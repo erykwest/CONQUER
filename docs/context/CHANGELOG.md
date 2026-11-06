@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-06 — Runner assedio con screenshot periodici
+
+- Aggiunto `SIEGE_SCREENSHOT_INTERVAL`: pause di acquisizione ai checkpoint simulati, screenshot in gioco e JSON progressivo con unità, porte, perdite e settori. Avviata prova di 300 s; nessuna modifica al comportamento del gioco. Corrette nella fixture le posizioni iniziali del capitano e di una pattuglia; il runner rifiuta partenze su terreno bloccato.
+
+
 ## 2026-11-06 — combat-ai: completamento del port circle e regressioni
 
 - Port selettivo dell'integrazione Siege/circle da main: scorte fisiche per settore, cattura, riconquista, persistenza, brecce e invalidazione della navigazione. Ripristinati i 2 test d'integrazione esclusi nel primo port.

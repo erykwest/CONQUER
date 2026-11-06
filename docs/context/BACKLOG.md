@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-06 — Verifica estesa
+
+- Prova da 300 s sulla variante concentrica TEST richiesta dall’utente: in corso, con screenshot ogni 60 s e checkpoint persistenti. La prova precedente da 60 s resta una misura separata. Corrette nella fixture le posizioni iniziali del capitano e di una pattuglia; il runner rifiuta partenze su terreno bloccato.
+
+
 ## 2026-11-06 — Campagna per settori, branch combat-ai
 
 - **IMPLEMENTATO E TESTATO LOCALMENTE:** integrazione circle con il ledger Siege, cattura/riconquista e salvataggio; agganci di breccia e navigazione; ripresa della campagna dopo ariete/scale/torri; collegamento delle brecce alla porta interna; ripiegamento dalle mura e dalla mischia.

@@ -1,5 +1,10 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-06 — Prova estesa di 5 minuti (in corso)
+
+Su richiesta utente, avviata la variante concentrica TEST per 300 s simulati, con screenshot in gioco a 0/60/120/180/240/300 s. Il runner mette in pausa solo per acquisire gli screenshot e salva checkpoint con perdite, porte, settori e posizioni; nessun cambiamento al codice di combattimento. Corrette nella fixture le posizioni iniziali del capitano e di una pattuglia; il runner rifiuta partenze su terreno bloccato. Esito da registrare a conclusione.
+
+
 ## 2026-11-06 — Verifica e completamento circle su combat-ai (NON MAIN)
 
 - Continuazione di `18b2a54`, `b299df1` e `aff223d`. Port selettivo di scorte/cattura/riconquista e persistenza circle da main; invalidazione dalla navigazione e registrazione delle brecce. Nessun merge generale di main.

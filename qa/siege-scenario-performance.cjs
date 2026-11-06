@@ -8,6 +8,7 @@
 //   node qa/siege-scenario-performance.cjs [label]
 //   env: SIEGE_LAYOUT (layout JSON, default layouts/TEST.json of this checkout), SIEGE_SECONDS
 //   (default 60), SIEGE_CONCENTRIC=1 for QA-only nested rings on the TEST village, SIEGE_TREBUCHETS=0 to leave them out (to compare with builds without them),
+//   SIEGE_SCREENSHOT_INTERVAL (simulated seconds between paused screenshots; 0 = final only),
 //   PERF_MODES (webgl,canvas; default webgl), QA_CHROME (a Chrome/Chromium executable).
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http');
 const {chromium}=require('playwright');
@@ -15,6 +16,7 @@ const root=path.resolve(__dirname,'..'),label=process.argv[2]||'local';
 const out=path.join(root,'output/playwright/siege-scenario');fs.mkdirSync(out,{recursive:true});
 const layoutFile=process.env.SIEGE_LAYOUT||path.join(root,'layouts/TEST.json');
 const seconds=Number(process.env.SIEGE_SECONDS||60),trebuchets=process.env.SIEGE_TREBUCHETS!=='0',concentric=process.env.SIEGE_CONCENTRIC==='1';
+const screenshotInterval=Math.max(0,Number(process.env.SIEGE_SCREENSHOT_INTERVAL)||0);
 const server=http.createServer((req,res)=>{
   const file=path.resolve(root,'.'+decodeURIComponent(new URL(req.url,'http://localhost').pathname));
   if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return}
@@ -28,7 +30,7 @@ async function main(){
   if(process.env.QA_CHROME)launch.executablePath=process.env.QA_CHROME;else launch.channel='chrome';
   const browser=await chromium.launch(launch);
   const git=args=>{try{return require('node:child_process').execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim()}catch{return null}};
-  const report={label,head:git(['rev-parse','--short','HEAD']),branch:git(['rev-parse','--abbrev-ref','HEAD']),dirty:!!git(['status','--porcelain']),layout:path.basename(layoutFile),seconds,trebuchets,concentric,startedAt:new Date().toISOString(),errors:[],results:[]};
+  const report={label,head:git(['rev-parse','--short','HEAD']),branch:git(['rev-parse','--abbrev-ref','HEAD']),dirty:!!git(['status','--porcelain']),layout:path.basename(layoutFile),seconds,trebuchets,concentric,screenshotInterval,startedAt:new Date().toISOString(),errors:[],results:[]};
   try{for(const mode of (process.env.PERF_MODES||'webgl').split(',')){
     const context=await browser.newContext({viewport:{width:1440,height:900},deviceScaleFactor:1});
     await context.route(/supabase\.co\//,r=>r.abort());
@@ -42,7 +44,7 @@ async function main(){
     await page.goto(`http://127.0.0.1:${server.address().port}/index.html?`+(mode==='webgl'?'world3d=1':'renderer=canvas2d'),{waitUntil:'networkidle'});
     await page.waitForFunction(()=>typeof draw==='function'&&!!window.ConquerCombat&&window.ConquerCircle?.getStatus?.().ready&&State.village?.founded&&State.structures.length>50,null,{timeout:60000});
     console.log('Loaded '+mode+' '+label);
-    const setup=await page.evaluate(({trebuchets,concentric,seconds})=>{
+    const setup=await page.evaluate(({trebuchets,concentric,seconds,screenshotInterval})=>{
       State.daylightOverride='day';State.clock.day=Math.floor(State.clock.day)+.45;
       if(concentric){
         // QA-only geometry: keep the TEST village and replace its open castle in memory.
@@ -72,7 +74,7 @@ async function main(){
       if(concentric){
         let patrol=0;
         for(const u of window.ConquerCombat.units()){
-          const at=u.kind==='captain'?{x:100,y:114}:u.kind==='patrol'?{x:88+(patrol++)*10,y:110}:{x:100,y:102};
+          const at=u.kind==='captain'?{x:103.2,y:114}:u.kind==='patrol'?[{x:88,y:110},{x:112,y:110},{x:100,y:104}][patrol++]:{x:100,y:102};
           Object.assign(u,at,{target:null,path:null,legs:null,wall:null,climbing:false});
         }
         for(let i=0;i<25;i++)mk('infantry',i,92+(i%9)*2,90-Math.floor(i/9)*1.2);
@@ -92,25 +94,55 @@ async function main(){
       window.ConquerCircle.updateControl(true);
       const treb=trebuchets&&window.ConquerTrebuchets?[{x:128,y:106},{x:128,y:118}].map(p=>window.ConquerTrebuchets.add(p)?.ok):[];
       // Instrument: combat ticks and frames, measured on the game's own loop.
-      const m=window.__siege={ticks:[],draws:[],frames:[],gameSeconds:0,captures:[],transitions:[]};
+      const m=window.__siege={ticks:[],draws:[],frames:[],gameSeconds:0,captures:[],transitions:[],nextCheckpoint:screenshotInterval||seconds};
       window.addEventListener('conquer-circle-captured',e=>m.captures.push(e.detail));
       window.addEventListener('conquer-circle-control-updated',e=>m.transitions.push(e.detail));
-      const C=window.ConquerCombat,tick=C.tick;C.tick=function(...a){const t=performance.now();try{return tick.apply(this,a)}finally{m.ticks.push(performance.now()-t);m.gameSeconds+=Math.min(.25,Number(a[0])||0);if(m.gameSeconds>=seconds)State.clock.speed=0;if(Math.floor(m.gameSeconds/10)>(m.progress||0)){m.progress=Math.floor(m.gameSeconds/10);console.log('[SIEGE_PROGRESS] '+m.gameSeconds.toFixed(1)+' s')}}};
+      const C=window.ConquerCombat,tick=C.tick;C.tick=function(...a){const t=performance.now();try{return tick.apply(this,a)}finally{m.ticks.push(performance.now()-t);m.gameSeconds+=Math.min(.25,Number(a[0])||0);if(m.gameSeconds+1e-6>=Math.min(seconds,m.nextCheckpoint))State.clock.speed=0;if(Math.floor(m.gameSeconds/10)>(m.progress||0)){m.progress=Math.floor(m.gameSeconds/10);console.log('[SIEGE_PROGRESS] '+m.gameSeconds.toFixed(1)+' s')}}};
       const d=draw;draw=function(...a){const t=performance.now();try{return d.apply(this,a)}finally{m.draws.push(performance.now()-t)}};
       let last=performance.now();const f=t=>{m.frames.push(t-last);last=t;if(!m.stop)requestAnimationFrame(f)};requestAnimationFrame(f);
       // Camera on the castle, game running.
       const r=wrap.getBoundingClientRect();State.view.scale=1.4;
       for(let k=0;k<4;k++){const q=w2s({x:104,y:108},0);State.view.x+=r.width/2-q.x;State.view.y+=r.height/2-q.y}
-      State.clock.speed=1;
+      State.clock.speed=screenshotInterval?0:1;
       const alive=a=>a.filter(u=>!u.defeated&&(u.stats?.hp??1)>0).length;
-      return{ram:!!ram,tower:!!tower,trebuchets:treb.filter(Boolean).length,attackers:E.length,attackersHp:E.reduce((n,u)=>n+(u.stats?.hp||0),0),defenders:alive(C.units()),defendersHp:C.units().reduce((n,u)=>n+(u.stats?.hp||0),0),sectors:window.ConquerCircle?.getSnapshot?.()?.compartments.map(c=>({id:c.id,depth:c.depth,state:c.state,mastio:c.mastio})),structures:State.structures.length,
+      return{blockedStarts:C.units().concat(E).filter(u=>pointBlockedForPeasant(u,u.id)).map(u=>({id:u.id,x:u.x,y:u.y})),ram:!!ram,tower:!!tower,trebuchets:treb.filter(Boolean).length,attackers:E.length,attackersHp:E.reduce((n,u)=>n+(u.stats?.hp||0),0),defenders:alive(C.units()),defendersHp:C.units().reduce((n,u)=>n+(u.stats?.hp||0),0),sectors:window.ConquerCircle?.getSnapshot?.()?.compartments.map(c=>({id:c.id,depth:c.depth,state:c.state,mastio:c.mastio})),structures:State.structures.length,
         archers:State.structures.filter(s=>s.type==='tower').reduce((n,t)=>n+(window.ConquerSiege?.occupiedArcherSlots?.(t)?.length||0),0)};
-    },{trebuchets,concentric,seconds});
+    },{trebuchets,concentric,seconds,screenshotInterval});
     console.log('Setup '+JSON.stringify(setup));
+    if(setup.blockedStarts.length)throw Error('QA units start in blocked terrain: '+JSON.stringify(setup.blockedStarts));
     if(concentric&&(setup.sectors.length!==2||!setup.sectors.some(c=>c.depth===2&&c.mastio)))throw Error('QA rings must enclose two sectors with the keep in the inner sector');
     // Game time, not wall time: wait until the clock has run SIEGE_SECONDS of combat.
     const t0=Date.now();
-    const done=await page.waitForFunction(n=>window.__siege.gameSeconds>=n,seconds,{timeout:Math.max(180000,seconds*20000),polling:500}).then(()=>true,()=>false);
+    const checkpoints=[];
+    let done=true;
+    if(screenshotInterval){
+      const targets=[0];
+      for(let n=screenshotInterval;n<seconds;n+=screenshotInterval)targets.push(n);
+      targets.push(seconds);
+      for(const target of targets){
+        if(target){
+          await page.evaluate(n=>{window.__siege.nextCheckpoint=n;State.clock.speed=1},target);
+          done=await page.waitForFunction(n=>window.__siege.gameSeconds+1e-6>=n,target,{timeout:Math.max(180000,seconds*20000),polling:500}).then(()=>true,()=>false);
+        }
+        const checkpoint=await page.evaluate(()=>{
+          State.clock.speed=0;window.ConquerCircle.updateControl(true);draw();
+          const C=window.ConquerCombat,alive=a=>a.filter(u=>!u.defeated&&(u.stats?.hp??1)>0);
+          const units=a=>a.map(u=>({id:u.id,kind:u.combatKind||u.kind,x:u.x,y:u.y,hp:u.stats?.hp,defeated:!!u.defeated,routing:!!u.routing,retreatTo:u.retreatTo||null,assault:u.assault||null,atKeep:!!u.atKeep,legs:u.legs?.length||0}));
+          return{gameSeconds:window.__siege.gameSeconds,attackersAlive:alive(C.enemy()).length,defendersAlive:alive(C.units()).length,
+            attackersHp:C.enemy().reduce((n,u)=>n+(u.stats?.hp||0),0),defendersHp:C.units().reduce((n,u)=>n+(u.stats?.hp||0),0),
+            sectors:window.ConquerCircle.getSnapshot()?.compartments.map(c=>({id:c.id,depth:c.depth,mastio:c.mastio,state:c.state,control:c.control})),
+            doors:State.structures.filter(s=>s.type==='gate').map(g=>({id:g.id,stage:window.ConquerSiege.doorStage(g),closed:window.ConquerSiege.gateClosed(g)})),
+            attackers:units(C.enemy()),defenders:units(C.units())};
+        });
+        checkpoint.targetSeconds=target;
+        checkpoint.screenshot=`${label}-${mode}-${String(target).padStart(3,'0')}s.png`;
+        await page.screenshot({path:path.join(out,checkpoint.screenshot),timeout:60000});
+        checkpoints.push(checkpoint);
+        fs.writeFileSync(path.join(out,`${label}-${mode}-checkpoints.json`),JSON.stringify({label,head:report.head,setup,checkpoints},null,2));
+        console.log('[SIEGE_CHECKPOINT] '+JSON.stringify({target,actual:+checkpoint.gameSeconds.toFixed(2),attackers:checkpoint.attackersAlive,defenders:checkpoint.defendersAlive,sectors:checkpoint.sectors,screenshot:checkpoint.screenshot}));
+        if(!done)break;
+      }
+    }else done=await page.waitForFunction(n=>window.__siege.gameSeconds>=n,seconds,{timeout:Math.max(180000,seconds*20000),polling:500}).then(()=>true,()=>false);
     if(!done)report.errors.push({mode,error:'timeout before '+seconds+' s of game time'});
     const wall=(Date.now()-t0)/1000;
     const res=await page.evaluate(()=>{
@@ -125,7 +157,7 @@ async function main(){
     });
     // The page can be too busy to paint a screenshot in time: optional.
     await page.screenshot({path:path.join(out,`${label}-${mode}.png`),timeout:60000}).catch(e=>report.errors.push({mode,error:'screenshot: '+e.message.split('\n')[0]}));
-    report.results.push({mode,setup,wallSeconds:+wall.toFixed(1),gameSeconds:+res.gameSeconds.toFixed(1),
+    report.results.push({mode,setup,checkpoints,wallSeconds:+wall.toFixed(1),gameSeconds:+res.gameSeconds.toFixed(1),
       firstTickMs:res.ticks[0]!=null?+res.ticks[0].toFixed(1):null,
       tickMs:{n:res.ticks.length,p50:pct(res.ticks,.5),p95:pct(res.ticks,.95),max:pct(res.ticks,1)},
       drawMs:{n:res.draws.length,p50:pct(res.draws,.5),p95:pct(res.draws,.95),max:pct(res.draws,1)},
