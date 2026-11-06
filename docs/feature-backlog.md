@@ -1,5 +1,11 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+## 2026-11-06 — Carretti locali produzione → Piazzale (branch `feature/local-production-haulage-20261106`, non ancora in main)
+
+- **P1 VISUAL LOGISTICS · IMPLEMENTATO SU BRANCH:** il libro economico emette eventi solo su `received>0` per la quota trattenuta da una produzione L1–L3; la bonifica forestale emette un evento dal luogo del taglio, senza accrediti aggiuntivi. I carrettieri usano l'asset carro/cavallo 2D di `ConquerVehicles` e `ConquerWagons`. Carico → strada completata → miglior Piazzale collegato → scarico → ritorno vuoto, fino a 4 simultanei, con pause e coda limitata.
+- **Nessuna doppia economia:** la consegna è visiva, le merci sono già contabilizzate da `ConquerEconomy`; mai aggiornare `State.resources` o `State.economy.castle` per l'arrivo del carretto. Nessun veicolo se manca la viabilità; le spedizioni private o vendute al mercato richiedono altra specifica. Test `qa/haulage-regression.cjs`.
+
+
 ## 2026-11-05 — Piazzale di stoccaggio al villaggio (branch `feature/founding-storage-yard-20261105`)
 
 - **P0-03 / P0-05 · SU BRANCH (non MAIN fino al merge):** alla fondazione del villaggio un Piazzale 2×2U è cercato entro 7U dal pozzo in un'area con terreno valido, non alberata e senza conflitti; è inoltre piazzabile dal Builder. Può crescere a 4×4U e 6×6U pagando materiali e oro, con capacità 600/2400/5400 unità aggregata.

@@ -1,5 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+06/11/2026 — branch `feature/local-production-haulage-20261106` (pre-merge): introdotto `ConquerHaulage`, traffico visivo reale delle merci trattenute dall'economia locale e del legname da bonifica fino ai Piazzali magazzino. Percorsi tramite `ConquerVehicles` sulle strade terminate, scelta del deposito connesso migliore, attesa in mancanza di route, carro carico in andata e vuoto in ritorno, sincronizzato alla pausa e al calendario. Kit carro, cavalli e conducenti 2D già esistenti; nessuna nuova risorsa, inventario o modello 3D. Aggiunti pannello Piazzale, QA e workflow Economy flows. Documenti STATUS/BACKLOG/DECISIONS/feature-backlog aggiornati; ROADMAP invariata.
+
+
 06/11/2026 — `chore/ci-p0-consolidation-20261106` (pre-merge): CI P0. Ritirati 11 workflow obsoleti/monouso senza cancellare test. `settlement-routing-spawn.yml` mantiene ID check ma passa da full `qa/*-regression.cjs` su qualsiasi PR a smoke veloci sulle PR isolate, full pre-merge su cambiamenti nei moduli condivisi e full domenicale/manuale. Conservati runtime integrity, economy, governance. Aggiunti `qa/ci-p0-regression.cjs` e `docs/CI.md`. ROADMAP di gioco invariata; P1 Playwright/dedup ancora aperto.
 
 

@@ -109,7 +109,7 @@
     if(!e.weekProducedSites||typeof e.weekProducedSites!=='object')e.weekProducedSites={};
     return e;
   }
-  function reset(){State.economy=makeState();render(true)}
+  function reset(){window.ConquerHaulage?.reset?.();State.economy=makeState();render(true)}
   // State.policies.rations holds the order; legacy numeric slider values mean 'market'.
   function rationMode(){
     const policies=State.policies||(State.policies={});
@@ -213,6 +213,8 @@
     e.weekProduced.wood=round(finite(e.weekProduced.wood)+quantity);
     note(e,'Forest clearance '+id+': +'+quantity+' wood');
     syncBuilderResources();
+    const origin=window.ConquerForestry?.jobs?.().find(j=>j.id===id)?.center;
+    if(origin)window.ConquerHaulage?.record?.({siteId:id,origin,good:'wood',qty:quantity,day:State.clock?.day});
     return true;
   }
   function refundBuild(cost){
@@ -269,6 +271,7 @@
         Math.max(0,(e.target[good]||0)-(e.castle[good]||0));
       const received=Math.min(keep,headroom);
       e.castle[good]=round(e.castle[good]+received);
+      if(received>0)window.ConquerHaulage?.record?.({siteId:id,good,qty:received,day:e.lastDay});
       quantity-=received;
     }
     if(quantity>0){
