@@ -25,8 +25,23 @@ const CIVIC_ANNEX_CATALOG=Object.freeze({
     loggia:{label:'Covered loggia',level:2,w:3,h:1.5,max:2,kind:'timber'},
     warehouse:{label:'Warehouse',level:3,w:2.5,h:2,max:2,kind:'timber'},
     shop:{label:'Shop',level:3,w:1.75,h:1.5,max:4,kind:'timber'}
+  }),
+  // Orto di corte (BC-251105-11): the town hall's kitchen garden. Unlike the rest of
+  // this skeleton it has a real yield: see KITCHEN_GARDEN_FOOD_PER_DAY in the economy.
+  townhall:Object.freeze({
+    kitchenGarden:{label:'Kitchen garden',level:1,w:3,h:2,max:2,kind:'garden'}
   })
 });
+// The town hall owns no Voronoi lot: its garden stays on open ground close by.
+const TOWNHALL_ANNEX_RANGE=7;
+// Completed, standing kitchen gardens of finished town halls (the economy's food source).
+function kitchenGardens(){
+  return State.structures.filter(s=>isCivicAnnex(s)&&s.annexType==='kitchenGarden'&&
+    !s.destroyed&&!s.burnt&&!underConstruction(s)&&(()=>{
+      const parent=State.structures.find(p=>p.id===s.parentId);
+      return parent?.type==='townhall'&&!parent.destroyed&&!underConstruction(parent);
+    })());
+}
 function isCivicAnnex(s){return !!s&&s.type==='civicAnnex'}
 function civicAnnexDefinition(s,parent=State.structures.find(p=>p.id===s?.parentId)){
   return parent&&CIVIC_ANNEX_CATALOG[parent.type]?.[s?.annexType]||null;
@@ -90,7 +105,12 @@ function civicAnnexPlacementCheck(s){
   if(siblings.length>=spec.max)return{ok:false,reason:'Maximum annex count reached'};
   const footprint=civicAnnexFootprint(s);
   if(footprint.length!==4)return{ok:false,reason:'Invalid annex footprint'};
-  if(parent.type==='market'){
+  if(parent.type==='townhall'){
+    if(dist(s,parent)>TOWNHALL_ANNEX_RANGE)
+      return{ok:false,reason:'Kitchen garden must remain within '+TOWNHALL_ANNEX_RANGE+'U of the town hall'};
+    if(urbanLots().some(lot=>urbanPolygonsOverlap(footprint,lot.points)))
+      return{ok:false,reason:'Kitchen garden cannot occupy an owned Voronoi lot'};
+  }else if(parent.type==='market'){
     // Public market pieces grow near the square, but never claim a private parcel.
     if(dist(s,parent)>9)return{ok:false,reason:'Market annex must remain within 9U of its square'};
     if(urbanLots().some(lot=>urbanPolygonsOverlap(footprint,lot.points)))

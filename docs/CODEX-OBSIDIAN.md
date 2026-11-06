@@ -8,7 +8,7 @@ Il vault dedicato CONQUER è la cartella scelta dall'utente in Obsidian. È la f
 
 Il percorso personale è conservato soltanto in `.codex-vault.local.json` (ignorato da Git), oppure può essere passato con `--vault` o `CONQUER_CODEX_VAULT`. Le impostazioni `.obsidian`, il workspace, la cache e il registro locale della sincronizzazione non sono pubblicati.
 
-Le 154 note sono piatte: 136 voci, 7 famiglie, 8 meccaniche/sovracategorie, CONQUER Index, Guida Editoriale e Modello Scheda. Indici, wikilink e backlink organizzano la lettura. Le cartelle e i documenti preesistenti del progetto nel vault personale restano fuori dall'importazione editoriale.
+Le 156 note sono piatte: 138 voci, 7 famiglie, 8 meccaniche/sovracategorie, CONQUER Index, Guida Editoriale e Modello Scheda. Indici, wikilink e backlink organizzano la lettura. Le cartelle e i documenti preesistenti del progetto nel vault personale restano fuori dall'importazione editoriale.
 
 ## Dal vault alla Wiki
 

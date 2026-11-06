@@ -12,8 +12,8 @@ const items=api.list();
 assert.equal(new Set(items.map(r=>r.id)).size,items.length);
 assert.equal(api.categories.length,7);
 for(const c of api.categories)assert.ok(items.some(r=>r.category===c),c+' populated');
-assert.equal(api.list({category:'room'}).length,20);
-assert.equal(api.list({category:'sub-building'}).length,16);
+assert.equal(api.list({category:'room'}).length,21);
+assert.equal(api.list({category:'sub-building'}).length,17);
 assert.equal(api.list({category:'ship'}).length,5);
 for(const row of items){
   assert.ok(fs.existsSync(path.join(__dirname,'..',row.source.file)),row.source.file);

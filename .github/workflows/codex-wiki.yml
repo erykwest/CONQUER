@@ -1,4 +1,7 @@
 name: Codex Wiki browser
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 on:
   pull_request:
     paths:
@@ -17,6 +20,7 @@ on:
       - 'tools/export-codex.cjs'
       - 'qa/codex-wiki*'
       - '.github/workflows/codex-wiki.yml'
+      - '.github/actions/playwright-setup/action.yml'
 permissions:
   contents: read
 jobs:
@@ -46,9 +50,7 @@ jobs:
           cat /tmp/conquer-codex-http.log
           exit 1
       - name: Install browser
-        run: |
-          npm install --no-save --no-package-lock playwright@1.56.1
-          npx playwright install chromium
+        uses: ./.github/actions/playwright-setup
       - name: Verify Wiki and Builder reader
         run: node qa/codex-wiki-browser.mjs
       - uses: actions/upload-artifact@v4

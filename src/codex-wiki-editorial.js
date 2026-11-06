@@ -1,7 +1,7 @@
 // Generated from content/codex/*.md. Do not edit; run node tools/export-codex-content.cjs.
 (function(root){root.ConquerWikiEditorial={
   "schemaVersion": 1,
-  "sourceDigest": "fb9c63bc53064c904a7fd7ba8da6933c37214bba036976bd683b84dbe7a7b3ff",
+  "sourceDigest": "5e1487c7a5d92b579630c49cea74bb5f978b99e16735bf8e9feef337e7727973",
   "pages": [
     {
       "id": "building:bridge",
@@ -2723,6 +2723,66 @@
       "members": []
     },
     {
+      "id": "room:mews",
+      "kind": "entry",
+      "title": "Falconiera",
+      "aliases": [
+        "Falconiera"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "La Falconiera è una delle [[Stanze]] del castello: occupa l'ultimo piano di una [[Torre]] in pietra W2–W3, dal livello 2, con tetto a falde. La voliera si trova sul tetto; la stessa sommità non può ospitare anche la campana o la [[Colombaia]].",
+          "tokens": [
+            {
+              "text": "La Falconiera è una delle "
+            },
+            {
+              "text": "Stanze",
+              "id": "category:room"
+            },
+            {
+              "text": " del castello: occupa l'ultimo piano di una "
+            },
+            {
+              "text": "Torre",
+              "id": "building:tower"
+            },
+            {
+              "text": " in pietra W2–W3, dal livello 2, con tetto a falde. La voliera si trova sul tetto; la stessa sommità non può ospitare anche la campana o la "
+            },
+            {
+              "text": "Colombaia",
+              "id": "room:dovecote"
+            },
+            {
+              "text": "."
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "Una falconiera attiva procura quattro razioni di selvaggina al giorno, anche durante l'assedio, entro la capacità dei granai. Aggiunge tre punti al prestigio del castello; il prestigio è mostrato nel riepilogo ma non ha ancora effetti su altri sistemi.",
+          "tokens": [
+            {
+              "text": "Una falconiera attiva procura quattro razioni di selvaggina al giorno, anche durante l'assedio, entro la capacità dei granai. Aggiunge tre punti al prestigio del castello; il prestigio è mostrato nel riepilogo ma non ha ancora effetti su altri sistemi."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "La Falconiera è una delle Stanze del castello: occupa l'ultimo piano di una Torre in pietra W2–W3, dal livello 2, con tetto a falde. La voliera si trova sul tetto; la stessa sommità non può ospitare anche la campana o la Colombaia.",
+        "Una falconiera attiva procura quattro razioni di selvaggina al giorno, anche durante l'assedio, entro la capacità dei granai. Aggiunge tre punti al prestigio del castello; il prestigio è mostrato nel riepilogo ma non ha ancora effetti su altri sistemi."
+      ],
+      "related": [
+        "category:room",
+        "building:tower",
+        "room:dovecote",
+        "topic:logistics"
+      ],
+      "members": []
+    },
+    {
       "id": "room:nobleRoom",
       "kind": "entry",
       "title": "Camere nobiliari",
@@ -4404,6 +4464,58 @@
         "topic:logistics",
         "topic:construction",
         "building:tavern"
+      ],
+      "members": []
+    },
+    {
+      "id": "sub-building:townhall.kitchenGarden",
+      "kind": "entry",
+      "title": "Orto di corte",
+      "aliases": [
+        "Orto di corte"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "L'Orto di corte è un [[Annessi|annesso]] del [[Municipio]]: occupa 3×2U di terreno aperto entro 7U dal Municipio e non può invadere lotti di proprietà. Ogni Municipio può avere al massimo due orti.",
+          "tokens": [
+            {
+              "text": "L'Orto di corte è un "
+            },
+            {
+              "text": "annesso",
+              "id": "category:sub-building"
+            },
+            {
+              "text": " del "
+            },
+            {
+              "text": "Municipio",
+              "id": "building:townhall"
+            },
+            {
+              "text": ": occupa 3×2U di terreno aperto entro 7U dal Municipio e non può invadere lotti di proprietà. Ogni Municipio può avere al massimo due orti."
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "Ogni orto completo e attivo produce due unità di cibo del signore per giornata lavorativa, anche in allarme o assedio. La resa usa il libro economico condiviso; non richiede lavoratori dedicati. Stagionalità e lavoro specifico dell'orto restano sviluppi possibili.",
+          "tokens": [
+            {
+              "text": "Ogni orto completo e attivo produce due unità di cibo del signore per giornata lavorativa, anche in allarme o assedio. La resa usa il libro economico condiviso; non richiede lavoratori dedicati. Stagionalità e lavoro specifico dell'orto restano sviluppi possibili."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "L'Orto di corte è un annesso del Municipio: occupa 3×2U di terreno aperto entro 7U dal Municipio e non può invadere lotti di proprietà. Ogni Municipio può avere al massimo due orti.",
+        "Ogni orto completo e attivo produce due unità di cibo del signore per giornata lavorativa, anche in allarme o assedio. La resa usa il libro economico condiviso; non richiede lavoratori dedicati. Stagionalità e lavoro specifico dell'orto restano sviluppi possibili."
+      ],
+      "related": [
+        "category:sub-building",
+        "building:townhall",
+        "topic:logistics"
       ],
       "members": []
     },

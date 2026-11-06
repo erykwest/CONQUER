@@ -7,7 +7,7 @@ import {
 } from '../src/circle/defensive-logistics.mjs';
 const source=readFileSync(new URL('../src/settlement-siege.js',import.meta.url),'utf8');
 const room=(id,compartmentId)=>({id,type:'tower',x:0,y:0,
-  level:1,functions:['granary'],roomSector:compartmentId});
+  level:1,tier:2,size:1.5,functions:['granary'],roomSector:compartmentId});
 function harness() {
   const inner=room('mastio','inner'),outer=room('outer','outer');
   const State={clock:{day:0,speed:1},structures:[outer,inner],
@@ -29,6 +29,7 @@ function harness() {
     functionSlotUnits:()=>1,
     normalizeFunctions:()=>{},
     structureLevel:s=>s.level,
+    towerTier:s=>s.tier,
     markDirty:()=>event.push('save'),
     renderUI:()=>{},renderFunctionPanel:()=>{},
     console};

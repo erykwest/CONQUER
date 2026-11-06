@@ -1,5 +1,7 @@
 # Livello 2 — Stato tecnico e prove
 
+06/11/2026 — Integrazione #165 su main 1247cca: aggiunte dal vault autore le schede Falconiera e Orto di corte (138 voci, 153 pagine, 156 note); export gameplay rigenerato. Nuovo workflow Wiki conforme a P1: concurrency PR e setup Chromium condiviso; inventario CI 26 workflow, 6 browser job. ROADMAP e contratti editoriali invariati.
+
 ## 2026-11-05 — Accesso Wiki dal Profilo (branch `feature/codex-obsidian`)
 
 Aggiunto il pulsante **CODEX / WIKI** nella barra del Profilo, accanto a Generale, Araldica e Centro di controllo. Apre il lettore interno in entrambe le UI; chiusura/Escape riporta al Profilo e al pulsante, senza modificare partita o scheda attiva. Barra a capo sugli schermi stretti; cache version aggiornata. Verifica browser estesa a ingresso dal Profilo, focus e mobile. La modifica è nella PR #165, non ancora main.
@@ -29,8 +31,128 @@ Verifica aggiuntiva: `qa/refactor-app-population-regression.cjs` FALLISCE sul co
 
 Base verificata `main` `bcf3cd788f18560221862fe1908edef4edb5f2d3`. [Censimento delle sette famiglie](../CODEX-CATALOG-AUDIT.md): registri gameplay, cataloghi visivi, fonti di costo/tempo/compatibilità e coperture parziali. Solo documentazione su `docs/codex-catalog-audit-20261105`; nessun Codex runtime o albero tecnologico implementato. QA gameplay/browser non eseguita. PR #155 e #158 ancora aperte al controllo: non incluse nella base.
 
+## Falconiera e Prestigio (branch `feature/falconry`, da `main` 05f8170, 05/11/2026, NON MAIN)
+
+- **IMPLEMENTATO SU BRANCH:**
+  - **Stanza `mews` (Falconiera):** ultimo piano delle torri in pietra W2–W3, L2 o più, con tetto a falde (`towerMewsAllowed`, stessa regola della Colombaia). Un tetto, un elemento in cima: prende il posto della Campana (`APEX_ROOMS`) e della Colombaia (stessa stanza).
+  - **Caccia:** ogni falconiera attiva (non catturata, tetto in piedi) porta 4 razioni di selvaggina al giorno nella scorta, anche in assedio, mai oltre la capienza dei granai (`MEWS_FOOD`, `mewsCount`).
+  - **Prestigio del castello (scelta dell'utente):** nuovo valore `ConquerSiege.prestige()`. Somma punti per stanza di corte attiva: Falconiera 3, Sala del trono 4, Stanze nobili 1, Cappella 1, Tesoro 1 (`PRESTIGE`). Mostrato nel riepilogo logistico con la resa della caccia. Per ora non è letto da altri sistemi.
+  - **Voliera sul tetto:** nuovo modello Blender `tools/blender/build_mews.py` → `src/assets/mews-models.js` (458 triangoli): sella in ardesia, gabbia di listelli, posatoio con falco incappucciato, cappello di scandole. Montato da `ROOM_EXTERIOR` (`mews`, `mount:'roof'`), esteso alle stanze con montaggio sul tetto legato allo slot. La bandiera sale sopra la voliera (`towerApexFlagZ`).
+  - **Arredo cutaway:** posatoi sulla parete principale, scaffale, tavolino del falconiere, sgabello, baule.
+- **Asset Lab:** varianti «Pietra quadrata L2 tetto + falconiera», «Grande rotonda L3 tetto + falconiera», «Grande quadrata L3 2 falde + falconiera» e il modello in «Edifici · Elementi esterni delle stanze». Audit: 33 render, 0 falliti (avvisi solo sul cantiere, come le altre torri in locale); tavola rivista; baseline aggiornata per queste voci.
+- **QA:** nuova `qa/falconry-regression.cjs` (regola, caccia, prestigio, voliera, Lab), aggiunta a `tower-variants-regression.yml`. 137 `qa/*.cjs` non di performance: 136 PASS, `founding-regression.cjs` fallisce solo dentro la suite completa (test di tempi di risposta) e passa da solo.
+- **Non verificato:** la caccia in una partita vera; il prestigio non ha ancora effetti.
+
+## 2026-11-06 — CI P1: deduplicazione e browser (branch `chore/ci-p1-browser-dedup-20261106`, pre-merge)
+
+- **IN BRANCH:** tutti i 25 workflow adottano concurrency per PR (cancel-in-progress solo su pull_request). Rimossi full deterministici duplicati da Main fixes, Gate-six sockets e WebGPU: il full rimane al selettore P0 e alla verifica settimanale/manuale.
+- **IN BRANCH:** composite Action per tutti e cinque i browser job, Chromium Playwright 1.56.1 con cache condivisa. Asset Lab browser/audit eseguiti solo per modifiche visive, la relativa smoke JS resta su tutte le modifiche di dipendenze; WebGPU solo per renderer o manuale.
+- **IN BRANCH:** ridondanze save-safety (Combat ed Economy) e context guard (Main fixes) eliminate, ma sorgenti di verità Runtime integrity e Context pyramid guard intatte. Aggiunto `qa/ci-p1-regression.cjs` al controllo P0, la suite full resta su cambiamenti world3d/castle3d.
+- **QA:** esiti live GitHub Actions da verificare prima del merge; nessun test esistente cancellato, documentazione `docs/CI.md` aggiornata.
+
+
+
+## 2026-11-06 — Consegne animate produzione → piazzali (branch `feature/local-production-haulage-20261106`, pre-merge)
+
+- **CODICE SU BRANCH, NON MAIN:** nuovo `ConquerHaulage` per viaggi locali automatici con carretti trainati dai cavalli usando `ConquerVehicles` e `ConquerWagons` 2D già presenti. Orchestrazione nel loop di simulazione e rendering Canvas anche sopra World3D; velocità sincronizzata alla simulazione e arresto in pausa.
+- **EVENTI REALI:** `ConquerEconomy.put` notifica solo le quantità effettivamente trattenute dal signore per il castello (`received>0`); `creditForestryWood` segnala la raccolta una tantum delle bonifiche forestali dal centro del lavoro. Non si crea una copia dello stock e nessun ricavo è aggiunto all'arrivo o alla partenza dei mezzi. Produzione privata e merci di solo mercato escluse.
+- **ITINERARI:** punto di carico sulla strada completata più vicina al produttore (≤3,5U), consegna al piazzale raggiungibile più vicino tramite viabilità effettiva (≤4U), scarico e viaggio di ritorno a carro vuoto. Senza strada continua nessuna partenza: richieste sospese temporaneamente senza teletrasporti. Al massimo 4 tragitti e 32 eventi pending, aggregazione per sito/merce, scadenza a 10 giorni simulati, cancellazione se sito o piazzale non esistono più.
+- **UI:** ispettore del Piazzale visualizza carretti attivi e carichi in attesa; non modifica il sistema di fatturazione. Asset Lab non necessita nuovi modelli perché la carrozzeria e il cavallo sono i componenti approvati già nel catalogo; conformità D-046 2D.
+- **QA:** `qa/haulage-regression.cjs` in Economy flows; verifica incasso singolo reale, percorso, scarico/ritorno vuoto, blocco strade incompiute, pausa, più magazzini, bonifiche, ripristino e assenza di duplicazioni. Verificare CI prima del merge.
+
+
+## 2026-11-06 — CI P0: workflow obsoleti e suite deterministica selettiva (branch `chore/ci-p0-consolidation-20261106`, pre-merge)
+
+- **CODICE SU BRANCH, NON MAIN:** rimossi 11 workflow YAML associati a branch remote inesistenti o a un vecchio cleanup monouso. Conservati tutti i 163 script QA e relativi asset; cronologia Git disponibile per restore.
+- **Orchestrazione:** `Settlement routing and spawn regression` preserva nome e job `settlement-qa`. Sulle PR isolate lancia 5 smoke mirati, mentre le PR che modificano bootstrap/stato/navigazione/persistenza/placement l'intera `qa/*-regression.cjs` con controllo sintassi. Suite completa anche su `workflow_dispatch` e ogni domenica UTC. Fallimento chiuso se base/head SHA non verificabili.
+- **Protezione:** `Runtime integrity`, `Economy flows regression`, `Context pyramid guard` invariati. Branch `main` non protetta (controllo GitHub, 06/11); status check obbligatori vuoti. WebGPU/Asset Lab/Playwright rimangono fuori scope P0.
+- **QA:** `qa/ci-p0-regression.cjs` protegge esistenza dei workflow cardine e modalità full/fast; CI e test run della PR da verificare prima del merge. Manuale completo: `docs/CI.md`.
+
+
+06/11/2026 — Integrazione #155: fixture CIRCLE aggiornata a torri W2 esplicite per i granai e relativo towerTier; le W1 non ammettono granai secondo la nuova regola. Nessuna variazione alle scorte o alle regole CIRCLE.
+
+## Latrina nelle torri W1 e stanze delle torri piccole (branch `fix/latrine-towers`, da `main` dab8224, 05/11/2026, NON MAIN)
+
+- **Correzione dell'utente (04/11):** la latrina va nelle **torri W1**, non nelle sezioni costruite. Il merge #146 l'aveva messa al piano 2 delle sezioni W1: corretto qui.
+- **IMPLEMENTATO SU BRANCH:**
+  - **Stanze nelle torri W1** (`functionCapacity`, `ConquerSiege.allowed`): le torri W1 hanno una stanza per piano ma tengono la scala a chiocciola (nessun arredo nel cutaway). Accettano solo, per scelta dell'utente: **Colombaia** (sempre all'ultimo piano, tetto a falde, in pietra, L2+), **Latrina**, **Prigione** (piano terra), **Tesoro**, **Armeria**. Il primo mastio T1 resta senza restrizioni (Sala comune).
+  - **Latrina:** primo piano superiore (piano 2) delle torri W1 in pietra, mai torri di legno, W2–W3, porte o sezioni costruite. Lo sbalzo (`ROOM_EXTERIOR`, `mount:'face'`) va sulla faccia esterna libera della torre che guarda più lontano dal castello: mai la faccia interna, né una faccia dove si attacca un muro, una sezione o una sottotorre, né dove davanti c'è un edificio. Su una torre rotonda la scatola rientra nella curva. Le feritoie di quella faccia, al suo piano e sotto, lasciano il posto allo sbalzo e allo scarico (`takesTowerFace`).
+  - **Revisione dell'utente (05/11):** una torre W1 con almeno una stanza assegnata perde la scala a chiocciola e apre i piani come le altre torri (scala a pioli, arredo); senza stanze la tiene. La latrina è **comune a 3 fori**: sbalzo largo 0,76 U e sporgente 0,22 U (prima 0,46 × 0,36), falda rifatta in tre corsi (la vecchia lastra aveva le facce rovesciate e nel 2.5D spariva). La stanza intera è la latrina: tre sedili contro la parete dello sbalzo, lavabo, scaffale, sgabello, candela. Nel cutaway lo sbalzo dietro la parete in piedi si disegna sopra quella parete e sotto pavimento e arredo; quello sul lato tagliato resta davanti.
+  - **Salvataggi:** una latrina già assegnata a una sezione costruita viene tolta al caricamento (`sanitizeRooms`).
+- **Asset Lab:** tolta la variante «Sezione costruita L2 + latrina» (9 voci di baseline). Nuove varianti di torre: «Pietra quadrata piccola L2 + latrina», «Pietra rotonda piccola L2 + latrina», «Pietra quadrata piccola L2 tetto + colombaia». Audit: 30 render, 0 falliti (avvisi solo sul cantiere, come le altre torri in locale); fogli rivisti e baseline aggiornata per queste voci.
+- **QA:** `qa/room-exterior-latrine-regression.cjs` riscritta sulle torri (faccia esterna, muro attaccato, torre rotonda, feritoia, regole di stanza). `qa/dovecote-regression.cjs`: la colombaia ora è ammessa nelle W1 e le W1 rifiutano le altre stanze. 127/127 `qa/*.cjs` non di performance PASS in locale.
+- **Non verificato:** l'assegnazione dal pannello delle stanze in una partita vera (verificata dai test della regola).
+
+
+Sul branch `feature/roof-pitch-75` (da `main` b1a2307, NON MAIN) la pendenza dei tetti a 75° (BC-251105-08) è selezionabile nella scheda «Pendenza dei tetti» al costo di 9 legno + 3 oro + 1 pietra per tetto. `node qa/roof-pitch-regression.cjs`: 3 check passati in locale. Audit Asset Lab locale (`--category=Fortificazioni`, Windows): 790 render, 0 falliti, 60 nuovi (gli stati «Tetto 30°/60°/75°»), rivisti nel foglio `fortificazioni-torri`; aggiunti alla baseline solo i 60 nuovi. I 391 «changed» su danni/cutaway/intatti sono deriva della macchina locale rispetto alla baseline e non sono stati accettati. CI del branch da verificare.
+
+## 2026-11-06 — Orto di corte, BC-251105-11 (branch `feature/orto-di-corte`, pre-merge)
+
+- **CODICE SU BRANCH, NON ANCORA MAIN:** `CIVIC_ANNEX_CATALOG.townhall.kitchenGarden` («Kitchen garden», 3×2U, L1, max 2, `kind:'garden'`, attraversabile). Il Municipio non ha lotto Voronoi: l'orto si posa su terreno aperto entro `TOWNHALL_ANNEX_RANGE` = 7U e non può occupare lotti di proprietà; restano i controlli condivisi di `ConquerPlacement`. Pulsante nel pannello Annessi del Municipio con la resa indicata.
+- **EFFETTO SIMULATO:** `kitchenGardens()` elenca gli orti completi, non distrutti/bruciati, di Municipi completi e in piedi; `ConquerEconomy.daily` aggiunge `KITCHEN_GARDEN_FOOD_PER_DAY` = 2 cibo per orto per giornata lavorativa al ledger del signore (quota trattenuta al castello, resto al mercato secondo `saleShare`). A differenza di pastori e pescatori produce anche in allarme/assedio. Nessun lavoratore richiesto (cura della corte).
+- **VISUAL:** modello Blender `kitchenGarden` (`tools/blender/build_civic.py`, accodato senza cambiare gli altri 52 modelli): filari di ortaggi, pali dei fagioli, recinto di vimini con cancello, botte e capanno. Canvas usa la sagoma `garden` esistente. Asset Lab «Orto di corte (annesso del municipio)»; `node qa/asset-audit.mjs` locale: 0 errori; baseline aggiornata per la sola nuova voce (i «cambiati» locali delle fortificazioni sono deriva di rasterizzazione, non toccati).
+- **QA:** `qa/civic-annex-regression.cjs` (raggio, lotti, tetto 2, orti distrutti) e `qa/labor-jobs-regression.cjs` (resa in allarme) verdi in locale; CI da leggere sulla PR.
+
+## 2026-11-05 — Scale ai camminamenti BC-251105-01/02 (branch `feature/bc-scale`, NON MAIN)
+
+- **Scala lignea e scala lapidea** (`src/settlement-wall-stairs.js`, modelli Blender `tools/blender/build_wall_stairs.py` → `src/assets/wall-stair-models.js`): upgrade di un muro in pietra finito T2/T3 dall'ispettore (Scala al camminamento: Nessuna / Lignea 4 oro + 14 legno / Lapidea 8 oro + 22 pietra; lignea → lapidea è un upgrade, non il contrario; posizione Inizio/Centro/Fine). Rampa addossata alla faccia interna, ultimo gradino a filo del cammino di ronda; modello normalizzato a 1U di alzata e scalato su altezza reale (legno ~60°, pietra ~45°). Muro troppo corto → rifiutata. Stato salvato sul muro (`wallStair`).
+- **Figuranti**: la scala è un accesso della rete dei camminamenti (`ConquerWallWalk.stairs()`), quindi le truppe la usano per salire/scendere come le scale di torri e porte (`planLegs` in `settlement-combat.js`). Una breccia nella campata della scala la fa crollare; altrimenti resta sul tratto che la contiene, nello stesso punto.
+- **Render**: castle 3D / World 3D / Asset Lab via `bodyMesh` (`settlement-castle3d.js`); 2.5D in `drawAll` (solo se la faccia interna guarda la camera, con occlusione delle strutture davanti).
+- **Prove**: `qa/wall-stairs-regression.cjs` (in CI `Combat simulation and renderer regression`), `qa/wallwalk-regression.cjs`, `qa/keep-entrance-regression.cjs` passano in locale. Asset Lab: varianti `T2 H1 scala lignea` e `T2 H2 scala lapidea` in GALLERY + modelli `stairWood`/`stairStone` in catalogo; audit completo `node qa/asset-audit.mjs`: 1137 render, 0 errori, 122 avvisi (2 nuovi `cantiere-progressivo` sulle varianti con scala), fogli provini rivisti, baseline aggiornata. Scala lapidea in un unico colore pietra (richiesta utente 06/11).
+- **Limiti**: solo mura in pietra (palizzate escluse: niente corpo 3D castle); la salita delle truppe è l'interpolazione `climb` esistente, non un passo per gradino; i civili non usano la scala; nessuna collisione propria per la rampa (sta nell'ingombro del muro + 0,4U).
+
+06/11/2026 — Integrazione PR #175: riallineata a main b62d0b9 (#173/#174). Risolti conflitti preservando rampe, H4 e torre lignea. Corretto il test costiero intermittente: fixture con seedRand reale, prima assente (3 fallimenti su 20); nessuna modifica al runtime costiero.
+
+Sul branch `feature/wood-tower-h2` (BC-251105-06, **non in main**): torre lignea a telaio H2 (`woodStyle:'frameTower'`, `woodTowerSize/woodTowerLevel` in `settlement-core.js`, caricamento in `settlement-app-persistence.js`, altezza 3,78 in `structureHeight`, cutaway abilitato; ingresso rialzato del mastio abilitato in `settlement-keep-entrance.js` con soglia 1,28 e parti `door`/`doorRaised`/`frontMid` scelte in `settlement-wood3d.js`; la finestra del mastio ligneo cede il posto alla porta in `settlement-architecture.js`). Prove: `qa/wood3d-regression.cjs` esteso (chiave modello, tetto fisso, H2, parti del cutaway, altezza/ingombro) e `qa/keep-entrance-regression.cjs` (scala alla torre a telaio, soglia al P1) verdi; tutti i `qa/*.cjs` non di performance verdi; `qa/clay-material-regression.cjs` verde; `construction-performance` e `fire-collapse-cutaway-performance` falliscono in locale anche su main (ambiente). Lab: `castle:legno-telaio-h2` ispezionato in 3D, nel gioco, cantiere 25/50/75%, danno e cutaway; `node qa/asset-audit.mjs`: 0 falliti, baseline aggiornata dopo la revisione.
+
+## 2026-11-06 — Torre W2 × H4 (branch `feature/tower-w2-h4`, pre-merge)
+
+- **CODICE SU BRANCH, NON ANCORA MAIN (BC-251105-07):** `towerH4Allowed` in `settlement-core.js`: solo torre quadrata in pietra W2 (1,5U), indipendente (niente sottotorri), non lignea, non tonda né D/semitorre. Per queste `maxStructureLevel` = 4; tutte le altre torri e porte restano a H3. `structureHeight`/`towerLevelHeight`: quarto piano a 5,95 U (+0,12 del tier), circa 4,1:1 sulla base. `levelCostFactor` L4 = 3,35 (+45% su H3). Solai del cutaway, finestre, feritoie e stanze per piano usano già il numero di livelli: nessun caso speciale. Pulsante «4 levels (W2)» nel menu torri (`index.html`, `camp/index.html`); su torri non W2 il livello viene ridotto a H3 da `structureLevel`.
+- **QA:** nuova `qa/tower-h4-regression.cjs` PASS (W2 sì; W1/W3/W4, tonda, D, legno, sottotorre e porta no; +1,2 U; costo). PASS anche `keep-w4`, `gate-tower-entrance`, `oriented-towers`, `subtower-junctions`, `tower-roof-shape`, `tower-weapons`. Audit del Lab (`node qa/asset-audit.mjs`): 1139 render, 0 falliti; le 22 render nuove delle due varianti «Pietra quadrata W2 H4 merli/tetto» riviste (4 file di finestre, cutaway con 3 solai, crolli 1–3 piani) e aggiunte da sole alla baseline. I 412 «cambiati» riguardano asset non toccati (sezioni costruite, infermeria, palizzata; distanze ≤0,04): deriva preesistente, baseline non rigenerata per loro. Avviso cantiere 25/50/75 identico come per tutte le torri in pietra.
+- **Non verificato:** assedio a quota H4 (scale d'assalto, gittata e visuale dalla cima, crollo dei piani in battaglia), posa in partita col mouse, World 3D in gioco, CI della PR.
+
+## 2026-11-05 — Piazza di stoccaggio iniziale e recupero produzione legname (branch `feature/founding-storage-yard-20261105`, pre-merge)
+
+- **CODICE SU BRANCH, NON ANCORA MAIN:** nuovo edificio `storageYard` («Piazzale · Magazzino»), terreno aperto 2×2U, spawn alla fondazione entro **7U dal primo pozzo** tramite stesso controllo terreno/vegetazione/ingombri del Builder; altra costruzione piazzale disponibile in paletta Produzione. Espansioni 2→4→6U, con costo reale e controllo collisioni.
+- **SCORTE:** il piazzale non contiene un duplicato persistente delle risorse: espone `ConquerEconomy.state().castle` (scorte iniziali e raccolti). Capienza base 600 unità astratte; espansioni 2400/5400. L'ultimo piazzale con beni non è eliminabile. Ricaricamento di vecchi salvataggi con villaggio fondato genera il piazzale mancante dopo il caricamento del terreno; non ripete la carta fondativa.
+- **LOGGING:** con piazzale attivo viene riservato almeno un L1 al taglialegna anche con cantieri che altrimenti esaurirebbero tutti i lavoratori; senza piazzale resta valida la vecchia priorità costruzioni. La carta iniziale assegna 200 legname ma l'obiettivo di riserva era solo 70; la metà trattenuta della produzione del Logging Camp finiva nel mercato e il deposito del castello non cresceva. Ora la quota non venduta viene accumulata nel piazzale fino a capienza, con eccedenza instradata a mercato; nessuna creazione di stock per il solo spawn. I lavoratori L1 e le giornate lavorative restano quelli dell'economia esistente.
+- **VISUAL:** base e cataste in Canvas 2D e World3D, pannello di selezione con inventario e comando di ampliamento. Stesse tre mesh procedurali 2×2/4×4/6×6 pubblicate nell'Asset Lab (categoria Produzione) e verificabili con il QA dell'Asset Lab.
+- **QA:** aggiunta `qa/storage-yard-regression.cjs` e collegata a `Economy flows regression`; esiti reali da verificare su Actions. Limitazione: niente trasporto individuale fisico delle merci, deposito visualmente aggregato.
+
+
+## 2026-11-05 — Rimozione foresta L1 e costo taglialegna (branch `fix/forestry-l1-clearing-cost-20261105`, pre-merge)
+
+- **CODICE SU BRANCH, NON ANCORA SU MAIN:** il capanno del taglialegna richiede 5 legname anziché 25 (35 oro invariati); UI e spesa effettiva condividono `ConquerIndustries.definition().cost`.
+- **Terraforming:** comando «Rimuovi foresta» con forme quadrata/rotonda e raggio 2/4/6; il clic mette in coda un job persistente `State.relief.forestryJobs` senza mutare gli alberi. Fino a 3 lavoratori L1 finanziati per job, esclusi quelli assegnati ai cantieri; il bosco si libera e il legname va al magazzino del signore solo al completamento. Resa iniziale 2,5 unità di legname per U² di foresta, lavoro 0,7 giornate operaio per U². Test dedicato `qa/forestry-regression.cjs` e job nella CI Economy flows; risultati della CI da leggere dal run della PR, non presunti.
+- **LIMITI:** nessuna rigenerazione forestale, nessuna animazione dedicata di abbattimento; il job apre una radura con poligono e aggiorna rendering e navigazione. Nessuna modifica al terraforming standard immediato.
+
+
 Sul branch `fix/audit-sheet-grid` i fogli provini dell'audit per categoria dispongono gli asset in una griglia da 8 colonne (prima: un asset per riga e 7 celle vuote). Le celle vuote hanno uno sfondo neutro, non più verde. `node qa/asset-audit.mjs` in locale: 1081 render, 0 falliti, 120 avvisi, 52 nuovi, 36 cambiati: stessi esiti della baseline, perché i render non cambiano. Fogli `araldica` e `fortificazioni-porte` rivisti a vista. Baseline invariata.
 
+## Merlature doppie BC-251105-04 (branch `feature/double-crenel`, da `main` b1a2307, 05/11/2026, NON MAIN)
+
+- Implementato: due nuovi stili in `CRENEL_STYLES`, scelti dal Centro di controllo › Cantieri › «Stile delle merlature».
+  - `double` «Merlo doppio» (BC-251105-04): sulle mura ogni merlo è lungo il doppio (.56) e il vuoto è largo quanto un merlo semplice (.28). La sequenza è 11011011 invece di 1010101; nei vuoti resta il parapetto. I merli d'estremità sono accorciati per restare sul muro. Costo: 2 pietra + 1 oro per merlo.
+  - `tworow` «Doppia fila»: è la prima interpretazione, conservata su richiesta. Aggiunge una seconda fila di merli piatti (h .20) con parapetto sul bordo interno del cammino di ronda. Costo: 1 pietra + 1 oro per merlo.
+  - Torri e porte restano a merli piatti con entrambi gli stili. Il preventivo conta i merli come costruiti nello stile di arrivo.
+  - Lab: quattro varianti di muro «merlo doppio» / «doppia fila». Usano l'override `labCrenelStyle` della variante, non la policy.
+- Provato: `qa/battlement-parapet-regression.cjs` 7/7. Audit locale: 1150 render, 0 falliti, 124 avvisi (i nuovi sono il già noto «cantiere-progressivo» dei muri), 36 nuovi, 0 cambiati. Merlo doppio rivisto a vista nel Lab e baseline aggiornata.
+- Non provato:
+  - una partita reale con il cambio pagato;
+  - mura su pendio con questi stili (passano per lo stesso adattamento ai gradini, non verificato a vista);
+  - merlo doppio su torri e porte (non esteso);
+  - world3d a pieno schermo.
+
+
+## 2026-11-06 — Rampe e scalinate sui dislivelli (branch `feature/ramps-stairs`, BC-251105-12/13, NON MAIN)
+
+- **Nuovo modulo** `src/settlement-slopeways.js` (`type:'ramp'` / `'stairway'`), menu Infrastrutture e gruppo «Fossati, ponti e rampe»: due clic, attacco sul pianoro basso e sul pianoro alto. **Rampa** 2U, pendenza max 1:4, sviluppo 2–16U, pedoni e carri. **Scalinata** 1U, pendenza 1:4–1:1 (45°), sviluppo 1–10U, solo pedoni. Le due quote sono rilevate sul terreno reale (`terrainPlateauElevation`, livelli delle colline e terrazzamenti), dislivello minimo 0,4U; il piano di calpestio va in linea retta tra le due quote e il terreno non può mai sovrastarlo (argine/rilevato addossato al pendio, niente trincee nascoste). Niente acqua né bosco; strade possono attestarsi alle estremità (`bridgeRoadEnd`/`roadMeetsBridgeEnd`).
+- **Pathfinding**: una rampa/scalinata finita è un attraversamento della scarpata come un ponte (`ConquerCrossings.onOpenBridge`, quindi `pointBlockedForPeasant`, `segmentCanCrossCliff`, rotte militari); i fianchi rialzati bloccano i pedoni (si sale e si scende solo dalle estremità); in cantiere non è percorribile; velocità 0,85 (rampa) e 0,7 (gradini). Mezzi pesanti solo sulle rampe; **carri** solo sulle rampe, che entrano nel grafo stradale dei veicoli (`settlement-vehicles.js`); le scalinate mai. Il completamento invalida i percorsi in cache. Le figure stanno sul piano (`terrainElevation` aggiunge il piano delle rampe finite).
+- **Grafica**: pezzo parametrico (lunghezza e dislivello dipendono dal terreno, come impalcato di ponte e banchina, quindi non un modello Blender fisso): rampa con rilevato in pietra, piano in terra battuta con carreggiate lastricate, cordoli e parapetto dove l'argine è alto; scalinata con gradini da ~0,18U poggiati sul terreno e guance in pietra. 2.5D (`ConquerMesh3D`) e scena WebGL.
+- **Salvataggio**: quote `za/zb` salvate e normalizzate al caricamento.
+- **Test**: `qa/slopeways-regression.cjs` (validazione, navigazione a griglia sulla scarpata modello, pesanti, carri sul grafo stradale, registro Lab, agganci). Tutte le `qa/*-regression.cjs` in Node locale passano tranne `founding-regression` (timeout, fallisce anche su `main`); `bridge-road-magnet` aggiornato al nuovo raccordo.
+- **Asset Lab**: Territorio → «Rampe e scalinate» (`ConquerSlopewayModels`: rampa H1/H2, scalinata H1/H2 contro una scarpata modello). `node qa/asset-audit.mjs`: 1118 render, 0 falliti, 120 avvisi (preesistenti), 4 nuovi, 0 cambiati; foglio `territorio` rivisto; baseline aggiornata.
+- Non verificato: costruzione in una partita reale (cliccata a mano) e CI del branch.
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`, NON MAIN)
 
 - **Aggiornamento porto**: moli L4 e L12 (`reach`, i moli salvati prima restano L8); piazzamento solo costa + approdo nella whitezone, senza regole di terreno edificabile (pendenze, bosco, terreno irregolare ammessi; impalcato sopra il terreno più alto dell'approdo). Nuova **banchina in pietra** (`src/settlement-quay.js`, `type:'quay'`): 2U, due clic lungo la riva o in acqua, solo whitezone + contatto con il mare, lato mare fissato al piazzamento, bitte sul bordo; i moli si agganciano al bordo verso il mare (`onQuay`, impalcato a filo della banchina).

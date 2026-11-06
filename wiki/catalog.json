@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceDigest": "6508619ffbe7662010bfdb22a5eed48ebd04c5a709b8880372c0de6386ec9915",
+  "sourceDigest": "bf07c2c39218f40cf1cf6b5469ea20b08d628554295ba93a6ae93b075e69e822",
   "catalog": {
     "schemaVersion": 1,
     "categories": [
@@ -468,7 +468,7 @@
           "days": 3,
           "cost": {
             "gold": 35,
-            "wood": 25
+            "wood": 5
           }
         },
         "relations": [],
@@ -2999,6 +2999,60 @@
         }
       },
       {
+        "id": "room:mews",
+        "key": "mews",
+        "label": "Falconry",
+        "category": "room",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "FUNCTION_CATALOG/TOWNHALL_FUNCTION_CATALOG"
+        },
+        "properties": {
+          "catalogs": [
+            "castle"
+          ]
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:gate",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:built",
+            "kind": "candidate-host"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "ConquerSiege.allowed"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
         "id": "room:nobleRoom",
         "key": "nobleRoom",
         "label": "Noble chambers",
@@ -5092,6 +5146,68 @@
             {
               "kind": "parent",
               "id": "building:tavern",
+              "minimumLevel": 1,
+              "maximum": 2
+            }
+          ],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "sub-building:townhall.kitchenGarden",
+        "key": "kitchenGarden",
+        "label": "Kitchen garden",
+        "category": "sub-building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-civic-annexes.js",
+          "symbol": "CIVIC_ANNEX_CATALOG.townhall.kitchenGarden"
+        },
+        "properties": {
+          "label": "Kitchen garden",
+          "level": 1,
+          "w": 3,
+          "h": 2,
+          "max": 2,
+          "kind": "garden"
+        },
+        "relations": [
+          {
+            "id": "building:townhall",
+            "kind": "belongs-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "footprint",
+              "w": 3,
+              "h": 2
+            }
+          ],
+          "functional": [
+            {
+              "kind": "parent",
+              "id": "building:townhall",
               "minimumLevel": 1,
               "maximum": 2
             }
@@ -7717,7 +7833,7 @@
           "status": "known",
           "value": {
             "gold": 35,
-            "wood": 25
+            "wood": 5
           }
         },
         "time": {

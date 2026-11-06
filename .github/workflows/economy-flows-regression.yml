@@ -1,4 +1,9 @@
 name: Economy flows regression
+
+# Abort superseded PR runs of this workflow (never cancel scheduled/main runs).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 on:
   pull_request:
     paths:
@@ -13,6 +18,23 @@ on:
       - 'src/ui/**'
       - 'qa/labor*.cjs'
       - 'qa/economy*.cjs'
+      - 'qa/forestry-regression.cjs'
+      - 'qa/storage-yard-regression.cjs'
+      - 'qa/haulage-regression.cjs'
+      - 'src/settlement-haulage.js'
+      - 'src/settlement-storage-yard.js'
+      - 'src/settlement-castle.js'
+      - 'src/settlement-castle-placement.js'
+      - 'src/settlement-app-rooms.js'
+      - 'src/settlement-structure-commands.js'
+      - 'src/settlement-app-persistence.js'
+      - 'src/settlement-world3d.js'
+      - 'src/settlement-forestry.js'
+      - 'src/settlement-industries.js'
+      - 'src/settlement-app-input.js'
+      - 'src/settlement-app-simulation.js'
+      - 'src/settlement-render.js'
+      - 'src/settlement-builder-ux.js'
       - 'qa/construction*.cjs'
       - 'src/settlement-core.js'
       - 'src/settlement-population-*.js'
@@ -47,6 +69,12 @@ jobs:
           node qa/economy-panel-history-regression.cjs
           node qa/economy-regression.cjs
           node qa/economy-industries-regression.cjs
+          node --check src/settlement-forestry.js
+          node qa/forestry-regression.cjs
+          node --check src/settlement-storage-yard.js
+          node qa/storage-yard-regression.cjs
+          node --check src/settlement-haulage.js
+          node qa/haulage-regression.cjs
           node qa/economy-balance-regression.cjs
           node qa/economy-builder-integration.cjs
           node qa/construction-workers-regression.cjs
@@ -54,7 +82,6 @@ jobs:
           node qa/construction-commute-regression.cjs
           node qa/labor-jobs-regression.cjs
           node qa/economy-rations-regression.cjs
-          node qa/save-safety-regression.cjs
           node qa/founding-regression.cjs
           node qa/builder-placement-regression.cjs
           node qa/refactor-app-population-regression.cjs

@@ -109,6 +109,9 @@ const StructureCommands=(()=>{
     status(target.type==='built'?'Built wall skin: '+(target.skin==='arcade'?'porticato':'standard'):'Wall skin: '+target.skin);
     return true;
   }
+  // Wall-walk stair (BC-251105-01/02, settlement-wall-stairs.js): none / timber / masonry, and where.
+  function setWallStair(id,kind){const target=find(id),S=window.ConquerWallStairs;return !!target&&!!S&&S.setKind(target,kind)}
+  function setWallStairPos(id,pos){const target=find(id),S=window.ConquerWallStairs;return !!target&&!!S&&S.setPos(target,pos)}
   function toggleCutaway(id){
     const target=find(id);if(!cutawayEligible(target))return false;
     target.cutaway=!structureCutaway(target);
@@ -243,6 +246,16 @@ const StructureCommands=(()=>{
     window.ConquerSiege?.changeArchers(target.id,delta);return true;
   }
 
+  function setYardSize(id,targetSize){
+    const target=find(id),Y=window.ConquerStorageYard;
+    if(!Y?.is(target))return false;
+    const result=Y.grow(target,Number(targetSize));
+    if(!result.ok){status('Piazzale: '+result.reason);return false}
+    renderFunctionPanel();draw();
+    status('Piazzale ampliato a '+result.size+'×'+result.size+'U · '+costText(result.cost));
+    return true;
+  }
+
   // ---------- inspector descriptor ----------
   const choice=(key,cmd,options,current,extra={})=>({key,cmd,options:options.map(o=>({...o,active:o.value===current})),...extra});
   function describeStructure(id){
@@ -256,6 +269,16 @@ const StructureCommands=(()=>{
     if(underConstruction(s))d.building={progress:constructionProgress(s),days:remainingDays(s)};
     const cost=s.buildCost||constructionCost(s);
     d.cost=cost;
+    if(window.ConquerStorageYard?.is(s)){
+      const Y=window.ConquerStorageYard,stock=Y.stocks(),n=Y.size(s);
+      d.facts.push({key:'size',value:n+'×'+n+'U'},
+        {key:'storageCapacity',value:Y.capacity()+' unità'},
+        {key:'storedGoods',value:Y.used()+' unità'},
+        ...Object.entries(stock).filter(([,v])=>v>0).map(([key,value])=>({key,value})));
+      if(n<6)d.controls.push(choice('yardSize','setYardSize',[2,4,6].filter(v=>v>=n).map(v=>({
+        value:v,label:v+'×'+v+'U'})),n));
+      return d;
+    }
     if(industry){
       const spec=window.ConquerIndustries.definition?.(s)||window.ConquerIndustries.TYPES[s.type],econ=window.ConquerEconomy;
       const details=econ?.state()?.activities?.[s.id];
@@ -364,6 +387,12 @@ const StructureCommands=(()=>{
     if(s.type==='wall'){
       const narrow=wallTier(s)===1;
       d.controls.push(choice('skin','setSkin',[{value:'standard',word:'standard'},{value:'machicolation',word:'machicolation',disabled:narrow},{value:'hoarding',word:'hoarding'}],wallSkin(s)));
+      const WS=window.ConquerWallStairs;
+      if(WS&&!building){
+        const ok=WS.eligible(s),cur=WS.stair(s)?.kind||'none';
+        d.controls.push(choice('wallStair','setWallStair',[{value:'none',word:'none'},{value:'wood',word:'stairWood',disabled:!ok||cur==='stone'},{value:'stone',word:'stairStone',disabled:!ok}],cur));
+        if(cur!=='none')d.controls.push(choice('wallStairPos','setWallStairPos',Object.keys(WS.POSITIONS).map(v=>({value:v,word:'stairPos_'+v})),s.wallStair.pos||'middle'));
+      }
     }
     if(['wall','palisade','built'].includes(s.type))d.controls.push({key:'side',cmd:'flipSide',toggle:true});
     if(cutawayEligible(s))d.controls.push({key:'cutaway',cmd:'toggleCutaway',toggle:true,active:structureCutaway(s),disabled:building});
@@ -391,7 +420,7 @@ const StructureCommands=(()=>{
     return d;
   }
 
-  return{setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setGateRoof,setGateUpper,setSkin,toggleCutaway,stepCutawayFloor,flipSide,
-    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,
+  return{setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setGateRoof,setGateUpper,setSkin,setWallStair,setWallStairPos,toggleCutaway,stepCutawayFloor,flipSide,
+    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,
     describeStructure};
 })();
