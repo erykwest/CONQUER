@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## REG-MOUNTAIN-DENSITY — Massicci e taglio al bordo (06/11/2026)
+
+Richiesta: raddoppiare le montagne, farle intersecare e tagliarle al confine come le colline. Coppie di cime per settore/massiccio, non rilievi isolati con distanza minima. Conservare il cono originale, ritagliare impronta e facce al quadrato del mondo interpolando Z; chiudere i tagli con sezioni verticali. Stesso dato geometrico per i due renderer. Salvataggi conservati; applicazione alla generazione delle nuove mappe.
+
 ## REG-COAST-SHAPES — Morfologia costiera (06/11/2026)
 
 Richiesta utente: 1 lato mare produce golfi; 2 lati adiacenti un promontorio roccioso al loro angolo e golfi sui due fronti; 3 lati una penisola; 4 lati un’isola. Per due lati opposti non esiste un angolo comune: conservare due coste a golfo. Deformazione deterministica nelle fasce di blending, senza sommergere il centro terrestre o cambiare i corner diagonali puri. Le rocce del promontorio sono ostacoli reali. Mare non selezionabile nella regionale (chiarimento esplicito); laghi selezionabili.

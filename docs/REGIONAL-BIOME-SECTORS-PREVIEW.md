@@ -94,3 +94,9 @@ La demo `index.html?demo=mixed&seed=4242` combina Pianura centrale, Montagne a n
 QA browser selezione: `npx --yes --package @playwright/cli playwright-cli -s=sea-select run-code --filename=qa/regional-sea-selection.browser.js` con server locale 4193. Verifica eventi clic/Shift reali del DOM e conversione terra→mare. Demo: `index.html?demo=gulf&seed=4242`, `demo=headland`, `demo=peninsula`, `demo=island`.
 
 Minimappa: i fori dei poligoni acqua e bosco sono tracciati con riempimento evenodd, cosi isole e radure non vengono coperte. Verificato in Chromium con campioni pixel distinti su terra interna e mare esterno.
+
+## Massicci raddoppiati — 06/11/2026
+
+06/11/2026 — REG-MOUNTAIN-DENSITY (branch, non main): raddoppiate le cime principali dei settori montuosi con coppie intersecate (Montagne 8–14, Valle 6–10) e mantenute le secondarie proporzionali. Limitrofi: seconda cima per ogni massiccio accettato, base annidata e apice sfalsato; fascia esterna portata al bordo. Non si scartano piu i rilievi che oltrepassano il mondo: impronta collisioni ritagliata e facce roccia/neve tagliate in XYZ con sezioni verticali, condivise da 2D e World3D. Outline originale conservato per quote dei pini. QA densita/intersezioni/tagli/determinismo PASS; demo seed 4242: centrali 4→8 principali, limitrofi 9→18. Audit Territorio: 12 render, zero errori/cambiamenti, cinque avvisi di schemi illustrativi; confronto montano reale eseguito nella demo.
+
+Test dedicato: `node qa/mountain-density-regression.cjs`, collegato alla CI Sea and pier. La preview `index.html?demo=mountains&seed=4242` mostra 8 cime principali e 16 secondarie. Nel fronte misto i 9 massicci nord hanno 18 apici intersecati.

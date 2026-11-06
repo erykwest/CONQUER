@@ -17,6 +17,7 @@ on:
       - 'src/settlement-world.js'
       - 'qa/pier-regression.cjs'
       - 'qa/biome-recipes-regression.cjs'
+      - 'qa/mountain-density-regression.cjs'
       - 'src/settlement-regional-landscape.js'
       - 'src/regional-biome-rules.js'
       - 'qa/regional-surroundings-regression.cjs'
@@ -37,6 +38,7 @@ jobs:
       - name: Run sea coverage and pier regressions
         run: |
           node qa/biome-recipes-regression.cjs
+          node qa/mountain-density-regression.cjs
           node qa/regional-surroundings-regression.cjs
           node qa/regional-demo-regression.cjs
           node qa/pier-regression.cjs

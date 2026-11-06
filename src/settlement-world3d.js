@@ -402,15 +402,14 @@
     const m=meshBuilder();
     for(const f of State.environment||[]){
       if(f.type!=='mountain'||!(f.points?.length>=3))continue;
-      const apex={x:f.x,y:f.y,z:f.height||MOUNTAIN_HEIGHT};
       // Rock up to the snow line (75% of the height), snow cap above it.
       // Map-wide snow line (75% of the tallest summit): lower peaks may stay bare.
-      const k=typeof mountainSnowZ==='function'?Math.min(1,mountainSnowZ()/apex.z):1,s=p=>({x:f.x+(p.x-f.x)*(1-k),y:f.y+(p.y-f.y)*(1-k),z:apex.z*k});
-      for(let i=0;i<f.points.length;i++){
-        const a=f.points[i],b=f.points[(i+1)%f.points.length];
+      for(const q of mountainFacetPolygons(f,f.height||MOUNTAIN_HEIGHT)){
+        const {i,a,b}=q;
         const rock=typeof mountainFaceColor==='function'?mountainFaceColor(f,a,b,i):MOUNTAIN_FACES[i%2];
-        m.face([{x:a.x,y:a.y,z:0},{x:b.x,y:b.y,z:0},s(b),s(a)],rock);
-        if(k<1)m.face([s(a),s(b),apex],mountainSnowColor(f,a,b,i));
+        m.face(q.rock,rock);
+        if(q.snow.length)m.face(q.snow,mountainSnowColor(f,a,b,i));
+        for(const cut of q.cuts)m.face(cut,'#514a40');
       }
     }
     return new Float32Array(m.tris);

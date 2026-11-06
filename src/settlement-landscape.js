@@ -346,9 +346,9 @@ function mountainSnowColor(f,a,b,i){
 }
 // Cone surface height at p: linear from the base outline (0) to the apex (f.height).
 function mountainFacet(f,p){
-  const a=Math.atan2(p.y-f.y,p.x-f.x),n=f.points.length;
+  const outline=f.unclippedPoints||f.points,a=Math.atan2(p.y-f.y,p.x-f.x),n=outline.length;
   for(let i=0;i<n;i++){
-    const A=f.points[i],B=f.points[(i+1)%n];
+    const A=outline[i],B=outline[(i+1)%n];
     const aa=Math.atan2(A.y-f.y,A.x-f.x),ab=Math.atan2(B.y-f.y,B.x-f.x);
     let span=ab-aa;while(span<=-Math.PI)span+=2*Math.PI;while(span>Math.PI)span-=2*Math.PI;
     let d=a-aa;while(d<=-Math.PI)d+=2*Math.PI;while(d>Math.PI)d-=2*Math.PI;
@@ -357,7 +357,7 @@ function mountainFacet(f,p){
   return 0;
 }
 function mountainSurfaceZ(f,p){
-  const i=mountainFacet(f,p),A=f.points[i],B=f.points[(i+1)%f.points.length];
+  const outline=f.unclippedPoints||f.points,i=mountainFacet(f,p),A=outline[i],B=outline[(i+1)%outline.length];
   // Ray from the centre through p meets edge AB at the base: z falls linearly to it.
   const dx=p.x-f.x,dy=p.y-f.y,ex=B.x-A.x,ey=B.y-A.y,den=dx*ey-dy*ex;
   if(Math.abs(den)<1e-9)return 0;
@@ -413,17 +413,31 @@ function drawMountainPine(t){
   const h=Math.max(8,U*State.view.scale*2.4*t.scale),w=h*.75;
   ctx.drawImage(img,base.x-w/2,base.y-h*.97,w,h);
 }
+function mountainFacetPolygons(f,height=f.height||3.6){
+  const base=f.unclippedPoints||f.points,apex={x:f.x,y:f.y,z:height},faces=[];
+  const k=Math.min(1,mountainSnowZ()/height),at=p=>({x:f.x+(p.x-f.x)*(1-k),y:f.y+(p.y-f.y)*(1-k),z:height*k});
+  for(let i=0;i<base.length;i++){
+    const a={...base[i],z:0},b={...base[(i+1)%base.length],z:0},sa=at(a),sb=at(b);
+    const full=clipTerrainPolygon([a,b,apex]),cuts=[];
+    for(let j=0;j<full.length;j++){
+      const u=full[j],v=full[(j+1)%full.length];
+      const onBorder=(Math.abs(u.x-v.x)<1e-7&&(Math.abs(u.x)<1e-7||Math.abs(u.x-WORLD)<1e-7))||(Math.abs(u.y-v.y)<1e-7&&(Math.abs(u.y)<1e-7||Math.abs(u.y-WORLD)<1e-7));
+      if(onBorder&&Math.max(u.z,v.z)>1e-6)cuts.push([u,v,{...v,z:0},{...u,z:0}]);
+    }
+    faces.push({i,a,b,rock:clipTerrainPolygon(k<1?[a,b,sb,sa]:[a,b,apex]),snow:k<1?clipTerrainPolygon([sa,sb,apex]):[],cuts});
+  }
+  return faces;
+}
 function drawRaisedFan(f,height){
-  const base=f.points,center={x:f.x,y:f.y},top=w2s(center,height),faces=[];
+  const faces=[];
   const plan=typeof isPlanView==='function'&&isPlanView(),pines=f.height?mountainPineLayout(f):[];
   // Fraction of this peak's height where the map-wide snow line falls (1 = no snow).
-  const k=Math.min(1,mountainSnowZ()/height);
-  for(let i=0;i<base.length;i++){
-    const j=(i+1)%base.length,a=w2s(base[i]),b=w2s(base[j]);
-    const sa=w2s({x:f.x+(base[i].x-f.x)*(1-k),y:f.y+(base[i].y-f.y)*(1-k)},height*k);
-    const sb=w2s({x:f.x+(base[j].x-f.x)*(1-k),y:f.y+(base[j].y-f.y)*(1-k)},height*k);
-    faces.push({rock:k<1?[a,b,sb,sa]:[a,b,top],snow:k<1?[sa,sb,top]:null,depth:(a.y+b.y)/2,i,
-      color:mountainFaceColor(f,base[i],base[j],i),snowColor:mountainSnowColor(f,base[i],base[j],i)});
+  const project=poly=>poly.map(p=>w2sRaw(p,p.z));
+  for(const q of mountainFacetPolygons(f,height)){
+    const {i,a,b}=q,pa=w2s(a),pb=w2s(b);
+    faces.push({rock:project(q.rock),snow:q.snow.length?project(q.snow):null,depth:(pa.y+pb.y)/2,i,
+      color:mountainFaceColor(f,a,b,i),snowColor:mountainSnowColor(f,a,b,i)});
+    for(const cut of q.cuts)faces.push({rock:project(cut),snow:null,depth:project(cut).reduce((s,p)=>s+p.y,0)/4,i:-1,color:'#514a40'});
   }
   faces.sort((a,b)=>a.depth-b.depth);
   // Pines go with their facet, so nearer facets (and their pines) cover farther ones.

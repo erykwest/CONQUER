@@ -19,6 +19,9 @@ run(moduleFile('regional-landscape'));
 function generate(biomes){run('window.__CONQUER_REGIONAL_DEMO__={surroundingBiomes:'+JSON.stringify(biomes)+'};State.seed=4242;State.biome="plains";State.environment=[];State.relief=null;State.structures=[];generateRelief();generateEnvironment()')}
 generate(neighbors);
 assert.equal(run('window.ConquerRegionalLandscape.active()'),true);
+assert.equal(run('State.environment.filter(f=>f.id.startsWith("regional-peak-")&&f.id.endsWith("-pair")).length*2'),run('State.environment.filter(f=>f.id.startsWith("regional-peak-")).length'),'regional peaks doubled exactly');
+assert.ok(run('State.environment.filter(f=>f.id.startsWith("regional-peak-")).flatMap(f=>mountainFacetPolygons(f)).some(f=>f.cuts.length)'),'regional mountains are cut at the world edge');
+assert.ok(run('State.environment.filter(f=>f.id.endsWith("-pair")).every(f=>{const main=State.environment.find(m=>m.id===f.id.slice(0,-5));return main&&polygonsOverlapSimple(f.points,main.points)})'),'regional peak pairs intersect');
 assert.equal(run('State.environment.some(f=>f.type==="sea"&&environmentContains(f,{x:100,y:190}))'),true,'south is real water');
 assert.equal(run('State.environment.some(f=>f.type==="sea"&&environmentContains(f,{x:190,y:190}))'),false,'land diagonal overrides two adjacent sea sides');
 assert.ok(run('State.environment.some(f=>f.type==="mountain"&&f.regional!==false)'),'neighbour mountains have real meshes');

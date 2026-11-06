@@ -12,10 +12,10 @@ const SEEDS=[12345,4242,229,777,90210,31337];
 const EXPECT={
   plains:{hills:[0,0],forests:[0,1],mountains:[0,0],water:['stream',null]},
   hills:{hills:[2,4],forests:[0,1],mountains:[0,0],water:[null]},
-  valley:{hills:[0,0],forests:[0,0],mountains:[3,5],water:['stream']},
+  valley:{hills:[0,0],forests:[0,0],mountains:[6,10],water:['stream']},
   river:{hills:[0,1],forests:[0,2],mountains:[0,0],water:['river']},
   forest:{hills:[0,0],forests:[1,1],mountains:[0,0],water:['stream'],ponds:1,continuous:true},
-  mountains:{hills:[1,60],forests:[0,0],mountains:[4,7],water:['stream'],hillCoverage:.30},
+  mountains:{hills:[1,60],forests:[0,0],mountains:[8,14],water:['stream'],hillCoverage:.30},
   sea:{hills:[0,0],forests:[0,1],mountains:[0,0],water:[null],sea:true}
 };
 for(const [biome,e] of Object.entries(EXPECT))for(const seed of SEEDS){

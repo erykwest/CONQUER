@@ -103,7 +103,8 @@
     const forests=base.filter(f=>f.type==='forest'),centralSea=base.filter(f=>f.type==='sea'),centralPonds=base.filter(f=>f.type==='pond');
     const lines=base.filter(f=>f.type==='river'||f.type==='stream');
     const mountains=base.filter(f=>f.type==='mountain').map(f=>({...f,id:'regional-center-'+f.id,
-      x:50+f.x/2,y:50+f.y/2,rx:f.rx/2,ry:f.ry/2,height:f.height/2,points:f.points.map(p=>({x:50+p.x/2,y:50+p.y/2}))}));
+      x:50+f.x/2,y:50+f.y/2,rx:f.rx/2,ry:f.ry/2,height:f.height/2,
+      unclippedPoints:(f.unclippedPoints||f.points).map(p=>({x:50+p.x/2,y:50+p.y/2})),points:f.points.map(p=>({x:50+p.x/2,y:50+p.y/2}))}));
     const n=100,seaMask=new Uint8Array(n*n),pondMask=new Uint8Array(n*n),forestMask=new Uint8Array(n*n);
     const samples=[];
     for(let y=0;y<n;y++)for(let x=0;x<n;x++){
@@ -148,12 +149,36 @@
       }
     }
     // Real peaks in the neighbouring mountain sectors. They never intrude into the central biome.
+    const regionalPeaks=[];
     for(let y=12;y<200;y+=22)for(let x=12;x<200;x+=22){
-      const p={x:x+(rnd()-.5)*5,y:y+(rnd()-.5)*5},w=weights(p);
+      const p={x:(x<20?6:x>180?194:x)+(rnd()-.5)*5,y:(y<20?6:y>180?194:y)+(rnd()-.5)*5},w=weights(p);
       if(p.x>=50&&p.x<=150&&p.y>=50&&p.y<=150||(w.mountains||0)<.65||blocked(p))continue;
       const peak=makeEnvBlob(rnd,'mountain',p.x,p.y,7+rnd()*4,7+rnd()*4,'#56493c','#968470',18,.1);
-      if(peak.points.some(q=>q.x<0||q.y<0||q.x>200||q.y>200||(weights(q).mountains||0)<.08||blocked(q)))continue;
-      peak.id='regional-peak-'+key+'-'+mountains.length;peak.slopeDeg=40+rnd()*20;peak.height=Math.sqrt(peak.rx*peak.ry)*Math.tan(peak.slopeDeg*Math.PI/180);mountains.push(peak);
+      peak.unclippedPoints=peak.points;
+      peak.points=clipTerrainPolygon(peak.points).map(q=>({x:q.x,y:q.y}));
+      if(peak.points.length<3||peak.points.some(q=>(weights(q).mountains||0)<.08||blocked(q)))continue;
+      peak.id='regional-peak-'+key+'-'+mountains.length;peak.slopeDeg=40+rnd()*20;peak.height=Math.sqrt(peak.rx*peak.ry)*Math.tan(peak.slopeDeg*Math.PI/180);mountains.push(peak);regionalPeaks.push(peak);
+    }
+    for(const peak of regionalPeaks){
+      const pairRnd=seedRand((State.seed^biomeHash(peak.id+':pair'))>>>0),a=pairRnd()*Math.PI*2;
+      // Separate summits with intersecting flanks; try different bearings to keep
+      // water and the central biome clear. A nested footprint is the tight-space fallback.
+      let twin=null;
+      for(let j=0;j<8;j++){
+        const angle=a+j*Math.PI/4,dx=Math.cos(angle)*9,dy=Math.sin(angle)*9;
+        const p={x:peak.x+dx,y:peak.y+dy};
+        if(p.x<0||p.x>200||p.y<0||p.y>200||p.x>=50&&p.x<=150&&p.y>=50&&p.y<=150||blocked(p)||(weights(p).mountains||0)<.5)continue;
+        const raw=peak.unclippedPoints.map(q=>({x:peak.x+(q.x-peak.x)*.98+dx,y:peak.y+(q.y-peak.y)*.98+dy}));
+        const points=clipTerrainPolygon(raw).map(q=>({x:q.x,y:q.y}));
+        if(points.length<3||points.some(q=>blocked(q)||(weights(q).mountains||0)<.08))continue;
+        twin={...peak,x:p.x,y:p.y,unclippedPoints:raw,points};break;
+      }
+      if(!twin){
+        const raw=peak.unclippedPoints.map(p=>({x:peak.x+(p.x-peak.x)*.98,y:peak.y+(p.y-peak.y)*.98}));
+        twin={...peak,x:clamp(peak.x+Math.cos(a)*4,.1,199.9),y:clamp(peak.y+Math.sin(a)*4,.1,199.9),unclippedPoints:raw,points:clipTerrainPolygon(raw).map(p=>({x:p.x,y:p.y}))};
+      }
+      twin.id=peak.id+'-pair';twin.height=peak.height*(.9+pairRnd()*.2);
+      mountains.push(twin);
     }
     const dryMountains=mountains.filter(f=>!blocked({x:f.x,y:f.y})&&!f.points.some(blocked));
     State.relief.hills=State.relief.hills.filter(h=>!reliefHillFootprint(h).some(blocked));clearReliefBandCache();

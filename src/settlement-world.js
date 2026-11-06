@@ -1340,17 +1340,18 @@ function biomeMountains(){
     if(fullSide)continue;
     const clip=m=>{
       // Perimeter mountains are cut at the map edge rather than spilling past it.
+      m.unclippedPoints=m.points;
       if(typeof clipTerrainPolygon==='function')m.points=clipTerrainPolygon(m.points).map(p=>({x:p.x,y:p.y}));
       return m;
     };
-    const peaks=chosen.map(cell=>{
-      const x=(cell.c+.5)*cw,y=(cell.r+.5)*cw;
+    const peaks=chosen.flatMap(cell=>Array.from({length:2},(_,pair)=>{
+      const x=(cell.c+.5)*cw+(pair?cw*.22:-cw*.12),y=(cell.r+.5)*cw+(pair?-cw*.15:cw*.10);
       const m=makeEnvBlob(rnd,'mountain',x,y,cw*biomeRand(rnd,.52,.60),cw*biomeRand(rnd,.54,.62),'#56493c','#968470',24,.11);
       // Steep peaks: apex height about the base radius. In this isometric view a cone below
       // ~0.6 height/radius keeps its apex inside the base outline and reads as flat.
       m.height=Math.sqrt(m.rx*m.ry)*biomeRand(rnd,MOUNTAIN_STEEPNESS[0],MOUNTAIN_STEEPNESS[1]);
       m.mapSector={row:cell.r,col:cell.c};return clip(m);
-    });
+    }));
     // Secondary summits: about twice as many as the main peaks, 50-75% of their height,
     // clustered on their flanks so the chain reads as a massif.
     const subCount=Math.max(peaks.length,peaks.length*2+Math.floor(rnd()*3)-1),subs=[];

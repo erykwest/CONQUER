@@ -1,7 +1,7 @@
 {
  "version": 1,
- "generatedAt": "2026-11-05T09:42:50.040Z",
- "note": "Reviewed Asset Lab renders. Regenerate with: node qa/asset-audit.mjs --update-baseline",
+ "generatedAt": "2026-11-06T15:20:32.968Z",
+ "note": "Reviewed Asset Lab renders. Latest partial review: Territorio, 12 unchanged renders, 2026-11-06. Regenerate with: node qa/asset-audit.mjs --update-baseline",
  "waivers": {},
  "entries": {
   "file:src/assets/animals/capra_estesa.svg|": {
