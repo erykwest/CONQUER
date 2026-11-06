@@ -139,7 +139,7 @@
     const perVehicle=c.vehicles>1?Math.ceil((c.qty||0)/c.vehicles):(c.qty||0);
     const coat=COATS[(i*2+(c.seed||0))%COATS.length];
     return{chassis:k.chassis,team:Array.from({length:k.team},(_,h)=>({coat:h?COATS[(i*2+1+(c.seed||0))%4]:coat})),
-      cargo:c.vehicle==='coach'?[]:cargoFor(c.good,perVehicle,cap,c.vehicle==='cart'?4:6)};
+      cargo:c.emptyReturn||c.vehicle==='coach'?[]:cargoFor(c.good,perVehicle,cap,c.vehicle==='cart'?4:6)};
   }
   const ground=p=>typeof terrainElevation==='function'?terrainElevation(p):0;
   // Everything one convoy shows this frame: vehicles, drivers and escorts.
