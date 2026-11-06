@@ -64,7 +64,7 @@
 
 ### Torri
 - [ ] **BC-251105-05 — Inner roof delle torri.** Copertura interna delle torri; definire relazione con sommità, merli, cutaway e locali sottostanti.
-- [ ] **BC-251105-06 — Torre lignea H2 con frame.** Variante torre in legno alta H2 con telaio/orditura leggibile nel modello.
+- [x] **BC-251105-06 — Torre lignea H2 con frame.** Variante torre in legno alta H2 con telaio/orditura leggibile nel modello. **Implementata su `feature/wood-tower-h2` (PR, non ancora in main):** `woodStyle:'frameTower'`, 1,5×1,5U, H2 fisso, sempre coperta; piano terra chiuso in tronchi, telaio controventato a vista solo al P1; modello Blender `frameTower` in `build_wood_fort.py`, cantiere, cutaway (lati verso la camera, solaio e scale interne) e Lab (`castle:legno-telaio-h2`, `castle:legno-telaio-h2-mastio-rialzato`). Compatibile con l'**ingresso rialzato del mastio**: unica torre lignea ammessa da `settlement-keep-entrance.js`; soglia al P1 (1,28), porta del P1 sul fronte (+x) al posto del montante centrale, nessuna porta a terra.
 - [x] **BC-251105-07 — Torre W2 × H4.** **[SU BRANCH `feature/tower-w2-h4`, non main]** Valutata e approvata dall'utente (06/11): quarto piano solo per la torre quadrata in pietra W2 (1,5U) indipendente; niente legno, tonde, D/semitorri, sottotorri, porte; W1/W3/W4 restano a H3 al massimo. Altezza 5,95+0,12 U (≈4,1:1 sulla base), costo ×3,35 rispetto a L1 (+45% su H3), una stanza NORMAL per piano come le altre W2. **Residui:** assedio (scale d'assalto contro quota H4, gittata/visuale dalla cima, crollo dei piani) non ribilanciato; il pulsante «4 levels» su torri non W2 viene ridotto a H3 senza avviso.
 
 ### Coperture

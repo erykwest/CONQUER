@@ -817,6 +817,8 @@ function drawFacadeWindows(lit=false,nf=1,includeHouses=true){
           if(!s.isMastio||woodTowerStyle(s)==='watchtower')return;
           const edge=visibleFacadeEdges(s).find(e=>isInteriorFacadeEdge(s,e));
           if(!edge)return;
+          // The frame tower's P1 doorway (raised entrance) takes this window's place.
+          if(towerWindowGivesWayToDoor(s,edge,2))return;
           const z=Math.min(structureHeight(s)-.53,1.45),w=.40,h=.50;
           drawArchitectureAssetOnEdge(edge,z,w,h,'gothicL1',0,lit,nf);
           if(!lit)drawMastioWindowDrape(s,edge,z,w,h);

@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+06/11/2026 — Integrazione PR #175: riallineata a main b62d0b9 (#173/#174). Risolti conflitti preservando rampe, H4 e torre lignea. Corretto il test costiero intermittente: fixture con seedRand reale, prima assente (3 fallimenti su 20); nessuna modifica al runtime costiero.
+
+06/11/2026 — `feature/wood-tower-h2` (BC-251105-06): nuova **torre lignea a telaio H2** nel Builder (Torri › Legno › «Telaio H2»), 1,5×1,5U, sempre coperta. Modello Blender `frameTower` (`tools/blender/build_wood_fort.py`): piano terra chiuso in tronchi, P1 con telaio controventato a vista e tamponamenti chiari, ballatoio con parapetto, tetto a padiglione e bandiera. Se è il mastio accetta l'ingresso rialzato (scala lignea/lapidea e ponte levatoio) con porta al P1. Cantiere, cutaway e Lab inclusi. Costo 55 oro / 130 legno, 6,5 giorni. Piramide: STATUS, BACKLOG, feature-backlog. ROADMAP e DECISIONS invariate: è una variante di una famiglia esistente.
+
 06/11/2026 — `feature/tower-w2-h4` (pre-merge): BC-251105-07 valutata e approvata. La torre quadrata in pietra W2 indipendente sale fino a H4 (`towerH4Allowed`, `maxStructureLevel` 4): altezza 5,95 U più il tier, costo livello ×3,35. Pulsante «4 levels (W2)» nel menu torri, due varianti W2 H4 nell'Asset Lab, nuova `qa/tower-h4-regression.cjs`. STATUS, BACKLOG e feature-backlog aggiornati; ROADMAP e DECISIONS invariate (estensione di un limite, nessun contratto nuovo).
 
 

@@ -248,6 +248,7 @@ const KEEP_FLOOR_PLAN_DEFAULTS=Object.freeze(['three','quad','hall']);
 const COSTS={
   tower:[{gold:45,stone:55,wood:12},{gold:75,stone:95,wood:20},{gold:120,stone:155,wood:32},{gold:240,stone:330,wood:75}],
   woodTower:[{gold:18,wood:42},{gold:32,wood:78}],
+  frameTower:{gold:55,wood:130},
   wallPerU:{gold:6,stone:18,wood:2},
   palisadePerU:{gold:3,wood:12},
   builtPerU:{gold:12,stone:16,wood:18},
@@ -266,7 +267,7 @@ const COSTS={
 // Stone towers of the same tier, against the square one: curved masonry costs more, the open-
 // backed semitower half.
 const TOWER_SHAPE_COST=Object.freeze({square:1,round:1.5,dee:1.25,half:.5});
-const BUILD_DAYS={tower:[4,7,11,18],woodTower:[2.5,4],gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,townhall:8,guild:6,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,longhouseBase:1.2,longhousePerU:.8,road:1,house:2.2,field:1.5};
+const BUILD_DAYS={tower:[4,7,11,18],woodTower:[2.5,4],frameTower:6.5,gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,townhall:8,guild:6,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,longhouseBase:1.2,longhousePerU:.8,road:1,house:2.2,field:1.5};
 const GROWTH_INTERVAL_DAYS=2.5;
 // One simulated 24-hour day lasts 48 real seconds at 1×.
 // All time controls multiply this common rate (3× = 16 s/day; 10× = 4.8 s/day; 100× = 0.48 s/day).
@@ -457,10 +458,15 @@ function towerBaseStyle(s){
   return structureVariant(s,'baseStyle')||'standard';
 }
 function isWoodTower(s){return !!s&&s.type==='tower'&&s.material==='wood'}
-function woodTowerStyle(s){return isWoodTower(s)?(s.woodStyle==='watchtower'?'watchtower':'palisadeTower'):undefined}
+// Timber tower styles: watchtower (1 U, H1), palisade tower (1.5 U, H1) and the two-storey
+// frame tower (1.5 U, H2, BC-251105-06: braced post-and-beam frame, always roofed).
+const WOOD_TOWER_STYLES=Object.freeze(['watchtower','palisadeTower','frameTower']);
+function woodTowerStyle(s){return isWoodTower(s)?(WOOD_TOWER_STYLES.includes(s.woodStyle)?s.woodStyle:'palisadeTower'):undefined}
+function woodTowerSize(style){return style==='watchtower'?1:1.5}
+function woodTowerLevel(style){return style==='frameTower'?2:1}
 function woodTowerRoof(s){
   if(!isWoodTower(s))return undefined;
-  if(woodTowerStyle(s)==='watchtower')return'pitched';
+  if(woodTowerStyle(s)!=='palisadeTower')return'pitched';
   return s.woodRoof==='pitched'?'pitched':'open';
 }
 function isWoodGate(s){return !!s&&s.type==='gate'&&s.material==='wood'}
@@ -796,6 +802,7 @@ function scaleCost(cost,factor){return roundCost(Object.fromEntries(Object.entri
 function baseConstructionCost(s){
   if(!s||s.auto)return{};
   if(s.type==='tower'){
+    if(isWoodTower(s)&&s.woodStyle==='frameTower')return {...COSTS.frameTower};
     if(isWoodTower(s))return {...COSTS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))]};
     return scaleCost(COSTS.tower[towerTier(s)-1],levelCostFactor(s)*(TOWER_SHAPE_COST[s.shape]??1));
   }
@@ -856,6 +863,7 @@ function refundCost(cost){
 }
 function buildDuration(s){
   if(s.type==='tower'){
+    if(isWoodTower(s)&&s.woodStyle==='frameTower')return BUILD_DAYS.frameTower;
     if(isWoodTower(s))return BUILD_DAYS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))];
     return BUILD_DAYS.tower[towerTier(s)-1]*(.7+.3*structureLevel(s));
   }
