@@ -1,5 +1,13 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-06 — CI P1 orchestrazione browser e riduzione duplicati
+
+- **P1 · IMPLEMENTATO SU BRANCH `chore/ci-p1-browser-dedup-20261106`:** 25 concurrency group separate per workflow/PR; eliminati tre full deterministici ridondanti; Asset Lab unico proprietario dell'audit visuale, con scope per file; cinque installazioni Chromium unificate da composite + cache Playwright 1.56.1; WebGPU scope renderer + PR/manuale; rimosse copie del save-safety e guard contestuale.
+- **P1 · QA IN PR:** `qa/ci-p1-regression.cjs` e workflow GitHub da verificare; non cancellare i test QA, non ridurre runtime/economia/governance.
+- **P2 · APERTO:** misurare tempi e cache hit nel periodo successivo, valutare Playwright screenshot coverage end-to-end su navigazione multi-PR. Conservare esecuzione periodica P0 full.
+
+
+
 ## 2026-11-06 — Logistica locale visuale sui piazzali (branch `feature/local-production-haulage-20261106`)
 
 - **IN BRANCH / DA VERIFICARE:** animazione automatica dei carretti dai luoghi di produzione con quantità realmente trattenuta dal signore (taglialegna/cava/miniera/mulini, ove l'economia rilascia scorte, e bonifica forestale) fino a un piazzale connesso da strade finite. Scelto il piazzale più prossimo sulla rete viabile; carico → viaggio → scarico → ritorno vuoto, scorte contabilizzate solo dal ledger originale.

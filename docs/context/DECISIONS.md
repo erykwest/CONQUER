@@ -1,5 +1,14 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-CI-P1-261106 — Ottimizzare la CI senza diminuire la copertura (06/11/2026)
+
+- **DECISO, CODICE SU BRANCH `chore/ci-p1-browser-dedup-20261106`:** un solo owner per la suite completa `qa/*-regression.cjs` (P0) e uno per l'audit visuale `qa/asset-audit.mjs` (Asset Lab). Workflow specifici fanno controlli mirati; full P0 si attiva sulle modifiche ai componenti condivisi, inclusi world3d/castle3d.
+- **BROWSER:** una composite action installa Playwright 1.56.1 e Chromium con cache condivisa su Ubuntu 24.04; Asset Lab salta il job visuale solo se la modifica non influenza asset o modelli; WebGPU esegue smoke su renderer e fallback solo quando pertinente, manualmente o su PR.
+- **CANCELLAZIONE RUN:** annullare soltanto i job superseded nella stessa PR e nello stesso workflow; mantenere run su main, manuali, schedulati.
+- **VINCOLI:** test QA esistenti tutti presenti, Runtime integrity, Economy flows e Context pyramid guard preservati. ROADMAP gameplay invariata.
+
+
+
 ## D-HAULAGE-261106 — Carretti locali come visualizzazione della produzione, non secondo ledger (06/11/2026)
 
 - **DECISO SU BRANCH `feature/local-production-haulage-20261106`:** generare un viaggio locale soltanto dopo una produzione che il ledger ha effettivamente accreditato alle riserve del signore o dopo una bonifica forestale accreditata una sola volta. I carichi privati e le merci solo di mercato non producono un finto trasporto al magazzino.

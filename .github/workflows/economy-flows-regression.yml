@@ -1,4 +1,9 @@
 name: Economy flows regression
+
+# Abort superseded PR runs of this workflow (never cancel scheduled/main runs).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 on:
   pull_request:
     paths:
@@ -77,7 +82,6 @@ jobs:
           node qa/construction-commute-regression.cjs
           node qa/labor-jobs-regression.cjs
           node qa/economy-rations-regression.cjs
-          node qa/save-safety-regression.cjs
           node qa/founding-regression.cjs
           node qa/builder-placement-regression.cjs
           node qa/refactor-app-population-regression.cjs

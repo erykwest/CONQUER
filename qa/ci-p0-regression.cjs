@@ -20,7 +20,7 @@ for(const s of ['pull_request:','workflow_dispatch:','schedule:','settlement-qa:
 }
 assert.match(workflow,/github\.event_name == 'pull_request' && steps\.tier\.outputs\.full == 'false'/);
 assert.match(workflow,/if: steps\.tier\.outputs\.full == 'true'/);
-assert.match(workflow,/src\/settlement-\(core\|app\|app-simulation\|app-persistence\|world\|placement\|castle-placement\|population-navigation\)/);
+assert.match(workflow,/src\/settlement-\(core\|app\|app-simulation\|app-persistence\|world\|world3d\|castle3d\|placement\|castle-placement\|population-navigation\)/);
 const count=fs.readdirSync(path.join(root,'qa')).filter(f=>f.endsWith('-regression.cjs')).length;
 assert.ok(count>100,'the full suite must still include all original deterministic regressions');
 console.log('PASS CI P0: 11 obsolete workflows retired; core checks retained; selective PR and complete risk/scheduled suites present ('+count+' deterministic tests).');

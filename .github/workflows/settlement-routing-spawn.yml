@@ -1,5 +1,10 @@
 name: Settlement routing and spawn regression
 
+# Abort superseded PR runs of this workflow (never cancel scheduled/main runs).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 # The workflow/job identifiers are retained to avoid changing check names.
 # PRs run fast route/spawn checks; shared engine edits also run the complete
 # deterministic suite before merging. Weekly/manual runs always run everything.
@@ -26,6 +31,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Verify CI P1 orchestration contracts
+        run: node qa/ci-p1-regression.cjs
       - name: Determine validation tier
         id: tier
         shell: bash
@@ -48,7 +55,7 @@ jobs:
           cat "$RUNNER_TEMP/ci-pr-changed.txt"
           # Shared application state, world generation, persistence, navigation,
           # terrain/placement or app entrypoint modifications are high risk.
-          if grep -Eq '^(index\.html|src/settlement-(core|app|app-simulation|app-persistence|world|placement|castle-placement|population-navigation)\.js|\.github/workflows/settlement-routing-spawn\.yml|qa/ci-p0-regression\.cjs)$' "$RUNNER_TEMP/ci-pr-changed.txt"; then
+          if grep -Eq '^(index\.html|src/settlement-(core|app|app-simulation|app-persistence|world|world3d|castle3d|placement|castle-placement|population-navigation)\.js|\.github/workflows/settlement-routing-spawn\.yml|qa/ci-(p0|p1)-regression\.cjs)$' "$RUNNER_TEMP/ci-pr-changed.txt"; then
             echo 'full=true' >> "$GITHUB_OUTPUT"
             echo 'Shared-engine change: complete pre-merge regression suite'
           else

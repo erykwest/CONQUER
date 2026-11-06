@@ -1,10 +1,31 @@
 name: WebGPU branch smoke
 
+# Abort superseded PR runs of this workflow (never cancel scheduled/main runs).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 on:
   push:
-    branches:
-      - main
-      - webgpu
+    branches: [main]
+    paths:
+      - 'src/settlement-webgpu.js'
+      - 'src/settlement-render.js'
+      - 'src/settlement-world3d.js'
+      - 'src/settlement-mesh3d.js'
+      - 'qa/ui-combat-regression.mjs'
+      - '.github/workflows/webgpu-smoke.yml'
+      - '.github/actions/playwright-setup/action.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/settlement-webgpu.js'
+      - 'src/settlement-render.js'
+      - 'src/settlement-world3d.js'
+      - 'src/settlement-mesh3d.js'
+      - 'qa/ui-combat-regression.mjs'
+      - '.github/workflows/webgpu-smoke.yml'
+      - '.github/actions/playwright-setup/action.yml'
   workflow_dispatch:
 
 jobs:
@@ -13,24 +34,23 @@ jobs:
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
       - name: Start static server
         run: |
           python3 -m http.server 4173 >/tmp/conquer-webgpu-http.log 2>&1 &
           sleep 2
 
-      - name: Install Playwright
-        run: |
-          npm init -y >/dev/null 2>&1
-          npm install playwright@1.55.0 >/dev/null
-          npx playwright install --with-deps chromium >/dev/null
+      - name: Install cached Chromium and pinned Playwright
+        uses: ./.github/actions/playwright-setup
 
-      - name: Run deterministic gameplay regression suites
+      - name: Renderer-specific deterministic regressions
         run: |
-          for test in qa/*-regression.cjs; do
-            echo "Running $test"
-            node "$test"
-          done
+          node qa/webgl-error-poll-regression.cjs
+          node qa/paused-render-regression.cjs
+          node qa/occlusion-clip-regression.cjs
 
       - name: Verify Builder, industry and Combat browser integration
         run: node qa/ui-combat-regression.mjs
