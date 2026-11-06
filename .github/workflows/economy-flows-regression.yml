@@ -20,6 +20,8 @@ on:
       - 'qa/economy*.cjs'
       - 'qa/forestry-regression.cjs'
       - 'qa/storage-yard-regression.cjs'
+      - 'qa/haulage-regression.cjs'
+      - 'src/settlement-haulage.js'
       - 'src/settlement-storage-yard.js'
       - 'src/settlement-castle.js'
       - 'src/settlement-castle-placement.js'
@@ -71,6 +73,8 @@ jobs:
           node qa/forestry-regression.cjs
           node --check src/settlement-storage-yard.js
           node qa/storage-yard-regression.cjs
+          node --check src/settlement-haulage.js
+          node qa/haulage-regression.cjs
           node qa/economy-balance-regression.cjs
           node qa/economy-builder-integration.cjs
           node qa/construction-workers-regression.cjs

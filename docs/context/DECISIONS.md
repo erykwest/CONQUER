@@ -8,6 +8,14 @@
 - **VINCOLI:** test QA esistenti tutti presenti, Runtime integrity, Economy flows e Context pyramid guard preservati. ROADMAP gameplay invariata.
 
 
+
+## D-HAULAGE-261106 — Carretti locali come visualizzazione della produzione, non secondo ledger (06/11/2026)
+
+- **DECISO SU BRANCH `feature/local-production-haulage-20261106`:** generare un viaggio locale soltanto dopo una produzione che il ledger ha effettivamente accreditato alle riserve del signore o dopo una bonifica forestale accreditata una sola volta. I carichi privati e le merci solo di mercato non producono un finto trasporto al magazzino.
+- **COERENZA D-007 e D-046:** la logistica locale ordinaria resta contabilmente astratta; nessuna risorsa passa fisicamente di proprietà all'arrivo o può essere accreditata due volte. Si utilizzano i carretti 2D, cavalli 2D, conducenti e lo stesso pathfinding stradale dei convogli esistenti. Non aggiungere bestie o figurine 3D per sostituirli.
+- **PERCORSO E LIMITI:** servono segmenti viari completati vicino al produttore e al piazzale; verso il magazzino raggiungibile con tragitto migliore, andata carica e ritorno vuoto. Se non c'è continuità il carico resta per poco in coda visiva, senza impattare le scorte già iscritte. Limite massimo 4 mezzi attivi e 32 richieste in attesa. Pausa del gioco ferma anche i carri. Nessun trasferimento materiali sito-per-sito fra piazzali in questa fase.
+
+
 ## D-CI-P0-261106 — Separazione CI quotidiana e verifica integrale (06/11/2026)
 
 - **DECISO, IMPLEMENTATO SU BRANCH `chore/ci-p0-consolidation-20261106`:** mantenere i 163 script QA ma eliminare 11 workflow dei branch che non esistono più/cleanup monouso. Il full su tutte le PR è sostituito da controlli rapidi (per modifiche isolate) e suite completa nei PR con modifiche al motore comune, nelle esecuzioni manuali e settimanali. Il nome del job esistente viene preservato.

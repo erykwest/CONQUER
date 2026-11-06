@@ -8,6 +8,16 @@
 - **QA:** esiti live GitHub Actions da verificare prima del merge; nessun test esistente cancellato, documentazione `docs/CI.md` aggiornata.
 
 
+
+## 2026-11-06 — Consegne animate produzione → piazzali (branch `feature/local-production-haulage-20261106`, pre-merge)
+
+- **CODICE SU BRANCH, NON MAIN:** nuovo `ConquerHaulage` per viaggi locali automatici con carretti trainati dai cavalli usando `ConquerVehicles` e `ConquerWagons` 2D già presenti. Orchestrazione nel loop di simulazione e rendering Canvas anche sopra World3D; velocità sincronizzata alla simulazione e arresto in pausa.
+- **EVENTI REALI:** `ConquerEconomy.put` notifica solo le quantità effettivamente trattenute dal signore per il castello (`received>0`); `creditForestryWood` segnala la raccolta una tantum delle bonifiche forestali dal centro del lavoro. Non si crea una copia dello stock e nessun ricavo è aggiunto all'arrivo o alla partenza dei mezzi. Produzione privata e merci di solo mercato escluse.
+- **ITINERARI:** punto di carico sulla strada completata più vicina al produttore (≤3,5U), consegna al piazzale raggiungibile più vicino tramite viabilità effettiva (≤4U), scarico e viaggio di ritorno a carro vuoto. Senza strada continua nessuna partenza: richieste sospese temporaneamente senza teletrasporti. Al massimo 4 tragitti e 32 eventi pending, aggregazione per sito/merce, scadenza a 10 giorni simulati, cancellazione se sito o piazzale non esistono più.
+- **UI:** ispettore del Piazzale visualizza carretti attivi e carichi in attesa; non modifica il sistema di fatturazione. Asset Lab non necessita nuovi modelli perché la carrozzeria e il cavallo sono i componenti approvati già nel catalogo; conformità D-046 2D.
+- **QA:** `qa/haulage-regression.cjs` in Economy flows; verifica incasso singolo reale, percorso, scarico/ritorno vuoto, blocco strade incompiute, pausa, più magazzini, bonifiche, ripristino e assenza di duplicazioni. Verificare CI prima del merge.
+
+
 ## 2026-11-06 — CI P0: workflow obsoleti e suite deterministica selettiva (branch `chore/ci-p0-consolidation-20261106`, pre-merge)
 
 - **CODICE SU BRANCH, NON MAIN:** rimossi 11 workflow YAML associati a branch remote inesistenti o a un vecchio cleanup monouso. Conservati tutti i 163 script QA e relativi asset; cronologia Git disponibile per restore.

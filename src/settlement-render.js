@@ -450,6 +450,7 @@ function draw(){
   // preserving the existing occlusion behaviour.
   window.ConquerLivestock?.draw();
   drawPeasants();
+  window.ConquerHaulage?.draw?.(); // Loaded carts to stockyards, empty return on completed roads
   window.ConquerJoust?.draw();   // spectators, knights and squires on an active joust ground
   window.ConquerEventPeople?.draw();   // feast and circus: diners, sellers, players, queues
   window.ConquerCourtPeople?.draw();   // the tribunal in session in the town hall cutaway
