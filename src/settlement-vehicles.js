@@ -192,7 +192,7 @@
       if(it.e){drawEscort(c,it.e);continue}
       const v=it.v,scr=w2s(v,.15),a=w2sRaw(v,0),b=w2sRaw({x:v.x+Math.cos(v.heading),y:v.y+Math.sin(v.heading)},0);
       W2.drawWagon(ctx,scr.x,scr.y,size,{chassis:k.chassis,team:v.spec.team,
-        cargo:v.spec.cargo.length?v.spec.cargo:k.chassis==='carriage'?[]:['crate'],covered:false,
+        cargo:v.spec.cargo.length?v.spec.cargo:(k.chassis==='carriage'||c.emptyReturn)?[]:['crate'],covered:false,
         facing:b.x>=a.x?1:-1,moving:v.moving,t:v.s*.5,distance:v.s*(typeof U!=='undefined'?U:12)*(State.view.scale||1)});
       drawDriver(c,v);
     }
