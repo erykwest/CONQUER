@@ -51,7 +51,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
     <h3>Wooden towers</h3>
     <div class="grid"><button data-wood-tower="watchtower">Watchtower<br><span class="small">1×1 · H1</span></button><button data-wood-tower="palisadeTower">Wood tower<br><span class="small">1.5×1.5 · H1</span></button><button data-wood-tower="frameTower">Frame tower<br><span class="small">1.5×1.5 · H2</span></button></div>
     <h3>Tower height</h3>
-    <div class="grid3"><button data-tower-level="1" class="active">1 level</button><button data-tower-level="2">2 levels</button><button data-tower-level="3">3 levels</button></div>
+    <div class="grid"><button data-tower-level="1" class="active">1 level</button><button data-tower-level="2">2 levels</button><button data-tower-level="3">3 levels</button><button data-tower-level="4" title="Only the square stone W2 tower rises to 4 levels">4 levels (W2)</button></div>
     <h3>Linear castle</h3>
     <div class="grid3"><button data-linear="wall">Wall</button><button data-linear="palisade">Palisade</button><button data-linear="built">Built section</button><button data-linear="builtWide">Wide hall</button><button data-linear="longhouse">Longhouse<br><span class="small">W1 · wood · P0</span></button><button data-linear="longhouseWide">Wide longhouse<br><span class="small">W2 · wood · P0</span></button></div>
     <h3>Wall / palisade depth</h3>
@@ -73,6 +73,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <h3>Fossati</h3><div class="grid"><button data-crossing="dry">⛏ Asciutto</button><button data-crossing="water">💧 Allagato H0</button></div>
 <h3>Ponti</h3><div class="grid"><button data-crossing="wood">🪵 Legno</button><button data-crossing="stone">🪨 Pietra</button></div>
 <h3>Porto</h3><div class="grid"><button data-pier="4">⚓ Molo L4<br><span class="small">4U sul mare · 2 attracchi</span></button><button data-pier="12">⚓ Molo L12<br><span class="small">12U sul mare · 2 attracchi</span></button><button data-quay>🪨 Banchina<br><span class="small">2U · 2 clic · riva o acqua</span></button><button data-pier data-yard="1">🛠 Cantiere navale L1<br><span class="small">scalo 7U · navi piccole</span></button><button data-pier data-yard="2">🛠 Cantiere navale L2<br><span class="small">scalo 10U · piazzale 12U · tutte le navi</span></button></div>
+<h3>Rampe e scalinate</h3><div class="grid"><button data-slopeway="ramp">⛰ Rampa<br><span class="small">2U · pedoni e carri · max 1:4</span></button><button data-slopeway="stairway">🪜 Scalinata<br><span class="small">1U · solo pedoni · fino a 45°</span></button></div>
 <div class="slot-label">Larghezza fossati e ponti</div><div class="grid3"><button data-crossing-width="1">1U</button><button data-crossing-width="2" class="active">2U</button><button data-crossing-width="3">3U</button></div>
 <div class="legend">Fossati: magneti alle estremità, tracciamento concatenato automatico. Click sul punto di partenza per interrompere la catena oppure Esc per uscire. Ponti: due estremità alla stessa quota. Levatoio dal menu Gate.</div>
     <h3>Settlement buildings</h3>
@@ -360,6 +361,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/assets/event-models.js?v=army-camp-1"></script>
 <script src="./src/settlement-events3d.js?v=army-camp-1"></script>
 <script src="./src/settlement-quay.js?v=quay-berth-1"></script>
+<script src="./src/settlement-slopeways.js?v=slopeways-2"></script>
 <script src="./src/assets/waterside-models.js?v=waterside1"></script>
 <script src="./src/settlement-coast.js?v=waves2"></script>
 <script src="./src/settlement-gulls.js?v=gulls1"></script>

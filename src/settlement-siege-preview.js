@@ -152,6 +152,8 @@
       ['Pietra quadrata L1',{type:'tower',shape:'square',material:'stone',level:1,tier:2,size:sq(2),roofStyle:'battlement'}],
       ['Pietra quadrata L2',{type:'tower',shape:'square',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'battlement'}],
       ['Pietra quadrata L3',{type:'tower',shape:'square',material:'stone',level:3,tier:2,size:sq(2),roofStyle:'battlement'}],
+      ['Pietra quadrata W2 H4 merli',{type:'tower',shape:'square',material:'stone',level:4,tier:2,size:sq(2),roofStyle:'battlement'}],
+      ['Pietra quadrata W2 H4 tetto',{type:'tower',shape:'square',material:'stone',level:4,tier:2,size:sq(2),roofStyle:'pitched'}],
       ['Pietra quadrata L3 tetto',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched'}],
       ['Pietra rotonda L3 caditoie',{type:'tower',shape:'round',material:'stone',level:3,tier:2,r:rd(2),roofStyle:'machicolation'}],
       ['Grande quadrata L3 merli',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'battlement'}],

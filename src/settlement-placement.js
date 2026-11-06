@@ -96,7 +96,7 @@
     if(other.type==='road'){
       if(s.type==='market'||s.type==='plaza')return false; // public squares allow crossing roads.
       if(s.type==='gate'&&roadUsesGatePassage(other,s))return false; // the road runs through the passage.
-      if(s.type==='bridge'&&roadMeetsBridgeEnd(other,s))return false; // the road leads onto the deck.
+      if(['bridge','ramp','stairway'].includes(s.type)&&roadMeetsBridgeEnd(other,s))return false; // the road leads onto the deck.
       return polys.some(poly=>roadTouchesPolygon(other,poly,.04));
     }
     if(s.type==='road'){
@@ -137,6 +137,13 @@
       // Quays only ask for the whitezone and water: no buildable-terrain rules.
       const quay=window.ConquerQuay.validate(s);
       if(!quay.ok)return quay;
+    }else if(window.ConquerSlopeways?.is(s)){
+      // Ramps and stairways climb a slope on purpose: their own survey of both plateaus,
+      // grade and terrain profile replaces the flat-terrace rule.
+      const way=window.ConquerSlopeways.validate(s);
+      if(!way.ok)return way;
+      const inForest=p=>(State.environment||[]).some(f=>f.type==='forest'&&environmentContains(f,p));
+      if(samples(polys).some(inForest)||blockedByTrees(polys))return invalid('Rampa/scalinata attraversa un bosco');
     }else if(isLine(s)){
       if(s.type==='road'){
         const d=dist(s.a,s.b);
