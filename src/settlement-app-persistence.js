@@ -35,10 +35,10 @@ function migrateStructures(list){
       if(!Number.isFinite(Number(s.orientationOffset)))s.orientationOffset=0;
       s.orientationOffset=snapStructureAngle(s.orientationOffset);
       if(s.material==='wood'){
-        s.woodStyle=s.woodStyle==='watchtower'?'watchtower':'palisadeTower';
-        s.shape='square';s.level=1;
-        s.size=s.woodStyle==='watchtower'?1:1.5;
-        s.woodRoof=s.woodStyle==='watchtower'?'pitched':(s.woodRoof==='pitched'?'pitched':'open');
+        s.woodStyle=WOOD_TOWER_STYLES.includes(s.woodStyle)?s.woodStyle:'palisadeTower';
+        s.shape='square';s.level=woodTowerLevel(s.woodStyle);
+        s.size=woodTowerSize(s.woodStyle);
+        s.woodRoof=s.woodStyle!=='palisadeTower'?'pitched':(s.woodRoof==='pitched'?'pitched':'open');
       }else{
         s.level=clamp(Math.round(Number(s.level)||1),1,3);
       }

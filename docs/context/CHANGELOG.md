@@ -1,5 +1,7 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+06/11/2026 — `feature/wood-tower-h2` (BC-251105-06): nuova **torre lignea a telaio H2** nel Builder (Torri › Legno › «Telaio H2»), 1,5×1,5U, sempre coperta. Modello Blender `frameTower` (`tools/blender/build_wood_fort.py`): piano terra chiuso in tronchi, P1 con telaio controventato a vista e tamponamenti chiari, ballatoio con parapetto, tetto a padiglione e bandiera. Se è il mastio accetta l'ingresso rialzato (scala lignea/lapidea e ponte levatoio) con porta al P1. Cantiere, cutaway e Lab inclusi. Costo 55 oro / 130 legno, 6,5 giorni. Piramide: STATUS, BACKLOG, feature-backlog. ROADMAP e DECISIONS invariate: è una variante di una famiglia esistente.
+
 05/11/2026 — `fix/audit-sheet-grid`: i fogli provini per categoria vanno a griglia da 8 colonne. Lo sfondo neutro evita che le celle vuote sembrino un esito verde. Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è uno strumento di QA, non cambia contratti.
 
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`)

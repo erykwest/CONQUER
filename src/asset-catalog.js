@@ -64,7 +64,7 @@
     ram:'Ariete',catapult:'Mangano',trebuchet:'Trabucco',tower:'Torre d’assedio',tower2:'Torre d’assedio (variante)',
     ladder:'Scala d’assedio',mantlet:'Mantelletto',ballista:'Balista',
     stake:'Palo di palizzata',watchtower:'Torre di vedetta in legno',palisadeTower_open:'Torre a palizzata aperta',
-    palisadeTower_roofed:'Torre a palizzata coperta',woodGate:'Porta in legno',
+    palisadeTower_roofed:'Torre a palizzata coperta',frameTower:'Torre lignea a telaio H2',woodGate:'Porta in legno',
     netRack:'Rete stesa ad asciugare',fishRack:'Rastrelliera del pesce',fishBaskets:'Ceste del pescato',
     slipwayL1:'Scalo di varo L1',slipwayL2:'Scalo di varo L2',shed:'Tettoia del cantiere navale',frames:'Ossatura di scafo',
     barchetta:'Barchetta a remi',riverJetty:'Molo fluviale',rocksA:'Scogli A',rocksB:'Scogli B',rocksC:'Scoglio alto',reef:'Secca di scogli',beachBoat:'Barca tirata a secco',driftwood:'Legni portati dal mare',garderobe:'Latrina a sbalzo (garderobe)',

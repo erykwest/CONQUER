@@ -49,7 +49,7 @@
 
 ### Torri
 - [ ] **BC-251105-05 — Inner roof delle torri.** Copertura interna delle torri; definire relazione con sommità, merli, cutaway e locali sottostanti.
-- [ ] **BC-251105-06 — Torre lignea H2 con frame.** Variante torre in legno alta H2 con telaio/orditura leggibile nel modello.
+- [x] **BC-251105-06 — Torre lignea H2 con frame.** Variante torre in legno alta H2 con telaio/orditura leggibile nel modello. **Implementata su `feature/wood-tower-h2` (PR, non ancora in main):** `woodStyle:'frameTower'`, 1,5×1,5U, H2 fisso, sempre coperta; piano terra chiuso in tronchi, telaio controventato a vista solo al P1; modello Blender `frameTower` in `build_wood_fort.py`, cantiere, cutaway (lati verso la camera, solaio e scale interne) e Lab (`castle:legno-telaio-h2`, `castle:legno-telaio-h2-mastio-rialzato`). Compatibile con l'**ingresso rialzato del mastio**: unica torre lignea ammessa da `settlement-keep-entrance.js`; soglia al P1 (1,28), porta del P1 sul fronte (+x) al posto del montante centrale, nessuna porta a terra.
 - [ ] **BC-251105-07 — Torri W2 × H4? [DA VALUTARE].** Verificare fattibilità e coerenza geometrica, funzionale e di gameplay dell'altezza H4 per larghezza W2; **non** trattare H4 come già approvato.
 
 ### Coperture

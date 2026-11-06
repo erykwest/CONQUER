@@ -48,7 +48,7 @@ export const T = {
     radius: 'Raggio'
   },
   values: {
-    square: 'Quadrata', round: 'Rotonda', half: 'Semitorre', dee: 'A D', watchtower: 'Guardia', woodTower: 'Lignea',
+    square: 'Quadrata', round: 'Rotonda', half: 'Semitorre', dee: 'A D', watchtower: 'Guardia', woodTower: 'Lignea', frameTower: 'Telaio H2',
     small: 'Piccola', medium: 'Media', large: 'Grande',
     wall: 'Mura', palisade: 'Palizzata', built: 'Sezione', builtWide: 'Sala larga', longhouse: 'Long house', longhouseWide: 'Long house larga',
     stone: 'Pietra', wood: 'Legno',
@@ -67,7 +67,7 @@ export const T = {
     delete: 'Clic su un edificio per demolirlo'
   },
   structures: {
-    towerSquare: 'Torre quadrata', towerRound: 'Torre rotonda', watchtower: 'Torre di guardia', palisadeTower: 'Torre lignea',
+    towerSquare: 'Torre quadrata', towerRound: 'Torre rotonda', watchtower: 'Torre di guardia', palisadeTower: 'Torre lignea', frameTower: 'Torre lignea a telaio',
     gate: 'Porta in pietra', woodGate: 'Porta lignea', wall: 'Mura', palisade: 'Palizzata', built: 'Sezione costruita',
     house: 'Casa', civicAnnex: 'Annesso', market: 'Mercato', tavern: 'Taverna', church: 'Chiesa', training: 'Campo di addestramento', plaza: 'Piazza', townhall: 'Municipio', guild: 'Gilda', windmill: 'Mulino a vento', watermill: 'Mulino ad acqua',
     loggingCamp: 'Campo taglialegna', quarry: 'Cava', mine: 'Miniera', moat: 'Fossato', bridge: 'Ponte', well: 'Pozzo'

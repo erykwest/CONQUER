@@ -175,7 +175,7 @@ function renderFunctionPanel(){
     const deg=Math.round(normalizeTowerAngle(s.angle)*180/Math.PI)%360;
     html+=`<div class="slot"><div class="slot-label">Tower orientation · ${deg}° · step ${structureRotationStep(s.angle)}/23</div><div class="grid3"><button data-tower-rotate="-1">↺ 15°</button><button data-tower-flip>⇄ 180°</button><button data-tower-rotate="1">↻ 15°</button></div><div class="legend">Structural rotation is quantized to 24 positions. Attached subtorri and wall sockets follow the same angle model.</div></div>`;
     if(isWoodTower(s)){
-      html+=`<div class="slot"><div class="legend">Wooden tower · fixed H1. Uses normal tower/wall snap but no masonry battlements or doors.</div></div>`;
+      html+=`<div class="slot"><div class="legend">Wooden tower · fixed H${structureLevel(s)}. Uses normal tower/wall snap but no masonry battlements or doors.</div></div>`;
       if(woodTowerStyle(s)==='palisadeTower'){
         const roof=woodTowerRoof(s);
         html+=`<div class="slot"><div class="slot-label">Wood roof</div><div class="grid"><button data-wood-roof="open" class="${roof==='open'?'active':''}">Open platform</button><button data-wood-roof="pitched" class="${roof==='pitched'?'active':''}">Pitched · 4 posts</button></div></div>`;

@@ -222,7 +222,7 @@ function circleWorldPoints(cx,cy,r,n=20){const pts=[];for(let i=0;i<n;i++){const
 function structureHeight(s){
   if(!s)return 0;
   if(s.type==='tower'){
-    if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?2.35:(woodTowerRoof(s)==='pitched'?2.95:2.32);
+    if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?2.35:woodTowerStyle(s)==='frameTower'?3.78:(woodTowerRoof(s)==='pitched'?2.95:2.32);
     const l=structureLevel(s),t=towerTier(s);return [2.35,3.55,4.75][l-1]+(t-1)*.12
   }
   // The small gate stands just above the curtain (H2 walls are 2.10): L1 passage only, L2 one room over it.
@@ -625,7 +625,7 @@ function cutawayEligible(s){
   if(s.type==='gate')return !isWoodGate(s);
   // The timber palisade tower opens its Blender model (settlement-wood3d.js); the watchtower
   // has no walls to open.
-  if(s.type==='tower'&&isWoodTower(s))return woodTowerStyle(s)==='palisadeTower'&&!!window.ConquerWood3D?.modelKey?.(s);
+  if(s.type==='tower'&&isWoodTower(s))return woodTowerStyle(s)!=='watchtower'&&!!window.ConquerWood3D?.modelKey?.(s);
   // T1 stone towers are too small for rooms: they open on a spiral stair (cutawaySpiralStair).
   // Semitowers are open already (their gorge shows the floors and ladders).
   return s.type==='tower'&&s.shape!=='half';
