@@ -1803,7 +1803,9 @@
   const FALLEN=new Set(['invaded','compromised','captured']);
   function circleData(){const d=window.ConquerCircle?.getSnapshot?.();return d?.compartments?.length&&d.portals?d:null}
   const sectorById=(d,id)=>d.compartments.find(c=>c.id===id)||null;
-  const keepOf=d=>d.compartments.find(c=>c.mastio)||d.compartments.slice().sort((a,b)=>b.depth-a.depth)[0];
+  // The goal is the innermost sector (the keep's, when it is among the deepest): circle may tag
+  // the keep to the sector its door opens on, which can be an outer ring.
+  const keepOf=d=>d.compartments.slice().sort((a,b)=>b.depth-a.depth||(b.mastio?1:0)-(a.mastio?1:0))[0];
   const gateById=id=>State.structures.find(s=>s.id===id&&s.type==='gate')||null;
   const gateOpen=g=>!!g&&(!window.ConquerSiege?.gateClosed?.(g)||!!window.ConquerSiege?.gateBreached?.(g));
   // Next sector towards the keep from sector id `here` (null: outside), and the gate between.
