@@ -209,6 +209,9 @@
       ['T2 H2 caditoie',{type:'wall',tier:2,level:2,skin:'machicolation'}],
       ['T2 H2 hoardings',{type:'wall',tier:2,level:2,skin:'hoarding'}],
       ['T1 H1 hoardings',{type:'wall',tier:1,level:1,skin:'hoarding'}],
+      // BC-251105-01/02: stair from the bailey to the wall walk (settlement-wall-stairs.js); flipped so the interior face, with the flight, faces the camera.
+      ['T2 H1 scala lignea',{type:'wall',tier:2,level:1,skin:'standard',flip:true,wallStair:{kind:'wood',pos:'middle'}}],
+      ['T2 H2 scala lapidea',{type:'wall',tier:2,level:2,skin:'standard',flip:true,wallStair:{kind:'stone',pos:'middle'}}],
       ['Palizzata T1',{type:'palisade',tier:1,level:1}],
       ['Palizzata T2',{type:'palisade',tier:2,level:1}],
       ['Palizzata T3',{type:'palisade',tier:3,level:1}]

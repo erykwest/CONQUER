@@ -12,6 +12,8 @@ on:
       - 'qa/patrol-regression.cjs'
       - 'src/settlement-alarm-bells.js'
       - 'qa/alarm-bell-regression.cjs'
+      - 'src/settlement-wall*.js'
+      - 'qa/wall-stairs-regression.cjs'
       - 'qa/urban-regression.cjs'
       - 'qa/camp-regression.cjs'
       - 'qa/wolves-regression.cjs'
@@ -51,6 +53,7 @@ jobs:
           node qa/diplomacy-regression.cjs
           node qa/siege-assault-regression.cjs
           node qa/keep-entrance-regression.cjs
+          node qa/wall-stairs-regression.cjs
           node qa/cutaway-floors-regression.cjs
           node qa/save-safety-regression.cjs
           node qa/alarm-bell-regression.cjs

@@ -80,16 +80,18 @@ export const T = {
     controls: {
       tier: 'Impronta', height: 'Livelli', rotation: 'Angolo', roof: 'Tetto', woodRoof: 'Tetto',
       base: 'Base', skin: 'Rivestimento', side: 'Lato esterno', cutaway: 'Spaccato',
-      weapon: 'Arma', bartizan: 'Garitte', roofShape: 'Falde', civicLevel: 'Sviluppo', plaza: 'Variante', upper: 'Piano alto', hoarding: 'Ballatoio', bell: 'Campana'
+      weapon: 'Arma', bartizan: 'Garitte', roofShape: 'Falde', civicLevel: 'Sviluppo', plaza: 'Variante', upper: 'Piano alto', hoarding: 'Ballatoio', bell: 'Campana',
+      wallStair: 'Scala al camminamento', wallStairPos: 'Posizione scala'
     },
     words: {
       battlement: 'Merlato', machicolation: 'Caditoie', pitched: 'Falde', open: 'Piattaforma', pitched4: 'Falde · 4 pali',
       masonry: 'Pietra', timber: 'Graticcio',
       standard: 'Standard', buttress: 'Contrafforti', splayed: 'A scarpa', arcade: 'Porticato', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato',
-      none: 'Nessuna', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide · 4 falde', gable: '2 falde', hip: '4 falde con colmo', paved: 'Lastricata', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana d\'allarme'
+      none: 'Nessuna', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide · 4 falde', gable: '2 falde', hip: '4 falde con colmo', paved: 'Lastricata', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana d\'allarme',
+      stairWood: 'Scala lignea · 4 oro, 14 legno', stairStone: 'Scala lapidea · 8 oro, 22 pietra', stairPos_start: 'Inizio muro', stairPos_middle: 'Centro', stairPos_end: 'Fine muro'
     },
     // Short labels shown on option buttons; the full word goes to the tooltip.
-    short: { masonry: 'Pietra', timber: 'Graticcio', battlement: 'Merli', machicolation: 'Caditoie', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', none: '—', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide', gable: '2 falde', hip: 'Colmo', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana' },
+    short: { masonry: 'Pietra', timber: 'Graticcio', battlement: 'Merli', machicolation: 'Caditoie', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', none: '—', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide', gable: '2 falde', hip: 'Colmo', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana', stairWood: 'Lignea', stairStone: 'Lapidea', stairPos_start: 'Inizio', stairPos_middle: 'Centro', stairPos_end: 'Fine' },
     flip: 'Inverti', on: 'Attivo', off: 'Spento', toggles: 'Opzioni',
     rotateLeft: 'Ruota −15°', rotateRight: 'Ruota +15°', rotateFlip: 'Gira di 180°',
     facts: {

@@ -1,5 +1,7 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+05/11/2026 — `feature/bc-scale`: BC-251105-01 scala lignea e BC-251105-02 scala lapidea ai camminamenti (upgrade del muro dall'ispettore, modelli Blender, accesso della rete wall-walk per le truppe, crollo in breccia, Asset Lab). Piramide: STATUS, BACKLOG, feature-backlog. ROADMAP e DECISIONS invariate: nuovo upgrade dentro il contratto esistente dei camminamenti.
+
 06/11/2026 — Integrazione PR #175: riallineata a main b62d0b9 (#173/#174). Risolti conflitti preservando rampe, H4 e torre lignea. Corretto il test costiero intermittente: fixture con seedRand reale, prima assente (3 fallimenti su 20); nessuna modifica al runtime costiero.
 
 06/11/2026 — `feature/wood-tower-h2` (BC-251105-06): nuova **torre lignea a telaio H2** nel Builder (Torri › Legno › «Telaio H2»), 1,5×1,5U, sempre coperta. Modello Blender `frameTower` (`tools/blender/build_wood_fort.py`): piano terra chiuso in tronchi, P1 con telaio controventato a vista e tamponamenti chiari, ballatoio con parapetto, tetto a padiglione e bandiera. Se è il mastio accetta l'ingresso rialzato (scala lignea/lapidea e ponte levatoio) con porta al P1. Cantiere, cutaway e Lab inclusi. Costo 55 oro / 130 legno, 6,5 giorni. Piramide: STATUS, BACKLOG, feature-backlog. ROADMAP e DECISIONS invariate: è una variante di una famiglia esistente.
