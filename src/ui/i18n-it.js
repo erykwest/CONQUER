@@ -25,7 +25,7 @@ export const T = {
     walls: 'Mura e palizzate',
     gates: 'Porte',
     roads: 'Strada principale',
-    crossings: 'Fossati e ponti',
+    crossings: 'Fossati, ponti e rampe',
     civic: 'Edifici civici',
     production: 'Produzione',
     terrain: 'Terreno',
@@ -48,11 +48,11 @@ export const T = {
     radius: 'Raggio'
   },
   values: {
-    square: 'Quadrata', round: 'Rotonda', half: 'Semitorre', dee: 'A D', watchtower: 'Guardia', woodTower: 'Lignea',
+    square: 'Quadrata', round: 'Rotonda', half: 'Semitorre', dee: 'A D', watchtower: 'Guardia', woodTower: 'Lignea', frameTower: 'Telaio H2',
     small: 'Piccola', medium: 'Media', large: 'Grande',
-    wall: 'Mura', palisade: 'Palizzata', built: 'Sezione', builtWide: 'Sala larga',
+    wall: 'Mura', palisade: 'Palizzata', built: 'Sezione', builtWide: 'Sala larga', longhouse: 'Long house', longhouseWide: 'Long house larga',
     stone: 'Pietra', wood: 'Legno',
-    dry: 'Fossato', water: 'Allagato', woodBridge: 'Ponte legno', stoneBridge: 'Ponte pietra',
+    dry: 'Fossato', water: 'Allagato', woodBridge: 'Ponte legno', stoneBridge: 'Ponte pietra', pier: 'Molo', quay: 'Banchina', ramp: 'Rampa', stairway: 'Scalinata',
     market: 'Mercato', tavern: 'Taverna', church: 'Chiesa', training: 'Addestramento',
     loggingCamp: 'Taglialegna', quarry: 'Cava', mine: 'Miniera', clayPit: 'Argilla', windmill: 'Mulino a vento', watermill: 'Mulino ad acqua',
     pillory: 'Gogna', gallows: 'Forca', scaffold: 'Patibolo',
@@ -67,7 +67,7 @@ export const T = {
     delete: 'Clic su un edificio per demolirlo'
   },
   structures: {
-    towerSquare: 'Torre quadrata', towerRound: 'Torre rotonda', watchtower: 'Torre di guardia', palisadeTower: 'Torre lignea',
+    towerSquare: 'Torre quadrata', towerRound: 'Torre rotonda', watchtower: 'Torre di guardia', palisadeTower: 'Torre lignea', frameTower: 'Torre lignea a telaio',
     gate: 'Porta in pietra', woodGate: 'Porta lignea', wall: 'Mura', palisade: 'Palizzata', built: 'Sezione costruita',
     house: 'Casa', civicAnnex: 'Annesso', market: 'Mercato', tavern: 'Taverna', church: 'Chiesa', training: 'Campo di addestramento', plaza: 'Piazza', townhall: 'Municipio', guild: 'Gilda', windmill: 'Mulino a vento', watermill: 'Mulino ad acqua',
     loggingCamp: 'Campo taglialegna', quarry: 'Cava', mine: 'Miniera', moat: 'Fossato', bridge: 'Ponte', well: 'Pozzo'
@@ -80,16 +80,18 @@ export const T = {
     controls: {
       tier: 'Impronta', height: 'Livelli', rotation: 'Angolo', roof: 'Tetto', woodRoof: 'Tetto',
       base: 'Base', skin: 'Rivestimento', side: 'Lato esterno', cutaway: 'Spaccato',
-      weapon: 'Arma', bartizan: 'Garitte', roofShape: 'Falde', civicLevel: 'Sviluppo', plaza: 'Variante', upper: 'Piano alto', hoarding: 'Ballatoio', bell: 'Campana'
+      weapon: 'Arma', bartizan: 'Garitte', roofShape: 'Falde', civicLevel: 'Sviluppo', plaza: 'Variante', upper: 'Piano alto', hoarding: 'Ballatoio', bell: 'Campana',
+      wallStair: 'Scala al camminamento', wallStairPos: 'Posizione scala'
     },
     words: {
       battlement: 'Merlato', machicolation: 'Caditoie', pitched: 'Falde', open: 'Piattaforma', pitched4: 'Falde · 4 pali',
       masonry: 'Pietra', timber: 'Graticcio',
       standard: 'Standard', buttress: 'Contrafforti', splayed: 'A scarpa', arcade: 'Porticato', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato',
-      none: 'Nessuna', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide · 4 falde', gable: '2 falde', hip: '4 falde con colmo', paved: 'Lastricata', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana d\'allarme'
+      none: 'Nessuna', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide · 4 falde', gable: '2 falde', hip: '4 falde con colmo', paved: 'Lastricata', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana d\'allarme',
+      stairWood: 'Scala lignea · 4 oro, 14 legno', stairStone: 'Scala lapidea · 8 oro, 22 pietra', stairPos_start: 'Inizio muro', stairPos_middle: 'Centro', stairPos_end: 'Fine muro'
     },
     // Short labels shown on option buttons; the full word goes to the tooltip.
-    short: { masonry: 'Pietra', timber: 'Graticcio', battlement: 'Merli', machicolation: 'Caditoie', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', none: '—', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide', gable: '2 falde', hip: 'Colmo', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana' },
+    short: { masonry: 'Pietra', timber: 'Graticcio', battlement: 'Merli', machicolation: 'Caditoie', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', none: '—', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide', gable: '2 falde', hip: 'Colmo', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana', stairWood: 'Lignea', stairStone: 'Lapidea', stairPos_start: 'Inizio', stairPos_middle: 'Centro', stairPos_end: 'Fine' },
     flip: 'Inverti', on: 'Attivo', off: 'Spento', toggles: 'Opzioni',
     rotateLeft: 'Ruota −15°', rotateRight: 'Ruota +15°', rotateFlip: 'Gira di 180°',
     facts: {
@@ -111,6 +113,9 @@ export const T = {
     archers: (n, max) => 'Arcieri ' + n + '/' + max,
     cutawayFloor: (i, n) => 'Spaccato · ' + (i === 0 ? 'piano terra' : 'piano ' + i) + ' (' + (i + 1) + '/' + n + ')',
     floorUp: 'Piano di sopra', floorDown: 'Piano di sotto',
+    keepPlan: f => 'Pianta · ' + (f === 0 ? 'piano terra' : 'piano ' + f),
+    keepPlans: { hall: 'Sala', halves: '2', three: '1+2', quad: '4' },
+    keepPlanRooms: n => n === 1 ? 'Una sala grande' : n + ' stanze',
     archerSlots: (roof, slits, bartizan) => 'Tetto ' + roof + (bartizan ? ' · garitte ' + bartizan : '') + ' · feritoie ' + slits,
     roomsTitle: 'Stanze',
     roomsPending: 'Le stanze si assegnano a costruzione finita.',
@@ -180,7 +185,7 @@ export const T = {
     roof: 'Caditoie: merlatura in aggetto su mensole.',
     woodRoof: 'Piattaforma aperta oppure tetto a falde su 4 pali.',
     base: 'A scarpa: alta 0,5. Contrafforti: da quota 0 a H1. Le fondamenta seguono l\'impronta.',
-    skin: { wall: 'Caditoie non disponibili sui muri T1. Ballatoio: galleria lignea al posto del coronamento.', built: 'Porticato: riguarda solo il piano terra interno.' },
+    skin: { wall: 'Caditoie non disponibili sui muri T1. Ballatoio: galleria lignea al posto del coronamento.', built: 'Porticato: il piano terra interno si apre sotto gli archi e il piano alto resta sopraelevato. Sotto il portico solo stalle, officina degli armaioli, magazzino e corpo di guardia.' },
     side: { wall: 'Decide da che parte stanno merlatura o ballatoio.', palisade: 'Camminamento e terrapieno vengono generati verso l\'interno.', built: 'Finestre esterne solo al piano alto; il portico segue il lato opposto.' },
     cutaway: 'Apre la facciata verso la camera e mostra le stanze.',
     weapon: 'Solo su torri T2 senza tetto a falde né ballatoio.',
@@ -199,7 +204,8 @@ export const T = {
     wellRoad: 'Solo il primo pozzo apre le strade maestre verso i bordi. Gli altri si collegano alla sua rete con una strada principale.',
     wellName: 'Nome del quartiere o della borgata, mostrato sulla mappa.',
     archers: 'Priorità: tetto, poi feritoie dai piani alti. Le mura collegate possono bloccare le feritoie.',
-    rooms: 'Una stanza per piano. Alcune funzioni sono permesse solo al piano terra.',
+    rooms: 'Una stanza per piano (il mastio W4 ne ha fino a 4). Alcune funzioni sono permesse solo al piano terra.',
+    keepPlan: 'Mastio W4: come si divide il piano. Sala = una stanza grande; 2 = due metà grandi; 1+2 = una metà grande e due quarti; 4 = quattro quarti normali. I tramezzi bassi hanno una porta per stanza.',
     cutawayFloor: 'Lo spaccato mostra un piano per volta: ▲ ▼ (o le frecce sopra l\'edificio) spengono o riaccendono i piani superiori.',
     masonry: 'Materiale dei prossimi cantieri in muratura: cambia costo e aspetto.',
     house: 'L1 3 abitanti · L2 6 · L3 9 · L4 12.',

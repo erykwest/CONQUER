@@ -1,8 +1,7 @@
 // Architecture sprite loading, facades, towers and window/door details. Runtime semantics preserved from the monolith.
 'use strict';
 // CONQUER settlement render module — classic-script shared runtime.
- // PNG architectural facade assets. Source art stays detailed; images are
- // downsampled and white-keyed once at load time so facade drawing remains cheap.
+// Facade textures are resized and keyed to transparency before publication.
 const ARCHITECTURE_ASSET_PATHS=Object.freeze({
   gatePortal:'./src/assets/architecture/gate_portal.png',
   towerDoor:'./src/assets/architecture/tower_door.png',
@@ -16,25 +15,12 @@ const ARCHITECTURE_ASSET_PATHS=Object.freeze({
   hallLancet:'./src/assets/architecture/hall_lancet.png'
 });
 const architectureSprites={};
-function prepareArchitectureSprite(img){
-  const maxDim=256,scale=Math.min(1,maxDim/Math.max(img.naturalWidth||1,img.naturalHeight||1));
-  const w=Math.max(1,Math.round((img.naturalWidth||1)*scale)),h=Math.max(1,Math.round((img.naturalHeight||1)*scale));
-  const c=document.createElement('canvas');c.width=w;c.height=h;
-  const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(img,0,0,w,h);
-  const data=g.getImageData(0,0,w,h),p=data.data;
-  for(let i=0;i<p.length;i+=4){
-    const r=p[i],gg=p[i+1],b=p[i+2],mx=Math.max(r,gg,b),mn=Math.min(r,gg,b);
-    if(r>247&&gg>247&&b>247)p[i+3]=0;
-    else if(r>238&&gg>238&&b>238&&mx-mn<8)p[i+3]=Math.min(p[i+3],Math.max(0,Math.min(255,(247-mx)*28)));
-  }
-  g.putImageData(data,0,0);return c;
-}
 async function loadArchitectureSprites(){
   const jobs=Object.entries(ARCHITECTURE_ASSET_PATHS).map(([key,path])=>new Promise(resolve=>{
     const img=new Image();
-    img.onload=()=>{try{architectureSprites[key]=prepareArchitectureSprite(img)}catch(err){console.warn('Architecture PNG prep failed',path,err);architectureSprites[key]=img}resolve(true)};
+    img.onload=()=>{architectureSprites[key]=img;resolve(true)};
     img.onerror=()=>{console.warn('Architecture PNG load failed',path);resolve(false)};
-    img.src=path;
+    img.src=path+'?v=prepared-1';
   }));
   await Promise.all(jobs);
   if(typeof invalidateSceneCache==='function')invalidateSceneCache();
@@ -407,7 +393,7 @@ function drawMastioWindowDrape(s,edge,windowZ,windowWidth,windowHeight,opacity=1
 }
 function towerLevelHeight(s,level){
   const t=towerTier(s);
-  return [2.35,3.55,4.75][clamp(level,1,3)-1]+(t-1)*.12;
+  return [2.35,3.55,4.75,5.95][clamp(level,1,maxStructureLevel(s))-1]+(t-1)*.12;
 }
 // One source of truth for tower floors, windows, arrow slits and archer slots:
 // the cutaway floor of each level, and openings at standing eye height above it.
@@ -523,10 +509,113 @@ function linearFacadeEdge(s,side){
     length:seg.length
   };
 }
+// Portico on the interior facade, shared by the 2.5D, World 3D and cutaway renderers: bays of
+// 2 or 3 arches (arcade2/arcade3), never taller than the slab of the raised floor above.
+function builtArcadeLayout(s){
+  if(!s||s.type!=='built'||underConstruction(s)||builtSkin(s)!=='arcade')return null;
+  const side=-wallExteriorSide(s),edge=linearFacadeEdge(s,side);
+  const ceiling=builtInteriorFloors(s)>=2?cutawayFloorLevels(s)[1].z-.08:structureHeight(s)-.16,h=Math.min(1.46,ceiling);
+  if(h<=.18||edge.length<.35)return null;
+  const count=Math.max(1,Math.round(edge.length/2.55)),cell=edge.length/count,key=cell<2.25?'arcade2':'arcade3';
+  return{side,edge,h,centerZ:.04+h/2,count,cell,key,arches:key==='arcade2'?2:3,
+    bays:Array.from({length:count},(_,i)=>({off:(i+.5)*cell-edge.length/2,w:cell*.96}))};
+}
+// Real loggia of a W1 portico (World 3D, like the carved gate passage): the whole ground floor is
+// an open hall behind a row of piers with round arches; only the exterior wall stays closed and
+// the raised floor rests on the arches. Faces are world-space polygons [{p,z}] tagged by part:
+// 'upper' (block over the loggia), 'ground' (exterior wall), 'backwall' (its face under the
+// arches), 'arcade' (end walls, piers, arches), 'ceiling' and 'paving'. The 2.5D renderer keeps
+// the arches cut into the facade. Also returned: the ground-floor room under the arches (`room`,
+// a cutaway floor basis) and the walkway along the piers (`walk`), kept clear of furniture.
+function builtLoggia(s){
+  const a=builtArcadeLayout(s);if(!a||isWideBuilt(s))return null;
+  const fp=unionFootprintPoints(s),L=Math.hypot(s.b.x-s.a.x,s.b.y-s.a.y)||1;
+  const u={x:(s.b.x-s.a.x)/L,y:(s.b.y-s.a.y)/L},n={x:-u.y,y:u.x};
+  const loc=p=>({al:(p.x-s.a.x)*u.x+(p.y-s.a.y)*u.y,ac:(p.x-s.a.x)*n.x+(p.y-s.a.y)*n.y});
+  const P=(al,ac)=>({x:s.a.x+u.x*al+n.x*ac,y:s.a.y+u.y*al+n.y*ac});
+  const lp=fp.map(loc),C0=Math.min(...lp.map(q=>q.ac)),C1=Math.max(...lp.map(q=>q.ac));
+  const side=a.side,front=side>0?C1:C0,depth=(C1-C0)-clamp((C1-C0)*.14,.11,.17),band=.12;
+  const back=front-side*depth,inner=front-side*band,cap=a.centerZ+a.h/2,H=structureHeight(s);
+  // Footprint clipped to {al,ac} half-planes: keeps snapped, slanted ends exactly as the body has them.
+  const clip=(poly,f)=>{const out=[];for(let i=0;i<poly.length;i++){const p=poly[i],q=poly[(i+1)%poly.length],fp0=f(loc(p)),fq=f(loc(q));
+    if(fp0>=0)out.push(p);if((fp0>=0)!==(fq>=0)){const t=fp0/(fp0-fq);out.push({x:p.x+(q.x-p.x)*t,y:p.y+(q.y-p.y)*t})}}return out};
+  const faces=[],face=(part,pts)=>faces.push({part,pts});
+  const prism=(part,pts,z0,z1,bottom=false)=>{
+    if(pts.length<3||!(z1>z0))return;
+    face(part,pts.map(p=>({p,z:z1})));if(bottom)face(part,pts.map(p=>({p,z:z0})).reverse());
+    for(let i=0;i<pts.length;i++){const p=pts[i],q=pts[(i+1)%pts.length];face(part,[{p,z:z0},{p:q,z:z0},{p:q,z:z1},{p,z:z1}])}
+  };
+  const strip=(c0,c1)=>clip(clip(fp,q=>side*(q.ac-c0)),q=>side*(c1-q.ac));   // across between c0 and c1 (towards front)
+  prism('upper',fp,cap,H);
+  prism('ground',clip(fp,q=>side*(back-q.ac)),0,cap);
+  // Arches along the usable facade (snapped ends padded like the windows), piers between them.
+  const e0=loc(a.edge.a).al,e1=loc(a.edge.b).al,N=a.count*a.arches,cell=(e1-e0)/N,pw=Math.min(.22,cell*.26),half=(cell-pw)/2;
+  const apex=cap-.10,spring=Math.max(.35,apex-half),rise=apex-spring;
+  const pier=(x0,x1)=>clip(clip(strip(inner,front),q=>q.al-x0),q=>x1-q.al);
+  // End walls close the loggia against towers and gates; piers are only the front band.
+  prism('arcade',clip(strip(back,front),q=>e0+pw/2-q.al),0,cap);
+  prism('arcade',clip(strip(back,front),q=>q.al-(e1-pw/2)),0,cap);
+  for(let k=1;k<N;k++){const x=e0+k*cell;prism('arcade',pier(x-pw/2,x+pw/2),0,cap)}
+  for(let k=0;k<N;k++){
+    const l=e0+k*cell+pw/2,r=l+cell-pw,c=(l+r)/2,arc=[];
+    for(let j=0;j<=8;j++){const t=Math.PI*(1-j/8);arc.push({al:c+half*Math.cos(t),z:spring+rise*Math.sin(t)})}
+    for(const ac of [front,inner]){
+      const cl={p:P(l,ac),z:cap},cr={p:P(r,ac),z:cap},A=q=>({p:P(q.al,ac),z:q.z});
+      for(let j=0;j<8;j++)face('arcade',[j<4?cl:cr,A(arc[j]),A(arc[j+1])]);
+      face('arcade',[cl,A(arc[4]),cr]);
+    }
+    for(let j=0;j<8;j++)face('arcade',[{p:P(arc[j].al,front),z:arc[j].z},{p:P(arc[j+1].al,front),z:arc[j+1].z},{p:P(arc[j+1].al,inner),z:arc[j+1].z},{p:P(arc[j].al,inner),z:arc[j].z}]);
+  }
+  // Rooms: one per bay of arches, split by partitions from the back wall to the walkway.
+  const WALK=.18,PART=.06,bayLen=cell*a.arches,walkEdge=inner-side*WALK;
+  for(let k=1;k<a.count;k++){const x=e0+k*bayLen;prism('arcade',clip(clip(strip(back,walkEdge),q=>q.al-(x-PART/2)),q=>x+PART/2-q.al),0,cap)}
+  // The rooms' wall under the arches stands in the loggia's shadow.
+  for(const f of faces)if(f.part==='ground'&&f.pts.every(q=>Math.abs(loc(q.p).ac-back)<1e-6))f.part='backwall';
+  const walk=clip(clip(strip(back,front),q=>q.al-e0),q=>e1-q.al);
+  face('ceiling',walk.map(p=>({p,z:cap-.002})));
+  face('paving',walk.map(p=>({p,z:.006})));
+  // Room frame (cutawayFloorBasis shape) between the end walls, the back wall and the piers; v
+  // points from the back wall towards the arches. The walkway is the WALK strip along the piers.
+  const r0=e0+pw/2,r1=e1-pw/2,mid=(back+inner)/2,c=P((r0+r1)/2,mid),angle=Math.atan2(u.y,u.x),h=Math.abs(inner-back);
+  // `room` v axis is n: the arches lie at v = side*h/2, the back wall at -side*h/2.
+  const room={center:c,angle,w:r1-r0,h};
+  // Each bay's room: from end wall or partition to the next one.
+  const rooms=Array.from({length:a.count},(_,k)=>{
+    const x0=k?e0+k*bayLen+PART/2:r0,x1=k<a.count-1?e0+(k+1)*bayLen-PART/2:r1;
+    return{center:P((x0+x1)/2,mid),angle,w:x1-x0,h};
+  });
+  const walkV=[side>0?room.h/2-WALK:-room.h/2,side>0?room.h/2:-room.h/2+WALK];
+  // Piers along the front band, for navigation: along positions and half width.
+  const piers=Array.from({length:N-1},(_,k)=>e0+(k+1)*cell);
+  return{side,cap,front,back,inner,faces,room,rooms,walk:{v0:walkV[0],v1:walkV[1],width:WALK},
+    local:{u,n,a:s.a,loc,P},span:[r0,r1],piers,pierHalf:pw/2};
+}
+// Navigation asks per sample point: one loggia per section until its shape changes.
+const builtLoggiaMemo=new WeakMap();
+function builtLoggiaCached(s){
+  const key=[s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.width,s.level,s.skin,s.flip,s.aSnap,s.bSnap,!!underConstruction(s)].join('|');
+  const hit=builtLoggiaMemo.get(s);if(hit&&hit.key===key)return hit.g;
+  const g=isBuiltPortico(s)?builtLoggia(s):null;builtLoggiaMemo.set(s,{key,g});return g;
+}
+// Walkers under a W1 portico: true when p (with a clearance) stands in the open loggia, from the
+// arches to the inner edge of the walkway, clear of the piers. Furniture keeps the rest.
+function builtLoggiaWalkable(s,p,pad=0){
+  const g=builtLoggiaCached(s);if(!g)return false;
+  const q=g.local.loc(p),r=g.room,c=g.local.loc(r.center),v=(q.ac-c.ac)*g.side;   // v: 0 mid-room, +h/2 at the arches
+  if(q.al<g.span[0]+pad||q.al>g.span[1]-pad)return false;
+  if(v<r.h/2-g.walk.width+pad)return false;                                        // furniture zone
+  if(v>r.h/2&&g.piers.some(x=>Math.abs(q.al-x)<g.pierHalf+pad))return false;      // a pier
+  return true;                                                                     // walkway, arch openings and beyond
+}
+// Where a visitor to a W1 portico stands: on the walkway, spread along it.
+function builtLoggiaStandPoint(s,t){
+  const g=builtLoggiaCached(s);if(!g)return null;
+  const r=g.room,c=g.local.loc(r.center),al=g.span[0]+.2+(g.span[1]-g.span[0]-.4)*Math.max(0,Math.min(1,t));
+  return g.local.P(al,c.ac+g.side*(r.h/2-g.walk.width/2));
+}
 function drawBuiltArcade(s){
-  if(!s||s.type!=='built'||underConstruction(s)||builtSkin(s)!=='arcade')return;const inside=-wallExteriorSide(s);if(inside!==linearFrontSide(s))return;
-  const edge=linearFacadeEdge(s,inside),count=Math.max(1,Math.round(edge.length/2.55)),cell=edge.length/count,h=Math.min(1.46,structureHeight(s)-.16),centerZ=.04+h/2,key=cell<2.25?'arcade2':'arcade3';
-  withStructureDetailOcclusion(s,centerZ+h/2,()=>{for(let i=0;i<count;i++){const off=(i+.5)*cell-edge.length/2,w=cell*.96;drawFacadeAssetBackdrop(edge,centerZ,w,h*.86,off,'#24211f');drawArchitectureAssetOnEdge(edge,centerZ,w,h,key,off)}})
+  const a=builtArcadeLayout(s);if(!a||a.side!==linearFrontSide(s))return;
+  withStructureDetailOcclusion(s,a.centerZ+a.h/2,()=>{for(const b of a.bays){drawFacadeAssetBackdrop(a.edge,a.centerZ,b.w,a.h*.86,b.off,'#24211f');drawArchitectureAssetOnEdge(a.edge,a.centerZ,b.w,a.h,a.key,b.off)}})
 }
 function drawWallHoarding(s,occlusionFrame=null){
   if(!s||s.type!=='wall'||wallSkin(s)!=='hoarding'||underConstruction(s))return;
@@ -719,7 +808,7 @@ function drawFacadeWindows(lit=false,nf=1,includeHouses=true){
     if(center&&!worldPointVisible(center,structureVisualTopHeight(s),110))continue;
     if(s.type==='house'){
       if(includeHouses)drawHouseFacadeWindows(s,lit,nf);
-    }else if(s.type==='built')drawBuiltWindows(s,lit,nf);
+    }else if(s.type==='built'&&!isLonghouse(s))drawBuiltWindows(s,lit,nf);
     else if(s.type==='gate'){
       if(!isWoodGate(s))withStructureGroundPlane(s,()=>drawGateWindows(s,lit,nf));
     }else if(s.type==='tower'){
@@ -729,6 +818,8 @@ function drawFacadeWindows(lit=false,nf=1,includeHouses=true){
           if(!s.isMastio||woodTowerStyle(s)==='watchtower')return;
           const edge=visibleFacadeEdges(s).find(e=>isInteriorFacadeEdge(s,e));
           if(!edge)return;
+          // The frame tower's P1 doorway (raised entrance) takes this window's place.
+          if(towerWindowGivesWayToDoor(s,edge,2))return;
           const z=Math.min(structureHeight(s)-.53,1.45),w=.40,h=.50;
           drawArchitectureAssetOnEdge(edge,z,w,h,'gothicL1',0,lit,nf);
           if(!lit)drawMastioWindowDrape(s,edge,z,w,h);

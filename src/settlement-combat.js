@@ -625,7 +625,7 @@
   function cliffClearForFootprint(p,kind){
     return militaryOffsets(kind).every(([ox,oy])=>{
       const q={x:p.x+ox,y:p.y+oy};
-      return !pointBlockedForPeasant(q)&&!terrainSegmentCrossesCliff(q,q);
+      return !pointBlockedForPeasant(q)&&(!terrainSegmentCrossesCliff(q,q)||!!window.ConquerCrossings?.segmentCanCrossCliff(q,q));
     });
   }
   function safeMilitarySegment(a,b,id,kind){
@@ -780,7 +780,7 @@
     syncButtons();
   }
   function clearCombatSelection(){
-    selectedIds.clear();selected=null;selectionDrag=null;syncButtons();
+    selectedIds.clear();selected=null;selectionDrag=null;window.ConquerFleet?.clearSelection();syncButtons();
   }
   function commanderCoversOrder(unit,target){
     const commander=combat.units.find(u=>u.kind==='captain'&&!u.defeated&&!u.routing);
@@ -1622,8 +1622,16 @@
     if(kind==='combat-orders'||kind==='select'){
       const hit=combat.units.filter(u=>!u.defeated&&!u.routing&&!u.campState&&dist(u,p)<1.1)
         .sort((a,b)=>dist(a,p)-dist(b,p))[0];
+      // The player's warships take the same orders (settlement-fleet.js).
+      if(!hit&&window.ConquerFleet?.selectAt(p,e.shiftKey)){
+        e.preventDefault();e.stopImmediatePropagation();
+        if(!e.shiftKey){selectedIds.clear();selected=null}
+        setTool({kind:'combat-orders',label:'Navi: clic sul mare, su una nave nemica o su un molo'});
+        syncButtons();draw();return;
+      }
       if(hit){
         e.preventDefault();e.stopImmediatePropagation();
+        if(!e.shiftKey)window.ConquerFleet?.clearSelection();
         selectCombatUnits([hit],e.shiftKey,e.shiftKey);
         setTool({kind:'combat-orders',label:'Orders: select, Shift+click or drag a box'});
         syncButtons();draw();return;
@@ -1662,7 +1670,11 @@
           const q=w2s(u,.08+(u.z||0));return q.x>=x0&&q.x<=x1&&q.y>=y0&&q.y<=y1;
         });
         selectCombatUnits(hits,drag.shift);
-        if(hits.length)setTool({kind:'combat-orders',label:'Orders: click destination'});
+        const shipHits=window.ConquerFleet?.selectInBox(x0,y0,x1,y1,drag.shift)||0;
+        if(hits.length||shipHits)setTool({kind:'combat-orders',label:'Orders: click destination'});
+      }else if(drag.kind==='combat-orders'&&window.ConquerFleet?.selectedShips().length&&!drag.shift){
+        const msg=window.ConquerFleet.orderAt(pointerWorld(e));if(msg)status(msg);
+        if(selectedIds.size)issueGroupMove(pointerWorld(e));
       }else if(drag.kind==='combat-orders'&&selectedIds.size&&!drag.shift){
         // Clicking a wall top sends the selection up onto the wall walk.
         const wallHit=WW()?.pickScreen(pointerScreen(e));
@@ -1688,7 +1700,7 @@
     scheduleLocalSave();requestToolDraw();
   },true);
   window.addEventListener?.('keydown',e=>{
-    if(e.key!=='Escape'||!selectedIds.size||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName||''))return;
+    if(e.key!=='Escape'||!(selectedIds.size||window.ConquerFleet?.selectedShips().length)||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName||''))return;
     clearCombatSelection();setTool({kind:'select',label:'Select'});draw();
   },true);
   const styles=document.createElement('style');
@@ -1699,7 +1711,7 @@
   ui.innerHTML='<h3>COMBAT · Fog / Command</h3>'+
     '<div class="combat-row"><button id="combatFog">Fog ON</button><button id="combatZones">Zones OFF</button><button id="combatRecall" title="Bell: green safe zones, then red Mastio Common Hall" aria-label="Raise alarm">🔔</button><button id="combatMute" title="Release all recalled civilians and recruits" aria-label="Release">🔕</button></div>'+
     '<div class="combat-row"><button data-combat-brush="allow">White +</button><button data-combat-brush="deny">White −</button><button data-combat-brush="yellow">Yellow</button><button data-combat-brush="green">Green</button></div>'+
-    '<div class="combat-row"><button data-combat-brush="eraseYellow">− Yellow</button><button data-combat-brush="eraseGreen">− Green</button><button id="combatOrders">Orders</button><button id="combatDeselect" title="Clear selection (Esc)">Deselect</button></div>'+
+    '<div class="combat-row"><button data-combat-brush="eraseYellow">− Yellow</button><button data-combat-brush="eraseGreen">− Green</button><button id="combatOrders">Orders</button><button id="combatDeselect" title="Clear selection (Esc)">Deselect</button><button id="combatMoor" title="Selected warships tie up at the nearest free military pier">Attracca</button></div>'+
     '<div class="combat-row"><button id="combatPatrolAdd" title="Add two pikemen to patrol the White Zone border">Patrol + · 2 pikemen</button><button id="combatPatrolRemove">Patrol −</button></div>'+ 
     '<div class="legend" id="combatPatrolCount">White Zone patrols · 0</div>'+ 
     '<label>Brush radius <input id="combatBrushSize" type="range" min="1" max="16" value="5"><b id="combatBrushReadout">5U</b></label>'+
@@ -1742,6 +1754,7 @@
   });
   $('combatBrushSize').oninput=e=>{combat.brushRadius=Number(e.target.value);changed();draw()};
   $('combatOrders').onclick=()=>{setTool({kind:'combat-orders',label:'Click or box-select friendly units, Shift to add'});syncButtons()};
+  $('combatMoor').onclick=()=>{const msg=window.ConquerFleet?.moorSelected?.();if(msg)status(msg);draw()};
   $('combatDeselect').onclick=()=>{clearCombatSelection();setTool({kind:'select',label:'Select'});draw()};
   $('combatPatrolAdd').onclick=addPatrol;
   $('combatPatrolRemove').onclick=removePatrol;

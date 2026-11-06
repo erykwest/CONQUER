@@ -74,8 +74,9 @@ const CATALOG = [
         opt(V.half, '[data-tower="half"][data-size="1"]', stone && t.shape === 'half'),
         opt(V.dee, '[data-tower="dee"][data-size="1.5"]', stone && t.shape === 'dee'),
         opt(V.watchtower, '[data-wood-tower="watchtower"]', t.woodStyle === 'watchtower'),
-        opt(V.woodTower, '[data-wood-tower="palisadeTower"]', t.woodStyle === 'palisadeTower')] }];
-      if (stone && t.shape === 'square') rows.push({ label: O.size, options: ['1', '1.5', '2'].map(n =>
+        opt(V.woodTower, '[data-wood-tower="palisadeTower"]', t.woodStyle === 'palisadeTower'),
+        opt(V.frameTower || 'Telaio H2', '[data-wood-tower="frameTower"]', t.woodStyle === 'frameTower')] }];
+      if (stone && t.shape === 'square') rows.push({ label: O.size, options: ['1', '1.5', '2', '3'].map(n =>
         opt(n.replace('.', ',') + 'U', `[data-tower="square"][data-size="${n}"]`, Number(t.size) === Number(n))) });
       if (stone && t.shape === 'round') rows.push({ label: O.size, options: ['0.5', '0.75', '1'].map(n =>
         opt('R ' + n.replace('.', ','), `[data-tower="round"][data-size="${n}"]`, Number(t.size) === Number(n))) });
@@ -89,14 +90,16 @@ const CATALOG = [
     } },
   { id: 'walls', hint: T.hints.linear, press: '[data-linear="wall"]', is: s => s.tool.kind === 'linear' && s.tool.linear !== 'road',
     rows: s => {
-      const kind = s.tool.linear, wide = kind === 'built' && s.tool.span === 'wide', rows = [{ label: O.type, options: [
+      const kind = s.tool.linear, wide = kind === 'built' && s.tool.span === 'wide', wood = kind === 'built' && s.tool.material === 'wood', rows = [{ label: O.type, options: [
         opt(V.wall, '[data-linear="wall"]', kind === 'wall'),
         opt(V.palisade, '[data-linear="palisade"]', kind === 'palisade'),
-        opt(V.built, '[data-linear="built"]', kind === 'built' && !wide),
-        opt(V.builtWide, '[data-linear="builtWide"]', wide)] }];
+        opt(V.built, '[data-linear="built"]', kind === 'built' && !wide && !wood),
+        opt(V.builtWide, '[data-linear="builtWide"]', wide && !wood),
+        opt(V.longhouse, '[data-linear="longhouse"]', wood && !wide),
+        opt(V.longhouseWide, '[data-linear="longhouseWide"]', wood && wide)] }];
       if (kind !== 'built') rows.push({ label: O.tier, options: [1, 2, 3].map(n => opt('T' + n, `[data-wall-tier="${n}"]`, s.levels.wallTier === n)) });
-      if (kind !== 'palisade') rows.push({ label: O.height, options: [1, 2].map(n => opt(String(n), `[data-wall-level="${n}"]`, (wide ? s.levels.builtWide : s.levels.wall) === n)) });
-      if (kind !== 'palisade') rows.push(masonryRow(s));
+      if (kind !== 'palisade' && !wood) rows.push({ label: O.height, options: [1, 2].map(n => opt(String(n), `[data-wall-level="${n}"]`, (wide ? s.levels.builtWide : s.levels.wall) === n)) });
+      if (kind !== 'palisade' && !wood) rows.push(masonryRow(s));
       return rows;
     } },
   { id: 'gates', hint: T.hints.point, press: '[data-gate]', is: s => s.tool.kind === 'gate',
@@ -127,14 +130,21 @@ const CATALOG = [
       return rows;
     } },
   { id: 'roads', hint: T.hints.linear, press: '[data-main-road]', is: s => s.tool.kind === 'linear' && s.tool.linear === 'road' },
-  { id: 'crossings', hint: T.hints.crossing, press: '[data-crossing="dry"]', is: s => s.tool.kind === 'crossing',
-    rows: s => [
-      { label: O.type, options: [
+  { id: 'crossings', hint: T.hints.crossing, press: '[data-crossing="dry"]', is: s => ['crossing', 'pier', 'quay', 'slopeway'].includes(s.tool.kind),
+    rows: s => {
+      const rows = [{ label: O.type, wrap: true, options: [
         opt(V.dry, '[data-crossing="dry"]', s.tool.crossing === 'dry'),
         opt(V.water, '[data-crossing="water"]', s.tool.crossing === 'water'),
         opt(V.woodBridge, '[data-crossing="wood"]', s.tool.crossing === 'wood'),
-        opt(V.stoneBridge, '[data-crossing="stone"]', s.tool.crossing === 'stone')] },
-      { label: O.width, options: [1, 2, 3].map(n => opt(n + 'U', `[data-crossing-width="${n}"]`, s.crossingWidth === n)) }] },
+        opt(V.stoneBridge, '[data-crossing="stone"]', s.tool.crossing === 'stone'),
+        opt(V.pier + ' L4', '[data-pier="4"]', s.tool.kind === 'pier' && s.tool.reach === 4),
+        opt(V.pier + ' L12', '[data-pier="12"]', s.tool.kind === 'pier' && s.tool.reach === 12),
+        opt(V.quay, '[data-quay]', s.tool.kind === 'quay'),
+        opt(V.ramp, '[data-slopeway="ramp"]', s.tool.kind === 'slopeway' && s.tool.slopeway === 'ramp'),
+        opt(V.stairway, '[data-slopeway="stairway"]', s.tool.kind === 'slopeway' && s.tool.slopeway === 'stairway')] }];
+      if (s.tool.kind === 'crossing') rows.push({ label: O.width, options: [1, 2, 3].map(n => opt(n + 'U', `[data-crossing-width="${n}"]`, s.crossingWidth === n)) });
+      return rows;
+    } },
   { id: 'civic', hint: T.hints.point, press: '[data-civic="market"]', is: s => s.tool.kind === 'civic',
     rows: s => [{ label: O.building, options: ['market', 'tavern', 'church', 'training', 'plaza', 'townhall', 'guild'].map(k =>
       opt(V[k], `[data-civic="${k}"]`, s.tool.civic === k)) }, masonryRow(s)] },
@@ -393,10 +403,13 @@ function Inspector({ snap, cmd }) {
     ${d.archers && html`<${Row} label=${I.archers(d.archers.count, d.archers.max)} tip=${TIP.archers + ' ' + I.archerSlots(d.archers.roof, d.archers.slits, d.archers.bartizan) + '.'}>
       <${Seg} options=${[{ label: '−', disabled: d.archers.disabled || d.archers.count === 0, v: -1 }, { label: '+', disabled: d.archers.disabled || d.archers.count >= d.archers.max, v: 1 }]}
         onPick=${o => run('changeArchers', o.v)} /></${Row}>`}
+    ${d.keepPlans && d.keepPlans.floors.map(f => html`<${Row} label=${I.keepPlan(f.floor)} tip=${TIP.keepPlan}>
+      <${Seg} options=${d.keepPlans.plans.map(p => ({ label: I.keepPlans[p.value] || p.value, active: p.value === f.plan, v: p.value, tip: I.keepPlanRooms(p.rooms) }))}
+        onPick=${o => run('setKeepFloorPlan', f.floor, o.v)} /></${Row}>`)}
     ${d.rooms && html`<div class="u2-group"><span class="u2-label" data-tip=${I.roomsTitle} data-tip-body=${TIP.rooms} tabindex="0">${I.roomsTitle}<i aria-hidden="true">?</i></span>
       ${d.rooms.pending ? html`<p class="u2-hint">${I.roomsPending}</p>` : d.rooms.slots.length === 0 ? html`<p class="u2-hint">${I.roomsNone}</p>` :
-        html`<div class="u2-rooms">${d.rooms.slots.map(r => html`<label class="u2-room" data-tip=${'Piano ' + (r.index + 1)} data-tip-body=${I.room(r.index + 1, r.size, r.units)}>
-          <span>P${r.index + 1}${r.size === 'large' ? '+' : ''}</span>
+        html`<div class="u2-rooms">${d.rooms.slots.map(r => html`<label class="u2-room" data-tip=${'Piano ' + ((d.keepPlans ? r.floor : r.index) + 1)} data-tip-body=${I.room((d.keepPlans ? r.floor : r.index) + 1, r.size, r.units)}>
+          <span>P${(d.keepPlans ? r.floor : r.index) + 1}${d.keepPlans ? String.fromCharCode(97 + r.room) : ''}${r.size === 'large' ? '+' : ''}</span>
           <select value=${r.value} onChange=${e => run('setRoom', r.index, e.currentTarget.value)}>
             <option value="">${I.roomEmpty}</option>
             ${r.options.map(o => html`<option value=${o.value} disabled=${!o.allowed}>${T.functions[o.value] || o.value}</option>`)}

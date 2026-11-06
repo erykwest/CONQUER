@@ -1,5 +1,27 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-ORTO-251106 — Il giardino è l'orto di corte del Municipio (06/11/2026)
+
+- Scelta dell'utente tra orto di corte, giardino dei semplici e hortus conclusus: **orto di corte**.
+- È un annesso civico del Municipio (`kitchenGarden`), non un edificio autonomo: riusa catalogo, persistenza, cancellazione a cascata e preflight degli annessi. Poiché il Municipio non ha lotto Voronoi, vale la regola «terreno aperto entro 7U, mai su lotti di proprietà».
+- Effetto: 2 cibo del signore per giornata lavorativa per orto, senza lavoratori, anche in allarme/assedio (scorta interna che non dipende da pascoli e reti). Primo annesso con resa economica: gli altri annessi restano skeleton.
+
+## D-STOCKYARD-251105 — Il piazzale fondativo è lo stoccaggio del castello (05/11/2026)
+
+- **DECISO, IN CODICE SU BRANCH `feature/founding-storage-yard-20261105`:** il villaggio nasce con un Piazzale 2×2U entro 7U dal primo pozzo, se un lotto edificabile è disponibile. Il capanno taglialegna versa la quota di produzione trattenuta nelle scorte del castello fino alla capienza dei piazzali; la parte non trattenuta e la quota in eccesso raggiungono il mercato.
+- **UNICO INVENTARIO:** `ConquerEconomy.state().castle` rimane fonte di verità: il magazzino non duplica le merci, il vecchio charter resta idempotente, la persistenza è quella di `State.structures` e `State.economy`.
+- **PRIORITÀ L1:** quando un piazzale è disponibile, un lavoratore L1 viene riservato al Logging Camp anche se sono aperti molti cantieri; le regole esistenti senza piazzale restano invariate.
+- **BILANCIAMENTO INIZIALE:** capienza 600/2400/5400 unità per 2×2, 4×4, 6×6U; costi di ampliamento 20 oro + 10 legname e poi 40 oro + 20 legname, pagati subito. Aree di ampliamento soggette a blocchi e collisioni normali. Nuovi piazzali 2×2U costruibili con 20 oro + 10 legname e normale cantiere L1; quello iniziale è gratuito.
+- **FUORI SCOPE:** carrettieri e trasferimento individuale del materiale, consumo e assegnazione delle room magazzino, redistribuzione tra depositi su distanze diverse.
+
+
+## D-FORESTRY-L1-251105 — Pulizia boschi come job di terraforming (05/11/2026)
+
+- **DECISO, IMPLEMENTATO SU BRANCH `fix/forestry-l1-clearing-cost-20261105` (pre-merge):** «Rimuovi foresta» è un lavoro civile L1 e non un click immediato. Richiede un insediamento fondato, si accoda nella stessa persistenza del paesaggio (`State.relief`), usa lavoratori L1 non impegnati nelle costruzioni e il payroll ordinario. Solo a completamento crea una radura, invalida paesaggio/navigation e attribuisce al signore un raccolto di legname sostanziale, una sola volta. Resa/tempo iniziali: 2,5 legname e 0,7 giornate operaio per U² di copertura forestale.
+- **Bilanciamento:** capanno del taglialegna massimo 5 legname (35 oro invariati). La rimozione manuale non sostituisce la produzione continuativa dei Logging Camp.
+- **Non deciso / fuori scope:** ricrescita forestale e depletion industriale periodica.
+
+
 ## D-ROOM-EXT-01 — Una stanza può cambiare l'esterno del suo edificio (04/11/2026)
 
 - **DECISO (contratto):** una funzione di stanza dichiara il suo elemento esterno in `ROOM_EXTERIOR[fn]` (`src/settlement-room-exterior.js`): `{model, source, mount, breakable?}`. `model` è un modello Blender in `src/assets/*-models.js` (registro `window[source].models[model]`: `parts` con `p/i/c`, `width`, `projection`, `bottom`, `chuteTop`), assi U con +x lungo la faccia (centrato), +y verso l'esterno, +z dal pavimento della stanza.
@@ -240,7 +262,7 @@ Le decisioni D-033…D-038 delle branch #55 e `jobmanager` avevano numeri già u
 
 **D-050 · CODICE SU MAIN dopo #98 (da `jobmanager` D-034, 20/10):** il villaggio compra il cibo al mercato; il castello dà razioni solo per ordine del signore, salvato in `State.policies.rations` (`market` predefinito, `half`, `full`; i vecchi valori numerici valgono `market`). Le razioni escono davvero dal magazzino. Felicità separata L1–L4: sale se la classe mangia, scende con fame e mezze razioni, sale con razioni piene; il benessere è la media pesata. Servi L1/L2 vincolati al feudo, L3/L4 liberi: la migrazione non è implementata.
 
-**D-051 · APERTO:** `jobmanager` (vincolo esplicito del 20/10) vuole **nessun L1 nei campi**, solo L2; #55 e `main` lasciano gli L1 sui campi e gli L2 liberi a completarli. La tappa 1 mantiene il comportamento di #55/`main`. Serve una scelta dell'utente: applicare il vincolo cambia campi, figure e bilancio alimentare iniziale.
+**D-051 · DECISO 05/11/2026:** scelta esplicita dell’utente: i campi sono lavorati esclusivamente dagli L2. Nel branch fix/fields-l2-only allocazione economica e assegnazione fisica escludono gli L1, anche nei salvataggi esistenti. Senza L2 disponibili le lavorazioni agricole restano ferme. Chiusa la scelta residua di jobmanager; archivio conservato nel tag archive/jobmanager.
 **D-052 · CODICE SU MAIN dopo #99 (da `jobmanager` D-035/D-036, 20/10):** routine settimanali visuali. Uomini adulti: lavoro fino alle 18:00, poi svago (`LEISURE_VENUES`: locanda, mercato, pozzo); sabato mattina mercato, domenica mattina messa, pomeriggi di svago. Donne adulte: L1/L2 lotto al mattino, L3 mercato, L4 svago; sabato mercato, domenica messa, pomeriggi di svago. Solo strutture completate e raggiungibili, nessun teletrasporto; nessun effetto economico. Lo svago serale e il weekend hanno la precedenza sui pastori.
 **D-053 · CODICE SU MAIN dopo #101 (unifica #55 commercio e `feature/autonomous-urban-economy`):** un solo catalogo di botteghe, quello urbano (7 mestieri → 5 Beni L3). Le botteghe nascono da sole nelle case L3 (una per casa, nessun comando del giocatore), con scelta pesata deterministica per seme; i prezzi dei Beni L3 della settimana N usano solo le osservazioni della N-1, aggiornando un bene al giorno. Le vendite spostano monete esistenti dalle famiglie al portafoglio L3. I Beni L3 restano fuori da `ConquerEconomy.GOODS` (UI aggregata «Beni L3»). Ricette e consumo di materie prime non sono ancora simulati. **Alternative scartate:** botteghe registrate a mano di #55 (`registerShop` resta come API) e moduli ES non collegati.
 **D-054 · CODICE SU BRANCH `feature/economy-convoys` (unifica #55 convogli e #96 carovane):** un solo sistema, `ConquerConvoys`, salvato in `State.economy.commerce` (`lordConvoys`, `journeys`, `nobleJourneys`). Le carovane della diplomazia sono convogli del signore: oro, merci e provviste escono dal castello in un solo passo alla partenza (o all'accantonamento), altrimenti il convoglio resta bloccato; una merce per carro; scorta entro i posti di caserma. `ConquerDiplomacy` crea e modifica i convogli attraverso questa interfaccia e non tiene più una lista propria. Completa la nota finale di D-046. I cartelli di prova usano la mesh `signpost` di `ConquerScatterModel` e il `settlement-wagons.js` di main.

@@ -36,7 +36,7 @@
   }
   function castleSource(s){
     const C=window.ConquerCastle3D;
-    if(!C?.structureWorld||!['tower','gate','wall','built'].includes(s.type)||call('isWoodTower',s)||call('isWoodGate',s))return null;
+    if(!C?.structureWorld||!['tower','gate','wall','built'].includes(s.type)||call('isWoodTower',s)||call('isWoodGate',s)||call('isLonghouse',s))return null;
     const {tris,tags}=C.structureWorld(s),pos=[],col=[],tag=[];
     // Stone gates already come carved (ConquerGates.addGateBody: piers, vault, leaves);
     // only a solid block needs its passage cut here.
@@ -203,7 +203,7 @@
     if(s.type==='house')return true;
     if(s.auto)return false;
     if(s.type==='palisade')return !!s.a&&!!s.b;
-    if(['tower','gate'].includes(s.type)&&(call('isWoodTower',s)||call('isWoodGate',s)))return !!window.ConquerWood3D?.modelKey?.(s);
+    if(['tower','gate','built'].includes(s.type)&&(call('isWoodTower',s)||call('isWoodGate',s)||call('isLonghouse',s)))return !!window.ConquerWood3D?.modelKey?.(s);
     if(['tower','gate','wall','built'].includes(s.type))return true;
     return !!window.ConquerCivic3D?.has?.(s)&&s.type!=='civicAnnex';
   }

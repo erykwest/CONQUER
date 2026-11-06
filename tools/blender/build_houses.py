@@ -17,6 +17,8 @@ Piece axes:
     origin at the wall top (eaves line) on the centre; the game scales x by the ridge length and
     y, z by the span (the pitch is constant, so the scaling is uniform across the slope).
   chimney: footprint 0.22 x 0.20 U as chimneySpecs, z 0..0.48 U, origin at the bottom centre.
+  chimneySide: L1 gable-end stack, a wall piece (origin on the gable wall face at ground, centred);
+    z 0..1.76 U, the game scales z to chimneySpecs.
   turretRoofRound / turretRoofSquare: base radius / half side 1 at z 0, apex at z 1, finial above;
     origin at the centre of the turret top.
   roofThatch: like roof, but with a unit rise (z 0..1 at the ridge): L1 ridges are fixed at
@@ -196,6 +198,33 @@ def chimney(mdl):
     mdl.done('stack', ch)
 
 
+def frustum(p, b, t, z0, z1, key):
+    """Rectangular frustum from base rect b to top rect t ((x0, y0, x1, y1), U), z0..z1."""
+    vs = [(x * S, y * S, z0 * S) for x, y in ((b[0], b[1]), (b[2], b[1]), (b[2], b[3]), (b[0], b[3]))]
+    vs += [(x * S, y * S, z1 * S) for x, y in ((t[0], t[1]), (t[2], t[1]), (t[2], t[3]), (t[0], t[3]))]
+    p.quads(vs, [(0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7), (4, 5, 6, 7)], key)
+
+
+CHIMNEY_SIDE_H = 1.76   # L1 ridge 1.45 U + 0.31
+
+
+def chimney_side(mdl):
+    """L1 cottage gable-end chimney, built against the outside of the wall: a broad rubble hearth
+    breast up to the eaves, sloping weatherings, then a narrower flue past the thatch with a
+    stone cap and a short pot."""
+    st = mdl.part('stack')
+    box(st, -.20, 0, 0, .20, .24, .62, 'stone')                                     # hearth breast
+    frustum(st, (-.20, 0, .20, .24), (-.12, 0, .12, .17), .62, .80, 'stoneDark')    # weatherings
+    box(st, -.12, 0, .80, .12, .17, 1.62, 'stone')                                  # flue
+    box(st, -.205, -.005, .30, .205, .245, .33, 'stoneDark')                        # rubble course
+    box(st, -.125, -.005, 1.18, .125, .175, 1.21, 'stoneDark')
+    mdl.done('stack', st)
+    cap = mdl.part('cap')
+    box(cap, -.15, -.01, 1.62, .15, .20, 1.67, 'chimneyCap')
+    box(cap, -.06, .035, 1.67, .06, .135, CHIMNEY_SIDE_H, 'chimneyDark')
+    mdl.done('cap', cap)
+
+
 def joist(mdl):
     """Joist end carrying the jetty: a squared beam end with a chamfered drop below it."""
     j = mdl.part('joist')
@@ -301,6 +330,7 @@ def turret_roof(mdl, sides):
 BUILD = [('windowUpper', window_upper), ('windowGround', window_ground), ('door', door),
          ('roof', roof), ('chimney', chimney), ('joist', joist),
          ('windowCottage', window_cottage), ('doorCottage', door_cottage), ('roofThatch', roof_thatch),
+         ('chimneySide', chimney_side),
          ('turretRoofRound', lambda m_: turret_roof(m_, 20)), ('turretRoofSquare', lambda m_: turret_roof(m_, 4))]
 
 

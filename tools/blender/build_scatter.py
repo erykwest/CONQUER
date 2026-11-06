@@ -30,9 +30,11 @@ COLORS = dict(build_wagon.COLORS)
 COLORS.update({
     'rope': '#a88a5a', 'board': '#b07c48', 'boardDark': '#7d5531', 'paint': '#3b2a1a',
     'stoneLight': '#b4b1aa', 'straw': '#d6b551', 'strawDark': '#b8973f', 'bark': '#6a4c30',
+    'reed': '#8f9d4c', 'reedDark': '#6b7a38', 'reedDry': '#b8a865', 'reedHead': '#5a3a22',
+    'bush': '#4f6b35', 'bushDark': '#3c5428', 'bushLight': '#6a8443', 'stoneWet': '#77746c', 'moss': '#5d6e3c',
 })
 COLL_NAME = 'CONQUER_Scatter'
-FAMILIES = ('carts', 'goods', 'signs', 'wheels', 'materials', 'farm', 'work')
+FAMILIES = ('carts', 'goods', 'signs', 'wheels', 'materials', 'farm', 'work', 'riverbank')
 
 # ---------------------------------------------------------------- helpers
 def mark(p):
@@ -328,6 +330,53 @@ def chopping_block(p):
     for x, y, a in ((.5, -.25, .3), (.62, .05, 1.2), (-.45, .35, -.6), (.35, .45, 2.0)):
         p.box((x, y, .05), (.32, .1, .1), 'logEnd' if a > 1 else 'log', rot=turn_z(a))
 
+# ---------------------------------------------------------------- riverbank (natural)
+def reed_blades(p, cx, cy, n, h, spread, rnd, heads=True):
+    for k in range(n):
+        a = rnd.uniform(0, 2 * math.pi); d = rnd.uniform(0, spread)
+        x, y = cx + math.cos(a) * d, cy + math.sin(a) * d
+        hh = h * rnd.uniform(.65, 1.1); lean = rnd.uniform(-.25, .25); lean2 = rnd.uniform(-.25, .25)
+        w = .035
+        key = rnd.choice(('reed', 'reed', 'reedDark', 'reedDry'))
+        # Two crossed blades, one face each (the props are drawn without back-face culling).
+        p.quads([(x - w, y, 0), (x + w, y, 0), (x + lean, y + lean2, hh)], [(0, 1, 2)], key)
+        p.quads([(x, y - w, 0), (x, y + w, 0), (x + lean + .01, y + lean2 + .01, hh * .98)], [(0, 1, 2)], key)
+        if heads and k % 3 == 0:
+            p.box((x + lean * .82, y + lean2 * .82, hh * .82), (.05, .05, .18), 'reedHead')
+
+def reed_bed(p):
+    import random as _r; rnd = _r.Random(41)
+    for (cx, cy) in ((0, 0), (.55, .3), (-.5, .35), (.2, -.5), (-.3, -.45)):
+        reed_blades(p, cx, cy, 9, 1.7, .3, rnd)
+
+def reed_clump(p):
+    import random as _r; rnd = _r.Random(43)
+    reed_blades(p, 0, 0, 12, 1.4, .28, rnd)
+
+def bush_blob(p, x, y, r, h, key='bush', top='bushLight'):
+    p.cylinder(r, 0, key, n=7, axis='z', center=(x, y, 0), radii=[r * .55, r, r * .92, r * .55, .02], along=[0, h * .3, h * .6, h * .88, h], cap_key=top)
+
+def bank_bush(p):
+    bush_blob(p, 0, 0, .75, 1.3)
+    bush_blob(p, .6, .35, .5, .9, 'bushDark')
+    bush_blob(p, -.55, .25, .45, .8, 'bushDark', 'bush')
+
+def bush_small(p):
+    bush_blob(p, 0, 0, .45, .75)
+    bush_blob(p, .35, -.2, .3, .5, 'bushDark', 'bush')
+
+def stone(p, x, y, r, h, key='stoneWet', top='stoneLight', n=6):
+    p.cylinder(r, 0, key, n=n, axis='z', center=(x, y, -.05), radii=[r * .9, r, r * .7, r * .2], along=[0, h * .35, h * .8, h], cap_key=top)
+
+def river_stones(p):
+    for (x, y, r, h) in ((0, 0, .32, .22), (.45, .2, .22, .16), (-.35, .3, .26, .2), (.15, -.4, .18, .12), (-.4, -.25, .14, .1), (.6, -.25, .12, .08)):
+        stone(p, x, y, r, h)
+
+def river_boulder(p):
+    stone(p, 0, 0, .7, .75, 'stone', 'stoneLight', n=7)
+    stone(p, .65, .3, .32, .3)
+    p.cylinder(.5, 0, 'moss', n=7, axis='z', center=(-.1, .05, .55), radii=[.42, .3, .05], along=[0, .12, .2])
+
 ASSETS = (
     ('cartParked', 'carts', cart_parked), ('wagonParked', 'carts', wagon_parked),
     ('carriageParked', 'carts', carriage_parked), ('wagonLoaded', 'carts', wagon_loaded),
@@ -340,6 +389,8 @@ ASSETS = (
     ('hayBales', 'farm', hay_bales), ('haystack', 'farm', haystack), ('farmTools', 'farm', farm_tools), ('buckets', 'farm', buckets),
     ('workbench', 'work', workbench), ('ladder', 'work', ladder), ('ropeCoil', 'work', rope_coil),
     ('sawhorse', 'work', sawhorse), ('choppingBlock', 'work', chopping_block),
+    ('reedBed', 'riverbank', reed_bed), ('reedClump', 'riverbank', reed_clump), ('bankBush', 'riverbank', bank_bush),
+    ('bushSmall', 'riverbank', bush_small), ('riverStones', 'riverbank', river_stones), ('riverBoulder', 'riverbank', river_boulder),
 )
 
 def build(root):

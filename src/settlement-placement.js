@@ -79,6 +79,13 @@
     return false;
   }
   function regularCollision(s,other,polys,options={}){
+    // Piers branch off quays: their landing rests on the quay.
+    if((s.type==='pier'&&other.type==='quay')||(s.type==='quay'&&other.type==='pier'))return false;
+    // Quays joined by the quay magnet meet without colliding.
+    if(window.ConquerQuay?.joined(s,other))return false;
+    // A wall magnetised to a quay stands on it.
+    if(other.type==='quay'&&window.ConquerQuay?.isWallOn(s,other))return false;
+    if(s.type==='quay'&&window.ConquerQuay?.isWallOn(other,s))return false;
     if(s.type==='house'&&other.type==='road'&&other.accessFor===s.id)return false;
     // Castle pieces deliberately join walls/gates/towers at their sockets.
     if(['tower','gate'].includes(s.type)&&['wall','built','tower','gate','palisade'].includes(other.type)){
@@ -89,7 +96,7 @@
     if(other.type==='road'){
       if(s.type==='market'||s.type==='plaza')return false; // public squares allow crossing roads.
       if(s.type==='gate'&&roadUsesGatePassage(other,s))return false; // the road runs through the passage.
-      if(s.type==='bridge'&&roadMeetsBridgeEnd(other,s))return false; // the road leads onto the deck.
+      if(['bridge','ramp','stairway'].includes(s.type)&&roadMeetsBridgeEnd(other,s))return false; // the road leads onto the deck.
       return polys.some(poly=>roadTouchesPolygon(other,poly,.04));
     }
     if(s.type==='road'){
@@ -107,7 +114,13 @@
     if(!annexVerdict.ok)return annexVerdict;
     const wellVerdict=typeof wellCivicPlacementCheck==='function'?wellCivicPlacementCheck(s):valid();
     if(!wellVerdict.ok)return wellVerdict;
-    if(!whitezone(s,polys))return invalid('Entire structure must be inside the whitezone (100×100U)');
+    // A pier reaches out over the sea: its own validation keeps the landing in the whitezone.
+    // Quays (and the walls and towers built against them) start in the whitezone by their own rules.
+    const harbour=window.ConquerPier?.is(s)||window.ConquerQuay?.is(s)||window.ConquerQuay?.wallGroundZ(s)!=null;
+    if(!harbour&&!whitezone(s,polys))return invalid('Entire structure must be inside the whitezone (100×100U)');
+    // Shore rocks take only a quay and what stands on it (settlement-coast.js).
+    const onQuay=window.ConquerQuay?.is(s)||window.ConquerQuay?.wallGroundZ(s)!=null||(s.type==='pier'&&s.onQuay);
+    if(!onQuay&&window.ConquerCoast&&samples(polys).some(p=>window.ConquerCoast.rockAt(p)))return invalid('Scogli: qui si può costruire solo la banchina');
     const ignored=ignoreSet(options);
     // Only one founding well: until the village is named, a second well cannot be placed.
     // Once founded, further wells are ordinary buildings (expansion centres).
@@ -117,6 +130,20 @@
     if(window.ConquerIndustries?.is(s)){
       const industry=window.ConquerIndustries.validate(s);
       if(!industry.ok)return industry;
+    }else if(window.ConquerPier?.is(s)){
+      const pier=window.ConquerPier.validate(s);
+      if(!pier.ok)return pier;
+    }else if(window.ConquerQuay?.is(s)){
+      // Quays only ask for the whitezone and water: no buildable-terrain rules.
+      const quay=window.ConquerQuay.validate(s);
+      if(!quay.ok)return quay;
+    }else if(window.ConquerSlopeways?.is(s)){
+      // Ramps and stairways climb a slope on purpose: their own survey of both plateaus,
+      // grade and terrain profile replaces the flat-terrace rule.
+      const way=window.ConquerSlopeways.validate(s);
+      if(!way.ok)return way;
+      const inForest=p=>(State.environment||[]).some(f=>f.type==='forest'&&environmentContains(f,p));
+      if(samples(polys).some(inForest)||blockedByTrees(polys))return invalid('Rampa/scalinata attraversa un bosco');
     }else if(isLine(s)){
       if(s.type==='road'){
         const d=dist(s.a,s.b);
@@ -133,6 +160,8 @@
         const inForest=p=>(State.environment||[]).some(f=>f.type==='forest'&&environmentContains(f,p));
         if(samples(polys).some(inForest)||blockedByTrees(polys))return invalid('Wall segment crosses a forest');
       }
+    }else if(s.type==='tower'&&s.quaySnap&&window.ConquerQuay?.wallGroundZ(s)!=null){
+      // A tower against a quay stands in the water on its plinth: no terrain or water rules.
     }else{
       const foundation=isPlacementFoundationBuilding(s);
       if(!foundation&&buildableTerrainElevationForStructure(s)==null)

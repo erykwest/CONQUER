@@ -67,10 +67,13 @@
       ['[data-linear="palisade"]','Palizzata','fence'],
       ['[data-linear="built"]','Sezione costruita','built'],
       ['[data-linear="builtWide"]','Sala larga 2U · doppia altezza','built'],
+      ['[data-linear="longhouse"]','Long house lignea W1 · solo P0','timber'],
+      ['[data-linear="longhouseWide"]','Long house lignea W2 · solo P0','timber'],
       ['[data-gate][data-gate-size="1.5"]','Porta muraria · 1,5×1,5U','gate'],
       ['[data-gate][data-gate-size="1"]','Porta piccola · 1×1U · L1–L2','gate'],
       ['[data-wood-gate]','Porta lignea','gate']]},
     {id:'economy',label:'Produzione',icon:'work',items:[
+      ['[data-storage-yard]','Piazzale / magazzino · 2×2U espandibile','work'],
       ['[data-industry="loggingCamp"]','Campo taglialegna','timber'],
       ['[data-industry="quarry"]:not([data-extraction-mode])','Cava pietra','work'],
       ['[data-industry="quarry"][data-extraction-mode="clay"]','Cava argilla · H0 · entro 6U da acqua interna','work'],
@@ -87,13 +90,21 @@
     {id:'terrain',label:'Terraforming',icon:'terrain',items:[
       ['[data-terraform="terrain"]','Terreno','terrain'],
       ['[data-terraform="walled"]','Terrazzamento murato','terrace'],
-      ['[data-terraform="flat"]','Flat · sottrai e riporta a H0','level']]},
+      ['[data-terraform="flat"]','Flat · sottrai e riporta a H0','level'],
+      ['[data-terraform="forest"]','Rimuovi foresta · job L1 · legname','work']]},
     {id:'infrastructure',label:'Infrastrutture',icon:'route',items:[
       ['[data-main-road]','Strada principale','route'],
       ['[data-crossing="dry"]','Fossato asciutto','moat'],
       ['[data-crossing="water"]','Fossato allagato · quota 0','moat'],
       ['[data-crossing="wood"]','Ponte di legno','bridge'],
-      ['[data-crossing="stone"]','Ponte di pietra','bridge']]}
+      ['[data-crossing="stone"]','Ponte di pietra','bridge'],
+      ['[data-pier="4"]','Molo piccolo L4 · 4U sul mare · 2 attracchi','bridge'],
+      ['[data-pier="12"]','Molo grande L12 · 12U sul mare · 2 attracchi','bridge'],
+      ['[data-slopeway="ramp"]','Rampa · 2U · collega due quote · pedoni e carri · pendenza max 1:4','route'],
+      ['[data-slopeway="stairway"]','Scalinata · 1U · gradini sul pendio · solo pedoni','terrace'],
+      ['[data-quay]','Banchina in pietra · 2U · due clic lungo la riva o in acqua','wall'],
+      ['[data-yard="1"]','Cantiere navale L1 · scalo 7U · barche e caravelle','bridge'],
+      ['[data-yard="2"]','Cantiere navale L2 · scalo 10U · piazzale 12U · tutte le navi','bridge']]}
   ];
   // The combat module inserts live controls into #builder before this UX loads.
   // Replacing children without retaining them detached Combat and crashed every
@@ -204,7 +215,7 @@
   // Clicking an actual build tool chooses it without closing the palette; this
   // keeps level/tier presets accessible while the ghost is being previewed.
   for(const b of originalButtons)b.addEventListener('click',()=>{
-    if(b.hasAttribute('data-tool')||b.hasAttribute('data-tower')||b.hasAttribute('data-wood-tower')||b.hasAttribute('data-linear')||b.hasAttribute('data-main-road')||b.hasAttribute('data-terraform')||b.hasAttribute('data-crossing')||b.hasAttribute('data-gate')||b.hasAttribute('data-wood-gate')||b.hasAttribute('data-well')||b.hasAttribute('data-civic')||b.hasAttribute('data-industry')||b.hasAttribute('data-event-venue')){
+    if(b.hasAttribute('data-tool')||b.hasAttribute('data-tower')||b.hasAttribute('data-wood-tower')||b.hasAttribute('data-linear')||b.hasAttribute('data-main-road')||b.hasAttribute('data-terraform')||b.hasAttribute('data-crossing')||b.hasAttribute('data-gate')||b.hasAttribute('data-wood-gate')||b.hasAttribute('data-well')||b.hasAttribute('data-civic')||b.hasAttribute('data-industry')||b.hasAttribute('data-event-venue')||b.hasAttribute('data-pier')||b.hasAttribute('data-quay')||b.hasAttribute('data-slopeway')){
       requestAnimationFrame(()=>{if(b.classList.contains('ux-icon-btn'))document.querySelectorAll('.ux-catalog .ux-icon-btn').forEach(x=>x.classList.toggle('active',x===b))});
     }
   });

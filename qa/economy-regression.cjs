@@ -113,7 +113,7 @@ test('calendar boundary pays wages monthly, not daily',()=>{
 });
 test('a lordly mill processes private crop into Food; mill stays optional',()=>{
   const field={id:'farm',type:'field',economicOwner:'private',crop:{cycles:0}};
-  const base=[{id:'home',type:'house',houseLevel:1},field];
+  const base=[{id:'home',type:'house',houseLevel:2},field];
   const {economy,State}=makeHarness([...base,{id:'mill',type:'windmill',economicOwner:'lord'}]);
   economy.sync();
   field.crop.cycles=1;
@@ -126,7 +126,7 @@ test('a lordly mill processes private crop into Food; mill stays optional',()=>{
   assert.ok(fromMill.some(l=>l.owner==='private'&&l.qty>0),'processed grain retains farm ownership');
   assert.equal(economy.state().cropStock.private,0,'unprocessed crop buffer drains');
   const noMillField={id:'other-farm',type:'field',economicOwner:'private',crop:{cycles:0}};
-  const noMill=makeHarness([{id:'home',type:'house',houseLevel:1},noMillField]);
+  const noMill=makeHarness([{id:'home',type:'house',houseLevel:2},noMillField]);
   noMill.economy.sync();noMillField.crop.cycles=1;
   noMill.economy.tick(-1,harvest);
   assert.ok(noMill.economy.snapshot().market.food>0,'existing Food production works without mills');

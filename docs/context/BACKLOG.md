@@ -5,6 +5,87 @@
 - **IMPLEMENTATO SU BRANCH `fix/latrine-towers`:** la latrina passa dalle sezioni costruite W1 alle torri W1 in pietra (piano 2, sbalzo sulla faccia esterna libera). Le torri W1 accettano Colombaia (ultimo piano), Latrina, Prigione, Tesoro e Armeria, con la scala a chiocciola che resta.
 - **APERTO:** nella torre rotonda W1 entrano meno sedili dei tre previsti (stanza di 0,73 U); un'apertura nel muro tra stanza e sbalzo; un avviso quando un salvataggio perde una latrina da una sezione costruita.
 
+
+06/11/2026 — Integrazione PR #175: riallineata a main b62d0b9 (#173/#174). Risolti conflitti preservando rampe, H4 e torre lignea. Corretto il test costiero intermittente: fixture con seedRand reale, prima assente (3 fallimenti su 20); nessuna modifica al runtime costiero.
+
+## 2026-11-05 — P0: Piazzale deposito e Logging Camp (branch `feature/founding-storage-yard-20261105`)
+
+- **P0-05 · PRODUZIONE LEGNO — FIX IN BRANCH:** con un piazzale e camp attivo almeno un L1 è assegnato prima dei cantieri, evitando produzione zero durante costruzioni simultanee; accantonamento nel magazzino iniziale della quota non venduta, superando il vecchio limite target 70 con scorte iniziali 200; eccedenza al mercato senza duplicazioni. L'output si vede nel pannello del taglialegna e dell'economia. Logistica dei popolani/carrettieri ancora fuori scope.
+- **P0-03 / P0-05 · PIAZZALE — IN BRANCH:** spawn garantito solo quando esiste una collocazione edificabile entro 7U dal pozzo; 2×2U, inventario fondativo nel ledger unico, espansione fino a 6×6U, comando nell'ispettore, altra costruzione tramite paletta Produzione, compatibilità salvataggi vecchi.
+- **QA in PR:** `qa/storage-yard-regression.cjs`; rischio residuo da collaudare a vista: terreno complesso/biomi e disegno World3D.
+
+
+## 2026-11-05 — Fix forestry L1 (branch `fix/forestry-l1-clearing-cost-20261105`)
+
+- **P0-02 · FORESTE — IN IMPLEMENTAZIONE SU BRANCH:** nuova azione «Rimuovi foresta» nel Terraforming, lavoro L1 pagato, durata proporzionale alla superficie realmente alberata, apertura di una radura persistente e riconoscimento di legname nel ledger economico al completamento. Non equivale a tree depletion automatica da parte dei Logging Camp; quest'ultima rimane aperta.
+- **P0-05 · LOGGING CAMP — FIX SU BRANCH:** costo di costruzione 5 legname e 35 oro, non 25 legname. Lavoratori e produzione ordinaria del Logging Camp non sono cambiati.
+- **QA dedicata:** `qa/forestry-regression.cjs` (ghost e coda non istantanei, prevenzione doppio impiego, sabato/domenica, salari, legname una sola volta, persistenza). Esecuzione CI da verificare dopo PR.
+
+
+Fogli provini dell'audit: impaginazione a griglia per le categorie e sfondo neutro sulle celle vuote (branch `fix/audit-sheet-grid`). **APERTO:** il simbolo «Her 2» dell'araldica è quasi invisibile nel foglio (difetto preesistente, non toccato).
+
+## 2026-11-05 — ARTE: opere commissionabili e decorazione delle stanze
+
+**APERTO · SOLO BACKLOG (nessuna implementazione o QA attestata).** Sottosistema separato da personaggi speciali e ricerca scientifica. Dettaglio canonico: [ARTE nel backlog Builder/Manager](../feature-backlog.md#2026-11-05--arte--commissioni-esposizione-e-circolazione-delle-opere).
+
+- **A-P0 (ART-251105-01…05):** catalogo quadri/arazzi/sculture; slot compatibili nelle stanze; azione «Commissiona opera d'arte» con oro e tempo; inventario individuale persistente; rimozione e ricollocazione.
+- **A-P1 (ART-251105-06…07):** valutazione Galleria/Atelier come funzioni delle Built Sections, non edifici autonomi; autori, qualità, provenienza e prestigio (formula da decidere).
+- **A-P2 (ART-251105-08…09):** vendita e donazione a feudi/regni stranieri con effettivo trasferimento di proprietà; dipendenze da ledger economico, commercio e diplomazia condivisi.
+- **Vincolo:** gli asset decorativi riutilizzano cutaway/furniture/Asset Lab, mentre ogni opera commissionata è un bene univoco, persistente e collocabile in un solo slot. La commissione non richiede obbligatoriamente un Atelier.
+
+## 2026-11-05 — Builder / Castello: upgrade architettonici richiesti
+
+**Richieste aperte al 05/11/2026 — non implementate da questo aggiornamento.** Il dettaglio canonico dei task e degli ID è in [feature-backlog.md](../feature-backlog.md#2026-11-05--builder--castello-upgrade-architettonici-richiesti).
+
+- **Mura/camminamenti:** BC-251105-01 scala lignea e 02 scala lapidea **implementate su `feature/bc-scale` (PR aperta, non in main)**: upgrade del muro T2/T3, accesso wall-walk per le truppe; seguiti aperti: variante per palizzate, salita animata gradino per gradino, uso da parte dei civili. 03 edifici addossati; 04 merlature doppie (distinte dallo stile a doppia falda esistente), su branch feature/double-crenel: merlo doppio (11011011) e doppia fila interna; estensione a porte e torri fuori scope.
+- **Torri:** BC-251105-05 inner roof; 06 torre lignea H2 con frame (PR #175, branch); 07 torre W2 × H4 **su branch `feature/tower-w2-h4`** (solo quadrata in pietra W2 indipendente; residui: bilanciamento assedio di scale, gittata e crollo dei piani a quota H4).
+- **Coperture:** BC-251105-08 75° (in PR su `feature/roof-pitch-75`, il set 30°/45°/60° è in main); 09 tetti Longhouse; 10 tetti edifici addossati.
+- **Ambiente:** BC-251105-11 giardino → deciso **orto di corte** (annesso del Municipio, +2 cibo/giorno lavorativo anche in assedio): implementato su `feature/orto-di-corte`, in attesa di merge. Seguiti possibili: lavoratori dedicati, stagionalità della resa.
+- **Terreno/percorsi:** BC-251105-12 rampe per collegare quote e superare pendii ripidi; 13 scalinate pedonali sui dislivelli delle colline, con raccordi a terreno e terrazzamenti. Requisiti di navigabilità/pathfinding e QA; **distinte** dalle scale per i camminamenti delle mura (01/02). Stato: **IMPLEMENTATO su branch `feature/ramps-stairs`** (06/11/2026, non in main): rampe 2U max 1:4 per pedoni e carri, scalinate 1U fino a 45° solo pedoni; vedi [STATUS](STATUS.md).
+- **Dipendenze:** `feat/roof-pitch`, `feature/wood-longhouse`, camminamenti e cutaway; nessun completamento o QA attestato da questo inserimento.
+
+## MARE — Porti e molo (branch `mare`, 02/11/2026)
+
+- **SUL BRANCH `mare`, NON MAIN**: mare al 30% della mappa; Molo in legno di 8U sulla costa con due attracchi esposti da `ConquerPier.moorings(s)`.
+- **Navi**: 5 modelli Blender pronti (3 piccole, 2 grandi), solo nell'Asset Lab.
+- **Navi in gioco**: flotta di test nel menu DEV (non salvata). **DA FARE**: salvataggio, arrivo/partenza in navigazione, selezione della nave nel gioco, ordine con il renderer WebGL invece del livello sovrapposto, picchi di disegno isolati.
+- **Mura sulla banchina**: fatto il magnete. **DA FARE**: contorno di selezione alla quota della banchina; porte sulla banchina (torri fatte); muro che continua dalla banchina alla terraferma.
+- **Attracchi lungo la banchina**: fatto. **DA FARE**: segnare in gioco gli slot liberi/occupati (oggi visibili solo via `ConquerQuay.berths`).
+- **Banchina fuori whitezone**: fatto (parte da dentro, prosegue oltre). **DA FARE**: allo spigolo il lastricato delle due banchine si sovrappone (doppio strato, possibile z-fighting); un unico raccordo d'angolo sarebbe più pulito.
+- **Battaglia navale**: dimostrazione nel menu DEV fatta. **DA FARE**: battaglie decise dal gioco (ordini, flotte, regni), vincitore che cattura invece di bruciare, uomini in acqua/scialuppe, legame con Combat/Siege ed economia (perdite, bottino).
+- **Equipaggi**: civili e militari fatti (marinai, gabbieri, arcieri, armigeri); **DA FARE** marinai visibili in gioco (dipende dalle navi in gioco), legame con popolazione/economia.
+- **DA FARE**: regni stranieri con araldica propria dalla mappa del mondo (oggi 3 segnaposto in `ConquerShips.FOREIGN`); navi ormeggiate agli attracchi e in navigazione; audit Asset Lab + baseline delle navi; ruolo economico del porto (commercio via mare, pesca); interazione con assedio/incendio/demolizione del molo; scatter in contesto porto anche sulla riva; audit Asset Lab del modello.
+Prestazioni avvio: texture architettoniche preparate offline sul branch `fix/prepare-architecture-textures`. La regressione visiva nel Lab verifica il rendering dei componenti e delle fortificazioni.
+
+Pulizia asset: rimossi dal branch `fix/remove-fossil-industry-svg` i due set di 24 pose industriali e le due viste base obsolete. Il catalogo conserva le anteprime 3D rotabili.
+
+## Pendenza dei tetti di torri e porte (05/11/2026)
+
+- **IN CORSO su branch, NON MERGE:** pendenza globale 30/45/60° con cambio a pagamento. Dettagli in [STATUS](STATUS.md).
+- 30/45/60° in main (PR #157). **75° (BC-251105-08) su branch `feature/roof-pitch-75`, NON MERGE**, con regressione `qa/roof-pitch-regression.cjs` su `roofPitchQuote`.
+- Aperti: estendere a case, sezioni costruite e garitte se richiesto.
+
+## Long house in legno W1 / W2 (04/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/wood-longhouse`:** sezione costruita in legno larga W1 o W2, solo P0, con le stanze del piano terra in pietra; modello Blender modulare; costruttore, cantiere, cutaway e Lab.
+- **APERTO:**
+  - Bilanciamento di costi e giorni (proposta 6 oro / 28 legno per U×larghezza, 1,2 + 0,8 giorni).
+  - Lato della porta: oggi sempre sul frontone in A; scelta del lato o porta laterale.
+  - Fumo dal foro nel colmo per il focolare (oggi nessun comignolo né fumo).
+  - Puntoni esterni che sporgono 0,1U oltre la sezione: verificare gli attacchi a mura e torri.
+  - Lab: lo stage delle sezioni larghe (anche la sala larga in pietra) mostra quasi vuoto il cantiere al 25/50/75% (difetto preesistente).
+## Mastio W4 · 3U con più stanze per piano (03/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/keep-w4` (NON MAIN, prototipo da provare):** tier W4 solo per torre quadrata in pietra, uno per insediamento, mastio automatico a fine cantiere; pianta per piano (Sala / 2 metà / 1+2 / 4 quarti), tramezzi bassi con porte nel cutaway, una scala per piano; stanze che restano sul loro piano quando cambia la pianta.
+- **APERTO:** bilanciamento di costi e giorni (proposta 240 oro / 330 pietra / 75 legno, 18 giorni); scale tra piani più adatte di una scala a pioli; un ingresso rialzato in scala con la facciata 3U; occupanti e IA che attraversano le porte dei tramezzi; garitte a guglia che nel Lab mostrano solo le bandiere (anche sulla T3, difetto preesistente); baseline dell'audit da aggiornare con Playwright.
+
+
+## Portico delle sezioni W1 (03/11/2026)
+
+- **IMPLEMENTATO SU BRANCH `feature/built-portico`:** un solo layout del porticato per 2.5D, World 3D e cutaway; archi sotto il solaio del piano sopraelevato; portico visibile nel cutaway 3D. Sotto il portico solo stalle, officina degli armaioli, magazzino e corpo di guardia (proposta: l'utente ha indicato stalle e armaioli, le altre due sono da confermare).
+- **IMPLEMENTATO SU BRANCH (04/11):** loggia vera in World 3D (piano terra arretrato, pilastri e archi, piano rialzato sopra), anche nel cutaway.
+- **IMPLEMENTATO SU BRANCH (04/11, sera):** una stanza arredata per campata, camminamento percorribile lungo i pilastri, visitatori fermi sotto il portico, «Portico» nel pannello.
+- **APERTO:** loggia anche nel 2.5D (oggi archi ritagliati nella facciata); figure di lavoro fisse nelle stanze (stalliere, armaiolo) come le guarnigioni del cutaway; cavalli nelle stalle; il box della stalla (0,54U) non entra nella profondità utile (0,56U meno margini) e viene saltato; arredi di notte in piena luce; loggia nell'audit del Lab (oggi cattura il 2.5D); bottega/mercato sotto portico se si vorrà il commercio.
 ## Campana d'allarme (04/11/2026)
 
 - **IMPLEMENTATO SU BRANCH `feature/alarm-bell`:** allarme che si propaga dalle campane; upgrade `bell` delle torri T1–T2 a falde; campanile su `ROOM_EXTERIOR` (`mount:'roof'`).
@@ -97,7 +178,7 @@ La presenza del motore CANS non chiude i requisiti di popolazione in interni o d
 |---|---|---|
 | P0 | bridge | Già coperta da #73; preservare i miglioramenti successivi di main |
 | P0 | circle | Riconciliata su main corrente, QA locale 67/67; pubblicazione e CI prima della promozione |
-| P0 | jobmanager | Coperta da #98–99; non duplicare D-049. D-051 resta aperta |
+| P0 | jobmanager | Coperta da #98–99; non duplicare D-049. D-051 decisa: campi solo L2 |
 | P0 | knights | Renderer 2D già identico su main, #96; 3D escluso da D-046 |
 | P2 | messages | Integrare dopo riconciliazione del runtime e documentazione |
 | P3 | Tutte le altre branch senza PR | Verificare se i residui sono ancora pertinenti; niente recuperi automatici |
@@ -241,7 +322,7 @@ Circle: niente resa automatica del feudo; conquista di settore solo con presenza
 ## Economia — porting di #55 e `jobmanager` in 5 tappe (28/10/2026)
 
 - **TAPPA 1 SU MAIN (#98, `a29e8e7`):** ledger settimanale, dotazione di fondazione, cantieri pagati con L1 reali, allocatore L1 unico con pascolo sorvegliato e taglio legna, razioni del signore e felicità L1–L4.
-- **APERTO (decisione dell'utente):** D-051, L1 nei campi (#55 sì, `jobmanager` no).
+- **DECISO 05/11/2026:** D-051, campi riservati agli L2.
 - **TAPPA 2 SU MAIN (#99, `cdb2af9`):** routine settimanali di uomini e donne.
 - **TAPPA 3 SU MAIN (#101, `e1fdb20`):** botteghe L3 autonome, Beni L3 con prezzi a ritardo settimanale, servizi L3, manifesti L4+.
 - **APERTO (economia L3):** ricette dei Beni L3 da validare (oggi nessun consumo di materie prime), importazioni per i mestieri mancanti, incasso della locanda. Su branch `feature/l3-workshop-cutaway` (NON MERGE): interno in sezione (fase 1), vetrina a ante e insegna a bandiera con emblema del mestiere (fase 2); residui: luce notturna dell'insegna, mesh Blender per ante e insegna, insegna visibile in 2.5D anche con la facciata di spalle.
@@ -323,7 +404,7 @@ Circle: niente resa automatica del feudo; conquista di settore solo con presenza
 - **APERTO:** il fallback Canvas 2D del gioco usa ancora il painter e taglia telai e finestre; valutare una correzione del painter o sprite pre-renderizzati.
 - **FATTO (26/10):** occupazione forzata nel Lab. Il pulsante «Occupazione» passa tra tre modi: no, occlusione corretta (figure provate contro il depth buffer) e come nel gioco (figure disegnate sopra). I popolani sono su una griglia di 0,6 U su terreno, pavimenti e portici con spazio libero; l'export PNG 512 rispetta il modo scelto. Non usa ancora gli slot CANS o degli eventi (non su `main`).
 - **APERTO:** nel gioco le figure sono uno strato 2D sopra gli edifici: il modo «come nel gioco» mostra popolani sui tetti e davanti ai muri che dovrebbero coprirli.
-- **Case in 3D, kit Blender (D-057), branch `feature/houses-blender`, NON MERGE:** pilota L3 fatto in World 3D, integrato con le botteghe di #135 (sezione e fronte). **L1 e L2 su main con #141** (L1: paglia, finestre rustiche, porta a tavole, telaio; L2: i pezzi delle L3 su un corpo). **L4 su branch `feature/houses-blender-l4`, NON MERGE** (torretta tonda e quadrata con telaio, finestre e tetto del kit; abbaini con finestra del kit). **Da fare:** torrette L4 in cantiere non provate (servono incroci stradali); comignolo più rustico per le L1; voce «casa intera» del kit nel Lab (oggi ci sono i soli pezzi). Cantiere col kit fatto (World 3D).
+- **Case in 3D, kit Blender (D-057), su main:** L3 (#136, con le botteghe di #135), L1 e L2 (#141), L4 con torrette e abbaini (#145). **Camino laterale delle L1 su branch `fix/l1-chimney`, NON MERGE:** un solo camino in pietra sulla testata (prima uno ogni 1,5 U di colmo: due sulle casette da 2 U). **Da fare:** torrette L4 in cantiere non provate (servono incroci stradali); voce «casa intera» del kit nel Lab (oggi ci sono i soli pezzi). Cantiere col kit fatto (World 3D).
 - **APERTO (incendio, già su `main`, emerso nella riverifica del 02/11):** un incendio consuma il combustibile della casa in ~55 s e la lascia al 2% di integrità, in piedi e senza segni di bruciatura; serve una seconda accensione per abbatterla. Decidere se una casa bruciata deve crollare o mostrare uno stato «bruciata».
 - **APERTO (colore dei cantieri in World 3D):** il cantiere è dipinto dal Canvas, la casa finita da WebGL con la luce calda: al completamento le falde passano da grigio a bruno.
 - **Residui dell'audit:** gli schemi (case, pozzo, campi, strade, fiumi, foresta, rilievo) restano non-gioco (`render-del-gioco`); ponti, levatoi, fossati, terrapieni non ancora nella sandbox.
@@ -717,6 +798,14 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 - **Rilevazione lag:** rendere evidenti cali improvvisi di FPS e picchi di frame time; privilegiare una traccia dei tempi per frame (ms) oppure affiancarla agli FPS per distinguere meglio gli spike.
 - **Impatto minimo:** campionamento e rendering dell'overlay leggeri, buffer temporale limitato a 30 secondi e nessun costo significativo quando disattivato.
 - **QA:** verificare accuratezza, comportamento in pausa e a differenti frame rate, corretto reset della finestra temporale e funzionamento su renderer supportati.
+- Navi: salvare la livrea con la nave quando la flotta verrà persistita (oggi è solo runtime).
+- Pescatori: pesce come bene a parte e pescheria al mercato; percorso delle barche che evita moli e altre navi; il pescatore a piedi tra casa e molo.
+- Uscite via mare: navi mercantili che entrano ed escono dalle 3 uscite di mare; rimuovere nei salvataggi vecchi la strada già costruita verso il mare.
+- Cantiere navale: annullare un ordine; navi straniere e mercantili che usano le uscite via mare.
+- Navi mercantili: carovane mercantili L4 via mare quando i viaggi L4 diventeranno fisici.
+- DEV: togliere il blocco `Fai arrivare qui` dal pannello del molo (`ConquerFleet.devPierHtml`) quando non serve più.
+- Navigazione: evitamento laterale (oggi chi sta dietro aspetta e basta); rotte ricalcolate se un molo viene costruito mentre una nave è in viaggio.
+- Navi militari: più battaglie navali insieme (oggi una sola alla volta), scorta dei convogli, comandi dal pannello (segui; Attracca fatto).
 
 
 ### CIRCLE — 2026-10-28
@@ -744,3 +833,8 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 ### CIRCLE — QA baseline 29 ottobre 2026
 - **Verificato:** Node 22 CI [run #40912609993](https://github.com/erykwest/CONQUER/actions/runs/40912609993), 65/65 PASS; workflow automatico attivo su `circle`.
 - **QA aperta:** prova gameplay browser sulla branch `circle`, assedio contemporaneo di cerchie concentriche/radiali, salvataggi dopo molte campagne, prestazioni della topologia raster e controllo UI in pausa.
+
+
+## Campi L2 — 05/11/2026
+
+D-051 risolta per scelta dell’utente: campi solo L2. Recupero residuo jobmanager nel branch fix/fields-l2-only; chiusura dopo merge e rimozione della branch storica.

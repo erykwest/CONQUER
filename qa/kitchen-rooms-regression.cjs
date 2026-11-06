@@ -18,6 +18,7 @@ const ctx=vm.createContext({
   structureLevel:s=>s.level||1,
   towerTier:s=>Number(s.size)>=2?3:Number(s.size)>=1.5?2:1,
   builtInteriorFloors:s=>s.span==='wide'?1:(s.level||1),
+  isBuiltPortico:()=>false,PORTICO_FUNCTIONS:[],
 });
 vm.runInContext([pick(castle,'functionCapacity'),pick(siege,'eligibleRoom'),pick(siege,'floor'),pick(siege,'allowed')].join('\n'),ctx);
 const allowed=vm.runInContext('allowed',ctx);

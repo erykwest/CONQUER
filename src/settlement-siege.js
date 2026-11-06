@@ -95,7 +95,8 @@
     rubbleGrid=null;                                  // rubble of the loaded game
   }
   function eligibleRoom(s){return !!s&&['tower','gate','built'].includes(s.type)&&!underConstruction(s)}
-  function floor(s,index){return index+1}
+  // Storey of a room (1 = ground); the W4 keep has several rooms per storey.
+  function floor(s,index){return typeof isKeepW4==='function'&&isKeepW4(s)?functionSlotFloor(s,index)+1:index+1}
   function allowed(s,index,fn){
     if(!fn)return true;
     // Town hall: one room per floor, as many as the civic level; the tribunal needs L2.
@@ -106,6 +107,9 @@
     const l=floor(s,index),top=structureLevel(s);
     // Small (W1) towers: the spiral stair fills the shaft, only a few rooms fit (user, 04/11/2026).
     if(s.type==='tower'&&towerTier(s)===1&&!s.isMastio&&!['dovecote','latrine','prison','treasury','armory'].includes(fn))return false;
+
+    // The portico of a W1 section is an open ground floor: only what lives under arches fits there.
+    if(l===1&&s.type==='built'&&typeof isBuiltPortico==='function'&&isBuiltPortico(s)&&!PORTICO_FUNCTIONS.includes(fn))return false;
     // Stables: ground floor of a tower or of a W1 built section, never a W2 wide hall.
     if(fn==='stables')return l===1&&s.type!=='gate'&&!s.parentTowerId&&!(s.type==='built'&&isWideBuilt(s));
     if(fn==='workshop')return l===1&&s.type!=='gate'&&!s.parentTowerId;
@@ -167,6 +171,16 @@
     }
   }
   function syncAutoMastio(){
+    // A finished W4 keep is the Mastio: it takes the title from any earlier tower once.
+    const w4=typeof isKeepW4==='function'&&State.structures.find(s=>isKeepW4(s)&&mastioEligible(s)&&!underConstruction(s));
+    if(w4&&!w4.isMastio&&!w4.mastioAuto){
+      w4.mastioAuto=true;
+      for(const s of State.structures)if(s.type==='tower')s.isMastio=false;
+      w4.isMastio=true;
+      if(!ensureMastioHall(w4,true))w4.isMastio=false;
+      markDirty(false,['base','castleBody','castleFront']);
+      return true;
+    }
     // The first independent finished tower is the keep, regardless of whether
     // it is wood, round stone or square stone. Gates/watchtowers are excluded.
     if(State.structures.some(s=>s.type==='tower'&&s.isMastio&&mastioEligible(s)))return false;
@@ -602,6 +616,9 @@
     };
     const left=piece(s.a,p0,s.aSnap,null,list.slice(0,i),0),right=piece(p1,s.b,null,s.bSnap,list.slice(i+1),bay.to);
     const pieces=[left,right].filter(Boolean);
+    // A wall-walk stair stays on the stretch that still holds its whole flight, at the same place;
+    // one standing in the bay comes down with it (settlement-wall-stairs.js).
+    window.ConquerWallStairs?.splitOnBreach?.(s,bay.from,bay.to,left,right);
     // The bay comes down: its masonry (and merlons) falls into the gap.
     // A stepped wall comes down from the ground of the section the bay opens in.
     const stepped=typeof wallGroundAt==='function'?wallGroundAt(s,(bay.from+bay.to)/2/L):null;
@@ -965,7 +982,7 @@
     status('The gate is broken in');
   }
   // 2.5D portals follow the door's state. architecture's drawGatePortals is wrapped once
-  // every script has run (its module is kept byte-identical by the refactor invariant).
+  // every script has run.
   const DOOR_ASSETS={gatePortalDamaged:'./src/assets/architecture/gate_portal_damaged.png',
     gatePortalBroken:'./src/assets/architecture/gate_portal_broken.png'};
   function doorAsset(g){const st=doorStage(g);return st==='broken'?'gatePortalBroken':st==='damaged'?'gatePortalDamaged':'gatePortal'}
@@ -974,10 +991,10 @@
     for(const [key,path] of Object.entries(DOOR_ASSETS)){
       const img=new Image();
       img.onload=()=>{
-        try{architectureSprites[key]=typeof prepareArchitectureSprite==='function'?prepareArchitectureSprite(img):img}catch{architectureSprites[key]=img}
+        architectureSprites[key]=img;
         invalidateSceneCache();redraw();
       };
-      img.src=path;
+      img.src=path+'?v=prepared-1';
     }
   }
   window.addEventListener?.('DOMContentLoaded',()=>{

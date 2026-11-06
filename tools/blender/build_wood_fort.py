@@ -322,6 +322,139 @@ def palisade_tower(mdl, roofed):
         flag(mdl, apex + .1)
 
 
+FRAME_TOWER = {'size': 1.5, 'storey': 1.28, 'deck0': 2.56, 'deck1': 2.66, 'eave': 3.30, 'apex': 3.78}
+
+
+def frame_tower(mdl):
+    """BC-251105-06 timber frame tower, H2 (1.5 U): two storeys of a braced post-and-beam
+    frame left readable on the outside - corner and middle posts on a sill, a girt at each
+    floor, a wall plate, raking braces in every panel over a recessed plank infill - then a
+    fighting deck with a rail, four posts with knee braces and a hip roof.
+    Parts as palisade_tower (side_yn/side_xp/side_yp/side_xn, floor, interior, deck, top, flag)
+    so the game's cutaway opens the two sides facing the camera."""
+    F = FRAME_TOWER
+    size, st, deck0, deck1, eave, apex = F['size'], F['storey'], F['deck0'], F['deck1'], F['eave'], F['apex']
+    half = size / 2 - .07
+    cs = [(-half, -half), (half, -half), (half, half), (-half, half)]
+    names = ['side_yn', 'side_xp', 'side_yp', 'side_xn']
+    normals = [(0, -1), (1, 0), (0, 1), (-1, 0)]
+    levels = [(0, st), (st, deck0)]
+    for e in range(4):
+        p = mdl.part(names[e])
+        a, b = cs[e], cs[(e + 1) % 4]
+        nx, ny = normals[e]
+        along_x = e % 2 == 0
+        L = 2 * half
+        mid = ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+        off = lambda q, d: (q[0] + nx * d, q[1] + ny * d)
+        # ground storey: a closed wall of upright logs between the corner posts (no exposed frame)
+        n = max(2, math.ceil(L / .17))
+        for i in range(1, n):
+            x, y = a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n
+            log(p, x, y, .08, -.02, st - .02 + rng.uniform(-.015, 0), top=None,
+                lean=(rng.uniform(-.006, .006), rng.uniform(-.006, .006)))
+        # first storey (P1) only: recessed infill panels behind the readable braced frame
+        for k, (z0, z1) in enumerate(levels[1:]):
+            for j in range(2):
+                c = (a[0] + (b[0] - a[0]) * (j * 2 + 1) / 4, a[1] + (b[1] - a[1]) * (j * 2 + 1) / 4)
+                c = off(c, -.02)
+                # light hewn boards behind the dark frame, so the bracing reads at game zoom
+                key = 'cut' if (j + k) % 2 else 'cutDark'
+                if along_x:
+                    box(p, c[0], c[1], z0 + .06, L / 2 - .1, .04, z1 - z0 - .1, key)
+                else:
+                    box(p, c[0], c[1], z0 + .06, .04, L / 2 - .1, z1 - z0 - .1, key)
+        # posts: the corner a (each side owns one corner) and the middle post
+        log(p, a[0], a[1], .085, -.02, eave, top=None)                 # corner posts run up to carry the roof
+        mp = off(mid, .005)
+        if names[e] == 'side_xp':
+            # The front (+x, the face the Mastio's raised-entrance stair climbs to): its middle
+            # post is a part of its own, swapped for the P1 doorway ('doorRaised') in game.
+            fm = mdl.part('frontMid')
+            box(fm, mp[0], mp[1], st, .1, .12, deck0 - st, 'beam')
+            for z in (st, deck0 - .04):
+                box(fm, mp[0] + .08, mp[1], z - .02, .03, .03, .03, 'logEnd')
+            mdl.done('frontMid', fm)
+        else:
+            box(p, mp[0], mp[1], st, .12 if along_x else .1, .1 if along_x else .12, deck0 - st, 'beam')
+        # girt at the first floor (sill of the frame) and wall plate under the deck
+        for z, h in ((st - .04, .08), (deck0 - .08, .08)):
+            q0, q1 = off(a, .03), off(b, .03)
+            beam(p, (q0[0], q0[1], z + h / 2), (q1[0], q1[1], z + h / 2), .1, h, 'beam')
+        # raking braces: each panel braced from the outer post foot up to the middle post
+        for z0, z1 in levels[1:]:
+            for q, r in ((a, mid), (b, mid)):
+                q0, r0 = off(q, .05), off(r, .05)
+                beam(p, (q0[0], q0[1], z0 + .07), (r0[0] * .5 + q0[0] * .5, r0[1] * .5 + q0[1] * .5, z1 - .06), .05, .05, 'brace')
+            # short head braces by the corners
+            for q in (a, b):
+                q0 = off(q, .05)
+                t = .22 / L
+                h0 = (q0[0] + (mid[0] - q[0]) * t * 2, q0[1] + (mid[1] - q[1]) * t * 2)
+                beam(p, (q0[0], q0[1], z1 - .26), (h0[0], h0[1], z1 - .06), .04, .04, 'brace')
+        # peg heads on the joints (lighter end grain)
+        for q in ((a, b) if names[e] == 'side_xp' else (a, mid, b)):
+            for z in (st, deck0 - .04):
+                q0 = off(q, .085)
+                box(p, q0[0], q0[1], z - .02, .03, .03, .03, 'logEnd')
+        # loopholes on the upper storey of every face (doors: parts 'door' / 'doorRaised' below)
+        for t in (.25, .75):
+            c = (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)
+            c = off(c, .002)
+            if along_x:
+                box(p, c[0], c[1], st + .45, .05, .01, .2, 'dark')
+            else:
+                box(p, c[0], c[1], st + .45, .01, .05, .2, 'dark')
+        mdl.done(names[e], p)
+    # Doors on the front (+x), centred like a stone tower's: 'door' at the ground in front of the
+    # log wall; 'doorRaised' at the P1 floor for the Mastio's raised entrance (settlement-keep-
+    # entrance.js), which then drops 'door' and 'frontMid' (the ground floor has no door).
+    x = half + .085
+    dr = mdl.part('door')
+    box(dr, x, 0, 0, .012, .32, .66, 'dark')
+    box(dr, x + .015, -.08, 0, .03, .15, .64, 'door')
+    box(dr, x + .01, 0, .66, .05, .44, .06, 'beam')
+    mdl.done('door', dr)
+    x = half + .03
+    dr = mdl.part('doorRaised')
+    box(dr, x + .02, 0, st + .04, .012, .34, .66, 'dark')
+    box(dr, x + .035, .09, st + .04, .03, .15, .64, 'door')
+    for y in (-.2, .2):
+        box(dr, x, y, st, .1, .07, deck0 - st, 'beam')                 # door posts
+    box(dr, x + .01, 0, st + .7, .07, .48, .07, 'beam')                  # lintel
+    box(dr, x + .04, 0, st - .03, .1, .5, .04, 'logEnd')                 # threshold
+    mdl.done('doorRaised', dr)
+    # Inside (cutaway only): ground plank floor, the first floor on joists, ladders to each hatch.
+    inner = half - .06
+    fl = mdl.part('floor')
+    box(fl, 0, 0, 0, inner * 2, inner * 2, .03, 'plankDark', 'plank')
+    for i in range(1, 7):
+        box(fl, -inner + inner * 2 * i / 7, 0, .03, .008, inner * 2 * .98, .003, 'plankDark')
+    mdl.done('floor', fl)
+    ins = mdl.part('interior')
+    box(ins, 0, 0, st - .04, inner * 2, inner * 2, .05, 'plankDark', 'plank')
+    box(ins, inner - .14, -inner + .14, st + .01, .22, .22, .006, 'dark')                # hatch
+    ladder(ins, inner - .14, -inner + .14, .03, st + .01, axis_y=True, w=.16, rungs=6)
+    box(ins, -inner + .14, inner - .14, deck0 - .005, .22, .22, .006, 'dark')
+    ladder(ins, -inner + .14, inner - .14, st + .01, deck0, axis_y=True, w=.16, rungs=6)
+    box(ins, 0, -inner + .25, st + .01, .5, .22, .3, 'cutDark', 'cut')                  # chest / bench
+    mdl.done('interior', ins)
+    dk = mdl.part('deck')
+    deck(dk, size - .02, deck0, deck1, top='plank', joists=4)
+    rail(dk, (size - .02) / 2 - .05, deck1, deck1 + .3)
+    mdl.done('deck', dk)
+    top = mdl.part('top')
+    rh = half
+    for x, y in cs:
+        sx, sy = (1 if x > 0 else -1), (1 if y > 0 else -1)
+        beam(top, (x, y, eave - .3), (x - sx * .24, y, eave - .04), .04, .04, 'brace')
+        beam(top, (x, y, eave - .3), (x, y - sy * .24, eave - .04), .04, .04, 'brace')
+    box(top, 0, 0, eave - .05, rh * 2 + .12, rh * 2 + .12, .05, 'beam', 'beam')
+    hip_roof(top, .92, eave, apex, courses=3)
+    mdl.done('top', top)
+    flag(mdl, apex + .1)
+
+
 def cloth(p, pts, key):
     """A thin cloth panel through world points (U), drawn as one quad strip."""
     p.quads([m(*q) for q in pts], [tuple(range(len(pts)))], key)
@@ -416,10 +549,110 @@ def wood_gate(mdl):
     drapes(mdl, half_x + .045, (-.62, .62), body_top - .05)
 
 
+# Timber longhouse: a ground-floor-only built section (W1 1 U wide, W2 2 U wide) of any length.
+LONGHOUSE = {'longhouse_w1': (1.0, .62, 1.45), 'longhouse_w2': (2.0, .72, 1.75)}   # width, wall top, ridge (U)
+
+
+def slab(p, quad, t, key, under='beam'):
+    """Thin roof slab: top face through four points (U), extruded t down; edges and underside 'under'."""
+    top = [m(*q) for q in quad]
+    bot = [(x, y, z - t * S) for x, y, z in top]
+    vs = top + bot
+    p.quads(vs, [(0, 1, 2, 3)], key)
+    p.quads(vs, [(7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2), (2, 6, 7, 3), (3, 7, 4, 0)], under)
+
+
+def longhouse(mdl, width, wall_h, ridge):
+    """Longhouse in structure-local space: a repeatable 1 U bay (x 0..1) the game lays along a->b,
+    and two gable ends at x = 0 (end_a faces -x and holds the door, end_b faces +x and is moved
+    to b). Vertical plank walls on a sill, raking outer props, a steep shingle roof with an eave
+    overhang, crossed carved boards over each gable. Parts per side (wall_yn / wall_yp,
+    roof_yn / roof_yp, end_a / end_b) let the cutaway leave out the ones facing the camera;
+    'floor' only shows in cutaway."""
+    hw = width / 2 - .06                                 # wall line
+    slope = (ridge - wall_h) / hw
+    over = .1                                            # eave overhang beyond the wall
+    eave_y, eave_z = hw + over, wall_h - over * slope
+    roof_z = lambda y: wall_h + slope * (hw - abs(y))   # underside of the roof over the wall line
+    planks = 9
+    for sgn, name in ((-1, 'wall_yn'), (1, 'wall_yp')):
+        w = mdl.part(name)
+        y = sgn * hw
+        box(w, .5, y, 0, 1.0, .09, .08, 'beam')                       # sill
+        for i in range(planks):
+            x = (i + .5) / planks
+            box(w, x, y, .06, 1 / planks - .008, .05, wall_h - .1, 'plank' if i % 2 else 'plankDark')
+        box(w, .5, y, wall_h - .06, 1.0, .09, .07, 'beam', 'beam')     # wall plate
+        log(w, 0, y, .05, 0, wall_h, top=None)                         # bay post
+        beam(w, (.5, y + sgn * .12, 0), (.5, y + sgn * .03, wall_h * .78), .055, .055, 'log')   # raking prop
+        mdl.done(name, w)
+    for sgn, name in ((-1, 'roof_yn'), (1, 'roof_yp')):
+        r = mdl.part(name)
+        courses = 4
+        for k in range(courses):
+            t0, t1 = k / courses, (k + 1) / courses
+            y0, y1 = sgn * (eave_y - eave_y * t0), sgn * (eave_y - eave_y * t1)
+            z0, z1 = eave_z + (ridge - eave_z) * t0, eave_z + (ridge - eave_z) * t1
+            lip = .025 if k else 0                                     # each course laps over the one below
+            q = [(0, y0 + sgn * lip * .3, z0 + .03 - lip), (1, y0 + sgn * lip * .3, z0 + .03 - lip), (1, y1, z1 + .03), (0, y1, z1 + .03)]
+            slab(r, q if sgn > 0 else q[::-1], .03, 'roofShingle' if k % 2 else 'roofShingleDark')
+        beam(r, (0, sgn * eave_y, eave_z - .015), (1, sgn * eave_y, eave_z - .015), .04, .05, 'beam')   # eave board
+        mdl.done(name, r)
+    rd = mdl.part('ridge')
+    beam(rd, (0, 0, ridge + .05), (1, 0, ridge + .05), .1, .07, 'roofRidge')
+    mdl.done('ridge', rd)
+    fl = mdl.part('floor')
+    box(fl, .5, 0, 0, 1.0, hw * 2 - .06, .03, 'plankDark', 'plank')
+    for i in range(1, 6):
+        box(fl, .5, -hw + hw * 2 * i / 6, .03, 1.0, .008, .003, 'plankDark')
+    mdl.done('floor', fl)
+    for out, name in ((-1, 'end_a'), (1, 'end_b')):
+        e = mdl.part(name)
+        x = out * .025
+        n = max(5, round(hw * 2 / .11))
+        for i in range(n):                                             # gable planks up to the roof
+            ya, yb = -hw + hw * 2 * i / n + .004, -hw + hw * 2 * (i + 1) / n - .004
+            top = [(ya, roof_z(ya)), (yb, roof_z(yb))]
+            if ya < 0 < yb:
+                top.insert(1, (0, ridge))
+            pts = [(ya, .06)] + top + [(yb, .06)]
+            vs = [(x * S - .025 * S, py * S, pz * S) for py, pz in pts] + [(x * S + .025 * S, py * S, pz * S) for py, pz in pts]
+            k = len(pts)
+            e.quads(vs, [tuple(range(k))[::-1], tuple(range(k, 2 * k))], 'plank' if i % 2 else 'plankDark')
+            e.quads(vs, [(j, (j + 1) % k, k + (j + 1) % k, k + j) for j in range(k)], 'plankDark')
+        box(e, 0, 0, 0, .09, hw * 2 + .09, .08, 'beam')                # sill
+        for y in (-hw, hw):
+            log(e, 0, y, .065, 0, wall_h, top=None)                    # corner posts
+        box(e, 0, 0, wall_h - .06, .09, hw * 2 + .09, .07, 'beam', 'beam')   # tie beam
+        # roof overhang beyond the gable and the barge boards along its edge
+        ox = out * .16
+        for sgn in (-1, 1):
+            q = [(0, sgn * eave_y, eave_z + .03), (ox, sgn * eave_y, eave_z + .03), (ox, 0, ridge + .03), (0, 0, ridge + .03)]
+            slab(e, q if (sgn > 0) == (out > 0) else q[::-1], .03, 'roofShingleDark')
+            beam(e, (ox, sgn * eave_y, eave_z), (ox, 0, ridge + .02), .03, .07, 'beam')
+            # crossed carved boards over the ridge (the barge boards running on past each other)
+            beam(e, (ox + out * .01, sgn * hw * .55, roof_z(hw * .45) + .06), (ox + out * .01, -sgn * .2, ridge + .2 + .16 * slope * .2), .03, .06, 'beam')
+            box(e, ox + out * .01, -sgn * .23, ridge + .23, .035, .07, .09, 'cut')   # carved head
+        beam(e, (0, 0, ridge + .05), (ox, 0, ridge + .05), .1, .07, 'roofRidge')
+        if out < 0:                                                    # door, lintel and a step stone
+            dw = min(.42, hw * .7)
+            box(e, x - .03, 0, .08, .012, dw, .5, 'dark')
+            box(e, x - .045, dw * .22, .08, .03, dw * .5, .48, 'door')
+            box(e, x - .04, 0, .58, .07, dw + .16, .07, 'beam')
+            for y in (-dw / 2 - .03, dw / 2 + .03):
+                box(e, x - .035, y, .08, .05, .05, .5, 'beam')
+            box(e, x - .12, 0, -.02, .16, dw + .1, .05, 'logEnd')
+        else:                                                          # shuttered gable window
+            box(e, x + .03, 0, wall_h + .1, .012, .2, .16, 'dark')
+            box(e, x + .04, -.15, wall_h + .1, .02, .09, .16, 'door')
+        mdl.done(name, e)
+
+
 BUILD = [('stake', stake), ('watchtower', watchtower),
          ('palisadeTower_open', lambda m_: palisade_tower(m_, False)),
          ('palisadeTower_roofed', lambda m_: palisade_tower(m_, True)),
-         ('woodGate', wood_gate)]
+         ('woodGate', wood_gate), ('frameTower', frame_tower)] + \
+        [(k, (lambda v: lambda m_: longhouse(m_, *v))(v)) for k, v in LONGHOUSE.items()]
 
 
 def main(out_path):

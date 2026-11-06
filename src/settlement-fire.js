@@ -532,5 +532,6 @@
     raf=requestAnimationFrame(step);
   }
   window.ConquerFire={parts,ignite,extinguish,burning,tick,blocks,draw,drawTorch,volley,gap,radius,state:store,BURN,needsAnimation,
+    flame,smoke,   // single flame tongue / smoke puffs at a screen point (ships on fire reuse them)
     brigade:{on:brigadeOn,set:setBrigade,carriers:()=>store().carriers||[],BRIGADE}};
 })();
