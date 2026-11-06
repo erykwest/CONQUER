@@ -23,12 +23,14 @@ function renderFunctionPanel(){
   if(window.ConquerStorageYard?.is(s)){
     const Y=window.ConquerStorageYard,n=Y.size(s),next=n+2,stock=Y.stocks();
     const goods=Object.entries(stock).filter(([,qty])=>qty>0);
+    const haul=window.ConquerHaulage?.snapshot?.();
     const fmt=val=>Number(val).toLocaleString('it-IT',{maximumFractionDigits:1});
     panel.classList.add('open');
     info.innerHTML='<div class="kv"><span>Deposito</span><b>Piazzale · '+n+'×'+n+'U</b></div>'+
       '<div class="kv"><span>Scorte nel magazzino</span><b>'+fmt(Y.used())+' / '+fmt(Y.capacity())+'</b></div>'+
       goods.map(([name,qty])=>'<div class="kv"><span>'+name+'</span><b>'+fmt(qty)+'</b></div>').join('')+
-      '<div class="legend">Le risorse coincidono con le scorte economiche del castello. Nessun inventario duplicato.</div>';
+      (haul?'<div class="kv"><span>Carretti locali</span><b>'+haul.active+' in viaggio · '+haul.pending+' in attesa</b></div>':'')+
+      '<div class="legend">I carri animano il trasporto dalla produzione al piazzale lungo strade completate. Le scorte sono già contabilizzate nel castello: nessun secondo accredito.</div>';
     const cost=Y.expansionCost(n,next);
     slots.innerHTML=cost?
       '<div class="slot"><div class="slot-label">Ampliamento</div><button data-stockyard-grow>Espandi a '+next+'×'+next+'U · '+costText(cost)+'</button>'+
