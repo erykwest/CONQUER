@@ -297,7 +297,7 @@
     return card('Pendenza dei tetti',rows+(ui.pitchMsg?warn(ui.pitchMsg):''),
       'Rifà i '+fmt(n)+' tetti a falde di torri e porte; il costo cresce con il numero di tetti. Le nuove costruzioni usano la pendenza scelta.',true);
   }
-  const CRENELS = [['flat','Piatta','Blocco squadrato, lo stile di base.'],['gabled','Doppia falda','Sommità a due spioventi.'],['swallowtail','Coda di rondine','Corna a V e feritoia: la più costosa.'],['double','Doppia','Seconda fila di merli sul lato interno del cammino delle mura.']];
+  const CRENELS = [['flat','Piatta','Blocco squadrato, lo stile di base.'],['gabled','Doppia falda','Sommità a due spioventi.'],['swallowtail','Coda di rondine','Corna a V e feritoia: la più costosa.'],['double','Merlo doppio','Merli lunghi il doppio sulle mura: due pieni, un vuoto.'],['tworow','Doppia fila','Seconda fila di merli sul lato interno del cammino delle mura.']];
   const costLine = cost => Object.entries(cost||{}).filter(([,v])=>v>0).map(([k,v])=>fmt(v)+' '+good(k)).join(' · ') || 'gratis';
   function crenelCard() {
     const cmd = window.ConquerGame?.commands;

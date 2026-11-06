@@ -4,9 +4,17 @@ Sul branch `fix/audit-sheet-grid` i fogli provini dell'audit per categoria dispo
 
 ## Merlature doppie BC-251105-04 (branch `feature/double-crenel`, da `main` b1a2307, 05/11/2026, NON MAIN)
 
-- Implementato: quarto stile `double` in `CRENEL_STYLES` (Centro di controllo › Cantieri › «Stile delle merlature», costo 1 pietra + 1 oro per merlo). Sulle mura aggiunge una seconda fila di merli piatti (h .20) con parapetto sul bordo interno del cammino di ronda; torri e porte restano con un solo anello di merli piatti. Il preventivo conta i merli dello stile di arrivo (quindi entrambe le file). Lab: varianti «Muro medio T2 H1 / Muro spesso T3 H2 merlatura doppia» (override `labCrenelStyle` della variante, non della policy).
-- Provato: `qa/battlement-parapet-regression.cjs` 6/6 (nuovo controllo doppia fila). `node qa/asset-audit.mjs` locale: 1132 render, 0 falliti, 122 avvisi (i 2 nuovi sono il già noto «cantiere-progressivo» dei muri), 18 nuovi, 0 cambiati; foglio `fortificazioni-mura` rivisto, baseline aggiornata.
-- Non provato: partita reale con il cambio pagato; mura su pendio con doppia fila (il codice passa per lo stesso adattamento ai gradini, non verificato a vista); modalità world3d a pieno schermo.
+- Implementato: due nuovi stili in `CRENEL_STYLES`, scelti dal Centro di controllo › Cantieri › «Stile delle merlature».
+  - `double` «Merlo doppio» (BC-251105-04): sulle mura ogni merlo è lungo il doppio (.56) e il vuoto è largo quanto un merlo semplice (.28). La sequenza è 11011011 invece di 1010101; nei vuoti resta il parapetto. I merli d'estremità sono accorciati per restare sul muro. Costo: 2 pietra + 1 oro per merlo.
+  - `tworow` «Doppia fila»: è la prima interpretazione, conservata su richiesta. Aggiunge una seconda fila di merli piatti (h .20) con parapetto sul bordo interno del cammino di ronda. Costo: 1 pietra + 1 oro per merlo.
+  - Torri e porte restano a merli piatti con entrambi gli stili. Il preventivo conta i merli come costruiti nello stile di arrivo.
+  - Lab: quattro varianti di muro «merlo doppio» / «doppia fila». Usano l'override `labCrenelStyle` della variante, non la policy.
+- Provato: `qa/battlement-parapet-regression.cjs` 7/7. Audit locale: 1150 render, 0 falliti, 124 avvisi (i nuovi sono il già noto «cantiere-progressivo» dei muri), 36 nuovi, 0 cambiati. Merlo doppio rivisto a vista nel Lab e baseline aggiornata.
+- Non provato:
+  - una partita reale con il cambio pagato;
+  - mura su pendio con questi stili (passano per lo stesso adattamento ai gradini, non verificato a vista);
+  - merlo doppio su torri e porte (non esteso);
+  - world3d a pieno schermo.
 
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`, NON MAIN)
 

@@ -45,7 +45,7 @@
 - [ ] **BC-251105-01 — Scala lignea per i camminamenti.** Upgrade/accesso in legno dalle quote a terra al cammino di ronda; definire aggancio, ingombro e accessibilità.
 - [ ] **BC-251105-02 — Scala lapidea per i camminamenti.** Variante in pietra con la stessa funzione di accesso, distinta da quella lignea; verificare il raccordo alla quota delle mura.
 - [ ] **BC-251105-03 — Edifici addossati alle mura.** Consentire una tipologia di edificio accostato alla faccia interna delle mura, con attacco geometrico e gestione delle interferenze con il camminamento.
-- [x] **BC-251105-04 — Merlature doppie.** Nuova configurazione di merlatura doppia; **non equivale** allo stile del merlo «a doppia falda» (`feat/crenel-styles`, in main con #115). Geometria scelta: stile globale `double` = seconda fila di merli piatti con parapetto sul bordo interno del cammino di ronda delle mura (torri e porte invariate). Branch `feature/double-crenel`.
+- [x] **BC-251105-04 — Merlature doppie.** Nuova configurazione di merlatura doppia; **non equivale** allo stile del merlo «a doppia falda» (`feat/crenel-styles`, in main con #115). Geometria: stile globale `double` = merlo lungo il doppio sulle mura, sequenza 11011011 invece di 1010101 (1 = merlo a piena altezza, 0 = parapetto). Conservato anche lo stile `tworow` = seconda fila di merli sul bordo interno del cammino. Torri e porte invariate. Branch `feature/double-crenel`.
 
 ### Torri
 - [ ] **BC-251105-05 — Inner roof delle torri.** Copertura interna delle torri; definire relazione con sommità, merli, cutaway e locali sottostanti.
