@@ -3,7 +3,7 @@
 ## 2026-11-06 — Campagna per settori, branch combat-ai
 
 - **IMPLEMENTATO E TESTATO LOCALMENTE:** integrazione circle con il ledger Siege, cattura/riconquista e salvataggio; agganci di breccia e navigazione; ripresa della campagna dopo ariete/scale/torri; collegamento delle brecce alla porta interna; ripiegamento dalle mura e dalla mischia.
-- **QA BROWSER:** variante TEST con due cinte e mastio interno, 43 assalitori / 5 difensori, prova 60 s in corso. Il layout originale non chiude una cinta per il raster: trattare distintamente i due scenari.
+- **QA BROWSER:** variante TEST con due cinte e mastio interno, 43 assalitori / 5 difensori, prova 60 s conclusa: 0 assalitori e 1 difensore caduti, 0 conquiste, settore esterno conteso, mastio sicuro. Tick massimo 10,7 s; [report](../qa/combat-ai-circle-2026-11-06.md). Il layout originale non chiude una cinta per il raster: trattare distintamente i due scenari.
 - **RESIDUI:** piazzamento autonomo di scale/torri (oggi il piano arma l'ariete; scale e torri già assegnate sono usate), profilazione dei picchi delle ricerche di percorso, riconciliazione generale con main separata. Nessuna chiusura delle milestone strategiche o dell'assedio completo.
 
 

@@ -4,7 +4,7 @@
 
 - Port selettivo dell'integrazione Siege/circle da main: scorte fisiche per settore, cattura, riconquista, persistenza, brecce e invalidazione della navigazione. Ripristinati i 2 test d'integrazione esclusi nel primo port.
 - Corretti il mancato ritorno alla campagna dopo gli assalti, il collegamento dei settori compromessi ai portali interni e il ripiegamento da mura/mischia. La regressione di attraversamento ora non dipende da frecce casuali delle porte.
-- 67 test circle e regressioni pertinenti PASS; runner browser TEST/variante concentrica di 60 s con perdite e settori, CI sul branch. Numeri browser conclusivi ancora da registrare. Branch non integrato in main.
+- 67 test circle e regressioni pertinenti PASS; runner browser TEST/variante concentrica di 60 s con perdite e settori, CI sul branch. Browser 60 s sulla variante concentrica: 43→43 assalitori vivi, 5→4 difensori, porta esterna sfondata, 0 settori conquistati (esterno conteso), mastio sicuro, 0 errori JS; picchi fino a 10,7 s. [Report](../qa/combat-ai-circle-2026-11-06.md). CI PASS su `a3ebb86`. Branch non integrato in main.
 
 
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`)

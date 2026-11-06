@@ -1,0 +1,110 @@
+{
+  "label": "combat-ai-concentric-final-60s",
+  "head": "aff223d",
+  "branch": "combat-ai",
+  "dirty": true,
+  "layout": "TEST.json",
+  "seconds": 60,
+  "concentric": true,
+  "startedAt": "2026-11-06T10:06:41.450Z",
+  "errors": [],
+  "verified_code_commit": "a3ebb866d581ead8285af3609c84c2c03df056b9",
+  "provenance": "Run started on aff223d with uncommitted runtime changes subsequently committed as a3ebb86. No runtime source changes during this run.",
+  "result": {
+    "mode": "webgl",
+    "setup": {
+      "ram": false,
+      "tower": false,
+      "trebuchets": 0,
+      "attackers": 43,
+      "attackersHp": 350,
+      "defenders": 5,
+      "defendersHp": 58,
+      "sectors": [
+        {
+          "id": "circle-1",
+          "depth": 1,
+          "state": "secure",
+          "mastio": false
+        },
+        {
+          "id": "circle-2",
+          "depth": 2,
+          "state": "secure",
+          "mastio": true
+        }
+      ],
+      "structures": 176,
+      "archers": 0
+    },
+    "wallSeconds": 405.8,
+    "gameSeconds": 60,
+    "firstTickMs": 522.6,
+    "tickMs": {
+      "n": 429,
+      "p50": 1.8,
+      "p95": 4738.4,
+      "max": 10669.1
+    },
+    "drawMs": {
+      "n": 376,
+      "p50": 20.3,
+      "p95": 53.9,
+      "max": 4892.7
+    },
+    "frameMs": {
+      "n": 429,
+      "p50": 89.9,
+      "p95": 4797.8,
+      "max": 10700.2
+    },
+    "outcome": {
+      "doors": [
+        {
+          "id": "go",
+          "stage": "broken"
+        },
+        {
+          "id": "gi",
+          "stage": "intact"
+        }
+      ],
+      "sectors": [
+        {
+          "id": "circle-1",
+          "depth": 1,
+          "state": "contested",
+          "mastio": false,
+          "control": {
+            "groundEnemies": 18,
+            "groundDefenders": 1,
+            "wallEnemies": 0,
+            "wallDefenders": 0,
+            "climbingEnemies": 0
+          }
+        },
+        {
+          "id": "circle-2",
+          "depth": 2,
+          "state": "alert",
+          "mastio": true,
+          "control": {
+            "groundEnemies": 0,
+            "groundDefenders": 1,
+            "wallEnemies": 0,
+            "wallDefenders": 0,
+            "climbingEnemies": 0
+          }
+        }
+      ],
+      "captures": [],
+      "defendersHp": 46,
+      "attackersAlive": 43,
+      "attackersHp": 330,
+      "defendersAlive": 4,
+      "door": "broken",
+      "onWalls": 0,
+      "trebuchetShots": 0
+    }
+  }
+}
