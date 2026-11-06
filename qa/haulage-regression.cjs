@@ -10,7 +10,7 @@ function world(){
   const camp={id:'camp',type:'loggingCamp',x:100,y:100,economicOwner:'lord'};
   const first={id:'road-a',type:'road',a:{x:99,y:100},b:{x:105,y:100}};
   const second={id:'road-b',type:'road',a:{x:105,y:100},b:{x:115,y:100}};
-  const State={clock:{day:0,speed:1},structures:[{id:'well',type:'well',x:100,y:100},yard,camp,first,second],
+  const State={clock:{day:0,speed:1},view:{scale:.75,rotation:0},structures:[{id:'well',type:'well',x:100,y:100},yard,camp,first,second],
     village:{founded:true,wellId:'well',foundingWorkers:4},policies:{rations:'market'}};
   const artwork=[],window={ConquerWagons:{drawWagon:(ctx,x,y,scale,opts)=>artwork.push({...opts})}};
   const ctx=vm.createContext({State,window,console,Math,Number,Object,Array,Map,Set,String,Date,
