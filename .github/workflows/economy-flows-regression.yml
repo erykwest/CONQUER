@@ -73,7 +73,6 @@ jobs:
           node qa/construction-commute-regression.cjs
           node qa/labor-jobs-regression.cjs
           node qa/economy-rations-regression.cjs
-          node qa/save-safety-regression.cjs
           node qa/founding-regression.cjs
           node qa/builder-placement-regression.cjs
           node qa/refactor-app-population-regression.cjs

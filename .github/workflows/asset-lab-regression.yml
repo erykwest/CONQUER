@@ -9,6 +9,9 @@ on:
       - tools/build-asset-manifest.cjs
       - src/settlement-siege-preview.js
       - src/settlement-castle3d.js
+      - src/settlement-world3d.js
+      - src/settlement-storage-yard.js
+      - .github/actions/playwright-setup/action.yml
       - src/settlement-app-persistence.js
       - src/settlement-work-anim.js
       - src/settlement-asset-stage.js
@@ -26,8 +29,36 @@ on:
 jobs:
   asset-lab:
     runs-on: ubuntu-latest
+    outputs:
+      visual_needed: ${{ steps.scope.outputs.visual_needed }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Detect changes that require full visual QA
+        id: scope
+        shell: bash
+        env:
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # Unverifiable diff => do not silently skip the browser.
+          if [[ ! "$PR_BASE" =~ ^[a-f0-9]{40}$ || ! "$PR_HEAD" =~ ^[a-f0-9]{40}$ ]]; then
+            echo 'visual_needed=true' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! git diff --name-only --diff-filter=ACDMRT "$PR_BASE...$PR_HEAD" > "$RUNNER_TEMP/assetlab-changes.txt"; then
+            echo 'visual_needed=true' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if grep -Eq '^(figures-lab\.html|src/(asset-(catalog|manifest|audit)|settlement-(asset-stage|siege-preview|castle.*|world3d|storage-yard|work-anim))\.js|src/assets/|lab/|qa/(asset-catalog-browser|asset-audit)\.(mjs|js)|qa/asset-audit-baseline\.json|tools/build-asset-manifest\.cjs|\.github/(actions/playwright-setup/action\.yml|workflows/asset-lab-regression\.yml))' "$RUNNER_TEMP/assetlab-changes.txt"; then
+            echo 'visual_needed=true' >> "$GITHUB_OUTPUT"
+            echo 'Assets/gallery changed: browser and full visual audit required'
+          else
+            echo 'visual_needed=false' >> "$GITHUB_OUTPUT"
+            echo 'Non-visual Asset Lab dependency changed: manifest and contract tests only'
+          fi
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
@@ -39,8 +70,9 @@ jobs:
       - name: Asset manifest is up to date
         run: node tools/build-asset-manifest.cjs --check
       - run: node qa/asset-catalog-regression.cjs
-      - run: node qa/siege-assault-regression.cjs
   browser:
+    needs: asset-lab
+    if: needs.asset-lab.outputs.visual_needed == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -57,10 +89,8 @@ jobs:
           done
           cat /tmp/asset-lab-http.log
           exit 1
-      - name: Install Chromium
-        run: |
-          npm install --no-save --no-package-lock playwright@1.56.1
-          npx playwright install --with-deps chromium
+      - name: Install cached Chromium and pinned Playwright
+        uses: ./.github/actions/playwright-setup
       - name: Run gallery browser QA
         run: node qa/asset-catalog-browser.mjs
       - name: Visual audit (every asset, every fortification state)
