@@ -13,7 +13,7 @@ for(const name of workflows){
   assert.ok(s.includes("cancel-in-progress: ${{ github.event_name == 'pull_request' }}"),name+' must not cancel completed/main/scheduled verification');
 }
 const action=read('.github/actions/playwright-setup/action.yml');
-for(const item of ['playwright@1.56.1','actions/cache@v4','~/.cache/ms-playwright','~/.npm','npx playwright install --with-deps chromium'])
+for(const item of ['playwright@1.56.1','actions/cache@v4','~/.cache/ms-playwright','~/.npm','npx playwright install chromium','npx playwright install-deps chromium','chromium.launch({headless:true})'])
  assert.ok(action.includes(item),'shared browser setup missing '+item);
 for(const name of ['asset-lab-regression.yml','converge-regression.yml','main-fixes-regression.yml','panels-browser-preview.yml','webgpu-smoke.yml']){
  const s=f(name);
