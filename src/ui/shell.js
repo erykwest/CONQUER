@@ -88,15 +88,17 @@ const CATALOG = [
       if (stone) rows.push(masonryRow(s));
       return rows;
     } },
-  { id: 'walls', hint: T.hints.linear, press: '[data-linear="wall"]', is: s => s.tool.kind === 'linear' && s.tool.linear !== 'road',
+  { id: 'walls', hint: T.hints.linear, press: '[data-linear="wall"]', is: s => (s.tool.kind === 'linear' && s.tool.linear !== 'road') || s.tool.kind === 'leanTo',
     rows: s => {
-      const kind = s.tool.linear, wide = kind === 'built' && s.tool.span === 'wide', wood = kind === 'built' && s.tool.material === 'wood', rows = [{ label: O.type, options: [
+      const kind = s.tool.linear, lean = s.tool.kind === 'leanTo', wide = kind === 'built' && s.tool.span === 'wide', wood = kind === 'built' && s.tool.material === 'wood', rows = [{ label: O.type, options: [
         opt(V.wall, '[data-linear="wall"]', kind === 'wall'),
         opt(V.palisade, '[data-linear="palisade"]', kind === 'palisade'),
-        opt(V.built, '[data-linear="built"]', kind === 'built' && !wide && !wood),
+        opt(V.built, '[data-linear="built"]', kind === 'built' && !wide && !wood && !lean),
         opt(V.builtWide, '[data-linear="builtWide"]', wide && !wood),
         opt(V.longhouse, '[data-linear="longhouse"]', wood && !wide),
-        opt(V.longhouseWide, '[data-linear="longhouseWide"]', wood && wide)] }];
+        opt(V.longhouseWide, '[data-linear="longhouseWide"]', wood && wide),
+        opt(V.leanTo, '[data-linear="leanTo"]', lean)] }];
+      if (lean) return [...rows, { label: O.material, options: [['wood', V.leanWood], ['stone', V.leanStone], ['brick', V.leanBrick]].map(([m, l]) => opt(l, `[data-lean-material="${m}"]`, (s.tool.leanMaterial || 'wood') === m)) }];
       if (kind !== 'built') rows.push({ label: O.tier, options: [1, 2, 3].map(n => opt('T' + n, `[data-wall-tier="${n}"]`, s.levels.wallTier === n)) });
       if (kind !== 'palisade' && !wood) rows.push({ label: O.height, options: [1, 2].map(n => opt(String(n), `[data-wall-level="${n}"]`, (wide ? s.levels.builtWide : s.levels.wall) === n)) });
       if (kind !== 'palisade' && !wood) rows.push(masonryRow(s));

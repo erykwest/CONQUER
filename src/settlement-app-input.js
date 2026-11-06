@@ -70,6 +70,12 @@ canvas.addEventListener('pointerdown',e=>{
     }
     return;
   }
+  if(State.tool.kind==='leanTo'){
+    const r=window.ConquerLeanTo?.atPoint(p);
+    if(!r?.ok){status('Lean-to blocked: '+(r?.reason||'no wall'));return}
+    if(addStructure(r.structure))status('Lean-to placed against the wall · choose its room in the panel');
+    return;
+  }
   if(State.tool.kind==='civicAnnex'){
     const parent=State.structures.find(x=>x.id===State.tool.parentId);
     if(!parent){status('Parent building no longer exists');setTool({kind:'select',label:'Select'});return}
@@ -332,6 +338,13 @@ canvas.addEventListener('pointermove',e=>{
     draw();
     return
   }
+  if(State.tool.kind==='leanTo'){
+    const r=window.ConquerLeanTo?.atPoint(p);
+    State.draft=r?.ok?{mode:'hover',preview:r.structure}:null;
+    const verdict=r?.ok?window.ConquerPlacement?.check(r.structure):r;
+    status(verdict&&!verdict.ok?'Lean-to blocked: '+verdict.reason:'Lean-to W1 · '+r.structure.length.toFixed(2)+'U · '+costText(constructionCost(r.structure))+' — click to confirm');
+    draw();return;
+  }
   if(State.tool.kind==='civicAnnex'){
     const parent=State.structures.find(x=>x.id===State.tool.parentId);
     if(!parent){State.draft=null;draw();return}
@@ -499,7 +512,7 @@ for(const b of document.querySelectorAll('[data-crossing-width]'))b.onclick=()=>
     status('Crossing width: '+width+'U');draw();
   }
 };
-for(const b of document.querySelectorAll('[data-linear]'))b.onclick=()=>{const tier=State.buildLevels.wallTier,kind=b.dataset.linear,wood=kind==='longhouse'||kind==='longhouseWide',wide=kind==='builtWide'||kind==='longhouseWide',linear=wide||wood?'built':kind,isPalisade=linear==='palisade',level=isPalisade||wood?1:wide?State.buildLevels.builtWide:State.buildLevels.wall;setTool({kind:'linear',linear,...(wide?{span:'wide'}:{}),...(wood?{material:'wood'}:{}),level,tier,label:(linear==='wall'?`Wall T${tier}`:isPalisade?`Palisade T${tier}`:wood?(wide?'Wide longhouse 2U':'Longhouse 1U'):wide?'Wide hall 2U':'Built section')+(isPalisade?'':` L${level}`)+` — choose point A`,el:b})};
+for(const b of document.querySelectorAll('[data-linear]'))b.onclick=()=>{if(b.dataset.linear==='leanTo'){setTool({kind:'leanTo',linear:'built',leanTo:true,leanMaterial:State.tool?.leanMaterial||'wood',level:1,label:'Lean-to W1 — click the inner side of an H2 wall',el:b});return}const tier=State.buildLevels.wallTier,kind=b.dataset.linear,wood=kind==='longhouse'||kind==='longhouseWide',wide=kind==='builtWide'||kind==='longhouseWide',linear=wide||wood?'built':kind,isPalisade=linear==='palisade',level=isPalisade||wood?1:wide?State.buildLevels.builtWide:State.buildLevels.wall;setTool({kind:'linear',linear,...(wide?{span:'wide'}:{}),...(wood?{material:'wood'}:{}),level,tier,label:(linear==='wall'?`Wall T${tier}`:isPalisade?`Palisade T${tier}`:wood?(wide?'Wide longhouse 2U':'Longhouse 1U'):wide?'Wide hall 2U':'Built section')+(isPalisade?'':` L${level}`)+` — choose point A`,el:b})};
 document.querySelectorAll('[data-tower-level]').forEach(b=>b.onclick=()=>{State.buildLevels.tower=Number(b.dataset.towerLevel);document.querySelectorAll('[data-tower-level]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='tower'&&State.tool.material!=='wood'){State.tool.level=State.buildLevels.tower;State.draft=null;status('Tower height: '+State.buildLevels.tower+' level'+(State.buildLevels.tower>1?'s':''));draw()}});
 document.querySelectorAll('[data-wall-tier]').forEach(b=>b.onclick=()=>{State.buildLevels.wallTier=Number(b.dataset.wallTier);document.querySelectorAll('[data-wall-tier]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='linear'&&['wall','palisade'].includes(State.tool.linear)){State.tool.tier=State.buildLevels.wallTier;State.draft=null;status((State.tool.linear==='palisade'?'Palisade':'Wall')+' tier: T'+State.buildLevels.wallTier+' · '+wallWidthForTier(State.buildLevels.wallTier)+'U');draw()}});
 document.querySelectorAll('[data-wall-level]').forEach(b=>b.onclick=()=>{const wide=State.tool.kind==='linear'&&State.tool.span==='wide';State.buildLevels[wide?'builtWide':'wall']=Number(b.dataset.wallLevel);document.querySelectorAll('[data-wall-level]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='linear'&&['wall','built'].includes(State.tool.linear)){State.tool.level=Number(b.dataset.wallLevel);State.draft=null;status((wide?'Wide hall':'Wall')+' height: '+State.tool.level+' level'+(State.tool.level>1?'s':''));draw()}});

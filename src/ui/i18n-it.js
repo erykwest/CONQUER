@@ -50,7 +50,7 @@ export const T = {
   values: {
     square: 'Quadrata', round: 'Rotonda', half: 'Semitorre', dee: 'A D', watchtower: 'Guardia', woodTower: 'Lignea', frameTower: 'Telaio H2',
     small: 'Piccola', medium: 'Media', large: 'Grande',
-    wall: 'Mura', palisade: 'Palizzata', built: 'Sezione', builtWide: 'Sala larga', longhouse: 'Long house', longhouseWide: 'Long house larga',
+    wall: 'Mura', palisade: 'Palizzata', built: 'Sezione', builtWide: 'Sala larga', longhouse: 'Long house', longhouseWide: 'Long house larga', leanTo: 'Addossato alle mura', leanWood: 'Legno · paglia', leanStone: 'Pietra', leanBrick: 'Mattoni',
     stone: 'Pietra', wood: 'Legno',
     dry: 'Fossato', water: 'Allagato', woodBridge: 'Ponte legno', stoneBridge: 'Ponte pietra', pier: 'Molo', quay: 'Banchina', ramp: 'Rampa', stairway: 'Scalinata',
     market: 'Mercato', tavern: 'Taverna', church: 'Chiesa', training: 'Addestramento',

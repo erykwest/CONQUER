@@ -71,7 +71,7 @@
 ### Mura e camminamenti
 - [x] **BC-251105-01 — Scala lignea per i camminamenti.** Upgrade/accesso in legno dalle quote a terra al cammino di ronda; definire aggancio, ingombro e accessibilità. **Su `feature/bc-scale` (non in main):** rampa lungo la faccia interna di un muro in pietra T2/T3, ~60°, larga 0,30U, ultimo gradino a filo del camminamento; posizione Inizio/Centro/Fine; accesso della rete wall-walk.
 - [x] **BC-251105-02 — Scala lapidea per i camminamenti.** Variante in pietra con la stessa funzione di accesso, distinta da quella lignea; verificare il raccordo alla quota delle mura. **Su `feature/bc-scale` (non in main):** rampa piena ~45°, larga 0,36U, con cordolo sul lato aperto e pilastrino di sbarco alla quota del camminamento; upgrade dalla lignea.
-- [ ] **BC-251105-03 — Edifici addossati alle mura.** Consentire una tipologia di edificio accostato alla faccia interna delle mura, con attacco geometrico e gestione delle interferenze con il camminamento.
+- [x] **BC-251105-03 — Edifici addossati alle mura.** *(branch `feature/wall-buildings`: sezione W1 `leanTo` contro muri H2, stesse stanze della W1.)* Consentire una tipologia di edificio accostato alla faccia interna delle mura, con attacco geometrico e gestione delle interferenze con il camminamento.
 - [x] **BC-251105-04 — Merlature doppie.** Nuova configurazione di merlatura doppia; **non equivale** allo stile del merlo «a doppia falda» (`feat/crenel-styles`, in main con #115). Geometria: stile globale `double` = merlo lungo il doppio sulle mura, sequenza 11011011 invece di 1010101 (1 = merlo a piena altezza, 0 = parapetto). Conservato anche lo stile `tworow` = seconda fila di merli sul bordo interno del cammino. Torri e porte invariate. Branch `feature/double-crenel`.
 
 ### Torri
@@ -82,7 +82,7 @@
 ### Coperture
 - [ ] **BC-251105-08 — Tetti inclinati a 75°.** Valutare e introdurre la pendenza a 75° nel sistema di tetti pertinente, coordinandola con `feat/roof-pitch` (30°/45°/60°, mergiato in main con PR #157). **Implementato su `feature/roof-pitch-75` (NON MERGE):** `ROOF_PITCHES` 30/45/60/75, costo 75° = 9 legno + 3 oro + 1 pietra per tetto, scheda «Pendenza dei tetti», stati «Tetto 30°/60°/75°» nell'Asset Lab, `qa/roof-pitch-regression.cjs`.
 - [ ] **BC-251105-09 — Upgrade tetti Longhouse.** Revisionare le coperture delle longhouse lignee W1/W2, con dipendenza da `feature/wood-longhouse` e dal suo modello modulare.
-- [ ] **BC-251105-10 — Upgrade tetti edifici addossati alle mura.** Disegnare le coperture dedicate ai nuovi edifici addossati, gestendo attacco alle mura e interferenze con parapetti/camminamenti; dipende da BC-251105-03.
+- [x] **BC-251105-10 — Upgrade tetti edifici addossati alle mura.** *(branch `feature/wall-buildings`: falda unica, colmo 0,12U sotto il camminamento; pendenza propria, indipendente da `feat/roof-pitch`.)* Disegnare le coperture dedicate ai nuovi edifici addossati, gestendo attacco alle mura e interferenze con parapetti/camminamenti; dipende da BC-251105-03.
 
 ### Ambiente
 - [x] **BC-251105-11 — Giardino → Orto di corte.** Scelto dall'utente il 06/11/2026: annesso `kitchenGarden` del Municipio, 3×2U, max 2, entro 7U su terreno aperto; 2 cibo del signore per giornata lavorativa per orto, anche in allarme/assedio. Branch `feature/orto-di-corte` (pre-merge).
