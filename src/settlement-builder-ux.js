@@ -73,6 +73,7 @@
       ['[data-gate][data-gate-size="1"]','Porta piccola · 1×1U · L1–L2','gate'],
       ['[data-wood-gate]','Porta lignea','gate']]},
     {id:'economy',label:'Produzione',icon:'work',items:[
+      ['[data-storage-yard]','Piazzale / magazzino · 2×2U espandibile','work'],
       ['[data-industry="loggingCamp"]','Campo taglialegna','timber'],
       ['[data-industry="quarry"]:not([data-extraction-mode])','Cava pietra','work'],
       ['[data-industry="quarry"][data-extraction-mode="clay"]','Cava argilla · H0 · entro 6U da acqua interna','work'],
@@ -89,7 +90,8 @@
     {id:'terrain',label:'Terraforming',icon:'terrain',items:[
       ['[data-terraform="terrain"]','Terreno','terrain'],
       ['[data-terraform="walled"]','Terrazzamento murato','terrace'],
-      ['[data-terraform="flat"]','Flat · sottrai e riporta a H0','level']]},
+      ['[data-terraform="flat"]','Flat · sottrai e riporta a H0','level'],
+      ['[data-terraform="forest"]','Rimuovi foresta · job L1 · legname','work']]},
     {id:'infrastructure',label:'Infrastrutture',icon:'route',items:[
       ['[data-main-road]','Strada principale','route'],
       ['[data-crossing="dry"]','Fossato asciutto','moat'],
