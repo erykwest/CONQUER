@@ -1456,6 +1456,7 @@ function generateRelief(){
       break;
     }
   }
+  window.ConquerRegionalLandscape?.adjustRelief();
   assignSteepEdgesByLevel(State.relief,seedRand((reliefSeed^0x735a2d97)>>>0));
   clearReliefBandCache();
   State.relief.stats=reliefStats();
@@ -1755,7 +1756,7 @@ function generateEnvironment(){
   environmentRevision++;
   // Relief from an older generator may still cross water or mountains laid out here.
   for(let i=env.length-1;i>=0;i--)if(environmentConflictsTestRelief(env[i])||['hill','rough'].includes(env[i].type))env.splice(i,1);
-  State.environment=env;
+  State.environment=window.ConquerRegionalLandscape?.compose(env)||env;
 }
 // ---------- woodland holes ----------
 // The Foresta biome is one woodland over the whole map (f.continuous) with holes: clearings,

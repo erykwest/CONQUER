@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## REG-EIGHT-BIOMES — Campioni direzionali (06/11/2026)
+
+Otto direzioni locali non implicano otto confinanti Voronoi distinti: un raggio dal centroide identifica il territorio oltre il primo bordo. Lo stesso confinante puo occupare piu direzioni. Al bordo del mondo si prolunga il terreno selezionato. Fasce 25/25/100/25/25 U e diagonali indipendenti; pesi condivisi tra terreno e componenti. I poligoni composti sono usati da rendering e collisioni. I servizi costieri esistenti ricevono la costa continua principale di ciascun mare; gestione portuale di tutte le coste disconnesse resta fuori da questa iterazione.
+
 ## REG-CENTRAL-BIOME — Prima la cella centrale (05/11/2026)
 
 Scelta esplicita: correggere prima il bioma centrale, rinviando gli otto vicini. Il terreno della cella determina la ricetta locale; i fiumi restano elementi aggiuntivi di confine. Contesto mancante: errore visibile, mai Pianura implicita. Specifica: docs/REGIONAL-BIOME-SECTORS-PREVIEW.md.

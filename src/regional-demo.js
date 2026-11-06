@@ -7,8 +7,18 @@
     try{demo=JSON.parse(params.get('regionalData')||sessionStorage.getItem('conquer.regional-demo.'+params.get('regionalDemo'))||'null')}catch{}
     const biome=window.ConquerRegionalBiomeRules?.biomeForTerrain(demo?.terrain);
     if(biome)demo.biome=biome;else demo=null;
+  }else if(params.get('demo')==='mixed'){
+    const terrain={north:'hills',northEast:'forest',east:'forest',southEast:'plain',south:'sea',southWest:'sea',west:'forest',northWest:'plain'};
+    demo={version:1,biome:'plains',seed:Number(params.get('seed')||4242),name:'Fronte misto · campioni demo',neighbors:[],hasRiver:true,riverSides:['west'],surroundings:Object.fromEntries(Object.entries(terrain).map(([k,v])=>[k,{terrain:v,source:'demo'}]))};
   }else if(allowed.includes(params.get('demo'))){
     demo={version:1,biome:params.get('demo'),seed:Number(params.get('seed')||4242),name:'Demo '+params.get('demo'),neighbors:[]};
+  }
+  if(demo?.surroundings){
+    const biomes={};for(const name of Object.keys(window.ConquerRegionalBiomeRules.directions)){
+      const biome=window.ConquerRegionalBiomeRules.biomeForTerrain(demo.surroundings[name]?.terrain);
+      if(biome)biomes[name]=biome;
+    }
+    if(Object.keys(biomes).length===8)demo.surroundingBiomes=biomes;
   }
   if((params.has('regionalDemo')||params.has('demo'))&&!(demo?.version===1&&allowed.includes(demo.biome)&&Number.isInteger(demo.seed)&&demo.seed>=0&&demo.seed<=2147483647)){
     demo={version:1,seed:4242,biome:'test',error:'Dati del territorio mancanti o non validi. Riapri la cella dalla mappa regionale.',neighbors:[]};
@@ -44,7 +54,10 @@
       for(const [name,features] of rows){const tr=table.insertRow();for(const text of [name,percent(features,0,200),percent(features,50,100)])tr.insertCell().textContent=text}
       output.append(table);
       const counts=document.createElement('p');counts.textContent=forests.length+' boschi · '+hills.length+' rilievi terrazzati · '+mountains.filter(m=>!m.subPeak).length+' cime principali · '+water.filter(f=>f.type==='river').length+' fiumi · '+water.filter(f=>f.type==='stream').length+' ruscelli. Coperture stimate su griglia 40×40, non sommare le percentuali.';output.append(counts);
-      if(info.neighbors?.length){const neighbors=document.createElement('p');neighbors.textContent='Confinanti regionali: '+info.neighbors.map(n=>n.code+' ('+n.terrain+')').join(', ')+'. Dati di contesto: le otto influenze non sono ancora composte nel terreno del Builder.';output.append(neighbors)}
+      if(info.surroundingBiomes){
+        const labels={north:'N',northEast:'NE',east:'E',southEast:'SE',south:'S',southWest:'SO',west:'O',northWest:'NO'};
+        const directions=document.createElement('p');directions.textContent='Biomi limitrofi applicati: '+Object.entries(labels).map(([k,label])=>label+' '+BIOMES[info.surroundingBiomes[k]].label).join(' · ')+'. Fasce 25 / 25 / 100 / 25 / 25 U.';output.append(directions);
+      }else if(info.neighbors?.length){const note=document.createElement('p');note.textContent='Questo collegamento contiene solo il bioma centrale. Riapri il territorio dalla mappa regionale aggiornata per applicare gli otto limitrofi.';output.append(note)}
     };
     const refresh=document.createElement('button');refresh.textContent='Aggiorna misure';refresh.onclick=measure;panel.append(refresh);
     const back=document.createElement('a');back.href='CONQUER_WORLD_LAB.html?returnDemo=1';back.textContent=' ← Mappa regionale';back.style.color='#edbd75';panel.append(back);document.body.append(panel);measure();

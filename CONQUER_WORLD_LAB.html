@@ -692,7 +692,8 @@
       <a href="index.html?demo=river&amp;seed=4242">Fiume</a>
       <a href="index.html?demo=mountains&amp;seed=4242">Montagne</a>
       <a href="index.html?demo=sea&amp;seed=4242">Costa</a>
-      <span>Prove temporanee, separate dai salvataggi. Le ricette locali non compongono ancora gli otto biomi.</span>
+      <a href="index.html?demo=mixed&amp;seed=4242">Fronte misto · 8 biomi</a>
+      <span>Prove temporanee, separate dai salvataggi. Aprendo una cella si applicano anche gli otto campioni circostanti.</span>
     </nav>
     <section class="toolbar" aria-label="Controlli di generazione">
       <div class="field">
@@ -940,7 +941,7 @@
     </div>
   </main>
 
-  <script src="src/regional-biome-rules.js"></script>
+  <script src="src/regional-biome-rules.js?v=regional-eight-1"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script>
@@ -3860,8 +3861,10 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         let seed=2166136261;for(const ch of String(state.seed)+'|'+macro.id)seed=Math.imul(seed^ch.charCodeAt(0),16777619);
         seed=(seed>>>0)%2147483647;
         const key=state.seed+'-'+macro.id;
+        const regionalCells=state.macros.map(m=>({id:m.id,code:m.code,terrain:state.terrain[m.id],centroid:m.centroid,polygon:m.cells[0].polygon}));
+        const surroundings=window.ConquerRegionalBiomeRules.sampleSurroundings(regionalCells[selectedMacro],regionalCells,state.configuration.width,state.configuration.height);
         const payload={version:1,seed,biome,terrain,name:territoryName(macro),regionalSeed:state.seed,territoryId:macro.id,
-          neighbors:ids.map(id=>({id,code:state.macros[id].code,terrain:state.terrain[id]})),hasRiver,riverSides};
+          neighbors:ids.map(id=>({id,code:state.macros[id].code,terrain:state.terrain[id]})),surroundings,hasRiver,riverSides};
         // Carry the small territory context in the URL too: opening another tab must
         // not lose its biome just because sessionStorage is scoped to the old tab.
         try{sessionStorage.setItem('conquer.regional-demo.world',JSON.stringify({map:mapData(),selected:selectedMacro}));sessionStorage.setItem('conquer.regional-demo.'+key,JSON.stringify(payload));}

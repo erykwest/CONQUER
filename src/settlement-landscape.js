@@ -308,6 +308,7 @@ function drawTerrain(){
   const terrainFill=winter?'#edf1ed':(BIOMES[State.biome]?.field||'#24291b');
   const terrainEdge=winter?'rgba(101,112,105,.34)':'rgba(225,214,190,.12)';
   pathPolygon(corners,terrainFill,terrainEdge,1);
+  window.ConquerRegionalLandscape?.drawGround();
   drawRelief();
   ctx.save();
   for(const mark of terrainMarkLayout()){
@@ -674,7 +675,9 @@ function drawEnvironment(){
         drawForestGround(f);
         drawForestMask(f);
       }else{
-        const pts=projectPath(f.points);pathPolygon(pts,f.fill,f.edge,1.2);
+        ctx.save();
+        for(const hole of f.holes||[]){const ring=projectPath(hole);ctx.beginPath();ctx.rect(-1e5,-1e5,2e5,2e5);ring.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.clip('evenodd')}
+        const pts=projectPath(f.points);pathPolygon(pts,f.fill,f.edge,1.2);ctx.restore();
       }
       if(f.type==='sea'&&f.coastline){
         // Beaches in the bays, rocks on the headlands (settlement-coast.js).
