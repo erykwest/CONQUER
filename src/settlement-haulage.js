@@ -73,7 +73,7 @@
     const trip={id:'local-haul-'+(++sequence),key:job.key,siteId:job.siteId,yardId:route.yardId,
       good:job.good,qty:job.qty,vehicle:job.good==='wood'||job.qty>45?'wagon':'cart',
       vehicles:1,guards:0,seed:sequence%4,points:route.points,
-      distance:0,speed:0,phase:'loading',remain:LOAD_SECONDS,emptyReturn:false};
+      distance:0,speed:0,phase:'loading',remain:LOAD_SECONDS,emptyReturn:false,virtualSource:!!job.origin};
     trips.push(trip);pending.delete(job.key);dispatched.set(job.key,day);
     return true;
   }
@@ -85,7 +85,7 @@
     const elapsed=Math.min(dt,.25)*Math.min(4,Math.sqrt(Math.max(1,State.clock.speed)));
     for(let i=trips.length-1;i>=0;i--){
       const t=trips[i];
-      if(!isActive(source(t.siteId))&&!((t.siteId||'').startsWith('forestry:'))||
+      if((!t.virtualSource&&!isActive(source(t.siteId)))||
           !yards().some(y=>y.id===t.yardId)){trips.splice(i,1);continue}
       if(t.phase==='loading'||t.phase==='unloading'){
         t.remain-=elapsed;
