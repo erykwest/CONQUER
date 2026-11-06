@@ -30,7 +30,11 @@
     // Componenti only architectural texture files (qa/asset-catalog-browser.mjs).
     {global:'ConquerGarderobeModels',collection:'models',category:'Edifici',family:'Elementi esterni delle stanze'},
     {global:'ConquerDovecoteModels',collection:'models',category:'Edifici',family:'Colombaia (lanterna sul tetto)'},
-    {global:'ConquerBelfryModels',collection:'models',category:'Edifici',family:'Elementi esterni delle stanze'}
+    {global:'ConquerBelfryModels',collection:'models',category:'Edifici',family:'Elementi esterni delle stanze'},
+    // Wall-walk stairs (BC-251105-01/02, settlement-wall-stairs.js): timber and masonry flight, rise 1 U.
+    {global:'ConquerWallStairModels',collection:'models',category:'Edifici',family:'Scale ai camminamenti'},
+    // Ramps and hill stairways (BC-251105-12/13): parametric pieces shown against a model cliff.
+    {global:'ConquerSlopewayModels',collection:'models',category:'Territorio',family:'Rampe e scalinate'}
     // Timber fortifications (ConquerWoodFortModels) are listed as engine meshes under Fortificazioni.
   ];
   const SUBJECTS=[
@@ -65,15 +69,15 @@
     ram:'Ariete',catapult:'Mangano',trebuchet:'Trabucco',tower:'Torre d’assedio',tower2:'Torre d’assedio (variante)',
     ladder:'Scala d’assedio',mantlet:'Mantelletto',ballista:'Balista',
     stake:'Palo di palizzata',watchtower:'Torre di vedetta in legno',palisadeTower_open:'Torre a palizzata aperta',
-    palisadeTower_roofed:'Torre a palizzata coperta',woodGate:'Porta in legno',
+    palisadeTower_roofed:'Torre a palizzata coperta',frameTower:'Torre lignea a telaio H2',woodGate:'Porta in legno',
     netRack:'Rete stesa ad asciugare',fishRack:'Rastrelliera del pesce',fishBaskets:'Ceste del pescato',
     slipwayL1:'Scalo di varo L1',slipwayL2:'Scalo di varo L2',shed:'Tettoia del cantiere navale',frames:'Ossatura di scafo',
     barchetta:'Barchetta a remi',riverJetty:'Molo fluviale',rocksA:'Scogli A',rocksB:'Scogli B',rocksC:'Scoglio alto',reef:'Secca di scogli',beachBoat:'Barca tirata a secco',driftwood:'Legni portati dal mare',garderobe:'Latrina a sbalzo (garderobe)',
     infirmaryBed:'Letto d’infermeria',herbShelf:'Scaffale delle erbe',washBasin:'Bacile',
     lantern:'Colombaia · lanterna sul tetto',nestWall:'Colombaia · parete dei nidi',perch:'Colombaia · posatoio',
-    belfry:'Castello campanario · campana d’allarme',
-    justicePillory:'Gogna',justiceGallows:'Forca',justiceScaffold:'Patibolo',almshouse:'Ospizio (annesso della chiesa)',
-    kitchenGarden:'Orto di corte (annesso del municipio)'};
+    stairWood:'Scala lignea al camminamento',stairStone:'Scala lapidea al camminamento',
+    belfry:'Castello campanario · campana d’allarme',rampH1:'Rampa · dislivello H1 · 1:4.5',rampH2:'Rampa · dislivello H2 · 1:4.25',stairwayH1:'Scalinata · dislivello H1',stairwayH2:'Scalinata · dislivello H2',
+    justicePillory:'Gogna',justiceGallows:'Forca',justiceScaffold:'Patibolo',almshouse:'Ospizio (annesso della chiesa)',kitchenGarden:'Orto di corte (annesso del municipio)'};
   function titleFor(key){
     if(nameOverrides[key])return nameOverrides[key];
     const furled=/Furled$/.test(key),ship=window.ConquerShipModels?.ships?.[key.replace(/Furled$/,'')];
@@ -118,7 +122,7 @@
           ({ConquerCivicModels:'civic-models.js',ConquerIndustryModels:'industry-models.js',ConquerStorageYard:'../settlement-storage-yard.js',
             ConquerScatterModel:'scatter-model.js',ConquerWagonModel:'wagon-model.js',
             ConquerSiegeModel:'siege-engines-model.js',ConquerWoodFortModels:'wood-fort-models.js',ConquerEventModels:'event-models.js',ConquerCampScenes:'../settlement-events3d.js',
-            ConquerHouseModels:'house-models.js',ConquerGarderobeModels:'garderobe-models.js',ConquerFurnitureModel:'furniture-model.js',ConquerDovecoteModels:'dovecote-models.js',ConquerBelfryModels:'belfry-models.js',
+            ConquerHouseModels:'house-models.js',ConquerGarderobeModels:'garderobe-models.js',ConquerFurnitureModel:'furniture-model.js',ConquerDovecoteModels:'dovecote-models.js',ConquerBelfryModels:'belfry-models.js',ConquerSlopewayModels:'../settlement-slopeways.js',ConquerWallStairModels:'wall-stair-models.js',
             ConquerShipModels:'ship-models.js',ConquerFishingModels:'fishing-models.js',ConquerShipyardModels:'shipyard-models.js',ConquerWatersideModels:'waterside-models.js'}[source.global]),
         format:'Modello 3D',subject:source.global==='ConquerSiegeModel'&&key!=='tower2'?'siege:'+key
           :source.global==='ConquerShipModels'&&window.ConquerShipModels.ships?.[key.replace(/Furled$/,'')]?'ship:'+key.replace(/Furled$/,''):null});

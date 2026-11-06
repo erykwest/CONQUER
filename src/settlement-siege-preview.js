@@ -152,6 +152,8 @@
       ['Pietra quadrata L1',{type:'tower',shape:'square',material:'stone',level:1,tier:2,size:sq(2),roofStyle:'battlement'}],
       ['Pietra quadrata L2',{type:'tower',shape:'square',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'battlement'}],
       ['Pietra quadrata L3',{type:'tower',shape:'square',material:'stone',level:3,tier:2,size:sq(2),roofStyle:'battlement'}],
+      ['Pietra quadrata W2 H4 merli',{type:'tower',shape:'square',material:'stone',level:4,tier:2,size:sq(2),roofStyle:'battlement'}],
+      ['Pietra quadrata W2 H4 tetto',{type:'tower',shape:'square',material:'stone',level:4,tier:2,size:sq(2),roofStyle:'pitched'}],
       ['Pietra quadrata L3 tetto',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched'}],
       ['Pietra rotonda L3 caditoie',{type:'tower',shape:'round',material:'stone',level:3,tier:2,r:rd(2),roofStyle:'machicolation'}],
       ['Grande quadrata L3 merli',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'battlement'}],
@@ -188,6 +190,8 @@
       ['Legno vedetta',{type:'tower',shape:'square',material:'wood',woodStyle:'watchtower',woodRoof:'pitched',level:1,tier:1,size:1}],
       ['Legno media aperta',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'open',level:1,tier:2,size:1.5}],
       ['Legno media tetto',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'pitched',level:1,tier:2,size:1.5}],
+      ['Legno telaio H2',{type:'tower',shape:'square',material:'wood',woodStyle:'frameTower',woodRoof:'pitched',level:2,tier:2,size:1.5}],
+      ['Legno telaio H2 mastio rialzato',{type:'tower',shape:'square',material:'wood',woodStyle:'frameTower',woodRoof:'pitched',level:2,tier:2,size:1.5,isMastio:true,keepEntrance:{stair:'wood',side:1,drawbridge:null}}],
       // Alarm bell: the belfry on the roof of T1-T2 towers, stone and timber (settlement-alarm-bells.js).
       ['Pietra quadrata piccola L1 tetto + campana',{type:'tower',shape:'square',material:'stone',level:1,tier:1,size:sq(1),roofStyle:'pitched',bell:'bell'}],
       ['Pietra rotonda L2 tetto + campana',{type:'tower',shape:'round',material:'stone',level:2,tier:2,r:rd(2),roofStyle:'pitched',bell:'bell'}],
@@ -205,6 +209,9 @@
       ['T2 H2 caditoie',{type:'wall',tier:2,level:2,skin:'machicolation'}],
       ['T2 H2 hoardings',{type:'wall',tier:2,level:2,skin:'hoarding'}],
       ['T1 H1 hoardings',{type:'wall',tier:1,level:1,skin:'hoarding'}],
+      // BC-251105-01/02: stair from the bailey to the wall walk (settlement-wall-stairs.js); flipped so the interior face, with the flight, faces the camera.
+      ['T2 H1 scala lignea',{type:'wall',tier:2,level:1,skin:'standard',flip:true,wallStair:{kind:'wood',pos:'middle'}}],
+      ['T2 H2 scala lapidea',{type:'wall',tier:2,level:2,skin:'standard',flip:true,wallStair:{kind:'stone',pos:'middle'}}],
       ['Palizzata T1',{type:'palisade',tier:1,level:1}],
       ['Palizzata T2',{type:'palisade',tier:2,level:1}],
       ['Palizzata T3',{type:'palisade',tier:3,level:1}]

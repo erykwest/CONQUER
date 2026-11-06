@@ -109,6 +109,9 @@ const StructureCommands=(()=>{
     status(target.type==='built'?'Built wall skin: '+(target.skin==='arcade'?'porticato':'standard'):'Wall skin: '+target.skin);
     return true;
   }
+  // Wall-walk stair (BC-251105-01/02, settlement-wall-stairs.js): none / timber / masonry, and where.
+  function setWallStair(id,kind){const target=find(id),S=window.ConquerWallStairs;return !!target&&!!S&&S.setKind(target,kind)}
+  function setWallStairPos(id,pos){const target=find(id),S=window.ConquerWallStairs;return !!target&&!!S&&S.setPos(target,pos)}
   function toggleCutaway(id){
     const target=find(id);if(!cutawayEligible(target))return false;
     target.cutaway=!structureCutaway(target);
@@ -384,6 +387,12 @@ const StructureCommands=(()=>{
     if(s.type==='wall'){
       const narrow=wallTier(s)===1;
       d.controls.push(choice('skin','setSkin',[{value:'standard',word:'standard'},{value:'machicolation',word:'machicolation',disabled:narrow},{value:'hoarding',word:'hoarding'}],wallSkin(s)));
+      const WS=window.ConquerWallStairs;
+      if(WS&&!building){
+        const ok=WS.eligible(s),cur=WS.stair(s)?.kind||'none';
+        d.controls.push(choice('wallStair','setWallStair',[{value:'none',word:'none'},{value:'wood',word:'stairWood',disabled:!ok||cur==='stone'},{value:'stone',word:'stairStone',disabled:!ok}],cur));
+        if(cur!=='none')d.controls.push(choice('wallStairPos','setWallStairPos',Object.keys(WS.POSITIONS).map(v=>({value:v,word:'stairPos_'+v})),s.wallStair.pos||'middle'));
+      }
     }
     if(['wall','palisade','built'].includes(s.type))d.controls.push({key:'side',cmd:'flipSide',toggle:true});
     if(cutawayEligible(s))d.controls.push({key:'cutaway',cmd:'toggleCutaway',toggle:true,active:structureCutaway(s),disabled:building});
@@ -411,7 +420,7 @@ const StructureCommands=(()=>{
     return d;
   }
 
-  return{setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setGateRoof,setGateUpper,setSkin,toggleCutaway,stepCutawayFloor,flipSide,
+  return{setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setGateRoof,setGateUpper,setSkin,setWallStair,setWallStairPos,toggleCutaway,stepCutawayFloor,flipSide,
     setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,
     describeStructure};
 })();

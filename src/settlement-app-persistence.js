@@ -3,6 +3,7 @@
 function migrateStructures(list){
   const migrated=(list||[]).map(s=>{
     if(['moat','bridge'].includes(s.type))window.ConquerCrossings?.normalise(s);
+    if(window.ConquerSlopeways?.is(s))window.ConquerSlopeways.normalise(s);   // keeps the surveyed za/zb
     // Migrate old windmill A/B save records before industry recognition.
     if(s.type==='windmillA'||s.type==='windmillB')s.type='windmill';
     if(window.ConquerIndustries?.is(s))window.ConquerIndustries.normalizeFootprint(s);
@@ -35,10 +36,10 @@ function migrateStructures(list){
       if(!Number.isFinite(Number(s.orientationOffset)))s.orientationOffset=0;
       s.orientationOffset=snapStructureAngle(s.orientationOffset);
       if(s.material==='wood'){
-        s.woodStyle=s.woodStyle==='watchtower'?'watchtower':'palisadeTower';
-        s.shape='square';s.level=1;
-        s.size=s.woodStyle==='watchtower'?1:1.5;
-        s.woodRoof=s.woodStyle==='watchtower'?'pitched':(s.woodRoof==='pitched'?'pitched':'open');
+        s.woodStyle=WOOD_TOWER_STYLES.includes(s.woodStyle)?s.woodStyle:'palisadeTower';
+        s.shape='square';s.level=woodTowerLevel(s.woodStyle);
+        s.size=woodTowerSize(s.woodStyle);
+        s.woodRoof=s.woodStyle!=='palisadeTower'?'pitched':(s.woodRoof==='pitched'?'pitched':'open');
       }else{
         s.level=clamp(Math.round(Number(s.level)||1),1,3);
       }
