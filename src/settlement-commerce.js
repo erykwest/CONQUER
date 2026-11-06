@@ -237,6 +237,10 @@
       c.goods[good]=roundGold(c.goods[good]+SHOP_OUTPUT_PER_DAY);
       c.week.supply[good]=roundGold(finite(c.week.supply[good])+SHOP_OUTPUT_PER_DAY);
       shop.produced=roundGold(shop.produced+SHOP_OUTPUT_PER_DAY);
+      // L3 artisan goods are booked above; the L1 carter only depicts their
+      // physical delivery to the market, never an extra economic transaction.
+      window.ConquerHaulage?.record?.({siteId:shop.houseId,good,qty:SHOP_OUTPUT_PER_DAY,
+        day,destination:'market'});
     }
     // Week N prices only see week N-1: one commodity per day, at most once a week.
     c.market=Market.stepMarket(c.market,{week});

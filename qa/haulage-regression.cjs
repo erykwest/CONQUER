@@ -10,7 +10,7 @@ function world(){
   const camp={id:'camp',type:'loggingCamp',x:100,y:100,economicOwner:'lord'};
   const first={id:'road-a',type:'road',a:{x:99,y:100},b:{x:105,y:100}};
   const second={id:'road-b',type:'road',a:{x:105,y:100},b:{x:115,y:100}};
-  const State={clock:{day:0,speed:1},view:{scale:.75,rotation:0},structures:[{id:'well',type:'well',x:100,y:100},yard,camp,first,second],
+  const State={clock:{day:.25,speed:1},view:{scale:.75,rotation:0},structures:[{id:'well',type:'well',x:100,y:100},yard,camp,first,second],
     village:{founded:true,wellId:'well',foundingWorkers:4},policies:{rations:'market'}};
   const artwork=[],window={ConquerWagons:{drawWagon:(ctx,x,y,scale,opts)=>artwork.push({...opts})}};
   const ctx=vm.createContext({State,window,console,Math,Number,Object,Array,Map,Set,String,Date,
@@ -40,7 +40,7 @@ test('runtime ordering, accounting events, simulation, renderer, and workshop UI
   assert.match(economy,/if\(origin\)window\.ConquerHaulage\?\.record/);
   assert.match(frame,/ConquerHaulage\?\.tick/);
   assert.match(render,/ConquerHaulage\?\.draw/);
-  assert.match(read('src/settlement-app-rooms.js'),/Carretti locali/);
+  assert.match(read('src/settlement-app-rooms.js'),/Carrettieri L1/);
   assert.match(read('src/settlement-app-persistence.js'),/ConquerHaulage\?\.reset/);
   assert.match(read('src/settlement-vehicles.js'),/c\.emptyReturn\|\|c\.vehicle/);
 });
@@ -55,24 +55,26 @@ test('a real logging production receipt queues one cart but does not duplicate t
   for(let i=0;i<12;i++)h.H.tick(.25);
   assert.equal(h.H.snapshot().active,1,'cart drives a route');
   assert.equal(JSON.stringify(h.E.state().castle),frozen,'travel never books extra stock');
-  assert.equal(h.H.snapshot().trips[0].yardId,'yard');
+  assert.equal(h.H.snapshot().trips[0].baseId,'yard');
+  assert.equal(h.H.snapshot().trips[0].destinationId,'yard');
+  assert.equal(h.H.snapshot().assigned,1);
   assert.equal(h.H.snapshot().trips[0].good,'wood');
 });
 test('cart carries logs out, unloads, and returns visibly empty without changing resources',()=>{
   const h=world();h.E.foundingCharter('well');h.E.tick(-1,0);
   const book=JSON.stringify(h.E.state().castle);
-  let outbound=false,returning=false,emptyCargo=false;
+  let outbound=false,departing=false,emptyCargo=false;
   for(let i=0;i<130;i++){
     h.H.tick(.25);
     const trip=h.H.snapshot().trips[0];
     if(trip?.phase==='outbound'){
       outbound=true;h.H.draw();assert.ok(h.artwork.some(v=>v.cargo.includes('logs')),'outgoing wagon has timber');
     }
-    if(trip?.phase==='returning'){
-      returning=true;h.H.draw();if(h.artwork.some(v=>v.cargo.length===0))emptyCargo=true;
+    if(trip?.phase==='departing'){
+      departing=true;h.H.draw();if(h.artwork.some(v=>v.cargo.length===0))emptyCargo=true;
     }
   }
-  assert.equal(outbound,true);assert.equal(returning,true);assert.equal(emptyCargo,true);
+  assert.equal(outbound,true);assert.equal(departing,true);assert.equal(emptyCargo,true);
   assert.equal(h.H.snapshot().active,0);assert.equal(h.H.snapshot().completed,1);
   assert.equal(JSON.stringify(h.E.state().castle),book);
 });
@@ -103,7 +105,7 @@ test('with several yards the truck chooses the nearest road-connected stockyard'
   h.State.structures.push(farther);
   h.H.record({siteId:'camp',good:'wood',qty:1});
   h.H.tick(.6);
-  assert.equal(h.H.snapshot().trips[0].yardId,'yard');
+  assert.equal(h.H.snapshot().trips[0].destinationId,'yard');
 });
 test('paused time does not move a trip and road signs keep their own vehicles',()=>{
   const h=world();h.H.record({siteId:'camp',good:'wood',qty:1});
