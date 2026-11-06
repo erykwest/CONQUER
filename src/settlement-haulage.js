@@ -95,22 +95,31 @@
     job._plan={graph,sig,fromX:from.x,fromY:from.y,value:best};
     return best;
   }
+  // Each yard is a workplace: never create extra carters for several receipts
+  // queued at the same depot. Reserve its worker until the round trip ends.
+  function dutyBases(day=dayOf()){
+    const bases=new Set(trips.map(t=>t.baseId));
+    if(onShift(day))for(const job of pending.values()){
+      if(day-job.lastDay>MAX_WAIT_DAYS)continue;
+      const route=plan(job);
+      if(route)bases.add(route.baseId);
+      if(bases.size>=MAX_ACTIVE)break;
+    }
+    return Array.from(bases).slice(0,MAX_ACTIVE);
+  }
   // Queried by ConquerEconomy.laborAllocation AFTER productive L1 industry and
   // BEFORE construction. No parallel workforce and no fictitious workers.
   function workerDemand(day=dayOf()){
     if(!State.village?.founded||!yards().length||!window.ConquerVehicles)return 0;
-    const active=trips.length;
-    if(!onShift(day))return active;
-    let waiting=0;
-    for(const j of pending.values()){
-      if(day-j.lastDay<=MAX_WAIT_DAYS&&plan(j))waiting++;
-      if(waiting>=MAX_ACTIVE)break;
-    }
-    return Math.min(MAX_ACTIVE,yards().length,active+waiting);
+    return dutyBases(day).length;
+  }
+  function workerBaseId(worker,roster=[],day=dayOf()){
+    const index=roster.findIndex(w=>w.id===worker.id);
+    return index<0?null:dutyBases(day)[index]||null;
   }
   function workerStation(worker,roster=[]){
     if(trips.some(t=>t.workerId===worker.id))return null; // carter is drawn on the wagon
-    const base=yards()[Math.max(0,roster.findIndex(w=>w.id===worker.id))%Math.max(1,yards().length)];
+    const base=source(workerBaseId(worker,roster));
     return base?{x:base.x+.18,y:base.y+.18}:null;
   }
   function dispatch(job,worker,day){
@@ -143,6 +152,8 @@
     if(!V||!E?.laborAllocation)return false;
     const day=dayOf(),roster=E.laborAllocation(day).carters||[];
     const ids=new Set(roster.map(w=>w.id));
+    const bases=dutyBases(day);
+    const workerBaseById=new Map(roster.map((w,i)=>[w.id,bases[i]]));
     const elapsed=Math.min(dt,.25)*Math.min(4,Math.sqrt(Math.max(1,State.clock.speed)));
     const available=roster.slice();
     for(let i=trips.length-1;i>=0;i--){
@@ -155,7 +166,8 @@
       // worker in today's L1 roster. With zero carters the trip is suspended
       // and its visual load requeued, never credited a second time.
       if(!ids.has(t.workerId)){
-        const substitute=available.find(w=>!trips.some(x=>x!==t&&x.workerId===w.id));
+        const substitute=available.find(w=>workerBaseById.get(w.id)===t.baseId&&
+          !trips.some(x=>x!==t&&x.workerId===w.id));
         if(substitute)t.workerId=substitute.id;
         else{abandon(t,day);trips.splice(i,1);continue}
       }
@@ -192,8 +204,9 @@
       if(onShift(day)&&available.length&&trips.length<MAX_ACTIVE){
         for(const job of pending.values()){
           if(!available.length||trips.length>=MAX_ACTIVE)break;
-          const worker=available[0];
-          if(dispatch(job,worker,day))available.shift();
+          const route=plan(job);
+          const worker=available.find(w=>workerBaseById.get(w.id)===route?.baseId);
+          if(worker&&dispatch(job,worker,day))available.splice(available.indexOf(worker),1);
         }
       }
     }
