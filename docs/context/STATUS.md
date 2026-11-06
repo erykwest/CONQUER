@@ -1,5 +1,7 @@
 # Livello 2 — Stato tecnico e prove
 
+Sul branch `feature/roof-pitch-75` (da `main` b1a2307, NON MAIN) la pendenza dei tetti a 75° (BC-251105-08) è selezionabile nella scheda «Pendenza dei tetti» al costo di 9 legno + 3 oro + 1 pietra per tetto. `node qa/roof-pitch-regression.cjs`: 3 check passati in locale. Audit Asset Lab locale (`--category=Fortificazioni`, Windows): 790 render, 0 falliti, 60 nuovi (gli stati «Tetto 30°/60°/75°»), rivisti nel foglio `fortificazioni-torri`; aggiunti alla baseline solo i 60 nuovi. I 391 «changed» su danni/cutaway/intatti sono deriva della macchina locale rispetto alla baseline e non sono stati accettati. CI del branch da verificare.
+
 ## 2026-11-06 — Orto di corte, BC-251105-11 (branch `feature/orto-di-corte`, pre-merge)
 
 - **CODICE SU BRANCH, NON ANCORA MAIN:** `CIVIC_ANNEX_CATALOG.townhall.kitchenGarden` («Kitchen garden», 3×2U, L1, max 2, `kind:'garden'`, attraversabile). Il Municipio non ha lotto Voronoi: l'orto si posa su terreno aperto entro `TOWNHALL_ANNEX_RANGE` = 7U e non può occupare lotti di proprietà; restano i controlli condivisi di `ConquerPlacement`. Pulsante nel pannello Annessi del Municipio con la resa indicata.
