@@ -1,5 +1,7 @@
 # Livello 2 — Stato tecnico e prove
 
+06/11/2026 — Integrazione PR #175: riallineata a main b62d0b9 (#173/#174). Risolti conflitti preservando rampe, H4 e torre lignea. Corretto il test costiero intermittente: fixture con seedRand reale, prima assente (3 fallimenti su 20); nessuna modifica al runtime costiero.
+
 Sul branch `feature/wood-tower-h2` (BC-251105-06, **non in main**): torre lignea a telaio H2 (`woodStyle:'frameTower'`, `woodTowerSize/woodTowerLevel` in `settlement-core.js`, caricamento in `settlement-app-persistence.js`, altezza 3,78 in `structureHeight`, cutaway abilitato; ingresso rialzato del mastio abilitato in `settlement-keep-entrance.js` con soglia 1,28 e parti `door`/`doorRaised`/`frontMid` scelte in `settlement-wood3d.js`; la finestra del mastio ligneo cede il posto alla porta in `settlement-architecture.js`). Prove: `qa/wood3d-regression.cjs` esteso (chiave modello, tetto fisso, H2, parti del cutaway, altezza/ingombro) e `qa/keep-entrance-regression.cjs` (scala alla torre a telaio, soglia al P1) verdi; tutti i `qa/*.cjs` non di performance verdi; `qa/clay-material-regression.cjs` verde; `construction-performance` e `fire-collapse-cutaway-performance` falliscono in locale anche su main (ambiente). Lab: `castle:legno-telaio-h2` ispezionato in 3D, nel gioco, cantiere 25/50/75%, danno e cutaway; `node qa/asset-audit.mjs`: 0 falliti, baseline aggiornata dopo la revisione.
 
 ## 2026-11-06 — Torre W2 × H4 (branch `feature/tower-w2-h4`, pre-merge)

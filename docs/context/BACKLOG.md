@@ -1,5 +1,7 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+06/11/2026 — Integrazione PR #175: riallineata a main b62d0b9 (#173/#174). Risolti conflitti preservando rampe, H4 e torre lignea. Corretto il test costiero intermittente: fixture con seedRand reale, prima assente (3 fallimenti su 20); nessuna modifica al runtime costiero.
+
 ## 2026-11-05 — P0: Piazzale deposito e Logging Camp (branch `feature/founding-storage-yard-20261105`)
 
 - **P0-05 · PRODUZIONE LEGNO — FIX IN BRANCH:** con un piazzale e camp attivo almeno un L1 è assegnato prima dei cantieri, evitando produzione zero durante costruzioni simultanee; accantonamento nel magazzino iniziale della quota non venduta, superando il vecchio limite target 70 con scorte iniziali 200; eccedenza al mercato senza duplicazioni. L'output si vede nel pannello del taglialegna e dell'economia. Logistica dei popolani/carrettieri ancora fuori scope.
