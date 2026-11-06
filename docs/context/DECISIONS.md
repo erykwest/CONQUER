@@ -1,5 +1,27 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-CODEX-03 — Vault personale e pubblicazione editoriale (05/11/2026)
+
+- **Richiesta dell'utente:** usare la skill Obsidian per edifici e meccaniche, con vault dedicato nella propria cartella CONQUER. Il vault personale è la fonte di scrittura; il repository conserva una copia di pubblicazione versionata, non un secondo vault da modificare indipendentemente.
+- Import a senso unico: non riscrive il vault, controlla la base locale e si ferma su conflitti, salvataggi concorrenti, link o destinazioni non valide. Percorso personale e manifest di sincronizzazione restano locali/ignorati da Git.
+- Solo contenuti approved sono compilati. Titolo, alias e corpo si modificano nelle note, mentre costi, tempi e compatibilità restano nel gameplay. ID stabili distinti da nome file e titolo; link di sezione preservati.
+- Nessuna pubblicazione automatica dal salvataggio di una nota. Copia Git e artefatto passano da PR/CI e merge autorizzato. [Contratto completo](../CODEX-OBSIDIAN.md). Milestone M0–M5 invariate.
+
+## D-CODEX-02 — Wiki ipertestuale e artefatto pubblico generato (05/11/2026)
+
+- **Richiesta dell'utente:** alcune keywords di sovracategoria nel testo devono rimandare a una pagina. Implementati link HTML reali con destinazioni stabili, match per parole intere e precedenza dei termini specifici; testi e destinazioni verificati dalle QA. Breadcrumb, relazioni e backlink completano la navigazione.
+- Una vista per sito e in-game; in-game legge il catalogo live senza snapshot, il sito legge un artefatto JSON generato dalle stesse definizioni. Estensione di D-CODEX-01: l'artefatto viene committato per hosting statico, ma non mantenuto manualmente; CI confronta la rigenerazione e rifiuta dati obsoleti.
+- Preventivi pubblici riferiti a configurazioni esplicite, preventivi contestuali dal gioco. Le conoscenze non mappate non diventano sblocchi o stati di possesso fittizi.
+- Nessun cambiamento alle milestone M0–M5 né ai contratti di economia/salvataggi. [Implementazione e limiti](../CODEX-WIKI.md), branch `feature/codex-wiki`.
+
+## D-CODEX-01 — Catalogo consultabile sopra i provider del gioco (05/11/2026)
+
+- **Implementazione fase 2 sul branch `feature/codex-normalized-catalog`**, su richiesta di procedere al catalogo normalizzato: sette categorie, ID semantici indipendenti da salvataggi/asset/etichette, metadati e relazioni strutturate. [Contratto v1](../CODEX-CATALOG.md).
+- Un core senza DOM e un adapter read-only al gameplay. Costi/tempi leggono i provider reali; nessun secondo listino. Lettura live in gioco, snapshot JSON esplicitamente datato dal processo che lo pubblica per il sito.
+- Valori noti distinti da unmapped/context-required/incompatible. La membership nello schema di una variante non certifica l'installabilità. Nessuna meccanica viene abilitata dal Codex.
+- Requisiti fisici, funzionali e conoscenze separati. Conoscenze non mappate; nessun albero tecnologico, nessun vincolo inventato.
+- Alternativa evitata: duplicare costi e regole nei contenuti Wiki. La UI Wiki e l'export automatico del sito restano fase successiva; milestone sistemiche M0–M5 invariate.
+
 ## D-PRESTIGE-01 — Prestigio del castello (05/11/2026)
 
 - **Decisione dell'utente:** la Falconiera dà «prestigio nobiliare» attraverso un valore nuovo del castello, non con un bonus ai cavalieri né alla diplomazia.

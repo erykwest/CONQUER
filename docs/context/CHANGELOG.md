@@ -1,5 +1,27 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+06/11/2026 — Integrazione #165 su main 1247cca: aggiunte dal vault autore le schede Falconiera e Orto di corte (138 voci, 153 pagine, 156 note); export gameplay rigenerato. Nuovo workflow Wiki conforme a P1: concurrency PR e setup Chromium condiviso; inventario CI 26 workflow, 6 browser job. ROADMAP e contratti editoriali invariati.
+
+## 2026-11-05 — Pulsante CODEX / WIKI nel Profilo
+
+Richiesta dell'utente: accesso visibile dentro Profilo. Aggiunto pulsante di apertura del lettore esistente e collegamento nel bridge; barra Profilo con wrap e versioni cache aggiornate. Regressione browser estesa a entrambe le UI, chiusura/Escape, ritorno focus e mobile. Nessuna modifica a gameplay o salvataggi; ROADMAP/DECISIONS invariate, accesso UI sul contratto Wiki esistente.
+
+## 2026-11-05 — Wiki da contenuti Obsidian (branch feature)
+
+Migrati titoli, alias e testi di 151 pagine in note Markdown; aggiunti indice, guida e modello. Il vault personale è l'ambiente di scrittura e la copia Git è importata con baseline/conflitti e validazione preventiva. Generato artefatto editoriale per sito e gioco, preservando costi/regole dai provider. Supportati link a sezioni, paragrafi/titoli/liste/formattazione sicura. Ampliate cinque note di contenuto; test editoriali/import e browser PASS locali. D-CODEX-03 e documentazione aggiornati, nessun merge/deploy implicito.
+
+## 2026-11-05 — Wiki Codex navigabile (branch feature)
+
+Aggiunti `/wiki/`, vista condivisa, contenuti editoriali con autolink di keywords verso sovracategorie e schede, ricerca e filtri con URL, backlink, dati/quote dal catalogo. Lettore modale in-game e accessi Builder/UI2; export pubblico deterministico da sorgenti e CI contro dati obsoleti. Test locali e browser PASS, screenshot desktop/mobile revisionati. D-CODEX-02 documenta i link e il ciclo di pubblicazione generato. Nessun nuovo asset, tecnologia o dato personale pubblicato.
+
+## 2026-11-05 — CODEX normalizzato v1 (branch feature)
+
+Aggiunti `src/codex-catalog.js` (contratto portabile, copie congelate, ID/relazioni, quote e snapshot) e `src/settlement-codex.js` (adapter read-only, 136 record) in index. Preventivi dalle funzioni del Builder e dai registri, compatibilità da predicati esistenti o esplicitamente non mappata. Nessuna modifica a salvataggi, economia, asset o tecnologie. Test Codex e regressioni Builder/economia/save/runtime PASS in locale; API verificata nel browser. Suite aggiunta a Runtime integrity. Audit #159 incorporato; documentato D-CODEX-01. Nessun merge/deploy implicito.
+
+## 2026-11-05 — Censimento iniziale CONQUER CODEX
+
+Branch documentale `docs/codex-catalog-audit-20261105`, base `main` `bcf3cd7`. Aggiunto `docs/CODEX-CATALOG-AUDIT.md` con registri, chiavi, proprietari e limiti delle sette famiglie; distinto Asset Lab da catalogo gameplay e stato delle PR aperte. Aggiornati STATUS/BACKLOG e indice README. Nessuna modifica runtime/asset/bilanciamento; suite gameplay e browser non eseguite. ROADMAP e DECISIONS invariate: questa fase documenta fonti e prossimi passi senza cambiare milestone né introdurre contratti runtime.
+
 05/11/2026 — `feature/falconry`: nuova stanza Falconiera (torri in pietra W2–W3 a falde, ultimo piano) con caccia di 4 razioni al giorno e voliera Blender sul tetto montata da `ROOM_EXTERIOR` (montaggio `roof` per le stanze); nuovo valore Prestigio del castello dalle stanze di corte. Piramide: STATUS, BACKLOG, DECISIONS (D-ROOM-EXT-01 esteso alle stanze sul tetto; D-PRESTIGE-01). ROADMAP invariata: la Falconiera era già approvata nel catalogo.
 
 06/11/2026 — `chore/ci-p1-browser-dedup-20261106` (pre-merge): introdotta concurrency per tutti i 25 workflow (cancel run superati solo PR), eliminati full suite duplicati in Main fixes/Gate/WebGPU, unificato Playwright 1.56.1/Chromium con cache in composite action, concentrato audit visivo in Asset Lab (browser condizionale ai file visivi), limitato WebGPU a modifiche renderer e lancio manuale, preservate integrità/economia/guard documentale e ampliato P0 full a world3d/castle3d. Test di regressione `qa/ci-p1-regression.cjs` e documentazione `docs/CI.md` aggiornati. ROADMAP invariata.

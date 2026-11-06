@@ -4,7 +4,7 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
 const root=path.resolve(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const dir=path.join(root,'.github/workflows');
 const workflows=fs.readdirSync(dir).filter(x=>x.endsWith('.yml')).sort();
-assert.equal(workflows.length,25,'P0 workflow inventory must remain intact');
+assert.equal(workflows.length,26,'P0 workflow inventory must remain intact');
 const f=name=>read('.github/workflows/'+name);
 for(const name of workflows){
   const s=f(name);
@@ -15,7 +15,7 @@ for(const name of workflows){
 const action=read('.github/actions/playwright-setup/action.yml');
 for(const item of ['playwright@1.56.1','actions/cache@v4','~/.cache/ms-playwright','~/.npm','npx playwright install chromium','npx playwright install-deps chromium','chromium.launch({headless:true})'])
  assert.ok(action.includes(item),'shared browser setup missing '+item);
-for(const name of ['asset-lab-regression.yml','converge-regression.yml','main-fixes-regression.yml','panels-browser-preview.yml','webgpu-smoke.yml']){
+for(const name of ['asset-lab-regression.yml','converge-regression.yml','main-fixes-regression.yml','panels-browser-preview.yml','webgpu-smoke.yml','codex-wiki.yml']){
  const s=f(name);
  assert.ok(s.includes('./.github/actions/playwright-setup'),name+' bypasses shared Chromium cache');
  assert.ok(s.includes('.github/actions/playwright-setup/action.yml'),name+' does not rerun when browser action changes');
@@ -40,4 +40,4 @@ for(const name of ['combat-regression.yml','economy-flows-regression.yml'])asser
 assert.ok(f('runtime-integrity.yml').includes('node qa/save-safety-regression.cjs'),'never drop save safety coverage');
 assert.ok(f('context-governance.yml').includes('node tools/context-guard.cjs'),'never drop documentation governance');
 assert.ok(settle.includes('qa/*-regression.cjs'),'complete deterministic tests must stay available');
-console.log('PASS CI P1: 25 concurrent workflows; 5 cached browser jobs; no duplicate full deterministic runners; preserved risk, economy, runtime and governance tests.');
+console.log('PASS CI P1: 26 concurrent workflows; 6 cached browser jobs; no duplicate full deterministic runners; preserved risk, economy, runtime and governance tests.');

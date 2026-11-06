@@ -1,5 +1,11 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+**Contenuti Codex in Obsidian (branch):** [pipeline editoriale e cinque note approfondite](CODEX-OBSIDIAN.md). UI, link e testi dalla copia validata del vault; requisiti e bilanciamento del Builder invariati.
+
+**Codex Wiki (branch `feature/codex-wiki`):** [UI condivisa e link contestuali Builder](CODEX-WIKI.md), keyword verso sovracategorie, ricerca e relazioni. Nessuna modifica ai requisiti di costruzione.
+
+**CODEX, 05/11/2026:** [catalogo normalizzato v1](CODEX-CATALOG.md) implementato su `feature/codex-normalized-catalog`, non ancora main. Riusa le definizioni Builder; nessun nuovo edificio o requisito tecnologico. Link e pagine Wiki rimangono fase 3.
+
 ## 2026-11-06 — Carretti locali produzione → Piazzale (branch `feature/local-production-haulage-20261106`, non ancora in main)
 
 - **P1 VISUAL LOGISTICS · IMPLEMENTATO SU BRANCH:** il libro economico emette eventi solo su `received>0` per la quota trattenuta da una produzione L1–L3; la bonifica forestale emette un evento dal luogo del taglio, senza accrediti aggiuntivi. I carrettieri usano l'asset carro/cavallo 2D di `ConquerVehicles` e `ConquerWagons`. Carico → strada completata → miglior Piazzale collegato → scarico → ritorno vuoto, fino a 4 simultanei, con pause e coda limitata.

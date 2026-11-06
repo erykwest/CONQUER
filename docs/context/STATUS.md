@@ -1,5 +1,36 @@
 # Livello 2 — Stato tecnico e prove
 
+06/11/2026 — Integrazione #165 su main 1247cca: aggiunte dal vault autore le schede Falconiera e Orto di corte (138 voci, 153 pagine, 156 note); export gameplay rigenerato. Nuovo workflow Wiki conforme a P1: concurrency PR e setup Chromium condiviso; inventario CI 26 workflow, 6 browser job. ROADMAP e contratti editoriali invariati.
+
+## 2026-11-05 — Accesso Wiki dal Profilo (branch `feature/codex-obsidian`)
+
+Aggiunto il pulsante **CODEX / WIKI** nella barra del Profilo, accanto a Generale, Araldica e Centro di controllo. Apre il lettore interno in entrambe le UI; chiusura/Escape riporta al Profilo e al pulsante, senza modificare partita o scheda attiva. Barra a capo sugli schermi stretti; cache version aggiornata. Verifica browser estesa a ingresso dal Profilo, focus e mobile. La modifica è nella PR #165, non ancora main.
+
+## 2026-11-05 — Obsidian come sorgente editoriale Wiki (branch, NON MAIN)
+
+Su `feature/codex-obsidian`: [note Markdown e pipeline editoriale](../CODEX-OBSIDIAN.md). Vault personale CONQUER già aperto nella cartella scelta dall'utente, 154 note; copia Git di pubblicazione `content/codex`, import a senso unico con baseline e controllo conflitti. 151 pagine approvate compilate in un artefatto condiviso web/in-game; niente prezzi duplicati nelle note.
+
+Approfondite Torre, Fortificazioni, Costruzioni, Logistica e Navigazione/porti. Test locali PASS per catalogo/Wiki, parser/editoria, import (conflitti/rinomine/salvataggi concorrenti) e Playwright (anche link a sezioni, Back, mobile e partita invariata). CI da verificare nella PR. Incorpora le fasi #159/#161/#163 ancora aperte all'avvio; nessun merge implicito.
+
+## 2026-11-05 — CODEX Wiki (branch `feature/codex-wiki`, NON MAIN)
+
+[Wiki condivisa](../CODEX-WIKI.md) con 136 schede, 7 famiglie e 8 sovracategorie; keywords nel testo collegate a pagine reali, breadcrumb, relazioni e rimandi inversi. Route pubblica `/wiki/`, ricerca/filtri e URL condivisibili. Lettore in-game con link Builder/inspector, provider live e compatibilità contestuale; catalogo pubblico generato dalle sorgenti con controllo di freschezza.
+
+QA locale PASS: catalogo, Wiki/export, Builder menu e module boundaries; Playwright: link, Back, ricerca/filtri, reload, mobile, errori/riprova, escaping, lettore live e nessuna modifica a risorse/strutture/selezione. Desktop/mobile revisionati. Workflow browser dedicato aggiunto; CI da verificare sulla PR. Base iniziale main `15070d2`, incorpora #159 e #161; nessun nuovo vincolo tecnologico o merge implicito.
+
+## 2026-11-05 — CODEX fase 2 (branch, NON MAIN)
+
+Su `feature/codex-normalized-catalog`, base `main` `9a4310d`: [catalogo normalizzato v1](../CODEX-CATALOG.md), 136 record in sette categorie. API read-only `ConquerGameCodex` in index, core portabile e snapshot JSON per consumatori web; prezzi/tempi delegati al gameplay. Nessuna UI Wiki né tecnologia applicata. Incorpora l'audit della PR #159 ancora aperta all'avvio.
+
+QA locale PASS: codex-catalog (dati gameplay reali, quote, relazioni, asset, isolamento e JSON), builder-menu, economy-builder-integration, save-safety e 5 test runtime-integrity. Browser locale verificato con fixture Asset Lab/Canvas: API, preventivi e round-trip; nessun asset modificato. Restano adapter professioni, coperture parziali dichiarate e fase 3 Wiki.
+
+
+Verifica aggiuntiva: `qa/refactor-app-population-regression.cjs` FALLISCE sul conteggio del siege hook `rubbleBlocks`, sia sul branch sia su checkout pulito della base `9a4310d` (stesso errore 1 !== 2). Difetto preesistente, sorgenti popolazione e relativa suite non modificati dal Codex. `qa/refactor-module-boundaries-regression.cjs` e `qa/context-guard-regression.cjs` PASS.
+
+## 2026-11-05 — CODEX: audit iniziale (branch documentale, NON MAIN)
+
+Base verificata `main` `bcf3cd788f18560221862fe1908edef4edb5f2d3`. [Censimento delle sette famiglie](../CODEX-CATALOG-AUDIT.md): registri gameplay, cataloghi visivi, fonti di costo/tempo/compatibilità e coperture parziali. Solo documentazione su `docs/codex-catalog-audit-20261105`; nessun Codex runtime o albero tecnologico implementato. QA gameplay/browser non eseguita. PR #155 e #158 ancora aperte al controllo: non incluse nella base.
+
 ## Falconiera e Prestigio (branch `feature/falconry`, da `main` 05f8170, 05/11/2026, NON MAIN)
 
 - **IMPLEMENTATO SU BRANCH:**

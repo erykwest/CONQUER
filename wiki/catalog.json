@@ -1,0 +1,7922 @@
+{
+  "schemaVersion": 1,
+  "sourceDigest": "bf07c2c39218f40cf1cf6b5469ea20b08d628554295ba93a6ae93b075e69e822",
+  "catalog": {
+    "schemaVersion": 1,
+    "categories": [
+      "building",
+      "sub-building",
+      "upgrade",
+      "room",
+      "unit",
+      "siege-engine",
+      "ship"
+    ],
+    "items": [
+      {
+        "id": "building:bridge",
+        "key": "bridge",
+        "label": "Ponte",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "constructionCost/buildDuration"
+        },
+        "properties": {},
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-crossings.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:built",
+        "key": "built",
+        "label": "Sezione costruita",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "constructionCost/buildDuration"
+        },
+        "properties": {
+          "variants": {
+            "skin": [
+              "standard",
+              "arcade"
+            ]
+          },
+          "geometry": {
+            "width": 1,
+            "min": 1,
+            "max": 4
+          },
+          "wideGeometry": {
+            "width": 2,
+            "min": 2,
+            "max": 6
+          }
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-castle-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:church",
+        "key": "church",
+        "label": "church",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "constructionCost/buildDuration"
+        },
+        "properties": {
+          "levels": [
+            1,
+            2,
+            3
+          ]
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:clay-quarry",
+        "key": "quarry",
+        "label": "Cava argilla",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-industries.js",
+          "symbol": "CLAY_QUARRY"
+        },
+        "properties": {
+          "label": "Argilla",
+          "name": "Clay pit",
+          "good": "clay",
+          "tier": 2,
+          "workers": 2,
+          "w": 4,
+          "h": 4,
+          "color": "#dc873b",
+          "edge": "#995025",
+          "days": 5,
+          "cost": {
+            "gold": 65,
+            "wood": 28
+          }
+        },
+        "relations": [
+          {
+            "id": "building:quarry",
+            "kind": "variant-of"
+          }
+        ],
+        "assets": [
+          {
+            "registry": "ConquerIndustryModels",
+            "collection": "models",
+            "key": "clayPit"
+          }
+        ],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:field",
+        "key": "field",
+        "label": "Campo",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "constructionCost/buildDuration"
+        },
+        "properties": {},
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:gate",
+        "key": "gate",
+        "label": "Porta",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "constructionCost/buildDuration"
+        },
+        "properties": {
+          "variants": {
+            "roofStyle": [
+              "battlement",
+              "pitched",
+              "flat"
+            ],
+            "upper": [
+              "stone",
+              "timber"
+            ],
+            "hoarding": [
+              "off",
+              "on"
+            ]
+          }
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-castle-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:guild",
+        "key": "guild",
+        "label": "guild",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "constructionCost/buildDuration"
+        },
+        "properties": {
+          "levels": [
+            1,
+            2,
+            3
+          ]
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:house",
+        "key": "house",
+        "label": "Casa",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "constructionCost/buildDuration"
+        },
+        "properties": {},
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:loggingCamp",
+        "key": "loggingCamp",
+        "label": "Taglialegna",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-industries.js",
+          "symbol": "TYPES.loggingCamp"
+        },
+        "properties": {
+          "label": "Taglialegna",
+          "name": "Logging camp",
+          "good": "wood",
+          "tier": 1,
+          "workers": 2,
+          "w": 2,
+          "h": 2,
+          "color": "#795036",
+          "edge": "#4a2d1c",
+          "radius": 10,
+          "days": 3,
+          "cost": {
+            "gold": 35,
+            "wood": 5
+          }
+        },
+        "relations": [],
+        "assets": [
+          {
+            "registry": "ConquerIndustryModels",
+            "collection": "models",
+            "key": "loggingCamp"
+          }
+        ],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:market",
+        "key": "market",
+        "label": "market",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "constructionCost/buildDuration"
+        },
+        "properties": {
+          "levels": [
+            1,
+            2,
+            3
+          ]
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:mine",
+        "key": "mine",
+        "label": "Miniera",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-industries.js",
+          "symbol": "TYPES.mine"
+        },
+        "properties": {
+          "label": "Miniera",
+          "name": "Mine",
+          "good": "stone",
+          "tier": 2,
+          "workers": 2,
+          "w": 1,
+          "h": 1,
+          "color": "#31363e",
+          "edge": "#171b20",
+          "days": 7,
+          "cost": {
+            "gold": 95,
+            "wood": 35,
+            "stone": 18
+          }
+        },
+        "relations": [],
+        "assets": [
+          {
+            "registry": "ConquerIndustryModels",
+            "collection": "models",
+            "key": "mine"
+          }
+        ],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:moat",
+        "key": "moat",
+        "label": "Fossato",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "constructionCost/buildDuration"
+        },
+        "properties": {},
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-crossings.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:palisade",
+        "key": "palisade",
+        "label": "Palizzata",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "constructionCost/buildDuration"
+        },
+        "properties": {
+          "geometry": {
+            "min": 1,
+            "max": 8
+          },
+          "tiers": {
+            "1": 0.2,
+            "2": 0.5,
+            "3": 1
+          }
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:pier",
+        "key": "pier",
+        "label": "Molo",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-pier.js",
+          "symbol": "SPEC"
+        },
+        "properties": {
+          "label": "Molo",
+          "name": "Pier",
+          "h": 1.5,
+          "sizes": {
+            "4": {
+              "days": 4,
+              "cost": {
+                "gold": 30,
+                "wood": 60
+              }
+            },
+            "8": {
+              "days": 6,
+              "cost": {
+                "gold": 55,
+                "wood": 110
+              }
+            },
+            "12": {
+              "days": 8,
+              "cost": {
+                "gold": 80,
+                "wood": 160
+              }
+            }
+          }
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-pier.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:plaza",
+        "key": "plaza",
+        "label": "plaza",
+        "category": "building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "constructionCost/buildDuration"
+        },
+        "properties": {
+          "levels": [
+            1,
+            2,
+            3
+          ],
+          "variants": [
+            "paved",
+            "fountain",
+            "garden"
+          ]
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:quarry",
+        "key": "quarry",
+        "label": "Cava",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-industries.js",
+          "symbol": "TYPES.quarry"
+        },
+        "properties": {
+          "label": "Cava",
+          "name": "Stone quarry",
+          "good": "stone",
+          "tier": 2,
+          "workers": 2,
+          "w": 3,
+          "h": 3,
+          "color": "#999b9c",
+          "edge": "#64686c",
+          "days": 5,
+          "cost": {
+            "gold": 65,
+            "wood": 20,
+            "stone": 8
+          }
+        },
+        "relations": [],
+        "assets": [
+          {
+            "registry": "ConquerIndustryModels",
+            "collection": "models",
+            "key": "quarry"
+          }
+        ],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:quay",
+        "key": "quay",
+        "label": "Banchina",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-quay.js",
+          "symbol": "SPEC"
+        },
+        "properties": {
+          "label": "Banchina",
+          "days": 0.6,
+          "costPerU": {
+            "gold": 6,
+            "stone": 14
+          }
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-quay.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:road",
+        "key": "road",
+        "label": "Strada",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "constructionCost/buildDuration"
+        },
+        "properties": {
+          "geometry": {
+            "width": 0.62,
+            "min": 1,
+            "max": 160
+          }
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:shipyard.1",
+        "key": "shipyard.1",
+        "label": "Cantiere navale L1",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-shipyard.js",
+          "symbol": "LEVELS.1"
+        },
+        "properties": {
+          "reach": 7,
+          "half": 1.1,
+          "land": 5,
+          "shed": 1,
+          "side": 1.6,
+          "slip": "slipwayL1",
+          "days": 12,
+          "cost": {
+            "gold": 120,
+            "wood": 220,
+            "stone": 80
+          },
+          "label": "Cantiere navale L1"
+        },
+        "relations": [
+          {
+            "id": "building:pier",
+            "kind": "variant-of"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:shipyard.2",
+        "key": "shipyard.2",
+        "label": "Cantiere navale L2",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-shipyard.js",
+          "symbol": "LEVELS.2"
+        },
+        "properties": {
+          "reach": 10,
+          "half": 2.4,
+          "land": 12,
+          "shed": 1.5,
+          "side": 3.4,
+          "crane": true,
+          "slip": "slipwayL2",
+          "days": 20,
+          "cost": {
+            "gold": 260,
+            "wood": 420,
+            "stone": 180
+          },
+          "label": "Cantiere navale L2"
+        },
+        "relations": [
+          {
+            "id": "building:pier",
+            "kind": "variant-of"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:tavern",
+        "key": "tavern",
+        "label": "tavern",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "constructionCost/buildDuration"
+        },
+        "properties": {
+          "levels": [
+            1,
+            2,
+            3
+          ]
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:terraforming.flat",
+        "key": "flat",
+        "label": "Terraforming · flat",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-terraforming.js",
+          "symbol": "preview/commit"
+        },
+        "properties": {
+          "kind": "terrain-operation",
+          "shapes": [
+            "round",
+            "square"
+          ],
+          "limits": {
+            "minRadius": 2,
+            "maxRadius": 8,
+            "minZ": 0,
+            "maxZ": 8
+          }
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-terraforming.js",
+                "symbol": "preview"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:terraforming.terrain",
+        "key": "terrain",
+        "label": "Terraforming · terrain",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-terraforming.js",
+          "symbol": "preview/commit"
+        },
+        "properties": {
+          "kind": "terrain-operation",
+          "shapes": [
+            "round",
+            "square"
+          ],
+          "limits": {
+            "minRadius": 2,
+            "maxRadius": 8,
+            "minZ": 0,
+            "maxZ": 8
+          }
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-terraforming.js",
+                "symbol": "preview"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:terraforming.walled",
+        "key": "walled",
+        "label": "Terraforming · walled",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-terraforming.js",
+          "symbol": "preview/commit"
+        },
+        "properties": {
+          "kind": "terrain-operation",
+          "shapes": [
+            "round",
+            "square"
+          ],
+          "limits": {
+            "minRadius": 2,
+            "maxRadius": 8,
+            "minZ": 0,
+            "maxZ": 8
+          }
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-terraforming.js",
+                "symbol": "preview"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:tower",
+        "key": "tower",
+        "label": "Torre",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "constructionCost/buildDuration"
+        },
+        "properties": {
+          "variants": {
+            "roofStyle": [
+              "battlement",
+              "machicolation",
+              "pitched"
+            ],
+            "baseStyle": [
+              "standard",
+              "buttress",
+              "splayed"
+            ],
+            "topWeapon": [
+              "none",
+              "mangonel",
+              "ballista"
+            ],
+            "bartizan": [
+              "none",
+              "battlement",
+              "pitched"
+            ],
+            "roofShape": [
+              "pyramid",
+              "gable",
+              "hip"
+            ],
+            "hoarding": [
+              "off",
+              "on"
+            ],
+            "bell": [
+              "none",
+              "bell"
+            ]
+          },
+          "geometry": {
+            "squareTiers": {
+              "1": 1,
+              "2": 1.5,
+              "3": 2,
+              "4": 3
+            },
+            "roundTiers": {
+              "1": 0.5,
+              "2": 0.75,
+              "3": 1
+            },
+            "oriented": {
+              "half": {
+                "1": {
+                  "depth": 0.75,
+                  "width": 1
+                },
+                "2": {
+                  "depth": 1,
+                  "width": 1.5
+                },
+                "tiers": [
+                  1,
+                  2
+                ]
+              },
+              "dee": {
+                "2": {
+                  "depth": 1.5,
+                  "width": 1.25
+                },
+                "3": {
+                  "depth": 2.25,
+                  "width": 1.5
+                },
+                "tiers": [
+                  2,
+                  3
+                ]
+              }
+            },
+            "keepFloorPlans": {
+              "hall": [
+                [
+                  0,
+                  0,
+                  1,
+                  1
+                ]
+              ],
+              "halves": [
+                [
+                  0,
+                  0,
+                  0.5,
+                  1
+                ],
+                [
+                  0.5,
+                  0,
+                  1,
+                  1
+                ]
+              ],
+              "three": [
+                [
+                  0,
+                  0,
+                  0.5,
+                  1
+                ],
+                [
+                  0.5,
+                  0,
+                  1,
+                  0.5
+                ],
+                [
+                  0.5,
+                  0.5,
+                  1,
+                  1
+                ]
+              ],
+              "quad": [
+                [
+                  0,
+                  0,
+                  0.5,
+                  0.5
+                ],
+                [
+                  0.5,
+                  0,
+                  1,
+                  0.5
+                ],
+                [
+                  0,
+                  0.5,
+                  0.5,
+                  1
+                ],
+                [
+                  0.5,
+                  0.5,
+                  1,
+                  1
+                ]
+              ]
+            }
+          }
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-castle-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:townhall",
+        "key": "townhall",
+        "label": "townhall",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "constructionCost/buildDuration"
+        },
+        "properties": {
+          "levels": [
+            1,
+            2,
+            3
+          ]
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:training",
+        "key": "training",
+        "label": "training",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "constructionCost/buildDuration"
+        },
+        "properties": {
+          "levels": [
+            1
+          ]
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:venue.arenaLot",
+        "key": "arenaLot",
+        "label": "arenaLot",
+        "category": "building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-events3d.js",
+          "symbol": "VENUES.arenaLot"
+        },
+        "properties": {
+          "w": 18,
+          "h": 14,
+          "setup": "arenaLot"
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:venue.armyCamp",
+        "key": "armyCamp",
+        "label": "armyCamp",
+        "category": "building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-events3d.js",
+          "symbol": "VENUES.armyCamp"
+        },
+        "properties": {
+          "w": 12,
+          "h": 10
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:venue.festivalGround",
+        "key": "festivalGround",
+        "label": "festivalGround",
+        "category": "building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-events3d.js",
+          "symbol": "VENUES.festivalGround"
+        },
+        "properties": {
+          "w": 14,
+          "h": 10
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:venue.gallows",
+        "key": "gallows",
+        "label": "gallows",
+        "category": "building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-events3d.js",
+          "symbol": "VENUES.gallows"
+        },
+        "properties": {
+          "w": 2,
+          "h": 1.5
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:venue.pillory",
+        "key": "pillory",
+        "label": "pillory",
+        "category": "building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-events3d.js",
+          "symbol": "VENUES.pillory"
+        },
+        "properties": {
+          "w": 1,
+          "h": 1
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:venue.scaffold",
+        "key": "scaffold",
+        "label": "scaffold",
+        "category": "building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-events3d.js",
+          "symbol": "VENUES.scaffold"
+        },
+        "properties": {
+          "w": 2.5,
+          "h": 2
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:venue.stage",
+        "key": "stage",
+        "label": "stage",
+        "category": "building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-events3d.js",
+          "symbol": "VENUES.stage"
+        },
+        "properties": {
+          "w": 2.4,
+          "h": 1.2,
+          "dressings": {
+            "players": "stagePlayers",
+            "herald": "stageHerald"
+          },
+          "dressing": "players"
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:venue.streetSpot",
+        "key": "streetSpot",
+        "label": "streetSpot",
+        "category": "building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-events3d.js",
+          "symbol": "VENUES.streetSpot"
+        },
+        "properties": {
+          "w": 1.6,
+          "h": 1.6
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:vineyard",
+        "key": "vineyard",
+        "label": "Vigneto",
+        "category": "building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-economy.js",
+          "symbol": "KIND.vineyard"
+        },
+        "properties": {
+          "kind": "economic-definition",
+          "definition": {
+            "good": "luxury",
+            "classId": 1,
+            "workers": 2,
+            "build": 90
+          }
+        },
+        "relations": [
+          {
+            "id": "building:field",
+            "kind": "related"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:wall",
+        "key": "wall",
+        "label": "Mura",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "constructionCost/buildDuration"
+        },
+        "properties": {
+          "variants": {
+            "skin": [
+              "standard",
+              "machicolation",
+              "hoarding"
+            ]
+          },
+          "geometry": {
+            "min": 1,
+            "max": 8
+          },
+          "tiers": {
+            "1": 0.2,
+            "2": 0.5,
+            "3": 1
+          }
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-castle-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:watermill",
+        "key": "watermill",
+        "label": "Mulino ad acqua",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-industries.js",
+          "symbol": "TYPES.watermill"
+        },
+        "properties": {
+          "label": "Mulino ad acqua",
+          "name": "Watermill",
+          "good": "food",
+          "tier": 1,
+          "workers": 0,
+          "w": 2,
+          "h": 2,
+          "color": "#f5d936",
+          "edge": "#ac870c",
+          "days": 3,
+          "cost": {
+            "gold": 45,
+            "wood": 35,
+            "stone": 10
+          }
+        },
+        "relations": [],
+        "assets": [
+          {
+            "registry": "ConquerIndustryModels",
+            "collection": "models",
+            "key": "watermill"
+          }
+        ],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:well",
+        "key": "well",
+        "label": "Pozzo",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "constructionCost/buildDuration"
+        },
+        "properties": {},
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:windmill",
+        "key": "windmill",
+        "label": "Mulino a vento",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-industries.js",
+          "symbol": "TYPES.windmill"
+        },
+        "properties": {
+          "label": "Mulino a vento",
+          "name": "Windmill",
+          "good": "food",
+          "tier": 1,
+          "workers": 0,
+          "w": 2,
+          "h": 2,
+          "color": "#f5d936",
+          "edge": "#ac870c",
+          "days": 3,
+          "cost": {
+            "gold": 40,
+            "wood": 30,
+            "stone": 10
+          }
+        },
+        "relations": [],
+        "assets": [
+          {
+            "registry": "ConquerIndustryModels",
+            "collection": "models",
+            "key": "windmill"
+          }
+        ],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "room:armory",
+        "key": "armory",
+        "label": "Armory",
+        "category": "room",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "FUNCTION_CATALOG/TOWNHALL_FUNCTION_CATALOG"
+        },
+        "properties": {
+          "catalogs": [
+            "castle"
+          ]
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:gate",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:built",
+            "kind": "candidate-host"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "ConquerSiege.allowed"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "room:barracks",
+        "key": "barracks",
+        "label": "Barracks",
+        "category": "room",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "FUNCTION_CATALOG/TOWNHALL_FUNCTION_CATALOG"
+        },
+        "properties": {
+          "catalogs": [
+            "castle"
+          ]
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:gate",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:built",
+            "kind": "candidate-host"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "ConquerSiege.allowed"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "room:chapel",
+        "key": "chapel",
+        "label": "Chapel",
+        "category": "room",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "FUNCTION_CATALOG/TOWNHALL_FUNCTION_CATALOG"
+        },
+        "properties": {
+          "catalogs": [
+            "castle"
+          ]
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:gate",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:built",
+            "kind": "candidate-host"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "ConquerSiege.allowed"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "room:cistern",
+        "key": "cistern",
+        "label": "Cistern",
+        "category": "room",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "FUNCTION_CATALOG/TOWNHALL_FUNCTION_CATALOG"
+        },
+        "properties": {
+          "catalogs": [
+            "castle"
+          ]
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:gate",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:built",
+            "kind": "candidate-host"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "ConquerSiege.allowed"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "room:commonHall",
+        "key": "commonHall",
+        "label": "Common hall",
+        "category": "room",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "FUNCTION_CATALOG/TOWNHALL_FUNCTION_CATALOG"
+        },
+        "properties": {
+          "catalogs": [
+            "castle"
+          ]
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:gate",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:built",
+            "kind": "candidate-host"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "ConquerSiege.allowed"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "room:council",
+        "key": "council",
+        "label": "Council chamber",
+        "category": "room",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "FUNCTION_CATALOG/TOWNHALL_FUNCTION_CATALOG"
+        },
+        "properties": {
+          "catalogs": [
+            "townhall"
+          ]
+        },
+        "relations": [
+          {
+            "id": "building:townhall",
+            "kind": "candidate-host"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "ConquerSiege.allowed"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "room:dovecote",
+        "key": "dovecote",
+        "label": "Dovecote",
+        "category": "room",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "FUNCTION_CATALOG/TOWNHALL_FUNCTION_CATALOG"
+        },
+        "properties": {
+          "catalogs": [
+            "castle"
+          ]
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:gate",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:built",
+            "kind": "candidate-host"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "ConquerSiege.allowed"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "room:granary",
+        "key": "granary",
+        "label": "Granary",
+        "category": "room",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "FUNCTION_CATALOG/TOWNHALL_FUNCTION_CATALOG"
+        },
+        "properties": {
+          "catalogs": [
+            "castle"
+          ]
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:gate",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:built",
+            "kind": "candidate-host"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "ConquerSiege.allowed"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "room:guard",
+        "key": "guard",
+        "label": "Guard post",
+        "category": "room",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "FUNCTION_CATALOG/TOWNHALL_FUNCTION_CATALOG"
+        },
+        "properties": {
+          "catalogs": [
+            "castle",
+            "townhall"
+          ]
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:gate",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:built",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:townhall",
+            "kind": "candidate-host"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "ConquerSiege.allowed"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "room:infirmary",
+        "key": "infirmary",
+        "label": "Infirmary",
+        "category": "room",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "FUNCTION_CATALOG/TOWNHALL_FUNCTION_CATALOG"
+        },
+        "properties": {
+          "catalogs": [
+            "castle"
+          ]
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:gate",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:built",
+            "kind": "candidate-host"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "ConquerSiege.allowed"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "room:kitchen",
+        "key": "kitchen",
+        "label": "Kitchen",
+        "category": "room",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "FUNCTION_CATALOG/TOWNHALL_FUNCTION_CATALOG"
+        },
+        "properties": {
+          "catalogs": [
+            "castle"
+          ]
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:gate",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:built",
+            "kind": "candidate-host"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "ConquerSiege.allowed"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "room:latrine",
+        "key": "latrine",
+        "label": "Latrine",
+        "category": "room",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "FUNCTION_CATALOG/TOWNHALL_FUNCTION_CATALOG"
+        },
+        "properties": {
+          "catalogs": [
+            "castle"
+          ]
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:gate",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:built",
+            "kind": "candidate-host"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "ConquerSiege.allowed"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "room:mews",
+        "key": "mews",
+        "label": "Falconry",
+        "category": "room",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "FUNCTION_CATALOG/TOWNHALL_FUNCTION_CATALOG"
+        },
+        "properties": {
+          "catalogs": [
+            "castle"
+          ]
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:gate",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:built",
+            "kind": "candidate-host"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "ConquerSiege.allowed"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "room:nobleRoom",
+        "key": "nobleRoom",
+        "label": "Noble chambers",
+        "category": "room",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "FUNCTION_CATALOG/TOWNHALL_FUNCTION_CATALOG"
+        },
+        "properties": {
+          "catalogs": [
+            "castle"
+          ]
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:gate",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:built",
+            "kind": "candidate-host"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "ConquerSiege.allowed"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "room:prison",
+        "key": "prison",
+        "label": "Prison",
+        "category": "room",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "FUNCTION_CATALOG/TOWNHALL_FUNCTION_CATALOG"
+        },
+        "properties": {
+          "catalogs": [
+            "castle",
+            "townhall"
+          ]
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:gate",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:built",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:townhall",
+            "kind": "candidate-host"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "ConquerSiege.allowed"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "room:stables",
+        "key": "stables",
+        "label": "Stables",
+        "category": "room",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "FUNCTION_CATALOG/TOWNHALL_FUNCTION_CATALOG"
+        },
+        "properties": {
+          "catalogs": [
+            "castle"
+          ]
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:gate",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:built",
+            "kind": "candidate-host"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "ConquerSiege.allowed"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "room:storage",
+        "key": "storage",
+        "label": "Materials store",
+        "category": "room",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "FUNCTION_CATALOG/TOWNHALL_FUNCTION_CATALOG"
+        },
+        "properties": {
+          "catalogs": [
+            "castle"
+          ]
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:gate",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:built",
+            "kind": "candidate-host"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "ConquerSiege.allowed"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "room:throneHall",
+        "key": "throneHall",
+        "label": "Throne hall",
+        "category": "room",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "FUNCTION_CATALOG/TOWNHALL_FUNCTION_CATALOG"
+        },
+        "properties": {
+          "catalogs": [
+            "castle"
+          ]
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:gate",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:built",
+            "kind": "candidate-host"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "ConquerSiege.allowed"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "room:treasury",
+        "key": "treasury",
+        "label": "Treasury",
+        "category": "room",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "FUNCTION_CATALOG/TOWNHALL_FUNCTION_CATALOG"
+        },
+        "properties": {
+          "catalogs": [
+            "castle"
+          ]
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:gate",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:built",
+            "kind": "candidate-host"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "ConquerSiege.allowed"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "room:tribunal",
+        "key": "tribunal",
+        "label": "Tribunal",
+        "category": "room",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "FUNCTION_CATALOG/TOWNHALL_FUNCTION_CATALOG"
+        },
+        "properties": {
+          "catalogs": [
+            "townhall"
+          ]
+        },
+        "relations": [
+          {
+            "id": "building:townhall",
+            "kind": "candidate-host"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "ConquerSiege.allowed"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "room:workshop",
+        "key": "workshop",
+        "label": "Armament workshop",
+        "category": "room",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "FUNCTION_CATALOG/TOWNHALL_FUNCTION_CATALOG"
+        },
+        "properties": {
+          "catalogs": [
+            "castle"
+          ]
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:gate",
+            "kind": "candidate-host"
+          },
+          {
+            "id": "building:built",
+            "kind": "candidate-host"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "ConquerSiege.allowed"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "ship:barca",
+        "key": "barca",
+        "label": "Barca da pesca",
+        "category": "ship",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-shipyard.js",
+          "symbol": "SHIPS.barca"
+        },
+        "properties": {
+          "size": "small",
+          "length": 2.571,
+          "beam": 0.857
+        },
+        "relations": [
+          {
+            "id": "building:shipyard.1",
+            "kind": "built-at"
+          },
+          {
+            "id": "building:shipyard.2",
+            "kind": "built-at"
+          }
+        ],
+        "assets": [
+          {
+            "registry": "ConquerShipModels",
+            "collection": "ships",
+            "key": "barca"
+          }
+        ],
+        "requirements": {
+          "physical": [],
+          "functional": [
+            {
+              "kind": "shipyard",
+              "levels": [
+                1,
+                2
+              ]
+            }
+          ],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "ConquerShipyard.SHIPS.barca.cost",
+          "time": "ConquerShipyard.SHIPS.barca.days",
+          "compatibility": "ConquerShipyard.canBuild"
+        },
+        "quotes": {
+          "cost": {
+            "status": "known",
+            "value": {
+              "gold": 40,
+              "wood": 60
+            }
+          },
+          "time": {
+            "status": "known",
+            "value": 6
+          }
+        }
+      },
+      {
+        "id": "ship:caravella",
+        "key": "caravella",
+        "label": "Caravella",
+        "category": "ship",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-shipyard.js",
+          "symbol": "SHIPS.caravella"
+        },
+        "properties": {
+          "size": "small",
+          "length": 4,
+          "beam": 1.2
+        },
+        "relations": [
+          {
+            "id": "building:shipyard.1",
+            "kind": "built-at"
+          },
+          {
+            "id": "building:shipyard.2",
+            "kind": "built-at"
+          }
+        ],
+        "assets": [
+          {
+            "registry": "ConquerShipModels",
+            "collection": "ships",
+            "key": "caravella"
+          }
+        ],
+        "requirements": {
+          "physical": [],
+          "functional": [
+            {
+              "kind": "shipyard",
+              "levels": [
+                1,
+                2
+              ]
+            }
+          ],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "ConquerShipyard.SHIPS.caravella.cost",
+          "time": "ConquerShipyard.SHIPS.caravella.days",
+          "compatibility": "ConquerShipyard.canBuild"
+        },
+        "quotes": {
+          "cost": {
+            "status": "known",
+            "value": {
+              "gold": 160,
+              "wood": 220,
+              "metal": 18
+            }
+          },
+          "time": {
+            "status": "known",
+            "value": 15
+          }
+        }
+      },
+      {
+        "id": "ship:cargo",
+        "key": "cargo",
+        "label": "Barca da carico",
+        "category": "ship",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-shipyard.js",
+          "symbol": "SHIPS.cargo"
+        },
+        "properties": {
+          "size": "small",
+          "length": 3.429,
+          "beam": 1.114
+        },
+        "relations": [
+          {
+            "id": "building:shipyard.1",
+            "kind": "built-at"
+          },
+          {
+            "id": "building:shipyard.2",
+            "kind": "built-at"
+          }
+        ],
+        "assets": [
+          {
+            "registry": "ConquerShipModels",
+            "collection": "ships",
+            "key": "cargo"
+          }
+        ],
+        "requirements": {
+          "physical": [],
+          "functional": [
+            {
+              "kind": "shipyard",
+              "levels": [
+                1,
+                2
+              ]
+            }
+          ],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "ConquerShipyard.SHIPS.cargo.cost",
+          "time": "ConquerShipyard.SHIPS.cargo.days",
+          "compatibility": "ConquerShipyard.canBuild"
+        },
+        "quotes": {
+          "cost": {
+            "status": "known",
+            "value": {
+              "gold": 70,
+              "wood": 110,
+              "metal": 4
+            }
+          },
+          "time": {
+            "status": "known",
+            "value": 9
+          }
+        }
+      },
+      {
+        "id": "ship:cocca",
+        "key": "cocca",
+        "label": "Cocca",
+        "category": "ship",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-shipyard.js",
+          "symbol": "SHIPS.cocca"
+        },
+        "properties": {
+          "size": "large",
+          "length": 6.571,
+          "beam": 2.171
+        },
+        "relations": [
+          {
+            "id": "building:shipyard.2",
+            "kind": "built-at"
+          }
+        ],
+        "assets": [
+          {
+            "registry": "ConquerShipModels",
+            "collection": "ships",
+            "key": "cocca"
+          }
+        ],
+        "requirements": {
+          "physical": [],
+          "functional": [
+            {
+              "kind": "shipyard",
+              "levels": [
+                2
+              ]
+            }
+          ],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "ConquerShipyard.SHIPS.cocca.cost",
+          "time": "ConquerShipyard.SHIPS.cocca.days",
+          "compatibility": "ConquerShipyard.canBuild"
+        },
+        "quotes": {
+          "cost": {
+            "status": "known",
+            "value": {
+              "gold": 320,
+              "wood": 420,
+              "metal": 36
+            }
+          },
+          "time": {
+            "status": "known",
+            "value": 24
+          }
+        }
+      },
+      {
+        "id": "ship:nave",
+        "key": "nave",
+        "label": "Nave latina",
+        "category": "ship",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-shipyard.js",
+          "symbol": "SHIPS.nave"
+        },
+        "properties": {
+          "size": "large",
+          "length": 7.429,
+          "beam": 2.286
+        },
+        "relations": [
+          {
+            "id": "building:shipyard.2",
+            "kind": "built-at"
+          }
+        ],
+        "assets": [
+          {
+            "registry": "ConquerShipModels",
+            "collection": "ships",
+            "key": "nave"
+          }
+        ],
+        "requirements": {
+          "physical": [],
+          "functional": [
+            {
+              "kind": "shipyard",
+              "levels": [
+                2
+              ]
+            }
+          ],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "ConquerShipyard.SHIPS.nave.cost",
+          "time": "ConquerShipyard.SHIPS.nave.days",
+          "compatibility": "ConquerShipyard.canBuild"
+        },
+        "quotes": {
+          "cost": {
+            "status": "known",
+            "value": {
+              "gold": 400,
+              "wood": 520,
+              "metal": 48
+            }
+          },
+          "time": {
+            "status": "known",
+            "value": 30
+          }
+        }
+      },
+      {
+        "id": "siege-engine:ballista",
+        "key": "ballista",
+        "label": "ballista",
+        "category": "siege-engine",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-siege-engines3d.js",
+          "symbol": "CYCLE.ballista"
+        },
+        "properties": {
+          "animationCycleSeconds": 3.5,
+          "crewAnchors": 2
+        },
+        "relations": [],
+        "assets": [
+          {
+            "registry": "ConquerSiegeModel",
+            "collection": "engines",
+            "key": "ballista"
+          }
+        ],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "siege-engine:catapult",
+        "key": "catapult",
+        "label": "catapult",
+        "category": "siege-engine",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-siege-engines3d.js",
+          "symbol": "CYCLE.catapult"
+        },
+        "properties": {
+          "animationCycleSeconds": 4.2,
+          "crewAnchors": 2
+        },
+        "relations": [],
+        "assets": [
+          {
+            "registry": "ConquerSiegeModel",
+            "collection": "engines",
+            "key": "catapult"
+          }
+        ],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "siege-engine:ladder",
+        "key": "ladder",
+        "label": "ladder",
+        "category": "siege-engine",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-siege-engines3d.js",
+          "symbol": "CYCLE.ladder"
+        },
+        "properties": {
+          "animationCycleSeconds": 7,
+          "crewAnchors": 2
+        },
+        "relations": [],
+        "assets": [
+          {
+            "registry": "ConquerSiegeModel",
+            "collection": "engines",
+            "key": "ladder"
+          }
+        ],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "siege-engine:mantlet",
+        "key": "mantlet",
+        "label": "mantlet",
+        "category": "siege-engine",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-siege-engines3d.js",
+          "symbol": "CYCLE.mantlet"
+        },
+        "properties": {
+          "animationCycleSeconds": 3.5,
+          "crewAnchors": 4
+        },
+        "relations": [],
+        "assets": [
+          {
+            "registry": "ConquerSiegeModel",
+            "collection": "engines",
+            "key": "mantlet"
+          }
+        ],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "siege-engine:ram",
+        "key": "ram",
+        "label": "ram",
+        "category": "siege-engine",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-siege-engines3d.js",
+          "symbol": "CYCLE.ram"
+        },
+        "properties": {
+          "animationCycleSeconds": 1.8,
+          "crewAnchors": 4
+        },
+        "relations": [],
+        "assets": [
+          {
+            "registry": "ConquerSiegeModel",
+            "collection": "engines",
+            "key": "ram"
+          }
+        ],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "siege-engine:tower",
+        "key": "tower",
+        "label": "tower",
+        "category": "siege-engine",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-siege-engines3d.js",
+          "symbol": "CYCLE.tower"
+        },
+        "properties": {
+          "animationCycleSeconds": 6,
+          "crewAnchors": 3
+        },
+        "relations": [],
+        "assets": [
+          {
+            "registry": "ConquerSiegeModel",
+            "collection": "engines",
+            "key": "tower"
+          }
+        ],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "siege-engine:tower2",
+        "key": "tower2",
+        "label": "tower2",
+        "category": "siege-engine",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-siege-engines3d.js",
+          "symbol": "CYCLE.tower2"
+        },
+        "properties": {
+          "animationCycleSeconds": 6,
+          "crewAnchors": 3
+        },
+        "relations": [],
+        "assets": [
+          {
+            "registry": "ConquerSiegeModel",
+            "collection": "engines",
+            "key": "tower2"
+          }
+        ],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "siege-engine:trebuchet",
+        "key": "trebuchet",
+        "label": "trebuchet",
+        "category": "siege-engine",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-siege-engines3d.js",
+          "symbol": "CYCLE.trebuchet"
+        },
+        "properties": {
+          "animationCycleSeconds": 6,
+          "crewAnchors": 3
+        },
+        "relations": [],
+        "assets": [
+          {
+            "registry": "ConquerSiegeModel",
+            "collection": "engines",
+            "key": "trebuchet"
+          }
+        ],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "sub-building:church.almshouse",
+        "key": "almshouse",
+        "label": "Almshouse",
+        "category": "sub-building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-civic-annexes.js",
+          "symbol": "CIVIC_ANNEX_CATALOG.church.almshouse"
+        },
+        "properties": {
+          "label": "Almshouse",
+          "level": 2,
+          "w": 4.5,
+          "h": 2.4,
+          "max": 1,
+          "kind": "stone"
+        },
+        "relations": [
+          {
+            "id": "building:church",
+            "kind": "belongs-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "footprint",
+              "w": 4.5,
+              "h": 2.4
+            }
+          ],
+          "functional": [
+            {
+              "kind": "parent",
+              "id": "building:church",
+              "minimumLevel": 2,
+              "maximum": 1
+            }
+          ],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "sub-building:church.cemetery",
+        "key": "cemetery",
+        "label": "Cemetery",
+        "category": "sub-building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-civic-annexes.js",
+          "symbol": "CIVIC_ANNEX_CATALOG.church.cemetery"
+        },
+        "properties": {
+          "label": "Cemetery",
+          "level": 1,
+          "w": 2.2,
+          "h": 2.2,
+          "max": 1,
+          "kind": "cemetery",
+          "intrinsic": true
+        },
+        "relations": [
+          {
+            "id": "building:church",
+            "kind": "belongs-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "footprint",
+              "w": 2.2,
+              "h": 2.2
+            }
+          ],
+          "functional": [
+            {
+              "kind": "parent",
+              "id": "building:church",
+              "minimumLevel": 1,
+              "maximum": 1
+            }
+          ],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "sub-building:church.cloister",
+        "key": "cloister",
+        "label": "Cloister",
+        "category": "sub-building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-civic-annexes.js",
+          "symbol": "CIVIC_ANNEX_CATALOG.church.cloister"
+        },
+        "properties": {
+          "label": "Cloister",
+          "level": 3,
+          "w": 2.5,
+          "h": 2.5,
+          "max": 1,
+          "kind": "yard"
+        },
+        "relations": [
+          {
+            "id": "building:church",
+            "kind": "belongs-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "footprint",
+              "w": 2.5,
+              "h": 2.5
+            }
+          ],
+          "functional": [
+            {
+              "kind": "parent",
+              "id": "building:church",
+              "minimumLevel": 3,
+              "maximum": 1
+            }
+          ],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "sub-building:church.herbGarden",
+        "key": "herbGarden",
+        "label": "Herb garden",
+        "category": "sub-building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-civic-annexes.js",
+          "symbol": "CIVIC_ANNEX_CATALOG.church.herbGarden"
+        },
+        "properties": {
+          "label": "Herb garden",
+          "level": 1,
+          "w": 2,
+          "h": 2,
+          "max": 2,
+          "kind": "garden"
+        },
+        "relations": [
+          {
+            "id": "building:church",
+            "kind": "belongs-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "footprint",
+              "w": 2,
+              "h": 2
+            }
+          ],
+          "functional": [
+            {
+              "kind": "parent",
+              "id": "building:church",
+              "minimumLevel": 1,
+              "maximum": 2
+            }
+          ],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "sub-building:church.monastery",
+        "key": "monastery",
+        "label": "Monastery",
+        "category": "sub-building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-civic-annexes.js",
+          "symbol": "CIVIC_ANNEX_CATALOG.church.monastery"
+        },
+        "properties": {
+          "label": "Monastery",
+          "level": 3,
+          "w": 3,
+          "h": 2.5,
+          "max": 1,
+          "kind": "stone"
+        },
+        "relations": [
+          {
+            "id": "building:church",
+            "kind": "belongs-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "footprint",
+              "w": 3,
+              "h": 2.5
+            }
+          ],
+          "functional": [
+            {
+              "kind": "parent",
+              "id": "building:church",
+              "minimumLevel": 3,
+              "maximum": 1
+            }
+          ],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "sub-building:church.scriptorium",
+        "key": "scriptorium",
+        "label": "Scriptorium",
+        "category": "sub-building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-civic-annexes.js",
+          "symbol": "CIVIC_ANNEX_CATALOG.church.scriptorium"
+        },
+        "properties": {
+          "label": "Scriptorium",
+          "level": 2,
+          "w": 2.5,
+          "h": 2,
+          "max": 1,
+          "kind": "stone"
+        },
+        "relations": [
+          {
+            "id": "building:church",
+            "kind": "belongs-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "footprint",
+              "w": 2.5,
+              "h": 2
+            }
+          ],
+          "functional": [
+            {
+              "kind": "parent",
+              "id": "building:church",
+              "minimumLevel": 2,
+              "maximum": 1
+            }
+          ],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "sub-building:church.square",
+        "key": "square",
+        "label": "Church square",
+        "category": "sub-building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-civic-annexes.js",
+          "symbol": "CIVIC_ANNEX_CATALOG.church.square"
+        },
+        "properties": {
+          "label": "Church square",
+          "level": 1,
+          "w": 4,
+          "h": 4,
+          "max": 1,
+          "kind": "plaza"
+        },
+        "relations": [
+          {
+            "id": "building:church",
+            "kind": "belongs-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "footprint",
+              "w": 4,
+              "h": 4
+            }
+          ],
+          "functional": [
+            {
+              "kind": "parent",
+              "id": "building:church",
+              "minimumLevel": 1,
+              "maximum": 1
+            }
+          ],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "sub-building:market.loggia",
+        "key": "loggia",
+        "label": "Covered loggia",
+        "category": "sub-building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-civic-annexes.js",
+          "symbol": "CIVIC_ANNEX_CATALOG.market.loggia"
+        },
+        "properties": {
+          "label": "Covered loggia",
+          "level": 2,
+          "w": 3,
+          "h": 1.5,
+          "max": 2,
+          "kind": "timber"
+        },
+        "relations": [
+          {
+            "id": "building:market",
+            "kind": "belongs-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "footprint",
+              "w": 3,
+              "h": 1.5
+            }
+          ],
+          "functional": [
+            {
+              "kind": "parent",
+              "id": "building:market",
+              "minimumLevel": 2,
+              "maximum": 2
+            }
+          ],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "sub-building:market.shop",
+        "key": "shop",
+        "label": "Shop",
+        "category": "sub-building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-civic-annexes.js",
+          "symbol": "CIVIC_ANNEX_CATALOG.market.shop"
+        },
+        "properties": {
+          "label": "Shop",
+          "level": 3,
+          "w": 1.75,
+          "h": 1.5,
+          "max": 4,
+          "kind": "timber"
+        },
+        "relations": [
+          {
+            "id": "building:market",
+            "kind": "belongs-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "footprint",
+              "w": 1.75,
+              "h": 1.5
+            }
+          ],
+          "functional": [
+            {
+              "kind": "parent",
+              "id": "building:market",
+              "minimumLevel": 3,
+              "maximum": 4
+            }
+          ],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "sub-building:market.stall",
+        "key": "stall",
+        "label": "Market stall",
+        "category": "sub-building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-civic-annexes.js",
+          "symbol": "CIVIC_ANNEX_CATALOG.market.stall"
+        },
+        "properties": {
+          "label": "Market stall",
+          "level": 1,
+          "w": 1.25,
+          "h": 1,
+          "max": 8,
+          "kind": "stall"
+        },
+        "relations": [
+          {
+            "id": "building:market",
+            "kind": "belongs-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "footprint",
+              "w": 1.25,
+              "h": 1
+            }
+          ],
+          "functional": [
+            {
+              "kind": "parent",
+              "id": "building:market",
+              "minimumLevel": 1,
+              "maximum": 8
+            }
+          ],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "sub-building:market.warehouse",
+        "key": "warehouse",
+        "label": "Warehouse",
+        "category": "sub-building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-civic-annexes.js",
+          "symbol": "CIVIC_ANNEX_CATALOG.market.warehouse"
+        },
+        "properties": {
+          "label": "Warehouse",
+          "level": 3,
+          "w": 2.5,
+          "h": 2,
+          "max": 2,
+          "kind": "timber"
+        },
+        "relations": [
+          {
+            "id": "building:market",
+            "kind": "belongs-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "footprint",
+              "w": 2.5,
+              "h": 2
+            }
+          ],
+          "functional": [
+            {
+              "kind": "parent",
+              "id": "building:market",
+              "minimumLevel": 3,
+              "maximum": 2
+            }
+          ],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "sub-building:tavern.brewery",
+        "key": "brewery",
+        "label": "Brewery extension",
+        "category": "sub-building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-civic-annexes.js",
+          "symbol": "CIVIC_ANNEX_CATALOG.tavern.brewery"
+        },
+        "properties": {
+          "label": "Brewery extension",
+          "level": 2,
+          "w": 2.5,
+          "h": 2,
+          "max": 1,
+          "kind": "timber"
+        },
+        "relations": [
+          {
+            "id": "building:tavern",
+            "kind": "belongs-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "footprint",
+              "w": 2.5,
+              "h": 2
+            }
+          ],
+          "functional": [
+            {
+              "kind": "parent",
+              "id": "building:tavern",
+              "minimumLevel": 2,
+              "maximum": 1
+            }
+          ],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "sub-building:tavern.courtyard",
+        "key": "courtyard",
+        "label": "Service courtyard",
+        "category": "sub-building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-civic-annexes.js",
+          "symbol": "CIVIC_ANNEX_CATALOG.tavern.courtyard"
+        },
+        "properties": {
+          "label": "Service courtyard",
+          "level": 1,
+          "w": 2,
+          "h": 2,
+          "max": 1,
+          "kind": "yard"
+        },
+        "relations": [
+          {
+            "id": "building:tavern",
+            "kind": "belongs-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "footprint",
+              "w": 2,
+              "h": 2
+            }
+          ],
+          "functional": [
+            {
+              "kind": "parent",
+              "id": "building:tavern",
+              "minimumLevel": 1,
+              "maximum": 1
+            }
+          ],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "sub-building:tavern.inn",
+        "key": "inn",
+        "label": "Guest lodging",
+        "category": "sub-building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-civic-annexes.js",
+          "symbol": "CIVIC_ANNEX_CATALOG.tavern.inn"
+        },
+        "properties": {
+          "label": "Guest lodging",
+          "level": 3,
+          "w": 3,
+          "h": 2.5,
+          "max": 2,
+          "kind": "timber"
+        },
+        "relations": [
+          {
+            "id": "building:tavern",
+            "kind": "belongs-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "footprint",
+              "w": 3,
+              "h": 2.5
+            }
+          ],
+          "functional": [
+            {
+              "kind": "parent",
+              "id": "building:tavern",
+              "minimumLevel": 3,
+              "maximum": 2
+            }
+          ],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "sub-building:tavern.stables",
+        "key": "stables",
+        "label": "Stables",
+        "category": "sub-building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-civic-annexes.js",
+          "symbol": "CIVIC_ANNEX_CATALOG.tavern.stables"
+        },
+        "properties": {
+          "label": "Stables",
+          "level": 2,
+          "w": 2.5,
+          "h": 2,
+          "max": 2,
+          "kind": "timber"
+        },
+        "relations": [
+          {
+            "id": "building:tavern",
+            "kind": "belongs-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "footprint",
+              "w": 2.5,
+              "h": 2
+            }
+          ],
+          "functional": [
+            {
+              "kind": "parent",
+              "id": "building:tavern",
+              "minimumLevel": 2,
+              "maximum": 2
+            }
+          ],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "sub-building:tavern.storage",
+        "key": "storage",
+        "label": "Storehouse",
+        "category": "sub-building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-civic-annexes.js",
+          "symbol": "CIVIC_ANNEX_CATALOG.tavern.storage"
+        },
+        "properties": {
+          "label": "Storehouse",
+          "level": 1,
+          "w": 1.5,
+          "h": 1.5,
+          "max": 2,
+          "kind": "timber"
+        },
+        "relations": [
+          {
+            "id": "building:tavern",
+            "kind": "belongs-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "footprint",
+              "w": 1.5,
+              "h": 1.5
+            }
+          ],
+          "functional": [
+            {
+              "kind": "parent",
+              "id": "building:tavern",
+              "minimumLevel": 1,
+              "maximum": 2
+            }
+          ],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "sub-building:townhall.kitchenGarden",
+        "key": "kitchenGarden",
+        "label": "Kitchen garden",
+        "category": "sub-building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-civic-annexes.js",
+          "symbol": "CIVIC_ANNEX_CATALOG.townhall.kitchenGarden"
+        },
+        "properties": {
+          "label": "Kitchen garden",
+          "level": 1,
+          "w": 3,
+          "h": 2,
+          "max": 2,
+          "kind": "garden"
+        },
+        "relations": [
+          {
+            "id": "building:townhall",
+            "kind": "belongs-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "footprint",
+              "w": 3,
+              "h": 2
+            }
+          ],
+          "functional": [
+            {
+              "kind": "parent",
+              "id": "building:townhall",
+              "minimumLevel": 1,
+              "maximum": 2
+            }
+          ],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "unit:archer",
+        "key": "archer",
+        "label": "archer",
+        "category": "unit",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-combat-rules.js",
+          "symbol": "PROFILES.archer"
+        },
+        "properties": {
+          "kind": "combat-profile",
+          "statistics": {
+            "hp": 100,
+            "combat": 1,
+            "armor": 0,
+            "aim": 2,
+            "front": 1,
+            "range": 15
+          }
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "unit:captain",
+        "key": "captain",
+        "label": "captain",
+        "category": "unit",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-combat-rules.js",
+          "symbol": "PROFILES.captain"
+        },
+        "properties": {
+          "kind": "combat-profile",
+          "statistics": {
+            "hp": 30,
+            "combat": 3,
+            "armor": 3,
+            "aim": null,
+            "front": 1
+          }
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "unit:cohort.L1",
+        "key": "L1",
+        "label": "Civili L1",
+        "category": "unit",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-economy.js",
+          "symbol": "HOUSEHOLD_NEEDS.L1"
+        },
+        "properties": {
+          "kind": "civilian-cohort",
+          "needs": {
+            "food": 0.55,
+            "wood": 0.06
+          }
+        },
+        "relations": [
+          {
+            "id": "building:house",
+            "kind": "resides-in"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "unit:cohort.L2",
+        "key": "L2",
+        "label": "Civili L2",
+        "category": "unit",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-economy.js",
+          "symbol": "HOUSEHOLD_NEEDS.L2"
+        },
+        "properties": {
+          "kind": "civilian-cohort",
+          "needs": {
+            "food": 0.55,
+            "wood": 0.08
+          }
+        },
+        "relations": [
+          {
+            "id": "building:house",
+            "kind": "resides-in"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "unit:cohort.L3",
+        "key": "L3",
+        "label": "Civili L3",
+        "category": "unit",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-economy.js",
+          "symbol": "HOUSEHOLD_NEEDS.L3"
+        },
+        "properties": {
+          "kind": "civilian-cohort",
+          "needs": {
+            "food": 0.55,
+            "wood": 0.1,
+            "luxury": 0.08
+          }
+        },
+        "relations": [
+          {
+            "id": "building:house",
+            "kind": "resides-in"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "unit:cohort.L4",
+        "key": "L4",
+        "label": "Civili L4",
+        "category": "unit",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-economy.js",
+          "symbol": "HOUSEHOLD_NEEDS.L4"
+        },
+        "properties": {
+          "kind": "civilian-cohort",
+          "needs": {
+            "food": 0.55,
+            "wood": 0.12,
+            "luxury": 0.25
+          }
+        },
+        "relations": [
+          {
+            "id": "building:house",
+            "kind": "resides-in"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "unit:infantry",
+        "key": "infantry",
+        "label": "infantry",
+        "category": "unit",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-combat-rules.js",
+          "symbol": "PROFILES.infantry"
+        },
+        "properties": {
+          "kind": "combat-profile",
+          "statistics": {
+            "hp": 100,
+            "combat": 2,
+            "armor": 1,
+            "aim": null,
+            "front": 1
+          }
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "unit:knight",
+        "key": "knight",
+        "label": "knight",
+        "category": "unit",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-combat-rules.js",
+          "symbol": "PROFILES.knight"
+        },
+        "properties": {
+          "kind": "combat-profile",
+          "statistics": {
+            "hp": 30,
+            "combat": 3,
+            "armor": 3,
+            "aim": null,
+            "front": 1
+          }
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "unit:patrol",
+        "key": "patrol",
+        "label": "patrol",
+        "category": "unit",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-combat-rules.js",
+          "symbol": "PROFILES.patrol"
+        },
+        "properties": {
+          "kind": "combat-profile",
+          "statistics": {
+            "hp": 40,
+            "combat": 2,
+            "armor": 2,
+            "aim": null,
+            "front": 2
+          }
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "unit:spearman",
+        "key": "spearman",
+        "label": "spearman",
+        "category": "unit",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-combat-rules.js",
+          "symbol": "PROFILES.spearman"
+        },
+        "properties": {
+          "kind": "combat-profile",
+          "statistics": {
+            "hp": 100,
+            "combat": 2,
+            "armor": 2,
+            "aim": null,
+            "front": 3
+          }
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "unit:wolf",
+        "key": "wolf",
+        "label": "wolf",
+        "category": "unit",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-combat-rules.js",
+          "symbol": "PROFILES.wolf"
+        },
+        "properties": {
+          "kind": "animal-profile",
+          "statistics": {
+            "hp": 12,
+            "combat": 3,
+            "armor": 0,
+            "aim": null,
+            "front": 1
+          }
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:built.skin.arcade",
+        "key": "arcade",
+        "label": "built · skin · arcade",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.built.skin"
+        },
+        "properties": {
+          "variant": "skin",
+          "value": "arcade",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:built",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:built.skin.standard",
+        "key": "standard",
+        "label": "built · skin · standard",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.built.skin"
+        },
+        "properties": {
+          "variant": "skin",
+          "value": "standard",
+          "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:built",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:gate.drawbridge",
+        "key": "gate.drawbridge",
+        "label": "Ponte levatoio della porta",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-crossings.js",
+          "symbol": "ConquerCrossings.DRAWBRIDGE_COST"
+        },
+        "properties": {},
+        "relations": [
+          {
+            "id": "building:gate",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "ConquerCrossings.DRAWBRIDGE_COST",
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "known",
+            "value": {
+              "gold": 18,
+              "wood": 28,
+              "metal": 5
+            }
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:gate.hoarding.off",
+        "key": "off",
+        "label": "gate · hoarding · off",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.gate.hoarding"
+        },
+        "properties": {
+          "variant": "hoarding",
+          "value": "off",
+          "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:gate",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:gate.hoarding.on",
+        "key": "on",
+        "label": "gate · hoarding · on",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.gate.hoarding"
+        },
+        "properties": {
+          "variant": "hoarding",
+          "value": "on",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:gate",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:gate.portcullis",
+        "key": "gate.portcullis",
+        "label": "Grata",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-gate-fittings.js",
+          "symbol": "ConquerGates.PORTCULLIS_COST"
+        },
+        "properties": {},
+        "relations": [
+          {
+            "id": "building:gate",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "ConquerGates.PORTCULLIS_COST",
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "known",
+            "value": {
+              "gold": 24,
+              "metal": 16,
+              "wood": 6
+            }
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:gate.roofStyle.battlement",
+        "key": "battlement",
+        "label": "gate · roofStyle · battlement",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.gate.roofStyle"
+        },
+        "properties": {
+          "variant": "roofStyle",
+          "value": "battlement",
+          "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:gate",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:gate.roofStyle.flat",
+        "key": "flat",
+        "label": "gate · roofStyle · flat",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.gate.roofStyle"
+        },
+        "properties": {
+          "variant": "roofStyle",
+          "value": "flat",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:gate",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:gate.roofStyle.pitched",
+        "key": "pitched",
+        "label": "gate · roofStyle · pitched",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.gate.roofStyle"
+        },
+        "properties": {
+          "variant": "roofStyle",
+          "value": "pitched",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:gate",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:gate.upper.stone",
+        "key": "stone",
+        "label": "gate · upper · stone",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.gate.upper"
+        },
+        "properties": {
+          "variant": "upper",
+          "value": "stone",
+          "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:gate",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:gate.upper.timber",
+        "key": "timber",
+        "label": "gate · upper · timber",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.gate.upper"
+        },
+        "properties": {
+          "variant": "upper",
+          "value": "timber",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:gate",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:keep.drawbridge",
+        "key": "keep.drawbridge",
+        "label": "Ponte levatoio del mastio",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-keep-entrance.js",
+          "symbol": "ConquerKeepEntrance.DRAWBRIDGE_COST"
+        },
+        "properties": {},
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "ConquerKeepEntrance.DRAWBRIDGE_COST",
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "known",
+            "value": {
+              "gold": 18,
+              "wood": 28,
+              "metal": 5
+            }
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:keep.stair",
+        "key": "keep.stair",
+        "label": "Scala lignea del mastio",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-keep-entrance.js",
+          "symbol": "ConquerKeepEntrance.STAIR_COST"
+        },
+        "properties": {},
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "ConquerKeepEntrance.STAIR_COST",
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "known",
+            "value": {
+              "gold": 6,
+              "wood": 24
+            }
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:keep.stone-stair",
+        "key": "keep.stone-stair",
+        "label": "Scala in pietra del mastio",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-keep-entrance.js",
+          "symbol": "ConquerKeepEntrance.STONE_COST"
+        },
+        "properties": {},
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "ConquerKeepEntrance.STONE_COST",
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "known",
+            "value": {
+              "gold": 10,
+              "stone": 30
+            }
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.bartizan.battlement",
+        "key": "battlement",
+        "label": "tower · bartizan · battlement",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.bartizan"
+        },
+        "properties": {
+          "variant": "bartizan",
+          "value": "battlement",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.bartizan.none",
+        "key": "none",
+        "label": "tower · bartizan · none",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.bartizan"
+        },
+        "properties": {
+          "variant": "bartizan",
+          "value": "none",
+          "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.bartizan.pitched",
+        "key": "pitched",
+        "label": "tower · bartizan · pitched",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.bartizan"
+        },
+        "properties": {
+          "variant": "bartizan",
+          "value": "pitched",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.baseStyle.buttress",
+        "key": "buttress",
+        "label": "tower · baseStyle · buttress",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.baseStyle"
+        },
+        "properties": {
+          "variant": "baseStyle",
+          "value": "buttress",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.baseStyle.splayed",
+        "key": "splayed",
+        "label": "tower · baseStyle · splayed",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.baseStyle"
+        },
+        "properties": {
+          "variant": "baseStyle",
+          "value": "splayed",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.baseStyle.standard",
+        "key": "standard",
+        "label": "tower · baseStyle · standard",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.baseStyle"
+        },
+        "properties": {
+          "variant": "baseStyle",
+          "value": "standard",
+          "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.bell.bell",
+        "key": "bell",
+        "label": "tower · bell · bell",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.bell"
+        },
+        "properties": {
+          "variant": "bell",
+          "value": "bell",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.bell.none",
+        "key": "none",
+        "label": "tower · bell · none",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.bell"
+        },
+        "properties": {
+          "variant": "bell",
+          "value": "none",
+          "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.hoarding.off",
+        "key": "off",
+        "label": "tower · hoarding · off",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.hoarding"
+        },
+        "properties": {
+          "variant": "hoarding",
+          "value": "off",
+          "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.hoarding.on",
+        "key": "on",
+        "label": "tower · hoarding · on",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.hoarding"
+        },
+        "properties": {
+          "variant": "hoarding",
+          "value": "on",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.roofShape.gable",
+        "key": "gable",
+        "label": "tower · roofShape · gable",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.roofShape"
+        },
+        "properties": {
+          "variant": "roofShape",
+          "value": "gable",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.roofShape.hip",
+        "key": "hip",
+        "label": "tower · roofShape · hip",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.roofShape"
+        },
+        "properties": {
+          "variant": "roofShape",
+          "value": "hip",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.roofShape.pyramid",
+        "key": "pyramid",
+        "label": "tower · roofShape · pyramid",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.roofShape"
+        },
+        "properties": {
+          "variant": "roofShape",
+          "value": "pyramid",
+          "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.roofStyle.battlement",
+        "key": "battlement",
+        "label": "tower · roofStyle · battlement",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.roofStyle"
+        },
+        "properties": {
+          "variant": "roofStyle",
+          "value": "battlement",
+          "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.roofStyle.machicolation",
+        "key": "machicolation",
+        "label": "tower · roofStyle · machicolation",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.roofStyle"
+        },
+        "properties": {
+          "variant": "roofStyle",
+          "value": "machicolation",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.roofStyle.pitched",
+        "key": "pitched",
+        "label": "tower · roofStyle · pitched",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.roofStyle"
+        },
+        "properties": {
+          "variant": "roofStyle",
+          "value": "pitched",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.topWeapon.ballista",
+        "key": "ballista",
+        "label": "tower · topWeapon · ballista",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.topWeapon"
+        },
+        "properties": {
+          "variant": "topWeapon",
+          "value": "ballista",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          },
+          {
+            "id": "siege-engine:ballista",
+            "kind": "uses"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.topWeapon.mangonel",
+        "key": "mangonel",
+        "label": "tower · topWeapon · mangonel",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.topWeapon"
+        },
+        "properties": {
+          "variant": "topWeapon",
+          "value": "mangonel",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          },
+          {
+            "id": "siege-engine:catapult",
+            "kind": "uses"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.topWeapon.none",
+        "key": "none",
+        "label": "tower · topWeapon · none",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.topWeapon"
+        },
+        "properties": {
+          "variant": "topWeapon",
+          "value": "none",
+          "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:wall.skin.hoarding",
+        "key": "hoarding",
+        "label": "wall · skin · hoarding",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.wall.skin"
+        },
+        "properties": {
+          "variant": "skin",
+          "value": "hoarding",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:wall",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:wall.skin.machicolation",
+        "key": "machicolation",
+        "label": "wall · skin · machicolation",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.wall.skin"
+        },
+        "properties": {
+          "variant": "skin",
+          "value": "machicolation",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:wall",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:wall.skin.standard",
+        "key": "standard",
+        "label": "wall · skin · standard",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.wall.skin"
+        },
+        "properties": {
+          "variant": "skin",
+          "value": "standard",
+          "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:wall",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      }
+    ]
+  },
+  "examples": {
+    "building:tower": {
+      "structure": {
+        "type": "tower",
+        "shape": "square",
+        "size": 1.5,
+        "level": 1
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 75,
+            "stone": 95,
+            "wood": 20
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 7
+        }
+      }
+    },
+    "building:gate": {
+      "structure": {
+        "type": "gate",
+        "size": 1.5,
+        "level": 1
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 95,
+            "stone": 90,
+            "wood": 38,
+            "metal": 10
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 9
+        }
+      }
+    },
+    "building:wall": {
+      "structure": {
+        "type": "wall",
+        "length": 4,
+        "level": 1
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 24,
+            "stone": 72,
+            "wood": 8
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 2.5
+        }
+      }
+    },
+    "building:palisade": {
+      "structure": {
+        "type": "palisade",
+        "length": 4
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 12,
+            "wood": 48
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 1.65
+        }
+      }
+    },
+    "building:built": {
+      "structure": {
+        "type": "built",
+        "length": 3,
+        "level": 1
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 36,
+            "stone": 48,
+            "wood": 54
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 6.5
+        }
+      }
+    },
+    "building:bridge": {
+      "structure": {
+        "type": "bridge",
+        "length": 4,
+        "width": 1.5,
+        "variant": "stone"
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 36,
+            "stone": 96
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 4.000000000000001
+        }
+      }
+    },
+    "building:moat": {
+      "structure": {
+        "type": "moat",
+        "length": 4,
+        "width": 1.5,
+        "variant": "dry"
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 42
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 3.4000000000000004
+        }
+      }
+    },
+    "building:well": {
+      "structure": {
+        "type": "well"
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 50,
+            "stone": 35,
+            "wood": 10
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 0
+        }
+      }
+    },
+    "building:pier": {
+      "structure": {
+        "type": "pier",
+        "reach": 4
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 30,
+            "wood": 60
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 4
+        }
+      }
+    },
+    "building:shipyard.1": {
+      "structure": {
+        "type": "pier",
+        "yard": 1
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 120,
+            "wood": 220,
+            "stone": 80
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 12
+        }
+      }
+    },
+    "building:shipyard.2": {
+      "structure": {
+        "type": "pier",
+        "yard": 2
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 260,
+            "wood": 420,
+            "stone": 180
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 20
+        }
+      }
+    },
+    "building:clay-quarry": {
+      "structure": {
+        "type": "quarry",
+        "extractionMode": "clay"
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 65,
+            "wood": 28
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 5
+        }
+      }
+    },
+    "building:market": {
+      "structure": {
+        "type": "market"
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 120,
+            "stone": 70,
+            "wood": 85
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 4
+        }
+      }
+    },
+    "building:tavern": {
+      "structure": {
+        "type": "tavern"
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 190,
+            "stone": 65,
+            "wood": 145
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 6
+        }
+      }
+    },
+    "building:church": {
+      "structure": {
+        "type": "church"
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 320,
+            "stone": 360,
+            "wood": 110,
+            "metal": 18
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 10
+        }
+      }
+    },
+    "building:training": {
+      "structure": {
+        "type": "training"
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 90,
+            "stone": 24,
+            "wood": 70
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 3.5
+        }
+      }
+    },
+    "building:plaza": {
+      "structure": {
+        "type": "plaza"
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 90,
+            "stone": 80,
+            "wood": 10
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 3
+        }
+      }
+    },
+    "building:townhall": {
+      "structure": {
+        "type": "townhall"
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 240,
+            "stone": 210,
+            "wood": 85,
+            "metal": 10
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 8
+        }
+      }
+    },
+    "building:guild": {
+      "structure": {
+        "type": "guild"
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 180,
+            "stone": 110,
+            "wood": 120
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 6
+        }
+      }
+    },
+    "building:loggingCamp": {
+      "structure": {
+        "type": "loggingCamp"
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 35,
+            "wood": 5
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 3
+        }
+      }
+    },
+    "building:quarry": {
+      "structure": {
+        "type": "quarry"
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 65,
+            "wood": 20,
+            "stone": 8
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 5
+        }
+      }
+    },
+    "building:mine": {
+      "structure": {
+        "type": "mine"
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 95,
+            "wood": 35,
+            "stone": 18
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 7
+        }
+      }
+    },
+    "building:windmill": {
+      "structure": {
+        "type": "windmill"
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 40,
+            "wood": 30,
+            "stone": 10
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 3
+        }
+      }
+    },
+    "building:watermill": {
+      "structure": {
+        "type": "watermill"
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 45,
+            "wood": 35,
+            "stone": 10
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 3
+        }
+      }
+    }
+  }
+}
