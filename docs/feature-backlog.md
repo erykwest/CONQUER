@@ -73,7 +73,7 @@
 - [ ] **BC-251105-10 — Upgrade tetti edifici addossati alle mura.** Disegnare le coperture dedicate ai nuovi edifici addossati, gestendo attacco alle mura e interferenze con parapetti/camminamenti; dipende da BC-251105-03.
 
 ### Ambiente
-- [ ] **BC-251105-11 — Giardino.** Nuovo elemento del Builder/ambiente; dimensioni, tipologia e ruolo (decorativo o funzionale) da definire prima dell'implementazione.
+- [x] **BC-251105-11 — Giardino → Orto di corte.** Scelto dall'utente il 06/11/2026: annesso `kitchenGarden` del Municipio, 3×2U, max 2, entro 7U su terreno aperto; 2 cibo del signore per giornata lavorativa per orto, anche in allarme/assedio. Branch `feature/orto-di-corte` (pre-merge).
 
 ### Terreno e percorsi su dislivelli
 - [ ] **BC-251105-12 — Rampe per superare i dislivelli.** Elemento costruibile per connettere due quote del terreno, anche in presenza di pendii scoscesi e terrazzamenti; valutare pendenze massime, sviluppo e raccordi con strade, suolo e percorsi delle unità. Verificare separatamente l'eventuale percorribilità dei carri.

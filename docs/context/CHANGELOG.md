@@ -1,5 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+06/11/2026 — `feature/orto-di-corte` (pre-merge): BC-251105-11 deciso dall'utente come **orto di corte**. Nuovo annesso `kitchenGarden` del Municipio (3×2U, L1, max 2, su terreno aperto entro 7U, mai su lotti altrui); ogni orto completo produce 2 cibo del signore per giornata lavorativa, anche in allarme/assedio. Modello Blender `kitchenGarden` in `civic-models.js` e nell'Asset Lab (audit: 0 errori, baseline aggiornata solo per la nuova voce). Test in `civic-annex-regression` e `labor-jobs-regression`. Aggiornati STATUS/BACKLOG/DECISIONS, feature-backlog e guida annessi civili; ROADMAP invariata.
+
+
 05/11/2026 — `feature/founding-storage-yard-20261105` (pre-merge): aggiunto il tipo `storageYard` «Piazzale · Magazzino», 2×2U, fondazione entro 7U dal primo pozzo, espandibile a 4×4/6×6 con costi e collisioni, inventario visualizzato direttamente dal ledger unico del castello. Garantito un L1 al taglialegna con piazzale anche in presenza di saturazione cantieri; risolta la mancata crescita apparente del legname: quota trattenuta della produzione Logging Camp ora nel magazzino entro capienza, eccedenza sul mercato, anziché restare azzerata dall'obiettivo riserva 70 a fronte di stock iniziale 200. Salvataggi vecchi migrati senza stock duplicato; Canvas, World3D e tre mesh in Asset Lab (categoria Produzione); test specifici e CI Economy flows. ROADMAP invariata, DECISIONS/BACKLOG/STATUS e feature-backlog aggiornati.
 
 

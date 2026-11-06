@@ -72,7 +72,8 @@
     infirmaryBed:'Letto d’infermeria',herbShelf:'Scaffale delle erbe',washBasin:'Bacile',
     lantern:'Colombaia · lanterna sul tetto',nestWall:'Colombaia · parete dei nidi',perch:'Colombaia · posatoio',
     belfry:'Castello campanario · campana d’allarme',
-    justicePillory:'Gogna',justiceGallows:'Forca',justiceScaffold:'Patibolo',almshouse:'Ospizio (annesso della chiesa)'};
+    justicePillory:'Gogna',justiceGallows:'Forca',justiceScaffold:'Patibolo',almshouse:'Ospizio (annesso della chiesa)',
+    kitchenGarden:'Orto di corte (annesso del municipio)'};
   function titleFor(key){
     if(nameOverrides[key])return nameOverrides[key];
     const furled=/Furled$/.test(key),ship=window.ConquerShipModels?.ships?.[key.replace(/Furled$/,'')];
