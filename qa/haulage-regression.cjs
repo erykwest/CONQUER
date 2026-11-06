@@ -40,7 +40,7 @@ test('runtime ordering, accounting events, simulation, renderer, and workshop UI
   assert.match(economy,/if\(origin\)window\.ConquerHaulage\?\.record/);
   assert.match(frame,/ConquerHaulage\?\.tick/);
   assert.match(render,/ConquerHaulage\?\.draw/);
-  assert.match(read('src/settlement-app-rooms.js'),/Carretti locali/);
+  assert.match(read('src/settlement-app-rooms.js'),/Carrettieri L1/);
   assert.match(read('src/settlement-app-persistence.js'),/ConquerHaulage\?\.reset/);
   assert.match(read('src/settlement-vehicles.js'),/c\.emptyReturn\|\|c\.vehicle/);
 });
