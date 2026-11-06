@@ -26,7 +26,9 @@ assert.ok(settle.includes("node qa/ci-p1-regression.cjs"),'P1 guard must execute
 assert.ok(settle.includes('(core|app|app-simulation|app-persistence|world|world3d|castle3d|placement|castle-placement|population-navigation)'), '3D world/castle changes must receive complete suite');
 const asset=f('asset-lab-regression.yml');
 assert.ok(asset.includes('needs: asset-lab')&&asset.includes("if: needs.asset-lab.outputs.visual_needed == 'true'"),'Asset Lab must skip expensive visual audit only for non-visual PRs');
-assert.ok(asset.includes("visual_needed=true")&&asset.includes("visual_needed=false"),'visual tests must fail open on ambiguous diff');
+assert.ok(asset.includes('audit_mode=full')&&asset.includes('node qa/asset-audit-scope.cjs')&&asset.includes('audit_sources'), 'asset scope must fail safe and publish explicit audit mode');
+assert.ok(asset.includes('workflow_dispatch:')&&asset.includes('schedule:'),'visual audit must remain manually and periodically exhaustive');
+assert.ok(asset.includes('node qa/asset-audit-scope-regression.cjs'),'asset scope guards must run before browser');
 assert.ok(asset.includes('src/settlement-world3d.js'), 'world3d must be covered by Asset Lab audit');
 assert.ok(asset.includes('node qa/asset-audit.mjs'),'retain exhaustive asset audit');
 const main=f('main-fixes-regression.yml'),gate=f('gate-six-sockets-regression.yml'),gpu=f('webgpu-smoke.yml');
