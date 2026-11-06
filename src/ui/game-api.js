@@ -67,6 +67,7 @@
       linear: t.linear || null,
       span: t.span || null,
       crossing: t.crossing || null,
+      slopeway: t.slopeway || null,
       width: t.width ?? null,
       civic: t.placementSpec?.type && t.kind === 'civic' ? t.placementSpec.type : null,
       industry: t.industry || null,

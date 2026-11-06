@@ -33,7 +33,7 @@ Fogli provini dell'audit: impaginazione a griglia per le categorie e sfondo neut
 - **Torri:** BC-251105-05 inner roof; 06 torre lignea H2 con frame; 07 torre W2 × H4 **su branch `feature/tower-w2-h4`** (solo quadrata in pietra W2 indipendente; residui: bilanciamento assedio di scale, gittata e crollo dei piani a quota H4).
 - **Coperture:** BC-251105-08 75° (estensione da valutare al set 30°/45°/60° su branch); 09 tetti Longhouse; 10 tetti edifici addossati.
 - **Ambiente:** BC-251105-11 giardino (tipo e funzione da definire).
-- **Terreno/percorsi:** BC-251105-12 rampe per collegare quote e superare pendii ripidi; 13 scalinate pedonali sui dislivelli delle colline, con raccordi a terreno e terrazzamenti. Requisiti di navigabilità/pathfinding e QA; **distinte** dalle scale per i camminamenti delle mura (01/02). Stato: **APERTO**, non implementato.
+- **Terreno/percorsi:** BC-251105-12 rampe per collegare quote e superare pendii ripidi; 13 scalinate pedonali sui dislivelli delle colline, con raccordi a terreno e terrazzamenti. Requisiti di navigabilità/pathfinding e QA; **distinte** dalle scale per i camminamenti delle mura (01/02). Stato: **IMPLEMENTATO su branch `feature/ramps-stairs`** (06/11/2026, non in main): rampe 2U max 1:4 per pedoni e carri, scalinate 1U fino a 45° solo pedoni; vedi [STATUS](STATUS.md).
 - **Dipendenze:** `feat/roof-pitch`, `feature/wood-longhouse`, camminamenti e cutaway; nessun completamento o QA attestato da questo inserimento.
 
 ## MARE — Porti e molo (branch `mare`, 02/11/2026)

@@ -129,7 +129,7 @@ const CATALOG = [
       return rows;
     } },
   { id: 'roads', hint: T.hints.linear, press: '[data-main-road]', is: s => s.tool.kind === 'linear' && s.tool.linear === 'road' },
-  { id: 'crossings', hint: T.hints.crossing, press: '[data-crossing="dry"]', is: s => ['crossing', 'pier', 'quay'].includes(s.tool.kind),
+  { id: 'crossings', hint: T.hints.crossing, press: '[data-crossing="dry"]', is: s => ['crossing', 'pier', 'quay', 'slopeway'].includes(s.tool.kind),
     rows: s => {
       const rows = [{ label: O.type, wrap: true, options: [
         opt(V.dry, '[data-crossing="dry"]', s.tool.crossing === 'dry'),
@@ -138,7 +138,9 @@ const CATALOG = [
         opt(V.stoneBridge, '[data-crossing="stone"]', s.tool.crossing === 'stone'),
         opt(V.pier + ' L4', '[data-pier="4"]', s.tool.kind === 'pier' && s.tool.reach === 4),
         opt(V.pier + ' L12', '[data-pier="12"]', s.tool.kind === 'pier' && s.tool.reach === 12),
-        opt(V.quay, '[data-quay]', s.tool.kind === 'quay')] }];
+        opt(V.quay, '[data-quay]', s.tool.kind === 'quay'),
+        opt(V.ramp, '[data-slopeway="ramp"]', s.tool.kind === 'slopeway' && s.tool.slopeway === 'ramp'),
+        opt(V.stairway, '[data-slopeway="stairway"]', s.tool.kind === 'slopeway' && s.tool.slopeway === 'stairway')] }];
       if (s.tool.kind === 'crossing') rows.push({ label: O.width, options: [1, 2, 3].map(n => opt(n + 'U', `[data-crossing-width="${n}"]`, s.crossingWidth === n)) });
       return rows;
     } },

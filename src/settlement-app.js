@@ -18,7 +18,7 @@ function structureAtScreen(p){
   for(const s of manual)if(screenHitStructure(s,p))return s;
   return null;
 }
-function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-wood-tower],[data-crossing],[data-linear],[data-main-road],[data-terraform],[data-gate],[data-wood-gate],[data-well],[data-civic],[data-industry],[data-storage-yard],[data-event-venue],[data-pier],[data-quay],[data-combat-brush],#combatOrders').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
+function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-wood-tower],[data-crossing],[data-linear],[data-main-road],[data-terraform],[data-gate],[data-wood-gate],[data-well],[data-civic],[data-industry],[data-storage-yard],[data-event-venue],[data-pier],[data-quay],[data-slopeway],[data-combat-brush],#combatOrders').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
 function markDirty(hardNavigation=true,staticChanged=true,scheduleSave=true){
   State.dirty=true;
   if(hardNavigation){
@@ -101,6 +101,11 @@ function addStructure(s){
       // Quay top at the deck level, its sea face fixed once at placement.
       const site=window.ConquerQuay.validate(s);
       s.groundZ=0;s.seaSide=site.side;s.length=dist(s.a,s.b);
+    }else if(window.ConquerSlopeways?.is(s)){
+      // Ramp/stairway: the two plateau levels it joins, surveyed on the real terrain.
+      const way=window.ConquerSlopeways.validate(s);
+      if(!way.ok){status(way.reason);return false}
+      s.za=way.za;s.zb=way.zb;s.length=way.length;s.groundZ=Math.min(way.za,way.zb);
     }else{
       const groundZ=linearBuildGroundZ(s);
       if(groundZ==null){status(s.type==='wall'?wallTerrainVerdict(s).reason:'Build only on a single flat terrace — slopes and mixed elevations are not buildable for this structure');return false}

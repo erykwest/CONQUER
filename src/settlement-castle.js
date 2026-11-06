@@ -133,7 +133,9 @@ function terrainBaseElevation(p){
 }
 function terrainElevation(p){
   const base=terrainBaseElevation(p);
-  return window.ConquerTerraforming?.elevationAt(p,base)??base;
+  const z=window.ConquerTerraforming?.elevationAt(p,base)??base;
+  // Finished ramps and stairways (settlement-slopeways.js): walkers stand on their deck.
+  return window.ConquerSlopeways?window.ConquerSlopeways.lift(p,z):z;
 }
 function terrainPlateauElevation(p){
   if(terrainSlopeKind(p))return null;
@@ -237,6 +239,7 @@ function structureHeight(s){
   if(s.type==='ruin')return Number(s.ruinHeight)||.8;     // the stump a fallen tower or gate leaves
   if(window.ConquerIndustries?.is(s))return .35;
   if(s.type==='pier'||s.type==='quay')return .6;
+  if(s.type==='ramp'||s.type==='stairway')return .3;
   if(s.type==='house')return houseStructureHeight(s);
   if(isCivicAnnex(s)){const spec=civicAnnexDefinition(s);return !spec?0:spec.kind==='garden'||spec.kind==='yard'?.18:spec.kind==='stall'?.95:1.55;}
   if(s.type==='market')return .78;
@@ -254,7 +257,7 @@ function footprintPoints(s){
   if(isOrientedTower(s))return orientedTowerOutline(s);
   if(['tower','gate','ruin'].includes(s.type)){const d=rectDims(s);return rectWorldPoints(s.x,s.y,d.w,d.h,s.angle||0)}
   if(s.type==='well')return circleWorldPoints(s.x,s.y,.62,20);
-  if(['wall','palisade','built','moat','bridge','quay'].includes(s.type))return linePoly(s);
+  if(['wall','palisade','built','moat','bridge','quay','ramp','stairway'].includes(s.type))return linePoly(s);
   if(s.type==='house'){
     const parts=houseFootprintParts(s),pts=parts.flatMap(p=>p.points);
     if(parts.length===1)return pts;
