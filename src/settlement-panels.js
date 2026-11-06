@@ -13,7 +13,7 @@
   const good = id => LABELS[id] || id;
   const PRICE_GOODS = Object.keys(LABELS).filter(k=>!['materials','horses','gold'].includes(k));
   const CLASSES = ['L1','L2','L3','L4'];
-  const COLORS = ['#bcd18b','#e7ac77','#97bfd9','#d9a4cf','#d9c0a4'];
+  const COLORS = ['#bcd18b','#e7ac77','#97bfd9','#d9a4cf','#d9c0a4','#a3d3c8'];
   const TABS = [
     ['general','Generale','Quadro d’insieme del feudo'],
     ['people','Popolazione','Classi, felicità e politiche fiscali'],
