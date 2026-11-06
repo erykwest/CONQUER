@@ -1,5 +1,7 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+06/11/2026 — `feature/ramps-stairs`: BC-251105-12/13 rampe e scalinate sui dislivelli (`src/settlement-slopeways.js`), costruibili, percorribili dal pathfinding (carri e mezzi pesanti solo sulle rampe), nel Lab con audit; test `qa/slopeways-regression.cjs`. Piramide: STATUS, BACKLOG, feature-backlog. ROADMAP e DECISIONS invariate: nuova struttura dentro contratti esistenti (attraversamenti come i ponti).
+
 05/11/2026 — `feature/founding-storage-yard-20261105` (pre-merge): aggiunto il tipo `storageYard` «Piazzale · Magazzino», 2×2U, fondazione entro 7U dal primo pozzo, espandibile a 4×4/6×6 con costi e collisioni, inventario visualizzato direttamente dal ledger unico del castello. Garantito un L1 al taglialegna con piazzale anche in presenza di saturazione cantieri; risolta la mancata crescita apparente del legname: quota trattenuta della produzione Logging Camp ora nel magazzino entro capienza, eccedenza sul mercato, anziché restare azzerata dall'obiettivo riserva 70 a fronte di stock iniziale 200. Salvataggi vecchi migrati senza stock duplicato; Canvas, World3D e tre mesh in Asset Lab (categoria Produzione); test specifici e CI Economy flows. ROADMAP invariata, DECISIONS/BACKLOG/STATUS e feature-backlog aggiornati.
 
 
