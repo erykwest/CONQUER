@@ -1,5 +1,17 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+06/11/2026 — REG-EIGHT-BIOMES (branch sperimentale, non main): apertura regionale con otto campioni direzionali sulla geometria Voronoi reale. Fasce 25/25/100/25/25 U, corner esterni 25×25 del diagonale e blending a prodotto. Composizione ingame di suolo, boschi, acqua con isole/fori e rilievi; il centro usa la propria ricetta. Fiumi esistenti preservati. Demo Fronte misto disponibile; test determinismo, collisioni, pesi e diagonali PASS. Bilanciamento quantitativo e dorsali continue restano aperti. Le vecchie demo senza campioni vanno riaperte dalla regionale.
+
+05/11/2026 — REG-CENTRAL-BIOME: corretto il bioma centrale in apertura dal territorio. Regole condivise: plain→Pianura, forest→Foresta, hills regionale→Montagne, sea→Mare, swamp→Palude, lake→Lago. Fiume di confine aggiuntivo, non sostitutivo del bioma. Contesto portabile nel link, session storage opzionale; dati mancanti mostrano errore, mai Pianura implicita. Scope scelto: prima il bioma centrale, otto influenze rinviate. QA mapping, ricette e trasferimento tra schede PASS.
+
+05/11/2026 — REG-DEMO: Builder → Mappa regionale → selezione territorio → Apri mappa locale del territorio. Demo isolate senza lettura/scrittura della partita o cloud, seed ripetibile derivato da regione/territorio, ritorno alla stessa regione e selezione. Scenari Pianura/Colline/Foresta/Fiume/Montagne/Costa con ricette attuali e misure di copertura mappa/buildable su griglia 40×40, conteggi delle componenti. Bilanciamento quantitativo ancora da decidere dopo revisione. I confinanti reali sono esposti come contesto; composizione a otto biomi non ancora nel Builder.
+
+05/11/2026 — REG-BIOME-RIVER2: sostituite le quattro anse Bezier identiche con integrazione della direzione lungo la lunghezza del corso. Raggio delle singole anse 2–3 larghezze, aperture e lunghezze variabili per seed, geometria arrotondata ispirata a Leopold/Wolman e al riferimento fornito. Test precedente: solo 2 forme dopo aver rimosso rotazioni; nuovo test: almeno 60 forme su 64 seed. PASS 64 mappe runtime, 2.000 curve, 42 mappe biomi e save-safety. Penetrazione minima 25 px sul riferimento preservata. Nuove mappe, salvataggi esistenti non rigenerati.
+
+05/11/2026 — REG-BIOME-RIVER ingame su `experiment/regional-biome-sectors` (NON MAIN): `makeEnvWater` genera i nuovi fiumi sul perimetro buildable con quattro ampie anse alternate, penetrazione interna 12 U (36 px riferimento 600 px). Acqua reale nei renderer e nei vincoli di costruzione. QA 42 mappe biomi, 64 mappe fiume con collisioni/determinismo, 36 urban checks PASS. Mappe salvate preservate; applicazione alle mappe rigenerate. Gli otto biomi e le dorsali della fixture non sono ancora integrati nel Builder.
+
+05/11/2026 — Esperimento REG-BIOME-PREVIEW: [prova cartografica](REGIONAL-BIOME-SECTORS-PREVIEW.md) su `experiment/regional-biome-sectors`, NON MAIN. Quattro lati e corner di blending. Integrazione con i confinanti Voronoi reali e generatore Builder ancora aperta.
+
 ## 2026-11-05 — Piazzale di stoccaggio al villaggio (branch `feature/founding-storage-yard-20261105`)
 
 - **P0-03 / P0-05 · SU BRANCH (non MAIN fino al merge):** alla fondazione del villaggio un Piazzale 2×2U è cercato entro 7U dal pozzo in un'area con terreno valido, non alberata e senza conflitti; è inoltre piazzabile dal Builder. Può crescere a 4×4U e 6×6U pagando materiali e oro, con capacità 600/2400/5400 unità aggregata.

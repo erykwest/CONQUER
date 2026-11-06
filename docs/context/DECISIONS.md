@@ -1,5 +1,17 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## REG-EIGHT-BIOMES — Campioni direzionali (06/11/2026)
+
+Otto direzioni locali non implicano otto confinanti Voronoi distinti: un raggio dal centroide identifica il territorio oltre il primo bordo. Lo stesso confinante puo occupare piu direzioni. Al bordo del mondo si prolunga il terreno selezionato. Fasce 25/25/100/25/25 U e diagonali indipendenti; pesi condivisi tra terreno e componenti. I poligoni composti sono usati da rendering e collisioni. I servizi costieri esistenti ricevono la costa continua principale di ciascun mare; gestione portuale di tutte le coste disconnesse resta fuori da questa iterazione.
+
+## REG-CENTRAL-BIOME — Prima la cella centrale (05/11/2026)
+
+Scelta esplicita: correggere prima il bioma centrale, rinviando gli otto vicini. Il terreno della cella determina la ricetta locale; i fiumi restano elementi aggiuntivi di confine. Contesto mancante: errore visibile, mai Pianura implicita. Specifica: docs/REGIONAL-BIOME-SECTORS-PREVIEW.md.
+
+## REG-BIOME-RIVER2 — Morfologia dei meandri (05/11/2026, branch sperimentale)
+
+Richiesto: eliminare il pattern ripetuto e usare il riferimento geometrico [Division by Zero](https://divisbyzero.com/2009/11/26/the-geometry-of-meandering-rivers/). Implementazione nel branch: integrazione per lunghezza del corso, raggi proporzionati alla larghezza (2–3w), parametri delle anse variabili per seed; mantenere ingresso nella buildable zone di almeno 25 px sul riferimento 600 px. Riferimento empirico, non simulazione idraulica. I salvataggi conservano la geometria precedente. [Specifica](../REGIONAL-BIOME-SECTORS-PREVIEW.md).
+
 ## D-STOCKYARD-251105 — Il piazzale fondativo è lo stoccaggio del castello (05/11/2026)
 
 - **DECISO, IN CODICE SU BRANCH `feature/founding-storage-yard-20261105`:** il villaggio nasce con un Piazzale 2×2U entro 7U dal primo pozzo, se un lotto edificabile è disponibile. Il capanno taglialegna versa la quota di produzione trattenuta nelle scorte del castello fino alla capienza dei piazzali; la parte non trattenuta e la quota in eccesso raggiungono il mercato.

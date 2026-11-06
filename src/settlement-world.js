@@ -1056,6 +1056,7 @@ function makeEnvEllipse(type,x,y,rx,ry,angle,fill,edge){return{id:'env-'+type+'-
 // Meandering watercourse across the map: two sine bends (long meanders plus tighter
 // wiggles) and a little smoothed noise, sampled every 2.5U.
 function makeEnvWater(rnd,type){
+  if(type==='river')return makeBoundaryRiver(rnd);
   const horizontal=rnd()>.30,river=type==='river',pts=[],step=2.5,n=Math.round(WORLD/step);
   const base=70+rnd()*60;
   const a1=river?biomeRand(rnd,14,22):biomeRand(rnd,9,15),f1=river?biomeRand(rnd,1.5,2.5):biomeRand(rnd,2,3.5);
@@ -1068,6 +1069,49 @@ function makeEnvWater(rnd,type){
     pts.push(horizontal?{x:t*WORLD,y:off}:{x:off,y:t*WORLD});
   }
   return{id:'env-'+type,type,points:pts,width:river?WATER_WIDTH.river:WATER_WIDTH.stream,fill:river?'#3a7684':'#4f8d95',edge:river?'#88b4b8':'#9cc6c6'};
+}
+// Real terrain water, shared by collision, navigation, banks and both renderers.
+// Keep existing saved landscapes intact: this policy applies when generating a river.
+function makeBoundaryRiver(rnd){
+  const requested=window.__CONQUER_REGIONAL_DEMO__?.riverSides;
+  const accepted=Array.isArray(requested)?requested.filter(s=>['west','north','east','south'].includes(s)):[];
+  const sides=accepted.length?accepted:['west','north','east','south'];
+  const side=sides[Math.floor(rnd()*sides.length)],width=WATER_WIDTH.river;
+  // Integrate heading over arc length, rather than prescribing y = sin(x).
+  // Leopold/Wolman: meander wavelength ~11 widths, bend radius ~2.3 widths.
+  // Each half-meander gets its own radius and turning angle, giving rounded,
+  // asymmetric bends without repeating one template or scaling it after placement.
+  let chosen=null;
+  for(let attempt=0;attempt<80&&!chosen;attempt++){
+    const path=[{x:0,y:0}],bends=[];let x=0,y=0,sign=rnd()<.5?-1:1;
+    const initialPhase=rnd()*.7;
+    for(let bend=0;x<WORLD&&bend<30;bend++){
+      const radius=width*(2+rnd()),angle=1+rnd()*.5;
+      const length=Math.PI*radius*angle,steps=Math.ceil(length/.65),ds=length/steps;
+      const start=bend===0?initialPhase:0;
+      bends.push({radius,angle,length});
+      for(let i=Math.floor(start*steps);i<steps&&x<WORLD;i++){
+        const theta=sign*angle*Math.sin(Math.PI*(i+.5)/steps);
+        const dx=ds*Math.cos(theta),dy=ds*Math.sin(theta),t=Math.min(1,(WORLD-x)/dx);
+        x+=dx*t;y+=dy*t;path.push({x,y});
+      }
+      sign=-sign;
+    }
+    const interior=path.filter(p=>p.x>=BUILD_MIN+12&&p.x<=BUILD_MAX-12);
+    if(x<WORLD||!interior.length)continue;
+    const depth=9+rnd()*3,shift=BUILD_MIN+depth-Math.max(...interior.map(p=>p.y));
+    const low=Math.min(...path.map(p=>p.y))+shift,high=Math.max(...path.map(p=>p.y))+shift;
+    if(low<width+1||high>BUILD_MIN+20)continue;
+    // Translate the accepted course inward, preserving the seeded bend geometry.
+    chosen={path:path.map(p=>({x:p.x,y:p.y+shift+15})),bends};
+  }
+  // A valid candidate must exist for the seeded bounded-angle family; surface a
+  // failure instead of silently reverting to a repeated artificial wave.
+  if(!chosen)throw new Error('Boundary river placement failed');
+  const points=chosen.path.map(p=>side==='west'?{x:p.y,y:p.x}:side==='east'?{x:WORLD-p.y,y:p.x}:
+    side==='south'?{x:p.x,y:WORLD-p.y}:p);
+  return{id:'env-river',type:'river',points,width,fill:'#3a7684',edge:'#88b4b8',
+    boundaryPolicy:3,boundarySide:side,inwardOffset:15,meanderModel:'arc-length-heading',meanderBends:chosen.bends};
 }
 // Watercourse widths (U). Saved landscapes from before the widening are brought up to them
 // on load (widenWatercourses), so old maps get the wider rivers and streams too.
@@ -1258,7 +1302,9 @@ const BIOME_RECIPES=Object.freeze({
   forest:{stream:1,continuousForest:.20,ponds:[0,1]},
   mountains:{mountains:[4,7],stream:1,hills:[1,2],hillHeight:[3,4],hillCoverage:.30},
   village:{forests:[1,2],hills:[0,1],hillHeight:[1,2]},
-  sea:{sea:true,forests:[0,1]}
+  sea:{sea:true,forests:[0,1]},
+  swamp:{stream:1,forests:[1,2],smallForests:true,ponds:[2,3]},
+  lake:{lake:true,forests:[0,1]}
 });
 function biomeRecipe(){return BIOME_RECIPES[State.biome]||BIOME_RECIPES.plains}
 function biomeRange(rnd,[lo,hi]=[0,0]){return lo+Math.floor(rnd()*(hi-lo+1))}
@@ -1330,7 +1376,8 @@ const MOUNTAIN_STEEPNESS=[.95,1.15],MOUNTAIN_SLOPE_DEG=[40,60];
 // makeWatercourseAvoiding: the stream/river must stay clear of the mountain chain.
 function biomeWater(mountains){
   const recipe=biomeRecipe(),rnd=biomeStream(0x3a7684c1);
-  const type=recipe.river?'river':recipe.stream&&rnd()<recipe.stream?'stream':null;
+  const borderRiver=window.__CONQUER_REGIONAL_DEMO__?.hasRiver;
+  const type=recipe.river||borderRiver&&!recipe.lake&&!recipe.sea?'river':recipe.stream&&rnd()<recipe.stream?'stream':null;
   if(!type)return null;
   let best=null,bestClear=-Infinity;
   for(let attempt=0;attempt<40;attempt++){
@@ -1409,6 +1456,7 @@ function generateRelief(){
       break;
     }
   }
+  window.ConquerRegionalLandscape?.adjustRelief();
   assignSteepEdgesByLevel(State.relief,seedRand((reliefSeed^0x735a2d97)>>>0));
   clearReliefBandCache();
   State.relief.stats=reliefStats();
@@ -1691,6 +1739,7 @@ function makeContinuousForest(env,rnd,ratio){
 function generateEnvironment(){
   const rnd=seedRand((State.seed^biomeHash(State.biome))>>>0),env=[],recipe=biomeRecipe();
   const sea=biomeSea();if(sea)env.push(sea);
+  if(recipe.lake)env.push(makeEnvBlob(rnd,'pond',WORLD/2,WORLD/2,78,72,'#3f7f8a','#8ab9bd',40,.07));
   const mountains=biomeMountains();env.push(...mountains);
   const water=biomeWater(mountains);if(water)env.push(water);
   const ponds=biomeRange(rnd,recipe.ponds);
@@ -1707,7 +1756,7 @@ function generateEnvironment(){
   environmentRevision++;
   // Relief from an older generator may still cross water or mountains laid out here.
   for(let i=env.length-1;i>=0;i--)if(environmentConflictsTestRelief(env[i])||['hill','rough'].includes(env[i].type))env.splice(i,1);
-  State.environment=env;
+  State.environment=window.ConquerRegionalLandscape?.compose(env)||env;
 }
 // ---------- woodland holes ----------
 // The Foresta biome is one woodland over the whole map (f.continuous) with holes: clearings,
@@ -1856,6 +1905,18 @@ function mapSeaSide(){return State.environment?.find(f=>f.type==='sea')?.side||n
 function landBorderSides(){const sea=mapSeaSide();return BORDER_ENTRY_SIDES.filter(e=>e!==sea)}
 const edgeCorners=()=>({north:[{x:0,y:0},{x:WORLD,y:0}],south:[{x:0,y:WORLD},{x:WORLD,y:WORLD}],west:[{x:0,y:0},{x:0,y:WORLD}],east:[{x:WORLD,y:0},{x:WORLD,y:WORLD}]});
 function seaBorderEntries(){
+  if(State.environment?.some(f=>f.type==='sea'&&f.regional)){
+    const seas=State.environment.filter(f=>f.type==='sea'),out=[];
+    for(const edge of BORDER_ENTRY_SIDES){
+      let start=null;
+      for(let i=0;i<=100;i++){
+        const p=edgeSample(edge,(i+.5)/100),wet=i<100&&seas.some(f=>environmentContains(f,{x:Math.max(1,Math.min(199,p.x)),y:Math.max(1,Math.min(199,p.y))}));
+        if(wet&&start===null)start=i;
+        if(!wet&&start!==null){const q=edgeSample(edge,(start+i)/200);out.push({id:'sea-'+edge+'-'+start,edge,kind:'sea',x:q.x,y:q.y});start=null;}
+      }
+    }
+    return out;
+  }
   const sea=State.environment?.find(f=>f.type==='sea');if(!sea?.coastline?.length)return[];
   const mid=edgeSample(sea.side,.5),out=[{id:'sea-'+sea.side,edge:sea.side,kind:'sea',x:mid.x,y:mid.y}];
   const onEdge=(p,edge)=>edge==='north'?p.y<=1e-6:edge==='south'?p.y>=WORLD-1e-6:edge==='west'?p.x<=1e-6:p.x>=WORLD-1e-6;
@@ -1873,6 +1934,7 @@ function seaBorderEntries(){
 // A land exit on the sea stub of an edge next to the sea: the border point itself reads as
 // dry, so the test is a step inside the map, with a margin from the coast.
 function borderEntryOnSea(e){
+  if(State.environment?.some(f=>f.type==='sea'&&f.regional))return State.environment.some(f=>f.type==='sea'&&environmentContains(f,{x:Math.min(WORLD-1,Math.max(1,e.x)),y:Math.min(WORLD-1,Math.max(1,e.y))},4));
   const sea=State.environment?.find(f=>f.type==='sea');if(!sea)return false;
   const p={x:Math.min(WORLD-1,Math.max(1,e.x)),y:Math.min(WORLD-1,Math.max(1,e.y))};
   return environmentContains(sea,p,4);

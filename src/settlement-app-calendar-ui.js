@@ -217,7 +217,7 @@ function generateNewMap(){
   State.diplomacy=null;
   window.ConquerDiplomacy?.reset();
   window.__conquerHeraldry?.reset();
-  localStorage.setItem('conquer.seed.0.0',String(State.seed));
+  if(!window.__CONQUER_REGIONAL_DEMO__)localStorage.setItem('conquer.seed.0.0',String(State.seed));
 
   // True new-map reset: nothing from the previous settlement survives.
   State.relief=null;
