@@ -1,5 +1,20 @@
 # Livello 2 — Stato tecnico e prove
 
+06/11/2026 — Integrazione #155: fixture CIRCLE aggiornata a torri W2 esplicite per i granai e relativo towerTier; le W1 non ammettono granai secondo la nuova regola. Nessuna variazione alle scorte o alle regole CIRCLE.
+
+## Latrina nelle torri W1 e stanze delle torri piccole (branch `fix/latrine-towers`, da `main` dab8224, 05/11/2026, NON MAIN)
+
+- **Correzione dell'utente (04/11):** la latrina va nelle **torri W1**, non nelle sezioni costruite. Il merge #146 l'aveva messa al piano 2 delle sezioni W1: corretto qui.
+- **IMPLEMENTATO SU BRANCH:**
+  - **Stanze nelle torri W1** (`functionCapacity`, `ConquerSiege.allowed`): le torri W1 hanno una stanza per piano ma tengono la scala a chiocciola (nessun arredo nel cutaway). Accettano solo, per scelta dell'utente: **Colombaia** (sempre all'ultimo piano, tetto a falde, in pietra, L2+), **Latrina**, **Prigione** (piano terra), **Tesoro**, **Armeria**. Il primo mastio T1 resta senza restrizioni (Sala comune).
+  - **Latrina:** primo piano superiore (piano 2) delle torri W1 in pietra, mai torri di legno, W2–W3, porte o sezioni costruite. Lo sbalzo (`ROOM_EXTERIOR`, `mount:'face'`) va sulla faccia esterna libera della torre che guarda più lontano dal castello: mai la faccia interna, né una faccia dove si attacca un muro, una sezione o una sottotorre, né dove davanti c'è un edificio. Su una torre rotonda la scatola rientra nella curva. Le feritoie di quella faccia, al suo piano e sotto, lasciano il posto allo sbalzo e allo scarico (`takesTowerFace`).
+  - **Revisione dell'utente (05/11):** una torre W1 con almeno una stanza assegnata perde la scala a chiocciola e apre i piani come le altre torri (scala a pioli, arredo); senza stanze la tiene. La latrina è **comune a 3 fori**: sbalzo largo 0,76 U e sporgente 0,22 U (prima 0,46 × 0,36), falda rifatta in tre corsi (la vecchia lastra aveva le facce rovesciate e nel 2.5D spariva). La stanza intera è la latrina: tre sedili contro la parete dello sbalzo, lavabo, scaffale, sgabello, candela. Nel cutaway lo sbalzo dietro la parete in piedi si disegna sopra quella parete e sotto pavimento e arredo; quello sul lato tagliato resta davanti.
+  - **Salvataggi:** una latrina già assegnata a una sezione costruita viene tolta al caricamento (`sanitizeRooms`).
+- **Asset Lab:** tolta la variante «Sezione costruita L2 + latrina» (9 voci di baseline). Nuove varianti di torre: «Pietra quadrata piccola L2 + latrina», «Pietra rotonda piccola L2 + latrina», «Pietra quadrata piccola L2 tetto + colombaia». Audit: 30 render, 0 falliti (avvisi solo sul cantiere, come le altre torri in locale); fogli rivisti e baseline aggiornata per queste voci.
+- **QA:** `qa/room-exterior-latrine-regression.cjs` riscritta sulle torri (faccia esterna, muro attaccato, torre rotonda, feritoia, regole di stanza). `qa/dovecote-regression.cjs`: la colombaia ora è ammessa nelle W1 e le W1 rifiutano le altre stanze. 127/127 `qa/*.cjs` non di performance PASS in locale.
+- **Non verificato:** l'assegnazione dal pannello delle stanze in una partita vera (verificata dai test della regola).
+
+
 Sul branch `feature/roof-pitch-75` (da `main` b1a2307, NON MAIN) la pendenza dei tetti a 75° (BC-251105-08) è selezionabile nella scheda «Pendenza dei tetti» al costo di 9 legno + 3 oro + 1 pietra per tetto. `node qa/roof-pitch-regression.cjs`: 3 check passati in locale. Audit Asset Lab locale (`--category=Fortificazioni`, Windows): 790 render, 0 falliti, 60 nuovi (gli stati «Tetto 30°/60°/75°»), rivisti nel foglio `fortificazioni-torri`; aggiunti alla baseline solo i 60 nuovi. I 391 «changed» su danni/cutaway/intatti sono deriva della macchina locale rispetto alla baseline e non sono stati accettati. CI del branch da verificare.
 
 ## 2026-11-06 — Orto di corte, BC-251105-11 (branch `feature/orto-di-corte`, pre-merge)

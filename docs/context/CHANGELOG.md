@@ -1,5 +1,16 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+06/11/2026 — Integrazione #155: fixture CIRCLE aggiornata a torri W2 esplicite per i granai e relativo towerTier; le W1 non ammettono granai secondo la nuova regola. Nessuna variazione alle scorte o alle regole CIRCLE.
+
+## 2026-11-05 — Latrina nelle torri W1 (branch `fix/latrine-towers`)
+
+- Correzione dell'utente: la latrina va al piano 2 delle torri W1 in pietra, con lo sbalzo sulla faccia esterna libera; non va più nelle sezioni costruite.
+- Revisione: con una stanza assegnata la torre W1 perde la scala a chiocciola; latrina comune a 3 fori, meno sporgente, falda corretta, stanza arredata; sbalzo leggibile nel cutaway. Deroga d'audit motivata per «sagoma-conservata» sullo sbalzo crollato della torre quadrata.
+- Le torri W1 ricevono una stanza per piano, ma con la scala a chiocciola accettano solo Colombaia (ultimo piano), Latrina, Prigione, Tesoro e Armeria.
+- `ROOM_EXTERIOR` monta l'elemento `face` anche sulle torri; le feritoie della faccia gli lasciano il posto. Asset Lab: tre varianti di torre W1 nuove, la variante della sezione con latrina rimossa; baseline aggiornata.
+- Piramide: STATUS, BACKLOG, DECISIONS (D-ROOM-EXT-01, prima applicazione). ROADMAP invariata.
+
+
 05/11/2026 — `feature/roof-pitch-75` (BC-251105-08): pendenza dei tetti a 75° aggiunta al set 30/45/60° (`ROOF_PITCHES`, `ROOF_PITCH_COST[75]` = 9 legno · 3 oro · 1 pietra per tetto), opzione nella scheda «Pendenza dei tetti». Asset Lab: torri e porte a falde in pietra hanno gli stati «Tetto 30°/60°/75°» (gruppo `pendenza`, cattura con `State.policies.roofPitch` temporaneo). Nuova `qa/roof-pitch-regression.cjs` (in CI `tower-variants-regression`). Piramide: STATUS, BACKLOG, feature-backlog. ROADMAP e DECISIONS invariate: estende un contratto già esistente.
 
 06/11/2026 — `feature/orto-di-corte` (pre-merge): BC-251105-11 deciso dall'utente come **orto di corte**. Nuovo annesso `kitchenGarden` del Municipio (3×2U, L1, max 2, su terreno aperto entro 7U, mai su lotti altrui); ogni orto completo produce 2 cibo del signore per giornata lavorativa, anche in allarme/assedio. Modello Blender `kitchenGarden` in `civic-models.js` e nell'Asset Lab (audit: 0 errori, baseline aggiornata solo per la nuova voce). Test in `civic-annex-regression` e `labor-jobs-regression`. Aggiornati STATUS/BACKLOG/DECISIONS, feature-backlog e guida annessi civili; ROADMAP invariata.

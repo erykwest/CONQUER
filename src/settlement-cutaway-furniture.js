@@ -226,7 +226,14 @@
       const two=depth>=2*size('infirmaryBed').d+.25,first=two?Math.ceil(beds/2):beds;
       let left=beds-wardRow(r,r.A,first);if(two&&left>0)left-=wardRow(r,opposite,left);if(left>0)wardRow(r,r.B,left);
       r.near(.3,.35,'stool');if(r.large)r.wall(r.A,-.95,'candleStand')},
-    latrine(r){r.wall(r.A,0,'latrineSeat');r.wall(r.B,.5,'washBasin');r.near(-.4,.35,'s:buckets');if(r.large)r.wall(r.A,.75,'latrineSeat')},
+    // The whole room is the latrine: the seat against the wall the garderobe hangs from, basin and buckets around.
+    // In a small tower room the seat is always there, against that wall even over the reserved spots.
+    latrine(r){const S=r.exteriorSide||r.A,O=S===r.A?r.B:r.A;
+      // Communal latrine: three seats side by side along that wall, over the three drop holes.
+      if(r.row(S,'latrineSeat',3,{spill:false})<3)for(const t of [-.8,0,.8])r.wall(S,t,'latrineSeat',{exact:true,deco:true});
+      // Basin and a rag shelf on the other standing wall, a stool and a light: the small tower room fills up.
+      r.wall(O,.5,'washBasin');r.wall(O,-.45,'shelf',{deco:true});r.near(.35,.35,'stool');r.wall(S,.85,'candleStand');
+      r.near(-.4,.35,'s:buckets');if(r.large){r.wall(O,-.5,'s:barrelGroup');r.wall(r.A,.75,'latrineSeat')}},
     prison(r){r.wall(r.A,0,'cellBars',{off:.35});r.wall(r.A,-.4,'wallChains',{deco:true});r.wall(r.A,.4,'straw',{deco:true});
       r.near(.45,.4,'tableSmall');r.near(.2,.45,'stool');r.near(-.4,.45,'s:buckets');if(r.large)r.near(.5,-.5,'stocks')},
     // Cistern (tower ground floor): the tank fed by the rain pipe, the hatch over the water, buckets by the door.
@@ -268,6 +275,10 @@
       const key=s.id+':'+slot.index,ladder=['tower','gate'].includes(s.type)&&levels>1&&!slot.room;
       const posts=s.type==='tower'?(window.ConquerSiege?.archerSlots(s)||[]).filter(a=>a.kind==='slit'&&a.floor===slot.floor+1).map(a=>a.p):[];
       const r=builder({...slot,key,round:s.type==='tower'&&s.shape==='round',dee:s.type==='tower'&&s.shape==='dee'},{ladderCorner:ladder,passage:pc.passage||passageFor(s,slot),posts,blocks:typeof cutawayBlockers==='function'?cutawayBlockers(s).filter(k=>slot.z<k.h).map(k=>k.pts):[]});
+      // A room with an exterior element (the garderobe) knows the side of the room it hangs from.
+      const ext=slot.role&&window.ConquerRoomExterior?.elements(s,{broken:true}).find(e=>e.index===slot.index);
+      if(ext){const ca=Math.cos(r.F.b.angle),sa=Math.sin(r.F.b.angle),u=ext.normal.x*ca+ext.normal.y*sa,v=-ext.normal.x*sa+ext.normal.y*ca;
+        r.exteriorSide=Math.abs(u)>=Math.abs(v)?(u>0?'u+':'u-'):(v>0?'v+':'v-')}
       if(slot.role&&ROOMS[slot.role])ROOMS[slot.role](r);
       // Torches on the standing walls light every furnished room at night.
       if(slot.role){r.wall(r.A,r.large?-.5:.0,'torchWall',{deco:true});if(r.large)r.wall(r.B,.5,'torchWall',{deco:true})}

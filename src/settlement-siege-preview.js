@@ -168,6 +168,7 @@
       ['Grande rotonda L3 tetto',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'pitched'}],
       // Dovecote (Colombaia): the top room under the pitched roof, its lantern on the apex.
       ['Pietra quadrata L2 tetto + colombaia',{type:'tower',shape:'square',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'pitched',functions:[null,'dovecote']}],
+      ['Pietra quadrata piccola L2 tetto + colombaia',{type:'tower',shape:'square',material:'stone',level:2,tier:1,size:sq(1),roofStyle:'pitched',functions:[null,'dovecote']}],
       ['Grande rotonda L3 tetto + colombaia',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'pitched',functions:[null,null,'dovecote']}],
       ['Torre a D grande L3 tetto + colombaia',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched',functions:[null,null,'dovecote']}],
       ['Grande quadrata L3 garitte merlate',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'battlement',bartizan:'battlement'}],
@@ -198,7 +199,10 @@
       ['Pietra quadrata L3 2 falde + campana',{type:'tower',shape:'square',material:'stone',level:3,tier:2,size:sq(2),roofStyle:'pitched',roofShape:'gable',bell:'bell'}],
       ['Torre a D media L2 tetto + campana',{type:'tower',shape:'dee',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'pitched',bell:'bell'}],
       ['Legno vedetta + campana',{type:'tower',shape:'square',material:'wood',woodStyle:'watchtower',woodRoof:'pitched',level:1,tier:1,size:1,bell:'bell'}],
-      ['Legno media tetto + campana',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'pitched',level:1,tier:2,size:1.5,bell:'bell'}]
+      ['Legno media tetto + campana',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'pitched',level:1,tier:2,size:1.5,bell:'bell'}],
+      // Latrine: the first upper floor of a small (W1) stone tower, its garderobe on a free outer face.
+      ['Pietra quadrata piccola L2 + latrina',{type:'tower',shape:'square',material:'stone',level:2,tier:1,size:sq(1),roofStyle:'battlement',functions:[null,'latrine']}],
+      ['Pietra rotonda piccola L2 + latrina',{type:'tower',shape:'round',material:'stone',level:2,tier:1,r:rd(1),roofStyle:'battlement',functions:[null,'latrine']}]
     ],
     walls:[
       ['Muro sottile T1 H1',{type:'wall',tier:1,level:1,skin:'standard'}],

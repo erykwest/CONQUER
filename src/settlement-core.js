@@ -458,7 +458,7 @@ function towerBartizan(s){const b=s?.type==='tower'?structureVariant(s,'bartizan
 // Dovecote (Colombaia): the room under the pitched roof of a medium or large (T2/T3) stone tower,
 // on its top floor at L2+. It takes the one room under the roof, so the falconry and the alarm bell
 // planned for the same place exclude it. Its lantern stands on the roof apex (dovecote-models.js).
-function towerDovecoteAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)>=2&&structureLevel(s)>=2&&towerRoofStyle(s)==='pitched'}
+function towerDovecoteAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&structureLevel(s)>=2&&towerRoofStyle(s)==='pitched'}
 function towerDovecote(s){return towerDovecoteAllowed(s)&&!underConstruction(s)&&!s.destroyed&&s.functions?.[structureLevel(s)-1]==='dovecote'}
 function towerBaseStyle(s){
   if(!s||s.type!=='tower'||isWoodTower(s))return undefined;

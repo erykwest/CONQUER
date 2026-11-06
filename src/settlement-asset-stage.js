@@ -35,8 +35,6 @@
       // Infirmary wards (W1 section on both floors, W2 hall): the cutaway shows the furnished rooms.
       ['Mura',['Infermeria · sezione L2',{type:'built',tier:2,level:2,functions:['infirmary','infirmary']}]],
       ['Mura',['Infermeria · sala larga',{type:'built',span:'wide',tier:2,level:2,flip:true,functions:['infirmary']}]],
-      // Room exterior element (settlement-room-exterior.js): the garderobe of an upper-floor latrine.
-      ['Mura',['Sezione costruita L2 + latrina',{type:'built',tier:2,level:2,functions:[null,'latrine']}]],
       // Military stables (settlement-siege.js stableUnits): stall rows down the long room.
       ['Mura',['Scuderia militare · sezione L1',{type:'built',tier:2,level:1,functions:['stables']}]],
       // Timber longhouse (settlement-wood3d.js): W1 / W2 span, ground floor only, the stone section's rooms.
