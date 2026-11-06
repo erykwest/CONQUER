@@ -1,5 +1,13 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-CI-P21-261106 — Selezione visuale incrementale, copertura completa periodica (06/11/2026)
+
+- **DECISO, CODICE SU BRANCH `perf/assetlab-p2-incremental-20261106`:** il catalogo runtime resta unica fonte di verità per gli ID da verificare; il planner sceglie solo sorgenti isolate con stato Git modificato. Il selettore non sostituisce e non altera le baseline degli asset.
+- **FAIL-SAFE:** incertezza, nuovo/rimosso file, cambi di scena o motore, texture architettoniche e modelli eliminati dalla baseline obbligano l'audit completo. Nessun rilassamento delle verifiche dei render/stati dell'Asset Lab.
+- **REGOLE CI:** gallery sempre integrale quando si avvia il browser; audit completo in esecuzione manuale o pianificata la domenica, oltre agli eventi ad alto rischio. Futuri allargamenti dell'allowlist richiedono test sulle dipendenze reali.
+- **MOTIVAZIONE:** ridurre rendering e screenshot inutilmente ripetuti su PR con modifiche locali, senza sacrificare la diagnosi di regressioni trasversali. ROADMAP di gioco invariata.
+
+
 ## D-CODEX-03 — Vault personale e pubblicazione editoriale (05/11/2026)
 
 - **Richiesta dell'utente:** usare la skill Obsidian per edifici e meccaniche, con vault dedicato nella propria cartella CONQUER. Il vault personale è la fonte di scrittura; il repository conserva una copia di pubblicazione versionata, non un secondo vault da modificare indipendentemente.

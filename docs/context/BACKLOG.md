@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-06 — P2.1 Asset Lab CI incrementale
+
+- **P2.1 · IMPLEMENTATO SU BRANCH:** gestione PR fail-safe `full/incremental/skip`, selezione ID da `ConquerAssetAudit.catalog()` per un massimo di quattro sorgenti isolate, controllo baseline dei registri e full su modifiche di moduli condivisi o inventario; full manuale/domenicale. Nessun asset eliminato.
+- **VERIFICA PR:** test pure-Node e CI GitHub, inclusi report e diagnosi Asset Lab; documentazione in `docs/CI.md`.
+- **P2.1 · MISURA SUCCESSIVA:** confrontare durata e numero di render su PR di un singolo SVG o registro, prima di ampliare l'allowlist. La prova full resta obbligatoria sulle variazioni di scena/castello.
+
+
 06/11/2026 — Integrazione #169 su main c0c720b: mantenuti H4 e funzioni attuali, fixture aggiornata, catalogo Wiki rigenerato. Audit locale Mura: 265 render, 0 errori; 32 nuove voci addossati (legno, scuderia, pietra, mattoni) riviste nei fogli e aggiunte alla baseline; 98 cambiati preesistenti non accettati. Limite conservato: perdita del muro non abbatte automaticamente l'addossato; nessuna nuova regola di crollo introdotta.
 
 BC-251105-03 e BC-251105-10 (edifici addossati alle mura e loro tetto a falda unica) implementati su `feature/wall-buildings`, PR in revisione. **APERTO:** comportamento dell'addossato quando il muro cade in breccia o viene demolito.

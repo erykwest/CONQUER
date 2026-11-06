@@ -1,5 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+06/11/2026 — `perf/assetlab-p2-incremental-20261106` (pre-merge): esteso Asset Lab con audit incrementale limitato ai file SVG/PNG indipendenti e registri 3D esplicitamente consentiti; risoluzione runtime via catalogo e controllo baseline con fallback a full per modelli spariti, file sconosciuti e mutazioni strutturali. Aggiunti full manuale/domenicale, pianificazione PR fail-safe, test `qa/asset-audit-scope-regression.cjs` e note `docs/CI.md`. Asset esistenti invariati; ROADMAP gameplay invariata.
+
+
 06/11/2026 — Integrazione #169 su main c0c720b: mantenuti H4 e funzioni attuali, fixture aggiornata, catalogo Wiki rigenerato. Audit locale Mura: 265 render, 0 errori; 32 nuove voci addossati (legno, scuderia, pietra, mattoni) riviste nei fogli e aggiunte alla baseline; 98 cambiati preesistenti non accettati. Limite conservato: perdita del muro non abbatte automaticamente l'addossato; nessuna nuova regola di crollo introdotta.
 
 05/11/2026 — `feature/wall-buildings`: edificio addossato alle mura (sezione W1, una stanza, contro muri H2) con tetto a falda unica sotto il camminamento. Di default in legno con tetto in paglia, a scelta pietra o mattoni. Piramide: STATUS, BACKLOG; backlog Builder: BC-251105-03/10.
