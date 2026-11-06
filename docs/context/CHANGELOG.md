@@ -2,7 +2,7 @@
 
 ## 2026-11-06 — Runner assedio con screenshot periodici
 
-- Aggiunto `SIEGE_SCREENSHOT_INTERVAL`: pause di acquisizione ai checkpoint simulati, screenshot in gioco e JSON progressivo con unità, porte, perdite e settori. Avviata prova di 300 s; nessuna modifica al comportamento del gioco. Corrette nella fixture le posizioni iniziali del capitano e di una pattuglia; il runner rifiuta partenze su terreno bloccato.
+- Aggiunto `SIEGE_SCREENSHOT_INTERVAL`: pause di acquisizione ai checkpoint simulati, screenshot in gioco e JSON progressivo con unità, porte, perdite e settori. Avviata prova di 300 s; nessuna modifica al comportamento del gioco. Corrette nella fixture le posizioni iniziali del capitano e di una pattuglia; il runner rifiuta partenze su terreno bloccato. CI circle estesa al controllo sintattico del runner degli screenshot.
 
 
 ## 2026-11-06 — combat-ai: completamento del port circle e regressioni

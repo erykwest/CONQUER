@@ -15,6 +15,7 @@ on:
       - 'src/settlement-population-navigation.js'
       - 'index.html'
       - 'qa/circle-*.test.mjs'
+      - 'qa/siege-scenario-performance.cjs'
       - 'qa/combat-sectors-regression.cjs'
       - 'qa/combat-engage-regression.cjs'
       - 'src/settlement-combat-rules.js'
@@ -30,6 +31,7 @@ on:
       - 'src/settlement-combat.js'
       - 'src/settlement-app-simulation.js'
       - 'qa/circle-*.test.mjs'
+      - 'qa/siege-scenario-performance.cjs'
       - 'qa/combat-sectors-regression.cjs'
       - 'qa/combat-engage-regression.cjs'
       - 'src/settlement-combat-rules.js'
@@ -52,6 +54,7 @@ jobs:
           node --check src/settlement-siege.js
           node --check src/settlement-app-simulation.js
           node --check src/settlement-combat.js
+          node --check qa/siege-scenario-performance.cjs
           node --check src/circle/defensive-logistics.mjs
           node --check src/circle/defensive-control.mjs
           node --check src/circle/defensive-topology.mjs
