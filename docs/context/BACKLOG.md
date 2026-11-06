@@ -18,6 +18,29 @@ Tutte **DA CONFERMARE dall'utente** prima di qualsiasi codice (effetti, compatib
 - **IMPLEMENTATO SU BRANCH `feature/falconry`:** stanza Falconiera (caccia: cibo), voliera sul tetto via `ROOM_EXTERIOR`, valore Prestigio del castello.
 - **APERTO, da decidere:** cosa legge il Prestigio (diplomazia, cavalieri, popolazione); la Colombaia resta da spostare sul montaggio `roof` di `ROOM_EXTERIOR` come la voliera.
 
+## 2026-11-06 — CI P1 orchestrazione browser e riduzione duplicati
+
+- **P1 · IMPLEMENTATO SU BRANCH `chore/ci-p1-browser-dedup-20261106`:** 25 concurrency group separate per workflow/PR; eliminati tre full deterministici ridondanti; Asset Lab unico proprietario dell'audit visuale, con scope per file; cinque installazioni Chromium unificate da composite + cache Playwright 1.56.1; WebGPU scope renderer + PR/manuale; rimosse copie del save-safety e guard contestuale.
+- **P1 · QA IN PR:** `qa/ci-p1-regression.cjs` e workflow GitHub da verificare; non cancellare i test QA, non ridurre runtime/economia/governance.
+- **P2 · APERTO:** misurare tempi e cache hit nel periodo successivo, valutare Playwright screenshot coverage end-to-end su navigazione multi-PR. Conservare esecuzione periodica P0 full.
+
+
+
+## 2026-11-06 — Logistica locale visuale sui piazzali (branch `feature/local-production-haulage-20261106`)
+
+- **IN BRANCH / DA VERIFICARE:** animazione automatica dei carretti dai luoghi di produzione con quantità realmente trattenuta dal signore (taglialegna/cava/miniera/mulini, ove l'economia rilascia scorte, e bonifica forestale) fino a un piazzale connesso da strade finite. Scelto il piazzale più prossimo sulla rete viabile; carico → viaggio → scarico → ritorno vuoto, scorte contabilizzate solo dal ledger originale.
+- **LIMITI DELLA PR:** nessuna spedizione per beni privati/solo mercato; se un sito o piazzale è isolato non vengono disegnati mezzi fittizi. Non è un sistema di trasporto materiale a latenza né richiede acquisto o staffing di un carrettiere. Migliorie eventuali: pedoni di carico/scarico, capienze per singolo deposito, visualizzazione dei trasferimenti del mercato, tabelle rotte e ETA per ogni sito.
+- **QA:** `qa/haulage-regression.cjs`; reimpiego di `ConquerVehicles` invece di un secondo pathfinder.
+
+
+## 2026-11-06 — P0 semplificazione GitHub Actions (branch `chore/ci-p0-consolidation-20261106`)
+
+- **P0 · SU BRANCH:** 11 YAML ritirati (10 branch-only per Civil/Clay/Urban/Events/Sound e un job monouso di cancellazione branch); test conservati, nessun ref GitHub eliminato.
+- **P0 · SU BRANCH:** rimpiazzato full suite per ogni PR con cinque smoke per modifiche isolate, full obbligatorio in CI quando sono modificati i moduli condivisi ad alto rischio, full manuale/settimanale. Copertura locale e QA dei singoli sottosistemi invariati.
+- **P0 · INVARIATI:** integrità runtime, salvataggi, economia e governance documentale.
+- **P1 · APERTO:** deduplicazione cross-workflow, Playwright/WebGPU/Asset Lab, cache e cancellazione dei job superseded. Verificare guardrail sui check per merge, dopo pubblicazione PR.
+
+
 06/11/2026 — Integrazione #155: fixture CIRCLE aggiornata a torri W2 esplicite per i granai e relativo towerTier; le W1 non ammettono granai secondo la nuova regola. Nessuna variazione alle scorte o alle regole CIRCLE.
 
 ## Latrina nelle torri W1 e stanze delle torri piccole (05/11/2026)

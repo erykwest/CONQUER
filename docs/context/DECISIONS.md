@@ -7,6 +7,29 @@
 - **Estensione di D-ROOM-EXT-01:** una stanza può avere il suo elemento esterno sul tetto (`mount:'roof'`): stessa posizione degli upgrade (campanile), indice = slot della stanza, regola `active` della voce. Prima applicazione: la voliera della Falconiera.
 - **Prova:** `qa/falconry-regression.cjs`.
 
+## D-CI-P1-261106 — Ottimizzare la CI senza diminuire la copertura (06/11/2026)
+
+- **DECISO, CODICE SU BRANCH `chore/ci-p1-browser-dedup-20261106`:** un solo owner per la suite completa `qa/*-regression.cjs` (P0) e uno per l'audit visuale `qa/asset-audit.mjs` (Asset Lab). Workflow specifici fanno controlli mirati; full P0 si attiva sulle modifiche ai componenti condivisi, inclusi world3d/castle3d.
+- **BROWSER:** una composite action installa Playwright 1.56.1 e Chromium con cache condivisa su Ubuntu 24.04; Asset Lab salta il job visuale solo se la modifica non influenza asset o modelli; WebGPU esegue smoke su renderer e fallback solo quando pertinente, manualmente o su PR.
+- **CANCELLAZIONE RUN:** annullare soltanto i job superseded nella stessa PR e nello stesso workflow; mantenere run su main, manuali, schedulati.
+- **VINCOLI:** test QA esistenti tutti presenti, Runtime integrity, Economy flows e Context pyramid guard preservati. ROADMAP gameplay invariata.
+
+
+
+## D-HAULAGE-261106 — Carretti locali come visualizzazione della produzione, non secondo ledger (06/11/2026)
+
+- **DECISO SU BRANCH `feature/local-production-haulage-20261106`:** generare un viaggio locale soltanto dopo una produzione che il ledger ha effettivamente accreditato alle riserve del signore o dopo una bonifica forestale accreditata una sola volta. I carichi privati e le merci solo di mercato non producono un finto trasporto al magazzino.
+- **COERENZA D-007 e D-046:** la logistica locale ordinaria resta contabilmente astratta; nessuna risorsa passa fisicamente di proprietà all'arrivo o può essere accreditata due volte. Si utilizzano i carretti 2D, cavalli 2D, conducenti e lo stesso pathfinding stradale dei convogli esistenti. Non aggiungere bestie o figurine 3D per sostituirli.
+- **PERCORSO E LIMITI:** servono segmenti viari completati vicino al produttore e al piazzale; verso il magazzino raggiungibile con tragitto migliore, andata carica e ritorno vuoto. Se non c'è continuità il carico resta per poco in coda visiva, senza impattare le scorte già iscritte. Limite massimo 4 mezzi attivi e 32 richieste in attesa. Pausa del gioco ferma anche i carri. Nessun trasferimento materiali sito-per-sito fra piazzali in questa fase.
+
+
+## D-CI-P0-261106 — Separazione CI quotidiana e verifica integrale (06/11/2026)
+
+- **DECISO, IMPLEMENTATO SU BRANCH `chore/ci-p0-consolidation-20261106`:** mantenere i 163 script QA ma eliminare 11 workflow dei branch che non esistono più/cleanup monouso. Il full su tutte le PR è sostituito da controlli rapidi (per modifiche isolate) e suite completa nei PR con modifiche al motore comune, nelle esecuzioni manuali e settimanali. Il nome del job esistente viene preservato.
+- **VINCOLI:** runtime integrity, economy flows, context governance intatti; non indebolire controlli fondamentali. Non toccare gli altri workflow (Playwright, browser, WebGPU) in P0. Nessuna nuova risorsa runtime, costo di gioco o macro-priorità ROADMAP.
+- **RICOSTRUIBILITÀ:** `docs/CI.md` conserva la lista dei workflow rimossi; la storia Git contiene i contenuti e i test rimangono nei percorsi originali.
+
+
 ## D-ORTO-251106 — Il giardino è l'orto di corte del Municipio (06/11/2026)
 
 - Scelta dell'utente tra orto di corte, giardino dei semplici e hortus conclusus: **orto di corte**.

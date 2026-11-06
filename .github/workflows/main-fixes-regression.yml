@@ -1,7 +1,10 @@
 name: Main fixes regression
+
+# Abort superseded PR runs of this workflow (never cancel scheduled/main runs).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 on:
-  push:
-    branches: [fix/main-founding-dev-webgl-20261023]
   pull_request:
     branches: [main]
     paths:
@@ -11,6 +14,7 @@ on:
       - qa/main-fixes-browser.mjs
       - qa/ui-combat-regression.mjs
       - .github/workflows/main-fixes-regression.yml
+      - .github/actions/playwright-setup/action.yml
 permissions:
   contents: read
 jobs:
@@ -26,15 +30,13 @@ jobs:
           node-version: '22'
       - name: Deterministic regressions
         run: |
-          for test in qa/*-regression.cjs; do
-            echo "Running $test"
-            node "$test"
-          done
+          node qa/main-road-finalization-regression.cjs
+          node qa/settlement-routing-spawn-regression.cjs
+          node qa/webgl-error-poll-regression.cjs
+          node qa/paused-render-regression.cjs
       - name: JavaScript syntax
         run: |
-          for file in src/*.js qa/*.cjs qa/*.mjs; do node --check "$file"; done
-      - name: Context sync against main
-        run: CONTEXT_BASE_SHA="$(git rev-parse origin/main)" CONTEXT_HEAD_SHA="$GITHUB_SHA" node tools/context-guard.cjs
+          for file in src/settlement-world.js src/settlement-world3d.js qa/main-fixes-browser.mjs qa/ui-combat-regression.mjs; do node --check "$file"; done
   browser:
     # Pinned like the other browser jobs: Playwright 1.56 has no Chromium build for ubuntu-latest (26.04).
     runs-on: ubuntu-24.04
@@ -44,10 +46,8 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
-      - name: Install Chromium
-        run: |
-          npm install --no-save --no-package-lock playwright@1.56.1
-          npx playwright install --with-deps chromium
+      - name: Install cached Chromium and pinned Playwright
+        uses: ./.github/actions/playwright-setup
       - name: Start local server
         run: |
           python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/main-fixes-http.log 2>&1 &
@@ -61,13 +61,10 @@ jobs:
         run: node qa/main-fixes-browser.mjs
       - name: Procedural defaults, explicit DEV controls and full UI/Combat
         run: node qa/ui-combat-regression.mjs
-      - name: Asset Lab visual audit
-        run: node qa/asset-audit.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: main-fixes-browser
           path: |
             output/playwright/main-fixes/
-            artifacts/asset-audit/
           retention-days: 7

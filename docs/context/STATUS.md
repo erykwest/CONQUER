@@ -12,6 +12,32 @@
 - **QA:** nuova `qa/falconry-regression.cjs` (regola, caccia, prestigio, voliera, Lab), aggiunta a `tower-variants-regression.yml`. 137 `qa/*.cjs` non di performance: 136 PASS, `founding-regression.cjs` fallisce solo dentro la suite completa (test di tempi di risposta) e passa da solo.
 - **Non verificato:** la caccia in una partita vera; il prestigio non ha ancora effetti.
 
+## 2026-11-06 — CI P1: deduplicazione e browser (branch `chore/ci-p1-browser-dedup-20261106`, pre-merge)
+
+- **IN BRANCH:** tutti i 25 workflow adottano concurrency per PR (cancel-in-progress solo su pull_request). Rimossi full deterministici duplicati da Main fixes, Gate-six sockets e WebGPU: il full rimane al selettore P0 e alla verifica settimanale/manuale.
+- **IN BRANCH:** composite Action per tutti e cinque i browser job, Chromium Playwright 1.56.1 con cache condivisa. Asset Lab browser/audit eseguiti solo per modifiche visive, la relativa smoke JS resta su tutte le modifiche di dipendenze; WebGPU solo per renderer o manuale.
+- **IN BRANCH:** ridondanze save-safety (Combat ed Economy) e context guard (Main fixes) eliminate, ma sorgenti di verità Runtime integrity e Context pyramid guard intatte. Aggiunto `qa/ci-p1-regression.cjs` al controllo P0, la suite full resta su cambiamenti world3d/castle3d.
+- **QA:** esiti live GitHub Actions da verificare prima del merge; nessun test esistente cancellato, documentazione `docs/CI.md` aggiornata.
+
+
+
+## 2026-11-06 — Consegne animate produzione → piazzali (branch `feature/local-production-haulage-20261106`, pre-merge)
+
+- **CODICE SU BRANCH, NON MAIN:** nuovo `ConquerHaulage` per viaggi locali automatici con carretti trainati dai cavalli usando `ConquerVehicles` e `ConquerWagons` 2D già presenti. Orchestrazione nel loop di simulazione e rendering Canvas anche sopra World3D; velocità sincronizzata alla simulazione e arresto in pausa.
+- **EVENTI REALI:** `ConquerEconomy.put` notifica solo le quantità effettivamente trattenute dal signore per il castello (`received>0`); `creditForestryWood` segnala la raccolta una tantum delle bonifiche forestali dal centro del lavoro. Non si crea una copia dello stock e nessun ricavo è aggiunto all'arrivo o alla partenza dei mezzi. Produzione privata e merci di solo mercato escluse.
+- **ITINERARI:** punto di carico sulla strada completata più vicina al produttore (≤3,5U), consegna al piazzale raggiungibile più vicino tramite viabilità effettiva (≤4U), scarico e viaggio di ritorno a carro vuoto. Senza strada continua nessuna partenza: richieste sospese temporaneamente senza teletrasporti. Al massimo 4 tragitti e 32 eventi pending, aggregazione per sito/merce, scadenza a 10 giorni simulati, cancellazione se sito o piazzale non esistono più.
+- **UI:** ispettore del Piazzale visualizza carretti attivi e carichi in attesa; non modifica il sistema di fatturazione. Asset Lab non necessita nuovi modelli perché la carrozzeria e il cavallo sono i componenti approvati già nel catalogo; conformità D-046 2D.
+- **QA:** `qa/haulage-regression.cjs` in Economy flows; verifica incasso singolo reale, percorso, scarico/ritorno vuoto, blocco strade incompiute, pausa, più magazzini, bonifiche, ripristino e assenza di duplicazioni. Verificare CI prima del merge.
+
+
+## 2026-11-06 — CI P0: workflow obsoleti e suite deterministica selettiva (branch `chore/ci-p0-consolidation-20261106`, pre-merge)
+
+- **CODICE SU BRANCH, NON MAIN:** rimossi 11 workflow YAML associati a branch remote inesistenti o a un vecchio cleanup monouso. Conservati tutti i 163 script QA e relativi asset; cronologia Git disponibile per restore.
+- **Orchestrazione:** `Settlement routing and spawn regression` preserva nome e job `settlement-qa`. Sulle PR isolate lancia 5 smoke mirati, mentre le PR che modificano bootstrap/stato/navigazione/persistenza/placement l'intera `qa/*-regression.cjs` con controllo sintassi. Suite completa anche su `workflow_dispatch` e ogni domenica UTC. Fallimento chiuso se base/head SHA non verificabili.
+- **Protezione:** `Runtime integrity`, `Economy flows regression`, `Context pyramid guard` invariati. Branch `main` non protetta (controllo GitHub, 06/11); status check obbligatori vuoti. WebGPU/Asset Lab/Playwright rimangono fuori scope P0.
+- **QA:** `qa/ci-p0-regression.cjs` protegge esistenza dei workflow cardine e modalità full/fast; CI e test run della PR da verificare prima del merge. Manuale completo: `docs/CI.md`.
+
+
 06/11/2026 — Integrazione #155: fixture CIRCLE aggiornata a torri W2 esplicite per i granai e relativo towerTier; le W1 non ammettono granai secondo la nuova regola. Nessuna variazione alle scorte o alle regole CIRCLE.
 
 ## Latrina nelle torri W1 e stanze delle torri piccole (branch `fix/latrine-towers`, da `main` dab8224, 05/11/2026, NON MAIN)
