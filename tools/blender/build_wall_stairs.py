@@ -11,7 +11,7 @@ Model axes (U), normalised to a rise of 1 U:
 The game scales X and Z by the real rise (walk height above the ground) and keeps Y, so the
 slope (wood ~60 deg, stone ~45 deg) and the step count stay those modelled here.
   stairWood   stringers, treads, outer handrail with posts, a top landing tied to the wall
-  stairStone  solid stepped masonry flight with a coping on its open side, bonded to the wall
+  stairStone  solid stepped masonry flight in one uniform stone colour with a coping on its open side, bonded to the wall
 Palette keys starting with 'tread' turn white in winter.
 
 headless:
@@ -28,8 +28,7 @@ from cq_blender import Part, fresh_collection, export_part_indexed
 S = 3.5
 COLORS = {
     'beam': '#5e4128', 'post': '#3f2c20', 'plank': '#8b6845', 'plankDark': '#6e5136',
-    'treadWood': '#9a7550', 'stone': '#9a9184', 'stoneDark': '#7d756a', 'treadStone': '#b3aa9c',
-    'coping': '#8a8276',
+    'treadWood': '#9a7550', 'stone': '#9a9184',
 }
 KEYS = list(COLORS.keys())
 COLL_NAME = 'CONQUER_WallStairs'
@@ -87,17 +86,17 @@ def stone_stair(root):
     parts = {}
     body = Part(root, 'body', COLORS)
     for k in range(n):                                           # each course runs on to the wall-walk end
-        box(body, k * d, run, 0, W, k * h, (k + 1) * h - .012, 'stone' if k % 2 else 'stoneDark')
-    box(body, run, run + .12, 0, W, 0, 1.0 - .012, 'stoneDark')                    # top pier against the walk
+        box(body, k * d, run, 0, W, k * h, (k + 1) * h - .012, 'stone')
+    box(body, run, run + .12, 0, W, 0, 1.0 - .012, 'stone')                    # top pier against the walk
     parts['body'] = body.finish()
     treads = Part(root, 'treads', COLORS)
     for k in range(n):
-        box(treads, k * d, (k + 1) * d + .01, 0, W, (k + 1) * h - .012, (k + 1) * h, 'stoneDark', 'treadStone')
-    box(treads, run, run + .12, 0, W, 1.0 - .012, 1.0, 'stoneDark', 'treadStone')
+        box(treads, k * d, (k + 1) * d + .01, 0, W, (k + 1) * h - .012, (k + 1) * h, 'stone')
+    box(treads, run, run + .12, 0, W, 1.0 - .012, 1.0, 'stone')
     parts['treads'] = treads.finish()
     coping = Part(root, 'coping', COLORS)                         # low parapet kerb on the open side
     for k in range(n):
-        box(coping, k * d, (k + 1) * d, W - .05, W, (k + 1) * h, (k + 1) * h + .07, 'coping')
+        box(coping, k * d, (k + 1) * d, W - .05, W, (k + 1) * h, (k + 1) * h + .07, 'stone')
     parts['coping'] = coping.finish()
     return parts
 
