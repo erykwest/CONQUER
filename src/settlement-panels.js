@@ -115,7 +115,7 @@
   const welfareTrend = d => historical(d,[{label:'Felicità media',color:COLORS[0],read:w=>w.welfare}],'Felicità della popolazione');
   const classTrend = d => historical(d,CLASSES.map((k,i)=>({label:k,color:COLORS[i],read:w=>w.population?.[k]>0?w.happiness?.[k]:null})),'Felicità per classe');
   const JOBS = [['building','Costruttori'],['herding','Pastori'],['logging','Boscaioli'],['industry','Industrie L1'],['carter','Carrettieri'],['idle','L1 inattivi']];
-  const jobsTrend = d => historical(d,JOBS.map(([k,label],i)=>({label,color:COLORS[i],read:w=>w.jobs?.[k]})),'Occupazione L1 per mansione');
+  const jobsTrend = d => historical(d,JOBS.map(([k,label],i)=>({label,color:COLORS[i],read:w=>w.jobs?.[k]})),'Occupazione L1 per mansione (carrettieri: picco settimanale)');
   const priceTrend = d => historical(d,[{label:good(ui.priceGood),color:COLORS[1],read:w=>w.prices?.[ui.priceGood]}],'Prezzo settimanale');
   function estateTrend(d,lordSites) {
     if(ui.site!=='all'&&!lordSites.some(a=>a.id===ui.site))ui.site='all';
