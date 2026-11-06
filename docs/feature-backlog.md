@@ -1,5 +1,12 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+## 2026-11-06 — L1 Carrettieri per Piazzale e Mercato (branch `feature/l1-carter-jobs-market-20261106`, prima del merge)
+
+- **LAVORO REALE:** professione Carrettiere in `ConquerEconomy.laborAllocation`: fino a un occupato per magazzino con carichi raggiungibili, dopo i produttori essenziali e prima dei costruttori. `jobSummary.carter`, grafici e storico settimanale. Ogni lavoratore L1 non è né inattivo né costruttore né il personaggio due volte disegnato durante la guida. Orari per nuove partenze nei feriali, stop durante allarme; carri fermi senza personale disponibile, produzione invariata.
+- **ROUTE:** piazzale → sito produttivo, viaggio a vuoto; carico → Piazzale per quota del signore, oppure Mercato per quota `e.lots` e beni reali delle botteghe L3 → piazzale a vuoto. Percorsi solo su viabilità terminata; nessuna consegna se la destinazione richiesta non esiste. Asset preesistenti ConquerWagons e cavalli 2D.
+- **SOLO ESTETICO:** nessuna modifica economica al momento della consegna. Unica fonte di verità rimane il ledger, inclusi i beni L3. Test `qa/l1-carter-market-regression.cjs`, estensione della QA haulage precedente.
+
+
 **Contenuti Codex in Obsidian (branch):** [pipeline editoriale e cinque note approfondite](CODEX-OBSIDIAN.md). UI, link e testi dalla copia validata del vault; requisiti e bilanciamento del Builder invariati.
 
 **Codex Wiki (branch `feature/codex-wiki`):** [UI condivisa e link contestuali Builder](CODEX-WIKI.md), keyword verso sovracategorie, ricerca e relazioni. Nessuna modifica ai requisiti di costruzione.
