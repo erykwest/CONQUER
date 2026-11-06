@@ -1,5 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+06/11/2026 — `chore/ci-p0-consolidation-20261106` (pre-merge): CI P0. Ritirati 11 workflow obsoleti/monouso senza cancellare test. `settlement-routing-spawn.yml` mantiene ID check ma passa da full `qa/*-regression.cjs` su qualsiasi PR a smoke veloci sulle PR isolate, full pre-merge su cambiamenti nei moduli condivisi e full domenicale/manuale. Conservati runtime integrity, economy, governance. Aggiunti `qa/ci-p0-regression.cjs` e `docs/CI.md`. ROADMAP di gioco invariata; P1 Playwright/dedup ancora aperto.
+
+
 06/11/2026 — Integrazione #155: fixture CIRCLE aggiornata a torri W2 esplicite per i granai e relativo towerTier; le W1 non ammettono granai secondo la nuova regola. Nessuna variazione alle scorte o alle regole CIRCLE.
 
 ## 2026-11-05 — Latrina nelle torri W1 (branch `fix/latrine-towers`)

@@ -1,5 +1,12 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-CI-P0-261106 — Separazione CI quotidiana e verifica integrale (06/11/2026)
+
+- **DECISO, IMPLEMENTATO SU BRANCH `chore/ci-p0-consolidation-20261106`:** mantenere i 163 script QA ma eliminare 11 workflow dei branch che non esistono più/cleanup monouso. Il full su tutte le PR è sostituito da controlli rapidi (per modifiche isolate) e suite completa nei PR con modifiche al motore comune, nelle esecuzioni manuali e settimanali. Il nome del job esistente viene preservato.
+- **VINCOLI:** runtime integrity, economy flows, context governance intatti; non indebolire controlli fondamentali. Non toccare gli altri workflow (Playwright, browser, WebGPU) in P0. Nessuna nuova risorsa runtime, costo di gioco o macro-priorità ROADMAP.
+- **RICOSTRUIBILITÀ:** `docs/CI.md` conserva la lista dei workflow rimossi; la storia Git contiene i contenuti e i test rimangono nei percorsi originali.
+
+
 ## D-ORTO-251106 — Il giardino è l'orto di corte del Municipio (06/11/2026)
 
 - Scelta dell'utente tra orto di corte, giardino dei semplici e hortus conclusus: **orto di corte**.
