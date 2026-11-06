@@ -29,8 +29,9 @@ function renderFunctionPanel(){
     info.innerHTML='<div class="kv"><span>Deposito</span><b>Piazzale · '+n+'×'+n+'U</b></div>'+
       '<div class="kv"><span>Scorte nel magazzino</span><b>'+fmt(Y.used())+' / '+fmt(Y.capacity())+'</b></div>'+
       goods.map(([name,qty])=>'<div class="kv"><span>'+name+'</span><b>'+fmt(qty)+'</b></div>').join('')+
-      (haul?'<div class="kv"><span>Carretti locali</span><b>'+haul.active+' in viaggio · '+haul.pending+' in attesa</b></div>':'')+
-      '<div class="legend">I carri animano il trasporto dalla produzione al piazzale lungo strade completate. Le scorte sono già contabilizzate nel castello: nessun secondo accredito.</div>';
+      (haul?'<div class="kv"><span>Carrettieri L1</span><b>'+haul.assigned+' assegnati · '+haul.active+' viaggi · '+haul.pending+' carichi in attesa</b></div>'+
+        '<div class="kv"><span>Rotte</span><b>'+haul.toYard+' ai piazzali · '+haul.toMarket+' al mercato</b></div>':'')+
+      '<div class="legend">Ogni carrettiere è un L1 reale del JobManager. Parte dal piazzale, ritira al produttore e consegna al deposito o al mercato. Richiede strade completate; le scorte sono contabilizzate una sola volta dal sistema economico.</div>';
     const cost=Y.expansionCost(n,next);
     slots.innerHTML=cost?
       '<div class="slot"><div class="slot-label">Ampliamento</div><button data-stockyard-grow>Espandi a '+next+'×'+next+'U · '+costText(cost)+'</button>'+
