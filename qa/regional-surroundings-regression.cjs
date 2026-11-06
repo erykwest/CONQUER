@@ -42,5 +42,18 @@ for(const biome of ['forest','mountains','sea','swamp','lake']){
   run('State.biome='+JSON.stringify(biome)+';State.relief=null;State.environment=[];generateRelief();generateEnvironment()');
   assert.ok(run('State.environment.every(f=>f.points?.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)))'));
 }
+const dry=Object.fromEntries(Object.keys(neighbors).map(k=>[k,'plains']));
+for(const [sides,kind] of [[['north'],'gulf'],[['north','east'],'headland'],[['north','east','south'],'peninsula'],[['north','east','south','west'],'island']]){
+  const biomes={...dry};for(const side of sides)biomes[side]='sea';
+  for(const [d,a,b] of [['northEast','north','east'],['southEast','south','east'],['southWest','south','west'],['northWest','north','west']])if(sides.includes(a)&&sides.includes(b))biomes[d]='sea';
+  generate(biomes);
+  assert.equal(run('window.ConquerRegionalLandscape.coastShape().kind'),kind);
+  assert.equal(run('State.environment.some(f=>f.type==="sea"&&environmentContains(f,{x:100,y:100}))'),false,'central land remains dry');
+  const shoreline=run('Array.from({length:21},(_,i)=>{const x=50+i*5;for(let y=0;y<=55;y+=.5)if(!State.environment.some(f=>f.type==="sea"&&environmentContains(f,{x,y})))return y;return 55})');
+  assert.ok(Math.max(...shoreline)-Math.min(...shoreline)>7,kind+' coast has broad bays');
+  if(kind==='headland')assert.ok(run('State.environment.some(f=>f.coastalRock)'), 'headland has real rock outcrops');
+  if(kind==='peninsula')assert.equal(run('Array.from({length:41},(_,i)=>({x:i*2.5,y:100})).some(p=>State.environment.some(f=>f.type==="sea"&&environmentContains(f,p)))'),false,'peninsula remains joined to land on west');
+  if(kind==='island')assert.ok(run('State.environment.some(f=>f.type==="sea"&&f.holes.length>0)'), 'island is enclosed by sea');
+}
 console.log('PASS regional surroundings: eight real ray samples, weights, meshes, water collision, diagonal land/sea and deterministic composition');
 `)(require,__dirname,neighbors);

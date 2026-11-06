@@ -9,6 +9,36 @@
   const hash=(x,y,s)=>{let h=Math.imul(x,374761393)^Math.imul(y,668265263)^s;h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967295};
   function noise(x,y,s){const ix=Math.floor(x),iy=Math.floor(y),a=x-ix,b=y-iy,u=a*a*(3-2*a),v=b*b*(3-2*b);return(hash(ix,iy,s)*(1-u)+hash(ix+1,iy,s)*u)*(1-v)+(hash(ix,iy+1,s)*(1-u)+hash(ix+1,iy+1,s)*u)*v}
   const signature=()=>biomeHash(State.biome+'|'+JSON.stringify(neighbors()));
+  const seaSides=()=>['north','east','south','west'].filter(side=>neighbors()?.[side]==='sea');
+  function coastShape(){
+    const sides=seaSides(),count=sides.length;
+    const corner=count===2?[
+      ['north','east',160,40],['east','south',160,160],
+      ['south','west',40,160],['west','north',40,40]
+    ].find(([a,b])=>sides.includes(a)&&sides.includes(b)):null;
+    return{kind:count===4?'island':count===3?'peninsula':corner?'headland':count?'gulf':'none',sides,corner:corner?{x:corner[2],y:corner[3]}:null};
+  }
+  function coastThreshold(p,shape=coastShape()){
+    if(!shape.sides.length)return .5;
+    const phase=hash(7,11,State.seed)*Math.PI*2;
+    let total=0,weight=0;
+    for(const side of shape.sides){
+      const t=(side==='north'||side==='south'?p.x:p.y)/200;
+      const d=side==='north'?p.y:side==='south'?200-p.y:side==='west'?p.x:200-p.x;
+      const influence=Math.exp(-Math.pow((d-38)/30,2));
+      // Two broad bays per front, with a seed-dependent position and unequal lobes.
+      const bays=.5+.29*Math.cos(t*Math.PI*4+phase)+.07*Math.sin(t*Math.PI*2-phase);
+      total+=bays*influence;weight+=influence;
+    }
+    let threshold=weight?total/weight:.5;
+    if(shape.corner)threshold+=.46*Math.exp(-((p.x-shape.corner.x)**2+(p.y-shape.corner.y)**2)/300);
+    if(shape.kind==='island'||shape.kind==='peninsula'){
+      // Round the land corners instead of tracing a square island/peninsula.
+      const ax=Math.abs(p.x-100),ay=Math.abs(p.y-100);
+      threshold-=.26*Math.max(0,Math.min(1,(Math.min(ax,ay)-42)/25));
+    }
+    return Math.max(.12,Math.min(.94,threshold));
+  }
   const area=r=>r.reduce((s,p,i)=>s+p.x*r[(i+1)%r.length].y-r[(i+1)%r.length].x*p.y,0)/2;
   function rings(mask,n=100){
     const edges=new Map(),step=200/n;
@@ -69,7 +99,7 @@
   }
   function compose(base){
     if(!active())return base;
-    const key=State.seed+'-'+signature(),rnd=seedRand((State.seed^signature()^0x18405c)>>>0);
+    const key=State.seed+'-'+signature(),rnd=seedRand((State.seed^signature()^0x18405c)>>>0),coast=coastShape();
     const forests=base.filter(f=>f.type==='forest'),centralSea=base.filter(f=>f.type==='sea'),centralPonds=base.filter(f=>f.type==='pond');
     const lines=base.filter(f=>f.type==='river'||f.type==='stream');
     const mountains=base.filter(f=>f.type==='mountain').map(f=>({...f,id:'regional-center-'+f.id,
@@ -80,7 +110,8 @@
       const p={x:(x+.5)*2,y:(y+.5)*2},w=field(p),c=w['@center']||0;
       const sea=(w.sea||0)+c*(centralSea.some(f=>environmentContains(f,p))?1:0);
       const pond=(w.lake||0)+c*(centralPonds.some(f=>environmentContains(f,p))?1:0)+(w.swamp||0)*(noise(p.x/12,p.y/12,State.seed+51)>.72?1:0);
-      const wet=sea+pond>.5+(noise(p.x/18,p.y/18,State.seed+23)-.5)*.2;
+      const threshold=sea>=pond?coastThreshold(p,coast):.5;
+      const wet=sea+pond>threshold+(noise(p.x/18,p.y/18,State.seed+23)-.5)*.08;
       if(wet)(sea>=pond?seaMask:pondMask)[y*n+x]=1;
       samples.push({p,w,c,wet});
     }
@@ -106,6 +137,16 @@
       })[0];
     }
     const blocked=p=>waters.some(f=>environmentContains(f,p))||lines.some(f=>environmentContains(f,p,1.5));
+    if(coast.corner){
+      // Low, real rock outcrops on the dry tip; shared mountain polygons block building.
+      const tip=coast.corner;
+      for(let i=0;i<5;i++){
+        const p={x:tip.x+(rnd()-.5)*9,y:tip.y+(rnd()-.5)*9};
+        const rock=makeEnvBlob(rnd,'mountain',p.x,p.y,2+rnd()*2,2+rnd()*2,'#645e50','#a59b85',12,.08);
+        if(blocked(p)||rock.points.some(blocked))continue;
+        rock.id='regional-headland-'+key+'-'+i;rock.height=2+rnd()*3;rock.slopeDeg=45;rock.coastalRock=true;mountains.push(rock);
+      }
+    }
     // Real peaks in the neighbouring mountain sectors. They never intrude into the central biome.
     for(let y=12;y<200;y+=22)for(let x=12;x<200;x+=22){
       const p={x:x+(rnd()-.5)*5,y:y+(rnd()-.5)*5},w=weights(p);
@@ -142,5 +183,5 @@
     const a=w2sRaw({x:0,y:0},0),b=w2sRaw({x:200,y:0},0),d=w2sRaw({x:0,y:200},0);
     ctx.save();ctx.transform((b.x-a.x)/256,(b.y-a.y)/256,(d.x-a.x)/256,(d.y-a.y)/256,a.x,a.y);ctx.drawImage(groundCache.canvas,0,0);ctx.restore();
   }
-  window.ConquerRegionalLandscape={active,weights,adjustRelief,compose,drawGround,rings};
+  window.ConquerRegionalLandscape={active,weights,adjustRelief,compose,drawGround,rings,coastShape,coastThreshold};
 })();

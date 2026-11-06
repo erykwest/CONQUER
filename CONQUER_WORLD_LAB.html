@@ -270,6 +270,8 @@
 
     .cell { cursor: pointer; transition: filter .14s ease; }
     .cell:hover { filter: brightness(1.14); }
+    .cell[data-terrain="sea"] { cursor: default; }
+    .cell[data-terrain="sea"]:hover { filter: none; }
     .micro-edge { pointer-events: none; opacity: .52; }
     .macro-edge { pointer-events: none; }
     .coastline-line { fill: none; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
@@ -3354,6 +3356,16 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
       }
 
       function render() {
+        selectedMacros = new Set([...selectedMacros].filter(id => state.terrain[id] !== 'sea'));
+        if (selectedMacro !== null && state.terrain[selectedMacro] === 'sea') {
+          selectedMacro = selectedMacros.values().next().value ?? null;
+          if (selectedMacro === null) {
+            selection.innerHTML = '<strong>Nessun territorio selezionato</strong><span>Seleziona una cella di terra o lago per ispezionarla</span>';
+            document.getElementById('openLocalDemo').disabled = true;
+            document.getElementById('openSelectedLocalDemo').disabled = true;
+            setMenuVisible(false);
+          }
+        }
         clearSvg();
         const defsLayer = svgElement('defs');
         const cellsLayer = svgElement('g', { id: 'cellsLayer' });
@@ -3378,6 +3390,8 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
             fill: macroFill(cell.macroId),
             class: 'cell',
             'data-macro': cell.macroId,
+            'data-terrain': state.terrain[cell.macroId],
+            'aria-disabled': state.terrain[cell.macroId] === 'sea' ? 'true' : 'false',
             'data-cell': cell.id,
             'aria-label': `Cella base ${cell.localIndex + 1}, territorio ${macroCode(cell.macroRow, cell.macroCol)}`
           });
@@ -3794,6 +3808,7 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         }
       }
       function selectMacro(macroId, extendSelection = false) {
+        if (!state?.macros[macroId] || state.terrain[macroId] === 'sea') return;
         if (extendSelection) {
           if (selectedMacros.has(macroId)) selectedMacros.delete(macroId);
           else selectedMacros.add(macroId);
@@ -3844,7 +3859,7 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
 
       document.getElementById('openSelectedLocalDemo').addEventListener('click',()=>document.getElementById('openLocalDemo').click());
       document.getElementById('openLocalDemo').addEventListener('click',()=>{
-        if(!state||selectedMacros.size!==1||selectedMacro===null)return;
+        if(!state||selectedMacros.size!==1||selectedMacro===null||state.terrain[selectedMacro]==='sea')return;
         const macro=state.macros[selectedMacro],ids=conquerNeighbors(selectedMacro);
         const riverEdges=new Set(state.generatedRiverEdges||[]);
         const touchingRivers=state.edges.filter(edge=>{

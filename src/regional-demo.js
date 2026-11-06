@@ -2,11 +2,18 @@
 // Disposable local-map previews. Loaded before core so no player save is read or written.
 (()=>{
   const params=new URLSearchParams(location.search),allowed=['plains','hills','valley','river','forest','mountains','sea','swamp','lake'];
+  const coastalDemos={gulf:'Golfi · 1 lato',headland:'Promontorio · 2 lati',peninsula:'Penisola · 3 lati',island:'Isola · 4 lati'};
   let demo=null;
   if(params.has('regionalDemo')){
     try{demo=JSON.parse(params.get('regionalData')||sessionStorage.getItem('conquer.regional-demo.'+params.get('regionalDemo'))||'null')}catch{}
     const biome=window.ConquerRegionalBiomeRules?.biomeForTerrain(demo?.terrain);
     if(biome)demo.biome=biome;else demo=null;
+  }else if(Object.hasOwn(coastalDemos,params.get('demo'))){
+    const preset=params.get('demo'),count=['gulf','headland','peninsula','island'].indexOf(preset)+1;
+    const sides=['north','east','south','west'].slice(0,count),terrain=Object.fromEntries(Object.keys(window.ConquerRegionalBiomeRules.directions).map(k=>[k,'plain']));
+    for(const side of sides)terrain[side]='sea';
+    for(const [d,a,b] of [['northEast','north','east'],['southEast','south','east'],['southWest','south','west'],['northWest','north','west']])if(sides.includes(a)&&sides.includes(b))terrain[d]='sea';
+    demo={version:1,biome:'plains',preset,seed:Number(params.get('seed')||4242),name:coastalDemos[preset],neighbors:[],surroundings:Object.fromEntries(Object.entries(terrain).map(([k,v])=>[k,{terrain:v,source:'demo'}]))};
   }else if(params.get('demo')==='mixed'){
     const terrain={north:'hills',northEast:'forest',east:'forest',southEast:'plain',south:'sea',southWest:'sea',west:'forest',northWest:'plain'};
     demo={version:1,biome:'plains',seed:Number(params.get('seed')||4242),name:'Fronte misto · campioni demo',neighbors:[],hasRiver:true,riverSides:['west'],surroundings:Object.fromEntries(Object.entries(terrain).map(([k,v])=>[k,{terrain:v,source:'demo'}]))};
@@ -42,7 +49,8 @@
     const intro=document.createElement('p');intro.textContent='Seed '+State.seed+' · Bioma centrale: '+BIOMES[State.biome].label+(info.hasRiver?' · Fiume di confine aggiuntivo.':'.')+' Prova temporanea: nessun salvataggio della partita.';panel.append(intro);
     const controls=document.createElement('div');
     const select=document.createElement('select');select.setAttribute('aria-label','Scenario demo');
-    for(const biome of allowed)select.add(new Option(BIOMES[biome].label,biome));select.value=State.biome;
+    for(const biome of allowed)select.add(new Option(BIOMES[biome].label,biome));
+    for(const [key,label] of Object.entries(coastalDemos))select.add(new Option(label,key));select.value=info.preset||State.biome;
     select.onchange=()=>{location.href='index.html?demo='+select.value+'&seed='+info.seed};controls.append(select);panel.append(controls);
     const output=document.createElement('div');output.id='naturalDemoMetrics';panel.append(output);
     const measure=()=>{

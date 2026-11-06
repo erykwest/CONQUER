@@ -28,9 +28,13 @@ window.ConquerMinimap=(()=>{
     if(begun&&close)g.closePath();
     return begun;
   };
-  function fillPoly(points,color,edge=null){
+  function fillPoly(points,color,edge=null,holes=[]){
     if(!poly(points))return;
-    g.fillStyle=color;g.fill();
+    for(const hole of holes){
+      const ring=hole.filter(valid).map(toMap);if(ring.length<3)continue;
+      g.moveTo(ring[0].x,ring[0].y);for(const p of ring.slice(1))g.lineTo(p.x,p.y);g.closePath();
+    }
+    g.fillStyle=color;if(holes.length)g.fill('evenodd');else g.fill();
     if(edge){g.strokeStyle=edge;g.lineWidth=.65;g.stroke()}
   }
   function segment(a,b,color,width){
@@ -80,9 +84,9 @@ window.ConquerMinimap=(()=>{
         const width=Math.max(1.3,(Number(f.width)||1)*drawSize/WORLD);
         for(let i=1;i<points.length;i++)segment(points[i-1],points[i],'#6495a7',width);
       }else if(f.type==='sea'||f.type==='pond'){
-        fillPoly(f.points?.length>2?f.points:oval(f),'#476b77','#8eafb2');
+        fillPoly(f.points?.length>2?f.points:oval(f),'#476b77','#8eafb2',f.holes||[]);
       }else if(f.type==='forest'){
-        fillPoly(f.points?.length>2?f.points:oval(f),State.season==='winter'?'#8b9c89':'#355e39');
+        fillPoly(f.points?.length>2?f.points:oval(f),State.season==='winter'?'#8b9c89':'#355e39',null,f.holes||[]);
       }else if(f.type==='mountain'){
         fillPoly(f.points?.length>2?f.points:oval(f),State.season==='winter'?'#a8afa6':'#726d5d');
       }else if(f.type==='hill'||f.type==='rough'){

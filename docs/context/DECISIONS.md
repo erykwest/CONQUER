@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## REG-COAST-SHAPES — Morfologia costiera (06/11/2026)
+
+Richiesta utente: 1 lato mare produce golfi; 2 lati adiacenti un promontorio roccioso al loro angolo e golfi sui due fronti; 3 lati una penisola; 4 lati un’isola. Per due lati opposti non esiste un angolo comune: conservare due coste a golfo. Deformazione deterministica nelle fasce di blending, senza sommergere il centro terrestre o cambiare i corner diagonali puri. Le rocce del promontorio sono ostacoli reali. Mare non selezionabile nella regionale (chiarimento esplicito); laghi selezionabili.
+
 ## REG-EIGHT-BIOMES — Campioni direzionali (06/11/2026)
 
 Otto direzioni locali non implicano otto confinanti Voronoi distinti: un raggio dal centroide identifica il territorio oltre il primo bordo. Lo stesso confinante puo occupare piu direzioni. Al bordo del mondo si prolunga il terreno selezionato. Fasce 25/25/100/25/25 U e diagonali indipendenti; pesi condivisi tra terreno e componenti. I poligoni composti sono usati da rendering e collisioni. I servizi costieri esistenti ricevono la costa continua principale di ciascun mare; gestione portuale di tutte le coste disconnesse resta fuori da questa iterazione.
