@@ -185,16 +185,27 @@ const CLAY_VISUAL_SWATCHES=Object.freeze({
 });
 let structureVisualMaterial=null;
 function masonryMaterial(s){
-  if(!s||s.material==='wood'||s.type==='palisade'||s.type==='storageYard'||s.type==='road'||s.type==='moat'||(s.type==='bridge'&&s.variant!=='stone'))return null;
+  if(!s||s.material==='wood'||(typeof isTimberLeanTo==='function'&&isTimberLeanTo(s))||s.type==='palisade'||s.type==='storageYard'||s.type==='road'||s.type==='moat'||(s.type==='bridge'&&s.variant!=='stone'))return null;
   return s.masonryMaterial==='brick'?'brick':'stone';
 }
 function withStructureVisualMaterial(s,paint){
   const previous=structureVisualMaterial;
-  structureVisualMaterial=masonryMaterial(s);
+  structureVisualMaterial=(typeof isTimberLeanTo==='function'&&isTimberLeanTo(s))?'timber':masonryMaterial(s);
   try{return paint()}finally{structureVisualMaterial=previous}
+}
+// Timber lean-to: the masonry greys become weathered planks (same light ramp, warm brown).
+const timberTintCache=new Map();
+function timberTint(color){
+  if(!/^#[0-9a-f]{6}$/i.test(color))return color;
+  let out=timberTintCache.get(color);if(out)return out;
+  const n=parseInt(color.slice(1),16),r=n>>16,g=n>>8&255,b=n&255,l=(r+g+b)/3;
+  if(Math.max(r,g,b)-Math.min(r,g,b)>40)return color;   // already coloured (doors, banners)
+  const h=v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0');
+  out='#'+h(l*1.08+14)+h(l*.80+6)+h(l*.52);timberTintCache.set(color,out);return out;
 }
 function visualPaletteColor(color){
   if(typeof color!=='string')return color;
+  if(structureVisualMaterial==='timber'&&typeof timberTint==='function')return timberTint(color);
   return (State.visualPalette==='clay'||structureVisualMaterial==='brick')
     ?CLAY_VISUAL_SWATCHES[color.toLowerCase()]||color:color;
 }
@@ -487,6 +498,9 @@ function isLonghouse(s){return s?.type==='built'&&s.material==='wood'}
 // Lean-to (settlement-lean-to.js): a W1 section against the inner face of an H2 wall, one storey,
 // single-pitch roof under the wall walk.
 function isLeanTo(s){return s?.type==='built'&&s.leanTo===true&&!isLonghouse(s)&&!isWideBuilt(s)}
+// Lean-to material: timber frame + thatch (default), or stone / brick masonry with the slate/tile roof.
+function leanToMaterial(s){return !isLeanTo(s)?null:s.leanMaterial==='stone'||s.leanMaterial==='brick'?s.leanMaterial:'wood'}
+function isTimberLeanTo(s){return leanToMaterial(s)==='wood'}
 // W1 section with the portico skin: its ground floor is the open arcade (the W2 hall keeps its hall).
 function isBuiltPortico(s){return s?.type==='built'&&!isWideBuilt(s)&&builtSkin(s)==='arcade'}
 // Semantic gameplay hook: combat can query this later without depending on renderer details.
@@ -564,9 +578,9 @@ const GATE_TIMBER_COST=Object.freeze({gold:8,wood:18}),GATE_JETTY=.07;
 // slopes over the front and the rear (gables on the flanks), so the whole gate stays low.
 const GATE_TIMBER_FLOOR=1.4,GATE_TIMBER_EAVES=2.6,GATE_TIMBER_RIDGE=GATE_TIMBER_EAVES+.84;
 function gateTimberUpper(s){return isSmallGate(s)&&!s.brokenTop&&structureLevel(s)===2&&structureVariant(s,'upper')==='timber'}
-function maxStructureLevel(s){return isLonghouse(s)||isLeanTo(s)?1:isSmallGate(s)?SMALL_GATE_MAX_LEVEL:['tower','gate'].includes(s?.type)?3:2}
+function maxStructureLevel(s){return isLonghouse(s)||(typeof isLeanTo==='function'&&isLeanTo(s))?1:isSmallGate(s)?SMALL_GATE_MAX_LEVEL:['tower','gate'].includes(s?.type)?3:2}
 function structureLevel(s){
-  if(isWoodGate(s)||isLonghouse(s)||isLeanTo(s))return 1;
+  if(isWoodGate(s)||isLonghouse(s)||(typeof isLeanTo==='function'&&isLeanTo(s)))return 1;
   return clamp(Math.round(Number(s?.level)||1),1,maxStructureLevel(s))
 }
 function houseLevel(s){return clamp(Math.round(Number(s?.houseLevel)||1),1,4)}
@@ -821,6 +835,7 @@ function baseConstructionCost(s){
   if(isCivic(s))return {...COSTS[s.type]};
   if(s.type==='wall')return scaleCost(Object.fromEntries(Object.entries(COSTS.wallPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
   if(s.type==='palisade')return roundCost(Object.fromEntries(Object.entries(COSTS.palisadePerU).map(([k,v])=>[k,v*s.length])));
+  if((typeof isTimberLeanTo==='function'&&isTimberLeanTo(s)))return roundCost(Object.fromEntries(Object.entries(COSTS.longhousePerU).map(([k,v])=>[k,v*.7*s.length])));
   if(isLonghouse(s))return roundCost(Object.fromEntries(Object.entries(COSTS.longhousePerU).map(([k,v])=>[k,v*s.length*builtWidth(s)])));
   if(s.type==='built')return scaleCost(Object.fromEntries(Object.entries(COSTS.builtPerU).map(([k,v])=>[k,v*s.length*builtWidth(s)])),levelCostFactor(s));
   return{};
@@ -868,6 +883,7 @@ function buildDuration(s){
   if(isCivic(s))return BUILD_DAYS[s.type];
   if(s.type==='wall')return (BUILD_DAYS.wallBase+BUILD_DAYS.wallPerU*s.length)*(.75+.25*structureLevel(s));
   if(s.type==='palisade')return BUILD_DAYS.palisadeBase+BUILD_DAYS.palisadePerU*s.length;
+  if((typeof isTimberLeanTo==='function'&&isTimberLeanTo(s)))return BUILD_DAYS.longhouseBase+BUILD_DAYS.longhousePerU*s.length;
   if(isLonghouse(s))return BUILD_DAYS.longhouseBase+BUILD_DAYS.longhousePerU*s.length*builtWidth(s);
   if(s.type==='built')return (BUILD_DAYS.builtBase+BUILD_DAYS.builtPerU*s.length*builtWidth(s))*(.75+.25*structureLevel(s));
   if(s.type==='moat')return .8+(s.length||1)*(s.variant==='water'?.9:.65)*(s.width||1.5)/1.5;

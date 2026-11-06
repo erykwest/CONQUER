@@ -444,8 +444,9 @@ function drawBuiltDetails(s,preview=false){
   const a0=w2s(g.p[0],g.h),a1=w2s(g.p[1],g.h),b0=w2s(g.p[3],g.h),b1=w2s(g.p[2],g.h);
   const ra=w2s(g.ridgeA,g.ridgeH),rb=w2s(g.ridgeB,g.ridgeH);
   const winter=State.season==='winter';
-  const faceA={poly:[a0,a1,rb,ra],fill:preview?'rgba(58,61,66,.62)':(winter?WINTER_SNOW_A:'#34363a'),depth:(a0.y+a1.y)/2};
-  const faceB={poly:[b0,b1,rb,ra],fill:preview?'rgba(70,73,78,.62)':(winter?WINTER_SNOW_B:'#42454a'),depth:(b0.y+b1.y)/2};
+  const thatch=isTimberLeanTo(s);   // timber lean-to: thatch instead of slate
+  const faceA={poly:[a0,a1,rb,ra],fill:preview?'rgba(58,61,66,.62)':(winter?WINTER_SNOW_A:thatch?'#b8995a':'#34363a'),depth:(a0.y+a1.y)/2};
+  const faceB={poly:[b0,b1,rb,ra],fill:preview?'rgba(70,73,78,.62)':(winter?WINTER_SNOW_B:thatch?'#a4864a':'#42454a'),depth:(b0.y+b1.y)/2};
 
   withBuiltRoofOcclusionClip(s,()=>{
     for(const face of [faceA,faceB].sort((a,b)=>a.depth-b.depth)){

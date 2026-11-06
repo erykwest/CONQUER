@@ -44,8 +44,11 @@
       ['Mura',['Long house W2',{type:'built',material:'wood',span:'wide',level:1,flip:true}]],
       ['Mura',['Long house W1 · scuderia',{type:'built',material:'wood',level:1,functions:['stables']}]],
       // Lean-to against the inner face of an H2 wall (settlement-lean-to.js): single-pitch roof.
-      ['Mura',['Addossato alle mura W1',{type:'built',leanTo:true,leanSide:1,flip:true,level:1,functions:[]}]],
-      ['Mura',['Addossato alle mura W1 · scuderia',{type:'built',leanTo:true,leanSide:-1,level:1,functions:['stables']}]],
+      // Timber + thatch by default; stone and brick on request.
+      ['Mura',['Addossato alle mura W1 · legno',{type:'built',leanTo:true,leanMaterial:'wood',leanSide:1,flip:true,level:1,functions:[]}]],
+      ['Mura',['Addossato alle mura W1 · legno · scuderia',{type:'built',leanTo:true,leanMaterial:'wood',leanSide:-1,level:1,functions:['stables']}]],
+      ['Mura',['Addossato alle mura W1 · pietra',{type:'built',leanTo:true,leanMaterial:'stone',leanSide:1,flip:true,level:1,functions:[]}]],
+      ['Mura',['Addossato alle mura W1 · mattoni',{type:'built',leanTo:true,leanMaterial:'brick',masonryMaterial:'brick',leanSide:1,flip:true,level:1,functions:[]}]],
       ['Mura',['Long house W2 · sala comune',{type:'built',material:'wood',span:'wide',level:1,flip:true,functions:['commonHall']}]],...G.gates.map(r=>['Porte',r])]
       .map(([family,[label,spec]])=>({id:slug(label),label,family,spec})).concat(shopVariants());
   }

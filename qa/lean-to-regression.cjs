@@ -14,6 +14,8 @@ const src=[
   pick(core,/function builtInteriorFloors\([^\n]*\n/,'builtInteriorFloors'),
   pick(core,/function isLonghouse\([^\n]*\n/,'isLonghouse'),
   pick(core,/function isLeanTo\([^\n]*\n/,'isLeanTo'),
+  pick(core,/function leanToMaterial\([^\n]*\n/,'leanToMaterial'),
+  pick(core,/function isTimberLeanTo\([^\n]*\n/,'isTimberLeanTo'),
   pick(core,/function maxStructureLevel\([^\n]*\n/,'maxStructureLevel'),
   pick(core,/function structureLevel\([\s\S]*?\n\}/,'structureLevel'),
   pick(structures,/function builtRoofFootprintPoints\([\s\S]*?\n\}/,'builtRoofFootprintPoints'),
@@ -31,7 +33,7 @@ function fixture(structures){
     isKeepW4:()=>false,civicLevel:()=>1,towerTier:()=>2,masonryMaterial:()=>'stone',hasCastleSnap:v=>!!v,
     structureHeight:height,
     pointSegmentDistance:(p,a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy)));return Math.hypot(p.x-a.x-dx*t,p.y-a.y-dy*t)}});
-  vm.runInContext(src+'\nthis.api={isLeanTo,structureLevel,builtRoofGeometry,functionCapacity};',ctx);
+  vm.runInContext(src+'\nthis.api={isTimberLeanTo,leanToMaterial,isLeanTo,structureLevel,builtRoofGeometry,functionCapacity};',ctx);
   return{L:ctx.window.ConquerLeanTo,...ctx.api,State};
 }
 const wall=(o={})=>({id:'wall',type:'wall',a:{x:0,y:0},b:{x:8,y:0},length:8,width:.5,tier:2,level:2,aSnap:'tA',bSnap:'tB',...o});
@@ -70,6 +72,17 @@ const wall=(o={})=>({id:'wall',type:'wall',a:{x:0,y:0},b:{x:8,y:0},length:8,widt
   assert.match(fixture([wall(),{id:'old',type:'built',leanTo:true,leanWallId:'wall'}]).L.atPoint({x:4,y:0}).reason,/already/,'one per wall');
   assert.ok(!fixture([wall()]).L.atPoint({x:4,y:5}).ok,'far from any wall');
   console.log('PASS lean-to placement rules');
+}
+// Material: timber + thatch by default, stone or brick on request.
+{
+  const f=fixture([wall()]);
+  const wood=f.L.atPoint({x:4,y:-.6}).structure;
+  assert.ok(f.isTimberLeanTo(wood)&&f.leanToMaterial(wood)==='wood','timber by default');
+  const stone=f.L.atPoint({x:4,y:-.6},'stone').structure,brick=f.L.atPoint({x:4,y:-.6},'brick').structure;
+  assert.ok(!f.isTimberLeanTo(stone)&&f.leanToMaterial(stone)==='stone'&&stone.masonryMaterial==='stone','stone on request');
+  assert.ok(f.leanToMaterial(brick)==='brick'&&brick.masonryMaterial==='brick','brick on request');
+  assert.match(read('settlement-castle3d.js')+read('settlement-castle-structures.js'),/isTimberLeanTo\(s\)[^\n]*thatch/,'thatch roof for timber');
+  console.log('PASS lean-to in timber with thatch, or stone / brick');
 }
 // Simulated effect: the siege/economy capacities count the rooms of every built section, the
 // lean-to included (no lean-to exclusion in eligibleRoom/allowed).

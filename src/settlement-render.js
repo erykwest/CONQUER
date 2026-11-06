@@ -172,7 +172,7 @@ function renderCastleBodyContent(){
   if(window.ConquerCastle3D?.drawBody?.())return;
   // A merged single-colour 2D union cannot represent distinct wall/brick components.
   // Use the existing per-structure fallback for mixed masonry; do not rewrite topology.
-  const hasBrick=castleBodyRenderableStructures().some(s=>masonryMaterial(s)==='brick');
+  const hasBrick=castleBodyRenderableStructures().some(s=>masonryMaterial(s)==='brick'||(typeof isTimberLeanTo==='function'&&isTimberLeanTo(s)));
   const unionOk=hasBrick?false:drawCastleUnion();
   if(!unionOk){
     const fallback=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)&&!structureCutaway(s)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));

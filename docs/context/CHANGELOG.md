@@ -1,6 +1,6 @@
 # Livello 5 — Diario delle variazioni del contesto
 
-05/11/2026 — `feature/wall-buildings`: edificio addossato alle mura (sezione W1, una stanza, contro muri H2) con tetto a falda unica sotto il camminamento. Piramide: STATUS, BACKLOG; backlog Builder: BC-251105-03/10.
+05/11/2026 — `feature/wall-buildings`: edificio addossato alle mura (sezione W1, una stanza, contro muri H2) con tetto a falda unica sotto il camminamento. Di default in legno con tetto in paglia, a scelta pietra o mattoni. Piramide: STATUS, BACKLOG; backlog Builder: BC-251105-03/10.
 
 05/11/2026 — `feature/founding-storage-yard-20261105` (pre-merge): aggiunto il tipo `storageYard` «Piazzale · Magazzino», 2×2U, fondazione entro 7U dal primo pozzo, espandibile a 4×4/6×6 con costi e collisioni, inventario visualizzato direttamente dal ledger unico del castello. Garantito un L1 al taglialegna con piazzale anche in presenza di saturazione cantieri; risolta la mancata crescita apparente del legname: quota trattenuta della produzione Logging Camp ora nel magazzino entro capienza, eccedenza sul mercato, anziché restare azzerata dall'obiettivo riserva 70 a fronte di stock iniziale 200. Salvataggi vecchi migrati senza stock duplicato; Canvas, World3D e tre mesh in Asset Lab (categoria Produzione); test specifici e CI Economy flows. ROADMAP invariata, DECISIONS/BACKLOG/STATUS e feature-backlog aggiornati.
 

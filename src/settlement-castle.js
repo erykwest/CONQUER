@@ -229,7 +229,7 @@ function structureHeight(s){
   if(s.type==='gate')return isWoodGate(s)?1.94:gateTimberUpper(s)?GATE_TIMBER_EAVES:(isSmallGate(s)?[2.4,3.6]:[2.8,4.0,5.2])[structureLevel(s)-1];
   if(s.type==='wall')return [1.15,2.10][structureLevel(s)-1];
   if(s.type==='palisade')return 1.15;
-  if(isLeanTo(s))return window.ConquerLeanTo?.EAVES??1.40;
+  if((typeof isLeanTo==='function'&&isLeanTo(s)))return window.ConquerLeanTo?.EAVES??1.40;
   if(s.type==='built')return isLonghouse(s)?(isWideBuilt(s)?2.07:1.77):[1.75,2.80][structureLevel(s)-1];
   if(s.type==='well')return .42;
   if(s.type==='storageYard')return .55;

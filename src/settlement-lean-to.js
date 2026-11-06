@@ -21,7 +21,8 @@
     return best;
   }
   // The section along the interior face of wall w (null + reason when it cannot stand there).
-  function make(w){
+  // material: 'wood' (timber + thatch, default), 'stone' or 'brick' (masonry, slate / tile roof).
+  function make(w,material=State.tool?.leanMaterial||'wood'){
     if(!w)return{ok:false,reason:'Click on the inner face of a curtain wall'};
     if(w.type!=='wall')return{ok:false,reason:'A lean-to stands against a curtain wall only'};
     if(underConstruction(w))return{ok:false,reason:'The wall is still under construction'};
@@ -35,13 +36,14 @@
     const s={
       id:uid(),type:'built',leanTo:true,leanWallId:w.id,leanSide:side,
       width:TYPES.built.width,level:1,flip:side===1,functions:[],
-      masonryMaterial:masonryMaterial(w)||State.buildMasonryMaterial,
+      leanMaterial:['stone','brick'].includes(material)?material:'wood',
+      masonryMaterial:material==='brick'?'brick':'stone',
       a:{x:w.a.x+ux*pa+ix,y:w.a.y+uy*pa+iy},b:{x:w.b.x-ux*pb+ix,y:w.b.y-uy*pb+iy},
       length,rotationStep:w.rotationStep
     };
     return{ok:true,structure:s};
   }
-  function atPoint(p){return make(nearestWall(p))}
+  function atPoint(p,material){return make(nearestWall(p),material)}
   // Roof heights: eaves on the open side, the top edge on the wall a hand under the walk.
   const EAVES=1.40,UNDER_WALK=.12;
   function roofTop(s){

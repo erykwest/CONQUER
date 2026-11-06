@@ -97,7 +97,7 @@ const CATALOG = [
         opt(V.longhouse, '[data-linear="longhouse"]', wood && !wide),
         opt(V.longhouseWide, '[data-linear="longhouseWide"]', wood && wide),
         opt(V.leanTo, '[data-linear="leanTo"]', lean)] }];
-      if (lean) return rows;
+      if (lean) return [...rows, { label: O.material, options: [['wood', V.leanWood], ['stone', V.leanStone], ['brick', V.leanBrick]].map(([m, l]) => opt(l, `[data-lean-material="${m}"]`, (s.tool.leanMaterial || 'wood') === m)) }];
       if (kind !== 'built') rows.push({ label: O.tier, options: [1, 2, 3].map(n => opt('T' + n, `[data-wall-tier="${n}"]`, s.levels.wallTier === n)) });
       if (kind !== 'palisade' && !wood) rows.push({ label: O.height, options: [1, 2].map(n => opt(String(n), `[data-wall-level="${n}"]`, (wide ? s.levels.builtWide : s.levels.wall) === n)) });
       if (kind !== 'palisade' && !wood) rows.push(masonryRow(s));
