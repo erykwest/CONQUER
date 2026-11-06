@@ -35,6 +35,14 @@ canvas.addEventListener('pointerdown',e=>{
     if(addStructure(quay)){State.draft=null;status('Banchina costruita — scegli il prossimo punto A')}
     draw();return
   }
+  if(State.tool.kind==='slopeway'){
+    // Ramp / stairway: bank A on one plateau, bank B on the other (settlement-slopeways.js).
+    const W=window.ConquerSlopeways,q={x:snapGrid(p.x),y:snapGrid(p.y)};
+    if(!State.draft?.a){State.draft={a:q,preview:null};status(W.SPEC[State.tool.slopeway].label+': attacco A fissato — clicca l’altro pianoro');draw();return}
+    const way={id:uid(),masonryMaterial:State.buildMasonryMaterial,...W.make(State.tool.slopeway,State.draft.a,q)};
+    if(addStructure(way)){State.draft=null;status(W.SPEC[way.type].label+' in costruzione · dislivello '+Math.abs(way.zb-way.za).toFixed(1)+'U — scegli il prossimo attacco')}
+    draw();return
+  }
   if(!inBuild(p)){status('Build only inside the central 100×100U area');return}
   if(State.tool.kind==='terraform'){
     const ghost=window.ConquerTerraforming?.preview(p,State.tool);
@@ -219,6 +227,17 @@ canvas.addEventListener('pointermove',e=>{
     State.draft.preview=preview.length>=.02?preview:null;
     const v=State.draft.preview&&window.ConquerPlacement?.check(State.draft.preview);
     status(v&&!v.ok?'Banchina: '+v.reason:(m?'⚓ ':'')+'Banchina '+preview.length.toFixed(1)+'U — clicca il punto B');
+    draw();return;
+  }
+  if(State.tool.kind==='slopeway'){
+    if(!State.draft?.a)return;
+    const W=window.ConquerSlopeways,b={x:snapGrid(p.x),y:snapGrid(p.y)};
+    const preview=W.make(State.tool.slopeway,State.draft.a,b),v=preview.length>=.5?window.ConquerPlacement?.check(preview,{checkCost:false}):null;
+    const survey=preview.length>=.5?W.validate(preview):null;
+    State.draft.preview=survey?.ok?{...preview,za:survey.za,zb:survey.zb}:null;
+    State.draft.invalidPreview=survey&&!survey.ok?preview:null;
+    status(!survey?W.label(State.tool.slopeway):!survey.ok?survey.reason:v&&!v.ok?v.reason:
+      W.SPEC[preview.type].label+' '+preview.length.toFixed(1)+'U · dislivello '+survey.rise.toFixed(1)+'U · pendenza 1:'+(1/survey.grade).toFixed(1)+' · '+costText(W.cost(preview))+' — clicca per confermare');
     draw();return;
   }
   if(State.tool.kind==='crossing'){
@@ -524,6 +543,11 @@ for(const b of document.querySelectorAll('[data-industry]'))b.onclick=()=>{
    setTool({kind:'pier',placementSpec:spec,label:P.label(spec)+' · '+P.buildDays(spec)+'d · '+costText(P.cost(spec)),el:b});
  };
  // Stone quay (settlement-quay.js): two clicks, along the shore or out in the water.
+ for(const b of document.querySelectorAll('[data-slopeway]'))b.onclick=()=>{
+   const W=window.ConquerSlopeways;if(!W)return;
+   const type=b.dataset.slopeway==='stairway'?'stairway':'ramp';
+   setTool({kind:'slopeway',slopeway:type,label:W.label(type)+' · 2 clic: pianoro basso e pianoro alto · '+costText(W.SPEC[type].costPerU)+'/U',el:b});
+ };
  for(const b of document.querySelectorAll('[data-quay]'))b.onclick=()=>{
    const Q=window.ConquerQuay;if(!Q)return;
    setTool({kind:'quay',label:Q.label()+' · 2 clic · lungo la riva o in acqua · '+costText(Q.SPEC.costPerU)+'/U',el:b});

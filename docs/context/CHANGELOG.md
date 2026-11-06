@@ -1,5 +1,7 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+06/11/2026 — `feature/ramps-stairs`: BC-251105-12/13 rampe e scalinate sui dislivelli (`src/settlement-slopeways.js`), costruibili, percorribili dal pathfinding (carri e mezzi pesanti solo sulle rampe), nel Lab con audit; test `qa/slopeways-regression.cjs`. Piramide: STATUS, BACKLOG, feature-backlog. ROADMAP e DECISIONS invariate: nuova struttura dentro contratti esistenti (attraversamenti come i ponti).
+
 05/11/2026 — `fix/audit-sheet-grid`: i fogli provini per categoria vanno a griglia da 8 colonne. Lo sfondo neutro evita che le celle vuote sembrino un esito verde. Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è uno strumento di QA, non cambia contratti.
 
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`)

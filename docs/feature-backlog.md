@@ -61,8 +61,8 @@
 - [ ] **BC-251105-11 — Giardino.** Nuovo elemento del Builder/ambiente; dimensioni, tipologia e ruolo (decorativo o funzionale) da definire prima dell'implementazione.
 
 ### Terreno e percorsi su dislivelli
-- [ ] **BC-251105-12 — Rampe per superare i dislivelli.** Elemento costruibile per connettere due quote del terreno, anche in presenza di pendii scoscesi e terrazzamenti; valutare pendenze massime, sviluppo e raccordi con strade, suolo e percorsi delle unità. Verificare separatamente l'eventuale percorribilità dei carri.
-- [ ] **BC-251105-13 — Scalinate per pendii e colline.** Elemento costruibile a gradini per collegare quote diverse su versanti ripidi, con attacco a pianori/terrazzamenti, corretto orientamento e accessibilità pedonale; distinta dalle scale che salgono ai camminamenti delle mura (BC-251105-01/02).
+- [x] **BC-251105-12 — Rampe per superare i dislivelli.** *(Branch `feature/ramps-stairs`, 06/11: rampa 2U, pendenza max 1:4, sviluppo 2–16U, rilevato contro il pendio; pedoni, mezzi pesanti e carri via grafo stradale; non in main.)* Elemento costruibile per connettere due quote del terreno, anche in presenza di pendii scoscesi e terrazzamenti; valutare pendenze massime, sviluppo e raccordi con strade, suolo e percorsi delle unità. Verificare separatamente l'eventuale percorribilità dei carri.
+- [x] **BC-251105-13 — Scalinate per pendii e colline.** *(Branch `feature/ramps-stairs`, 06/11: scalinata 1U, pendenza 1:4–1:1, gradini sul terreno reale, solo pedoni; non in main.)* Elemento costruibile a gradini per collegare quote diverse su versanti ripidi, con attacco a pianori/terrazzamenti, corretto orientamento e accessibilità pedonale; distinta dalle scale che salgono ai camminamenti delle mura (BC-251105-01/02).
 
 **Accettazione BC-12/13:** la geometria segue le quote reali del terreno; entrambe le estremità si connettono a superfici percorribili; il pathfinding delle unità riconosce i collegamenti, senza attraversare pendii non accessibili; costruzione, collisioni, salvataggio e visualizzazione 3D/2.5D sono verificati.
 

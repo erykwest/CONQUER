@@ -613,6 +613,7 @@
       if(window.ConquerEvents3D?.is(s))window.ConquerEvents3D.addToBuilder(m,s);   // event venues and their setups
       else if(window.ConquerPier?.is(s))window.ConquerPier.addToBuilder(m,s);      // timber pier over the sea
       else if(window.ConquerQuay?.is(s))window.ConquerQuay.addToBuilder(m,s);      // stone quay
+      else if(window.ConquerSlopeways?.is(s))window.ConquerSlopeways.addToBuilder(m,s);  // ramp / stairway
       else if(isCivic(s))withStructureVisualMaterial(s,()=>addCivic(m,s,winter));
       else if(isCivicAnnex(s))withStructureVisualMaterial(s,()=>addCivicAnnex(m,s,winter));
       else if(window.ConquerIndustries?.is(s)){

@@ -40,6 +40,7 @@ function drawStructure(s,preview=false){
     else if(window.ConquerEvents3D?.is(s))window.ConquerEvents3D.draw(s,preview);   // event venues (settlement-events3d.js)
     else if(window.ConquerPier?.is(s))window.ConquerPier.draw(s,preview);           // timber pier (settlement-pier.js)
     else if(window.ConquerQuay?.is(s))window.ConquerQuay.draw(s,preview);           // stone quay (settlement-quay.js)
+    else if(window.ConquerSlopeways?.is(s))window.ConquerSlopeways.draw(s,preview); // ramp / stairway (settlement-slopeways.js)
     else if(isCivic(s))drawCivicStructure(s,preview);
     else if(isCivicAnnex(s))drawCivicAnnex(s,preview);
     else if(['tower','gate','well'].includes(s.type))drawPointStructure(s,preview);
