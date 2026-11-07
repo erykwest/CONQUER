@@ -7,6 +7,14 @@
 - **NON COMPRESO:** nuovi asset SVG, sfumature spaziali dentro la singola chioma, caduta/diminuzione del fogliame o biologia per specie; lavoro forestale e produzione legno non modificati.
 
 
+
+## 2026-11-07 — CAMP, recupero bivacchi notturni (fix sul branch `fix/camp-bivouac-night-20261107`)
+
+- **CORRETTO SU BRANCH, NON ANCORA MAIN:** unità in `camped` all'esterno della Yellow Zone devono avere una tenda visibile anche quando `ConquerEvents3D.bivouacMeshes()` è vuoto per collisioni/ostacoli; fallback Canvas mirato ai gruppi senza tende e disegno 3D per gli altri.
+- **COPERTURA QA AGGIUNTA:** percorso bivacco 3D normale, mesh vuote e gruppi misti (oltre ai controlli esistenti su rientro notturno in caserma, pattuglie White, alba e fuochi). **APERTO:** verifica reale nel browser a notte simulata e riscontro del problema segnalato su una partita preesistente.
+- **INVARIATI:** contratto Yellow/White, calendario, comportamento pattuglie, roadmap e decisioni di gioco; nessun nuovo modello né feature richiesta.
+
+
 ## 2026-11-06 — CI P2.3: trigger per branch inesistenti
 
 - **INTERVENTO SU BRANCH `chore/ci-p23-stale-push-triggers-20261106`:** pulizia di 8 occorrenze obsolete (camp, cans, audit-hardening, circle, combat, mare, feature/cutaway-furniture-converge) in 7 workflow. Nessuna branch Git eliminata; PR/main/manuali preservati.

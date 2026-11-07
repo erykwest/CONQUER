@@ -3,6 +3,10 @@
 07/11/2026 — branch `autumn` (pre-merge): sostituite le chiome brune uniformi con evoluzione di 91 giorni da verde estivo a giallo, oro, arancione, rosso e marrone, asincrona per posizione/seed. Canvas invalida due cache statiche al cambio del giorno autunnale; WebGL2 riutilizza l'atlante e ricostruisce solo i vertici UV, senza nuovi SVG. Aggiunto `qa/autumn-foliage-regression.cjs` a Runtime integrity, cache-busting script, STATUS/BACKLOG/DECISIONS e feature-backlog. Parsing JS e prova logica in sessione, CI/browser da verificare. Nessun merge in `main` e ROADMAP invariata.
 
 
+
+07/11/2026 — fix CAMP `fix/camp-bivouac-night-20261107` (pre-merge): ripristinata la visibilità delle tende durante i bivacchi notturni anche con mesh 3D vuote o parzialmente eliminate dal filtro ostacoli; modello Canvas di sicurezza per le sole unità senza tenda, con gli altri bivacchi che mantengono il 3D. Cache aggiornata per seed/livrea/numero strutture; regressione `qa/camp-regression.cjs` ampliata a render 3D normale, vuoto e misto. QA Actions da verificare; nessuna variazione alle regole Yellow/White, pattuglie o a modelli grafici.
+
+
 06/11/2026 — P2.3 CI (`chore/ci-p23-stale-push-triggers-20261106`): rimossi 8 trigger push per 7 branch inesistenti da 7 workflow; invariati i trigger PR, push su main e workflow manuali. Aggiornato `qa/ci-p1-regression.cjs` come guardia anti-regressione. Nessun test/asset/branch eliminato.
 
 
