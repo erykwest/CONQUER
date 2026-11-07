@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-07 — CAMP, tende notturne mancanti (branch `fix/camp-bivouac-night-20261107`, pre-merge)
+
+- **RISCONTRO SORGENTE:** fuori dall'area gialla l'unità militare entra correttamente in `campState='camped'` durante la notte astronomica; le pattuglie della White Zone non si accampano. Il renderer 3D considerava sufficiente la presenza del catalogo, anche quando il filtro degli ostacoli restituiva **zero mesh/tende**, sopprimendo il fallback Canvas.
+- **CORREZIONE NEL BRANCH:** quando un gruppo non ha alcuna tenda 3D, riattivare le tende Canvas per le unità senza riparo, senza togliere i modelli agli altri accampamenti. Se l'intero bivacco 3D è vuoto, il fallback è completo; se il generatore fallisce, mantiene il rendering Canvas. La cache include seed, livrea e variazioni nel numero delle strutture.
+- **QA:** `qa/camp-regression.cjs` estesa al percorso 3D, tutti i modelli assenti e bivacchi misti. Risultati della CI da verificare tramite PR; controllo visivo nel browser non certificato da questo test. Nessuna modifica a limiti delle zone, percorso delle pattuglie, salvataggi, economia o asset.
+
+
 ## 2026-11-06 — CI P2.3: rimozione trigger obsolete (branch `chore/ci-p23-stale-push-triggers-20261106`)
 
 - **MODIFICA PROPOSTA:** eliminati esclusivamente 8 riferimenti `push` a 7 branch remote inesistenti da 7 workflow, senza cancellare workflow, asset, script di test o branch Git. Confermati i trigger `pull_request` e quelli `push: main` ancora applicabili.

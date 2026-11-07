@@ -75,8 +75,9 @@ assert.equal(troop.campState,null,'squad becomes active at daybreak');
 troop.x=26;troop.y=30;cycle=.95;camp.synchronize();
 assert.equal(troop.campState,'camped','outside yellow builds camp in place');
 assert.equal(troop.target,null,'camp cancels outdoor movement');
+let screenFills=0;
 const screen={
-  beginPath:noop,moveTo:noop,lineTo:noop,closePath:noop,fill:noop,stroke:noop,
+  beginPath:noop,moveTo:noop,lineTo:noop,closePath:noop,fill:()=>screenFills++,stroke:noop,
   arc:noop,save:noop,restore:noop,createRadialGradient:()=>({addColorStop:noop})
 };
 camp.drawEncampments(screen);
@@ -123,6 +124,44 @@ assert.equal(stale.campState,null,'legacy sleeping patrol is awakened even at ni
 assert.equal(stale.nextPatrolAt,0,'patrol AI can calculate a fresh route immediately');
 roster.pop();
 cycle=.3;camp.synchronize();
+// Exercise the real 3D dispatch path, not only the legacy Canvas fallback:
+// blocked placement must not make a camped squad invisible overnight.
+const nightVisual={id:'night-visual',kind:'squad',x:29,y:33,target:null};
+roster.push(nightVisual);
+cycle=.95;camp.synchronize();
+assert.equal(nightVisual.campState,'camped','visual regression fixture reaches camped state');
+state.seed=42;
+let modeled='normal',meshPaints=0;
+win.ConquerEvents3D={
+  bivouac:members=>({camps:members.map(u=>({
+    key:u.id,
+    items:modeled==='blocked'||modeled==='mixed'&&u.id==='night-visual'?[]:[{m:'tentRidge'}],
+    fires:[{x:u.x+.7,y:u.y,id:u.id+':fire'}]
+  }))}),
+  bivouacMeshes:camps=>camps.some(c=>c.items.length)?[{col:['#a99a76']}]:[]
+};
+win.ConquerMesh3D={drawMeshes:()=>meshPaints++,gameView:()=>({})};
+let fillsBefore=screenFills;
+camp.drawEncampments(screen);
+assert.equal(meshPaints,1,'intact bivouac uses Blender-backed mesh renderer');
+assert.equal(screenFills-fillsBefore,1,'intact 3D bivouac only draws its fire in Canvas');
+modeled='blocked';state.seed++;
+fillsBefore=screenFills;
+camp.drawEncampments(screen);
+assert.equal(meshPaints,1,'empty 3D mesh must not conceal the Canvas tent');
+assert.equal(screenFills-fillsBefore,4,'blocked bivouac restores three tent faces and one fire');
+const secondCamp={id:'night-visual-ok',kind:'squad',x:38,y:41,target:null};
+roster.push(secondCamp);camp.synchronize();
+assert.equal(secondCamp.campState,'camped');
+modeled='mixed';state.seed++;
+fillsBefore=screenFills;
+camp.drawEncampments(screen);
+assert.equal(meshPaints,2,'an unaffected camp still uses the 3D mesh');
+assert.equal(screenFills-fillsBefore,5,'only the obstructed squad receives a fallback tent, both have fires');
+roster.splice(roster.indexOf(nightVisual),1);
+roster.splice(roster.indexOf(secondCamp),1);
+delete win.ConquerEvents3D;delete win.ConquerMesh3D;
+cycle=.3;camp.synchronize();
 camp.removeSquad('barracks-1:0');
 assert.equal(roster.length,2,'troop decrement updates roster');
-console.log('CAMP regression passed (barracks, night return, tents/brazier, blocked route, dawn, roster)');
+console.log('CAMP regression passed (barracks, night return, tents/brazier, blocked 3D tents, mixed bivouacs, dawn, roster)');
