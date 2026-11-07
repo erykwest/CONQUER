@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-07 — P3-21 · Finitura stagionale alberi SVG (`autumn`)
+
+- **CODICE SU BRANCH, non ancora merge:** progressione cromatica verde → giallo-verde → giallo → oro → arancione → rosso → marrone dal 1° settembre al 30 novembre, variazione deterministica tra alberi; foreste procedurali e alberi urbani coerenti nel fallback Canvas e in WebGL2. Pini ed inverno invariati.
+- **DA VALIDARE:** regressione dedicata in Runtime integrity e controllo a vista WebGL2/Canvas dei passaggi fra agosto, settembre, ottobre, novembre e dicembre, incluse la modalità DEV forzata e le prestazioni di ricostruzione dei buffer.
+- **NON COMPRESO:** nuovi asset SVG, sfumature spaziali dentro la singola chioma, caduta/diminuzione del fogliame o biologia per specie; lavoro forestale e produzione legno non modificati.
+
+
 ## 2026-11-06 — CI P2.3: trigger per branch inesistenti
 
 - **INTERVENTO SU BRANCH `chore/ci-p23-stale-push-triggers-20261106`:** pulizia di 8 occorrenze obsolete (camp, cans, audit-hardening, circle, combat, mare, feature/cutaway-furniture-converge) in 7 workflow. Nessuna branch Git eliminata; PR/main/manuali preservati.
