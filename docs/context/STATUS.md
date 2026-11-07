@@ -1,5 +1,13 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-07 — Foliage autunnale progressivo (branch `autumn`, non su `main`)
+
+- **IMPLEMENTATO SU BRANCH:** gli alberi SVG delle foreste e degli angoli dei lotti conservano il verde estivo a inizio settembre, poi percorrono sei passaggi cromatici fino al marrone di fine novembre. I giorni di calendario 1 settembre–30 novembre (91) determinano l'avanzamento; ogni albero ha una variazione di fase stabile da posizione e seed, senza rumore per-frame. I pini montani restano verdi e in inverno le chiome decidue restano nascoste.
+- **RENDERING:** fallback Canvas invalida `landscape` e `base` soltanto quando cambia il giorno della progressione. World3D conserva l'atlante delle sprite e aggiorna solo le UV delle chiome al cambio di giorno, evitando di ricreare le texture; SVG originali invariati. Forzando Autunno fuori dai mesi reali, il controllo DEV mostra una fase intermedia.
+- **QA:** parsing dei tre moduli JS e simulazione del calendario/fasi eseguiti nella sessione; `qa/autumn-foliage-regression.cjs` collegata al workflow Runtime integrity. **GitHub Actions e verifica visuale browser ancora da confermare**, nessun merge o deploy su `main`.
+- **SCOPE:** cambiamento solo grafico, nessuna modifica a biomi, economia forestale o regole stagionali; ROADMAP invariata. Decisione D-VIS-AUTUMN-261107.
+
+
 ## 2026-11-06 — CI P2.3: rimozione trigger obsolete (branch `chore/ci-p23-stale-push-triggers-20261106`)
 
 - **MODIFICA PROPOSTA:** eliminati esclusivamente 8 riferimenti `push` a 7 branch remote inesistenti da 7 workflow, senza cancellare workflow, asset, script di test o branch Git. Confermati i trigger `pull_request` e quelli `push: main` ancora applicabili.
