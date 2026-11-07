@@ -1,5 +1,13 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-07 — P3-21 · Finitura stagionale alberi SVG (`autumn`)
+
+- **CODICE SU BRANCH, non ancora merge:** progressione cromatica verde → giallo-verde → giallo → oro → arancione → rosso → marrone dal 1° settembre al 30 novembre, variazione deterministica tra alberi; foreste procedurali e alberi urbani coerenti nel fallback Canvas e in WebGL2. Pini ed inverno invariati.
+- **DA VALIDARE:** regressione dedicata in Runtime integrity e controllo a vista WebGL2/Canvas dei passaggi fra agosto, settembre, ottobre, novembre e dicembre, incluse la modalità DEV forzata e le prestazioni di ricostruzione dei buffer.
+- **NON COMPRESO:** nuovi asset SVG, sfumature spaziali dentro la singola chioma, caduta/diminuzione del fogliame o biologia per specie; lavoro forestale e produzione legno non modificati.
+
+
+
 ## 2026-11-07 — CAMP, recupero bivacchi notturni (fix sul branch `fix/camp-bivouac-night-20261107`)
 
 - **CORRETTO SU BRANCH, NON ANCORA MAIN:** unità in `camped` all'esterno della Yellow Zone devono avere una tenda visibile anche quando `ConquerEvents3D.bivouacMeshes()` è vuoto per collisioni/ostacoli; fallback Canvas mirato ai gruppi senza tende e disegno 3D per gli altri.

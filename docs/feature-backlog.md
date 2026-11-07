@@ -203,6 +203,7 @@
 ## P3 — Rifinitura ambientale
 
 - [x] **P3-21 — Sette varianti di alberi SVG.** **[CORE MAIN · QA/integrazione se necessaria]** Gli asset sono già nel repository: verificare uso effettivo nel renderer forestale, varietà e prestazioni. **Accettazione:** distribuzione seeded, riconoscibilità delle sagome, culling/cache e nessun peggioramento significativo dei frame time.
+  - **Polish stagionale su branch `autumn` (07/11/2026, non su `main`):** progressione autunnale da verde estivo a marrone su 91 giorni, passaggi giallo/arancione/rosso differenziati per posizione e seed, stesso sistema per foreste e alberi di lotto. Test `qa/autumn-foliage-regression.cjs` in CI; verifica grafica WebGL2/Canvas in attesa. Nessun SVG o modello aggiuntivo.
 - [x] **P3-22 — Scatter procedurale antropico.** **[CORE MAIN · QA/integrazione se necessaria]** Preparare circa 25 silhouette nelle sette famiglie: carri, merci, cartelli, ruote/rottami, cataste, attrezzi agricoli e arredi da lavoro. **Accettazione:** distribuzione contestuale (strade, crocevia, cantieri, boschi, periferie), non random uniforme; nessuna interferenza ingiustificata con percorsi e selezione.
 
 **Milestone P3:** alberi e scatter **implementati su main**; soltanto QA/prestazioni/polish correttivo, non nuova generazione da zero.

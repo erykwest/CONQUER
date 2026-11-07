@@ -34,6 +34,8 @@ jobs:
           for file in src/*.js api/*.js; do node --check "$file"; done
       - name: Local diagnostics and disabled remote telemetry
         run: node --test tests/runtime-integrity.test.mjs
+      - name: Autumn foliage calendar and renderer regression
+        run: node qa/autumn-foliage-regression.cjs
       - name: Preserve saves and DEV-only resource floor
         run: node qa/save-safety-regression.cjs
 
