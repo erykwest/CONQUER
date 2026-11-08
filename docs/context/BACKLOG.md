@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-08 — STONECOLOR · Verifica a cascata delle dipendenze
+
+- **CODICE COLLEGATO:** modelli litici principali e sub-asset (case, civici e cimiteri, torri/mura, cantieri, scalinate, rampe, ponti, cave/miniere, massi/sassi di fiume, coste/reef, banchine, interni/cutaway) e relative chiavi di cache. Assenti copie per palette delle mesh e dei registri Blender.
+- **GUARDIA DI MATERIALI:** le palette dei modelli sono interpretate per ruolo `stone*/rock*/paving`, non come tutti i grigi. Esclusi clay/brick, legno, acqua, neve, tetti, muschio, alghe e metallo.
+- **APERTO PER CHIUSURA:** esecuzione completa della CI sull'ultimo commit e verifica visiva di cinque colori su Canvas e World3D, con LOD, inverno, cutaway, costruzione e modifiche da Profilo. Nessuna dichiarazione di copertura completa basata soltanto sui test statici.
+
+
 ## 2026-11-08 — STONECOLOR · Materiali litici per mappa
 
 - **PALETTE APPROVATE:** Grigio attuale, Arenaria (beige mineralizzato, distinta dalla terracotta Clay), Tufo ocra, Calcare bianco-grigio, Granito grigio scuro. Cinque tonalità coordinate luce → ombra profonda per ciascuna.
