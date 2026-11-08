@@ -234,7 +234,7 @@
     const box=(a0,a1,c0,c1,z0,z1,c)=>{
       const v=[];for(const a of [a0,a1])for(const k of [c0,c1])for(const z of [z0,z1])v.push(P(a,k,z));
       for(const [i,j,k,l] of [[0,2,6,4],[1,5,7,3],[0,4,5,1],[2,3,7,6],[0,1,3,2],[4,6,7,5]])
-        for(const tri of [[i,j,k],[i,k,l]]){for(const q of tri)pos.push(...v[q]);col.push(c===DARK||c===WET?c:(window.ConquerStoneColor?.shade(c)||c))}
+        for(const tri of [[i,j,k],[i,k,l]]){for(const q of tri)pos.push(...v[q]);col.push(c===DARK?c:(window.ConquerStoneColor?.shade(c)||c))}
     };
     // Ashlar: a dark mortar core, then blocks in staggered courses standing just proud of it,
     // so every joint reads as a recessed line; four stone tones picked per block.
