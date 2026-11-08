@@ -1,5 +1,8 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+- **FOLLOW-UP VISIVO #184:** verificare in preview le **sette varianti reali** dei cespugli. Correzione al caricamento SVG: invalidare `landscape` oltre a `ground` dopo la decodifica, così Canvas non resta con ellissi fallback identiche. QA dedicata alle sette silhouette in tutte le stagioni; controllo finale preview dopo la CI.
+
+
 ## 2026-11-08 — P0-02 / P3-21 · Densità forestale omogenea e cespugli 1:1
 
 - **CORREZIONE SU BRANCH `fix/forest-density-understory`:** il numero di alberi segue l'area realmente occupabile tramite griglia di passo 2,9 U anziché min/max per singola foresta; grandi macchie non restano rade, piccole macchie non sono forzate a 14 alberi. Una pianta arbustiva per albero, all'interno del bosco, non nelle radure o nelle tracce di strada. Posizioni deterministiche e stabili quando si scavano nuovi varchi.
