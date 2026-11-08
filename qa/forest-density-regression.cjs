@@ -136,7 +136,7 @@ vm.runInContext('loadBoundaryBushSprites()',spriteContext).then(()=>{
     assert.equal(images.length,7,season+' loads seven SVGs');
     assert.equal(new Set(images).size,7,season+' keeps seven distinct silhouettes, not one fallback');
   }
-  assert.match(index,/settlement-boundaries\\.js\\?v=forest-bush-variants1/,
+  assert.match(index,/settlement-boundaries\.js\?v=forest-bush-variants1/,
     'cache busting delivers the fixed bush sprite loader to Vercel preview');
   console.log('PASS: all 7 decoded SVG silhouettes and forest landscape-cache invalidation');
 }).catch(err=>{console.error(err);process.exitCode=1});
