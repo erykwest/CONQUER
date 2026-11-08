@@ -138,7 +138,7 @@
       const z0=deckZ(s,a0)+lift,z1=deckZ(s,a1)+lift,v=[];
       for(const [a,z] of [[a0,z0],[a1,z1]])for(const k of [c0,c1])for(const d of [-t,0])v.push(P(a,k,z+d));
       for(const [i,j,k,l] of [[0,2,6,4],[1,5,7,3],[0,4,5,1],[2,3,7,6],[0,1,3,2],[4,6,7,5]])
-        for(const tri of [[i,j,k],[i,k,l]]){for(const q of tri)pos.push(...v[q]);col.push(c)}
+        for(const tri of [[i,j,k],[i,k,l]]){for(const q of tri)pos.push(...v[q]);col.push(stoneTone(c))}
     };
     const low=a=>Math.min(groundFn(at(s,a,-w)),groundFn(at(s,a,0)),groundFn(at(s,a,w)))-.06;
     if(s.type==='ramp'){
