@@ -50,6 +50,6 @@
     document.dispatchEvent(new CustomEvent('conquer-stonecolor-change',{detail:{id}}));
     return true;
   }
-  State.stonePaletteId=randomForSeed(State.seed);
+  State.stonePaletteId=window.__CONQUER_ASSET_LAB__?'gray':randomForSeed(State.seed);
   window.ConquerStoneColor=Object.freeze({PALETTES,IDS,randomForSeed,normalized,current,shade,masonry,changed});
 })();
