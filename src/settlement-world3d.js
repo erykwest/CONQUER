@@ -430,7 +430,7 @@
         }
       }else if(edit.mode==='flat'){
         for(const {a,b,baseZ,baseZB,targetZ,targetZB} of window.ConquerTerraforming?.flatWallSegments?.(edit)||[])
-          m.face([{...a,z:baseZ},{...b,z:baseZB},{...b,z:targetZB},{...a,z:targetZ}],'#686057');
+          m.face([{...a,z:baseZ},{...b,z:baseZB},{...b,z:targetZB},{...a,z:targetZ}],window.ConquerStoneColor?.shade('#686057')||'#686057');
       }
     }
     const borders=[t=>({x:t,y:0}),t=>({x:W,y:t}),t=>({x:W-t,y:W}),t=>({x:0,y:W-t})];
@@ -438,7 +438,7 @@
       let prev=at(0),hp=terrainElevation(prev);
       for(let i=1;i<=n;i++){
         const p=at(i*EDGE_STEP),h=terrainElevation(p);
-        if(hp>.001||h>.001)m.face([{...prev,z:0},{...p,z:0},{...p,z:h},{...prev,z:hp}],EDGE_SECTION[side%2]);
+        if(hp>.001||h>.001)m.face([{...prev,z:0},{...p,z:0},{...p,z:h},{...prev,z:hp}],window.ConquerStoneColor?.shade(EDGE_SECTION[side%2])||EDGE_SECTION[side%2]);
         prev=p;hp=h;
       }
     });
@@ -597,7 +597,8 @@
       const dx=e.b.x-e.a.x,dy=e.b.y-e.a.y,L=Math.hypot(dx,dy);if(L<1e-4)continue;
       const ang=Math.atan2(dy,dx),mid={x:(e.a.x+e.b.x)/2,y:(e.a.y+e.b.y)/2},g=terrainElevation(mid);
       if(e.material==='wall'){                                                  // drawUrbanWall
-        m.prism(rectWorldPoints(mid.x,mid.y,L,.13,ang),g,g+.36,winter?'#e5e9df':'#a3937a','#766a59','#8b7c67');
+        const stone=hex=>window.ConquerStoneColor?.shade(hex)||hex;
+         m.prism(rectWorldPoints(mid.x,mid.y,L,.13,ang),g,g+.36,winter?'#e5e9df':stone('#a3937a'),stone('#766a59'),stone('#8b7c67'));
       }else if(e.material!=='hedge'){                                           // drawUrbanFence
         for(const z of [.13,.30])m.prism(rectWorldPoints(mid.x,mid.y,L,.035,ang),g+z-.018,g+z+.018,'#806442','#6b5338','#806442');
         const count=Math.max(1,Math.ceil(L/.65));
@@ -622,8 +623,9 @@
         if(!window.ConquerIndustries3D?.addToBuilder(m,s,g))m.prism(ConquerIndustries.footprint(s),g,g+.35,def.color,def.edge,def.edge);
       }else if(s.type==='well')withStructureVisualMaterial(s,()=>{
         const g=terrainElevation(s);
-        m.prism(rectWorldPoints(s.x,s.y,WELL_PLAZA_SIZE,WELL_PLAZA_SIZE,0),g,g+.055,'#8d816e','#655b4f','#74695a');
-        m.prism(circleWorldPoints(s.x,s.y,.62,20),g+.055,g+.42,'#84796d','#4e4740','#5d554d');
+        const stone=hex=>window.ConquerStoneColor?.shade(hex)||hex;
+         m.prism(rectWorldPoints(s.x,s.y,WELL_PLAZA_SIZE,WELL_PLAZA_SIZE,0),g,g+.055,stone('#8d816e'),stone('#655b4f'),stone('#74695a'));
+        m.prism(circleWorldPoints(s.x,s.y,.62,20),g+.055,g+.42,stone('#84796d'),stone('#4e4740'),stone('#5d554d'));
         m.face(circleWorldPoints(s.x,s.y,.36,16).map(p=>({x:p.x,y:p.y,z:g+.425})),'#172023');
       });
     }
@@ -1223,6 +1225,8 @@
     // Furniture and ladders (world xy, z on the structure plane).
     const addFurniture=s=>{
       const plane=s.type==='tower'||s.type==='gate',G0=plane?(Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s)):null;
+       const stoneTone=hex=>State.visualPalette==='clay'||(typeof masonryMaterial==='function'&&masonryMaterial(s)==='brick')?hex:(window.ConquerStoneColor?.shade(hex)||hex);
+       const floorTone=hex=>State.visualPalette==='clay'?hex:(window.ConquerStoneColor?.shade(hex)||hex);
       for(const f of FU?.worldFaces(s)||[]){
         const pts=f.pts.map(p=>({x:p[0],y:p[1],z:(plane?G0:terrainElevation({x:p[0],y:p[1]}))+p[2]}));
         const k=W3?W3.shadeFactor(f.n[0],f.n[1],f.n[2],turns):1;
@@ -1275,17 +1279,17 @@
       for(const i of keep){
         const j=(i+1)%n,o0=g.outer[i],o1=g.outer[j],i0=g.inner[i],i1=g.inner[j];
         if(timber){
-          band(sh,o0,o1,0,zf,castleSideShade(o0,o1));band(sh,o0,o1,zf,H,'#d9ccb0');
-          band(m,i0,i1,0,zf,'#61574f');band(m,i0,i1,zf,H,'#cbbd9f');
+          band(sh,o0,o1,0,zf,stoneTone(castleSideShade(o0,o1)));band(sh,o0,o1,zf,H,'#d9ccb0');
+          band(m,i0,i1,0,zf,stoneTone('#61574f'));band(m,i0,i1,zf,H,'#cbbd9f');
         }else if(loggiaEdge(o0,o1)){
           // W1 portico on the standing wall: masonry only above the loggia, its piers and arches below.
-          band(sh,o0,o1,loggia.cap,H,castleSideShade(o0,o1));band(m,i0,i1,loggia.cap,H,'#61574f');
+          band(sh,o0,o1,loggia.cap,H,stoneTone(castleSideShade(o0,o1)));band(m,i0,i1,loggia.cap,H,stoneTone('#61574f'));
           for(const f of loggia.faces)if(f.part==='arcade'){
             const P=f.pts.map(q=>Z(q.p,q.z));let nx=0,ny=0,nz=0;
             for(let k=0;k<P.length;k++){const a=P[k],b=P[(k+1)%P.length];nx+=(a.y-b.y)*(a.z+b.z);ny+=(a.z-b.z)*(a.x+b.x);nz+=(a.x-b.x)*(a.y+b.y)}
-            const l=Math.hypot(nx,ny,nz)||1;sh.face(P,shadeHex('#8a7f74',W3?W3.shadeFactor(nx/l,ny/l,nz/l,turns):1));
+            const l=Math.hypot(nx,ny,nz)||1;sh.face(P,shadeHex(stoneTone('#8a7f74'),W3?W3.shadeFactor(nx/l,ny/l,nz/l,turns):1));
           }
-        }else{wallFace(sh,o0,o1,castleSideShade(o0,o1));wallFace(m,i0,i1,'#61574f')}
+        }else{wallFace(sh,o0,o1,stoneTone(castleSideShade(o0,o1)));wallFace(m,i0,i1,stoneTone('#61574f'))}
       }
       // Subtower: the parent stays intact, and a dividing wall closes the subtower along the
       // parent's outline where it runs through the subtower footprint.
@@ -1299,7 +1303,7 @@
           if(1-t>1e-4)ins.push([t,1]);
           for(const [u,v] of ins){
             const A={x:p.x+(q.x-p.x)*u,y:p.y+(q.y-p.y)*u},B={x:p.x+(q.x-p.x)*v,y:p.y+(q.y-p.y)*v};
-            m.face([Z(A,0),Z(B,0),Z(B,top),Z(A,top)],'#61574f');
+            m.face([Z(A,0),Z(B,0),Z(B,top),Z(A,top)],stoneTone('#61574f'));
             // Connecting door through the dividing wall, on the subtower's ground floor.
             const len=Math.hypot(B.x-A.x,B.y-A.y);
             if(len>.45&&top>.7){
@@ -1309,28 +1313,28 @@
           }
         }
       }      for(const v of jambs)if(outside(g.outer[v])&&outside(g.inner[v])){
-        m.face([Z(g.outer[v],0),Z(g.inner[v],0),Z(g.inner[v],zf),Z(g.outer[v],zf)],'#82776c');
+        m.face([Z(g.outer[v],0),Z(g.inner[v],0),Z(g.inner[v],zf),Z(g.outer[v],zf)],stoneTone('#82776c'));
         if(timber)m.face([Z(g.outer[v],zf),Z(g.inner[v],zf),Z(g.inner[v],H),Z(g.outer[v],H)],'#5b412c');   // cut corner post
       }
-      const ring=timber?'#5b412c':winter?WINTER_SNOW_TOP:'#8f857a';   // a frame's cut top is its head plate
+      const ring=timber?'#5b412c':winter?WINTER_SNOW_TOP:stoneTone('#8f857a');   // a frame's cut top is its head plate
       for(let i=0;i<n;i++){const j=(i+1)%n;facesOut([g.outer[i],g.outer[j],g.inner[j],g.inner[i]],ring,sh,H)}
       // Room exterior elements stand outside the cut: whole, lit with the shell.
       for(const t of window.ConquerRoomExterior?.triangles(s)||[])sh.face(t.pts.map(q=>Z(q.p,q.z)),t.hex);
-      if(H>=HF-1e-6&&s.type==='tower'&&towerRoofStyle(s)==='battlement')facesOut(g.inner,winter?WINTER_SNOW_TOP:'#8f857a',sh,H-.01);
+      if(H>=HF-1e-6&&s.type==='tower'&&towerRoofStyle(s)==='battlement')facesOut(g.inner,winter?WINTER_SNOW_TOP:stoneTone('#8f857a'),sh,H-.01);
       // Floors: slab, then tiles (stone ground floor) or planks (wooden upper floors) clipped to the room.
       const basis=cutawayFloorBasis(s,g),ca=Math.cos(basis.angle),sa=Math.sin(basis.angle);
       const L=(u,v)=>({x:basis.center.x+u*ca-v*sa,y:basis.center.y+u*sa+v*ca});
       for(const floor of cutawayFloorLevels(s)){
         const stone=floor.material==='stone',z=floor.z,th=stone?.045:.065;
         if(z>=H-.01)continue;
-        facesOut(g.inner,stone?'#7f796f':'#795a3a',m,z);
-        for(let i=0;i<g.inner.length;i++){for(const [a,b] of segMinus(g.inner[i],g.inner[(i+1)%g.inner.length],under(z)))m.face([Z(a,z-th),Z(b,z-th),Z(b,z),Z(a,z)],stone?'#5a554d':'#5b402b')}
+        facesOut(g.inner,stone?floorTone('#7f796f'):'#795a3a',m,z);
+        for(let i=0;i<g.inner.length;i++){for(const [a,b] of segMinus(g.inner[i],g.inner[(i+1)%g.inner.length],under(z)))m.face([Z(a,z-th),Z(b,z-th),Z(b,z),Z(a,z)],stone?floorTone('#5a554d'):'#5b402b')}
         if(stone){
           const tile=.32,nx=Math.ceil(basis.w/tile),ny=Math.ceil(basis.h/tile);
           for(let ix=0;ix<nx;ix++)for(let iy=0;iy<ny;iy++){
             if((ix+iy)%2)continue;
             const u0=-basis.w/2+ix*tile,v0=-basis.h/2+iy*tile,q=clipConvex([L(u0,v0),L(u0+tile,v0),L(u0+tile,v0+tile),L(u0,v0+tile)],g.inner);
-            if(q.length>2)facesOut(q,'#8d877c',m,z+.003);
+            if(q.length>2)facesOut(q,floorTone('#8d877c'),m,z+.003);
           }
         }else{
           const plank=.18,across=basis.h<=basis.w,span=across?basis.h:basis.w,len=across?basis.w:basis.h;
