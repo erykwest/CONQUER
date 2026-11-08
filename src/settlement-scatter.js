@@ -273,7 +273,8 @@
   function worldMesh(props,turns=0){
     const m=M();if(!m)return new Float32Array(0);
     const W3=window.ConquerWagons3D,rgbOf=hex=>{const h=hex.replace('#','');return[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255)};
-    const pal=m.palette.map(rgbOf);
+    const pal=m.palette.map(rgbOf),stonePal=m.palette.map(hex=>rgbOf(window.ConquerStoneColor?.shade(hex)||hex));
+    const STONE_PROPS=new Set(['stonePile','riverStones','riverBoulder','milestone']);
     let n=0;for(const p of props)n+=m.assets[p.asset].c.length;
     const out=new Float32Array(n*18);let o=0;
     for(const p of props){
@@ -284,7 +285,7 @@
         for(let k=0;k<3;k++){const j=I[t*3+k]*3,x=V[j],y=V[j+1];w.push(p.x+x*c-y*s,p.y+x*s+y*c,z0+V[j+2]*k0)}
         const ux=w[3]-w[0],uy=w[4]-w[1],uz=w[5]-w[2],vx=w[6]-w[0],vy=w[7]-w[1],vz=w[8]-w[2];
         const nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx;
-        const base=pal[a.c[t]],f=W3?W3.shadeFactor(nx,ny,nz,turns):1;
+        const base=(STONE_PROPS.has(p.asset)?stonePal:pal)[a.c[t]],f=W3?W3.shadeFactor(nx,ny,nz,turns):1;
         const lum=(base[0]+base[1]+base[2])/3,ff=lum>.7?1-(1-f)*.55:f;
         for(let k=0;k<3;k++){out[o++]=w[k*3];out[o++]=w[k*3+1];out[o++]=w[k*3+2];out[o++]=base[0]*ff;out[o++]=base[1]*ff;out[o++]=base[2]*ff}
       }
