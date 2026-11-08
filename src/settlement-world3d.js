@@ -1225,8 +1225,6 @@
     // Furniture and ladders (world xy, z on the structure plane).
     const addFurniture=s=>{
       const plane=s.type==='tower'||s.type==='gate',G0=plane?(Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s)):null;
-       const stoneTone=hex=>State.visualPalette==='clay'||(typeof masonryMaterial==='function'&&masonryMaterial(s)==='brick')?hex:(window.ConquerStoneColor?.shade(hex)||hex);
-       const floorTone=hex=>State.visualPalette==='clay'?hex:(window.ConquerStoneColor?.shade(hex)||hex);
       for(const f of FU?.worldFaces(s)||[]){
         const pts=f.pts.map(p=>({x:p[0],y:p[1],z:(plane?G0:terrainElevation({x:p[0],y:p[1]}))+p[2]}));
         const k=W3?W3.shadeFactor(f.n[0],f.n[1],f.n[2],turns):1;
@@ -1262,6 +1260,8 @@
         if(blk.length&&top<H)mesh.face([Z(p,top),Z(q,top),Z(q,H),Z(p,H)],hex);
       };
       const plane=s.type==='tower'||s.type==='gate',G0=plane?(Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s)):null;
+      const stoneTone=hex=>State.visualPalette==='clay'||(typeof masonryMaterial==='function'&&masonryMaterial(s)==='brick')?hex:(window.ConquerStoneColor?.shade(hex)||hex);
+      const floorTone=hex=>State.visualPalette==='clay'?hex:(window.ConquerStoneColor?.shade(hex)||hex);
       const Z=(p,z)=>({x:p.x,y:p.y,z:(plane?G0:terrainElevation(p))+z});
       let keep,jambs;
       if(s.type==='built'){
