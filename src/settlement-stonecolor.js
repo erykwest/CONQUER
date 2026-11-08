@@ -17,15 +17,20 @@
   function hexOf(rgb){return'#'+rgb.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('')}
   // The existing grayscale family is the calibration reference (not a replacement texture).
   const REFERENCE=[194,154,130,99,77];
+  const SHADE_CACHE=new Map(); // Avoid re-parsing the same geological shade for thousands of model faces.
   function shade(color){
     if(!/^#[0-9a-fA-F]{6}$/.test(color)||current()==='gray')return color;
+    const key=current()+'|'+color.toLowerCase(),hit=SHADE_CACHE.get(key);
+    if(hit)return hit;
     const rgb=parse(color),L=rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;
     const ramp=PALETTES[current()].shades.map(parse);
-    if(L>=REFERENCE[0])return hexOf(ramp[0]);
-    if(L<=REFERENCE[4])return hexOf(ramp[4]);
+    if(L>=REFERENCE[0]){const out=hexOf(ramp[0]);SHADE_CACHE.set(key,out);return out}
+    if(L<=REFERENCE[4]){const out=hexOf(ramp[4]);SHADE_CACHE.set(key,out);return out}
     let i=0;while(i<4&&L<REFERENCE[i+1])i++;
     const t=Math.max(0,Math.min(1,(REFERENCE[i]-L)/(REFERENCE[i]-REFERENCE[i+1])));
-    return hexOf(ramp[i].map((v,j)=>v+(ramp[i+1][j]-v)*t));
+    const out=hexOf(ramp[i].map((v,j)=>v+(ramp[i+1][j]-v)*t));
+    if(SHADE_CACHE.size>4096)SHADE_CACHE.clear();
+    SHADE_CACHE.set(key,out);return out;
   }
   // Semantic call sites only: these are stone surfaces, never generic beige/grey pixels.
   const MASONRY=new Set([
@@ -42,6 +47,7 @@
   function changed(id){
     if(!IDS.includes(id)||current()===id)return false;
     State.stonePaletteId=id;
+    SHADE_CACHE.clear();
     if(typeof invalidateSceneCache==='function')invalidateSceneCache();
     window.__conquerAssetCompiler?.clearComposite?.();
     if(typeof saveLocal==='function')saveLocal();
