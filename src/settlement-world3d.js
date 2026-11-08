@@ -825,7 +825,8 @@
   }
   function buildTrees(atlas){
     const v=[];if(!atlas)return new Float32Array(0);
-    const groves=(State.environment||[]).filter(f=>f.type==='forest').map(forestTreeLayout);
+    const forests=(State.environment||[]).filter(f=>f.type==='forest');
+    const groves=forests.map(forestTreeLayout);
     groves.push(urbanLotCornerTrees());                  // single trees on plot corners
     for(const trees of groves){
       for(const t of trees){
@@ -837,6 +838,15 @@
         const size=2.25*t.scale,z=t.z||0;
         const C=[[-.5,-.94,u0,v0],[.5,-.94,u1,v0],[.5,.06,u1,v1],[-.5,.06,u0,v1]];
         for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(t.p.x,t.p.y,z,cx,cy,size,u,w)}
+      }
+    }
+    // Same 1:1 forest understory as Canvas, using existing bush atlas tiles.
+    for(const f of forests)for(const bush of forestBushLayout(f)){
+      const uv=atlas.map.get('bush:'+bush.shape);if(!uv)continue;
+      const [u0,v0,u1,v1]=uv,hr=580/920*bush.scale;
+      const C=[[-.5,-.97*hr,u0,v0],[.5,-.97*hr,u1,v0],[.5,.03*hr,u1,v1],[-.5,.03*hr,u0,v1]];
+      for(const k of [0,1,2,0,2,3]){
+        const [cx,cy,u,w]=C[k];v.push(bush.p.x,bush.p.y,bush.z,cx,cy,bush.width,u,w);
       }
     }
     // Pines on the lower half of the mountains, standing on the cone surface.
