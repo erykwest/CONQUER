@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-08 — STONECOLOR · Audit dipendenze e sottodipendenze
+
+- **CORRETTO SU BRANCH:** coda dei materiali litici collegata ai registri semantici nei modelli Blender di case, edifici civici e relative pavimentazioni, cave di pietra e mine, costruttori, scatter fluviali/costieri, ponti in pietra, scale da camminamento, rampe e gradini, arredi e pavimenti dei cutaway. Le rampe cromatiche condivise restano cinque; legno, argilla, tetti, muschio e alghe mantengono le tinte originarie.
+- **CACHE:** nuova famiglia inclusa nelle firme di case 3D, civici e cimiteri, cutaway, manufatti/cantieri, ponti, rampe, banchine, costa, scatter, World3D e composite del castello. Unione mura Canvas disegnata in esplicito contesto litico. Script URL invalidati con revisione stonecolor2.
+- **QUALITY GATE:** ampliata la regressione dedicata alla dipendenza dei moduli e ai ruoli degli asset; corretta la scoping del tint di cutaway; rigenerato digest del catalogo Wiki dopo modifica agli attraversamenti. **Prova visiva end-to-end e risultati dell'ultima CI ancora da verificare prima di dichiarare copertura totale e merge.**
+
+
 ## 2026-11-08 — STONECOLOR · Cinque famiglie di pietra approvate (branch `feature/stonecolor`)
 
 - **IMPLEMENTATO SU BRANCH:** `src/settlement-stonecolor.js` conserva cinque ramp cromatiche approvate (grigio, arenaria, tufo, calcare, granito). La nuova mappa sceglie una famiglia pseudocasuale tramite il suo seed, e la palette resta stabile ai reload. Per salvataggi legacy senza campo, fallback grigio attuale.
