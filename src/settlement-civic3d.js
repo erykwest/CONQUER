@@ -52,7 +52,7 @@
       if(winter&&k.startsWith('roof'))return WINTER[/Dark$/.test(k)?1:0];
       if(clay)return CLAY[k]||hex;
       // The Blender register identifies stone by material role, never by an arbitrary grey RGB.
-      return k.startsWith('stone')?(window.ConquerStoneColor?.shade(hex)||hex):hex;});
+      return k.startsWith('stone')||k.startsWith('paving')?(window.ConquerStoneColor?.shade(hex)||hex):hex;});
     palCache.set(ck,{data,pal});return pal;
   }
   // World triangles of model `key` at place {x,y,angle,scale}; ground parts paint first.
