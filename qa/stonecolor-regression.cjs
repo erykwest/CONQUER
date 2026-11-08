@@ -100,4 +100,14 @@ const terraforming=read('src/settlement-terraforming.js');
 assert.match(terraforming,/const mineral=!ghost&&edit\.mode==='walled'/,'wall material excludes soil and previews');
 assert.match(terraforming,/pathPolygon\(face\.screen,mineral\?\(window\.ConquerStoneColor\?\.shade/,'Canvas terracing walls use map palette');
 for(const js of ['src/settlement-crossings.js','src/settlement-urban.js','src/settlement-terraforming.js'])new vm.Script(read(js),{filename:js});
+// Asset Lab must expose the same canonical palette to the actual engine and screenshot runner.
+const lab=read('figures-lab.html'),catalog=read('src/asset-catalog.js'),audit=read('src/asset-audit.js');
+assert.match(lab,/id="assetStoneColor"/,'Asset Lab selector missing');
+for(const id of ids)assert.match(lab,new RegExp('<option value="'+id+'">'),'Lab missing '+id);
+assert.match(catalog,/ConquerStoneColor\?\.preview/,'Engine palette not linked to Lab');
+assert.match(catalog,/paletteKeys\?\.\[color\]/,'Blender roles must drive recolouring');
+assert.match(catalog,/captureCache\.clear\(\)/,'Snapshots must invalidate on a palette change');
+assert.match(audit,/invalidate\(\)\{lastReport=null\}/,'Audit images cannot reuse another palette');
+assert.match(read('qa/stonecolor-snapshots.mjs'),/ConquerAssetAudit\.sheet/,'Snapshot runner must reuse the actual Lab sheet');
+assert.match(read('.github/workflows/asset-lab-regression.yml'),/name: Stonecolor palette snapshots/,'CI must generate the PNGs');
 console.log('PASS STONECOLOR: 5 approved ramps; random stable; material isolation; UI/save/cache/renderer contracts');
