@@ -1,5 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+08/11/2026 — `feature/construction-staged-priority-20261108` (pre-merge): conferma ghost senza pagamento integrale; costi fissi come preventivi e trasferimenti parziali dal ledger canonico in ordine di sei priorità, coerenti con gli assegnamenti dei costruttori L1. Inspector provvisorio con due progressi e quantità consegnate, anche su UI2. Compatibilità con vecchi cantieri già prepagati; rimborsi parziali dei nuovi; regressione dedicata `qa/construction-priority-regression.cjs` nel Runtime integrity. CI e controllo visivo ancora da verificare; nessuna carovana materiale separata, ROADMAP M0–M5 invariata.
+
+
 08/11/2026 — branch `fix/dark-tree-bark-20261108` (pre-merge): 14 asset SVG con tronchi di alberi e rami di cespugli in **#2B1D16**, stessa tinta per i pini montani; conversione cespugli aggiornata, chiome e progressione autunnale inalterate. Cache-busting sprite e script, `qa/tree-bark-regression.cjs` aggiunta a Runtime integrity. CI e verifica visiva browser ancora da confermare; ROADMAP/DECISIONS invariati.
 
 07/11/2026 — branch `autumn` (pre-merge): sostituite le chiome brune uniformi con evoluzione di 91 giorni da verde estivo a giallo, oro, arancione, rosso e marrone, asincrona per posizione/seed. Canvas invalida due cache statiche al cambio del giorno autunnale; WebGL2 riutilizza l'atlante e ricostruisce solo i vertici UV, senza nuovi SVG. Aggiunto `qa/autumn-foliage-regression.cjs` a Runtime integrity, cache-busting script, STATUS/BACKLOG/DECISIONS e feature-backlog. Parsing JS e prova logica in sessione, CI/browser da verificare. Nessun merge in `main` e ROADMAP invariata.
