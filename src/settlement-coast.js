@@ -82,7 +82,8 @@
       for(const part of Object.values(m.parts))for(let t=0;t<part.c.length;t++){
         for(let q=0;q<3;q++){const j=part.i[t*3+q]*3,x=part.p[j],y=part.p[j+1];pos.push(o.x+x*cs-y*sn,o.y+x*sn+y*cs,z0+part.p[j+2]*sc)}
         const hex=K.palette[part.c[t]];
-        col.push(['rocksA','rocksB','rocksC','reef'].includes(name)?(window.ConquerStoneColor?.shade(hex)||hex):hex);
+        const role=K.paletteKeys[part.c[t]];
+        col.push(['rocksA','rocksB','rocksC','reef'].includes(name)&&role?.startsWith('rock')?(window.ConquerStoneColor?.shade(hex)||hex):hex);
       }
     };
     const at=(p,off,jit)=>({x:p.x+d.D.x*off+(rnd()-.5)*jit,y:p.y+d.D.y*off+(rnd()-.5)*jit});
