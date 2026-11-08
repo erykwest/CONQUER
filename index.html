@@ -163,12 +163,13 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
   <div id="profileOverlay" class="profile-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="profileTitle">
     <section class="profile-window">
       <div class="profile-titlebar"><h2 id="profileTitle">PROFILE <small>· Partita corrente</small></h2><button type="button" id="profileClose" aria-label="Chiudi">✕</button></div>
-      <nav class="profile-tabs" aria-label="Profilo partita"><button type="button" class="active" data-profile-tab="general">GENERALE</button><button type="button" data-profile-tab="heraldry">ARALDICA</button><button type="button" data-profile-tab="control">CENTRO DI CONTROLLO</button><button type="button" id="profileCodexBtn" aria-haspopup="dialog">CODEX / WIKI</button></nav>
+      <nav class="profile-tabs" aria-label="Profilo partita"><button type="button" class="active" data-profile-tab="general">GENERALE</button><button type="button" data-profile-tab="heraldry">ARALDICA</button><button type="button" data-profile-tab="environment">AMBIENTE</button><button type="button" data-profile-tab="control">CENTRO DI CONTROLLO</button><button type="button" id="profileCodexBtn" aria-haspopup="dialog">CODEX / WIKI</button></nav>
       <section class="profile-section" id="profileGeneral">
         <h3>DATI DELLA PARTITA</h3>
         <div class="profile-facts"><div>Insediamento <strong id="profileVillage">—</strong></div><div>Seed <strong id="profileSeed">—</strong></div><div>Bioma <strong id="profileBiome">—</strong></div><div>Giorno <strong id="profileDay">—</strong></div><div>Cella mondo <strong>0, 0</strong></div></div>
         <p class="profile-help">Questi dati appartengono alla partita, non all'account del giocatore.</p>
       </section>
+      <section class="profile-section" id="profileEnvironment" hidden><h3>PIETRA DEL TERRITORIO</h3><p class="profile-help">La pietra è scelta casualmente quando generi una nuova mappa. La modifica è globale, solamente estetica e si salva con la partita.</p><div id="stonecolorChoices" class="stonecolor-choices" role="group" aria-label="Tonalità della pietra"></div></section>
       <section class="profile-section" id="profileControl" hidden><nav id="controlNav" class="cp-nav" role="tablist" aria-label="Settori della gestione dell’insediamento"></nav><div id="controlBody" class="cp-body" aria-live="off"></div></section>
       <section class="profile-section" id="profileHeraldry" hidden>
         <div class="heraldry-editor">
@@ -355,6 +356,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 </div>
 <!-- Ordered classic modules: shared global lexical runtime, no build step. -->
 <script src="./src/settlement-core.js?v=slopes-merge-1-wc1-hoard1-hardening2-dove1-bell1-portico6-longhouse1-mare"></script>
+<script src="./src/settlement-stonecolor.js?v=stonecolor1"></script>
 <script src="./src/settlement-tower-shapes.js?v=dee-slits-1"></script>
 <script src="./src/settlement-civic-annexes.js?v=civil-annex-1-wc1"></script>
 <script src="./src/assets/civic-models.js?v=civic3d-1-wc1"></script>
