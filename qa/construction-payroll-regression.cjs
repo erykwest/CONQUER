@@ -22,7 +22,10 @@ function harness({workers=2,day=0}={}){
     underConstruction:s=>s.construction?.version===2?
       s.construction.workDone<s.construction.workRequired-1e-9:
       s.construction?State.clock.day<s.construction.completeDay:false,
-    buildDuration:s=>s.workDays??3
+    buildDuration:s=>s.workDays??3,
+    // This suite isolates payroll; its synthetic sites are prepaid/free.
+    // Priority and material shortages are tested separately.
+    constructionCost:()=>({})
   });
   vm.runInContext(economy,context,{filename:'settlement-economy.js'});
   vm.runInContext(work,context,{filename:'construction-v2.js'});
