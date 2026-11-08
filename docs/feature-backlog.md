@@ -1,5 +1,14 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+## 2026-11-08 — BC-261108-01 · Cantieri senza prefinanziamento, sei priorità
+
+- [x] **SU BRANCH `feature/construction-staged-priority-20261108`, pre-merge:** il ghost e gli elementi lineari (compresi ponti/fossati) sono confermabili anche senza stock sufficiente. Lo stesso preventivo esistente determina la spesa finale, ma è consumato progressivamente dal ledger economico durante i lavori.
+- [x] **Priorità per cantiere:** Molto basso, Basso, Medio (default), Alto, Molto alto, Critico; rifornimento e assegnazione dei costruttori L1 in tale ordine. Lavoro con limite di materiali ricevuti, fermo senza materie prime; nessuna nuova professione o stock alternativo.
+- [x] **Inspector provvisorio:** stato, barra lavorazione e barra rifornimento, quantità per materiale, priorità modificabile; reintegro dell'inspector completo alla fine. Entrambe le UI.
+- [x] **Compatibilità salvataggi:** vecchi cantieri V2 già prepagati; nuovi rimborsano il consegnato alla demolizione. Nessun costo fisso all'apertura del progetto.
+- [ ] **ACCETTAZIONE:** QA Runtime integrity in CI e browser UI1/UI2, persistenza/ripresa e controllo economico multisito. L'approvvigionamento fisico per ogni carro resta escluso dalla feature.
+
+
 ## 2026-11-06 — L1 Carrettieri per Piazzale e Mercato (branch `feature/l1-carter-jobs-market-20261106`, prima del merge)
 
 - **LAVORO REALE:** professione Carrettiere in `ConquerEconomy.laborAllocation`: fino a un occupato per magazzino con carichi raggiungibili, dopo i produttori essenziali e prima dei costruttori. `jobSummary.carter`, grafici e storico settimanale. Ogni lavoratore L1 non è né inattivo né costruttore né il personaggio due volte disegnato durante la guida. Orari per nuove partenze nei feriali, stop durante allarme; carri fermi senza personale disponibile, produzione invariata.
