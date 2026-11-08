@@ -1,5 +1,8 @@
 # Livello 2 — Stato tecnico e prove
 
+- **VARIANTI CESPUGLI / FIX CACHE:** individuato e corretto il fallback visivo uniforme su Canvas: i sette SVG erano selezionati nel layout, ma il caricamento asincrono invalidava solo `ground`, mentre le foreste vengono disegnate nella cache `landscape`. Ora il loader invalida entrambe le cache dopo il caricamento. Aggiunta regressione di decodifica delle sette silhouette in tre stagioni e aggiornato il versionamento di `settlement-boundaries.js`. **Verifiche sul nuovo commit in attesa di CI/preview**.
+
+
 ## 2026-11-08 — Uniformità di densità forestale e sottobosco (branch `fix/forest-density-understory`)
 
 - **IMPLEMENTATO SU BRANCH:** sostituito il conteggio per bosco `clamp(14..120)` con una griglia world-space di celle da 2,9 U, indipendente dalla superficie della macchia. Alberi distribuiti con jitter deterministico, senza accumuli casuali né limite che svuota i boschi grandi. Anche la foresta continua usa le stesse celle.
