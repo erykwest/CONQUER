@@ -1,6 +1,6 @@
 # CONQUER — STONECOLOR · Scheda di validazione cromatica v1
 
-**Branch:** `feature/stonecolor` · **Data:** 08/11/2026 · **Stato:** palette proposta da validare, **non** implementazione/runtime completato.
+**Branch:** `feature/stonecolor` · **Data:** 08/11/2026 · **Stato:** **PALETTE APPROVATA DAL PRODUCT OWNER (08/11/2026)**; integrazione runtime in sviluppo su branch.
 
 ## Decisione di prodotto
 
@@ -10,7 +10,7 @@ La palette si applica solo ai componenti realmente minerali: edifici e murature 
 
 ## Palette proposta (5 ruoli di luce)
 
-I colori sono ramp **di revisione**, non una promessa di aggiornamento già operativo. La palette `gray` conserva i grigi caldi caratteristici delle murature correnti; il terreno e gli scatter ora usano ulteriori grigi da normalizzare **per classe semantica**, senza convertire tutti i pixel grigi.
+I colori sono le **cinque ramp approvate**; la corrispondenza fra palette e tutte le superfici minerali viene verificata sul runtime. La palette `gray` conserva i grigi caldi caratteristici delle murature correnti; il terreno e gli scatter ora usano ulteriori grigi da normalizzare **per classe semantica**, senza convertire tutti i pixel grigi.
 
 | Famiglia | Luce | Sommità | Mezzotono | Ombra | Fessura |
 |---|---|---|---|---|---|
@@ -42,3 +42,7 @@ Un unico registro `stonePaletteId` per partita + ruoli cromatici semantici. No d
 **Fonte di realtà:** `src/settlement-core.js` (palette Clay e materiali), `src/settlement-landscape.js` (scarpate e massi), `src/settlement-world3d.js` (montagne e mesh), `src/settlement-coast.js`, `src/settlement-scatter.js`, `src/settlement-industries3d.js`.
 
 **Artefatto interattivo:** `stonecolor_palette_validation.html` consegnato nel dialogo di validazione, con anteprima schematica, confronto Clay, quattro condizioni ambientali, giudizi approvato/da rivedere ed esportazione JSON. **Non è una cattura in-engine né una prova di integrazione.**
+
+## Approvazione
+
+**08/11/2026 — APPROVATO:** tutte e cinque le palette e la separazione visiva arenaria/Clay, come da conferma esplicita del product owner. Nessuna nuova variante cromatica richiesta.
