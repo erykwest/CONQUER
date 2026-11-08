@@ -87,6 +87,18 @@ const continuousLayout=read(continuous);
 assert.equal(continuousLayout.bushes.length,continuousLayout.trees.length,'whole-map forest also has 1:1 understory');
 assert.ok(continuousLayout.trees.every(t=>!inside(t.p,continuous.holes[0])),'continuous forest respects glades');
 assert.ok(continuousLayout.trees.length>2500,'continuous woodland follows identical spatial density');
+// Fast placement lookup must agree with the full layout, without causing a
+// cold whole-forest materialisation on the first placement check.
+evaluate('clearForestLayoutCache()');
+context.f=continuous;
+context.box={minX:80,maxX:93,minY:130,maxY:142};
+const nearby=JSON.parse(JSON.stringify(evaluate('forestTreesInBounds(f,box,1)')));
+assert.equal(evaluate('forestTreeLayoutCache.size'),0,'placement query is lazy, no full scan');
+const full=JSON.parse(JSON.stringify(evaluate('forestTreeLayout(f)')));
+const region=t=>t.p.x>=79&&t.p.x<=94&&t.p.y>=129&&t.p.y<=143;
+assert.deepEqual(nearby,full.filter(region),'spatial lookup sees precisely the drawn trees');
+const placement=fs.readFileSync(path.join(root,'src/settlement-placement.js'),'utf8');
+assert.match(placement,/forestTreesInBounds\(f,b,pad\)/,'building placement uses local canopy query');
 assert.match(landscape,/items\.sort\(/,'Canvas depth sorts trees and bushes together');
 assert.match(world3d,/for\(const f of forests\)for\(const bush of forestBushLayout\(f\)\)/,'WebGL2 includes understory');
 assert.match(world3d,/atlas\.map\.get\('bush:'\+bush\.shape\)/,'WebGL2 reuses existing bush atlas');
