@@ -1,5 +1,13 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-08 — Cantieri confermati senza scorte e approvvigionamento prioritario (branch `feature/construction-staged-priority-20261108`)
+
+- **IMPLEMENTATO SUL BRANCH, NON ANCORA SU MAIN:** il ghost conferma un cantiere valido per geometria/terreno senza richiedere il preventivo interamente disponibile. Il costo rimane un preventivo, i materiali arrivano progressivamente dallo stock economico canonico. Nessun debito o scorta negativa: il lavoro non supera il rapporto delle risorse effettivamente trasferite.
+- **PRIORITÀ:** sei classi ordinabili, Molto basso → Basso → Medio → Alto → Molto alto → Critico; ordinamento stabile per classe, data e ID anche nell'assegnazione del personale L1, senza generare nuovi lavoratori. Il salario resta conteggiato separatamente per il lavoro svolto. La selezione apre un inspector provvisorio con progresso del lavoro, progresso/quantità dei materiali e priorità, distinto da quello dell'edificio ultimato, anche in UI v2.
+- **PERSISTENZA:** priorità, materiali consegnati e avanzamento vengono salvati nella struttura già persistita. Cantieri precedenti con V2 ma senza `materialsDelivered` si considerano già pagati per evitare doppi addebiti. Alla demolizione si rimborsano soltanto i materiali realmente trasferiti nei nuovi cantieri; i preesistenti conservano il rimborso storico. I pozzi/edifici manuali a durata zero e costo non nullo creano ora un cantiere minimo invece di comparire gratuitamente completati.
+- **QA:** aggiunta `qa/construction-priority-regression.cjs` al workflow Runtime integrity per code, carenze, priorità variabile, compatibilità legacy e rimborsi. **Da verificare:** esito GitHub Actions e prova visuale end-to-end (UI classica/UI2, costi misti, reload e completamento). Non si simulano carovane fisiche per i trasferimenti ordinari.
+
+
 ## 2026-11-08 — Tronchi degli alberi e rami dei cespugli marrone molto scuro (branch `fix/dark-tree-bark-20261108`)
 
 - **IMPLEMENTATO SU BRANCH:** i 7 SVG degli alberi decidui e i 7 SVG dei cespugli adottano **#2B1D16** per tronchi e rami (ex azzurro `#9BBACE`); i tronchi dei pini montani Canvas sono uniformati. Le chiome stagionali sono invariate, inclusa la progressione autunnale integrata in `main` con PR #183.
