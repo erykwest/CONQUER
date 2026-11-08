@@ -181,3 +181,10 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 #devSound .sound-music-eq input[type=range]{width:100%;min-width:0;accent-color:var(--accent)}
 #devSound .sound-music-eq output{text-align:right;font-size:10px}
 #devPanel #devSound #musicEqReset{font-size:10px;height:24px;padding:2px 8px;margin-top:6px}
+
+/* Construction-only inspector: separate from the operational room palette. */
+.construction-inspector .site-label{margin-top:10px}
+.construction-inspector .site-material-progress>i{background:#b9a276}
+.construction-inspector .site-material-grid{margin-top:8px}
+.construction-inspector .site-material-grid .kv{font-size:11px}
+.construction-priority select{margin-top:5px}
