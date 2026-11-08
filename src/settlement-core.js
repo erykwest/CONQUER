@@ -1028,6 +1028,7 @@ function constructionCrewAssignments(day=State.clock.day,cutoff=day){
   const sites=(State.structures||[]).filter(s=>!s.auto&&
     s.construction?.version===2&&underConstruction(s)&&
     s.construction.startedDay<=cutoff).sort((a,b)=>
+    constructionPriority(b)-constructionPriority(a)||
     a.construction.startedDay-b.construction.startedDay||
     String(a.id).localeCompare(String(b.id)));
   for(const s of sites)slots.set(s.id,[]);
@@ -1115,7 +1116,8 @@ function tickConstructionWork(fromDay,toDay){
     const sites=(State.structures||[]).filter(s=>
       !s.auto&&s.construction?.version===2&&underConstruction(s)&&
       s.construction.startedDay<next
-    ).sort((a,b)=>a.construction.startedDay-b.construction.startedDay||
+    ).sort((a,b)=>constructionPriority(b)-constructionPriority(a)||
+      a.construction.startedDay-b.construction.startedDay||
       String(a.id).localeCompare(String(b.id)));
     if(sites.length){
       allocateConstructionMaterials(sites,next-t);
