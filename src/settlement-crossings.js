@@ -524,8 +524,9 @@
   function drawBridge(s){
     const z=(Number(s.groundZ)||0)+.09,f=frame(s),width=f.width;
     const poly=corners(s);
-    pathPolygon(poly.map(p=>w2s(p,z)),s.variant==='stone'?'#9c9b92':'#986e42',
-      s.variant==='stone'?'#5c5b53':'#50361e',1);
+    const tint=hex=>s.variant==='stone'?(window.ConquerStoneColor?.shade(hex)||hex):hex;
+    pathPolygon(poly.map(p=>w2s(p,z)),tint(s.variant==='stone'?'#9c9b92':'#986e42'),
+      tint(s.variant==='stone'?'#5c5b53':'#50361e'),1);
     const across=(-width/2);
     if(s.variant==='wood'){
       for(let v=.25;v<f.L;v+=.35){
@@ -541,7 +542,7 @@
       for(const side of [-1,1]){
         const a=w2s(point(s,0,side*width/2),z+.24),b=w2s(point(s,f.L,side*width/2),z+.24);
         ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
-        ctx.strokeStyle='#78766d';ctx.lineWidth=3.4;ctx.stroke();
+        ctx.strokeStyle=window.ConquerStoneColor?.shade('#78766d')||'#78766d';ctx.lineWidth=3.4;ctx.stroke();
       }
     }
   }
