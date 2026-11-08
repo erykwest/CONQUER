@@ -207,7 +207,7 @@ function visualPaletteColor(color){
   if(typeof color!=='string')return color;
   if(structureVisualMaterial==='timber'&&typeof timberTint==='function')return timberTint(color);
   if(State.visualPalette==='clay'||structureVisualMaterial==='brick')return CLAY_VISUAL_SWATCHES[color.toLowerCase()]||color;
-  if(structureVisualMaterial==='stone')return window.ConquerStoneColor?.masonry(color)||color;
+  if(structureVisualMaterial==='stone'&&typeof window!=='undefined')return window.ConquerStoneColor?.masonry(color)||color;
   return color;
 }
 // DEV VISUAL PALETTE END
