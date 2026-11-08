@@ -157,8 +157,7 @@
     const err=validate(s);
     if(err){status(err);return false}
     const cost=constructionCost(s);
-    if(!canAfford(cost)){status('Insufficient resources: '+costText(cost));return false}
-    s.id=s.id||uid();s.buildCost=cost;spendCost(cost);beginConstruction(s);
+    s.id=s.id||uid();s.buildCost=cost;beginConstruction(s);
     State.structures.push(s);
     selectStructure(s);markDirty(true,['ground','base','castleBody']);
     status((s.type==='moat'?'Moat':'Bridge')+' placed · '+s.length.toFixed(1)+'U · level '+s.groundZ);
