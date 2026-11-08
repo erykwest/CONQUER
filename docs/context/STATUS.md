@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-08 — Palette Job Manager / Trade nel Profilo (branch `feature/profile-job-trade-tabs-20261108`)
+
+- **IMPLEMENTATO SU BRANCH:** aggiunte due schede di primo livello accanto a Generale, Araldica e Centro di Controllo, senza replicare ledger, roster o simulatori.
+- **JOB MANAGER:** distribuzione L1, popolazione per classe, occupati per attività e andamento settimanale. Allocazione automatica invariata, nessuna assegnazione manuale fittizia.
+- **TRADE:** inventario mercato/castello, prezzi, storico, quote di vendita editabili tramite il comando `setSaleShare` già esistente e apertura carovane.
+- **QA:** regressione `qa/panels-regression.cjs` estesa. CI e QA visiva da verificare, nessun nuovo asset né schema di salvataggio. ROADMAP/DECISIONS invariate.
+
 ## 2026-11-08 — Tronchi degli alberi e rami dei cespugli marrone molto scuro (branch `fix/dark-tree-bark-20261108`)
 
 - **IMPLEMENTATO SU BRANCH:** i 7 SVG degli alberi decidui e i 7 SVG dei cespugli adottano **#2B1D16** per tronchi e rami (ex azzurro `#9BBACE`); i tronchi dei pini montani Canvas sono uniformati. Le chiome stagionali sono invariate, inclusa la progressione autunnale integrata in `main` con PR #183.
