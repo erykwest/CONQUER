@@ -64,6 +64,8 @@ for(const size of [12,20,36,60]){
 }
 const large=read(grove('large-no-cap',60));
 assert.ok(large.trees.length>120,'large woods are no longer capped at 120');
+assert.deepEqual([...new Set(large.bushes.map(b=>b.shape))].sort((a,b)=>a-b),[0,1,2,3,4,5,6],
+  'a large forest must actually instantiate all seven distinctive bush shapes');
 const repeat=read(grove('large-no-cap',60));
 assert.deepEqual(repeat,large,'deterministic across reads');
 const f=grove('persistent',40),before=read(f);
@@ -107,3 +109,35 @@ assert.match(index,/settlement-landscape\.js\?v=[^"]+-forest2/);
 assert.match(index,/settlement-world3d\.js\?v=[^"]+-forest2/);
 assert.match(world,/function makeOrganicForestBlob/,'forest outline stays unchanged');
 console.log('PASS: uniform forest density, no caps, 1:1 understory, glades and stable Canvas/WebGL2 rendering');
+// Regression for the reported identical-bush fallback: SVGs load asynchronously.
+// Unlike urban hedges (ground cache), forest understory is baked into landscape.
+const boundarySource=fs.readFileSync(path.join(root,'src/settlement-boundaries.js'),'utf8');
+new vm.Script(boundarySource);
+const invalidations=[];
+let draws=0;
+class StubImage{
+  set src(value){this.value=value;queueMicrotask(()=>this.onload?.());}
+  get src(){return this.value;}
+}
+const spriteContext=vm.createContext({
+  Image:StubImage,
+  Promise,Math,encodeURIComponent,console,
+  fetch:async url=>({ok:true,text:async()=>fs.readFileSync(path.join(root,url.slice(2)),'utf8')}),
+  invalidateSceneCache:layers=>invalidations.push(layers),
+  draw:()=>{draws++;}
+});
+vm.runInContext(between(boundarySource,'const BOUNDARY_BUSH_ASSETS=','function urbanHedgeBushes('),spriteContext);
+vm.runInContext('loadBoundaryBushSprites()',spriteContext).then(()=>{
+  assert.deepEqual(JSON.parse(JSON.stringify(invalidations)),[['landscape','ground']],
+    'decoding bushes invalidates BOTH forest landscape and urban hedge ground caches');
+  assert.equal(draws,1,'loading all variants redraws once after their decoding');
+  for(const season of ['summer','autumn','winter']){
+    const images=vm.runInContext('boundaryBushSprites['+JSON.stringify(season)+'].map(i=>i.src)',spriteContext);
+    assert.equal(images.length,7,season+' loads seven SVGs');
+    assert.equal(new Set(images).size,7,season+' keeps seven distinct silhouettes, not one fallback');
+  }
+  assert.match(index,/settlement-boundaries\\.js\\?v=forest-bush-variants1/,
+    'cache busting delivers the fixed bush sprite loader to Vercel preview');
+  console.log('PASS: all 7 decoded SVG silhouettes and forest landscape-cache invalidation');
+}).catch(err=>{console.error(err);process.exitCode=1});
+
