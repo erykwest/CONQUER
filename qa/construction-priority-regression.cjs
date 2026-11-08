@@ -61,6 +61,20 @@ function makeScenario(wood=0,gold=0,workers=1){
   assert(q.t.constructionMaterialInfo(site).progress>0,'delivery is tracked per site');
 }
 {
+  const q=makeScenario(10,0);
+  const site=q.add('partial',2,{wood:10,gold:5});
+  q.t.tickConstructionWork(0,1);
+  assert(q.t.constructionMaterialInfo(site).delivered.wood>0,'wood must arrive despite missing gold');
+  assert.equal(q.t.constructionMaterialInfo(site).delivered.gold,0,'unavailable gold stays pending');
+  assert.equal(site.construction.workDone,0,'physical progress waits for the limiting material');
+  const wood=q.t.constructionMaterialInfo(site).delivered.wood;
+  q.econ.castleGold=5;
+  q.t.tickConstructionWork(1,2);
+  assert(site.construction.workDone>0,'new gold delivery unblocks work with stored wood');
+  assert(q.t.constructionMaterialInfo(site).delivered.wood>=wood,'no previously delivered wood is lost');
+  assert(q.econ.castleGold>=0,'gold cannot overdraw');
+}
+{
   const q=makeScenario(4,0),low=q.add('low',0),high=q.add('high',5);
   q.t.tickConstructionWork(0,1);
   assert(q.t.constructionMaterialInfo(high).progress>0,'critical project receives first allocation');
