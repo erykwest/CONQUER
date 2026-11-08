@@ -4,7 +4,7 @@
 
 - **CORREZIONE SU BRANCH `fix/forest-density-understory`:** il numero di alberi segue l'area realmente occupabile tramite griglia di passo 2,9 U anziché min/max per singola foresta; grandi macchie non restano rade, piccole macchie non sono forzate a 14 alberi. Una pianta arbustiva per albero, all'interno del bosco, non nelle radure o nelle tracce di strada. Posizioni deterministiche e stabili quando si scavano nuovi varchi.
 - **RENDERIZZAZIONE:** sette cespugli SVG esistenti, con colori stagionali invariati, usati sia dal fallback Canvas che dai billboard WebGL2; nessun nuovo asset o alterazione delle siepi urbane.
-- **CHIUSURA:** regressioni distribuzione/1:1/radure/foresta continua, 13 workflow CI, controllo della densità visiva e del frame-time (soprattutto nel bioma Foresta). ROADMAP e produzione legname invariati.
+- **CHIUSURA:** regressioni distribuzione/1:1/radure/foresta continua e equivalenza fra query spaziale locale e layout disegnato. Il validatore del posizionamento interroga solo celle vicine (niente scansione globale della foresta). Ancora richiesti CI e controllo della densità visiva/frame-time, soprattutto nel bioma Foresta. ROADMAP e produzione legname invariati.
 
 
 ## 2026-11-07 — P3-21 · Finitura stagionale alberi SVG (`autumn`)
