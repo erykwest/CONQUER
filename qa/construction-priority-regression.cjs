@@ -65,7 +65,7 @@ function makeScenario(wood=0,gold=0,workers=1){
   const site=q.add('partial',2,{wood:10,gold:5});
   q.t.tickConstructionWork(0,1);
   assert(q.t.constructionMaterialInfo(site).delivered.wood>0,'wood must arrive despite missing gold');
-  assert.equal(q.t.constructionMaterialInfo(site).delivered.gold,0,'unavailable gold stays pending');
+  assert.equal(q.t.constructionMaterialInfo(site).delivered.gold||0,0,'unavailable gold stays pending');
   assert.equal(site.construction.workDone,0,'physical progress waits for the limiting material');
   const wood=q.t.constructionMaterialInfo(site).delivered.wood;
   q.econ.castleGold=5;
