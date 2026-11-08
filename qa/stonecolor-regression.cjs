@@ -53,4 +53,40 @@ assert.match(world,/const meshSig=\[season,State\.stonePaletteId/);
 assert.match(world,/const castleContent=\[season,State\.visualPalette,State\.stonePaletteId/);
 assert.match(world,/const scContent=\[season,State\.stonePaletteId/);
 for(const file of ['src/settlement-stonecolor.js','src/settlement-world3d.js','src/settlement-landscape.js','src/settlement-scatter.js','src/settlement-industries3d.js','src/settlement-quay.js','src/settlement-coast.js'])new vm.Script(read(file),{filename:file});
+
+// Audit the entire rendering dependency tree and invalidate geometry/bitmap caches.
+const deps={
+ 'src/settlement-house3d.js':['State.stonePaletteId','structureVisualMaterial','ConquerStoneColor?.shade'],
+ 'src/settlement-civic3d.js':['State.stonePaletteId',"startsWith('stone')","startsWith('paving')"],
+ 'src/settlement-render.js':['State.stonePaletteId',"withStructureVisualMaterial({type:'wall',masonryMaterial:'stone'},drawCastleUnion)"],
+ 'src/settlement-castle.js':['function drawStoneTileFloor','ConquerStoneColor?.shade'],
+ 'src/settlement-shop-cutaway.js':['State.stonePaletteId','ConquerStoneColor?.shade'],
+ 'src/settlement-cutaway-furniture.js':['State.stonePaletteId',"f.key?.startsWith('stone')"],
+ 'src/settlement-crossings.js':['State.stonePaletteId','ConquerStoneColor?.shade'],
+ 'src/settlement-slopeways.js':['State.stonePaletteId','STONE_TONES','stoneTone(c)'],
+ 'src/settlement-wall-stairs.js':["l.spec.kind==='stone'",'ConquerStoneColor?.shade'],
+ 'src/settlement-construction-props.js':['State.stonePaletteId',"'rock','block','blockDressed'"],
+ 'src/settlement-construction-assembly.js':['State.stonePaletteId'],
+ 'src/settlement-coast.js':['State.stonePaletteId',"role?.startsWith('rock')"],
+ 'src/settlement-scatter.js':['stonePal',"paletteKeys[i]?.startsWith('stone')"],
+ 'src/settlement-industries3d.js':['data.paletteKeys',"modelKey==='quarry'","modelKey==='mine'"],
+ 'src/settlement-world3d.js':['State.stonePaletteId',"stoneTone('#61574f')","floorTone('#7f796f')"],
+ 'src/settlement-landscape.js':['ConquerStoneColor?.shade','mountainFaceColor'],
+ 'src/settlement-quay.js':['State.stonePaletteId','ConquerStoneColor?.shade']
+};
+for(const [file,checks] of Object.entries(deps)){
+ const src=read(file);
+ for(const token of checks)assert.ok(src.includes(token),file+' missing '+token);
+ new vm.Script(src,{filename:file});
+}
+const assets=['src/assets/waterside-models.js','src/assets/scatter-model.js','src/assets/industry-models.js'];
+const records=assets.map(file=>{const s=read(file);return JSON.parse(s.slice(s.indexOf('={')+1).replace(/;\s*$/,''))});
+assert.ok(records[0].paletteKeys.includes('weed')&&records[0].paletteKeys.includes('rock'));
+assert.ok(records[1].paletteKeys.includes('stone')&&records[1].paletteKeys.includes('moss'));
+assert.ok(records[2].paletteKeys.includes('clay')&&records[2].paletteKeys.includes('rock'));
+for(const file of Object.keys(deps)){
+ const src='src/settlement-'+file.split('src/settlement-').pop();
+ assert.ok(html.includes(src+'?v='),file+' must be browser-loaded');
+}
+
 console.log('PASS STONECOLOR: 5 approved ramps; random stable; material isolation; UI/save/cache/renderer contracts');
