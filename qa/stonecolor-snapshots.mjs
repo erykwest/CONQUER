@@ -49,7 +49,7 @@ try{
     'model:ConquerWatersideModels:rocksA']){
     assert.ok(ids.includes(required),'missing representative asset '+required);
   }
-  const files=[],colorHashes={};
+  const files=[],colorHashes={},sheetImages=[];
   for(const id of paletteIds){
     await page.evaluate(id=>{
       const ok=window.ConquerAssetCatalog.setStonePalette(id);
@@ -70,11 +70,24 @@ try{
     // Contact sheets are composed from the real game meshes and stage captures.
     const sheet=await page.evaluate(ids=>window.ConquerAssetAudit.sheet({ids,states:'default',columns:4,cell:220}),ids);
     const filename=id+'-asset-lab.png';
-    fs.writeFileSync(path.join(out,filename),decode(sheet));files.push(filename);
+    fs.writeFileSync(path.join(out,filename),decode(sheet));files.push(filename);sheetImages.push(sheet);
     await page.evaluate(()=>window.ConquerAssetCatalog.select('castle:pietra-quadrata-l3'));
     await page.screenshot({path:path.join(out,id+'-inspector.png')});
     console.log('Captured '+filename+' ('+ids.length+' assets)');
   }
+  // One side-by-side comparison, five columns (one sheet per palette) rendered entirely in-browser.
+  const comparison=await page.evaluate(async ({sheets,names})=>{
+    const images=await Promise.all(sheets.map(src=>new Promise((resolve,reject)=>{
+      const image=new Image();image.onload=()=>resolve(image);image.onerror=reject;image.src=src;
+    })));
+    const w=images[0].naturalWidth,h=images[0].naturalHeight,head=40;
+    const canvas=document.createElement('canvas');canvas.width=w*images.length;canvas.height=h+head;
+    const g=canvas.getContext('2d');g.fillStyle='#1d1a16';g.fillRect(0,0,canvas.width,canvas.height);
+    g.font='700 22px system-ui';g.fillStyle='#eee6d9';
+    images.forEach((im,i)=>{g.fillText(names[i],i*w+14,29);g.drawImage(im,i*w,head)});
+    return canvas.toDataURL('image/png');
+  },{sheets:sheetImages,names:['Grigio','Arenaria','Tufo','Calcare','Granito']});
+  fs.writeFileSync(path.join(out,'comparison.png'),decode(comparison));
   // Clay and terracotta must remain untouched; mineral assets should visibly respond.
   const unchanged='model:ConquerIndustryModels:clayPit';
   const changed=['castle:pietra-quadrata-l3','model:ConquerIndustryModels:quarry',
@@ -89,11 +102,12 @@ try{
   // The hidden engine must not save a player's settlement while previewing colors.
   assert.deepEqual(await page.evaluate(()=>Object.keys(localStorage).filter(k=>/settlement|assetlab/.test(k))),[]);
   const report={generatedAt:new Date().toISOString(),source:'figures-lab.html / ConquerAssetStage / ConquerAssetAudit',
-    palettes:paletteIds,assets:ids,hashes:colorHashes,files,checks:{mineralFamilies:changed,
+    palettes:paletteIds,assets:ids,hashes:colorHashes,files:['comparison.png',...files],checks:{mineralFamilies:changed,
       unchangedClay:unchanged,engineSynced:true,localSaveUntouched:true,errors}};
   fs.writeFileSync(path.join(out,'report.json'),JSON.stringify(report,null,2)+'\n');
   fs.writeFileSync(path.join(out,'README.md'),[
     '# Stonecolor — snapshot Asset Lab', '',
+    '## Confronto diretto (5 colonne)', '![Le cinque palette sullo stesso set di asset](comparison.png)', '',
     'I cinque fogli sono estratti dal rendering reale di CONQUER; stessa selezione di asset e stesso punto di vista.',
     'Il **Clay Pit** è il controllo negativo: non deve cambiare colore. Nessun asset è stato duplicato.',
     '', ...files.map((f,i)=>'## '+paletteIds[i]+'\n![Snapshot '+paletteIds[i]+']('+f+')\n'),
