@@ -34,14 +34,12 @@ const LANDSCAPE_RENDER_BUDGET=Object.freeze({
   terrainMarks:120,
   rockDensity:2.35,
   rockCrestDensity:.95,
-  forestDensity:.95,
-  forestMin:14,
-  forestMax:120,
   flowerClusters:520
 });
 let landscapeRenderCacheSeed=null;
 const steepRockLayoutCache=new Map();
 const forestTreeLayoutCache=new Map();
+const forestBushLayoutCache=new Map();
 const forestGroundLayoutCache=new Map();
 let terrainMarkLayoutCache=null;
 let springFlowerLayoutCache=null;
@@ -92,6 +90,7 @@ function ensureLandscapeRenderCaches(){
   landscapeRenderCacheSeed=State.seed;
   steepRockLayoutCache.clear();
   forestTreeLayoutCache.clear();
+  forestBushLayoutCache.clear();
   forestGroundLayoutCache.clear();
   terrainMarkLayoutCache=null;
   springFlowerLayoutCache=null;
@@ -603,73 +602,91 @@ function drawForestGround(f){
   }
   ctx.restore();
 }
-function forestTreeCount(f){
-  return clamp(Math.round((f.rx||5)*(f.ry||4)*LANDSCAPE_RENDER_BUDGET.forestDensity),LANDSCAPE_RENDER_BUDGET.forestMin,LANDSCAPE_RENDER_BUDGET.forestMax);
-}
-// Holes (clearings, grooves) change the layout: key it by their count, not just the id.
+// One density for every woodland size (including the continuous forest biome).
+// World-anchored, independently seeded cells stop small groves bunching up and
+// prevent a per-patch tree cap from thinning large forest polygons.
+const FOREST_TREE_SPACING=2.9;
 function forestLayoutKey(f){return f.id+':'+(f.holes?.length||0)}
-function clearForestLayoutCache(){forestTreeLayoutCache.clear()}
-// Continuous woodland: a jittered grid over the map with fixed per-cell attributes, filtered by
-// containment, so carving a groove removes only the trees inside it instead of reshuffling all.
-const CONTINUOUS_FOREST_SPACING=4.4;
-function continuousForestTrees(f){
-  const rnd=seedRand((State.seed^biomeHash(f.id))>>>0),n=Math.ceil(WORLD/CONTINUOUS_FOREST_SPACING),trees=[];
-  for(let iy=0;iy<n;iy++)for(let ix=0;ix<n;ix++){
-    const p={x:(ix+.15+rnd()*.7)*CONTINUOUS_FOREST_SPACING,y:(iy+.15+rnd()*.7)*CONTINUOUS_FOREST_SPACING};
-    const tree={p,shapeIndex:Math.floor(rnd()*FOREST_TREE_ASSETS.length),colorIndex:Math.floor(rnd()*FOREST_CANOPY_PALETTES.summer.length),flip:rnd()<.5,scale:.8+rnd()*.4};
-    if(p.x<0||p.x>WORLD||p.y<0||p.y>WORLD||!environmentContains(f,p))continue;
-    tree.z=terrainElevation(p);trees.push(tree);
-  }
-  return trees;
-}
+function clearForestLayoutCache(){forestTreeLayoutCache.clear();forestBushLayoutCache.clear()}
 function forestTreeLayout(f){
   ensureLandscapeRenderCaches();
   const cacheKey=forestLayoutKey(f);
   if(forestTreeLayoutCache.has(cacheKey))return forestTreeLayoutCache.get(cacheKey);
-  if(f.continuous){const trees=continuousForestTrees(f);forestTreeLayoutCache.set(cacheKey,trees);return trees}
-  const rnd=seedRand((State.seed^biomeHash(f.id))>>>0),trees=[],target=forestTreeCount(f);
-  // Sample the actual rotated, lobed polygon's bounds, not the nominal axis
-  // radii: every cove and peninsula must be eligible for trees.
-  const bounds={minX:Infinity,maxX:-Infinity,minY:Infinity,maxY:-Infinity};
-  for(const p of f.points||[]){
-    bounds.minX=Math.min(bounds.minX,p.x);bounds.maxX=Math.max(bounds.maxX,p.x);
-    bounds.minY=Math.min(bounds.minY,p.y);bounds.maxY=Math.max(bounds.maxY,p.y);
+  const trees=[],bounds=environmentPolygonBounds(f.points||[]);
+  if(!Number.isFinite(bounds.minX)||!Number.isFinite(bounds.minY)){
+    forestTreeLayoutCache.set(cacheKey,trees);return trees;
   }
-  if(!Number.isFinite(bounds.minX)){
-    bounds.minX=f.x-f.rx;bounds.maxX=f.x+f.rx;
-    bounds.minY=f.y-f.ry;bounds.maxY=f.y+f.ry;
-  }
-  let attempts=0;
-  while(trees.length<target&&attempts<target*12){
-    attempts++;
-    const p={x:bounds.minX+rnd()*(bounds.maxX-bounds.minX),y:bounds.minY+rnd()*(bounds.maxY-bounds.minY)};
+  // A cell's roll is independent of its neighbours: carving a clearing/groove
+  // never relocates the surviving trees, even in a lobed or ribbon-shaped forest.
+  const spacing=FOREST_TREE_SPACING;
+  const ix0=Math.max(0,Math.floor(bounds.minX/spacing)),ix1=Math.min(Math.ceil(WORLD/spacing),Math.ceil(bounds.maxX/spacing));
+  const iy0=Math.max(0,Math.floor(bounds.minY/spacing)),iy1=Math.min(Math.ceil(WORLD/spacing),Math.ceil(bounds.maxY/spacing));
+  for(let iy=iy0;iy<iy1;iy++)for(let ix=ix0;ix<ix1;ix++){
+    const rnd=seedRand((State.seed^biomeHash(f.id+':tree:'+ix+':'+iy))>>>0);
+    const p={x:(ix+.28+rnd()*.44)*spacing,y:(iy+.28+rnd()*.44)*spacing};
     if(p.x<0||p.x>WORLD||p.y<0||p.y>WORLD||!environmentContains(f,p))continue;
-    trees.push({
-      p,z:terrainElevation(p),
+    trees.push({p,z:terrainElevation(p),cellX:ix,cellY:iy,
       shapeIndex:Math.floor(rnd()*FOREST_TREE_ASSETS.length),
       colorIndex:Math.floor(rnd()*FOREST_CANOPY_PALETTES.summer.length),
-      flip:rnd()<.5,
-      scale:.8+rnd()*.4
-    });
+      flip:rnd()<.5,scale:.8+rnd()*.4});
   }
   forestTreeLayoutCache.set(cacheKey,trees);return trees;
+}
+// One distinct understory bush per forest tree. Reuse the existing seasonal
+// seven SVG bush variants; neither hedgerows nor plot-corner trees are affected.
+function forestBushLayout(f){
+  ensureLandscapeRenderCaches();
+  const cacheKey=forestLayoutKey(f);
+  if(forestBushLayoutCache.has(cacheKey))return forestBushLayoutCache.get(cacheKey);
+  const bushes=forestTreeLayout(f).map(t=>{
+    const rnd=seedRand((State.seed^biomeHash(f.id+':bush:'+t.cellX+':'+t.cellY))>>>0);
+    const angle=rnd()*Math.PI*2,radius=.8+rnd()*.5;
+    let p=t.p;
+    // Try each side of its tree, staying clear of boundaries, glades and roads.
+    for(let k=0;k<12;k++){
+      const a=angle+k*Math.PI/6,q={x:t.p.x+Math.cos(a)*radius,y:t.p.y+Math.sin(a)*radius};
+      if(q.x>=0&&q.x<=WORLD&&q.y>=0&&q.y<=WORLD&&environmentContains(f,q)){p=q;break}
+    }
+    return{p,z:terrainElevation(p)+.01,shape:Math.floor(rnd()*BOUNDARY_BUSH_ASSETS.length),
+      width:.82+rnd()*.32,scale:.82+rnd()*.3};
+  });
+  forestBushLayoutCache.set(cacheKey,bushes);return bushes;
 }
 function forestLikelyVisible(f,pad=100){
   const p={x:Number(f.x)||0,y:Number(f.y)||0},z=terrainElevation(p),s=w2sRaw(p,z),r=wrap.getBoundingClientRect();
   const extent=Math.hypot(f.rx||5,f.ry||4)*1.4*U*State.view.scale*1.55+pad+staticCullOverscan();
   return s.x>=-extent&&s.y>=-extent&&s.x<=r.width+extent&&s.y<=r.height+extent;
 }
+function drawForestBush(bush){
+  if(!screenPointVisibleRaw(bush.p,bush.z,40))return false;
+  const season=State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer';
+  const img=boundaryBushSprites?.[season]?.[bush.shape];
+  const base=w2sRaw(bush.p,bush.z),width=Math.max(4,U*State.view.scale*bush.width);
+  const height=width*(580/920)*bush.scale;
+  if(img)ctx.drawImage(img,base.x-width/2,base.y-height*.97,width,height);
+  else{ctx.fillStyle=season==='winter'?'#c7d1b9':season==='autumn'?'#827044':'#527641';
+    ctx.beginPath();ctx.ellipse(base.x,base.y-height/2,width/2,height/2,0,0,Math.PI*2);ctx.fill()}
+  return true;
+}
 function drawForestMask(f){
   if(!forestLikelyVisible(f))return;
-  const tier=landscapeDetailTier();
-  const trees=forestTreeLayout(f)
-    .filter((_,i)=>tier===0?i%2===0:tier===1?i%4!==3:true)
-    .filter(tree=>screenPointVisibleRaw(tree.p,tree.z,50))
-    .slice()
-    .sort((a,b)=>w2sRaw(a.p,a.z).y-w2sRaw(b.p,b.z).y);
-  let drawn=0;
-  for(const tree of trees)if(drawTree(tree))drawn++;
-  if(window.__conquerPerf)window.__conquerPerf.forestTrees=(window.__conquerPerf.forestTrees||0)+drawn;
+  const tier=landscapeDetailTier(),trees=forestTreeLayout(f),bushes=forestBushLayout(f),items=[];
+  for(let i=0;i<trees.length;i++){
+    if(tier===0&&i%2!==0||tier===1&&i%4===3)continue;
+    const tree=trees[i],bush=bushes[i];
+    if(screenPointVisibleRaw(tree.p,tree.z,50))items.push({item:tree,tree:true});
+    if(screenPointVisibleRaw(bush.p,bush.z,40))items.push({item:bush,tree:false});
+  }
+  items.sort((a,b)=>w2sRaw(a.item.p,a.item.z).y-w2sRaw(b.item.p,b.item.z).y);
+  let drawnTrees=0,drawnBushes=0;
+  for(const entry of items){
+    if(entry.tree){if(drawTree(entry.item))drawnTrees++}
+    else if(drawForestBush(entry.item))drawnBushes++;
+  }
+  if(window.__conquerPerf){
+    window.__conquerPerf.forestTrees=(window.__conquerPerf.forestTrees||0)+drawnTrees;
+    window.__conquerPerf.forestBushes=(window.__conquerPerf.forestBushes||0)+drawnBushes;
+  }
 }
 
 function ellipseWorldPoints(f,n=28){
@@ -678,7 +695,7 @@ function ellipseWorldPoints(f,n=28){
   return pts;
 }
 function drawEnvironment(){
-  if(window.__conquerPerf)window.__conquerPerf.forestTrees=0;
+  if(window.__conquerPerf){window.__conquerPerf.forestTrees=0;window.__conquerPerf.forestBushes=0}
   // Peaks overlap (main summits and their secondary ones): paint far to near, or by height in plan.
   const depth=f=>isPlanView()?(f.height||3.6):w2sRaw({x:f.x,y:f.y},0).y;
   const mountains=State.environment.filter(f=>f.type==='mountain').sort((a,b)=>depth(a)-depth(b));
