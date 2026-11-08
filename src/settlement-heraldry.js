@@ -46,7 +46,14 @@ function open(tab='general'){
  $('profileDay').textContent=(Number(State.clock?.day)||0).toFixed(1);
  setTab(tab);
 }
-function setTab(tab){document.querySelectorAll('[data-profile-tab]').forEach(b=>b.classList.toggle('active',b.dataset.profileTab===tab));$('profileGeneral').hidden=tab!=='general';$('profileHeraldry').hidden=tab!=='heraldry';const control=$('profileControl');if(control)control.hidden=tab!=='control';if(tab==='heraldry')draw();if(tab==='control')window.ConquerPanels?.open()}
+function setTab(tab){document.querySelectorAll('[data-profile-tab]').forEach(b=>b.classList.toggle('active',b.dataset.profileTab===tab));$('profileGeneral').hidden=tab!=='general';$('profileHeraldry').hidden=tab!=='heraldry';const environment=$('profileEnvironment');if(environment)environment.hidden=tab!=='environment';const control=$('profileControl');if(control)control.hidden=tab!=='control';if(tab==='heraldry')draw();if(tab==='environment')renderEnvironment();if(tab==='control')window.ConquerPanels?.open()}
+function renderEnvironment(){
+ const host=$('stonecolorChoices'),api=window.ConquerStoneColor;if(!host||!api)return;
+ host.innerHTML=api.IDS.map(id=>{
+  const p=api.PALETTES[id],active=api.current()===id;
+  return '<button type="button" data-stonecolor="'+id+'" class="stonecolor-option'+(active?' active':'')+'" aria-pressed="'+active+'"><span class="stonecolor-strip" style="background:linear-gradient(90deg,'+p.shades.join(',')+')"></span><span>'+p.label+'</span></button>';
+ }).join('');
+}
 function close(){$('profileOverlay').hidden=true}
 sanitize();State.heraldry={...h};
 $('profileBtn').addEventListener('click',()=>open());
@@ -58,6 +65,8 @@ document.querySelectorAll('[data-profile-tab]').forEach(b=>b.addEventListener('c
 $('heraldryPatterns').addEventListener('click',e=>{const b=e.target.closest('[data-pattern]');if(b){h.pattern=b.dataset.pattern;persist()}});
 $('heraldrySymbols').addEventListener('click',e=>{const b=e.target.closest('[data-symbol]');if(b){h.symbol=b.dataset.symbol;persist()}});
 $('heraldryColors').addEventListener('input',e=>{const k=e.target.dataset.heraldryColor;if(k&&validHex(e.target.value)){h[k]=e.target.value;persist()}});
+$('stonecolorChoices')?.addEventListener('click',e=>{const b=e.target.closest('[data-stonecolor]');if(!b)return;if(window.ConquerStoneColor?.changed(b.dataset.stonecolor)){renderEnvironment();$('heraldrySaveStatus').textContent='Ambiente salvato nella partita · locale'}});
+document.addEventListener('conquer-stonecolor-change',renderEnvironment);
 window.__conquerHeraldry={reset:()=>{h={...DEFAULT};State.heraldry={...h};draw()},get:()=>({...State.heraldry}),render:()=>rectangle(),open:()=>open('heraldry')};
 })();
 
