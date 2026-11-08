@@ -49,6 +49,8 @@ assert.match(persist,/normalized\(x\.stonePaletteId\)/);
 assert.match(persist,/normalized\(data\.policies\?\.stonePaletteId\)/);
 for(const name of ['src/settlement-landscape.js','src/settlement-coast.js','src/settlement-industries3d.js','src/settlement-scatter.js','src/settlement-quay.js'])assert.match(read(name),/ConquerStoneColor\?\.shade/,name);
 const world=read('src/settlement-world3d.js');
+const cutawayPos=world.indexOf('function buildCutaway()'),cutawayLoop=world.indexOf('for(const s of State.structures){',cutawayPos),stoneToneHelper=world.indexOf('const stoneTone=',cutawayPos);
+assert.ok(cutawayPos>=0&&cutawayLoop>cutawayPos&&stoneToneHelper>cutawayLoop,'cutaway helper must be inside the structure scope');
 assert.match(world,/const meshSig=\[season,State\.stonePaletteId/);
 assert.match(world,/const castleContent=\[season,State\.visualPalette,State\.stonePaletteId/);
 assert.match(world,/const scContent=\[season,State\.stonePaletteId/);
