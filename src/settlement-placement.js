@@ -67,7 +67,9 @@
         if(f.type!=='forest'||!f.points?.length)continue;
         const fb=environmentPolygonBounds(f.points);
         if(fb.maxX<b.minX-pad||fb.minX>b.maxX+pad||fb.maxY<b.minY-pad||fb.minY>b.maxY+pad)continue;
-        for(const t of forestTreeLayout(f)){
+        const candidates=typeof forestTreesInBounds==='function'
+          ?forestTreesInBounds(f,b,pad):forestTreeLayout(f);
+        for(const t of candidates){
           const p=t.p;
           if(p.x<b.minX-pad||p.x>b.maxX+pad||p.y<b.minY-pad||p.y>b.maxY+pad)continue;
           if(pointInPolygon(p,poly))return true;

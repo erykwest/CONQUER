@@ -1,5 +1,12 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-VIS-FOREST-261108 — Densità omogenea e sottobosco 1:1 (08/11/2026)
+
+- **DECISO SU RICHIESTA:** non assegnare alberi in base a un minimo/massimo per macchia di foresta: ogni cella di griglia world-space (2,9 U di passo, con jitter riproducibile) può generare un albero. La densità areale risultante è costante per grandi e piccoli poligoni, inclusa la foresta continua.
+- **SOTTOBOSCO:** a ogni albero forestale corrisponde un cespuglio dei sette SVG già disponibili, collocato in modo deterministico entro il bosco. La generazione evita radure, buchi, percorsi intagliati; cambiare un buco elimina solo gli esemplari interessati.
+- **INVARIANTI:** cespugli di siepi, alberi urbani, classificazione del bioma, copertura economica forestale, foresteria e collisioni non dipendono dalla densità grafica e non cambiano. LOD Canvas riduce in coppia alberi e cespugli alla scala ridotta. Verifica su prestazioni e rendering browser prima del merge.
+
+
 ## D-VIS-AUTUMN-261107 — Progressione autunnale delle chiome (07/11/2026)
 
 - **DECISO, CODICE SU BRANCH `autumn`:** la chioma degli alberi decidui non passa in un colpo al marrone: dal 1° settembre al 30 novembre cambia gradualmente di aspetto attraverso toni verde/giallo-verde, giallo, oro, arancione, rosso e marrone. Posizione degli alberi e seed producono un anticipo/ritardo stabile della fase, senza sincronizzazione di tutta la foresta.

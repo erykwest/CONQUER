@@ -1,5 +1,17 @@
 # Livello 2 — Stato tecnico e prove
 
+- **VARIANTI CESPUGLI / FIX CACHE:** individuato e corretto il fallback visivo uniforme su Canvas: i sette SVG erano selezionati nel layout, ma il caricamento asincrono invalidava solo `ground`, mentre le foreste vengono disegnate nella cache `landscape`. Ora il loader invalida entrambe le cache dopo il caricamento. Aggiunta regressione di decodifica delle sette silhouette in tre stagioni e aggiornato il versionamento di `settlement-boundaries.js`. **Verifiche sul nuovo commit in attesa di CI/preview**.
+
+
+## 2026-11-08 — Uniformità di densità forestale e sottobosco (branch `fix/forest-density-understory`)
+
+- **IMPLEMENTATO SU BRANCH:** sostituito il conteggio per bosco `clamp(14..120)` con una griglia world-space di celle da 2,9 U, indipendente dalla superficie della macchia. Alberi distribuiti con jitter deterministico, senza accumuli casuali né limite che svuota i boschi grandi. Anche la foresta continua usa le stesse celle.
+- **SOTTOBOSCO:** un cespuglio per ogni albero esistente, sempre entro il poligono e fuori dalle radure, buche e strade intagliate. Riutilizzate le sette sprite SVG stagionali dei cespugli; nessun nuovo asset. Le posizioni rimanenti non cambiano quando viene creata una radura.
+- **RENDER E PERFORMANCE:** Canvas ordina alberi e cespugli nello stesso ordine di profondità e applica il LOD in coppia; WebGL2 riutilizza l'atlante delle siepi senza nuovi caricamenti. Il posizionamento dei nuovi edifici interroga solo le celle forestali adiacenti invece di ricostruire/scorrere l'intera foresta; il numero di istanze nel bioma Foresta cresce e richiede ancora verifica frame-time.
+- **QA:** aggiunta `qa/forest-density-regression.cjs` al workflow Runtime integrity insieme alla regressione dei poligoni organici. CI e controllo visivo non ancora verificati; nessun merge o deploy autorizzato prima delle verifiche.
+- **SCOPE:** variazione grafica di generazione, nessun cambio a collisioni, navigazione, economia legname, salvataggi, biome polygons o alberi negli angoli dei lotti. ROADMAP invariata.
+
+
 ## 2026-11-07 — Foliage autunnale progressivo (branch `autumn`, non su `main`)
 
 - **IMPLEMENTATO SU BRANCH:** gli alberi SVG delle foreste e degli angoli dei lotti conservano il verde estivo a inizio settembre, poi percorrono sei passaggi cromatici fino al marrone di fine novembre. I giorni di calendario 1 settembre–30 novembre (91) determinano l'avanzamento; ogni albero ha una variazione di fase stabile da posizione e seed, senza rumore per-frame. I pini montani restano verdi e in inverno le chiome decidue restano nascoste.

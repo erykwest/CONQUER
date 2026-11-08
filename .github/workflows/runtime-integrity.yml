@@ -36,6 +36,10 @@ jobs:
         run: node --test tests/runtime-integrity.test.mjs
       - name: Autumn foliage calendar and renderer regression
         run: node qa/autumn-foliage-regression.cjs
+      - name: Uniform forests and bush understory
+        run: |
+          node qa/organic-forest-regression.cjs
+          node qa/forest-density-regression.cjs
       - name: Preserve saves and DEV-only resource floor
         run: node qa/save-safety-regression.cjs
 

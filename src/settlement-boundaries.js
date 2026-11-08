@@ -25,7 +25,11 @@ async function loadBoundaryBushSprites(){
     }));
   }
   await Promise.all(jobs);
-  invalidateSceneCache('ground');if(typeof draw==='function')draw();
+  // Hedge sprites belong to ground, but forest understory belongs to the
+  // separately cached landscape. Repaint both after the async SVG decode:
+  // otherwise every forest bush remains the identical ellipse fallback.
+  invalidateSceneCache(['landscape','ground']);
+  if(typeof draw==='function')draw();
 }
 function urbanHedgeBushes({a,b}){
   const L=dist(a,b),count=Math.max(1,Math.ceil(L/.42)),key=urbanBoundaryKey(a,b);
