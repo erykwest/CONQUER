@@ -1073,24 +1073,25 @@ function allocateConstructionMaterials(sites,daySpan){
       key:r.key,qty:Math.max(0,Math.round((r.total*target-r.delivered)*1000)/1000)
     })).filter(r=>r.qty>0);
     if(!needs.length)continue;
-    const fraction=Math.min(1,...needs.map(r=>stock(r.key)/r.qty));
-    const bundle={};
-    for(const r of needs){
-      const qty=Math.min(r.qty,Math.floor((r.qty*Math.max(0,fraction)+1e-9)*1000)/1000);
-      if(qty>0)bundle[r.key]=qty;
+    // Material types arrive independently. A stone shipment can be reserved
+    // while wood or gold is unavailable; physical work only advances at the
+    // pace of the least-supplied material. Never lock a complete quote upfront.
+    for(const need of needs){
+      const available=Math.floor((stock(need.key)+1e-9)*1000)/1000;
+      const qty=Math.min(need.qty,available);
+      if(qty<=0)continue;
+      const part={[need.key]:qty};
+      let paid=false;
+      if(economy?.spendBuild)paid=economy.spendBuild(part);
+      else if(stock(need.key)+1e-8>=qty){
+        State.resources[need.key]=Math.round((stock(need.key)-qty)*1000)/1000;
+        paid=true;
+      }
+      if(!paid)continue;
+      c.materialsDelivered[need.key]=Math.round(((Number(c.materialsDelivered[need.key])||0)+qty)*1000)/1000;
+      changed=true;
     }
-    if(!Object.keys(bundle).length){c.materialBlocked=true;continue}
-    let paid=false;
-    if(economy?.spendBuild)paid=economy.spendBuild(bundle);
-    else if(Object.entries(bundle).every(([key,qty])=>stock(key)+1e-9>=qty)){
-      for(const [key,qty] of Object.entries(bundle))State.resources[key]=Math.round((stock(key)-qty)*1000)/1000;
-      paid=true;
-    }
-    if(!paid){c.materialBlocked=true;continue}
-    for(const [key,qty] of Object.entries(bundle))
-      c.materialsDelivered[key]=Math.round(((Number(c.materialsDelivered[key])||0)+qty)*1000)/1000;
     c.materialBlocked=constructionMaterialInfo(site).progress<target-1e-6;
-    changed=true;
   }
   if(changed)State.dirty=true;
   return changed;
