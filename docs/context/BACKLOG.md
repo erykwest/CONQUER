@@ -1,5 +1,13 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-08 — BC-261108-01 · Cantieri finanziati progressivamente
+
+- **IMPLEMENTATO SUL BRANCH `feature/construction-staged-priority-20261108`:** il vincolo di piazzamento resta soltanto geomorfologico/spaziale. Un preventivo anche superiore alle scorte non blocca la conferma. Il cantiere persistente riceve porzioni di materiale in ordine **Molto basso / Basso / Medio / Alto / Molto alto / Critico** (massima classe prima); a parità vince il più anziano, poi ID. I materiali già destinati non possono essere spesi due volte; il lavoro procede solo in proporzione alle risorse consegnate e ai costruttori L1 disponibili.
+- **UI:** inspector di cantiere provvisorio, separato dai controlli dell'edificio completato: barra del progresso, dettagli consegnato/totale, selettore di priorità, indicazione attesa materiali/manodopera. Integrazione UI originale + UI2; pannello Cantieri del Profilo non sostituisce l'inspector.
+- **RETROCOMPATIBILITÀ:** i cantieri V2 precedenti non riacquistano i materiali; un nuovo cantiere restituisce in demolizione solo il consegnato. Per edifici ultimati e upgrade storici resta il modello preesistente; non è inclusa una logistica fisica con carrettieri per ogni partita di materiale.
+- **QA / ACCETTAZIONE IN SOSPESO:** regressione Node inserita in Runtime integrity, ancora da verificare in CI e nel browser (salvataggio, priorità concorrenti, UI2, low/no stock, ripresa dei lavori, geometria/assedi).
+
+
 ## 2026-11-08 — P3-21 · Tronchi e rami uniformati (`fix/dark-tree-bark-20261108`)
 
 - **IMPLEMENTATO SU BRANCH:** il legno visibile di alberi e cespugli SVG è marrone molto scuro **#2B1D16** (7+7 sorgenti), comprese le ramificazioni dei cespugli; nessun cambio alle chiome e alla loro stagionalità. Stesso colore per i pini montani e nei render Canvas/WebGL2.
