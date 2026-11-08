@@ -1,5 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+08/11/2026 — `feature/stonecolor` audit dipendenze: aggiunti agganci semantici del colore pietra a case/civici, pavimentazioni, ponti, rampe/scalinate, materiali di cantiere, cutaway e relative cache; corretto il riconoscimento errato Clay in House3D, mantenute alghe e muschio negli asset rocciosi, unione Canvas mura forzata a pietra; bust URL stonecolor2 e QA estesa. Nessuna geometria, economia o colore degli oggetti non minerali intenzionalmente modificato. Verifica visuale e CI finale aperte.
+
+
 08/11/2026 — `feature/stonecolor`: palette cromatiche **approvate** in SVG dal product owner. Implementato registro a cinque scale di ombreggiatura, selezione seed-based per mappa, nuova scheda Profilo → Ambiente, save locale/cloud, tintura semantica di murature e componenti rocciose Canvas/World3D senza convertire Clay, legno e tetti. Aggiornate cache e versioni asset; test stonecolor nel workflow Runtime integrity. PR/Actions/QA visiva da verificare prima del merge.
 
 
