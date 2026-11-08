@@ -228,12 +228,13 @@
     if(window.ConquerIndustries3D?.draw(s,ground,preview))return;
     // Placeholder platform uses one surveyed elevation even when it spans rock.
     const h=.35;
-    const shade=type.edge;
+    const tint=hex=>s.type==='quarry'&&!isClayQuarry(s)?(window.ConquerStoneColor?.shade(hex)||hex):hex;
+    const shade=tint(type.edge);
     ctx.save();
     if(preview)ctx.globalAlpha*=.62;
     withProjectionGroundZ(ground,()=>{
     extrudePolygonAt(poly,0,h,{
-      top:type.color,sideA:shade,sideB:shade,stroke:selected?'#f4b76f':'#c4bcb0'
+      top:tint(type.color),sideA:shade,sideB:shade,stroke:selected?'#f4b76f':'#c4bcb0'
     });
     const center=w2s({x:s.x,y:s.y},h+.04);
     ctx.fillStyle=isMill(s)?'#594405':s.type==='mine'?'#f4eee6':'#211d17';
