@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-08 — P0-02 / P3-21 · Densità forestale omogenea e cespugli 1:1
+
+- **CORREZIONE SU BRANCH `fix/forest-density-understory`:** il numero di alberi segue l'area realmente occupabile tramite griglia di passo 2,9 U anziché min/max per singola foresta; grandi macchie non restano rade, piccole macchie non sono forzate a 14 alberi. Una pianta arbustiva per albero, all'interno del bosco, non nelle radure o nelle tracce di strada. Posizioni deterministiche e stabili quando si scavano nuovi varchi.
+- **RENDERIZZAZIONE:** sette cespugli SVG esistenti, con colori stagionali invariati, usati sia dal fallback Canvas che dai billboard WebGL2; nessun nuovo asset o alterazione delle siepi urbane.
+- **CHIUSURA:** regressioni distribuzione/1:1/radure/foresta continua, 13 workflow CI, controllo della densità visiva e del frame-time (soprattutto nel bioma Foresta). ROADMAP e produzione legname invariati.
+
+
 ## 2026-11-07 — P3-21 · Finitura stagionale alberi SVG (`autumn`)
 
 - **CODICE SU BRANCH, non ancora merge:** progressione cromatica verde → giallo-verde → giallo → oro → arancione → rosso → marrone dal 1° settembre al 30 novembre, variazione deterministica tra alberi; foreste procedurali e alberi urbani coerenti nel fallback Canvas e in WebGL2. Pini ed inverno invariati.
