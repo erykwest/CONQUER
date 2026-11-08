@@ -273,7 +273,7 @@
   function worldMesh(props,turns=0){
     const m=M();if(!m)return new Float32Array(0);
     const W3=window.ConquerWagons3D,rgbOf=hex=>{const h=hex.replace('#','');return[0,2,4].map(i=>parseInt(h.slice(i,i+2),16)/255)};
-    const pal=m.palette.map(rgbOf),stonePal=m.palette.map(hex=>rgbOf(window.ConquerStoneColor?.shade(hex)||hex));
+    const pal=m.palette.map(rgbOf),stonePal=m.palette.map((hex,i)=>rgbOf(m.paletteKeys[i]?.startsWith('stone')?(window.ConquerStoneColor?.shade(hex)||hex):hex));
     const STONE_PROPS=new Set(['stonePile','riverStones','riverBoulder','milestone']);
     let n=0;for(const p of props)n+=m.assets[p.asset].c.length;
     const out=new Float32Array(n*18);let o=0;
