@@ -445,10 +445,28 @@ const FOREST_TREE_ASSETS=[
 ];
 const FOREST_CANOPY_PALETTES={
   summer:['#355f2f','#3f6b35','#49783b','#557f43','#628b4c'],
-  autumn:['#65452d','#754c2b','#85552d','#965f31','#a76b36']
+  // Six successive autumn tones; summer's five greens remain unchanged at day 1.
+  autumn:['#98ac43','#d3c84a','#edbc3d','#df8a32','#bb4834','#76513a']
 };
 const forestTreeSprites={summer:[],autumn:[],winter:[]};
 let forestTreeSpritesReady=false;
+// Calendar-driven, deterministic foliage: September 1 = 0, November 30 = 90.
+// Outside that range, a forced DEV autumn shows a mid-season preview.
+function autumnFoliageStep(){
+  if(State.season!=='autumn')return -1;
+  const d=calendarDateFromDay();
+  if(d.month<8||d.month>10)return 45;
+  return (d.month===8?0:d.month===9?30:61)+d.day-1;
+}
+function autumnFoliageStage(tree){
+  const progress=Math.max(0,Math.min(1,autumnFoliageStep()/90));
+  const seed=(Number(State.seed)||0)*.019;
+  const hash=n=>{const v=Math.sin(tree.p.x*n+tree.p.y*(n+101.13)+seed)*43758.5453123;return v-Math.floor(v)};
+  // Offset the timing by up to ~15 days: neighbouring trees are not synchronized.
+  const local=Math.max(0,Math.min(1,progress+(hash(12.9898)-.5)*.32));
+  return Math.min(FOREST_CANOPY_PALETTES.autumn.length,
+    Math.floor(local*FOREST_CANOPY_PALETTES.autumn.length+hash(78.233)));
+}
 function buildForestSvg(source,canopyColor=null,canopyVisible=true){
   if(!canopyVisible)return source.replace(/fill="#3B5174"/gi,'fill="#3B5174" fill-opacity="0"');
   return source.replace(/fill="#3B5174"/gi,`fill="${canopyColor}" fill-opacity="0.8"`);
@@ -492,8 +510,10 @@ loadForestTreeSprites();
 function drawTree(tree){
   if(!forestTreeSpritesReady||!screenPointVisibleRaw(tree.p,tree.z||0,44))return false;
   const season=State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer';
-  const colorIndex=season==='winter'?0:tree.colorIndex;
-  const img=forestTreeSprites[season]?.[tree.shapeIndex]?.[colorIndex];
+  const stage=season==='autumn'?autumnFoliageStage(tree):0;
+  const img=season==='autumn'&&stage>0
+    ? forestTreeSprites.autumn?.[tree.shapeIndex]?.[stage-1]
+    : forestTreeSprites[season==='autumn'?'summer':season]?.[tree.shapeIndex]?.[season==='winter'?0:tree.colorIndex];
   if(!img)return false;
   const base=w2sRaw(tree.p,tree.z||0);
   const size=Math.max(10,U*State.view.scale*2.25*tree.scale);

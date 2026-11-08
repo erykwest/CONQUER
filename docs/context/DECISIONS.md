@@ -1,5 +1,13 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-VIS-AUTUMN-261107 — Progressione autunnale delle chiome (07/11/2026)
+
+- **DECISO, CODICE SU BRANCH `autumn`:** la chioma degli alberi decidui non passa in un colpo al marrone: dal 1° settembre al 30 novembre cambia gradualmente di aspetto attraverso toni verde/giallo-verde, giallo, oro, arancione, rosso e marrone. Posizione degli alberi e seed producono un anticipo/ritardo stabile della fase, senza sincronizzazione di tutta la foresta.
+- **INVARIANTI:** si riusano i sette SVG e le palette verdi estive; inverno senza chiome, pini sempreverdi, salvataggi e bilanci economici immutati. Un override DEV Autunno fuori dal periodo autunnale mostra una fase intermedia. Ottimizzazione: atlante WebGL2 statico, aggiornamento UV per giorno, fallback Canvas aggiornato per foreste e alberi urbani.
+- **LIMITE DICHIARATO:** gradazione percepita nel paesaggio tramite sei toni e differimento fra alberi, non interpolazione continua pixel-per-pixel nella stessa chioma e non simulazione di foglie cadute. QA browser/prestazioni richiesta prima di merge.
+- **DIREZIONE:** sola rifinitura del P3-21 visivo; ROADMAP M0–M5 invariata.
+
+
 ## D-CI-P23-261106 — CI senza trigger push su branch inesistenti (06/11/2026)
 
 - **DECISO:** eliminare soltanto i push indirizzati a branch GitHub non più presenti; mantenere i test specialistici su PR e i push su `main` quando configurati.

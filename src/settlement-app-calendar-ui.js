@@ -22,10 +22,21 @@ function seasonForMonth(month){
   if(month<=7)return'summer';
   return'autumn';
 }
+let lastAutumnFoliageStep=-1;
+function syncAutumnFoliage(){
+  const step=autumnFoliageStep();
+  if(step===lastAutumnFoliageStep)return false;
+  lastAutumnFoliageStep=step;
+  // Canvas forest sprites live in landscape; urban corner trees live in base.
+  // World3D only re-uploads tree geometry because its atlas signature is unchanged.
+  if(step>=0)invalidateSceneCache(['landscape','base']);
+  return true;
+}
 function syncSeasonToCalendar(){
   const next=State.seasonOverride||seasonForMonth(calendarDateFromDay().month);
-  if(State.season===next)return false;
+  if(State.season===next){syncAutumnFoliage();return false}
   State.season=next;
+  syncAutumnFoliage();
   document.querySelectorAll('[data-season]').forEach(b=>b.classList.toggle('active',b.dataset.season===State.seasonOverride));
   invalidateSceneCache();
   return true;
@@ -155,6 +166,7 @@ function setSeason(season){
   const labels={summer:'Estate',autumn:'Autunno',winter:'Inverno',spring:'Primavera'};
   State.seasonOverride=State.seasonOverride===season?null:season;
   State.season=State.seasonOverride||seasonForMonth(calendarDateFromDay().month);
+  syncAutumnFoliage();
   syncDevButtons();
   weatherCacheKey='';weatherCacheValue=null;cloudLayerKey='';puddleCacheKey='';
   invalidateSceneCache();saveLocal();draw();

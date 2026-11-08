@@ -801,8 +801,15 @@
   function buildTreeAtlas(){
     if(!forestTreeSpritesReady)return null;
     const season=State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer';
-    const sets=forestTreeSprites[season]||[],tiles=[];
-    sets.forEach((byColor,shape)=>(byColor||[]).forEach((img,color)=>img&&tiles.push({key:shape+':'+color,img,aspect:1})));
+    const tiles=[];
+    // Autumn reuses the summer greens for stage zero; later stages use six warm tones.
+    // Atlas pixels remain static throughout the season: only per-tree UVs advance.
+    const add=(sets,offset=0)=>(sets||[]).forEach((byColor,shape)=>(byColor||[]).forEach((img,color)=>
+      img&&tiles.push({key:shape+':'+(offset+color),img,aspect:1})));
+    if(season==='autumn'){
+      add(forestTreeSprites.summer);
+      add(forestTreeSprites.autumn,FOREST_CANOPY_PALETTES.summer.length);
+    }else add(forestTreeSprites[season]);
     // Hedge bushes (drawUrbanHedge): 920x580 sprites.
     (window.boundaryBushSprites?.[season]||(typeof boundaryBushSprites!=='undefined'?boundaryBushSprites[season]:[])||[])
       .forEach((img,shape)=>img&&tiles.push({key:'bush:'+shape,img,aspect:580/920}));
@@ -822,7 +829,10 @@
     groves.push(urbanLotCornerTrees());                  // single trees on plot corners
     for(const trees of groves){
       for(const t of trees){
-        const uv=atlas.map.get(t.shapeIndex+':'+(atlas.season==='winter'?0:t.colorIndex));if(!uv)continue;
+        const stage=atlas.season==='autumn'?autumnFoliageStage(t):0;
+        const canopyIndex=atlas.season==='winter'?0:
+          atlas.season==='autumn'&&stage>0?FOREST_CANOPY_PALETTES.summer.length+stage-1:t.colorIndex;
+        const uv=atlas.map.get(t.shapeIndex+':'+canopyIndex);if(!uv)continue;
         let [u0,v0,u1,v1]=uv;if(t.flip)[u0,u1]=[u1,u0];
         const size=2.25*t.scale,z=t.z||0;
         const C=[[-.5,-.94,u0,v0],[.5,-.94,u1,v0],[.5,.06,u1,v1],[-.5,.06,u0,v1]];
@@ -1532,12 +1542,18 @@
       for(const [name,part] of [['castleBody','body'],['castleLines','lines'],['castleFront','front'],['castleFrontLines','frontLines']]){S.buf[name]=v[part].b;S.buf[name+'#n']=v[part].n}
       S.sig.castle=cSig;st.castleMs=performance.now()-a;
     }
-    const treeSig=[season,forestTreeSpritesReady,(State.environment||[]).length,envRev,State.seed,urbanRev(),structuresSig('hedges'),
+    const atlasSig=[season,forestTreeSpritesReady,
       Object.keys((typeof boundaryBushSprites!=='undefined'&&boundaryBushSprites[season])||{}).length].join('|');
+    if(S.sig.treeAtlas!==atlasSig){
+      S.treeAtlas=buildTreeAtlas();
+      if(S.treeAtlas)uploadTexture(gl,'atlas',S.treeAtlas.canvas);
+      S.sig.treeAtlas=atlasSig;
+    }
+    const treeSig=[atlasSig,season==='autumn'?autumnFoliageStep():-1,
+      (State.environment||[]).length,envRev,State.seed,urbanRev(),structuresSig('hedges')].join('|');
     if(S.sig.trees!==treeSig){
-      const a=performance.now(),atlas=buildTreeAtlas();
-      if(atlas)uploadTexture(gl,'atlas',atlas.canvas);
-      upload(gl,'trees',buildTrees(atlas));S.sig.trees=treeSig;st.treesMs=performance.now()-a;
+      const a=performance.now();
+      upload(gl,'trees',buildTrees(S.treeAtlas));S.sig.trees=treeSig;st.treesMs=performance.now()-a;
     }
     const dSig=[structuresSig('all'),shopCut,shopFront,Object.keys(architectureSprites).length,window.ConquerGates?.ensureSprites()||''].join('|');
     if(S.sig.decals!==dSig){
