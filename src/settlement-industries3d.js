@@ -60,7 +60,9 @@
           if(pv){const dy=y-pv[1],dz=z-pv[2];y=pv[1]+dy*rc-dz*rs;z=pv[2]+dy*rs+dz*rc}
           pos.push(s.x+x*c-y*sn,s.y+x*sn+y*c,z0+z);
         }
-        col.push(pal[part.c[t]]);gi.push(g);
+        const color=pal[part.c[t]];
+        const mineral=(key(s)==='quarry'&&(['rock','blocks'].includes(name)||part.c[t]===14))||(key(s)==='mine'&&name==='rock');
+        col.push(mineral?(window.ConquerStoneColor?.shade(color)||color):color);gi.push(g);
       }
       let cx=0,cy=0,cz=0;const n=(pos.length-start)/3||1;
       for(let i=start;i<pos.length;i+=3){cx+=pos[i];cy+=pos[i+1];cz+=pos[i+2]}
