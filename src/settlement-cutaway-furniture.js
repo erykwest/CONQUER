@@ -411,7 +411,7 @@
     // Newel: an octagonal (square: four-sided) post with a cap above the last step.
     const zt=st.z1+.04,n=square?4:8,a0=square?Math.PI/4:0,ring=Array.from({length:n},(_,i)=>a0+i*Math.PI*2/n);
     for(let i=0;i<n;i++){const p=ring[i],q=ring[(i+1)%n]+(i===n-1?Math.PI*2:0);out.push({pts:[P(p,newel,st.z0),P(q,newel,st.z0),P(q,newel,zt),P(p,newel,zt)],hex:stone('#7a7268'),n:N((p+q)/2),floor:0})}
-    out.push({pts:ring.map(a=>P(a,newel,zt)),hex:'#8d877c',n:[0,0,1],floor:0});
+    out.push({pts:ring.map(a=>P(a,newel,zt)),hex:stone('#8d877c'),n:[0,0,1],floor:0});
   }
   const cache=new Map();
   function structureFaces(s,g){
