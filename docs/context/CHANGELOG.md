@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+08/11/2026 — correzione review PR #184: il layout usava già tutte e sette le varianti SVG dei cespugli, ma Canvas mantenne le ellissi fallback uniformi perché il loader asincrono invalidava solo `ground`; ora invalida anche `landscape` dopo la decodifica. Aggiornata la versione dello script `settlement-boundaries.js` per la preview e aggiunta regressione che verifica tutte le sette immagini differenti in estate/autunno/inverno e la corretta invalidazione delle cache. CI e verifica visiva aggiornate da confermare.
+
+
+
 08/11/2026 — branch `fix/forest-density-understory` (pre-merge): eliminati i limiti 14/120 alberi per bosco e i sorteggi random con addensamenti; introdotto spawn su griglia world-space deterministica, passo 2,9 U, per tutte le foreste incluse quelle continue. Aggiunto un cespuglio per ogni albero, generato in un punto valido del bosco rispettando radure e gole di viabilità. Canvas/WebGL2 riutilizzano gli asset dei cespugli esistenti, con depth sorting/atlante; il controllo di posizionamento ora interroga solo celle locali anziché scandire migliaia di alberi nel bioma Foresta; aggiornati cache bust, regressione `qa/forest-density-regression.cjs` e test delle foreste organiche in Runtime integrity. CI e visione reale da confermare; nessun asset, bioma o regola economica cambiata. ROADMAP invariata.
 
 
