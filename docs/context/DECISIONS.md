@@ -1,5 +1,13 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-BUILD-PRIORITY-261108 — Conferma del cantiere indipendente dalle scorte (08/11/2026)
+
+- **DECISO:** un ghost valido si conferma anche con zero risorse. La stima è un preventivo complessivo, non una condizione economica per collocare la struttura. Il cantiere occupa subito lo spazio e resta selezionabile/salvabile; non diventa operativo prima del completamento.
+- **SISTEMA UNICO:** nessun inventario parallelo o carovana obbligatoria: `ConquerEconomy` contabilizza il materiale effettivamente destinato al progetto; l'assegnazione è progressiva, ordinata per `Molto basso < Basso < Medio < Alto < Molto alto < Critico`, e successivamente per data/ID. Anche i costruttori L1 seguono questo ordine, ma rimangono persone reali già occupate dal JobManager.
+- **VINCOLI:** non spendere materiali non posseduti, non produrre progresso di lavoro senza i materiali corrispondenti, non dedurre costi due volte. I salari restano pagati quando il lavoro è realmente eseguito; si può attendere sia i materiali sia la manodopera. Nuovi siti rimborsano solo quanto consegnato; salvati preesistenti già pagati restano integralmente riforniti.
+- **UI:** un inspector temporaneo con barre lavoro/materiali e selettore delle sei priorità sostituisce i controlli di esercizio fino alla fine del cantiere; l'inspector completato riappare automaticamente. **SCOPE:** non modificare M0–M5, inventario dei beni o logistica fisica ordinaria; eventuale manutenzione/riparazioni/upgrades come progetti progressivi è decisione futura.
+
+
 ## D-VIS-AUTUMN-261107 — Progressione autunnale delle chiome (07/11/2026)
 
 - **DECISO, CODICE SU BRANCH `autumn`:** la chioma degli alberi decidui non passa in un colpo al marrone: dal 1° settembre al 30 novembre cambia gradualmente di aspetto attraverso toni verde/giallo-verde, giallo, oro, arancione, rosso e marrone. Posizione degli alberi e seed producono un anticipo/ritardo stabile della fase, senza sincronizzazione di tutta la foresta.
