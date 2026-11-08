@@ -14,6 +14,12 @@
 - **DA VALIDARE:** test GitHub Actions e confronto visivo nei due renderer per giorno/notte, inverno, stili clay/brick, cutaway e Asset Lab; censimento di qualunque modulo ancora con colori litici hard-coded. Non fare merge solo sulla base dei test statici.
 - **FUORI SCOPE:** nuove risorse tipo arenaria/tufo/calcare/granito, biome lock, durabilità diversa, texture aggiuntive o copie degli asset.
 
+## 2026-11-08 — Palette Job Manager / Trade nel Profilo (branch `feature/profile-job-trade-tabs-20261108`)
+
+- **IMPLEMENTATO SU BRANCH:** aggiunte due schede di primo livello accanto a Generale, Araldica e Centro di Controllo, senza replicare ledger, roster o simulatori.
+- **JOB MANAGER:** distribuzione L1, popolazione per classe, occupati per attività e andamento settimanale. Allocazione automatica invariata, nessuna assegnazione manuale fittizia.
+- **TRADE:** inventario mercato/castello, prezzi, storico, quote di vendita editabili tramite il comando `setSaleShare` già esistente e apertura carovane.
+- **QA:** regressione `qa/panels-regression.cjs` estesa. CI e QA visiva da verificare, nessun nuovo asset né schema di salvataggio. ROADMAP/DECISIONS invariate.
 
 ## 2026-11-08 — P3-21 · Tronchi e rami uniformati (`fix/dark-tree-bark-20261108`)
 

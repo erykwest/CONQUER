@@ -28,7 +28,7 @@
   const HISTORY_WEEKS = 26;
 
   // UI selection survives re-renders and reopening the tab.
-  const ui = {tab:'general',priceGood:'food',site:'all'};
+  const ui = {tab:'general',mode:'control',priceGood:'food',site:'all'};
 
   // ---- Building blocks -------------------------------------------------------
   const card = (title,body,foot='',wide=false) =>
@@ -192,14 +192,18 @@
       card('Festività',line('Sabato','Mercato')+line('Domenica','Riposo')+empty('Festività straordinarie e loro effetti sulla felicità: TBD.'))
     ]);
   }
-  function economy(d) {
-    const e = d.economy || {}, j = e.jobs || {}, goods = e.goods || [];
-    const jobs = JOBS.map(([k,label])=>[label,j[k]]);
-    const market = goods.length ? table(['Bene','Prezzo','Mercato','Castello','Vendita'],goods.map(g=>[
+  // One live market table used by Economy and the Trade palette.
+  function marketTable(goods) {
+    return goods.length ? table(['Bene','Prezzo','Mercato','Castello','Vendita'],goods.map(g=>[
       '<th>'+esc(good(g.id))+'</th>','<td>'+fmt(g.price)+'</td>','<td>'+fmt(g.market)+'</td>','<td>'+fmt(g.castle)+'</td>',
       '<td><select data-cp-share="'+esc(g.id)+'" aria-label="Quota vendita '+esc(good(g.id))+'">'+
         [0,25,50,75,100].map(n=>'<option value="'+n+'"'+(num(g.share)===n?' selected':'')+'>'+n+'%</option>').join('')+'</select></td>'
     ])) : empty('Mercato non inizializzato.');
+  }
+  function economy(d) {
+    const e = d.economy || {}, j = e.jobs || {};
+    const jobs = JOBS.map(([k,label])=>[label,j[k]]);
+    const market = marketTable(e.goods || []);
     return kpis([
       kpi('Capitale L4',fmt(e.capital),'Oro privato'),
       kpi('Tesoreria',fmt(e.castleGold),'Oro signore'),
@@ -212,6 +216,44 @@
       card('Mercato, prezzi e vendite',market,'La domanda esterna non viene generata automaticamente.',true)
     ]);
   }
+  // Dedicated entry to the existing automatic labor allocation, not a second roster.
+  function jobs(d) {
+    const e=d.economy||{}, j=e.jobs||{}, p=population(d), work=JOBS.map(([k,label])=>[label,j[k]]);
+    const activity=e.activities||[];
+    const sites=activity.length ? table(['Attività','Occupati','Proprietà'],activity.map(a=>[
+      '<th>'+esc(a.type)+'</th>','<td>'+fmt(a.workers)+'</td>',
+      '<td>'+esc(a.owner==='lord'?'Signore':'Privati')+'</td>'
+    ])) : empty('Nessuna attività produttiva registrata.');
+    return kpis([
+      kpi('L1 residenti',fmt(p.L1)),
+      kpi('L1 al lavoro',fmt(sum(work.filter(([label])=>label!=='L1 inattivi').map(x=>x[1]))),'Mansioni correnti'),
+      kpi('L1 inattivi',fmt(j.idle),'Disponibili'),
+      kpi('Cantieri',fmt(j.building),'Costruttori assegnati')
+    ])+grid([
+      card('Distribuzione delle mansioni L1',bars(work,max1(work.map(x=>x[1]))),'Assegnazioni automatiche dell’economia, non impostazioni manuali.'),
+      card('Popolazione per classe',classBars(p),'L2–L4 mantengono professioni e capacità proprie.'),
+      card('Storico occupazione',jobsTrend(d),'Le assegnazioni variano con cantieri, stagione e risorse.',true),
+      card('Posti nelle attività',sites,'Occupati rilevati dal Job Manager esistente; nessuna nuova simulazione.',true),
+      ...(j.foodRisk?[card('Segnalazioni',warn('Possibile carenza alimentare rispetto al fabbisogno stimato.'),'',true)]:[])
+    ]);
+  }
+  // Trade is a view over the existing market ledger, prices and sale-share command.
+  function trade(d) {
+    const e=d.economy||{}, goods=e.goods||[];
+    return kpis([
+      kpi('Oro del signore',fmt(e.castleGold),'Tesoreria'),
+      kpi('Capitale mercanti L4',fmt(e.capital),'Oro privato'),
+      kpi('Merci al mercato',fmt(sum(goods.map(g=>g.market))),'Scorte nel ledger'),
+      kpi('Cicli di mercato',fmt(d.snapshot?.weeks),'Settimane contabilizzate')
+    ])+grid([
+      card('Scambi e quote di vendita',marketTable(goods),'Le quote regolano la vendita tramite il motore economico esistente.',true),
+      card('Prezzi nel tempo',select('data-cp-price','Bene',PRICE_GOODS.map(k=>[k,good(k)]),ui.priceGood)+priceTrend(d),'Storico solo se sono disponibili mercati settimanali.',true),
+      card('Carovane',line('Convogli attivi',fmt((d.diplomacy?.caravans||[]).filter(c=>c.status!=='completed').length))+
+        '<button type="button" class="cp-action" data-cp-action="caravans">Apri gestione carovane</button>',
+        'I convogli strategici sono gestiti dalla funzione esistente.')
+    ]);
+  }
+
   function estate(d) {
     const items = d.economy?.activities || [], lord = items.filter(a=>a.owner==='lord');
     const weekGoods = d.snapshot?.balance?.goods;
@@ -330,6 +372,7 @@
     ]);
   }
   const views = {general,people,economy,estate,stores,military,building,diplomacy,alerts};
+  const PALETTES = {jobs:['Job Manager','Distribuzione e attività dei lavoratori'],trade:['Trade','Mercato, prezzi e quote di vendita']};
 
   // ---- Rendering --------------------------------------------------------------
   function nav(d) {
@@ -345,20 +388,22 @@
     const d = get();
     // Keep horizontal table scroll across live refreshes.
     const scrolls = [...(body.querySelectorAll?.('.cp-scroll')||[])].map(el=>el.scrollLeft);
-    $('controlNav').innerHTML = nav(d);
-    const [,title,subtitle] = TABS.find(t=>t[0]===ui.tab) || TABS[0];
+    const palette=PALETTES[ui.mode];
+    $('controlNav').hidden=!!palette;
+    $('controlNav').innerHTML=palette?'':nav(d);
+    const [,title,subtitle] = palette ? [ui.mode,...palette] : (TABS.find(t=>t[0]===ui.tab) || TABS[0]);
     body.innerHTML = !d.founded
       ? card('Insediamento non fondato',empty('Fonda il villaggio: le risorse di test del Builder non sono statistiche economiche.'))
-      : '<div class="cp-head"><h2>'+esc(title)+'</h2><p>'+esc(subtitle)+'</p></div>'+(views[ui.tab]||general)(d);
+      : '<div class="cp-head"><h2>'+esc(title)+'</h2><p>'+esc(subtitle)+'</p></div>'+(palette ? (ui.mode==='jobs'?jobs(d):trade(d)) : (views[ui.tab]||general)(d));
     [...(body.querySelectorAll?.('.cp-scroll')||[])].forEach((el,i)=>{ if(scrolls[i])el.scrollLeft = scrolls[i]; });
   }
-  function open() { render(); }
+  function open(mode='control') { ui.mode=Object.hasOwn(PALETTES,mode)?mode:'control'; render(); }
 
   const root = $('profileControl');
   if(root){
     root.addEventListener('click',ev=>{
       const tab = ev.target.closest('[data-cp-tab]');
-      if(tab){ui.tab = tab.dataset.cpTab; render(); return;}
+      if(tab){ui.tab = tab.dataset.cpTab; ui.mode='control'; render(); return;}
       const trade = ev.target.closest('[data-cp-transfer]');
       if(trade){window.ConquerGame?.commands?.transferActivity?.(trade.dataset.cpTransfer,trade.dataset.cpOwner); render(); return;}
       const pitch = ev.target.closest('[data-cp-pitch]');

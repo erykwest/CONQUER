@@ -14,6 +14,12 @@
 - **GRAFICA:** tinte per murature, scarpate, rocce, montagne, coste rocciose/reef, blocchi della cava, stone scatter, banchine; gli asset originali (e le mesh/pose) non sono duplicati. Include chiavi palette nelle cache World3D e nelle mesh cached di costa/banchina, e cache bust degli script.
 - **QA:** `qa/stonecolor-regression.cjs` integrata in Runtime integrity; esito Actions, verifica in-game WebGL2/Canvas, Asset Lab e audit di tutte le parti minerali **non ancora certificati**. Non dichiarare feature integrata in `main` finché CI e controllo grafico non passano.
 
+## 2026-11-08 — Palette Job Manager / Trade nel Profilo (branch `feature/profile-job-trade-tabs-20261108`)
+
+- **IMPLEMENTATO SU BRANCH:** aggiunte due schede di primo livello accanto a Generale, Araldica e Centro di Controllo, senza replicare ledger, roster o simulatori.
+- **JOB MANAGER:** distribuzione L1, popolazione per classe, occupati per attività e andamento settimanale. Allocazione automatica invariata, nessuna assegnazione manuale fittizia.
+- **TRADE:** inventario mercato/castello, prezzi, storico, quote di vendita editabili tramite il comando `setSaleShare` già esistente e apertura carovane.
+- **QA:** regressione `qa/panels-regression.cjs` estesa. CI e QA visiva da verificare, nessun nuovo asset né schema di salvataggio. ROADMAP/DECISIONS invariate.
 
 ## 2026-11-08 — Tronchi degli alberi e rami dei cespugli marrone molto scuro (branch `fix/dark-tree-bark-20261108`)
 
