@@ -91,4 +91,13 @@ for(const file of Object.keys(deps)){
  assert.ok(html.includes(src+'?v='),file+' must be browser-loaded');
 }
 
+// Secondary dependencies must update alongside the main stone family.
+const crossings=read('src/settlement-crossings.js');
+assert.match(crossings,/s\.variant==='stone'\?\(window\.ConquerStoneColor\?\.shade\(hex\)/,'Canvas stone bridge uses map palette');
+const urban=read('src/settlement-urban.js');
+assert.match(urban,/function drawUrbanWall\([\s\S]*?ConquerStoneColor\?\.shade/,'Canvas boundary walls use map palette');
+const terraforming=read('src/settlement-terraforming.js');
+assert.match(terraforming,/const mineral=!ghost&&edit\.mode==='walled'/,'wall material excludes soil and previews');
+assert.match(terraforming,/pathPolygon\(face\.screen,mineral\?\(window\.ConquerStoneColor\?\.shade/,'Canvas terracing walls use map palette');
+for(const js of ['src/settlement-crossings.js','src/settlement-urban.js','src/settlement-terraforming.js'])new vm.Script(read(js),{filename:js});
 console.log('PASS STONECOLOR: 5 approved ramps; random stable; material isolation; UI/save/cache/renderer contracts');
