@@ -44,18 +44,22 @@
     '#625e59','#4f4b47','#9f9285'
   ]);
   function masonry(hex){return typeof hex==='string'&&MASONRY.has(hex.toLowerCase())?shade(hex):hex}
-  function changed(id){
+  function changed(id,{persist=true}={}){
     if(!IDS.includes(id)||current()===id)return false;
     State.stonePaletteId=id;
     SHADE_CACHE.clear();
     if(typeof invalidateSceneCache==='function')invalidateSceneCache();
     window.__conquerAssetCompiler?.clearComposite?.();
-    if(typeof saveLocal==='function')saveLocal();
-    if(typeof markDirty==='function')markDirty(false,false,false);
+    // Asset Lab changes are transient and must never touch the player's settlement save.
+    if(persist&&!window.__CONQUER_ASSET_LAB__){
+      if(typeof saveLocal==='function')saveLocal();
+      if(typeof markDirty==='function')markDirty(false,false,false);
+    }
     if(typeof draw==='function')draw();
     document.dispatchEvent(new CustomEvent('conquer-stonecolor-change',{detail:{id}}));
     return true;
   }
   State.stonePaletteId=window.__CONQUER_ASSET_LAB__?'gray':randomForSeed(State.seed);
-  window.ConquerStoneColor=Object.freeze({PALETTES,IDS,randomForSeed,normalized,current,shade,masonry,changed});
+  window.ConquerStoneColor=Object.freeze({PALETTES,IDS,randomForSeed,normalized,current,shade,masonry,changed,
+    preview:id=>changed(id,{persist:false})});
 })();
