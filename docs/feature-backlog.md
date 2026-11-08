@@ -2,7 +2,7 @@
 
 ## 2026-11-08 — BC-261108-01 · Cantieri senza prefinanziamento, sei priorità
 
-- [x] **SU BRANCH `feature/construction-staged-priority-20261108`, pre-merge:** il ghost e gli elementi lineari (compresi ponti/fossati) sono confermabili anche senza stock sufficiente. Lo stesso preventivo esistente determina la spesa finale, ma è consumato progressivamente dal ledger economico durante i lavori.
+- [x] **SU BRANCH `feature/construction-staged-priority-20261108`, pre-merge:** il ghost e gli elementi lineari (compresi ponti/fossati) sono confermabili anche senza stock sufficiente. Lo stesso preventivo esistente determina la spesa finale, ma è consumato progressivamente dal ledger economico durante i lavori, con consegne indipendenti per tipologia e avanzamento limitato dalla risorsa più carente.
 - [x] **Priorità per cantiere:** Molto basso, Basso, Medio (default), Alto, Molto alto, Critico; rifornimento e assegnazione dei costruttori L1 in tale ordine. Lavoro con limite di materiali ricevuti, fermo senza materie prime; nessuna nuova professione o stock alternativo.
 - [x] **Inspector provvisorio:** stato, barra lavorazione e barra rifornimento, quantità per materiale, priorità modificabile; reintegro dell'inspector completo alla fine. Entrambe le UI.
 - [x] **Compatibilità salvataggi:** vecchi cantieri V2 già prepagati; nuovi rimborsano il consegnato alla demolizione. Nessun costo fisso all'apertura del progetto.
