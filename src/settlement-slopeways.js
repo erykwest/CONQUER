@@ -118,10 +118,12 @@
   // ---------- geometry (settlement-mesh3d.js format: absolute world z)
   const PAL={earth:'#8a7350',earthDark:'#6e5b3e',pave:'#a59f92',pave2:'#968f82',kerb:'#b8b1a2',wall:'#8d887d',wall2:'#7c776c',
     tread:'#b0aa9c',tread2:'#a19b8d',riser:'#7d786d',cheek:'#868176',post:'#6f4a2b'};
+  const STONE_TONES=new Set(['pave','pave2','kerb','wall','wall2','tread','tread2','riser','cheek'].map(k=>PAL[k]));
+  const stoneTone=hex=>STONE_TONES.has(hex)?(window.ConquerStoneColor?.shade(hex)||hex):hex;
   const meshCache=new Map();
   function meshes(s,groundFn=ground){
     if(!is(s)||!s.a||!s.b)return[];
-    const key=[s.type,s.a.x,s.a.y,s.b.x,s.b.y,s.za,s.zb,s.width].join('|');
+    const key=[s.type,s.a.x,s.a.y,s.b.x,s.b.y,s.za,s.zb,s.width,State.stonePaletteId].join('|');
     const hit=s.id&&groundFn===ground&&meshCache.get(s.id);if(hit&&hit.key===key)return hit.list;
     const {L}=frame(s),w=(Number(s.width)||spec(s).width)/2,pos=[],col=[];
     const P=(along,across,z)=>{const p=at(s,along,across);return[p.x,p.y,z]};
@@ -129,7 +131,7 @@
       if(z1-z0<1e-4)return;
       const v=[];for(const a of [a0,a1])for(const k of [c0,c1])for(const z of [z0,z1])v.push(P(a,k,z));
       for(const [i,j,k,l] of [[0,2,6,4],[1,5,7,3],[0,4,5,1],[2,3,7,6],[0,1,3,2],[4,6,7,5]])
-        for(const tri of [[i,j,k],[i,k,l]]){for(const q of tri)pos.push(...v[q]);col.push(c)}
+        for(const tri of [[i,j,k],[i,k,l]]){for(const q of tri)pos.push(...v[q]);col.push(stoneTone(c))}
     };
     // A slanted slab between along a0..a1 whose top follows the deck from z(a0) to z(a1).
     const slab=(a0,a1,c0,c1,t,c,lift=0)=>{
