@@ -224,6 +224,11 @@ function simulationFrame(now){
 
     if(now-simUiAt>=250){
       renderUI();
+      // Legacy inspector does not subscribe to the UI2 snapshot. Refresh its
+      // progress while visible, but do not replace a focused priority selector.
+      const inspector=document.getElementById('functionPanel'),selected=selectedStructure();
+      if(inspector?.classList.contains('open')&&selected&&underConstruction(selected)&&
+        !inspector.contains(document.activeElement))renderFunctionPanel();
       simUiAt=now;
     }
 
