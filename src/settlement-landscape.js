@@ -608,6 +608,16 @@ function drawForestGround(f){
 const FOREST_TREE_SPACING=2.9;
 function forestLayoutKey(f){return f.id+':'+(f.holes?.length||0)}
 function clearForestLayoutCache(){forestTreeLayoutCache.clear();forestBushLayoutCache.clear()}
+function forestTreeCell(f,ix,iy){
+  const spacing=FOREST_TREE_SPACING;
+  const rnd=seedRand((State.seed^biomeHash(f.id+':tree:'+ix+':'+iy))>>>0);
+  const p={x:(ix+.28+rnd()*.44)*spacing,y:(iy+.28+rnd()*.44)*spacing};
+  if(p.x<0||p.x>WORLD||p.y<0||p.y>WORLD||!environmentContains(f,p))return null;
+  return{p,z:terrainElevation(p),cellX:ix,cellY:iy,
+    shapeIndex:Math.floor(rnd()*FOREST_TREE_ASSETS.length),
+    colorIndex:Math.floor(rnd()*FOREST_CANOPY_PALETTES.summer.length),
+    flip:rnd()<.5,scale:.8+rnd()*.4};
+}
 function forestTreeLayout(f){
   ensureLandscapeRenderCaches();
   const cacheKey=forestLayoutKey(f);
@@ -616,21 +626,29 @@ function forestTreeLayout(f){
   if(!Number.isFinite(bounds.minX)||!Number.isFinite(bounds.minY)){
     forestTreeLayoutCache.set(cacheKey,trees);return trees;
   }
-  // A cell's roll is independent of its neighbours: carving a clearing/groove
-  // never relocates the surviving trees, even in a lobed or ribbon-shaped forest.
+  // Each cell roll is independent of neighbours: a new clearing/groove does
+  // not relocate surviving trees, including in lobed or ribbon-shaped woods.
   const spacing=FOREST_TREE_SPACING;
   const ix0=Math.max(0,Math.floor(bounds.minX/spacing)),ix1=Math.min(Math.ceil(WORLD/spacing),Math.ceil(bounds.maxX/spacing));
   const iy0=Math.max(0,Math.floor(bounds.minY/spacing)),iy1=Math.min(Math.ceil(WORLD/spacing),Math.ceil(bounds.maxY/spacing));
   for(let iy=iy0;iy<iy1;iy++)for(let ix=ix0;ix<ix1;ix++){
-    const rnd=seedRand((State.seed^biomeHash(f.id+':tree:'+ix+':'+iy))>>>0);
-    const p={x:(ix+.28+rnd()*.44)*spacing,y:(iy+.28+rnd()*.44)*spacing};
-    if(p.x<0||p.x>WORLD||p.y<0||p.y>WORLD||!environmentContains(f,p))continue;
-    trees.push({p,z:terrainElevation(p),cellX:ix,cellY:iy,
-      shapeIndex:Math.floor(rnd()*FOREST_TREE_ASSETS.length),
-      colorIndex:Math.floor(rnd()*FOREST_CANOPY_PALETTES.summer.length),
-      flip:rnd()<.5,scale:.8+rnd()*.4});
+    const tree=forestTreeCell(f,ix,iy);
+    if(tree)trees.push(tree);
   }
   forestTreeLayoutCache.set(cacheKey,trees);return trees;
+}
+// Placement queries must not materialise/scan thousands of trees in a continuous
+// woodland. Resolve just the same seeded cells intersecting the local footprint.
+function forestTreesInBounds(f,b,pad=0){
+  const spacing=FOREST_TREE_SPACING,margin=Math.max(0,pad);
+  const x0=Math.max(0,Math.floor((b.minX-margin)/spacing)),x1=Math.min(Math.ceil(WORLD/spacing),Math.ceil((b.maxX+margin)/spacing));
+  const y0=Math.max(0,Math.floor((b.minY-margin)/spacing)),y1=Math.min(Math.ceil(WORLD/spacing),Math.ceil((b.maxY+margin)/spacing));
+  const trees=[];
+  for(let iy=y0;iy<y1;iy++)for(let ix=x0;ix<x1;ix++){
+    const tree=forestTreeCell(f,ix,iy);
+    if(tree&&tree.p.x>=b.minX-margin&&tree.p.x<=b.maxX+margin&&tree.p.y>=b.minY-margin&&tree.p.y<=b.maxY+margin)trees.push(tree);
+  }
+  return trees;
 }
 // One distinct understory bush per forest tree. Reuse the existing seasonal
 // seven SVG bush variants; neither hedgerows nor plot-corner trees are affected.
