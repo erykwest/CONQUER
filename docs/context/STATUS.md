@@ -1,5 +1,13 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-08 — STONECOLOR · Cinque famiglie di pietra approvate (branch `feature/stonecolor`)
+
+- **IMPLEMENTATO SU BRANCH:** `src/settlement-stonecolor.js` conserva cinque ramp cromatiche approvate (grigio, arenaria, tufo, calcare, granito). La nuova mappa sceglie una famiglia pseudocasuale tramite il suo seed, e la palette resta stabile ai reload. Per salvataggi legacy senza campo, fallback grigio attuale.
+- **UI:** Profilo → Ambiente seleziona in ogni momento la famiglia, aggiornando immediatamente la mappa. La scelta si salva localmente e nel campo `policies.stonePaletteId` del payload cloud. Nessun nuovo materiale costruttivo: pietra e argilla/mattoni mantengono costi e HP.
+- **GRAFICA:** tinte per murature, scarpate, rocce, montagne, coste rocciose/reef, blocchi della cava, stone scatter, banchine; gli asset originali (e le mesh/pose) non sono duplicati. Include chiavi palette nelle cache World3D e nelle mesh cached di costa/banchina, e cache bust degli script.
+- **QA:** `qa/stonecolor-regression.cjs` integrata in Runtime integrity; esito Actions, verifica in-game WebGL2/Canvas, Asset Lab e audit di tutte le parti minerali **non ancora certificati**. Non dichiarare feature integrata in `main` finché CI e controllo grafico non passano.
+
+
 ## 2026-11-08 — Tronchi degli alberi e rami dei cespugli marrone molto scuro (branch `fix/dark-tree-bark-20261108`)
 
 - **IMPLEMENTATO SU BRANCH:** i 7 SVG degli alberi decidui e i 7 SVG dei cespugli adottano **#2B1D16** per tronchi e rami (ex azzurro `#9BBACE`); i tronchi dei pini montani Canvas sono uniformati. Le chiome stagionali sono invariate, inclusa la progressione autunnale integrata in `main` con PR #183.
