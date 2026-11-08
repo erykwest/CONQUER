@@ -920,13 +920,42 @@ function buildDuration(s){
 // Construction V2: manual projects use paid-for work units, not a calendar deadline.
 // The pre-existing procedural roads/houses/fields keep their bootstrap timers.
 const CONSTRUCTION_MAX_WORKERS=3;
+const CONSTRUCTION_PRIORITIES=Object.freeze(['Molto basso','Basso','Medio','Alto','Molto alto','Critico']);
+const CONSTRUCTION_DEFAULT_PRIORITY=2;
+function constructionPriority(s){
+  const value=Number(s?.construction?.priority);
+  return Number.isInteger(value)&&value>=0&&value<CONSTRUCTION_PRIORITIES.length?value:CONSTRUCTION_DEFAULT_PRIORITY;
+}
+// Older V2 saves paid the complete quote at placement. Their missing
+// materialsDelivered field means 'fully supplied', never 'unfunded'.
+function constructionMaterialInfo(s){
+  const required=s?.buildCost||constructionCost(s);
+  const c=s?.construction;
+  const delivered=c?.version===2&&c.materialsDelivered&&typeof c.materialsDelivered==='object'
+    ?c.materialsDelivered:required;
+  const rows=Object.entries(required).filter(([,qty])=>Number(qty)>0).map(([key,qty])=>{
+    const total=Number(qty),supplied=Math.min(total,Math.max(0,Number(delivered[key])||0));
+    return {key,total,delivered:supplied,missing:Math.max(0,total-supplied)};
+  });
+  return {required,delivered,rows,
+    progress:rows.length?Math.max(0,Math.min(1,...rows.map(r=>r.delivered/r.total))):1};
+}
+function refundableConstructionCost(s){
+  if(!s?.buildCost)return{};
+  const delivered=s?.construction?.version===2&&s.construction.materialsDelivered;
+  return delivered&&typeof delivered==='object'?{...delivered}:{...s.buildCost};
+}
 function constructionWorkClock(day){
   // Same 5-day labor week / work shift used by the agricultural simulation.
   const whole=Math.floor(day),week=Math.floor(whole/7),wd=((whole%7)+7)%7;
   return week*5+Math.min(wd,5)+(wd<5?clamp((day-whole-.14)/.38,0,1):0);
 }
 function beginConstruction(s,delay=0){
-  const d=buildDuration(s);if(d<=0)return s;
+  const duration=buildDuration(s);
+  // A paid structure with zero legacy duration (notably the village well)
+  // still needs a real site so its materials are not silently made free.
+  if(duration<=0&&(s.auto||!Object.keys(s.buildCost||{}).length))return s;
+  const d=Math.max(.5,duration);
   const startedDay=State.clock.day+delay;
   if(s.auto){
     s.construction={startedDay,completeDay:startedDay+d};
@@ -941,7 +970,8 @@ function beginConstruction(s,delay=0){
     return s;
   }
   s.construction={version:2,startedDay,workRequired:d,workDone:0,
-    lastWorkDay:startedDay,workers:0,completedDay:null};
+    lastWorkDay:startedDay,workers:0,completedDay:null,
+    priority:CONSTRUCTION_DEFAULT_PRIORITY,materialsDelivered:{},materialBlocked:false};
   return s;
 }
 function constructionProgress(s){
@@ -965,6 +995,8 @@ function constructionWorkStatus(s){
   if(c.version!==2)return 'Procedural construction';
   const wd=((Math.floor(State.clock.day)%7)+7)%7;
   if(wd>=5)return 'Workers resting (weekend)';
+  if(constructionMaterialInfo(s).progress<=constructionProgress(s)+1e-7&&
+      constructionMaterialInfo(s).progress<1-1e-7)return 'In attesa di materiali';
   if(c.unfunded||(window.ConquerEconomy?.constructionWagePerWorkday?.()||0)>0&&
       (window.ConquerEconomy?.state?.().castleGold||0)<=1e-8)
     return 'Paused: insufficient lord treasury for wages';
@@ -1013,6 +1045,55 @@ function constructionCrewAssignments(day=State.clock.day,cutoff=day){
     }
   return slots;
 }
+// Goods are consumed from the single castle ledger only when actually delivered.
+// Every tick visits sites by priority, then placement date and stable id.
+// The one-shift buffer prevents projects from locking their entire quote early.
+function allocateConstructionMaterials(sites,daySpan){
+  let changed=false;
+  const economy=State.village?.founded?window.ConquerEconomy:null;
+  const stock=key=>{
+    if(economy?.state){
+      const e=economy.state();
+      return Math.max(0,Number(key==='gold'?e.castleGold:e.castle?.[key])||0);
+    }
+    return Math.max(0,Number(State.resources?.[key])||0);
+  };
+  const ordered=sites.filter(s=>s.construction?.materialsDelivered).slice().sort((a,b)=>
+    constructionPriority(b)-constructionPriority(a)||
+    a.construction.startedDay-b.construction.startedDay||
+    String(a.id).localeCompare(String(b.id)));
+  for(const site of ordered){
+    const c=site.construction,info=constructionMaterialInfo(site);
+    if(info.progress>=1-1e-8){c.materialBlocked=false;continue}
+    const remainingWork=Math.max(0,c.workRequired-c.workDone);
+    const buffer=Math.max(.5,Math.min(CONSTRUCTION_MAX_WORKERS,CONSTRUCTION_MAX_WORKERS*Math.max(0,daySpan)));
+    const target=Math.min(1,(c.workDone+Math.min(remainingWork,buffer))/Math.max(.001,c.workRequired));
+    const needs=info.rows.map(r=>({
+      key:r.key,qty:Math.max(0,Math.round((r.total*target-r.delivered)*1000)/1000)
+    })).filter(r=>r.qty>0);
+    if(!needs.length)continue;
+    const fraction=Math.min(1,...needs.map(r=>stock(r.key)/r.qty));
+    const bundle={};
+    for(const r of needs){
+      const qty=Math.min(r.qty,Math.floor((r.qty*Math.max(0,fraction)+1e-9)*1000)/1000);
+      if(qty>0)bundle[r.key]=qty;
+    }
+    if(!Object.keys(bundle).length){c.materialBlocked=true;continue}
+    let paid=false;
+    if(economy?.spendBuild)paid=economy.spendBuild(bundle);
+    else if(Object.entries(bundle).every(([key,qty])=>stock(key)+1e-9>=qty)){
+      for(const [key,qty] of Object.entries(bundle))State.resources[key]=Math.round((stock(key)-qty)*1000)/1000;
+      paid=true;
+    }
+    if(!paid){c.materialBlocked=true;continue}
+    for(const [key,qty] of Object.entries(bundle))
+      c.materialsDelivered[key]=Math.round(((Number(c.materialsDelivered[key])||0)+qty)*1000)/1000;
+    c.materialBlocked=constructionMaterialInfo(site).progress<target-1e-6;
+    changed=true;
+  }
+  if(changed)State.dirty=true;
+  return changed;
+}
 function tickConstructionWork(fromDay,toDay){
   if(!State.village?.founded)return[];
   migrateConstructionSites();
@@ -1037,14 +1118,18 @@ function tickConstructionWork(fromDay,toDay){
     ).sort((a,b)=>a.construction.startedDay-b.construction.startedDay||
       String(a.id).localeCompare(String(b.id)));
     if(sites.length){
+      allocateConstructionMaterials(sites,next-t);
       const assigned=workerDay>0?constructionCrewAssignments(t,next):new Map();
       for(const s of sites){
         const c=s.construction,n=assigned.get(s.id)?.length||0;
         const effectiveStart=Math.max(t,c.startedDay,Number(c.lastWorkDay)||c.startedDay);
-        const requested=Math.min(Math.max(0,c.workRequired-c.workDone),
+        const proposed=Math.min(Math.max(0,c.workRequired-c.workDone),
           Math.max(0,constructionWorkClock(next)-constructionWorkClock(effectiveStart))*n);
-        // Only actual funded work advances construction. Materials were paid
-        // at placement; labor is paid as its shifts are performed.
+        // Work cannot overrun materials already supplied to this specific site.
+        const materialWork=Math.max(0,c.workRequired*constructionMaterialInfo(s).progress-c.workDone);
+        const requested=Math.min(proposed,materialWork);
+        c.materialBlocked=proposed>requested+1e-7;
+        // Wages remain pay-as-you-work and are never deducted twice.
         const payroll=requested>0?
           window.ConquerEconomy?.payConstructionWork?.(s,requested)||{work:requested,paid:0}:
           {work:0,paid:0};
