@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-08 — P3-21 · Tronchi e rami uniformati (`fix/dark-tree-bark-20261108`)
+
+- **IMPLEMENTATO SU BRANCH:** il legno visibile di alberi e cespugli SVG è marrone molto scuro **#2B1D16** (7+7 sorgenti), comprese le ramificazioni dei cespugli; nessun cambio alle chiome e alla loro stagionalità. Stesso colore per i pini montani e nei render Canvas/WebGL2.
+- **DA VALIDARE:** CI Runtime integrity/Asset Lab e controllo visivo; versioning asset/script per evitare cache precedenti. Nessuna modifica a biomi, gestione foreste, collisioni o salvataggi.
+
 ## 2026-11-07 — P3-21 · Finitura stagionale alberi SVG (`autumn`)
 
 - **CODICE SU BRANCH, non ancora merge:** progressione cromatica verde → giallo-verde → giallo → oro → arancione → rosso → marrone dal 1° settembre al 30 novembre, variazione deterministica tra alberi; foreste procedurali e alberi urbani coerenti nel fallback Canvas e in WebGL2. Pini ed inverno invariati.
