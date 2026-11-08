@@ -27,6 +27,8 @@ on:
       - lab/**
       - qa/asset-catalog-regression.cjs
       - qa/asset-catalog-browser.mjs
+      - qa/stonecolor-snapshots.mjs
+      - src/settlement-stonecolor.js
       - qa/asset-audit.mjs
       - qa/asset-audit-scope.cjs
       - qa/asset-audit-scope-regression.cjs
@@ -137,4 +139,37 @@ jobs:
           path: |
             artifacts/asset-lab-browser.png
             artifacts/asset-audit/
+          retention-days: 14
+
+  stonecolor-snapshots:
+    name: Stonecolor palette snapshots
+    # Snapshot sheets are validation artifacts for the Stonecolor feature branch, not new baselines.
+    if: github.event_name == 'pull_request' && github.head_ref == 'feature/stonecolor'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Start isolated Asset Lab
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/asset-lab-stonecolor.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:4173/figures-lab.html >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/asset-lab-stonecolor.log
+          exit 1
+      - name: Install cached Chromium and pinned Playwright
+        uses: ./.github/actions/playwright-setup
+      - name: Capture all 5 geological palettes in the real Asset Lab
+        run: node qa/stonecolor-snapshots.mjs
+      - name: Publish Stonecolor visual comparison
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stonecolor-five-palettes
+          path: artifacts/stonecolor/
+          if-no-files-found: warn
           retention-days: 14
