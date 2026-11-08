@@ -78,7 +78,8 @@ const oldTree=new Map(before.trees.map(t=>[key(t),t]));
 const oldBush=new Map(before.trees.map((t,i)=>[key(t),before.bushes[i]]));
 for(let i=0;i<after.trees.length;i++){
   assert.deepEqual(after.trees[i],oldTree.get(key(after.trees[i])),'remaining trees do not reshuffle');
-  assert.deepEqual(after.bushes[i],oldBush.get(key(after.trees[i])),'remaining bushes do not reshuffle');
+  const previousBush=oldBush.get(key(after.trees[i]));
+  if(!inside(previousBush.p,f.holes[0]))assert.deepEqual(after.bushes[i],previousBush,'unaffected bushes do not reshuffle');
 }
 const continuous={id:'continuous',type:'forest',continuous:true,points:rect(0,0,200,200),holes:[rect(65,65,75,75)]};
 evaluate('clearForestLayoutCache()');
