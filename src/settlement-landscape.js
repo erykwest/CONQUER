@@ -387,7 +387,7 @@ function mountainPineSprite(variant,winter=false){
   const key=variant+(winter?'w':'');
   if(mountainPineSprites[key])return mountainPineSprites[key];
   const W=96,H=128,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
-  const crown=winter?(variant?'#6f8a72':'#7f9a80'):(variant?'#4f7a45':'#5d9140'),trunk='#a07560';
+  const crown=winter?(variant?'#6f8a72':'#7f9a80'):(variant?'#4f7a45':'#5d9140'),trunk='#2B1D16';
   g.fillStyle=trunk;g.fillRect(W*.44,H*.80,W*.12,H*.17);
   g.fillStyle=crown;g.beginPath();
   const tiers=5,top=H*.04,bottom=H*.83;g.moveTo(W/2,top);
@@ -473,7 +473,7 @@ function buildForestSvg(source,canopyColor=null,canopyVisible=true){
 }
 async function loadForestTreeSprites(){
   try{
-    const sources=await Promise.all(FOREST_TREE_ASSETS.map(path=>fetch(path).then(r=>{
+    const sources=await Promise.all(FOREST_TREE_ASSETS.map(path=>fetch(path+'?v=bark1').then(r=>{
       if(!r.ok)throw new Error('Forest SVG '+r.status+' '+path);
       return r.text();
     })));

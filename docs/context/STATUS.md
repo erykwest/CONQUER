@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-08 — Tronchi degli alberi e rami dei cespugli marrone molto scuro (branch `fix/dark-tree-bark-20261108`)
+
+- **IMPLEMENTATO SU BRANCH:** i 7 SVG degli alberi decidui e i 7 SVG dei cespugli adottano **#2B1D16** per tronchi e rami (ex azzurro `#9BBACE`); i tronchi dei pini montani Canvas sono uniformati. Le chiome stagionali sono invariate, inclusa la progressione autunnale integrata in `main` con PR #183.
+- **RENDERING:** i cespugli preservano il nuovo colore nella conversione SVG, con compatibilità per eventuali sorgenti legacy; asset e script hanno URL versionati per evitare cache precedenti. Canvas e WebGL2 condividono gli sprite, senza cambiare geometrie o atlanti.
+- **QA:** nuova regressione `qa/tree-bark-regression.cjs` nel workflow Runtime integrity per 14 SVG e trasformazioni stagionali. GitHub Actions e verifica visiva browser da controllare; nessun merge su `main` in questa modifica. ROADMAP e DECISIONS invariati: rifinitura grafica P3-21.
+
 ## 2026-11-07 — Foliage autunnale progressivo (branch `autumn`, non su `main`)
 
 - **IMPLEMENTATO SU BRANCH:** gli alberi SVG delle foreste e degli angoli dei lotti conservano il verde estivo a inizio settembre, poi percorrono sei passaggi cromatici fino al marrone di fine novembre. I giorni di calendario 1 settembre–30 novembre (91) determinano l'avanzamento; ogni albero ha una variazione di fase stabile da posizione e seed, senza rumore per-frame. I pini montani restano verdi e in inverno le chiome decidue restano nascoste.
