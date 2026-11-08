@@ -46,10 +46,13 @@
   // Palette with the roofs whitened in winter (light and dark tones kept apart).
   const palCache=new Map();
   function palette(){
-    const data=DATA(),winter=typeof State!=='undefined'&&State.season==='winter',clay=clayFor||isClay(null),ck=(winter?'w':'s')+(clay?'c':'');
+    const data=DATA(),winter=typeof State!=='undefined'&&State.season==='winter',clay=clayFor||isClay(null),ck=(winter?'w':'s')+(clay?'c':'')+'|'+(State.stonePaletteId||'gray');
     const hit=palCache.get(ck);if(hit&&hit.data===data)return hit.pal;
     const pal=data.palette.map((hex,i)=>{const k=data.paletteKeys[i];
-      return winter&&k.startsWith('roof')?WINTER[/Dark$/.test(k)?1:0]:clay&&CLAY[k]||hex});
+      if(winter&&k.startsWith('roof'))return WINTER[/Dark$/.test(k)?1:0];
+      if(clay)return CLAY[k]||hex;
+      // The Blender register identifies stone by material role, never by an arbitrary grey RGB.
+      return k.startsWith('stone')?(window.ConquerStoneColor?.shade(hex)||hex):hex;});
     palCache.set(ck,{data,pal});return pal;
   }
   // World triangles of model `key` at place {x,y,angle,scale}; ground parts paint first.
@@ -240,8 +243,8 @@
   function propMeshes(s){
     const props=lotProps(s);if(!props.length)return[];
     const hit=propCache.get(s.id),season=State.season;
-    if(hit.meshes&&hit.season===season)return hit.meshes;
-    hit.season=season;
+    if(hit.meshes&&hit.season===season&&hit.stonePaletteId===State.stonePaletteId&&hit.visualPalette===State.visualPalette)return hit.meshes;
+    hit.season=season;hit.stonePaletteId=State.stonePaletteId;hit.visualPalette=State.visualPalette;
     hit.meshes=props.map(p=>p.asset.startsWith('sc:')?scatterTriangles(p.asset.slice(3),p)
       :triangles('prop_'+p.asset,{x:p.x,y:p.y,angle:p.heading,scale:p.s},terrainElevation(p))).filter(Boolean);
     return hit.meshes;
@@ -621,7 +624,7 @@
   const cutCache=new Map();
   function cutawayMesh(s,ground){
     const cam=cameraLocal(s),span=floorSpan(s);
-    const key=[modelKey(s),s.x,s.y,s.angle||0,ground,State.season,isClay(s),cam?cam.x.toFixed(3)+','+cam.y.toFixed(3):'plan',span.floor,(s.functions||[]).join(',')].join('|');
+    const key=[modelKey(s),s.x,s.y,s.angle||0,ground,State.season,State.stonePaletteId,State.visualPalette,isClay(s),cam?cam.x.toFixed(3)+','+cam.y.toFixed(3):'plan',span.floor,(s.functions||[]).join(',')].join('|');
     const hit=cutCache.get(s.id);if(hit&&hit.key===key)return hit.mesh;
     const mesh=withClay(s,()=>emit([...interiorParts(modelKey(s),span,s),...sectionParts(modelKey(s),cam,span)],placeOf(s),ground));
     cutCache.set(s.id,{key,mesh});
@@ -630,7 +633,7 @@
   // The building mesh is kept per structure (the painter caches its shaded fills on it).
   const bodyCache=new Map();
   function bodyMesh(s,ground){
-    const key=[modelKey(s),s.x,s.y,s.angle||0,ground,State.season,isClay(s)].join('|'),hit=bodyCache.get(s.id);
+    const key=[modelKey(s),s.x,s.y,s.angle||0,ground,State.season,State.stonePaletteId,State.visualPalette,isClay(s)].join('|'),hit=bodyCache.get(s.id);
     if(hit&&hit.key===key)return hit.mesh;
     const mesh=withClay(s,()=>triangles(modelKey(s),placeOf(s),ground));
     bodyCache.set(s.id,{key,mesh});
