@@ -1,5 +1,11 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+## 2026-11-08 — P0-02 / P3-21 · Correzione densità foreste e sottobosco
+
+- **SU BRANCH `fix/forest-density-understory`:** spawn alberi uniforme per superficie forestale (una cella di 2,9 U, jitter deterministico, nessun minimo/massimo artificiale per bosco), compatibile con poligoni organici, foresta continua, radure e varchi. Un cespuglio dei sette SVG preesistenti per ogni albero; Canvas/WebGL2 coerenti. Gli alberi urbani e le siepi rimangono separati.
+- **VERIFICHE DA COMPLETARE:** CI Runtime integrity con `qa/forest-density-regression.cjs`, confronto a vista boschi piccoli/grandi, prestazioni del bioma Foresta. Economie e navigazione non cambiano.
+
+
 ## 2026-11-06 — L1 Carrettieri per Piazzale e Mercato (branch `feature/l1-carter-jobs-market-20261106`, prima del merge)
 
 - **LAVORO REALE:** professione Carrettiere in `ConquerEconomy.laborAllocation`: fino a un occupato per magazzino con carichi raggiungibili, dopo i produttori essenziali e prima dei costruttori. `jobSummary.carter`, grafici e storico settimanale. Ogni lavoratore L1 non è né inattivo né costruttore né il personaggio due volte disegnato durante la guida. Orari per nuove partenze nei feriali, stop durante allarme; carri fermi senza personale disponibile, produzione invariata.
