@@ -4,7 +4,7 @@
 
 - **IMPLEMENTATO SU BRANCH:** sostituito il conteggio per bosco `clamp(14..120)` con una griglia world-space di celle da 2,9 U, indipendente dalla superficie della macchia. Alberi distribuiti con jitter deterministico, senza accumuli casuali né limite che svuota i boschi grandi. Anche la foresta continua usa le stesse celle.
 - **SOTTOBOSCO:** un cespuglio per ogni albero esistente, sempre entro il poligono e fuori dalle radure, buche e strade intagliate. Riutilizzate le sette sprite SVG stagionali dei cespugli; nessun nuovo asset. Le posizioni rimanenti non cambiano quando viene creata una radura.
-- **RENDER:** Canvas ordina alberi e cespugli nello stesso ordine di profondità e applica il LOD in coppia; WebGL2 riutilizza l'atlante delle siepi senza nuovi caricamenti. Il numero di istanze nella foresta continua cresce e richiede verifica frame-time.
+- **RENDER E PERFORMANCE:** Canvas ordina alberi e cespugli nello stesso ordine di profondità e applica il LOD in coppia; WebGL2 riutilizza l'atlante delle siepi senza nuovi caricamenti. Il posizionamento dei nuovi edifici interroga solo le celle forestali adiacenti invece di ricostruire/scorrere l'intera foresta; il numero di istanze nel bioma Foresta cresce e richiede ancora verifica frame-time.
 - **QA:** aggiunta `qa/forest-density-regression.cjs` al workflow Runtime integrity insieme alla regressione dei poligoni organici. CI e controllo visivo non ancora verificati; nessun merge o deploy autorizzato prima delle verifiche.
 - **SCOPE:** variazione grafica di generazione, nessun cambio a collisioni, navigazione, economia legname, salvataggi, biome polygons o alberi negli angoli dei lotti. ROADMAP invariata.
 
