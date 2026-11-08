@@ -31,6 +31,19 @@ try{
   const castlePixels=await page.locator('#assetDetailPreview canvas').evaluate(c=>{
     const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let n=0;for(let p=3;p<d.length;p+=4)if(d[p])n++;return n});
   assert.ok(castlePixels>5000,'Castle tower should draw real geometry: '+castlePixels);
+  // Stonecolor is a Lab option, not a second material class: real stone changes, clay does not.
+  const originalStone=await page.locator('#assetDetailPreview canvas').evaluate(c=>c.toDataURL());
+  await page.locator('#assetStoneColor').selectOption('sandstone');
+  assert.equal(await page.evaluate(()=>window.ConquerAssetCatalog.stonePaletteId),'sandstone');
+  const sandstoneStone=await page.locator('#assetDetailPreview canvas').evaluate(c=>c.toDataURL());
+  assert.notEqual(sandstoneStone,originalStone,'Engine-generated masonry must use the selected Lab stone color');
+  await page.evaluate(()=>window.ConquerAssetCatalog.select('model:ConquerIndustryModels:clayPit'));
+  const claySandstone=await page.locator('#assetDetailPreview canvas').evaluate(c=>c.toDataURL());
+  await page.locator('#assetStoneColor').selectOption('granite');
+  assert.equal(await page.locator('#assetDetailPreview canvas').evaluate(c=>c.toDataURL()),claySandstone,
+    'Changing stone color must not recolor the clay quarry');
+  await page.locator('#assetStoneColor').selectOption('gray');
+  await page.evaluate(()=>window.ConquerAssetCatalog.select('castle:pietra-quadrata-l3'));
   const castleBefore=await page.locator('#assetDetailPreview canvas').evaluate(c=>c.toDataURL());
   await page.locator('#assetRotateRight').click();
   assert.notEqual(await page.locator('#assetDetailPreview canvas').evaluate(c=>c.toDataURL()),castleBefore,'Castle meshes must rotate');
