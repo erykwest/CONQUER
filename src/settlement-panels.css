@@ -6,6 +6,7 @@
 }
 
 /* Navigation: one scrollable row, never wraps into a block of buttons. */
+.cp-nav[hidden]{display:none!important}
 .cp-nav{display:flex;gap:4px;overflow-x:auto;scrollbar-width:thin;padding:0 0 10px;margin-bottom:14px;border-bottom:1px solid var(--line)}
 .cp-nav button{flex:none;display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
   padding:8px 12px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--cp-soft);cursor:pointer}

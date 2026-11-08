@@ -54,6 +54,20 @@ const x=fixture();
 assert.equal(x.context.window.ConquerPanels.tabs.length,9);
 x.context.window.ConquerPanels.open();
 assert.match(x.elements.controlBody.innerHTML,/Popolazione/);
+// Two main Profile palettes use live views and retain the existing sale-share command.
+x.context.window.ConquerPanels.open('jobs');
+assert.match(x.elements.controlBody.innerHTML,/Distribuzione delle mansioni L1/);
+assert.match(x.elements.controlBody.innerHTML,/Posti nelle attività/);
+assert.equal(x.elements.controlNav.hidden,true);
+x.context.window.ConquerPanels.open('trade');
+assert.match(x.elements.controlBody.innerHTML,/Scambi e quote di vendita/);
+assert.match(x.elements.controlBody.innerHTML,/data-cp-share="food"/);
+assert.equal(x.elements.controlNav.hidden,true);
+x.elements.profileControl.events.change({target:{dataset:{cpShare:'food'},value:'25'}});
+assert.deepEqual(x.calls.pop(),['share','food',25]);
+x.context.window.ConquerPanels.open('control');
+assert.equal(x.elements.controlNav.hidden,false);
+assert.match(x.elements.controlBody.innerHTML,/Popolazione/);
 assert.match(x.elements.controlBody.innerHTML,/<polyline/);
 for(const id of x.context.window.ConquerPanels.tabs){
   x.tab(id);
