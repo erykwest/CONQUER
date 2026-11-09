@@ -923,6 +923,8 @@
   }
   function patrolDestination(unit,skip=0){
     const local=unit.circleSectorId?circlePatrolPoints(unit.circleSectorId):[];
+    // Never silently patrol the White Zone while a valid sector is assigned.
+    if(unit.circleSectorId&&!local.length)return null;
     const boundary=local.length?local:whiteBoundaryPoints();
     const loop=local.length?local.map((_,i)=>i):whiteBoundaryLoopCache;
     if(!boundary.length||!loop.length)return null;
@@ -972,6 +974,13 @@
   function updatePatrols(now){
     for(const unit of combat.units){
       if(unit.kind!=='patrol'||unit.defeated||unit.routing||unit.campState||unit.target||now<(unit.nextPatrolAt||0))continue;
+      // Defensive geometry can change during construction or siege. An old
+      // CIRCLE id is no longer a valid assignment: release it to the reserve.
+      if(unit.circleSectorId&&window.ConquerCircle?.getStatus?.().ready&&
+        !window.ConquerCircle?.controlState?.(unit.circleSectorId)){
+        unit.circleSectorId=null;unit.patrolLoopPosition=null;
+        unit.patrolProbeOffset=0;changed();
+      }
       const previous=unit.patrolLoopPosition,offset=unit.patrolProbeOffset||0;
       // Only one candidate is searched per simulation tick. Searching three
       // endpoints * four increasingly wide A* windows in one tick caused
