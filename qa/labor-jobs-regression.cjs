@@ -90,4 +90,73 @@ check('orto di corte: each kitchen garden yields lord food per workday, also und
   idle.tick(-1,0);
   assert.ok(!(idle.state().weekProduced?.food>0),'no gardens, no food under alarm');
 });
-console.log('Labor jobs regression: PASS');
+
+check('manual minima reserve distinct L1 and leave additional population idle',()=>{
+  const {e}=harness([house('a'),house('b'),house('c'),house('d'),
+    {id:'wood',type:'loggingCamp'},{id:'wine',type:'vineyard'},site('tower')],{wood:500});
+  assert.equal(e.setL1Minimum('site:wine',1),true);
+  assert.equal(e.setL1Minimum('builders',2),true);
+  assert.equal(e.setL1Auto('site:wood',false),true);
+  assert.equal(e.setL1Auto('site:wine',false),true);
+  assert.equal(e.setL1Auto('builders',false),true);
+  assert.equal(e.setL1Order(['builders','site:wine','site:wood','carter']),true);
+  const labor=e.laborAllocation(0);
+  assert.equal(labor.builders.length,2);
+  assert.equal(labor.allocated.wine,1);
+  assert.equal(labor.allocated.wood,0);
+  assert.equal(labor.idle.length,1);
+  assert.equal(e.availableBuilders(0),2);
+  assert.equal(e.availableBuilderIds(0).length,2);
+  const workers=[...labor.assignedL1.wine,...labor.builders,...labor.carters];
+  assert.equal(new Set(workers.map(w=>w.id)).size,workers.length,'a worker has only one L1 job');
+});
+check('AUTO fills remaining slots after minimum guarantees, even under labor pressure',()=>{
+  const {e}=harness([house('a'),house('b'),house('c'),house('d'),
+    {id:'wood',type:'loggingCamp'},{id:'wine',type:'vineyard'},site('tower')],{wood:500});
+  assert.equal(e.setL1Minimum('site:wood',1),true);
+  assert.equal(e.setL1Minimum('site:wine',1),true);
+  assert.equal(e.setL1Minimum('builders',1),true);
+  assert.equal(e.setL1Order(['site:wood','site:wine','builders','carter']),true);
+  const labor=e.laborAllocation(0);
+  assert.equal(labor.allocated.wood,2);
+  assert.equal(labor.allocated.wine,1);
+  assert.equal(labor.builders.length,1);
+  assert.equal(labor.idle.length,0);
+});
+check('drag priority determines shortage winner, rejects bad order and survives serialization',()=>{
+  const buildings=[house('a'),{id:'wood',type:'loggingCamp'},{id:'wine',type:'vineyard'},site('tower')];
+  const h=harness(buildings,{wood:500});
+  const {e}=h;
+  assert.equal(e.setL1Order(['site:wine','builders','site:wood','carter']),true);
+  assert.equal(e.setL1Order(['site:wine','site:wine']),false);
+  assert.equal(e.setL1Minimum('site:wine',1),true);
+  assert.equal(e.setL1Minimum('builders',1),true);
+  const labor=e.laborAllocation(0);
+  assert.equal(labor.allocated.wine,1);
+  assert.equal(labor.builders.length,0);
+  assert.equal(labor.allocated.wood,0);
+  const j=e.jobManager(0);
+  assert.equal(j.tasks[0].key,'site:wine');
+  assert.equal(j.tasks.find(t=>t.key==='builders').minimum,1);
+  assert.equal(j.tasks.find(t=>t.key==='builders').workers,0);
+  const saved=JSON.parse(JSON.stringify(h.State.economy));
+  const loaded=harness(buildings,{wood:500});
+  loaded.State.economy=saved;
+  assert.equal(loaded.e.jobManager(0).managed,true);
+  assert.equal(loaded.e.jobManager(0).tasks[0].key,'site:wine');
+  assert.equal(loaded.e.laborAllocation(0).allocated.wine,1);
+});
+check('manual zero stops a productive site without affecting L2 staff or protected herders',()=>{
+  const {e}=harness([house('a','goat'),house('b'),house('c'),
+    {id:'wine',type:'vineyard'},{id:'field',type:'field'},
+    {...house('tier2'),houseLevel:2}],{wood:500});
+  assert.equal(e.setL1Auto('site:wine',false),true);
+  assert.equal(e.laborAllocation(0).allocated.wine,0);
+  assert.equal(e.laborAllocation(0).allocated.field,1);
+  assert.ok(e.laborAllocation(0).herders.length>=1);
+  assert.equal(e.setL1Minimum('site:wine',-1),false);
+  assert.equal(e.setL1Minimum('site:wine',999),true);
+  assert.equal(e.jobManager(0).tasks.find(t=>t.key==='site:wine').minimum,2);
+});
+
+console.log('Labor jobs regression: PASS (legacy allocation + ranked/minimum/manual L1)');
