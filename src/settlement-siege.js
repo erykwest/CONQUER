@@ -59,7 +59,12 @@
   const within=(v,a,b)=>Math.max(a,Math.min(b,v));
   function initial(){return{version:1,stock:Object.fromEntries(STOCK_KEYS.map(k=>[k,0])),
     lastDay:State.clock.day,starvationDays:0,thirstDays:0,hygiene:100,ruins:[],earthworks:[],
-    circle:{captures:[],capturedRoomIds:[]}}}
+    circle:{captures:[],capturedRoomIds:[]},soldiers:{enlisted:0,paid:true,expedition:0}}}
+  // The soldiers' reserve (settlement-soldiers.js): enlisted L1 men, whether they were paid, men out on expedition.
+  function soldierState(raw){
+    const n=v=>Math.max(0,Math.floor(Number(v)||0));
+    return{enlisted:n(raw?.enlisted),paid:raw?.paid!==false,expedition:n(raw?.expedition)};
+  }
   function state(){
     if(!State.siege||typeof State.siege!=='object')State.siege=initial();
     const x=State.siege;
@@ -74,6 +79,7 @@
     if(!Number.isFinite(x.starvationDays))x.starvationDays=0;
     if(!Number.isFinite(x.thirstDays))x.thirstDays=0;
     x.hygiene=Number.isFinite(x.hygiene)?within(x.hygiene,0,100):100;
+    if(!x.soldiers||typeof x.soldiers!=='object')x.soldiers=soldierState(null);
     return x;
   }
   function restore(raw){
@@ -84,6 +90,7 @@
       version:1,stock:{...(raw.stock||{})},lastDay:Number(raw.lastDay),
       starvationDays:Number(raw.starvationDays)||0,thirstDays:Number(raw.thirstDays)||0,horsesSlaughtered:Number(raw.horsesSlaughtered)||0,hygiene:Number.isFinite(Number(raw.hygiene))?Number(raw.hygiene):100,ruins:Array.isArray(raw.ruins)?raw.ruins.slice(-200):[],
       earthworks:Array.isArray(raw.earthworks)?raw.earthworks.slice(-100):[],
+      soldiers:soldierState(raw.soldiers),
       circle:{
         // Never discard an ACTIVE conquest when loading a long campaign.
         captures:Array.isArray(raw.circle?.captures)?raw.circle.captures.filter(
@@ -105,7 +112,9 @@
     // Town hall: one room per floor, as many as the civic level; the tribunal needs L2.
     if(s?.type==='townhall')return !underConstruction(s)&&index>=0&&index<functionCapacity(s)
       &&TOWNHALL_FUNCTION_CATALOG.includes(fn)&&(fn!=='tribunal'||civicLevel(s)>=2)&&(fn!=='prison'||index===0);
-    if(fn==='council'||fn==='tribunal')return false;   // civic rooms, town hall only
+    // Civic rooms, town hall only. The castle guard post merged into the Barracks (D-MIL-RES-261109):
+    // saved castle guard rooms are emptied by sanitizeRooms.
+    if(fn==='council'||fn==='tribunal'||fn==='guard')return false;
     if(!eligibleRoom(s)||index<0||index>=functionCapacity(s))return false;
     const l=floor(s,index),top=structureLevel(s);
     // Small (W1) towers: the spiral stair fills the shaft, only a few rooms fit (user, 04/11/2026).
@@ -347,7 +356,9 @@
   // Horses in the stables that no mounted knight needs.
   function spareHorses(x=state()){
     const knights=(window.ConquerCombat?.units?.()||[]).filter(u=>u.kind==='knight'&&!u.defeated).length;
-    return Math.max(0,Math.floor(x.stock.horses)-knights);
+    // Outposts keep their relay horse (settlement-soldiers.js).
+    const relays=window.ConquerSoldiers?.horsesHeld?.()||0;
+    return Math.max(0,Math.floor(x.stock.horses)-knights-relays);
   }
   // Out of food: slaughter just enough spare horses to cover the shortfall; their meat goes to the stock.
   function slaughterHorses(x,shortfall){
@@ -440,6 +451,7 @@
     x.lastDay=after;
     if(elapsed)window.ConquerEarthworks?.tick(elapsed);
     if(elapsed)window.ConquerInfirmary?.tick(after-elapsed,after);
+    if(elapsed)window.ConquerSoldiers?.tick(after-elapsed,after);
     if(!elapsed)return;
     const w=water();
     if(w.short>0)x.thirstDays+=elapsed*w.short;

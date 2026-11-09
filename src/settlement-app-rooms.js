@@ -192,6 +192,8 @@ function renderFunctionPanel(){
       '<div class="grid"><button type="button" data-siege-archer="-1" '+(building||archers===0?'disabled':'')+'>− Archer</button>'+
       '<button type="button" data-siege-archer="1" '+(building||archers>=archerSlots.length?'disabled':'')+'>+ Archer</button></div>'+
       '<div class="legend">Priority: roof '+roofSlots+(bartizanSlots?' → bartizans '+bartizanSlots+' (also 0-1U at the tower foot)':'')+' → arrow slits '+slitSlots+' (upper floors first). Connected walls can block slits.</div></div>';
+    // Lookout, outpost and signal fire (settlement-soldiers.js).
+    html+=window.ConquerSoldiers?.towerPanelHtml?.(s)||'';
   }
   if(['house','market','tavern','church','training','plaza','townhall','guild'].includes(s.type)){
     const deg=Math.round((Number(s.angle)||0)*180/Math.PI+360)%360;
@@ -347,6 +349,7 @@ function renderFunctionPanel(){
   window.ConquerSiege?.bindPanel(slots);
   window.ConquerCrossings?.bindPanel(slots);
   window.ConquerKeepEntrance?.bindPanel(slots);
+  window.ConquerSoldiers?.bindTowerPanel?.(slots,s);
   // Every control acts through StructureCommands (src/settlement-structure-commands.js), shared with UI v2.
   const on=(selector,fn,event='onclick')=>slots.querySelectorAll(selector).forEach(el=>el[event]=e=>{const target=selectedStructure();if(target)fn(target.id,el,e)});
   on('[data-house-up]',id=>StructureCommands.changeHouseLevel(id,1));

@@ -460,6 +460,9 @@
     const herdReserve=herdPool.length?
       clamp(Math.ceil(foodGap/(HERD_FOOD_PER_DAY*10)),1,herdPool.length):0;
     const herders=herdPool.splice(0,herdReserve);
+    // Enlisted soldiers (settlement-soldiers.js) are L1 men who left their work for the Barracks.
+    const enlistable=l1Available.length;
+    const soldiers=l1Available.splice(0,Math.min(enlistable,window.ConquerSoldiers?.enlisted?.()||0));
     l1Available.push(...herdPool);
     remaining.L1=Math.min(remaining.L1,l1Available.length);
     // L2 has its own independent staffing policy. Allocate exactly once,
@@ -524,7 +527,7 @@
       // bypassed by the generic spare-L1 fallback used in legacy mode.
       remaining.L1=builders.length;
       return {allocated,remaining,limits,assignedL1,spareL1:builders,builders,
-        herders,herdReserve,fishers,shipwrights,carters,idle,foodWeekly:round(foodWeekly),managedL1:true};
+        herders,herdReserve,fishers,shipwrights,carters,idle,soldiers,enlistable,foodWeekly:round(foodWeekly),managedL1:true};
     }
     const logging=[],woodLow=woodStock(e)<Math.min(20,finite(e.target?.wood,20));
     // A settlement with an actual stockyard must keep at least one lumber
@@ -575,7 +578,7 @@
     for(const w of l1Available)(herdIds.has(w.houseId)?herders:idle).push(w);
     remaining.L1=Math.max(0,Math.min(remaining.L1,builders.length+idle.length));
     return{allocated,remaining,limits,assignedL1,spareL1:[...builders,...idle],
-      herders,herdReserve,fishers,shipwrights,carters,idle,foodWeekly:round(foodWeekly)};
+      herders,herdReserve,fishers,shipwrights,carters,idle,soldiers,enlistable,foodWeekly:round(foodWeekly)};
   }
   // Food the households can actually reach: market lots, plus castle stores
   // only while the lord orders full or half rations.

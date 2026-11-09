@@ -352,7 +352,9 @@ const STRUCTURE_VARIANTS=Object.freeze({
     // Timber gallery mounted round the top in wartime and taken down after: the roof stays as built.
     hoarding:Object.freeze(['off','on']),
     // Alarm bell under a small belfry on the roof apex (rules: settlement-alarm-bells.js).
-    bell:Object.freeze(['none','bell'])
+    bell:Object.freeze(['none','bell']),
+    // Signal fire: a great pyre on a flat crenellated deck (rules: settlement-soldiers.js).
+    signalFire:Object.freeze(['none','pyre'])
   }),
   gate:Object.freeze({
     roofStyle:Object.freeze(['battlement','pitched','flat']),
@@ -367,7 +369,7 @@ const STRUCTURE_VARIANTS=Object.freeze({
   })
 });
 const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
-  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid',hoarding:'off',bell:'none'}),
+  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid',hoarding:'off',bell:'none',signalFire:'none'}),
   gate:Object.freeze({roofStyle:'battlement',upper:'stone',hoarding:'off'}),
   wall:Object.freeze({skin:'standard'}),
   built:Object.freeze({skin:'standard'})
@@ -404,9 +406,10 @@ const BIOMES=Object.freeze({
   mountains:{label:'Montagne',field:'#2b2620'},
   sea:{label:'Mare',field:'#2a2818'}
 });
-const FUNCTION_CATALOG=['guard','barracks','armory','storage','granary','kitchen','stables','nobleRoom','workshop','chapel','commonHall','throneHall','treasury','prison','latrine','infirmary','dovecote','cistern','mews'];
-// Ground floor under the arches of a W1 portico: stables, armourers' workshop, carts/stores, guard post.
-const PORTICO_FUNCTIONS=Object.freeze(['stables','workshop','storage','guard']);
+// The castle guard post merged into the Barracks (D-MIL-RES-261109): 'guard' is a town hall room only.
+const FUNCTION_CATALOG=['barracks','armory','storage','granary','kitchen','stables','nobleRoom','workshop','chapel','commonHall','throneHall','treasury','prison','latrine','infirmary','dovecote','cistern','mews'];
+// Ground floor under the arches of a W1 portico: stables, armourers' workshop, carts/stores.
+const PORTICO_FUNCTIONS=Object.freeze(['stables','workshop','storage']);
 const FUNCTION_LABELS={guard:'Guard post',barracks:'Barracks',armory:'Armory',storage:'Materials store',granary:'Granary',kitchen:'Kitchen',stables:'Stables',quarters:'Quarters',nobleRoom:'Noble chambers',workshop:'Armament workshop',chapel:'Chapel',commonHall:'Common hall',throneHall:'Throne hall',treasury:'Treasury',prison:'Prison',latrine:'Latrine',infirmary:'Infirmary',dovecote:'Dovecote',cistern:'Cistern',mews:'Falconry',council:'Council chamber',tribunal:'Tribunal'};
 // Town hall: one room per floor, as many as the civic level (L1 = the ground floor only),
 // shown one floor at a time in the floor-by-floor cutaway.

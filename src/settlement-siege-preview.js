@@ -205,6 +205,9 @@
       ['Torre a D media L2 tetto + campana',{type:'tower',shape:'dee',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'pitched',bell:'bell'}],
       ['Legno vedetta + campana',{type:'tower',shape:'square',material:'wood',woodStyle:'watchtower',woodRoof:'pitched',level:1,tier:1,size:1,bell:'bell'}],
       ['Legno media tetto + campana',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'pitched',level:1,tier:2,size:1.5,bell:'bell'}],
+      // Signal fire: the pyre on the flat crenellated deck of a stone tower (settlement-soldiers.js).
+      ['Pietra quadrata media L2 merlata + fuoco di segnalazione',{type:'tower',shape:'square',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'battlement',signalFire:'pyre'}],
+      ['Pietra rotonda media L3 caditoie + fuoco di segnalazione',{type:'tower',shape:'round',material:'stone',level:3,tier:2,r:rd(2),roofStyle:'machicolation',signalFire:'pyre'}],
       // Latrine: the first upper floor of a small (W1) stone tower, its garderobe on a free outer face.
       ['Pietra quadrata piccola L2 + latrina',{type:'tower',shape:'square',material:'stone',level:2,tier:1,size:sq(1),roofStyle:'battlement',functions:[null,'latrine']}],
       ['Pietra rotonda piccola L2 + latrina',{type:'tower',shape:'round',material:'stone',level:2,tier:1,r:rd(1),roofStyle:'battlement',functions:[null,'latrine']}]
