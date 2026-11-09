@@ -33,6 +33,7 @@ function harness(){
     return{ok:true};
   }};
   vm.runInContext(read('src/settlement-economy.js'),context,{filename:'settlement-economy.js'});
+  require('./construction-fixture.cjs')(context);
   vm.runInContext(read('src/settlement-storage-yard.js'),context,{filename:'settlement-storage-yard.js'});
   const yard=window.ConquerStorageYard,economy=window.ConquerEconomy;
   return{State,window,context,saved,yard,economy};

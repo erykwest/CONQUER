@@ -9,7 +9,7 @@ const StructureCommands=(()=>{
   function setConstructionPriority(id,level){
     const target=find(id),c=target?.construction;
     const requested=Number(level);
-    if(!target||target.auto||!underConstruction(target)||c?.version!==2||
+    if(!target||target.auto&&!c?.upgrade||!underConstruction(target)||c?.version!==2||
       !Number.isInteger(requested)||requested<0||requested>=CONSTRUCTION_PRIORITIES.length)return false;
     if(constructionPriority(target)===requested)return true;
     c.priority=requested;
@@ -297,10 +297,10 @@ const StructureCommands=(()=>{
       d.building={progress:constructionProgress(s),days:remainingDays(s),
         priority:constructionPriority(s),priorities:CONSTRUCTION_PRIORITIES,
         materialsProgress:material.progress,materials:material.rows,
-        status:constructionWorkStatus(s),editable:!s.auto&&s.construction?.version===2};
+        status:constructionWorkStatus(s),editable:s.construction?.version===2&&(!s.auto||!!s.construction.upgrade)};
     }
     const cost=s.buildCost||constructionCost(s);
-    d.cost=cost;
+    d.cost=d.building?constructionMaterialInfo(s).required:cost;
     // Construction uses a temporary inspector. No completed-building commands
     // or room assignment are exposed before the project is finished.
     if(d.building)return d;
@@ -465,7 +465,18 @@ const StructureCommands=(()=>{
     return d;
   }
 
-  return{setConstructionPriority,setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setGateRoof,setGateUpper,setSkin,setWallStair,setWallStairPos,toggleCutaway,stepCutawayFloor,flipSide,
+  const commands={setConstructionPriority,setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setGateRoof,setGateUpper,setSkin,setWallStair,setWallStairPos,toggleCutaway,stepCutawayFloor,flipSide,
     setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerLookout,setTowerOutpost,setTowerSignalFire,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,
     describeStructure};
+  for(const name of ['setTier','setHeight','setKeepFloorPlan','setTowerBase','setTowerRoof','setHoarding','setWoodRoof','setGateRoof','setGateUpper','setSkin','setTowerWeapon','setTowerRoofShape','setTowerBartizan','setTowerBell','setCivicLevel','setPlazaVariant']){
+    const execute=commands[name];
+    commands[name]=(id,...args)=>{
+      const target=find(id);if(!target||underConstruction(target))return false;
+      const before=structureUpgradeSnapshot(target);
+      const result=execute(id,...args);
+      if(result&&beginStructureUpgrade(target,before)){refresh(target);status(underConstruction(target)?'Cantiere di modifica avviato':'Modifica completata')}
+      return result;
+    };
+  }
+  return commands;
 })();

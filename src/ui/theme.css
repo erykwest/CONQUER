@@ -12,7 +12,7 @@
 body.ui2>header,body.ui2 #builder,body.ui2 #timePanel,body.ui2 #status,body.ui2 #saveState,body.ui2 #functionPanel{display:none!important}
 body.ui2 #policy:not(.u2-hosted){display:none!important}
 body.ui2:not(.ui2-dev) #devTools{display:none!important}
-body.ui2.ui2-dev #devTools{top:var(--u2-top);right:var(--u2-gap)}
+body.ui2.ui2-dev #devTools{top:var(--u2-top);right:var(--u2-gap);z-index:12}
 
 #ui2{position:absolute;inset:0;z-index:10;pointer-events:none;font-family:var(--u2-body);font-size:14px;line-height:1.25;color:var(--u2-text)}
 #ui2 button,#ui2 select,#ui2 input{font:inherit;color:inherit}

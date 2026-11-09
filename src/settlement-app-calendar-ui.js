@@ -42,6 +42,7 @@ function syncSeasonToCalendar(){
   return true;
 }
 function syncDevButtons(){
+  document.querySelectorAll('[data-dev-build]').forEach(b=>{const active=devBuildMode(b.dataset.devBuild);b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active))});
   document.querySelectorAll('[data-private-masonry]').forEach(b=>{
     const active=b.dataset.privateMasonry===(State.village.privateMasonryMaterial||'stone');
     b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));
@@ -191,7 +192,19 @@ function setPrivateMasonryMaterial(next){
   markDirty(false,false,true);syncDevButtons();
   status('Nuove case private: '+(next==='brick'?'ARGILLA / MATTONI':'PIETRA')+' · le case esistenti non cambiano');
 }
+function setDevBuildMode(key){
+  if(!['freeBuild','fastBuild'].includes(key))return;
+  State.devBuild=State.devBuild||{};State.devBuild[key]=!devBuildMode(key);
+  const completed=[];
+  for(const s of State.structures.filter(underConstruction)){
+    applyConstructionDev(s);if(!underConstruction(s))completed.push(s);
+  }
+  if(completed.length)runSettlementMaintenance('completion',completed);
+  if(completed.length||devBuildMode('freeBuild'))markDirty(false,true);
+  syncDevButtons();renderFunctionPanel();renderUI();draw();
+}
 function ensureDevControls(){
+  document.querySelectorAll('[data-dev-build]').forEach(b=>b.onclick=()=>setDevBuildMode(b.dataset.devBuild));
   document.querySelectorAll('[data-private-masonry]').forEach(b=>b.onclick=()=>setPrivateMasonryMaterial(b.dataset.privateMasonry));
   document.querySelectorAll('[data-visual-palette]').forEach(b=>b.onclick=()=>setDevVisualPalette(b.dataset.visualPalette));
   document.querySelectorAll('[data-season]').forEach(b=>b.onclick=()=>setSeason(b.dataset.season));

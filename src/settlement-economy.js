@@ -594,11 +594,12 @@
     if(!State.village?.founded||!buildersFunded()||
         (window.ConquerCombat?.alarmMode?.()||'off')!=='off')return 0;
     const perSite=typeof CONSTRUCTION_MAX_WORKERS==='number'?CONSTRUCTION_MAX_WORKERS:3;
-    return(State.structures||[]).filter(s=>!s.auto&&s.construction?.version===2&&
+    return(State.structures||[]).filter(s=>s.construction?.version===2&&
       !complete(s)&&finite(s.construction.startedDay)<=finite(day)).length*perSite;
   }
   function activeCapacity(){return laborAllocation().allocated}
   function buildersFunded(){
+    if(typeof devBuildMode==='function'&&devBuildMode('freeBuild'))return true;
     return constructionWagePerWorkday()<=0||finite(state().castleGold)>1e-8;
   }
   function availableBuilderIds(day=State.clock?.day){

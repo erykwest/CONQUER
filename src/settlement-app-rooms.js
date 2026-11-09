@@ -4,6 +4,7 @@ function siteLaborText(s){
   if(s?.auto&&s.spawnCost)
     return 'Spontaneous spawn: '+Number(s.spawnCost.laborGold||0).toFixed(2)+' gold in labor value (not charged to lord)';
   if(s?.construction?.version!==2)return '';
+  if(devBuildMode('freeBuild'))return 'Free build DEV: nessun salario addebitato';
   const c=s.construction,rate=window.ConquerEconomy?.constructionWagePerWorkday?.()||0;
   return 'Lord construction wages: '+Number(c.wagesPaid||0).toFixed(2)+
     ' gold paid · '+((Math.max(0,c.workRequired-c.workDone))*rate).toFixed(2)+' gold remaining at current wage';
@@ -39,7 +40,7 @@ function renderFunctionPanel(){
         '<div class="kv"><span>'+r.key+'</span><b>'+fmt(r.delivered)+' / '+fmt(r.total)+'</b></div>'
       ).join('')+'</div>'+
       '<div class="legend">'+constructionWorkStatus(s)+'</div>'+siteLaborLine(s)+'</div>';
-    const editable=!s.auto&&c?.version===2;
+    const editable=c?.version===2&&(!s.auto||c.upgrade);
     slots.innerHTML=editable?
       '<div class="slot construction-priority"><label class="slot-label" for="constructionPrioritySelect">Priorità approvvigionamento</label>'+
       '<select id="constructionPrioritySelect" aria-label="Priorità cantiere">'+
@@ -49,7 +50,7 @@ function renderFunctionPanel(){
       '<div class="legend">Cantiere spontaneo · non prioritizzabile.</div>';
     const select=slots.querySelector('#constructionPrioritySelect');
     if(select)select.onchange=()=>StructureCommands.setConstructionPriority(s.id,Number(select.value));
-    if(editable){const cancel=document.createElement('button');cancel.textContent='Annulla cantiere';cancel.dataset.cancelConstruction='true';cancel.onclick=()=>deleteStructure(s.id);slots.appendChild(cancel);}
+    if(editable||c?.upgrade){const cancel=document.createElement('button');cancel.textContent='Annulla cantiere';cancel.dataset.cancelConstruction='true';cancel.onclick=()=>deleteStructure(s.id);slots.appendChild(cancel);}
     return;
   }
   if(window.ConquerStorageYard?.is(s)){
@@ -67,7 +68,7 @@ function renderFunctionPanel(){
     const cost=Y.expansionCost(n,next);
     slots.innerHTML=cost?
       '<div class="slot"><div class="slot-label">Ampliamento</div><button data-stockyard-grow>Espandi a '+next+'×'+next+'U · '+costText(cost)+'</button>'+
-      '<div class="legend">Area libera e pianeggiante richiesta; aumento capacità effettivo subito dopo l’espansione.</div></div>':
+      '<div class="legend">Area libera e pianeggiante richiesta; aumento capacità disponibile al termine del cantiere.</div></div>':
       '<div class="legend">Capienza massima raggiunta · 6×6U.</div>';
     const button=slots.querySelector('[data-stockyard-grow]');
     if(button)button.onclick=()=>StructureCommands.setYardSize(s.id,next);

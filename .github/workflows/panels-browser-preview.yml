@@ -47,13 +47,17 @@ jobs:
       - name: Capture management panels with browser
         run: node qa/panels-browser.mjs
       - name: Verify construction inspectors and save/refund flows
-        run: node qa/construction-browser.mjs
+        run: |
+          node qa/construction-browser.mjs
+          node qa/upgrades-dev-browser.mjs
       - name: Upload construction screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: construction-ui-screenshots
-          path: output/playwright/construction/
+          path: |
+            output/playwright/construction/
+            output/playwright/upgrades-dev/
           retention-days: 21
       - name: Upload six screenshots
         if: always()
