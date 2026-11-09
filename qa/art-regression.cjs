@@ -101,5 +101,42 @@ check('artSlots: world anchors per structure, none on the gate passage, mount an
   // Every work fits the widest wall anchor: the largest anchor size covers the whole catalogue.
   for(const [n,c] of Object.entries(A().catalog))if(c.mount==='wall')assert.ok(F().artFits({mount:'wall',w:.9},n),n+' fits a large anchor');
 });
+check('commissioning colours: every archetype has colour slots, with swatches and real palette keys',()=>{
+  const m=A();
+  for(const [n,c] of Object.entries(m.catalog)){
+    assert.ok(c.colors.length>=1,n+' has colour slots');
+    assert.equal(new Set(c.colors.map(s=>s.id)).size,c.colors.length,n+': unique slot ids');
+    assert.equal(new Set(c.colors.map(s=>s.key)).size,c.colors.length,n+': one key per slot');
+    const used=new Set(m.pieces[n].c.map(i=>m.paletteKeys[i]));
+    for(const s of c.colors){
+      assert.ok(used.has(s.key),n+'.'+s.id+' paints the piece');
+      assert.ok(/^#[0-9a-f]{6}$/i.test(s.default)&&Object.keys(m.swatches[s.swatches]||{}).length>=4,n+'.'+s.id+' swatches');
+      if(s.shade)assert.ok(used.has(s.shade)&&s.k>=0&&s.k<=.7,n+'.'+s.id+' shade');
+    }
+  }
+  assert.ok(m.catalog.artTriptychL.colors.some(s=>s.id==='robeLeft'),'triptych wings recolour on their own');
+});
+
+check('ConquerArtColors: normalize, diff and paint',()=>{
+  run(fs.readFileSync(__dirname+'/../src/art-colors.js','utf8'));
+  const C=run('window.ConquerArtColors'),J=x=>JSON.parse(JSON.stringify(x));
+  assert.deepEqual(J(C.paint('artIconS',{})),{},'archetype colours: nothing to override');
+  assert.deepEqual(J(C.diff('artIconS',{mantle:'#5B3A6B',bogus:'#000000',robe:'red'})),{mantle:'#5b3a6b'},'only valid slots and hex survive');
+  assert.deepEqual(J(C.paint('artIconS',{mantle:'#5b3a6b'})),{ultramarine:'#5b3a6b'});
+  const fr=C.paint('artIconS',{frame:'#b8bcc0'});
+  assert.equal(fr.gilt,'#b8bcc0');assert.ok(fr.giltDark&&fr.giltDark!=='#b8bcc0','the frame shade follows, darker');
+  assert.equal(C.signature('artIconS',{frame:'#B8BCC0',mantle:'#2c4a8c'}),'frame#b8bcc0','default values do not count');
+  assert.equal(C.darken('#808080',.5),'#404040');
+});
+
+check('a commissioned work is drawn on its anchor with its own colours',()=>{
+  rooms('r3',[]);const slot=F().artSlots(run("State.structures.find(x=>x.id==='r3')")).find(a=>a.mount==='wall'&&a.size==='large');
+  const plain=F().artWorkFaces(slot,'artIconL',{}),purple=F().artWorkFaces(slot,'artIconL',{mantle:'#5b3a6b'});
+  assert.ok(plain.length>20&&plain.length===purple.length);
+  assert.ok(plain.every(f=>f.pts.every(p=>p.every(Number.isFinite))));
+  assert.ok(!plain.some(f=>f.hex==='#5b3a6b')&&purple.some(f=>f.hex==='#5b3a6b'),'the chosen mantle colour is painted');
+  assert.ok(purple.filter(f=>f.hex==='#2c4a8c').length<plain.filter(f=>f.hex==='#2c4a8c').length,'and replaces the ultramarine');
+  assert.equal(F().artWorkFaces(slot,'artBust',{}).length,0,'a floor work never goes on a wall anchor');
+});
 console.log('art regression: '+passed+' checks');
 `);

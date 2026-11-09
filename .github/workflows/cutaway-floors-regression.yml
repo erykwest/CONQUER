@@ -13,6 +13,7 @@ on:
       - 'qa/civic3d-regression.cjs'
       - 'qa/art-regression.cjs'
       - 'src/assets/art-models.js'
+      - 'src/art-colors.js'
       - 'src/settlement-cutaway-floors.js'
       - 'src/settlement-castle.js'
       - 'src/settlement-civic3d.js'

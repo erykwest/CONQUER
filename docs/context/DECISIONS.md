@@ -1,5 +1,11 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-ART-COLORS-261109 — Opere d'arte: forme fisse, colori scelti alla commissione (09/11/2026)
+
+- **DECISIONE DEL PRODUCT OWNER:** alla commissione di un'opera l'utente sceglie **i colori**; le **forme** restano quelle dell'archetipo grafico (eventuali varianti di forma saranno valutate più avanti).
+- **CONTRATTO:** ogni archetipo di `ConquerArtModels.catalog` dichiara i suoi slot colore (`colors`: id, etichetta, chiave di palette, eventuale chiave d'ombra con rapporto `k`, set di tinte suggerite in `swatches`). L'opera commissionata salva solo `{ slotId: '#rrggbb' }` (le differenze dai colori dell'archetipo, `ConquerArtColors.diff`); `ConquerArtColors.paint` la traduce in sostituzioni di palette che il cutaway applica con precedenza su araldica e tinta della pietra. Le tinte suggerite sono pigmenti, lane, dorature e pietre storiche, ma qualsiasi colore esadecimale è accettato.
+- **STATO:** codice sul branch `feature/arte-graphics`; manca la UI di commissione in gioco (ART-251105-03), che userà questo contratto.
+
 ## D-MIL-CIRCLE-261109 — Gerarchia CIRCLE per assegnazioni militari (09/11/2026)
 
 - **DECISIONE DEL PRODUCT OWNER:** la sottopaletta «Pattuglie e guarnigioni» deve usare l'interfaccia CIRCLE, con assegnazioni da **zone difensive** fino a **torri**; ogni torre principale e le sue sottotorri sono una **sola riga** come macrostruttura difensiva.

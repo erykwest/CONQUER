@@ -212,7 +212,7 @@ Fogli provini dell'audit: impaginazione a griglia per le categorie e sfondo neut
 
 ## 2026-11-05 — ARTE: opere commissionabili e decorazione delle stanze
 
-**09/11/2026 · PARTE GRAFICA SU BRANCH `feature/arte-graphics` (non in main):** 19 archetipi in `ConquerArtModels` (ART-251105-01, grafica) e ancoraggi a parete/pavimento per stanza con `ConquerCutawayFurniture.artSlots`/`artFits` (ART-251105-02); QA `qa/art-regression.cjs`. **Ancora aperti:** commissione (03), inventario persistente (04), rimozione/ricollocazione (05) e il rendering delle opere esposte sugli ancoraggi, che dipende da 03/04; da valutare se gli arredi decorativi esistenti (arazzo araldico, drappi) cedano il posto alle opere esposte.
+**09/11/2026 · PARTE GRAFICA SU BRANCH `feature/arte-graphics` (non in main):** 19 archetipi in `ConquerArtModels` (ART-251105-01, grafica) e ancoraggi a parete/pavimento per stanza con `ConquerCutawayFurniture.artSlots`/`artFits` (ART-251105-02); colori scelti alla commissione tramite slot colore e `ConquerArtColors` (D-ART-COLORS-261109), già applicabili nel cutaway e provabili nel Lab; QA `qa/art-regression.cjs`. Varianti di forma rinviate. **Ancora aperti:** commissione (03), inventario persistente (04), rimozione/ricollocazione (05) e il rendering delle opere esposte sugli ancoraggi, che dipende da 03/04; da valutare se gli arredi decorativi esistenti (arazzo araldico, drappi) cedano il posto alle opere esposte.
 
 **APERTO · SOLO BACKLOG (nessuna implementazione o QA attestata).** Sottosistema separato da personaggi speciali e ricerca scientifica. Dettaglio canonico: [ARTE nel backlog Builder/Manager](../feature-backlog.md#2026-11-05--arte--commissioni-esposizione-e-circolazione-delle-opere).
 

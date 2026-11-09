@@ -58,6 +58,15 @@ header h1{font-size:18px;white-space:nowrap}
 .asset-inspector #assetDetailSource{display:block;overflow-wrap:anywhere;font-size:11px;color:#ab9b85;margin-top:10px}
 #assetDetailPreview{height:260px;background:radial-gradient(ellipse at center,#5e5347,#322b23);border:1px solid var(--line);border-radius:7px;display:flex;align-items:center;justify-content:center;overflow:hidden}
 #assetDetailPreview[hidden]{display:none}
+.asset-art-colors{margin:10px 0;display:grid;gap:7px}
+.asset-art-colors[hidden]{display:none}
+.asset-art-colors .art-colors-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.asset-art-colors .art-colors-head button{font-size:11px;padding:3px 8px}
+.asset-art-colors .art-color-row{display:grid;grid-template-columns:minmax(90px,auto) 30px 1fr;align-items:center;gap:6px;font-size:12px;color:#d6c7ae}
+.asset-art-colors input[type=color]{width:30px;height:24px;padding:0;border:1px solid var(--line);border-radius:4px;background:none;cursor:pointer}
+.asset-art-colors .art-swatches{display:flex;flex-wrap:wrap;gap:3px}
+.asset-art-colors .art-swatches button{width:18px;height:18px;padding:0;border:1px solid rgba(0,0,0,.45);border-radius:3px;cursor:pointer}
+.asset-art-colors .art-swatches button[aria-pressed="true"]{outline:2px solid #f2dfb5;outline-offset:1px}
 #assetDetailPreview img,#assetDetailPreview svg{max-width:100%;max-height:100%;object-fit:contain;width:100%;height:100%;padding:8px}
 #assetDetailPreview canvas{max-width:100%;height:100%;object-fit:contain}
 #assetAnimationPanel{background:#342f28;border:1px solid var(--line);border-radius:7px;overflow:hidden}
@@ -202,6 +211,7 @@ body.asset-catalog-static #labLegacyControls{display:none}
       <output id="assetRotationValue" aria-live="polite">0°</output>
       <button id="assetRotateRight" type="button" aria-label="Ruota modello di 15 gradi a destra">+15° ↷</button>
     </div>
+    <div id="assetArtColors" class="asset-art-colors" aria-label="Colori dell'opera" hidden></div>
     <div class="asset-rotate"><button id="assetOccupancy" type="button" title="Popolani su terreno, pavimenti e portici del modello 3D: occlusione col depth buffer, o disegnati sopra come fa oggi il gioco">Occupazione: no</button><button id="assetExportPng" type="button" title="Scarica l'anteprima corrente (stato e rotazione) in PNG 512 × 512">Esporta PNG 512</button></div>
     <p id="assetPreviewNote"></p>
     <span class="caption">Sorgente effettiva</span>
@@ -635,7 +645,8 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 <script src="./src/assets/mews-models.js?v=mews1"></script>
 <script src="./src/assets/dovecote-models.js?v=dovecote-1"></script>
 <script src="./src/assets/furniture-model.js?v=infirmary-1-dove1"></script>
-<script src="./src/assets/art-models.js?v=arte-1"></script>
+<script src="./src/assets/art-models.js?v=arte-2"></script>
+<script src="./src/art-colors.js?v=arte-2"></script>
 <script src="./src/assets/garderobe-models.js?v=room-exterior-1"></script>
 <script src="./src/assets/wall-stair-models.js?v=wall-stairs-1"></script>
 
@@ -643,7 +654,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 <script src="./src/heraldry-symbols.js?v=asset-lab-1"></script>
 <script src="./src/heraldry-shapes.js?v=ships-1"></script>
 <script src="./src/asset-manifest.js?v=asset-lab-3"></script>
-<script src="./src/asset-catalog.js?v=asset-lab-13-stonecolor"></script>
+<script src="./src/asset-catalog.js?v=asset-lab-13-stonecolor-arte2"></script>
 <script src="./src/asset-audit.js?v=asset-lab-8-stonecolor"></script>
 </body>
 </html>

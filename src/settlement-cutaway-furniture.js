@@ -386,7 +386,9 @@
     for(const f of pf.faces){
       const n=[f.n[0]*ca-f.n[1]*sa,f.n[0]*sa+f.n[1]*ca,f.n[2]];
       const color=f.key?.startsWith('stone')?(window.ConquerStoneColor?.shade(f.hex)||f.hex):f.hex;
-       out.push({pts:f.pts.map(W),hex:her[f.key]||color,n,floor,emissive:EMISSIVE.has(f.key)});
+      // A commissioned work of art carries its chosen colours (ConquerArtColors.paint): they win
+      // over the realm's heraldry and the stone palette.
+      out.push({pts:f.pts.map(W),hex:item.paint?.[f.key]||her[f.key]||color,n,floor,emissive:EMISSIVE.has(f.key)});
     }
     for(const [x,y,zl,kind] of pf.lights)lights.push({p:W([x,y,zl]),kind,floor});
   }
@@ -609,5 +611,14 @@
     if(!slot||!c||!p||c.mount!==slot.mount)return false;
     return (slot.mount==='wall'?p.w:Math.max(p.w,p.d))<=slot.w+1e-3;
   }
-  window.ConquerCutawayFurniture={ROOMS,draw,artSlots,artFits,lights,drawNightGlow,drawEmissive2D,worldFaces,loggiaFaces,standSpots,layoutStructure,spiralStair,pieceFaces,clear:()=>cache.clear()};
+  // World faces of a work of art (archetype name + commissioning colours) set on an anchor of
+  // artSlots(): what the display of a commissioned work will draw (ART-251105-03/04).
+  function artWorkFaces(slot,name,colors){
+    if(!slot||!artFits(slot,name))return[];
+    const paint=window.ConquerArtColors?.paint(name,colors)||{},out=[];
+    const F={b:{angle:slot.angle},toWorld:()=>({x:slot.x,y:slot.y})};
+    pieceWorld({name:'a:'+name,u:0,v:0,turn:0,lift:0,paint},F,slot.z,out,[],heraldry(),slot.floor);
+    return out;
+  }
+  window.ConquerCutawayFurniture={ROOMS,draw,artSlots,artFits,artWorkFaces,lights,drawNightGlow,drawEmissive2D,worldFaces,loggiaFaces,standSpots,layoutStructure,spiralStair,pieceFaces,clear:()=>cache.clear()};
 })();

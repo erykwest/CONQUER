@@ -44,7 +44,75 @@ COLORS = {
     # sculpture
     'marble': '#e6e1d6', 'marbleShade': '#c9c2b4', 'limestone': '#c2b59a', 'limestoneShade': '#9f9279',
     'bronze': '#8a6a3a', 'bronzeDark': '#5e4826', 'stonePlinth': '#8d877c', 'stonePlinthDark': '#6f6a62',
+    # roles of their own, so that each can be recoloured alone (see SLOTS)
+    'robeL': '#b23a2a', 'robeR': '#4a6236', 'nicheBack': '#2c4a8c',
 }
+
+# ---------------------------------------------------------------- commissioning colours
+# A commissioned work keeps its archetype's shapes and chooses the colours of its slots.
+# Each slot recolours one palette key (and its shade key, darkened by the same ratio as the
+# defaults); the swatch sets are the suggested pigments, wools, gildings and stones.
+SWATCHES = {
+    'pigment': {'Oltremare': '#2c4a8c', 'Azzurrite': '#4f6fae', 'Vermiglione': '#b23a2a', 'Lacca cremisi': '#7a2430',
+                'Rosa di robbia': '#c0607a', 'Porpora': '#5b3a6b', 'Verderame': '#3e6b5a', 'Terra verde': '#6f8a4a',
+                'Ocra gialla': '#c49a45', 'Oro': '#d8b04f', 'Terra d\'ombra': '#4a3424', 'Nero d\'avorio': '#1e1a18',
+                'Bianco di piombo': '#ece4d2'},
+    'sky': {'Cielo': '#8fb4d0', 'Cielo chiaro': '#c9dbe3', 'Tramonto': '#d9a07a', 'Fondo oro': '#d8b04f', 'Notte': '#2f3f6b'},
+    'frame': {'Oro zecchino': '#c9a24b', 'Oro pallido': '#e0c46a', 'Argento': '#b8bcc0', 'Noce': '#5a3a22',
+              'Rovere': '#8a6a45', 'Ebano': '#2a2220', 'Lacca rossa': '#7a2a22', 'Lacca verde': '#2f4a3a'},
+    'wool': {'Verde bosco': '#2f4a35', 'Verde foglia': '#5f7f45', 'Rosso robbia': '#8a2f2a', 'Blu guado': '#2f3f6b',
+             'Azzurro': '#6a7fb8', 'Crema': '#d9cbaa', 'Bianco': '#e8dfc6', 'Ocra': '#c49a45', 'Rosa': '#c0503c',
+             'Bruno': '#6b4a30', 'Viola': '#4f3560', 'Nero': '#2a2420'},
+    'sculpture': {'Marmo bianco': '#e6e1d6', 'Marmo rosa': '#d9b8a8', 'Marmo nero': '#3a3634', 'Pietra calcarea': '#c2b59a',
+                  'Arenaria': '#b9895e', 'Bronzo': '#8a6a3a', 'Bronzo dorato': '#c9a24b', 'Bronzo patinato': '#5f8a76'},
+    'plinth': {'Pietra grigia': '#8d877c', 'Pietra scura': '#5a5550', 'Porfido': '#6e2e2a', 'Serpentino': '#3f5a48', 'Marmo': '#d8d2c6'},
+}
+# (id, label, palette key, shade key or None, swatch set)
+FRAME_GILT = ('frame', 'Cornice', 'gilt', 'giltDark', 'frame')
+FRAME_WOOD = ('frame', 'Cornice', 'frameWood', 'frameWoodDark', 'frame')
+FILLET = ('fillet', 'Filetto della cornice', 'gilt', None, 'frame')
+ICON_SLOTS = [('ground', 'Fondo', 'goldLeaf', None, 'pigment'), ('halo', 'Aureole', 'goldPale', None, 'pigment'),
+              ('mantle', 'Manto', 'ultramarine', None, 'pigment'), ('robe', 'Veste', 'vermilion', None, 'pigment'), FRAME_GILT]
+SLOTS = {
+    'icon': ICON_SLOTS,
+    'triptych': ICON_SLOTS + [('robeLeft', 'Veste del santo a sinistra', 'robeL', None, 'pigment'),
+                              ('robeRight', 'Veste del santo a destra', 'robeR', None, 'pigment')],
+    'portrait': [('ground', 'Fondo', 'umberDark', None, 'pigment'), ('hat', 'Copricapo', 'ink', None, 'pigment'),
+                 ('robe', 'Veste', 'crimson', None, 'pigment'), FRAME_WOOD, FILLET],
+    'landscape': [('sky', 'Cielo', 'sky', None, 'sky'), ('clouds', 'Nuvole', 'skyPale', None, 'sky'),
+                  ('meadow', 'Prati', 'meadow', 'meadowDark', 'pigment'), ('water', 'Acque', 'river', None, 'pigment'),
+                  ('roofs', 'Tetti', 'roofTile', None, 'pigment'), FRAME_GILT],
+    'hunt': [('sky', 'Cielo', 'skyPale', None, 'sky'), ('wood', 'Bosco', 'forest', None, 'pigment'),
+             ('meadow', 'Prato', 'meadow', None, 'pigment'), ('rider', 'Cavaliere', 'vermilion', None, 'pigment'), FRAME_WOOD, FILLET],
+    'millefleurs': [('ground', 'Fondo', 'woolGround', None, 'wool'), ('leaves', 'Fogliame', 'woolLeaf', None, 'wool'),
+                    ('flowers', 'Fiori', 'woolPink', None, 'wool'), ('border', 'Bordura', 'woolRed', None, 'wool')],
+    'frieze': [('ground', 'Fondo', 'woolCream', None, 'wool'), ('figures', 'Figure e motivi', 'woolRed', None, 'wool'),
+               ('horses', 'Cavalli e scafo', 'woolBrown', None, 'wool'), ('border', 'Bordura', 'woolBlue', None, 'wool')],
+    'bust': [('material', 'Materiale', 'marble', 'marbleShade', 'sculpture')],
+    'saint': [('ground', 'Fondo della nicchia', 'nicheBack', None, 'pigment'), ('mantle', 'Manto', 'ultramarine', None, 'pigment'),
+              ('robe', 'Veste', 'vermilion', None, 'pigment'), ('gilding', 'Dorature', 'gilt', 'giltDark', 'frame'),
+              ('corbel', 'Mensola', 'frameWood', 'frameWoodDark', 'frame')],
+}
+PLINTH = ('plinth', 'Basamento', 'stonePlinth', 'stonePlinthDark', 'plinth')
+
+
+def statue_slots(body, shade):
+    return [('material', 'Materiale', body, shade, 'sculpture'), PLINTH]
+
+
+def lum(h):
+    return sum(int(h[i:i + 2], 16) for i in (1, 3, 5)) / 765
+
+
+def export_slots(slots):
+    out = []
+    for sid, label, key, shade, swatch in slots:
+        e = {'id': sid, 'label': label, 'key': key, 'default': COLORS[key], 'swatches': swatch}
+        if shade:
+            e['shade'] = shade
+            e['k'] = round(max(0, min(.7, 1 - lum(COLORS[shade]) / max(.01, lum(COLORS[key])))), 3)
+        out.append(e)
+    return out
 KEYS = list(COLORS.keys())
 COLL_NAME = 'CONQUER_Art'
 
@@ -161,7 +229,7 @@ def triptych(scale):
             p.beam((.025, s * (w / 2 + fw), top), (.025, 0, top + .16 * scale), .045 * scale, .05, 'gilt')
         p.box((.025, 0, top + .17 * scale), (.05, .05 * scale, .05 * scale), 'giltDark')
         # Wings: hinged on the outer edge of the central frame, opened 30 degrees.
-        for s, robe in ((-1, 'vermilion'), (1, 'meadowDark')):
+        for s, robe in ((-1, 'robeL'), (1, 'robeR')):
             hinge = Vector((0, s * (w / 2 + fw), 0))
             a = s * math.radians(-30)
             rot = Matrix.Rotation(a, 3, 'Z')
@@ -276,7 +344,7 @@ def bust(p):
 def saint_niche(p):
     """Polychrome wooden saint in a gilt tabernacle on the wall: corbel shelf, starry back, gable."""
     zb, zt, hw = .95, 2.05, .32
-    p.box((.02, 0, (zb + zt) / 2), (.04, 2 * hw, zt - zb), 'ultramarine')
+    p.box((.02, 0, (zb + zt) / 2), (.04, 2 * hw, zt - zb), 'nicheBack')
     start = len(p.bm.faces)
     for i, (y, z) in enumerate(((-.2, 1.9), (.18, 1.95), (-.12, 1.25), (.2, 1.4), (-.22, 1.55), (.05, 1.98), (.22, 1.75))):
         p.quads([(.041, y - .015, z - .015), (.041, y + .015, z - .015), (.041, y + .015, z + .015), (.041, y - .015, z + .015)], [(0, 1, 2, 3)], 'goldPale')
@@ -336,7 +404,9 @@ def build(root):
 
 def export(parts, out_path):
     data = {'unit': 'U', 'metersPerU': METERS_PER_U, 'palette': list(COLORS.values()), 'paletteKeys': KEYS,
-            'pieces': {}, 'catalog': {}}
+            'pieces': {}, 'catalog': {}, 'swatches': SWATCHES}
+    statue = {'marble': statue_slots('marble', 'marbleShade'), 'stone': statue_slots('limestone', 'limestoneShade'),
+              'bronze': statue_slots('bronze', 'bronzeDark')}
     total = 0
     for (name, _fn, kind, archetype, size, material, mount, label) in PIECES:
         e = export_indexed(parts[name], KEYS)
@@ -345,8 +415,12 @@ def export(parts, out_path):
         e['back'] = round(min(xs), 3)
         e['z0'] = round(min(zs), 3)                         # lowest point: wall pieces hang above the floor
         data['pieces'][name] = e
+        slots = statue[material] if archetype == 'statue' else SLOTS[archetype]
+        used = set(e['c'])
+        for sid, _l, key, shade, _s in slots:                # every slot key really paints this piece
+            assert KEYS.index(key) in used, (name, sid, key)
         data['catalog'][name] = {'kind': kind, 'archetype': archetype, 'size': size, 'material': material,
-                                 'mount': mount, 'label': label}
+                                 'mount': mount, 'label': label, 'colors': export_slots(slots)}
         total += len(e['c'])
     js = ("'use strict';\n// Generated by tools/blender/build_art.py — do not edit by hand.\n"
           "// ARTE graphic archetypes (paintings, tapestries, sculptures) as indexed triangles in model space (U):\n"
