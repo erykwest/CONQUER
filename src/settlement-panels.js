@@ -341,10 +341,57 @@
       card('Capienza dei magazzini',siege.map(g=>line(good(g.id),fmt(g.stock)+' / '+fmt(g.cap))).join('')||empty('Nessun deposito assegnato.'),'',true)
     ]);
   }
-  function military(d) {
-    const c = d.defense || {}, k = d.knights || {}, l = d.logistics || {};
-    const live = v => c.active ? fmt(v) : '—';
+
+  // Centro di controllo → Militare shares the real Combat and Siege rosters.
+  function militaryNav(){
+    const entries=[['overview','Riepilogo'],['garrisons','Pattuglie e guarnigioni']];
+    return '<nav class="cp-subnav" role="tablist" aria-label="Gestione militare">'+entries.map(([k,label])=>
+      '<button type="button" role="tab" data-cp-military-sub="'+k+'" aria-selected="'+(ui.militaryTab===k)+'" class="'+(ui.militaryTab===k?'active':'')+'">'+label+'</button>'
+    ).join('')+'</nav>';
+  }
+  function militaryAssignments(d){
+    const a=d.militaryAssignments||{},patrols=a.patrols||[],towers=a.towers||[],barracks=a.barracks||[];
+    const patrolRows=patrols.length?table(['Pattuglia','Compito'],patrols.map((p,i)=>[
+      '<th>Perimetro '+(i+1)+'</th>','<td>'+esc(p.active?p.position:'non operativa')+'</td>'
+    ])):empty('Nessuna pattuglia assegnata alla White Zone.');
+    const patrolActions='<div class="cp-job-garrison"><div><b>'+fmt(patrols.length)+'</b> pattuglie assegnate · 2 picchieri per pattuglia</div>'+
+      '<div class="cp-job-garrison-buttons"><button type="button" data-cp-patrol="remove"'+(!patrols.length?' disabled':'')+' aria-label="Rimuovi una pattuglia">−</button>'+
+      '<button type="button" data-cp-patrol="add" aria-label="Aggiungi una pattuglia">+</button></div></div>';
+    const towerRows=towers.length?towers.map(t=>
+      '<div class="cp-job-garrison"><div><b>'+esc(t.label)+'</b><small>'+
+      fmt(t.assigned)+' / '+fmt(t.capacity)+' arcieri assegnati · '+fmt(t.active)+' operativi</small></div>'+
+      '<div class="cp-job-garrison-buttons">'+
+      '<button type="button" data-cp-tower-id="'+esc(t.id)+'" data-cp-tower-delta="-1" aria-label="Rimuovi arciere da '+esc(t.label)+'"'+(!t.assigned?' disabled':'')+'>−</button>'+
+      '<button type="button" data-cp-tower-id="'+esc(t.id)+'" data-cp-tower-delta="1" aria-label="Assegna arciere a '+esc(t.label)+'"'+(t.assigned>=t.capacity?' disabled':'')+'>+</button></div></div>'
+    ).join(''):empty('Nessuna torre con postazioni per arcieri.');
+    const barracksRows=barracks.length?barracks.map(b=>
+      '<div class="cp-job-garrison"><div><b>'+esc(b.label)+'</b><small>'+
+      fmt(b.assigned)+' / '+fmt(b.capacity)+' squadre · 5 armigeri per squadra</small></div>'+
+      '<div class="cp-job-garrison-buttons">'+
+      '<button type="button" data-cp-barracks-id="'+esc(b.id)+'" data-cp-barracks-delta="-1" aria-label="Rimuovi squadra da '+esc(b.label)+'"'+(!b.assigned?' disabled':'')+'>−</button>'+
+      '<button type="button" data-cp-barracks-id="'+esc(b.id)+'" data-cp-barracks-delta="1" aria-label="Aggiungi squadra a '+esc(b.label)+'"'+(b.assigned>=b.capacity?' disabled':'')+'>+</button></div></div>'
+    ).join(''):empty(a.hasCampManagement?
+      'Nessuna caserma operativa con posti assegnabili.':
+      'Le squadre nelle caserme sono gestibili nella modalità /camp. Le postazioni delle torri restano configurabili qui.');
     return kpis([
+      kpi('Pattuglie',fmt(patrols.length),'White Zone'),
+      kpi('Arcieri assegnati',fmt(sum(towers.map(t=>t.assigned))),'Postazioni torri'),
+      kpi('Arcieri operativi',fmt(sum(towers.map(t=>t.active))),'Al netto dei malati'),
+      kpi('Squadre senza caserma',fmt(a.unassigned),'Roster tattico')
+    ])+grid([
+      card('Pattuglie della White Zone',patrolActions+patrolRows,
+        'Le pattuglie seguono il perimetro autorizzato dal sistema Combat.',true),
+      card('Guarnigioni delle torri',towerRows,
+        'Gli arcieri occupano gli slot del tetto e delle feritoie già previsti dal sistema d’assedio.',true),
+      card('Caserme e armigeri',barracksRows,
+        'Le squadre delle caserme appartengono al roster persistente della modalità /camp.',true)
+    ]);
+  }
+  function military(d) {
+    const c=d.defense||{}, k=d.knights||{}, l=d.logistics||{};
+    if(ui.militaryTab==='garrisons')return militaryNav()+militaryAssignments(d);
+    const live = v => c.active ? fmt(v) : '—';
+    return militaryNav()+kpis([
       kpi('Unità alleate',live(c.units),'Presenti nel combat'),
       kpi('Pattuglie',live(c.patrols)),
       kpi('Cavalieri',k.current==null?'—':fmt(k.current)+' / '+fmt(k.limit)),
