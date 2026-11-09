@@ -6,6 +6,27 @@
 - **CONTRATTO:** ogni archetipo di `ConquerArtModels.catalog` dichiara i suoi slot colore (`colors`: id, etichetta, chiave di palette, eventuale chiave d'ombra con rapporto `k`, set di tinte suggerite in `swatches`). L'opera commissionata salva solo `{ slotId: '#rrggbb' }` (le differenze dai colori dell'archetipo, `ConquerArtColors.diff`); `ConquerArtColors.paint` la traduce in sostituzioni di palette che il cutaway applica con precedenza su araldica e tinta della pietra. Le tinte suggerite sono pigmenti, lane, dorature e pietre storiche, ma qualsiasi colore esadecimale è accettato.
 - **STATO:** codice sul branch `feature/arte-graphics`; manca la UI di commissione in gioco (ART-251105-03), che userà questo contratto.
 
+## D-UPGRADE-261109 — Upgrade edilizi e strumenti DEV
+
+- **DECISO:** gli interventi individuali su strutture e livelli delle case usano il motore di costruzione condiviso, con inspector temporaneo, tempo positivo, quota separata e annullamento che ripristina lo stato precedente. Un solo intervento per edificio. Restano distinti i comandi operativi (apri/chiudi, funzioni stanza, rotazione), le politiche edilizie globali e le riparazioni.
+- **PREVENTIVI:** gli accessori mantengono il costo dedicato esistente; altezza/tier usano la differenza positiva dei preventivi. Per i livelli civici il costo base vale per ogni livello aggiunto. Le varianti senza prezzo rimangono senza materiale, pagando il lavoro effettivo. Durata generica massima tra 0,5 giorni lavoratore, incremento di durata e 25% della durata dell'edificio; prezzi/tempi dedicati di accessori dove previsti. Valori di bilanciamento espliciti e successivamente affinabili.
+- **CASE PRIVATE:** cambiare livello produce un cantiere temporizzato con il finanziamento procedurale esistente; non spende il tesoro del signore. Il motore di promozione autonoma è scorporato; nessuna condizione di ricchezza/felicità inventata in questo fix.
+- **DEV:** Free build evita materiali e salari, mantenendo i tempi; Fast build elimina tempi e operai ma rispetta le scorte. Entrambi permettono costruzione gratuita immediata. Agiscono sui progetti nuovi e aperti, soltanto nella sessione corrente; i materiali gratuiti sono marcati nel progetto e non possono generare rimborsi.
+
+
+## D-BUILD-PRIORITY-261108 — Conferma del cantiere indipendente dalle scorte (08/11/2026)
+
+- **DECISO:** un ghost valido si conferma anche con zero risorse. La stima è un preventivo complessivo, non una condizione economica per collocare la struttura. Il cantiere occupa subito lo spazio e resta selezionabile/salvabile; non diventa operativo prima del completamento. Ogni tipologia di risorsa può essere trasferita indipendentemente: possedere pietra senza legno permette di rifornire la pietra, ma non fa avanzare i lavori oltre la risorsa più carente.
+- **SISTEMA UNICO:** nessun inventario parallelo o carovana obbligatoria: `ConquerEconomy` contabilizza il materiale effettivamente destinato al progetto; l'assegnazione è progressiva, ordinata per `Molto basso < Basso < Medio < Alto < Molto alto < Critico`, con divisione equa di ciascun bene a pari priorità; i residui millesimali vanno al cantiere meno rifornito, con ID come ultimo spareggio. Anche i costruttori L1 seguono questo ordine, ma rimangono persone reali già occupate dal JobManager.
+- **VINCOLI:** non spendere materiali non posseduti, non produrre progresso di lavoro senza i materiali corrispondenti, non dedurre costi due volte. I salari restano pagati quando il lavoro è realmente eseguito; si può attendere sia i materiali sia la manodopera. Nuovi siti persistono consegne e consumo proporzionale al lavoro; annullare rimborsa solo il consegnato non consumato, mai i salari; salvati preesistenti già pagati restano integralmente riforniti.
+- **UI:** un inspector temporaneo con barre lavoro/materiali e selettore delle sei priorità sostituisce i controlli di esercizio fino alla fine del cantiere; l'inspector completato riappare automaticamente. **SCOPE:** non modificare M0–M5, inventario dei beni o logistica fisica ordinaria; eventuale manutenzione/riparazioni/upgrades come progetti progressivi è decisione futura.
+## D-MIL-RES-261109 — Caserma come unica riserva di soldati; vedette e Avamposto (09/11/2026)
+
+- **DECISIONE DEL PRODUCT OWNER:** il Corpo di Guardia del castello è un duplicato della Caserma e vi si fonde; `guard` resta solo nel Municipio (guardia cittadina, CRIME). La Caserma alloggia una riserva unica di soldati arruolati tra gli L1 (ingaggio 15 oro, paga L2), spesa come valuta da pattuglie, vedette, presidi di Avamposto e spedizioni.
+- **VISTA:** una torre osserva solo con una vedetta assegnata; pattuglie e vedette danno l'allarme automatico.
+- **AVAMPOSTO:** upgrade di una torre isolata, con presidio fisso di 4 soldati e 1 cavallo; avvisa con campana, fuoco di segnalazione (nuovo upgrade dei tetti piani, raggio triplo, monouso) o staffetta a cavallo. Niente piccioni né Stazione di Posta.
+- **STATO:** solo specifica ([BACKLOG](BACKLOG.md), MIL-RES-01). Aggiornamento distruttivo ammesso perché il gioco è in fase di test. ROADMAP invariata.
+
 ## D-MIL-CIRCLE-261109 — Gerarchia CIRCLE per assegnazioni militari (09/11/2026)
 
 - **DECISIONE DEL PRODUCT OWNER:** la sottopaletta «Pattuglie e guarnigioni» deve usare l'interfaccia CIRCLE, con assegnazioni da **zone difensive** fino a **torri**; ogni torre principale e le sue sottotorri sono una **sola riga** come macrostruttura difensiva.

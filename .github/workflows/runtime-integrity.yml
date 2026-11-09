@@ -16,6 +16,7 @@ on:
       - 'src/settlement-codex.js'
       - 'qa/codex-catalog-regression.cjs'
       - 'qa/save-safety-regression.cjs'
+      - 'qa/construction-priority-regression.cjs'
       - '.github/workflows/runtime-integrity.yml'
   pull_request:
 permissions:
@@ -38,6 +39,11 @@ jobs:
         run: node qa/autumn-foliage-regression.cjs
       - name: Tree and bush bark colour regression
         run: node qa/tree-bark-regression.cjs
+      - name: Staged construction and priorities
+        run: |
+          node qa/construction-priority-regression.cjs
+          node qa/construction-materials-regression.cjs
+          node qa/upgrades-dev-regression.cjs
       - name: Stone colour palette and semantic rendering regression
         run: node qa/stonecolor-regression.cjs
       - name: Preserve saves and DEV-only resource floor

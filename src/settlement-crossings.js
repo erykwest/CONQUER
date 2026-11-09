@@ -157,8 +157,7 @@
     const err=validate(s);
     if(err){status(err);return false}
     const cost=constructionCost(s);
-    if(!canAfford(cost)){status('Insufficient resources: '+costText(cost));return false}
-    s.id=s.id||uid();s.buildCost=cost;spendCost(cost);beginConstruction(s);
+    s.id=s.id||uid();s.buildCost=cost;beginConstruction(s);
     State.structures.push(s);
     selectStructure(s);markDirty(true,['ground','base','castleBody']);
     status((s.type==='moat'?'Moat':'Bridge')+' placed · '+s.length.toFixed(1)+'U · level '+s.groundZ);
@@ -476,9 +475,9 @@
   }
   function installDrawbridge(gate){
     if(!gate||gate.type!=='gate'||underConstruction(gate)||drawbridge(gate))return false;
-    if(!canAfford(DRAWBRIDGE_COST)){status('Insufficient resources · '+costText(DRAWBRIDGE_COST));return false}
-    spendCost(DRAWBRIDGE_COST);
+    const before=structureUpgradeSnapshot(gate);
     gate.drawbridge={installed:true,raised:false,progress:0};
+    beginStructureUpgrade(gate,before,DRAWBRIDGE_COST,1);
     markDirty(true,['ground','base']);renderFunctionPanel();draw();
     status('Drawbridge installed on the gate');
     return true;
@@ -770,8 +769,8 @@
     const error=validate(proposal);
     if(error){status('Bridge upgrade unavailable: '+error);return false}
     const price=crossingUpgradeCost(s,'stone');
-    if(!canAfford(price)){status('Insufficient resources · '+costText(price));return false}
-    spendCost(price);s.variant='stone';s.upgradeCost=price;
+    const before=structureUpgradeSnapshot(s);s.variant='stone';s.upgradeCost=price;
+    beginStructureUpgrade(s,before,price);
     markDirty(true,['ground','base']);renderFunctionPanel();draw();
     status('Wooden bridge upgraded to stone');return true;
   }
@@ -781,8 +780,8 @@
     const error=validate(proposal);
     if(error){status('Cannot flood moat: '+error);return false}
     const price=crossingUpgradeCost(s,'water');
-    if(!canAfford(price)){status('Insufficient resources · '+costText(price));return false}
-    spendCost(price);s.variant='water';s.upgradeCost=price;
+    const before=structureUpgradeSnapshot(s);s.variant='water';s.upgradeCost=price;
+    beginStructureUpgrade(s,before,price);
     markDirty(true,['ground','base']);renderFunctionPanel();draw();
     status('Moat flooded · water level 0');return true;
   }

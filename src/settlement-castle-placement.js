@@ -383,7 +383,23 @@ function wallFragmentFrom(source,a,b,aSnap,bSnap,ratio){
     length:dist(a,b),
     buildCost:proportionalBuildCost(source.buildCost,ratio)
   };
-  if(source.construction)fragment.construction={...source.construction};
+  if(source.construction){
+    fragment.construction={...source.construction};
+    if(source.construction.materialsDelivered){
+      const scale=values=>Object.fromEntries(Object.entries(values||{}).map(([k,v])=>[k,Math.floor(v*ratio*1000+1e-7)/1000]));
+      fragment.buildCost=scale(source.buildCost);
+      fragment.construction.materialsDelivered=scale(source.construction.materialsDelivered);
+      if(source.construction.materialsRequired)fragment.construction.materialsRequired=scale(source.construction.materialsRequired);
+      if(source.construction.materialsFree)fragment.construction.materialsFree=scale(source.construction.materialsFree);
+      if(source.construction.upgrade){
+        const before=source.construction.upgrade.before;
+        fragment.construction.upgrade={before:{...structureUpgradeSnapshot(before),id:fragment.id,a:fragment.a,b:fragment.b,aSnap:fragment.aSnap,bSnap:fragment.bSnap,length:fragment.length,buildCost:scale(before.buildCost)}};
+      }
+      fragment.construction.materialsConsumed=scale(source.construction.materialsConsumed||Object.fromEntries(Object.entries(source.buildCost||{}).map(([k,v])=>[k,v*constructionProgress(source)])));
+      fragment.construction.workRequired*=ratio;fragment.construction.workDone*=ratio;
+      fragment.construction.wagesPaid=(source.construction.wagesPaid||0)*ratio;
+    }
+  }
   normalizeStructureVariants(fragment);
   return fragment;
 }
@@ -523,6 +539,11 @@ function breakWallForTower(wallId,tower){
     fragments.push(wallFragmentFrom(wall,p1,wall.b,tower.id,wall.bSnap,(L-cut1)/L));
   }
 
+  if(wall.construction?.materialsDelivered){
+    const old=refundableConstructionCost(wall),refund={};
+    for(const [k,v] of Object.entries(old))refund[k]=Math.max(0,v-fragments.reduce((n,f)=>n+(refundableConstructionCost(f)[k]||0),0));
+    refundCost(refund);
+  }
   const idx=State.structures.findIndex(s=>s.id===wall.id);
   if(idx>=0)State.structures.splice(idx,1,...fragments);
   castleUnionCache.key=null;

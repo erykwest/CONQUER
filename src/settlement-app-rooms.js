@@ -4,6 +4,7 @@ function siteLaborText(s){
   if(s?.auto&&s.spawnCost)
     return 'Spontaneous spawn: '+Number(s.spawnCost.laborGold||0).toFixed(2)+' gold in labor value (not charged to lord)';
   if(s?.construction?.version!==2)return '';
+  if(devBuildMode('freeBuild'))return 'Free build DEV: nessun salario addebitato';
   const c=s.construction,rate=window.ConquerEconomy?.constructionWagePerWorkday?.()||0;
   return 'Lord construction wages: '+Number(c.wagesPaid||0).toFixed(2)+
     ' gold paid · '+((Math.max(0,c.workRequired-c.workDone))*rate).toFixed(2)+' gold remaining at current wage';
@@ -20,6 +21,38 @@ function hoardingSlot(s){
 }
 function renderFunctionPanel(){
   const panel=document.getElementById('functionPanel'),info=document.getElementById('functionInfo'),slots=document.getElementById('functionSlots'),s=selectedStructure();
+  // Every incomplete structure has a dedicated, provisional inspector.
+  // Do not expose functions, upgrades or operational controls during assembly.
+  if(s&&underConstruction(s)){
+    const c=s.construction,mat=constructionMaterialInfo(s);
+    const progress=Math.round(constructionProgress(s)*100);
+    const supplied=Math.round(mat.progress*100);
+    const fmt=n=>Number(n).toLocaleString('it-IT',{maximumFractionDigits:2});
+    panel.classList.add('open');
+    info.innerHTML='<div class="construction-inspector">'+
+      '<div class="kv"><span>Cantiere</span><b>'+structureLabel(s)+'</b></div>'+
+      '<div class="site-label">Avanzamento lavori · '+progress+'%</div>'+
+      '<div class="progress"><i style="width:'+progress+'%"></i></div>'+
+      '<div class="kv"><span>Lavoro residuo</span><b>'+fmt(remainingDays(s))+' giornate</b></div>'+
+      '<div class="site-label">Materiali consegnati · '+supplied+'%</div>'+
+      '<div class="progress site-material-progress"><i style="width:'+supplied+'%"></i></div>'+
+      '<div class="site-material-grid">'+mat.rows.map(r=>
+        '<div class="kv"><span>'+r.key+'</span><b>'+fmt(r.delivered)+' / '+fmt(r.total)+'</b></div>'
+      ).join('')+'</div>'+
+      '<div class="legend">'+constructionWorkStatus(s)+'</div>'+siteLaborLine(s)+'</div>';
+    const editable=c?.version===2&&(!s.auto||c.upgrade);
+    slots.innerHTML=editable?
+      '<div class="slot construction-priority"><label class="slot-label" for="constructionPrioritySelect">Priorità approvvigionamento</label>'+
+      '<select id="constructionPrioritySelect" aria-label="Priorità cantiere">'+
+      CONSTRUCTION_PRIORITIES.map((label,value)=>
+        '<option value="'+value+'"'+(constructionPriority(s)===value?' selected':'')+'>'+label+'</option>').join('')+
+      '</select><div class="legend">Le scorte disponibili vengono assegnate prima ai cantieri con priorità più alta. Nessun materiale è richiesto per confermare il progetto.</div></div>':
+      '<div class="legend">Cantiere spontaneo · non prioritizzabile.</div>';
+    const select=slots.querySelector('#constructionPrioritySelect');
+    if(select)select.onchange=()=>StructureCommands.setConstructionPriority(s.id,Number(select.value));
+    if(editable||c?.upgrade){const cancel=document.createElement('button');cancel.textContent='Annulla cantiere';cancel.dataset.cancelConstruction='true';cancel.onclick=()=>deleteStructure(s.id);slots.appendChild(cancel);}
+    return;
+  }
   if(window.ConquerStorageYard?.is(s)){
     const Y=window.ConquerStorageYard,n=Y.size(s),next=n+2,stock=Y.stocks();
     const goods=Object.entries(stock).filter(([,qty])=>qty>0);
@@ -35,7 +68,7 @@ function renderFunctionPanel(){
     const cost=Y.expansionCost(n,next);
     slots.innerHTML=cost?
       '<div class="slot"><div class="slot-label">Ampliamento</div><button data-stockyard-grow>Espandi a '+next+'×'+next+'U · '+costText(cost)+'</button>'+
-      '<div class="legend">Area libera e pianeggiante richiesta; aumento capacità effettivo subito dopo l’espansione.</div></div>':
+      '<div class="legend">Area libera e pianeggiante richiesta; aumento capacità disponibile al termine del cantiere.</div></div>':
       '<div class="legend">Capienza massima raggiunta · 6×6U.</div>';
     const button=slots.querySelector('[data-stockyard-grow]');
     if(button)button.onclick=()=>StructureCommands.setYardSize(s.id,next);

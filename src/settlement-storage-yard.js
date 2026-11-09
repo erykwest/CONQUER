@@ -78,9 +78,9 @@
     const check=window.ConquerPlacement?.check?.(candidate,{ignoreId:target.id,includeAuto:true,checkCost:false});
     if(!check?.ok)return{ok:false,reason:check?.reason||'Expansion footprint blocked'};
     const cost=expansionCost(old,next);
-    if(typeof canAfford==='function'&&!canAfford(cost))return{ok:false,reason:'Insufficient resources for expansion'};
-    if(typeof spendCost==='function'&&!spendCost(cost))return{ok:false,reason:'Unable to pay expansion cost'};
+    const before=structureUpgradeSnapshot(target);
     Object.assign(target,{w:next,h:next,yardSize:next,expandedAt:Number(State.clock?.day)||0});
+    beginStructureUpgrade(target,before,cost,2);
     if(typeof markStructureDirty==='function')markStructureDirty(target);
     return{ok:true,cost,size:next};
   }

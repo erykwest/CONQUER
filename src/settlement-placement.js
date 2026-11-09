@@ -179,10 +179,6 @@
       if(regularCollision(s,other,polys,options))
         return invalid('Footprint overlaps an existing structure or road');
     }
-    if(options.checkCost!==false&&!s.auto){
-      const cost=constructionCost(s);
-      if(!canAfford(cost))return invalid('Insufficient resources: '+costText(cost));
-    }
     return valid();
   }
   window.ConquerPlacement=Object.freeze({check,contact,intersects});

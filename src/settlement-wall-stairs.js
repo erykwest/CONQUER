@@ -120,9 +120,8 @@
     const spec={kind,pos:s.wallStair?.pos||'middle'};
     if(!layout(s,spec)){status('Muro troppo corto per questa scala');return false}
     const cost=COST[kind];
-    if(typeof canAfford==='function'&&!canAfford(cost)){status('Risorse insufficienti · '+costText(cost));return false}
-    if(typeof spendCost==='function')spendCost(cost);
-    s.wallStair=spec;refresh(s);
+    const before=structureUpgradeSnapshot(s);
+    s.wallStair=spec;beginStructureUpgrade(s,before,cost,1);refresh(s);
     status(kind==='wood'?'Scala lignea costruita sul camminamento':'Scala lapidea costruita sul camminamento');return true;
   }
   function setPos(s,pos){

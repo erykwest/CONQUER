@@ -8,6 +8,40 @@
 - **ASSET LAB:** registro `ConquerArtModels` in `MODEL_SOURCES` (Interni · «Opere d'arte · quadri / arazzi / sculture», titoli in italiano dal catalogo); script caricato in `figures-lab.html` e `index.html`.
 - **PROVE:** `qa/art-regression.cjs` (catalogo, risoluzione `a:`, ancoraggi dentro la stanza e liberi da mobili, scala e tra loro; regole di montaggio e larghezza; slot colore, `ConquerArtColors`, opera ricolorata sul suo ancoraggio) PASS 7/7; audit Interni senza differenze sui colori predefiniti; `qa/cutaway-furniture-regression.cjs` PASS 9/9; controllo visivo dei 19 modelli nel Lab. Osservazione: nelle stanze quadrate già arredate le pareti libere sono strette (circa 1 m: letto, camino, arazzo araldico e torce); i tratti fino a 3 m ci sono nelle stanze rotonde o vuote.
 
+## 2026-11-09 — BC-261109-02 · DEV e cantieri di upgrade (branch `fix/upgrades-dev-build`)
+
+- **Prove aggiuntive PASS:** regressione d'assedio reale Canvas/WebGL e perdita contesto WebGL; annullamento di upgrade conserva i danni subiti durante il cantiere.
+
+- **Riesame CI:** fixture browser d'assedio aggiornata a Fast a pagamento per preparare la porta completa; verificata anche l'allocazione Fast dallo stock provvisorio prima della fondazione. Il comportamento normale resta temporizzato.
+
+- **CODICE SUL BRANCH, NON ANCORA MERGE:** due toggle DEV indipendenti Free build (nessun materiale/salario addebitato) e Fast build (nessuna attesa/manodopera, materiali ancora necessari). Insieme danno costruzione gratuita e istantanea; valgono anche sui cantieri aperti. Preferenze solo di sessione, escluse dai save; materiali concessi gratis tracciati e mai rimborsabili.
+- **UPGRADE:** altezza/tier, piani e varianti strutturali/civiche ora aprono il medesimo cantiere. Costo differenziale ove esiste il listino, prezzi dedicati conservati per piazzali, ponti/fossati, scale, levatoi e grata. Preventivo dell'intervento separato dal costo dell'edificio. Durata positiva; controllo di un solo intervento per struttura. Nessun costo inventato per varianti senza listino.
+- **CANCELLAZIONE/PERSISTENZA:** snapshot dello stato precedente nel cantiere; annullare un upgrade ripristina l'edificio e restituisce il solo materiale pagato e non consumato. Quote, consegne e rollback salvati nei normali payload. Frammenti dei muri ripartiscono anche quote/crediti DEV degli upgrade.
+- **CASE:** `changeHouseDensity` avvia il cantiere anche per case automatiche, conservando finanziamento privato e timer procedurale; regola pronta per una futura promozione autonoma. Motore/condizioni di autoupgrade separati nella chat «CONQUER — Autoupgrade delle case», senza soglie economiche aggiunte qui.
+- **PROVE LOCALI:** riprodotto l'upgrade torre senza cantiere prima del fix; nuovi test di dominio PASS. Suite completa: 160/161 PASS inizialmente; fixture urban-density aggiornata e 18 casi PASS al riesame. Browser Chromium UI1/UI2 PASS per upgrade, rollback, pulsanti reali Free/Fast, indipendenza modalità, salvataggio e casa automatica. CI del branch ancora da eseguire. Nessun nuovo asset/modello.
+
+
+## 2026-11-09 — BC-261108-01 · Completamento PR #186
+
+- Branch `feature/construction-staged-priority-20261108` riallineata a main `3fdae53`; nessun merge della feature dichiarato. Risolti i conflitti preservando STONECOLOR, CIRCLE e documentazione corrente.
+- Materiali: priorità stretta tra sei classi, divisione equa per bene a pari classe, residui millesimali al meno rifornito. Quote, consegne e consumo proporzionale al lavoro persistiti; annullamento restituisce solo il consegnato non consumato, mai salari. Nessun vincolo economico nei ghost, compresi percorsi lineari. Cantieri senza materiali non trattengono operai.
+- Correzioni: persistenza dei pozzi in cantiere, rimborsi dei ponti lignei, clear e frammenti di muro senza duplicare prenotazioni; inspector classico aggiornato al completamento.
+- QA locale PASS: materiali/priorità, workers/payroll/commute, economy/balance/builder, founding, storage, panels, save-safety, placement, multi-wells, urban, well-civics, codex e confini moduli. Chromium reale UI1/UI2 PASS: piazzamento senza risorse, sei opzioni, cambio priorità, consegne separate dal lavoro, salvataggio locale e migrazione, completamento e annullamento/rimborso. Catture `output/playwright/construction/`. CI dell'ultimo commit da verificare; nessun asset o modello aggiunto.
+
+
+## 2026-11-08 — Cantieri confermati senza scorte e approvvigionamento prioritario (branch `feature/construction-staged-priority-20261108`)
+
+- **IMPLEMENTATO SUL BRANCH, NON ANCORA SU MAIN:** il ghost conferma un cantiere valido per geometria/terreno senza richiedere il preventivo interamente disponibile. Il costo rimane un preventivo, le singole risorse arrivano progressivamente e indipendentemente dallo stock economico canonico, anche quando altre tipologie mancano. Nessun debito o scorta negativa: il lavoro non supera il rapporto delle risorse effettivamente trasferite.
+- **PRIORITÀ:** sei classi ordinabili, Molto basso → Basso → Medio → Alto → Molto alto → Critico; ordinamento stabile per classe, data e ID anche nell'assegnazione del personale L1, senza generare nuovi lavoratori. Il salario resta conteggiato separatamente per il lavoro svolto. La selezione apre un inspector provvisorio con progresso del lavoro, progresso/quantità dei materiali e priorità, distinto da quello dell'edificio ultimato, anche in UI v2.
+- **PERSISTENZA:** priorità, materiali consegnati e avanzamento vengono salvati nella struttura già persistita. Cantieri precedenti con V2 ma senza `materialsDelivered` si considerano già pagati per evitare doppi addebiti. Alla demolizione si rimborsano soltanto i materiali realmente trasferiti nei nuovi cantieri; i preesistenti conservano il rimborso storico. I pozzi/edifici manuali a durata zero e costo non nullo creano ora un cantiere minimo invece di comparire gratuitamente completati.
+- **QA:** aggiunta `qa/construction-priority-regression.cjs` al workflow Runtime integrity per code, carenze, priorità variabile, compatibilità legacy e rimborsi. **Da verificare:** esito GitHub Actions e prova visuale end-to-end (UI classica/UI2, costi misti, reload e completamento). Non si simulano carovane fisiche per i trasferimenti ordinari.
+
+
+## 2026-11-09 — MIL-RES-01 · Caserma, vedette e Avamposto (solo specifica)
+
+- **NESSUN CODICE.** Specifica approvata nel [BACKLOG](BACKLOG.md); decisione D-MIL-RES-261109.
+- **STATO DI PARTENZA VERIFICATO NEL CODICE:** la stanza `guard` calcola `watchmen` (`src/settlement-siege.js`, 4 per unità) ma nessun sistema lo legge; le pattuglie (`ConquerCombat.addPatrol`) non consumano soldati; ogni torre finita osserva senza personale (`VISION_BASE=16`, `VISION_PER_HEIGHT=4`); l'allarme è solo manuale; i soldati costano solo cibo; non esiste un conteggio di soldati reali.
+
 ## 2026-11-09 — CIRCLE: assegnazione pattuglie e guarnigioni per settore → macrostruttura (`feature/circle-military-zones-macrotowers-20261109`)
 
 - **CODICE PRESENTE SUL BRANCH (non ancora su main):** Centro di controllo → Militare → Pattuglie e guarnigioni adotta la gerarchia CIRCLE reale: settori chiusi dal rilevamento topologico, stato (sicuro/allerta/conteso, ecc.), profondità e presidio per settore; un livello più basso presenta le macrostrutture difensive. Torri figlie e nipoti collegate con `parentTowerId` sono aggregate in un'unica riga della torre principale: arcieri assegnati, capienza e operativi sono somme delle postazioni `ConquerSiege`, non risorse simulate.

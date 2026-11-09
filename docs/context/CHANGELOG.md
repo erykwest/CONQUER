@@ -2,6 +2,25 @@
 
 09/11/2026 — `feature/arte-graphics` (pre-merge): parte grafica di ARTE. Generatore `tools/blender/build_art.py` e registro `ConquerArtModels` con 19 archetipi (quadri e arazzi in due taglie, busto, statua in marmo/pietra/bronzo, santo ligneo in tabernacolo) e catalogo dei metadati; Asset Lab con tre famiglie «Opere d'arte». Ancoraggi a parete e a pavimento calcolati per ogni stanza del cutaway (`artSlots`, `artFits`), senza esporre opere né cambiare le stanze. Nuova `qa/art-regression.cjs`. ART-251105-01 fatto per la parte grafica, ART-251105-02 per gli slot; commissione, inventario e ricollocazione restano aperti. Poi: colori parametrici delle opere (forme fisse, colori a commissione), con slot colore nel catalogo, `src/art-colors.js`, applicazione nel cutaway (`artWorkFaces`) e selettore «Colori della commissione» nel Lab. Nuova decisione D-ART-COLORS-261109; ROADMAP invariata.
 
+## 2026-11-09 — BC-261109-02 · DEV e cantieri di ristrutturazione
+
+- **Prove aggiuntive PASS:** regressione d'assedio reale Canvas/WebGL e perdita contesto WebGL; annullamento di upgrade conserva i danni subiti durante il cantiere.
+
+- **Riesame CI:** fixture browser d'assedio aggiornata a Fast a pagamento per preparare la porta completa; verificata anche l'allocazione Fast dallo stock provvisorio prima della fondazione. Il comportamento normale resta temporizzato.
+
+Branch `fix/upgrades-dev-build`: Free/Fast build indipendenti, cantieri con quota incrementale e rollback per upgrade edilizi, regola condivisa per cambi livello delle case automatiche. Materiali DEV non rimborsabili e opzioni non salvate. Test locali e browser UI1/UI2 PASS; CI da verificare. ROADMAP invariata.
+
+
+## 2026-11-09 — PR #186 · Cantieri: equità, consumo e verifica browser
+
+Completata la branch dei cantieri senza prefinanziamento: ripartizione equa per bene, rimborso dei soli materiali non consumati, salvataggio pozzi e apportionamento dei frammenti, ghost lineari coerenti. Test locali e Chromium UI1/UI2 PASS, workflow browser ampliato. Stato: branch, Actions del nuovo head da verificare.
+
+
+08/11/2026 — `feature/construction-staged-priority-20261108` (pre-merge): conferma ghost senza pagamento integrale; costi fissi come preventivi e trasferimenti parziali dal ledger canonico in ordine di sei priorità, coerenti con gli assegnamenti dei costruttori L1. Inspector provvisorio con due progressi e quantità consegnate, anche su UI2. Compatibilità con vecchi cantieri già prepagati; rimborsi parziali dei nuovi; regressione dedicata `qa/construction-priority-regression.cjs` nel Runtime integrity. CI e controllo visivo ancora da verificare; nessuna carovana materiale separata, ROADMAP M0–M5 invariata.
+
+
+09/11/2026 — `docs/caserma-avamposto-spec`: specifica approvata MIL-RES-01 (Corpo di Guardia fuso nella Caserma, riserva unica di soldati L1 come valuta, pattuglie esterne e ronde con allarme automatico, vedette obbligatorie per la vista delle torri, Avamposto come upgrade delle torri isolate, fuoco di segnalazione, staffetta). Nuova decisione D-MIL-RES-261109. Solo documentazione: nessun codice, test o asset; ROADMAP invariata.
+
 09/11/2026 — `feature/circle-military-zones-macrotowers-20261109` (pre-merge): gestione militare CIRCLE con compartimenti difensivi effettivi, stato e profondità per zona; assegnazioni arcieri per settore e per torre madre; sottotorri e sottotorri annidate aggregate in una riga, con slots Siege sommati una sola volta. Le pattuglie si assegnano/ritirano dai settori usando il roster Combat già esistente e percorsi militari locali: nessuna nuova unità creata dal trasferimento. QA dedicata e test di pannello/browser; in attesa CI prima del merge. Decisione D-MIL-CIRCLE-261109; ROADMAP invariata.
 
 

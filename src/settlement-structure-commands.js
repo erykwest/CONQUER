@@ -6,6 +6,18 @@ const StructureCommands=(()=>{
   const find=id=>State.structures.find(s=>s.id===id)||null;
   const refresh=(target,hardNavigation=true)=>{markStructureDirty(target,hardNavigation);renderFunctionPanel();draw()};
 
+  function setConstructionPriority(id,level){
+    const target=find(id),c=target?.construction;
+    const requested=Number(level);
+    if(!target||target.auto&&!c?.upgrade||!underConstruction(target)||c?.version!==2||
+      !Number.isInteger(requested)||requested<0||requested>=CONSTRUCTION_PRIORITIES.length)return false;
+    if(constructionPriority(target)===requested)return true;
+    c.priority=requested;
+    markDirty(false,false);
+    renderFunctionPanel();draw();
+    status('Priorità cantiere: '+CONSTRUCTION_PRIORITIES[requested]);
+    return true;
+  }
   function setTier(id,requested){
     const target=find(id);if(!target)return false;
     if(target.type==='tower'){
@@ -266,9 +278,18 @@ const StructureCommands=(()=>{
       houseLevel:s.type==='house'?houseLevel(s):null,mastioActive:!!s.isMastio,
       building:null,facts:[],controls:[],rooms:null,
       mastio:null,keepEntrance:null,archers:null,integrity:null,legacy:null,industry:null};
-    if(underConstruction(s))d.building={progress:constructionProgress(s),days:remainingDays(s)};
+    if(underConstruction(s)){
+      const material=constructionMaterialInfo(s);
+      d.building={progress:constructionProgress(s),days:remainingDays(s),
+        priority:constructionPriority(s),priorities:CONSTRUCTION_PRIORITIES,
+        materialsProgress:material.progress,materials:material.rows,
+        status:constructionWorkStatus(s),editable:s.construction?.version===2&&(!s.auto||!!s.construction.upgrade)};
+    }
     const cost=s.buildCost||constructionCost(s);
-    d.cost=cost;
+    d.cost=d.building?constructionMaterialInfo(s).required:cost;
+    // Construction uses a temporary inspector. No completed-building commands
+    // or room assignment are exposed before the project is finished.
+    if(d.building)return d;
     if(window.ConquerStorageYard?.is(s)){
       const Y=window.ConquerStorageYard,stock=Y.stocks(),n=Y.size(s);
       d.facts.push({key:'size',value:n+'×'+n+'U'},
@@ -420,7 +441,18 @@ const StructureCommands=(()=>{
     return d;
   }
 
-  return{setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setGateRoof,setGateUpper,setSkin,setWallStair,setWallStairPos,toggleCutaway,stepCutawayFloor,flipSide,
+  const commands={setConstructionPriority,setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setGateRoof,setGateUpper,setSkin,setWallStair,setWallStairPos,toggleCutaway,stepCutawayFloor,flipSide,
     setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,
     describeStructure};
+  for(const name of ['setTier','setHeight','setKeepFloorPlan','setTowerBase','setTowerRoof','setHoarding','setWoodRoof','setGateRoof','setGateUpper','setSkin','setTowerWeapon','setTowerRoofShape','setTowerBartizan','setTowerBell','setCivicLevel','setPlazaVariant']){
+    const execute=commands[name];
+    commands[name]=(id,...args)=>{
+      const target=find(id);if(!target||underConstruction(target))return false;
+      const before=structureUpgradeSnapshot(target);
+      const result=execute(id,...args);
+      if(result&&beginStructureUpgrade(target,before)){refresh(target);status(underConstruction(target)?'Cantiere di modifica avviato':'Modifica completata')}
+      return result;
+    };
+  }
+  return commands;
 })();

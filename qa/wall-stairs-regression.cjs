@@ -8,13 +8,14 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const root=__dirname+'/../src/';
 function fixture(structures,stock={gold:100,wood:100,stone:100}){
-  const State={structures},log=[];
+  const State={structures,resources:stock},log=[];
   const ctx=vm.createContext({State,window:{},Math,Number,Object,Array,Map,Set,String,JSON,
     underConstruction:s=>!!s.building,structureHeight:s=>[1.15,2.10][(s.level||1)-1],wallTier:s=>s.tier||2,
     wallExteriorSide:s=>s.flip?-1:1,pointRadius:()=>.75,structureInteriorVector:()=>({x:1,y:0}),
     w2s:(p,z)=>({x:p.x*10,y:p.y*10-z*10}),status:m=>log.push(m),
     canAfford:c=>Object.entries(c).every(([k,v])=>(stock[k]||0)>=v),
     spendCost:c=>{for(const [k,v] of Object.entries(c))stock[k]-=v},costText:c=>JSON.stringify(c)});
+  require('./construction-fixture.cjs')(ctx);
   ctx.window.window=ctx.window;
   for(const f of ['assets/wall-stair-models.js','settlement-wallwalk.js','settlement-wall-stairs.js'])
     vm.runInContext(fs.readFileSync(root+f,'utf8'),ctx);
@@ -73,7 +74,8 @@ const wall=(id,a,b,o={})=>({id,type:'wall',a,b,width:.5,level:1,tier:2,...o});
   assert.equal(WS.setKind(short,'stone'),false,'a wall too short for the flight refuses it');
   assert.equal(WS.setKind(busy,'wood'),false,'not on a wall still being built');
   const poor=fixture([wall('P',{x:0,y:0},{x:0,y:10})],{gold:1});
-  assert.equal(poor.WS.setKind(State0(poor),'wood'),false,'no stair without the resources');
+  const pending=State0(poor);assert.equal(poor.WS.setKind(pending,'wood'),true,'unfunded stair opens a project');
+  assert.equal(pending.construction.workDone,0,'no instant completion without the quote');
   console.log('PASS eligibility and cost');
 }
 {

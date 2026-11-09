@@ -68,6 +68,7 @@ function fixture({night=0,rotation=0}={}){
     markDirty:()=>{},renderFunctionPanel:()=>{},draw:()=>{},status:()=>{},invalidateNavigation:()=>{},
     selectedStructure:()=>State.structures[0]
   });
+  require('./construction-fixture.cjs')(ctx);
   vm.runInContext(read('settlement-gate-fittings.js'),ctx);
   const gate={id:'g',type:'gate',material:'stone',x:0,y:0,size:1.5,angle:0,functions:[]};
   State.structures.push(gate);
@@ -159,6 +160,7 @@ function fixture({night=0,rotation=0}={}){
     markDirty:()=>{},renderFunctionPanel:()=>{},draw:()=>{},status:()=>{},selectStructure:()=>{},selectedStructure:()=>null,
     uid:(()=>{let n=0;return()=>'id'+(++n)})()
   });
+  require('./construction-fixture.cjs')(ctx);
   vm.runInContext(['settlement-collapse.js','settlement-siege.js','settlement-gate-fittings.js'].map(read).join('\n'),ctx);
   const S=ctx.window.ConquerSiege,G=ctx.window.ConquerGates;
   const gate={id:'g',type:'gate',material:'stone',x:0,y:0,size:1.5,angle:0,level:1,functions:[]};
