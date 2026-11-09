@@ -74,10 +74,26 @@ try{
     const balanceHistory=history.slice(-8).map((w,i)=>({day:w.day,goods:{
       food:{produced:35+i*2,demand:40+i*.5}
     }}));
+    const macro={
+      id:'tower-1',zoneId:'circle-1',label:'Mastio · tower-1',subtowers:2,
+      capacity:4,assigned:2,active:2,squadCapacity:3,squads:1,
+      rooms:[{id:'room-1',capacity:3,assigned:1}],
+      members:[{id:'tower-1',capacity:1,assigned:1,active:1},
+        {id:'subtower-1',capacity:2,assigned:1,active:1},
+        {id:'subtower-2',capacity:1,assigned:0,active:0}]
+    };
+    const circleZone={
+      id:'circle-1',label:'Settore 1',depth:2,state:'secure',mastio:true,
+      patrols:1,capacity:4,assigned:2,active:2,towers:[macro],otherBarracks:[]
+    };
     const military={
-      patrols:[{id:'patrol-1',active:true,position:'perimetro White Zone'}],
-      towers:[{id:'tower-1',label:'Torre · tower-1',assigned:2,active:2,capacity:4}],
-      barracks:[{id:'room-1',label:'Caserma · room-1',assigned:1,capacity:3}],
+      circleReady:true,
+      patrols:[{id:'patrol-1',active:true,zoneId:null},{id:'patrol-2',active:true,zoneId:'circle-1'}],
+      zones:[circleZone,{id:'circle-2',label:'Settore 2',depth:1,state:'alert',mastio:false,
+        patrols:0,capacity:0,assigned:0,active:0,towers:[],otherBarracks:[]}],
+      outside:{id:'outside',label:'Fuori dai compartimenti CIRCLE',patrols:1,
+        capacity:0,assigned:0,active:0,towers:[],otherBarracks:[]},
+      macros:[macro],otherBarracks:[],totalAssigned:2,totalActive:2,
       unassigned:0,hasCampManagement:true
     };
     const realGame=window.ConquerGame;
@@ -93,16 +109,44 @@ try{
         economic.jobManagerL2.tasks=order.map(key=>byKey.get(key));return true;
       },
       adjustPatrols:delta=>{
-        if(delta>0)military.patrols.push({id:'patrol-'+(military.patrols.length+1),active:true,position:'perimetro White Zone'});
-        else military.patrols.pop();return true;
+        if(delta>0){
+          military.patrols.push({id:'patrol-'+(military.patrols.length+1),active:true,zoneId:null});
+          military.outside.patrols++;
+        }else{
+          const index=military.patrols.findLastIndex(p=>!p.zoneId);
+          if(index<0)return false;
+          military.patrols.splice(index,1);military.outside.patrols--;
+        }
+        return true;
       },
-      adjustTowerArchers:(id,delta)=>{
-        const t=military.towers.find(t=>t.id===id);if(!t)return false;
-        t.assigned=Math.max(0,Math.min(t.capacity,t.assigned+delta));t.active=t.assigned;return true;
+      assignCirclePatrol:(id,delta)=>{
+        const zone=military.zones.find(z=>z.id===id);if(!zone)return false;
+        const unit=delta>0?military.patrols.find(p=>!p.zoneId):
+          military.patrols.findLast(p=>p.zoneId===id);
+        if(!unit)return false;
+        unit.zoneId=delta>0?id:null;
+        zone.patrols+=delta;military.outside.patrols-=delta;return true;
       },
-      adjustBarracksSquads:(id,delta)=>{
-        const b=military.barracks.find(b=>b.id===id);if(!b)return false;
-        b.assigned=Math.max(0,Math.min(b.capacity,b.assigned+delta));return true;
+      adjustMacroArchers:(id,delta)=>{
+        const m=military.macros.find(m=>m.id===id);if(!m)return false;
+        const members=delta>0?m.members:m.members.slice().reverse();
+        const target=members.find(t=>delta>0?t.assigned<t.capacity:t.assigned>0);
+        if(!target)return false;
+        target.assigned+=delta;target.active=target.assigned;
+        m.assigned+=delta;m.active+=delta;
+        const zone=military.zones.find(z=>z.id===m.zoneId);
+        zone.assigned+=delta;zone.active+=delta;
+        military.totalAssigned+=delta;military.totalActive+=delta;return true;
+      },
+      adjustZoneArchers:(id,delta)=>{
+        const zone=military.zones.find(z=>z.id===id);if(!zone)return false;
+        const target=zone.towers.find(t=>delta>0?t.assigned<t.capacity:t.assigned>0);
+        return target?jobCommands.adjustMacroArchers(target.id,delta):false;
+      },
+      adjustMacroSquads:(id,delta)=>{
+        const m=military.macros.find(m=>m.id===id);
+        if(!m||m.squads+delta<0||m.squads+delta>m.squadCapacity)return false;
+        m.squads+=delta;m.rooms[0].assigned+=delta;return true;
       },
       setL1Order:order=>{
         const byKey=new Map(economic.jobManager.tasks.map(t=>[t.key,t]));
@@ -191,17 +235,30 @@ try{
   await page.locator('[data-cp-tab="military"]').click();
   await page.locator('[data-cp-military-sub="garrisons"]').click();
   assert.ok(await page.locator('#controlBody').textContent().then(t=>t.includes('Pattuglie e guarnigioni')));
+  assert.equal(await page.locator('[data-cp-zone="circle-1"] .cp-circle-macro').count(),1,
+    'Mastio + two subtowers must be rendered as one macro row');
+  assert.ok(await page.locator('[data-cp-zone="circle-1"]').textContent().then(t=>t.includes('2 sottotorri aggregate')));
+  assert.equal(await page.locator('[data-cp-zone="circle-2"]').count(),1);
   await page.locator('[data-cp-patrol="add"]').click();
-  assert.ok(await page.locator('#controlBody').textContent().then(t=>t.includes('2 pattuglie assegnate')));
-  await page.locator('[data-cp-tower-id="tower-1"][data-cp-tower-delta="1"]').click();
-  assert.ok(await page.locator('#controlBody').textContent().then(t=>t.includes('3 / 4 arcieri assegnati')));
-  await page.locator('[data-cp-barracks-id="room-1"][data-cp-barracks-delta="1"]').click();
-  assert.ok(await page.locator('#controlBody').textContent().then(t=>t.includes('2 / 3 squadre')));
+  assert.ok(await page.locator('#controlBody').textContent().then(t=>t.includes('2 pattuglie disponibili')));
+  await page.locator('[data-cp-circle-patrol="circle-1"][data-cp-circle-delta="1"]').click();
+  assert.ok(await page.locator('[data-cp-zone="circle-1"]').textContent().then(t=>t.includes('2 pattuglie')));
+  assert.ok(await page.locator('#controlBody').textContent().then(t=>t.includes('1 pattuglie disponibili')));
+  await page.locator('[data-cp-circle-archer="circle-1"][data-cp-circle-delta="1"]').click();
+  assert.ok(await page.locator('[data-cp-zone="circle-1"]').textContent().then(t=>t.includes('3/4 arcieri')));
+  await page.locator('[data-cp-macro-id="tower-1"][data-cp-macro-delta="1"]').click();
+  assert.ok(await page.locator('[data-cp-zone="circle-1"]').textContent().then(t=>t.includes('4/4 arcieri')));
+  await page.locator('[data-cp-macro-squad="tower-1"][data-cp-macro-squad-delta="1"]').click();
+  assert.ok(await page.locator('[data-cp-zone="circle-1"]').textContent().then(t=>t.includes('Armigeri 2/3')));
+  await page.locator('[data-cp-circle-toggle="circle-1"]').click();
+  assert.equal(await page.locator('[data-cp-zone="circle-1"] .cp-circle-macro').count(),0);
+  await page.locator('[data-cp-circle-toggle="circle-1"]').click();
+  assert.equal(await page.locator('[data-cp-zone="circle-1"] .cp-circle-macro').count(),1);
   await page.locator('.profile-window').evaluate(node=>node.scrollTop=0);
-  await page.locator('.profile-window').screenshot({path:output+'/patrols-garrisons.png'});
+  await page.locator('.profile-window').screenshot({path:output+'/circle-patrols-macro-towers.png'});
 
   fs.writeFileSync(output+'/report.json',JSON.stringify({
-    result:'PASS',kind:'actual-game-UI-with-demo-data',tabs:requested,detailTabs:['people','economy','estate'],jobManager:{L1:{minimum:true,auto:true,drag:true},L2:{minimum:true,auto:true,drag:true}},military:{patrols:true,towers:true,barracks:true},errors,source:'branch panels',note:'Data are synthetic visual fixtures, not a saved gameplay state.'
+    result:'PASS',kind:'actual-game-UI-with-demo-data',tabs:requested,detailTabs:['people','economy','estate'],jobManager:{L1:{minimum:true,auto:true,drag:true},L2:{minimum:true,auto:true,drag:true}},military:{circleZones:true,macroAggregation:true,patrolTransfers:true,zoneArchers:true,macroArchers:true,barracks:true},errors,source:'branch panels',note:'Data are synthetic visual fixtures, not a saved gameplay state.'
   },null,2));
   console.log('PASS real CONQUER UI screenshots: '+requested.join(', ')+' + L1/L2 and military controls');
 }finally{
