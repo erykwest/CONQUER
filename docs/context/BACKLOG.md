@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-09 — JM-L1-01 · Gestione priorità produttive dei popolani L1
+
+- **IN BRANCH:** ordinamento drag-and-drop e su/giù delle mansioni L1; «Minimum worker» numerico; toggle AUTO/manuale, stato del personale e segnalazione dei minimi non soddisfatti.
+- **ACCEPTANCE CORE:** due passaggi per i posti (minimi in ordine di priorità, poi eccedenza ai job AUTO in ordine); manuale non assorbe eccedenze; coerenza con pastori/pescatori riservati, carrettieri, cantieri navali e cantieri manuali. Dati persistiti in `State.economy`; risparmio sul legacy finché non si agisce.
+- **PROVE/RESIDUI:** regressioni `qa/labor-jobs-regression.cjs` e `qa/panels-regression.cjs` ampliate; sessione JS PASS; attendere CI PR, verifica browser del DnD/mobile e comportamento reale durante il cambio del turno. Fuori scopo assegnazioni L2–L4 e reintegro forzoso di pescatori/pastori.
+
+
 ## 2026-11-09 — Riconciliazione con GitHub (ref `main` `e63f729`)
 
 > **Prevale sulle diciture «SU BRANCH / NON MERGE / pre-merge» delle sezioni sotto.** Verificato con `gh pr list` il 09/11/2026. I requisiti APERTI delle singole sezioni restano validi: cambia solo dove sta il codice.

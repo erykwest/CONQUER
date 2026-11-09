@@ -17,6 +17,10 @@ function fixture(founded=true,markets=2) {
   const economy={
     population:{L1:9,L2:3,L3:0,L4:1},welfare:54,castleGold:123,capital:20,rationMode:'market',
     jobs:{building:2,herding:1,logging:1,industry:1,idle:0,foodRisk:false},
+    jobManager:{managed:true,available:4,tasks:[
+      {key:'site:log',label:'Taglialegna · log',workers:1,demand:2,capacity:2,minimum:1,auto:true},
+      {key:'builders',label:'Costruttori',workers:2,demand:3,capacity:3,minimum:2,auto:false}
+    ]},
     goods:[{id:'food',price:2,market:10,castle:40,share:50,reserve:100}],
     activities:[{id:'farm-1',type:'field',owner:'lord',workers:1,value:50,profit:null}]
   };
@@ -29,6 +33,9 @@ function fixture(founded=true,markets=2) {
   const commands={
     setPolicy:(...args)=>calls.push(['policy',...args]),
     setSaleShare:(...args)=>calls.push(['share',...args]),
+    setL1Minimum:(...args)=>calls.push(['jobMinimum',...args]),
+    setL1Auto:(...args)=>calls.push(['jobAuto',...args]),
+    setL1Order:(...args)=>calls.push(['jobOrder',...args]),
     transferActivity:(...args)=>calls.push(['transfer',...args]),
     openCaravans:()=>calls.push(['caravans'])
   };
@@ -100,6 +107,22 @@ assert.match(x.elements.controlBody.innerHTML,/Diplomazia/);
 x.tab('estate');
 assert.match(x.elements.controlBody.innerHTML,/<option value="farm-1"/);
 assert.doesNotMatch(x.elements.controlBody.innerHTML,/<option value="farm-1"[^>]*>[^<]*·[^<]*<\/option><option value="mill/);
+// L1 queue is interactive: minimum number, AUTO, keyboard/touch move and drag/drop.
+x.context.window.ConquerPanels.open('jobs');
+assert.match(x.elements.controlBody.innerHTML,/Priorità produzioni e mansioni L1/);
+assert.match(x.elements.controlBody.innerHTML,/data-cp-job-min="site:log"/);
+assert.match(x.elements.controlBody.innerHTML,/data-cp-job-auto="builders"/);
+assert.match(x.elements.controlBody.innerHTML,/draggable="true"/);
+x.elements.profileControl.events.change({target:{dataset:{cpJobMin:'site:log'},value:'2',matches:()=>false}});
+assert.deepEqual(x.calls.pop(),['jobMinimum','site:log',2]);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-job-auto]'?{dataset:{cpJobAuto:'builders'}}:null}});
+assert.deepEqual(x.calls.pop(),['jobAuto','builders',true]);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-job-move]'?{dataset:{cpJobMove:'up',cpJobKey:'builders'}}:null}});
+assert.deepEqual(x.calls.pop(),['jobOrder',['builders','site:log']]);
+const jobNode=key=>({dataset:{cpJobRow:key},classList:{add(){},remove(){}}});
+x.elements.profileControl.events.dragstart({target:{closest:selector=>selector==='[data-cp-job-row]'?jobNode('site:log'):null},dataTransfer:{setData(){},effectAllowed:''}});
+x.elements.profileControl.events.drop({target:{closest:selector=>selector==='[data-cp-job-row]'?jobNode('builders'):null},preventDefault(){}});
+assert.deepEqual(x.calls.pop(),['jobOrder',['builders','site:log']]);
 const y=fixture(false);
 y.context.window.ConquerPanels.open();
 assert.match(y.elements.controlBody.innerHTML,/non fondato/);

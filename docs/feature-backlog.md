@@ -1,5 +1,11 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+## 2026-11-09 — JM-L1-01 · Job Manager L1 modificabile
+
+- **SU BRANCH `feature/l1-jobmanager-priority-20261109`:** lavorazioni L1 e mansioni di costruzione, carrettieri e cantieri navali riordinabili con drag-and-drop; minimi numerici e AUTO/manuale operativi nel motore economico. I minimi precedono l'eccedenza AUTO; persistono nel save. Pastori protetti, pescatori e tier L2–L4 non vengono riassegnati.
+- **DA CHIUDERE:** CI, verifica visuale drag-and-drop/touch e controllo in partita del turno di lavorazione. Non dichiarare concluso su `main` prima del merge. Riferimento decisionale D-L1-JOB-261109.
+
+
 ## STONECOLOR — Palette pietra per territorio (approvata 08/11/2026)
 
 - `feature/stonecolor`: 5 palette (grigio attuale, arenaria, tufo, calcare, granito), ciascuna con cinque toni di luce/ombra definiti in [STONECOLOR-PALETTE-VALIDATION.md](STONECOLOR-PALETTE-VALIDATION.md).

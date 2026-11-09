@@ -1,5 +1,13 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-L1-JOB-261109 — Priorità del lavoro dei popolani L1 (09/11/2026)
+
+- **APPROVATO DAL PRODUCT OWNER:** nel Job Manager L1 le produzioni/mansioni sono righe ordinabili trascinandole, ciascuna con un numero «Minimum worker» da garantire quando i lavoratori sono disponibili e un pulsante AUTO. AUTO disattivato passa la mansione a manuale.
+- **CONTRATTO DI IMPLEMENTAZIONE:** i minimi sono distribuiti prima, in ordine di priorità; se la richiesta complessiva supera la popolazione disponibile, i minimi dei job in alto prevalgono. Solo dopo si assegnano lavoratori aggiuntivi ai job AUTO, sempre in ordine di priorità; i job manuali ricevono esclusivamente il minimo. Non si supera la capacità massima del job o la disponibilità di L1.
+- **CONFINI:** i pastori necessari alla sicurezza alimentare e i pescatori attivi restano riservati secondo le regole specifiche. L2–L4 non sono toccati. I salvataggi esistenti conservano l'allocatore originale finché un comando della nuova gestione non viene utilizzato; modifiche salvate con `State.economy.l1Jobs` su locale/cloud.
+- **STATO:** codice e QA su `feature/l1-jobmanager-priority-20261109`; CI e browser da validare prima del merge. ROADMAP invariata: evoluzione del Job Manager già esistente.
+
+
 ## D-VIS-STONECOLOR-261108 — Pietra coerente per mappa (08/11/2026)
 
 - **APPROVATO DAL PRODUCT OWNER:** scelta casuale iniziale fra Grigio attuale, Arenaria, Tufo, Calcare e Granito; successiva modifica da **Profilo → Ambiente** con applicazione globale agli elementi realmente litici.
