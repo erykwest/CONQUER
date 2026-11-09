@@ -230,13 +230,37 @@
       kpi('L1 inattivi',fmt(j.idle),'Disponibili'),
       kpi('Cantieri',fmt(j.building),'Costruttori assegnati')
     ])+grid([
-      card('Distribuzione delle mansioni L1',bars(work,max1(work.map(x=>x[1]))),'Assegnazioni automatiche dell’economia, non impostazioni manuali.'),
+      card('Priorità produzioni e mansioni L1',l1JobQueue(e),'Le priorità si salvano nella partita.',true),
+      card('Distribuzione delle mansioni L1',bars(work,max1(work.map(x=>x[1]))),'Manodopera effettivamente assegnata dal motore economico.'),
       card('Popolazione per classe',classBars(p),'L2–L4 mantengono professioni e capacità proprie.'),
       card('Storico occupazione',jobsTrend(d),'Le assegnazioni variano con cantieri, stagione e risorse.',true),
       card('Posti nelle attività',sites,'Occupati rilevati dal Job Manager esistente; nessuna nuova simulazione.',true),
       ...(j.foodRisk?[card('Segnalazioni',warn('Possibile carenza alimentare rispetto al fabbisogno stimato.'),'',true)]:[])
     ]);
   }
+
+  // L1 production and service queues are actual economy commands, not mock controls.
+  function l1JobQueue(e){
+    const jm=e.jobManager||{},tasks=jm.tasks||[];
+    if(!tasks.length)return empty('Nessuna mansione L1 disponibile.');
+    const info='<p class="cp-job-intro">Trascina le righe per modificare la priorità. Il minimo è riservato prima dei posti AUTO; se le richieste superano gli L1 disponibili, prevale la priorità più alta.</p>';
+    const columns='<div class="cp-job-columns"><span>PRIORITÀ · MANSIONE</span><span>MINIMUM WORKER</span><span>GESTIONE</span></div>';
+    const rows=tasks.map((t,i)=>{
+      const unmet=jm.managed&&t.minimum>t.workers&&t.demand>0;
+      return '<div class="cp-job-row'+(unmet?' cp-job-short':'')+'" data-cp-job-row="'+esc(t.key)+'" draggable="true" role="listitem" aria-label="Priorità '+(i+1)+': '+esc(t.label)+'">'+
+        '<span class="cp-job-drag" title="Trascina per cambiare priorità" aria-hidden="true">⠿</span>'+
+        '<span class="cp-job-rank">'+(i+1)+'.</span>'+
+        '<div class="cp-job-name"><strong>'+esc(t.label)+'</strong><small>'+fmt(t.workers)+' / '+fmt(t.demand)+' lavoratori'+(unmet?' · minimo non raggiunto':t.demand===0?' · nessuna richiesta attiva':'')+'</small></div>'+
+        '<label class="cp-job-min">Minimum worker<input type="number" inputmode="numeric" min="0" max="'+t.capacity+'" step="1" value="'+t.minimum+'" data-cp-job-min="'+esc(t.key)+'" aria-label="Minimum worker · '+esc(t.label)+'"></label>'+
+        '<div class="cp-job-mode"><button type="button" class="cp-job-auto'+(t.auto?' is-auto':'')+'" aria-pressed="'+(t.auto?'true':'false')+'" data-cp-job-auto="'+esc(t.key)+'" title="'+(t.auto?'Automatico: assegna i posti residui secondo priorità':'Manuale: assegna soltanto il minimo richiesto')+'">AUTO</button><small>'+(t.auto?'automatico':'manuale')+'</small></div>'+
+        '<div class="cp-job-move"><button type="button" data-cp-job-move="up" data-cp-job-key="'+esc(t.key)+'" aria-label="Sposta '+esc(t.label)+' in alto"'+(i===0?' disabled':'')+'>↑</button>'+
+        '<button type="button" data-cp-job-move="down" data-cp-job-key="'+esc(t.key)+'" aria-label="Sposta '+esc(t.label)+' in basso"'+(i===tasks.length-1?' disabled':'')+'>↓</button></div></div>';
+    }).join('');
+    return info+(!jm.managed?'<p class="cp-job-legacy">Assegnazione L1 precedente ancora attiva; la nuova priorità entra in vigore alla prima modifica.</p>':'')+
+      '<div class="cp-job-queue" role="list" aria-label="Priorità delle mansioni L1">'+columns+rows+'</div>'+
+      '<p class="cp-foot">AUTO attivo: dopo i minimi, completa i posti disponibili in ordine di priorità. AUTO spento: assegna esattamente il minimo (se vi sono lavoratori). Pastori protetti e pescatori non sono riassegnabili.</p>';
+  }
+
   // Trade is a view over the existing market ledger, prices and sale-share command.
   function trade(d) {
     const e=d.economy||{}, goods=e.goods||[];
@@ -372,7 +396,7 @@
     ]);
   }
   const views = {general,people,economy,estate,stores,military,building,diplomacy,alerts};
-  const PALETTES = {jobs:['Job Manager','Distribuzione e attività dei lavoratori'],trade:['Trade','Mercato, prezzi e quote di vendita']};
+  const PALETTES = {jobs:['Job Manager','Priorità e assegnazione dei lavoratori L1'],trade:['Trade','Mercato, prezzi e quote di vendita']};
 
   // ---- Rendering --------------------------------------------------------------
   function nav(d) {
@@ -399,11 +423,34 @@
   }
   function open(mode='control') { ui.mode=Object.hasOwn(PALETTES,mode)?mode:'control'; render(); }
 
+  function reorderJob(key,target){
+    const order=(window.ConquerGame?.read?.economy?.()?.jobManager?.tasks||[]).map(t=>t.key);
+    const from=order.indexOf(key),to=order.indexOf(target);
+    if(from<0||to<0||from===to)return false;
+    order.splice(from,1);order.splice(to,0,key);
+    return !!window.ConquerGame?.commands?.setL1Order?.(order);
+  }
+
   const root = $('profileControl');
   if(root){
     root.addEventListener('click',ev=>{
       const tab = ev.target.closest('[data-cp-tab]');
       if(tab){ui.tab = tab.dataset.cpTab; ui.mode='control'; render(); return;}
+      const auto = ev.target.closest('[data-cp-job-auto]');
+      if(auto){
+        const key=auto.dataset.cpJobAuto;
+        const task=window.ConquerGame?.read?.economy?.()?.jobManager?.tasks?.find(t=>t.key===key);
+        if(task)window.ConquerGame?.commands?.setL1Auto?.(key,!task.auto);
+        render();return;
+      }
+      const move = ev.target.closest('[data-cp-job-move]');
+      if(move){
+        const tasks=window.ConquerGame?.read?.economy?.()?.jobManager?.tasks||[];
+        const index=tasks.findIndex(t=>t.key===move.dataset.cpJobKey);
+        const next=index+(move.dataset.cpJobMove==='up'?-1:1);
+        if(index>=0&&next>=0&&next<tasks.length)reorderJob(tasks[index].key,tasks[next].key);
+        render();return;
+      }
       const trade = ev.target.closest('[data-cp-transfer]');
       if(trade){window.ConquerGame?.commands?.transferActivity?.(trade.dataset.cpTransfer,trade.dataset.cpOwner); render(); return;}
       const pitch = ev.target.closest('[data-cp-pitch]');
@@ -427,14 +474,43 @@
     });
     root.addEventListener('change',ev=>{
       const el = ev.target, cmd = window.ConquerGame?.commands;
+      if(el.dataset.cpJobMin)cmd?.setL1Minimum?.(el.dataset.cpJobMin,Number(el.value));
       if(el.dataset.cpPolicy)cmd?.setPolicy?.(el.dataset.cpPolicy,el.value);
       if(el.dataset.cpShare)cmd?.setSaleShare?.(el.dataset.cpShare,num(el.value));
       if(el.matches?.('[data-cp-price]'))ui.priceGood = el.value;
       if(el.matches?.('[data-cp-estate]'))ui.site = el.value;
       render();
     });
+    // HTML drag and drop, plus keyboard/touch move buttons on every row.
+    root.addEventListener('dragstart',ev=>{
+      const row=ev.target.closest?.('[data-cp-job-row]');
+      if(!row||ev.target.closest?.('button,input'))return;
+      ui.dragJob=row.dataset.cpJobRow;
+      if(ev.dataTransfer){ev.dataTransfer.effectAllowed='move';ev.dataTransfer.setData('text/plain',ui.dragJob);}
+      row.classList?.add('cp-job-dragging');
+    });
+    root.addEventListener('dragover',ev=>{
+      const row=ev.target.closest?.('[data-cp-job-row]');
+      if(!ui.dragJob||!row)return;
+      ev.preventDefault();
+      if(ev.dataTransfer)ev.dataTransfer.dropEffect='move';
+      root.querySelectorAll?.('.cp-job-over').forEach(el=>el.classList.remove('cp-job-over'));
+      if(row.dataset.cpJobRow!==ui.dragJob)row.classList?.add('cp-job-over');
+    });
+    root.addEventListener('drop',ev=>{
+      const row=ev.target.closest?.('[data-cp-job-row]'),key=ui.dragJob;
+      if(!row||!key)return;
+      ev.preventDefault();
+      ui.dragJob=null;
+      reorderJob(key,row.dataset.cpJobRow);
+      render();
+    });
+    root.addEventListener('dragend',()=>{
+      ui.dragJob=null;
+      root.querySelectorAll?.('.cp-job-dragging,.cp-job-over').forEach(el=>el.classList.remove('cp-job-dragging','cp-job-over'));
+    });
     // Live refresh while visible; never while the player is using a control inside.
-    const refresh = () => { if(!$('profileOverlay')?.hidden && !root.hidden && !root.contains(document.activeElement))render(); };
+    const refresh = () => { if(!ui.dragJob&&!$('profileOverlay')?.hidden && !root.hidden && !root.contains(document.activeElement))render(); };
     let pending = false;
     const throttled = () => { if(pending)return; pending = true; setTimeout(()=>{pending = false; refresh();},500); };
     if(typeof window.ConquerGame?.subscribe==='function')window.ConquerGame.subscribe(throttled);
