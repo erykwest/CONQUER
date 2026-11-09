@@ -54,4 +54,35 @@ for(const name of ['combat-regression.yml','economy-flows-regression.yml'])asser
 assert.ok(f('runtime-integrity.yml').includes('node qa/save-safety-regression.cjs'),'never drop save safety coverage');
 assert.ok(f('context-governance.yml').includes('node tools/context-guard.cjs'),'never drop documentation governance');
 assert.ok(settle.includes('qa/*-regression.cjs'),'complete deterministic tests must stay available');
+
+// P2.4: deterministic test ownership where the canonical workflow runs on EVERY PR.
+// The always-on owners must never acquire PR path filters: otherwise specialist
+// removal would leave parts of the repository untested.
+const p24Runtime=f('runtime-integrity.yml'),p24Codex=f('codex-wiki.yml');
+assert.match(p24Runtime,/^  pull_request:\npermissions:/m,'Runtime integrity must run on every PR for Codex deduplication');
+assert.match(settle,/^  pull_request:\n    branches: \[main\]/m,'settlement-qa must run on every PR into main');
+for(const cmd of [
+ 'node qa/codex-catalog-regression.cjs',
+ 'node qa/codex-wiki-regression.cjs',
+ 'node tools/export-codex.cjs --check',
+ 'node qa/codex-obsidian-regression.cjs',
+ 'node qa/codex-vault-import-regression.cjs',
+ 'node tools/export-codex-content.cjs --check'
+]){
+ assert.ok(p24Runtime.includes(cmd),'always-on Runtime integrity lost Codex owner: '+cmd);
+ assert.ok(!p24Codex.includes(cmd),'Codex browser duplicates always-on deterministic check: '+cmd);
+}
+assert.ok(p24Codex.includes('node qa/codex-wiki-browser.mjs')&&p24Codex.includes('qa/codex-wiki-browser-checks.cjs'),
+ 'Codex Wiki browser still needs browser test and changes to its check module');
+for(const test of ['qa/main-road-finalization-regression.cjs','qa/settlement-routing-spawn-regression.cjs']){
+ assert.ok(settle.includes('node '+test),'always-on settlement QA lost regression: '+test);
+ assert.ok(!main.includes('node '+test),'main-fixes repeats always-on settlement QA: '+test);
+}
+assert.ok(!f('camp-regression.yml').includes('node qa/settlement-routing-spawn-regression.cjs'),
+ 'camp repeats always-on settlement routing/spawn');
+for(const test of ['qa/webgl-error-poll-regression.cjs','qa/paused-render-regression.cjs'])
+ assert.ok(main.includes('node '+test),'main-fixes lost renderer-specific safety check: '+test);
+for(const test of ['qa/camp-regression.cjs','qa/wolves-regression.cjs','qa/patrol-regression.cjs'])
+ assert.ok(f('camp-regression.yml').includes('node '+test),'camp lost behavioral regression: '+test);
+console.log('PASS CI P2.4: six Codex checks retained by all-PR runtime owner, routing/spawn checks retained by all-PR settlement owner; specialist browser, renderer and camp coverage preserved.');
 console.log('PASS CI P1: 26 concurrent workflows; 6 cached browser jobs; no duplicate full deterministic runners; preserved risk, economy, runtime and governance tests.');

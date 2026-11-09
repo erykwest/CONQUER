@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-09 — P2.4 · Responsabilità unica test CI sovrapposti
+
+- **INTERVENTO CODICE:** rimossi nove comandi ripetuti in tre workflow specialistici, trasferendo l'ownership esclusiva a Runtime integrity (Codex, 6) e Settlement routing/spawn (regressioni routing, 3). Nessun test o script eliminato.
+- **INVARIATI:** browser Wiki/Builder, browser Main fixes, WebGL e camp gameplay; duplicazioni tra workflow con filtri non sovrapponibili mantenute deliberatamente.
+- **PROSSIMO:** validare guard/Actions e confrontare tempi di PR future. Non coinvolto il P2.2 di protezione main, precedentemente sospeso.
+
+
 ## 2026-11-09 — BC-261109-02 · DEV Free/Fast e upgrade temporizzati
 
 - **Riesame CI:** fixture browser d'assedio aggiornata a Fast a pagamento per preparare la porta completa; verificata anche l'allocazione Fast dallo stock provvisorio prima della fondazione. Il comportamento normale resta temporizzato.

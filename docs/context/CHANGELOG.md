@@ -1,5 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+09/11/2026 — CI P2.4 (`perf/ci-p24-specialist-test-ownership-20261109`): rimosse 9 invocazioni test duplicate da Codex Wiki, Main fixes e CAMP, mantenendo owner di regressione in Runtime integrity e settlement-qa (always-on PR). Codex Wiki mantiene Playwright e filtri dei suoi check browser, Main fixes mantiene WebGL/render e UI/Combat, CAMP conserva animali e pattuglie. Aggiunta guardia P2.4 in `qa/ci-p1-regression.cjs`; suite completa P0 e tutte le baseline/test immutate.
+
+
 ## 2026-11-09 — BC-261109-02 · DEV e cantieri di ristrutturazione
 
 - **Prove aggiuntive PASS:** regressione d'assedio reale Canvas/WebGL e perdita contesto WebGL; annullamento di upgrade conserva i danni subiti durante il cantiere.

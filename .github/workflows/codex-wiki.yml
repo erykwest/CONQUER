@@ -8,8 +8,6 @@ on:
       - 'wiki/**'
       - 'content/codex/**'
       - 'tools/export-codex-content.cjs'
-      - 'qa/codex-obsidian-regression.cjs'
-      - 'qa/codex-vault-import-regression.cjs'
       - 'tools/import-codex-vault.cjs'
       - 'src/codex-*.js'
       - 'src/codex-*.css'
@@ -18,7 +16,8 @@ on:
       - 'index.html'
       - 'tools/codex-runtime.cjs'
       - 'tools/export-codex.cjs'
-      - 'qa/codex-wiki*'
+      - 'qa/codex-wiki-browser.mjs'
+      - 'qa/codex-wiki-browser-checks.cjs'
       - '.github/workflows/codex-wiki.yml'
       - '.github/actions/playwright-setup/action.yml'
 permissions:
@@ -32,14 +31,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Verify generated data and internal links
-        run: |
-          node qa/codex-catalog-regression.cjs
-          node qa/codex-wiki-regression.cjs
-          node tools/export-codex.cjs --check
-          node qa/codex-obsidian-regression.cjs
-          node qa/codex-vault-import-regression.cjs
-          node tools/export-codex-content.cjs --check
+      # The always-on Runtime integrity workflow owns all six deterministic Codex checks.
+      # This path-scoped workflow owns the Playwright reader/editor integration only.
       - name: Start local site
         run: |
           python3 -m http.server 4181 --bind 127.0.0.1 >/tmp/conquer-codex-http.log 2>&1 &
