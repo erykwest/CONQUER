@@ -39,6 +39,11 @@ try{
     const economic={
       population:history[13].population,welfare:history[13].welfare,castleGold:486,capital:212,
       rationMode:'half',jobs:{building:4,herding:3,logging:4,industry:5,idle:2,foodRisk:false},
+      jobManager:{managed:true,available:22,tasks:[
+        {key:'site:forest-1',kind:'site',id:'forest-1',label:'Taglialegna · forest-1',workers:3,capacity:3,demand:3,minimum:1,auto:true},
+        {key:'carter',kind:'carter',label:'Carrettieri',workers:1,capacity:2,demand:2,minimum:0,auto:true},
+        {key:'builders',kind:'builders',label:'Costruttori',workers:4,capacity:6,demand:6,minimum:2,auto:true}
+      ]},
       goods:[
         {id:'food',price:3.1,market:210,castle:185,share:25,reserve:260},
         {id:'wood',price:4.5,market:66,castle:84,share:50,reserve:120},
@@ -67,7 +72,16 @@ try{
     }}));
     const realGame=window.ConquerGame;
     const realRead=realGame.read;
-    window.ConquerGame={...realGame,read:{...realRead,
+    const jobCommands={
+      setL1Minimum:(key,n)=>{const task=economic.jobManager.tasks.find(t=>t.key===key);if(!task)return false;task.minimum=n;return true;},
+      setL1Auto:(key,enabled)=>{const task=economic.jobManager.tasks.find(t=>t.key===key);if(!task)return false;task.auto=enabled;return true;},
+      setL1Order:order=>{
+        const byKey=new Map(economic.jobManager.tasks.map(t=>[t.key,t]));
+        if(order.some(key=>!byKey.has(key))||order.length!==byKey.size)return false;
+        economic.jobManager.tasks=order.map(key=>byKey.get(key));return true;
+      }
+    };
+    window.ConquerGame={...realGame,commands:{...realGame.commands,...jobCommands},read:{...realRead,
       economy:()=>economic,
       policies:()=>({tax:28,levy:15,rations:'half'}),
       logistics:()=>({stores:[
@@ -112,10 +126,27 @@ try{
     await page.locator('.profile-window').evaluate(node=>{node.scrollTop=410;});
     await page.locator('.profile-window').screenshot({path:output+'/'+id+'-details.png'});
   }
+  // Verify the actual first-level Job Manager layout and its input/drag events.
+  // Commands are captured by the visual fixture above, never persisted to a save.
+  await page.locator('[data-profile-tab="jobs"]').click();
+  await page.waitForFunction(()=>document.getElementById('profileControl')?.hidden===false&&
+    !!document.querySelector('.cp-job-queue'));
+  assert.equal(await page.locator('.cp-job-row').count(),3);
+  const minimum=page.locator('[data-cp-job-min="site:forest-1"]');
+  await minimum.fill('2');
+  await minimum.press('Tab');
+  assert.equal(await page.locator('[data-cp-job-min="site:forest-1"]').inputValue(),'2');
+  const auto=page.locator('[data-cp-job-auto="builders"]');
+  await auto.click();
+  assert.equal(await page.locator('[data-cp-job-auto="builders"]').getAttribute('aria-pressed'),'false');
+  await page.locator('[data-cp-job-row="builders"]').dragTo(page.locator('[data-cp-job-row="site:forest-1"]'));
+  assert.equal(await page.locator('.cp-job-row').first().getAttribute('data-cp-job-row'),'builders');
+  await page.locator('.profile-window').evaluate(node=>node.scrollTop=0);
+  await page.locator('.profile-window').screenshot({path:output+'/job-manager.png'});
   fs.writeFileSync(output+'/report.json',JSON.stringify({
-    result:'PASS',kind:'actual-game-UI-with-demo-data',tabs:requested,detailTabs:['people','economy','estate'],errors,source:'branch panels',note:'Data are synthetic visual fixtures, not a saved gameplay state.'
+    result:'PASS',kind:'actual-game-UI-with-demo-data',tabs:requested,detailTabs:['people','economy','estate'],jobManager:{minimum:true,auto:true,drag:true},errors,source:'branch panels',note:'Data are synthetic visual fixtures, not a saved gameplay state.'
   },null,2));
-  console.log('PASS real CONQUER UI screenshots: '+requested.join(', '));
+  console.log('PASS real CONQUER UI screenshots: '+requested.join(', ')+' + Job Manager L1 controls');
 }finally{
   await browser.close();
 }
