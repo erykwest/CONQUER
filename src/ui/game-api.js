@@ -178,6 +178,43 @@
       if(ok){scheduleLocalSave(200);emit();}
       return !!ok;
     },
+    setL2Minimum: (key, minimum) => {
+      const ok=window.ConquerEconomy?.setL2Minimum?.(key,minimum);
+      if(ok){scheduleLocalSave(200);emit();}
+      return !!ok;
+    },
+    setL2Auto: (key, enabled) => {
+      const ok=window.ConquerEconomy?.setL2Auto?.(key,enabled);
+      if(ok){scheduleLocalSave(200);emit();}
+      return !!ok;
+    },
+    setL2Order: order => {
+      const ok=window.ConquerEconomy?.setL2Order?.(order);
+      if(ok){scheduleLocalSave(200);emit();}
+      return !!ok;
+    },
+    adjustPatrols: delta => {
+      if(!State.village?.founded||!window.ConquerCombat?.units)return false;
+      const before=window.ConquerCombat.units().filter(u=>u.kind==='patrol').length;
+      const ok=press(delta>0?'#combatPatrolAdd':'#combatPatrolRemove');
+      const after=window.ConquerCombat.units().filter(u=>u.kind==='patrol').length;
+      if(ok&&after!==before)emit();
+      return ok&&after!==before;
+    },
+    adjustTowerArchers: (id, delta) => {
+      const ok=window.ConquerSiege?.changeArchers?.(id,delta);
+      if(ok){scheduleLocalSave(200);emit();}
+      return !!ok;
+    },
+    adjustBarracksSquads: (id, delta) => {
+      const camp=window.ConquerCamp,roster=window.ConquerCombat?.units;
+      if(!camp||!roster||!camp.barracks?.().some(b=>b.id===id))return false;
+      const before=roster().filter(u=>u.kind==='squad'&&u.barracksId===id&&!u.defeated).length;
+      if(delta>0)camp.addSquad(id);else camp.removeSquad(id);
+      const after=roster().filter(u=>u.kind==='squad'&&u.barracksId===id&&!u.defeated).length;
+      if(after!==before){scheduleLocalSave(200);emit();}
+      return after!==before;
+    },
     transferActivity: (id, owner) => {
       const ok = window.ConquerEconomy?.transfer(id, owner);
       if (!ok) status('Insufficient economic capital for enterprise transfer');
@@ -219,6 +256,21 @@
   const read = {
     defense() { return window.ConquerCombat?.uiState?.() || null; },
     knights() { return window.ConquerCombat?.knightRecruitment?.() || null; },
+    militaryAssignments(){
+      const combat=window.ConquerCombat,siege=window.ConquerSiege,camp=window.ConquerCamp;
+      const allies=combat?.units?.()||[];
+      const patrols=allies.filter(u=>u.kind==='patrol'&&!u.defeated)
+        .map(u=>({id:u.id,active:!u.routing&&!u.campState,position:u.target?'in marcia':'perimetro White Zone'}));
+      const towers=(State.structures||[])
+        .filter(s=>s.type==='tower'&&!s.destroyed&&!(typeof underConstruction==='function'&&underConstruction(s)))
+        .map(s=>({id:s.id,label:s.name||'Torre · '+s.id,capacity:siege?.archerSlots?.(s)?.length||0,
+          assigned:siege?.stationedArchers?.(s)||0,active:siege?.occupiedArcherSlots?.(s)?.length||0}))
+        .filter(t=>t.capacity>0);
+      const barracks=(camp?.barracks?.()||[]).map(b=>({id:b.id,label:'Caserma · '+b.id,
+        capacity:b.capacity,assigned:allies.filter(u=>u.kind==='squad'&&u.barracksId===b.id&&!u.defeated).length}));
+      const unassigned=allies.filter(u=>u.kind==='squad'&&!u.defeated&&!u.barracksId).length;
+      return {patrols,towers,barracks,unassigned,hasCampManagement:!!camp};
+    },
     caravans() {
       const d = window.ConquerDiplomacy;
       return d ? (d.caravans?.() || []).filter(c => c.status !== 'completed').length : null;
@@ -236,11 +288,13 @@
       const s = econ.snapshot(), e = econ.state(), staff = econ.staffing?.() || {};
       const activities = Object.entries(e.activities)
         .filter(([id]) => State.structures.some(x => x.id === id))
-        .map(([id, a]) => ({ id, type: a.type, owner: a.owner, value: econ.assetValue(a), workers: staff[id] || 0,
+        .map(([id, a]) => ({ id, type: a.type, tier: econ.KIND?.[a.type]?.classId || null,
+          owner: a.owner, value: econ.assetValue(a), workers: staff[id] || 0,
           profit: a.profit ?? null, abandoned: !!a.abandoned }));
       return {
         happiness: s.happiness, rationMode: s.rationMode, castleFoodIssued: s.castleFoodIssued,
         jobs: econ.jobSummary?.() || null, jobManager: econ.jobManager?.() || null,
+        jobManagerL2: econ.jobManagerL2?.() || null,
         commerce: s.commerce || null,
         welfare: s.welfare, capital: s.capital, castleGold: s.castleGold, population: s.population, wage: s.wage,
         goods: (econ.GOODS || ECON_GOODS).map(g => ({ id: g, price: s.prices[g], market: s.market[g], castle: s.castle[g],
