@@ -28,7 +28,7 @@
   const HISTORY_WEEKS = 26;
 
   // UI selection survives re-renders and reopening the tab.
-  const ui = {tab:'general',mode:'control',priceGood:'food',site:'all',jobTier:'L1',militaryTab:'overview'};
+  const ui = {tab:'general',mode:'control',priceGood:'food',site:'all',jobTier:'L1',militaryTab:'overview',circleCollapsed:new Set()};
 
   // ---- Building blocks -------------------------------------------------------
   const card = (title,body,foot='',wide=false) =>
@@ -349,42 +349,91 @@
       '<button type="button" role="tab" data-cp-military-sub="'+k+'" aria-selected="'+(ui.militaryTab===k)+'" class="'+(ui.militaryTab===k?'active':'')+'">'+label+'</button>'
     ).join('')+'</nav>';
   }
+
+  // Operational CIRCLE hierarchy: closed defensive sectors → macro towers.
+  // parentTowerId children are summed into one row, never shown as extra towers.
+  const CIRCLE_STATES={secure:'Sicuro',alert:'Allerta',threatened:'Minacciato',
+    infiltrated:'Infiltrato',contested:'Conteso',invaded:'Invaso',
+    compromised:'Compromesso',captured:'Occupato',unassessed:'Da valutare',outside:'Esterno'};
+  function circleMacroRow(m){
+    const child=m.subtowers===1?'1 sottotorre aggregata':m.subtowers>1?
+      m.subtowers+' sottotorri aggregate':'Torre indipendente';
+    const details=fmt(m.assigned)+' / '+fmt(m.capacity)+' arcieri · '+fmt(m.active)+' operativi';
+    const archers='<div class="cp-circle-staff"><span>Arcieri</span><div class="cp-job-garrison-buttons">'+
+      '<button type="button" data-cp-macro-id="'+esc(m.id)+'" data-cp-macro-delta="-1"'+
+      (!m.assigned?' disabled':'')+' aria-label="Rimuovi arciere da '+esc(m.label)+'">−</button>'+
+      '<button type="button" data-cp-macro-id="'+esc(m.id)+'" data-cp-macro-delta="1"'+
+      (m.assigned>=m.capacity?' disabled':'')+' aria-label="Assegna arciere a '+esc(m.label)+'">+</button></div></div>';
+    const squads=m.squadCapacity?'<div class="cp-circle-staff"><span>Armigeri '+fmt(m.squads)+'/'+fmt(m.squadCapacity)+'</span>'+
+      '<div class="cp-job-garrison-buttons">'+
+      '<button type="button" data-cp-macro-squad="'+esc(m.id)+'" data-cp-macro-squad-delta="-1"'+
+      (!m.squads?' disabled':'')+' aria-label="Rimuovi squadra da '+esc(m.label)+'">−</button>'+
+      '<button type="button" data-cp-macro-squad="'+esc(m.id)+'" data-cp-macro-squad-delta="1"'+
+      (m.squads>=m.squadCapacity?' disabled':'')+' aria-label="Assegna squadra a '+esc(m.label)+'">+</button></div></div>':'';
+    return '<div class="cp-job-garrison cp-circle-macro" data-cp-macro="'+esc(m.id)+'">'+
+      '<div class="cp-circle-macro-name"><b>'+esc(m.label)+'</b><small>'+esc(child)+'</small>'+
+      '<small>'+details+'</small></div><div class="cp-circle-staffers">'+archers+squads+'</div></div>';
+  }
+  function circleBarracksRow(b){
+    return '<div class="cp-job-garrison"><div><b>'+esc(b.label)+'</b>'+
+      '<small>'+fmt(b.assigned)+' / '+fmt(b.capacity)+' squadre da 5 armigeri</small></div>'+
+      '<div class="cp-job-garrison-buttons">'+
+      '<button type="button" data-cp-barracks-id="'+esc(b.id)+'" data-cp-barracks-delta="-1"'+(!b.assigned?' disabled':'')+' aria-label="Rimuovi squadra">−</button>'+
+      '<button type="button" data-cp-barracks-id="'+esc(b.id)+'" data-cp-barracks-delta="1"'+
+      (b.assigned>=b.capacity?' disabled':'')+' aria-label="Assegna squadra">+</button></div></div>';
+  }
+  function circleZoneRow(zone,unassigned,hasCircle=true){
+    const collapsed=ui.circleCollapsed.has(zone.id);
+    const isOutside=zone.id==='outside';
+    const summary=fmt(zone.assigned)+'/'+fmt(zone.capacity)+' arcieri · '+fmt(zone.patrols)+' pattuglie';
+    const archerTools='<div class="cp-circle-staff"><span>Arcieri</span><div class="cp-job-garrison-buttons">'+
+      '<button type="button" data-cp-circle-archer="'+esc(zone.id)+'" data-cp-circle-delta="-1"'+
+      (!zone.assigned?' disabled':'')+' aria-label="Rimuovi un arciere dal '+esc(zone.label)+'">−</button>'+
+      '<button type="button" data-cp-circle-archer="'+esc(zone.id)+'" data-cp-circle-delta="1"'+
+      (zone.assigned>=zone.capacity?' disabled':'')+' aria-label="Assegna un arciere al '+esc(zone.label)+'">+</button></div></div>';
+    const patrolTools=isOutside?'':'<div class="cp-circle-staff"><span>Pattuglie</span><div class="cp-job-garrison-buttons">'+
+      '<button type="button" data-cp-circle-patrol="'+esc(zone.id)+'" data-cp-circle-delta="-1"'+
+      (!zone.patrols?' disabled':'')+' aria-label="Richiama una pattuglia dal '+esc(zone.label)+'">−</button>'+
+      '<button type="button" data-cp-circle-patrol="'+esc(zone.id)+'" data-cp-circle-delta="1"'+
+      (!unassigned?' disabled':'')+' aria-label="Assegna una pattuglia al '+esc(zone.label)+'">+</button></div></div>';
+    const macros=zone.towers||[],rooms=zone.otherBarracks||[];
+    const detail=macros.map(circleMacroRow).join('')+rooms.map(circleBarracksRow).join('')||
+      empty('Nessuna torre o caserma operativa associata a questo compartimento.');
+    return '<section class="cp-circle-zone" data-cp-zone="'+esc(zone.id)+'">'+
+      '<div class="cp-circle-zone-head">'+
+      '<button type="button" class="cp-circle-expand" data-cp-circle-toggle="'+esc(zone.id)+'" aria-expanded="'+(!collapsed)+'">'+
+      '<span aria-hidden="true">'+(collapsed?'▸':'▾')+'</span><span><b>'+esc(zone.label)+
+      (zone.mastio?' · Mastio':'')+'</b><small>'+esc(isOutside?'Nessun compartimento difensivo chiuso':
+        'CIRCLE · livello '+zone.depth+' · '+(CIRCLE_STATES[zone.state]||zone.state))+'</small>'+
+      '<small>'+summary+'</small></span></button>'+
+      '<div class="cp-circle-staffers">'+archerTools+patrolTools+'</div></div>'+
+      (collapsed?'':'<div class="cp-circle-zone-body">'+detail+'</div>')+'</section>';
+  }
   function militaryAssignments(d){
-    const a=d.militaryAssignments||{},patrols=a.patrols||[],towers=a.towers||[],barracks=a.barracks||[];
-    const patrolRows=patrols.length?table(['Pattuglia','Compito'],patrols.map((p,i)=>[
-      '<th>Perimetro '+(i+1)+'</th>','<td>'+esc(p.active?p.position:'non operativa')+'</td>'
-    ])):empty('Nessuna pattuglia assegnata alla White Zone.');
-    const patrolActions='<div class="cp-job-garrison"><div><b>'+fmt(patrols.length)+'</b> pattuglie assegnate · 2 picchieri per pattuglia</div>'+
-      '<div class="cp-job-garrison-buttons"><button type="button" data-cp-patrol="remove"'+(!patrols.length?' disabled':'')+' aria-label="Rimuovi una pattuglia">−</button>'+
-      '<button type="button" data-cp-patrol="add" aria-label="Aggiungi una pattuglia">+</button></div></div>';
-    const towerRows=towers.length?towers.map(t=>
-      '<div class="cp-job-garrison"><div><b>'+esc(t.label)+'</b><small>'+
-      fmt(t.assigned)+' / '+fmt(t.capacity)+' arcieri assegnati · '+fmt(t.active)+' operativi</small></div>'+
-      '<div class="cp-job-garrison-buttons">'+
-      '<button type="button" data-cp-tower-id="'+esc(t.id)+'" data-cp-tower-delta="-1" aria-label="Rimuovi arciere da '+esc(t.label)+'"'+(!t.assigned?' disabled':'')+'>−</button>'+
-      '<button type="button" data-cp-tower-id="'+esc(t.id)+'" data-cp-tower-delta="1" aria-label="Assegna arciere a '+esc(t.label)+'"'+(t.assigned>=t.capacity?' disabled':'')+'>+</button></div></div>'
-    ).join(''):empty('Nessuna torre con postazioni per arcieri.');
-    const barracksRows=barracks.length?barracks.map(b=>
-      '<div class="cp-job-garrison"><div><b>'+esc(b.label)+'</b><small>'+
-      fmt(b.assigned)+' / '+fmt(b.capacity)+' squadre · 5 armigeri per squadra</small></div>'+
-      '<div class="cp-job-garrison-buttons">'+
-      '<button type="button" data-cp-barracks-id="'+esc(b.id)+'" data-cp-barracks-delta="-1" aria-label="Rimuovi squadra da '+esc(b.label)+'"'+(!b.assigned?' disabled':'')+'>−</button>'+
-      '<button type="button" data-cp-barracks-id="'+esc(b.id)+'" data-cp-barracks-delta="1" aria-label="Aggiungi squadra a '+esc(b.label)+'"'+(b.assigned>=b.capacity?' disabled':'')+'>+</button></div></div>'
-    ).join(''):empty(a.hasCampManagement?
-      'Nessuna caserma operativa con posti assegnabili.':
-      'Le squadre nelle caserme sono gestibili nella modalità /camp. Le postazioni delle torri restano configurabili qui.');
+    const a=d.militaryAssignments||{},patrols=a.patrols||[],zones=a.zones||[],outside=a.outside||{towers:[],otherBarracks:[],patrols:0,assigned:0,capacity:0};
+    const reserved=num(outside.patrols),total=patrols.length;
+    const global='<div class="cp-job-garrison"><div><b>Riserva White Zone</b>'+
+      '<small>'+fmt(reserved)+' pattuglie disponibili per assegnazioni CIRCLE · '+fmt(total)+' complessive</small></div>'+
+      '<div class="cp-job-garrison-buttons"><button type="button" data-cp-patrol="remove"'+
+      (!reserved?' disabled':'')+' aria-label="Rimuovi una pattuglia dalla riserva">−</button>'+
+      '<button type="button" data-cp-patrol="add" aria-label="Aggiungi una pattuglia alla riserva">+</button></div></div>';
+    const totalTowers=(a.macros||[]);
+    const sectorRows=zones.map(z=>circleZoneRow(z,reserved)).join('');
+    const outsideVisible=outside.towers?.length||outside.otherBarracks?.length;
+    const outRow=outsideVisible?circleZoneRow(outside,reserved,false):'';
+    const note=!a.circleReady?warn('CIRCLE non è ancora disponibile: le torri sono elencate fuori dai compartimenti.'):
+      !zones.length?empty('CIRCLE non rileva ancora zone difensive chiuse: completa il perimetro per assegnare presidi per settore.'):'';
     return kpis([
-      kpi('Pattuglie',fmt(patrols.length),'White Zone'),
-      kpi('Arcieri assegnati',fmt(sum(towers.map(t=>t.assigned))),'Postazioni torri'),
-      kpi('Arcieri operativi',fmt(sum(towers.map(t=>t.active))),'Al netto dei malati'),
-      kpi('Squadre senza caserma',fmt(a.unassigned),'Roster tattico')
+      kpi('Settori CIRCLE',fmt(zones.length),'Compartimenti chiusi reali'),
+      kpi('Pattuglie assegnate',fmt(total-reserved),'Nei settori CIRCLE'),
+      kpi('Arcieri assegnati',fmt(a.totalAssigned),'Nelle torri e sottotorri'),
+      kpi('Macrostrutture',fmt(totalTowers.length),'Torri madri con sottotorri aggregate')
     ])+grid([
-      card('Pattuglie della White Zone',patrolActions+patrolRows,
-        'Le pattuglie seguono il perimetro autorizzato dal sistema Combat.',true),
-      card('Guarnigioni delle torri',towerRows,
-        'Gli arcieri occupano gli slot del tetto e delle feritoie già previsti dal sistema d’assedio.',true),
-      card('Caserme e armigeri',barracksRows,
-        'Le squadre delle caserme appartengono al roster persistente della modalità /camp.',true)
+      card('Riserva pattuglie',global,
+        'Le pattuglie nella riserva seguono la White Zone. Assegnare a un settore trasferisce una pattuglia esistente, senza reclutarne una nuova.',true),
+      card('CIRCLE · Settori e presidi',note+sectorRows+outRow,
+        'Gerarchia reale: compartimento CIRCLE → torre madre. Il comando a livello settore distribuisce arcieri nei posti disponibili delle torri sottostanti.',true),
+      ...(!a.hasCampManagement?[card('Caserme',empty('L’assegnazione di squadre nelle caserme è disponibile nella modalità /camp.'),'',true)]:[])
     ]);
   }
   function military(d) {
@@ -513,6 +562,33 @@
       if(tier){ui.jobTier=tier.dataset.cpJobsTier==='L2'?'L2':'L1';render();return;}
       const msub = ev.target.closest('[data-cp-military-sub]');
       if(msub){ui.militaryTab=msub.dataset.cpMilitarySub==='garrisons'?'garrisons':'overview';render();return;}
+      const collapse = ev.target.closest('[data-cp-circle-toggle]');
+      if(collapse){
+        const id=collapse.dataset.cpCircleToggle;
+        if(ui.circleCollapsed.has(id))ui.circleCollapsed.delete(id);
+        else ui.circleCollapsed.add(id);
+        render();return;
+      }
+      const zonePatrol = ev.target.closest('[data-cp-circle-patrol]');
+      if(zonePatrol){
+        window.ConquerGame?.commands?.assignCirclePatrol?.(zonePatrol.dataset.cpCirclePatrol,Number(zonePatrol.dataset.cpCircleDelta));
+        render();return;
+      }
+      const zoneArcher = ev.target.closest('[data-cp-circle-archer]');
+      if(zoneArcher){
+        window.ConquerGame?.commands?.adjustZoneArchers?.(zoneArcher.dataset.cpCircleArcher,Number(zoneArcher.dataset.cpCircleDelta));
+        render();return;
+      }
+      const macroArcher = ev.target.closest('[data-cp-macro-id]');
+      if(macroArcher){
+        window.ConquerGame?.commands?.adjustMacroArchers?.(macroArcher.dataset.cpMacroId,Number(macroArcher.dataset.cpMacroDelta));
+        render();return;
+      }
+      const macroSquad = ev.target.closest('[data-cp-macro-squad]');
+      if(macroSquad){
+        window.ConquerGame?.commands?.adjustMacroSquads?.(macroSquad.dataset.cpMacroSquad,Number(macroSquad.dataset.cpMacroSquadDelta));
+        render();return;
+      }
       const patrol = ev.target.closest('[data-cp-patrol]');
       if(patrol){window.ConquerGame?.commands?.adjustPatrols?.(patrol.dataset.cpPatrol==='add'?1:-1);render();return;}
       const tower = ev.target.closest('[data-cp-tower-id]');
