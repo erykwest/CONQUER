@@ -49,6 +49,7 @@ function renderFunctionPanel(){
       '<div class="legend">Cantiere spontaneo · non prioritizzabile.</div>';
     const select=slots.querySelector('#constructionPrioritySelect');
     if(select)select.onchange=()=>StructureCommands.setConstructionPriority(s.id,Number(select.value));
+    if(editable){const cancel=document.createElement('button');cancel.textContent='Annulla cantiere';cancel.dataset.cancelConstruction='true';cancel.onclick=()=>deleteStructure(s.id);slots.appendChild(cancel);}
     return;
   }
   if(window.ConquerStorageYard?.is(s)){

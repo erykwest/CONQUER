@@ -84,7 +84,7 @@ function makeScenario(wood=0,gold=0,workers=1){
   assert(q.econ.castle.wood>=0,'no negative ledger balance');
   const supplied=q.t.constructionMaterialInfo(high).delivered.wood;
   assert(Math.abs(q.charged-supplied)<1e-7,'each delivered good is debited exactly once');
-  assert.equal(q.t.refundableConstructionCost(high).wood,supplied,'refund only delivered goods');
+  assert.equal(q.t.refundableConstructionCost(high).wood,supplied-high.construction.materialsConsumed.wood,'refund only delivered unconsumed goods');
   low.construction.priority=5;high.construction.priority=0;
   q.econ.castle.wood=4;
   q.t.tickConstructionWork(1,2);

@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-09 — BC-261108-01 · Accettazione aggiornata PR #186
+
+- Implementati e provati localmente equità per risorsa a pari priorità, residui senza starvation, consumo distinto dalla consegna e rimborso del solo non consumato. Quote e avanzamento conservati nei salvataggi, inclusi pozzi e frammenti.
+- Browser UI1/UI2 e regressioni locali PASS; verifica Actions sul nuovo head richiesta prima dell'integrazione. ROADMAP M0–M5 invariata.
+
+
 ## 2026-11-08 — BC-261108-01 · Cantieri finanziati progressivamente
 
 - **IMPLEMENTATO SUL BRANCH `feature/construction-staged-priority-20261108`:** il vincolo di piazzamento resta soltanto geomorfologico/spaziale. Un preventivo anche superiore alle scorte non blocca la conferma. Il cantiere persistente riceve porzioni di materiale in ordine **Molto basso / Basso / Medio / Alto / Molto alto / Critico** (massima classe prima); a parità vince il più anziano, poi ID. I materiali già destinati non possono essere spesi due volte; il lavoro procede solo in proporzione alle risorse consegnate e ai costruttori L1 disponibili.

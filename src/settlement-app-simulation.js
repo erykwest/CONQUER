@@ -215,6 +215,7 @@ function simulationFrame(now){
     if(completed.length){
       window.ConquerCircle?.invalidate?.('construction completed');
       runSettlementMaintenance('completion',completed);
+      if(completed.some(s=>s.id===State.selectedId))renderFunctionPanel();
       if(completed.some(s=>s.type==='tower'))window.ConquerSiege?.syncAutoMastio?.();
       simMaintenanceAt=now;
     }else if(now-simMaintenanceAt>=MAINTENANCE_WATCHDOG_MS){

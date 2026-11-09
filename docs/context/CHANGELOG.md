@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-09 — PR #186 · Cantieri: equità, consumo e verifica browser
+
+Completata la branch dei cantieri senza prefinanziamento: ripartizione equa per bene, rimborso dei soli materiali non consumati, salvataggio pozzi e apportionamento dei frammenti, ghost lineari coerenti. Test locali e Chromium UI1/UI2 PASS, workflow browser ampliato. Stato: branch, Actions del nuovo head da verificare.
+
+
 08/11/2026 — `feature/construction-staged-priority-20261108` (pre-merge): conferma ghost senza pagamento integrale; costi fissi come preventivi e trasferimenti parziali dal ledger canonico in ordine di sei priorità, coerenti con gli assegnamenti dei costruttori L1. Inspector provvisorio con due progressi e quantità consegnate, anche su UI2. Compatibilità con vecchi cantieri già prepagati; rimborsi parziali dei nuovi; regressione dedicata `qa/construction-priority-regression.cjs` nel Runtime integrity. CI e controllo visivo ancora da verificare; nessuna carovana materiale separata, ROADMAP M0–M5 invariata.
 
 

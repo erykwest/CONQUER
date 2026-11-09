@@ -196,7 +196,7 @@ function deleteStructure(id){
   const removedChildren=civicAnnexChildren(id);
   for(const child of removedChildren)if(child.buildCost)refundCost(refundableConstructionCost(child));
   if(['tower','gate'].includes(target.type))detachSubtowerChildren(target.id);
-  if(!target.auto&&target.buildCost&&!(target.type==='bridge'&&target.variant==='wood'))refundCost(refundableConstructionCost(target));
+  if(!target.auto&&target.buildCost&&(target.construction?.materialsDelivered||!(target.type==='bridge'&&target.variant==='wood')))refundCost(refundableConstructionCost(target));
   const foundingWellTarget=target.type==='well'&&(!State.village.founded||target.id===State.village.wellId);
   if(foundingWellTarget){
     State.combat=null;window.ConquerCombat?.restore(null);
