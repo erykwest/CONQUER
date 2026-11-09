@@ -21,6 +21,7 @@
   let whiteBoundaryCache=[],whiteBoundaryLoopCache=[],whiteBoundarySignature='',whiteBoundaryRevision=0;
   let whiteBoundaryPending=false,patrolNavRevision=0;
   const patrolRouteCache=new Map();
+  const circlePatrolWaypointsCache=new Map();
   const renderer=window.ConquerCombatRenderer.create({
     worldSize:WORLD,visionSize:N,
     readState:()=>({combat,selected,selectedIds,selectionDrag}),
@@ -68,7 +69,7 @@
     clearCivilianMotions();
     archerCache.clear();archerRoster=[];archerRosterSize=-1;nextArcherRosterAt=0;tacticalRuleAccum=0;
     whiteBoundaryCache=[];whiteBoundaryLoopCache=[];whiteBoundarySignature='';whiteBoundaryRevision=0;
-    whiteBoundaryPending=false;patrolNavRevision=0;patrolRouteCache.clear();
+    whiteBoundaryPending=false;patrolNavRevision=0;patrolRouteCache.clear();circlePatrolWaypointsCache.clear();
     window.ConquerCombatRules?.reset();
     renderer.reset();
     State.combat=combat;syncButtons();refreshFog(true);
@@ -865,14 +866,14 @@
     // neighbor trace to it or patrols can reverse along a short fragment.
     whiteBoundaryLoopCache=points.map((_,i)=>i);
     patrolRouteCache.clear();
-    for(const unit of combat.units)if(unit.kind==='patrol'){
+    for(const unit of combat.units)if(unit.kind==='patrol'&&!unit.circleSectorId){
       unit.patrolLoopPosition=null;unit.patrolBoundaryIndex=null;unit.patrolPreviousIndex=null;
     }
     spacePatrols(points,whiteBoundaryLoopCache);
     return points;
   }
   function spacePatrols(boundary=whiteBoundaryPoints(),loop=whiteBoundaryLoopCache){
-    const patrols=combat.units.filter(u=>u.kind==='patrol'&&!u.defeated);
+    const patrols=combat.units.filter(u=>u.kind==='patrol'&&!u.defeated&&!u.circleSectorId);
     if(!patrols.length||!boundary.length||!loop.length)return;
     patrols.forEach((unit,i)=>{
       const loopPosition=Math.floor(i*loop.length/patrols.length)%loop.length;
@@ -882,8 +883,49 @@
       unit.target=null;unit.path=null;unit.pathIndex=1;unit.nextPatrolAt=0;unit.patrolProbeOffset=0;
     });
   }
+
+  // Zone patrols stay inside a REAL CIRCLE compartment. The sampled walk
+  // points are on accessible ground just behind its physical boundary; the
+  // normal patrol A* still enforces cliffs, wall crossings and White Zone.
+  function circlePatrolPoints(sectorId){
+    const circle=window.ConquerCircle;
+    if(!sectorId||!circle?.getStatus?.().ready)return[];
+    const revision=circle.getStatus().revision||0;
+    const key=sectorId+':'+revision+':'+patrolNavRevision;
+    if(circlePatrolWaypointsCache.has(key))return circlePatrolWaypointsCache.get(key);
+    if(circlePatrolWaypointsCache.size>64)circlePatrolWaypointsCache.clear();
+    const sector=circle.getSnapshot()?.compartments?.find(c=>c.id===sectorId);
+    if(!sector){circlePatrolWaypointsCache.set(key,[]);return[]}
+    const contour=sector.polygon||[],anchor=sector.anchors?.find(p=>circle.sectorAt(p)===sectorId)||sector.centroid;
+    const clear=p=>!!p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&
+      circle.sectorAt(p)===sectorId&&areaState(p).allowed&&cliffClearForFootprint(p,'patrol');
+    const points=[];
+    if(contour.length&&anchor){
+      const count=Math.min(48,contour.length);
+      for(let i=0;i<count;i++){
+        const pointOnEdge=contour[Math.floor(i*contour.length/count)];
+        if(!pointOnEdge||!Number.isFinite(pointOnEdge.x)||!Number.isFinite(pointOnEdge.y))continue;
+        for(const blend of [.12,.24,.4,.6,.8,1]){
+          const p={x:pointOnEdge.x*(1-blend)+anchor.x*blend,
+            y:pointOnEdge.y*(1-blend)+anchor.y*blend};
+          if(clear(p)){
+            if(!points.length||dist(points.at(-1),p)>=.75)points.push(p);
+            break;
+          }
+        }
+      }
+    }
+    if(points.length<2)for(const p of sector.anchors||[])if(clear(p)&&
+      (!points.length||dist(points.at(-1),p)>=.75))points.push({x:p.x,y:p.y});
+    const result=points.length>=2?points:[];
+    circlePatrolWaypointsCache.set(key,result);
+    return result;
+  }
   function patrolDestination(unit,skip=0){
-    const boundary=whiteBoundaryPoints(),loop=whiteBoundaryLoopCache;if(!boundary.length||!loop.length)return null;
+    const local=unit.circleSectorId?circlePatrolPoints(unit.circleSectorId):[];
+    const boundary=local.length?local:whiteBoundaryPoints();
+    const loop=local.length?local.map((_,i)=>i):whiteBoundaryLoopCache;
+    if(!boundary.length||!loop.length)return null;
     let position=Number.isInteger(unit.patrolLoopPosition)&&
       unit.patrolLoopPosition>=0&&unit.patrolLoopPosition<loop.length?unit.patrolLoopPosition:-1;
     const initial=position<0;
@@ -909,9 +951,10 @@
     unit.patrolAnchorIndex=null;unit.patrolPreviousIndex=null;
     return boundary[loop[position]];
   }
-  function patrolSafeWaypoint(candidate){
+  function patrolSafeWaypoint(candidate,sectorId=null){
     if(!candidate)return null;
-    const clear=p=>areaState(p).allowed&&cliffClearForFootprint(p,'patrol');
+    const clear=p=>areaState(p).allowed&&cliffClearForFootprint(p,'patrol')&&
+      (!sectorId||window.ConquerCircle?.sectorAt?.(p)===sectorId);
     if(clear(candidate))return candidate;
     // Samples of the White Zone perimeter may overlap a wall, house or
     // blocked doorway. Shift a short distance inside the permitted area.
@@ -934,7 +977,8 @@
       // endpoints * four increasingly wide A* windows in one tick caused
       // visible frame stalls in dense villages.
       unit.patrolLoopPosition=previous;
-      const target=patrolSafeWaypoint(patrolDestination(unit,offset));
+      const circleLength=unit.circleSectorId?circlePatrolPoints(unit.circleSectorId).length:0;
+      const target=patrolSafeWaypoint(patrolDestination(unit,offset),circleLength?unit.circleSectorId:null);
       const path=target?patrolRoute(unit,target,unit.id):null;
       if(path?.length>1){
         unit.target={x:target.x,y:target.y};
@@ -942,7 +986,7 @@
         unit.pathIndex=1;unit.patrolProbeOffset=0;unit.nextPatrolAt=now;
       }else{
         unit.patrolLoopPosition=previous;
-        unit.patrolProbeOffset=(offset+1)%Math.max(1,whiteBoundaryLoopCache.length);
+        unit.patrolProbeOffset=(offset+1)%Math.max(1,circleLength||whiteBoundaryLoopCache.length);
         unit.nextPatrolAt=now+650;
         if(window.__conquerPerf){
           window.__conquerPerf.patrolWaypointMisses=(window.__conquerPerf.patrolWaypointMisses||0)+1;
@@ -968,7 +1012,7 @@
   }
   function addPatrol(){
     const well=activeWell();
-    if(!well){status('Found the settlement before adding a White Zone patrol');return}
+    if(!well){status('Found the settlement before adding a White Zone patrol');return false}
     startUnits();
     const index=combat.units.filter(u=>u.kind==='patrol').length;
     const angle=index*Math.PI*.77,radius=2.4+(index%3)*.45;
@@ -976,17 +1020,36 @@
     if(!areaState(spawn).allowed||pointBlockedForPeasant(spawn,'combat-patrol'))spawn={x:well.x,y:well.y};
     combat.units.push({id:'combat-patrol-'+uid(),kind:'patrol',x:spawn.x,y:spawn.y,target:null,patrolDirection:1});
     spacePatrols();
-    visibilityDirty=true;changed();status('White Zone patrol added · 2 pikemen');draw();
+    visibilityDirty=true;changed();status('White Zone patrol added · 2 pikemen');draw();return true;
   }
   function removePatrol(){
     let index=-1;for(let i=combat.units.length-1;i>=0;i--)if(combat.units[i].kind==='patrol'){index=i;break}
-    if(index<0){status('No White Zone patrol to remove');return}
+    if(index<0){status('No White Zone patrol to remove');return false}
     const [removed]=combat.units.splice(index,1);
     if(selected===removed.id)selected=null;
     selectedIds.delete(removed.id);
     spacePatrols();
-    visibilityDirty=true;changed();status('White Zone patrol removed');draw();
+    visibilityDirty=true;changed();status('White Zone patrol removed');draw();return true;
   }
+
+  // Assignment is a transfer of an existing patrol, not the creation of
+  // new soldiers. Without CIRCLE, patrols remain on the White Zone perimeter.
+  function assignCirclePatrol(sectorId,delta){
+    const circle=window.ConquerCircle,valid=!!circle?.getStatus?.().ready&&
+      circle.getSnapshot()?.compartments?.some(c=>c.id===sectorId);
+    if(!valid||!Number.isInteger(delta)||Math.abs(delta)!==1)return false;
+    const candidates=combat?.units?.filter(u=>u.kind==='patrol'&&!u.defeated) || [];
+    const unit=delta>0?candidates.find(u=>!u.circleSectorId):
+      candidates.findLast(u=>u.circleSectorId===sectorId);
+    if(!unit)return false;
+    unit.circleSectorId=delta>0?sectorId:null;
+    unit.target=null;unit.path=null;unit.pathIndex=1;unit.nextPatrolAt=0;
+    unit.patrolLoopPosition=null;unit.patrolAnchorIndex=null;unit.patrolProbeOffset=0;
+    spacePatrols();
+    visibilityDirty=true;changed();draw();
+    return true;
+  }
+
   function spawnOccupants(){
     const out=[];
     for(const unit of combat.units.concat(combat.enemy)){
@@ -1793,7 +1856,7 @@
   window.ConquerCombat={tick,serialize,restore,mapContacts,civilPosition,areaState,sourceSees,observers,spawnOccupants,civilSpawnPosition,
     dynamicMeshes,addStorm,addRamStorm,addKeepStorm,issueWallOrder,planLegs,inKeep:()=>combat?.inKeep||[],
     units:()=>combat?.units||[],enemy:()=>combat?.enemy||[],
-    recruitKnight,knightRecruitment:()=>{
+    recruitKnight,assignCirclePatrol,knightRecruitment:()=>{
       const cap=window.ConquerSiege?.capacity?.()||{},current=(combat?.units||[]).filter(u=>u.kind==='knight'&&!u.defeated).length;
       return {current,limit:Math.min(cap.knights||0,cap.horses||0),rooms:cap.knights||0,horses:cap.horses||0};
     },
@@ -1822,7 +1885,7 @@
     },
     yellowGeometry:()=>circles().filter(c=>c.mode==='yellow').concat(combat.strokes.filter(c=>['yellow','eraseYellow'].includes(c.mode))),
     invalidateRoutes:()=>{civilianRouteCache.clear();circleCacheBucket=-1;visibilityDirty=true;
-      whiteBoundarySignature='';patrolNavRevision++;patrolRouteCache.clear();
+      whiteBoundarySignature='';patrolNavRevision++;patrolRouteCache.clear();circlePatrolWaypointsCache.clear();
       for(const u of combat?.units||[]){u.path=null;if(u.kind==='patrol'){u.target=null;u.nextPatrolAt=0}}},
     invalidateArchers:()=>{nextArcherRosterAt=0;archerRosterSize=-1},
     visibilityAt:p=>spotted(p,observers()),refresh:()=>{visibilityDirty=true;refreshFog(true);draw()}};
