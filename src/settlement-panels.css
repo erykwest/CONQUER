@@ -147,3 +147,17 @@
   .cp-job-move button{padding:5px}
   .cp-job-name strong{font-size:11px}
 }
+
+/* Subpalettes inside Job Manager and the Military control panel. */
+.cp-subnav{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:0 0 10px;border-bottom:1px solid var(--line)}
+.cp-subnav button{padding:7px 15px;min-height:32px;border:1px solid #6b543b;border-radius:6px;background:#30231b;color:var(--cp-soft);font-weight:700;font-size:11px;letter-spacing:.04em;cursor:pointer}
+.cp-subnav button.active,.cp-subnav button[aria-selected="true"]{background:#68472c;border-color:var(--cp-gold);color:var(--cp-ink)}
+.cp-subnav button:focus-visible{outline:2px solid var(--cp-gold);outline-offset:2px}
+.cp-job-garrison{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;padding:10px 0;border-bottom:1px solid var(--line);font-size:12px;color:var(--cp-ink)}
+.cp-job-garrison:last-child{border-bottom:none}
+.cp-job-garrison>div:first-child{min-width:0;overflow-wrap:anywhere}
+.cp-job-garrison small{display:block;margin-top:5px;color:var(--cp-soft);font-size:10px}
+.cp-job-garrison-buttons{display:flex;gap:6px;flex-shrink:0}
+.cp-job-garrison-buttons button{min-width:34px;min-height:34px;font-weight:800;font-size:17px;color:var(--cp-ink);background:#4a3425;border:1px solid #7b5c40;border-radius:5px;cursor:pointer}
+.cp-job-garrison-buttons button:disabled{opacity:.35;cursor:default}
+.cp-job-garrison-buttons button:focus-visible{outline:2px solid var(--cp-gold);outline-offset:2px}
