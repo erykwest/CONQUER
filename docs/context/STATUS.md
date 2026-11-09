@@ -1,5 +1,13 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-09 — CIRCLE: assegnazione pattuglie e guarnigioni per settore → macrostruttura (`feature/circle-military-zones-macrotowers-20261109`)
+
+- **CODICE PRESENTE SUL BRANCH (non ancora su main):** Centro di controllo → Militare → Pattuglie e guarnigioni adotta la gerarchia CIRCLE reale: settori chiusi dal rilevamento topologico, stato (sicuro/allerta/conteso, ecc.), profondità e presidio per settore; un livello più basso presenta le macrostrutture difensive. Torri figlie e nipoti collegate con `parentTowerId` sono aggregate in un'unica riga della torre principale: arcieri assegnati, capienza e operativi sono somme delle postazioni `ConquerSiege`, non risorse simulate.
+- **COMANDI:** per settore `+`/`−` arcieri distribuiti alle macrostrutture realmente presenti; per macrostruttura `+`/`−` arcieri alle postazioni della torre madre e delle sottotorri, con roster delle caserme aggregate in `/camp`; le altre caserme restano per stanza. Settori esterni/non mappati espliciti, nessuna zona CIRCLE fittizia.
+- **PATTUGLIE:** riserva sul perimetro White Zone; trasferimento di una pattuglia esistente verso/da un settore CIRCLE, persistito in `combat.units[].circleSectorId`, senza inventare soldati. Gli itinerari zonali usano punti percorribili del poligono CIRCLE e A* militare esistente; in assenza di percorso non teletrasportano. Ricalcolo e rilascio delle assegnazioni a settori cancellati dopo modifiche topologiche.
+- **PROVE:** QA dedicata `qa/military-circle-roster-regression.cjs` e test di pannello/browser ampliati; CI e browser ancora da verificare prima di merge. Nessun asset o nuovo modello, ROADMAP invariata.
+
+
 ## 2026-11-09 — Sottopalette L1/L2 e «Pattuglie e guarnigioni» (branch `feature/jobmanager-l2-military-garrisons-20261109`)
 
 - **IMPLEMENTATO SUL BRANCH:** Job Manager → L1 e L2, con preferenza di sottopaletta conservata durante l'apertura del pannello. La L1 mantiene le code esistenti. La L2 gestisce campi, cave e miniere con identici controlli drag/drop, minimo e AUTO/manuale. L2 attinge esclusivamente dalla quota produttiva L2; l'ordinamento L2 non altera L1.

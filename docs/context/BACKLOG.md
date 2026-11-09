@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-09 — MIL-CIRCLE-02 · Zone CIRCLE e macrostrutture difensive
+
+- **SU BRANCH:** sostituisce il roster piatto delle torri di MIL-PG-01 con **zone difensive CIRCLE → macrostrutture**. Ogni torre madre (`parentTowerId`) integra sottotorri dirette e annidate in **una sola riga**, sommando capienza, assegnati e operativi senza contare due volte. Si assegnano arcieri sia a livello settore sia a livello macrostruttura, reindirizzando i comandi ai singoli slot Siege.
+- **PATTUGLIE:** la White Zone resta riserva. Comando di assegnazione a zona sposta una pattuglia esistente e la fa pattugliare i punti percorribili di CIRCLE; il richiamo la rimette sul perimetro White Zone. L'assegnazione persiste nel save Combat; settori invalidi vengono rilasciati senza inventare zone.
+- **ACCEPTANCE APERTO:** regressioni GitHub Actions, prova browser e test in partita con castelli annidati, accesso di pattuglie a zone recintate complesse. Non incluso reclutamento automatico di guarnigioni o ridefinizione della topologia CIRCLE.
+
+
 ## 2026-11-09 — JM-L2-01 + MIL-PG-01 · Sottopalette di gestione
 
 - **JM-L2-01 IN BRANCH:** Job Manager suddiviso in L1/L2. Produzioni L2 (campi, cava, miniera) ordinate per priorità drag-and-drop, minimo e AUTO/manuale. Rispetta limiti della manodopera L2 e cicli stagionali; le modifiche sono indipendenti dal roster L1 e persistono nel medesimo save economico. Test `qa/labor-jobs-regression.cjs` estesi.

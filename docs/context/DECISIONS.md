@@ -1,5 +1,14 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-MIL-CIRCLE-261109 — Gerarchia CIRCLE per assegnazioni militari (09/11/2026)
+
+- **DECISIONE DEL PRODUCT OWNER:** la sottopaletta «Pattuglie e guarnigioni» deve usare l'interfaccia CIRCLE, con assegnazioni da **zone difensive** fino a **torri**; ogni torre principale e le sue sottotorri sono una **sola riga** come macrostruttura difensiva.
+- **CONTRATTO:** usare solo i settori chiusi effettivamente rilevati da `ConquerCircle.getSnapshot().compartments` e `sectorForStructure`. L'albero `parentTowerId` raggruppa i figli della torre principale senza doppio conteggio. Il controllo di livello zona distribuisce arcieri ai posti validi delle torri associate; il controllo di livello macrostruttura assegna o richiama arcieri alle postazioni reali di madre/figlie. Stessa contabilità per le squadre delle caserme in `/camp` senza righe figlie duplicate.
+- **PATTUGLIE:** il trasferimento da White Zone a CIRCLE imposta un identificatore di settore persistito sull'unità Combat, non recluta una pattuglia nuova. Il pattugliamento segue punti percorribili del compartimento tramite pathfinder militare; nessun teletrasporto. Le zone CIRCLE non disponibili o scomparse non diventano zone inventate.
+- **LIMITI:** settori CIRCLE dipendono da perimetri realmente chiusi, quindi finché non lo sono le torri rimangono sotto «Fuori dai compartimenti CIRCLE»; pattugliamento non garantito per compartimenti privi di itinerari militari accessibili. Roadmap immutata.
+- **STATO:** codice sul branch `feature/circle-military-zones-macrotowers-20261109`, CI/test live/merge da confermare.
+
+
 ## D-JOBS-MIL-261109 — Sottopalette L1/L2 e Pattuglie e guarnigioni (09/11/2026)
 
 - **DECISO DAL PRODUCT OWNER:** due sottopalette all'interno del Job Manager, denominate «L1» e «L2»; una sottopaletta militare «Pattuglie e guarnigioni».
