@@ -1,5 +1,12 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+## 2026-11-08 — BC-261108-01 · Cantieri senza prefinanziamento, sei priorità
+
+- [x] **SU BRANCH `feature/construction-staged-priority-20261108`, pre-merge:** il ghost e gli elementi lineari (compresi ponti/fossati) sono confermabili anche senza stock sufficiente. Lo stesso preventivo esistente determina la spesa finale, ma è consumato progressivamente dal ledger economico durante i lavori, con consegne indipendenti per tipologia e avanzamento limitato dalla risorsa più carente.
+- [x] **Priorità per cantiere:** Molto basso, Basso, Medio (default), Alto, Molto alto, Critico; rifornimento e assegnazione dei costruttori L1 in tale ordine. Lavoro con limite di materiali ricevuti, fermo senza materie prime; nessuna nuova professione o stock alternativo.
+- [x] **Inspector provvisorio:** stato, barra lavorazione e barra rifornimento, quantità per materiale, priorità modificabile; reintegro dell'inspector completo alla fine. Entrambe le UI.
+- [x] **Compatibilità salvataggi:** vecchi cantieri V2 già prepagati; nuovi rimborsano solo il consegnato non consumato alla demolizione. Nessun costo fisso all'apertura del progetto.
+- [x] **QA locale 09/11, PR #186:** regressioni materiali, equità a pari priorità e rimborsi PASS; browser reale UI1/UI2, salvataggio locale/ripresa, completamento e annullamento PASS. **Actions del nuovo head ancora da verificare.** L'approvvigionamento fisico per ogni carro resta escluso dalla feature.
 ## 2026-11-09 — MIL-CIRCLE-02 · Settori CIRCLE e una riga per macrostruttura difensiva
 
 - **BRANCH `feature/circle-military-zones-macrotowers-20261109`:** «Pattuglie e guarnigioni» ora presenta zone difensive reali CIRCLE; distribuzione di pattuglie tra riserva White Zone e settori tramite il roster Combat; arcieri assegnabili per settore e per torre madre con sottotorri aggregate (`parentTowerId`), usando esclusivamente i posti Siege esistenti. Caserme nelle sottotorri integrate nel conteggio della torre madre quando `/camp` è attivo.

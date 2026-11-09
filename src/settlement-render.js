@@ -492,12 +492,10 @@ function draw(){
   }else if(['moat','bridge'].includes(State.draft?.preview?.type))window.ConquerCrossings?.drawPreview(State.draft.preview);
   if(State.draft?.mode!=='terraform'&&State.draft?.previewSegments?.length){
     const segments=State.draft.previewSegments;
-    const totalCost=aggregateConstructionCost(segments);
-    const routeUnderfunded=!canAfford(totalCost);
     for(const segment of segments){
       drawStructure(segment,true);
       const verdict=builderGhostVerdict(segment);
-      if(!verdict.ok||routeUnderfunded)drawInvalidPlacementGhost(segment);
+      if(!verdict.ok)drawInvalidPlacementGhost(segment);
     }
   }else if(State.draft?.mode!=='terraform'&&State.draft?.preview){
     const ghost=State.draft.preview;

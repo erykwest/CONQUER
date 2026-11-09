@@ -1,5 +1,21 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-09 — BC-261108-01 · Completamento PR #186
+
+- Branch `feature/construction-staged-priority-20261108` riallineata a main `3fdae53`; nessun merge della feature dichiarato. Risolti i conflitti preservando STONECOLOR, CIRCLE e documentazione corrente.
+- Materiali: priorità stretta tra sei classi, divisione equa per bene a pari classe, residui millesimali al meno rifornito. Quote, consegne e consumo proporzionale al lavoro persistiti; annullamento restituisce solo il consegnato non consumato, mai salari. Nessun vincolo economico nei ghost, compresi percorsi lineari. Cantieri senza materiali non trattengono operai.
+- Correzioni: persistenza dei pozzi in cantiere, rimborsi dei ponti lignei, clear e frammenti di muro senza duplicare prenotazioni; inspector classico aggiornato al completamento.
+- QA locale PASS: materiali/priorità, workers/payroll/commute, economy/balance/builder, founding, storage, panels, save-safety, placement, multi-wells, urban, well-civics, codex e confini moduli. Chromium reale UI1/UI2 PASS: piazzamento senza risorse, sei opzioni, cambio priorità, consegne separate dal lavoro, salvataggio locale e migrazione, completamento e annullamento/rimborso. Catture `output/playwright/construction/`. CI dell'ultimo commit da verificare; nessun asset o modello aggiunto.
+
+
+## 2026-11-08 — Cantieri confermati senza scorte e approvvigionamento prioritario (branch `feature/construction-staged-priority-20261108`)
+
+- **IMPLEMENTATO SUL BRANCH, NON ANCORA SU MAIN:** il ghost conferma un cantiere valido per geometria/terreno senza richiedere il preventivo interamente disponibile. Il costo rimane un preventivo, le singole risorse arrivano progressivamente e indipendentemente dallo stock economico canonico, anche quando altre tipologie mancano. Nessun debito o scorta negativa: il lavoro non supera il rapporto delle risorse effettivamente trasferite.
+- **PRIORITÀ:** sei classi ordinabili, Molto basso → Basso → Medio → Alto → Molto alto → Critico; ordinamento stabile per classe, data e ID anche nell'assegnazione del personale L1, senza generare nuovi lavoratori. Il salario resta conteggiato separatamente per il lavoro svolto. La selezione apre un inspector provvisorio con progresso del lavoro, progresso/quantità dei materiali e priorità, distinto da quello dell'edificio ultimato, anche in UI v2.
+- **PERSISTENZA:** priorità, materiali consegnati e avanzamento vengono salvati nella struttura già persistita. Cantieri precedenti con V2 ma senza `materialsDelivered` si considerano già pagati per evitare doppi addebiti. Alla demolizione si rimborsano soltanto i materiali realmente trasferiti nei nuovi cantieri; i preesistenti conservano il rimborso storico. I pozzi/edifici manuali a durata zero e costo non nullo creano ora un cantiere minimo invece di comparire gratuitamente completati.
+- **QA:** aggiunta `qa/construction-priority-regression.cjs` al workflow Runtime integrity per code, carenze, priorità variabile, compatibilità legacy e rimborsi. **Da verificare:** esito GitHub Actions e prova visuale end-to-end (UI classica/UI2, costi misti, reload e completamento). Non si simulano carovane fisiche per i trasferimenti ordinari.
+
+
 ## 2026-11-09 — MIL-RES-01 · Caserma, vedette e Avamposto (solo specifica)
 
 - **NESSUN CODICE.** Specifica approvata nel [BACKLOG](BACKLOG.md); decisione D-MIL-RES-261109.

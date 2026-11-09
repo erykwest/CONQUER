@@ -112,8 +112,8 @@ function addStructure(s){
       s.groundZ=groundZ;
     }
     const cost=constructionCost(s);
-    if(!canAfford(cost)){status('Insufficient resources — '+costText(cost));return false}
-    s.buildCost=cost;spendCost(cost);beginConstruction(s);
+    // Confirmation creates a project, not an upfront debit.
+    s.buildCost=cost;beginConstruction(s);
     displaced=removeOverlappingAuto(s);
   }
   State.structures.push(s);
@@ -179,11 +179,6 @@ function commitStructuralLinearRoute(route,endSnapId,spec){
       return false;
     }
   }
-  const totalCost=aggregateConstructionCost(structures);
-  if(!canAfford(totalCost)){
-    status('Insufficient resources — '+costText(totalCost));
-    return false;
-  }
   for(const s of structures)if(!addStructure(s))return false;
   return true;
 }
@@ -199,15 +194,15 @@ function deleteStructure(id){
   }
   if(target.type==='tower')restoreTowerWallConnections(target);
   const removedChildren=civicAnnexChildren(id);
-  for(const child of removedChildren)if(child.buildCost)refundCost(child.buildCost);
+  for(const child of removedChildren)if(child.buildCost)refundCost(refundableConstructionCost(child));
   if(['tower','gate'].includes(target.type))detachSubtowerChildren(target.id);
-  if(!target.auto&&target.buildCost&&!(target.type==='bridge'&&target.variant==='wood'))refundCost(target.buildCost);
+  if(!target.auto&&target.buildCost&&(target.construction?.materialsDelivered||!(target.type==='bridge'&&target.variant==='wood')))refundCost(refundableConstructionCost(target));
   const foundingWellTarget=target.type==='well'&&(!State.village.founded||target.id===State.village.wellId);
   if(foundingWellTarget){
     State.combat=null;window.ConquerCombat?.restore(null);
     const borderEntries=ensureBorderEntrySelection();
     // The village goes with its founding well, later wells included (refunded).
-    for(const w of State.structures)if(w.type==='well'&&w.id!==id&&!w.auto&&w.buildCost)refundCost(w.buildCost);
+    for(const w of State.structures)if(w.type==='well'&&w.id!==id&&!w.auto&&w.buildCost)refundCost(refundableConstructionCost(w));
     State.structures=State.structures.filter(s=>!s.auto&&!s.foundingStockyard&&s.id!==id&&s.type!=='well');
     window.ConquerEconomy?.reset?.();State.resources={...PROVISIONAL_RESOURCES};
     State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};

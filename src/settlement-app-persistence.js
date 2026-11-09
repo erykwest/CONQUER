@@ -59,7 +59,7 @@ function migrateStructures(list){
     }
     if(s.type==='road'&&s.a&&s.b&&!Number.isFinite(Number(s.length)))s.length=dist(s.a,s.b);
     if(s.type==='well'){
-      delete s.construction;
+      if(!s.construction?.materialsDelivered)delete s.construction;
       // Quarter names of later wells (older saves have none: one well = the village centre).
       const name=sanitizeWellName(s.wellName);if(name)s.wellName=name;else delete s.wellName;
     }

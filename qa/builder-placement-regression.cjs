@@ -72,9 +72,9 @@ test('central valid point placement',()=>{
 test('whole footprint, not just centre, must remain in whitezone',()=>{
   const h=harness();assert.equal(h.check({type:'market',x:149.4,y:100,w:2,h:2}).ok,false);
 });
-test('unaffordable placement is invalid',()=>{
+test('ghost placement remains valid with no construction resources',()=>{
   const h=harness();h.setCash(0);
-  assert.match(h.check({type:'market',x:100,y:100,w:2,h:2}).reason,/Insufficient/);
+  assert.equal(h.check({type:'market',x:100,y:100,w:2,h:2}).ok,true);
 });
 test('terrain obstruction makes ghost invalid',()=>{
   const h=harness();h.setBlocked(true);

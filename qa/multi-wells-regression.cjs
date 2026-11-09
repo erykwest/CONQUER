@@ -15,7 +15,18 @@ function test(name,body){body();passed++;console.log('PASS '+name)}
 function found(){
  run("State.seed=12345;State.environment=[];State.relief=null;State.clock.day=0;State.structures=[{id:'well',type:'well',x:100,y:100}];State.village={name:'Rocca',founded:true,wellId:'well',growthStep:0,growthVersion:3};State.combat.units=[];State.combat.enemy=[];State.combat.strokes=[];State.resources={gold:1e6,stone:1e6,wood:1e6,metal:1e6,clay:1e6,food:1e6,equipment:1e6};invalidateNavigation();invalidateUrbanGeometry();window.ConquerCombat.invalidateRoutes();connectSelectedBorderMainRoads()");
 }
-function addWell(id,x,y){return run("addStructure({id:'"+id+"',type:'well',masonryMaterial:'stone',x:"+x+",y:"+y+"})")}
+// Multi-well topology tests operate on finished wells; the construction
+// contract is verified explicitly below, without silently making new wells instant.
+function finishWell(id){
+  run("(()=>{const s=State.structures.find(w=>w.id==="+JSON.stringify(id)+");"+
+    "const c=s?.construction;if(c?.version===2){c.workDone=c.workRequired;c.completedDay=State.clock.day;}"+
+    "reconcileWellMainConnections(false)})()");
+}
+function addWell(id,x,y,finish=true){
+  const placed=run("addStructure({id:'"+id+"',type:'well',masonryMaterial:'stone',x:"+x+",y:"+y+"})");
+  if(placed&&finish)finishWell(id);
+  return placed;
+}
 
 test('a one-well save keeps the founding well as village centre and label',()=>{
  found();
@@ -33,6 +44,14 @@ test('before founding a second well is still refused; after founding it is allow
  found();
  assert.equal(run("window.ConquerPlacement.check({id:'w2',type:'well',x:130,y:100}).ok"),true);
  assert.ok(!/A village well already exists/.test(fs.readFileSync(__dirname+'/../src/settlement-placement.js','utf8')));
+});
+test('unfunded secondary well is confirmed as a site but roads wait for completion',()=>{
+ found();
+ assert.equal(addWell('w2',128,112,false),true);
+ assert.equal(run("underConstruction(State.structures.find(s=>s.id==='w2'))"),true);
+ assert.equal(run("wellMainRoads(State.structures.find(s=>s.id==='w2')).length"),0);
+ finishWell('w2');
+ assert.ok(run("wellMainRoads(State.structures.find(s=>s.id==='w2')).length")>0);
 });
 test('a later well gets one main road to the founding network, no border roads',()=>{
  found();

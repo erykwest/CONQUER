@@ -921,13 +921,49 @@ function buildDuration(s){
 // Construction V2: manual projects use paid-for work units, not a calendar deadline.
 // The pre-existing procedural roads/houses/fields keep their bootstrap timers.
 const CONSTRUCTION_MAX_WORKERS=3;
+const CONSTRUCTION_PRIORITIES=Object.freeze(['Molto basso','Basso','Medio','Alto','Molto alto','Critico']);
+const CONSTRUCTION_DEFAULT_PRIORITY=2;
+function constructionPriority(s){
+  const value=Number(s?.construction?.priority);
+  return Number.isInteger(value)&&value>=0&&value<CONSTRUCTION_PRIORITIES.length?value:CONSTRUCTION_DEFAULT_PRIORITY;
+}
+// Older V2 saves paid the complete quote at placement. Their missing
+// materialsDelivered field means 'fully supplied', never 'unfunded'.
+function constructionMaterialInfo(s){
+  const required=s?.buildCost||constructionCost(s);
+  const c=s?.construction;
+  const delivered=c?.version===2&&c.materialsDelivered&&typeof c.materialsDelivered==='object'
+    ?c.materialsDelivered:required;
+  const rows=Object.entries(required).filter(([,qty])=>Number(qty)>0).map(([key,qty])=>{
+    const total=Number(qty),supplied=Math.min(total,Math.max(0,Number(delivered[key])||0));
+    return {key,total,delivered:supplied,missing:Math.max(0,total-supplied)};
+  });
+  return {required,delivered,rows,
+    progress:rows.length?Math.max(0,Math.min(1,...rows.map(r=>r.delivered/r.total))):1};
+}
+function refundableConstructionCost(s){
+  if(!s?.buildCost)return{};
+  const c=s.construction,delivered=c?.version===2&&c.materialsDelivered;
+  if(!delivered||typeof delivered!=='object')return {...s.buildCost};
+  const ratio=constructionProgress(s),out={};
+  for(const [key,qty] of Object.entries(delivered)){
+    const consumed=c.materialsConsumed?.[key]??(Number(s.buildCost[key])||0)*ratio;
+    const remaining=Math.max(0,Math.floor((qty-consumed)*1000+1e-7)/1000);
+    if(remaining>0)out[key]=remaining;
+  }
+  return out;
+}
 function constructionWorkClock(day){
   // Same 5-day labor week / work shift used by the agricultural simulation.
   const whole=Math.floor(day),week=Math.floor(whole/7),wd=((whole%7)+7)%7;
   return week*5+Math.min(wd,5)+(wd<5?clamp((day-whole-.14)/.38,0,1):0);
 }
 function beginConstruction(s,delay=0){
-  const d=buildDuration(s);if(d<=0)return s;
+  const duration=buildDuration(s);
+  // A paid structure with zero legacy duration (notably the village well)
+  // still needs a real site so its materials are not silently made free.
+  if(duration<=0&&(s.auto||!Object.keys(s.buildCost||{}).length))return s;
+  const d=Math.max(.5,duration);
   const startedDay=State.clock.day+delay;
   if(s.auto){
     s.construction={startedDay,completeDay:startedDay+d};
@@ -942,7 +978,8 @@ function beginConstruction(s,delay=0){
     return s;
   }
   s.construction={version:2,startedDay,workRequired:d,workDone:0,
-    lastWorkDay:startedDay,workers:0,completedDay:null};
+    lastWorkDay:startedDay,workers:0,completedDay:null,
+    priority:CONSTRUCTION_DEFAULT_PRIORITY,materialsDelivered:{},materialsConsumed:{},materialBlocked:false};
   return s;
 }
 function constructionProgress(s){
@@ -966,6 +1003,8 @@ function constructionWorkStatus(s){
   if(c.version!==2)return 'Procedural construction';
   const wd=((Math.floor(State.clock.day)%7)+7)%7;
   if(wd>=5)return 'Workers resting (weekend)';
+  if(constructionMaterialInfo(s).progress<=constructionProgress(s)+1e-7&&
+      constructionMaterialInfo(s).progress<1-1e-7)return 'In attesa di materiali';
   if(c.unfunded||(window.ConquerEconomy?.constructionWagePerWorkday?.()||0)>0&&
       (window.ConquerEconomy?.state?.().castleGold||0)<=1e-8)
     return 'Paused: insufficient lord treasury for wages';
@@ -996,7 +1035,8 @@ function constructionCrewAssignments(day=State.clock.day,cutoff=day){
   const candidates=window.ConquerEconomy?.availableBuilderIds?.(day)||[];
   const sites=(State.structures||[]).filter(s=>!s.auto&&
     s.construction?.version===2&&underConstruction(s)&&
-    s.construction.startedDay<=cutoff).sort((a,b)=>
+    s.construction.startedDay<=cutoff&&constructionMaterialInfo(s).progress>constructionProgress(s)+1e-9).sort((a,b)=>
+    constructionPriority(b)-constructionPriority(a)||
     a.construction.startedDay-b.construction.startedDay||
     String(a.id).localeCompare(String(b.id)));
   for(const s of sites)slots.set(s.id,[]);
@@ -1013,6 +1053,52 @@ function constructionCrewAssignments(day=State.clock.day,cutoff=day){
       used.add(worker.id);slots.get(s.id).push(worker);
     }
   return slots;
+}
+function allocateConstructionMaterials(sites,daySpan){
+  let changed=false;
+  sites=sites.filter(s=>s.construction?.materialsDelivered);
+  const stock=window.ConquerEconomy?.state?.();
+  const available=k=>Math.max(0,Number(stock?(k==='gold'?stock.castleGold:stock.castle?.[k]):State.resources?.[k])||0);
+  // Strict priority between tiers; equal shares of each scarce good within a tier.
+  // Thousandth-unit leftovers go to the least supplied site, so tiny repeated
+  // deliveries cannot starve an equal-priority job. No per-cart simulation.
+  for(let priority=5;priority>=0;priority--){
+    const group=sites.filter(s=>constructionPriority(s)===priority);
+    const goods=new Set(group.flatMap(s=>Object.keys(s.buildCost||{})));
+    for(const k of goods){
+      let budget=Math.floor(available(k)*1000+1e-7);
+      let jobs=group.map(s=>({s,m:{required:s.buildCost||{},delivered:s.construction.materialsDelivered},units:0})).filter(j=>
+        (j.need=Math.max(0,Math.round(((j.m.required[k]||0)-(j.m.delivered[k]||0))*1000)))>0);
+      while(budget>0&&jobs.length){
+        const share=Math.floor(budget/jobs.length);
+        if(!share){
+          jobs.sort((a,b)=>(a.m.delivered[k]||0)+a.units/1000-(b.m.delivered[k]||0)-b.units/1000||String(a.s.id).localeCompare(String(b.s.id)));
+          for(const j of jobs.slice(0,budget)){j.units++;j.need--;budget--}
+          break;
+        }
+        for(const j of jobs){const n=Math.min(share,j.need);j.units+=n;j.need-=n;budget-=n}
+        jobs=jobs.filter(j=>j.need>0||j.units>0);
+        if(jobs.every(j=>!j.need))break;
+        // Retain allocations separately while excluding fulfilled jobs next pass.
+        const done=jobs.filter(j=>!j.need);
+        for(const j of done)commit(j);
+        jobs=jobs.filter(j=>j.need>0);
+      }
+      for(const j of jobs)commit(j);
+      function commit(j){
+        if(j.units<=0)return;
+        const qty=j.units/1000;
+        const paid=State.village?.founded&&window.ConquerEconomy?.spendBuild
+          ?window.ConquerEconomy.spendBuild({[k]:qty})
+          :available(k)>=qty&&(State.resources[k]=Math.round((available(k)-qty)*1000)/1000,true);
+        if(paid){
+          j.m.delivered[k]=Math.round(((j.m.delivered[k]||0)+qty)*1000)/1000;
+          State.dirty=true;changed=true;
+        }
+      }
+    }
+  }
+  return changed;
 }
 function tickConstructionWork(fromDay,toDay){
   if(!State.village?.founded)return[];
@@ -1035,17 +1121,22 @@ function tickConstructionWork(fromDay,toDay){
     const sites=(State.structures||[]).filter(s=>
       !s.auto&&s.construction?.version===2&&underConstruction(s)&&
       s.construction.startedDay<next
-    ).sort((a,b)=>a.construction.startedDay-b.construction.startedDay||
+    ).sort((a,b)=>constructionPriority(b)-constructionPriority(a)||
+      a.construction.startedDay-b.construction.startedDay||
       String(a.id).localeCompare(String(b.id)));
     if(sites.length){
+      allocateConstructionMaterials(sites,next-t);
       const assigned=workerDay>0?constructionCrewAssignments(t,next):new Map();
       for(const s of sites){
         const c=s.construction,n=assigned.get(s.id)?.length||0;
         const effectiveStart=Math.max(t,c.startedDay,Number(c.lastWorkDay)||c.startedDay);
-        const requested=Math.min(Math.max(0,c.workRequired-c.workDone),
+        const proposed=Math.min(Math.max(0,c.workRequired-c.workDone),
           Math.max(0,constructionWorkClock(next)-constructionWorkClock(effectiveStart))*n);
-        // Only actual funded work advances construction. Materials were paid
-        // at placement; labor is paid as its shifts are performed.
+        // Work cannot overrun materials already supplied to this specific site.
+        const materialWork=Math.max(0,c.workRequired*constructionMaterialInfo(s).progress-c.workDone);
+        const requested=Math.min(proposed,materialWork);
+        c.materialBlocked=proposed>requested+1e-7;
+        // Wages remain pay-as-you-work and are never deducted twice.
         const payroll=requested>0?
           window.ConquerEconomy?.payConstructionWork?.(s,requested)||{work:requested,paid:0}:
           {work:0,paid:0};
@@ -1054,6 +1145,10 @@ function tickConstructionWork(fromDay,toDay){
         c.workers=work>0?n:0;
         if(work>0){
           c.workDone=Math.min(c.workRequired,c.workDone+work);
+          if(c.materialsDelivered){
+            c.materialsConsumed={};
+            for(const [key,qty] of Object.entries(s.buildCost||{}))c.materialsConsumed[key]=qty*c.workDone/c.workRequired;
+          }
           State.dirty=true;
         }
         c.lastWorkDay=Math.max(next,Number(c.lastWorkDay)||0);

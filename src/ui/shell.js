@@ -348,6 +348,40 @@ function Inspector({ snap, cmd }) {
   const d = snap.selection?.detail;
   if (!d) return null;
   const run = (name, ...args) => cmd.structure(name, d.id, ...args);
+  // Construction has a different palette from the operational inspector.
+  // This branch intentionally precedes every completed-building control.
+  if (d.building) {
+    const b = d.building;
+    return html`<${Card} title=${structureTitle(d)} sub="Cantiere in costruzione" onClose=${cmd.deselect}
+      footer=${html`<${Cost} cost=${d.cost} />
+        <button type="button" class="u2-icon-btn u2-danger" aria-label=${I.demolish}
+          data-tip=${I.demolish} onClick=${() => cmd.demolish(d.id)}>
+          <${Icon} name="delete" size=${18} /></button>`}>
+      <div class="u2-stats">
+        <${Stat} label="Avanzamento lavori" value=${Math.round(b.progress * 100) + '%'} />
+        <${Stat} label="Lavoro residuo" value=${fmt(b.days) + ' giornate'} />
+      </div>
+      <${Bar} value=${b.progress} max=${1} />
+      <div class="u2-stats">
+        <${Stat} label="Materiali consegnati" value=${Math.round(b.materialsProgress * 100) + '%'} />
+        <${Stat} label="Stato" value=${b.status || 'In attesa'} />
+      </div>
+      <${Bar} value=${b.materialsProgress} max=${1} />
+      <div class="u2-site-materials">
+        ${b.materials.map(r => html`<div class="u2-site-material">
+          <span>${T.resourcesLong[r.key] || r.key}</span><strong>${fmt(r.delivered)} / ${fmt(r.total)}</strong>
+        </div>`)}
+      </div>
+      ${b.editable && html`<${Row} label="Priorità approvvigionamento">
+        <select class="u2-name" aria-label="Priorità cantiere" value=${String(b.priority)}
+          onChange=${e => run('setConstructionPriority', Number(e.currentTarget.value))}>
+          ${b.priorities.map((label, value) => html`<option value=${String(value)}>${label}</option>`)}
+        </select>
+      </${Row}>`}
+      <p class="u2-hint">Il progetto rimane confermato anche senza scorte. I materiali disponibili sono assegnati prima ai cantieri con priorità più alta.</p>
+    </${Card}>`;
+  }
+
   const sub = d.building ? I.underConstruction(d.building.days) : d.houseLevel ? 'L' + d.houseLevel
     : d.well ? (d.well.center ? d.well.villageName || I.wellCenter : d.well.name || I.wellUnnamed) : I.completed;
   const facts = d.facts.map(f => [I.facts[f.key], f.key === 'masonry' ? I.masonryValues[f.value] || f.value : f.center ? I.wellCenter + ' · ' + f.value : f.value]);

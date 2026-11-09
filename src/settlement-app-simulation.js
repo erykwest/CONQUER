@@ -215,6 +215,7 @@ function simulationFrame(now){
     if(completed.length){
       window.ConquerCircle?.invalidate?.('construction completed');
       runSettlementMaintenance('completion',completed);
+      if(completed.some(s=>s.id===State.selectedId))renderFunctionPanel();
       if(completed.some(s=>s.type==='tower'))window.ConquerSiege?.syncAutoMastio?.();
       simMaintenanceAt=now;
     }else if(now-simMaintenanceAt>=MAINTENANCE_WATCHDOG_MS){
@@ -224,6 +225,11 @@ function simulationFrame(now){
 
     if(now-simUiAt>=250){
       renderUI();
+      // Legacy inspector does not subscribe to the UI2 snapshot. Refresh its
+      // progress while visible, but do not replace a focused priority selector.
+      const inspector=document.getElementById('functionPanel'),selected=selectedStructure();
+      if(inspector?.classList.contains('open')&&selected&&underConstruction(selected)&&
+        !inspector.contains(document.activeElement))renderFunctionPanel();
       simUiAt=now;
     }
 

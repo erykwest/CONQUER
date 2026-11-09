@@ -168,3 +168,8 @@ body.ui2:not(:has(#conquerMinimap)) #ui2 .u2-card{max-height:calc(100% - var(--u
   #ui2 .u2-resbar ul{flex-wrap:wrap;justify-content:flex-end}
   #ui2 .u2-resbar li{height:26px;padding:0 7px}
 }
+
+/* Construction-only panel in UI2. */
+.u2-site-materials{display:grid;gap:5px;margin:8px 0}
+.u2-site-material{display:flex;justify-content:space-between;gap:12px;font-size:12px;line-height:1.4}
+.u2-site-material strong{font-variant-numeric:tabular-nums}
