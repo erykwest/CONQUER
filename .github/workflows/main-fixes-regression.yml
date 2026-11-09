@@ -10,7 +10,6 @@ on:
     paths:
       - src/settlement-world.js
       - src/settlement-world3d.js
-      - qa/main-road-finalization-regression.cjs
       - qa/main-fixes-browser.mjs
       - qa/ui-combat-regression.mjs
       - .github/workflows/main-fixes-regression.yml
@@ -28,10 +27,9 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
-      - name: Deterministic regressions
+      # Always-on settlement-qa owns road finalization and spawn in fast/full tiers.
+      - name: Renderer-specific deterministic regressions
         run: |
-          node qa/main-road-finalization-regression.cjs
-          node qa/settlement-routing-spawn-regression.cjs
           node qa/webgl-error-poll-regression.cjs
           node qa/paused-render-regression.cjs
       - name: JavaScript syntax

@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-09 — CI P2.4: ownership delle regressioni specialistici (PR in preparazione)
+
+- **IMPLEMENTAZIONE SU BRANCH:** sei controlli Codex deterministici restano solo in Runtime integrity (always-on PR); routing/spawn + main-road restano sempre in settlement-qa, tolti da CAMP/Main fixes (3 invocazioni). Totale nove invocazioni ridondanti eliminate senza toccare i test stessi.
+- **COPERTURA:** Codex conserva il browser e il check module; CAMP conserva test comportamento; Main fixes conserva WebGL, paused-render e browser. Altre sovrapposizioni con trigger differenti lasciate inalterate, per non perdere regressioni.
+- **QA DA VERIFICARE:** guard CI P1 esteso con ownership P2.4, workflow invariati nel numero; PR e merge solo con tutti i controlli verdi.
+
+
 ## 2026-11-09 — BC-261109-02 · DEV e cantieri di upgrade (branch `fix/upgrades-dev-build`)
 
 - **Prove aggiuntive PASS:** regressione d'assedio reale Canvas/WebGL e perdita contesto WebGL; annullamento di upgrade conserva i danni subiti durante il cantiere.
