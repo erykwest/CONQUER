@@ -1116,7 +1116,7 @@ function allocateConstructionMaterials(sites,daySpan){
   let changed=false;
   sites=sites.filter(s=>s.construction?.materialsDelivered);
   for(const s of sites)grantFreeConstructionMaterials(s);
-  const stock=window.ConquerEconomy?.state?.();
+  const stock=State.village?.founded?window.ConquerEconomy?.state?.():null;
   const available=k=>Math.max(0,Number(stock?(k==='gold'?stock.castleGold:stock.castle?.[k]):State.resources?.[k])||0);
   // Strict priority between tiers; equal shares of each scarce good within a tier.
   // Thousandth-unit leftovers go to the least supplied site, so tiny repeated

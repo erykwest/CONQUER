@@ -2,6 +2,10 @@
 
 ## 2026-11-09 — BC-261109-02 · DEV e cantieri di upgrade (branch `fix/upgrades-dev-build`)
 
+- **Prove aggiuntive PASS:** regressione d'assedio reale Canvas/WebGL e perdita contesto WebGL; annullamento di upgrade conserva i danni subiti durante il cantiere.
+
+- **Riesame CI:** fixture browser d'assedio aggiornata a Fast a pagamento per preparare la porta completa; verificata anche l'allocazione Fast dallo stock provvisorio prima della fondazione. Il comportamento normale resta temporizzato.
+
 - **CODICE SUL BRANCH, NON ANCORA MERGE:** due toggle DEV indipendenti Free build (nessun materiale/salario addebitato) e Fast build (nessuna attesa/manodopera, materiali ancora necessari). Insieme danno costruzione gratuita e istantanea; valgono anche sui cantieri aperti. Preferenze solo di sessione, escluse dai save; materiali concessi gratis tracciati e mai rimborsabili.
 - **UPGRADE:** altezza/tier, piani e varianti strutturali/civiche ora aprono il medesimo cantiere. Costo differenziale ove esiste il listino, prezzi dedicati conservati per piazzali, ponti/fossati, scale, levatoi e grata. Preventivo dell'intervento separato dal costo dell'edificio. Durata positiva; controllo di un solo intervento per struttura. Nessun costo inventato per varianti senza listino.
 - **CANCELLAZIONE/PERSISTENZA:** snapshot dello stato precedente nel cantiere; annullare un upgrade ripristina l'edificio e restituisce il solo materiale pagato e non consumato. Quote, consegne e rollback salvati nei normali payload. Frammenti dei muri ripartiscono anche quote/crediti DEV degli upgrade.

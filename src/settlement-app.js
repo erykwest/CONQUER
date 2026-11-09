@@ -188,9 +188,14 @@ function deleteStructure(id){
   const target=State.structures.find(s=>s.id===id);if(!target)return;
   if(underConstruction(target)&&target.construction?.upgrade){
     const before=target.construction.upgrade.before,refund=refundableConstructionCost(target);
+    const damage=target.siegeIntegrity?JSON.parse(JSON.stringify(target.siegeIntegrity)):null;
     refundCost(refund);
     for(const key of Object.keys(target))delete target[key];
-    Object.assign(target,before);markStructureDirty(target);renderFunctionPanel();draw();return;
+    Object.assign(target,before);
+    if(damage)target.siegeIntegrity=damage; // Cancelling work never heals siege damage.
+    if(target.type==='tower'){repositionSubtower(target);syncSubtowerTree(target.id)}
+    if(target.type==='house')invalidateUrbanGeometry();
+    markStructureDirty(target);renderFunctionPanel();draw();return;
   }
   if(window.ConquerStorageYard?.is(target)&&!window.ConquerStorageYard.canRemove(target)){
     status('Sposta le scorte in un altro piazzale prima di eliminare l’unico magazzino');return;

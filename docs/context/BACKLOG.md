@@ -2,6 +2,8 @@
 
 ## 2026-11-09 — BC-261109-02 · DEV Free/Fast e upgrade temporizzati
 
+- **Riesame CI:** fixture browser d'assedio aggiornata a Fast a pagamento per preparare la porta completa; verificata anche l'allocazione Fast dallo stock provvisorio prima della fondazione. Il comportamento normale resta temporizzato.
+
 - **SU BRANCH `fix/upgrades-dev-build`:** Free build e Fast build separati nel pannello DEV; cantieri per upgrade di strutture, case, civici e accessori edilizi con preventivi già definiti; annullamento reversibile e stato persistente.
 - **REGOLA CASE:** ogni cambio di livello attraversa il cantiere, incluse case automatiche. Condizioni e job di promozione autonoma scorporati, da decidere nella chat dedicata.
 - **QA:** nuove regressioni dominio/browser locali PASS, regressioni geometriche di accessori aggiornate per usare il vero runtime in modalità Fast a pagamento. Verifica CI richiesta prima di main. Politiche feudali globali di merli/pendenza tetti e riparazioni restano comandi dei rispettivi sistemi.

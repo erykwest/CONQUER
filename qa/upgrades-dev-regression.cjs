@@ -20,6 +20,10 @@ test('cancel renovation restores prior building and refunds only delivered uncon
  run("deleteStructure('t')");assert.equal(run("State.structures[1].level"),1);assert.equal(run("underConstruction(State.structures[1])"),false);
  assert.equal(run("window.ConquerEconomy.state().castle.stone"),3);
 });
+test('cancelling renovation preserves damage taken during the project',()=>{
+ reset();run("StructureCommands.setHeight('t',2);window.ConquerSiege.integrity(State.structures[1]).core.hp-=10;deleteStructure('t')");
+ assert.equal(run("window.ConquerSiege.integrity(State.structures[1]).core.max-window.ConquerSiege.integrity(State.structures[1]).core.hp"),10);
+});
 test('free build grants materials without treasury or wage consumption, and grants cannot be refunded',()=>{
  reset();run("State.devBuild.freeBuild=true;StructureCommands.setHeight('t',2);State.clock.day=.52;tickConstructionWork(0,.52)");
  assert(run("State.structures[1].construction.workDone>0"));assert.equal(run("window.ConquerEconomy.state().castleGold"),0);
@@ -34,6 +38,10 @@ test('fast build respects material payment but removes worker and time requireme
 test('combined DEV modes finish new construction instantly without minting refundable materials',()=>{
  reset();run("State.devBuild={freeBuild:true,fastBuild:true};const s=State.structures[1];beginConstruction(s)");
  assert.equal(run("constructionProgress(State.structures[1])"),1);assert.equal(run("Object.keys(refundableConstructionCost(State.structures[1])).length"),0);
+});
+test('Fast build before village founding charges the provisional stock rather than the economy',()=>{
+ reset();run("State.village={};State.devBuild.fastBuild=true;State.resources={gold:45,stone:55,wood:12};beginConstruction(State.structures[1])");
+ assert.equal(run("underConstruction(State.structures[1])"),false);assert.equal(run("State.resources.gold"),0);assert.equal(run("State.resources.stone"),0);
 });
 test('automatic-house inspector level changes invoke a timed site through the real entry point',()=>{
  reset();run("State.structures=[{id:'well',type:'well',x:80,y:80},{id:'house',type:'house',auto:true,x:100,y:100,w:1.5,h:1,angle:0,houseLevel:2}];State.combat.strokes=[{x:100,y:100,r:40,mode:'yellow'}];invalidateNavigation();invalidateUrbanGeometry();changeHouseDensity(State.structures[1],3)");
