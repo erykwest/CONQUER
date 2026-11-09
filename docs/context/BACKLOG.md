@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-09 — JM-L2-01 + MIL-PG-01 · Sottopalette di gestione
+
+- **JM-L2-01 IN BRANCH:** Job Manager suddiviso in L1/L2. Produzioni L2 (campi, cava, miniera) ordinate per priorità drag-and-drop, minimo e AUTO/manuale. Rispetta limiti della manodopera L2 e cicli stagionali; le modifiche sono indipendenti dal roster L1 e persistono nel medesimo save economico. Test `qa/labor-jobs-regression.cjs` estesi.
+- **MIL-PG-01 IN BRANCH:** Militare → Pattuglie e guarnigioni, con gestione pattuglie perimetrali Combat, arcieri nelle torri in `ConquerSiege` e squadre caserma attraverso `ConquerCamp` nella sola modalità `/camp`. Guardie decorative ai cancelli e ai camminamenti non diventano fittizi posti di lavoro/combattenti.
+- **ACCEPTANCE APERTO:** Actions, prova UI L2 e guarnigioni in browser e controllo nel gioco reale. Non incluso: nuove formazioni, trasferimenti individuali tra caserme, assunzioni a pagamento o simulazione nuove unità.
+
+
 ## 2026-11-09 — JM-L1-01 · Gestione priorità produttive dei popolani L1
 
 - **IN BRANCH:** ordinamento drag-and-drop e su/giù delle mansioni L1; «Minimum worker» numerico; toggle AUTO/manuale, stato del personale e segnalazione dei minimi non soddisfatti.
