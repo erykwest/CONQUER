@@ -1023,7 +1023,7 @@
     visibilityDirty=true;changed();status('White Zone patrol added · 2 pikemen');draw();return true;
   }
   function removePatrol(){
-    let index=-1;for(let i=combat.units.length-1;i>=0;i--)if(combat.units[i].kind==='patrol'){index=i;break}
+    let index=-1;for(let i=combat.units.length-1;i>=0;i--)if(combat.units[i].kind==='patrol'&&!combat.units[i].circleSectorId){index=i;break}
     if(index<0){status('No White Zone patrol to remove');return false}
     const [removed]=combat.units.splice(index,1);
     if(selected===removed.id)selected=null;
