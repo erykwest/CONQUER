@@ -161,3 +161,28 @@
 .cp-job-garrison-buttons button{min-width:34px;min-height:34px;font-weight:800;font-size:17px;color:var(--cp-ink);background:#4a3425;border:1px solid #7b5c40;border-radius:5px;cursor:pointer}
 .cp-job-garrison-buttons button:disabled{opacity:.35;cursor:default}
 .cp-job-garrison-buttons button:focus-visible{outline:2px solid var(--cp-gold);outline-offset:2px}
+
+/* CIRCLE → sector → macro tower, keeping subtower manpower on one row. */
+.cp-circle-zone{min-width:0;margin:10px 0;border:1px solid #685038;border-radius:8px;overflow:hidden;background:rgba(37,28,20,.65)}
+.cp-circle-zone-head{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0;padding:9px 10px;background:rgba(79,53,35,.38)}
+.cp-circle-expand{display:flex;align-items:center;text-align:left;gap:10px;min-width:0;flex:1;cursor:pointer;border:0;background:transparent;color:var(--cp-ink);padding:5px;font-size:12px}
+.cp-circle-expand>span:first-child{flex:none;font-size:20px;color:var(--cp-gold)}
+.cp-circle-expand>span:last-child{min-width:0;overflow-wrap:anywhere}
+.cp-circle-expand b{display:block;font-size:12px}
+.cp-circle-expand small{display:block;font-size:10px;color:var(--cp-soft);margin-top:3px}
+.cp-circle-expand:focus-visible{outline:2px solid var(--cp-gold);outline-offset:2px}
+.cp-circle-zone-body{padding:0 11px 5px 21px}
+.cp-circle-zone-body>.cp-job-garrison:last-child{border-bottom:0}
+.cp-circle-zone .cp-job-garrison-buttons button{min-width:29px;min-height:29px}
+.cp-circle-staffers{display:flex;align-items:center;gap:13px;flex-wrap:wrap;justify-content:flex-end;flex-shrink:0}
+.cp-circle-staff{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--cp-soft);white-space:nowrap}
+.cp-circle-macro{padding:10px 3px;gap:8px}
+.cp-circle-macro-name{min-width:0;overflow-wrap:anywhere}
+@media(max-width:700px){
+  .cp-circle-zone-head{flex-wrap:wrap}
+  .cp-circle-expand{width:100%;flex-basis:100%}
+  .cp-circle-zone-head>.cp-circle-staffers{width:100%;justify-content:flex-start;padding-left:5px}
+  .cp-circle-zone-body{padding-left:9px;padding-right:9px}
+  .cp-circle-macro{flex-wrap:wrap}
+  .cp-circle-macro>.cp-circle-staffers{width:100%;justify-content:flex-start}
+}
