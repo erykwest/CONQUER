@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceDigest": "b6d654d3bb68d378e17fa2efadaa014f25f237b5010c2c6670dc46cfd44330c7",
+  "sourceDigest": "5317c2fc6cd7211889033c6d5d2b43de78a6d6f48cb2fcae8ceb0cfaa30d7c67",
   "catalog": {
     "schemaVersion": 1,
     "categories": [
@@ -1422,6 +1422,10 @@
             "bell": [
               "none",
               "bell"
+            ],
+            "signalFire": [
+              "none",
+              "pyre"
             ]
           },
           "geometry": {
@@ -2789,23 +2793,10 @@
         },
         "properties": {
           "catalogs": [
-            "castle",
             "townhall"
           ]
         },
         "relations": [
-          {
-            "id": "building:tower",
-            "kind": "candidate-host"
-          },
-          {
-            "id": "building:gate",
-            "kind": "candidate-host"
-          },
-          {
-            "id": "building:built",
-            "kind": "candidate-host"
-          },
           {
             "id": "building:townhall",
             "kind": "candidate-host"
@@ -7119,6 +7110,100 @@
         "properties": {
           "variant": "roofStyle",
           "value": "pitched",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.signalFire.none",
+        "key": "none",
+        "label": "tower · signalFire · none",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.signalFire"
+        },
+        "properties": {
+          "variant": "signalFire",
+          "value": "none",
+          "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.signalFire.pyre",
+        "key": "pyre",
+        "label": "tower · signalFire · pyre",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.signalFire"
+        },
+        "properties": {
+          "variant": "signalFire",
+          "value": "pyre",
           "default": false,
           "kind": "configuration"
         },

@@ -14,9 +14,18 @@
 - **QA / ACCETTAZIONE IN SOSPESO:** regressione Node inserita in Runtime integrity, ancora da verificare in CI e nel browser (salvataggio, priorità concorrenti, UI2, low/no stock, ripresa dei lavori, geometria/assedi).
 
 
-## 2026-11-09 — MIL-RES-01 · Caserma, riserva di soldati, pattuglie, vedette e Avamposto (specifica approvata)
+## 2026-11-09 — MIL-RES-01 · Caserma, riserva di soldati, pattuglie, vedette e Avamposto
 
-**SOLO SPECIFICA, NESSUN CODICE.** Approvata dal product owner il 09/11/2026; l'implementazione parte solo dopo una nuova conferma. Decisione [D-MIL-RES-261109](DECISIONS.md). Sostituisce le voci «Corpo di Guardia» e «Avamposto» del catalogo edifici.
+**IMPLEMENTATO SU BRANCH `feature/caserma-avamposto`, NON MERGE.** Specifica approvata dal product owner il 09/11/2026 (sotto), implementazione confermata lo stesso giorno. Decisione [D-MIL-RES-261109](DECISIONS.md). Sostituisce le voci «Corpo di Guardia» e «Avamposto» del catalogo edifici. Dettagli tecnici e prove in [STATUS](STATUS.md).
+
+- **APERTO (dopo questa tappa):**
+  - Bilanciamento: ingaggio 15 oro, paga L2, avamposto 60 oro / 40 pietra / 20 legno / 4 giorni, pira 30 legno, velocità della staffetta 2,6 U/s.
+  - La ronda segue le strade completate dentro la Yellow Zone: va allineata con le pattuglie assegnate ai settori CIRCLE (#192), oggi sono due modi distinti.
+  - Le unità squadra/capitano di partenza e gli arcieri delle torri non pescano ancora dalla riserva (gli arcieri restano gratuiti).
+  - La vedetta si vede solo sui terrazzi aperti; sotto un tetto a falde sta dentro la stanza in cima.
+  - Ordine pubblico: la guardia cittadina del Municipio e le ronde non alimentano ancora CRIME (C-01).
+  - Spedizioni: `reserveExpedition` / `releaseExpedition` pronte, nessun chiamante finché MARCH non è collegato.
+  - Rintocco udibile della campana e crepitio del fuoco: nessun suono.
 
 1. **Il Corpo di Guardia si fonde nella Caserma.** `guard` esce dal castello (torri, porte, sezioni costruite, `PORTICO_FUNCTIONS`) e resta solo in `TOWNHALL_FUNCTION_CATALOG` come guardia cittadina per CRIME. Aggiornamento distruttivo (fase di test): le stanze `guard` del castello si svuotano al caricamento.
 2. **Una sola riserva di soldati: i posti della Caserma** (`barracks`, 16 per unità di stanza). I soldati sono uomini adulti L1 arruolati dal giocatore fino ai posti liberi; escono dal lavoro L1. Ingaggio **15 oro**, paga giornaliera da **L2** dall'oro del castello (stesso schema di `ConquerInfirmary.pay`). Senza paga non prestano servizio: pattuglie e vedette rientrano. Cibo come oggi (0,22 al giorno).
@@ -181,7 +190,7 @@ BC-251105-03 e BC-251105-10 (edifici addossati alle mura e loro tetto a falda un
 Tutte **DA CONFERMARE dall'utente** prima di qualsiasi codice (effetti, compatibilità, priorità). Nessuna è approvata.
 
 - **Presidio antincendio:** upgrade di Pozzo/Cisterna; secchi e uomini pronti che spengono prima gli incendi nel raggio (sistema fuoco esistente).
-- **Avamposto:** ~~torre isolata che evolve Corpo di guardia e Stazione di posta~~ → **specifica approvata il 09/11/2026, vedi MIL-RES-01** (upgrade delle torri isolate; il Corpo di Guardia si fonde nella Caserma).
+- **Avamposto:** ~~torre isolata che evolve Corpo di guardia e Stazione di posta~~ → **implementato su branch il 09/11/2026, vedi MIL-RES-01** (upgrade delle torri isolate; il Corpo di Guardia si fonde nella Caserma).
 - **Municipio:** funzioni amministrative.
 - **Gilda:** assorbe la Casa delle Corporazioni.
 - **Scriptorium (Chiesa L2):** servono effetti simulati.

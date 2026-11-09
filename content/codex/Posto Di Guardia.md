@@ -8,12 +8,9 @@ aliases: ["Posto di guardia"]
 
 # Posto di guardia
 
-Posto di guardia appartiene alle [[Stanze|stanze]] del [[Fortificazioni|castello]] o degli [[Edifici|edifici]] civici compatibili. L’assegnazione dipende dalla struttura e dal piano; le funzioni disponibili seguono le regole della partita.
+Posto di guardia è la sala della guardia cittadina nel [[Municipio|municipio]], una delle [[Stanze|stanze]] civiche. Nel castello il corpo di guardia è stato fuso nella caserma: i soldati della caserma fanno pattuglie, ronde, vedette e presidi degli avamposti.
 
 ## Collegamenti
 
 - [[Stanze]]
-- [[Torre]]
-- [[Porta Fortificata]]
-- [[Sezione Costruita]]
 - [[Municipio]]

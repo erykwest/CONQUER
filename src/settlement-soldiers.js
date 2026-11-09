@@ -323,7 +323,8 @@
   // The lookout stands on an open deck (a pitched roof hides him inside the top room).
   function lookoutPose(s){
     const slot=(S()?.archerSlots?.(s)||[]).find(x=>x.kind==='roof');if(!slot)return null;
-    const a=(Number(s.angle)||0)+Math.PI/4,off=Math.min(.35,half(s)*.45);
+    // Towards a corner, clear of the pyre (0.3U half side) and inside the parapet.
+    const a=(Number(s.angle)||0)+Math.PI/4,off=Math.max(.2,Math.min(.62,half(s)-.2)*Math.SQRT2*.75);
     return{p:{x:slot.p.x+Math.cos(a)*off,y:slot.p.y+Math.sin(a)*off},z:slot.z};
   }
   function drawLookouts(){
@@ -344,10 +345,11 @@
       const z=(typeof terrainElevation==='function'?terrainElevation(s):0)+structureHeight(s)+.05;
       if(typeof worldPointVisible==='function'&&!worldPointVisible(s,z,60))continue;
       const k=Math.max(0,Math.min(1,(until-now)/FIRE_BURN_MS)),base=w2s({x:s.x,y:s.y},z);
-      const scale=Math.max(2,(State.view?.scale||10)*.9)*(.5+.5*k);
+      // One world unit up, in pixels: the flames are about 1.2U tall at their height, 0.3U wide.
+      const unit=Math.max(3,Math.abs(w2s({x:s.x,y:s.y},z+1).y-base.y)),scale=unit*(.5+.5*k);
       g.save();g.globalCompositeOperation='lighter';
       for(let i=0;i<5;i++){
-        const f=Math.sin(now/90+i*1.7)*.5+.5,h=scale*(2.2+f*1.4),w=scale*(.9-i*.12);
+        const f=Math.sin(now/90+i*1.7)*.5+.5,h=scale*(.8+f*.5),w=scale*(.32-i*.04);
         g.fillStyle=i<2?'rgba(255,214,120,.55)':'rgba(240,120,40,.45)';
         g.beginPath();g.moveTo(base.x-w,base.y);g.quadraticCurveTo(base.x+(f-.5)*w,base.y-h*.6,base.x+(f-.5)*w*.4,base.y-h);
         g.quadraticCurveTo(base.x+(.5-f)*w,base.y-h*.5,base.x+w,base.y);g.closePath();g.fill();
