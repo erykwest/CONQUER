@@ -113,6 +113,9 @@ try{
   const checked=await page.evaluate(()=>{
     const oldStructures=State.structures,oldFounded=State.village.founded,oldWellId=State.village.wellId;
     const oldCombat=window.ConquerCombat.serialize();
+    // A patrol takes two soldiers of the Barracks reserve (MIL-RES-01): give the test a free pair.
+    const oldSoldiers=window.ConquerSoldiers;
+    if(oldSoldiers)window.ConquerSoldiers={...oldSoldiers,free:()=>2,frame:()=>{},summary:()=>({...oldSoldiers.summary(),free:2})};
     try{
       const id='qa-regression-well';
       State.structures=[...oldStructures,{id,type:'well',x:100,y:100,size:1.5,groundZ:0}];
@@ -126,10 +129,11 @@ try{
       const statusText=document.getElementById('combatPatrolCount').textContent;
       document.getElementById('combatPatrolRemove').click();
       return {ok:true,selectionExists:!!document.getElementById('combatSelection'),
-        patrolAdded:active.length===1,patrolVisible:statusText.includes('1 (2 pikemen)'),
+        patrolAdded:active.length===1,patrolVisible:statusText.includes('1 esterne')&&statusText.includes('(2 soldati)'),
         patrolRemoved:!window.ConquerCombat.serialize().units.some(u=>u.kind==='patrol'),
         routeChecked:!!state.units.find(u=>u.kind==='patrol')};
     }finally{
+      if(oldSoldiers)window.ConquerSoldiers=oldSoldiers;
       State.structures=oldStructures;
       State.village.founded=oldFounded;
       State.village.wellId=oldWellId;

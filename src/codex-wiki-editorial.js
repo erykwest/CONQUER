@@ -1,7 +1,7 @@
 // Generated from content/codex/*.md. Do not edit; run node tools/export-codex-content.cjs.
 (function(root){root.ConquerWikiEditorial={
   "schemaVersion": 1,
-  "sourceDigest": "5e1487c7a5d92b579630c49cea74bb5f978b99e16735bf8e9feef337e7727973",
+  "sourceDigest": "76512afd5f20445edc5cdb485e54dddab6c3a3b159fc480e0cdaf5d130a8852b",
   "pages": [
     {
       "id": "building:bridge",
@@ -2510,43 +2510,33 @@
       "blocks": [
         {
           "type": "paragraph",
-          "text": "Posto di guardia appartiene alle [[Stanze|stanze]] del [[Fortificazioni|castello]] o degli [[Edifici|edifici]] civici compatibili. L’assegnazione dipende dalla struttura e dal piano; le funzioni disponibili seguono le regole della partita.",
+          "text": "Posto di guardia è la sala della guardia cittadina nel [[Municipio|municipio]], una delle [[Stanze|stanze]] civiche. Nel castello il corpo di guardia è stato fuso nella caserma: i soldati della caserma fanno pattuglie, ronde, vedette e presidi degli avamposti.",
           "tokens": [
             {
-              "text": "Posto di guardia appartiene alle "
+              "text": "Posto di guardia è la sala della guardia cittadina nel "
+            },
+            {
+              "text": "municipio",
+              "id": "building:townhall"
+            },
+            {
+              "text": ", una delle "
             },
             {
               "text": "stanze",
               "id": "category:room"
             },
             {
-              "text": " del "
-            },
-            {
-              "text": "castello",
-              "id": "topic:fortifications"
-            },
-            {
-              "text": " o degli "
-            },
-            {
-              "text": "edifici",
-              "id": "category:building"
-            },
-            {
-              "text": " civici compatibili. L’assegnazione dipende dalla struttura e dal piano; le funzioni disponibili seguono le regole della partita."
+              "text": " civiche. Nel castello il corpo di guardia è stato fuso nella caserma: i soldati della caserma fanno pattuglie, ronde, vedette e presidi degli avamposti."
             }
           ]
         }
       ],
       "text": [
-        "Posto di guardia appartiene alle stanze del castello o degli edifici civici compatibili. L’assegnazione dipende dalla struttura e dal piano; le funzioni disponibili seguono le regole della partita."
+        "Posto di guardia è la sala della guardia cittadina nel municipio, una delle stanze civiche. Nel castello il corpo di guardia è stato fuso nella caserma: i soldati della caserma fanno pattuglie, ronde, vedette e presidi degli avamposti."
       ],
       "related": [
         "category:room",
-        "building:tower",
-        "building:gate",
-        "building:built",
         "building:townhall"
       ],
       "members": []
@@ -7455,6 +7445,101 @@
       ],
       "text": [
         "Torre · Sommità a falde appartiene ai miglioramenti delle fortificazioni. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:tower"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:tower.signalFire.none",
+      "kind": "entry",
+      "title": "Torre · Fuoco di segnalazione nessuno",
+      "aliases": [
+        "Torre · Fuoco di segnalazione nessuno"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Torre|Torre]] · Fuoco di segnalazione nessuno appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata.",
+          "tokens": [
+            {
+              "text": "Torre",
+              "id": "building:tower"
+            },
+            {
+              "text": " · Fuoco di segnalazione nessuno appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ". Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Torre · Fuoco di segnalazione nessuno appartiene ai miglioramenti delle fortificazioni. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:tower"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:tower.signalFire.pyre",
+      "kind": "entry",
+      "title": "Torre · Fuoco di segnalazione pira",
+      "aliases": [
+        "Torre · Fuoco di segnalazione pira",
+        "Fuoco di segnalazione"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Torre|Torre]] · Fuoco di segnalazione pira appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]. È una pira grande sul terrazzo merlato di una torre in pietra senza macchine da guerra: passa l'allarme a catena come la campana, con un raggio tre volte maggiore, ma brucia una volta sola e poi va ricostruita con 30 legno. Serve soprattutto all'avamposto, per avvisare il castello da lontano.",
+          "tokens": [
+            {
+              "text": "Torre",
+              "id": "building:tower"
+            },
+            {
+              "text": " · Fuoco di segnalazione pira appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ". È una pira grande sul terrazzo merlato di una torre in pietra senza macchine da guerra: passa l'allarme a catena come la campana, con un raggio tre volte maggiore, ma brucia una volta sola e poi va ricostruita con 30 legno. Serve soprattutto all'avamposto, per avvisare il castello da lontano."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Torre · Fuoco di segnalazione pira appartiene ai miglioramenti delle fortificazioni. È una pira grande sul terrazzo merlato di una torre in pietra senza macchine da guerra: passa l'allarme a catena come la campana, con un raggio tre volte maggiore, ma brucia una volta sola e poi va ricostruita con 30 legno. Serve soprattutto all'avamposto, per avvisare il castello da lontano."
       ],
       "related": [
         "category:upgrade",
