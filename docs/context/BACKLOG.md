@@ -1,5 +1,19 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-08 — STONECOLOR · Verifica a cascata delle dipendenze
+
+- **CODICE COLLEGATO:** modelli litici principali e sub-asset (case, civici e cimiteri, torri/mura, cantieri, scalinate, rampe, ponti, cave/miniere, massi/sassi di fiume, coste/reef, banchine, interni/cutaway) e relative chiavi di cache. Assenti copie per palette delle mesh e dei registri Blender.
+- **GUARDIA DI MATERIALI:** le palette dei modelli sono interpretate per ruolo `stone*/rock*/paving`, non come tutti i grigi. Esclusi clay/brick, legno, acqua, neve, tetti, muschio, alghe e metallo.
+- **APERTO PER CHIUSURA:** esecuzione completa della CI sull'ultimo commit e verifica visiva di cinque colori su Canvas e World3D, con LOD, inverno, cutaway, costruzione e modifiche da Profilo. Nessuna dichiarazione di copertura completa basata soltanto sui test statici.
+
+
+## 2026-11-08 — STONECOLOR · Materiali litici per mappa
+
+- **PALETTE APPROVATE:** Grigio attuale, Arenaria (beige mineralizzato, distinta dalla terracotta Clay), Tufo ocra, Calcare bianco-grigio, Granito grigio scuro. Cinque tonalità coordinate luce → ombra profonda per ciascuna.
+- **IN BRANCH `feature/stonecolor`:** selezione casuale deterministica al nuovo seed, Profilo → Ambiente, persistenza locale/cloud, integrazione colore per murature, ripidi pendii, rocce, montagne, coste/reef, pietre scatter, cava di pietra, banchine; riuso dei modelli esistenti.
+- **DA VALIDARE:** test GitHub Actions e confronto visivo nei due renderer per giorno/notte, inverno, stili clay/brick, cutaway e Asset Lab; censimento di qualunque modulo ancora con colori litici hard-coded. Non fare merge solo sulla base dei test statici.
+- **FUORI SCOPE:** nuove risorse tipo arenaria/tufo/calcare/granito, biome lock, durabilità diversa, texture aggiuntive o copie degli asset.
+
 ## 2026-11-08 — Palette Job Manager / Trade nel Profilo (branch `feature/profile-job-trade-tabs-20261108`)
 
 - **IMPLEMENTATO SU BRANCH:** aggiunte due schede di primo livello accanto a Generale, Araldica e Centro di Controllo, senza replicare ledger, roster o simulatori.

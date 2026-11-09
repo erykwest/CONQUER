@@ -1,5 +1,19 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-08 — STONECOLOR · Audit dipendenze e sottodipendenze
+
+- **CORRETTO SU BRANCH:** coda dei materiali litici collegata ai registri semantici nei modelli Blender di case, edifici civici e relative pavimentazioni, cave di pietra e mine, costruttori, scatter fluviali/costieri, ponti in pietra, scale da camminamento, rampe e gradini, arredi e pavimenti dei cutaway. Le rampe cromatiche condivise restano cinque; legno, argilla, tetti, muschio e alghe mantengono le tinte originarie.
+- **CACHE:** nuova famiglia inclusa nelle firme di case 3D, civici e cimiteri, cutaway, manufatti/cantieri, ponti, rampe, banchine, costa, scatter, World3D e composite del castello. Unione mura Canvas disegnata in esplicito contesto litico. Script URL invalidati con revisione stonecolor2.
+- **QUALITY GATE:** ampliata la regressione dedicata alla dipendenza dei moduli e ai ruoli degli asset; corretta la scoping del tint di cutaway; rigenerato digest del catalogo Wiki dopo modifica agli attraversamenti. **Prova visiva end-to-end e risultati dell'ultima CI ancora da verificare prima di dichiarare copertura totale e merge.**
+
+
+## 2026-11-08 — STONECOLOR · Cinque famiglie di pietra approvate (branch `feature/stonecolor`)
+
+- **IMPLEMENTATO SU BRANCH:** `src/settlement-stonecolor.js` conserva cinque ramp cromatiche approvate (grigio, arenaria, tufo, calcare, granito). La nuova mappa sceglie una famiglia pseudocasuale tramite il suo seed, e la palette resta stabile ai reload. Per salvataggi legacy senza campo, fallback grigio attuale.
+- **UI:** Profilo → Ambiente seleziona in ogni momento la famiglia, aggiornando immediatamente la mappa. La scelta si salva localmente e nel campo `policies.stonePaletteId` del payload cloud. Nessun nuovo materiale costruttivo: pietra e argilla/mattoni mantengono costi e HP.
+- **GRAFICA:** tinte per murature, scarpate, rocce, montagne, coste rocciose/reef, blocchi della cava, stone scatter, banchine; gli asset originali (e le mesh/pose) non sono duplicati. Include chiavi palette nelle cache World3D e nelle mesh cached di costa/banchina, e cache bust degli script.
+- **QA:** `qa/stonecolor-regression.cjs` integrata in Runtime integrity; esito Actions, verifica in-game WebGL2/Canvas, Asset Lab e audit di tutte le parti minerali **non ancora certificati**. Non dichiarare feature integrata in `main` finché CI e controllo grafico non passano.
+
 ## 2026-11-08 — Palette Job Manager / Trade nel Profilo (branch `feature/profile-job-trade-tabs-20261108`)
 
 - **IMPLEMENTATO SU BRANCH:** aggiunte due schede di primo livello accanto a Generale, Araldica e Centro di Controllo, senza replicare ledger, roster o simulatori.

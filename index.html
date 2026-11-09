@@ -28,7 +28,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+SC:wght@500;700&family=Alegreya+Sans:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="./src/ui/theme.css?v=ui2-6">
-<link rel="stylesheet" href="./src/settlement-panels.css?v=panels-4">
+<link rel="stylesheet" href="./src/settlement-panels.css?v=panels-4-stonecolor2">
 <link rel="stylesheet" href="./src/codex-host.css?v=wiki-1">
 </head>
 <body>
@@ -163,12 +163,13 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
   <div id="profileOverlay" class="profile-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="profileTitle">
     <section class="profile-window">
       <div class="profile-titlebar"><h2 id="profileTitle">PROFILE <small>· Partita corrente</small></h2><button type="button" id="profileClose" aria-label="Chiudi">✕</button></div>
-      <nav class="profile-tabs" aria-label="Profilo partita"><button type="button" class="active" data-profile-tab="general">GENERALE</button><button type="button" data-profile-tab="heraldry">ARALDICA</button><button type="button" data-profile-tab="jobs">JOB MANAGER</button><button type="button" data-profile-tab="trade">TRADE</button><button type="button" data-profile-tab="control">CENTRO DI CONTROLLO</button><button type="button" id="profileCodexBtn" aria-haspopup="dialog">CODEX / WIKI</button></nav>
+      <nav class="profile-tabs" aria-label="Profilo partita"><button type="button" class="active" data-profile-tab="general">GENERALE</button><button type="button" data-profile-tab="heraldry">ARALDICA</button><button type="button" data-profile-tab="environment">AMBIENTE</button><button type="button" data-profile-tab="jobs">JOB MANAGER</button><button type="button" data-profile-tab="trade">TRADE</button><button type="button" data-profile-tab="control">CENTRO DI CONTROLLO</button><button type="button" id="profileCodexBtn" aria-haspopup="dialog">CODEX / WIKI</button></nav>
       <section class="profile-section" id="profileGeneral">
         <h3>DATI DELLA PARTITA</h3>
         <div class="profile-facts"><div>Insediamento <strong id="profileVillage">—</strong></div><div>Seed <strong id="profileSeed">—</strong></div><div>Bioma <strong id="profileBiome">—</strong></div><div>Giorno <strong id="profileDay">—</strong></div><div>Cella mondo <strong>0, 0</strong></div></div>
         <p class="profile-help">Questi dati appartengono alla partita, non all'account del giocatore.</p>
       </section>
+      <section class="profile-section" id="profileEnvironment" hidden><h3>PIETRA DEL TERRITORIO</h3><p class="profile-help">La pietra è scelta casualmente quando generi una nuova mappa. La modifica è globale, solamente estetica e si salva con la partita.</p><div id="stonecolorChoices" class="stonecolor-choices" role="group" aria-label="Tonalità della pietra"></div></section>
       <section class="profile-section" id="profileControl" hidden><nav id="controlNav" class="cp-nav" role="tablist" aria-label="Settori della gestione dell’insediamento"></nav><div id="controlBody" class="cp-body" aria-live="off"></div></section>
       <section class="profile-section" id="profileHeraldry" hidden>
         <div class="heraldry-editor">
@@ -354,18 +355,19 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
   <div id="status">Select a build tool</div>
 </div>
 <!-- Ordered classic modules: shared global lexical runtime, no build step. -->
-<script src="./src/settlement-core.js?v=slopes-merge-1-wc1-hoard1-hardening2-dove1-bell1-portico6-longhouse1-mare"></script>
+<script src="./src/settlement-core.js?v=slopes-merge-1-wc1-hoard1-hardening2-dove1-bell1-portico6-longhouse1-mare-stonecolor1"></script>
+<script src="./src/settlement-stonecolor.js?v=stonecolor1-stonecolor2"></script>
 <script src="./src/settlement-tower-shapes.js?v=dee-slits-1"></script>
 <script src="./src/settlement-civic-annexes.js?v=civil-annex-1-wc1"></script>
 <script src="./src/assets/civic-models.js?v=civic3d-1-wc1"></script>
 <script src="./src/settlement-mesh3d.js?v=normals-1"></script>
-<script src="./src/settlement-civic3d.js?v=civic3d-1-wc1-floors1-court2-p0"></script>
+<script src="./src/settlement-civic3d.js?v=civic3d-1-wc1-floors1-court2-p0-stonecolor2"></script>
 <script src="./src/assets/event-models.js?v=army-camp-1"></script>
 <script src="./src/settlement-events3d.js?v=army-camp-1"></script>
-<script src="./src/settlement-quay.js?v=quay-berth-1"></script>
-<script src="./src/settlement-slopeways.js?v=slopeways-2"></script>
+<script src="./src/settlement-quay.js?v=quay-berth-1-stonecolor1"></script>
+<script src="./src/settlement-slopeways.js?v=slopeways-2-stonecolor2"></script>
 <script src="./src/assets/waterside-models.js?v=waterside1"></script>
-<script src="./src/settlement-coast.js?v=waves2"></script>
+<script src="./src/settlement-coast.js?v=waves2-stonecolor1-stonecolor2"></script>
 <script src="./src/settlement-gulls.js?v=gulls1"></script>
 <script src="./src/settlement-pier.js?v=devpier1-moli1"></script>
 <script src="./src/assets/shipyard-models.js?v=yard5"></script>
@@ -384,29 +386,29 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/settlement-events-joust.js?v=joust-2"></script>
 <script src="./src/settlement-webgpu.js?v=webgpu-2"></script>
 <script src="./src/settlement-world.js?v=bridge-magnet-1-wc1-mare"></script>
-<script src="./src/settlement-castle.js?v=stair-hl-1-floors1-longhouse2-mare"></script>
-<script src="./src/settlement-terraforming.js?v=terraform-blockers-flat-cut-1"></script>
-<script src="./src/settlement-landscape.js?v=refactor-1-mare-autumn1-bark1"></script>
+<script src="./src/settlement-castle.js?v=stair-hl-1-floors1-longhouse2-mare-stonecolor2"></script>
+<script src="./src/settlement-terraforming.js?v=terraform-blockers-flat-cut-1-stonecolor2"></script>
+<script src="./src/settlement-landscape.js?v=refactor-1-mare-autumn1-bark1-stonecolor1"></script>
 <script src="./src/settlement-castle-placement.js?v=small-gate-1-longhouse1-mare"></script>
 <script src="./src/settlement-castle-structures.js?v=tower-hoarding-2-dove1-bell1-longhouse1-mare"></script>
 <script src="./src/settlement-buildings.js?v=wood3d-4-wc1"></script>
-<script src="./src/settlement-urban.js?v=case-l4-4"></script>
+<script src="./src/settlement-urban.js?v=case-l4-4-stonecolor2"></script>
 <script src="./src/settlement-fields.js"></script>
 <script src="./src/settlement-boundaries.js?v=bark1"></script>
-<script src="./src/settlement-industries.js?v=industry-1"></script>
+<script src="./src/settlement-industries.js?v=industry-1-stonecolor1"></script>
 <script src="./src/assets/industry-models.js?v=ind-1"></script>
 <script src="./src/settlement-mesh3d.js?v=normals-1"></script>
-<script src="./src/settlement-industries3d.js?v=ind-1"></script>
+<script src="./src/settlement-industries3d.js?v=ind-1-stonecolor1-stonecolor2"></script>
 <script src="./src/assets/construction-models.js?v=cantiere-case-3"></script>
-<script src="./src/settlement-construction-props.js?v=dee-scaffold-1"></script>
-<script src="./src/settlement-construction-assembly.js?v=wood3d-3-longhouse1-mare"></script>
+<script src="./src/settlement-construction-props.js?v=dee-scaffold-1-stonecolor2"></script>
+<script src="./src/settlement-construction-assembly.js?v=wood3d-3-longhouse1-mare-stonecolor2"></script>
 <script src="./src/settlement-placement.js?v=wall-slopes-1-wc1-mare"></script>
 <script src="./src/settlement-collapse.js?v=collapse-1"></script>
 <script src="./src/settlement-siege.js?v=keep-entrance-2-circle3-hoard1-p0-infirmary1-dove1-portico6-prepared1"></script>
 <script src="./src/settlement-infirmary.js?v=infirmary-1"></script>
 <script src="./src/settlement-earthworks.js?v=knights2d-1"></script>
 <script src="./src/settlement-fire.js?v=keep-entrance-2-hoard1"></script>
-<script src="./src/settlement-crossings.js?v=drawbridge-window-mask-v5"></script>
+<script src="./src/settlement-crossings.js?v=drawbridge-window-mask-v5-stonecolor2-stonecolor2"></script>
 <script src="./src/settlement-gate-fittings.js?v=timber-gate-2"></script>
 <script src="./src/settlement-keep-entrance.js?v=keep-entrance-4"></script>
 <script src="./src/settlement-population.js"></script>
@@ -430,10 +432,10 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/settlement-sound.js?v=sound-2"></script>
 <script src="./src/settlement-sound-bridge.js?v=sound-2"></script>
 <script src="./src/settlement-ambient-light.js?v=ambient-light-1"></script>
-<script src="./src/settlement-render.js?v=keep-entrance-2-floors1-court1-longhouse2-mare"></script>
+<script src="./src/settlement-render.js?v=keep-entrance-2-floors1-court1-longhouse2-mare-stonecolor2"></script>
 <script src="./src/assets/hoarding-models.js?v=tower-hoarding-2"></script>
 <script src="./src/assets/wall-stair-models.js?v=wall-stairs-1"></script>
-<script src="./src/settlement-wall-stairs.js?v=wall-stairs-1"></script>
+<script src="./src/settlement-wall-stairs.js?v=wall-stairs-1-stonecolor2"></script>
 <script src="./src/assets/belfry-models.js?v=bell1"></script>
 <script src="./src/assets/mews-models.js?v=mews1"></script>
 <script src="./src/assets/dovecote-models.js?v=dovecote-1"></script>
@@ -442,14 +444,14 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/settlement-castle3d.js?v=tower-hoarding-2-dove1-bell1-portico6"></script>
 <script src="./src/settlement-wagons3d.js?v=scatter-1"></script>
 <script src="./src/assets/scatter-model.js?v=riverbank1"></script>
-<script src="./src/settlement-scatter.js?v=riverbank1"></script>
+<script src="./src/settlement-scatter.js?v=riverbank1-stonecolor1-stonecolor2"></script>
 <script src="./src/assets/furniture-model.js?v=cutaway-furniture-1-infirmary1-dove1"></script>
-<script src="./src/settlement-cutaway-furniture.js?v=small-gate-1-floors1-infirmary1-dove1-portico6"></script>
+<script src="./src/settlement-cutaway-furniture.js?v=small-gate-1-floors1-infirmary1-dove1-portico6-stonecolor2"></script>
 <script src="./src/assets/wood-fort-models.js?v=wood3d-6-longhouse1"></script>
 <script src="./src/settlement-wood3d.js?v=wood3d-6-bell1-longhouse2"></script>
 <script src="./src/assets/house-models.js?v=house3d-1"></script>
-<script src="./src/settlement-house3d.js?v=house3d-1"></script>
-<script src="./src/settlement-world3d.js?v=keep-entrance-1-wc1-floors1-house3d-portico6-longhouse2-mare-autumn1"></script>
+<script src="./src/settlement-house3d.js?v=house3d-1-stonecolor2"></script>
+<script src="./src/settlement-world3d.js?v=keep-entrance-1-wc1-floors1-house3d-portico6-longhouse2-mare-autumn1-stonecolor1-stonecolor2"></script>
 <script src="./src/settlement-assets.js"></script>
 <script src="./src/settlement-facade-polish.js?v=portico6-mare"></script>
 <script src="./src/settlement-economy.js?v=economy-commerce-1-yard1"></script>
@@ -458,7 +460,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/settlement-urban-economy.js?v=economy-commerce-1"></script>
 <script src="./src/settlement-market-economy.js?v=economy-commerce-1"></script>
 <script src="./src/settlement-commerce.js?v=economy-commerce-1-seaconvoy1"></script>
-<script src="./src/settlement-shop-cutaway.js?v=shop-cutaway-1"></script>
+<script src="./src/settlement-shop-cutaway.js?v=shop-cutaway-1-stonecolor2"></script>
 <script src="./src/settlement-convoys.js?v=economy-convoys-1-seaconvoy1"></script>
 <script src="./src/settlement-wagons.js?v=economy-convoys-1"></script>
 <script src="./src/settlement-vehicles.js?v=economy-vehicles-1-haulage1"></script>
@@ -470,8 +472,8 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/settlement-structure-commands.js?v=keep-entrance-3-wc1-hoard1-floors1-bell1-longhouse1-mare"></script>
 <script src="./src/settlement-cutaway-floors.js?v=floors1"></script>
 <script src="./src/settlement-app-input.js?v=small-gate-1-wc1-longhouse1-mare"></script>
-<script src="./src/settlement-app-persistence.js?v=keep-entrance-1-wc1-longhouse1-mare"></script>
-<script src="./src/settlement-app-calendar-ui.js?v=economy-labour-1-autumn1"></script>
+<script src="./src/settlement-app-persistence.js?v=keep-entrance-1-wc1-longhouse1-mare-stonecolor1"></script>
+<script src="./src/settlement-app-calendar-ui.js?v=economy-labour-1-autumn1-stonecolor1"></script>
 <script src="./src/settlement-app-simulation.js?v=economy-convoys-1-wc1-circle3"></script>
 <script src="./src/settlement-circle.js?v=circle-2"></script>
 <script src="./src/settlement-lod.js?v=lod-1"></script>
@@ -489,7 +491,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/settlement-combat.js?v=zones-hd-off-1-keep-entrance-4-wc1-circle3-render-split1-bell1-shipcmd1-moli1"></script>
 <script src="./src/heraldry-symbols.js"></script>
 <script src="./src/heraldry-shapes.js"></script>
-<script src="./src/settlement-heraldry.js?v=profile-jobs-trade-1"></script>
+<script src="./src/settlement-heraldry.js?v=profile-jobs-trade-stonecolor2"></script>
 <script src="./src/ui/game-api.js?v=economy-convoys-1"></script>
 <script src="./src/settlement-builder-ux.js?v=army-camp-2-longhouse1"></script>
 <script src="./src/assets/siege-engines-model.js?v=siege-2"></script>

@@ -40,10 +40,12 @@
   // turn to light brick, slate courses and ridge to dark tile, instead of staying grey on brick.
   const CLAY_ALIAS={stoneTrim:'#9a8e82',step:'#887d72',roofCourse:'#303236',roofRidge:'#303236'};
   function kitPalette(){
-    const data=DATA(),winter=State.season==='winter',clay=tint(STONE[0])!==STONE[0];
+    // Stone recoloring must not be mistaken for a clay/brick material change.
+    const data=DATA(),winter=State.season==='winter',clay=State.visualPalette==='clay'||(typeof structureVisualMaterial!=='undefined'&&structureVisualMaterial==='brick');
     return data.palette.map((hex,i)=>{
       const k=data.paletteKeys[i];
       if(winter&&k.startsWith('roof'))return tint(WINTER[/Dark$|Ridge$|Course$/.test(k)?1:0]);
+      if(!clay&&['stone','stoneDark','stoneTrim','step'].includes(k))return window.ConquerStoneColor?.shade(hex)||hex;
       return tint(clay&&CLAY_ALIAS[k]||hex);
     });
   }
@@ -253,7 +255,7 @@
   function geometry(house){
     const entry=urbanHouseGeometry().find(e=>e.house.id===house.id);if(!entry)return null;
     const urban=typeof urbanRevision!=='undefined'?urbanRevision:0;
-    const key=[house.x,house.y,house.angle||0,house.w,house.h,house.doorSide,urban,State.season,State.visualPalette,
+    const key=[house.x,house.y,house.angle||0,house.w,house.h,house.doorSide,urban,State.season,State.visualPalette,State.stonePaletteId,
       typeof masonryMaterial==='function'?masonryMaterial(house):'stone',!!DATA()].join('|');
     const hit=cache.get(house.id);if(hit&&hit.key===key)return hit.mesh;
     const mesh=withStructureVisualMaterial(house,()=>build(house,entry));

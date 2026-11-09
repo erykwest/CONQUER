@@ -77,7 +77,7 @@ function getSteepSlopePattern(winter=false){
 function drawSteepSlopeSurface(poly,winter=false){
   if(!poly?.length)return;
   const base=winter?'#969ca0':'#6f7477';
-  pathPolygon(poly,base,winter?'rgba(205,211,214,.55)':'rgba(190,196,197,.32)',.8);
+  pathPolygon(poly,window.ConquerStoneColor?.shade(base)||base,winter?'rgba(205,211,214,.55)':'rgba(190,196,197,.32)',.8);
   const pattern=getSteepSlopePattern(winter);if(!pattern)return;
   let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
   for(const p of poly){minX=Math.min(minX,p.x);minY=Math.min(minY,p.y);maxX=Math.max(maxX,p.x);maxY=Math.max(maxY,p.y)}
@@ -143,8 +143,9 @@ function drawGentleSlopeBand(band,winter){
 function drawLowPolyRock(p,z,size,height,seed,winter=false){
   if(!screenPointVisibleRaw(p,z,36))return;
   const tier=landscapeDetailTier(),rnd=seedRand(seed>>>0);
-  const sidePalette=winter?['#8b9092','#9ca1a2','#777d80','#a8acad']:['#5e6263','#727677','#505455','#838787'];
-  const topPalette=winter?['#b4b8b9','#a8adae','#c0c3c4']:['#8a8e8d','#989b99','#777b7a'];
+  const palette=colors=>colors.map(hex=>window.ConquerStoneColor?.shade(hex)||hex);
+  const sidePalette=palette(winter?['#8b9092','#9ca1a2','#777d80','#a8acad']:['#5e6263','#727677','#505455','#838787']);
+  const topPalette=palette(winter?['#b4b8b9','#a8adae','#c0c3c4']:['#8a8e8d','#989b99','#777b7a']);
 
   if(tier===0){
     const base=w2sRaw(p,z+.01),top=w2sRaw(p,z+height*.75),px=Math.max(1.25,size*U*State.view.scale*.78);
@@ -328,7 +329,8 @@ function mountainFaceColor(f,a,b,i){
   const mx=(a.x+b.x)/2-f.x,my=(a.y+b.y)/2-f.y,L=Math.hypot(mx,my)||1;
   const t=clamp((mx/L*MOUNTAIN_LIGHT.x+my/L*MOUNTAIN_LIGHT.y+1)/2+(i%2?.035:-.035),0,1);
   const c=MOUNTAIN_DARK.map((d,k)=>Math.round(d+(MOUNTAIN_LIT[k]-d)*t));
-  return'#'+c.map(v=>v.toString(16).padStart(2,'0')).join('');
+  const hex='#'+c.map(v=>v.toString(16).padStart(2,'0')).join('');
+  return window.ConquerStoneColor?.shade(hex)||hex;
 }
 // Snow above 50% and pines below 25% of the TALLEST summit's height: one snow line and one
 // tree line for the whole map, so lower summits may have no snow at all.

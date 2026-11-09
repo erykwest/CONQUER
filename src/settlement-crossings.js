@@ -306,7 +306,7 @@
   const bridgeCache=new Map();
   function bridgeMesh(s){
     if(!xy(s))return null;
-    const key=s.id+':'+s.a.x+','+s.a.y+':'+s.b.x+','+s.b.y+':'+s.width+':'+s.variant+':'+(underConstruction(s)?1:0);
+    const key=s.id+':'+s.a.x+','+s.a.y+':'+s.b.x+','+s.b.y+':'+s.width+':'+s.variant+':'+(underConstruction(s)?1:0)+':'+State.stonePaletteId;
     let m=bridgeCache.get(s.id);if(m&&m.key===key)return m;
     const f=frame(s),w=f.width/2,top=(Number(s.groundZ)||0)+.09,stone=s.variant==='stone',pos=[],col=[];
     const P=(along,across,z)=>{const p=point(s,along,across);return[p.x,p.y,z]};
@@ -315,7 +315,7 @@
       for(const [i,j,k,l] of [[0,2,6,4],[1,5,7,3],[0,4,5,1],[2,3,7,6],[0,1,3,2],[4,6,7,5]])
         for(const tri of [[i,j,k],[i,k,l]]){for(const q of tri)pos.push(...v[q]);col.push(colr)}
     };
-    const deck=stone?'#9c9b92':'#986e42',dark=stone?'#78766d':'#6f4a2b';
+    const deck=stone?(window.ConquerStoneColor?.shade('#9c9b92')||'#9c9b92'):'#986e42',dark=stone?(window.ConquerStoneColor?.shade('#78766d')||'#78766d'):'#6f4a2b';
     box(0,f.L,-w,w,top-.1,top,deck);
     if(stone)for(const side of [-1,1])box(0,f.L,side*w-(side>0?.12:0),side*w+(side<0?.12:0),top,top+.25,dark);
     else for(const side of [-1,1]){
@@ -524,8 +524,9 @@
   function drawBridge(s){
     const z=(Number(s.groundZ)||0)+.09,f=frame(s),width=f.width;
     const poly=corners(s);
-    pathPolygon(poly.map(p=>w2s(p,z)),s.variant==='stone'?'#9c9b92':'#986e42',
-      s.variant==='stone'?'#5c5b53':'#50361e',1);
+    const tint=hex=>s.variant==='stone'?(window.ConquerStoneColor?.shade(hex)||hex):hex;
+    pathPolygon(poly.map(p=>w2s(p,z)),tint(s.variant==='stone'?'#9c9b92':'#986e42'),
+      tint(s.variant==='stone'?'#5c5b53':'#50361e'),1);
     const across=(-width/2);
     if(s.variant==='wood'){
       for(let v=.25;v<f.L;v+=.35){
@@ -541,7 +542,7 @@
       for(const side of [-1,1]){
         const a=w2s(point(s,0,side*width/2),z+.24),b=w2s(point(s,f.L,side*width/2),z+.24);
         ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
-        ctx.strokeStyle='#78766d';ctx.lineWidth=3.4;ctx.stroke();
+        ctx.strokeStyle=window.ConquerStoneColor?.shade('#78766d')||'#78766d';ctx.lineWidth=3.4;ctx.stroke();
       }
     }
   }

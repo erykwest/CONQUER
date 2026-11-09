@@ -1,5 +1,14 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-VIS-STONECOLOR-261108 — Pietra coerente per mappa (08/11/2026)
+
+- **APPROVATO DAL PRODUCT OWNER:** scelta casuale iniziale fra Grigio attuale, Arenaria, Tufo, Calcare e Granito; successiva modifica da **Profilo → Ambiente** con applicazione globale agli elementi realmente litici.
+- **5 GRADIENTI OBBLIGATORI:** per ogni famiglia luce, sommità, mezzotono, ombra e fessura. Colori esatti nella [scheda approvata](../STONECOLOR-PALETTE-VALIDATION.md). Arenaria beige desaturata e minerale: deve restare distinguibile dal Clay rosso/terracotta delle murature e dalle cave di argilla.
+- **SEMANTICA E PERSISTENZA:** famiglia pietra è un aspetto di mappa, non una tipologia di risorsa/costruzione; random deterministico dal seed e stabile in salvataggio locale/cloud. Vecchi salvataggi privi di palette rimangono in grigio.
+- **ESCLUSIONI:** legno, brick/clay, acqua, neve, tetti, metallo, vegetazione. Rimangono invariate economia, integrità, collider, geometrie e logistica. Nessuna nuova collezione di SVG/mesh per ogni colore.
+- **STATO:** implementazione su `feature/stonecolor`, non automaticamente consegnata su main; passaggio CI e validazione visiva necessari.
+
+
 ## D-VIS-AUTUMN-261107 — Progressione autunnale delle chiome (07/11/2026)
 
 - **DECISO, CODICE SU BRANCH `autumn`:** la chioma degli alberi decidui non passa in un colpo al marrone: dal 1° settembre al 30 novembre cambia gradualmente di aspetto attraverso toni verde/giallo-verde, giallo, oro, arancione, rosso e marrone. Posizione degli alberi e seed producono un anticipo/ritardo stabile della fase, senza sincronizzazione di tutta la foresta.

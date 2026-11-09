@@ -206,8 +206,9 @@ function timberTint(color){
 function visualPaletteColor(color){
   if(typeof color!=='string')return color;
   if(structureVisualMaterial==='timber'&&typeof timberTint==='function')return timberTint(color);
-  return (State.visualPalette==='clay'||structureVisualMaterial==='brick')
-    ?CLAY_VISUAL_SWATCHES[color.toLowerCase()]||color:color;
+  if(State.visualPalette==='clay'||structureVisualMaterial==='brick')return CLAY_VISUAL_SWATCHES[color.toLowerCase()]||color;
+  if(structureVisualMaterial==='stone'&&typeof window!=='undefined')return window.ConquerStoneColor?.masonry(color)||color;
+  return color;
 }
 // DEV VISUAL PALETTE END
 const STRUCTURE_ANGLE_STEP_DEG=15;

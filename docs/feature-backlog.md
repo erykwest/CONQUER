@@ -1,5 +1,13 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+## STONECOLOR — Palette pietra per territorio (approvata 08/11/2026)
+
+- `feature/stonecolor`: 5 palette (grigio attuale, arenaria, tufo, calcare, granito), ciascuna con cinque toni di luce/ombra definiti in [STONECOLOR-PALETTE-VALIDATION.md](STONECOLOR-PALETTE-VALIDATION.md).
+- Nuova mappa → scelta casuale stabile; Profilo → Ambiente → cambio estetico globale; salvataggio locale e cloud.
+- Componenti litici (castello, edifici, scarpate, rocce, costa, scogli, cave/scatter, banchine); esclusione argilla/mattoni e di oggetti non minerali. Reimpiego asset/mesh, niente trasformazioni costi o HP.
+- QA/CI e confronto visuale Canvas e World3D da verificare prima del merge.
+
+
 ## 2026-11-06 — L1 Carrettieri per Piazzale e Mercato (branch `feature/l1-carter-jobs-market-20261106`, prima del merge)
 
 - **LAVORO REALE:** professione Carrettiere in `ConquerEconomy.laborAllocation`: fino a un occupato per magazzino con carichi raggiungibili, dopo i produttori essenziali e prima dei costruttori. `jobSummary.carter`, grafici e storico settimanale. Ogni lavoratore L1 non è né inattivo né costruttore né il personaggio due volte disegnato durante la guida. Orari per nuove partenze nei feriali, stop durante allarme; carri fermi senza personale disponibile, produzione invariata.

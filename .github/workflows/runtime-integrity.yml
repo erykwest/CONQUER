@@ -38,6 +38,8 @@ jobs:
         run: node qa/autumn-foliage-regression.cjs
       - name: Tree and bush bark colour regression
         run: node qa/tree-bark-regression.cjs
+      - name: Stone colour palette and semantic rendering regression
+        run: node qa/stonecolor-regression.cjs
       - name: Preserve saves and DEV-only resource floor
         run: node qa/save-safety-regression.cjs
 

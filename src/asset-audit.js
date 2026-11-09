@@ -353,5 +353,6 @@
       panel(report);
     }finally{runButton.disabled=false}
   });
-  window.ConquerAssetAudit={catalog,inspect,run,sheet,baseline,distance,get last(){return lastReport}};
+  window.ConquerAssetAudit={catalog,inspect,run,sheet,baseline,distance,
+    invalidate(){lastReport=null},get last(){return lastReport}};
 })();
