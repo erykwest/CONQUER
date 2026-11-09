@@ -128,7 +128,7 @@ const transferCode=combatSource.slice(transferStart,transferEnd);
   assert.equal(combat.units[0].target,null,'old White Zone route is cleared');
   assert.equal(transfer('circle-1',1),false,'cannot allocate more than available reserve');
   assert.equal(transfer('circle-1',-1),true,'withdraw a patrol from the sector');
-  assert.equal(combat.units[0].circleSectorId,null);
+  assert.equal(combat.units.filter(u=>!u.circleSectorId).length,1,'one existing patrol returned to the White Zone');
   assert.equal(transfer('circle-99',1),false,'reject unknown sector');
   assert.equal(changes,6,'persist and refresh on successful transfer only');
 }
