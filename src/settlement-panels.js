@@ -28,7 +28,7 @@
   const HISTORY_WEEKS = 26;
 
   // UI selection survives re-renders and reopening the tab.
-  const ui = {tab:'general',mode:'control',priceGood:'food',site:'all'};
+  const ui = {tab:'general',mode:'control',priceGood:'food',site:'all',jobTier:'L1',militaryTab:'overview'};
 
   // ---- Building blocks -------------------------------------------------------
   const card = (title,body,foot='',wide=false) =>
@@ -139,6 +139,7 @@
       logistics:game?.logistics?.(),
       defense:game?.defense?.(),
       knights:game?.knights?.(),
+      militaryAssignments:game?.militaryAssignments?.(),
       diplomacy:window.ConquerDiplomacy?.state?.(),
       sites:(State.structures||[]).filter(s=>s.construction && typeof underConstruction==='function' && underConstruction(s))
     };
@@ -216,49 +217,75 @@
       card('Mercato, prezzi e vendite',market,'La domanda esterna non viene generata automaticamente.',true)
     ]);
   }
-  // Dedicated entry to the existing automatic labor allocation, not a second roster.
-  function jobs(d) {
-    const e=d.economy||{}, j=e.jobs||{}, p=population(d), work=JOBS.map(([k,label])=>[label,j[k]]);
-    const activity=e.activities||[];
-    const sites=activity.length ? table(['Attività','Occupati','Proprietà'],activity.map(a=>[
-      '<th>'+esc(a.type)+'</th>','<td>'+fmt(a.workers)+'</td>',
+
+  // Two independent job subpalettes, sharing a single editable queue renderer.
+  function jobTierNav(){
+    return '<nav class="cp-subnav" role="tablist" aria-label="Classi lavoratori">'+
+      ['L1','L2'].map(t=>'<button type="button" role="tab" data-cp-jobs-tier="'+t+'" aria-selected="'+(ui.jobTier===t)+'" class="'+(ui.jobTier===t?'active':'')+'">'+t+'</button>').join('')+'</nav>';
+  }
+  function jobs(d){
+    if(ui.jobTier==='L2')return jobTierNav()+l2Jobs(d);
+    const e=d.economy||{},j=e.jobs||{},p=population(d),work=JOBS.map(([k,label])=>[label,j[k]]);
+    const activity=(e.activities||[]).filter(a=>a.tier===1);
+    const sites=activity.length?table(['Attività','Occupati','Proprietà'],activity.map(a=>[
+      '<th>'+esc(a.type)+' · '+esc(a.id)+'</th>','<td>'+fmt(a.workers)+'</td>',
       '<td>'+esc(a.owner==='lord'?'Signore':'Privati')+'</td>'
-    ])) : empty('Nessuna attività produttiva registrata.');
-    return kpis([
+    ])):empty('Nessuna attività produttiva L1 registrata.');
+    return jobTierNav()+kpis([
       kpi('L1 residenti',fmt(p.L1)),
       kpi('L1 al lavoro',fmt(sum(work.filter(([label])=>label!=='L1 inattivi').map(x=>x[1]))),'Mansioni correnti'),
       kpi('L1 inattivi',fmt(j.idle),'Disponibili'),
       kpi('Cantieri',fmt(j.building),'Costruttori assegnati')
     ])+grid([
-      card('Priorità produzioni e mansioni L1',l1JobQueue(e),'Le priorità si salvano nella partita.',true),
-      card('Distribuzione delle mansioni L1',bars(work,max1(work.map(x=>x[1]))),'Manodopera effettivamente assegnata dal motore economico.'),
-      card('Popolazione per classe',classBars(p),'L2–L4 mantengono professioni e capacità proprie.'),
+      card('Priorità produzioni e mansioni L1',jobQueue(e,'L1'),'Le priorità si salvano nella partita.',true),
+      card('Distribuzione delle mansioni L1',bars(work,max1(work.map(x=>x[1]))),'Manodopera assegnata dal motore economico.'),
+      card('Popolazione per classe',classBars(p),'L2–L4 mantengono capacità produttive proprie.'),
       card('Storico occupazione',jobsTrend(d),'Le assegnazioni variano con cantieri, stagione e risorse.',true),
-      card('Posti nelle attività',sites,'Occupati rilevati dal Job Manager esistente; nessuna nuova simulazione.',true),
+      card('Posti nelle attività',sites,'Occupati rilevati dal Job Manager economico.',true),
       ...(j.foodRisk?[card('Segnalazioni',warn('Possibile carenza alimentare rispetto al fabbisogno stimato.'),'',true)]:[])
     ]);
   }
-
-  // L1 production and service queues are actual economy commands, not mock controls.
-  function l1JobQueue(e){
-    const jm=e.jobManager||{},tasks=jm.tasks||[];
-    if(!tasks.length)return empty('Nessuna mansione L1 disponibile.');
-    const info='<p class="cp-job-intro">Trascina le righe per modificare la priorità. Il minimo è riservato prima dei posti AUTO; se le richieste superano gli L1 disponibili, prevale la priorità più alta.</p>';
+  function l2Jobs(d){
+    const e=d.economy||{},p=population(d),manager=e.jobManagerL2||{},tasks=manager.tasks||[];
+    const assigned=num(manager.assigned),available=num(manager.available);
+    const activity=(e.activities||[]).filter(a=>a.tier===2);
+    const sites=activity.length?table(['Attività L2','Occupati','Proprietà'],activity.map(a=>[
+      '<th>'+esc(a.type)+' · '+esc(a.id)+'</th>','<td>'+fmt(a.workers)+'</td>',
+      '<td>'+esc(a.owner==='lord'?'Signore':'Privati')+'</td>'
+    ])):empty('Nessun sito produttivo L2 operativo.');
+    return kpis([
+      kpi('L2 residenti',fmt(p.L2)),
+      kpi('L2 disponibili',fmt(available),'Adulto produttivo per nucleo'),
+      kpi('L2 assegnati',fmt(assigned),'Oggi'),
+      kpi('L2 inattivi',fmt(Math.max(0,available-assigned)),'Posti non impiegati')
+    ])+grid([
+      card('Priorità produzioni e mansioni L2',jobQueue(e,'L2'),
+        'Campi, cave e miniere utilizzano la sola manodopera L2.',true),
+      card('Distribuzione L2 per produzione',tasks.length?bars(tasks.map(t=>[t.label,t.workers]),max1(tasks.map(t=>t.workers))):empty('Nessuna produzione L2 presente.')),
+      card('Attività L2',sites,'I campi fuori stagione e le imprese disattivate non richiedono lavoratori.',true)
+    ]);
+  }
+  function jobQueue(e,tier){
+    const jm=(tier==='L2'?e.jobManagerL2:e.jobManager)||{},tasks=jm.tasks||[];
+    if(!tasks.length)return empty('Nessuna mansione '+tier+' disponibile.');
+    const info='<p class="cp-job-intro">Trascina le righe per modificare la priorità. I minimi sono riservati prima dei posti AUTO; se le richieste superano gli '+tier+' disponibili, prevale la priorità più alta.</p>';
     const columns='<div class="cp-job-columns"><span>PRIORITÀ · MANSIONE</span><span>MINIMUM WORKER</span><span>GESTIONE</span></div>';
     const rows=tasks.map((t,i)=>{
       const unmet=jm.managed&&t.minimum>t.workers&&t.demand>0;
-      return '<div class="cp-job-row'+(unmet?' cp-job-short':'')+'" data-cp-job-row="'+esc(t.key)+'" draggable="true" role="listitem" aria-label="Priorità '+(i+1)+': '+esc(t.label)+'">'+
+      return '<div class="cp-job-row'+(unmet?' cp-job-short':'')+'" data-cp-job-row="'+esc(t.key)+'" data-cp-job-tier="'+tier+'" draggable="true" role="listitem" aria-label="Priorità '+(i+1)+': '+esc(t.label)+'">'+
         '<span class="cp-job-drag" title="Trascina per cambiare priorità" aria-hidden="true">⠿</span>'+
         '<span class="cp-job-rank">'+(i+1)+'.</span>'+
         '<div class="cp-job-name"><strong>'+esc(t.label)+'</strong><small>'+fmt(t.workers)+' / '+fmt(t.demand)+' lavoratori'+(unmet?' · minimo non raggiunto':t.demand===0?' · nessuna richiesta attiva':'')+'</small></div>'+
-        '<label class="cp-job-min">Minimum worker<input type="number" inputmode="numeric" min="0" max="'+t.capacity+'" step="1" value="'+t.minimum+'" data-cp-job-min="'+esc(t.key)+'" aria-label="Minimum worker · '+esc(t.label)+'"></label>'+
-        '<div class="cp-job-mode"><button type="button" class="cp-job-auto'+(t.auto?' is-auto':'')+'" aria-pressed="'+(t.auto?'true':'false')+'" data-cp-job-auto="'+esc(t.key)+'" title="'+(t.auto?'Automatico: assegna i posti residui secondo priorità':'Manuale: assegna soltanto il minimo richiesto')+'">AUTO</button><small>'+(t.auto?'automatico':'manuale')+'</small></div>'+
-        '<div class="cp-job-move"><button type="button" data-cp-job-move="up" data-cp-job-key="'+esc(t.key)+'" aria-label="Sposta '+esc(t.label)+' in alto"'+(i===0?' disabled':'')+'>↑</button>'+
-        '<button type="button" data-cp-job-move="down" data-cp-job-key="'+esc(t.key)+'" aria-label="Sposta '+esc(t.label)+' in basso"'+(i===tasks.length-1?' disabled':'')+'>↓</button></div></div>';
+        '<label class="cp-job-min">Minimum worker<input type="number" inputmode="numeric" min="0" max="'+t.capacity+'" step="1" value="'+t.minimum+'" data-cp-job-min="'+esc(t.key)+'" data-cp-job-tier="'+tier+'" aria-label="Minimum worker · '+esc(t.label)+'"></label>'+
+        '<div class="cp-job-mode"><button type="button" class="cp-job-auto'+(t.auto?' is-auto':'')+'" aria-pressed="'+(t.auto?'true':'false')+'" data-cp-job-auto="'+esc(t.key)+'" data-cp-job-tier="'+tier+'" title="'+(t.auto?'Automatico: assegna i posti residui secondo priorità':'Manuale: assegna soltanto il minimo richiesto')+'">AUTO</button><small>'+(t.auto?'automatico':'manuale')+'</small></div>'+
+        '<div class="cp-job-move"><button type="button" data-cp-job-move="up" data-cp-job-key="'+esc(t.key)+'" data-cp-job-tier="'+tier+'" aria-label="Sposta '+esc(t.label)+' in alto"'+(i===0?' disabled':'')+'>↑</button>'+
+        '<button type="button" data-cp-job-move="down" data-cp-job-key="'+esc(t.key)+'" data-cp-job-tier="'+tier+'" aria-label="Sposta '+esc(t.label)+' in basso"'+(i===tasks.length-1?' disabled':'')+'>↓</button></div></div>';
     }).join('');
-    return info+(!jm.managed?'<p class="cp-job-legacy">Assegnazione L1 precedente ancora attiva; la nuova priorità entra in vigore alla prima modifica.</p>':'')+
-      '<div class="cp-job-queue" role="list" aria-label="Priorità delle mansioni L1">'+columns+rows+'</div>'+
-      '<p class="cp-foot">AUTO attivo: dopo i minimi, completa i posti disponibili in ordine di priorità. AUTO spento: assegna esattamente il minimo (se vi sono lavoratori). Pastori protetti e pescatori non sono riassegnabili.</p>';
+    const note=tier==='L1'?'Pastori protetti e pescatori non sono riassegnabili.':
+      'L2 è indipendente da L1; i campi fuori stagione non assorbono lavoratori.';
+    return info+(!jm.managed?'<p class="cp-job-legacy">Assegnazione '+tier+' precedente ancora attiva; i nuovi controlli entrano in vigore alla prima modifica.</p>':'')+
+      '<div class="cp-job-queue" role="list" aria-label="Priorità delle mansioni '+tier+'">'+columns+rows+'</div>'+
+      '<p class="cp-foot">AUTO attivo: dopo i minimi completa i posti disponibili in ordine di priorità. AUTO spento: assegna esattamente il minimo quando disponibile. '+note+'</p>';
   }
 
   // Trade is a view over the existing market ledger, prices and sale-share command.
@@ -396,7 +423,7 @@
     ]);
   }
   const views = {general,people,economy,estate,stores,military,building,diplomacy,alerts};
-  const PALETTES = {jobs:['Job Manager','Priorità e assegnazione dei lavoratori L1'],trade:['Trade','Mercato, prezzi e quote di vendita']};
+  const PALETTES = {jobs:['Job Manager','Priorità e assegnazioni L1 / L2'],trade:['Trade','Mercato, prezzi e quote di vendita']};
 
   // ---- Rendering --------------------------------------------------------------
   function nav(d) {
