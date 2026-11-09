@@ -1,5 +1,13 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-UPGRADE-261109 — Upgrade edilizi e strumenti DEV
+
+- **DECISO:** gli interventi individuali su strutture e livelli delle case usano il motore di costruzione condiviso, con inspector temporaneo, tempo positivo, quota separata e annullamento che ripristina lo stato precedente. Un solo intervento per edificio. Restano distinti i comandi operativi (apri/chiudi, funzioni stanza, rotazione), le politiche edilizie globali e le riparazioni.
+- **PREVENTIVI:** gli accessori mantengono il costo dedicato esistente; altezza/tier usano la differenza positiva dei preventivi. Per i livelli civici il costo base vale per ogni livello aggiunto. Le varianti senza prezzo rimangono senza materiale, pagando il lavoro effettivo. Durata generica massima tra 0,5 giorni lavoratore, incremento di durata e 25% della durata dell'edificio; prezzi/tempi dedicati di accessori dove previsti. Valori di bilanciamento espliciti e successivamente affinabili.
+- **CASE PRIVATE:** cambiare livello produce un cantiere temporizzato con il finanziamento procedurale esistente; non spende il tesoro del signore. Il motore di promozione autonoma è scorporato; nessuna condizione di ricchezza/felicità inventata in questo fix.
+- **DEV:** Free build evita materiali e salari, mantenendo i tempi; Fast build elimina tempi e operai ma rispetta le scorte. Entrambi permettono costruzione gratuita immediata. Agiscono sui progetti nuovi e aperti, soltanto nella sessione corrente; i materiali gratuiti sono marcati nel progetto e non possono generare rimborsi.
+
+
 ## D-BUILD-PRIORITY-261108 — Conferma del cantiere indipendente dalle scorte (08/11/2026)
 
 - **DECISO:** un ghost valido si conferma anche con zero risorse. La stima è un preventivo complessivo, non una condizione economica per collocare la struttura. Il cantiere occupa subito lo spazio e resta selezionabile/salvabile; non diventa operativo prima del completamento. Ogni tipologia di risorsa può essere trasferita indipendentemente: possedere pietra senza legno permette di rifornire la pietra, ma non fa avanzare i lavori oltre la risorsa più carente.

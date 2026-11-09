@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-09 — BC-261109-02 · DEV Free/Fast e upgrade temporizzati
+
+- **SU BRANCH `fix/upgrades-dev-build`:** Free build e Fast build separati nel pannello DEV; cantieri per upgrade di strutture, case, civici e accessori edilizi con preventivi già definiti; annullamento reversibile e stato persistente.
+- **REGOLA CASE:** ogni cambio di livello attraversa il cantiere, incluse case automatiche. Condizioni e job di promozione autonoma scorporati, da decidere nella chat dedicata.
+- **QA:** nuove regressioni dominio/browser locali PASS, regressioni geometriche di accessori aggiornate per usare il vero runtime in modalità Fast a pagamento. Verifica CI richiesta prima di main. Politiche feudali globali di merli/pendenza tetti e riparazioni restano comandi dei rispettivi sistemi.
+
+
 ## 2026-11-09 — BC-261108-01 · Accettazione aggiornata PR #186
 
 - Implementati e provati localmente equità per risorsa a pari priorità, residui senza starvation, consumo distinto dalla consegna e rimborso del solo non consumato. Quote e avanzamento conservati nei salvataggi, inclusi pozzi e frammenti.

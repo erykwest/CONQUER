@@ -40,7 +40,8 @@ function markStructureDirty(s,hardNavigation=true,scheduleSave=true){
   markDirty(hardNavigation,structureSceneLayers(s),scheduleSave);
 }
 function changeHouseDensity(target,level){
-  if(level===houseLevel(target))return;
+  if(level===houseLevel(target)||underConstruction(target))return false;
+  const before=structureUpgradeSnapshot(target);
   const candidate={...target,houseLevel:level,
     urbanRedeveloped:!target.auto&&level>=3};
   const houses=State.structures.filter(s=>s.type==='house').map(s=>s.id===target.id?candidate:s);
@@ -59,6 +60,7 @@ function changeHouseDensity(target,level){
   if(level>=3&&count){
     State.structures=State.structures.filter(s=>s.type!=='road'||s.accessFor!==target.id);
   }else if(level<3&&target.auto)ensureSettlementRoadAccess(target,true);
+  beginStructureUpgrade(target,before,null,BUILD_DAYS.house);
   markStructureDirty(target);
   renderFunctionPanel();draw();
   status('House L'+level+(count?' · '+count+' streetfront '+(count===1?'building':'buildings'):' · waiting for primary road frontage'));
@@ -184,6 +186,12 @@ function commitStructuralLinearRoute(route,endSnapId,spec){
 }
 function deleteStructure(id){
   const target=State.structures.find(s=>s.id===id);if(!target)return;
+  if(underConstruction(target)&&target.construction?.upgrade){
+    const before=target.construction.upgrade.before,refund=refundableConstructionCost(target);
+    refundCost(refund);
+    for(const key of Object.keys(target))delete target[key];
+    Object.assign(target,before);markStructureDirty(target);renderFunctionPanel();draw();return;
+  }
   if(window.ConquerStorageYard?.is(target)&&!window.ConquerStorageYard.canRemove(target)){
     status('Sposta le scorte in un altro piazzale prima di eliminare l’unico magazzino');return;
   }

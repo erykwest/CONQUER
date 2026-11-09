@@ -389,6 +389,12 @@ function wallFragmentFrom(source,a,b,aSnap,bSnap,ratio){
       const scale=values=>Object.fromEntries(Object.entries(values||{}).map(([k,v])=>[k,Math.floor(v*ratio*1000+1e-7)/1000]));
       fragment.buildCost=scale(source.buildCost);
       fragment.construction.materialsDelivered=scale(source.construction.materialsDelivered);
+      if(source.construction.materialsRequired)fragment.construction.materialsRequired=scale(source.construction.materialsRequired);
+      if(source.construction.materialsFree)fragment.construction.materialsFree=scale(source.construction.materialsFree);
+      if(source.construction.upgrade){
+        const before=source.construction.upgrade.before;
+        fragment.construction.upgrade={before:{...structureUpgradeSnapshot(before),id:fragment.id,a:fragment.a,b:fragment.b,aSnap:fragment.aSnap,bSnap:fragment.bSnap,length:fragment.length,buildCost:scale(before.buildCost)}};
+      }
       fragment.construction.materialsConsumed=scale(source.construction.materialsConsumed||Object.fromEntries(Object.entries(source.buildCost||{}).map(([k,v])=>[k,v*constructionProgress(source)])));
       fragment.construction.workRequired*=ratio;fragment.construction.workDone*=ratio;
       fragment.construction.wagesPaid=(source.construction.wagesPaid||0)*ratio;

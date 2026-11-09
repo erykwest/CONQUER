@@ -26,6 +26,7 @@ function fixture({gold=500}={}){
     spendCost:c=>{for(const [k,v] of Object.entries(c))State.resources[k]-=v},
     status:m=>messages.push(m),markDirty:()=>{},renderFunctionPanel:()=>{},draw:()=>{},invalidateNavigation:()=>{}
   });
+  require('./construction-fixture.cjs')(ctx);
   vm.runInContext(src,ctx);
   // A square L2 keep at the origin, its front (angle 0) facing +x.
   const keep={id:'k',type:'tower',shape:'square',x:0,y:0,size:1.5,angle:0,level:2,isMastio:true,functions:[]};
@@ -143,6 +144,7 @@ console.log('PASS the drawbridge fits either stair and, raised, shuts the keep')
     cutawayFloorLevels:s=>[{z:.055},{z:1.775}],footprintPoints:s=>s.type==='tower'?rect(s.x,s.y,1.5,1.5):[],
     boundaryPoint:(s,p)=>p,placementGroundZ:()=>0,terrainElevation:()=>0,pointInPolygon:()=>false,structureLabel:s=>s.type,costText:()=>'',
     canAfford:()=>true,spendCost:()=>{},status:()=>{},markDirty:()=>{},renderFunctionPanel:()=>{},draw:()=>{},invalidateNavigation:()=>{}});
+  require('./construction-fixture.cjs')(ctx);
   vm.runInContext(src,ctx);
   const K=ctx.window.ConquerKeepEntrance,keep={id:'k',type:'tower',shape:'square',x:0,y:0,size:1.5,angle:0,level:2,isMastio:true};
   State.structures.push(keep);K.buildStair(keep);K.installDrawbridge(keep);

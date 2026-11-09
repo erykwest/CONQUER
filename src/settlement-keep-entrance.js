@@ -107,10 +107,6 @@
     if(typeof invalidateSceneCache==='function')invalidateSceneCache();
     markDirty(true,['ground','base']);renderFunctionPanel();if(redraw)draw();
   }
-  function pay(cost){
-    if(!canAfford(cost)){status('Risorse insufficienti · '+costText(cost));return false}
-    spendCost(cost);return true;
-  }
   // A new wooden stair, or a burnt one rebuilt (the raised door is already in the wall).
   function buildStair(t){
     const rebuild=entrance(t)?.stair==='burnt';
@@ -118,8 +114,8 @@
     if(!rebuild&&t.keepEntrance?.stair)return false;
     const spec={stair:'wood',side:1,drawbridge:null},error=validate(t,spec);
     if(error){status('Ingresso rialzato non disponibile: '+error);return false}
-    if(!pay(STAIR_COST))return false;
-    t.keepEntrance=spec;refresh(t);
+    if(underConstruction(t))return false;const before=structureUpgradeSnapshot(t);
+    t.keepEntrance=spec;beginStructureUpgrade(t,before,STAIR_COST,1);refresh(t);
     status(rebuild?'Scala di legno ricostruita':'Scala di legno costruita: la porta del mastio è ora al primo piano');return true;
   }
   // Masonry flight along the facade, on whichever side is free (the one already chosen first).
@@ -133,8 +129,8 @@
     const e=entrance(t);if(!e||e.stair!=='wood')return false;
     const side=freeSide(t,e);
     if(side===null){status('Scala in pietra non disponibile: '+validate(t,{...e,stair:'stone',side:1}));return false}
-    if(!pay(STONE_COST))return false;
-    e.stair='stone';e.side=side;refresh(t);
+    if(underConstruction(t))return false;const before=structureUpgradeSnapshot(t);
+    e.stair='stone';e.side=side;beginStructureUpgrade(t,before,STONE_COST,2);refresh(t);
     status('Scala in pietra costruita lungo la facciata');return true;
   }
   function installDrawbridge(t){
@@ -142,9 +138,9 @@
     const next={...e,drawbridge:{installed:true,raised:false,progress:0}};
     const error=e.stair==='stone'?(freeSide(t,next)===null?validate(t,next):null):validate(t,next);
     if(error){status('Levatoio non disponibile: '+error);return false}
-    if(!pay(DRAWBRIDGE_COST))return false;
+    if(underConstruction(t))return false;const before=structureUpgradeSnapshot(t);
     if(e.stair==='stone')e.side=freeSide(t,next);
-    e.drawbridge=next.drawbridge;e.ladder=null;refresh(t);
+    e.drawbridge=next.drawbridge;e.ladder=null;beginStructureUpgrade(t,before,DRAWBRIDGE_COST,1);refresh(t);
     status('Levatoio installato davanti alla porta del mastio');return true;
   }
   // By hand: the guard leaves it as set until the next time enemies come or go.

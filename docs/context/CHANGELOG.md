@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-09 — BC-261109-02 · DEV e cantieri di ristrutturazione
+
+Branch `fix/upgrades-dev-build`: Free/Fast build indipendenti, cantieri con quota incrementale e rollback per upgrade edilizi, regola condivisa per cambi livello delle case automatiche. Materiali DEV non rimborsabili e opzioni non salvate. Test locali e browser UI1/UI2 PASS; CI da verificare. ROADMAP invariata.
+
+
 ## 2026-11-09 — PR #186 · Cantieri: equità, consumo e verifica browser
 
 Completata la branch dei cantieri senza prefinanziamento: ripartizione equa per bene, rimborso dei soli materiali non consumati, salvataggio pozzi e apportionamento dei frammenti, ghost lineari coerenti. Test locali e Chromium UI1/UI2 PASS, workflow browser ampliato. Stato: branch, Actions del nuovo head da verificare.

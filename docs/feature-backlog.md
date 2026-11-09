@@ -1,5 +1,13 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+## 2026-11-09 — BC-261109-02 · DEV Free/Fast e cantieri di upgrade
+
+- [x] **SU BRANCH:** pulsanti indipendenti nel DEV, stato premuto accessibile, nessun salvataggio delle preferenze; risorse gratuite non convertibili in rimborsi.
+- [x] **UPGRADE:** cantiere su altezza/tier/varianti civiche e strutturali, espansione piazzale, scale e levatoi, grata, ponte e fossato. Costo intervento separato, snapshot per annullamento, stato persistito e niente secondo intervento sovrapposto.
+- [x] **CASE AUTO:** cantiere anche al cambio di livello tramite inspector; futura promozione autonoma deve richiamare lo stesso comando. Condizioni di promozione scorporate nella chat dedicata.
+- [ ] **ACCETTAZIONE:** Actions del nuovo head e audit Lab prima dell'integrazione. Dominio e Chromium UI1/UI2 provati localmente; nessun nuovo asset o modello.
+
+
 ## 2026-11-08 — BC-261108-01 · Cantieri senza prefinanziamento, sei priorità
 
 - [x] **SU BRANCH `feature/construction-staged-priority-20261108`, pre-merge:** il ghost e gli elementi lineari (compresi ponti/fossati) sono confermabili anche senza stock sufficiente. Lo stesso preventivo esistente determina la spesa finale, ma è consumato progressivamente dal ledger economico durante i lavori, con consegne indipendenti per tipologia e avanzamento limitato dalla risorsa più carente.
