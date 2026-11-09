@@ -1,5 +1,14 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-09 — BC-261109-02 · DEV e cantieri di ristrutturazione
+
+- **Prove aggiuntive PASS:** regressione d'assedio reale Canvas/WebGL e perdita contesto WebGL; annullamento di upgrade conserva i danni subiti durante il cantiere.
+
+- **Riesame CI:** fixture browser d'assedio aggiornata a Fast a pagamento per preparare la porta completa; verificata anche l'allocazione Fast dallo stock provvisorio prima della fondazione. Il comportamento normale resta temporizzato.
+
+Branch `fix/upgrades-dev-build`: Free/Fast build indipendenti, cantieri con quota incrementale e rollback per upgrade edilizi, regola condivisa per cambi livello delle case automatiche. Materiali DEV non rimborsabili e opzioni non salvate. Test locali e browser UI1/UI2 PASS; CI da verificare. ROADMAP invariata.
+
+
 ## 2026-11-09 — PR #186 · Cantieri: equità, consumo e verifica browser
 
 Completata la branch dei cantieri senza prefinanziamento: ripartizione equa per bene, rimborso dei soli materiali non consumati, salvataggio pozzi e apportionamento dei frammenti, ghost lineari coerenti. Test locali e Chromium UI1/UI2 PASS, workflow browser ampliato. Stato: branch, Actions del nuovo head da verificare.

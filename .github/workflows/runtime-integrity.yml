@@ -43,6 +43,7 @@ jobs:
         run: |
           node qa/construction-priority-regression.cjs
           node qa/construction-materials-regression.cjs
+          node qa/upgrades-dev-regression.cjs
       - name: Stone colour palette and semantic rendering regression
         run: node qa/stonecolor-regression.cjs
       - name: Preserve saves and DEV-only resource floor

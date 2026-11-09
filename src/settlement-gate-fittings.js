@@ -110,9 +110,9 @@
   }
   function installPortcullis(gate){
     if(!stoneGate(gate)||underConstruction(gate)||portcullis(gate))return false;
-    if(!canAfford(PORTCULLIS_COST)){status('Insufficient resources · '+costText(PORTCULLIS_COST));return false}
-    spendCost(PORTCULLIS_COST);
+    const before=structureUpgradeSnapshot(gate);
     gate.portcullis={installed:true,lowered:false,progress:0};
+    beginStructureUpgrade(gate,before,PORTCULLIS_COST,1);
     markDirty(false,false,true);renderFunctionPanel();draw();
     status('Portcullis installed in the gate');
     return true;

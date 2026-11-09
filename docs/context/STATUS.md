@@ -1,5 +1,18 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-09 — BC-261109-02 · DEV e cantieri di upgrade (branch `fix/upgrades-dev-build`)
+
+- **Prove aggiuntive PASS:** regressione d'assedio reale Canvas/WebGL e perdita contesto WebGL; annullamento di upgrade conserva i danni subiti durante il cantiere.
+
+- **Riesame CI:** fixture browser d'assedio aggiornata a Fast a pagamento per preparare la porta completa; verificata anche l'allocazione Fast dallo stock provvisorio prima della fondazione. Il comportamento normale resta temporizzato.
+
+- **CODICE SUL BRANCH, NON ANCORA MERGE:** due toggle DEV indipendenti Free build (nessun materiale/salario addebitato) e Fast build (nessuna attesa/manodopera, materiali ancora necessari). Insieme danno costruzione gratuita e istantanea; valgono anche sui cantieri aperti. Preferenze solo di sessione, escluse dai save; materiali concessi gratis tracciati e mai rimborsabili.
+- **UPGRADE:** altezza/tier, piani e varianti strutturali/civiche ora aprono il medesimo cantiere. Costo differenziale ove esiste il listino, prezzi dedicati conservati per piazzali, ponti/fossati, scale, levatoi e grata. Preventivo dell'intervento separato dal costo dell'edificio. Durata positiva; controllo di un solo intervento per struttura. Nessun costo inventato per varianti senza listino.
+- **CANCELLAZIONE/PERSISTENZA:** snapshot dello stato precedente nel cantiere; annullare un upgrade ripristina l'edificio e restituisce il solo materiale pagato e non consumato. Quote, consegne e rollback salvati nei normali payload. Frammenti dei muri ripartiscono anche quote/crediti DEV degli upgrade.
+- **CASE:** `changeHouseDensity` avvia il cantiere anche per case automatiche, conservando finanziamento privato e timer procedurale; regola pronta per una futura promozione autonoma. Motore/condizioni di autoupgrade separati nella chat «CONQUER — Autoupgrade delle case», senza soglie economiche aggiunte qui.
+- **PROVE LOCALI:** riprodotto l'upgrade torre senza cantiere prima del fix; nuovi test di dominio PASS. Suite completa: 160/161 PASS inizialmente; fixture urban-density aggiornata e 18 casi PASS al riesame. Browser Chromium UI1/UI2 PASS per upgrade, rollback, pulsanti reali Free/Fast, indipendenza modalità, salvataggio e casa automatica. CI del branch ancora da eseguire. Nessun nuovo asset/modello.
+
+
 ## 2026-11-09 — BC-261108-01 · Completamento PR #186
 
 - Branch `feature/construction-staged-priority-20261108` riallineata a main `3fdae53`; nessun merge della feature dichiarato. Risolti i conflitti preservando STONECOLOR, CIRCLE e documentazione corrente.
