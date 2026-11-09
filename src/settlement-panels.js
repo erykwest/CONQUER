@@ -497,32 +497,45 @@
   }
   function open(mode='control') { ui.mode=Object.hasOwn(PALETTES,mode)?mode:'control'; render(); }
 
-  function reorderJob(key,target){
-    const order=(window.ConquerGame?.read?.economy?.()?.jobManager?.tasks||[]).map(t=>t.key);
+  function reorderJob(key,target,tier='L1'){
+    const economy=window.ConquerGame?.read?.economy?.();
+    const order=((tier==='L2'?economy?.jobManagerL2:economy?.jobManager)?.tasks||[]).map(t=>t.key);
     const from=order.indexOf(key),to=order.indexOf(target);
     if(from<0||to<0||from===to)return false;
     order.splice(from,1);order.splice(to,0,key);
-    return !!window.ConquerGame?.commands?.setL1Order?.(order);
+    return !!window.ConquerGame?.commands?.[tier==='L2'?'setL2Order':'setL1Order']?.(order);
   }
 
   const root = $('profileControl');
   if(root){
     root.addEventListener('click',ev=>{
+      const tier = ev.target.closest('[data-cp-jobs-tier]');
+      if(tier){ui.jobTier=tier.dataset.cpJobsTier==='L2'?'L2':'L1';render();return;}
+      const msub = ev.target.closest('[data-cp-military-sub]');
+      if(msub){ui.militaryTab=msub.dataset.cpMilitarySub==='garrisons'?'garrisons':'overview';render();return;}
+      const patrol = ev.target.closest('[data-cp-patrol]');
+      if(patrol){window.ConquerGame?.commands?.adjustPatrols?.(patrol.dataset.cpPatrol==='add'?1:-1);render();return;}
+      const tower = ev.target.closest('[data-cp-tower-id]');
+      if(tower){window.ConquerGame?.commands?.adjustTowerArchers?.(tower.dataset.cpTowerId,Number(tower.dataset.cpTowerDelta));render();return;}
+      const barracks = ev.target.closest('[data-cp-barracks-id]');
+      if(barracks){window.ConquerGame?.commands?.adjustBarracksSquads?.(barracks.dataset.cpBarracksId,Number(barracks.dataset.cpBarracksDelta));render();return;}
       const tab = ev.target.closest('[data-cp-tab]');
       if(tab){ui.tab = tab.dataset.cpTab; ui.mode='control'; render(); return;}
       const auto = ev.target.closest('[data-cp-job-auto]');
       if(auto){
         const key=auto.dataset.cpJobAuto;
-        const task=window.ConquerGame?.read?.economy?.()?.jobManager?.tasks?.find(t=>t.key===key);
-        if(task)window.ConquerGame?.commands?.setL1Auto?.(key,!task.auto);
+        const tier=auto.dataset.cpJobTier==='L2'?'L2':'L1',economy=window.ConquerGame?.read?.economy?.();
+        const task=(tier==='L2'?economy?.jobManagerL2:economy?.jobManager)?.tasks?.find(t=>t.key===key);
+        if(task)window.ConquerGame?.commands?.[tier==='L2'?'setL2Auto':'setL1Auto']?.(key,!task.auto);
         render();return;
       }
       const move = ev.target.closest('[data-cp-job-move]');
       if(move){
-        const tasks=window.ConquerGame?.read?.economy?.()?.jobManager?.tasks||[];
+        const economy=window.ConquerGame?.read?.economy?.();
+        const tasks=(move.dataset.cpJobTier==='L2'?economy?.jobManagerL2:economy?.jobManager)?.tasks||[];
         const index=tasks.findIndex(t=>t.key===move.dataset.cpJobKey);
         const next=index+(move.dataset.cpJobMove==='up'?-1:1);
-        if(index>=0&&next>=0&&next<tasks.length)reorderJob(tasks[index].key,tasks[next].key);
+        if(index>=0&&next>=0&&next<tasks.length)reorderJob(tasks[index].key,tasks[next].key,move.dataset.cpJobTier==='L2'?'L2':'L1');
         render();return;
       }
       const trade = ev.target.closest('[data-cp-transfer]');
@@ -548,7 +561,7 @@
     });
     root.addEventListener('change',ev=>{
       const el = ev.target, cmd = window.ConquerGame?.commands;
-      if(el.dataset.cpJobMin)cmd?.setL1Minimum?.(el.dataset.cpJobMin,Number(el.value));
+      if(el.dataset.cpJobMin)cmd?.[el.dataset.cpJobTier==='L2'?'setL2Minimum':'setL1Minimum']?.(el.dataset.cpJobMin,Number(el.value));
       if(el.dataset.cpPolicy)cmd?.setPolicy?.(el.dataset.cpPolicy,el.value);
       if(el.dataset.cpShare)cmd?.setSaleShare?.(el.dataset.cpShare,num(el.value));
       if(el.matches?.('[data-cp-price]'))ui.priceGood = el.value;
@@ -559,8 +572,8 @@
     root.addEventListener('dragstart',ev=>{
       const row=ev.target.closest?.('[data-cp-job-row]');
       if(!row||ev.target.closest?.('button,input'))return;
-      ui.dragJob=row.dataset.cpJobRow;
-      if(ev.dataTransfer){ev.dataTransfer.effectAllowed='move';ev.dataTransfer.setData('text/plain',ui.dragJob);}
+      ui.dragJob={key:row.dataset.cpJobRow,tier:row.dataset.cpJobTier==='L2'?'L2':'L1'};
+      if(ev.dataTransfer){ev.dataTransfer.effectAllowed='move';ev.dataTransfer.setData('text/plain',ui.dragJob.key);}
       row.classList?.add('cp-job-dragging');
     });
     root.addEventListener('dragover',ev=>{
@@ -569,14 +582,14 @@
       ev.preventDefault();
       if(ev.dataTransfer)ev.dataTransfer.dropEffect='move';
       root.querySelectorAll?.('.cp-job-over').forEach(el=>el.classList.remove('cp-job-over'));
-      if(row.dataset.cpJobRow!==ui.dragJob)row.classList?.add('cp-job-over');
+      if(row.dataset.cpJobRow!==ui.dragJob.key)row.classList?.add('cp-job-over');
     });
     root.addEventListener('drop',ev=>{
-      const row=ev.target.closest?.('[data-cp-job-row]'),key=ui.dragJob;
-      if(!row||!key)return;
+      const row=ev.target.closest?.('[data-cp-job-row]'),drag=ui.dragJob;
+      if(!row||!drag||drag.tier!==(row.dataset.cpJobTier==='L2'?'L2':'L1'))return;
       ev.preventDefault();
       ui.dragJob=null;
-      reorderJob(key,row.dataset.cpJobRow);
+      reorderJob(drag.key,row.dataset.cpJobRow,drag.tier);
       render();
     });
     root.addEventListener('dragend',()=>{
