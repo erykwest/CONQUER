@@ -1,5 +1,13 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-09 — Job Manager L1: priorità, minimi e AUTO/manuale (branch `feature/l1-jobmanager-priority-20261109`)
+
+- **IMPLEMENTATO SUL BRANCH:** il Job Manager visualizza le mansioni L1 in righe trascinabili per priorità (con comandi su/giù anche per tastiera e touch), numeratore «Minimum worker» e pulsante AUTO attivo/spento. Include produzioni L1, carrettieri, cantieri navali con commessa e costruttori; riporta lavoratori effettivi, richiesti e minimi insoddisfatti.
+- **MOTORE:** quando il giocatore effettua la prima modifica, `ConquerEconomy.laborAllocation` applica i minimi per priorità e solo poi riempie i posti in AUTO per priorità; AUTO disattivato assegna al massimo il minimo. Nessun lavoratore creato, nessuna duplicazione tra produzioni, carri, navi e cantieri. Pastori di sicurezza, pescatori e classi L2–L4 non sono alterati. Salvataggi preesistenti mantengono il comportamento originale finché non vengono modificati.
+- **PERSISTENZA:** ordine, minimo e AUTO nel campo `State.economy.l1Jobs`, già incluso nei save locali e cloud. I nuovi siti vengono aggiunti in coda; le mansioni inattive assegnano zero.
+- **VERIFICHE:** parsing dei moduli e test isolati eseguiti in sessione, incluse regressioni `qa/labor-jobs-regression.cjs` e `qa/panels-regression.cjs` con adattatore JS (PASS). Esecuzione Node/Actions e prova visiva in browser ancora da verificare; non dichiarare merge prima dei check.
+
+
 ## 2026-11-08 — STONECOLOR · Audit dipendenze e sottodipendenze
 
 - **CORRETTO SU BRANCH:** coda dei materiali litici collegata ai registri semantici nei modelli Blender di case, edifici civici e relative pavimentazioni, cave di pietra e mine, costruttori, scatter fluviali/costieri, ponti in pietra, scale da camminamento, rampe e gradini, arredi e pavimenti dei cutaway. Le rampe cromatiche condivise restano cinque; legno, argilla, tetti, muschio e alghe mantengono le tinte originarie.

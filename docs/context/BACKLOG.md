@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-09 — JM-L1-01 · Gestione priorità produttive dei popolani L1
+
+- **IN BRANCH:** ordinamento drag-and-drop e su/giù delle mansioni L1; «Minimum worker» numerico; toggle AUTO/manuale, stato del personale e segnalazione dei minimi non soddisfatti.
+- **ACCEPTANCE CORE:** due passaggi per i posti (minimi in ordine di priorità, poi eccedenza ai job AUTO in ordine); manuale non assorbe eccedenze; coerenza con pastori/pescatori riservati, carrettieri, cantieri navali e cantieri manuali. Dati persistiti in `State.economy`; risparmio sul legacy finché non si agisce.
+- **PROVE/RESIDUI:** regressioni `qa/labor-jobs-regression.cjs` e `qa/panels-regression.cjs` ampliate; sessione JS PASS; attendere CI PR, verifica browser del DnD/mobile e comportamento reale durante il cambio del turno. Fuori scopo assegnazioni L2–L4 e reintegro forzoso di pescatori/pastori.
+
+
 ## 2026-11-08 — STONECOLOR · Verifica a cascata delle dipendenze
 
 - **CODICE COLLEGATO:** modelli litici principali e sub-asset (case, civici e cimiteri, torri/mura, cantieri, scalinate, rampe, ponti, cave/miniere, massi/sassi di fiume, coste/reef, banchine, interni/cutaway) e relative chiavi di cache. Assenti copie per palette delle mesh e dei registri Blender.
