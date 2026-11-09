@@ -90,6 +90,12 @@ const StructureCommands=(()=>{
     target.woodRoof=style==='pitched'?'pitched':'open';
     refresh(target);status('Wood tower roof: '+target.woodRoof);return true;
   }
+  // Longhouse roof cover: shingles, thatch or turf (BC-251105-09); a recover, not a rebuild.
+  function setLonghouseCover(id,cover){
+    const target=find(id);if(!isLonghouse(target)||!LONGHOUSE_COVERS.includes(cover))return false;
+    if(cover==='shingle')delete target.roofCover;else target.roofCover=cover;
+    refresh(target);status('Longhouse roof: '+cover);return true;
+  }
   function setGateRoof(id,style){
     const target=find(id);if(!target||target.type!=='gate')return false;
     if(!setStructureVariant(target,'roofStyle',style))return false;
@@ -360,6 +366,7 @@ const StructureCommands=(()=>{
       const stage=window.ConquerSiege.doorStage(s),closed=!!s.closed&&stage!=='broken';
       d.gate={stage,closed,broken:stage==='broken',nightClose:s.nightClose!==false};
     }
+    if(isLonghouse(s))d.controls.push(choice('roofCover','setLonghouseCover',LONGHOUSE_COVERS.map(v=>({value:v,word:'cover_'+v})),longhouseCover(s)));
     if(s.type==='built'&&!isLonghouse(s))d.controls.push(choice('skin','setSkin',[{value:'standard',word:'standard'},{value:'arcade',word:'arcade'}],builtSkin(s)));
     if(s.type==='wall'){
       const narrow=wallTier(s)===1;
@@ -391,7 +398,7 @@ const StructureCommands=(()=>{
     return d;
   }
 
-  return{setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setGateRoof,setGateUpper,setSkin,toggleCutaway,stepCutawayFloor,flipSide,
+  return{setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setLonghouseCover,setGateRoof,setGateUpper,setSkin,toggleCutaway,stepCutawayFloor,flipSide,
     setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,
     describeStructure};
 })();

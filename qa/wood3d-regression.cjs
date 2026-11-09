@@ -107,7 +107,10 @@ for(const [key,width,h] of [['longhouse_w1',1,1.77],['longhouse_w2',2,2.07]]){
   assert.ok(Math.abs(b.z1-h)<.05,key+' height '+b.z1.toFixed(2)+' ~ '+h);
   assert.ok(b.z0>-.05,key+' sits on the ground');
   assert.ok(Math.max(-b.y0,b.y1)<=width/2+.12,key+' keeps to the section width');
-  for(const part of ['wall_yn','wall_yp','roof_yn','roof_yp','ridge','floor','end_a','end_b'])assert.ok(M.models[key].parts[part],key+' has '+part);
+  for(const part of ['wall_yn','wall_yp','floor','end_a','end_b'])assert.ok(M.models[key].parts[part],key+' has '+part);
+  // BC-251105-09: every roof cover has its slopes, ridge, gable verges and smoke hole.
+  for(const v of ['shingle','thatch','turf'])for(const part of ['roof_yn','roof_yp','ridge','verge_a','verge_b','smoke'])
+    assert.ok(M.models[key].parts[part+'.'+v],key+' has '+part+'.'+v);
 }
 const lh=(length,extra={})=>({id:'lh'+length+JSON.stringify(extra),type:'built',material:'wood',level:1,a:{x:10,y:5},b:{x:10+length,y:5},length,...extra});
 const along=t=>{let a=Infinity,b=-Infinity;for(let i=0;i<t.length;i+=6){a=Math.min(a,t[i]);b=Math.max(b,t[i])}return[a,b]};
@@ -115,18 +118,26 @@ for(const length of [2,3.4]){
   const [x0,x1]=along(W.worldTriangles([lh(length)]));
   assert.ok(Math.abs(x0-10)<.3&&Math.abs(x1-(10+length))<.3,'longhouse '+length+'U runs from a to b');
 }
-const bayTris=['wall_yn','wall_yp','roof_yn','roof_yp','ridge'].reduce((n,p)=>n+M.models.longhouse_w1.parts[p].c.length,0);
-const endTris=M.models.longhouse_w1.parts.end_a.c.length+M.models.longhouse_w1.parts.end_b.c.length;
-assert.equal(W.geometry(lh(4)).mesh.col.length,4*bayTris+endTris,'one bay per U, floor only in cutaway');
+const P=k=>M.models.longhouse_w1.parts[k].c.length;
+for(const v of ['shingle','thatch','turf']){
+  const bayTris=['wall_yn','wall_yp','roof_yn.'+v,'roof_yp.'+v,'ridge.'+v].reduce((n,p)=>n+P(p),0);
+  const endTris=P('end_a')+P('end_b')+P('verge_a.'+v)+P('verge_b.'+v);
+  const extra=v==='shingle'?{}:{roofCover:v};
+  assert.equal(W.geometry(lh(4,extra)).mesh.col.length,4*bayTris+endTris+P('smoke.'+v),v+': one bay per U, one smoke hole, floor only in cutaway');
+}
+const colsOf=extra=>new Set(W.geometry(lh(3,extra)).mesh.col);
+const pal=k=>M.palette[M.paletteKeys.indexOf(k)];
+assert.ok(colsOf({roofCover:'thatch'}).has(pal('roofThatch'))&&!colsOf({roofCover:'thatch'}).has(pal('roofShingle')),'thatch cover replaces the shingles');
+assert.ok(colsOf({roofCover:'turf'}).has(pal('roofTurf')),'turf cover');
+assert.ok(colsOf({roofCover:'bogus'}).has(pal('roofShingle')),'unknown cover falls back to shingles');
 // Cutaway: no roof at all (the far slope would hide the back of the room), the near wall and the
 // near gable go, the floor shows. Camera looking from +y and +x: the -y wall and the gable at a
 // (smaller x) are the far ones.
 ctx.structureCutaway=s=>!!s.cutaway;ctx.viewDepthPoint=p=>p.y+p.x*.01;
-const P=k=>M.models.longhouse_w1.parts[k].c.length;
 const cut=W.geometry(lh(4,{cutaway:true})).mesh.col.length;
 assert.equal(cut,4*(P('wall_yn')+P('floor'))+P('end_a'),'cutaway keeps the far wall, the floor and the far gable only');
 delete ctx.structureCutaway;
-console.log('PASS timber longhouse W1 / W2: sizes, bays along a->b, cutaway');
+console.log('PASS timber longhouse W1 / W2: sizes, roof covers, smoke hole, bays along a->b, cutaway');
 
 // World renderer wiring: timber leaves the per-frame 2.5D residue; construction sites are
 // assembled from the same models.

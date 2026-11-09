@@ -484,6 +484,9 @@ function builtInteriorFloors(s){return isWideBuilt(s)?1:structureLevel(s)}
 // Timber longhouse: a built section (W1 or W2 span) in wood, ground floor only, with the same
 // rooms as the stone section's ground floor (Blender model: build_wood_fort.py, settlement-wood3d.js).
 function isLonghouse(s){return s?.type==='built'&&s.material==='wood'}
+// Longhouse roof cover (BC-251105-09): shingles (default), thatch or turf; all with a smoke hole.
+const LONGHOUSE_COVERS=Object.freeze(['shingle','thatch','turf']);
+function longhouseCover(s){return LONGHOUSE_COVERS.includes(s?.roofCover)?s.roofCover:'shingle'}
 // W1 section with the portico skin: its ground floor is the open arcade (the W2 hall keeps its hall).
 function isBuiltPortico(s){return s?.type==='built'&&!isWideBuilt(s)&&builtSkin(s)==='arcade'}
 // Semantic gameplay hook: combat can query this later without depending on renderer details.

@@ -37,6 +37,9 @@ COLORS = {
     # winter: white
     # Kept clear of the dark ground tones: the Asset Lab cuts out pixels close to the empty view.
     'roofShingle': '#654535', 'roofShingleDark': '#5a3d2e', 'roofRidge': '#7a5640', 'roofDeck': '#8b6845',
+    # longhouse covers (BC-251105-09): thatch and turf, also white in winter
+    'roofThatch': '#a08650', 'roofThatchDark': '#8c7343', 'roofThatchRidge': '#76603a',
+    'roofTurf': '#6f7d3e', 'roofTurfDark': '#5d6a34',
 }
 KEYS = list(COLORS.keys())
 COLL_NAME = 'CONQUER_WoodFort'
@@ -429,6 +432,87 @@ def slab(p, quad, t, key, under='beam'):
     p.quads(vs, [(7, 6, 5, 4), (0, 4, 5, 1), (1, 5, 6, 2), (2, 6, 7, 3), (3, 7, 4, 0)], under)
 
 
+# Longhouse covers (BC-251105-09): the game picks one set of parts per section (s.roofCover).
+# over = eave overhang beyond the wall (U), t = thickness, lip = lap of each course over the one below.
+LONGHOUSE_COVERS = {
+    'shingle': dict(courses=4, t=.03, lip=.025, over=.10, keys=('roofShingleDark', 'roofShingle'), under='beam'),
+    'thatch':  dict(courses=3, t=.085, lip=.05, over=.14, keys=('roofThatchDark', 'roofThatch'), under='roofThatchDark'),
+    'turf':    dict(courses=1, t=.06, lip=0, over=.12, keys=('roofTurf', 'roofTurf'), under='plankDark'),
+}
+
+
+def longhouse_cover(mdl, v, cv, hw, wall_h, ridge, slope, roof_z):
+    """One roof cover over the 1 U bay ('roof_yn.v', 'roof_yp.v', 'ridge.v'), the overhang past
+    each gable ('verge_a.v', 'verge_b.v': slab, barge boards, crossed carved boards) and the
+    smoke hole of the hearth ('smoke.v'), a hooded louvre on the ridge the game sets on one bay."""
+    t, over, keys = cv['t'], cv['over'], cv['keys']
+    eave_y, eave_z = hw + over, wall_h - over * slope
+    lift = t                                              # the slab's underside sits on the rafters
+    for sgn, name in ((-1, 'roof_yn'), (1, 'roof_yp')):
+        r = mdl.part(name + '.' + v)
+        n = cv['courses']
+        for k in range(n):
+            t0, t1 = k / n, (k + 1) / n
+            y0, y1 = sgn * (eave_y - eave_y * t0), sgn * (eave_y - eave_y * t1)
+            z0, z1 = eave_z + (ridge - eave_z) * t0, eave_z + (ridge - eave_z) * t1
+            lip = cv['lip'] if k else 0
+            q = [(0, y0 + sgn * lip * .3, z0 + lift - lip), (1, y0 + sgn * lip * .3, z0 + lift - lip), (1, y1, z1 + lift), (0, y1, z1 + lift)]
+            slab(r, q if sgn > 0 else q[::-1], t, keys[k % 2], cv['under'])
+        if v == 'turf':      # turf-retaining log along the eave, birch-bark deck edge under it
+            log_y = sgn * (eave_y - .03)
+            beam(r, (0, log_y, eave_z + lift + .02), (1, log_y, eave_z + lift + .02), .07, .07, 'log')
+            beam(r, (0, sgn * eave_y, eave_z - .01), (1, sgn * eave_y, eave_z - .01), .03, .04, 'cut')
+        elif v == 'thatch':  # thatch cut square at the eave: a darker band of butt ends
+            beam(r, (0, sgn * (eave_y - .01), eave_z + lift * .45), (1, sgn * (eave_y - .01), eave_z + lift * .45), .05, lift * .9, 'roofThatchRidge')
+        else:
+            beam(r, (0, sgn * eave_y, eave_z - .015), (1, sgn * eave_y, eave_z - .015), .04, .05, 'beam')   # eave board
+        mdl.done(name + '.' + v, r)
+    rd = mdl.part('ridge.' + v)
+    top = ridge + lift
+    if v == 'thatch':        # thick ridge roll, bound with two hazel rods
+        beam(rd, (0, 0, top - .02), (1, 0, top - .02), .24, .1, 'roofThatchRidge')
+        for y in (-.09, .09):
+            beam(rd, (0, y, top + .025), (1, y, top + .025), .02, .02, 'beam')
+        crest = top + .08
+    elif v == 'turf':        # grass crest over the ridge board
+        beam(rd, (0, 0, top + .01), (1, 0, top + .01), .16, .07, 'roofTurfDark')
+        crest = top + .05
+    else:
+        beam(rd, (0, 0, ridge + .05), (1, 0, ridge + .05), .1, .07, 'roofRidge')
+        crest = ridge + .09
+    mdl.done('ridge.' + v, rd)
+    for out, name in ((-1, 'verge_a'), (1, 'verge_b')):
+        e = mdl.part(name + '.' + v)
+        ox = out * (.16 + (over - .1) * .5)
+        for sgn in (-1, 1):
+            q = [(0, sgn * eave_y, eave_z + lift), (ox, sgn * eave_y, eave_z + lift), (ox, 0, ridge + lift), (0, 0, ridge + lift)]
+            slab(e, q if (sgn > 0) == (out > 0) else q[::-1], t, keys[0], cv['under'])
+            beam(e, (ox, sgn * eave_y, eave_z + lift - t - .005), (ox, 0, ridge + lift - t), .03, .07, 'beam')
+            # crossed carved boards over the ridge (the barge boards running on past each other),
+            # at the same height on every cover so the section keeps its structureHeight
+            dz = 0
+            beam(e, (ox + out * .01, sgn * hw * .55, roof_z(hw * .45) + .06 + dz), (ox + out * .01, -sgn * .2, ridge + .2 + .16 * slope * .2 + dz), .03, .06, 'beam')
+            box(e, ox + out * .01, -sgn * .23, ridge + .23 + dz, .035, .07, .09, 'cut')   # carved head
+        if v == 'thatch':
+            beam(e, (0, 0, top - .02), (ox, 0, top - .02), .24, .1, 'roofThatchRidge')
+        elif v == 'turf':
+            beam(e, (0, 0, top + .01), (ox, 0, top + .01), .16, .07, 'roofTurfDark')
+        else:
+            beam(e, (0, 0, ridge + .05), (ox, 0, ridge + .05), .1, .07, 'roofRidge')
+        mdl.done(name + '.' + v, e)
+    # Smoke hole over the hearth: a dark opening in the ridge under a small raised hood.
+    sm = mdl.part('smoke.' + v)
+    x0, x1, hy, hz = .32, .68, .19, crest + .1
+    box(sm, .5, 0, crest - .09, x1 - x0, .26, .1, 'dark')
+    for x in (x0, x1):
+        for y in (-.1, .1):
+            log(sm, x, y, .018, crest - .04, hz - .02, 'beam', top=None)
+    for sgn in (-1, 1):
+        q = [(x0 - .03, sgn * hy, hz - .07), (x1 + .03, sgn * hy, hz - .07), (x1 + .03, 0, hz), (x0 - .03, 0, hz)]
+        slab(sm, q if sgn > 0 else q[::-1], .025, keys[1] if v != 'turf' else 'plank', 'beam')
+    mdl.done('smoke.' + v, sm)
+
+
 def longhouse(mdl, width, wall_h, ridge):
     """Longhouse in structure-local space: a repeatable 1 U bay (x 0..1) the game lays along a->b,
     and two gable ends at x = 0 (end_a faces -x and holds the door, end_b faces +x and is moved
@@ -438,8 +522,6 @@ def longhouse(mdl, width, wall_h, ridge):
     'floor' only shows in cutaway."""
     hw = width / 2 - .06                                 # wall line
     slope = (ridge - wall_h) / hw
-    over = .1                                            # eave overhang beyond the wall
-    eave_y, eave_z = hw + over, wall_h - over * slope
     roof_z = lambda y: wall_h + slope * (hw - abs(y))   # underside of the roof over the wall line
     planks = 9
     for sgn, name in ((-1, 'wall_yn'), (1, 'wall_yp')):
@@ -453,21 +535,8 @@ def longhouse(mdl, width, wall_h, ridge):
         log(w, 0, y, .05, 0, wall_h, top=None)                         # bay post
         beam(w, (.5, y + sgn * .12, 0), (.5, y + sgn * .03, wall_h * .78), .055, .055, 'log')   # raking prop
         mdl.done(name, w)
-    for sgn, name in ((-1, 'roof_yn'), (1, 'roof_yp')):
-        r = mdl.part(name)
-        courses = 4
-        for k in range(courses):
-            t0, t1 = k / courses, (k + 1) / courses
-            y0, y1 = sgn * (eave_y - eave_y * t0), sgn * (eave_y - eave_y * t1)
-            z0, z1 = eave_z + (ridge - eave_z) * t0, eave_z + (ridge - eave_z) * t1
-            lip = .025 if k else 0                                     # each course laps over the one below
-            q = [(0, y0 + sgn * lip * .3, z0 + .03 - lip), (1, y0 + sgn * lip * .3, z0 + .03 - lip), (1, y1, z1 + .03), (0, y1, z1 + .03)]
-            slab(r, q if sgn > 0 else q[::-1], .03, 'roofShingle' if k % 2 else 'roofShingleDark')
-        beam(r, (0, sgn * eave_y, eave_z - .015), (1, sgn * eave_y, eave_z - .015), .04, .05, 'beam')   # eave board
-        mdl.done(name, r)
-    rd = mdl.part('ridge')
-    beam(rd, (0, 0, ridge + .05), (1, 0, ridge + .05), .1, .07, 'roofRidge')
-    mdl.done('ridge', rd)
+    for v, cv in LONGHOUSE_COVERS.items():
+        longhouse_cover(mdl, v, cv, hw, wall_h, ridge, slope, roof_z)
     fl = mdl.part('floor')
     box(fl, .5, 0, 0, 1.0, hw * 2 - .06, .03, 'plankDark', 'plank')
     for i in range(1, 6):
@@ -491,17 +560,7 @@ def longhouse(mdl, width, wall_h, ridge):
         for y in (-hw, hw):
             log(e, 0, y, .065, 0, wall_h, top=None)                    # corner posts
         box(e, 0, 0, wall_h - .06, .09, hw * 2 + .09, .07, 'beam', 'beam')   # tie beam
-        # roof overhang beyond the gable and the barge boards along its edge
-        ox = out * .16
-        for sgn in (-1, 1):
-            q = [(0, sgn * eave_y, eave_z + .03), (ox, sgn * eave_y, eave_z + .03), (ox, 0, ridge + .03), (0, 0, ridge + .03)]
-            slab(e, q if (sgn > 0) == (out > 0) else q[::-1], .03, 'roofShingleDark')
-            beam(e, (ox, sgn * eave_y, eave_z), (ox, 0, ridge + .02), .03, .07, 'beam')
-            # crossed carved boards over the ridge (the barge boards running on past each other)
-            beam(e, (ox + out * .01, sgn * hw * .55, roof_z(hw * .45) + .06), (ox + out * .01, -sgn * .2, ridge + .2 + .16 * slope * .2), .03, .06, 'beam')
-            box(e, ox + out * .01, -sgn * .23, ridge + .23, .035, .07, .09, 'cut')   # carved head
-        beam(e, (0, 0, ridge + .05), (ox, 0, ridge + .05), .1, .07, 'roofRidge')
-        if out < 0:                                                    # door, lintel and a step stone
+        if out < 0:                                                  # door, lintel and a step stone
             dw = min(.42, hw * .7)
             box(e, x - .03, 0, .08, .012, dw, .5, 'dark')
             box(e, x - .045, dw * .22, .08, .03, dw * .5, .48, 'door')

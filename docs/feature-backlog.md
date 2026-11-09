@@ -54,7 +54,7 @@
 
 ### Coperture
 - [ ] **BC-251105-08 — Tetti inclinati a 75°.** Valutare e introdurre la pendenza a 75° nel sistema di tetti pertinente, coordinandola con `feat/roof-pitch` (30°/45°/60° già documentati su branch, non assumere merge).
-- [ ] **BC-251105-09 — Upgrade tetti Longhouse.** Revisionare le coperture delle longhouse lignee W1/W2, con dipendenza da `feature/wood-longhouse` e dal suo modello modulare.
+- [x] **BC-251105-09 — Upgrade tetti Longhouse.** Revisionare le coperture delle longhouse lignee W1/W2, con dipendenza da `feature/wood-longhouse` e dal suo modello modulare. **Su branch `feature/longhouse-roofs` (NON MAIN):** manti scandole/paglia/zolle nel modello Blender, scelta «Copertura» nel pannello, sfiatatoio nel colmo con fumo, varianti nel Lab.
 - [ ] **BC-251105-10 — Upgrade tetti edifici addossati alle mura.** Disegnare le coperture dedicate ai nuovi edifici addossati, gestendo attacco alle mura e interferenze con parapetti/camminamenti; dipende da BC-251105-03.
 
 ### Ambiente

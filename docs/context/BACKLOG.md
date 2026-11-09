@@ -48,7 +48,8 @@ Pulizia asset: rimossi dal branch `fix/remove-fossil-industry-svg` i due set di 
 - **APERTO:**
   - Bilanciamento di costi e giorni (proposta 6 oro / 28 legno per U×larghezza, 1,2 + 0,8 giorni).
   - Lato della porta: oggi sempre sul frontone in A; scelta del lato o porta laterale.
-  - Fumo dal foro nel colmo per il focolare (oggi nessun comignolo né fumo).
+  - ~~Fumo dal foro nel colmo per il focolare~~ — **IMPLEMENTATO SU BRANCH `feature/longhouse-roofs` (09/11):** sfiatatoio sul colmo e fumo in 2.5D; nel renderer WebGL il fumo è quello della passata 2D (da verificare).
+  - **Coperture (BC-251105-09) IMPLEMENTATO SU BRANCH `feature/longhouse-roofs`:** scandole, paglia, zolle erbose. Aperto: costo/tempo del cambio di copertura (oggi gratuito e immediato); effetto della paglia sugli incendi (`settlement-fire.js`) da decidere.
   - Puntoni esterni che sporgono 0,1U oltre la sezione: verificare gli attacchi a mura e torri.
   - Lab: lo stage delle sezioni larghe (anche la sala larga in pietra) mostra quasi vuoto il cantiere al 25/50/75% (difetto preesistente).
 ## Mastio W4 · 3U con più stanze per piano (03/11/2026)

@@ -14,8 +14,8 @@ function migrateStructures(list){
       if(!Number.isFinite(s.length))s.length=dist(s.a,s.b);
       s.level=clamp(Math.round(Number(s.level)||1),1,2);
       // Timber longhouse: ground floor only, plain skin.
-      if(s.material==='wood'){s.level=1;s.skin='standard'}
-      else delete s.material;
+      if(s.material==='wood'){s.level=1;s.skin='standard';if(longhouseCover(s)==='shingle')delete s.roofCover}
+      else{delete s.material;delete s.roofCover}
     }
     if(s.type==='wall'){
       s.width=Number.isFinite(Number(s.width))?Number(s.width):.5;

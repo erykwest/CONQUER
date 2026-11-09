@@ -2,6 +2,10 @@
 
 05/11/2026 — `fix/audit-sheet-grid`: i fogli provini per categoria vanno a griglia da 8 colonne. Lo sfondo neutro evita che le celle vuote sembrino un esito verde. Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è uno strumento di QA, non cambia contratti.
 
+## 2026-11-09 — Coperture della long house (branch `feature/longhouse-roofs`)
+
+- BC-251105-09: la long house lignea W1/W2 ha tre manti a scelta nel pannello (scandole, paglia, zolle erbose), generati nel modello Blender, e uno sfiatatoio nel colmo da cui esce il fumo del focolare. Quattro varianti nuove nell'Asset Lab. Piramide: STATUS, BACKLOG, CHANGELOG e `feature-backlog.md`. ROADMAP e DECISIONS invariate: nessun contratto nuovo, solo un campo di variante.
+
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`)
 
 - Banchina perpendicolare alla riva: pontili su entrambi i lati, approdo ridotto a 0,3U sulla banchina; test del molo esteso.

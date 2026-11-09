@@ -42,6 +42,11 @@
       // Timber longhouse (settlement-wood3d.js): W1 / W2 span, ground floor only, the stone section's rooms.
       ['Mura',['Long house W1',{type:'built',material:'wood',level:1}]],
       ['Mura',['Long house W2',{type:'built',material:'wood',span:'wide',level:1,flip:true}]],
+      // Roof covers (BC-251105-09): thatch and turf beside the default shingles, smoke hole on the ridge.
+      ['Mura',['Long house W1 · paglia',{type:'built',material:'wood',level:1,roofCover:'thatch'}]],
+      ['Mura',['Long house W1 · zolle',{type:'built',material:'wood',level:1,roofCover:'turf'}]],
+      ['Mura',['Long house W2 · paglia',{type:'built',material:'wood',span:'wide',level:1,flip:true,roofCover:'thatch'}]],
+      ['Mura',['Long house W2 · zolle',{type:'built',material:'wood',span:'wide',level:1,flip:true,roofCover:'turf'}]],
       ['Mura',['Long house W1 · scuderia',{type:'built',material:'wood',level:1,functions:['stables']}]],
       ['Mura',['Long house W2 · sala comune',{type:'built',material:'wood',span:'wide',level:1,flip:true,functions:['commonHall']}]],...G.gates.map(r=>['Porte',r])]
       .map(([family,[label,spec]])=>({id:slug(label),label,family,spec})).concat(shopVariants());
