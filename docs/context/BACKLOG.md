@@ -44,7 +44,7 @@
 
 **Catalogo edifici — ancora solo progetto, da confermare prima del codice:** Presidio antincendio, Avamposto, funzioni del Municipio, Gilda/Corporazioni, effetti dello Scriptorium, Bagni pubblici, Lavatoio, Approdo fluviale, Cortile domestico, Giardino dei semplici, Carbonaia, Palazzo del Balivo. Il Corpo di Guardia esiste come stanza `guard` e sala del Municipio, senza pattuglie né allarmi propri.
 
-**Seguiti aperti trasversali:** lanterna della Colombaia sul montaggio `roof` di `ROOM_EXTERIOR`; reclutamento dei cavalieri sullo stock reale dei cavalli; rintocco della campana nel motore audio; cosa legge il Prestigio; gronda e pluviale della Cisterna; assedio strategico S-01/02/03/04/10/15; CRIME C-01 e C-05; MARCH collegato a mappa e salvataggi; navi in gioco (MARE); ARTE solo backlog; UI v2 fase 5.
+**Seguiti aperti trasversali:** lanterna della Colombaia sul montaggio `roof` di `ROOM_EXTERIOR`; reclutamento dei cavalieri sullo stock reale dei cavalli; rintocco della campana nel motore audio; cosa legge il Prestigio; gronda e pluviale della Cisterna; assedio strategico S-01/02/03/04/10/15; CRIME C-01 e C-05; MARCH collegato a mappa e salvataggi; navi in gioco (MARE); ARTE: grafica e ancoraggi su branch, commissione/inventario aperti; UI v2 fase 5.
 
 ## 2026-11-08 — STONECOLOR · Verifica a cascata delle dipendenze
 
@@ -211,6 +211,8 @@ Tutte **DA CONFERMARE dall'utente** prima di qualsiasi codice (effetti, compatib
 Fogli provini dell'audit: impaginazione a griglia per le categorie e sfondo neutro sulle celle vuote (branch `fix/audit-sheet-grid`). **APERTO:** il simbolo «Her 2» dell'araldica è quasi invisibile nel foglio (difetto preesistente, non toccato).
 
 ## 2026-11-05 — ARTE: opere commissionabili e decorazione delle stanze
+
+**09/11/2026 · PARTE GRAFICA SU BRANCH `feature/arte-graphics` (non in main):** 19 archetipi in `ConquerArtModels` (ART-251105-01, grafica) e ancoraggi a parete/pavimento per stanza con `ConquerCutawayFurniture.artSlots`/`artFits` (ART-251105-02); QA `qa/art-regression.cjs`. **Ancora aperti:** commissione (03), inventario persistente (04), rimozione/ricollocazione (05) e il rendering delle opere esposte sugli ancoraggi, che dipende da 03/04; da valutare se gli arredi decorativi esistenti (arazzo araldico, drappi) cedano il posto alle opere esposte.
 
 **APERTO · SOLO BACKLOG (nessuna implementazione o QA attestata).** Sottosistema separato da personaggi speciali e ricerca scientifica. Dettaglio canonico: [ARTE nel backlog Builder/Manager](../feature-backlog.md#2026-11-05--arte--commissioni-esposizione-e-circolazione-delle-opere).
 

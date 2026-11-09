@@ -1,5 +1,7 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+09/11/2026 — `feature/arte-graphics` (pre-merge): parte grafica di ARTE. Generatore `tools/blender/build_art.py` e registro `ConquerArtModels` con 19 archetipi (quadri e arazzi in due taglie, busto, statua in marmo/pietra/bronzo, santo ligneo in tabernacolo) e catalogo dei metadati; Asset Lab con tre famiglie «Opere d'arte». Ancoraggi a parete e a pavimento calcolati per ogni stanza del cutaway (`artSlots`, `artFits`), senza esporre opere né cambiare le stanze. Nuova `qa/art-regression.cjs`. ART-251105-01 fatto per la parte grafica, ART-251105-02 per gli slot; commissione, inventario e ricollocazione restano aperti. ROADMAP e DECISIONS invariate.
+
 09/11/2026 — `feature/circle-military-zones-macrotowers-20261109` (pre-merge): gestione militare CIRCLE con compartimenti difensivi effettivi, stato e profondità per zona; assegnazioni arcieri per settore e per torre madre; sottotorri e sottotorri annidate aggregate in una riga, con slots Siege sommati una sola volta. Le pattuglie si assegnano/ritirano dai settori usando il roster Combat già esistente e percorsi militari locali: nessuna nuova unità creata dal trasferimento. QA dedicata e test di pannello/browser; in attesa CI prima del merge. Decisione D-MIL-CIRCLE-261109; ROADMAP invariata.
 
 

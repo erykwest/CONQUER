@@ -25,6 +25,8 @@
     {global:'ConquerCampScenes',collection:'models',category:'Eventi',family:'Bivacchi (composizioni)'},
     {global:'ConquerHouseModels',collection:'models',category:'Edifici',family:'Kit case'},
     {global:'ConquerFurnitureModel',collection:'pieces',category:'Interni',family:'Arredi del cutaway'},
+    // ARTE (ART-251105-01): graphic archetypes of paintings, tapestries and sculptures, one family per kind.
+    {global:'ConquerArtModels',collection:'pieces',category:'Interni',family:'Opere d’arte'},
     // Elements a room adds to the outside of its building (ROOM_EXTERIOR, settlement-room-exterior.js).
     // Blender parts listed under Edifici, as the house kit: Fortificazioni holds only engine meshes and
     // Componenti only architectural texture files (qa/asset-catalog-browser.mjs).
@@ -80,8 +82,10 @@
     stairWood:'Scala lignea al camminamento',stairStone:'Scala lapidea al camminamento',
     belfry:'Castello campanario · campana d’allarme',rampH1:'Rampa · dislivello H1 · 1:4.5',rampH2:'Rampa · dislivello H2 · 1:4.25',stairwayH1:'Scalinata · dislivello H1',stairwayH2:'Scalinata · dislivello H2',
     justicePillory:'Gogna',justiceGallows:'Forca',justiceScaffold:'Patibolo',almshouse:'Ospizio (annesso della chiesa)',kitchenGarden:'Orto di corte (annesso del municipio)'};
+  const ART_FAMILY={painting:'Opere d’arte · quadri',tapestry:'Opere d’arte · arazzi',sculpture:'Opere d’arte · sculture'};
   function titleFor(key){
     if(nameOverrides[key])return nameOverrides[key];
+    const art=window.ConquerArtModels?.catalog?.[key];if(art)return art.label;
     const furled=/Furled$/.test(key),ship=window.ConquerShipModels?.ships?.[key.replace(/Furled$/,'')];
     if(ship)return ship.label+(ship.size==='large'?' · grande':' · piccola')+(furled?' · vele alzate':' · vele spiegate');
     const m=/^(church|tavern|market|townhall|guild|windmill|watermill|quarry|mine|loggingCamp)(\d+)$/.exec(key);
@@ -118,13 +122,14 @@
       const isJustice=source.global==='ConquerEventModels'&&key.startsWith('justice');
       const category=isCivicNature?'Natura':isCivicFurniture?'Interni':isCivicProp?'Scatter':isJustice?'Edifici':source.category;
       const family=isJustice?'Giustizia':source.global==='ConquerScatterModel'?prettify(collection[key].family||'Oggetti ambientali')
-        :isCivicNature?'Vegetazione 3D':isCivicFurniture?'Arredi 3D':isCivicProp?'Elementi ambientali':source.family;
+        :isCivicNature?'Vegetazione 3D':isCivicFurniture?'Arredi 3D':isCivicProp?'Elementi ambientali'
+        :source.global==='ConquerArtModels'?ART_FAMILY[registry.catalog?.[key]?.kind]||source.family:source.family;
       items.push({id:'model:'+source.global+':'+key,title:titleFor(key),category,family,
         kind:'model',registry:source.global,collection:source.collection,key,source:'src/assets/'+
           ({ConquerCivicModels:'civic-models.js',ConquerIndustryModels:'industry-models.js',ConquerStorageYard:'../settlement-storage-yard.js',
             ConquerScatterModel:'scatter-model.js',ConquerWagonModel:'wagon-model.js',
             ConquerSiegeModel:'siege-engines-model.js',ConquerWoodFortModels:'wood-fort-models.js',ConquerEventModels:'event-models.js',ConquerCampScenes:'../settlement-events3d.js',
-            ConquerHouseModels:'house-models.js',ConquerGarderobeModels:'garderobe-models.js',ConquerFurnitureModel:'furniture-model.js',ConquerDovecoteModels:'dovecote-models.js',ConquerBelfryModels:'belfry-models.js',ConquerSlopewayModels:'../settlement-slopeways.js',ConquerWallStairModels:'wall-stair-models.js',
+            ConquerHouseModels:'house-models.js',ConquerGarderobeModels:'garderobe-models.js',ConquerFurnitureModel:'furniture-model.js',ConquerArtModels:'art-models.js',ConquerDovecoteModels:'dovecote-models.js',ConquerBelfryModels:'belfry-models.js',ConquerSlopewayModels:'../settlement-slopeways.js',ConquerWallStairModels:'wall-stair-models.js',
             ConquerMewsModels:'mews-models.js',
             ConquerShipModels:'ship-models.js',ConquerFishingModels:'fishing-models.js',ConquerShipyardModels:'shipyard-models.js',ConquerWatersideModels:'waterside-models.js'}[source.global]),
         format:'Modello 3D',subject:source.global==='ConquerSiegeModel'&&key!=='tower2'?'siege:'+key
