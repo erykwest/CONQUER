@@ -1,5 +1,24 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-09 — MIL-RES-01 · Caserma, riserva di soldati, pattuglie, vedette e Avamposto (specifica approvata)
+
+**SOLO SPECIFICA, NESSUN CODICE.** Approvata dal product owner il 09/11/2026; l'implementazione parte solo dopo una nuova conferma. Decisione [D-MIL-RES-261109](DECISIONS.md). Sostituisce le voci «Corpo di Guardia» e «Avamposto» del catalogo edifici.
+
+1. **Il Corpo di Guardia si fonde nella Caserma.** `guard` esce dal castello (torri, porte, sezioni costruite, `PORTICO_FUNCTIONS`) e resta solo in `TOWNHALL_FUNCTION_CATALOG` come guardia cittadina per CRIME. Aggiornamento distruttivo (fase di test): le stanze `guard` del castello si svuotano al caricamento.
+2. **Una sola riserva di soldati: i posti della Caserma** (`barracks`, 16 per unità di stanza). I soldati sono uomini adulti L1 arruolati dal giocatore fino ai posti liberi; escono dal lavoro L1. Ingaggio **15 oro**, paga giornaliera da **L2** dall'oro del castello (stesso schema di `ConquerInfirmary.pay`). Senza paga non prestano servizio: pattuglie e vedette rientrano. Cibo come oggi (0,22 al giorno).
+3. **I soldati sono una valuta:** ogni soldato è libero o impegnato in pattuglia, vedetta, presidio di Avamposto o spedizione.
+4. **Pattuglie: 2 soldati della riserva, partono dalla Caserma.** Due tipi: **esterna** sul bordo della White Zone (quella attuale) e **ronda** lungo le strade della città. Se una pattuglia avvista nemici scatta l'**allarme automatico** (campana, `ConquerAlarmBells`). Da allineare con l'assegnazione a zona di MIL-CIRCLE-02 (#192): la ronda può coincidere con una pattuglia assegnata a un settore CIRCLE interno.
+5. **Vedette: 1 soldato su una torre.** **Senza vedetta una torre non osserva** (restano la vista delle unità e quella base); con la vedetta vede come oggi (`16 + 4 × altezza` U, un terzo di notte) e dà l'allarme automatico quando avvista nemici. Figura visibile sul tetto. Cambia l'equilibrio attuale, in cui ogni torre finita vede gratis.
+6. **Avamposto: upgrade a pagamento di una torre isolata** (staccata dalle mura, fuori dalla White Zone, dentro l'area edificabile; ammessa la W2 H4). Costo provvisorio 60 oro + 40 pietra + 20 legno, 4 giorni. Presidio fisso di **4 soldati e 1 cavallo** presi dalle riserve, vedetta sempre in servizio; senza soldati o cavallo disponibili l'Avamposto resta inattivo.
+7. **Avvisi dall'Avamposto al castello:**
+   - **Campana** (upgrade esistente dei tetti a falde).
+   - **Fuoco di segnalazione** (nuovo): upgrade dei tetti piani merlati, una pira grande, diversa dal braciere attuale. Passa l'allarme a catena come la campana con **raggio triplo**; si accende **una volta sola**, poi la pira si ricostruisce in cantiere (30 legno).
+   - **Staffetta a cavallo** lungo la strada fino al castello: l'allarme scatta all'arrivo.
+   - **Esclusi:** piccioni (Colombaia), cambio cavalli per i corrieri diplomatici, Stazione di Posta.
+8. **Spedizioni militari:** solo contratto. Prenotano soldati dalla riserva e li restituiscono al rientro; la meccanica resta a MARCH.
+
+**Asset nel Lab:** modello della pira, figura della vedetta sul tetto. **Dettagli lasciati all'implementazione:** la Caserma non entra sotto il portico (restano stalle, officina degli armaioli, magazzino); la vedetta si può mettere su qualunque torre finita. **Chiude:** il seguito della Colombaia «avvisi rapidi tra avamposti e castelli».
+
 ## 2026-11-09 — MIL-CIRCLE-02 · Zone CIRCLE e macrostrutture difensive
 
 - **SU BRANCH:** sostituisce il roster piatto delle torri di MIL-PG-01 con **zone difensive CIRCLE → macrostrutture**. Ogni torre madre (`parentTowerId`) integra sottotorri dirette e annidate in **una sola riga**, sommando capienza, assegnati e operativi senza contare due volte. Si assegnano arcieri sia a livello settore sia a livello macrostruttura, reindirizzando i comandi ai singoli slot Siege.
@@ -148,7 +167,7 @@ BC-251105-03 e BC-251105-10 (edifici addossati alle mura e loro tetto a falda un
 Tutte **DA CONFERMARE dall'utente** prima di qualsiasi codice (effetti, compatibilità, priorità). Nessuna è approvata.
 
 - **Presidio antincendio:** upgrade di Pozzo/Cisterna; secchi e uomini pronti che spengono prima gli incendi nel raggio (sistema fuoco esistente).
-- **Avamposto:** torre isolata che evolve Corpo di guardia e Stazione di posta; avvistamento lontano, staffette per i messaggi.
+- **Avamposto:** ~~torre isolata che evolve Corpo di guardia e Stazione di posta~~ → **specifica approvata il 09/11/2026, vedi MIL-RES-01** (upgrade delle torri isolate; il Corpo di Guardia si fonde nella Caserma).
 - **Municipio:** funzioni amministrative.
 - **Gilda:** assorbe la Casa delle Corporazioni.
 - **Scriptorium (Chiesa L2):** servono effetti simulati.

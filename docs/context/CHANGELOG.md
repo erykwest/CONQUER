@@ -1,5 +1,7 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+09/11/2026 — `docs/caserma-avamposto-spec`: specifica approvata MIL-RES-01 (Corpo di Guardia fuso nella Caserma, riserva unica di soldati L1 come valuta, pattuglie esterne e ronde con allarme automatico, vedette obbligatorie per la vista delle torri, Avamposto come upgrade delle torri isolate, fuoco di segnalazione, staffetta). Nuova decisione D-MIL-RES-261109. Solo documentazione: nessun codice, test o asset; ROADMAP invariata.
+
 09/11/2026 — `feature/circle-military-zones-macrotowers-20261109` (pre-merge): gestione militare CIRCLE con compartimenti difensivi effettivi, stato e profondità per zona; assegnazioni arcieri per settore e per torre madre; sottotorri e sottotorri annidate aggregate in una riga, con slots Siege sommati una sola volta. Le pattuglie si assegnano/ritirano dai settori usando il roster Combat già esistente e percorsi militari locali: nessuna nuova unità creata dal trasferimento. QA dedicata e test di pannello/browser; in attesa CI prima del merge. Decisione D-MIL-CIRCLE-261109; ROADMAP invariata.
 
 

@@ -1,5 +1,10 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-09 — MIL-RES-01 · Caserma, vedette e Avamposto (solo specifica)
+
+- **NESSUN CODICE.** Specifica approvata nel [BACKLOG](BACKLOG.md); decisione D-MIL-RES-261109.
+- **STATO DI PARTENZA VERIFICATO NEL CODICE:** la stanza `guard` calcola `watchmen` (`src/settlement-siege.js`, 4 per unità) ma nessun sistema lo legge; le pattuglie (`ConquerCombat.addPatrol`) non consumano soldati; ogni torre finita osserva senza personale (`VISION_BASE=16`, `VISION_PER_HEIGHT=4`); l'allarme è solo manuale; i soldati costano solo cibo; non esiste un conteggio di soldati reali.
+
 ## 2026-11-09 — CIRCLE: assegnazione pattuglie e guarnigioni per settore → macrostruttura (`feature/circle-military-zones-macrotowers-20261109`)
 
 - **CODICE PRESENTE SUL BRANCH (non ancora su main):** Centro di controllo → Militare → Pattuglie e guarnigioni adotta la gerarchia CIRCLE reale: settori chiusi dal rilevamento topologico, stato (sicuro/allerta/conteso, ecc.), profondità e presidio per settore; un livello più basso presenta le macrostrutture difensive. Torri figlie e nipoti collegate con `parentTowerId` sono aggregate in un'unica riga della torre principale: arcieri assegnati, capienza e operativi sono somme delle postazioni `ConquerSiege`, non risorse simulate.

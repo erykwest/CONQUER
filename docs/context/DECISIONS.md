@@ -1,5 +1,12 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-MIL-RES-261109 — Caserma come unica riserva di soldati; vedette e Avamposto (09/11/2026)
+
+- **DECISIONE DEL PRODUCT OWNER:** il Corpo di Guardia del castello è un duplicato della Caserma e vi si fonde; `guard` resta solo nel Municipio (guardia cittadina, CRIME). La Caserma alloggia una riserva unica di soldati arruolati tra gli L1 (ingaggio 15 oro, paga L2), spesa come valuta da pattuglie, vedette, presidi di Avamposto e spedizioni.
+- **VISTA:** una torre osserva solo con una vedetta assegnata; pattuglie e vedette danno l'allarme automatico.
+- **AVAMPOSTO:** upgrade di una torre isolata, con presidio fisso di 4 soldati e 1 cavallo; avvisa con campana, fuoco di segnalazione (nuovo upgrade dei tetti piani, raggio triplo, monouso) o staffetta a cavallo. Niente piccioni né Stazione di Posta.
+- **STATO:** solo specifica ([BACKLOG](BACKLOG.md), MIL-RES-01). Aggiornamento distruttivo ammesso perché il gioco è in fase di test. ROADMAP invariata.
+
 ## D-MIL-CIRCLE-261109 — Gerarchia CIRCLE per assegnazioni militari (09/11/2026)
 
 - **DECISIONE DEL PRODUCT OWNER:** la sottopaletta «Pattuglie e guarnigioni» deve usare l'interfaccia CIRCLE, con assegnazioni da **zone difensive** fino a **torri**; ogni torre principale e le sue sottotorri sono una **sola riga** come macrostruttura difensiva.
