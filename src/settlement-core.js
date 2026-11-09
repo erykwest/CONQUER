@@ -206,8 +206,9 @@ function timberTint(color){
 function visualPaletteColor(color){
   if(typeof color!=='string')return color;
   if(structureVisualMaterial==='timber'&&typeof timberTint==='function')return timberTint(color);
-  return (State.visualPalette==='clay'||structureVisualMaterial==='brick')
-    ?CLAY_VISUAL_SWATCHES[color.toLowerCase()]||color:color;
+  if(State.visualPalette==='clay'||structureVisualMaterial==='brick')return CLAY_VISUAL_SWATCHES[color.toLowerCase()]||color;
+  if(structureVisualMaterial==='stone'&&typeof window!=='undefined')return window.ConquerStoneColor?.masonry(color)||color;
+  return color;
 }
 // DEV VISUAL PALETTE END
 const STRUCTURE_ANGLE_STEP_DEG=15;
@@ -942,8 +943,15 @@ function constructionMaterialInfo(s){
 }
 function refundableConstructionCost(s){
   if(!s?.buildCost)return{};
-  const delivered=s?.construction?.version===2&&s.construction.materialsDelivered;
-  return delivered&&typeof delivered==='object'?{...delivered}:{...s.buildCost};
+  const c=s.construction,delivered=c?.version===2&&c.materialsDelivered;
+  if(!delivered||typeof delivered!=='object')return {...s.buildCost};
+  const ratio=constructionProgress(s),out={};
+  for(const [key,qty] of Object.entries(delivered)){
+    const consumed=c.materialsConsumed?.[key]??(Number(s.buildCost[key])||0)*ratio;
+    const remaining=Math.max(0,Math.floor((qty-consumed)*1000+1e-7)/1000);
+    if(remaining>0)out[key]=remaining;
+  }
+  return out;
 }
 function constructionWorkClock(day){
   // Same 5-day labor week / work shift used by the agricultural simulation.
@@ -971,7 +979,7 @@ function beginConstruction(s,delay=0){
   }
   s.construction={version:2,startedDay,workRequired:d,workDone:0,
     lastWorkDay:startedDay,workers:0,completedDay:null,
-    priority:CONSTRUCTION_DEFAULT_PRIORITY,materialsDelivered:{},materialBlocked:false};
+    priority:CONSTRUCTION_DEFAULT_PRIORITY,materialsDelivered:{},materialsConsumed:{},materialBlocked:false};
   return s;
 }
 function constructionProgress(s){
@@ -1027,7 +1035,7 @@ function constructionCrewAssignments(day=State.clock.day,cutoff=day){
   const candidates=window.ConquerEconomy?.availableBuilderIds?.(day)||[];
   const sites=(State.structures||[]).filter(s=>!s.auto&&
     s.construction?.version===2&&underConstruction(s)&&
-    s.construction.startedDay<=cutoff).sort((a,b)=>
+    s.construction.startedDay<=cutoff&&constructionMaterialInfo(s).progress>constructionProgress(s)+1e-9).sort((a,b)=>
     constructionPriority(b)-constructionPriority(a)||
     a.construction.startedDay-b.construction.startedDay||
     String(a.id).localeCompare(String(b.id)));
@@ -1046,54 +1054,50 @@ function constructionCrewAssignments(day=State.clock.day,cutoff=day){
     }
   return slots;
 }
-// Goods are consumed from the single castle ledger only when actually delivered.
-// Every tick visits sites by priority, then placement date and stable id.
-// The one-shift buffer prevents projects from locking their entire quote early.
 function allocateConstructionMaterials(sites,daySpan){
   let changed=false;
-  const economy=State.village?.founded?window.ConquerEconomy:null;
-  const stock=key=>{
-    if(economy?.state){
-      const e=economy.state();
-      return Math.max(0,Number(key==='gold'?e.castleGold:e.castle?.[key])||0);
-    }
-    return Math.max(0,Number(State.resources?.[key])||0);
-  };
-  const ordered=sites.filter(s=>s.construction?.materialsDelivered).slice().sort((a,b)=>
-    constructionPriority(b)-constructionPriority(a)||
-    a.construction.startedDay-b.construction.startedDay||
-    String(a.id).localeCompare(String(b.id)));
-  for(const site of ordered){
-    const c=site.construction,info=constructionMaterialInfo(site);
-    if(info.progress>=1-1e-8){c.materialBlocked=false;continue}
-    const remainingWork=Math.max(0,c.workRequired-c.workDone);
-    const buffer=Math.max(.5,Math.min(CONSTRUCTION_MAX_WORKERS,CONSTRUCTION_MAX_WORKERS*Math.max(0,daySpan)));
-    const target=Math.min(1,(c.workDone+Math.min(remainingWork,buffer))/Math.max(.001,c.workRequired));
-    const needs=info.rows.map(r=>({
-      key:r.key,qty:Math.max(0,Math.round((r.total*target-r.delivered)*1000)/1000)
-    })).filter(r=>r.qty>0);
-    if(!needs.length)continue;
-    // Material types arrive independently. A stone shipment can be reserved
-    // while wood or gold is unavailable; physical work only advances at the
-    // pace of the least-supplied material. Never lock a complete quote upfront.
-    for(const need of needs){
-      const available=Math.floor((stock(need.key)+1e-9)*1000)/1000;
-      const qty=Math.min(need.qty,available);
-      if(qty<=0)continue;
-      const part={[need.key]:qty};
-      let paid=false;
-      if(economy?.spendBuild)paid=economy.spendBuild(part);
-      else if(stock(need.key)+1e-8>=qty){
-        State.resources[need.key]=Math.round((stock(need.key)-qty)*1000)/1000;
-        paid=true;
+  sites=sites.filter(s=>s.construction?.materialsDelivered);
+  const stock=window.ConquerEconomy?.state?.();
+  const available=k=>Math.max(0,Number(stock?(k==='gold'?stock.castleGold:stock.castle?.[k]):State.resources?.[k])||0);
+  // Strict priority between tiers; equal shares of each scarce good within a tier.
+  // Thousandth-unit leftovers go to the least supplied site, so tiny repeated
+  // deliveries cannot starve an equal-priority job. No per-cart simulation.
+  for(let priority=5;priority>=0;priority--){
+    const group=sites.filter(s=>constructionPriority(s)===priority);
+    const goods=new Set(group.flatMap(s=>Object.keys(s.buildCost||{})));
+    for(const k of goods){
+      let budget=Math.floor(available(k)*1000+1e-7);
+      let jobs=group.map(s=>({s,m:{required:s.buildCost||{},delivered:s.construction.materialsDelivered},units:0})).filter(j=>
+        (j.need=Math.max(0,Math.round(((j.m.required[k]||0)-(j.m.delivered[k]||0))*1000)))>0);
+      while(budget>0&&jobs.length){
+        const share=Math.floor(budget/jobs.length);
+        if(!share){
+          jobs.sort((a,b)=>(a.m.delivered[k]||0)+a.units/1000-(b.m.delivered[k]||0)-b.units/1000||String(a.s.id).localeCompare(String(b.s.id)));
+          for(const j of jobs.slice(0,budget)){j.units++;j.need--;budget--}
+          break;
+        }
+        for(const j of jobs){const n=Math.min(share,j.need);j.units+=n;j.need-=n;budget-=n}
+        jobs=jobs.filter(j=>j.need>0||j.units>0);
+        if(jobs.every(j=>!j.need))break;
+        // Retain allocations separately while excluding fulfilled jobs next pass.
+        const done=jobs.filter(j=>!j.need);
+        for(const j of done)commit(j);
+        jobs=jobs.filter(j=>j.need>0);
       }
-      if(!paid)continue;
-      c.materialsDelivered[need.key]=Math.round(((Number(c.materialsDelivered[need.key])||0)+qty)*1000)/1000;
-      changed=true;
+      for(const j of jobs)commit(j);
+      function commit(j){
+        if(j.units<=0)return;
+        const qty=j.units/1000;
+        const paid=State.village?.founded&&window.ConquerEconomy?.spendBuild
+          ?window.ConquerEconomy.spendBuild({[k]:qty})
+          :available(k)>=qty&&(State.resources[k]=Math.round((available(k)-qty)*1000)/1000,true);
+        if(paid){
+          j.m.delivered[k]=Math.round(((j.m.delivered[k]||0)+qty)*1000)/1000;
+          State.dirty=true;changed=true;
+        }
+      }
     }
-    c.materialBlocked=constructionMaterialInfo(site).progress<target-1e-6;
   }
-  if(changed)State.dirty=true;
   return changed;
 }
 function tickConstructionWork(fromDay,toDay){
@@ -1141,6 +1145,10 @@ function tickConstructionWork(fromDay,toDay){
         c.workers=work>0?n:0;
         if(work>0){
           c.workDone=Math.min(c.workRequired,c.workDone+work);
+          if(c.materialsDelivered){
+            c.materialsConsumed={};
+            for(const [key,qty] of Object.entries(s.buildCost||{}))c.materialsConsumed[key]=qty*c.workDone/c.workRequired;
+          }
           State.dirty=true;
         }
         c.lastWorkDay=Math.max(next,Number(c.lastWorkDay)||0);

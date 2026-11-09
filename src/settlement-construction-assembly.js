@@ -339,7 +339,7 @@
   function geomKey(s){
     return[s.type,s.x,s.y,s.angle,s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.size,s.r,s.w,s.h,s.level,s.civicLevel,s.houseLevel,s.roofStyle,s.bartizan,s.bell,s.roofShape,s.baseStyle,
       s.material,s.woodStyle,s.woodRoof,s.tier,s.width,s.flip?1:0,
-      s.masonryMaterial,s.groundZ,State.season,State.view?.rotation||0].join('|');
+      s.masonryMaterial,s.groundZ,State.season,State.visualPalette,State.stonePaletteId,State.view?.rotation||0].join('|');
   }
   function entry(s){
     const key=geomKey(s);let e=cache.get(s.id);

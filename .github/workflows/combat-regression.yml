@@ -15,6 +15,8 @@ on:
       - 'qa/*combat*'
       - 'qa/*battle*'
       - 'qa/patrol-regression.cjs'
+      - 'qa/military-circle-roster-regression.cjs'
+      - 'src/ui/game-api.js'
       - 'src/settlement-alarm-bells.js'
       - 'qa/alarm-bell-regression.cjs'
       - 'src/settlement-wall*.js'
@@ -38,6 +40,8 @@ on:
       - 'qa/*combat*'
       - 'qa/*battle*'
       - 'qa/patrol-regression.cjs'
+      - 'qa/military-circle-roster-regression.cjs'
+      - 'src/ui/game-api.js'
       - 'qa/alarm-bell-regression.cjs'
       - 'qa/wall-stairs-regression.cjs'
       - 'qa/urban-regression.cjs'
@@ -69,6 +73,7 @@ jobs:
           node qa/combat-selection-regression.cjs
           node qa/mass-battle-regression.cjs
           node qa/patrol-regression.cjs
+          node qa/military-circle-roster-regression.cjs
           node qa/night-vision-regression.cjs
           node qa/zones-visual-regression.cjs
           node qa/camp-regression.cjs

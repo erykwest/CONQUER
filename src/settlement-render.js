@@ -174,12 +174,13 @@ function renderCastleBodyContent(){
   // A merged single-colour 2D union cannot represent distinct wall/brick components.
   // Use the existing per-structure fallback for mixed masonry; do not rewrite topology.
   const hasBrick=castleBodyRenderableStructures().some(s=>masonryMaterial(s)==='brick'||(typeof isTimberLeanTo==='function'&&isTimberLeanTo(s)));
-  const unionOk=hasBrick?false:drawCastleUnion();
+  // The union has no individual structure context: explicitly mark it as stone masonry.
+  const unionOk=hasBrick?false:withStructureVisualMaterial({type:'wall',masonryMaterial:'stone'},drawCastleUnion);
   if(!unionOk){
     const fallback=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)&&!structureCutaway(s)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
     for(const s of fallback)drawStructure(s);
   }else{
-    drawCastleUnionDetails();
+    withStructureVisualMaterial({type:'wall',masonryMaterial:'stone'},drawCastleUnionDetails);
   }
 
   // Point fortifications on slopes are intentionally kept out of the wall
@@ -228,7 +229,7 @@ function castleBodyVisualSignature(){
     num(s.orientationOffset),num(s.groundZ),num(s.foundationMinZ)
   ]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
   return JSON.stringify([
-    1,window.ConquerCastle3D?.active?.()?'3d':'2d',State.season||'summer',State.visualPalette,num(State.view.scale),State.view.rotation||0,isPlanView()?'plan':'iso',staticCacheDpr(),
+    1,window.ConquerCastle3D?.active?.()?'3d':'2d',State.season||'summer',State.visualPalette,State.stonePaletteId,num(State.view.scale),State.view.rotation||0,isPlanView()?'plan':'iso',staticCacheDpr(),
     !!window.__polygonClipping,crenelStyle(),roofPitch(),items
   ]);
 }
@@ -491,12 +492,10 @@ function draw(){
   }else if(['moat','bridge'].includes(State.draft?.preview?.type))window.ConquerCrossings?.drawPreview(State.draft.preview);
   if(State.draft?.mode!=='terraform'&&State.draft?.previewSegments?.length){
     const segments=State.draft.previewSegments;
-    const totalCost=aggregateConstructionCost(segments);
-    const routeUnderfunded=!canAfford(totalCost);
     for(const segment of segments){
       drawStructure(segment,true);
       const verdict=builderGhostVerdict(segment);
-      if(!verdict.ok||routeUnderfunded)drawInvalidPlacementGhost(segment);
+      if(!verdict.ok)drawInvalidPlacementGhost(segment);
     }
   }else if(State.draft?.mode!=='terraform'&&State.draft?.preview){
     const ghost=State.draft.preview;

@@ -173,7 +173,18 @@
   // destruction gallery's variant list, meshed by ConquerCastle3D.worldMeshes(): the castle the player sees.
   const ENGINE_URL='./index.html?assetlab=1&renderer=canvas2d';
   const status=text=>{const el=byId('assetEngineStatus');if(el)el.textContent=text};
-  let engine=null;
+  let engine=null,stonePaletteId='gray';
+  const STONE_ASSETS=new Set(['stonePile','riverStones','riverBoulder','milestone']);
+  const COAST_ROCKS=new Set(['rocksA','rocksB','rocksC','reef']);
+  const SLOPEWAY_STONE=new Set(['#a59f92','#968f82','#b8b1a2','#8d887d','#7c776c','#b0aa9c','#a19b8d','#7d786d','#868176']);
+  // Material-role gating: never recolor a whole Blender model because its palette contains grey.
+  function isGeologicalTone(item,role,hex){
+    if(item.registry==='ConquerIndustryModels')return ['quarry','mine'].includes(item.key)&&/^(rock|gravel|block|rubble)/i.test(role||'');
+    if(item.registry==='ConquerScatterModel')return STONE_ASSETS.has(item.key)&&/^stone/i.test(role||'');
+    if(item.registry==='ConquerWatersideModels')return COAST_ROCKS.has(item.key)&&/^rock/i.test(role||'');
+    if(item.registry==='ConquerSlopewayModels')return SLOPEWAY_STONE.has(String(hex).toLowerCase());
+    return /^(stone|paving)/i.test(role||'')||item.registry==='ConquerHouseModels'&&role==='step';
+  }
   const slug=s=>s.toLocaleLowerCase('it').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
   function loadEngine(){
     const frame=document.createElement('iframe');
@@ -200,6 +211,7 @@
   // each damage phase, cutaway — captured on demand by the stage.
   function onEngine(w){
     engine=w;
+    if(w.ConquerStoneColor?.current()!==stonePaletteId)w.ConquerStoneColor?.preview(stonePaletteId);
     let meshes=0;
     for(const v of w.ConquerAssetStage.variants()){
       // Wood towers, wood gates and palisades are meshed by ConquerWood3D (Blender models).
@@ -220,7 +232,7 @@
   const captureCache=new Map();
   function engineCapture(item,stateId,rotation=0){
     if(!engine||!item.stageId)return null;
-    const key=item.stageId+'|'+stateId+'|'+rotation;
+    const key=item.stageId+'|'+stateId+'|'+rotation+'|'+stonePaletteId;
     if(!captureCache.has(key))captureCache.set(key,engine.ConquerAssetStage.capture(item.stageId,stateId,{rotation}));
     return captureCache.get(key);
   }
@@ -242,9 +254,10 @@
   // The same indexed/triangle Blender geometry used by the game, not screenshots or illustrations.
   const meshCache=new Map();
   function modelMesh(item){
-    if(meshCache.has(item.id))return meshCache.get(item.id);
+    const cacheKey=item.id+'|'+stonePaletteId;
+    if(meshCache.has(cacheKey))return meshCache.get(cacheKey);
     let mesh;
-    if(item.kind==='castle')mesh=item.mesh;
+    if(item.kind==='castle')mesh=toLabMesh(engine?.ConquerSiegePreview?.assetMesh(item.spec))||item.mesh;
     else if(item.kind==='animal'&&window.ConquerAnimals3D){
       mesh=window.ConquerAnimals3D.triangles(item.key,{x:0,y:0,heading:0},{mode:'idle',t:0,seed:1},
         window.ConquerAnimals3D.coatColors(item.key,'brown'));
@@ -263,13 +276,16 @@
             }
           }else pos.push(...verts.slice(t*9,t*9+9));
           const color=part.c?.[t]??0;
-          col.push(typeof color==='string'?color:(palette[color]||'#a69a83'));
+          const sourceHex=typeof color==='string'?color:(palette[color]||'#a69a83');
+          const role=typeof color==='number'?db.paletteKeys?.[color]:null;
+          const stoneApi=engine?.ConquerStoneColor;
+          col.push(stoneApi&&stonePaletteId!=='gray'&&isGeologicalTone(item,role,sourceHex)?stoneApi.shade(sourceHex):sourceHex);
         }
       }
       mesh={pos:new Float32Array(pos),col};
     }
     if(!mesh||!mesh.pos?.length)return null;
-    meshCache.set(item.id,mesh);
+    meshCache.set(cacheKey,mesh);
     return mesh;
   }
   // Forced occupancy: 'off', 'depth' (figures tested against the depth buffer, the correct
@@ -502,6 +518,20 @@
     if(item.kind==='wardrobe')return renderWardrobe(canvas,item);
   }
   let currentCategory='Tutti',currentFamily='',currentFormat='',query='',selectedId='',selectedRotation=0,selectedItem=null,selectedState=null;
+  function setStonePalette(id){
+    if(!['gray','sandstone','tuff','limestone','granite'].includes(id))return false;
+    if(stonePaletteId===id)return true;
+    stonePaletteId=id;
+    byId('assetStoneColor').value=id;
+    // The iframe runs the actual engine. Preview suppresses local/cloud saves and resource changes.
+    engine?.ConquerStoneColor?.preview(id);
+    meshCache.clear();captureCache.clear();
+    window.ConquerAssetAudit?.invalidate?.();
+    refresh();
+    if(selectedItem)selectItem(selectedItem,selectedState);
+    return true;
+  }
+  byId('assetStoneColor')?.addEventListener('change',e=>setStonePalette(e.target.value));
   let observer=null;
   const snapshotMode=()=>selectedItem?.kind==='castle'&&selectedState&&selectedState!=='3d';
   function renderStateBar(item){
@@ -653,7 +683,7 @@
     byId('assetSearch').value='';byId('assetFormat').value='';refresh()});
   window.ConquerAssetCatalog={items,refresh,select:(id,state)=>{const item=items.find(x=>x.id===id);if(item)selectItem(item,state)},
     selectState,get selected(){return selectedId},get state(){return selectedState},get rotation(){return selectedRotation},
-    get engineReady(){return !!engine},
+    get engineReady(){return !!engine},get stonePaletteId(){return stonePaletteId},setStonePalette,
     // The Lab's own renderers, for src/asset-audit.js: the audit looks at exactly what the Lab shows.
     lab:{makePreview,modelMesh,engineCapture,defaultState,rotationFrame},exportImage};
   // Reparent the existing native animation canvas: the animator retains its context.

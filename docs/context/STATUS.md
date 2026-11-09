@@ -8,6 +8,62 @@
 - **QA:** aggiunta `qa/construction-priority-regression.cjs` al workflow Runtime integrity per code, carenze, priorità variabile, compatibilità legacy e rimborsi. **Da verificare:** esito GitHub Actions e prova visuale end-to-end (UI classica/UI2, costi misti, reload e completamento). Non si simulano carovane fisiche per i trasferimenti ordinari.
 
 
+## 2026-11-09 — MIL-RES-01 · Caserma, vedette e Avamposto (solo specifica)
+
+- **NESSUN CODICE.** Specifica approvata nel [BACKLOG](BACKLOG.md); decisione D-MIL-RES-261109.
+- **STATO DI PARTENZA VERIFICATO NEL CODICE:** la stanza `guard` calcola `watchmen` (`src/settlement-siege.js`, 4 per unità) ma nessun sistema lo legge; le pattuglie (`ConquerCombat.addPatrol`) non consumano soldati; ogni torre finita osserva senza personale (`VISION_BASE=16`, `VISION_PER_HEIGHT=4`); l'allarme è solo manuale; i soldati costano solo cibo; non esiste un conteggio di soldati reali.
+
+## 2026-11-09 — CIRCLE: assegnazione pattuglie e guarnigioni per settore → macrostruttura (`feature/circle-military-zones-macrotowers-20261109`)
+
+- **CODICE PRESENTE SUL BRANCH (non ancora su main):** Centro di controllo → Militare → Pattuglie e guarnigioni adotta la gerarchia CIRCLE reale: settori chiusi dal rilevamento topologico, stato (sicuro/allerta/conteso, ecc.), profondità e presidio per settore; un livello più basso presenta le macrostrutture difensive. Torri figlie e nipoti collegate con `parentTowerId` sono aggregate in un'unica riga della torre principale: arcieri assegnati, capienza e operativi sono somme delle postazioni `ConquerSiege`, non risorse simulate.
+- **COMANDI:** per settore `+`/`−` arcieri distribuiti alle macrostrutture realmente presenti; per macrostruttura `+`/`−` arcieri alle postazioni della torre madre e delle sottotorri, con roster delle caserme aggregate in `/camp`; le altre caserme restano per stanza. Settori esterni/non mappati espliciti, nessuna zona CIRCLE fittizia.
+- **PATTUGLIE:** riserva sul perimetro White Zone; trasferimento di una pattuglia esistente verso/da un settore CIRCLE, persistito in `combat.units[].circleSectorId`, senza inventare soldati. Gli itinerari zonali usano punti percorribili del poligono CIRCLE e A* militare esistente; in assenza di percorso non teletrasportano. Ricalcolo e rilascio delle assegnazioni a settori cancellati dopo modifiche topologiche.
+- **PROVE:** QA dedicata `qa/military-circle-roster-regression.cjs` e test di pannello/browser ampliati; CI e browser ancora da verificare prima di merge. Nessun asset o nuovo modello, ROADMAP invariata.
+
+
+## 2026-11-09 — Sottopalette L1/L2 e «Pattuglie e guarnigioni» (branch `feature/jobmanager-l2-military-garrisons-20261109`)
+
+- **IMPLEMENTATO SUL BRANCH:** Job Manager → L1 e L2, con preferenza di sottopaletta conservata durante l'apertura del pannello. La L1 mantiene le code esistenti. La L2 gestisce campi, cave e miniere con identici controlli drag/drop, minimo e AUTO/manuale. L2 attinge esclusivamente dalla quota produttiva L2; l'ordinamento L2 non altera L1.
+- **MOTORE/PERSISTENZA:** `ConquerEconomy.l2Jobs` in `State.economy`: minimi per priorità, poi capacità residua ai soli AUTO; salvataggi locali/cloud esistenti preservati, e nessun override L2 per save legacy finché non si modifica un job. L2 fuori stagione/disattivato non occupa lavoratori.
+- **MILITARE:** Centro di controllo → Militare → «Riepilogo» / «Pattuglie e guarnigioni». Pulsanti di aggiunta/rimozione pattuglie White Zone sfruttano il Combat esistente; guarnigioni delle torri incrementano/decrementano le postazioni arcieri con `ConquerSiege.changeArchers` e mostrano assegnati/operativi; le squadre nelle caserme sfruttano `ConquerCamp` solo quando presente nella modalità `/camp`. Nessun inventario militare fittizio.
+- **QA:** regole L2 e API/UI provate nella sessione con regressioni JS isolate (PASS); test browser L2 e guarnigioni aggiornato e in attesa di esecuzione CI. Non dichiarare il merge prima della conferma Actions. Nessun nuovo asset o modello; ROADMAP invariata.
+
+
+## 2026-11-09 — Job Manager L1: priorità, minimi e AUTO/manuale (branch `feature/l1-jobmanager-priority-20261109`)
+
+- **IMPLEMENTATO SUL BRANCH:** il Job Manager visualizza le mansioni L1 in righe trascinabili per priorità (con comandi su/giù anche per tastiera e touch), numeratore «Minimum worker» e pulsante AUTO attivo/spento. Include produzioni L1, carrettieri, cantieri navali con commessa e costruttori; riporta lavoratori effettivi, richiesti e minimi insoddisfatti.
+- **MOTORE:** quando il giocatore effettua la prima modifica, `ConquerEconomy.laborAllocation` applica i minimi per priorità e solo poi riempie i posti in AUTO per priorità; AUTO disattivato assegna al massimo il minimo. Nessun lavoratore creato, nessuna duplicazione tra produzioni, carri, navi e cantieri. Pastori di sicurezza, pescatori e classi L2–L4 non sono alterati. Salvataggi preesistenti mantengono il comportamento originale finché non vengono modificati.
+- **PERSISTENZA:** ordine, minimo e AUTO nel campo `State.economy.l1Jobs`, già incluso nei save locali e cloud. I nuovi siti vengono aggiunti in coda; le mansioni inattive assegnano zero.
+- **VERIFICHE:** parsing dei moduli e test isolati eseguiti in sessione, incluse regressioni `qa/labor-jobs-regression.cjs` e `qa/panels-regression.cjs` con adattatore JS (PASS). Esecuzione Node/Actions e prova visiva in browser ancora da verificare; non dichiarare merge prima dei check.
+
+
+## 2026-11-09 — Riconciliazione backlog con GitHub (solo documentazione)
+
+- **VERIFICATO:** stato delle PR con `gh pr list` contro `main` `e63f729`. Le feature dal 28/10 al 08/11 indicate come «su branch» sono merged; tabella completa in [BACKLOG](BACKLOG.md#2026-11-09--riconciliazione-con-github-ref-main-e63f729).
+- **APERTE:** PR #186 (CI verde), #184 e #162 in bozza. Worktree locali non pubblicati: tetto interno delle torri, tetti della Long house, `figure-billboards`, `combat-ai`.
+- **NESSUN CODICE O TEST** cambiato in questa voce; nessuna nuova prova eseguita oltre alla lettura dello stato delle PR.
+
+## 2026-11-08 — STONECOLOR · Audit dipendenze e sottodipendenze
+
+- **CORRETTO SU BRANCH:** coda dei materiali litici collegata ai registri semantici nei modelli Blender di case, edifici civici e relative pavimentazioni, cave di pietra e mine, costruttori, scatter fluviali/costieri, ponti in pietra, scale da camminamento, rampe e gradini, arredi e pavimenti dei cutaway. Le rampe cromatiche condivise restano cinque; legno, argilla, tetti, muschio e alghe mantengono le tinte originarie.
+- **CACHE:** nuova famiglia inclusa nelle firme di case 3D, civici e cimiteri, cutaway, manufatti/cantieri, ponti, rampe, banchine, costa, scatter, World3D e composite del castello. Unione mura Canvas disegnata in esplicito contesto litico. Script URL invalidati con revisione stonecolor2.
+- **QUALITY GATE:** ampliata la regressione dedicata alla dipendenza dei moduli e ai ruoli degli asset; corretta la scoping del tint di cutaway; rigenerato digest del catalogo Wiki dopo modifica agli attraversamenti. **Prova visiva end-to-end e risultati dell'ultima CI ancora da verificare prima di dichiarare copertura totale e merge.**
+
+
+## 2026-11-08 — STONECOLOR · Cinque famiglie di pietra approvate (branch `feature/stonecolor`)
+
+- **IMPLEMENTATO SU BRANCH:** `src/settlement-stonecolor.js` conserva cinque ramp cromatiche approvate (grigio, arenaria, tufo, calcare, granito). La nuova mappa sceglie una famiglia pseudocasuale tramite il suo seed, e la palette resta stabile ai reload. Per salvataggi legacy senza campo, fallback grigio attuale.
+- **UI:** Profilo → Ambiente seleziona in ogni momento la famiglia, aggiornando immediatamente la mappa. La scelta si salva localmente e nel campo `policies.stonePaletteId` del payload cloud. Nessun nuovo materiale costruttivo: pietra e argilla/mattoni mantengono costi e HP.
+- **GRAFICA:** tinte per murature, scarpate, rocce, montagne, coste rocciose/reef, blocchi della cava, stone scatter, banchine; gli asset originali (e le mesh/pose) non sono duplicati. Include chiavi palette nelle cache World3D e nelle mesh cached di costa/banchina, e cache bust degli script.
+- **QA:** `qa/stonecolor-regression.cjs` integrata in Runtime integrity; esito Actions, verifica in-game WebGL2/Canvas, Asset Lab e audit di tutte le parti minerali **non ancora certificati**. Non dichiarare feature integrata in `main` finché CI e controllo grafico non passano.
+
+## 2026-11-08 — Palette Job Manager / Trade nel Profilo (branch `feature/profile-job-trade-tabs-20261108`)
+
+- **IMPLEMENTATO SU BRANCH:** aggiunte due schede di primo livello accanto a Generale, Araldica e Centro di Controllo, senza replicare ledger, roster o simulatori.
+- **JOB MANAGER:** distribuzione L1, popolazione per classe, occupati per attività e andamento settimanale. Allocazione automatica invariata, nessuna assegnazione manuale fittizia.
+- **TRADE:** inventario mercato/castello, prezzi, storico, quote di vendita editabili tramite il comando `setSaleShare` già esistente e apertura carovane.
+- **QA:** regressione `qa/panels-regression.cjs` estesa. CI e QA visiva da verificare, nessun nuovo asset né schema di salvataggio. ROADMAP/DECISIONS invariate.
+
 ## 2026-11-08 — Tronchi degli alberi e rami dei cespugli marrone molto scuro (branch `fix/dark-tree-bark-20261108`)
 
 - **IMPLEMENTATO SU BRANCH:** i 7 SVG degli alberi decidui e i 7 SVG dei cespugli adottano **#2B1D16** per tronchi e rami (ex azzurro `#9BBACE`); i tronchi dei pini montani Canvas sono uniformati. Le chiome stagionali sono invariate, inclusa la progressione autunnale integrata in `main` con PR #183.

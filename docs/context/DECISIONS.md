@@ -6,6 +6,45 @@
 - **SISTEMA UNICO:** nessun inventario parallelo o carovana obbligatoria: `ConquerEconomy` contabilizza il materiale effettivamente destinato al progetto; l'assegnazione è progressiva, ordinata per `Molto basso < Basso < Medio < Alto < Molto alto < Critico`, e successivamente per data/ID. Anche i costruttori L1 seguono questo ordine, ma rimangono persone reali già occupate dal JobManager.
 - **VINCOLI:** non spendere materiali non posseduti, non produrre progresso di lavoro senza i materiali corrispondenti, non dedurre costi due volte. I salari restano pagati quando il lavoro è realmente eseguito; si può attendere sia i materiali sia la manodopera. Nuovi siti rimborsano solo quanto consegnato; salvati preesistenti già pagati restano integralmente riforniti.
 - **UI:** un inspector temporaneo con barre lavoro/materiali e selettore delle sei priorità sostituisce i controlli di esercizio fino alla fine del cantiere; l'inspector completato riappare automaticamente. **SCOPE:** non modificare M0–M5, inventario dei beni o logistica fisica ordinaria; eventuale manutenzione/riparazioni/upgrades come progetti progressivi è decisione futura.
+## D-MIL-RES-261109 — Caserma come unica riserva di soldati; vedette e Avamposto (09/11/2026)
+
+- **DECISIONE DEL PRODUCT OWNER:** il Corpo di Guardia del castello è un duplicato della Caserma e vi si fonde; `guard` resta solo nel Municipio (guardia cittadina, CRIME). La Caserma alloggia una riserva unica di soldati arruolati tra gli L1 (ingaggio 15 oro, paga L2), spesa come valuta da pattuglie, vedette, presidi di Avamposto e spedizioni.
+- **VISTA:** una torre osserva solo con una vedetta assegnata; pattuglie e vedette danno l'allarme automatico.
+- **AVAMPOSTO:** upgrade di una torre isolata, con presidio fisso di 4 soldati e 1 cavallo; avvisa con campana, fuoco di segnalazione (nuovo upgrade dei tetti piani, raggio triplo, monouso) o staffetta a cavallo. Niente piccioni né Stazione di Posta.
+- **STATO:** solo specifica ([BACKLOG](BACKLOG.md), MIL-RES-01). Aggiornamento distruttivo ammesso perché il gioco è in fase di test. ROADMAP invariata.
+
+## D-MIL-CIRCLE-261109 — Gerarchia CIRCLE per assegnazioni militari (09/11/2026)
+
+- **DECISIONE DEL PRODUCT OWNER:** la sottopaletta «Pattuglie e guarnigioni» deve usare l'interfaccia CIRCLE, con assegnazioni da **zone difensive** fino a **torri**; ogni torre principale e le sue sottotorri sono una **sola riga** come macrostruttura difensiva.
+- **CONTRATTO:** usare solo i settori chiusi effettivamente rilevati da `ConquerCircle.getSnapshot().compartments` e `sectorForStructure`. L'albero `parentTowerId` raggruppa i figli della torre principale senza doppio conteggio. Il controllo di livello zona distribuisce arcieri ai posti validi delle torri associate; il controllo di livello macrostruttura assegna o richiama arcieri alle postazioni reali di madre/figlie. Stessa contabilità per le squadre delle caserme in `/camp` senza righe figlie duplicate.
+- **PATTUGLIE:** il trasferimento da White Zone a CIRCLE imposta un identificatore di settore persistito sull'unità Combat, non recluta una pattuglia nuova. Il pattugliamento segue punti percorribili del compartimento tramite pathfinder militare; nessun teletrasporto. Le zone CIRCLE non disponibili o scomparse non diventano zone inventate.
+- **LIMITI:** settori CIRCLE dipendono da perimetri realmente chiusi, quindi finché non lo sono le torri rimangono sotto «Fuori dai compartimenti CIRCLE»; pattugliamento non garantito per compartimenti privi di itinerari militari accessibili. Roadmap immutata.
+- **STATO:** codice sul branch `feature/circle-military-zones-macrotowers-20261109`, CI/test live/merge da confermare.
+
+
+## D-JOBS-MIL-261109 — Sottopalette L1/L2 e Pattuglie e guarnigioni (09/11/2026)
+
+- **DECISO DAL PRODUCT OWNER:** due sottopalette all'interno del Job Manager, denominate «L1» e «L2»; una sottopaletta militare «Pattuglie e guarnigioni».
+- **SCELTA DI IMPLEMENTAZIONE:** L1 mantiene le sue mansioni, L2 applica la stessa semantica di priorità drag-and-drop, minimo e AUTO/manuale alla sola classe L2 (campi, cave, miniere). Minimi assegnati prima in ordine di priorità, poi resto solo ai job AUTO; nessun travaso automatico di lavoratori L1 e nessuna variazione a L3/L4. Save legacy intatto prima dell'attivazione L2.
+- **CONTATTO CON IL MOTORE MILITARE:** pattuglie esistenti gestite su White Zone da Combat; arcieri nelle torri via postazioni Siege; squadre caserma disponibili dove esiste ConquerCamp (`/camp`). Nessuna nuova formazione, fabbricazione artificiale di soldati o spostamento implicito di unità.
+- **STATO:** branch `feature/jobmanager-l2-military-garrisons-20261109`, QA completa/merge ancora da verificare; roadmap invariata.
+
+
+## D-L1-JOB-261109 — Priorità del lavoro dei popolani L1 (09/11/2026)
+
+- **APPROVATO DAL PRODUCT OWNER:** nel Job Manager L1 le produzioni/mansioni sono righe ordinabili trascinandole, ciascuna con un numero «Minimum worker» da garantire quando i lavoratori sono disponibili e un pulsante AUTO. AUTO disattivato passa la mansione a manuale.
+- **CONTRATTO DI IMPLEMENTAZIONE:** i minimi sono distribuiti prima, in ordine di priorità; se la richiesta complessiva supera la popolazione disponibile, i minimi dei job in alto prevalgono. Solo dopo si assegnano lavoratori aggiuntivi ai job AUTO, sempre in ordine di priorità; i job manuali ricevono esclusivamente il minimo. Non si supera la capacità massima del job o la disponibilità di L1.
+- **CONFINI:** i pastori necessari alla sicurezza alimentare e i pescatori attivi restano riservati secondo le regole specifiche. L2–L4 non sono toccati. I salvataggi esistenti conservano l'allocatore originale finché un comando della nuova gestione non viene utilizzato; modifiche salvate con `State.economy.l1Jobs` su locale/cloud.
+- **STATO:** codice e QA su `feature/l1-jobmanager-priority-20261109`; CI e browser da validare prima del merge. ROADMAP invariata: evoluzione del Job Manager già esistente.
+
+
+## D-VIS-STONECOLOR-261108 — Pietra coerente per mappa (08/11/2026)
+
+- **APPROVATO DAL PRODUCT OWNER:** scelta casuale iniziale fra Grigio attuale, Arenaria, Tufo, Calcare e Granito; successiva modifica da **Profilo → Ambiente** con applicazione globale agli elementi realmente litici.
+- **5 GRADIENTI OBBLIGATORI:** per ogni famiglia luce, sommità, mezzotono, ombra e fessura. Colori esatti nella [scheda approvata](../STONECOLOR-PALETTE-VALIDATION.md). Arenaria beige desaturata e minerale: deve restare distinguibile dal Clay rosso/terracotta delle murature e dalle cave di argilla.
+- **SEMANTICA E PERSISTENZA:** famiglia pietra è un aspetto di mappa, non una tipologia di risorsa/costruzione; random deterministico dal seed e stabile in salvataggio locale/cloud. Vecchi salvataggi privi di palette rimangono in grigio.
+- **ESCLUSIONI:** legno, brick/clay, acqua, neve, tetti, metallo, vegetazione. Rimangono invariate economia, integrità, collider, geometrie e logistica. Nessuna nuova collezione di SVG/mesh per ogni colore.
+- **STATO:** implementazione su `feature/stonecolor`, non automaticamente consegnata su main; passaggio CI e validazione visiva necessari.
 
 
 ## D-VIS-AUTUMN-261107 — Progressione autunnale delle chiome (07/11/2026)

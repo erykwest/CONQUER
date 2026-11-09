@@ -225,6 +225,7 @@ function generateNewMap(){
   State.clock.day=0;
   State.draft=null;State.selectedId=null;
   State.seed=freshLandscapeSeed();
+  State.stonePaletteId=window.ConquerStoneColor?.randomForSeed(State.seed)||'gray';
   State.heraldry=null;
   State.diplomacy=null;
   window.ConquerDiplomacy?.reset();

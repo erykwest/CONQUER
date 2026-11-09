@@ -59,7 +59,11 @@
     // model is mirrored and the winding reversed so faces keep pointing out.
     const mirror=l.ux*l.ny-l.uy*l.nx<0,order=mirror?[0,2,1]:[0,1,2];
     const snow=typeof winterSnowColor==='function';
-    const color=ci=>snow&&keys[ci].startsWith('tread')?winterSnowColor(pal[ci],ci%2?WINTER_SNOW_A:WINTER_SNOW_B):pal[ci];
+    const color=ci=>{
+      const key=keys[ci],raw=pal[ci];
+      if(snow&&key.startsWith('tread'))return winterSnowColor(raw,ci%2?WINTER_SNOW_A:WINTER_SNOW_B);
+      return l.spec.kind==='stone'&&key==='stone'?(window.ConquerStoneColor?.shade(raw)||raw):raw;
+    };
     const at=(x,y)=>({x:l.foot.x+l.ux*x*l.rise+l.nx*y,y:l.foot.y+l.uy*x*l.rise+l.ny*y});
     for(const [name,part] of Object.entries(l.model.parts)){
       const p=part.p,ix=part.i;

@@ -8,6 +8,92 @@
 - **QA / ACCETTAZIONE IN SOSPESO:** regressione Node inserita in Runtime integrity, ancora da verificare in CI e nel browser (salvataggio, priorità concorrenti, UI2, low/no stock, ripresa dei lavori, geometria/assedi).
 
 
+## 2026-11-09 — MIL-RES-01 · Caserma, riserva di soldati, pattuglie, vedette e Avamposto (specifica approvata)
+
+**SOLO SPECIFICA, NESSUN CODICE.** Approvata dal product owner il 09/11/2026; l'implementazione parte solo dopo una nuova conferma. Decisione [D-MIL-RES-261109](DECISIONS.md). Sostituisce le voci «Corpo di Guardia» e «Avamposto» del catalogo edifici.
+
+1. **Il Corpo di Guardia si fonde nella Caserma.** `guard` esce dal castello (torri, porte, sezioni costruite, `PORTICO_FUNCTIONS`) e resta solo in `TOWNHALL_FUNCTION_CATALOG` come guardia cittadina per CRIME. Aggiornamento distruttivo (fase di test): le stanze `guard` del castello si svuotano al caricamento.
+2. **Una sola riserva di soldati: i posti della Caserma** (`barracks`, 16 per unità di stanza). I soldati sono uomini adulti L1 arruolati dal giocatore fino ai posti liberi; escono dal lavoro L1. Ingaggio **15 oro**, paga giornaliera da **L2** dall'oro del castello (stesso schema di `ConquerInfirmary.pay`). Senza paga non prestano servizio: pattuglie e vedette rientrano. Cibo come oggi (0,22 al giorno).
+3. **I soldati sono una valuta:** ogni soldato è libero o impegnato in pattuglia, vedetta, presidio di Avamposto o spedizione.
+4. **Pattuglie: 2 soldati della riserva, partono dalla Caserma.** Due tipi: **esterna** sul bordo della White Zone (quella attuale) e **ronda** lungo le strade della città. Se una pattuglia avvista nemici scatta l'**allarme automatico** (campana, `ConquerAlarmBells`). Da allineare con l'assegnazione a zona di MIL-CIRCLE-02 (#192): la ronda può coincidere con una pattuglia assegnata a un settore CIRCLE interno.
+5. **Vedette: 1 soldato su una torre.** **Senza vedetta una torre non osserva** (restano la vista delle unità e quella base); con la vedetta vede come oggi (`16 + 4 × altezza` U, un terzo di notte) e dà l'allarme automatico quando avvista nemici. Figura visibile sul tetto. Cambia l'equilibrio attuale, in cui ogni torre finita vede gratis.
+6. **Avamposto: upgrade a pagamento di una torre isolata** (staccata dalle mura, fuori dalla White Zone, dentro l'area edificabile; ammessa la W2 H4). Costo provvisorio 60 oro + 40 pietra + 20 legno, 4 giorni. Presidio fisso di **4 soldati e 1 cavallo** presi dalle riserve, vedetta sempre in servizio; senza soldati o cavallo disponibili l'Avamposto resta inattivo.
+7. **Avvisi dall'Avamposto al castello:**
+   - **Campana** (upgrade esistente dei tetti a falde).
+   - **Fuoco di segnalazione** (nuovo): upgrade dei tetti piani merlati, una pira grande, diversa dal braciere attuale. Passa l'allarme a catena come la campana con **raggio triplo**; si accende **una volta sola**, poi la pira si ricostruisce in cantiere (30 legno).
+   - **Staffetta a cavallo** lungo la strada fino al castello: l'allarme scatta all'arrivo.
+   - **Esclusi:** piccioni (Colombaia), cambio cavalli per i corrieri diplomatici, Stazione di Posta.
+8. **Spedizioni militari:** solo contratto. Prenotano soldati dalla riserva e li restituiscono al rientro; la meccanica resta a MARCH.
+
+**Asset nel Lab:** modello della pira, figura della vedetta sul tetto. **Dettagli lasciati all'implementazione:** la Caserma non entra sotto il portico (restano stalle, officina degli armaioli, magazzino); la vedetta si può mettere su qualunque torre finita. **Chiude:** il seguito della Colombaia «avvisi rapidi tra avamposti e castelli».
+
+## 2026-11-09 — MIL-CIRCLE-02 · Zone CIRCLE e macrostrutture difensive
+
+- **SU BRANCH:** sostituisce il roster piatto delle torri di MIL-PG-01 con **zone difensive CIRCLE → macrostrutture**. Ogni torre madre (`parentTowerId`) integra sottotorri dirette e annidate in **una sola riga**, sommando capienza, assegnati e operativi senza contare due volte. Si assegnano arcieri sia a livello settore sia a livello macrostruttura, reindirizzando i comandi ai singoli slot Siege.
+- **PATTUGLIE:** la White Zone resta riserva. Comando di assegnazione a zona sposta una pattuglia esistente e la fa pattugliare i punti percorribili di CIRCLE; il richiamo la rimette sul perimetro White Zone. L'assegnazione persiste nel save Combat; settori invalidi vengono rilasciati senza inventare zone.
+- **ACCEPTANCE APERTO:** regressioni GitHub Actions, prova browser e test in partita con castelli annidati, accesso di pattuglie a zone recintate complesse. Non incluso reclutamento automatico di guarnigioni o ridefinizione della topologia CIRCLE.
+
+
+## 2026-11-09 — JM-L2-01 + MIL-PG-01 · Sottopalette di gestione
+
+- **JM-L2-01 IN BRANCH:** Job Manager suddiviso in L1/L2. Produzioni L2 (campi, cava, miniera) ordinate per priorità drag-and-drop, minimo e AUTO/manuale. Rispetta limiti della manodopera L2 e cicli stagionali; le modifiche sono indipendenti dal roster L1 e persistono nel medesimo save economico. Test `qa/labor-jobs-regression.cjs` estesi.
+- **MIL-PG-01 IN BRANCH:** Militare → Pattuglie e guarnigioni, con gestione pattuglie perimetrali Combat, arcieri nelle torri in `ConquerSiege` e squadre caserma attraverso `ConquerCamp` nella sola modalità `/camp`. Guardie decorative ai cancelli e ai camminamenti non diventano fittizi posti di lavoro/combattenti.
+- **ACCEPTANCE APERTO:** Actions, prova UI L2 e guarnigioni in browser e controllo nel gioco reale. Non incluso: nuove formazioni, trasferimenti individuali tra caserme, assunzioni a pagamento o simulazione nuove unità.
+
+
+## 2026-11-09 — JM-L1-01 · Gestione priorità produttive dei popolani L1
+
+- **IN BRANCH:** ordinamento drag-and-drop e su/giù delle mansioni L1; «Minimum worker» numerico; toggle AUTO/manuale, stato del personale e segnalazione dei minimi non soddisfatti.
+- **ACCEPTANCE CORE:** due passaggi per i posti (minimi in ordine di priorità, poi eccedenza ai job AUTO in ordine); manuale non assorbe eccedenze; coerenza con pastori/pescatori riservati, carrettieri, cantieri navali e cantieri manuali. Dati persistiti in `State.economy`; risparmio sul legacy finché non si agisce.
+- **PROVE/RESIDUI:** regressioni `qa/labor-jobs-regression.cjs` e `qa/panels-regression.cjs` ampliate; sessione JS PASS; attendere CI PR, verifica browser del DnD/mobile e comportamento reale durante il cambio del turno. Fuori scopo assegnazioni L2–L4 e reintegro forzoso di pescatori/pastori.
+
+
+## 2026-11-09 — Riconciliazione con GitHub (ref `main` `e63f729`)
+
+> **Prevale sulle diciture «SU BRANCH / NON MERGE / pre-merge» delle sezioni sotto.** Verificato con `gh pr list` il 09/11/2026. I requisiti APERTI delle singole sezioni restano validi: cambia solo dove sta il codice.
+
+**Già in `main` (merged), anche se le sezioni sotto dicono «branch»:**
+
+| Area | PR |
+|---|---|
+| Stanze e funzioni del castello | Colombaia #142 · Infermeria #143 · Cisterna #144 · ROOM_EXTERIOR + Latrina W1 #146 · Latrina nelle torri W1 #155 · Campana d'allarme #148 · Scuderia militare #149 · Falconiera e Prestigio #164 · Cucine solo nelle sezioni #140 |
+| Castello e Builder | Cutaway per piani #138 · Portico W1 #147 · Mastio W4 #151 · Long house #154 · Pendenza tetti 30/45/60° #157 e 75° #168 · Scale ai camminamenti #172 · Merlo doppio #170 · Edifici addossati alle mura #169 · Torre W2×H4 #174 · Torre lignea H2 #175 · Rampe e scalinate #173 · Orto di corte #171 · Ballatoi #134 |
+| Castello (30/10–03/11) | Semitorri e torri a D #114 · Porta piccola #116 · Muri sui pendii #118 · Garitte e falde #119 · Ingresso rialzato del mastio #120 · Stili di merlatura #115 |
+| Civili e città | Municipio e gilda #113 · Più pozzi #111 · Case 3D L1–L4 #136/#141/#145 · Camino L1 #156 · Botteghe L3 cutaway #135 · Incendio case #137 · Piazzale e taglialegna #166/#167 · Carretti locali #177 · Carrettiere L1 #179 · Campi solo L2 #160 |
+| CRIME e militare | CRIME skeleton #132 · edifici, tribunale e prigioni #139 · Accampamenti/livree #110 · MARCH skeleton #117 · Combat: separazione presentazione (03/11) |
+| Mondo e grafica | MARE #150 · Foglie autunnali #183 · Tronchi scuri #185 · Bivacchi notturni #182 · STONECOLOR #187 · Texture offline #153 · SVG industriali rimossi #152 |
+| UI, CODEX, CI | Schede Job Manager e Trade #188 · CODEX/Obsidian #165 · CI P0/P1/P2.1/P2.3 #176/#178/#180/#181 · Audit a griglia #158 |
+| Storico 28–30/10 | Centro di controllo #103 · Sala larga #102 · Legno 3D #104 · Scala a chiocciola T1 #106 · Parapetti #107 · Picchi render #97 · Occlusione #94 · Save-safety #93 · Cavalieri/diplomazia #96 · Cutaway junctions #95 · Audio #92 · Cutaway civico Lab #100 · UI Difendi #88 · Abiti stagionali #87 |
+
+**PR aperte:** #186 cantieri avviabili senza scorte con approvvigionamento e priorità (CI verde, da rivedere) · #184 densità foreste e sottobosco (bozza) · #162 biomi regionali e settori (bozza, esperimento).
+
+**Lavoro non pubblicato (worktree locali, nessuna PR):** BC-251105-05 tetto interno dentro i merli (`feature/tower-inner-roof`, 1 commit + modifiche) · BC-251105-09 tetti della Long house (`feature/longhouse-roofs`, solo modifiche non committate) · `figure-billboards` (19 commit) · `combat-ai` (26 commit su remoto, ultima nota: assedio di 5 minuti fallito).
+
+**Catalogo edifici — ancora solo progetto, da confermare prima del codice:** Presidio antincendio, Avamposto, funzioni del Municipio, Gilda/Corporazioni, effetti dello Scriptorium, Bagni pubblici, Lavatoio, Approdo fluviale, Cortile domestico, Giardino dei semplici, Carbonaia, Palazzo del Balivo. Il Corpo di Guardia esiste come stanza `guard` e sala del Municipio, senza pattuglie né allarmi propri.
+
+**Seguiti aperti trasversali:** lanterna della Colombaia sul montaggio `roof` di `ROOM_EXTERIOR`; reclutamento dei cavalieri sullo stock reale dei cavalli; rintocco della campana nel motore audio; cosa legge il Prestigio; gronda e pluviale della Cisterna; assedio strategico S-01/02/03/04/10/15; CRIME C-01 e C-05; MARCH collegato a mappa e salvataggi; navi in gioco (MARE); ARTE solo backlog; UI v2 fase 5.
+
+## 2026-11-08 — STONECOLOR · Verifica a cascata delle dipendenze
+
+- **CODICE COLLEGATO:** modelli litici principali e sub-asset (case, civici e cimiteri, torri/mura, cantieri, scalinate, rampe, ponti, cave/miniere, massi/sassi di fiume, coste/reef, banchine, interni/cutaway) e relative chiavi di cache. Assenti copie per palette delle mesh e dei registri Blender.
+- **GUARDIA DI MATERIALI:** le palette dei modelli sono interpretate per ruolo `stone*/rock*/paving`, non come tutti i grigi. Esclusi clay/brick, legno, acqua, neve, tetti, muschio, alghe e metallo.
+- **APERTO PER CHIUSURA:** esecuzione completa della CI sull'ultimo commit e verifica visiva di cinque colori su Canvas e World3D, con LOD, inverno, cutaway, costruzione e modifiche da Profilo. Nessuna dichiarazione di copertura completa basata soltanto sui test statici.
+
+
+## 2026-11-08 — STONECOLOR · Materiali litici per mappa
+
+- **PALETTE APPROVATE:** Grigio attuale, Arenaria (beige mineralizzato, distinta dalla terracotta Clay), Tufo ocra, Calcare bianco-grigio, Granito grigio scuro. Cinque tonalità coordinate luce → ombra profonda per ciascuna.
+- **IN BRANCH `feature/stonecolor`:** selezione casuale deterministica al nuovo seed, Profilo → Ambiente, persistenza locale/cloud, integrazione colore per murature, ripidi pendii, rocce, montagne, coste/reef, pietre scatter, cava di pietra, banchine; riuso dei modelli esistenti.
+- **DA VALIDARE:** test GitHub Actions e confronto visivo nei due renderer per giorno/notte, inverno, stili clay/brick, cutaway e Asset Lab; censimento di qualunque modulo ancora con colori litici hard-coded. Non fare merge solo sulla base dei test statici.
+- **FUORI SCOPE:** nuove risorse tipo arenaria/tufo/calcare/granito, biome lock, durabilità diversa, texture aggiuntive o copie degli asset.
+
+## 2026-11-08 — Palette Job Manager / Trade nel Profilo (branch `feature/profile-job-trade-tabs-20261108`)
+
+- **IMPLEMENTATO SU BRANCH:** aggiunte due schede di primo livello accanto a Generale, Araldica e Centro di Controllo, senza replicare ledger, roster o simulatori.
+- **JOB MANAGER:** distribuzione L1, popolazione per classe, occupati per attività e andamento settimanale. Allocazione automatica invariata, nessuna assegnazione manuale fittizia.
+- **TRADE:** inventario mercato/castello, prezzi, storico, quote di vendita editabili tramite il comando `setSaleShare` già esistente e apertura carovane.
+- **QA:** regressione `qa/panels-regression.cjs` estesa. CI e QA visiva da verificare, nessun nuovo asset né schema di salvataggio. ROADMAP/DECISIONS invariate.
+
 ## 2026-11-08 — P3-21 · Tronchi e rami uniformati (`fix/dark-tree-bark-20261108`)
 
 - **IMPLEMENTATO SU BRANCH:** il legno visibile di alberi e cespugli SVG è marrone molto scuro **#2B1D16** (7+7 sorgenti), comprese le ramificazioni dei cespugli; nessun cambio alle chiome e alla loro stagionalità. Stesso colore per i pini montani e nei render Canvas/WebGL2.
@@ -89,7 +175,7 @@ BC-251105-03 e BC-251105-10 (edifici addossati alle mura e loro tetto a falda un
 Tutte **DA CONFERMARE dall'utente** prima di qualsiasi codice (effetti, compatibilità, priorità). Nessuna è approvata.
 
 - **Presidio antincendio:** upgrade di Pozzo/Cisterna; secchi e uomini pronti che spengono prima gli incendi nel raggio (sistema fuoco esistente).
-- **Avamposto:** torre isolata che evolve Corpo di guardia e Stazione di posta; avvistamento lontano, staffette per i messaggi.
+- **Avamposto:** ~~torre isolata che evolve Corpo di guardia e Stazione di posta~~ → **specifica approvata il 09/11/2026, vedi MIL-RES-01** (upgrade delle torri isolate; il Corpo di Guardia si fonde nella Caserma).
 - **Municipio:** funzioni amministrative.
 - **Gilda:** assorbe la Casa delle Corporazioni.
 - **Scriptorium (Chiesa L2):** servono effetti simulati.
