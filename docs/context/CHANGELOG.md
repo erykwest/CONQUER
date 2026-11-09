@@ -1,5 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+09/11/2026 — `feature/circle-military-zones-macrotowers-20261109` (pre-merge): gestione militare CIRCLE con compartimenti difensivi effettivi, stato e profondità per zona; assegnazioni arcieri per settore e per torre madre; sottotorri e sottotorri annidate aggregate in una riga, con slots Siege sommati una sola volta. Le pattuglie si assegnano/ritirano dai settori usando il roster Combat già esistente e percorsi militari locali: nessuna nuova unità creata dal trasferimento. QA dedicata e test di pannello/browser; in attesa CI prima del merge. Decisione D-MIL-CIRCLE-261109; ROADMAP invariata.
+
+
 09/11/2026 — `feature/jobmanager-l2-military-garrisons-20261109` (pre-merge): palette Job Manager ripartita in L1/L2. L2 ora usa l'algoritmo con priorità/minimo/AUTO, indipendente da L1 e persistito dentro `State.economy`; supporta campi/cave/miniere e mantiene il comportamento legacy fino alla prima modifica. Centro di controllo → Militare integra sottopaletta «Pattuglie e guarnigioni» con pattuglie White Zone, archi delle torri tramite Siege e caserme `/camp`, senza forzare asset o unità simulate. Regresioni motore/pannelli e browser estese; QA JS isolata PASS, CI da verificare. Decisione D-JOBS-MIL-261109, ROADMAP invariata.
 
 

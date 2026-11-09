@@ -1,5 +1,11 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+## 2026-11-09 — MIL-CIRCLE-02 · Settori CIRCLE e una riga per macrostruttura difensiva
+
+- **BRANCH `feature/circle-military-zones-macrotowers-20261109`:** «Pattuglie e guarnigioni» ora presenta zone difensive reali CIRCLE; distribuzione di pattuglie tra riserva White Zone e settori tramite il roster Combat; arcieri assegnabili per settore e per torre madre con sottotorri aggregate (`parentTowerId`), usando esclusivamente i posti Siege esistenti. Caserme nelle sottotorri integrate nel conteggio della torre madre quando `/camp` è attivo.
+- **DA VALIDARE:**  test CI/browser, castelli con perimetri complessi e pattuglie con percorsi non raggiungibili, poi merge. Nessuna creazione di soldati dalla semplice assegnazione.
+
+
 ## 2026-11-09 — JM-L2-01 / MIL-PG-01 · L2 e pattuglie/guarnigioni
 
 - **SU BRANCH `feature/jobmanager-l2-military-garrisons-20261109`:** Job Manager con sottopalette L1/L2, L2 gestibile con drag-and-drop/minimo/AUTO, priorità e riserve proprie. Militare con sottopaletta «Pattuglie e guarnigioni» per pattuglie White Zone, presidio arcieri delle torri e squadre di caserma dove `ConquerCamp` è attivo.
