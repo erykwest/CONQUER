@@ -364,6 +364,7 @@
     });
     drawEffects(g,(p,z)=>w2sRaw(p,z),window.ConquerCombatRules?.visualEffects?.());
     window.ConquerDiplomacy?.draw(g);
+    window.ConquerSoldiers?.draw(g);   // outpost relay riders and burning signal fires
     const focused=combat.units.find(u=>u.id===selected);
     // The Builder layout may be replaced by another UI shell. Missing optional
     // HUD controls must never interrupt render/simulation or the combat canvas.

@@ -493,8 +493,11 @@
   }
   function observers(){
     const out=[];
+    const soldiers=window.ConquerSoldiers;
     for(const tower of State.structures){
       if(tower.type!=='tower'||underConstruction(tower))continue;
+      // A tower watches only with a lookout on duty (MIL-RES-01, settlement-soldiers.js).
+      if(soldiers&&!soldiers.towerWatches(tower))continue;
       const h=clamp(Math.round(terrainElevation(tower)+structureLevel(tower)),0,8);
       out.push({x:tower.x,y:tower.y,h,r:combatVisionRadius(h),id:tower.id});
     }
@@ -601,8 +604,15 @@
   }
   function updateAlert(sources){
     let next='clear';
+    const soldiers=window.ConquerSoldiers;
     for(const intruder of combat.enemy){
-      if(intruder.neutral||intruder.defeated||intruder.stats?.hp<=0||!spotted(intruder,sources))continue;
+      if(intruder.neutral||intruder.defeated||intruder.stats?.hp<=0)continue;
+      // Lookouts, patrols and outposts raise the alarm themselves (settlement-soldiers.js).
+      if(soldiers&&intruder.kind!=='wolf'){
+        const seers=sources.filter(s=>sourceSees(s,intruder));
+        if(!seers.length)continue;
+        soldiers.sighted(intruder,seers);
+      }else if(!spotted(intruder,sources))continue;
       const a=areaState(intruder);
       if(a.green){next='general';break}
       if(a.yellow)next='local';
@@ -873,7 +883,7 @@
     return points;
   }
   function spacePatrols(boundary=whiteBoundaryPoints(),loop=whiteBoundaryLoopCache){
-    const patrols=combat.units.filter(u=>u.kind==='patrol'&&!u.defeated&&!u.circleSectorId);
+    const patrols=combat.units.filter(u=>u.kind==='patrol'&&!u.defeated&&!u.circleSectorId&&u.patrolMode!=='town');
     if(!patrols.length||!boundary.length||!loop.length)return;
     patrols.forEach((unit,i)=>{
       const loopPosition=Math.floor(i*loop.length/patrols.length)%loop.length;
@@ -921,7 +931,38 @@
     circlePatrolWaypointsCache.set(key,result);
     return result;
   }
+  // Town round (MIL-RES-01): the patrol walks the completed roads inside the Yellow Zone, in a loop
+  // around the village well. Samples every ~2U along each road, ordered by angle round the well.
+  let townRoundCache=null,townRoundKey='';
+  function townRoundPoints(){
+    const well=activeWell();if(!well)return[];
+    const roads=State.structures.filter(s=>s.type==='road'&&s.a&&s.b&&!underConstruction(s));
+    const key=roads.length+':'+State.structures.length+':'+patrolNavRevision+':'+whiteBoundaryRevision;
+    if(townRoundCache&&key===townRoundKey)return townRoundCache;
+    const pts=[];
+    for(const r of roads){
+      const L=Math.hypot(r.b.x-r.a.x,r.b.y-r.a.y),n=Math.max(1,Math.round(L/2));
+      for(let i=0;i<=n;i++){
+        const p={x:r.a.x+(r.b.x-r.a.x)*i/n,y:r.a.y+(r.b.y-r.a.y)*i/n},a=areaState(p);
+        if(a.allowed&&a.yellow&&dist(p,well)>2&&cliffClearForFootprint(p,'patrol'))pts.push(p);
+      }
+    }
+    const angle=p=>Math.atan2(p.y-well.y,p.x-well.x);
+    pts.sort((a,b)=>angle(a)-angle(b)||dist(a,well)-dist(b,well));
+    const out=[];for(const p of pts)if(!out.length||dist(out.at(-1),p)>=1.5)out.push(p);
+    townRoundCache=out.length>=2?out:[];townRoundKey=key;
+    return townRoundCache;
+  }
   function patrolDestination(unit,skip=0){
+    if(unit.patrolMode==='town'&&!unit.circleSectorId){
+      const round=townRoundPoints();if(!round.length)return null;
+      let position=Number.isInteger(unit.patrolLoopPosition)&&unit.patrolLoopPosition<round.length?unit.patrolLoopPosition:-1;
+      const initial=position<0;
+      if(initial){position=0;let best=Infinity;round.forEach((p,i)=>{const d=dist(unit,p);if(d<best){best=d;position=i}})}
+      position=(position+(skip+(initial?0:1)))%round.length;
+      unit.patrolLoopPosition=position;
+      return round[position];
+    }
     const local=unit.circleSectorId?circlePatrolPoints(unit.circleSectorId):[];
     // Never silently patrol the White Zone while a valid sector is assigned.
     if(unit.circleSectorId&&!local.length)return null;
@@ -986,7 +1027,8 @@
       // endpoints * four increasingly wide A* windows in one tick caused
       // visible frame stalls in dense villages.
       unit.patrolLoopPosition=previous;
-      const circleLength=unit.circleSectorId?circlePatrolPoints(unit.circleSectorId).length:0;
+      const circleLength=unit.circleSectorId?circlePatrolPoints(unit.circleSectorId).length
+        :unit.patrolMode==='town'?townRoundPoints().length:0;
       const target=patrolSafeWaypoint(patrolDestination(unit,offset),circleLength?unit.circleSectorId:null);
       const path=target?patrolRoute(unit,target,unit.id):null;
       if(path?.length>1){
@@ -1019,26 +1061,61 @@
     visibilityDirty=true;changed();status('Mounted knight recruited · '+(active+1)+' / '+limit);
     draw();return true;
   }
-  function addPatrol(){
+  // A patrol takes two soldiers of the Barracks reserve (settlement-soldiers.js) and leaves from the
+  // Barracks: 'white' walks the White Zone border, 'town' the round of the village roads.
+  function patrolHome(well){
+    const barracks=State.structures.find(s=>!s.destroyed&&!underConstruction(s)&&['tower','built','gate'].includes(s.type)&&
+      s.functions?.some((fn,i)=>fn==='barracks'&&(window.ConquerSiege?.allowed?.(s,i,fn)??true)));
+    const c=barracks?structureCenter(barracks):null;
+    return c&&areaState(c).allowed?c:well;
+  }
+  function addPatrol(mode='white'){
     const well=activeWell();
-    if(!well){status('Found the settlement before adding a White Zone patrol');return false}
+    if(!well){status('Found the settlement before adding a patrol');return false}
+    const soldiers=window.ConquerSoldiers;
+    if(soldiers&&soldiers.free()<soldiers.PATROL_MEN){
+      status('A patrol takes '+soldiers.PATROL_MEN+' free soldiers: enlist them in the Barracks');return false;
+    }
+    const town=mode==='town';
+    if(town&&!townRoundPoints().length){status('Town round: build roads inside the Yellow Zone first');return false}
     startUnits();
+    const home=soldiers?patrolHome(well):well;
     const index=combat.units.filter(u=>u.kind==='patrol').length;
     const angle=index*Math.PI*.77,radius=2.4+(index%3)*.45;
-    let spawn=point(well.x+Math.cos(angle)*radius,well.y+Math.sin(angle)*radius);
+    let spawn=point(home.x+Math.cos(angle)*radius,home.y+Math.sin(angle)*radius);
     if(!areaState(spawn).allowed||pointBlockedForPeasant(spawn,'combat-patrol'))spawn={x:well.x,y:well.y};
-    combat.units.push({id:'combat-patrol-'+uid(),kind:'patrol',x:spawn.x,y:spawn.y,target:null,patrolDirection:1});
-    spacePatrols();
-    visibilityDirty=true;changed();status('White Zone patrol added · 2 pikemen');draw();return true;
+    const unit={id:'combat-patrol-'+uid(),kind:'patrol',x:spawn.x,y:spawn.y,target:null,patrolDirection:1};
+    if(town)unit.patrolMode='town';
+    combat.units.push(unit);
+    soldiers?.invalidate();spacePatrols();
+    visibilityDirty=true;changed();status((town?'Town round':'White Zone patrol')+' added · 2 pikemen');draw();return true;
   }
-  function removePatrol(){
-    let index=-1;for(let i=combat.units.length-1;i>=0;i--)if(combat.units[i].kind==='patrol'&&!combat.units[i].circleSectorId){index=i;break}
-    if(index<0){status('No White Zone patrol to remove');return false}
+  function dropPatrol(index){
     const [removed]=combat.units.splice(index,1);
     if(selected===removed.id)selected=null;
     selectedIds.delete(removed.id);
-    spacePatrols();
-    visibilityDirty=true;changed();status('White Zone patrol removed');draw();return true;
+    return removed;
+  }
+  function removePatrol(mode=null){
+    let index=-1;for(let i=combat.units.length-1;i>=0;i--){
+      const u=combat.units[i];
+      if(u.kind==='patrol'&&!u.circleSectorId&&(!mode||(mode==='town')===(u.patrolMode==='town'))){index=i;break}
+    }
+    if(index<0){status(mode==='town'?'No town round to remove':'No patrol to remove');return false}
+    const removed=dropPatrol(index);
+    window.ConquerSoldiers?.invalidate();spacePatrols();
+    visibilityDirty=true;changed();status((removed.patrolMode==='town'?'Town round':'Patrol')+' back to the Barracks');draw();return true;
+  }
+  // The reserve no longer covers n patrols: the last ones go back, free patrols before zone ones.
+  function withdrawPatrols(n){
+    let done=0;
+    for(const sector of [false,true])for(let i=combat.units.length-1;i>=0&&done<n;i--){
+      const u=combat.units[i];
+      if(u.kind!=='patrol'||u.defeated||u.lost||u.ward||!!u.circleSectorId!==sector)continue;
+      dropPatrol(i);done++;
+    }
+    if(done){spacePatrols();visibilityDirty=true;changed();draw()}
+    return done;
   }
 
   // Assignment is a transfer of an existing patrol, not the creation of
@@ -1526,6 +1603,7 @@
     dt=Math.min(dt,.25);
     window.ConquerWolves?.tick(dt);
     window.ConquerCamp?.synchronize();
+    window.ConquerSoldiers?.frame(dt);
     updatePatrols(performance.now());
     let moved=false;
     for(const u of combat.units){
@@ -1784,8 +1862,10 @@
     '<div class="combat-row"><button id="combatFog">Fog ON</button><button id="combatZones">Zones OFF</button><button id="combatRecall" title="Bell: green safe zones, then red Mastio Common Hall" aria-label="Raise alarm">🔔</button><button id="combatMute" title="Release all recalled civilians and recruits" aria-label="Release">🔕</button></div>'+
     '<div class="combat-row"><button data-combat-brush="allow">White +</button><button data-combat-brush="deny">White −</button><button data-combat-brush="yellow">Yellow</button><button data-combat-brush="green">Green</button></div>'+
     '<div class="combat-row"><button data-combat-brush="eraseYellow">− Yellow</button><button data-combat-brush="eraseGreen">− Green</button><button id="combatOrders">Orders</button><button id="combatDeselect" title="Clear selection (Esc)">Deselect</button><button id="combatMoor" title="Selected warships tie up at the nearest free military pier">Attracca</button></div>'+
-    '<div class="combat-row"><button id="combatPatrolAdd" title="Add two pikemen to patrol the White Zone border">Patrol + · 2 pikemen</button><button id="combatPatrolRemove">Patrol −</button></div>'+ 
-    '<div class="legend" id="combatPatrolCount">White Zone patrols · 0</div>'+ 
+    '<div class="combat-row"><button id="combatRecruit" title="Enlist an L1 man in the Barracks (15 gold, then an L2 wage a day)">Arruola +1</button><button id="combatDismiss" title="Send a free soldier back to L1 work">Congeda −1</button></div>'+
+    '<div class="legend" id="combatReserve">Caserma · soldati 0 / 0</div>'+
+    '<div class="combat-row"><button id="combatPatrolAdd" title="Two soldiers of the reserve patrol the White Zone border">Pattuglia +</button><button id="combatRoundAdd" title="Two soldiers of the reserve walk the round of the village roads">Ronda +</button><button id="combatPatrolRemove">Pattuglia −</button></div>'+
+    '<div class="legend" id="combatPatrolCount">White Zone patrols · 0</div>'+
     '<label>Brush radius <input id="combatBrushSize" type="range" min="1" max="16" value="5"><b id="combatBrushReadout">5U</b></label>'+
     '<div class="combat-row"><button id="combatIntruder">Test intruder</button><button id="combatClearEnemies">Clear intruders</button></div>'+
     '<div class="combat-row"><button id="combatTorch" title="Place an attacker with a torch: he sets alight the nearest thing that burns">Torch-bearer</button><button data-combat-fire="arrows" title="Click a structure: a volley of fire arrows from outside">Fire arrows</button><button data-combat-fire="stone" title="Click a structure: a burning trebuchet stone">Fire stone</button><button id="combatBuckets" title="Bucket brigade: women run water from the nearest well to every fire">Buckets ON</button></div>'+
@@ -1807,9 +1887,18 @@
     $('combatMute').disabled=combat.recallMode==='off';
     $('combatBrushSize').value=combat.brushRadius;
     $('combatBrushReadout').textContent=combat.brushRadius+'U';
-    const patrols=combat.units.filter(u=>u.kind==='patrol').length;
-    $('combatPatrolCount').textContent='White Zone patrols · '+patrols+' ('+(patrols*2)+' pikemen)';
+    const patrolUnits=combat.units.filter(u=>u.kind==='patrol'),patrols=patrolUnits.length;
+    const rounds=patrolUnits.filter(u=>u.patrolMode==='town').length;
+    $('combatPatrolCount').textContent='Pattuglie · '+(patrols-rounds)+' esterne · '+rounds+' ronde ('+(patrols*2)+' soldati)';
     $('combatPatrolRemove').disabled=patrols===0;
+    const reserve=window.ConquerSoldiers?.summary?.();
+    if(reserve&&$('combatReserve')){
+      $('combatReserve').textContent='Caserma · soldati '+reserve.enlisted+' / '+reserve.posts+' posti · liberi '+reserve.free+
+        ' · vedette '+reserve.lookouts+(reserve.outpostsWanted?' · avamposti '+reserve.outposts+'/'+reserve.outpostsWanted:'')+
+        (reserve.paid?'':' · NON PAGATI');
+      $('combatRecruit').disabled=reserve.enlisted>=reserve.posts;
+      $('combatDismiss').disabled=reserve.enlisted===0;
+    }
     // Keep Add clickable before founding: the action explains the prerequisite.
     document.querySelectorAll('[data-combat-brush]').forEach(b=>b.classList.toggle('active',State.tool.kind==='combat-brush'&&State.tool.combatBrush===b.dataset.combatBrush));
     document.querySelectorAll('[data-combat-storm]').forEach(b=>b.classList.toggle('active',State.tool.kind==='combat-storm'&&State.tool.stormKind===b.dataset.combatStorm));
@@ -1828,8 +1917,11 @@
   $('combatOrders').onclick=()=>{setTool({kind:'combat-orders',label:'Click or box-select friendly units, Shift to add'});syncButtons()};
   $('combatMoor').onclick=()=>{const msg=window.ConquerFleet?.moorSelected?.();if(msg)status(msg);draw()};
   $('combatDeselect').onclick=()=>{clearCombatSelection();setTool({kind:'select',label:'Select'});draw()};
-  $('combatPatrolAdd').onclick=addPatrol;
-  $('combatPatrolRemove').onclick=removePatrol;
+  $('combatPatrolAdd').onclick=()=>addPatrol('white');
+  $('combatRoundAdd').onclick=()=>addPatrol('town');
+  $('combatPatrolRemove').onclick=()=>removePatrol();
+  $('combatRecruit').onclick=()=>{window.ConquerSoldiers?.recruit();syncButtons()};
+  $('combatDismiss').onclick=()=>{window.ConquerSoldiers?.dismiss();syncButtons()};
   $('combatIntruder').onclick=()=>{setTool({kind:'combat-intruder',label:'Click terrain to position a test enemy'});syncButtons()};
   $('combatBuckets').onclick=()=>{const F=window.ConquerFire;if(!F)return;F.brigade.set(!F.brigade.on());syncButtons();status('Bucket brigade '+(F.brigade.on()?'on: women fight the fires':'off'))};
   $('combatTorch').onclick=()=>{setTool({kind:'combat-intruder',torch:true,label:'Click terrain to place a torch-bearer'});syncButtons()};
@@ -1865,7 +1957,7 @@
   window.ConquerCombat={tick,serialize,restore,mapContacts,civilPosition,areaState,sourceSees,observers,spawnOccupants,civilSpawnPosition,
     dynamicMeshes,addStorm,addRamStorm,addKeepStorm,issueWallOrder,planLegs,inKeep:()=>combat?.inKeep||[],
     units:()=>combat?.units||[],enemy:()=>combat?.enemy||[],
-    recruitKnight,assignCirclePatrol,knightRecruitment:()=>{
+    recruitKnight,assignCirclePatrol,addPatrol,removePatrol,withdrawPatrols,townRoundPoints,knightRecruitment:()=>{
       const cap=window.ConquerSiege?.capacity?.()||{},current=(combat?.units||[]).filter(u=>u.kind==='knight'&&!u.defeated).length;
       return {current,limit:Math.min(cap.knights||0,cap.horses||0),rooms:cap.knights||0,horses:cap.horses||0};
     },

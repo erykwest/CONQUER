@@ -18,6 +18,8 @@ on:
       - 'qa/military-circle-roster-regression.cjs'
       - 'src/ui/game-api.js'
       - 'src/settlement-alarm-bells.js'
+      - 'src/settlement-soldiers.js'
+      - 'qa/caserma-avamposto-regression.cjs'
       - 'qa/alarm-bell-regression.cjs'
       - 'src/settlement-wall*.js'
       - 'qa/wall-stairs-regression.cjs'
@@ -34,6 +36,8 @@ on:
       - 'src/settlement-wolves.js'
       - 'src/settlement-mounted2d.js'
       - 'src/settlement-alarm-bells.js'
+      - 'src/settlement-soldiers.js'
+      - 'qa/caserma-avamposto-regression.cjs'
       - 'src/settlement-siege.js'
       - 'src/settlement-render.js'
       - 'src/settlement-wall*.js'
@@ -66,6 +70,7 @@ jobs:
           node --check src/settlement-combat.js
           node --check src/settlement-combat-render.js
           node --check src/settlement-combat-rules.js
+          node --check src/settlement-soldiers.js
       - name: Rendering boundaries and combat behavior
         run: |
           node qa/combat-render-regression.cjs
@@ -86,3 +91,4 @@ jobs:
           node qa/wall-stairs-regression.cjs
           node qa/cutaway-floors-regression.cjs
           node qa/alarm-bell-regression.cjs
+          node qa/caserma-avamposto-regression.cjs

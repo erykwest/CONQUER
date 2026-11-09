@@ -194,6 +194,20 @@ const StructureCommands=(()=>{
     status(value==='bell'?'Alarm bell: heard '+bells.hearingRadius(target)+'U around the tower':'Alarm bell removed');
     return true;
   }
+  // Lookout, outpost and signal fire (settlement-soldiers.js, MIL-RES-01).
+  function setTowerLookout(id,value){
+    const target=find(id),M=window.ConquerSoldiers;if(target?.type!=='tower'||!M)return false;
+    const ok=M.setLookout(id,value==='on');if(ok)refresh(target,false);return ok;
+  }
+  function setTowerOutpost(id,value){
+    const target=find(id),M=window.ConquerSoldiers;if(target?.type!=='tower'||!M)return false;
+    if(value==='none'&&target.outpost&&typeof confirm==='function'&&!confirm('Smobilitare l\'avamposto? Il costo non viene restituito.'))return false;
+    const ok=M.setOutpost(id,value==='outpost');if(ok)refresh(target,false);return ok;
+  }
+  function setTowerSignalFire(id,value){
+    const target=find(id),M=window.ConquerSoldiers;if(target?.type!=='tower'||!M)return false;
+    const ok=M.setSignalFire(id,value);if(ok)refresh(target,false);return ok;
+  }
   function setCivicLevel(id,level){
     const target=find(id);if(!target||!CIVIC_LEVEL_TYPES.includes(target.type))return false;
     if(civicAnnexChildren(target.id).some(child=>civicAnnexDefinition(child,target)?.level>level)){
@@ -369,6 +383,16 @@ const StructureCommands=(()=>{
         d.controls.push(choice('bell','setTowerBell',[{value:'none',word:'none'},{value:'bell',word:'bell',disabled:off}],structureVariant(s,'bell')));
         if(bells.towerBell(s))d.facts.push({key:'bellRange',value:bells.hearingRadius(s)+'U'});
       }
+      const M=window.ConquerSoldiers;
+      if(M){
+        if(!s.outpost)d.controls.push(choice('lookout','setTowerLookout',[{value:'none',word:'lookoutOff'},{value:'on',word:'lookoutOn',disabled:building}],s.lookout?'on':'none'));
+        const why=M.outpostBlocker(s);
+        d.controls.push(choice('outpost','setTowerOutpost',[{value:'none',word:'none'},{value:'outpost',word:'outpost',disabled:!s.outpost&&!!why}],s.outpost?'outpost':'none'));
+        if(!woodTower&&(M.signalFireAllowed(s)||M.signalFire(s)))
+          d.controls.push(choice('signalFire','setTowerSignalFire',[{value:'none',word:'none'},{value:'pyre',word:M.signalFire(s)&&s.signalFireSpent?'pyreRebuild':'pyre'}],
+            M.signalFire(s)&&!s.signalFireSpent?'pyre':'none'));
+        d.facts.push(...M.towerFacts(s));
+      }
       if(woodTower){
         if(woodTowerStyle(s)==='palisadeTower')d.controls.push(choice('woodRoof','setWoodRoof',[{value:'open',word:'open'},{value:'pitched',word:'pitched4'}],woodTowerRoof(s)));
       }else{
@@ -442,7 +466,7 @@ const StructureCommands=(()=>{
   }
 
   const commands={setConstructionPriority,setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setGateRoof,setGateUpper,setSkin,setWallStair,setWallStairPos,toggleCutaway,stepCutawayFloor,flipSide,
-    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,
+    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerLookout,setTowerOutpost,setTowerSignalFire,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,
     describeStructure};
   for(const name of ['setTier','setHeight','setKeepFloorPlan','setTowerBase','setTowerRoof','setHoarding','setWoodRoof','setGateRoof','setGateUpper','setSkin','setTowerWeapon','setTowerRoofShape','setTowerBartizan','setTowerBell','setCivicLevel','setPlazaVariant']){
     const execute=commands[name];
