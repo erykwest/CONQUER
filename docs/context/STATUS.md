@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-09 — Riconciliazione backlog con GitHub (solo documentazione)
+
+- **VERIFICATO:** stato delle PR con `gh pr list` contro `main` `e63f729`. Le feature dal 28/10 al 08/11 indicate come «su branch» sono merged; tabella completa in [BACKLOG](BACKLOG.md#2026-11-09--riconciliazione-con-github-ref-main-e63f729).
+- **APERTE:** PR #186 (CI verde), #184 e #162 in bozza. Worktree locali non pubblicati: tetto interno delle torri, tetti della Long house, `figure-billboards`, `combat-ai`.
+- **NESSUN CODICE O TEST** cambiato in questa voce; nessuna nuova prova eseguita oltre alla lettura dello stato delle PR.
+
 ## 2026-11-08 — STONECOLOR · Audit dipendenze e sottodipendenze
 
 - **CORRETTO SU BRANCH:** coda dei materiali litici collegata ai registri semantici nei modelli Blender di case, edifici civici e relative pavimentazioni, cave di pietra e mine, costruttori, scatter fluviali/costieri, ponti in pietra, scale da camminamento, rampe e gradini, arredi e pavimenti dei cutaway. Le rampe cromatiche condivise restano cinque; legno, argilla, tetti, muschio e alghe mantengono le tinte originarie.

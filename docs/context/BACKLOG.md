@@ -1,5 +1,30 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-09 — Riconciliazione con GitHub (ref `main` `e63f729`)
+
+> **Prevale sulle diciture «SU BRANCH / NON MERGE / pre-merge» delle sezioni sotto.** Verificato con `gh pr list` il 09/11/2026. I requisiti APERTI delle singole sezioni restano validi: cambia solo dove sta il codice.
+
+**Già in `main` (merged), anche se le sezioni sotto dicono «branch»:**
+
+| Area | PR |
+|---|---|
+| Stanze e funzioni del castello | Colombaia #142 · Infermeria #143 · Cisterna #144 · ROOM_EXTERIOR + Latrina W1 #146 · Latrina nelle torri W1 #155 · Campana d'allarme #148 · Scuderia militare #149 · Falconiera e Prestigio #164 · Cucine solo nelle sezioni #140 |
+| Castello e Builder | Cutaway per piani #138 · Portico W1 #147 · Mastio W4 #151 · Long house #154 · Pendenza tetti 30/45/60° #157 e 75° #168 · Scale ai camminamenti #172 · Merlo doppio #170 · Edifici addossati alle mura #169 · Torre W2×H4 #174 · Torre lignea H2 #175 · Rampe e scalinate #173 · Orto di corte #171 · Ballatoi #134 |
+| Castello (30/10–03/11) | Semitorri e torri a D #114 · Porta piccola #116 · Muri sui pendii #118 · Garitte e falde #119 · Ingresso rialzato del mastio #120 · Stili di merlatura #115 |
+| Civili e città | Municipio e gilda #113 · Più pozzi #111 · Case 3D L1–L4 #136/#141/#145 · Camino L1 #156 · Botteghe L3 cutaway #135 · Incendio case #137 · Piazzale e taglialegna #166/#167 · Carretti locali #177 · Carrettiere L1 #179 · Campi solo L2 #160 |
+| CRIME e militare | CRIME skeleton #132 · edifici, tribunale e prigioni #139 · Accampamenti/livree #110 · MARCH skeleton #117 · Combat: separazione presentazione (03/11) |
+| Mondo e grafica | MARE #150 · Foglie autunnali #183 · Tronchi scuri #185 · Bivacchi notturni #182 · STONECOLOR #187 · Texture offline #153 · SVG industriali rimossi #152 |
+| UI, CODEX, CI | Schede Job Manager e Trade #188 · CODEX/Obsidian #165 · CI P0/P1/P2.1/P2.3 #176/#178/#180/#181 · Audit a griglia #158 |
+| Storico 28–30/10 | Centro di controllo #103 · Sala larga #102 · Legno 3D #104 · Scala a chiocciola T1 #106 · Parapetti #107 · Picchi render #97 · Occlusione #94 · Save-safety #93 · Cavalieri/diplomazia #96 · Cutaway junctions #95 · Audio #92 · Cutaway civico Lab #100 · UI Difendi #88 · Abiti stagionali #87 |
+
+**PR aperte:** #186 cantieri avviabili senza scorte con approvvigionamento e priorità (CI verde, da rivedere) · #184 densità foreste e sottobosco (bozza) · #162 biomi regionali e settori (bozza, esperimento).
+
+**Lavoro non pubblicato (worktree locali, nessuna PR):** BC-251105-05 tetto interno dentro i merli (`feature/tower-inner-roof`, 1 commit + modifiche) · BC-251105-09 tetti della Long house (`feature/longhouse-roofs`, solo modifiche non committate) · `figure-billboards` (19 commit) · `combat-ai` (26 commit su remoto, ultima nota: assedio di 5 minuti fallito).
+
+**Catalogo edifici — ancora solo progetto, da confermare prima del codice:** Presidio antincendio, Avamposto, funzioni del Municipio, Gilda/Corporazioni, effetti dello Scriptorium, Bagni pubblici, Lavatoio, Approdo fluviale, Cortile domestico, Giardino dei semplici, Carbonaia, Palazzo del Balivo. Il Corpo di Guardia esiste come stanza `guard` e sala del Municipio, senza pattuglie né allarmi propri.
+
+**Seguiti aperti trasversali:** lanterna della Colombaia sul montaggio `roof` di `ROOM_EXTERIOR`; reclutamento dei cavalieri sullo stock reale dei cavalli; rintocco della campana nel motore audio; cosa legge il Prestigio; gronda e pluviale della Cisterna; assedio strategico S-01/02/03/04/10/15; CRIME C-01 e C-05; MARCH collegato a mappa e salvataggi; navi in gioco (MARE); ARTE solo backlog; UI v2 fase 5.
+
 ## 2026-11-08 — STONECOLOR · Verifica a cascata delle dipendenze
 
 - **CODICE COLLEGATO:** modelli litici principali e sub-asset (case, civici e cimiteri, torri/mura, cantieri, scalinate, rampe, ponti, cave/miniere, massi/sassi di fiume, coste/reef, banchine, interni/cutaway) e relative chiavi di cache. Assenti copie per palette delle mesh e dei registri Blender.

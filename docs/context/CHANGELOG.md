@@ -1,5 +1,7 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+09/11/2026 — `docs/backlog-sync-20261109`: riconciliato il BACKLOG con le PR effettivamente merged in `main` (`e63f729`); nuova sezione in testa che prevale sulle diciture «su branch / non merge», elenco delle PR aperte, del lavoro locale non pubblicato e delle voci di catalogo ancora da confermare. STATUS aggiornato. Nessun codice, test o asset modificato; ROADMAP e DECISIONS invariate.
+
 08/11/2026 — `feature/stonecolor` audit dipendenze: aggiunti agganci semantici del colore pietra a case/civici, pavimentazioni, ponti, rampe/scalinate, materiali di cantiere, cutaway e relative cache; corretto il riconoscimento errato Clay in House3D, mantenute alghe e muschio negli asset rocciosi, unione Canvas mura forzata a pietra; bust URL stonecolor2 e QA estesa. Nessuna geometria, economia o colore degli oggetti non minerali intenzionalmente modificato. Verifica visuale e CI finale aperte.
 
 
