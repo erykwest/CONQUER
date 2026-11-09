@@ -1,5 +1,11 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+## 2026-11-09 — JM-L2-01 / MIL-PG-01 · L2 e pattuglie/guarnigioni
+
+- **SU BRANCH `feature/jobmanager-l2-military-garrisons-20261109`:** Job Manager con sottopalette L1/L2, L2 gestibile con drag-and-drop/minimo/AUTO, priorità e riserve proprie. Militare con sottopaletta «Pattuglie e guarnigioni» per pattuglie White Zone, presidio arcieri delle torri e squadre di caserma dove `ConquerCamp` è attivo.
+- **DA VALIDARE:** GitHub Actions e prove in browser, quindi merge; trasferimenti individuali tra guarnigioni o nuovi sistemi di leva non inclusi.
+
+
 ## 2026-11-09 — JM-L1-01 · Job Manager L1 modificabile
 
 - **SU BRANCH `feature/l1-jobmanager-priority-20261109`:** lavorazioni L1 e mansioni di costruzione, carrettieri e cantieri navali riordinabili con drag-and-drop; minimi numerici e AUTO/manuale operativi nel motore economico. I minimi precedono l'eccedenza AUTO; persistono nel save. Pastori protetti, pescatori e tier L2–L4 non vengono riassegnati.

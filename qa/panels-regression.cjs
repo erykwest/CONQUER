@@ -21,6 +21,10 @@ function fixture(founded=true,markets=2) {
       {key:'site:log',label:'Taglialegna · log',workers:1,demand:2,capacity:2,minimum:1,auto:true},
       {key:'builders',label:'Costruttori',workers:2,demand:3,capacity:3,minimum:2,auto:false}
     ]},
+    jobManagerL2:{managed:true,available:2,assigned:1,tasks:[
+      {key:'site:field',label:'Campi · field',workers:1,demand:1,capacity:1,minimum:1,auto:true},
+      {key:'site:mine',label:'Miniera · mine',workers:0,demand:2,capacity:2,minimum:0,auto:false}
+    ]},
     goods:[{id:'food',price:2,market:10,castle:40,share:50,reserve:100}],
     activities:[{id:'farm-1',type:'field',owner:'lord',workers:1,value:50,profit:null}]
   };
@@ -36,6 +40,12 @@ function fixture(founded=true,markets=2) {
     setL1Minimum:(...args)=>calls.push(['jobMinimum',...args]),
     setL1Auto:(...args)=>calls.push(['jobAuto',...args]),
     setL1Order:(...args)=>calls.push(['jobOrder',...args]),
+    setL2Minimum:(...args)=>calls.push(['l2Minimum',...args]),
+    setL2Auto:(...args)=>calls.push(['l2Auto',...args]),
+    setL2Order:(...args)=>calls.push(['l2Order',...args]),
+    adjustPatrols:(...args)=>calls.push(['patrol',...args]),
+    adjustTowerArchers:(...args)=>calls.push(['tower',...args]),
+    adjustBarracksSquads:(...args)=>calls.push(['barracks',...args]),
     transferActivity:(...args)=>calls.push(['transfer',...args]),
     openCaravans:()=>calls.push(['caravans'])
   };
@@ -44,7 +54,11 @@ function fixture(founded=true,markets=2) {
       ConquerGame:{read:{economy:()=>economy,policies:()=>({tax:25,levy:10,rations:'market'}),
         logistics:()=>({stores:[{id:'food',stock:12,cap:30}],autonomy:3,daily:4,soldiers:8,shortfall:0}),
         defense:()=>({active:true,units:4,patrols:2,hostiles:0,alarm:'off'}),
-        knights:()=>({current:1,limit:2})},commands},
+        knights:()=>({current:1,limit:2}),
+        militaryAssignments:()=>({patrols:[{id:'patrol-1',active:true,position:'perimetro White Zone'}],
+          towers:[{id:'tower-1',label:'Torre · tower-1',capacity:3,assigned:1,active:1}],
+          barracks:[{id:'room-1',label:'Caserma · room-1',capacity:3,assigned:1}],
+          hasCampManagement:true,unassigned:0})},commands},
       ConquerEconomy:{state:()=>books,snapshot:()=>({weeks:markets,constructionPayroll:5})},
       ConquerDiplomacy:{state:()=>({caravans:[],incoming:null,history:[]})}
     },
@@ -123,6 +137,35 @@ const jobNode=key=>({dataset:{cpJobRow:key},classList:{add(){},remove(){}}});
 x.elements.profileControl.events.dragstart({target:{closest:selector=>selector==='[data-cp-job-row]'?jobNode('site:log'):null},dataTransfer:{setData(){},effectAllowed:''}});
 x.elements.profileControl.events.drop({target:{closest:selector=>selector==='[data-cp-job-row]'?jobNode('builders'):null},preventDefault(){}});
 assert.deepEqual(x.calls.pop(),['jobOrder',['builders','site:log']]);
+// Two Job Manager subpalettes maintain independent L1 and L2 commands.
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-jobs-tier]'?{dataset:{cpJobsTier:'L2'}}:null}});
+assert.match(x.elements.controlBody.innerHTML,/Priorità produzioni e mansioni L2/);
+assert.match(x.elements.controlBody.innerHTML,/data-cp-job-tier="L2"/);
+assert.match(x.elements.controlBody.innerHTML,/L2 inattivi/);
+x.elements.profileControl.events.change({target:{dataset:{cpJobMin:'site:field',cpJobTier:'L2'},value:'1',matches:()=>false}});
+assert.deepEqual(x.calls.pop(),['l2Minimum','site:field',1]);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-job-auto]'?{dataset:{cpJobAuto:'site:mine',cpJobTier:'L2'}}:null}});
+assert.deepEqual(x.calls.pop(),['l2Auto','site:mine',true]);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-job-move]'?{dataset:{cpJobMove:'up',cpJobKey:'site:mine',cpJobTier:'L2'}}:null}});
+assert.deepEqual(x.calls.pop(),['l2Order',['site:mine','site:field']]);
+x.elements.profileControl.events.dragstart({target:{closest:selector=>selector==='[data-cp-job-row]'?{...jobNode('site:field'),dataset:{cpJobRow:'site:field',cpJobTier:'L2'}}:null},dataTransfer:{setData(){}}});
+x.elements.profileControl.events.drop({target:{closest:selector=>selector==='[data-cp-job-row]'?{...jobNode('site:mine'),dataset:{cpJobRow:'site:mine',cpJobTier:'L2'}}:null},preventDefault(){}});
+assert.deepEqual(x.calls.pop(),['l2Order',['site:mine','site:field']]);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-jobs-tier]'?{dataset:{cpJobsTier:'L1'}}:null}});
+assert.match(x.elements.controlBody.innerHTML,/Priorità produzioni e mansioni L1/);
+// Military overview and new patrol/garrison subpalette operate on actual API commands.
+x.tab('military');
+assert.match(x.elements.controlBody.innerHTML,/Pattuglie e guarnigioni/);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-military-sub]'?{dataset:{cpMilitarySub:'garrisons'}}:null}});
+assert.match(x.elements.controlBody.innerHTML,/Pattuglie della White Zone/);
+assert.match(x.elements.controlBody.innerHTML,/Guarnigioni delle torri/);
+assert.match(x.elements.controlBody.innerHTML,/Caserme e armigeri/);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-patrol]'?{dataset:{cpPatrol:'add'}}:null}});
+assert.deepEqual(x.calls.pop(),['patrol',1]);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-tower-id]'?{dataset:{cpTowerId:'tower-1',cpTowerDelta:'1'}}:null}});
+assert.deepEqual(x.calls.pop(),['tower','tower-1',1]);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-barracks-id]'?{dataset:{cpBarracksId:'room-1',cpBarracksDelta:'-1'}}:null}});
+assert.deepEqual(x.calls.pop(),['barracks','room-1',-1]);
 const y=fixture(false);
 y.context.window.ConquerPanels.open();
 assert.match(y.elements.controlBody.innerHTML,/non fondato/);

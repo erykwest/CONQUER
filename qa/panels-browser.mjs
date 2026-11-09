@@ -44,6 +44,10 @@ try{
         {key:'carter',kind:'carter',label:'Carrettieri',workers:1,capacity:2,demand:2,minimum:0,auto:true},
         {key:'builders',kind:'builders',label:'Costruttori',workers:4,capacity:6,demand:6,minimum:2,auto:true}
       ]},
+      jobManagerL2:{managed:true,available:10,assigned:6,tasks:[
+        {key:'site:farm-1',kind:'site',id:'farm-1',label:'Campi · farm-1',workers:4,capacity:4,demand:4,minimum:2,auto:true},
+        {key:'site:quarry-1',kind:'site',id:'quarry-1',label:'Cava · quarry-1',workers:2,capacity:2,demand:2,minimum:1,auto:true}
+      ]},
       goods:[
         {id:'food',price:3.1,market:210,castle:185,share:25,reserve:260},
         {id:'wood',price:4.5,market:66,castle:84,share:50,reserve:120},
@@ -70,11 +74,36 @@ try{
     const balanceHistory=history.slice(-8).map((w,i)=>({day:w.day,goods:{
       food:{produced:35+i*2,demand:40+i*.5}
     }}));
+    const military={
+      patrols:[{id:'patrol-1',active:true,position:'perimetro White Zone'}],
+      towers:[{id:'tower-1',label:'Torre · tower-1',assigned:2,active:2,capacity:4}],
+      barracks:[{id:'room-1',label:'Caserma · room-1',assigned:1,capacity:3}],
+      unassigned:0,hasCampManagement:true
+    };
     const realGame=window.ConquerGame;
     const realRead=realGame.read;
     const jobCommands={
       setL1Minimum:(key,n)=>{const task=economic.jobManager.tasks.find(t=>t.key===key);if(!task)return false;task.minimum=n;return true;},
       setL1Auto:(key,enabled)=>{const task=economic.jobManager.tasks.find(t=>t.key===key);if(!task)return false;task.auto=enabled;return true;},
+      setL2Minimum:(key,n)=>{const t=economic.jobManagerL2.tasks.find(t=>t.key===key);if(!t)return false;t.minimum=n;return true;},
+      setL2Auto:(key,enabled)=>{const t=economic.jobManagerL2.tasks.find(t=>t.key===key);if(!t)return false;t.auto=enabled;return true;},
+      setL2Order:order=>{
+        const byKey=new Map(economic.jobManagerL2.tasks.map(t=>[t.key,t]));
+        if(order.some(key=>!byKey.has(key))||order.length!==byKey.size)return false;
+        economic.jobManagerL2.tasks=order.map(key=>byKey.get(key));return true;
+      },
+      adjustPatrols:delta=>{
+        if(delta>0)military.patrols.push({id:'patrol-'+(military.patrols.length+1),active:true,position:'perimetro White Zone'});
+        else military.patrols.pop();return true;
+      },
+      adjustTowerArchers:(id,delta)=>{
+        const t=military.towers.find(t=>t.id===id);if(!t)return false;
+        t.assigned=Math.max(0,Math.min(t.capacity,t.assigned+delta));t.active=t.assigned;return true;
+      },
+      adjustBarracksSquads:(id,delta)=>{
+        const b=military.barracks.find(b=>b.id===id);if(!b)return false;
+        b.assigned=Math.max(0,Math.min(b.capacity,b.assigned+delta));return true;
+      },
       setL1Order:order=>{
         const byKey=new Map(economic.jobManager.tasks.map(t=>[t.key,t]));
         if(order.some(key=>!byKey.has(key))||order.length!==byKey.size)return false;
@@ -90,7 +119,8 @@ try{
         {id:'gold',stock:110,cap:300}
       ],autonomy:23,daily:5.7,shortfall:0,soldiers:24}),
       defense:()=>({active:true,units:16,patrols:5,hostiles:0,alarm:'off'}),
-      knights:()=>({current:5,limit:8})
+      knights:()=>({current:5,limit:8}),
+      militaryAssignments:()=>military
     }};
     const realEconomy=window.ConquerEconomy;
     window.ConquerEconomy={...realEconomy,
@@ -143,10 +173,37 @@ try{
   assert.equal(await page.locator('.cp-job-row').first().getAttribute('data-cp-job-row'),'builders');
   await page.locator('.profile-window').evaluate(node=>node.scrollTop=0);
   await page.locator('.profile-window').screenshot({path:output+'/job-manager.png'});
+  // L2 independently saves minimum, toggles AUTO and reorders its own tasks.
+  await page.locator('[data-cp-jobs-tier="L2"]').click();
+  assert.equal(await page.locator('.cp-job-row').count(),2);
+  await page.locator('[data-cp-job-min="site:farm-1"]').fill('3');
+  await page.locator('[data-cp-job-min="site:farm-1"]').press('Tab');
+  assert.equal(await page.locator('[data-cp-job-min="site:farm-1"]').inputValue(),'3');
+  await page.locator('[data-cp-job-auto="site:quarry-1"]').click();
+  assert.equal(await page.locator('[data-cp-job-auto="site:quarry-1"]').getAttribute('aria-pressed'),'false');
+  await page.locator('[data-cp-job-row="site:quarry-1"]').dragTo(page.locator('[data-cp-job-row="site:farm-1"]'));
+  assert.equal(await page.locator('.cp-job-row').first().getAttribute('data-cp-job-row'),'site:quarry-1');
+  await page.locator('.profile-window').evaluate(node=>node.scrollTop=0);
+  await page.locator('.profile-window').screenshot({path:output+'/job-manager-l2.png'});
+
+  // The military subpalette uses the same UI wiring, with a synthetic roster.
+  await page.locator('[data-profile-tab="control"]').click();
+  await page.locator('[data-cp-tab="military"]').click();
+  await page.locator('[data-cp-military-sub="garrisons"]').click();
+  assert.ok(await page.locator('#controlBody').textContent().then(t=>t.includes('Pattuglie e guarnigioni')));
+  await page.locator('[data-cp-patrol="add"]').click();
+  assert.ok(await page.locator('#controlBody').textContent().then(t=>t.includes('2 pattuglie assegnate')));
+  await page.locator('[data-cp-tower-id="tower-1"][data-cp-tower-delta="1"]').click();
+  assert.ok(await page.locator('#controlBody').textContent().then(t=>t.includes('3 / 4 arcieri assegnati')));
+  await page.locator('[data-cp-barracks-id="room-1"][data-cp-barracks-delta="1"]').click();
+  assert.ok(await page.locator('#controlBody').textContent().then(t=>t.includes('2 / 3 squadre')));
+  await page.locator('.profile-window').evaluate(node=>node.scrollTop=0);
+  await page.locator('.profile-window').screenshot({path:output+'/patrols-garrisons.png'});
+
   fs.writeFileSync(output+'/report.json',JSON.stringify({
-    result:'PASS',kind:'actual-game-UI-with-demo-data',tabs:requested,detailTabs:['people','economy','estate'],jobManager:{minimum:true,auto:true,drag:true},errors,source:'branch panels',note:'Data are synthetic visual fixtures, not a saved gameplay state.'
+    result:'PASS',kind:'actual-game-UI-with-demo-data',tabs:requested,detailTabs:['people','economy','estate'],jobManager:{L1:{minimum:true,auto:true,drag:true},L2:{minimum:true,auto:true,drag:true}},military:{patrols:true,towers:true,barracks:true},errors,source:'branch panels',note:'Data are synthetic visual fixtures, not a saved gameplay state.'
   },null,2));
-  console.log('PASS real CONQUER UI screenshots: '+requested.join(', ')+' + Job Manager L1 controls');
+  console.log('PASS real CONQUER UI screenshots: '+requested.join(', ')+' + L1/L2 and military controls');
 }finally{
   await browser.close();
 }

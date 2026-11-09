@@ -1,5 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+09/11/2026 — `feature/jobmanager-l2-military-garrisons-20261109` (pre-merge): palette Job Manager ripartita in L1/L2. L2 ora usa l'algoritmo con priorità/minimo/AUTO, indipendente da L1 e persistito dentro `State.economy`; supporta campi/cave/miniere e mantiene il comportamento legacy fino alla prima modifica. Centro di controllo → Militare integra sottopaletta «Pattuglie e guarnigioni» con pattuglie White Zone, archi delle torri tramite Siege e caserme `/camp`, senza forzare asset o unità simulate. Regresioni motore/pannelli e browser estese; QA JS isolata PASS, CI da verificare. Decisione D-JOBS-MIL-261109, ROADMAP invariata.
+
+
 09/11/2026 — `feature/l1-jobmanager-priority-20261109` (pre-merge): Job Manager L1 reso modificabile con ordine drag-and-drop, controlli su/giù, Minimum worker e toggle AUTO/manuale. `ConquerEconomy` assegna prima i minimi (priorità) e successivamente la capacità AUTO; i job manuali rispettano il tetto e gli inattivi non vengono erroneamente offerti ai cantieri. Politiche conservate nel save dell'economia locale/cloud; legacy automatico intatto fino alla prima modifica. QA lavoro/pannelli estesa, prove isolate PASS, CI e verifica visiva ancora da effettuare. ROADMAP invariata, decisione D-L1-JOB-261109.
 
 

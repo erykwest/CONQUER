@@ -1,5 +1,13 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-JOBS-MIL-261109 — Sottopalette L1/L2 e Pattuglie e guarnigioni (09/11/2026)
+
+- **DECISO DAL PRODUCT OWNER:** due sottopalette all'interno del Job Manager, denominate «L1» e «L2»; una sottopaletta militare «Pattuglie e guarnigioni».
+- **SCELTA DI IMPLEMENTAZIONE:** L1 mantiene le sue mansioni, L2 applica la stessa semantica di priorità drag-and-drop, minimo e AUTO/manuale alla sola classe L2 (campi, cave, miniere). Minimi assegnati prima in ordine di priorità, poi resto solo ai job AUTO; nessun travaso automatico di lavoratori L1 e nessuna variazione a L3/L4. Save legacy intatto prima dell'attivazione L2.
+- **CONTATTO CON IL MOTORE MILITARE:** pattuglie esistenti gestite su White Zone da Combat; arcieri nelle torri via postazioni Siege; squadre caserma disponibili dove esiste ConquerCamp (`/camp`). Nessuna nuova formazione, fabbricazione artificiale di soldati o spostamento implicito di unità.
+- **STATO:** branch `feature/jobmanager-l2-military-garrisons-20261109`, QA completa/merge ancora da verificare; roadmap invariata.
+
+
 ## D-L1-JOB-261109 — Priorità del lavoro dei popolani L1 (09/11/2026)
 
 - **APPROVATO DAL PRODUCT OWNER:** nel Job Manager L1 le produzioni/mansioni sono righe ordinabili trascinandole, ciascuna con un numero «Minimum worker» da garantire quando i lavoratori sono disponibili e un pulsante AUTO. AUTO disattivato passa la mansione a manuale.

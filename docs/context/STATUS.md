@@ -1,5 +1,13 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-09 — Sottopalette L1/L2 e «Pattuglie e guarnigioni» (branch `feature/jobmanager-l2-military-garrisons-20261109`)
+
+- **IMPLEMENTATO SUL BRANCH:** Job Manager → L1 e L2, con preferenza di sottopaletta conservata durante l'apertura del pannello. La L1 mantiene le code esistenti. La L2 gestisce campi, cave e miniere con identici controlli drag/drop, minimo e AUTO/manuale. L2 attinge esclusivamente dalla quota produttiva L2; l'ordinamento L2 non altera L1.
+- **MOTORE/PERSISTENZA:** `ConquerEconomy.l2Jobs` in `State.economy`: minimi per priorità, poi capacità residua ai soli AUTO; salvataggi locali/cloud esistenti preservati, e nessun override L2 per save legacy finché non si modifica un job. L2 fuori stagione/disattivato non occupa lavoratori.
+- **MILITARE:** Centro di controllo → Militare → «Riepilogo» / «Pattuglie e guarnigioni». Pulsanti di aggiunta/rimozione pattuglie White Zone sfruttano il Combat esistente; guarnigioni delle torri incrementano/decrementano le postazioni arcieri con `ConquerSiege.changeArchers` e mostrano assegnati/operativi; le squadre nelle caserme sfruttano `ConquerCamp` solo quando presente nella modalità `/camp`. Nessun inventario militare fittizio.
+- **QA:** regole L2 e API/UI provate nella sessione con regressioni JS isolate (PASS); test browser L2 e guarnigioni aggiornato e in attesa di esecuzione CI. Non dichiarare il merge prima della conferma Actions. Nessun nuovo asset o modello; ROADMAP invariata.
+
+
 ## 2026-11-09 — Job Manager L1: priorità, minimi e AUTO/manuale (branch `feature/l1-jobmanager-priority-20261109`)
 
 - **IMPLEMENTATO SUL BRANCH:** il Job Manager visualizza le mansioni L1 in righe trascinabili per priorità (con comandi su/giù anche per tastiera e touch), numeratore «Minimum worker» e pulsante AUTO attivo/spento. Include produzioni L1, carrettieri, cantieri navali con commessa e costruttori; riporta lavoratori effettivi, richiesti e minimi insoddisfatti.
