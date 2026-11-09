@@ -46,6 +46,10 @@ function fixture(founded=true,markets=2) {
     adjustPatrols:(...args)=>calls.push(['patrol',...args]),
     adjustTowerArchers:(...args)=>calls.push(['tower',...args]),
     adjustBarracksSquads:(...args)=>calls.push(['barracks',...args]),
+    assignCirclePatrol:(...args)=>calls.push(['zonePatrol',...args]),
+    adjustMacroArchers:(...args)=>calls.push(['macroArcher',...args]),
+    adjustZoneArchers:(...args)=>calls.push(['zoneArcher',...args]),
+    adjustMacroSquads:(...args)=>calls.push(['macroSquad',...args]),
     transferActivity:(...args)=>calls.push(['transfer',...args]),
     openCaravans:()=>calls.push(['caravans'])
   };
@@ -55,10 +59,19 @@ function fixture(founded=true,markets=2) {
         logistics:()=>({stores:[{id:'food',stock:12,cap:30}],autonomy:3,daily:4,soldiers:8,shortfall:0}),
         defense:()=>({active:true,units:4,patrols:2,hostiles:0,alarm:'off'}),
         knights:()=>({current:1,limit:2}),
-        militaryAssignments:()=>({patrols:[{id:'patrol-1',active:true,position:'perimetro White Zone'}],
-          towers:[{id:'tower-1',label:'Torre · tower-1',capacity:3,assigned:1,active:1}],
-          barracks:[{id:'room-1',label:'Caserma · room-1',capacity:3,assigned:1}],
-          hasCampManagement:true,unassigned:0})},commands},
+        militaryAssignments:()=>({
+          circleReady:true,
+          patrols:[{id:'patrol-1',active:true,zoneId:null},{id:'patrol-2',active:true,zoneId:'circle-1'}],
+          zones:[{id:'circle-1',label:'Settore 1',depth:2,state:'secure',mastio:true,
+            patrols:1,capacity:3,assigned:1,active:1,otherBarracks:[],
+            towers:[{id:'tower-1',label:'Mastio · tower-1',subtowers:2,capacity:3,assigned:1,
+              active:1,squads:1,squadCapacity:3,rooms:[{id:'room-1',capacity:3,assigned:1}],
+              members:[{id:'tower-1',capacity:1,assigned:0},{id:'sub-1',capacity:2,assigned:1}]}]}],
+          outside:{id:'outside',label:'Fuori dai compartimenti CIRCLE',patrols:1,
+            capacity:0,assigned:0,active:0,towers:[],otherBarracks:[]},
+          macros:[{id:'tower-1',label:'Mastio · tower-1',subtowers:2,capacity:3,assigned:1,active:1}],
+          totalAssigned:1,totalActive:1,hasCampManagement:true,unassigned:0
+        })},commands},
       ConquerEconomy:{state:()=>books,snapshot:()=>({weeks:markets,constructionPayroll:5})},
       ConquerDiplomacy:{state:()=>({caravans:[],incoming:null,history:[]})}
     },
@@ -157,15 +170,28 @@ assert.match(x.elements.controlBody.innerHTML,/Priorità produzioni e mansioni L
 x.tab('military');
 assert.match(x.elements.controlBody.innerHTML,/Pattuglie e guarnigioni/);
 x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-military-sub]'?{dataset:{cpMilitarySub:'garrisons'}}:null}});
-assert.match(x.elements.controlBody.innerHTML,/Pattuglie della White Zone/);
-assert.match(x.elements.controlBody.innerHTML,/Guarnigioni delle torri/);
-assert.match(x.elements.controlBody.innerHTML,/Caserme e armigeri/);
+assert.match(x.elements.controlBody.innerHTML,/Riserva White Zone/);
+assert.match(x.elements.controlBody.innerHTML,/CIRCLE · Settori e presidi/);
+assert.match(x.elements.controlBody.innerHTML,/Settore 1/);
+assert.match(x.elements.controlBody.innerHTML,/2 sottotorri aggregate/);
+assert.match(x.elements.controlBody.innerHTML,/data-cp-macro="tower-1"/);
+assert.equal((x.elements.controlBody.innerHTML.match(/data-cp-macro="tower-1"/g)||[]).length,1,
+  'one rendered row per macro tower, no child tower rows');
 x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-patrol]'?{dataset:{cpPatrol:'add'}}:null}});
 assert.deepEqual(x.calls.pop(),['patrol',1]);
-x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-tower-id]'?{dataset:{cpTowerId:'tower-1',cpTowerDelta:'1'}}:null}});
-assert.deepEqual(x.calls.pop(),['tower','tower-1',1]);
-x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-barracks-id]'?{dataset:{cpBarracksId:'room-1',cpBarracksDelta:'-1'}}:null}});
-assert.deepEqual(x.calls.pop(),['barracks','room-1',-1]);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-circle-patrol]'?{dataset:{cpCirclePatrol:'circle-1',cpCircleDelta:'1'}}:null}});
+assert.deepEqual(x.calls.pop(),['zonePatrol','circle-1',1]);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-circle-archer]'?{dataset:{cpCircleArcher:'circle-1',cpCircleDelta:'-1'}}:null}});
+assert.deepEqual(x.calls.pop(),['zoneArcher','circle-1',-1]);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-macro-id]'?{dataset:{cpMacroId:'tower-1',cpMacroDelta:'1'}}:null}});
+assert.deepEqual(x.calls.pop(),['macroArcher','tower-1',1]);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-macro-squad]'?{dataset:{cpMacroSquad:'tower-1',cpMacroSquadDelta:'1'}}:null}});
+assert.deepEqual(x.calls.pop(),['macroSquad','tower-1',1]);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-circle-toggle]'?{dataset:{cpCircleToggle:'circle-1'}}:null}});
+assert.match(x.elements.controlBody.innerHTML,/aria-expanded="false"/);
+assert.doesNotMatch(x.elements.controlBody.innerHTML,/data-cp-macro="tower-1"/);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-circle-toggle]'?{dataset:{cpCircleToggle:'circle-1'}}:null}});
+assert.match(x.elements.controlBody.innerHTML,/aria-expanded="true"/);
 const y=fixture(false);
 y.context.window.ConquerPanels.open();
 assert.match(y.elements.controlBody.innerHTML,/non fondato/);
