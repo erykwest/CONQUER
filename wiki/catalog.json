@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceDigest": "0782c7b564e82d243662424c897fc8abf70294c3df3d1df6d43f6f028f79a95a",
+  "sourceDigest": "5928f830141ecda66b7b58baba0c8ab0f25eff855b3ffc4216588e456cfc44cd",
   "catalog": {
     "schemaVersion": 1,
     "categories": [
@@ -575,7 +575,7 @@
         "properties": {
           "label": "Miniera",
           "name": "Mine",
-          "good": "stone",
+          "good": "metal",
           "tier": 2,
           "workers": 2,
           "w": 1,

@@ -2,7 +2,7 @@
 
 ## 2026-11-10 — ECO-FIL-01 · Filiere produttive complete
 
-**SPECIFICA APPROVATA, NESSUN CODICE.** Intervista con il product owner del 10/11/2026 (sessione «filiere», nata dalla sessione Gilda). Decisione [D-ECO-FIL-261110](DECISIONS.md). Base verificata: `main` 89e7a2c, non le note della mappa `CONQUER_ECONOMY_ULTIMA_REVISIONE_NOV10` (scritte su `feature/autonomous-urban-economy`). Chiude la decisione aperta «miniera stone/metal» (P0-08, ROADMAP M1) e gli errori di mappatura di `WORKSHOP_OUTPUT`. La Gilda (sessione dedicata) applica il suo +25/+50/+100% a queste ricette: il bonus moltiplica produzione **e** consumo di materie, quindi senza materie non produce di più.
+**SPECIFICA APPROVATA. Fase 1 (miniera → metallo) IMPLEMENTATA SU BRANCH `feature/eco-fil-01-miniera-metallo`, NON MERGE; fasi 2–6 aperte.** Intervista con il product owner del 10/11/2026 (sessione «filiere», nata dalla sessione Gilda). Decisione [D-ECO-FIL-261110](DECISIONS.md). Base verificata: `main` 89e7a2c, non le note della mappa `CONQUER_ECONOMY_ULTIMA_REVISIONE_NOV10` (scritte su `feature/autonomous-urban-economy`). Chiude la decisione aperta «miniera stone/metal» (P0-08, ROADMAP M1) e gli errori di mappatura di `WORKSHOP_OUTPUT`. La Gilda (sessione dedicata) applica il suo +25/+50/+100% a queste ricette: il bonus moltiplica produzione **e** consumo di materie, quindi senza materie non produce di più.
 
 **Regole generali**
 - Le botteghe L3 producono 1 unità al giorno lavorativo (Lun–Ven, come oggi) e **consumano** la ricetta qui sotto. Il sabato comprano al mercato del villaggio le scorte per 5 giorni con il portafoglio L3 (stesso schema dei buffer `inputs` di `KIND`). Il magazzino del castello conta solo per la quota che il signore mette in vendita.

@@ -1,5 +1,19 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-10 — ECO-FIL-01 fase 1 · Miniera → metallo (branch `feature/eco-fil-01-miniera-metallo`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `KIND.mine` diventa `{good:'metal',rate:1}` (2 L2, 1 metallo al giorno lavorativo a squadra completa) e `ConquerIndustries.TYPES.mine.good` passa a `metal`.
+  - `normalizeFootprint` converte a `metal` le miniere salvate con `productionGood:'stone'`; le scorte di pietra già prodotte restano pietra.
+  - L'etichetta dello strumento Builder legge la resa per lavoratore dal motore (miniera 0,5 metal/lavoratore/giorno).
+  - Voce Wiki «Miniera» aggiornata e rigenerati `src/codex-wiki-editorial.js` e `wiki/catalog.json`.
+- **PROVE LOCALI PASS:**
+  - tutta la suite di `economy-flows-regression.yml` (26 script);
+  - codex-wiki, codex-catalog, fields, industries3d;
+  - `export-codex-content --check`.
+  - `economy-industries-regression` ha un caso aggiornato (cava 2 pietra, miniera 1 metallo al giorno) e un nuovo caso di migrazione.
+- **DA VERIFICARE:** CI del branch. Nessun asset o modello toccato: il modello della miniera resta quello attuale, senza audit asset.
+
 ## 2026-11-10 — ECO-FIL-01 · Filiere produttive (solo specifica, branch `docs/filiere-produttive`)
 
 - **NESSUN CODICE:** specifica approvata in [BACKLOG](BACKLOG.md), decisione [D-ECO-FIL-261110](DECISIONS.md). Nessun test eseguito né richiesto.

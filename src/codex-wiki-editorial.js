@@ -1,7 +1,7 @@
 // Generated from content/codex/*.md. Do not edit; run node tools/export-codex-content.cjs.
 (function(root){root.ConquerWikiEditorial={
   "schemaVersion": 1,
-  "sourceDigest": "76512afd5f20445edc5cdb485e54dddab6c3a3b159fc480e0cdaf5d130a8852b",
+  "sourceDigest": "6e3bc856e64ee39d6271ef1e932764b88969b365b89834597c2688977e6eedca",
   "pages": [
     {
       "id": "building:bridge",
@@ -445,7 +445,7 @@
       "blocks": [
         {
           "type": "paragraph",
-          "text": "La miniera appartiene agli [[Edifici|edifici]] di [[Produzione|produzione]]. Nel gioco attuale produce pietra: il suo nome non implica ancora una produzione di metallo.",
+          "text": "La miniera appartiene agli [[Edifici|edifici]] di [[Produzione|produzione]]. Estrae metallo: con due lavoratori L2 rende un'unità di metallo per giorno lavorativo, con la fusione già compresa. La pietra si ottiene dalla [[Cava Di Pietra|cava di pietra]].",
           "tokens": [
             {
               "text": "La miniera appartiene agli "
@@ -462,13 +462,20 @@
               "id": "topic:production"
             },
             {
-              "text": ". Nel gioco attuale produce pietra: il suo nome non implica ancora una produzione di metallo."
+              "text": ". Estrae metallo: con due lavoratori L2 rende un'unità di metallo per giorno lavorativo, con la fusione già compresa. La pietra si ottiene dalla "
+            },
+            {
+              "text": "cava di pietra",
+              "id": "building:quarry"
+            },
+            {
+              "text": "."
             }
           ]
         }
       ],
       "text": [
-        "La miniera appartiene agli edifici di produzione. Nel gioco attuale produce pietra: il suo nome non implica ancora una produzione di metallo."
+        "La miniera appartiene agli edifici di produzione. Estrae metallo: con due lavoratori L2 rende un'unità di metallo per giorno lavorativo, con la fusione già compresa. La pietra si ottiene dalla cava di pietra."
       ],
       "related": [
         "category:building",

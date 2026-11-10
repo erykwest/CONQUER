@@ -1,5 +1,7 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+10/11/2026 — ECO-FIL-01 fase 1 (`feature/eco-fil-01-miniera-metallo`): la miniera produce metallo (1 al giorno con 2 L2) invece di pietra, migrando i salvataggi. Etichetta Builder, Wiki e catalogo aggiornati. Suite economia locale PASS, CI da verificare. ROADMAP invariata nei contenuti: la voce M1 «scegliere output `mine`» è ora implementata sul branch. DECISIONS invariata: D-ECO-FIL-261110 copre già questa fase.
+
 10/11/2026 — ECO-FIL-01 (`docs/filiere-produttive`): specifica approvata delle filiere produttive. Prevede:
 - miniera → metallo;
 - lana, pelli e latte (con il casaro) dagli allevamenti;
