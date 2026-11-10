@@ -673,7 +673,8 @@
           ?(face.index%2?'#49443f':'#686057')
           :edit.material==='fill'?(face.index%2?'#a88d57':'#b89c63')
           :(winter?'#d2d8d3':face.index%2?'#464630':'#514e37');
-      pathPolygon(face.screen,fill,ghost?(valid?'rgba(111,255,175,.95)':'rgba(255,95,101,.98)'):null,ghost?1.6:0);
+      const mineral=!ghost&&edit.mode==='walled';
+      pathPolygon(face.screen,mineral?(window.ConquerStoneColor?.shade(fill)||fill):fill,ghost?(valid?'rgba(111,255,175,.95)':'rgba(255,95,101,.98)'):null,ghost?1.6:0);
     }
     const tops=ghost||edit.mode==='flat'?[edit.top]:visibleTerracePieces(edit);
     for(const piece of tops){

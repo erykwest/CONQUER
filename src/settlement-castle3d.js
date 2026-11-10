@@ -192,8 +192,9 @@
   function addBuilt(m,s){
     const g=builtRoofGeometry(s);if(!g)return;
     const [p0,p1,p2,p3]=g.p,ra=g.ridgeA,rb=g.ridgeB,H=g.h,R=g.ridgeH;
-    m.face([{p:p0,z:H},{p:p1,z:H},{p:rb,z:R},{p:ra,z:R}],winter()?WINTER_SNOW_A:'#34363a');
-    m.face([{p:p3,z:H},{p:p2,z:H},{p:rb,z:R},{p:ra,z:R}],winter()?WINTER_SNOW_B:'#42454a');
+    const thatch=isTimberLeanTo(s);   // timber lean-to: thatch instead of slate
+    m.face([{p:p0,z:H},{p:p1,z:H},{p:rb,z:R},{p:ra,z:R}],winter()?WINTER_SNOW_A:thatch?'#b8995a':'#34363a');
+    m.face([{p:p3,z:H},{p:p2,z:H},{p:rb,z:R},{p:ra,z:R}],winter()?WINTER_SNOW_B:thatch?'#a4864a':'#42454a');
     // Gable ends are left open in 2.5D; a closed volume needs them.
     const roofTag=m.tag;m.tag='gable';
     m.face([{p:p0,z:H},{p:ra,z:R},{p:p3,z:H}],PAL.stone());
@@ -289,6 +290,8 @@
         // Room exterior elements (settlement-room-exterior.js), as the hoarding: sides a shade darker.
         // Timber towers carry theirs in their Blender mesh (settlement-wood3d.js).
         if(!isWoodTower(s))for(const t of window.ConquerRoomExterior?.triangles(s)||[])m.face(t.pts,[t.hex,t.hex,shadeHex(t.hex,.82)]);
+        // Wall-walk stair (settlement-wall-stairs.js, Blender models), as the room exteriors.
+        if(s.wallStair)for(const t of window.ConquerWallStairs?.triangles(s)||[])m.face(t.pts,[t.hex,t.hex,shadeHex(t.hex,.82)]);
         for(const b of wideHallButtresses(s))addButtress(m,b);
         if(s.type==='wall'&&wallSkin(s)==='hoarding')addHoarding(m,s);
         const mf=machicolationFloorPolygon(s);

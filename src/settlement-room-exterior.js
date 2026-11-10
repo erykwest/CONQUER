@@ -11,7 +11,8 @@
 //   World 3D cutaway   the exterior shell of settlement-world3d.js
 //   construction site  nothing: rooms are only assigned once the building is finished
 //   collapse    roomExteriorCollapseParts(): the element falls with its building, or alone when broken
-// Mounts: 'face' (corbelled out of the exterior face of a built section, at the floor of its room)
+// Mounts: 'face' (corbelled out of an exterior face at the floor of its room: a tower's free outer
+// face, or the exterior face of a built section)
 // and 'roof' (on the apex or the middle of the ridge of a tower's pitched roof); 'eave' is reserved
 // for the cistern.
 // Two kinds of entry: a room function (key = the function, one element per room that has it) and a
@@ -20,10 +21,17 @@
 const ROOM_EXTERIOR=Object.freeze({
   // Garderobe: a stone box on corbels, the chute down the wall. One per room, upper floor only.
   latrine:Object.freeze({model:'garderobe',source:'ConquerGarderobeModels',mount:'face',breakable:Object.freeze({hp:40,material:'stone'})}),
+  // Falconry mews: a slatted timber cage on the roof of the tower whose top room is the falconry.
+  mews:Object.freeze({model:'mews',source:'ConquerMewsModels',mount:'roof',active:s=>typeof towerMews==='function'&&towerMews(s)}),
   // Alarm-bell belfry: the `bell` upgrade of a T1-T2 pitched-roof tower (rules in settlement-alarm-bells.js).
   bell:Object.freeze({upgrade:Object.freeze({variant:'bell',value:'bell'}),model:'belfry',source:'ConquerBelfryModels',mount:'roof',
-    active:s=>!!window.ConquerAlarmBells?.towerBell(s)})
+    active:s=>!!window.ConquerAlarmBells?.towerBell(s)}),
+  // Signal fire: the great pyre on the flat crenellated deck of a stone tower (settlement-soldiers.js).
+  // Mount 'deck': centred on the roof platform, inside the parapet. Gone once burnt, until rebuilt.
+  signalFire:Object.freeze({upgrade:Object.freeze({variant:'signalFire',value:'pyre'}),model:'pyre',source:'ConquerPyreModels',mount:'deck',
+    active:s=>window.ConquerSoldiers?window.ConquerSoldiers.pyreReady(s):!s.signalFireSpent})
 });
+const roomExteriorTop=spec=>spec?.mount==='roof'||spec?.mount==='deck';
 const ROOM_EXTERIOR_UPGRADES=Object.entries(ROOM_EXTERIOR).filter(([,spec])=>spec.upgrade);
 const ROOM_EXTERIOR_END_CLEAR=.3;          // U kept free at each end of the face (tower snaps, corners)
 const ROOM_EXTERIOR_HOARDING_REACH=.5;      // how far a tower/gate hoarding or a wall gallery sticks out
@@ -49,7 +57,7 @@ function roomExteriorFloorZ(s,index){
 // Plan footprint of an element: the box out of the face (or centred on a roof anchor), with a margin.
 function roomExteriorRect(e,margin=.02){
   const h=e.width/2+margin,out=e.projection+margin*2,{anchor:a,tangent:t,normal:n}=e;
-  if(e.spec?.mount==='roof'){
+  if(roomExteriorTop(e.spec)){
     const d=out/2,c=(u,v)=>({x:a.x+t.x*u+n.x*v,y:a.y+t.y*u+n.y*v});
     return[c(-h,-d),c(h,-d),c(h,d),c(-h,d)];
   }
@@ -113,16 +121,59 @@ function roomExteriorRoofBase(s){
   if(g)return{p:{x:(g.ridgeA.x+g.ridgeB.x)/2,y:(g.ridgeA.y+g.ridgeB.y)/2},z:g.ridgeH,angle:s.angle||0};
   return{p:towerRoofApex(s),z:towerVisualTopHeight(s),angle:s.shape==='round'?0:(s.angle||0)};
 }
+// 'deck': the middle of a stone tower's flat crenellated platform, turned with the tower.
+function roomExteriorDeckBase(s){
+  if(s?.type!=='tower'||isWoodTower(s)||!['battlement','machicolation'].includes(towerRoofStyle(s)))return null;
+  return{p:{x:s.x,y:s.y},z:structureHeight(s)+.02,angle:s.shape==='round'?0:(s.angle||0)};
+}
 function roomExteriorUpgradePlacement(s,key,spec){
-  const m=roomExteriorModel(spec);if(!m||!s||underConstruction(s)||spec.mount!=='roof')return null;
-  const base=roomExteriorRoofBase(s);if(!base)return null;
+  const m=roomExteriorModel(spec);if(!m||!s||underConstruction(s)||!roomExteriorTop(spec))return null;
+  const base=spec.mount==='deck'?roomExteriorDeckBase(s):roomExteriorRoofBase(s);if(!base)return null;
   const ext=roomExteriorModelExtent(m.model),ca=Math.cos(base.angle),sa=Math.sin(base.angle);
   return{fn:key,index:'v:'+key,spec,side:0,off:0,z:base.z,width:ext.width,projection:ext.depth,height:ext.height,
     tangent:{x:ca,y:sa},normal:{x:-sa,y:ca},anchor:base.p};
 }
+// 'face' on a tower: the outer face of the room's floor that is free (not the interior face, not a face
+// a wall, built section or subtower runs into), the one looking farthest from the castle first. On a
+// round tower the box sits on the tangent plane, sunk by the sagitta so its back corners stay in the wall.
+const ROOM_EXTERIOR_TOWER_FACE_CLEAR=.08;   // U kept free at each corner of a square tower face
+function roomExteriorTowerPlacement(s,index,fn,spec,m){
+  const floor=index+functionFloorOffset(s)+1,z=towerFloorZ(s,floor);if(!Number.isFinite(z))return null;
+  const W=m.model.width,P=m.model.projection,iv=structureInteriorVector(s);
+  const fp=s.shape==='round'?null:towerFacadePoints(s);
+  const faces=towerFaceDirections(s).filter(d=>!d.interior&&!towerFaceBlocked(s,d,floor))
+    .sort((a,b)=>(a.nx*iv.x+a.ny*iv.y)-(b.nx*iv.x+b.ny*iv.y)||a.face-b.face);
+  const obstacles=roomExteriorObstacles(s,z+m.model.bottom);
+  for(const d of faces){
+    let anchor;
+    if(!fp){
+      const r=Number(s.r)||.5,sink=r-Math.sqrt(Math.max(0,r*r-W*W/4));
+      anchor={x:s.x+d.nx*(r-sink),y:s.y+d.ny*(r-sink)};
+    }else if(d.at)anchor={x:d.at.x+d.nx*.004,y:d.at.y+d.ny*.004};
+    else{
+      const a=fp[d.face],b=fp[(d.face+1)%fp.length];
+      if(Math.hypot(b.x-a.x,b.y-a.y)<W+2*ROOM_EXTERIOR_TOWER_FACE_CLEAR)continue;
+      anchor={x:(a.x+b.x)/2+d.nx*.004,y:(a.y+b.y)/2+d.ny*.004};
+    }
+    const n={x:d.nx,y:d.ny},t={x:n.y,y:-n.x};               // right-handed: model +x along, +y out, +z up
+    const e={fn,index,spec,side:'tower',face:d.face,floor,off:0,z,width:W,projection:P,tangent:t,normal:n,anchor};
+    if(roomExteriorClear(e,obstacles))return e;
+  }
+  return null;
+}
 function roomExteriorPlacement(s,index,fn){
   const spec=roomExteriorSpec(fn),m=roomExteriorModel(spec);
   if(!spec||!m||!s||underConstruction(s))return null;
+  // A room whose element sits on the roof (the falconry mews): the roof mount of the upgrades,
+  // tied to the room slot and to its own active rule.
+  if(spec.mount==='roof'){
+    if(spec.active&&!spec.active(s))return null;
+    const e=roomExteriorUpgradePlacement(s,fn,spec);
+    if(e)e.index=index;
+    return e;
+  }
+
+  if(spec.mount==='face'&&s.type==='tower')return roomExteriorTowerPlacement(s,index,fn,spec,m);
   if(spec.mount!=='face'||s.type!=='built')return null;
   const z=roomExteriorFloorZ(s,index);if(!Number.isFinite(z))return null;
   const side=wallExteriorSide(s),edge=linearFacadeEdge(s,side),L=edge.length;
@@ -184,12 +235,23 @@ function roomExteriorTriangles(s,elements=roomExteriorElements(s)){
   return out;
 }
 // 2.5D: the same triangles, painted far to near, back faces skipped (as drawPointHoarding).
-function drawRoomExterior(s){
-  const elements=roomExteriorElements(s);if(!elements.length)return;
+// Which side of the view a face element hangs from: 'far' (behind its structure, outward normal
+// pointing away from the camera) or 'near'; roof elements are 'roof'.
+function roomExteriorViewSide(e){
+  if(roomExteriorTop(e.spec))return'roof';
+  const out={x:e.anchor.x+e.normal.x*.1,y:e.anchor.y+e.normal.y*.1};
+  return viewDepthPoint(out)<viewDepthPoint(e.anchor)?'far':'near';
+}
+// only: 'roof' | 'far' | 'near' limits the elements drawn (a tower in cutaway draws its face
+// elements around its own cutaway: far ones before the shell, near ones after it).
+function drawRoomExterior(s,{only=null}={}){
+  const elements=roomExteriorElements(s).filter(e=>!only||roomExteriorViewSide(e)===only);if(!elements.length)return;
   const tris=roomExteriorTriangles(s,elements),top=Math.max(...elements.map(e=>e.z+(e.height||.75)));
   const depth=t=>t.pts.reduce((a,q)=>a+viewDepthPoint(q.p)+ISO_Z*q.z,0)/3;
   withStructureDetailOcclusion(s,top,()=>{
-    for(const {t} of tris.map(t=>({t,d:depth(t)})).sort((a,b)=>a.d-b.d)){
+    // The roof caps its element: painted last, so no wall top under it wins the depth sort.
+    const cap=t=>t.part==='roof'&&t.pts.every(q=>q.z>=elements[0].z)?1:0;
+    for(const {t} of tris.map(t=>({t,d:depth(t)})).sort((a,b)=>cap(a.t)-cap(b.t)||a.d-b.d)){
       const [a,b,c]=t.pts.map(q=>w2s(q.p,q.z));
       // The stain is a flat decal on the wall: drawn whatever its winding.
       if(t.part!=='chute'&&(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x)<0)continue;
@@ -202,13 +264,18 @@ function drawRoomExteriors(){
   // cutaway draws its own inside drawCutawayStructure, a tower in cutaway keeps its roof and roof element.
   const items=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)&&!(structureCutaway(s)&&s.type==='built')&&!isWoodTower(s)&&hasRoomExterior(s))
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-  for(const s of items)withStructureVisualMaterial(s,()=>drawRoomExterior(s));
+  for(const s of items)withStructureVisualMaterial(s,()=>drawRoomExterior(s,{only:structureCutaway(s)&&s.type==='tower'?'roof':null}));
 }
 // Facade rows ask this before drawing a window: the element takes the cell it is centred on, from its
 // roof down (the chute runs over the slits below it).
 function roomExteriorTakesWindow(s,side,z,off){
   if(!s?.functions?.some(roomExteriorSpec))return false;
   return roomExteriorElements(s,{broken:true}).some(e=>e.side===side&&Math.abs(e.off-off)<e.width/2+.05&&z<e.z+1.1);
+}
+// Tower slits ask this: the face of a tower garderobe has no slit on its floor nor below (the chute).
+function roomExteriorTakesTowerFace(s,face,floor){
+  if(s?.type!=='tower'||!s.functions?.some(roomExteriorSpec))return false;
+  return roomExteriorElements(s,{broken:true}).some(e=>e.side==='tower'&&e.face===face&&floor<=e.floor);
 }
 // Element hit by an impact point (artillery), within reach of its box.
 function roomExteriorAt(s,p,reach=.45){
@@ -229,7 +296,7 @@ function roomExteriorHp(s,e){
 function roomExteriorCollapseParts(e){
   const m=roomExteriorModel(e.spec)?.model;if(!m)return null;
   // A roof element (the belfry) is a timber frame whatever the tower is built of.
-  if(e.spec.mount==='roof')return{parts:[roomExteriorRect(e,0)],z0:e.z-(roomExteriorModel(e.spec).data.sink||0),z1:e.z+e.height,
+  if(roomExteriorTop(e.spec))return{parts:[roomExteriorRect(e,0)],z0:e.z-(roomExteriorModel(e.spec).data.sink||0),z1:e.z+e.height,
     material:e.spec.breakable?.material||'wood'};
   return{parts:[roomExteriorRect(e,0)],z0:e.z+m.bottom,z1:e.z+.72,material:e.spec.breakable?.material||'stone'};
 }
@@ -240,7 +307,7 @@ function restoreRoomExterior(s,index){
   if(!Object.keys(s.roomExteriorHp).length)delete s.roomExteriorHp;
   return true;
 }
-window.ConquerRoomExterior={ROOM_EXTERIOR,spec:roomExteriorSpec,upgrades:roomExteriorUpgrades,has:hasRoomExterior,roofBase:roomExteriorRoofBase,
+window.ConquerRoomExterior={ROOM_EXTERIOR,spec:roomExteriorSpec,upgrades:roomExteriorUpgrades,has:hasRoomExterior,roofBase:roomExteriorRoofBase,deckBase:roomExteriorDeckBase,
   placement:roomExteriorPlacement,elements:roomExteriorElements,
-  triangles:roomExteriorTriangles,draw:drawRoomExterior,drawAll:drawRoomExteriors,takesWindow:roomExteriorTakesWindow,
+  triangles:roomExteriorTriangles,draw:drawRoomExterior,drawAll:drawRoomExteriors,takesWindow:roomExteriorTakesWindow,takesTowerFace:roomExteriorTakesTowerFace,
   at:roomExteriorAt,hp:roomExteriorHp,broken:roomExteriorBroken,collapseParts:roomExteriorCollapseParts,repair:restoreRoomExterior};

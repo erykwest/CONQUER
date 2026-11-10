@@ -272,12 +272,13 @@ test('building over the yard removes the whole lot, house and private spur witho
  assert.equal(run("State.structures.some(s=>s.id==='new-tower')"),true);
  assert.equal(run("urbanFenceSegments().length"),0);
 });
-test('a failed paid building placement does not clear a lot',()=>{
+test('an unfunded tower confirms its footprint as a persistent construction site',()=>{
  zoningFixture();
  run("State.structures.push({id:'home',type:'house',auto:true,x:106,y:104,w:1.5,h:1,angle:0});invalidateNavigation();State.resources={gold:0,stone:0,wood:0,metal:0};globalThis.result=addStructure({id:'expensive',type:'tower',shape:'square',size:1,x:108,y:106,angle:0})");
- assert.equal(run('result'),false);
- assert.equal(run("State.structures.some(s=>s.id==='home')"),true);
- assert.equal(run("urbanLots().length"),1);
+ assert.equal(run('result'),true);
+ assert.equal(run("State.structures.some(s=>s.id==='expensive')"),true);
+ assert.equal(run("underConstruction(State.structures.find(s=>s.id==='expensive'))"),true);
+ assert.equal(run("State.resources.gold"),0,'confirmation does not create a negative stockpile');
 });
 test('minimum parcel holds a real 2x2 square, including rotated lots, and rejects thin large-area slivers',()=>{
  assert.equal(run('urbanLotHasMinimumSize([{x:0,y:0},{x:2,y:0},{x:2,y:2},{x:0,y:2}])'),true);

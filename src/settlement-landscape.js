@@ -77,7 +77,7 @@ function getSteepSlopePattern(winter=false){
 function drawSteepSlopeSurface(poly,winter=false){
   if(!poly?.length)return;
   const base=winter?'#969ca0':'#6f7477';
-  pathPolygon(poly,base,winter?'rgba(205,211,214,.55)':'rgba(190,196,197,.32)',.8);
+  pathPolygon(poly,window.ConquerStoneColor?.shade(base)||base,winter?'rgba(205,211,214,.55)':'rgba(190,196,197,.32)',.8);
   const pattern=getSteepSlopePattern(winter);if(!pattern)return;
   let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
   for(const p of poly){minX=Math.min(minX,p.x);minY=Math.min(minY,p.y);maxX=Math.max(maxX,p.x);maxY=Math.max(maxY,p.y)}
@@ -143,8 +143,9 @@ function drawGentleSlopeBand(band,winter){
 function drawLowPolyRock(p,z,size,height,seed,winter=false){
   if(!screenPointVisibleRaw(p,z,36))return;
   const tier=landscapeDetailTier(),rnd=seedRand(seed>>>0);
-  const sidePalette=winter?['#8b9092','#9ca1a2','#777d80','#a8acad']:['#5e6263','#727677','#505455','#838787'];
-  const topPalette=winter?['#b4b8b9','#a8adae','#c0c3c4']:['#8a8e8d','#989b99','#777b7a'];
+  const palette=colors=>colors.map(hex=>window.ConquerStoneColor?.shade(hex)||hex);
+  const sidePalette=palette(winter?['#8b9092','#9ca1a2','#777d80','#a8acad']:['#5e6263','#727677','#505455','#838787']);
+  const topPalette=palette(winter?['#b4b8b9','#a8adae','#c0c3c4']:['#8a8e8d','#989b99','#777b7a']);
 
   if(tier===0){
     const base=w2sRaw(p,z+.01),top=w2sRaw(p,z+height*.75),px=Math.max(1.25,size*U*State.view.scale*.78);
@@ -329,7 +330,8 @@ function mountainFaceColor(f,a,b,i){
   const mx=(a.x+b.x)/2-f.x,my=(a.y+b.y)/2-f.y,L=Math.hypot(mx,my)||1;
   const t=clamp((mx/L*MOUNTAIN_LIGHT.x+my/L*MOUNTAIN_LIGHT.y+1)/2+(i%2?.035:-.035),0,1);
   const c=MOUNTAIN_DARK.map((d,k)=>Math.round(d+(MOUNTAIN_LIT[k]-d)*t));
-  return'#'+c.map(v=>v.toString(16).padStart(2,'0')).join('');
+  const hex='#'+c.map(v=>v.toString(16).padStart(2,'0')).join('');
+  return window.ConquerStoneColor?.shade(hex)||hex;
 }
 // Snow above 50% and pines below 25% of the TALLEST summit's height: one snow line and one
 // tree line for the whole map, so lower summits may have no snow at all.
@@ -388,7 +390,7 @@ function mountainPineSprite(variant,winter=false){
   const key=variant+(winter?'w':'');
   if(mountainPineSprites[key])return mountainPineSprites[key];
   const W=96,H=128,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
-  const crown=winter?(variant?'#6f8a72':'#7f9a80'):(variant?'#4f7a45':'#5d9140'),trunk='#a07560';
+  const crown=winter?(variant?'#6f8a72':'#7f9a80'):(variant?'#4f7a45':'#5d9140'),trunk='#2B1D16';
   g.fillStyle=trunk;g.fillRect(W*.44,H*.80,W*.12,H*.17);
   g.fillStyle=crown;g.beginPath();
   const tiers=5,top=H*.04,bottom=H*.83;g.moveTo(W/2,top);
@@ -460,17 +462,35 @@ const FOREST_TREE_ASSETS=[
 ];
 const FOREST_CANOPY_PALETTES={
   summer:['#355f2f','#3f6b35','#49783b','#557f43','#628b4c'],
-  autumn:['#65452d','#754c2b','#85552d','#965f31','#a76b36']
+  // Six successive autumn tones; summer's five greens remain unchanged at day 1.
+  autumn:['#98ac43','#d3c84a','#edbc3d','#df8a32','#bb4834','#76513a']
 };
 const forestTreeSprites={summer:[],autumn:[],winter:[]};
 let forestTreeSpritesReady=false;
+// Calendar-driven, deterministic foliage: September 1 = 0, November 30 = 90.
+// Outside that range, a forced DEV autumn shows a mid-season preview.
+function autumnFoliageStep(){
+  if(State.season!=='autumn')return -1;
+  const d=calendarDateFromDay();
+  if(d.month<8||d.month>10)return 45;
+  return (d.month===8?0:d.month===9?30:61)+d.day-1;
+}
+function autumnFoliageStage(tree){
+  const progress=Math.max(0,Math.min(1,autumnFoliageStep()/90));
+  const seed=(Number(State.seed)||0)*.019;
+  const hash=n=>{const v=Math.sin(tree.p.x*n+tree.p.y*(n+101.13)+seed)*43758.5453123;return v-Math.floor(v)};
+  // Offset the timing by up to ~15 days: neighbouring trees are not synchronized.
+  const local=Math.max(0,Math.min(1,progress+(hash(12.9898)-.5)*.32));
+  return Math.min(FOREST_CANOPY_PALETTES.autumn.length,
+    Math.floor(local*FOREST_CANOPY_PALETTES.autumn.length+hash(78.233)));
+}
 function buildForestSvg(source,canopyColor=null,canopyVisible=true){
   if(!canopyVisible)return source.replace(/fill="#3B5174"/gi,'fill="#3B5174" fill-opacity="0"');
   return source.replace(/fill="#3B5174"/gi,`fill="${canopyColor}" fill-opacity="0.8"`);
 }
 async function loadForestTreeSprites(){
   try{
-    const sources=await Promise.all(FOREST_TREE_ASSETS.map(path=>fetch(path).then(r=>{
+    const sources=await Promise.all(FOREST_TREE_ASSETS.map(path=>fetch(path+'?v=bark1').then(r=>{
       if(!r.ok)throw new Error('Forest SVG '+r.status+' '+path);
       return r.text();
     })));
@@ -507,8 +527,10 @@ loadForestTreeSprites();
 function drawTree(tree){
   if(!forestTreeSpritesReady||!screenPointVisibleRaw(tree.p,tree.z||0,44))return false;
   const season=State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer';
-  const colorIndex=season==='winter'?0:tree.colorIndex;
-  const img=forestTreeSprites[season]?.[tree.shapeIndex]?.[colorIndex];
+  const stage=season==='autumn'?autumnFoliageStage(tree):0;
+  const img=season==='autumn'&&stage>0
+    ? forestTreeSprites.autumn?.[tree.shapeIndex]?.[stage-1]
+    : forestTreeSprites[season==='autumn'?'summer':season]?.[tree.shapeIndex]?.[season==='winter'?0:tree.colorIndex];
   if(!img)return false;
   const base=w2sRaw(tree.p,tree.z||0);
   const size=Math.max(10,U*State.view.scale*2.25*tree.scale);

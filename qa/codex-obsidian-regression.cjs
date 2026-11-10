@@ -1,0 +1,42 @@
+'use strict';
+const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
+const {compileDirectory,parseNote,serialize}=require('../tools/export-codex-content.cjs');
+const root=path.join(__dirname,'..'),source=path.join(root,'content/codex'),temp=fs.mkdtempSync(path.join(os.tmpdir(),'conquer-editorial-'));
+try{
+  for(const file of fs.readdirSync(source).filter(f=>f.endsWith('.md')))fs.copyFileSync(path.join(source,file),path.join(temp,file));
+  const initial=compileDirectory(temp);assert.equal(initial.pages.length,155);
+  const scalar=parseNote('---\ncodex_id: topic:test\nkind: topic\ntitle: "Test"\neditorial_status: draft\naliases:\n  - Test Uno\n  - "Test Due"\n---\n','Test.md');
+  assert.deepEqual(scalar.meta.aliases,['Test Uno','Test Due']);
+  const towerFile=path.join(temp,'Torre.md'),original=fs.readFileSync(towerFile,'utf8');
+  fs.writeFileSync(towerFile,original.replace('## Collegamenti','## Funzionamento\n\n**Testo modificato in Obsidian.** Leggi [[Fortificazioni|le difese]].\n\n- Primo punto\n- Secondo punto\n\n## Collegamenti'));
+  let updated=compileDirectory(temp),tower=updated.pages.find(p=>p.id==='building:tower');
+  assert.ok(tower.text.some(t=>t.includes('Testo modificato in Obsidian')));
+  assert.ok(tower.blocks.some(b=>b.type==='heading'&&b.anchor==='section-funzionamento'));
+  assert.ok(tower.blocks.some(b=>b.type==='list'&&b.items.length===2));
+  const newTopic='---\ncodex_id: topic:test-editoriale\nkind: topic\ntitle: Test Editoriale\neditorial_status: draft\naliases: []\n---\n\nBozza non pubblicabile.\n';
+  fs.writeFileSync(path.join(temp,'Test Editoriale.md'),newTopic);
+  assert.equal(compileDirectory(temp).pages.length,155,'draft never exported');
+  fs.writeFileSync(towerFile,original+'\nTest [[Test Editoriale]].\n');
+  assert.throws(()=>compileDirectory(temp),/requires a list of wikilinks|unpublished/);
+  fs.writeFileSync(towerFile,original.replace('La torre','[[Destinazione Mancante]] La torre'));
+  assert.throws(()=>compileDirectory(temp),/unresolved/);
+  fs.writeFileSync(towerFile,original);
+  fs.writeFileSync(path.join(temp,'Test Editoriale.md'),newTopic.replace('editorial_status: draft','editorial_status: approved').replace('Bozza non pubblicabile.','Leggi [[Torre|la torre]] e [[Torre#Sezione Assente|la sezione]].'));
+  assert.throws(()=>compileDirectory(temp),/missing heading/);
+  fs.writeFileSync(path.join(temp,'Test Editoriale.md'),newTopic.replace('editorial_status: draft','editorial_status: approved').replace('Bozza non pubblicabile.','Leggi [[Torre|la torre]].'));
+  updated=compileDirectory(temp);assert.equal(updated.pages.length,156);
+  const custom=updated.pages.find(p=>p.id==='topic:test-editoriale');assert.ok(custom.blocks[0].tokens.some(t=>t.id==='building:tower'));
+  fs.renameSync(towerFile,path.join(temp,'Torre Rinominata.md'));
+  assert.ok(compileDirectory(temp).pages.some(p=>p.id==='building:tower'),'filename rename preserves stable ID and alias references');
+  fs.writeFileSync(path.join(temp,'Torre Rinominata.md'),original.replace('## Collegamenti','## Funzionamento\n\nRegola verificata.\n\n## Collegamenti'));
+  fs.writeFileSync(path.join(temp,'Test Editoriale.md'),newTopic.replace('editorial_status: draft','editorial_status: approved').replace('Bozza non pubblicabile.','Leggi [[Torre#Funzionamento|il funzionamento]].'));
+  assert.ok(compileDirectory(temp).pages.find(p=>p.id==='topic:test-editoriale').blocks[0].tokens.some(t=>t.anchor==='section-funzionamento'));
+  const engine=vm.createContext({});vm.runInContext(serialize(temp),engine);
+  assert.equal(engine.ConquerWikiEditorial.pages.length,156,'generated runtime data contains approved edited content');
+  assert.equal(fs.readFileSync(path.join(root,'src/codex-wiki-editorial.js'),'utf8').replace(/\r\n/g,'\n'),serialize(),'generated artifact fresh');
+  console.log('PASS Obsidian: editable Markdown, stable IDs/renames, aliases, approval gate, links/headings, lists, draft exclusion and generated content');
+}finally{
+  const resolved=fs.realpathSync(temp),base=fs.realpathSync(os.tmpdir());
+  if(path.dirname(resolved)!==base||!path.basename(resolved).startsWith('conquer-editorial-'))throw Error('Unsafe test cleanup target');
+  fs.rmSync(resolved,{recursive:true});
+}

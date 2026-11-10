@@ -14,9 +14,8 @@ const coast=[];for(let i=0;i<=14;i++){const x=i/14*200;coast.push({x,y:150+(i===
 const sea={type:'sea',side:'south',coastline:coast,points:[...coast,{x:200,y:200},{x:0,y:200}]};
 const window={},State={seed:3,structures:[],environment:[sea]};
 const ctx=vm.createContext({window,State,Math,Object,Number,Array,Map,Set,String,JSON,terrainElevation:()=>0});
-// Match the real game: regenerating harbour meshes must reuse the same seeded
-// scatter. Math.random() compared two different coasts and made this test flaky.
-vm.runInContext(read('src/settlement-landscape.js').split(/\r?\n/).find(line=>line.startsWith('function seedRand(')),ctx);
+// Use the game's seeded generator: before/after harbour geometry must share one layout.
+vm.runInContext(read('src/settlement-landscape.js').match(/function seedRand\(seed\)\{[^\n]+/)[0],ctx);
 for(const f of ['assets/waterside-models.js','settlement-coast.js'])vm.runInContext(read('src/'+f),ctx);
 const C=window.ConquerCoast;
 const kinds=C.stretches().map(s=>s.kind).join();

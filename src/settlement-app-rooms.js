@@ -4,6 +4,7 @@ function siteLaborText(s){
   if(s?.auto&&s.spawnCost)
     return 'Spontaneous spawn: '+Number(s.spawnCost.laborGold||0).toFixed(2)+' gold in labor value (not charged to lord)';
   if(s?.construction?.version!==2)return '';
+  if(devBuildMode('freeBuild'))return 'Free build DEV: nessun salario addebitato';
   const c=s.construction,rate=window.ConquerEconomy?.constructionWagePerWorkday?.()||0;
   return 'Lord construction wages: '+Number(c.wagesPaid||0).toFixed(2)+
     ' gold paid · '+((Math.max(0,c.workRequired-c.workDone))*rate).toFixed(2)+' gold remaining at current wage';
@@ -20,19 +21,54 @@ function hoardingSlot(s){
 }
 function renderFunctionPanel(){
   const panel=document.getElementById('functionPanel'),info=document.getElementById('functionInfo'),slots=document.getElementById('functionSlots'),s=selectedStructure();
+  // Every incomplete structure has a dedicated, provisional inspector.
+  // Do not expose functions, upgrades or operational controls during assembly.
+  if(s&&underConstruction(s)){
+    const c=s.construction,mat=constructionMaterialInfo(s);
+    const progress=Math.round(constructionProgress(s)*100);
+    const supplied=Math.round(mat.progress*100);
+    const fmt=n=>Number(n).toLocaleString('it-IT',{maximumFractionDigits:2});
+    panel.classList.add('open');
+    info.innerHTML='<div class="construction-inspector">'+
+      '<div class="kv"><span>Cantiere</span><b>'+structureLabel(s)+'</b></div>'+
+      '<div class="site-label">Avanzamento lavori · '+progress+'%</div>'+
+      '<div class="progress"><i style="width:'+progress+'%"></i></div>'+
+      '<div class="kv"><span>Lavoro residuo</span><b>'+fmt(remainingDays(s))+' giornate</b></div>'+
+      '<div class="site-label">Materiali consegnati · '+supplied+'%</div>'+
+      '<div class="progress site-material-progress"><i style="width:'+supplied+'%"></i></div>'+
+      '<div class="site-material-grid">'+mat.rows.map(r=>
+        '<div class="kv"><span>'+r.key+'</span><b>'+fmt(r.delivered)+' / '+fmt(r.total)+'</b></div>'
+      ).join('')+'</div>'+
+      '<div class="legend">'+constructionWorkStatus(s)+'</div>'+siteLaborLine(s)+'</div>';
+    const editable=c?.version===2&&(!s.auto||c.upgrade);
+    slots.innerHTML=editable?
+      '<div class="slot construction-priority"><label class="slot-label" for="constructionPrioritySelect">Priorità approvvigionamento</label>'+
+      '<select id="constructionPrioritySelect" aria-label="Priorità cantiere">'+
+      CONSTRUCTION_PRIORITIES.map((label,value)=>
+        '<option value="'+value+'"'+(constructionPriority(s)===value?' selected':'')+'>'+label+'</option>').join('')+
+      '</select><div class="legend">Le scorte disponibili vengono assegnate prima ai cantieri con priorità più alta. Nessun materiale è richiesto per confermare il progetto.</div></div>':
+      '<div class="legend">Cantiere spontaneo · non prioritizzabile.</div>';
+    const select=slots.querySelector('#constructionPrioritySelect');
+    if(select)select.onchange=()=>StructureCommands.setConstructionPriority(s.id,Number(select.value));
+    if(editable||c?.upgrade){const cancel=document.createElement('button');cancel.textContent='Annulla cantiere';cancel.dataset.cancelConstruction='true';cancel.onclick=()=>deleteStructure(s.id);slots.appendChild(cancel);}
+    return;
+  }
   if(window.ConquerStorageYard?.is(s)){
     const Y=window.ConquerStorageYard,n=Y.size(s),next=n+2,stock=Y.stocks();
     const goods=Object.entries(stock).filter(([,qty])=>qty>0);
+    const haul=window.ConquerHaulage?.snapshot?.();
     const fmt=val=>Number(val).toLocaleString('it-IT',{maximumFractionDigits:1});
     panel.classList.add('open');
     info.innerHTML='<div class="kv"><span>Deposito</span><b>Piazzale · '+n+'×'+n+'U</b></div>'+
       '<div class="kv"><span>Scorte nel magazzino</span><b>'+fmt(Y.used())+' / '+fmt(Y.capacity())+'</b></div>'+
       goods.map(([name,qty])=>'<div class="kv"><span>'+name+'</span><b>'+fmt(qty)+'</b></div>').join('')+
-      '<div class="legend">Le risorse coincidono con le scorte economiche del castello. Nessun inventario duplicato.</div>';
+      (haul?'<div class="kv"><span>Carrettieri L1</span><b>'+haul.assigned+' assegnati · '+haul.active+' viaggi · '+haul.pending+' carichi in attesa</b></div>'+
+        '<div class="kv"><span>Rotte</span><b>'+haul.toYard+' ai piazzali · '+haul.toMarket+' al mercato</b></div>':'')+
+      '<div class="legend">Ogni carrettiere è un L1 reale del JobManager. Parte dal piazzale, ritira al produttore e consegna al deposito o al mercato. Richiede strade completate; le scorte sono contabilizzate una sola volta dal sistema economico.</div>';
     const cost=Y.expansionCost(n,next);
     slots.innerHTML=cost?
       '<div class="slot"><div class="slot-label">Ampliamento</div><button data-stockyard-grow>Espandi a '+next+'×'+next+'U · '+costText(cost)+'</button>'+
-      '<div class="legend">Area libera e pianeggiante richiesta; aumento capacità effettivo subito dopo l’espansione.</div></div>':
+      '<div class="legend">Area libera e pianeggiante richiesta; aumento capacità disponibile al termine del cantiere.</div></div>':
       '<div class="legend">Capienza massima raggiunta · 6×6U.</div>';
     const button=slots.querySelector('[data-stockyard-grow]');
     if(button)button.onclick=()=>StructureCommands.setYardSize(s.id,next);
@@ -157,6 +193,8 @@ function renderFunctionPanel(){
       '<div class="grid"><button type="button" data-siege-archer="-1" '+(building||archers===0?'disabled':'')+'>− Archer</button>'+
       '<button type="button" data-siege-archer="1" '+(building||archers>=archerSlots.length?'disabled':'')+'>+ Archer</button></div>'+
       '<div class="legend">Priority: roof '+roofSlots+(bartizanSlots?' → bartizans '+bartizanSlots+' (also 0-1U at the tower foot)':'')+' → arrow slits '+slitSlots+' (upper floors first). Connected walls can block slits.</div></div>';
+    // Lookout, outpost and signal fire (settlement-soldiers.js).
+    html+=window.ConquerSoldiers?.towerPanelHtml?.(s)||'';
   }
   if(['house','market','tavern','church','training','plaza','townhall','guild'].includes(s.type)){
     const deg=Math.round((Number(s.angle)||0)*180/Math.PI+360)%360;
@@ -179,7 +217,10 @@ function renderFunctionPanel(){
           '<button data-civic-annex="'+key+'" '+(locked||full||building?'disabled':'')+'>'+
           (locked?'Requires L'+spec.level:full?'Limit reached':building?'Parent under construction':'Place '+spec.label)+' · '+spec.w+'×'+spec.h+'U</button>'+
           owned.map(child=>'<button data-civic-annex-child="'+child.id+'">↳ Select '+spec.label+'</button>').join('');
-      }).join('')+'<div class="legend">Owned plots for church and tavern · public expansion for market. No services or economic effects.</div></div>';
+      }).join('')+(s.type==='townhall'
+        ?'<div class="legend">Open ground within '+TOWNHALL_ANNEX_RANGE+'U of the town hall. Each garden yields '+
+          (window.ConquerEconomy?.KITCHEN_GARDEN_FOOD_PER_DAY||2)+' food per working day to the lord, also under alarm and siege.</div></div>'
+        :'<div class="legend">Owned plots for church and tavern · public expansion for market. No services or economic effects.</div></div>');
   }
   if(isPlazaLike(s)){
     html+=`<div class="slot"><div class="slot-label">Piazza variant</div><div class="grid3">${PLAZA_VARIANTS.map(variant=>`<button data-plaza-variant="${variant}" class="${plazaVariant(s)===variant?'active':''}">${variant==='paved'?'Paved':variant==='fountain'?'Fountain':'Garden'}</button>`).join('')}</div></div>`;
@@ -200,7 +241,7 @@ function renderFunctionPanel(){
     const deg=Math.round(normalizeTowerAngle(s.angle)*180/Math.PI)%360;
     html+=`<div class="slot"><div class="slot-label">Tower orientation · ${deg}° · step ${structureRotationStep(s.angle)}/23</div><div class="grid3"><button data-tower-rotate="-1">↺ 15°</button><button data-tower-flip>⇄ 180°</button><button data-tower-rotate="1">↻ 15°</button></div><div class="legend">Structural rotation is quantized to 24 positions. Attached subtorri and wall sockets follow the same angle model.</div></div>`;
     if(isWoodTower(s)){
-      html+=`<div class="slot"><div class="legend">Wooden tower · fixed H1. Uses normal tower/wall snap but no masonry battlements or doors.</div></div>`;
+      html+=`<div class="slot"><div class="legend">Wooden tower · fixed H${structureLevel(s)}. Uses normal tower/wall snap but no masonry battlements or doors.</div></div>`;
       if(woodTowerStyle(s)==='palisadeTower'){
         const roof=woodTowerRoof(s);
         html+=`<div class="slot"><div class="slot-label">Wood roof</div><div class="grid"><button data-wood-roof="open" class="${roof==='open'?'active':''}">Open platform</button><button data-wood-roof="pitched" class="${roof==='pitched'?'active':''}">Pitched · 4 posts</button></div></div>`;
@@ -309,6 +350,7 @@ function renderFunctionPanel(){
   window.ConquerSiege?.bindPanel(slots);
   window.ConquerCrossings?.bindPanel(slots);
   window.ConquerKeepEntrance?.bindPanel(slots);
+  window.ConquerSoldiers?.bindTowerPanel?.(slots,s);
   // Every control acts through StructureCommands (src/settlement-structure-commands.js), shared with UI v2.
   const on=(selector,fn,event='onclick')=>slots.querySelectorAll(selector).forEach(el=>el[event]=e=>{const target=selectedStructure();if(target)fn(target.id,el,e)});
   on('[data-house-up]',id=>StructureCommands.changeHouseLevel(id,1));

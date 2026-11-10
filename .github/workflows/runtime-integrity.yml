@@ -1,13 +1,22 @@
 name: Runtime integrity
+
+# Abort superseded PR runs of this workflow (never cancel scheduled/main runs).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 on:
   push:
-    branches: [main, audit-hardening]
+    branches: [main]
     paths:
       - 'api/telemetry.js'
       - 'src/settlement-core.js'
       - 'src/settlement-app-persistence.js'
       - 'tests/runtime-integrity.test.mjs'
+      - 'src/codex-catalog.js'
+      - 'src/settlement-codex.js'
+      - 'qa/codex-catalog-regression.cjs'
       - 'qa/save-safety-regression.cjs'
+      - 'qa/construction-priority-regression.cjs'
       - '.github/workflows/runtime-integrity.yml'
   pull_request:
 permissions:
@@ -26,5 +35,30 @@ jobs:
           for file in src/*.js api/*.js; do node --check "$file"; done
       - name: Local diagnostics and disabled remote telemetry
         run: node --test tests/runtime-integrity.test.mjs
+      - name: Autumn foliage calendar and renderer regression
+        run: node qa/autumn-foliage-regression.cjs
+      - name: Tree and bush bark colour regression
+        run: node qa/tree-bark-regression.cjs
+      - name: Staged construction and priorities
+        run: |
+          node qa/construction-priority-regression.cjs
+          node qa/construction-materials-regression.cjs
+          node qa/upgrades-dev-regression.cjs
+      - name: Stone colour palette and semantic rendering regression
+        run: node qa/stonecolor-regression.cjs
       - name: Preserve saves and DEV-only resource floor
         run: node qa/save-safety-regression.cjs
+
+      - name: Codex catalog and live gameplay providers
+        run: node qa/codex-catalog-regression.cjs
+
+      - name: Wiki links and fresh generated catalog
+        run: |
+          node qa/codex-wiki-regression.cjs
+          node tools/export-codex.cjs --check
+
+      - name: Obsidian editorial approval and fresh export
+        run: |
+          node qa/codex-obsidian-regression.cjs
+          node qa/codex-vault-import-regression.cjs
+          node tools/export-codex-content.cjs --check

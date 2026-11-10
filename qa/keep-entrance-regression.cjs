@@ -26,6 +26,7 @@ function fixture({gold=500}={}){
     spendCost:c=>{for(const [k,v] of Object.entries(c))State.resources[k]-=v},
     status:m=>messages.push(m),markDirty:()=>{},renderFunctionPanel:()=>{},draw:()=>{},invalidateNavigation:()=>{}
   });
+  require('./construction-fixture.cjs')(ctx);
   vm.runInContext(src,ctx);
   // A square L2 keep at the origin, its front (angle 0) facing +x.
   const keep={id:'k',type:'tower',shape:'square',x:0,y:0,size:1.5,angle:0,level:2,isMastio:true,functions:[]};
@@ -44,6 +45,16 @@ function fixture({gold=500}={}){
   assert.equal(K.buildStair(plain),false,'nor on a tower that is not the mastio');
   assert.ok(!wood.keepEntrance&&!low.keepEntrance&&!plain.keepEntrance);
   console.log('PASS only a masonry mastio of 2+ storeys gets a raised entrance');
+}
+{
+  // BC-251105-06: the two-storey timber frame tower is the one wooden keep with a raised entrance.
+  const {K,State}=fixture();
+  const frame={id:'f',type:'tower',shape:'square',x:9,y:0,size:1.5,angle:0,level:2,woodStyle:'frameTower',isMastio:true};
+  State.structures.push(frame);
+  assert.ok(K.buildStair(frame),'stair to the frame tower');
+  assert.equal(K.sill(frame),1.28,'its door opens on the P1 floor of the Blender model');
+  assert.equal(K.layout(frame).zTop,1.28);
+  console.log('PASS the timber frame tower takes the raised entrance at its P1');
 }
 {
   const {K,State,keep}=fixture();
@@ -133,6 +144,7 @@ console.log('PASS the drawbridge fits either stair and, raised, shuts the keep')
     cutawayFloorLevels:s=>[{z:.055},{z:1.775}],footprintPoints:s=>s.type==='tower'?rect(s.x,s.y,1.5,1.5):[],
     boundaryPoint:(s,p)=>p,placementGroundZ:()=>0,terrainElevation:()=>0,pointInPolygon:()=>false,structureLabel:s=>s.type,costText:()=>'',
     canAfford:()=>true,spendCost:()=>{},status:()=>{},markDirty:()=>{},renderFunctionPanel:()=>{},draw:()=>{},invalidateNavigation:()=>{}});
+  require('./construction-fixture.cjs')(ctx);
   vm.runInContext(src,ctx);
   const K=ctx.window.ConquerKeepEntrance,keep={id:'k',type:'tower',shape:'square',x:0,y:0,size:1.5,angle:0,level:2,isMastio:true};
   State.structures.push(keep);K.buildStair(keep);K.installDrawbridge(keep);

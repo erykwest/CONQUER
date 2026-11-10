@@ -15,7 +15,16 @@ function found(){
  run("State.seed=12345;State.environment=[];State.relief=null;State.clock.day=0;State.structures=[{id:'well',type:'well',x:100,y:100}];State.village={name:'Rocca',founded:true,wellId:'well',growthStep:0,growthVersion:3};State.combat.units=[];State.combat.enemy=[];State.combat.strokes=[];State.resources={gold:1e6,stone:1e6,wood:1e6,metal:1e6,clay:1e6,food:1e6,equipment:1e6};invalidateNavigation();invalidateUrbanGeometry();window.ConquerCombat.invalidateRoutes();connectSelectedBorderMainRoads()");
 }
 const civic=(id,type,x,y,extra='')=>"{id:'"+id+"',type:'"+type+"',shape:'civic',masonryMaterial:'stone',x:"+x+",y:"+y+extra+"}";
-const place=(id,type,x,y,extra)=>run("addStructure("+civic(id,type,x,y,extra)+")");
+// These catalog/urban tests inspect completed civic functions. Explicitly
+// finish new construction sites so the ordinary inspector becomes available.
+const complete=id=>run("(()=>{const s=State.structures.find(x=>x.id==="+JSON.stringify(id)+");"+
+  "const c=s?.construction;if(c?.version===2){c.workDone=c.workRequired;c.completedDay=State.clock.day;}"+
+  "reconcileWellMainConnections(false)})()");
+const place=(id,type,x,y,extra)=>{
+ const ok=run("addStructure("+civic(id,type,x,y,extra)+")");
+ if(ok)complete(id);
+ return ok;
+};
 const verdict=(type,x,y)=>run("window.ConquerPlacement.check("+civic('probe',type,x,y)+")");
 // First placeable spot on rings around a well.
 const free=(type,cx,cy)=>{for(let r=3;r<=8;r+=.5)for(let a=0;a<16;a++){const x=+(cx+Math.cos(a/16*6.283)*r).toFixed(1),y=+(cy+Math.sin(a/16*6.283)*r).toFixed(1);if(verdict(type,x,y).ok)return[x,y]}return null};
@@ -48,6 +57,8 @@ test('one town hall and one guild per well, bound to the nearest free well',()=>
  assert.equal(run("State.structures.find(s=>s.id==='g1').wellId"),'well');
  // A quarter well takes its own pair.
  assert.equal(run("addStructure({id:'w2',type:'well',masonryMaterial:'stone',x:140,y:118})"),true);
+ assert.equal(run("underConstruction(State.structures.find(s=>s.id==='w2'))"),true,'secondary well is now a real site');
+ complete('w2');
  run("StructureCommands.setWellName('w2','Borgo San Rocco')");
  const th2=free('townhall',140,118);assert.ok(th2,'a town hall fits at the quarter well');
  assert.equal(place('th2','townhall',th2[0],th2[1]),true);

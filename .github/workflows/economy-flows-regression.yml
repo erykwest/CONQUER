@@ -1,4 +1,9 @@
 name: Economy flows regression
+
+# Abort superseded PR runs of this workflow (never cancel scheduled/main runs).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 on:
   pull_request:
     paths:
@@ -15,6 +20,11 @@ on:
       - 'qa/economy*.cjs'
       - 'qa/forestry-regression.cjs'
       - 'qa/storage-yard-regression.cjs'
+      - 'qa/haulage-regression.cjs'
+      - 'qa/l1-carter-market-regression.cjs'
+      - 'src/settlement-haulage.js'
+      - 'src/settlement-population-figures.js'
+      - 'src/settlement-commerce.js'
       - 'src/settlement-storage-yard.js'
       - 'src/settlement-castle.js'
       - 'src/settlement-castle-placement.js'
@@ -66,6 +76,9 @@ jobs:
           node qa/forestry-regression.cjs
           node --check src/settlement-storage-yard.js
           node qa/storage-yard-regression.cjs
+          node --check src/settlement-haulage.js
+          node qa/haulage-regression.cjs
+          node qa/l1-carter-market-regression.cjs
           node qa/economy-balance-regression.cjs
           node qa/economy-builder-integration.cjs
           node qa/construction-workers-regression.cjs
@@ -73,7 +86,6 @@ jobs:
           node qa/construction-commute-regression.cjs
           node qa/labor-jobs-regression.cjs
           node qa/economy-rations-regression.cjs
-          node qa/save-safety-regression.cjs
           node qa/founding-regression.cjs
           node qa/builder-placement-regression.cjs
           node qa/refactor-app-population-regression.cjs

@@ -9,11 +9,11 @@ function buildBoundaryBushSvg(source,season){
   const colors={summer:'#527641',autumn:'#827044',winter:'#c7d1b9'};
   return source.replace('viewBox="0 0 1024 1024"','viewBox="64 260 920 580"')
     .replace('width="1024"','width="920"').replace('height="1024"','height="580"')
-    .replace(/#3B5174/gi,colors[season]||colors.summer).replace(/#9BBACE/gi,'#73604a');
+    .replace(/#3B5174/gi,colors[season]||colors.summer).replace(/#9BBACE/gi,'#2B1D16');
 }
 async function loadBoundaryBushSprites(){
   const sources=await Promise.allSettled(BOUNDARY_BUSH_ASSETS.map(async name=>{
-    const r=await fetch('./src/assets/bushes/'+name);if(!r.ok)throw new Error('Bush SVG '+r.status+' '+name);return r.text();
+    const r=await fetch('./src/assets/bushes/'+name+'?v=bark1');if(!r.ok)throw new Error('Bush SVG '+r.status+' '+name);return r.text();
   }));
   const jobs=[];
   for(let shape=0;shape<sources.length;shape++){

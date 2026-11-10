@@ -1,5 +1,10 @@
 name: Builder menu regression
 
+# Abort superseded PR runs of this workflow (never cancel scheduled/main runs).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 on:
   pull_request:
     branches: [main]
@@ -30,3 +35,4 @@ jobs:
         run: |
           node qa/mills3d-regression.cjs
           node qa/builder-placement-regression.cjs
+          node qa/lean-to-regression.cjs

@@ -34,7 +34,9 @@ const {allowed,builtArcadeLayout,builtLoggia,builtLoggiaWalkable,builtLoggiaStan
 const section=(extra)=>({type:'built',a:{x:0,y:0},b:{x:7.5,y:0},length:7.5,level:2,skin:'arcade',...extra});
 
 const portico={type:'built',length:3,level:2,skin:'arcade'},porticoL1={...portico,level:1},plain={type:'built',length:3,level:2};
-assert.deepEqual([...PORTICO_FUNCTIONS],['stables','workshop','storage','guard']);
+// The castle guard post merged into the Barracks (D-MIL-RES-261109): no longer under the portico.
+assert.deepEqual([...PORTICO_FUNCTIONS],['stables','workshop','storage']);
+assert.ok(!allowed(portico,0,'guard'),'no guard post under the portico');
 for(const fn of PORTICO_FUNCTIONS)assert.ok(allowed(portico,0,fn),fn+' under the portico');
 for(const fn of ['kitchen','granary','barracks','nobleRoom','chapel','commonHall','throneHall','treasury','prison','armory'])
   assert.ok(!allowed(portico,0,fn),'no '+fn+' under the portico');

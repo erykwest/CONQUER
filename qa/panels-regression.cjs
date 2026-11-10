@@ -17,6 +17,14 @@ function fixture(founded=true,markets=2) {
   const economy={
     population:{L1:9,L2:3,L3:0,L4:1},welfare:54,castleGold:123,capital:20,rationMode:'market',
     jobs:{building:2,herding:1,logging:1,industry:1,idle:0,foodRisk:false},
+    jobManager:{managed:true,available:4,tasks:[
+      {key:'site:log',label:'Taglialegna · log',workers:1,demand:2,capacity:2,minimum:1,auto:true},
+      {key:'builders',label:'Costruttori',workers:2,demand:3,capacity:3,minimum:2,auto:false}
+    ]},
+    jobManagerL2:{managed:true,available:2,assigned:1,tasks:[
+      {key:'site:field',label:'Campi · field',workers:1,demand:1,capacity:1,minimum:1,auto:true},
+      {key:'site:mine',label:'Miniera · mine',workers:0,demand:2,capacity:2,minimum:0,auto:false}
+    ]},
     goods:[{id:'food',price:2,market:10,castle:40,share:50,reserve:100}],
     activities:[{id:'farm-1',type:'field',owner:'lord',workers:1,value:50,profit:null}]
   };
@@ -29,6 +37,19 @@ function fixture(founded=true,markets=2) {
   const commands={
     setPolicy:(...args)=>calls.push(['policy',...args]),
     setSaleShare:(...args)=>calls.push(['share',...args]),
+    setL1Minimum:(...args)=>calls.push(['jobMinimum',...args]),
+    setL1Auto:(...args)=>calls.push(['jobAuto',...args]),
+    setL1Order:(...args)=>calls.push(['jobOrder',...args]),
+    setL2Minimum:(...args)=>calls.push(['l2Minimum',...args]),
+    setL2Auto:(...args)=>calls.push(['l2Auto',...args]),
+    setL2Order:(...args)=>calls.push(['l2Order',...args]),
+    adjustPatrols:(...args)=>calls.push(['patrol',...args]),
+    adjustTowerArchers:(...args)=>calls.push(['tower',...args]),
+    adjustBarracksSquads:(...args)=>calls.push(['barracks',...args]),
+    assignCirclePatrol:(...args)=>calls.push(['zonePatrol',...args]),
+    adjustMacroArchers:(...args)=>calls.push(['macroArcher',...args]),
+    adjustZoneArchers:(...args)=>calls.push(['zoneArcher',...args]),
+    adjustMacroSquads:(...args)=>calls.push(['macroSquad',...args]),
     transferActivity:(...args)=>calls.push(['transfer',...args]),
     openCaravans:()=>calls.push(['caravans'])
   };
@@ -37,7 +58,20 @@ function fixture(founded=true,markets=2) {
       ConquerGame:{read:{economy:()=>economy,policies:()=>({tax:25,levy:10,rations:'market'}),
         logistics:()=>({stores:[{id:'food',stock:12,cap:30}],autonomy:3,daily:4,soldiers:8,shortfall:0}),
         defense:()=>({active:true,units:4,patrols:2,hostiles:0,alarm:'off'}),
-        knights:()=>({current:1,limit:2})},commands},
+        knights:()=>({current:1,limit:2}),
+        militaryAssignments:()=>({
+          circleReady:true,
+          patrols:[{id:'patrol-1',active:true,zoneId:null},{id:'patrol-2',active:true,zoneId:'circle-1'}],
+          zones:[{id:'circle-1',label:'Settore 1',depth:2,state:'secure',mastio:true,
+            patrols:1,capacity:3,assigned:1,active:1,otherBarracks:[],
+            towers:[{id:'tower-1',label:'Mastio · tower-1',subtowers:2,capacity:3,assigned:1,
+              active:1,squads:1,squadCapacity:3,rooms:[{id:'room-1',capacity:3,assigned:1}],
+              members:[{id:'tower-1',capacity:1,assigned:0},{id:'sub-1',capacity:2,assigned:1}]}]}],
+          outside:{id:'outside',label:'Fuori dai compartimenti CIRCLE',patrols:1,
+            capacity:0,assigned:0,active:0,towers:[],otherBarracks:[]},
+          macros:[{id:'tower-1',label:'Mastio · tower-1',subtowers:2,capacity:3,assigned:1,active:1}],
+          totalAssigned:1,totalActive:1,hasCampManagement:true,unassigned:0
+        })},commands},
       ConquerEconomy:{state:()=>books,snapshot:()=>({weeks:markets,constructionPayroll:5})},
       ConquerDiplomacy:{state:()=>({caravans:[],incoming:null,history:[]})}
     },
@@ -53,6 +87,20 @@ function fixture(founded=true,markets=2) {
 const x=fixture();
 assert.equal(x.context.window.ConquerPanels.tabs.length,9);
 x.context.window.ConquerPanels.open();
+assert.match(x.elements.controlBody.innerHTML,/Popolazione/);
+// Two main Profile palettes use live views and retain the existing sale-share command.
+x.context.window.ConquerPanels.open('jobs');
+assert.match(x.elements.controlBody.innerHTML,/Distribuzione delle mansioni L1/);
+assert.match(x.elements.controlBody.innerHTML,/Posti nelle attività/);
+assert.equal(x.elements.controlNav.hidden,true);
+x.context.window.ConquerPanels.open('trade');
+assert.match(x.elements.controlBody.innerHTML,/Scambi e quote di vendita/);
+assert.match(x.elements.controlBody.innerHTML,/data-cp-share="food"/);
+assert.equal(x.elements.controlNav.hidden,true);
+x.elements.profileControl.events.change({target:{dataset:{cpShare:'food'},value:'25'}});
+assert.deepEqual(x.calls.pop(),['share','food',25]);
+x.context.window.ConquerPanels.open('control');
+assert.equal(x.elements.controlNav.hidden,false);
 assert.match(x.elements.controlBody.innerHTML,/Popolazione/);
 assert.match(x.elements.controlBody.innerHTML,/<polyline/);
 for(const id of x.context.window.ConquerPanels.tabs){
@@ -86,6 +134,64 @@ assert.match(x.elements.controlBody.innerHTML,/Diplomazia/);
 x.tab('estate');
 assert.match(x.elements.controlBody.innerHTML,/<option value="farm-1"/);
 assert.doesNotMatch(x.elements.controlBody.innerHTML,/<option value="farm-1"[^>]*>[^<]*·[^<]*<\/option><option value="mill/);
+// L1 queue is interactive: minimum number, AUTO, keyboard/touch move and drag/drop.
+x.context.window.ConquerPanels.open('jobs');
+assert.match(x.elements.controlBody.innerHTML,/Priorità produzioni e mansioni L1/);
+assert.match(x.elements.controlBody.innerHTML,/data-cp-job-min="site:log"/);
+assert.match(x.elements.controlBody.innerHTML,/data-cp-job-auto="builders"/);
+assert.match(x.elements.controlBody.innerHTML,/draggable="true"/);
+x.elements.profileControl.events.change({target:{dataset:{cpJobMin:'site:log'},value:'2',matches:()=>false}});
+assert.deepEqual(x.calls.pop(),['jobMinimum','site:log',2]);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-job-auto]'?{dataset:{cpJobAuto:'builders'}}:null}});
+assert.deepEqual(x.calls.pop(),['jobAuto','builders',true]);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-job-move]'?{dataset:{cpJobMove:'up',cpJobKey:'builders'}}:null}});
+assert.deepEqual(x.calls.pop(),['jobOrder',['builders','site:log']]);
+const jobNode=key=>({dataset:{cpJobRow:key},classList:{add(){},remove(){}}});
+x.elements.profileControl.events.dragstart({target:{closest:selector=>selector==='[data-cp-job-row]'?jobNode('site:log'):null},dataTransfer:{setData(){},effectAllowed:''}});
+x.elements.profileControl.events.drop({target:{closest:selector=>selector==='[data-cp-job-row]'?jobNode('builders'):null},preventDefault(){}});
+assert.deepEqual(x.calls.pop(),['jobOrder',['builders','site:log']]);
+// Two Job Manager subpalettes maintain independent L1 and L2 commands.
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-jobs-tier]'?{dataset:{cpJobsTier:'L2'}}:null}});
+assert.match(x.elements.controlBody.innerHTML,/Priorità produzioni e mansioni L2/);
+assert.match(x.elements.controlBody.innerHTML,/data-cp-job-tier="L2"/);
+assert.match(x.elements.controlBody.innerHTML,/L2 inattivi/);
+x.elements.profileControl.events.change({target:{dataset:{cpJobMin:'site:field',cpJobTier:'L2'},value:'1',matches:()=>false}});
+assert.deepEqual(x.calls.pop(),['l2Minimum','site:field',1]);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-job-auto]'?{dataset:{cpJobAuto:'site:mine',cpJobTier:'L2'}}:null}});
+assert.deepEqual(x.calls.pop(),['l2Auto','site:mine',true]);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-job-move]'?{dataset:{cpJobMove:'up',cpJobKey:'site:mine',cpJobTier:'L2'}}:null}});
+assert.deepEqual(x.calls.pop(),['l2Order',['site:mine','site:field']]);
+x.elements.profileControl.events.dragstart({target:{closest:selector=>selector==='[data-cp-job-row]'?{...jobNode('site:field'),dataset:{cpJobRow:'site:field',cpJobTier:'L2'}}:null},dataTransfer:{setData(){}}});
+x.elements.profileControl.events.drop({target:{closest:selector=>selector==='[data-cp-job-row]'?{...jobNode('site:mine'),dataset:{cpJobRow:'site:mine',cpJobTier:'L2'}}:null},preventDefault(){}});
+assert.deepEqual(x.calls.pop(),['l2Order',['site:mine','site:field']]);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-jobs-tier]'?{dataset:{cpJobsTier:'L1'}}:null}});
+assert.match(x.elements.controlBody.innerHTML,/Priorità produzioni e mansioni L1/);
+// Military overview and new patrol/garrison subpalette operate on actual API commands.
+x.tab('military');
+assert.match(x.elements.controlBody.innerHTML,/Pattuglie e guarnigioni/);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-military-sub]'?{dataset:{cpMilitarySub:'garrisons'}}:null}});
+assert.match(x.elements.controlBody.innerHTML,/Riserva White Zone/);
+assert.match(x.elements.controlBody.innerHTML,/CIRCLE · Settori e presidi/);
+assert.match(x.elements.controlBody.innerHTML,/Settore 1/);
+assert.match(x.elements.controlBody.innerHTML,/2 sottotorri aggregate/);
+assert.match(x.elements.controlBody.innerHTML,/data-cp-macro="tower-1"/);
+assert.equal((x.elements.controlBody.innerHTML.match(/data-cp-macro="tower-1"/g)||[]).length,1,
+  'one rendered row per macro tower, no child tower rows');
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-patrol]'?{dataset:{cpPatrol:'add'}}:null}});
+assert.deepEqual(x.calls.pop(),['patrol',1]);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-circle-patrol]'?{dataset:{cpCirclePatrol:'circle-1',cpCircleDelta:'1'}}:null}});
+assert.deepEqual(x.calls.pop(),['zonePatrol','circle-1',1]);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-circle-archer]'?{dataset:{cpCircleArcher:'circle-1',cpCircleDelta:'-1'}}:null}});
+assert.deepEqual(x.calls.pop(),['zoneArcher','circle-1',-1]);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-macro-id]'?{dataset:{cpMacroId:'tower-1',cpMacroDelta:'1'}}:null}});
+assert.deepEqual(x.calls.pop(),['macroArcher','tower-1',1]);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-macro-squad]'?{dataset:{cpMacroSquad:'tower-1',cpMacroSquadDelta:'1'}}:null}});
+assert.deepEqual(x.calls.pop(),['macroSquad','tower-1',1]);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-circle-toggle]'?{dataset:{cpCircleToggle:'circle-1'}}:null}});
+assert.match(x.elements.controlBody.innerHTML,/aria-expanded="false"/);
+assert.doesNotMatch(x.elements.controlBody.innerHTML,/data-cp-macro="tower-1"/);
+x.elements.profileControl.events.click({target:{closest:selector=>selector==='[data-cp-circle-toggle]'?{dataset:{cpCircleToggle:'circle-1'}}:null}});
+assert.match(x.elements.controlBody.innerHTML,/aria-expanded="true"/);
 const y=fixture(false);
 y.context.window.ConquerPanels.open();
 assert.match(y.elements.controlBody.innerHTML,/non fondato/);

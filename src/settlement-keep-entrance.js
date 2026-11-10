@@ -20,6 +20,8 @@
   const GAP=.9,LAND=.62,LAND_HALF=.46,FLIGHT_W=.66,SLOPE=1,STEP_RISE=.17;
   const BLOCKERS_SKIP=new Set(['road','field','moat','bridge','ruin']);
   const STAIRS=['wood','stone'];
+  // P1 floor of the timber frame tower (FRAME_TOWER storey in tools/blender/build_wood_fort.py).
+  const WOOD_FRAME_P1=1.28;
   // Enemies this close to the stair foot or the landing make the guard raise the leaf; it
   // comes down once none is within the farther radius.
   const ALARM_NEAR=9,ALARM_CLEAR=13;
@@ -27,7 +29,8 @@
   const LEAF_HP=60;
 
   function eligible(t){
-    return !!t&&t.type==='tower'&&!underConstruction(t)&&!isWoodTower(t)&&!t.parentTowerId&&
+    // Masonry towers, and the two-storey timber frame tower (its P1 doorway is a model part).
+    return !!t&&t.type==='tower'&&!underConstruction(t)&&(!isWoodTower(t)||t.woodStyle==='frameTower')&&!t.parentTowerId&&
       !(typeof isOrientedTower==='function'&&isOrientedTower(t))&&structureLevel(t)>=2;
   }
   function entrance(t){return eligible(t)&&[...STAIRS,'burnt'].includes(t.keepEntrance?.stair)?t.keepEntrance:null}
@@ -72,13 +75,14 @@
   }
   // Floor of the first upper storey, above the tower's own ground.
   function sillFor(t){
+    if(isWoodTower(t))return WOOD_FRAME_P1;
     const floors=typeof cutawayFloorLevels==='function'?cutawayFloorLevels(t):[];
     const z=floors[1]?.z??structureHeight(t)/structureLevel(t);
     return Math.max(.6,Math.min(z,structureHeight(t)-1.1));
   }
   // Why a stair spec cannot stand in front of tower t, or null.
   function validate(t,spec){
-    if(!eligible(t))return'serve una torre in muratura indipendente di almeno 2 piani';
+    if(!eligible(t))return'serve una torre in muratura indipendente di almeno 2 piani o una torre lignea a telaio';
     const L=layout(t,{...spec,sill:sillFor(t)});if(!L)return'geometria non valida';
     if(L.rise<.5)return'il terreno davanti alla porta è troppo alto';
     if(L.zFoot>L.zTop-.3)return'il terreno davanti alla porta è troppo alto';
@@ -103,10 +107,6 @@
     if(typeof invalidateSceneCache==='function')invalidateSceneCache();
     markDirty(true,['ground','base']);renderFunctionPanel();if(redraw)draw();
   }
-  function pay(cost){
-    if(!canAfford(cost)){status('Risorse insufficienti · '+costText(cost));return false}
-    spendCost(cost);return true;
-  }
   // A new wooden stair, or a burnt one rebuilt (the raised door is already in the wall).
   function buildStair(t){
     const rebuild=entrance(t)?.stair==='burnt';
@@ -114,8 +114,8 @@
     if(!rebuild&&t.keepEntrance?.stair)return false;
     const spec={stair:'wood',side:1,drawbridge:null},error=validate(t,spec);
     if(error){status('Ingresso rialzato non disponibile: '+error);return false}
-    if(!pay(STAIR_COST))return false;
-    t.keepEntrance=spec;refresh(t);
+    if(underConstruction(t))return false;const before=structureUpgradeSnapshot(t);
+    t.keepEntrance=spec;beginStructureUpgrade(t,before,STAIR_COST,1);refresh(t);
     status(rebuild?'Scala di legno ricostruita':'Scala di legno costruita: la porta del mastio è ora al primo piano');return true;
   }
   // Masonry flight along the facade, on whichever side is free (the one already chosen first).
@@ -129,8 +129,8 @@
     const e=entrance(t);if(!e||e.stair!=='wood')return false;
     const side=freeSide(t,e);
     if(side===null){status('Scala in pietra non disponibile: '+validate(t,{...e,stair:'stone',side:1}));return false}
-    if(!pay(STONE_COST))return false;
-    e.stair='stone';e.side=side;refresh(t);
+    if(underConstruction(t))return false;const before=structureUpgradeSnapshot(t);
+    e.stair='stone';e.side=side;beginStructureUpgrade(t,before,STONE_COST,2);refresh(t);
     status('Scala in pietra costruita lungo la facciata');return true;
   }
   function installDrawbridge(t){
@@ -138,9 +138,9 @@
     const next={...e,drawbridge:{installed:true,raised:false,progress:0}};
     const error=e.stair==='stone'?(freeSide(t,next)===null?validate(t,next):null):validate(t,next);
     if(error){status('Levatoio non disponibile: '+error);return false}
-    if(!pay(DRAWBRIDGE_COST))return false;
+    if(underConstruction(t))return false;const before=structureUpgradeSnapshot(t);
     if(e.stair==='stone')e.side=freeSide(t,next);
-    e.drawbridge=next.drawbridge;e.ladder=null;refresh(t);
+    e.drawbridge=next.drawbridge;e.ladder=null;beginStructureUpgrade(t,before,DRAWBRIDGE_COST,1);refresh(t);
     status('Levatoio installato davanti alla porta del mastio');return true;
   }
   // By hand: the guard leaves it as set until the next time enemies come or go.
@@ -480,7 +480,7 @@
       intruders:e?.intruders||0,
       leafBurnt:!!e?.drawbridge?.burnt,unreachable:cut,ladder:cut?{down:!!e.ladder?.down}:null,auto:e?guardOn(e):true,
       costs:{wood:STAIR_COST,stone:STONE_COST,drawbridge:DRAWBRIDGE_COST},
-      reason:!eligible(t)?'Serve una torre in muratura di almeno 2 piani':!e&&!t.isMastio?'Solo sul mastio':null};
+      reason:!eligible(t)?'Serve una torre in muratura di almeno 2 piani o una torre lignea a telaio':!e&&!t.isMastio?'Solo sul mastio':null};
   }
   function panel(t){
     const D=describe(t);if(!D||(!D.stair&&!D.mastio))return'';
