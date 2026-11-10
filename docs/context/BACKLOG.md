@@ -618,7 +618,9 @@ Circle: niente resa automatica del feudo; conquista di settore solo con presenza
 ## UX — UI v2 «Isole» (opt-in `?ui=2`, 26/10/2026)
 
 - **FASI 1–3 SU MAIN (`5ddefa6`):** guscio, API di gioco, Costruisci, Gestisci, comandi struttura.
-- **FASE 4 SU BRANCH `feature/ui-defend`, NON MERGE:** modalità Difendi (comando, zone, pattuglie, allarme; prove d'assedio solo DEV).
+- **FASE 4 SU MAIN (`ebdf084`, PR #88):** modalità Difendi (comando, zone, pattuglie, allarme; prove d'assedio solo DEV).
+- **FIX RAPIDI SU BRANCH `fix/ui-v2-quickfixes`, NON MERGE (10/11/2026):** Argilla nella barra risorse; stato senza id grezzi (`select`) e frasi legacy più frequenti in italiano; indicatore di salvataggio con stato «errore»; tooltip delle barre in alto aperti verso il basso e trattenuti nella finestra; barre in alto senza sovrapposizione sotto 1220px; valori composti di Panoramica a capo; circa 35 stringhe di `shell.js` spostate in `i18n-it.js`.
+- **ANCORA APERTO — parità con la legacy (review 10/11):** torre L4, luoghi per eventi, deposito, accampamento, cantieri navali, rimozione foresta, scelta bioma; ispettori di porte, pontile, banchina, rotazione industrie. Catalogo strumenti unico al posto delle tre copie (`index.html`, `settlement-builder-ux.js`, `shell.js`) e comandi veri in `game-api.js` al posto di `press(selector)`.
 - **ANCORA APERTO — fase 5:** messaggi di stato/log tradotti, pannello attraversamenti come dati, UI v2 default, rimozione `settlement-builder-ux.js` e aggiornamento degli id usati da `qa/ui-combat-regression.mjs`.
 
 ## Hardening: cause strade / DEV / WebGL (23/10/2026)

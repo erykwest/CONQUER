@@ -1,7 +1,7 @@
 // CONQUER interface v2 ("Isole"): floating wood-and-gold tablets over a full-bleed map.
 // Opt-in with ?ui=2 (persisted; ?ui=1 goes back). Reads the game only through window.ConquerGame.
 import { html, render, useState, useEffect, useRef } from '../vendor/htm-preact-3.1.1.js';
-import { T } from './i18n-it.js?v=keep-entrance-4-multi-wells-1';
+import { T } from './i18n-it.js?v=ui2-quickfix-1';
 
 const STORE_KEY = 'conquer.ui.v2', MODE_KEY = 'conquer.ui.mode', DEV_KEY = 'conquer.dev';
 const params = new URLSearchParams(location.search);
@@ -174,10 +174,14 @@ function Tooltip() {
     const show = el => {
       const r = el.getBoundingClientRect(), host = root.getBoundingClientRect();
       const cx = (r.left + r.right) / 2 - host.left;
-      const side = cx > host.width * .62 ? 'left' : cx < host.width * .38 && r.top - host.top > 60 ? 'right' : 'top';
+      // Controls in the top bars have no room above them: their tip opens below.
+      const nearTop = r.top - host.top < 72;
+      const side = nearTop ? 'bottom' : cx > host.width * .62 ? 'left' : cx < host.width * .38 ? 'right' : 'top';
+      // Centred tips (max 260px wide) stay inside the window horizontally.
+      const centred = Math.max(140, Math.min(host.width - 140, cx));
       setTip({ title: el.dataset.tip, body: el.dataset.tipBody || '', side,
-        x: side === 'left' ? r.left - host.left - 10 : side === 'right' ? r.right - host.left + 10 : cx,
-        y: side === 'top' ? r.top - host.top - 8 : (r.top + r.bottom) / 2 - host.top });
+        x: side === 'left' ? r.left - host.left - 10 : side === 'right' ? r.right - host.left + 10 : centred,
+        y: side === 'top' ? r.top - host.top - 8 : side === 'bottom' ? r.bottom - host.top + 8 : (r.top + r.bottom) / 2 - host.top });
     };
     const over = e => {
       const el = e.target.closest?.('[data-tip]');
@@ -230,17 +234,17 @@ function Card({ title, sub, onClose, wide, children, footer }) {
 function ModeBar({ mode, setMode }) {
   return html`<div class="u2-tablet u2-modebar">
     <div class="u2-brand">${T.brand}</div>
-    <nav class="u2-seg u2-seg-lg" aria-label="Modalità">
+    <nav class="u2-seg u2-seg-lg" aria-label=${T.aria.modes}>
       ${['build', 'manage', 'defend'].map((m, i) => html`
         <button type="button" class=${mode === m ? 'on' : ''} aria-pressed=${mode === m}
-          data-tip=${T.modes[m]} data-tip-body=${'Tasto ' + (i + 1)} onClick=${() => setMode(m)}>${T.modes[m]}</button>`)}
-      <button type="button" onClick=${() => window.ConquerWikiHost?.open()}>Codex</button>
+          data-tip=${T.modes[m]} data-tip-body=${T.modeKey(i + 1)} onClick=${() => setMode(m)}>${T.modes[m]}</button>`)}
+      <button type="button" onClick=${() => window.ConquerWikiHost?.open()}>${T.codex}</button>
     </nav>
   </div>`;
 }
 function ResourceBar({ snap, cmd }) {
   return html`<div class="u2-tablet u2-resbar">
-    <ul aria-label="Risorse">
+    <ul aria-label=${T.aria.resources}>
       ${Object.keys(T.resources).map(k => html`
         <li data-tip=${T.resourcesLong[k]} tabindex="0"><span>${T.resources[k]}</span><b>${fmt(snap.resources[k])}</b></li>`)}
     </ul>
@@ -250,7 +254,7 @@ function ResourceBar({ snap, cmd }) {
 }
 function ToolRail({ snap, cmd }) {
   const active = activeEntry(snap).id;
-  return html`<nav class="u2-tablet u2-rail" aria-label="Strumenti di costruzione">
+  return html`<nav class="u2-tablet u2-rail" aria-label=${T.aria.buildTools}>
     ${CATALOG.map(e => html`
       <button type="button" class=${'u2-tool' + (active === e.id ? ' on' : '')} aria-label=${T.tools[e.id]}
         aria-pressed=${active === e.id} data-tip=${T.tools[e.id]} data-tip-body=${e.hint} onClick=${() => cmd.press(e.press)}>
@@ -278,7 +282,7 @@ function ToolCard({ snap, cmd }) {
         tip: VALUE_TIPS[o.label] || VALUE_SHORT[o.label] ? o.label : null, tipBody: VALUE_TIPS[o.label] }))}
         wrap=${row.wrap} onPick=${o => cmd.press(o.selector)} /></${Row}>`)}
     ${rows.length === 0 && html`<p class="u2-hint">${entry.hint}</p>`}
-    <a class="u2-codex-link" href=${window.ConquerWikiHost?.href() || './wiki/'} onClick=${e => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) { e.preventDefault(); window.ConquerWikiHost?.openTool(); } }}>Voce nel Codex</a>
+    <a class="u2-codex-link" href=${window.ConquerWikiHost?.href() || './wiki/'} onClick=${e => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) { e.preventDefault(); window.ConquerWikiHost?.openTool(); } }}>${T.codexEntry}</a>
   </${Card}>`;
 }
 
@@ -290,7 +294,7 @@ function structureTitle(d) {
   if (d.type === 'gate') return d.wood ? S.woodGate : S.gate;
   return S[d.type] || d.label;
 }
-const RES_SHORT = { gold: 'Oro', stone: 'Pie', wood: 'Leg', metal: 'Met', clay: 'Arg', food: 'Cibo', equipment: 'Equ' };
+const RES_SHORT = T.resourcesShort;
 function Cost({ cost }) {
   const parts = Object.entries(cost || {}).filter(([, v]) => v > 0);
   return html`<span class="u2-cost" data-tip=${I.cost} data-tip-body=${parts.map(([k, v]) => T.resourcesLong[k] + ' ' + fmt(v)).join(' · ')} tabindex="0">
@@ -352,19 +356,20 @@ function Inspector({ snap, cmd }) {
   // This branch intentionally precedes every completed-building control.
   if (d.building) {
     const b = d.building;
-    return html`<${Card} title=${structureTitle(d)} sub="Cantiere in costruzione" onClose=${cmd.deselect}
+    const S = T.site;
+    return html`<${Card} title=${structureTitle(d)} sub=${S.sub} onClose=${cmd.deselect}
       footer=${html`<${Cost} cost=${d.cost} />
         <button type="button" class="u2-icon-btn u2-danger" aria-label=${I.demolish}
           data-tip=${I.demolish} onClick=${() => cmd.demolish(d.id)}>
           <${Icon} name="delete" size=${18} /></button>`}>
       <div class="u2-stats">
-        <${Stat} label="Avanzamento lavori" value=${Math.round(b.progress * 100) + '%'} />
-        <${Stat} label="Lavoro residuo" value=${fmt(b.days) + ' giornate'} />
+        <${Stat} label=${S.progress} value=${Math.round(b.progress * 100) + '%'} />
+        <${Stat} label=${S.remaining} value=${S.days(fmt(b.days))} />
       </div>
       <${Bar} value=${b.progress} max=${1} />
       <div class="u2-stats">
-        <${Stat} label="Materiali consegnati" value=${Math.round(b.materialsProgress * 100) + '%'} />
-        <${Stat} label="Stato" value=${b.status || 'In attesa'} />
+        <${Stat} label=${S.materials} value=${Math.round(b.materialsProgress * 100) + '%'} />
+        <${Stat} label=${S.state} value=${b.status || S.waiting} />
       </div>
       <${Bar} value=${b.materialsProgress} max=${1} />
       <div class="u2-site-materials">
@@ -372,13 +377,13 @@ function Inspector({ snap, cmd }) {
           <span>${T.resourcesLong[r.key] || r.key}</span><strong>${fmt(r.delivered)} / ${fmt(r.total)}</strong>
         </div>`)}
       </div>
-      ${b.editable && html`<${Row} label="Priorità approvvigionamento">
-        <select class="u2-name" aria-label="Priorità cantiere" value=${String(b.priority)}
+      ${b.editable && html`<${Row} label=${S.priority}>
+        <select class="u2-name" aria-label=${S.priorityAria} value=${String(b.priority)}
           onChange=${e => run('setConstructionPriority', Number(e.currentTarget.value))}>
           ${b.priorities.map((label, value) => html`<option value=${String(value)}>${label}</option>`)}
         </select>
       </${Row}>`}
-      <p class="u2-hint">Il progetto rimane confermato anche senza scorte. I materiali disponibili sono assegnati prima ai cantieri con priorità più alta.</p>
+      <p class="u2-hint">${S.hint}</p>
     </${Card}>`;
   }
 
@@ -389,7 +394,7 @@ function Inspector({ snap, cmd }) {
   const hp = d.integrity;
   return html`<${Card} title=${structureTitle(d)} sub=${sub} onClose=${cmd.deselect}
     footer=${html`<${Cost} cost=${d.cost} />
-      <a class="u2-codex-link" href=${window.ConquerWikiHost?.href() || './wiki/'} onClick=${e => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) { e.preventDefault(); window.ConquerWikiHost?.openSelection(); } }}>Voce nel Codex</a>
+      <a class="u2-codex-link" href=${window.ConquerWikiHost?.href() || './wiki/'} onClick=${e => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) { e.preventDefault(); window.ConquerWikiHost?.openSelection(); } }}>${T.codexEntry}</a>
       <button type="button" class="u2-icon-btn u2-danger" aria-label=${I.demolish} data-tip=${I.demolish} onClick=${() => cmd.demolish(d.id)}><${Icon} name="delete" size=${18} /></button>`}>
     ${d.building && html`<${Bar} value=${d.building.progress} max=${1} />`}
     ${facts.length > 0 && html`<div class="u2-stats">${facts.map(([k, v]) => html`<${Stat} label=${k} value=${v} />`)}</div>`}
@@ -447,7 +452,7 @@ function Inspector({ snap, cmd }) {
         onPick=${o => run('setKeepFloorPlan', f.floor, o.v)} /></${Row}>`)}
     ${d.rooms && html`<div class="u2-group"><span class="u2-label" data-tip=${I.roomsTitle} data-tip-body=${TIP.rooms} tabindex="0">${I.roomsTitle}<i aria-hidden="true">?</i></span>
       ${d.rooms.pending ? html`<p class="u2-hint">${I.roomsPending}</p>` : d.rooms.slots.length === 0 ? html`<p class="u2-hint">${I.roomsNone}</p>` :
-        html`<div class="u2-rooms">${d.rooms.slots.map(r => html`<label class="u2-room" data-tip=${'Piano ' + ((d.keepPlans ? r.floor : r.index) + 1)} data-tip-body=${I.room((d.keepPlans ? r.floor : r.index) + 1, r.size, r.units)}>
+        html`<div class="u2-rooms">${d.rooms.slots.map(r => html`<label class="u2-room" data-tip=${T.floor((d.keepPlans ? r.floor : r.index) + 1)} data-tip-body=${I.room((d.keepPlans ? r.floor : r.index) + 1, r.size, r.units)}>
           <span>P${(d.keepPlans ? r.floor : r.index) + 1}${d.keepPlans ? String.fromCharCode(97 + r.room) : ''}${r.size === 'large' ? '+' : ''}</span>
           <select value=${r.value} onChange=${e => run('setRoom', r.index, e.currentTarget.value)}>
             <option value="">${I.roomEmpty}</option>
@@ -484,10 +489,10 @@ function Overview({ game }) {
       <${Stat} label=${M.happiness} value=${['L1', 'L2', 'L3', 'L4'].map(g => num(e.happiness?.[g], 0)).join(' · ')} tip=${TIP.happiness} />
       ${e.jobs && html`<${Stat} label=${M.jobs} value=${M.jobsValue(e.jobs)} tip=${TIP.jobs + (e.jobs.foodRisk ? ' ⚠' : '')} />`}
       ${e.commerce && html`<${Stat} label=${M.workshops} value=${e.commerce.l3Shops + ' · ' + num(e.commerce.l3Goods, 0) + ' ' + M.l3Goods} tip=${TIP.workshops} />`}
-      <${Stat} label="Oro castello" value=${num(e.castleGold, 0)} tip=${TIP.castleGold} />
-      <${Stat} label="Capitale L4" value=${num(e.capital, 0)} tip=${TIP.capital} />
-      <${Stat} label="Salari" value=${[e.wage.L1, e.wage.L2, e.wage.L3].map(w => num(w, 1)).join(' · ')} tip=${TIP.wages + ' ' + TIP.schedule} />
-      <${Stat} label="Mercato" value=${trade ? num(trade.domestic?.food, 0) + ' / ' + num(unmet, 0) : '—'} tip=${TIP.lastMarket} />
+      <${Stat} label=${M.castleGold} value=${num(e.castleGold, 0)} tip=${TIP.castleGold} />
+      <${Stat} label=${M.capital} value=${num(e.capital, 0)} tip=${TIP.capital} />
+      <${Stat} label=${M.wages} value=${[e.wage.L1, e.wage.L2, e.wage.L3].map(w => num(w, 1)).join(' · ')} tip=${TIP.wages + ' ' + TIP.schedule} />
+      <${Stat} label=${M.lastMarket} value=${trade ? num(trade.domestic?.food, 0) + ' / ' + num(unmet, 0) : '—'} tip=${TIP.lastMarket} />
     </div>
     ${e.events?.length > 0 && html`<ul class="u2-log">${e.events.slice(0, 4).map(x => html`<li>${x.label}</li>`)}</ul>`}`;
 }
@@ -498,7 +503,7 @@ function Policies({ game }) {
         onPick=${o => { game.commands.setPolicy('rations', o.m); game.emit(); }} /></${Row}>` : html`<${Row} label=${M.policies[k]} tip=${M.policyHelp[k]}>
       <div class="u2-slider"><input type="range" min="0" max="100" value=${p[k]} aria-label=${M.policies[k]}
         onInput=${e => { game.commands.setPolicy(k, e.currentTarget.value); game.emit(); }} /><b>${p[k]}%</b></div></${Row}>`)}
-    <${Row} label="Muratura case" tip=${M.privateMasonryHelp}>
+    <${Row} label=${M.privateMasonry} tip=${M.privateMasonryHelp}>
       <${Seg} options=${['stone', 'brick'].map(m => ({ label: T.values[m], active: snap.privateMasonry === m, m }))}
         onPick=${o => game.commands.press('[data-private-masonry="' + o.m + '"]')} /></${Row}>`;
 }
@@ -507,7 +512,7 @@ function Market({ game }) {
   if (!e) return null;
   const head = (label, tip) => html`<th data-tip=${label} data-tip-body=${tip} tabindex="0">${label}</th>`;
   return html`<table class="u2-table">
-    <thead><tr><th></th>${head('Prezzo', TIP.price)}${head('Merc.', TIP.inMarket)}${head('Cast.', TIP.inCastle)}${head(M.sell, TIP.sell)}${head(M.reserve, TIP.reserve)}</tr></thead>
+    <thead><tr><th></th>${head(M.colPrice, TIP.price)}${head(M.colMarket, TIP.inMarket)}${head(M.colCastle, TIP.inCastle)}${head(M.sell, TIP.sell)}${head(M.reserve, TIP.reserve)}</tr></thead>
     <tbody>${e.goods.map(g => html`<tr>
       <th scope="row">${M.goods[g.id] || g.id}</th><td>${num(g.price)}</td><td>${num(g.market, 0)}</td><td>${num(g.castle, 0)}</td>
       <td><select aria-label=${M.sell + ' ' + (M.goods[g.id] || g.id)} value=${g.share} onChange=${ev => game.commands.setSaleShare(g.id, Number(ev.currentTarget.value))}>
@@ -519,7 +524,7 @@ function Activities({ game }) {
   const e = game.read.economy();
   if (!e || !e.activities.length) return html`<p class="u2-hint">${M.noActivities}</p>`;
   return html`<table class="u2-table">
-    <thead><tr><th></th><th data-tip=${I.owner} tabindex="0">Prop.</th><th data-tip=${M.workers} tabindex="0">Lav.</th><th data-tip=${M.value} tabindex="0">Val.</th><th></th></tr></thead>
+    <thead><tr><th></th><th data-tip=${I.owner} tabindex="0">${M.colOwner}</th><th data-tip=${M.workers} tabindex="0">${M.colWorkers}</th><th data-tip=${M.value} tabindex="0">${M.colValue}</th><th></th></tr></thead>
     <tbody>${e.activities.map(a => html`<tr class=${a.abandoned ? 'u2-dim' : ''}>
       <th scope="row">${M.activityTypes[a.type] || a.type}</th><td>${M.owner[a.owner]}</td><td>${a.workers}</td><td>${num(a.value, 0)}</td>
       <td><button type="button" class="u2-mini" data-tip=${a.owner === 'lord' ? M.sellL4 : M.buy} data-tip-body=${TIP.transfer}
@@ -532,7 +537,7 @@ function CastleStores({ game }) {
   const transfers = Object.fromEntries(l.transfers.map(t => [t.id, t]));
   return html`<div class="u2-stats">
       <${Stat} label=${M.autonomy} value=${M.days(l.autonomy)} tip=${TIP.autonomy + ' ' + M.dailyNeed + ': ' + num(l.daily) + '.'} />
-      <${Stat} label="Capienza" value=${l.meals + ' · ' + l.soldiers + ' · ' + l.knights} tip=${TIP.capacity} />
+      <${Stat} label=${M.capacity} value=${l.meals + ' · ' + l.soldiers + ' · ' + l.knights} tip=${TIP.capacity} />
       <${Stat} label=${M.water} value=${M.waterSource[l.water.source] + ' · ' + l.water.cisterns} tip=${TIP.water} />
     </div>
     ${l.shortfall > 0 && html`<p class="u2-warn">${M.shortfall(l.shortfall)}</p>`}
@@ -615,7 +620,7 @@ function DefendCard({ section, game, snap }) {
       opt(D.tests[k], k, { active: tool.kind === 'combat-storm' && tool.stormKind === k, k }))} onPick=${o => def('storm', o.k)} /></${Row}>`;
   return html`<${Card} title=${D.sections[section]} sub=${D.alert[s.alert] || ''}>
     <div class="u2-stats u2-stats-4">
-      <${Stat} label="Stato" value=${D.alert[s.alert] || s.alert} tip=${DT.alert} />
+      <${Stat} label=${D.state} value=${D.alert[s.alert] || s.alert} tip=${DT.alert} />
       <${Stat} label=${D.units} value=${s.units} />
       <${Stat} label=${D.hostiles} value=${s.hostiles} />
       <${Stat} label=${D.patrols} value=${s.patrols} tip=${DT.patrols} />
@@ -639,11 +644,18 @@ function TimeBar({ snap, cmd }) {
     </div>
   </div>`;
 }
+// Legacy status lines: known ids/English phrases are translated; any other bare
+// lowercase id (a tool kind without a label) is internal and is not shown.
+const statusText = s => {
+  const text = String(s || '').trim();
+  if (Object.prototype.hasOwnProperty.call(T.status, text)) return T.status[text];
+  return /^[a-z][a-zA-Z-]*$/.test(text) ? '' : text;
+};
 function Toast({ snap }) {
-  const unsaved = /unsaved/i.test(snap.saved);
+  const save = snap.saveStatus, message = statusText(snap.status);
   return html`<div class="u2-toast" aria-live="polite">
-    ${snap.status && html`<div class="u2-tablet u2-status">${snap.status}</div>`}
-    <div class=${'u2-saved' + (unsaved ? ' bad' : '')}>● ${unsaved ? T.unsaved : T.saved}</div>
+    ${message && html`<div class="u2-tablet u2-status">${message}</div>`}
+    <div class=${'u2-saved' + (save !== 'saved' ? ' bad' : '')}>● ${save === 'error' ? T.saveError : save === 'unsaved' ? T.unsaved : T.saved}</div>
   </div>`;
 }
 
