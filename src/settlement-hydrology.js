@@ -50,15 +50,15 @@
   return best;
  }
  function distributaries(main,bodies){
-  if(main.type!=='river'||!main.mouth||main.confluence)return [];
-  const receiver=bodies.find(f=>f.id===main.mouth.receiverId);if(!receiver)return [];
+  if(main.type!=='river'||main.mouth?.kind!=='sea'||main.confluence)return [];
+  const receiver=bodies.find(f=>f.id===main.mouth.receiverId);if(!receiver||receiver.type!=='sea')return [];
   const points=main.points,arc=[0];for(let i=1;i<points.length;i++)arc.push(arc.at(-1)+Math.hypot(points[i].x-points[i-1].x,points[i].y-points[i-1].y));
   const length=arc.at(-1);if(length<25)return [];
   const at=d=>{let i=1;while(i<arc.length-1&&arc[i]<d)i++;return lerp(points[i-1],points[i],(d-arc[i-1])/(arc[i]-arc[i-1]||1))};
   const end=points.at(-1),before=at(length-3),L=Math.hypot(end.x-before.x,end.y-before.y)||1,nx=-(end.y-before.y)/L,ny=(end.x-before.x)/L;
   const rnd=seedRand((State.seed^biomeHash(main.id+':delta'))>>>0),out=[];
   for(let branch=0;branch<2;branch++){
-   const sign=branch?1:-1,fraction=.80+branch*.045+rnd()*.015,reach=Math.min(24,Math.max(8,length*.075));
+   const sign=branch?1:-1,fraction=.70+branch*.065+rnd()*.02,reach=Math.min(24,Math.max(8,length*.075));
    const desired={x:end.x+nx*sign*reach,y:end.y+ny*sign*reach};let target=null,score=Infinity;
    for(let y=Math.max(1,end.y-reach-5);y<Math.min(200,end.y+reach+5);y+=1.5)for(let x=Math.max(1,end.x-reach-5);x<Math.min(200,end.x+reach+5);x+=1.5){
     const p={x,y};if(!environmentContains(receiver,p)||(x-end.x)*nx*sign+(y-end.y)*ny*sign<3)continue;

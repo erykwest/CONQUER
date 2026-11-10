@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## REG-SEA-DELTA-30 — Lago diretto, mare ramificato (10/11/2026)
+
+La regola aggiornata sostituisce il precedente delta nell’ultimo 20% per entrambi i riceventi: lago con singolo sbocco diretto, mare con distributari nel 30% finale. Percentuale misurata lungo il corso, non per numero di vertici. Scelta progettuale esplicita: lo studio di Seybold et al. descrive anche delta lacustri; la loro esclusione qui e una regola del gioco, non una conclusione del paper. Riferimento: https://www.pnas.org/doi/10.1073/pnas.0705265104 ; versione autori letta https://arxiv.org/html/0711.3283v1. Il modello del gioco resta geometrico e deterministico.
+
 ## REG-WATER-SURFACE — Continuita dell’acqua e delta (10/11/2026)
 
 I contorni delle singole acque non devono comparire dentro un’altra acqua: tutti i bordi precedono i riempimenti nel layer condiviso. Il lago ha una propria fascia di sponda sulle rive reali e sulle isole, non sul limite artificiale del mondo. Delta fluviale: due distributari nell’ultimo 20% misurato per lunghezza d’arco, piu stretti e con sbocchi reali nel corpo ricevente. Nessun cambiamento alla geometria dei salvataggi gia esistenti; i delta generati mantengono le proprie larghezze al caricamento.
