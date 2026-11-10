@@ -1,5 +1,7 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+10/11/2026 — REG-WATER-SURFACE: eliminati i bordi chiari interni a confluenze e foci con contorni acqua disegnati prima di tutti i riempimenti. Alberi e montagne mantengono la propria occlusione. Aggiunte sponde ai laghi (anche isole interne), ritagliate al mondo senza spiagge sul bordo artificiale della mappa. Foce fluviale con due rami distributari piu stretti, innestati dall’80–86% della lunghezza reale, ciascuno termina nel ricevente; caricamento preserva le larghezze ridotte. Schiuma marina interrotta agli sbocchi. PASS dodici fixture delta mare/lago, idrografia, test pixel contorni e sponda e cinque scenari browser. Audit Territorio: 16 render invariati, zero errori, cinque avvisi di schemi illustrativi.
+
 10/11/2026 — REG-WATER-CI: rigenerato wiki/catalog.json dopo il riallineamento delle sorgenti gameplay; unica differenza sourceDigest. PASS codex-wiki e export --check. PASS anche 42 biome-recipes, mountain-density e cinque fixture browser sulla versione integrata.
 
 10/11/2026 — REG-WATER-INTEGRATION: allineato il branch sperimentale a main 89e7a2c per risolvere i conflitti della PR e riattivare CI. Preservati Codex, palette Stonecolor, reset Haulage e isolamento completo delle demo nella persistenza. Risolti i renderer mantenendo facce montane ritagliate e fallback della palette. QA locale: regional-demo, hydrology-network, Stonecolor, Haulage (10), Builder menu, stockyard (8), coast, asset-catalog e save-safety PASS. Nessun merge del lavoro regionale in main.

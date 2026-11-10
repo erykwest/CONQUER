@@ -49,6 +49,35 @@
   }
   return best;
  }
+ function distributaries(main,bodies){
+  if(main.type!=='river'||!main.mouth||main.confluence)return [];
+  const receiver=bodies.find(f=>f.id===main.mouth.receiverId);if(!receiver)return [];
+  const points=main.points,arc=[0];for(let i=1;i<points.length;i++)arc.push(arc.at(-1)+Math.hypot(points[i].x-points[i-1].x,points[i].y-points[i-1].y));
+  const length=arc.at(-1);if(length<25)return [];
+  const at=d=>{let i=1;while(i<arc.length-1&&arc[i]<d)i++;return lerp(points[i-1],points[i],(d-arc[i-1])/(arc[i]-arc[i-1]||1))};
+  const end=points.at(-1),before=at(length-3),L=Math.hypot(end.x-before.x,end.y-before.y)||1,nx=-(end.y-before.y)/L,ny=(end.x-before.x)/L;
+  const rnd=seedRand((State.seed^biomeHash(main.id+':delta'))>>>0),out=[];
+  for(let branch=0;branch<2;branch++){
+   const sign=branch?1:-1,fraction=.80+branch*.045+rnd()*.015,reach=Math.min(24,Math.max(8,length*.075));
+   const desired={x:end.x+nx*sign*reach,y:end.y+ny*sign*reach};let target=null,score=Infinity;
+   for(let y=Math.max(1,end.y-reach-5);y<Math.min(200,end.y+reach+5);y+=1.5)for(let x=Math.max(1,end.x-reach-5);x<Math.min(200,end.x+reach+5);x+=1.5){
+    const p={x,y};if(!environmentContains(receiver,p)||(x-end.x)*nx*sign+(y-end.y)*ny*sign<3)continue;
+    if(![[3,0],[-3,0],[0,3],[0,-3]].some(([dx,dy])=>!environmentContains(receiver,{x:x+dx,y:y+dy})))continue;
+    const distance=Math.hypot(x-desired.x,y-desired.y);if(distance<score){score=distance;target=p;}
+   }
+   if(!target)continue;
+   const root=length*fraction,n=Math.max(16,Math.ceil(length-root)),path=[];
+   for(let i=0;i<=n;i++){
+    const t=i/n,ease=t*t*(3-2*t),p=at(root+(length-root)*t),q={x:p.x+(target.x-end.x)*ease,y:p.y+(target.y-end.y)*ease};
+    if(q.x<0||q.x>200||q.y<0||q.y>200)break;
+    path.push(q);if(i>1&&environmentContains(receiver,q))break;
+   }
+   if(path.length<3||!environmentContains(receiver,path.at(-1)))continue;
+   out.push({...main,id:main.id+'-delta-'+branch,points:path,width:main.width*(.48+rnd()*.13),
+    delta:{parentId:main.id,startFraction:fraction},mouth:{receiverId:receiver.id,kind:main.mouth.kind,point:path.at(-1)}});
+  }
+  return out;
+ }
  function compose(env){
   const info=window.__CONQUER_REGIONAL_DEMO__;if(!info)return env;
   const original=env.filter(water);if(!original.length)return env;
@@ -63,6 +92,7 @@
    candidate.id='env-affluent-'+n;const connected=join(candidate,lines,bodies,obstacles);
    if(connected){lines.push(connected);break;}
   }
+  lines.push(...lines.flatMap(line=>distributaries(line,bodies)));
   // Update actual forest holes and hills after network geometry is final.
   for(const f of env.filter(f=>f.type==='forest'))f.holes=[...(f.holes||[]),...lines.map(l=>bank(l.points,l.width/2+2))];
   if(State.relief){State.relief.hills=State.relief.hills.filter(h=>!reliefHillFootprint(h).some(p=>lines.some(l=>environmentContains(l,p,1))));clearReliefBandCache();State.relief.stats=reliefStats();}
@@ -71,5 +101,5 @@
   const dry=env.filter(f=>!water(f)&&!(f.type==='mountain'&&lines.some(l=>l.points.some(p=>environmentContains(f,p,l.width/2+1)))));
   return [...dry,...lines];
  }
- window.ConquerHydrology={compose,mouth,join,intersection};
+ window.ConquerHydrology={compose,mouth,join,intersection,distributaries};
 })();

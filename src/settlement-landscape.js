@@ -694,6 +694,45 @@ function ellipseWorldPoints(f,n=28){
   for(let i=0;i<n;i++){const a=i/n*Math.PI*2,x=Math.cos(a)*f.rx,y=Math.sin(a)*f.ry;pts.push({x:f.x+x*ca-y*sa,y:f.y+x*sa+y*ca})}
   return pts;
 }
+// Draw all water outlines before any water fill: shared interiors are covered by the union.
+function lakeShoreBands(f){
+  if(f.type!=='pond'||f.waterBodyKind!=='lake'&&State.biome!=='lake')return [];
+  return [f.points,...(f.holes||[])].filter(r=>r?.length>=3).flatMap(ring=>{
+    const land=[],wet=[];
+    for(let i=0;i<ring.length;i++){
+      const a=ring[(i+ring.length-1)%ring.length],b=ring[(i+1)%ring.length],p=ring[i],L=Math.hypot(b.x-a.x,b.y-a.y)||1;
+      let nx=-(b.y-a.y)/L,ny=(b.x-a.x)/L;
+      if(!environmentContains(f,{x:p.x+nx*.8,y:p.y+ny*.8})){nx=-nx;ny=-ny;}
+      land.push({x:p.x-nx*2.8,y:p.y-ny*2.8});wet.push({x:p.x+nx*.65,y:p.y+ny*.65});
+    }
+    const bands=[];
+    for(let i=0;i<ring.length;i++){
+      const j=(i+1)%ring.length,a=ring[i],b=ring[j];
+      if(a.x===b.x&&(a.x===0||a.x===WORLD)||a.y===b.y&&(a.y===0||a.y===WORLD))continue;
+      const poly=clipTerrainPolygon([land[i],land[j],wet[j],wet[i]]);if(poly.length>=3)bands.push(poly);
+    }
+    return bands;
+  });
+}
+function drawWaterLayer(features){
+  if(!features.length)return;
+  ctx.save();
+  for(const f of features)for(const band of lakeShoreBands(f))pathPolygon(projectPath(band),'#b9ac82',null,0);
+  if(features.some(f=>f.type==='sea'&&f.coastline))window.ConquerCoast?.drawGround(projectPath,(pts,c)=>pathPolygon(pts,c,null,0));
+  const body=(f,fill)=>{
+    ctx.save();for(const hole of f.holes||[]){const ring=projectPath(hole);ctx.beginPath();ctx.rect(-1e5,-1e5,2e5,2e5);ring.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.clip('evenodd')}
+    pathPolygon(projectPath(f.points),fill?f.fill:null,fill?null:f.edge,1.2);ctx.restore();
+  };
+  const course=(f,fill)=>{
+    const pts=f.points.map(p=>w2s(p));if(!pts.length)return;
+    ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);
+    ctx.strokeStyle=fill?f.fill:f.edge;ctx.lineWidth=fill?Math.max(1.4,f.width*U*State.view.scale*.72):Math.max(2,(f.width+.35)*U*State.view.scale*.72);ctx.stroke();
+  };
+  for(const fill of [false,true])for(const f of features){
+    if(f.type==='river'||f.type==='stream')course(f,fill);else body(f,fill);
+  }
+  ctx.restore();
+}
 function drawEnvironment(){
   if(window.__conquerPerf)window.__conquerPerf.forestTrees=0;
   // Peaks overlap (main summits and their secondary ones): paint far to near, or by height in plan.
@@ -702,26 +741,13 @@ function drawEnvironment(){
   const ordered=[...State.environment.filter(f=>f.type!=='mountain'),...mountains];
   for(const f of ordered){
     ctx.save();
-    if(['stream','river'].includes(f.type)){
-      const pts=f.points.map(p=>w2s(p));ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);
-      ctx.strokeStyle=f.edge;ctx.lineWidth=Math.max(2,(f.width+.35)*U*State.view.scale*.72);ctx.stroke();ctx.strokeStyle=f.fill;ctx.lineWidth=Math.max(1.4,f.width*U*State.view.scale*.72);ctx.stroke();
-    }else if(['forest','pond','sea'].includes(f.type)){
-      if(f.type==='forest'){
-        if(!forestLikelyVisible(f)){ctx.restore();continue}
-        drawForestGround(f);
-        drawForestMask(f);
-      }else{
-        ctx.save();
-        for(const hole of f.holes||[]){const ring=projectPath(hole);ctx.beginPath();ctx.rect(-1e5,-1e5,2e5,2e5);ring.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.clip('evenodd')}
-        const pts=projectPath(f.points);pathPolygon(pts,f.fill,f.edge,1.2);ctx.restore();
-      }
-      if(f.type==='sea'&&f.coastline){
-        // Beaches in the bays, rocks on the headlands (settlement-coast.js).
-        window.ConquerCoast?.drawGround(projectPath,(pts,c)=>pathPolygon(pts,c,null,0));
-        const coast=projectPath(f.coastline);ctx.beginPath();coast.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.strokeStyle='#b9cfca';ctx.lineWidth=2;ctx.stroke();
-      }
+    if(['stream','river','sea','pond'].includes(f.type)){
+      // Water is rendered once below, as one connected layer.
+    }else if(f.type==='forest'){
+      if(!forestLikelyVisible(f)){ctx.restore();continue}
+      drawForestGround(f);
     }else if(f.type==='mountain'){
-      pathPolygon(projectPath(f.points),f.fill,f.edge,1.2);drawRaisedFan(f,f.height||3.6);
+      // Peaks are painted after the unified water layer, preserving occlusion.
     }else if(['hill','rough'].includes(f.type)){
       const pts=ellipseWorldPoints(f);pathPolygon(projectPath(pts),f.fill,f.edge,1.1);
       if(f.type==='hill'){
@@ -731,6 +757,9 @@ function drawEnvironment(){
     }
     ctx.restore();
   }
+  drawWaterLayer(State.environment.filter(f=>['river','stream','sea','pond'].includes(f.type)));
+  for(const f of State.environment.filter(f=>f.type==='forest'))drawForestMask(f);
+  for(const f of mountains){pathPolygon(projectPath(f.points),f.fill,f.edge,1.2);drawRaisedFan(f,f.height||3.6);}
 }
 function drawGrid(){
   if(State.view.scale<.34)return;ctx.save();ctx.strokeStyle='rgba(255,255,255,.045)';ctx.lineWidth=1;

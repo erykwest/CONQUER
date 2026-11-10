@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## REG-WATER-SURFACE — Continuita dell’acqua e delta (10/11/2026)
+
+I contorni delle singole acque non devono comparire dentro un’altra acqua: tutti i bordi precedono i riempimenti nel layer condiviso. Il lago ha una propria fascia di sponda sulle rive reali e sulle isole, non sul limite artificiale del mondo. Delta fluviale: due distributari nell’ultimo 20% misurato per lunghezza d’arco, piu stretti e con sbocchi reali nel corpo ricevente. Nessun cambiamento alla geometria dei salvataggi gia esistenti; i delta generati mantengono le proprie larghezze al caricamento.
+
 ## REG-WATER-NETWORK — Biomi e rete idrografica (09/11/2026)
 
 Bioma terrestre regionale ereditato nella zona: Pianura, Foresta, Montagne, Palude. Mare e Lago sono celle acquatiche escluse dalla selezione e apertura; costa, valle, colline e fiume descrivono morfologia/idrografia, senza ulteriori scelte locali di bioma. Le ricette legacy restano leggibili per compatibilita. Confluenza solo dove il grafo regionale ha una diramazione, non per ogni coppia di lati fluviali. L’affluente termina sul corso ricevente; la foce nel corpo acqua ricevente. Laghi distinti da piccoli stagni: nessuna foce automatica in un normale stagno. Raccordi geometrici deterministici, non simulazione di portata, erosione o quota di bacino. La palude richiede un successivo bilanciamento visivo di acqua/vegetazione.

@@ -134,6 +134,7 @@
   function drawWaves(now){
     const d=shore();if(!d||typeof ctx==='undefined'||typeof w2sRaw!=='function')return false;
     const W=typeof currentWeather==='function'?currentWeather().kind:'clear',swell=SWELL[W]??.6;
+    const mouths=(State.environment||[]).filter(f=>f.mouth);
     const night=typeof nightFactor==='function'?nightFactor():0,day=1-night*.85;
     const zoom=Math.max(.35,Math.min(2.4,State.view?.scale||1)),D=d.D;
     const view=ctx.canvas?{w:ctx.canvas.width/(window.devicePixelRatio||1),h:ctx.canvas.height/(window.devicePixelRatio||1)}:null;
@@ -155,7 +156,7 @@
             if(onScreen(q))any=true;
             // Broken crests: the foam comes in patches that drift along the shore.
             const gap=Math.sin(p.x*.23+p.y*.17+w*2.1+now*.15)+Math.sin(p.x*.61-p.y*.43+w)*.5<-.35;
-            if(gap){started=false;continue}
+            if(gap||mouths.some(f=>Math.hypot(p.x-f.mouth.point.x,p.y-f.mouth.point.y)<f.width*1.6)){started=false;continue}
             if(!started){ctx.moveTo(q.x,q.y);started=true}else ctx.lineTo(q.x,q.y);
           }
           if(any){ctx.stroke();drawn=true}

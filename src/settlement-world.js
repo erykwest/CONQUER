@@ -1117,7 +1117,7 @@ function makeBoundaryRiver(rnd,preferredSide){
 // on load (widenWatercourses), so old maps get the wider rivers and streams too.
 const WATER_WIDTH=Object.freeze({river:4.4,stream:1.8});
 function widenWatercourses(env=State.environment){
-  for(const f of env||[])if(WATER_WIDTH[f.type]&&!(Number(f.width)>=WATER_WIDTH[f.type]))f.width=WATER_WIDTH[f.type];
+  for(const f of env||[])if(!f.delta&&WATER_WIDTH[f.type]&&!(Number(f.width)>=WATER_WIDTH[f.type]))f.width=WATER_WIDTH[f.type];
 }
 // The sea covers at most 30% of the map: its mean coast depth is held at or under 60U,
 // so the coast reaches into the buildable zone (50U) and leaves room for harbours.
