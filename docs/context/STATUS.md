@@ -1,5 +1,16 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-10 — FISCO-01 fase A · Bargello e Palazzo del Balivo (branch `feature/bargello-balivo`)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:** modelli `bargello1/2` (parti `hall`, `tower`) e `balivo1/2` (`hall`) in `tools/blender/build_civic.py`, generati con Blender 4.4 in `src/assets/civic-models.js`. I 53 modelli civici esistenti restano identici (confronto del JSON) e la palette è invariata.
+- **RUNTIME:** tipi civici con livelli L1–L2 (`civicMaxLevel`/`civicLevels`), costi e tempi, impronte, altezze, Builder e shell UI, etichette, collocamento (Bargello come `WELL_CIVIC_TYPES`; Balivo con `balivoPlacementCheck`), cantiere a graticcio L1, crollo con la torretta, incendio L1, fallback 2.5D/WebGL, cutaway per piani con stanze fisse e nuovo arredo `exactor`, Codex (2 voci approvate, catalogo rigenerato).
+- **PROVE ESEGUITE IN LOCALE:**
+  - 169 suite `qa/*.cjs`: tutte PASS tranne `mass-battle-performance` e `movement-collapse-performance`, che falliscono identiche su `main` (import di `circle/defensive-topology.mjs` e soglie di tempo); `asset-audit-scope.cjs` è uno strumento CI.
+  - `well-civics-regression` estesa con 3 test FISCO-01; conteggi Codex +2.
+  - Audit Lab sulle 4 voci nuove: 0 errori, 0 avvisi; baseline unita a mano (+4 voci, nessuna voce esistente toccata), secondo giro 0 nuovi / 0 cambiati.
+  - Smoke nel browser: modelli caricati, 8 cutaway (2 tipi × 2 livelli × 2 piani) disegnati senza errori, console pulita.
+- **NON VERIFICATO:** aspetto del cutaway a schermo (catture non disponibili con la finestra nascosta); GitHub Actions; collocamento giocato in partita. Nessun effetto di gioco (fase B).
+
 ## 2026-11-09 — CI P2.4: ownership delle regressioni specialistici (PR in preparazione)
 
 - **IMPLEMENTAZIONE SU BRANCH:** sei controlli Codex deterministici restano solo in Runtime integrity (always-on PR); routing/spawn + main-road restano sempre in settlement-qa, tolti da CAMP/Main fixes (3 invocazioni). Totale nove invocazioni ridondanti eliminate senza toccare i test stessi.

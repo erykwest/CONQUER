@@ -148,7 +148,7 @@ const CATALOG = [
       return rows;
     } },
   { id: 'civic', hint: T.hints.point, press: '[data-civic="market"]', is: s => s.tool.kind === 'civic',
-    rows: s => [{ label: O.building, options: ['market', 'tavern', 'church', 'training', 'plaza', 'townhall', 'guild'].map(k =>
+    rows: s => [{ label: O.building, options: ['market', 'tavern', 'church', 'training', 'plaza', 'townhall', 'guild', 'bargello', 'balivo'].map(k =>
       opt(V[k], `[data-civic="${k}"]`, s.tool.civic === k)) }, masonryRow(s)] },
   { id: 'production', hint: T.hints.point, press: '[data-industry="loggingCamp"]', is: s => s.tool.kind === 'industry',
     rows: s => [{ label: O.building, wrap: true, options: INDUSTRIES.map(([k, selector, on]) => opt(V[k], selector, on(s.tool))) }, masonryRow(s)] },

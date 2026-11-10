@@ -248,6 +248,8 @@ function structureHeight(s){
   if(s.type==='church')return 3.35;
   if(s.type==='townhall')return [2.6,3.2,3.8][civicLevel(s)-1];
   if(s.type==='guild')return [2.4,3.1,3.6][civicLevel(s)-1];
+  if(s.type==='bargello')return [3.9,4.9][civicLevel(s)-1];
+  if(s.type==='balivo')return [2.6,3.0][civicLevel(s)-1];
   if(s.type==='training')return .10;
   return 0;
 }
@@ -365,7 +367,7 @@ function unionGroundContactRings(polys){
     return polys;
   }
 }
-const PLACEMENT_FOUNDATION_TYPES=new Set(['tower','gate','tavern','church','townhall','guild']);
+const PLACEMENT_FOUNDATION_TYPES=new Set(['tower','gate','tavern','church','townhall','guild','bargello','balivo']);
 function isPlacementFoundationBuilding(s){
   // A tower against a quay stands on the quay's plinth instead (settlement-quay.js).
   return !!s&&!s.auto&&!s.quaySnap&&PLACEMENT_FOUNDATION_TYPES.has(s.type);

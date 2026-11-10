@@ -18,7 +18,7 @@
       return 'plaza_'+(typeof plazaVariant==='function'?plazaVariant(s):'paved')+(parent&&typeof civicLevel==='function'?civicLevel(parent):1);
     }
     if(s.type==='plaza')return 'plaza_'+(typeof plazaVariant==='function'?plazaVariant(s):'paved')+level;
-    if(['church','tavern','market','townhall','guild'].includes(s.type))return s.type+level;
+    if(['church','tavern','market','townhall','guild','bargello','balivo'].includes(s.type))return s.type+level;
     return null;
   }
   const has=s=>{const k=modelKey(s);return !!(k&&DATA()?.models?.[k])};
@@ -286,11 +286,22 @@
     // Guild hall: counting desks with ledgers and scales, the strongbox, bolts of cloth.
     guild1:{floors:[[-1.42,-1.17,.46,1.17]],desks:[[-.95,-.45],[-.2,-.45]],counter:[-1.3,.62,-.25,.82],chests:[[.25,.9]],barrels:[[.28,-.85]],bolts:[[-1.35,-.95,-.4]],hearths:[]},
     guild2:{floors:[[-1.42,-1.17,1.42,1.17]],desks:[[-.75,-.35],[.75,-.35]],counter:[-.6,.7,.6,.9],chests:[[-1.2,.95],[1.2,.95]],bolts:[[-1.35,-.95,-.1]],hearths:[[1.1,.62]]},
-    guild3:{floors:[[-1.42,-1.17,1.42,1.17]],desks:[[-.75,-.3],[0,-.3],[.75,-.3]],counter:[-.7,.72,.7,.92],chests:[[-1.2,.95],[1.2,.95],[1.2,.55]],bolts:[[-1.35,-.95,.2],[1.35,-.95,.2]],hearths:[[-1.1,.8]]}
+    guild3:{floors:[[-1.42,-1.17,1.42,1.17]],desks:[[-.75,-.3],[0,-.3],[.75,-.3]],counter:[-.7,.72,.7,.92],chests:[[-1.2,.95],[1.2,.95],[1.2,.55]],bolts:[[-1.35,-.95,.2],[1.35,-.95,.2]],hearths:[[-1.1,.8]]},
+    // FISCO-01. Bargello: the watch's guard room on the ground floor, the collectors' office
+    // upstairs (build_civic.py bargello: upper floor at gf). room / upper[].room name the
+    // furnishings (furnishTownhallRoom).
+    bargello1:{floors:[[-1.24,-.69,1.24,1.19]],room:'guard',hearths:[],upper:[{z:.857,rect:[-1.24,-.69,1.24,1.19],room:'exactor'}]},
+    bargello2:{floors:[[-1.24,-.69,1.24,1.19]],room:'guard',hearths:[],upper:[{z:.971,rect:[-1.24,-.69,1.24,1.19],room:'exactor'}]},
+    // Palazzo del Balivo: the tithe store below, the bailiff's rural court upstairs (the L2 upper
+    // floor stands back behind the loggia).
+    balivo1:{floors:[[-1.64,-.84,1.64,1.24]],barrels:[[-1.4,1.0],[-1.1,1.0],[-1.4,.7],[1.35,1.0]],chests:[[1.35,.6],[.2,1.05]],hearths:[],
+      upper:[{z:.914,rect:[-1.64,-.84,1.64,1.24],room:'tribunal'}]},
+    balivo2:{floors:[[-1.64,-.84,1.64,1.24]],barrels:[[-1.4,1.0],[-1.1,1.0],[-1.4,.7],[1.35,1.0],[1.05,1.0]],chests:[[1.35,.6],[.2,1.05]],hearths:[],
+      upper:[{z:1.029,rect:[-1.64,-.38,1.64,1.24],room:'tribunal'}]}
   };
   const selectedOf=()=>typeof State!=='undefined'&&State.selectedId?(State.structures||[]).find(s=>s.id===State.selectedId):null;
   function cutawayActive(s){
-    return !!s&&['church','tavern','townhall','guild'].includes(s.type)&&s.id===State.selectedId&&!!INTERIOR[modelKey(s)]&&has(s)
+    return !!s&&['church','tavern','townhall','guild','bargello','balivo'].includes(s.type)&&s.id===State.selectedId&&!!INTERIOR[modelKey(s)]&&has(s)
       &&!(typeof underConstruction==='function'&&underConstruction(s));
   }
   function cutawayId(){const s=selectedOf();return cutawayActive(s)?s.id:null}
@@ -347,7 +358,7 @@
       if(part.name==='naveRoof'||part.name==='chimneys')continue;
       // The town hall's tower stands in front of the council room: it goes down to a stump,
       // or the section plane would leave a sliver of it standing to full height.
-      const stump=key.startsWith('townhall')&&TOWER_PARTS.has(part.name)&&!!cam,tower=TOWER_PARTS.has(part.name)&&!stump;
+      const stump=(key.startsWith('townhall')||key.startsWith('bargello'))&&TOWER_PARTS.has(part.name)&&!!cam,tower=TOWER_PARTS.has(part.name)&&!stump;
       const back=localPart(part.name),front=localPart(part.name+':front'),sill=localPart(part.name+':sill',1e5);
       const v=part.v;
       for(let t=0;t<part.c.length;t++){
@@ -450,6 +461,18 @@
       piece('shieldRack',p=>{for(let x=r1+.25;x<ix1-.6;x+=.3)box(p,x-.11,back-.05,x+.11,back-.02,z+.22,z+.5,P(x%0.6<.3?'canvasRed':'canvasBlue'))});
       for(const y of [front+.35,front+.85])piece('cot',p=>{box(p,ix1-.26,y-.22,ix1-.02,y+.22,z,z+.1,P('woodDark'));box(p,ix1-.24,y-.2,ix1-.04,y+.2,z+.1,z+.13,P('cloth'))});
       chest(ix1-.2,back-.2);
+    }else if(role==='exactor'){
+      // Collectors' office (FISCO-01): the counting table with the tax rolls and the scales, the
+      // iron-bound strongbox, the roll shelves along the back wall, a bench for those who pay.
+      const ty=(front+back)/2+.05;
+      piece('countingTable',p=>{box(p,icx-.6,ty-.06,icx+.6,ty+.06,z,z+.2,P('woodDark'));box(p,icx-.7,ty-.22,icx+.7,ty+.22,z+.2,z+.235,P('canvasGreen'),P('wood'))});
+      for(const x of [icx-.4,icx,icx+.4])piece('ledger',p=>box(p,x-.08,ty-.06,x+.08,ty+.05,z+.235,z+.255,P('canvasWhite')));
+      piece('scales',p=>{box(p,icx+.55,ty-.01,icx+.57,ty+.01,z+.235,z+.36,P('iron'));box(p,icx+.46,ty-.01,icx+.66,ty+.01,z+.35,z+.365,P('bronze'))});
+      for(const x of [icx-.45,icx+.05,icx+.45])stool(x,ty+.34);
+      piece('rollShelf',p=>{box(p,ix0+.05,back-.14,ix0+1.1,back-.02,z,z+.06,P('woodDark'));for(const zz of [.22,.42])box(p,ix0+.05,back-.14,ix0+1.1,back-.02,z+zz,z+zz+.03,P('woodDark'));
+        for(let x=ix0+.14;x<ix0+1.05;x+=.12)for(const zz of [.06,.25,.45])box(p,x-.04,back-.12,x+.04,back-.04,z+zz,z+zz+.08,P('canvasWhite'))});
+      chest(ix1-.25,back-.22);chest(ix1-.25,back-.5);
+      piece('payersBench',p=>box(p,icx-.6,front+.18,icx+.6,front+.3,z,z+.11,P('wood'),P('woodDark')));
     }else if(role==='prison'){
       // Cells along the back wall behind one row of bars, each with straw, a bucket and wall
       // chains; the jailer's table by the door.
@@ -515,7 +538,10 @@
     const rect=span.floor?spec.upper[span.floor-1].rect:spec.floors[0],P=prisonLayout(rect,span.floor?[]:spec.hearths||[]);
     return{x0:P.ix0,x1:P.ix1,y:P.cy,z:span.z+FLOOR_Z,h:.59,step:.09,back:P.back};
   }
-  const UPPER_ROOMS={townhall:({storey,s,rect,z,piece,P})=>furnishTownhallRoom(townhallRole(s,storey),rect,z,piece,P)};
+  // The Bargello and the Balivo have fixed rooms per storey (INTERIOR[key].upper[].room).
+  const fixedUpper=({key,storey,rect,z,piece,P})=>{const room=INTERIOR[key]?.upper?.[storey-1]?.room;if(room)furnishTownhallRoom(room,rect,z,piece,P)};
+  const UPPER_ROOMS={townhall:({storey,s,rect,z,piece,P})=>furnishTownhallRoom(townhallRole(s,storey),rect,z,piece,P),
+    bargello:fixedUpper,balivo:fixedUpper};
   function interiorParts(key,span={floor:0,z:0},s=null){
     let spec=INTERIOR[key];const pal=palette(),keys=DATA().paletteKeys,P=k=>pal[keys.indexOf(k)],out=[];
     if(span.floor>0){
@@ -564,7 +590,7 @@
       // (the hearths stay with the chimney stacks).
       const role=townhallRole(s,0);
       if(role!=='council'){furnishTownhallRoom(role,spec.floors[0],FLOOR_Z,piece,P,spec.hearths);spec={floors:spec.floors,hearths:spec.hearths}}
-    }
+    }else if(spec.room)furnishTownhallRoom(spec.room,spec.floors[0],FLOOR_Z,piece,P,spec.hearths);
     const z=FLOOR_Z;
     for(const [x,y] of spec.tables||[])piece('table',p=>{
       box(p,x-.05,y-.05,x+.05,y+.05,z,z+.19,P('woodDark'));

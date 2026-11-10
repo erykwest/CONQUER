@@ -142,7 +142,7 @@ function renderFunctionPanel(){
     const name=slots.querySelector('#wellNameInput');if(name)name.onchange=()=>StructureCommands.setWellName(s.id,name.value);
     return;
   }
-  if(!s||!['tower','gate','built','wall','palisade','house','market','tavern','church','training','plaza','townhall','guild','moat','bridge'].includes(s.type)){panel.classList.remove('open');return}
+  if(!s||!['tower','gate','built','wall','palisade','house','market','tavern','church','training','plaza','townhall','guild','bargello','balivo','moat','bridge'].includes(s.type)){panel.classList.remove('open');return}
   if(['moat','bridge'].includes(s.type)){
     panel.classList.add('open');
     const cost=s.buildCost||constructionCost(s);
@@ -196,12 +196,12 @@ function renderFunctionPanel(){
     // Lookout, outpost and signal fire (settlement-soldiers.js).
     html+=window.ConquerSoldiers?.towerPanelHtml?.(s)||'';
   }
-  if(['house','market','tavern','church','training','plaza','townhall','guild'].includes(s.type)){
+  if(['house','market','tavern','church','training','plaza','townhall','guild','bargello','balivo'].includes(s.type)){
     const deg=Math.round((Number(s.angle)||0)*180/Math.PI+360)%360;
     html+=`<div class="slot"><div class="slot-label">Building rotation · ${deg}°</div><div class="grid3"><button data-point-rotate="-1">↺ 15°</button><button data-point-rotate="12">⇄ 180°</button><button data-point-rotate="1">↻ 15°</button></div></div>`;
   }
   if(CIVIC_LEVEL_TYPES.includes(s.type)){
-    html+=`<div class="slot"><div class="slot-label">Civic development · L${civicLevel(s)} (skeleton)</div><div class="grid3">${[1,2,3].map(level=>`<button data-civic-level="${level}" class="${civicLevel(s)===level?'active':''}">L${level}</button>`).join('')}</div><div class="legend">Three planned stages; no economy or service effects yet.</div></div>`;
+    html+=`<div class="slot"><div class="slot-label">Civic development · L${civicLevel(s)} (skeleton)</div><div class="grid3">${civicLevels(s.type).map(level=>`<button data-civic-level="${level}" class="${civicLevel(s)===level?'active':''}">L${level}</button>`).join('')}</div><div class="legend">Three planned stages; no economy or service effects yet.</div></div>`;
   }
   if(CIVIC_ANNEX_CATALOG[s.type]){
     const catalog=CIVIC_ANNEX_CATALOG[s.type],children=civicAnnexChildren(s.id);

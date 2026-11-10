@@ -773,7 +773,7 @@
       }else if(s.type==='tavern'){
         const rA=winter?WINTER_ROOF[0]:'#3b302b',rB=winter?WINTER_ROOF[1]:'#493930';
         m.gabled(part.center,part.w,part.h,turn,angle+turn,g,1.48,2.08,'#684f3d','#7b5e48',rA,rB,'#80624a');
-      }else if(s.type==='townhall'||s.type==='guild'){
+      }else if(['townhall','guild','bargello','balivo'].includes(s.type)){
         if(part.role==='tower')m.prism(part.points,g,g+3.0,'#7a746b','#6d675f','#7a746b');
         else m.gabled(part.center,part.w,part.h,turn,angle+turn,g,1.7,2.4,'#7a746b','#8b847a',winter?WINTER_ROOF[0]:'#7a4433',winter?WINTER_ROOF[1]:'#8a4c39','#968e82');
       }else if(s.type==='church'){
@@ -1124,7 +1124,7 @@
     const sun=sunShadowState();if(!sun)return{data:new Float32Array(0),alpha:0};
     const v=[];
     for(const s of State.structures){
-      if(underConstruction(s)||!['house','tower','gate','wall','palisade','built','market','tavern','church','plaza','townhall','guild','civicAnnex'].includes(s.type))continue;
+      if(underConstruction(s)||!['house','tower','gate','wall','palisade','built','market','tavern','church','plaza','townhall','guild','bargello','balivo','civicAnnex'].includes(s.type))continue;
       const {fp,h}=shadowCasterGeometry(s);if(!fp?.length||h<=0)continue;
       const len=h*sun.lengthPerHeight,ox=sun.dx*len,oy=sun.dy*len,cloud=[];
       for(const p of fp){cloud.push({x:p.x,y:p.y});cloud.push({x:p.x+ox,y:p.y+oy})}

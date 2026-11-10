@@ -1,8 +1,79 @@
 // Generated from content/codex/*.md. Do not edit; run node tools/export-codex-content.cjs.
 (function(root){root.ConquerWikiEditorial={
   "schemaVersion": 1,
-  "sourceDigest": "76512afd5f20445edc5cdb485e54dddab6c3a3b159fc480e0cdaf5d130a8852b",
+  "sourceDigest": "62937048fb047fe197f5fdf9ec19df17509c792ff5ecbc1f49f804892437d2ea",
   "pages": [
+    {
+      "id": "building:balivo",
+      "kind": "entry",
+      "title": "Palazzo del Balivo",
+      "aliases": [
+        "Palazzo del Balivo",
+        "Balivo"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "Il Palazzo del Balivo è la sede del funzionario del signore nel contado: sorge in campagna, lontano dai pozzi e dalle zone abitate, con il magazzino della decima al piano terra e la sala della bassa giustizia al piano superiore, raggiunta da una scala esterna. Appartiene agli [[Edifici|edifici]] civici e ha due livelli; decima, giustizia rurale e ordine sulle strade sono descritti nella specifica FISCO-01 e non sono ancora simulati.",
+          "tokens": [
+            {
+              "text": "Il Palazzo del Balivo è la sede del funzionario del signore nel contado: sorge in campagna, lontano dai pozzi e dalle zone abitate, con il magazzino della decima al piano terra e la sala della bassa giustizia al piano superiore, raggiunta da una scala esterna. Appartiene agli "
+            },
+            {
+              "text": "edifici",
+              "id": "category:building"
+            },
+            {
+              "text": " civici e ha due livelli; decima, giustizia rurale e ordine sulle strade sono descritti nella specifica FISCO-01 e non sono ancora simulati."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Il Palazzo del Balivo è la sede del funzionario del signore nel contado: sorge in campagna, lontano dai pozzi e dalle zone abitate, con il magazzino della decima al piano terra e la sala della bassa giustizia al piano superiore, raggiunta da una scala esterna. Appartiene agli edifici civici e ha due livelli; decima, giustizia rurale e ordine sulle strade sono descritti nella specifica FISCO-01 e non sono ancora simulati."
+      ],
+      "related": [
+        "category:building",
+        "topic:construction",
+        "building:townhall"
+      ],
+      "members": []
+    },
+    {
+      "id": "building:bargello",
+      "kind": "entry",
+      "title": "Bargello",
+      "aliases": [
+        "Bargello"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "Il Bargello è la casa degli esattori e delle guardie cittadine di un quartiere: sorge presso il pozzo del quartiere, uno per pozzo, ed è riconoscibile dalla torretta d'angolo con la vedetta e la campanella. Appartiene agli [[Edifici|edifici]] civici e ha due livelli; la riscossione e l'ordine pubblico che lo animeranno sono descritti nella specifica FISCO-01 e non sono ancora simulati.",
+          "tokens": [
+            {
+              "text": "Il Bargello è la casa degli esattori e delle guardie cittadine di un quartiere: sorge presso il pozzo del quartiere, uno per pozzo, ed è riconoscibile dalla torretta d'angolo con la vedetta e la campanella. Appartiene agli "
+            },
+            {
+              "text": "edifici",
+              "id": "category:building"
+            },
+            {
+              "text": " civici e ha due livelli; la riscossione e l'ordine pubblico che lo animeranno sono descritti nella specifica FISCO-01 e non sono ancora simulati."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Il Bargello è la casa degli esattori e delle guardie cittadine di un quartiere: sorge presso il pozzo del quartiere, uno per pozzo, ed è riconoscibile dalla torretta d'angolo con la vedetta e la campanella. Appartiene agli edifici civici e ha due livelli; la riscossione e l'ordine pubblico che lo animeranno sono descritti nella specifica FISCO-01 e non sono ancora simulati."
+      ],
+      "related": [
+        "category:building",
+        "topic:construction",
+        "building:townhall"
+      ],
+      "members": []
+    },
     {
       "id": "building:bridge",
       "kind": "entry",

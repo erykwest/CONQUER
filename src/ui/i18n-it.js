@@ -56,7 +56,7 @@ export const T = {
     market: 'Mercato', tavern: 'Taverna', church: 'Chiesa', training: 'Addestramento',
     loggingCamp: 'Taglialegna', quarry: 'Cava', mine: 'Miniera', clayPit: 'Argilla', windmill: 'Mulino a vento', watermill: 'Mulino ad acqua',
     pillory: 'Gogna', gallows: 'Forca', scaffold: 'Patibolo',
-    plaza: 'Piazza', townhall: 'Municipio', guild: 'Gilda', brick: 'Mattoni', sloped: 'Pendio', walled: 'Terrazza murata', flat: 'Piano H0', dig: 'Scava 1U', raise: 'Alza 1U'
+    plaza: 'Piazza', townhall: 'Municipio', guild: 'Gilda', bargello: 'Bargello', balivo: 'Palazzo del Balivo', brick: 'Mattoni', sloped: 'Pendio', walled: 'Terrazza murata', flat: 'Piano H0', dig: 'Scava 1U', raise: 'Alza 1U'
   },
   hints: {
     select: 'Clic su un edificio per selezionarlo',
@@ -69,7 +69,7 @@ export const T = {
   structures: {
     towerSquare: 'Torre quadrata', towerRound: 'Torre rotonda', watchtower: 'Torre di guardia', palisadeTower: 'Torre lignea', frameTower: 'Torre lignea a telaio',
     gate: 'Porta in pietra', woodGate: 'Porta lignea', wall: 'Mura', palisade: 'Palizzata', built: 'Sezione costruita',
-    house: 'Casa', civicAnnex: 'Annesso', market: 'Mercato', tavern: 'Taverna', church: 'Chiesa', training: 'Campo di addestramento', plaza: 'Piazza', townhall: 'Municipio', guild: 'Gilda', windmill: 'Mulino a vento', watermill: 'Mulino ad acqua',
+    house: 'Casa', civicAnnex: 'Annesso', market: 'Mercato', tavern: 'Taverna', church: 'Chiesa', training: 'Campo di addestramento', plaza: 'Piazza', townhall: 'Municipio', guild: 'Gilda', bargello: 'Bargello', balivo: 'Palazzo del Balivo', windmill: 'Mulino a vento', watermill: 'Mulino ad acqua',
     loggingCamp: 'Campo taglialegna', quarry: 'Cava', mine: 'Miniera', moat: 'Fossato', bridge: 'Ponte', well: 'Pozzo'
   },
   inspector: {

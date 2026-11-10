@@ -351,7 +351,7 @@ const StructureCommands=(()=>{
       const well=wellCivicWell(s);
       d.facts.push({key:'square',value:well?wellDisplayName(well)||'—':'—',center:!!well&&isVillageCenterWell(well)});
     }
-    if(['house','market','tavern','church','training','plaza','townhall','guild'].includes(s.type))
+    if(['house','market','tavern','church','training','plaza','townhall','guild','bargello','balivo'].includes(s.type))
       d.controls.push({key:'rotation',cmd:'rotate',rotate:true,angle:Math.round((Number(s.angle)||0)*180/Math.PI+360)%360});
     if(s.type==='tower'){
       d.mastio={active:!!s.isMastio,disabled:building};
@@ -419,7 +419,7 @@ const StructureCommands=(()=>{
       d.controls.push(hoardingChoice(s));
     }
     if(typeof CIVIC_LEVEL_TYPES!=='undefined'&&CIVIC_LEVEL_TYPES.includes(s.type))
-      d.controls.push(choice('civicLevel','setCivicLevel',[1,2,3].map(n=>({value:n,label:'L'+n})),civicLevel(s)));
+      d.controls.push(choice('civicLevel','setCivicLevel',civicLevels(s.type).map(n=>({value:n,label:'L'+n})),civicLevel(s)));
     if((s.type==='church'||s.type==='townhall')&&window.ConquerAlarmBells)
       d.facts.push({key:'bellRange',value:window.ConquerAlarmBells.hearingRadius(s)+'U'});
     if(typeof isPlazaLike==='function'&&isPlazaLike(s))
