@@ -1,5 +1,16 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-10 — ECO-FIL-01 · Filiere produttive (solo specifica, branch `docs/filiere-produttive`)
+
+- **NESSUN CODICE:** specifica approvata in [BACKLOG](BACKLOG.md), decisione [D-ECO-FIL-261110](DECISIONS.md). Nessun test eseguito né richiesto.
+- **STATO LIVE VERIFICATO SU `main` 89e7a2c:**
+  - `KIND.mine` produce `stone`.
+  - `metal` non ha produttori. `KIND.workshop` non è collocabile, mentre la stanza `workshop` del castello esiste senza effetti economici.
+  - Le botteghe L3 producono 1 bene al giorno senza consumare nulla. Restano gli errori di `WORKSHOP_OUTPUT` (falegname su `metalGoods`, tessitore e sarto entrambi su `textiles`) e `leatherGoods` ha ancora input `wood`.
+  - I pastori L1 di capre e pecore danno 0,9 `food` al giorno; mucche e cavalli non producono.
+  - La pesca esiste (1,2 `food` al giorno per pescatore).
+- **PROSSIMO:** fase 1 (miniera → metallo) su un branch nuovo da `main`, solo dopo conferma esplicita.
+
 ## 2026-11-09 — CI P2.4: ownership delle regressioni specialistici (PR in preparazione)
 
 - **IMPLEMENTAZIONE SU BRANCH:** sei controlli Codex deterministici restano solo in Runtime integrity (always-on PR); routing/spawn + main-road restano sempre in settlement-qa, tolti da CAMP/Main fixes (3 invocazioni). Totale nove invocazioni ridondanti eliminate senza toccare i test stessi.

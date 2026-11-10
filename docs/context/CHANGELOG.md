@@ -1,5 +1,15 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+10/11/2026 — ECO-FIL-01 (`docs/filiere-produttive`): specifica approvata delle filiere produttive. Prevede:
+- miniera → metallo;
+- lana, pelli e latte (con il casaro) dagli allevamenti;
+- ricette e consumo delle botteghe L3, senza importazioni;
+- correzioni dei mestieri: falegname su archi e lance, sarto su abiti, pellettiere su pelli;
+- cinque armi con domanda civile e officina del castello;
+- affumicatore, birra della taverna e vigneto collocabile.
+
+Nessun codice. Aggiornati BACKLOG, STATUS e DECISIONS (D-ECO-FIL-261110); ROADMAP invariata (la voce M1 «scegliere output `mine`» resta, ora decisa, da implementare).
+
 09/11/2026 — CI P2.4 (`perf/ci-p24-specialist-test-ownership-20261109`): rimosse 9 invocazioni test duplicate da Codex Wiki, Main fixes e CAMP, mantenendo owner di regressione in Runtime integrity e settlement-qa (always-on PR). Codex Wiki mantiene Playwright e filtri dei suoi check browser, Main fixes mantiene WebGL/render e UI/Combat, CAMP conserva animali e pattuglie. Aggiunta guardia P2.4 in `qa/ci-p1-regression.cjs`; suite completa P0 e tutte le baseline/test immutate.
 
 
