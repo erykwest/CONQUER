@@ -1295,7 +1295,7 @@ const BIOME_RECIPES=Object.freeze({
   // TEST (default): the settings used while developing — procedural terraced hills up to 20% of
   // the map and many small woods up to 12% coverage.
   test:{legacyRelief:.20,smallForestCoverage:.12},
-  plains:{stream:.45,forests:[0,1]},
+  plains:{stream:.45,woodlandCoverage:.20},
   hills:{hills:[3,4],hillHeight:[2,3],forests:[0,1]},
   valley:{mountains:[3,5],stream:1},
   river:{river:true,forests:[1,2],hills:[0,1],hillHeight:[1,2]},
@@ -1658,9 +1658,10 @@ function ensureForestCoverage(env,rnd,target=.20,small=false){
   // tree line after each accepted forest (previously quadratic in patch count).
   const samples=72,total=samples*samples,occupied=new Uint8Array(total);
   let covered=0,guard=0,failures=0;
-  const maxForests=small?40:State.biome==='forest'?20:13;
+  const maxForests=small||State.biome==='plains'?40:State.biome==='forest'?20:13;
   let forestCount=env.filter(f=>f.type==='forest').length;
-  function markForest(f){
+  function markForest(f,commit=true){
+    let added=0;
     const b=environmentPolygonBounds(f.points);
     const x0=Math.max(0,Math.floor(b.minX/WORLD*samples)-1);
     const x1=Math.min(samples-1,Math.ceil(b.maxX/WORLD*samples)+1);
@@ -1672,16 +1673,32 @@ function ensureForestCoverage(env,rnd,target=.20,small=false){
         const i=iy*samples+ix;
         if(occupied[i])continue;
         const p={x:(ix+.5)/samples*WORLD,y};
-        if(pointInPolygon(p,f.points)){occupied[i]=1;covered++}
+        if(pointInPolygon(p,f.points)){added++;if(commit)occupied[i]=1}
       }
     }
+    return added;
   }
-  for(const f of env)if(f.type==='forest')markForest(f);
+  for(const f of env)if(f.type==='forest')covered+=markForest(f);
   // The cap is deliberate: no more proliferating tiny woodland patches just
   // to meet a fixed coverage percentage in constrained geography.
   while(covered/total<target&&forestCount<maxForests&&guard++<320&&failures<24){
     const forest=addForestBlob(env,rnd,small,3,80);
-    if(forest){forestCount++;markForest(forest);failures=0}else failures++;
+    if(forest){
+      if(State.biome==='plains'&&covered+markForest(forest,false)>Math.round(target*total)){
+        const original=forest.points,rx=forest.rx,ry=forest.ry,remaining=Math.round(target*total)-covered;
+        let lo=0,hi=1,best=1,error=Infinity;
+        for(let j=0;j<18;j++){
+          const scale=(lo+hi)/2;
+          forest.points=original.map(p=>({x:forest.x+(p.x-forest.x)*scale,y:forest.y+(p.y-forest.y)*scale}));
+          const count=markForest(forest,false),delta=Math.abs(count-remaining);
+          if(delta<error&&forestBlobCanPlace(forest,env.filter(f=>f!==forest),3)){best=scale;error=delta}
+          if(count>remaining)hi=scale;else lo=scale;
+        }
+        forest.points=original.map(p=>({x:forest.x+(p.x-forest.x)*best,y:forest.y+(p.y-forest.y)*best}));
+        forest.rx=rx*best;forest.ry=ry*best;
+      }
+      forestCount++;covered+=markForest(forest);failures=0;
+    }else failures++;
   }
   return covered/total;
 }
@@ -1749,6 +1766,8 @@ function generateEnvironment(){
   if(recipe.continuousForest){
     for(let i=0;i<ponds;i++)addBiomePond(env,rnd);
     env.push(makeContinuousForest(env,rnd,recipe.continuousForest));
+  }else if(recipe.woodlandCoverage){
+    ensureForestCoverage(env,rnd,recipe.woodlandCoverage);
   }else if(recipe.smallForestCoverage){
     ensureForestCoverage(env,rnd,recipe.smallForestCoverage,true);
   }else{

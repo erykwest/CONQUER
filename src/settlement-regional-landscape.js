@@ -190,10 +190,31 @@
     }
     const dryMountains=mountains.filter(f=>!blocked({x:f.x,y:f.y})&&!f.points.some(blocked));
     State.relief.hills=State.relief.hills.filter(h=>!reliefHillFootprint(h).some(blocked));clearReliefBandCache();
+    // Boschi are land cover; Foresta remains a separate biome. Calibrate the
+    // pure plains centre and inherited plains separately, so neighbours cannot
+    // dilute the central 20%. Blended strips interpolate the local thresholds.
+    const plainsGroups=[{total:0,candidates:[]},{total:0,candidates:[]}],eligible=[];
     for(let i=0;i<samples.length;i++){
-      const {p,w,c,wet}=samples[i];if(wet||lines.some(f=>environmentContains(f,p,2))||dryMountains.some(f=>environmentContains(f,p))||terrainSlopeKind(p)==='steep')continue;
-      const density=c*(forests.some(f=>environmentContains(f,p))?1:0)+(w.forest||0)*.82+(w.swamp||0)*.34;
-      if(density>noise(p.x/9,p.y/9,State.seed+91))forestMask[i]=1;
+      const {p,w,c,wet}=samples[i],plain=(w.plains||0)+(State.biome==='plains'?c:0);
+      const group=plainsGroups[p.x>=50&&p.x<150&&p.y>=50&&p.y<150?0:1];
+      if(plain>.999)group.total++;
+      if(wet||lines.some(f=>environmentContains(f,p,2))||dryMountains.some(f=>environmentContains(f,p))||terrainSlopeKind(p)==='steep'||plain>0&&dist(p,{x:100,y:100})<8)continue;
+      const scale=plain>0?18:9,value=noise(p.x/scale,p.y/scale,State.seed+91);
+      eligible.push({i,value,plain,group});
+      if(plain>.999)group.candidates.push({i,value});
+    }
+    for(const group of plainsGroups){
+      group.candidates.sort((a,b)=>a.value-b.value||a.i-b.i);
+      const count=Math.min(group.candidates.length,Math.round(group.total*BIOME_RECIPES.plains.woodlandCoverage));
+      group.threshold=count?group.candidates[count-1].value:-1;
+      for(let j=0;j<count;j++)forestMask[group.candidates[j].i]=1;
+    }
+    for(const {i,value,plain,group} of eligible){
+      if(plain>.999)continue;
+      const {p,w,c}=samples[i];
+      const density=(State.biome==='plains'?0:c*(forests.some(f=>environmentContains(f,p))?1:0))+(w.forest||0)*.82+(w.swamp||0)*.34;
+      const threshold=Math.max(0,group.threshold)*plain+density;
+      if(threshold>value)forestMask[i]=1;
     }
     if(typeof clearForestLayoutCache==='function')clearForestLayoutCache();
     State.relief.stats=reliefStats();

@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## REG-PLAINS-WOODS-20 — Boschi in Pianura (10/11/2026)
+
+Boschi indica la copertura vegetale, Foresta il bioma. Nelle nuove mappe Pianura il target dei boschi e il 20% della superficie della pianura, inclusi nel denominatore i terreni occupati da altri elementi. Centro e pianure ereditate sono calibrati separatamente; le fasce interpolano i contributi dei biomi. Vincoli di acqua, rilievo e spazio iniziale hanno priorita. La discretizzazione e lo smoothing ammettono una tolleranza geometrica, verificata nei test entro 1.5 punti percentuali. Nessuna rigenerazione dei salvataggi.
+
 ## REG-SEA-DELTA-30 — Lago diretto, mare ramificato (10/11/2026)
 
 La regola aggiornata sostituisce il precedente delta nell’ultimo 20% per entrambi i riceventi: lago con singolo sbocco diretto, mare con distributari nel 30% finale. Percentuale misurata lungo il corso, non per numero di vertici. Scelta progettuale esplicita: lo studio di Seybold et al. descrive anche delta lacustri; la loro esclusione qui e una regola del gioco, non una conclusione del paper. Riferimento: https://www.pnas.org/doi/10.1073/pnas.0705265104 ; versione autori letta https://arxiv.org/html/0711.3283v1. Il modello del gioco resta geometrico e deterministico.

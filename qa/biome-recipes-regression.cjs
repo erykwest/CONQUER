@@ -10,7 +10,7 @@ const check=new Function('require','__dirname',harness+`
 let passed=0;
 const SEEDS=[12345,4242,229,777,90210,31337];
 const EXPECT={
-  plains:{hills:[0,0],forests:[0,1],mountains:[0,0],water:['stream',null]},
+  plains:{hills:[0,0],forests:[1,40],mountains:[0,0],water:['stream',null]},
   hills:{hills:[2,4],forests:[0,1],mountains:[0,0],water:[null]},
   valley:{hills:[0,0],forests:[0,0],mountains:[6,10],water:['stream']},
   river:{hills:[0,1],forests:[0,2],mountains:[0,0],water:['river']},
@@ -57,7 +57,7 @@ for(const [biome,e] of Object.entries(EXPECT))for(const seed of SEEDS){
   assert.ok(r.maxHeight<=4,tag+'hill height '+r.maxHeight);
   if(e.hillCoverage)assert.ok(r.reliefCoverage>=e.hillCoverage-.02,tag+'hill coverage '+(100*r.reliefCoverage).toFixed(1)+'%');
   // Scaled COFFEE BATTLES sizes: small woods 11-15.4 x 6.6-8.8U, large 17.6-22 x 8.8-12.1U.
-  for(const rad of r.forestRadius)assert.ok(rad>=8.5&&rad<=16.4,tag+'forest radius '+rad.toFixed(1));
+  for(const rad of biome==='plains'?[]:r.forestRadius)assert.ok(rad>=8.5&&rad<=16.4,tag+'forest radius '+rad.toFixed(1));
   assert.equal(r.onWater,false,tag+'woods must leave the watercourse open');
   assert.equal(r.onHill,false,tag+'woods must not overlap hills');
   assert.equal(r.townCovered,false,tag+'settlement hub must stay clear');
