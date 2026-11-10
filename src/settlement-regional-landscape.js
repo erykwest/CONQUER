@@ -124,17 +124,20 @@
     for(const sea of waters.filter(f=>f.type==='sea')){
       const runs=[];
       for(const ring of [sea.points,...sea.holes]){
-        const border=p=>p.x===0||p.y===0||p.x===200||p.y===200;
-        const start=ring.findIndex(border);
+        const borderEdge=(a,b)=>(a.x===b.x&&(a.x===0||a.x===200))||(a.y===b.y&&(a.y===0||a.y===200));
+        const start=ring.findIndex((p,i)=>borderEdge(p,ring[(i+1)%ring.length]));
         if(start<0){runs.push([...ring,ring[0]]);continue;}
         let run=[];
-        for(let j=0;j<=ring.length;j++){
-          const p=ring[(start+j)%ring.length];
-          if(border(p)){if(run.length>1)runs.push(run);run=[];}else run.push(p);
+        for(let j=1;j<=ring.length;j++){
+          const a=ring[(start+j)%ring.length],b=ring[(start+j+1)%ring.length];
+          if(borderEdge(a,b)){if(run.length>1)runs.push(run);run=[];}
+          else{if(!run.length)run.push(a);run.push(b);}
         }
+        if(run.length>1)runs.push(run);
       }
       const length=r=>r.reduce((s,p,i)=>i?s+Math.hypot(p.x-r[i-1].x,p.y-r[i-1].y):s,0);
-      sea.coastline=runs.sort((a,b)=>length(b)-length(a))[0]||[];
+      sea.coastlines=runs.sort((a,b)=>length(b)-length(a));
+      sea.coastline=sea.coastlines[0]||[];
       sea.side=['north','east','south','west'].sort((a,b)=>{
         const score=side=>Array.from({length:20},(_,i)=>edgeSample(side,(i+.5)/20)).filter(p=>environmentContains(sea,{x:Math.max(1,Math.min(199,p.x)),y:Math.max(1,Math.min(199,p.y))})).length;
         return score(b)-score(a);

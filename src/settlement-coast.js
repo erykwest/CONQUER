@@ -10,23 +10,32 @@
 (() => {
   const HEADLAND=1.2,ROCK_LAND=2.6,ROCK_SEA=1.2,BEACH_LAND=3,STEP=1.5;
   const SEA_DIR={north:{x:0,y:-1},south:{x:0,y:1},west:{x:-1,y:0},east:{x:1,y:0}};
-  const seaOf=()=>(typeof State!=='undefined'&&State.environment||[]).find(f=>f.type==='sea'&&f.coastline?.length>1)||null;
+  const seasOf=()=>(typeof State!=='undefined'&&State.environment||[]).filter(f=>f.type==='sea'&&(f.coastlines?.some(c=>c.length>1)||f.coastline?.length>1));
   let cache={key:null,data:null};
   const lerp=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
   // Fine points along the coast from parameter u0 to u1 (u = vertex index + fraction).
-  function along(c,u0,u1){
-    const out=[],at=u=>{const i=Math.min(c.length-2,Math.floor(u));return lerp(c[i],c[i+1],u-i)};
+  function along(c,u0,u1,normals){
+    const out=[],at=u=>{const i=Math.min(c.length-2,Math.floor(u));const p=lerp(c[i],c[i+1],u-i);if(normals){const n=lerp(normals[i],normals[i+1],u-i),l=Math.hypot(n.x,n.y)||1;p.nx=n.x/l;p.ny=n.y/l}return p};
     let len=0;for(let i=Math.floor(u0);i<Math.ceil(u1);i++)len+=Math.hypot(c[i+1].x-c[i].x,c[i+1].y-c[i].y);
     const n=Math.max(2,Math.ceil(len/STEP));
     for(let k=0;k<=n;k++)out.push(at(u0+(u1-u0)*k/n));
     return out;
   }
-  const band=(pts,D,toSea,toLand)=>[...pts.map(p=>({x:p.x+D.x*toSea,y:p.y+D.y*toSea})),...pts.slice().reverse().map(p=>({x:p.x-D.x*toLand,y:p.y-D.y*toLand}))];
+  const band=(pts,D,toSea,toLand)=>[...pts.map(p=>({x:p.x+(p.nx??D.x)*toSea,y:p.y+(p.ny??D.y)*toSea})),...pts.slice().reverse().map(p=>({x:p.x-(p.nx??D.x)*toLand,y:p.y-(p.ny??D.y)*toLand}))];
   const bounds=poly=>{let a=Infinity,b=Infinity,c=-Infinity,d=-Infinity;for(const p of poly){a=Math.min(a,p.x);b=Math.min(b,p.y);c=Math.max(c,p.x);d=Math.max(d,p.y)}return{minX:a,minY:b,maxX:c,maxY:d}};
   function shore(){
-    const sea=seaOf();if(!sea)return null;
-    const c=sea.coastline,key=sea.side+'|'+c.length+'|'+c[0].x+','+c[0].y+'|'+c[c.length-1].x;
+    const seas=seasOf();if(!seas.length)return null;
+    const key=JSON.stringify(seas.map(sea=>[sea.side,sea.coastlines||[sea.coastline]]));
     if(cache.key===key)return cache.data;
+    const all=[];
+    for(const sea of seas)for(const c of sea.coastlines||[sea.coastline]){
+    if(c.length<2)continue;
+    const normals=sea.coastlines&&typeof environmentContains==='function'?c.map((p,i)=>{
+      const a=c[Math.max(0,i-1)],b=c[Math.min(c.length-1,i+1)],l=Math.hypot(b.x-a.x,b.y-a.y)||1;
+      let x=-(b.y-a.y)/l,y=(b.x-a.x)/l;
+      if(!environmentContains(sea,{x:p.x+x*.8,y:p.y+y*.8})){x=-x;y=-y}
+      return{x,y};
+    }):null;
     const D=SEA_DIR[sea.side]||{x:0,y:1},out=c.map(p=>p.x*D.x+p.y*D.y);
     const head=c.map((_,i)=>{
       const near=[];for(let j=Math.max(0,i-3);j<=Math.min(c.length-1,i+3);j++)if(j!==i)near.push(out[j]);
@@ -39,11 +48,13 @@
     for(const [a,b] of runs){if(a>u)stretches.push({kind:'beach',u0:u,u1:a});stretches.push({kind:'rocks',u0:a,u1:b});u=b}
     if(u<c.length-1)stretches.push({kind:'beach',u0:u,u1:c.length-1});
     for(const s of stretches){
-      s.points=along(c,s.u0,s.u1);
+      s.points=along(c,s.u0,s.u1,normals);
       s.poly=s.kind==='rocks'?band(s.points,D,ROCK_SEA,ROCK_LAND):band(s.points,D,.25,BEACH_LAND);
       s.bounds=bounds(s.poly);
     }
-    cache={key,data:{side:sea.side,D,stretches}};
+    all.push(...stretches);
+    }
+    cache={key,data:{side:seas[0].side,D:SEA_DIR[seas[0].side]||{x:0,y:1},stretches:all}};
     return cache.data;
   }
   const pip=(p,poly)=>{let k=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.y>p.y)!==(b.y>p.y)&&p.x<(b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x)k=!k}return k};
@@ -86,7 +97,7 @@
         col.push(['rocksA','rocksB','rocksC','reef'].includes(name)&&role?.startsWith('rock')?(window.ConquerStoneColor?.shade(hex)||hex):hex);
       }
     };
-    const at=(p,off,jit)=>({x:p.x+d.D.x*off+(rnd()-.5)*jit,y:p.y+d.D.y*off+(rnd()-.5)*jit});
+    const at=(p,off,jit)=>({x:p.x+(p.nx??d.D.x)*off+(rnd()-.5)*jit,y:p.y+(p.ny??d.D.y)*off+(rnd()-.5)*jit});
     const ROCKS=['rocksA','rocksB','rocksC','rocksA'];
     for(const s of d.stretches){
       if(s.kind==='rocks'){
@@ -123,11 +134,11 @@
   const h01=n=>{n=Math.imul(n^n>>>16,0x45d9f3b);n=Math.imul(n^n>>>16,0x45d9f3b);return((n^n>>>16)>>>0)/4294967296};
   let glintCache={key:null,pts:[]};
   function glints(d){
-    const sea=seaOf(),key=cache.key;if(glintCache.key===key)return glintCache.pts;
+    const seas=seasOf(),key=cache.key;if(glintCache.key===key)return glintCache.pts;
     const pts=[];
-    for(let i=0;i<160&&sea;i++){
+    for(let i=0;i<160&&seas.length;i++){
       const p={x:h01(i*7+1)*200,y:h01(i*7+2)*200};
-      if(typeof environmentContains==='function'&&environmentContains(sea,p,-3))pts.push({...p,ph:h01(i*7+3)});
+      if(typeof environmentContains==='function'&&seas.some(sea=>environmentContains(sea,p,-3)))pts.push({...p,ph:h01(i*7+3)});
     }
     glintCache={key,pts};return pts;
   }
@@ -152,7 +163,7 @@
           ctx.beginPath();let started=false,any=false;
           for(let i=0;i<s.points.length;i++){
             const p=s.points[i],wob=Math.sin(p.x*.37+p.y*.29+now*.9+w)*.25*swell;
-            const q=w2sRaw({x:p.x+D.x*(off+wob),y:p.y+D.y*(off+wob)},0);
+            const q=w2sRaw({x:p.x+(p.nx??D.x)*(off+wob),y:p.y+(p.ny??D.y)*(off+wob)},0);
             if(onScreen(q))any=true;
             // Broken crests: the foam comes in patches that drift along the shore.
             const gap=Math.sin(p.x*.23+p.y*.17+w*2.1+now*.15)+Math.sin(p.x*.61-p.y*.43+w)*.5<-.35;
@@ -166,7 +177,7 @@
         for(let i=0;i<s.points.length;i++){
           const p=s.points[i],seed=Math.floor(p.x*13+p.y*7),rate=.35+swell*.35;
           const t=(now*rate+h01(seed))%1;if(t>.3)continue;
-          const k=t/.3,base={x:p.x+D.x*ROCK_SEA*.7,y:p.y+D.y*ROCK_SEA*.7},q0=w2sRaw(base,0);
+          const k=t/.3,base={x:p.x+(p.nx??D.x)*ROCK_SEA*.7,y:p.y+(p.ny??D.y)*ROCK_SEA*.7},q0=w2sRaw(base,0);
           if(!onScreen(q0))continue;
           for(let j=0;j<4;j++){
             const ang=h01(seed+j*31)*Math.PI*2,r=(.15+.35*k)*(1+h01(seed+j)),z=Math.sin(k*Math.PI)*(.25+.35*swell)*(1+h01(seed+j*5)*.6);
