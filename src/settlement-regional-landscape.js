@@ -119,6 +119,7 @@
       samples.push({p,w,c,wet});
     }
     const waters=[...features(seaMask,'sea','regional-sea-'+key),...features(pondMask,'pond','regional-lake-'+key)];
+    for(const pond of waters.filter(f=>f.type==='pond'))pond.waterBodyKind=samples.some(s=>((s.w.lake||0)>.5||State.biome==='lake'&&s.c>.5)&&environmentContains(pond,s.p))?'lake':'pond';
     // Publish the longest actual shore for existing coast tools; never join separate shores.
     for(const sea of waters.filter(f=>f.type==='sea')){
       const runs=[];

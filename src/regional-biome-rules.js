@@ -34,7 +34,15 @@
     add(neighbors[vertical]||center,v*(1-h));add(neighbors[diagonal]||center,h*v);
     return out;
   }
-  const api={biomeForTerrain,directions,sampleSurroundings,weights};
+  function riverJunctionCount(touching,all){
+    const key=p=>p.x.toFixed(4)+','+p.y.toFixed(4),degree=new Map(),local=new Set();
+    for(const edge of all)for(const p of [edge.start,edge.end])degree.set(key(p),(degree.get(key(p))||0)+1);
+    for(const edge of touching)for(const p of [edge.start,edge.end])local.add(key(p));
+    return Math.min(3,[...local].reduce((sum,k)=>sum+Math.max(0,(degree.get(k)||0)-2),0));
+  }
+  const isSelectableTerrain=terrain=>!!biomeForTerrain(terrain)&&!['sea','lake'].includes(terrain);
+  const landBiomes=Object.freeze(['plains','forest','mountains','swamp']);
+  const api={biomeForTerrain,isSelectableTerrain,landBiomes,riverJunctionCount,directions,sampleSurroundings,weights};
   if(typeof window!=='undefined')window.ConquerRegionalBiomeRules=api;
   if(typeof module!=='undefined')module.exports=api;
 })();

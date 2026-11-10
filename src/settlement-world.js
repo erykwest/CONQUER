@@ -1072,10 +1072,10 @@ function makeEnvWater(rnd,type){
 }
 // Real terrain water, shared by collision, navigation, banks and both renderers.
 // Keep existing saved landscapes intact: this policy applies when generating a river.
-function makeBoundaryRiver(rnd){
+function makeBoundaryRiver(rnd,preferredSide){
   const requested=window.__CONQUER_REGIONAL_DEMO__?.riverSides;
   const accepted=Array.isArray(requested)?requested.filter(s=>['west','north','east','south'].includes(s)):[];
-  const sides=accepted.length?accepted:['west','north','east','south'];
+  const sides=['west','north','east','south'].includes(preferredSide)?[preferredSide]:accepted.length?accepted:['west','north','east','south'];
   const side=sides[Math.floor(rnd()*sides.length)],width=WATER_WIDTH.river;
   // Integrate heading over arc length, rather than prescribing y = sin(x).
   // Leopold/Wolman: meander wavelength ~11 widths, bend radius ~2.3 widths.
@@ -1742,7 +1742,7 @@ function makeContinuousForest(env,rnd,ratio){
 function generateEnvironment(){
   const rnd=seedRand((State.seed^biomeHash(State.biome))>>>0),env=[],recipe=biomeRecipe();
   const sea=biomeSea();if(sea)env.push(sea);
-  if(recipe.lake)env.push(makeEnvBlob(rnd,'pond',WORLD/2,WORLD/2,78,72,'#3f7f8a','#8ab9bd',40,.07));
+  if(recipe.lake)env.push({...makeEnvBlob(rnd,'pond',WORLD/2,WORLD/2,78,72,'#3f7f8a','#8ab9bd',40,.07),waterBodyKind:'lake'});
   const mountains=biomeMountains();env.push(...mountains);
   const water=biomeWater(mountains);if(water)env.push(water);
   const ponds=biomeRange(rnd,recipe.ponds);
@@ -1758,8 +1758,12 @@ function generateEnvironment(){
   }
   environmentRevision++;
   // Relief from an older generator may still cross water or mountains laid out here.
-  for(let i=env.length-1;i>=0;i--)if(environmentConflictsTestRelief(env[i])||['hill','rough'].includes(env[i].type))env.splice(i,1);
-  State.environment=window.ConquerRegionalLandscape?.compose(env)||env;
+  for(let i=env.length-1;i>=0;i--){
+    const regionalWater=window.__CONQUER_REGIONAL_DEMO__&&['river','stream'].includes(env[i].type);
+    if(!regionalWater&&environmentConflictsTestRelief(env[i])||['hill','rough'].includes(env[i].type))env.splice(i,1);
+  }
+  const regional=window.ConquerRegionalLandscape?.compose(env)||env;
+  State.environment=window.ConquerHydrology?.compose(regional)||regional;
 }
 // ---------- woodland holes ----------
 // The Foresta biome is one woodland over the whole map (f.continuous) with holes: clearings,

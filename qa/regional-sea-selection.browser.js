@@ -13,6 +13,8 @@ async page => {
   if(await page.locator('#selection').innerText()!==before)throw Error('Sea replaced land selection');
   await sea.dispatchEvent('click',{shiftKey:true});
   if(await page.locator('#selection').innerText()!==before)throw Error('Sea added to multiselection');
+  const lake=page.locator('#cellsLayer polygon[data-terrain=lake]').first();
+  if(await lake.count()){await lake.dispatchEvent('click');await lake.dispatchEvent('click',{shiftKey:true});if(await page.locator('#selection').innerText()!==before)throw Error('Lake changed selection');}
   await page.locator('.terrain-button[data-terrain=sea]').dispatchEvent('click');
   if(await page.locator('#openLocalDemo').isEnabled())throw Error('Converted sea remains selected');
   if(await page.locator('#cellMenu').isVisible())throw Error('Converted sea menu remains open');

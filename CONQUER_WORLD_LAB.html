@@ -270,8 +270,8 @@
 
     .cell { cursor: pointer; transition: filter .14s ease; }
     .cell:hover { filter: brightness(1.14); }
-    .cell[data-terrain="sea"] { cursor: default; }
-    .cell[data-terrain="sea"]:hover { filter: none; }
+    .cell[data-terrain="sea"], .cell[data-terrain="lake"] { cursor: default; }
+    .cell[data-terrain="sea"]:hover, .cell[data-terrain="lake"]:hover { filter: none; }
     .micro-edge { pointer-events: none; opacity: .52; }
     .macro-edge { pointer-events: none; }
     .coastline-line { fill: none; stroke-linecap: round; stroke-linejoin: round; pointer-events: none; }
@@ -689,11 +689,9 @@
       <button type="button" id="openLocalDemo" disabled>Apri mappa locale del territorio</button>
       <span>Demo con quantitativi attuali:</span>
       <a href="index.html?demo=plains&amp;seed=4242">Pianura</a>
-      <a href="index.html?demo=hills&amp;seed=4242">Colline</a>
       <a href="index.html?demo=forest&amp;seed=4242">Foresta</a>
-      <a href="index.html?demo=river&amp;seed=4242">Fiume</a>
       <a href="index.html?demo=mountains&amp;seed=4242">Montagne</a>
-      <a href="index.html?demo=sea&amp;seed=4242">Costa</a>
+      <a href="index.html?demo=swamp&amp;seed=4242">Palude</a>
       <a href="index.html?demo=mixed&amp;seed=4242">Fronte misto · 8 biomi</a>
       <span>Prove temporanee, separate dai salvataggi. Aprendo una cella si applicano anche gli otto campioni circostanti.</span>
     </nav>
@@ -943,7 +941,7 @@
     </div>
   </main>
 
-  <script src="src/regional-biome-rules.js?v=regional-eight-1"></script>
+  <script src="src/regional-biome-rules.js?v=water-network-1"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script>
@@ -3356,11 +3354,11 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
       }
 
       function render() {
-        selectedMacros = new Set([...selectedMacros].filter(id => state.terrain[id] !== 'sea'));
-        if (selectedMacro !== null && state.terrain[selectedMacro] === 'sea') {
+        selectedMacros = new Set([...selectedMacros].filter(id => !isWaterTerrain(state.terrain[id])));
+        if (selectedMacro !== null && isWaterTerrain(state.terrain[selectedMacro])) {
           selectedMacro = selectedMacros.values().next().value ?? null;
           if (selectedMacro === null) {
-            selection.innerHTML = '<strong>Nessun territorio selezionato</strong><span>Seleziona una cella di terra o lago per ispezionarla</span>';
+            selection.innerHTML = '<strong>Nessun territorio selezionato</strong><span>Seleziona una cella terrestre per ispezionarla</span>';
             document.getElementById('openLocalDemo').disabled = true;
             document.getElementById('openSelectedLocalDemo').disabled = true;
             setMenuVisible(false);
@@ -3391,7 +3389,7 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
             class: 'cell',
             'data-macro': cell.macroId,
             'data-terrain': state.terrain[cell.macroId],
-            'aria-disabled': state.terrain[cell.macroId] === 'sea' ? 'true' : 'false',
+            'aria-disabled': isWaterTerrain(state.terrain[cell.macroId]) ? 'true' : 'false',
             'data-cell': cell.id,
             'aria-label': `Cella base ${cell.localIndex + 1}, territorio ${macroCode(cell.macroRow, cell.macroCol)}`
           });
@@ -3808,7 +3806,7 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         }
       }
       function selectMacro(macroId, extendSelection = false) {
-        if (!state?.macros[macroId] || state.terrain[macroId] === 'sea') return;
+        if (!state?.macros[macroId] || isWaterTerrain(state.terrain[macroId])) return;
         if (extendSelection) {
           if (selectedMacros.has(macroId)) selectedMacros.delete(macroId);
           else selectedMacros.add(macroId);
@@ -3859,13 +3857,16 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
 
       document.getElementById('openSelectedLocalDemo').addEventListener('click',()=>document.getElementById('openLocalDemo').click());
       document.getElementById('openLocalDemo').addEventListener('click',()=>{
-        if(!state||selectedMacros.size!==1||selectedMacro===null||state.terrain[selectedMacro]==='sea')return;
+        if(!state||selectedMacros.size!==1||selectedMacro===null||isWaterTerrain(state.terrain[selectedMacro]))return;
         const macro=state.macros[selectedMacro],ids=conquerNeighbors(selectedMacro);
         const riverEdges=new Set(state.generatedRiverEdges||[]);
-        const touchingRivers=state.edges.filter(edge=>{
+        const allRiverEdges=state.edges.filter(edge=>{
           const touching=[...new Set(edge.cells.map(cell=>cell.macroId))];
-          return touching.includes(selectedMacro)&&(riverEdges.has(edgeGeometryKey(edge))||state.rivers.includes(borderKey(touching)));
+          return riverEdges.has(edgeGeometryKey(edge))||state.rivers.includes(borderKey(touching));
         });
+        const touchingRivers=allRiverEdges.filter(edge=>edge.cells.some(cell=>cell.macroId===selectedMacro));
+        const riverJunctions=window.ConquerRegionalBiomeRules.riverJunctionCount(touchingRivers,allRiverEdges);
+        const tributaryTypes=Array(riverJunctions).fill('river');
         const hasRiver=touchingRivers.length>0;
         const riverSides=[...new Set(touchingRivers.map(edge=>{
           const dx=(edge.start.x+edge.end.x)/2-macro.centroid.x,dy=(edge.start.y+edge.end.y)/2-macro.centroid.y;
@@ -3879,7 +3880,7 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         const regionalCells=state.macros.map(m=>({id:m.id,code:m.code,terrain:state.terrain[m.id],centroid:m.centroid,polygon:m.cells[0].polygon}));
         const surroundings=window.ConquerRegionalBiomeRules.sampleSurroundings(regionalCells[selectedMacro],regionalCells,state.configuration.width,state.configuration.height);
         const payload={version:1,seed,biome,terrain,name:territoryName(macro),regionalSeed:state.seed,territoryId:macro.id,
-          neighbors:ids.map(id=>({id,code:state.macros[id].code,terrain:state.terrain[id]})),surroundings,hasRiver,riverSides};
+          neighbors:ids.map(id=>({id,code:state.macros[id].code,terrain:state.terrain[id]})),surroundings,hasRiver,riverSides,riverJunctions,tributaryTypes};
         // Carry the small territory context in the URL too: opening another tab must
         // not lose its biome just because sessionStorage is scoped to the old tab.
         try{sessionStorage.setItem('conquer.regional-demo.world',JSON.stringify({map:mapData(),selected:selectedMacro}));sessionStorage.setItem('conquer.regional-demo.'+key,JSON.stringify(payload));}

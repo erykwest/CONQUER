@@ -4,8 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>CONQUER — Settlement Builder</title>
-<script src="./src/regional-biome-rules.js?v=regional-eight-coast-3"></script>
-<script src="./src/regional-demo.js?v=no-demo-overlay-1"></script>
+<script src="./src/regional-biome-rules.js?v=water-network-2"></script>
+<script src="./src/regional-demo.js?v=no-demo-overlay-1-water-network-1"></script>
 <script>
 // ?assetlab=1: geometry sandbox for the Asset Lab (figures-lab.html) — no saves, no cloud, no telemetry.
 window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetlab') === '1';
@@ -126,16 +126,16 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
     <div class="kv"><span>Seed</span><b id="seedLabel">—</b></div>
     <div class="kv"><span>Biome</span><b id="biomeLabel">Pianura</b></div>
     <select id="biomeSelect" aria-label="Biome">
-      <option value="test" selected>TEST</option>
+      <option value="test" selected hidden disabled>TEST</option>
       <option value="plains">Pianura</option>
-      <option value="hills">Colline</option>
-      <option value="valley">Vallata</option>
-      <option value="river">Fiume</option>
+      <option value="hills" hidden disabled>Colline</option>
+      <option value="valley" hidden disabled>Vallata</option>
+      <option value="river" hidden disabled>Fiume</option>
       <option value="forest">Foresta</option>
       <option value="mountains">Montagne</option>
-      <option value="sea">Mare</option>
+      <option value="sea" hidden disabled>Mare</option>
       <option value="swamp">Palude</option>
-      <option value="lake">Lago</option>
+      <option value="lake" hidden disabled>Lago</option>
     </select>
     <div class="kv"><span>Build area</span><b>100×100U</b></div>
     <div class="kv"><span>World buffer</span><b>200×200U</b></div>
@@ -383,8 +383,9 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/settlement-court-people.js?v=court-3-p0"></script>
 <script src="./src/settlement-events-joust.js?v=joust-2"></script>
 <script src="./src/settlement-webgpu.js?v=webgpu-2"></script>
-<script src="./src/settlement-world.js?v=bridge-magnet-1-wc1-mare-regional-eight-coast-3-mountains-irregular-3"></script>
-<script src="./src/settlement-regional-landscape.js?v=regional-coast-3-mountains-uniform-4"></script>
+<script src="./src/settlement-world.js?v=bridge-magnet-1-wc1-mare-regional-eight-coast-3-mountains-irregular-3-water-network-1"></script>
+<script src="./src/settlement-hydrology.js?v=network-2"></script>
+<script src="./src/settlement-regional-landscape.js?v=regional-coast-3-mountains-uniform-4-water-network-2"></script>
 <script src="./src/settlement-castle.js?v=stair-hl-1-floors1-longhouse2-mare"></script>
 <script src="./src/settlement-terraforming.js?v=terraform-blockers-flat-cut-1"></script>
 <script src="./src/settlement-landscape.js?v=regional-eight-coast-3-mountains-irregular-3"></script>

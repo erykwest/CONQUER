@@ -7,7 +7,12 @@
   if(params.has('regionalDemo')){
     try{demo=JSON.parse(params.get('regionalData')||sessionStorage.getItem('conquer.regional-demo.'+params.get('regionalDemo'))||'null')}catch{}
     const biome=window.ConquerRegionalBiomeRules?.biomeForTerrain(demo?.terrain);
-    if(biome)demo.biome=biome;else demo=null;
+    if(biome&&window.ConquerRegionalBiomeRules.isSelectableTerrain(demo?.terrain))demo.biome=biome;else demo=null;
+  }else if(['mouth-sea','mouth-lake','river-confluence','stream-confluence','mixed-confluence'].includes(params.get('demo'))){
+    const preset=params.get('demo'),stream=preset==='stream-confluence',forest=stream||preset==='mixed-confluence';
+    const terrain=Object.fromEntries(Object.keys(window.ConquerRegionalBiomeRules.directions).map(k=>[k,forest?'forest':'plain']));
+    if(preset.startsWith('mouth-'))for(const d of ['south','southEast','southWest'])terrain[d]=preset==='mouth-sea'?'sea':'lake';
+    demo={version:1,biome:forest?'forest':'plains',preset,seed:Number(params.get('seed')||4242),name:preset,hasRiver:!stream,riverSides:['north','east'],tributaryTypes:preset==='river-confluence'?['river']:preset.endsWith('confluence')?['stream']:[],surroundings:Object.fromEntries(Object.entries(terrain).map(([k,v])=>[k,{terrain:v,source:'demo'}]))};
   }else if(Object.hasOwn(coastalDemos,params.get('demo'))){
     const preset=params.get('demo'),count=['gulf','headland','peninsula','island'].indexOf(preset)+1;
     const sides=['north','east','south','west'].slice(0,count),terrain=Object.fromEntries(Object.keys(window.ConquerRegionalBiomeRules.directions).map(k=>[k,'plain']));
@@ -42,6 +47,8 @@
       const alert=document.createElement('p');alert.id='demoLaunchError';alert.setAttribute('role','alert');alert.style.cssText='padding:40px;color:#efd1a6;font:18px system-ui';alert.textContent=info.error;
       const back=document.createElement('a');back.href='CONQUER_WORLD_LAB.html';back.textContent=' Torna alla mappa regionale';alert.append(back);document.body.append(alert);return;
     }
+    const select=document.getElementById('biomeSelect');
+    if(params.has('regionalDemo')&&select){select.disabled=true;select.title='Bioma ereditato dal territorio regionale';}
     State.daylightOverride='day';State.clock.speed=0;invalidateSceneCache();draw();
     const regionalLink=document.querySelector('header a[href="./CONQUER_WORLD_LAB.html"]');
     if(regionalLink)regionalLink.href='CONQUER_WORLD_LAB.html?returnDemo=1';

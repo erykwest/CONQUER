@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## REG-WATER-NETWORK — Biomi e rete idrografica (09/11/2026)
+
+Bioma terrestre regionale ereditato nella zona: Pianura, Foresta, Montagne, Palude. Mare e Lago sono celle acquatiche escluse dalla selezione e apertura; costa, valle, colline e fiume descrivono morfologia/idrografia, senza ulteriori scelte locali di bioma. Le ricette legacy restano leggibili per compatibilita. Confluenza solo dove il grafo regionale ha una diramazione, non per ogni coppia di lati fluviali. L’affluente termina sul corso ricevente; la foce nel corpo acqua ricevente. Laghi distinti da piccoli stagni: nessuna foce automatica in un normale stagno. Raccordi geometrici deterministici, non simulazione di portata, erosione o quota di bacino. La palude richiede un successivo bilanciamento visivo di acqua/vegetazione.
+
 ## REG-MOUNTAIN-UNIFORM — Posizionamento anche con biomi uguali (06/11/2026)
 
 L’uguaglianza dei biomi non permette di saltare la composizione montana: la ricetta legacy non equivale alla distribuzione esplicita di otto settori montuosi. La composizione va attivata con contesto montano completo anche se centro e vicini sono tutti Montagne. Caso di regressione T297, seed 1555837107.
