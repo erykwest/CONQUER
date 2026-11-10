@@ -8,6 +8,13 @@
 - **ASSET LAB:** registro `ConquerArtModels` in `MODEL_SOURCES` (Interni · «Opere d'arte · quadri / arazzi / sculture», titoli in italiano dal catalogo); script caricato in `figures-lab.html` e `index.html`.
 - **PROVE:** `qa/art-regression.cjs` (catalogo, risoluzione `a:`, ancoraggi dentro la stanza e liberi da mobili, scala e tra loro; regole di montaggio e larghezza; slot colore, `ConquerArtColors`, opera ricolorata sul suo ancoraggio) PASS 7/7; audit Interni senza differenze sui colori predefiniti; `qa/cutaway-furniture-regression.cjs` PASS 9/9; controllo visivo dei 19 modelli nel Lab. Osservazione: nelle stanze quadrate già arredate le pareti libere sono strette (circa 1 m: letto, camino, arazzo araldico e torce); i tratti fino a 3 m ci sono nelle stanze rotonde o vuote.
 
+## 2026-11-09 — CI P2.4: ownership delle regressioni specialistici (PR in preparazione)
+
+- **IMPLEMENTAZIONE SU BRANCH:** sei controlli Codex deterministici restano solo in Runtime integrity (always-on PR); routing/spawn + main-road restano sempre in settlement-qa, tolti da CAMP/Main fixes (3 invocazioni). Totale nove invocazioni ridondanti eliminate senza toccare i test stessi.
+- **COPERTURA:** Codex conserva il browser e il check module; CAMP conserva test comportamento; Main fixes conserva WebGL, paused-render e browser. Altre sovrapposizioni con trigger differenti lasciate inalterate, per non perdere regressioni.
+- **QA DA VERIFICARE:** guard CI P1 esteso con ownership P2.4, workflow invariati nel numero; PR e merge solo con tutti i controlli verdi.
+
+
 ## 2026-11-09 — BC-261109-02 · DEV e cantieri di upgrade (branch `fix/upgrades-dev-build`)
 
 - **Prove aggiuntive PASS:** regressione d'assedio reale Canvas/WebGL e perdita contesto WebGL; annullamento di upgrade conserva i danni subiti durante il cantiere.

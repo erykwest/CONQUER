@@ -53,4 +53,4 @@ jobs:
           node qa/night-vision-regression.cjs
           node qa/patrol-regression.cjs
           node qa/combat-selection-regression.cjs
-          node qa/settlement-routing-spawn-regression.cjs
+          # Routing/spawn is already checked on every PR by settlement-qa.

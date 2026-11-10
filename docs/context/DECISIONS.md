@@ -6,6 +6,13 @@
 - **CONTRATTO:** ogni archetipo di `ConquerArtModels.catalog` dichiara i suoi slot colore (`colors`: id, etichetta, chiave di palette, eventuale chiave d'ombra con rapporto `k`, set di tinte suggerite in `swatches`). L'opera commissionata salva solo `{ slotId: '#rrggbb' }` (le differenze dai colori dell'archetipo, `ConquerArtColors.diff`); `ConquerArtColors.paint` la traduce in sostituzioni di palette che il cutaway applica con precedenza su araldica e tinta della pietra. Le tinte suggerite sono pigmenti, lane, dorature e pietre storiche, ma qualsiasi colore esadecimale è accettato.
 - **STATO:** codice sul branch `feature/arte-graphics`; manca la UI di commissione in gioco (ART-251105-03), che userà questo contratto.
 
+## D-CI-P24-261109 — Ownership dei test CI con proprietario always-on (09/11/2026)
+
+- **DECISO:** rimuovere un comando deterministico duplicato da un workflow specialistico solo se un owner separato esegue lo stesso controllo in ogni PR pertinente (Runtime integrity per Codex, settlement-qa per routing/main-road).
+- **NON RIMUOVERE:** ripetizioni apparentemente simili ma con trigger per percorsi diversi (Combat/CAMP, Economy/Builder/Road, Gate/Cutaway, renderer Main-fixes/WebGPU/Converge), poiché fungono da garanzia su cambiamenti non necessariamente intercettati dall'altro workflow. Restano tutti i controlli browser e la suite completa settimanale/ad alto rischio.
+- **REGRESSIONE CI:** owner e assenza duplicati verificate dal guard always-on, nessun cambio ai 26 workflow esistenti, né alle protezioni main (P2.2 sospeso). Valutare benefici reali su campione di PR.
+
+
 ## D-UPGRADE-261109 — Upgrade edilizi e strumenti DEV
 
 - **DECISO:** gli interventi individuali su strutture e livelli delle case usano il motore di costruzione condiviso, con inspector temporaneo, tempo positivo, quota separata e annullamento che ripristina lo stato precedente. Un solo intervento per edificio. Restano distinti i comandi operativi (apri/chiudi, funzioni stanza, rotazione), le politiche edilizie globali e le riparazioni.
