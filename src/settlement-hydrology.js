@@ -37,17 +37,25 @@
   pts=dense(pts);return trim()||line;
  }
  function join(branch,trunks,bodies,obstacles){
-  let best=null;
+  // Each end drains to its FIRST crossing. Choosing the longest path to any
+  // crossing makes a tributary cross/rejoin the trunk repeatedly, forming loops.
+  const hits=[],arc=[0];
+  for(let i=1;i<branch.points.length;i++)arc.push(arc.at(-1)+Math.hypot(branch.points[i].x-branch.points[i-1].x,branch.points[i].y-branch.points[i-1].y));
   for(const trunk of trunks)for(let i=1;i<branch.points.length;i++)for(let j=1;j<trunk.points.length;j++){
    const p=intersection(branch.points[i-1],branch.points[i],trunk.points[j-1],trunk.points[j]);if(!p||bodies.some(f=>environmentContains(f,p)))continue;
-   const choices=[branch.points.slice(0,i).concat([p]),branch.points.slice(i).reverse().concat([p])].sort((a,b)=>b.length-a.length);
-   for(const points of choices){
-    if(points.length<10||points.some((q,k)=>k%3===0&&(bodies.some(f=>environmentContains(f,q))||obstacles.some(f=>environmentContains(f,q,1)))))continue;
-    if(!best||points.length>best.points.length)best={...branch,points,confluence:{downstreamId:trunk.id,point:p}};
-    break;
-   }
+   hits.push({p,i,trunk,d:arc[i-1]+Math.hypot(p.x-branch.points[i-1].x,p.y-branch.points[i-1].y)});
   }
-  return best;
+  if(!hits.length)return null;
+  hits.sort((a,b)=>a.d-b.d);
+  const first=hits[0],last=hits.at(-1),choices=[
+   {hit:first,points:branch.points.slice(0,first.i).concat([first.p]),length:first.d},
+   {hit:last,points:branch.points.slice(last.i).reverse().concat([last.p]),length:arc.at(-1)-last.d}
+  ].sort((a,b)=>b.length-a.length);
+  for(const {hit,points} of choices){
+   if(points.length<10||points.some((q,k)=>k%3===0&&(bodies.some(f=>environmentContains(f,q))||obstacles.some(f=>environmentContains(f,q,1)))))continue;
+   return {...branch,points,confluence:{downstreamId:hit.trunk.id,point:hit.p}};
+  }
+  return null;
  }
  function distributaries(main,bodies){
   if(main.type!=='river'||main.mouth?.kind!=='sea'||main.confluence)return [];
@@ -79,13 +87,28 @@
   return out;
  }
  function compose(env){
-  const info=window.__CONQUER_REGIONAL_DEMO__;if(!info)return env;
+  const info=window.__CONQUER_REGIONAL_DEMO__||{};
   const original=env.filter(water);if(!original.length)return env;
   const bodies=env.filter(f=>f.type==='sea'||f.type==='pond'&&f.waterBodyKind==='lake'),obstacles=env.filter(f=>f.type==='mountain');
-  const lines=original.map(f=>mouth({...f,points:f.points.map(p=>({...p}))},bodies)).filter(Boolean);
+  const lines=[];
+  // Resolve crossing streams as real junctions instead of drawing crossing caps.
+  for(const f of original.slice().sort((a,b)=>(a.type==='stream')-(b.type==='stream'))){
+    const line=mouth({...f,points:f.points.map(p=>({...p}))},bodies);if(!line)continue;
+    if(line.type==='stream'&&lines.length){
+      const connected=join(line,lines,bodies,obstacles);
+      if(connected){lines.push(connected);continue;}
+      // An obstructed junction may be skipped, but never leave a crossing loop.
+      const crossing=lines.some(trunk=>line.points.slice(1).some((p,i)=>trunk.points.slice(1).some((q,j)=>intersection(line.points[i],p,trunk.points[j],q))));
+      if(crossing)continue;
+    }
+    lines.push(line);
+  }
   if(!lines.length)return env.filter(f=>!water(f));
-  const rnd=seedRand((State.seed^0x6783ab1)>>>0),types=Array.isArray(info.tributaryTypes)?info.tributaryTypes.filter(t=>['river','stream'].includes(t)).slice(0,3):[];
-  if(info.hasRiver&&biomeRecipe().stream&&rnd()<biomeRecipe().stream&&!original.some(f=>f.type==='stream')&&!types.includes('stream'))types.push('stream');
+  const rnd=seedRand((State.seed^0x6783ab1)>>>0),types=[];
+  let streams=lines.filter(f=>f.type==='stream').length;
+  const requested=Array.isArray(info.tributaryTypes)?info.tributaryTypes.filter(t=>['river','stream'].includes(t)).slice(0,3):[];
+  for(const type of requested){if(type==='stream'&&streams>=3)continue;types.push(type);if(type==='stream')streams++}
+  if(info.hasRiver)while(streams<biomeStreamCount()){types.push('stream');streams++}
   const sides=info.riverSides||[];
   for(let n=0;n<types.length;n++)for(let attempt=0;attempt<12;attempt++){
    const candidate=types[n]==='river'?makeBoundaryRiver(rnd,sides[(n+attempt+1)%sides.length]):makeEnvWater(rnd,'stream');

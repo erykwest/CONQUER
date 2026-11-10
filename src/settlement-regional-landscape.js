@@ -100,6 +100,7 @@
     State.relief.regionalAdjusted=true;clearReliefBandCache();
   }
   function compose(base){
+    woodlandContext=null;
     if(!active())return base;
     const key=State.seed+'-'+signature(),rnd=seedRand((State.seed^signature()^0x18405c)>>>0),coast=coastShape();
     const forests=base.filter(f=>f.type==='forest'),centralSea=base.filter(f=>f.type==='sea'),centralPonds=base.filter(f=>f.type==='pond');
@@ -107,7 +108,7 @@
     const mountains=base.filter(f=>f.type==='mountain').map(f=>({...f,id:'regional-center-'+f.id,
       x:50+f.x/2,y:50+f.y/2,rx:f.rx/2,ry:f.ry/2,height:f.height/2,
       unclippedPoints:(f.unclippedPoints||f.points).map(p=>({x:50+p.x/2,y:50+p.y/2})),points:f.points.map(p=>({x:50+p.x/2,y:50+p.y/2}))}));
-    const n=100,seaMask=new Uint8Array(n*n),pondMask=new Uint8Array(n*n),forestMask=new Uint8Array(n*n);
+    const n=100,seaMask=new Uint8Array(n*n),pondMask=new Uint8Array(n*n);
     const samples=[];
     for(let y=0;y<n;y++)for(let x=0;x<n;x++){
       const p={x:(x+.5)*2,y:(y+.5)*2},w=field(p),c=w['@center']||0;
@@ -190,6 +191,16 @@
     }
     const dryMountains=mountains.filter(f=>!blocked({x:f.x,y:f.y})&&!f.points.some(blocked));
     State.relief.hills=State.relief.hills.filter(h=>!reliefHillFootprint(h).some(blocked));clearReliefBandCache();
+    woodlandContext={key,samples,forests};
+    const woods=woodlandFeatures(samples,lines,dryMountains,forests,key);
+    if(typeof clearForestLayoutCache==='function')clearForestLayoutCache();
+    State.relief.stats=reliefStats();
+    // Seas paint after rivers, so submerged downstream segments disappear into their receiving water.
+    return[...lines,...waters,...woods,...dryMountains];
+  }
+  let woodlandContext=null;
+  function woodlandFeatures(samples,lines,dryMountains,forests,key){
+    const forestMask=new Uint8Array(samples.length);
     // Boschi are land cover; Foresta remains a separate biome. Calibrate the
     // pure plains centre and inherited plains separately, so neighbours cannot
     // dilute the central 20%. Blended strips interpolate the local thresholds.
@@ -216,10 +227,14 @@
       const threshold=Math.max(0,group.threshold)*plain+density;
       if(threshold>value)forestMask[i]=1;
     }
+    return features(forestMask,'forest','regional-forest-'+key);
+  }
+  // Mouth extensions and tributaries are final before calibrating woodland cover.
+  function finalizeWoodlands(env){
+    const c=woodlandContext;if(!c||!active()||c.key!==State.seed+'-'+signature())return env;
+    const woods=woodlandFeatures(c.samples,env.filter(f=>f.type==='river'||f.type==='stream'),env.filter(f=>f.type==='mountain'),c.forests,c.key);
     if(typeof clearForestLayoutCache==='function')clearForestLayoutCache();
-    State.relief.stats=reliefStats();
-    // Seas paint after rivers, so submerged downstream segments disappear into their receiving water.
-    return[...lines,...waters,...features(forestMask,'forest','regional-forest-'+key),...dryMountains];
+    return [...env.filter(f=>f.type!=='forest'),...woods];
   }
   let groundCache=null;
   function drawGround(){
@@ -237,5 +252,5 @@
     const a=w2sRaw({x:0,y:0},0),b=w2sRaw({x:200,y:0},0),d=w2sRaw({x:0,y:200},0);
     ctx.save();ctx.transform((b.x-a.x)/256,(b.y-a.y)/256,(d.x-a.x)/256,(d.y-a.y)/256,a.x,a.y);ctx.drawImage(groundCache.canvas,0,0);ctx.restore();
   }
-  window.ConquerRegionalLandscape={active,weights,adjustRelief,compose,drawGround,rings,coastShape,coastThreshold};
+  window.ConquerRegionalLandscape={active,weights,adjustRelief,compose,finalizeWoodlands,drawGround,rings,coastShape,coastThreshold};
 })();

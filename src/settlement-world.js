@@ -1377,22 +1377,32 @@ function biomeMountains(){
 }
 const MOUNTAIN_STEEPNESS=[.95,1.15],MOUNTAIN_SLOPE_DEG=[37,63];
 // makeWatercourseAvoiding: the stream/river must stay clear of the mountain chain.
-function biomeWater(mountains){
+// The biome probability enables a draw; the draw itself is uniformly 0-3.
+// Shared by terrain obstacles and final drainage, including regional tributaries.
+function biomeStreamCount(){
+  const probability=biomeRecipe().stream||0,rnd=biomeStream(0x51ea03);
+  return probability&&rnd()<probability?Math.floor(rnd()*4):0;
+}
+function biomeWaters(mountains){
   const recipe=biomeRecipe(),rnd=biomeStream(0x3a7684c1);
   const borderRiver=window.__CONQUER_REGIONAL_DEMO__?.hasRiver;
-  const type=recipe.river||borderRiver&&!recipe.lake&&!recipe.sea?'river':recipe.stream&&rnd()<recipe.stream?'stream':null;
-  if(!type)return null;
-  let best=null,bestClear=-Infinity;
-  for(let attempt=0;attempt<40;attempt++){
-    const water=makeEnvWater(rnd,type);
-    let clear=Infinity;
-    for(const m of mountains)for(let i=1;i<water.points.length;i++)
-      for(const p of m.points)clear=Math.min(clear,pointSegmentDistance(p,water.points[i-1],water.points[i]));
-    if(clear>water.width/2+2)return water;
-    if(clear>bestClear){bestClear=clear;best=water}
+  const river=recipe.river||borderRiver&&!recipe.lake&&!recipe.sea;
+  const count=river?1:biomeStreamCount(),out=[];
+  for(let n=0;n<count;n++){
+    let best=null,bestClear=-Infinity;
+    for(let attempt=0;attempt<40;attempt++){
+      const water=makeEnvWater(rnd,river?'river':'stream');
+      let clear=Infinity;
+      for(const m of mountains)for(let i=1;i<water.points.length;i++)
+        for(const p of m.points)clear=Math.min(clear,pointSegmentDistance(p,water.points[i-1],water.points[i]));
+      if(clear>bestClear){bestClear=clear;best=water}
+      if(clear>water.width/2+2)break;
+    }
+    if(best){if(!river)best.id='env-stream-'+n;out.push(best)}
   }
-  return best;
+  return out;
 }
+function biomeWater(mountains){return biomeWaters(mountains)[0]||null}
 // Outline used to keep hills, forests, ponds, sea and mountains apart.
 function reliefHillFootprint(hill){return hill.levels?.[0]?.top||[]}
 function biomeFeatureClear(points,obstacles,gap){
@@ -1410,10 +1420,10 @@ function biomeFeatureClear(points,obstacles,gap){
   return true;
 }
 function biomeTerrainObstacles(){
-  const sea=biomeSea(),mountains=biomeMountains(),water=biomeWater(mountains),out=[];
+  const sea=biomeSea(),mountains=biomeMountains(),waters=biomeWaters(mountains),out=[];
   // Hills may run into the mountains: foothills continue the massif instead of avoiding it.
   if(sea)out.push({points:sea.points});
-  if(water)out.push({line:water.points,clear:water.width/2+2});
+  for(const water of waters)out.push({line:water.points,clear:water.width/2+2});
   return out;
 }
 const BIOME_TOWN={x:WORLD/2,y:WORLD/2},BIOME_TOWN_CLEARANCE=7;
@@ -1761,7 +1771,7 @@ function generateEnvironment(){
   const sea=biomeSea();if(sea)env.push(sea);
   if(recipe.lake)env.push({...makeEnvBlob(rnd,'pond',WORLD/2,WORLD/2,78,72,'#3f7f8a','#8ab9bd',40,.07),waterBodyKind:'lake'});
   const mountains=biomeMountains();env.push(...mountains);
-  const water=biomeWater(mountains);if(water)env.push(water);
+  env.push(...biomeWaters(mountains));
   const ponds=biomeRange(rnd,recipe.ponds);
   if(recipe.continuousForest){
     for(let i=0;i<ponds;i++)addBiomePond(env,rnd);
@@ -1782,7 +1792,8 @@ function generateEnvironment(){
     if(!regionalWater&&environmentConflictsTestRelief(env[i])||['hill','rough'].includes(env[i].type))env.splice(i,1);
   }
   const regional=window.ConquerRegionalLandscape?.compose(env)||env;
-  State.environment=window.ConquerHydrology?.compose(regional)||regional;
+  const drainage=window.ConquerHydrology?.compose(regional)||regional;
+  State.environment=window.ConquerRegionalLandscape?.finalizeWoodlands(drainage)||drainage;
 }
 // ---------- woodland holes ----------
 // The Foresta biome is one woodland over the whole map (f.continuous) with holes: clearings,

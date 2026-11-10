@@ -12,10 +12,10 @@ const SEEDS=[12345,4242,229,777,90210,31337];
 const EXPECT={
   plains:{hills:[0,0],forests:[1,40],mountains:[0,0],water:['stream',null]},
   hills:{hills:[2,4],forests:[0,1],mountains:[0,0],water:[null]},
-  valley:{hills:[0,0],forests:[0,0],mountains:[6,10],water:['stream']},
+  valley:{hills:[0,0],forests:[0,0],mountains:[6,10],water:['stream',null]},
   river:{hills:[0,1],forests:[0,2],mountains:[0,0],water:['river']},
-  forest:{hills:[0,0],forests:[1,1],mountains:[0,0],water:['stream'],ponds:1,continuous:true},
-  mountains:{hills:[1,60],forests:[0,0],mountains:[8,14],water:['stream'],hillCoverage:.30},
+  forest:{hills:[0,0],forests:[1,1],mountains:[0,0],water:['stream',null],ponds:1,continuous:true},
+  mountains:{hills:[1,60],forests:[0,0],mountains:[8,14],water:['stream',null],hillCoverage:.30},
   sea:{hills:[0,0],forests:[0,1],mountains:[0,0],water:[null],sea:true}
 };
 for(const [biome,e] of Object.entries(EXPECT))for(const seed of SEEDS){
@@ -69,7 +69,9 @@ for(const [biome,e] of Object.entries(EXPECT)){
   if(biome==='hills')assert.ok(hills>=SEEDS.length*3,'hills biome should usually place 3-4 hills, got '+hills);
 }
 // Main roads cut a groove through the continuous woodland instead of failing.
-run("State.seed=4242;State.biome='forest';State.structures=[];State.environment=[];State.relief=null;clearReliefBandCache();generateRelief();generateEnvironment()");
+run("State.seed=2;State.biome='forest';State.structures=[];State.environment=[];State.relief=null;clearReliefBandCache();generateRelief();generateEnvironment()");
+// Isolate the groove contract from seed-dependent stream banks and natural glades.
+run("State.environment=State.environment.filter(f=>f.type==='forest');State.environment[0].holes=[];clearForestLayoutCache()");
 assert.equal(run("environmentBlocksPoint({x:100,y:3},'road')"),true,'woodland blocks ordinary roads');
 assert.equal(run("primaryRoadTerrainBlocked({x:100,y:3})"),false,'main roads may enter the woodland');
 run("globalThis.qaGroove={id:'qa-main',type:'road',auto:true,routeId:'arterial-0',a:{x:100,y:80},b:{x:100,y:20},width:.62};carveForestGroove(qaGroove)");

@@ -1,7 +1,7 @@
 {
  "version": 1,
- "generatedAt": "2026-11-10T11:01:52.978183+00:00",
- "note": "Reviewed Territorio: 16 unchanged renders, 0 failures, 5 schematic warnings; woodland density verified separately in five runtime scenarios on 2026-11-10. Regenerate with: node qa/asset-audit.mjs --update-baseline",
+ "generatedAt": "2026-11-10T11:16:57.618206+00:00",
+ "note": "Reviewed Territorio: 16 unchanged renders, zero failures, five schematic warnings; 0-3 streams verified in five runtime scenarios on 2026-11-10. Regenerate with: node qa/asset-audit.mjs --update-baseline",
  "waivers": {
   "castle:pietra-quadrata-piccola-l2-latrina|damage-elemento-esterno-crollato|sagoma-conservata": "Falso positivo: la torre resta integra, le macerie dello sbalzo a terra allargano l'inquadratura e la torre risulta più piccola (rivisto nel foglio il 05/11/2026)."
  },

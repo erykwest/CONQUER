@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## REG-STREAMS-0-3 — Numero dei torrenti (10/11/2026)
+
+Nuove mappe: estrazione uniforme tra zero e tre dopo il gate stream della ricetta. Il gate resta .45 in Pianura e 1 in Foresta/Montagne/Palude: le probabilita finali teoriche sono rispettivamente 66.25/11.25/11.25/11.25% e 25/25/25/25% per 0/1/2/3 torrenti. Gli scarti per vincoli geometrici possono ridurre il numero. Richieste esplicite della rete regionale condividono il limite di tre torrenti; non limitano i fiumi regionali. Gli affluenti terminano al primo incrocio, senza attraversamenti ripetuti del ricevente. Boschi calibrati dopo la geometria finale dell’acqua.
+
 ## REG-PLAINS-WOODS-20 — Boschi in Pianura (10/11/2026)
 
 Boschi indica la copertura vegetale, Foresta il bioma. Nelle nuove mappe Pianura il target dei boschi e il 20% della superficie della pianura, inclusi nel denominatore i terreni occupati da altri elementi. Centro e pianure ereditate sono calibrati separatamente; le fasce interpolano i contributi dei biomi. Vincoli di acqua, rilievo e spazio iniziale hanno priorita. La discretizzazione e lo smoothing ammettono una tolleranza geometrica, verificata nei test entro 1.5 punti percentuali. Nessuna rigenerazione dei salvataggi.
