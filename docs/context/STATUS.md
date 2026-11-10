@@ -1,5 +1,7 @@
 # Livello 2 — Stato tecnico e prove
 
+10/11/2026 — REG-WOODLAND-DENSITY: rimosso il minimo di 14 alberi e il conteggio su raggi nominali nei boschi isolati. Stessa griglia jittered 4.4U dei boschi regionali, filtrata sui poligoni reali e sulle radure: densita omogenea anche per macchie piccole, strette o ritagliate. Geometrie e copertura boschiva immutate. Test fallito prima e PASS dopo; cinque snapshot runtime verificati (seed 12345/4242/229/777/90210) in output/playwright/density-fixed-*.png. Audit Lab Territorio: 16 invariati, zero errori, cinque avvisi di schemi illustrativi.
+
 10/11/2026 — REG-PLAINS-WOODS-20: boschi (copertura naturale) distinti dal bioma Foresta. Pianura con target 20% della superficie, non 0–1 macchie. Ricetta autonoma calibrata e composizione regionale calibrata separatamente su centro e settori di pianura ereditata; fasce miscelate. Acque, pendii ripidi e nucleo insediativo restano esclusi. PASS sei seed autonomi e misti con tolleranza raster 1.5 punti percentuali, determinismo e regressioni biomi/idrografia/coste/persistenza. Salvataggi esistenti non rigenerati. Nessuna modifica alla roadmap o ai modelli grafici.
 
 10/11/2026 — REG-COAST-ENDS: conservati gli endpoint delle rive reali sul bordo mondo; esclusi solo gli spigoli artificiali del mare. Tutte le rive separate ricevono spiaggia/rocce e onde con normali locali; coastline principale mantenuta per compatibilita. PASS inherited-coast, coast, regional-surroundings, water-surface e hydrology-network. Verifica browser non eseguita in questo intervento.

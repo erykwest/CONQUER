@@ -34,9 +34,6 @@ const LANDSCAPE_RENDER_BUDGET=Object.freeze({
   terrainMarks:120,
   rockDensity:2.35,
   rockCrestDensity:.95,
-  forestDensity:.95,
-  forestMin:14,
-  forestMax:120,
   flowerClusters:520
 });
 let landscapeRenderCacheSeed=null;
@@ -620,9 +617,6 @@ function drawForestGround(f){
   }
   ctx.restore();
 }
-function forestTreeCount(f){
-  return clamp(Math.round((f.rx||5)*(f.ry||4)*LANDSCAPE_RENDER_BUDGET.forestDensity),LANDSCAPE_RENDER_BUDGET.forestMin,LANDSCAPE_RENDER_BUDGET.forestMax);
-}
 // Holes (clearings, grooves) change the layout: key it by their count, not just the id.
 function forestLayoutKey(f){return f.id+':'+(f.holes?.length||0)}
 function clearForestLayoutCache(){forestTreeLayoutCache.clear()}
@@ -643,32 +637,9 @@ function forestTreeLayout(f){
   ensureLandscapeRenderCaches();
   const cacheKey=forestLayoutKey(f);
   if(forestTreeLayoutCache.has(cacheKey))return forestTreeLayoutCache.get(cacheKey);
-  if(f.continuous){const trees=continuousForestTrees(f);forestTreeLayoutCache.set(cacheKey,trees);return trees}
-  const rnd=seedRand((State.seed^biomeHash(f.id))>>>0),trees=[],target=forestTreeCount(f);
-  // Sample the actual rotated, lobed polygon's bounds, not the nominal axis
-  // radii: every cove and peninsula must be eligible for trees.
-  const bounds={minX:Infinity,maxX:-Infinity,minY:Infinity,maxY:-Infinity};
-  for(const p of f.points||[]){
-    bounds.minX=Math.min(bounds.minX,p.x);bounds.maxX=Math.max(bounds.maxX,p.x);
-    bounds.minY=Math.min(bounds.minY,p.y);bounds.maxY=Math.max(bounds.maxY,p.y);
-  }
-  if(!Number.isFinite(bounds.minX)){
-    bounds.minX=f.x-f.rx;bounds.maxX=f.x+f.rx;
-    bounds.minY=f.y-f.ry;bounds.maxY=f.y+f.ry;
-  }
-  let attempts=0;
-  while(trees.length<target&&attempts<target*12){
-    attempts++;
-    const p={x:bounds.minX+rnd()*(bounds.maxX-bounds.minX),y:bounds.minY+rnd()*(bounds.maxY-bounds.minY)};
-    if(p.x<0||p.x>WORLD||p.y<0||p.y>WORLD||!environmentContains(f,p))continue;
-    trees.push({
-      p,z:terrainElevation(p),
-      shapeIndex:Math.floor(rnd()*FOREST_TREE_ASSETS.length),
-      colorIndex:Math.floor(rnd()*FOREST_CANOPY_PALETTES.summer.length),
-      flip:rnd()<.5,
-      scale:.8+rnd()*.4
-    });
-  }
+  // One area-based spacing for all woods, including tiny, narrow and clipped
+  // isolated patches. No per-patch minimum or nominal-radius tree quota.
+  const trees=continuousForestTrees(f);
   forestTreeLayoutCache.set(cacheKey,trees);return trees;
 }
 function forestLikelyVisible(f,pad=100){
