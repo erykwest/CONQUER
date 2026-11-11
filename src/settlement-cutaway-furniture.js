@@ -8,10 +8,12 @@
 // depth-sorted, with the castle two-tone shading and the realm's heraldry colours;
 // torch and candle flames are exported as lights for the night cutaway.
 (function(){
-  const FM=()=>window.ConquerFurnitureModel,SM=()=>window.ConquerScatterModel;
+  const FM=()=>window.ConquerFurnitureModel,SM=()=>window.ConquerScatterModel,AM=()=>window.ConquerArtModels;
   const GAP=.02,LADDER_W=.16,LADDER_CLEAR=.34;
   function model(name){
     if(name.startsWith('s:')){const m=SM();return m&&{m,p:m.assets[name.slice(2)]}}
+    // ARTE works (src/assets/art-models.js): same piece format as the furniture.
+    if(name.startsWith('a:')){const m=AM();return m&&{m,p:m.pieces[name.slice(2)]}}
     const m=FM();return m&&{m,p:m.pieces[name]};
   }
   // ---------- geometry: indexed triangles -> polygons (coplanar same-colour pairs merged)
@@ -95,8 +97,9 @@
     const hit=(r,list)=>list.some(q=>{const a=norm(r),c=norm(q);return a[0]<c[2]&&a[2]>c[0]&&a[1]<c[3]&&a[3]>c[1]});
     // Footprint from the piece's real local extent (x from back to back+d, y centred),
     // turned by quarter turns: wall pieces such as torches only reach forward.
-    function rectOf(name,u,v,rot){
-      const s=size(name),x0=s.back,x1=s.back+s.d,y0=-s.w/2,y1=s.w/2;
+    function rectOf(name,u,v,rot){return rectFor(size(name),u,v,rot)}
+    function rectFor(s,u,v,rot){
+      const x0=s.back,x1=s.back+s.d,y0=-s.w/2,y1=s.w/2;
       const c=[[x0,y0],[x1,y0],[x1,y1],[x0,y1]].map(([x,y])=>rot===0?[x,y]:rot===1?[-y,x]:rot===2?[-x,-y]:[y,-x]);
       return[u+Math.min(...c.map(p=>p[0])),v+Math.min(...c.map(p=>p[1])),u+Math.max(...c.map(p=>p[0])),v+Math.max(...c.map(p=>p[1]))];
     }
@@ -151,7 +154,87 @@
     const toward=side=>(facing(side)+2)%4;
     // Fractions for a point just in front of a far wall.
     const front=(side,t,depth=.45)=>{const [du,dv]=SIDES[side];return du?[du*(1-depth),t]:[t,dv*(1-depth)]};
-    return{F,rnd,items,large:slot.size==='large',A:F.far[0],B:F.far[1],wall,row,at,near,facing,toward,front,place};
+    // Footprint s ({d,w,back}) at (u,v) inside the room shape and clear of furniture and reserves.
+    function fits(s,u,v,rot){
+      const r=rectFor(s,u,v,rot);
+      if(r[0]<-F.hu-1e-6||r[2]>F.hu+1e-6||r[1]<-F.hv-1e-6||r[3]>F.hv+1e-6)return null;
+      if(F.round&&Math.hypot(Math.max(Math.abs(r[0]),Math.abs(r[2])),Math.max(Math.abs(r[1]),Math.abs(r[3])))>F.hu+.02)return null;
+      if(F.dee&&![[r[0],r[1]],[r[2],r[1]],[r[2],r[3]],[r[0],r[3]]].every(([u,v])=>deeInside(F,u,v,-.02)))return null;
+      if(hit(r,boxes)||hit(r,reserve))return null;
+      return r;
+    }
+    // Where a wall piece of footprint s would stand at t along a far wall (same rule as wall()).
+    function wallSpot(side,t,s){
+      const [du,dv]=SIDES[side],inset=-s.back+GAP,along=(du?F.hv:F.hu)-s.w/2-.02;
+      const pos=t*Math.max(0,along),u=du?du*(F.hu-inset):pos,v=dv?dv*(F.hv-inset):pos;
+      const [pu,pv]=F.round?shrinkRound(u,v,s):F.dee?deeShrink(F,u,v,Math.max(s.d,s.w)*.5+.02):[u,v];
+      return{u:pu,v:pv,turn:facing(side)};
+    }
+    return{F,rnd,items,large:slot.size==='large',A:F.far[0],B:F.far[1],wall,row,at,near,facing,toward,front,place,
+      fits,wallSpot,rectFor,hit,reserve};
+  }
+
+  // ---------- ARTE display slots (ART-251105-02)
+  // Anchors where a work of art can be shown in a furnished room, computed after the room
+  // recipe so they never cover its furniture: wall anchors (paintings, tapestries, the saint's
+  // tabernacle) on the two standing walls, floor anchors (busts, statues) on free floor.
+  // A slot is a place, not a work: the commissioned work (game data) refers to a slot id.
+  // Wall art hangs above low furniture (benches, chests, tables) but not over tall pieces or
+  // other wall decorations. Each anchor records its free width w (U): a work fits when it is no
+  // wider (artFits); 'large' marks the anchors that take even the largest tapestry with its rod (.9 U ≈ 3.15 m).
+  const ART_WALL_W=[.9,.66,.5,.38,.28],ART_LARGE_W=.9,ART_LOW=.22;
+  const ART_FLOOR={small:{d:.14,w:.14,back:-.07},large:{d:.2,w:.2,back:-.1}},ART_FLOOR_MARGIN=.05;
+  function roomArtSlots(r,room){
+    const out=[],taken=[],F=r.F;
+    const tall=[...r.items.filter(it=>it.deco||(pieceFaces(it.name)?.h??1)>ART_LOW).map(it=>it.r),...r.reserve];
+    const sides=[...new Set([r.A,r.B])];
+    const tryWall=(side,width,w)=>{
+      const s={d:.03,w:width,back:0},rect=r.rectFor(s,w.u,w.v,w.turn%4);
+      const inside=rect[0]>=-F.hu-1e-6&&rect[2]<=F.hu+1e-6&&rect[1]>=-F.hv-1e-6&&rect[3]<=F.hv+1e-6;
+      if(!inside||r.hit(rect,tall)||r.hit(rect,taken))return false;
+      taken.push(rect);out.push({mount:'wall',size:width>=ART_LARGE_W?'large':'small',w:width,side,u:w.u,v:w.v,turn:w.turn,rect});return true;
+    };
+    for(const side of sides){
+      if(F.round||F.dee){
+        // Curved walls: sample spots along the wall (wallSpot pulls them onto the curve).
+        for(const t of r.large?[-.7,-.35,0,.35,.7]:[-.6,-.3,0,.3,.6])
+          for(const width of ART_WALL_W)if(tryWall(side,width,r.wallSpot(side,t,{d:.03,w:width,back:0})))break;
+        continue;
+      }
+      // Straight walls: the free stretches between tall pieces, each filled with the widest anchors that fit.
+      const [du,dv]=SIDES[side],half=(du?F.hv:F.hu)-.02,a=du?1:0,depth=[du?du*F.hu:dv*F.hv,(du?du*F.hu:dv*F.hv)-(du||dv)*.08];
+      const lo=Math.min(...depth),hi=Math.max(...depth);
+      const blocked=tall.map(q=>[Math.min(q[0],q[2]),Math.min(q[1],q[3]),Math.max(q[0],q[2]),Math.max(q[1],q[3])])
+        .filter(q=>q[1-a]<hi&&q[3-a]>lo).map(q=>[q[a]-.02,q[a+2]+.02]).sort((p,q)=>p[0]-q[0]);
+      let x=-half;const gaps=[];
+      for(const [b0,b1] of blocked){if(b0>x)gaps.push([x,Math.min(b0,half)]);x=Math.max(x,b1)}
+      if(x<half)gaps.push([x,half]);
+      for(const [g0,g1] of gaps){
+        let start=g0;
+        while(g1-start>=ART_WALL_W.at(-1)){
+          const width=ART_WALL_W.find(W=>W<=g1-start+1e-9),c=start+width/2;
+          tryWall(side,width,{u:du?du*(F.hu-GAP):c,v:dv?dv*(F.hv-GAP):c,turn:r.facing(side)});
+          start+=width+.04;
+        }
+      }
+    }
+    const cap=r.large?3:2,grid=[];
+    for(let a=-.7;a<=.71;a+=.35)for(let b=-.7;b<=.71;b+=.35)grid.push([a*F.hu,b*F.hv]);
+    // Statues stand towards the walls, the middle of the room stays free to walk.
+    grid.sort((p,q)=>Math.hypot(q[0]/F.hu,q[1]/F.hv)-Math.hypot(p[0]/F.hu,p[1]/F.hv));
+    let floors=0;
+    for(const [u,v] of grid){
+      if(floors>=cap)break;
+      for(const size of ['large','small']){
+        const s=ART_FLOOR[size],m={d:s.d+2*ART_FLOOR_MARGIN,w:s.w+2*ART_FLOOR_MARGIN,back:s.back-ART_FLOOR_MARGIN};
+        const rect=r.fits(m,u,v,0);
+        if(!rect||r.hit(rect,taken))continue;
+        // Facing the middle of the room.
+        const turn=Math.abs(u)>=Math.abs(v)?(u>0?2:0):(v>0?3:1);
+        taken.push(rect);out.push({mount:'floor',size,w:s.w,u,v,turn,rect});floors++;break;
+      }
+    }
+    return out.map((a,k)=>({...a,key:room.key+':art'+k}));
   }
   function hashStr(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
 
@@ -285,7 +368,9 @@
       if(slot.role&&ROOMS[slot.role])ROOMS[slot.role](r);
       // Torches on the standing walls light every furnished room at night.
       if(slot.role){r.wall(r.A,r.large?-.5:.0,'torchWall',{deco:true});if(r.large)r.wall(r.B,.5,'torchWall',{deco:true})}
-      out.push({slot,F:r.F,items:r.items,ladder:ladder&&slot.floor<levels-1?r.F.ladder:null,
+      // ARTE anchors, after every piece of the room (the gate passage floor has none).
+      const art=slot.index===-1?[]:roomArtSlots(r,{key});
+      out.push({slot,F:r.F,items:r.items,art,ladder:ladder&&slot.floor<levels-1?r.F.ladder:null,
         nextZ:floors[slot.floor+1]?.z});
     }
     return out;
@@ -301,7 +386,9 @@
     for(const f of pf.faces){
       const n=[f.n[0]*ca-f.n[1]*sa,f.n[0]*sa+f.n[1]*ca,f.n[2]];
       const color=f.key?.startsWith('stone')?(window.ConquerStoneColor?.shade(f.hex)||f.hex):f.hex;
-       out.push({pts:f.pts.map(W),hex:her[f.key]||color,n,floor,emissive:EMISSIVE.has(f.key)});
+      // A commissioned work of art carries its chosen colours (ConquerArtColors.paint): they win
+      // over the realm's heraldry and the stone palette.
+      out.push({pts:f.pts.map(W),hex:item.paint?.[f.key]||her[f.key]||color,n,floor,emissive:EMISSIVE.has(f.key)});
     }
     for(const [x,y,zl,kind] of pf.lights)lights.push({p:W([x,y,zl]),kind,floor});
   }
@@ -420,15 +507,18 @@
     const snaps=State.structures.filter(w=>w.aSnap===s.id||w.bSnap===s.id).map(w=>w.id+':'+structureLevel(w)).join(',');
     const key=[s.id,State.view.rotation||0,State.stonePaletteId,snaps,typeof cutawayBlockers==='function'?JSON.stringify(cutawayBlockers(s)):'',s.shape,s.isMastio?1:0,(typeof isPlanView==='function'&&isPlanView())?1:0,JSON.stringify(s.functions||[]),(s.keepPlans||[]).join(','),structureLevel(s),s.skin,s.wallSide,s.flip,s.x,s.y,s.angle,s.size,s.r,State.heraldry?.c1,State.heraldry?.c2,!!FM(),!!SM()].join('|');
     const hit=cache.get(s.id);if(hit&&hit.key===key)return hit;
-    const faces=[],lights=[],her=heraldry(),spots=new Map();
+    const faces=[],lights=[],her=heraldry(),spots=new Map(),art=[];
     for(const room of layoutStructure(s,g)){
       for(const it of room.items)pieceWorld(it,room.F,room.slot.z+.012,faces,lights,her,room.slot.floor);
       if(room.ladder&&Number.isFinite(room.nextZ))ladderWorld(room.ladder,room.F,room.slot.z+.01,room.nextZ,faces,room.slot.floor);
       spots.set(room.slot.index,freeSpots(room));
+      for(const a of room.art){const p=room.F.toWorld(a.u,a.v);
+        art.push({id:a.key,structureId:s.id,room:room.slot.index,floor:room.slot.floor,role:room.slot.role||null,mount:a.mount,size:a.size,w:a.w,
+          side:a.side||null,u:a.u,v:a.v,turn:a.turn,x:p.x,y:p.y,z:room.slot.z+.012,angle:room.F.b.angle+a.turn*Math.PI/2})}
     }
     partitionsWorld(s,g,faces);
     if(spiralTower(s)){const st=spiralStair(s,g);if(st)spiralStairWorld(st,faces)}
-    const res={key,faces,lights,spots};cache.set(s.id,res);return res;
+    const res={key,faces,lights,spots,art};cache.set(s.id,res);return res;
   }
   // Standing spots for room occupants: grid points clear of furniture footprints.
   function freeSpots(room){
@@ -513,5 +603,22 @@
   function worldFaces(s){return FM()?structureFaces(s,cutawayWallGeometry(s)).faces.filter(f=>shown(s,f)):[]}
   // W1 portico outside the cutaway: the loggia's furniture stays in view through the arches.
   function loggiaFaces(s){return FM()&&isBuiltPortico(s)&&!underConstruction(s)?structureFaces(s,cutawayWallGeometry(s)).faces.filter(f=>f.floor===0):[]}
-  window.ConquerCutawayFurniture={ROOMS,draw,lights,drawNightGlow,drawEmissive2D,worldFaces,loggiaFaces,standSpots,layoutStructure,spiralStair,pieceFaces,clear:()=>cache.clear()};
+  // ARTE: display anchors of a structure's rooms, and whether an art archetype fits one
+  // (same mount, and the work no wider than the anchor's free width).
+  function artSlots(s){return FM()&&!underConstruction(s)?structureFaces(s,cutawayWallGeometry(s)).art:[]}
+  function artFits(slot,name){
+    const c=AM()?.catalog?.[name],p=AM()?.pieces?.[name];
+    if(!slot||!c||!p||c.mount!==slot.mount)return false;
+    return (slot.mount==='wall'?p.w:Math.max(p.w,p.d))<=slot.w+1e-3;
+  }
+  // World faces of a work of art (archetype name + commissioning colours) set on an anchor of
+  // artSlots(): what the display of a commissioned work will draw (ART-251105-03/04).
+  function artWorkFaces(slot,name,colors){
+    if(!slot||!artFits(slot,name))return[];
+    const paint=window.ConquerArtColors?.paint(name,colors)||{},out=[];
+    const F={b:{angle:slot.angle},toWorld:()=>({x:slot.x,y:slot.y})};
+    pieceWorld({name:'a:'+name,u:0,v:0,turn:0,lift:0,paint},F,slot.z,out,[],heraldry(),slot.floor);
+    return out;
+  }
+  window.ConquerCutawayFurniture={ROOMS,draw,artSlots,artFits,artWorkFaces,lights,drawNightGlow,drawEmissive2D,worldFaces,loggiaFaces,standSpots,layoutStructure,spiralStair,pieceFaces,clear:()=>cache.clear()};
 })();

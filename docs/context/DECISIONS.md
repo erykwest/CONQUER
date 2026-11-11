@@ -1,5 +1,11 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-ART-COLORS-261109 — Opere d'arte: forme fisse, colori scelti alla commissione (09/11/2026)
+
+- **DECISIONE DEL PRODUCT OWNER:** alla commissione di un'opera l'utente sceglie **i colori**; le **forme** restano quelle dell'archetipo grafico (eventuali varianti di forma saranno valutate più avanti).
+- **CONTRATTO:** ogni archetipo di `ConquerArtModels.catalog` dichiara i suoi slot colore (`colors`: id, etichetta, chiave di palette, eventuale chiave d'ombra con rapporto `k`, set di tinte suggerite in `swatches`). L'opera commissionata salva solo `{ slotId: '#rrggbb' }` (le differenze dai colori dell'archetipo, `ConquerArtColors.diff`); `ConquerArtColors.paint` la traduce in sostituzioni di palette che il cutaway applica con precedenza su araldica e tinta della pietra. Le tinte suggerite sono pigmenti, lane, dorature e pietre storiche, ma qualsiasi colore esadecimale è accettato.
+- **STATO:** codice sul branch `feature/arte-graphics`; manca la UI di commissione in gioco (ART-251105-03), che userà questo contratto.
+
 ## D-CI-P24-261109 — Ownership dei test CI con proprietario always-on (09/11/2026)
 
 - **DECISO:** rimuovere un comando deterministico duplicato da un workflow specialistico solo se un owner separato esegue lo stesso controllo in ogni PR pertinente (Runtime integrity per Codex, settlement-qa per routing/main-road).

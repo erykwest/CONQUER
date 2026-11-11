@@ -11,6 +11,9 @@ on:
       - 'qa/cutaway-floors-regression.cjs'
       - 'qa/cutaway-furniture-regression.cjs'
       - 'qa/civic3d-regression.cjs'
+      - 'qa/art-regression.cjs'
+      - 'src/assets/art-models.js'
+      - 'src/art-colors.js'
       - 'src/settlement-cutaway-floors.js'
       - 'src/settlement-castle.js'
       - 'src/settlement-civic3d.js'
@@ -46,3 +49,5 @@ jobs:
         run: |
           node qa/civic3d-regression.cjs
           node qa/cutaway-furniture-regression.cjs
+      - name: Test ARTE art archetypes and room display anchors
+        run: node qa/art-regression.cjs
