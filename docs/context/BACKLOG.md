@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-11 — Integrazione urgente figure-billboards (pre-merge)
+
+Recuperati i cinque commit residui 31cb32d, 2408397, 8e541fd, e4b06cc, 0ff543d sulla base main e4230db. La parte navale precedente era già in #150. Civili, lavoratori, carpentieri e marinai entrano nel depth buffer World3D; atlante 2048 con caselle 64px, 1024 posti, pose condivise, riuso LRU e upload incrementale. Conservati LOD militare, addOutbuilding, ingresso del mastio, arte e guarnigioni. Recuperati layout TEST, cache accesso pozzi, traslazione mesh navi, indice spaziale ostacoli e Trabucco DEV con scenario QA.
+
+QA locale: 165 regressioni deterministiche PASS. Aggiunta prova browser sul painter reale dei civili, occlusione da murature, riuso atlante, picking militare e fallback Canvas; inserita nel workflow Main fixes. Audit Lab e CI da completare prima del merge. Nessun nuovo modello, nessuna modifica alle priorità ROADMAP. Restano i limiti originari del Trabucco: non persistito, serventi colpibili solo via API, munizioni non simulate.
+
+
 BC-251105-05 tetto interno delle torri: **sul branch `feature/tower-inner-roof`, NON MAIN** ([dettaglio](../feature-backlog.md#2026-11-05--builder--castello-upgrade-architettonici-richiesti)). **APERTO:** nessun costo né effetto di gioco (solo estetica); non brucia con gli incendi; nel cutaway del World 3D sparisce come il tetto a falde.
 ## 2026-11-09 — P2.4 · Responsabilità unica test CI sovrapposti
 

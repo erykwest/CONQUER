@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-11 — Integrazione urgente figure-billboards (pre-merge)
+
+Recuperati i cinque commit residui 31cb32d, 2408397, 8e541fd, e4b06cc, 0ff543d sulla base main e4230db. La parte navale precedente era già in #150. Civili, lavoratori, carpentieri e marinai entrano nel depth buffer World3D; atlante 2048 con caselle 64px, 1024 posti, pose condivise, riuso LRU e upload incrementale. Conservati LOD militare, addOutbuilding, ingresso del mastio, arte e guarnigioni. Recuperati layout TEST, cache accesso pozzi, traslazione mesh navi, indice spaziale ostacoli e Trabucco DEV con scenario QA.
+
+QA locale: 165 regressioni deterministiche PASS. Aggiunta prova browser sul painter reale dei civili, occlusione da murature, riuso atlante, picking militare e fallback Canvas; inserita nel workflow Main fixes. Audit Lab e CI da completare prima del merge. Nessun nuovo modello, nessuna modifica alle priorità ROADMAP. Restano i limiti originari del Trabucco: non persistito, serventi colpibili solo via API, munizioni non simulate.
+
+
 ## 2026-11-09 — ARTE: archetipi grafici e ancoraggi delle stanze (`feature/arte-graphics`)
 
 - **CODICE SUL BRANCH (non in main):** nuovo generatore Blender `tools/blender/build_art.py` → `src/assets/art-models.js` (`window.ConquerArtModels`): 19 archetipi grafici low-poly a colori piatti, nello stesso formato dei mobili del cutaway. **Quadri** (icona su fondo oro, trittico con ante aperte, ritratto, paesaggio, scena di caccia) e **arazzi** (millefleurs, fregio narrativo), ognuno in taglia piccola e grande; **sculture**: busto su piedistallo in marmo, statua su basamento in marmo/pietra/bronzo, santo ligneo policromo in tabernacolo a parete. Le immagini sono griglie di pixel unite nel minor numero di rettangoli; 5.622 triangoli, 142 KB. `catalog` descrive per ogni pezzo kind/archetype/size/material/mount/label.
