@@ -7,6 +7,18 @@ Recuperati i cinque commit residui 31cb32d, 2408397, 8e541fd, e4b06cc, 0ff543d s
 QA locale: 165 regressioni deterministiche PASS. Aggiunta prova browser sul painter reale dei civili, occlusione da murature, riuso atlante, picking militare e fallback Canvas; inserita nel workflow Main fixes. Audit Lab completo: 1473 render, 0 errori; rivisti Popolazione, Truppe e confronto browser dietro la torre. Firme di queste categorie invariate; annotata la revisione nella baseline, senza accettare i 184 cambiati locali o i 15 stati tetto nuovi estranei a questa integrazione. Prova browser dedicata PASS. CI remota da completare prima del merge. Nessun nuovo modello, nessuna modifica alle priorità ROADMAP. Restano i limiti originari del Trabucco: non persistito, serventi colpibili solo via API, munizioni non simulate.
 
 
+10/11/2026 — ECO-FIL-01 fase 1 (`feature/eco-fil-01-miniera-metallo`): la miniera produce metallo (1 al giorno con 2 L2) invece di pietra, migrando i salvataggi. Etichetta Builder, Wiki e catalogo aggiornati. Suite economia locale PASS, CI da verificare. ROADMAP invariata nei contenuti: la voce M1 «scegliere output `mine`» è ora implementata sul branch. DECISIONS invariata: D-ECO-FIL-261110 copre già questa fase.
+
+10/11/2026 — ECO-FIL-01 (`docs/filiere-produttive`): specifica approvata delle filiere produttive. Prevede:
+- miniera → metallo;
+- lana, pelli e latte (con il casaro) dagli allevamenti;
+- ricette e consumo delle botteghe L3, senza importazioni;
+- correzioni dei mestieri: falegname su archi e lance, sarto su abiti, pellettiere su pelli;
+- cinque armi con domanda civile e officina del castello;
+- affumicatore, birra della taverna e vigneto collocabile.
+
+Nessun codice. Aggiornati BACKLOG, STATUS e DECISIONS (D-ECO-FIL-261110); ROADMAP invariata (la voce M1 «scegliere output `mine`» resta, ora decisa, da implementare).
+
 09/11/2026 — `feature/arte-graphics` (pre-merge): parte grafica di ARTE. Generatore `tools/blender/build_art.py` e registro `ConquerArtModels` con 19 archetipi (quadri e arazzi in due taglie, busto, statua in marmo/pietra/bronzo, santo ligneo in tabernacolo) e catalogo dei metadati; Asset Lab con tre famiglie «Opere d'arte». Ancoraggi a parete e a pavimento calcolati per ogni stanza del cutaway (`artSlots`, `artFits`), senza esporre opere né cambiare le stanze. Nuova `qa/art-regression.cjs`. ART-251105-01 fatto per la parte grafica, ART-251105-02 per gli slot; commissione, inventario e ricollocazione restano aperti. Poi: colori parametrici delle opere (forme fisse, colori a commissione), con slot colore nel catalogo, `src/art-colors.js`, applicazione nel cutaway (`artWorkFaces`) e selettore «Colori della commissione» nel Lab. Nuova decisione D-ART-COLORS-261109; ROADMAP invariata.
 
 
