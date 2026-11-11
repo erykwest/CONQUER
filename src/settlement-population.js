@@ -82,7 +82,8 @@ function towerRoofFootprintPoints(s){
 // stone kerb, then a pyramid (square / oriented) or a cone (round) at the feudal pitch to the apex.
 // Too small a ring (inner half span under 0.25 U, i.e. T1 towers) means no inner roof: `check`
 // only asks whether it fits. Returns {ring,h,eaveZ,apex,apexZ,half} or null.
-const TOWER_INNER_ROOF_INSET=.42,TOWER_INNER_ROOF_KERB=.14,TOWER_INNER_ROOF_MIN_HALF=.25;
+// The ring is small: at least ~58° of pitch so the roof stands clear of the merlons.
+const TOWER_INNER_ROOF_MIN_TAN=1.6,TOWER_INNER_ROOF_INSET=.42,TOWER_INNER_ROOF_KERB=.14,TOWER_INNER_ROOF_MIN_HALF=.25;
 function towerInnerRoofGeometry(s,check=false){
   if(!s||s.type!=='tower'||isWoodTower(s)||s.shape==='half')return null;
   if(!check&&!towerInnerRoofMounted(s))return null;
@@ -94,7 +95,7 @@ function towerInnerRoofGeometry(s,check=false){
   if(!(half>=TOWER_INNER_ROOF_MIN_HALF)||ring.length<3)return null;
   if(check)return true;
   const h=structureHeight(s),eaveZ=h+TOWER_INNER_ROOF_KERB;
-  return{ring,h,eaveZ,apex:towerRoofApex(s),apexZ:eaveZ+roofPitchTan()*half,half};
+  return{ring,h,eaveZ,apex:towerRoofApex(s),apexZ:eaveZ+Math.max(roofPitchTan(),TOWER_INNER_ROOF_MIN_TAN)*half,half};
 }
 // Square stone towers choose the shape of the pitched roof (variant `roofShape`): a pyramid, two
 // slopes on a ridge with stone gable ends, or four slopes on a ridge half as long as the roof (hip).
