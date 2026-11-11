@@ -353,6 +353,9 @@ Fogli provini dell'audit: impaginazione a griglia per le categorie e sfondo neut
 - **SUL BRANCH `mare`, NON MAIN**: mare al 30% della mappa; Molo in legno di 8U sulla costa con due attracchi esposti da `ConquerPier.moorings(s)`.
 - **Navi**: 5 modelli Blender pronti (3 piccole, 2 grandi), solo nell'Asset Lab.
 - **Navi in gioco**: flotta di test nel menu DEV (non salvata). **DA FARE**: salvataggio, arrivo/partenza in navigazione, selezione della nave nel gioco, ordine con il renderer WebGL invece del livello sovrapposto, picchi di disegno isolati.
+- **Trabucco**: DA FARE serventi come unità di combattimento (oggi figure, `crewHit` solo via API), salvataggio con la partita, munizioni, il tiro parte a 9U dal bersaglio (volley) invece che dalla macchina; picchi residui ~200 ms nel tick di combattimento all'avvio dell'assalto (12 percorsi A* in un tick: distribuirli su più frame).
+- **Performance**: restano 20–40 ms di passata frontale WebGL (`world3dFrontMs`, include la copia del canvas WebGL sul 2D) e la popolazione a zoom alto; misurare con il pannello visibile e un profilo CPU. `lotKindForHouse` è chiamata centinaia di volte per frame.
+- **Personaggi 3D**: fatto per contadini, lavoratori, carpentieri e marinai. **DA FARE**: carrettieri sui veicoli e figure della battaglia navale ancora in 2D; i costruttori stanno solo sul lato verso la camera (con la profondità non serve più); misurare con un villaggio grande di giorno (nel test erano visibili solo 4 abitanti).
 - **Mura sulla banchina**: fatto il magnete. **DA FARE**: contorno di selezione alla quota della banchina; porte sulla banchina (torri fatte); muro che continua dalla banchina alla terraferma.
 - **Attracchi lungo la banchina**: fatto. **DA FARE**: segnare in gioco gli slot liberi/occupati (oggi visibili solo via `ConquerQuay.berths`).
 - **Banchina fuori whitezone**: fatto (parte da dentro, prosegue oltre). **DA FARE**: allo spigolo il lastricato delle due banchine si sovrappone (doppio strato, possibile z-fighting); un unico raccordo d'angolo sarebbe più pulito.
@@ -1142,3 +1145,9 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 ## Campi L2 — 05/11/2026
 
 D-051 risolta per scelta dell’utente: campi solo L2. Recupero residuo jobmanager nel branch fix/fields-l2-only; chiusura dopo merge e rimozione della branch storica.
+
+## 2026-11-11 — Integrazione urgente figure-billboards (pre-merge)
+
+Recuperati i cinque commit residui 31cb32d, 2408397, 8e541fd, e4b06cc, 0ff543d sulla base main e4230db. La parte navale precedente era già in #150. Civili, lavoratori, carpentieri e marinai entrano nel depth buffer World3D; atlante 2048 con caselle 64px, 1024 posti, pose condivise, riuso LRU e upload incrementale. Conservati LOD militare, addOutbuilding, ingresso del mastio, arte e guarnigioni. Recuperati layout TEST, cache accesso pozzi, traslazione mesh navi, indice spaziale ostacoli e Trabucco DEV con scenario QA.
+
+QA locale: 165 regressioni deterministiche PASS. Aggiunta prova browser sul painter reale dei civili, occlusione da murature, riuso atlante, picking militare e fallback Canvas; inserita nel workflow Main fixes. Audit Lab completo: 1473 render, 0 errori; rivisti Popolazione, Truppe e confronto browser dietro la torre. Firme di queste categorie invariate; annotata la revisione nella baseline, senza accettare i 184 cambiati locali o i 15 stati tetto nuovi estranei a questa integrazione. Prova browser dedicata PASS. CI remota da completare prima del merge. Nessun nuovo modello, nessuna modifica alle priorità ROADMAP. Restano i limiti originari del Trabucco: non persistito, serventi colpibili solo via API, munizioni non simulate.
