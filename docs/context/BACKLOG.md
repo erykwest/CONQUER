@@ -1,5 +1,62 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-10 — ECO-FIL-01 · Filiere produttive complete
+
+**SPECIFICA APPROVATA. Fase 1 (miniera → metallo) IMPLEMENTATA SU BRANCH `feature/eco-fil-01-miniera-metallo`, NON MERGE; fasi 2–6 aperte.** Intervista con il product owner del 10/11/2026 (sessione «filiere», nata dalla sessione Gilda). Decisione [D-ECO-FIL-261110](DECISIONS.md). Base verificata: `main` 89e7a2c, non le note della mappa `CONQUER_ECONOMY_ULTIMA_REVISIONE_NOV10` (scritte su `feature/autonomous-urban-economy`). Chiude la decisione aperta «miniera stone/metal» (P0-08, ROADMAP M1) e gli errori di mappatura di `WORKSHOP_OUTPUT`. La Gilda (sessione dedicata) applica il suo +25/+50/+100% a queste ricette: il bonus moltiplica produzione **e** consumo di materie, quindi senza materie non produce di più.
+
+**Regole generali**
+- Le botteghe L3 producono 1 unità al giorno lavorativo (Lun–Ven, come oggi) e **consumano** la ricetta qui sotto. Il sabato comprano al mercato del villaggio le scorte per 5 giorni con il portafoglio L3 (stesso schema dei buffer `inputs` di `KIND`). Il magazzino del castello conta solo per la quota che il signore mette in vendita.
+- **Nessuna importazione.** Se la materia manca, la bottega resta aperta ma non produce (stato visibile «senza materie»); produce in proporzione alla scorta parziale. La scelta del mestiere (`tradeResources`) usa la disponibilità reale della materia di ogni mestiere.
+- **Depositi interni non vendibili**, come `cropStock`: `milkStock` (latte) e `fishStock` (pescato), separati per proprietario. Ciò che non viene lavorato entro il sabato diventa `food` al mercato, come il raccolto non macinato. Il casaro e l'affumicatore pagano il prelievo al proprietario al prezzo corrente del cibo.
+- **Interfaccia:** le nuove materie del ledger sono `wool` e `hides`. Le cinque armi si mostrano come voce aggregata «Armi», con dettaglio a richiesta. I nuovi prodotti di bottega restano dentro l'aggregato «Beni L3».
+
+**Materie prime**
+| Fonte | Lavoro | Produzione per giorno lavorativo |
+| --- | --- | --- |
+| Miniera | 2 L2 | **1 `metal`** (fusione implicita; non più `stone`). Le miniere salvate passano al metallo; la pietra resta alla cava |
+| Pecore (casa L1 `shepherd`) | pastore L1 | 0,9 `food` (come oggi) + 0,3 `wool` |
+| Capre (casa L1 `goat`) | pastore L1 | 0,6 `food` + 0,3 latte + 0,1 `hides` |
+| Mucche (casa L2 `cow`) | mandriano L2 (nuova riga «Mandrie» del Job Manager L2) | 0,4 `food` + 0,8 latte + 0,15 `hides` |
+| Pesca (esiste su main) | pescatore L1 | 1,2 pescato in `fishStock` (oggi 1,2 `food` diretto) |
+| Vigneto (`KIND.vineyard` reso collocabile) | 2 L1 | raccolto d'autunno → `luxury` (vino), resa per area già nel motore |
+I cavalli restano solo trasporto. Latte e carne non diventano merci.
+
+**Ricette delle botteghe L3 (per 1 unità prodotta)**
+| Mestiere | Prodotto | Ricetta | Prezzo base |
+| --- | --- | --- | --- |
+| Fabbro | ferramenta `metalGoods` | 0,5 metal + 0,2 wood | 18 |
+| Orafo | gioielli `jewelry` | 0,3 metal | 45 |
+| Vasaio | ceramica `pottery` | 1 clay + 0,2 wood | 8 |
+| Tessitore | tessuti `textiles` | 1 wool | 11 |
+| Sarto | **abiti `clothing`** (nuovo) | 1 wool + 0,25 hides | 20 |
+| Pellettiere | pelletteria `leatherGoods` | 1 hides (concia implicita, nessuna conceria né cuoio) | 12 |
+| **Casaro** (nuovo mestiere) | **formaggi `cheese`** | 2 latte | 9 |
+| **Affumicatore** (nuovo mestiere) | **pesce affumicato `smokedFish`** | 2 pescato + 0,2 wood | 7 |
+| Falegname | **archi** / **lance** (merci del ledger, non Beni L3) | arco: 1 wood · lancia: 1 wood + 0,2 metal | 8 / 9 |
+| Birraio della taverna (gestore L3 del servizio `tavern`) | **birra `beer`** | 1 food | 5 |
+Il falegname sceglie ogni giorno tra arco e lancia secondo il prezzo più alto. La birra ha un bisogno proprio anche per L1/L2 (gli altri Beni L3 hanno L1 = 0).
+
+**Armi**
+- Cinque merci distinte nel ledger: `bows`, `spears`, `swords`, `lightArmor`, `heavyArmor`. `equipment` cessa di essere una merce: diventa l'aggregato «Armi» dell'interfaccia, della capienza dell'armeria e delle stive. Le scorte salvate si dividono in parti uguali; l'obiettivo di scorta 30 diventa 6 per arma.
+- **Officina del castello:** la stanza `workshop` (sotto portico, «officina degli armaioli») diventa il vero `KIND.workshop`. È del signore, ha 1 lavoratore L3 e rende 0,5 unità al giorno. Spada: 1 metal + 0,2 wood. Armatura pesante: 1,5 metal + 0,5 hides. Armatura leggera: 1,5 hides. Fa l'arma con lo scarto più grande rispetto all'obiettivo dell'armeria, altrimenti quella col prezzo più alto.
+- **Vendita al sabato:** il signore compra per primo fino all'obiettivo di scorta, poi comprano le famiglie con le proprie monete. Bisogno settimanale civile (valori provvisori): L1 archi e lance 0,005 ciascuno; L2 archi e lance 0,008; L3 spade 0,01 e armature leggere 0,008; L4 spade 0,02, armature pesanti 0,01, armature leggere 0,01, più 1 armatura leggera per mercenario di scorta di ogni carovana L4+.
+- Gli incassi delle botteghe vanno al portafoglio L3, non al lotto `private` (L4), che oggi riceve i ricavi di ogni lotto privato.
+- Quale arma usi quale truppa lo decide il sistema militare. Gli effetti delle armi possedute dai civili (milizia, ordine pubblico) sono agganci per Municipio/CRIME e militare.
+
+**Migrazione dei salvataggi:** miniere da pietra a metallo; botteghe `carpenter` alle armi, con il vecchio stock `metalGoods` conservato; `equipment` diviso in cinque; nuovi campi `milkStock` e `fishStock` a zero. Nessun reset di monete o scorte.
+
+**Valori provvisori da bilanciare:** tutte le rese, le ricette, i prezzi base, i bisogni civili e i pesi di carico (`CARGO_WEIGHTS`: wool 3, hides 4, ogni arma 3).
+
+**Fasi di implementazione proposte (una PR ciascuna):**
+1. Miniera → metallo e migrazione.
+2. Ricette e consumo delle botteghe L3, acquisto del sabato, stop senza materie, correzione di `WORKSHOP_OUTPUT` e `tradeResources`.
+3. Allevamenti: `wool`/`hides`, `milkStock`, mandriano L2, casaro.
+4. Armi: cinque merci al posto di `equipment`, falegname, officina del castello, domanda civile, aggregato «Armi» e armeria.
+5. Pesca → `fishStock` e affumicatore; birraio della taverna.
+6. Vigneto collocabile: edificio nel Builder (regola di posa da decidere in questa fase), modello e voce nel Lab, audit asset.
+
+**Fuori da questa specifica:** conceria o fonderia come edifici, latte/carne come merci, importazioni, effetti militari e di ordine pubblico delle armi civili, sale/salagione.
+
 BC-251105-05 tetto interno delle torri: **sul branch `feature/tower-inner-roof`, NON MAIN** ([dettaglio](../feature-backlog.md#2026-11-05--builder--castello-upgrade-architettonici-richiesti)). **APERTO:** nessun costo né effetto di gioco (solo estetica); non brucia con gli incendi; nel cutaway del World 3D sparisce come il tetto a falde.
 ## 2026-11-09 — P2.4 · Responsabilità unica test CI sovrapposti
 

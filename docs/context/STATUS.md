@@ -1,5 +1,30 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-10 — ECO-FIL-01 fase 1 · Miniera → metallo (branch `feature/eco-fil-01-miniera-metallo`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `KIND.mine` diventa `{good:'metal',rate:1}` (2 L2, 1 metallo al giorno lavorativo a squadra completa) e `ConquerIndustries.TYPES.mine.good` passa a `metal`.
+  - `normalizeFootprint` converte a `metal` le miniere salvate con `productionGood:'stone'`; le scorte di pietra già prodotte restano pietra.
+  - L'etichetta dello strumento Builder legge la resa per lavoratore dal motore (miniera 0,5 metal/lavoratore/giorno).
+  - Voce Wiki «Miniera» aggiornata e rigenerati `src/codex-wiki-editorial.js` e `wiki/catalog.json`.
+- **PROVE LOCALI PASS:**
+  - tutta la suite di `economy-flows-regression.yml` (26 script);
+  - codex-wiki, codex-catalog, fields, industries3d;
+  - `export-codex-content --check`.
+  - `economy-industries-regression` ha un caso aggiornato (cava 2 pietra, miniera 1 metallo al giorno) e un nuovo caso di migrazione.
+- **DA VERIFICARE:** CI del branch. Nessun asset o modello toccato: il modello della miniera resta quello attuale, senza audit asset.
+
+## 2026-11-10 — ECO-FIL-01 · Filiere produttive (solo specifica, branch `docs/filiere-produttive`)
+
+- **NESSUN CODICE:** specifica approvata in [BACKLOG](BACKLOG.md), decisione [D-ECO-FIL-261110](DECISIONS.md). Nessun test eseguito né richiesto.
+- **STATO LIVE VERIFICATO SU `main` 89e7a2c:**
+  - `KIND.mine` produce `stone`.
+  - `metal` non ha produttori. `KIND.workshop` non è collocabile, mentre la stanza `workshop` del castello esiste senza effetti economici.
+  - Le botteghe L3 producono 1 bene al giorno senza consumare nulla. Restano gli errori di `WORKSHOP_OUTPUT` (falegname su `metalGoods`, tessitore e sarto entrambi su `textiles`) e `leatherGoods` ha ancora input `wood`.
+  - I pastori L1 di capre e pecore danno 0,9 `food` al giorno; mucche e cavalli non producono.
+  - La pesca esiste (1,2 `food` al giorno per pescatore).
+- **PROSSIMO:** fase 1 (miniera → metallo) su un branch nuovo da `main`, solo dopo conferma esplicita.
+
 ## 2026-11-09 — ARTE: archetipi grafici e ancoraggi delle stanze (`feature/arte-graphics`)
 
 - **CODICE SUL BRANCH (non in main):** nuovo generatore Blender `tools/blender/build_art.py` → `src/assets/art-models.js` (`window.ConquerArtModels`): 19 archetipi grafici low-poly a colori piatti, nello stesso formato dei mobili del cutaway. **Quadri** (icona su fondo oro, trittico con ante aperte, ritratto, paesaggio, scena di caccia) e **arazzi** (millefleurs, fregio narrativo), ognuno in taglia piccola e grande; **sculture**: busto su piedistallo in marmo, statua su basamento in marmo/pietra/bronzo, santo ligneo policromo in tabernacolo a parete. Le immagini sono griglie di pixel unite nel minor numero di rettangoli; 5.622 triangoli, 142 KB. `catalog` descrive per ogni pezzo kind/archetype/size/material/mount/label.
