@@ -57,6 +57,7 @@ Il falegname sceglie ogni giorno tra arco e lancia secondo il prezzo più alto. 
 
 **Fuori da questa specifica:** conceria o fonderia come edifici, latte/carne come merci, importazioni, effetti militari e di ordine pubblico delle armi civili, sale/salagione.
 
+BC-251105-05 tetto interno delle torri: **sul branch `feature/tower-inner-roof`, NON MAIN** ([dettaglio](../feature-backlog.md#2026-11-05--builder--castello-upgrade-architettonici-richiesti)). **APERTO:** nessun costo né effetto di gioco (solo estetica); non brucia con gli incendi; nel cutaway del World 3D sparisce come il tetto a falde.
 ## 2026-11-09 — P2.4 · Responsabilità unica test CI sovrapposti
 
 - **INTERVENTO CODICE:** rimossi nove comandi ripetuti in tre workflow specialistici, trasferendo l'ownership esclusiva a Runtime integrity (Codex, 6) e Settlement routing/spawn (regressioni routing, 3). Nessun test o script eliminato.

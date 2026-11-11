@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceDigest": "5928f830141ecda66b7b58baba0c8ab0f25eff855b3ffc4216588e456cfc44cd",
+  "sourceDigest": "d781ef6c82475eb5b5bb7fa18775e575ee7e170ef369abc6c33109afd87285ad",
   "catalog": {
     "schemaVersion": 1,
     "categories": [
@@ -1426,6 +1426,10 @@
             "signalFire": [
               "none",
               "pyre"
+            ],
+            "innerRoof": [
+              "off",
+              "on"
             ]
           },
           "geometry": {
@@ -6827,6 +6831,100 @@
         },
         "properties": {
           "variant": "hoarding",
+          "value": "on",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.innerRoof.off",
+        "key": "off",
+        "label": "tower · innerRoof · off",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.innerRoof"
+        },
+        "properties": {
+          "variant": "innerRoof",
+          "value": "off",
+          "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.innerRoof.on",
+        "key": "on",
+        "label": "tower · innerRoof · on",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.innerRoof"
+        },
+        "properties": {
+          "variant": "innerRoof",
           "value": "on",
           "default": false,
           "kind": "configuration"
