@@ -98,5 +98,27 @@ test('a wall defender descends by the stairs and reaches the inner refuge',()=>{
   tick(450);
   assert.ok(!U('wall-guard').wall&&inR(U('wall-guard'),92,108),'descended to the inner sector: '+U('wall-guard').x+','+U('wall-guard').y);
 });
+// Gate jams seen in the 5-minute siege (docs/qa/combat-ai-circle-300s-2026-11-06.md): men left
+// standing in a passage belong to no sector, and from beside the walls the grid route to a
+// gate mouth fails for a military footprint.
+test('an attacker left in the outer passage goes on inwards, not back out',()=>{
+  sandbox.qaStates.outer='secure';sandbox.qaStates.inner='secure';
+  reset([],[A('p1','infantry',100,80.2)]);
+  tick(120);
+  assert.ok(inR(E('p1'),80,120)&&E('p1').y>81.5,'out of the passage, inside the outer ring: '+E('p1').x.toFixed(1)+','+E('p1').y.toFixed(1));
+});
+test('an attacker left in the inner passage goes on into the keep ring',()=>{
+  reset([],[A('p2','infantry',100,92.2)]);
+  tick(120);
+  assert.ok(inR(E('p2'),92,108),'into the inner ring: '+E('p2').x.toFixed(1)+','+E('p2').y.toFixed(1));
+});
+test('a patrol beside the outer wall completes its fall back',()=>{
+  sandbox.qaStates.outer='secure';
+  reset([{id:'pt',kind:'patrol',combatKind:'patrol',faction:'realm',x:82,y:110}],[A('a1','infantry',100,60)]);
+  run("State.combat.enemy[0].digging='qa'");
+  sandbox.qaStates.outer='invaded';
+  tick(500);
+  assert.ok(inR(U('pt'),92,108),'reached the inner ring: '+U('pt').x.toFixed(1)+','+U('pt').y.toFixed(1));
+});
 console.log(passed+' combat sector checks passed; '+failed+' failed.');if(failed)process.exitCode=1;
 `)(require,__dirname);

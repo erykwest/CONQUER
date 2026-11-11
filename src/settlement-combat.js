@@ -1841,13 +1841,49 @@
   // Legs through one given gate, from wherever u is to `beyond` the far mouth (then optional goal).
   function legsThrough(u,gate,goal=null){
     if(typeof gatePassageInfo!=='function')return null;
-    const info=gatePassageInfo(gate,u),dx=info.far.x-info.center.x,dy=info.far.y-info.center.y,L=Math.hypot(dx,dy)||1;
+    const info=gatePassageInfo(gate,u);
+    // The near mouth is the one on the man's side of the gate (same area), not the closest as
+    // the crow flies: beside a ring the far mouth can be nearer, but is behind the wall.
+    const outOf=m=>{const x=m.x-info.center.x,y=m.y-info.center.y,l=Math.hypot(x,y)||1;return{x:m.x+x/l*.8,y:m.y+y/l*.8}};
+    // With circle the sector decides (an open gate joins both areas); otherwise the area.
+    const rings=circleData(),here=rings?.sectorAt(u);
+    const mine=[info.sideA,info.sideB].filter(m=>rings?rings.sectorAt(outOf(m))===here:sameArea(u,outOf(m)));
+    if(mine.length===1&&mine[0]!==info.near){const n=info.far;info.far=info.near;info.near=n}
+    const dx=info.far.x-info.center.x,dy=info.far.y-info.center.y,L=Math.hypot(dx,dy)||1;
     const beyond={x:info.far.x+dx/L*.8,y:info.far.y+dy/L*.8};
-    const approach=groundLeg(u,info.near,u),last=approach.points.at(-1);
-    if(!last||Math.hypot(last.x-info.near.x,last.y-info.near.y)>.1)return null;
+    const reaches=(leg,p)=>{const last=leg?.points?.at(-1);return!!last&&leg.points.length>=1&&Math.hypot(last.x-p.x,last.y-p.y)<=.1};
+    let approach=groundLeg(u,info.near,u);
+    if(!reaches(approach,info.near)){
+      // The grid route with a military footprint does not fit the gate mouth: close by, walk
+      // straight in; farther off, reach a point out in front of the mouth, then straight in.
+      const nx=info.near.x-info.center.x,ny=info.near.y-info.center.y,nl=Math.hypot(nx,ny)||1;
+      const front={x:info.near.x+nx/nl*1.5,y:info.near.y+ny/nl*1.5};
+      if(Math.hypot(u.x-info.near.x,u.y-info.near.y)<3)approach={kind:'ground',points:[{x:u.x,y:u.y,z:0},{...info.near,z:0}]};
+      else{
+        let toFront=groundLeg(u,front,u);
+        if(!reaches(toFront,front)){
+          // Last resort: a single-file route (a man walking, not the formation's footprint),
+          // e.g. a patrol pressed against a wall.
+          const single=typeof findPeasantPath==='function'?findPeasantPath(u,front,u.id,14):null;
+          if(!single||single.length<2)return null;
+          toFront={kind:'ground',points:[{x:u.x,y:u.y,z:0},...single.slice(1).map(p=>({x:p.x,y:p.y,z:0}))]};
+          if(!reaches(toFront,front))toFront.points.push({...front,z:0});
+        }
+        approach={kind:'ground',points:[...toFront.points,{...info.near,z:0}]};
+      }
+    }
     const legs=[approach,{kind:'ground',points:[{...info.near,z:0},{...info.far,z:0},{...beyond,z:0}]}];
     if(goal)legs.push(groundLeg(beyond,goal,u));
     return legs;
+  }
+  // A man standing inside a gate passage belongs to no sector. Out by the mouth on the side
+  // `pick` prefers (straight: the passage is a straight run), a step beyond it.
+  const passageAt=p=>typeof gatePointInPassage==='function'?State.structures.find(g=>g.type==='gate'&&!underConstruction(g)&&gatePointInPassage(g,p,.35))||null:null;
+  function legsOutOfPassage(u,gate,d,pick){
+    const info=gatePassageInfo(gate,u),out=side=>{const dx=side.x-info.center.x,dy=side.y-info.center.y,L=Math.hypot(dx,dy)||1;return{x:side.x+dx/L*.8,y:side.y+dy/L*.8}};
+    const sides=[info.sideA,info.sideB].map(m=>({mouth:m,beyond:out(m),sector:d.sectorAt(out(m))}));
+    const go=pick(sides);if(!go)return null;
+    return[{kind:'ground',points:[{x:u.x,y:u.y,z:0},{...go.mouth,z:0},{...go.beyond,z:0}]}];
   }
   // A ram for a closed gate on the way: the nearest free men-at-arms crew it; the storm grabs
   // every hostile outside, so the others keep their own task.
@@ -1866,6 +1902,14 @@
     const foe=best(combat.units.filter(u=>livingUnit(u)&&!u.routing&&!unitWall(u)&&!u.climbing&&u.campState!=='barracks'&&Math.hypot(u.x-e.x,u.y-e.y)<=18&&sameArea(u,e)),u=>Math.hypot(u.x-e.x,u.y-e.y));
     if(foe){e.campaignLegs=false;return raidThink(e,now)}
     e.nextThink=now+THINK_S*1000;
+    // In a passage: on through it, out on the deeper side (towards the keep).
+    const inGate=passageAt(e);
+    if(inGate){
+      const depth=s=>s?sectorById(d,s)?.depth||0:0;
+      const legs=legsOutOfPassage(e,inGate,d,sides=>sides.slice().sort((a,b)=>depth(b.sector)-depth(a.sector))[0]);
+      if(legs){e.legs=legs;e.campaignLegs=true}
+      return;
+    }
     const here=d.sectorAt(e),route=hopToKeep(d,here);if(!route)return;
     const archer=(e.combatKind||e.kind)==='archer';
     if(!route.hop){
@@ -1878,7 +1922,9 @@
     const gate=gateById(route.hop.portal.id);if(!gate)return;
     if(gateOpen(gate)&&route.hop.portal.open!==false){
       if(seekBudget<=0){e.nextThink=0;return}
-      seekBudget--;e.legs=legsThrough(e,gate);e.campaignLegs=!!e.legs;return;
+      seekBudget--;e.legs=legsThrough(e,gate);e.campaignLegs=!!e.legs;
+      if(!e.legs)e.nextThink=now+4000;                                  // no way to the mouth: try again later
+      return;
     }
     // Closed: the ram for it, and the others wait out of reach of the door.
     const info=gatePassageInfo(gate,e);
@@ -1918,6 +1964,13 @@
         return false;
       }
       const gate=gateById(u.retreatGate);
+      // Already in the refuge gate's passage: straight out on the refuge side.
+      const inGate=passageAt(u);
+      if(inGate){
+        const legs=legsOutOfPassage(u,inGate,d,sides=>sides.find(s=>s.sector===u.retreatTo)||null);
+        if(legs){u.legs=legs;u.target=null;u.path=null;return true}
+      }
+      if(now<(u.retreatRetryAt||0))return true;
       if(gate&&seekBudget>0){
         seekBudget--;
         const goal=sectorById(d,u.retreatTo)?.anchors?.[2]||null;
@@ -1928,9 +1981,15 @@
           if(last&&Math.hypot(last.x-info.near.x,last.y-info.near.y)<.1&&through)u.legs=[...down,...through];
         }else u.legs=legsThrough(u,gate,goal);
         u.target=null;u.path=null;
+        if(!u.legs?.length){
+          // No way through: try again a little later; after a few failures hold the ground.
+          u.retreatFails=(u.retreatFails||0)+1;u.retreatRetryAt=now+3000;
+          if(u.retreatFails>=4){u.retreatTo=u.retreatGate=u.retreatFrom=null;u.retreatFails=0;u.holdUntil=now+20000;return false}
+        }else u.retreatFails=0;
       }
       return true;
     }
+    if(now<(u.holdUntil||0))return false;                               // a failed fall back: hold for a while
     const here=defenceSector(d,u);if(!here)return false;
     const sector=sectorById(d,here);if(!sector||sector.mastio&&!sector.adjacentIds?.length)return false;
     const hostiles=combat.enemy.filter(e=>livingUnit(e)&&!e.neutral&&d.sectorAt(e)===here).length;

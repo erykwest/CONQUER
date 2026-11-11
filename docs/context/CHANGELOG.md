@@ -12,6 +12,13 @@
 - 67 test circle e regressioni pertinenti PASS; runner browser TEST/variante concentrica di 60 s con perdite e settori, CI sul branch. Browser 60 s sulla variante concentrica: 43→43 assalitori vivi, 5→4 difensori, porta esterna sfondata, 0 settori conquistati (esterno conteso), mastio sicuro, 0 errori JS; picchi fino a 10,7 s. [Report](../qa/combat-ai-circle-2026-11-06.md). CI PASS su `a3ebb86`. Branch non integrato in main.
 
 
+## 2026-11-11 — Assedio concentrico: blocco nei varchi
+
+- Chi resta nel varco di una porta (che non appartiene a nessun settore) prosegue dritto verso il lato più profondo; prima era trattato come «fuori» e rimandato alla porta esterna.
+- L'imbocco di una porta si sceglie dal settore in cui si trova l'unità, non dalla distanza in linea d'aria: accanto a una cinta l'imbocco più vicino può essere dietro il muro (causa delle pattuglie ferme nella prova di 5 minuti).
+- Se il percorso con l'ingombro della formazione non raggiunge l'imbocco: dritti entro 3 U, altrimenti a un punto davanti all'imbocco, come ultima risorsa a fila singola.
+- Dopo un percorso fallito: attesa di 4 s (assalitori) o 3 s (ritirata); dopo 4 fallimenti la pattuglia tiene la posizione per 20 s invece di ricalcolare all'infinito.
+
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`)
 
 - Assedio per settori concentrici (logica simmetrica su /circle). Portati da `main` solo `src/settlement-circle.js`, `src/circle/*.mjs`, 5 test `qa/circle-*.test.mjs` e il workflow (senza merge: 18 conflitti); agganci in `settlement-app-simulation.js` (`updateControl`, `tickOccupation`, `invalidate` a costruzione completata) e invalidazione dal combattimento quando la cinta cambia. **Assalitori** (`campaignThink`): vogliono il mastio e attraversano i settori uno alla volta lungo i portali di circle; combattono i difensori dello stesso settore, passano dalle porte aperte o sfondate, per una porta chiusa armano un ariete con gli armigeri più vicini mentre gli altri aspettano fuori (arcieri a 10U). **Difensori** (`fallbackThink`): tengono il settore più esterno; se cade (invaso, compromesso, preso) o sono due contro uno ripiegano nel settore interno, aprono la porta interna se serve e la richiudono dopo l'ultimo; in ritirata non ingaggiano; il mastio è l'ultimo baluardo.

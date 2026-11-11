@@ -1,5 +1,8 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-11 — Blocco nei varchi corretto: assedio concentrico RIUSCITO in 180 s
+Stesso scenario della prova di 5 minuti (`SIEGE_CONCENTRIC=1`, 43 assalitori, 5 difensori mobili, porte chiuse), 180 s simulati con screenshot ogni 60 s. Al minuto 1: 42/4 vivi, settore esterno conteso. Al minuto 2: 40/0, settore esterno **catturato**, settore del mastio invaso (26 ostili). Al minuto 3: 38/0, **entrambi i settori catturati**. Nessun blocco nei varchi e nessuna ritirata incompiuta. `qa/combat-sectors-regression.cjs` 12/12 (3 nuovi casi: attaccante fermo nel varco esterno e in quello interno, pattuglia accanto al muro esterno che ripiega). **Prestazioni ancora inaccettabili**: 2395 s reali per 180 s simulati, tick mediano 1,5 ms ma p95 6,5 s e massimo 26,8 s.
+
 ## 2026-11-06 — Prova estesa di 5 minuti: FALLITA
 
 Su richiesta utente, avviata la variante concentrica TEST per 300 s simulati, con screenshot in gioco a 0/60/120/180/240/300 s. Il runner mette in pausa solo per acquisire gli screenshot e salva checkpoint con perdite, porte, settori e posizioni; nessun cambiamento al codice di combattimento. Corrette nella fixture le posizioni iniziali del capitano e di una pattuglia; il runner rifiuta partenze su terreno bloccato. CI circle estesa al controllo sintattico del runner degli screenshot. Completati 300,2 s: assalitori 43→26, difensori mobili 5→2, 0 conquiste. Dal minuto 2 tutti i superstiti restano fermi nei varchi; 2 pattuglie non completano la ritirata. Tick mediano 2,53 s, massimo 21,34 s; 0 eccezioni JS. [Report e sei screenshot](../qa/combat-ai-circle-300s-2026-11-06.md). Esito funzionale KO, indipendente dalla CI tecnica PASS.
