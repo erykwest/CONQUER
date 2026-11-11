@@ -1,7 +1,7 @@
 {
  "version": 1,
  "generatedAt": "2026-11-04T14:44:28.911Z",
- "note": "Reviewed Asset Lab renders. Regenerate with: node qa/asset-audit.mjs --update-baseline",
+ "note": "Reviewed Asset Lab renders. Regenerate with: node qa/asset-audit.mjs --update-baseline Reviewed 2026-11-11 figure-billboards: population and troop sheets unchanged; existing signatures preserved.",
  "waivers": {
   "castle:pietra-quadrata-piccola-l2-latrina|damage-elemento-esterno-crollato|sagoma-conservata": "Falso positivo: la torre resta integra, le macerie dello sbalzo a terra allargano l'inquadratura e la torre risulta più piccola (rivisto nel foglio il 05/11/2026)."
  },
