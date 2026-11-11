@@ -41,6 +41,26 @@
     }
     return Math.max(.12,Math.min(.94,threshold));
   }
+  function enclosedCoastSea(p,shape){
+    const phase=hash(17,29,State.seed)*Math.PI*2;
+    let u=p.x-100,v=p.y-100,rx=68,ry=62;
+    if(shape.kind==='peninsula'){
+      // The missing sea side is the land attachment. Keep its centre connected.
+      const land=['north','east','south','west'].find(side=>!shape.sides.includes(side));
+      if(land==='east')u=-u;
+      else if(land==='north'){u=p.y-100;v=p.x-100;}
+      else if(land==='south'){u=100-p.y;v=p.x-100;}
+      v-=7*Math.sin(u/45+phase);u+=42;rx=110;ry=59;
+    }else{
+      // Rotate an oval before adding large, unequal coves and headlands.
+      const angle=phase*.35,cs=Math.cos(angle),sn=Math.sin(angle),x=u,y=v;
+      u=x*cs+y*sn;v=-x*sn+y*cs;
+    }
+    const angle=Math.atan2(v/ry,u/rx),r=Math.hypot(u/rx,v/ry);
+    const lobes=2+Math.floor(hash(31,43,State.seed)*3),amplitude=.12+.06*hash(47,53,State.seed);
+    const outline=1+amplitude*Math.sin(lobes*angle+phase)+.09*Math.cos((lobes+2)*angle-phase*.7)+.07*Math.sin(2*angle+phase*1.3);
+    return r>outline?1:0;
+  }
   const area=r=>r.reduce((s,p,i)=>s+p.x*r[(i+1)%r.length].y-r[(i+1)%r.length].x*p.y,0)/2;
   function rings(mask,n=100){
     const edges=new Map(),step=200/n;
@@ -115,6 +135,8 @@
     woodlandContext=null;
     if(!active())return base;
     const key=State.seed+'-'+signature(),rnd=seedRand((State.seed^signature()^0x18405c)>>>0),coast=coastShape();
+    const lakeSides=['north','east','south','west'].filter(side=>neighbors()?.[side]==='lake');
+    const lakeShape=lakeSides.length>=3?{kind:lakeSides.length===4?'island':'peninsula',sides:lakeSides}:null;
     const forests=base.filter(f=>f.type==='forest'),centralSea=base.filter(f=>f.type==='sea'),centralPonds=base.filter(f=>f.type==='pond').map(f=>f.waterBodyKind==='marsh'?{...f,x:50+f.x/2,y:50+f.y/2,rx:f.rx/2,ry:f.ry/2,points:f.points.map(p=>({x:50+p.x/2,y:50+p.y/2}))}:f);
     const lines=base.filter(f=>f.type==='river'||f.type==='stream');
     const mountains=base.filter(f=>f.type==='mountain').map(f=>({...f,id:'regional-center-'+f.id,
@@ -124,8 +146,8 @@
     const samples=[],swampWet=swampMarshMask(true);
     for(let y=0;y<n;y++)for(let x=0;x<n;x++){
       const p={x:(x+.5)*2,y:(y+.5)*2},w=field(p),c=w['@center']||0;
-      const sea=(w.sea||0)+c*(centralSea.some(f=>environmentContains(f,p))?1:0);
-      const fresh=(w.lake||0)+c*(centralPonds.some(f=>f.waterBodyKind!=='marsh'&&environmentContains(f,p))?1:0);
+      const sea=coast.kind==='island'||coast.kind==='peninsula'?enclosedCoastSea(p,coast):(w.sea||0)+c*(centralSea.some(f=>environmentContains(f,p))?1:0);
+      const fresh=lakeShape?enclosedCoastSea(p,lakeShape):(w.lake||0)+c*(centralPonds.some(f=>f.waterBodyKind!=='marsh'&&environmentContains(f,p))?1:0);
       const marsh=swampWet[y*n+x]?1:0;
       const pond=fresh+marsh;
       const threshold=sea>=pond?coastThreshold(p,coast):.5;

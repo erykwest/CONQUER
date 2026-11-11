@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## REG-ORGANIC-COAST - Isole e penisole (11/11/2026)
+
+Con tre o quattro lati di mare oppure di lago, la costa non e limitata alle fasce di blending: un contorno ovale deformato dal seed determina i poligoni mare/terra. Isole racchiuse dal mare, penisole collegate al lato terrestre indicato dai vicini. Il centro insediativo resta asciutto; i margini della buildable zone possono essere costieri. Restano invariati golfo a un lato e promontorio a due lati. Nessuna modifica alle probabilita dei biomi o ai paesaggi gia salvati.
+
 ## REG-SWAMP-BALANCE - Copertura Palude (11/11/2026)
 
 Il bilanciamento sostituisce il numero prefissato di acquitrini: obiettivo 25% acqua stagnante e 25% boschi, entrambi nell intervallo 20-30% della superficie palustre; il resto rimane aperto, salvo corsi d acqua. Le percentuali si misurano sulla porzione del bioma, distinguendo centro e vicini; le fasce interpolate raccordano i target. I poligoni condividono rendering e collisione. Il conteggio delle macchie deriva dalla geometria, non e un target. Pianura resta al 20% di boschi.

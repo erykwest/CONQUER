@@ -59,6 +59,7 @@ jobs:
           node qa/regional-demo-regression.cjs
           node qa/hydrology-network-regression.cjs
           node qa/water-surface-regression.cjs
+          node qa/island-coast-regression.cjs
           node qa/inherited-coast-regression.cjs
           node qa/plains-woods-regression.cjs
           node qa/woodland-density-regression.cjs
