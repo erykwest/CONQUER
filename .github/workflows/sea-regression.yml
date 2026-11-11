@@ -22,6 +22,7 @@ on:
       - 'qa/water-surface-regression.cjs'
       - 'src/settlement-landscape.js'
       - 'src/settlement-coast.js'
+      - 'qa/stream-hierarchy-regression.cjs'
       - 'qa/stream-count-regression.cjs'
       - 'qa/woodland-density-regression.cjs'
       - 'qa/plains-woods-regression.cjs'
@@ -60,6 +61,7 @@ jobs:
           node qa/plains-woods-regression.cjs
           node qa/woodland-density-regression.cjs
           node qa/stream-count-regression.cjs
+          node qa/stream-hierarchy-regression.cjs
           node qa/pier-regression.cjs
           node qa/ships-regression.cjs
           node qa/ship-crew-regression.cjs

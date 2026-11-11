@@ -86,34 +86,71 @@
   }
   return out;
  }
+ // Tributaries are generated from their mouth outwards, normal to the primary.
+ // This makes the hierarchy geometric: no parallel full-map streams or X crossings.
+ function tributary(primary,type,id,rnd,lines,bodies,obstacles){
+  const arc=[0],pts=primary.points;
+  for(let i=1;i<pts.length;i++)arc.push(arc.at(-1)+Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y));
+  const length=arc.at(-1),used=lines.filter(f=>f.confluence?.downstreamId===primary.id);
+  if(length<40)return null;
+  for(let attempt=0;attempt<120;attempt++){
+   const distance=length*(.16+rnd()*.68);let k=1;while(k<arc.length-1&&arc[k]<distance)k++;
+   const a=pts[k-1],b=pts[k],L=Math.hypot(b.x-a.x,b.y-a.y)||1,tx=(b.x-a.x)/L,ty=(b.y-a.y)/L;
+   const target=lerp(a,b,(distance-arc[k-1])/(arc[k]-arc[k-1]||1));
+   if(used.some(f=>Math.abs(f.confluence.arcDistance-distance)<28||Math.hypot(f.confluence.point.x-target.x,f.confluence.point.y-target.y)<18))continue;
+   const sign=used.length%2?-1:1,nx=-ty*sign,ny=tx*sign;
+   const axis={x:pts.at(-1).x-pts[0].x,y:pts.at(-1).y-pts[0].y},axisLength=Math.hypot(axis.x,axis.y)||1;
+   // The tributary must cross the primary's overall direction, rather than
+   // follow its meanders alongside it. Two tributaries cannot share a heading.
+   if(Math.abs((axis.x*nx+axis.y*ny)/axisLength)>.75)continue;
+   if(used.some(f=>{const start=f.points[0],end=f.points.at(-1),dx=start.x-end.x,dy=start.y-end.y;return(dx*nx+dy*ny)/(Math.hypot(dx,dy)||1)>.86}))continue;
+   const reach=Math.min(...[[nx,200-target.x,target.x],[ny,200-target.y,target.y]].map(([v,pos,neg])=>Math.abs(v)<1e-9?Infinity:(v>0?pos:neg)/Math.abs(v)));
+   if(reach<28)continue;
+   const phase=rnd()*Math.PI*2,amplitude=5+rnd()*8,frequency=1+rnd(),n=Math.ceil(reach/1.5),points=[];
+   for(let i=0;i<=n;i++){
+    const t=i/n,remaining=reach*(1-t),v=clamp((remaining-9)/18,0,1),taper=v*v*(3-2*v);
+    const bend=amplitude*Math.sin(t*Math.PI*2*frequency+phase)*Math.sin(t*Math.PI)**2*taper;
+    points.push({x:target.x+nx*remaining+tx*bend,y:target.y+ny*remaining+ty*bend});
+   }
+   points[points.length-1]=target;
+   if(points.some(p=>p.x<-.001||p.y<-.001||p.x>200.001||p.y>200.001||bodies.some(f=>environmentContains(f,p))||obstacles.some(f=>environmentContains(f,p,1))))continue;
+   let crossing=false;
+   for(let i=1;i<points.length&&!crossing;i++)for(const line of lines){
+    for(let j=1;j<line.points.length;j++){
+     const hit=intersection(points[i-1],points[i],line.points[j-1],line.points[j]);
+     if(hit&&(line!==primary||Math.hypot(hit.x-target.x,hit.y-target.y)>1e-5)){crossing=true;break;}
+    }
+    if(crossing)break;
+   }
+   if(crossing)continue;
+   return{id,type,points,width:type==='river'?WATER_WIDTH.river:WATER_WIDTH.stream,
+    fill:type==='river'?'#3a7684':'#4f8d95',edge:type==='river'?'#88b4b8':'#9cc6c6',
+    confluence:{downstreamId:primary.id,point:target,arcDistance:distance,bankSide:sign}};
+  }
+  return null;
+ }
  function compose(env){
   const info=window.__CONQUER_REGIONAL_DEMO__||{};
   const original=env.filter(water);if(!original.length)return env;
   const bodies=env.filter(f=>f.type==='sea'||f.type==='pond'&&f.waterBodyKind==='lake'),obstacles=env.filter(f=>f.type==='mountain');
-  const lines=[];
-  // Resolve crossing streams as real junctions instead of drawing crossing caps.
-  for(const f of original.slice().sort((a,b)=>(a.type==='stream')-(b.type==='stream'))){
-    const line=mouth({...f,points:f.points.map(p=>({...p}))},bodies);if(!line)continue;
-    if(line.type==='stream'&&lines.length){
-      const connected=join(line,lines,bodies,obstacles);
-      if(connected){lines.push(connected);continue;}
-      // An obstructed junction may be skipped, but never leave a crossing loop.
-      const crossing=lines.some(trunk=>line.points.slice(1).some((p,i)=>trunk.points.slice(1).some((q,j)=>intersection(line.points[i],p,trunk.points[j],q))));
-      if(crossing)continue;
-    }
-    lines.push(line);
+  const rnd=seedRand((State.seed^0x6783ab1)>>>0),lines=[];
+  const ordered=original.slice().sort((a,b)=>(a.type==='stream')-(b.type==='stream'));
+  const first=mouth({...ordered[0],points:ordered[0].points.map(p=>({...p})),drainagePrimary:true},bodies);
+  if(first)lines.push(first);
+  const primary=lines[0];
+  if(primary)for(const f of ordered.slice(1)){
+    const branch=tributary(primary,f.type,f.id,rnd,lines,bodies,obstacles);
+    if(branch)lines.push(branch);
   }
   if(!lines.length)return env.filter(f=>!water(f));
-  const rnd=seedRand((State.seed^0x6783ab1)>>>0),types=[];
+  const types=[];
   let streams=lines.filter(f=>f.type==='stream').length;
   const requested=Array.isArray(info.tributaryTypes)?info.tributaryTypes.filter(t=>['river','stream'].includes(t)).slice(0,3):[];
   for(const type of requested){if(type==='stream'&&streams>=3)continue;types.push(type);if(type==='stream')streams++}
   if(info.hasRiver)while(streams<biomeStreamCount()){types.push('stream');streams++}
-  const sides=info.riverSides||[];
-  for(let n=0;n<types.length;n++)for(let attempt=0;attempt<12;attempt++){
-   const candidate=types[n]==='river'?makeBoundaryRiver(rnd,sides[(n+attempt+1)%sides.length]):makeEnvWater(rnd,'stream');
-   candidate.id='env-affluent-'+n;const connected=join(candidate,lines,bodies,obstacles);
-   if(connected){lines.push(connected);break;}
+  for(let n=0;n<types.length;n++){
+   const connected=tributary(primary,types[n],'env-affluent-'+n,rnd,lines,bodies,obstacles);
+   if(connected)lines.push(connected);
   }
   lines.push(...lines.flatMap(line=>distributaries(line,bodies)));
   // Update actual forest holes and hills after network geometry is final.
@@ -124,5 +161,5 @@
   const dry=env.filter(f=>!water(f)&&!(f.type==='mountain'&&lines.some(l=>l.points.some(p=>environmentContains(f,p,l.width/2+1)))));
   return [...dry,...lines];
  }
- window.ConquerHydrology={compose,mouth,join,intersection,distributaries};
+ window.ConquerHydrology={compose,mouth,join,intersection,distributaries,tributary};
 })();

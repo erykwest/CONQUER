@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## REG-STREAM-T-HIERARCHY — Primario e affluenti a T (10/11/2026)
+
+Con piu corsi, uno solo e primario: un fiume ha sempre precedenza sui torrenti. Gli altri corsi confluiscono direttamente nel primario a T, con sbocchi distinti, distanti almeno 28U lungo il corso e 18U in linea d aria. Vietati torrenti autonomi paralleli, incroci a X e confluenze multiple nello stesso punto. Le curve affluenti sono costruite dallo sbocco con terminale perpendicolare, lati alternati e controlli su altre acque e rilievi. Il coseno assoluto con l asse complessivo del primario non supera .75; tra le direzioni degli affluenti non supera .86. In mancanza di spazio si omette l affluente. Il limite 0–3 dei torrenti e le probabilita restano invariati. Le sponde definitive sostituiscono i tagli boschivi provvisori.
+
 ## REG-STREAMS-0-3 — Numero dei torrenti (10/11/2026)
 
 Nuove mappe: estrazione uniforme tra zero e tre dopo il gate stream della ricetta. Il gate resta .45 in Pianura e 1 in Foresta/Montagne/Palude: le probabilita finali teoriche sono rispettivamente 66.25/11.25/11.25/11.25% e 25/25/25/25% per 0/1/2/3 torrenti. Gli scarti per vincoli geometrici possono ridurre il numero. Richieste esplicite della rete regionale condividono il limite di tre torrenti; non limitano i fiumi regionali. Gli affluenti terminano al primo incrocio, senza attraversamenti ripetuti del ricevente. Boschi calibrati dopo la geometria finale dell’acqua.

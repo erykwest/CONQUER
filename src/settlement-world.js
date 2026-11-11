@@ -1759,11 +1759,12 @@ function makeContinuousForest(env,rnd,ratio){
     clearings.push(hole);
   }
   const holes=[...clearings];
-  for(const w of env.filter(f=>f.type==='stream'||f.type==='river'))holes.push(...corridorHolePolygons(w.points,w.width/2+2));
   for(const pond of env.filter(f=>f.type==='pond'))holes.push(pond.points.map(q=>({x:pond.x+(q.x-pond.x)*1.25,y:pond.y+(q.y-pond.y)*1.25})));
+  const naturalHoleCount=holes.length;
+  for(const w of env.filter(f=>f.type==='stream'||f.type==='river'))holes.push(...corridorHolePolygons(w.points,w.width/2+2));
   return{id:'env-forest-continuous',type:'forest',continuous:true,
     points:[{x:0,y:0},{x:WORLD,y:0},{x:WORLD,y:WORLD},{x:0,y:WORLD}],
-    holes,clearings:clearings.length,clearingRatio:clearingCoverage(clearings),
+    holes,naturalHoleCount,clearings:clearings.length,clearingRatio:clearingCoverage(clearings),
     fill:'#2e3c1d',edge:'#5c7438',x:WORLD/2,y:WORLD/2,rx:WORLD/2,ry:WORLD/2};
 }
 function generateEnvironment(){
@@ -1791,6 +1792,9 @@ function generateEnvironment(){
     const regionalWater=window.__CONQUER_REGIONAL_DEMO__&&['river','stream'].includes(env[i].type);
     if(!regionalWater&&environmentConflictsTestRelief(env[i])||['hill','rough'].includes(env[i].type))env.splice(i,1);
   }
+  // Provisional stream paths are replaced by T tributaries. Preserve natural
+  // glades and ponds, then let final drainage carve only the real riverbanks.
+  if(window.ConquerHydrology)for(const f of env)if(f.type==='forest'&&Number.isInteger(f.naturalHoleCount))f.holes=f.holes.slice(0,f.naturalHoleCount);
   const regional=window.ConquerRegionalLandscape?.compose(env)||env;
   const drainage=window.ConquerHydrology?.compose(regional)||regional;
   State.environment=window.ConquerRegionalLandscape?.finalizeWoodlands(drainage)||drainage;
