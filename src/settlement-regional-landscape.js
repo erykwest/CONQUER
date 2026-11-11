@@ -129,6 +129,19 @@
       if(foot.some(q=>q.x<0||q.y<0||q.x>200||q.y>200||(weights(q)[biome]||0)<.08)||!hillSpacingOk(hill,State.relief.hills))continue;
       State.relief.hills.push(hill);
     }
+    // Sparse neighbouring relief has its own budget and sampling stream.
+    const sparseRnd=seedRand((State.seed^signature()^0x5c431ba9)>>>0);
+    for(const biome of ['plains','forest','swamp']){
+      const count=biomeHillPlan(biome).count;
+      for(let i=0;i<count;i++)for(let attempt=0;attempt<240;attempt++){
+        const p={x:5+sparseRnd()*190,y:5+sparseRnd()*190};
+        if(p.x>=50&&p.x<=150&&p.y>=50&&p.y<=150||(weights(p)[biome]||0)<.7)continue;
+        const hill=makeProceduralHill(sparseRnd,index,{center:p,rx:8+sparseRnd()*4,ry:7+sparseRnd()*2,maxHeight:biome==='forest'?2:1});
+        const foot=reliefHillFootprint(hill);
+        if(foot.some(q=>q.x<0||q.y<0||q.x>200||q.y>200||(weights(q)[biome]||0)<.08)||!hillSpacingOk(hill,State.relief.hills))continue;
+        State.relief.hills.push(hill);index++;break;
+      }
+    }
     State.relief.regionalAdjusted=true;clearReliefBandCache();
   }
   function compose(base){
@@ -243,12 +256,14 @@
   // Rank a smooth field to control actual wetland area, independently of patch count.
   function swampMarshMask(regional){
     if(regional&&State.biome!=='swamp'&&!Object.values(neighbors()||{}).includes('swamp'))return new Uint8Array(10000);
+    const hillObstacles=State.relief.hills.map(h=>{const points=reliefHillFootprint(h);return{points,b:environmentPolygonBounds(points)}});
+    const onHill=p=>hillObstacles.some(({points,b})=>p.x>=b.minX-4&&p.x<=b.maxX+4&&p.y>=b.minY-4&&p.y<=b.maxY+4&&(pointInPolygon(p,points)||points.some((a,i)=>pointSegmentDistance(p,a,points[(i+1)%points.length])<4)));
     const mask=new Uint8Array(10000),groups=[{total:0,items:[]},{total:0,items:[]}],items=[];
     for(let y=0;y<100;y++)for(let x=0;x<100;x++){
       const p={x:x*2+1,y:y*2+1},i=y*100+x,zone=x>=25&&x<75&&y>=25&&y<75?0:1;
       const weight=regional?(weights(p).swamp||0):1;
       if(weight>.999)groups[zone].total++;
-      if(weight<=0||dist(p,{x:100,y:100})<8)continue;
+      if(weight<=0||dist(p,{x:100,y:100})<8||onHill(p))continue;
       const value=noise(p.x/12,p.y/12,State.seed+51),item={i,value,weight,zone};items.push(item);
       if(weight>.999)groups[zone].items.push(item);
     }

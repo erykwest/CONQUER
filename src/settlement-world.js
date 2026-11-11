@@ -1298,19 +1298,26 @@ const BIOME_RECIPES=Object.freeze({
   // TEST (default): the settings used while developing — procedural terraced hills up to 20% of
   // the map and many small woods up to 12% coverage.
   test:{legacyRelief:.20,smallForestCoverage:.12},
-  plains:{stream:.45,woodlandCoverage:.20},
+  plains:{stream:.45,woodlandCoverage:.20,hillChance:1/3,hills:[1,2],hillHeight:[1,2]},
   hills:{hills:[3,4],hillHeight:[2,3],forests:[0,1]},
   valley:{mountains:[3,5],stream:1},
   river:{river:true,forests:[1,2],hills:[0,1],hillHeight:[1,2]},
-  forest:{stream:1,continuousForest:.20,ponds:[0,1]},
+  forest:{stream:1,continuousForest:.20,ponds:[0,1],hillChance:1/2,hills:[2,3],hillHeight:[2,3]},
   mountains:{mountains:[4,7],stream:1,hills:[1,2],hillHeight:[3,4],hillCoverage:.30},
   village:{forests:[1,2],hills:[0,1],hillHeight:[1,2]},
   sea:{sea:true,forests:[0,1]},
-  swamp:{stream:1,woodlandCoverage:.25,marshCoverage:.25},
+  swamp:{stream:1,woodlandCoverage:.25,marshCoverage:.25,hillChance:1/4,hills:[1,1],hillHeight:[1,2]},
   lake:{lake:true,forests:[0,1]}
 });
 function biomeRecipe(){return BIOME_RECIPES[State.biome]||BIOME_RECIPES.plains}
 function biomeRange(rnd,[lo,hi]=[0,0]){return lo+Math.floor(rnd()*(hi-lo+1))}
+// Independent seeded gate: changing hill frequency does not reroll hydrology.
+function biomeHillPlan(biome=State.biome){
+  const recipe=BIOME_RECIPES[biome]||BIOME_RECIPES.plains;
+  const rnd=seedRand((State.seed^biomeHash(biome)^0x6c714b39)>>>0);
+  const enabled=recipe.hillChance===undefined||rnd()<recipe.hillChance;
+  return{enabled,count:enabled?biomeRange(rnd,recipe.hills):0};
+}
 function biomeRand(rnd,lo,hi){return lo+rnd()*(hi-lo)}
 // randomCenter(marginU) inside the COFFEE BATTLES map zone (battlefield inset by 2U).
 function biomeCenter(rnd,marginU=0){
@@ -1440,7 +1447,7 @@ function generateRelief(){
   State.relief={version:LANDSCAPE_GENERATION_VERSION,seed:reliefSeed,biome:State.biome,hills:[],stats:null};
   clearReliefBandCache();
   // generateTactical: hills placed after coast, mountains and water, never overlapping them.
-  const recipe=biomeRecipe(),count=biomeRange(rnd,recipe.hills),obstacles=biomeTerrainObstacles();
+  const recipe=biomeRecipe(),count=recipe.hillChance===undefined?biomeRange(rnd,recipe.hills):biomeHillPlan().count,obstacles=biomeTerrainObstacles();
   if(recipe.legacyRelief){
     // Former test relief: random procedural hills anywhere (also past the edge) until coverage.
     let coverage=0,attempts=0;
@@ -1457,6 +1464,7 @@ function generateRelief(){
     if(i>=count)extra++;
     for(let attempt=0;attempt<(i>=count?70:420);attempt++){
       const size=biomeFeatureSize(rnd,false),center=biomeCenter(rnd,i>=count?0:size.margin);
+      if(recipe.hillChance!==undefined&&i===0){center.x=65+rnd()*70;center.y=65+rnd()*70;}
       // Foothills range from half to twice a recipe hill, so smaller ones fill the gaps.
       if(i>=count){const k=attempt<35?biomeRand(rnd,1,2):biomeRand(rnd,.5,1);size.rx*=k;size.ry*=k}
       // Every terrace needs room: about one level per 3U of the short radius.

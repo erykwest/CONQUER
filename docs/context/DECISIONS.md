@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## REG-SPORADIC-HILLS - Frequenza dei rilievi (11/11/2026)
+
+La frequenza indica la probabilita di un territorio con colline, non la percentuale della superficie: Pianura 1/3 (1-2 rilievi), Foresta 1/2 (2-3), Palude 1/4 (uno). Seed separato dalla rete idrografica, stesso risultato a ogni rigenerazione. I vincoli geometrici restano prioritari nelle zone costiere e limitrofe. Gli acquitrini lasciano asciutti rilievi e versanti; le scarpate reali restano compatibili con gli attuali validatori estrattivi. L economia resta di competenza dell altro branch. Questa iterazione modifica distribuzione e quantità, usando la geometria terrazzata esistente.
+
 ## REG-ORGANIC-COAST - Isole e penisole (11/11/2026)
 
 Con tre o quattro lati di mare oppure di lago, la costa non e limitata alle fasce di blending: un contorno ovale deformato dal seed determina i poligoni mare/terra. Isole racchiuse dal mare, penisole collegate al lato terrestre indicato dai vicini. Il centro insediativo resta asciutto; i margini della buildable zone possono essere costieri. Restano invariati golfo a un lato e promontorio a due lati. Nessuna modifica alle probabilita dei biomi o ai paesaggi gia salvati.
