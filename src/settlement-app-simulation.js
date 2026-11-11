@@ -130,7 +130,8 @@ function runSettlementMaintenance(reason='watchdog',completedStructures=[]){
     // Church/tavern completion adds a Voronoi site; completed primary roads
     // unlock dense street-front houses. New road commits invalidate parcels
     // themselves when they actually change the network.
-    invalidateNavigation(false,{urban:completedStructures.some(s=>s.type==='church'||s.type==='tavern'||s.type==='road'&&!!s.routeId)});
+    // A finished ramp or stairway opens a new way across a cliff: cached walks are stale.
+    invalidateNavigation(completedStructures.some(s=>window.ConquerSlopeways?.is(s)),{urban:completedStructures.some(s=>s.type==='church'||s.type==='tavern'||s.type==='road'&&!!s.routeId)});
     fieldWorkAssignmentCache={key:null,map:new Map()};
     const layers=new Set();
     for(const item of completedStructures)for(const layer of structureSceneLayers(item))layers.add(layer);
@@ -160,6 +161,9 @@ function simulationFrame(now){
     const previousDay=State.clock.day;
     State.clock.day+=dt*BASE_DAYS_PER_SECOND*State.clock.speed;
     window.ConquerSiege?.tick(previousDay,State.clock.day);
+    // Local producer-to-stockyard haulage is animation only: clock-gated,
+    // without modifying economic stocks or scheduling saves per frame.
+    window.ConquerHaulage?.tick?.(dt);
     // Fires run on game time: they pause with the game and speed up with it.
     try{window.ConquerFire?.tick(dt*State.clock.speed)}catch(err){console.error('CONQUER_FIRE_TICK_ERROR',err)}
     // Combat faults must not affect village/economy/render simulation.
@@ -200,6 +204,7 @@ function simulationFrame(now){
       window.ConquerConvoys?.tick?.(previousDay,State.clock.day); // lord convoys and diplomatic caravans
       // Player-build projects progress only when available L1 staff actually
       // complete shift work; procedural road/house generation retains V1 clocks.
+      window.ConquerForestry?.tick(simLogicDay,State.clock.day);
       const laborCompletions=tickConstructionWork(simLogicDay,State.clock.day);
       completed=[...constructionCompletionsCrossed(simLogicDay,State.clock.day),...laborCompletions];
       simLogicDay=State.clock.day;
@@ -210,6 +215,7 @@ function simulationFrame(now){
     if(completed.length){
       window.ConquerCircle?.invalidate?.('construction completed');
       runSettlementMaintenance('completion',completed);
+      if(completed.some(s=>s.id===State.selectedId))renderFunctionPanel();
       if(completed.some(s=>s.type==='tower'))window.ConquerSiege?.syncAutoMastio?.();
       simMaintenanceAt=now;
     }else if(now-simMaintenanceAt>=MAINTENANCE_WATCHDOG_MS){
@@ -219,6 +225,11 @@ function simulationFrame(now){
 
     if(now-simUiAt>=250){
       renderUI();
+      // Legacy inspector does not subscribe to the UI2 snapshot. Refresh its
+      // progress while visible, but do not replace a focused priority selector.
+      const inspector=document.getElementById('functionPanel'),selected=selectedStructure();
+      if(inspector?.classList.contains('open')&&selected&&underConstruction(selected)&&
+        !inspector.contains(document.activeElement))renderFunctionPanel();
       simUiAt=now;
     }
 
@@ -259,7 +270,7 @@ function simulationFrame(now){
     const animatedCutaway=State.structures.some(s=>structureCutaway(s)&&Array.isArray(s.functions)&&s.functions.some(role=>role==='barracks'||role==='quarters'||role==='nobleRoom'));
     // DEV weather/daylight overrides ease even with the simulation paused.
     const ambientTransition=window.ConquerAmbientLight?.isTransitioning?.()||false;
-    const animatedEffects=window.ConquerFire?.needsAnimation?.()||window.ConquerSiege?.needsAnimation?.()||window.ConquerCombatAnim?.active?.();
+    const animatedEffects=window.ConquerFire?.needsAnimation?.()||window.ConquerSiege?.needsAnimation?.()||window.ConquerCombatAnim?.active?.()||window.ConquerSoldiers?.needsAnimation?.();
     if(sceneDrawRequested||((animatedCutaway||ambientTransition||animatedEffects)&&now-simDrawAt>=(ambientTransition?WEATHER_FRAME_MS:animatedEffects?VISUAL_FRAME_FAST_MS:84))){
       sceneDrawRequested=false;
       draw();

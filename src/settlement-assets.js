@@ -159,6 +159,7 @@ function structureAssetFamilyCatalog(){
   }
   add('tower-wood-watch','Wood watchtower',assetPointBase('tower',{shape:'square',material:'wood',woodStyle:'watchtower',woodRoof:'pitched',level:1,size:1,tier:1}));
   for(const woodRoof of ['open','pitched'])add('tower-wood-medium-'+woodRoof,'Wood medium tower '+woodRoof,assetPointBase('tower',{shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof,level:1,size:1.5,tier:2}));
+  add('tower-wood-frame-h2','Wood frame tower H2',assetPointBase('tower',{shape:'square',material:'wood',woodStyle:'frameTower',woodRoof:'pitched',level:2,size:1.5,tier:2}));
   for(let level=1;level<=3;level++)for(const roofStyle of ['battlement','pitched'])add(
     'gate-stone-l'+level+'-'+roofStyle,'Stone gate L'+level+' '+roofStyle,
     assetPointBase('gate',{shape:'square',material:'stone',size:1.5,level,roofStyle})
@@ -187,6 +188,8 @@ function structureAssetFamilyCatalog(){
   );
   // Timber longhouse: the W1 / W2 spans in wood, ground floor only.
   for(const length of STRUCTURE_ASSET_TEST_LENGTHS.built)add('longhouse-w1-'+length,'Longhouse W1 '+length+'U',assetLinearBase('built',length,{material:'wood',level:1,width:1,functions:[]}));
+  // Lean-to against an H2 wall (settlement-lean-to.js): one storey, single-pitch roof; both wall sides.
+  for(const mat of ['wood','stone','brick'])for(const side of [1,-1])for(const length of STRUCTURE_ASSET_TEST_LENGTHS.built)add('lean-to-'+mat+'-'+(side===1?'n':'s')+'-'+length,'Lean-to W1 '+mat+' '+(side===1?'wall +n':'wall -n')+' '+length+'U',assetLinearBase('built',length,{leanTo:true,leanMaterial:mat,masonryMaterial:mat==='brick'?'brick':'stone',leanSide:side,flip:side===1,level:1,width:1,functions:[]}));
   for(const length of STRUCTURE_ASSET_TEST_LENGTHS.builtWide)add('longhouse-w2-'+length,'Longhouse W2 '+length+'U',assetLinearBase('built',length,{material:'wood',span:'wide',level:1,width:TYPES.builtWide.width,functions:[]}));
   // Longhouse roof covers (BC-251105-09): thatch and turf beside the default shingles.
   for(const roofCover of ['thatch','turf']){

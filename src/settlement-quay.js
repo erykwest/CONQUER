@@ -227,14 +227,14 @@
     const side=s.seaSide||seaSide(s),sides=wetSides(s),[S0,S1]=span(s);
     const piers=(State.structures||[]).filter(p=>p.type==='pier'&&p.onQuay===s.id),onIt=s.id?attached(s):[];
     const key=[s.a.x,s.a.y,s.b.x,s.b.y,S0,S1,side,sides.join(),piers.map(p=>p.id+p.x.toFixed(2)+p.y.toFixed(2)).join(),
-      onIt.map(o=>o.id+JSON.stringify(typeof footprintPoints==='function'?footprintPoints(o):0)).join()].join('|');
+      onIt.map(o=>o.id+JSON.stringify(typeof footprintPoints==='function'?footprintPoints(o):0)).join(),State.stonePaletteId].join('|');
     const hit=cache.get(s.id);if(hit&&hit.key===key)return hit.list;
     const pos=[],col=[],w=WIDTH/2;
     const P=(along,across,z)=>{const p=at(s,along,across);return[p.x,p.y,z]};
     const box=(a0,a1,c0,c1,z0,z1,c)=>{
       const v=[];for(const a of [a0,a1])for(const k of [c0,c1])for(const z of [z0,z1])v.push(P(a,k,z));
       for(const [i,j,k,l] of [[0,2,6,4],[1,5,7,3],[0,4,5,1],[2,3,7,6],[0,1,3,2],[4,6,7,5]])
-        for(const tri of [[i,j,k],[i,k,l]]){for(const q of tri)pos.push(...v[q]);col.push(c)}
+        for(const tri of [[i,j,k],[i,k,l]]){for(const q of tri)pos.push(...v[q]);col.push(c===DARK?c:(window.ConquerStoneColor?.shade(c)||c))}
     };
     // Ashlar: a dark mortar core, then blocks in staggered courses standing just proud of it,
     // so every joint reads as a recessed line; four stone tones picked per block.
@@ -268,9 +268,9 @@
     const prism=(poly,z0,z1,c,cTop)=>{
       for(let i=0;i<poly.length;i++){
         const p=poly[i],q=poly[(i+1)%poly.length];
-        for(const tri of [[[p,z0],[q,z0],[q,z1]],[[p,z0],[q,z1],[p,z1]]]){for(const [v,z] of tri)pos.push(v.x,v.y,z);col.push(i%2?c:STONE2)}
+        for(const tri of [[[p,z0],[q,z0],[q,z1]],[[p,z0],[q,z1],[p,z1]]]){for(const [v,z] of tri)pos.push(v.x,v.y,z);col.push(window.ConquerStoneColor?.shade(i%2?c:STONE2)||(i%2?c:STONE2))}
       }
-      for(let i=1;i+1<poly.length;i++){for(const v of [poly[0],poly[i],poly[i+1]])pos.push(v.x,v.y,z1);col.push(cTop)}
+      for(let i=1;i+1<poly.length;i++){for(const v of [poly[0],poly[i],poly[i+1]])pos.push(v.x,v.y,z1);col.push(window.ConquerStoneColor?.shade(cTop)||cTop)}
     };
     if(typeof footprintPoints==='function')for(const o of onIt){const fp=footprintPoints(o);if(fp?.length>=3)prism(fp,BED,TOP,STONE,COPING)}
     const list=[{pos,col}];

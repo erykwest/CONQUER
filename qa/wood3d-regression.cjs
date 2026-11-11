@@ -33,6 +33,13 @@ const T={type:'tower',material:'wood'};
 assert.equal(W.modelKey({...T,woodStyle:'watchtower'}),'watchtower');
 assert.equal(W.modelKey({...T,woodStyle:'palisadeTower',woodRoof:'open'}),'palisadeTower_open');
 assert.equal(W.modelKey({...T,woodStyle:'palisadeTower',woodRoof:'pitched'}),'palisadeTower_roofed');
+assert.equal(W.modelKey({...T,woodStyle:'frameTower',woodRoof:'open'}),'frameTower','the H2 frame tower is always roofed');
+assert.equal(ctx.woodTowerRoof({...T,woodStyle:'frameTower'}),'pitched');
+assert.equal(ctx.woodTowerLevel('frameTower'),2);
+assert.equal(ctx.woodTowerSize('frameTower'),1.5);
+assert.equal(ctx.woodTowerStyle({...T,woodStyle:'bogus'}),'palisadeTower','unknown styles fall back');
+for(const side of ['side_xp','side_xn','side_yp','side_yn','floor','interior','deck','top','flag'])
+  assert.ok(M.models.frameTower.parts[side],'frameTower part '+side+' (cutaway sides / interior)');
 assert.equal(W.modelKey({type:'gate',material:'wood'}),'woodGate');
 assert.equal(W.modelKey({type:'tower',material:'stone'}),null,'stone stays with ConquerCastle3D');
 assert.ok(!W.handles({...T,woodStyle:'watchtower',construction:{}}),'sites keep their ghost / assembly');
@@ -47,7 +54,7 @@ function bounds(key){
   }
   return{x0,x1,y0,y1,z0,z1};
 }
-for(const [key,h,half] of [['watchtower',2.35,.5],['palisadeTower_open',2.32,.75],['palisadeTower_roofed',2.95,.75],['woodGate',1.94,.75]]){
+for(const [key,h,half] of [['watchtower',2.35,.5],['palisadeTower_open',2.32,.75],['palisadeTower_roofed',2.95,.75],['frameTower',3.78,.75],['woodGate',1.94,.75]]){
   const b=bounds(key);
   assert.ok(Math.abs(b.z1-h)<.2,key+' height '+b.z1.toFixed(2)+' ~ '+h);
   assert.ok(b.z0>-.05,key+' sits on the ground');

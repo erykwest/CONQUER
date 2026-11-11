@@ -383,7 +383,23 @@ function wallFragmentFrom(source,a,b,aSnap,bSnap,ratio){
     length:dist(a,b),
     buildCost:proportionalBuildCost(source.buildCost,ratio)
   };
-  if(source.construction)fragment.construction={...source.construction};
+  if(source.construction){
+    fragment.construction={...source.construction};
+    if(source.construction.materialsDelivered){
+      const scale=values=>Object.fromEntries(Object.entries(values||{}).map(([k,v])=>[k,Math.floor(v*ratio*1000+1e-7)/1000]));
+      fragment.buildCost=scale(source.buildCost);
+      fragment.construction.materialsDelivered=scale(source.construction.materialsDelivered);
+      if(source.construction.materialsRequired)fragment.construction.materialsRequired=scale(source.construction.materialsRequired);
+      if(source.construction.materialsFree)fragment.construction.materialsFree=scale(source.construction.materialsFree);
+      if(source.construction.upgrade){
+        const before=source.construction.upgrade.before;
+        fragment.construction.upgrade={before:{...structureUpgradeSnapshot(before),id:fragment.id,a:fragment.a,b:fragment.b,aSnap:fragment.aSnap,bSnap:fragment.bSnap,length:fragment.length,buildCost:scale(before.buildCost)}};
+      }
+      fragment.construction.materialsConsumed=scale(source.construction.materialsConsumed||Object.fromEntries(Object.entries(source.buildCost||{}).map(([k,v])=>[k,v*constructionProgress(source)])));
+      fragment.construction.workRequired*=ratio;fragment.construction.workDone*=ratio;
+      fragment.construction.wagesPaid=(source.construction.wagesPaid||0)*ratio;
+    }
+  }
   normalizeStructureVariants(fragment);
   return fragment;
 }
@@ -523,6 +539,11 @@ function breakWallForTower(wallId,tower){
     fragments.push(wallFragmentFrom(wall,p1,wall.b,tower.id,wall.bSnap,(L-cut1)/L));
   }
 
+  if(wall.construction?.materialsDelivered){
+    const old=refundableConstructionCost(wall),refund={};
+    for(const [k,v] of Object.entries(old))refund[k]=Math.max(0,v-fragments.reduce((n,f)=>n+(refundableConstructionCost(f)[k]||0),0));
+    refundCost(refund);
+  }
   const idx=State.structures.findIndex(s=>s.id===wall.id);
   if(idx>=0)State.structures.splice(idx,1,...fragments);
   castleUnionCache.key=null;
@@ -661,7 +682,9 @@ function functionCapacity(s){
   if(!s)return 0;
   if(s.type==='gate')return Math.max(0,structureLevel(s)-1);
   if(typeof isKeepW4==='function'&&isKeepW4(s)){let n=0;for(let f=0;f<structureLevel(s);f++)n+=keepFloorRooms(s,f).length;return n}
-  if(s.type==='tower')return towerTier(s)>=2||s.isMastio?structureLevel(s):0; // The first T1 wood/stone keep needs its Common Hall.
+  // One room per floor. W1 towers keep their spiral stair and take only dovecote, latrine, prison,
+  // treasury and armory (settlement-siege.js allowed), except the first T1 keep (its Common Hall).
+  if(s.type==='tower')return structureLevel(s);
   if(s.type==='built')return Number(s.length)>=2?builtInteriorFloors(s):0;
   if(s.type==='townhall')return civicLevel(s);
   return 0;
@@ -699,4 +722,4 @@ function normalizeTownhallRooms(s){
  // wall/built -> skin
  // Renderer/UI steps must use structureVariant()/setStructureVariant() rather
  // than creating duplicate structure types.
-function structureLabel(s){if(!s)return'';if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.label(s);if(window.ConquerPier?.is(s))return window.ConquerPier.label(s);if(window.ConquerQuay?.is(s))return window.ConquerQuay.label(s);if(isCivicAnnex(s))return 'Annex · '+(civicAnnexDefinition(s)?.label||s.annexType||'unknown');if(window.ConquerIndustries?.is(s)){const t=window.ConquerIndustries.TYPES[s.type];return t.name+' · '+t.w+'×'+t.h+'U'};if(s.type==='house'){const l=houseLevel(s);return `House · L${l}${l===3?' · '+housePlanType(s)+' plan':l===4?' · elite · '+houseTurretType(s)+' turret':''}`};if(s.type==='market')return`Market · 4×4U · L${civicLevel(s)}`;if(s.type==='tavern')return`Tavern · double-T plan · L${civicLevel(s)}`;if(s.type==='church')return`Church · large · L${civicLevel(s)}`;if(typeof isWellCivic==='function'&&isWellCivic(s))return wellCivicLabel(s);if(s.type==='plaza')return`Piazza · ${plazaVariant(s)} · L${civicLevel(s)}`;if(s.type==='training')return'Training field · 5×4U';if(s.type==='well')return'Village well';if(s.type==='gate')return isWoodGate(s)?'Wood gate 1.5×1U · H1 · flat deck · battlements':isSmallGate(s)?`Small gate 1×1U · L${structureLevel(s)}`:`Gate 1.5×1.5U · L${structureLevel(s)}`;if(s.type==='tower'){if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?`Wood watchtower 1×1U · H1`:`Wood tower 1.5×1.5U · H1 · ${woodTowerRoof(s)==='pitched'?'pitched roof':'open top'}`;if(isOrientedTower(s))return orientedTowerLabel(s)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'');return(s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'')};if(s.type==='built')return`${isLonghouse(s)?(isWideBuilt(s)?'Longhouse W2':'Longhouse W1'):isWideBuilt(s)?'Wide hall':'Built section'} ${s.length.toFixed(2)}U${isWideBuilt(s)?' × 2U':''} · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;if(s.type==='palisade')return`Palisade ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U)`;if(s.type==='road')return`${s.manualMain?'Main road':'Road'} ${(s.length||dist(s.a,s.b)).toFixed(2)}U`;return s.type}
+function structureLabel(s){if(!s)return'';if(s.type==='storageYard')return'Piazzale · Magazzino '+(s.yardSize||2)+'×'+(s.yardSize||2)+'U';if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.label(s);if(window.ConquerPier?.is(s))return window.ConquerPier.label(s);if(window.ConquerQuay?.is(s))return window.ConquerQuay.label(s);if(isCivicAnnex(s))return 'Annex · '+(civicAnnexDefinition(s)?.label||s.annexType||'unknown');if(window.ConquerIndustries?.is(s)){const t=window.ConquerIndustries.TYPES[s.type];return t.name+' · '+t.w+'×'+t.h+'U'};if(s.type==='house'){const l=houseLevel(s);return `House · L${l}${l===3?' · '+housePlanType(s)+' plan':l===4?' · elite · '+houseTurretType(s)+' turret':''}`};if(s.type==='market')return`Market · 4×4U · L${civicLevel(s)}`;if(s.type==='tavern')return`Tavern · double-T plan · L${civicLevel(s)}`;if(s.type==='church')return`Church · large · L${civicLevel(s)}`;if(typeof isWellCivic==='function'&&isWellCivic(s))return wellCivicLabel(s);if(s.type==='plaza')return`Piazza · ${plazaVariant(s)} · L${civicLevel(s)}`;if(s.type==='training')return'Training field · 5×4U';if(s.type==='well')return'Village well';if(s.type==='gate')return isWoodGate(s)?'Wood gate 1.5×1U · H1 · flat deck · battlements':isSmallGate(s)?`Small gate 1×1U · L${structureLevel(s)}`:`Gate 1.5×1.5U · L${structureLevel(s)}`;if(s.type==='tower'){if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?`Wood watchtower 1×1U · H1`:`Wood tower 1.5×1.5U · H1 · ${woodTowerRoof(s)==='pitched'?'pitched roof':'open top'}`;if(isOrientedTower(s))return orientedTowerLabel(s)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'');return(s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'')};if(s.type==='built')return`${isLeanTo(s)?'Lean-to W1':isLonghouse(s)?(isWideBuilt(s)?'Longhouse W2':'Longhouse W1'):isWideBuilt(s)?'Wide hall':'Built section'} ${s.length.toFixed(2)}U${isWideBuilt(s)?' × 2U':''} · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;if(s.type==='palisade')return`Palisade ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U)`;if(s.type==='road')return`${s.manualMain?'Main road':'Road'} ${(s.length||dist(s.a,s.b)).toFixed(2)}U`;return s.type}

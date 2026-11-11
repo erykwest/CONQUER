@@ -157,8 +157,7 @@
     const err=validate(s);
     if(err){status(err);return false}
     const cost=constructionCost(s);
-    if(!canAfford(cost)){status('Insufficient resources: '+costText(cost));return false}
-    s.id=s.id||uid();s.buildCost=cost;spendCost(cost);beginConstruction(s);
+    s.id=s.id||uid();s.buildCost=cost;beginConstruction(s);
     State.structures.push(s);
     selectStructure(s);markDirty(true,['ground','base','castleBody']);
     status((s.type==='moat'?'Moat':'Bridge')+' placed · '+s.length.toFixed(1)+'U · level '+s.groundZ);
@@ -172,6 +171,9 @@
   }
   function onOpenBridge(p,forHeavy=false){
     const requirement=heavyWidth(forHeavy);
+    // Ramps carry everyone across a cliff; stairways only walkers (settlement-slopeways.js).
+    const slopeway=window.ConquerSlopeways?.at(p,!!forHeavy);
+    if(slopeway&&(Number(slopeway.width)||0)+1e-5>=requirement)return slopeway;
     for(const s of State.structures){
       if(s.type==='bridge'&&!underConstruction(s)&&s.width+1e-5>=requirement
         &&onStrip(s,p,requirement?-.03:0))return s;
@@ -194,6 +196,8 @@
     return rubble<=0?0:rubble*crossingMultiplier(p,heavy);
   }
   function crossingMultiplier(p,heavy=false){
+    const climb=window.ConquerSlopeways?.speed(p,heavy);
+    if(climb!=null)return climb;          // climbing a ramp or a flight of steps is slower
     if(onOpenBridge(p,heavy))return 1;
     const found=moatAt(p);
     if(!found||filled(found.moat,found.location,heavyWidth(heavy)))return 1;
@@ -301,7 +305,7 @@
   const bridgeCache=new Map();
   function bridgeMesh(s){
     if(!xy(s))return null;
-    const key=s.id+':'+s.a.x+','+s.a.y+':'+s.b.x+','+s.b.y+':'+s.width+':'+s.variant+':'+(underConstruction(s)?1:0);
+    const key=s.id+':'+s.a.x+','+s.a.y+':'+s.b.x+','+s.b.y+':'+s.width+':'+s.variant+':'+(underConstruction(s)?1:0)+':'+State.stonePaletteId;
     let m=bridgeCache.get(s.id);if(m&&m.key===key)return m;
     const f=frame(s),w=f.width/2,top=(Number(s.groundZ)||0)+.09,stone=s.variant==='stone',pos=[],col=[];
     const P=(along,across,z)=>{const p=point(s,along,across);return[p.x,p.y,z]};
@@ -310,7 +314,7 @@
       for(const [i,j,k,l] of [[0,2,6,4],[1,5,7,3],[0,4,5,1],[2,3,7,6],[0,1,3,2],[4,6,7,5]])
         for(const tri of [[i,j,k],[i,k,l]]){for(const q of tri)pos.push(...v[q]);col.push(colr)}
     };
-    const deck=stone?'#9c9b92':'#986e42',dark=stone?'#78766d':'#6f4a2b';
+    const deck=stone?(window.ConquerStoneColor?.shade('#9c9b92')||'#9c9b92'):'#986e42',dark=stone?(window.ConquerStoneColor?.shade('#78766d')||'#78766d'):'#6f4a2b';
     box(0,f.L,-w,w,top-.1,top,deck);
     if(stone)for(const side of [-1,1])box(0,f.L,side*w-(side>0?.12:0),side*w+(side<0?.12:0),top,top+.25,dark);
     else for(const side of [-1,1]){
@@ -471,9 +475,9 @@
   }
   function installDrawbridge(gate){
     if(!gate||gate.type!=='gate'||underConstruction(gate)||drawbridge(gate))return false;
-    if(!canAfford(DRAWBRIDGE_COST)){status('Insufficient resources · '+costText(DRAWBRIDGE_COST));return false}
-    spendCost(DRAWBRIDGE_COST);
+    const before=structureUpgradeSnapshot(gate);
     gate.drawbridge={installed:true,raised:false,progress:0};
+    beginStructureUpgrade(gate,before,DRAWBRIDGE_COST,1);
     markDirty(true,['ground','base']);renderFunctionPanel();draw();
     status('Drawbridge installed on the gate');
     return true;
@@ -519,8 +523,9 @@
   function drawBridge(s){
     const z=(Number(s.groundZ)||0)+.09,f=frame(s),width=f.width;
     const poly=corners(s);
-    pathPolygon(poly.map(p=>w2s(p,z)),s.variant==='stone'?'#9c9b92':'#986e42',
-      s.variant==='stone'?'#5c5b53':'#50361e',1);
+    const tint=hex=>s.variant==='stone'?(window.ConquerStoneColor?.shade(hex)||hex):hex;
+    pathPolygon(poly.map(p=>w2s(p,z)),tint(s.variant==='stone'?'#9c9b92':'#986e42'),
+      tint(s.variant==='stone'?'#5c5b53':'#50361e'),1);
     const across=(-width/2);
     if(s.variant==='wood'){
       for(let v=.25;v<f.L;v+=.35){
@@ -536,7 +541,7 @@
       for(const side of [-1,1]){
         const a=w2s(point(s,0,side*width/2),z+.24),b=w2s(point(s,f.L,side*width/2),z+.24);
         ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
-        ctx.strokeStyle='#78766d';ctx.lineWidth=3.4;ctx.stroke();
+        ctx.strokeStyle=window.ConquerStoneColor?.shade('#78766d')||'#78766d';ctx.lineWidth=3.4;ctx.stroke();
       }
     }
   }
@@ -764,8 +769,8 @@
     const error=validate(proposal);
     if(error){status('Bridge upgrade unavailable: '+error);return false}
     const price=crossingUpgradeCost(s,'stone');
-    if(!canAfford(price)){status('Insufficient resources · '+costText(price));return false}
-    spendCost(price);s.variant='stone';s.upgradeCost=price;
+    const before=structureUpgradeSnapshot(s);s.variant='stone';s.upgradeCost=price;
+    beginStructureUpgrade(s,before,price);
     markDirty(true,['ground','base']);renderFunctionPanel();draw();
     status('Wooden bridge upgraded to stone');return true;
   }
@@ -775,8 +780,8 @@
     const error=validate(proposal);
     if(error){status('Cannot flood moat: '+error);return false}
     const price=crossingUpgradeCost(s,'water');
-    if(!canAfford(price)){status('Insufficient resources · '+costText(price));return false}
-    spendCost(price);s.variant='water';s.upgradeCost=price;
+    const before=structureUpgradeSnapshot(s);s.variant='water';s.upgradeCost=price;
+    beginStructureUpgrade(s,before,price);
     markDirty(true,['ground','base']);renderFunctionPanel();draw();
     status('Moat flooded · water level 0');return true;
   }

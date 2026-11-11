@@ -46,13 +46,14 @@ const line=(text,re)=>{const m=text.match(re);assert.ok(m,String(re));return m[0
   assert.ok(!S.allowed(tower,0,'tribunal')&&!S.allowed(tower,0,'council'),'no tribunal or council in a tower');
   assert.ok(S.allowed(tower,0,'prison')&&!S.allowed(tower,1,'prison')&&!S.allowed(tower,2,'prison'),'castle prison on the ground floor only');
   assert.ok(!S.allowed({id:'g',type:'gate',level:3,functions:[]},0,'prison'),'not in a gate (its ground floor is the passage)');
-  assert.ok(S.allowed(tower,2,'guard'),'guard post on any T2 tower floor');
+  // The castle guard post merged into the Barracks (D-MIL-RES-261109): town hall only.
+  assert.ok(!S.allowed(tower,2,'guard'),'no guard post in a tower');
   // Capacities: five prisoners per cell (one cell a normal room, the town hall's cells counted by civic3d); guard posts 4 watchmen.
-  State.structures=[{...tower,size:1.5,functions:['prison','guard',null]},hall(2,['prison','tribunal'])];
+  State.structures=[{...tower,size:1.5,functions:['prison','guard',null]},hall(2,['prison','guard'])];
   run('functionSlotUnits=()=>1;');ctx.window.ConquerCivic3D={prisonCellCount:()=>3};
   const cap=S.capacity();
   assert.equal(cap.prisoners,5+15,'tower cell (5) + three town hall cells (15)');
-  assert.equal(cap.watchmen,4,'one guard post');
+  assert.equal(cap.watchmen,4,'only the town hall guard post counts');
   console.log('PASS town hall chambers: council, guard, prison, tribunal from L2; prison and guard capacities');
 }
 

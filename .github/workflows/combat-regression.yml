@@ -1,7 +1,12 @@
 name: Combat simulation and renderer regression
+
+# Abort superseded PR runs of this workflow (never cancel scheduled/main runs).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 on:
   push:
-    branches: [main, combat]
+    branches: [main]
     paths:
       - 'src/settlement-combat*.js'
       - 'src/settlement-camp.js'
@@ -10,8 +15,14 @@ on:
       - 'qa/*combat*'
       - 'qa/*battle*'
       - 'qa/patrol-regression.cjs'
+      - 'qa/military-circle-roster-regression.cjs'
+      - 'src/ui/game-api.js'
       - 'src/settlement-alarm-bells.js'
+      - 'src/settlement-soldiers.js'
+      - 'qa/caserma-avamposto-regression.cjs'
       - 'qa/alarm-bell-regression.cjs'
+      - 'src/settlement-wall*.js'
+      - 'qa/wall-stairs-regression.cjs'
       - 'qa/urban-regression.cjs'
       - 'qa/camp-regression.cjs'
       - 'qa/wolves-regression.cjs'
@@ -19,6 +30,30 @@ on:
       - 'camp/index.html'
       - '.github/workflows/combat-regression.yml'
   pull_request:
+    paths:
+      - 'src/settlement-combat*.js'
+      - 'src/settlement-camp.js'
+      - 'src/settlement-wolves.js'
+      - 'src/settlement-mounted2d.js'
+      - 'src/settlement-alarm-bells.js'
+      - 'src/settlement-soldiers.js'
+      - 'qa/caserma-avamposto-regression.cjs'
+      - 'src/settlement-siege.js'
+      - 'src/settlement-render.js'
+      - 'src/settlement-wall*.js'
+      - 'qa/*combat*'
+      - 'qa/*battle*'
+      - 'qa/patrol-regression.cjs'
+      - 'qa/military-circle-roster-regression.cjs'
+      - 'src/ui/game-api.js'
+      - 'qa/alarm-bell-regression.cjs'
+      - 'qa/wall-stairs-regression.cjs'
+      - 'qa/urban-regression.cjs'
+      - 'qa/camp-regression.cjs'
+      - 'qa/wolves-regression.cjs'
+      - 'index.html'
+      - 'camp/index.html'
+      - '.github/workflows/combat-regression.yml'
 permissions:
   contents: read
 jobs:
@@ -35,6 +70,7 @@ jobs:
           node --check src/settlement-combat.js
           node --check src/settlement-combat-render.js
           node --check src/settlement-combat-rules.js
+          node --check src/settlement-soldiers.js
       - name: Rendering boundaries and combat behavior
         run: |
           node qa/combat-render-regression.cjs
@@ -42,6 +78,7 @@ jobs:
           node qa/combat-selection-regression.cjs
           node qa/mass-battle-regression.cjs
           node qa/patrol-regression.cjs
+          node qa/military-circle-roster-regression.cjs
           node qa/night-vision-regression.cjs
           node qa/zones-visual-regression.cjs
           node qa/camp-regression.cjs
@@ -51,6 +88,7 @@ jobs:
           node qa/diplomacy-regression.cjs
           node qa/siege-assault-regression.cjs
           node qa/keep-entrance-regression.cjs
+          node qa/wall-stairs-regression.cjs
           node qa/cutaway-floors-regression.cjs
-          node qa/save-safety-regression.cjs
           node qa/alarm-bell-regression.cjs
+          node qa/caserma-avamposto-regression.cjs

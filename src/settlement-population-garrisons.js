@@ -149,6 +149,8 @@ function drawCastleSoldiers(){
       });
     }
   }
+  // Lookouts of the Barracks reserve on the open decks (settlement-soldiers.js).
+  window.ConquerSoldiers?.drawLookouts?.();
 }
 function drawTrainingSoldiers(){
   const day=peasantVisualDay(),dots=[];

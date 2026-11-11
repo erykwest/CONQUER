@@ -16,6 +16,7 @@
     if(isLonghouse(s))return isWideBuilt(s)?'longhouse_w2':'longhouse_w1';
     if(!isWoodTower(s))return null;
     if(woodTowerStyle(s)==='watchtower')return'watchtower';
+    if(woodTowerStyle(s)==='frameTower')return DATA()?.models?.frameTower?'frameTower':null;
     return woodTowerRoof(s)==='open'?'palisadeTower_open':'palisadeTower_roofed';
   }
   // Structures this module draws in the world renderer (sites keep their ghost / assembly).
@@ -203,7 +204,11 @@
       // Room exterior elements (settlement-room-exterior.js): the alarm-bell belfry takes the roof
       // top and its finial replaces the flag pole.
       const belfry=window.ConquerRoomExterior?.triangles(s)||[];
-      const only=names.filter(n=>(open?!open.has(n):!INTERIOR.includes(n))&&!(belfry.length&&n==='flag'));
+      // Frame tower front: ground door, or (Mastio raised entrance) the P1 doorway in place of
+      // the front's middle post and with no door below.
+      const raised=window.ConquerKeepEntrance?.sill?.(s)!=null;
+      const drop=new Set(raised?['door','frontMid']:['doorRaised']);
+      const only=names.filter(n=>(open?!open.has(n):!INTERIOR.includes(n))&&!(belfry.length&&n==='flag')&&!drop.has(n));
       addModel(mesh,key,{x:s.x,y:s.y,angle:s.angle||0},ground,only);
       for(const t of belfry){for(const q of t.pts)mesh.pos.push(q.p.x,q.p.y,ground+q.z);mesh.col.push(t.hex)}
     }
@@ -214,7 +219,7 @@
   function geometry(s){
     const sig=[s.type,s.x,s.y,s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.angle||0,s.width,s.tier,s.woodStyle,s.woodRoof,s.roofCover,s.roofStyle,s.bell,s.w,s.h,s.size,
       s.aSnap,s.bSnap,s.flip?1:0,s.groundZ,State.season,State.relief?.seed,JSON.stringify(State.relief?.terraforming||[]).length,
-      cutaway(s)?'cut'+(isLonghouse(s)?State.view?.rotation:[...openSides(s)].join(',')):'',s.span,Object.values(heraldry()).join('')].join('|');
+      cutaway(s)?'cut'+(isLonghouse(s)?State.view?.rotation:[...openSides(s)].join(',')):'',s.span,Object.values(heraldry()).join(''),window.ConquerKeepEntrance?.sill?.(s)??''].join('|');
     const hit=s.id&&cache.get(s.id);if(hit&&hit.sig===sig)return hit.geo;
     let geo;
     if(s.type==='palisade')geo=palisade(s);

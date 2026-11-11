@@ -226,13 +226,23 @@
       const two=depth>=2*size('infirmaryBed').d+.25,first=two?Math.ceil(beds/2):beds;
       let left=beds-wardRow(r,r.A,first);if(two&&left>0)left-=wardRow(r,opposite,left);if(left>0)wardRow(r,r.B,left);
       r.near(.3,.35,'stool');if(r.large)r.wall(r.A,-.95,'candleStand')},
-    latrine(r){r.wall(r.A,0,'latrineSeat');r.wall(r.B,.5,'washBasin');r.near(-.4,.35,'s:buckets');if(r.large)r.wall(r.A,.75,'latrineSeat')},
+    // The whole room is the latrine: the seat against the wall the garderobe hangs from, basin and buckets around.
+    // In a small tower room the seat is always there, against that wall even over the reserved spots.
+    latrine(r){const S=r.exteriorSide||r.A,O=S===r.A?r.B:r.A;
+      // Communal latrine: three seats side by side along that wall, over the three drop holes.
+      if(r.row(S,'latrineSeat',3,{spill:false})<3)for(const t of [-.8,0,.8])r.wall(S,t,'latrineSeat',{exact:true,deco:true});
+      // Basin and a rag shelf on the other standing wall, a stool and a light: the small tower room fills up.
+      r.wall(O,.5,'washBasin');r.wall(O,-.45,'shelf',{deco:true});r.near(.35,.35,'stool');r.wall(S,.85,'candleStand');
+      r.near(-.4,.35,'s:buckets');if(r.large){r.wall(O,-.5,'s:barrelGroup');r.wall(r.A,.75,'latrineSeat')}},
     prison(r){r.wall(r.A,0,'cellBars',{off:.35});r.wall(r.A,-.4,'wallChains',{deco:true});r.wall(r.A,.4,'straw',{deco:true});
       r.near(.45,.4,'tableSmall');r.near(.2,.45,'stool');r.near(-.4,.45,'s:buckets');if(r.large)r.near(.5,-.5,'stocks')},
     // Cistern (tower ground floor): the tank fed by the rain pipe, the hatch over the water, buckets by the door.
     cistern(r){r.wall(r.A,-.2,'cisternTank');r.near(.1,.15,'cisternHatch',r.toward(r.A));r.near(.45,.45,'s:buckets');
       if(r.large){r.wall(r.B,.4,'cisternTank');r.near(-.4,.45,'s:barrelGroup')}},
     // Colombaia: walls of nesting holes, a perch rack, grain sacks and the keeper's stool.
+    // Falconry: perches for the birds on the main wall, the falconer's table (hoods, jesses) and his chest.
+    mews(r){r.row(r.A,'perch',r.large?3:2);r.wall(r.B,-.3,'shelf',{deco:true});r.near(.3,-.25,'tableSmall');
+      r.near(.35,.3,'stool');r.wall(r.B,.6,'chest');if(r.large)r.near(-.35,.35,'s:sackPile')},
     dovecote(r){r.row(r.A,'nestWall',r.large?2:1);r.wall(r.B,-.3,'nestWall');r.near(.25,.25,'perch',r.toward(r.A));
       r.near(-.35,.4,'s:sackPile');r.near(.5,-.4,'stool');if(r.large)r.near(-.5,-.45,'s:buckets')}
   };
@@ -268,6 +278,10 @@
       const key=s.id+':'+slot.index,ladder=['tower','gate'].includes(s.type)&&levels>1&&!slot.room;
       const posts=s.type==='tower'?(window.ConquerSiege?.archerSlots(s)||[]).filter(a=>a.kind==='slit'&&a.floor===slot.floor+1).map(a=>a.p):[];
       const r=builder({...slot,key,round:s.type==='tower'&&s.shape==='round',dee:s.type==='tower'&&s.shape==='dee'},{ladderCorner:ladder,passage:pc.passage||passageFor(s,slot),posts,blocks:typeof cutawayBlockers==='function'?cutawayBlockers(s).filter(k=>slot.z<k.h).map(k=>k.pts):[]});
+      // A room with an exterior element (the garderobe) knows the side of the room it hangs from.
+      const ext=slot.role&&window.ConquerRoomExterior?.elements(s,{broken:true}).find(e=>e.index===slot.index);
+      if(ext){const ca=Math.cos(r.F.b.angle),sa=Math.sin(r.F.b.angle),u=ext.normal.x*ca+ext.normal.y*sa,v=-ext.normal.x*sa+ext.normal.y*ca;
+        r.exteriorSide=Math.abs(u)>=Math.abs(v)?(u>0?'u+':'u-'):(v>0?'v+':'v-')}
       if(slot.role&&ROOMS[slot.role])ROOMS[slot.role](r);
       // Torches on the standing walls light every furnished room at night.
       if(slot.role){r.wall(r.A,r.large?-.5:.0,'torchWall',{deco:true});if(r.large)r.wall(r.B,.5,'torchWall',{deco:true})}
@@ -286,7 +300,8 @@
     const W=([x,y,zl])=>[c.x+x*ca-y*sa,c.y+x*sa+y*ca,zz+zl];
     for(const f of pf.faces){
       const n=[f.n[0]*ca-f.n[1]*sa,f.n[0]*sa+f.n[1]*ca,f.n[2]];
-      out.push({pts:f.pts.map(W),hex:her[f.key]||f.hex,n,floor,emissive:EMISSIVE.has(f.key)});
+      const color=f.key?.startsWith('stone')?(window.ConquerStoneColor?.shade(f.hex)||f.hex):f.hex;
+       out.push({pts:f.pts.map(W),hex:her[f.key]||color,n,floor,emissive:EMISSIVE.has(f.key)});
     }
     for(const [x,y,zl,kind] of pf.lights)lights.push({p:W([x,y,zl]),kind,floor});
   }
@@ -324,7 +339,7 @@
         for(let i=0;i+1<edges.length;i+=2){
           const t0=Math.max(0,edges[i]),t1=Math.min(1,edges[i+1]);if(t1-t0<1e-3)continue;
           const tm=(t0+t1)/2,u=seg.a[0]+(seg.b[0]-seg.a[0])*tm,v=seg.a[1]+(seg.b[1]-seg.a[1])*tm,span=(t1-t0)*len;
-          boxWorld(F,u,v,z0,vertical?KEEP_PARTITION:span,vertical?span:KEEP_PARTITION,h,'#8a8378',out,f);
+          boxWorld(F,u,v,z0,vertical?KEEP_PARTITION:span,vertical?span:KEEP_PARTITION,h,window.ConquerStoneColor?.shade('#8a8378')||'#8a8378',out,f);
         }
       }
     });
@@ -380,6 +395,7 @@
   // angles out to a square wall line around a square newel.
   function spiralStairWorld(st,out){
     const da=Math.PI*2/st.perTurn,rise=(st.z1-st.z0)/st.steps,{u,v,R,newel,square}=st;
+    const stone=hex=>window.ConquerStoneColor?.shade(hex)||hex;
     const rad=(a,r)=>square?r/Math.max(Math.abs(Math.cos(a)),Math.abs(Math.sin(a))):r;
     const P=(a,r,z)=>{const rr=rad(a,r),p=st.toWorld(u+Math.cos(a)*rr,v+Math.sin(a)*rr);return[p.x,p.y,z]};
     const N=(a)=>[Math.cos(a+st.angle),Math.sin(a+st.angle),0];
@@ -387,22 +403,22 @@
     const side=a=>{if(!square)return N(a);const c=Math.cos(a),s=Math.sin(a);return N(Math.abs(c)>=Math.abs(s)?(c>0?0:Math.PI):(s>0?Math.PI/2:-Math.PI/2))};
     for(let k=0;k<st.steps;k++){
       const a0=st.start+k*da,a1=a0+da*(square?1:1.04),am=(a0+a1)/2,top=st.z0+(k+1)*rise,bot=Math.max(st.z0,top-rise-.035);
-      out.push({pts:[P(a0,newel,top),P(a0,R,top),P(am,R,top),P(a1,R,top),P(a1,newel,top)],hex:'#8d877c',n:[0,0,1],floor:0});
-      out.push({pts:[P(a0,newel,bot),P(a0,R,bot),P(a0,R,top),P(a0,newel,top)],hex:'#6f6a62',n:N(a0-Math.PI/2),floor:0});
+      out.push({pts:[P(a0,newel,top),P(a0,R,top),P(am,R,top),P(a1,R,top),P(a1,newel,top)],hex:stone('#8d877c'),n:[0,0,1],floor:0});
+      out.push({pts:[P(a0,newel,bot),P(a0,R,bot),P(a0,R,top),P(a0,newel,top)],hex:stone('#6f6a62'),n:N(a0-Math.PI/2),floor:0});
       out.push({pts:[P(a1,R,bot),P(a1,newel,bot),P(a1,newel,top),P(a1,R,top)],hex:'#6f6a62',n:N(a1+Math.PI/2),floor:0});
-      for(const [p,q] of [[a0,am],[am,a1]])out.push({pts:[P(p,R,bot),P(q,R,bot),P(q,R,top),P(p,R,top)],hex:'#77716a',n:side((p+q)/2),floor:0});
+      for(const [p,q] of [[a0,am],[am,a1]])out.push({pts:[P(p,R,bot),P(q,R,bot),P(q,R,top),P(p,R,top)],hex:stone('#77716a'),n:side((p+q)/2),floor:0});
     }
     // Newel: an octagonal (square: four-sided) post with a cap above the last step.
     const zt=st.z1+.04,n=square?4:8,a0=square?Math.PI/4:0,ring=Array.from({length:n},(_,i)=>a0+i*Math.PI*2/n);
-    for(let i=0;i<n;i++){const p=ring[i],q=ring[(i+1)%n]+(i===n-1?Math.PI*2:0);out.push({pts:[P(p,newel,st.z0),P(q,newel,st.z0),P(q,newel,zt),P(p,newel,zt)],hex:'#7a7268',n:N((p+q)/2),floor:0})}
-    out.push({pts:ring.map(a=>P(a,newel,zt)),hex:'#8d877c',n:[0,0,1],floor:0});
+    for(let i=0;i<n;i++){const p=ring[i],q=ring[(i+1)%n]+(i===n-1?Math.PI*2:0);out.push({pts:[P(p,newel,st.z0),P(q,newel,st.z0),P(q,newel,zt),P(p,newel,zt)],hex:stone('#7a7268'),n:N((p+q)/2),floor:0})}
+    out.push({pts:ring.map(a=>P(a,newel,zt)),hex:stone('#8d877c'),n:[0,0,1],floor:0});
   }
   const cache=new Map();
   function structureFaces(s,g){
     // Cheap key: archer posts follow the wall junctions and the tower shape, not the archer
     // count, so no archerSlots() scan per call.
     const snaps=State.structures.filter(w=>w.aSnap===s.id||w.bSnap===s.id).map(w=>w.id+':'+structureLevel(w)).join(',');
-    const key=[s.id,State.view.rotation||0,snaps,typeof cutawayBlockers==='function'?JSON.stringify(cutawayBlockers(s)):'',s.shape,s.isMastio?1:0,(typeof isPlanView==='function'&&isPlanView())?1:0,JSON.stringify(s.functions||[]),(s.keepPlans||[]).join(','),structureLevel(s),s.skin,s.wallSide,s.flip,s.x,s.y,s.angle,s.size,s.r,State.heraldry?.c1,State.heraldry?.c2,!!FM(),!!SM()].join('|');
+    const key=[s.id,State.view.rotation||0,State.stonePaletteId,snaps,typeof cutawayBlockers==='function'?JSON.stringify(cutawayBlockers(s)):'',s.shape,s.isMastio?1:0,(typeof isPlanView==='function'&&isPlanView())?1:0,JSON.stringify(s.functions||[]),(s.keepPlans||[]).join(','),structureLevel(s),s.skin,s.wallSide,s.flip,s.x,s.y,s.angle,s.size,s.r,State.heraldry?.c1,State.heraldry?.c2,!!FM(),!!SM()].join('|');
     const hit=cache.get(s.id);if(hit&&hit.key===key)return hit;
     const faces=[],lights=[],her=heraldry(),spots=new Map();
     for(const room of layoutStructure(s,g)){

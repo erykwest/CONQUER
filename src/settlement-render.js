@@ -36,10 +36,12 @@ function drawStructure(s,preview=false){
     if(assembled&&window.ConquerAssembly.draw(s))return;
     ctx.save();if(preview)ctx.globalAlpha=.58;else if(underConstruction(s))ctx.globalAlpha=.42;
     if(isPlacementFoundationBuilding(s))drawPlacementFoundation(s,preview);
-    if(window.ConquerIndustries?.is(s))window.ConquerIndustries.render(s,preview);
+    if(window.ConquerStorageYard?.is(s))window.ConquerStorageYard.draw(s,preview);
+    else if(window.ConquerIndustries?.is(s))window.ConquerIndustries.render(s,preview);
     else if(window.ConquerEvents3D?.is(s))window.ConquerEvents3D.draw(s,preview);   // event venues (settlement-events3d.js)
     else if(window.ConquerPier?.is(s))window.ConquerPier.draw(s,preview);           // timber pier (settlement-pier.js)
     else if(window.ConquerQuay?.is(s))window.ConquerQuay.draw(s,preview);           // stone quay (settlement-quay.js)
+    else if(window.ConquerSlopeways?.is(s))window.ConquerSlopeways.draw(s,preview); // ramp / stairway (settlement-slopeways.js)
     else if(isCivic(s))drawCivicStructure(s,preview);
     else if(isCivicAnnex(s))drawCivicAnnex(s,preview);
     else if(['tower','gate','well'].includes(s.type))drawPointStructure(s,preview);
@@ -171,13 +173,14 @@ function renderCastleBodyContent(){
   if(window.ConquerCastle3D?.drawBody?.())return;
   // A merged single-colour 2D union cannot represent distinct wall/brick components.
   // Use the existing per-structure fallback for mixed masonry; do not rewrite topology.
-  const hasBrick=castleBodyRenderableStructures().some(s=>masonryMaterial(s)==='brick');
-  const unionOk=hasBrick?false:drawCastleUnion();
+  const hasBrick=castleBodyRenderableStructures().some(s=>masonryMaterial(s)==='brick'||(typeof isTimberLeanTo==='function'&&isTimberLeanTo(s)));
+  // The union has no individual structure context: explicitly mark it as stone masonry.
+  const unionOk=hasBrick?false:withStructureVisualMaterial({type:'wall',masonryMaterial:'stone'},drawCastleUnion);
   if(!unionOk){
     const fallback=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)&&!structureCutaway(s)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
     for(const s of fallback)drawStructure(s);
   }else{
-    drawCastleUnionDetails();
+    withStructureVisualMaterial({type:'wall',masonryMaterial:'stone'},drawCastleUnionDetails);
   }
 
   // Point fortifications on slopes are intentionally kept out of the wall
@@ -194,6 +197,7 @@ function renderCastleBodyContent(){
   drawTowerRoofs();
   drawGateRoofs();
   window.ConquerRoomExterior?.drawAll();
+  window.ConquerWallStairs?.drawAll();
 }
 function castleBodyRenderableStructures(){
   return State.structures.filter(s=>(isCastlePart(s)||isRaisedPlacementCastlePoint(s))&&!underConstruction(s));
@@ -219,13 +223,13 @@ function castleBodyVisualSignature(){
   const point=p=>p?[num(p.x),num(p.y)]:null;
   const items=castleBodyRenderableStructures().map(s=>[
     s.id||'',s.type||'',s.shape||'',s.material||'',s.masonryMaterial||'stone',s.woodStyle||'',s.woodRoof||'',
-    s.roofStyle||'',s.bartizan||'',s.bell||'',s.roofShape||'',s.baseStyle||'',s.skin||'',num(s.x),num(s.y),num(s.r),num(s.size),
+    s.roofStyle||'',s.bartizan||'',s.bell||'',s.innerRoof||'',(s.signalFire||'')+(s.signalFireSpent?'F':''),s.roofShape||'',s.baseStyle||'',s.skin||'',num(s.x),num(s.y),num(s.r),num(s.size),
     point(s.a),point(s.b),num(s.width),num(s.length),num(s.angle),s.rotationStep??null,
     s.level??null,s.tier??null,!!s.flip,!!s.cutaway,s.cutawayFloor??null,JSON.stringify(s.functions||[]),JSON.stringify(s.roomExteriorHp||null),s.aSnap||null,s.bSnap||null,s.parentTowerId||null,
     num(s.orientationOffset),num(s.groundZ),num(s.foundationMinZ)
   ]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
   return JSON.stringify([
-    1,window.ConquerCastle3D?.active?.()?'3d':'2d',State.season||'summer',State.visualPalette,num(State.view.scale),State.view.rotation||0,isPlanView()?'plan':'iso',staticCacheDpr(),
+    1,window.ConquerCastle3D?.active?.()?'3d':'2d',State.season||'summer',State.visualPalette,State.stonePaletteId,num(State.view.scale),State.view.rotation||0,isPlanView()?'plan':'iso',staticCacheDpr(),
     !!window.__polygonClipping,crenelStyle(),roofPitch(),items
   ]);
 }
@@ -429,6 +433,7 @@ function draw(){
   // Dynamic placement overlay: switching tools must not invalidate or rebuild
   // the static landscape cache, and the WebGPU path must show the same outline.
   drawBuildArea();
+  window.ConquerForestry?.drawJobs();
   for(const field of completedSettlement('field'))drawFieldWork(field);
 
   // Construction sites remain dynamic at ground/building depth.
@@ -446,6 +451,7 @@ function draw(){
   // preserving the existing occlusion behaviour.
   window.ConquerLivestock?.draw();
   drawPeasants();
+  window.ConquerHaulage?.draw?.(); // Loaded carts to stockyards, empty return on completed roads
   window.ConquerJoust?.draw();   // spectators, knights and squires on an active joust ground
   window.ConquerEventPeople?.draw();   // feast and circus: diners, sellers, players, queues
   window.ConquerCourtPeople?.draw();   // the tribunal in session in the town hall cutaway
@@ -481,16 +487,15 @@ function draw(){
   drawChimneysAndSmoke();
 
   if(State.draft?.mode==='terraform'){
-    window.ConquerTerraforming?.drawGhost(State.draft.preview);
+    if(State.tool?.mode==='forest')window.ConquerForestry?.drawGhost(State.draft.preview);
+    else window.ConquerTerraforming?.drawGhost(State.draft.preview);
   }else if(['moat','bridge'].includes(State.draft?.preview?.type))window.ConquerCrossings?.drawPreview(State.draft.preview);
   if(State.draft?.mode!=='terraform'&&State.draft?.previewSegments?.length){
     const segments=State.draft.previewSegments;
-    const totalCost=aggregateConstructionCost(segments);
-    const routeUnderfunded=!canAfford(totalCost);
     for(const segment of segments){
       drawStructure(segment,true);
       const verdict=builderGhostVerdict(segment);
-      if(!verdict.ok||routeUnderfunded)drawInvalidPlacementGhost(segment);
+      if(!verdict.ok)drawInvalidPlacementGhost(segment);
     }
   }else if(State.draft?.mode!=='terraform'&&State.draft?.preview){
     const ghost=State.draft.preview;

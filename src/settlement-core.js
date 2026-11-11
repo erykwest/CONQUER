@@ -28,9 +28,9 @@ function invalidateSettlementScene(includeCastle=true){
 }
 function structureSceneLayers(s){
   if(!s)return['ground','shadow','base','castleBody','castleFront'];
-  if(['road','moat','bridge'].includes(s.type))return['ground','base'];
+  if(['road','moat','bridge','ramp','stairway'].includes(s.type))return['ground','base'];
   if(s.auto&&s.type==='field')return['ground'];
-  if(s.type==='house')return['ground','shadow','base'];
+  if(s.type==='house'||s.type==='storageYard')return['ground','shadow','base'];
   if(isCivicAnnex(s))return['ground','shadow','base'];
   if(window.ConquerIndustries?.is(s))return['ground','shadow','base'];
   const shadow=['house','tower','gate','wall','palisade','built','market','tavern','church','townhall','guild'].includes(s.type)?['shadow']:[];
@@ -185,18 +185,30 @@ const CLAY_VISUAL_SWATCHES=Object.freeze({
 });
 let structureVisualMaterial=null;
 function masonryMaterial(s){
-  if(!s||s.material==='wood'||s.type==='palisade'||s.type==='road'||s.type==='moat'||(s.type==='bridge'&&s.variant!=='stone'))return null;
+  if(!s||s.material==='wood'||(typeof isTimberLeanTo==='function'&&isTimberLeanTo(s))||s.type==='palisade'||s.type==='storageYard'||s.type==='road'||s.type==='moat'||(s.type==='bridge'&&s.variant!=='stone'))return null;
   return s.masonryMaterial==='brick'?'brick':'stone';
 }
 function withStructureVisualMaterial(s,paint){
   const previous=structureVisualMaterial;
-  structureVisualMaterial=masonryMaterial(s);
+  structureVisualMaterial=(typeof isTimberLeanTo==='function'&&isTimberLeanTo(s))?'timber':masonryMaterial(s);
   try{return paint()}finally{structureVisualMaterial=previous}
+}
+// Timber lean-to: the masonry greys become weathered planks (same light ramp, warm brown).
+const timberTintCache=new Map();
+function timberTint(color){
+  if(!/^#[0-9a-f]{6}$/i.test(color))return color;
+  let out=timberTintCache.get(color);if(out)return out;
+  const n=parseInt(color.slice(1),16),r=n>>16,g=n>>8&255,b=n&255,l=(r+g+b)/3;
+  if(Math.max(r,g,b)-Math.min(r,g,b)>40)return color;   // already coloured (doors, banners)
+  const h=v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0');
+  out='#'+h(l*1.08+14)+h(l*.80+6)+h(l*.52);timberTintCache.set(color,out);return out;
 }
 function visualPaletteColor(color){
   if(typeof color!=='string')return color;
-  return (State.visualPalette==='clay'||structureVisualMaterial==='brick')
-    ?CLAY_VISUAL_SWATCHES[color.toLowerCase()]||color:color;
+  if(structureVisualMaterial==='timber'&&typeof timberTint==='function')return timberTint(color);
+  if(State.visualPalette==='clay'||structureVisualMaterial==='brick')return CLAY_VISUAL_SWATCHES[color.toLowerCase()]||color;
+  if(structureVisualMaterial==='stone'&&typeof window!=='undefined')return window.ConquerStoneColor?.masonry(color)||color;
+  return color;
 }
 // DEV VISUAL PALETTE END
 const STRUCTURE_ANGLE_STEP_DEG=15;
@@ -248,6 +260,7 @@ const KEEP_FLOOR_PLAN_DEFAULTS=Object.freeze(['three','quad','hall']);
 const COSTS={
   tower:[{gold:45,stone:55,wood:12},{gold:75,stone:95,wood:20},{gold:120,stone:155,wood:32},{gold:240,stone:330,wood:75}],
   woodTower:[{gold:18,wood:42},{gold:32,wood:78}],
+  frameTower:{gold:55,wood:130},
   wallPerU:{gold:6,stone:18,wood:2},
   palisadePerU:{gold:3,wood:12},
   builtPerU:{gold:12,stone:16,wood:18},
@@ -266,7 +279,7 @@ const COSTS={
 // Stone towers of the same tier, against the square one: curved masonry costs more, the open-
 // backed semitower half.
 const TOWER_SHAPE_COST=Object.freeze({square:1,round:1.5,dee:1.25,half:.5});
-const BUILD_DAYS={tower:[4,7,11,18],woodTower:[2.5,4],gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,townhall:8,guild:6,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,longhouseBase:1.2,longhousePerU:.8,road:1,house:2.2,field:1.5};
+const BUILD_DAYS={tower:[4,7,11,18],woodTower:[2.5,4],frameTower:6.5,gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,townhall:8,guild:6,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,longhouseBase:1.2,longhousePerU:.8,road:1,house:2.2,field:1.5};
 const GROWTH_INTERVAL_DAYS=2.5;
 // One simulated 24-hour day lasts 48 real seconds at 1×.
 // All time controls multiply this common rate (3× = 16 s/day; 10× = 4.8 s/day; 100× = 0.48 s/day).
@@ -291,20 +304,27 @@ const BATTLEMENT_SPACING=.62;
 // Feudal crenellation style: one choice for every stone merlon of the settlement (towers, gates,
 // walls), stored in State.policies so new construction follows it. Restyling existing merlons is
 // paid per merlon at the target style's rate; flat is the default and the cheapest.
-const CRENEL_STYLES=Object.freeze(['flat','gabled','swallowtail']);
+// Curtain-wall styles (towers and gates keep flat merlons):
+// 'double' = double merlon, each merlon twice as long along the run (pattern 11011011, not 1010101);
+// 'tworow' = a second, inner row of flat merlons on the wall walk. Quotes count merlons as built.
+const CRENEL_STYLES=Object.freeze(['flat','gabled','swallowtail','double','tworow']);
 const CRENEL_STYLE_COST=Object.freeze({
   flat:Object.freeze({stone:1}),
+  double:Object.freeze({gold:1,stone:2}),
+  tworow:Object.freeze({gold:1,stone:1}),
   gabled:Object.freeze({gold:1,stone:2}),
   swallowtail:Object.freeze({gold:2,stone:3})
 });
 // Feudal roof pitch: one slope for every pitched tower and gate roof (degrees), stored in
 // State.policies like the crenel style. Re-roofing is paid per roof at the target pitch's rate;
 // steeper roofs take more timber. 45° is the default, the closest to the historical ~40° roofs.
-const ROOF_PITCHES=Object.freeze([30,45,60]);
+// 75° is the steep spire (rise ≈ 3.7 × half span): the dearest, with stone for the taller gables.
+const ROOF_PITCHES=Object.freeze([30,45,60,75]);
 const ROOF_PITCH_COST=Object.freeze({
   30:Object.freeze({wood:3}),
   45:Object.freeze({gold:1,wood:4}),
-  60:Object.freeze({gold:2,wood:6})
+  60:Object.freeze({gold:2,wood:6}),
+  75:Object.freeze({gold:3,stone:1,wood:9})
 });
 function roofPitch(){const v=Number(State.policies?.roofPitch);return ROOF_PITCHES.includes(v)?v:45}
 function roofPitchTan(){return Math.tan(roofPitch()*Math.PI/180)}
@@ -332,7 +352,11 @@ const STRUCTURE_VARIANTS=Object.freeze({
     // Timber gallery mounted round the top in wartime and taken down after: the roof stays as built.
     hoarding:Object.freeze(['off','on']),
     // Alarm bell under a small belfry on the roof apex (rules: settlement-alarm-bells.js).
-    bell:Object.freeze(['none','bell'])
+    bell:Object.freeze(['none','bell']),
+    // Signal fire: a great pyre on a flat crenellated deck (rules: settlement-soldiers.js).
+    signalFire:Object.freeze(['none','pyre']),
+    // Inner roof: a pyramid/cone set back inside the merlons of a crenellated top (BC-251105-05).
+    innerRoof:Object.freeze(['off','on'])
   }),
   gate:Object.freeze({
     roofStyle:Object.freeze(['battlement','pitched','flat']),
@@ -347,7 +371,7 @@ const STRUCTURE_VARIANTS=Object.freeze({
   })
 });
 const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
-  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid',hoarding:'off',bell:'none'}),
+  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid',hoarding:'off',bell:'none',signalFire:'none',innerRoof:'off'}),
   gate:Object.freeze({roofStyle:'battlement',upper:'stone',hoarding:'off'}),
   wall:Object.freeze({skin:'standard'}),
   built:Object.freeze({skin:'standard'})
@@ -384,10 +408,11 @@ const BIOMES=Object.freeze({
   mountains:{label:'Montagne',field:'#2b2620'},
   sea:{label:'Mare',field:'#2a2818'}
 });
-const FUNCTION_CATALOG=['guard','barracks','armory','storage','granary','kitchen','stables','nobleRoom','workshop','chapel','commonHall','throneHall','treasury','prison','latrine','infirmary','dovecote','cistern'];
-// Ground floor under the arches of a W1 portico: stables, armourers' workshop, carts/stores, guard post.
-const PORTICO_FUNCTIONS=Object.freeze(['stables','workshop','storage','guard']);
-const FUNCTION_LABELS={guard:'Guard post',barracks:'Barracks',armory:'Armory',storage:'Materials store',granary:'Granary',kitchen:'Kitchen',stables:'Stables',quarters:'Quarters',nobleRoom:'Noble chambers',workshop:'Armament workshop',chapel:'Chapel',commonHall:'Common hall',throneHall:'Throne hall',treasury:'Treasury',prison:'Prison',latrine:'Latrine',infirmary:'Infirmary',dovecote:'Dovecote',cistern:'Cistern',council:'Council chamber',tribunal:'Tribunal'};
+// The castle guard post merged into the Barracks (D-MIL-RES-261109): 'guard' is a town hall room only.
+const FUNCTION_CATALOG=['barracks','armory','storage','granary','kitchen','stables','nobleRoom','workshop','chapel','commonHall','throneHall','treasury','prison','latrine','infirmary','dovecote','cistern','mews'];
+// Ground floor under the arches of a W1 portico: stables, armourers' workshop, carts/stores.
+const PORTICO_FUNCTIONS=Object.freeze(['stables','workshop','storage']);
+const FUNCTION_LABELS={guard:'Guard post',barracks:'Barracks',armory:'Armory',storage:'Materials store',granary:'Granary',kitchen:'Kitchen',stables:'Stables',quarters:'Quarters',nobleRoom:'Noble chambers',workshop:'Armament workshop',chapel:'Chapel',commonHall:'Common hall',throneHall:'Throne hall',treasury:'Treasury',prison:'Prison',latrine:'Latrine',infirmary:'Infirmary',dovecote:'Dovecote',cistern:'Cistern',mews:'Falconry',council:'Council chamber',tribunal:'Tribunal'};
 // Town hall: one room per floor, as many as the civic level (L1 = the ground floor only),
 // shown one floor at a time in the floor-by-floor cutaway.
 // Civic catalogue, apart from the castle one: the tribunal sits there from L2.
@@ -432,7 +457,17 @@ function towerRoofStyle(s){
 }
 // Upgrade: a mangonel or a ballista on the deck of a medium (T2) stone tower without a roof,
 // at any height (drawn by settlement-tower-weapons.js). Not on a broken crown.
-function towerTopWeaponAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===2&&!['pitched','broken'].includes(towerRoofStyle(s))&&!towerHoardingMounted(s)}
+// The inner roof takes the deck, so a tower carries one or the other.
+function towerTopWeaponAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===2&&!['pitched','broken'].includes(towerRoofStyle(s))&&!towerHoardingMounted(s)&&structureVariant(s,'innerRoof')!=='on'}
+// Inner roof (BC-251105-05): on a medium or large (T2+) stone tower with a crenellated or
+// machicolated top, a roof set back inside the merlons on a low kerb, the wall-walk left free
+// between them. Geometry: towerInnerRoofGeometry (settlement-population.js). It is not a pitched
+// roof: no room under it, so the Dovecote, the mews and the alarm bell keep asking for 'pitched'.
+function towerInnerRoofAllowed(s){
+  return !!s&&s.type==='tower'&&!isWoodTower(s)&&s.shape!=='half'&&towerTier(s)>=2&&['battlement','machicolation'].includes(towerRoofStyle(s))
+    &&structureVariant(s,'topWeapon')==='none'&&structureVariant(s,'signalFire')!=='pyre'&&(typeof towerInnerRoofGeometry!=='function'||!!towerInnerRoofGeometry(s,true));
+}
+function towerInnerRoofMounted(s){return towerInnerRoofAllowed(s)&&structureVariant(s,'innerRoof')==='on'}
 // Hoarding (ballatoio): not with machicolations (they do its job in stone) nor on a broken crown.
 // Nor with bartizans: their corbelled corners take the perimeter the gallery runs round.
 function towerHoardingAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&s.shape!=='half'&&['battlement','pitched'].includes(towerRoofStyle(s))&&towerBartizan(s)==='none'}
@@ -450,17 +485,25 @@ function towerBartizan(s){const b=s?.type==='tower'?structureVariant(s,'bartizan
 // Dovecote (Colombaia): the room under the pitched roof of a medium or large (T2/T3) stone tower,
 // on its top floor at L2+. It takes the one room under the roof, so the falconry and the alarm bell
 // planned for the same place exclude it. Its lantern stands on the roof apex (dovecote-models.js).
-function towerDovecoteAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)>=2&&structureLevel(s)>=2&&towerRoofStyle(s)==='pitched'}
+function towerDovecoteAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&structureLevel(s)>=2&&towerRoofStyle(s)==='pitched'}
+// Falconry (mews): the top room of a W2-W3 stone tower under a pitched roof, its mews on the roof.
+function towerMewsAllowed(s){return towerDovecoteAllowed(s)&&towerTier(s)>=2}
+function towerMews(s){return towerMewsAllowed(s)&&!underConstruction(s)&&!s.destroyed&&s.functions?.[structureLevel(s)-1]==='mews'}
 function towerDovecote(s){return towerDovecoteAllowed(s)&&!underConstruction(s)&&!s.destroyed&&s.functions?.[structureLevel(s)-1]==='dovecote'}
 function towerBaseStyle(s){
   if(!s||s.type!=='tower'||isWoodTower(s))return undefined;
   return structureVariant(s,'baseStyle')||'standard';
 }
 function isWoodTower(s){return !!s&&s.type==='tower'&&s.material==='wood'}
-function woodTowerStyle(s){return isWoodTower(s)?(s.woodStyle==='watchtower'?'watchtower':'palisadeTower'):undefined}
+// Timber tower styles: watchtower (1 U, H1), palisade tower (1.5 U, H1) and the two-storey
+// frame tower (1.5 U, H2, BC-251105-06: braced post-and-beam frame, always roofed).
+const WOOD_TOWER_STYLES=Object.freeze(['watchtower','palisadeTower','frameTower']);
+function woodTowerStyle(s){return isWoodTower(s)?(WOOD_TOWER_STYLES.includes(s.woodStyle)?s.woodStyle:'palisadeTower'):undefined}
+function woodTowerSize(style){return style==='watchtower'?1:1.5}
+function woodTowerLevel(style){return style==='frameTower'?2:1}
 function woodTowerRoof(s){
   if(!isWoodTower(s))return undefined;
-  if(woodTowerStyle(s)==='watchtower')return'pitched';
+  if(woodTowerStyle(s)!=='palisadeTower')return'pitched';
   return s.woodRoof==='pitched'?'pitched':'open';
 }
 function isWoodGate(s){return !!s&&s.type==='gate'&&s.material==='wood'}
@@ -487,6 +530,12 @@ function isLonghouse(s){return s?.type==='built'&&s.material==='wood'}
 // Longhouse roof cover (BC-251105-09): shingles (default), thatch or turf; all with a smoke hole.
 const LONGHOUSE_COVERS=Object.freeze(['shingle','thatch','turf']);
 function longhouseCover(s){return LONGHOUSE_COVERS.includes(s?.roofCover)?s.roofCover:'shingle'}
+// Lean-to (settlement-lean-to.js): a W1 section against the inner face of an H2 wall, one storey,
+// single-pitch roof under the wall walk.
+function isLeanTo(s){return s?.type==='built'&&s.leanTo===true&&!isLonghouse(s)&&!isWideBuilt(s)}
+// Lean-to material: timber frame + thatch (default), or stone / brick masonry with the slate/tile roof.
+function leanToMaterial(s){return !isLeanTo(s)?null:s.leanMaterial==='stone'||s.leanMaterial==='brick'?s.leanMaterial:'wood'}
+function isTimberLeanTo(s){return leanToMaterial(s)==='wood'}
 // W1 section with the portico skin: its ground floor is the open arcade (the W2 hall keeps its hall).
 function isBuiltPortico(s){return s?.type==='built'&&!isWideBuilt(s)&&builtSkin(s)==='arcade'}
 // Semantic gameplay hook: combat can query this later without depending on renderer details.
@@ -564,9 +613,13 @@ const GATE_TIMBER_COST=Object.freeze({gold:8,wood:18}),GATE_JETTY=.07;
 // slopes over the front and the rear (gables on the flanks), so the whole gate stays low.
 const GATE_TIMBER_FLOOR=1.4,GATE_TIMBER_EAVES=2.6,GATE_TIMBER_RIDGE=GATE_TIMBER_EAVES+.84;
 function gateTimberUpper(s){return isSmallGate(s)&&!s.brokenTop&&structureLevel(s)===2&&structureVariant(s,'upper')==='timber'}
-function maxStructureLevel(s){return isLonghouse(s)?1:isSmallGate(s)?SMALL_GATE_MAX_LEVEL:['tower','gate'].includes(s?.type)?3:2}
+// BC-251105-07: only the free-standing square stone W2 tower may rise to a fourth storey (H4),
+// a slender watch tower; wider towers stop at H3 and the W4 keep stays the only great tower.
+const TOWER_H4_LEVEL=4;
+function towerH4Allowed(s){return s?.type==='tower'&&!isWoodTower(s)&&!isOrientedTower(s)&&(s.shape||'square')==='square'&&!s.parentTowerId&&towerTier(s)===2}
+function maxStructureLevel(s){return isLonghouse(s)||(typeof isLeanTo==='function'&&isLeanTo(s))?1:isSmallGate(s)?SMALL_GATE_MAX_LEVEL:towerH4Allowed(s)?TOWER_H4_LEVEL:['tower','gate'].includes(s?.type)?3:2}
 function structureLevel(s){
-  if(isWoodGate(s)||isLonghouse(s))return 1;
+  if(isWoodGate(s)||isLonghouse(s)||(typeof isLeanTo==='function'&&isLeanTo(s)))return 1;
   return clamp(Math.round(Number(s?.level)||1),1,maxStructureLevel(s))
 }
 function houseLevel(s){return clamp(Math.round(Number(s?.houseLevel)||1),1,4)}
@@ -788,13 +841,14 @@ function civicRadius(s){
 }
 function levelCostFactor(s){
   const l=structureLevel(s);
-  if(['tower','gate'].includes(s?.type))return[1,1.65,2.3][l-1];
+  if(['tower','gate'].includes(s?.type))return[1,1.65,2.3,3.35][l-1];
   return[1,1.8][l-1];
 }
 function scaleCost(cost,factor){return roundCost(Object.fromEntries(Object.entries(cost||{}).map(([k,v])=>[k,v*factor])))}
 function baseConstructionCost(s){
   if(!s||s.auto)return{};
   if(s.type==='tower'){
+    if(isWoodTower(s)&&s.woodStyle==='frameTower')return {...COSTS.frameTower};
     if(isWoodTower(s))return {...COSTS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))]};
     return scaleCost(COSTS.tower[towerTier(s)-1],levelCostFactor(s)*(TOWER_SHAPE_COST[s.shape]??1));
   }
@@ -812,14 +866,17 @@ function baseConstructionCost(s){
       :{gold:5*(s.length||1)*factor,wood:18*(s.length||1)*factor});
   }
   if(s.type==='well')return {...COSTS.well};
+  if(s.type==='storageYard')return s.foundingStockyard?{}:{gold:20,wood:10};
   if(window.ConquerIndustries?.is(s))return {...window.ConquerIndustries.definition(s).cost};
   if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.cost(s);
   if(window.ConquerPier?.is(s))return window.ConquerPier.cost(s);
   if(window.ConquerQuay?.is(s))return window.ConquerQuay.cost(s);
+  if(window.ConquerSlopeways?.is(s))return window.ConquerSlopeways.cost(s);
   if(isCivicAnnex(s))return{}; // skeleton: no economic effects yet
   if(isCivic(s))return {...COSTS[s.type]};
   if(s.type==='wall')return scaleCost(Object.fromEntries(Object.entries(COSTS.wallPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
   if(s.type==='palisade')return roundCost(Object.fromEntries(Object.entries(COSTS.palisadePerU).map(([k,v])=>[k,v*s.length])));
+  if((typeof isTimberLeanTo==='function'&&isTimberLeanTo(s)))return roundCost(Object.fromEntries(Object.entries(COSTS.longhousePerU).map(([k,v])=>[k,v*.7*s.length])));
   if(isLonghouse(s))return roundCost(Object.fromEntries(Object.entries(COSTS.longhousePerU).map(([k,v])=>[k,v*s.length*builtWidth(s)])));
   if(s.type==='built')return scaleCost(Object.fromEntries(Object.entries(COSTS.builtPerU).map(([k,v])=>[k,v*s.length*builtWidth(s)])),levelCostFactor(s));
   return{};
@@ -833,11 +890,13 @@ function costText(cost){const icons={gold:'🪙',stone:'🪨',clay:'🧱',wood:'
 // Before founding, the sandbox only permits placement of the founding well.
 // Once founded, the economic treasury and castle store own all construction assets.
 function canAfford(cost){
+  if(typeof devBuildMode==='function'&&devBuildMode('freeBuild'))return true;
   if(State.village?.founded&&window.ConquerEconomy?.canBuild)
     return window.ConquerEconomy.canBuild(cost);
   return Object.entries(cost||{}).every(([k,v])=>(State.resources[k]||0)>=v);
 }
 function spendCost(cost){
+  if(typeof devBuildMode==='function'&&devBuildMode('freeBuild'))return true;
   if(State.village?.founded&&window.ConquerEconomy?.spendBuild){
     if(!window.ConquerEconomy.spendBuild(cost))return false;
   }else for(const [k,v] of Object.entries(cost||{}))
@@ -853,19 +912,23 @@ function refundCost(cost){
 }
 function buildDuration(s){
   if(s.type==='tower'){
+    if(isWoodTower(s)&&s.woodStyle==='frameTower')return BUILD_DAYS.frameTower;
     if(isWoodTower(s))return BUILD_DAYS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))];
     return BUILD_DAYS.tower[towerTier(s)-1]*(.7+.3*structureLevel(s));
   }
   if(s.type==='gate')return isWoodGate(s)?BUILD_DAYS.woodGate:BUILD_DAYS.gate*(.7+.3*structureLevel(s));
   if(s.type==='well')return BUILD_DAYS.well;
+  if(s.type==='storageYard')return 2;
   if(window.ConquerIndustries?.is(s))return window.ConquerIndustries.definition(s).days;
   if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.buildDays(s);
   if(window.ConquerPier?.is(s))return window.ConquerPier.buildDays(s);
   if(window.ConquerQuay?.is(s))return window.ConquerQuay.buildDays(s);
+  if(window.ConquerSlopeways?.is(s))return window.ConquerSlopeways.buildDays(s);
   if(isCivicAnnex(s))return 0; // skeleton construction is immediate
   if(isCivic(s))return BUILD_DAYS[s.type];
   if(s.type==='wall')return (BUILD_DAYS.wallBase+BUILD_DAYS.wallPerU*s.length)*(.75+.25*structureLevel(s));
   if(s.type==='palisade')return BUILD_DAYS.palisadeBase+BUILD_DAYS.palisadePerU*s.length;
+  if((typeof isTimberLeanTo==='function'&&isTimberLeanTo(s)))return BUILD_DAYS.longhouseBase+BUILD_DAYS.longhousePerU*s.length;
   if(isLonghouse(s))return BUILD_DAYS.longhouseBase+BUILD_DAYS.longhousePerU*s.length*builtWidth(s);
   if(s.type==='built')return (BUILD_DAYS.builtBase+BUILD_DAYS.builtPerU*s.length*builtWidth(s))*(.75+.25*structureLevel(s));
   if(s.type==='moat')return .8+(s.length||1)*(s.variant==='water'?.9:.65)*(s.width||1.5)/1.5;
@@ -878,13 +941,104 @@ function buildDuration(s){
 // Construction V2: manual projects use paid-for work units, not a calendar deadline.
 // The pre-existing procedural roads/houses/fields keep their bootstrap timers.
 const CONSTRUCTION_MAX_WORKERS=3;
+const CONSTRUCTION_PRIORITIES=Object.freeze(['Molto basso','Basso','Medio','Alto','Molto alto','Critico']);
+const CONSTRUCTION_DEFAULT_PRIORITY=2;
+// DEV build switches are session-only: saves never enable cheats on load.
+function devBuildMode(key){return State.devBuild?.[key]===true}
+function grantFreeConstructionMaterials(s){
+  const c=s.construction;if(c?.version!==2||!devBuildMode('freeBuild'))return;
+  c.materialsFree=c.materialsFree||{};
+  for(const r of constructionMaterialInfo(s).rows){
+    if(r.missing<=0)continue;
+    c.materialsDelivered[r.key]=r.total;
+    c.materialsFree[r.key]=(c.materialsFree[r.key]||0)+r.missing;State.dirty=true;
+  }
+}
+function completeFastConstruction(s){
+  const c=s.construction;if(!c||!devBuildMode('fastBuild'))return false;
+  if(c.version!==2){c.completeDay=State.clock.day;return true}
+  if(constructionMaterialInfo(s).progress<1-1e-8)return false;
+  c.workDone=c.workRequired;c.workers=0;c.completedDay=State.clock.day;
+  c.materialsConsumed={...constructionMaterialInfo(s).required};State.dirty=true;
+  return true;
+}
+function applyConstructionDev(s){
+  grantFreeConstructionMaterials(s);
+  if(devBuildMode('fastBuild')&&s.construction?.version===2){
+    const sites=(State.structures||[]).filter(x=>x!==s&&x.construction?.version===2&&underConstruction(x));
+    allocateConstructionMaterials([...sites,s],0);
+  }
+  completeFastConstruction(s);
+}
+function structureUpgradeSnapshot(s){
+  const copy=JSON.parse(JSON.stringify(s));
+  if(copy.construction)delete copy.construction.upgrade;
+  return copy;
+}
+// The ordinary construction engine also owns renovation quotes and rollback.
+function beginStructureUpgrade(s,before,quote=null,days=null){
+  if(JSON.stringify(structureUpgradeSnapshot(s))===JSON.stringify(before))return false;
+  const costOf=x=>{
+    const cost=constructionCost({...x,auto:false});
+    const multiplier=CIVIC_LEVEL_TYPES.includes(x.type)?civicLevel(x):1;
+    return Object.fromEntries(Object.entries(cost).map(([k,v])=>[k,v*multiplier]));
+  };
+  const old=costOf(before),next=costOf(s);
+  const cost=quote||Object.fromEntries(Object.entries(next).map(([k,v])=>[k,Math.max(0,v-(old[k]||0))]).filter(([,v])=>v>0));
+  const duration=days??Math.max(.5,buildDuration(s)-buildDuration(before),buildDuration(s)*.25);
+  const day=State.clock.day;
+  if(s.auto&&s.type==='house'){
+    // Private houses retain procedural financing, rather than billing the lord.
+    s.construction={startedDay:day,completeDay:day+duration,upgrade:{before}};
+  }else{
+    s.construction={version:2,startedDay:day,lastWorkDay:day,workRequired:duration,workDone:0,workers:0,completedDay:null,
+      priority:CONSTRUCTION_DEFAULT_PRIORITY,materialsRequired:{...cost},materialsDelivered:{},materialsConsumed:{},upgrade:{before}};
+  }
+  applyConstructionDev(s);
+  return true;
+}
+function constructionPriority(s){
+  const value=Number(s?.construction?.priority);
+  return Number.isInteger(value)&&value>=0&&value<CONSTRUCTION_PRIORITIES.length?value:CONSTRUCTION_DEFAULT_PRIORITY;
+}
+// Older V2 saves paid the complete quote at placement. Their missing
+// materialsDelivered field means 'fully supplied', never 'unfunded'.
+function constructionMaterialInfo(s){
+  const required=s?.construction?.materialsRequired||s?.buildCost||constructionCost(s);
+  const c=s?.construction;
+  const delivered=c?.version===2&&c.materialsDelivered&&typeof c.materialsDelivered==='object'
+    ?c.materialsDelivered:required;
+  const rows=Object.entries(required).filter(([,qty])=>Number(qty)>0).map(([key,qty])=>{
+    const total=Number(qty),supplied=Math.min(total,Math.max(0,Number(delivered[key])||0));
+    return {key,total,delivered:supplied,missing:Math.max(0,total-supplied)};
+  });
+  return {required,delivered,rows,
+    progress:rows.length?Math.max(0,Math.min(1,...rows.map(r=>r.delivered/r.total))):1};
+}
+function refundableConstructionCost(s){
+  if(!s?.buildCost&&!s?.construction?.materialsRequired)return{};
+  const c=s.construction,delivered=c?.version===2&&c.materialsDelivered;
+  if(!delivered||typeof delivered!=='object')return {...(s.buildCost||{})};
+  const ratio=constructionProgress(s),out={};
+  for(const [key,qty] of Object.entries(delivered)){
+    const consumed=c.materialsConsumed?.[key]??(Number(constructionMaterialInfo(s).required[key])||0)*ratio;
+    const free=Number(c.materialsFree?.[key])||0;
+    const remaining=Math.max(0,Math.floor((qty-consumed-Math.max(0,free-consumed))*1000+1e-7)/1000);
+    if(remaining>0)out[key]=remaining;
+  }
+  return out;
+}
 function constructionWorkClock(day){
   // Same 5-day labor week / work shift used by the agricultural simulation.
   const whole=Math.floor(day),week=Math.floor(whole/7),wd=((whole%7)+7)%7;
   return week*5+Math.min(wd,5)+(wd<5?clamp((day-whole-.14)/.38,0,1):0);
 }
 function beginConstruction(s,delay=0){
-  const d=buildDuration(s);if(d<=0)return s;
+  const duration=buildDuration(s);
+  // A paid structure with zero legacy duration (notably the village well)
+  // still needs a real site so its materials are not silently made free.
+  if(duration<=0&&(s.auto||!Object.keys(s.buildCost||{}).length))return s;
+  const d=Math.max(.5,duration);
   const startedDay=State.clock.day+delay;
   if(s.auto){
     s.construction={startedDay,completeDay:startedDay+d};
@@ -896,18 +1050,19 @@ function beginConstruction(s,delay=0){
       s.spawnCost={laborDays:quote.laborDays,laborGold:quote.laborGold,
         totalGold:quote.laborGold,payer:'spontaneous'};
     }
-    return s;
+    applyConstructionDev(s);return s;
   }
   s.construction={version:2,startedDay,workRequired:d,workDone:0,
-    lastWorkDay:startedDay,workers:0,completedDay:null};
-  return s;
+    lastWorkDay:startedDay,workers:0,completedDay:null,
+    priority:CONSTRUCTION_DEFAULT_PRIORITY,materialsDelivered:{},materialsConsumed:{},materialBlocked:false};
+  applyConstructionDev(s);return s;
 }
 function constructionProgress(s){
   if(!s?.construction)return 1;
   const c=s.construction;
   if(c.version===2)return clamp((Number(c.workDone)||0)/Math.max(0.001,Number(c.workRequired)||1),0,1);
   const a=c.startedDay,b=c.completeDay;
-  if(State.clock.day<=a)return 0;if(State.clock.day>=b)return 1;
+  if(State.clock.day>=b)return 1;if(State.clock.day<=a)return 0;
   return clamp((State.clock.day-a)/(b-a),0,1);
 }
 function underConstruction(s){return constructionProgress(s)<1}
@@ -921,10 +1076,13 @@ function constructionWorkStatus(s){
   const c=s?.construction;
   if(!c||!underConstruction(s))return '';
   if(c.version!==2)return 'Procedural construction';
+  if(devBuildMode('fastBuild')&&constructionMaterialInfo(s).progress<1-1e-8)return 'Fast build: in attesa dei materiali';
   const wd=((Math.floor(State.clock.day)%7)+7)%7;
   if(wd>=5)return 'Workers resting (weekend)';
-  if(c.unfunded||(window.ConquerEconomy?.constructionWagePerWorkday?.()||0)>0&&
-      (window.ConquerEconomy?.state?.().castleGold||0)<=1e-8)
+  if(constructionMaterialInfo(s).progress<=constructionProgress(s)+1e-7&&
+      constructionMaterialInfo(s).progress<1-1e-7)return 'In attesa di materiali';
+  if(!devBuildMode('freeBuild')&&(c.unfunded||(window.ConquerEconomy?.constructionWagePerWorkday?.()||0)>0&&
+      (window.ConquerEconomy?.state?.().castleGold||0)<=1e-8))
     return 'Paused: insufficient lord treasury for wages';
   return c.workers>0?c.workers+' L1 assigned':'Waiting for idle L1 workers';
 }
@@ -951,9 +1109,10 @@ function constructionCrewAssignments(day=State.clock.day,cutoff=day){
   const dayOfWeek=((Math.floor(day)%7)+7)%7;
   if(dayOfWeek>=5)return slots;
   const candidates=window.ConquerEconomy?.availableBuilderIds?.(day)||[];
-  const sites=(State.structures||[]).filter(s=>!s.auto&&
+  const sites=(State.structures||[]).filter(s=>
     s.construction?.version===2&&underConstruction(s)&&
-    s.construction.startedDay<=cutoff).sort((a,b)=>
+    s.construction.startedDay<=cutoff&&constructionMaterialInfo(s).progress>constructionProgress(s)+1e-9).sort((a,b)=>
+    constructionPriority(b)-constructionPriority(a)||
     a.construction.startedDay-b.construction.startedDay||
     String(a.id).localeCompare(String(b.id)));
   for(const s of sites)slots.set(s.id,[]);
@@ -971,6 +1130,53 @@ function constructionCrewAssignments(day=State.clock.day,cutoff=day){
     }
   return slots;
 }
+function allocateConstructionMaterials(sites,daySpan){
+  let changed=false;
+  sites=sites.filter(s=>s.construction?.materialsDelivered);
+  for(const s of sites)grantFreeConstructionMaterials(s);
+  const stock=State.village?.founded?window.ConquerEconomy?.state?.():null;
+  const available=k=>Math.max(0,Number(stock?(k==='gold'?stock.castleGold:stock.castle?.[k]):State.resources?.[k])||0);
+  // Strict priority between tiers; equal shares of each scarce good within a tier.
+  // Thousandth-unit leftovers go to the least supplied site, so tiny repeated
+  // deliveries cannot starve an equal-priority job. No per-cart simulation.
+  for(let priority=5;priority>=0;priority--){
+    const group=sites.filter(s=>constructionPriority(s)===priority);
+    const goods=new Set(group.flatMap(s=>Object.keys(constructionMaterialInfo(s).required)));
+    for(const k of goods){
+      let budget=Math.floor(available(k)*1000+1e-7);
+      let jobs=group.map(s=>({s,m:{required:constructionMaterialInfo(s).required,delivered:s.construction.materialsDelivered},units:0})).filter(j=>
+        (j.need=Math.max(0,Math.round(((j.m.required[k]||0)-(j.m.delivered[k]||0))*1000)))>0);
+      while(budget>0&&jobs.length){
+        const share=Math.floor(budget/jobs.length);
+        if(!share){
+          jobs.sort((a,b)=>(a.m.delivered[k]||0)+a.units/1000-(b.m.delivered[k]||0)-b.units/1000||String(a.s.id).localeCompare(String(b.s.id)));
+          for(const j of jobs.slice(0,budget)){j.units++;j.need--;budget--}
+          break;
+        }
+        for(const j of jobs){const n=Math.min(share,j.need);j.units+=n;j.need-=n;budget-=n}
+        jobs=jobs.filter(j=>j.need>0||j.units>0);
+        if(jobs.every(j=>!j.need))break;
+        // Retain allocations separately while excluding fulfilled jobs next pass.
+        const done=jobs.filter(j=>!j.need);
+        for(const j of done)commit(j);
+        jobs=jobs.filter(j=>j.need>0);
+      }
+      for(const j of jobs)commit(j);
+      function commit(j){
+        if(j.units<=0)return;
+        const qty=j.units/1000;
+        const paid=State.village?.founded&&window.ConquerEconomy?.spendBuild
+          ?window.ConquerEconomy.spendBuild({[k]:qty})
+          :available(k)>=qty&&(State.resources[k]=Math.round((available(k)-qty)*1000)/1000,true);
+        if(paid){
+          j.m.delivered[k]=Math.round(((j.m.delivered[k]||0)+qty)*1000)/1000;
+          State.dirty=true;changed=true;
+        }
+      }
+    }
+  }
+  return changed;
+}
 function tickConstructionWork(fromDay,toDay){
   if(!State.village?.founded)return[];
   migrateConstructionSites();
@@ -978,7 +1184,7 @@ function tickConstructionWork(fromDay,toDay){
   if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start)return[];
   const completed=[];
   const pending=(State.structures||[]).filter(s=>
-    !s.auto&&s.construction?.version===2&&underConstruction(s));
+    s.construction?.version===2&&underConstruction(s));
   if(!pending.length)return completed;
   // Loaded games may resume at day 2000 with simLogicDay still at zero.
   // Progress was already settled through each site's lastWorkDay.
@@ -990,27 +1196,38 @@ function tickConstructionWork(fromDay,toDay){
     if(next<=t+1e-9)break;
     const workerDay=constructionWorkClock(next)-constructionWorkClock(t);
     const sites=(State.structures||[]).filter(s=>
-      !s.auto&&s.construction?.version===2&&underConstruction(s)&&
+      s.construction?.version===2&&underConstruction(s)&&
       s.construction.startedDay<next
-    ).sort((a,b)=>a.construction.startedDay-b.construction.startedDay||
+    ).sort((a,b)=>constructionPriority(b)-constructionPriority(a)||
+      a.construction.startedDay-b.construction.startedDay||
       String(a.id).localeCompare(String(b.id)));
     if(sites.length){
+      allocateConstructionMaterials(sites,next-t);
+      for(const s of sites)if(completeFastConstruction(s))completed.push(s);
       const assigned=workerDay>0?constructionCrewAssignments(t,next):new Map();
       for(const s of sites){
+        if(!underConstruction(s))continue;
         const c=s.construction,n=assigned.get(s.id)?.length||0;
         const effectiveStart=Math.max(t,c.startedDay,Number(c.lastWorkDay)||c.startedDay);
-        const requested=Math.min(Math.max(0,c.workRequired-c.workDone),
+        const proposed=Math.min(Math.max(0,c.workRequired-c.workDone),
           Math.max(0,constructionWorkClock(next)-constructionWorkClock(effectiveStart))*n);
-        // Only actual funded work advances construction. Materials were paid
-        // at placement; labor is paid as its shifts are performed.
+        // Work cannot overrun materials already supplied to this specific site.
+        const materialWork=Math.max(0,c.workRequired*constructionMaterialInfo(s).progress-c.workDone);
+        const requested=Math.min(proposed,materialWork);
+        c.materialBlocked=proposed>requested+1e-7;
+        // Wages remain pay-as-you-work and are never deducted twice.
         const payroll=requested>0?
-          window.ConquerEconomy?.payConstructionWork?.(s,requested)||{work:requested,paid:0}:
+          (devBuildMode('freeBuild')?{work:requested,paid:0}:window.ConquerEconomy?.payConstructionWork?.(s,requested)||{work:requested,paid:0}):
           {work:0,paid:0};
         const work=payroll.work;
         c.unfunded=requested>1e-9&&work<=1e-9;
         c.workers=work>0?n:0;
         if(work>0){
           c.workDone=Math.min(c.workRequired,c.workDone+work);
+          if(c.materialsDelivered){
+            c.materialsConsumed={};
+            for(const [key,qty] of Object.entries(constructionMaterialInfo(s).required))c.materialsConsumed[key]=qty*c.workDone/c.workRequired;
+          }
           State.dirty=true;
         }
         c.lastWorkDay=Math.max(next,Number(c.lastWorkDay)||0);
@@ -1030,7 +1247,7 @@ function pointRadius(s){
   if(s.type==='gate'){const d=rectDims(s);return Math.hypot(d.w,d.h)/2}
   if(s.type==='well')return .75;
   if(s.type==='house'){const {w,h}=houseFootprintDimensions(s);return Math.hypot(w,h)/2}
-  if(s.type==='field'||window.ConquerIndustries?.is(s))return Math.hypot(s.w,s.h)/2;
+  if(s.type==='field'||s.type==='storageYard'||window.ConquerIndustries?.is(s))return Math.hypot(s.w,s.h)/2;
   if(s.type==='pier')return 1;
   if(isCivicAnnex(s))return Math.hypot(s.w||1,s.h||1)/2;
   if(isCivic(s))return civicRadius(s);

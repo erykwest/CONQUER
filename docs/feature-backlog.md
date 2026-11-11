@@ -1,5 +1,80 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+## 2026-11-09 — BC-261109-02 · DEV Free/Fast e cantieri di upgrade
+
+- [x] **SU BRANCH:** pulsanti indipendenti nel DEV, stato premuto accessibile, nessun salvataggio delle preferenze; risorse gratuite non convertibili in rimborsi.
+- [x] **UPGRADE:** cantiere su altezza/tier/varianti civiche e strutturali, espansione piazzale, scale e levatoi, grata, ponte e fossato. Costo intervento separato, snapshot per annullamento, stato persistito e niente secondo intervento sovrapposto.
+- [x] **CASE AUTO:** cantiere anche al cambio di livello tramite inspector; futura promozione autonoma deve richiamare lo stesso comando. Condizioni di promozione scorporate nella chat dedicata.
+- [ ] **ACCETTAZIONE:** Actions del nuovo head e audit Lab prima dell'integrazione. Dominio e Chromium UI1/UI2 provati localmente; nessun nuovo asset o modello.
+
+
+## 2026-11-08 — BC-261108-01 · Cantieri senza prefinanziamento, sei priorità
+
+- [x] **SU BRANCH `feature/construction-staged-priority-20261108`, pre-merge:** il ghost e gli elementi lineari (compresi ponti/fossati) sono confermabili anche senza stock sufficiente. Lo stesso preventivo esistente determina la spesa finale, ma è consumato progressivamente dal ledger economico durante i lavori, con consegne indipendenti per tipologia e avanzamento limitato dalla risorsa più carente.
+- [x] **Priorità per cantiere:** Molto basso, Basso, Medio (default), Alto, Molto alto, Critico; rifornimento e assegnazione dei costruttori L1 in tale ordine. Lavoro con limite di materiali ricevuti, fermo senza materie prime; nessuna nuova professione o stock alternativo.
+- [x] **Inspector provvisorio:** stato, barra lavorazione e barra rifornimento, quantità per materiale, priorità modificabile; reintegro dell'inspector completo alla fine. Entrambe le UI.
+- [x] **Compatibilità salvataggi:** vecchi cantieri V2 già prepagati; nuovi rimborsano solo il consegnato non consumato alla demolizione. Nessun costo fisso all'apertura del progetto.
+- [x] **QA locale 09/11, PR #186:** regressioni materiali, equità a pari priorità e rimborsi PASS; browser reale UI1/UI2, salvataggio locale/ripresa, completamento e annullamento PASS. **Actions del nuovo head ancora da verificare.** L'approvvigionamento fisico per ogni carro resta escluso dalla feature.
+## 2026-11-09 — MIL-CIRCLE-02 · Settori CIRCLE e una riga per macrostruttura difensiva
+
+- **BRANCH `feature/circle-military-zones-macrotowers-20261109`:** «Pattuglie e guarnigioni» ora presenta zone difensive reali CIRCLE; distribuzione di pattuglie tra riserva White Zone e settori tramite il roster Combat; arcieri assegnabili per settore e per torre madre con sottotorri aggregate (`parentTowerId`), usando esclusivamente i posti Siege esistenti. Caserme nelle sottotorri integrate nel conteggio della torre madre quando `/camp` è attivo.
+- **DA VALIDARE:**  test CI/browser, castelli con perimetri complessi e pattuglie con percorsi non raggiungibili, poi merge. Nessuna creazione di soldati dalla semplice assegnazione.
+
+
+## 2026-11-09 — JM-L2-01 / MIL-PG-01 · L2 e pattuglie/guarnigioni
+
+- **SU BRANCH `feature/jobmanager-l2-military-garrisons-20261109`:** Job Manager con sottopalette L1/L2, L2 gestibile con drag-and-drop/minimo/AUTO, priorità e riserve proprie. Militare con sottopaletta «Pattuglie e guarnigioni» per pattuglie White Zone, presidio arcieri delle torri e squadre di caserma dove `ConquerCamp` è attivo.
+- **DA VALIDARE:** GitHub Actions e prove in browser, quindi merge; trasferimenti individuali tra guarnigioni o nuovi sistemi di leva non inclusi.
+
+
+## 2026-11-09 — JM-L1-01 · Job Manager L1 modificabile
+
+- **SU BRANCH `feature/l1-jobmanager-priority-20261109`:** lavorazioni L1 e mansioni di costruzione, carrettieri e cantieri navali riordinabili con drag-and-drop; minimi numerici e AUTO/manuale operativi nel motore economico. I minimi precedono l'eccedenza AUTO; persistono nel save. Pastori protetti, pescatori e tier L2–L4 non vengono riassegnati.
+- **DA CHIUDERE:** CI, verifica visuale drag-and-drop/touch e controllo in partita del turno di lavorazione. Non dichiarare concluso su `main` prima del merge. Riferimento decisionale D-L1-JOB-261109.
+
+
+## STONECOLOR — Palette pietra per territorio (approvata 08/11/2026)
+
+- `feature/stonecolor`: 5 palette (grigio attuale, arenaria, tufo, calcare, granito), ciascuna con cinque toni di luce/ombra definiti in [STONECOLOR-PALETTE-VALIDATION.md](STONECOLOR-PALETTE-VALIDATION.md).
+- Nuova mappa → scelta casuale stabile; Profilo → Ambiente → cambio estetico globale; salvataggio locale e cloud.
+- Componenti litici (castello, edifici, scarpate, rocce, costa, scogli, cave/scatter, banchine); esclusione argilla/mattoni e di oggetti non minerali. Reimpiego asset/mesh, niente trasformazioni costi o HP.
+- QA/CI e confronto visuale Canvas e World3D da verificare prima del merge.
+
+
+## 2026-11-06 — L1 Carrettieri per Piazzale e Mercato (branch `feature/l1-carter-jobs-market-20261106`, prima del merge)
+
+- **LAVORO REALE:** professione Carrettiere in `ConquerEconomy.laborAllocation`: fino a un occupato per magazzino con carichi raggiungibili, dopo i produttori essenziali e prima dei costruttori. `jobSummary.carter`, grafici e storico settimanale. Ogni lavoratore L1 non è né inattivo né costruttore né il personaggio due volte disegnato durante la guida. Orari per nuove partenze nei feriali, stop durante allarme; carri fermi senza personale disponibile, produzione invariata.
+- **ROUTE:** piazzale → sito produttivo, viaggio a vuoto; carico → Piazzale per quota del signore, oppure Mercato per quota `e.lots` e beni reali delle botteghe L3 → piazzale a vuoto. Percorsi solo su viabilità terminata; nessuna consegna se la destinazione richiesta non esiste. Asset preesistenti ConquerWagons e cavalli 2D.
+- **SOLO ESTETICO:** nessuna modifica economica al momento della consegna. Unica fonte di verità rimane il ledger, inclusi i beni L3. Test `qa/l1-carter-market-regression.cjs`, estensione della QA haulage precedente.
+
+
+**Contenuti Codex in Obsidian (branch):** [pipeline editoriale e cinque note approfondite](CODEX-OBSIDIAN.md). UI, link e testi dalla copia validata del vault; requisiti e bilanciamento del Builder invariati.
+
+**Codex Wiki (branch `feature/codex-wiki`):** [UI condivisa e link contestuali Builder](CODEX-WIKI.md), keyword verso sovracategorie, ricerca e relazioni. Nessuna modifica ai requisiti di costruzione.
+
+**CODEX, 05/11/2026:** [catalogo normalizzato v1](CODEX-CATALOG.md) implementato su `feature/codex-normalized-catalog`, non ancora main. Riusa le definizioni Builder; nessun nuovo edificio o requisito tecnologico. Link e pagine Wiki rimangono fase 3.
+
+## 2026-11-06 — Carretti locali produzione → Piazzale (branch `feature/local-production-haulage-20261106`, non ancora in main)
+
+- **P1 VISUAL LOGISTICS · IMPLEMENTATO SU BRANCH:** il libro economico emette eventi solo su `received>0` per la quota trattenuta da una produzione L1–L3; la bonifica forestale emette un evento dal luogo del taglio, senza accrediti aggiuntivi. I carrettieri usano l'asset carro/cavallo 2D di `ConquerVehicles` e `ConquerWagons`. Carico → strada completata → miglior Piazzale collegato → scarico → ritorno vuoto, fino a 4 simultanei, con pause e coda limitata.
+- **Nessuna doppia economia:** la consegna è visiva, le merci sono già contabilizzate da `ConquerEconomy`; mai aggiornare `State.resources` o `State.economy.castle` per l'arrivo del carretto. Nessun veicolo se manca la viabilità; le spedizioni private o vendute al mercato richiedono altra specifica. Test `qa/haulage-regression.cjs`.
+
+
+## 2026-11-05 — Piazzale di stoccaggio al villaggio (branch `feature/founding-storage-yard-20261105`)
+
+- **P0-03 / P0-05 · SU BRANCH (non MAIN fino al merge):** alla fondazione del villaggio un Piazzale 2×2U è cercato entro 7U dal pozzo in un'area con terreno valido, non alberata e senza conflitti; è inoltre piazzabile dal Builder. Può crescere a 4×4U e 6×6U pagando materiali e oro, con capacità 600/2400/5400 unità aggregata.
+- **Stock iniziali:** rappresentati fisicamente nel piazzale e mostrati nell'ispettore, conservati esclusivamente in `ConquerEconomy.state().castle`; non aggiungere una seconda economia locale al magazzino.
+- **Bug taglialegna:** con piazzale attivo un L1 ha priorità sul cantiere, per scongiurare la produzione zero con quattro fondatori impegnati in opere; con charter a 200 legname e target 70, la produzione trattenuta non incrementava il deposito e andava tutta al mercato. Dal branch, la quota non destinata alla vendita cresce nel castello fino a capienza del piazzale; il resto viene offerto al mercato. I tempi e la manodopera L1 non sono cambiati.
+- **Da collaudare:** casi di fondazione con vincoli forestali senza spazio entro 7U, scene e animazioni carico/scarico reali, eventuali esigenze di capacity tuning; test `qa/storage-yard-regression.cjs` e GitHub Actions.
+
+
+## 2026-11-05 — Forestry L1, tool del Terraforming (fix urgente su branch `fix/forestry-l1-clearing-cost-20261105`)
+
+- **P0-02 · IMPLEMENTATO SUL BRANCH, NON VALIDATO COME CORE COMPLETO:** nuovo tool «Rimuovi foresta», non istantaneo; assegna lavori L1 finanziati con fino a 3 popolani per job, lascia gli alberi finché il lavoro non termina, apre radure persistenti e accredita il legname al magazzino del castello. Resa iniziale 2,5 legname/U²; 0,7 giornate operaio/U². Restano fuori rigenerazione e abbattimento periodico automatico dalle industrie.
+- **P0-05 · FIX SUL BRANCH:** edificio taglialegna 5 legname, 35 oro (precedente 25 legname); palette, preview e spesa reali usano il costo unico in `settlement-industries.js`.
+- **Verifiche:** `qa/forestry-regression.cjs` e workflow Economy flows aggiornato; esito da confermare dalla PR.
+
+
 ## Stato corrente su main — 30 ottobre 2026
 
 > **Audit sostitutivo della fotografia del 22–23/10:** [AUDIT-2026-10-30](context/AUDIT-2026-10-30.md), ref `main` `cf5699922`. **15 nuclei CORE MAIN, 8 voci PARZIALI** su 23 ID Builder; questo non certifica la QA browser completa. Il precedente conteggio 13/10 più sotto resta esclusivamente **storico**.
@@ -42,27 +117,27 @@
 > **NUOVE RICHIESTE · BACKLOG APERTO, NON IMPLEMENTATO IN QUESTA MODIFICA.** Task raccolti il 05/11/2026. Non confondere questi requisiti con le varianti già documentate su branch o con feature verificate in `main`. La priorità tra i task non è ancora assegnata.
 
 ### Mura e camminamenti
-- [ ] **BC-251105-01 — Scala lignea per i camminamenti.** Upgrade/accesso in legno dalle quote a terra al cammino di ronda; definire aggancio, ingombro e accessibilità.
-- [ ] **BC-251105-02 — Scala lapidea per i camminamenti.** Variante in pietra con la stessa funzione di accesso, distinta da quella lignea; verificare il raccordo alla quota delle mura.
-- [ ] **BC-251105-03 — Edifici addossati alle mura.** Consentire una tipologia di edificio accostato alla faccia interna delle mura, con attacco geometrico e gestione delle interferenze con il camminamento.
-- [ ] **BC-251105-04 — Merlature doppie.** Nuova configurazione di merlatura doppia da definire geometricamente; **non equivale** allo stile del merlo «a doppia falda» già annotato in `feat/crenel-styles`.
+- [x] **BC-251105-01 — Scala lignea per i camminamenti.** Upgrade/accesso in legno dalle quote a terra al cammino di ronda; definire aggancio, ingombro e accessibilità. **Su `feature/bc-scale` (non in main):** rampa lungo la faccia interna di un muro in pietra T2/T3, ~60°, larga 0,30U, ultimo gradino a filo del camminamento; posizione Inizio/Centro/Fine; accesso della rete wall-walk.
+- [x] **BC-251105-02 — Scala lapidea per i camminamenti.** Variante in pietra con la stessa funzione di accesso, distinta da quella lignea; verificare il raccordo alla quota delle mura. **Su `feature/bc-scale` (non in main):** rampa piena ~45°, larga 0,36U, con cordolo sul lato aperto e pilastrino di sbarco alla quota del camminamento; upgrade dalla lignea.
+- [x] **BC-251105-03 — Edifici addossati alle mura.** *(branch `feature/wall-buildings`: sezione W1 `leanTo` contro muri H2, stesse stanze della W1.)* Consentire una tipologia di edificio accostato alla faccia interna delle mura, con attacco geometrico e gestione delle interferenze con il camminamento.
+- [x] **BC-251105-04 — Merlature doppie.** Nuova configurazione di merlatura doppia; **non equivale** allo stile del merlo «a doppia falda» (`feat/crenel-styles`, in main con #115). Geometria: stile globale `double` = merlo lungo il doppio sulle mura, sequenza 11011011 invece di 1010101 (1 = merlo a piena altezza, 0 = parapetto). Conservato anche lo stile `tworow` = seconda fila di merli sul bordo interno del cammino. Torri e porte invariate. Branch `feature/double-crenel`.
 
 ### Torri
-- [ ] **BC-251105-05 — Inner roof delle torri.** Copertura interna delle torri; definire relazione con sommità, merli, cutaway e locali sottostanti.
-- [ ] **BC-251105-06 — Torre lignea H2 con frame.** Variante torre in legno alta H2 con telaio/orditura leggibile nel modello.
-- [ ] **BC-251105-07 — Torri W2 × H4? [DA VALUTARE].** Verificare fattibilità e coerenza geometrica, funzionale e di gameplay dell'altezza H4 per larghezza W2; **non** trattare H4 come già approvato.
+- [x] **BC-251105-05 — Inner roof delle torri.** Copertura interna delle torri; definire relazione con sommità, merli, cutaway e locali sottostanti. **Sul branch `feature/tower-inner-roof` (NON MAIN):** variante `innerRoof` off/on = tetto a piramide (quadrate, a D) o cono (rotonde) arretrato dentro i merli di torri in pietra T2+ con merli o caditoie, su un cordolo di 0,14U, con cammino di ronda libero (~0,22U). Esclude l'arma in cima; compatibile con ballatoio e garitte. Non è un tetto a falde: nessuna stanza sotto, quindi Colombaia, Falconiera e Campana (`ROOM_EXTERIOR` 'roof') restano sul tetto a falde. Cutaway: come il tetto a falde. Test `qa/tower-inner-roof-regression.cjs`; 6 righe nel Lab (galleria fortificazioni).
+- [x] **BC-251105-06 — Torre lignea H2 con frame.** Variante torre in legno alta H2 con telaio/orditura leggibile nel modello. **Implementata su `feature/wood-tower-h2` (PR, non ancora in main):** `woodStyle:'frameTower'`, 1,5×1,5U, H2 fisso, sempre coperta; piano terra chiuso in tronchi, telaio controventato a vista solo al P1; modello Blender `frameTower` in `build_wood_fort.py`, cantiere, cutaway (lati verso la camera, solaio e scale interne) e Lab (`castle:legno-telaio-h2`, `castle:legno-telaio-h2-mastio-rialzato`). Compatibile con l'**ingresso rialzato del mastio**: unica torre lignea ammessa da `settlement-keep-entrance.js`; soglia al P1 (1,28), porta del P1 sul fronte (+x) al posto del montante centrale, nessuna porta a terra.
+- [x] **BC-251105-07 — Torre W2 × H4.** **[SU BRANCH `feature/tower-w2-h4`, non main]** Valutata e approvata dall'utente (06/11): quarto piano solo per la torre quadrata in pietra W2 (1,5U) indipendente; niente legno, tonde, D/semitorri, sottotorri, porte; W1/W3/W4 restano a H3 al massimo. Altezza 5,95+0,12 U (≈4,1:1 sulla base), costo ×3,35 rispetto a L1 (+45% su H3), una stanza NORMAL per piano come le altre W2. **Residui:** assedio (scale d'assalto contro quota H4, gittata/visuale dalla cima, crollo dei piani) non ribilanciato; il pulsante «4 levels» su torri non W2 viene ridotto a H3 senza avviso.
 
 ### Coperture
-- [ ] **BC-251105-08 — Tetti inclinati a 75°.** Valutare e introdurre la pendenza a 75° nel sistema di tetti pertinente, coordinandola con `feat/roof-pitch` (30°/45°/60° già documentati su branch, non assumere merge).
+- [ ] **BC-251105-08 — Tetti inclinati a 75°.** Valutare e introdurre la pendenza a 75° nel sistema di tetti pertinente, coordinandola con `feat/roof-pitch` (30°/45°/60°, mergiato in main con PR #157). **Implementato su `feature/roof-pitch-75` (NON MERGE):** `ROOF_PITCHES` 30/45/60/75, costo 75° = 9 legno + 3 oro + 1 pietra per tetto, scheda «Pendenza dei tetti», stati «Tetto 30°/60°/75°» nell'Asset Lab, `qa/roof-pitch-regression.cjs`.
 - [x] **BC-251105-09 — Upgrade tetti Longhouse.** Revisionare le coperture delle longhouse lignee W1/W2, con dipendenza da `feature/wood-longhouse` e dal suo modello modulare. **Su branch `feature/longhouse-roofs` (NON MAIN):** manti scandole/paglia/zolle nel modello Blender, scelta «Copertura» nel pannello, sfiatatoio nel colmo con fumo, varianti nel Lab.
-- [ ] **BC-251105-10 — Upgrade tetti edifici addossati alle mura.** Disegnare le coperture dedicate ai nuovi edifici addossati, gestendo attacco alle mura e interferenze con parapetti/camminamenti; dipende da BC-251105-03.
+- [x] **BC-251105-10 — Upgrade tetti edifici addossati alle mura.** *(branch `feature/wall-buildings`: falda unica, colmo 0,12U sotto il camminamento; pendenza propria, indipendente da `feat/roof-pitch`.)* Disegnare le coperture dedicate ai nuovi edifici addossati, gestendo attacco alle mura e interferenze con parapetti/camminamenti; dipende da BC-251105-03.
 
 ### Ambiente
-- [ ] **BC-251105-11 — Giardino.** Nuovo elemento del Builder/ambiente; dimensioni, tipologia e ruolo (decorativo o funzionale) da definire prima dell'implementazione.
+- [x] **BC-251105-11 — Giardino → Orto di corte.** Scelto dall'utente il 06/11/2026: annesso `kitchenGarden` del Municipio, 3×2U, max 2, entro 7U su terreno aperto; 2 cibo del signore per giornata lavorativa per orto, anche in allarme/assedio. Branch `feature/orto-di-corte` (pre-merge).
 
 ### Terreno e percorsi su dislivelli
-- [ ] **BC-251105-12 — Rampe per superare i dislivelli.** Elemento costruibile per connettere due quote del terreno, anche in presenza di pendii scoscesi e terrazzamenti; valutare pendenze massime, sviluppo e raccordi con strade, suolo e percorsi delle unità. Verificare separatamente l'eventuale percorribilità dei carri.
-- [ ] **BC-251105-13 — Scalinate per pendii e colline.** Elemento costruibile a gradini per collegare quote diverse su versanti ripidi, con attacco a pianori/terrazzamenti, corretto orientamento e accessibilità pedonale; distinta dalle scale che salgono ai camminamenti delle mura (BC-251105-01/02).
+- [x] **BC-251105-12 — Rampe per superare i dislivelli.** *(Branch `feature/ramps-stairs`, 06/11: rampa 2U, pendenza max 1:4, sviluppo 2–16U, rilevato contro il pendio; pedoni, mezzi pesanti e carri via grafo stradale; non in main.)* Elemento costruibile per connettere due quote del terreno, anche in presenza di pendii scoscesi e terrazzamenti; valutare pendenze massime, sviluppo e raccordi con strade, suolo e percorsi delle unità. Verificare separatamente l'eventuale percorribilità dei carri.
+- [x] **BC-251105-13 — Scalinate per pendii e colline.** *(Branch `feature/ramps-stairs`, 06/11: scalinata 1U, pendenza 1:4–1:1, gradini sul terreno reale, solo pedoni; non in main.)* Elemento costruibile a gradini per collegare quote diverse su versanti ripidi, con attacco a pianori/terrazzamenti, corretto orientamento e accessibilità pedonale; distinta dalle scale che salgono ai camminamenti delle mura (BC-251105-01/02).
 
 **Accettazione BC-12/13:** la geometria segue le quote reali del terreno; entrambe le estremità si connettono a superfici percorribili; il pathfinding delle unità riconosce i collegamenti, senza attraversare pendii non accessibili; costruzione, collisioni, salvataggio e visualizzazione 3D/2.5D sono verificati.
 
@@ -169,6 +244,7 @@
 ## P3 — Rifinitura ambientale
 
 - [x] **P3-21 — Sette varianti di alberi SVG.** **[CORE MAIN · QA/integrazione se necessaria]** Gli asset sono già nel repository: verificare uso effettivo nel renderer forestale, varietà e prestazioni. **Accettazione:** distribuzione seeded, riconoscibilità delle sagome, culling/cache e nessun peggioramento significativo dei frame time.
+  - **Polish stagionale su branch `autumn` (07/11/2026, non su `main`):** progressione autunnale da verde estivo a marrone su 91 giorni, passaggi giallo/arancione/rosso differenziati per posizione e seed, stesso sistema per foreste e alberi di lotto. Test `qa/autumn-foliage-regression.cjs` in CI; verifica grafica WebGL2/Canvas in attesa. Nessun SVG o modello aggiuntivo.
 - [x] **P3-22 — Scatter procedurale antropico.** **[CORE MAIN · QA/integrazione se necessaria]** Preparare circa 25 silhouette nelle sette famiglie: carri, merci, cartelli, ruote/rottami, cataste, attrezzi agricoli e arredi da lavoro. **Accettazione:** distribuzione contestuale (strade, crocevia, cantieri, boschi, periferie), non random uniforme; nessuna interferenza ingiustificata con percorsi e selezione.
 
 **Milestone P3:** alberi e scatter **implementati su main**; soltanto QA/prestazioni/polish correttivo, non nuova generazione da zero.

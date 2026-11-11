@@ -393,7 +393,7 @@ function drawMastioWindowDrape(s,edge,windowZ,windowWidth,windowHeight,opacity=1
 }
 function towerLevelHeight(s,level){
   const t=towerTier(s);
-  return [2.35,3.55,4.75][clamp(level,1,3)-1]+(t-1)*.12;
+  return [2.35,3.55,4.75,5.95][clamp(level,1,maxStructureLevel(s))-1]+(t-1)*.12;
 }
 // One source of truth for tower floors, windows, arrow slits and archer slots:
 // the cutaway floor of each level, and openings at standing eye height above it.
@@ -457,7 +457,8 @@ function towerWindowGivesWayToDoor(s,edgeOrDir,floor){
 }
 function towerSlitFace(s,face,floor){
   const dir=towerFaceDirections(s).find(d=>d.face===face);
-  return !!dir&&!dir.interior&&floor>=2&&!towerFaceBlocked(s,dir,floor);
+  return !!dir&&!dir.interior&&floor>=2&&!towerFaceBlocked(s,dir,floor)
+    &&!window.ConquerRoomExterior?.takesTowerFace?.(s,face,floor);
 }
 function towerWindowRows(s){
   const l=structureLevel(s),rows=[];
@@ -817,6 +818,8 @@ function drawFacadeWindows(lit=false,nf=1,includeHouses=true){
           if(!s.isMastio||woodTowerStyle(s)==='watchtower')return;
           const edge=visibleFacadeEdges(s).find(e=>isInteriorFacadeEdge(s,e));
           if(!edge)return;
+          // The frame tower's P1 doorway (raised entrance) takes this window's place.
+          if(towerWindowGivesWayToDoor(s,edge,2))return;
           const z=Math.min(structureHeight(s)-.53,1.45),w=.40,h=.50;
           drawArchitectureAssetOnEdge(edge,z,w,h,'gothicL1',0,lit,nf);
           if(!lit)drawMastioWindowDrape(s,edge,z,w,h);

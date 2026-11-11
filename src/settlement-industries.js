@@ -3,7 +3,7 @@
 // Only world-space placement/production rules live here; no tree depletion.
 (() => {
   const TYPES=Object.freeze({
-    loggingCamp:{label:'Taglialegna',name:'Logging camp',good:'wood',tier:1,workers:2,w:2,h:2,color:'#795036',edge:'#4a2d1c',radius:10,days:3,cost:{gold:35,wood:25}},
+    loggingCamp:{label:'Taglialegna',name:'Logging camp',good:'wood',tier:1,workers:2,w:2,h:2,color:'#795036',edge:'#4a2d1c',radius:10,days:3,cost:{gold:35,wood:5}},
     quarry:{label:'Cava',name:'Stone quarry',good:'stone',tier:2,workers:2,w:3,h:3,color:'#999b9c',edge:'#64686c',days:5,cost:{gold:65,wood:20,stone:8}},
     mine:{label:'Miniera',name:'Mine',good:'stone',tier:2,workers:2,w:1,h:1,color:'#31363e',edge:'#171b20',days:7,cost:{gold:95,wood:35,stone:18}},
     windmill:{label:'Mulino a vento',name:'Windmill',good:'food',tier:1,workers:0,w:2,h:2,color:'#f5d936',edge:'#ac870c',days:3,cost:{gold:40,wood:30,stone:10}},
@@ -228,12 +228,13 @@
     if(window.ConquerIndustries3D?.draw(s,ground,preview))return;
     // Placeholder platform uses one surveyed elevation even when it spans rock.
     const h=.35;
-    const shade=type.edge;
+    const tint=hex=>s.type==='quarry'&&!isClayQuarry(s)?(window.ConquerStoneColor?.shade(hex)||hex):hex;
+    const shade=tint(type.edge);
     ctx.save();
     if(preview)ctx.globalAlpha*=.62;
     withProjectionGroundZ(ground,()=>{
     extrudePolygonAt(poly,0,h,{
-      top:type.color,sideA:shade,sideB:shade,stroke:selected?'#f4b76f':'#c4bcb0'
+      top:tint(type.color),sideA:shade,sideB:shade,stroke:selected?'#f4b76f':'#c4bcb0'
     });
     const center=w2s({x:s.x,y:s.y},h+.04);
     ctx.fillStyle=isMill(s)?'#594405':s.type==='mine'?'#f4eee6':'#211d17';

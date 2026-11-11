@@ -1,5 +1,173 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-CI-P24-261109 — Ownership dei test CI con proprietario always-on (09/11/2026)
+
+- **DECISO:** rimuovere un comando deterministico duplicato da un workflow specialistico solo se un owner separato esegue lo stesso controllo in ogni PR pertinente (Runtime integrity per Codex, settlement-qa per routing/main-road).
+- **NON RIMUOVERE:** ripetizioni apparentemente simili ma con trigger per percorsi diversi (Combat/CAMP, Economy/Builder/Road, Gate/Cutaway, renderer Main-fixes/WebGPU/Converge), poiché fungono da garanzia su cambiamenti non necessariamente intercettati dall'altro workflow. Restano tutti i controlli browser e la suite completa settimanale/ad alto rischio.
+- **REGRESSIONE CI:** owner e assenza duplicati verificate dal guard always-on, nessun cambio ai 26 workflow esistenti, né alle protezioni main (P2.2 sospeso). Valutare benefici reali su campione di PR.
+
+
+## D-UPGRADE-261109 — Upgrade edilizi e strumenti DEV
+
+- **DECISO:** gli interventi individuali su strutture e livelli delle case usano il motore di costruzione condiviso, con inspector temporaneo, tempo positivo, quota separata e annullamento che ripristina lo stato precedente. Un solo intervento per edificio. Restano distinti i comandi operativi (apri/chiudi, funzioni stanza, rotazione), le politiche edilizie globali e le riparazioni.
+- **PREVENTIVI:** gli accessori mantengono il costo dedicato esistente; altezza/tier usano la differenza positiva dei preventivi. Per i livelli civici il costo base vale per ogni livello aggiunto. Le varianti senza prezzo rimangono senza materiale, pagando il lavoro effettivo. Durata generica massima tra 0,5 giorni lavoratore, incremento di durata e 25% della durata dell'edificio; prezzi/tempi dedicati di accessori dove previsti. Valori di bilanciamento espliciti e successivamente affinabili.
+- **CASE PRIVATE:** cambiare livello produce un cantiere temporizzato con il finanziamento procedurale esistente; non spende il tesoro del signore. Il motore di promozione autonoma è scorporato; nessuna condizione di ricchezza/felicità inventata in questo fix.
+- **DEV:** Free build evita materiali e salari, mantenendo i tempi; Fast build elimina tempi e operai ma rispetta le scorte. Entrambi permettono costruzione gratuita immediata. Agiscono sui progetti nuovi e aperti, soltanto nella sessione corrente; i materiali gratuiti sono marcati nel progetto e non possono generare rimborsi.
+
+
+## D-BUILD-PRIORITY-261108 — Conferma del cantiere indipendente dalle scorte (08/11/2026)
+
+- **DECISO:** un ghost valido si conferma anche con zero risorse. La stima è un preventivo complessivo, non una condizione economica per collocare la struttura. Il cantiere occupa subito lo spazio e resta selezionabile/salvabile; non diventa operativo prima del completamento. Ogni tipologia di risorsa può essere trasferita indipendentemente: possedere pietra senza legno permette di rifornire la pietra, ma non fa avanzare i lavori oltre la risorsa più carente.
+- **SISTEMA UNICO:** nessun inventario parallelo o carovana obbligatoria: `ConquerEconomy` contabilizza il materiale effettivamente destinato al progetto; l'assegnazione è progressiva, ordinata per `Molto basso < Basso < Medio < Alto < Molto alto < Critico`, con divisione equa di ciascun bene a pari priorità; i residui millesimali vanno al cantiere meno rifornito, con ID come ultimo spareggio. Anche i costruttori L1 seguono questo ordine, ma rimangono persone reali già occupate dal JobManager.
+- **VINCOLI:** non spendere materiali non posseduti, non produrre progresso di lavoro senza i materiali corrispondenti, non dedurre costi due volte. I salari restano pagati quando il lavoro è realmente eseguito; si può attendere sia i materiali sia la manodopera. Nuovi siti persistono consegne e consumo proporzionale al lavoro; annullare rimborsa solo il consegnato non consumato, mai i salari; salvati preesistenti già pagati restano integralmente riforniti.
+- **UI:** un inspector temporaneo con barre lavoro/materiali e selettore delle sei priorità sostituisce i controlli di esercizio fino alla fine del cantiere; l'inspector completato riappare automaticamente. **SCOPE:** non modificare M0–M5, inventario dei beni o logistica fisica ordinaria; eventuale manutenzione/riparazioni/upgrades come progetti progressivi è decisione futura.
+## D-MIL-RES-261109 — Caserma come unica riserva di soldati; vedette e Avamposto (09/11/2026)
+
+- **DECISIONE DEL PRODUCT OWNER:** il Corpo di Guardia del castello è un duplicato della Caserma e vi si fonde; `guard` resta solo nel Municipio (guardia cittadina, CRIME). La Caserma alloggia una riserva unica di soldati arruolati tra gli L1 (ingaggio 15 oro, paga L2), spesa come valuta da pattuglie, vedette, presidi di Avamposto e spedizioni.
+- **VISTA:** una torre osserva solo con una vedetta assegnata; pattuglie e vedette danno l'allarme automatico.
+- **AVAMPOSTO:** upgrade di una torre isolata, con presidio fisso di 4 soldati e 1 cavallo; avvisa con campana, fuoco di segnalazione (nuovo upgrade dei tetti piani, raggio triplo, monouso) o staffetta a cavallo. Niente piccioni né Stazione di Posta.
+- **CONTRATTO TECNICO (implementazione):** `ConquerSoldiers` è l'unica fonte della riserva; combattimento, economia e assedio la leggono (`towerWatches`, `enlisted`, `horsesHeld`) senza duplicarla. Ordine di copertura: spedizioni, avamposti, vedette, pattuglie. Il fuoco di segnalazione è un elemento esterno `ROOM_EXTERIOR` con montaggio `deck` (terrazzo piano), da riusare per altri elementi sul terrazzo.
+- **STATO:** implementato su `feature/caserma-avamposto` ([BACKLOG](BACKLOG.md), MIL-RES-01), non ancora in `main`. Aggiornamento distruttivo ammesso perché il gioco è in fase di test. ROADMAP invariata.
+
+## D-MIL-CIRCLE-261109 — Gerarchia CIRCLE per assegnazioni militari (09/11/2026)
+
+- **DECISIONE DEL PRODUCT OWNER:** la sottopaletta «Pattuglie e guarnigioni» deve usare l'interfaccia CIRCLE, con assegnazioni da **zone difensive** fino a **torri**; ogni torre principale e le sue sottotorri sono una **sola riga** come macrostruttura difensiva.
+- **CONTRATTO:** usare solo i settori chiusi effettivamente rilevati da `ConquerCircle.getSnapshot().compartments` e `sectorForStructure`. L'albero `parentTowerId` raggruppa i figli della torre principale senza doppio conteggio. Il controllo di livello zona distribuisce arcieri ai posti validi delle torri associate; il controllo di livello macrostruttura assegna o richiama arcieri alle postazioni reali di madre/figlie. Stessa contabilità per le squadre delle caserme in `/camp` senza righe figlie duplicate.
+- **PATTUGLIE:** il trasferimento da White Zone a CIRCLE imposta un identificatore di settore persistito sull'unità Combat, non recluta una pattuglia nuova. Il pattugliamento segue punti percorribili del compartimento tramite pathfinder militare; nessun teletrasporto. Le zone CIRCLE non disponibili o scomparse non diventano zone inventate.
+- **LIMITI:** settori CIRCLE dipendono da perimetri realmente chiusi, quindi finché non lo sono le torri rimangono sotto «Fuori dai compartimenti CIRCLE»; pattugliamento non garantito per compartimenti privi di itinerari militari accessibili. Roadmap immutata.
+- **STATO:** codice sul branch `feature/circle-military-zones-macrotowers-20261109`, CI/test live/merge da confermare.
+
+
+## D-JOBS-MIL-261109 — Sottopalette L1/L2 e Pattuglie e guarnigioni (09/11/2026)
+
+- **DECISO DAL PRODUCT OWNER:** due sottopalette all'interno del Job Manager, denominate «L1» e «L2»; una sottopaletta militare «Pattuglie e guarnigioni».
+- **SCELTA DI IMPLEMENTAZIONE:** L1 mantiene le sue mansioni, L2 applica la stessa semantica di priorità drag-and-drop, minimo e AUTO/manuale alla sola classe L2 (campi, cave, miniere). Minimi assegnati prima in ordine di priorità, poi resto solo ai job AUTO; nessun travaso automatico di lavoratori L1 e nessuna variazione a L3/L4. Save legacy intatto prima dell'attivazione L2.
+- **CONTATTO CON IL MOTORE MILITARE:** pattuglie esistenti gestite su White Zone da Combat; arcieri nelle torri via postazioni Siege; squadre caserma disponibili dove esiste ConquerCamp (`/camp`). Nessuna nuova formazione, fabbricazione artificiale di soldati o spostamento implicito di unità.
+- **STATO:** branch `feature/jobmanager-l2-military-garrisons-20261109`, QA completa/merge ancora da verificare; roadmap invariata.
+
+
+## D-L1-JOB-261109 — Priorità del lavoro dei popolani L1 (09/11/2026)
+
+- **APPROVATO DAL PRODUCT OWNER:** nel Job Manager L1 le produzioni/mansioni sono righe ordinabili trascinandole, ciascuna con un numero «Minimum worker» da garantire quando i lavoratori sono disponibili e un pulsante AUTO. AUTO disattivato passa la mansione a manuale.
+- **CONTRATTO DI IMPLEMENTAZIONE:** i minimi sono distribuiti prima, in ordine di priorità; se la richiesta complessiva supera la popolazione disponibile, i minimi dei job in alto prevalgono. Solo dopo si assegnano lavoratori aggiuntivi ai job AUTO, sempre in ordine di priorità; i job manuali ricevono esclusivamente il minimo. Non si supera la capacità massima del job o la disponibilità di L1.
+- **CONFINI:** i pastori necessari alla sicurezza alimentare e i pescatori attivi restano riservati secondo le regole specifiche. L2–L4 non sono toccati. I salvataggi esistenti conservano l'allocatore originale finché un comando della nuova gestione non viene utilizzato; modifiche salvate con `State.economy.l1Jobs` su locale/cloud.
+- **STATO:** codice e QA su `feature/l1-jobmanager-priority-20261109`; CI e browser da validare prima del merge. ROADMAP invariata: evoluzione del Job Manager già esistente.
+
+
+## D-VIS-STONECOLOR-261108 — Pietra coerente per mappa (08/11/2026)
+
+- **APPROVATO DAL PRODUCT OWNER:** scelta casuale iniziale fra Grigio attuale, Arenaria, Tufo, Calcare e Granito; successiva modifica da **Profilo → Ambiente** con applicazione globale agli elementi realmente litici.
+- **5 GRADIENTI OBBLIGATORI:** per ogni famiglia luce, sommità, mezzotono, ombra e fessura. Colori esatti nella [scheda approvata](../STONECOLOR-PALETTE-VALIDATION.md). Arenaria beige desaturata e minerale: deve restare distinguibile dal Clay rosso/terracotta delle murature e dalle cave di argilla.
+- **SEMANTICA E PERSISTENZA:** famiglia pietra è un aspetto di mappa, non una tipologia di risorsa/costruzione; random deterministico dal seed e stabile in salvataggio locale/cloud. Vecchi salvataggi privi di palette rimangono in grigio.
+- **ESCLUSIONI:** legno, brick/clay, acqua, neve, tetti, metallo, vegetazione. Rimangono invariate economia, integrità, collider, geometrie e logistica. Nessuna nuova collezione di SVG/mesh per ogni colore.
+- **STATO:** implementazione su `feature/stonecolor`, non automaticamente consegnata su main; passaggio CI e validazione visiva necessari.
+
+
+## D-VIS-AUTUMN-261107 — Progressione autunnale delle chiome (07/11/2026)
+
+- **DECISO, CODICE SU BRANCH `autumn`:** la chioma degli alberi decidui non passa in un colpo al marrone: dal 1° settembre al 30 novembre cambia gradualmente di aspetto attraverso toni verde/giallo-verde, giallo, oro, arancione, rosso e marrone. Posizione degli alberi e seed producono un anticipo/ritardo stabile della fase, senza sincronizzazione di tutta la foresta.
+- **INVARIANTI:** si riusano i sette SVG e le palette verdi estive; inverno senza chiome, pini sempreverdi, salvataggi e bilanci economici immutati. Un override DEV Autunno fuori dal periodo autunnale mostra una fase intermedia. Ottimizzazione: atlante WebGL2 statico, aggiornamento UV per giorno, fallback Canvas aggiornato per foreste e alberi urbani.
+- **LIMITE DICHIARATO:** gradazione percepita nel paesaggio tramite sei toni e differimento fra alberi, non interpolazione continua pixel-per-pixel nella stessa chioma e non simulazione di foglie cadute. QA browser/prestazioni richiesta prima di merge.
+- **DIREZIONE:** sola rifinitura del P3-21 visivo; ROADMAP M0–M5 invariata.
+
+
+## D-CI-P23-261106 — CI senza trigger push su branch inesistenti (06/11/2026)
+
+- **DECISO:** eliminare soltanto i push indirizzati a branch GitHub non più presenti; mantenere i test specialistici su PR e i push su `main` quando configurati.
+- **LIMITI:** non cancellare né rinominare workflow e check, non cambiare le condizioni `paths`, non rimuovere script QA e non eliminare branch reali. Progettazione P2.2 (protezione `main`) differita su esplicita richiesta; nessuna regola GitHub amministrativa modificata.
+- **QA:** proteggere i trigger superstiti con `qa/ci-p1-regression.cjs`; verificare Actions prima dell'integrazione.
+
+
+## D-CI-P21-261106 — Selezione visuale incrementale, copertura completa periodica (06/11/2026)
+
+- **DECISO, CODICE SU BRANCH `perf/assetlab-p2-incremental-20261106`:** il catalogo runtime resta unica fonte di verità per gli ID da verificare; il planner sceglie solo sorgenti isolate con stato Git modificato. Il selettore non sostituisce e non altera le baseline degli asset.
+- **FAIL-SAFE:** incertezza, nuovo/rimosso file, cambi di scena o motore, texture architettoniche e modelli eliminati dalla baseline obbligano l'audit completo. Nessun rilassamento delle verifiche dei render/stati dell'Asset Lab.
+- **REGOLE CI:** gallery sempre integrale quando si avvia il browser; audit completo in esecuzione manuale o pianificata la domenica, oltre agli eventi ad alto rischio. Futuri allargamenti dell'allowlist richiedono test sulle dipendenze reali.
+- **MOTIVAZIONE:** ridurre rendering e screenshot inutilmente ripetuti su PR con modifiche locali, senza sacrificare la diagnosi di regressioni trasversali. ROADMAP di gioco invariata.
+
+
+## D-L1-CARTER-261106 — Carrettiere come mestiere L1, trasporto ancora visivo (06/11/2026)
+
+- **DECISO E IMPLEMENTATO SU BRANCH `feature/l1-carter-jobs-market-20261106`:** una rete logistica locale prende **veri lavoratori L1** dal roster `ConquerEconomy.laborAllocation`. Al massimo un carrettiere per piazzale attivo con una consegna raggiungibile (max 4); l'industria essenziale e i cantieri navali hanno precedenza, mentre i cantieri usano soltanto il residuo. Il carrettiere ha la stessa identità del popolano/fondatore: mai contarlo due volte o generare un lavoratore addizionale.
+- **SEPARAZIONE DELLE DESTINAZIONI:** la quota reale della produzione contabilizzata come scorta del signore è trasportata visivamente al deposito; le quote registrate come `market lots` e le merci del commercio L3 sono trasportate visivamente al Mercato costruito, senza appropriarsi del materiale privato. Origine operativa = piazzale; il carico avviene dal produttore.
+- **IL LEDGER NON CAMBIA:** il lavoro è reale in termini di occupazione L1, il trasporto è estetico. Nessun addebito, consegna ritardata, vendita o consumo aggiuntivo su partenza/arrivo; niente inventario per singolo carretto o magazzino. Su rete viaria interrotta, turno non attivo o carenza L1 si rinuncia all'animazione, non alla produzione. I carri ordinari rimangono non intercettabili; i convogli militari/strategici conservano le loro regole.
+- **TURNO:** lunedì-venerdì, fascia .25–.75 della giornata per nuove partenze (i viaggi già avviati completano il ritorno). Sabato mercato civile, domenica riposo; l'allarme non autorizza nuove corse.
+
+
+## D-CODEX-03 — Vault personale e pubblicazione editoriale (05/11/2026)
+
+- **Richiesta dell'utente:** usare la skill Obsidian per edifici e meccaniche, con vault dedicato nella propria cartella CONQUER. Il vault personale è la fonte di scrittura; il repository conserva una copia di pubblicazione versionata, non un secondo vault da modificare indipendentemente.
+- Import a senso unico: non riscrive il vault, controlla la base locale e si ferma su conflitti, salvataggi concorrenti, link o destinazioni non valide. Percorso personale e manifest di sincronizzazione restano locali/ignorati da Git.
+- Solo contenuti approved sono compilati. Titolo, alias e corpo si modificano nelle note, mentre costi, tempi e compatibilità restano nel gameplay. ID stabili distinti da nome file e titolo; link di sezione preservati.
+- Nessuna pubblicazione automatica dal salvataggio di una nota. Copia Git e artefatto passano da PR/CI e merge autorizzato. [Contratto completo](../CODEX-OBSIDIAN.md). Milestone M0–M5 invariate.
+
+## D-CODEX-02 — Wiki ipertestuale e artefatto pubblico generato (05/11/2026)
+
+- **Richiesta dell'utente:** alcune keywords di sovracategoria nel testo devono rimandare a una pagina. Implementati link HTML reali con destinazioni stabili, match per parole intere e precedenza dei termini specifici; testi e destinazioni verificati dalle QA. Breadcrumb, relazioni e backlink completano la navigazione.
+- Una vista per sito e in-game; in-game legge il catalogo live senza snapshot, il sito legge un artefatto JSON generato dalle stesse definizioni. Estensione di D-CODEX-01: l'artefatto viene committato per hosting statico, ma non mantenuto manualmente; CI confronta la rigenerazione e rifiuta dati obsoleti.
+- Preventivi pubblici riferiti a configurazioni esplicite, preventivi contestuali dal gioco. Le conoscenze non mappate non diventano sblocchi o stati di possesso fittizi.
+- Nessun cambiamento alle milestone M0–M5 né ai contratti di economia/salvataggi. [Implementazione e limiti](../CODEX-WIKI.md), branch `feature/codex-wiki`.
+
+## D-CODEX-01 — Catalogo consultabile sopra i provider del gioco (05/11/2026)
+
+- **Implementazione fase 2 sul branch `feature/codex-normalized-catalog`**, su richiesta di procedere al catalogo normalizzato: sette categorie, ID semantici indipendenti da salvataggi/asset/etichette, metadati e relazioni strutturate. [Contratto v1](../CODEX-CATALOG.md).
+- Un core senza DOM e un adapter read-only al gameplay. Costi/tempi leggono i provider reali; nessun secondo listino. Lettura live in gioco, snapshot JSON esplicitamente datato dal processo che lo pubblica per il sito.
+- Valori noti distinti da unmapped/context-required/incompatible. La membership nello schema di una variante non certifica l'installabilità. Nessuna meccanica viene abilitata dal Codex.
+- Requisiti fisici, funzionali e conoscenze separati. Conoscenze non mappate; nessun albero tecnologico, nessun vincolo inventato.
+- Alternativa evitata: duplicare costi e regole nei contenuti Wiki. La UI Wiki e l'export automatico del sito restano fase successiva; milestone sistemiche M0–M5 invariate.
+
+## D-PRESTIGE-01 — Prestigio del castello (05/11/2026)
+
+- **Decisione dell'utente:** la Falconiera dà «prestigio nobiliare» attraverso un valore nuovo del castello, non con un bonus ai cavalieri né alla diplomazia.
+- **Contratto:** `ConquerSiege.prestige()` → `{total, by}`, somma di `PRESTIGE[fn]` per ogni stanza ammessa e non catturata (Falconiera 3, Sala del trono 4, Stanze nobili 1, Cappella 1, Tesoro 1). Si mostra nel riepilogo logistico. Gli altri sistemi lo leggeranno in seguito: quali, è aperto in BACKLOG.
+- **Estensione di D-ROOM-EXT-01:** una stanza può avere il suo elemento esterno sul tetto (`mount:'roof'`): stessa posizione degli upgrade (campanile), indice = slot della stanza, regola `active` della voce. Prima applicazione: la voliera della Falconiera.
+- **Prova:** `qa/falconry-regression.cjs`.
+
+## D-CI-P1-261106 — Ottimizzare la CI senza diminuire la copertura (06/11/2026)
+
+- **DECISO, CODICE SU BRANCH `chore/ci-p1-browser-dedup-20261106`:** un solo owner per la suite completa `qa/*-regression.cjs` (P0) e uno per l'audit visuale `qa/asset-audit.mjs` (Asset Lab). Workflow specifici fanno controlli mirati; full P0 si attiva sulle modifiche ai componenti condivisi, inclusi world3d/castle3d.
+- **BROWSER:** una composite action installa Playwright 1.56.1 e Chromium con cache condivisa su Ubuntu 24.04; Asset Lab salta il job visuale solo se la modifica non influenza asset o modelli; WebGPU esegue smoke su renderer e fallback solo quando pertinente, manualmente o su PR.
+- **CANCELLAZIONE RUN:** annullare soltanto i job superseded nella stessa PR e nello stesso workflow; mantenere run su main, manuali, schedulati.
+- **VINCOLI:** test QA esistenti tutti presenti, Runtime integrity, Economy flows e Context pyramid guard preservati. ROADMAP gameplay invariata.
+
+
+
+## D-HAULAGE-261106 — Carretti locali come visualizzazione della produzione, non secondo ledger (06/11/2026)
+
+- **DECISO SU BRANCH `feature/local-production-haulage-20261106`:** generare un viaggio locale soltanto dopo una produzione che il ledger ha effettivamente accreditato alle riserve del signore o dopo una bonifica forestale accreditata una sola volta. I carichi privati e le merci solo di mercato non producono un finto trasporto al magazzino.
+- **COERENZA D-007 e D-046:** la logistica locale ordinaria resta contabilmente astratta; nessuna risorsa passa fisicamente di proprietà all'arrivo o può essere accreditata due volte. Si utilizzano i carretti 2D, cavalli 2D, conducenti e lo stesso pathfinding stradale dei convogli esistenti. Non aggiungere bestie o figurine 3D per sostituirli.
+- **PERCORSO E LIMITI:** servono segmenti viari completati vicino al produttore e al piazzale; verso il magazzino raggiungibile con tragitto migliore, andata carica e ritorno vuoto. Se non c'è continuità il carico resta per poco in coda visiva, senza impattare le scorte già iscritte. Limite massimo 4 mezzi attivi e 32 richieste in attesa. Pausa del gioco ferma anche i carri. Nessun trasferimento materiali sito-per-sito fra piazzali in questa fase.
+
+
+## D-CI-P0-261106 — Separazione CI quotidiana e verifica integrale (06/11/2026)
+
+- **DECISO, IMPLEMENTATO SU BRANCH `chore/ci-p0-consolidation-20261106`:** mantenere i 163 script QA ma eliminare 11 workflow dei branch che non esistono più/cleanup monouso. Il full su tutte le PR è sostituito da controlli rapidi (per modifiche isolate) e suite completa nei PR con modifiche al motore comune, nelle esecuzioni manuali e settimanali. Il nome del job esistente viene preservato.
+- **VINCOLI:** runtime integrity, economy flows, context governance intatti; non indebolire controlli fondamentali. Non toccare gli altri workflow (Playwright, browser, WebGPU) in P0. Nessuna nuova risorsa runtime, costo di gioco o macro-priorità ROADMAP.
+- **RICOSTRUIBILITÀ:** `docs/CI.md` conserva la lista dei workflow rimossi; la storia Git contiene i contenuti e i test rimangono nei percorsi originali.
+
+
+## D-ORTO-251106 — Il giardino è l'orto di corte del Municipio (06/11/2026)
+
+- Scelta dell'utente tra orto di corte, giardino dei semplici e hortus conclusus: **orto di corte**.
+- È un annesso civico del Municipio (`kitchenGarden`), non un edificio autonomo: riusa catalogo, persistenza, cancellazione a cascata e preflight degli annessi. Poiché il Municipio non ha lotto Voronoi, vale la regola «terreno aperto entro 7U, mai su lotti di proprietà».
+- Effetto: 2 cibo del signore per giornata lavorativa per orto, senza lavoratori, anche in allarme/assedio (scorta interna che non dipende da pascoli e reti). Primo annesso con resa economica: gli altri annessi restano skeleton.
+
+## D-STOCKYARD-251105 — Il piazzale fondativo è lo stoccaggio del castello (05/11/2026)
+
+- **DECISO, IN CODICE SU BRANCH `feature/founding-storage-yard-20261105`:** il villaggio nasce con un Piazzale 2×2U entro 7U dal primo pozzo, se un lotto edificabile è disponibile. Il capanno taglialegna versa la quota di produzione trattenuta nelle scorte del castello fino alla capienza dei piazzali; la parte non trattenuta e la quota in eccesso raggiungono il mercato.
+- **UNICO INVENTARIO:** `ConquerEconomy.state().castle` rimane fonte di verità: il magazzino non duplica le merci, il vecchio charter resta idempotente, la persistenza è quella di `State.structures` e `State.economy`.
+- **PRIORITÀ L1:** quando un piazzale è disponibile, un lavoratore L1 viene riservato al Logging Camp anche se sono aperti molti cantieri; le regole esistenti senza piazzale restano invariate.
+- **BILANCIAMENTO INIZIALE:** capienza 600/2400/5400 unità per 2×2, 4×4, 6×6U; costi di ampliamento 20 oro + 10 legname e poi 40 oro + 20 legname, pagati subito. Aree di ampliamento soggette a blocchi e collisioni normali. Nuovi piazzali 2×2U costruibili con 20 oro + 10 legname e normale cantiere L1; quello iniziale è gratuito.
+- **FUORI SCOPE:** carrettieri e trasferimento individuale del materiale, consumo e assegnazione delle room magazzino, redistribuzione tra depositi su distanze diverse.
+
+
+## D-FORESTRY-L1-251105 — Pulizia boschi come job di terraforming (05/11/2026)
+
+- **DECISO, IMPLEMENTATO SU BRANCH `fix/forestry-l1-clearing-cost-20261105` (pre-merge):** «Rimuovi foresta» è un lavoro civile L1 e non un click immediato. Richiede un insediamento fondato, si accoda nella stessa persistenza del paesaggio (`State.relief`), usa lavoratori L1 non impegnati nelle costruzioni e il payroll ordinario. Solo a completamento crea una radura, invalida paesaggio/navigation e attribuisce al signore un raccolto di legname sostanziale, una sola volta. Resa/tempo iniziali: 2,5 legname e 0,7 giornate operaio per U² di copertura forestale.
+- **Bilanciamento:** capanno del taglialegna massimo 5 legname (35 oro invariati). La rimozione manuale non sostituisce la produzione continuativa dei Logging Camp.
+- **Non deciso / fuori scope:** ricrescita forestale e depletion industriale periodica.
+
+
 ## D-ROOM-EXT-01 — Una stanza può cambiare l'esterno del suo edificio (04/11/2026)
 
 - **DECISO (contratto):** una funzione di stanza dichiara il suo elemento esterno in `ROOM_EXTERIOR[fn]` (`src/settlement-room-exterior.js`): `{model, source, mount, breakable?}`. `model` è un modello Blender in `src/assets/*-models.js` (registro `window[source].models[model]`: `parts` con `p/i/c`, `width`, `projection`, `bottom`, `chuteTop`), assi U con +x lungo la faccia (centrato), +y verso l'esterno, +z dal pavimento della stanza.
@@ -12,7 +180,7 @@
   - **`mount:'roof'`:** sull'apice di un tetto a piramide o rotondo, a metà colmo di un tetto a due falde o a padiglione, in cima al tetto Blender di una torre di legno; ruota con la torre (il tetto rotondo resta ad angolo 0). L'ingombro in pianta e l'altezza vengono dal modello.
   - **Prima voce:** `bell`, il campanile della Campana d'allarme. La Colombaia dovrà usare lo stesso montaggio.
   - **Renderer:** le torri di legno disegnano i loro triangoli nella mesh di `settlement-wood3d.js` (il castle 3D e il 2.5D le saltano). Una torre in cutaway tiene il suo tetto, quindi anche l'elemento del tetto.
-- **Prima applicazione, Latrina / Garderobe:** solo al piano 2 di una sezione W1 (non nelle sale W2, non nelle torri). È una scatola di pietra a sbalzo di 0,36 U, larga 0,46 U, su 4 mensole, con lo scarico che macchia il muro fino a terra.
+- **Prima applicazione, Latrina / Garderobe:** solo al piano 2 di una **torre W1 in pietra**, sulla faccia esterna libera che guarda più lontano dal castello (correzione dell'utente del 04/11/2026: mai nelle sezioni costruite, né nelle torri W2–W3 o di legno). Le torri W1 tengono la scala a chiocciola e accettano solo Colombaia, Latrina, Prigione, Tesoro e Armeria. È una scatola di pietra a sbalzo di 0,36 U, larga 0,46 U, su 4 mensole, con lo scarico che macchia il muro fino a terra.
   - **Igiene della guarnigione:** è un bisogno secondario. Il cortile serve 24 soldati, ogni latrina ne serve altri 16 (32 in una stanza grande). L'igiene non scende sotto 40 e cala di 2 al giorno, risale di 5. Sotto 50 si ammala fino al 10% degli arcieri, che lasciano libere le postazioni.
   - **Motivo:** l'utente non vuole che la latrina diventi un sistema obbligatorio; i castelli piccoli non ne risentono.
   - **Prova:** `qa/room-exterior-latrine-regression.cjs`.

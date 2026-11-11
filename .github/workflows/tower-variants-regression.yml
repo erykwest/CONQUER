@@ -1,5 +1,10 @@
 name: Tower bartizans and roof shapes regression
 
+# Abort superseded PR runs of this workflow (never cancel scheduled/main runs).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 on:
   pull_request:
     branches: [main]
@@ -13,7 +18,9 @@ on:
       - 'src/settlement-structure-commands.js'
       - 'qa/bartizan-regression.cjs'
       - 'qa/tower-roof-shape-regression.cjs'
+      - 'qa/tower-inner-roof-regression.cjs'
       - 'qa/dovecote-regression.cjs'
+      - 'qa/falconry-regression.cjs'
       - 'src/settlement-diplomacy.js'
       - 'src/settlement-cutaway-furniture.js'
       - 'src/assets/dovecote-models.js'
@@ -40,10 +47,15 @@ jobs:
         run: node qa/bartizan-regression.cjs
       - name: Square tower roof shapes (pyramid, gable, hip with L/2 ridge)
         run: node qa/tower-roof-shape-regression.cjs
+      - name: Inner roof inside the merlons (BC-251105-05)
+        run: node qa/tower-inner-roof-regression.cjs
       - name: Existing crown and tower weapon regressions
         run: |
           node qa/battlement-parapet-regression.cjs
+          node qa/roof-pitch-regression.cjs
           node qa/subtower-junctions-regression.cjs
           node qa/tower-weapons-regression.cjs
       - name: Dovecote (top room under the pitched roof, pigeon post, roof lantern)
         run: node qa/dovecote-regression.cjs
+      - name: Falconry (top room under the pitched roof, hunting, prestige, mews on the roof)
+        run: node qa/falconry-regression.cjs

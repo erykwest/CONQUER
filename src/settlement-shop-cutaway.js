@@ -139,7 +139,8 @@
           for(const [t0,t1] of cuts){
             const tm=(t0+t1)/2,near=facing||!plan&&da+(db-da)*tm>0,h=near?SILL:R.top,z0=R.ground;
             const p={x:a.x+(b.x-a.x)*t0,y:a.y+(b.y-a.y)*t0},q={x:a.x+(b.x-a.x)*t1,y:a.y+(b.y-a.y)*t1};
-            quad(group(out,near?0:-5e4),[[p.x,p.y,z0],[q.x,q.y,z0],[q.x,q.y,z0+h],[p.x,p.y,z0+h]],STONE[i%2]);
+            const raw=STONE[i%2],hex=typeof masonryMaterial==='function'&&masonryMaterial(R.house)==='brick'?raw:(window.ConquerStoneColor?.shade(raw)||raw);
+            quad(group(out,near?0:-5e4),[[p.x,p.y,z0],[q.x,q.y,z0],[q.x,q.y,z0+h],[p.x,p.y,z0+h]],hex);
           }
         }
       }
@@ -247,7 +248,7 @@
   function build(house){
     const shop=shopOf(house),plan=typeof isPlanView==='function'&&isPlanView();
     const urban=typeof urbanRevision!=='undefined'?urbanRevision:0;
-    const key=[house.id,house.x,house.y,house.angle||0,house.doorSide,shop?.kind,urban,State.view?.rotation||0,plan?1:0,!!CF()].join('|');
+    const key=[house.id,house.x,house.y,house.angle||0,house.doorSide,shop?.kind,urban,State.view?.rotation||0,plan?1:0,State.stonePaletteId,State.visualPalette,!!CF()].join('|');
     const hit=cache.get(house.id);if(hit&&hit.key===key)return hit.res;
     const R=room(house);if(!R)return null;
     const out=[];shell(R,out);

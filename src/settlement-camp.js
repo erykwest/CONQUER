@@ -195,21 +195,38 @@
     const campers=units().filter(u=>u.campState==='camped'&&!u.defeated&&
       ['squad','knight','captain'].includes(u.kind));
     if(!campers.length)return;
-    // Bivouac layout (ConquerEvents3D.bivouac): pavilion, ridge tents and fires per camp;
-    // the old one-tent-per-unit sketch stays as the fallback without the 3D catalog.
+    // Each night camp must show a shelter. A valid 3D catalog alone is not
+    // enough: terrain/obstacle filtering can remove every tent from a camp.
     const E=window.ConquerEvents3D,M=window.ConquerMesh3D;
     let fires=campers.map(u=>({x:u.x+.68,y:u.y-.25,id:u.id}));
-    const sig=campers.map(u=>u.id+'@'+u.x.toFixed(1)+','+u.y.toFixed(1)).join('|');
-    if(E?.bivouac&&M){
-      if(bivouacCache.sig!==sig){
-        const camps=E.bivouac(campers,{blocked:p=>typeof pointBlockedForPeasant==='function'&&pointBlockedForPeasant(p)}).camps;
-        bivouacCache={sig,camps,meshes:E.bivouacMeshes(camps,p=>terrainElevation(p))};
+    let draw3D=false,fallbackCampers=campers;
+    const sig=[State.seed,State.heraldry?.c1,State.heraldry?.c2,State.structures.length,
+      ...campers.map(u=>u.id+'@'+u.x.toFixed(2)+','+u.y.toFixed(2))].join('|');
+    if(E?.bivouac&&E?.bivouacMeshes&&M?.drawMeshes&&M?.gameView){
+      try{
+        if(bivouacCache.sig!==sig){
+          const camps=E.bivouac(campers,{blocked:p=>typeof pointBlockedForPeasant==='function'&&pointBlockedForPeasant(p)}).camps;
+          bivouacCache={sig,camps,meshes:E.bivouacMeshes(camps,p=>terrainElevation(p)).filter(m=>m?.col?.length)};
+        }
+        const sheltered=new Set();
+        for(const camp of bivouacCache.camps){
+          if(camp.items.some(it=>it.m?.startsWith('tent')))
+            for(const id of camp.key.split(','))sheltered.add(id);
+        }
+        draw3D=bivouacCache.meshes.length>0;
+        if(draw3D){
+          fallbackCampers=campers.filter(u=>!sheltered.has(String(u.id)));
+          fires=bivouacCache.camps.flatMap(c=>c.fires);
+        }
+      }catch(error){
+        // Preserve the original canvas tents if a 3D catalog fails at runtime.
+        bivouacCache={sig:null,camps:[],meshes:[]};
+        console.warn('CONQUER_CAMP_BIVOUAC_FALLBACK',error);
       }
-      fires=bivouacCache.camps.flatMap(c=>c.fires);
     }
     withRenderContext(g,()=>{
-      if(E?.bivouac&&M)M.drawMeshes(g,bivouacCache.meshes,M.gameView());
-      else campers.forEach(u=>tent(g,u));
+      if(draw3D)M.drawMeshes(g,bivouacCache.meshes,M.gameView());
+      for(const unit of fallbackCampers)tent(g,unit);
       for(const f of fires){
         const fire={kind:'brazier',id:f.id+':camp-brazier',
           p:{x:f.x,y:f.y},z:.14,groundZ:terrainElevation(f)};

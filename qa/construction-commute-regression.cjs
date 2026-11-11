@@ -33,6 +33,8 @@ function harness({founders=4,houses=0,reachable=true,industry=0}={}){
     State,window,clamp,dist,peasantHash:hash,Math,Number,Object,Array,console,
     document:{getElementById:()=>null},calendarDateFromDay,renderUI:()=>{},
     buildDuration:s=>s.workDays??3,
+    // Commute regression models workers, not material demand.
+    constructionCost:()=>({}),
     houseDoorInfo:h=>({outside:{x:h.x+1,y:h.y}}),
     structureAccessPoint:s=>({x:s.x+1.4,y:s.y+.2}),
     roadNetworkPath:(a,b,sourceId)=>{paths.push({a,b,sourceId});return reachable?[a,b]:null},
