@@ -2,6 +2,8 @@
 
 09/11/2026 — `feature/arte-graphics` (pre-merge): parte grafica di ARTE. Generatore `tools/blender/build_art.py` e registro `ConquerArtModels` con 19 archetipi (quadri e arazzi in due taglie, busto, statua in marmo/pietra/bronzo, santo ligneo in tabernacolo) e catalogo dei metadati; Asset Lab con tre famiglie «Opere d'arte». Ancoraggi a parete e a pavimento calcolati per ogni stanza del cutaway (`artSlots`, `artFits`), senza esporre opere né cambiare le stanze. Nuova `qa/art-regression.cjs`. ART-251105-01 fatto per la parte grafica, ART-251105-02 per gli slot; commissione, inventario e ricollocazione restano aperti. Poi: colori parametrici delle opere (forme fisse, colori a commissione), con slot colore nel catalogo, `src/art-colors.js`, applicazione nel cutaway (`artWorkFaces`) e selettore «Colori della commissione» nel Lab. Nuova decisione D-ART-COLORS-261109; ROADMAP invariata.
 
+
+05/11/2026 — `feature/tower-inner-roof`: BC-251105-05, tetto interno dentro i merli delle torri in pietra T2+ (variante `innerRoof`), nel Builder, nel 2.5D, nel 3D e nel Lab. Piramide: STATUS, BACKLOG, feature-backlog. ROADMAP e DECISIONS invariate: nuova variante estetica, nessun contratto cambiato (le stanze sotto il tetto restano legate al tetto a falde).
 09/11/2026 — CI P2.4 (`perf/ci-p24-specialist-test-ownership-20261109`): rimosse 9 invocazioni test duplicate da Codex Wiki, Main fixes e CAMP, mantenendo owner di regressione in Runtime integrity e settlement-qa (always-on PR). Codex Wiki mantiene Playwright e filtri dei suoi check browser, Main fixes mantiene WebGL/render e UI/Combat, CAMP conserva animali e pattuglie. Aggiunta guardia P2.4 in `qa/ci-p1-regression.cjs`; suite completa P0 e tutte le baseline/test immutate.
 
 
