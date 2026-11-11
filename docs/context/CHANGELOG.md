@@ -3,6 +3,7 @@
 ## 2026-11-05 — Latrina nelle torri W1 (branch `fix/latrine-towers`)
 
 - Correzione dell'utente: la latrina va al piano 2 delle torri W1 in pietra, con lo sbalzo sulla faccia esterna libera; non va più nelle sezioni costruite.
+- Falda dello sbalzo rivista con l'utente (11/11): una lastra unica, il doppio di pendenza (0,24 U) e di sporgenza (12 cm davanti, 8 ai lati). Decisione dell'utente: il renderer 2.5D sarà dismesso (tranne scatter e personaggi), lavoro in un branch a parte; gli asset si verificano in 3D.
 - Revisione: con una stanza assegnata la torre W1 perde la scala a chiocciola; latrina comune a 3 fori, meno sporgente, falda corretta, stanza arredata; sbalzo leggibile nel cutaway. Deroga d'audit motivata per «sagoma-conservata» sullo sbalzo crollato della torre quadrata.
 - Le torri W1 ricevono una stanza per piano, ma con la scala a chiocciola accettano solo Colombaia (ultimo piano), Latrina, Prigione, Tesoro e Armeria.
 - `ROOM_EXTERIOR` monta l'elemento `face` anche sulle torri; le feritoie della faccia gli lasciano il posto. Asset Lab: tre varianti di torre W1 nuove, la variante della sezione con latrina rimossa; baseline aggiornata.

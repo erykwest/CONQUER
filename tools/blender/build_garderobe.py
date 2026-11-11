@@ -41,8 +41,9 @@ HOLES = (-.25, 0, .25)        # drop holes, one per seat
 SLAB0, SLAB1 = -.06, 0.0      # floor slab, flush with the room floor
 WALL_T = .05
 TOP = .56                     # box walls
-ROOF_IN, ROOF_OUT = -.03, PROJ + .05
-ROOF_HI, ROOF_LO, ROOF_T = .74, .62, .04   # underside clear of the wall tops (TOP): no coplanar fight in 2.5D
+ROOF_IN, ROOF_OUT = -.03, PROJ + .12      # eave well past the front (user 05/11/2026: steeper and deeper)
+ROOF_SIDE = .08                            # eave past each side
+ROOF_HI, ROOF_LO, ROOF_T = .86, .62, .04   # underside clear of the wall tops (TOP): no coplanar fight in 2.5D
 CORBELS = (-.36, -.125, .125, .36)   # between the drop holes
 
 
@@ -89,7 +90,7 @@ def garderobe(root):
 
     r = Part(root, 'roof', COLORS)
     # Lean-to roof: one sloped slab (a single convex solid sorts cleanly in 2.5D).
-    slab(r, -h - .03, h + .03, ROOF_IN, ROOF_HI, ROOF_OUT, ROOF_LO, ROOF_T, 'roofSlab', 'roofSlabDark')
+    slab(r, -h - ROOF_SIDE, h + ROOF_SIDE, ROOF_IN, ROOF_HI, ROOF_OUT, ROOF_LO, ROOF_T, 'roofSlab', 'roofSlabDark')
     parts['roof'] = r.finish()
 
     # Unit-height chute: z 0 at the slab underside (chuteTop), -1 at the ground (stretched by the game).
