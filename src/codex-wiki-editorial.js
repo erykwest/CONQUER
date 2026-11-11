@@ -1,7 +1,7 @@
 // Generated from content/codex/*.md. Do not edit; run node tools/export-codex-content.cjs.
 (function(root){root.ConquerWikiEditorial={
   "schemaVersion": 1,
-  "sourceDigest": "76512afd5f20445edc5cdb485e54dddab6c3a3b159fc480e0cdaf5d130a8852b",
+  "sourceDigest": "45eb7490212f3955ab4159e1f04f9722f075673805ca6408dd21a46ebc596cdd",
   "pages": [
     {
       "id": "building:bridge",
@@ -7163,6 +7163,100 @@
       ],
       "text": [
         "Torre · Ballatoio montato appartiene ai miglioramenti delle fortificazioni. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:tower"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:tower.innerRoof.off",
+      "kind": "entry",
+      "title": "Torre · Tetto interno nessuno",
+      "aliases": [
+        "Torre · Tetto interno nessuno"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Torre|Torre]] · Tetto interno nessuno appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: la piazza merlata resta scoperta e libera per armi da tiro o fuoco di segnalazione.",
+          "tokens": [
+            {
+              "text": "Torre",
+              "id": "building:tower"
+            },
+            {
+              "text": " · Tetto interno nessuno appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": la piazza merlata resta scoperta e libera per armi da tiro o fuoco di segnalazione."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Torre · Tetto interno nessuno appartiene ai miglioramenti delle fortificazioni: la piazza merlata resta scoperta e libera per armi da tiro o fuoco di segnalazione."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:tower"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:tower.innerRoof.on",
+      "kind": "entry",
+      "title": "Torre · Tetto interno dentro i merli",
+      "aliases": [
+        "Torre · Tetto interno dentro i merli"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Torre|Torre]] · Tetto interno dentro i merli appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: un tetto a piramide o a cono arretrato dentro i merli, su un cordolo, che lascia libero il cammino di ronda. Solo torri in pietra medie o grandi con merli o caditoie, senza arma né fuoco di segnalazione in cima. È soltanto estetico e non crea una stanza sotto: colombaia, falconiera e campana restano legate al tetto a falde.",
+          "tokens": [
+            {
+              "text": "Torre",
+              "id": "building:tower"
+            },
+            {
+              "text": " · Tetto interno dentro i merli appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": un tetto a piramide o a cono arretrato dentro i merli, su un cordolo, che lascia libero il cammino di ronda. Solo torri in pietra medie o grandi con merli o caditoie, senza arma né fuoco di segnalazione in cima. È soltanto estetico e non crea una stanza sotto: colombaia, falconiera e campana restano legate al tetto a falde."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Torre · Tetto interno dentro i merli appartiene ai miglioramenti delle fortificazioni: un tetto a piramide o a cono arretrato dentro i merli, su un cordolo, che lascia libero il cammino di ronda. Solo torri in pietra medie o grandi con merli o caditoie, senza arma né fuoco di segnalazione in cima. È soltanto estetico e non crea una stanza sotto: colombaia, falconiera e campana restano legate al tetto a falde."
       ],
       "related": [
         "category:upgrade",

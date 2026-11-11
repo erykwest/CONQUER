@@ -4,7 +4,7 @@ const root=path.join(__dirname,'..'),{generate}=require('../tools/export-codex.c
 const sandbox=vm.createContext({});
 for(const file of ['codex-catalog.js','codex-wiki-editorial.js','codex-wiki-content.js'])vm.runInContext(fs.readFileSync(path.join(root,'src',file),'utf8'),sandbox);
 const data=generate(),api=sandbox.ConquerCodex.fromSnapshot(data.catalog),wiki=sandbox.ConquerWikiContent.create(api);
-assert.equal(wiki.pages.size,140+7+8);
+assert.equal(wiki.pages.size,142+7+8);
 for(const p of wiki.pages.values()){
   assert.ok(p.title&&!p.title.includes('undefined'),p.id+' title');
   for(const text of p.text){
@@ -25,4 +25,4 @@ assert.ok(wiki.pages.get('building:mine').text[0].includes('pietra'));
 const generated=fs.readFileSync(path.join(root,'wiki/catalog.json'),'utf8').replace(/\r\n/g,'\n');
 assert.equal(generated,JSON.stringify(data,null,2)+'\n','generated public data must match live definitions');
 assert.deepEqual(JSON.parse(JSON.stringify(api.quote('ship:barca'))),data.catalog.items.find(r=>r.id==='ship:barca').quotes);
-console.log('PASS Wiki: 155 pages, inline parent-keyword links, longest match, boundaries, backlinks and fresh gameplay export');
+console.log('PASS Wiki: 157 pages, inline parent-keyword links, longest match, boundaries, backlinks and fresh gameplay export');
