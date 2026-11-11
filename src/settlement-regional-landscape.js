@@ -69,6 +69,18 @@
     }
     return out;
   }
+  function roundMarshRing(ring){
+    const border=p=>p.x===0||p.y===0||p.x===200||p.y===200;
+    for(let pass=0;pass<2;pass++){
+      const out=[];
+      for(let i=0;i<ring.length;i++){
+        const a=ring[i],b=ring[(i+1)%ring.length];
+        out.push(border(a)?a:{x:a.x*.75+b.x*.25,y:a.y*.75+b.y*.25},border(b)?b:{x:a.x*.25+b.x*.75,y:a.y*.25+b.y*.75});
+      }
+      ring=out.filter((p,i)=>!i||Math.hypot(p.x-out[i-1].x,p.y-out[i-1].y)>1e-6);
+    }
+    return ring;
+  }
   function features(mask,type,prefix){
     const all=rings(mask),outers=all.filter(r=>area(r)>0),holes=all.filter(r=>area(r)<0);
     return outers.map((points,i)=>{
@@ -103,24 +115,26 @@
     woodlandContext=null;
     if(!active())return base;
     const key=State.seed+'-'+signature(),rnd=seedRand((State.seed^signature()^0x18405c)>>>0),coast=coastShape();
-    const forests=base.filter(f=>f.type==='forest'),centralSea=base.filter(f=>f.type==='sea'),centralPonds=base.filter(f=>f.type==='pond');
+    const forests=base.filter(f=>f.type==='forest'),centralSea=base.filter(f=>f.type==='sea'),centralPonds=base.filter(f=>f.type==='pond').map(f=>f.waterBodyKind==='marsh'?{...f,x:50+f.x/2,y:50+f.y/2,rx:f.rx/2,ry:f.ry/2,points:f.points.map(p=>({x:50+p.x/2,y:50+p.y/2}))}:f);
     const lines=base.filter(f=>f.type==='river'||f.type==='stream');
     const mountains=base.filter(f=>f.type==='mountain').map(f=>({...f,id:'regional-center-'+f.id,
       x:50+f.x/2,y:50+f.y/2,rx:f.rx/2,ry:f.ry/2,height:f.height/2,
       unclippedPoints:(f.unclippedPoints||f.points).map(p=>({x:50+p.x/2,y:50+p.y/2})),points:f.points.map(p=>({x:50+p.x/2,y:50+p.y/2}))}));
-    const n=100,seaMask=new Uint8Array(n*n),pondMask=new Uint8Array(n*n);
+    const n=100,seaMask=new Uint8Array(n*n),pondMask=new Uint8Array(n*n),marshMask=new Uint8Array(n*n);
     const samples=[];
     for(let y=0;y<n;y++)for(let x=0;x<n;x++){
       const p={x:(x+.5)*2,y:(y+.5)*2},w=field(p),c=w['@center']||0;
       const sea=(w.sea||0)+c*(centralSea.some(f=>environmentContains(f,p))?1:0);
-      const pond=(w.lake||0)+c*(centralPonds.some(f=>environmentContains(f,p))?1:0)+(w.swamp||0)*(noise(p.x/12,p.y/12,State.seed+51)>.72?1:0);
+      const fresh=(w.lake||0)+c*(centralPonds.some(f=>f.waterBodyKind!=='marsh'&&environmentContains(f,p))?1:0);
+      const marsh=c*(centralPonds.some(f=>f.waterBodyKind==='marsh'&&environmentContains(f,p))?1:0)+(w.swamp||0)*(noise(p.x/12,p.y/12,State.seed+51)>.72?1:0);
+      const pond=fresh+marsh;
       const threshold=sea>=pond?coastThreshold(p,coast):.5;
       const wet=sea+pond>threshold+(noise(p.x/18,p.y/18,State.seed+23)-.5)*.08;
-      if(wet)(sea>=pond?seaMask:pondMask)[y*n+x]=1;
+      if(wet)(sea>=pond?seaMask:marsh>fresh?marshMask:pondMask)[y*n+x]=1;
       samples.push({p,w,c,wet});
     }
-    const waters=[...features(seaMask,'sea','regional-sea-'+key),...features(pondMask,'pond','regional-lake-'+key)];
-    for(const pond of waters.filter(f=>f.type==='pond'))pond.waterBodyKind=samples.some(s=>((s.w.lake||0)>.5||State.biome==='lake'&&s.c>.5)&&environmentContains(pond,s.p))?'lake':'pond';
+    const waters=[...features(seaMask,'sea','regional-sea-'+key),...features(pondMask,'pond','regional-lake-'+key),...features(marshMask,'pond','regional-marsh-'+key).map(f=>{styleMarshWater(f);f.points=roundMarshRing(f.points);f.holes=f.holes.map(roundMarshRing);return f})];
+    for(const pond of waters.filter(f=>f.type==='pond'&&f.waterBodyKind!=='marsh'))pond.waterBodyKind=samples.some(s=>((s.w.lake||0)>.5||State.biome==='lake'&&s.c>.5)&&environmentContains(pond,s.p))?'lake':'pond';
     // Publish the longest actual shore for existing coast tools; never join separate shores.
     for(const sea of waters.filter(f=>f.type==='sea')){
       const runs=[];

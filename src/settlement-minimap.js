@@ -84,7 +84,7 @@ window.ConquerMinimap=(()=>{
         const width=Math.max(1.3,(Number(f.width)||1)*drawSize/WORLD);
         for(let i=1;i<points.length;i++)segment(points[i-1],points[i],'#6495a7',width);
       }else if(f.type==='sea'||f.type==='pond'){
-        fillPoly(f.points?.length>2?f.points:oval(f),'#476b77','#8eafb2',f.holes||[]);
+        fillPoly(f.points?.length>2?f.points:oval(f),f.waterBodyKind==='marsh'?f.fill:'#476b77',f.waterBodyKind==='marsh'?f.edge:'#8eafb2',f.holes||[]);
       }else if(f.type==='forest'){
         fillPoly(f.points?.length>2?f.points:oval(f),State.season==='winter'?'#8b9c89':'#355e39',null,f.holes||[]);
       }else if(f.type==='mountain'){

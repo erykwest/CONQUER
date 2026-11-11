@@ -209,9 +209,9 @@
     // asset, weight, offset from the water's edge (U, negative = in the water)
     ['reedBed',4,-.15],['reedClump',4,.05],['riverStones',2,-.1],['bankBush',3,.75],['bushSmall',3,.5],['riverBoulder',1,.35]
   ];
-  function bankFree(p,r,obs,placed){
+  function bankFree(p,r,obs,placed,ownWater=null){
     if(p.x<EDGE+r||p.y<EDGE+r||p.x>WORLD-EDGE-r||p.y>WORLD-EDGE-r)return false;
-    for(const f of State.environment||[])if(['sea','pond','mountain'].includes(f.type)&&environmentContains(f,p,r))return false;
+    for(const f of State.environment||[])if(f!==ownWater&&['sea','pond','mountain'].includes(f.type)&&environmentContains(f,p,r))return false;
     if(terrainSlopeKind(p)==='steep')return false;
     for(const rd of obs.roads)if(pointSegmentDistance(p,rd.a,rd.b)<rd.half+r)return false;
     for(const pts of obs.polys)if(pointInPolygon(p,pts)||distToPoly(p,pts)<r+GAP)return false;
@@ -238,6 +238,27 @@
       }
     }
   }
+  function marshProps(out,obs,placed){
+    const choices=['reedBed','reedClump','bankBush'].filter(a=>M().assets[a]);if(!choices.length)return;
+    for(const f of State.environment||[]){
+      if(f.waterBodyKind!=='marsh')continue;
+      const rnd=rngFor('marsh:'+f.id);
+      for(const ring of [f.points,...(f.holes||[])])for(let i=0;i<ring.length;i++){
+        const a=ring[i],b=ring[(i+1)%ring.length],L=Math.hypot(b.x-a.x,b.y-a.y);if(!L)continue;
+        if(a.x===b.x&&(a.x===0||a.x===WORLD)||a.y===b.y&&(a.y===0||a.y===WORLD))continue;
+        for(let d=1+rnd()*2;d<L;d+=3+rnd()*2){
+          if(out.length>=MAX_RIVER)return;
+          const p={x:a.x+(b.x-a.x)*d/L,y:a.y+(b.y-a.y)*d/L};
+          let nx=-(b.y-a.y)/L,ny=(b.x-a.x)/L;
+          if(environmentContains(f,{x:p.x+nx*.6,y:p.y+ny*.6})){nx=-nx;ny=-ny}
+          p.x+=nx*.45;p.y+=ny*.45;
+          const asset=choices[Math.floor(rnd()*choices.length)],s=scaleOf(asset),rad=M().assets[asset].r*s*.8;
+          if(!bankFree(p,rad,obs,placed.concat(out),f))continue;
+          out.push({asset,x:p.x,y:p.y,r:rad,s,heading:rnd()*Math.PI*2,ctx:'marshbank',owner:f.id});
+        }
+      }
+    }
+  }
   function layout(){
     if(!M()||!Array.isArray(State.structures))return[];
     // Civic lot props (churchyard, inn tables) are placed first and kept clear of.
@@ -257,6 +278,7 @@
     houseProps(out,obs,fields);
     fieldProps(out,obs,fields);
     const props=out.slice(pre.length,pre.length+MAX_PROPS),bank=[];
+    marshProps(bank,obs,out);
     riverProps(bank,obs,out);
     return props.concat(bank);
   }

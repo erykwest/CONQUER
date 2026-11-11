@@ -1291,6 +1291,9 @@ function reliefStats(){
 // 200U CONQUER world. Hills become terraced relief; forests keep the organic outlines.
 // COFFEE BATTLES "rough" patches are not generated: CONQUER retired the rough ellipses.
 const BIOME_SCALE=2.2,BIOME_ZONE_INSET=2*BIOME_SCALE;
+// Acquitrini are standing, muddy water; keep pond collision and exclude lake outlets.
+const MARSH_WATER=Object.freeze({fill:'#6b6a3d',edge:'#898052',bank:'#565238',algae:'#8b934e'});
+function styleMarshWater(f){f.waterBodyKind='marsh';f.fill=MARSH_WATER.fill;f.edge=MARSH_WATER.edge;return f}
 const BIOME_RECIPES=Object.freeze({
   // TEST (default): the settings used while developing — procedural terraced hills up to 20% of
   // the map and many small woods up to 12% coverage.
@@ -1734,6 +1737,7 @@ function addBiomePond(env,rnd){
     // makePond: rx 4-5, ry 2.5-3.3, centre margin 4.
     const p=biomeCenter(rnd,4),pond=makeEnvBlob(rnd,'pond',p.x,p.y,biomeRand(rnd,4,5)*BIOME_SCALE,biomeRand(rnd,2.5,3.3)*BIOME_SCALE,'#3f7f8a','#8ab9bd',20,.20);
     if(!biomeTownClear(pond.points)||!biomeFeatureClear(pond.points,others,1))continue;
+    if(State.biome==='swamp')styleMarshWater(pond);
     env.push(pond);return pond;
   }
   return null;

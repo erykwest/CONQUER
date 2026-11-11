@@ -667,14 +667,15 @@ function ellipseWorldPoints(f,n=28){
 }
 // Draw all water outlines before any water fill: shared interiors are covered by the union.
 function lakeShoreBands(f){
-  if(f.type!=='pond'||f.waterBodyKind!=='lake'&&State.biome!=='lake')return [];
+  if(f.type!=='pond'||!['lake','marsh'].includes(f.waterBodyKind)&&State.biome!=='lake')return [];
+  const marsh=f.waterBodyKind==='marsh',landWidth=marsh?1.1:2.8,wetWidth=marsh?.35:.65;
   return [f.points,...(f.holes||[])].filter(r=>r?.length>=3).flatMap(ring=>{
     const land=[],wet=[];
     for(let i=0;i<ring.length;i++){
       const a=ring[(i+ring.length-1)%ring.length],b=ring[(i+1)%ring.length],p=ring[i],L=Math.hypot(b.x-a.x,b.y-a.y)||1;
       let nx=-(b.y-a.y)/L,ny=(b.x-a.x)/L;
       if(!environmentContains(f,{x:p.x+nx*.8,y:p.y+ny*.8})){nx=-nx;ny=-ny;}
-      land.push({x:p.x-nx*2.8,y:p.y-ny*2.8});wet.push({x:p.x+nx*.65,y:p.y+ny*.65});
+      land.push({x:p.x-nx*landWidth,y:p.y-ny*landWidth});wet.push({x:p.x+nx*wetWidth,y:p.y+ny*wetWidth});
     }
     const bands=[];
     for(let i=0;i<ring.length;i++){
@@ -688,11 +689,21 @@ function lakeShoreBands(f){
 function drawWaterLayer(features){
   if(!features.length)return;
   ctx.save();
-  for(const f of features)for(const band of lakeShoreBands(f))pathPolygon(projectPath(band),'#b9ac82',null,0);
+  for(const f of features)for(const band of lakeShoreBands(f))pathPolygon(projectPath(band),f.waterBodyKind==='marsh'?MARSH_WATER.bank:'#b9ac82',null,0);
   if(features.some(f=>f.type==='sea'&&f.coastline))window.ConquerCoast?.drawGround(projectPath,(pts,c)=>pathPolygon(pts,c,null,0));
   const body=(f,fill)=>{
     ctx.save();for(const hole of f.holes||[]){const ring=projectPath(hole);ctx.beginPath();ctx.rect(-1e5,-1e5,2e5,2e5);ring.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.clip('evenodd')}
-    pathPolygon(projectPath(f.points),fill?f.fill:null,fill?null:f.edge,1.2);ctx.restore();
+    pathPolygon(projectPath(f.points),fill?f.fill:null,fill?null:f.edge,1.2);
+    if(fill&&f.waterBodyKind==='marsh'){
+      const ring=projectPath(f.points);ctx.beginPath();ring.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.clip();
+      const b=environmentPolygonBounds(f.points),rnd=seedRand((State.seed^biomeHash(f.id+':algae'))>>>0);ctx.globalAlpha=.32;
+      for(let y=b.minY+1;y<b.maxY;y+=4)for(let x=b.minX+1;x<b.maxX;x+=4){
+        const c={x:x+(rnd()-.5)*3,y:y+(rnd()-.5)*3};if(rnd()>.42||!environmentContains(f,c))continue;
+        const rx=.6+rnd()*1.1,ry=.4+rnd()*.7,patch=Array.from({length:9},(_,i)=>({x:c.x+Math.cos(i*Math.PI*2/9)*rx,y:c.y+Math.sin(i*Math.PI*2/9)*ry}));
+        pathPolygon(projectPath(patch),MARSH_WATER.algae,null,0);
+      }
+    }
+    ctx.restore();
   };
   const course=(f,fill)=>{
     const pts=f.points.map(p=>w2s(p));if(!pts.length)return;

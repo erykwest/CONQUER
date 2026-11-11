@@ -1,7 +1,7 @@
 {
  "version": 1,
- "generatedAt": "2026-11-11T16:48:49.002700+00:00",
- "note": "Reviewed Territorio: 16 unchanged renders, zero failures, five schematic warnings; downstream 30 degree tributaries reviewed in five runtime scenes on 2026-11-11. Regenerate with: node qa/asset-audit.mjs --update-baseline",
+ "generatedAt": "2026-11-11T17:05:41.796898+00:00",
+ "note": "Reviewed Territorio: 16 unchanged renders, zero failures, five schematic warnings; marsh water, muddy banks and reused reeds reviewed in five runtime scenes on 2026-11-11. Regenerate with: node qa/asset-audit.mjs --update-baseline",
  "waivers": {
   "castle:pietra-quadrata-piccola-l2-latrina|damage-elemento-esterno-crollato|sagoma-conservata": "Falso positivo: la torre resta integra, le macerie dello sbalzo a terra allargano l'inquadratura e la torre risulta più piccola (rivisto nel foglio il 05/11/2026)."
  },

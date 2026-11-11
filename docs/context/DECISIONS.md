@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## REG-MARSH — Acquitrini e mulino ad acqua (11/11/2026)
+
+La Palude contiene acquitrini: specchi di acqua stagnante marrone-verde, con sponde fangose, canneti e vegetazione galleggiante. Sono elementi naturali, non un nuovo bioma; implementati come pond con waterBodyKind=marsh, quindi non edificabili. Restano distinti dai laghi e dagli stagni ordinari; i corsi non vengono forzati a sfociare in un acquitrino. Il mulino ad acqua si orienta e si valida esclusivamente sulle rive di fiumi e torrenti: mare, laghi, stagni e acquitrini non sono sorgenti ammesse, e l impronta deve restare fuori da tutte queste acque. Quantita palustri ancora quelle attuali, senza nuovo bilanciamento percentuale. Nessuna rigenerazione dei salvataggi esistenti.
+
 ## REG-FLOW-30 — Verso del primario e confluenze (11/11/2026)
 
 Sostituisce il precedente angolo retto: ingresso di default a 30 gradi rispetto alla tangente del primario nel verso di valle, senza immissioni controcorrente. Il verso dei punti del primario rappresenta monte-verso-valle. Priorita: foce locale, vettore del tratto regionale ricavato dalla rete verso mare/lago, distanza dalle sorgenti quando non raggiunge acqua, fallback deterministico dal seed. Il vettore regionale orienta il percorso locale esistente, senza cambiarne il piazzamento. Curve affluenti raccordate con continuita tangenziale a un terminale di 9U. Restano primario unico (precedenza al fiume), sbocchi distanziati, lati alternati e vincoli contro incroci e parallelismi. Nessuna rigenerazione dei salvataggi esistenti.
