@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-05 — Tetto interno delle torri, BC-251105-05 (branch `feature/tower-inner-roof`, NON MAIN)
+
+- Nuova variante torre `innerRoof` (`off`/`on`, `STRUCTURE_VARIANTS.tower`): tetto a piramide (quadrate, a D) o cono (rotonde) arretrato dentro i merli, su un cordolo di pietra di 0,14U; tra tetto e merli resta il cammino di ronda (~0,22U). Regola `towerInnerRoofAllowed` (core): pietra, non semitorre, T2+, sommità a merli o caditoie, nessuna arma sulla piazza (arma e tetto interno si escludono). Geometria `towerInnerRoofGeometry` (population); 2.5D come pezzo ordinato tra i merli (`towerInnerRoofPiece`/`drawTowerInnerRoof`); 3D in `addTower` (castle3d → World 3D, Lab). Altezza visiva, sagoma di occlusione, ombra e chiavi di cache la includono.
+- Builder: pulsanti «Tetto interno» nel pannello torre e nel descrittore (`setTowerInnerRoof`), etichette e tooltip in italiano.
+- Compatibilità: non è un tetto a falde, quindi niente stanza sotto: Colombaia, Falconiera e Campana (`ROOM_EXTERIOR` mount 'roof') restano legate a `roofStyle:'pitched'`. Ballatoio e garitte convivono. Cutaway come il tetto a falde (lo stesso codice di disegno).
+- Test: `qa/tower-inner-roof-regression.cjs` (5 controlli) passa, aggiunto al workflow `tower-variants-regression`; passano anche bartizan, roof-shape, battlement-parapet, subtower-junctions, tower-weapons, dovecote, oriented-towers, cutaway-floors.
+- Lab: 6 righe nuove nella galleria fortificazioni (`settlement-siege-preview.js`). Audit Fortificazioni completo in locale (dopo rebase su main): 1058 render, 0 falliti; le 6 voci nuove (58 render tra 3D, gioco, cantiere, danni e cutaway) rivedute nel foglio provini e aggiunte alla baseline. I 133 «cambiati» toccano anche mura e porte non modificate: deriva preesistente della baseline di main, non aggiornata qui. Pendenza del tetto interno almeno ~58° (`TOWER_INNER_ROOF_MIN_TAN`) per staccarlo dai merli. Rogo di segnalazione e tetto interno si escludono, come l'arma in cima.
 ## 2026-11-09 — CI P2.4: ownership delle regressioni specialistici (PR in preparazione)
 
 - **IMPLEMENTAZIONE SU BRANCH:** sei controlli Codex deterministici restano solo in Runtime integrity (always-on PR); routing/spawn + main-road restano sempre in settlement-qa, tolti da CAMP/Main fixes (3 invocazioni). Totale nove invocazioni ridondanti eliminate senza toccare i test stessi.
