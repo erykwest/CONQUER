@@ -13,8 +13,10 @@
   function modelKey(s){
     if(!s)return null;
     if(isWoodGate(s))return'woodGate';
+    if(isLonghouse(s))return isWideBuilt(s)?'longhouse_w2':'longhouse_w1';
     if(!isWoodTower(s))return null;
     if(woodTowerStyle(s)==='watchtower')return'watchtower';
+    if(woodTowerStyle(s)==='frameTower')return DATA()?.models?.frameTower?'frameTower':null;
     return woodTowerRoof(s)==='open'?'palisadeTower_open':'palisadeTower_roofed';
   }
   // Structures this module draws in the world renderer (sites keep their ghost / assembly).
@@ -162,6 +164,29 @@
     return out;
   }
   const cutaway=s=>typeof structureCutaway==='function'&&structureCutaway(s);
+  // Longhouse laid along a->b: one 1 U bay model per U (stretched to the exact length), the door
+  // gable at a and the closed gable at b. In cutaway the roof goes (the far slope would cover the
+  // back of the room from above, as the stone section's cutaway has no roof), and so do the wall
+  // and gable facing the camera; the plank floor shows, as the palisade tower's open sides.
+  function longhouse(s){
+    const key=modelKey(s),mesh={pos:[],col:[]};
+    const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,angle=Math.atan2(dy,dx);
+    const ground=Math.min(terrainElevation(s.a),terrainElevation(s.b)),n=Math.max(1,Math.round(L)),sx=L/n;
+    const ux=dx/L,uy=dy/L,c={x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2};
+    let skip=new Set(['floor']);
+    if(cutaway(s)&&!(typeof isPlanView==='function'&&isPlanView())){
+      const d0=viewDepthPoint(c),near=p=>viewDepthPoint(p)>d0+1e-6;
+      skip=new Set();
+      const yn=near({x:c.x+uy,y:c.y-ux});
+      skip.add(yn?'wall_yn':'wall_yp').add('roof_yn').add('roof_yp').add('ridge');
+      skip.add(near(s.a)?'end_a':'end_b');
+    }
+    const bay=['wall_yn','wall_yp','roof_yn','roof_yp','ridge','floor'].filter(n=>!skip.has(n));
+    for(let i=0;i<n;i++)addModel(mesh,key,{x:s.a.x+ux*i*sx,y:s.a.y+uy*i*sx,angle,sx},ground,bay);
+    if(!skip.has('end_a'))addModel(mesh,key,{x:s.a.x,y:s.a.y,angle},ground,['end_a']);
+    if(!skip.has('end_b'))addModel(mesh,key,{x:s.b.x,y:s.b.y,angle},ground,['end_b']);
+    return mesh;
+  }
   function pointModel(s){
     const key=modelKey(s),ground=groundOf(s),mesh={pos:[],col:[]};
     if(key==='woodGate'){
@@ -173,7 +198,11 @@
       // Room exterior elements (settlement-room-exterior.js): the alarm-bell belfry takes the roof
       // top and its finial replaces the flag pole.
       const belfry=window.ConquerRoomExterior?.triangles(s)||[];
-      const only=names.filter(n=>(open?!open.has(n):!INTERIOR.includes(n))&&!(belfry.length&&n==='flag'));
+      // Frame tower front: ground door, or (Mastio raised entrance) the P1 doorway in place of
+      // the front's middle post and with no door below.
+      const raised=window.ConquerKeepEntrance?.sill?.(s)!=null;
+      const drop=new Set(raised?['door','frontMid']:['doorRaised']);
+      const only=names.filter(n=>(open?!open.has(n):!INTERIOR.includes(n))&&!(belfry.length&&n==='flag')&&!drop.has(n));
       addModel(mesh,key,{x:s.x,y:s.y,angle:s.angle||0},ground,only);
       for(const t of belfry){for(const q of t.pts)mesh.pos.push(q.p.x,q.p.y,ground+q.z);mesh.col.push(t.hex)}
     }
@@ -184,10 +213,11 @@
   function geometry(s){
     const sig=[s.type,s.x,s.y,s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.angle||0,s.width,s.tier,s.woodStyle,s.woodRoof,s.roofStyle,s.bell,s.w,s.h,s.size,
       s.aSnap,s.bSnap,s.flip?1:0,s.groundZ,State.season,State.relief?.seed,JSON.stringify(State.relief?.terraforming||[]).length,
-      cutaway(s)?'cut'+[...openSides(s)].join(','):'',Object.values(heraldry()).join('')].join('|');
+      cutaway(s)?'cut'+(isLonghouse(s)?State.view?.rotation:[...openSides(s)].join(',')):'',s.span,Object.values(heraldry()).join(''),window.ConquerKeepEntrance?.sill?.(s)??''].join('|');
     const hit=s.id&&cache.get(s.id);if(hit&&hit.sig===sig)return hit.geo;
     let geo;
     if(s.type==='palisade')geo=palisade(s);
+    else if(isLonghouse(s))geo={mesh:longhouse(s),faces:[]};
     else geo={mesh:pointModel(s),faces:[],foundation:foundation(s)};
     // Pre-shaded faces as one flat mesh for the 2.5D painter.
     const flat={pos:[],col:[],flat:true};

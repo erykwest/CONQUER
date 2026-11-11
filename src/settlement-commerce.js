@@ -26,7 +26,10 @@
   const VEHICLES=Object.freeze({
     cart:Object.freeze({capacity:40,goldPerDay:.10,horses:1,passengers:0,use:'local-small-cargo'}),
     wagon:Object.freeze({capacity:100,goldPerDay:.20,horses:2,passengers:0,use:'freight'}),
-    coach:Object.freeze({capacity:0,goldPerDay:.30,horses:2,passengers:2,use:'noble-passengers'})
+    coach:Object.freeze({capacity:0,goldPerDay:.30,horses:2,passengers:2,use:'noble-passengers'}),
+    // Merchant ships (settlement-sea-convoys.js): a small ship holds three wagons, a large one nine.
+    shipSmall:Object.freeze({capacity:300,goldPerDay:.45,horses:0,passengers:0,use:'sea-freight',ship:true,wagonsEach:3,model:'caravella'}),
+    shipLarge:Object.freeze({capacity:900,goldPerDay:1.1,horses:0,passengers:0,use:'sea-freight',ship:true,wagonsEach:9,model:'cocca'})
   });
   const CARGO_WEIGHTS=Object.freeze({
     food:2,wood:5,stone:10,clay:10,metal:8,equipment:3,luxury:1

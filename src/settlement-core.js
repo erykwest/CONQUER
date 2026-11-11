@@ -28,9 +28,9 @@ function invalidateSettlementScene(includeCastle=true){
 }
 function structureSceneLayers(s){
   if(!s)return['ground','shadow','base','castleBody','castleFront'];
-  if(['road','moat','bridge'].includes(s.type))return['ground','base'];
+  if(['road','moat','bridge','ramp','stairway'].includes(s.type))return['ground','base'];
   if(s.auto&&s.type==='field')return['ground'];
-  if(s.type==='house')return['ground','shadow','base'];
+  if(s.type==='house'||s.type==='storageYard')return['ground','shadow','base'];
   if(isCivicAnnex(s))return['ground','shadow','base'];
   if(window.ConquerIndustries?.is(s))return['ground','shadow','base'];
   const shadow=['house','tower','gate','wall','palisade','built','market','tavern','church','townhall','guild'].includes(s.type)?['shadow']:[];
@@ -185,7 +185,7 @@ const CLAY_VISUAL_SWATCHES=Object.freeze({
 });
 let structureVisualMaterial=null;
 function masonryMaterial(s){
-  if(!s||s.material==='wood'||s.type==='palisade'||s.type==='road'||s.type==='moat'||(s.type==='bridge'&&s.variant!=='stone'))return null;
+  if(!s||s.material==='wood'||s.type==='palisade'||s.type==='storageYard'||s.type==='road'||s.type==='moat'||(s.type==='bridge'&&s.variant!=='stone'))return null;
   return s.masonryMaterial==='brick'?'brick':'stone';
 }
 function withStructureVisualMaterial(s,paint){
@@ -215,6 +215,8 @@ function structureAngleFromStep(step){
 }
 function snapStructureAngle(angle){return structureAngleFromStep(structureRotationStep(angle))}
 function structureUsesDiscreteAngle(s){
+  // A tower against a stone quay keeps the quay's exact angle (settlement-quay.js).
+  if(s?.type==='tower'&&s.quaySnap)return false;
   return !!s&&['tower','gate','house','market','tavern','church','training','plaza','townhall','guild'].includes(s.type);
 }
 function applyStructureRotation(s,angle=s?.angle||0){
@@ -230,14 +232,27 @@ function normalizeStructureRotation(s){
 }
 const TYPES={wall:{min:1,max:8},palisade:{min:1,max:8},built:{width:1,min:1,max:4},builtWide:{width:2,min:2,max:6},road:{width:.62,min:1,max:160}};
 const WALL_TIERS=Object.freeze({1:.2,2:.5,3:1});
-const SQUARE_TOWER_TIERS=Object.freeze({1:1,2:1.5,3:2});
+// W4 (3U) is the Mastio only: square stone, one per settlement, several rooms per floor.
+const SQUARE_TOWER_TIERS=Object.freeze({1:1,2:1.5,3:2,4:3});
 const ROUND_TOWER_TIERS=Object.freeze({1:.5,2:.75,3:1});
+const KEEP_W4_TIER=4;
+// Floor plans of the W4 keep: room rectangles as fractions of the floor [u0,v0,u1,v1] (u along
+// the tower angle, v across). Halves and the hall are LARGE rooms, quarters NORMAL.
+const KEEP_FLOOR_PLANS=Object.freeze({
+  hall:Object.freeze([[0,0,1,1]]),
+  halves:Object.freeze([[0,0,.5,1],[.5,0,1,1]]),
+  three:Object.freeze([[0,0,.5,1],[.5,0,1,.5],[.5,.5,1,1]]),
+  quad:Object.freeze([[0,0,.5,.5],[.5,0,1,.5],[0,.5,.5,1],[.5,.5,1,1]])
+});
+const KEEP_FLOOR_PLAN_DEFAULTS=Object.freeze(['three','quad','hall']);
 const COSTS={
-  tower:[{gold:45,stone:55,wood:12},{gold:75,stone:95,wood:20},{gold:120,stone:155,wood:32}],
+  tower:[{gold:45,stone:55,wood:12},{gold:75,stone:95,wood:20},{gold:120,stone:155,wood:32},{gold:240,stone:330,wood:75}],
   woodTower:[{gold:18,wood:42},{gold:32,wood:78}],
+  frameTower:{gold:55,wood:130},
   wallPerU:{gold:6,stone:18,wood:2},
   palisadePerU:{gold:3,wood:12},
   builtPerU:{gold:12,stone:16,wood:18},
+  longhousePerU:{gold:6,wood:28},
   gate:{gold:95,stone:90,wood:38,metal:10},
   woodGate:{gold:35,wood:90,metal:4},
   well:{gold:50,stone:35,wood:10},
@@ -252,7 +267,7 @@ const COSTS={
 // Stone towers of the same tier, against the square one: curved masonry costs more, the open-
 // backed semitower half.
 const TOWER_SHAPE_COST=Object.freeze({square:1,round:1.5,dee:1.25,half:.5});
-const BUILD_DAYS={tower:[4,7,11],woodTower:[2.5,4],gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,townhall:8,guild:6,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,road:1,house:2.2,field:1.5};
+const BUILD_DAYS={tower:[4,7,11,18],woodTower:[2.5,4],frameTower:6.5,gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,townhall:8,guild:6,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,longhouseBase:1.2,longhousePerU:.8,road:1,house:2.2,field:1.5};
 const GROWTH_INTERVAL_DAYS=2.5;
 // One simulated 24-hour day lasts 48 real seconds at 1×.
 // All time controls multiply this common rate (3× = 16 s/day; 10× = 4.8 s/day; 100× = 0.48 s/day).
@@ -277,12 +292,30 @@ const BATTLEMENT_SPACING=.62;
 // Feudal crenellation style: one choice for every stone merlon of the settlement (towers, gates,
 // walls), stored in State.policies so new construction follows it. Restyling existing merlons is
 // paid per merlon at the target style's rate; flat is the default and the cheapest.
-const CRENEL_STYLES=Object.freeze(['flat','gabled','swallowtail']);
+// Curtain-wall styles (towers and gates keep flat merlons):
+// 'double' = double merlon, each merlon twice as long along the run (pattern 11011011, not 1010101);
+// 'tworow' = a second, inner row of flat merlons on the wall walk. Quotes count merlons as built.
+const CRENEL_STYLES=Object.freeze(['flat','gabled','swallowtail','double','tworow']);
 const CRENEL_STYLE_COST=Object.freeze({
   flat:Object.freeze({stone:1}),
+  double:Object.freeze({gold:1,stone:2}),
+  tworow:Object.freeze({gold:1,stone:1}),
   gabled:Object.freeze({gold:1,stone:2}),
   swallowtail:Object.freeze({gold:2,stone:3})
 });
+// Feudal roof pitch: one slope for every pitched tower and gate roof (degrees), stored in
+// State.policies like the crenel style. Re-roofing is paid per roof at the target pitch's rate;
+// steeper roofs take more timber. 45° is the default, the closest to the historical ~40° roofs.
+// 75° is the steep spire (rise ≈ 3.7 × half span): the dearest, with stone for the taller gables.
+const ROOF_PITCHES=Object.freeze([30,45,60,75]);
+const ROOF_PITCH_COST=Object.freeze({
+  30:Object.freeze({wood:3}),
+  45:Object.freeze({gold:1,wood:4}),
+  60:Object.freeze({gold:2,wood:6}),
+  75:Object.freeze({gold:3,stone:1,wood:9})
+});
+function roofPitch(){const v=Number(State.policies?.roofPitch);return ROOF_PITCHES.includes(v)?v:45}
+function roofPitchTan(){return Math.tan(roofPitch()*Math.PI/180)}
 function crenelStyle(){const v=State.policies?.crenelStyle;return CRENEL_STYLES.includes(v)?v:'flat'}
 const CHIMNEY_SPACING=1.5;
 const WELL_PLAZA_SIZE=3;
@@ -360,6 +393,8 @@ const BIOMES=Object.freeze({
   sea:{label:'Mare',field:'#2a2818'}
 });
 const FUNCTION_CATALOG=['guard','barracks','armory','storage','granary','kitchen','stables','nobleRoom','workshop','chapel','commonHall','throneHall','treasury','prison','latrine','infirmary','dovecote','cistern'];
+// Ground floor under the arches of a W1 portico: stables, armourers' workshop, carts/stores, guard post.
+const PORTICO_FUNCTIONS=Object.freeze(['stables','workshop','storage','guard']);
 const FUNCTION_LABELS={guard:'Guard post',barracks:'Barracks',armory:'Armory',storage:'Materials store',granary:'Granary',kitchen:'Kitchen',stables:'Stables',quarters:'Quarters',nobleRoom:'Noble chambers',workshop:'Armament workshop',chapel:'Chapel',commonHall:'Common hall',throneHall:'Throne hall',treasury:'Treasury',prison:'Prison',latrine:'Latrine',infirmary:'Infirmary',dovecote:'Dovecote',cistern:'Cistern',council:'Council chamber',tribunal:'Tribunal'};
 // Town hall: one room per floor, as many as the civic level (L1 = the ground floor only),
 // shown one floor at a time in the floor-by-floor cutaway.
@@ -418,7 +453,7 @@ function hoardingMounted(s){return s?.type==='gate'?gateHoardingMounted(s):tower
 function towerTopWeapon(s){const w=s?.type==='tower'?structureVariant(s,'topWeapon'):'none';return towerTopWeaponAllowed(s)&&w?w:'none'}
 // Bartizans: four corbelled corner turrets on a large (T3) square or round stone tower, crowned
 // with merlons or with a pitched (conical) roof (geometry: towerBartizans in settlement-castle-structures.js).
-function towerBartizanAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===3&&['square','round'].includes(s.shape||'square')&&towerRoofStyle(s)!=='broken'}
+function towerBartizanAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)>=3&&['square','round'].includes(s.shape||'square')&&towerRoofStyle(s)!=='broken'}
 function towerBartizan(s){const b=s?.type==='tower'?structureVariant(s,'bartizan'):'none';return towerBartizanAllowed(s)&&b?b:'none'}
 // Dovecote (Colombaia): the room under the pitched roof of a medium or large (T2/T3) stone tower,
 // on its top floor at L2+. It takes the one room under the roof, so the falconry and the alarm bell
@@ -430,10 +465,15 @@ function towerBaseStyle(s){
   return structureVariant(s,'baseStyle')||'standard';
 }
 function isWoodTower(s){return !!s&&s.type==='tower'&&s.material==='wood'}
-function woodTowerStyle(s){return isWoodTower(s)?(s.woodStyle==='watchtower'?'watchtower':'palisadeTower'):undefined}
+// Timber tower styles: watchtower (1 U, H1), palisade tower (1.5 U, H1) and the two-storey
+// frame tower (1.5 U, H2, BC-251105-06: braced post-and-beam frame, always roofed).
+const WOOD_TOWER_STYLES=Object.freeze(['watchtower','palisadeTower','frameTower']);
+function woodTowerStyle(s){return isWoodTower(s)?(WOOD_TOWER_STYLES.includes(s.woodStyle)?s.woodStyle:'palisadeTower'):undefined}
+function woodTowerSize(style){return style==='watchtower'?1:1.5}
+function woodTowerLevel(style){return style==='frameTower'?2:1}
 function woodTowerRoof(s){
   if(!isWoodTower(s))return undefined;
-  if(woodTowerStyle(s)==='watchtower')return'pitched';
+  if(woodTowerStyle(s)!=='palisadeTower')return'pitched';
   return s.woodRoof==='pitched'?'pitched':'open';
 }
 function isWoodGate(s){return !!s&&s.type==='gate'&&s.material==='wood'}
@@ -448,12 +488,17 @@ function wallSkin(s){
   if(s?.type!=='wall')return undefined;
   return typeof wallSlopeSections==='function'&&wallSlopeSections(s)?'standard':structureVariant(s,'skin');
 }
-function builtSkin(s){return s?.type==='built'?structureVariant(s,'skin'):undefined}
+function builtSkin(s){return s?.type==='built'?(isLonghouse(s)?'standard':structureVariant(s,'skin')):undefined}
 // Wide built section (hall): same 'built' type, double width, one free-height
 // ground floor even at L2 — common halls, chapels, throne halls.
 function isWideBuilt(s){return s?.type==='built'&&s.span==='wide'}
 function builtWidth(s){return isWideBuilt(s)?TYPES.builtWide.width:TYPES.built.width}
 function builtInteriorFloors(s){return isWideBuilt(s)?1:structureLevel(s)}
+// Timber longhouse: a built section (W1 or W2 span) in wood, ground floor only, with the same
+// rooms as the stone section's ground floor (Blender model: build_wood_fort.py, settlement-wood3d.js).
+function isLonghouse(s){return s?.type==='built'&&s.material==='wood'}
+// W1 section with the portico skin: its ground floor is the open arcade (the W2 hall keeps its hall).
+function isBuiltPortico(s){return s?.type==='built'&&!isWideBuilt(s)&&builtSkin(s)==='arcade'}
 // Semantic gameplay hook: combat can query this later without depending on renderer details.
 function hasMachicolation(s){
   if(!s)return false;
@@ -486,7 +531,15 @@ function towerFacadePoints(s){
   if(!isOrientedTower(s))return footprintPoints(s);
   const {w,h}=orientedTowerDims(s);return rectWorldPoints(s.x,s.y,w,h,s.angle||0);
 }
-function towerTier(s){if(isOrientedTower(s))return orientedTowerTier(s);const span=s.shape==='round'?s.r*2:s.size;return span>=1.99?3:span>=1.49?2:1}
+function towerTier(s){if(isOrientedTower(s))return orientedTowerTier(s);const span=s.shape==='round'?s.r*2:s.size;return span>=2.99&&s.shape!=='round'?KEEP_W4_TIER:span>=1.99?3:span>=1.49?2:1}
+function isKeepW4(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&(s.shape||'square')==='square'&&towerTier(s)===KEEP_W4_TIER}
+// The W4 keep can be planned while no other one stands (or is being built).
+function keepW4Available(except=null){return !State.structures.some(o=>o!==except&&o.id!==except?.id&&isKeepW4(o)&&!o.destroyed)}
+function keepFloorPlan(s,floor){
+  const plan=Array.isArray(s?.keepPlans)?s.keepPlans[floor]:null;
+  return KEEP_FLOOR_PLANS[plan]?plan:KEEP_FLOOR_PLAN_DEFAULTS[Math.min(floor,KEEP_FLOOR_PLAN_DEFAULTS.length-1)];
+}
+function keepFloorRooms(s,floor){return KEEP_FLOOR_PLANS[keepFloorPlan(s,floor)]}
 function wallTier(s){
   const explicit=Math.round(Number(s?.tier));
   if(explicit>=1&&explicit<=3)return explicit;
@@ -494,9 +547,10 @@ function wallTier(s){
   return w>=.75?3:w>=.35?2:1;
 }
 function wallWidthForTier(t){return WALL_TIERS[clamp(Math.round(Number(t)||2),1,3)]}
-function towerSizeForTier(shape,t){t=clamp(Math.round(Number(t)||1),1,3);return shape==='round'?ROUND_TOWER_TIERS[t]:SQUARE_TOWER_TIERS[t]}
+function towerSizeForTier(shape,t){t=clamp(Math.round(Number(t)||1),1,shape==='square'?KEEP_W4_TIER:3);return shape==='round'?ROUND_TOWER_TIERS[t]:SQUARE_TOWER_TIERS[t]}
 function applyStructureTier(s,tier){
-  tier=clamp(Math.round(Number(tier)||1),1,3);
+  const w4=s.type==='tower'&&!isWoodTower(s)&&(s.shape||'square')==='square';
+  tier=clamp(Math.round(Number(tier)||1),1,w4?KEEP_W4_TIER:3);
   s.tier=tier;
   if(['wall','palisade'].includes(s.type)){
     s.width=wallWidthForTier(tier);
@@ -520,9 +574,13 @@ const GATE_TIMBER_COST=Object.freeze({gold:8,wood:18}),GATE_JETTY=.07;
 // slopes over the front and the rear (gables on the flanks), so the whole gate stays low.
 const GATE_TIMBER_FLOOR=1.4,GATE_TIMBER_EAVES=2.6,GATE_TIMBER_RIDGE=GATE_TIMBER_EAVES+.84;
 function gateTimberUpper(s){return isSmallGate(s)&&!s.brokenTop&&structureLevel(s)===2&&structureVariant(s,'upper')==='timber'}
-function maxStructureLevel(s){return isSmallGate(s)?SMALL_GATE_MAX_LEVEL:['tower','gate'].includes(s?.type)?3:2}
+// BC-251105-07: only the free-standing square stone W2 tower may rise to a fourth storey (H4),
+// a slender watch tower; wider towers stop at H3 and the W4 keep stays the only great tower.
+const TOWER_H4_LEVEL=4;
+function towerH4Allowed(s){return s?.type==='tower'&&!isWoodTower(s)&&!isOrientedTower(s)&&(s.shape||'square')==='square'&&!s.parentTowerId&&towerTier(s)===2}
+function maxStructureLevel(s){return isLonghouse(s)?1:isSmallGate(s)?SMALL_GATE_MAX_LEVEL:towerH4Allowed(s)?TOWER_H4_LEVEL:['tower','gate'].includes(s?.type)?3:2}
 function structureLevel(s){
-  if(isWoodGate(s))return 1;
+  if(isWoodGate(s)||isLonghouse(s))return 1;
   return clamp(Math.round(Number(s?.level)||1),1,maxStructureLevel(s))
 }
 function houseLevel(s){return clamp(Math.round(Number(s?.houseLevel)||1),1,4)}
@@ -680,6 +738,20 @@ function houseRidgeHeight(s){
   if(houseLevel(s)===1)return 1.45;
   return housePartRidge(s,houseFootprintParts(s)[0]);
 }
+// L1 cottage chimney: one stack built against the outside of a gable end (the hearth wall, end
+// picked per id), from the ground up past the thatch. center: the stack's middle, as chimneySpecs;
+// wall/normal: where it meets the wall (kit piece, and the gable window it replaces). Ignores the
+// construction state, so the facade plan of a site matches the finished cottage.
+const L1_CHIMNEY_DEPTH=.22,L1_CHIMNEY_HALF_W=.2;
+function houseSideChimney(s){
+  if(!s||s.type!=='house'||houseLevel(s)!==1)return null;
+  const body=houseFootprintParts(s).find(p=>p.kind==='body');if(!body)return null;
+  const a=s.angle||0,end=(peasantHash((s.id||'house')+'-chimney')&1)?1:-1;
+  const normal={x:Math.cos(a)*end,y:Math.sin(a)*end};
+  const wall={x:body.center.x+normal.x*body.w/2,y:body.center.y+normal.y*body.w/2};
+  return{center:{x:wall.x+normal.x*L1_CHIMNEY_DEPTH/2,y:wall.y+normal.y*L1_CHIMNEY_DEPTH/2},angle:a,
+    z0:0,z1:houseRidgeHeight(s)+.31,index:0,side:true,wall,normal};
+}
 function houseStructureHeight(s){const turret=houseTurretInfo(s);return turret?Math.max(houseRidgeHeight(s),turret.roofH):houseRidgeHeight(s)}
 const CIVIC_TYPES=Object.freeze(['market','tavern','church','training','plaza','townhall','guild']);
 const CIVIC_LEVEL_TYPES=Object.freeze(['market','tavern','church','plaza','townhall','guild']);
@@ -730,13 +802,14 @@ function civicRadius(s){
 }
 function levelCostFactor(s){
   const l=structureLevel(s);
-  if(['tower','gate'].includes(s?.type))return[1,1.65,2.3][l-1];
+  if(['tower','gate'].includes(s?.type))return[1,1.65,2.3,3.35][l-1];
   return[1,1.8][l-1];
 }
 function scaleCost(cost,factor){return roundCost(Object.fromEntries(Object.entries(cost||{}).map(([k,v])=>[k,v*factor])))}
 function baseConstructionCost(s){
   if(!s||s.auto)return{};
   if(s.type==='tower'){
+    if(isWoodTower(s)&&s.woodStyle==='frameTower')return {...COSTS.frameTower};
     if(isWoodTower(s))return {...COSTS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))]};
     return scaleCost(COSTS.tower[towerTier(s)-1],levelCostFactor(s)*(TOWER_SHAPE_COST[s.shape]??1));
   }
@@ -754,12 +827,17 @@ function baseConstructionCost(s){
       :{gold:5*(s.length||1)*factor,wood:18*(s.length||1)*factor});
   }
   if(s.type==='well')return {...COSTS.well};
+  if(s.type==='storageYard')return s.foundingStockyard?{}:{gold:20,wood:10};
   if(window.ConquerIndustries?.is(s))return {...window.ConquerIndustries.definition(s).cost};
   if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.cost(s);
+  if(window.ConquerPier?.is(s))return window.ConquerPier.cost(s);
+  if(window.ConquerQuay?.is(s))return window.ConquerQuay.cost(s);
+  if(window.ConquerSlopeways?.is(s))return window.ConquerSlopeways.cost(s);
   if(isCivicAnnex(s))return{}; // skeleton: no economic effects yet
   if(isCivic(s))return {...COSTS[s.type]};
   if(s.type==='wall')return scaleCost(Object.fromEntries(Object.entries(COSTS.wallPerU).map(([k,v])=>[k,v*s.length])),levelCostFactor(s));
   if(s.type==='palisade')return roundCost(Object.fromEntries(Object.entries(COSTS.palisadePerU).map(([k,v])=>[k,v*s.length])));
+  if(isLonghouse(s))return roundCost(Object.fromEntries(Object.entries(COSTS.longhousePerU).map(([k,v])=>[k,v*s.length*builtWidth(s)])));
   if(s.type==='built')return scaleCost(Object.fromEntries(Object.entries(COSTS.builtPerU).map(([k,v])=>[k,v*s.length*builtWidth(s)])),levelCostFactor(s));
   return{};
 }
@@ -792,17 +870,23 @@ function refundCost(cost){
 }
 function buildDuration(s){
   if(s.type==='tower'){
+    if(isWoodTower(s)&&s.woodStyle==='frameTower')return BUILD_DAYS.frameTower;
     if(isWoodTower(s))return BUILD_DAYS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))];
     return BUILD_DAYS.tower[towerTier(s)-1]*(.7+.3*structureLevel(s));
   }
   if(s.type==='gate')return isWoodGate(s)?BUILD_DAYS.woodGate:BUILD_DAYS.gate*(.7+.3*structureLevel(s));
   if(s.type==='well')return BUILD_DAYS.well;
+  if(s.type==='storageYard')return 2;
   if(window.ConquerIndustries?.is(s))return window.ConquerIndustries.definition(s).days;
   if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.buildDays(s);
+  if(window.ConquerPier?.is(s))return window.ConquerPier.buildDays(s);
+  if(window.ConquerQuay?.is(s))return window.ConquerQuay.buildDays(s);
+  if(window.ConquerSlopeways?.is(s))return window.ConquerSlopeways.buildDays(s);
   if(isCivicAnnex(s))return 0; // skeleton construction is immediate
   if(isCivic(s))return BUILD_DAYS[s.type];
   if(s.type==='wall')return (BUILD_DAYS.wallBase+BUILD_DAYS.wallPerU*s.length)*(.75+.25*structureLevel(s));
   if(s.type==='palisade')return BUILD_DAYS.palisadeBase+BUILD_DAYS.palisadePerU*s.length;
+  if(isLonghouse(s))return BUILD_DAYS.longhouseBase+BUILD_DAYS.longhousePerU*s.length*builtWidth(s);
   if(s.type==='built')return (BUILD_DAYS.builtBase+BUILD_DAYS.builtPerU*s.length*builtWidth(s))*(.75+.25*structureLevel(s));
   if(s.type==='moat')return .8+(s.length||1)*(s.variant==='water'?.9:.65)*(s.width||1.5)/1.5;
   if(s.type==='bridge')return .8+(s.length||1)*(s.variant==='stone'?.8:.5)*(s.width||1.5)/1.5;
@@ -966,7 +1050,8 @@ function pointRadius(s){
   if(s.type==='gate'){const d=rectDims(s);return Math.hypot(d.w,d.h)/2}
   if(s.type==='well')return .75;
   if(s.type==='house'){const {w,h}=houseFootprintDimensions(s);return Math.hypot(w,h)/2}
-  if(s.type==='field'||window.ConquerIndustries?.is(s))return Math.hypot(s.w,s.h)/2;
+  if(s.type==='field'||s.type==='storageYard'||window.ConquerIndustries?.is(s))return Math.hypot(s.w,s.h)/2;
+  if(s.type==='pier')return 1;
   if(isCivicAnnex(s))return Math.hypot(s.w||1,s.h||1)/2;
   if(isCivic(s))return civicRadius(s);
   return .5;

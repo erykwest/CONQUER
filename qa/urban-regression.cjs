@@ -38,6 +38,18 @@ test('four entries migrate from build boundary to outer world boundary',()=>{
  assert.equal(run('validBorderEntrySelection(State.village.borderEntries)'),true);
  assert.equal(run('State.village.borderEntries.every(e=>e.x===0||e.x===WORLD||e.y===0||e.y===WORLD)'),true);
 });
+test('a sea map has three land exits and three sea exits',()=>{
+ const r=run(`(()=>{const env=State.environment;State.environment=[makeEnvSea(()=>.9)];const side=State.environment[0].side;
+  delete State.village.borderEntries;const land=ensureBorderEntrySelection().map(e=>e.edge).sort().join(),sea=seaBorderEntries();
+  const out={side,land,sea:sea.map(e=>e.edge).sort().join(),onBorder:sea.every(e=>e.x===0||e.x===WORLD||e.y===0||e.y===WORLD),
+   wet:sea.every(e=>environmentContains(State.environment[0],{x:Math.min(WORLD-.5,Math.max(.5,e.x)),y:Math.min(WORLD-.5,Math.max(.5,e.y))},0))};
+  State.environment=env;delete State.village.borderEntries;ensureBorderEntrySelection();return JSON.stringify(out)})()`);
+ const o=JSON.parse(r);
+ assert.equal(o.side,'west');
+ assert.equal(o.land,'east,north,south');
+ assert.equal(o.sea,'north,south,west');
+ assert.equal(o.onBorder,true);assert.equal(o.wet,true);
+});
 test('road repairs can reach outer world and reject points beyond it',()=>{
  assert.equal(run('roadRepairPointClear({x:25,y:100})'),true);
  assert.equal(run('roadRepairPointClear({x:0,y:100})'),true);
@@ -159,7 +171,10 @@ test('corner trees: one roll per shared corner, never two trees on one site',()=
 });
 test('facades: two windows per floor on long sides of L2+, timber frame on upper floors and gables',()=>{
  const plans=level=>run("(()=>{State.structures=[{id:'fp',type:'house',x:100,y:100,w:1.8,h:1.1,angle:0,houseLevel:"+level+"}];invalidateUrbanGeometry();const e=urbanHouseGeometry()[0],p=e.parts[0];return p.points.map((a,i)=>{const edge={a,b:p.points[(i+1)%p.points.length]},pl=houseFacadePlan(e.house,{...p,turret:null},edge);return{L:dist(edge.a,edge.b),wall:p.bodyH,ridge:p.roofH,...pl}})})()");
- for(const w of plans(1)){assert.equal(w.windows.length,1);assert.equal(w.beams.length,0)}
+ // L1: one window per wall, except the gable end carrying the chimney stack (houseSideChimney).
+ const cottage=plans(1);
+ for(const w of cottage){assert.ok(w.windows.length<=1);assert.equal(w.beams.length,0)}
+ assert.equal(cottage.filter(w=>!w.windows.length).length,1,'only the chimney gable is blind');
  for(const level of [2,3,4]){
   const walls=plans(level),long=walls.filter(w=>w.L>1.5),short=walls.filter(w=>w.L<1.5);
   assert.ok(long.length>=1&&short.length>=1);

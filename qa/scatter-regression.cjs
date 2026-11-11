@@ -9,9 +9,9 @@ for(const f of ['settlement-industries.js','settlement-wagons3d.js','assets/scat
 let passed=0;
 function check(name,body){body();passed++;console.log('PASS '+name)}
 
-check('the scatter model has the seven families and no covered wagon',()=>{
+check('the scatter model has the eight families (riverbank too) and no covered wagon',()=>{
   const m=run('window.ConquerScatterModel');
-  assert.deepEqual([...m.families],['carts','goods','signs','wheels','materials','farm','work']);
+  assert.deepEqual([...m.families],['carts','goods','signs','wheels','materials','farm','work','riverbank']);
   const names=Object.keys(m.assets);
   assert.ok(names.length>=25,'about 25 props: '+names.length);
   for(const fam of m.families)assert.ok(names.some(n=>m.assets[n].family===fam),'family '+fam+' has props');
@@ -92,6 +92,23 @@ check('world mesh: one interleaved vertex per corner, shading follows the camera
   assert.equal(a.length,tris*18);
   for(let i=3;i<a.length;i+=6)assert.ok(a[i]>=0&&a[i]<=1&&a[i+1]>=0&&a[i+1]<=1&&a[i+2]>=0&&a[i+2]<=1);
   assert.ok(a.some((v,i)=>i%6>=3&&Math.abs(v-b[i])>1e-3),'side tones change with the quarter-turn');
+});
+check('riverbanks: reeds, stones and bushes along a river, both sides, off the road and the sea',()=>{
+  run("State.environment=[{id:'env-river',type:'river',width:3.2,points:[{x:20,y:60},{x:60,y:62},{x:100,y:58}]}];"+
+    "State.structures=[{id:'rd',type:'road',a:{x:40,y:50},b:{x:40,y:75},width:.6}];");
+  const bank=run('window.ConquerScatter.layout()').filter(p=>p.ctx==='riverbank');
+  assert.ok(bank.length>30,'a river gets a dressed bank: '+bank.length);
+  const kinds=new Set(bank.map(p=>p.asset));
+  for(const k of ['reedBed','bankBush','riverStones'])assert.ok(kinds.has(k),k+' on the bank');
+  const P=[{x:20,y:60},{x:60,y:62},{x:100,y:58}],psd=run('pointSegmentDistance');
+  const near=p=>Math.min(psd(p,P[0],P[1]),psd(p,P[1],P[2]));
+  assert.ok(bank.every(p=>near(p)<3.2),'all within reach of the water');
+  assert.ok(bank.every(p=>near(p)>1.6-.6),'none in mid-stream');
+  assert.ok(bank.some(p=>p.y>61.5)&&bank.some(p=>p.y<58.5),'both banks');
+  assert.ok(bank.every(p=>Math.abs(p.x-40)>p.r+.3),'never on the road crossing');
+  const again=run('window.ConquerScatter.layout()').filter(p=>p.ctx==='riverbank');
+  assert.equal(JSON.stringify(again),JSON.stringify(bank),'deterministic');
+  run('State.environment=[];State.structures=[]');
 });
 console.log('scatter regression: '+passed+' checks');
 `);

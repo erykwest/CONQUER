@@ -133,7 +133,9 @@ function terrainBaseElevation(p){
 }
 function terrainElevation(p){
   const base=terrainBaseElevation(p);
-  return window.ConquerTerraforming?.elevationAt(p,base)??base;
+  const z=window.ConquerTerraforming?.elevationAt(p,base)??base;
+  // Finished ramps and stairways (settlement-slopeways.js): walkers stand on their deck.
+  return window.ConquerSlopeways?window.ConquerSlopeways.lift(p,z):z;
 }
 function terrainPlateauElevation(p){
   if(terrainSlopeKind(p))return null;
@@ -222,19 +224,22 @@ function circleWorldPoints(cx,cy,r,n=20){const pts=[];for(let i=0;i<n;i++){const
 function structureHeight(s){
   if(!s)return 0;
   if(s.type==='tower'){
-    if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?2.35:(woodTowerRoof(s)==='pitched'?2.95:2.32);
-    const l=structureLevel(s),t=towerTier(s);return [2.35,3.55,4.75][l-1]+(t-1)*.12
+    if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?2.35:woodTowerStyle(s)==='frameTower'?3.78:(woodTowerRoof(s)==='pitched'?2.95:2.32);
+    const l=structureLevel(s),t=towerTier(s);return [2.35,3.55,4.75,5.95][l-1]+(t-1)*.12
   }
   // The small gate stands just above the curtain (H2 walls are 2.10): L1 passage only, L2 one room over it.
   if(s.type==='gate')return isWoodGate(s)?1.94:gateTimberUpper(s)?GATE_TIMBER_EAVES:(isSmallGate(s)?[2.4,3.6]:[2.8,4.0,5.2])[structureLevel(s)-1];
   if(s.type==='wall')return [1.15,2.10][structureLevel(s)-1];
   if(s.type==='palisade')return 1.15;
-  if(s.type==='built')return [1.75,2.80][structureLevel(s)-1];
+  if(s.type==='built')return isLonghouse(s)?(isWideBuilt(s)?2.07:1.77):[1.75,2.80][structureLevel(s)-1];
   if(s.type==='well')return .42;
+  if(s.type==='storageYard')return .55;
   if(s.type==='bridge')return .12;
   if(s.type==='moat')return 0;
   if(s.type==='ruin')return Number(s.ruinHeight)||.8;     // the stump a fallen tower or gate leaves
   if(window.ConquerIndustries?.is(s))return .35;
+  if(s.type==='pier'||s.type==='quay')return .6;
+  if(s.type==='ramp'||s.type==='stairway')return .3;
   if(s.type==='house')return houseStructureHeight(s);
   if(isCivicAnnex(s)){const spec=civicAnnexDefinition(s);return !spec?0:spec.kind==='garden'||spec.kind==='yard'?.18:spec.kind==='stall'?.95:1.55;}
   if(s.type==='market')return .78;
@@ -252,7 +257,7 @@ function footprintPoints(s){
   if(isOrientedTower(s))return orientedTowerOutline(s);
   if(['tower','gate','ruin'].includes(s.type)){const d=rectDims(s);return rectWorldPoints(s.x,s.y,d.w,d.h,s.angle||0)}
   if(s.type==='well')return circleWorldPoints(s.x,s.y,.62,20);
-  if(['wall','palisade','built','moat','bridge'].includes(s.type))return linePoly(s);
+  if(['wall','palisade','built','moat','bridge','quay','ramp','stairway'].includes(s.type))return linePoly(s);
   if(s.type==='house'){
     const parts=houseFootprintParts(s),pts=parts.flatMap(p=>p.points);
     if(parts.length===1)return pts;
@@ -260,7 +265,9 @@ function footprintPoints(s){
     return pts.slice().sort((a,b)=>Math.atan2(a.y-cy,a.x-cx)-Math.atan2(b.y-cy,b.x-cx));
   }
   if(s.type==='field')return fieldPoints(s);
+  if(s.type==='storageYard')return rectWorldPoints(s.x,s.y,s.w||2,s.h||2,s.angle||0);
   if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.footprint(s);   // event venues (settlement-events3d.js)
+  if(window.ConquerPier?.is(s))return window.ConquerPier.footprint(s);
   if(isCivicAnnex(s))return civicAnnexFootprint(s);
   if(window.ConquerIndustries?.is(s))return window.ConquerIndustries.footprint(s);
   if(isCivic(s)){
@@ -359,7 +366,8 @@ function unionGroundContactRings(polys){
 }
 const PLACEMENT_FOUNDATION_TYPES=new Set(['tower','gate','tavern','church','townhall','guild']);
 function isPlacementFoundationBuilding(s){
-  return !!s&&!s.auto&&PLACEMENT_FOUNDATION_TYPES.has(s.type);
+  // A tower against a quay stands on the quay's plinth instead (settlement-quay.js).
+  return !!s&&!s.auto&&!s.quaySnap&&PLACEMENT_FOUNDATION_TYPES.has(s.type);
 }
 function placementFoundationProfile(s){
   if(!isPlacementFoundationBuilding(s))return null;
@@ -467,6 +475,8 @@ function structureTerrainSamples(s){
 function buildableTerrainElevationForStructure(s){
   const terraceZ=window.ConquerTerraforming?.wallGroundZ(s);
   if(terraceZ!=null)return terraceZ;
+  const quayZ=window.ConquerQuay?.wallGroundZ(s);   // a wall built along a quay stands on its coping
+  if(quayZ!=null)return quayZ;
   const samples=structureTerrainSamples(s);if(!samples.length)return 0;
   let level=null;
   for(const p of samples){
@@ -620,7 +630,7 @@ function cutawayEligible(s){
   if(s.type==='gate')return !isWoodGate(s);
   // The timber palisade tower opens its Blender model (settlement-wood3d.js); the watchtower
   // has no walls to open.
-  if(s.type==='tower'&&isWoodTower(s))return woodTowerStyle(s)==='palisadeTower'&&!!window.ConquerWood3D?.modelKey?.(s);
+  if(s.type==='tower'&&isWoodTower(s))return woodTowerStyle(s)!=='watchtower'&&!!window.ConquerWood3D?.modelKey?.(s);
   // T1 stone towers are too small for rooms: they open on a spiral stair (cutawaySpiralStair).
   // Semitowers are open already (their gorge shows the floors and ladders).
   return s.type==='tower'&&s.shape!=='half';
@@ -795,11 +805,51 @@ function cutawayRoomSlots(s,g=cutawayWallGeometry(s)){
   const floors=cutawayFloorLevels(s),basis=cutawayFloorBasis(s,g),off=functionFloorOffset(s),cap=Math.min(functionCapacity(s),floors.length-off);
   const roles=Array.isArray(s.functions)?s.functions:[];
   const out=[];
+  // W4 keep: each room is its own basis, a rectangle of the floor less half a partition wall.
+  if(isKeepW4(s)){
+    functionSlotLayout(s).forEach((L,i)=>{
+      if(!floors[L.floor])return;
+      out.push({index:i,floor:L.floor,room:L.room,role:roles[i]||null,size:functionSlotSize(s,i),
+        z:floors[L.floor].z,basis:keepRoomBasis(basis,L.rect),g});
+    });
+    return out;
+  }
   for(let i=0;i<cap;i++)out.push({
     index:i,floor:i+off,role:roles[i]||null,size:functionSlotSize(s,i),
     z:floors[i+off].z,basis,g
   });
   return out;
+}
+const KEEP_PARTITION=.10,KEEP_PARTITION_H=.62,KEEP_DOORWAY=.34;
+function keepRoomBasis(basis,[u0,v0,u1,v1]){
+  const t=KEEP_PARTITION/2,x0=-basis.w/2+u0*basis.w+(u0>0?t:0),x1=-basis.w/2+u1*basis.w-(u1<1?t:0);
+  const y0=-basis.h/2+v0*basis.h+(v0>0?t:0),y1=-basis.h/2+v1*basis.h-(v1<1?t:0);
+  const cu=(x0+x1)/2,cv=(y0+y1)/2,ca=Math.cos(basis.angle),sa=Math.sin(basis.angle);
+  return{center:{x:basis.center.x+cu*ca-cv*sa,y:basis.center.y+cu*sa+cv*ca},angle:basis.angle,w:x1-x0,h:y1-y0};
+}
+// Partition walls of a W4 floor: the inner room edges, in local (u,v) of the floor basis, as
+// {a:[u,v],b:[u,v],doors:[t]} with t in [0,1] along a->b. Every stretch between two junctions
+// keeps a doorway in its middle, so each room opens on its neighbours. They are cut low
+// (KEEP_PARTITION_H) like a dollhouse section, so the rooms behind stay readable.
+function keepPartitionSegments(s,floor,basis){
+  const rects=keepFloorRooms(s,floor),seen=new Set(),segs=[];
+  for(const [u0,v0,u1,v1] of rects)for(const g of [[u1,v0,u1,v1],[u0,v1,u1,v1]]){
+    if((g[0]===g[2]&&g[0]>=1)||(g[1]===g[3]&&g[1]>=1))continue;
+    const k=g.join(',');if(!seen.has(k)){seen.add(k);segs.push(g)}
+  }
+  const U=f=>-basis.w/2+f*basis.w,V=f=>-basis.h/2+f*basis.h;
+  return segs.map(g=>{
+    const vertical=g[0]===g[2],lo=vertical?g[1]:g[0],hi=vertical?g[3]:g[2];
+    // Junctions: the ends of the other walls that land inside this one.
+    const cuts=[lo,hi];
+    for(const o of segs)if(o!==g)for(const [pu,pv] of [[o[0],o[1]],[o[2],o[3]]]){
+      const on=vertical?pu===g[0]:pv===g[1],t=vertical?pv:pu;
+      if(on&&t>lo+1e-9&&t<hi-1e-9)cuts.push(t);
+    }
+    cuts.sort((p,q)=>p-q);
+    const doors=[];for(let i=0;i+1<cuts.length;i++)doors.push(((cuts[i]+cuts[i+1])/2-lo)/(hi-lo));
+    return{a:[U(g[0]),V(g[1])],b:[U(g[2]),V(g[3])],doors};
+  });
 }
 function cutawayRoomPoint(slot,nx=0,ny=0){
   const b=slot.basis,x=nx*b.w*.40,y=ny*b.h*.36,ca=Math.cos(b.angle),sa=Math.sin(b.angle);
@@ -1018,6 +1068,7 @@ function drawCutawayStructure(s){
   // Timber tower: its model, minus the camera-facing sides, is drawn with the structures
   // (ConquerWood3D.draw); only the room's furnishings belong here.
   if(isWoodTower(s)){withStructureGroundPlane(s,()=>window.ConquerCutawayFurniture?.draw(s,cutawayWallGeometry(s)));return}
+  if(isLonghouse(s))return;   // its room is drawn with its model (drawStructure)
   const render=()=>{
     // Walls stop at the ceiling of the floor in view (cutawayCeilingZ); the crest and the roof
     // deck only when every floor is in view.
@@ -1064,7 +1115,7 @@ function drawCutawayStructures(){
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b))
     .forEach(s=>withStructureVisualMaterial(s,()=>drawCutawayStructure(s)));
 }
-function isCastlePart(s){return !s.auto&&['tower','gate','wall','built'].includes(s.type)&&!(s.type==='tower'&&isWoodTower(s))&&!isWoodGate(s)&&!isRaisedPlacementCastlePoint(s)}
+function isCastlePart(s){return !s.auto&&['tower','gate','wall','built'].includes(s.type)&&!(s.type==='tower'&&isWoodTower(s))&&!isWoodGate(s)&&!isLonghouse(s)&&!isRaisedPlacementCastlePoint(s)}
 function hasCastleSnap(id){return !!id&&State.structures.some(x=>x.id===id&&['tower','gate'].includes(x.type))}
 function unionFootprintPoints(s){
   if(!['wall','built'].includes(s.type))return footprintPoints(s);

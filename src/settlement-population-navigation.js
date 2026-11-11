@@ -271,8 +271,8 @@ function roadNetworkPath(start,goal,sourceHouseId){
   return clear;
 }
 function peasantObstacleSignature(){
-  return State.structures.filter(s=>['house','tower','gate','wall','palisade','built','well','road','market','tavern','church','training','plaza','civicAnnex'].includes(s.type)).map(s=>{
-    if(['wall','palisade','built','road'].includes(s.type))return [s.id,s.type,s.a.x,s.a.y,s.b.x,s.b.y,s.width,JSON.stringify(s.functions||[]),underConstruction(s)?1:0].join(',');
+  return State.structures.filter(s=>['house','tower','gate','wall','palisade','built','well','road','market','tavern','church','training','plaza','civicAnnex','ramp','stairway'].includes(s.type)).map(s=>{
+    if(['wall','palisade','built','road','ramp','stairway'].includes(s.type))return [s.id,s.type,s.a.x,s.a.y,s.b.x,s.b.y,s.width,JSON.stringify(s.functions||[]),underConstruction(s)?1:0,s.skin||'',s.flip?1:0,s.level||''].join(',');
     return [s.id,s.type,s.x,s.y,s.w,s.h,s.r,s.size,s.angle,s.houseLevel,JSON.stringify(s.functions||[]),underConstruction(s)?1:0].join(',');
   }).join('|');
 }
@@ -291,9 +291,14 @@ function peasantObstacleSnapshot(){
   parts.circles=State.structures.filter(s=>s.type==='well'||(['tower','ruin'].includes(s.type)&&s.shape==='round'));
   return parts;
 }
+// A quay built over the rocks is walkable.
+function quayAt(p){return(State.structures||[]).some(s=>s.type==='quay'&&window.ConquerQuay&&pointInPolygonSimple(p,window.ConquerQuay.footprint(s)))}
+function pointInPolygonSimple(p,poly){let k=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.y>p.y)!==(b.y>p.y)&&p.x<(b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x)k=!k}return k}
 function pointBlockedForPeasant(p,sourceHouseId,obstacleParts=null){
   if(urbanFencePointBlocked(p,PEASANT_CLEARANCE))return true;
+  if(window.ConquerCoast?.rockAt(p)&&!quayAt(p))return true;            // shore rocks (settlement-coast.js)
   if(terrainSlopeKind(p)==='steep'&&!window.ConquerCrossings?.onBridge(p))return true;
+  if(window.ConquerSlopeways?.blocksPoint(p))return true;     // raised sides of a ramp/stairway
   if(window.ConquerSiege?.rubbleBlocks?.(p))return true;      // the high core of a collapse heap
   for(const s of State.structures){
     if(s.id===sourceHouseId&&s.type!=='house')continue;
@@ -313,6 +318,8 @@ function pointBlockedForPeasant(p,sourceHouseId,obstacleParts=null){
     }
 
     if(['wall','palisade','built'].includes(s.type)){
+      // A W1 portico: its walkway under the arches is open to walkers.
+      if(s.type==='built'&&builtLoggiaWalkable(s,p,.04))continue;
       if(pointSegmentDistance(p,s.a,s.b)<=Number(s.width)/2+PEASANT_CLEARANCE)return true;
       continue;
     }

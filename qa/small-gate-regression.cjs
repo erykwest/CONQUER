@@ -9,7 +9,7 @@ const read=f=>fs.readFileSync(root+f,'utf8').replace(/\r\n/g,'\n');
 const core=read('settlement-core.js'),castle=read('settlement-castle.js'),fittings=read('settlement-gate-fittings.js');
 const pick=(src,re,name)=>{const m=src.match(re)?.[0];assert.ok(m,'use the actual '+name);return m};
 const ctx=vm.createContext({Math,Number,Object,
-  clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),isWoodGate:s=>s?.type==='gate'&&s.material==='wood',
+  clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),isWoodGate:s=>s?.type==='gate'&&s.material==='wood',isLonghouse:s=>s?.type==='built'&&s.material==='wood',
   rectDims:s=>({w:s.size,h:s.size}),window:{},roundCost:c=>c,
   scaleCost:(x,f=1)=>Object.fromEntries(Object.entries(x).map(([k,v])=>[k,v*f])),
   COSTS:{gate:{gold:95,stone:90,wood:38,metal:10},woodGate:{gold:35}}});

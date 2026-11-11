@@ -36,12 +36,19 @@ function drawStructure(s,preview=false){
     if(assembled&&window.ConquerAssembly.draw(s))return;
     ctx.save();if(preview)ctx.globalAlpha=.58;else if(underConstruction(s))ctx.globalAlpha=.42;
     if(isPlacementFoundationBuilding(s))drawPlacementFoundation(s,preview);
-    if(window.ConquerIndustries?.is(s))window.ConquerIndustries.render(s,preview);
+    if(window.ConquerStorageYard?.is(s))window.ConquerStorageYard.draw(s,preview);
+    else if(window.ConquerIndustries?.is(s))window.ConquerIndustries.render(s,preview);
     else if(window.ConquerEvents3D?.is(s))window.ConquerEvents3D.draw(s,preview);   // event venues (settlement-events3d.js)
+    else if(window.ConquerPier?.is(s))window.ConquerPier.draw(s,preview);           // timber pier (settlement-pier.js)
+    else if(window.ConquerQuay?.is(s))window.ConquerQuay.draw(s,preview);           // stone quay (settlement-quay.js)
+    else if(window.ConquerSlopeways?.is(s))window.ConquerSlopeways.draw(s,preview); // ramp / stairway (settlement-slopeways.js)
     else if(isCivic(s))drawCivicStructure(s,preview);
     else if(isCivicAnnex(s))drawCivicAnnex(s,preview);
     else if(['tower','gate','well'].includes(s.type))drawPointStructure(s,preview);
     else if(s.type==='palisade')drawPalisade(s,preview);
+    // Timber longhouse: Blender model; open in cutaway, its room right after it, in depth order (it
+    // is not a castle part, so the castle body / cutaway composites neither bound nor refresh it).
+    else if(isLonghouse(s)&&window.ConquerWood3D?.draw(s,preview)){if(!preview&&structureCutaway(s))window.ConquerCutawayFurniture?.draw(s,cutawayWallGeometry(s))}
     else{drawLinearBase(s,preview);if(!underConstruction(s))drawBuiltDetails(s,preview)}
     ctx.restore();
   };
@@ -189,6 +196,7 @@ function renderCastleBodyContent(){
   drawTowerRoofs();
   drawGateRoofs();
   window.ConquerRoomExterior?.drawAll();
+  window.ConquerWallStairs?.drawAll();
 }
 function castleBodyRenderableStructures(){
   return State.structures.filter(s=>(isCastlePart(s)||isRaisedPlacementCastlePoint(s))&&!underConstruction(s));
@@ -221,7 +229,7 @@ function castleBodyVisualSignature(){
   ]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
   return JSON.stringify([
     1,window.ConquerCastle3D?.active?.()?'3d':'2d',State.season||'summer',State.visualPalette,num(State.view.scale),State.view.rotation||0,isPlanView()?'plan':'iso',staticCacheDpr(),
-    !!window.__polygonClipping,items
+    !!window.__polygonClipping,crenelStyle(),roofPitch(),items
   ]);
 }
 function drawCastleBodyBitmap(){
@@ -424,6 +432,7 @@ function draw(){
   // Dynamic placement overlay: switching tools must not invalidate or rebuild
   // the static landscape cache, and the WebGPU path must show the same outline.
   drawBuildArea();
+  window.ConquerForestry?.drawJobs();
   for(const field of completedSettlement('field'))drawFieldWork(field);
 
   // Construction sites remain dynamic at ground/building depth.
@@ -446,6 +455,10 @@ function draw(){
   window.ConquerCourtPeople?.draw();   // the tribunal in session in the town hall cutaway
   window.ConquerIndustries?.drawWorkers();
   window.ConquerWorkAnim?.drawBuilders();
+  window.ConquerShipyard?.drawShipwrights();   // shipwrights along the hull on the slipways
+  if(!window.ConquerWorld3D?.active?.())window.ConquerCoast?.draw();   // 2.5D: shore boulders (WebGL has them in the static scene)
+  window.ConquerCoast?.drawWaves(performance.now()/1000);   // waves on the beaches, spray on the rocks, glints at sea
+  window.ConquerFleet?.draw();   // ships at the piers or at anchor, with their crews (settlement-fleet.js)
   markPhase('population');
   drawTrainingSoldiers();
   if(world3d)window.ConquerWorld3D.drawCastleOverlays();else blitSceneCache('castleBody');
@@ -455,6 +468,8 @@ function draw(){
   drawCastleSoldiers();
   markPhase('castle-units');
   if(world3d)window.ConquerWorld3D.drawFront(r);else blitSceneCache('castleFront');
+  window.ConquerFleet?.drawFigures();   // 3D: crews, fires and arrows over the ships of the front pass
+  window.ConquerGulls?.draw(performance.now()/1000);   // seagulls over the coast, above the ships
   window.ConquerSiege?.drawOverlay();
   if(typeof drawRaisedVillagers==='function')drawRaisedVillagers();   // on the Mastio's outer stair
   drawCastleFireFixtures();
@@ -470,7 +485,8 @@ function draw(){
   drawChimneysAndSmoke();
 
   if(State.draft?.mode==='terraform'){
-    window.ConquerTerraforming?.drawGhost(State.draft.preview);
+    if(State.tool?.mode==='forest')window.ConquerForestry?.drawGhost(State.draft.preview);
+    else window.ConquerTerraforming?.drawGhost(State.draft.preview);
   }else if(['moat','bridge'].includes(State.draft?.preview?.type))window.ConquerCrossings?.drawPreview(State.draft.preview);
   if(State.draft?.mode!=='terraform'&&State.draft?.previewSegments?.length){
     const segments=State.draft.previewSegments;

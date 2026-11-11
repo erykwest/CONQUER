@@ -4,7 +4,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
 const source=fs.readFileSync(path.join(__dirname,'../src/settlement-economy.js'),'utf8');
 const house=(id,kind='garden')=>({id,type:'house',houseLevel:1,kind});
 const site=id=>({id,type:'tower',construction:{version:2,startedDay:0,workRequired:20,workDone:0}});
-function harness(structures,{food=0,wood=0,alarm='off'}={}){
+function harness(structures,{food=0,wood=0,alarm='off',gardens=[]}={}){
   const State={clock:{day:0},village:{founded:true,wellId:'well',foundingWorkers:0},
     structures,policies:{tax:0,rations:'market'}};
   const window={
@@ -13,7 +13,7 @@ function harness(structures,{food=0,wood=0,alarm='off'}={}){
   };
   vm.runInNewContext(source,{State,window,document:{getElementById:()=>null},
     underConstruction:s=>!!s.construction&&s.construction.workDone<s.construction.workRequired,
-    calendarDateFromDay:day=>({month:0,year:1,day:day+1}),console,Math,Number,Object,Array,Set});
+    calendarDateFromDay:day=>({month:0,year:1,day:day+1}),kitchenGardens:()=>gardens,console,Math,Number,Object,Array,Set});
   const e=window.ConquerEconomy;
   e.state().castleGold=1000;e.state().castle.food=food;e.state().castle.wood=wood;
   return{State,e};
@@ -68,5 +68,26 @@ check('alarm: no construction demand, no grazing output',()=>{
   assert.equal(e.laborAllocation(0).spareL1.length-e.laborAllocation(0).idle.length,0);
   e.tick(-1,0);
   assert.equal(e.state().lots.food.length,0);
+});
+check('fields consume only L2 capacity and leave L1 available for construction',()=>{
+  const field={id:'field',type:'field'};
+  const l1=[house('a'),house('b')];
+  const {e}=harness([...l1,field,site('site')]);
+  assert.equal(e.KIND.field.classId,2);
+  assert.equal(e.laborAllocation(0).allocated.field,0);
+  assert.equal(e.laborAllocation(0).spareL1.length,2);
+  const mixed=harness([...l1,{...house('l2'),houseLevel:2},field,site('site')]).e;
+  assert.equal(mixed.laborAllocation(0).allocated.field,1);
+  assert.equal(mixed.laborAllocation(0).spareL1.length,2);
+});
+check('orto di corte: each kitchen garden yields lord food per workday, also under alarm',()=>{
+  const gardens=[{id:'g1'},{id:'g2'}];
+  const {e}=harness([house('a')],{alarm:'mobilize',gardens});
+  e.tick(-1,0);
+  assert.equal(e.KITCHEN_GARDEN_FOOD_PER_DAY,2);
+  assert.ok(Math.abs(e.state().weekProduced.food-2*e.KITCHEN_GARDEN_FOOD_PER_DAY)<1e-9,'two gardens, one workday');
+  const idle=harness([house('a')],{alarm:'mobilize'}).e;
+  idle.tick(-1,0);
+  assert.ok(!(idle.state().weekProduced?.food>0),'no gardens, no food under alarm');
 });
 console.log('Labor jobs regression: PASS');

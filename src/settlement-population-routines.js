@@ -112,6 +112,8 @@ function structureAccessPoint(target,from,visitorId=''){
     return civicEntranceInfo(target)?.outside||structureCenter(target);
   }
 
+  // A W1 portico (stables, armourers...): visitors stand on the walkway under the arches.
+  if(target.type==='built'){const p=builtLoggiaStandPoint(target,((h>>>12)%1000)/1000);if(p)return p}
   if(['wall','built'].includes(target.type)){
     const mid={x:(target.a.x+target.b.x)/2,y:(target.a.y+target.b.y)/2};
     const dx=target.b.x-target.a.x,dy=target.b.y-target.a.y,L=Math.hypot(dx,dy)||1;

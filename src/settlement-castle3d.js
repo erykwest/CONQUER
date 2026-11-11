@@ -201,6 +201,16 @@
     m.tag=roofTag;
     for(const c of chimneySpecs(s))m.prism(rectWorldPoints(c.center.x,c.center.y,.22,.20,c.angle||0),c.z0,c.z1,PAL.chimney());
   }
+  // W1 portico: the loggia (builtLoggia) replaces the solid ground storey; false keeps the prism.
+  // Dressed stone arcade a shade lighter than the rubble wall; the loggia's inside in shadow.
+  const LOGGIA_HEX={ceiling:'#2c2724',backwall:'#3a3430',paving:'#6d645b'};
+  function addBuiltLoggia(m,s){
+    if(!isBuiltPortico(s))return false;
+    const g=builtLoggia(s);if(!g)return false;
+    const arcade=[snowTop('#b1a597'),'#8f8478','#72685f'];
+    for(const f of g.faces)m.face(f.pts,LOGGIA_HEX[f.part]||(f.part==='arcade'?arcade:PAL.stone()));
+    return true;
+  }
   function addHoarding(m,s){
     // drawWallHoarding geometry as solids (the 2.5D version draws the board face only when it faces the camera).
     const g=wallExteriorLayout(s),h=g.z,innerOff=Math.max(.02,g.width/2-.02),outerOff=g.width/2+.42;
@@ -264,7 +274,7 @@
         const steps=s.type==='wall'?wallSlopeSections(s):null;
         const timber=s.type==='gate'&&gateTimberUpper(s),top=timber?gateTimberFloorZ(s):structureHeight(s);
         if(steps)for(const q of steps)withProjectionGroundZ(q.ground,()=>m.prism(q.pts,q.low,structureHeight(s),PAL.stone()));
-        else if(!(worldOut&&s.type==='gate'&&window.ConquerGates?.addGateBody(m,s,top,PAL.stone())))
+        else if(!(worldOut&&s.type==='gate'&&window.ConquerGates?.addGateBody(m,s,top,PAL.stone()))&&!(worldOut&&addBuiltLoggia(m,s)))
           for(const pts of towerBodyPrisms(s))m.prism(pts,0,top,PAL.stone());
         if(timber)m.prism(gateTimberStoreyPoints(s),top,structureHeight(s),PAL.plaster());
         if(s.type==='tower')addTower(m,s);
@@ -279,6 +289,8 @@
         // Room exterior elements (settlement-room-exterior.js), as the hoarding: sides a shade darker.
         // Timber towers carry theirs in their Blender mesh (settlement-wood3d.js).
         if(!isWoodTower(s))for(const t of window.ConquerRoomExterior?.triangles(s)||[])m.face(t.pts,[t.hex,t.hex,shadeHex(t.hex,.82)]);
+        // Wall-walk stair (settlement-wall-stairs.js, Blender models), as the room exteriors.
+        if(s.wallStair)for(const t of window.ConquerWallStairs?.triangles(s)||[])m.face(t.pts,[t.hex,t.hex,shadeHex(t.hex,.82)]);
         for(const b of wideHallButtresses(s))addButtress(m,b);
         if(s.type==='wall'&&wallSkin(s)==='hoarding')addHoarding(m,s);
         const mf=machicolationFloorPolygon(s);

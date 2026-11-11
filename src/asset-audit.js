@@ -284,15 +284,30 @@
       }
       rows.push({item,row});
     }
-    const cols=columns||Math.max(1,...rows.map(x=>x.row.length)),head=18,lab=28;
-    const cv=document.createElement('canvas');cv.width=cols*cell;cv.height=rows.length*(cell+head+lab);
-    const g=cv.getContext('2d');g.fillStyle='#4f6b3e';g.fillRect(0,0,cv.width,cv.height);
-    for(let j=0;j<rows.length;j++){
+    // All states: one line per asset (its states side by side, the asset named across the line).
+    // One state per asset: the assets flow into a grid of `columns`, each cell named in its own header.
+    const grid=states!=='all',head=18,lab=28;
+    const lines=grid?[]:rows.map(x=>({title:x.item.title+'  ·  '+x.item.family,cells:x.row}));
+    if(grid){
+      const cells=rows.flatMap(x=>x.row.map(c=>({...c,title:x.item.title})));
+      const per=Math.max(1,columns||8);
+      for(let i=0;i<cells.length;i+=per)lines.push({title:null,cells:cells.slice(i,i+per)});
+    }
+    const cols=Math.max(1,...lines.map(x=>x.cells.length));
+    const cv=document.createElement('canvas');cv.width=cols*cell;cv.height=Math.max(1,lines.length)*(cell+head+lab);
+    // Neutral background: an empty cell must not read as a result.
+    const g=cv.getContext('2d');g.fillStyle='#2b2824';g.fillRect(0,0,cv.width,cv.height);
+    const fit=(text,w)=>{if(g.measureText(text).width<=w)return text;while(text.length>1&&g.measureText(text+'…').width>w)text=text.slice(0,-1);return text+'…'};
+    for(let j=0;j<lines.length;j++){
       const y=j*(cell+head+lab);
-      g.fillStyle='#1d1a16';g.fillRect(0,y,cv.width,head);g.fillStyle='#efe6d6';g.font='bold 12px system-ui';
-      g.fillText(rows[j].item.title+'  ·  '+rows[j].item.family,6,y+13);
-      for(let i=0;i<rows[j].row.length;i++){
-        const {r,status,label}=rows[j].row[i],x=i*cell;
+      g.font='bold 12px system-ui';
+      if(lines[j].title){
+        g.fillStyle='#1d1a16';g.fillRect(0,y,cv.width,head);g.fillStyle='#efe6d6';g.fillText(fit(lines[j].title,cv.width-12),6,y+13);
+      }
+      for(let i=0;i<lines[j].cells.length;i++){
+        const {r,status,label,title}=lines[j].cells[i],x=i*cell;
+        g.fillStyle='#3b4a32';g.fillRect(x,y+head,cell,cell+lab);
+        if(title){g.fillStyle='#1d1a16';g.fillRect(x,y,cell,head);g.fillStyle='#efe6d6';g.font='bold 12px system-ui';g.fillText(fit(title,cell-10),x+5,y+13)}
         if(r.image){
           const im=new Image();im.src=r.image;await loaded(im);
           const k=Math.min((cell-10)/(im.naturalWidth||1),(cell-10)/(im.naturalHeight||1));
@@ -300,8 +315,8 @@
         }
         g.strokeStyle=STATUS_COLOR[status]||'#888';g.lineWidth=3;g.strokeRect(x+1.5,y+head+1.5,cell-3,cell+lab-3);
         g.fillStyle='rgba(0,0,0,.55)';g.fillRect(x+3,y+head+cell,cell-6,lab-3);
-        g.fillStyle='#fff';g.font='11px system-ui';g.fillText(label.slice(0,26),x+7,y+head+cell+12);
-        g.fillStyle=STATUS_COLOR[status]||'#ccc';g.fillText(status+(r.checks.some(c=>!c.ok)?' · '+r.checks.filter(c=>!c.ok).map(c=>c.name).join(', '):''),x+7,y+head+cell+23);
+        g.fillStyle='#fff';g.font='11px system-ui';g.fillText(fit(String(label||''),cell-14),x+7,y+head+cell+12);
+        g.fillStyle=STATUS_COLOR[status]||'#ccc';g.fillText(fit(status+(r.checks.some(c=>!c.ok)?' · '+r.checks.filter(c=>!c.ok).map(c=>c.name).join(', '):''),cell-14),x+7,y+head+cell+23);
       }
     }
     return cv.toDataURL('image/png');

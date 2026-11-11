@@ -18,7 +18,7 @@ try{
       models:list.filter(x=>x.kind==='model').length,
       categories:new Set(list.map(x=>x.category)).size,nav:document.querySelectorAll('#assetCategoryFilters button').length};
   });
-  assert.ok(inventory.total>=150&&inventory.files>=36&&inventory.models>=100,JSON.stringify(inventory));
+  assert.ok(inventory.total>=150&&inventory.files>=35&&inventory.models>=100,JSON.stringify(inventory));
   assert.ok(inventory.categories>=11&&inventory.nav>=11,JSON.stringify(inventory));
 
   // Fortifications: meshed by the game in the sandbox frame, stone towers / walls / gates.
@@ -62,10 +62,14 @@ try{
   await page.evaluate(()=>window.ConquerAssetCatalog.select('figure:work:chop'));
   assert.equal(await page.locator('#actions [aria-pressed="true"]').getAttribute('data-action'),'chop');
   assert.equal(await page.evaluate(()=>window.ConquerAssetCatalog.items.filter(x=>x.family==='Lavori').length),7);
-  // Rotation sets step through their pre-rendered frames.
-  await page.evaluate(()=>window.ConquerAssetCatalog.select('file:src/assets/economy/stone_quarry.svg'));
-  await page.locator('#assetRotateRight').click();
-  assert.match(await page.locator('#assetDetailPreview img').getAttribute('src'),/stone_quarry_015\.svg$/);
+  // The two industries use their rotatable 3D catalogue entries.
+  for(const key of ['quarry','loggingCamp']){
+    const id='model:ConquerIndustryModels:'+key;
+    assert.ok(await page.evaluate(id=>window.ConquerAssetCatalog.items.some(x=>x.id===id&&x.kind==='model'),id),id);
+    await page.evaluate(id=>window.ConquerAssetCatalog.select(id),id);
+    await page.locator('#assetRotateRight').click();
+    assert.equal(await page.locator('#assetRotationValue').textContent(),'15°');
+  }
   // Search only looks at real fields.
   await page.locator('#assetSearch').fill('undefined');
   assert.equal(await page.locator('.asset-card').count(),0,'Missing fields must not be searchable');

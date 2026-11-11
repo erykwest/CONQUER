@@ -1,5 +1,7 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+06/11/2026 — Integrazione #155: fixture CIRCLE aggiornata a torri W2 esplicite per i granai e relativo towerTier; le W1 non ammettono granai secondo la nuova regola. Nessuna variazione alle scorte o alle regole CIRCLE.
+
 ## 2026-11-05 — Latrina nelle torri W1 (branch `fix/latrine-towers`)
 
 - Correzione dell'utente: la latrina va al piano 2 delle torri W1 in pietra, con lo sbalzo sulla faccia esterna libera; non va più nelle sezioni costruite.
@@ -9,6 +11,105 @@
 - `ROOM_EXTERIOR` monta l'elemento `face` anche sulle torri; le feritoie della faccia gli lasciano il posto. Asset Lab: tre varianti di torre W1 nuove, la variante della sezione con latrina rimossa; baseline aggiornata.
 - Piramide: STATUS, BACKLOG, DECISIONS (D-ROOM-EXT-01, prima applicazione). ROADMAP invariata.
 
+
+05/11/2026 — `feature/roof-pitch-75` (BC-251105-08): pendenza dei tetti a 75° aggiunta al set 30/45/60° (`ROOF_PITCHES`, `ROOF_PITCH_COST[75]` = 9 legno · 3 oro · 1 pietra per tetto), opzione nella scheda «Pendenza dei tetti». Asset Lab: torri e porte a falde in pietra hanno gli stati «Tetto 30°/60°/75°» (gruppo `pendenza`, cattura con `State.policies.roofPitch` temporaneo). Nuova `qa/roof-pitch-regression.cjs` (in CI `tower-variants-regression`). Piramide: STATUS, BACKLOG, feature-backlog. ROADMAP e DECISIONS invariate: estende un contratto già esistente.
+
+06/11/2026 — `feature/orto-di-corte` (pre-merge): BC-251105-11 deciso dall'utente come **orto di corte**. Nuovo annesso `kitchenGarden` del Municipio (3×2U, L1, max 2, su terreno aperto entro 7U, mai su lotti altrui); ogni orto completo produce 2 cibo del signore per giornata lavorativa, anche in allarme/assedio. Modello Blender `kitchenGarden` in `civic-models.js` e nell'Asset Lab (audit: 0 errori, baseline aggiornata solo per la nuova voce). Test in `civic-annex-regression` e `labor-jobs-regression`. Aggiornati STATUS/BACKLOG/DECISIONS, feature-backlog e guida annessi civili; ROADMAP invariata.
+
+
+05/11/2026 — `feature/bc-scale`: BC-251105-01 scala lignea e BC-251105-02 scala lapidea ai camminamenti (upgrade del muro dall'ispettore, modelli Blender, accesso della rete wall-walk per le truppe, crollo in breccia, Asset Lab). Piramide: STATUS, BACKLOG, feature-backlog. ROADMAP e DECISIONS invariate: nuovo upgrade dentro il contratto esistente dei camminamenti.
+
+06/11/2026 — Integrazione PR #175: riallineata a main b62d0b9 (#173/#174). Risolti conflitti preservando rampe, H4 e torre lignea. Corretto il test costiero intermittente: fixture con seedRand reale, prima assente (3 fallimenti su 20); nessuna modifica al runtime costiero.
+
+06/11/2026 — `feature/wood-tower-h2` (BC-251105-06): nuova **torre lignea a telaio H2** nel Builder (Torri › Legno › «Telaio H2»), 1,5×1,5U, sempre coperta. Modello Blender `frameTower` (`tools/blender/build_wood_fort.py`): piano terra chiuso in tronchi, P1 con telaio controventato a vista e tamponamenti chiari, ballatoio con parapetto, tetto a padiglione e bandiera. Se è il mastio accetta l'ingresso rialzato (scala lignea/lapidea e ponte levatoio) con porta al P1. Cantiere, cutaway e Lab inclusi. Costo 55 oro / 130 legno, 6,5 giorni. Piramide: STATUS, BACKLOG, feature-backlog. ROADMAP e DECISIONS invariate: è una variante di una famiglia esistente.
+
+06/11/2026 — `feature/tower-w2-h4` (pre-merge): BC-251105-07 valutata e approvata. La torre quadrata in pietra W2 indipendente sale fino a H4 (`towerH4Allowed`, `maxStructureLevel` 4): altezza 5,95 U più il tier, costo livello ×3,35. Pulsante «4 levels (W2)» nel menu torri, due varianti W2 H4 nell'Asset Lab, nuova `qa/tower-h4-regression.cjs`. STATUS, BACKLOG e feature-backlog aggiornati; ROADMAP e DECISIONS invariate (estensione di un limite, nessun contratto nuovo).
+
+
+06/11/2026 — `feature/ramps-stairs`: BC-251105-12/13 rampe e scalinate sui dislivelli (`src/settlement-slopeways.js`), costruibili, percorribili dal pathfinding (carri e mezzi pesanti solo sulle rampe), nel Lab con audit; test `qa/slopeways-regression.cjs`. Piramide: STATUS, BACKLOG, feature-backlog. ROADMAP e DECISIONS invariate: nuova struttura dentro contratti esistenti (attraversamenti come i ponti).
+
+05/11/2026 — `feature/founding-storage-yard-20261105` (pre-merge): aggiunto il tipo `storageYard` «Piazzale · Magazzino», 2×2U, fondazione entro 7U dal primo pozzo, espandibile a 4×4/6×6 con costi e collisioni, inventario visualizzato direttamente dal ledger unico del castello. Garantito un L1 al taglialegna con piazzale anche in presenza di saturazione cantieri; risolta la mancata crescita apparente del legname: quota trattenuta della produzione Logging Camp ora nel magazzino entro capienza, eccedenza sul mercato, anziché restare azzerata dall'obiettivo riserva 70 a fronte di stock iniziale 200. Salvataggi vecchi migrati senza stock duplicato; Canvas, World3D e tre mesh in Asset Lab (categoria Produzione); test specifici e CI Economy flows. ROADMAP invariata, DECISIONS/BACKLOG/STATUS e feature-backlog aggiornati.
+
+
+05/11/2026 — `fix/forestry-l1-clearing-cost-20261105` (pre-merge): capanno del taglialegna ridotto da 25 a 5 legname (35 oro invariati); nuovo tool Terraforming «Rimuovi foresta», che crea un job L1 persistente e pagato. La rimozione del bosco e l'accredito della resa in legname nel castello avvengono solo alla fine del lavoro. Aggiunti regressione dedicata e hook CI Economy flows. ROADMAP invariata; aggiornati STATUS/BACKLOG/DECISIONS e backlog Builder. CI e merge da verificare su GitHub.
+
+
+05/11/2026 — `fix/audit-sheet-grid`: i fogli provini per categoria vanno a griglia da 8 colonne. Lo sfondo neutro evita che le celle vuote sembrino un esito verde. Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è uno strumento di QA, non cambia contratti.
+
+05/11/2026 — `feature/double-crenel` (BC-251105-04): nuovi stili delle merlature «Merlo doppio» (merli lunghi il doppio sulle mura, sequenza 11011011) e «Doppia fila» (seconda fila di merli sul lato interno del cammino delle mura). Entrambi selezionabili nel Centro di controllo › Cantieri, presente nel Lab. Piramide: STATUS, BACKLOG, CHANGELOG, feature-backlog. ROADMAP e DECISIONS invariate: estende un contratto esistente (`State.policies.crenelStyle`).
+
+## 2026-11-02 — Mare al 30% e Molo (branch `mare`)
+
+- Banchina perpendicolare alla riva: pontili su entrambi i lati, approdo ridotto a 0,3U sulla banchina; test del molo esteso.
+- Magnete delle mura sui lati della banchina: muro dritto all'esterno, addossato alla faccia, alla quota della banchina su zoccolo.
+- Gabbiani (`src/settlement-gulls.js`, sprite 2D, solo grafica): stormi che girano sopra costa, moli e acqua vicina, con battiti d'ala, planate e ombra; altri posati su scogli, spiagge e teste dei moli. Di notte non volano, con la tempesta sono la metà.
+- Onde (`ConquerCoast.drawWaves`, solo grafica, tempo reale, entrambi i renderer): creste di schiuma a tratti che salgono sulla spiaggia e si ritirano, spruzzi sugli scogli, riflessi in mare aperto. Il meteo cambia la forza (calma 0,6, vento 1, tempesta 1,6); di notte restano deboli riflessi.
+- Moli commerciali e militari: un selettore nel pannello del molo (Commerciale di default). Le navi militari del giocatore attraccano solo ai moli militari; mercantili, convogli e pescatori solo ai commerciali e alle banchine. Nuovo pulsante **Attracca** nei comandi: le navi selezionate vanno all'attracco militare libero più vicino.
+- Le bandiere delle navi sventolano tutte dalla stessa parte, sottovento: un vento per mappa (`ConquerShips.windHeading`, dal seme), e la rotta della nave non le fa più girare.
+- Comandi unità per le navi militari del giocatore (`settlement-fleet.js`, agganciati agli ordini di `settlement-combat.js`). Si selezionano con un clic o un riquadro (Shift per aggiungere) e un riquadro giallo le evidenzia. Clic sul mare: la nave salpa lungo la rotta e resta all'ancora lì; più navi si mettono in fila. Clic su una nave straniera: la nave le si avvicina e a 16U parte la battaglia navale. Clic su un molo: la nave va a ormeggiare a un attracco libero. Le navi all'ancora vengono salvate nel punto in cui si trovano.
+- Fix: il pagliolo delle barche aperte (barca da pesca, barca da carico, barchetta) era sotto o vicino alla linea di galleggiamento e il mare si vedeva dentro lo scafo, soprattutto con il rollio. Ora sta circa 0,35 m sopra l'acqua (`floor` in `build_ships.py`); un test controlla che ogni nave resti asciutta col rollio massimo.
+- Navigazione in mare (`src/settlement-sea-nav.js`): griglia di 1U sul mare che esclude terra, scogli, banchine, moli e scali, con lo spazio libero di ogni cella per la larghezza dello scafo. Rotte A* lisciate; le navi si muovono a velocità reale e girano gradualmente; chi sta dietro aspetta se il suo scafo sta per toccare un'altra nave, con un limite di attesa. Pescatori e navi mercantili dei convogli seguono queste rotte. Tutte le navi hanno rollio e beccheggio (più le barche piccole e in navigazione).
+- Pescatori: metà delle famiglie usa la barchetta a remi (remi separati in Blender che vogano) e metà la barca a vela; sul punto di pesca la rete (`castNet`, kit Blender pesca) viene calata, lasciata e salpata a ciclo; i punti di pesca stanno a 10U l'uno dall'altro.
+- Cantiere navale: i carpentieri si vedono al lavoro lungo lo scafo sullo scalo (martello e ascia, animazioni dei cantieri edili), di giorno nei giorni feriali, tanti quanti l'economia ne assegna allo scalo.
+- Costa (`src/settlement-coast.js`): spiaggia nelle insenature, costruibile; scogli sui promontori (vertici della costa che sporgono più di 1,2U verso il mare rispetto ai vicini). Gli scogli formano una fascia di 2,6U a terra e 1,2U in mare che le unità non attraversano e dove strade ed edifici non si possono costruire, tranne la banchina. Il terreno è dipinto a sabbia o pietra; scogli, secche, barche tirate a secco e legni portati dal mare vengono dal kit Blender waterside (`waterside-models.js`).
+- Navi mercantili come carovane: nuovi mezzi `shipSmall` (300 punti = 3 carri) e `shipLarge` (900 = 9 carri) in `settlement-commerce.js`. I convogli del Mastio possono partire via mare se c'è un molo o una banchina, scegliendo un'uscita via mare; in mare il viaggio è più veloce (40U/giorno). Le navi (`src/settlement-sea-convoys.js`) si vedono lasciare il porto all'andata e rientrare al ritorno.
+- DEV: nel pannello di un molo selezionato, `Fai arrivare qui` ormeggia a quel molo una nave del tipo e della bandiera scelti (da rimuovere poi).
+- Cantiere navale (`src/settlement-shipyard.js`, molo con `yard:1|2`): si aggancia alla costa dal menu Porto. L1 ha lo scalo di 7U in mare e 5U a terra e costruisce barca, carico e caravella; L2 ha 10U in mare, 12U di piazzale e una gru a ruota, e costruisce anche cocca e nave latina. Si ordina una nave alla volta dal pannello (tipo e bandiera, costo pagato subito); fino a 3 carpentieri L1 lavorano nei giorni feriali e lo scafo cresce in fasi (ossatura, fasciame, ponte e castelli, alberi). Poi c'è il varo lungo lo scalo e la nave entra nella flotta. Kit Blender `tools/blender/build_shipyard.py` → `src/assets/shipyard-models.js` (scalo L1/L2, tettoia, ossatura), nell'Asset Lab sotto Produzione/Cantiere navale.
+- La flotta si salva con il villaggio (`State.village.fleet`: tipo, bandiera, livrea, attracco) e si ricarica; le barche dei pescatori seguono le loro famiglie.
+- Pescatori (`src/settlement-fishers.js`): le case L1 entro 14U da un molo o da una banchina diventano famiglie di pescatori, una per attracco libero, le più vicine prima. Ognuna ha una barca da pesca ormeggiata, che esce all'alba nei giorni feriali verso una zona di pesca al largo e rientra nel pomeriggio; il pescato vale 1,2 di cibo privato per pescatore per giorno lavorativo. Sul lotto ci sono rete stesa, rastrelliera del pesce e ceste (Blender `tools/blender/build_fishing.py` → `src/assets/fishing-models.js`, nell'Asset Lab sotto Produzione/Pescatori).
+- Rotte commerciali col mare: niente strada principale né cartello sul lato mare; 3 uscite via mare (centro del lato mare e moncherini di mare dei due lati adiacenti) in `State.village.seaEntries` e in `ConquerConvoys.availableExits()` con `mode:'sea'`. Le uscite stradali non finiscono più sui moncherini di mare.
+- Livrea casuale delle navi: ogni nave alla creazione prende a caso pittura dello scafo (fascia e pannelli, 7 colori) e tono del fasciame (5), passabili come `livery` a `ConquerFleet.spawn`.
+- Attracchi lungo la banchina (ogni 5U, disattivati entro 4U da un pontile, sotto le mura, vicino alle torri); la flotta li usa dopo i pontili con controllo dello scafo.
+- Regola: i muri di banchina mostrano sempre l'esterno all'acqua (flip forzato, anche sulle partite salvate; inversione manuale rifiutata).
+- Angoli delle banchine chiusi (prolungamento alle estremità collegate, muri d'angolo sovrapposti); banchine, mura, torri e pontili da banchina possono proseguire oltre la white zone se partono da dentro.
+- Torri sulla banchina (lati e vertici, porta verso la banchina, quota della banchina su zoccolo); magnete tra banchine (estremità e facce); texture a blocchi di pietra con giunti e lastricato.
+- Navi nel WebGL (mesh dinamiche); pontili da banchina a ≥4U dalla riva e ≥5U tra loro; gru, paranchi e merci sulla banchina.
+
+- Equipaggio militare (arcieri sui castelli, armigeri sul ponte) e battaglia navale dimostrativa: avvicinamento, frecce anche incendiarie, passerella e abbordaggio, incendio e affondamento (`settlement-naval-battle.js`, `qa/naval-battle-regression.cjs`). `settlement-fire.js` esporta `flame`/`smoke`.
+
+- Porto: moli L4/L12, piazzamento solo costa + whitezone; banchina in pietra a due clic con moli agganciati; navi di test nel menu DEV (ormeggio con vele alzate, alla fonda, ordini alle vele). Toppe araldiche 16×10 e bandiere 10×6 per contenere il costo di disegno.
+
+- Mare: copertura massima dal 20% al 30%, la costa arriva nella whitezone per permettere i porti.
+- Nuovo Molo (`settlement-pier.js`): legno su pali, 8U sul mare, merci sulle tavole, due attracchi sinistra/destra; agganciato a menu, anteprima, validazione, costi, render 2D/WebGL e inspector.
+- Cinque navi modellate in Blender (`build_ships.py`): barca, barca da carico, caravella (piccole); cocca, nave latina (grandi). Registrate nell'Asset Lab, regressione `qa/ships-regression.cjs`. Vele alzate per ogni nave e animazione di alzata/ammainata (morph tra i due stati Blender), con anteprima animata nel Lab. Araldica navale: bandiere e armi sulle vele per navi del giocatore e di regni stranieri, solo bandiera per le mercantili; partizioni araldiche spostate in `heraldry-shapes.js` (condivise con l'editor). Equipaggi civili: marinai che camminano sul ponte e gabbieri che salgono sugli alberi per manovrare le vele (`settlement-ship-crew.js`, dati da Blender, `qa/ship-crew-regression.cjs`). Cantiere del molo: materiali solo sull'approdo, nessun oggetto di cantiere in acqua, materiali in legno.
+- Nuova regressione `qa/pier-regression.cjs` e workflow `sea-regression.yml`. ROADMAP e DECISIONS invariati (nessun nuovo contratto oltre la struttura `pier`).
+## 2026-11-05 — Pendenza dei tetti di torri e porte (branch `feat/roof-pitch`)
+
+- Nuova scelta globale `State.policies.roofPitch` (30°, 45° default, 60°; persistita locale e cloud) per tutti i tetti a falde in pietra di torri (piramide, due falde, padiglione, rotonde, a D) e porte (grande e piccola). La salita è `tan(pendenza) × semiluce` (raggio sulle rotonde, lato corto sulle quadrate); il piano in legno della porta piccola mantiene il suo colmo fisso.
+- Cambio a pagamento dal Centro di controllo › Cantieri, scheda «Pendenza dei tetti»: costo per tetto (`ROOF_PITCH_COST`: 3 legno / 4 legno + 1 oro / 6 legno + 2 oro), cantieri esclusi; le nuove costruzioni seguono la pendenza. Comandi `ConquerGame.commands.roofPitchQuote/setRoofPitch`.
+- Correzione cache: la firma del bitmap del corpo castello e quella degli sprite struttura includono ora stile delle merlature e pendenza, così il cambio si vede senza ricaricare.
+- QA: Lab con le tre pendenze su torre quadrata, rotonda, due falde, porta grande e piccola; regressioni Node PASS tranne `asset-catalog-regression`, che fallisce identica su main. Asset audit 1081 render, 0 falliti, baseline aggiornata. CI non ancora eseguita.
+
+## 2026-11-05 — Camino laterale delle case L1 (branch `fix/l1-chimney`)
+
+- Le casette L1 hanno un solo camino, in pietra, addossato a una testata, da terra oltre la paglia (prima due camini sul colmo sulle casette da 2 U). La finestra della testata lascia il posto al camino. Nuovo pezzo `chimneySide` nel kit Blender e nel Lab.
+- Piramide: STATUS, BACKLOG. DECISIONS e ROADMAP invariate (correzione visiva dentro D-057).
+
+## 2026-11-04 — Long house in legno W1 / W2 (branch `feature/wood-longhouse`)
+
+- Nuova long house lignea: una sezione costruita (`built`) con `material:'wood'`, larga come la W1 (1U) o la W2 (2U), solo piano terra (P0) con le stesse stanze della sezione in pietra al piano terra.
+- Modello Blender in `tools/blender/build_wood_fort.py` (campata da 1U ripetuta lungo a→b, testata con porta e testata cieca, tetto a scandole, assi incrociate sui frontoni) → `src/assets/wood-fort-models.js`; i modelli lignei esistenti sono rigenerati identici.
+- Asset Lab: 4 varianti nella famiglia Mura e 7 voci nel catalogo strutture; baseline dell'audit estesa con i 32 render nuovi.
+- Cutaway corretto: in World 3D ora si apre dal comando, nel 2.5D la stanza non passa più dai compositi del castello in pietra, e il tetto si toglie tutto.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: nuova variante di un tipo esistente, non cambia milestone né contratti.
+04/11/2026 — `fix/prepare-architecture-textures`: ridotte le texture architettoniche al formato già usato dal renderer e rimossa la preparazione Canvas all’avvio.
+
+04/11/2026 — `fix/remove-fossil-industry-svg`: rimossi 50 SVG obsoleti di cava e campo taglialegna. Manifest, baseline e regressione del Lab aggiornati alle anteprime 3D.
+
+## 2026-11-03 — Mastio W4 · 3U, più stanze per piano (branch `feature/keep-w4`)
+
+- Nuovo tier W4 (3×3U) per il mastio: piante per piano con 1–4 stanze, tramezzi e porte nel cutaway, stanze assegnate per piano. Lab: 5 righe nella galleria fortificazioni e 16 voci nel catalogo.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è un prototipo da provare, non cambia milestone né contratti.
+
+
+## 2026-11-03 — Portico delle sezioni W1 (branch `feature/built-portico`)
+
+- Porticato W1 corretto: stessa geometria in 2.5D, World 3D e cutaway, archi sotto il piano sopraelevato, portico visibile nel cutaway 3D.
+- In World 3D il portico W1 è una loggia vera: piano terra arretrato, pilastri e archi, piano rialzato sopra (anche nel cutaway).
+- Sotto il portico solo stalle, officina degli armaioli, magazzino e corpo di guardia.
+- Il portico ha una stanza arredata per campata, sempre visibile in 3D, e un camminamento lungo i pilastri percorso dalle figure.
+- Nuova `qa/built-portico-regression.cjs`; variante «Sezione porticata L2» nel Lab e in baseline.
+- Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: correzione di resa e regola sulle stanze, non cambia milestone né contratti.
 ## 2026-11-04 — Campana d'allarme (branch `feature/alarm-bell`)
 
 - L'allarme del villaggio si propaga dalle campane (chiesa, Municipio, torri T1–T2 a falde con l'upgrade `bell`): raggio d'ascolto, catena di campane, passaparola oltre i raggi. Le case lontane lo sentono più tardi.
@@ -717,3 +818,8 @@ Non archiviare nuove idee indistintamente come «implementazioni»: mantenere se
 
 ### 2026-10-29 — CIRCLE QA GitHub Actions
 - Creato workflow `.github/workflows/circle-regression.yml` per test Node.js 22 e syntax checks ad ogni push rilevante su `circle`. [Run #40912609993](https://github.com/erykwest/CONQUER/actions/runs/40912609993) su codice `68533977`: **PASS 65/65 test**. Restano da eseguire smoke test browser/UI e profiling dinamico.
+
+
+## Campi L2 — 05/11/2026
+
+Branch fix/fields-l2-only — scelta utente campi solo L2, sincronizzazione ledger e figure, regressioni su esclusione L1 e prenotazioni L2. Chiusura residuo jobmanager e pulizia dopo merge.

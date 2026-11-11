@@ -604,11 +604,17 @@
         for(let i=0;i<=count;i++){const t=i/count,p={x:e.a.x+dx*t,y:e.a.y+dy*t};m.prism(rectWorldPoints(p.x,p.y,.05,.05,ang),g+.02,g+.38,'#806442','#6b5338','#806442')}
       }
     }
+    // Shore boulders on the rocky stretches of the coast (settlement-coast.js).
+    window.ConquerCoast?.addToBuilder(m);
     for(const s of State.structures){
       if(underConstruction(s))continue;
       // Palisades, timber towers and timber gates: Blender models and stakes (settlement-wood3d.js).
       if(window.ConquerWood3D?.addToBuilder(m,s))continue;
       if(window.ConquerEvents3D?.is(s))window.ConquerEvents3D.addToBuilder(m,s);   // event venues and their setups
+      else if(window.ConquerPier?.is(s))window.ConquerPier.addToBuilder(m,s);      // timber pier over the sea
+      else if(window.ConquerQuay?.is(s))window.ConquerQuay.addToBuilder(m,s);      // stone quay
+      else if(window.ConquerStorageYard?.is(s))window.ConquerStorageYard.addToBuilder(m,s);
+      else if(window.ConquerSlopeways?.is(s))window.ConquerSlopeways.addToBuilder(m,s);  // ramp / stairway
       else if(isCivic(s))withStructureVisualMaterial(s,()=>addCivic(m,s,winter));
       else if(isCivicAnnex(s))withStructureVisualMaterial(s,()=>addCivicAnnex(m,s,winter));
       else if(window.ConquerIndustries?.is(s)){
@@ -991,23 +997,21 @@
             else for(const off of gateSlitOffsets(edge))onEdge(edge,z,.24,.62,'arrowSlit',off,ground,o);
           }
         }
-      }else if(s.type==='built'){
-        const inside=-wallExteriorSide(s);
+      }else if(s.type==='built'&&!isLonghouse(s)){
         for(const [side,z,density,key,aw,ah,,fixed] of builtWindowRows(s)){
           const edge=linearFacadeEdge(s,side),count=builtWindowCount(edge,density,fixed,aw),cell=edge.length/count;
           const ground=terrainElevation({x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2}),o=outward(edge,center);
           for(let i=0;i<count;i++){const off=(i+.5)*cell-edge.length/2;if(!window.ConquerRoomExterior?.takesWindow(s,side,z,off))onEdge(edge,z,Math.min(aw,cell*.82),ah,key,off,ground,o)}
         }
-        if(builtSkin(s)==='arcade'){                                            // drawBuiltArcade, interior facade
-          const edge=linearFacadeEdge(s,inside),h=Math.min(1.46,structureHeight(s)-.16);
-          if(h>.18&&edge.length>=.35){
-            const count=Math.max(1,Math.round(edge.length/2.55)),cell=edge.length/count,centerZ=.04+h/2,key=cell<2.25?'arcade2':'arcade3';
-            const ground=terrainElevation({x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2}),o=outward(edge,center),DARK=[36/255,33/255,31/255,1];
-            for(let i=0;i<count;i++){
-              const off=(i+.5)*cell-edge.length/2,w=cell*.96,span=facadeAssetWorldSpan(edge,w,off);
-              quad(span.a,span.b,ground+centerZ-h*.43,ground+centerZ+h*.43,'__white',o,DARK,.008);   // drawFacadeAssetBackdrop
-              onEdge(edge,centerZ,w,h,key,off,ground,o);
-            }
+        // W1 portico: carved loggia in the castle body (builtLoggia). The W2 hall keeps the arcade decal.
+        const arcade=!isBuiltPortico(s)&&builtArcadeLayout(s);
+        if(arcade){
+          const {edge,h,centerZ,key}=arcade;
+          const ground=terrainElevation({x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2}),o=outward(edge,center),DARK=[36/255,33/255,31/255,1];
+          for(const {off,w} of arcade.bays){
+            const span=facadeAssetWorldSpan(edge,w,off);
+            quad(span.a,span.b,ground+centerZ-h*.43,ground+centerZ+h*.43,'__white',o,DARK,.008);   // drawFacadeAssetBackdrop
+            onEdge(edge,centerZ,w,h,key,off,ground,o);
           }
         }
       }else if(s.type==='house'){
@@ -1217,7 +1221,15 @@
       }
     };
     for(const s of State.structures){
-      if(!structureCutaway(s)||underConstruction(s))continue;
+      if(underConstruction(s))continue;
+      if(!structureCutaway(s)){
+        // Closed W1 portico: only the furniture under its arches.
+        if(isBuiltPortico(s))for(const f of FU?.loggiaFaces?.(s)||[]){
+          const pts=f.pts.map(p=>({x:p[0],y:p[1],z:terrainElevation({x:p[0],y:p[1]})+p[2]}));
+          m.face(pts,shadeHex(f.hex,W3?W3.shadeFactor(f.n[0],f.n[1],f.n[2],turns):1));if(f.emissive)em.face(pts,f.hex);
+        }
+        continue;
+      }
       // Timber tower: the Blender model minus the sides facing this quarter-turn, then its room.
       if(window.ConquerWood3D?.addCutawayToBuilder?.(sh,s)){addFurniture(s);continue}
       // Floor-by-floor cutaway: H is the cut (the ceiling of the floor in view), HF the full height.
@@ -1248,11 +1260,21 @@
       // Timber-framed small gate: masonry up to the frame's floor, plaster above (outside and in).
       const timber=s.type==='gate'&&gateTimberUpper(s),zf=timber?Math.min(gateTimberFloorZ(s),H):H;
       const band=(mesh,p,q,z0,z1,hex)=>mesh.face([Z(p,z0),Z(q,z0),Z(q,z1),Z(p,z1)],hex);
+      const loggia=isBuiltPortico(s)?builtLoggia(s):null,lc=structureCenter(s),ln=s.b?{x:-(s.b.y-s.a.y),y:s.b.x-s.a.x}:null;
+      const loggiaEdge=(p,q)=>!!loggia&&loggia.cap<H&&Math.sign(((p.x+q.x)/2-lc.x)*ln.x+((p.y+q.y)/2-lc.y)*ln.y)===loggia.side;
       for(const i of keep){
         const j=(i+1)%n,o0=g.outer[i],o1=g.outer[j],i0=g.inner[i],i1=g.inner[j];
         if(timber){
           band(sh,o0,o1,0,zf,castleSideShade(o0,o1));band(sh,o0,o1,zf,H,'#d9ccb0');
           band(m,i0,i1,0,zf,'#61574f');band(m,i0,i1,zf,H,'#cbbd9f');
+        }else if(loggiaEdge(o0,o1)){
+          // W1 portico on the standing wall: masonry only above the loggia, its piers and arches below.
+          band(sh,o0,o1,loggia.cap,H,castleSideShade(o0,o1));band(m,i0,i1,loggia.cap,H,'#61574f');
+          for(const f of loggia.faces)if(f.part==='arcade'){
+            const P=f.pts.map(q=>Z(q.p,q.z));let nx=0,ny=0,nz=0;
+            for(let k=0;k<P.length;k++){const a=P[k],b=P[(k+1)%P.length];nx+=(a.y-b.y)*(a.z+b.z);ny+=(a.z-b.z)*(a.x+b.x);nz+=(a.x-b.x)*(a.y+b.y)}
+            const l=Math.hypot(nx,ny,nz)||1;sh.face(P,shadeHex('#8a7f74',W3?W3.shadeFactor(nx/l,ny/l,nz/l,turns):1));
+          }
         }else{wallFace(sh,o0,o1,castleSideShade(o0,o1));wallFace(m,i0,i1,'#61574f')}
       }
       // Subtower: the parent stays intact, and a dividing wall closes the subtower along the
@@ -1357,6 +1379,23 @@
             else decal(at,dir,G0+z-.31,G0+z+.31,.24,'arrowSlit','#1c1612');
           }
         }
+      }else if(s.type==='built'){
+        // W2 hall portico (a decal) seen from inside when it stands on the rear wall; the W1 loggia is
+        // geometry (above). On the near side it goes with the wall.
+        const arcade=!loggia&&builtArcadeLayout(s),c=structureCenter(s);
+        const seg={x:s.b.x-s.a.x,y:s.b.y-s.a.y},L=Math.hypot(seg.x,seg.y)||1,u={x:seg.x/L,y:seg.y/L};
+        for(const e of keep){
+          if(!arcade||arcade.centerZ+arcade.h/2>H)break;
+          const a=g.inner[e],b=g.inner[(e+1)%n],mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+          const side=Math.sign(-u.y*(mid.x-c.x)+u.x*(mid.y-c.y));if(side!==arcade.side)continue;
+          const dir={x:-u.y*side,y:u.x*side},ec={x:(arcade.edge.a.x+arcade.edge.b.x)/2,y:(arcade.edge.a.y+arcade.edge.b.y)/2};
+          const t=(ec.x-mid.x)*u.x+(ec.y-mid.y)*u.y,G=terrainElevation(mid),{h,centerZ:cz}=arcade;
+          for(const {off,w} of arcade.bays){
+            const at=k=>({x:mid.x+u.x*(t+off)-dir.x*k,y:mid.y+u.y*(t+off)-dir.y*k});
+            openingQuad(m,at(.006),dir,G+cz-h*.43,G+cz+h*.43,w,'#24211f');
+            decal(at(.009),dir,G+cz-h/2,G+cz+h/2,w,arcade.key,'#6d655c');
+          }
+        }
       }
       addFurniture(s);
     }
@@ -1368,7 +1407,7 @@
   // Category tests look at fields only (no terrain sampling), so this stays well under a millisecond.
   let sigPass=null;
   function structureKey(s){
-    return s.id+(underConstruction(s)?'u':'c')+(s.level||'')+(s.houseLevel||'')+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.b?.x??'')+(s.b?.y??'')+(s.angle||0)+(s.roofStyle||'')+(s.bartizan||'')+(s.bell||'')+(s.roofShape||'')+(s.baseStyle||'')+(s.skin||'')+(s.masonryMaterial||'stone')+(s.cutaway?1:0)+(s.width||'')+(s.groundZ??'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0)
+    return s.id+(underConstruction(s)?'u':'c')+(s.level||'')+(s.houseLevel||'')+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.b?.x??'')+(s.b?.y??'')+(s.angle||0)+(s.roofStyle||'')+(s.bartizan||'')+(s.bell||'')+(s.roofShape||'')+(s.baseStyle||'')+(s.skin||'')+(s.masonryMaterial||'stone')+(s.cutaway?1:0)+(s.width||'')+(s.span||'')+(s.material||'')+(s.groundZ??'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0)
       // Moat fill patches are baked into the ground: filling must re-bake it.
       +(s.fills?.length?s.fills.map(f=>(+f.at).toFixed(2)+':'+f.span+':'+(+f.progress).toFixed(3)).join(','):'')
       // The gate door's state swaps its facade decal.
@@ -1389,8 +1428,8 @@
   }
   const SIG_CATEGORIES=[
     {name:'ground',test:s=>s.type==='road'||s.type==='field'||s.type==='house'||s.type==='moat'||s.type==='bridge'||s.type==='palisade'},
-    {name:'buildings',test:s=>s.type==='house'||s.type==='field'||s.type==='well'||CIVIC_TYPES.includes(s.type)||!!window.ConquerIndustries?.TYPES?.[s.type]
-      ||s.type==='palisade'||isWoodTower(s)||isWoodGate(s)},
+    {name:'buildings',test:s=>s.type==='house'||s.type==='field'||s.type==='well'||s.type==='pier'||s.type==='quay'||CIVIC_TYPES.includes(s.type)||!!window.ConquerIndustries?.TYPES?.[s.type]
+      ||s.type==='palisade'||isWoodTower(s)||isWoodGate(s)||isLonghouse(s)},
     {name:'castle',test:s=>!s.auto&&['tower','gate','wall','built'].includes(s.type)},
     {name:'hedges',test:s=>s.type==='house'||s.type==='field'},
     {name:'all',test:()=>true}
@@ -1464,7 +1503,7 @@
     }
     pumpGroundTiles(gl);
     // Heraldry: flags and drapes of the timber fortifications take the realm's colours.
-    const bSig=[season,State.visualPalette,urbanRev(),structuresSig('buildings'),civicCut,shopCut,shopFront,JSON.stringify(State.heraldry||null)].join('|');
+    const bSig=[season,State.visualPalette,window.ConquerCoast?.shore()?.stretches?.length||0,State.seed,urbanRev(),structuresSig('buildings'),window.ConquerStorageYard?.visualSignature?.()||'',civicCut,shopCut,shopFront,JSON.stringify(State.heraldry||null)].join('|');
     if(S.sig.buildings!==bSig){const a=performance.now();upload(gl,'buildings',buildBuildings());S.sig.buildings=bSig;st.buildingsMs=performance.now()-a}
     // The selected church / inn in cutaway: its section plane follows the camera quarter-turn.
     const cutSig=[bSig,rot,plan].join('|');
@@ -1528,9 +1567,10 @@
       S.buf.scatter=v.b;S.buf['scatter#n']=v.n;
     }
     // Cutaway interiors: rebuilt on content change, one buffer pair per camera quarter-turn.
-    const cut=State.structures.filter(s=>structureCutaway(s)&&!underConstruction(s));
+    // W1 porticos join even when closed: their loggia furniture shows through the arches.
+    const cut=State.structures.filter(s=>(structureCutaway(s)||isBuiltPortico(s))&&!underConstruction(s));
     const cutContent=cut.length?[season,S.castleContent,JSON.stringify(State.heraldry||null),!!window.ConquerFurnitureModel,S.sig.decals,
-      ...cut.map(s=>[s.id,JSON.stringify(s.functions||[]),structureLevel(s),cutawayCeilingZ(s),s.x??s.a?.x,s.y??s.a?.y,s.b?.x,s.b?.y,s.angle,s.size,s.r,s.isMastio?1:0].join(':'))].join('|'):'';
+      ...cut.map(s=>[s.id,JSON.stringify(s.functions||[]),structureLevel(s),structureCutaway(s)?1:0,s.skin,cutawayCeilingZ(s),s.x??s.a?.x,s.y??s.a?.y,s.b?.x,s.b?.y,s.angle,s.size,s.r,s.isMastio?1:0].join(':'))].join('|'):'';
     if(S.cutContent!==cutContent){
       for(const v of S.cutVariants?.values()||[]){gl.deleteBuffer(v.main.b);gl.deleteBuffer(v.shell.b);gl.deleteBuffer(v.em.b);gl.deleteBuffer(v.dec.b)}
       S.cutContent=cutContent;S.cutVariants=new Map();
@@ -1777,7 +1817,7 @@
   function residual2D(){
     // Palisades, wood towers and wood gates are 3D (settlement-wood3d.js); without their models
     // they keep the 2.5D drawing (per frame).
-    const items=State.structures.filter(s=>!underConstruction(s)&&(s.type==='palisade'||isWoodTower(s)||isWoodGate(s))&&!window.ConquerWood3D?.handles(s))
+    const items=State.structures.filter(s=>!underConstruction(s)&&(s.type==='palisade'||isWoodTower(s)||isWoodGate(s)||isLonghouse(s))&&!window.ConquerWood3D?.handles(s))
       .sort((a,b)=>worldDepth(a)-worldDepth(b));
     for(const s of items)drawStructure(s);
   }
@@ -1914,6 +1954,8 @@
     }
     // Event flags, bunting and banners wave in the wind (settlement-events3d.js).
     try{for(const m of window.ConquerEvents3D?.dynamicMeshes?.()||[])dynamicQueue.push(m)}catch(e){console.error(e)}
+    // Ships afloat: hulls, morphing sails, flags and boarding planks (settlement-fleet.js).
+    try{for(const m of window.ConquerFleet?.dynamicMeshes?.()||[])dynamicQueue.push(m)}catch(e){console.error(e)}
     const settled=dynamicQueue.filter(m=>m.static===true),moving=dynamicQueue.filter(m=>m.static!==true);
     uploadSettledMeshes(S.gl,settled);
     const dyn=buildDynamic(moving);dynamicQueue=[];
