@@ -40,9 +40,21 @@
     for(const edge of touching)for(const p of [edge.start,edge.end])local.add(key(p));
     return Math.min(3,[...local].reduce((sum,k)=>sum+Math.max(0,(degree.get(k)||0)-2),0));
   }
+  function riverFlow(touching,all,outlets=[],sources=[]){
+    const key=p=>p.x.toFixed(4)+','+p.y.toFixed(4),graph=new Map();
+    for(const e of all){const a=key(e.start),b=key(e.end),length=Math.hypot(e.end.x-e.start.x,e.end.y-e.start.y);for(const [u,v] of [[a,b],[b,a]]){if(!graph.has(u))graph.set(u,[]);graph.get(u).push({v,length})}}
+    const distances=seeds=>{const d=new Map(),queue=[];for(const p of seeds){const k=key(p);if(graph.has(k)&&!d.has(k)){d.set(k,0);queue.push({k,d:0})}}while(queue.length){queue.sort((a,b)=>b.d-a.d);const item=queue.pop();if(item.d!==d.get(item.k))continue;for(const {v,length} of graph.get(item.k)||[]){const next=item.d+length;if(next<(d.get(v)??Infinity)){d.set(v,next);queue.push({k:v,d:next})}}}return d};
+    for(const [seeds,source,towards] of [[outlets,'regional-water-outlet',true],[sources,'regional-source',false]]){
+      const d=distances(seeds),candidates=touching.filter(e=>Number.isFinite(d.get(key(e.start)))&&Number.isFinite(d.get(key(e.end)))&&Math.abs(d.get(key(e.start))-d.get(key(e.end)))>1e-6).sort((a,b)=>Math.hypot(b.end.x-b.start.x,b.end.y-b.start.y)-Math.hypot(a.end.x-a.start.x,a.end.y-a.start.y));
+      if(!candidates.length)continue;
+      const e=candidates[0],forward=towards?d.get(key(e.start))>d.get(key(e.end)):d.get(key(e.start))<d.get(key(e.end)),sign=forward?1:-1,L=Math.hypot(e.end.x-e.start.x,e.end.y-e.start.y)||1;
+      return{x:(e.end.x-e.start.x)/L*sign||0,y:(e.end.y-e.start.y)/L*sign||0,source};
+    }
+    return null;
+  }
   const isSelectableTerrain=terrain=>!!biomeForTerrain(terrain)&&!['sea','lake'].includes(terrain);
   const landBiomes=Object.freeze(['plains','forest','mountains','swamp']);
-  const api={biomeForTerrain,isSelectableTerrain,landBiomes,riverJunctionCount,directions,sampleSurroundings,weights};
+  const api={biomeForTerrain,isSelectableTerrain,landBiomes,riverJunctionCount,riverFlow,directions,sampleSurroundings,weights};
   if(typeof window!=='undefined')window.ConquerRegionalBiomeRules=api;
   if(typeof module!=='undefined')module.exports=api;
 })();

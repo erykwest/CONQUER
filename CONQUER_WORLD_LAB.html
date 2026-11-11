@@ -941,7 +941,7 @@
     </div>
   </main>
 
-  <script src="src/regional-biome-rules.js?v=water-network-1"></script>
+  <script src="src/regional-biome-rules.js?v=flow-30-1-water-network-1"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script>
@@ -3866,6 +3866,8 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         });
         const touchingRivers=allRiverEdges.filter(edge=>edge.cells.some(cell=>cell.macroId===selectedMacro));
         const riverJunctions=window.ConquerRegionalBiomeRules.riverJunctionCount(touchingRivers,allRiverEdges);
+        const waterVertices=state.edges.filter(edge=>edge.cells.some(cell=>isWaterTerrain(state.terrain[cell.macroId]))).flatMap(edge=>[edge.start,edge.end]);
+        const riverFlow=window.ConquerRegionalBiomeRules.riverFlow(touchingRivers,allRiverEdges,waterVertices,state.riverSources||[]);
         const tributaryTypes=Array(riverJunctions).fill('river');
         const hasRiver=touchingRivers.length>0;
         const riverSides=[...new Set(touchingRivers.map(edge=>{
@@ -3880,7 +3882,7 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         const regionalCells=state.macros.map(m=>({id:m.id,code:m.code,terrain:state.terrain[m.id],centroid:m.centroid,polygon:m.cells[0].polygon}));
         const surroundings=window.ConquerRegionalBiomeRules.sampleSurroundings(regionalCells[selectedMacro],regionalCells,state.configuration.width,state.configuration.height);
         const payload={version:1,seed,biome,terrain,name:territoryName(macro),regionalSeed:state.seed,territoryId:macro.id,
-          neighbors:ids.map(id=>({id,code:state.macros[id].code,terrain:state.terrain[id]})),surroundings,hasRiver,riverSides,riverJunctions,tributaryTypes};
+          neighbors:ids.map(id=>({id,code:state.macros[id].code,terrain:state.terrain[id]})),surroundings,hasRiver,riverSides,riverFlow,riverJunctions,tributaryTypes};
         // Carry the small territory context in the URL too: opening another tab must
         // not lose its biome just because sessionStorage is scoped to the old tab.
         try{sessionStorage.setItem('conquer.regional-demo.world',JSON.stringify({map:mapData(),selected:selectedMacro}));sessionStorage.setItem('conquer.regional-demo.'+key,JSON.stringify(payload));}

@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## REG-FLOW-30 — Verso del primario e confluenze (11/11/2026)
+
+Sostituisce il precedente angolo retto: ingresso di default a 30 gradi rispetto alla tangente del primario nel verso di valle, senza immissioni controcorrente. Il verso dei punti del primario rappresenta monte-verso-valle. Priorita: foce locale, vettore del tratto regionale ricavato dalla rete verso mare/lago, distanza dalle sorgenti quando non raggiunge acqua, fallback deterministico dal seed. Il vettore regionale orienta il percorso locale esistente, senza cambiarne il piazzamento. Curve affluenti raccordate con continuita tangenziale a un terminale di 9U. Restano primario unico (precedenza al fiume), sbocchi distanziati, lati alternati e vincoli contro incroci e parallelismi. Nessuna rigenerazione dei salvataggi esistenti.
+
 ## REG-STREAM-T-HIERARCHY — Primario e affluenti a T (10/11/2026)
 
 Con piu corsi, uno solo e primario: un fiume ha sempre precedenza sui torrenti. Gli altri corsi confluiscono direttamente nel primario a T, con sbocchi distinti, distanti almeno 28U lungo il corso e 18U in linea d aria. Vietati torrenti autonomi paralleli, incroci a X e confluenze multiple nello stesso punto. Le curve affluenti sono costruite dallo sbocco con terminale perpendicolare, lati alternati e controlli su altre acque e rilievi. Il coseno assoluto con l asse complessivo del primario non supera .75; tra le direzioni degli affluenti non supera .86. In mancanza di spazio si omette l affluente. Il limite 0–3 dei torrenti e le probabilita restano invariati. Le sponde definitive sostituiscono i tagli boschivi provvisori.

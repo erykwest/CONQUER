@@ -86,7 +86,22 @@
   }
   return out;
  }
- // Tributaries are generated from their mouth outwards, normal to the primary.
+ function orientPrimary(line,info){
+  let source='local-mouth';
+  if(!line.mouth){
+    const vector=info.riverFlow,a=line.points[0],b=line.points.at(-1);
+    if(vector&&Number.isFinite(vector.x)&&Number.isFinite(vector.y)&&Math.hypot(vector.x,vector.y)>.01){
+      if((b.x-a.x)*vector.x+(b.y-a.y)*vector.y<0)line.points.reverse();source=vector.source||'regional';
+    }else{
+      if(seedRand((State.seed^biomeHash(line.id+':flow'))>>>0)()<.5)line.points.reverse();source='seeded-fallback';
+    }
+  }
+  const from=line.points[0],to=line.points.at(-1),L=Math.hypot(to.x-from.x,to.y-from.y)||1;
+  line.flow={source,from:{...from},to:{...to},direction:{x:(to.x-from.x)/L,y:(to.y-from.y)/L}};
+  return line;
+ }
+ const TRIBUTARY_ANGLE_DEG=30;
+ // Tributaries approach from opposite banks and turn downstream at the mouth.
  // This makes the hierarchy geometric: no parallel full-map streams or X crossings.
  function tributary(primary,type,id,rnd,lines,bodies,obstacles){
   const arc=[0],pts=primary.points;
@@ -107,11 +122,17 @@
    const reach=Math.min(...[[nx,200-target.x,target.x],[ny,200-target.y,target.y]].map(([v,pos,neg])=>Math.abs(v)<1e-9?Infinity:(v>0?pos:neg)/Math.abs(v)));
    if(reach<28)continue;
    const phase=rnd()*Math.PI*2,amplitude=5+rnd()*8,frequency=1+rnd(),n=Math.ceil(reach/1.5),points=[];
+   const angle=TRIBUTARY_ANGLE_DEG*Math.PI/180,ox=nx*Math.sin(angle)-tx*Math.cos(angle),oy=ny*Math.sin(angle)-ty*Math.cos(angle);
+   const source={x:target.x+nx*reach,y:target.y+ny*reach},stem={x:target.x+ox*9,y:target.y+oy*9};
+   const c1=lerp(source,stem,.35),handle=Math.min(18,reach*.25),c2={x:stem.x+ox*handle,y:stem.y+oy*handle};
    for(let i=0;i<=n;i++){
-    const t=i/n,remaining=reach*(1-t),v=clamp((remaining-9)/18,0,1),taper=v*v*(3-2*v);
+    const t=i/n,u=1-t,remaining=reach*u,v=clamp((remaining-9)/18,0,1),taper=v*v*(3-2*v);
     const bend=amplitude*Math.sin(t*Math.PI*2*frequency+phase)*Math.sin(t*Math.PI)**2*taper;
-    points.push({x:target.x+nx*remaining+tx*bend,y:target.y+ny*remaining+ty*bend});
+    points.push({x:u*u*u*source.x+3*u*u*t*c1.x+3*u*t*t*c2.x+t*t*t*stem.x+tx*bend,
+      y:u*u*u*source.y+3*u*u*t*c1.y+3*u*t*t*c2.y+t*t*t*stem.y+ty*bend});
    }
+   // Tangent-continuous approach: the last 9U retain exactly the downstream angle.
+   for(let i=1;i<=6;i++)points.push(lerp(stem,target,i/6));
    points[points.length-1]=target;
    if(points.some(p=>p.x<-.001||p.y<-.001||p.x>200.001||p.y>200.001||bodies.some(f=>environmentContains(f,p))||obstacles.some(f=>environmentContains(f,p,1))))continue;
    let crossing=false;
@@ -125,7 +146,7 @@
    if(crossing)continue;
    return{id,type,points,width:type==='river'?WATER_WIDTH.river:WATER_WIDTH.stream,
     fill:type==='river'?'#3a7684':'#4f8d95',edge:type==='river'?'#88b4b8':'#9cc6c6',
-    confluence:{downstreamId:primary.id,point:target,arcDistance:distance,bankSide:sign}};
+    confluence:{downstreamId:primary.id,point:target,arcDistance:distance,bankSide:sign,angleDeg:TRIBUTARY_ANGLE_DEG}};
   }
   return null;
  }
@@ -136,7 +157,7 @@
   const rnd=seedRand((State.seed^0x6783ab1)>>>0),lines=[];
   const ordered=original.slice().sort((a,b)=>(a.type==='stream')-(b.type==='stream'));
   const first=mouth({...ordered[0],points:ordered[0].points.map(p=>({...p})),drainagePrimary:true},bodies);
-  if(first)lines.push(first);
+  if(first)lines.push(orientPrimary(first,info));
   const primary=lines[0];
   if(primary)for(const f of ordered.slice(1)){
     const branch=tributary(primary,f.type,f.id,rnd,lines,bodies,obstacles);
@@ -161,5 +182,5 @@
   const dry=env.filter(f=>!water(f)&&!(f.type==='mountain'&&lines.some(l=>l.points.some(p=>environmentContains(f,p,l.width/2+1)))));
   return [...dry,...lines];
  }
- window.ConquerHydrology={compose,mouth,join,intersection,distributaries,tributary};
+ window.ConquerHydrology={compose,mouth,join,intersection,distributaries,tributary,orientPrimary,TRIBUTARY_ANGLE_DEG};
 })();

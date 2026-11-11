@@ -14,10 +14,11 @@ assert.ok(launch('?demo=unknown').error,'malformed demo never opens player save'
 assert.equal(launch('?demo=river&seed=bad').seed,4242);
 assert.ok(launch('?regionalDemo=abc',{version:1,biome:'plains',seed:123,name:'A1'}).error,'old payload without authoritative terrain cannot masquerade as plains');
 for(const [terrain,biome] of Object.entries({plain:'plains',forest:'forest',hills:'mountains',swamp:'swamp'})){
-  const payload={version:1,biome:'plains',terrain,seed:123,name:'Foresta è'};
+  const payload={version:1,biome:'plains',terrain,seed:123,name:'Foresta è',riverFlow:{x:0,y:1,source:'regional-water-outlet'}};
   const demo=launch('?regionalDemo=abc&regionalData='+encodeURIComponent(JSON.stringify(payload)));
   assert.equal(demo.biome,biome,'central terrain survives missing tab storage: '+terrain);
   assert.equal(demo.name,payload.name);
+  assert.deepEqual(JSON.parse(JSON.stringify(demo.riverFlow)),payload.riverFlow,'regional flow survives the URL launch boundary');
 }
 for(const terrain of ['sea','lake'])assert.ok(launch('?regionalDemo=water',{version:1,terrain,seed:123}).error,'water cells cannot launch a local map');
 assert.equal(rules.biomeForTerrain('unknown'),null);
