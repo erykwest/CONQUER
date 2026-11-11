@@ -188,7 +188,7 @@ const StructureCommands=(()=>{
   // Inner roof inside the merlons (BC-251105-05): cosmetic cover of the deck, no room under it.
   function setTowerInnerRoof(id,value){
     const target=find(id);if(!target||target.type!=='tower')return false;
-    if(value==='on'&&!towerInnerRoofAllowed(target)){status('Inner roof: needs a T2+ stone tower with a crenellated or machicolated top and no weapon on the deck');return false}
+    if(value==='on'&&!towerInnerRoofAllowed(target)){status('Inner roof: needs a T2+ stone tower with a crenellated or machicolated top and no weapon or signal pyre on the deck');return false}
     if(!setStructureVariant(target,'innerRoof',value==='on'?'on':'off'))return false;
     refresh(target,false);
     status(target.innerRoof==='on'?'Inner roof built inside the merlons':'Inner roof removed');

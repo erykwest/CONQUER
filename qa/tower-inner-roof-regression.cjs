@@ -27,6 +27,9 @@ check('the deck weapon and the inner roof exclude each other',()=>{
   assert.ok(!mounted(tower('a',{topWeapon:'mangonel',innerRoof:'on'})),'weapon first');
   assert.ok(!run('towerTopWeaponAllowed')(tower('b',{innerRoof:'on'})),'roof first');
   assert.ok(run('towerTopWeaponAllowed')(tower('c')),'T2 crenellated tower still takes a weapon');
+  assert.ok(!mounted(tower('d',{signalFire:'pyre',innerRoof:'on'})),'no inner roof over a signal pyre');
+  const soldiers=fs.readFileSync(__dirname+'/../src/settlement-soldiers.js','utf8');
+  assert.ok(soldiers.includes("structureVariant(s,'innerRoof')!=='on'"),'no signal pyre under an inner roof');
 });
 check('the roof stands inside the merlons, on a kerb, and rises above them',()=>{
   for(const t of [tower('s',{innerRoof:'on'}),tower('r',{shape:'round',r:1,tier:3,level:3,innerRoof:'on'}),tower('m',{size:2,tier:3,roofStyle:'machicolation',innerRoof:'on'})]){

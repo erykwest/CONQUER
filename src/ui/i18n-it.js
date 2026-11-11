@@ -192,7 +192,7 @@ export const T = {
     cutaway: 'Apre la facciata verso la camera e mostra le stanze.',
     weapon: 'Solo su torri T2 senza tetto a falde né ballatoio.',
     roofShape: 'Solo estetica, stesso costo; con il tetto a falde. 2 falde: timpani in pietra. Colmo: 4 falde su un colmo lungo metà del tetto. Con il colmo, due bandiere.',
-    innerRoof: 'Tetto a piramide o cono arretrato dentro i merli su un cordolo: il cammino di ronda resta libero tra tetto e merli. Torri in pietra T2+ con merli o caditoie, senza arma in cima. Solo estetica: nessuna stanza sotto (Colombaia, Falconiera e Campana restano sul tetto a falde).',
+    innerRoof: 'Tetto a piramide o cono arretrato dentro i merli su un cordolo: il cammino di ronda resta libero tra tetto e merli. Torri in pietra T2+ con merli o caditoie, senza arma né fuoco di segnalazione in cima. Solo estetica: nessuna stanza sotto (Colombaia, Falconiera e Campana restano sul tetto a falde).',
     bartizan: 'Quattro garitte d\'angolo su mensole, solo torri grandi (T3) quadrate o rotonde. 3 tiratori per garitta, che colpiscono anche il piede della torre fino a 1U.',
     hoarding: 'Galleria di legno montata in guerra attorno alla cima, sotto la gronda se c\'è il tetto; il tetto resta. Non con le caditoie né con le garitte.',
     bell: 'Castello campanario sulla punta del tetto, solo torri T1-T2 con tetto a falde (anche di legno). Quando suona l\'allarme, chi è nel raggio lo sente subito e un\'altra campana nel raggio lo ripete; fuori dai raggi l\'allarme corre a voce, più lento. Raggio: H1 10U, H2 13U, H3 16U. Esclude colombaia e falconiera.',

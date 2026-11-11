@@ -465,7 +465,7 @@ function towerTopWeaponAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&
 // roof: no room under it, so the Dovecote, the mews and the alarm bell keep asking for 'pitched'.
 function towerInnerRoofAllowed(s){
   return !!s&&s.type==='tower'&&!isWoodTower(s)&&s.shape!=='half'&&towerTier(s)>=2&&['battlement','machicolation'].includes(towerRoofStyle(s))
-    &&structureVariant(s,'topWeapon')==='none'&&(typeof towerInnerRoofGeometry!=='function'||!!towerInnerRoofGeometry(s,true));
+    &&structureVariant(s,'topWeapon')==='none'&&structureVariant(s,'signalFire')!=='pyre'&&(typeof towerInnerRoofGeometry!=='function'||!!towerInnerRoofGeometry(s,true));
 }
 function towerInnerRoofMounted(s){return towerInnerRoofAllowed(s)&&structureVariant(s,'innerRoof')==='on'}
 // Hoarding (ballatoio): not with machicolations (they do its job in stone) nor on a broken crown.
