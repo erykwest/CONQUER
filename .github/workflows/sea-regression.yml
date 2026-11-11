@@ -65,6 +65,7 @@ jobs:
           node qa/stream-count-regression.cjs
           node qa/stream-hierarchy-regression.cjs
           node qa/river-flow-regression.cjs
+          node qa/swamp-balance-regression.cjs
           node qa/marsh-regression.cjs
           node qa/pier-regression.cjs
           node qa/ships-regression.cjs

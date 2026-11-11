@@ -121,12 +121,12 @@
       x:50+f.x/2,y:50+f.y/2,rx:f.rx/2,ry:f.ry/2,height:f.height/2,
       unclippedPoints:(f.unclippedPoints||f.points).map(p=>({x:50+p.x/2,y:50+p.y/2})),points:f.points.map(p=>({x:50+p.x/2,y:50+p.y/2}))}));
     const n=100,seaMask=new Uint8Array(n*n),pondMask=new Uint8Array(n*n),marshMask=new Uint8Array(n*n);
-    const samples=[];
+    const samples=[],swampWet=swampMarshMask(true);
     for(let y=0;y<n;y++)for(let x=0;x<n;x++){
       const p={x:(x+.5)*2,y:(y+.5)*2},w=field(p),c=w['@center']||0;
       const sea=(w.sea||0)+c*(centralSea.some(f=>environmentContains(f,p))?1:0);
       const fresh=(w.lake||0)+c*(centralPonds.some(f=>f.waterBodyKind!=='marsh'&&environmentContains(f,p))?1:0);
-      const marsh=c*(centralPonds.some(f=>f.waterBodyKind==='marsh'&&environmentContains(f,p))?1:0)+(w.swamp||0)*(noise(p.x/12,p.y/12,State.seed+51)>.72?1:0);
+      const marsh=swampWet[y*n+x]?1:0;
       const pond=fresh+marsh;
       const threshold=sea>=pond?coastThreshold(p,coast):.5;
       const wet=sea+pond>threshold+(noise(p.x/18,p.y/18,State.seed+23)-.5)*.08;
@@ -212,41 +212,81 @@
     // Seas paint after rivers, so submerged downstream segments disappear into their receiving water.
     return[...lines,...waters,...woods,...dryMountains];
   }
+  // Keep a 4U shore buffer before smoothing the woodland outline.
+  const woodlandWet=(water,p)=>water.some(f=>{
+    const b=environmentPolygonBounds(f.points);
+    if(p.x<b.minX-4||p.x>b.maxX+4||p.y<b.minY-4||p.y>b.maxY+4)return false;
+    return [-4,-2,0,2,4].some(dx=>[-4,-2,0,2,4].some(dy=>environmentContains(f,{x:p.x+dx,y:p.y+dy})));
+  });
+  // Rank a smooth field to control actual wetland area, independently of patch count.
+  function swampMarshMask(regional){
+    if(regional&&State.biome!=='swamp'&&!Object.values(neighbors()||{}).includes('swamp'))return new Uint8Array(10000);
+    const mask=new Uint8Array(10000),groups=[{total:0,items:[]},{total:0,items:[]}],items=[];
+    for(let y=0;y<100;y++)for(let x=0;x<100;x++){
+      const p={x:x*2+1,y:y*2+1},i=y*100+x,zone=x>=25&&x<75&&y>=25&&y<75?0:1;
+      const weight=regional?(weights(p).swamp||0):1;
+      if(weight>.999)groups[zone].total++;
+      if(weight<=0||dist(p,{x:100,y:100})<8)continue;
+      const value=noise(p.x/12,p.y/12,State.seed+51),item={i,value,weight,zone};items.push(item);
+      if(weight>.999)groups[zone].items.push(item);
+    }
+    for(const g of groups){
+      g.items.sort((a,b)=>a.value-b.value||a.i-b.i);
+      const count=Math.min(g.items.length,Math.round(g.total*BIOME_RECIPES.swamp.marshCoverage));
+      g.threshold=count?g.items[count-1].value:0;
+      for(let j=0;j<count;j++)mask[g.items[j].i]=1;
+    }
+    for(const item of items)if(item.weight<=.999&&item.value<groups[item.zone].threshold*item.weight)mask[item.i]=1;
+    return mask;
+  }
   let woodlandContext=null;
   function woodlandFeatures(samples,lines,dryMountains,forests,key){
     const forestMask=new Uint8Array(samples.length);
-    // Boschi are land cover; Foresta remains a separate biome. Calibrate the
-    // pure plains centre and inherited plains separately, so neighbours cannot
-    // dilute the central 20%. Blended strips interpolate the local thresholds.
-    const plainsGroups=[{total:0,candidates:[]},{total:0,candidates:[]}],eligible=[];
+    // Calibrate central and inherited land cover separately for each biome.
+    const biomes=['plains','swamp'],groups=Object.fromEntries(biomes.map(b=>[b,[{total:0,candidates:[]},{total:0,candidates:[]}]])),eligible=[];
     for(let i=0;i<samples.length;i++){
-      const {p,w,c,wet}=samples[i],plain=(w.plains||0)+(State.biome==='plains'?c:0);
-      const group=plainsGroups[p.x>=50&&p.x<150&&p.y>=50&&p.y<150?0:1];
-      if(plain>.999)group.total++;
-      if(wet||lines.some(f=>environmentContains(f,p,2))||dryMountains.some(f=>environmentContains(f,p))||terrainSlopeKind(p)==='steep'||plain>0&&dist(p,{x:100,y:100})<8)continue;
-      const scale=plain>0?18:9,value=noise(p.x/scale,p.y/scale,State.seed+91);
-      eligible.push({i,value,plain,group});
-      if(plain>.999)group.candidates.push({i,value});
+      const {p,w,c,wet}=samples[i],zone=p.x>=50&&p.x<150&&p.y>=50&&p.y<150?0:1;
+      const cover=Object.fromEntries(biomes.map(b=>[b,(w[b]||0)+(State.biome===b?c:0)]));
+      const pure=biomes.find(b=>cover[b]>.999),calibrated=biomes.some(b=>cover[b]>0);
+      if(pure)groups[pure][zone].total++;
+      if(wet||lines.some(f=>environmentContains(f,p,2))||dryMountains.some(f=>environmentContains(f,p))||terrainSlopeKind(p)==='steep'||calibrated&&dist(p,{x:100,y:100})<8)continue;
+      const scale=calibrated?18:9,value=noise(p.x/scale,p.y/scale,State.seed+91);
+      eligible.push({i,value,cover,zone,pure});
+      if(pure)groups[pure][zone].candidates.push({i,value});
     }
-    for(const group of plainsGroups){
+    for(const biome of biomes)for(const group of groups[biome]){
       group.candidates.sort((a,b)=>a.value-b.value||a.i-b.i);
-      const count=Math.min(group.candidates.length,Math.round(group.total*BIOME_RECIPES.plains.woodlandCoverage));
+      const count=Math.min(group.candidates.length,Math.round(group.total*BIOME_RECIPES[biome].woodlandCoverage));
       group.threshold=count?group.candidates[count-1].value:-1;
       for(let j=0;j<count;j++)forestMask[group.candidates[j].i]=1;
     }
-    for(const {i,value,plain,group} of eligible){
-      if(plain>.999)continue;
+    for(const {i,value,cover,zone,pure} of eligible){
+      if(pure)continue;
       const {p,w,c}=samples[i];
-      const density=(State.biome==='plains'?0:c*(forests.some(f=>environmentContains(f,p))?1:0))+(w.forest||0)*.82+(w.swamp||0)*.34;
-      const threshold=Math.max(0,group.threshold)*plain+density;
+      const density=(biomes.includes(State.biome)?0:c*(forests.some(f=>environmentContains(f,p))?1:0))+(w.forest||0)*.82;
+      const threshold=density+biomes.reduce((sum,b)=>sum+Math.max(0,groups[b][zone].threshold)*cover[b],0);
       if(threshold>value)forestMask[i]=1;
     }
     return features(forestMask,'forest','regional-forest-'+key);
   }
   // Mouth extensions and tributaries are final before calibrating woodland cover.
   function finalizeWoodlands(env){
+    if(State.biome==='swamp'&&!active()){
+      const marshes=features(swampMarshMask(false),'pond','swamp-marsh-'+State.seed).map(f=>{styleMarshWater(f);f.points=roundMarshRing(f.points);f.holes=f.holes.map(roundMarshRing);return f});
+      env=[...env.filter(f=>f.waterBodyKind!=='marsh'),...marshes];
+      const samples=[],water=env.filter(f=>f.type==='pond'||f.type==='sea');
+      for(let y=0;y<100;y++)for(let x=0;x<100;x++){
+        const p={x:(x+.5)*2,y:(y+.5)*2};
+        samples.push({p,w:{},c:1,wet:woodlandWet(water,p)});
+      }
+      const woods=woodlandFeatures(samples,env.filter(f=>f.type==='river'||f.type==='stream'),env.filter(f=>f.type==='mountain'),[],State.seed+'-swamp');
+      if(typeof clearForestLayoutCache==='function')clearForestLayoutCache();
+      return [...env.filter(f=>f.type!=='forest'),...woods];
+    }
     const c=woodlandContext;if(!c||!active()||c.key!==State.seed+'-'+signature())return env;
-    const woods=woodlandFeatures(c.samples,env.filter(f=>f.type==='river'||f.type==='stream'),env.filter(f=>f.type==='mountain'),c.forests,c.key);
+    const water=env.filter(f=>f.type==='pond'||f.type==='sea');
+    const samples=c.samples.map(s=>({...s,wet:s.wet||woodlandWet(water,s.p)}));
+    const woods=woodlandFeatures(samples,env.filter(f=>f.type==='river'||f.type==='stream'),env.filter(f=>f.type==='mountain'),c.forests,c.key);
     if(typeof clearForestLayoutCache==='function')clearForestLayoutCache();
     return [...env.filter(f=>f.type!=='forest'),...woods];
   }

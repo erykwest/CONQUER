@@ -1306,7 +1306,7 @@ const BIOME_RECIPES=Object.freeze({
   mountains:{mountains:[4,7],stream:1,hills:[1,2],hillHeight:[3,4],hillCoverage:.30},
   village:{forests:[1,2],hills:[0,1],hillHeight:[1,2]},
   sea:{sea:true,forests:[0,1]},
-  swamp:{stream:1,forests:[1,2],smallForests:true,ponds:[2,3]},
+  swamp:{stream:1,woodlandCoverage:.25,marshCoverage:.25},
   lake:{lake:true,forests:[0,1]}
 });
 function biomeRecipe(){return BIOME_RECIPES[State.biome]||BIOME_RECIPES.plains}
@@ -1782,7 +1782,8 @@ function generateEnvironment(){
     for(let i=0;i<ponds;i++)addBiomePond(env,rnd);
     env.push(makeContinuousForest(env,rnd,recipe.continuousForest));
   }else if(recipe.woodlandCoverage){
-    ensureForestCoverage(env,rnd,recipe.woodlandCoverage);
+    for(let i=0;i<ponds;i++)addBiomePond(env,rnd);
+    if(State.biome!=='swamp')ensureForestCoverage(env,rnd,recipe.woodlandCoverage);
   }else if(recipe.smallForestCoverage){
     ensureForestCoverage(env,rnd,recipe.smallForestCoverage,true);
   }else{

@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## REG-SWAMP-BALANCE - Copertura Palude (11/11/2026)
+
+Il bilanciamento sostituisce il numero prefissato di acquitrini: obiettivo 25% acqua stagnante e 25% boschi, entrambi nell intervallo 20-30% della superficie palustre; il resto rimane aperto, salvo corsi d acqua. Le percentuali si misurano sulla porzione del bioma, distinguendo centro e vicini; le fasce interpolate raccordano i target. I poligoni condividono rendering e collisione. Il conteggio delle macchie deriva dalla geometria, non e un target. Pianura resta al 20% di boschi.
+
 ## REG-MARSH — Acquitrini e mulino ad acqua (11/11/2026)
 
 La Palude contiene acquitrini: specchi di acqua stagnante marrone-verde, con sponde fangose, canneti e vegetazione galleggiante. Sono elementi naturali, non un nuovo bioma; implementati come pond con waterBodyKind=marsh, quindi non edificabili. Restano distinti dai laghi e dagli stagni ordinari; i corsi non vengono forzati a sfociare in un acquitrino. Il mulino ad acqua si orienta e si valida esclusivamente sulle rive di fiumi e torrenti: mare, laghi, stagni e acquitrini non sono sorgenti ammesse, e l impronta deve restare fuori da tutte queste acque. Quantita palustri ancora quelle attuali, senza nuovo bilanciamento percentuale. Nessuna rigenerazione dei salvataggi esistenti.
