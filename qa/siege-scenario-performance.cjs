@@ -51,7 +51,9 @@ async function main(){
         const units=window.ConquerCombat.units();
         window.ConquerCombat.restore({version:2,fog:false,units,enemy:[],storms:[],strokes:[]});
         State.structures=State.structures.filter(s=>!s.siegeTestBay&&!/^(tw\d|w[NESW]\d?|gt|yard)$/.test(s.id));
-        const T=(id,x,y)=>({id,type:'tower',shape:'square',size:2,x,y,level:2,material:'stone',angle:0,archerCount:0,functions:[]});
+        // 5 archers spread over the towers: the two flanking the outer gate, one at the back, two flanking the inner gate.
+        const archers={ro0:1,ro1:1,ro2:1,ri0:1,ri1:1};
+        const T=(id,x,y)=>({id,type:'tower',shape:'square',size:2,x,y,level:2,material:'stone',angle:0,archerCount:archers[id]||0,functions:[]});
         const W=(id,a,b,aSnap,bSnap)=>({id,type:'wall',a,b,aSnap,bSnap,width:.6,level:2,tier:2,material:'stone',length:Math.hypot(b.x-a.x,b.y-a.y)});
         const ring=(p,lo,hi,top,bottom,gid)=>{
           const mid=(lo+hi)/2;
