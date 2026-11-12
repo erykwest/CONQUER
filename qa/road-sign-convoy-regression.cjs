@@ -13,6 +13,7 @@ function harness(saved=null){
   const structures=[{id:'well',type:'well',...center},
     {id:'keep',type:'tower',isMastio:true,functions:['commonHall'],x:99,y:98},
     {id:'house4',type:'house',houseLevel:4,x:102,y:102},
+    {id:'house3',type:'house',houseLevel:3,x:104,y:104},
     ...rs.map((r,i)=>({id:'segment-'+r.edge,type:'road',routeId:r.id,
       routeSeq:0,width:.62,a:{...center},b:{...r.target}}))];
   const State={clock:{day:12,speed:0},village:{founded:true,wellId:'well',
