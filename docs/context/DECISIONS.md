@@ -1,5 +1,15 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-URB-HEAT-261112 — Classi, densità e quattro heatmap territoriali (12/11/2026)
+
+- **DECISO dal product owner:** ceti civili L1 manodopera comune (inclusi contadini, pastori, cavatori/minatori); L2 artigiani; L3 borghesia istruita (mercanti, scribani, magistrati); L4 solo nobili proprietari, con rendite e possedimenti. Commercio L3 non equivale a possesso nobiliare L4.
+- **DECISO:** abitazione con prestigio L1–L4 e densità del lotto D1–D3: 12 archetipi. Il prestigio è insito nel template edilizio e nella composizione interna; al cambio che impone un diverso template, ricostruzione completa, non sostituzione di skin. Lotti con più fabbricati e fabbricati multipiano sono varianti possibili della densificazione.
+- **DECISO:** quattro heatmap territoriali: domanda residenziale (4 canali L1–L4), prestigio/degrado, sicurezza e criminalità. Piazza/abbellimenti aumentano prestigio, impianti produttivi possono ridurlo pur attirando lavoratori; domanda influenzata da lavoro, accessi, sicurezza, mura e crimine. La criminalità passa a scala locale, senza perdere l'eventuale aggregato di villaggio.
+- **DIREZIONE TECNICA:** lotto Voronoi come unità di densificazione; domanda effettiva dipende da famiglie e alloggi realmente disponibili; evitare ricostruzioni ad ogni minima fluttuazione con soglie e inerzia.
+- **NON DECISO:** coefficienti/raggi, tempi di aggiornamento, mapping definitivo dei 12 template, soglie D1–D3, politica proprietaria per le singole case, bilanciamento della criminalità territoriale e regole di migrazione dei salvataggi.
+- **STATO:** skeleton puro su branch `feature/urban-heatmap-skeleton-20261112` senza mutazioni di gioco; [contratto](../URBAN-HEATMAP-SKELETON.md).
+
+
 ## D-ECO-FIL-261110 — Filiere produttive complete (10/11/2026)
 
 - **DECISO (product owner, 10/11/2026), nessun codice:** specifica [ECO-FIL-01](BACKLOG.md).
