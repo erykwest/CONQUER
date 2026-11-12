@@ -93,7 +93,7 @@ check('real private quarry production sends only its actually booked market outp
   assert.equal(t.destination,'market');
   assert.equal(t.destinationId,'market-1');
   assert.equal(t.baseId,'yard');
-  assert.equal(t.workerId,'founder:well:0');
+  assert.equal(t.workerId,'founder:well:2', 'quarry now reserves two L1 founders before the cart driver');
   assert.equal(w.E.state().lots.stone.reduce((n,x)=>n+x.qty,0),after,'route never changes market stocks');
   w.H.draw();
   assert.ok(w.drivers.includes(t.workerId),'wagon driver has the real L1 worker identity');
