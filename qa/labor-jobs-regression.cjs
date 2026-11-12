@@ -69,16 +69,16 @@ check('alarm: no construction demand, no grazing output',()=>{
   e.tick(-1,0);
   assert.equal(e.state().lots.food.length,0);
 });
-check('fields consume only L2 capacity and leave L1 available for construction',()=>{
+check('fields consume merged L1 capacity, never artisan L2',()=>{
   const field={id:'field',type:'field'};
   const l1=[house('a'),house('b')];
   const {e}=harness([...l1,field,site('site')]);
-  assert.equal(e.KIND.field.classId,2);
-  assert.equal(e.laborAllocation(0).allocated.field,0);
-  assert.equal(e.laborAllocation(0).spareL1.length,2);
+  assert.equal(e.KIND.field.classId,1);
+  assert.equal(e.laborAllocation(0).allocated.field,1);
+  assert.equal(e.laborAllocation(0).spareL1.length,1);
   const mixed=harness([...l1,{...house('l2'),houseLevel:2},field,site('site')]).e;
   assert.equal(mixed.laborAllocation(0).allocated.field,1);
-  assert.equal(mixed.laborAllocation(0).spareL1.length,2);
+  assert.equal(mixed.laborAllocation(0).spareL1.length,1);
 });
 check('orto di corte: each kitchen garden yields lord food per workday, also under alarm',()=>{
   const gardens=[{id:'g1'},{id:'g2'}];
