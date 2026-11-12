@@ -160,45 +160,39 @@ check('manual zero stops a productive site without affecting L2 staff or protect
 });
 
 
-check('L2 priority and minima allocate real field, quarry and mine staffing',()=>{
-  const structures=[{...house('l2'),houseLevel:2},
+check('L2 artisan job manager rejects former L2 extraction and farm jobs',()=>{
+  const structures=[house('servant'),{...house('artisan'),houseLevel:2},
     {id:'field',type:'field'},{id:'quarry',type:'quarry'},{id:'mine',type:'mine'}];
-  const {e,State}=harness(structures);
-  assert.equal(e.jobManagerL2(0).managed,false,'legacy L2 remains automatic before first edit');
-  assert.equal(e.setL2Minimum('site:quarry',2),true);
-  assert.equal(e.setL2Minimum('site:field',1),true);
-  assert.equal(e.setL2Order(['site:quarry','site:field','site:mine']),true);
-  assert.equal(e.setL2Order(['site:quarry','site:quarry','site:mine']),false);
-  for(const key of ['site:quarry','site:field','site:mine'])
-    assert.equal(e.setL2Auto(key,false),true);
+  const {e}=harness(structures);
+  for(const type of ['field','quarry','mine'])assert.equal(e.KIND[type].classId,1);
+  assert.equal(e.KIND.workshop.classId,2);
+  const l2=e.jobManagerL2(0);
+  assert.ok(!l2.tasks.some(t=>['site:field','site:quarry','site:mine'].includes(t.key)));
+  assert.equal(e.setL2Minimum('site:quarry',2),false);
+  assert.equal(e.setL2Minimum('site:field',1),false);
+  assert.equal(e.setL2Auto('site:mine',false),false);
   const labor=e.laborAllocation(0);
-  assert.equal(labor.limits.L2,2);
-  assert.equal(labor.allocated.quarry,2);
-  assert.equal(labor.allocated.field,0,'lowest-priority minimum loses when only two L2 available');
-  assert.equal(labor.allocated.mine,0,'manual zero does not fill spare capacity');
-  assert.equal(e.jobManagerL2(0).tasks[0].key,'site:quarry');
-  assert.equal(e.jobManagerL2(0).tasks.find(t=>t.key==='site:field').minimum,1);
-  const saved=JSON.parse(JSON.stringify(State.economy));
-  const restored=harness(structures);
-  restored.State.economy=saved;
-  assert.equal(restored.e.jobManagerL2(0).tasks[0].key,'site:quarry');
-  assert.equal(restored.e.laborAllocation(0).allocated.quarry,2);
+  assert.equal(labor.limits.L1,1);
+  assert.equal(labor.limits.L2,2,'artisan reserve cannot become a miner');
+  assert.equal(labor.allocated.field+labor.allocated.quarry+labor.allocated.mine,1,
+    'only available servant can work extraction or fields');
 });
-check('L2 AUTO fills spare work after minima without taking L1 builders',()=>{
-  const {e}=harness([house('a'),{...house('b'),houseLevel:2},
-    {id:'field',type:'field'},{id:'quarry',type:'quarry'},{id:'wine',type:'vineyard'},site('tower')],{wood:500});
-  assert.equal(e.setL2Minimum('site:quarry',1),true);
-  assert.equal(e.setL2Order(['site:quarry','site:field']),true);
-  assert.equal(e.setL2Auto('site:quarry',false),true);
+check('L1 job manager can explicitly prioritize quarry over fields and mine',()=>{
+  const {e,State}=harness([house('servant'),{...house('artisan'),houseLevel:2},
+    {id:'field',type:'field'},{id:'quarry',type:'quarry'},{id:'mine',type:'mine'}]);
+  assert.equal(e.setL1Minimum('site:quarry',1),true);
+  assert.equal(e.setL1Auto('site:field',false),true);
+  assert.equal(e.setL1Auto('site:mine',false),true);
+  assert.equal(e.setL1Order(['site:quarry','site:field','site:mine']),true);
   const labor=e.laborAllocation(0);
   assert.equal(labor.allocated.quarry,1);
-  assert.equal(labor.allocated.field,1);
-  assert.equal(labor.allocated.wine,1,'L1 uses its own pool');
-  assert.equal(labor.spareL1.length,0,'L1 remains on vineyard');
-  assert.equal(e.setL2Minimum('site:quarry',999),true);
-  assert.equal(e.jobManagerL2(0).tasks[0].minimum,2);
-  assert.equal(e.setL2Minimum('site:field',-1),false);
-  assert.equal(e.setL2Auto('site:field','false'),false);
+  assert.equal(labor.allocated.field,0);
+  assert.equal(labor.allocated.mine,0);
+  const saved=JSON.parse(JSON.stringify(State.economy));
+  const reloaded=harness(State.structures);
+  reloaded.State.economy=saved;
+  assert.equal(reloaded.e.jobManager(0).tasks[0].key,'site:quarry');
+  assert.equal(reloaded.e.laborAllocation(0).allocated.quarry,1);
 });
 
-console.log('Labor jobs regression: PASS (L1/L2 priority, minimum, AUTO and legacy)');
+console.log('Labor jobs regression: PASS (merged L1 extraction, protected herders, artisan isolation and job priority)');
