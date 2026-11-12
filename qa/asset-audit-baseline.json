@@ -1,7 +1,7 @@
 {
  "version": 1,
- "generatedAt": "2026-11-12T11:10:08.309227+00:00",
- "note": "Reviewed Territorio: 16 unchanged renders, zero failures, five schematic warnings; high island and peninsula hill budget reviewed in five runtime scenes on 2026-11-12. Regenerate with: node qa/asset-audit.mjs --update-baseline",
+ "generatedAt": "2026-11-12T11:22:02.623467+00:00",
+ "note": "Reviewed Territorio: 16 unchanged renders, zero failures, five schematic warnings; coastal hills near shores and disabled island/peninsula streams reviewed in five runtime scenes on 2026-11-12. Regenerate with: node qa/asset-audit.mjs --update-baseline",
  "waivers": {
   "castle:pietra-quadrata-piccola-l2-latrina|damage-elemento-esterno-crollato|sagoma-conservata": "Falso positivo: la torre resta integra, le macerie dello sbalzo a terra allargano l'inquadratura e la torre risulta più piccola (rivisto nel foglio il 05/11/2026)."
  },

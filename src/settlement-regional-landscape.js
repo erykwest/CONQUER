@@ -250,6 +250,25 @@
         if(!biomeTownClear(foot)||!hillSpacingOk(hill,State.relief.hills)||foot.some(p=>waters.some(f=>environmentContains(f,p,1))))continue;
         State.relief.hills.push(hill);added=true;clearReliefBandCache();
       }
+      if(!State.relief.coastalPositioned){
+        const shore=waters.filter(f=>f.type==='sea'||f.waterBodyKind==='lake').flatMap(f=>[f.points,...(f.holes||[])]).flat().filter(p=>p.x>1&&p.y>1&&p.x<199&&p.y<199);
+        const coastRnd=seedRand((State.seed^signature()^0x2c0871)>>>0),placed=[];
+        for(const hill of State.relief.hills){
+          let best=null,bestGap=Infinity;
+          for(let attempt=0;shore.length&&attempt<180;attempt++){
+            const anchor=shore[Math.floor(coastRnd()*shore.length)],angle=coastRnd()*Math.PI*2,d=12+coastRnd()*16;
+            const center={x:anchor.x+Math.cos(angle)*d,y:anchor.y+Math.sin(angle)*d},dx=center.x-hill.center.x,dy=center.y-hill.center.y;
+            const shift=p=>({x:p.x+dx,y:p.y+dy});
+            const candidate={...hill,center,levels:hill.levels.map(l=>({...l,center:shift(l.center),top:l.top.map(shift)}))},foot=reliefHillFootprint(candidate);
+            if(!biomeTownClear(foot)||!hillSpacingOk(candidate,placed)||foot.some(p=>p.x<2||p.y<2||p.x>198||p.y>198||waters.some(f=>environmentContains(f,p,2))))continue;
+            const gap=Math.min(...foot.map(p=>Math.min(...shore.map(q=>dist(p,q)))));
+            if(gap<bestGap){best=candidate;bestGap=gap;}
+            if(gap<4)break;
+          }
+          placed.push(best||hill);
+        }
+        State.relief.hills=placed;State.relief.coastalPositioned=true;clearReliefBandCache();
+      }
       if(added){assignSteepEdgesByLevel(State.relief,seedRand((State.relief.seed^0x735a2d97)>>>0));clearReliefBandCache();}
     }
     woodlandContext={key,samples,forests};

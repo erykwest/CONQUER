@@ -1,5 +1,12 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-12 — Torrenti esclusi e colline sulla costa
+
+- Isole e penisole marittime/lacustri: stream=0 nella ricetta; esclusi anche torrenti passati alla composizione idrologica e affluenti regionali di tipo stream. I fiumi restano distinti.
+- Riposizionamento deterministico dei rilievi lungo le sponde effettive prima dell'idrologia, conservando numero, dimensioni e livelli. Controlli su acqua, distanza fra rilievi e spazio centrale.
+- Verifiche: 15 fixture isole/penisole senza torrenti, colline asciutte e a meno di 10U dalla sponda; landscape-order su sei fixture. Cinque scene `coastal-shores-*`: zero torrenti e piedi delle colline a circa 0–4U dalla costa. Audit Territorio: 16 render invariati, zero errori, cinque avvisi schematici preesistenti.
+- Economia e roadmap invariate.
+
 ### 2026-11-12 — Isole e penisole collinari
 
 - Le terre con tre o quattro lati cardinali sul mare o sul lago ricevono una base di tre colline, con gli stessi livelli 2–3 del bioma Colline (ricetta 3–4 rilievi). Restano valide eventuali colline ereditate dai vicini; i biomi già più montuosi non vengono ridotti.

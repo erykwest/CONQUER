@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+### 2026-11-12 — Idrologia e orografia costiera
+
+Isole e penisole non generano torrenti e non accettano affluenti regionali di tipo torrente; la regola si applica a ogni bioma terrestre. I fiumi restano governati dalla rete regionale. I rilievi vengono accostati alle sponde effettive prima della composizione idrologica, preservando le quote e lo spazio dell'insediamento.
+
 ### 2026-11-12 — Rilievi delle terre circondate dall'acqua
 
 Tre o quattro vicini cardinali dello stesso tipo mare/lago qualificano rispettivamente una penisola o un'isola. La ricetta centrale terrestre riceve tre colline di altezza 2–3, vicina alle 3–4 del bioma Colline, senza sostituire il bioma della vegetazione. Colline, Montagne e Valle mantengono la propria orografia. L'adattamento alle sponde ha precedenza sui rilievi.

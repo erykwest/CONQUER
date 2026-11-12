@@ -205,7 +205,8 @@
   return {...line,points:dense(out),reliefRouted:true};
  }
  function compose(env){
-  const info=window.__CONQUER_REGIONAL_DEMO__||{};
+  const info=window.__CONQUER_REGIONAL_DEMO__||{},coastal=biomeCoastalLand();
+  if(coastal)env=env.filter(f=>f.type!=='stream');
   const original=env.filter(water);if(!original.length)return env;
   const bodies=env.filter(f=>f.type==='sea'||f.type==='pond'&&f.waterBodyKind==='lake'),obstacles=[...env.filter(f=>f.type==='mountain'),...(State.relief?.hills||[]).map(h=>({type:'mountain',points:reliefHillFootprint(h)}))];
   const rnd=seedRand((State.seed^0x6783ab1)>>>0),lines=[];
@@ -220,7 +221,7 @@
   if(!lines.length)return env.filter(f=>!water(f));
   const types=[];
   let streams=lines.filter(f=>f.type==='stream').length;
-  const requested=Array.isArray(info.tributaryTypes)?info.tributaryTypes.filter(t=>['river','stream'].includes(t)).slice(0,3):[];
+  const requested=Array.isArray(info.tributaryTypes)?info.tributaryTypes.filter(t=>t==='river'||t==='stream'&&!coastal).slice(0,3):[];
   for(const type of requested){if(type==='stream'&&streams>=3)continue;types.push(type);if(type==='stream')streams++}
   if(info.hasRiver)while(streams<biomeStreamCount()){types.push('stream');streams++}
   for(let n=0;n<types.length;n++){

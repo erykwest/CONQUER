@@ -1309,14 +1309,15 @@ const BIOME_RECIPES=Object.freeze({
   swamp:{stream:1,woodlandCoverage:.25,marshCoverage:.25,hillChance:1/4,hills:[1,1],hillHeight:[1,2]},
   lake:{lake:true,forests:[0,1]}
 });
+function biomeCoastalLand(){
+  const neighbors=window.__CONQUER_REGIONAL_DEMO__?.surroundingBiomes;
+  return !['sea','lake'].includes(State.biome)&&['sea','lake'].some(water=>['north','east','south','west'].filter(d=>neighbors?.[d]===water).length>=3);
+}
 function biomeRecipe(){
   const recipe=BIOME_RECIPES[State.biome]||BIOME_RECIPES.plains;
-  const neighbors=window.__CONQUER_REGIONAL_DEMO__?.surroundingBiomes;
-  const enclosed=['sea','lake'].some(water=>['north','east','south','west'].filter(d=>neighbors?.[d]===water).length>=3);
-  // Islands and peninsulas carry almost the hill biome budget (3 versus 3–4),
-  // without changing their woodland, wetland or watercourse recipe.
-  return enclosed&&!['hills','mountains','valley','sea','lake','test'].includes(State.biome)
-    ?{...recipe,hillChance:undefined,hills:[3,3],hillHeight:[2,3]}:recipe;
+  if(!biomeCoastalLand())return recipe;
+  const hills=!['hills','mountains','valley','test'].includes(State.biome)?{hillChance:undefined,hills:[3,3],hillHeight:[2,3]}:{};
+  return {...recipe,...hills,stream:0};
 }
 function biomeRange(rnd,[lo,hi]=[0,0]){return lo+Math.floor(rnd()*(hi-lo+1))}
 // Independent seeded gate: changing hill frequency does not reroll hydrology.
