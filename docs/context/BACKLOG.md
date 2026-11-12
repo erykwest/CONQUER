@@ -1,5 +1,6 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+
 ## 2026-11-10 — ECO-FIL-01 · Filiere produttive complete
 
 **SPECIFICA APPROVATA. Fase 1 (miniera → metallo) IMPLEMENTATA SU BRANCH `feature/eco-fil-01-miniera-metallo`, NON MERGE; fasi 2–6 aperte.** Intervista con il product owner del 10/11/2026 (sessione «filiere», nata dalla sessione Gilda). Decisione [D-ECO-FIL-261110](DECISIONS.md). Base verificata: `main` 89e7a2c, non le note della mappa `CONQUER_ECONOMY_ULTIMA_REVISIONE_NOV10` (scritte su `feature/autonomous-urban-economy`). Chiude la decisione aperta «miniera stone/metal» (P0-08, ROADMAP M1) e gli errori di mappatura di `WORKSHOP_OUTPUT`. La Gilda (sessione dedicata) applica il suo +25/+50/+100% a queste ricette: il bonus moltiplica produzione **e** consumo di materie, quindi senza materie non produce di più.
@@ -305,6 +306,8 @@ Tutte **DA CONFERMARE dall'utente** prima di qualsiasi codice (effetti, compatib
 ## Latrina nelle torri W1 e stanze delle torri piccole (05/11/2026)
 
 - **IMPLEMENTATO SU BRANCH `fix/latrine-towers`:** la latrina passa dalle sezioni costruite W1 alle torri W1 in pietra (piano 2, sbalzo sulla faccia esterna libera). Le torri W1 accettano Colombaia (ultimo piano), Latrina, Prigione, Tesoro e Armeria, con la scala a chiocciola che resta.
+- **APERTO:** le correzioni di ordinamento 2.5D dello sbalzo vanno tolte quando il 2.5D sarà dismesso (branch `retire-25d-renderer`); la cattura 3D del Lab ignora la rotazione; un'apertura nel muro tra stanza e sbalzo; un avviso quando un salvataggio perde una latrina da una sezione costruita.
+
 - **APERTO:** nella torre rotonda W1 entrano meno sedili dei tre previsti (stanza di 0,73 U); un'apertura nel muro tra stanza e sbalzo; un avviso quando un salvataggio perde una latrina da una sezione costruita.
 
 
