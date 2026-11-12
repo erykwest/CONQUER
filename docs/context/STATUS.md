@@ -1,5 +1,32 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-12 — SCOL-01 fase 1 · Scolarizzati: dati, tetto, ingaggio (branch `feature/scol-01-fase1`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - **Modulo `src/settlement-educated.js`** (`window.ConquerEducated`), caricato dopo il commercio in `index.html` e `camp/index.html`:
+    - blocco `State.economy.educated` con `lay` e `clergy` ciascuno `{L3, L4}`, `homeless`, `courses`, `hires`, `wageMul`, `roles` e `lastMonthDay`;
+    - migrazione lazy a zero; `economy.version` invariato.
+  - **Tetto** `floor(L3/3) + floor(L4/3)`.
+  - **Controllo giornaliero**, agganciato a `ConquerEconomy.tick` dopo `daily`:
+    - l'eccedenza esce prima dai laici, passa ai posti liberi dell'altra classe e altrimenti resta «senza alloggio»;
+    - i senza alloggio rientrano quando si libera un posto ed emigrano dopo 28 giorni;
+    - gli ingaggi in viaggio arrivano come laici e occupano prima L3, poi L4. Senza posto all'arrivo, l'oro torna al castello.
+  - **Ingaggio:** `hire()` costa 40 oro dal castello, con arrivo dopo 14 giorni. È rifiutato senza oro o se i posti liberi sono già promessi agli ingaggi in viaggio.
+  - **Interfaccia:**
+    - `ConquerGame.read.economy().educated` e il comando `hireEducated`;
+    - sotto-righe «di cui scolarizzati» nelle carte «Classi sociali» e «Popolazione per classe»;
+    - nuova scheda «L3 · Istruiti» nel Job Manager (KPI, ingaggio, posti per classe, segnaposto dei ruoli);
+    - tooltip della popolazione nella shell UI2;
+    - `panelHistory[].educated`.
+  - **Ancora nessun effetto sul lavoro:** i ruoli non esistono ancora, quindi gli scolarizzati restano lavoratori L3/L4 comuni.
+- **PROVE LOCALI PASS:**
+  - nuova `qa/educated-regression.cjs`, 10 casi: tetto, migrazione, ingaggio e arrivo, rifiuti, rimborso, L3 prima di L4, eccedenza e rientro, emigrazione a 28 giorni, salvataggio JSON, limiti di lavoro invariati;
+  - tutte le 31 voci di `economy-flows-regression.yml`, dove la nuova regressione è stata aggiunta;
+  - le regressioni che leggono `index.html`.
+  - Le 5 prove di prestazioni basate su Playwright non sono eseguibili in locale (manca il modulo), quindi non sono attestate.
+- **PROVA BROWSER LOCALE:** con un villaggio di prova in memoria (una casa L3 e una L4), la scheda «L3 · Istruiti» mostra 7 posti, contatori e viaggio. Il pulsante d'ingaggio scala 40 oro e aggiunge un arrivo. Nessun errore in console.
+- **DA VERIFICARE:** CI del branch; prova in una partita reale con case L3/L4 costruite.
+
 ## 2026-11-12 — SCOL-01 · Scolarizzati (solo specifica, branch `docs/scolarizzati`)
 
 - **NESSUN CODICE:** specifica approvata in [BACKLOG](BACKLOG.md), contratto [D-SCOL-261112](DECISIONS.md). Nessun test eseguito né richiesto.

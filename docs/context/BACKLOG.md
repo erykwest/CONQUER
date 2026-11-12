@@ -2,7 +2,7 @@
 
 ## 2026-11-12 — SCOL-01 · Scolarizzati, sottoclasse istruita di L3/L4
 
-**SPECIFICA APPROVATA, NESSUN CODICE.** Intervista con il product owner del 12/11/2026 (sessione dedicata, nata dalla sessione Gilda). Contratto per le altre sessioni: [D-SCOL-261112](DECISIONS.md). Base verificata: `main` 431af30d. Gilda, Scriptorium, FISCO-01 (esattori, giudici), CRIME (tribunale), ARTE (artisti), diplomazia (scrivani) e la futura sessione Chiesa (chierici) **non definiscono la classe**: registrano i loro ruoli in questo contratto.
+**SPECIFICA APPROVATA. FASE 1 IMPLEMENTATA SU BRANCH `feature/scol-01-fase1`, NON MERGE; fasi 2–4 aperte.** La fase 1 comprende `src/settlement-educated.js` (`ConquerEducated`): contatori, tetto, eccedenza senza alloggio, ingaggio, salvataggio, sotto-righe nei pannelli e scheda «L3 · Istruiti». Dettagli e prove in [STATUS](STATUS.md). Intervista con il product owner del 12/11/2026 (sessione dedicata, nata dalla sessione Gilda). Contratto per le altre sessioni: [D-SCOL-261112](DECISIONS.md). Base verificata: `main` 431af30d. Gilda, Scriptorium, FISCO-01 (esattori, giudici), CRIME (tribunale), ARTE (artisti), diplomazia (scrivani) e la futura sessione Chiesa (chierici) **non definiscono la classe**: registrano i loro ruoli in questo contratto.
 
 **Stato live su `main` (verificato nel codice)**
 - La classe sociale coincide con il livello della casa: `ConquerEconomy.population()` somma `livello × 3` abitanti per casa completata e non viene salvato. Non esistono cittadini individuali né promozioni automatiche; si cambia classe solo con l'upgrade manuale della casa.
@@ -15,7 +15,7 @@
 **1. Definizione**
 - Gli **Scolarizzati** sono abitanti istruiti delle case L3 e L4, rappresentati da **contatori** come i soldati, non da una quinta classe. Usano il borsellino e la felicità della classe della loro casa: **nessun secondo ledger**.
 - **Due rami:** **laici** e **chierici**. Il ramo si cambia solo con un nuovo corso nello Scriptorium del ramo opposto.
-- **Tetto:** `posti = floor(abitanti L3 / 3) + floor(abitanti L4 / 3)`, cioè 3 per casa. Scolarizzati e allievi in corso insieme non superano il tetto. Ogni scolarizzato appartiene a L3 o a L4: le nuove entrate occupano prima i posti L3, poi quelli L4.
+- **Tetto:** `posti = floor(abitanti L3 / 3) + floor(abitanti L4 / 3)`, cioè 3 posti per casa L3 (9 abitanti) e 4 per casa L4 (12 abitanti). Scolarizzati e allievi in corso insieme non superano il tetto. Ogni scolarizzato appartiene a L3 o a L4: le nuove entrate occupano prima i posti L3, poi quelli L4.
 - Uno scolarizzato **con un ruolo** esce dai lavoratori della sua classe (come i soldati da L1). Uno **senza ruolo** lavora come un L3 comune.
 
 **2. Origini**
@@ -80,7 +80,7 @@
 **Valori provvisori da bilanciare:** corso (4 allievi, 1 anno), retta 20, ingaggio 40 oro e 14 giorni, salario 2 × `wage.L3`, intervallo del cursore 50–200%, soglie di felicità 40/50/60/80, ±0,5/0,2 di felicità, 4 settimane senza alloggio.
 
 **Fasi di implementazione proposte (una PR ciascuna, solo dopo conferma):**
-1. Modello dati, tetto, salvataggio e migrazione, eccedenza senza alloggio, sotto-righe nei pannelli, ingaggio.
+1. Modello dati, tetto, salvataggio e migrazione, eccedenza senza alloggio, sotto-righe nei pannelli, ingaggio. **Fatta su branch `feature/scol-01-fase1`.**
 2. Scriptorium: selettore, corsi, retta e iscrizione automatica.
 3. Registro dei ruoli, scheda Istruiti (priorità, minimo, AUTO), resa e avvisi, salari, felicità. Primo ruolo: gestore della Chiesa, con assegnazione automatica dei gestori di Chiesa e Locanda.
 4. Mercato del lavoro: immigrazione ed emigrazione mensili e cursore del salario.

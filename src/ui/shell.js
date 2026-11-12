@@ -479,7 +479,7 @@ function Overview({ game }) {
   const pop = Object.values(e.population), total = pop.reduce((a, b) => a + b, 0);
   const trade = e.lastTrade, unmet = trade ? Object.values(trade.unmet || {}).reduce((a, b) => a + b, 0) : 0;
   return html`<div class="u2-stats u2-stats-3">
-      <${Stat} label=${M.population} value=${total} tip=${TIP.population + ' ' + pop.join(' · ')} />
+      <${Stat} label=${M.population} value=${total} tip=${TIP.population + ' ' + pop.join(' · ') + (e.educated ? ' · scolarizzati ' + e.educated.total : '')} />
       <${Stat} label=${M.welfare} value=${num(e.welfare, 0)} tip=${TIP.welfare}><${Bar} value=${e.welfare} max=${100} /></${Stat}>
       <${Stat} label=${M.happiness} value=${['L1', 'L2', 'L3', 'L4'].map(g => num(e.happiness?.[g], 0)).join(' · ')} tip=${TIP.happiness} />
       ${e.jobs && html`<${Stat} label=${M.jobs} value=${M.jobsValue(e.jobs)} tip=${TIP.jobs + (e.jobs.foodRisk ? ' ⚠' : '')} />`}
