@@ -104,6 +104,7 @@
  // Tributaries approach from opposite banks and turn downstream at the mouth.
  // This makes the hierarchy geometric: no parallel full-map streams or X crossings.
  function tributary(primary,type,id,rnd,lines,bodies,obstacles){
+  const blocked=terrainGuard(obstacles,(type==='river'?WATER_WIDTH.river:WATER_WIDTH.stream)/2+2);
   const arc=[0],pts=primary.points;
   for(let i=1;i<pts.length;i++)arc.push(arc.at(-1)+Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y));
   const length=arc.at(-1),used=lines.filter(f=>f.confluence?.downstreamId===primary.id);
@@ -134,7 +135,7 @@
    // Tangent-continuous approach: the last 9U retain exactly the downstream angle.
    for(let i=1;i<=6;i++)points.push(lerp(stem,target,i/6));
    points[points.length-1]=target;
-   if(points.some(p=>p.x<-.001||p.y<-.001||p.x>200.001||p.y>200.001||bodies.some(f=>environmentContains(f,p))||obstacles.some(f=>environmentContains(f,p,1))))continue;
+   if(points.some(p=>p.x<-.001||p.y<-.001||p.x>200.001||p.y>200.001||bodies.some(f=>environmentContains(f,p))||blocked(p)))continue;
    let crossing=false;
    for(let i=1;i<points.length&&!crossing;i++)for(const line of lines){
     for(let j=1;j<line.points.length;j++){
@@ -150,13 +151,66 @@
   }
   return null;
  }
+ // Every course is fitted around the existing relief, including its bank width.
+ function terrainGuard(obstacles,pad){
+  const shapes=obstacles.map(f=>({f,b:environmentPolygonBounds(f.points)}));
+  return p=>shapes.some(({f,b})=>p.x>=b.minX-pad&&p.x<=b.maxX+pad&&p.y>=b.minY-pad&&p.y<=b.maxY+pad&&(environmentContains(f,p)||f.points.some((a,i)=>pointSegmentDistance(p,a,f.points[(i+1)%f.points.length])<pad)));
+ }
+ function routeRelief(line,obstacles){
+  if(!line||!obstacles.length)return line;
+  const blocked=terrainGuard(obstacles,line.width/2+2),pts=dense(line.points);
+  if(!pts.some(blocked))return line;
+  const clear=(a,b)=>{const n=Math.ceil(Math.hypot(b.x-a.x,b.y-a.y)*2);for(let j=0;j<=n;j++)if(blocked(lerp(a,b,n?j/n:0)))return false;return true};
+  function detour(a,b){
+   const n=101,key=(x,y)=>y*n+x,point=i=>({x:(i%n)*2,y:Math.floor(i/n)*2}),cache=new Map();
+   const free=i=>{if(!cache.has(i))cache.set(i,!blocked(point(i)));return cache.get(i)};
+   const snap=p=>{let best=null;for(let dy=-3;dy<=3;dy++)for(let dx=-3;dx<=3;dx++){
+    const x=clamp(Math.round(p.x/2)+dx,0,100),y=clamp(Math.round(p.y/2)+dy,0,100),i=key(x,y),q=point(i),d=Math.hypot(q.x-p.x,q.y-p.y);
+    if((!best||d<best.d)&&free(i)&&clear(p,q))best={i,d};
+   }return best?.i};
+   const start=snap(a),goal=snap(b);if(start===undefined||goal===undefined)return null;
+   const scores=new Map([[start,0]]),parents=new Map(),open=[{i:start,f:0}],closed=new Set();let guard=0;
+   while(open.length&&guard++<20000){
+    open.sort((a,b)=>b.f-a.f);const {i}=open.pop();if(closed.has(i))continue;
+    if(i===goal){const path=[b];let k=i;while(k!==undefined){path.push(point(k));k=parents.get(k)}path.push(a);path.reverse();
+     const smooth=[path[0]];for(let j=0;j<path.length-1;){let k=path.length-1;while(k>j+1&&!clear(path[j],path[k]))k--;smooth.push(path[k]);j=k}
+     // Round detour bends only when the rounded bank still clears the terrain.
+     const rounded=[smooth[0]];for(let j=1;j<smooth.length-1;j++){rounded.push(lerp(smooth[j-1],smooth[j],.8),lerp(smooth[j],smooth[j+1],.2))}rounded.push(smooth.at(-1));
+     let result=rounded.every((p,j)=>!j||clear(rounded[j-1],p))?rounded:smooth;
+     for(let pass=0;pass<2;pass++){
+      const next=[result[0]];for(let j=1;j<result.length;j++)next.push(lerp(result[j-1],result[j],.25),lerp(result[j-1],result[j],.75));next.push(result.at(-1));
+      if(next.every((p,j)=>!j||clear(next[j-1],p)))result=next;else break;
+     }
+     return result;
+    }
+    closed.add(i);const x=i%n,y=Math.floor(i/n);
+    for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+     if(!dx&&!dy||x+dx<0||x+dx>=n||y+dy<0||y+dy>=n)continue;
+     const next=key(x+dx,y+dy);if(closed.has(next)||!free(next)||!clear(point(i),point(next)))continue;
+     const score=scores.get(i)+Math.hypot(dx,dy);if(score>=(scores.get(next)??Infinity))continue;
+     scores.set(next,score);parents.set(next,i);open.push({i:next,f:score+Math.hypot((goal%n)-(x+dx),Math.floor(goal/n)-(y+dy))});
+    }
+   }return null;
+  }
+  let start=pts.findIndex(p=>!blocked(p)),end=pts.length-1;while(end>=0&&blocked(pts[end]))end--;
+  if(start<0||end<=start)return null;
+  const out=[pts[start]];
+  for(let i=start+1;i<=end;i++){
+   if(!blocked(pts[i])&&clear(out.at(-1),pts[i])){out.push(pts[i]);continue;}
+   let j=i;while(j<=end&&blocked(pts[j]))j++;
+   // Leave space on both ends for a safe connection to the routing grid.
+   const a=out.at(-1),b=pts[Math.min(j+3,end)],path=detour(a,b);if(!path)return null;
+   out.push(...path.slice(1));i=Math.min(j+3,end);
+  }
+  return {...line,points:dense(out),reliefRouted:true};
+ }
  function compose(env){
   const info=window.__CONQUER_REGIONAL_DEMO__||{};
   const original=env.filter(water);if(!original.length)return env;
-  const bodies=env.filter(f=>f.type==='sea'||f.type==='pond'&&f.waterBodyKind==='lake'),obstacles=env.filter(f=>f.type==='mountain');
+  const bodies=env.filter(f=>f.type==='sea'||f.type==='pond'&&f.waterBodyKind==='lake'),obstacles=[...env.filter(f=>f.type==='mountain'),...(State.relief?.hills||[]).map(h=>({type:'mountain',points:reliefHillFootprint(h)}))];
   const rnd=seedRand((State.seed^0x6783ab1)>>>0),lines=[];
   const ordered=original.slice().sort((a,b)=>(a.type==='stream')-(b.type==='stream'));
-  const first=mouth({...ordered[0],points:ordered[0].points.map(p=>({...p})),drainagePrimary:true},bodies);
+  const first=routeRelief(mouth({...ordered[0],points:ordered[0].points.map(p=>({...p})),drainagePrimary:true},bodies),obstacles);
   if(first)lines.push(orientPrimary(first,info));
   const primary=lines[0];
   if(primary)for(const f of ordered.slice(1)){
@@ -173,14 +227,14 @@
    const connected=tributary(primary,types[n],'env-affluent-'+n,rnd,lines,bodies,obstacles);
    if(connected)lines.push(connected);
   }
-  lines.push(...lines.flatMap(line=>distributaries(line,bodies)));
-  // Update actual forest holes and hills after network geometry is final.
+  lines.push(...lines.flatMap(line=>distributaries(line,bodies)).filter(line=>!line.points.some(terrainGuard(obstacles,line.width/2+2))));
+  // Legacy callers may still provide woods; relief is never deleted for water.
   for(const f of env.filter(f=>f.type==='forest'))f.holes=[...(f.holes||[]),...lines.map(l=>bank(l.points,l.width/2+2))];
-  if(State.relief){State.relief.hills=State.relief.hills.filter(h=>!reliefHillFootprint(h).some(p=>lines.some(l=>environmentContains(l,p,1))));clearReliefBandCache();State.relief.stats=reliefStats();}
+
   if(typeof clearForestLayoutCache==='function')clearForestLayoutCache();
   // A clipped mouth paints over the shoreline trim, opening the beach at its outlet.
   const dry=env.filter(f=>!water(f)&&!(f.type==='mountain'&&lines.some(l=>l.points.some(p=>environmentContains(f,p,l.width/2+1)))));
   return [...dry,...lines];
  }
- window.ConquerHydrology={compose,mouth,join,intersection,distributaries,tributary,orientPrimary,TRIBUTARY_ANGLE_DEG};
+ window.ConquerHydrology={compose,mouth,join,intersection,distributaries,tributary,orientPrimary,TRIBUTARY_ANGLE_DEG,bank,routeRelief,terrainGuard};
 })();

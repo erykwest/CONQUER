@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## REG-LANDSCAPE-ORDER - Priorita geometrica (12/11/2026)
+
+I rilievi vengono fissati prima dei corsi d acqua; fiumi e torrenti devono aggirarli con tutta la larghezza della sponda, senza eliminare le colline. Confluenze e foci vengono definite prima del riempimento vegetale e palustre. Boschi, stagni e acquitrini evitano rilievi e rete definitiva, anche nei settori ereditati. Mare e grandi laghi restano ricevitori geografici della rete. In casi senza percorso libero, un corso incompatibile viene scartato senza modificare il rilievo. Le frequenze e i target di copertura restano quelli concordati. Economia invariata, gestita nell altro branch.
+
 ## REG-SPORADIC-HILLS - Frequenza dei rilievi (11/11/2026)
 
 La frequenza indica la probabilita di un territorio con colline, non la percentuale della superficie: Pianura 1/3 (1-2 rilievi), Foresta 1/2 (2-3), Palude 1/4 (uno). Seed separato dalla rete idrografica, stesso risultato a ogni rigenerazione. I vincoli geometrici restano prioritari nelle zone costiere e limitrofe. Gli acquitrini lasciano asciutti rilievi e versanti; le scarpate reali restano compatibili con gli attuali validatori estrattivi. L economia resta di competenza dell altro branch. Questa iterazione modifica distribuzione e quantità, usando la geometria terrazzata esistente.

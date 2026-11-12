@@ -1430,12 +1430,11 @@ function biomeFeatureClear(points,obstacles,gap){
   return true;
 }
 function biomeTerrainObstacles(){
-  const sea=biomeSea(),mountains=biomeMountains(),waters=biomeWaters(mountains),out=[];
-  // Hills may run into the mountains: foothills continue the massif instead of avoiding it.
-  if(sea)out.push({points:sea.points});
-  for(const water of waters)out.push({line:water.points,clear:water.width/2+2});
-  return out;
+  const sea=biomeSea();
+  // Coast is fixed geography; rivers are generated only after relief.
+  return sea?[{points:sea.points}]:[];
 }
+
 const BIOME_TOWN={x:WORLD/2,y:WORLD/2},BIOME_TOWN_CLEARANCE=7;
 function biomeTownClear(points){
   if(pointInPolygon(BIOME_TOWN,points))return false;
@@ -1563,6 +1562,7 @@ function environmentPolygonBounds(points){
   return bounds;
 }
 function forestBlobCanPlace(candidate,env,minGap=3){
+  if((State.relief?.hills||[]).some(h=>polygonsOverlapSimple(candidate.points,reliefHillFootprint(h))))return false;
   if(forestIntersectsSteepRelief(candidate))return false;
   // Do not trap the initial settlement inside an unbreakable forest ring.
   // This protects only the immediate hub, not radial road corridors.
@@ -1772,8 +1772,9 @@ function makeContinuousForest(env,rnd,ratio){
   }
   const holes=[...clearings];
   for(const pond of env.filter(f=>f.type==='pond'))holes.push(pond.points.map(q=>({x:pond.x+(q.x-pond.x)*1.25,y:pond.y+(q.y-pond.y)*1.25})));
+  for(const hill of State.relief?.hills||[])holes.push(reliefHillFootprint(hill).map(p=>({x:hill.center.x+(p.x-hill.center.x)*1.35,y:hill.center.y+(p.y-hill.center.y)*1.35})));
   const naturalHoleCount=holes.length;
-  for(const w of env.filter(f=>f.type==='stream'||f.type==='river'))holes.push(...corridorHolePolygons(w.points,w.width/2+2));
+  for(const w of env.filter(f=>f.type==='stream'||f.type==='river'))holes.push(...(window.ConquerHydrology?.bank?[window.ConquerHydrology.bank(w.points,w.width/2+2)]:corridorHolePolygons(w.points,w.width/2+2)));
   return{id:'env-forest-continuous',type:'forest',continuous:true,
     points:[{x:0,y:0},{x:WORLD,y:0},{x:WORLD,y:WORLD},{x:0,y:WORLD}],
     holes,naturalHoleCount,clearings:clearings.length,clearingRatio:clearingCoverage(clearings),
@@ -1783,34 +1784,27 @@ function generateEnvironment(){
   const rnd=seedRand((State.seed^biomeHash(State.biome))>>>0),env=[],recipe=biomeRecipe();
   const sea=biomeSea();if(sea)env.push(sea);
   if(recipe.lake)env.push({...makeEnvBlob(rnd,'pond',WORLD/2,WORLD/2,78,72,'#3f7f8a','#8ab9bd',40,.07),waterBodyKind:'lake'});
-  const mountains=biomeMountains();env.push(...mountains);
-  env.push(...biomeWaters(mountains));
-  const ponds=biomeRange(rnd,recipe.ponds);
+  const mountains=biomeMountains();env.push(...mountains,...biomeWaters(mountains));
+  // Phase 1: existing relief and fixed receiving shores. Phase 2: final drainage.
+  const regional=window.ConquerRegionalLandscape?.compose(env,{deferCover:true})||env;
+  const drainage=window.ConquerHydrology?.compose(regional)||regional;
+  const filled=[...drainage],ponds=biomeRange(rnd,recipe.ponds);
+  // Phase 3: fill around the final hills, riverbanks and confluences.
   if(recipe.continuousForest){
-    for(let i=0;i<ponds;i++)addBiomePond(env,rnd);
-    env.push(makeContinuousForest(env,rnd,recipe.continuousForest));
+    for(let i=0;i<ponds;i++)addBiomePond(filled,rnd);
+    filled.push(makeContinuousForest(filled,rnd,recipe.continuousForest));
   }else if(recipe.woodlandCoverage){
-    for(let i=0;i<ponds;i++)addBiomePond(env,rnd);
-    if(State.biome!=='swamp')ensureForestCoverage(env,rnd,recipe.woodlandCoverage);
+    for(let i=0;i<ponds;i++)addBiomePond(filled,rnd);
+    if(State.biome!=='swamp')ensureForestCoverage(filled,rnd,recipe.woodlandCoverage);
   }else if(recipe.smallForestCoverage){
-    ensureForestCoverage(env,rnd,recipe.smallForestCoverage,true);
+    ensureForestCoverage(filled,rnd,recipe.smallForestCoverage,true);
   }else{
     const forests=biomeRange(rnd,recipe.forests);
-    for(let i=0;i<forests;i++)addBiomeForest(env,rnd,!!recipe.smallForests);
-    for(let i=0;i<ponds;i++)addBiomePond(env,rnd);
+    for(let i=0;i<forests;i++)addBiomeForest(filled,rnd,!!recipe.smallForests);
+    for(let i=0;i<ponds;i++)addBiomePond(filled,rnd);
   }
   environmentRevision++;
-  // Relief from an older generator may still cross water or mountains laid out here.
-  for(let i=env.length-1;i>=0;i--){
-    const regionalWater=window.__CONQUER_REGIONAL_DEMO__&&['river','stream'].includes(env[i].type);
-    if(!regionalWater&&environmentConflictsTestRelief(env[i])||['hill','rough'].includes(env[i].type))env.splice(i,1);
-  }
-  // Provisional stream paths are replaced by T tributaries. Preserve natural
-  // glades and ponds, then let final drainage carve only the real riverbanks.
-  if(window.ConquerHydrology)for(const f of env)if(f.type==='forest'&&Number.isInteger(f.naturalHoleCount))f.holes=f.holes.slice(0,f.naturalHoleCount);
-  const regional=window.ConquerRegionalLandscape?.compose(env)||env;
-  const drainage=window.ConquerHydrology?.compose(regional)||regional;
-  State.environment=window.ConquerRegionalLandscape?.finalizeWoodlands(drainage)||drainage;
+  State.environment=window.ConquerRegionalLandscape?.finalizeWoodlands(filled)||filled;
 }
 // ---------- woodland holes ----------
 // The Foresta biome is one woodland over the whole map (f.continuous) with holes: clearings,
