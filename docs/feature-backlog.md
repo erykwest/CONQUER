@@ -1,5 +1,10 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+## SOC-CLASS-02 — Fusione L1 e istituzione istruiti L3 (12/11/2026)
+
+**IMPLEMENTAZIONE SU PR #206, non ancora mergiata.** Popolazione sociale permanente L1 servi (compresi ex L2 minatori/cavatori), L2 artigiani (ex L3), L3 istruiti/mercanti (ex L4), L4 nobili e rendite. Migrazione save locali/cloud, census e denaro conservati, lavori L1 e botteghe L2, commercio/servizi L3, lealtà L4. [Specifica e limiti](CIVIL-CLASS-MIGRATION.md). **DA FARE:** vera migrazione demografica, Job Manager artigiani, servizi amministrativi di istruiti, ricostruzione case e densità D1–D3, test completi e approvazione ripartizione monetaria.
+
+
 ## CIV-EVT-01 — Fiere, feste e giostre: effetti sociali (12/11/2026)
 
 **Skeleton sul branch PR #206, non attivo e non merge.** Otto eventi catalogati con effetto proposto su felicità dei servi L1, artigiani L2 e borghesi L3, e lealtà dei nobili L4. Prestigio locale temporaneo proiettato sulle heatmap, senza nuovi overlay o sistemi economici. Si riusano gli allestimenti già esistenti; `feast` richiede `civicKind` per distinguere fiera, festa religiosa, raccolto e banchetto. [Contratto](CIVIC-EVENT-EFFECTS-SKELETON.md). **Aperti:** integrazione con UI eventi, vero roster partecipanti, risorse, felicità insediamento, migrazioni, salvataggi, QA Node/browser e CI.
