@@ -223,8 +223,10 @@ function woodedSurfaceFace(vertices,forests){
     ctx.save();ctx.beginPath();poly.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.clip();
     ring(f.points);ctx.clip();
     for(const hole of f.holes||[]){const h=environmentPolygonBounds(hole);if(h.maxX<bounds.minX||h.minX>bounds.maxX||h.maxY<bounds.minY||h.minY>bounds.maxY)continue;ctx.beginPath();ctx.rect(-1e5,-1e5,2e5,2e5);hole.forEach((p,i)=>{const q=w2sRaw(p,z(p));i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)});ctx.closePath();ctx.clip('evenodd')}
-    const rgb=winter?[218,229,217]:[43,72,32];ctx.fillStyle='rgb('+rgb.map(v=>Math.round(v*light)).join(',')+')';ctx.fillRect(-1e4,-1e4,2e4,2e4);
-    ctx.globalAlpha=.30;ctx.fillStyle=getForestGroundPattern();ctx.fillRect(-1e4,-1e4,2e4,2e4);ctx.restore();
+    // Keep all the original undergrowth detail; shade over it per terrain face.
+    ctx.fillStyle=getForestGroundPattern();ctx.fillRect(-1e4,-1e4,2e4,2e4);
+    ctx.fillStyle=winter?'rgba(238,247,234,.10)':'rgba(104,147,66,.16)';ctx.fillRect(-1e4,-1e4,2e4,2e4);
+    ctx.globalAlpha=Math.abs(1-light)*.8;ctx.fillStyle=light<1?'#000':'#fff';ctx.fillRect(-1e4,-1e4,2e4,2e4);ctx.restore();
   }
 }
 function forestReliefHulls(){
@@ -662,14 +664,15 @@ function forestLayoutKey(f){return f.id+':'+(f.holes?.length||0)}
 function clearForestLayoutCache(){forestTreeLayoutCache.clear();forestGroundLayoutCache.clear()}
 // Continuous woodland: a jittered grid over the map with fixed per-cell attributes, filtered by
 // containment, so carving a groove removes only the trees inside it instead of reshuffling all.
-const CONTINUOUS_FOREST_SPACING=4.4;
+const CONTINUOUS_FOREST_SPACING=4.4/Math.sqrt(2.5);
 function continuousForestTrees(f){
   const rnd=seedRand((State.seed^biomeHash(f.id))>>>0),n=Math.ceil(WORLD/CONTINUOUS_FOREST_SPACING),trees=[];
   for(let iy=0;iy<n;iy++)for(let ix=0;ix<n;ix++){
-    const p={x:(ix+.15+rnd()*.7)*CONTINUOUS_FOREST_SPACING,y:(iy+.15+rnd()*.7)*CONTINUOUS_FOREST_SPACING};
+    const p={x:(ix+.2+rnd()*.6)*CONTINUOUS_FOREST_SPACING,y:(iy+.2+rnd()*.6)*CONTINUOUS_FOREST_SPACING};
     const tree={p,shapeIndex:Math.floor(rnd()*FOREST_TREE_ASSETS.length),colorIndex:Math.floor(rnd()*FOREST_CANOPY_PALETTES.summer.length),flip:rnd()<.5,scale:.8+rnd()*.4};
     if(p.x<0||p.x>WORLD||p.y<0||p.y>WORLD||!environmentContains(f,p))continue;
-    const slope=terrainSlopeKind(p);if(slope==='steep')continue;
+    const slope=terrainSlopeKind(p);
+    if([-1.1,0,1.1].some(dx=>[-1.1,0,1.1].some(dy=>terrainSlopeKind({x:p.x+dx,y:p.y+dy})==='steep')))continue;
     tree.z=terrainElevation(p);tree.slope=slope;
     if(slope==='gentle'){const density=seedRand((Math.floor(p.x*100)*73856093^Math.floor(p.y*100)*19349663^State.seed)>>>0)();if(density>.72)continue;tree.scale*=.92;}
     trees.push(tree);

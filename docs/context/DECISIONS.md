@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## REG-TREE-DENSITY - Alberi e sottobosco distinti (12/11/2026)
+
+Aumenta soltanto il numero di alberi: target 2.5x nella stessa area boscosa. Cespugli/scatter e dettaglio procedurale del sottobosco mantengono le quantita; il dettaglio sui rilievi torna alla piena visibilita con ombreggiatura separata. Esclusione assoluta delle superfici ripide e rispetto di 1.1U attorno alle radici rispetto alle scarpate. Restano ammessi sommita e pendii dolci. Coperture dei biomi e geometrie del terreno invariate.
+
 ## REG-WOODED-RELIEF - Boschi sui rilievi (12/11/2026)
 
 Il bosco puo occupare sommita e pendii dolci, restando escluso dalle pareti rocciose ripide. Questo aggiorna la precedente esclusione totale bosco/collina: acqua stagnante e corsi restano separati dai rilievi. Rendering per superficie con quota e luce del versante, tronchi verticali e occlusione dei rilievi davanti agli alberi. Densita invariata sulle superfici piane e diradata sui pendii; stessi asset. Il contenimento boschivo esclude le scarpate rocciose anche per i validatori esistenti, senza cambiare produzione o regole economiche. Le vecchie radure salvate restano preservate.
