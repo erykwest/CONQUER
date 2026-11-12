@@ -67,7 +67,7 @@
       lots:Object.fromEntries(GOODS.map(g=>[g,[]])),
       prices:{...BASE},externalDemand:empty(),externalOffers:empty(),
       wallet:{L1:24,L2:40,L3:60,L4:300},welfare:50,
-      happiness:{L1:50,L2:50,L3:50,L4:50},
+      happiness:{L1:50,L2:50,L3:50,L4:50},loyaltyL4:50,
       wage:{L1:1,L2:2,L3:3},activities:{},cropStock:{lord:0,private:0},
       books:{},annual:{},negativeYears:{},lastTrade:{},events:[],
       constructionPayroll:{total:0,bySite:{}},weekCarterPeak:0,
@@ -95,6 +95,7 @@
     if(!e.happiness||typeof e.happiness!=='object')e.happiness={};
     for(const group of HAPPINESS_GROUPS)
       e.happiness[group]=clamp(finite(e.happiness[group],finite(e.welfare,50)),0,100);
+    e.loyaltyL4=clamp(finite(e.loyaltyL4,50),0,100);
     if(!Array.isArray(e.panelHistory))e.panelHistory=[];
     if(!Number.isFinite(e.weekCarterPeak))e.weekCarterPeak=0;
     if(!e.weekProducedSites||typeof e.weekProducedSites!=='object')e.weekProducedSites={};
@@ -984,7 +985,7 @@
       capital:round(e.wallet.L4),castleGold:round(finite(e.castleGold)),
       constructionPayroll:round(finite(e.constructionPayroll?.total)),
       spontaneousSpawnLabor:spontaneousLabor,spontaneousSpawnCount:spontaneous.length,
-      welfare:e.welfare,happiness:{...e.happiness},rationMode:rationMode(),
+      welfare:e.welfare,happiness:{...e.happiness},loyaltyL4:e.loyaltyL4,rationMode:rationMode(),
       castleFoodIssued:round(Object.values(e.lastTrade?.castleRations||{}).reduce((a,b)=>a+finite(b),0)),
       activities:Object.keys(e.activities).length,
       stockyard:window.ConquerStorageYard?{
@@ -1010,7 +1011,8 @@
     const info=g=>s.balance?.goods?.[g];
     const jobs=jobSummary();
     target.innerHTML='<div class="kv"><span>Average happiness / L4 capital</span><b>'+fmt(s.welfare)+' / '+fmt(s.capital)+' gold</b></div>'+
-      '<div class="kv"><span>Happiness L1 · L2 · L3 · L4</span><b>'+HAPPINESS_GROUPS.map(g=>fmt(s.happiness[g])).join(' · ')+'</b></div>'+
+      '<div class="kv"><span>Felicità L1 servi · L2 artigiani · L3 istruiti</span><b>'+['L1','L2','L3'].map(g=>fmt(s.happiness[g])).join(' · ')+'</b></div>'+
+      '<div class="kv"><span>Lealtà L4 nobiltà</span><b>'+fmt(s.loyaltyL4)+'</b></div>'+
       '<div class="kv"><span>Food policy · castle food issued</span><b>'+({market:'Market only',full:'Full rations',half:'Half rations'}[s.rationMode])+' · '+fmt(s.castleFoodIssued)+'</b></div>'+
       '<div class="kv"><span>L1 costruttori / pastori / boscaioli / carrettieri / inattivi</span><b>'+jobs.building+' / '+jobs.herding+' / '+jobs.logging+' / '+jobs.carter+' / '+jobs.idle+'</b></div>'+
       (jobs.foodRisk?'<div class="legend">⚠ Food supply at risk · protected herders: '+jobs.protectedHerders+'</div>':'')+
@@ -1021,9 +1023,9 @@
       '<div class="kv"><span>L4 investment capacity</span><b>'+fmt(s.investmentCapacity)+' gold</b></div>'+
       '<div class="kv"><span>Population L1–L4</span><b>'+Object.values(s.population).join(' · ')+'</b></div>'+
       (s.commerce?
-        '<div class="kv"><span>L3 workshops / services</span><b>'+s.commerce.l3Shops+' / '+s.commerce.l3Services+'</b></div>'+
+        '<div class="kv"><span>L2 botteghe / L3 servizi</span><b>'+s.commerce.l2Shops+' / '+s.commerce.l3Services+'</b></div>'+
         '<div class="kv"><span>L3 goods in stock · reference value</span><b>'+fmt(s.commerce.l3Goods)+' · '+fmt(s.commerce.l3GoodsValue)+' gold</b></div>'+
-        '<div class="kv"><span>L4+ intercity manifests / present</span><b>'+s.commerce.l4PlusPlanned+' / '+s.commerce.l4PlusPresent+'</b></div>'+
+        '<div class="kv"><span>L3 mercanti in viaggio / presenti</span><b>'+s.commerce.l4PlusPlanned+' / '+s.commerce.l4PlusPresent+'</b></div>'+
         '<div class="kv"><span>Inn beds available</span><b>'+Math.max(0,s.commerce.innBeds-s.commerce.innOccupied)+' / '+s.commerce.innBeds+'</b></div>':'')+
       '<div class="legend">Mon–Fri work · Saturday market · Sunday rest. Wages monthly, rates/returns yearly.</div>'+
       '<div class="economy-goods">'+GOODS.map(g=>
