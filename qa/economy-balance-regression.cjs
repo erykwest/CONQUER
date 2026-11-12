@@ -61,7 +61,7 @@ test('affordability is not mislabeled as a shortage of goods',()=>{
 });
 test('workshop purchases are inventory transfers; materials become consumption when used',()=>{
   const {economy}=harness([
-    {id:'h',type:'house',houseLevel:3},
+    {id:'h',type:'house',houseLevel:2},
     {id:'w',type:'workshop',economicOwner:'private'}
   ]);
   const e=economy.state();
