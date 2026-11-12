@@ -232,7 +232,20 @@
       ctx.restore();
     }}));
   }
-  let frame3d=null;
+  let frame3d=null,prewarmedFor=null;
+  // The swell moves every hull every frame: building a big ship's mesh takes ~20 ms, so the mesh
+  // is built once in the ship's own frame (rebuilt only when sails, oars, arms or livery change)
+  // and each frame only moves it rigidly to the pose: the same vertices, a few matrix products.
+  const ORIGIN={x:0,y:0,heading:0,z:0,roll:0,pitch:0};
+  function placed(s,view,arms,row){
+    const k=[s.key,s.crew.sail.furl.toFixed(3),row,JSON.stringify(arms.sail),JSON.stringify(s.livery)].join('|');
+    if(s.base?.key!==k)s.base={key:k,mesh:S().mesh(s.key,ORIGIN,s.crew.sail.furl,{sail:arms.sail,flag:null},s.livery,row)};
+    const T=S().toWorld,o=T(view,[0,0,0]),ex=T(view,[1,0,0]),ey=T(view,[0,1,0]),ez=T(view,[0,0,1]);
+    const a=ex.x-o.x,b=ey.x-o.x,c=ez.x-o.x,d=ex.y-o.y,e=ey.y-o.y,f=ez.y-o.y,g=ex.z-o.z,h=ey.z-o.z,i=ez.z-o.z;
+    const src=s.base.mesh.pos,pos=new Float32Array(src.length);
+    for(let j=0;j<src.length;j+=3){const x=src[j],y=src[j+1],z=src[j+2];pos[j]=o.x+a*x+b*y+c*z;pos[j+1]=o.y+d*x+e*y+f*z;pos[j+2]=o.z+g*x+h*y+i*z}
+    return{...s.base.mesh,pos};
+  }
   const world3d=()=>!!window.ConquerWorld3D?.active?.();
   function drawAll(){
     frame3d=null;
@@ -264,7 +277,7 @@
     for(const s of ships){
       const view=seaMotion(s,now),row=s.row==null?null:+s.row.toFixed(2);
       const arms=S().arms(s),key=[view.x,view.y,view.heading,view.z||0,view.roll||0,view.pitch||0,row,s.crew.sail.furl.toFixed(3),JSON.stringify(arms)].join('|');
-      if(s.cache?.key!==key)s.cache={key,mesh:S().mesh(s.key,view,s.crew.sail.furl,{sail:arms.sail,flag:null},s.livery,row)};
+      if(s.cache?.key!==key)s.cache={key,mesh:placed(s,view,arms,row)};
       // A battle chars, burns and sinks the hull (settlement-naval-battle.js).
       meshes.push(fighting?NB.dress(s,s.cache.mesh):s.cache.mesh);
       s.flags=S().flagMesh(s.key,view,arms.flag,now);
@@ -273,11 +286,19 @@
       for(const sl of C().sailors(s.crew)){
         const w=C().toWorld(view,sl.local),a=C().toWorld(view,sl.local.map((v,i)=>v+(sl.dir[i]||0)));
         if(w.z<-.05)continue;
+        // WebGL: the sailor is a depth-tested card (hidden by the hull and sails in front of him).
+        const facing=w2sRaw(a,a.z).x>=w2sRaw(w,w.z).x?1:-1;
+        if(gl&&C().sailorFigure?.(C().dot(sl.id,{x:w.x,y:w.y}),sl.mode,now,facing,w.z))continue;
         sprites.push({...w,draw:()=>{
           const p=w2sRaw(w,w.z),q=w2sRaw(a,a.z);
           withProjectionGroundZ(w.z-.1,()=>C().drawSailor(C().dot(sl.id,{x:w.x,y:w.y}),sl.mode,now,q.x>=p.x?1:-1));
         }});
       }
+    }
+    // WebGL: once per crew, the poses of its sailors are painted ahead in idle time.
+    if(gl&&window.ConquerWorld3D?.prewarmFigures&&C().sailorPoses){
+      const crewKey=ships.map(s=>s.id).join();
+      if(crewKey!==prewarmedFor){prewarmedFor=crewKey;window.ConquerWorld3D.prewarmFigures(ships.flatMap(s=>C().sailors(s.crew).flatMap(sl=>C().sailorPoses(C().dot(sl.id,{x:0,y:0})))))}
     }
     sprites.push(...selectionSprites());
     const flags=ships.map(s=>s.flags).filter(Boolean),plank=fighting&&NB.plankMesh();

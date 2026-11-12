@@ -131,21 +131,31 @@ test('manual building collision and water exclusion still apply to extraction',(
   h.State.environment=[{id:'pond',type:'pond',points:rect(129,125,1,1)}];
   assert.match(h.industry.validate(quarry).reason,/forest, water or obstacle/);
 });
-test('production remains two units/day with two available workers',()=>{
+test('two workers: camp 2 wood/day, quarry 2 stone/day, mine 1 metal/day (ECO-FIL-01)',()=>{
   const h=harness();
   h.State.structures=[
     ...Array.from({length:2},(_,i)=>({id:'l1-'+i,type:'house',houseLevel:1})),
     ...Array.from({length:4},(_,i)=>({id:'l2-'+i,type:'house',houseLevel:2})),
     ...['loggingCamp','quarry','mine'].map(type=>({id:type,type,economicOwner:'lord'}))
   ];
-  h.economy.setShare('wood',100);h.economy.setShare('stone',100);
+  h.economy.setShare('wood',100);h.economy.setShare('stone',100);h.economy.setShare('metal',100);
   h.economy.tick(-1,4);
   assert.equal(h.economy.snapshot().market.wood,10);
-  assert.equal(h.economy.snapshot().market.stone,20);
+  assert.equal(h.economy.snapshot().market.stone,10,'quarry alone yields stone');
+  assert.equal(h.economy.snapshot().market.metal,5,'mine yields metal, not stone');
   h.economy.tick(4,6);
   assert.ok(h.economy.snapshot().market.wood<10,'Saturday households consume wood');
   assert.equal(h.economy.snapshot().balance.goods.wood.produced,10);
-  assert.equal(h.economy.snapshot().market.stone,20);
+  assert.equal(h.economy.snapshot().balance.goods.metal.produced,5);
+  assert.equal(h.economy.snapshot().market.stone,10);
+});
+test('mines saved with stone output migrate to metal on load',()=>{
+  const h=harness();
+  const mine={type:'mine',x:130.1,y:125,w:2,h:2,productionGood:'stone'};
+  h.industry.normalizeFootprint(mine);
+  assert.equal(mine.productionGood,'metal');
+  assert.equal(h.industry.make('mine',{x:130.1,y:125}).productionGood,'metal');
+  assert.equal(h.industry.TYPES.mine.good,'metal');
 });
 
 test('clay pit is 4x4 orange and keeps legacy stone quarry 3x3',()=>{

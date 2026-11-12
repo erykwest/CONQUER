@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceDigest": "a7900e37a7457b27049f841a9f9120cab8c6cf554d4a875fb05a08df8abf373e",
+  "sourceDigest": "a05536dfa0c8dbf28ccd76acbbcafc7047c1bb895571b457af20f9097a50d6e7",
   "catalog": {
     "schemaVersion": 1,
     "categories": [
@@ -575,7 +575,7 @@
         "properties": {
           "label": "Miniera",
           "name": "Mine",
-          "good": "stone",
+          "good": "metal",
           "tier": 2,
           "workers": 2,
           "w": 1,
@@ -1426,6 +1426,10 @@
             "signalFire": [
               "none",
               "pyre"
+            ],
+            "innerRoof": [
+              "off",
+              "on"
             ]
           },
           "geometry": {
@@ -6827,6 +6831,100 @@
         },
         "properties": {
           "variant": "hoarding",
+          "value": "on",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.innerRoof.off",
+        "key": "off",
+        "label": "tower · innerRoof · off",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.innerRoof"
+        },
+        "properties": {
+          "variant": "innerRoof",
+          "value": "off",
+          "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.innerRoof.on",
+        "key": "on",
+        "label": "tower · innerRoof · on",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.innerRoof"
+        },
+        "properties": {
+          "variant": "innerRoof",
           "value": "on",
           "default": false,
           "kind": "configuration"

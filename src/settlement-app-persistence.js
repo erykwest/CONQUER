@@ -15,8 +15,8 @@ function migrateStructures(list){
       if(!Number.isFinite(s.length))s.length=dist(s.a,s.b);
       s.level=clamp(Math.round(Number(s.level)||1),1,2);
       // Timber longhouse: ground floor only, plain skin.
-      if(s.material==='wood'){s.level=1;s.skin='standard'}
-      else delete s.material;
+      if(s.material==='wood'){s.level=1;s.skin='standard';if(longhouseCover(s)==='shingle')delete s.roofCover}
+      else{delete s.material;delete s.roofCover}
     }
     if(s.type==='wall'){
       s.width=Number.isFinite(Number(s.width))?Number(s.width):.5;
@@ -171,3 +171,15 @@ async function loadCloud(){if(window.__CONQUER_REGIONAL_DEMO__)return;if(!State.
   window.ConquerSiege?.syncAutoMastio?.();const cloudLandscape=cloudPolicies.landscape;let repairedLandscape=false;if(cloudLandscape?.version===LANDSCAPE_GENERATION_VERSION&&Array.isArray(cloudLandscape.relief?.hills)&&Array.isArray(cloudLandscape.environment)){State.relief=cloudLandscape.relief;State.environment=cloudLandscape.environment;widenWatercourses();clearReliefBandCache();repairedLandscape=ensureStaticLandscape()}else{State.relief=null;State.environment=[];ensureStaticLandscape();repairedLandscape=true}window.ConquerStorageYard?.ensureForWell?.();ensureBorderEntrySelection();syncPrimaryRoadBridges();for(const structure of State.structures)if(window.ConquerIndustries?.is(structure))window.ConquerIndustries.normalizeFootprint(structure);if(State.village.founded)connectBorderMainRoadsInFrames(()=>{markDirty(true,['ground','base']);renderUI();draw()});rebuildSecondaryRoadsOnLoad();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);reconcileGateMainConnections(true);reconcileSettlementAccessRoads(Infinity,true);invalidateSceneCache();if(repairedLandscape)await saveCloud();else saveLocal();renderUI();renderFunctionPanel();draw()}}
 async function saveCloud(){if(window.__CONQUER_REGIONAL_DEMO__){State.dirty=false;return;}saveLocal();if(window.__CONQUER_CAMP_MODE__){document.getElementById('saveState').textContent='saved camp local';State.dirty=false;return;}if(!State.user){document.getElementById('saveState').textContent='saved local';State.dirty=false;return}const payload={user_id:State.user.id,world_cell_x:0,world_cell_y:0,terrain_seed:State.seed,biome:State.biome,neighbor_biomes:State.neighborBiomes,resources:State.resources,policies:{...State.policies,ambientAutoV1:true,buildMasonryMaterial:State.buildMasonryMaterial,stonePaletteId:State.stonePaletteId,economy:State.economy||null,diplomacy:State.diplomacy||null,siege:State.siege||null,combat:window.ConquerCombat?.serialize()||State.combat,heraldry:State.heraldry||null,season:State.season,seasonOverride:State.seasonOverride||null,village:State.village,clock:{day:State.clock.day},landscape:{version:LANDSCAPE_GENERATION_VERSION,relief:State.relief,environment:State.environment}},structures:State.structures,camera:State.view,updated_at:new Date().toISOString()};const {error}=await State.supabase.from('settlements').upsert(payload,{onConflict:'user_id,world_cell_x,world_cell_y'});if(error){document.getElementById('saveState').textContent='cloud error';console.error(error)}else{State.dirty=false;document.getElementById('saveState').textContent='saved cloud'}}
 document.getElementById('saveBtn').onclick=saveCloud;
+// DEV: saved test layouts (layouts/<name>.json, the same format as the local save) replace the
+// local game and reload it.
+async function loadLayout(name){
+  const res=await fetch('layouts/'+encodeURIComponent(name)+'.json',{cache:'no-store'});
+  if(!res.ok){status('Layout '+name+' non trovato');return false}
+  const text=await res.text();JSON.parse(text);
+  localStorage.setItem(localStorageKey(),text);location.reload();return true;
+}
+document.getElementById('devLayoutLoad')?.addEventListener('click',()=>{
+  const name=document.getElementById('devLayoutName')?.value||'TEST';
+  if(confirm('Caricare il layout '+name+'? La partita locale attuale viene sostituita.'))loadLayout(name).catch(e=>status('Layout non valido: '+e.message));
+});

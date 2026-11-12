@@ -7,7 +7,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
-const src=name=>fs.readFileSync(__dirname+'/../src/'+name,'utf8');
+const src=name=>fs.readFileSync(__dirname+'/../src/'+name,'utf8').replace(/\r\n/g,'\n');
 const pick=(text,name)=>{
   const at=text.search(new RegExp('\\n[ ]*function '+name+'\\('));assert.ok(at>=0,name);
   const indent=text.slice(at+1).match(/^[ ]*/)[0],end=text.indexOf('\n'+indent+'function ',at+1);
@@ -120,7 +120,8 @@ assert.ok(!spiral(tower({tier:2,functions:[]})),'never in W2 towers');
 assert.ok(RE.ROOM_EXTERIOR.latrine&&ctx.window.ConquerGarderobeModels.models.garderobe.projection<=.22,'a shallow garderobe');
 assert.equal(tris.filter(t=>t.key==='stain').length,3*2,'communal: three drop holes, three stains');
 const furn=src('settlement-cutaway-furniture.js');
-assert.match(furn,/r\.row\(S,'latrineSeat',3/,'three seats along the garderobe wall');
+assert.ok(ctx.window.ConquerGarderobeModels.models.garderobe.parts.bench,'the three-hole seat bench is inside the garderobe');
+assert.doesNotMatch(furn.match(/latrine\(r\)\{[\s\S]*?\n    prison/)[0],/latrineSeat/,'no seats in the room itself');
 assert.match(furn,/latrine\(r\)\{const S=r\.exteriorSide\|\|r\.A/,'the seat goes against the wall of the garderobe');
 assert.match(furn,/r\.exteriorSide=Math\.abs\(u\)>=Math\.abs\(v\)/);
 console.log('PASS W1 stair only in empty towers; shallow garderobe; latrine furnishes its room');

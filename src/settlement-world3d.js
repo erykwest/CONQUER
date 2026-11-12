@@ -1,5 +1,5 @@
 'use strict';
-// CONQUER world 3D prototype — the whole static scene on WebGL2 with the camera as shader uniforms.
+// CONQUER world 3D prototype â€” the whole static scene on WebGL2 with the camera as shader uniforms.
 //
 // Static geometry is uploaded once and only rebuilt when its content changes; pan, zoom, rotation and
 // plan view are pure uniform changes (no scene-cache rebuilds). Everything reuses the game's own data:
@@ -244,7 +244,7 @@
         return{edit,minX:Math.min(...xs),maxX:Math.max(...xs),
           minY:Math.min(...ys),maxY:Math.max(...ys)};
       });
-      // Broadphase: register edit bounds in 8U buckets once. A 100×100U
+      // Broadphase: register edit bounds in 8U buckets once. A 100Ã—100U
       // 0.5U terrain rebuild has 40,000 cells; almost all must bypass CSG
       // clipping entirely instead of scanning every authored polygon.
       const BIN=8,bins=new Map(),binKey=(x,y)=>x+','+y;
@@ -443,8 +443,8 @@
     });
     return new Float32Array(m.tris);
   }
-  // Bake the existing 2D ground drawing in plan view (rotation 0) into a TEX_SIZE² canvas covering
-  // [x0,x0+size]². With `tile` ({ox,oy}) only that TILE_PX² window of the same texture is painted:
+  // Bake the existing 2D ground drawing in plan view (rotation 0) into a TEX_SIZEÂ² canvas covering
+  // [x0,x0+size]Â². With `tile` ({ox,oy}) only that TILE_PXÂ² window of the same texture is painted:
   // the mapping stays the full texture's, translated, so repeating ground patterns line up across tiles.
   function bakeGround(x0,y0,size,tile=null){
     const N=tile?TILE_PX:TEX_SIZE,ox=tile?.ox||0,oy=tile?.oy||0;
@@ -458,7 +458,7 @@
     // World window actually painted, for culling roads and fields.
     const wx0=x0+ox/px,wy0=y0+oy/px,wsize=N/px;
     const inside=s=>{if(!tile)return true;const b=groundItemBounds(s);return !b||(b.x0<wx0+wsize&&b.x1>wx0&&b.y0<wy0+wsize&&b.y1>wy0)};
-    // The landscape culls against [0,width]² of the rect, which for a translated tile still holds
+    // The landscape culls against [0,width]Â² of the rect, which for a translated tile still holds
     // everything above and left of it: a far tile would cost a full bake. Cull to the tile instead.
     const keepCull=[screenPointVisibleRaw,screenPolygonVisible,forestLikelyVisible];
     if(tile){
@@ -567,7 +567,7 @@
     S.groundQueue=[];
   }
   // One tile per frame: a tile costs a few ms, the whole queue of a typical edit (2-6 tiles) is gone
-  // before the construction site is noticed. Mipmaps of a 4096² texture are rebuilt once, when its
+  // before the construction site is noticed. Mipmaps of a 4096Â² texture are rebuilt once, when its
   // last queued tile is in (until then the minified levels show the previous ground for a few frames).
   function pumpGroundTiles(gl){
     const t=S.groundQueue.shift();if(!t)return;
@@ -1157,7 +1157,7 @@
     const c=rgb(hex),lum=(c[0]+c[1]+c[2])/3,kk=lum>.7?1-(1-k)*.55:k;
     return'#'+c.map(x=>Math.round(clamp(x*kk,0,1)*255).toString(16).padStart(2,'0')).join('');
   }
-  // Convex polygon clip (Sutherland–Hodgman) of a ground polygon against a convex clip polygon.
+  // Convex polygon clip (Sutherlandâ€“Hodgman) of a ground polygon against a convex clip polygon.
   function clipConvex(subject,clip){
     let out=subject;const area=clip.reduce((a,p,i)=>{const q=clip[(i+1)%clip.length];return a+p.x*q.y-q.x*p.y},0),sgn=area>=0?1:-1;
     for(let i=0;i<clip.length&&out.length;i++){
@@ -1199,7 +1199,7 @@
     }
     return pieces;
   }
-  // Parts of segment p-q outside every convex blocker (Cyrus–Beck interval per blocker).
+  // Parts of segment p-q outside every convex blocker (Cyrusâ€“Beck interval per blocker).
   function segMinus(p,q,blockers){
     let parts=[[0,1]];
     for(const B of blockers){
@@ -1433,7 +1433,7 @@
   // Category tests look at fields only (no terrain sampling), so this stays well under a millisecond.
   let sigPass=null;
   function structureKey(s){
-    return s.id+(underConstruction(s)?'u':'c')+(s.level||'')+(s.houseLevel||'')+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.b?.x??'')+(s.b?.y??'')+(s.angle||0)+(s.roofStyle||'')+(s.bartizan||'')+(s.bell||'')+(s.signalFire||'')+(s.signalFireSpent?'F':'')+(s.roofShape||'')+(s.baseStyle||'')+(s.skin||'')+(s.masonryMaterial||'stone')+(s.cutaway?1:0)+(s.width||'')+(s.span||'')+(s.material||'')+(s.groundZ??'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0)
+    return s.id+(underConstruction(s)?'u':'c')+(s.level||'')+(s.houseLevel||'')+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.b?.x??'')+(s.b?.y??'')+(s.angle||0)+(s.roofStyle||'')+(s.bartizan||'')+(s.bell||'')+(s.innerRoof||'')+(s.signalFire||'')+(s.signalFireSpent?'F':'')+(s.roofShape||'')+(s.baseStyle||'')+(s.skin||'')+(s.masonryMaterial||'stone')+(s.cutaway?1:0)+(s.width||'')+(s.span||'')+(s.material||'')+(s.groundZ??'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0)
       // Moat fill patches are baked into the ground: filling must re-bake it.
       +(s.fills?.length?s.fills.map(f=>(+f.at).toFixed(2)+':'+f.span+':'+(+f.progress).toFixed(3)).join(','):'')
       // The gate door's state swaps its facade decal.
@@ -1737,7 +1737,7 @@
       gl.drawArrays(gl.TRIANGLES,0,dynamic.length/6);
     }
     if(soldiers.length&&soldierAtlas.canvas){
-      if(soldierAtlas.dirty){uploadTexture(gl,'soldierAtlas',soldierAtlas.canvas);soldierAtlas.dirty=false}
+      uploadAtlas(gl);
       let b=S.buf.soldiers;if(!b){b=gl.createBuffer();S.buf.soldiers=b}
       gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,soldiers,gl.STREAM_DRAW);
       const sp=S.prog.sprite;useProgram(gl,sp);setCamera(gl,sp,r);
@@ -1754,10 +1754,83 @@
   // tower archers, training knights, cutaway occupants) are collected instead of painted. Each one is
   // rendered as a billboard in the front pass, depth-tested against the whole scene, and registers a
   // vertical capsule collider in world units for picking and future combat queries.
-  const SOLDIER_TILE=128,SOLDIER_SR=8,SOLDIER_FEET=.75;          // sprite px, sprite view scale, feet row
+  // Civilians (villagers, workers, sailors, shipwrights) share the same path through figure():
+  // each look and animation phase is painted once into a tile, then every figure is a 6-vertex
+  // depth-tested card, so a hull, a sail or a wall in front of it hides it.
+  const SOLDIER_TILE=64,SOLDIER_SR=4,SOLDIER_FEET=.75;           // sprite px, sprite view scale, feet row
+  const FIG_ATLAS=2048,FIG_COLS=Math.floor(FIG_ATLAS/SOLDIER_TILE);     // 32x32 = 1024 tiles
   const SOLDIER_SIZE_U=SOLDIER_TILE/(U*SOLDIER_SR);               // 1.333U card
   const CAPSULE={r:.12,below:.11,above:.38};                       // figure body + head around the feet point
-  const soldierAtlas={canvas:null,map:new Map(),next:0,dirty:false,heraldry:null};
+  // map: key -> {uv,slot,used}. Slots of tiles unused for a while are reused when the FIG_ATLAS is full;
+  // only the tiles painted since the last frame are sent to the GPU (tiles), not the whole FIG_ATLAS.
+  const soldierAtlas={canvas:null,map:new Map(),next:0,free:[],frame:0,dirty:false,full:true,tiles:[],heraldry:null,resets:0,painted:0,evicted:0};
+  function clearAtlas(){soldierAtlas.map.clear();soldierAtlas.next=0;soldierAtlas.free=[];soldierAtlas.full=true;soldierAtlas.tiles=[]}
+  function takeSlot(){
+    const A=soldierAtlas,cap=FIG_COLS*FIG_COLS;
+    if(A.next<cap)return A.next++;
+    if(!A.free.length){
+      // Evict what has not been drawn in the last second or so (or, failing that, the older half).
+      const list=[...A.map.entries()].sort((a,b)=>a[1].used-b[1].used),old=list.filter(([,e])=>e.used<A.frame-60);
+      for(const [k,e] of (old.length?old:list.slice(0,list.length>>1))){A.map.delete(k);A.free.push(e.slot);A.evicted++}
+      if(!old.length)A.resets++;
+    }
+    return A.free.pop();
+  }
+  function atlasTile(key,paint){
+    const hit=soldierAtlas.map.get(key);if(hit){hit.used=soldierAtlas.frame;return hit.uv}
+    if(!soldierAtlas.canvas){soldierAtlas.canvas=document.createElement('canvas');soldierAtlas.canvas.width=soldierAtlas.canvas.height=FIG_ATLAS;soldierAtlas.g=soldierAtlas.canvas.getContext('2d',{willReadFrequently:true})}
+    const i=takeSlot(),x=(i%FIG_COLS)*SOLDIER_TILE,y=Math.floor(i/FIG_COLS)*SOLDIER_TILE;
+    const g=soldierAtlas.g;g.clearRect(x,y,SOLDIER_TILE,SOLDIER_TILE);   // CPU canvas: tile readback is cheap
+    const keepView=State.view,keepW2s=w2s;
+    State.view={...keepView,scale:SOLDIER_SR};
+    w2s=()=>({x:x+SOLDIER_TILE/2,y:y+SOLDIER_TILE*SOLDIER_FEET});      // figure painters project only the feet
+    try{withRenderContext(g,()=>paint(g,x,y))}
+    catch(e){console.error(e)}
+    finally{State.view=keepView;w2s=keepW2s}
+    const uv=[x/FIG_ATLAS,y/FIG_ATLAS,(x+SOLDIER_TILE)/FIG_ATLAS,(y+SOLDIER_TILE)/FIG_ATLAS];
+    soldierAtlas.map.set(key,{uv,slot:i,used:soldierAtlas.frame});soldierAtlas.tiles.push([x,y]);
+    soldierAtlas.dirty=true;soldierAtlas.painted++;return uv;
+  }
+  // FIG_ATLAS -> GPU: the whole canvas the first time (or after a clear), then tile by tile.
+  function uploadAtlas(gl){
+    const A=soldierAtlas;if(!A.dirty)return;
+    if(A.full||!S.tex.soldierAtlas||A.tiles.length>60)uploadTexture(gl,'soldierAtlas',A.canvas);
+    else{
+      const g=A.g;
+      gl.bindTexture(gl.TEXTURE_2D,S.tex.soldierAtlas);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);
+      for(const [x,y] of A.tiles){const d=g.getImageData(x,y,SOLDIER_TILE,SOLDIER_TILE);gl.texSubImage2D(gl.TEXTURE_2D,0,x,y,SOLDIER_TILE,SOLDIER_TILE,gl.RGBA,gl.UNSIGNED_BYTE,d.data)}
+      gl.generateMipmap(gl.TEXTURE_2D);
+    }
+    perf().figureTilesUploaded=A.tiles.length;
+    A.dirty=false;A.full=false;A.tiles=[];
+  }
+  // A civilian figure at feet p, z above the ground. key: everything that changes the picture
+  // (look, pose, animation phase bucket, facing); paint() draws it with the figure painters, which
+  // only project the feet point. Returns false outside a 3D frame (the caller paints in 2D).
+  // mirror: the picture faces left (paint() always draws it facing right; the card flips it).
+  let figuresOn=true;   // benchmark switch: false paints civilians in 2D as before
+  function figure(p,z,key,paint,id=key,mirror=false){
+    if(!collecting||!figuresOn)return false;
+    const ground=Number.isFinite(structureProjectionGroundZ)?structureProjectionGroundZ:terrainElevation(p);
+    collecting.push({p:{x:p.x,y:p.y},z:z+ground,key:'civ|'+key,paint,id,type:'civilian',mirror:!!mirror});
+    return true;
+  }
+  // Prepare poses ahead ([{key,paint}]): painted in idle time, a few at a time, so a phase change
+  // later finds its tile ready instead of painting it inside a frame. Never evicts for this.
+  const prewarmQueue=[];let prewarmScheduled=false;
+  function prewarmFigures(poses){
+    for(const d of poses||[])if(d&&d.key&&d.paint&&!soldierAtlas.map.has('civ|'+d.key))prewarmQueue.push(d);
+    if(prewarmScheduled||!prewarmQueue.length)return;
+    prewarmScheduled=true;
+    const idle=window.requestIdleCallback||(f=>setTimeout(()=>f({timeRemaining:()=>8}),50));
+    const run=deadline=>{
+      while(prewarmQueue.length&&deadline.timeRemaining()>2&&soldierAtlas.next<FIG_COLS*FIG_COLS){
+        const d=prewarmQueue.shift();if(!soldierAtlas.map.has('civ|'+d.key))atlasTile('civ|'+d.key,d.paint);
+      }
+      if(prewarmQueue.length&&soldierAtlas.next<FIG_COLS*FIG_COLS)idle(run);else{prewarmQueue.length=0;prewarmScheduled=false}
+    };
+    idle(run);
+  }
   let collecting=null,colliders=[];
   if(typeof drawSoldierFigure==='function'){
     const original=drawSoldierFigure;
@@ -1772,37 +1845,27 @@
     // Only the knight's sword swings with phase; everything else is a single pose.
     const isDot=window.ConquerLOD?.militaryTier()==='dot';
     const bucket=!isDot&&type==='knight'?Math.floor((((phase%1)+1)%1)*8):0;
-    const herald=JSON.stringify(State.heraldry||null);
-    if(soldierAtlas.heraldry!==herald){soldierAtlas.map.clear();soldierAtlas.next=0;soldierAtlas.heraldry=herald}
     const key=(isDot?'dot|':'figure|')+type+'|'+bucket+'|'+(livery?JSON.stringify(livery):'realm');
-    let uv=soldierAtlas.map.get(key);if(uv)return uv;
-    if(!soldierAtlas.canvas){soldierAtlas.canvas=document.createElement('canvas');soldierAtlas.canvas.width=soldierAtlas.canvas.height=1024}
-    const cols=1024/SOLDIER_TILE,i=soldierAtlas.next++%(cols*cols),x=(i%cols)*SOLDIER_TILE,y=Math.floor(i/cols)*SOLDIER_TILE;
-    const g=soldierAtlas.canvas.getContext('2d');g.clearRect(x,y,SOLDIER_TILE,SOLDIER_TILE);
-    if(isDot){
+    return atlasTile(key,isDot?(g,x,y)=>{
       // The same sprite/billboard and depth-tested capsule stay in place, but
       // the distant soldier is a single colored point instead of a figure.
       const cy=y+SOLDIER_TILE*.54,r=SOLDIER_TILE*.34;
       g.fillStyle=window.ConquerLOD.militaryColor(type,livery);
-      g.strokeStyle='#28302a';g.lineWidth=5;
+      g.strokeStyle='#28302a';g.lineWidth=4;
       g.beginPath();g.arc(x+SOLDIER_TILE/2,cy,r,0,Math.PI*2);g.fill();g.stroke();
-    }else{
-      const keepView=State.view,keepW2s=w2s;
-      State.view={...keepView,scale:SOLDIER_SR};
-      w2s=()=>({x:x+SOLDIER_TILE/2,y:y+SOLDIER_TILE*SOLDIER_FEET});      // drawSoldierFigureUnmasked projects only the feet
-      try{withRenderContext(g,()=>drawSoldierFigureUnmasked({x:0,y:0},0,type,'atlas',bucket/8,livery))}
-      finally{State.view=keepView;w2s=keepW2s}
-    }
-    uv=[x/1024,y/1024,(x+SOLDIER_TILE)/1024,(y+SOLDIER_TILE)/1024];
-    soldierAtlas.map.set(key,uv);soldierAtlas.dirty=true;return uv;
+    }:()=>drawSoldierFigureUnmasked({x:0,y:0},0,type,'FIG_ATLAS',bucket/8,livery));
   }
   function buildSoldiers(list){
     const v=[],out=[];
+    const herald=JSON.stringify(State.heraldry||null);
+    if(soldierAtlas.heraldry!==herald){clearAtlas();soldierAtlas.heraldry=herald}
+    soldierAtlas.frame++;
     for(const s of list){
-      const [u0,v0,u1,v1]=soldierTile(s.type,s.phase,s.livery);
+      let [u0,v0,u1,v1]=s.paint?atlasTile(s.key,s.paint):soldierTile(s.type,s.phase,s.livery);
+      if(s.mirror)[u0,u1]=[u1,u0];
       const C=[[-.5,-SOLDIER_FEET,u0,v0],[.5,-SOLDIER_FEET,u1,v0],[.5,1-SOLDIER_FEET,u1,v1],[-.5,1-SOLDIER_FEET,u0,v1]];
       for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(s.p.x,s.p.y,s.z,cx,cy,SOLDIER_SIZE_U,u,w)}
-      out.push({id:s.id,type:s.type,x:s.p.x,y:s.p.y,z0:s.z-CAPSULE.below,z1:s.z+CAPSULE.above,r:CAPSULE.r});
+      if(!s.paint)out.push({id:s.id,type:s.type,x:s.p.x,y:s.p.y,z0:s.z-CAPSULE.below,z1:s.z+CAPSULE.above,r:CAPSULE.r});
     }
     colliders=out;
     return new Float32Array(v);
@@ -1981,7 +2044,7 @@
     // Mill sails and wheels turn every frame (industries).
     // Gate door leaves, portcullis and torch brackets (gate fittings).
     // The Mastio's raised entrance: stair and drawbridge leaf (keep entrance).
-    for(const source of [window.ConquerSiege,window.ConquerCombat,window.ConquerIndustries3D,window.ConquerGates,window.ConquerKeepEntrance]){
+    for(const source of [window.ConquerSiege,window.ConquerCombat,window.ConquerIndustries3D,window.ConquerGates,window.ConquerKeepEntrance,window.ConquerTrebuchets]){
       try{for(const m of source?.dynamicMeshes?.()||[])dynamicQueue.push(m)}catch(e){console.error(e)}
     }
     // Event flags, bunting and banners wave in the wind (settlement-events3d.js).
@@ -2023,7 +2086,8 @@
   }
   window.ConquerWorld3D={active,supported,setEnabled,drawBack,drawCastleOverlays,drawFront,
     drawNightLights3D,nightLightsEnabled,setNightLightsEnabled,drawMastioDrapes,drawEmissive,finishFrame,_setActiveForTest,
-    pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,addHouse,addOutbuilding,
+    pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,addHouse,addOutbuilding,figure,prewarmFigures,_setFiguresForTest:on=>{figuresOn=!!on},
+    atlasCanvas:()=>soldierAtlas.canvas,frameFigures:()=>(S.frameFigures||[]).map(f=>({key:f.key||f.type,p:f.p,z:f.z,mirror:f.mirror})),atlasStats:()=>({tiles:soldierAtlas.next,capacity:FIG_COLS*FIG_COLS,resets:soldierAtlas.resets,painted:soldierAtlas.painted}),
     invalidate:()=>{S.sig={};S.contentDirty=true},
     _debugBake:bakeGround,
     status:()=>({enabled,supported:supported(),failed:S.failed,stats:{...S.stats},sig:{...S.sig},buffers:Object.fromEntries(Object.entries(S.buf).filter(([k])=>k.endsWith('#n')))})};
