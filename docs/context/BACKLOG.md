@@ -1,5 +1,93 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-12 — SCOL-01 · Scolarizzati, sottoclasse istruita di L3/L4
+
+**SPECIFICA APPROVATA, NESSUN CODICE.** Intervista con il product owner del 12/11/2026 (sessione dedicata, nata dalla sessione Gilda). Contratto per le altre sessioni: [D-SCOL-261112](DECISIONS.md). Base verificata: `main` 431af30d. Gilda, Scriptorium, FISCO-01 (esattori, giudici), CRIME (tribunale), ARTE (artisti), diplomazia (scrivani) e la futura sessione Chiesa (chierici) **non definiscono la classe**: registrano i loro ruoli in questo contratto.
+
+**Stato live su `main` (verificato nel codice)**
+- La classe sociale coincide con il livello della casa: `ConquerEconomy.population()` somma `livello × 3` abitanti per casa completata e non viene salvato. Non esistono cittadini individuali né promozioni automatiche; si cambia classe solo con l'upgrade manuale della casa.
+- I lavoratori disponibili sono `floor(L2/3)`, `floor(L3/3)` e `L4` (`laborAllocation`). Oggi solo `KIND.workshop` consuma lavoratori L3; botteghe e servizi L3 sono legati alla casa.
+- Borsellini `wallet.L1–L4`, felicità per classe (mossa solo dal cibo, dalle razioni e dall'infermeria), `wage = {L1:1, L2:2, L3:3}` al mese, ricalcolato ogni anno con il benessere. Il ciclo `monthly` non paga mai salari a classi > 2.
+- Unico precedente di sottoclasse: i **soldati** (`State.siege.soldiers`), un contatore sottratto ai lavoratori L1, pagato nel `wallet.L1`, senza un secondo ledger.
+- Nessuna immigrazione: la popolazione cresce solo con le case L1 automatiche (`processVillageGrowth`).
+- Lo Scriptorium è un annesso della Chiesa L2 senza effetti (`settlement-civic-annexes.js`). I gestori di Chiesa e Locanda (`SERVICE_KINDS`, `assignService`) si assegnano solo nei test; non hanno reddito né effetti. Giudici e cancelliere del tribunale sono figure decorative (`ConquerCourtPeople`).
+
+**1. Definizione**
+- Gli **Scolarizzati** sono abitanti istruiti delle case L3 e L4, rappresentati da **contatori** come i soldati, non da una quinta classe. Usano il borsellino e la felicità della classe della loro casa: **nessun secondo ledger**.
+- **Due rami:** **laici** e **chierici**. Il ramo si cambia solo con un nuovo corso nello Scriptorium del ramo opposto.
+- **Tetto:** `posti = floor(abitanti L3 / 3) + floor(abitanti L4 / 3)`, cioè 3 per casa. Scolarizzati e allievi in corso insieme non superano il tetto. Ogni scolarizzato appartiene a L3 o a L4: le nuove entrate occupano prima i posti L3, poi quelli L4.
+- Uno scolarizzato **con un ruolo** esce dai lavoratori della sua classe (come i soldati da L1). Uno **senza ruolo** lavora come un L3 comune.
+
+**2. Origini**
+| Origine | Regola | Valori provvisori |
+| --- | --- | --- |
+| **Scriptorium** | Ogni Scriptorium ha un **selettore Laico / Clericale** e forma solo il ramo scelto, mai i due insieme. Il selettore si cambia dopo la costruzione: vale dalle iscrizioni successive, e gli allievi in corso finiscono nel ramo vecchio. **Iscrizione automatica**: quando ci sono posti liberi nel corso e nel tetto, iscrive un lavoratore L3 (poi L4) se il borsellino della sua classe può pagare la retta; senza fondi non iscrive. L'allievo non lavora per tutta la durata del corso. Più Scriptorium per villaggio sono ammessi (oggi è un annesso per chiesa). | 4 allievi per Scriptorium, corso di **1 anno di gioco**, retta 20 oro per allievo |
+| **Immigrazione** (mercato del lavoro, §5) | Controllo mensile; arrivano solo laici. Condizioni: felicità L3 ≥ 60 (≥ 50 se il salario è ≥ 150%), almeno una **locanda con gestore**, posti liberi nel tetto. Arrivi = `min(posti liberi, floor(base × moltiplicatore salario))`, con base 1, o 2 se la felicità L3 è ≥ 80. | — |
+| **Ingaggio del signore** | Pulsante «Ingaggia scolarizzato» nella scheda Istruiti: si pagano subito dal castello 40 oro e il laico **arriva dopo 2 settimane** (corriere). All'arrivo serve un posto libero, altrimenti l'oro torna al castello. Più ingaggi possono essere in viaggio insieme. | 40 oro, 14 giorni |
+- Le nuove partite e i vecchi salvataggi partono con **0 scolarizzati**.
+
+**3. Ruoli**
+| Ruolo | Ramo | Proprietario (posti, effetti) | Chi paga |
+| --- | --- | --- | --- |
+| Chierico: gestore della Chiesa (`SERVICE_KINDS.church`) ed eventuale personale dello Scriptorium | chierici | Sessione **Chiesa** (da aprire), Scriptorium | La Chiesa. Finché la sessione Chiesa non decide, il castello paga per conto della Chiesa |
+| Esattore (circa 1 ogni 40 abitanti; Municipio e Bargello) | laici | FISCO-01 (#197) | Castello |
+| Giudice (tribunale del Municipio L2; bassa giustizia del Balivo) | laici | FISCO-01 / CRIME | Castello |
+| Funzionario della Gilda | laici | Sessione Gilda | Borsellino L3 delle botteghe |
+| Artista | laici | ARTE (#195) | A commissione (ARTE), nessun salario mensile |
+| Scrivano della diplomazia | laici | Diplomazia (cavalieri, corrieri), da assegnare | Castello |
+- Il **gestore della Locanda resta un L3 comune**, non uno scolarizzato.
+- Le sessioni proprietarie fissano il numero di posti e l'effetto del ruolo. Questa specifica fissa solo la classe, i rami, l'allocazione, i salari e la regola delle mancanze.
+
+**4. Allocazione e mancanze**
+- Nuova scheda **«L3 · Istruiti»** nel Job Manager, accanto a L1 e L2, con due liste (laici, chierici). Ogni ruolo ha priorità, minimo e AUTO, con lo stesso contratto di `l1Jobs` / `l2Jobs`: prima i minimi in ordine di priorità, poi l'eccedenza ai ruoli AUTO. Le assegnazioni si ricalcolano ogni giorno e non si salvano; si salvano solo le politiche.
+- **Resa proporzionale con soglia:** ogni ruolo rende `max(resaMinima, coperti / posti)`. La resa minima la sceglie il proprietario (es. FISCO: riscossione al 30% senza esattori).
+- Un ruolo con 0 coperti è **«scoperto»**: avviso nel Centro di controllo e nell'ispettore dell'edificio.
+
+**5. Salari e mercato del lavoro**
+- Salario mensile di default = **2 × `wage.L3`** (oggi 6 oro), versato al borsellino della classe dello scolarizzato (L3 o L4). Lo paga chi impiega (tabella §3). Chi non ha un ruolo non riceve salario.
+- **Cursore del salario dei laici** nella scheda Istruiti, dal **50% al 200%** del default. Il salario dei chierici lo deciderà la sessione Chiesa (fino ad allora resta al 100%).
+- Il cursore agisce sulla regola mensile dell'immigrazione (§2) e sulle partenze:
+  - con un moltiplicatore **< 0,8** se ne va 1 laico al mese, anche se ha un ruolo (prima quelli senza ruolo);
+  - con la felicità L3 **< 40** se ne va 1 laico in più.
+- «Cervelli attratti da altri stati» e «emigrati verso altri stati» sono un **aggancio per la diplomazia**: in questa fase non si simulano regni stranieri.
+
+**6. Felicità**
+- Nessun bisogno nuovo di merci.
+- **Disoccupazione istruita**, controllata il sabato: se più del 25% degli scolarizzati è senza ruolo, la felicità L3 perde 0,5. Se tutti hanno un ruolo, guadagna 0,2.
+
+**7. Perdita delle case**
+- Se il tetto scende (incendio, demolizione o retrocessione di case L3/L4), l'eccedenza diventa **«senza alloggio»** per 4 settimane, senza ruolo né salario. Se nel frattempo si libera un posto rientra, altrimenti emigra: prima i laici senza ruolo, poi gli altri.
+- Gli allievi in corso non si perdono per mancanza di case. Se si perde lo Scriptorium, si perdono i suoi allievi, e le rette non vengono restituite.
+
+**8. Persistenza** (dentro `State.economy`, già salvato in locale e su cloud)
+- Blocco `educated`:
+  - `lay` e `clergy`, ciascuno come `{L3, L4}`;
+  - `homeless` (eccedenza con il giorno di inizio);
+  - `courses[scriptoriumId] = {mode, students:[{cls, branch, endDay}]}`;
+  - `hires` (ingaggi in viaggio, con giorno di arrivo e oro pagato);
+  - `wageMul`;
+  - `roles` (ordine e impostazioni come `l1Jobs`);
+  - ultimo controllo mensile.
+- **Migrazione lazy** in `state()`: il blocco nasce a zero se manca. `economy.version` non cambia, quindi nessun reset.
+
+**9. Interfaccia**
+- Sotto-riga «di cui scolarizzati N (laici / chierici, con ruolo / liberi / in formazione / senza alloggio)» sotto L3 e L4: nel Profilo (Generale, Persone, Job Manager), nel tooltip della popolazione della shell e nella serie settimanale `panelHistory`.
+- Ispettore dello Scriptorium: selettore Laico/Clericale, allievi e mesi mancanti.
+- Scheda Istruiti: ruoli, coperti/posti, cursore del salario, ingaggio, arrivi e partenze del mese.
+
+**Dipendenze introdotte:** l'immigrazione richiede l'**assegnazione automatica dei gestori** di Chiesa e Locanda (oggi solo nei test). Il gestore della Chiesa diventa un chierico, quello della Locanda resta un L3 comune.
+
+**Valori provvisori da bilanciare:** corso (4 allievi, 1 anno), retta 20, ingaggio 40 oro e 14 giorni, salario 2 × `wage.L3`, intervallo del cursore 50–200%, soglie di felicità 40/50/60/80, ±0,5/0,2 di felicità, 4 settimane senza alloggio.
+
+**Fasi di implementazione proposte (una PR ciascuna, solo dopo conferma):**
+1. Modello dati, tetto, salvataggio e migrazione, eccedenza senza alloggio, sotto-righe nei pannelli, ingaggio.
+2. Scriptorium: selettore, corsi, retta e iscrizione automatica.
+3. Registro dei ruoli, scheda Istruiti (priorità, minimo, AUTO), resa e avvisi, salari, felicità. Primo ruolo: gestore della Chiesa, con assegnazione automatica dei gestori di Chiesa e Locanda.
+4. Mercato del lavoro: immigrazione ed emigrazione mensili e cursore del salario.
+I ruoli di Gilda, FISCO, CRIME, ARTE e diplomazia entrano con le PR delle rispettive sessioni.
+
+**Fuori da questa specifica:** la Chiesa come entità autonoma (tesoro, offerte, decima ecclesiastica, gerarchia, salario dei chierici), che va in una sessione dedicata; i regni stranieri che attirano o cedono scolarizzati; merci come pergamena o libri; specializzazioni oltre i due rami; promozione delle case per istruzione.
+
 ## 2026-11-10 — ECO-FIL-01 · Filiere produttive complete
 
 **SPECIFICA APPROVATA. Fase 1 (miniera → metallo) IMPLEMENTATA SU BRANCH `feature/eco-fil-01-miniera-metallo`, NON MERGE; fasi 2–6 aperte.** Intervista con il product owner del 10/11/2026 (sessione «filiere», nata dalla sessione Gilda). Decisione [D-ECO-FIL-261110](DECISIONS.md). Base verificata: `main` 89e7a2c, non le note della mappa `CONQUER_ECONOMY_ULTIMA_REVISIONE_NOV10` (scritte su `feature/autonomous-urban-economy`). Chiude la decisione aperta «miniera stone/metal» (P0-08, ROADMAP M1) e gli errori di mappatura di `WORKSHOP_OUTPUT`. La Gilda (sessione dedicata) applica il suo +25/+50/+100% a queste ricette: il bonus moltiplica produzione **e** consumo di materie, quindi senza materie non produce di più.

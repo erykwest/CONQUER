@@ -1,5 +1,19 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-12 — SCOL-01 · Scolarizzati (solo specifica, branch `docs/scolarizzati`)
+
+- **NESSUN CODICE:** specifica approvata in [BACKLOG](BACKLOG.md), contratto [D-SCOL-261112](DECISIONS.md). Nessun test eseguito né richiesto.
+- **STATO LIVE VERIFICATO SU `main` 431af30d:**
+  - La popolazione per classe deriva dal livello delle case e non si salva.
+  - Nessuna mobilità di classe né immigrazione.
+  - Soldati come unico contatore sottratto a una classe.
+  - Il ciclo `monthly` non paga mai salari L3.
+  - Scriptorium senza effetti.
+  - Gestori di Chiesa e Locanda assegnati solo dai test.
+  - Giudici del tribunale decorativi.
+  - Nessun riferimento a istruzione, esattori o funzionari in `src/`.
+- **PROSSIMO:** fase 1 (dati, tetto, salvataggio, pannelli, ingaggio) su un branch nuovo da `main`, solo dopo conferma esplicita.
+
 ## 2026-11-10 — ECO-FIL-01 fase 1 · Miniera → metallo (branch `feature/eco-fil-01-miniera-metallo`)
 
 - **CODICE SUL BRANCH, NON MERGE:**
