@@ -105,7 +105,7 @@ function residentClassPosition(house,resident,day,assignment){
   if(level===2)return artisanPosition(house,shiftedDay);
   // L2 artisans own the workshops; L3 educated residents trade/administer.
   // No travelling manifest is created by a resident animation.
-  if(level===3)return merchantPosition(house,shiftedDay);
+  if(level===3)return educatedPosition(house,shiftedDay);
   return elitePosition(house,shiftedDay);
 }
 function villagerClass(house){
