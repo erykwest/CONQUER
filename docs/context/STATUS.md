@@ -1,5 +1,14 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-12 — SOC-CLASS-02 · Migrazione reale ceti (branch PR #206)
+
+- **CODICE SUL BRANCH, NON MERGE:** `ConquerSocialClasses` + migratori save local/cloud, riassegnazione L1 campi/cava/miniera, botteghe e portafoglio artigiani L2, istruiti/mercanti L3, possedimenti L4.
+- **CENSIMENTO:** residenti delle vecchie case preservati tramite `householdResidents`, livelli sociali distinti da `densityLevel`; cohort IDs stabili e livestock precedente preservato. Monete conservate con partizione 25/75 provvisoria di ex-L4.
+- **TEST:** nuova QA `social-classes-regression` collegata all'urbanistica; regressioni obsolete di economia/industrie/carrettieri aggiornate. Test V8 di migrazione superato. CI GitHub in verifica: non dichiarare merge o completamento fino a verde.
+- **ANCORA APERTI:** veri L3 magistrati/scribani e L2 botteghe specializzate, migrazione/emigrazione, felicità/loyalty operative, trasformazione case e 12 archetipi.
+- [Contratto](../CIVIL-CLASS-MIGRATION.md).
+
+
 ## 2026-11-12 — CIV-EVT-01 · Skeleton effetti eventi civili (branch PR #206)
 
 - **SU BRANCH, NON MERGE:** `src/settlement-civic-event-effects.js` offre otto archetipi di evento e preview di felicità L1–L3, lealtà L4, costi teorici, rendimenti decrescenti e prestigio locale temporaneo. Riusa `ConquerUrbanHeatmaps.at`, le fasi e gli allestimenti già esistenti.
