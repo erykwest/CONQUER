@@ -13,7 +13,6 @@ function harness(saved=null){
   const structures=[{id:'well',type:'well',...center},
     {id:'keep',type:'tower',isMastio:true,functions:['commonHall'],x:99,y:98},
     {id:'house4',type:'house',houseLevel:4,x:102,y:102},
-    {id:'house3',type:'house',houseLevel:3,x:104,y:104},
     ...rs.map((r,i)=>({id:'segment-'+r.edge,type:'road',routeId:r.id,
       routeSeq:0,width:.62,a:{...center},b:{...r.target}}))];
   const State={clock:{day:12,speed:0},village:{founded:true,wellId:'well',
@@ -121,7 +120,8 @@ test('full accounting and rollback survives a persisted in-flight save',()=>{
   assert.equal(restored.road.active(),null);
 });
 test('merchant test uses only funded L3 coins, mercenary visuals are previews',()=>{
-  const h=harness(),e=h.eco.state(),before=e.wallet.L3;
+  const h=harness();h.State.structures.push({id:'house3',type:'house',houseLevel:3,x:112,y:112});
+  const e=h.eco.state(),before=e.wallet.L3;
   assert.equal(h.road.launch({edge:'south',kind:'merchant',good:'stone',
     qty:1,coinGold:5,guards:1}).ok,false,'market cargo not duplicated by a mock sale');
   const x=h.road.launch({edge:'south',kind:'merchant',coinGold:15,guards:2,vehicle:'cart'});
