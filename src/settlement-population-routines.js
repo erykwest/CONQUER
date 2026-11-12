@@ -278,11 +278,11 @@ function fallbackSocialTarget(house,from,visitorId){
 function artisanPosition(house,day){
   const frac=day-Math.floor(day),hash=peasantHash(house.id),stagger=(((hash>>>8)%1000)/1000-.5)*.024;
   const home=houseDoorInfo(house).outside;
-  const worksite=houseLevel(house)===3?
+  const worksite=(window.ConquerSocialClasses?.tierOfHouse?.(house)??houseLevel(house))===2?
     window.ConquerCommerce?.worksiteForHouse?.(house.id):null;
   const workshop=worksite?.structure||nearestWorkshop(home);
   const market=nearestCompletedStructure('market',home);
-  // An L3 shop operates at home. An L3 service operator travels to their
+  // An L2 workshop operates at home. An L3 service operator travels to their
   // actual inn/church rather than behaving like a generic market merchant.
   let primary=worksite?.kind==='shop'?{structure:house,point:home}:
     workshop?{structure:workshop,point:structureAccessPoint(workshop,home,house.id+'-work')}:null;
