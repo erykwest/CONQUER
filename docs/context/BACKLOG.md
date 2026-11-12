@@ -1,5 +1,19 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-12 — SOC-CLASS-02 · Nuove classi sociali L1–L4
+
+**IMPLEMENTATO SU BRANCH PR #206, NON MERGE.** [Contratto](../CIVIL-CLASS-MIGRATION.md), decisione D-SOC-CLASS-261112.
+
+- [x] Ceti nuovi e conversione una tantum di residenti, economie e salvataggi local/cloud, con identità, numeri e monete conservati.
+- [x] Fusione del lavoro agricolo/estrattivo L1, vecchie botteghe L3 → artigiani L2, mercanti/scrivani/magistrati/amministratori L3 come ruoli e routine; proprietà private L4.
+- [x] Lealtà L4 come dato distinto da felicità L1–L3; nessun trigger militare.
+- [x] Regressione dedicata e prima bonifica fixture legacy; CI da validare.
+- [ ] Famiglie migranti reali, soddisfazione per ceto e L4 lealtà attiva.
+- [ ] Cambio di proprietario/ceto come ricostruzione completa del template con trasferimento/sostituzione abitanti.
+- [ ] Template 12 combinazioni, richiesta e densità lotti D1–D3, UI L2 artigiani e lavoro effettivo L3.
+- [ ] Approvazione partizione monetaria 25%/75% e collaudi browser, salvataggi reali, CI verde.
+
+
 ## 2026-11-12 — CIV-EVT-01 · Effetti sociali degli eventi
 
 **SKELETON PREVIEW SULLA BRANCH DELLA PR #206; NESSUN TICK ATTIVO.** Contratto: [CIVIC-EVENT-EFFECTS-SKELETON](../CIVIC-EVENT-EFFECTS-SKELETON.md).
