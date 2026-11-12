@@ -13,3 +13,4 @@ output/migrate-codex-notes.cjs
 .codex-vault-sync.json
 content/codex/*.import-tmp
 src/codex-wiki-editorial.js.import-tmp
+output/horse-preview/

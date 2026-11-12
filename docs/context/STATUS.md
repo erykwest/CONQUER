@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-12 — Cavallo 2D ridisegnato (stesso branch `feature/vehicles-depth-cards`)
+
+- **CODICE SUL BRANCH, NON MERGE:** il cavallo di `ConquerAnimals` (unico per scuderie, cavalieri, messaggero, staffetta dell'Avamposto, carri, giostra e feste) ha nuove proporzioni: corpo lungo quanto l'altezza al garrese, zampe lunghe quanto il corpo è alto con coscia, garretto, ginocchio e zoccoli, collo pieno inclinato in avanti, testa più lunga e fine portata a muso in giù. Dorso alla stessa quota di prima: sella, cavaliere, gualdrappe (anche della giostra) e finimenti dei carri restano agganciati. `stride`/`runStride` per specie (cavallo 0,62 al passo, 0,9 al galoppo), `shadeY` per l'ombra del ventre. `ConquerMounted2D`: frontale, pennacchio, briglia e redini adattati alla nuova testa.
+- **ANTEPRIME IN GIOCO:** `qa/horse-gallery.js` (`ConquerHorseGallery.show({scale})`, `sheet()`) mette sulla scena reale tutti gli usi del cavallo; `qa/horse-preview.mjs` salva i PNG prima/dopo in `output/horse-preview/` (zoom 8, 3 e 1,5, fasi del passo).
+- **LAB:** prima non c'era nessun cavallo 2D nel catalogo (il «Cavaliere» è un fante, il «Carro animato 2D» non ha il tiro). Aggiunti `figure:horse2d`, `figure:horse2dGraze`, `figure:knight2d`, `figure:messenger2d`, `figure:wagonTeam`; audit 5 nuovi, 0 errori, baseline aggiornata solo per queste voci.
+- **PROVE LOCALI PASS:** 45 regressioni che toccano animali, cavalieri, carri, bestiame, giostra e diplomazia (FAIL solo le due `*-performance` e lo strumento `asset-audit-scope`); `vehicle-cards-browser.mjs`. `asset-catalog-browser.mjs` non eseguito in locale (non usa `QA_CHROME`), da verificare in CI.
+
 ## 2026-11-12 — Veicoli come carte con profondità in World3D (branch `feature/vehicles-depth-cards`, chiude `economic-balances-animations`)
 
 - **VERIFICA DEL BRANCH D'ORIGINE (`origin/economic-balances-animations` 4b10705, 142 commit su base pre-urban):** economia già in main con le cinque tappe (#108 per i veicoli, D-055); file residui solo sprite SVG di taglialegna e cava (sostituiti dalle mesh Blender) e `road-sign-model.js` (sostituito dal `signpost` scatter, D-054); mesh 3D di carri e cavalli escluse da D-046/D-055. Unico residuo ancora utile: i veicoli fuori dal depth buffer, segnato DA FARE dopo #201 («carrettieri sui veicoli ancora in 2D»). Nessun altro recupero.

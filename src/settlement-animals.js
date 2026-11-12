@@ -59,26 +59,37 @@
         leg:'#7a5236',legFar:'#5f3f29',legLine:'#3b2617',eye:'#1e140d',
         ear:'#5f3f29',muzzle:'#a47c5d',hoof:'#2a1c12'}
     },
-    // Source: cavallo_esteso.svg (256×256, faces right). Long hanging tail
-    // and a mane along the neck redrawn after the reference; coat variants.
+    // Horse (256×256, faces right), redrawn 12/11/2026 to real proportions: body as long as
+    // the withers are high, legs as long as the body is deep with knees, hocks and hooves,
+    // neck sloping forward from the withers, a long head carried nose-down. The back keeps
+    // the old height (saddle, riders, caparisons and wagon harness stay attached).
     horse:{
       artFacing:1,
-      body:'M54 130 C60 108,88 92,126 92 C150 84,176 90,190 106 C202 110,210 118,214 128 C220 144,214 158,200 168 C190 180,172 188,148 188 C124 188,96 184,76 174 C60 166,50 150,54 130 Z',
-      head:'M170 102 C174 84,182 68,194 52 C204 38,214 28,222 28 C226 28,228 32,228 38 C226 48,224 60,224 70 C226 84,230 94,236 104 C236 112,228 118,220 118 C210 120,198 118,190 112 C182 120,172 128,162 132 C156 128,154 120,156 112 C160 108,164 106,170 102 Z',
+      body:'M60 108 C58 94,68 86,86 84 C104 84,116 92,134 92 C150 92,162 84,176 80 C192 80,206 92,212 108 C218 122,216 138,206 148 C196 160,178 162,160 160 C138 158,116 150,96 148 C82 150,66 146,60 134 C56 126,58 116,60 108 Z',
+      head:'M201 46 C203 30,212 23,221 26 C231 30,241 46,249 63 C254 73,253 83,245 86 C239 88,233 86,229 82 C222 80,214 78,208 74 C200 68,198 56,201 46 Z',
       headParts:[
-        {d:'M217 34 L213 17 L226 29 Z',fill:'body'},
-        {d:'M166 104 C170 84,180 66,194 50 C202 41,210 33,219 30 C214 40,206 50,200 60 C190 74,183 88,178 106 Z',fill:'mane'}
+        {d:'M212 31 L211 15 L221 27 Z',fill:'body'},
+        {d:'M216 27 C222 30,225 37,223 44 C216 40,212 34,216 27 Z',fill:'mane'},
+        {d:'M243 76 C246 74,249 75,249 78 C247 80,244 79,243 76 Z',fill:'line'}
       ],
-      legs:'M80 172 C86 172,90 176,90 182 L88 230 C88 236,84 242,78 242 C72 242,68 236,68 230 L70 182 C70 176,74 172,80 172 Z M110 178 C116 178,120 182,120 188 L118 236 C118 242,114 248,108 248 C102 248,98 242,98 236 L100 188 C100 182,104 178,110 178 Z M156 176 C162 176,166 180,166 186 L164 232 C164 238,160 244,154 244 C148 244,144 238,144 232 L146 186 C146 180,150 176,156 176 Z M190 166 C196 166,200 170,200 176 L196 226 C196 232,192 238,186 238 C180 238,176 232,176 226 L180 176 C180 170,184 166,190 166 Z',
-      tail:'M60 124 C46 134,38 162,36 198 C35 208,41 214,47 207 C49 182,55 158,66 138 Z',
+      // Near hind, far hind, near fore, far fore (hips at the top of each leg).
+      legs:[
+        'M80 124 L96 124 C98 146,94 168,88 190 L90 230 C91 236,92 242,92 246 L80 246 C80 242,81 236,82 230 L78 198 C72 194,66 184,64 168 C62 150,64 136,66 124 L80 124 Z',
+        'M94 124 L110 124 C112 146,108 168,102 190 L104 230 C105 236,106 242,106 246 L94 246 C94 242,95 236,96 230 L92 198 C86 194,80 184,78 168 C76 150,78 136,80 124 L94 124 Z',
+        'M192 136 L202 136 C204 156,200 176,199 194 L198 232 C199 238,200 242,200 246 L187 246 C187 242,188 238,189 232 L188 198 C186 186,182 158,182 136 L192 136 Z',
+        'M176 136 L186 136 C188 156,184 176,183 194 L182 232 C183 238,184 242,184 246 L171 246 C171 242,172 238,173 232 L172 198 C170 186,166 158,166 136 L176 136 Z'
+      ].join(' '),
+      tail:'M64 94 C48 100,40 126,40 156 C40 178,44 194,50 204 C55 198,55 182,57 166 C59 138,63 116,72 104 Z',
       tailFill:'mane',
-      pivot:{x:166,y:118},eye:{x:222,y:52},tailPivot:{x:60,y:128},center:{x:134,y:246},
+      pivot:{x:184,y:100},eye:{x:224,y:42},tailPivot:{x:64,y:98},center:{x:134,y:246},
+      // Belly shade band low on the barrel; stride: shorter leg swing for the long legs.
+      shadeY:166,stride:.62,runStride:.9,
       // Dedicated neck joint: the neck is its own tapered piece from a root
       // hidden in the body to the throat (line a→b); the rigid head rides on
       // its end. Pose x/y move the throat, rot turns the head about it.
-      pose:{walk:{x:0,y:0,rot:0},browse:{x:36,y:120,rot:.55}},
-      joint:{a:{x:210,y:40},b:{x:194,y:108}},
-      neck:{root:{x:150,y:112},rootWidth:58,tipWidth:66,mane:12},
+      pose:{walk:{x:0,y:0,rot:0},browse:{x:12,y:145,rot:1.0}},
+      joint:{a:{x:206,y:34},b:{x:214,y:76}},
+      neck:{root:{x:186,y:110},rootWidth:72,tipWidth:42,mane:11},
       // In-world size: a horse stands well above sheep and people.
       hoof:12,headBehind:true,scale:1.9,
       colors:{body:'#8a5a35',shade:'#764b2b',line:'#3a2414',head:'#8a5a35',headLine:'#3a2414',
@@ -253,8 +264,10 @@
     const sp=SPECIES[species],spec=sp.pose[mode]||sp.pose.walk,dir=-sp.artFacing;
     const gait=spec.gait||(['walk','browse','run'].includes(mode)?mode:'still');
     const g=gaitPose(gait,t,seed),add=spec.legAdd||[0,0,0,0];
+    // Long-legged species swing less at the walk than the shared gait (stride), more at the gallop.
+    const k=gait==='run'?(sp.runStride??sp.stride??1):(sp.stride??1);
     return{
-      legs:g.legs.map((a,i)=>a*dir+add[i]),lift:g.lift,bob:g.bob,tail:g.tail*dir,
+      legs:g.legs.map((a,i)=>a*dir*k+add[i]),lift:g.lift.map(l=>l*k),bob:g.bob,tail:g.tail*dir,
       headX:spec.x,headY:spec.y+(gait==='browse'?g.chew*2:0),headRot:spec.rot+g.head*dir,
       neck:spec.neck??(mode==='browse'?1:0),
       tilt:((spec.tilt??(mode==='browse'?-.05:0))+(g.pitch||0))*dir,
@@ -340,7 +353,7 @@
     fillStroke(ctx,sp.body,c.body,c.line,lw);
     // A low belly shade keeps light coats readable on light ground.
     ctx.save();ctx.clip(path(sp.body));ctx.fillStyle=c.shade;
-    ctx.beginPath();ctx.ellipse(sp.center.x,sp.center.y-50,110,24,0,0,Math.PI*2);ctx.fill();ctx.restore();
+    ctx.beginPath();ctx.ellipse(sp.center.x,sp.shadeY??sp.center.y-50,110,24,0,0,Math.PI*2);ctx.fill();ctx.restore();
     if(!sp.headBehind)drawHead(ctx,sp,c,pose,lw,size);
     // Riders and gear (settlement-mounted2d.js) draw in the body's art space, so they
     // follow the gait's bob and pitch; flip says whether the art is mirrored.
