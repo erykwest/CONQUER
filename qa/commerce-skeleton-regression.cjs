@@ -131,7 +131,7 @@ test('one commodity per journey; coins are a physical chest not a second market 
   assert.equal(h.c.state().journeys['only-gold'].transport.wagons,1,
     'a buying trip brings an empty cart');
   assert.equal(h.c.state().journeys['only-gold'].transport.loadPoints,0);
-  assert.equal(h.e.state().wallet.L3,wallet);
+  assert.equal(h.e.state().wallet.L4,wallet);
   assert.equal(h.e.snapshot().castleGold,before.castleGold);
   assert.deepEqual(asObject(h.e.snapshot().market),asObject(before.market));
 });
