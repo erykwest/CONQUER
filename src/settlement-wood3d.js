@@ -173,18 +173,24 @@
     const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,angle=Math.atan2(dy,dx);
     const ground=Math.min(terrainElevation(s.a),terrainElevation(s.b)),n=Math.max(1,Math.round(L)),sx=L/n;
     const ux=dx/L,uy=dy/L,c={x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2};
-    let skip=new Set(['floor']);
+    // Roof cover parts carry the cover as suffix (build_wood_fort.py LONGHOUSE_COVERS).
+    const v='.'+longhouseCover(s),roof=['roof_yn'+v,'roof_yp'+v,'ridge'+v];
+    let skip=new Set(['floor']),open=false;
     if(cutaway(s)&&!(typeof isPlanView==='function'&&isPlanView())){
       const d0=viewDepthPoint(c),near=p=>viewDepthPoint(p)>d0+1e-6;
-      skip=new Set();
+      skip=new Set();open=true;
       const yn=near({x:c.x+uy,y:c.y-ux});
-      skip.add(yn?'wall_yn':'wall_yp').add('roof_yn').add('roof_yp').add('ridge');
+      skip.add(yn?'wall_yn':'wall_yp');
       skip.add(near(s.a)?'end_a':'end_b');
     }
-    const bay=['wall_yn','wall_yp','roof_yn','roof_yp','ridge','floor'].filter(n=>!skip.has(n));
-    for(let i=0;i<n;i++)addModel(mesh,key,{x:s.a.x+ux*i*sx,y:s.a.y+uy*i*sx,angle,sx},ground,bay);
-    if(!skip.has('end_a'))addModel(mesh,key,{x:s.a.x,y:s.a.y,angle},ground,['end_a']);
-    if(!skip.has('end_b'))addModel(mesh,key,{x:s.b.x,y:s.b.y,angle},ground,['end_b']);
+    const bay=['wall_yn','wall_yp','floor',...(open?[]:roof)].filter(n=>!skip.has(n));
+    // The hearth's smoke hole sits on the middle bay (its smoke: longhouseSmokeSpecs).
+    const mid=Math.floor((n-1)/2);
+    for(let i=0;i<n;i++)addModel(mesh,key,{x:s.a.x+ux*i*sx,y:s.a.y+uy*i*sx,angle,sx},ground,i===mid&&!open?[...bay,'smoke'+v]:bay);
+    for(const [end,p] of [['a',s.a],['b',s.b]]){
+      const only=[...(skip.has('end_'+end)?[]:['end_'+end]),...(open?[]:['verge_'+end+v])];
+      if(only.length)addModel(mesh,key,{x:p.x,y:p.y,angle},ground,only);
+    }
     return mesh;
   }
   function pointModel(s){
@@ -211,7 +217,7 @@
   // World geometry of one structure: model meshes (shaded by face normal) + pre-shaded faces.
   const cache=new Map();
   function geometry(s){
-    const sig=[s.type,s.x,s.y,s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.angle||0,s.width,s.tier,s.woodStyle,s.woodRoof,s.roofStyle,s.bell,s.w,s.h,s.size,
+    const sig=[s.type,s.x,s.y,s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.angle||0,s.width,s.tier,s.woodStyle,s.woodRoof,s.roofCover,s.roofStyle,s.bell,s.w,s.h,s.size,
       s.aSnap,s.bSnap,s.flip?1:0,s.groundZ,State.season,State.relief?.seed,JSON.stringify(State.relief?.terraforming||[]).length,
       cutaway(s)?'cut'+(isLonghouse(s)?State.view?.rotation:[...openSides(s)].join(',')):'',s.span,Object.values(heraldry()).join(''),window.ConquerKeepEntrance?.sill?.(s)??''].join('|');
     const hit=s.id&&cache.get(s.id);if(hit&&hit.sig===sig)return hit.geo;
