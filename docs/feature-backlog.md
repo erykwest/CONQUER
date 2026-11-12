@@ -1,5 +1,10 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+## URB-HEAT-01 — Quattro heatmap e 12 archetipi abitativi (12/11/2026)
+
+**Skeleton su `feature/urban-heatmap-skeleton-20261112`, non merge né gameplay attivo.** Domanda abitativa multicanale L1–L4, prestigio, sicurezza e crimine locale; D1–D3 determina la densità del lotto Voronoi, mentre L1–L4 determina il template completo della casa. Nuova gerarchia sociale L1 lavoratori, L2 artigiani, L3 borghesi istruiti, L4 nobiltà (contratto in [decisioni](context/DECISIONS.md)). `src/settlement-urban-heatmaps.js`, `qa/urban-heatmaps-regression.cjs`, [specifica e dipendenze](URBAN-HEATMAP-SKELETON.md). **Aperti:** integrazione con Crime, mura/guardie, Job Manager, crescita lotti, ricostruzione, migrazione, QA browser e salvataggi.
+
+
 ## 2026-11-09 — BC-261109-02 · DEV Free/Fast e cantieri di upgrade
 
 - [x] **SU BRANCH:** pulsanti indipendenti nel DEV, stato premuto accessibile, nessun salvataggio delle preferenze; risorse gratuite non convertibili in rimborsi.
