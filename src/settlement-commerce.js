@@ -376,8 +376,7 @@
     const journeys=Object.values(c.journeys);
     const lodging=Object.values(c.services).filter(s=>s.type==='tavern');
     return{
-      l2Shops:Object.keys(c.shops).length,
-      l3Shops:Object.keys(c.shops).length, // legacy reporting alias
+      l3Shops:Object.keys(c.shops).length, // legacy field name, now L2 artisan shops
       l3Goods:roundGold(Market.aggregateGoods(c.goods).quantity),
       l3GoodsValue:roundGold(Market.aggregateGoods(c.goods).referenceValue),
       l3Revenue:roundGold(Object.values(c.shops).reduce((n,s)=>n+finite(s.revenue),0)),
