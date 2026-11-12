@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-12 — Correzioni emerse dalla CI di preparazione
+
+- Test cache di corteccia e magnete ponte aggiornati per accettare il token nella versione composta; test montagne adeguato a Valle alias Colline, senza catene autonome.
+- Conferma fondazione: preflight delle chiome limitato alla zona del piazzale, senza generare tutto il bosco al primo clic. Identici RNG, posizioni e attributi; confronto automatico con il layout completo. Caso Foresta 4242: circa 148 ms prima, 22 ms dopo nella riproduzione locale. Test placement e densità PASS.
+- La prima CI di integrazione aveva cinque workflow falliti (due condividono il test ponte). Verifica completa e CI successiva ancora necessarie; nessun merge in main.
+
+
 ### 2026-11-12 — Preparazione merge regionale
 
 - Integrato `main` 95e8dd2 nel branch sperimentale. Conflitti risolti conservando documentazione di entrambi i filoni, versioni cache e firme degli asset; catalogo Wiki rigenerato dai provider unificati. Preservati economia ECO-FIL-01, figure, arte, coperture e latrine.

@@ -667,11 +667,12 @@ function clearForestLayoutCache(){forestTreeLayoutCache.clear();forestGroundLayo
 // Continuous woodland: a jittered grid over the map with fixed per-cell attributes, filtered by
 // containment, so carving a groove removes only the trees inside it instead of reshuffling all.
 const CONTINUOUS_FOREST_SPACING=4.4/Math.sqrt(2.5);
-function continuousForestTrees(f){
+function continuousForestTrees(f,bounds=null){
   const rnd=seedRand((State.seed^biomeHash(f.id))>>>0),n=Math.ceil(WORLD/CONTINUOUS_FOREST_SPACING),trees=[];
   for(let iy=0;iy<n;iy++)for(let ix=0;ix<n;ix++){
     const p={x:(ix+.2+rnd()*.6)*CONTINUOUS_FOREST_SPACING,y:(iy+.2+rnd()*.6)*CONTINUOUS_FOREST_SPACING};
     const tree={p,shapeIndex:Math.floor(rnd()*FOREST_TREE_ASSETS.length),colorIndex:Math.floor(rnd()*FOREST_CANOPY_PALETTES.summer.length),flip:rnd()<.5,scale:.8+rnd()*.4};
+    if(bounds&&(p.x<bounds.minX||p.x>bounds.maxX||p.y<bounds.minY||p.y>bounds.maxY))continue;
     if(p.x<0||p.x>WORLD||p.y<0||p.y>WORLD||!environmentContains(f,p))continue;
     const slope=terrainSlopeKind(p);
     if([-1.1,0,1.1].some(dx=>[-1.1,0,1.1].some(dy=>terrainSlopeKind({x:p.x+dx,y:p.y+dy})==='steep')))continue;
@@ -681,12 +682,14 @@ function continuousForestTrees(f){
   }
   return trees;
 }
-function forestTreeLayout(f){
+function forestTreeLayout(f,bounds=null){
   ensureLandscapeRenderCaches();
   const cacheKey=forestLayoutKey(f);
-  if(forestTreeLayoutCache.has(cacheKey))return forestTreeLayoutCache.get(cacheKey);
+  if(forestTreeLayoutCache.has(cacheKey)){const trees=forestTreeLayoutCache.get(cacheKey);return bounds?trees.filter(t=>t.p.x>=bounds.minX&&t.p.x<=bounds.maxX&&t.p.y>=bounds.minY&&t.p.y<=bounds.maxY):trees;}
   // One area-based spacing for all woods, including tiny, narrow and clipped
   // isolated patches. No per-patch minimum or nominal-radius tree quota.
+  // Placement only needs nearby canopies; consume the same RNG but defer distant terrain queries.
+  if(bounds)return continuousForestTrees(f,bounds);
   const trees=continuousForestTrees(f);
   forestTreeLayoutCache.set(cacheKey,trees);return trees;
 }

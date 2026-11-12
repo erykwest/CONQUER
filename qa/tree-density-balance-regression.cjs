@@ -3,6 +3,8 @@ const fs=require('node:fs');
 const harness=fs.readFileSync(__dirname+'/urban-regression.cjs','utf8').split('let passed=0;')[0];
 new Function('require','__dirname',harness+`
 run('State.seed=4242;State.biome="plains";State.structures=[];State.relief={hills:[]};clearReliefBandCache();State.environment=[{id:"flat-density",type:"forest",x:100,y:100,rx:60,ry:60,points:[{x:40,y:40},{x:160,y:40},{x:160,y:160},{x:40,y:160}],holes:[]}];clearForestLayoutCache()');
+const nearby=run('JSON.stringify(forestTreeLayout(State.environment[0],{minX:90,maxX:110,minY:90,maxY:110}))');
+assert.equal(nearby,run('JSON.stringify(forestTreeLayout(State.environment[0]).filter(t=>t.p.x>=90&&t.p.x<=110&&t.p.y>=90&&t.p.y<=110))'),'bounded canopy query preserves exact tree positions and attributes');
 const count=run('forestTreeLayout(State.environment[0]).length'),oldExpected=120*120/(4.4*4.4);
 assert.ok(count/oldExpected>=2.4&&count/oldExpected<=2.6,'tree multiplier '+count/oldExpected);
 for(const seed of [1,3,7]){

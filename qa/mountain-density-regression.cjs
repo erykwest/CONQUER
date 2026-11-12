@@ -4,6 +4,7 @@ const harness=fs.readFileSync(__dirname+'/urban-regression.cjs','utf8').split('l
 new Function('require','__dirname',harness+`
 for(const biome of ['mountains','valley'])for(const seed of [4242,229,777,12345]){
   run('State.seed='+seed+';State.biome='+JSON.stringify(biome)+';State.environment=biomeMountains()');
+  if(biome==='valley'){assert.equal(run('State.environment.length'),0,'Valley is Hills, mountains require a regional border');continue;}
   const main=run('State.environment.filter(m=>!m.subPeak)');
   assert.ok(main.length>=(biome==='mountains'?8:6)&&main.length<=(biome==='mountains'?14:10));
   assert.equal(main.length%2,0,'doubled peak count');
