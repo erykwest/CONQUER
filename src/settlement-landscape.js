@@ -702,16 +702,17 @@ function forestShrubLayout(f){
     if(p.x>WORLD||p.y>WORLD||!environmentContains(f,p))continue;
     const r=shrub.width/2;
     if([-r,0,r].some(dx=>[-r,0,r].some(dy=>terrainSlopeKind({x:p.x+dx,y:p.y+dy})==='steep')))continue;
-    shrub.z=terrainElevation(p);shrubs.push(shrub);
+    shrub.z=terrainElevation(p);shrub.flip=!!(biomeHash(State.seed+'|'+f.id+'|'+x+'|'+y)&1);shrubs.push(shrub);
   }
   forestShrubLayoutCache.set(key,shrubs);return shrubs;
 }
 function drawForestShrub(shrub){
+  if(!forestTreeSpritesReady)return false; // 3D ground bake uses upright billboards instead.
   const season=State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer';
   const img=typeof boundaryBushSprites!=='undefined'?boundaryBushSprites[season]?.[shrub.shape]:null;
   if(!img)return false;
   const base=w2sRaw(shrub.p,shrub.z),width=shrub.width*U*State.view.scale,height=width*580/920*shrub.scale;
-  ctx.drawImage(img,base.x-width/2,base.y-height*.97,width,height);return true;
+  ctx.save();ctx.translate(base.x,base.y);if(shrub.flip)ctx.scale(-1,1);ctx.drawImage(img,-width/2,-height*.97,width,height);ctx.restore();return true;
 }
 function forestLikelyVisible(f,pad=100){
   const p={x:Number(f.x)||0,y:Number(f.y)||0},z=terrainElevation(p),s=w2sRaw(p,z),r=wrap.getBoundingClientRect();

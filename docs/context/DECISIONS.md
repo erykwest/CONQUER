@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## REG-UPRIGHT-SHRUBS - Orientamento dei cespugli (12/11/2026)
+
+In 3D i cespugli boschivi sono billboard verticali con profondita reale, come gli alberi, e non fanno parte della texture del suolo. Il flip sinistra/destra dipende stabilmente da seed e posizione nella griglia, senza rimescolare geometria o quantita. Stessa orientazione nel fallback 2D.
+
 ## REG-REAL-FOREST-SHRUBS - Cespugli distinti dalla trama (12/11/2026)
 
 I cespugli richiesti sono elementi visibili con sagoma propria, non la texture del terreno. Si riusano i sette SVG dei cespugli gia presenti: distribuzione deterministica separata dagli alberi e non moltiplicata dal loro aumento di densita. Alberi e cespugli condividono ordine di profondita, quota e occlusione; restano esclusi dalle superfici ripide. Sono decorativi all interno dei poligoni boschivi esistenti e non alterano l economia.

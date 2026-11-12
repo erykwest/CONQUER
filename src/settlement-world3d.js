@@ -840,6 +840,19 @@
         for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(t.p.x,t.p.y,z,cx,cy,size,u,w)}
       }
     }
+    // Woodland bushes stand upright, like trees; never bake them flat into ground.
+    let forestBushes=0;
+    for(const f of State.environment||[]){
+      if(f.type!=='forest'||typeof forestShrubLayout!=='function')continue;
+      for(const b of forestShrubLayout(f)){
+        const uv=atlas.map.get('bush:'+b.shape);if(!uv)continue;
+        let [u0,v0,u1,v1]=uv;if(b.flip)[u0,u1]=[u1,u0];
+        const hr=580/920*b.scale,C=[[-.5,-.97*hr,u0,v0],[.5,-.97*hr,u1,v0],[.5,.03*hr,u1,v1],[-.5,.03*hr,u0,v1]];
+        for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(b.p.x,b.p.y,b.z+.01,cx,cy,b.width,u,w)}
+        forestBushes++;
+      }
+    }
+    S.stats.forestBushes=forestBushes;
     // Pines on the lower half of the mountains, standing on the cone surface.
     for(const f of State.environment||[]){
       if(f.type!=='mountain'||!f.height||typeof mountainPineLayout!=='function')continue;

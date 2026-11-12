@@ -23,7 +23,7 @@ async page=>{
   },{c,dirs}));
   if(!results.at(-1).hills)throw Error('Missing hills: '+JSON.stringify(results.at(-1)));
   await page.evaluate(async()=>{for(let i=0;i<3;i++){draw();drawWeatherOverlay();await new Promise(requestAnimationFrame)}});
-  results.at(-1).drawnShrubs=await page.evaluate(()=>window.__conquerPerf?.forestShrubs||0);
+  results.at(-1).drawnShrubs=await page.evaluate(()=>window.ConquerWorld3D?.active()?window.ConquerWorld3D.status().stats.forestBushes||0:window.__conquerPerf?.forestShrubs||0);
   if(!results.at(-1).drawnShrubs)throw Error('Bush sprites were not rendered');
   await page.screenshot({path:'output/playwright/forest-shrubs-'+c.name+'.png'});
  }
