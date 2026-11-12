@@ -24,6 +24,10 @@ Il modulo `src/settlement-urban-heatmaps.js` è esposto come `window.ConquerUrba
 
 [Lo skeleton degli eventi](CIVIC-EVENT-EFFECTS-SKELETON.md) usa `ConquerUrbanHeatmaps.at` per proiettare il prestigio temporaneo di fiere, giostre e feste **solo a scopo di preview**. È un modulo autonomo, caricato ma inattivo: nessuna modifica a `LANDMARKS`, `State`, edifici, residenti o scheduling.
 
+## Migrazione sociale SOC-CLASS-02
+
+La conversione dei ceti già codificata sullo stesso branch è descritta in [CIVIL-CLASS-MIGRATION](CIVIL-CLASS-MIGRATION.md): salva il censimento e la proprietà senza attivare la crescita urbana. Gli adapter dei quattro canali di domanda rimangono invece inattivi, e D1–D3 resta solo metadato dei lotti esistenti.
+
 ## Dipendenze di integrazione — NON implementate
 1. **Dati affidabili:** adapter da `State.structures` (pozzo, piazze, civici, industrie, lavoro), viabilità e accessi, mura **chiuse e valicabili**, presidio/guardie, eventi e rischio del sistema Crime. Mantenere Crime come fonte primaria, non due indici in competizione.
 2. **Domanda reale:** contabilizzare famiglie L1–L4 in cerca di alloggio e capacità disponibile per ceto; la heatmap rappresenta l'idoneità geografica, non crea popolazione. Congelare l'upgrade quando mancano residenti realmente assegnabili.
