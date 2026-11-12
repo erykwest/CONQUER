@@ -41,7 +41,9 @@ on:
 jobs:
   sea-regression:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Expanded terrain, coast and swamp fixtures exceeded 10 minutes on the CI runner.
+    # Keep every check and the existing job name; match the full routing suite budget.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

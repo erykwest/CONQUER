@@ -1,5 +1,12 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-12 — Esito CI integrazione e budget Sea
+
+- Commit 1f5deb0: 19 workflow CI riusciti, inclusa la suite completa di regressione/routing e Asset Lab. Sea and pier interrotto dal timeout di 10 minuti dopo i controlli di flusso, senza assertion fallite. Budget portato a 15 minuti come la suite routing; nessun test rimosso e nome del check conservato.
+- Riproduzione locale Windows: conferma fondazione corretta, ma picco di pianificazione stradale circa 116 ms oltre la soglia 100 ms; stessa suite PASS sul runner CI. Non garantita una soglia di latenza su ogni macchina.
+- Nessun merge in main; nuovo esito Sea da verificare.
+
+
 ### 2026-11-12 — Correzioni emerse dalla CI di preparazione
 
 - Test cache di corteccia e magnete ponte aggiornati per accettare il token nella versione composta; test montagne adeguato a Valle alias Colline, senza catene autonome.
