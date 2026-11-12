@@ -1,5 +1,18 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-12 — CIV-EVT-01 · Effetti sociali degli eventi
+
+**SKELETON PREVIEW SULLA BRANCH DELLA PR #206; NESSUN TICK ATTIVO.** Contratto: [CIVIC-EVENT-EFFECTS-SKELETON](../CIVIC-EVENT-EFFECTS-SKELETON.md).
+
+- [x] Catalogo iniziale di otto eventi che riusa allestimenti `feast/joust/tourney/circus/theatre`, senza duplicarne il motore.
+- [x] Modificatori diversi di felicità L1–L3 e lealtà L4; influenza temporanea sul prestigio e proiezione non invasiva delle heatmap.
+- [x] QA dedicata scritta e agganciata alla suite urbana (esito Node/CI da verificare).
+- [ ] Adattare la UI degli eventi per distinguere gli allestimenti `feast` con `civicKind` e registrare partecipanti reali.
+- [ ] Collegare costi alla fonte economica canonica, felicità/lealtà alla popolazione per insediamento, e la durata al calendario.
+- [ ] Implementare immigrazione ed emigrazione L2–L3; L1 servi senza emigrazione, L4 lealtà senza ribellioni armate.
+- [ ] Bilanciare costi, modificatori, frequenza, raggio, prerequisiti; verificare QA Node, browser e CI.
+
+
 ## 2026-11-12 — URB-HEAT-01 · Urbanistica a quattro heatmap
 
 **FASE 0 — SOLO SKELETON SU BRANCH, NON MERGE.** Contratto: [URBAN-HEATMAP-SKELETON](../URBAN-HEATMAP-SKELETON.md); decisione [D-URB-HEAT-261112](DECISIONS.md).
