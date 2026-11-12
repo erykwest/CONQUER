@@ -1,5 +1,25 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-ECO-FIL-261110 — Filiere produttive complete (10/11/2026)
+
+- **DECISO (product owner, 10/11/2026), nessun codice:** specifica [ECO-FIL-01](BACKLOG.md).
+  - La miniera estrae solo `metal`. Chiude P0-08 e il conflitto «miniera stone/metal».
+  - Dagli allevamenti entrano nel ledger due sole materie, `wool` e `hides`. Il latte va in un deposito interno non vendibile, come il raccolto prima del mulino, e il casaro L3 lo trasforma in formaggi.
+  - Le trasformazioni intermedie sono implicite: niente fonderia, conceria o cuoio.
+  - Le botteghe L3 consumano materie prime e, **senza importazioni**, si fermano se mancano.
+  - Il falegname produce solo archi e lance; il sarto fa abiti da lana e pelli, distinti dai tessuti del tessitore.
+  - Le armi diventano **cinque merci distinte**; `equipment` resta solo come aggregato «Armi». Le produce l'officina del castello (stanza `workshop`) insieme al falegname. Il signore ha la precedenza d'acquisto fino alla scorta obiettivo, poi comprano i civili.
+  - Entrano anche l'affumicatore del pescato, la birra della taverna e il vigneto collocabile.
+- **VINCOLO RISPETTATO:** poche merci visibili (`wool`, `hides` e l'aggregato «Armi»). I prodotti di bottega restano dentro «Beni L3».
+- **IPOTESI:** rese, ricette, prezzi e bisogni civili sono provvisori, da bilanciare con simulazioni multianno.
+- **NON DECISO QUI:** effetti delle armi civili su milizia e ordine pubblico (militare, Municipio/CRIME); bonus della Gilda (sessione dedicata, che usa queste ricette).
+
+## D-ART-COLORS-261109 — Opere d'arte: forme fisse, colori scelti alla commissione (09/11/2026)
+
+- **DECISIONE DEL PRODUCT OWNER:** alla commissione di un'opera l'utente sceglie **i colori**; le **forme** restano quelle dell'archetipo grafico (eventuali varianti di forma saranno valutate più avanti).
+- **CONTRATTO:** ogni archetipo di `ConquerArtModels.catalog` dichiara i suoi slot colore (`colors`: id, etichetta, chiave di palette, eventuale chiave d'ombra con rapporto `k`, set di tinte suggerite in `swatches`). L'opera commissionata salva solo `{ slotId: '#rrggbb' }` (le differenze dai colori dell'archetipo, `ConquerArtColors.diff`); `ConquerArtColors.paint` la traduce in sostituzioni di palette che il cutaway applica con precedenza su araldica e tinta della pietra. Le tinte suggerite sono pigmenti, lane, dorature e pietre storiche, ma qualsiasi colore esadecimale è accettato.
+- **STATO:** codice sul branch `feature/arte-graphics`; manca la UI di commissione in gioco (ART-251105-03), che userà questo contratto.
+
 ## D-CI-P24-261109 — Ownership dei test CI con proprietario always-on (09/11/2026)
 
 - **DECISO:** rimuovere un comando deterministico duplicato da un workflow specialistico solo se un owner separato esegue lo stesso controllo in ogni PR pertinente (Runtime integrity per Codex, settlement-qa per routing/main-road).

@@ -1,7 +1,7 @@
 // CONQUER interface v2 ("Isole"): floating wood-and-gold tablets over a full-bleed map.
 // Opt-in with ?ui=2 (persisted; ?ui=1 goes back). Reads the game only through window.ConquerGame.
 import { html, render, useState, useEffect, useRef } from '../vendor/htm-preact-3.1.1.js';
-import { T } from './i18n-it.js?v=ui2-quickfix-1';
+import { T } from './i18n-it.js?v=ui2-quickfix-2-lhroof1';
 
 const STORE_KEY = 'conquer.ui.v2', MODE_KEY = 'conquer.ui.mode', DEV_KEY = 'conquer.dev';
 const params = new URLSearchParams(location.search);
