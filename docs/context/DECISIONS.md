@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## REG-REAL-FOREST-SHRUBS - Cespugli distinti dalla trama (12/11/2026)
+
+I cespugli richiesti sono elementi visibili con sagoma propria, non la texture del terreno. Si riusano i sette SVG dei cespugli gia presenti: distribuzione deterministica separata dagli alberi e non moltiplicata dal loro aumento di densita. Alberi e cespugli condividono ordine di profondita, quota e occlusione; restano esclusi dalle superfici ripide. Sono decorativi all interno dei poligoni boschivi esistenti e non alterano l economia.
+
 ## REG-TREE-DENSITY - Alberi e sottobosco distinti (12/11/2026)
 
 Aumenta soltanto il numero di alberi: target 2.5x nella stessa area boscosa. Cespugli/scatter e dettaglio procedurale del sottobosco mantengono le quantita; il dettaglio sui rilievi torna alla piena visibilita con ombreggiatura separata. Esclusione assoluta delle superfici ripide e rispetto di 1.1U attorno alle radici rispetto alle scarpate. Restano ammessi sommita e pendii dolci. Coperture dei biomi e geometrie del terreno invariate.
