@@ -12,7 +12,7 @@
   // Real scale reads well for vehicles; small props are enlarged a little to stay legible
   // at play zoom (same spirit as the figures).
   const FAMILY_SCALE={carts:1,signs:1.15,goods:1.3,wheels:1.3,materials:1.3,farm:1.3,work:1.3,riverbank:1.7};
-  const MAX_RIVER=600;
+  const MAX_RIVER=600,MAX_MARSH=2400;
   const scaleOf=asset=>FAMILY_SCALE[M().assets[asset]?.family]||1;
   // Context -> weighted asset choices. Seasonal entries are filtered in pick().
   const RULES={
@@ -219,6 +219,7 @@
     return true;
   }
   function riverProps(out,obs,placed){
+    const limit=out.length+MAX_RIVER;
     const total=BANK.reduce((s,[a,w])=>s+(M().assets[a]?w:0),0);if(!total)return;
     for(const f of State.environment||[]){
       if(!['river','stream'].includes(f.type)||!(f.points?.length>1))continue;
@@ -227,7 +228,7 @@
         const a=f.points[i],b=f.points[i+1],L=Math.hypot(b.x-a.x,b.y-a.y);if(!L)continue;
         const ux=(b.x-a.x)/L,uy=(b.y-a.y)/L;
         for(let d=rnd()*step;d<L;d+=step*(.7+rnd()*.6))for(const side of [1,-1]){
-          if(out.length>=MAX_RIVER)return;
+          if(out.length>=limit)return;
           if(rnd()<.2)continue;
           let r=rnd()*total,pick=BANK[0];for(const e of BANK){if(!M().assets[e[0]])continue;if((r-=e[1])<0){pick=e;break}}
           const [asset,,edge]=pick,A=M().assets[asset],s=scaleOf(asset),rad=A.r*s;
@@ -238,7 +239,7 @@
       }
     }
   }
-  function marshProps(out,obs,placed){
+  function marshBaseProps(out,obs,placed){
     const choices=['reedBed','reedClump','bankBush'].filter(a=>M().assets[a]);if(!choices.length)return;
     for(const f of State.environment||[]){
       if(f.waterBodyKind!=='marsh')continue;
@@ -258,6 +259,36 @@
         }
       }
     }
+  }
+  function marshExtraProps(out,obs,placed,limit){
+    const choices=['reedBed','reedClump'].filter(a=>M().assets[a]);if(!choices.length)return;
+    for(const f of State.environment||[]){
+      if(f.waterBodyKind!=='marsh')continue;
+      const rnd=rngFor('marsh-extra:'+f.id);
+      const target=Math.min(limit,out.length+3*out.filter(p=>p.owner===f.id&&p.asset.startsWith('reed')).length);
+      shore:for(const ring of [f.points,...(f.holes||[])])for(let i=0;i<ring.length;i++){
+        const a=ring[i],b=ring[(i+1)%ring.length],L=Math.hypot(b.x-a.x,b.y-a.y);if(!L)continue;
+        if(a.x===b.x&&(a.x===0||a.x===WORLD)||a.y===b.y&&(a.y===0||a.y===WORLD))continue;
+        // Four times the shoreline sampling density; only reeds are multiplied.
+        for(let d=(1+rnd()*2)/4;d<L;d+=(3+rnd()*2)/4){
+          if(out.length>=limit)return;
+          if(out.length>=target)break shore;
+          const p={x:a.x+(b.x-a.x)*d/L,y:a.y+(b.y-a.y)*d/L};
+          let nx=-(b.y-a.y)/L,ny=(b.x-a.x)/L;
+          if(environmentContains(f,{x:p.x+nx*.6,y:p.y+ny*.6})){nx=-nx;ny=-ny}
+          p.x+=nx*.45;p.y+=ny*.45;
+          const asset=choices[Math.floor(rnd()*choices.length)],s=scaleOf(asset),rad=M().assets[asset].r*s*.8;
+          if(!bankFree(p,rad,obs,placed.concat(out),f))continue;
+          out.push({asset,x:p.x,y:p.y,r:rad,s,heading:rnd()*Math.PI*2,ctx:'marshbank',owner:f.id});
+        }
+      }
+    }
+  }
+  function marshProps(out,obs,placed){
+    marshBaseProps(out,obs,placed);
+    const reeds=out.filter(p=>p.ctx==='marshbank'&&p.asset.startsWith('reed')).length;
+    // Keep the original bushes and reeds, then add three more reeds per original.
+    marshExtraProps(out,obs,placed,Math.min(MAX_MARSH,out.length+reeds*3));
   }
   function layout(){
     if(!M()||!Array.isArray(State.structures))return[];
