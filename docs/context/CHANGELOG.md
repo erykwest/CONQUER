@@ -1,5 +1,17 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-12 — CHIESA-01 · La Chiesa come entità autonoma (solo specifica)
+
+12/11/2026 — `docs/chiesa`: il product owner ha approvato la specifica della Chiesa come istituzione distinta dal castello.
+- Una sola istituzione per villaggio, con una Cassa che non è un secondo ledger.
+- Entrate: offerte domenicali, lasciti annui e doni del signore. Nessuna decima ecclesiastica.
+- Spese in ordine fisso: salari dei chierici, rette clericali, carità, feste, co-finanziamento dei cantieri.
+- La Chiesa decide ogni anno il salario dei chierici e smette di farli pagare al castello.
+- Posti per livello della chiesa; il Monastero forma 2 novizi l'anno.
+- Favore 0–100 verso il signore, che muove le prediche; messa domenicale con capienza.
+- Modifiche al contratto D-SCOL-261112 descritte in D-CHIESA-261112.
+
+BACKLOG, STATUS e DECISIONS aggiornati; ROADMAP invariata; nessun codice.
 
 ## 2026-11-09 — BC-261109-02 · DEV e cantieri di ristrutturazione
 

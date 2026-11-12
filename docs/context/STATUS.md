@@ -1,5 +1,17 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-12 — CHIESA-01 · La Chiesa come entità autonoma (solo specifica, branch `docs/chiesa`)
+
+- **NESSUN CODICE:** specifica approvata in [BACKLOG](BACKLOG.md), decisione [D-CHIESA-261112](DECISIONS.md). Nessun test eseguito né richiesto.
+- **STATO LIVE VERIFICATO SU `main` 431af30d:**
+  - `SERVICE_KINDS.church` ha `income:'not-simulated'` e il gestore si assegna solo nei test.
+  - Gli annessi della Chiesa non hanno effetti.
+  - Non esiste un fondo della Chiesa: solo `wallet.L1–L4` e `castleGold`.
+  - `monthly` non paga salari oltre la classe 2.
+  - La felicità si muove solo con cibo, razioni e infermeria.
+  - La Cappella del castello conta solo per il prestigio nell'assedio.
+- **DIPENDE DA:** SCOL-01 (branch `docs/scolarizzati`, non su `main`) fino alla fase 3; FISCO-01 fase B; CRIME.
+- **PROSSIMO:** fase 1 (Cassa, offerte, lasciti, dono, scheda) su un branch nuovo da `main`, solo dopo conferma esplicita e dopo la fase 3 di SCOL-01.
 
 ## 2026-11-10 — ECO-FIL-01 fase 1 · Miniera → metallo (branch `feature/eco-fil-01-miniera-metallo`)
 
