@@ -6,6 +6,18 @@ const StructureCommands=(()=>{
   const find=id=>State.structures.find(s=>s.id===id)||null;
   const refresh=(target,hardNavigation=true)=>{markStructureDirty(target,hardNavigation);renderFunctionPanel();draw()};
 
+  function setConstructionPriority(id,level){
+    const target=find(id),c=target?.construction;
+    const requested=Number(level);
+    if(!target||target.auto&&!c?.upgrade||!underConstruction(target)||c?.version!==2||
+      !Number.isInteger(requested)||requested<0||requested>=CONSTRUCTION_PRIORITIES.length)return false;
+    if(constructionPriority(target)===requested)return true;
+    c.priority=requested;
+    markDirty(false,false);
+    renderFunctionPanel();draw();
+    status('Priorità cantiere: '+CONSTRUCTION_PRIORITIES[requested]);
+    return true;
+  }
   function setTier(id,requested){
     const target=find(id);if(!target)return false;
     if(target.type==='tower'){
@@ -90,6 +102,12 @@ const StructureCommands=(()=>{
     target.woodRoof=style==='pitched'?'pitched':'open';
     refresh(target);status('Wood tower roof: '+target.woodRoof);return true;
   }
+  // Longhouse roof cover: shingles, thatch or turf (BC-251105-09); a recover, not a rebuild.
+  function setLonghouseCover(id,cover){
+    const target=find(id);if(!isLonghouse(target)||!LONGHOUSE_COVERS.includes(cover))return false;
+    if(cover==='shingle')delete target.roofCover;else target.roofCover=cover;
+    refresh(target);status('Longhouse roof: '+cover);return true;
+  }
   function setGateRoof(id,style){
     const target=find(id);if(!target||target.type!=='gate')return false;
     if(!setStructureVariant(target,'roofStyle',style))return false;
@@ -173,6 +191,15 @@ const StructureCommands=(()=>{
     status('Bartizans: '+({none:'none',battlement:'crenellated',pitched:'spire'}[target.bartizan])+(towerBartizanAllowed(target)?'':' (needs a large T3 square or round stone tower)'));
     return true;
   }
+  // Inner roof inside the merlons (BC-251105-05): cosmetic cover of the deck, no room under it.
+  function setTowerInnerRoof(id,value){
+    const target=find(id);if(!target||target.type!=='tower')return false;
+    if(value==='on'&&!towerInnerRoofAllowed(target)){status('Inner roof: needs a T2+ stone tower with a crenellated or machicolated top and no weapon or signal pyre on the deck');return false}
+    if(!setStructureVariant(target,'innerRoof',value==='on'?'on':'off'))return false;
+    refresh(target,false);
+    status(target.innerRoof==='on'?'Inner roof built inside the merlons':'Inner roof removed');
+    return true;
+  }
   // Alarm bell on the roof apex of a T1-T2 tower with a pitched roof (settlement-alarm-bells.js).
   function setTowerBell(id,value){
     const target=find(id),bells=window.ConquerAlarmBells;if(!target||target.type!=='tower'||!bells)return false;
@@ -181,6 +208,20 @@ const StructureCommands=(()=>{
     refresh(target,false);
     status(value==='bell'?'Alarm bell: heard '+bells.hearingRadius(target)+'U around the tower':'Alarm bell removed');
     return true;
+  }
+  // Lookout, outpost and signal fire (settlement-soldiers.js, MIL-RES-01).
+  function setTowerLookout(id,value){
+    const target=find(id),M=window.ConquerSoldiers;if(target?.type!=='tower'||!M)return false;
+    const ok=M.setLookout(id,value==='on');if(ok)refresh(target,false);return ok;
+  }
+  function setTowerOutpost(id,value){
+    const target=find(id),M=window.ConquerSoldiers;if(target?.type!=='tower'||!M)return false;
+    if(value==='none'&&target.outpost&&typeof confirm==='function'&&!confirm('Smobilitare l\'avamposto? Il costo non viene restituito.'))return false;
+    const ok=M.setOutpost(id,value==='outpost');if(ok)refresh(target,false);return ok;
+  }
+  function setTowerSignalFire(id,value){
+    const target=find(id),M=window.ConquerSoldiers;if(target?.type!=='tower'||!M)return false;
+    const ok=M.setSignalFire(id,value);if(ok)refresh(target,false);return ok;
   }
   function setCivicLevel(id,level){
     const target=find(id);if(!target||!CIVIC_LEVEL_TYPES.includes(target.type))return false;
@@ -266,9 +307,18 @@ const StructureCommands=(()=>{
       houseLevel:s.type==='house'?houseLevel(s):null,mastioActive:!!s.isMastio,
       building:null,facts:[],controls:[],rooms:null,
       mastio:null,keepEntrance:null,archers:null,integrity:null,legacy:null,industry:null};
-    if(underConstruction(s))d.building={progress:constructionProgress(s),days:remainingDays(s)};
+    if(underConstruction(s)){
+      const material=constructionMaterialInfo(s);
+      d.building={progress:constructionProgress(s),days:remainingDays(s),
+        priority:constructionPriority(s),priorities:CONSTRUCTION_PRIORITIES,
+        materialsProgress:material.progress,materials:material.rows,
+        status:constructionWorkStatus(s),editable:s.construction?.version===2&&(!s.auto||!!s.construction.upgrade)};
+    }
     const cost=s.buildCost||constructionCost(s);
-    d.cost=cost;
+    d.cost=d.building?constructionMaterialInfo(s).required:cost;
+    // Construction uses a temporary inspector. No completed-building commands
+    // or room assignment are exposed before the project is finished.
+    if(d.building)return d;
     if(window.ConquerStorageYard?.is(s)){
       const Y=window.ConquerStorageYard,stock=Y.stocks(),n=Y.size(s);
       d.facts.push({key:'size',value:n+'×'+n+'U'},
@@ -348,11 +398,22 @@ const StructureCommands=(()=>{
         d.controls.push(choice('bell','setTowerBell',[{value:'none',word:'none'},{value:'bell',word:'bell',disabled:off}],structureVariant(s,'bell')));
         if(bells.towerBell(s))d.facts.push({key:'bellRange',value:bells.hearingRadius(s)+'U'});
       }
+      const M=window.ConquerSoldiers;
+      if(M){
+        if(!s.outpost)d.controls.push(choice('lookout','setTowerLookout',[{value:'none',word:'lookoutOff'},{value:'on',word:'lookoutOn',disabled:building}],s.lookout?'on':'none'));
+        const why=M.outpostBlocker(s);
+        d.controls.push(choice('outpost','setTowerOutpost',[{value:'none',word:'none'},{value:'outpost',word:'outpost',disabled:!s.outpost&&!!why}],s.outpost?'outpost':'none'));
+        if(!woodTower&&(M.signalFireAllowed(s)||M.signalFire(s)))
+          d.controls.push(choice('signalFire','setTowerSignalFire',[{value:'none',word:'none'},{value:'pyre',word:M.signalFire(s)&&s.signalFireSpent?'pyreRebuild':'pyre'}],
+            M.signalFire(s)&&!s.signalFireSpent?'pyre':'none'));
+        d.facts.push(...M.towerFacts(s));
+      }
       if(woodTower){
         if(woodTowerStyle(s)==='palisadeTower')d.controls.push(choice('woodRoof','setWoodRoof',[{value:'open',word:'open'},{value:'pitched',word:'pitched4'}],woodTowerRoof(s)));
       }else{
         d.controls.push(choice('roof','setTowerRoof',[{value:'battlement',word:'battlement'},{value:'machicolation',word:'machicolation'},{value:'pitched',word:'pitched'}],towerRoofStyle(s)));
         if(s.shape!=='half')d.controls.push(hoardingChoice(s));
+        if(s.shape!=='half')d.controls.push(choice('innerRoof','setTowerInnerRoof',[{value:'off',word:'innerRoofOff'},{value:'on',word:'innerRoofOn',disabled:!towerInnerRoofAllowed(s)}],towerInnerRoofMounted(s)?'on':'off'));
         d.controls.push(choice('weapon','setTowerWeapon',[{value:'none',word:'none'},{value:'mangonel',word:'mangonel',disabled:!towerTopWeaponAllowed(s)},{value:'ballista',word:'ballista',disabled:!towerTopWeaponAllowed(s)}],structureVariant(s,'topWeapon')));
         if((s.shape||'square')==='square'&&variantSchema(s)?.roofShape){
           const flat=towerRoofStyle(s)!=='pitched';
@@ -383,6 +444,7 @@ const StructureCommands=(()=>{
       const stage=window.ConquerSiege.doorStage(s),closed=!!s.closed&&stage!=='broken';
       d.gate={stage,closed,broken:stage==='broken',nightClose:s.nightClose!==false};
     }
+    if(isLonghouse(s))d.controls.push(choice('roofCover','setLonghouseCover',LONGHOUSE_COVERS.map(v=>({value:v,word:'cover_'+v})),longhouseCover(s)));
     if(s.type==='built'&&!isLonghouse(s))d.controls.push(choice('skin','setSkin',[{value:'standard',word:'standard'},{value:'arcade',word:'arcade'}],builtSkin(s)));
     if(s.type==='wall'){
       const narrow=wallTier(s)===1;
@@ -420,7 +482,18 @@ const StructureCommands=(()=>{
     return d;
   }
 
-  return{setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setGateRoof,setGateUpper,setSkin,setWallStair,setWallStairPos,toggleCutaway,stepCutawayFloor,flipSide,
-    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,
+  const commands={setConstructionPriority,setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setLonghouseCover,setGateRoof,setGateUpper,setSkin,setWallStair,setWallStairPos,toggleCutaway,stepCutawayFloor,flipSide,
+    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerInnerRoof,setTowerLookout,setTowerOutpost,setTowerSignalFire,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,
     describeStructure};
+  for(const name of ['setTier','setHeight','setKeepFloorPlan','setTowerBase','setTowerRoof','setHoarding','setWoodRoof','setGateRoof','setGateUpper','setSkin','setTowerWeapon','setTowerRoofShape','setTowerBartizan','setTowerBell','setTowerInnerRoof','setCivicLevel','setPlazaVariant']){
+    const execute=commands[name];
+    commands[name]=(id,...args)=>{
+      const target=find(id);if(!target||underConstruction(target))return false;
+      const before=structureUpgradeSnapshot(target);
+      const result=execute(id,...args);
+      if(result&&beginStructureUpgrade(target,before)){refresh(target);status(underConstruction(target)?'Cantiere di modifica avviato':'Modifica completata')}
+      return result;
+    };
+  }
+  return commands;
 })();

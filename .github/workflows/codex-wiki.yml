@@ -1,0 +1,54 @@
+name: Codex Wiki browser
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+on:
+  pull_request:
+    paths:
+      - 'wiki/**'
+      - 'content/codex/**'
+      - 'tools/export-codex-content.cjs'
+      - 'tools/import-codex-vault.cjs'
+      - 'src/codex-*.js'
+      - 'src/codex-*.css'
+      - 'src/settlement-codex.js'
+      - 'src/ui/shell.js'
+      - 'index.html'
+      - 'tools/codex-runtime.cjs'
+      - 'tools/export-codex.cjs'
+      - 'qa/codex-wiki-browser.mjs'
+      - 'qa/codex-wiki-browser-checks.cjs'
+      - '.github/workflows/codex-wiki.yml'
+      - '.github/actions/playwright-setup/action.yml'
+permissions:
+  contents: read
+jobs:
+  wiki-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # The always-on Runtime integrity workflow owns all six deterministic Codex checks.
+      # This path-scoped workflow owns the Playwright reader/editor integration only.
+      - name: Start local site
+        run: |
+          python3 -m http.server 4181 --bind 127.0.0.1 >/tmp/conquer-codex-http.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:4181/wiki/ >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/conquer-codex-http.log
+          exit 1
+      - name: Install browser
+        uses: ./.github/actions/playwright-setup
+      - name: Verify Wiki and Builder reader
+        run: node qa/codex-wiki-browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: codex-wiki-screenshots
+          path: output/playwright/*.png
+          retention-days: 14

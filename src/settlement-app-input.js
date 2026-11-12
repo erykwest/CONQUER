@@ -70,6 +70,12 @@ canvas.addEventListener('pointerdown',e=>{
     }
     return;
   }
+  if(State.tool.kind==='leanTo'){
+    const r=window.ConquerLeanTo?.atPoint(p);
+    if(!r?.ok){status('Lean-to blocked: '+(r?.reason||'no wall'));return}
+    if(addStructure(r.structure))status('Lean-to placed against the wall · choose its room in the panel');
+    return;
+  }
   if(State.tool.kind==='civicAnnex'){
     const parent=State.structures.find(x=>x.id===State.tool.parentId);
     if(!parent){status('Parent building no longer exists');setTool({kind:'select',label:'Select'});return}
@@ -332,6 +338,13 @@ canvas.addEventListener('pointermove',e=>{
     draw();
     return
   }
+  if(State.tool.kind==='leanTo'){
+    const r=window.ConquerLeanTo?.atPoint(p);
+    State.draft=r?.ok?{mode:'hover',preview:r.structure}:null;
+    const verdict=r?.ok?window.ConquerPlacement?.check(r.structure):r;
+    status(verdict&&!verdict.ok?'Lean-to blocked: '+verdict.reason:'Lean-to W1 · '+r.structure.length.toFixed(2)+'U · '+costText(constructionCost(r.structure))+' — click to confirm');
+    draw();return;
+  }
   if(State.tool.kind==='civicAnnex'){
     const parent=State.structures.find(x=>x.id===State.tool.parentId);
     if(!parent){State.draft=null;draw();return}
@@ -499,7 +512,7 @@ for(const b of document.querySelectorAll('[data-crossing-width]'))b.onclick=()=>
     status('Crossing width: '+width+'U');draw();
   }
 };
-for(const b of document.querySelectorAll('[data-linear]'))b.onclick=()=>{const tier=State.buildLevels.wallTier,kind=b.dataset.linear,wood=kind==='longhouse'||kind==='longhouseWide',wide=kind==='builtWide'||kind==='longhouseWide',linear=wide||wood?'built':kind,isPalisade=linear==='palisade',level=isPalisade||wood?1:wide?State.buildLevels.builtWide:State.buildLevels.wall;setTool({kind:'linear',linear,...(wide?{span:'wide'}:{}),...(wood?{material:'wood'}:{}),level,tier,label:(linear==='wall'?`Wall T${tier}`:isPalisade?`Palisade T${tier}`:wood?(wide?'Wide longhouse 2U':'Longhouse 1U'):wide?'Wide hall 2U':'Built section')+(isPalisade?'':` L${level}`)+` — choose point A`,el:b})};
+for(const b of document.querySelectorAll('[data-linear]'))b.onclick=()=>{if(b.dataset.linear==='leanTo'){setTool({kind:'leanTo',linear:'built',leanTo:true,leanMaterial:State.tool?.leanMaterial||'wood',level:1,label:'Lean-to W1 — click the inner side of an H2 wall',el:b});return}const tier=State.buildLevels.wallTier,kind=b.dataset.linear,wood=kind==='longhouse'||kind==='longhouseWide',wide=kind==='builtWide'||kind==='longhouseWide',linear=wide||wood?'built':kind,isPalisade=linear==='palisade',level=isPalisade||wood?1:wide?State.buildLevels.builtWide:State.buildLevels.wall;setTool({kind:'linear',linear,...(wide?{span:'wide'}:{}),...(wood?{material:'wood'}:{}),level,tier,label:(linear==='wall'?`Wall T${tier}`:isPalisade?`Palisade T${tier}`:wood?(wide?'Wide longhouse 2U':'Longhouse 1U'):wide?'Wide hall 2U':'Built section')+(isPalisade?'':` L${level}`)+` — choose point A`,el:b})};
 document.querySelectorAll('[data-tower-level]').forEach(b=>b.onclick=()=>{State.buildLevels.tower=Number(b.dataset.towerLevel);document.querySelectorAll('[data-tower-level]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='tower'&&State.tool.material!=='wood'){State.tool.level=State.buildLevels.tower;State.draft=null;status('Tower height: '+State.buildLevels.tower+' level'+(State.buildLevels.tower>1?'s':''));draw()}});
 document.querySelectorAll('[data-wall-tier]').forEach(b=>b.onclick=()=>{State.buildLevels.wallTier=Number(b.dataset.wallTier);document.querySelectorAll('[data-wall-tier]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='linear'&&['wall','palisade'].includes(State.tool.linear)){State.tool.tier=State.buildLevels.wallTier;State.draft=null;status((State.tool.linear==='palisade'?'Palisade':'Wall')+' tier: T'+State.buildLevels.wallTier+' · '+wallWidthForTier(State.buildLevels.wallTier)+'U');draw()}});
 document.querySelectorAll('[data-wall-level]').forEach(b=>b.onclick=()=>{const wide=State.tool.kind==='linear'&&State.tool.span==='wide';State.buildLevels[wide?'builtWide':'wall']=Number(b.dataset.wallLevel);document.querySelectorAll('[data-wall-level]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='linear'&&['wall','built'].includes(State.tool.linear)){State.tool.level=Number(b.dataset.wallLevel);State.draft=null;status((wide?'Wide hall':'Wall')+' height: '+State.tool.level+' level'+(State.tool.level>1?'s':''));draw()}});
@@ -542,13 +555,18 @@ for(const b of document.querySelectorAll('[data-storage-yard]'))b.onclick=()=>{
   const candidate=window.ConquerStorageYard.make();
   setTool({kind:'civic',placementSpec:candidate,label:'Piazzale magazzino · 2×2U · '+costText(constructionCost(candidate)),el:b});
 };
+// Per-worker daily output from the engine contract (e.g. mine 1 metal / 2 L2 = 0.5).
+const industryRatePerWorker=type=>{
+  const k=window.ConquerEconomy?.KIND?.[type];
+  return k&&k.rate&&k.workers?Math.round(k.rate/k.workers*100)/100:1;
+};
 for(const b of document.querySelectorAll('[data-industry]'))b.onclick=()=>{
    const type=b.dataset.industry,extractionMode=b.dataset.extractionMode==='clay'?'clay':'stone';
    const candidate=window.ConquerIndustries.make(type,{x:0,y:0},extractionMode);
    const spec=window.ConquerIndustries.definition(candidate);
    setTool({kind:'industry',industry:type,
      placementSpec:candidate,
-     label:spec.name+' · '+spec.w+'×'+spec.h+'U'+(spec.workers?' · L'+spec.tier+' ×'+spec.workers:'')+(window.ConquerIndustries.isMill({type})?' · Crop → Food':' · 1 '+spec.good+'/worker/day')+' · '+costText(constructionCost({...candidate,masonryMaterial:State.buildMasonryMaterial})),el:b});
+     label:spec.name+' · '+spec.w+'×'+spec.h+'U'+(spec.workers?' · L'+spec.tier+' ×'+spec.workers:'')+(window.ConquerIndustries.isMill({type})?' · Crop → Food':' · '+industryRatePerWorker(type)+' '+spec.good+'/worker/day')+' · '+costText(constructionCost({...candidate,masonryMaterial:State.buildMasonryMaterial})),el:b});
  };
  // Event venues (settlement-events3d.js): podium, stage, festival ground, arena lot.
  for(const b of document.querySelectorAll('[data-event-venue]'))b.onclick=()=>{
@@ -601,5 +619,5 @@ document.getElementById('cancelVillageBtn').onclick=()=>{const id=State.pendingW
 document.getElementById('villageNameInput').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('confirmVillageBtn').click()});
 document.getElementById('closeFunctions').onclick=()=>{State.selectedId=null;renderFunctionPanel();draw()};
 document.getElementById('undoBtn').onclick=()=>{const s=[...State.structures].reverse().find(x=>!x.auto&&!x.foundingStockyard);if(s)deleteStructure(s.id)};
-document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement, including player terraforming, and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);const borderEntries=ensureBorderEntrySelection();State.structures=[];window.ConquerTerraforming?.clear();window.ConquerForestry?.clear();window.ConquerEconomy?.reset();State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty(true,'all');renderUI();draw()}};
+document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement, including player terraforming, and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(refundableConstructionCost(s));const borderEntries=ensureBorderEntrySelection();State.structures=[];window.ConquerTerraforming?.clear();window.ConquerForestry?.clear();window.ConquerEconomy?.reset();State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty(true,'all');renderUI();draw()}};
 ['tax','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty(false,false,true)});

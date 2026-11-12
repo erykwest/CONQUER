@@ -303,7 +303,14 @@ function builtRoofFootprintPoints(s){
 }
 function builtRoofGeometry(s){
   const p=builtRoofFootprintPoints(s);if(!p||p.length<4)return null;
-  const h=structureHeight(s),rise=clamp((Number(s.width)||1)*.46,.32,isWideBuilt(s)?.92:.56);
+  const h=structureHeight(s);
+  // Lean-to: one pitch, its top edge on the wall (leanSide) a hand under the wall walk.
+  if(isLeanTo(s)){
+    const up=s.leanSide===-1?[p[3],p[2]]:[p[0],p[1]];
+    const top=Math.max(h+.2,window.ConquerLeanTo?.roofTop(s)??1.98);
+    return{p,h,rise:top-h,ridgeA:{...up[0]},ridgeB:{...up[1]},ridgeH:top,leanTo:true};
+  }
+  const rise=clamp((Number(s.width)||1)*.46,.32,isWideBuilt(s)?.92:.56);
   const ridgeA={x:(p[0].x+p[3].x)/2,y:(p[0].y+p[3].y)/2};
   const ridgeB={x:(p[1].x+p[2].x)/2,y:(p[1].y+p[2].y)/2};
   return{p,h,rise,ridgeA,ridgeB,ridgeH:h+rise};
@@ -403,6 +410,8 @@ function structureScreenSilhouette(s){
       const g=towerRoofShape(s)!=='pyramid'&&squareTowerRoofGeometry(s);
       if(g)cloud.push(w2s(g.ridgeA,g.ridgeH),w2s(g.ridgeB,g.ridgeH));
     }
+    const inner=s.type==='tower'&&towerInnerRoofGeometry(s);
+    if(inner)cloud.push(w2s(inner.apex,inner.apexZ));
     if(hasPointHoarding(s)){
       const z=pointHoardingBaseZ(s);
       for(const b of pointHoardingBays(s)){
@@ -437,8 +446,9 @@ function drawBuiltDetails(s,preview=false){
   const a0=w2s(g.p[0],g.h),a1=w2s(g.p[1],g.h),b0=w2s(g.p[3],g.h),b1=w2s(g.p[2],g.h);
   const ra=w2s(g.ridgeA,g.ridgeH),rb=w2s(g.ridgeB,g.ridgeH);
   const winter=State.season==='winter';
-  const faceA={poly:[a0,a1,rb,ra],fill:preview?'rgba(58,61,66,.62)':(winter?WINTER_SNOW_A:'#34363a'),depth:(a0.y+a1.y)/2};
-  const faceB={poly:[b0,b1,rb,ra],fill:preview?'rgba(70,73,78,.62)':(winter?WINTER_SNOW_B:'#42454a'),depth:(b0.y+b1.y)/2};
+  const thatch=isTimberLeanTo(s);   // timber lean-to: thatch instead of slate
+  const faceA={poly:[a0,a1,rb,ra],fill:preview?'rgba(58,61,66,.62)':(winter?WINTER_SNOW_A:thatch?'#b8995a':'#34363a'),depth:(a0.y+a1.y)/2};
+  const faceB={poly:[b0,b1,rb,ra],fill:preview?'rgba(70,73,78,.62)':(winter?WINTER_SNOW_B:thatch?'#a4864a':'#42454a'),depth:(b0.y+b1.y)/2};
 
   withBuiltRoofOcclusionClip(s,()=>{
     for(const face of [faceA,faceB].sort((a,b)=>a.depth-b.depth)){
@@ -577,6 +587,7 @@ function dovecoteTriangles(s){
 // (one roof, one upgrade: settlement-alarm-bells.js APEX_ROOMS).
 function towerApexFlagZ(s){
   const h=typeof towerDovecote==='function'&&towerDovecote(s)?window.ConquerDovecoteModels?.height||0
+    :typeof towerMews==='function'&&towerMews(s)?window.ConquerMewsModels?.height||0
     :window.ConquerAlarmBells?.towerBell(s)?window.ConquerBelfryModels?.height||0:0;
   return towerVisualTopHeight(s)+h;
 }
@@ -753,6 +764,7 @@ function drawBattlementPiece(piece,frame){
       drawWoodPost(piece.center,piece.r,piece.z0,piece.tipZ,piece.angle||0);
       return;
     }
+    if(piece.kind==='innerRoof'){drawTowerInnerRoof(piece.geo);return}
     if(piece.kind==='machicolationCorbel'){
       extrudePolygonAt(piece.pts,piece.z0,piece.z1,{top:winterSnowColor('#887d72'),sideA:'#403b36',sideB:'#554d46',stroke:'#9f9183'});
       return;
@@ -1433,12 +1445,36 @@ function woodTowerFrontPieces(s){
   }
   return pieces;
 }
+// Inner roof (BC-251105-05) in 2.5D: one piece sorted among the merlons by the tower centre, so the
+// far merlons are painted before it and the near ones over its eave. The 3D builders mesh it with
+// the tower body instead (addTower in settlement-castle3d.js).
+function towerInnerRoofPiece(s){
+  const g=!underConstruction(s)&&towerInnerRoofGeometry(s);if(!g)return null;
+  const piece=battlementPolygonPiece('innerRoof',g.ring,g.h,g.apexZ,s);
+  const rp=rotateViewPoint({x:s.x,y:s.y});piece.depth=rp.x+rp.y;piece.geo=g;
+  return piece;
+}
+function drawTowerInnerRoof(g){
+  if(!g)return;
+  const winter=State.season==='winter';
+  extrudePolygonAt(g.ring,g.h,g.eaveZ,{top:'#6f665d',sideA:'#514a44',sideB:'#635951',stroke:'#8f8276'});
+  const apex=w2s(g.apex,g.apexZ),n=g.ring.length,round=n>8,faces=[];
+  for(let i=0;i<n;i++){
+    const a=w2s(g.ring[i],g.eaveZ),b=w2s(g.ring[(i+1)%n],g.eaveZ);
+    const fill=round?(winter?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP][i%3]:['#303236','#3a3d42','#44474c'][i%3])
+      :winter?(i%2?WINTER_SNOW_A:WINTER_SNOW_B):(i%2?'#34363a':'#42454a');
+    faces.push({poly:[a,b,apex],depth:(a.y+b.y)/2,fill});
+  }
+  faces.sort((a,b)=>a.depth-b.depth);
+  for(const f of faces)pathPolygon(f.poly,f.fill,round?null:winter?WINTER_SNOW_STROKE:'#5d6066',1);
+}
 function drawCastleBattlements(){
   const pieces=[];
   for(const s of State.structures){
     if(underConstruction(s))continue;
     if(s.type==='tower'){
       pieces.push(...towerBattlementPieces(s));
+      const inner=towerInnerRoofPiece(s);if(inner)pieces.push(inner);
       if(isWoodTower(s))pieces.push(...woodTowerFrontPieces(s));
     }else if(s.type==='gate')pieces.push(...gateBattlementPieces(s));
     else if(s.type==='wall')pieces.push(...wallBattlementPieces(s));
@@ -1479,7 +1515,7 @@ function chimneySpecs(s){
     return specs;
   }
 
-  // The timber longhouse has no masonry stack (its Blender model is the whole building).
+  // The timber longhouse has no masonry stack: its hearth smokes through the ridge (longhouseSmokeSpecs).
   if(s.type==='built'&&isLonghouse(s))return[];
   if(s.type==='built'){
     const g=builtRoofGeometry(s);if(!g)return[];
@@ -1489,8 +1525,10 @@ function chimneySpecs(s){
     const count=isWideBuilt(s)?2:Math.max(1,Math.ceil(ridgeLength/CHIMNEY_SPACING));
     for(let i=0;i<count;i++){
       const t=(i+1)/(count+1);
+      // Lean-to: the stack rises off the wall face, inside the roof.
+      const inn=g.leanTo?{x:-(s.leanSide===-1?-1:1)*(-dy/(ridgeLength||1))*.16,y:-(s.leanSide===-1?-1:1)*(dx/(ridgeLength||1))*.16}:{x:0,y:0};
       specs.push({
-        center:{x:g.ridgeA.x+dx*t,y:g.ridgeA.y+dy*t},
+        center:{x:g.ridgeA.x+dx*t+inn.x,y:g.ridgeA.y+dy*t+inn.y},
         angle:Math.atan2(s.b.y-s.a.y,s.b.x-s.a.x),
         z0:g.ridgeH-.02,z1:g.ridgeH+.48,index:i
       });
@@ -1538,9 +1576,20 @@ function drawSmoke(spec,id,now){
 function drawHouseChimneys(s){
   for(const spec of chimneySpecs(s))drawChimney(spec);
 }
+// Longhouse smoke hole (BC-251105-09): over the middle bay of the ridge, as the model's 'smoke.*'
+// part (settlement-wood3d.js); no smoke while the roof is opened in cutaway.
+// Top of the smoke-hole hood above ground (U): ridge crest + 0.1, as build_wood_fort.py.
+const LONGHOUSE_SMOKE_TOP={longhouse_w1:{shingle:1.64,thatch:1.715,turf:1.66},longhouse_w2:{shingle:1.94,thatch:2.015,turf:1.96}};
+function longhouseSmokeSpecs(s){
+  if(!isLonghouse(s)||underConstruction(s)||structureCutaway(s))return[];
+  const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,n=Math.max(1,Math.round(L)),along=(Math.floor((n-1)/2)+.5)*L/n;
+  const top=LONGHOUSE_SMOKE_TOP[isWideBuilt(s)?'longhouse_w2':'longhouse_w1'][longhouseCover(s)];
+  return[{center:{x:s.a.x+dx/L*along,y:s.a.y+dy/L*along},z1:top,index:0}];
+}
 function drawChimneysAndSmoke(){
   if(State.view.scale<.32)return;
   const now=performance.now()/1000;
+  for(const s of State.structures)for(const spec of longhouseSmokeSpecs(s))drawSmoke(spec,s.id+':hole',now);
   // An open L3 workshop has no chimney left (settlement-shop-cutaway.js).
   const sources=State.structures.filter(s=>!underConstruction(s)&&(s.type==='house'||s.type==='built')&&!window.ConquerShopCutaway?.active(s));
   for(const s of sources){

@@ -163,6 +163,16 @@
         m.pyramid(ring,h,apex,apexZ,i=>winter()?(i%2?WINTER_SNOW_A:WINTER_SNOW_B):(i%2?'#34363a':'#42454a'));
       }
     }
+    // Inner roof (BC-251105-05): kerb, then a pyramid or a cone inside the merlons.
+    const inner=towerInnerRoofGeometry(s);
+    if(inner){
+      const tag=m.tag;m.tag='body';
+      m.prism(inner.ring,inner.h,inner.eaveZ,PAL.stone());
+      m.tag='roof';
+      const round=inner.ring.length>8,cols=round?(winter()?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP]:['#303236','#3a3d42','#44474c']):null;
+      m.pyramid(inner.ring,inner.eaveZ,inner.apex,inner.apexZ,i=>round?cols[i%3]:winter()?(i%2?WINTER_SNOW_A:WINTER_SNOW_B):(i%2?'#34363a':'#42454a'));
+      m.tag=tag;
+    }
     for(const b of towerBartizans(s))addBartizan(m,b);
   }
   // Corbelled cone, moulding band and drum; the pitched kind adds a conical roof (merlons: addPieces).
@@ -192,8 +202,9 @@
   function addBuilt(m,s){
     const g=builtRoofGeometry(s);if(!g)return;
     const [p0,p1,p2,p3]=g.p,ra=g.ridgeA,rb=g.ridgeB,H=g.h,R=g.ridgeH;
-    m.face([{p:p0,z:H},{p:p1,z:H},{p:rb,z:R},{p:ra,z:R}],winter()?WINTER_SNOW_A:'#34363a');
-    m.face([{p:p3,z:H},{p:p2,z:H},{p:rb,z:R},{p:ra,z:R}],winter()?WINTER_SNOW_B:'#42454a');
+    const thatch=isTimberLeanTo(s);   // timber lean-to: thatch instead of slate
+    m.face([{p:p0,z:H},{p:p1,z:H},{p:rb,z:R},{p:ra,z:R}],winter()?WINTER_SNOW_A:thatch?'#b8995a':'#34363a');
+    m.face([{p:p3,z:H},{p:p2,z:H},{p:rb,z:R},{p:ra,z:R}],winter()?WINTER_SNOW_B:thatch?'#a4864a':'#42454a');
     // Gable ends are left open in 2.5D; a closed volume needs them.
     const roofTag=m.tag;m.tag='gable';
     m.face([{p:p0,z:H},{p:ra,z:R},{p:p3,z:H}],PAL.stone());

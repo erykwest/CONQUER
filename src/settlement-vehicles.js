@@ -139,7 +139,7 @@
     const perVehicle=c.vehicles>1?Math.ceil((c.qty||0)/c.vehicles):(c.qty||0);
     const coat=COATS[(i*2+(c.seed||0))%COATS.length];
     return{chassis:k.chassis,team:Array.from({length:k.team},(_,h)=>({coat:h?COATS[(i*2+1+(c.seed||0))%4]:coat})),
-      cargo:c.vehicle==='coach'?[]:cargoFor(c.good,perVehicle,cap,c.vehicle==='cart'?4:6)};
+      cargo:c.emptyReturn||c.vehicle==='coach'?[]:cargoFor(c.good,perVehicle,cap,c.vehicle==='cart'?4:6)};
   }
   const ground=p=>typeof terrainElevation==='function'?terrainElevation(p):0;
   // Everything one convoy shows this frame: vehicles, drivers and escorts.
@@ -173,7 +173,8 @@
     const p={x:v.x+Math.cos(v.heading)*ahead-Math.sin(v.heading)*side,
       y:v.y+Math.sin(v.heading)*ahead+Math.cos(v.heading)*side};
     const lift=cart?(v.moving?Math.abs(Math.sin(v.s*5.2))*.035:0):.22;
-    const dot={...(c.vehicle==='coach'?COACHMAN:DRIVER),id:(cart?'carter-':'driver-')+c.id+'-'+v.i,p};
+    const dot={...(c.vehicle==='coach'?COACHMAN:DRIVER),
+      id:c.workerId||((cart?'carter-':'driver-')+c.id+'-'+v.i),p};
     if(typeof withProjectionGroundZ==='function')withProjectionGroundZ(v.z+lift,()=>drawVillagerFigureUnmasked(dot));
     else drawVillagerFigureUnmasked(dot);
   }
@@ -192,7 +193,7 @@
       if(it.e){drawEscort(c,it.e);continue}
       const v=it.v,scr=w2s(v,.15),a=w2sRaw(v,0),b=w2sRaw({x:v.x+Math.cos(v.heading),y:v.y+Math.sin(v.heading)},0);
       W2.drawWagon(ctx,scr.x,scr.y,size,{chassis:k.chassis,team:v.spec.team,
-        cargo:v.spec.cargo.length?v.spec.cargo:k.chassis==='carriage'?[]:['crate'],covered:false,
+        cargo:v.spec.cargo.length?v.spec.cargo:(k.chassis==='carriage'||c.emptyReturn)?[]:['crate'],covered:false,
         facing:b.x>=a.x?1:-1,moving:v.moving,t:v.s*.5,distance:v.s*(typeof U!=='undefined'?U:12)*(State.view.scale||1)});
       drawDriver(c,v);
     }

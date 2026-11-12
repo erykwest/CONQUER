@@ -807,7 +807,8 @@ function drawUrbanFence({a,b}){
 function drawUrbanWall({a,b}){
   const L=dist(a,b),nx=-(b.y-a.y)/L*.065,ny=(b.x-a.x)/L*.065;
   const poly=[{x:a.x+nx,y:a.y+ny},{x:b.x+nx,y:b.y+ny},{x:b.x-nx,y:b.y-ny},{x:a.x-nx,y:a.y-ny}];
-  extrudePolygon(poly,.36,{top:State.season==='winter'?'#e5e9df':'#a3937a',sideA:'#766a59',sideB:'#8b7c67',stroke:'rgba(57,49,39,.65)'});
+  const stone=hex=>window.ConquerStoneColor?.shade(hex)||hex;
+  extrudePolygon(poly,.36,{top:State.season==='winter'?'#e5e9df':stone('#a3937a'),sideA:stone('#766a59'),sideB:stone('#8b7c67'),stroke:'rgba(57,49,39,.65)'});
   ctx.strokeStyle='rgba(57,49,39,.4)';
   for(const z of [.12,.24]){
     const p=w2s(a,z),q=w2s(b,z);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();

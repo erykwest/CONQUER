@@ -230,7 +230,8 @@
             const v=part.i[t*3+k]*3,x=part.p[v],y=part.p[v+1];
             pos.push(it.x+x*c-y*sn,it.y+x*sn+y*c,it.z+part.p[v+2]);
           }
-          col.push(pal[part.c[t]]);gi.push(g);
+          const hex=pal[part.c[t]],role=data.paletteKeys[part.c[t]];
+          col.push(['rock','block','blockDressed'].includes(role)?(window.ConquerStoneColor?.shade(hex)||hex):hex);gi.push(g);
         }
         let cx=0,cy=0,cz=0;const n=(pos.length-start)/3||1;
         for(let i=start;i<pos.length;i+=3){cx+=pos[i];cy+=pos[i+1];cz+=pos[i+2]}
@@ -245,7 +246,7 @@
   function stateKey(s,p){
     const {storey}=units(),k=siteKind(s);
     return[s.id,phaseOf(p),k?Math.round(built(s,k,p)/storey*8):0,Math.round(raised(p)*20),State.view?.rotation||0,
-      s.x,s.y,s.angle,s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.w,s.h,s.size,s.r,s.groundZ,(State.structures||[]).length].join('|');
+      s.x,s.y,s.angle,s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.w,s.h,s.size,s.r,s.groundZ,State.stonePaletteId,(State.structures||[]).length].join('|');
   }
   function siteMesh(s){
     const p=call('constructionProgress',s)??1;if(!(p<1)||!(State.view?.scale>=MIN_SCALE))return null;

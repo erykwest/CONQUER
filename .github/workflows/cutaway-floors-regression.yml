@@ -1,11 +1,19 @@
 name: Cutaway floors regression
 
+# Abort superseded PR runs of this workflow (never cancel scheduled/main runs).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 on:
   pull_request:
     paths:
       - 'qa/cutaway-floors-regression.cjs'
       - 'qa/cutaway-furniture-regression.cjs'
       - 'qa/civic3d-regression.cjs'
+      - 'qa/art-regression.cjs'
+      - 'src/assets/art-models.js'
+      - 'src/art-colors.js'
       - 'src/settlement-cutaway-floors.js'
       - 'src/settlement-castle.js'
       - 'src/settlement-civic3d.js'
@@ -41,3 +49,5 @@ jobs:
         run: |
           node qa/civic3d-regression.cjs
           node qa/cutaway-furniture-regression.cjs
+      - name: Test ARTE art archetypes and room display anchors
+        run: node qa/art-regression.cjs

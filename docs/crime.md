@@ -31,7 +31,7 @@ La de-escalation è possibile, per gradi, attraverso tempo, sostegno sociale e p
 
 | Struttura | Dove si costruisce | Dati | Note |
 | --- | --- | --- | --- |
-| Corpo di guardia (`guard`) | Stanza di torre T2/T3, porta o sezione costruita (già esistente); **stanza del Municipio** (un piano) | `s.functions[i]='guard'` | Capienza 4 sentinelle per unità di stanza (`ConquerSiege.capacity().watchmen`) |
+| Corpo di guardia (`guard`) | **Solo stanza del Municipio** (un piano). Nel castello si è fuso nella Caserma il 09/11/2026 (D-MIL-RES-261109, MIL-RES-01) | `s.functions[i]='guard'` | Capienza 4 sentinelle per unità di stanza (`ConquerSiege.capacity().watchmen`) |
 | Prigione (`prison`) | **Solo al piano terra (P0)**: torri e sezioni costruite (non le porte, dove il piano terra è il passaggio), stanza 0 del Municipio | `s.functions[i]='prison'` | **5 detenuti per cella**: una cella per stanza normale, due per stanza grande, 2–3 nel Municipio (`ConquerCivic3D.prisonCellCount`). Le prigioni salvate ai piani alti vengono svuotate al caricamento (`capacity().prisoners`) |
 | Sala del consiglio (`council`) | Solo Municipio | `s.functions[i]='council'` | Arredo storico del cutaway; un Municipio salvato prima delle stanze la riceve al piano terra |
 | Tribunale (`tribunal`) | Solo Municipio **L2+**, a qualsiasi piano | `s.functions[i]='tribunal'` | Al ritorno a L1 la stanza decade |

@@ -40,7 +40,8 @@ function markStructureDirty(s,hardNavigation=true,scheduleSave=true){
   markDirty(hardNavigation,structureSceneLayers(s),scheduleSave);
 }
 function changeHouseDensity(target,level){
-  if(level===houseLevel(target))return;
+  if(level===houseLevel(target)||underConstruction(target))return false;
+  const before=structureUpgradeSnapshot(target);
   const candidate={...target,houseLevel:level,
     urbanRedeveloped:!target.auto&&level>=3};
   const houses=State.structures.filter(s=>s.type==='house').map(s=>s.id===target.id?candidate:s);
@@ -59,6 +60,7 @@ function changeHouseDensity(target,level){
   if(level>=3&&count){
     State.structures=State.structures.filter(s=>s.type!=='road'||s.accessFor!==target.id);
   }else if(level<3&&target.auto)ensureSettlementRoadAccess(target,true);
+  beginStructureUpgrade(target,before,null,BUILD_DAYS.house);
   markStructureDirty(target);
   renderFunctionPanel();draw();
   status('House L'+level+(count?' · '+count+' streetfront '+(count===1?'building':'buildings'):' · waiting for primary road frontage'));
@@ -112,8 +114,8 @@ function addStructure(s){
       s.groundZ=groundZ;
     }
     const cost=constructionCost(s);
-    if(!canAfford(cost)){status('Insufficient resources — '+costText(cost));return false}
-    s.buildCost=cost;spendCost(cost);beginConstruction(s);
+    // Confirmation creates a project, not an upfront debit.
+    s.buildCost=cost;beginConstruction(s);
     displaced=removeOverlappingAuto(s);
   }
   State.structures.push(s);
@@ -179,16 +181,22 @@ function commitStructuralLinearRoute(route,endSnapId,spec){
       return false;
     }
   }
-  const totalCost=aggregateConstructionCost(structures);
-  if(!canAfford(totalCost)){
-    status('Insufficient resources — '+costText(totalCost));
-    return false;
-  }
   for(const s of structures)if(!addStructure(s))return false;
   return true;
 }
 function deleteStructure(id){
   const target=State.structures.find(s=>s.id===id);if(!target)return;
+  if(underConstruction(target)&&target.construction?.upgrade){
+    const before=target.construction.upgrade.before,refund=refundableConstructionCost(target);
+    const damage=target.siegeIntegrity?JSON.parse(JSON.stringify(target.siegeIntegrity)):null;
+    refundCost(refund);
+    for(const key of Object.keys(target))delete target[key];
+    Object.assign(target,before);
+    if(damage)target.siegeIntegrity=damage; // Cancelling work never heals siege damage.
+    if(target.type==='tower'){repositionSubtower(target);syncSubtowerTree(target.id)}
+    if(target.type==='house')invalidateUrbanGeometry();
+    markStructureDirty(target);renderFunctionPanel();draw();return;
+  }
   if(window.ConquerStorageYard?.is(target)&&!window.ConquerStorageYard.canRemove(target)){
     status('Sposta le scorte in un altro piazzale prima di eliminare l’unico magazzino');return;
   }
@@ -199,15 +207,15 @@ function deleteStructure(id){
   }
   if(target.type==='tower')restoreTowerWallConnections(target);
   const removedChildren=civicAnnexChildren(id);
-  for(const child of removedChildren)if(child.buildCost)refundCost(child.buildCost);
+  for(const child of removedChildren)if(child.buildCost)refundCost(refundableConstructionCost(child));
   if(['tower','gate'].includes(target.type))detachSubtowerChildren(target.id);
-  if(!target.auto&&target.buildCost&&!(target.type==='bridge'&&target.variant==='wood'))refundCost(target.buildCost);
+  if(!target.auto&&target.buildCost&&(target.construction?.materialsDelivered||!(target.type==='bridge'&&target.variant==='wood')))refundCost(refundableConstructionCost(target));
   const foundingWellTarget=target.type==='well'&&(!State.village.founded||target.id===State.village.wellId);
   if(foundingWellTarget){
     State.combat=null;window.ConquerCombat?.restore(null);
     const borderEntries=ensureBorderEntrySelection();
     // The village goes with its founding well, later wells included (refunded).
-    for(const w of State.structures)if(w.type==='well'&&w.id!==id&&!w.auto&&w.buildCost)refundCost(w.buildCost);
+    for(const w of State.structures)if(w.type==='well'&&w.id!==id&&!w.auto&&w.buildCost)refundCost(refundableConstructionCost(w));
     State.structures=State.structures.filter(s=>!s.auto&&!s.foundingStockyard&&s.id!==id&&s.type!=='well');
     window.ConquerEconomy?.reset?.();State.resources={...PROVISIONAL_RESOURCES};
     State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};

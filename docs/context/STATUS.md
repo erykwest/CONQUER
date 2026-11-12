@@ -1,5 +1,264 @@
 # Livello 2 — Stato tecnico e prove
 
+
+## 2026-11-10 — ECO-FIL-01 fase 1 · Miniera → metallo (branch `feature/eco-fil-01-miniera-metallo`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `KIND.mine` diventa `{good:'metal',rate:1}` (2 L2, 1 metallo al giorno lavorativo a squadra completa) e `ConquerIndustries.TYPES.mine.good` passa a `metal`.
+  - `normalizeFootprint` converte a `metal` le miniere salvate con `productionGood:'stone'`; le scorte di pietra già prodotte restano pietra.
+  - L'etichetta dello strumento Builder legge la resa per lavoratore dal motore (miniera 0,5 metal/lavoratore/giorno).
+  - Voce Wiki «Miniera» aggiornata e rigenerati `src/codex-wiki-editorial.js` e `wiki/catalog.json`.
+- **PROVE LOCALI PASS:**
+  - tutta la suite di `economy-flows-regression.yml` (26 script);
+  - codex-wiki, codex-catalog, fields, industries3d;
+  - `export-codex-content --check`.
+  - `economy-industries-regression` ha un caso aggiornato (cava 2 pietra, miniera 1 metallo al giorno) e un nuovo caso di migrazione.
+- **DA VERIFICARE:** CI del branch. Nessun asset o modello toccato: il modello della miniera resta quello attuale, senza audit asset.
+
+## 2026-11-10 — ECO-FIL-01 · Filiere produttive (solo specifica, branch `docs/filiere-produttive`)
+
+- **NESSUN CODICE:** specifica approvata in [BACKLOG](BACKLOG.md), decisione [D-ECO-FIL-261110](DECISIONS.md). Nessun test eseguito né richiesto.
+- **STATO LIVE VERIFICATO SU `main` 89e7a2c:**
+  - `KIND.mine` produce `stone`.
+  - `metal` non ha produttori. `KIND.workshop` non è collocabile, mentre la stanza `workshop` del castello esiste senza effetti economici.
+  - Le botteghe L3 producono 1 bene al giorno senza consumare nulla. Restano gli errori di `WORKSHOP_OUTPUT` (falegname su `metalGoods`, tessitore e sarto entrambi su `textiles`) e `leatherGoods` ha ancora input `wood`.
+  - I pastori L1 di capre e pecore danno 0,9 `food` al giorno; mucche e cavalli non producono.
+  - La pesca esiste (1,2 `food` al giorno per pescatore).
+- **PROSSIMO:** fase 1 (miniera → metallo) su un branch nuovo da `main`, solo dopo conferma esplicita.
+
+## 2026-11-09 — ARTE: archetipi grafici e ancoraggi delle stanze (`feature/arte-graphics`)
+
+- **CODICE SUL BRANCH (non in main):** nuovo generatore Blender `tools/blender/build_art.py` → `src/assets/art-models.js` (`window.ConquerArtModels`): 19 archetipi grafici low-poly a colori piatti, nello stesso formato dei mobili del cutaway. **Quadri** (icona su fondo oro, trittico con ante aperte, ritratto, paesaggio, scena di caccia) e **arazzi** (millefleurs, fregio narrativo), ognuno in taglia piccola e grande; **sculture**: busto su piedistallo in marmo, statua su basamento in marmo/pietra/bronzo, santo ligneo policromo in tabernacolo a parete. Le immagini sono griglie di pixel unite nel minor numero di rettangoli; 5.622 triangoli, 142 KB. `catalog` descrive per ogni pezzo kind/archetype/size/material/mount/label.
+- **CUTAWAY:** `settlement-cutaway-furniture.js` risolve i pezzi come `a:<nome>` e calcola, dopo la ricetta di ogni stanza, gli **ancoraggi ARTE** (ART-251105-02): a parete sui due muri visibili, negli intervalli liberi da mobili alti (> 0,22 U), decorazioni, torce e angolo della scala, ciascuno con la propria larghezza libera `w`; a pavimento (piedistallo 0,14 U o 0,2 U con margine) verso le pareti, al massimo 2 (3 nelle stanze grandi). Nessun ancoraggio sul passaggio del portone. API `ConquerCutawayFurniture.artSlots(s)` (id stabile, stanza, piano, ruolo, montaggio, coordinate) e `artFits(slot, nome)` (stesso montaggio, opera non più larga dell'ancoraggio). **Le stanze non cambiano aspetto:** nessuna opera è esposta finché non esistono commissione e inventario (ART-251105-03/04).
+- **COLORI PARAMETRICI (D-ART-COLORS-261109):** ogni archetipo ha da 1 a 7 slot colore (es. icona: fondo, aureole, manto, veste, cornice; arazzi: fondo, fogliame/figure, fiori/cavalli, bordura; statue: materiale e basamento) con tinte suggerite (pigmenti, cielo, cornici, lane, materiali scultorei, basamenti). Nuovo `src/art-colors.js` (`ConquerArtColors`: slots, defaults, swatches, normalize, diff, paint, signature); l'ombra di uno slot segue il colore scelto. Il cutaway applica `item.paint`; `ConquerCutawayFurniture.artWorkFaces(slot, nome, colori)` produce le facce di un'opera posata su un ancoraggio. Nel Lab, il pannello di un'opera mostra «Colori della commissione» (campioni, colore libero, «Colori originali»); galleria e audit restano sui colori dell'archetipo.
+- **ASSET LAB:** registro `ConquerArtModels` in `MODEL_SOURCES` (Interni · «Opere d'arte · quadri / arazzi / sculture», titoli in italiano dal catalogo); script caricato in `figures-lab.html` e `index.html`.
+- **PROVE:** `qa/art-regression.cjs` (catalogo, risoluzione `a:`, ancoraggi dentro la stanza e liberi da mobili, scala e tra loro; regole di montaggio e larghezza; slot colore, `ConquerArtColors`, opera ricolorata sul suo ancoraggio) PASS 7/7; audit Interni senza differenze sui colori predefiniti; `qa/cutaway-furniture-regression.cjs` PASS 9/9; controllo visivo dei 19 modelli nel Lab. Osservazione: nelle stanze quadrate già arredate le pareti libere sono strette (circa 1 m: letto, camino, arazzo araldico e torce); i tratti fino a 3 m ci sono nelle stanze rotonde o vuote.
+
+
+## 2026-11-05 — Tetto interno delle torri, BC-251105-05 (branch `feature/tower-inner-roof`, NON MAIN)
+
+- Nuova variante torre `innerRoof` (`off`/`on`, `STRUCTURE_VARIANTS.tower`): tetto a piramide (quadrate, a D) o cono (rotonde) arretrato dentro i merli, su un cordolo di pietra di 0,14U; tra tetto e merli resta il cammino di ronda (~0,22U). Regola `towerInnerRoofAllowed` (core): pietra, non semitorre, T2+, sommità a merli o caditoie, nessuna arma sulla piazza (arma e tetto interno si escludono). Geometria `towerInnerRoofGeometry` (population); 2.5D come pezzo ordinato tra i merli (`towerInnerRoofPiece`/`drawTowerInnerRoof`); 3D in `addTower` (castle3d → World 3D, Lab). Altezza visiva, sagoma di occlusione, ombra e chiavi di cache la includono.
+- Builder: pulsanti «Tetto interno» nel pannello torre e nel descrittore (`setTowerInnerRoof`), etichette e tooltip in italiano.
+- Compatibilità: non è un tetto a falde, quindi niente stanza sotto: Colombaia, Falconiera e Campana (`ROOM_EXTERIOR` mount 'roof') restano legate a `roofStyle:'pitched'`. Ballatoio e garitte convivono. Cutaway come il tetto a falde (lo stesso codice di disegno).
+- Test: `qa/tower-inner-roof-regression.cjs` (5 controlli) passa, aggiunto al workflow `tower-variants-regression`; passano anche bartizan, roof-shape, battlement-parapet, subtower-junctions, tower-weapons, dovecote, oriented-towers, cutaway-floors.
+- Lab: 6 righe nuove nella galleria fortificazioni (`settlement-siege-preview.js`). Audit Fortificazioni completo in locale (dopo rebase su main): 1058 render, 0 falliti; le 6 voci nuove (58 render tra 3D, gioco, cantiere, danni e cutaway) rivedute nel foglio provini e aggiunte alla baseline. I 133 «cambiati» toccano anche mura e porte non modificate: deriva preesistente della baseline di main, non aggiornata qui. Pendenza del tetto interno almeno ~58° (`TOWER_INNER_ROOF_MIN_TAN`) per staccarlo dai merli. Rogo di segnalazione e tetto interno si escludono, come l'arma in cima.
+## 2026-11-09 — CI P2.4: ownership delle regressioni specialistici (PR in preparazione)
+
+- **IMPLEMENTAZIONE SU BRANCH:** sei controlli Codex deterministici restano solo in Runtime integrity (always-on PR); routing/spawn + main-road restano sempre in settlement-qa, tolti da CAMP/Main fixes (3 invocazioni). Totale nove invocazioni ridondanti eliminate senza toccare i test stessi.
+- **COPERTURA:** Codex conserva il browser e il check module; CAMP conserva test comportamento; Main fixes conserva WebGL, paused-render e browser. Altre sovrapposizioni con trigger differenti lasciate inalterate, per non perdere regressioni.
+- **QA DA VERIFICARE:** guard CI P1 esteso con ownership P2.4, workflow invariati nel numero; PR e merge solo con tutti i controlli verdi.
+
+
+## 2026-11-09 — BC-261109-02 · DEV e cantieri di upgrade (branch `fix/upgrades-dev-build`)
+
+- **Prove aggiuntive PASS:** regressione d'assedio reale Canvas/WebGL e perdita contesto WebGL; annullamento di upgrade conserva i danni subiti durante il cantiere.
+
+- **Riesame CI:** fixture browser d'assedio aggiornata a Fast a pagamento per preparare la porta completa; verificata anche l'allocazione Fast dallo stock provvisorio prima della fondazione. Il comportamento normale resta temporizzato.
+
+- **CODICE SUL BRANCH, NON ANCORA MERGE:** due toggle DEV indipendenti Free build (nessun materiale/salario addebitato) e Fast build (nessuna attesa/manodopera, materiali ancora necessari). Insieme danno costruzione gratuita e istantanea; valgono anche sui cantieri aperti. Preferenze solo di sessione, escluse dai save; materiali concessi gratis tracciati e mai rimborsabili.
+- **UPGRADE:** altezza/tier, piani e varianti strutturali/civiche ora aprono il medesimo cantiere. Costo differenziale ove esiste il listino, prezzi dedicati conservati per piazzali, ponti/fossati, scale, levatoi e grata. Preventivo dell'intervento separato dal costo dell'edificio. Durata positiva; controllo di un solo intervento per struttura. Nessun costo inventato per varianti senza listino.
+- **CANCELLAZIONE/PERSISTENZA:** snapshot dello stato precedente nel cantiere; annullare un upgrade ripristina l'edificio e restituisce il solo materiale pagato e non consumato. Quote, consegne e rollback salvati nei normali payload. Frammenti dei muri ripartiscono anche quote/crediti DEV degli upgrade.
+- **CASE:** `changeHouseDensity` avvia il cantiere anche per case automatiche, conservando finanziamento privato e timer procedurale; regola pronta per una futura promozione autonoma. Motore/condizioni di autoupgrade separati nella chat «CONQUER — Autoupgrade delle case», senza soglie economiche aggiunte qui.
+- **PROVE LOCALI:** riprodotto l'upgrade torre senza cantiere prima del fix; nuovi test di dominio PASS. Suite completa: 160/161 PASS inizialmente; fixture urban-density aggiornata e 18 casi PASS al riesame. Browser Chromium UI1/UI2 PASS per upgrade, rollback, pulsanti reali Free/Fast, indipendenza modalità, salvataggio e casa automatica. CI del branch ancora da eseguire. Nessun nuovo asset/modello.
+
+
+## 2026-11-09 — BC-261108-01 · Completamento PR #186
+
+- Branch `feature/construction-staged-priority-20261108` riallineata a main `3fdae53`; nessun merge della feature dichiarato. Risolti i conflitti preservando STONECOLOR, CIRCLE e documentazione corrente.
+- Materiali: priorità stretta tra sei classi, divisione equa per bene a pari classe, residui millesimali al meno rifornito. Quote, consegne e consumo proporzionale al lavoro persistiti; annullamento restituisce solo il consegnato non consumato, mai salari. Nessun vincolo economico nei ghost, compresi percorsi lineari. Cantieri senza materiali non trattengono operai.
+- Correzioni: persistenza dei pozzi in cantiere, rimborsi dei ponti lignei, clear e frammenti di muro senza duplicare prenotazioni; inspector classico aggiornato al completamento.
+- QA locale PASS: materiali/priorità, workers/payroll/commute, economy/balance/builder, founding, storage, panels, save-safety, placement, multi-wells, urban, well-civics, codex e confini moduli. Chromium reale UI1/UI2 PASS: piazzamento senza risorse, sei opzioni, cambio priorità, consegne separate dal lavoro, salvataggio locale e migrazione, completamento e annullamento/rimborso. Catture `output/playwright/construction/`. CI dell'ultimo commit da verificare; nessun asset o modello aggiunto.
+
+
+## 2026-11-08 — Cantieri confermati senza scorte e approvvigionamento prioritario (branch `feature/construction-staged-priority-20261108`)
+
+- **IMPLEMENTATO SUL BRANCH, NON ANCORA SU MAIN:** il ghost conferma un cantiere valido per geometria/terreno senza richiedere il preventivo interamente disponibile. Il costo rimane un preventivo, le singole risorse arrivano progressivamente e indipendentemente dallo stock economico canonico, anche quando altre tipologie mancano. Nessun debito o scorta negativa: il lavoro non supera il rapporto delle risorse effettivamente trasferite.
+- **PRIORITÀ:** sei classi ordinabili, Molto basso → Basso → Medio → Alto → Molto alto → Critico; ordinamento stabile per classe, data e ID anche nell'assegnazione del personale L1, senza generare nuovi lavoratori. Il salario resta conteggiato separatamente per il lavoro svolto. La selezione apre un inspector provvisorio con progresso del lavoro, progresso/quantità dei materiali e priorità, distinto da quello dell'edificio ultimato, anche in UI v2.
+- **PERSISTENZA:** priorità, materiali consegnati e avanzamento vengono salvati nella struttura già persistita. Cantieri precedenti con V2 ma senza `materialsDelivered` si considerano già pagati per evitare doppi addebiti. Alla demolizione si rimborsano soltanto i materiali realmente trasferiti nei nuovi cantieri; i preesistenti conservano il rimborso storico. I pozzi/edifici manuali a durata zero e costo non nullo creano ora un cantiere minimo invece di comparire gratuitamente completati.
+- **QA:** aggiunta `qa/construction-priority-regression.cjs` al workflow Runtime integrity per code, carenze, priorità variabile, compatibilità legacy e rimborsi. **Da verificare:** esito GitHub Actions e prova visuale end-to-end (UI classica/UI2, costi misti, reload e completamento). Non si simulano carovane fisiche per i trasferimenti ordinari.
+
+
+## 2026-11-09 — MIL-RES-01 · Caserma, vedette e Avamposto (branch `feature/caserma-avamposto`, non merge)
+
+- **IMPLEMENTATO SU BRANCH:** nuovo modulo `src/settlement-soldiers.js` (`ConquerSoldiers`), caricato dopo l'assedio e prima del combattimento in `index.html` (non in `/camp`, che conserva il comportamento precedente).
+  - **Riserva:** `State.siege.soldiers = {enlisted, paid, expedition}`, salvato con l'assedio. Posti = `ConquerSiege.capacity().soldiers` (Caserma 16 per unità). `recruit()` costa 15 oro (`canAfford`/`spendCost`), `dismiss()` rimanda un soldato libero al lavoro. `ConquerEconomy.laborAllocation` toglie gli arruolati dal pool L1 (`soldiers`, `enlistable`). Paga giornaliera L2/20 per soldato dall'oro del castello al portafoglio L1; senza paga nessun servizio.
+  - **Copertura:** `roster()` assegna gli uomini in servizio nell'ordine spedizioni → avamposti (4 + 1 cavallo dalla scuderia, esclusi dalla macellazione) → vedette (1) → pattuglie (2). Le pattuglie non coperte rientrano (`ConquerCombat.withdrawPatrols`).
+  - **Vista:** `ConquerCombat.observers()` include una torre solo se `ConquerSoldiers.towerWatches(tower)`. `updateAlert` passa a `sighted()` chi vede ogni nemico (lupi esclusi): vedetta o pattuglia alzano l'allarme verde una volta per incursione.
+  - **Pattuglie:** `addPatrol('white'|'town')` richiede 2 soldati liberi e parte dalla Caserma; la ronda (`patrolMode:'town'`) percorre in anello i punti delle strade completate nella Yellow Zone (`townRoundPoints`). Pannello combattimento: Arruola/Congeda, Pattuglia+, Ronda+, Pattuglia−, riga della riserva.
+  - **Avamposto:** `s.outpost = {readyDay}` su una torre isolata fuori dalla White Zone (`outpostBlocker`), attivo dopo 4 giorni con presidio coperto. Quando vede un nemico: piano di segnali (Dijkstra su campane e pire pronte, raggio pira = 3 × campana, 2 s per pira) fino al posto di comando, pire usate bruciate; staffetta a cavallo sempre in partenza lungo la strada (`ConquerVehicles.route`), allarme all'arrivo.
+  - **Fuoco di segnalazione:** variante torre `signalFire: none|pyre`, solo terrazzo merlato in pietra senza macchina da guerra; 30 legno, `signalFireSpent` dopo l'uso, ricostruzione a pagamento. Modello Blender `tools/blender/build_pyre.py` → `src/assets/pyre-models.js`, elemento esterno `ROOM_EXTERIOR.signalFire` con nuovo montaggio `deck`; fiamme 2D per 40 s.
+  - **Comandi e UI:** `StructureCommands.setTowerLookout/setTowerOutpost/setTowerSignalFire`, controlli e fatti nell'ispettore UI v2, blocco nel pannello UI v1, etichette e suggerimenti italiani. Vedetta disegnata sul terrazzo, staffetta con il cavallo 2D dei messaggeri.
+  - **Stanze:** `guard` fuori da `FUNCTION_CATALOG` e da `PORTICO_FUNCTIONS`; `ConquerSiege.allowed` la ammette solo nel Municipio, `sanitizeRooms` svuota quelle salvate nel castello.
+- **PROVE:** nuovo `qa/caserma-avamposto-regression.cjs` (10 controlli) nel workflow combattimento; aggiornati portico, colombaia, crime-buildings, Codex (2 nuove voci della pira, voce del posto di guardia) e `qa/ui-combat-regression.mjs` (riserva simulata nel test browser). Batteria Node locale: tutte PASS tranne i test che richiedono Playwright installato. Verifica in partita nel browser (server locale): arruolamento, vedetta, avamposto attivo al giorno 4, pira accesa e allarme dal segnale, staffetta, ronda sulle strade, rientro delle pattuglie senza paga, persistenza al ricaricamento. **Audit dell'Asset Lab** completo in locale (Chrome su Windows): 1396 render, 0 falliti; nuovi la pira e le due torri di prova «+ fuoco di segnalazione» (rivisti a vista nel Lab e aggiunti da soli al baseline, 20 render). Le 475 differenze di torri, mura e porte vengono dalla resa locale rispetto al baseline della CI e non sono state scritte nel baseline. Non verificati in locale: i test di prestazione Playwright (`mass-battle-performance`, `movement-collapse-performance`) falliscono qui all'import dinamico di `src/circle/defensive-topology.mjs`, file non toccato da questo branch.
+- **STATO DI PARTENZA (prima di questo branch):** la stanza `guard` calcola `watchmen` (`src/settlement-siege.js`, 4 per unità) ma nessun sistema lo legge; le pattuglie (`ConquerCombat.addPatrol`) non consumano soldati; ogni torre finita osserva senza personale (`VISION_BASE=16`, `VISION_PER_HEIGHT=4`); l'allarme è solo manuale; i soldati costano solo cibo; non esiste un conteggio di soldati reali.
+
+## 2026-11-09 — CIRCLE: assegnazione pattuglie e guarnigioni per settore → macrostruttura (`feature/circle-military-zones-macrotowers-20261109`)
+
+- **CODICE PRESENTE SUL BRANCH (non ancora su main):** Centro di controllo → Militare → Pattuglie e guarnigioni adotta la gerarchia CIRCLE reale: settori chiusi dal rilevamento topologico, stato (sicuro/allerta/conteso, ecc.), profondità e presidio per settore; un livello più basso presenta le macrostrutture difensive. Torri figlie e nipoti collegate con `parentTowerId` sono aggregate in un'unica riga della torre principale: arcieri assegnati, capienza e operativi sono somme delle postazioni `ConquerSiege`, non risorse simulate.
+- **COMANDI:** per settore `+`/`−` arcieri distribuiti alle macrostrutture realmente presenti; per macrostruttura `+`/`−` arcieri alle postazioni della torre madre e delle sottotorri, con roster delle caserme aggregate in `/camp`; le altre caserme restano per stanza. Settori esterni/non mappati espliciti, nessuna zona CIRCLE fittizia.
+- **PATTUGLIE:** riserva sul perimetro White Zone; trasferimento di una pattuglia esistente verso/da un settore CIRCLE, persistito in `combat.units[].circleSectorId`, senza inventare soldati. Gli itinerari zonali usano punti percorribili del poligono CIRCLE e A* militare esistente; in assenza di percorso non teletrasportano. Ricalcolo e rilascio delle assegnazioni a settori cancellati dopo modifiche topologiche.
+- **PROVE:** QA dedicata `qa/military-circle-roster-regression.cjs` e test di pannello/browser ampliati; CI e browser ancora da verificare prima di merge. Nessun asset o nuovo modello, ROADMAP invariata.
+
+
+## 2026-11-09 — Sottopalette L1/L2 e «Pattuglie e guarnigioni» (branch `feature/jobmanager-l2-military-garrisons-20261109`)
+
+- **IMPLEMENTATO SUL BRANCH:** Job Manager → L1 e L2, con preferenza di sottopaletta conservata durante l'apertura del pannello. La L1 mantiene le code esistenti. La L2 gestisce campi, cave e miniere con identici controlli drag/drop, minimo e AUTO/manuale. L2 attinge esclusivamente dalla quota produttiva L2; l'ordinamento L2 non altera L1.
+- **MOTORE/PERSISTENZA:** `ConquerEconomy.l2Jobs` in `State.economy`: minimi per priorità, poi capacità residua ai soli AUTO; salvataggi locali/cloud esistenti preservati, e nessun override L2 per save legacy finché non si modifica un job. L2 fuori stagione/disattivato non occupa lavoratori.
+- **MILITARE:** Centro di controllo → Militare → «Riepilogo» / «Pattuglie e guarnigioni». Pulsanti di aggiunta/rimozione pattuglie White Zone sfruttano il Combat esistente; guarnigioni delle torri incrementano/decrementano le postazioni arcieri con `ConquerSiege.changeArchers` e mostrano assegnati/operativi; le squadre nelle caserme sfruttano `ConquerCamp` solo quando presente nella modalità `/camp`. Nessun inventario militare fittizio.
+- **QA:** regole L2 e API/UI provate nella sessione con regressioni JS isolate (PASS); test browser L2 e guarnigioni aggiornato e in attesa di esecuzione CI. Non dichiarare il merge prima della conferma Actions. Nessun nuovo asset o modello; ROADMAP invariata.
+
+
+## 2026-11-09 — Job Manager L1: priorità, minimi e AUTO/manuale (branch `feature/l1-jobmanager-priority-20261109`)
+
+- **IMPLEMENTATO SUL BRANCH:** il Job Manager visualizza le mansioni L1 in righe trascinabili per priorità (con comandi su/giù anche per tastiera e touch), numeratore «Minimum worker» e pulsante AUTO attivo/spento. Include produzioni L1, carrettieri, cantieri navali con commessa e costruttori; riporta lavoratori effettivi, richiesti e minimi insoddisfatti.
+- **MOTORE:** quando il giocatore effettua la prima modifica, `ConquerEconomy.laborAllocation` applica i minimi per priorità e solo poi riempie i posti in AUTO per priorità; AUTO disattivato assegna al massimo il minimo. Nessun lavoratore creato, nessuna duplicazione tra produzioni, carri, navi e cantieri. Pastori di sicurezza, pescatori e classi L2–L4 non sono alterati. Salvataggi preesistenti mantengono il comportamento originale finché non vengono modificati.
+- **PERSISTENZA:** ordine, minimo e AUTO nel campo `State.economy.l1Jobs`, già incluso nei save locali e cloud. I nuovi siti vengono aggiunti in coda; le mansioni inattive assegnano zero.
+- **VERIFICHE:** parsing dei moduli e test isolati eseguiti in sessione, incluse regressioni `qa/labor-jobs-regression.cjs` e `qa/panels-regression.cjs` con adattatore JS (PASS). Esecuzione Node/Actions e prova visiva in browser ancora da verificare; non dichiarare merge prima dei check.
+
+
+## 2026-11-09 — Riconciliazione backlog con GitHub (solo documentazione)
+
+- **VERIFICATO:** stato delle PR con `gh pr list` contro `main` `e63f729`. Le feature dal 28/10 al 08/11 indicate come «su branch» sono merged; tabella completa in [BACKLOG](BACKLOG.md#2026-11-09--riconciliazione-con-github-ref-main-e63f729).
+- **APERTE:** PR #186 (CI verde), #184 e #162 in bozza. Worktree locali non pubblicati: tetto interno delle torri, tetti della Long house, `figure-billboards`, `combat-ai`.
+- **NESSUN CODICE O TEST** cambiato in questa voce; nessuna nuova prova eseguita oltre alla lettura dello stato delle PR.
+
+## 2026-11-08 — STONECOLOR · Audit dipendenze e sottodipendenze
+
+- **CORRETTO SU BRANCH:** coda dei materiali litici collegata ai registri semantici nei modelli Blender di case, edifici civici e relative pavimentazioni, cave di pietra e mine, costruttori, scatter fluviali/costieri, ponti in pietra, scale da camminamento, rampe e gradini, arredi e pavimenti dei cutaway. Le rampe cromatiche condivise restano cinque; legno, argilla, tetti, muschio e alghe mantengono le tinte originarie.
+- **CACHE:** nuova famiglia inclusa nelle firme di case 3D, civici e cimiteri, cutaway, manufatti/cantieri, ponti, rampe, banchine, costa, scatter, World3D e composite del castello. Unione mura Canvas disegnata in esplicito contesto litico. Script URL invalidati con revisione stonecolor2.
+- **QUALITY GATE:** ampliata la regressione dedicata alla dipendenza dei moduli e ai ruoli degli asset; corretta la scoping del tint di cutaway; rigenerato digest del catalogo Wiki dopo modifica agli attraversamenti. **Prova visiva end-to-end e risultati dell'ultima CI ancora da verificare prima di dichiarare copertura totale e merge.**
+
+
+## 2026-11-08 — STONECOLOR · Cinque famiglie di pietra approvate (branch `feature/stonecolor`)
+
+- **IMPLEMENTATO SU BRANCH:** `src/settlement-stonecolor.js` conserva cinque ramp cromatiche approvate (grigio, arenaria, tufo, calcare, granito). La nuova mappa sceglie una famiglia pseudocasuale tramite il suo seed, e la palette resta stabile ai reload. Per salvataggi legacy senza campo, fallback grigio attuale.
+- **UI:** Profilo → Ambiente seleziona in ogni momento la famiglia, aggiornando immediatamente la mappa. La scelta si salva localmente e nel campo `policies.stonePaletteId` del payload cloud. Nessun nuovo materiale costruttivo: pietra e argilla/mattoni mantengono costi e HP.
+- **GRAFICA:** tinte per murature, scarpate, rocce, montagne, coste rocciose/reef, blocchi della cava, stone scatter, banchine; gli asset originali (e le mesh/pose) non sono duplicati. Include chiavi palette nelle cache World3D e nelle mesh cached di costa/banchina, e cache bust degli script.
+- **QA:** `qa/stonecolor-regression.cjs` integrata in Runtime integrity; esito Actions, verifica in-game WebGL2/Canvas, Asset Lab e audit di tutte le parti minerali **non ancora certificati**. Non dichiarare feature integrata in `main` finché CI e controllo grafico non passano.
+
+## 2026-11-08 — Palette Job Manager / Trade nel Profilo (branch `feature/profile-job-trade-tabs-20261108`)
+
+- **IMPLEMENTATO SU BRANCH:** aggiunte due schede di primo livello accanto a Generale, Araldica e Centro di Controllo, senza replicare ledger, roster o simulatori.
+- **JOB MANAGER:** distribuzione L1, popolazione per classe, occupati per attività e andamento settimanale. Allocazione automatica invariata, nessuna assegnazione manuale fittizia.
+- **TRADE:** inventario mercato/castello, prezzi, storico, quote di vendita editabili tramite il comando `setSaleShare` già esistente e apertura carovane.
+- **QA:** regressione `qa/panels-regression.cjs` estesa. CI e QA visiva da verificare, nessun nuovo asset né schema di salvataggio. ROADMAP/DECISIONS invariate.
+
+## 2026-11-08 — Tronchi degli alberi e rami dei cespugli marrone molto scuro (branch `fix/dark-tree-bark-20261108`)
+
+- **IMPLEMENTATO SU BRANCH:** i 7 SVG degli alberi decidui e i 7 SVG dei cespugli adottano **#2B1D16** per tronchi e rami (ex azzurro `#9BBACE`); i tronchi dei pini montani Canvas sono uniformati. Le chiome stagionali sono invariate, inclusa la progressione autunnale integrata in `main` con PR #183.
+- **RENDERING:** i cespugli preservano il nuovo colore nella conversione SVG, con compatibilità per eventuali sorgenti legacy; asset e script hanno URL versionati per evitare cache precedenti. Canvas e WebGL2 condividono gli sprite, senza cambiare geometrie o atlanti.
+- **QA:** nuova regressione `qa/tree-bark-regression.cjs` nel workflow Runtime integrity per 14 SVG e trasformazioni stagionali. GitHub Actions e verifica visiva browser da controllare; nessun merge su `main` in questa modifica. ROADMAP e DECISIONS invariati: rifinitura grafica P3-21.
+
+## 2026-11-07 — Foliage autunnale progressivo (branch `autumn`, non su `main`)
+
+- **IMPLEMENTATO SU BRANCH:** gli alberi SVG delle foreste e degli angoli dei lotti conservano il verde estivo a inizio settembre, poi percorrono sei passaggi cromatici fino al marrone di fine novembre. I giorni di calendario 1 settembre–30 novembre (91) determinano l'avanzamento; ogni albero ha una variazione di fase stabile da posizione e seed, senza rumore per-frame. I pini montani restano verdi e in inverno le chiome decidue restano nascoste.
+- **RENDERING:** fallback Canvas invalida `landscape` e `base` soltanto quando cambia il giorno della progressione. World3D conserva l'atlante delle sprite e aggiorna solo le UV delle chiome al cambio di giorno, evitando di ricreare le texture; SVG originali invariati. Forzando Autunno fuori dai mesi reali, il controllo DEV mostra una fase intermedia.
+- **QA:** parsing dei tre moduli JS e simulazione del calendario/fasi eseguiti nella sessione; `qa/autumn-foliage-regression.cjs` collegata al workflow Runtime integrity. **GitHub Actions e verifica visuale browser ancora da confermare**, nessun merge o deploy su `main`.
+- **SCOPE:** cambiamento solo grafico, nessuna modifica a biomi, economia forestale o regole stagionali; ROADMAP invariata. Decisione D-VIS-AUTUMN-261107.
+
+
+
+## 2026-11-07 — CAMP, tende notturne mancanti (branch `fix/camp-bivouac-night-20261107`, pre-merge)
+
+- **RISCONTRO SORGENTE:** fuori dall'area gialla l'unità militare entra correttamente in `campState='camped'` durante la notte astronomica; le pattuglie della White Zone non si accampano. Il renderer 3D considerava sufficiente la presenza del catalogo, anche quando il filtro degli ostacoli restituiva **zero mesh/tende**, sopprimendo il fallback Canvas.
+- **CORREZIONE NEL BRANCH:** quando un gruppo non ha alcuna tenda 3D, riattivare le tende Canvas per le unità senza riparo, senza togliere i modelli agli altri accampamenti. Se l'intero bivacco 3D è vuoto, il fallback è completo; se il generatore fallisce, mantiene il rendering Canvas. La cache include seed, livrea e variazioni nel numero delle strutture.
+- **QA:** `qa/camp-regression.cjs` estesa al percorso 3D, tutti i modelli assenti e bivacchi misti. Risultati della CI da verificare tramite PR; controllo visivo nel browser non certificato da questo test. Nessuna modifica a limiti delle zone, percorso delle pattuglie, salvataggi, economia o asset.
+
+
+## 2026-11-06 — CI P2.3: rimozione trigger obsolete (branch `chore/ci-p23-stale-push-triggers-20261106`)
+
+- **MODIFICA PROPOSTA:** eliminati esclusivamente 8 riferimenti `push` a 7 branch remote inesistenti da 7 workflow, senza cancellare workflow, asset, script di test o branch Git. Confermati i trigger `pull_request` e quelli `push: main` ancora applicabili.
+- **REGRESSIONE:** `qa/ci-p1-regression.cjs` mantiene un controllo statico sulle branch ritirate e sui trigger PR/main; integrità, economia, WebGPU e audit periodici non modificati.
+
+
+## 2026-11-06 — CI P2.1: audit Asset Lab incrementale (branch `perf/assetlab-p2-incremental-20261106`, pre-merge)
+
+- **IN BRANCH:** il workflow Asset Lab seleziona `full`, `incremental` o `skip` dal diff PR verificato; modifiche isolate a SVG/PNG indipendenti e registri 3D approvati vengono verificate tramite ID e stati reali del catalogo.
+- **SICUREZZA:** variazioni trasversali, rinomine, aggiunte, eliminazioni e inventario incoerente richiedono il full. L'audit mirato confronta i registri con le voci della baseline per non perdere modelli rimossi. Full disponibile manualmente e domenica 04:47 UTC.
+- **QA IN PR:** `qa/asset-audit-scope-regression.cjs` e `qa/ci-p1-regression.cjs` aggiornati; nessun materiale grafico, test precedente o configurazione gameplay rimosso. Esito live Actions da validare prima dell'integrazione.
+
+
+## 2026-11-06 — Carrettieri L1 + consegne al mercato (branch `feature/l1-carter-jobs-market-20261106`, da verificare prima del merge)
+
+- **IMPLEMENTATO SU BRANCH:** `ConquerHaulage` usa il Job Manager `ConquerEconomy.laborAllocation` per reclutare persone L1 esistenti come carrettieri, fino a un dipendente per piazzale operativo con almeno una consegna raggiungibile. Sono assegnati dopo i produttori e i carpentieri navali, prima dei cantieri; mai duplicati tra `assignedL1`, costruttori, inattivi e conducenti.
+- **CICLO COMPLETO:** piazzale/base → produttore **a vuoto** → carico → piazzale o mercato **con merce** → scarico → ritorno alla base **a vuoto** (se al mercato). Viabilità terminata su tutte le tratte; nessuna scorciatoia attraverso la mappa. Ogni carro ha `workerId` di un L1 esistente e la figura del lavoratore non viene duplicata a piedi quando è sul carro. Turno di nuove partenze L1 lun–ven 06:00–18:00 (frazione .25–.75), sospeso in allarme; i viaggi già avviati possono finire il rientro. Prima del turno il lavoratore ha la normale routine.
+- **UNICO LEDGER:** eventi solo da `ConquerEconomy.put` sul trattenuto del signore (magazzino), sulla quota effettiva accreditata a `lots` (mercato), da bonifiche forestali e da produzione di beni L3 realmente inseriti in `ConquerCommerce.state().goods` (mercato). Il carrettiere non sposta denaro, merce o saldi: nessuna seconda registrazione contabile. Un mercato deve essere effettivamente costruito e collegato per visualizzarne le consegne.
+- **INTERFACCE/QA:** pannello Piazzale e sezioni Economia/Cantieri con nuovo job Carrettieri e serie storica settimanale. `qa/l1-carter-market-regression.cjs` (più `qa/haulage-regression.cjs` aggiornato) nel workflow Economy flows. Roadmap invariata: espansione P1 logistica locale. Verificare suite e audit prima del merge.
+
+
+06/11/2026 — Integrazione #169 su main c0c720b: mantenuti H4 e funzioni attuali, fixture aggiornata, catalogo Wiki rigenerato. Audit locale Mura: 265 render, 0 errori; 32 nuove voci addossati (legno, scuderia, pietra, mattoni) riviste nei fogli e aggiunte alla baseline; 98 cambiati preesistenti non accettati. Limite conservato: perdita del muro non abbatte automaticamente l'addossato; nessuna nuova regola di crollo introdotta.
+
+Sul branch `feature/wall-buildings` (BC-251105-03/10): **edificio addossato alle mura** (`src/settlement-lean-to.js`, pulsante Builder «Lean-to»). È una sezione `built` W1 (`leanTo:true`) agganciata con un clic alla faccia interna di un muro H2, lungo tutto il tratto (0,55U di rispetto verso torri/porte, minimo 2U), un solo piano con la stanza della sezione W1 al piano terra: le capacità simulate (scuderia, magazzino, caserma…) sono le stesse. Tetto a **falda unica**: gronda a 1,40U sul lato aperto, colmo sul muro a 0,12U sotto il camminamento, che resta libero. **Materiale** (06/11): di default **legno con tetto in paglia** (tinta legno sul corpo, falda color paglia, costo e tempi da long house in legno, resistenza all'assedio del legno); nel Builder si può scegliere **pietra** o **mattoni** (tetto in ardesia/tegole, costi in pietra/argilla). Rifiuta muri H1, muri in costruzione, muri già occupati e tratti troppo corti. Test: `qa/lean-to-regression.cjs` (in CI builder-menu). Asset Lab: 4 voci «Addossato alle mura W1» (legno, legno·scuderia, pietra, mattoni); audit famiglia Mura 220 render, 0 falliti, nuovi render rivisti nei provini. **Aperto:** le macerie dell'addossato in legno sono pietrame; il legno è una tinta sulla geometria in muratura, non un modello Blender dedicato. **Aperto:** l'addossato non segue il muro se questo viene demolito o breccia (resta in piedi); baseline audit non aggiornata (nuovi render da approvare).
+
+06/11/2026 — Integrazione #165 su main 1247cca: aggiunte dal vault autore le schede Falconiera e Orto di corte (138 voci, 153 pagine, 156 note); export gameplay rigenerato. Nuovo workflow Wiki conforme a P1: concurrency PR e setup Chromium condiviso; inventario CI 26 workflow, 6 browser job. ROADMAP e contratti editoriali invariati.
+
+## 2026-11-05 — Accesso Wiki dal Profilo (branch `feature/codex-obsidian`)
+
+Aggiunto il pulsante **CODEX / WIKI** nella barra del Profilo, accanto a Generale, Araldica e Centro di controllo. Apre il lettore interno in entrambe le UI; chiusura/Escape riporta al Profilo e al pulsante, senza modificare partita o scheda attiva. Barra a capo sugli schermi stretti; cache version aggiornata. Verifica browser estesa a ingresso dal Profilo, focus e mobile. La modifica è nella PR #165, non ancora main.
+
+## 2026-11-05 — Obsidian come sorgente editoriale Wiki (branch, NON MAIN)
+
+Su `feature/codex-obsidian`: [note Markdown e pipeline editoriale](../CODEX-OBSIDIAN.md). Vault personale CONQUER già aperto nella cartella scelta dall'utente, 154 note; copia Git di pubblicazione `content/codex`, import a senso unico con baseline e controllo conflitti. 151 pagine approvate compilate in un artefatto condiviso web/in-game; niente prezzi duplicati nelle note.
+
+Approfondite Torre, Fortificazioni, Costruzioni, Logistica e Navigazione/porti. Test locali PASS per catalogo/Wiki, parser/editoria, import (conflitti/rinomine/salvataggi concorrenti) e Playwright (anche link a sezioni, Back, mobile e partita invariata). CI da verificare nella PR. Incorpora le fasi #159/#161/#163 ancora aperte all'avvio; nessun merge implicito.
+
+## 2026-11-05 — CODEX Wiki (branch `feature/codex-wiki`, NON MAIN)
+
+[Wiki condivisa](../CODEX-WIKI.md) con 136 schede, 7 famiglie e 8 sovracategorie; keywords nel testo collegate a pagine reali, breadcrumb, relazioni e rimandi inversi. Route pubblica `/wiki/`, ricerca/filtri e URL condivisibili. Lettore in-game con link Builder/inspector, provider live e compatibilità contestuale; catalogo pubblico generato dalle sorgenti con controllo di freschezza.
+
+QA locale PASS: catalogo, Wiki/export, Builder menu e module boundaries; Playwright: link, Back, ricerca/filtri, reload, mobile, errori/riprova, escaping, lettore live e nessuna modifica a risorse/strutture/selezione. Desktop/mobile revisionati. Workflow browser dedicato aggiunto; CI da verificare sulla PR. Base iniziale main `15070d2`, incorpora #159 e #161; nessun nuovo vincolo tecnologico o merge implicito.
+
+## 2026-11-05 — CODEX fase 2 (branch, NON MAIN)
+
+Su `feature/codex-normalized-catalog`, base `main` `9a4310d`: [catalogo normalizzato v1](../CODEX-CATALOG.md), 136 record in sette categorie. API read-only `ConquerGameCodex` in index, core portabile e snapshot JSON per consumatori web; prezzi/tempi delegati al gameplay. Nessuna UI Wiki né tecnologia applicata. Incorpora l'audit della PR #159 ancora aperta all'avvio.
+
+QA locale PASS: codex-catalog (dati gameplay reali, quote, relazioni, asset, isolamento e JSON), builder-menu, economy-builder-integration, save-safety e 5 test runtime-integrity. Browser locale verificato con fixture Asset Lab/Canvas: API, preventivi e round-trip; nessun asset modificato. Restano adapter professioni, coperture parziali dichiarate e fase 3 Wiki.
+
+
+Verifica aggiuntiva: `qa/refactor-app-population-regression.cjs` FALLISCE sul conteggio del siege hook `rubbleBlocks`, sia sul branch sia su checkout pulito della base `9a4310d` (stesso errore 1 !== 2). Difetto preesistente, sorgenti popolazione e relativa suite non modificati dal Codex. `qa/refactor-module-boundaries-regression.cjs` e `qa/context-guard-regression.cjs` PASS.
+
+## 2026-11-05 — CODEX: audit iniziale (branch documentale, NON MAIN)
+
+Base verificata `main` `bcf3cd788f18560221862fe1908edef4edb5f2d3`. [Censimento delle sette famiglie](../CODEX-CATALOG-AUDIT.md): registri gameplay, cataloghi visivi, fonti di costo/tempo/compatibilità e coperture parziali. Solo documentazione su `docs/codex-catalog-audit-20261105`; nessun Codex runtime o albero tecnologico implementato. QA gameplay/browser non eseguita. PR #155 e #158 ancora aperte al controllo: non incluse nella base.
+
+## Falconiera e Prestigio (branch `feature/falconry`, da `main` 05f8170, 05/11/2026, NON MAIN)
+
+- **IMPLEMENTATO SU BRANCH:**
+  - **Stanza `mews` (Falconiera):** ultimo piano delle torri in pietra W2–W3, L2 o più, con tetto a falde (`towerMewsAllowed`, stessa regola della Colombaia). Un tetto, un elemento in cima: prende il posto della Campana (`APEX_ROOMS`) e della Colombaia (stessa stanza).
+  - **Caccia:** ogni falconiera attiva (non catturata, tetto in piedi) porta 4 razioni di selvaggina al giorno nella scorta, anche in assedio, mai oltre la capienza dei granai (`MEWS_FOOD`, `mewsCount`).
+  - **Prestigio del castello (scelta dell'utente):** nuovo valore `ConquerSiege.prestige()`. Somma punti per stanza di corte attiva: Falconiera 3, Sala del trono 4, Stanze nobili 1, Cappella 1, Tesoro 1 (`PRESTIGE`). Mostrato nel riepilogo logistico con la resa della caccia. Per ora non è letto da altri sistemi.
+  - **Voliera sul tetto:** nuovo modello Blender `tools/blender/build_mews.py` → `src/assets/mews-models.js` (458 triangoli): sella in ardesia, gabbia di listelli, posatoio con falco incappucciato, cappello di scandole. Montato da `ROOM_EXTERIOR` (`mews`, `mount:'roof'`), esteso alle stanze con montaggio sul tetto legato allo slot. La bandiera sale sopra la voliera (`towerApexFlagZ`).
+  - **Arredo cutaway:** posatoi sulla parete principale, scaffale, tavolino del falconiere, sgabello, baule.
+- **Asset Lab:** varianti «Pietra quadrata L2 tetto + falconiera», «Grande rotonda L3 tetto + falconiera», «Grande quadrata L3 2 falde + falconiera» e il modello in «Edifici · Elementi esterni delle stanze». Audit: 33 render, 0 falliti (avvisi solo sul cantiere, come le altre torri in locale); tavola rivista; baseline aggiornata per queste voci.
+- **QA:** nuova `qa/falconry-regression.cjs` (regola, caccia, prestigio, voliera, Lab), aggiunta a `tower-variants-regression.yml`. 137 `qa/*.cjs` non di performance: 136 PASS, `founding-regression.cjs` fallisce solo dentro la suite completa (test di tempi di risposta) e passa da solo.
+- **Non verificato:** la caccia in una partita vera; il prestigio non ha ancora effetti.
+
+## 2026-11-06 — CI P1: deduplicazione e browser (branch `chore/ci-p1-browser-dedup-20261106`, pre-merge)
+
+- **IN BRANCH:** tutti i 25 workflow adottano concurrency per PR (cancel-in-progress solo su pull_request). Rimossi full deterministici duplicati da Main fixes, Gate-six sockets e WebGPU: il full rimane al selettore P0 e alla verifica settimanale/manuale.
+- **IN BRANCH:** composite Action per tutti e cinque i browser job, Chromium Playwright 1.56.1 con cache condivisa. Asset Lab browser/audit eseguiti solo per modifiche visive, la relativa smoke JS resta su tutte le modifiche di dipendenze; WebGPU solo per renderer o manuale.
+- **IN BRANCH:** ridondanze save-safety (Combat ed Economy) e context guard (Main fixes) eliminate, ma sorgenti di verità Runtime integrity e Context pyramid guard intatte. Aggiunto `qa/ci-p1-regression.cjs` al controllo P0, la suite full resta su cambiamenti world3d/castle3d.
+- **QA:** esiti live GitHub Actions da verificare prima del merge; nessun test esistente cancellato, documentazione `docs/CI.md` aggiornata.
+
+
+
+## 2026-11-06 — Consegne animate produzione → piazzali (branch `feature/local-production-haulage-20261106`, pre-merge)
+
+- **CODICE SU BRANCH, NON MAIN:** nuovo `ConquerHaulage` per viaggi locali automatici con carretti trainati dai cavalli usando `ConquerVehicles` e `ConquerWagons` 2D già presenti. Orchestrazione nel loop di simulazione e rendering Canvas anche sopra World3D; velocità sincronizzata alla simulazione e arresto in pausa.
+- **EVENTI REALI:** `ConquerEconomy.put` notifica solo le quantità effettivamente trattenute dal signore per il castello (`received>0`); `creditForestryWood` segnala la raccolta una tantum delle bonifiche forestali dal centro del lavoro. Non si crea una copia dello stock e nessun ricavo è aggiunto all'arrivo o alla partenza dei mezzi. Produzione privata e merci di solo mercato escluse.
+- **ITINERARI:** punto di carico sulla strada completata più vicina al produttore (≤3,5U), consegna al piazzale raggiungibile più vicino tramite viabilità effettiva (≤4U), scarico e viaggio di ritorno a carro vuoto. Senza strada continua nessuna partenza: richieste sospese temporaneamente senza teletrasporti. Al massimo 4 tragitti e 32 eventi pending, aggregazione per sito/merce, scadenza a 10 giorni simulati, cancellazione se sito o piazzale non esistono più.
+- **UI:** ispettore del Piazzale visualizza carretti attivi e carichi in attesa; non modifica il sistema di fatturazione. Asset Lab non necessita nuovi modelli perché la carrozzeria e il cavallo sono i componenti approvati già nel catalogo; conformità D-046 2D.
+- **QA:** `qa/haulage-regression.cjs` in Economy flows; verifica incasso singolo reale, percorso, scarico/ritorno vuoto, blocco strade incompiute, pausa, più magazzini, bonifiche, ripristino e assenza di duplicazioni. Verificare CI prima del merge.
+
+
+## 2026-11-06 — CI P0: workflow obsoleti e suite deterministica selettiva (branch `chore/ci-p0-consolidation-20261106`, pre-merge)
+
+- **CODICE SU BRANCH, NON MAIN:** rimossi 11 workflow YAML associati a branch remote inesistenti o a un vecchio cleanup monouso. Conservati tutti i 163 script QA e relativi asset; cronologia Git disponibile per restore.
+- **Orchestrazione:** `Settlement routing and spawn regression` preserva nome e job `settlement-qa`. Sulle PR isolate lancia 5 smoke mirati, mentre le PR che modificano bootstrap/stato/navigazione/persistenza/placement l'intera `qa/*-regression.cjs` con controllo sintassi. Suite completa anche su `workflow_dispatch` e ogni domenica UTC. Fallimento chiuso se base/head SHA non verificabili.
+- **Protezione:** `Runtime integrity`, `Economy flows regression`, `Context pyramid guard` invariati. Branch `main` non protetta (controllo GitHub, 06/11); status check obbligatori vuoti. WebGPU/Asset Lab/Playwright rimangono fuori scope P0.
+- **QA:** `qa/ci-p0-regression.cjs` protegge esistenza dei workflow cardine e modalità full/fast; CI e test run della PR da verificare prima del merge. Manuale completo: `docs/CI.md`.
+
+
 06/11/2026 — Integrazione #155: fixture CIRCLE aggiornata a torri W2 esplicite per i granai e relativo towerTier; le W1 non ammettono granai secondo la nuova regola. Nessuna variazione alle scorte o alle regole CIRCLE.
 
 ## Latrina nelle torri W1 e stanze delle torri piccole (branch `fix/latrine-towers`, da `main` dab8224, 05/11/2026, NON MAIN)
@@ -10,6 +269,7 @@
   - **Latrina:** primo piano superiore (piano 2) delle torri W1 in pietra, mai torri di legno, W2–W3, porte o sezioni costruite. Lo sbalzo (`ROOM_EXTERIOR`, `mount:'face'`) va sulla faccia esterna libera della torre che guarda più lontano dal castello: mai la faccia interna, né una faccia dove si attacca un muro, una sezione o una sottotorre, né dove davanti c'è un edificio. Su una torre rotonda la scatola rientra nella curva. Le feritoie di quella faccia, al suo piano e sotto, lasciano il posto allo sbalzo e allo scarico (`takesTowerFace`).
   - **Revisione dell'utente (05/11):** una torre W1 con almeno una stanza assegnata perde la scala a chiocciola e apre i piani come le altre torri (scala a pioli, arredo); senza stanze la tiene. La latrina è **comune a 3 fori**: sbalzo largo 0,76 U e sporgente 0,22 U (prima 0,46 × 0,36), falda rifatta in tre corsi (la vecchia lastra aveva le facce rovesciate e nel 2.5D spariva). La stanza intera è la latrina: tre sedili contro la parete dello sbalzo, lavabo, scaffale, sgabello, candela. Nel cutaway lo sbalzo dietro la parete in piedi si disegna sopra quella parete e sotto pavimento e arredo; quello sul lato tagliato resta davanti.
   - **Validazione visiva dell'utente (12/11):** esterno e cutaway dai 4 lati di torri W1 quadrata e rotonda e di una torre W3 con sottotorre W1 latrina (nuova variante del Lab). Sbalzo: falda unica con gronda corta su timpani, panca a 3 fori dentro lo sbalzo. Disegno 2.5D: sbalzo dietro la torre prima del corpo (coperto), sul lato tagliato senza facciata, senza scarichi nel cutaway; la torre madre copre lo sbalzo della sottotorre solo se gli sta davanti. Il 2.5D sarà dismesso in un branch a parte.
+
   - **Salvataggi:** una latrina già assegnata a una sezione costruita viene tolta al caricamento (`sanitizeRooms`).
 - **Asset Lab:** tolta la variante «Sezione costruita L2 + latrina» (9 voci di baseline). Nuove varianti di torre: «Pietra quadrata piccola L2 + latrina», «Pietra rotonda piccola L2 + latrina», «Pietra quadrata piccola L2 tetto + colombaia». Audit: 30 render, 0 falliti (avvisi solo sul cantiere, come le altre torri in locale); fogli rivisti e baseline aggiornata per queste voci.
 - **QA:** `qa/room-exterior-latrine-regression.cjs` riscritta sulle torri (faccia esterna, muro attaccato, torre rotonda, feritoia, regole di stanza). `qa/dovecote-regression.cjs`: la colombaia ora è ammessa nelle W1 e le W1 rifiutano le altre stanze. 127/127 `qa/*.cjs` non di performance PASS in locale.
@@ -61,6 +321,13 @@ Sul branch `feature/wood-tower-h2` (BC-251105-06, **non in main**): torre lignea
 
 Sul branch `fix/audit-sheet-grid` i fogli provini dell'audit per categoria dispongono gli asset in una griglia da 8 colonne (prima: un asset per riga e 7 celle vuote). Le celle vuote hanno uno sfondo neutro, non più verde. `node qa/asset-audit.mjs` in locale: 1081 render, 0 falliti, 120 avvisi, 52 nuovi, 36 cambiati: stessi esiti della baseline, perché i render non cambiano. Fogli `araldica` e `fortificazioni-porte` rivisti a vista. Baseline invariata.
 
+## 2026-11-09 — Coperture della long house e sfiatatoio (BC-251105-09, branch `feature/longhouse-roofs`, NON MAIN)
+
+- **Modello:** `longhouse_cover()` in `tools/blender/build_wood_fort.py` (Blender 4.4 headless) genera tre manti per W1 e W2: `shingle` (scandole, come prima), `thatch` (paglia spessa, colmo a rotolo legato) e `turf` (zolle erbose su tavolato, trave di ritegno in gronda). Ogni manto ha le sue parti `roof_yn.*`, `roof_yp.*`, `ridge.*`, `verge_a.*`/`verge_b.*` (sporto sul frontone, mantovane e tavole incrociate, spostati fuori da `end_a`/`end_b`) e `smoke.*` (sfiatatoio del focolare sul colmo: apertura scura sotto un piccolo cappello). Nuovi colori `roofThatch*`/`roofTurf*` (bianchi d'inverno). Gli altri 5 modelli lignei sono invariati.
+- **Gioco:** campo `s.roofCover` (`longhouseCover()`, assente = scandole); comando `setLonghouseCover` e scelta «Copertura» (Scandole / Paglia / Zolle erbose) nel pannello della long house; cambio gratuito. Lo sfiatatoio sta sulla campata di mezzo; il fumo esce da lì (`longhouseSmokeSpecs`, 2.5D), non nel cutaway. Salvataggi: `roofCover` resta solo sulle long house non a scandole.
+- **Lab:** quattro varianti nuove (W1/W2 · paglia, W1/W2 · zolle) in `settlement-asset-stage.js`, più le voci in `settlement-assets.js`.
+- **Prove:** `qa/wood3d-regression.cjs` (parti per manto, conteggi per campata, sfiatatoio unico, ricaduta sulle scandole, cutaway), `house3d`, `small-gate`, `clay-material` passano in locale. Audit del Lab (`node qa/asset-audit.mjs`): 1146 render, 0 errori, 124 avvisi (cantiere 25/50/75% delle sezioni larghe/lignee e danno leggero: preesistenti), 32 nuovi (le 4 varianti) e 4 cambiati (cutaway W1/W2 e campate: sporto e sfiatatoio); foglio `fortificazioni-mura` rivisto, baseline aggiornata. Dopo il merge di `main` (11/11): modello rigenerato (gli altri 6 modelli lignei, compresa la torre a telaio, identici a main), audit 1486 render, 0 errori; nella baseline aggiornate solo le 64 voci `castle:long-house-*` (gli altri ~180 render «cambiati» in locale non dipendono da questo branch e restano come in main). CI: `integrity` e `settlement-qa` fallivano su `codex-wiki-regression` perché `wiki/catalog.json` (impronta `sourceDigest` dei sorgenti, che include `settlement-core.js`) non era rigenerato; rigenerato con `node tools/export-codex.cjs`.
+
 ## Merlature doppie BC-251105-04 (branch `feature/double-crenel`, da `main` b1a2307, 05/11/2026, NON MAIN)
 
 - Implementato: due nuovi stili in `CRENEL_STYLES`, scelti dal Centro di controllo › Cantieri › «Stile delle merlature».
@@ -88,6 +355,9 @@ Sul branch `fix/audit-sheet-grid` i fogli provini dell'audit per categoria dispo
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`, NON MAIN)
 
 - **Aggiornamento porto**: moli L4 e L12 (`reach`, i moli salvati prima restano L8); piazzamento solo costa + approdo nella whitezone, senza regole di terreno edificabile (pendenze, bosco, terreno irregolare ammessi; impalcato sopra il terreno più alto dell'approdo). Nuova **banchina in pietra** (`src/settlement-quay.js`, `type:'quay'`): 2U, due clic lungo la riva o in acqua, solo whitezone + contatto con il mare, lato mare fissato al piazzamento, bitte sul bordo; i moli si agganciano al bordo verso il mare (`onQuay`, impalcato a filo della banchina).
+- **Trabucco** e **indice spaziale degli ostacoli**: `qa/trebuchet-regression.cjs`; verificato in preview (2 trabucchi a est del castello si montano e tirano sulla torre più vicina; primo tick dell'assalto da 63 s a ~0,9 s). Suite verde.
+- **Performance layout TEST**: frame 1280×800 da ~940 ms a ~30–75 ms (mediana di 10 frame, 4 inquadrature, pannello nascosto, quindi misure rumorose ±20 ms). Le cause principali erano il percorso verso il pozzo ricalcolato per ogni artigiano e la mesh delle navi ricostruita a ogni frame. Suite `qa/*-regression.cjs` verde.
+- **Personaggi con profondità in 3D** (branch `figure-billboards`): contadini, lavoratori, carpentieri e marinai sono carte con test di profondità (`ConquerWorld3D.figure`). Verificato in preview: un contadino davanti alla nave sta sopra lo scafo, uno dietro è nascosto, le vele e il castello coprono i marinai dietro. Misura (porto con 5 navi, 35 figure, mediana di 60 frame, 2 giri): frame 22–26 → 19–20 ms, popolazione 10–13 → 6–7 ms, `world3dFrontMs` 8,8–9,0 → 8,6–8,7 ms. Suite `qa/*-regression.cjs` verde (founding al secondo giro).
 - **Gabbiani** sulla costa: `qa/coast-regression.cjs`; verificato in preview (in volo con ombra, posati sul molo).
 - **Onde** sulla costa: `qa/coast-regression.cjs`; verificato in preview (spiaggia con vento, spruzzi sugli scogli).
 - **Audit Asset Lab (mare)**: 1026 render, 0 errori, 35 nuovi asset di mare rivisti nei fogli provini; baseline aggiornata.
@@ -1068,3 +1338,9 @@ Aggiornare questo livello dopo ogni PR che modifica una milestone, non dopo ogni
 ## Campi L2 — 05/11/2026
 
 Nel branch fix/fields-l2-only i campi richiedono esclusivamente L2 sia nel ledger sia nelle assegnazioni fisiche. Gli L1 restano disponibili per gli altri lavori. Colture salvate conservate, assegnazioni ricalcolate. Nessun raccolto lavorato da L1 in assenza di L2. D-051 risolta per scelta dell’utente. QA locale campi, lavoro, economia, razioni, industrie e cantieri eseguita prima della PR. Pulizia jobmanager prevista dopo il merge, archivio archive/jobmanager conservato.
+
+## 2026-11-11 — Integrazione urgente figure-billboards (pre-merge)
+
+Recuperati i cinque commit residui 31cb32d, 2408397, 8e541fd, e4b06cc, 0ff543d sulla base main e4230db. La parte navale precedente era già in #150. Civili, lavoratori, carpentieri e marinai entrano nel depth buffer World3D; atlante 2048 con caselle 64px, 1024 posti, pose condivise, riuso LRU e upload incrementale. Conservati LOD militare, addOutbuilding, ingresso del mastio, arte e guarnigioni. Recuperati layout TEST, cache accesso pozzi, traslazione mesh navi, indice spaziale ostacoli e Trabucco DEV con scenario QA.
+
+QA locale: 165 regressioni deterministiche PASS. Aggiunta prova browser sul painter reale dei civili, occlusione da murature, riuso atlante, picking militare e fallback Canvas; inserita nel workflow Main fixes. Audit Lab completo: 1473 render, 0 errori; rivisti Popolazione, Truppe e confronto browser dietro la torre. Firme di queste categorie invariate; annotata la revisione nella baseline, senza accettare i 184 cambiati locali o i 15 stati tetto nuovi estranei a questa integrazione. Prova browser dedicata PASS. CI remota da completare prima del merge. Nessun nuovo modello, nessuna modifica alle priorità ROADMAP. Restano i limiti originari del Trabucco: non persistito, serventi colpibili solo via API, munizioni non simulate.

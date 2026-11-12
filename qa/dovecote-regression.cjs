@@ -49,7 +49,8 @@ assert.ok(!allowed(tower({building:true}),1,'dovecote'),'not while under constru
 assert.ok(!allowed({type:'gate',level:3,roofStyle:'pitched'},1,'dovecote'),'not in gates');
 assert.ok(!allowed({type:'built',length:3,level:2},1,'dovecote'),'not in built sections');
 // The other rooms keep their rules: the dovecote only adds one line to allowed().
-assert.ok(allowed(tower(),1,'guard')&&allowed(tower(),0,'granary')&&!allowed(tower(),0,'kitchen'));
+assert.ok(allowed(tower(),1,'barracks')&&allowed(tower(),0,'granary')&&!allowed(tower(),0,'kitchen'));
+assert.ok(!allowed(tower(),1,'guard'),'the castle guard post merged into the Barracks (D-MIL-RES-261109)');
 console.log('PASS dovecote only on the top floor of stone towers L2+ with a pitched roof (W1 too)');
 
 assert.ok(towerDovecote(tower({functions:[null,'dovecote']})),'an assigned top room is an active dovecote');

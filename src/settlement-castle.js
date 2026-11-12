@@ -231,6 +231,7 @@ function structureHeight(s){
   if(s.type==='gate')return isWoodGate(s)?1.94:gateTimberUpper(s)?GATE_TIMBER_EAVES:(isSmallGate(s)?[2.4,3.6]:[2.8,4.0,5.2])[structureLevel(s)-1];
   if(s.type==='wall')return [1.15,2.10][structureLevel(s)-1];
   if(s.type==='palisade')return 1.15;
+  if((typeof isLeanTo==='function'&&isLeanTo(s)))return window.ConquerLeanTo?.EAVES??1.40;
   if(s.type==='built')return isLonghouse(s)?(isWideBuilt(s)?2.07:1.77):[1.75,2.80][structureLevel(s)-1];
   if(s.type==='well')return .42;
   if(s.type==='storageYard')return .55;
@@ -764,9 +765,9 @@ function clipToWorldPolygon(worldPts,z,fn){
   ctx.closePath();ctx.clip();fn();ctx.restore();
 }
 function drawStoneTileFloor(s,g,z){
-  const basis=cutawayFloorBasis(s,g),tile=.32;
+  const basis=cutawayFloorBasis(s,g),tile=.32,stone=hex=>window.ConquerStoneColor?.shade(hex)||hex;
   extrudePolygonAt(g.inner,Math.max(.005,z-.045),z,{
-    top:'#7f796f',sideA:'#4c4842',sideB:'#5a554d',stroke:'#a59b8d'
+    top:stone('#7f796f'),sideA:stone('#4c4842'),sideB:stone('#5a554d'),stroke:stone('#a59b8d')
   });
   clipToWorldPolygon(g.inner,z+.002,()=>{
     const nx=Math.ceil(basis.w/tile),ny=Math.ceil(basis.h/tile);
@@ -774,7 +775,7 @@ function drawStoneTileFloor(s,g,z){
       const x0=-basis.w/2+ix*tile,x1=Math.min(basis.w/2,x0+tile);
       const y0=-basis.h/2+iy*tile,y1=Math.min(basis.h/2,y0+tile);
       const quad=cutawayLocalRect(basis.center,basis.angle,x0,y0,x1,y1);
-      pathPolygon(projectPath(quad,z+.004),(ix+iy)%2?'#8d877c':'#716c64','rgba(61,57,52,.52)',.55);
+      pathPolygon(projectPath(quad,z+.004),stone((ix+iy)%2?'#8d877c':'#716c64'),'rgba(61,57,52,.52)',.55);
     }
   });
 }

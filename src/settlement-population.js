@@ -52,6 +52,10 @@ function sunShadowState(){
 }
 function towerRoofRise(s){
   // A hoarding on the crenellated top rises above it to its lean-to ridge (build_hoarding.py).
+  if(s?.type==='tower'&&towerInnerRoofMounted(s)){
+    const g=towerInnerRoofGeometry(s);
+    return Math.max(g?g.apexZ-g.h:0,towerHoardingMounted(s)?.69:0);
+  }
   if(s?.type==='tower'&&towerRoofStyle(s)==='battlement'&&towerHoardingMounted(s))return .69;
   if(!s||s.type!=='tower'||towerRoofStyle(s)!=='pitched')return 0;
   // Feudal roof pitch (roofPitch()): the slope rises from the eave over the roof's half span, the
@@ -72,6 +76,26 @@ function towerRoofFootprintPoints(s){
   if(isOrientedTower(s))return orientedTowerOutline(s,-overhang);
   const d=rectDims(s);
   return rectWorldPoints(s.x,s.y,d.w+overhang*2,d.h+overhang*2,s.angle||0);
+}
+// Inner roof (BC-251105-05): the outline drawn TOWER_INNER_ROOF_INSET in from the face (past the
+// merlons' inner face, about 0.2 U, and a 0.22 U wall-walk), raised on a TOWER_INNER_ROOF_KERB high
+// stone kerb, then a pyramid (square / oriented) or a cone (round) at the feudal pitch to the apex.
+// Too small a ring (inner half span under 0.25 U, i.e. T1 towers) means no inner roof: `check`
+// only asks whether it fits. Returns {ring,h,eaveZ,apex,apexZ,half} or null.
+// The ring is small: at least ~58° of pitch so the roof stands clear of the merlons.
+const TOWER_INNER_ROOF_MIN_TAN=1.6,TOWER_INNER_ROOF_INSET=.42,TOWER_INNER_ROOF_KERB=.14,TOWER_INNER_ROOF_MIN_HALF=.25;
+function towerInnerRoofGeometry(s,check=false){
+  if(!s||s.type!=='tower'||isWoodTower(s)||s.shape==='half')return null;
+  if(!check&&!towerInnerRoofMounted(s))return null;
+  const k=TOWER_INNER_ROOF_INSET,round=s.shape==='round';
+  let ring,half;
+  if(round){half=Number(s.r||.5)-k;ring=half>0?circleWorldPoints(s.x,s.y,half,24):[]}
+  else if(isOrientedTower(s)){const d=orientedTowerDims(s);half=Math.min(d.w,d.h)/2-k;ring=half>0?orientedTowerOutline(s,k):[]}
+  else{const d=rectDims(s);half=Math.min(d.w,d.h)/2-k;ring=half>0?rectWorldPoints(s.x,s.y,d.w-k*2,d.h-k*2,s.angle||0):[]}
+  if(!(half>=TOWER_INNER_ROOF_MIN_HALF)||ring.length<3)return null;
+  if(check)return true;
+  const h=structureHeight(s),eaveZ=h+TOWER_INNER_ROOF_KERB;
+  return{ring,h,eaveZ,apex:towerRoofApex(s),apexZ:eaveZ+Math.max(roofPitchTan(),TOWER_INNER_ROOF_MIN_TAN)*half,half};
 }
 // Square stone towers choose the shape of the pitched roof (variant `roofShape`): a pyramid, two
 // slopes on a ridge with stone gable ends, or four slopes on a ridge half as long as the roof (hip).
@@ -126,7 +150,7 @@ function structureVisualTopHeight(s){
 function shadowStructureHeight(s){
   if(s?.type==='house')return houseStructureHeight(s);
   if(s?.type==='built'){const g=builtRoofGeometry(s);return g?.ridgeH||structureHeight(s)}
-  if(s?.type==='tower'&&towerRoofStyle(s)==='pitched')return towerVisualTopHeight(s);
+  if(s?.type==='tower'&&(towerRoofStyle(s)==='pitched'||towerInnerRoofMounted(s)))return towerVisualTopHeight(s);
   if(s?.type==='gate'&&gateRoofStyle(s)==='pitched')return gateVisualTopHeight(s);
   return structureHeight(s);
 }
@@ -144,7 +168,7 @@ const shadowCasterGeometryCache=new Map();
 function shadowCasterSignature(s){
   return[
     s.id,s.type,s.x,s.y,s.angle,s.w,s.h,s.r,s.size,s.level,s.tier,s.houseLevel,s.width,
-    s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.roofStyle,s.bartizan,s.bell,s.roofShape,s.baseStyle,s.material,s.woodStyle,s.woodRoof,
+    s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.roofStyle,s.bartizan,s.bell,s.innerRoof,s.signalFire,s.signalFireSpent,s.lookout,s.outpost?.readyDay,s.roofShape,s.baseStyle,s.material,s.woodStyle,s.woodRoof,
     s.type==='house'&&(s.auto||s.urbanRedeveloped)&&houseLevel(s)>=3?urbanRevision:0
   ].join('|');
 }

@@ -1,5 +1,5 @@
 'use strict';
-// CONQUER world 3D prototype — the whole static scene on WebGL2 with the camera as shader uniforms.
+// CONQUER world 3D prototype â€” the whole static scene on WebGL2 with the camera as shader uniforms.
 //
 // Static geometry is uploaded once and only rebuilt when its content changes; pan, zoom, rotation and
 // plan view are pure uniform changes (no scene-cache rebuilds). Everything reuses the game's own data:
@@ -244,7 +244,7 @@
         return{edit,minX:Math.min(...xs),maxX:Math.max(...xs),
           minY:Math.min(...ys),maxY:Math.max(...ys)};
       });
-      // Broadphase: register edit bounds in 8U buckets once. A 100×100U
+      // Broadphase: register edit bounds in 8U buckets once. A 100Ã—100U
       // 0.5U terrain rebuild has 40,000 cells; almost all must bypass CSG
       // clipping entirely instead of scanning every authored polygon.
       const BIN=8,bins=new Map(),binKey=(x,y)=>x+','+y;
@@ -408,7 +408,7 @@
       const k=typeof mountainSnowZ==='function'?Math.min(1,mountainSnowZ()/apex.z):1,s=p=>({x:f.x+(p.x-f.x)*(1-k),y:f.y+(p.y-f.y)*(1-k),z:apex.z*k});
       for(let i=0;i<f.points.length;i++){
         const a=f.points[i],b=f.points[(i+1)%f.points.length];
-        const rock=typeof mountainFaceColor==='function'?mountainFaceColor(f,a,b,i):MOUNTAIN_FACES[i%2];
+        const rock=typeof mountainFaceColor==='function'?mountainFaceColor(f,a,b,i):(window.ConquerStoneColor?.shade(MOUNTAIN_FACES[i%2])||MOUNTAIN_FACES[i%2]);
         m.face([{x:a.x,y:a.y,z:0},{x:b.x,y:b.y,z:0},s(b),s(a)],rock);
         if(k<1)m.face([s(a),s(b),apex],mountainSnowColor(f,a,b,i));
       }
@@ -426,11 +426,11 @@
           const segments=window.ConquerTerraforming?.exposedWallSegments?.(edit,i)||
             [{a:edit.top[i],b:edit.top[(i+1)%edit.top.length]}];
           for(const {a,b} of segments)
-            m.face([{...a,z:edit.baseZ},{...b,z:edit.baseZ},{...b,z:edit.targetZ},{...a,z:edit.targetZ}],i%2?'#49443f':'#686057');
+            m.face([{...a,z:edit.baseZ},{...b,z:edit.baseZ},{...b,z:edit.targetZ},{...a,z:edit.targetZ}],window.ConquerStoneColor?.shade(i%2?'#49443f':'#686057')||(i%2?'#49443f':'#686057'));
         }
       }else if(edit.mode==='flat'){
         for(const {a,b,baseZ,baseZB,targetZ,targetZB} of window.ConquerTerraforming?.flatWallSegments?.(edit)||[])
-          m.face([{...a,z:baseZ},{...b,z:baseZB},{...b,z:targetZB},{...a,z:targetZ}],'#686057');
+          m.face([{...a,z:baseZ},{...b,z:baseZB},{...b,z:targetZB},{...a,z:targetZ}],window.ConquerStoneColor?.shade('#686057')||'#686057');
       }
     }
     const borders=[t=>({x:t,y:0}),t=>({x:W,y:t}),t=>({x:W-t,y:W}),t=>({x:0,y:W-t})];
@@ -438,14 +438,14 @@
       let prev=at(0),hp=terrainElevation(prev);
       for(let i=1;i<=n;i++){
         const p=at(i*EDGE_STEP),h=terrainElevation(p);
-        if(hp>.001||h>.001)m.face([{...prev,z:0},{...p,z:0},{...p,z:h},{...prev,z:hp}],EDGE_SECTION[side%2]);
+        if(hp>.001||h>.001)m.face([{...prev,z:0},{...p,z:0},{...p,z:h},{...prev,z:hp}],window.ConquerStoneColor?.shade(EDGE_SECTION[side%2])||EDGE_SECTION[side%2]);
         prev=p;hp=h;
       }
     });
     return new Float32Array(m.tris);
   }
-  // Bake the existing 2D ground drawing in plan view (rotation 0) into a TEX_SIZE² canvas covering
-  // [x0,x0+size]². With `tile` ({ox,oy}) only that TILE_PX² window of the same texture is painted:
+  // Bake the existing 2D ground drawing in plan view (rotation 0) into a TEX_SIZEÂ² canvas covering
+  // [x0,x0+size]Â². With `tile` ({ox,oy}) only that TILE_PXÂ² window of the same texture is painted:
   // the mapping stays the full texture's, translated, so repeating ground patterns line up across tiles.
   function bakeGround(x0,y0,size,tile=null){
     const N=tile?TILE_PX:TEX_SIZE,ox=tile?.ox||0,oy=tile?.oy||0;
@@ -459,7 +459,7 @@
     // World window actually painted, for culling roads and fields.
     const wx0=x0+ox/px,wy0=y0+oy/px,wsize=N/px;
     const inside=s=>{if(!tile)return true;const b=groundItemBounds(s);return !b||(b.x0<wx0+wsize&&b.x1>wx0&&b.y0<wy0+wsize&&b.y1>wy0)};
-    // The landscape culls against [0,width]² of the rect, which for a translated tile still holds
+    // The landscape culls against [0,width]Â² of the rect, which for a translated tile still holds
     // everything above and left of it: a far tile would cost a full bake. Cull to the tile instead.
     const keepCull=[screenPointVisibleRaw,screenPolygonVisible,forestLikelyVisible];
     if(tile){
@@ -568,7 +568,7 @@
     S.groundQueue=[];
   }
   // One tile per frame: a tile costs a few ms, the whole queue of a typical edit (2-6 tiles) is gone
-  // before the construction site is noticed. Mipmaps of a 4096² texture are rebuilt once, when its
+  // before the construction site is noticed. Mipmaps of a 4096Â² texture are rebuilt once, when its
   // last queued tile is in (until then the minified levels show the previous ground for a few frames).
   function pumpGroundTiles(gl){
     const t=S.groundQueue.shift();if(!t)return;
@@ -597,7 +597,8 @@
       const dx=e.b.x-e.a.x,dy=e.b.y-e.a.y,L=Math.hypot(dx,dy);if(L<1e-4)continue;
       const ang=Math.atan2(dy,dx),mid={x:(e.a.x+e.b.x)/2,y:(e.a.y+e.b.y)/2},g=terrainElevation(mid);
       if(e.material==='wall'){                                                  // drawUrbanWall
-        m.prism(rectWorldPoints(mid.x,mid.y,L,.13,ang),g,g+.36,winter?'#e5e9df':'#a3937a','#766a59','#8b7c67');
+        const stone=hex=>window.ConquerStoneColor?.shade(hex)||hex;
+         m.prism(rectWorldPoints(mid.x,mid.y,L,.13,ang),g,g+.36,winter?'#e5e9df':stone('#a3937a'),stone('#766a59'),stone('#8b7c67'));
       }else if(e.material!=='hedge'){                                           // drawUrbanFence
         for(const z of [.13,.30])m.prism(rectWorldPoints(mid.x,mid.y,L,.035,ang),g+z-.018,g+z+.018,'#806442','#6b5338','#806442');
         const count=Math.max(1,Math.ceil(L/.65));
@@ -622,8 +623,9 @@
         if(!window.ConquerIndustries3D?.addToBuilder(m,s,g))m.prism(ConquerIndustries.footprint(s),g,g+.35,def.color,def.edge,def.edge);
       }else if(s.type==='well')withStructureVisualMaterial(s,()=>{
         const g=terrainElevation(s);
-        m.prism(rectWorldPoints(s.x,s.y,WELL_PLAZA_SIZE,WELL_PLAZA_SIZE,0),g,g+.055,'#8d816e','#655b4f','#74695a');
-        m.prism(circleWorldPoints(s.x,s.y,.62,20),g+.055,g+.42,'#84796d','#4e4740','#5d554d');
+        const stone=hex=>window.ConquerStoneColor?.shade(hex)||hex;
+         m.prism(rectWorldPoints(s.x,s.y,WELL_PLAZA_SIZE,WELL_PLAZA_SIZE,0),g,g+.055,stone('#8d816e'),stone('#655b4f'),stone('#74695a'));
+        m.prism(circleWorldPoints(s.x,s.y,.62,20),g+.055,g+.42,stone('#84796d'),stone('#4e4740'),stone('#5d554d'));
         m.face(circleWorldPoints(s.x,s.y,.36,16).map(p=>({x:p.x,y:p.y,z:g+.425})),'#172023');
       });
     }
@@ -801,8 +803,15 @@
   function buildTreeAtlas(){
     if(!forestTreeSpritesReady)return null;
     const season=State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer';
-    const sets=forestTreeSprites[season]||[],tiles=[];
-    sets.forEach((byColor,shape)=>(byColor||[]).forEach((img,color)=>img&&tiles.push({key:shape+':'+color,img,aspect:1})));
+    const tiles=[];
+    // Autumn reuses the summer greens for stage zero; later stages use six warm tones.
+    // Atlas pixels remain static throughout the season: only per-tree UVs advance.
+    const add=(sets,offset=0)=>(sets||[]).forEach((byColor,shape)=>(byColor||[]).forEach((img,color)=>
+      img&&tiles.push({key:shape+':'+(offset+color),img,aspect:1})));
+    if(season==='autumn'){
+      add(forestTreeSprites.summer);
+      add(forestTreeSprites.autumn,FOREST_CANOPY_PALETTES.summer.length);
+    }else add(forestTreeSprites[season]);
     // Hedge bushes (drawUrbanHedge): 920x580 sprites.
     (window.boundaryBushSprites?.[season]||(typeof boundaryBushSprites!=='undefined'?boundaryBushSprites[season]:[])||[])
       .forEach((img,shape)=>img&&tiles.push({key:'bush:'+shape,img,aspect:580/920}));
@@ -822,7 +831,10 @@
     groves.push(urbanLotCornerTrees());                  // single trees on plot corners
     for(const trees of groves){
       for(const t of trees){
-        const uv=atlas.map.get(t.shapeIndex+':'+(atlas.season==='winter'?0:t.colorIndex));if(!uv)continue;
+        const stage=atlas.season==='autumn'?autumnFoliageStage(t):0;
+        const canopyIndex=atlas.season==='winter'?0:
+          atlas.season==='autumn'&&stage>0?FOREST_CANOPY_PALETTES.summer.length+stage-1:t.colorIndex;
+        const uv=atlas.map.get(t.shapeIndex+':'+canopyIndex);if(!uv)continue;
         let [u0,v0,u1,v1]=uv;if(t.flip)[u0,u1]=[u1,u0];
         const size=2.25*t.scale,z=t.z||0;
         const C=[[-.5,-.94,u0,v0],[.5,-.94,u1,v0],[.5,.06,u1,v1],[-.5,.06,u0,v1]];
@@ -1133,7 +1145,7 @@
     const c=rgb(hex),lum=(c[0]+c[1]+c[2])/3,kk=lum>.7?1-(1-k)*.55:k;
     return'#'+c.map(x=>Math.round(clamp(x*kk,0,1)*255).toString(16).padStart(2,'0')).join('');
   }
-  // Convex polygon clip (Sutherland–Hodgman) of a ground polygon against a convex clip polygon.
+  // Convex polygon clip (Sutherlandâ€“Hodgman) of a ground polygon against a convex clip polygon.
   function clipConvex(subject,clip){
     let out=subject;const area=clip.reduce((a,p,i)=>{const q=clip[(i+1)%clip.length];return a+p.x*q.y-q.x*p.y},0),sgn=area>=0?1:-1;
     for(let i=0;i<clip.length&&out.length;i++){
@@ -1175,7 +1187,7 @@
     }
     return pieces;
   }
-  // Parts of segment p-q outside every convex blocker (Cyrus–Beck interval per blocker).
+  // Parts of segment p-q outside every convex blocker (Cyrusâ€“Beck interval per blocker).
   function segMinus(p,q,blockers){
     let parts=[[0,1]];
     for(const B of blockers){
@@ -1248,6 +1260,8 @@
         if(blk.length&&top<H)mesh.face([Z(p,top),Z(q,top),Z(q,H),Z(p,H)],hex);
       };
       const plane=s.type==='tower'||s.type==='gate',G0=plane?(Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s)):null;
+      const stoneTone=hex=>State.visualPalette==='clay'||(typeof masonryMaterial==='function'&&masonryMaterial(s)==='brick')?hex:(window.ConquerStoneColor?.shade(hex)||hex);
+      const floorTone=hex=>State.visualPalette==='clay'?hex:(window.ConquerStoneColor?.shade(hex)||hex);
       const Z=(p,z)=>({x:p.x,y:p.y,z:(plane?G0:terrainElevation(p))+z});
       let keep,jambs;
       if(s.type==='built'){
@@ -1265,17 +1279,17 @@
       for(const i of keep){
         const j=(i+1)%n,o0=g.outer[i],o1=g.outer[j],i0=g.inner[i],i1=g.inner[j];
         if(timber){
-          band(sh,o0,o1,0,zf,castleSideShade(o0,o1));band(sh,o0,o1,zf,H,'#d9ccb0');
-          band(m,i0,i1,0,zf,'#61574f');band(m,i0,i1,zf,H,'#cbbd9f');
+          band(sh,o0,o1,0,zf,stoneTone(castleSideShade(o0,o1)));band(sh,o0,o1,zf,H,'#d9ccb0');
+          band(m,i0,i1,0,zf,stoneTone('#61574f'));band(m,i0,i1,zf,H,'#cbbd9f');
         }else if(loggiaEdge(o0,o1)){
           // W1 portico on the standing wall: masonry only above the loggia, its piers and arches below.
-          band(sh,o0,o1,loggia.cap,H,castleSideShade(o0,o1));band(m,i0,i1,loggia.cap,H,'#61574f');
+          band(sh,o0,o1,loggia.cap,H,stoneTone(castleSideShade(o0,o1)));band(m,i0,i1,loggia.cap,H,stoneTone('#61574f'));
           for(const f of loggia.faces)if(f.part==='arcade'){
             const P=f.pts.map(q=>Z(q.p,q.z));let nx=0,ny=0,nz=0;
             for(let k=0;k<P.length;k++){const a=P[k],b=P[(k+1)%P.length];nx+=(a.y-b.y)*(a.z+b.z);ny+=(a.z-b.z)*(a.x+b.x);nz+=(a.x-b.x)*(a.y+b.y)}
-            const l=Math.hypot(nx,ny,nz)||1;sh.face(P,shadeHex('#8a7f74',W3?W3.shadeFactor(nx/l,ny/l,nz/l,turns):1));
+            const l=Math.hypot(nx,ny,nz)||1;sh.face(P,shadeHex(stoneTone('#8a7f74'),W3?W3.shadeFactor(nx/l,ny/l,nz/l,turns):1));
           }
-        }else{wallFace(sh,o0,o1,castleSideShade(o0,o1));wallFace(m,i0,i1,'#61574f')}
+        }else{wallFace(sh,o0,o1,stoneTone(castleSideShade(o0,o1)));wallFace(m,i0,i1,stoneTone('#61574f'))}
       }
       // Subtower: the parent stays intact, and a dividing wall closes the subtower along the
       // parent's outline where it runs through the subtower footprint.
@@ -1289,7 +1303,7 @@
           if(1-t>1e-4)ins.push([t,1]);
           for(const [u,v] of ins){
             const A={x:p.x+(q.x-p.x)*u,y:p.y+(q.y-p.y)*u},B={x:p.x+(q.x-p.x)*v,y:p.y+(q.y-p.y)*v};
-            m.face([Z(A,0),Z(B,0),Z(B,top),Z(A,top)],'#61574f');
+            m.face([Z(A,0),Z(B,0),Z(B,top),Z(A,top)],stoneTone('#61574f'));
             // Connecting door through the dividing wall, on the subtower's ground floor.
             const len=Math.hypot(B.x-A.x,B.y-A.y);
             if(len>.45&&top>.7){
@@ -1299,28 +1313,28 @@
           }
         }
       }      for(const v of jambs)if(outside(g.outer[v])&&outside(g.inner[v])){
-        m.face([Z(g.outer[v],0),Z(g.inner[v],0),Z(g.inner[v],zf),Z(g.outer[v],zf)],'#82776c');
+        m.face([Z(g.outer[v],0),Z(g.inner[v],0),Z(g.inner[v],zf),Z(g.outer[v],zf)],stoneTone('#82776c'));
         if(timber)m.face([Z(g.outer[v],zf),Z(g.inner[v],zf),Z(g.inner[v],H),Z(g.outer[v],H)],'#5b412c');   // cut corner post
       }
-      const ring=timber?'#5b412c':winter?WINTER_SNOW_TOP:'#8f857a';   // a frame's cut top is its head plate
+      const ring=timber?'#5b412c':winter?WINTER_SNOW_TOP:stoneTone('#8f857a');   // a frame's cut top is its head plate
       for(let i=0;i<n;i++){const j=(i+1)%n;facesOut([g.outer[i],g.outer[j],g.inner[j],g.inner[i]],ring,sh,H)}
       // Room exterior elements stand outside the cut: whole, lit with the shell.
       for(const t of window.ConquerRoomExterior?.triangles(s)||[])sh.face(t.pts.map(q=>Z(q.p,q.z)),t.hex);
-      if(H>=HF-1e-6&&s.type==='tower'&&towerRoofStyle(s)==='battlement')facesOut(g.inner,winter?WINTER_SNOW_TOP:'#8f857a',sh,H-.01);
+      if(H>=HF-1e-6&&s.type==='tower'&&towerRoofStyle(s)==='battlement')facesOut(g.inner,winter?WINTER_SNOW_TOP:stoneTone('#8f857a'),sh,H-.01);
       // Floors: slab, then tiles (stone ground floor) or planks (wooden upper floors) clipped to the room.
       const basis=cutawayFloorBasis(s,g),ca=Math.cos(basis.angle),sa=Math.sin(basis.angle);
       const L=(u,v)=>({x:basis.center.x+u*ca-v*sa,y:basis.center.y+u*sa+v*ca});
       for(const floor of cutawayFloorLevels(s)){
         const stone=floor.material==='stone',z=floor.z,th=stone?.045:.065;
         if(z>=H-.01)continue;
-        facesOut(g.inner,stone?'#7f796f':'#795a3a',m,z);
-        for(let i=0;i<g.inner.length;i++){for(const [a,b] of segMinus(g.inner[i],g.inner[(i+1)%g.inner.length],under(z)))m.face([Z(a,z-th),Z(b,z-th),Z(b,z),Z(a,z)],stone?'#5a554d':'#5b402b')}
+        facesOut(g.inner,stone?floorTone('#7f796f'):'#795a3a',m,z);
+        for(let i=0;i<g.inner.length;i++){for(const [a,b] of segMinus(g.inner[i],g.inner[(i+1)%g.inner.length],under(z)))m.face([Z(a,z-th),Z(b,z-th),Z(b,z),Z(a,z)],stone?floorTone('#5a554d'):'#5b402b')}
         if(stone){
           const tile=.32,nx=Math.ceil(basis.w/tile),ny=Math.ceil(basis.h/tile);
           for(let ix=0;ix<nx;ix++)for(let iy=0;iy<ny;iy++){
             if((ix+iy)%2)continue;
             const u0=-basis.w/2+ix*tile,v0=-basis.h/2+iy*tile,q=clipConvex([L(u0,v0),L(u0+tile,v0),L(u0+tile,v0+tile),L(u0,v0+tile)],g.inner);
-            if(q.length>2)facesOut(q,'#8d877c',m,z+.003);
+            if(q.length>2)facesOut(q,floorTone('#8d877c'),m,z+.003);
           }
         }else{
           const plank=.18,across=basis.h<=basis.w,span=across?basis.h:basis.w,len=across?basis.w:basis.h;
@@ -1407,7 +1421,7 @@
   // Category tests look at fields only (no terrain sampling), so this stays well under a millisecond.
   let sigPass=null;
   function structureKey(s){
-    return s.id+(underConstruction(s)?'u':'c')+(s.level||'')+(s.houseLevel||'')+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.b?.x??'')+(s.b?.y??'')+(s.angle||0)+(s.roofStyle||'')+(s.bartizan||'')+(s.bell||'')+(s.roofShape||'')+(s.baseStyle||'')+(s.skin||'')+(s.masonryMaterial||'stone')+(s.cutaway?1:0)+(s.width||'')+(s.span||'')+(s.material||'')+(s.groundZ??'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0)
+    return s.id+(underConstruction(s)?'u':'c')+(s.level||'')+(s.houseLevel||'')+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.b?.x??'')+(s.b?.y??'')+(s.angle||0)+(s.roofStyle||'')+(s.bartizan||'')+(s.bell||'')+(s.innerRoof||'')+(s.signalFire||'')+(s.signalFireSpent?'F':'')+(s.roofShape||'')+(s.baseStyle||'')+(s.skin||'')+(s.masonryMaterial||'stone')+(s.cutaway?1:0)+(s.width||'')+(s.span||'')+(s.material||'')+(s.groundZ??'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0)
       // Moat fill patches are baked into the ground: filling must re-bake it.
       +(s.fills?.length?s.fills.map(f=>(+f.at).toFixed(2)+':'+f.span+':'+(+f.progress).toFixed(3)).join(','):'')
       // The gate door's state swaps its facade decal.
@@ -1484,7 +1498,7 @@
     // Relief, terraforming and forests shape the terrain meshes: those rebuild them and re-bake the
     // whole ground. Season and wetness re-bake the whole ground too. Structure and urban-lot edits only
     // re-bake the tiles they touch, one per frame (pumpGroundTiles).
-    const meshSig=[season,State.biome,State.relief?.seed,terraformSig,(State.environment||[]).length,envRev].join('|');
+    const meshSig=[season,State.stonePaletteId,State.biome,State.relief?.seed,terraformSig,(State.environment||[]).length,envRev].join('|');
     const gSig=[meshSig,wet()].join('|');
     const tSig=[gSig,groundLotsSignature(),structuresSig('ground')].join('|');
     if(S.sig.terrain!==tSig){
@@ -1503,7 +1517,7 @@
     }
     pumpGroundTiles(gl);
     // Heraldry: flags and drapes of the timber fortifications take the realm's colours.
-    const bSig=[season,State.visualPalette,window.ConquerCoast?.shore()?.stretches?.length||0,State.seed,urbanRev(),structuresSig('buildings'),window.ConquerStorageYard?.visualSignature?.()||'',civicCut,shopCut,shopFront,JSON.stringify(State.heraldry||null)].join('|');
+    const bSig=[season,State.visualPalette,State.stonePaletteId,window.ConquerCoast?.shore()?.stretches?.length||0,State.seed,urbanRev(),structuresSig('buildings'),window.ConquerStorageYard?.visualSignature?.()||'',civicCut,shopCut,shopFront,JSON.stringify(State.heraldry||null)].join('|');
     if(S.sig.buildings!==bSig){const a=performance.now();upload(gl,'buildings',buildBuildings());S.sig.buildings=bSig;st.buildingsMs=performance.now()-a}
     // The selected church / inn in cutaway: its section plane follows the camera quarter-turn.
     const cutSig=[bSig,rot,plan].join('|');
@@ -1515,7 +1529,7 @@
     }
     // Castle side tones and the near/far battlement split depend on the quarter-turn: keep one mesh set
     // per rotation/plan variant so turning the camera back and forth never rebuilds.
-    const castleContent=[season,State.visualPalette,structuresSig('castle')].join('|');
+    const castleContent=[season,State.visualPalette,State.stonePaletteId,structuresSig('castle')].join('|');
     if(S.castleContent!==castleContent){
       for(const v of S.castleVariants?.values()||[])for(const p of Object.values(v))gl.deleteBuffer(p.b);
       S.castleContent=castleContent;S.castleVariants=new Map();
@@ -1532,12 +1546,18 @@
       for(const [name,part] of [['castleBody','body'],['castleLines','lines'],['castleFront','front'],['castleFrontLines','frontLines']]){S.buf[name]=v[part].b;S.buf[name+'#n']=v[part].n}
       S.sig.castle=cSig;st.castleMs=performance.now()-a;
     }
-    const treeSig=[season,forestTreeSpritesReady,(State.environment||[]).length,envRev,State.seed,urbanRev(),structuresSig('hedges'),
+    const atlasSig=[season,forestTreeSpritesReady,
       Object.keys((typeof boundaryBushSprites!=='undefined'&&boundaryBushSprites[season])||{}).length].join('|');
+    if(S.sig.treeAtlas!==atlasSig){
+      S.treeAtlas=buildTreeAtlas();
+      if(S.treeAtlas)uploadTexture(gl,'atlas',S.treeAtlas.canvas);
+      S.sig.treeAtlas=atlasSig;
+    }
+    const treeSig=[atlasSig,season==='autumn'?autumnFoliageStep():-1,
+      (State.environment||[]).length,envRev,State.seed,urbanRev(),structuresSig('hedges')].join('|');
     if(S.sig.trees!==treeSig){
-      const a=performance.now(),atlas=buildTreeAtlas();
-      if(atlas)uploadTexture(gl,'atlas',atlas.canvas);
-      upload(gl,'trees',buildTrees(atlas));S.sig.trees=treeSig;st.treesMs=performance.now()-a;
+      const a=performance.now();
+      upload(gl,'trees',buildTrees(S.treeAtlas));S.sig.trees=treeSig;st.treesMs=performance.now()-a;
     }
     const dSig=[structuresSig('all'),shopCut,shopFront,Object.keys(architectureSprites).length,window.ConquerGates?.ensureSprites()||''].join('|');
     if(S.sig.decals!==dSig){
@@ -1551,7 +1571,7 @@
     // Environmental scatter (settlement-scatter.js): the layout follows content, the two-tone
     // side shading follows the camera quarter-turn, so keep one buffer per rotation.
     if(window.ConquerScatter&&window.ConquerScatterModel){
-      const scContent=[season,State.seed,State.relief?.seed,(State.environment||[]).length,urbanRev(),structuresSig('all')].join('|');
+      const scContent=[season,State.stonePaletteId,State.seed,State.relief?.seed,(State.environment||[]).length,urbanRev(),structuresSig('all')].join('|');
       if(S.scatterContent!==scContent){
         const a=performance.now();
         for(const v of S.scatterVariants?.values()||[])gl.deleteBuffer(v.b);
@@ -1705,7 +1725,7 @@
       gl.drawArrays(gl.TRIANGLES,0,dynamic.length/6);
     }
     if(soldiers.length&&soldierAtlas.canvas){
-      if(soldierAtlas.dirty){uploadTexture(gl,'soldierAtlas',soldierAtlas.canvas);soldierAtlas.dirty=false}
+      uploadAtlas(gl);
       let b=S.buf.soldiers;if(!b){b=gl.createBuffer();S.buf.soldiers=b}
       gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,soldiers,gl.STREAM_DRAW);
       const sp=S.prog.sprite;useProgram(gl,sp);setCamera(gl,sp,r);
@@ -1722,10 +1742,83 @@
   // tower archers, training knights, cutaway occupants) are collected instead of painted. Each one is
   // rendered as a billboard in the front pass, depth-tested against the whole scene, and registers a
   // vertical capsule collider in world units for picking and future combat queries.
-  const SOLDIER_TILE=128,SOLDIER_SR=8,SOLDIER_FEET=.75;          // sprite px, sprite view scale, feet row
+  // Civilians (villagers, workers, sailors, shipwrights) share the same path through figure():
+  // each look and animation phase is painted once into a tile, then every figure is a 6-vertex
+  // depth-tested card, so a hull, a sail or a wall in front of it hides it.
+  const SOLDIER_TILE=64,SOLDIER_SR=4,SOLDIER_FEET=.75;           // sprite px, sprite view scale, feet row
+  const FIG_ATLAS=2048,FIG_COLS=Math.floor(FIG_ATLAS/SOLDIER_TILE);     // 32x32 = 1024 tiles
   const SOLDIER_SIZE_U=SOLDIER_TILE/(U*SOLDIER_SR);               // 1.333U card
   const CAPSULE={r:.12,below:.11,above:.38};                       // figure body + head around the feet point
-  const soldierAtlas={canvas:null,map:new Map(),next:0,dirty:false,heraldry:null};
+  // map: key -> {uv,slot,used}. Slots of tiles unused for a while are reused when the FIG_ATLAS is full;
+  // only the tiles painted since the last frame are sent to the GPU (tiles), not the whole FIG_ATLAS.
+  const soldierAtlas={canvas:null,map:new Map(),next:0,free:[],frame:0,dirty:false,full:true,tiles:[],heraldry:null,resets:0,painted:0,evicted:0};
+  function clearAtlas(){soldierAtlas.map.clear();soldierAtlas.next=0;soldierAtlas.free=[];soldierAtlas.full=true;soldierAtlas.tiles=[]}
+  function takeSlot(){
+    const A=soldierAtlas,cap=FIG_COLS*FIG_COLS;
+    if(A.next<cap)return A.next++;
+    if(!A.free.length){
+      // Evict what has not been drawn in the last second or so (or, failing that, the older half).
+      const list=[...A.map.entries()].sort((a,b)=>a[1].used-b[1].used),old=list.filter(([,e])=>e.used<A.frame-60);
+      for(const [k,e] of (old.length?old:list.slice(0,list.length>>1))){A.map.delete(k);A.free.push(e.slot);A.evicted++}
+      if(!old.length)A.resets++;
+    }
+    return A.free.pop();
+  }
+  function atlasTile(key,paint){
+    const hit=soldierAtlas.map.get(key);if(hit){hit.used=soldierAtlas.frame;return hit.uv}
+    if(!soldierAtlas.canvas){soldierAtlas.canvas=document.createElement('canvas');soldierAtlas.canvas.width=soldierAtlas.canvas.height=FIG_ATLAS;soldierAtlas.g=soldierAtlas.canvas.getContext('2d',{willReadFrequently:true})}
+    const i=takeSlot(),x=(i%FIG_COLS)*SOLDIER_TILE,y=Math.floor(i/FIG_COLS)*SOLDIER_TILE;
+    const g=soldierAtlas.g;g.clearRect(x,y,SOLDIER_TILE,SOLDIER_TILE);   // CPU canvas: tile readback is cheap
+    const keepView=State.view,keepW2s=w2s;
+    State.view={...keepView,scale:SOLDIER_SR};
+    w2s=()=>({x:x+SOLDIER_TILE/2,y:y+SOLDIER_TILE*SOLDIER_FEET});      // figure painters project only the feet
+    try{withRenderContext(g,()=>paint(g,x,y))}
+    catch(e){console.error(e)}
+    finally{State.view=keepView;w2s=keepW2s}
+    const uv=[x/FIG_ATLAS,y/FIG_ATLAS,(x+SOLDIER_TILE)/FIG_ATLAS,(y+SOLDIER_TILE)/FIG_ATLAS];
+    soldierAtlas.map.set(key,{uv,slot:i,used:soldierAtlas.frame});soldierAtlas.tiles.push([x,y]);
+    soldierAtlas.dirty=true;soldierAtlas.painted++;return uv;
+  }
+  // FIG_ATLAS -> GPU: the whole canvas the first time (or after a clear), then tile by tile.
+  function uploadAtlas(gl){
+    const A=soldierAtlas;if(!A.dirty)return;
+    if(A.full||!S.tex.soldierAtlas||A.tiles.length>60)uploadTexture(gl,'soldierAtlas',A.canvas);
+    else{
+      const g=A.g;
+      gl.bindTexture(gl.TEXTURE_2D,S.tex.soldierAtlas);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,true);
+      for(const [x,y] of A.tiles){const d=g.getImageData(x,y,SOLDIER_TILE,SOLDIER_TILE);gl.texSubImage2D(gl.TEXTURE_2D,0,x,y,SOLDIER_TILE,SOLDIER_TILE,gl.RGBA,gl.UNSIGNED_BYTE,d.data)}
+      gl.generateMipmap(gl.TEXTURE_2D);
+    }
+    perf().figureTilesUploaded=A.tiles.length;
+    A.dirty=false;A.full=false;A.tiles=[];
+  }
+  // A civilian figure at feet p, z above the ground. key: everything that changes the picture
+  // (look, pose, animation phase bucket, facing); paint() draws it with the figure painters, which
+  // only project the feet point. Returns false outside a 3D frame (the caller paints in 2D).
+  // mirror: the picture faces left (paint() always draws it facing right; the card flips it).
+  let figuresOn=true;   // benchmark switch: false paints civilians in 2D as before
+  function figure(p,z,key,paint,id=key,mirror=false){
+    if(!collecting||!figuresOn)return false;
+    const ground=Number.isFinite(structureProjectionGroundZ)?structureProjectionGroundZ:terrainElevation(p);
+    collecting.push({p:{x:p.x,y:p.y},z:z+ground,key:'civ|'+key,paint,id,type:'civilian',mirror:!!mirror});
+    return true;
+  }
+  // Prepare poses ahead ([{key,paint}]): painted in idle time, a few at a time, so a phase change
+  // later finds its tile ready instead of painting it inside a frame. Never evicts for this.
+  const prewarmQueue=[];let prewarmScheduled=false;
+  function prewarmFigures(poses){
+    for(const d of poses||[])if(d&&d.key&&d.paint&&!soldierAtlas.map.has('civ|'+d.key))prewarmQueue.push(d);
+    if(prewarmScheduled||!prewarmQueue.length)return;
+    prewarmScheduled=true;
+    const idle=window.requestIdleCallback||(f=>setTimeout(()=>f({timeRemaining:()=>8}),50));
+    const run=deadline=>{
+      while(prewarmQueue.length&&deadline.timeRemaining()>2&&soldierAtlas.next<FIG_COLS*FIG_COLS){
+        const d=prewarmQueue.shift();if(!soldierAtlas.map.has('civ|'+d.key))atlasTile('civ|'+d.key,d.paint);
+      }
+      if(prewarmQueue.length&&soldierAtlas.next<FIG_COLS*FIG_COLS)idle(run);else{prewarmQueue.length=0;prewarmScheduled=false}
+    };
+    idle(run);
+  }
   let collecting=null,colliders=[];
   if(typeof drawSoldierFigure==='function'){
     const original=drawSoldierFigure;
@@ -1740,37 +1833,27 @@
     // Only the knight's sword swings with phase; everything else is a single pose.
     const isDot=window.ConquerLOD?.militaryTier()==='dot';
     const bucket=!isDot&&type==='knight'?Math.floor((((phase%1)+1)%1)*8):0;
-    const herald=JSON.stringify(State.heraldry||null);
-    if(soldierAtlas.heraldry!==herald){soldierAtlas.map.clear();soldierAtlas.next=0;soldierAtlas.heraldry=herald}
     const key=(isDot?'dot|':'figure|')+type+'|'+bucket+'|'+(livery?JSON.stringify(livery):'realm');
-    let uv=soldierAtlas.map.get(key);if(uv)return uv;
-    if(!soldierAtlas.canvas){soldierAtlas.canvas=document.createElement('canvas');soldierAtlas.canvas.width=soldierAtlas.canvas.height=1024}
-    const cols=1024/SOLDIER_TILE,i=soldierAtlas.next++%(cols*cols),x=(i%cols)*SOLDIER_TILE,y=Math.floor(i/cols)*SOLDIER_TILE;
-    const g=soldierAtlas.canvas.getContext('2d');g.clearRect(x,y,SOLDIER_TILE,SOLDIER_TILE);
-    if(isDot){
+    return atlasTile(key,isDot?(g,x,y)=>{
       // The same sprite/billboard and depth-tested capsule stay in place, but
       // the distant soldier is a single colored point instead of a figure.
       const cy=y+SOLDIER_TILE*.54,r=SOLDIER_TILE*.34;
       g.fillStyle=window.ConquerLOD.militaryColor(type,livery);
-      g.strokeStyle='#28302a';g.lineWidth=5;
+      g.strokeStyle='#28302a';g.lineWidth=4;
       g.beginPath();g.arc(x+SOLDIER_TILE/2,cy,r,0,Math.PI*2);g.fill();g.stroke();
-    }else{
-      const keepView=State.view,keepW2s=w2s;
-      State.view={...keepView,scale:SOLDIER_SR};
-      w2s=()=>({x:x+SOLDIER_TILE/2,y:y+SOLDIER_TILE*SOLDIER_FEET});      // drawSoldierFigureUnmasked projects only the feet
-      try{withRenderContext(g,()=>drawSoldierFigureUnmasked({x:0,y:0},0,type,'atlas',bucket/8,livery))}
-      finally{State.view=keepView;w2s=keepW2s}
-    }
-    uv=[x/1024,y/1024,(x+SOLDIER_TILE)/1024,(y+SOLDIER_TILE)/1024];
-    soldierAtlas.map.set(key,uv);soldierAtlas.dirty=true;return uv;
+    }:()=>drawSoldierFigureUnmasked({x:0,y:0},0,type,'FIG_ATLAS',bucket/8,livery));
   }
   function buildSoldiers(list){
     const v=[],out=[];
+    const herald=JSON.stringify(State.heraldry||null);
+    if(soldierAtlas.heraldry!==herald){clearAtlas();soldierAtlas.heraldry=herald}
+    soldierAtlas.frame++;
     for(const s of list){
-      const [u0,v0,u1,v1]=soldierTile(s.type,s.phase,s.livery);
+      let [u0,v0,u1,v1]=s.paint?atlasTile(s.key,s.paint):soldierTile(s.type,s.phase,s.livery);
+      if(s.mirror)[u0,u1]=[u1,u0];
       const C=[[-.5,-SOLDIER_FEET,u0,v0],[.5,-SOLDIER_FEET,u1,v0],[.5,1-SOLDIER_FEET,u1,v1],[-.5,1-SOLDIER_FEET,u0,v1]];
       for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(s.p.x,s.p.y,s.z,cx,cy,SOLDIER_SIZE_U,u,w)}
-      out.push({id:s.id,type:s.type,x:s.p.x,y:s.p.y,z0:s.z-CAPSULE.below,z1:s.z+CAPSULE.above,r:CAPSULE.r});
+      if(!s.paint)out.push({id:s.id,type:s.type,x:s.p.x,y:s.p.y,z0:s.z-CAPSULE.below,z1:s.z+CAPSULE.above,r:CAPSULE.r});
     }
     colliders=out;
     return new Float32Array(v);
@@ -1949,7 +2032,7 @@
     // Mill sails and wheels turn every frame (industries).
     // Gate door leaves, portcullis and torch brackets (gate fittings).
     // The Mastio's raised entrance: stair and drawbridge leaf (keep entrance).
-    for(const source of [window.ConquerSiege,window.ConquerCombat,window.ConquerIndustries3D,window.ConquerGates,window.ConquerKeepEntrance]){
+    for(const source of [window.ConquerSiege,window.ConquerCombat,window.ConquerIndustries3D,window.ConquerGates,window.ConquerKeepEntrance,window.ConquerTrebuchets]){
       try{for(const m of source?.dynamicMeshes?.()||[])dynamicQueue.push(m)}catch(e){console.error(e)}
     }
     // Event flags, bunting and banners wave in the wind (settlement-events3d.js).
@@ -1991,7 +2074,8 @@
   }
   window.ConquerWorld3D={active,supported,setEnabled,drawBack,drawCastleOverlays,drawFront,
     drawNightLights3D,nightLightsEnabled,setNightLightsEnabled,drawMastioDrapes,drawEmissive,finishFrame,_setActiveForTest,
-    pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,addHouse,addOutbuilding,
+    pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,addHouse,addOutbuilding,figure,prewarmFigures,_setFiguresForTest:on=>{figuresOn=!!on},
+    atlasCanvas:()=>soldierAtlas.canvas,frameFigures:()=>(S.frameFigures||[]).map(f=>({key:f.key||f.type,p:f.p,z:f.z,mirror:f.mirror})),atlasStats:()=>({tiles:soldierAtlas.next,capacity:FIG_COLS*FIG_COLS,resets:soldierAtlas.resets,painted:soldierAtlas.painted}),
     invalidate:()=>{S.sig={};S.contentDirty=true},
     _debugBake:bakeGround,
     status:()=>({enabled,supported:supported(),failed:S.failed,stats:{...S.stats},sig:{...S.sig},buffers:Object.fromEntries(Object.entries(S.buf).filter(([k])=>k.endsWith('#n')))})};

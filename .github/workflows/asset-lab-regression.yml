@@ -1,4 +1,9 @@
 name: Asset Lab regression
+
+# Abort superseded PR runs of this workflow (never cancel scheduled/main runs).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 on:
   pull_request:
     paths:
@@ -9,6 +14,9 @@ on:
       - tools/build-asset-manifest.cjs
       - src/settlement-siege-preview.js
       - src/settlement-castle3d.js
+      - src/settlement-world3d.js
+      - src/settlement-storage-yard.js
+      - .github/actions/playwright-setup/action.yml
       - src/settlement-app-persistence.js
       - src/settlement-work-anim.js
       - src/settlement-asset-stage.js
@@ -19,15 +27,61 @@ on:
       - lab/**
       - qa/asset-catalog-regression.cjs
       - qa/asset-catalog-browser.mjs
+      - qa/stonecolor-snapshots.mjs
+      - src/settlement-stonecolor.js
       - qa/asset-audit.mjs
+      - qa/asset-audit-scope.cjs
+      - qa/asset-audit-scope-regression.cjs
       - qa/asset-audit-baseline.json
       - index.html
       - .github/workflows/asset-lab-regression.yml
+  workflow_dispatch:
+  schedule:
+    - cron: '47 4 * * 0'
+
+permissions:
+  contents: read
+
 jobs:
   asset-lab:
     runs-on: ubuntu-latest
+    outputs:
+      visual_needed: ${{ steps.scope.outputs.visual_needed }}
+      audit_mode: ${{ steps.scope.outputs.audit_mode }}
+      audit_sources: ${{ steps.scope.outputs.audit_sources }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Select full, incremental or skipped visual audit
+        id: scope
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # Weekly and manual audits always test the entire catalogue.
+          if [[ "$EVENT_NAME" != "pull_request" ]]; then
+            {
+              echo 'visual_needed=true'
+              echo 'audit_mode=full'
+              echo 'audit_sources='
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Fail safe: do a full audit if we cannot trust the diff.
+          if [[ ! "$PR_BASE" =~ ^[a-f0-9]{40}$ || ! "$PR_HEAD" =~ ^[a-f0-9]{40}$ ]] ||
+             ! git diff --name-status --diff-filter=ACDMRT "$PR_BASE...$PR_HEAD" > "$RUNNER_TEMP/assetlab-changes.txt"; then
+            {
+              echo 'visual_needed=true'
+              echo 'audit_mode=full'
+              echo 'audit_sources='
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          node qa/asset-audit-scope.cjs --diff "$RUNNER_TEMP/assetlab-changes.txt" --github-output "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
@@ -39,8 +93,10 @@ jobs:
       - name: Asset manifest is up to date
         run: node tools/build-asset-manifest.cjs --check
       - run: node qa/asset-catalog-regression.cjs
-      - run: node qa/siege-assault-regression.cjs
+      - run: node qa/asset-audit-scope-regression.cjs
   browser:
+    needs: asset-lab
+    if: needs.asset-lab.outputs.visual_needed == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -57,14 +113,21 @@ jobs:
           done
           cat /tmp/asset-lab-http.log
           exit 1
-      - name: Install Chromium
-        run: |
-          npm install --no-save --no-package-lock playwright@1.56.1
-          npx playwright install --with-deps chromium
+      - name: Install cached Chromium and pinned Playwright
+        uses: ./.github/actions/playwright-setup
       - name: Run gallery browser QA
         run: node qa/asset-catalog-browser.mjs
-      - name: Visual audit (every asset, every fortification state)
-        run: node qa/asset-audit.mjs
+      - name: Visual audit (incremental or complete)
+        env:
+          AUDIT_MODE: ${{ needs.asset-lab.outputs.audit_mode }}
+          AUDIT_SOURCES: ${{ needs.asset-lab.outputs.audit_sources }}
+        shell: bash
+        run: |
+          if [[ "$AUDIT_MODE" == "incremental" && -n "$AUDIT_SOURCES" ]]; then
+            node qa/asset-audit.mjs --sources="$AUDIT_SOURCES"
+          else
+            node qa/asset-audit.mjs
+          fi
       - name: Audit summary
         if: always()
         run: test -f artifacts/asset-audit/report.md && cat artifacts/asset-audit/report.md >> "$GITHUB_STEP_SUMMARY" || true
@@ -76,4 +139,37 @@ jobs:
           path: |
             artifacts/asset-lab-browser.png
             artifacts/asset-audit/
+          retention-days: 14
+
+  stonecolor-snapshots:
+    name: Stonecolor palette snapshots
+    # Snapshot sheets are validation artifacts for the Stonecolor feature branch, not new baselines.
+    if: github.event_name == 'pull_request' && github.head_ref == 'feature/stonecolor'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Start isolated Asset Lab
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/asset-lab-stonecolor.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:4173/figures-lab.html >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/asset-lab-stonecolor.log
+          exit 1
+      - name: Install cached Chromium and pinned Playwright
+        uses: ./.github/actions/playwright-setup
+      - name: Capture all 5 geological palettes in the real Asset Lab
+        run: node qa/stonecolor-snapshots.mjs
+      - name: Publish Stonecolor visual comparison
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stonecolor-five-palettes
+          path: artifacts/stonecolor/
+          if-no-files-found: warn
           retention-days: 14

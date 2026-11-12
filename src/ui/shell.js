@@ -1,7 +1,7 @@
 // CONQUER interface v2 ("Isole"): floating wood-and-gold tablets over a full-bleed map.
 // Opt-in with ?ui=2 (persisted; ?ui=1 goes back). Reads the game only through window.ConquerGame.
 import { html, render, useState, useEffect, useRef } from '../vendor/htm-preact-3.1.1.js';
-import { T } from './i18n-it.js?v=keep-entrance-4-multi-wells-1';
+import { T } from './i18n-it.js?v=keep-entrance-4-multi-wells-1-lhroof1';
 
 const STORE_KEY = 'conquer.ui.v2', MODE_KEY = 'conquer.ui.mode', DEV_KEY = 'conquer.dev';
 const params = new URLSearchParams(location.search);
@@ -88,15 +88,17 @@ const CATALOG = [
       if (stone) rows.push(masonryRow(s));
       return rows;
     } },
-  { id: 'walls', hint: T.hints.linear, press: '[data-linear="wall"]', is: s => s.tool.kind === 'linear' && s.tool.linear !== 'road',
+  { id: 'walls', hint: T.hints.linear, press: '[data-linear="wall"]', is: s => (s.tool.kind === 'linear' && s.tool.linear !== 'road') || s.tool.kind === 'leanTo',
     rows: s => {
-      const kind = s.tool.linear, wide = kind === 'built' && s.tool.span === 'wide', wood = kind === 'built' && s.tool.material === 'wood', rows = [{ label: O.type, options: [
+      const kind = s.tool.linear, lean = s.tool.kind === 'leanTo', wide = kind === 'built' && s.tool.span === 'wide', wood = kind === 'built' && s.tool.material === 'wood', rows = [{ label: O.type, options: [
         opt(V.wall, '[data-linear="wall"]', kind === 'wall'),
         opt(V.palisade, '[data-linear="palisade"]', kind === 'palisade'),
-        opt(V.built, '[data-linear="built"]', kind === 'built' && !wide && !wood),
+        opt(V.built, '[data-linear="built"]', kind === 'built' && !wide && !wood && !lean),
         opt(V.builtWide, '[data-linear="builtWide"]', wide && !wood),
         opt(V.longhouse, '[data-linear="longhouse"]', wood && !wide),
-        opt(V.longhouseWide, '[data-linear="longhouseWide"]', wood && wide)] }];
+        opt(V.longhouseWide, '[data-linear="longhouseWide"]', wood && wide),
+        opt(V.leanTo, '[data-linear="leanTo"]', lean)] }];
+      if (lean) return [...rows, { label: O.material, options: [['wood', V.leanWood], ['stone', V.leanStone], ['brick', V.leanBrick]].map(([m, l]) => opt(l, `[data-lean-material="${m}"]`, (s.tool.leanMaterial || 'wood') === m)) }];
       if (kind !== 'built') rows.push({ label: O.tier, options: [1, 2, 3].map(n => opt('T' + n, `[data-wall-tier="${n}"]`, s.levels.wallTier === n)) });
       if (kind !== 'palisade' && !wood) rows.push({ label: O.height, options: [1, 2].map(n => opt(String(n), `[data-wall-level="${n}"]`, (wide ? s.levels.builtWide : s.levels.wall) === n)) });
       if (kind !== 'palisade' && !wood) rows.push(masonryRow(s));
@@ -232,6 +234,7 @@ function ModeBar({ mode, setMode }) {
       ${['build', 'manage', 'defend'].map((m, i) => html`
         <button type="button" class=${mode === m ? 'on' : ''} aria-pressed=${mode === m}
           data-tip=${T.modes[m]} data-tip-body=${'Tasto ' + (i + 1)} onClick=${() => setMode(m)}>${T.modes[m]}</button>`)}
+      <button type="button" onClick=${() => window.ConquerWikiHost?.open()}>Codex</button>
     </nav>
   </div>`;
 }
@@ -275,6 +278,7 @@ function ToolCard({ snap, cmd }) {
         tip: VALUE_TIPS[o.label] || VALUE_SHORT[o.label] ? o.label : null, tipBody: VALUE_TIPS[o.label] }))}
         wrap=${row.wrap} onPick=${o => cmd.press(o.selector)} /></${Row}>`)}
     ${rows.length === 0 && html`<p class="u2-hint">${entry.hint}</p>`}
+    <a class="u2-codex-link" href=${window.ConquerWikiHost?.href() || './wiki/'} onClick=${e => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) { e.preventDefault(); window.ConquerWikiHost?.openTool(); } }}>Voce nel Codex</a>
   </${Card}>`;
 }
 
@@ -344,6 +348,40 @@ function Inspector({ snap, cmd }) {
   const d = snap.selection?.detail;
   if (!d) return null;
   const run = (name, ...args) => cmd.structure(name, d.id, ...args);
+  // Construction has a different palette from the operational inspector.
+  // This branch intentionally precedes every completed-building control.
+  if (d.building) {
+    const b = d.building;
+    return html`<${Card} title=${structureTitle(d)} sub="Cantiere in costruzione" onClose=${cmd.deselect}
+      footer=${html`<${Cost} cost=${d.cost} />
+        <button type="button" class="u2-icon-btn u2-danger" aria-label=${I.demolish}
+          data-tip=${I.demolish} onClick=${() => cmd.demolish(d.id)}>
+          <${Icon} name="delete" size=${18} /></button>`}>
+      <div class="u2-stats">
+        <${Stat} label="Avanzamento lavori" value=${Math.round(b.progress * 100) + '%'} />
+        <${Stat} label="Lavoro residuo" value=${fmt(b.days) + ' giornate'} />
+      </div>
+      <${Bar} value=${b.progress} max=${1} />
+      <div class="u2-stats">
+        <${Stat} label="Materiali consegnati" value=${Math.round(b.materialsProgress * 100) + '%'} />
+        <${Stat} label="Stato" value=${b.status || 'In attesa'} />
+      </div>
+      <${Bar} value=${b.materialsProgress} max=${1} />
+      <div class="u2-site-materials">
+        ${b.materials.map(r => html`<div class="u2-site-material">
+          <span>${T.resourcesLong[r.key] || r.key}</span><strong>${fmt(r.delivered)} / ${fmt(r.total)}</strong>
+        </div>`)}
+      </div>
+      ${b.editable && html`<${Row} label="Priorità approvvigionamento">
+        <select class="u2-name" aria-label="Priorità cantiere" value=${String(b.priority)}
+          onChange=${e => run('setConstructionPriority', Number(e.currentTarget.value))}>
+          ${b.priorities.map((label, value) => html`<option value=${String(value)}>${label}</option>`)}
+        </select>
+      </${Row}>`}
+      <p class="u2-hint">Il progetto rimane confermato anche senza scorte. I materiali disponibili sono assegnati prima ai cantieri con priorità più alta.</p>
+    </${Card}>`;
+  }
+
   const sub = d.building ? I.underConstruction(d.building.days) : d.houseLevel ? 'L' + d.houseLevel
     : d.well ? (d.well.center ? d.well.villageName || I.wellCenter : d.well.name || I.wellUnnamed) : I.completed;
   const facts = d.facts.map(f => [I.facts[f.key], f.key === 'masonry' ? I.masonryValues[f.value] || f.value : f.center ? I.wellCenter + ' · ' + f.value : f.value]);
@@ -351,6 +389,7 @@ function Inspector({ snap, cmd }) {
   const hp = d.integrity;
   return html`<${Card} title=${structureTitle(d)} sub=${sub} onClose=${cmd.deselect}
     footer=${html`<${Cost} cost=${d.cost} />
+      <a class="u2-codex-link" href=${window.ConquerWikiHost?.href() || './wiki/'} onClick=${e => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) { e.preventDefault(); window.ConquerWikiHost?.openSelection(); } }}>Voce nel Codex</a>
       <button type="button" class="u2-icon-btn u2-danger" aria-label=${I.demolish} data-tip=${I.demolish} onClick=${() => cmd.demolish(d.id)}><${Icon} name="delete" size=${18} /></button>`}>
     ${d.building && html`<${Bar} value=${d.building.progress} max=${1} />`}
     ${facts.length > 0 && html`<div class="u2-stats">${facts.map(([k, v]) => html`<${Stat} label=${k} value=${v} />`)}</div>`}

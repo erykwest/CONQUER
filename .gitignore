@@ -2,3 +2,14 @@
 __pycache__/
 .playwright-cli/
 output/playwright/
+
+# Local Obsidian workspace/cache; editorial Markdown is versioned.
+content/codex/.obsidian/
+content/codex/.trash/
+output/migrate-codex-notes.cjs
+
+# Local authoring location and import baseline, never published.
+.codex-vault.local.json
+.codex-vault-sync.json
+content/codex/*.import-tmp
+src/codex-wiki-editorial.js.import-tmp

@@ -22,15 +22,27 @@ function seasonForMonth(month){
   if(month<=7)return'summer';
   return'autumn';
 }
+let lastAutumnFoliageStep=-1;
+function syncAutumnFoliage(){
+  const step=autumnFoliageStep();
+  if(step===lastAutumnFoliageStep)return false;
+  lastAutumnFoliageStep=step;
+  // Canvas forest sprites live in landscape; urban corner trees live in base.
+  // World3D only re-uploads tree geometry because its atlas signature is unchanged.
+  if(step>=0)invalidateSceneCache(['landscape','base']);
+  return true;
+}
 function syncSeasonToCalendar(){
   const next=State.seasonOverride||seasonForMonth(calendarDateFromDay().month);
-  if(State.season===next)return false;
+  if(State.season===next){syncAutumnFoliage();return false}
   State.season=next;
+  syncAutumnFoliage();
   document.querySelectorAll('[data-season]').forEach(b=>b.classList.toggle('active',b.dataset.season===State.seasonOverride));
   invalidateSceneCache();
   return true;
 }
 function syncDevButtons(){
+  document.querySelectorAll('[data-dev-build]').forEach(b=>{const active=devBuildMode(b.dataset.devBuild);b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active))});
   document.querySelectorAll('[data-private-masonry]').forEach(b=>{
     const active=b.dataset.privateMasonry===(State.village.privateMasonryMaterial||'stone');
     b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));
@@ -155,6 +167,7 @@ function setSeason(season){
   const labels={summer:'Estate',autumn:'Autunno',winter:'Inverno',spring:'Primavera'};
   State.seasonOverride=State.seasonOverride===season?null:season;
   State.season=State.seasonOverride||seasonForMonth(calendarDateFromDay().month);
+  syncAutumnFoliage();
   syncDevButtons();
   weatherCacheKey='';weatherCacheValue=null;cloudLayerKey='';puddleCacheKey='';
   invalidateSceneCache();saveLocal();draw();
@@ -179,7 +192,19 @@ function setPrivateMasonryMaterial(next){
   markDirty(false,false,true);syncDevButtons();
   status('Nuove case private: '+(next==='brick'?'ARGILLA / MATTONI':'PIETRA')+' · le case esistenti non cambiano');
 }
+function setDevBuildMode(key){
+  if(!['freeBuild','fastBuild'].includes(key))return;
+  State.devBuild=State.devBuild||{};State.devBuild[key]=!devBuildMode(key);
+  const completed=[];
+  for(const s of State.structures.filter(underConstruction)){
+    applyConstructionDev(s);if(!underConstruction(s))completed.push(s);
+  }
+  if(completed.length)runSettlementMaintenance('completion',completed);
+  if(completed.length||devBuildMode('freeBuild'))markDirty(false,true);
+  syncDevButtons();renderFunctionPanel();renderUI();draw();
+}
 function ensureDevControls(){
+  document.querySelectorAll('[data-dev-build]').forEach(b=>b.onclick=()=>setDevBuildMode(b.dataset.devBuild));
   document.querySelectorAll('[data-private-masonry]').forEach(b=>b.onclick=()=>setPrivateMasonryMaterial(b.dataset.privateMasonry));
   document.querySelectorAll('[data-visual-palette]').forEach(b=>b.onclick=()=>setDevVisualPalette(b.dataset.visualPalette));
   document.querySelectorAll('[data-season]').forEach(b=>b.onclick=()=>setSeason(b.dataset.season));
@@ -213,6 +238,7 @@ function generateNewMap(){
   State.clock.day=0;
   State.draft=null;State.selectedId=null;
   State.seed=freshLandscapeSeed();
+  State.stonePaletteId=window.ConquerStoneColor?.randomForSeed(State.seed)||'gray';
   State.heraldry=null;
   State.diplomacy=null;
   window.ConquerDiplomacy?.reset();

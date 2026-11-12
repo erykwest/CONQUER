@@ -1,5 +1,100 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+
+## 2026-11-09 — BC-261109-02 · DEV e cantieri di ristrutturazione
+
+- **Prove aggiuntive PASS:** regressione d'assedio reale Canvas/WebGL e perdita contesto WebGL; annullamento di upgrade conserva i danni subiti durante il cantiere.
+
+- **Riesame CI:** fixture browser d'assedio aggiornata a Fast a pagamento per preparare la porta completa; verificata anche l'allocazione Fast dallo stock provvisorio prima della fondazione. Il comportamento normale resta temporizzato.
+
+Branch `fix/upgrades-dev-build`: Free/Fast build indipendenti, cantieri con quota incrementale e rollback per upgrade edilizi, regola condivisa per cambi livello delle case automatiche. Materiali DEV non rimborsabili e opzioni non salvate. Test locali e browser UI1/UI2 PASS; CI da verificare. ROADMAP invariata.
+
+
+## 2026-11-09 — PR #186 · Cantieri: equità, consumo e verifica browser
+
+Completata la branch dei cantieri senza prefinanziamento: ripartizione equa per bene, rimborso dei soli materiali non consumati, salvataggio pozzi e apportionamento dei frammenti, ghost lineari coerenti. Test locali e Chromium UI1/UI2 PASS, workflow browser ampliato. Stato: branch, Actions del nuovo head da verificare.
+
+
+08/11/2026 — `feature/construction-staged-priority-20261108` (pre-merge): conferma ghost senza pagamento integrale; costi fissi come preventivi e trasferimenti parziali dal ledger canonico in ordine di sei priorità, coerenti con gli assegnamenti dei costruttori L1. Inspector provvisorio con due progressi e quantità consegnate, anche su UI2. Compatibilità con vecchi cantieri già prepagati; rimborsi parziali dei nuovi; regressione dedicata `qa/construction-priority-regression.cjs` nel Runtime integrity. CI e controllo visivo ancora da verificare; nessuna carovana materiale separata, ROADMAP M0–M5 invariata.
+
+09/11/2026 — `feature/caserma-avamposto` (pre-merge): implementata MIL-RES-01. Riserva unica di soldati nella Caserma (arruolamento L1 a 15 oro, paga L2), pattuglie esterne e ronde che consumano 2 soldati, vedette obbligatorie perché una torre veda, allarme automatico da vedette e pattuglie, Avamposto come upgrade delle torri isolate con segnali a catena e staffetta a cavallo, fuoco di segnalazione con modello Blender della pira. Il corpo di guardia esce dal castello (resta nel Municipio). Nuova regressione e test aggiornati; STATUS, BACKLOG e DECISIONS aggiornati; ROADMAP invariata.
+
+09/11/2026 — `docs/caserma-avamposto-spec`: specifica approvata MIL-RES-01 (Corpo di Guardia fuso nella Caserma, riserva unica di soldati L1 come valuta, pattuglie esterne e ronde con allarme automatico, vedette obbligatorie per la vista delle torri, Avamposto come upgrade delle torri isolate, fuoco di segnalazione, staffetta). Nuova decisione D-MIL-RES-261109. Solo documentazione: nessun codice, test o asset; ROADMAP invariata.
+
+09/11/2026 — `feature/circle-military-zones-macrotowers-20261109` (pre-merge): gestione militare CIRCLE con compartimenti difensivi effettivi, stato e profondità per zona; assegnazioni arcieri per settore e per torre madre; sottotorri e sottotorri annidate aggregate in una riga, con slots Siege sommati una sola volta. Le pattuglie si assegnano/ritirano dai settori usando il roster Combat già esistente e percorsi militari locali: nessuna nuova unità creata dal trasferimento. QA dedicata e test di pannello/browser; in attesa CI prima del merge. Decisione D-MIL-CIRCLE-261109; ROADMAP invariata.
+
+
+09/11/2026 — `feature/jobmanager-l2-military-garrisons-20261109` (pre-merge): palette Job Manager ripartita in L1/L2. L2 ora usa l'algoritmo con priorità/minimo/AUTO, indipendente da L1 e persistito dentro `State.economy`; supporta campi/cave/miniere e mantiene il comportamento legacy fino alla prima modifica. Centro di controllo → Militare integra sottopaletta «Pattuglie e guarnigioni» con pattuglie White Zone, archi delle torri tramite Siege e caserme `/camp`, senza forzare asset o unità simulate. Regresioni motore/pannelli e browser estese; QA JS isolata PASS, CI da verificare. Decisione D-JOBS-MIL-261109, ROADMAP invariata.
+
+
+09/11/2026 — `feature/l1-jobmanager-priority-20261109` (pre-merge): Job Manager L1 reso modificabile con ordine drag-and-drop, controlli su/giù, Minimum worker e toggle AUTO/manuale. `ConquerEconomy` assegna prima i minimi (priorità) e successivamente la capacità AUTO; i job manuali rispettano il tetto e gli inattivi non vengono erroneamente offerti ai cantieri. Politiche conservate nel save dell'economia locale/cloud; legacy automatico intatto fino alla prima modifica. QA lavoro/pannelli estesa, prove isolate PASS, CI e verifica visiva ancora da effettuare. ROADMAP invariata, decisione D-L1-JOB-261109.
+
+
+09/11/2026 — `docs/backlog-sync-20261109`: riconciliato il BACKLOG con le PR effettivamente merged in `main` (`e63f729`); nuova sezione in testa che prevale sulle diciture «su branch / non merge», elenco delle PR aperte, del lavoro locale non pubblicato e delle voci di catalogo ancora da confermare. STATUS aggiornato. Nessun codice, test o asset modificato; ROADMAP e DECISIONS invariate.
+
+08/11/2026 — `feature/stonecolor` audit dipendenze: aggiunti agganci semantici del colore pietra a case/civici, pavimentazioni, ponti, rampe/scalinate, materiali di cantiere, cutaway e relative cache; corretto il riconoscimento errato Clay in House3D, mantenute alghe e muschio negli asset rocciosi, unione Canvas mura forzata a pietra; bust URL stonecolor2 e QA estesa. Nessuna geometria, economia o colore degli oggetti non minerali intenzionalmente modificato. Verifica visuale e CI finale aperte.
+
+
+08/11/2026 — `feature/stonecolor`: palette cromatiche **approvate** in SVG dal product owner. Implementato registro a cinque scale di ombreggiatura, selezione seed-based per mappa, nuova scheda Profilo → Ambiente, save locale/cloud, tintura semantica di murature e componenti rocciose Canvas/World3D senza convertire Clay, legno e tetti. Aggiornate cache e versioni asset; test stonecolor nel workflow Runtime integrity. PR/Actions/QA visiva da verificare prima del merge.
+
+08/11/2026 — branch `feature/profile-job-trade-tabs-20261108` (pre-merge): schede Job Manager e Trade accanto alle schede Profilo; viste sui dati occupazione/mercato esistenti, quote vendita e gestione carovane ancora instradate ai comandi correnti. Regressione pannelli estesa, CI/browser da verificare. Nessuna modifica a gameplay, risorse o save; ROADMAP e DECISIONS invariate.
+
+08/11/2026 — branch `fix/dark-tree-bark-20261108` (pre-merge): 14 asset SVG con tronchi di alberi e rami di cespugli in **#2B1D16**, stessa tinta per i pini montani; conversione cespugli aggiornata, chiome e progressione autunnale inalterate. Cache-busting sprite e script, `qa/tree-bark-regression.cjs` aggiunta a Runtime integrity. CI e verifica visiva browser ancora da confermare; ROADMAP/DECISIONS invariati.
+
+07/11/2026 — branch `autumn` (pre-merge): sostituite le chiome brune uniformi con evoluzione di 91 giorni da verde estivo a giallo, oro, arancione, rosso e marrone, asincrona per posizione/seed. Canvas invalida due cache statiche al cambio del giorno autunnale; WebGL2 riutilizza l'atlante e ricostruisce solo i vertici UV, senza nuovi SVG. Aggiunto `qa/autumn-foliage-regression.cjs` a Runtime integrity, cache-busting script, STATUS/BACKLOG/DECISIONS e feature-backlog. Parsing JS e prova logica in sessione, CI/browser da verificare. Nessun merge in `main` e ROADMAP invariata.
+
+
+
+07/11/2026 — fix CAMP `fix/camp-bivouac-night-20261107` (pre-merge): ripristinata la visibilità delle tende durante i bivacchi notturni anche con mesh 3D vuote o parzialmente eliminate dal filtro ostacoli; modello Canvas di sicurezza per le sole unità senza tenda, con gli altri bivacchi che mantengono il 3D. Cache aggiornata per seed/livrea/numero strutture; regressione `qa/camp-regression.cjs` ampliata a render 3D normale, vuoto e misto. QA Actions da verificare; nessuna variazione alle regole Yellow/White, pattuglie o a modelli grafici.
+
+
+06/11/2026 — P2.3 CI (`chore/ci-p23-stale-push-triggers-20261106`): rimossi 8 trigger push per 7 branch inesistenti da 7 workflow; invariati i trigger PR, push su main e workflow manuali. Aggiornato `qa/ci-p1-regression.cjs` come guardia anti-regressione. Nessun test/asset/branch eliminato.
+
+
+06/11/2026 — `perf/assetlab-p2-incremental-20261106` (pre-merge): esteso Asset Lab con audit incrementale limitato ai file SVG/PNG indipendenti e registri 3D esplicitamente consentiti; risoluzione runtime via catalogo e controllo baseline con fallback a full per modelli spariti, file sconosciuti e mutazioni strutturali. Aggiunti full manuale/domenicale, pianificazione PR fail-safe, test `qa/asset-audit-scope-regression.cjs` e note `docs/CI.md`. Asset esistenti invariati; ROADMAP gameplay invariata.
+
+
+06/11/2026 — branch `feature/l1-carter-jobs-market-20261106` (pre-merge): promosso il traffico `ConquerHaulage` da sola animazione a professione **Carrettiere L1**, con assegnazioni del JobManager, sede operativa al Piazzale, un dipendente per deposito attivo, esclusione dalle altre mansioni e soppressione della figura doppia quando conduce. Rotte reali: partenza a vuoto dal deposito, carico dal sito produttivo, consegna al deposito signorile o al Mercato per le quote private/vendute, ritorno vuoto. Visualizza anche le produzioni delle botteghe L3 tramite eventi dopo l'accredito nei loro beni; nessuna duplicazione dei ledger. Pannelli aggiornati, QA dedicata `qa/l1-carter-market-regression.cjs` nel workflow Economy flows; STATUS/BACKLOG/DECISIONS/feature-backlog allineati. ROADMAP invariata.
+
+
+06/11/2026 — Integrazione #169 su main c0c720b: mantenuti H4 e funzioni attuali, fixture aggiornata, catalogo Wiki rigenerato. Audit locale Mura: 265 render, 0 errori; 32 nuove voci addossati (legno, scuderia, pietra, mattoni) riviste nei fogli e aggiunte alla baseline; 98 cambiati preesistenti non accettati. Limite conservato: perdita del muro non abbatte automaticamente l'addossato; nessuna nuova regola di crollo introdotta.
+
+05/11/2026 — `feature/wall-buildings`: edificio addossato alle mura (sezione W1, una stanza, contro muri H2) con tetto a falda unica sotto il camminamento. Di default in legno con tetto in paglia, a scelta pietra o mattoni. Piramide: STATUS, BACKLOG; backlog Builder: BC-251105-03/10.
+
+06/11/2026 — Integrazione #165 su main 1247cca: aggiunte dal vault autore le schede Falconiera e Orto di corte (138 voci, 153 pagine, 156 note); export gameplay rigenerato. Nuovo workflow Wiki conforme a P1: concurrency PR e setup Chromium condiviso; inventario CI 26 workflow, 6 browser job. ROADMAP e contratti editoriali invariati.
+
+## 2026-11-05 — Pulsante CODEX / WIKI nel Profilo
+
+Richiesta dell'utente: accesso visibile dentro Profilo. Aggiunto pulsante di apertura del lettore esistente e collegamento nel bridge; barra Profilo con wrap e versioni cache aggiornate. Regressione browser estesa a entrambe le UI, chiusura/Escape, ritorno focus e mobile. Nessuna modifica a gameplay o salvataggi; ROADMAP/DECISIONS invariate, accesso UI sul contratto Wiki esistente.
+
+## 2026-11-05 — Wiki da contenuti Obsidian (branch feature)
+
+Migrati titoli, alias e testi di 151 pagine in note Markdown; aggiunti indice, guida e modello. Il vault personale è l'ambiente di scrittura e la copia Git è importata con baseline/conflitti e validazione preventiva. Generato artefatto editoriale per sito e gioco, preservando costi/regole dai provider. Supportati link a sezioni, paragrafi/titoli/liste/formattazione sicura. Ampliate cinque note di contenuto; test editoriali/import e browser PASS locali. D-CODEX-03 e documentazione aggiornati, nessun merge/deploy implicito.
+
+## 2026-11-05 — Wiki Codex navigabile (branch feature)
+
+Aggiunti `/wiki/`, vista condivisa, contenuti editoriali con autolink di keywords verso sovracategorie e schede, ricerca e filtri con URL, backlink, dati/quote dal catalogo. Lettore modale in-game e accessi Builder/UI2; export pubblico deterministico da sorgenti e CI contro dati obsoleti. Test locali e browser PASS, screenshot desktop/mobile revisionati. D-CODEX-02 documenta i link e il ciclo di pubblicazione generato. Nessun nuovo asset, tecnologia o dato personale pubblicato.
+
+## 2026-11-05 — CODEX normalizzato v1 (branch feature)
+
+Aggiunti `src/codex-catalog.js` (contratto portabile, copie congelate, ID/relazioni, quote e snapshot) e `src/settlement-codex.js` (adapter read-only, 136 record) in index. Preventivi dalle funzioni del Builder e dai registri, compatibilità da predicati esistenti o esplicitamente non mappata. Nessuna modifica a salvataggi, economia, asset o tecnologie. Test Codex e regressioni Builder/economia/save/runtime PASS in locale; API verificata nel browser. Suite aggiunta a Runtime integrity. Audit #159 incorporato; documentato D-CODEX-01. Nessun merge/deploy implicito.
+
+## 2026-11-05 — Censimento iniziale CONQUER CODEX
+
+Branch documentale `docs/codex-catalog-audit-20261105`, base `main` `bcf3cd7`. Aggiunto `docs/CODEX-CATALOG-AUDIT.md` con registri, chiavi, proprietari e limiti delle sette famiglie; distinto Asset Lab da catalogo gameplay e stato delle PR aperte. Aggiornati STATUS/BACKLOG e indice README. Nessuna modifica runtime/asset/bilanciamento; suite gameplay e browser non eseguite. ROADMAP e DECISIONS invariate: questa fase documenta fonti e prossimi passi senza cambiare milestone né introdurre contratti runtime.
+
+05/11/2026 — `feature/falconry`: nuova stanza Falconiera (torri in pietra W2–W3 a falde, ultimo piano) con caccia di 4 razioni al giorno e voliera Blender sul tetto montata da `ROOM_EXTERIOR` (montaggio `roof` per le stanze); nuovo valore Prestigio del castello dalle stanze di corte. Piramide: STATUS, BACKLOG, DECISIONS (D-ROOM-EXT-01 esteso alle stanze sul tetto; D-PRESTIGE-01). ROADMAP invariata: la Falconiera era già approvata nel catalogo.
+
+06/11/2026 — `chore/ci-p1-browser-dedup-20261106` (pre-merge): introdotta concurrency per tutti i 25 workflow (cancel run superati solo PR), eliminati full suite duplicati in Main fixes/Gate/WebGPU, unificato Playwright 1.56.1/Chromium con cache in composite action, concentrato audit visivo in Asset Lab (browser condizionale ai file visivi), limitato WebGPU a modifiche renderer e lancio manuale, preservate integrità/economia/guard documentale e ampliato P0 full a world3d/castle3d. Test di regressione `qa/ci-p1-regression.cjs` e documentazione `docs/CI.md` aggiornati. ROADMAP invariata.
+
+
+
+06/11/2026 — branch `feature/local-production-haulage-20261106` (pre-merge): introdotto `ConquerHaulage`, traffico visivo reale delle merci trattenute dall'economia locale e del legname da bonifica fino ai Piazzali magazzino. Percorsi tramite `ConquerVehicles` sulle strade terminate, scelta del deposito connesso migliore, attesa in mancanza di route, carro carico in andata e vuoto in ritorno, sincronizzato alla pausa e al calendario. Kit carro, cavalli e conducenti 2D già esistenti; nessuna nuova risorsa, inventario o modello 3D. Aggiunti pannello Piazzale, QA e workflow Economy flows. Documenti STATUS/BACKLOG/DECISIONS/feature-backlog aggiornati; ROADMAP invariata.
+
+
+06/11/2026 — `chore/ci-p0-consolidation-20261106` (pre-merge): CI P0. Ritirati 11 workflow obsoleti/monouso senza cancellare test. `settlement-routing-spawn.yml` mantiene ID check ma passa da full `qa/*-regression.cjs` su qualsiasi PR a smoke veloci sulle PR isolate, full pre-merge su cambiamenti nei moduli condivisi e full domenicale/manuale. Conservati runtime integrity, economy, governance. Aggiunti `qa/ci-p0-regression.cjs` e `docs/CI.md`. ROADMAP di gioco invariata; P1 Playwright/dedup ancora aperto.
+
+
 06/11/2026 — Integrazione #155: fixture CIRCLE aggiornata a torri W2 esplicite per i granai e relativo towerTier; le W1 non ammettono granai secondo la nuova regola. Nessuna variazione alle scorte o alle regole CIRCLE.
 
 ## 2026-11-05 — Latrina nelle torri W1 (branch `fix/latrine-towers`)
@@ -7,6 +102,7 @@
 - Correzione dell'utente: la latrina va al piano 2 delle torri W1 in pietra, con lo sbalzo sulla faccia esterna libera; non va più nelle sezioni costruite.
 - Validazione con l'utente (12/11): falda a lastra unica con gronda corta (5 cm davanti, 3 ai lati) appoggiata su timpani in pietra; panca a 3 fori dentro lo sbalzo (Blender), non più sedili nella stanza. 2.5D: lo sbalzo dietro la torre si disegna prima del corpo del castello (la torre lo copre); nel cutaway quello sul lato tagliato perde solo la facciata, scarichi e fori sotto lo sbalzo spariscono; torre madre e sottotorri si coprono solo quando una sta davvero davanti. Lab: variante «Grande quadrata L3 + sottotorre W1 latrina» (lo stage accetta `attach` per le sottotorri).
 - Falda dello sbalzo rivista con l'utente (11/11): una lastra unica, il doppio di pendenza (0,24 U) e di sporgenza (12 cm davanti, 8 ai lati). Decisione dell'utente: il renderer 2.5D sarà dismesso (tranne scatter e personaggi), lavoro in un branch a parte; gli asset si verificano in 3D.
+
 - Revisione: con una stanza assegnata la torre W1 perde la scala a chiocciola; latrina comune a 3 fori, meno sporgente, falda corretta, stanza arredata; sbalzo leggibile nel cutaway. Deroga d'audit motivata per «sagoma-conservata» sullo sbalzo crollato della torre quadrata.
 - Le torri W1 ricevono una stanza per piano, ma con la scala a chiocciola accettano solo Colombaia (ultimo piano), Latrina, Prigione, Tesoro e Armeria.
 - `ROOM_EXTERIOR` monta l'elemento `face` anche sulle torri; le feritoie della faccia gli lasciano il posto. Asset Lab: tre varianti di torre W1 nuove, la variante della sezione con latrina rimossa; baseline aggiornata.
@@ -37,10 +133,20 @@
 
 05/11/2026 — `fix/audit-sheet-grid`: i fogli provini per categoria vanno a griglia da 8 colonne. Lo sfondo neutro evita che le celle vuote sembrino un esito verde. Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è uno strumento di QA, non cambia contratti.
 
+## 2026-11-09 — Coperture della long house (branch `feature/longhouse-roofs`)
+
+- BC-251105-09: la long house lignea W1/W2 ha tre manti a scelta nel pannello (scandole, paglia, zolle erbose), generati nel modello Blender, e uno sfiatatoio nel colmo da cui esce il fumo del focolare. Quattro varianti nuove nell'Asset Lab. Piramide: STATUS, BACKLOG, CHANGELOG e `feature-backlog.md`. ROADMAP e DECISIONS invariate: nessun contratto nuovo, solo un campo di variante.
+
 05/11/2026 — `feature/double-crenel` (BC-251105-04): nuovi stili delle merlature «Merlo doppio» (merli lunghi il doppio sulle mura, sequenza 11011011) e «Doppia fila» (seconda fila di merli sul lato interno del cammino delle mura). Entrambi selezionabili nel Centro di controllo › Cantieri, presente nel Lab. Piramide: STATUS, BACKLOG, CHANGELOG, feature-backlog. ROADMAP e DECISIONS invariate: estende un contratto esistente (`State.policies.crenelStyle`).
 
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`)
 
+- **Trabucco come unità** (`src/settlement-trebuchets.js`): pulsante *Assault · trebuchet* nel pannello Combat, si piazza fuori dalle mura e punta la fortificazione più vicina entro 28U; montaggio di 6 s (animazione del modello), poi una pietra infuocata per ciclo (6 s) con danno reale (`attackStructure` arma trebuchet, forza 0,5) e nuovo bersaglio quando il primo crolla; 4 serventi, fermo senza serventi. Test `qa/trebuchet-regression.cjs`.
+- Performance assedio: `pointBlockedForPeasant` usa un indice spaziale delle strutture (celle 4U) nella fotografia degli ostacoli; stessi risultati su 20.000 punti, 17× più veloce. Il primo tick dell'assalto sul layout TEST passa da 63 s a ~0,9 s.
+- Layout TEST: mura con `flip` (cammino di ronda e lato esterno corretti: torre d'assedio fuori dalle mura) e porta girata verso nord.
+- Performance (layout TEST, 166 strutture, 6 navi, 163 abitanti): da ~940 ms a ~30–75 ms per frame. (1) Gli artigiani senza bottega né mercato ricalcolavano a ogni frame la strada fino al pozzo (`structureAccessPoint`, ~30 ms ciascuno): ora il punto è in cache fino al cambio di navigazione. (2) Le navi ricostruivano la mesh a ogni frame per rollio e beccheggio (~19 ms una nave grande): ora la mesh si costruisce una volta nel sistema della nave e si sposta con una trasformazione rigida (flotta da 58 a 6 ms). (3) Atlante delle figure con riquadri da 64 px (1024 posti), canvas `willReadFrequently` per la rilettura delle caselle, pre-caricamento dei marinai solo per le pose ferma e camminata.
+- DEV **Carica layout**: layout di prova salvati in `layouts/<nome>.json` (stesso formato del salvataggio locale) e richiamabili dal menu DEV. Primo layout `TEST`: Portoreale, villaggio medio con castello a 4 torri in cutaway con stanze e arcieri, mura T3 pattugliate, porta con guardie, campo d'addestramento, molo militare e commerciale, 6 navi, pattuglie di picchieri.
+- Personaggi con profondità in WebGL: contadini, lavoratori con attrezzo, carpentieri e marinai passano dal meccanismo dei soldati (carta con test di profondità). Ogni posa si dipinge una volta in un atlante 2048 (riquadri 96 px, 441 posti, sfratto dei meno usati), le animazioni sono divise in 8 fasi, la direzione è la stessa carta ribaltata, alla GPU va solo la casella nuova. Le pose degli equipaggi si preparano nei tempi morti. Ora uno scafo, una vela o un molo davanti nascondono il personaggio.
 - Banchina perpendicolare alla riva: pontili su entrambi i lati, approdo ridotto a 0,3U sulla banchina; test del molo esteso.
 - Magnete delle mura sui lati della banchina: muro dritto all'esterno, addossato alla faccia, alla quota della banchina su zoccolo.
 - Gabbiani (`src/settlement-gulls.js`, sprite 2D, solo grafica): stormi che girano sopra costa, moli e acqua vicina, con battiti d'ala, planate e ombra; altri posati su scogli, spiagge e teste dei moli. Di notte non volano, con la tempesta sono la metà.
@@ -824,3 +930,28 @@ Non archiviare nuove idee indistintamente come «implementazioni»: mantenere se
 ## Campi L2 — 05/11/2026
 
 Branch fix/fields-l2-only — scelta utente campi solo L2, sincronizzazione ledger e figure, regressioni su esclusione L1 e prenotazioni L2. Chiusura residuo jobmanager e pulizia dopo merge.
+
+## 2026-11-11 — Integrazione urgente figure-billboards (pre-merge)
+
+Recuperati i cinque commit residui 31cb32d, 2408397, 8e541fd, e4b06cc, 0ff543d sulla base main e4230db. La parte navale precedente era già in #150. Civili, lavoratori, carpentieri e marinai entrano nel depth buffer World3D; atlante 2048 con caselle 64px, 1024 posti, pose condivise, riuso LRU e upload incrementale. Conservati LOD militare, addOutbuilding, ingresso del mastio, arte e guarnigioni. Recuperati layout TEST, cache accesso pozzi, traslazione mesh navi, indice spaziale ostacoli e Trabucco DEV con scenario QA.
+
+QA locale: 165 regressioni deterministiche PASS. Aggiunta prova browser sul painter reale dei civili, occlusione da murature, riuso atlante, picking militare e fallback Canvas; inserita nel workflow Main fixes. Audit Lab completo: 1473 render, 0 errori; rivisti Popolazione, Truppe e confronto browser dietro la torre. Firme di queste categorie invariate; annotata la revisione nella baseline, senza accettare i 184 cambiati locali o i 15 stati tetto nuovi estranei a questa integrazione. Prova browser dedicata PASS. CI remota da completare prima del merge. Nessun nuovo modello, nessuna modifica alle priorità ROADMAP. Restano i limiti originari del Trabucco: non persistito, serventi colpibili solo via API, munizioni non simulate.
+
+
+10/11/2026 — ECO-FIL-01 fase 1 (`feature/eco-fil-01-miniera-metallo`): la miniera produce metallo (1 al giorno con 2 L2) invece di pietra, migrando i salvataggi. Etichetta Builder, Wiki e catalogo aggiornati. Suite economia locale PASS, CI da verificare. ROADMAP invariata nei contenuti: la voce M1 «scegliere output `mine`» è ora implementata sul branch. DECISIONS invariata: D-ECO-FIL-261110 copre già questa fase.
+
+10/11/2026 — ECO-FIL-01 (`docs/filiere-produttive`): specifica approvata delle filiere produttive. Prevede:
+- miniera → metallo;
+- lana, pelli e latte (con il casaro) dagli allevamenti;
+- ricette e consumo delle botteghe L3, senza importazioni;
+- correzioni dei mestieri: falegname su archi e lance, sarto su abiti, pellettiere su pelli;
+- cinque armi con domanda civile e officina del castello;
+- affumicatore, birra della taverna e vigneto collocabile.
+
+Nessun codice. Aggiornati BACKLOG, STATUS e DECISIONS (D-ECO-FIL-261110); ROADMAP invariata (la voce M1 «scegliere output `mine`» resta, ora decisa, da implementare).
+
+09/11/2026 — `feature/arte-graphics` (pre-merge): parte grafica di ARTE. Generatore `tools/blender/build_art.py` e registro `ConquerArtModels` con 19 archetipi (quadri e arazzi in due taglie, busto, statua in marmo/pietra/bronzo, santo ligneo in tabernacolo) e catalogo dei metadati; Asset Lab con tre famiglie «Opere d'arte». Ancoraggi a parete e a pavimento calcolati per ogni stanza del cutaway (`artSlots`, `artFits`), senza esporre opere né cambiare le stanze. Nuova `qa/art-regression.cjs`. ART-251105-01 fatto per la parte grafica, ART-251105-02 per gli slot; commissione, inventario e ricollocazione restano aperti. Poi: colori parametrici delle opere (forme fisse, colori a commissione), con slot colore nel catalogo, `src/art-colors.js`, applicazione nel cutaway (`artWorkFaces`) e selettore «Colori della commissione» nel Lab. Nuova decisione D-ART-COLORS-261109; ROADMAP invariata.
+
+
+05/11/2026 — `feature/tower-inner-roof`: BC-251105-05, tetto interno dentro i merli delle torri in pietra T2+ (variante `innerRoof`), nel Builder, nel 2.5D, nel 3D e nel Lab. Piramide: STATUS, BACKLOG, feature-backlog. ROADMAP e DECISIONS invariate: nuova variante estetica, nessun contratto cambiato (le stanze sotto il tetto restano legate al tetto a falde).
+09/11/2026 — CI P2.4 (`perf/ci-p24-specialist-test-ownership-20261109`): rimosse 9 invocazioni test duplicate da Codex Wiki, Main fixes e CAMP, mantenendo owner di regressione in Runtime integrity e settlement-qa (always-on PR). Codex Wiki mantiene Playwright e filtri dei suoi check browser, Main fixes mantiene WebGL/render e UI/Combat, CAMP conserva animali e pattuglie. Aggiunta guardia P2.4 in `qa/ci-p1-regression.cjs`; suite completa P0 e tutte le baseline/test immutate.

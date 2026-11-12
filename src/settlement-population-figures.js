@@ -49,7 +49,14 @@ function drawVillagerHead(id,x,y,r,sex='male',cachedHair=null){
   ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();
   ctx.restore();
 }
+// Everything that changes how a villager looks (not where): the key of its 3D figure tile.
+function villagerLookKey(dot){
+  const outfit=window.ConquerWardrobe?.outfitFor(dot);
+  return [dot.kind,dot.age,dot.sex,dot.hair||villagerHair(dot.id),(dot.colors||[]).join(','),outfit?JSON.stringify(outfit):''].join('|');
+}
 function drawVillagerFigure(dot){
+  // WebGL: a depth-tested card (settlement-world3d.js figure()), so ships and walls in front hide it.
+  if(window.ConquerWorld3D?.figure?.(dot.p,.10,'v|'+villagerLookKey(dot),()=>drawVillagerFigureUnmasked({...dot,p:{x:0,y:0}}),dot.id))return true;
   return withUrbanFigureOcclusion(dot.p,.10,()=>drawVillagerFigureUnmasked(dot));
 }
 function drawVillagerFigureUnmasked(dot){
@@ -97,6 +104,7 @@ function drawPeasants(){
   const labor=economy?.laborAllocation?.(State.clock.day);
   const unavailableFounders=new Set(Object.values(labor?.assignedL1||{})
     .flat().filter(w=>w.founderIndex!=null).map(w=>w.id));
+  const carterWorkers=new Map((labor?.carters||[]).map(w=>[w.id,w]));
   const workday=(economy?.weekday?.(State.clock.day)??6)<5;
   // Loggers walk the same commute to their camp as construction crews.
   if(workday&&(window.ConquerCombat?.alarmMode?.()||'off')==='off')
@@ -114,12 +122,17 @@ function drawPeasants(){
       // Alarm destinations are computed even for residents not selected by
       // distant-camera LOD, so mobilization does not depend on zoom level.
       const building=constructionJobs.get(resident.id);
-      let p=building?constructionWorkerPosition(building.worker,building.site,State.clock.day):
+      const carter=carterWorkers.get(resident.id);
+      // Do not draw this same named L1 both as a house resident and as the
+      // carter driving the wagon. Between journeys he waits at his yard.
+      let p=carter?window.ConquerHaulage?.workerStation?.(carter,labor.carters):
+        building?constructionWorkerPosition(building.worker,building.site,State.clock.day):
         residentClassPosition(house,resident,day,assignment);
+      if(carter&&!p)continue;
       // The artisan of an open L3 workshop works at his bench, not at the door.
-      const shop=!building?window.ConquerShopCutaway?.artisanAt(house,resident,p):null;
+      const shop=!building&&!carter?window.ConquerShopCutaway?.artisanAt(house,resident,p):null;
       if(shop)p=shop.p;
-      else if(p&&!building&&!(assignment&&resident.sex==='male'&&resident.age==='adult'&&houseLevel(house)<=2))
+      else if(p&&!building&&!carter&&!(assignment&&resident.sex==='male'&&resident.age==='adult'&&houseLevel(house)<=2))
         p={x:p.x+resident.scatterX,y:p.y+resident.scatterY};
       const combatP=window.ConquerCombat?.civilPosition(p,house,resident);
       if(combatP!==undefined)p=combatP; // null means safely inside the Common Hall.
@@ -146,9 +159,10 @@ function drawPeasants(){
     const id='founder:'+well.id+':'+i,phase=day*.13+i*.8;
     const angle=i*(Math.PI*2/Math.max(1,founders))+.17;
     const distance=2.05+(i%2)*.32;
-    const building=constructionJobs.get(id);
-    if(!building&&workday&&unavailableFounders.has(id))continue;
-    const p=building?constructionWorkerPosition(building.worker,building.site,State.clock.day):
+    const building=constructionJobs.get(id),carter=carterWorkers.get(id);
+    if(!building&&!carter&&workday&&unavailableFounders.has(id))continue;
+    const p=carter?window.ConquerHaulage?.workerStation?.(carter,labor.carters):
+      building?constructionWorkerPosition(building.worker,building.site,State.clock.day):
       {x:well.x+Math.cos(angle)*distance+Math.cos(phase)*.06,
         y:well.y+Math.sin(angle)*distance+Math.sin(phase)*.06};
     if(!p)continue;

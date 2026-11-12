@@ -1,7 +1,10 @@
 name: CAMP regression
+
+# Abort superseded PR runs of this workflow (never cancel scheduled/main runs).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 on:
-  push:
-    branches: [camp]
   pull_request:
     paths:
       - camp/**
@@ -50,4 +53,4 @@ jobs:
           node qa/night-vision-regression.cjs
           node qa/patrol-regression.cjs
           node qa/combat-selection-regression.cjs
-          node qa/settlement-routing-spawn-regression.cjs
+          # Routing/spawn is already checked on every PR by settlement-qa.

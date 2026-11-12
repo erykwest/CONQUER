@@ -43,7 +43,18 @@
       // Timber longhouse (settlement-wood3d.js): W1 / W2 span, ground floor only, the stone section's rooms.
       ['Mura',['Long house W1',{type:'built',material:'wood',level:1}]],
       ['Mura',['Long house W2',{type:'built',material:'wood',span:'wide',level:1,flip:true}]],
+      // Roof covers (BC-251105-09): thatch and turf beside the default shingles, smoke hole on the ridge.
+      ['Mura',['Long house W1 · paglia',{type:'built',material:'wood',level:1,roofCover:'thatch'}]],
+      ['Mura',['Long house W1 · zolle',{type:'built',material:'wood',level:1,roofCover:'turf'}]],
+      ['Mura',['Long house W2 · paglia',{type:'built',material:'wood',span:'wide',level:1,flip:true,roofCover:'thatch'}]],
+      ['Mura',['Long house W2 · zolle',{type:'built',material:'wood',span:'wide',level:1,flip:true,roofCover:'turf'}]],
       ['Mura',['Long house W1 · scuderia',{type:'built',material:'wood',level:1,functions:['stables']}]],
+      // Lean-to against the inner face of an H2 wall (settlement-lean-to.js): single-pitch roof.
+      // Timber + thatch by default; stone and brick on request.
+      ['Mura',['Addossato alle mura W1 · legno',{type:'built',leanTo:true,leanMaterial:'wood',leanSide:1,flip:true,level:1,functions:[]}]],
+      ['Mura',['Addossato alle mura W1 · legno · scuderia',{type:'built',leanTo:true,leanMaterial:'wood',leanSide:-1,level:1,functions:['stables']}]],
+      ['Mura',['Addossato alle mura W1 · pietra',{type:'built',leanTo:true,leanMaterial:'stone',leanSide:1,flip:true,level:1,functions:[]}]],
+      ['Mura',['Addossato alle mura W1 · mattoni',{type:'built',leanTo:true,leanMaterial:'brick',masonryMaterial:'brick',leanSide:1,flip:true,level:1,functions:[]}]],
       ['Mura',['Long house W2 · sala comune',{type:'built',material:'wood',span:'wide',level:1,flip:true,functions:['commonHall']}]],...G.gates.map(r=>['Porte',r])]
       .map(([family,[label,spec]])=>({id:slug(label),label,family,spec})).concat(shopVariants());
   }

@@ -38,6 +38,8 @@ header h1{font-size:18px;white-space:nowrap}
 .asset-tools input,.asset-tools select{color:var(--text);background:#201d19;border:1px solid var(--line);border-radius:6px;padding:8px;max-width:100%;font:inherit}
 .asset-tools #assetSearch{min-width:160px;flex:1}
 .asset-tools select{max-width:190px}
+.asset-stone-swatch{width:44px;height:9px;border-radius:5px;display:inline-block;vertical-align:middle;margin-left:6px;box-shadow:0 0 0 1px #1d1a16}
+.asset-tools label[for="assetStoneColor"]{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:12px}
 #assetCount,#assetEngineStatus{font-size:12px;color:var(--muted);white-space:nowrap}
 #assetGallery{height:min(58vh,740px);min-height:280px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));grid-auto-rows:max-content;align-content:start;gap:10px;padding:12px;scrollbar-width:thin}
 .asset-card{padding:0 0 10px;text-align:left;background:#352f27;border:1px solid #514536;border-radius:8px;overflow:hidden;min-width:0;display:flex;flex-direction:column}
@@ -56,6 +58,15 @@ header h1{font-size:18px;white-space:nowrap}
 .asset-inspector #assetDetailSource{display:block;overflow-wrap:anywhere;font-size:11px;color:#ab9b85;margin-top:10px}
 #assetDetailPreview{height:260px;background:radial-gradient(ellipse at center,#5e5347,#322b23);border:1px solid var(--line);border-radius:7px;display:flex;align-items:center;justify-content:center;overflow:hidden}
 #assetDetailPreview[hidden]{display:none}
+.asset-art-colors{margin:10px 0;display:grid;gap:7px}
+.asset-art-colors[hidden]{display:none}
+.asset-art-colors .art-colors-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.asset-art-colors .art-colors-head button{font-size:11px;padding:3px 8px}
+.asset-art-colors .art-color-row{display:grid;grid-template-columns:minmax(90px,auto) 30px 1fr;align-items:center;gap:6px;font-size:12px;color:#d6c7ae}
+.asset-art-colors input[type=color]{width:30px;height:24px;padding:0;border:1px solid var(--line);border-radius:4px;background:none;cursor:pointer}
+.asset-art-colors .art-swatches{display:flex;flex-wrap:wrap;gap:3px}
+.asset-art-colors .art-swatches button{width:18px;height:18px;padding:0;border:1px solid rgba(0,0,0,.45);border-radius:3px;cursor:pointer}
+.asset-art-colors .art-swatches button[aria-pressed="true"]{outline:2px solid #f2dfb5;outline-offset:1px}
 #assetDetailPreview img,#assetDetailPreview svg{max-width:100%;max-height:100%;object-fit:contain;width:100%;height:100%;padding:8px}
 #assetDetailPreview canvas{max-width:100%;height:100%;object-fit:contain}
 #assetAnimationPanel{background:#342f28;border:1px solid var(--line);border-radius:7px;overflow:hidden}
@@ -168,6 +179,15 @@ body.asset-catalog-static #labLegacyControls{display:none}
         <option value="figure">Animazioni</option><option value="wardrobe">Abbigliamento</option><option value="schematic">Parametrici</option>
         <option value="symbol">Simboli araldici</option>
       </select>
+      <label for="assetStoneColor" title="Scegli la pietra per le anteprime e gli snapshot del laboratorio">Pietra
+        <select id="assetStoneColor" aria-label="Stonecolor — tonalità della pietra">
+          <option value="gray">Grigio (attuale)</option>
+          <option value="sandstone">Arenaria</option>
+          <option value="tuff">Tufo</option>
+          <option value="limestone">Calcare</option>
+          <option value="granite">Granito</option>
+        </select>
+      </label>
       <button id="assetReset" type="button">Azzera</button>
       <button id="assetAuditRun" type="button" title="Verifica ogni asset in ogni stato con i render del Lab">Audit</button>
       <span id="assetCount" aria-live="polite"></span>
@@ -191,6 +211,7 @@ body.asset-catalog-static #labLegacyControls{display:none}
       <output id="assetRotationValue" aria-live="polite">0°</output>
       <button id="assetRotateRight" type="button" aria-label="Ruota modello di 15 gradi a destra">+15° ↷</button>
     </div>
+    <div id="assetArtColors" class="asset-art-colors" aria-label="Colori dell'opera" hidden></div>
     <div class="asset-rotate"><button id="assetOccupancy" type="button" title="Popolani su terreno, pavimenti e portici del modello 3D: occlusione col depth buffer, o disegnati sopra come fa oggi il gioco">Occupazione: no</button><button id="assetExportPng" type="button" title="Scarica l'anteprima corrente (stato e rotazione) in PNG 512 × 512">Esporta PNG 512</button></div>
     <p id="assetPreviewNote"></p>
     <span class="caption">Sorgente effettiva</span>
@@ -621,8 +642,12 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 <script src="./src/settlement-events3d.js?v=asset-lab-8"></script>
 <script src="./src/assets/house-models.js?v=house3d-1"></script>
 <script src="./src/assets/belfry-models.js?v=bell1"></script>
+<script src="./src/assets/mews-models.js?v=mews1"></script>
+<script src="./src/assets/pyre-models.js?v=milres1"></script>
 <script src="./src/assets/dovecote-models.js?v=dovecote-1"></script>
 <script src="./src/assets/furniture-model.js?v=infirmary-1-dove1"></script>
+<script src="./src/assets/art-models.js?v=arte-2"></script>
+<script src="./src/art-colors.js?v=arte-2"></script>
 <script src="./src/assets/garderobe-models.js?v=room-exterior-1"></script>
 <script src="./src/assets/wall-stair-models.js?v=wall-stairs-1"></script>
 
@@ -630,7 +655,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 <script src="./src/heraldry-symbols.js?v=asset-lab-1"></script>
 <script src="./src/heraldry-shapes.js?v=ships-1"></script>
 <script src="./src/asset-manifest.js?v=asset-lab-3"></script>
-<script src="./src/asset-catalog.js?v=asset-lab-12-infirmary1-dove1-bell1-mare-stairs1"></script>
-<script src="./src/asset-audit.js?v=asset-lab-7"></script>
+<script src="./src/asset-catalog.js?v=asset-lab-13-stonecolor-milres1-arte2"></script>
+<script src="./src/asset-audit.js?v=asset-lab-8-stonecolor"></script>
 </body>
 </html>
