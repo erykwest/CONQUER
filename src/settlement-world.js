@@ -1512,7 +1512,7 @@ function polygonGap(a,b){
   for(const p of b)for(let i=0;i<a.length;i++)best=Math.min(best,pointSegmentDistance(p,a[i],a[(i+1)%a.length]));
   return best;
 }
-const FOREST_TERRAIN_RULE_VERSION=1;
+const FOREST_TERRAIN_RULE_VERSION=2;
 function polygonsOverlapSimple(a,b){
   if(!a?.length||!b?.length)return false;
   if(a.some(p=>pointInPolygon(p,b))||b.some(p=>pointInPolygon(p,a)))return true;
@@ -1536,17 +1536,11 @@ function forestIntersectsSteepRelief(forest){
   return false;
 }
 function repairForestsAgainstSteepSlopes(){
-  if(!State.relief?.hills?.length||!Array.isArray(State.environment))return false;
-  const already=State.relief.forestTerrainRuleVersion===FOREST_TERRAIN_RULE_VERSION;
-  let removed=0;
-  State.environment=State.environment.filter(f=>{
-    if(f.type!=='forest')return true;
-    if(!forestIntersectsSteepRelief(f))return true;
-    removed++;return false;
-  });
-  // Woods are counted per biome now: removed ones are not topped up to a coverage target.
+  // Woodland spans hills; rocky faces are excluded by containment and rendering.
+  if(!State.relief)return false;
+  const changed=State.relief.forestTerrainRuleVersion!==FOREST_TERRAIN_RULE_VERSION;
   State.relief.forestTerrainRuleVersion=FOREST_TERRAIN_RULE_VERSION;
-  return removed>0||!already;
+  return changed;
 }
 
 const ENV_POLYGON_BOUNDS=new WeakMap();
@@ -1562,8 +1556,6 @@ function environmentPolygonBounds(points){
   return bounds;
 }
 function forestBlobCanPlace(candidate,env,minGap=3){
-  if((State.relief?.hills||[]).some(h=>polygonsOverlapSimple(candidate.points,reliefHillFootprint(h))))return false;
-  if(forestIntersectsSteepRelief(candidate))return false;
   // Do not trap the initial settlement inside an unbreakable forest ring.
   // This protects only the immediate hub, not radial road corridors.
   const town={x:WORLD/2,y:WORLD/2},townClearance=7;
@@ -1729,7 +1721,7 @@ function biomeHillObstacles(){
   return(State.relief?.hills||[]).map(h=>({points:reliefHillFootprint(h)})).filter(o=>o.points.length>=3);
 }
 function addBiomeForest(env,rnd,small){
-  const others=()=>[...biomeHillObstacles(),...env.filter(f=>['sea','mountain','pond'].includes(f.type)).map(f=>({points:f.points}))];
+  const others=()=>[...env.filter(f=>['sea','mountain','pond'].includes(f.type)).map(f=>({points:f.points}))];
   for(let attempt=0;attempt<420;attempt++){
     const size=biomeFeatureSize(rnd,small),p=biomeCenter(rnd,size.margin);
     const candidate=makeOrganicForestBlob(rnd,p.x,p.y,size.rx,size.ry,small);
@@ -1772,7 +1764,6 @@ function makeContinuousForest(env,rnd,ratio){
   }
   const holes=[...clearings];
   for(const pond of env.filter(f=>f.type==='pond'))holes.push(pond.points.map(q=>({x:pond.x+(q.x-pond.x)*1.25,y:pond.y+(q.y-pond.y)*1.25})));
-  for(const hill of State.relief?.hills||[])holes.push(reliefHillFootprint(hill).map(p=>({x:hill.center.x+(p.x-hill.center.x)*1.35,y:hill.center.y+(p.y-hill.center.y)*1.35})));
   const naturalHoleCount=holes.length;
   for(const w of env.filter(f=>f.type==='stream'||f.type==='river'))holes.push(...(window.ConquerHydrology?.bank?[window.ConquerHydrology.bank(w.points,w.width/2+2)]:corridorHolePolygons(w.points,w.width/2+2)));
   return{id:'env-forest-continuous',type:'forest',continuous:true,
@@ -1880,6 +1871,7 @@ function pointInPolygon(point,pts){
   let inside=false;for(let i=0,j=pts.length-1;i<pts.length;j=i++){const a=pts[i],b=pts[j],hit=((a.y>point.y)!==(b.y>point.y))&&(point.x<(b.x-a.x)*(point.y-a.y)/((b.y-a.y)||1e-9)+a.x);if(hit)inside=!inside}return inside;
 }
 function environmentContains(f,p,pad=0){
+  if(f.type==='forest'&&terrainSlopeKind(p)==='steep')return false;
   if(['forest','mountain','pond','sea'].includes(f.type)){
     if(!f.points?.length)return false;
     const bounds=environmentPolygonBounds(f.points);

@@ -12,7 +12,7 @@ for(const [biome,seed] of [['plains',1],['plains',4],['forest',1],['forest',3],[
  const hills=run('JSON.stringify(State.relief.hills)');run('generateEnvironment()');
  assert.equal(run('JSON.stringify(State.relief.hills)'),hills,'final drainage preserves hills: '+biome+' '+seed);
  assert.ok(run('(()=>{const lines=State.environment.filter(f=>f.type==="river"||f.type==="stream"),obstacles=State.relief.hills.map(h=>({type:"mountain",points:reliefHillFootprint(h)}));return lines.every(l=>!l.points.some(window.ConquerHydrology.terrainGuard(obstacles,l.width/2+1)))})()'),'water banks avoid hills');
- assert.ok(run('(()=>{for(let y=1;y<200;y+=2)for(let x=1;x<200;x+=2){const p={x,y},cover=State.environment.some(f=>(f.type==="forest"||f.waterBodyKind==="marsh")&&environmentContains(f,p));if(cover&&(terrainElevation(p)>.05||State.environment.some(f=>(f.type==="river"||f.type==="stream")&&environmentContains(f,p))))return false}return true})()'),'woods and marsh avoid relief and final streams: '+biome+' '+seed);
+ assert.ok(run('(()=>{for(let y=1;y<200;y+=2)for(let x=1;x<200;x+=2){const p={x,y},cover=State.environment.some(f=>(f.type==="forest"||f.waterBodyKind==="marsh")&&environmentContains(f,p));if(cover&&((terrainElevation(p)>.05&&State.environment.some(f=>f.waterBodyKind==="marsh"&&environmentContains(f,p)))||State.environment.some(f=>(f.type==="river"||f.type==="stream")&&environmentContains(f,p))))return false}return true})()'),'marsh avoids relief; all cover avoids final streams: '+biome+' '+seed);
 }
-console.log('PASS landscape order: preserved hills, routed primary, clear banks and no woodland/marsh overlap in six fixtures');
+console.log('PASS landscape order: preserved hills, routed primary, clear banks, dry marsh relief and no cover/water overlap in six fixtures');
 `)(require,__dirname);

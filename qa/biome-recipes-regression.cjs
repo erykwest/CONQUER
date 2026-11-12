@@ -59,7 +59,6 @@ for(const [biome,e] of Object.entries(EXPECT))for(const seed of SEEDS){
   // Scaled COFFEE BATTLES sizes: small woods 11-15.4 x 6.6-8.8U, large 17.6-22 x 8.8-12.1U.
   for(const rad of biome==='plains'?[]:r.forestRadius)assert.ok(rad>=8.5&&rad<=16.4,tag+'forest radius '+rad.toFixed(1));
   assert.equal(r.onWater,false,tag+'woods must leave the watercourse open');
-  assert.equal(r.onHill,false,tag+'woods must not overlap hills');
   assert.equal(r.townCovered,false,tag+'settlement hub must stay clear');
   assert.equal(r.ovals,false,tag+'no obsolete hill/rough ellipses');
   passed++;

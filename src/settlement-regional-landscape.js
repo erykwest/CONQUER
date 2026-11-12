@@ -279,7 +279,6 @@
   let woodlandContext=null;
   function woodlandFeatures(samples,lines,dryMountains,forests,key){
     const forestMask=new Uint8Array(samples.length);
-    const hillGuard=window.ConquerHydrology?.terrainGuard((State.relief?.hills||[]).map(h=>({type:'mountain',points:reliefHillFootprint(h)})),5)||(()=>false);
     // Calibrate central and inherited land cover separately for each biome.
     const biomes=['plains','swamp'],groups=Object.fromEntries(biomes.map(b=>[b,[{total:0,candidates:[]},{total:0,candidates:[]}]])),eligible=[];
     for(let i=0;i<samples.length;i++){
@@ -287,7 +286,7 @@
       const cover=Object.fromEntries(biomes.map(b=>[b,(w[b]||0)+(State.biome===b?c:0)]));
       const pure=biomes.find(b=>cover[b]>.999),calibrated=biomes.some(b=>cover[b]>0);
       if(pure)groups[pure][zone].total++;
-      if(wet||lines.some(f=>environmentContains(f,p,2))||dryMountains.some(f=>environmentContains(f,p))||hillGuard(p)||terrainSlopeKind(p)==='steep'||calibrated&&dist(p,{x:100,y:100})<8)continue;
+      if(wet||lines.some(f=>environmentContains(f,p,2))||dryMountains.some(f=>environmentContains(f,p))||terrainSlopeKind(p)==='steep'||calibrated&&dist(p,{x:100,y:100})<8)continue;
       const scale=calibrated?18:9,value=noise(p.x/scale,p.y/scale,State.seed+91);
       eligible.push({i,value,cover,zone,pure});
       if(pure)groups[pure][zone].candidates.push({i,value});

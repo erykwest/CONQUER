@@ -204,10 +204,44 @@ function drawSteepSlopeRocks(level,band,winter){
   if(window.__conquerPerf)window.__conquerPerf.landscapeRocks=(window.__conquerPerf.landscapeRocks||0)+rocks.length;
   for(const rock of rocks)drawLowPolyRock(rock.p,rock.z,rock.size,rock.height,rock.seed,winter);
 }
+// Cover is projected onto each terrain face, never stretched across a whole hill.
+function woodedSurfaceFace(vertices,forests){
+  if(vertices.length<3||!forests.length)return;
+  const a=vertices[0],b=vertices[1],c=vertices.slice(2).find(p=>Math.abs((b.x-a.x)*(p.y-a.y)-(b.y-a.y)*(p.x-a.x))>1e-8);
+  if(!c)return;
+  const ux=b.x-a.x,uy=b.y-a.y,vx=c.x-a.x,vy=c.y-a.y,det=ux*vy-uy*vx;
+  if(Math.abs(det)<1e-8)return;
+  const dx=((b.z-a.z)*vy-(c.z-a.z)*uy)/det,dy=(ux*(c.z-a.z)-vx*(b.z-a.z))/det;
+  const z=p=>a.z+dx*(p.x-a.x)+dy*(p.y-a.y),poly=projectClippedTerrain(vertices);
+  if(poly.length<3||!screenPolygonVisible(poly,8))return;
+  const bounds=environmentPolygonBounds(vertices),winter=State.season==='winter';
+  const light=clamp((1-dx*.48-dy*.72)/Math.sqrt(1+dx*dx+dy*dy),.42,1.28);
+  for(const f of forests){
+    const box=environmentPolygonBounds(f.points);
+    if(box.maxX<bounds.minX||box.minX>bounds.maxX||box.maxY<bounds.minY||box.minY>bounds.maxY)continue;
+    const ring=points=>{ctx.beginPath();points.forEach((p,i)=>{const q=w2sRaw(p,z(p));i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)});ctx.closePath()};
+    ctx.save();ctx.beginPath();poly.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.clip();
+    ring(f.points);ctx.clip();
+    for(const hole of f.holes||[]){const h=environmentPolygonBounds(hole);if(h.maxX<bounds.minX||h.minX>bounds.maxX||h.maxY<bounds.minY||h.minY>bounds.maxY)continue;ctx.beginPath();ctx.rect(-1e5,-1e5,2e5,2e5);hole.forEach((p,i)=>{const q=w2sRaw(p,z(p));i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)});ctx.closePath();ctx.clip('evenodd')}
+    const rgb=winter?[218,229,217]:[43,72,32];ctx.fillStyle='rgb('+rgb.map(v=>Math.round(v*light)).join(',')+')';ctx.fillRect(-1e4,-1e4,2e4,2e4);
+    ctx.globalAlpha=.30;ctx.fillStyle=getForestGroundPattern();ctx.fillRect(-1e4,-1e4,2e4,2e4);ctx.restore();
+  }
+}
+function forestReliefHulls(){
+  return (State.relief?.hills||[]).map(h=>convexHull(h.levels.flatMap(l=>[
+    ...l.top.map(p=>w2sRaw(p,l.z1)),...reliefEdgeBands(l).flatMap(terrainBandScreenPolygon)
+  ])));
+}
+function forestTreeOccluders(){
+  return reliefLevels().flatMap(l=>[
+    ...reliefEdgeBands(l).map(b=>({poly:terrainBandScreenPolygon(b),depth:[b.oa,b.ob,b.a,b.b].reduce((s,p)=>s+w2sRaw(p,0).y,0)/4})),
+    {poly:l.top.map(p=>w2sRaw(p,l.z1)),depth:l.top.reduce((s,p)=>s+w2sRaw(p,0).y,0)/l.top.length}
+  ]).map(f=>({...f,b:environmentPolygonBounds(f.poly)}));
+}
 function drawRelief(){
   ensureLandscapeRenderCaches();
   const winter=State.season==='winter',baseFill=winter?'#edf1ed':(BIOMES[State.biome]?.field||'#24291b');
-  const levels=reliefLevels().slice().sort((a,b)=>a.z1-b.z1);
+  const levels=reliefLevels().slice().sort((a,b)=>a.z1-b.z1),woods=State.environment.filter(f=>f.type==='forest');
   let bandsDrawn=0;
   if(window.__conquerPerf)window.__conquerPerf.landscapeRocks=0;
   for(const level of levels){
@@ -215,7 +249,11 @@ function drawRelief(){
     for(const band of bands){
       if(!screenPolygonVisible(terrainBandScreenPolygon(band),96))continue;
       bandsDrawn++;
-      if(band.kind==='gentle')drawGentleSlopeBand(band,winter);
+      if(band.kind==='gentle'){
+        drawGentleSlopeBand(band,winter);
+        const a={...band.oa,z:band.z0},b={...band.ob,z:band.z0},c={...band.b,z:band.z1},d={...band.a,z:band.z1};
+        woodedSurfaceFace([a,b,c],woods);woodedSurfaceFace([a,c,d],woods);
+      }
       else{
         const poly=projectClippedTerrain([
           {...band.oa,z:band.z0},{...band.ob,z:band.z0},{...band.b,z:band.z1},{...band.a,z:band.z1}
@@ -226,6 +264,7 @@ function drawRelief(){
     }
     const top=projectClippedTerrain(level.top.map(p=>({...p,z:level.z1})));
     if(top.length>=3&&screenPolygonVisible(top,96))pathPolygon(top,baseFill,winter?'rgba(118,128,121,.40)':'rgba(203,190,148,.22)',1.05);
+    woodedSurfaceFace(level.top.map(p=>({...p,z:level.z1})),woods);
   }
   window.ConquerTerraforming?.drawCommitted();
   if(window.__conquerPerf)window.__conquerPerf.reliefBandsDrawn=bandsDrawn;
@@ -577,7 +616,7 @@ function getForestGroundPattern(){
 function forestGroundLayout(f){
   ensureLandscapeRenderCaches();
   if(forestGroundLayoutCache.has(f.id))return forestGroundLayoutCache.get(f.id);
-  const pts=(f.points||[]).map(p=>({x:p.x,y:p.y,z:terrainElevation(p)}));
+  const pts=(f.points||[]).map(p=>({x:p.x,y:p.y,z:0}));
   forestGroundLayoutCache.set(f.id,pts);return pts;
 }
 function drawForestGround(f){
@@ -596,7 +635,8 @@ function drawForestGround(f){
   ctx.clip();
   // Holes (clearings, banks, grooves): each one is cut out with an even-odd clip against a
   // covering rectangle; successive clips intersect, so overlapping holes stay open.
-  const holes=(f.holes||[]).map(h=>h.map(p=>w2sRaw(p,terrainElevation(p))));
+  const holes=(f.holes||[]).map(h=>h.map(p=>w2sRaw(p,0)));
+  for(const hull of forestReliefHulls()){ctx.beginPath();ctx.rect(-1e5,-1e5,2e5,2e5);hull.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.clip('evenodd')}
   for(const hole of holes){
     if(!screenPolygonVisible(hole,8))continue;
     ctx.beginPath();ctx.rect(-1e5,-1e5,2e5,2e5);
@@ -619,7 +659,7 @@ function drawForestGround(f){
 }
 // Holes (clearings, grooves) change the layout: key it by their count, not just the id.
 function forestLayoutKey(f){return f.id+':'+(f.holes?.length||0)}
-function clearForestLayoutCache(){forestTreeLayoutCache.clear()}
+function clearForestLayoutCache(){forestTreeLayoutCache.clear();forestGroundLayoutCache.clear()}
 // Continuous woodland: a jittered grid over the map with fixed per-cell attributes, filtered by
 // containment, so carving a groove removes only the trees inside it instead of reshuffling all.
 const CONTINUOUS_FOREST_SPACING=4.4;
@@ -629,7 +669,10 @@ function continuousForestTrees(f){
     const p={x:(ix+.15+rnd()*.7)*CONTINUOUS_FOREST_SPACING,y:(iy+.15+rnd()*.7)*CONTINUOUS_FOREST_SPACING};
     const tree={p,shapeIndex:Math.floor(rnd()*FOREST_TREE_ASSETS.length),colorIndex:Math.floor(rnd()*FOREST_CANOPY_PALETTES.summer.length),flip:rnd()<.5,scale:.8+rnd()*.4};
     if(p.x<0||p.x>WORLD||p.y<0||p.y>WORLD||!environmentContains(f,p))continue;
-    tree.z=terrainElevation(p);trees.push(tree);
+    const slope=terrainSlopeKind(p);if(slope==='steep')continue;
+    tree.z=terrainElevation(p);tree.slope=slope;
+    if(slope==='gentle'){const density=seedRand((Math.floor(p.x*100)*73856093^Math.floor(p.y*100)*19349663^State.seed)>>>0)();if(density>.72)continue;tree.scale*=.92;}
+    trees.push(tree);
   }
   return trees;
 }
@@ -656,7 +699,16 @@ function drawForestMask(f){
     .slice()
     .sort((a,b)=>w2sRaw(a.p,a.z).y-w2sRaw(b.p,b.z).y);
   let drawn=0;
-  for(const tree of trees)if(drawTree(tree))drawn++;
+  const occluders=forestTreeOccluders();
+  for(const tree of trees){
+    const base=w2sRaw(tree.p,tree.z),depth=w2sRaw(tree.p,0).y,size=Math.max(10,U*State.view.scale*2.25*tree.scale);
+    ctx.save();
+    for(const f of occluders){
+      if(f.depth<=depth+.5||f.b.maxX<base.x-size/2||f.b.minX>base.x+size/2||f.b.maxY<base.y-size||f.b.minY>base.y)continue;
+      ctx.beginPath();ctx.rect(-1e5,-1e5,2e5,2e5);f.poly.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.clip('evenodd');
+    }
+    if(drawTree(tree))drawn++;ctx.restore();
+  }
   if(window.__conquerPerf)window.__conquerPerf.forestTrees=(window.__conquerPerf.forestTrees||0)+drawn;
 }
 

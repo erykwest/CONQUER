@@ -64,6 +64,7 @@ jobs:
           node qa/island-coast-regression.cjs
           node qa/inherited-coast-regression.cjs
           node qa/plains-woods-regression.cjs
+          node qa/wooded-relief-regression.cjs
           node qa/woodland-density-regression.cjs
           node qa/stream-count-regression.cjs
           node qa/stream-hierarchy-regression.cjs

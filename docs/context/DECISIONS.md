@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## REG-WOODED-RELIEF - Boschi sui rilievi (12/11/2026)
+
+Il bosco puo occupare sommita e pendii dolci, restando escluso dalle pareti rocciose ripide. Questo aggiorna la precedente esclusione totale bosco/collina: acqua stagnante e corsi restano separati dai rilievi. Rendering per superficie con quota e luce del versante, tronchi verticali e occlusione dei rilievi davanti agli alberi. Densita invariata sulle superfici piane e diradata sui pendii; stessi asset. Il contenimento boschivo esclude le scarpate rocciose anche per i validatori esistenti, senza cambiare produzione o regole economiche. Le vecchie radure salvate restano preservate.
+
 ## REG-LANDSCAPE-ORDER - Priorita geometrica (12/11/2026)
 
 I rilievi vengono fissati prima dei corsi d acqua; fiumi e torrenti devono aggirarli con tutta la larghezza della sponda, senza eliminare le colline. Confluenze e foci vengono definite prima del riempimento vegetale e palustre. Boschi, stagni e acquitrini evitano rilievi e rete definitiva, anche nei settori ereditati. Mare e grandi laghi restano ricevitori geografici della rete. In casi senza percorso libero, un corso incompatibile viene scartato senza modificare il rilievo. Le frequenze e i target di copertura restano quelli concordati. Economia invariata, gestita nell altro branch.
