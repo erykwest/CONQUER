@@ -216,7 +216,7 @@ test('clay requires centre H0, respects whitezone, forests, roads and buildings'
 test('staffed clay extraction generates clay commodity without changing stone production',()=>{
   const h=harness();
   h.State.structures=[
-    ...Array.from({length:4},(_,i)=>({id:'l2-'+i,type:'house',houseLevel:2})),
+    ...Array.from({length:4},(_,i)=>({id:'l1-clay-'+i,type:'house',houseLevel:1})),
     {...h.industry.make('quarry',{x:108,y:100},'clay'),id:'clay-quarry'},
     {...h.industry.make('quarry',{x:129,y:120}),id:'stone-quarry'}
   ];
