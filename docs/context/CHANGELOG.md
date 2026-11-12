@@ -1,5 +1,12 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-12 — Isole e penisole collinari
+
+- Le terre con tre o quattro lati cardinali sul mare o sul lago ricevono una base di tre colline, con gli stessi livelli 2–3 del bioma Colline (ricetta 3–4 rilievi). Restano valide eventuali colline ereditate dai vicini; i biomi già più montuosi non vengono ridotti.
+- Boschi, paludi e corsi d'acqua mantengono le proprie ricette; l'adattamento regionale riposiziona i rilievi tagliati dalla costa prima dei corsi d'acqua. Le zone interne conservano le frequenze sporadiche precedenti.
+- Verifiche: isole/coste su 15 fixture con rilievi asciutti e determinismo; colline sporadiche su 9000 estrazioni; confronto esplorativo 48 combinazioni; cinque snapshot `coastal-hills-*` rivisti. Audit Territorio: 16 render invariati, zero errori, cinque avvisi schematici preesistenti.
+- Economia e roadmap invariate; regola geografica documentata in DECISIONS.
+
 ### 2026-11-12 — Canneti delle paludi quadruplicati
 
 - Conservata la vegetazione di sponda originale, aggiunti tre canneti per ogni canneto esistente su ciascun acquitrinio, con controlli su ostacoli e distanze. Budget paludi separato da quello dei corsi d'acqua.

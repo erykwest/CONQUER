@@ -240,6 +240,18 @@
     }
     const dryMountains=mountains.filter(f=>!blocked({x:f.x,y:f.y})&&!f.points.some(blocked));
     State.relief.hills=State.relief.hills.filter(h=>!reliefHillFootprint(h).some(p=>waters.some(f=>environmentContains(f,p))));clearReliefBandCache();
+    if((coast.sides.length>=3||lakeShape)&&!['mountains','valley','sea','lake','test'].includes(State.biome)){
+      // Coast clipping may remove a recipe hill. Replace it on dry land before hydrology.
+      const hillRnd=seedRand((State.seed^signature()^0x72a91d)>>>0);let added=false;
+      for(let attempt=0;State.relief.hills.length<3&&attempt<600;attempt++){
+        const center={x:55+hillRnd()*90,y:55+hillRnd()*90};
+        const hill=makeProceduralHill(hillRnd,State.relief.hills.length,{center,rx:8+hillRnd()*3,ry:5+hillRnd()*2,maxHeight:2+Math.floor(hillRnd()*2)});
+        const foot=reliefHillFootprint(hill);
+        if(!biomeTownClear(foot)||!hillSpacingOk(hill,State.relief.hills)||foot.some(p=>waters.some(f=>environmentContains(f,p,1))))continue;
+        State.relief.hills.push(hill);added=true;clearReliefBandCache();
+      }
+      if(added){assignSteepEdgesByLevel(State.relief,seedRand((State.relief.seed^0x735a2d97)>>>0));clearReliefBandCache();}
+    }
     woodlandContext={key,samples,forests};
     const woods=deferCover?[]:woodlandFeatures(samples,lines,dryMountains,forests,key);
     if(typeof clearForestLayoutCache==='function')clearForestLayoutCache();
