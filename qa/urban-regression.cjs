@@ -338,6 +338,7 @@ test('civil development defaults, level clamping and three piazza variants norma
   assert.equal(run("CIVIC_TYPES.includes('market')&&CIVIC_TYPES.includes('plaza')"),true);
 });
 require('./urban-heatmaps-regression.cjs');
+require('./social-classes-regression.cjs');
 require('./civic-event-effects-regression.cjs');
 console.log(passed+' urban regression checks passed.');
 
