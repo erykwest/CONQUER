@@ -1,5 +1,13 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-12 — URB-HEAT-01 skeleton quattro heatmap (branch `feature/urban-heatmap-skeleton-20261112`)
+
+- **CODICE SUL BRANCH, NON MERGE:** nuovo motore puro `src/settlement-urban-heatmaps.js` con sette valori (domanda L1–L4, prestigio, sicurezza, criminalità), sorgenti radiali/poligonali, griglia deterministica, interpolazione e campionamento del lotto Voronoi. Caricato come API inattiva prima del runtime urbano.
+- **QA:** `qa/urban-heatmaps-regression.cjs` aggiunto e richiamato dalla suite urbana esistente; esecuzione locale e CI ancora da verificare.
+- **NON IMPLEMENTATI:** adapter da Builder/Crime/guardie/mura, domanda demografica reale, aggiornamenti territoriali, rendering heatmap, densificazione, migrazione L1–L4, ricostruzione automatica e persistenza. Nessuna modifica a salvataggi, occupanti o fabbricati.
+- **Contratto:** [URBAN-HEATMAP-SKELETON](../URBAN-HEATMAP-SKELETON.md); [decisione D-URB-HEAT-261112](DECISIONS.md).
+
+
 
 ## 2026-11-10 — ECO-FIL-01 fase 1 · Miniera → metallo (branch `feature/eco-fil-01-miniera-metallo`)
 
