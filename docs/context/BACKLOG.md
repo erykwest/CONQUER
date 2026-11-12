@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-12 — Rilievi organici e cime disperse
+
+- Rimossa la griglia a due file e la rotazione quasi fissa che causavano la regressione visiva. Colline collocate per tentativi geometrici con rotazioni libere, rapporti fra assi e superfici differenti, contorni più lobati. Numero 4–8 e minimo 30% preservati senza aggiungere rilievi oltre il limite.
+- Catene di bordo: posizioni longitudinali irregolari e dispersione trasversale fino a circa ±23U sulla direttrice, raggi delle cime 7–15U; trasformazione coerente per le quattro direzioni. Conservati i corridoi di 7U tra colline e il margine esterno per la rete idrica.
+- Risolto anche un punto di instradamento: il raccordo della deviazione non può essere scelto di nuovo dentro un rilievo successivo. Test organic-hills falliva sulla vecchia disposizione a due file e passa sulla nuova; controlli dei quattro bordi, landscape-order e cinque snapshot regionali `organic-relief-*` rivisti.
+- Misure snapshot: colline 31.0–34.8%, boschi 24.7–24.9%, 1–3 torrenti. Audit Territorio 16 invariati, zero errori, cinque avvisi schematici preesistenti. Economia e roadmap invariate.
+
 ### 2026-11-12 — HILLS regionale corretto e coperture reali
 
 - Esportazione HILLS → hills, biomi terrestri Pianura/Colline/Foresta/Palude. Valle resta alias. Bordi montuosi espliciti (`mountainSides`) esportati dalla regione come fiumi e costa; catene generate sui lati richiesti senza sostituire il bioma.

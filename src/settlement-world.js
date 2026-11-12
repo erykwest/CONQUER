@@ -1181,12 +1181,12 @@ function makeProceduralHill(rnd,index,spec=null){
   const center=spec?.center??{x:-18+rnd()*(WORLD+36),y:-18+rnd()*(WORLD+36)};
   const rx=spec?.rx??22+rnd()*16,ry=spec?.ry??15+rnd()*13,angle=spec?.angle??rnd()*Math.PI;
   const ca=Math.cos(angle),sa=Math.sin(angle),angles=[];
-  const phaseA=rnd()*Math.PI*2,phaseB=rnd()*Math.PI*2;
+  const phaseA=rnd()*Math.PI*2,phaseB=rnd()*Math.PI*2,lobeScale=spec?.lobeScale??1;
   for(let i=0;i<controlCount;i++)angles.push(i/controlCount*Math.PI*2+(rnd()-.5)*.055);
   const control=angles.map(a=>{
     const rr=1
-      +Math.sin(a*2+phaseA)*(.055+rnd()*.025)
-      +Math.sin(a*3+phaseB)*(.035+rnd()*.018)
+      +Math.sin(a*2+phaseA)*(.055+rnd()*.025)*lobeScale
+      +Math.sin(a*3+phaseB)*(.035+rnd()*.018)*lobeScale
       +(rnd()-.5)*.035;
     const x=Math.cos(a)*rx*rr,y=Math.sin(a)*ry*rr;
     return{x:center.x+x*ca-y*sa,y:center.y+x*sa+y*ca};
@@ -1351,9 +1351,11 @@ function biomeMountains(){
   if(Array.isArray(sides)&&sides.length){
     const rnd=biomeStream(0x60a4f7e1),out=[];
     for(const side of [...new Set(sides)].filter(s=>['north','east','south','west'].includes(s)))for(let i=0;i<16;i++){
-      const t=i*200/15,off=45+Math.sin(t/37+rnd())*3;
+      const t=i===0?0:i===15?200:clamp((i+.5)*200/16+(rnd()-.5)*22,0,200),off=45+Math.sin(t/35+State.seed)*8+(rnd()-.5)*30;
       const p=side==='north'?{x:t,y:off}:side==='south'?{x:t,y:200-off}:side==='west'?{x:off,y:t}:{x:200-off,y:t};
-      const peak=makeEnvBlob(rnd,'mountain',p.x,p.y,9+rnd()*3,9+rnd()*3,'#56493c','#968470',18,.1);
+      const peak=makeEnvBlob(rnd,'mountain',t,off,7+rnd()*8,7+rnd()*8,'#56493c','#968470',18,.1);
+      const turn=q=>side==='north'?q:side==='south'?{x:q.x,y:200-q.y}:side==='west'?{x:q.y,y:q.x}:{x:200-q.y,y:q.x};
+      peak.points=peak.points.map(turn);peak.x=p.x;peak.y=p.y;if(side==='east'||side==='west')[peak.rx,peak.ry]=[peak.ry,peak.rx];
       peak.unclippedPoints=peak.points;peak.points=clipTerrainPolygon(peak.points).map(q=>({x:q.x,y:q.y}));
       peak.id='regional-border-'+side+'-'+i;peak.regionalBorder=true;peak.slopeDeg=37+rnd()*26;peak.height=Math.sqrt(peak.rx*peak.ry)*Math.tan(peak.slopeDeg*Math.PI/180);out.push(peak);
     }
@@ -1466,23 +1468,33 @@ function biomeTownClear(points){
   for(let i=0;i<points.length;i++)if(pointSegmentDistance(BIOME_TOWN,points[i],points[(i+1)%points.length])<BIOME_TOWN_CLEARANCE)return false;
   return true;
 }
-function generateDenseHills(count,obstacles){
-  const sides=window.__CONQUER_REGIONAL_DEMO__?.mountainSides||[];
-  const bounds={minX:sides.includes('west')?63:0,maxX:sides.includes('east')?137:200,minY:sides.includes('north')?63:0,maxY:sides.includes('south')?137:200};
+function generateDenseHills(count,obstacles,canonical=false){
+  const sides=window.__CONQUER_REGIONAL_DEMO__?.mountainSides||[],side=sides.length===1?sides[0]:null;
+  if(!canonical&&side&&side!=='north'){
+    const toNorth=p=>side==='south'?{x:p.x,y:200-p.y}:side==='west'?{x:p.y,y:p.x}:{x:p.y,y:200-p.x};
+    const fromNorth=p=>side==='south'?{x:p.x,y:200-p.y}:side==='west'?{x:p.y,y:p.x}:{x:200-p.y,y:p.x};
+    generateDenseHills(count,obstacles.map(o=>({...o,points:o.points.map(toNorth)})),true);
+    for(const hill of State.relief.hills){hill.center=fromNorth(hill.center);for(const level of hill.levels){level.center=fromNorth(level.center);level.top=level.top.map(fromNorth);}}
+    clearReliefBandCache();return;
+  }
   let best=[],bestCoverage=0;
-  for(let attempt=0;attempt<12;attempt++){
-    const rnd=seedRand((State.seed^0x2d571a3^attempt)>>>0),scale=.70+attempt*.035,hills=[];
+  for(let layout=0;layout<80;layout++){
+    const rnd=seedRand((State.seed^0x2d571a3^Math.imul(layout+1,0x45d9f3b))>>>0),hills=[];
+    const weights=Array.from({length:count},()=>.65+rnd()*.8).sort((a,b)=>b-a),sum=weights.reduce((a,b)=>a+b,0);
     for(let i=0;i<count;i++){
-      const top=sides.includes('north')?Math.min(4,count-2):sides.includes('south')&&count>=5?count-4:Math.ceil(count/2),row=i<top?0:1,cols=row?count-top:top,col=row?i-top:i;
-      const cw=(bounds.maxX-bounds.minX)/cols,ch=(bounds.maxY-bounds.minY)/2;
-      const center={x:bounds.minX+(col+.5)*cw,y:bounds.minY+(row+.5)*ch};
-      const hill=makeProceduralHill(rnd,i,{center,rx:cw*.44*scale,ry:ch*.43*scale,angle:(rnd()-.5)*.20,maxHeight:2+Math.floor(rnd()*2)}),foot=reliefHillFootprint(hill);
-      if(!biomeTownClear(foot)||!hillSpacingOk(hill,hills)||!biomeFeatureClear(foot,obstacles,2))continue;
-      hills.push(hill);
+      const area=40000*(.29+(layout%4)*.01)*weights[i]/sum;
+      for(let attempt=0;attempt<220;attempt++){
+        const aspect=.65+rnd()*1.05,rx=Math.sqrt(area/Math.PI*aspect),ry=Math.sqrt(area/Math.PI/aspect);
+        const center={x:18+rnd()*164,y:18+rnd()*164};
+        const hill=makeProceduralHill(rnd,i,{center,rx,ry,angle:rnd()*Math.PI,lobeScale:2.0+rnd()*1.7,maxHeight:2+Math.floor(rnd()*2)}),foot=reliefHillFootprint(hill);
+        if(foot.some(p=>p.x<5||p.y<5||p.x>195||p.y>195)||!biomeTownClear(foot)||!biomeFeatureClear(foot,hills.map(h=>({points:reliefHillFootprint(h)})),7)||!biomeFeatureClear(foot,obstacles,2))continue;
+        hills.push(hill);break;
+      }
+      if(hills.length!==i+1)break;
     }
     State.relief.hills=hills;clearReliefBandCache();const coverage=estimateReliefCoverage(80);
     if(hills.length===count&&coverage>bestCoverage){best=hills;bestCoverage=coverage;}
-    if(hills.length===count&&coverage>=.315)break;
+    if(hills.length===count&&coverage>=.31)break;
   }
   State.relief.hills=best;clearReliefBandCache();
 }

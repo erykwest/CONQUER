@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+### 2026-11-12 — La quota collinare non impone una griglia
+
+La copertura minima deve essere raggiunta mantenendo varietà di superfici, contorni, rotazioni e distanze dei rilievi. Vietata la disposizione a file fisse come scorciatoia per soddisfare il 30%. Le catene montuose seguono il bordo regionale come direttrice, con dispersione longitudinale e trasversale delle singole cime; la medesima geometria è trasformata coerentemente per nord/est/sud/ovest.
+
 ### 2026-11-12 — Bioma terrestre e proprietà dei confini
 
 Il terreno regionale hills corrisponde al bioma locale Colline, non Montagne. I quattro biomi terrestri sono Pianura, Colline (Valle alias), Foresta e Palude. Le catene montuose derivano dai bordi regionali espliciti/automatici e sono trasmesse in mountainSides; fiumi e costa restano proprietà additive della zona. Colline richiede 4–8 rilievi, almeno 30% di copertura, boschi 20–30% (target 25%) e 1–3 torrenti con attivazione 100%. Conservata l'eccezione zero torrenti per isole e penisole. Numero dei rilievi e quota di superficie sono vincoli distinti; non si aggiungono oltre otto rilievi per raggiungere la superficie.

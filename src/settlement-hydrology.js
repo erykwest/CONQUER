@@ -199,8 +199,9 @@
    if(!blocked(pts[i])&&clear(out.at(-1),pts[i])){out.push(pts[i]);continue;}
    let j=i;while(j<=end&&blocked(pts[j]))j++;
    // Leave space on both ends for a safe connection to the routing grid.
-   const a=out.at(-1),b=pts[Math.min(j+3,end)],path=detour(a,b);if(!path)return null;
-   out.push(...path.slice(1));i=Math.min(j+3,end);
+   let target=Math.min(j+3,end);while(target>j&&blocked(pts[target]))target--;
+   const a=out.at(-1),b=pts[target],path=detour(a,b);if(!path)return null;
+   out.push(...path.slice(1));i=target;
   }
   return {...line,points:dense(out),reliefRouted:true};
  }
