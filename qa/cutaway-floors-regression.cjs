@@ -95,7 +95,6 @@ const fnSrc=(text,name)=>{const m=text.match(new RegExp('function '+name+'\\([^)
   assert.match(src('settlement-castle.js'),/height=Math\.min\(full,cutawayCeilingZ\(s\)\)/,'2.5D castle cut');
   assert.match(src('settlement-world3d.js'),/H=Math\.min\(HF,cutawayCeilingZ\(s\)\)/,'WebGL castle cut');
   assert.match(src('settlement-world3d.js'),/cutawayCeilingZ\(s\),s\.x\?\?s\.a\?\.x/,'WebGL cutaway rebuilds on a floor change');
-  assert.match(src('settlement-render.js'),/s\.cutawayFloor\?\?null/,'2.5D overlay cache key');
   assert.match(src('settlement-cutaway-furniture.js'),/faces\.filter\(f=>shown\(s,f\)\)/,'furniture of the floors above is not drawn');
   assert.match(src('settlement-population-garrisons.js'),/cutawayFloorShown\(s,slot\.floor\)/,'no occupants in rooms taken off');
   console.log('PASS one command for the inspector and the arrows; every renderer honours the cut');

@@ -13,8 +13,8 @@ function drawDayNightOverlay(){
   if(nf<=0)return;
   ctx.save();ctx.fillStyle='rgba(6,10,18,'+(NIGHT_OVERLAY_MAX*nf).toFixed(3)+')';ctx.fillRect(0,0,r.width,r.height);ctx.restore();
 }
-// Buildings render only in WebGL2 (D-RENDER-3D-261111): say so instead of drawing a 2.5D castle.
 function drawNo3DNotice(r){
+  // Buildings render only in WebGL2 (D-RENDER-3D-261111): say so instead of drawing a 2.5D castle.
   ctx.save();ctx.fillStyle='rgba(12,10,8,.78)';ctx.fillRect(r.width/2-190,18,380,46);
   ctx.fillStyle='#f2e6d3';ctx.font='600 13px system-ui';ctx.textAlign='center';
   ctx.fillText('Edifici non disponibili: serve WebGL2',r.width/2,38);

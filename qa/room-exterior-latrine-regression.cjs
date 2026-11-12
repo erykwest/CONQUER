@@ -144,7 +144,7 @@ console.log('PASS hygiene: free for a small garrison, floored at 40, at most 10%
 // ---- renderers and collapse all read the same triangles
 assert.match(src('settlement-castle3d.js'),/for\(const t of window\.ConquerRoomExterior\?\.triangles\(s\)\|\|\[\]\)m\.face/);
 assert.match(src('settlement-world3d.js'),/for\(const t of window\.ConquerRoomExterior\?\.triangles\(s\)\|\|\[\]\)sh\.face/);
-assert.match(src('settlement-render.js'),/drawGateRoofs\(\);\n  window\.ConquerRoomExterior\?\.drawAll\(\);/);
+assert.doesNotMatch(src('settlement-render.js'),/ConquerRoomExterior\?\.drawAll\(\)/,'room exteriors are 3D only');
 assert.match(pick(siege,'destroyStructure'),/ConquerRoomExterior\?\.elements\(s\)/);
 for(const page of ['index.html','camp/index.html'])
   assert.match(fs.readFileSync(__dirname+'/../'+page,'utf8'),/garderobe-models\.js[^\n]*\n<script src="\.\/src\/settlement-room-exterior\.js/);
