@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-12 — SOC-CLASS-02 · Migrazione ceti sul branch PR #206
+
+Migratore puro `ConquerSocialClasses` e applicazione una tantum ai save locali/cloud; census house L1+ex-L2 con abitanti conservati, L2 artigiani e L3 istruiti/mercanti, L4 nobiltà. Riassegnate professioni economiche, botteghe, routine sociali e fondi commerciali; nuova lealtà nobiliare; QA dedicata e regressioni aggiornate. Partizione 25/75 del vecchio portafoglio L4 da approvare. Codice su branch, non merge, CI completa da verificare; immigrazione/ricostruzione D1–D3 NON attivate. [Specifiche](../CIVIL-CLASS-MIGRATION.md).
+
+
 ## 2026-11-12 — CIV-EVT-01 · Skeleton degli effetti civili (branch PR #206)
 
 Aggiunto `ConquerCivicEventEffects`, API read-only per 8 tipi di eventi civili con bonus differenziati di felicità L1–L3, lealtà L4, ripetizione e prestigio temporaneo; collegamento di anteprima alle heatmap PR #206. Riutilizzati allestimenti/fasi esistenti, nessun mutamento di salvataggi, costi o popolazione. Aggiunta regressione alla suite urbana, [contratto](../CIVIC-EVENT-EFFECTS-SKELETON.md) e decisione D-CIV-EVT-261112. Sul branch, non merge: Node/browser/CI da verificare.
