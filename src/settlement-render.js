@@ -13,16 +13,14 @@ function drawDayNightOverlay(){
   if(nf<=0)return;
   ctx.save();ctx.fillStyle='rgba(6,10,18,'+(NIGHT_OVERLAY_MAX*nf).toFixed(3)+')';ctx.fillRect(0,0,r.width,r.height);ctx.restore();
 }
-function drawNightLights(){
-  const nf=nightFactor();if(nf<=.01)return;
-  const t0=performance.now();
-  window.ConquerWorld3D?.drawEmissive?.();
-  window.ConquerCutawayFurniture?.drawEmissive2D(nf);
-  drawFacadeWindows(true,nf);
-  drawFireGlows(nf);
-  const ms=performance.now()-t0;
-  if(window.__conquerPerf)window.__conquerPerf.canvasNightLightsMs=ms;
-  window.__conquerAnalytics?.measure('NIGHTLIGHT_CANVAS',ms,{structures:State.structures.length});
+// Buildings render only in WebGL2 (D-RENDER-3D-261111): say so instead of drawing a 2.5D castle.
+function drawNo3DNotice(r){
+  ctx.save();ctx.fillStyle='rgba(12,10,8,.78)';ctx.fillRect(r.width/2-190,18,380,46);
+  ctx.fillStyle='#f2e6d3';ctx.font='600 13px system-ui';ctx.textAlign='center';
+  ctx.fillText('Edifici non disponibili: serve WebGL2',r.width/2,38);
+  ctx.font='11px system-ui';ctx.fillStyle='rgba(242,230,211,.78)';
+  ctx.fillText(window.ConquerWorld3D?.status?.().failed||'Il renderer 3D non è attivo su questo browser.',r.width/2,55);
+  ctx.restore();
 }
 function drawConstructionProgress(s){
   const p=w2s(structureCenter(s),structureHeight(s)+.65),pr=constructionProgress(s),w=34,h=5;ctx.save();ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(p.x-w/2,p.y-18,w,h);ctx.fillStyle='#e08a3c';ctx.fillRect(p.x-w/2,p.y-18,w*pr,h);ctx.strokeStyle='rgba(255,255,255,.3)';ctx.strokeRect(p.x-w/2,p.y-18,w,h);if(s.construction?.version===2){ctx.font='9px sans-serif';ctx.textAlign='center';ctx.fillStyle='rgba(255,255,255,.95)';ctx.fillText((s.construction.workers||0)+' L1',p.x,p.y-23)}ctx.restore();
@@ -32,6 +30,14 @@ function drawStructure(s,preview=false){
   if(s?.type==='ruin')return;          // ruined stumps are drawn with their rubble (ConquerSiege)
   // A site with an assembly is drawn piece by piece (opaque) instead of as a translucent ghost.
   const assembled=!preview&&underConstruction(s)&&window.ConquerAssembly?.has(s);
+  // Fortifications have no 2.5D body any more (D-RENDER-3D-261111): finished ones are World 3D
+  // meshes, sites are assembled from the same meshes, ghosts are their footprint volume.
+  if(isFortificationStructure(s)){
+    if(!preview&&!underConstruction(s))return;
+    if(!(assembled&&window.ConquerAssembly.draw(s)))drawPlacementVolume(s,'rgba(244,214,160,.22)','rgba(244,214,160,.92)');
+    if(!preview)drawConstructionProgress(s);
+    return;
+  }
   const render=()=>{
     if(assembled&&window.ConquerAssembly.draw(s))return;
     ctx.save();if(preview)ctx.globalAlpha=.58;else if(underConstruction(s))ctx.globalAlpha=.42;
@@ -75,11 +81,17 @@ function builderGhostVerdict(ghost){
   ghost._ghostCheck=result;
   return result;
 }
+function isFortificationStructure(s){
+  return !!s&&['tower','gate','wall','palisade','built'].includes(s.type);
+}
 function drawInvalidPlacementGhost(ghost){
+  drawPlacementVolume(ghost,'rgba(232,40,47,.38)','rgba(255,76,83,.98)');
+}
+// Footprint prism (placement contact rings, base and top) of a structure: the placement ghost.
+function drawPlacementVolume(ghost,fill,stroke){
   if(!ghost)return;
   ctx.save();
   ctx.globalAlpha=1;
-  const fill='rgba(232,40,47,.38)',stroke='rgba(255,76,83,.98)';
   ctx.setLineDash([5,3]);
   ctx.lineWidth=2.5;
   if(ghost.a&&ghost.b&&ghost.type==='road'){
@@ -98,7 +110,7 @@ function drawInvalidPlacementGhost(ghost){
         pathPolygon(projectPath(poly,.03),fill,stroke,2.5);
         // A red upper face remains aligned to the slope-based industry platform.
         const height=Math.max(0,structureHeight(ghost));
-        if(height>.05)pathPolygon(projectPath(poly,height+.04),'rgba(229,36,45,.28)',stroke,2);
+        if(height>.05)pathPolygon(projectPath(poly,height+.04),fill,stroke,2);
       }
     });
   }
@@ -147,212 +159,16 @@ function drawShadowStaticScene(){
   perf.cacheShadowRebuilds=(perf.cacheShadowRebuilds||0)+1;
   window.__conquerAnalytics?.measure('CACHE_SHADOW',performance.now()-analyticsT0);
 }
-function drawBaseStaticScene(){
-  const analyticsT0=performance.now();
-  const entry=prepareSceneCache('base');
-  withRenderContext(entry.ctx,()=>{
-    const completedOthers=State.structures
-      .filter(s=>!['moat','bridge'].includes(s.type)&&!(s.type==='road'||(s.auto&&s.type==='field'))&&!isCastlePart(s)&&!isRaisedPlacementCastlePoint(s)&&!underConstruction(s))
-      .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-    for(const s of completedOthers){
-      // Offscreen houses do not need full architectural rasterization.
-      if(s.type==='house'&&!worldPointVisible(s,houseBodyHeight(s)+.6,
-        320+180*State.view.scale))continue;
-      if(s.auto)drawAutoStructure(s);else drawStructure(s);
-    }
-    drawStaticHouseFacadeDetails();
-  });
-  entry.dirty=false;
-  const perf=window.__conquerPerf||(window.__conquerPerf={});
-  perf.cacheBaseRebuilds=(perf.cacheBaseRebuilds||0)+1;
-  window.__conquerAnalytics?.measure('CACHE_BASE',performance.now()-analyticsT0,{structures:State.structures.length});
-}
-let castleBodyBitmapEnabled=localStorage.getItem('conquer.castleBodyBitmap.v1')!=='0';
-function renderCastleBodyContent(){
-  // Opt-in 3D prototype (settlement-castle3d.js); falls through to the Canvas union renderer.
-  if(window.ConquerCastle3D?.drawBody?.())return;
-  // A merged single-colour 2D union cannot represent distinct wall/brick components.
-  // Use the existing per-structure fallback for mixed masonry; do not rewrite topology.
-  const hasBrick=castleBodyRenderableStructures().some(s=>masonryMaterial(s)==='brick'||(typeof isTimberLeanTo==='function'&&isTimberLeanTo(s)));
-  // The union has no individual structure context: explicitly mark it as stone masonry.
-  const unionOk=hasBrick?false:withStructureVisualMaterial({type:'wall',masonryMaterial:'stone'},drawCastleUnion);
-  if(!unionOk){
-    const fallback=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)&&!structureCutaway(s)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-    for(const s of fallback)drawStructure(s);
-  }else{
-    withStructureVisualMaterial({type:'wall',masonryMaterial:'stone'},drawCastleUnionDetails);
-  }
-
-  // Point fortifications on slopes are intentionally kept out of the wall
-  // boolean union: draw them as rigid volumes on their own level-0 plane.
-  const raised=State.structures
-    .filter(s=>isRaisedPlacementCastlePoint(s)&&!underConstruction(s)&&!structureCutaway(s))
-    .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-  for(const s of raised)drawStructure(s);
-
-  // Machicolation floors are part of the castle body, below tower units.
-  drawMachicolationFloors();
-  drawCutawayStructures();
-  drawTowerDoors();
-  drawTowerRoofs();
-  drawGateRoofs();
-  window.ConquerRoomExterior?.drawAll();
-  window.ConquerWallStairs?.drawAll();
-}
-function castleBodyRenderableStructures(){
-  return State.structures.filter(s=>(isCastlePart(s)||isRaisedPlacementCastlePoint(s))&&!underConstruction(s));
-}
-function castleBodyCompositeBounds(){
-  const parts=castleBodyRenderableStructures();if(!parts.length)return null;
-  const cloud=[];
-  for(const s of parts){
-    const hull=structureScreenSilhouette(s);
-    if(hull?.length)cloud.push(...hull);
-  }
-  if(!cloud.length)return null;
-  const pad=Math.max(56,72*State.view.scale);
-  return{
-    minX:Math.min(...cloud.map(p=>p.x))-pad,
-    minY:Math.min(...cloud.map(p=>p.y))-pad,
-    maxX:Math.max(...cloud.map(p=>p.x))+pad,
-    maxY:Math.max(...cloud.map(p=>p.y))+pad
-  };
-}
-function castleBodyVisualSignature(){
-  const num=v=>Number.isFinite(Number(v))?+Number(v).toFixed(4):null;
-  const point=p=>p?[num(p.x),num(p.y)]:null;
-  const items=castleBodyRenderableStructures().map(s=>[
-    s.id||'',s.type||'',s.shape||'',s.material||'',s.masonryMaterial||'stone',s.woodStyle||'',s.woodRoof||'',
-    s.roofStyle||'',s.bartizan||'',s.bell||'',s.innerRoof||'',(s.signalFire||'')+(s.signalFireSpent?'F':''),s.roofShape||'',s.baseStyle||'',s.skin||'',num(s.x),num(s.y),num(s.r),num(s.size),
-    point(s.a),point(s.b),num(s.width),num(s.length),num(s.angle),s.rotationStep??null,
-    s.level??null,s.tier??null,!!s.flip,!!s.cutaway,s.cutawayFloor??null,JSON.stringify(s.functions||[]),JSON.stringify(s.roomExteriorHp||null),s.aSnap||null,s.bSnap||null,s.parentTowerId||null,
-    num(s.orientationOffset),num(s.groundZ),num(s.foundationMinZ)
-  ]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
-  return JSON.stringify([
-    1,window.ConquerCastle3D?.active?.()?'3d':'2d',State.season||'summer',State.visualPalette,State.stonePaletteId,num(State.view.scale),State.view.rotation||0,isPlanView()?'plan':'iso',staticCacheDpr(),
-    !!window.__polygonClipping,crenelStyle(),roofPitch(),items
-  ]);
-}
-function drawCastleBodyBitmap(){
-  const api=window.__conquerAssetCompiler,bounds=castleBodyCompositeBounds();
-  if(!castleBodyBitmapEnabled||!api?.renderComposite||!bounds){renderCastleBodyContent();return{mode:'direct',hit:false}}
-  const key='castleBody|'+castleBodyVisualSignature();
-  const result=api.renderComposite('castleBody',key,bounds,renderCastleBodyContent);
-  if(!result?.ok){renderCastleBodyContent();return{mode:'fallback',hit:false,reason:result?.reason||'cache-failed'}}
-  return{mode:result.hit?'hit':'miss',hit:!!result.hit,ms:result.ms||0,bytes:result.bytes||0};
-}
-function drawCutawayStaticOverlay(){
-  const api=window.__conquerAssetCompiler,bounds=castleBodyCompositeBounds();
-  if(!api?.renderComposite||!bounds){drawCutawayStructures();return}
-  // Occupants remain in drawCutawayOccupants, animated every visual frame.
-  // Reuse the existing bounded 32 MiB composite cache for shell, floors and props.
-  const props=Object.keys(cutawayPropSprites).filter(k=>cutawayPropSprite(k)).join(',');
-  const key='cutaway|'+castleBodyVisualSignature()+'|'+props+'|'+(State.selectedId||'')+'|'+State.relief?.seed+'|'+JSON.stringify(State.relief?.terraforming||[]);
-  const result=api.renderComposite('cutaway',key,bounds,drawCutawayStructures);
-  if(!result?.ok)drawCutawayStructures();
-  const perf=window.__conquerPerf;
-  if(perf){perf.cutawayCacheHits=(perf.cutawayCacheHits||0)+(result?.hit?1:0);perf.cutawayCacheBuilds=(perf.cutawayCacheBuilds||0)+(result?.ok&&!result.hit?1:0)}
-}
-function updateCastleCacheControls(){
-  const btn=document.getElementById('castleCacheToggle');
-  if(btn){btn.textContent='Castle cache '+(castleBodyBitmapEnabled?'ON':'OFF');btn.classList.toggle('active',castleBodyBitmapEnabled)}
-  window.__conquerAssetCompiler?.stats?.();
-}
-function setCastleBodyBitmapEnabled(enabled){
-  castleBodyBitmapEnabled=!!enabled;
-  localStorage.setItem('conquer.castleBodyBitmap.v1',castleBodyBitmapEnabled?'1':'0');
-  window.__conquerAssetCompiler?.clearComposite?.();
-  invalidateSceneCache('castleBody');updateCastleCacheControls();draw();
-}
-function makeCastleBenchmarkCanvas(){
-  const r=wrap.getBoundingClientRect(),d=staticCacheDpr(),canvas=document.createElement('canvas');
-  canvas.width=Math.max(1,Math.round(r.width*d));canvas.height=Math.max(1,Math.round(r.height*d));
-  const g=canvas.getContext('2d');g.setTransform(d,0,0,d,0,0);
-  return{canvas,g,d,r};
-}
-function castleBenchmarkPixelDiff(a,b){
-  try{
-    const da=a.getContext('2d').getImageData(0,0,a.width,a.height).data;
-    const db=b.getContext('2d').getImageData(0,0,b.width,b.height).data;
-    let checked=0,different=0,sum=0,max=0;
-    for(let i=0;i<da.length;i+=16){
-      const d=Math.max(Math.abs(da[i]-db[i]),Math.abs(da[i+1]-db[i+1]),Math.abs(da[i+2]-db[i+2]),Math.abs(da[i+3]-db[i+3]));
-      checked++;sum+=d;if(d>8)different++;if(d>max)max=d;
-    }
-    return{ratio:checked?different/checked:0,mean:checked?sum/checked:0,max};
-  }catch{return null}
-}
-function benchmarkCastleBodyCache(iterations=3){
-  const api=window.__conquerAssetCompiler;if(!api?.renderComposite)return null;
-  const loops=Math.max(1,Math.min(6,Math.round(iterations)||3)),directTimes=[],hitTimes=[];
-  const direct=makeCastleBenchmarkCanvas();
-  for(let i=0;i<loops;i++){
-    direct.g.clearRect(0,0,direct.r.width,direct.r.height);
-    const t0=performance.now();withRenderContext(direct.g,renderCastleBodyContent);directTimes.push(performance.now()-t0);
-  }
-  api.clearComposite();
-  const cached=makeCastleBenchmarkCanvas(),bounds=castleBodyCompositeBounds(),key='castleBody|'+castleBodyVisualSignature();
-  const coldT0=performance.now();
-  let cold;
-  withRenderContext(cached.g,()=>{cold=api.renderComposite('castleBody',key,bounds,renderCastleBodyContent)});
-  const coldMs=performance.now()-coldT0;
-  for(let i=0;i<loops;i++){
-    cached.g.clearRect(0,0,cached.r.width,cached.r.height);
-    const t0=performance.now();withRenderContext(cached.g,()=>api.renderComposite('castleBody',key,bounds,renderCastleBodyContent));hitTimes.push(performance.now()-t0);
-  }
-  const avg=a=>a.reduce((x,y)=>x+y,0)/Math.max(1,a.length),diff=castleBenchmarkPixelDiff(direct.canvas,cached.canvas);
-  const result={
-    iterations:loops,directMs:+avg(directTimes).toFixed(2),coldMs:+coldMs.toFixed(2),hitMs:+avg(hitTimes).toFixed(2),
-    speedup:+(avg(directTimes)/Math.max(.01,avg(hitTimes))).toFixed(2),
-    pixelDiffRatio:diff?+diff.ratio.toFixed(6):null,pixelDiffMean:diff?+diff.mean.toFixed(3):null,pixelDiffMax:diff?.max??null
-  };
-  window.__conquerAnalytics?.event('CASTLE_BODY_AB',result,diff&&diff.ratio>.002?'warn':'info');
-  const el=document.getElementById('castleCacheReadout');
-  if(el)el.textContent='A/B direct '+result.directMs+' ms · hit '+result.hitMs+' ms · ×'+result.speedup+' · diff '+(result.pixelDiffRatio==null?'—':(result.pixelDiffRatio*100).toFixed(2)+'%');
-  return result;
-}
-function drawCastleBodyStaticScene(){
-  const analyticsT0=performance.now();
-  const entry=prepareSceneCache('castleBody');
-  let cacheResult={mode:'direct',hit:false};
-  withRenderContext(entry.ctx,()=>{cacheResult=drawCastleBodyBitmap()});
-  entry.dirty=false;
-  const perf=window.__conquerPerf||(window.__conquerPerf={});
-  perf.cacheCastleBodyRebuilds=(perf.cacheCastleBodyRebuilds||0)+1;
-  perf.lastCastleBodyCacheMode=cacheResult.mode;
-  perf.lastCastleBodyRebuildMs=performance.now()-analyticsT0;
-  window.__conquerAnalytics?.measure('CACHE_CASTLE_BODY',perf.lastCastleBodyRebuildMs,{bitmap:cacheResult.mode});
-}
-function drawCastleFrontStaticScene(){
-  const analyticsT0=performance.now();
-  const entry=prepareSceneCache('castleFront');
-  withRenderContext(entry.ctx,()=>{if(!window.ConquerCastle3D?.drawFront?.())drawCastleBattlements()});
-  entry.dirty=false;
-  const perf=window.__conquerPerf||(window.__conquerPerf={});perf.cacheCastleFrontRebuilds=(perf.cacheCastleFrontRebuilds||0)+1;
-  window.__conquerAnalytics?.measure('CACHE_CASTLE_FRONT',performance.now()-analyticsT0);
-}
-window.__conquerCastleBodyCache={
-  enabled:()=>castleBodyBitmapEnabled,
-  setEnabled:setCastleBodyBitmapEnabled,
-  benchmark:benchmarkCastleBodyCache,
-  signature:castleBodyVisualSignature
-};
-document.getElementById('castleCacheToggle')?.addEventListener('click',()=>setCastleBodyBitmapEnabled(!castleBodyBitmapEnabled));
-document.getElementById('castleCacheBenchmark')?.addEventListener('click',()=>benchmarkCastleBodyCache(3));
-updateCastleCacheControls();
-
 let shopFrontSig=null;
 function ensureStaticSceneCaches(){
   // L3 shop fronts open at dawn and shut at dusk (settlement-shop-cutaway.js): repaint the houses.
   const shopSig=window.ConquerShopCutaway?.frontSig?.()??null;
   if(shopSig!==shopFrontSig){if(shopFrontSig!==null)invalidateSceneCache(['base']);shopFrontSig=shopSig}
+  // Buildings, towers, walls and gates render only in 3D (settlement-world3d.js, decision
+  // D-RENDER-3D-261111). Without WebGL2 the Canvas keeps the terrain and ground network only.
   const builders=[
     ['landscape',drawLandscapeStaticScene],
-    ['ground',drawGroundStaticScene],
-    ['shadow',drawShadowStaticScene],
-    ['base',drawBaseStaticScene],
-    ['castleBody',drawCastleBodyStaticScene],
-    ['castleFront',drawCastleFrontStaticScene]
+    ['ground',drawGroundStaticScene]
   ];
 
   // A projection mismatch cannot safely reuse the old raster. Content-only
@@ -369,7 +185,7 @@ function ensureStaticSceneCaches(){
   }
 
   const stagePriority=new Map([
-    ['ground',0],['base',1],['castleBody',2],['castleFront',3],['shadow',4],['landscape',5]
+    ['ground',0],['landscape',1]
   ]);
   const dirty=builders
     .filter(([name])=>sceneCache[name].dirty)
@@ -409,25 +225,19 @@ function draw(){
   beginPopulationFrame(r);
   ctx=screenCtx;
   screenCtx.clearRect(0,0,r.width,r.height);
-  // Opt-in full-scene 3D prototype (settlement-world3d.js): replaces every static scene cache.
+  // The static scene is the 3D world (settlement-world3d.js). Buildings have no Canvas path:
+  // without WebGL2 only terrain and ground are drawn, with a notice (drawNo3DNotice).
   const world3d=window.ConquerWorld3D?.active?.()&&window.ConquerWorld3D.drawBack(r);
   if(world3d){
     window.ConquerSnowTracks?.draw();
   }else{
   ensureStaticSceneCaches();
-  // Keep moving footprints above the terrain but BELOW completed buildings.
-  // With WebGPU active, exclude the base layer from its compositing pass and
-  // blit that cached bitmap on the front canvas after the snow. Otherwise
-  // WebGPU's opaque static canvas would always bury the footprints entirely.
-  const snowUnderBuildings=State.season==='winter'&&(window.ConquerSnowTracks?.count?.()||0)>0;
-  const gpuStatic=window.ConquerWebGPU?.renderStaticLayers?.(r,snowUnderBuildings)===true;
+  const gpuStatic=window.ConquerWebGPU?.renderStaticLayers?.(r,true)===true;
   if(!gpuStatic){
     blitSceneCache('landscape');
     blitSceneCache('ground');
-    blitSceneCache('shadow');
   }
   window.ConquerSnowTracks?.draw();
-  if(!gpuStatic||snowUnderBuildings)blitSceneCache('base');
   }
 
   // Dynamic placement overlay: switching tools must not invalidate or rebuild
@@ -463,13 +273,12 @@ function draw(){
   window.ConquerFleet?.draw();   // ships at the piers or at anchor, with their crews (settlement-fleet.js)
   markPhase('population');
   drawTrainingSoldiers();
-  if(world3d)window.ConquerWorld3D.drawCastleOverlays();else blitSceneCache('castleBody');
   drawCutawayOccupants();
 
   drawTowerFlags();
   drawCastleSoldiers();
   markPhase('castle-units');
-  if(world3d)window.ConquerWorld3D.drawFront(r);else blitSceneCache('castleFront');
+  if(world3d)window.ConquerWorld3D.drawFront(r);
   window.ConquerFleet?.drawFigures();   // 3D: crews, fires and arrows over the ships of the front pass
   window.ConquerGulls?.draw(performance.now()/1000);   // seagulls over the coast, above the ships
   window.ConquerSiege?.drawOverlay();
@@ -480,7 +289,6 @@ function draw(){
   // windows FIRST, then the moving drawbridge so it physically covers them
   // on the outward Gate facade (stone and timber alike).
   if(world3d)window.ConquerWorld3D.drawMastioDrapes();
-  else{drawFacadeWindows(false,1,false);drawGatePortals()}
   window.ConquerCrossings?.drawDynamic();
   window.ConquerKeepEntrance?.animate();
   window.ConquerGates?.tick();
@@ -519,12 +327,12 @@ function draw(){
   drawDayNightOverlay();
   // WebGL2 lights share the real scene depth and are composited after colour grading.
   // Canvas keeps its original complete night path as the fallback.
-  if(world3d&&window.ConquerWorld3D.nightLightsEnabled())window.ConquerWorld3D.drawNightLights3D(r);
-  else drawNightLights();
+  if(world3d)window.ConquerWorld3D.drawNightLights3D(r);
   if(world3d&&!window.ConquerWorld3D.finishFrame()){
-    // A failed checkpoint must still leave a complete Canvas frame visible.
+    // A failed checkpoint leaves terrain and the WebGL2 notice (no Canvas buildings).
     draw();return;
   }
+  if(!world3d)drawNo3DNotice(r);
   // High-contrast dynamic outline stays visible above roofs, windows and light.
   drawCastleSelection();
   // Road signposts and convoys on the arterial roads, above scene caches;

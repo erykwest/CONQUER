@@ -1834,12 +1834,12 @@
   // ---------- frame hooks used by draw() ----------
   function supported(){return !!ensureGL()}
   function active(){return enabled&&supported()}
-  function residual2D(){
-    // Palisades, wood towers and wood gates are 3D (settlement-wood3d.js); without their models
-    // they keep the 2.5D drawing (per frame).
-    const items=State.structures.filter(s=>!underConstruction(s)&&(s.type==='palisade'||isWoodTower(s)||isWoodGate(s)||isLonghouse(s))&&!window.ConquerWood3D?.handles(s))
-      .sort((a,b)=>worldDepth(a)-worldDepth(b));
-    for(const s of items)drawStructure(s);
+  // Palisades, wood towers, wood gates and longhouses are 3D (settlement-wood3d.js). One whose
+  // model is missing is reported, never painted in 2.5D (D-RENDER-3D-261111).
+  function missingWood3D(){
+    const miss=State.structures.filter(s=>!underConstruction(s)&&(s.type==='palisade'||isWoodTower(s)||isWoodGate(s)||isLonghouse(s))&&!window.ConquerWood3D?.handles(s));
+    perf().world3dMissingWood=miss.length;
+    if(miss.length&&!S.missingWoodReported){S.missingWoodReported=true;console.warn('World 3D: timber structures without a 3D model',miss.map(s=>s.id))}
   }
   function drawBack(r){
     const t0=performance.now(),gl=ensureGL();if(!gl)return false;
@@ -1851,7 +1851,7 @@
     const t1=performance.now();renderBack(r);
     ctx.drawImage(S.canvas,0,0,r.width,r.height);
     if(isPlanView())drawGrid();             // 5U lines + 0.5U snap lattice (plan view editor aid)
-    residual2D();
+    missingWood3D();
     // Village name over the centre well, quarter names over the others (as drawPointStructure).
     if(State.village.founded)for(const s of State.structures){
       if(s.type!=='well'||underConstruction(s))continue;
@@ -1870,7 +1870,7 @@
     S.failed='world3d-draw: '+String(err?.message||err);enabled=false;collecting=null;
     const gpu=document.getElementById('gpuCanvas');if(gpu)gpu.style.visibility='';
     window.ConquerWebGPU?.invalidate?.();invalidateSceneCache();
-    console.warn('World 3D disabled; Canvas fallback:',S.failed);
+    console.warn('World 3D disabled (buildings need WebGL2, no Canvas fallback):',S.failed);
   }
   function finishFrame(){
     try{deferRendererError(S.gl);return true}
@@ -1981,12 +1981,6 @@
     const dyn=buildDynamic(moving);dynamicQueue=[];
     renderFront(r,buildSoldiers(list),dyn);S.frameColliders=colliders;ctx.drawImage(S.canvas,0,0,r.width,r.height);
     if(S.debugColliders)drawColliderDebug();
-    // 2.5D front pieces only exist for palisades, wood towers and wood gates without their 3D models
-    // (settlement-wood3d.js); the battlement occlusion frame is expensive, so skip the call entirely
-    // when none of them is present.
-    const all=State.structures,wood3d=s=>!!window.ConquerWood3D?.handles(s);
-    const residual=all.filter(s=>!underConstruction(s)&&(s.type==='palisade'||isWoodTower(s)||isWoodGate(s))&&!wood3d(s));
-    if(residual.length){try{State.structures=all.filter(s=>!window.ConquerCastle3D?.castleVolume?.(s)&&!wood3d(s));drawCastleBattlements()}finally{State.structures=all}}
     perf().world3dFrontMs=performance.now()-t0;
   }
   function setEnabled(on){enabled=!!on;try{localStorage.setItem(STORE_KEY,enabled?'1':'0')}catch{}location.reload()}
