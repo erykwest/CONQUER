@@ -143,11 +143,11 @@ The economy Builder offers three manual, lord-owned industry footprints of diffe
 | --- | --- | --- | --- | --- |
 | Logging camp | Brown 2×2U low block | Flat ground with forest boundary within 10U of building centre | 2 × L1 | 1 wood per active worker |
 | Quarry | Light-grey **3×3U** low block | **Any part** of the rotated 3×3U footprint must overlap a steep rocky slope; centre need not be on the slope | 2 × L2 | 1 stone per active worker |
-| Mine | Dark anthracite-grey **1×1U** low block | **Centre point** must sit directly on a steep rocky slope; edge overlap alone is insufficient | 2 × L2 | 1 stone per active worker **as currently requested** |
+| Mine | Dark anthracite-grey **1×1U** low block | **Centre point** must sit directly on a steep rocky slope; edge overlap alone is insufficient | 2 × L2 | 0.5 **metal** per active worker (1/day with full crew), smelting implicit — ECO-FIL-01 |
 
 Worker numbers are balancing placeholders (2 each), and are limited by the aggregate L1/L2 labor pool: without enough workers, output is lower or zero. Saturday is market day; Sunday is rest. A logging camp displays two anonymous small walkers heading to the forest edge during workdays (not persistent individual laborers). No forest depletion, individual chopping animation, or regeneration logic has been implemented.
 
-**Open design decision:** the mine currently yields stone according to the latest instruction; earlier economic design assumed metal. Choose the definitive mined good before balancing the metallurgical chain. Rendering intentionally remains temporary while SVG assets are authored in `urban`. No claim is made that the `urban` branch art has been merged.
+**Decided 10/11/2026 (D-ECO-FIL-261110, phase 1 of ECO-FIL-01):** the mine yields **metal only**, with no ore good or smelter; stone comes from the quarry. Mines saved with `productionGood:'stone'` migrate to `metal` on load. Rendering intentionally remains temporary while SVG assets are authored in `urban`. No claim is made that the `urban` branch art has been merged.
 
 Regression: `node qa/economy-industries-regression.cjs` (whitezone, forest range, quarry/mine terrain, collisions, staffing, daily output and weekends).
 

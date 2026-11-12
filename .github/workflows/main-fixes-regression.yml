@@ -11,6 +11,7 @@ on:
       - src/settlement-world.js
       - src/settlement-world3d.js
       - qa/main-fixes-browser.mjs
+      - qa/figure-billboards-browser.mjs
       - qa/ui-combat-regression.mjs
       - .github/workflows/main-fixes-regression.yml
       - .github/actions/playwright-setup/action.yml
@@ -57,6 +58,8 @@ jobs:
           exit 1
       - name: WebGL rebuilds and genuine context-loss fallback
         run: node qa/main-fixes-browser.mjs
+      - name: Civilian billboards, occlusion and atlas reuse
+        run: node qa/figure-billboards-browser.mjs
       - name: Procedural defaults, explicit DEV controls and full UI/Combat
         run: node qa/ui-combat-regression.mjs
       - uses: actions/upload-artifact@v4
@@ -65,4 +68,5 @@ jobs:
           name: main-fixes-browser
           path: |
             output/playwright/main-fixes/
+            output/playwright/figure-billboards/
           retention-days: 7

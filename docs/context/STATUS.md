@@ -1,5 +1,39 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-10 — ECO-FIL-01 fase 1 · Miniera → metallo (branch `feature/eco-fil-01-miniera-metallo`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `KIND.mine` diventa `{good:'metal',rate:1}` (2 L2, 1 metallo al giorno lavorativo a squadra completa) e `ConquerIndustries.TYPES.mine.good` passa a `metal`.
+  - `normalizeFootprint` converte a `metal` le miniere salvate con `productionGood:'stone'`; le scorte di pietra già prodotte restano pietra.
+  - L'etichetta dello strumento Builder legge la resa per lavoratore dal motore (miniera 0,5 metal/lavoratore/giorno).
+  - Voce Wiki «Miniera» aggiornata e rigenerati `src/codex-wiki-editorial.js` e `wiki/catalog.json`.
+- **PROVE LOCALI PASS:**
+  - tutta la suite di `economy-flows-regression.yml` (26 script);
+  - codex-wiki, codex-catalog, fields, industries3d;
+  - `export-codex-content --check`.
+  - `economy-industries-regression` ha un caso aggiornato (cava 2 pietra, miniera 1 metallo al giorno) e un nuovo caso di migrazione.
+- **DA VERIFICARE:** CI del branch. Nessun asset o modello toccato: il modello della miniera resta quello attuale, senza audit asset.
+
+## 2026-11-10 — ECO-FIL-01 · Filiere produttive (solo specifica, branch `docs/filiere-produttive`)
+
+- **NESSUN CODICE:** specifica approvata in [BACKLOG](BACKLOG.md), decisione [D-ECO-FIL-261110](DECISIONS.md). Nessun test eseguito né richiesto.
+- **STATO LIVE VERIFICATO SU `main` 89e7a2c:**
+  - `KIND.mine` produce `stone`.
+  - `metal` non ha produttori. `KIND.workshop` non è collocabile, mentre la stanza `workshop` del castello esiste senza effetti economici.
+  - Le botteghe L3 producono 1 bene al giorno senza consumare nulla. Restano gli errori di `WORKSHOP_OUTPUT` (falegname su `metalGoods`, tessitore e sarto entrambi su `textiles`) e `leatherGoods` ha ancora input `wood`.
+  - I pastori L1 di capre e pecore danno 0,9 `food` al giorno; mucche e cavalli non producono.
+  - La pesca esiste (1,2 `food` al giorno per pescatore).
+- **PROSSIMO:** fase 1 (miniera → metallo) su un branch nuovo da `main`, solo dopo conferma esplicita.
+
+## 2026-11-09 — ARTE: archetipi grafici e ancoraggi delle stanze (`feature/arte-graphics`)
+
+- **CODICE SUL BRANCH (non in main):** nuovo generatore Blender `tools/blender/build_art.py` → `src/assets/art-models.js` (`window.ConquerArtModels`): 19 archetipi grafici low-poly a colori piatti, nello stesso formato dei mobili del cutaway. **Quadri** (icona su fondo oro, trittico con ante aperte, ritratto, paesaggio, scena di caccia) e **arazzi** (millefleurs, fregio narrativo), ognuno in taglia piccola e grande; **sculture**: busto su piedistallo in marmo, statua su basamento in marmo/pietra/bronzo, santo ligneo policromo in tabernacolo a parete. Le immagini sono griglie di pixel unite nel minor numero di rettangoli; 5.622 triangoli, 142 KB. `catalog` descrive per ogni pezzo kind/archetype/size/material/mount/label.
+- **CUTAWAY:** `settlement-cutaway-furniture.js` risolve i pezzi come `a:<nome>` e calcola, dopo la ricetta di ogni stanza, gli **ancoraggi ARTE** (ART-251105-02): a parete sui due muri visibili, negli intervalli liberi da mobili alti (> 0,22 U), decorazioni, torce e angolo della scala, ciascuno con la propria larghezza libera `w`; a pavimento (piedistallo 0,14 U o 0,2 U con margine) verso le pareti, al massimo 2 (3 nelle stanze grandi). Nessun ancoraggio sul passaggio del portone. API `ConquerCutawayFurniture.artSlots(s)` (id stabile, stanza, piano, ruolo, montaggio, coordinate) e `artFits(slot, nome)` (stesso montaggio, opera non più larga dell'ancoraggio). **Le stanze non cambiano aspetto:** nessuna opera è esposta finché non esistono commissione e inventario (ART-251105-03/04).
+- **COLORI PARAMETRICI (D-ART-COLORS-261109):** ogni archetipo ha da 1 a 7 slot colore (es. icona: fondo, aureole, manto, veste, cornice; arazzi: fondo, fogliame/figure, fiori/cavalli, bordura; statue: materiale e basamento) con tinte suggerite (pigmenti, cielo, cornici, lane, materiali scultorei, basamenti). Nuovo `src/art-colors.js` (`ConquerArtColors`: slots, defaults, swatches, normalize, diff, paint, signature); l'ombra di uno slot segue il colore scelto. Il cutaway applica `item.paint`; `ConquerCutawayFurniture.artWorkFaces(slot, nome, colori)` produce le facce di un'opera posata su un ancoraggio. Nel Lab, il pannello di un'opera mostra «Colori della commissione» (campioni, colore libero, «Colori originali»); galleria e audit restano sui colori dell'archetipo.
+- **ASSET LAB:** registro `ConquerArtModels` in `MODEL_SOURCES` (Interni · «Opere d'arte · quadri / arazzi / sculture», titoli in italiano dal catalogo); script caricato in `figures-lab.html` e `index.html`.
+- **PROVE:** `qa/art-regression.cjs` (catalogo, risoluzione `a:`, ancoraggi dentro la stanza e liberi da mobili, scala e tra loro; regole di montaggio e larghezza; slot colore, `ConquerArtColors`, opera ricolorata sul suo ancoraggio) PASS 7/7; audit Interni senza differenze sui colori predefiniti; `qa/cutaway-furniture-regression.cjs` PASS 9/9; controllo visivo dei 19 modelli nel Lab. Osservazione: nelle stanze quadrate già arredate le pareti libere sono strette (circa 1 m: letto, camino, arazzo araldico e torce); i tratti fino a 3 m ci sono nelle stanze rotonde o vuote.
+
+
 ## 2026-11-05 — Tetto interno delle torri, BC-251105-05 (branch `feature/tower-inner-roof`, NON MAIN)
 
 - Nuova variante torre `innerRoof` (`off`/`on`, `STRUCTURE_VARIANTS.tower`): tetto a piramide (quadrate, a D) o cono (rotonde) arretrato dentro i merli, su un cordolo di pietra di 0,14U; tra tetto e merli resta il cammino di ronda (~0,22U). Regola `towerInnerRoofAllowed` (core): pietra, non semitorre, T2+, sommità a merli o caditoie, nessuna arma sulla piazza (arma e tetto interno si escludono). Geometria `towerInnerRoofGeometry` (population); 2.5D come pezzo ordinato tra i merli (`towerInnerRoofPiece`/`drawTowerInnerRoof`); 3D in `addTower` (castle3d → World 3D, Lab). Altezza visiva, sagoma di occlusione, ombra e chiavi di cache la includono.
@@ -318,6 +352,9 @@ Sul branch `fix/audit-sheet-grid` i fogli provini dell'audit per categoria dispo
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`, NON MAIN)
 
 - **Aggiornamento porto**: moli L4 e L12 (`reach`, i moli salvati prima restano L8); piazzamento solo costa + approdo nella whitezone, senza regole di terreno edificabile (pendenze, bosco, terreno irregolare ammessi; impalcato sopra il terreno più alto dell'approdo). Nuova **banchina in pietra** (`src/settlement-quay.js`, `type:'quay'`): 2U, due clic lungo la riva o in acqua, solo whitezone + contatto con il mare, lato mare fissato al piazzamento, bitte sul bordo; i moli si agganciano al bordo verso il mare (`onQuay`, impalcato a filo della banchina).
+- **Trabucco** e **indice spaziale degli ostacoli**: `qa/trebuchet-regression.cjs`; verificato in preview (2 trabucchi a est del castello si montano e tirano sulla torre più vicina; primo tick dell'assalto da 63 s a ~0,9 s). Suite verde.
+- **Performance layout TEST**: frame 1280×800 da ~940 ms a ~30–75 ms (mediana di 10 frame, 4 inquadrature, pannello nascosto, quindi misure rumorose ±20 ms). Le cause principali erano il percorso verso il pozzo ricalcolato per ogni artigiano e la mesh delle navi ricostruita a ogni frame. Suite `qa/*-regression.cjs` verde.
+- **Personaggi con profondità in 3D** (branch `figure-billboards`): contadini, lavoratori, carpentieri e marinai sono carte con test di profondità (`ConquerWorld3D.figure`). Verificato in preview: un contadino davanti alla nave sta sopra lo scafo, uno dietro è nascosto, le vele e il castello coprono i marinai dietro. Misura (porto con 5 navi, 35 figure, mediana di 60 frame, 2 giri): frame 22–26 → 19–20 ms, popolazione 10–13 → 6–7 ms, `world3dFrontMs` 8,8–9,0 → 8,6–8,7 ms. Suite `qa/*-regression.cjs` verde (founding al secondo giro).
 - **Gabbiani** sulla costa: `qa/coast-regression.cjs`; verificato in preview (in volo con ombra, posati sul molo).
 - **Onde** sulla costa: `qa/coast-regression.cjs`; verificato in preview (spiaggia con vento, spruzzi sugli scogli).
 - **Audit Asset Lab (mare)**: 1026 render, 0 errori, 35 nuovi asset di mare rivisti nei fogli provini; baseline aggiornata.
@@ -1298,3 +1335,9 @@ Aggiornare questo livello dopo ogni PR che modifica una milestone, non dopo ogni
 ## Campi L2 — 05/11/2026
 
 Nel branch fix/fields-l2-only i campi richiedono esclusivamente L2 sia nel ledger sia nelle assegnazioni fisiche. Gli L1 restano disponibili per gli altri lavori. Colture salvate conservate, assegnazioni ricalcolate. Nessun raccolto lavorato da L1 in assenza di L2. D-051 risolta per scelta dell’utente. QA locale campi, lavoro, economia, razioni, industrie e cantieri eseguita prima della PR. Pulizia jobmanager prevista dopo il merge, archivio archive/jobmanager conservato.
+
+## 2026-11-11 — Integrazione urgente figure-billboards (pre-merge)
+
+Recuperati i cinque commit residui 31cb32d, 2408397, 8e541fd, e4b06cc, 0ff543d sulla base main e4230db. La parte navale precedente era già in #150. Civili, lavoratori, carpentieri e marinai entrano nel depth buffer World3D; atlante 2048 con caselle 64px, 1024 posti, pose condivise, riuso LRU e upload incrementale. Conservati LOD militare, addOutbuilding, ingresso del mastio, arte e guarnigioni. Recuperati layout TEST, cache accesso pozzi, traslazione mesh navi, indice spaziale ostacoli e Trabucco DEV con scenario QA.
+
+QA locale: 165 regressioni deterministiche PASS. Aggiunta prova browser sul painter reale dei civili, occlusione da murature, riuso atlante, picking militare e fallback Canvas; inserita nel workflow Main fixes. Audit Lab completo: 1473 render, 0 errori; rivisti Popolazione, Truppe e confronto browser dietro la torre. Firme di queste categorie invariate; annotata la revisione nella baseline, senza accettare i 184 cambiati locali o i 15 stati tetto nuovi estranei a questa integrazione. Prova browser dedicata PASS. CI remota da completare prima del merge. Nessun nuovo modello, nessuna modifica alle priorità ROADMAP. Restano i limiti originari del Trabucco: non persistito, serventi colpibili solo via API, munizioni non simulate.

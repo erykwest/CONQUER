@@ -21,7 +21,7 @@ assert.ok(wiki.tokenize('FORTIFICAZIONI e costruzioni.','home').some(t=>t.id==='
 assert.ok(!wiki.tokenize('sottocostruzioni','home').some(t=>t.id),'word boundaries');
 assert.ok(wiki.backlinks('topic:fortifications').includes('building:tower'));
 assert.ok(wiki.pages.get('room:kitchen').text[0].includes('piano terra'));
-assert.ok(wiki.pages.get('building:mine').text[0].includes('pietra'));
+assert.ok(wiki.pages.get('building:mine').text[0].includes('metallo'));
 const generated=fs.readFileSync(path.join(root,'wiki/catalog.json'),'utf8').replace(/\r\n/g,'\n');
 assert.equal(generated,JSON.stringify(data,null,2)+'\n','generated public data must match live definitions');
 assert.deepEqual(JSON.parse(JSON.stringify(api.quote('ship:barca'))),data.catalog.items.find(r=>r.id==='ship:barca').quotes);

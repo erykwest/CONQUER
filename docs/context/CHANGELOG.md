@@ -1,9 +1,5 @@
 # Livello 5 — Diario delle variazioni del contesto
 
-05/11/2026 — `feature/tower-inner-roof`: BC-251105-05, tetto interno dentro i merli delle torri in pietra T2+ (variante `innerRoof`), nel Builder, nel 2.5D, nel 3D e nel Lab. Piramide: STATUS, BACKLOG, feature-backlog. ROADMAP e DECISIONS invariate: nuova variante estetica, nessun contratto cambiato (le stanze sotto il tetto restano legate al tetto a falde).
-09/11/2026 — CI P2.4 (`perf/ci-p24-specialist-test-ownership-20261109`): rimosse 9 invocazioni test duplicate da Codex Wiki, Main fixes e CAMP, mantenendo owner di regressione in Runtime integrity e settlement-qa (always-on PR). Codex Wiki mantiene Playwright e filtri dei suoi check browser, Main fixes mantiene WebGL/render e UI/Combat, CAMP conserva animali e pattuglie. Aggiunta guardia P2.4 in `qa/ci-p1-regression.cjs`; suite completa P0 e tutte le baseline/test immutate.
-
-
 ## 2026-11-09 — BC-261109-02 · DEV e cantieri di ristrutturazione
 
 - **Prove aggiuntive PASS:** regressione d'assedio reale Canvas/WebGL e perdita contesto WebGL; annullamento di upgrade conserva i danni subiti durante il cantiere.
@@ -141,6 +137,12 @@ Branch documentale `docs/codex-catalog-audit-20261105`, base `main` `bcf3cd7`. A
 
 ## 2026-11-02 — Mare al 30% e Molo (branch `mare`)
 
+- **Trabucco come unità** (`src/settlement-trebuchets.js`): pulsante *Assault · trebuchet* nel pannello Combat, si piazza fuori dalle mura e punta la fortificazione più vicina entro 28U; montaggio di 6 s (animazione del modello), poi una pietra infuocata per ciclo (6 s) con danno reale (`attackStructure` arma trebuchet, forza 0,5) e nuovo bersaglio quando il primo crolla; 4 serventi, fermo senza serventi. Test `qa/trebuchet-regression.cjs`.
+- Performance assedio: `pointBlockedForPeasant` usa un indice spaziale delle strutture (celle 4U) nella fotografia degli ostacoli; stessi risultati su 20.000 punti, 17× più veloce. Il primo tick dell'assalto sul layout TEST passa da 63 s a ~0,9 s.
+- Layout TEST: mura con `flip` (cammino di ronda e lato esterno corretti: torre d'assedio fuori dalle mura) e porta girata verso nord.
+- Performance (layout TEST, 166 strutture, 6 navi, 163 abitanti): da ~940 ms a ~30–75 ms per frame. (1) Gli artigiani senza bottega né mercato ricalcolavano a ogni frame la strada fino al pozzo (`structureAccessPoint`, ~30 ms ciascuno): ora il punto è in cache fino al cambio di navigazione. (2) Le navi ricostruivano la mesh a ogni frame per rollio e beccheggio (~19 ms una nave grande): ora la mesh si costruisce una volta nel sistema della nave e si sposta con una trasformazione rigida (flotta da 58 a 6 ms). (3) Atlante delle figure con riquadri da 64 px (1024 posti), canvas `willReadFrequently` per la rilettura delle caselle, pre-caricamento dei marinai solo per le pose ferma e camminata.
+- DEV **Carica layout**: layout di prova salvati in `layouts/<nome>.json` (stesso formato del salvataggio locale) e richiamabili dal menu DEV. Primo layout `TEST`: Portoreale, villaggio medio con castello a 4 torri in cutaway con stanze e arcieri, mura T3 pattugliate, porta con guardie, campo d'addestramento, molo militare e commerciale, 6 navi, pattuglie di picchieri.
+- Personaggi con profondità in WebGL: contadini, lavoratori con attrezzo, carpentieri e marinai passano dal meccanismo dei soldati (carta con test di profondità). Ogni posa si dipinge una volta in un atlante 2048 (riquadri 96 px, 441 posti, sfratto dei meno usati), le animazioni sono divise in 8 fasi, la direzione è la stessa carta ribaltata, alla GPU va solo la casella nuova. Le pose degli equipaggi si preparano nei tempi morti. Ora uno scafo, una vela o un molo davanti nascondono il personaggio.
 - Banchina perpendicolare alla riva: pontili su entrambi i lati, approdo ridotto a 0,3U sulla banchina; test del molo esteso.
 - Magnete delle mura sui lati della banchina: muro dritto all'esterno, addossato alla faccia, alla quota della banchina su zoccolo.
 - Gabbiani (`src/settlement-gulls.js`, sprite 2D, solo grafica): stormi che girano sopra costa, moli e acqua vicina, con battiti d'ala, planate e ombra; altri posati su scogli, spiagge e teste dei moli. Di notte non volano, con la tempesta sono la metà.
@@ -924,3 +926,28 @@ Non archiviare nuove idee indistintamente come «implementazioni»: mantenere se
 ## Campi L2 — 05/11/2026
 
 Branch fix/fields-l2-only — scelta utente campi solo L2, sincronizzazione ledger e figure, regressioni su esclusione L1 e prenotazioni L2. Chiusura residuo jobmanager e pulizia dopo merge.
+
+## 2026-11-11 — Integrazione urgente figure-billboards (pre-merge)
+
+Recuperati i cinque commit residui 31cb32d, 2408397, 8e541fd, e4b06cc, 0ff543d sulla base main e4230db. La parte navale precedente era già in #150. Civili, lavoratori, carpentieri e marinai entrano nel depth buffer World3D; atlante 2048 con caselle 64px, 1024 posti, pose condivise, riuso LRU e upload incrementale. Conservati LOD militare, addOutbuilding, ingresso del mastio, arte e guarnigioni. Recuperati layout TEST, cache accesso pozzi, traslazione mesh navi, indice spaziale ostacoli e Trabucco DEV con scenario QA.
+
+QA locale: 165 regressioni deterministiche PASS. Aggiunta prova browser sul painter reale dei civili, occlusione da murature, riuso atlante, picking militare e fallback Canvas; inserita nel workflow Main fixes. Audit Lab completo: 1473 render, 0 errori; rivisti Popolazione, Truppe e confronto browser dietro la torre. Firme di queste categorie invariate; annotata la revisione nella baseline, senza accettare i 184 cambiati locali o i 15 stati tetto nuovi estranei a questa integrazione. Prova browser dedicata PASS. CI remota da completare prima del merge. Nessun nuovo modello, nessuna modifica alle priorità ROADMAP. Restano i limiti originari del Trabucco: non persistito, serventi colpibili solo via API, munizioni non simulate.
+
+
+10/11/2026 — ECO-FIL-01 fase 1 (`feature/eco-fil-01-miniera-metallo`): la miniera produce metallo (1 al giorno con 2 L2) invece di pietra, migrando i salvataggi. Etichetta Builder, Wiki e catalogo aggiornati. Suite economia locale PASS, CI da verificare. ROADMAP invariata nei contenuti: la voce M1 «scegliere output `mine`» è ora implementata sul branch. DECISIONS invariata: D-ECO-FIL-261110 copre già questa fase.
+
+10/11/2026 — ECO-FIL-01 (`docs/filiere-produttive`): specifica approvata delle filiere produttive. Prevede:
+- miniera → metallo;
+- lana, pelli e latte (con il casaro) dagli allevamenti;
+- ricette e consumo delle botteghe L3, senza importazioni;
+- correzioni dei mestieri: falegname su archi e lance, sarto su abiti, pellettiere su pelli;
+- cinque armi con domanda civile e officina del castello;
+- affumicatore, birra della taverna e vigneto collocabile.
+
+Nessun codice. Aggiornati BACKLOG, STATUS e DECISIONS (D-ECO-FIL-261110); ROADMAP invariata (la voce M1 «scegliere output `mine`» resta, ora decisa, da implementare).
+
+09/11/2026 — `feature/arte-graphics` (pre-merge): parte grafica di ARTE. Generatore `tools/blender/build_art.py` e registro `ConquerArtModels` con 19 archetipi (quadri e arazzi in due taglie, busto, statua in marmo/pietra/bronzo, santo ligneo in tabernacolo) e catalogo dei metadati; Asset Lab con tre famiglie «Opere d'arte». Ancoraggi a parete e a pavimento calcolati per ogni stanza del cutaway (`artSlots`, `artFits`), senza esporre opere né cambiare le stanze. Nuova `qa/art-regression.cjs`. ART-251105-01 fatto per la parte grafica, ART-251105-02 per gli slot; commissione, inventario e ricollocazione restano aperti. Poi: colori parametrici delle opere (forme fisse, colori a commissione), con slot colore nel catalogo, `src/art-colors.js`, applicazione nel cutaway (`artWorkFaces`) e selettore «Colori della commissione» nel Lab. Nuova decisione D-ART-COLORS-261109; ROADMAP invariata.
+
+
+05/11/2026 — `feature/tower-inner-roof`: BC-251105-05, tetto interno dentro i merli delle torri in pietra T2+ (variante `innerRoof`), nel Builder, nel 2.5D, nel 3D e nel Lab. Piramide: STATUS, BACKLOG, feature-backlog. ROADMAP e DECISIONS invariate: nuova variante estetica, nessun contratto cambiato (le stanze sotto il tetto restano legate al tetto a falde).
+09/11/2026 — CI P2.4 (`perf/ci-p24-specialist-test-ownership-20261109`): rimosse 9 invocazioni test duplicate da Codex Wiki, Main fixes e CAMP, mantenendo owner di regressione in Runtime integrity e settlement-qa (always-on PR). Codex Wiki mantiene Playwright e filtri dei suoi check browser, Main fixes mantiene WebGL/render e UI/Combat, CAMP conserva animali e pattuglie. Aggiunta guardia P2.4 in `qa/ci-p1-regression.cjs`; suite completa P0 e tutte le baseline/test immutate.

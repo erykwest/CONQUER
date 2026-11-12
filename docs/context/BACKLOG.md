@@ -1,5 +1,62 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-10 — ECO-FIL-01 · Filiere produttive complete
+
+**SPECIFICA APPROVATA. Fase 1 (miniera → metallo) IMPLEMENTATA SU BRANCH `feature/eco-fil-01-miniera-metallo`, NON MERGE; fasi 2–6 aperte.** Intervista con il product owner del 10/11/2026 (sessione «filiere», nata dalla sessione Gilda). Decisione [D-ECO-FIL-261110](DECISIONS.md). Base verificata: `main` 89e7a2c, non le note della mappa `CONQUER_ECONOMY_ULTIMA_REVISIONE_NOV10` (scritte su `feature/autonomous-urban-economy`). Chiude la decisione aperta «miniera stone/metal» (P0-08, ROADMAP M1) e gli errori di mappatura di `WORKSHOP_OUTPUT`. La Gilda (sessione dedicata) applica il suo +25/+50/+100% a queste ricette: il bonus moltiplica produzione **e** consumo di materie, quindi senza materie non produce di più.
+
+**Regole generali**
+- Le botteghe L3 producono 1 unità al giorno lavorativo (Lun–Ven, come oggi) e **consumano** la ricetta qui sotto. Il sabato comprano al mercato del villaggio le scorte per 5 giorni con il portafoglio L3 (stesso schema dei buffer `inputs` di `KIND`). Il magazzino del castello conta solo per la quota che il signore mette in vendita.
+- **Nessuna importazione.** Se la materia manca, la bottega resta aperta ma non produce (stato visibile «senza materie»); produce in proporzione alla scorta parziale. La scelta del mestiere (`tradeResources`) usa la disponibilità reale della materia di ogni mestiere.
+- **Depositi interni non vendibili**, come `cropStock`: `milkStock` (latte) e `fishStock` (pescato), separati per proprietario. Ciò che non viene lavorato entro il sabato diventa `food` al mercato, come il raccolto non macinato. Il casaro e l'affumicatore pagano il prelievo al proprietario al prezzo corrente del cibo.
+- **Interfaccia:** le nuove materie del ledger sono `wool` e `hides`. Le cinque armi si mostrano come voce aggregata «Armi», con dettaglio a richiesta. I nuovi prodotti di bottega restano dentro l'aggregato «Beni L3».
+
+**Materie prime**
+| Fonte | Lavoro | Produzione per giorno lavorativo |
+| --- | --- | --- |
+| Miniera | 2 L2 | **1 `metal`** (fusione implicita; non più `stone`). Le miniere salvate passano al metallo; la pietra resta alla cava |
+| Pecore (casa L1 `shepherd`) | pastore L1 | 0,9 `food` (come oggi) + 0,3 `wool` |
+| Capre (casa L1 `goat`) | pastore L1 | 0,6 `food` + 0,3 latte + 0,1 `hides` |
+| Mucche (casa L2 `cow`) | mandriano L2 (nuova riga «Mandrie» del Job Manager L2) | 0,4 `food` + 0,8 latte + 0,15 `hides` |
+| Pesca (esiste su main) | pescatore L1 | 1,2 pescato in `fishStock` (oggi 1,2 `food` diretto) |
+| Vigneto (`KIND.vineyard` reso collocabile) | 2 L1 | raccolto d'autunno → `luxury` (vino), resa per area già nel motore |
+I cavalli restano solo trasporto. Latte e carne non diventano merci.
+
+**Ricette delle botteghe L3 (per 1 unità prodotta)**
+| Mestiere | Prodotto | Ricetta | Prezzo base |
+| --- | --- | --- | --- |
+| Fabbro | ferramenta `metalGoods` | 0,5 metal + 0,2 wood | 18 |
+| Orafo | gioielli `jewelry` | 0,3 metal | 45 |
+| Vasaio | ceramica `pottery` | 1 clay + 0,2 wood | 8 |
+| Tessitore | tessuti `textiles` | 1 wool | 11 |
+| Sarto | **abiti `clothing`** (nuovo) | 1 wool + 0,25 hides | 20 |
+| Pellettiere | pelletteria `leatherGoods` | 1 hides (concia implicita, nessuna conceria né cuoio) | 12 |
+| **Casaro** (nuovo mestiere) | **formaggi `cheese`** | 2 latte | 9 |
+| **Affumicatore** (nuovo mestiere) | **pesce affumicato `smokedFish`** | 2 pescato + 0,2 wood | 7 |
+| Falegname | **archi** / **lance** (merci del ledger, non Beni L3) | arco: 1 wood · lancia: 1 wood + 0,2 metal | 8 / 9 |
+| Birraio della taverna (gestore L3 del servizio `tavern`) | **birra `beer`** | 1 food | 5 |
+Il falegname sceglie ogni giorno tra arco e lancia secondo il prezzo più alto. La birra ha un bisogno proprio anche per L1/L2 (gli altri Beni L3 hanno L1 = 0).
+
+**Armi**
+- Cinque merci distinte nel ledger: `bows`, `spears`, `swords`, `lightArmor`, `heavyArmor`. `equipment` cessa di essere una merce: diventa l'aggregato «Armi» dell'interfaccia, della capienza dell'armeria e delle stive. Le scorte salvate si dividono in parti uguali; l'obiettivo di scorta 30 diventa 6 per arma.
+- **Officina del castello:** la stanza `workshop` (sotto portico, «officina degli armaioli») diventa il vero `KIND.workshop`. È del signore, ha 1 lavoratore L3 e rende 0,5 unità al giorno. Spada: 1 metal + 0,2 wood. Armatura pesante: 1,5 metal + 0,5 hides. Armatura leggera: 1,5 hides. Fa l'arma con lo scarto più grande rispetto all'obiettivo dell'armeria, altrimenti quella col prezzo più alto.
+- **Vendita al sabato:** il signore compra per primo fino all'obiettivo di scorta, poi comprano le famiglie con le proprie monete. Bisogno settimanale civile (valori provvisori): L1 archi e lance 0,005 ciascuno; L2 archi e lance 0,008; L3 spade 0,01 e armature leggere 0,008; L4 spade 0,02, armature pesanti 0,01, armature leggere 0,01, più 1 armatura leggera per mercenario di scorta di ogni carovana L4+.
+- Gli incassi delle botteghe vanno al portafoglio L3, non al lotto `private` (L4), che oggi riceve i ricavi di ogni lotto privato.
+- Quale arma usi quale truppa lo decide il sistema militare. Gli effetti delle armi possedute dai civili (milizia, ordine pubblico) sono agganci per Municipio/CRIME e militare.
+
+**Migrazione dei salvataggi:** miniere da pietra a metallo; botteghe `carpenter` alle armi, con il vecchio stock `metalGoods` conservato; `equipment` diviso in cinque; nuovi campi `milkStock` e `fishStock` a zero. Nessun reset di monete o scorte.
+
+**Valori provvisori da bilanciare:** tutte le rese, le ricette, i prezzi base, i bisogni civili e i pesi di carico (`CARGO_WEIGHTS`: wool 3, hides 4, ogni arma 3).
+
+**Fasi di implementazione proposte (una PR ciascuna):**
+1. Miniera → metallo e migrazione.
+2. Ricette e consumo delle botteghe L3, acquisto del sabato, stop senza materie, correzione di `WORKSHOP_OUTPUT` e `tradeResources`.
+3. Allevamenti: `wool`/`hides`, `milkStock`, mandriano L2, casaro.
+4. Armi: cinque merci al posto di `equipment`, falegname, officina del castello, domanda civile, aggregato «Armi» e armeria.
+5. Pesca → `fishStock` e affumicatore; birraio della taverna.
+6. Vigneto collocabile: edificio nel Builder (regola di posa da decidere in questa fase), modello e voce nel Lab, audit asset.
+
+**Fuori da questa specifica:** conceria o fonderia come edifici, latte/carne come merci, importazioni, effetti militari e di ordine pubblico delle armi civili, sale/salagione.
+
 BC-251105-05 tetto interno delle torri: **sul branch `feature/tower-inner-roof`, NON MAIN** ([dettaglio](../feature-backlog.md#2026-11-05--builder--castello-upgrade-architettonici-richiesti)). **APERTO:** nessun costo né effetto di gioco (solo estetica); non brucia con gli incendi; nel cutaway del World 3D sparisce come il tetto a falde.
 ## 2026-11-09 — P2.4 · Responsabilità unica test CI sovrapposti
 
@@ -103,7 +160,7 @@ BC-251105-05 tetto interno delle torri: **sul branch `feature/tower-inner-roof`,
 
 **Catalogo edifici — ancora solo progetto, da confermare prima del codice:** Presidio antincendio, Avamposto, funzioni del Municipio, Gilda/Corporazioni, effetti dello Scriptorium, Bagni pubblici, Lavatoio, Approdo fluviale, Cortile domestico, Giardino dei semplici, Carbonaia, Palazzo del Balivo. Il Corpo di Guardia esiste come stanza `guard` e sala del Municipio, senza pattuglie né allarmi propri.
 
-**Seguiti aperti trasversali:** lanterna della Colombaia sul montaggio `roof` di `ROOM_EXTERIOR`; reclutamento dei cavalieri sullo stock reale dei cavalli; rintocco della campana nel motore audio; cosa legge il Prestigio; gronda e pluviale della Cisterna; assedio strategico S-01/02/03/04/10/15; CRIME C-01 e C-05; MARCH collegato a mappa e salvataggi; navi in gioco (MARE); ARTE solo backlog; UI v2 fase 5.
+**Seguiti aperti trasversali:** lanterna della Colombaia sul montaggio `roof` di `ROOM_EXTERIOR`; reclutamento dei cavalieri sullo stock reale dei cavalli; rintocco della campana nel motore audio; cosa legge il Prestigio; gronda e pluviale della Cisterna; assedio strategico S-01/02/03/04/10/15; CRIME C-01 e C-05; MARCH collegato a mappa e salvataggi; navi in gioco (MARE); ARTE: grafica e ancoraggi su branch, commissione/inventario aperti; UI v2 fase 5.
 
 ## 2026-11-08 — STONECOLOR · Verifica a cascata delle dipendenze
 
@@ -271,6 +328,8 @@ Fogli provini dell'audit: impaginazione a griglia per le categorie e sfondo neut
 
 ## 2026-11-05 — ARTE: opere commissionabili e decorazione delle stanze
 
+**09/11/2026 · PARTE GRAFICA SU BRANCH `feature/arte-graphics` (non in main):** 19 archetipi in `ConquerArtModels` (ART-251105-01, grafica) e ancoraggi a parete/pavimento per stanza con `ConquerCutawayFurniture.artSlots`/`artFits` (ART-251105-02); colori scelti alla commissione tramite slot colore e `ConquerArtColors` (D-ART-COLORS-261109), già applicabili nel cutaway e provabili nel Lab; QA `qa/art-regression.cjs`. Varianti di forma rinviate. **Ancora aperti:** commissione (03), inventario persistente (04), rimozione/ricollocazione (05) e il rendering delle opere esposte sugli ancoraggi, che dipende da 03/04; da valutare se gli arredi decorativi esistenti (arazzo araldico, drappi) cedano il posto alle opere esposte.
+
 **APERTO · SOLO BACKLOG (nessuna implementazione o QA attestata).** Sottosistema separato da personaggi speciali e ricerca scientifica. Dettaglio canonico: [ARTE nel backlog Builder/Manager](../feature-backlog.md#2026-11-05--arte--commissioni-esposizione-e-circolazione-delle-opere).
 
 - **A-P0 (ART-251105-01…05):** catalogo quadri/arazzi/sculture; slot compatibili nelle stanze; azione «Commissiona opera d'arte» con oro e tempo; inventario individuale persistente; rimozione e ricollocazione.
@@ -294,6 +353,9 @@ Fogli provini dell'audit: impaginazione a griglia per le categorie e sfondo neut
 - **SUL BRANCH `mare`, NON MAIN**: mare al 30% della mappa; Molo in legno di 8U sulla costa con due attracchi esposti da `ConquerPier.moorings(s)`.
 - **Navi**: 5 modelli Blender pronti (3 piccole, 2 grandi), solo nell'Asset Lab.
 - **Navi in gioco**: flotta di test nel menu DEV (non salvata). **DA FARE**: salvataggio, arrivo/partenza in navigazione, selezione della nave nel gioco, ordine con il renderer WebGL invece del livello sovrapposto, picchi di disegno isolati.
+- **Trabucco**: DA FARE serventi come unità di combattimento (oggi figure, `crewHit` solo via API), salvataggio con la partita, munizioni, il tiro parte a 9U dal bersaglio (volley) invece che dalla macchina; picchi residui ~200 ms nel tick di combattimento all'avvio dell'assalto (12 percorsi A* in un tick: distribuirli su più frame).
+- **Performance**: restano 20–40 ms di passata frontale WebGL (`world3dFrontMs`, include la copia del canvas WebGL sul 2D) e la popolazione a zoom alto; misurare con il pannello visibile e un profilo CPU. `lotKindForHouse` è chiamata centinaia di volte per frame.
+- **Personaggi 3D**: fatto per contadini, lavoratori, carpentieri e marinai. **DA FARE**: carrettieri sui veicoli e figure della battaglia navale ancora in 2D; i costruttori stanno solo sul lato verso la camera (con la profondità non serve più); misurare con un villaggio grande di giorno (nel test erano visibili solo 4 abitanti).
 - **Mura sulla banchina**: fatto il magnete. **DA FARE**: contorno di selezione alla quota della banchina; porte sulla banchina (torri fatte); muro che continua dalla banchina alla terraferma.
 - **Attracchi lungo la banchina**: fatto. **DA FARE**: segnare in gioco gli slot liberi/occupati (oggi visibili solo via `ConquerQuay.berths`).
 - **Banchina fuori whitezone**: fatto (parte da dentro, prosegue oltre). **DA FARE**: allo spigolo il lastricato delle due banchine si sovrappone (doppio strato, possibile z-fighting); un unico raccordo d'angolo sarebbe più pulito.
@@ -1084,3 +1146,9 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 ## Campi L2 — 05/11/2026
 
 D-051 risolta per scelta dell’utente: campi solo L2. Recupero residuo jobmanager nel branch fix/fields-l2-only; chiusura dopo merge e rimozione della branch storica.
+
+## 2026-11-11 — Integrazione urgente figure-billboards (pre-merge)
+
+Recuperati i cinque commit residui 31cb32d, 2408397, 8e541fd, e4b06cc, 0ff543d sulla base main e4230db. La parte navale precedente era già in #150. Civili, lavoratori, carpentieri e marinai entrano nel depth buffer World3D; atlante 2048 con caselle 64px, 1024 posti, pose condivise, riuso LRU e upload incrementale. Conservati LOD militare, addOutbuilding, ingresso del mastio, arte e guarnigioni. Recuperati layout TEST, cache accesso pozzi, traslazione mesh navi, indice spaziale ostacoli e Trabucco DEV con scenario QA.
+
+QA locale: 165 regressioni deterministiche PASS. Aggiunta prova browser sul painter reale dei civili, occlusione da murature, riuso atlante, picking militare e fallback Canvas; inserita nel workflow Main fixes. Audit Lab completo: 1473 render, 0 errori; rivisti Popolazione, Truppe e confronto browser dietro la torre. Firme di queste categorie invariate; annotata la revisione nella baseline, senza accettare i 184 cambiati locali o i 15 stati tetto nuovi estranei a questa integrazione. Prova browser dedicata PASS. CI remota da completare prima del merge. Nessun nuovo modello, nessuna modifica alle priorità ROADMAP. Restano i limiti originari del Trabucco: non persistito, serventi colpibili solo via API, munizioni non simulate.
