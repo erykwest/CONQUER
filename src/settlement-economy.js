@@ -1023,7 +1023,7 @@
       '<div class="kv"><span>L4 investment capacity</span><b>'+fmt(s.investmentCapacity)+' gold</b></div>'+
       '<div class="kv"><span>Population L1–L4</span><b>'+Object.values(s.population).join(' · ')+'</b></div>'+
       (s.commerce?
-        '<div class="kv"><span>L2 botteghe / L3 servizi</span><b>'+s.commerce.l2Shops+' / '+s.commerce.l3Services+'</b></div>'+
+        '<div class="kv"><span>L2 botteghe / L3 servizi</span><b>'+s.commerce.l3Shops+' / '+s.commerce.l3Services+'</b></div>'+
         '<div class="kv"><span>L3 goods in stock · reference value</span><b>'+fmt(s.commerce.l3Goods)+' · '+fmt(s.commerce.l3GoodsValue)+' gold</b></div>'+
         '<div class="kv"><span>L3 mercanti in viaggio / presenti</span><b>'+s.commerce.l4PlusPlanned+' / '+s.commerce.l4PlusPresent+'</b></div>'+
         '<div class="kv"><span>Inn beds available</span><b>'+Math.max(0,s.commerce.innBeds-s.commerce.innOccupied)+' / '+s.commerce.innBeds+'</b></div>':'')+
