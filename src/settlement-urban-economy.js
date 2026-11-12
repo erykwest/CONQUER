@@ -1,5 +1,5 @@
 'use strict';
-// CONQUER autonomous L3 street-front workshops (from feature/autonomous-urban-economy).
+// CONQUER autonomous L2 artisan street-front workshops (from feature/autonomous-urban-economy).
 // Pure rules: eligibility, weighted trade choice, daily state. ConquerCommerce
 // owns the saved registry and calls these from the simulation calendar.
 (() => {
@@ -16,7 +16,7 @@
   const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
   const unit = n => Number.isFinite(n) ? clamp(n, 0, 1) : 0;
   function eligibleForWorkshop(house) {
-    return Boolean(house && Number(house.level ?? house.tier) === 3 && house.completed !== false &&
+    return Boolean(house && Number(house.level ?? house.tier) === 2 && house.completed !== false &&
       house.accessible !== false && house.streetFacing !== false);
   }
   // A city's workshop register: coverage counts, not player-managed jobs.
@@ -59,7 +59,7 @@
   function proposeWorkshops({ houses = [], artisans = [], existing = [], demand = {}, supply = {}, resources = {}, prosperity = 0, random = Math.random, day = 0 } = {}) {
     const occupied = new Set(existing.map(w => w.houseId));
     const assigned = new Set(existing.map(w => w.artisanId));
-    const available = artisans.filter(a => (Number(a.level ?? a.tier) === 3) && !assigned.has(a.id) && a.available !== false);
+    const available = artisans.filter(a => (Number(a.level ?? a.tier) === 2) && !assigned.has(a.id) && a.available !== false);
     const proposals = [];
     const registry = workshopRegistry(existing);
     for (const house of houses) {
