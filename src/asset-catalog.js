@@ -173,7 +173,8 @@
   // Castle geometry needs the whole game (terrain, footprints, battlements, roofs), so the game runs in
   // a hidden sandbox frame (no saves, no cloud, no telemetry). Each entry is one structure of the
   // destruction gallery's variant list, meshed by ConquerCastle3D.worldMeshes(): the castle the player sees.
-  const ENGINE_URL='./index.html?assetlab=1&renderer=canvas2d';
+  // World 3D only (D-RENDER-3D-261111): the engine frame renders buildings in WebGL2, never 2.5D.
+  const ENGINE_URL='./index.html?assetlab=1&world3d=1';
   const status=text=>{const el=byId('assetEngineStatus');if(el)el.textContent=text};
   let engine=null,stonePaletteId='gray';
   const STONE_ASSETS=new Set(['stonePile','riverStones','riverBoulder','milestone']);
@@ -230,7 +231,7 @@
     status(total+' fortificazioni dal motore · '+meshes+' in 3D · '+(total-meshes)+' solo 2.5D');
     refresh();
   }
-  // Engine captures: the game's 2.5D render of one state, ground removed. Cached per view.
+  // Engine captures: the game's World 3D render of one state, ground removed. Cached per view.
   const captureCache=new Map();
   function engineCapture(item,stateId,rotation=0){
     if(!engine||!item.stageId)return null;
