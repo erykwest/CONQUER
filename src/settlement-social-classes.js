@@ -30,9 +30,21 @@
     return Math.floor(capacity(h)/3);
   }
   function householdHeadIds(h){
-    const prefix=String(h.id)+':'+(Number(h.householdGeneration)||0);
+    const generation=Math.max(0,Math.floor(Number(h.householdGeneration)||0));
+    const prefix=generation?String(h.id)+':g'+generation:String(h.id);
     return Array.from({length:adultWorkers(h)},(_,i)=>
-      Number(h.householdGeneration)>0?prefix+':m:'+i:String(h.id)+':m:'+i);
+      prefix+':m:'+i);
+  }
+  // Educated occupations are immutable household roles, not advancement.
+  // A venue must exist for civic roles; otherwise use the market role.
+  function educatedProfession(h,structures=[]){
+    if(tierOfHouse(h)!==3)return null;
+    const civic=structures.some(s=>s?.type==='townhall'&&!s.destroyed),
+      market=structures.some(s=>s?.type==='market'&&!s.destroyed);
+    const roles=civic?['scribe','magistrate','administrator',...(market?['merchant']:[])]:['merchant'];
+    let hash=2166136261;
+    for(const ch of String(h?.id||'')){hash^=ch.charCodeAt(0);hash=Math.imul(hash,16777619);}
+    return roles[(hash>>>0)%roles.length];
   }
   function moveLegacyJobs(e){
     const a=e.l1Jobs,b=e.l2Jobs;
@@ -100,5 +112,5 @@
     return {structures:migrated,economy:e,changed:true,version:VERSION};
   }
   return Object.freeze({VERSION,TIERS,LEGACY,tierOfHouse,capacity,
-    adultWorkers,householdHeadIds,migrateSave});
+    adultWorkers,householdHeadIds,educatedProfession,migrateSave});
 });
