@@ -1294,20 +1294,21 @@ const BIOME_SCALE=2.2,BIOME_ZONE_INSET=2*BIOME_SCALE;
 // Acquitrini are standing, muddy water; keep pond collision and exclude lake outlets.
 const MARSH_WATER=Object.freeze({fill:'#6b6a3d',edge:'#898052',bank:'#565238',algae:'#8b934e'});
 function styleMarshWater(f){f.waterBodyKind='marsh';f.fill=MARSH_WATER.fill;f.edge=MARSH_WATER.edge;return f}
+const HILLS_RECIPE=Object.freeze({hills:[4,8],hillHeight:[2,3],forests:[0,1]});
 const BIOME_RECIPES=Object.freeze({
   // TEST (default): the settings used while developing — procedural terraced hills up to 20% of
   // the map and many small woods up to 12% coverage.
   test:{legacyRelief:.20,smallForestCoverage:.12},
   plains:{stream:.45,woodlandCoverage:.20,hillChance:1/3,hills:[1,2],hillHeight:[1,2]},
-  hills:{hills:[3,4],hillHeight:[2,3],forests:[0,1]},
-  valley:{mountains:[3,5],stream:1},
+  hills:HILLS_RECIPE,
+  valley:HILLS_RECIPE,
   river:{river:true,forests:[1,2],hills:[0,1],hillHeight:[1,2]},
   forest:{stream:1,continuousForest:.20,ponds:[0,1],hillChance:1/2,hills:[2,3],hillHeight:[2,3]},
   mountains:{mountains:[4,7],stream:1,hills:[1,2],hillHeight:[3,4],hillCoverage:.30},
   village:{forests:[1,2],hills:[0,1],hillHeight:[1,2]},
-  sea:{sea:true,forests:[0,1]},
+  sea:{sea:true,forests:[0,1],hillChance:.20,hills:[1,2],hillHeight:[1,2]},
   swamp:{stream:1,woodlandCoverage:.25,marshCoverage:.25,hillChance:1/4,hills:[1,1],hillHeight:[1,2]},
-  lake:{lake:true,forests:[0,1]}
+  lake:{lake:true,forests:[0,1],hillChance:.20,hills:[1,2],hillHeight:[1,2]}
 });
 function biomeCoastalLand(){
   const neighbors=window.__CONQUER_REGIONAL_DEMO__?.surroundingBiomes;
@@ -1341,7 +1342,7 @@ function biomeFeatureSize(rnd,small){
 }
 // Coast, orography and hydrology come from their own seeded streams, so generateRelief() and
 // generateEnvironment() see the same sea, mountains and water and can avoid each other.
-function biomeStream(salt){return seedRand((State.seed^biomeHash(State.biome||'plains')^salt)>>>0)}
+function biomeStream(salt){return seedRand((State.seed^biomeHash(State.biome==='valley'?'hills':State.biome||'plains')^salt)>>>0)}
 function biomeSea(){return biomeRecipe().sea?makeEnvSea(biomeStream(0x51ea51ea)):null}
 // makeMountainSectorChain: a contiguous run of perimeter sectors (4x4 grid on the square map),
 // never a whole side, each holding a mountain about 0.52-0.60 of a sector across in radius.
@@ -1438,10 +1439,13 @@ function biomeFeatureClear(points,obstacles,gap){
   }
   return true;
 }
+function biomeLake(rnd=seedRand((State.seed^biomeHash(State.biome))>>>0)){
+  return {...makeEnvBlob(rnd,'pond',WORLD/2,WORLD/2,78,72,'#3f7f8a','#8ab9bd',40,.07),waterBodyKind:'lake'};
+}
 function biomeTerrainObstacles(){
-  const sea=biomeSea();
+  const sea=biomeSea(),lake=biomeRecipe().lake?biomeLake():null;
   // Coast is fixed geography; rivers are generated only after relief.
-  return sea?[{points:sea.points}]:[];
+  return [sea,lake].filter(Boolean).map(f=>({points:f.points}));
 }
 
 const BIOME_TOWN={x:WORLD/2,y:WORLD/2},BIOME_TOWN_CLEARANCE=7;
@@ -1472,7 +1476,7 @@ function generateRelief(){
     if(i>=count)extra++;
     for(let attempt=0;attempt<(i>=count?70:420);attempt++){
       const size=biomeFeatureSize(rnd,false),center=biomeCenter(rnd,i>=count?0:size.margin);
-      if(recipe.hillChance!==undefined&&i===0){center.x=65+rnd()*70;center.y=65+rnd()*70;}
+      if(recipe.hillChance!==undefined&&i===0&&!recipe.sea&&!recipe.lake){center.x=65+rnd()*70;center.y=65+rnd()*70;}
       // Foothills range from half to twice a recipe hill, so smaller ones fill the gaps.
       if(i>=count){const k=attempt<35?biomeRand(rnd,1,2):biomeRand(rnd,.5,1);size.rx*=k;size.ry*=k}
       // Every terrace needs room: about one level per 3U of the short radius.
@@ -1781,9 +1785,9 @@ function makeContinuousForest(env,rnd,ratio){
     fill:'#2e3c1d',edge:'#5c7438',x:WORLD/2,y:WORLD/2,rx:WORLD/2,ry:WORLD/2};
 }
 function generateEnvironment(){
-  const rnd=seedRand((State.seed^biomeHash(State.biome))>>>0),env=[],recipe=biomeRecipe();
+  const rnd=seedRand((State.seed^biomeHash(State.biome==='valley'?'hills':State.biome))>>>0),env=[],recipe=biomeRecipe();
   const sea=biomeSea();if(sea)env.push(sea);
-  if(recipe.lake)env.push({...makeEnvBlob(rnd,'pond',WORLD/2,WORLD/2,78,72,'#3f7f8a','#8ab9bd',40,.07),waterBodyKind:'lake'});
+  if(recipe.lake)env.push(biomeLake(rnd));
   const mountains=biomeMountains();env.push(...mountains,...biomeWaters(mountains));
   // Phase 1: existing relief and fixed receiving shores. Phase 2: final drainage.
   const regional=window.ConquerRegionalLandscape?.compose(env,{deferCover:true})||env;

@@ -400,7 +400,7 @@ const BIOMES=Object.freeze({
   test:{label:'TEST',field:'#2a2818'},
   plains:{label:'Pianura',field:'#2a2818'},
   hills:{label:'Colline',field:'#2f2a19'},
-  valley:{label:'Vallata',field:'#28271a'},
+  valley:{label:'Vallata',field:'#2f2a19'},
   river:{label:'Fiume',field:'#24271c'},
   forest:{label:'Foresta',field:'#1f2516'},
   mountains:{label:'Montagne',field:'#2b2620'},

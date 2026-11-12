@@ -178,7 +178,7 @@ window.ConquerMinimap=(()=>{
     resizeMap();
     g.clearRect(0,0,drawSize,drawSize);
     g.fillStyle=State.season==='winter'?'#dce2dc':
-      ({forest:'#33482e',mountains:'#646550',sea:'#536f75',hills:'#6c7950',valley:'#58714a',river:'#59744f'}[State.biome]||'#607448');
+      ({forest:'#33482e',mountains:'#646550',sea:'#536f75',hills:'#6c7950',valley:'#6c7950',river:'#59744f'}[State.biome]||'#607448');
     g.fillRect(0,0,drawSize,drawSize);
     g.save();
     g.beginPath();g.rect(0,0,drawSize,drawSize);g.clip();

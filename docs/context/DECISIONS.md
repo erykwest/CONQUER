@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+### 2026-11-12 — Valle equivale a Colline; quantità 4–8
+
+Valle è un alias compatibile di Colline nella generazione: stessa ricetta 4–8 rilievi H2–3 e normalizzazione dei seed e dei vicini, senza catene montuose proprie. Mare e Lago hanno un gate indipendente del 20% per 1–2 colline H1–2 sulle porzioni emerse; rimangono celle regionali non selezionabili. Il vecchio nome Vallata resta leggibile nei salvataggi/demo.
+
 ### 2026-11-12 — Idrologia e orografia costiera
 
 Isole e penisole non generano torrenti e non accettano affluenti regionali di tipo torrente; la regola si applica a ogni bioma terrestre. I fiumi restano governati dalla rete regionale. I rilievi vengono accostati alle sponde effettive prima della composizione idrologica, preservando le quote e lo spazio dell'insediamento.

@@ -1,5 +1,12 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-12 — Quantità colline e alias Valle
+
+- Colline e Valle condividono la ricetta 4–8 rilievi, H2–3; Valle non genera più catene montuose o torrenti propri. Seed e pesi regionali normalizzati, colori terreno/minimappa allineati.
+- Mare e Lago: probabilità 20%, 1–2 rilievi H1–2. La sagoma del lago viene calcolata anche prima dei rilievi per mantenerli sulle porzioni emerse; selezione regionale dell'acqua invariata.
+- PASS ricette biomi (42), equivalenza Valle/Colline su tre seed inclusi 4 e 8 rilievi, colline sporadiche su 3000 seed per cinque biomi (Mare 20.0%, Lago 20.4%), isole/penisole (15). Cinque snapshot `hill-quantities-*` rivisti, conteggi 4/8/7/1/2. Audit Territorio 16 invariati, zero errori, cinque avvisi schematici preesistenti.
+- Aggiornata la tabella in BIOME-HILL-QUANTITIES.md. Nessun target sperimentale del 20% di superficie per Colline; quantità soltanto. Economia e roadmap invariate, salvataggi non rigenerati.
+
 ### 2026-11-12 — Torrenti esclusi e colline sulla costa
 
 - Isole e penisole marittime/lacustri: stream=0 nella ricetta; esclusi anche torrenti passati alla composizione idrologica e affluenti regionali di tipo stream. I fiumi restano distinti.

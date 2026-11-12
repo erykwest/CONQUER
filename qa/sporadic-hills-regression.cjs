@@ -3,7 +3,7 @@ const fs=require('node:fs');
 const harness=fs.readFileSync(__dirname+'/urban-regression.cjs','utf8').split('let passed=0;')[0];
 new Function('require','__dirname',harness+`
 run(fs.readFileSync(__dirname+'/../src/regional-biome-rules.js','utf8'));run(moduleFile('regional-landscape'));run(moduleFile('hydrology'));
-for(const [biome,chance,lo,hi] of [['plains',1/3,1,2],['forest',1/2,2,3],['swamp',1/4,1,1]]){
+for(const [biome,chance,lo,hi] of [['plains',1/3,1,2],['forest',1/2,2,3],['swamp',1/4,1,1],['sea',.20,1,2],['lake',.20,1,2]]){
  let hits=0;const selected=[];
  for(let seed=1;seed<=3000;seed++){
   run('State.seed='+seed+';State.biome='+JSON.stringify(biome));const plan=run('biomeHillPlan()');

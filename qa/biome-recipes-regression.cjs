@@ -11,12 +11,12 @@ let passed=0;
 const SEEDS=[12345,4242,229,777,90210,31337];
 const EXPECT={
   plains:{hills:[0,2],forests:[1,40],mountains:[0,0],water:['stream',null]},
-  hills:{hills:[2,4],forests:[0,1],mountains:[0,0],water:[null]},
-  valley:{hills:[0,0],forests:[0,0],mountains:[6,10],water:['stream',null]},
+  hills:{hills:[4,8],forests:[0,1],mountains:[0,0],water:[null]},
+  valley:{hills:[4,8],forests:[0,1],mountains:[0,0],water:[null]},
   river:{hills:[0,1],forests:[0,2],mountains:[0,0],water:['river']},
   forest:{hills:[0,3],forests:[1,1],mountains:[0,0],water:['stream',null],ponds:1,continuous:true},
   mountains:{hills:[1,60],forests:[0,0],mountains:[8,14],water:['stream',null],hillCoverage:.30},
-  sea:{hills:[0,0],forests:[0,1],mountains:[0,0],water:[null],sea:true}
+  sea:{hills:[0,2],forests:[0,1],mountains:[0,0],water:[null],sea:true}
 };
 for(const [biome,e] of Object.entries(EXPECT))for(const seed of SEEDS){
   run("State.seed="+seed+";State.biome='"+biome+"';State.structures=[];State.environment=[];State.relief=null;clearReliefBandCache();generateRelief();generateEnvironment()");

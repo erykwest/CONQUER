@@ -54,6 +54,7 @@ jobs:
         run: |
           node qa/landscape-order-regression.cjs
           node qa/sporadic-hills-regression.cjs
+          node qa/valley-hills-regression.cjs
           node qa/biome-recipes-regression.cjs
           node qa/mountain-density-regression.cjs
           node qa/regional-mountain-placement-regression.cjs

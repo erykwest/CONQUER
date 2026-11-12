@@ -2,15 +2,16 @@
 // Regional composition in the real environment format: rendering and collision share polygons.
 (()=>{
   const rules=window.ConquerRegionalBiomeRules;
-  const neighbors=()=>window.__CONQUER_REGIONAL_DEMO__?.surroundingBiomes;
+  const canonical=b=>b==='valley'?'hills':b;
+  const neighbors=()=>{const n=window.__CONQUER_REGIONAL_DEMO__?.surroundingBiomes;for(const d in n)if(n[d]==='valley')return Object.fromEntries(Object.entries(n).map(([d,b])=>[d,canonical(b)]));return n};
   // Uniform mountains still need explicit placement in every surrounding sector.
   // The legacy recipe only occupies a short perimeter arc of the whole map.
-  const active=()=>!!rules&&Object.keys(rules.directions).every(k=>BIOMES[neighbors()?.[k]])&&(State.biome==='mountains'||Object.values(neighbors()).some(b=>b!==State.biome));
+  const active=()=>!!rules&&Object.keys(rules.directions).every(k=>BIOMES[neighbors()?.[k]])&&(State.biome==='mountains'||Object.values(neighbors()).some(b=>b!==canonical(State.biome)));
   const field=p=>rules.weights(p,'@center',neighbors());
-  const weights=p=>rules.weights(p,State.biome,neighbors());
+  const weights=p=>rules.weights(p,canonical(State.biome),neighbors());
   const hash=(x,y,s)=>{let h=Math.imul(x,374761393)^Math.imul(y,668265263)^s;h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967295};
   function noise(x,y,s){const ix=Math.floor(x),iy=Math.floor(y),a=x-ix,b=y-iy,u=a*a*(3-2*a),v=b*b*(3-2*b);return(hash(ix,iy,s)*(1-u)+hash(ix+1,iy,s)*u)*(1-v)+(hash(ix,iy+1,s)*(1-u)+hash(ix+1,iy+1,s)*u)*v}
-  const signature=()=>biomeHash(State.biome+'|'+JSON.stringify(neighbors()));
+  const signature=()=>biomeHash(canonical(State.biome)+'|'+JSON.stringify(neighbors()));
   const seaSides=()=>['north','east','south','west'].filter(side=>neighbors()?.[side]==='sea');
   function coastShape(){
     const sides=seaSides(),count=sides.length;
@@ -240,7 +241,7 @@
     }
     const dryMountains=mountains.filter(f=>!blocked({x:f.x,y:f.y})&&!f.points.some(blocked));
     State.relief.hills=State.relief.hills.filter(h=>!reliefHillFootprint(h).some(p=>waters.some(f=>environmentContains(f,p))));clearReliefBandCache();
-    if((coast.sides.length>=3||lakeShape)&&!['mountains','valley','sea','lake','test'].includes(State.biome)){
+    if((coast.sides.length>=3||lakeShape)&&!['mountains','sea','lake','test'].includes(State.biome)){
       // Coast clipping may remove a recipe hill. Replace it on dry land before hydrology.
       const hillRnd=seedRand((State.seed^signature()^0x72a91d)>>>0);let added=false;
       for(let attempt=0;State.relief.hills.length<3&&attempt<600;attempt++){
