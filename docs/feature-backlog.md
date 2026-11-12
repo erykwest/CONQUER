@@ -1,5 +1,10 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+## CIV-EVT-01 — Fiere, feste e giostre: effetti sociali (12/11/2026)
+
+**Skeleton sul branch PR #206, non attivo e non merge.** Otto eventi catalogati con effetto proposto su felicità dei servi L1, artigiani L2 e borghesi L3, e lealtà dei nobili L4. Prestigio locale temporaneo proiettato sulle heatmap, senza nuovi overlay o sistemi economici. Si riusano gli allestimenti già esistenti; `feast` richiede `civicKind` per distinguere fiera, festa religiosa, raccolto e banchetto. [Contratto](CIVIC-EVENT-EFFECTS-SKELETON.md). **Aperti:** integrazione con UI eventi, vero roster partecipanti, risorse, felicità insediamento, migrazioni, salvataggi, QA Node/browser e CI.
+
+
 ## URB-HEAT-01 — Quattro heatmap e 12 archetipi abitativi (12/11/2026)
 
 **Skeleton su `feature/urban-heatmap-skeleton-20261112`, non merge né gameplay attivo.** Domanda abitativa multicanale L1–L4, prestigio, sicurezza e crimine locale; D1–D3 determina la densità del lotto Voronoi, mentre L1–L4 determina il template completo della casa. Nuova gerarchia sociale L1 lavoratori, L2 artigiani, L3 borghesi istruiti, L4 nobiltà (contratto in [decisioni](context/DECISIONS.md)). `src/settlement-urban-heatmaps.js`, `qa/urban-heatmaps-regression.cjs`, [specifica e dipendenze](URBAN-HEATMAP-SKELETON.md). **Aperti:** integrazione con Crime, mura/guardie, Job Manager, crescita lotti, ricostruzione, migrazione, QA browser e salvataggi.
