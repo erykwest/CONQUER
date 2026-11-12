@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-12 — Cespugli dei boschi al 50%
+
+- Scala visiva uniforme di larghezza e altezza: 50% con variazione deterministica relativa di ±10% (45–55% della dimensione precedente), in 2D e nei billboard 3D.
+- Numero, posizioni, quota e flip preservati; siepi urbane e alberi invariati. Economia e roadmap invariate.
+- Verifica: forest-shrubs-regression PASS; cinque scene runtime `small-shrubs-*` riviste (sommità, pendio, scarpate, palude e foresta intera); audit Territorio 16 render, zero errori, cinque avvisi schematici preesistenti.
+
 12/11/2026 - REG-UPRIGHT-SHRUBS: risolto il difetto dei cespugli piatti: nel renderer 3D erano ancora dipinti nel bake del suolo. Ora sono billboard verticali nello stesso atlas degli alberi; il bake non li disegna e il fallback 2D resta corretto. Flip orizzontale deterministico per singolo cespuglio, applicato sia agli UV 3D sia al canvas 2D; posizioni e quantita invariate. PASS forest-shrubs (due orientamenti e nessuna pittura nel bake), tree-density (2.51x), save-safety, cinque scene browser 3D e screenshot upright-shrubs-*.png. Audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Roadmap/economia invariate.
 
 12/11/2026 - REG-REAL-FOREST-SHRUBS: corretta la confusione tra trama del sottobosco e cespugli visibili. Aggiunto strato separato di cespugli SVG riusando i sette asset esistenti delle siepi, con griglia indipendente dagli alberi, quota reale, stagioni e occlusione condivisa. Esclusi acqua/radure e pendii ripidi. Caricamento sprite invalida anche la cache paesaggio. Alberi invariati a circa 2.5x. PASS forest-shrubs (quattro situazioni), wooded-relief, woodland-density, tree-density, scatter (8), save-safety; cinque scene browser con verifica sprite caricati e cespugli effettivamente disegnati. Snapshot forest-shrubs-*.png, primo ravvicinato. Audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Economia e roadmap invariate; nessuna modifica ai salvataggi o alla copertura dei biomi.

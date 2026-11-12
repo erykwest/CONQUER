@@ -702,6 +702,7 @@ function forestShrubLayout(f){
     if(p.x>WORLD||p.y>WORLD||!environmentContains(f,p))continue;
     const r=shrub.width/2;
     if([-r,0,r].some(dx=>[-r,0,r].some(dy=>terrainSlopeKind({x:p.x+dx,y:p.y+dy})==='steep')))continue;
+    shrub.visualScale=.45+.10*seedRand(biomeHash(State.seed+'|'+f.id+'|'+x+'|'+y+'|size'))();
     shrub.z=terrainElevation(p);shrub.flip=!!(biomeHash(State.seed+'|'+f.id+'|'+x+'|'+y)&1);shrubs.push(shrub);
   }
   forestShrubLayoutCache.set(key,shrubs);return shrubs;
@@ -711,7 +712,7 @@ function drawForestShrub(shrub){
   const season=State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer';
   const img=typeof boundaryBushSprites!=='undefined'?boundaryBushSprites[season]?.[shrub.shape]:null;
   if(!img)return false;
-  const base=w2sRaw(shrub.p,shrub.z),width=shrub.width*U*State.view.scale,height=width*580/920*shrub.scale;
+  const base=w2sRaw(shrub.p,shrub.z),width=shrub.width*(shrub.visualScale??1)*U*State.view.scale,height=width*580/920*shrub.scale;
   ctx.save();ctx.translate(base.x,base.y);if(shrub.flip)ctx.scale(-1,1);ctx.drawImage(img,-width/2,-height*.97,width,height);ctx.restore();return true;
 }
 function forestLikelyVisible(f,pad=100){
@@ -730,7 +731,7 @@ function drawForestMask(f){
   let drawn=0,shrubsDrawn=0;
   const occluders=forestTreeOccluders();
   for(const tree of trees){
-    const base=w2sRaw(tree.p,tree.z),depth=w2sRaw(tree.p,0).y,size=tree.shrub?tree.width*U*State.view.scale:Math.max(10,U*State.view.scale*2.25*tree.scale);
+    const base=w2sRaw(tree.p,tree.z),depth=w2sRaw(tree.p,0).y,size=tree.shrub?tree.width*(tree.visualScale??1)*U*State.view.scale:Math.max(10,U*State.view.scale*2.25*tree.scale);
     ctx.save();
     for(const f of occluders){
       if(f.depth<=depth+.5||f.b.maxX<base.x-size/2||f.b.minX>base.x+size/2||f.b.maxY<base.y-size||f.b.minY>base.y)continue;
