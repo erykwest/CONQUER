@@ -183,11 +183,20 @@
           j.kind==='merchant'?{main:'#79553b',alt:'#b08a65'}:null);
     }
   }
+  // Vehicles go out with the population (settlement-render.js), before the World3D front pass,
+  // so their depth cards are tested against walls and houses; draw() then paints only the signs.
+  let vehiclesDrawn=false;
+  function drawVehicles(){
+    if(!well())return;
+    drawConvoy();drawLiveConvoys();
+    window.ConquerVehicles?.drawTrips?.();
+    vehiclesDrawn=true;
+  }
   function draw(){
     if(!well())return;
     for(const sign of signs())drawSign(sign);
-    drawConvoy();drawLiveConvoys();
-    window.ConquerVehicles?.drawTrips?.();
+    if(!vehiclesDrawn)drawVehicles();
+    vehiclesDrawn=false;
   }
   // Read-only road continuity validation: do not teleport across unfinished
   // arterial branches, or charge anything before route can be followed.
@@ -398,6 +407,6 @@
       refreshPanel();
     };
   }
-  window.ConquerRoadSignTests=Object.freeze({signs,hit,open,draw,tick,
+  window.ConquerRoadSignTests=Object.freeze({signs,hit,open,draw,drawVehicles,tick,
     routeFor,drivePath,launch,launchCoach,restore,active:testRecord,refreshPanel});
 })();

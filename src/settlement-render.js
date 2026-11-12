@@ -452,6 +452,7 @@ function draw(){
   window.ConquerLivestock?.draw();
   drawPeasants();
   window.ConquerHaulage?.draw?.(); // Loaded carts to stockyards, empty return on completed roads
+  window.ConquerRoadSignTests?.drawVehicles?.(); // lord/merchant convoys and coach trips on the roads
   window.ConquerJoust?.draw();   // spectators, knights and squires on an active joust ground
   window.ConquerEventPeople?.draw();   // feast and circus: diners, sellers, players, queues
   window.ConquerCourtPeople?.draw();   // the tribunal in session in the town hall cutaway

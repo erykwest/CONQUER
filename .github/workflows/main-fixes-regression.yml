@@ -12,6 +12,10 @@ on:
       - src/settlement-world3d.js
       - qa/main-fixes-browser.mjs
       - qa/figure-billboards-browser.mjs
+      - qa/vehicle-cards-browser.mjs
+      - src/settlement-vehicles.js
+      - src/settlement-wagons.js
+      - src/settlement-road-sign-tests.js
       - qa/ui-combat-regression.mjs
       - .github/workflows/main-fixes-regression.yml
       - .github/actions/playwright-setup/action.yml
@@ -35,7 +39,7 @@ jobs:
           node qa/paused-render-regression.cjs
       - name: JavaScript syntax
         run: |
-          for file in src/settlement-world.js src/settlement-world3d.js qa/main-fixes-browser.mjs qa/ui-combat-regression.mjs; do node --check "$file"; done
+          for file in src/settlement-world.js src/settlement-world3d.js src/settlement-vehicles.js qa/main-fixes-browser.mjs qa/vehicle-cards-browser.mjs qa/ui-combat-regression.mjs; do node --check "$file"; done
   browser:
     # Pinned like the other browser jobs: Playwright 1.56 has no Chromium build for ubuntu-latest (26.04).
     runs-on: ubuntu-24.04
@@ -60,6 +64,8 @@ jobs:
         run: node qa/main-fixes-browser.mjs
       - name: Civilian billboards, occlusion and atlas reuse
         run: node qa/figure-billboards-browser.mjs
+      - name: Vehicle cards (carts, wagons, coaches), occlusion and 2D fallback
+        run: node qa/vehicle-cards-browser.mjs
       - name: Procedural defaults, explicit DEV controls and full UI/Combat
         run: node qa/ui-combat-regression.mjs
       - uses: actions/upload-artifact@v4
@@ -69,4 +75,5 @@ jobs:
           path: |
             output/playwright/main-fixes/
             output/playwright/figure-billboards/
+            output/playwright/vehicle-cards/
           retention-days: 7

@@ -1764,13 +1764,14 @@
     }
     return A.free.pop();
   }
-  function atlasTile(key,paint){
+  // span > 1: a wider card (vehicles) painted at SOLDIER_SR/span into the same 64px tile.
+  function atlasTile(key,paint,span=1){
     const hit=soldierAtlas.map.get(key);if(hit){hit.used=soldierAtlas.frame;return hit.uv}
     if(!soldierAtlas.canvas){soldierAtlas.canvas=document.createElement('canvas');soldierAtlas.canvas.width=soldierAtlas.canvas.height=FIG_ATLAS;soldierAtlas.g=soldierAtlas.canvas.getContext('2d',{willReadFrequently:true})}
     const i=takeSlot(),x=(i%FIG_COLS)*SOLDIER_TILE,y=Math.floor(i/FIG_COLS)*SOLDIER_TILE;
     const g=soldierAtlas.g;g.clearRect(x,y,SOLDIER_TILE,SOLDIER_TILE);   // CPU canvas: tile readback is cheap
     const keepView=State.view,keepW2s=w2s;
-    State.view={...keepView,scale:SOLDIER_SR};
+    State.view={...keepView,scale:SOLDIER_SR/(span>0?span:1)};
     w2s=()=>({x:x+SOLDIER_TILE/2,y:y+SOLDIER_TILE*SOLDIER_FEET});      // figure painters project only the feet
     try{withRenderContext(g,()=>paint(g,x,y))}
     catch(e){console.error(e)}
@@ -1796,11 +1797,15 @@
   // (look, pose, animation phase bucket, facing); paint() draws it with the figure painters, which
   // only project the feet point. Returns false outside a 3D frame (the caller paints in 2D).
   // mirror: the picture faces left (paint() always draws it facing right; the card flips it).
+  // card (optional): {span, ox} — span scales the card (FIGURE_CARD_U*span wide, painted at
+  // SOLDIER_SR/span, so the key must include it); ox shifts the card sideways on screen by
+  // ox card widths, for pictures whose feet point is not their middle (a wagon and its team).
   let figuresOn=true;   // benchmark switch: false paints civilians in 2D as before
-  function figure(p,z,key,paint,id=key,mirror=false){
+  function figure(p,z,key,paint,id=key,mirror=false,card=null){
     if(!collecting||!figuresOn)return false;
     const ground=Number.isFinite(structureProjectionGroundZ)?structureProjectionGroundZ:terrainElevation(p);
-    collecting.push({p:{x:p.x,y:p.y},z:z+ground,key:'civ|'+key,paint,id,type:'civilian',mirror:!!mirror});
+    const span=card&&card.span>0?card.span:1,ox=card&&Number.isFinite(card.ox)?card.ox:0;
+    collecting.push({p:{x:p.x,y:p.y},z:z+ground,key:'civ|'+key,paint,id,type:'civilian',mirror:!!mirror,span,ox});
     return true;
   }
   // Prepare poses ahead ([{key,paint}]): painted in idle time, a few at a time, so a phase change
@@ -1849,10 +1854,11 @@
     if(soldierAtlas.heraldry!==herald){clearAtlas();soldierAtlas.heraldry=herald}
     soldierAtlas.frame++;
     for(const s of list){
-      let [u0,v0,u1,v1]=s.paint?atlasTile(s.key,s.paint):soldierTile(s.type,s.phase,s.livery);
+      const span=s.span||1,ox=s.ox||0;
+      let [u0,v0,u1,v1]=s.paint?atlasTile(s.key,s.paint,span):soldierTile(s.type,s.phase,s.livery);
       if(s.mirror)[u0,u1]=[u1,u0];
-      const C=[[-.5,-SOLDIER_FEET,u0,v0],[.5,-SOLDIER_FEET,u1,v0],[.5,1-SOLDIER_FEET,u1,v1],[-.5,1-SOLDIER_FEET,u0,v1]];
-      for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(s.p.x,s.p.y,s.z,cx,cy,SOLDIER_SIZE_U,u,w)}
+      const C=[[ox-.5,-SOLDIER_FEET,u0,v0],[ox+.5,-SOLDIER_FEET,u1,v0],[ox+.5,1-SOLDIER_FEET,u1,v1],[ox-.5,1-SOLDIER_FEET,u0,v1]];
+      for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(s.p.x,s.p.y,s.z,cx,cy,SOLDIER_SIZE_U*span,u,w)}
       if(!s.paint)out.push({id:s.id,type:s.type,x:s.p.x,y:s.p.y,z0:s.z-CAPSULE.below,z1:s.z+CAPSULE.above,r:CAPSULE.r});
     }
     colliders=out;
@@ -2074,8 +2080,8 @@
   }
   window.ConquerWorld3D={active,supported,setEnabled,drawBack,drawCastleOverlays,drawFront,
     drawNightLights3D,nightLightsEnabled,setNightLightsEnabled,drawMastioDrapes,drawEmissive,finishFrame,_setActiveForTest,
-    pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,addHouse,addOutbuilding,figure,prewarmFigures,_setFiguresForTest:on=>{figuresOn=!!on},
-    atlasCanvas:()=>soldierAtlas.canvas,frameFigures:()=>(S.frameFigures||[]).map(f=>({key:f.key||f.type,p:f.p,z:f.z,mirror:f.mirror})),atlasStats:()=>({tiles:soldierAtlas.next,capacity:FIG_COLS*FIG_COLS,resets:soldierAtlas.resets,painted:soldierAtlas.painted}),
+    pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,addHouse,addOutbuilding,figure,prewarmFigures,_setFiguresForTest:on=>{figuresOn=!!on},FIGURE_CARD_U:SOLDIER_SIZE_U,FIGURE_FEET:SOLDIER_FEET,
+    atlasCanvas:()=>soldierAtlas.canvas,frameFigures:()=>(S.frameFigures||[]).map(f=>({key:f.key||f.type,p:f.p,z:f.z,mirror:f.mirror,span:f.span||1,ox:f.ox||0,id:f.id})),atlasStats:()=>({tiles:soldierAtlas.next,capacity:FIG_COLS*FIG_COLS,resets:soldierAtlas.resets,painted:soldierAtlas.painted}),
     invalidate:()=>{S.sig={};S.contentDirty=true},
     _debugBake:bakeGround,
     status:()=>({enabled,supported:supported(),failed:S.failed,stats:{...S.stats},sig:{...S.sig},buffers:Object.fromEntries(Object.entries(S.buf).filter(([k])=>k.endsWith('#n')))})};

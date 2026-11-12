@@ -1,5 +1,15 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-12 — Veicoli come carte con profondità in World3D (branch `feature/vehicles-depth-cards`, chiude `economic-balances-animations`)
+
+- **VERIFICA DEL BRANCH D'ORIGINE (`origin/economic-balances-animations` 4b10705, 142 commit su base pre-urban):** economia già in main con le cinque tappe (#108 per i veicoli, D-055); file residui solo sprite SVG di taglialegna e cava (sostituiti dalle mesh Blender) e `road-sign-model.js` (sostituito dal `signpost` scatter, D-054); mesh 3D di carri e cavalli escluse da D-046/D-055. Unico residuo ancora utile: i veicoli fuori dal depth buffer, segnato DA FARE dopo #201 («carrettieri sui veicoli ancora in 2D»). Nessun altro recupero.
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `ConquerWorld3D.figure(p,z,key,paint,id,mirror,card)` accetta `card={span,ox}`: carta larga `FIGURE_CARD_U×span`, dipinta a `SOLDIER_SR/span` nella stessa casella da 64 px dell'atlante, spostata di `ox` larghezze carta sullo schermo. Esporta `FIGURE_CARD_U`, `FIGURE_FEET`; `frameFigures()` riporta `span`, `ox`, `id`.
+  - `ConquerVehicles.draw`: in un frame World3D ogni veicolo (carretto, carro, carrozza) è **una** carta: `ConquerWagons.drawWagon` con la squadra di cavalli 2D e il conducente dipinti insieme (conducente seduto sulla cassetta tramite l'ancora `driver` del carro, carrettiere alla testa del cavallo). Chiave: telaio, mantelli, carico, fase d'andatura (8 fasi del passo `ConquerAnimals`, `still` da fermo), aspetto del conducente. Verso sinistra la carta è specchiata. Le scorte restano billboard dei soldati. Fuori da World3D (o con `_setFiguresForTest(false)`) il disegno 2D resta identico.
+  - `ConquerRoadSignTests.drawVehicles()`: convogli del signore/mercanti e viaggi in carrozza escono con la popolazione (prima del front pass) invece che sopra la scena; `draw()` disegna solo i cartelli (o anche i veicoli se `drawVehicles` non è stato chiamato).
+- **PROVE LOCALI PASS:** `qa/vehicles-regression.cjs` (nuovo caso carte WebGL), haulage, road-sign-convoy, l1-carter-market, slopeways; nuova prova browser `qa/vehicle-cards-browser.mjs` (carte reali, occlusione dentro una torre, riuso atlante, scorte, fallback 2D) e `figure-billboards-browser.mjs`/`main-fixes-browser.mjs` su `python -m http.server`. Controllo visivo nel pannello browser: posizione e scala uguali al 2D; nel 2D il conducente del carro resta davanti al pianale, nella carta siede sulla cassetta.
+- **LIMITI:** la carta ha una sola profondità (quella del pianale): un muro sottile tra pianale e cavalli non li separa. Risoluzione della carta del carro ~27 px/U (le figure 48 px/U): leggermente morbida oltre zoom 2,5. Staffetta a cavallo dell'Avamposto e figure della battaglia navale restano 2D. CI da verificare.
+
 ## 2026-11-10 — ECO-FIL-01 fase 1 · Miniera → metallo (branch `feature/eco-fil-01-miniera-metallo`)
 
 - **CODICE SUL BRANCH, NON MERGE:**
@@ -612,7 +622,7 @@ Baseline verificata: main d8c89556d504a48cf64bb2c9927a5620ec1772b5. Nessuna PR n
 - **P0 jobmanager:** allocatore e razioni già in #98, routine in #99. D-049 mantiene un unico allocatore ConquerEconomy; nessun ConquerJobManager duplicato. D-051 (campi solo L2) resta decisione aperta: la priorità del branch non cambia quel contratto.
 - **P0 knights:** settlement-mounted2d.js e settlement-animals.js sono identici tra knights e main; gameplay e diplomazia in #96. Le differenze 3D restano escluse da D-046.
 - **P2 messages:** conservata per futura riconciliazione, senza integrazione in questo lavoro.
-- **P3:** case, economic-balances-animations, feature/landscape-forests, feature/ui-shell, fix/biomes-restore, fix/render-spikes: verificare pertinenza residua prima di qualsiasi recupero.
+- **P3:** case, feature/landscape-forests, feature/ui-shell, fix/biomes-restore, fix/render-spikes: verificare pertinenza residua prima di qualsiasi recupero. `economic-balances-animations` verificata il 12/11/2026: unico residuo (veicoli nel depth buffer) in `feature/vehicles-depth-cards`, nient'altro da recuperare.
 - **QA locale:** 67/67 test circle, incluse due regressioni del main corrente; 113 suite qa/*-regression.cjs superate (112 in parallelo, founding ripetuta isolata dopo soglia temporale 119ms sotto carico). Non è una misura di prestazioni stabili. Nessun asset/renderer cambiato. Browser locale: moduli ES caricati, WebGL attivo, 400 cibo trasferiti al granaio e sottratti una sola volta alla conquista; banner di settore aggiornato. Ricaricamento mantiene una sola conquista; riconquista riapre il granaio (480 posti) senza restituire il cibo. Favicon 404 e avviso WebGPU Windows non riguardano circle. CI CIRCLE sul primo commit a4d8792 PASS (run 41604792313). Riallineamento successivo a main d8c89556 conserva #115 merlature; nuova CI e stato merge da verificare sul commit finale.
 
 

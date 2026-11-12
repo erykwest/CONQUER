@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-12 — Veicoli con profondità in World3D (`feature/vehicles-depth-cards`)
+
+Chiusura di `economic-balances-animations`: verificato che economia, veicoli 2D e cartelli sono già in main (#108, D-054, D-055) e che i file residui sono superati. Completato l'unico residuo dopo #201: carri, carretti e carrozze (cavalli e conducente compresi) entrano nel depth buffer come carte 2D dell'atlante figure (`figure()` con `card={span,ox}`), occlusi da murature e case; convogli dei cartelli disegnati con la popolazione. Nuove prove `vehicles-regression` (caso WebGL) e `vehicle-cards-browser.mjs` nel workflow Main fixes. Decisione D-VEH-CARDS-261112 (applica D-046). ROADMAP invariata. Nessun nuovo modello né asset: il Lab mostra già il carro 2D usato dalla carta, audit asset non necessario.
+
 ## 2026-11-09 — BC-261109-02 · DEV e cantieri di ristrutturazione
 
 - **Prove aggiuntive PASS:** regressione d'assedio reale Canvas/WebGL e perdita contesto WebGL; annullamento di upgrade conserva i danni subiti durante il cantiere.

@@ -182,6 +182,59 @@
     if(typeof drawSoldierFigure!=='function')return;
     drawSoldierFigure({x:e.x,y:e.y},.1,'spearman','convoy-'+c.id+'-'+e.i,State.clock.day,c.livery||null);
   }
+  // ---------- WebGL: the whole vehicle as one depth-tested card (D-046: still a 2D picture)
+  // World3D figure() paints wagon, team and driver once per look and gait phase into the figure
+  // atlas, then shows it as a camera-facing card tested against the scene's depth buffer, so a
+  // wall, a house or a hull in front of the cart hides it. Outside a 3D frame figure() refuses
+  // and the 2D painter below runs unchanged.
+  const GAIT_PHASES=8,WALK_HZ=1.6;                 // ConquerAnimals walk: t*2pi*1.6
+  const U_PER_ART=5.75*1.9/(256*12);               // teamSize()/U with the horse art scale, view-independent
+  const extentCache=new Map();
+  // Horizontal extent of the composition in wagon art units (feet at x=0, facing right).
+  function cardExtent(chassis,team){
+    const id=chassis+'|'+team;let e=extentCache.get(id);if(e)return e;
+    const W2=window.ConquerWagons,K=W2?.WAGON_SCALE||1.6;
+    const lay=W2?.wagonLayout?.({chassis,team:Array(team).fill({})});
+    const bed=lay?.bed||[-105,105],wheel=Math.max(0,...(lay?.chassis?.wheels||[]).map(w=>w.x+w.r));
+    const x0=Math.min(bed[0]*K,-wheel*K)-14,front=lay?.horses?.length?Math.max(...lay.horses.map(h=>h.x))+132:bed[1]*K+24;
+    const x1=Math.max(front,bed[1]*K+(W2?.DEPTH?.x||10)*K+14);
+    e={x0,x1,mid:(x0+x1)/2,widthU:(x1-x0)*U_PER_ART};extentCache.set(id,e);return e;
+  }
+  function driverLook(c){
+    const look=c.vehicle==='coach'?COACHMAN:DRIVER;
+    return{...look,id:c.workerId||((kindOf(c.vehicle).chassis==='cart'?'carter-':'driver-')+c.id)};
+  }
+  // Paint one feet-anchored villager at screen (sx,sy) of the current ctx (figure painters
+  // project only the feet point through w2s).
+  function paintVillagerAt(dot,sx,sy){
+    if(typeof drawVillagerFigureUnmasked!=='function')return;
+    const keep=w2s;w2s=()=>({x:sx,y:sy});
+    try{drawVillagerFigureUnmasked({...dot,p:{x:0,y:0}})}finally{w2s=keep}
+  }
+  function vehicleCardKey(c,v,k,cargo,bucket,dot){
+    const look=typeof villagerLookKey==='function'?villagerLookKey(dot):dot.kind;
+    return['veh',k.chassis,v.spec.team.map(h=>h.coat||'').join(','),cargo.join(','),v.moving?bucket:'still',look].join('|');
+  }
+  function drawCard(c,v,k,cargo,facing){
+    const W3=window.ConquerWorld3D;if(!W3?.figure||!W3.FIGURE_CARD_U)return false;
+    const ext=cardExtent(k.chassis,v.spec.team.length),cardU=W3.FIGURE_CARD_U;
+    const span=Math.max(1,(ext.widthU+.12)/cardU);
+    const bucket=v.moving?Math.floor((((v.s*.5*WALK_HZ)%1)+1)%1*GAIT_PHASES):0;
+    const dot=driverLook(c),cart=k.chassis==='cart';
+    const paint=g=>{
+      const W2=window.ConquerWagons,f=w2s(),size=teamSize(),u=size*U_PER_ART*12/5.75;   // px per art unit
+      const pxU=(typeof U!=='undefined'?U:12)*(State.view.scale||1);
+      const x=f.x-ext.mid*u,t=bucket/(GAIT_PHASES*WALK_HZ);
+      W2.drawWagon(g,x,f.y,size,{chassis:k.chassis,team:v.spec.team,cargo,covered:false,facing:1,
+        moving:v.moving,t,distance:bucket/GAIT_PHASES*40,
+        driver:cart?null:(gg,sx,sy)=>paintVillagerAt(dot,sx,sy)});
+      // The carter walks at the horse's head, on the near side.
+      if(cart)paintVillagerAt(dot,x+.75*pxU,f.y+.12*pxU);
+    };
+    const ox=facing*ext.mid*U_PER_ART/(cardU*span);
+    return W3.figure({x:v.x,y:v.y},.1,vehicleCardKey(c,v,k,cargo,bucket,dot),paint,
+      'vehicle-'+c.id+'-'+v.i,facing<0,{span,ox});
+  }
   // Draw one convoy into the current 2D ctx, back to front.
   function draw(c,points){
     if(!points?.length||!c)return 0;
@@ -191,10 +244,13 @@
     const items=[...L.vehicles.map(v=>({v,d:depth(v)})),...L.escorts.map(e=>({e,d:depth(e)}))].sort((a,b)=>a.d-b.d);
     for(const it of items){
       if(it.e){drawEscort(c,it.e);continue}
-      const v=it.v,scr=w2s(v,.15),a=w2sRaw(v,0),b=w2sRaw({x:v.x+Math.cos(v.heading),y:v.y+Math.sin(v.heading)},0);
-      W2.drawWagon(ctx,scr.x,scr.y,size,{chassis:k.chassis,team:v.spec.team,
-        cargo:v.spec.cargo.length?v.spec.cargo:(k.chassis==='carriage'||c.emptyReturn)?[]:['crate'],covered:false,
-        facing:b.x>=a.x?1:-1,moving:v.moving,t:v.s*.5,distance:v.s*(typeof U!=='undefined'?U:12)*(State.view.scale||1)});
+      const v=it.v,a=w2sRaw(v,0),b=w2sRaw({x:v.x+Math.cos(v.heading),y:v.y+Math.sin(v.heading)},0);
+      const facing=b.x>=a.x?1:-1;
+      const cargo=v.spec.cargo.length?v.spec.cargo:(k.chassis==='carriage'||c.emptyReturn)?[]:['crate'];
+      if(drawCard(c,v,k,cargo,facing))continue;
+      const scr=w2s(v,.15);
+      W2.drawWagon(ctx,scr.x,scr.y,size,{chassis:k.chassis,team:v.spec.team,cargo,covered:false,
+        facing,moving:v.moving,t:v.s*.5,distance:v.s*(typeof U!=='undefined'?U:12)*(State.view.scale||1)});
       drawDriver(c,v);
     }
     return L.vehicles.length;

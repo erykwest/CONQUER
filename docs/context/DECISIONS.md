@@ -1,5 +1,11 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-VEH-CARDS-261112 — Veicoli come carte 2D con profondità (12/11/2026)
+
+- **DECISO (applica D-046 e D-055, segue #201):** in World3D un veicolo su strada è **una carta 2D depth-tested** dell'atlante figure: pianale, carico, squadra di cavalli 2D e conducente dipinti insieme da `ConquerWagons.drawWagon`, carta allargata (`span`) e spostata verso i cavalli (`ox`). Nessuna mesh 3D di carri o cavalli; `ConquerWagons3D`/`ConquerAnimals3D` restano esclusi dal gioco.
+- **ALTERNATIVE SCARTATE:** carte separate per pianale e cavalli (il timone non resterebbe agganciato quando la strada non è orizzontale sullo schermo); caselle d'atlante più grandi per i soli veicoli (allocatore e LRU da duplicare, guadagno visibile solo oltre zoom 2,5).
+- **CONSEGUENZA:** `economic-balances-animations` non ha altri residui da recuperare; il branch si può archiviare.
+
 ## D-ECO-FIL-261110 — Filiere produttive complete (10/11/2026)
 
 - **DECISO (product owner, 10/11/2026), nessun codice:** specifica [ECO-FIL-01](BACKLOG.md).
