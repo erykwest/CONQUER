@@ -223,14 +223,43 @@ function roomExteriorViewSide(e){
 }
 // only: 'roof' | 'far' | 'near' limits the elements drawn (a tower in cutaway draws its face
 // elements around its own cutaway: far ones before the shell, near ones after it).
-function drawRoomExterior(s,{only=null}={}){
+// cutFront: in cutaway, the box's front facade (its outer wall, slits and string course) is cut
+// away like the room wall it continues; floor, sides, corbels and roof stay (user, 12/11/2026).
+const ROOM_EXTERIOR_FACADE_DEPTH=.07;
+// cutaway: the stain runs down the OUTER face of the wall, which in cutaway is seen from inside or
+// cut away: left out (the drop holes stay).
+function drawRoomExterior(s,{only=null,cutFront=false,cutaway=false}={}){
   const elements=roomExteriorElements(s).filter(e=>!only||roomExteriorViewSide(e)===only);if(!elements.length)return;
-  const tris=roomExteriorTriangles(s,elements),top=Math.max(...elements.map(e=>e.z+(e.height||.75)));
+  let tris=roomExteriorTriangles(s,elements);const top=Math.max(...elements.map(e=>e.z+(e.height||.75)));
+  if(cutaway)tris=tris.filter(t=>t.part!=='chute');   // stain and drop holes (seen only from below)
+  if(cutFront){
+    const e0=elements[0],out=q=>(q.p.x-e0.anchor.x)*e0.normal.x+(q.p.y-e0.anchor.y)*e0.normal.y;
+    tris=tris.filter(t=>!(t.part==='box'&&t.pts.every(q=>out(q)>=e0.projection-ROOM_EXTERIOR_FACADE_DEPTH)&&t.pts.some(q=>q.z>e0.z+.02)));
+  }
   const depth=t=>t.pts.reduce((a,q)=>a+viewDepthPoint(q.p)+ISO_Z*q.z,0)/3;
-  withStructureDetailOcclusion(s,top,()=>{
+  // Occluders as for any structure detail, except the parent tower and its subtowers: they overlap in
+  // plan, so the generic rule would clip a subtower's garderobe out of the parent's whole silhouette
+  // even where it hangs in front of it (the face side already decides front/behind).
+  // A related tower still hides the element when it stands between it and the camera (its centre
+  // nearer than the element's box centre), as the parent does for a subtower garderobe behind it.
+  const kin=o=>o.id===s.parentTowerId||o.parentTowerId===s.id||(s.parentTowerId&&o.parentTowerId===s.parentTowerId);
+  const boxDepth=Math.max(...elements.map(e=>viewDepthPoint({x:e.anchor.x+e.normal.x*e.projection/2,y:e.anchor.y+e.normal.y*e.projection/2})));
+  const kinInFront=o=>viewDepthPoint({x:o.x,y:o.y})>boxDepth;
+  const occluders=structureDetailOccluders(s,top).filter(o=>!kin(o)||kinInFront(o));
+  const clipped=fn=>{
+    if(!occluders.length){fn();return}
+    const r=wrap.getBoundingClientRect();ctx.save();
+    clipOutsideHulls(occluders.map(structureScreenSilhouette),-48,-48,r.width+96,r.height+96);
+    fn();ctx.restore();
+  };
+  clipped(()=>{
     // The roof caps its element: painted last, so no wall top under it wins the depth sort.
-    const cap=t=>t.part==='roof'&&t.pts.every(q=>q.z>=elements[0].z)?1:0;
-    for(const {t} of tris.map(t=>({t,d:depth(t)})).sort((a,b)=>cap(a.t)-cap(b.t)||a.d-b.d)){
+    // The seat bench sits inside the closed box: drawn only once the cutaway opened its facade, after
+    // the box walls, bottom up (body, then the boards around the holes), before the roof.
+    const layer=t=>t.part==='roof'&&t.pts.every(q=>q.z>=elements[0].z)?2:t.part==='bench'?1:0;
+    const zTop=t=>Math.max(...t.pts.map(q=>q.z));
+    const drawn=tris.filter(t=>t.part!=='bench'||cutFront);
+    for(const {t} of drawn.map(t=>({t,d:depth(t)})).sort((a,b)=>layer(a.t)-layer(b.t)||(layer(a.t)===1?zTop(a.t)-zTop(b.t):0)||a.d-b.d)){
       const [a,b,c]=t.pts.map(q=>w2s(q.p,q.z));
       // The stain is a flat decal on the wall: drawn whatever its winding.
       if(t.part!=='chute'&&(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x)<0)continue;
@@ -238,12 +267,24 @@ function drawRoomExterior(s,{only=null}={}){
     }
   });
 }
-function drawRoomExteriors(){
+// phase 'back': face elements behind their structure (drawn before the castle body, which then hides
+// them); phase 'front' (default): the rest, after the roofs. A structure in cutaway draws its own
+// face elements (drawCutawayStructure); a tower in cutaway keeps only its roof element here.
+function drawRoomExteriors(phase='front'){
+  if(phase==='back'){
+    const items=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)&&!structureCutaway(s)&&!isWoodTower(s)&&hasRoomExterior(s))
+      .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
+    for(const s of items)withStructureVisualMaterial(s,()=>drawRoomExterior(s,{only:'far'}));
+    return;
+  }
   // Timber towers carry theirs in the Blender mesh of settlement-wood3d.js; a built section in
   // cutaway draws its own inside drawCutawayStructure, a tower in cutaway keeps its roof and roof element.
   const items=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)&&!(structureCutaway(s)&&s.type==='built')&&!isWoodTower(s)&&hasRoomExterior(s))
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-  for(const s of items)withStructureVisualMaterial(s,()=>drawRoomExterior(s,{only:structureCutaway(s)&&s.type==='tower'?'roof':null}));
+  for(const s of items)withStructureVisualMaterial(s,()=>{
+    if(structureCutaway(s)&&s.type==='tower')drawRoomExterior(s,{only:'roof'});
+    else{drawRoomExterior(s,{only:'roof'});drawRoomExterior(s,{only:'near'})}
+  });
 }
 // Facade rows ask this before drawing a window: the element takes the cell it is centred on, from its
 // roof down (the chute runs over the slits below it).

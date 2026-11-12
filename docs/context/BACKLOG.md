@@ -5,7 +5,7 @@
 ## Latrina nelle torri W1 e stanze delle torri piccole (05/11/2026)
 
 - **IMPLEMENTATO SU BRANCH `fix/latrine-towers`:** la latrina passa dalle sezioni costruite W1 alle torri W1 in pietra (piano 2, sbalzo sulla faccia esterna libera). Le torri W1 accettano Colombaia (ultimo piano), Latrina, Prigione, Tesoro e Armeria, con la scala a chiocciola che resta.
-- **APERTO:** nella torre rotonda W1 entrano meno sedili dei tre previsti (stanza di 0,73 U); un'apertura nel muro tra stanza e sbalzo; un avviso quando un salvataggio perde una latrina da una sezione costruita.
+- **APERTO:** le correzioni di ordinamento 2.5D dello sbalzo vanno tolte quando il 2.5D sarà dismesso (branch `retire-25d-renderer`); la cattura 3D del Lab ignora la rotazione; un'apertura nel muro tra stanza e sbalzo; un avviso quando un salvataggio perde una latrina da una sezione costruita.
 
 
 06/11/2026 — Integrazione PR #175: riallineata a main b62d0b9 (#173/#174). Risolti conflitti preservando rampe, H4 e torre lignea. Corretto il test costiero intermittente: fixture con seedRand reale, prima assente (3 fallimenti su 20); nessuna modifica al runtime costiero.
