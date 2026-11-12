@@ -1,5 +1,13 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-12 — CIV-EVT-01 · Skeleton effetti eventi civili (branch PR #206)
+
+- **SU BRANCH, NON MERGE:** `src/settlement-civic-event-effects.js` offre otto archetipi di evento e preview di felicità L1–L3, lealtà L4, costi teorici, rendimenti decrescenti e prestigio locale temporaneo. Riusa `ConquerUrbanHeatmaps.at`, le fasi e gli allestimenti già esistenti.
+- **NO GAMEPLAY:** script caricato come API inattiva; nessun addebito, cronologia, migrazione, ricostruzione o modifica ai livelli delle famiglie. Non confondere i figuranti provvisori con partecipanti effettivi.
+- **QA:** `qa/civic-event-effects-regression.cjs` collegato alla suite urbana. Smoke V8 del modulo eseguito; test Node/browser e CI da verificare.
+- **Contratto:** [CIVIC-EVENT-EFFECTS-SKELETON](../CIVIC-EVENT-EFFECTS-SKELETON.md) e D-CIV-EVT-261112.
+
+
 ## 2026-11-12 — URB-HEAT-01 skeleton quattro heatmap (branch `feature/urban-heatmap-skeleton-20261112`)
 
 - **CODICE SUL BRANCH, NON MERGE:** nuovo motore puro `src/settlement-urban-heatmaps.js` con sette valori (domanda L1–L4, prestigio, sicurezza, criminalità), sorgenti radiali/poligonali, griglia deterministica, interpolazione e campionamento del lotto Voronoi. Caricato come API inattiva prima del runtime urbano.
