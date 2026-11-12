@@ -527,6 +527,9 @@ function builtInteriorFloors(s){return isWideBuilt(s)?1:structureLevel(s)}
 // Timber longhouse: a built section (W1 or W2 span) in wood, ground floor only, with the same
 // rooms as the stone section's ground floor (Blender model: build_wood_fort.py, settlement-wood3d.js).
 function isLonghouse(s){return s?.type==='built'&&s.material==='wood'}
+// Longhouse roof cover (BC-251105-09): shingles (default), thatch or turf; all with a smoke hole.
+const LONGHOUSE_COVERS=Object.freeze(['shingle','thatch','turf']);
+function longhouseCover(s){return LONGHOUSE_COVERS.includes(s?.roofCover)?s.roofCover:'shingle'}
 // Lean-to (settlement-lean-to.js): a W1 section against the inner face of an H2 wall, one storey,
 // single-pitch roof under the wall walk.
 function isLeanTo(s){return s?.type==='built'&&s.leanTo===true&&!isLonghouse(s)&&!isWideBuilt(s)}

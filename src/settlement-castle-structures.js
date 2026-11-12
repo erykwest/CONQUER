@@ -1515,7 +1515,7 @@ function chimneySpecs(s){
     return specs;
   }
 
-  // The timber longhouse has no masonry stack (its Blender model is the whole building).
+  // The timber longhouse has no masonry stack: its hearth smokes through the ridge (longhouseSmokeSpecs).
   if(s.type==='built'&&isLonghouse(s))return[];
   if(s.type==='built'){
     const g=builtRoofGeometry(s);if(!g)return[];
@@ -1576,9 +1576,20 @@ function drawSmoke(spec,id,now){
 function drawHouseChimneys(s){
   for(const spec of chimneySpecs(s))drawChimney(spec);
 }
+// Longhouse smoke hole (BC-251105-09): over the middle bay of the ridge, as the model's 'smoke.*'
+// part (settlement-wood3d.js); no smoke while the roof is opened in cutaway.
+// Top of the smoke-hole hood above ground (U): ridge crest + 0.1, as build_wood_fort.py.
+const LONGHOUSE_SMOKE_TOP={longhouse_w1:{shingle:1.64,thatch:1.715,turf:1.66},longhouse_w2:{shingle:1.94,thatch:2.015,turf:1.96}};
+function longhouseSmokeSpecs(s){
+  if(!isLonghouse(s)||underConstruction(s)||structureCutaway(s))return[];
+  const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,n=Math.max(1,Math.round(L)),along=(Math.floor((n-1)/2)+.5)*L/n;
+  const top=LONGHOUSE_SMOKE_TOP[isWideBuilt(s)?'longhouse_w2':'longhouse_w1'][longhouseCover(s)];
+  return[{center:{x:s.a.x+dx/L*along,y:s.a.y+dy/L*along},z1:top,index:0}];
+}
 function drawChimneysAndSmoke(){
   if(State.view.scale<.32)return;
   const now=performance.now()/1000;
+  for(const s of State.structures)for(const spec of longhouseSmokeSpecs(s))drawSmoke(spec,s.id+':hole',now);
   // An open L3 workshop has no chimney left (settlement-shop-cutaway.js).
   const sources=State.structures.filter(s=>!underConstruction(s)&&(s.type==='house'||s.type==='built')&&!window.ConquerShopCutaway?.active(s));
   for(const s of sources){
