@@ -142,7 +142,7 @@ check('market goods require a real completed market and cannot spawn a fake sale
   cycle(w,2);assert.equal(w.H.snapshot().active,1);
 });
 check('market and yard share one available L1 carter per yard, not one per product',()=>{
-  const w=world({market:true,logging:true,quarry:true});
+  const w=world({market:true,logging:true,quarry:true,workers:6});
   w.H.record({siteId:'camp',good:'wood',qty:2,destination:'yard'});
   w.H.record({siteId:'quarry',good:'stone',qty:2,destination:'market'});
   w.H.record({siteId:'house-L2',good:'tools',qty:1,destination:'market'});
