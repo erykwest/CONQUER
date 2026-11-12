@@ -183,7 +183,7 @@ check('L1 job manager can explicitly prioritize quarry over fields and mine',()=
   assert.equal(e.setL1Minimum('site:quarry',1),true);
   assert.equal(e.setL1Auto('site:field',false),true);
   assert.equal(e.setL1Auto('site:mine',false),true);
-  assert.equal(e.setL1Order(['site:quarry','site:field','site:mine']),true);
+  assert.equal(e.setL1Order(['site:quarry','site:field','site:mine','carter','builders']),true);
   const labor=e.laborAllocation(0);
   assert.equal(labor.allocated.quarry,1);
   assert.equal(labor.allocated.field,0);
