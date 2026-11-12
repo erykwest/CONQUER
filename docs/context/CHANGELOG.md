@@ -1,5 +1,11 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+12/11/2026 — `feature/bargello-balivo` (FISCO-01 fase B, pre-merge):
+- Nuovo modulo Erario (`ConquerTreasury`) e scheda ERARIO nel Profilo, con cursori, efficienza e decreti.
+- Imposte nuove: testatico, dazio delle botteghe L3, pedaggio e decima in natura, riscosse con l'efficienza del Municipio del centro, dei Bargelli e dei Balivi.
+- Sette decreti del consiglio. La leva straordinaria tiene armata una quota di uomini L1/L2 senza allarme; il cursore `levy` è rimosso.
+- `qa/treasury-regression.cjs` aggiunto in CI. Contratto tecnico in D-FISCO-261110. ROADMAP invariata.
+
 12/11/2026 — `feature/bargello-balivo`: FISCO-01 rimanda al futuro contratto «Scolarizzati» per classe, formazione e salari di esattori e giudici (prima: «nuovo mestiere L2»). Solo documentazione.
 
 10/11/2026 — `feature/bargello-balivo` (FISCO-01 fase A, pre-merge): specifica fiscale concordata con l'utente (Erario, cinque imposte, efficienza di riscossione del Municipio, Bargello, sala delle guardie, Palazzo del Balivo, decreti con leva straordinaria; giustizia ancora proposta) in BACKLOG e D-FISCO-261110. Implementati solo i modelli: Bargello e Palazzo del Balivo L1–L2 da Blender, Builder, collocamento, cantiere, crollo, incendio, cutaway, Lab, Codex. Nessun effetto di gioco. ROADMAP invariata.

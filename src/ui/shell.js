@@ -493,7 +493,8 @@ function Overview({ game }) {
 }
 function Policies({ game }) {
   const p = game.read.policies(), snap = game.snapshot();
-  return html`${['tax', 'rations', 'levy'].map(k => k === 'rations' ? html`<${Row} label=${M.policies[k]} tip=${M.policyHelp[k]}>
+  // FISCO-01: the inactive levy slider is gone; the Leva straordinaria is a decree (Profilo › Erario).
+  return html`${['tax', 'rations'].map(k => k === 'rations' ? html`<${Row} label=${M.policies[k]} tip=${M.policyHelp[k]}>
       <${Seg} options=${['market', 'half', 'full'].map(m => ({ label: M.rationModes[m], active: (game.read.economy()?.rationMode || 'market') === m, m }))}
         onPick=${o => { game.commands.setPolicy('rations', o.m); game.emit(); }} /></${Row}>` : html`<${Row} label=${M.policies[k]} tip=${M.policyHelp[k]}>
       <div class="u2-slider"><input type="range" min="0" max="100" value=${p[k]} aria-label=${M.policies[k]}

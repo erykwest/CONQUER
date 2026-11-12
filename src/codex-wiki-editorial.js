@@ -1,7 +1,7 @@
 // Generated from content/codex/*.md. Do not edit; run node tools/export-codex-content.cjs.
 (function(root){root.ConquerWikiEditorial={
   "schemaVersion": 1,
-  "sourceDigest": "62937048fb047fe197f5fdf9ec19df17509c792ff5ecbc1f49f804892437d2ea",
+  "sourceDigest": "e28e4b5a9bdc4462e55ff73ea0ece6d9fbe056b9024af81be82a4b7139d684ab",
   "pages": [
     {
       "id": "building:balivo",
@@ -14,7 +14,7 @@
       "blocks": [
         {
           "type": "paragraph",
-          "text": "Il Palazzo del Balivo è la sede del funzionario del signore nel contado: sorge in campagna, lontano dai pozzi e dalle zone abitate, con il magazzino della decima al piano terra e la sala della bassa giustizia al piano superiore, raggiunta da una scala esterna. Appartiene agli [[Edifici|edifici]] civici e ha due livelli; decima, giustizia rurale e ordine sulle strade sono descritti nella specifica FISCO-01 e non sono ancora simulati.",
+          "text": "Il Palazzo del Balivo è la sede del funzionario del signore nel contado: sorge in campagna, lontano dai pozzi e dalle zone abitate, con il magazzino della decima al piano terra e la sala della bassa giustizia al piano superiore, raggiunta da una scala esterna. Appartiene agli [[Edifici|edifici]] civici e ha due livelli. Raccoglie la decima in natura sui campi e sui produttori privati del contado entro 30 unità: fino al 60% del dovuto al livello 1 e al 75% al livello 2. Dove non c'è un Balivo, la campagna rende la metà del centro. La bassa giustizia rurale e l'ordine sulle strade non sono ancora simulati.",
           "tokens": [
             {
               "text": "Il Palazzo del Balivo è la sede del funzionario del signore nel contado: sorge in campagna, lontano dai pozzi e dalle zone abitate, con il magazzino della decima al piano terra e la sala della bassa giustizia al piano superiore, raggiunta da una scala esterna. Appartiene agli "
@@ -24,13 +24,13 @@
               "id": "category:building"
             },
             {
-              "text": " civici e ha due livelli; decima, giustizia rurale e ordine sulle strade sono descritti nella specifica FISCO-01 e non sono ancora simulati."
+              "text": " civici e ha due livelli. Raccoglie la decima in natura sui campi e sui produttori privati del contado entro 30 unità: fino al 60% del dovuto al livello 1 e al 75% al livello 2. Dove non c'è un Balivo, la campagna rende la metà del centro. La bassa giustizia rurale e l'ordine sulle strade non sono ancora simulati."
             }
           ]
         }
       ],
       "text": [
-        "Il Palazzo del Balivo è la sede del funzionario del signore nel contado: sorge in campagna, lontano dai pozzi e dalle zone abitate, con il magazzino della decima al piano terra e la sala della bassa giustizia al piano superiore, raggiunta da una scala esterna. Appartiene agli edifici civici e ha due livelli; decima, giustizia rurale e ordine sulle strade sono descritti nella specifica FISCO-01 e non sono ancora simulati."
+        "Il Palazzo del Balivo è la sede del funzionario del signore nel contado: sorge in campagna, lontano dai pozzi e dalle zone abitate, con il magazzino della decima al piano terra e la sala della bassa giustizia al piano superiore, raggiunta da una scala esterna. Appartiene agli edifici civici e ha due livelli. Raccoglie la decima in natura sui campi e sui produttori privati del contado entro 30 unità: fino al 60% del dovuto al livello 1 e al 75% al livello 2. Dove non c'è un Balivo, la campagna rende la metà del centro. La bassa giustizia rurale e l'ordine sulle strade non sono ancora simulati."
       ],
       "related": [
         "category:building",
@@ -49,7 +49,7 @@
       "blocks": [
         {
           "type": "paragraph",
-          "text": "Il Bargello è la casa degli esattori e delle guardie cittadine di un quartiere: sorge presso il pozzo del quartiere, uno per pozzo, ed è riconoscibile dalla torretta d'angolo con la vedetta e la campanella. Appartiene agli [[Edifici|edifici]] civici e ha due livelli; la riscossione e l'ordine pubblico che lo animeranno sono descritti nella specifica FISCO-01 e non sono ancora simulati.",
+          "text": "Il Bargello è la casa degli esattori e delle guardie cittadine di un quartiere: sorge presso il pozzo del quartiere, uno per pozzo, ed è riconoscibile dalla torretta d'angolo con la vedetta e la campanella. Appartiene agli [[Edifici|edifici]] civici e ha due livelli. Riscuote le imposte fissate nell'Erario per le case e le botteghe del suo quartiere: al livello 1 fino al 65% del dovuto, al livello 2 fino all'80%, più un 5% se il Municipio del centro ha la sala delle guardie. Senza il Municipio del centro non riscuote, e un quartiere senza Bargello rende poco più della metà. Durante un allarme o un assedio la riscossione è sospesa. L'ordine pubblico delle sue guardie non è ancora simulato.",
           "tokens": [
             {
               "text": "Il Bargello è la casa degli esattori e delle guardie cittadine di un quartiere: sorge presso il pozzo del quartiere, uno per pozzo, ed è riconoscibile dalla torretta d'angolo con la vedetta e la campanella. Appartiene agli "
@@ -59,13 +59,13 @@
               "id": "category:building"
             },
             {
-              "text": " civici e ha due livelli; la riscossione e l'ordine pubblico che lo animeranno sono descritti nella specifica FISCO-01 e non sono ancora simulati."
+              "text": " civici e ha due livelli. Riscuote le imposte fissate nell'Erario per le case e le botteghe del suo quartiere: al livello 1 fino al 65% del dovuto, al livello 2 fino all'80%, più un 5% se il Municipio del centro ha la sala delle guardie. Senza il Municipio del centro non riscuote, e un quartiere senza Bargello rende poco più della metà. Durante un allarme o un assedio la riscossione è sospesa. L'ordine pubblico delle sue guardie non è ancora simulato."
             }
           ]
         }
       ],
       "text": [
-        "Il Bargello è la casa degli esattori e delle guardie cittadine di un quartiere: sorge presso il pozzo del quartiere, uno per pozzo, ed è riconoscibile dalla torretta d'angolo con la vedetta e la campanella. Appartiene agli edifici civici e ha due livelli; la riscossione e l'ordine pubblico che lo animeranno sono descritti nella specifica FISCO-01 e non sono ancora simulati."
+        "Il Bargello è la casa degli esattori e delle guardie cittadine di un quartiere: sorge presso il pozzo del quartiere, uno per pozzo, ed è riconoscibile dalla torretta d'angolo con la vedetta e la campanella. Appartiene agli edifici civici e ha due livelli. Riscuote le imposte fissate nell'Erario per le case e le botteghe del suo quartiere: al livello 1 fino al 65% del dovuto, al livello 2 fino all'80%, più un 5% se il Municipio del centro ha la sala delle guardie. Senza il Municipio del centro non riscuote, e un quartiere senza Bargello rende poco più della metà. Durante un allarme o un assedio la riscossione è sospesa. L'ordine pubblico delle sue guardie non è ancora simulato."
       ],
       "related": [
         "category:building",

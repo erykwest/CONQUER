@@ -1,5 +1,23 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-12 — FISCO-01 fase B · Erario, riscossione e decreti (branch `feature/bargello-balivo`)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:**
+  - `src/settlement-treasury.js` (`ConquerTreasury`), con lo stato in `State.economy.treasury`.
+  - Scheda ERARIO nel Profilo (`settlement-panels.js`, `settlement-heraldry.js`, `index.html`).
+  - Agganci in economia (decima, calmiere, tick), commercio (dazio, pedaggio) e combattimento (leva straordinaria via `leviedResident`/`refreshLevy`).
+  - Cursore `levy` rimosso da UI1 e UI2.
+  - Codex di Bargello e Balivo aggiornati.
+- **PROVE ESEGUITE:**
+  - `qa/treasury-regression.cjs`: 18 PASS, aggiunto al workflow Economy flows.
+  - Regressioni di economia, commercio, routine, convogli, codex e runtime: PASS in locale.
+  - Browser su `localhost:4431`: scheda Erario con efficienza 80% (Municipio L2 con sala delle guardie), quartiere con Bargello L1 al 70%, decreto Festa emanato, nessun errore in console.
+- **NON PROVATO:**
+  - Una partita lunga con riscossione reale del sabato. La logica settimanale è coperta solo dal test Node.
+  - La leva vista in gioco: gli uomini che vanno all'armeria senza allarme.
+  - La CI sul nuovo head.
+- **APERTI:** vedi BACKLOG FISCO-01. Pedaggio senza arrivi reali, CRIME non caricato, leva fuori dalla riserva e dai turni, giustizia ancora in proposta.
+
 ## 2026-11-10 — FISCO-01 fase A · Bargello e Palazzo del Balivo (branch `feature/bargello-balivo`)
 
 - **IMPLEMENTATO SU BRANCH, NON MERGE:** modelli `bargello1/2` (parti `hall`, `tower`) e `balivo1/2` (`hall`) in `tools/blender/build_civic.py`, generati con Blender 4.4 in `src/assets/civic-models.js`. I 53 modelli civici esistenti restano identici (confronto del JSON) e la palette è invariata.
