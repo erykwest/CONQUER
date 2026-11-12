@@ -88,7 +88,10 @@
     let e=sprites.get(id);
     // At most one repaint per frame (load, view turn, stage change, end of a zoom): the
     // others keep showing their previous bitmap (stretched to the zoom) until their turn.
-    const settling=now-lastScaleAt<REPAINT_MS,turn=now-lastRepaint>=FRAME_MS;
+    // The Asset Lab stage freezes performance.now() for its captures: there every frame repaints,
+    // otherwise only the first site of an audit would ever be painted.
+    const lab=typeof window!=='undefined'&&window.__CONQUER_ASSET_LAB__;
+    const settling=!lab&&now-lastScaleAt<REPAINT_MS,turn=lab||now-lastRepaint>=FRAME_MS;
     const want=!e||e.key!==full||e.scale!==scale;
     // A deferred repaint asks for another frame (the paused game draws only on request).
     if(want&&(!turn||settling)&&typeof requestSceneDraw==='function')requestSceneDraw();

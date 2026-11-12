@@ -4,6 +4,7 @@
 // construction, a damage phase of ConquerSiege, cutaway — and captures what the game draws, with the
 // ground removed (pixels that differ from the same view without the structure). The Asset Lab uses
 // these captures as its audit images: they are the game's own render path, nothing re-drawn.
+// That path is World 3D (WebGL2): the 2.5D Canvas castle was retired, so "Nel gioco" is the 3D frame.
 (function(){
   if(!window.__CONQUER_ASSET_LAB__)return;
   const SP=()=>window.ConquerSiegePreview;
@@ -126,8 +127,11 @@
     if(m)for(let t=0;t<m.col.length;t++){const o=t*9;fill([0,3,6].map(j=>w2sRaw({x:m.pos[o+j],y:m.pos[o+j+1]},m.pos[o+j+2])))}
     return g.getImageData(0,0,W,H).data;
   }
+  // Buildings render only in World 3D (D-RENDER-3D-261111): a capture without it is an error, not
+  // a 2.5D image.
+  function renderer(){return window.ConquerWorld3D?.active?.()?'webgl2':'none'}
   function frame(){
-    invalidateSceneCache(STRUCTURE_LAYERS);window.ConquerWallWalk?.invalidate?.();draw();
+    invalidateSceneCache(STRUCTURE_LAYERS);window.ConquerWallWalk?.invalidate?.();window.ConquerWorld3D?.invalidate?.();draw();
     const c=document.getElementById('c');
     return c.getContext('2d').getImageData(0,0,c.width,c.height);
   }
@@ -181,7 +185,7 @@
         if(bg[p])continue;
         mask[p]=1;n++;const x=p%W,y=(p/W)|0;if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;
       }
-      const result={id,state:stateId,label:v.label,family:v.family,structure:summary(s),coverage:n/(W*H)};
+      const result={id,state:stateId,label:v.label,family:v.family,structure:summary(s),coverage:n/(W*H),renderer:renderer()};
       if(x1<0)return{...result,dataUrl:null,width:0,height:0};
       const pad=6;x0=Math.max(0,x0-pad);y0=Math.max(0,y0-pad);x1=Math.min(W-1,x1+pad);y1=Math.min(H-1,y1+pad);
       const w=x1-x0+1,h=y1-y0+1,out=document.createElement('canvas');out.width=w;out.height=h;
@@ -204,5 +208,5 @@
       if(v.spec.type==='house')invalidateUrbanGeometry();
     }
   }
-  window.ConquerAssetStage={variants,states,capture};
+  window.ConquerAssetStage={variants,states,capture,renderer};
 })();

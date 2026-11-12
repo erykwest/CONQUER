@@ -127,29 +127,7 @@ async function main(){
         assert.ok(result.settled.turned>result.settled.after&&result.settled.vertices>0,'rotation must update heap shading');
         console.log('SETTLED '+JSON.stringify(result.settled));
       }
-      if(process.env.PERF_ASSERT==='1'&&mode==='webgl'&&scenario==='cutaway'){
-        result.pixels=await page.evaluate(()=>{
-          const saved={...State.view},palette=State.visualPalette,checks=[];
-          for(const [rotation,material] of [[0,'stone'],[1,'stone'],[1,'clay']]){
-            const direct=document.createElement('canvas'),cached=document.createElement('canvas');direct.width=cached.width=canvas.width;direct.height=cached.height=canvas.height;
-            const a=direct.getContext('2d'),b=cached.getContext('2d');
-            State.view.rotation=rotation;State.visualPalette=material;
-            a.clearRect(0,0,direct.width,direct.height);b.clearRect(0,0,cached.width,cached.height);
-            withRenderContext(a,drawCutawayStructures);withRenderContext(b,drawCutawayStaticOverlay);
-            const p=a.getImageData(0,0,direct.width,direct.height).data,q=b.getImageData(0,0,cached.width,cached.height).data;
-            let pixels=0,diff=0,error=0;
-            for(let i=0;i<p.length;i+=4)if(p[i+3]||q[i+3]){pixels++;let max=0;for(let k=0;k<4;k++){const d=Math.abs(p[i+k]-q[i+k]);error+=d;max=Math.max(max,d)}if(max>16)diff++}
-            checks.push({rotation,material,pixels,differingFraction:diff/Math.max(1,pixels),meanChannelError:error/Math.max(1,pixels*4),...(material==='clay'?{direct:direct.toDataURL(),cached:cached.toDataURL()}:{})});
-          }
-          State.view=saved;State.visualPalette=palette;
-          return checks;
-        });
-        for(const check of result.pixels){
-          for(const key of ['direct','cached'])if(check[key]){fs.writeFileSync(path.join(out,`cutaway-${key}.png`),Buffer.from(check[key].split(',')[1],'base64'));delete check[key]}
-          assert.ok(check.pixels>100);assert.ok(check.differingFraction<.02&&check.meanChannelError<1,JSON.stringify(check));
-        }
-        console.log('CUTAWAY PIXELS '+JSON.stringify(result.pixels));
-      }
+      // The 2.5D cutaway direct-vs-cached pixel check went with the 2.5D castle path (D-RENDER-3D-261111).
       fs.writeFileSync(path.join(out,`${label}.json`),JSON.stringify(report,null,2));
       await page.screenshot({path:path.join(out,`${label}-${mode}-${scenario}.png`)});await context.close();
     }

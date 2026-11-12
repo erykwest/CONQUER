@@ -1,5 +1,12 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-RENDER-3D-261111 — Edifici e fortificazioni solo in 3D; ritiro del renderer 2.5D (11/11/2026)
+
+- **DECISO (utente, 11/11/2026):** edifici, torri, mura, porte ed elementi esterni delle stanze si disegnano solo nel World 3D (WebGL2: `settlement-world3d.js`, mesh di `settlement-castle3d.js` `worldMeshes()`, legno `settlement-wood3d.js`). Il percorso 2.5D painter-sorted (tetti culled, strisce di ordinamento, esterni visti attraverso i muri, es. latrina W1 della PR #155) non si corregge più: si elimina.
+- **ECCEZIONI:** scatter (oggetti ambientali) e personaggi a capsule mantengono il loro percorso attuale. Edifici CRIME non toccati.
+- **CONTRATTO:** senza WebGL2 il Canvas mostra solo terreno e rete di terra con l'avviso «serve WebGL2»; nessun fallback 2.5D degli edifici. Cantieri: assemblati dalle stesse mesh 3D (`ConquerAssembly`), altrimenti volume dell'impronta; ghost di piazzamento: volume dell'impronta. La geometria condivisa (impronte, merli, tetti, layout stanze/esterni) resta: si eliminano solo le funzioni che dipingono il corpo su Canvas.
+- **ASSET LAB:** le catture «Nel gioco» sono frame World 3D; ogni cattura registra `renderer` e il controllo `renderer-3d` fallisce se non è `webgl2`. Piano completo: [RETIRE-25D-PLAN](../RETIRE-25D-PLAN.md).
+
 ## D-ECO-FIL-261110 — Filiere produttive complete (10/11/2026)
 
 - **DECISO (product owner, 10/11/2026), nessun codice:** specifica [ECO-FIL-01](BACKLOG.md).

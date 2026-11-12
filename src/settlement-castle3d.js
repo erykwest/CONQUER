@@ -427,48 +427,8 @@
   function supported(){return !!ensureGL()}
   function active(){return enabled&&supported()}
 
-  // Replaces drawCastleUnion + drawCastleUnionDetails + machicolation floors + tower/gate roofs.
-  // Returns false to let the caller fall back to the Canvas union renderer.
-  function drawBody(){
-    if(!active())return false;
-    const t0=performance.now();
-    const body=buildBody(),r=rasterise([],body);
-    if(!r)return false;
-    if(!r.empty)ctx.drawImage(gpu.canvas,r.bounds.x,r.bounds.y,r.bounds.w,r.bounds.h);
-    // 2.5D overlays kept as-is: arcades, orientation ticks, raised points, cutaways, doors.
-    for(const s of castleParts()){
-      if(s.type==='built')drawBuiltArcade(s);
-      if(s.type==='tower'||s.type==='gate'){
-        const h=structureHeight(s),a=w2s({x:s.x,y:s.y},h+.03),q={x:s.x+Math.cos(s.angle||0)*.55,y:s.y+Math.sin(s.angle||0)*.55},b=w2s(q,h+.03);
-        ctx.save();ctx.strokeStyle='rgba(245,226,202,.48)';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
-      }
-    }
-    // Cutaway structures keep their 2.5D interior rendering; afterwards everything that is in front
-    // of their full volume is re-rasterised on top, so they no longer paint over nearer masonry.
-    const cut=cutawayParts();
-    if(cut.length){
-      drawCutawayStructures();
-      const rr=rasterise(buildCutawayDepth(),body,true);
-      if(rr&&!rr.empty)ctx.drawImage(gpu.canvas,rr.bounds.x,rr.bounds.y,rr.bounds.w,rr.bounds.h);
-    }
-    drawTowerDoors();
-    const p=perf();p.castle3dBodyMs=performance.now()-t0;p.castle3dBodyTris=body.length/18;
-    return true;
-  }
-  // castleFront: stone battlements rasterised against the full castle depth (hidden merlons vanish);
-  // palisade / wood-tower front pieces still use the 2.5D path.
-  function drawFront(){
-    if(!active())return false;
-    const t0=performance.now();
-    const front=buildFront(),r=rasterise(buildBody(),front);
-    if(!r)return false;
-    if(!r.empty)ctx.drawImage(gpu.canvas,r.bounds.x,r.bounds.y,r.bounds.w,r.bounds.h);
-    const all=State.structures;
-    // 2.5D front pieces only for what the 3D pass does not own (palisades, wood towers, cutaways).
-    try{State.structures=all.filter(s=>!castleVolume(s)||structureCutaway(s));drawCastleBattlements()}finally{State.structures=all}
-    const p=perf();p.castle3dFrontMs=performance.now()-t0;p.castle3dFrontTris=front.length/18;
-    return true;
-  }
+  // The castle is drawn by the World 3D renderer from worldMeshes() (settlement-world3d.js); the
+  // old castleBody/castleFront Canvas-cache rasteriser was retired with the 2.5D path.
   function setEnabled(on){
     enabled=!!on;
     try{localStorage.setItem(STORE_KEY,enabled?'1':'0')}catch{}
@@ -504,7 +464,7 @@
       });
     }finally{worldOut=false}
   }
-  window.ConquerCastle3D={active,supported,setEnabled,drawBody,drawFront,worldMeshes,structureWorld,castleParts:()=>castleParts(),
+  window.ConquerCastle3D={active,supported,setEnabled,worldMeshes,structureWorld,castleParts:()=>castleParts(),
     castleVolume:s=>castleVolume(s),PAL,
     status:()=>({enabled,supported:supported(),failed:gpu.failed,bodyMs:perf().castle3dBodyMs,frontMs:perf().castle3dFrontMs,bodyTris:perf().castle3dBodyTris,frontTris:perf().castle3dFrontTris}),
     _build:{body:buildBody,front:buildFront}};

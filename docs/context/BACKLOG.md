@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-11 — D-RENDER-3D-261111 · ritiro del renderer 2.5D
+
+- **SU BRANCH `retire-25d-renderer`:** edifici, torri, mura, porte ed esterni delle stanze solo in World 3D; Asset Lab con controllo `renderer-3d`.
+- **APERTO:** stato «danneggiata» senza segni visibili in 3D (23 avvisi `danno-visibile`); drappo del Mastio come decal 3D; eliminare le funzioni di pittura 2.5D non più chiamate (castle, castle-structures, room-exterior, cutaway-furniture, architecture finestre/portali); ritirare o portare in 3D lo strumento DEV «Prerender + test»; workflow browser che usano `?renderer=canvas2d` (webgpu-smoke, clay-browser) da riallineare al contratto «senza WebGL2 nessun edificio».
+
 
 ## 2026-11-10 — ECO-FIL-01 · Filiere produttive complete
 
