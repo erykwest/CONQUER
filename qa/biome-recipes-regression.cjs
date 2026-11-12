@@ -7,18 +7,20 @@
 const fs=require('node:fs');
 const harness=fs.readFileSync(__dirname+'/urban-regression.cjs','utf8').split('let passed=0;')[0];
 const check=new Function('require','__dirname',harness+`
+
 let passed=0;
 const SEEDS=[12345,4242,229,777,90210,31337];
 const EXPECT={
   plains:{hills:[0,2],forests:[1,40],mountains:[0,0],water:['stream',null]},
-  hills:{hills:[4,8],forests:[0,1],mountains:[0,0],water:[null]},
-  valley:{hills:[4,8],forests:[0,1],mountains:[0,0],water:[null]},
+  hills:{hills:[4,8],forests:[1,100],mountains:[0,0],water:['stream'],hillCoverage:.30},
+  valley:{hills:[4,8],forests:[1,100],mountains:[0,0],water:['stream'],hillCoverage:.30},
   river:{hills:[0,1],forests:[0,2],mountains:[0,0],water:['river']},
   forest:{hills:[0,3],forests:[1,1],mountains:[0,0],water:['stream',null],ponds:1,continuous:true},
   mountains:{hills:[1,60],forests:[0,0],mountains:[8,14],water:['stream',null],hillCoverage:.30},
   sea:{hills:[0,2],forests:[0,1],mountains:[0,0],water:[null],sea:true}
 };
 for(const [biome,e] of Object.entries(EXPECT))for(const seed of SEEDS){
+  if(['hills','valley'].includes(biome)){run(fs.readFileSync(__dirname+'/../src/regional-biome-rules.js','utf8'));run(moduleFile('regional-landscape'));run(moduleFile('hydrology'));}else run('window.ConquerRegionalLandscape=undefined;window.ConquerHydrology=undefined');
   run("State.seed="+seed+";State.biome='"+biome+"';State.structures=[];State.environment=[];State.relief=null;clearReliefBandCache();generateRelief();generateEnvironment()");
   const r=run("(()=>{const env=State.environment,forests=env.filter(f=>f.type==='forest'),water=env.find(f=>f.type==='stream'||f.type==='river');"+
     "const hills=State.relief.hills,inForest=p=>forests.some(f=>environmentContains(f,p));"+
@@ -52,12 +54,12 @@ for(const [biome,e] of Object.entries(EXPECT))for(const seed of SEEDS){
   assert.ok(r.ponds<=(e.ponds||0),tag+'ponds '+r.ponds);
   assert.equal(r.sea,!!e.sea,tag+'sea');
   assert.ok(r.seaShare<=.30+1e-9,tag+'sea covers '+(100*r.seaShare).toFixed(1)+'%');
-  assert.equal(r.continuous,!!e.continuous,tag+'continuous woodland');
+  if(e.continuous)assert.equal(r.continuous,true,tag+'continuous woodland');
   if(e.continuous)assert.ok(r.open>=.18&&r.open<=.40,tag+'open ground '+(100*r.open).toFixed(1)+'%');
   assert.ok(r.maxHeight<=4,tag+'hill height '+r.maxHeight);
   if(e.hillCoverage)assert.ok(r.reliefCoverage>=e.hillCoverage-.02,tag+'hill coverage '+(100*r.reliefCoverage).toFixed(1)+'%');
   // Scaled COFFEE BATTLES sizes: small woods 11-15.4 x 6.6-8.8U, large 17.6-22 x 8.8-12.1U.
-  for(const rad of biome==='plains'?[]:r.forestRadius)assert.ok(rad>=8.5&&rad<=16.4,tag+'forest radius '+rad.toFixed(1));
+  for(const rad of ['plains','hills','valley'].includes(biome)?[]:r.forestRadius)assert.ok(rad>=8.5&&rad<=16.4,tag+'forest radius '+rad.toFixed(1));
   assert.equal(r.onWater,false,tag+'woods must leave the watercourse open');
   assert.equal(r.townCovered,false,tag+'settlement hub must stay clear');
   assert.equal(r.ovals,false,tag+'no obsolete hill/rough ellipses');

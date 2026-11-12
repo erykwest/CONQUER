@@ -153,7 +153,7 @@
     const lakeShape=lakeSides.length>=3?{kind:lakeSides.length===4?'island':'peninsula',sides:lakeSides}:null;
     const forests=base.filter(f=>f.type==='forest'),centralSea=base.filter(f=>f.type==='sea'),centralPonds=base.filter(f=>f.type==='pond').map(f=>f.waterBodyKind==='marsh'?{...f,x:50+f.x/2,y:50+f.y/2,rx:f.rx/2,ry:f.ry/2,points:f.points.map(p=>({x:50+p.x/2,y:50+p.y/2}))}:f);
     const lines=base.filter(f=>f.type==='river'||f.type==='stream');
-    const mountains=base.filter(f=>f.type==='mountain').map(f=>({...f,id:'regional-center-'+f.id,
+    const mountains=base.filter(f=>f.type==='mountain').map(f=>f.regionalBorder?f:({...f,id:'regional-center-'+f.id,
       x:50+f.x/2,y:50+f.y/2,rx:f.rx/2,ry:f.ry/2,height:f.height/2,
       unclippedPoints:(f.unclippedPoints||f.points).map(p=>({x:50+p.x/2,y:50+p.y/2})),points:f.points.map(p=>({x:50+p.x/2,y:50+p.y/2}))}));
     const n=100,seaMask=new Uint8Array(n*n),pondMask=new Uint8Array(n*n),marshMask=new Uint8Array(n*n);
@@ -312,10 +312,10 @@
   function woodlandFeatures(samples,lines,dryMountains,forests,key){
     const forestMask=new Uint8Array(samples.length);
     // Calibrate central and inherited land cover separately for each biome.
-    const biomes=['plains','swamp'],groups=Object.fromEntries(biomes.map(b=>[b,[{total:0,candidates:[]},{total:0,candidates:[]}]])),eligible=[];
+    const biomes=['plains','swamp','hills'],groups=Object.fromEntries(biomes.map(b=>[b,[{total:0,candidates:[]},{total:0,candidates:[]}]])),eligible=[];
     for(let i=0;i<samples.length;i++){
       const {p,w,c,wet}=samples[i],zone=p.x>=50&&p.x<150&&p.y>=50&&p.y<150?0:1;
-      const cover=Object.fromEntries(biomes.map(b=>[b,(w[b]||0)+(State.biome===b?c:0)]));
+      const cover=Object.fromEntries(biomes.map(b=>[b,(w[b]||0)+(canonical(State.biome)===b?c:0)]));
       const pure=biomes.find(b=>cover[b]>.999),calibrated=biomes.some(b=>cover[b]>0);
       if(pure)groups[pure][zone].total++;
       if(wet||lines.some(f=>environmentContains(f,p,2))||dryMountains.some(f=>environmentContains(f,p))||terrainSlopeKind(p)==='steep'||calibrated&&dist(p,{x:100,y:100})<8)continue;
@@ -340,8 +340,8 @@
   }
   // Mouth extensions and tributaries are final before calibrating woodland cover.
   function finalizeWoodlands(env){
-    if(State.biome==='swamp'&&!active()){
-      const marshes=features(swampMarshMask(false,env.filter(f=>f.type==='river'||f.type==='stream'),env.filter(f=>f.type==='sea'||f.type==='pond')),'pond','swamp-marsh-'+State.seed).map(f=>{styleMarshWater(f);f.points=roundMarshRing(f.points);f.holes=f.holes.map(roundMarshRing);return f});
+    if(['swamp','hills','valley'].includes(State.biome)&&!active()){
+      const marshes=State.biome==='swamp'?features(swampMarshMask(false,env.filter(f=>f.type==='river'||f.type==='stream'),env.filter(f=>f.type==='sea'||f.type==='pond')),'pond','swamp-marsh-'+State.seed).map(f=>{styleMarshWater(f);f.points=roundMarshRing(f.points);f.holes=f.holes.map(roundMarshRing);return f}):[];
       env=[...env.filter(f=>f.waterBodyKind!=='marsh'),...marshes];
       const samples=[],water=env.filter(f=>f.type==='pond'||f.type==='sea');
       for(let y=0;y<100;y++)for(let x=0;x<100;x++){

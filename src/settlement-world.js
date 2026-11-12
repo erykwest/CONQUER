@@ -1294,7 +1294,7 @@ const BIOME_SCALE=2.2,BIOME_ZONE_INSET=2*BIOME_SCALE;
 // Acquitrini are standing, muddy water; keep pond collision and exclude lake outlets.
 const MARSH_WATER=Object.freeze({fill:'#6b6a3d',edge:'#898052',bank:'#565238',algae:'#8b934e'});
 function styleMarshWater(f){f.waterBodyKind='marsh';f.fill=MARSH_WATER.fill;f.edge=MARSH_WATER.edge;return f}
-const HILLS_RECIPE=Object.freeze({hills:[4,8],hillHeight:[2,3],forests:[0,1]});
+const HILLS_RECIPE=Object.freeze({hills:[4,8],hillHeight:[2,3],hillMinimumCoverage:.30,woodlandCoverage:.25,stream:1,streamMin:1});
 const BIOME_RECIPES=Object.freeze({
   // TEST (default): the settings used while developing — procedural terraced hills up to 20% of
   // the map and many small woods up to 12% coverage.
@@ -1347,6 +1347,18 @@ function biomeSea(){return biomeRecipe().sea?makeEnvSea(biomeStream(0x51ea51ea))
 // makeMountainSectorChain: a contiguous run of perimeter sectors (4x4 grid on the square map),
 // never a whole side, each holding a mountain about 0.52-0.60 of a sector across in radius.
 function biomeMountains(){
+  const sides=window.__CONQUER_REGIONAL_DEMO__?.mountainSides;
+  if(Array.isArray(sides)&&sides.length){
+    const rnd=biomeStream(0x60a4f7e1),out=[];
+    for(const side of [...new Set(sides)].filter(s=>['north','east','south','west'].includes(s)))for(let i=0;i<16;i++){
+      const t=i*200/15,off=45+Math.sin(t/37+rnd())*3;
+      const p=side==='north'?{x:t,y:off}:side==='south'?{x:t,y:200-off}:side==='west'?{x:off,y:t}:{x:200-off,y:t};
+      const peak=makeEnvBlob(rnd,'mountain',p.x,p.y,9+rnd()*3,9+rnd()*3,'#56493c','#968470',18,.1);
+      peak.unclippedPoints=peak.points;peak.points=clipTerrainPolygon(peak.points).map(q=>({x:q.x,y:q.y}));
+      peak.id='regional-border-'+side+'-'+i;peak.regionalBorder=true;peak.slopeDeg=37+rnd()*26;peak.height=Math.sqrt(peak.rx*peak.ry)*Math.tan(peak.slopeDeg*Math.PI/180);out.push(peak);
+    }
+    return out;
+  }
   const recipe=biomeRecipe();if(!recipe.mountains)return[];
   const rnd=biomeStream(0x60a4f7e1),cells=4,cw=WORLD/cells,ring=[];
   for(let c=0;c<cells;c++)ring.push({r:0,c});
@@ -1401,7 +1413,7 @@ const MOUNTAIN_STEEPNESS=[.95,1.15],MOUNTAIN_SLOPE_DEG=[37,63];
 // Shared by terrain obstacles and final drainage, including regional tributaries.
 function biomeStreamCount(){
   const probability=biomeRecipe().stream||0,rnd=biomeStream(0x51ea03);
-  return probability&&rnd()<probability?Math.floor(rnd()*4):0;
+  return probability&&rnd()<probability?(biomeRecipe().streamMin||0)+Math.floor(rnd()*(4-(biomeRecipe().streamMin||0))):0;
 }
 function biomeWaters(mountains){
   const recipe=biomeRecipe(),rnd=biomeStream(0x3a7684c1);
@@ -1445,7 +1457,7 @@ function biomeLake(rnd=seedRand((State.seed^biomeHash(State.biome))>>>0)){
 function biomeTerrainObstacles(){
   const sea=biomeSea(),lake=biomeRecipe().lake?biomeLake():null;
   // Coast is fixed geography; rivers are generated only after relief.
-  return [sea,lake].filter(Boolean).map(f=>({points:f.points}));
+  return [sea,lake,...biomeMountains()].filter(Boolean).map(f=>({points:f.points}));
 }
 
 const BIOME_TOWN={x:WORLD/2,y:WORLD/2},BIOME_TOWN_CLEARANCE=7;
@@ -1454,12 +1466,33 @@ function biomeTownClear(points){
   for(let i=0;i<points.length;i++)if(pointSegmentDistance(BIOME_TOWN,points[i],points[(i+1)%points.length])<BIOME_TOWN_CLEARANCE)return false;
   return true;
 }
+function generateDenseHills(count,obstacles){
+  const sides=window.__CONQUER_REGIONAL_DEMO__?.mountainSides||[];
+  const bounds={minX:sides.includes('west')?63:0,maxX:sides.includes('east')?137:200,minY:sides.includes('north')?63:0,maxY:sides.includes('south')?137:200};
+  let best=[],bestCoverage=0;
+  for(let attempt=0;attempt<12;attempt++){
+    const rnd=seedRand((State.seed^0x2d571a3^attempt)>>>0),scale=.70+attempt*.035,hills=[];
+    for(let i=0;i<count;i++){
+      const top=sides.includes('north')?Math.min(4,count-2):sides.includes('south')&&count>=5?count-4:Math.ceil(count/2),row=i<top?0:1,cols=row?count-top:top,col=row?i-top:i;
+      const cw=(bounds.maxX-bounds.minX)/cols,ch=(bounds.maxY-bounds.minY)/2;
+      const center={x:bounds.minX+(col+.5)*cw,y:bounds.minY+(row+.5)*ch};
+      const hill=makeProceduralHill(rnd,i,{center,rx:cw*.44*scale,ry:ch*.43*scale,angle:(rnd()-.5)*.20,maxHeight:2+Math.floor(rnd()*2)}),foot=reliefHillFootprint(hill);
+      if(!biomeTownClear(foot)||!hillSpacingOk(hill,hills)||!biomeFeatureClear(foot,obstacles,2))continue;
+      hills.push(hill);
+    }
+    State.relief.hills=hills;clearReliefBandCache();const coverage=estimateReliefCoverage(80);
+    if(hills.length===count&&coverage>bestCoverage){best=hills;bestCoverage=coverage;}
+    if(hills.length===count&&coverage>=.315)break;
+  }
+  State.relief.hills=best;clearReliefBandCache();
+}
 function generateRelief(){
   const reliefSeed=(State.seed^0x5f356495)>>>0,rnd=seedRand(reliefSeed);
   State.relief={version:LANDSCAPE_GENERATION_VERSION,seed:reliefSeed,biome:State.biome,hills:[],stats:null};
   clearReliefBandCache();
   // generateTactical: hills placed after coast, mountains and water, never overlapping them.
   const recipe=biomeRecipe(),count=recipe.hillChance===undefined?biomeRange(rnd,recipe.hills):biomeHillPlan().count,obstacles=biomeTerrainObstacles();
+  if(recipe.hillMinimumCoverage)generateDenseHills(count,obstacles);
   if(recipe.legacyRelief){
     // Former test relief: random procedural hills anywhere (also past the edge) until coverage.
     let coverage=0,attempts=0;
@@ -1472,7 +1505,7 @@ function generateRelief(){
   // Foothills: a biome may ask for a minimum relief coverage (Montagne: 30% of the map); extra
   // hills, up to 1.7x larger, keep being placed after the recipe count until it is reached.
   let coverage=0,extra=0;
-  for(let i=0;i<count||(recipe.hillCoverage&&coverage<recipe.hillCoverage&&extra<90);i++){
+  for(let i=0;!recipe.hillMinimumCoverage&&(i<count||(recipe.hillCoverage&&coverage<recipe.hillCoverage&&extra<90));i++){
     if(i>=count)extra++;
     for(let attempt=0;attempt<(i>=count?70:420);attempt++){
       const size=biomeFeatureSize(rnd,false),center=biomeCenter(rnd,i>=count?0:size.margin);
@@ -1799,7 +1832,7 @@ function generateEnvironment(){
     filled.push(makeContinuousForest(filled,rnd,recipe.continuousForest));
   }else if(recipe.woodlandCoverage){
     for(let i=0;i<ponds;i++)addBiomePond(filled,rnd);
-    if(State.biome!=='swamp')ensureForestCoverage(filled,rnd,recipe.woodlandCoverage);
+    if(!['swamp','hills','valley'].includes(State.biome))ensureForestCoverage(filled,rnd,recipe.woodlandCoverage);
   }else if(recipe.smallForestCoverage){
     ensureForestCoverage(filled,rnd,recipe.smallForestCoverage,true);
   }else{

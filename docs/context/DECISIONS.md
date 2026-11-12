@@ -1,5 +1,9 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+### 2026-11-12 — Bioma terrestre e proprietà dei confini
+
+Il terreno regionale hills corrisponde al bioma locale Colline, non Montagne. I quattro biomi terrestri sono Pianura, Colline (Valle alias), Foresta e Palude. Le catene montuose derivano dai bordi regionali espliciti/automatici e sono trasmesse in mountainSides; fiumi e costa restano proprietà additive della zona. Colline richiede 4–8 rilievi, almeno 30% di copertura, boschi 20–30% (target 25%) e 1–3 torrenti con attivazione 100%. Conservata l'eccezione zero torrenti per isole e penisole. Numero dei rilievi e quota di superficie sono vincoli distinti; non si aggiungono oltre otto rilievi per raggiungere la superficie.
+
 ### 2026-11-12 — Valle equivale a Colline; quantità 4–8
 
 Valle è un alias compatibile di Colline nella generazione: stessa ricetta 4–8 rilievi H2–3 e normalizzazione dei seed e dei vicini, senza catene montuose proprie. Mare e Lago hanno un gate indipendente del 20% per 1–2 colline H1–2 sulle porzioni emerse; rimangono celle regionali non selezionabili. Il vecchio nome Vallata resta leggibile nei salvataggi/demo.

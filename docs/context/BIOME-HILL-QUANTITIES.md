@@ -1,18 +1,14 @@
-# Quantità di colline — 12 novembre 2026
+# Componenti dei biomi terrestri — 12 novembre 2026
 
-Valori della ricetta base, prima degli scarti geometrici e delle aggiunte ereditate dai vicini.
+| Bioma | Probabilità colline | Quantità base | Copertura collinare | Boschi | Torrenti autonomi |
+|---|---:|---:|---|---|---|
+| Pianura | 33,3% | 1–2 | Non fissata | Target 20% | Gate 45%, estrazione 0–3 |
+| Colline / Valle | 100% | 4–8 | Almeno 30% | 20–30%, target 25% | 100%, estrazione 1–3 |
+| Foresta | 50% | 2–3 | Non fissata | Bosco continuo con radure | 100%, estrazione 0–3 |
+| Palude | 25% | 1 | Non fissata | Target 25% | 100%, estrazione 0–3 |
 
-| Bioma | Probabilità di presenza configurata | Quantità quando presente | Massimo base |
-|---|---:|---:|---:|
-| Pianura | 33,3% | 1–2 | 2 |
-| Colline / Valle | 100% | 4–8 | 8 |
-| Foresta | 50% | 2–3 | 3 |
-| Palude | 25% | 1 | 1 |
-| Montagne | 100% | 1–2 iniziali, poi target 30% di copertura | 92 teorico |
-| Fiume / Villaggio | 50% | 1 | 1 |
-| Mare / Lago | 20% | 1–2 | 2 |
-| Test | 100% | fino al 20% di copertura | 14 |
+Montagne, fiumi e forme costiere sono proprietà della zona, derivate dai confini regionali; non sostituiscono il bioma. HILLS regionale viene esportato come hills. I bordi montuosi sono trasmessi in mountainSides, i fluviali in riverSides. Mare e lago non sono territori selezionabili per l'apertura di una zona terrestre.
 
-Montagne consente fino a 90 aggiunte oltre alle 1–2 iniziali. Il limite tecnico non è il conteggio normalmente raggiunto. Colline non ha un target percentuale di superficie.
+Le quantità si riferiscono alla ricetta centrale; i confinanti contribuiscono alle fasce esterne. Isole e penisole mantengono la regola zero torrenti e il precedente override di tre rilievi per i biomi a bassa frequenza; Colline conserva la propria ricetta.
 
-Isole e penisole mantengono l'override centrale di tre rilievi per Pianura, Foresta, Palude, Fiume e Villaggio; Colline/Valle e Montagne mantengono la propria ricetta. Le colline ereditate sono aggiuntive. I torrenti sono esclusi su isole e penisole.
+Verifica runtime su cinque aperture regionali: colline 30,9–32,6%, boschi 24,6–24,9%, 1–3 torrenti. Snapshot hills-regional-*.

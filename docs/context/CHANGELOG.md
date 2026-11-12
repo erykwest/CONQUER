@@ -1,5 +1,13 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-12 — HILLS regionale corretto e coperture reali
+
+- Esportazione HILLS → hills, biomi terrestri Pianura/Colline/Foresta/Palude. Valle resta alias. Bordi montuosi espliciti (`mountainSides`) esportati dalla regione come fiumi e costa; catene generate sui lati richiesti senza sostituire il bioma.
+- Colline: 4–8 rilievi dimensionati per almeno 30% di superficie, H2–3; boschi calibrati al 25% effettivo, entro 20–30%; estrazione torrenti 100%, 1–3. Il vincolo precedente di zero torrenti su isole/penisole resta prioritario.
+- Cinque aperture con payload regionali reali riviste: 4/7/8 rilievi e casi con fiume o bordo montuoso. Copertura colline 30.9–32.6%, boschi 24.6–24.9%, torrenti 1–3. Zero montagne senza bordi richiesti; 16 cime sul bordo nord richiesto.
+- PASS hills-zone (cinque seed, alias e quattro orientazioni dei bordi), regional-demo (mapping e proprietà trasmesse), ricette biomi (42). Audit Territorio: 16 render invariati, zero errori, cinque avvisi schematici preesistenti. Snapshot `hills-regional-*`.
+- Economia e roadmap invariate. Le ricette legacy non fanno parte dei biomi selezionabili; salvataggi esistenti non rigenerati.
+
 ### 2026-11-12 — Quantità colline e alias Valle
 
 - Colline e Valle condividono la ricetta 4–8 rilievi, H2–3; Valle non genera più catene montuose o torrenti propri. Seed e pesi regionali normalizzati, colori terreno/minimappa allineati.

@@ -1,7 +1,7 @@
 'use strict';
 // One explicit contract shared by regional export and local demo startup.
 (()=>{
-  const terrainToBiome=Object.freeze({plain:'plains',forest:'forest',hills:'mountains',sea:'sea',swamp:'swamp',lake:'lake'});
+  const terrainToBiome=Object.freeze({plain:'plains',forest:'forest',hills:'hills',sea:'sea',swamp:'swamp',lake:'lake'});
   const biomeForTerrain=terrain=>Object.hasOwn(terrainToBiome,terrain)?terrainToBiome[terrain]:null;
   const directions=Object.freeze({north:[0,-1],northEast:[1,-1],east:[1,0],southEast:[1,1],south:[0,1],southWest:[-1,1],west:[-1,0],northWest:[-1,-1]});
   const contains=(p,ring)=>{let yes=false;for(let i=0,j=ring.length-1;i<ring.length;j=i++){const a=ring[i],b=ring[j];if((a.y>p.y)!==(b.y>p.y)&&p.x<(b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x)yes=!yes}return yes};
@@ -53,7 +53,7 @@
     return null;
   }
   const isSelectableTerrain=terrain=>!!biomeForTerrain(terrain)&&!['sea','lake'].includes(terrain);
-  const landBiomes=Object.freeze(['plains','forest','mountains','swamp']);
+  const landBiomes=Object.freeze(['plains','hills','forest','swamp']);
   const api={biomeForTerrain,isSelectableTerrain,landBiomes,riverJunctionCount,riverFlow,directions,sampleSurroundings,weights};
   if(typeof window!=='undefined')window.ConquerRegionalBiomeRules=api;
   if(typeof module!=='undefined')module.exports=api;

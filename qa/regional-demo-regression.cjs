@@ -13,11 +13,12 @@ assert.ok(launch('?regionalDemo=missing').error,'missing context shows an error,
 assert.ok(launch('?demo=unknown').error,'malformed demo never opens player save');
 assert.equal(launch('?demo=river&seed=bad').seed,4242);
 assert.ok(launch('?regionalDemo=abc',{version:1,biome:'plains',seed:123,name:'A1'}).error,'old payload without authoritative terrain cannot masquerade as plains');
-for(const [terrain,biome] of Object.entries({plain:'plains',forest:'forest',hills:'mountains',swamp:'swamp'})){
-  const payload={version:1,biome:'plains',terrain,seed:123,name:'Foresta è',riverFlow:{x:0,y:1,source:'regional-water-outlet'}};
+for(const [terrain,biome] of Object.entries({plain:'plains',forest:'forest',hills:'hills',swamp:'swamp'})){
+  const payload={version:1,biome:'plains',terrain,seed:123,name:'Foresta è',mountainSides:['north'],riverFlow:{x:0,y:1,source:'regional-water-outlet'}};
   const demo=launch('?regionalDemo=abc&regionalData='+encodeURIComponent(JSON.stringify(payload)));
   assert.equal(demo.biome,biome,'central terrain survives missing tab storage: '+terrain);
   assert.equal(demo.name,payload.name);
+  assert.deepEqual(JSON.parse(JSON.stringify(demo.mountainSides)),payload.mountainSides,'mountain borders survive launch');
   assert.deepEqual(JSON.parse(JSON.stringify(demo.riverFlow)),payload.riverFlow,'regional flow survives the URL launch boundary');
 }
 for(const terrain of ['sea','lake'])assert.ok(launch('?regionalDemo=water',{version:1,terrain,seed:123}).error,'water cells cannot launch a local map');
@@ -28,6 +29,8 @@ assert.equal(launch('?regionalDemo=abc',{version:1,terrain:'forest',biome:'river
 const harness=fs.readFileSync(__dirname+'/urban-regression.cjs','utf8').split('let passed=0;')[0]
   .replace('const context=vm.createContext(sandbox);','sandbox.window.__CONQUER_REGIONAL_DEMO__={seed:4242,biome:"river"};const context=vm.createContext(sandbox);');
 const check=new Function('require','__dirname',harness+`
+run(fs.readFileSync(__dirname+'/../src/regional-biome-rules.js','utf8'));run(moduleFile('regional-landscape'));run(moduleFile('hydrology'));
+
 assert.equal(run('initialSeed'),4242);
 assert.equal(run('State.biome'),'river');
 run(fs.readFileSync(__dirname+'/../src/settlement-app-persistence.js','utf8'));
