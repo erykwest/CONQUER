@@ -174,7 +174,7 @@ test('no phantom chest: budget check, external funds and save/reload',()=>{
   assert.equal(h.c.planJourney({id:'unfunded',source:'resident',houseId:'home3',
     originId:'well',destinationId:'city',coinGold:wallet+1}),true);
   assert.equal(h.c.reserveJourneyCoins('unfunded'),false);
-  assert.equal(h.e.state().wallet.L4,wallet);
+  assert.equal(h.e.state().wallet.L3,wallet);
   assert.equal(h.c.planJourney({id:'external',originId:'elsewhere',
     destinationId:'well',coinGold:9000}),true);
   assert.equal(h.c.reserveJourneyCoins('external'),false);
