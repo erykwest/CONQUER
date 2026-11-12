@@ -141,6 +141,7 @@
       knights:game?.knights?.(),
       militaryAssignments:game?.militaryAssignments?.(),
       diplomacy:window.ConquerDiplomacy?.state?.(),
+      church:window.ConquerChurch?.snapshot?.(),
       sites:(State.structures||[]).filter(s=>s.construction && typeof underConstruction==='function' && underConstruction(s))
     };
     d.warnings = warnings(d);
@@ -166,6 +167,7 @@
       kpi('Felicità',welfare==null?'—':fmt(welfare)+'/100','',welfare!=null&&welfare<40?'bad':''),
       kpi('Tesoreria',fmt(d.economy?.castleGold),'Oro economico'),
       kpi('Cantieri',fmt(d.sites.length)),
+      ...(d.church?.churches?[kpi('Chiesa',fmt(d.church.gold)+' oro','Favore '+fmt(d.church.favor)+'/100',d.church.favor<=30?'bad':'')]:[]),
       kpi('Cavalieri',fmt(d.knights?.current)),
       kpi('Avvisi',fmt(d.warnings.length),'',d.warnings.length?'bad':'good')
     ])+grid([

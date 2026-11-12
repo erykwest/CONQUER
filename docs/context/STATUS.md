@@ -1,5 +1,19 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-12 — CHIESA-01 fase 1 · Cassa della Chiesa (branch `feature/chiesa-fase1`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - nuovo `src/settlement-church.js` (`ConquerChurch`): Cassa e Favore in `State.economy.church`, migrazione lazy; offerte domenicali per classe dai borsellini (quota × fedeli serviti × resa del culto × (0,5 + felicità/100)); lasciti annui del 2% di L3/L4 con felicità ≥ 50; dono 10/50/100 dal `castleGold`;
+  - `ConquerEconomy.tick` chiama la Chiesa la domenica, a fine mese e a fine anno (i lasciti prima della chiusura del mese);
+  - scheda «Chiesa» nell'ispettore classico (`settlement-app-rooms.js`) e in UI v2 (`ChurchPanel` in `ui/shell.js`); riquadro «Chiesa» nel Profilo › Generale (`settlement-panels.js`);
+  - `index.html`: script dopo `settlement-commerce.js` e versioni dei file toccati aggiornate; `wiki/catalog.json` rigenerato (impronta dei sorgenti).
+- **PROVE LOCALI PASS:**
+  - `qa/church-regression.cjs` (11 casi), aggiunto al workflow Economy flows;
+  - tutti i 31 comandi di `economy-flows-regression.yml`; `founding-regression` è instabile anche su `main` (risposta a tempo) e passa rilanciandolo;
+  - multi-wells, infirmary, events-builder, cutaway-floors, crime-buildings, codex-wiki, codex-catalog.
+- **BROWSER (preview locale, chiesa iniettata da console):** nessun errore in console; la scheda mostra Cassa, Favore, entrate e fedeli serviti; «Dona 10» sposta 10 oro dal castello alla Cassa e porta il Favore da 55 a 56; il riquadro «Chiesa 63,6 oro · Favore 56/100» compare nel Profilo › Generale.
+- **NON VERIFICATO:** CI su GitHub (branch non pushato); partita reale con chiesa costruita dal Builder.
+
 ## 2026-11-12 — CHIESA-01 · La Chiesa come entità autonoma (solo specifica, branch `docs/chiesa`)
 
 - **NESSUN CODICE:** specifica approvata in [BACKLOG](BACKLOG.md), decisione [D-CHIESA-261112](DECISIONS.md). Nessun test eseguito né richiesto.
