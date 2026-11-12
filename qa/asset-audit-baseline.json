@@ -1,7 +1,7 @@
 {
  "version": 1,
- "generatedAt": "2026-11-04T14:44:28.911Z",
- "note": "Reviewed Asset Lab renders. Regenerate with: node qa/asset-audit.mjs --update-baseline Reviewed 2026-11-11 figure-billboards: population and troop sheets unchanged; existing signatures preserved.",
+ "generatedAt": "2026-11-12T15:42:06.228749+00:00",
+ "note": "Reviewed Territorio: 16 unchanged renders, zero failures, five schematic warnings; regional mountains enlarged 30 percent reviewed in five scenes on 2026-11-12. Main figure-billboards and existing signatures preserved. Regenerate with: node qa/asset-audit.mjs --update-baseline",
  "waivers": {
   "castle:pietra-quadrata-piccola-l2-latrina|damage-elemento-esterno-crollato|sagoma-conservata": "Falso positivo: la torre resta integra, le macerie dello sbalzo a terra allargano l'inquadratura e la torre risulta più piccola (rivisto nel foglio il 05/11/2026)."
  },

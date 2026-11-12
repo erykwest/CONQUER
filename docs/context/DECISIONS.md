@@ -1,5 +1,117 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+### 2026-11-12 — La quota collinare non impone una griglia
+
+La copertura minima deve essere raggiunta mantenendo varietà di superfici, contorni, rotazioni e distanze dei rilievi. Vietata la disposizione a file fisse come scorciatoia per soddisfare il 30%. Le catene montuose seguono il bordo regionale come direttrice, con dispersione longitudinale e trasversale delle singole cime; la medesima geometria è trasformata coerentemente per nord/est/sud/ovest.
+
+### 2026-11-12 — Bioma terrestre e proprietà dei confini
+
+Il terreno regionale hills corrisponde al bioma locale Colline, non Montagne. I quattro biomi terrestri sono Pianura, Colline (Valle alias), Foresta e Palude. Le catene montuose derivano dai bordi regionali espliciti/automatici e sono trasmesse in mountainSides; fiumi e costa restano proprietà additive della zona. Colline richiede 4–8 rilievi, almeno 30% di copertura, boschi 20–30% (target 25%) e 1–3 torrenti con attivazione 100%. Conservata l'eccezione zero torrenti per isole e penisole. Numero dei rilievi e quota di superficie sono vincoli distinti; non si aggiungono oltre otto rilievi per raggiungere la superficie.
+
+### 2026-11-12 — Valle equivale a Colline; quantità 4–8
+
+Valle è un alias compatibile di Colline nella generazione: stessa ricetta 4–8 rilievi H2–3 e normalizzazione dei seed e dei vicini, senza catene montuose proprie. Mare e Lago hanno un gate indipendente del 20% per 1–2 colline H1–2 sulle porzioni emerse; rimangono celle regionali non selezionabili. Il vecchio nome Vallata resta leggibile nei salvataggi/demo.
+
+### 2026-11-12 — Idrologia e orografia costiera
+
+Isole e penisole non generano torrenti e non accettano affluenti regionali di tipo torrente; la regola si applica a ogni bioma terrestre. I fiumi restano governati dalla rete regionale. I rilievi vengono accostati alle sponde effettive prima della composizione idrologica, preservando le quote e lo spazio dell'insediamento.
+
+### 2026-11-12 — Rilievi delle terre circondate dall'acqua
+
+Tre o quattro vicini cardinali dello stesso tipo mare/lago qualificano rispettivamente una penisola o un'isola. La ricetta centrale terrestre riceve tre colline di altezza 2–3, vicina alle 3–4 del bioma Colline, senza sostituire il bioma della vegetazione. Colline, Montagne e Valle mantengono la propria orografia. L'adattamento alle sponde ha precedenza sui rilievi.
+
+## REG-UPRIGHT-SHRUBS - Orientamento dei cespugli (12/11/2026)
+
+In 3D i cespugli boschivi sono billboard verticali con profondita reale, come gli alberi, e non fanno parte della texture del suolo. Il flip sinistra/destra dipende stabilmente da seed e posizione nella griglia, senza rimescolare geometria o quantita. Stessa orientazione nel fallback 2D.
+
+## REG-REAL-FOREST-SHRUBS - Cespugli distinti dalla trama (12/11/2026)
+
+I cespugli richiesti sono elementi visibili con sagoma propria, non la texture del terreno. Si riusano i sette SVG dei cespugli gia presenti: distribuzione deterministica separata dagli alberi e non moltiplicata dal loro aumento di densita. Alberi e cespugli condividono ordine di profondita, quota e occlusione; restano esclusi dalle superfici ripide. Sono decorativi all interno dei poligoni boschivi esistenti e non alterano l economia.
+
+## REG-TREE-DENSITY - Alberi e sottobosco distinti (12/11/2026)
+
+Aumenta soltanto il numero di alberi: target 2.5x nella stessa area boscosa. Cespugli/scatter e dettaglio procedurale del sottobosco mantengono le quantita; il dettaglio sui rilievi torna alla piena visibilita con ombreggiatura separata. Esclusione assoluta delle superfici ripide e rispetto di 1.1U attorno alle radici rispetto alle scarpate. Restano ammessi sommita e pendii dolci. Coperture dei biomi e geometrie del terreno invariate.
+
+## REG-WOODED-RELIEF - Boschi sui rilievi (12/11/2026)
+
+Il bosco puo occupare sommita e pendii dolci, restando escluso dalle pareti rocciose ripide. Questo aggiorna la precedente esclusione totale bosco/collina: acqua stagnante e corsi restano separati dai rilievi. Rendering per superficie con quota e luce del versante, tronchi verticali e occlusione dei rilievi davanti agli alberi. Densita invariata sulle superfici piane e diradata sui pendii; stessi asset. Il contenimento boschivo esclude le scarpate rocciose anche per i validatori esistenti, senza cambiare produzione o regole economiche. Le vecchie radure salvate restano preservate.
+
+## REG-LANDSCAPE-ORDER - Priorita geometrica (12/11/2026)
+
+I rilievi vengono fissati prima dei corsi d acqua; fiumi e torrenti devono aggirarli con tutta la larghezza della sponda, senza eliminare le colline. Confluenze e foci vengono definite prima del riempimento vegetale e palustre. Boschi, stagni e acquitrini evitano rilievi e rete definitiva, anche nei settori ereditati. Mare e grandi laghi restano ricevitori geografici della rete. In casi senza percorso libero, un corso incompatibile viene scartato senza modificare il rilievo. Le frequenze e i target di copertura restano quelli concordati. Economia invariata, gestita nell altro branch.
+
+## REG-SPORADIC-HILLS - Frequenza dei rilievi (11/11/2026)
+
+La frequenza indica la probabilita di un territorio con colline, non la percentuale della superficie: Pianura 1/3 (1-2 rilievi), Foresta 1/2 (2-3), Palude 1/4 (uno). Seed separato dalla rete idrografica, stesso risultato a ogni rigenerazione. I vincoli geometrici restano prioritari nelle zone costiere e limitrofe. Gli acquitrini lasciano asciutti rilievi e versanti; le scarpate reali restano compatibili con gli attuali validatori estrattivi. L economia resta di competenza dell altro branch. Questa iterazione modifica distribuzione e quantità, usando la geometria terrazzata esistente.
+
+## REG-ORGANIC-COAST - Isole e penisole (11/11/2026)
+
+Con tre o quattro lati di mare oppure di lago, la costa non e limitata alle fasce di blending: un contorno ovale deformato dal seed determina i poligoni mare/terra. Isole racchiuse dal mare, penisole collegate al lato terrestre indicato dai vicini. Il centro insediativo resta asciutto; i margini della buildable zone possono essere costieri. Restano invariati golfo a un lato e promontorio a due lati. Nessuna modifica alle probabilita dei biomi o ai paesaggi gia salvati.
+
+## REG-SWAMP-BALANCE - Copertura Palude (11/11/2026)
+
+Il bilanciamento sostituisce il numero prefissato di acquitrini: obiettivo 25% acqua stagnante e 25% boschi, entrambi nell intervallo 20-30% della superficie palustre; il resto rimane aperto, salvo corsi d acqua. Le percentuali si misurano sulla porzione del bioma, distinguendo centro e vicini; le fasce interpolate raccordano i target. I poligoni condividono rendering e collisione. Il conteggio delle macchie deriva dalla geometria, non e un target. Pianura resta al 20% di boschi.
+
+## REG-MARSH — Acquitrini e mulino ad acqua (11/11/2026)
+
+La Palude contiene acquitrini: specchi di acqua stagnante marrone-verde, con sponde fangose, canneti e vegetazione galleggiante. Sono elementi naturali, non un nuovo bioma; implementati come pond con waterBodyKind=marsh, quindi non edificabili. Restano distinti dai laghi e dagli stagni ordinari; i corsi non vengono forzati a sfociare in un acquitrino. Il mulino ad acqua si orienta e si valida esclusivamente sulle rive di fiumi e torrenti: mare, laghi, stagni e acquitrini non sono sorgenti ammesse, e l impronta deve restare fuori da tutte queste acque. Quantita palustri ancora quelle attuali, senza nuovo bilanciamento percentuale. Nessuna rigenerazione dei salvataggi esistenti.
+
+## REG-FLOW-30 — Verso del primario e confluenze (11/11/2026)
+
+Sostituisce il precedente angolo retto: ingresso di default a 30 gradi rispetto alla tangente del primario nel verso di valle, senza immissioni controcorrente. Il verso dei punti del primario rappresenta monte-verso-valle. Priorita: foce locale, vettore del tratto regionale ricavato dalla rete verso mare/lago, distanza dalle sorgenti quando non raggiunge acqua, fallback deterministico dal seed. Il vettore regionale orienta il percorso locale esistente, senza cambiarne il piazzamento. Curve affluenti raccordate con continuita tangenziale a un terminale di 9U. Restano primario unico (precedenza al fiume), sbocchi distanziati, lati alternati e vincoli contro incroci e parallelismi. Nessuna rigenerazione dei salvataggi esistenti.
+
+## REG-STREAM-T-HIERARCHY — Primario e affluenti a T (10/11/2026)
+
+Con piu corsi, uno solo e primario: un fiume ha sempre precedenza sui torrenti. Gli altri corsi confluiscono direttamente nel primario a T, con sbocchi distinti, distanti almeno 28U lungo il corso e 18U in linea d aria. Vietati torrenti autonomi paralleli, incroci a X e confluenze multiple nello stesso punto. Le curve affluenti sono costruite dallo sbocco con terminale perpendicolare, lati alternati e controlli su altre acque e rilievi. Il coseno assoluto con l asse complessivo del primario non supera .75; tra le direzioni degli affluenti non supera .86. In mancanza di spazio si omette l affluente. Il limite 0–3 dei torrenti e le probabilita restano invariati. Le sponde definitive sostituiscono i tagli boschivi provvisori.
+
+## REG-STREAMS-0-3 — Numero dei torrenti (10/11/2026)
+
+Nuove mappe: estrazione uniforme tra zero e tre dopo il gate stream della ricetta. Il gate resta .45 in Pianura e 1 in Foresta/Montagne/Palude: le probabilita finali teoriche sono rispettivamente 66.25/11.25/11.25/11.25% e 25/25/25/25% per 0/1/2/3 torrenti. Gli scarti per vincoli geometrici possono ridurre il numero. Richieste esplicite della rete regionale condividono il limite di tre torrenti; non limitano i fiumi regionali. Gli affluenti terminano al primo incrocio, senza attraversamenti ripetuti del ricevente. Boschi calibrati dopo la geometria finale dell’acqua.
+
+## REG-PLAINS-WOODS-20 — Boschi in Pianura (10/11/2026)
+
+Boschi indica la copertura vegetale, Foresta il bioma. Nelle nuove mappe Pianura il target dei boschi e il 20% della superficie della pianura, inclusi nel denominatore i terreni occupati da altri elementi. Centro e pianure ereditate sono calibrati separatamente; le fasce interpolano i contributi dei biomi. Vincoli di acqua, rilievo e spazio iniziale hanno priorita. La discretizzazione e lo smoothing ammettono una tolleranza geometrica, verificata nei test entro 1.5 punti percentuali. Nessuna rigenerazione dei salvataggi.
+
+## REG-SEA-DELTA-30 — Lago diretto, mare ramificato (10/11/2026)
+
+La regola aggiornata sostituisce il precedente delta nell’ultimo 20% per entrambi i riceventi: lago con singolo sbocco diretto, mare con distributari nel 30% finale. Percentuale misurata lungo il corso, non per numero di vertici. Scelta progettuale esplicita: lo studio di Seybold et al. descrive anche delta lacustri; la loro esclusione qui e una regola del gioco, non una conclusione del paper. Riferimento: https://www.pnas.org/doi/10.1073/pnas.0705265104 ; versione autori letta https://arxiv.org/html/0711.3283v1. Il modello del gioco resta geometrico e deterministico.
+
+## REG-WATER-SURFACE — Continuita dell’acqua e delta (10/11/2026)
+
+I contorni delle singole acque non devono comparire dentro un’altra acqua: tutti i bordi precedono i riempimenti nel layer condiviso. Il lago ha una propria fascia di sponda sulle rive reali e sulle isole, non sul limite artificiale del mondo. Delta fluviale: due distributari nell’ultimo 20% misurato per lunghezza d’arco, piu stretti e con sbocchi reali nel corpo ricevente. Nessun cambiamento alla geometria dei salvataggi gia esistenti; i delta generati mantengono le proprie larghezze al caricamento.
+
+## REG-WATER-NETWORK — Biomi e rete idrografica (09/11/2026)
+
+Bioma terrestre regionale ereditato nella zona: Pianura, Foresta, Montagne, Palude. Mare e Lago sono celle acquatiche escluse dalla selezione e apertura; costa, valle, colline e fiume descrivono morfologia/idrografia, senza ulteriori scelte locali di bioma. Le ricette legacy restano leggibili per compatibilita. Confluenza solo dove il grafo regionale ha una diramazione, non per ogni coppia di lati fluviali. L’affluente termina sul corso ricevente; la foce nel corpo acqua ricevente. Laghi distinti da piccoli stagni: nessuna foce automatica in un normale stagno. Raccordi geometrici deterministici, non simulazione di portata, erosione o quota di bacino. La palude richiede un successivo bilanciamento visivo di acqua/vegetazione.
+
+## REG-MOUNTAIN-UNIFORM — Posizionamento anche con biomi uguali (06/11/2026)
+
+L’uguaglianza dei biomi non permette di saltare la composizione montana: la ricetta legacy non equivale alla distribuzione esplicita di otto settori montuosi. La composizione va attivata con contesto montano completo anche se centro e vicini sono tutti Montagne. Caso di regressione T297, seed 1555837107.
+
+## REG-MOUNTAIN-VARIATION — Catena irregolare (06/11/2026)
+
+Correzione richiesta: mantenere il raddoppio ma rimuovere l’effetto coppia. Distribuzione continua lungo i settori scelti con posizioni e dimensioni variabili; nei limitrofi sagome indipendenti e distanza variabile, fianchi ancora intersecati. Pendenze 37–63 gradi (prima 40–60), maggiore escursione dei raggi e quindi delle altezze, senza cambiare il taglio al confine.
+
+## REG-MOUNTAIN-DENSITY — Massicci e taglio al bordo (06/11/2026)
+
+Richiesta: raddoppiare le montagne, farle intersecare e tagliarle al confine come le colline. Coppie di cime per settore/massiccio, non rilievi isolati con distanza minima. Conservare il cono originale, ritagliare impronta e facce al quadrato del mondo interpolando Z; chiudere i tagli con sezioni verticali. Stesso dato geometrico per i due renderer. Salvataggi conservati; applicazione alla generazione delle nuove mappe.
+
+## REG-COAST-SHAPES — Morfologia costiera (06/11/2026)
+
+Richiesta utente: 1 lato mare produce golfi; 2 lati adiacenti un promontorio roccioso al loro angolo e golfi sui due fronti; 3 lati una penisola; 4 lati un’isola. Per due lati opposti non esiste un angolo comune: conservare due coste a golfo. Deformazione deterministica nelle fasce di blending, senza sommergere il centro terrestre o cambiare i corner diagonali puri. Le rocce del promontorio sono ostacoli reali. Mare non selezionabile nella regionale (chiarimento esplicito); laghi selezionabili.
+
+## REG-EIGHT-BIOMES — Campioni direzionali (06/11/2026)
+
+Otto direzioni locali non implicano otto confinanti Voronoi distinti: un raggio dal centroide identifica il territorio oltre il primo bordo. Lo stesso confinante puo occupare piu direzioni. Al bordo del mondo si prolunga il terreno selezionato. Fasce 25/25/100/25/25 U e diagonali indipendenti; pesi condivisi tra terreno e componenti. I poligoni composti sono usati da rendering e collisioni. I servizi costieri esistenti ricevono la costa continua principale di ciascun mare; gestione portuale di tutte le coste disconnesse resta fuori da questa iterazione.
+
+## REG-CENTRAL-BIOME — Prima la cella centrale (05/11/2026)
+
+Scelta esplicita: correggere prima il bioma centrale, rinviando gli otto vicini. Il terreno della cella determina la ricetta locale; i fiumi restano elementi aggiuntivi di confine. Contesto mancante: errore visibile, mai Pianura implicita. Specifica: docs/REGIONAL-BIOME-SECTORS-PREVIEW.md.
+
+## REG-BIOME-RIVER2 — Morfologia dei meandri (05/11/2026, branch sperimentale)
+
+Richiesto: eliminare il pattern ripetuto e usare il riferimento geometrico [Division by Zero](https://divisbyzero.com/2009/11/26/the-geometry-of-meandering-rivers/). Implementazione nel branch: integrazione per lunghezza del corso, raggi proporzionati alla larghezza (2–3w), parametri delle anse variabili per seed; mantenere ingresso nella buildable zone di almeno 25 px sul riferimento 600 px. Riferimento empirico, non simulazione idraulica. I salvataggi conservano la geometria precedente. [Specifica](../REGIONAL-BIOME-SECTORS-PREVIEW.md).
+
 ## D-ECO-FIL-261110 — Filiere produttive complete (10/11/2026)
 
 - **DECISO (product owner, 10/11/2026), nessun codice:** specifica [ECO-FIL-01](BACKLOG.md).

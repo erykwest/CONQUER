@@ -17,14 +17,33 @@ on:
       - 'src/settlement-fleet.js'
       - 'src/settlement-naval-battle.js'
       - 'src/settlement-world.js'
+      - 'src/settlement-hydrology.js'
+      - 'qa/hydrology-network-regression.cjs'
+      - 'qa/water-surface-regression.cjs'
+      - 'src/settlement-landscape.js'
+      - 'src/settlement-coast.js'
+      - 'qa/marsh-regression.cjs'
+      - 'qa/river-flow-regression.cjs'
+      - 'qa/stream-hierarchy-regression.cjs'
+      - 'qa/stream-count-regression.cjs'
+      - 'qa/woodland-density-regression.cjs'
+      - 'qa/plains-woods-regression.cjs'
+      - 'qa/inherited-coast-regression.cjs'
       - 'qa/pier-regression.cjs'
       - 'qa/biome-recipes-regression.cjs'
+      - 'qa/mountain-density-regression.cjs'
+      - 'qa/regional-mountain-placement-regression.cjs'
+      - 'src/settlement-regional-landscape.js'
+      - 'src/regional-biome-rules.js'
+      - 'qa/regional-surroundings-regression.cjs'
   workflow_dispatch:
 
 jobs:
   sea-regression:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Expanded terrain, coast and swamp fixtures exceeded 10 minutes on the CI runner.
+    # Keep every check and the existing job name; match the full routing suite budget.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -35,7 +54,30 @@ jobs:
           for file in src/*.js qa/*.cjs; do node --check "$file"; done
       - name: Run sea coverage and pier regressions
         run: |
+          node qa/landscape-order-regression.cjs
+          node qa/sporadic-hills-regression.cjs
+          node qa/valley-hills-regression.cjs
+          node qa/hills-zone-regression.cjs
+          node qa/organic-hills-regression.cjs
           node qa/biome-recipes-regression.cjs
+          node qa/mountain-density-regression.cjs
+          node qa/regional-mountain-placement-regression.cjs
+          node qa/regional-surroundings-regression.cjs
+          node qa/regional-demo-regression.cjs
+          node qa/hydrology-network-regression.cjs
+          node qa/water-surface-regression.cjs
+          node qa/island-coast-regression.cjs
+          node qa/inherited-coast-regression.cjs
+          node qa/plains-woods-regression.cjs
+          node qa/forest-shrubs-regression.cjs
+          node qa/tree-density-balance-regression.cjs
+          node qa/wooded-relief-regression.cjs
+          node qa/woodland-density-regression.cjs
+          node qa/stream-count-regression.cjs
+          node qa/stream-hierarchy-regression.cjs
+          node qa/river-flow-regression.cjs
+          node qa/swamp-balance-regression.cjs
+          node qa/marsh-regression.cjs
           node qa/pier-regression.cjs
           node qa/ships-regression.cjs
           node qa/ship-crew-regression.cjs

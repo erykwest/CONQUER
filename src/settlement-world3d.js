@@ -402,15 +402,14 @@
     const m=meshBuilder();
     for(const f of State.environment||[]){
       if(f.type!=='mountain'||!(f.points?.length>=3))continue;
-      const apex={x:f.x,y:f.y,z:f.height||MOUNTAIN_HEIGHT};
       // Rock up to the snow line (75% of the height), snow cap above it.
       // Map-wide snow line (75% of the tallest summit): lower peaks may stay bare.
-      const k=typeof mountainSnowZ==='function'?Math.min(1,mountainSnowZ()/apex.z):1,s=p=>({x:f.x+(p.x-f.x)*(1-k),y:f.y+(p.y-f.y)*(1-k),z:apex.z*k});
-      for(let i=0;i<f.points.length;i++){
-        const a=f.points[i],b=f.points[(i+1)%f.points.length];
+      for(const q of mountainFacetPolygons(f,f.height||MOUNTAIN_HEIGHT)){
+        const {i,a,b}=q;
         const rock=typeof mountainFaceColor==='function'?mountainFaceColor(f,a,b,i):(window.ConquerStoneColor?.shade(MOUNTAIN_FACES[i%2])||MOUNTAIN_FACES[i%2]);
-        m.face([{x:a.x,y:a.y,z:0},{x:b.x,y:b.y,z:0},s(b),s(a)],rock);
-        if(k<1)m.face([s(a),s(b),apex],mountainSnowColor(f,a,b,i));
+        m.face(q.rock,rock);
+        if(q.snow.length)m.face(q.snow,mountainSnowColor(f,a,b,i));
+        for(const cut of q.cuts)m.face(cut,window.ConquerStoneColor?.shade('#514a40')||'#514a40');
       }
     }
     return new Float32Array(m.tris);
@@ -841,6 +840,19 @@
         for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(t.p.x,t.p.y,z,cx,cy,size,u,w)}
       }
     }
+    // Woodland bushes stand upright, like trees; never bake them flat into ground.
+    let forestBushes=0;
+    for(const f of State.environment||[]){
+      if(f.type!=='forest'||typeof forestShrubLayout!=='function')continue;
+      for(const b of forestShrubLayout(f)){
+        const uv=atlas.map.get('bush:'+b.shape);if(!uv)continue;
+        let [u0,v0,u1,v1]=uv;if(b.flip)[u0,u1]=[u1,u0];
+        const hr=580/920*b.scale,C=[[-.5,-.97*hr,u0,v0],[.5,-.97*hr,u1,v0],[.5,.03*hr,u1,v1],[-.5,.03*hr,u0,v1]];
+        for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(b.p.x,b.p.y,b.z+.01,cx,cy,b.width*(b.visualScale??1),u,w)}
+        forestBushes++;
+      }
+    }
+    S.stats.forestBushes=forestBushes;
     // Pines on the lower half of the mountains, standing on the cone surface.
     for(const f of State.environment||[]){
       if(f.type!=='mountain'||!f.height||typeof mountainPineLayout!=='function')continue;

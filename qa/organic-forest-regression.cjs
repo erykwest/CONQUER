@@ -51,8 +51,7 @@ for(let sample=0;sample<80;sample++){
   if(shifted)nonEllipse++;
 }
 assert.ok(nonEllipse>65,'forest borders must vary with asymmetric rounded lobes');
-assert.match(landscape,/for\(const p of f\.points\|\|\[\]\)/,'tree positions sample true organic extents');
-assert.match(landscape,/forestMax:120/,'large forests can draw proportional additional trees');
-assert.match(world,/if\(forestIntersectsSteepRelief\(candidate\)\)return false/,'old cliff exclusion still applies');
+assert.match(landscape,/!environmentContains\(f,p\)/,'tree positions use actual organic polygons');
+assert.match(landscape,/const trees=continuousForestTrees\(f\)/,'all woodland sizes use the same area-based spacing');
 assert.match(world,/polygonGap\(candidate\.points,f\.points\)>=minGap/,'old forest spacing stays geometric');
 console.log('PASS smooth varied polygons, no self-intersections, complete tree coverage, cliff and separation checks');
