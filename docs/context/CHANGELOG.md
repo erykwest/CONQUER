@@ -1,5 +1,7 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+11/11/2026 — `retire-25d-renderer`: D-RENDER-3D-261111, edifici e fortificazioni solo in World 3D; rimossi cache Canvas del castello, rasterizzatore opt-in castle3d, residui 2.5D di legno e merli, luci notturne Canvas; Asset Lab con controllo `renderer-3d`. Piramide: STATUS, BACKLOG, DECISIONS (nuova decisione). ROADMAP invariata.
+
 05/11/2026 — `feature/tower-inner-roof`: BC-251105-05, tetto interno dentro i merli delle torri in pietra T2+ (variante `innerRoof`), nel Builder, nel 2.5D, nel 3D e nel Lab. Piramide: STATUS, BACKLOG, feature-backlog. ROADMAP e DECISIONS invariate: nuova variante estetica, nessun contratto cambiato (le stanze sotto il tetto restano legate al tetto a falde).
 09/11/2026 — CI P2.4 (`perf/ci-p24-specialist-test-ownership-20261109`): rimosse 9 invocazioni test duplicate da Codex Wiki, Main fixes e CAMP, mantenendo owner di regressione in Runtime integrity e settlement-qa (always-on PR). Codex Wiki mantiene Playwright e filtri dei suoi check browser, Main fixes mantiene WebGL/render e UI/Combat, CAMP conserva animali e pattuglie. Aggiunta guardia P2.4 in `qa/ci-p1-regression.cjs`; suite completa P0 e tutte le baseline/test immutate.
 

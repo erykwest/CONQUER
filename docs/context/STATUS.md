@@ -1,5 +1,13 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-11 — D-RENDER-3D-261111 · ritiro del 2.5D per edifici e fortificazioni (branch `retire-25d-renderer`, NON MAIN)
+
+- **CODICE SUL BRANCH:** `settlement-render.js` senza cache Canvas `shadow`/`base`/`castleBody`/`castleFront`, bitmap composite, benchmark A/B e toggle «Castle cache»; `draw()` usa solo World 3D per la scena statica, senza WebGL2 terreno + avviso. `castle3d.drawBody/drawFront` (opt-in `?castle3d=1`) rimossi. World 3D: niente residuo 2.5D del legno (un modello mancante viene segnalato in console e in `__conquerPerf.world3dMissingWood`), niente merli 2.5D nel front pass. Fortificazioni in cantiere: `ConquerAssembly` o volume dell'impronta; ghost: volume dell'impronta. Notturno Canvas `drawNightLights` rimosso (`?nightlight=0` senza effetto).
+- **ASSET LAB:** stage sempre in 3D (`__CONQUER_ASSET_LAB__` ignora l'opt-out salvato), `ConquerWorld3D.invalidate()` a ogni cattura, campo `renderer` e controllo `renderer-3d` in `asset-audit.js`.
+- **RESTA 2.5D (seguiti):** drappo araldico del Mastio (`drawMastioDrapes`, overlay Canvas), strumento DEV «Prerender + test» (`settlement-assets.js`, usato anche da `house-catalog.html`), funzioni di pittura ormai non chiamate in `settlement-castle.js`/`settlement-castle-structures.js`/`settlement-room-exterior.js`/`settlement-cutaway-furniture.js` (da eliminare in una PR di pulizia).
+- **TEST:** `qa/*.cjs` 166/171 PASS; i 5 rimasti (`asset-audit-scope` senza argomenti, 4 `*-performance` senza Playwright) falliscono identici su `main`. Aggiornati i controlli sul sorgente 2.5D (clay-palette, cutaway-floors, refactor-module-boundaries, room-exterior-latrine, snow-tracks, stonecolor, wall-stairs, fire-collapse-cutaway-performance).
+
+
 ## 2026-11-05 — Tetto interno delle torri, BC-251105-05 (branch `feature/tower-inner-roof`, NON MAIN)
 
 - Nuova variante torre `innerRoof` (`off`/`on`, `STRUCTURE_VARIANTS.tower`): tetto a piramide (quadrate, a D) o cono (rotonde) arretrato dentro i merli, su un cordolo di pietra di 0,14U; tra tetto e merli resta il cammino di ronda (~0,22U). Regola `towerInnerRoofAllowed` (core): pietra, non semitorre, T2+, sommità a merli o caditoie, nessuna arma sulla piazza (arma e tetto interno si escludono). Geometria `towerInnerRoofGeometry` (population); 2.5D come pezzo ordinato tra i merli (`towerInnerRoofPiece`/`drawTowerInnerRoof`); 3D in `addTower` (castle3d → World 3D, Lab). Altezza visiva, sagoma di occlusione, ombra e chiavi di cache la includono.

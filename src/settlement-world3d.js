@@ -16,7 +16,8 @@
   const STORE_KEY='conquer.world3d.v2';
   const fromUrl=(()=>{try{const v=new URLSearchParams(location.search).get('world3d');return v===null?null:v!=='0'}catch{return null}})();
   const forcedCanvas=(()=>{try{return new URLSearchParams(location.search).get('renderer')==='canvas2d'}catch{return false}})();
-  let enabled=!forcedCanvas&&(fromUrl??(()=>{try{return localStorage.getItem(STORE_KEY)!=='0'}catch{return true}})());
+  // The Asset Lab audits the 3D frame only: a persisted opt-out never applies to its sandbox.
+  let enabled=!forcedCanvas&&(window.__CONQUER_ASSET_LAB__||(fromUrl??(()=>{try{return localStorage.getItem(STORE_KEY)!=='0'}catch{return true}})()));
   // Branch-local A/B: ?nightlight=0 keeps the same WebGL2 world, but uses old Canvas lights.
   let useGpuNightLights=(()=>{try{return new URLSearchParams(location.search).get('nightlight')!=='0'}catch{return true}})();
   if(fromUrl!==null){try{localStorage.setItem(STORE_KEY,fromUrl?'1':'0')}catch{}}
