@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-12 — URB-HEAT-01 · Skeleton territoriale (branch feature)
+
+Aggiunto modulo isolato `ConquerUrbanHeatmaps` con quattro mappe concettuali (domanda L1–L4, prestigio, sicurezza, crimine), sette canali e lettura del lotto; script caricato senza simulazione attiva. Aggiunta regressione richiamata da QA urbana e specifica `docs/URBAN-HEATMAP-SKELETON.md`. **Sul branch, non merge; QA/CI da verificare; nessuna migrazione o modifica gameplay.** Contratti in D-URB-HEAT-261112. ROADMAP invariata: nessuna milestone ripianificata.
+
+
 
 ## 2026-11-09 — BC-261109-02 · DEV e cantieri di ristrutturazione
 
