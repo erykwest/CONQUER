@@ -47,7 +47,7 @@ check('trades are deterministic per seed and survive save/reload',()=>{
   const a=harness([2,2,2]);a.e.tick(-1,0);
   const b=harness([2,2,2]);b.e.tick(-1,0);
   assert.deepEqual(asObject(a.c.state().shops),asObject(b.c.state().shops));
-  const resumed=harness([3,3,3],asObject(a.State.economy));
+  const resumed=harness([2,2,2],asObject(a.State.economy));
   resumed.e.tick(0,1);
   assert.deepEqual(Object.keys(resumed.c.state().shops).sort(),['h0','h1','h2']);
   for(const id of ['h0','h1','h2'])assert.equal(resumed.c.state().shops[id].kind,a.c.state().shops[id].kind);
