@@ -1,5 +1,14 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-SOC-CLASS-261112 — Migrazione attiva dei ceti civili (12/11/2026)
+
+- **DECISO:** i ceti sono identità permanenti, non livelli evolutivi. L1 servi (ex L1 e L2), L2 artigiani (ex L3), L3 borghesia istruita (ex L4), L4 esclusivamente nobiltà possidente. L1 non emigra volontariamente; L2/L3 possono emigrare in futuro; L4 ha *lealtà* anziché emigrazione automatica o rivolte ora.
+- **IMPLEMENTATO SUL BRANCH PR #206:** `ConquerSocialClasses` migra local/cloud una volta, preserva residenti degli alloggi (3/6/9/12), beni/stock e portafogli complessivi; campi/cava/miniera adesso L1, botteghe L2, commercio residenziale e routine amministrative L3, proprietà L4.
+- **IPOTESI NON APPROVATA:** 25% delle vecchie monete L4 ai nuovi L3 e 75% al portafoglio L4 proprietario. Somma conservata, da decidere.
+- **APERTO:** immigrazione/emigrazione reale, trasferimento famiglie durante ricostruzione/cambio prestigio, 12 template D1–D3, mansionario e impieghi effettivi L3, lealtà funzionale, UI Job Manager L2 artigiano.
+- **CONTRATTO:** [CIVIL-CLASS-MIGRATION](../CIVIL-CLASS-MIGRATION.md). La migrazione non rende operativi i sistemi heatmap o gli eventi.
+
+
 ## D-CIV-EVT-261112 — Eventi civili e dinamiche sociali (12/11/2026)
 
 - **DECISO DAL PRODUCT OWNER:** i popolani non evolvono tra ceti. L1 = servi vincolati, senza emigrazione volontaria; L2 artigiani e L3 borghesia istruita possono immigrare ed emigrare. L4 nobili proprietari: lealtà verso il potere, senza emigrazione automatica e senza simulazione di ribellioni armate in questa fase.
