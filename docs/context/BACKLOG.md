@@ -1,5 +1,20 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-12 — URB-HEAT-01 · Urbanistica a quattro heatmap
+
+**FASE 0 — SOLO SKELETON SU BRANCH, NON MERGE.** Contratto: [URBAN-HEATMAP-SKELETON](../URBAN-HEATMAP-SKELETON.md); decisione [D-URB-HEAT-261112](DECISIONS.md).
+
+- [x] API indipendente dal Builder con griglia deterministica: domanda L1–L4, prestigio, sicurezza e criminalità (7 canali, 4 sistemi).
+- [x] Sorgenti locali positive/negative, aree protette poligonali, interpolazione e lettura del lotto senza modificarlo.
+- [x] QA del modulo scritta e agganciata a `qa/urban-regression.cjs`; **PASS/FAIL da verificare in CI**.
+- [ ] Adapter da strutture, posti di lavoro e percorsi, mura/accessi, guardie e fonte autorevole Crime.
+- [ ] Domanda effettiva dei quattro ceti calcolata da famiglie in cerca e disponibilità abitativa.
+- [ ] D1–D3 sul lotto con capienza, multi-edificio/sopraelevazione e soglie anti-oscillazione.
+- [ ] Prestigio dell'edificio e ricostruzione completa del template al cambio ceto/proprietario.
+- [ ] Migrazione dei ceti L1–L4, L3+ e dei sistemi lavoro/economia/popolanI/salvataggi.
+- [ ] Quattro overlay debug nel Builder e regressioni browser/salvataggio.
+
+
 
 ## 2026-11-10 — ECO-FIL-01 · Filiere produttive complete
 
