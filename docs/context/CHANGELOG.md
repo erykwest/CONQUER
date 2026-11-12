@@ -1,5 +1,14 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-12 — Montagne regionali +30%
+
+- Raggi delle cime di bordo aumentati da 7–15U a 9.1–19.5U; altezza aumenta nella stessa proporzione, pendenza, numero e centri restano identici. Ingombri usati anche da collisioni e generazione colline.
+- Cinque snapshot `mountains-plus30-*` rivisti: quattro orientamenti con seed 1 e nord seed 229. Colline 32.4–33.0%, boschi 24.7–24.8%, 1–2 torrenti; 16 cime per bordo. Audit Territorio: 16 invariati, zero errori, cinque avvisi schematici preesistenti.
+- Difetto preesistente riprodotto prima e dopo: HILLS seed 1, bordo montuoso nord + fiume est non genera rete idrica. Da correggere separatamente; non introdotto dall'aumento di scala.
+- PASS hills-zone (cinque seed, alias Valle e quattro bordi), organic-hills; cinque snapshot browser e audit Territorio.
+- Economia, roadmap e classificazione dei biomi invariate. Modifica sul branch sperimentale, nessun merge in main.
+
+
 ### 2026-11-12 — Rilievi organici e cime disperse
 
 - Rimossa la griglia a due file e la rotazione quasi fissa che causavano la regressione visiva. Colline collocate per tentativi geometrici con rotazioni libere, rapporti fra assi e superfici differenti, contorni più lobati. Numero 4–8 e minimo 30% preservati senza aggiungere rilievi oltre il limite.

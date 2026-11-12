@@ -1353,7 +1353,8 @@ function biomeMountains(){
     for(const side of [...new Set(sides)].filter(s=>['north','east','south','west'].includes(s)))for(let i=0;i<16;i++){
       const t=i===0?0:i===15?200:clamp((i+.5)*200/16+(rnd()-.5)*22,0,200),off=45+Math.sin(t/35+State.seed)*8+(rnd()-.5)*30;
       const p=side==='north'?{x:t,y:off}:side==='south'?{x:t,y:200-off}:side==='west'?{x:off,y:t}:{x:200-off,y:t};
-      const peak=makeEnvBlob(rnd,'mountain',t,off,7+rnd()*8,7+rnd()*8,'#56493c','#968470',18,.1);
+      // Uniform 130% size: preserve seeded centres and slope, enlarge physical footprint and height.
+      const peak=makeEnvBlob(rnd,'mountain',t,off,(7+rnd()*8)*1.3,(7+rnd()*8)*1.3,'#56493c','#968470',18,.1);
       const turn=q=>side==='north'?q:side==='south'?{x:q.x,y:200-q.y}:side==='west'?{x:q.y,y:q.x}:{x:200-q.y,y:q.x};
       peak.points=peak.points.map(turn);peak.x=p.x;peak.y=p.y;if(side==='east'||side==='west')[peak.rx,peak.ry]=[peak.ry,peak.rx];
       peak.unclippedPoints=peak.points;peak.points=clipTerrainPolygon(peak.points).map(q=>({x:q.x,y:q.y}));
