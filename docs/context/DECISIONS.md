@@ -1,5 +1,14 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-CIV-EVT-261112 — Eventi civili e dinamiche sociali (12/11/2026)
+
+- **DECISO DAL PRODUCT OWNER:** i popolani non evolvono tra ceti. L1 = servi vincolati, senza emigrazione volontaria; L2 artigiani e L3 borghesia istruita possono immigrare ed emigrare. L4 nobili proprietari: lealtà verso il potere, senza emigrazione automatica e senza simulazione di ribellioni armate in questa fase.
+- **DECISO:** fiere, giostre, feste religiose e altri eventi possono influire diversamente sui ceti e sul prestigio territoriale; per L4 il canale è la lealtà. Gli effetti devono essere reversibili/temporanei e non devono innescare ricostruzioni edilizie su oscillazioni effimere.
+- **DIREZIONE TECNICA:** riusare le sedi/scene e il ciclo degli eventi già nel gioco, con modulo puro di preview `ConquerCivicEventEffects` sovrapposto alle heatmap della PR #206. `feast` può rappresentare eventi sociali diversi e richiede un classificatore `civicKind` esplicito prima dell'applicazione degli effetti.
+- **NON APPROVATI:** importi, coefficienti sociali, durata e raggi, prerequisiti dei luoghi sacri, bilanciamento, impatto reale sulla migrazione e sistemi di rivolta. Sono segnaposto da collaudare.
+- **STATO:** skeleton su branch PR #206, non attivo; [contratto](../CIVIC-EVENT-EFFECTS-SKELETON.md).
+
+
 ## D-URB-HEAT-261112 — Classi, densità e quattro heatmap territoriali (12/11/2026)
 
 - **DECISO dal product owner:** ceti civili L1 manodopera comune (inclusi contadini, pastori, cavatori/minatori); L2 artigiani; L3 borghesia istruita (mercanti, scribani, magistrati); L4 solo nobili proprietari, con rendite e possedimenti. Commercio L3 non equivale a possesso nobiliare L4.
