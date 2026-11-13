@@ -82,6 +82,11 @@ STATUS, BACKLOG e DECISIONS (regola transitoria della resa del culto) aggiornati
 
 BACKLOG, STATUS e DECISIONS aggiornati; ROADMAP invariata; nessun codice.
 
+## 2026-11-10 — UI v2: fix rapidi dalla review dell'interfaccia (branch `fix/ui-v2-quickfixes`)
+
+- Review completa delle due UI: la v2 su `main` comanda ancora i pulsanti legacy nascosti e ogni strumento è definito in tre file; elenco dei buchi di parità nel [BACKLOG](BACKLOG.md#ux--ui-v2-isole-opt-in-ui2-26102026).
+- Fix: Argilla nella barra risorse, stato senza id grezzi e con le frasi legacy più frequenti in italiano, stato di salvataggio «errore», tooltip delle barre in alto verso il basso, barre in alto senza sovrapposizione a 1024px, Panoramica senza troncamenti, stringhe di `shell.js` in `i18n-it.js`. Stato e prove in [STATUS](STATUS.md). ROADMAP e DECISIONS invariate: nessun contratto di simulazione toccato.
+
 ## 2026-11-09 — BC-261109-02 · DEV e cantieri di ristrutturazione
 
 - **Prove aggiuntive PASS:** regressione d'assedio reale Canvas/WebGL e perdita contesto WebGL; annullamento di upgrade conserva i danni subiti durante il cantiere.
