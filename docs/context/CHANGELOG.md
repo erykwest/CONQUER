@@ -16,6 +16,126 @@ Il cavallo 2D, condiviso da ogni uso in gioco, passa da sagoma tozza da asino a 
 
 Chiusura di `economic-balances-animations`: verificato che economia, veicoli 2D e cartelli sono già in main (#108, D-054, D-055) e che i file residui sono superati. Completato l'unico residuo dopo #201: carri, carretti e carrozze (cavalli e conducente compresi) entrano nel depth buffer come carte 2D dell'atlante figure (`figure()` con `card={span,ox}`), occlusi da murature e case; convogli dei cartelli disegnati con la popolazione. Nuove prove `vehicles-regression` (caso WebGL) e `vehicle-cards-browser.mjs` nel workflow Main fixes. Decisione D-VEH-CARDS-261112 (applica D-046). ROADMAP invariata. Nessun nuovo modello né asset: il Lab mostra già il carro 2D usato dalla carta, audit asset non necessario.
 
+## 2026-11-13 — CAM-ROT-01 · Rotazione libera della camera
+
+13/11/2026 — `feature/free-camera-rotation` (pre-merge):
+- La vista ruota a qualsiasi angolo: Shift + tasto centrale trascinato, con Ctrl a scatti di 15°. Tasto centrale/destro da soli restano pan; Q/E e pulsanti girano di 90°.
+- Proiezione 2D, shader WebGL e ombreggiatura delle facce accettano angoli frazionari; i quarti interi usano lo stesso percorso esatto di prima.
+- QA: 51 regressioni Node PASS; prova in gioco sul layout `TEST` a 22,5°, 30°, 45° e 105°.
+- Limite: trascinamento a ~6 fps (ogni angolo ricostruisce scena e mesh).
+
+STATUS, BACKLOG e CHANGELOG aggiornati; ROADMAP e DECISIONS invariate (comando di camera, nessun contratto toccato).
+
+## 2026-11-13 — MP-01…MP-06 · Scope multiplayer e colonizzazione feudale (solo documentazione)
+
+Registrato il modello con posti umani separati dai bot e dai territori non colonizzati, ingresso su nuovi villaggi senza sostituzione bot, priorità delle terre libere e possedimenti aperti alla fondazione di sudditi, configurabili dal signore in alternativa all'autosviluppo. Esempio 100 territori / 30 posti umani / 30 bot non vincolante; lobby informativa, ×1 multiplayer e punti aperti su avvio, mastio, permessi e durata. Specifica [MULTIPLAYER-SERVER-SCOPE](../MULTIPLAYER-SERVER-SCOPE.md), decisione D-MP-261113, backlog MP-01…MP-06. **Nessun codice o QA runtime modificato/eseguito. ROADMAP invariata: World/Feudal resta M4.**
+
+
+## 2026-11-13 - Preparazione merge PR #206
+
+Preparazione merge PR #206: main aggiornato riconciliato mantenendo moduli e documenti di entrambi i branch. Catalogo Wiki rigenerato. Gilda riferita agli artigiani L2; dazio botteghe e relativo malcontento addebitati a L2 anziche L3, con regressione riprodotta prima del fix. Fondazione: cinque scenari superati isolatamente con Node 22, ma timing intermittente oltre 100 ms nella suite anche su Node 22; verifica Actions ancora necessaria. Nessuna soglia allentata. Suite completa e Actions da completare prima del merge. Nessuna nuova funzione demografica, giudiziaria o archetipo edilizio.
+
+## 2026-11-13 - Verifica CI PR #206
+
+Corretta asserzione livestock obsoleta dopo SOC-CLASS-02. Test comportamentali su selettore agricolo reale, riserve cave, esclusione allevatori e conservazione della vocazione su 400 case migrate superati. Suite completa e CI da completare prima del merge. Nessuna modifica runtime o bilanciamento; ROADMAP e DECISIONS invariate. Demografia, 12 archetipi e funzioni giudiziarie fuori scope.
+
+## 2026-11-12 — SOC-CLASS-02 · Migrazione ceti sul branch PR #206
+
+Migratore puro `ConquerSocialClasses` e applicazione una tantum ai save locali/cloud; census house L1+ex-L2 con abitanti conservati, L2 artigiani e L3 istruiti/mercanti, L4 nobiltà. Riassegnate professioni economiche, botteghe, routine sociali e fondi commerciali; nuova lealtà nobiliare; QA dedicata e regressioni aggiornate. Partizione 25/75 del vecchio portafoglio L4 da approvare. Codice su branch, non merge, CI completa da verificare; immigrazione/ricostruzione D1–D3 NON attivate. [Specifiche](../CIVIL-CLASS-MIGRATION.md).
+
+
+## 2026-11-12 — CIV-EVT-01 · Skeleton degli effetti civili (branch PR #206)
+
+Aggiunto `ConquerCivicEventEffects`, API read-only per 8 tipi di eventi civili con bonus differenziati di felicità L1–L3, lealtà L4, ripetizione e prestigio temporaneo; collegamento di anteprima alle heatmap PR #206. Riutilizzati allestimenti/fasi esistenti, nessun mutamento di salvataggi, costi o popolazione. Aggiunta regressione alla suite urbana, [contratto](../CIVIC-EVENT-EFFECTS-SKELETON.md) e decisione D-CIV-EVT-261112. Sul branch, non merge: Node/browser/CI da verificare.
+
+
+## 2026-11-12 — URB-HEAT-01 · Skeleton territoriale (branch feature)
+
+Aggiunto modulo isolato `ConquerUrbanHeatmaps` con quattro mappe concettuali (domanda L1–L4, prestigio, sicurezza, crimine), sette canali e lettura del lotto; script caricato senza simulazione attiva. Aggiunta regressione richiamata da QA urbana e specifica `docs/URBAN-HEATMAP-SKELETON.md`. **Sul branch, non merge; QA/CI da verificare; nessuna migrazione o modifica gameplay.** Contratti in D-URB-HEAT-261112. ROADMAP invariata: nessuna milestone ripianificata.
+
+
+## 2026-11-13 — GILDA-01 fase 1 · Bonus delle botteghe e Gilda unica
+
+13/11/2026 — `feature/gilda-fase1` (pre-merge):
+- Nuovo modulo `ConquerGuild`: una Gilda attiva per villaggio, bonus +25/+50/+100% sulla produzione delle botteghe L3, scalato dalla resa dei funzionari (1 finché SCOL-01 non porta i ruoli).
+- Il Builder rifiuta una seconda Gilda; nei vecchi salvataggi lavora solo la migliore.
+- Scheda Gilda nell'ispettore (classico e UI2) e KPI nel Profilo.
+- Regressione `qa/guild-regression.cjs` nel workflow economico.
+
+STATUS, BACKLOG e CHANGELOG aggiornati; DECISIONS e ROADMAP invariate (la fase segue D-GILDA-261113).
+
+## 2026-11-13 — GILDA-01 · Gilda (solo specifica)
+
+13/11/2026 — `docs/gilda-01`: specifica della Gilda approvata dal product owner.
+- Solo produttività: +25/+50/+100% per livello su produzione e consumo delle botteghe L3, una Gilda attiva per villaggio.
+- Funzionari laici `guild.official` (posti 1/2/3, nessun bonus senza funzionari).
+- Cassa della Gilda alimentata da una quota sulle vendite a pareggio automatico (tetto 15%), dopo il dazio.
+- Nuovo pagatore `payer:'guild'` nel contratto D-SCOL-261112; nessun legame con Municipio ed Erario.
+- La Casa delle Corporazioni è assorbita: tolta dal catalogo «da confermare».
+
+BACKLOG, DECISIONS, STATUS e CHANGELOG aggiornati; ROADMAP invariata.
+
+13/11/2026 — `docs/scriptorium-effects`: specifica SCRIPT-01 approvata dal product owner (maestro laico `scriptorium.master`, scuola ferma senza maestro, ingaggio del chierico a 60 oro come modifica a D-SCOL-261112 §6, +1 Prestigio, codici miniati ARTE solo nello Scriptorium Clericale, interno in sezione come ultima fase). Nuova decisione D-SCRIPT-261113; voci di catalogo dello Scriptorium aggiornate. Nessun codice, test o asset modificato; ROADMAP invariata.
+
+## 2026-11-12 — SCOL-01 fase 1 · Scolarizzati: dati, tetto e ingaggio
+
+12/11/2026 — `feature/scol-01-fase1` (pre-merge):
+- Nuovo modulo `ConquerEducated`: contatori laici/chierici nelle case L3/L4 dentro `State.economy`, con migrazione lazy.
+- Tetto di 3 posti per casa L3 e 4 per casa L4. Eccedenza senza alloggio che rientra o emigra dopo 4 settimane.
+- Ingaggio del signore a 40 oro con arrivo in 14 giorni e rimborso se non c'è posto.
+- Sotto-righe nei pannelli e scheda «L3 · Istruiti» nel Job Manager.
+- Regressione `qa/educated-regression.cjs` aggiunta al workflow economico.
+- Nessun effetto sul lavoro finché non arrivano i ruoli (fase 3).
+
+Corretta nella specifica la frase «3 posti per casa»: la formula approvata dà 4 posti alle case L4. STATUS, BACKLOG, CHANGELOG e DECISIONS aggiornati; ROADMAP invariata.
+
+## 2026-11-12 — SCOL-01 · Scolarizzati (solo specifica)
+
+12/11/2026 — `docs/scolarizzati`: specifica della sottoclasse «Scolarizzati» approvata dal product owner.
+- Contatori laici/chierici sulle case L3/L4, senza secondo ledger.
+- Tre origini: Scriptorium con selettore Laico/Clericale, 4 allievi e 1 anno; immigrazione mensile; ingaggio a 40 oro con arrivo in 2 settimane.
+- Ruoli registrati dalle sessioni proprietarie, con resa proporzionale e soglia.
+- Salario 2 × L3 con cursore 50–200% che muove arrivi e partenze.
+- Penalità per disoccupazione istruita; eccedenza senza alloggio per 4 settimane.
+- Contratto D-SCOL-261112 in DECISIONS per Gilda, Scriptorium, FISCO-01, CRIME, ARTE, diplomazia e la futura sessione Chiesa.
+
+12/11/2026 — `feature/bargello-balivo` (FISCO-01 fase B, pre-merge):
+- Nuovo modulo Erario (`ConquerTreasury`) e scheda ERARIO nel Profilo, con cursori, efficienza e decreti.
+- Imposte nuove: testatico, dazio delle botteghe L3, pedaggio e decima in natura, riscosse con l'efficienza del Municipio del centro, dei Bargelli e dei Balivi.
+- Sette decreti del consiglio. La leva straordinaria tiene armata una quota di uomini L1/L2 senza allarme; il cursore `levy` è rimosso.
+- `qa/treasury-regression.cjs` aggiunto in CI. Contratto tecnico in D-FISCO-261110. ROADMAP invariata.
+
+12/11/2026 — `feature/bargello-balivo`: FISCO-01 rimanda al futuro contratto «Scolarizzati» per classe, formazione e salari di esattori e giudici (prima: «nuovo mestiere L2»). Solo documentazione.
+
+10/11/2026 — `feature/bargello-balivo` (FISCO-01 fase A, pre-merge): specifica fiscale concordata con l'utente (Erario, cinque imposte, efficienza di riscossione del Municipio, Bargello, sala delle guardie, Palazzo del Balivo, decreti con leva straordinaria; giustizia ancora proposta) in BACKLOG e D-FISCO-261110. Implementati solo i modelli: Bargello e Palazzo del Balivo L1–L2 da Blender, Builder, collocamento, cantiere, crollo, incendio, cutaway, Lab, Codex. Nessun effetto di gioco. ROADMAP invariata.
+
+09/11/2026 — CI P2.4 (`perf/ci-p24-specialist-test-ownership-20261109`): rimosse 9 invocazioni test duplicate da Codex Wiki, Main fixes e CAMP, mantenendo owner di regressione in Runtime integrity e settlement-qa (always-on PR). Codex Wiki mantiene Playwright e filtri dei suoi check browser, Main fixes mantiene WebGL/render e UI/Combat, CAMP conserva animali e pattuglie. Aggiunta guardia P2.4 in `qa/ci-p1-regression.cjs`; suite completa P0 e tutte le baseline/test immutate.
+
+
+## 2026-11-12 — CHIESA-01 fase 1 · Cassa della Chiesa
+
+12/11/2026 — `feature/chiesa-fase1`: la Chiesa ha una sua Cassa.
+- Ogni domenica le offerte arrivano dai borsellini delle classi servite da una chiesa.
+- A fine anno arrivano i lasciti di L3 e L4, se le due classi sono contente.
+- Il signore può donare 10, 50 o 100 oro e guadagna Favore.
+- Scheda «Chiesa» nell'ispettore di ogni chiesa e riquadro nel Profilo › Generale.
+- Nuova regressione `qa/church-regression.cjs`.
+
+STATUS, BACKLOG e DECISIONS (regola transitoria della resa del culto) aggiornati; ROADMAP invariata.
+
+## 2026-11-12 — CHIESA-01 · La Chiesa come entità autonoma (solo specifica)
+
+12/11/2026 — `docs/chiesa`: il product owner ha approvato la specifica della Chiesa come istituzione distinta dal castello.
+- Una sola istituzione per villaggio, con una Cassa che non è un secondo ledger.
+- Entrate: offerte domenicali, lasciti annui e doni del signore. Nessuna decima ecclesiastica.
+- Spese in ordine fisso: salari dei chierici, rette clericali, carità, feste, co-finanziamento dei cantieri.
+- La Chiesa decide ogni anno il salario dei chierici e smette di farli pagare al castello.
+- Posti per livello della chiesa; il Monastero forma 2 novizi l'anno.
+- Favore 0–100 verso il signore, che muove le prediche; messa domenicale con capienza.
+- Modifiche al contratto D-SCOL-261112 descritte in D-CHIESA-261112.
+
+BACKLOG, STATUS e DECISIONS aggiornati; ROADMAP invariata; nessun codice.
+
 ## 2026-11-09 — BC-261109-02 · DEV e cantieri di ristrutturazione
 
 - **Prove aggiuntive PASS:** regressione d'assedio reale Canvas/WebGL e perdita contesto WebGL; annullamento di upgrade conserva i danni subiti durante il cantiere.
@@ -115,6 +235,9 @@ Branch documentale `docs/codex-catalog-audit-20261105`, base `main` `bcf3cd7`. A
 ## 2026-11-05 — Latrina nelle torri W1 (branch `fix/latrine-towers`)
 
 - Correzione dell'utente: la latrina va al piano 2 delle torri W1 in pietra, con lo sbalzo sulla faccia esterna libera; non va più nelle sezioni costruite.
+- Validazione con l'utente (12/11): falda a lastra unica con gronda corta (5 cm davanti, 3 ai lati) appoggiata su timpani in pietra; panca a 3 fori dentro lo sbalzo (Blender), non più sedili nella stanza. 2.5D: lo sbalzo dietro la torre si disegna prima del corpo del castello (la torre lo copre); nel cutaway quello sul lato tagliato perde solo la facciata, scarichi e fori sotto lo sbalzo spariscono; torre madre e sottotorri si coprono solo quando una sta davvero davanti. Lab: variante «Grande quadrata L3 + sottotorre W1 latrina» (lo stage accetta `attach` per le sottotorri).
+- Falda dello sbalzo rivista con l'utente (11/11): una lastra unica, il doppio di pendenza (0,24 U) e di sporgenza (12 cm davanti, 8 ai lati). Decisione dell'utente: il renderer 2.5D sarà dismesso (tranne scatter e personaggi), lavoro in un branch a parte; gli asset si verificano in 3D.
+
 - Revisione: con una stanza assegnata la torre W1 perde la scala a chiocciola; latrina comune a 3 fori, meno sporgente, falda corretta, stanza arredata; sbalzo leggibile nel cutaway. Deroga d'audit motivata per «sagoma-conservata» sullo sbalzo crollato della torre quadrata.
 - Le torri W1 ricevono una stanza per piano, ma con la scala a chiocciola accettano solo Colombaia (ultimo piano), Latrina, Prigione, Tesoro e Armeria.
 - `ROOM_EXTERIOR` monta l'elemento `face` anche sulle torri; le feritoie della faccia gli lasciano il posto. Asset Lab: tre varianti di torre W1 nuove, la variante della sezione con latrina rimossa; baseline aggiornata.
@@ -144,6 +267,10 @@ Branch documentale `docs/codex-catalog-audit-20261105`, base `main` `bcf3cd7`. A
 
 
 05/11/2026 — `fix/audit-sheet-grid`: i fogli provini per categoria vanno a griglia da 8 colonne. Lo sfondo neutro evita che le celle vuote sembrino un esito verde. Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è uno strumento di QA, non cambia contratti.
+
+## 2026-11-09 — Coperture della long house (branch `feature/longhouse-roofs`)
+
+- BC-251105-09: la long house lignea W1/W2 ha tre manti a scelta nel pannello (scandole, paglia, zolle erbose), generati nel modello Blender, e uno sfiatatoio nel colmo da cui esce il fumo del focolare. Quattro varianti nuove nell'Asset Lab. Piramide: STATUS, BACKLOG, CHANGELOG e `feature-backlog.md`. ROADMAP e DECISIONS invariate: nessun contratto nuovo, solo un campo di variante.
 
 05/11/2026 — `feature/double-crenel` (BC-251105-04): nuovi stili delle merlature «Merlo doppio» (merli lunghi il doppio sulle mura, sequenza 11011011) e «Doppia fila» (seconda fila di merli sul lato interno del cammino delle mura). Entrambi selezionabili nel Centro di controllo › Cantieri, presente nel Lab. Piramide: STATUS, BACKLOG, CHANGELOG, feature-backlog. ROADMAP e DECISIONS invariate: estende un contratto esistente (`State.policies.crenelStyle`).
 

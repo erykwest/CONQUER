@@ -2,6 +2,8 @@
 
 This folder defines the initial contracts for social events. It intentionally does not activate gameplay or alter the main simulation.
 
+**Social-effects companion (PR #206, 12/11/2026):** [CIV-EVT-01](../CIVIC-EVENT-EFFECTS-SKELETON.md) adds a separate read-only event effects catalog. It reuses these venue layouts and lifecycle states; it does **not** connect costs, happiness, loyalty, migration or temporary prestige to the live simulation.
+
 ## Spaces
 - **Street performance spot**: player-placed small location; spontaneous performance by one artist or a pair, with a small audience.
 - **Stage**: player-placed permanent performance platform; group performances with audience.

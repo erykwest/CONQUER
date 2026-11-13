@@ -1,5 +1,8 @@
 # CONQUER — Piramide di contesto
 
+**Scope multiplayer (13/11/2026, solo design):** [Server, slot giocatori/bot, ingresso tardivo e colonizzazione feudale](../MULTIPLAYER-SERVER-SCOPE.md), decisione [D-MP-261113](DECISIONS.md). Nessun sistema server/lobby integrato su `main`; la roadmap M4 non viene anticipata.
+
+
 **Codex Obsidian (branch feature):** [contenuti Markdown dal vault personale alla Wiki](../CODEX-OBSIDIAN.md), import con validazione e controllo conflitti, prezzi/regole dai provider.
 
 **Codex Wiki (05/11/2026, branch feature):** [consultazione ipertestuale web/in-game](../CODEX-WIKI.md), con keywords di sovracategoria collegate a pagine e catalogo pubblico generato.

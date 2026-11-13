@@ -75,7 +75,7 @@
     :path.includes('/interior/')?'Interni':path.includes('/heraldry/')?'Araldica':'Territorio';
   const fileFamily=path=>path.includes('/architecture/')?'Elementi architettonici':path.split('/').slice(-2,-1)[0]||'SVG';
   const prettify=key=>key.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/[_-]+/g,' ').replace(/(\d+)/g,' $1').trim().replace(/^./,m=>m.toUpperCase());
-  const nameOverrides={church:'Chiesa',tavern:'Taverna',market:'Mercato',townhall:'Municipio',guild:'Gilda',quarry:'Cava',mine:'Miniera',clayPit:'Cava d’argilla',
+  const nameOverrides={church:'Chiesa',tavern:'Taverna',market:'Mercato',townhall:'Municipio',guild:'Gilda',bargello:'Bargello',balivo:'Palazzo del Balivo',quarry:'Cava',mine:'Miniera',clayPit:'Cava d’argilla',
     loggingCamp:'Campo taglialegna',stockyard2:'Piazzale · magazzino 2×2U',stockyard4:'Piazzale · magazzino 4×4U',stockyard6:'Piazzale · magazzino 6×6U',watermill:'Mulino ad acqua',windmill:'Mulino a vento',crate:'Cassa',barrel:'Botte',
     sheep:'Pecora',goat:'Capra',cow:'Mucca',horse:'Cavallo',deer:'Cerva',stag:'Cervo',wolf:'Lupo',bear:'Orso',boar:'Cinghiale',
     ram:'Ariete',catapult:'Mangano',trebuchet:'Trabucco',tower:'Torre d’assedio',tower2:'Torre d’assedio (variante)',
@@ -97,7 +97,7 @@
     const art=window.ConquerArtModels?.catalog?.[key];if(art)return art.label;
     const furled=/Furled$/.test(key),ship=window.ConquerShipModels?.ships?.[key.replace(/Furled$/,'')];
     if(ship)return ship.label+(ship.size==='large'?' · grande':' · piccola')+(furled?' · vele alzate':' · vele spiegate');
-    const m=/^(church|tavern|market|townhall|guild|windmill|watermill|quarry|mine|loggingCamp)(\d+)$/.exec(key);
+    const m=/^(church|tavern|market|townhall|guild|bargello|balivo|windmill|watermill|quarry|mine|loggingCamp)(\d+)$/.exec(key);
     return m?(nameOverrides[m[1]]||prettify(m[1]))+' · livello '+m[2]:prettify(key);
   }
   const items=[];

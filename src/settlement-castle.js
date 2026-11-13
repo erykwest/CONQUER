@@ -13,7 +13,10 @@ function rotateViewPoint(p,turns=State.view.rotation||0){
   if(q===1)return{x:c-dy,y:c+dx};
   if(q===2)return{x:c-dx,y:c-dy};
   if(q===3)return{x:c+dy,y:c-dx};
-  return{x:p.x,y:p.y};
+  if(q===0)return{x:p.x,y:p.y};
+  // Free camera rotation: `turns` may be fractional (quarter-turn units, 1/6 = 15°).
+  const a=q*Math.PI/2,ca=Math.cos(a),sa=Math.sin(a);
+  return{x:c+dx*ca-dy*sa,y:c+dx*sa+dy*ca};
 }
 function unrotateViewPoint(p,turns=State.view.rotation||0){return rotateViewPoint(p,-turns)}
 const reliefBandCache=new Map();
@@ -248,6 +251,8 @@ function structureHeight(s){
   if(s.type==='church')return 3.35;
   if(s.type==='townhall')return [2.6,3.2,3.8][civicLevel(s)-1];
   if(s.type==='guild')return [2.4,3.1,3.6][civicLevel(s)-1];
+  if(s.type==='bargello')return [3.9,4.9][civicLevel(s)-1];
+  if(s.type==='balivo')return [2.6,3.0][civicLevel(s)-1];
   if(s.type==='training')return .10;
   return 0;
 }
@@ -365,7 +370,7 @@ function unionGroundContactRings(polys){
     return polys;
   }
 }
-const PLACEMENT_FOUNDATION_TYPES=new Set(['tower','gate','tavern','church','townhall','guild']);
+const PLACEMENT_FOUNDATION_TYPES=new Set(['tower','gate','tavern','church','townhall','guild','bargello','balivo']);
 function isPlacementFoundationBuilding(s){
   // A tower against a quay stands on the quay's plinth instead (settlement-quay.js).
   return !!s&&!s.auto&&!s.quaySnap&&PLACEMENT_FOUNDATION_TYPES.has(s.type);
@@ -1080,7 +1085,8 @@ function drawCutawayStructure(s){
       drawBuiltCutawayShell(s,g,height);
       drawCutawayFloorsAndProps(s,g);
       drawCutawayWallRing(g,height,CUTAWAY_TOP_ALPHA);
-      window.ConquerRoomExterior?.draw(s);       // outside the cut walls: stays whole
+      window.ConquerRoomExterior?.draw(s,{only:'far',cutaway:true});   // behind the standing wall
+      window.ConquerRoomExterior?.draw(s,{only:'near',cutFront:true,cutaway:true});   // cut side: without its front facade
       if(top)drawBuiltDetails(s,false);
       if(builtSkin(s)==='arcade'){
         ctx.save();ctx.globalAlpha*=.72;drawBuiltArcade(s);ctx.restore();
@@ -1092,7 +1098,7 @@ function drawCutawayStructure(s){
     drawCutawayShellFaces(shell.faces,false);
     // Tower garderobe behind the standing wall: shown over that wall, under the floor and the
     // furniture, so it reads as the latrine of that room (its triangles carry their own ground).
-    if(s.type==='tower')withProjectionGroundZ(0,()=>window.ConquerRoomExterior?.draw(s,{only:'far'}));
+    if(s.type==='tower')withProjectionGroundZ(0,()=>window.ConquerRoomExterior?.draw(s,{only:'far',cutaway:true}));
     drawCutawayFloorsAndProps(s,g);
     drawCutawaySectionJambs(g,height,shell.transparent);
     drawCutawayShellFaces(shell.faces,true);
@@ -1104,10 +1110,10 @@ function drawCutawayStructure(s){
     }
   };
   if(s.type==='tower'){
-    // A tower's face elements (the garderobe): the far one inside render (over the standing wall),
-    // the one on the cut side stays whole in front.
+    // A tower's face elements (the garderobe): the far one inside render (over the standing wall);
+    // the one on the cut side loses only its front facade, like the wall it continues (user, 12/11/2026).
     withStructureGroundPlane(s,render);
-    window.ConquerRoomExterior?.draw(s,{only:'near'});
+    window.ConquerRoomExterior?.draw(s,{only:'near',cutFront:true,cutaway:true});
   }else if(s.type==='gate')withStructureGroundPlane(s,render);else render();
 }
 function drawCutawayStructures(){
