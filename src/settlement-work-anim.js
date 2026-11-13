@@ -248,9 +248,9 @@
   const now=()=>(typeof performance!=='undefined'?performance.now():Date.now())/1000;
   // Anonymous labourers are L1: grey and beige cloth.
   const WORKER_COLORS=[['#9c9078','#7d7a72'],['#b4a58a','#8f8b82'],['#a39e93','#7d7a72'],['#c8bda6','#9c9078'],['#8f8b82','#b9b2a3']];
-  function anonymous(id,p){
+  function anonymous(id,p,role){
     const h=hash(String(id));
-    return{p,id:String(id),kind:'peasant',sex:'male',age:'adult',colors:WORKER_COLORS[h%WORKER_COLORS.length],
+    return{p,id:String(id),kind:'peasant',sex:'male',age:'adult',role,colors:WORKER_COLORS[h%WORKER_COLORS.length],
       hair:typeof villagerHair==='function'?villagerHair(String(id)):'brown'};
   }
   // ---------- builders at construction sites (visual only)
@@ -281,7 +281,7 @@
       for(let i=0;i<n;i++){
         const sp=spots[(start+i*Math.max(1,Math.floor(spots.length/n)))%spots.length];
         if(!worldPointVisible(sp,0,40))continue;
-        drawWorker(anonymous(s.id+':builder'+i,sp),'hammer',t,facingOf(sp,sp.to.x-sp.x,sp.to.y-sp.y));
+        drawWorker(anonymous(s.id+':builder'+i,sp,'builder'),'hammer',t,facingOf(sp,sp.to.x-sp.x,sp.to.y-sp.y));
       }
     }
   }
