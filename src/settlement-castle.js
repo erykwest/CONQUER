@@ -1255,8 +1255,10 @@ function drawCastleSelection(){
   const s=State.structures?.find(item=>item.id===State.selectedId);
   if(!s||s.type==='road'||s.type==='moat'||s.type==='bridge')return;
   // Only the ground perimeter (h 0): the parts of a house or civic building merge into one outline.
+  // A civic follows what stands at its current level, not the L3 footprint.
+  const civic=isCivic(s)?((typeof window!=='undefined'&&window.ConquerCivic3D?.builtParts?.(s))||civicParts(s)):null;
   const parts=(s.type==='field'?[fieldPoints(s)]:s.type==='house'?urbanHouseDisplayParts(s).map(part=>part.points):
-    isCivic(s)?civicParts(s).map(part=>part.points):[footprintPoints(s)]).filter(points=>points?.length>=3);
+    civic?civic.map(part=>part.points):[footprintPoints(s)]).filter(points=>points?.length>=3);
   if(!parts.length)return;
   let rings=parts;
   const pc=typeof window!=='undefined'?window.__polygonClipping:null;
@@ -1264,20 +1266,59 @@ function drawCastleSelection(){
     try{rings=pc.union(...parts.map(points=>[points.map(p=>[p.x,p.y])])).flatMap(poly=>poly.map(cleanClipRing)).filter(r=>r.length>=3)}
     catch{rings=parts}
   }
+  // Bodies with a real volume hide the ground edges behind them; flat plazas, yards,
+  // open industries, fields and construction sites keep the whole perimeter.
+  const occluders=s.type==='field'||underConstruction(s)||!(structureHeight(s)>.56)?[]:
+    s.type==='house'?parts:civic?civic.filter(part=>!['plaza','square','training'].includes(part.role)).map(part=>part.points):parts;
   withStructureGroundPlane(s,()=>{
+    const runs=selectionOutlineRuns(rings,occluders.filter(points=>points?.length>=3));
     ctx.save();
     ctx.lineJoin='round';ctx.lineCap='round';ctx.setLineDash([]);
     // Black keyline provides contrast over snow, sandstone and grass.
     for(const [color,width] of [['rgba(24,16,10,.92)',4.5],['#ffc46e',2.25]]){
       ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();
-      for(const ring of rings){
-        projectPath(ring,.02).forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
-        ctx.closePath();
+      for(const run of runs){
+        run.points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+        if(run.closed)ctx.closePath();
       }
       ctx.stroke();
     }
     ctx.restore();
   });
+}
+// Screen polylines of the selection perimeter without the edges hidden behind the
+// building volume. A ground edge is behind the volume when, just below it on screen
+// (opposite to the projected vertical), lies the footprint of a body that rises.
+function selectionOutlineRuns(rings,occluders){
+  const inside=(p,poly)=>{
+    let hit=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+      const a=poly[i],b=poly[j];
+      if(((a.y>p.y)!==(b.y>p.y))&&(p.x<(b.x-a.x)*(p.y-a.y)/((b.y-a.y)||1e-9)+a.x))hit=!hit;
+    }return hit;
+  };
+  const bases=occluders.map(points=>projectPath(points,.02));
+  const runs=[];
+  for(const ring of rings){
+    const base=projectPath(ring,.02),top=projectPath(ring,1),n=base.length;
+    const hidden=base.map((a,i)=>{
+      if(!bases.length)return false;
+      const j=(i+1)%n,b=base[j];
+      let dx=(a.x-top[i].x)+(b.x-top[j].x),dy=(a.y-top[i].y)+(b.y-top[j].y);
+      const len=Math.hypot(dx,dy);if(!(len>1e-6))return false;
+      const probe={x:(a.x+b.x)/2+dx/len*1.5,y:(a.y+b.y)/2+dy/len*1.5};
+      return bases.some(poly=>inside(probe,poly));
+    });
+    if(!hidden.some(Boolean)){runs.push({points:base,closed:true});continue}
+    // Start right after a hidden edge so every visible run is one polyline.
+    const start=(hidden.indexOf(true)+1)%n;let run=null;
+    for(let k=0;k<n;k++){
+      const i=(start+k)%n,j=(i+1)%n;
+      if(hidden[i]){run=null;continue}
+      if(!run){run={points:[base[i]],closed:false};runs.push(run)}
+      run.points.push(base[j]);
+    }
+  }
+  return runs;
 }
 
 function worldDepth(s){const p=rotateViewPoint(structureCenter(s));return p.x+p.y;}

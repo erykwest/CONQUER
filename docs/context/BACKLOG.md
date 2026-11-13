@@ -1,5 +1,14 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-13 — UI-SEL-01 · Perimetro di selezione fedele al volume
+
+**SU BRANCH `fix/selection-outline-occlusion`, NON MERGE.**
+
+- [x] Nascondere i lati del perimetro dietro il volume dell'edificio (torri, sezioni, case, civici, anche in cutaway).
+- [x] Perimetro dei civici al livello corrente (chiesa L1, taverna L1–L2), non al footprint L3.
+- [ ] Facoltativo: allineare anche l'area cliccabile dei civici al footprint del livello corrente.
+- [ ] Occlusione da parte di altri edifici davanti a quello selezionato (oggi il contorno resta sopra di essi).
+
 ## 2026-11-13 - Preparazione merge PR #206
 
 Preparazione merge PR #206: main aggiornato riconciliato mantenendo moduli e documenti di entrambi i branch. Catalogo Wiki rigenerato. Gilda riferita agli artigiani L2; dazio botteghe e relativo malcontento addebitati a L2 anziche L3, con regressione riprodotta prima del fix. Fondazione: cinque scenari superati isolatamente con Node 22, ma timing intermittente oltre 100 ms nella suite anche su Node 22; verifica Actions ancora necessaria. Nessuna soglia allentata. Suite completa e Actions da completare prima del merge. Nessuna nuova funzione demografica, giudiziaria o archetipo edilizio.

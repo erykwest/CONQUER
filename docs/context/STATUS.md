@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-13 — Selezione edifici: perimetro posteriore nascosto (branch `fix/selection-outline-occlusion`)
+
+- **CODICE SUL BRANCH, NON MERGE:** `selectionOutlineRuns` in `src/settlement-castle.js` spezza il perimetro di selezione e omette i lati dietro il volume. Il contorno 2D resta l'ultimo passaggio, sopra la scena WebGL: nessun depth test. I civici usano `ConquerCivic3D.builtParts(s)` (nuovo export in `settlement-civic3d.js`) per il footprint del livello corrente.
+- **TEST:** `mastio-selection-zoom-regression` con proiezione isometrica reale (torre, campo, piazza, casa, civico per livello); `well-civics`, `stonecolor`, `cutaway-floors`, `crime-buildings`, `court-people`, `civic3d` e `ci-p1` superate in locale. Catture Playwright prima/dopo di torre, chiesa, municipio e dei livelli L1–L3 di chiesa, taverna, municipio e gilda. CI da verificare.
+- **INVARIATO:** l'area cliccabile (`screenHitStructureBody`) usa ancora il footprint completo dei civici.
+
 ## 2026-11-13 - Preparazione merge PR #206
 
 Preparazione merge PR #206: main aggiornato riconciliato mantenendo moduli e documenti di entrambi i branch. Catalogo Wiki rigenerato. Gilda riferita agli artigiani L2; dazio botteghe e relativo malcontento addebitati a L2 anziche L3, con regressione riprodotta prima del fix. Fondazione: cinque scenari superati isolatamente con Node 22, ma timing intermittente oltre 100 ms nella suite anche su Node 22; verifica Actions ancora necessaria. Nessuna soglia allentata. Suite completa e Actions da completare prima del merge. Nessuna nuova funzione demografica, giudiziaria o archetipo edilizio.
