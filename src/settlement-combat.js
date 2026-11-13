@@ -866,7 +866,8 @@
         }
         if(!spotted(e,sightSources))continue;
         const livery=window.ConquerCombatRules?.liveryOf(e.faction||'dev_hostile');
-        const figure=e.kind==='knight'||e.combatKind==='knight'?'knight':e.kind==='archer'||e.combatKind==='archer'?'archer':'spearman';
+        // Men working a ram have both hands on it: no spear, weapon or shield (e.atRam, ramStep).
+        const figure=e.atRam?'unarmed':e.kind==='knight'||e.combatKind==='knight'?'knight':e.kind==='archer'||e.combatKind==='archer'?'archer':'spearman';
         drawPosedFigure(e,figure,e.id,livery,e,0,.08+(e.z||0));
         if(down)continue;
         if(e.torch)window.ConquerFire?.drawTorch(g,w2s(e,.08+(e.z||0)),State.view.scale,e.id);
@@ -874,11 +875,17 @@
         g.beginPath();g.arc(p.x,p.y-8,11,0,Math.PI*2);g.stroke();
       }
     });
+    // Burning siege engines: flames on the timber, bigger as the fire grows.
+    if(typeof drawScreenFlame==='function')for(const s of combat.storms||[]){
+      if(!s.fire||!s.origin)continue;
+      drawScreenFlame(w2s(s.origin,.6),State.view.scale,s.id+':engine-fire',s.fire.heat>.4);
+    }
     // Paused swings/falls share the simulation's visual scheduler with fire,
     // collapses and scene requests, avoiding a second draw in the same RAF.
     // 2.5D view: assault ladders and towers as simple timber outlines (3D draws the models).
     if(combat.storms?.length&&!window.ConquerWorld3D?.active?.())withRenderContext(g,()=>{
       for(const s of combat.storms){
+        if(s.burnt)continue;
         if(s.kind==='ram'){
           if(s.done)continue;
           const a=w2s(s.foot,0),b=w2s(s.origin,.35);g.strokeStyle='#6b4a2c';g.lineWidth=12;g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();continue;
@@ -1321,6 +1328,12 @@
         // No unassigned tower fires and slits have outward firing arcs.
         for(const slot of window.ConquerSiege?.occupiedArcherSlots(s)||[]){
           put(slot.id,slot.p,slot.visualZ,slot.h,slot.kind==='slit'?slot:null);
+          // The staffed post can be shot at; a hit that beats the cover kills that archer.
+          const sh=archerCache.get(slot.id),tower=s;
+          // A slit covers 90% of the arrows, the merlons of a battlemented roof 70%.
+          sh.post={cover:slot.kind==='slit'?.9:.7,hit(){tower.archerCount=Math.max(0,(window.ConquerSiege?.stationedArchers(tower)||0)-1);nextArcherRosterAt=0}};
+          // From the roof the arrows are incendiary: they can set the wooden siege engines alight.
+          sh.onLoose=slot.kind==='roof'?fireArrowAt:null;
         }
       }else if(s.type==='gate'){
         if(gateRoofStyle(s)==='battlement')put(s.id+':gate-roof',{x:s.x,y:s.y},ground+structureHeight(s)+.08,ground+structureLevel(s));
@@ -1388,7 +1401,7 @@
     const ww=WW();if(!ww)return[];
     const stairs=ww.stairs().map(s=>({id:s.id,ground:s.ground,entry:s.entry,comp:ww.component(s.entry)}));
     if(kind!=='storm')return stairs;
-    return(combat.storms||[]).filter(s=>ww.edgeOf(s.wallId)).map(s=>({id:s.id,ground:s.foot,entry:{wallId:s.wallId,t:s.t},comp:ww.component({wallId:s.wallId})}));
+    return(combat.storms||[]).filter(s=>!s.burnt&&ww.edgeOf(s.wallId)).map(s=>({id:s.id,ground:s.foot,entry:{wallId:s.wallId,t:s.t},comp:ww.component({wallId:s.wallId})}));
   }
   const best=(list,score)=>{let b=null,bs=Infinity;for(const a of list){const s=score(a);if(s<bs){bs=s;b=a}}return b};
   // Legs from where the unit is to target {wall:{wallId,t}} or {ground:{x,y}}.
@@ -1490,13 +1503,18 @@
   // four attackers man it (the model's crew posts), the others wait behind; with two or
   // more at their posts it swings (1.8 s) and every blow hits the door
   // (ConquerSiege.attackStructure 'door'). When the door gives, everyone goes in.
-  const RAM_CYCLE=1.8,RAM_BLOW=.72,RAM_REACH=3.81/3.5;
-  function addRamStorm(gate){
+  const RAM_CYCLE=1.8,RAM_BLOW=.72,RAM_REACH=3.81/3.5,RAM_LIGHT_REACH=2.61/3.5,RAM_FORCE_PER_MAN=.04;
+  // Two rams: 'light', a beam carried by 4 men (agile like a ladder, the men in the open), and
+  // 'covered', the wheeled shed of the model worked by 8 (heavier; its roof stops 90% of the
+  // arrows and all the stones on the men at their posts, but fire arrows can catch it).
+  const RAM_CREW=Object.freeze({light:4,covered:8});
+  function addRamStorm(gate,variant='covered'){
     const check=window.ConquerSiege?.assaultCheck(gate,'ram');
     if(!check?.ok){status('Assault refused: '+(check?.reason||'no assault rules'));return null}
     const a=Number(gate.angle)||0,out={x:Math.cos(a),y:Math.sin(a)},half=rectDims(gate).w/2;
-    const back=RAM_REACH-.04,origin={x:gate.x+out.x*(half+back),y:gate.y+out.y*(half+back)};
-    const storm={id:'storm-'+uid(),kind:'ram',gateId:gate.id,origin,heading:a+Math.PI,clock:0,
+    // The light ram's head is shorter (ramLight: 2.3 m + the swing): it stands closer.
+    const back=(variant==='light'?RAM_LIGHT_REACH:RAM_REACH)-.04,origin={x:gate.x+out.x*(half+back),y:gate.y+out.y*(half+back)};
+    const storm={id:'storm-'+uid(),kind:'ram',variant:RAM_CREW[variant]?variant:'covered',gateId:gate.id,origin,heading:a+Math.PI,clock:0,
       foot:{x:origin.x+out.x*1.2,y:origin.y+out.y*1.2}};
     (combat.storms||(combat.storms=[])).push(storm);
     let n=0;
@@ -1507,7 +1525,8 @@
   const ramPlace=s=>({x:s.origin.x,y:s.origin.y,heading:s.heading});
   function ramPosts(storm){
     const SE=window.ConquerSiegeEngines3D;
-    return SE?SE.crew('ram',ramPlace(storm)):[storm.origin];
+    // ConquerSiegeEngines3D.crew: 4 posts at the light ram, 8 under the covered shed.
+    return SE?SE.crew(storm.variant==='light'?'ramLight':'ram',ramPlace(storm)):[storm.origin];
   }
   function ramCrew(storm){
     const posts=ramPosts(storm),crew=combat.enemy.filter(e=>e.assault===storm.id&&livingUnit(e)&&!e.routing);
@@ -1522,6 +1541,7 @@
   }
   // Swing the rams that are manned; a blow lands at 72% of each swing.
   function ramStep(dt){
+    for(const e of combat.enemy){e.underRoof=false;e.atRam=false}
     for(const storm of combat.storms||[]){
       if(storm.kind!=='ram'||storm.done)continue;
       const gate=State.structures.find(s=>s.id===storm.gateId);
@@ -1530,12 +1550,86 @@
       if(!gate||breached(gate)){breakIn(storm);continue}
       const manned=ramCrew(storm).filter(c=>c.post&&!c.e.engaged&&!c.e.legs?.length&&Math.hypot(c.post.x-c.e.x,c.post.y-c.e.y)<.3);
       storm.manned=manned.length;
+      for(const c of manned){c.e.atRam=true;if(storm.variant==='covered')c.e.underRoof=true}
       if(manned.length<2)continue;
       const before=(storm.clock%RAM_CYCLE)/RAM_CYCLE;storm.clock+=dt;const after=(storm.clock%RAM_CYCLE)/RAM_CYCLE;
       if(!(before<RAM_BLOW&&after>=RAM_BLOW)&&!(after<before&&before<RAM_BLOW))continue;
-      const out=window.ConquerSiege?.attackStructure(gate.id,'ram',manned.length*.5,'door');
+      // A gate door is oak and iron: a full crew of four needs ~90 blows (~2.7 min) for the
+      // 85 hp door (ram vs door ×6 in ConquerSiege), which leaves the defence time to answer.
+      const out=window.ConquerSiege?.attackStructure(gate.id,'ram',manned.length*RAM_FORCE_PER_MAN,'door');
       storm.blows=(storm.blows||0)+1;
       if((out?.destroyed&&out.part==='door'&&!window.ConquerGates?.portcullisBlocks?.(gate))||breached(gate))breakIn(storm);
+    }
+  }
+  // ---------- tower archers follow the fight ----------
+  // Rule of engagement: a tower whose archers have had nothing to shoot at for ARCHER_IDLE_S
+  // sends one of them (along the walls, ARCHER_WALK U/s) to the staffed-or-not tower with a
+  // free post nearest to the enemy, provided that tower has a hostile within bow range.
+  // While walking the archer shoots at nobody; a full tower on arrival sends him back.
+  const ARCHER_IDLE_S=6,ARCHER_WALK=1.2,ARCHER_MOVE_EVERY_MS=4000,BOW=15;
+  function archerRedeploy(now,hostiles){
+    const SG=window.ConquerSiege;if(!SG)return;
+    const transit=combat.archerTransit||(combat.archerTransit=[]);
+    for(let i=transit.length-1;i>=0;i--){
+      const t=transit[i];if(now<t.at)continue;
+      transit.splice(i,1);
+      let to=State.structures.find(s=>s.id===t.to);
+      if(!to||SG.stationedArchers(to)>=SG.archerSlots(to).length)to=State.structures.find(s=>s.id===t.from);
+      if(to&&SG.stationedArchers(to)<SG.archerSlots(to).length){to.archerCount=SG.stationedArchers(to)+1;nextArcherRosterAt=0}
+    }
+    if(!hostiles.length)return;
+    const towers=State.structures.filter(s=>s.type==='tower'&&!underConstruction(s)&&SG.archerSlots(s).length);
+    const nearestFoe=s=>{let d=Infinity;for(const e of hostiles)if(livingUnit(e))d=Math.min(d,Math.hypot(e.x-s.x,e.y-s.y));return d};
+    const incoming=id=>transit.filter(t=>t.to===id).length;
+    for(const from of towers){
+      const n=SG.stationedArchers(from);if(!n||now<(from.archerMoveAt||0))continue;
+      const posts=SG.occupiedArcherSlots(from).map(p=>archerCache.get(p.id)).filter(Boolean);
+      if(!posts.length||posts.some(p=>(p.idle||0)<ARCHER_IDLE_S))continue;
+      let best=null,bd=BOW;
+      for(const to of towers){
+        if(to===from||SG.stationedArchers(to)+incoming(to.id)>=SG.archerSlots(to).length)continue;
+        const d=nearestFoe(to);if(d<bd){best=to;bd=d}
+      }
+      if(!best)continue;
+      from.archerCount=n-1;from.archerMoveAt=now+ARCHER_MOVE_EVERY_MS;nextArcherRosterAt=0;
+      for(const p of posts)p.idle=0;
+      transit.push({from:from.id,to:best.id,at:now+Math.hypot(best.x-from.x,best.y-from.y)/ARCHER_WALK*1000});
+    }
+  }
+  // ---------- fire on the siege engines ----------
+  // Rams, assault towers and ladders are timber. A fire arrow loosed from a tower roof at
+  // a man near an engine may start a fire on it (ENGINE_CATCH). A fire grows on its own
+  // (faster for a ladder, slower in the rain); the crew at the engine, if not fighting,
+  // beat it down while it is still small. At full heat the engine is lost: the assault
+  // ends and its men go back to the sector campaign.
+  const ENGINE_REBUILD_MS=40000,ENGINE_CATCH=.25,ENGINE_NEAR=3,ENGINE_GROW=.035,ENGINE_DOUSE=.012,ENGINE_DOUSABLE=.6;
+  const engineWet=()=>{try{return typeof weatherGroundWet==='function'?!!weatherGroundWet():!!State.weather?.wet}catch{return false}};
+  function fireArrowAt(target){
+    let storm=null,best=ENGINE_NEAR;
+    for(const s of combat.storms||[]){
+      if(s.done||s.burnt||!s.origin||s.variant==='light')continue;   // a carried beam does not catch
+      const d=Math.hypot(s.origin.x-target.x,s.origin.y-target.y);
+      if(d<best){storm=s;best=d}
+    }
+    if(!storm||Math.random()>=ENGINE_CATCH)return;
+    if(!storm.fire){storm.fire={heat:.15};status(engineName(storm)+' set alight by fire arrows')}
+    else storm.fire.heat=Math.min(1,storm.fire.heat+.08);
+  }
+  const engineName=s=>s.kind==='ram'?'Ram':s.kind==='ladder'?'Ladder':'Assault tower';
+  function engineFireStep(dt){
+    for(const s of combat.storms||[]){
+      const f=s.fire;if(!f||s.burnt)continue;
+      f.heat+=dt*ENGINE_GROW*(s.kind==='ladder'?2:1)*(engineWet()?.3:1);
+      if(f.heat<ENGINE_DOUSABLE){
+        const crew=combat.enemy.filter(e=>e.assault===s.id&&livingUnit(e)&&!e.engaged&&!e.wall&&Math.hypot(e.x-s.origin.x,e.y-s.origin.y)<2.5).length;
+        f.heat-=dt*ENGINE_DOUSE*crew;
+        if(f.heat<=0){s.fire=null;continue}
+      }
+      if(f.heat>=1){
+        s.burnt=true;s.done=true;s.fire=null;s.burntAt=performance.now();
+        for(const e of combat.enemy)if(e.assault===s.id&&!e.wall&&!e.climbing){e.assault=null;e.legs=null;e.nextThink=0}
+        status(engineName(s)+' burnt out');changed();
+      }
     }
   }
   function breakIn(storm){
@@ -1643,7 +1737,7 @@
       const along0=(u.x-f.wall.a.x)*f.ux+(u.y-f.wall.a.y)*f.uy;
       let target=null,bd=Infinity;
       for(const e of combat.enemy){
-        if(!livingUnit(e)||unitWall(e))continue;
+        if(!livingUnit(e)||unitWall(e)||e.underRoof)continue;     // the shed's roof stops stones
         const rx=e.x-f.wall.a.x,ry=e.y-f.wall.a.y,along=rx*f.ux+ry*f.uy,out=rx*f.ex+ry*f.ey-f.half;
         if(out<-.05||out>reach||Math.abs(along-along0)>1.6)continue;
         const d=Math.abs(along-along0)+out;if(d<bd){bd=d;target=e}
@@ -1657,9 +1751,9 @@
   // Ladders and assault towers against the walls, for the 3D renderer.
   function dynamicMeshes(){
     const SE=window.ConquerSiegeEngines3D;if(!SE||!combat?.storms?.length)return[];
-    return combat.storms.filter(s=>s.kind==='ram'?!s.done:WW()?.edgeOf(s.wallId)).map(s=>{
+    return combat.storms.filter(s=>!s.burnt&&(s.kind==='ram'?!s.done:WW()?.edgeOf(s.wallId))).map(s=>{
       const g=terrainElevation(s.origin);
-      if(s.kind==='ram')return SE.triangles('ram',{x:s.origin.x,y:s.origin.y,z:g,heading:s.heading},
+      if(s.kind==='ram')return SE.triangles(s.variant==='light'?'ramLight':'ram',{x:s.origin.x,y:s.origin.y,z:g,heading:s.heading},
         (s.manned||0)>=2?{mode:'fire',t:s.clock}:{mode:'idle'});
       return s.kind==='ladder'
         ?SE.triangles('ladder',{x:s.origin.x,y:s.origin.y,z:g,heading:s.heading},{up:1})
@@ -1888,11 +1982,14 @@
   // A ram for a closed gate on the way: the nearest free men-at-arms crew it; the storm grabs
   // every hostile outside, so the others keep their own task.
   function rigRam(gate,near){
-    if((combat.storms||[]).some(s=>s.kind==='ram'&&s.gateId===gate.id&&!s.done))return;
+    // A burnt ram takes a while to replace (ENGINE_REBUILD_MS from the fire).
+    if((combat.storms||[]).some(s=>s.kind==='ram'&&s.gateId===gate.id&&(!s.done||s.burnt&&performance.now()-(s.burntAt||0)<ENGINE_REBUILD_MS)))return;
     const keep=new Map(combat.enemy.map(e=>[e,{assault:e.assault,legs:e.legs,cameDown:e.cameDown}]));
-    const storm=addRamStorm(gate);if(!storm)return;
-    const crew=new Set(combat.enemy.filter(e=>livingUnit(e)&&!e.routing&&(e.combatKind||e.kind)==='infantry'&&!keep.get(e).assault&&!unitWall(e))
-      .sort((a,b)=>dist(a,near)-dist(b,near)).slice(0,6));
+    // Eight free men-at-arms bring up the covered ram; fewer carry the light one.
+    const free=combat.enemy.filter(e=>livingUnit(e)&&!e.routing&&(e.combatKind||e.kind)==='infantry'&&!e.assault&&!unitWall(e));
+    const variant=free.length>=RAM_CREW.covered?'covered':'light';
+    const storm=addRamStorm(gate,variant);if(!storm)return;
+    const crew=new Set(free.sort((a,b)=>dist(a,near)-dist(b,near)).slice(0,RAM_CREW[variant]+2));
     for(const e of combat.enemy){const k=keep.get(e);if(k&&!crew.has(e)){e.assault=k.assault;e.legs=k.legs;e.cameDown=k.cameDown}}
   }
   function campaignThink(e,now,d){
@@ -2096,7 +2193,7 @@
           if(la!=='ground')return true;
           return safeMilitarySegment(a,b,a.id,a.kind||'knight')&&Math.abs(terrainElevation(a)-terrainElevation(b))<=1;
         },mobileArchers(hostiles),sees);
-      stoneDrops(step);
+      stoneDrops(step);engineFireStep(step);archerRedeploy(performance.now(),hostiles);
       const ruleMs=performance.now()-ruleStart;
       if(window.__conquerPerf)window.__conquerPerf.combatRulesMs=ruleMs;
       if(ruleMs>25)window.__conquerAnalytics?.event('COMBAT_RULES_SLOW',{ms:+ruleMs.toFixed(1),archers:hostiles.length?archerRoster.length:0,hostiles:hostiles.length},'warn',3000);

@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-13 — Assedio: difesa dalle mura e arieti
+
+- **FATTO su combat-ai:** copertura di feritoie/merli/tetto dell'ariete, arcieri delle torri bersagliabili e mobili tra le torri, frecce incendiarie sulle macchine, porta più resistente, ariete leggero (4) e coperto (8) validati nell'Asset Lab.
+- **APERTO:** assedio lungo con i due arieti; audit completo del Lab e baseline per il nuovo modello `ramLight`; tempo di trasporto/montaggio degli arieti (oggi compaiono davanti alla porta, quindi il leggero non è ancora «più agile»); i trabucchi non prendono fuoco; arcieri in cammino tra le torri non visibili e persi se si ricarica; prestazioni delle ricerche di percorso.
+
 ## 2026-11-06 — Verifica estesa
 
 - Prova da 300 s sulla variante concentrica TEST richiesta dall’utente: conclusa con 6 screenshot: 17 assalitori e 3 difensori caduti, 0 conquiste. **Corretti l'11/11:** assalitori fermi nei varchi e pattuglie bloccate in ritirata (in 180 s entrambi i settori catturati). **KO ancora aperto:** ricerche di percorso molto lente (tick p95 6,5 s, massimo 26,8 s). [Report](../qa/combat-ai-circle-300s-2026-11-06.md). La prova precedente da 60 s resta una misura separata. Corrette nella fixture le posizioni iniziali del capitano e di una pattuglia; il runner rifiuta partenze su terreno bloccato. CI circle estesa al controllo sintattico del runner degli screenshot.

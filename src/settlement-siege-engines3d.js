@@ -13,7 +13,7 @@
   const ph=(u,a,b)=>ease(clamp01((u-a)/(b-a))),lerp=(a,b,s)=>a+(b-a)*s;
   // Action cycles (seconds) and the angles they sweep (radians; positive pitch =
   // the forward end of a part goes down about its pivot).
-  const CYCLE={ram:1.8,catapult:4.2,trebuchet:6,tower:6,tower2:6,ladder:7,mantlet:3.5,ballista:3.5};
+  const CYCLE={ram:1.8,ramLight:1.8,catapult:4.2,trebuchet:6,tower:6,tower2:6,ladder:7,mantlet:3.5,ballista:3.5};
   // Trebuchet set-up loop for {mode:'setup'}: packed, unpack, set up, pack again.
   const SETUP=13;
   // Ram: drawn back on its ropes, then driven forward into the gate.
@@ -129,7 +129,7 @@
   // Pose for {mode:'idle'|'move'|'fire'|'setup', t, distance, deploy, ammo, ballista}.
   function pose(engine,state={}){
     const fire=state.mode==='fire',k=fire?((state.t||0)%CYCLE[engine])/CYCLE[engine]:0;
-    if(engine==='ram')return fire?ramPose(k):{ram:0};
+    if(engine==='ram'||engine==='ramLight')return fire?ramPose(k):{ram:0};
     if(engine==='catapult')return{...catapultPose(k),ammo:state.ammo,mounted:!!state.mounted};
     if(engine==='tower'||engine==='tower2')return towerPose(state,engine);
     if(engine==='mantlet')return state.ballista?{ballista:ballistaPose(state)}:{};
@@ -217,7 +217,7 @@
       let fn=p=>p,color=null,burning=false;
       if(treb)fn=treb[name]||fn;
       else if(bal)fn=bal.fns[name]||fn;
-      else if(engine==='ram'&&name==='ram')fn=p=>pitch(p,pv.ram,st.ram);
+      else if((engine==='ram'||engine==='ramLight')&&name==='ram')fn=p=>pitch(p,pv.ram,st.ram);
       else if(engine==='catapult'&&(name==='arm'||name==='stone'||name==='pebbles'))fn=p=>pitch(p,pv.arm,st.arm);
       else if((engine==='tower'||engine==='tower2')&&name==='bridge')fn=p=>pitch(p,pv.bridge,st.bridge);
       else if(engine==='ladder'&&name==='ladder'){const L=st.ladder;fn=place(pv.ladder,L.a,[L.x,0,L.z])}
@@ -273,11 +273,18 @@
   }
   // Crew standing at the engine (world); the ladder men move to its foot when it goes up;
   // with the ballista behind the mantlet, two men work it and two hold the shield.
+  // The model's posts stand at y ±0.157 beside the log; the covered shed's outer files stand
+  // at y ±0.30, inside the side plates (±0.30) and under the eaves (±0.37), at the same x
+  // (forward, towards the gate, they would stand in the passage clearance).
+  const RAM_OUTER=.30/.1571;
   const LADDER_CREW=[[-.2/3.5,.55/3.5],[-.2/3.5,-.55/3.5]];
   function crew(engine,placeAt,state={}){
     const c=Math.cos(placeAt.heading||0),s=Math.sin(placeAt.heading||0);
     const up=engine==='ladder'?ladderPose(state).up:0,e=M().engines[engine];
-    const spots=engine==='mantlet'&&state.ballista?[...e.rig.ballistaCrew,...e.crew.slice(2)]:e.crew;
+    let spots=engine==='mantlet'&&state.ballista?[...e.rig.ballistaCrew,...e.crew.slice(2)]:e.crew;
+    // The covered ram's shed is worked by 8: an outer file beside each inner one
+    // (the light ram, 'ramLight', has its own 4 posts at the cross bars).
+    if(engine==='ram')spots=[...spots,...spots.map(([x,y,z])=>[x,y*RAM_OUTER,z])];
     return spots.map(([x,y,z],i)=>{
       if(up&&LADDER_CREW[i]){x=lerp(x,LADDER_CREW[i][0],up);y=lerp(y,LADDER_CREW[i][1],up)}
       return{x:(placeAt.x||0)+x*c-y*s,y:(placeAt.y||0)+x*s+y*c,z:(placeAt.z||0)+z};

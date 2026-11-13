@@ -17,6 +17,9 @@ const out=path.join(root,'output/playwright/siege-scenario');fs.mkdirSync(out,{r
 const layoutFile=process.env.SIEGE_LAYOUT||path.join(root,'layouts/TEST.json');
 const seconds=Number(process.env.SIEGE_SECONDS||60),trebuchets=process.env.SIEGE_TREBUCHETS!=='0',concentric=process.env.SIEGE_CONCENTRIC==='1';
 const screenshotInterval=Math.max(0,Number(process.env.SIEGE_SCREENSHOT_INTERVAL)||0);
+// SIEGE_SPEED: game clock speed while running (3 = three game seconds per real one, same dt cap).
+// SIEGE_FOCUS 'x,y' and SIEGE_ZOOM: where the camera looks for the screenshots.
+const speed=Math.max(1,Number(process.env.SIEGE_SPEED)||1),focus=(process.env.SIEGE_FOCUS||'104,108').split(',').map(Number),zoom=Number(process.env.SIEGE_ZOOM)||1.4;
 const server=http.createServer((req,res)=>{
   const file=path.resolve(root,'.'+decodeURIComponent(new URL(req.url,'http://localhost').pathname));
   if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return}
@@ -44,7 +47,7 @@ async function main(){
     await page.goto(`http://127.0.0.1:${server.address().port}/index.html?`+(mode==='webgl'?'world3d=1':'renderer=canvas2d'),{waitUntil:'networkidle'});
     await page.waitForFunction(()=>typeof draw==='function'&&!!window.ConquerCombat&&window.ConquerCircle?.getStatus?.().ready&&State.village?.founded&&State.structures.length>50,null,{timeout:60000});
     console.log('Loaded '+mode+' '+label);
-    const setup=await page.evaluate(({trebuchets,concentric,seconds,screenshotInterval})=>{
+    const setup=await page.evaluate(({trebuchets,concentric,seconds,screenshotInterval,speed,focus,zoom})=>{
       State.daylightOverride='day';State.clock.day=Math.floor(State.clock.day)+.45;
       if(concentric){
         // QA-only geometry: keep the TEST village and replace its open castle in memory.
@@ -54,7 +57,9 @@ async function main(){
         // 5 archers spread over the towers: the two flanking the outer gate, one at the back, two flanking the inner gate.
         const archers={ro0:1,ro1:1,ro2:1,ri0:1,ri1:1};
         const T=(id,x,y)=>({id,type:'tower',shape:'square',size:2,x,y,level:2,material:'stone',angle:0,archerCount:archers[id]||0,functions:[]});
-        const W=(id,a,b,aSnap,bSnap)=>({id,type:'wall',a,b,aSnap,bSnap,width:.6,level:2,tier:2,material:'stone',length:Math.hypot(b.x-a.x,b.y-a.y)});
+        // The rings run clockwise on screen, so the left-hand normal (the default exterior,
+        // wallExteriorSide) points inside: flip puts merlons and the outer face outside.
+        const W=(id,a,b,aSnap,bSnap)=>({id,type:'wall',a,b,aSnap,bSnap,flip:true,width:.6,level:2,tier:2,material:'stone',length:Math.hypot(b.x-a.x,b.y-a.y)});
         const ring=(p,lo,hi,top,bottom,gid)=>{
           const mid=(lo+hi)/2;
           return[T(p+'0',lo,top),T(p+'1',hi,top),T(p+'2',hi,bottom),T(p+'3',lo,bottom),
@@ -103,13 +108,13 @@ async function main(){
       const d=draw;draw=function(...a){const t=performance.now();try{return d.apply(this,a)}finally{m.draws.push(performance.now()-t)}};
       let last=performance.now();const f=t=>{m.frames.push(t-last);last=t;if(!m.stop)requestAnimationFrame(f)};requestAnimationFrame(f);
       // Camera on the castle, game running.
-      const r=wrap.getBoundingClientRect();State.view.scale=1.4;
-      for(let k=0;k<4;k++){const q=w2s({x:104,y:108},0);State.view.x+=r.width/2-q.x;State.view.y+=r.height/2-q.y}
-      State.clock.speed=screenshotInterval?0:1;
+      const r=wrap.getBoundingClientRect();State.view.scale=zoom;
+      for(let k=0;k<4;k++){const q=w2s({x:focus[0],y:focus[1]},0);State.view.x+=r.width/2-q.x;State.view.y+=r.height/2-q.y}
+      State.clock.speed=screenshotInterval?0:speed;
       const alive=a=>a.filter(u=>!u.defeated&&(u.stats?.hp??1)>0).length;
       return{blockedStarts:C.units().concat(E).filter(u=>pointBlockedForPeasant(u,u.id)).map(u=>({id:u.id,x:u.x,y:u.y})),ram:!!ram,tower:!!tower,trebuchets:treb.filter(Boolean).length,attackers:E.length,attackersHp:E.reduce((n,u)=>n+(u.stats?.hp||0),0),defenders:alive(C.units()),defendersHp:C.units().reduce((n,u)=>n+(u.stats?.hp||0),0),sectors:window.ConquerCircle?.getSnapshot?.()?.compartments.map(c=>({id:c.id,depth:c.depth,state:c.state,mastio:c.mastio})),structures:State.structures.length,
         archers:State.structures.filter(s=>s.type==='tower').reduce((n,t)=>n+(window.ConquerSiege?.occupiedArcherSlots?.(t)?.length||0),0)};
-    },{trebuchets,concentric,seconds,screenshotInterval});
+    },{trebuchets,concentric,seconds,screenshotInterval,speed,focus,zoom});
     console.log('Setup '+JSON.stringify(setup));
     if(setup.blockedStarts.length)throw Error('QA units start in blocked terrain: '+JSON.stringify(setup.blockedStarts));
     if(concentric&&(setup.sectors.length!==2||!setup.sectors.some(c=>c.depth===2&&c.mastio)))throw Error('QA rings must enclose two sectors with the keep in the inner sector');
@@ -123,7 +128,7 @@ async function main(){
       targets.push(seconds);
       for(const target of targets){
         if(target){
-          await page.evaluate(n=>{window.__siege.nextCheckpoint=n;State.clock.speed=1},target);
+          await page.evaluate(([n,v])=>{window.__siege.nextCheckpoint=n;State.clock.speed=v},[target,speed]);
           done=await page.waitForFunction(n=>window.__siege.gameSeconds+1e-6>=n,target,{timeout:Math.max(180000,seconds*20000),polling:500}).then(()=>true,()=>false);
         }
         const checkpoint=await page.evaluate(()=>{
@@ -134,14 +139,16 @@ async function main(){
             attackersHp:C.enemy().reduce((n,u)=>n+(u.stats?.hp||0),0),defendersHp:C.units().reduce((n,u)=>n+(u.stats?.hp||0),0),
             sectors:window.ConquerCircle.getSnapshot()?.compartments.map(c=>({id:c.id,depth:c.depth,mastio:c.mastio,state:c.state,control:c.control})),
             doors:State.structures.filter(s=>s.type==='gate').map(g=>({id:g.id,stage:window.ConquerSiege.doorStage(g),closed:window.ConquerSiege.gateClosed(g)})),
-            attackers:units(C.enemy()),defenders:units(C.units())};
+            attackers:units(C.enemy()),defenders:units(C.units()),
+            storms:(State.combat.storms||[]).map(s=>({id:s.id,kind:s.kind,done:!!s.done,burnt:!!s.burnt,heat:s.fire?+s.fire.heat.toFixed(2):0,blows:s.blows||0})),
+            towerArchers:Object.fromEntries(State.structures.filter(s=>s.type==='tower').map(t=>[t.id,window.ConquerSiege.stationedArchers(t)]).filter(e=>e[1])),archersWalking:(State.combat.archerTransit||[]).length};
         });
         checkpoint.targetSeconds=target;
         checkpoint.screenshot=`${label}-${mode}-${String(target).padStart(3,'0')}s.png`;
         await page.screenshot({path:path.join(out,checkpoint.screenshot),timeout:60000});
         checkpoints.push(checkpoint);
         fs.writeFileSync(path.join(out,`${label}-${mode}-checkpoints.json`),JSON.stringify({label,head:report.head,setup,checkpoints},null,2));
-        console.log('[SIEGE_CHECKPOINT] '+JSON.stringify({target,actual:+checkpoint.gameSeconds.toFixed(2),attackers:checkpoint.attackersAlive,defenders:checkpoint.defendersAlive,sectors:checkpoint.sectors,screenshot:checkpoint.screenshot}));
+        console.log('[SIEGE_CHECKPOINT] '+JSON.stringify({target,actual:+checkpoint.gameSeconds.toFixed(2),attackers:checkpoint.attackersAlive,defenders:checkpoint.defendersAlive,storms:checkpoint.storms,towerArchers:checkpoint.towerArchers,sectors:checkpoint.sectors,screenshot:checkpoint.screenshot}));
         if(!done)break;
       }
     }else done=await page.waitForFunction(n=>window.__siege.gameSeconds>=n,seconds,{timeout:Math.max(180000,seconds*20000),polling:500}).then(()=>true,()=>false);

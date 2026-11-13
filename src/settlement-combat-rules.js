@@ -235,6 +235,9 @@
     }
     return hits;
   }
+  const SLIT_COVER=.9,MERLON_COVER=.7,ROOF_COVER=.9;
+  // A tower archer is an unarmoured archer (armour 0) before the slit's cover.
+  const postHit=()=>{const die=roll();return die===6||(die!==1&&die+PROFILES.archer.aim>=6)};
   function shooterRange(shooter,target){
     const targetH=Number.isFinite(target.h)?target.h:target.height??0;
     // +1/-1 range for every relative altitude level. Positive downhill,
@@ -247,18 +250,25 @@
       if(owner&&(!living(owner)||owner.defeated||owner.routing||owner.engaged||owner.climbing))continue;
       let target=null,best=Infinity;
       for(const e of targets){
-        if(!living(e)||e.routing||e.neutral)continue;
+        if(!e.post&&(!living(e)||e.routing||e.neutral))continue;
         const d=Math.hypot(shooter.x-e.x,shooter.y-e.y);
         if(d>shooterRange(shooter,{...e,h:e.h??shooter.terrainAt(e)})||d>=best)continue;
         if(!visibleFn(e,shooter))continue;
         target=e;best=d;
       }
       if(!shooter.clock)shooter.clock=0;
-      if(!target){shooter.clock=0;continue}
+      // idle: seconds without a target (the garrison moves archers with nothing to shoot at).
+      if(!target){shooter.clock=0;shooter.idle=(shooter.idle||0)+dt;continue}
+      shooter.idle=0;
       shooter.clock+=dt;
       if(shooter.clock<2)continue;
       shooter.clock%=2;
-      const hit=shotHit(shooter,target),shot=arrow(shooter,target,hit);
+      // Cover against arrows: a slit stops 90% of the hits, merlons on a wall walk 70%.
+      // A covered ram's shed covers its crew at their posts (90%).
+      const cover=target.post?target.post.cover??SLIT_COVER:target.underRoof?ROOF_COVER:target.wall?MERLON_COVER:0;
+      const hit=(target.post?postHit():shotHit(shooter,target))&&!(cover&&Math.random()<cover),shot=arrow(shooter,target,hit);
+      shooter.onLoose?.(target,hit);
+      if(hit&&target.post){target.post.hit?.();continue}
       if(hit){
         applyDamage(target,1,owner||shooter);
         window.ConquerCombatAnim?.hurt(target,shot.duration);
@@ -308,7 +318,8 @@
     }
     if(combatClock>=1)combatClock%=1;
     shoot(dt,shooters,enemy,visibleFn);
-    shoot(dt,enemyShooters,friendly,enemyVisibleFn);
+    // Staffed tower posts are targets too: the hostiles shoot at the archers behind the slits.
+    shoot(dt,enemyShooters,friendly.concat(shooters.filter(s=>s.post)),enemyVisibleFn);
     for(let i=shots.length-1;i>=0;i--)if(elapsed>shots[i].start+shots[i].duration)shots.splice(i,1);
     for(let i=meleeFlashes.length-1;i>=0;i--)if(elapsed>meleeFlashes[i].at+.65)meleeFlashes.splice(i,1);
     for(let i=stones.length-1;i>=0;i--)if(elapsed>stones[i].start+stones[i].duration+.25)stones.splice(i,1);

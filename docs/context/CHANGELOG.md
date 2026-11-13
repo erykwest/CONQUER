@@ -12,6 +12,14 @@
 - 67 test circle e regressioni pertinenti PASS; runner browser TEST/variante concentrica di 60 s con perdite e settori, CI sul branch. Browser 60 s sulla variante concentrica: 43→43 assalitori vivi, 5→4 difensori, porta esterna sfondata, 0 settori conquistati (esterno conteso), mastio sicuro, 0 errori JS; picchi fino a 10,7 s. [Report](../qa/combat-ai-circle-2026-11-06.md). CI PASS su `a3ebb86`. Branch non integrato in main.
 
 
+## 2026-11-13 — Difesa dalle mura, fuoco sulle macchine e due arieti
+
+- Copertura dalle frecce in `settlement-combat-rules.js`: feritoia 90%, merli (cammino di ronda e tetto delle torri) 70%, tetto dell'ariete coperto 90%. Gli arcieri delle torri (posti `occupiedArcherSlots`) diventano bersagli: un colpo che supera la copertura toglie un arciere dalla torre.
+- Arcieri senza bersaglio da 6 s: uno per torre ogni 4 s si sposta (1,2 U/s) nella torre libera più vicina al nemico entro 15 U.
+- Frecce incendiarie dai posti sul tetto delle torri: 25% di innesco su un ariete, una torre d'assalto o una scala entro 3 U dal bersaglio. Il fuoco cresce (scala al doppio, pioggia al 30%), la squadra libera lo spegne finché è piccolo, a fuoco pieno la macchina è persa e un nuovo ariete per la stessa porta arriva dopo 40 s. Le pietre dei ballatoi ignorano gli uomini sotto il tetto.
+- Ariete: forza per uomo 0,04 (circa 90 colpi, 2,7 min con 4 uomini, per la porta da 85 HP). Due varianti: `light` (4 uomini, nuovo modello Blender `ramLight`: trave corta all'altezza delle mani con due traverse) e `covered` (8 uomini, modello attuale, due file per lato sotto il tetto). Con almeno 8 fanti liberi gli assalitori montano il coperto. Le squadre al loro posto sono disegnate senza armi (`atRam`).
+- Asset Lab: «Ariete coperto» e «Ariete leggero» con azione «Colpo». Runner dell'assedio: `SIEGE_SPEED`, `SIEGE_FOCUS`, `SIEGE_ZOOM`, stato delle macchine e arcieri per torre negli snapshot; nella fixture concentrica 5 arcieri e mura con `flip` (merli all'esterno).
+
 ## 2026-11-11 — Assedio concentrico: blocco nei varchi
 
 - Chi resta nel varco di una porta (che non appartiene a nessun settore) prosegue dritto verso il lato più profondo; prima era trattato come «fuori» e rimandato alla porta esterna.

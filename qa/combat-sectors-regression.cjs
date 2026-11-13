@@ -8,6 +8,9 @@ const harness=fs.readFileSync(__dirname+'/urban-regression.cjs','utf8').split('l
 new Function('require','__dirname',harness+`
 run(fs.readFileSync(__dirname+'/../src/settlement-architecture.js','utf8'));
 run(fs.readFileSync(__dirname+'/../src/settlement-wallwalk.js','utf8'));
+// The siege-engine models give the ram crews their real posts (4 light, 8 covered).
+run(fs.readFileSync(__dirname+'/../src/assets/siege-engines-model.js','utf8'));
+run(fs.readFileSync(__dirname+'/../src/settlement-siege-engines3d.js','utf8'));
 let passed=0,failed=0;
 function test(name,fn){try{fn();passed++;console.log('PASS '+name)}catch(e){failed++;console.error('FAIL '+name+': '+e.message)}}
 let T=1e6;sandbox.performance={now:()=>(T+=.0005)};
@@ -119,6 +122,51 @@ test('a patrol beside the outer wall completes its fall back',()=>{
   sandbox.qaStates.outer='invaded';
   tick(500);
   assert.ok(inR(U('pt'),92,108),'reached the inner ring: '+U('pt').x.toFixed(1)+','+U('pt').y.toFixed(1));
+});
+// Fire on the siege engines: roof archers loose fire arrows; a fire that grows past the
+// crew's buckets burns the engine out and ends that assault.
+test('fire arrows from a tower roof set the ram alight',()=>{
+  reset([],[...Array(8)].map((_,i)=>A('m'+i,'infantry',96+i,72)),['go']);
+  // A roofed-deck tower just inside the gate, within bow range of the ram (the corners are 20 U off).
+  run("State.structures.push({id:'qt',type:'tower',shape:'square',size:2,x:106,y:84,level:2,material:'stone',angle:0,archerCount:1,functions:[]});invalidateNavigation()");
+  assert.equal(run("window.ConquerSiege.occupiedArcherSlots(State.structures.find(s=>s.id==='qt'))[0]?.kind"),'roof','the archer is on the roof');
+  let lit=false;for(let i=0;i<120&&!lit;i++){tick(5);lit=run("(State.combat.storms||[]).some(s=>s.kind==='ram'&&(s.fire||s.burnt))")}
+  assert.ok(lit,'the ram caught fire');
+});
+test('a ram fire past the crew burns it out and frees the crew',()=>{
+  reset([],[...Array(8)].map((_,i)=>A('m'+i,'infantry',96+i,72)),['go']);
+  tick(30);
+  run("const s=State.combat.storms.find(s=>s.kind==='ram');s.fire={heat:.95}");
+  tick(30);
+  const s=run("State.combat.storms.find(s=>s.kind==='ram')");
+  assert.ok(s.burnt&&s.done,'burnt out');
+  assert.ok(!run("State.combat.enemy.some(e=>e.assault==='"+s.id+"')"),'crew released');
+  assert.ok(!run("State.combat.storms.some(x=>x.kind==='ram'&&!x.done)"),'no new ram at once');
+});
+test('an archer with no target moves to a tower that can engage',()=>{
+  reset([],[A('m1','infantry',100,74)],['go']);
+  run("State.combat.enemy[0].digging='qa'");
+  run("State.structures.push({id:'qt',type:'tower',shape:'square',size:2,x:106,y:84,level:2,material:'stone',angle:0,archerCount:0,functions:[]});State.structures.find(s=>s.id==='o2').archerCount=1;invalidateNavigation()");
+  tick(80);
+  assert.equal(run("State.structures.find(s=>s.id==='o2').archerCount"),0,'left the idle back tower');
+  tick(450);
+  assert.equal(run("State.structures.find(s=>s.id==='qt').archerCount"),1,'took a post in the tower facing the enemy');
+});
+test('few men carry the light ram, eight bring up the covered one',()=>{
+  reset([],[A('m1','infantry',100,72),A('m2','infantry',101,72)],['go']);
+  tick(30);
+  assert.equal(run("State.combat.storms.find(s=>s.kind==='ram').variant"),'light','two men: the light ram');
+  reset([],[...Array(8)].map((_,i)=>A('m'+i,'infantry',96+i,72)),['go']);
+  tick(30);
+  assert.equal(run("State.combat.storms.find(s=>s.kind==='ram').variant"),'covered','eight men: the covered ram');
+});
+test('the covered ram shelters its crew at their posts',()=>{
+  reset([],[...Array(8)].map((_,i)=>A('m'+i,'infantry',96+i,72)),['go']);
+  tick(300);
+  assert.equal(run("State.combat.enemy.filter(e=>e.underRoof).length"),8,'all eight at their posts under the roof: '+
+    run("JSON.stringify({storm:State.combat.storms.map(s=>({v:s.variant,m:s.manned,o:s.origin})),crew:State.combat.enemy.map(e=>[e.id,+e.x.toFixed(2),+e.y.toFixed(2),e.assault?1:0,e.legs?.length||0,e.engaged?1:0])})"));
+  assert.ok(run("State.combat.storms.find(s=>s.kind==='ram').blows")>0,'and the ram swings');
+  assert.equal(run("State.combat.enemy.filter(e=>e.atRam).length"),8,'drawn with both hands on the ram (no spear or shield)');
 });
 console.log(passed+' combat sector checks passed; '+failed+' failed.');if(failed)process.exitCode=1;
 `)(require,__dirname);
