@@ -35,11 +35,19 @@
       // Infirmary wards (W1 section on both floors, W2 hall): the cutaway shows the furnished rooms.
       ['Mura',['Infermeria · sezione L2',{type:'built',tier:2,level:2,functions:['infirmary','infirmary']}]],
       ['Mura',['Infermeria · sala larga',{type:'built',span:'wide',tier:2,level:2,flip:true,functions:['infirmary']}]],
+      // A W3 tower with an attached W1 subtower whose upper room is a latrine (garderobe on its free face).
+      ['Torri',['Grande quadrata L3 + sottotorre W1 latrina',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:2,roofStyle:'battlement',
+        attach:[{dx:1.45,dy:0,spec:{type:'tower',shape:'square',material:'stone',level:2,tier:1,size:1,roofStyle:'battlement',functions:[null,'latrine']}}]}]],
       // Military stables (settlement-siege.js stableUnits): stall rows down the long room.
       ['Mura',['Scuderia militare · sezione L1',{type:'built',tier:2,level:1,functions:['stables']}]],
       // Timber longhouse (settlement-wood3d.js): W1 / W2 span, ground floor only, the stone section's rooms.
       ['Mura',['Long house W1',{type:'built',material:'wood',level:1}]],
       ['Mura',['Long house W2',{type:'built',material:'wood',span:'wide',level:1,flip:true}]],
+      // Roof covers (BC-251105-09): thatch and turf beside the default shingles, smoke hole on the ridge.
+      ['Mura',['Long house W1 · paglia',{type:'built',material:'wood',level:1,roofCover:'thatch'}]],
+      ['Mura',['Long house W1 · zolle',{type:'built',material:'wood',level:1,roofCover:'turf'}]],
+      ['Mura',['Long house W2 · paglia',{type:'built',material:'wood',span:'wide',level:1,flip:true,roofCover:'thatch'}]],
+      ['Mura',['Long house W2 · zolle',{type:'built',material:'wood',span:'wide',level:1,flip:true,roofCover:'turf'}]],
       ['Mura',['Long house W1 · scuderia',{type:'built',material:'wood',level:1,functions:['stables']}]],
       // Lean-to against the inner face of an H2 wall (settlement-lean-to.js): single-pitch roof.
       // Timber + thatch by default; stone and brick on request.
@@ -86,6 +94,9 @@
   function apply(spec,state,id){
     // A fixed id: collapse seeds (and so the rubble heaps) derive from it.
     const s={...SP().galleryStructure(spec,spot.x,spot.y),id:'assetlab-'+id};State.structures.push(s);
+    // Attached subtowers (spec.attach: [{dx,dy,spec}]): staged with their parent, which they follow
+    // in cutaway (structureCutaway).
+    (spec.attach||[]).forEach((a,i)=>State.structures.push({...SP().galleryStructure(a.spec,spot.x+a.dx,spot.y+a.dy),id:'assetlab-'+id+'-sub'+i,parentTowerId:s.id}));
     // Houses are drawn from the urban geometry cache (walls, timber frame, windows): rebuild it.
     if(s.type==='house')invalidateUrbanGeometry();
     if(state.progress!=null){

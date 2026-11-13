@@ -34,7 +34,8 @@
     field:{good:'food',classId:2,workers:1,build:20},
     loggingCamp:{good:'wood',classId:1,workers:2,rate:2,build:45},
     quarry:{good:'stone',classId:2,workers:2,rate:2,build:65},
-    mine:{good:'stone',classId:2,workers:2,rate:2,build:95},
+    // ECO-FIL-01: the mine yields metal only (smelting implicit); stone stays at the quarry.
+    mine:{good:'metal',classId:2,workers:2,rate:1,build:95},
     // Optional mills process unmarketed crop stock. No additional tradeable good.
     windmill:{good:'food',classId:1,workers:0,rate:12,build:40},
     watermill:{good:'food',classId:1,workers:0,rate:12,build:45},

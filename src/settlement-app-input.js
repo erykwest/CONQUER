@@ -555,13 +555,18 @@ for(const b of document.querySelectorAll('[data-storage-yard]'))b.onclick=()=>{
   const candidate=window.ConquerStorageYard.make();
   setTool({kind:'civic',placementSpec:candidate,label:'Piazzale magazzino · 2×2U · '+costText(constructionCost(candidate)),el:b});
 };
+// Per-worker daily output from the engine contract (e.g. mine 1 metal / 2 L2 = 0.5).
+const industryRatePerWorker=type=>{
+  const k=window.ConquerEconomy?.KIND?.[type];
+  return k&&k.rate&&k.workers?Math.round(k.rate/k.workers*100)/100:1;
+};
 for(const b of document.querySelectorAll('[data-industry]'))b.onclick=()=>{
    const type=b.dataset.industry,extractionMode=b.dataset.extractionMode==='clay'?'clay':'stone';
    const candidate=window.ConquerIndustries.make(type,{x:0,y:0},extractionMode);
    const spec=window.ConquerIndustries.definition(candidate);
    setTool({kind:'industry',industry:type,
      placementSpec:candidate,
-     label:spec.name+' · '+spec.w+'×'+spec.h+'U'+(spec.workers?' · L'+spec.tier+' ×'+spec.workers:'')+(window.ConquerIndustries.isMill({type})?' · Crop → Food':' · 1 '+spec.good+'/worker/day')+' · '+costText(constructionCost({...candidate,masonryMaterial:State.buildMasonryMaterial})),el:b});
+     label:spec.name+' · '+spec.w+'×'+spec.h+'U'+(spec.workers?' · L'+spec.tier+' ×'+spec.workers:'')+(window.ConquerIndustries.isMill({type})?' · Crop → Food':' · '+industryRatePerWorker(type)+' '+spec.good+'/worker/day')+' · '+costText(constructionCost({...candidate,masonryMaterial:State.buildMasonryMaterial})),el:b});
  };
  // Event venues (settlement-events3d.js): podium, stage, festival ground, arena lot.
  for(const b of document.querySelectorAll('[data-event-venue]'))b.onclick=()=>{

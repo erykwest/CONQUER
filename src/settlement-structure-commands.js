@@ -102,6 +102,12 @@ const StructureCommands=(()=>{
     target.woodRoof=style==='pitched'?'pitched':'open';
     refresh(target);status('Wood tower roof: '+target.woodRoof);return true;
   }
+  // Longhouse roof cover: shingles, thatch or turf (BC-251105-09); a recover, not a rebuild.
+  function setLonghouseCover(id,cover){
+    const target=find(id);if(!isLonghouse(target)||!LONGHOUSE_COVERS.includes(cover))return false;
+    if(cover==='shingle')delete target.roofCover;else target.roofCover=cover;
+    refresh(target);status('Longhouse roof: '+cover);return true;
+  }
   function setGateRoof(id,style){
     const target=find(id);if(!target||target.type!=='gate')return false;
     if(!setStructureVariant(target,'roofStyle',style))return false;
@@ -183,6 +189,15 @@ const StructureCommands=(()=>{
     window.ConquerCombat?.invalidateArchers?.();
     refresh(target);
     status('Bartizans: '+({none:'none',battlement:'crenellated',pitched:'spire'}[target.bartizan])+(towerBartizanAllowed(target)?'':' (needs a large T3 square or round stone tower)'));
+    return true;
+  }
+  // Inner roof inside the merlons (BC-251105-05): cosmetic cover of the deck, no room under it.
+  function setTowerInnerRoof(id,value){
+    const target=find(id);if(!target||target.type!=='tower')return false;
+    if(value==='on'&&!towerInnerRoofAllowed(target)){status('Inner roof: needs a T2+ stone tower with a crenellated or machicolated top and no weapon or signal pyre on the deck');return false}
+    if(!setStructureVariant(target,'innerRoof',value==='on'?'on':'off'))return false;
+    refresh(target,false);
+    status(target.innerRoof==='on'?'Inner roof built inside the merlons':'Inner roof removed');
     return true;
   }
   // Alarm bell on the roof apex of a T1-T2 tower with a pitched roof (settlement-alarm-bells.js).
@@ -398,6 +413,7 @@ const StructureCommands=(()=>{
       }else{
         d.controls.push(choice('roof','setTowerRoof',[{value:'battlement',word:'battlement'},{value:'machicolation',word:'machicolation'},{value:'pitched',word:'pitched'}],towerRoofStyle(s)));
         if(s.shape!=='half')d.controls.push(hoardingChoice(s));
+        if(s.shape!=='half')d.controls.push(choice('innerRoof','setTowerInnerRoof',[{value:'off',word:'innerRoofOff'},{value:'on',word:'innerRoofOn',disabled:!towerInnerRoofAllowed(s)}],towerInnerRoofMounted(s)?'on':'off'));
         d.controls.push(choice('weapon','setTowerWeapon',[{value:'none',word:'none'},{value:'mangonel',word:'mangonel',disabled:!towerTopWeaponAllowed(s)},{value:'ballista',word:'ballista',disabled:!towerTopWeaponAllowed(s)}],structureVariant(s,'topWeapon')));
         if((s.shape||'square')==='square'&&variantSchema(s)?.roofShape){
           const flat=towerRoofStyle(s)!=='pitched';
@@ -428,6 +444,7 @@ const StructureCommands=(()=>{
       const stage=window.ConquerSiege.doorStage(s),closed=!!s.closed&&stage!=='broken';
       d.gate={stage,closed,broken:stage==='broken',nightClose:s.nightClose!==false};
     }
+    if(isLonghouse(s))d.controls.push(choice('roofCover','setLonghouseCover',LONGHOUSE_COVERS.map(v=>({value:v,word:'cover_'+v})),longhouseCover(s)));
     if(s.type==='built'&&!isLonghouse(s))d.controls.push(choice('skin','setSkin',[{value:'standard',word:'standard'},{value:'arcade',word:'arcade'}],builtSkin(s)));
     if(s.type==='wall'){
       const narrow=wallTier(s)===1;
@@ -465,10 +482,10 @@ const StructureCommands=(()=>{
     return d;
   }
 
-  const commands={setConstructionPriority,setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setGateRoof,setGateUpper,setSkin,setWallStair,setWallStairPos,toggleCutaway,stepCutawayFloor,flipSide,
-    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerLookout,setTowerOutpost,setTowerSignalFire,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,
+  const commands={setConstructionPriority,setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setLonghouseCover,setGateRoof,setGateUpper,setSkin,setWallStair,setWallStairPos,toggleCutaway,stepCutawayFloor,flipSide,
+    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerInnerRoof,setTowerLookout,setTowerOutpost,setTowerSignalFire,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,
     describeStructure};
-  for(const name of ['setTier','setHeight','setKeepFloorPlan','setTowerBase','setTowerRoof','setHoarding','setWoodRoof','setGateRoof','setGateUpper','setSkin','setTowerWeapon','setTowerRoofShape','setTowerBartizan','setTowerBell','setCivicLevel','setPlazaVariant']){
+  for(const name of ['setTier','setHeight','setKeepFloorPlan','setTowerBase','setTowerRoof','setHoarding','setWoodRoof','setGateRoof','setGateUpper','setSkin','setTowerWeapon','setTowerRoofShape','setTowerBartizan','setTowerBell','setTowerInnerRoof','setCivicLevel','setPlazaVariant']){
     const execute=commands[name];
     commands[name]=(id,...args)=>{
       const target=find(id);if(!target||underConstruction(target))return false;

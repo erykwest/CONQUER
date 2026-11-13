@@ -1082,7 +1082,8 @@ function drawCutawayStructure(s){
       drawBuiltCutawayShell(s,g,height);
       drawCutawayFloorsAndProps(s,g);
       drawCutawayWallRing(g,height,CUTAWAY_TOP_ALPHA);
-      window.ConquerRoomExterior?.draw(s);       // outside the cut walls: stays whole
+      window.ConquerRoomExterior?.draw(s,{only:'far',cutaway:true});   // behind the standing wall
+      window.ConquerRoomExterior?.draw(s,{only:'near',cutFront:true,cutaway:true});   // cut side: without its front facade
       if(top)drawBuiltDetails(s,false);
       if(builtSkin(s)==='arcade'){
         ctx.save();ctx.globalAlpha*=.72;drawBuiltArcade(s);ctx.restore();
@@ -1094,7 +1095,7 @@ function drawCutawayStructure(s){
     drawCutawayShellFaces(shell.faces,false);
     // Tower garderobe behind the standing wall: shown over that wall, under the floor and the
     // furniture, so it reads as the latrine of that room (its triangles carry their own ground).
-    if(s.type==='tower')withProjectionGroundZ(0,()=>window.ConquerRoomExterior?.draw(s,{only:'far'}));
+    if(s.type==='tower')withProjectionGroundZ(0,()=>window.ConquerRoomExterior?.draw(s,{only:'far',cutaway:true}));
     drawCutawayFloorsAndProps(s,g);
     drawCutawaySectionJambs(g,height,shell.transparent);
     drawCutawayShellFaces(shell.faces,true);
@@ -1106,10 +1107,10 @@ function drawCutawayStructure(s){
     }
   };
   if(s.type==='tower'){
-    // A tower's face elements (the garderobe): the far one inside render (over the standing wall),
-    // the one on the cut side stays whole in front.
+    // A tower's face elements (the garderobe): the far one inside render (over the standing wall);
+    // the one on the cut side loses only its front facade, like the wall it continues (user, 12/11/2026).
     withStructureGroundPlane(s,render);
-    window.ConquerRoomExterior?.draw(s,{only:'near'});
+    window.ConquerRoomExterior?.draw(s,{only:'near',cutFront:true,cutaway:true});
   }else if(s.type==='gate')withStructureGroundPlane(s,render);else render();
 }
 function drawCutawayStructures(){

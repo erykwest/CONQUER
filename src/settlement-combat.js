@@ -1745,6 +1745,13 @@
       if(addRamStorm(s))setTool({kind:'select',label:'Select'});
       syncButtons();draw();return;
     }
+    if(kind==='combat-storm'&&State.tool.stormKind==='trebuchet'){
+      e.preventDefault();e.stopImmediatePropagation();
+      const out=window.ConquerTrebuchets?.add(p);
+      if(!out?.ok){status(out?.reason||'Trebuchets unavailable');return}
+      setTool({kind:'select',label:'Select'});
+      status('Trebuchet set up · target '+out.target);syncButtons();draw();return;
+    }
     if(kind==='combat-storm'&&State.tool.stormKind==='fill'){
       e.preventDefault();e.stopImmediatePropagation();
       const result=window.ConquerEarthworks?.start(p);
@@ -1885,7 +1892,7 @@
     '<label>Brush radius <input id="combatBrushSize" type="range" min="1" max="16" value="5"><b id="combatBrushReadout">5U</b></label>'+
     '<div class="combat-row"><button id="combatIntruder">Test intruder</button><button id="combatClearEnemies">Clear intruders</button></div>'+
     '<div class="combat-row"><button id="combatTorch" title="Place an attacker with a torch: he sets alight the nearest thing that burns">Torch-bearer</button><button data-combat-fire="arrows" title="Click a structure: a volley of fire arrows from outside">Fire arrows</button><button data-combat-fire="stone" title="Click a structure: a burning trebuchet stone">Fire stone</button><button id="combatBuckets" title="Bucket brigade: women run water from the nearest well to every fire">Buckets ON</button></div>'+
-    '<div class="combat-row"><button data-combat-storm="ladder" title="Set an assault ladder against a wall: intruders storm it">Assault · ladder</button><button data-combat-storm="tower" title="Set an assault tower against a wall: intruders storm it">Assault · tower</button><button data-combat-storm="ram" title="Set a ram against a gate: intruders batter it in">Assault · ram</button><button data-combat-storm="fill" title="Fill a ravine up to the plateau: three moat-fills per level, dug by infantry">Assault · fill</button></div>'+
+    '<div class="combat-row"><button data-combat-storm="ladder" title="Set an assault ladder against a wall: intruders storm it">Assault · ladder</button><button data-combat-storm="tower" title="Set an assault tower against a wall: intruders storm it">Assault · tower</button><button data-combat-storm="ram" title="Set a ram against a gate: intruders batter it in">Assault · ram</button><button data-combat-storm="fill" title="Fill a ravine up to the plateau: three moat-fills per level, dug by infantry">Assault · fill</button><button data-combat-storm="trebuchet" title="Place an enemy trebuchet outside the walls: it shoots burning stones at the nearest fortification within 28U">Assault · trebuchet</button></div>'+
     '<div class="legend" id="combatSelection">Select a unit to move</div>'+ 
     '<div class="legend" id="combatStats">Combat stats · Coffee Battles</div>'+
     '<div class="legend" id="combatAlarm" data-level="clear">No alert</div>'+
@@ -1944,7 +1951,7 @@
   document.querySelectorAll('[data-combat-fire]').forEach(b=>b.onclick=()=>{
     setTool({kind:'combat-fire',fireKind:b.dataset.combatFire,label:'Click a structure to shoot at it'});syncButtons();
   });
-  $('combatClearEnemies').onclick=()=>{combat.enemy=[];combat.storms=[];window.ConquerCombatRules?.reset();alertState='clear';changed();draw()};
+  $('combatClearEnemies').onclick=()=>{combat.enemy=[];combat.storms=[];window.ConquerTrebuchets?.clear();window.ConquerCombatRules?.reset();alertState='clear';changed();draw()};
   document.querySelectorAll('[data-combat-storm]').forEach(b=>b.onclick=()=>{
     setTool({kind:'combat-storm',stormKind:b.dataset.combatStorm,label:'Click the top of a wall to storm it'});syncButtons();
   });

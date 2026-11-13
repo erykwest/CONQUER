@@ -156,7 +156,7 @@
 
   // ---------- signal fires
   const flatDeck=s=>s?.type==='tower'&&!isWoodTower(s)&&s.shape!=='half'&&['battlement','machicolation'].includes(towerRoofStyle(s))
-    &&(typeof structureVariant!=='function'||structureVariant(s,'topWeapon')==='none');
+    &&(typeof structureVariant!=='function'||structureVariant(s,'topWeapon')==='none'&&structureVariant(s,'innerRoof')!=='on');   // the inner roof takes the deck
   function signalFireAllowed(s){return flatDeck(s)}
   function signalFire(s){return signalFireAllowed(s)&&typeof structureVariant==='function'&&structureVariant(s,'signalFire')==='pyre'}
   function pyreReady(s){return signalFire(s)&&standing(s)&&!s.signalFireSpent}

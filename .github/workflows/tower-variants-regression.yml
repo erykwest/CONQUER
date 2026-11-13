@@ -18,6 +18,7 @@ on:
       - 'src/settlement-structure-commands.js'
       - 'qa/bartizan-regression.cjs'
       - 'qa/tower-roof-shape-regression.cjs'
+      - 'qa/tower-inner-roof-regression.cjs'
       - 'qa/dovecote-regression.cjs'
       - 'qa/falconry-regression.cjs'
       - 'src/settlement-diplomacy.js'
@@ -46,6 +47,8 @@ jobs:
         run: node qa/bartizan-regression.cjs
       - name: Square tower roof shapes (pyramid, gable, hip with L/2 ridge)
         run: node qa/tower-roof-shape-regression.cjs
+      - name: Inner roof inside the merlons (BC-251105-05)
+        run: node qa/tower-inner-roof-regression.cjs
       - name: Existing crown and tower weapon regressions
         run: |
           node qa/battlement-parapet-regression.cjs

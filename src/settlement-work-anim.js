@@ -158,7 +158,20 @@
     ctx.restore();
     drawFx(tool,dot.id,P.cycle,P.u,{x:at.x,y:at.y+P.bob*bodyH},f,scale);
   }
+  // WebGL figures: the stroke is cut into PHASES poses; the time is moved to the middle of the
+  // worker's current phase, so every worker of the same look shares the same few tiles.
+  const PHASES=8;
+  function phaseTime(tool,id,t){
+    const T=TOOLS[tool],k=(hash(String(id))%1000)/1000*T.period*.9,c=(t+k)/T.period,b=Math.floor((c-Math.floor(c))*PHASES);
+    return{b,t:(b+.5)/PHASES*T.period-k};
+  }
+  const look=dot=>typeof villagerLookKey==='function'?villagerLookKey(dot):(dot.colors||[]).join(',');
   function drawWorker(dot,tool,t,facing){
+    if(TOOLS[tool]&&window.ConquerWorld3D?.figure){
+      const q=phaseTime(tool,dot.id,t),f=facing<0?-1:1;
+      // Painted facing right; a worker facing left is the same card flipped.
+      if(window.ConquerWorld3D.figure(dot.p,.10,'w|'+tool+'|'+q.b+'|'+look(dot),()=>drawWorkerUnmasked({...dot,p:{x:0,y:0}},tool,q.t,1),dot.id,f<0))return true;
+    }
     return withUrbanFigureOcclusion(dot.p,.10,()=>drawWorkerUnmasked(dot,tool,t,facing));
   }
   // A walking worker carries the tool on the shoulder.
@@ -169,7 +182,10 @@
     const g={x:base.x+f*bodyW*.3,y:bodyY-bodyH*.28};
     ctx.save();drawTool(tool,g,f,tool==='hammer'||tool==='sickle'?.9:-.75,scale);ctx.restore();
   }
-  function drawCarrier(dot,tool,facing){return withUrbanFigureOcclusion(dot.p,.10,()=>drawCarrierUnmasked(dot,tool,facing))}
+  function drawCarrier(dot,tool,facing){
+    const f=facing<0?-1:1;
+    if(window.ConquerWorld3D?.figure?.(dot.p,.10,'c|'+tool+'|'+look(dot),()=>drawCarrierUnmasked({...dot,p:{x:0,y:0}},tool,1),dot.id,f<0))return true;
+    return withUrbanFigureOcclusion(dot.p,.10,()=>drawCarrierUnmasked(dot,tool,facing))}
   // Screen-space facing of a world direction (dx,dy).
   function facingOf(p,dx,dy){const a=w2s(p,0),b=w2s({x:p.x+dx,y:p.y+dy},0);return b.x>=a.x?1:-1}
   const now=()=>(typeof performance!=='undefined'?performance.now():Date.now())/1000;
@@ -213,6 +229,6 @@
     }
   }
   const FIELD_TOOL={plough:'hoe',sow:'seeds',harvest:'sickle'};
-  window.ConquerWorkAnim={TOOLS,FIELD_TOOL,pose,drawWorker,drawWorkerUnmasked,drawCarrier,drawCarrierUnmasked,
+  window.ConquerWorkAnim={TOOLS,FIELD_TOOL,PHASES,phaseTime,pose,drawWorker,drawWorkerUnmasked,drawCarrier,drawCarrierUnmasked,
     drawBuilders,anonymous,facingOf,now};
 })();

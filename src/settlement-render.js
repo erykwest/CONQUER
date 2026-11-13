@@ -171,6 +171,8 @@ let castleBodyBitmapEnabled=localStorage.getItem('conquer.castleBodyBitmap.v1')!
 function renderCastleBodyContent(){
   // Opt-in 3D prototype (settlement-castle3d.js); falls through to the Canvas union renderer.
   if(window.ConquerCastle3D?.drawBody?.())return;
+  // Room exterior elements behind their structure (a garderobe on the far face) go first: the body hides them.
+  window.ConquerRoomExterior?.drawAll('back');
   // A merged single-colour 2D union cannot represent distinct wall/brick components.
   // Use the existing per-structure fallback for mixed masonry; do not rewrite topology.
   const hasBrick=castleBodyRenderableStructures().some(s=>masonryMaterial(s)==='brick'||(typeof isTimberLeanTo==='function'&&isTimberLeanTo(s)));
@@ -223,7 +225,7 @@ function castleBodyVisualSignature(){
   const point=p=>p?[num(p.x),num(p.y)]:null;
   const items=castleBodyRenderableStructures().map(s=>[
     s.id||'',s.type||'',s.shape||'',s.material||'',s.masonryMaterial||'stone',s.woodStyle||'',s.woodRoof||'',
-    s.roofStyle||'',s.bartizan||'',s.bell||'',(s.signalFire||'')+(s.signalFireSpent?'F':''),s.roofShape||'',s.baseStyle||'',s.skin||'',num(s.x),num(s.y),num(s.r),num(s.size),
+    s.roofStyle||'',s.bartizan||'',s.bell||'',s.innerRoof||'',(s.signalFire||'')+(s.signalFireSpent?'F':''),s.roofShape||'',s.baseStyle||'',s.skin||'',num(s.x),num(s.y),num(s.r),num(s.size),
     point(s.a),point(s.b),num(s.width),num(s.length),num(s.angle),s.rotationStep??null,
     s.level??null,s.tier??null,!!s.flip,!!s.cutaway,s.cutawayFloor??null,JSON.stringify(s.functions||[]),JSON.stringify(s.roomExteriorHp||null),s.aSnap||null,s.bSnap||null,s.parentTowerId||null,
     num(s.orientationOffset),num(s.groundZ),num(s.foundationMinZ)
@@ -468,6 +470,7 @@ function draw(){
 
   drawTowerFlags();
   drawCastleSoldiers();
+  window.ConquerTrebuchets?.draw();   // enemy trebuchets: crews (and the 2.5D outline)
   markPhase('castle-units');
   if(world3d)window.ConquerWorld3D.drawFront(r);else blitSceneCache('castleFront');
   window.ConquerFleet?.drawFigures();   // 3D: crews, fires and arrows over the ships of the front pass

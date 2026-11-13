@@ -191,6 +191,11 @@ function structureAssetFamilyCatalog(){
   // Lean-to against an H2 wall (settlement-lean-to.js): one storey, single-pitch roof; both wall sides.
   for(const mat of ['wood','stone','brick'])for(const side of [1,-1])for(const length of STRUCTURE_ASSET_TEST_LENGTHS.built)add('lean-to-'+mat+'-'+(side===1?'n':'s')+'-'+length,'Lean-to W1 '+mat+' '+(side===1?'wall +n':'wall -n')+' '+length+'U',assetLinearBase('built',length,{leanTo:true,leanMaterial:mat,masonryMaterial:mat==='brick'?'brick':'stone',leanSide:side,flip:side===1,level:1,width:1,functions:[]}));
   for(const length of STRUCTURE_ASSET_TEST_LENGTHS.builtWide)add('longhouse-w2-'+length,'Longhouse W2 '+length+'U',assetLinearBase('built',length,{material:'wood',span:'wide',level:1,width:TYPES.builtWide.width,functions:[]}));
+  // Longhouse roof covers (BC-251105-09): thatch and turf beside the default shingles.
+  for(const roofCover of ['thatch','turf']){
+    for(const length of STRUCTURE_ASSET_TEST_LENGTHS.built)add('longhouse-w1-'+roofCover+'-'+length,'Longhouse W1 '+roofCover+' '+length+'U',assetLinearBase('built',length,{material:'wood',level:1,width:1,roofCover,functions:[]}));
+    for(const length of STRUCTURE_ASSET_TEST_LENGTHS.builtWide)add('longhouse-w2-'+roofCover+'-'+length,'Longhouse W2 '+roofCover+' '+length+'U',assetLinearBase('built',length,{material:'wood',span:'wide',level:1,width:TYPES.builtWide.width,roofCover,functions:[]}));
+  }
   for(const type of CIVIC_TYPES){
     if(CIVIC_LEVEL_TYPES.includes(type))for(let level=1;level<=3;level++){
       if(type==='plaza')for(const variant of PLAZA_VARIANTS)add('civic-plaza-l'+level+'-'+variant,'Piazza L'+level+' '+variant,assetPointBase(type,{civicLevel:level,plazaVariant:variant}));
