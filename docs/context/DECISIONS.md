@@ -1,5 +1,14 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-RC-TIME-261113 — Due temporalità per gli ordini remoti (13/11/2026)
+
+- **DECISO dal product owner:** ordini amministrativi impartiti al **proprio feudo** da browser/app sono validati dal server e **applicati al primo tick utile successivo** alla ricezione, senza alcun trasporto fittizio del comando.
+- **DECISO:** comunicazioni, richieste e ordini diplomatici **tra feudi** utilizzano i **tempi di invio, trasporto e consegna simulati** della posta feudale; invio ≠ ricezione. Non rendere disponibile al destinatario il contenuto prima della consegna e non consentire scorciatoie tramite API, dashboard o notifiche.
+- **DISTINZIONE DI STATO:** accettato/accodato ≠ applicato; la UI non deve anticipare l'esito. Un ordine sul proprio feudo che avvia una spedizione viene registrato al tick successivo, ma **viaggio, intercettazione e arrivo** mantengono i propri tempi simulati.
+- **APERTO:** durata fisica del tick e scheduling, comportamento dei comandi durante sospensioni regionali, ordine dei comandi concorrenti e conseguenze al recapito dei singoli tipi di messaggio. Nessuna accelerazione esclusiva di browser o app mobile.
+- **STATO:** solo specifica, nessun runtime cambiato. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md) e [SRS mobile v0.3 nella PR draft #222](https://github.com/erykwest/CONQUER/pull/222). Nessun cambio milestone.
+
+
 ## D-MOB-B-261113 — Prima release pubblica mobile: controllo remoto completo (13/11/2026)
 
 - **DECISO dal product owner — scelta B:** la prima versione **pubblica** dell'app CONQUER per **Android e iOS** deve offrire il **controllo remoto completo** del feudo, non un MVP di sola dashboard/posta o soltanto economico.
