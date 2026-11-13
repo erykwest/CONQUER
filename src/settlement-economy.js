@@ -303,7 +303,14 @@
     const spec=KIND[s.type];
     if(s.type==='field'){
       let slots=1;
-      if(typeof fieldLayout==='function')slots=Math.max(1,fieldLayout(s).cells.length);
+      if(typeof fieldLayout==='function'){
+        const cells=fieldLayout(s).cells;
+        slots=Math.max(1,cells.length);
+        // An in-season field employs only its strips that still have work:
+        // a farmer whose strip is done is free for another field or the L1 pool.
+        if(typeof fieldCropReady==='function'&&typeof fieldSlotDone==='function'&&fieldCropReady(s))
+          slots=Math.max(1,cells.filter(c=>!fieldSlotDone(s,c)).length);
+      }
       return {tier:spec.classId,count:slots};
     }
     return {tier:spec.classId,count:spec.workers};
@@ -344,7 +351,8 @@
   }
   function jobManager(day=State.clock?.day){
     const e=state(),labor=laborAllocation(day);
-    return {managed:!!e.l1Jobs.enabled,available:labor.limits.L1,
+    return {managed:!!e.l1Jobs.enabled,available:labor.limits.L1+(labor.lentL2?.length||0),
+      farmhands:labor.lentL2?.length||0,
       protectedHerders:labor.herders.length,fishers:labor.fishers.length,
       tasks:orderedL1Tasks(day).map(t=>{
         const setting=e.l1Jobs.settings[t.key]||{};
@@ -404,7 +412,7 @@
         auto:settings.auto!==false};
     });
     return {managed:!!e.l2Jobs.enabled,available:labor.limits.L2,
-      assigned:tasks.reduce((n,t)=>n+t.workers,0),tasks};
+      assigned:tasks.reduce((n,t)=>n+t.workers,0),lentToL1:labor.lentL2?.length||0,tasks};
   }
   function setL2Minimum(key,value){
     const task=l2Tasks().find(t=>t.key===key),n=Number(value);
@@ -426,6 +434,31 @@
     const e=state();e.l2Jobs.order=order.slice();e.l2Jobs.enabled=true;return true;
   }
 
+  // D-FIELD-LEND: an L2 farmer with no open strip this morning (spring growth,
+  // or his strip of the season already done and no other open strip nearby)
+  // is lent to the L1 pool as a farmhand. He is taken out of the L2 quota,
+  // so the same adult is never counted both at a field and at an L1 job.
+  function lendIdleFarmers(allocated,remaining){
+    if(!State.village?.founded||typeof fieldIdleFarmHouses!=='function')return [];
+    if((window.ConquerCombat?.alarmMode?.()||'off')!=='off'||remaining.L2<=0)return [];
+    let reservedL2=0;
+    for(const s of activeStructures())
+      if(s.type!=='field'&&KIND[s.type]?.classId===2)reservedL2+=allocated[s.id]||0;
+    const all=typeof completedSettlement==='function'?completedSettlement('house'):
+      (State.structures||[]).filter(s=>s.type==='house'&&complete(s));
+    const fields=typeof completedSettlement==='function'?completedSettlement('field'):
+      (State.structures||[]).filter(s=>s.type==='field'&&complete(s));
+    const idle=fieldIdleFarmHouses(all,fields,reservedL2);
+    const lent=idle.slice(0,Math.max(0,Math.floor(remaining.L2)))
+      .map(h=>({id:String(h.id)+':m:0',houseId:h.id,lentL2:true}));
+    remaining.L2-=lent.length;
+    return lent;
+  }
+  // Farmhands queue after every L1 adult but before herders leave their flock.
+  function joinLent(pool,lent,herdIds){
+    const at=pool.findIndex(w=>herdIds.has(w.houseId));
+    pool.splice(at<0?pool.length:at,0,...lent);
+  }
   function laborAllocation(day=State.clock?.day){
     const pop=population(),limits={
       L1:Math.floor((pop.L1-foundingWorkers())/3)+foundingWorkers(),
@@ -466,6 +499,13 @@
     const soldiers=l1Available.splice(0,Math.min(enlistable,window.ConquerSoldiers?.enlisted?.()||0));
     l1Available.push(...herdPool);
     remaining.L1=Math.min(remaining.L1,l1Available.length);
+    const herdIds=new Set(houses.filter(herdHouse).map(h=>h.id));
+    let lent=[];
+    const lend=()=>{
+      lent=lendIdleFarmers(allocated,remaining);
+      joinLent(l1Available,lent,herdIds);remaining.L1+=lent.length;
+    };
+    const lentIdleOf=pool=>pool.filter(w=>w.lentL2);
     // L2 has its own independent staffing policy. Allocate exactly once,
     // regardless of whether L1 is managed or uses the legacy algorithm.
     const allocateL2=()=>{
@@ -496,6 +536,7 @@
         remaining[group]-=count;allocated[s.id]=count;
       }
       allocateL2();
+      lend();
       const shipwrights={},carters=[],builders=[];
       const tasks=orderedL1Tasks(day);
       const assigned=Object.fromEntries(tasks.map(t=>[t.key,0]));
@@ -522,13 +563,14 @@
         }else if(task.kind==='carter')carters.push(...workers);
         else if(task.kind==='builders')builders.push(...workers);
       }
-      const idle=[],herdIds=new Set(houses.filter(herdHouse).map(h=>h.id));
-      for(const w of l1Available)(herdIds.has(w.houseId)?herders:idle).push(w);
+      const idle=[],lentIdle=lentIdleOf(l1Available);
+      for(const w of l1Available)if(!w.lentL2)(herdIds.has(w.houseId)?herders:idle).push(w);
       // Construction receives ONLY its own roster: manual limits cannot be
       // bypassed by the generic spare-L1 fallback used in legacy mode.
       remaining.L1=builders.length;
       return {allocated,remaining,limits,assignedL1,spareL1:builders,builders,
-        herders,herdReserve,fishers,shipwrights,carters,idle,soldiers,enlistable,foodWeekly:round(foodWeekly),managedL1:true};
+        herders,herdReserve,fishers,shipwrights,carters,idle,lentL2:lent,lentIdle,
+        soldiers,enlistable,foodWeekly:round(foodWeekly),managedL1:true};
     }
     const logging=[],woodLow=woodStock(e)<Math.min(20,finite(e.target?.wood,20));
     // A settlement with an actual stockyard must keep at least one lumber
@@ -555,6 +597,7 @@
       allocated[s.id]=count;
     }
     allocateL2();
+    lend();
     // Shipwrights: up to three L1 at each shipyard with a ship on its slipway.
     const shipwrights={};
     for(const s of window.ConquerShipyard?.demand?.()||[]){
@@ -575,11 +618,13 @@
       allocated[s.id]+=free;remaining.L1-=free;
     }
     // Unneeded herders return to their flocks; everyone else waits as idle labor.
-    const idle=[],herdIds=new Set(houses.filter(herdHouse).map(h=>h.id));
-    for(const w of l1Available)(herdIds.has(w.houseId)?herders:idle).push(w);
-    remaining.L1=Math.max(0,Math.min(remaining.L1,builders.length+idle.length));
-    return{allocated,remaining,limits,assignedL1,spareL1:[...builders,...idle],
-      herders,herdReserve,fishers,shipwrights,carters,idle,soldiers,enlistable,foodWeekly:round(foodWeekly)};
+    const idle=[],lentIdle=lentIdleOf(l1Available);
+    for(const w of l1Available)if(!w.lentL2)(herdIds.has(w.houseId)?herders:idle).push(w);
+    // Unused farmhands stay generic labor (e.g. replanting crews) but are not "L1 idle".
+    remaining.L1=Math.max(0,Math.min(remaining.L1,builders.length+idle.length+lentIdle.length));
+    return{allocated,remaining,limits,assignedL1,spareL1:[...builders,...idle,...lentIdle],builders,
+      herders,herdReserve,fishers,shipwrights,carters,idle,lentL2:lent,lentIdle,
+      soldiers,enlistable,foodWeekly:round(foodWeekly)};
   }
   // Food the households can actually reach: market lots, plus castle stores
   // only while the lord orders full or half rations.

@@ -364,9 +364,23 @@ function peasantPosition(house,assignment,day){
   if(frac<leave0||frac>return1)return null;
   const base=peasantPath(house,assignment);
   if(dist(base.at(-1),assignment.cell.world)>.05)return null;
+  const smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
+  // A strip that ran out of work during the shift sends its farmer home on
+  // foot from where he stopped; tomorrow morning he is reassigned or lent.
+  const release=typeof fieldSlotRelease==='function'?fieldSlotRelease(assignment.field,assignment.cell,day):null;
+  if(release){
+    if(release.home)return null;
+    const path=base.concat(fieldWorkerRoute(assignment.field,assignment.cell,release.d));
+    const at=Math.max(leave1,release.day-Math.floor(release.day)),back=Math.min(return1-return0,.1);
+    if(frac>=at){
+      if(frac>=at+back)return null;
+      return pointAlongPath(path,1-smooth((frac-at)/back));
+    }
+    if(frac<leave1)return pointAlongPath(path,smooth((frac-leave0)/(leave1-leave0)));
+    return path.at(-1);
+  }
   const path=base.concat(fieldWorkerRoute(assignment.field,assignment.cell));
   const work=fieldWorkerPosition(assignment.field,assignment.cell);
-  const smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
   if(frac<leave1)return pointAlongPath(path,smooth((frac-leave0)/(leave1-leave0)));
   if(frac<return0)return work;
   return pointAlongPath(path,1-smooth((frac-return0)/(return1-return0)));

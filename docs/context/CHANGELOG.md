@@ -1,5 +1,16 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-13 — FIELD-LEND · Contadini senza lavoro al campo
+
+13/11/2026 — `fix/idle-peasants` (pre-merge):
+- Decisione mattutina del lavoro agricolo: striscia propria, poi striscia aperta di un altro campo in stagione, poi bracciante nel pool L1 in coda agli L1 (prima dei pastori).
+- Prestito solo nei mesi con lavoro agricolo e nella crescita di maggio–giugno.
+- Chi finisce la striscia a metà turno rientra a piedi; nessuna riassegnazione a metà turno; niente attrezzo su una striscia finita.
+- Il campo in stagione impiega solo le strisce aperte; il bracciante esce dalla quota L2; nuovi campi `lentL2` e `lentIdle` in `laborAllocation`, `farmhands` nel Job Manager L1, `lentToL1` nel Job Manager L2.
+- Nuova `qa/idle-farmers-regression.cjs`; `qa/fields-regression.cjs` adeguata alla decisione mattutina; entrambe nel workflow economico.
+
+STATUS, BACKLOG, CHANGELOG e DECISIONS (D-FIELD-LEND-261113) aggiornati; ROADMAP invariata.
+
 13/11/2026 — `docs/scriptorium-effects`: specifica SCRIPT-01 approvata dal product owner (maestro laico `scriptorium.master`, scuola ferma senza maestro, ingaggio del chierico a 60 oro come modifica a D-SCOL-261112 §6, +1 Prestigio, codici miniati ARTE solo nello Scriptorium Clericale, interno in sezione come ultima fase). Nuova decisione D-SCRIPT-261113; voci di catalogo dello Scriptorium aggiornate. Nessun codice, test o asset modificato; ROADMAP invariata.
 
 ## 2026-11-12 — SCOL-01 fase 1 · Scolarizzati: dati, tetto e ingaggio

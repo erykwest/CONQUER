@@ -94,7 +94,8 @@ function residentClassPosition(house,resident,day,assignment){
   if(weekly===6)return null; // Children keep the Sunday rest.
   if(weekly===5)return familyPosition(house,State.clock.day); // Saturday market trip.
   if(resident.age==='child')return childHomePosition(house,resident,shiftedDay);
-  // Both L1 and unoccupied L2 workers use the real serpentine field route.
+  // L2 farmers with a strip this morning use the real serpentine field route
+  // (D-051, D-FIELD-LEND-261113); lent farmhands are drawn by drawPeasants.
   if(resident.sex==='male'&&assignment&&(level===1||level===2))
     return peasantPosition(house,assignment,State.clock.day);
   if(level===1)return null;

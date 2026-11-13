@@ -1,4 +1,4 @@
-name: Economy flows regression
+﻿name: Economy flows regression
 
 # Abort superseded PR runs of this workflow (never cancel scheduled/main runs).
 concurrency:
@@ -20,6 +20,9 @@ on:
       - 'src/settlement-population-figures.js'
       - 'src/ui/**'
       - 'qa/labor*.cjs'
+      - 'src/settlement-fields.js'
+      - 'qa/fields-regression.cjs'
+      - 'qa/idle-farmers-regression.cjs'
       - 'src/settlement-educated.js'
       - 'qa/educated-regression.cjs'
       - 'qa/economy*.cjs'
@@ -92,6 +95,8 @@ jobs:
           node qa/construction-payroll-regression.cjs
           node qa/construction-commute-regression.cjs
           node qa/labor-jobs-regression.cjs
+          node qa/fields-regression.cjs
+          node qa/idle-farmers-regression.cjs
           node --check src/settlement-educated.js
           node qa/educated-regression.cjs
           node qa/economy-rations-regression.cjs

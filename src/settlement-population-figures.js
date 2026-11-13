@@ -200,6 +200,8 @@ function drawRaisedVillagers(){
 // hoe for ploughing, seed sack for sowing, sickle for the harvest.
 function fieldWork(p,assignment,house,resident){
   if(!window.ConquerWorkAnim||!assignment||resident.sex!=='male'||resident.age!=='adult'||houseLevel(house)>2)return null;
+  // A strip without work (finished or field closed) never shows a working pose.
+  if(typeof fieldSlotRelease==='function'&&fieldSlotRelease(assignment.field,assignment.cell))return null;
   const spot=fieldWorkerPosition(assignment.field,assignment.cell);
   if(!spot||Math.hypot(p.x-spot.x,p.y-spot.y)>.02)return null;
   const tool=window.ConquerWorkAnim.FIELD_TOOL[fieldCrop(assignment.field).phase];

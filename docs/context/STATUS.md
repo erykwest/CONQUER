@@ -1,5 +1,16 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-13 — FIELD-LEND · Contadini senza lavoro al campo (branch `fix/idle-peasants`)
+
+- **STATO LIVE verificato su `main` 99f341fe prima del lavoro:** ai campi vanno solo gli L2 (D-051). In crescita o a striscia finita il contadino non aveva assegnazione e non restava al campo: girava per mercato e pozzo come un artigiano (`artisanPosition`), mentre la sua quota L2 restava inutilizzata, perché cava e miniera sono coperte prima dei campi e gli L2 non entravano nel pool L1.
+- **CODICE SUL BRANCH, NON MERGE** ([D-FIELD-LEND-261113](DECISIONS.md)):
+  - `fieldWorkAssignments` decide una volta per giorno lavorativo (cache per giorno, roster stabile anche se a metà giornata nasce un campo o cambia la cava); applica prima le transizioni di stagione (`fieldPrepareSeason`).
+  - `fieldIdleFarmHouses` e `lendIdleFarmers` in `laborAllocation`: i contadini senza striscia diventano braccianti nel pool L1, in coda agli L1 e prima dei pastori, nei mesi con lavoro agricolo e a maggio–giugno. Escono dalla quota L2. Nuovi campi `lentL2`, `lentIdle`; `builders` anche in modalità legacy.
+  - `workerDemand` del campo in stagione conta solo le strisce aperte.
+  - `tickFields` registra quando una striscia finisce (`crop.slotEnd`); `peasantPosition` riporta a casa a piedi chi la finisce a metà turno; `fieldWork` non mostra l'attrezzo su una striscia finita.
+- **PROVE LOCALI PASS:** nuova `qa/idle-farmers-regression.cjs` (6 casi: crescita con prestito al cantiere, aratura con due contadini e un bracciante contati una volta, striscia finita a metà turno con rientro a piedi e roster invariato fino al mattino, altro campo prima del prestito, nessun prestito a settembre e dicembre–febbraio, Job Manager L1 gestito); `qa/fields-regression.cjs` adeguata (16 casi); tutte le 31 voci di `economy-flows-regression.yml`, dove sono state aggiunte le due regressioni, più `qa/urban-regression.cjs`. `founding-regression` passa in locale su questo branch.
+- **NON VERIFICATO:** partita reale nel browser e prove di prestazioni Playwright (non eseguibili in locale). CI del branch.
+
 ## 2026-11-13 — SCRIPT-01 · Specifica dello Scriptorium (solo documentazione)
 
 - **SPECIFICA APPROVATA, NESSUN CODICE:** maestro per Scriptorium, scuola ferma senza maestro, ingaggio del chierico, +1 Prestigio, codici miniati ARTE, interno in sezione. Dettagli in [BACKLOG](BACKLOG.md) e [D-SCRIPT-261113](DECISIONS.md).
