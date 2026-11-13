@@ -1,5 +1,26 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-SCRIPT-261113 — Scriptorium: maestro, primo chierico, Prestigio e codici miniati (13/11/2026)
+
+- **DECISO (product owner, 13/11/2026), nessun codice:** specifica completa in [SCRIPT-01](BACKLOG.md). Lo Scriptorium è la scuola degli Scolarizzati e usa il contratto D-SCOL-261112 senza ridefinire la classe.
+- **SCELTE:**
+  - un maestro per Scriptorium del ramo del selettore; nuovo ruolo laico `scriptorium.master` (`payer:'castle'`, `minYield:0`), simmetrico a `church.scriptoriumMaster`;
+  - senza maestro la scuola si ferma: niente iscrizioni, corsi sospesi (la fine slitta di un giorno per giorno scoperto);
+  - +1 Prestigio per Scriptorium in `ConquerSiege.prestige()`;
+  - codici miniati come archetipo ARTE, commissionabili solo in uno Scriptorium Clericale e realizzati dal maestro chierico; la scuola continua durante il lavoro;
+  - interno in sezione con arredi, maestro e allievi, come ultima fase.
+- **MODIFICA AL CONTRATTO D-SCOL-261112 §6:** l'ingaggio del signore sceglie il ramo; il chierico lo manda il vescovo, 60 oro, 14 giorni. Motivo: con «senza maestro si ferma» uno Scriptorium Clericale non partirebbe mai senza un Monastero.
+- **ALTERNATIVE SCARTATE:**
+  - formazione come bonus individuale ad artigiani singoli (il gioco conta persone, non individui);
+  - effetto della scuola solo finché è attiva, senza persone formate;
+  - scuola laica tenuta da un chierico, o senza maestro;
+  - corsi più lenti o più piccoli senza maestro;
+  - chierico gratuito alla costruzione della chiesa; Scriptorium Clericale sbloccato solo dal Monastero;
+  - scrivani della diplomazia decisi qui (restano a una sessione Diplomazia);
+  - copie e libri come merce L3.
+- **IPOTESI:** tutti i numeri sono provvisori (ingaggio chierico 60 oro, codice 80 oro / 60 giorni, +1 Prestigio).
+- **IMPATTO:** nessun file di codice cambiato. Le fasi toccheranno `src/settlement-educated.js` (maestro, sospensione, ingaggio con ramo), `src/settlement-siege.js` (`prestige()`), il registro ARTE (`ConquerArtModels.catalog`), `src/settlement-civic3d.js` (interno), l'Asset Lab con la sua baseline e una regressione dedicata. ROADMAP invariata.
+
 ## D-SCOL-261112 — Scolarizzati: sottoclasse istruita di L3/L4 e contratto dei ruoli istruiti (12/11/2026)
 
 - **DECISO (product owner, 12/11/2026), nessun codice:** specifica completa in [SCOL-01](BACKLOG.md).
