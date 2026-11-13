@@ -1,5 +1,16 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-RC-261113 — Main page e controllo remoto multi-campagna (13/11/2026)
+
+- **DECISO dal product owner:** la pagina principale dopo l'accesso contiene sia la lobby delle campagne disponibili sia le campagne **in corso alle quali l'account partecipa**, con **KPI aggregati per insediamento** senza mischiare lo stato delle partite.
+- **DECISO:** la stessa main page diventa il punto d'accesso al **controllo remoto** dei propri feudi, inizialmente da **browser** e in futuro tramite **app Android/iOS**, senza aprire la scena Builder/3D. Nell'interfaccia confluiscono messaggi e branch `messages`, diplomazia, spedizioni, tributi, mappa regionale e gestione dell'insediamento.
+- **VINCOLO DI ARCHITETTURA:** stesso stato autorevole di partita e medesime regole per ogni client, partecipazioni isolate per `campaign_id` (D-MP-ACCOUNT-261113), comandi autorizzati lato server, nessuna seconda economia o seconda simulazione in dashboard.
+- **PROPOSTO da verificare:** distinguere comandi amministrativi sul proprio feudo dalle comunicazioni diplomatiche trasportate con ETA simulata; non rendere istantanee le lettere della branch `messages` per il solo fatto che sono consultate da remoto.
+- **GAP CODE/BRANCH:** centro di controllo a nove viste già su `main` ma locale al runtime; `messages` è una branch ancora separata e divergente (29 commit avanti, 317 indietro nel confronto del 13/11). La sua postazione è su feudi esterni astratti, senza World/Feudal reale. Richiede porting selettivo, non merge cieco.
+- **APERTO:** portata degli ordini remoti (incluso Builder geometrico), tempi, visibilità/freschezza dei KPI, autorizzazioni su feudi di sudditi/vassalli, finestra offline, notifiche push e UI mobile.
+- **STATO:** solo scope documentale; [REMOTE-CONTROL-SCOPE.md](../REMOTE-CONTROL-SCOPE.md). Nessun codice aggiornato, ROADMAP M0–M5 invariata.
+
+
 ## D-MP-ACCOUNT-261113 — Profilo globale e partecipazioni multi-campagna (13/11/2026)
 
 - **DECISO dal product owner:** separare il profilo/account del giocatore dalla partita, permettendo a uno stesso account di essere **presente in più campagne/server contemporaneamente**. La lobby deve mostrare e riaprire tutte le sue partecipazioni.
