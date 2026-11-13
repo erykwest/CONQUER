@@ -210,7 +210,11 @@
         e.wallet.L3=roundGold(finite(e.wallet.L3)+paid);
         c.goods[id]=roundGold(c.goods[id]-qty);sold[id]+=qty;
         const makers=Object.values(c.shops).filter(s=>Market.WORKSHOP_OUTPUT[s.kind]===id);
-        for(const s of makers)s.revenue=roundGold(s.revenue+paid/makers.length);
+        for(const s of makers){
+          s.revenue=roundGold(s.revenue+paid/makers.length);
+          // FISCO-01: workshop dues accrue on the takings, where the shop stands.
+          window.ConquerTreasury?.accrueDues?.(paid/makers.length,State.structures?.find(x=>x.id===s.houseId)||null);
+        }
       }
       demand[id]=roundGold(demand[id]);sold[id]=roundGold(sold[id]);
     }
@@ -332,7 +336,10 @@
   function confirmArrival(journeyId){
     const c=sync(),j=c?.journeys[journeyId];
     if(!j||j.status!=='planned'||j.destinationId!==localId())return false;
-    j.status='arrived';State.dirty=true;return true;
+    j.status='arrived';State.dirty=true;
+    // FISCO-01: the toll is paid at the gates by merchants coming from outside.
+    if(j.source==='external')j.toll=window.ConquerTreasury?.toll?.(journeyId)||0;
+    return true;
   }
   function checkIn(journeyId,innId){
     const c=sync(),j=c?.journeys[journeyId],beds=occupancy(innId);

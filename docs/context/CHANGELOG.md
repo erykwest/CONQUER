@@ -22,6 +22,41 @@ Corretta nella specifica la frase «3 posti per casa»: la formula approvata dà
 - Penalità per disoccupazione istruita; eccedenza senza alloggio per 4 settimane.
 - Contratto D-SCOL-261112 in DECISIONS per Gilda, Scriptorium, FISCO-01, CRIME, ARTE, diplomazia e la futura sessione Chiesa.
 
+12/11/2026 — `feature/bargello-balivo` (FISCO-01 fase B, pre-merge):
+- Nuovo modulo Erario (`ConquerTreasury`) e scheda ERARIO nel Profilo, con cursori, efficienza e decreti.
+- Imposte nuove: testatico, dazio delle botteghe L3, pedaggio e decima in natura, riscosse con l'efficienza del Municipio del centro, dei Bargelli e dei Balivi.
+- Sette decreti del consiglio. La leva straordinaria tiene armata una quota di uomini L1/L2 senza allarme; il cursore `levy` è rimosso.
+- `qa/treasury-regression.cjs` aggiunto in CI. Contratto tecnico in D-FISCO-261110. ROADMAP invariata.
+
+12/11/2026 — `feature/bargello-balivo`: FISCO-01 rimanda al futuro contratto «Scolarizzati» per classe, formazione e salari di esattori e giudici (prima: «nuovo mestiere L2»). Solo documentazione.
+
+10/11/2026 — `feature/bargello-balivo` (FISCO-01 fase A, pre-merge): specifica fiscale concordata con l'utente (Erario, cinque imposte, efficienza di riscossione del Municipio, Bargello, sala delle guardie, Palazzo del Balivo, decreti con leva straordinaria; giustizia ancora proposta) in BACKLOG e D-FISCO-261110. Implementati solo i modelli: Bargello e Palazzo del Balivo L1–L2 da Blender, Builder, collocamento, cantiere, crollo, incendio, cutaway, Lab, Codex. Nessun effetto di gioco. ROADMAP invariata.
+
+09/11/2026 — CI P2.4 (`perf/ci-p24-specialist-test-ownership-20261109`): rimosse 9 invocazioni test duplicate da Codex Wiki, Main fixes e CAMP, mantenendo owner di regressione in Runtime integrity e settlement-qa (always-on PR). Codex Wiki mantiene Playwright e filtri dei suoi check browser, Main fixes mantiene WebGL/render e UI/Combat, CAMP conserva animali e pattuglie. Aggiunta guardia P2.4 in `qa/ci-p1-regression.cjs`; suite completa P0 e tutte le baseline/test immutate.
+
+
+## 2026-11-12 — CHIESA-01 fase 1 · Cassa della Chiesa
+
+12/11/2026 — `feature/chiesa-fase1`: la Chiesa ha una sua Cassa.
+- Ogni domenica le offerte arrivano dai borsellini delle classi servite da una chiesa.
+- A fine anno arrivano i lasciti di L3 e L4, se le due classi sono contente.
+- Il signore può donare 10, 50 o 100 oro e guadagna Favore.
+- Scheda «Chiesa» nell'ispettore di ogni chiesa e riquadro nel Profilo › Generale.
+- Nuova regressione `qa/church-regression.cjs`.
+
+STATUS, BACKLOG e DECISIONS (regola transitoria della resa del culto) aggiornati; ROADMAP invariata.
+
+## 2026-11-12 — CHIESA-01 · La Chiesa come entità autonoma (solo specifica)
+
+12/11/2026 — `docs/chiesa`: il product owner ha approvato la specifica della Chiesa come istituzione distinta dal castello.
+- Una sola istituzione per villaggio, con una Cassa che non è un secondo ledger.
+- Entrate: offerte domenicali, lasciti annui e doni del signore. Nessuna decima ecclesiastica.
+- Spese in ordine fisso: salari dei chierici, rette clericali, carità, feste, co-finanziamento dei cantieri.
+- La Chiesa decide ogni anno il salario dei chierici e smette di farli pagare al castello.
+- Posti per livello della chiesa; il Monastero forma 2 novizi l'anno.
+- Favore 0–100 verso il signore, che muove le prediche; messa domenicale con capienza.
+- Modifiche al contratto D-SCOL-261112 descritte in D-CHIESA-261112.
+
 BACKLOG, STATUS e DECISIONS aggiornati; ROADMAP invariata; nessun codice.
 
 ## 2026-11-09 — BC-261109-02 · DEV e cantieri di ristrutturazione
@@ -123,6 +158,9 @@ Branch documentale `docs/codex-catalog-audit-20261105`, base `main` `bcf3cd7`. A
 ## 2026-11-05 — Latrina nelle torri W1 (branch `fix/latrine-towers`)
 
 - Correzione dell'utente: la latrina va al piano 2 delle torri W1 in pietra, con lo sbalzo sulla faccia esterna libera; non va più nelle sezioni costruite.
+- Validazione con l'utente (12/11): falda a lastra unica con gronda corta (5 cm davanti, 3 ai lati) appoggiata su timpani in pietra; panca a 3 fori dentro lo sbalzo (Blender), non più sedili nella stanza. 2.5D: lo sbalzo dietro la torre si disegna prima del corpo del castello (la torre lo copre); nel cutaway quello sul lato tagliato perde solo la facciata, scarichi e fori sotto lo sbalzo spariscono; torre madre e sottotorri si coprono solo quando una sta davvero davanti. Lab: variante «Grande quadrata L3 + sottotorre W1 latrina» (lo stage accetta `attach` per le sottotorri).
+- Falda dello sbalzo rivista con l'utente (11/11): una lastra unica, il doppio di pendenza (0,24 U) e di sporgenza (12 cm davanti, 8 ai lati). Decisione dell'utente: il renderer 2.5D sarà dismesso (tranne scatter e personaggi), lavoro in un branch a parte; gli asset si verificano in 3D.
+
 - Revisione: con una stanza assegnata la torre W1 perde la scala a chiocciola; latrina comune a 3 fori, meno sporgente, falda corretta, stanza arredata; sbalzo leggibile nel cutaway. Deroga d'audit motivata per «sagoma-conservata» sullo sbalzo crollato della torre quadrata.
 - Le torri W1 ricevono una stanza per piano, ma con la scala a chiocciola accettano solo Colombaia (ultimo piano), Latrina, Prigione, Tesoro e Armeria.
 - `ROOM_EXTERIOR` monta l'elemento `face` anche sulle torri; le feritoie della faccia gli lasciano il posto. Asset Lab: tre varianti di torre W1 nuove, la variante della sezione con latrina rimossa; baseline aggiornata.
@@ -152,6 +190,10 @@ Branch documentale `docs/codex-catalog-audit-20261105`, base `main` `bcf3cd7`. A
 
 
 05/11/2026 — `fix/audit-sheet-grid`: i fogli provini per categoria vanno a griglia da 8 colonne. Lo sfondo neutro evita che le celle vuote sembrino un esito verde. Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: è uno strumento di QA, non cambia contratti.
+
+## 2026-11-09 — Coperture della long house (branch `feature/longhouse-roofs`)
+
+- BC-251105-09: la long house lignea W1/W2 ha tre manti a scelta nel pannello (scandole, paglia, zolle erbose), generati nel modello Blender, e uno sfiatatoio nel colmo da cui esce il fumo del focolare. Quattro varianti nuove nell'Asset Lab. Piramide: STATUS, BACKLOG, CHANGELOG e `feature-backlog.md`. ROADMAP e DECISIONS invariate: nessun contratto nuovo, solo un campo di variante.
 
 05/11/2026 — `feature/double-crenel` (BC-251105-04): nuovi stili delle merlature «Merlo doppio» (merli lunghi il doppio sulle mura, sequenza 11011011) e «Doppia fila» (seconda fila di merli sul lato interno del cammino delle mura). Entrambi selezionabili nel Centro di controllo › Cantieri, presente nel Lab. Piramide: STATUS, BACKLOG, CHANGELOG, feature-backlog. ROADMAP e DECISIONS invariate: estende un contratto esistente (`State.policies.crenelStyle`).
 

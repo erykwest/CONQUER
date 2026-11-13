@@ -33,7 +33,7 @@ function structureSceneLayers(s){
   if(s.type==='house'||s.type==='storageYard')return['ground','shadow','base'];
   if(isCivicAnnex(s))return['ground','shadow','base'];
   if(window.ConquerIndustries?.is(s))return['ground','shadow','base'];
-  const shadow=['house','tower','gate','wall','palisade','built','market','tavern','church','townhall','guild'].includes(s.type)?['shadow']:[];
+  const shadow=['house','tower','gate','wall','palisade','built','market','tavern','church','townhall','guild','bargello','balivo'].includes(s.type)?['shadow']:[];
   if(isCastlePart(s)||isRaisedPlacementCastlePoint(s))return[...shadow,'castleBody','castleFront'];
   // Palisades and timber fortifications are rendered in the non-union base layer.
   if(s.type==='palisade'||isWoodTower(s)||isWoodGate(s))return[...shadow,'base','castleFront'];
@@ -229,7 +229,7 @@ function snapStructureAngle(angle){return structureAngleFromStep(structureRotati
 function structureUsesDiscreteAngle(s){
   // A tower against a stone quay keeps the quay's exact angle (settlement-quay.js).
   if(s?.type==='tower'&&s.quaySnap)return false;
-  return !!s&&['tower','gate','house','market','tavern','church','training','plaza','townhall','guild'].includes(s.type);
+  return !!s&&['tower','gate','house','market','tavern','church','training','plaza','townhall','guild','bargello','balivo'].includes(s.type);
 }
 function applyStructureRotation(s,angle=s?.angle||0){
   if(!s)return 0;
@@ -274,12 +274,13 @@ const COSTS={
   plaza:{gold:90,stone:80,wood:10},
   townhall:{gold:240,stone:210,wood:85,metal:10},
   guild:{gold:180,stone:110,wood:120},
+  bargello:{gold:140,stone:90,wood:60},balivo:{gold:170,stone:120,wood:80},
   training:{gold:90,stone:24,wood:70}
 };
 // Stone towers of the same tier, against the square one: curved masonry costs more, the open-
 // backed semitower half.
 const TOWER_SHAPE_COST=Object.freeze({square:1,round:1.5,dee:1.25,half:.5});
-const BUILD_DAYS={tower:[4,7,11,18],woodTower:[2.5,4],frameTower:6.5,gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,townhall:8,guild:6,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,longhouseBase:1.2,longhousePerU:.8,road:1,house:2.2,field:1.5};
+const BUILD_DAYS={tower:[4,7,11,18],woodTower:[2.5,4],frameTower:6.5,gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,townhall:8,guild:6,bargello:5,balivo:6,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,longhouseBase:1.2,longhousePerU:.8,road:1,house:2.2,field:1.5};
 const GROWTH_INTERVAL_DAYS=2.5;
 // One simulated 24-hour day lasts 48 real seconds at 1×.
 // All time controls multiply this common rate (3× = 16 s/day; 10× = 4.8 s/day; 100× = 0.48 s/day).
@@ -527,6 +528,9 @@ function builtInteriorFloors(s){return isWideBuilt(s)?1:structureLevel(s)}
 // Timber longhouse: a built section (W1 or W2 span) in wood, ground floor only, with the same
 // rooms as the stone section's ground floor (Blender model: build_wood_fort.py, settlement-wood3d.js).
 function isLonghouse(s){return s?.type==='built'&&s.material==='wood'}
+// Longhouse roof cover (BC-251105-09): shingles (default), thatch or turf; all with a smoke hole.
+const LONGHOUSE_COVERS=Object.freeze(['shingle','thatch','turf']);
+function longhouseCover(s){return LONGHOUSE_COVERS.includes(s?.roofCover)?s.roofCover:'shingle'}
 // Lean-to (settlement-lean-to.js): a W1 section against the inner face of an H2 wall, one storey,
 // single-pitch roof under the wall walk.
 function isLeanTo(s){return s?.type==='built'&&s.leanTo===true&&!isLonghouse(s)&&!isWideBuilt(s)}
@@ -789,11 +793,15 @@ function houseSideChimney(s){
     z0:0,z1:houseRidgeHeight(s)+.31,index:0,side:true,wall,normal};
 }
 function houseStructureHeight(s){const turret=houseTurretInfo(s);return turret?Math.max(houseRidgeHeight(s),turret.roofH):houseRidgeHeight(s)}
-const CIVIC_TYPES=Object.freeze(['market','tavern','church','training','plaza','townhall','guild']);
-const CIVIC_LEVEL_TYPES=Object.freeze(['market','tavern','church','plaza','townhall','guild']);
+const CIVIC_TYPES=Object.freeze(['market','tavern','church','training','plaza','townhall','guild','bargello','balivo']);
+const CIVIC_LEVEL_TYPES=Object.freeze(['market','tavern','church','plaza','townhall','guild','bargello','balivo']);
 const PLAZA_VARIANTS=Object.freeze(['paved','fountain','garden']);
 function isCivic(s){return !!s&&CIVIC_TYPES.includes(s.type)}
-function civicLevel(s){return Math.max(1,Math.min(3,Math.round(Number(s?.civicLevel)||1)))}
+// FISCO-01: the Bargello and the Palazzo del Balivo have two levels; the other civics three.
+// civicLevel stays self-contained (regressions evaluate it on its own); the others read it.
+function civicLevel(s){const max=s?.type==='bargello'||s?.type==='balivo'?2:3;return Math.max(1,Math.min(max,Math.round(Number(s?.civicLevel)||1)))}
+function civicMaxLevel(type){return civicLevel({type,civicLevel:99})}
+function civicLevels(type){return Array.from({length:civicMaxLevel(type)},(_,i)=>i+1)}
 function plazaVariant(s){return PLAZA_VARIANTS.includes(s?.plazaVariant)?s.plazaVariant:'paved'}
 const isPlazaLike=s=>s?.type==='plaza'||s?.type==='civicAnnex'&&s.annexType==='square';
 function normalizeCivicDevelopment(s){
@@ -821,6 +829,12 @@ function civicLocalParts(s){
     {cx:0,cy:-1.15,w:1.3,h:1.3,role:'tower',roofTurn:0}
   ];
   if(s.type==='guild')return[{cx:0,cy:0,w:3,h:2.5,role:'hall',roofTurn:Math.PI/2}];
+  // FISCO-01: the Bargello's turret on the front right corner; the Balivo's outside stair stays on its front.
+  if(s.type==='bargello')return[
+    {cx:0,cy:.25,w:2.6,h:2,role:'hall',roofTurn:0},
+    {cx:1.15,cy:-.75,w:1,h:1,role:'tower',roofTurn:0}
+  ];
+  if(s.type==='balivo')return[{cx:0,cy:.2,w:3.4,h:2.2,role:'hall',roofTurn:0}];
   return[];
 }
 function civicParts(s){

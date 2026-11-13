@@ -89,7 +89,7 @@ test('Blender models: three levels each, the town hall with hall, tower and belf
  for(const L of [1,2,3])assert.ok(models['townhall'+L].parts.belfry.c.includes(bronze),'townhall'+L+' rings a bronze bell');
  assert.ok(models.townhall3.parts.tower.c.includes(clock),'the L3 civic tower has a clock face');
  const civic3d=fs.readFileSync(__dirname+'/../src/settlement-civic3d.js','utf8');
- assert.match(civic3d,/\\['church','tavern','market','townhall','guild'\\]\\.includes\\(s\\.type\\)\\)return s\\.type\\+level/);
+ assert.match(civic3d,/\\['church','tavern','market','townhall','guild','bargello','balivo'\\]\\.includes\\(s\\.type\\)\\)return s\\.type\\+level/);
  assert.match(fs.readFileSync(__dirname+'/../index.html','utf8'),/data-civic="townhall"[\\s\\S]*data-civic="guild"/);
 });
 test('destroyed: the town hall falls hall first, then its tower from its own height',()=>{
@@ -109,8 +109,44 @@ test('brick masonry and the clay palette reach the Blender civic models; cutaway
  const civic3d=fs.readFileSync(__dirname+'/../src/settlement-civic3d.js','utf8');
  assert.match(civic3d,/masonryMaterial\\(s\\)==='brick'/);
  assert.match(civic3d,/withClay\\(s,\\(\\)=>triangles\\(modelKey\\(s\\),placeOf\\(s\\),ground\\)\\)/);
- assert.match(civic3d,/\\['church','tavern','townhall','guild'\\]\\.includes\\(s\\.type\\)&&s\\.id===State\\.selectedId/);
+ assert.match(civic3d,/\\['church','tavern','townhall','guild','bargello','balivo'\\]\\.includes\\(s\\.type\\)&&s\\.id===State\\.selectedId/);
  for(const k of ['townhall1','townhall2','townhall3','guild1','guild2','guild3'])assert.match(civic3d,new RegExp(k+':\\\\{floors:'));
+});
+test('FISCO-01: the Bargello stands at a quarter well, two levels, turret on the front corner',()=>{
+ assert.equal(run("isCivic({type:'bargello'})&&CIVIC_LEVEL_TYPES.includes('bargello')&&isWellCivic({type:'bargello'})"),true);
+ assert.equal(run("civicLocalParts({type:'bargello'}).map(p=>p.role).join()"),'hall,tower');
+ assert.equal(run("civicLevel({type:'bargello',civicLevel:3})"),2,'the Bargello stops at L2');
+ assert.equal(run("civicLevels('bargello').join()"),'1,2');
+ assert.equal(run("civicLevels('townhall').join()"),'1,2,3');
+ found();
+ const b=free('bargello',100,100);assert.ok(b,'a Bargello fits beside the founding well');
+ assert.equal(place('b1','bargello',b[0],b[1]),true);
+ assert.equal(run("State.structures.find(s=>s.id==='b1').wellId"),'well');
+ assert.equal(free('bargello',100,100),null,'one Bargello per well');
+ assert.match(run("structureLabel(State.structures.find(s=>s.id==='b1'))"),/^Bargello · L1 · /);
+});
+test('FISCO-01: the Palazzo del Balivo stands in the countryside, clear of the wells',()=>{
+ assert.equal(run("isCivic({type:'balivo'})&&!isWellCivic({type:'balivo'})"),true);
+ assert.equal(run("civicLevel({type:'balivo',civicLevel:5})"),2);
+ run("State.structures=[{id:'well',type:'well',x:100,y:100}];State.village={founded:false,wellId:null}");
+ assert.match(verdict('balivo',130,100).reason,/founded village/);
+ found();
+ assert.match(verdict('balivo',100,106).reason,/housing zones|from any well/);
+ const v=verdict('balivo',100,128);assert.ok(v.ok||!/well|Balivo/.test(v.reason||''),'the countryside south of the village: '+JSON.stringify(v));
+});
+test('FISCO-01: Blender models and cutaway rooms of the Bargello and the Balivo',()=>{
+ const ctx={window:{}};require('node:vm').runInNewContext(fs.readFileSync(__dirname+'/../src/assets/civic-models.js','utf8'),ctx);
+ const models=ctx.window.ConquerCivicModels.models,keys=ctx.window.ConquerCivicModels.paletteKeys;
+ for(const L of [1,2]){
+  assert.deepEqual(Object.keys(models['bargello'+L].parts),['hall','tower']);
+  assert.ok(models['bargello'+L].parts.tower.c.includes(keys.indexOf('bronze')),'bargello'+L+' turret bell');
+  assert.ok(models['balivo'+L].parts.hall,'balivo'+L+' hall');
+ }
+ assert.equal(models.bargello3,undefined);
+ const civic3d=fs.readFileSync(__dirname+'/../src/settlement-civic3d.js','utf8');
+ for(const k of ['bargello1','bargello2','balivo1','balivo2'])assert.match(civic3d,new RegExp(k+':\\\\{floors:'));
+ assert.match(civic3d,/role==='exactor'/);
+ assert.match(fs.readFileSync(__dirname+'/../index.html','utf8'),/data-civic="bargello"[\\s\\S]*data-civic="balivo"/);
 });
 console.log(passed+' well civic regression checks passed.');
 `);

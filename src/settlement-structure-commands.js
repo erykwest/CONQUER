@@ -102,6 +102,12 @@ const StructureCommands=(()=>{
     target.woodRoof=style==='pitched'?'pitched':'open';
     refresh(target);status('Wood tower roof: '+target.woodRoof);return true;
   }
+  // Longhouse roof cover: shingles, thatch or turf (BC-251105-09); a recover, not a rebuild.
+  function setLonghouseCover(id,cover){
+    const target=find(id);if(!isLonghouse(target)||!LONGHOUSE_COVERS.includes(cover))return false;
+    if(cover==='shingle')delete target.roofCover;else target.roofCover=cover;
+    refresh(target);status('Longhouse roof: '+cover);return true;
+  }
   function setGateRoof(id,style){
     const target=find(id);if(!target||target.type!=='gate')return false;
     if(!setStructureVariant(target,'roofStyle',style))return false;
@@ -360,7 +366,7 @@ const StructureCommands=(()=>{
       const well=wellCivicWell(s);
       d.facts.push({key:'square',value:well?wellDisplayName(well)||'—':'—',center:!!well&&isVillageCenterWell(well)});
     }
-    if(['house','market','tavern','church','training','plaza','townhall','guild'].includes(s.type))
+    if(['house','market','tavern','church','training','plaza','townhall','guild','bargello','balivo'].includes(s.type))
       d.controls.push({key:'rotation',cmd:'rotate',rotate:true,angle:Math.round((Number(s.angle)||0)*180/Math.PI+360)%360});
     if(s.type==='tower'){
       d.mastio={active:!!s.isMastio,disabled:building};
@@ -429,7 +435,7 @@ const StructureCommands=(()=>{
       d.controls.push(hoardingChoice(s));
     }
     if(typeof CIVIC_LEVEL_TYPES!=='undefined'&&CIVIC_LEVEL_TYPES.includes(s.type))
-      d.controls.push(choice('civicLevel','setCivicLevel',[1,2,3].map(n=>({value:n,label:'L'+n})),civicLevel(s)));
+      d.controls.push(choice('civicLevel','setCivicLevel',civicLevels(s.type).map(n=>({value:n,label:'L'+n})),civicLevel(s)));
     if((s.type==='church'||s.type==='townhall')&&window.ConquerAlarmBells)
       d.facts.push({key:'bellRange',value:window.ConquerAlarmBells.hearingRadius(s)+'U'});
     if(typeof isPlazaLike==='function'&&isPlazaLike(s))
@@ -438,6 +444,7 @@ const StructureCommands=(()=>{
       const stage=window.ConquerSiege.doorStage(s),closed=!!s.closed&&stage!=='broken';
       d.gate={stage,closed,broken:stage==='broken',nightClose:s.nightClose!==false};
     }
+    if(isLonghouse(s))d.controls.push(choice('roofCover','setLonghouseCover',LONGHOUSE_COVERS.map(v=>({value:v,word:'cover_'+v})),longhouseCover(s)));
     if(s.type==='built'&&!isLonghouse(s))d.controls.push(choice('skin','setSkin',[{value:'standard',word:'standard'},{value:'arcade',word:'arcade'}],builtSkin(s)));
     if(s.type==='wall'){
       const narrow=wallTier(s)===1;
@@ -475,7 +482,7 @@ const StructureCommands=(()=>{
     return d;
   }
 
-  const commands={setConstructionPriority,setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setGateRoof,setGateUpper,setSkin,setWallStair,setWallStairPos,toggleCutaway,stepCutawayFloor,flipSide,
+  const commands={setConstructionPriority,setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setLonghouseCover,setGateRoof,setGateUpper,setSkin,setWallStair,setWallStairPos,toggleCutaway,stepCutawayFloor,flipSide,
     setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerInnerRoof,setTowerLookout,setTowerOutpost,setTowerSignalFire,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,
     describeStructure};
   for(const name of ['setTier','setHeight','setKeepFloorPlan','setTowerBase','setTowerRoof','setHoarding','setWoodRoof','setGateRoof','setGateUpper','setSkin','setTowerWeapon','setTowerRoofShape','setTowerBartizan','setTowerBell','setTowerInnerRoof','setCivicLevel','setPlazaVariant']){

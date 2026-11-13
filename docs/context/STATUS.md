@@ -41,6 +41,63 @@
   - Nessun riferimento a istruzione, esattori o funzionari in `src/`.
 - **PROSSIMO:** fase 1 (dati, tetto, salvataggio, pannelli, ingaggio) su un branch nuovo da `main`, solo dopo conferma esplicita.
 
+## 2026-11-12 — FISCO-01 fase B · Erario, riscossione e decreti (branch `feature/bargello-balivo`)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:**
+  - `src/settlement-treasury.js` (`ConquerTreasury`), con lo stato in `State.economy.treasury`.
+  - Scheda ERARIO nel Profilo (`settlement-panels.js`, `settlement-heraldry.js`, `index.html`).
+  - Agganci in economia (decima, calmiere, tick), commercio (dazio, pedaggio) e combattimento (leva straordinaria via `leviedResident`/`refreshLevy`).
+  - Cursore `levy` rimosso da UI1 e UI2.
+  - Codex di Bargello e Balivo aggiornati.
+- **PROVE ESEGUITE:**
+  - `qa/treasury-regression.cjs`: 18 PASS, aggiunto al workflow Economy flows.
+  - Regressioni di economia, commercio, routine, convogli, codex e runtime: PASS in locale.
+  - Browser su `localhost:4431`: scheda Erario con efficienza 80% (Municipio L2 con sala delle guardie), quartiere con Bargello L1 al 70%, decreto Festa emanato, nessun errore in console.
+- **NON PROVATO:**
+  - Una partita lunga con riscossione reale del sabato. La logica settimanale è coperta solo dal test Node.
+  - La leva vista in gioco: gli uomini che vanno all'armeria senza allarme.
+  - La CI sul nuovo head.
+- **APERTI:** vedi BACKLOG FISCO-01. Pedaggio senza arrivi reali, CRIME non caricato, leva fuori dalla riserva e dai turni, giustizia ancora in proposta.
+
+## 2026-11-10 — FISCO-01 fase A · Bargello e Palazzo del Balivo (branch `feature/bargello-balivo`)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:** modelli `bargello1/2` (parti `hall`, `tower`) e `balivo1/2` (`hall`) in `tools/blender/build_civic.py`, generati con Blender 4.4 in `src/assets/civic-models.js`. I 53 modelli civici esistenti restano identici (confronto del JSON) e la palette è invariata.
+- **RUNTIME:** tipi civici con livelli L1–L2 (`civicMaxLevel`/`civicLevels`), costi e tempi, impronte, altezze, Builder e shell UI, etichette, collocamento (Bargello come `WELL_CIVIC_TYPES`; Balivo con `balivoPlacementCheck`), cantiere a graticcio L1, crollo con la torretta, incendio L1, fallback 2.5D/WebGL, cutaway per piani con stanze fisse e nuovo arredo `exactor`, Codex (2 voci approvate, catalogo rigenerato).
+- **PROVE ESEGUITE IN LOCALE:**
+  - 169 suite `qa/*.cjs`: tutte PASS tranne `mass-battle-performance` e `movement-collapse-performance`, che falliscono identiche su `main` (import di `circle/defensive-topology.mjs` e soglie di tempo); `asset-audit-scope.cjs` è uno strumento CI.
+  - `well-civics-regression` estesa con 3 test FISCO-01; conteggi Codex +2.
+  - Audit Lab sulle 4 voci nuove: 0 errori, 0 avvisi; baseline unita a mano (+4 voci, nessuna voce esistente toccata), secondo giro 0 nuovi / 0 cambiati.
+  - Smoke nel browser: modelli caricati, 8 cutaway (2 tipi × 2 livelli × 2 piani) disegnati senza errori, console pulita.
+- **NON VERIFICATO:** aspetto del cutaway a schermo (catture non disponibili con la finestra nascosta); GitHub Actions; collocamento giocato in partita. Nessun effetto di gioco (fase B).
+
+
+## 2026-11-12 — CHIESA-01 fase 1 · Cassa della Chiesa (branch `feature/chiesa-fase1`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - nuovo `src/settlement-church.js` (`ConquerChurch`): Cassa e Favore in `State.economy.church`, migrazione lazy; offerte domenicali per classe dai borsellini (quota × fedeli serviti × resa del culto × (0,5 + felicità/100)); lasciti annui del 2% di L3/L4 con felicità ≥ 50; dono 10/50/100 dal `castleGold`;
+  - `ConquerEconomy.tick` chiama la Chiesa la domenica, a fine mese e a fine anno (i lasciti prima della chiusura del mese);
+  - scheda «Chiesa» nell'ispettore classico (`settlement-app-rooms.js`) e in UI v2 (`ChurchPanel` in `ui/shell.js`); riquadro «Chiesa» nel Profilo › Generale (`settlement-panels.js`);
+  - `index.html`: script dopo `settlement-commerce.js` e versioni dei file toccati aggiornate; `wiki/catalog.json` rigenerato (impronta dei sorgenti).
+- **PROVE LOCALI PASS:**
+  - `qa/church-regression.cjs` (11 casi), aggiunto al workflow Economy flows;
+  - tutti i 31 comandi di `economy-flows-regression.yml`; `founding-regression` è instabile anche su `main` (risposta a tempo) e passa rilanciandolo;
+  - multi-wells, infirmary, events-builder, cutaway-floors, crime-buildings, codex-wiki, codex-catalog.
+- **BROWSER (preview locale, chiesa iniettata da console):** nessun errore in console; la scheda mostra Cassa, Favore, entrate e fedeli serviti; «Dona 10» sposta 10 oro dal castello alla Cassa e porta il Favore da 55 a 56; il riquadro «Chiesa 63,6 oro · Favore 56/100» compare nel Profilo › Generale.
+- **NON VERIFICATO:** CI su GitHub (branch non pushato); partita reale con chiesa costruita dal Builder.
+
+## 2026-11-12 — CHIESA-01 · La Chiesa come entità autonoma (solo specifica, branch `docs/chiesa`)
+
+- **NESSUN CODICE:** specifica approvata in [BACKLOG](BACKLOG.md), decisione [D-CHIESA-261112](DECISIONS.md). Nessun test eseguito né richiesto.
+- **STATO LIVE VERIFICATO SU `main` 431af30d:**
+  - `SERVICE_KINDS.church` ha `income:'not-simulated'` e il gestore si assegna solo nei test.
+  - Gli annessi della Chiesa non hanno effetti.
+  - Non esiste un fondo della Chiesa: solo `wallet.L1–L4` e `castleGold`.
+  - `monthly` non paga salari oltre la classe 2.
+  - La felicità si muove solo con cibo, razioni e infermeria.
+  - La Cappella del castello conta solo per il prestigio nell'assedio.
+- **DIPENDE DA:** SCOL-01 (branch `docs/scolarizzati`, non su `main`) fino alla fase 3; FISCO-01 fase B; CRIME.
+- **PROSSIMO:** fase 1 (Cassa, offerte, lasciti, dono, scheda) su un branch nuovo da `main`, solo dopo conferma esplicita e dopo la fase 3 di SCOL-01.
+
 ## 2026-11-10 — ECO-FIL-01 fase 1 · Miniera → metallo (branch `feature/eco-fil-01-miniera-metallo`)
 
 - **CODICE SUL BRANCH, NON MERGE:**
@@ -308,6 +365,8 @@ Base verificata `main` `bcf3cd788f18560221862fe1908edef4edb5f2d3`. [Censimento d
   - **Stanze nelle torri W1** (`functionCapacity`, `ConquerSiege.allowed`): le torri W1 hanno una stanza per piano ma tengono la scala a chiocciola (nessun arredo nel cutaway). Accettano solo, per scelta dell'utente: **Colombaia** (sempre all'ultimo piano, tetto a falde, in pietra, L2+), **Latrina**, **Prigione** (piano terra), **Tesoro**, **Armeria**. Il primo mastio T1 resta senza restrizioni (Sala comune).
   - **Latrina:** primo piano superiore (piano 2) delle torri W1 in pietra, mai torri di legno, W2–W3, porte o sezioni costruite. Lo sbalzo (`ROOM_EXTERIOR`, `mount:'face'`) va sulla faccia esterna libera della torre che guarda più lontano dal castello: mai la faccia interna, né una faccia dove si attacca un muro, una sezione o una sottotorre, né dove davanti c'è un edificio. Su una torre rotonda la scatola rientra nella curva. Le feritoie di quella faccia, al suo piano e sotto, lasciano il posto allo sbalzo e allo scarico (`takesTowerFace`).
   - **Revisione dell'utente (05/11):** una torre W1 con almeno una stanza assegnata perde la scala a chiocciola e apre i piani come le altre torri (scala a pioli, arredo); senza stanze la tiene. La latrina è **comune a 3 fori**: sbalzo largo 0,76 U e sporgente 0,22 U (prima 0,46 × 0,36), falda rifatta in tre corsi (la vecchia lastra aveva le facce rovesciate e nel 2.5D spariva). La stanza intera è la latrina: tre sedili contro la parete dello sbalzo, lavabo, scaffale, sgabello, candela. Nel cutaway lo sbalzo dietro la parete in piedi si disegna sopra quella parete e sotto pavimento e arredo; quello sul lato tagliato resta davanti.
+  - **Validazione visiva dell'utente (12/11):** esterno e cutaway dai 4 lati di torri W1 quadrata e rotonda e di una torre W3 con sottotorre W1 latrina (nuova variante del Lab). Sbalzo: falda unica con gronda corta su timpani, panca a 3 fori dentro lo sbalzo. Disegno 2.5D: sbalzo dietro la torre prima del corpo (coperto), sul lato tagliato senza facciata, senza scarichi nel cutaway; la torre madre copre lo sbalzo della sottotorre solo se gli sta davanti. Il 2.5D sarà dismesso in un branch a parte.
+
   - **Salvataggi:** una latrina già assegnata a una sezione costruita viene tolta al caricamento (`sanitizeRooms`).
 - **Asset Lab:** tolta la variante «Sezione costruita L2 + latrina» (9 voci di baseline). Nuove varianti di torre: «Pietra quadrata piccola L2 + latrina», «Pietra rotonda piccola L2 + latrina», «Pietra quadrata piccola L2 tetto + colombaia». Audit: 30 render, 0 falliti (avvisi solo sul cantiere, come le altre torri in locale); fogli rivisti e baseline aggiornata per queste voci.
 - **QA:** `qa/room-exterior-latrine-regression.cjs` riscritta sulle torri (faccia esterna, muro attaccato, torre rotonda, feritoia, regole di stanza). `qa/dovecote-regression.cjs`: la colombaia ora è ammessa nelle W1 e le W1 rifiutano le altre stanze. 127/127 `qa/*.cjs` non di performance PASS in locale.
@@ -358,6 +417,13 @@ Sul branch `feature/wood-tower-h2` (BC-251105-06, **non in main**): torre lignea
 
 
 Sul branch `fix/audit-sheet-grid` i fogli provini dell'audit per categoria dispongono gli asset in una griglia da 8 colonne (prima: un asset per riga e 7 celle vuote). Le celle vuote hanno uno sfondo neutro, non più verde. `node qa/asset-audit.mjs` in locale: 1081 render, 0 falliti, 120 avvisi, 52 nuovi, 36 cambiati: stessi esiti della baseline, perché i render non cambiano. Fogli `araldica` e `fortificazioni-porte` rivisti a vista. Baseline invariata.
+
+## 2026-11-09 — Coperture della long house e sfiatatoio (BC-251105-09, branch `feature/longhouse-roofs`, NON MAIN)
+
+- **Modello:** `longhouse_cover()` in `tools/blender/build_wood_fort.py` (Blender 4.4 headless) genera tre manti per W1 e W2: `shingle` (scandole, come prima), `thatch` (paglia spessa, colmo a rotolo legato) e `turf` (zolle erbose su tavolato, trave di ritegno in gronda). Ogni manto ha le sue parti `roof_yn.*`, `roof_yp.*`, `ridge.*`, `verge_a.*`/`verge_b.*` (sporto sul frontone, mantovane e tavole incrociate, spostati fuori da `end_a`/`end_b`) e `smoke.*` (sfiatatoio del focolare sul colmo: apertura scura sotto un piccolo cappello). Nuovi colori `roofThatch*`/`roofTurf*` (bianchi d'inverno). Gli altri 5 modelli lignei sono invariati.
+- **Gioco:** campo `s.roofCover` (`longhouseCover()`, assente = scandole); comando `setLonghouseCover` e scelta «Copertura» (Scandole / Paglia / Zolle erbose) nel pannello della long house; cambio gratuito. Lo sfiatatoio sta sulla campata di mezzo; il fumo esce da lì (`longhouseSmokeSpecs`, 2.5D), non nel cutaway. Salvataggi: `roofCover` resta solo sulle long house non a scandole.
+- **Lab:** quattro varianti nuove (W1/W2 · paglia, W1/W2 · zolle) in `settlement-asset-stage.js`, più le voci in `settlement-assets.js`.
+- **Prove:** `qa/wood3d-regression.cjs` (parti per manto, conteggi per campata, sfiatatoio unico, ricaduta sulle scandole, cutaway), `house3d`, `small-gate`, `clay-material` passano in locale. Audit del Lab (`node qa/asset-audit.mjs`): 1146 render, 0 errori, 124 avvisi (cantiere 25/50/75% delle sezioni larghe/lignee e danno leggero: preesistenti), 32 nuovi (le 4 varianti) e 4 cambiati (cutaway W1/W2 e campate: sporto e sfiatatoio); foglio `fortificazioni-mura` rivisto, baseline aggiornata. Dopo il merge di `main` (11/11): modello rigenerato (gli altri 6 modelli lignei, compresa la torre a telaio, identici a main), audit 1486 render, 0 errori; nella baseline aggiornate solo le 64 voci `castle:long-house-*` (gli altri ~180 render «cambiati» in locale non dipendono da questo branch e restano come in main). CI: `integrity` e `settlement-qa` fallivano su `codex-wiki-regression` perché `wiki/catalog.json` (impronta `sourceDigest` dei sorgenti, che include `settlement-core.js`) non era rigenerato; rigenerato con `node tools/export-codex.cjs`.
 
 ## Merlature doppie BC-251105-04 (branch `feature/double-crenel`, da `main` b1a2307, 05/11/2026, NON MAIN)
 

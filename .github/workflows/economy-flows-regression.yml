@@ -8,6 +8,9 @@ on:
   pull_request:
     paths:
       - 'src/settlement-economy.js'
+      - 'src/settlement-treasury.js'
+      - 'src/settlement-combat.js'
+      - 'qa/treasury-regression.cjs'
       - 'src/settlement-panels.js'
       - 'src/settlement-panels.css'
       - 'src/settlement-heraldry.js'
@@ -27,6 +30,8 @@ on:
       - 'src/settlement-haulage.js'
       - 'src/settlement-population-figures.js'
       - 'src/settlement-commerce.js'
+      - 'src/settlement-church.js'
+      - 'qa/church*.cjs'
       - 'src/settlement-storage-yard.js'
       - 'src/settlement-castle.js'
       - 'src/settlement-castle-placement.js'
@@ -90,6 +95,8 @@ jobs:
           node --check src/settlement-educated.js
           node qa/educated-regression.cjs
           node qa/economy-rations-regression.cjs
+          node --check src/settlement-treasury.js
+          node qa/treasury-regression.cjs
           node qa/founding-regression.cjs
           node qa/builder-placement-regression.cjs
           node qa/refactor-app-population-regression.cjs
@@ -98,6 +105,8 @@ jobs:
           node qa/male-routines-regression.cjs
           node qa/female-routines-regression.cjs
           node qa/commerce-skeleton-regression.cjs
+          node --check src/settlement-church.js
+          node qa/church-regression.cjs
           node qa/urban-workshops-regression.cjs
           node qa/convoys-skeleton-regression.cjs
           node qa/road-sign-convoy-regression.cjs
