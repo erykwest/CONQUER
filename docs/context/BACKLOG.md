@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-13 — Equipaggiamento delle unità: elmi e scudi
+
+**IMPLEMENTATO SU BRANCH `feature/unit-equipment-styles`, NON MERGE.** Scelta feudale dell'elmo e della forma dello scudo dei soldati, dal Centro di controllo › Militare › Equipaggiamento, come merlature e pendenza dei tetti. Dettagli in [STATUS](STATUS.md).
+- Aperti: estendere la scelta ai cavalieri a cavallo (elmo e scudo in `settlement-mounted2d.js`); valutare un effetto di gioco (oggi solo estetico); audit del Lab da eseguire in CI.
+
 ## 2026-11-13 — UI-SEL-01 · Perimetro di selezione fedele al volume
 
 **SU BRANCH `fix/selection-outline-occlusion`, NON MERGE.**

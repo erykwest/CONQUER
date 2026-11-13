@@ -157,6 +157,10 @@ body.asset-catalog-static #labLegacyControls{display:none}
     <label id="ammoBox">Munizioni <select id="sAmmo"></select></label>
     <label id="balBox"><input id="sBallista" type="checkbox"> Balista</label>
   </div>
+  <div class="group" id="equipBox"><span>Equipaggiamento</span>
+    <label>Elmo <select id="sHelmet"><option value="cap">Cervelliera</option><option value="kettle">Cappello d'arme</option><option value="nasal">Elmo a nasale</option><option value="barbuta">Barbuta</option><option value="greathelm">Elmo a staio</option></select></label>
+    <label>Scudo <select id="sShield"><option value="oval">Ovale</option><option value="round">Rotella</option><option value="heater">Triangolare</option><option value="kite">A mandorla</option><option value="pavise">Pavese</option></select></label>
+  </div>
   <label id="wardrobeBox">Stagione/meteo <select id="wardrobe">
     <option value="summer|clear">Estate serena</option><option value="spring|wind">Primavera ventosa</option>
     <option value="autumn|fog">Autunno nebbioso</option><option value="summer|rain">Pioggia</option>
@@ -281,6 +285,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     $('wagonBox').hidden=!['wagon','wagon3d'].includes(subject);
     $('wagon3dBox').hidden=!(subject==='wagon3d'||['animal','siege','ship'].includes(kindOf(subject)));
     $('flipBox').hidden=subject!=='wagon';
+    $('equipBox').hidden=kindOf(subject)!=='soldier';
     const eng=kindOf(subject)==='siege'?subject.split(':')[1]:'',ammo=AMMO[eng];
     $('siegeUpBox').hidden=!ammo&&eng!=='mantlet';$('ammoBox').hidden=!ammo;$('balBox').hidden=eng!=='mantlet';
     if(ammo){const was=$('sAmmo').value;$('sAmmo').innerHTML=ammo.map(([k,l])=>'<option value="'+k+'">'+l+'</option>').join('');if(ammo.some(([k])=>k===was))$('sAmmo').value=was}
@@ -289,6 +294,9 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
   // Wardrobe preview: the lab has no calendar or weather, so the select stands in for both.
   function setWardrobe(){const [season,weather]=$('wardrobe').value.split('|');window.ConquerWardrobe.preview={season,weather}}
   $('wardrobe').onchange=setWardrobe;setWardrobe();
+  // Feudal unit equipment (State.policies.unitHelmet/unitShield), as chosen in Militare › Equipaggiamento.
+  function setEquip(){const p=State.policies||(State.policies={});p.unitHelmet=$('sHelmet').value;p.unitShield=$('sShield').value}
+  $('sHelmet').onchange=$('sShield').onchange=setEquip;setEquip();
   document.querySelectorAll('[data-subject]').forEach(b=>b.onclick=()=>{subject=b.dataset.subject;fromAction=action='walk';trans=1;renderButtons()});
   $('actions').onclick=e=>{const k=e.target.dataset?.action;if(k&&k!==action){fromAction=action;action=k;trans=0;renderButtons()}};
 
