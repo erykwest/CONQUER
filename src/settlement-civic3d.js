@@ -502,7 +502,46 @@
   // People of the room in view of a selected town hall, in its local axes (x, y as the model,
   // z = feet above the building's ground): the tribunal in session. Seated figures sit .12 low
   // (the event figures' convention). Public seats are a fixed draw per building.
+  // People of the other civic interiors (settlement-staff-people.js): the priest at the altar, the
+  // innkeeper behind the counter, the watch and the collectors of the Bargello, the judges of the
+  // Balivo. Same slot shape as the town hall's; `tool` is the work gesture (settlement-work-anim.js).
+  function staffSlots(s){
+    const key=modelKey(s),spec=INTERIOR[key];if(!spec)return[];
+    const span=floorSpan(s,key),z=span.z+FLOOR_Z,out=[];
+    const add=(id,role,action,x,y,dz,tool=null,facing=1)=>out.push({id,role,action,x,y,z:z+dz,tool,facing});
+    if(s.type==='church'&&span.floor===0){
+      // Facing the altar from the chancel step, the book open.
+      add('priest','priest','work',0,spec.altar-.32,0,'book',1);
+    }else if(s.type==='tavern'&&span.floor===0){
+      // Behind the counter, on the side of the barrels.
+      const [x0,y0,x1,y1]=spec.counter,cx=(x0+x1)/2,cy=(y0+y1)/2,b=spec.barrels?.[0]||[cx,cy+1];
+      const dx=b[0]-cx,dy=b[1]-cy,vertical=y1-y0>x1-x0;
+      const off=vertical?[Math.sign(dx)||1,0]:[0,Math.sign(dy)||1];
+      add('innkeeper','innkeeper','work',cx+off[0]*((x1-x0)/2+.16),cy+off[1]*((y1-y0)/2+.16),0,'mug',1);
+    }else if(s.type==='bargello'){
+      const room=span.floor?spec.upper[span.floor-1].room:spec.room,rect=span.floor?spec.upper[span.floor-1].rect:spec.floors[0];
+      const [fx0,fy0,fx1,fy1]=rect,ix0=fx0+.18,ix1=fx1-.18,icx=(ix0+ix1)/2,front=fy0,back=fy1;
+      if(room==='guard'){
+        // The watch: one at the table, one on his feet by the weapon rack.
+        const ty=(front+back)/2;
+        add('watch0','guard','stand',icx-.55,ty-.3,0);
+        add('watch1','guard','stand',ix0+.5,back-.35,0);
+      }else if(room==='exactor'){
+        // Collectors seated behind the counting table, writing; who pays waits on the bench.
+        const ty=(front+back)/2+.05;
+        [icx-.45,icx+.45].forEach((x,i)=>add('collector'+i,'exactor','work',x,ty+.34,.13-.12,'quill',i?-1:1));
+        add('payer0','public','sit',icx-.3,front+.24,.11-.12);
+      }
+    }else if(s.type==='balivo'&&span.floor>0&&spec.upper[span.floor-1].room==='tribunal'){
+      // The bailiff's rural court: the same bench as the town hall's tribunal.
+      const L=tribunalLayout(spec.upper[span.floor-1].rect,[]);
+      L.judges.forEach((x,i)=>add('bailiff'+i,'bailiff',i===1?'preside':'sit',x,L.jy+.05,.1+.23-.12));
+      add('clerk','clerk','write',L.clerk.x,L.clerk.y+.28,.13-.12);
+    }
+    return out;
+  }
   function roomSlots(s){
+    if(s&&['church','tavern','bargello','balivo'].includes(s.type))return staffSlots(s);
     if(s?.type!=='townhall')return[];
     const key=modelKey(s),spec=INTERIOR[key];if(!spec)return[];
     const span=floorSpan(s,key),role=townhallRole(s,span.floor);

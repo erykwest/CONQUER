@@ -181,5 +181,28 @@
         '#ffe29a','rgba(214,158,57,.12)');
     }
   }
-  window.ConquerForestry=Object.freeze({WOOD_PER_U2,WORK_PER_U2,jobs,preview,start,crews,tick,clear,drawGhost,drawJobs});
+  // The L1 crew at a clearing: woodcutters with the axe around the area, the third one grubbing
+  // stumps with the shovel. Visual only: as many as the job's paid workers, on working hours of
+  // a weekday, never during an alarm (settlement-work-anim.js figures, woodcutter clothes).
+  function crewSpots(job,n){
+    const out=[],r=num(job.radius,4)*.55,a0=(parseInt(String(job.id).replace(/\D/g,''),10)||0)*.9;
+    for(let i=0;i<n;i++){const a=a0+i*Math.PI*2/Math.max(1,n);out.push({x:job.center.x+Math.cos(a)*r,y:job.center.y+Math.sin(a)*r})}
+    return out;
+  }
+  function drawCrews(){
+    const W=window.ConquerWorkAnim;
+    if(!W||(window.ConquerCombat?.alarmMode?.()||'off')!=='off'||State.view.scale<.3)return;
+    const day=num(State.clock?.day),f=day-Math.floor(day);
+    if(!isWeekday(day)||f<.24||f>.66)return;
+    const t=W.now();
+    for(const job of jobs()){
+      const c=job.construction;if(!c||c.workDone>=c.workRequired)continue;
+      const n=Math.min(MAX_WORKERS,Math.max(0,Math.floor(num(c.workers))));
+      crewSpots(job,n).forEach((p,i)=>{
+        if(typeof worldPointVisible==='function'&&!worldPointVisible(p,0,40))return;
+        W.drawWorker(W.anonymous(job.id+':feller'+i,p,'woodcutter'),i===2?'shovel':'axe',t,W.facingOf(p,job.center.x-p.x,job.center.y-p.y));
+      });
+    }
+  }
+  window.ConquerForestry=Object.freeze({WOOD_PER_U2,WORK_PER_U2,jobs,preview,start,crews,tick,clear,drawGhost,drawJobs,crewSpots,drawCrews});
 })();

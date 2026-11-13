@@ -1,5 +1,11 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-13 — Figure dei ruoli mancanti
+
+Branch `feature/new-role-figures`. I ruoli che esistevano solo nei conti ora hanno una figura con l'abito del mestiere e un gesto: il personale delle stanze del castello (cuoco, stalliere, armaiolo, cappellano, tesoriere, cerusico e inservienti, falconiere, colombaro, consiglieri), il prete, l'oste, le guardie e gli esattori del Bargello, i giudici del Balivo, i boscaioli del disboscamento. Il lavoro aggiunge 9 gesti, 8 pezzi di guardaroba, 12 abiti, voci nel Lab e una nuova regressione. ROADMAP e DECISIONS invariate.
+
+Prova in partita (22 scene di stanze e interni civici, più il disboscamento): tutto al suo posto. Corretto il falco del falconiere, che si confondeva con la tunica: ora ha il dorso grigio e il petto chiaro.
+
 ## 2026-11-13 — Selezione edifici · perimetro senza lati posteriori e al livello corrente
 
 `drawCastleSelection` non disegna più i lati del perimetro a terra nascosti dal volume dell'edificio: un lato è posteriore se appena sotto di esso sullo schermo c'è il footprint di un corpo con altezza reale. Vale per torri, mura, sezioni costruite, case e civici, anche in cutaway, con la vista ruotata e con la camera libera di CAM-ROT-01 (i lati visti di taglio restano nascosti dalla parete). Campi, cantieri, piazze e corpi bassi (cortili, industrie aperte, pozzi) mantengono il perimetro completo. I civici seguono ciò che sta in piedi al livello corrente (`ConquerCivic3D.builtParts`, tabella `BUILT`): la chiesa L1 non mostra più la croce L3. Regressione in `qa/mastio-selection-zoom-regression.cjs`. ROADMAP e DECISIONS invariate.

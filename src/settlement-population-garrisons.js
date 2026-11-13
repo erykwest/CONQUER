@@ -32,7 +32,8 @@ function drawCutawayOccupants(){
           for(let c=0;c<cells;c++)count+=1+peasantHash(s.id+'-cell-'+slot.index+'-'+c)%max;
           kind='prisoner';
         }
-        if(!count)continue;
+        // The household of the other rooms: cook, groom, chaplain, treasurer... (settlement-staff-people.js).
+        if(!count){window.ConquerStaffPeople?.drawRoom(s,slot);continue}
         const spots=window.ConquerCutawayFurniture?.standSpots(s,slot,count);
         const positions=cutawayOccupantLayout(count),items=[];
         for(let i=0;i<count;i++){

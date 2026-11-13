@@ -460,6 +460,7 @@ function draw(){
   window.ConquerCourtPeople?.draw();   // the tribunal in session in the town hall cutaway
   window.ConquerIndustries?.drawWorkers();
   window.ConquerWorkAnim?.drawBuilders();
+  window.ConquerForestry?.drawCrews?.();   // L1 woodcutters at the forest clearings
   window.ConquerShipyard?.drawShipwrights();   // shipwrights along the hull on the slipways
   if(!window.ConquerWorld3D?.active?.())window.ConquerCoast?.draw();   // 2.5D: shore boulders (WebGL has them in the static scene)
   window.ConquerCoast?.drawWaves(performance.now()/1000);   // waves on the beaches, spray on the rocks, glints at sea

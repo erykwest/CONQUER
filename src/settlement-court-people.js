@@ -29,9 +29,11 @@
   function courtBuilding(){
     if(typeof State==='undefined'||!State.selectedId)return null;
     const s=(State.structures||[]).find(o=>o.id===State.selectedId);
-    if(!s||s.type!=='townhall'||!C3()?.cutawayActive?.(s))return null;
+    if(!s||!STAFFED.has(s.type)||!C3()?.cutawayActive?.(s))return null;
     return s;
   }
+  // Town hall (tribunal, prison) and the other staffed civic interiors (ConquerCivic3D.roomSlots).
+  const STAFFED=new Set(['townhall','church','tavern','bargello','balivo']);
   function slots(s){
     const list=C3()?.roomSlots?.(s)||[];
     return occupancySource?occupancySource(s,list)||[]:list;
@@ -39,7 +41,7 @@
   // Actors at time t (seconds): pure, so the scene can be tested without a canvas.
   function scene(s,t){
     return slots(s).map(sl=>{
-      const ph=hash(s.id+':'+sl.id)%1000/1000,a={...sl,phase:frac(t*.35+ph),gesture:0,bob:0,sway:0};
+      const ph=hash(s.id+':'+sl.id)%1000/1000,a={...sl,phase:frac(t*.35+ph),gesture:0,bob:0,sway:0,t};
       if(sl.action==='preside'){const c=frac(t/7+ph);a.gesture=c<.22?Math.sin(c/.22*Math.PI):0}
       else if(sl.action==='write')a.gesture=.5+.5*Math.sin(t*5+ph*9);
       else if(sl.action==='bound')a.sway=Math.sin(t*.9+ph*6)*.012;
@@ -58,8 +60,10 @@
     const sex=a.role==='public'&&hash(id+':sex')%2?'female':'male';
     const colors=typeof villagerBodyColors==='function'?villagerBodyColors(id,kind):['#8c6b3f','#5d4a33'];
     const hair=a.role==='prisoner'?'brown':typeof villagerHair==='function'?villagerHair(id):'brown';
-    const dress=ROLE_DRESS[a.role];
+    const dress=ROLE_DRESS[a.role],trade=!dress&&W()?.ROLES?.[a.role];
     const own={prisoner:['#8a7f6a','#6d6352'],executioner:['#2e2624','#221c1b'],jailer:['#5a4030','#3e2c21']}[a.role];
+    // A trade (settlement-wardrobe.js ROLES) dresses for the season in its free slots; a costume of office does not.
+    if(trade)return{p,id,kind:window.ConquerStaffPeople?.KIND?.[a.role]||kind,role:a.role,sex,age:'adult',hair,colors:own||colors};
     return{p,id,kind,sex,age:'adult',hair,colors:own||colors,
       outfit:dress?W()?.compose(dress,id,kind)??null:null};
   }
@@ -79,10 +83,12 @@
     withProjectionGroundZ(ground+a.z+a.bob,()=>{
       if(a.role==='guard'){drawSoldierFigureUnmasked(p,.09,'spearman',s.id+':court:'+a.id,a.phase);return}
       const dot=dotOf(s,a,p);
+      // Staff at work: the gesture of the trade (settlement-work-anim.js).
+      if(a.tool&&window.ConquerWorkAnim){window.ConquerWorkAnim.drawWorkerUnmasked(dot,a.tool,a.t??0,a.facing||1);return}
       drawVillagerFigureUnmasked(dot);
       const F=frame(p);if(F.scale<.16)return;
       const sleeve=darken(dot.outfit?.sleeve||dot.colors[0],.78);
-      if(a.role==='judge'&&a.gesture>0){
+      if((a.role==='judge'||a.role==='bailiff')&&a.gesture>0){
         // The presiding judge raises his right hand to speak.
         const sh={x:F.base.x+F.bodyW*.2,y:F.top+F.bodyH*.2};
         arm(sh,{x:sh.x+F.bodyW*.25,y:sh.y-F.bodyH*(.15+.35*a.gesture)},sleeve,F.scale);
@@ -122,6 +128,9 @@
     const t=window.ConquerWorkAnim?.now?.()??performance.now()/1000;
     drawJustice(t);
     const s=courtBuilding();if(!s)return;
+    const ground0=typeof placementGroundZ==='function'&&Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s);
+    // Church, tavern, Bargello, Balivo: their people are in by day (settlement-staff-people.js).
+    if(s.type!=='townhall'){if(window.ConquerStaffPeople?.onDuty?.())paintActors(s,scene(s,t),ground0);return}
     // The tribunal sits by day; the prison is never empty.
     const role=C3().townhallRole?.(s,C3().visibleFloor(s));
     if(role!=='prison'&&!(role==='tribunal'&&inSession()))return;
