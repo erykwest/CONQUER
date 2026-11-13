@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-13 — RC-PAUSE-01 · Preparazione ordini durante pause regionali (solo design)
+
+Decisione confermata: una campagna **in pausa regionale** resta completamente ferma, ma se raggiungibile consente **ordini preparati/in attesa** da browser e app; l'applicazione è rimandata al **primo tick utile alla ripresa**, senza anticipare produzioni, viaggi o consegne. Retry e convalida al riavvio sono salvaguardie progettuali; modalità offline del dispositivo distinta e non ancora definita. Aggiornati REMOTE-CONTROL-SCOPE, D-RC-PAUSE-261113, backlog RC-PAUSE-01 e SRS mobile v0.5 nella PR draft #222. **Nessun codice o schema modificato.**
+
+
 ## 2026-11-13 — RC-REPORT-01 · Resoconti dei vassalli programmabili (solo design)
 
 Il product owner ha deciso che **il sovrano non vede i KPI dei vassalli live**: riceve snapshot prodotti e **recapitati da messaggeri**, con **frequenza di resoconto da lui impostabile**. Lo stato del proprio feudo resta consultabile direttamente. Le routine 1/7/30 giorni della branch `messages` sono un precedente tecnico, non frequenze definitive approvate. Aggiornati SRS mobile v0.4 nella draft PR #222, REMOTE-CONTROL-SCOPE, D-RC-VASSAL-REPORTS-261113 e backlog RC-REPORT-01. **Solo documentazione, nessun codice.**
