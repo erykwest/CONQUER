@@ -6,13 +6,13 @@
 
 - [ ] **RC-01:** homepage che unisce lobby delle partite disponibili e campagne del giocatore con navigazione multi-server.
 - [ ] **RC-02:** KPI di ogni insediamento / campagna con fonte autorevole, stato e tempi di aggiornamento.
-- [ ] **RC-03:** remote control dei feudi da browser senza caricare Builder/3D, comandi server-side e autorizzazioni; ambito comandi da fissare.
+- [ ] **RC-03:** controllo remoto da browser (poi Android/iOS) di economia, fisco, lavoro/Job Manager, priorità e programmazione cantieri già localizzati, militare strategico/spedizioni, diplomazia, messaggi, tributi e carovane; comandi lato server e autorizzazioni. **Esclusi** piazzamento geometrico degli edifici, progettazione spaziale delle fortificazioni e controllo tattico diretto (solo Builder/3D); catalogo granulare dei comandi ancora aperto.
 - [ ] **RC-04:** integrare posta, report e routine dalla branch `messages` dopo analisi delle 29 commit avanti / 317 indietro rispetto a `main`; preservare ETA simulati e non duplicare la diplomazia.
 - [ ] **RC-05:** unificare diplomazia, spedizioni militari, tributi/convogli e mappa regionale con World/Feudal e permessi.
 - [ ] **RC-06:** web responsive e API condivise; app Android/iOS solo in una fase successiva.
 - [ ] **RC-07:** QA sicurezza (cross-campaign, permessi sudditi, comandi duplicati/concorrenti), freschezza KPI, offline e tempi di recapito.
 
-**APERTO:** comandi immediati sulla propria colonia vs tempi simulati per operazioni inter-feudo, portata del Builder remoto, permessi e filtri dei dati pubblici.
+**DECISO:** confine gestione remota vs Builder/3D come D-RC-BOUNDARY-261113. **APERTO:** comandi immediati sulla propria colonia vs tempi simulati per operazioni inter-feudo, permessi, catalogo granulare dei comandi e filtri dei dati pubblici.
 
 
 ## MP-07 — Profilo globale, partecipazioni multi-server e isolamento dello stato (design 13/11/2026)
