@@ -1,5 +1,16 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## MP-07 — Profilo globale, partecipazioni multi-server e isolamento dello stato (design 13/11/2026)
+
+**DECISO / DA IMPLEMENTARE:** un account può partecipare simultaneamente a più campagne. Separare identità/autenticazione globale, record di partecipazione `user_id + campaign_id` e progressi/feudi isolati per campagna. Lobby: elenco campagne aperte e già partecipate. Nessun trasferimento fra server di risorse, edifici, armate o progresso. [Specifica](../MULTIPLAYER-SERVER-SCOPE.md#4a-separazione-account--campagna--feudo--decisione-13112026), [decisione](DECISIONS.md#d-mp-account-261113--profilo-globale-e-partecipazioni-multi-campagna-13112026).
+
+- [ ] Definire `campaign_id`, `membership_id`/partecipazione, `settlement_id`/`territory_id`, permessi e isolamento dei salvataggi.
+- [ ] Migrare schema cloud corrente: `src/settlement-app-persistence.js` salva con conflitto `user_id,world_cell_x,world_cell_y`, coordinate 0,0 e nessun `campaign_id`.
+- [ ] Separare araldica/titoli/relazioni della campagna da impostazioni e identità di account; definire nickname e storico.
+- [ ] Testare isolamento cross-campaign, accesso autorizzato, doppia iscrizione, cambio campagna, salvataggi legacy e sicurezza delle query.
+- [ ] Decidere numero massimo di campagne contemporanee, identità di personaggio, profilo pubblico e regole per account/abbandono.
+
+
 ## CAM-ROT-01 — Rotazione libera della camera (13/11/2026)
 
 - **FATTO SU BRANCH** `feature/free-camera-rotation`: rotazione a qualsiasi angolo con Shift + tasto centrale, scatti di 15° con Ctrl; pan invariato su tasto centrale/destro; Q/E a 90°.
