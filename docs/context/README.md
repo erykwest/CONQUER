@@ -1,5 +1,8 @@
 # CONQUER — Piramide di contesto
 
+**Remote control multi-campagna (13/11/2026, solo design):** [Main page, lobby, KPI e comando remoto](../REMOTE-CONTROL-SCOPE.md) — futura UI web/mobile per posta, diplomazia, spedizioni, tributi, mappa regionale e gestione senza Builder. Non implementato su `main`. Decisione D-RC-261113.
+
+
 **Scope multiplayer (13/11/2026, solo design):** [Server, slot giocatori/bot, ingresso tardivo e colonizzazione feudale](../MULTIPLAYER-SERVER-SCOPE.md), decisione [D-MP-261113](DECISIONS.md). Nessun sistema server/lobby integrato su `main`; la roadmap M4 non viene anticipata.
 
 
