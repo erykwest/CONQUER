@@ -165,12 +165,15 @@
       ctx.fillStyle='#6f8a4a';ctx.beginPath();ctx.ellipse(mx,my,rw*.85,rw*.22,0,0,Math.PI*2);ctx.fill();
     }else if(tool==='falcon'){
       // Leather glove and the hooded bird perched on it; the wings open when it bates.
-      const bate=B.u>.2&&B.u<.42,bx=g.x,by=g.y-.9*s;
-      ctx.fillStyle='#7a5937';ctx.beginPath();ctx.arc(g.x,g.y,.8*s,0,Math.PI*2);ctx.fill();
-      ctx.fillStyle='#6b5038';ctx.strokeStyle='#2a1f16';ctx.lineWidth=lw;
-      if(bate)for(const k of [-1,1]){ctx.beginPath();ctx.moveTo(bx,by-.6*s);ctx.quadraticCurveTo(bx+k*2.6*s,by-2.4*s,bx+k*3*s,by-.2*s);ctx.lineTo(bx,by);ctx.closePath();ctx.fill();ctx.stroke()}
-      ctx.beginPath();ctx.ellipse(bx,by-.4*s,.8*s,1.2*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();
-      ctx.fillStyle='#8e2a26';ctx.beginPath();ctx.arc(bx+f*.15*s,by-1.75*s,.55*s,0,Math.PI*2);ctx.fill();
+      // Slate-grey back and a pale breast: the bird reads against the falconer's brown tunic.
+      const bate=B.u>.2&&B.u<.42,bx=g.x+f*.3*s,by=g.y-1.1*s;
+      ctx.fillStyle='#7a5937';ctx.beginPath();ctx.arc(g.x,g.y,.85*s,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#5f6670';ctx.strokeStyle='#22262b';ctx.lineWidth=lw;
+      if(bate)for(const k of [-1,1]){ctx.beginPath();ctx.moveTo(bx,by-.7*s);ctx.quadraticCurveTo(bx+k*3*s,by-2.8*s,bx+k*3.4*s,by-.2*s);ctx.lineTo(bx,by);ctx.closePath();ctx.fill();ctx.stroke()}
+      ctx.beginPath();ctx.moveTo(bx-f*.2*s,by+.6*s);ctx.lineTo(bx-f*.9*s,by+1.6*s);ctx.lineTo(bx+f*.1*s,by+1.2*s);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.beginPath();ctx.ellipse(bx,by-.4*s,1*s,1.5*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.fillStyle='#ddd1b4';ctx.beginPath();ctx.ellipse(bx+f*.35*s,by-.3*s,.5*s,1.05*s,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#8e2a26';ctx.strokeStyle='#3a1412';ctx.beginPath();ctx.arc(bx+f*.15*s,by-2.1*s,.62*s,0,Math.PI*2);ctx.fill();ctx.stroke();
     }else if(tool==='mug'||tool==='bowl'){
       const w=(tool==='mug'?.75:1.25)*s,h=(tool==='mug'?1.3:.6)*s;
       ctx.fillStyle=tool==='mug'?'#8a6a46':'#c9c2b0';ctx.strokeStyle='#3e2c1d';ctx.lineWidth=lw;

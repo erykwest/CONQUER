@@ -29,9 +29,14 @@
   - `work-anim` (19 gesti), `wardrobe` (28 mestieri), `court-people`, `ci-p1`, `codex-wiki`;
   - suite `qa/*.cjs` senza i `*-performance`: tutto verde tranne `founding-regression`, che fallisce uguale su main.
 - **AUDIT ASSET:** audit completo con 0 errori e 21 voci nuove, riviste su un foglio grande dei gesti. Baseline aggiornata solo per `figure:work:*` e `wardrobe:trade:*`. Le altre differenze (alberi, torri) sono deriva già presente su main.
+- **PROVA IN PARTITA (13/11):** gioco del branch in Chromium (WebGL SwiftShader), alle 10:30, 22 scene:
+  - stanze del castello in sezione, piano per piano: sezioni costruite W1 e W2 e torre grande L3 con cucina, cappella, scuderie, tesoro, infermeria, consiglio, armeria, officina, falconiera, colombaia;
+  - chiesa L1 e L3, taverna L1 e L2, Bargello L1 e L2 su entrambi i piani, Balivo L1 e L2;
+  - cantiere di disboscamento con 3 lavoratori.
+  - Esito: ogni figura sta nella sua stanza e al suo piano, con l'abito e il gesto giusti; di notte il cantiere è vuoto.
+  - Unico difetto trovato, corretto: il falco era marrone come la tunica del falconiere e non si vedeva. Ora ha il dorso grigio ardesia, il petto chiaro e la coda, ed è un po' più grande. Baseline aggiornata solo per `figure:work:hawk`.
 - **DA VERIFICARE:**
   - CI del branch;
-  - una prova in partita delle stanze del castello e degli interni civici selezionati, che il Lab non mostra;
   - l'ordine di merge: prima #207 e #213, poi questa PR.
 
 ## 2026-11-13 — Abiti da mestiere (branch `feature/role-outfits`)
