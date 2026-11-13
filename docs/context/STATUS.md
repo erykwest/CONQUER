@@ -1,6 +1,22 @@
 # Livello 2 — Stato tecnico e prove
 
 
+## 2026-11-13 — Animazioni di lavoro dei bottegai (branch `feature/shop-artisan-tools`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `ConquerWorkAnim.TOOLS` passa da 7 a 10 attrezzi: `clay` (vasaio: mani sul vaso che sale al tornio, schizzi d'argilla), `shuttle` (tessitore: la spola va avanti e indietro all'altezza dell'ordito, filacce alla battuta), `needle` (sarto: ago nella stoffa e lunga tirata del filo, senza effetti).
+  - I tre pezzi da banco (vaso col tornio, spola col filo, stoffa col filo) si disegnano tra il corpo e il braccio. Le figure WebGL usano le stesse 8 fasi delle altre (`w|tool|fase|look`).
+  - `TRADES` di `settlement-shop-cutaway.js`: vasaio, tessitore e sarto non hanno più `tool:null`, quindi nessun bottegaio resta fermo al banco.
+  - Asset Lab, famiglia «Lavori»: nuove voci Vasaio (tornio), Tessitore (spola), Sarto (ago).
+- **PROVE LOCALI PASS:**
+  - `work-anim-regression` (10 attrezzi, ogni mestiere di bottega ha un attrezzo noto, i pezzi da banco si disegnano);
+  - `shop-cutaway-regression`, aggiornato: il tessitore ora usa la spola;
+  - `asset-catalog-regression`, `urban-workshops-regression`, `commerce-skeleton-regression`;
+  - suite `qa/*.cjs`: falliscono solo i `*-performance`, `asset-audit-scope` (strumento CLI) e `founding-regression`, che fallisce identico su `main` 95e8dd29.
+- **AUDIT ASSET:** `node qa/asset-audit.mjs` sulle 3 voci nuove e sulle botteghe L3 di vasaio, tessitore e sarto: 0 errori, 3 nuove, 1 cambiata (vasaio esterno, distanza 0,024). Fogli rivisti; baseline aggiornata solo per queste voci.
+- **DA VERIFICARE:** CI del branch.
+
+
 ## 2026-11-10 — ECO-FIL-01 fase 1 · Miniera → metallo (branch `feature/eco-fil-01-miniera-metallo`)
 
 - **CODICE SUL BRANCH, NON MERGE:**
