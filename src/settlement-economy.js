@@ -31,15 +31,15 @@
   // it lies by the town hall, so it keeps producing under alarm and siege.
   const KITCHEN_GARDEN_FOOD_PER_DAY = 2;
   const KIND = Object.freeze({
-    field:{good:'food',classId:2,workers:1,build:20},
+    field:{good:'food',classId:1,workers:1,build:20},
     loggingCamp:{good:'wood',classId:1,workers:2,rate:2,build:45},
-    quarry:{good:'stone',classId:2,workers:2,rate:2,build:65},
+    quarry:{good:'stone',classId:1,workers:2,rate:2,build:65},
     // ECO-FIL-01: the mine yields metal only (smelting implicit); stone stays at the quarry.
-    mine:{good:'metal',classId:2,workers:2,rate:1,build:95},
+    mine:{good:'metal',classId:1,workers:2,rate:1,build:95},
     // Optional mills process unmarketed crop stock. No additional tradeable good.
     windmill:{good:'food',classId:1,workers:0,rate:12,build:40},
     watermill:{good:'food',classId:1,workers:0,rate:12,build:45},
-    workshop:{good:'equipment',classId:3,workers:1,rate:.5,inputs:{metal:.6,wood:.3},build:130},
+    workshop:{good:'equipment',classId:2,workers:1,rate:.5,inputs:{metal:.6,wood:.3},build:130},
     vineyard:{good:'luxury',classId:1,workers:2,build:90}
   });
   const clamp=(n,min,max)=>Math.min(max,Math.max(min,n));
@@ -55,8 +55,8 @@
   const population=()=>{
     const counts={L1:foundingWorkers(),L2:0,L3:0,L4:0};
     for(const h of State.structures||[])if(h.type==='house'&&complete(h)){
-      const lvl=clamp(Math.floor(finite(h.houseLevel,1)),1,4);
-      counts[classKey(lvl)]+=lvl*3; // existing housePopulationCapacity contract
+      const lvl=window.ConquerSocialClasses?.tierOfHouse?.(h)??clamp(Math.floor(finite(h.houseLevel,1)),1,4);
+      counts[classKey(lvl)]+=window.ConquerSocialClasses?.capacity?.(h)??lvl*3;
     }
     return counts;
   };
@@ -67,7 +67,7 @@
       lots:Object.fromEntries(GOODS.map(g=>[g,[]])),
       prices:{...BASE},externalDemand:empty(),externalOffers:empty(),
       wallet:{L1:24,L2:40,L3:60,L4:300},welfare:50,
-      happiness:{L1:50,L2:50,L3:50,L4:50},
+      happiness:{L1:50,L2:50,L3:50,L4:50},loyaltyL4:50,
       wage:{L1:1,L2:2,L3:3},activities:{},cropStock:{lord:0,private:0},
       books:{},annual:{},negativeYears:{},lastTrade:{},events:[],
       constructionPayroll:{total:0,bySite:{}},weekCarterPeak:0,
@@ -95,6 +95,7 @@
     if(!e.happiness||typeof e.happiness!=='object')e.happiness={};
     for(const group of HAPPINESS_GROUPS)
       e.happiness[group]=clamp(finite(e.happiness[group],finite(e.welfare,50)),0,100);
+    e.loyaltyL4=clamp(finite(e.loyaltyL4,50),0,100);
     if(!Array.isArray(e.panelHistory))e.panelHistory=[];
     if(!Number.isFinite(e.weekCarterPeak))e.weekCarterPeak=0;
     if(!e.weekProducedSites||typeof e.weekProducedSites!=='object')e.weekProducedSites={};
@@ -315,10 +316,11 @@
     const e=state();
     const sites=activeStructures().filter(s=>KIND[s.type].classId===1&&workerDemand(s).count>0)
       .sort((a,b)=>String(a.id).localeCompare(String(b.id)));
-    const labels={loggingCamp:'Taglialegna',vineyard:'Vigneto'};
+    const labels={loggingCamp:'Taglialegna',vineyard:'Vigneto',field:'Campi',quarry:'Cava',mine:'Miniera'};
     const tasks=sites.map(s=>{
       const capacity=workerDemand(s).count;
-      const inactive=s.economyDisabled||s.destroyed||s.abandoned||e.activities[s.id]?.abandoned;
+      const inactive=s.economyDisabled||s.destroyed||s.abandoned||e.activities[s.id]?.abandoned||
+        s.type==='field'&&typeof fieldCropReady==='function'&&!fieldCropReady(s,day);
       return {key:'site:'+s.id,kind:'site',id:String(s.id),
         label:(labels[s.type]||s.type)+' · '+s.id,capacity,demand:inactive?0:capacity};
     });
@@ -433,7 +435,7 @@
     };
     const remaining={...limits},allocated={},assignedL1={};
     const houses=(State.structures||[]).filter(s=>s.type==='house'&&complete(s)&&
-      clamp(Math.floor(finite(s.houseLevel,1)),1,4)===1).sort((a,b)=>
+      (window.ConquerSocialClasses?.tierOfHouse?.(s)??clamp(Math.floor(finite(s.houseLevel,1)),1,4))===1).sort((a,b)=>
       typeof peasantHash==='function'?
         peasantHash(String(a.id))-peasantHash(String(b.id)):
         String(a.id).localeCompare(String(b.id)));
@@ -443,12 +445,14 @@
     // Goat and sheep households are qualified herders: they join the pool last,
     // so other L1 take industry and construction jobs before a flock is left.
     const herdHouse=h=>['goat','shepherd'].includes(window.ConquerLivestock?.lotKindForHouse?.(h));
-    const worker=h=>({id:String(h.id)+':m:0',houseId:h.id});
-    const herdPool=houses.filter(herdHouse).map(worker);
+    const workers=h=>(window.ConquerSocialClasses?.householdHeadIds?.(h)||[String(h.id)+':m:0'])
+      .map(id=>({id,houseId:h.id}));
+    // One adult stays with a flock/fishing boat; other adults remain assignable.
+    const herdPool=houses.filter(herdHouse).flatMap(h=>workers(h).slice(0,1));
     // Fishermen go out with their boat every working day: never in the L1 job pool.
-    const fishHouse=h=>!!window.ConquerFishers?.isFisher(h),fishers=houses.filter(fishHouse).map(worker);
+    const fishHouse=h=>!!window.ConquerFishers?.isFisher(h),fishers=houses.filter(fishHouse).flatMap(h=>workers(h).slice(0,1));
     const l1Available=[
-      ...houses.filter(h=>!herdHouse(h)&&!fishHouse(h)).map(worker),
+      ...houses.flatMap(h=>workers(h).filter((_,i)=>i>0||(!herdHouse(h)&&!fishHouse(h)))), 
       ...Array.from({length:foundingWorkers()},(_,i)=>({
         id:'founder:'+wellId+':'+i,founderIndex:i
       }))
@@ -906,7 +910,7 @@
       const b=e.books[id]||{revenue:0,cost:0,tax:0,wages:0};
       const profit=round(b.revenue-b.cost-b.tax-b.wages);
       const margin=b.revenue>0?profit/b.revenue:-1;
-      const negative=profit<0||(a.type==='workshop'&&profit<e.wage.L3);
+      const negative=profit<0||(a.type==='workshop'&&profit<e.wage.L2);
       a.negativeYears=negative?(a.negativeYears||0)+1:0;
       a.margin=round(margin);a.profit=profit;
       const limit=a.type==='field'?3:2;
@@ -995,7 +999,7 @@
       capital:round(e.wallet.L4),castleGold:round(finite(e.castleGold)),
       constructionPayroll:round(finite(e.constructionPayroll?.total)),
       spontaneousSpawnLabor:spontaneousLabor,spontaneousSpawnCount:spontaneous.length,
-      welfare:e.welfare,happiness:{...e.happiness},rationMode:rationMode(),
+      welfare:e.welfare,happiness:{...e.happiness},loyaltyL4:e.loyaltyL4,rationMode:rationMode(),
       castleFoodIssued:round(Object.values(e.lastTrade?.castleRations||{}).reduce((a,b)=>a+finite(b),0)),
       activities:Object.keys(e.activities).length,
       stockyard:window.ConquerStorageYard?{
@@ -1021,7 +1025,8 @@
     const info=g=>s.balance?.goods?.[g];
     const jobs=jobSummary();
     target.innerHTML='<div class="kv"><span>Average happiness / L4 capital</span><b>'+fmt(s.welfare)+' / '+fmt(s.capital)+' gold</b></div>'+
-      '<div class="kv"><span>Happiness L1 · L2 · L3 · L4</span><b>'+HAPPINESS_GROUPS.map(g=>fmt(s.happiness[g])).join(' · ')+'</b></div>'+
+      '<div class="kv"><span>Felicità L1 servi · L2 artigiani · L3 istruiti</span><b>'+['L1','L2','L3'].map(g=>fmt(s.happiness[g])).join(' · ')+'</b></div>'+
+      '<div class="kv"><span>Lealtà L4 nobiltà</span><b>'+fmt(s.loyaltyL4)+'</b></div>'+
       '<div class="kv"><span>Food policy · castle food issued</span><b>'+({market:'Market only',full:'Full rations',half:'Half rations'}[s.rationMode])+' · '+fmt(s.castleFoodIssued)+'</b></div>'+
       '<div class="kv"><span>L1 costruttori / pastori / boscaioli / carrettieri / inattivi</span><b>'+jobs.building+' / '+jobs.herding+' / '+jobs.logging+' / '+jobs.carter+' / '+jobs.idle+'</b></div>'+
       (jobs.foodRisk?'<div class="legend">⚠ Food supply at risk · protected herders: '+jobs.protectedHerders+'</div>':'')+
@@ -1032,9 +1037,9 @@
       '<div class="kv"><span>L4 investment capacity</span><b>'+fmt(s.investmentCapacity)+' gold</b></div>'+
       '<div class="kv"><span>Population L1–L4</span><b>'+Object.values(s.population).join(' · ')+'</b></div>'+
       (s.commerce?
-        '<div class="kv"><span>L3 workshops / services</span><b>'+s.commerce.l3Shops+' / '+s.commerce.l3Services+'</b></div>'+
+        '<div class="kv"><span>L2 botteghe / L3 servizi</span><b>'+s.commerce.l3Shops+' / '+s.commerce.l3Services+'</b></div>'+
         '<div class="kv"><span>L3 goods in stock · reference value</span><b>'+fmt(s.commerce.l3Goods)+' · '+fmt(s.commerce.l3GoodsValue)+' gold</b></div>'+
-        '<div class="kv"><span>L4+ intercity manifests / present</span><b>'+s.commerce.l4PlusPlanned+' / '+s.commerce.l4PlusPresent+'</b></div>'+
+        '<div class="kv"><span>L3 mercanti in viaggio / presenti</span><b>'+s.commerce.l4PlusPlanned+' / '+s.commerce.l4PlusPresent+'</b></div>'+
         '<div class="kv"><span>Inn beds available</span><b>'+Math.max(0,s.commerce.innBeds-s.commerce.innOccupied)+' / '+s.commerce.innBeds+'</b></div>':'')+
       '<div class="legend">Mon–Fri work · Saturday market · Sunday rest. Wages monthly, rates/returns yearly.</div>'+
       '<div class="economy-goods">'+GOODS.map(g=>

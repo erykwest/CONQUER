@@ -1,5 +1,28 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-13 - Preparazione merge PR #206
+
+Preparazione merge PR #206: main aggiornato riconciliato mantenendo moduli e documenti di entrambi i branch. Catalogo Wiki rigenerato. Gilda riferita agli artigiani L2; dazio botteghe e relativo malcontento addebitati a L2 anziche L3, con regressione riprodotta prima del fix. Fondazione: cinque scenari superati isolatamente con Node 22, ma timing intermittente oltre 100 ms nella suite anche su Node 22; verifica Actions ancora necessaria. Nessuna soglia allentata. Suite completa e Actions da completare prima del merge. Nessuna nuova funzione demografica, giudiziaria o archetipo edilizio.
+
+## 2026-11-13 - Verifica CI PR #206
+
+Corretta asserzione livestock obsoleta dopo SOC-CLASS-02. Test comportamentali su selettore agricolo reale, riserve cave, esclusione allevatori e conservazione della vocazione su 400 case migrate superati. Suite completa e CI da completare prima del merge. Nessuna modifica runtime o bilanciamento; ROADMAP e DECISIONS invariate. Demografia, 12 archetipi e funzioni giudiziarie fuori scope.
+
+## 2026-11-12 — SOC-CLASS-02 · Migrazione ceti sul branch PR #206
+
+Migratore puro `ConquerSocialClasses` e applicazione una tantum ai save locali/cloud; census house L1+ex-L2 con abitanti conservati, L2 artigiani e L3 istruiti/mercanti, L4 nobiltà. Riassegnate professioni economiche, botteghe, routine sociali e fondi commerciali; nuova lealtà nobiliare; QA dedicata e regressioni aggiornate. Partizione 25/75 del vecchio portafoglio L4 da approvare. Codice su branch, non merge, CI completa da verificare; immigrazione/ricostruzione D1–D3 NON attivate. [Specifiche](../CIVIL-CLASS-MIGRATION.md).
+
+
+## 2026-11-12 — CIV-EVT-01 · Skeleton degli effetti civili (branch PR #206)
+
+Aggiunto `ConquerCivicEventEffects`, API read-only per 8 tipi di eventi civili con bonus differenziati di felicità L1–L3, lealtà L4, ripetizione e prestigio temporaneo; collegamento di anteprima alle heatmap PR #206. Riutilizzati allestimenti/fasi esistenti, nessun mutamento di salvataggi, costi o popolazione. Aggiunta regressione alla suite urbana, [contratto](../CIVIC-EVENT-EFFECTS-SKELETON.md) e decisione D-CIV-EVT-261112. Sul branch, non merge: Node/browser/CI da verificare.
+
+
+## 2026-11-12 — URB-HEAT-01 · Skeleton territoriale (branch feature)
+
+Aggiunto modulo isolato `ConquerUrbanHeatmaps` con quattro mappe concettuali (domanda L1–L4, prestigio, sicurezza, crimine), sette canali e lettura del lotto; script caricato senza simulazione attiva. Aggiunta regressione richiamata da QA urbana e specifica `docs/URBAN-HEATMAP-SKELETON.md`. **Sul branch, non merge; QA/CI da verificare; nessuna migrazione o modifica gameplay.** Contratti in D-URB-HEAT-261112. ROADMAP invariata: nessuna milestone ripianificata.
+
+
 ## 2026-11-13 — GILDA-01 fase 1 · Bonus delle botteghe e Gilda unica
 
 13/11/2026 — `feature/gilda-fase1` (pre-merge):

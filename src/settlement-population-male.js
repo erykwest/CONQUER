@@ -81,7 +81,7 @@
   }
   function position(house,resident,day=State.clock.day){
     const frac=day-Math.floor(day),dow=weekday(day);
-    const stage=activity(houseLevel(house),dow,frac);
+    const stage=activity(window.ConquerSocialClasses?.tierOfHouse?.(house)??houseLevel(house),dow,frac);
     if(stage==='home'||stage==='regular')return null;
     const t=targets(house,resident,dow);
     if(dow<5){
