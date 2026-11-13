@@ -21,9 +21,9 @@
     blacksmith:{tool:'hammer',goods:['#6f7377','#8c9094','#5e6266']},
     carpenter:{tool:'hammer',goods:['#a7814f','#8d6a3f','#b9925c']},
     leatherworker:{tool:'hammer',goods:['#7c4f2e','#94603a','#6a4126']},
-    potter:{tool:null,goods:['#a85f3a','#b8734a','#93522f']},
-    weaver:{tool:null,goods:['#5d7393','#a8503f','#c9a64e']},
-    tailor:{tool:null,goods:['#8a4d63','#4f6d5a','#c2b089']},
+    potter:{tool:'clay',goods:['#a85f3a','#b8734a','#93522f']},
+    weaver:{tool:'shuttle',goods:['#5d7393','#a8503f','#c9a64e']},
+    tailor:{tool:'needle',goods:['#8a4d63','#4f6d5a','#c2b089']},
     goldsmith:{tool:'hammer',goods:['#d9b44a','#e8cf7a','#bfc4c7']}
   });
   const CF=()=>window.ConquerCutawayFurniture;

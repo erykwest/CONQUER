@@ -86,6 +86,11 @@ STATUS, BACKLOG e DECISIONS (regola transitoria della resa del culto) aggiornati
 
 BACKLOG, STATUS e DECISIONS aggiornati; ROADMAP invariata; nessun codice.
 
+## 2026-11-13 — Bottegai al lavoro: vasaio, tessitore, sarto
+
+Branch `feature/shop-artisan-tools`. Tre nuovi attrezzi nelle animazioni di lavoro (argilla al tornio, spola, ago e filo): ora tutti i mestieri delle botteghe L3 lavorano invece di stare fermi. Voci nuove nell'Asset Lab, test e baseline dell'audit aggiornati. Il BACKLOG elenca le animazioni di lavoro ancora mancanti (rimboschimento, campi). ROADMAP e DECISIONS invariate: è un completamento visivo senza nuovi contratti.
+
+
 ## 2026-11-09 — BC-261109-02 · DEV e cantieri di ristrutturazione
 
 - **Prove aggiuntive PASS:** regressione d'assedio reale Canvas/WebGL e perdita contesto WebGL; annullamento di upgrade conserva i danni subiti durante il cantiere.
