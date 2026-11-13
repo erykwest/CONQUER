@@ -126,6 +126,12 @@ console.log('PASS visual outline on houses and wood towers, not a permanent road
   assert.equal(segments.length,4,'a plaza-only civic keeps its whole perimeter');
   iso.State.structures=[{id:'t',type:'house'}];vm.runInContext('drawCastleSelection()',iso);
   assert.equal(segments.length,2,'a house hides its back edges too');
+  // Free camera seen face-on: side edges project along the vertical and stay hidden by their walls.
+  const isoProject=iso.projectPath;
+  iso.projectPath=(pts,z)=>pts.map(p=>({x:p.x*20,y:(p.y*.5-z)*20}));
+  iso.State.structures=[{id:'t',type:'tower'}];vm.runInContext('drawCastleSelection()',iso);
+  assert.deepEqual(segments.map(key),[key([{x:20,y:9.6},{x:0,y:9.6}])],'face-on, only the front edge is stroked');
+  iso.projectPath=isoProject;
   // A civic is outlined on what stands at its level (ConquerCivic3D.builtParts), not on the L3 footprint.
   const chapel=[{x:0,y:0},{x:.5,y:0},{x:.5,y:.5},{x:0,y:.5}];
   iso.window={ConquerCivic3D:{builtParts:()=>[{points:chapel,role:'body'}]}};

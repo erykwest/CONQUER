@@ -1308,6 +1308,9 @@ function selectionOutlineRuns(rings,occluders){
       const j=(i+1)%n,b=base[j];
       let dx=(a.x-top[i].x)+(b.x-top[j].x),dy=(a.y-top[i].y)+(b.y-top[j].y);
       const len=Math.hypot(dx,dy);if(!(len>1e-6))return false;
+      // An edge seen edge-on (free camera) runs up the wall's silhouette: the wall hides it.
+      const ex=b.x-a.x,ey=b.y-a.y,el=Math.hypot(ex,ey);
+      if(el>1e-6&&Math.abs(ex*dy-ey*dx)/(el*len)<.05)return true;
       const probe={x:(a.x+b.x)/2+dx/len*1.5,y:(a.y+b.y)/2+dy/len*1.5};
       return bases.some(poly=>inside(probe,poly));
     });

@@ -2,7 +2,7 @@
 
 ## 2026-11-13 — Selezione edifici · perimetro senza lati posteriori e al livello corrente
 
-`drawCastleSelection` non disegna più i lati del perimetro a terra nascosti dal volume dell'edificio: un lato è posteriore se appena sotto di esso sullo schermo c'è il footprint di un corpo con altezza reale. Vale per torri, mura, sezioni costruite, case e civici, anche in cutaway e con la vista ruotata. Campi, cantieri, piazze e corpi bassi (cortili, industrie aperte, pozzi) mantengono il perimetro completo. I civici seguono ciò che sta in piedi al livello corrente (`ConquerCivic3D.builtParts`, tabella `BUILT`): la chiesa L1 non mostra più la croce L3. Regressione in `qa/mastio-selection-zoom-regression.cjs`. ROADMAP e DECISIONS invariate.
+`drawCastleSelection` non disegna più i lati del perimetro a terra nascosti dal volume dell'edificio: un lato è posteriore se appena sotto di esso sullo schermo c'è il footprint di un corpo con altezza reale. Vale per torri, mura, sezioni costruite, case e civici, anche in cutaway, con la vista ruotata e con la camera libera di CAM-ROT-01 (i lati visti di taglio restano nascosti dalla parete). Campi, cantieri, piazze e corpi bassi (cortili, industrie aperte, pozzi) mantengono il perimetro completo. I civici seguono ciò che sta in piedi al livello corrente (`ConquerCivic3D.builtParts`, tabella `BUILT`): la chiesa L1 non mostra più la croce L3. Regressione in `qa/mastio-selection-zoom-regression.cjs`. ROADMAP e DECISIONS invariate.
 
 ## 2026-11-13 — RC-01…RC-07 · Hub/lobby e remote control (solo documentazione)
 
