@@ -1,5 +1,9 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-13 - Verifica CI PR #206
+
+Corretta asserzione livestock obsoleta dopo SOC-CLASS-02. Test comportamentali su selettore agricolo reale, riserve cave, esclusione allevatori e conservazione della vocazione su 400 case migrate superati. Suite completa e CI da completare prima del merge. Nessuna modifica runtime o bilanciamento; ROADMAP e DECISIONS invariate. Demografia, 12 archetipi e funzioni giudiziarie fuori scope.
+
 ## 2026-11-12 — SOC-CLASS-02 · Nuove classi sociali L1–L4
 
 **IMPLEMENTATO SU BRANCH PR #206, NON MERGE.** [Contratto](../CIVIL-CLASS-MIGRATION.md), decisione D-SOC-CLASS-261112.

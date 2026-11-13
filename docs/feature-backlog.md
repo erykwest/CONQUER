@@ -1,5 +1,9 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+## 2026-11-13 - Verifica CI PR #206
+
+Corretta asserzione livestock obsoleta dopo SOC-CLASS-02. Test comportamentali su selettore agricolo reale, riserve cave, esclusione allevatori e conservazione della vocazione su 400 case migrate superati. Suite completa e CI da completare prima del merge. Nessuna modifica runtime o bilanciamento; ROADMAP e DECISIONS invariate. Demografia, 12 archetipi e funzioni giudiziarie fuori scope.
+
 ## SOC-CLASS-02 — Fusione L1 e istituzione istruiti L3 (12/11/2026)
 
 **IMPLEMENTAZIONE SU PR #206, non ancora mergiata.** Popolazione sociale permanente L1 servi (compresi ex L2 minatori/cavatori), L2 artigiani (ex L3), L3 istruiti/mercanti (ex L4), L4 nobili e rendite. Migrazione save locali/cloud, census e denaro conservati, lavori L1 e botteghe L2, commercio/servizi L3, lealtà L4. [Specifica e limiti](CIVIL-CLASS-MIGRATION.md). **DA FARE:** vera migrazione demografica, Job Manager artigiani, servizi amministrativi di istruiti, ricostruzione case e densità D1–D3, test completi e approvazione ripartizione monetaria.

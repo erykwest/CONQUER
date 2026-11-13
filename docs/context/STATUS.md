@@ -1,5 +1,9 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-13 - Verifica CI PR #206
+
+Corretta asserzione livestock obsoleta dopo SOC-CLASS-02. Test comportamentali su selettore agricolo reale, riserve cave, esclusione allevatori e conservazione della vocazione su 400 case migrate superati. Suite completa e CI da completare prima del merge. Nessuna modifica runtime o bilanciamento; ROADMAP e DECISIONS invariate. Demografia, 12 archetipi e funzioni giudiziarie fuori scope.
+
 ## 2026-11-12 — SOC-CLASS-02 · Migrazione reale ceti (branch PR #206)
 
 - **CODICE SUL BRANCH, NON MERGE:** `ConquerSocialClasses` + migratori save local/cloud, riassegnazione L1 campi/cava/miniera, botteghe e portafoglio artigiani L2, istruiti/mercanti L3, possedimenti L4.
