@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-13 — Figure dei ruoli mancanti
+
+Branch `feature/new-role-figures`. I ruoli che esistevano solo nei conti ora hanno una figura con l'abito del mestiere e un gesto: il personale delle stanze del castello (cuoco, stalliere, armaiolo, cappellano, tesoriere, cerusico e inservienti, falconiere, colombaro, consiglieri), il prete, l'oste, le guardie e gli esattori del Bargello, i giudici del Balivo, i boscaioli del disboscamento. Il lavoro aggiunge 9 gesti, 8 pezzi di guardaroba, 12 abiti, voci nel Lab e una nuova regressione. ROADMAP e DECISIONS invariate.
+
 ## 2026-11-13 — Abiti da mestiere
 
 Branch `feature/role-outfits`. Il guardaroba ha 11 nuovi pezzi da lavoro (grembiuli di cuoio, di tela e del vasaio, farsetto, mantelletta, calotta, cuffia, cappello di feltro, tocco, berretto da marinaio, chiavi) e 16 abiti per mestiere. Le figure al lavoro li indossano: bottegai, lavoratori anonimi, costruttori e taglialegna nominati, pastore, carrettiere, carceriere e marinai. Ci sono voci nuove nell'Asset Lab (famiglia «Abiti da mestiere»), una regressione estesa e la baseline dell'audit aggiornata solo per queste voci. ROADMAP e DECISIONS invariate.

@@ -1,5 +1,39 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-13 — Figure dei ruoli mancanti (branch `feature/new-role-figures`, sopra `feature/role-outfits` e `feature/shop-artisan-tools`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - Nuovo `src/settlement-staff-people.js` (`ConquerStaffPeople`): personale delle stanze del castello in cutaway, presente di giorno (6-20) e assente durante l'allarme. La tabella `ROOM_STAFF` copre 10 funzioni:
+    - cucina: cuoco con mestolo, due nella stanza grande;
+    - scuderie: stalliere con striglia;
+    - armeria e officina d'armi: armaiolo col martello;
+    - cappella: cappellano col libro;
+    - tesoro: tesoriere con penna e registro;
+    - infermeria: cerusico col mortaio e inservienti con ciotola;
+    - falconiera: falconiere col falco sul pugno;
+    - colombaia: colombaro con la granaglia;
+    - sala del consiglio: consiglieri che parlano.
+  - Le stanze che non hanno soldati, nobili o prigionieri lo disegnano da `drawCutawayOccupants`.
+  - `ConquerCivic3D.roomSlots` copre chiesa, taverna, Bargello e Balivo (`staffSlots`):
+    - chiesa: prete all'altare;
+    - taverna: oste dietro il banco, dal lato delle botti;
+    - Bargello: due guardie nel corpo di guardia; al piano superiore due esattori al tavolo dei conti e chi paga sulla panca;
+    - Balivo: tre giudici, uno presiede, e il cancelliere nel tribunale al piano superiore.
+  - Le figure civiche passano da `ConquerCourtPeople`, che ora vale per tutti gli interni civici selezionati.
+  - Disboscamento L1: `ConquerForestry.drawCrews` disegna tanti boscaioli quanti sono i lavoratori pagati del cantiere, con l'ascia; il terzo usa la pala per le ceppaie. Solo nei giorni feriali e in orario di lavoro.
+  - 9 nuovi gesti in `settlement-work-anim.js`: ladle, brush, book, quill, mortar, falcon, mug, speak, bowl. I gesti `sweep` muovono la mano avanti e indietro a un'altezza fissa.
+  - 8 nuovi pezzi di guardaroba: tonaca, stola, veste da notabile, camice del cerusico, toga del Balivo, tabarro del Comune, catena d'ufficio, berretto da cuoco. 12 nuovi abiti di mestiere, 28 in tutto, ciascuno diverso dagli altri.
+  - Asset Lab: 9 gesti nella famiglia «Lavori» e 12 abiti nuovi.
+- **PROVE LOCALI PASS:**
+  - `staff-people-regression` (nuovo, nel workflow Wardrobe perché il numero di workflow è fisso a 26): stanze reali, abiti e gesti noti, orari e allarme, posti negli interni civici di tutti i livelli, squadre di disboscamento, collegamenti;
+  - `work-anim` (19 gesti), `wardrobe` (28 mestieri), `court-people`, `ci-p1`, `codex-wiki`;
+  - suite `qa/*.cjs` senza i `*-performance`: tutto verde tranne `founding-regression`, che fallisce uguale su main.
+- **AUDIT ASSET:** audit completo con 0 errori e 21 voci nuove, riviste su un foglio grande dei gesti. Baseline aggiornata solo per `figure:work:*` e `wardrobe:trade:*`. Le altre differenze (alberi, torri) sono deriva già presente su main.
+- **DA VERIFICARE:**
+  - CI del branch;
+  - una prova in partita delle stanze del castello e degli interni civici selezionati, che il Lab non mostra;
+  - l'ordine di merge: prima #207 e #213, poi questa PR.
+
 ## 2026-11-13 — Abiti da mestiere (branch `feature/role-outfits`)
 
 - **CODICE SUL BRANCH, NON MERGE:**

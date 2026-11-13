@@ -27,7 +27,7 @@ vm.runInContext(fs.readFileSync(path.join(__dirname,'..','src','settlement-work-
 const WA=window.ConquerWorkAnim;
 
 const tools=Object.keys(WA.TOOLS);
-assert.deepEqual(tools.sort(),['axe','clay','hammer','hoe','needle','pickaxe','seeds','shovel','shuttle','sickle']);
+assert.deepEqual(tools.sort(),['axe','book','bowl','brush','clay','falcon','hammer','hoe','ladle','mortar','mug','needle','pickaxe','quill','seeds','shovel','shuttle','sickle','speak']);
 for(const tool of tools){
   const T=WA.TOOLS[tool];
   for(const t of [0,.3,.77,1.9]){
@@ -36,10 +36,10 @@ for(const tool of tools){
     assert.ok(Math.abs(a.th-b.th)<1e-9&&Math.abs(a.lean-b.lean)<1e-9,tool+' pose repeats every period');
   }
   const swing=[...Array(24)].map((_,i)=>WA.pose(tool,'w1',i*T.period/24).th);
-  assert.ok(Math.max(...swing)-Math.min(...swing)>.8,tool+' swings the tool');
+  assert.ok(Math.max(...swing)-Math.min(...swing)>(T.calm?.12:.8),tool+(T.calm?' moves the hand':' swings the tool'));
   assert.notEqual(WA.pose(tool,'w1',.2).u.toFixed(3),WA.pose(tool,'w2',.2).u.toFixed(3),tool+': a crew is not in step');
 }
-console.log('PASS ten tools with periodic, out-of-step swings');
+console.log('PASS '+tools.length+' tools with periodic, out-of-step swings');
 
 // Every trade of an open shop works with its own tool: nobody stands idle at the bench.
 const shopSrc=fs.readFileSync(path.join(__dirname,'..','src','settlement-shop-cutaway.js'),'utf8');
