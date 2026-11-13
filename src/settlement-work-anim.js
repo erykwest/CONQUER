@@ -3,7 +3,8 @@
 // villager figure (drawVillagerFigureUnmasked), like the combat animations draw
 // weapons over the soldier body. Tools: shovel (clay diggers), axe (woodcutters),
 // pickaxe (quarry and mine), hammer (builders), hoe (ploughing), seed sack (sowing),
-// sickle (harvest). Each tool has its own rhythm, body lean and a small effect at
+// sickle (harvest); at the shop benches: clay on the wheel (potter), shuttle (weaver),
+// needle and thread (tailor). Each tool has its own rhythm, body lean and a small effect at
 // the stroke (clods, chips, dust, seeds, cut stalks). Poses are pure functions of
 // time; workers are visual only. Classic script.
 (function(){
@@ -17,7 +18,11 @@
     shovel:{period:1.7,len:9,hit:.62,fx:'clod'},
     hoe:{period:1.25,len:9.5,hit:.6,fx:'soil'},
     seeds:{period:1.5,len:4.2,hit:.42,fx:'seeds'},
-    sickle:{period:.95,len:3.6,hit:.5,fx:'stalks'}
+    sickle:{period:.95,len:3.6,hit:.5,fx:'stalks'},
+    // Bench trades of the open shops (settlement-shop-cutaway.js).
+    clay:{period:2.2,len:1.2,hit:.5,fx:'slip'},       // potter: hands raise the wall of a pot on the wheel
+    shuttle:{period:.9,len:2.6,hit:.32,fx:'lint'},    // weaver: throw the shuttle, beat the weft
+    needle:{period:1.6,len:1.8,hit:.55,fx:null}       // tailor: stitch, pull the thread up and out
   };
   const ease=t=>t*t*(3-2*t),lerp=(a,b,t)=>a+(b-a)*t;
   // Piecewise keyframes [[u,th,lean,bob],...] -> pose at phase u.
@@ -39,7 +44,13 @@
     // Hand from the sack on the hip, a wide cast forward.
     seeds:[[0,2.8,.05,0],[.25,2.6,.06,0],[.42,.55,-.02,0],[.6,.9,0,0],[1,2.8,.05,0]],
     // Crouched, a low sweep through the stalks.
-    sickle:[[0,1.25,.32,.12],[.35,1.0,.3,.11],[.5,2.55,.38,.14],[.7,2.45,.36,.13],[1,1.25,.32,.12]]
+    sickle:[[0,1.25,.32,.12],[.35,1.0,.3,.11],[.5,2.55,.38,.14],[.7,2.45,.36,.13],[1,1.25,.32,.12]],
+    // Bent over the wheel: wet hands down to the clay, a slow pull up the wall, back down.
+    clay:[[0,2.4,.2,.06],[.15,2.4,.2,.06],[.5,1.3,.14,.04],[.62,1.3,.14,.04],[.9,2.4,.2,.06],[1,2.4,.2,.06]],
+    // Shuttle thrown forward through the shed, the beater pulled back hard against the cloth.
+    shuttle:[[0,1.2,.08,.02],[.22,2.1,.16,.04],[.32,2.15,.17,.04],[.5,1.2,.06,.02],[1,1.2,.08,.02]],
+    // Needle into the cloth, then the long pull of the thread up past the shoulder.
+    needle:[[0,2.4,.14,.02],[.2,2.45,.15,.03],[.55,.45,.02,0],[.7,.55,.02,0],[1,2.4,.14,.02]]
   };
   function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
   function rnd(seed){let a=seed|0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
@@ -55,12 +66,51 @@
   // Tool tip offset from the grip for angle th and facing f (screen space, px).
   const dirOf=(th,f)=>({x:f*Math.sin(th),y:-Math.cos(th)});
   const HANDLE='#7a5937',IRON='#9da3a8',IRON_DARK='#5c6266';
+  // Bench work pieces, drawn between the body and the arm (B: the worker's body frame).
+  const CLAY='#a5653f',CLAY_DARK='#7f4a2c',CLAY_WET='#c48a62';
+  function drawBench(tool,g,f,s,B){
+    const lw=Math.max(.5,.35*s);ctx.lineCap='round';ctx.lineJoin='round';
+    if(tool==='clay'){
+      // Wheel head and the pot rising under the hands; a wet streak turns round it.
+      const cx=g.x+f*B.bodyW*.24,foot=B.bodyY+B.bodyH*.24,rw=B.bodyW*.42;
+      ctx.fillStyle='#5e4630';ctx.strokeStyle='#3d2c1d';ctx.lineWidth=lw;
+      ctx.beginPath();ctx.ellipse(cx,foot,rw,rw*.32,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+      const top=Math.min(foot-B.bodyH*.17,g.y+.4*s),hw=B.bodyW*.2,mw=B.bodyW*.27;
+      ctx.fillStyle=CLAY;ctx.strokeStyle=CLAY_DARK;
+      ctx.beginPath();ctx.moveTo(cx-hw*.9,foot);ctx.quadraticCurveTo(cx-mw*1.25,(foot+top)/2,cx-hw*.7,top);
+      ctx.lineTo(cx+hw*.7,top);ctx.quadraticCurveTo(cx+mw*1.25,(foot+top)/2,cx+hw*.9,foot);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle=CLAY_DARK;ctx.beginPath();ctx.ellipse(cx,top,hw*.7,Math.max(.3,hw*.22),0,0,Math.PI*2);ctx.fill();
+      const k=Math.sin(B.u*Math.PI*2*5);   // the streak runs round the pot five times a stroke
+      ctx.strokeStyle=CLAY_WET;ctx.lineWidth=Math.max(.5,.45*s);
+      ctx.beginPath();ctx.moveTo(cx+k*mw*.75,top+1*s);ctx.lineTo(cx+k*mw*.85,foot-.8*s);ctx.stroke();
+    }else if(tool==='shuttle'){
+      // Boat-shaped shuttle in the hand, a pale weft thread trailing back to the loom.
+      const l=TOOLS.shuttle.len*s*.85,w=.6*s,back={x:B.base.x+f*B.bodyW*1.2,y:B.bodyY+B.bodyH*.04};
+      ctx.strokeStyle='#e8e0c8';ctx.lineWidth=Math.max(.4,.25*s);
+      ctx.beginPath();ctx.moveTo(back.x,back.y);ctx.lineTo(g.x,g.y);ctx.stroke();
+      ctx.fillStyle='#b48a52';ctx.strokeStyle='#6b4a2a';ctx.lineWidth=lw;
+      ctx.beginPath();ctx.moveTo(g.x-l,g.y);ctx.quadraticCurveTo(g.x,g.y-w*2,g.x+l,g.y);ctx.quadraticCurveTo(g.x,g.y+w*2,g.x-l,g.y);ctx.fill();ctx.stroke();
+      ctx.fillStyle='#d8cfae';ctx.fillRect(g.x-l*.3,g.y-w*.5,l*.6,w);
+    }else if(tool==='needle'){
+      // Cloth held on the bench in front; the thread runs from it to the needle hand.
+      const cloth={x:B.base.x+f*B.bodyW*.78,y:B.bodyY+B.bodyH*.1};
+      ctx.fillStyle='#4f6d8a';ctx.strokeStyle='#3f5970';ctx.lineWidth=lw;
+      ctx.beginPath();ctx.moveTo(cloth.x-B.bodyW*.3,cloth.y+B.bodyH*.06);ctx.lineTo(cloth.x+B.bodyW*.3,cloth.y+B.bodyH*.02);
+      ctx.lineTo(cloth.x+B.bodyW*.26,cloth.y-B.bodyH*.06);ctx.lineTo(cloth.x-B.bodyW*.28,cloth.y-B.bodyH*.03);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.strokeStyle='#e8e0c8';ctx.lineWidth=Math.max(.35,.2*s);
+      ctx.beginPath();ctx.moveTo(cloth.x,cloth.y-B.bodyH*.04);ctx.quadraticCurveTo((cloth.x+g.x)/2+f*B.bodyW*.2,(cloth.y+g.y)/2,g.x,g.y);ctx.stroke();
+      ctx.strokeStyle=IRON;ctx.lineWidth=Math.max(.4,.3*s);
+      const L=TOOLS.needle.len*s*.5;
+      ctx.beginPath();ctx.moveTo(g.x-f*L*.2,g.y+L*.4);ctx.lineTo(g.x+f*L*.25,g.y-L*.6);ctx.stroke();
+    }
+  }
+  const BENCH=new Set(['clay','shuttle','needle']);
   function drawTool(tool,g,f,th,s){
     const d=dirOf(th,f),L=TOOLS[tool].len*s,lw=Math.max(.9,.95*s);
     const a={x:g.x-d.x*L*.22,y:g.y-d.y*L*.22},b={x:g.x+d.x*L*.78,y:g.y+d.y*L*.78};
     const n={x:-d.y,y:d.x};   // perpendicular, rotated a quarter turn
     ctx.lineCap='round';
-    if(tool==='seeds')return;
+    if(tool==='seeds'||BENCH.has(tool))return;
     ctx.strokeStyle=HANDLE;ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
     ctx.fillStyle=IRON;ctx.strokeStyle=IRON_DARK;ctx.lineWidth=Math.max(.5,.35*s);
     ctx.beginPath();
@@ -106,11 +156,13 @@
     clod:{n:3,col:['#7d5a36','#9b7448'],v:[1.2,2.0],up:2.6,life:.6,size:.95},
     soil:{n:4,col:['#6e5236','#8a6a46'],v:[.4,1.0],up:1.4,life:.4,size:.6},
     seeds:{n:9,col:['#e7d49a','#c9b26c'],v:[.9,2.2],up:.9,life:.7,size:.35},
-    stalks:{n:4,col:['#d8b95a','#b89a3c'],v:[.3,1.0],up:1.1,life:.55,size:.7}
+    stalks:{n:4,col:['#d8b95a','#b89a3c'],v:[.3,1.0],up:1.1,life:.55,size:.7},
+    slip:{n:3,col:['#9b5a36','#c48a62'],v:[.3,.8],up:.7,life:.4,size:.45},
+    lint:{n:4,col:['#e8e0c8','#d8cfae'],v:[.2,.6],up:.5,life:.6,size:.35}
   };
   function drawFx(tool,id,cycle,u,at,f,s){
     const T=TOOLS[tool],F=FX[T.fx],age=(u-T.hit)*T.period;
-    if(age<0||age>F.life)return;
+    if(!F||age<0||age>F.life)return;
     const r=rnd(hash(String(id))^Math.imul(cycle,2654435761)),grav=9*s;
     ctx.save();ctx.globalAlpha*=1-age/F.life*.7;
     for(let k=0;k<F.n;k++){
@@ -144,9 +196,13 @@
     // Hands rise with the tool: high when it points up, at the waist when down.
     const shoulder={x:base.x+f*bodyW*.18,y:top+bodyH*.2};
     // The sower's hand swings on the arm; tool hands rise with the tool.
+    // The weaver's hand travels forward and back through the shed at the height of the warp.
+    const reach=tool==='shuttle'?Math.max(0,Math.min(1,(P.th-1.2)/.95)):0;
     const g=sack?{x:shoulder.x+dirOf(P.th,f).x*bodyW*.95,y:shoulder.y+dirOf(P.th,f).y*bodyW*.95}
+      :tool==='shuttle'?{x:base.x+f*bodyW*(.3+.75*reach),y:bodyY+bodyH*(.02-.04*reach)}
       :{x:base.x+f*bodyW*.48,y:bodyY-bodyH*(.08+.28*Math.cos(P.th))};
-    if(!sack)drawTool(tool,g,f,P.th,scale);
+    if(BENCH.has(tool))drawBench(tool,g,f,scale,{base,bodyW,bodyH,bodyY,u:P.u});
+    else if(!sack)drawTool(tool,g,f,P.th,scale);
     // Arm: shoulder to hand, in the darker tunic tone (or the cloak's, when wearing one).
     ctx.strokeStyle=darken(window.ConquerWardrobe?.outfitFor(dot)?.sleeve||dot.colors?.[0]||'#8c6b3f',.78);ctx.lineWidth=Math.max(.8,1.1*scale);ctx.lineCap='round';
     ctx.beginPath();ctx.moveTo(shoulder.x,shoulder.y);ctx.lineTo(g.x,g.y);ctx.stroke();
@@ -154,7 +210,8 @@
     // Effect origin: where the tool tip strikes (or the casting hand).
     const hitTh=keys(KEYS[tool],T.hit).th,d=dirOf(hitTh,f),L=T.len*scale*.78;
     const gHit={x:base.x+f*bodyW*.48,y:bodyY-bodyH*(.08+.28*Math.cos(hitTh))};
-    const at=sack?{x:base.x+f*bodyW*.9,y:bodyY-bodyH*.1}:{x:gHit.x+d.x*L,y:Math.min(base.y,gHit.y+d.y*L)};
+    const at=sack?{x:base.x+f*bodyW*.9,y:bodyY-bodyH*.1}:BENCH.has(tool)?{x:g.x+f*bodyW*.2,y:g.y}
+      :{x:gHit.x+d.x*L,y:Math.min(base.y,gHit.y+d.y*L)};
     ctx.restore();
     drawFx(tool,dot.id,P.cycle,P.u,{x:at.x,y:at.y+P.bob*bodyH},f,scale);
   }
