@@ -122,6 +122,13 @@
     const a=s.angle||0,c=Math.cos(a),sn=Math.sin(a);
     return rects.map(r=>{const x=s.x+r.cx*c-r.cy*sn,y=s.y+r.cx*sn+r.cy*c;return rectWorldPoints(x,y,r.w,r.h,a)});
   }
+  // Footprint parts of the building as built at its current level (with roles), for
+  // the selection outline: an L1 chapel must not show the L3 church perimeter.
+  function builtParts(s){
+    const level=typeof civicLevel==='function'?civicLevel(s):1;
+    if(!BUILT[s.type+level])return civicParts(s);
+    return bodyPolys(s,level).map(points=>({points,role:'body'}));
+  }
   function lotContext(s,level){
     const lot=lotOf(s);if(!lot)return null;
     const body=bodyPolys(s,level);
@@ -743,6 +750,6 @@
     addMesh(m,cutawayMesh(s,ground));
     return true;
   }
-  window.ConquerCivic3D={modelKey,has,parts,triangles,draw,addToBuilder,addCutawayToBuilder,cutawayId,cutawaySig,cutawayActive,
+  window.ConquerCivic3D={modelKey,has,parts,builtParts,triangles,draw,addToBuilder,addCutawayToBuilder,cutawayId,cutawaySig,cutawayActive,
     floorCount,visibleFloor,floorSpan,UPPER_ROOMS,townhallRole,roomSlots,prisonBars,prisonCellCount,PRISON_CELL_MAX,lotProps,allLotProps};
 })();
