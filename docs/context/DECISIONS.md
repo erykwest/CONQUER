@@ -1,5 +1,25 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-RC-261113 — Main page e controllo remoto multi-campagna (13/11/2026)
+
+- **DECISO dal product owner:** la pagina principale dopo l'accesso contiene sia la lobby delle campagne disponibili sia le campagne **in corso alle quali l'account partecipa**, con **KPI aggregati per insediamento** senza mischiare lo stato delle partite.
+- **DECISO:** la stessa main page diventa il punto d'accesso al **controllo remoto** dei propri feudi, inizialmente da **browser** e in futuro tramite **app Android/iOS**, senza aprire la scena Builder/3D. Nell'interfaccia confluiscono messaggi e branch `messages`, diplomazia, spedizioni, tributi, mappa regionale e gestione dell'insediamento.
+- **VINCOLO DI ARCHITETTURA:** stesso stato autorevole di partita e medesime regole per ogni client, partecipazioni isolate per `campaign_id` (D-MP-ACCOUNT-261113), comandi autorizzati lato server, nessuna seconda economia o seconda simulazione in dashboard.
+- **PROPOSTO da verificare:** distinguere comandi amministrativi sul proprio feudo dalle comunicazioni diplomatiche trasportate con ETA simulata; non rendere istantanee le lettere della branch `messages` per il solo fatto che sono consultate da remoto.
+- **GAP CODE/BRANCH:** centro di controllo a nove viste già su `main` ma locale al runtime; `messages` è una branch ancora separata e divergente (29 commit avanti, 317 indietro nel confronto del 13/11). La sua postazione è su feudi esterni astratti, senza World/Feudal reale. Richiede porting selettivo, non merge cieco.
+- **APERTO:** portata degli ordini remoti (incluso Builder geometrico), tempi, visibilità/freschezza dei KPI, autorizzazioni su feudi di sudditi/vassalli, finestra offline, notifiche push e UI mobile.
+- **STATO:** solo scope documentale; [REMOTE-CONTROL-SCOPE.md](../REMOTE-CONTROL-SCOPE.md). Nessun codice aggiornato, ROADMAP M0–M5 invariata.
+
+
+## D-MP-ACCOUNT-261113 — Profilo globale e partecipazioni multi-campagna (13/11/2026)
+
+- **DECISO dal product owner:** separare il profilo/account del giocatore dalla partita, permettendo a uno stesso account di essere **presente in più campagne/server contemporaneamente**. La lobby deve mostrare e riaprire tutte le sue partecipazioni.
+- **CONTRATTO:** account globale identificato da `user_id`, associazione a campagne distinta (`campaign_id + user_id`) e stato autorevole di ogni partita/feudo isolato per `campaign_id` / identificativo territoriale. Il giocatore può ricoprire ruoli feudali differenti nelle diverse campagne; risorse, unità, territori e progressi non vengono condivisi.
+- **GAP ATTUALE:** `src/settlement-app-persistence.js` usa oggi `settlements` con chiave di conflitto `user_id,world_cell_x,world_cell_y` e coordinate (0,0), senza discriminante di campagna. Serve progettare schema, migrazione, autenticazione e autorizzazioni per multi-server prima di implementare lobby e multiplayer.
+- **APERTO:** profilo pubblico globale vs identità del signore in partita, limiti di partecipazioni, ricompense globali e politiche di abbandono/sconfitta.
+- **STATO:** solo design documentato; non implementato. Specifica: [MULTIPLAYER-SERVER-SCOPE.md](../MULTIPLAYER-SERVER-SCOPE.md). ROADMAP M0–M5 invariata.
+
+
 ## D-MP-261113 — Ingresso multiplayer e colonizzazione feudale (13/11/2026)
 
 - **DECISO, solo design:** server multiplayer dimensionati indicativamente per 20–100 giocatori, con minimo di avvio ancora da fissare. Slot di giocatori, feudi bot e territori non colonizzati sono concetti distinti. I nuovi giocatori **non sostituiscono bot** e **non ereditano sviluppi IA**.

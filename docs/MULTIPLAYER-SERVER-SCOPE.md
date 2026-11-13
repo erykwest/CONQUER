@@ -38,9 +38,24 @@ La colonizzazione umana di un possedimento non deve generare una copia del feudo
 ## 4. Tempo, campagne e partecipazione multi-server
 
 - **DECISO:** multiplayer a **velocità ×1**, senza moltiplicatori individuali di accelerazione.
-- **PROPOSTO:** lo stesso account può partecipare a **più campagne/server contemporaneamente**, mantenendo feudi, eserciti, progresso e relazioni separati per partita.
+- **DECISO:** lo stesso account può partecipare a **più campagne/server contemporaneamente**, mantenendo feudi, eserciti, progresso e relazioni separati per partita; vedi §4a.
 - **APERTO:** durata attesa e massima di una campagna, soglia e verifica della condizione di vittoria territoriale, finestra operativa giornaliera per area geografica, conseguenze della disconnessione, abbandono e sconfitta, chiusura degli ingressi vicino alla conclusione.
 - **NOTA SUL RUNTIME ESISTENTE:** il calendario del prototipo locale in `main` usa **365 giorni/anno**, `BASE_DAYS_PER_SECOND = 1/48` a ×1 (giorno di 48 s); le velocità di test ×3/×10/×100 non sono il contratto multiplayer. **Non cambiare qui il calendario**: scelta di campagna e scala temporale da trattare a parte.
+
+## 4a. Separazione account / campagna / feudo — decisione 13/11/2026
+
+**DECISO — un account globale, più partite simultanee.** La stessa identità di accesso può iscriversi e giocare contemporaneamente su più server/campagne, ognuno con un proprio stato persistente. Il passaggio da una campagna all'altra avviene dalla lobby e non cancella, sovrascrive o sospende automaticamente le altre partecipazioni.
+
+**DECISO — tre confini dati distinti:**
+1. **Account/profilo globale** (es. `user_id`): autenticazione, identità pubblica e preferenze trasversali. Lo storico delle partecipazioni può essere aggregato, ma non è il contenitore del progresso economico.
+2. **Partecipazione a campagna** (chiave logica `campaign_id + user_id`): iscrizione, ruolo politico nella singola partita, eventuale signore/feudo controllato e stato della partecipazione. Uno stesso account ha partecipazioni indipendenti su campagne diverse.
+3. **Stato autorevole della campagna e dei feudi** (chiavi `campaign_id`, `territory_id` / `settlement_id`): tempo condiviso, mappa, sovranità, bot, villaggi, strutture, popolazione, risorse, diplomazia, eserciti e salvataggi. L'araldica, i titoli e i rapporti feudali applicati al mondo sono **contestuali alla campagna**, non attributi globali che modifichino tutte le partite.
+
+**DECISO — isolamento:** nessun trasferimento automatico fra campagne di territori, risorse, eserciti, strutture, progressi o privilegi di gioco. È ammessa l'identità globale condivisa, non il potere accumulato in un altro server.
+
+**VERIFICA DEL CODICE AL 13/11/2026:** in `src/settlement-app-persistence.js` il prototipo salva su `settlements` con `onConflict:'user_id,world_cell_x,world_cell_y'`, e `world_cell_x=0` / `world_cell_y=0`; la lettura usa le stesse coordinate, senza filtro `campaign_id`. Il modello corrente è a singolo mondo per account/posizione e **non è ancora compatibile** con partecipazioni multi-campagna. L'integrazione dovrà introdurre identificativi e autorizzazioni server per campagna, con piano di migrazione dei salvataggi esistenti; non basta aggiungere una voce nella lobby.
+
+**APERTO:** nickname pubblico globale vs nome del signore per campagna, limiti al numero di campagne contemporanee, politiche anti-multi-account, classifiche/storico tra partite, ricompense estetiche globali, salvataggi locali legacy, lifecycle delle partecipazioni dopo sconfitta/abbandono e autorizzazioni per l'eventuale gestione di più feudi nella stessa campagna.
 
 ## 5. Backlog di definizione — senza implementazione
 
@@ -50,5 +65,7 @@ La colonizzazione umana di un possedimento non deve generare una copia del feudo
 4. **MP-04 Equità e politica:** salvaguardie per chi arriva dopo, diritti del suddito, tributi, revoca/indipendenza, abbandono e sconfitta.
 5. **MP-05 Tempo/campagna:** durata attesa, calendario, finestre regionali, condizioni di vittoria e account multi-server.
 6. **MP-06 QA futura:** test per occupazione territoriale separata dalla fondazione, ingresso senza sostituzione bot, non-sovrapposizione spawn, capienza/idoneità, persistenza e autorizzazioni server.
+
+7. **MP-07 Identità multi-campagna:** profilo globale separato dalle partecipazioni e dallo stato dei feudi; schema, autorizzazioni e migrazione del salvataggio cloud attuale.
 
 **Dipendenze:** `World/Feudal` (roadmap M4), stato e ID unici di territori/feudi, economia e Combat/Siege condivisi, persistenza autorevole lato server; non introdurre un simulatore parallelo.
