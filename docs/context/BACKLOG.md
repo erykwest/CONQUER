@@ -1,5 +1,65 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-13 — SCRIPT-01 · Scriptorium: la scuola degli Scolarizzati
+
+**SPECIFICA APPROVATA, NESSUN CODICE.** Intervista con il product owner del 13/11/2026 (sessione «Scriptorium»). Decisione [D-SCRIPT-261113](DECISIONS.md). Base verificata: `main` e93b22b5 (SCOL-01 fase 1 #208, CHIESA-01 fase 1 #205, ARTE grafica #195).
+
+**Confine.** Lo Scriptorium è **la scuola degli Scolarizzati** e non ridefinisce la classe. Da [SCOL-01](#2026-11-12--scol-01--scolarizzati-sottoclasse-istruita-di-l3l4) restano invariati: selettore Laico/Clericale, 4 allievi, corso di 1 anno, retta 20 oro, iscrizione automatica di lavoratori L3 poi L4, perdita degli allievi se lo Scriptorium cade. Da [CHIESA-01](#2026-11-12--chiesa-01--la-chiesa-come-entità-autonoma) restano invariati: in modo Clericale la retta la paga la Cassa, il ruolo `church.scriptoriumMaster` e il Monastero come seconda origine dei chierici. Questa specifica aggiunge solo quanto segue.
+
+**Stato live su `main`:** l'annesso `scriptorium` (Chiesa L2, 2,5×2U, uno per chiesa) ha il modello Blender esterno (`a_scriptorium` in `tools/blender/build_civic.py`), nessun effetto, nessun interno in sezione. `ConquerEducated` (#208) gestisce dati, tetto e ingaggio; corsi e ruoli sono le fasi 2–3 di SCOL-01, non ancora implementate.
+
+**1. Maestro**
+- Ogni Scriptorium ha **1 posto da maestro** del ramo del suo selettore:
+  - modo Clericale: `church.scriptoriumMaster` (già in D-CHIESA-261112, `payer:'church'`);
+  - modo Laico, **nuovo ruolo** `scriptorium.master`: `{branch:'lay', owner:'scriptorium', seats: 1 per Scriptorium Laico completato, minYield: 0, payer:'castle'}`.
+- **Senza maestro lo Scriptorium si ferma:** non iscrive nuovi allievi e gli allievi in corso restano sospesi. Il giorno di fine del corso si sposta in avanti di un giorno per ogni giorno senza maestro; nessun allievo si perde e nessuna retta torna. Con il maestro il corso riprende da dove era.
+- Il maestro è un ruolo come gli altri: si assegna dalla scheda «L3 · Istruiti» e ha salario mensile secondo SCOL-01 §5.
+
+**2. Il primo chierico: ingaggio con scelta del ramo** (modifica a D-SCOL-261112 §6)
+- Il pulsante «Ingaggia scolarizzato» chiede il **ramo**:
+  - laico: invariato, 40 oro dal castello, arrivo in 14 giorni;
+  - **chierico**: mandato dal vescovo, **60 oro** dal castello, arrivo in 14 giorni.
+- Stessa regola dei posti: all'arrivo serve un posto libero nel tetto, altrimenti l'oro torna al castello. Senza questa origine uno Scriptorium Clericale non potrebbe mai partire senza Monastero.
+
+**3. Prestigio**
+- **+1 Prestigio per ogni Scriptorium completato e in piedi**, di qualunque modo, anche fermo senza maestro. Si somma in `ConquerSiege.prestige()` con una voce `scriptorium` in `by`, leggendo gli annessi civici (stesso filtro dell'orto di corte: completato, in piedi, chiesa madre viva). Oggi nessun sistema legge il Prestigio: il punto vale quando lo leggerà qualcuno.
+
+**4. Codici miniati (opere ARTE)**
+- Nuovo archetipo ARTE **«codice miniato»**: un libro aperto su leggio, con forma fissa e colori scelti alla commissione (D-ART-COLORS-261109). Si colloca negli slot delle stanze come le altre opere ed è un bene unico e persistente (ART-251105-01…05).
+- **Solo in uno Scriptorium Clericale con il maestro presente.** Lo realizza il maestro chierico: non servono artisti ARTE.
+- Commissione: oro dal castello e tempo di lavoro. Valori provvisori: **80 oro, 60 giorni**. Uno per volta per Scriptorium.
+- **La scuola continua** mentre il maestro lavora al codice.
+- Se il maestro manca, il lavoro si sospende come il corso. Se lo Scriptorium cade o passa a Laico, la commissione si annulla e l'oro non torna.
+
+**5. Interno in sezione (ultima fase)**
+- Cutaway dello Scriptorium come quelli di Chiesa, Locanda, Municipio e Gilda (tabella `INTERIOR` di `settlement-civic3d.js`, `cutawayActive`):
+  - arredi: scrittoi, leggii, scaffali di codici, camino;
+  - figure: il maestro, se presente, e gli allievi in corso (fino a 4);
+  - il codice in lavorazione sul leggio quando c'è una commissione.
+- Lo stato si legge a colpo d'occhio: scuola attiva, ferma senza maestro, vuota.
+- Arredi e archetipo «codice miniato» entrano nell'Asset Lab con audit e baseline nella stessa PR (AGENTS.md).
+
+**6. Interfaccia**
+- Ispettore dello Scriptorium (si aggiunge a quanto previsto da SCOL-01 §9): stato del maestro (presente / scoperto: «scuola ferma»), giorni di sospensione accumulati, codice in lavorazione e giorni mancanti.
+- Scheda Istruiti: scelta del ramo nell'ingaggio, con il costo di ciascuno.
+
+**Fuori da questa specifica**
+- **Scrivani della diplomazia:** il ruolo resta senza proprietario fino a una sessione Diplomazia.
+- Copie e libri come merce L3, pergamena e filiera delle pelli.
+- Felicità o altri effetti culturali dello Scriptorium.
+- Codici realizzati dai monaci del Monastero o da artisti laici.
+
+**Dipendenze:** SCOL-01 fase 2 (corsi) e fase 3 (registro dei ruoli, scheda Istruiti); CHIESA-01 fase 2 (Cassa che paga il maestro chierico e le rette clericali); ARTE ART-251105-03 (interfaccia di commissione in gioco) per i codici miniati.
+
+**Valori provvisori da bilanciare:** ingaggio del chierico 60 oro; codice miniato 80 oro e 60 giorni; +1 Prestigio.
+
+**Fasi di implementazione proposte (una PR ciascuna, solo dopo conferma):**
+1. Maestro: ruolo `scriptorium.master`, sospensione dei corsi senza maestro, avviso nell'ispettore. Insieme a SCOL-01 fase 2–3 o subito dopo.
+2. Ingaggio con scelta del ramo (chierico 60 oro), nel motore `ConquerEducated`.
+3. Prestigio +1 per Scriptorium.
+4. Codici miniati: archetipo ARTE, commissione nello Scriptorium Clericale, Lab e audit. Dopo ART-251105-03.
+5. Interno in sezione con arredi e figure, Lab e audit.
+
 ## 2026-11-12 — SCOL-01 · Scolarizzati, sottoclasse istruita di L3/L4
 
 **SPECIFICA APPROVATA. FASE 1 IMPLEMENTATA SU BRANCH `feature/scol-01-fase1`, NON MERGE; fasi 2–4 aperte.** La fase 1 comprende `src/settlement-educated.js` (`ConquerEducated`): contatori, tetto, eccedenza senza alloggio, ingaggio, salvataggio, sotto-righe nei pannelli e scheda «L3 · Istruiti». Dettagli e prove in [STATUS](STATUS.md). Intervista con il product owner del 12/11/2026 (sessione dedicata, nata dalla sessione Gilda). Contratto per le altre sessioni: [D-SCOL-261112](DECISIONS.md). Base verificata: `main` 431af30d. Gilda, Scriptorium, FISCO-01 (esattori, giudici), CRIME (tribunale), ARTE (artisti), diplomazia (scrivani) e la futura sessione Chiesa (chierici) **non definiscono la classe**: registrano i loro ruoli in questo contratto.
@@ -358,7 +418,7 @@ BC-251105-05 tetto interno delle torri: **sul branch `feature/tower-inner-roof`,
 
 **Lavoro non pubblicato (worktree locali, nessuna PR):** BC-251105-05 tetto interno dentro i merli (`feature/tower-inner-roof`, 1 commit + modifiche) · BC-251105-09 tetti della Long house (`feature/longhouse-roofs`, solo modifiche non committate) · `figure-billboards` (19 commit) · `combat-ai` (26 commit su remoto, ultima nota: assedio di 5 minuti fallito).
 
-**Catalogo edifici — ancora solo progetto, da confermare prima del codice:** Presidio antincendio, Gilda/Corporazioni, effetti dello Scriptorium, Bagni pubblici, Lavatoio, Approdo fluviale, Cortile domestico, Giardino dei semplici, Carbonaia. Avamposto: fatto con MIL-RES-01. Municipio e Palazzo del Balivo: progettati in FISCO-01 (10/11/2026). Il Corpo di Guardia esiste come stanza `guard` e sala del Municipio, senza pattuglie né allarmi propri.
+**Catalogo edifici — ancora solo progetto, da confermare prima del codice:** Presidio antincendio, Gilda/Corporazioni, Bagni pubblici, Lavatoio, Approdo fluviale, Cortile domestico, Giardino dei semplici, Carbonaia. Avamposto: fatto con MIL-RES-01. Municipio e Palazzo del Balivo: progettati in FISCO-01 (10/11/2026). Il Corpo di Guardia esiste come stanza `guard` e sala del Municipio, senza pattuglie né allarmi propri.
 
 **Seguiti aperti trasversali:** lanterna della Colombaia sul montaggio `roof` di `ROOM_EXTERIOR`; reclutamento dei cavalieri sullo stock reale dei cavalli; rintocco della campana nel motore audio; cosa legge il Prestigio; gronda e pluviale della Cisterna; assedio strategico S-01/02/03/04/10/15; CRIME C-01 e C-05; MARCH collegato a mappa e salvataggi; navi in gioco (MARE); ARTE: grafica e ancoraggi su branch, commissione/inventario aperti; UI v2 fase 5.
 
@@ -467,7 +527,7 @@ Tutte **DA CONFERMARE dall'utente** prima di qualsiasi codice (effetti, compatib
 - **Avamposto:** ~~torre isolata che evolve Corpo di guardia e Stazione di posta~~ → **implementato su branch il 09/11/2026, vedi MIL-RES-01** (upgrade delle torri isolate; il Corpo di Guardia si fonde nella Caserma).
 - **Municipio:** funzioni amministrative → progettate in FISCO-01 (10/11/2026).
 - **Gilda:** assorbe la Casa delle Corporazioni.
-- **Scriptorium (Chiesa L2):** servono effetti simulati.
+- **Scriptorium (Chiesa L2):** progettato in [SCRIPT-01](#2026-11-13--script-01--scriptorium-la-scuola-degli-scolarizzati) (13/11/2026).
 - **Annessi civici:** Bagni pubblici L1–L3, Lavatoio (civico L1 o upgrade del Pozzo), Approdo fluviale, Cortile domestico (upgrade delle case), Giardino dei semplici (annesso di Chiesa L2 / Ospedale), Carbonaia (annesso del Taglialegna). Palazzo del Balivo → FISCO-01, modelli su `feature/bargello-balivo`.
 - **Seguiti aperti:** Colombaia sul montaggio `roof` di `ROOM_EXTERIOR`; reclutamento dei cavalieri sullo stock reale dei cavalli; suono della campana; cosa legge il Prestigio.
 - **Scartati, da non riproporre:** Ghiacciaia, Dogana, Stazione di posta (→ Avamposto), Scuola autonoma, Casa delle Corporazioni autonoma, Torre campanaria (→ Campana).

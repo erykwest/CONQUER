@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-13 — SCRIPT-01 · Specifica dello Scriptorium (solo documentazione)
+
+- **SPECIFICA APPROVATA, NESSUN CODICE:** maestro per Scriptorium, scuola ferma senza maestro, ingaggio del chierico, +1 Prestigio, codici miniati ARTE, interno in sezione. Dettagli in [BACKLOG](BACKLOG.md) e [D-SCRIPT-261113](DECISIONS.md).
+- **STATO LIVE verificato su `main` e93b22b5:** annesso `scriptorium` con solo modello esterno e nessun effetto; `ConquerEducated` senza corsi né ruoli (SCOL-01 fasi 2–3 aperte).
+- Nessun test eseguito: nessun codice cambiato.
+
 ## 2026-11-12 — SCOL-01 fase 1 · Scolarizzati: dati, tetto, ingaggio (branch `feature/scol-01-fase1`)
 
 - **CODICE SUL BRANCH, NON MERGE:**

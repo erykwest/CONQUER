@@ -1,5 +1,7 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+13/11/2026 — `docs/scriptorium-effects`: specifica SCRIPT-01 approvata dal product owner (maestro laico `scriptorium.master`, scuola ferma senza maestro, ingaggio del chierico a 60 oro come modifica a D-SCOL-261112 §6, +1 Prestigio, codici miniati ARTE solo nello Scriptorium Clericale, interno in sezione come ultima fase). Nuova decisione D-SCRIPT-261113; voci di catalogo dello Scriptorium aggiornate. Nessun codice, test o asset modificato; ROADMAP invariata.
+
 ## 2026-11-12 — SCOL-01 fase 1 · Scolarizzati: dati, tetto e ingaggio
 
 12/11/2026 — `feature/scol-01-fase1` (pre-merge):
