@@ -52,11 +52,11 @@
 
 **VINCOLO DI PROGETTO (derivato dal requisito di controllo remoto):** browser di gioco, dashboard web e futuri client mobili devono consumare **lo stesso modello autorevole di partita**. Le operazioni mutative devono essere validate lato server rispetto a `user_id`, `campaign_id`, `settlement_id`/ruolo feudale, disponibilità delle risorse e stato del mondo. La UI non deve modificare direttamente un salvataggio locale come se fosse il mondo condiviso.
 
-**PROPOSTO — due canali logici distinti:**
-1. **Comandi di amministrazione sul proprio feudo:** richiesta autorizzata del giocatore al backend della partita; effetto applicato secondo le regole/tick del motore. La latenza/efficacia dei singoli comandi è **da decidere**.
-2. **Comunicazioni verso altri feudi e persone:** lettere, ordini diplomatici, allarmi e rapporti che rispettano origine, destinazione, trasporto, ETA, consegna e visibilità. Aprire la dashboard non deve rendere istantanei i messaggi che il gioco prevede viaggino fisicamente o con ritardo simulato.
+**DECISO — due canali logici distinti (13/11/2026):**
+1. **Comandi di amministrazione sul proprio feudo:** l'ordine viene ricevuto e validato dal backend autorevole, poi **applicato al primo tick utile successivo** senza messaggero né latenza simulata aggiuntiva. Accettazione e applicazione sono stati distinti; il client non dichiara l'esecuzione prima della conferma del motore. Il tempo reale di un tick **non è fissato da questa decisione**.
+2. **Comunicazioni verso altri feudi e persone:** lettere, richieste e ordini diplomatici indirizzati ad altri feudi rispettano **origine, destinazione, trasporto e tempo simulato di recapito**; inviare ≠ consegnare. Il destinatario non accede al contenuto o ai suoi effetti prima della consegna prevista dal motore; app, browser e notifiche non creano scorciatoie. Un messaggio recapitato non applica automaticamente una decisione diplomatica se la semantica di quel messaggio non lo prevede.
 
-**PROPOSTO:** layer di lettura leggero (snapshot, KPI, timeline ed eventi/avvisi) e layer di comando separati, senza richiedere scene 3D, canvas o simulazioni economiche parallele sul client. Prevedere audit/completamento/esito dei comandi e informazioni sulla freschezza dello snapshot. Le notifiche cross-campagna e i push mobili restano future.
+**PROPOSTO:** layer di lettura leggero (snapshot, KPI, timeline ed eventi/avvisi) e layer di comando separati, senza richiedere scene 3D, canvas o simulazioni economiche parallele sul client. Prevedere audit/completamento/esito dei comandi e informazioni sulla freschezza dello snapshot. Le notifiche cross-campagna e i push mobili restano future. **DECISO**: il comando locale che avvia una spedizione viene acquisito al tick utile, ma spostamento, viaggio, intercettazione, arrivo e conseguenze si svolgono sempre con i tempi simulati propri del motore: nessun teletrasporto della spedizione al tick.
 
 ### Componenti già nel repository (verificati il 13/11/2026)
 
@@ -69,7 +69,7 @@
 ## 4. Decisioni ancora necessarie
 
 1. **Dettaglio comandi:** inventario esatto dei comandi remoti per economia, fisco, lavoro, cantieri già localizzati, strategia, diplomazia e logistica; il **confine generale è deciso** nel §2a: niente piazzamento geometrico, progettazione spaziale o controllo tattico diretto.
-2. **Tempistica degli ordini remoti:** gestione locale applicata al tick successivo o anch'essa mediata da messaggeri/intermediari? Separare questo principio dai ritardi inter-feudo già previsti da `messages`.
+2. **Dettagli temporali ancora aperti:** definire durata e scheduling del tick, cosa accade a comandi accettati quando il server è in pausa e la semantica delle singole richieste inter-feudo. **Il principio è DECISO**: proprio feudo → primo tick utile; comunicazioni inter-feudo → recapito simulato.
 3. **Visibilità:** informazioni sempre live sul proprio feudo vs rapporti ritardati dei territori lontani/vassalli; quali KPI aggregare su più feudi e campagne?
 4. **Permessi:** quali operazioni può compiere un suddito, un vassallo o un sovrano su un possedimento altrui?
 5. **Stato offline:** notifiche e pianificazione azioni in server temporaneamente inattivi, comportamento di comandi accodati e conferma dell'esecuzione.
