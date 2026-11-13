@@ -71,13 +71,25 @@
 - **Divergenza Git verificata:** branch `messages` **29 commit avanti e 317 indietro** rispetto a `main` nel confronto del 13/11/2026. Prima di portarla nel nuovo hub occorre **audit e cherry-pick/porting selettivo** dei contratti ancora validi, senza merge cieco.
 - **Persistenza odierna:** `src/settlement-app-persistence.js` e `supabase/schema.sql` salvano la singola colonia con una chiave basata su `user_id,world_cell_x,world_cell_y`, non su `campaign_id`. La separazione account/campagna e l'accesso da client remoto sono dipendenze preliminari.
 
+## 3a. Ordini preparabili durante la pausa regionale — DECISO (13/11/2026)
+
+**DECISO — preparare sì, simulare no:** quando una campagna è in **pausa regionale programmata**, ma il servizio è raggiungibile, un giocatore può **consultare lo stato congelato e predisporre ordini** per il proprio feudo tramite browser o futuro client mobile. Gli ordini sono **registrati/in attesa**, non eseguiti; **nessun tick, costruzione, produzione, movimento, viaggio, messaggio o consegna avanza** durante la pausa.
+
+**DECISO — esecuzione alla ripresa:** alla riattivazione gli ordini preparati entrano nel flusso del **primo tick utile**, mantenendo la distinzione fra accettazione ed esecuzione. Gli ordini che avviano spedizioni/carovane non ne anticipano il viaggio: il tempo di marcia parte quando la simulazione riprende.
+
+**VINCOLO TECNICO PROPOSTO:** ri-validare al momento dell'applicazione permessi, risorse e prerequisiti, evitare duplicati dopo retry, e mostrare successo o rifiuto in modo esplicito. L'ordine può essere preparato con dati di uno snapshot congelato, ma ciò non garantisce che le sue condizioni rimangano soddisfatte alla ripresa.
+
+**DISTINZIONE:** *server in pausa, ancora raggiungibile* ≠ *dispositivo senza rete / server irraggiungibile*. La possibilità di conservare ordini **solo sul telefono** e sincronizzarli in seguito è **APERTA**: non è stata approvata implicitamente.
+
+**APERTO:** quali tipologie di ordini si possono prenotare; ordine di elaborazione, limiti, modifica/cancellazione, gestione di competizione e risorse scarse sul primo tick, messaggi redatti vs effettivamente spediti, ed eventuali costi della preparazione. La pausa regionale stessa (fasce, calendario e accensione) rimane soggetta al design della campagna; il principio vale **se** tale pausa è prevista.
+
 ## 4. Decisioni ancora necessarie
 
 1. **Dettaglio comandi:** inventario esatto dei comandi remoti per economia, fisco, lavoro, cantieri già localizzati, strategia, diplomazia e logistica; il **confine generale è deciso** nel §2a: niente piazzamento geometrico, progettazione spaziale o controllo tattico diretto.
-2. **Dettagli temporali ancora aperti:** definire durata e scheduling del tick, cosa accade a comandi accettati quando il server è in pausa e la semantica delle singole richieste inter-feudo. **Il principio è DECISO**: proprio feudo → primo tick utile; comunicazioni inter-feudo → recapito simulato.
+2. **Dettagli temporali ancora aperti:** durata e scheduling del tick, coda e concorrenza al primo tick di ripresa, semantica delle singole richieste inter-feudo. **DECISO**: proprio feudo → primo tick utile; comunicazioni inter-feudo → recapito simulato; server regionale in pausa → ordini preparabili ma simulazione congelata fino alla ripresa.
 3. **Dettagli della visibilità (principio DECISO):** proprio feudo aggiornato direttamente; vassalli solo tramite rapporti recapitati, **frequenza impostata dal sovrano**. Da definire granularità della programmazione, contenuto, diritti e selezione dei KPI sulle schede aggregate.
 4. **Permessi:** quali operazioni può compiere un suddito, un vassallo o un sovrano su un possedimento altrui?
-5. **Stato offline:** notifiche e pianificazione azioni in server temporaneamente inattivi, comportamento di comandi accodati e conferma dell'esecuzione.
+5. **Dettagli degli ordini in pausa (principio DECISO):** preparazione consentita durante pause regionali, applicazione solo al riavvio e nessun avanzamento del mondo; **APERTO** ordine/limiti/revoca, conflitti al tick, notifiche, gestione server irraggiungibile e coda offline sul dispositivo.
 6. **UX e piattaforme:** progettazione web responsive/API riusabili prima dell'app nativa; sequenza di rilascio, autenticazione e aggiornamenti real-time.
 
 ## 5. Tranche di lavoro future (non implementate)
