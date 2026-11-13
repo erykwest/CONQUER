@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-13 — GILDA-01 · Gilda (solo specifica, branch `docs/gilda-01`)
+
+- **SOLO DOCUMENTAZIONE:** specifica GILDA-01 in BACKLOG e decisione D-GILDA-261113 in DECISIONS. Nessun file di codice, test o asset cambiato; nessuna prova da eseguire.
+- **Stato live verificato su `main` e93b22b5:** la Gilda esiste come civico L1–L3 legato a un pozzo, con modelli e cutaway, ma senza effetti di gioco; le botteghe L3 producono 1 unità al giorno feriale.
+- **Prossimo passo:** fase 1 (bonus per livello con resa transitoria 1, Gilda unica per villaggio, scheda) solo dopo conferma del product owner.
+
 ## 2026-11-12 — SCOL-01 fase 1 · Scolarizzati: dati, tetto, ingaggio (branch `feature/scol-01-fase1`)
 
 - **CODICE SUL BRANCH, NON MERGE:**

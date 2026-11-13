@@ -1,5 +1,16 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-13 — GILDA-01 · Gilda (solo specifica)
+
+13/11/2026 — `docs/gilda-01`: specifica della Gilda approvata dal product owner.
+- Solo produttività: +25/+50/+100% per livello su produzione e consumo delle botteghe L3, una Gilda attiva per villaggio.
+- Funzionari laici `guild.official` (posti 1/2/3, nessun bonus senza funzionari).
+- Cassa della Gilda alimentata da una quota sulle vendite a pareggio automatico (tetto 15%), dopo il dazio.
+- Nuovo pagatore `payer:'guild'` nel contratto D-SCOL-261112; nessun legame con Municipio ed Erario.
+- La Casa delle Corporazioni è assorbita: tolta dal catalogo «da confermare».
+
+BACKLOG, DECISIONS, STATUS e CHANGELOG aggiornati; ROADMAP invariata.
+
 ## 2026-11-12 — SCOL-01 fase 1 · Scolarizzati: dati, tetto e ingaggio
 
 12/11/2026 — `feature/scol-01-fase1` (pre-merge):

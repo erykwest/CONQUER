@@ -1,5 +1,25 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-GILDA-261113 — La Gilda: produttività delle botteghe L3, funzionari pagati da una quota sulle vendite (13/11/2026)
+
+- **DECISO (product owner, 11–13/11/2026), nessun codice:** specifica completa in [GILDA-01](BACKLOG.md). La Gilda assorbe la Casa delle Corporazioni (nessun edificio separato).
+- **SCELTE:**
+  - solo produttività, una Gilda attiva per villaggio, raggio su tutto il villaggio;
+  - bonus +25/+50/+100% per L1/L2/L3 su produzione **e** consumo delle ricette ECO-FIL-01 (D-ECO-FIL-261110);
+  - personale = ruolo istruito laico `guild.official`, posti 1/2/3, `minYield` 0: senza funzionari nessun bonus;
+  - stipendi pagati da una **Cassa della Gilda** (`State.economy.guild.gold`, un borsellino in più, non un ledger) alimentata da una **quota sulle vendite** delle botteghe L3, trattenuta dopo tassa sulle vendite e dazio, con aliquota a **pareggio automatico** mensile e tetto 15%;
+  - nessun annesso né modello nuovo; nessun legame con Municipio ed Erario oltre a una riga in sola lettura.
+- **MODIFICA AL CONTRATTO D-SCOL-261112:** nuovo valore `payer:'guild'`, che addebita la Cassa della Gilda. Un funzionario non pagato non copre il ruolo per quel mese (stessa regola di `payer:'church'` in D-CHIESA-261112). Ruolo registrato: `guild.official`.
+- **ALTERNATIVE SCARTATE:**
+  - effetti su qualità, prezzi, apprendisti, monopoli e quote di mestiere;
+  - più Gilde con bonus per quartiere;
+  - funzionari pagati dal castello o direttamente dal borsellino L3;
+  - quota fissa al 5% o cursore del giocatore;
+  - annessi Magazzino e Scuola d'arte;
+  - esenzione dal dazio per decreto del Municipio.
+- **TRANSITORIO:** senza `ConquerEducated.coverage` la resa vale 1 e la quota 0; senza consumo di materie (ECO-FIL-01 fase 2) il bonus moltiplica solo la produzione.
+- **IMPATTO:** nessun file di codice cambiato. Le fasi toccheranno `settlement-commerce.js` (`daily`, `sellGoods`), il collocamento dei civici (`settlement-civic-annexes.js` / `settlement-app.js`), il modulo degli scolarizzati, l'Erario (riga in sola lettura), i pannelli e una nuova `qa/guild-regression.cjs`. ROADMAP invariata.
+
 ## D-SCOL-261112 — Scolarizzati: sottoclasse istruita di L3/L4 e contratto dei ruoli istruiti (12/11/2026)
 
 - **DECISO (product owner, 12/11/2026), nessun codice:** specifica completa in [SCOL-01](BACKLOG.md).
