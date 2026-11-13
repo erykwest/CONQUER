@@ -1,5 +1,47 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-MP-261113 — Ingresso multiplayer e colonizzazione feudale (13/11/2026)
+
+- **DECISO, solo design:** server multiplayer dimensionati indicativamente per 20–100 giocatori, con minimo di avvio ancora da fissare. Slot di giocatori, feudi bot e territori non colonizzati sono concetti distinti. I nuovi giocatori **non sostituiscono bot** e **non ereditano sviluppi IA**.
+- **DECISO:** rivendicare un territorio non equivale a fondare un villaggio. Priorità di spawn nei **territori liberi non rivendicati**; quando disponibili, i possedimenti **aperti dal titolare** alla gestione di un giocatore consentono la fondazione di un **nuovo** villaggio sotto **sudditanza** del proprietario, in alternativa allo sviluppo automatizzato.
+- **DECISO:** l'ingresso in una campagna avviata richiede contemporaneamente uno slot umano libero e una posizione fondabile idonea; le iscrizioni possono quindi arrestarsi prima della capienza nominale. Lobby con dati pubblici sul server (età, progresso, giocatori e bot, disponibilità) per scegliere la campagna.
+- **DECISO:** multiplayer sempre a velocità ×1; nessun controllo individuale ×3/×10/×100.
+- **ESEMPIO, NON PARAMETRO DECISO:** 100 territori, 30 slot giocatore, 30 bot iniziali e 10 giocatori T0 → 40 territori colonizzati e 60 inizialmente non colonizzati; i 20 posti umani residui non garantiscono altrettante posizioni fondabili.
+- **PROPOSTO/APERTI:** blocco allo spawn in presenza di mastio; autorizzazioni dettagliate e trattamento dei possedimenti già in sviluppo IA; scelta volontaria di entrare come suddito; soglia minima, durata campagna, finestre regionali, vittoria, gestione abbandono/sconfitta e partecipazione simultanea a più server.
+- **STATO:** solo documentazione, **non implementato** su `main`, nessuna modifica a runtime o milestone M0–M5. Contratto e lista dei punti aperti: [MULTIPLAYER-SERVER-SCOPE.md](../MULTIPLAYER-SERVER-SCOPE.md).
+
+
+## 2026-11-13 - Preparazione merge PR #206
+
+Preparazione merge PR #206: main aggiornato riconciliato mantenendo moduli e documenti di entrambi i branch. Catalogo Wiki rigenerato. Gilda riferita agli artigiani L2; dazio botteghe e relativo malcontento addebitati a L2 anziche L3, con regressione riprodotta prima del fix. Fondazione: cinque scenari superati isolatamente con Node 22, ma timing intermittente oltre 100 ms nella suite anche su Node 22; verifica Actions ancora necessaria. Nessuna soglia allentata. Suite completa e Actions da completare prima del merge. Nessuna nuova funzione demografica, giudiziaria o archetipo edilizio.
+
+## D-SOC-CLASS-261112 — Migrazione attiva dei ceti civili (12/11/2026)
+
+- **DECISO:** i ceti sono identità permanenti, non livelli evolutivi. L1 servi (ex L1 e L2), L2 artigiani (ex L3), L3 borghesia istruita (ex L4), L4 esclusivamente nobiltà possidente. L1 non emigra volontariamente; L2/L3 possono emigrare in futuro; L4 ha *lealtà* anziché emigrazione automatica o rivolte ora.
+- **IMPLEMENTATO SUL BRANCH PR #206:** `ConquerSocialClasses` migra local/cloud una volta, preserva residenti degli alloggi (3/6/9/12), beni/stock e portafogli complessivi; campi/cava/miniera adesso L1, botteghe L2, commercio residenziale e routine amministrative L3, proprietà L4.
+- **IPOTESI NON APPROVATA:** 25% delle vecchie monete L4 ai nuovi L3 e 75% al portafoglio L4 proprietario. Somma conservata, da decidere.
+- **APERTO:** immigrazione/emigrazione reale, trasferimento famiglie durante ricostruzione/cambio prestigio, 12 template D1–D3, mansionario e impieghi effettivi L3, lealtà funzionale, UI Job Manager L2 artigiano.
+- **CONTRATTO:** [CIVIL-CLASS-MIGRATION](../CIVIL-CLASS-MIGRATION.md). La migrazione non rende operativi i sistemi heatmap o gli eventi.
+
+
+## D-CIV-EVT-261112 — Eventi civili e dinamiche sociali (12/11/2026)
+
+- **DECISO DAL PRODUCT OWNER:** i popolani non evolvono tra ceti. L1 = servi vincolati, senza emigrazione volontaria; L2 artigiani e L3 borghesia istruita possono immigrare ed emigrare. L4 nobili proprietari: lealtà verso il potere, senza emigrazione automatica e senza simulazione di ribellioni armate in questa fase.
+- **DECISO:** fiere, giostre, feste religiose e altri eventi possono influire diversamente sui ceti e sul prestigio territoriale; per L4 il canale è la lealtà. Gli effetti devono essere reversibili/temporanei e non devono innescare ricostruzioni edilizie su oscillazioni effimere.
+- **DIREZIONE TECNICA:** riusare le sedi/scene e il ciclo degli eventi già nel gioco, con modulo puro di preview `ConquerCivicEventEffects` sovrapposto alle heatmap della PR #206. `feast` può rappresentare eventi sociali diversi e richiede un classificatore `civicKind` esplicito prima dell'applicazione degli effetti.
+- **NON APPROVATI:** importi, coefficienti sociali, durata e raggi, prerequisiti dei luoghi sacri, bilanciamento, impatto reale sulla migrazione e sistemi di rivolta. Sono segnaposto da collaudare.
+- **STATO:** skeleton su branch PR #206, non attivo; [contratto](../CIVIC-EVENT-EFFECTS-SKELETON.md).
+
+
+## D-URB-HEAT-261112 — Classi, densità e quattro heatmap territoriali (12/11/2026)
+
+- **DECISO dal product owner:** ceti civili L1 manodopera comune (inclusi contadini, pastori, cavatori/minatori); L2 artigiani; L3 borghesia istruita (mercanti, scribani, magistrati); L4 solo nobili proprietari, con rendite e possedimenti. Commercio L3 non equivale a possesso nobiliare L4.
+- **DECISO:** abitazione con prestigio L1–L4 e densità del lotto D1–D3: 12 archetipi. Il prestigio è insito nel template edilizio e nella composizione interna; al cambio che impone un diverso template, ricostruzione completa, non sostituzione di skin. Lotti con più fabbricati e fabbricati multipiano sono varianti possibili della densificazione.
+- **DECISO:** quattro heatmap territoriali: domanda residenziale (4 canali L1–L4), prestigio/degrado, sicurezza e criminalità. Piazza/abbellimenti aumentano prestigio, impianti produttivi possono ridurlo pur attirando lavoratori; domanda influenzata da lavoro, accessi, sicurezza, mura e crimine. La criminalità passa a scala locale, senza perdere l'eventuale aggregato di villaggio.
+- **DIREZIONE TECNICA:** lotto Voronoi come unità di densificazione; domanda effettiva dipende da famiglie e alloggi realmente disponibili; evitare ricostruzioni ad ogni minima fluttuazione con soglie e inerzia.
+- **NON DECISO:** coefficienti/raggi, tempi di aggiornamento, mapping definitivo dei 12 template, soglie D1–D3, politica proprietaria per le singole case, bilanciamento della criminalità territoriale e regole di migrazione dei salvataggi.
+- **STATO:** skeleton puro su branch `feature/urban-heatmap-skeleton-20261112` senza mutazioni di gioco; [contratto](../URBAN-HEATMAP-SKELETON.md).
+
 ## D-GILDA-261113 — La Gilda: produttività delle botteghe L3, funzionari pagati da una quota sulle vendite (13/11/2026)
 
 - **DECISO (product owner, 11–13/11/2026), nessun codice:** specifica completa in [GILDA-01](BACKLOG.md). La Gilda assorbe la Casa delle Corporazioni (nessun edificio separato).

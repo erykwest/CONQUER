@@ -278,11 +278,11 @@ function fallbackSocialTarget(house,from,visitorId){
 function artisanPosition(house,day){
   const frac=day-Math.floor(day),hash=peasantHash(house.id),stagger=(((hash>>>8)%1000)/1000-.5)*.024;
   const home=houseDoorInfo(house).outside;
-  const worksite=houseLevel(house)===3?
+  const worksite=(window.ConquerSocialClasses?.tierOfHouse?.(house)??houseLevel(house))===2?
     window.ConquerCommerce?.worksiteForHouse?.(house.id):null;
   const workshop=worksite?.structure||nearestWorkshop(home);
   const market=nearestCompletedStructure('market',home);
-  // An L3 shop operates at home. An L3 service operator travels to their
+  // An L2 workshop operates at home. An L3 service operator travels to their
   // actual inn/church rather than behaving like a generic market merchant.
   let primary=worksite?.kind==='shop'?{structure:house,point:home}:
     workshop?{structure:workshop,point:structureAccessPoint(workshop,home,house.id+'-work')}:null;
@@ -325,6 +325,20 @@ function merchantPosition(house,day){
   }
   if(frac<leaveSecond)return residentIdlePoint(first.point,house.id+'-merchant-primary',day,.20);
   return routineTravel(house,first.point,home,frac,leaveSecond,homeAt,'merchant-market-home');
+}
+// Educated L3 families occupy real administrative/commercial destinations.
+function educatedPosition(house,day){
+  const role=window.ConquerSocialClasses?.educatedProfession?.(house,State.structures)||'merchant';
+  if(role==='merchant')return merchantPosition(house,day);
+  const home=houseDoorInfo(house).outside,
+    hall=nearestCompletedStructure('townhall',home);
+  if(!hall)return merchantPosition(house,day);
+  const dest=structureAccessPoint(hall,home,house.id+'-'+role);
+  const frac=day-Math.floor(day),start=.10,arrive=.18,leave=.50,homeAt=.65;
+  if(frac<start||frac>=homeAt)return null;
+  if(frac<arrive)return routineTravel(house,home,dest,frac,start,arrive,role+'-to-hall');
+  if(frac<leave)return residentIdlePoint(dest,house.id+'-'+role+'-work',day,.18);
+  return routineTravel(house,dest,home,frac,leave,homeAt,role+'-home');
 }
 function elitePosition(house,day){
   const frac=day-Math.floor(day),hash=peasantHash(house.id),stagger=(((hash>>>8)%1000)/1000-.5)*.018;

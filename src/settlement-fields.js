@@ -135,8 +135,8 @@ function fieldCropReady(field,day=State.clock.day){
     return cell&&done<cell.end-cell.start-1e-7;
   });
 }
-function maybeExpandIdleL2Fields(houses,fields,day){
-  // Once per working day in October/November, any L2 labor not committed to
+function maybeExpandIdleL1Fields(houses,fields,day){
+  // Once per working day in October/November, any L1 labor not committed to
   // mining, quarrying or an existing field may open one immediately arable plot.
   if(!State.village?.founded||fieldSeasonPhase(calendarDateFromDay(day).month)!=='plough')return 0;
   if((window.ConquerCombat?.alarmMode?.()||'off')!=='off')return 0;
@@ -147,7 +147,7 @@ function maybeExpandIdleL2Fields(houses,fields,day){
   if(Number.isFinite(State.village.fieldExpansionFailedDay)&&
       wholeDay-State.village.fieldExpansionFailedDay<3)return 0;
   const assigned=fieldWorkAssignments(houses,fields);
-  const idle=fieldAvailableHouses(houses).L2.filter(h=>!assigned.has(h.id));
+  const idle=fieldAvailableHouses(houses).L1.filter(h=>!assigned.has(h.id));
   if(!idle.length)return 0;
   State.village.fieldExpansionAttemptDay=wholeDay;
   const t0=performance.now();
@@ -161,15 +161,16 @@ function maybeExpandIdleL2Fields(houses,fields,day){
     fieldWorkAssignmentCache.key=null;
     markDirty(false,false,false);
   }else State.village.fieldExpansionFailedDay=wholeDay;
-  window.__conquerAnalytics?.event('FIELD_L2_EXPANSION',{
-    day:wholeDay,idleL2:idle.length,created,fields:fields.length,
+  window.__conquerAnalytics?.event('FIELD_L1_EXPANSION',{
+    day:wholeDay,idleL1:idle.length,created,fields:fields.length,
     elapsedMs:+(performance.now()-t0).toFixed(2)
   },created?'info':'warn');
   return created;
 }
 function tickFields(day=State.clock.day){
   const fields=completedSettlement('field');
-  const houses=completedSettlement('house').filter(h=>houseLevel(h)<=2);
+  const houses=completedSettlement('house').filter(h=>
+    (window.ConquerSocialClasses?.tierOfHouse?.(h)??houseLevel(h))===1);
   const month=calendarDateFromDay(day).month,season=fieldSeasonPhase(month);
   // Prepare all crop states before assigning workers so a completed field
   // immediately releases its workforce to any other available parcel.
@@ -224,7 +225,7 @@ function tickFields(day=State.clock.day){
       fieldWorkAssignmentCache.key=null;
     }
   }
-  maybeExpandIdleL2Fields(houses,fields,day);
+  maybeExpandIdleL1Fields(houses,fields,day);
 }
 function fieldWorkerPosition(field,cell){
   const crop=fieldCrop(field);
