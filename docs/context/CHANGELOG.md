@@ -1,5 +1,15 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-13 — CAM-ROT-01 · Rotazione libera della camera
+
+13/11/2026 — `feature/free-camera-rotation` (pre-merge):
+- La vista ruota a qualsiasi angolo: Shift + tasto centrale trascinato, con Ctrl a scatti di 15°. Tasto centrale/destro da soli restano pan; Q/E e pulsanti girano di 90°.
+- Proiezione 2D, shader WebGL e ombreggiatura delle facce accettano angoli frazionari; i quarti interi usano lo stesso percorso esatto di prima.
+- QA: 51 regressioni Node PASS; prova in gioco sul layout `TEST` a 22,5°, 30°, 45° e 105°.
+- Limite: trascinamento a ~6 fps (ogni angolo ricostruisce scena e mesh).
+
+STATUS, BACKLOG e CHANGELOG aggiornati; ROADMAP e DECISIONS invariate (comando di camera, nessun contratto toccato).
+
 ## 2026-11-13 — MP-01…MP-06 · Scope multiplayer e colonizzazione feudale (solo documentazione)
 
 Registrato il modello con posti umani separati dai bot e dai territori non colonizzati, ingresso su nuovi villaggi senza sostituzione bot, priorità delle terre libere e possedimenti aperti alla fondazione di sudditi, configurabili dal signore in alternativa all'autosviluppo. Esempio 100 territori / 30 posti umani / 30 bot non vincolante; lobby informativa, ×1 multiplayer e punti aperti su avvio, mastio, permessi e durata. Specifica [MULTIPLAYER-SERVER-SCOPE](../MULTIPLAYER-SERVER-SCOPE.md), decisione D-MP-261113, backlog MP-01…MP-06. **Nessun codice o QA runtime modificato/eseguito. ROADMAP invariata: World/Feudal resta M4.**

@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-13 — CAM-ROT-01 · Rotazione libera della camera (branch `feature/free-camera-rotation`)
+
+- **CODICE SUL BRANCH, NON MERGE:** `State.view.rotation` resta in quarti di giro ma accetta valori frazionari. `rotateViewPoint` (2D), lo shader WebGL (`uRot` ora `vec2` cos/sin) e l'ombreggiatura delle facce (`rotDir` in `settlement-mesh3d.js` e `settlement-wagons3d.js`) seguono qualsiasi angolo; per i quarti interi il percorso esatto è invariato.
+- **Comandi:** Shift + tasto centrale trascinato = rotazione libera attorno al centro dello schermo (160 px = 90°); con Ctrl scatti di 15° (24 posizioni). Tasto centrale o destro da soli = pan come prima. Q/E e pulsanti ↺/↻ restano a 90° partendo dall'angolo corrente. Angolo salvato nel salvataggio locale/cloud come prima.
+- **QA:** 51 regressioni Node che toccano camera/mesh/input PASS. La CI ha poi rilevato `qa/builder-placement-regression.cjs`, che estrae gli handler di input e non dichiarava il nuovo stato `orbit`: il finto ambiente ora lo dichiara accanto a `pan`, test PASS in locale. Prova browser in gioco sul layout `TEST` (168 strutture): pan, rotazione libera 22,5°, scatto a 30°, viste a 45° e 105° coerenti (terreno, strade, case, mura, cutaway torri, minimappa); punto al centro invariato; nessun errore di render in console.
+- **LIMITI:** ogni nuovo angolo ricostruisce scena statica e mesh (~150 ms, come un giro di 90°): durante il trascinamento ~6 fps. Le scelte discrete legate alla vista (facce aperte del cutaway, lato dei costruttori) si calcolano sull'angolo reale e non sono state riviste una per una.
+
 ## 2026-11-13 - Preparazione merge PR #206
 
 Preparazione merge PR #206: main aggiornato riconciliato mantenendo moduli e documenti di entrambi i branch. Catalogo Wiki rigenerato. Gilda riferita agli artigiani L2; dazio botteghe e relativo malcontento addebitati a L2 anziche L3, con regressione riprodotta prima del fix. Fondazione: cinque scenari superati isolatamente con Node 22, ma timing intermittente oltre 100 ms nella suite anche su Node 22; verifica Actions ancora necessaria. Nessuna soglia allentata. Suite completa e Actions da completare prima del merge. Nessuna nuova funzione demografica, giudiziaria o archetipo edilizio.
