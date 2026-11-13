@@ -162,6 +162,12 @@
     setRoofPitch: pitch => { const out = applyRoofPitch(pitch); emit(); return out; },
     setSaleShare:(good, pct) => { const ok = window.ConquerEconomy?.setShare(good, pct); scheduleLocalSave(200); emit(); return ok; },
     setReserve: (good, qty) => { const ok = window.ConquerEconomy?.setTarget(good, qty); scheduleLocalSave(200); emit(); return ok; },
+    // SCOL-01: the lord hires a lay scolarizzato (castle gold, arrives after two weeks).
+    hireEducated: () => {
+      const out=window.ConquerEducated?.hire?.()||{ok:false,reason:'economy'};
+      if(out.ok){scheduleLocalSave(200);emit();}
+      return out;
+    },
     // L1 Job Manager: commands only; the economy remains the allocator and save owner.
     setL1Minimum: (key, minimum) => {
       const ok=window.ConquerEconomy?.setL1Minimum?.(key,minimum);
@@ -407,6 +413,7 @@
         happiness: s.happiness, rationMode: s.rationMode, castleFoodIssued: s.castleFoodIssued,
         jobs: econ.jobSummary?.() || null, jobManager: econ.jobManager?.() || null,
         jobManagerL2: econ.jobManagerL2?.() || null,
+        educated: window.ConquerEducated?.summary?.() || null,
         commerce: s.commerce || null,
         welfare: s.welfare, capital: s.capital, castleGold: s.castleGold, population: s.population, wage: s.wage,
         goods: (econ.GOODS || ECON_GOODS).map(g => ({ id: g, price: s.prices[g], market: s.market[g], castle: s.castle[g],

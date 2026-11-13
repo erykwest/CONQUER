@@ -12,7 +12,7 @@ function generate(){
     well:{type:'well'},pier:{type:'pier',reach:4},'shipyard.1':{type:'pier',yard:1},'shipyard.2':{type:'pier',yard:2},
     'clay-quarry':{type:'quarry',extractionMode:'clay'}
   };
-  for(const key of ['market','tavern','church','training','plaza','townhall','guild','loggingCamp','quarry','mine','windmill','watermill'])descriptors[key]={type:key};
+  for(const key of ['market','tavern','church','training','plaza','townhall','guild','bargello','balivo','loggingCamp','quarry','mine','windmill','watermill'])descriptors[key]={type:key};
   const examples={};
   for(const [key,structure] of Object.entries(descriptors))examples['building:'+key]={structure,quote:api.quote('building:'+key,{structure})};
   return {schemaVersion:1,sourceDigest:crypto.createHash('sha256').update(input).digest('hex'),catalog,examples};

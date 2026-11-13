@@ -148,7 +148,7 @@ const CATALOG = [
       return rows;
     } },
   { id: 'civic', hint: T.hints.point, press: '[data-civic="market"]', is: s => s.tool.kind === 'civic',
-    rows: s => [{ label: O.building, options: ['market', 'tavern', 'church', 'training', 'plaza', 'townhall', 'guild'].map(k =>
+    rows: s => [{ label: O.building, options: ['market', 'tavern', 'church', 'training', 'plaza', 'townhall', 'guild', 'bargello', 'balivo'].map(k =>
       opt(V[k], `[data-civic="${k}"]`, s.tool.civic === k)) }, masonryRow(s)] },
   { id: 'production', hint: T.hints.point, press: '[data-industry="loggingCamp"]', is: s => s.tool.kind === 'industry',
     rows: s => [{ label: O.building, wrap: true, options: INDUSTRIES.map(([k, selector, on]) => opt(V[k], selector, on(s.tool))) }, masonryRow(s)] },
@@ -329,6 +329,27 @@ function CrossingPanel({ id }) {
   });
   return html`<div class="u2-legacy" ref=${ref}></div>`;
 }
+// CHIESA-01: the Church tab (treasury, Favour, gifts) comes from settlement-church.js as markup.
+function ChurchPanel({ id }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const s = State.structures.find(x => x.id === id);
+    if (!ref.current || !s) return;
+    ref.current.innerHTML = window.ConquerChurch?.panelHtml?.(s) || '';
+    window.ConquerChurch?.bindPanel?.(ref.current);
+  });
+  return html`<div class="u2-legacy" ref=${ref}></div>`;
+}
+// GILDA-01: the Guild tab (workshop bonus, officials) comes from settlement-guild.js as markup.
+function GuildPanel({ id }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const s = State.structures.find(x => x.id === id);
+    if (!ref.current || !s) return;
+    ref.current.innerHTML = window.ConquerGuild?.panelHtml?.(s) || '';
+  });
+  return html`<div class="u2-legacy" ref=${ref}></div>`;
+}
 // Village well: centre designation (like the Mastio) and the quarter name of a non-centre well.
 function WellPanel({ d, run }) {
   const w = d.well;
@@ -454,6 +475,8 @@ function Inspector({ snap, cmd }) {
             ${r.options.map(o => html`<option value=${o.value} disabled=${!o.allowed}>${T.functions[o.value] || o.value}</option>`)}
           </select></label>`)}</div>`}</div>`}
     ${d.legacy === 'crossing' && html`<${CrossingPanel} id=${d.id} />`}
+    ${d.type === 'church' && html`<${ChurchPanel} id=${d.id} />`}
+    ${d.type === 'guild' && html`<${GuildPanel} id=${d.id} />`}
     ${hp && html`<div class="u2-group"><span class="u2-label" data-tip=${I.integrity} data-tip-body=${TIP.integrity} tabindex="0">${I.integrity}<i aria-hidden="true">?</i></span>
       <div class="u2-meter" data-tip=${I.masonry} data-tip-body=${hp.core + ' / ' + hp.coreMax}><small>${I.masonry}</small><${Bar} value=${hp.core} max=${hp.coreMax} /></div>
       ${hp.door != null && html`<div class="u2-meter" data-tip=${I.door} data-tip-body=${hp.door + ' / ' + hp.doorMax}><small>${I.door}</small><${Bar} value=${hp.door} max=${hp.doorMax} /></div>`}
@@ -479,7 +502,7 @@ function Overview({ game }) {
   const pop = Object.values(e.population), total = pop.reduce((a, b) => a + b, 0);
   const trade = e.lastTrade, unmet = trade ? Object.values(trade.unmet || {}).reduce((a, b) => a + b, 0) : 0;
   return html`<div class="u2-stats u2-stats-3">
-      <${Stat} label=${M.population} value=${total} tip=${TIP.population + ' ' + pop.join(' · ')} />
+      <${Stat} label=${M.population} value=${total} tip=${TIP.population + ' ' + pop.join(' · ') + (e.educated ? ' · scolarizzati ' + e.educated.total : '')} />
       <${Stat} label=${M.welfare} value=${num(e.welfare, 0)} tip=${TIP.welfare}><${Bar} value=${e.welfare} max=${100} /></${Stat}>
       <${Stat} label=${M.happiness} value=${['L1', 'L2', 'L3', 'L4'].map(g => num(e.happiness?.[g], 0)).join(' · ')} tip=${TIP.happiness} />
       ${e.jobs && html`<${Stat} label=${M.jobs} value=${M.jobsValue(e.jobs)} tip=${TIP.jobs + (e.jobs.foodRisk ? ' ⚠' : '')} />`}
@@ -493,7 +516,8 @@ function Overview({ game }) {
 }
 function Policies({ game }) {
   const p = game.read.policies(), snap = game.snapshot();
-  return html`${['tax', 'rations', 'levy'].map(k => k === 'rations' ? html`<${Row} label=${M.policies[k]} tip=${M.policyHelp[k]}>
+  // FISCO-01: the inactive levy slider is gone; the Leva straordinaria is a decree (Profilo › Erario).
+  return html`${['tax', 'rations'].map(k => k === 'rations' ? html`<${Row} label=${M.policies[k]} tip=${M.policyHelp[k]}>
       <${Seg} options=${['market', 'half', 'full'].map(m => ({ label: M.rationModes[m], active: (game.read.economy()?.rationMode || 'market') === m, m }))}
         onPick=${o => { game.commands.setPolicy('rations', o.m); game.emit(); }} /></${Row}>` : html`<${Row} label=${M.policies[k]} tip=${M.policyHelp[k]}>
       <div class="u2-slider"><input type="range" min="0" max="100" value=${p[k]} aria-label=${M.policies[k]}

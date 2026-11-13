@@ -208,7 +208,9 @@ check('shop receipts use real L3 goods output and do not touch the castle ledger
   assert.equal(w.H.record({siteId:'house-L2',good:'tools',qty:1,destination:'market'}),true);
   assert.equal(w.H.snapshot().pending,1);
   assert.equal(JSON.stringify(w.E.state().castle),castle);
-  assert.match(read('src/settlement-commerce.js'),/ConquerHaulage\?\.record\?\.\(\{siteId:shop\.houseId,good,qty:SHOP_OUTPUT_PER_DAY/);
+  assert.match(read('src/settlement-commerce.js'),/ConquerHaulage\?\.record\?\.\(\{siteId:shop\.houseId,good,qty:out/);
+  // GILDA-01: the carter hauls the day's real output, base 1 times the guild bonus.
+  assert.match(read('src/settlement-commerce.js'),/const out=roundGold\(SHOP_OUTPUT_PER_DAY\*\(1\+/);
 });
 check('source deletion cancels route; reset and load do not persist duplicate trips',()=>{
   const w=world({logging:true});w.H.record({siteId:'camp',good:'wood',qty:2});

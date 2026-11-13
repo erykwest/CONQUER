@@ -36,7 +36,7 @@
     }
     for(const key of CIVIC_TYPES){
       const r=structure(key,key,s=>s.type===key,{},key==='plaza'?'partial':'present');
-      r.properties.levels=CIVIC_LEVEL_TYPES.includes(key)?[1,2,3]:[1];
+      r.properties.levels=CIVIC_LEVEL_TYPES.includes(key)?civicLevels(key):[1];
       if(key==='plaza')r.properties.variants=PLAZA_VARIANTS;
     }
     for(const mode of ['terrain','walled','flat'])add({id:'building:terraforming.'+mode,key:mode,label:'Terraforming · '+mode,category:'building',status:'present',
