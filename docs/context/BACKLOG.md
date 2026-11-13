@@ -1,5 +1,16 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## RC-TIME-01 — Tick locale vs recapito inter-feudo (decisione 13/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** un comando amministrativo al proprio feudo viene applicato al **primo tick utile**, dopo validazione lato server; una comunicazione verso altro feudo viaggia e si consegna **secondo il tempo simulato**. [D-RC-TIME-261113](DECISIONS.md#d-rc-time-261113--due-temporalita-per-gli-ordini-remoti-13112026).
+
+- [ ] Definire stati autorizzati e osservabili: ricevuto, accettato/in attesa di tick, applicato, rifiutato/fallito; vietare false conferme anticipate.
+- [ ] Messaggi inter-feudo: spedito/in transito/consegnato/errore, ETA server e accesso al contenuto solo dopo il recapito; nessuna scorciatoia mobile/browser/API.
+- [ ] Ordini di spedizione/carovana: acquisizione del comando al tick utile, viaggio e arrivo secondo i tempi del sistema strategico, non istantanei.
+- [ ] QA cross-client per comando locale al tick, comunicazione ritardata, pausa del mondo, tentativi anticipati e deduplicazione.
+- [ ] Da definire: durata tick, validazioni concorrenti, scheduling durante pausa server e semantica specifica dell'ordine al destinatario.
+
+
 ## MOB-B-01 — Prima release pubblica mobile con remote control completo (decisione 13/11/2026)
 
 **DECISO / NON IMPLEMENTATO:** scelta **B** per Android e iOS; il primo rilascio pubblico deve includere i domini gestionali e strategici già approvati, non solo dashboard o messaggi. [D-MOB-B-261113](DECISIONS.md#d-mob-b-261113--prima-release-pubblica-mobile-controllo-remoto-completo-13112026) · [SRS mobile v0.2 draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
@@ -37,7 +48,7 @@
 - [ ] **RC-06:** web responsive e API condivise; app Android/iOS solo in una fase successiva.
 - [ ] **RC-07:** QA sicurezza (cross-campaign, permessi sudditi, comandi duplicati/concorrenti), freschezza KPI, offline e tempi di recapito.
 
-**DECISO:** confine gestione remota vs Builder/3D come D-RC-BOUNDARY-261113. **APERTO:** comandi immediati sulla propria colonia vs tempi simulati per operazioni inter-feudo, permessi, catalogo granulare dei comandi e filtri dei dati pubblici.
+**DECISO:** confine gestione remota vs Builder/3D (D-RC-BOUNDARY-261113) e doppia temporalità (D-RC-TIME-261113: proprio feudo al tick utile; lettere inter-feudo con recapito simulato). **APERTO:** permessi, catalogo granulare dei comandi, durata tick, gestione pause e filtri dei dati pubblici.
 
 
 ## MP-07 — Profilo globale, partecipazioni multi-server e isolamento dello stato (design 13/11/2026)
