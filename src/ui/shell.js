@@ -340,6 +340,16 @@ function ChurchPanel({ id }) {
   });
   return html`<div class="u2-legacy" ref=${ref}></div>`;
 }
+// GILDA-01: the Guild tab (workshop bonus, officials) comes from settlement-guild.js as markup.
+function GuildPanel({ id }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const s = State.structures.find(x => x.id === id);
+    if (!ref.current || !s) return;
+    ref.current.innerHTML = window.ConquerGuild?.panelHtml?.(s) || '';
+  });
+  return html`<div class="u2-legacy" ref=${ref}></div>`;
+}
 // Village well: centre designation (like the Mastio) and the quarter name of a non-centre well.
 function WellPanel({ d, run }) {
   const w = d.well;
@@ -466,6 +476,7 @@ function Inspector({ snap, cmd }) {
           </select></label>`)}</div>`}</div>`}
     ${d.legacy === 'crossing' && html`<${CrossingPanel} id=${d.id} />`}
     ${d.type === 'church' && html`<${ChurchPanel} id=${d.id} />`}
+    ${d.type === 'guild' && html`<${GuildPanel} id=${d.id} />`}
     ${hp && html`<div class="u2-group"><span class="u2-label" data-tip=${I.integrity} data-tip-body=${TIP.integrity} tabindex="0">${I.integrity}<i aria-hidden="true">?</i></span>
       <div class="u2-meter" data-tip=${I.masonry} data-tip-body=${hp.core + ' / ' + hp.coreMax}><small>${I.masonry}</small><${Bar} value=${hp.core} max=${hp.coreMax} /></div>
       ${hp.door != null && html`<div class="u2-meter" data-tip=${I.door} data-tip-body=${hp.door + ' / ' + hp.doorMax}><small>${I.door}</small><${Bar} value=${hp.door} max=${hp.doorMax} /></div>`}
