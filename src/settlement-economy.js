@@ -916,8 +916,10 @@
       daily(day);
       if(weekday(day)===5)market(day); // Saturday market; no civilian production
       window.ConquerCommerce?.daily?.(day); // L3 workshops and their goods market
+      window.ConquerChurch?.daily?.(day); // CHIESA-01: Sunday offerings into the Church treasury
       const today=dateAt(day),tomorrow=dateAt(day+1);
-      if(today.month!==tomorrow.month||today.year!==tomorrow.year)monthly(day);
+      if(today.year!==tomorrow.year)window.ConquerChurch?.annual?.(day); // bequests, booked in the closing month
+      if(today.month!==tomorrow.month||today.year!==tomorrow.year){monthly(day);window.ConquerChurch?.monthly?.(day)}
       if(today.year!==tomorrow.year)annual(day);
     }
     window.ConquerStorageYard?.refreshVisual?.();

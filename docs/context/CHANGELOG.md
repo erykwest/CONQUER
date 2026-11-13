@@ -1,5 +1,28 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-12 — CHIESA-01 fase 1 · Cassa della Chiesa
+
+12/11/2026 — `feature/chiesa-fase1`: la Chiesa ha una sua Cassa.
+- Ogni domenica le offerte arrivano dai borsellini delle classi servite da una chiesa.
+- A fine anno arrivano i lasciti di L3 e L4, se le due classi sono contente.
+- Il signore può donare 10, 50 o 100 oro e guadagna Favore.
+- Scheda «Chiesa» nell'ispettore di ogni chiesa e riquadro nel Profilo › Generale.
+- Nuova regressione `qa/church-regression.cjs`.
+
+STATUS, BACKLOG e DECISIONS (regola transitoria della resa del culto) aggiornati; ROADMAP invariata.
+
+## 2026-11-12 — CHIESA-01 · La Chiesa come entità autonoma (solo specifica)
+
+12/11/2026 — `docs/chiesa`: il product owner ha approvato la specifica della Chiesa come istituzione distinta dal castello.
+- Una sola istituzione per villaggio, con una Cassa che non è un secondo ledger.
+- Entrate: offerte domenicali, lasciti annui e doni del signore. Nessuna decima ecclesiastica.
+- Spese in ordine fisso: salari dei chierici, rette clericali, carità, feste, co-finanziamento dei cantieri.
+- La Chiesa decide ogni anno il salario dei chierici e smette di farli pagare al castello.
+- Posti per livello della chiesa; il Monastero forma 2 novizi l'anno.
+- Favore 0–100 verso il signore, che muove le prediche; messa domenicale con capienza.
+- Modifiche al contratto D-SCOL-261112 descritte in D-CHIESA-261112.
+
+BACKLOG, STATUS e DECISIONS aggiornati; ROADMAP invariata; nessun codice.
 
 ## 2026-11-09 — BC-261109-02 · DEV e cantieri di ristrutturazione
 

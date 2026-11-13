@@ -25,6 +25,8 @@ on:
       - 'src/settlement-haulage.js'
       - 'src/settlement-population-figures.js'
       - 'src/settlement-commerce.js'
+      - 'src/settlement-church.js'
+      - 'qa/church*.cjs'
       - 'src/settlement-storage-yard.js'
       - 'src/settlement-castle.js'
       - 'src/settlement-castle-placement.js'
@@ -94,6 +96,8 @@ jobs:
           node qa/male-routines-regression.cjs
           node qa/female-routines-regression.cjs
           node qa/commerce-skeleton-regression.cjs
+          node --check src/settlement-church.js
+          node qa/church-regression.cjs
           node qa/urban-workshops-regression.cjs
           node qa/convoys-skeleton-regression.cjs
           node qa/road-sign-convoy-regression.cjs
