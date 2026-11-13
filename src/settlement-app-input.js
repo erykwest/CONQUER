@@ -1,13 +1,14 @@
 'use strict';
 // Pointer/canvas interactions and build tool controls. Extracted verbatim from settlement-app.js.
-// Middle mouse (mouse 3) drag = free camera rotation around the screen centre; Shift snaps to 15°.
+// Shift + middle mouse (mouse 3) drag = free camera rotation around the screen centre; adding Ctrl snaps to 15°.
+// Plain middle/right drag still pans.
 let orbit=null,orbitFrame=0,orbitPending=null;
 const ORBIT_PX_PER_TURN=160;   // horizontal pixels per 90°
 function flushCameraOrbit(){
   orbitFrame=0;if(!orbit||!orbitPending)return;
-  const {clientX,shift}=orbitPending;orbitPending=null;
-  setCameraRotation(orbit.start+(clientX-orbit.x)/ORBIT_PX_PER_TURN,{pivot:orbit.pivot,anchor:orbit.anchor,snap:shift});
-  status('View rotation: '+cameraRotationDegrees()+'°'+(shift?' (15° snap)':' · Shift = 15° steps'));
+  const {clientX,snap}=orbitPending;orbitPending=null;
+  setCameraRotation(orbit.start+(clientX-orbit.x)/ORBIT_PX_PER_TURN,{pivot:orbit.pivot,anchor:orbit.anchor,snap});
+  status('View rotation: '+cameraRotationDegrees()+'°'+(snap?' (15° snap)':' · +Ctrl = 15° steps'));
 }
 function finishCameraOrbit(){
   if(!orbit)return;
@@ -15,14 +16,14 @@ function finishCameraOrbit(){
   orbit=null;scheduleLocalSave(500);
 }
 canvas.addEventListener('pointerdown',e=>{
-  if(e.button===1){
+  if(e.button===1&&e.shiftKey){
     e.preventDefault();
     const pivot=visibleCanvasCenter();
     orbit={x:e.clientX,start:State.view.rotation||0,pivot,anchor:s2w(pivot.x,pivot.y)};
     canvas.setPointerCapture(e.pointerId);
     return
   }
-  if(e.button===2){
+  if(e.button===1||e.button===2){
     pan={x:e.clientX,y:e.clientY,vx:State.view.x,vy:State.view.y};
     sceneCachePanPreview=true;
     canvas.setPointerCapture(e.pointerId);
@@ -244,7 +245,7 @@ function flushCanvasPan(){
 }
 canvas.addEventListener('pointermove',e=>{
   if(orbit){
-    orbitPending={clientX:e.clientX,shift:e.shiftKey};
+    orbitPending={clientX:e.clientX,snap:e.ctrlKey};
     if(!orbitFrame)orbitFrame=requestAnimationFrame(flushCameraOrbit);
     return
   }
