@@ -3,6 +3,10 @@
 ## 2026-11-13 — Selezione edifici · perimetro senza lati posteriori e al livello corrente
 
 `drawCastleSelection` non disegna più i lati del perimetro a terra nascosti dal volume dell'edificio: un lato è posteriore se appena sotto di esso sullo schermo c'è il footprint di un corpo con altezza reale. Vale per torri, mura, sezioni costruite, case e civici, anche in cutaway e con la vista ruotata. Campi, cantieri, piazze e corpi bassi (cortili, industrie aperte, pozzi) mantengono il perimetro completo. I civici seguono ciò che sta in piedi al livello corrente (`ConquerCivic3D.builtParts`, tabella `BUILT`): la chiesa L1 non mostra più la croce L3. Regressione in `qa/mastio-selection-zoom-regression.cjs`. ROADMAP e DECISIONS invariate.
+## 2026-11-13 — MP-01…MP-06 · Scope multiplayer e colonizzazione feudale (solo documentazione)
+
+Registrato il modello con posti umani separati dai bot e dai territori non colonizzati, ingresso su nuovi villaggi senza sostituzione bot, priorità delle terre libere e possedimenti aperti alla fondazione di sudditi, configurabili dal signore in alternativa all'autosviluppo. Esempio 100 territori / 30 posti umani / 30 bot non vincolante; lobby informativa, ×1 multiplayer e punti aperti su avvio, mastio, permessi e durata. Specifica [MULTIPLAYER-SERVER-SCOPE](../MULTIPLAYER-SERVER-SCOPE.md), decisione D-MP-261113, backlog MP-01…MP-06. **Nessun codice o QA runtime modificato/eseguito. ROADMAP invariata: World/Feudal resta M4.**
+
 
 ## 2026-11-13 - Preparazione merge PR #206
 

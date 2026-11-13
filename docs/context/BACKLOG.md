@@ -8,6 +8,17 @@
 - [x] Perimetro dei civici al livello corrente (chiesa L1, taverna L1–L2), non al footprint L3.
 - [ ] Facoltativo: allineare anche l'area cliccabile dei civici al footprint del livello corrente.
 - [ ] Occlusione da parte di altri edifici davanti a quello selezionato (oggi il contorno resta sopra di essi).
+## MP-01…MP-06 — Multiplayer, lobby e colonizzazione feudale (design 13/11/2026)
+
+**STATO: SPECIFICA / DA IMPLEMENTARE.** [Contratto dettagliato e distinzioni deciso/proposto/aperto](../MULTIPLAYER-SERVER-SCOPE.md), decisione [D-MP-261113](DECISIONS.md#d-mp-261113--ingresso-multiplayer-e-colonizzazione-feudale-13112026). Dipendenza World/Feudal (M4); nessuna lobby o sostituzione bot implementata.
+
+- [ ] **MP-01:** capienze indicative 20–100, minimo effettivo di avvio, ciclo di server, ingresso durante la campagna, dati pubblici in lobby.
+- [ ] **MP-02:** separare territori rivendicati da villaggi fondati; slot umani distinti da bot e terre non colonizzate, mantenendo una sola sovranità per territorio.
+- [ ] **MP-03:** ingresso solo su posizione idonea, con priorità alle terre libere; proprietario può aprire un possedimento alla nuova fondazione umana **come suddito** invece dello sviluppo automatico. Niente takeover di bot né eredità dei loro progressi.
+- [ ] **MP-04:** definire mastio come eventuale blocco, spazio edificabile, permessi e diritti dei sudditi, integrazione con imposte/tributi, revoca, sconfitta e nuove iscrizioni.
+- [ ] **MP-05:** multiplayer ×1, calibrazione calendario/durata campagne, disponibilità regionale e partecipazione su più server (quest'ultima **proposta**, non decisa).
+- [ ] **MP-06:** solo in fase implementativa, QA su capienza, idoneità dello spawn, permessi, persistenza, non sovrapposizione e assenza di trasferimento dati dai bot.
+
 
 ## 2026-11-13 - Preparazione merge PR #206
 
