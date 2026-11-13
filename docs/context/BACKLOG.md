@@ -1,5 +1,16 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## MOB-B-01 — Prima release pubblica mobile con remote control completo (decisione 13/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** scelta **B** per Android e iOS; il primo rilascio pubblico deve includere i domini gestionali e strategici già approvati, non solo dashboard o messaggi. [D-MOB-B-261113](DECISIONS.md#d-mob-b-261113--prima-release-pubblica-mobile-controllo-remoto-completo-13112026) · [SRS mobile v0.2 draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
+
+- [ ] **Prerequisiti:** backend multiplayer autorevole per account/campagne/feudi, API di lettura/scrittura e gestione permessi, World/Feudal, messaggistica inter-giocatore effettiva.
+- [ ] **Funzioni di release obbligatorie:** lobby e KPI multi-campagna; economia, lavoro/Job Manager, fisco, priorità dei cantieri già localizzati; militare strategico/spedizioni; diplomazia e lettere; tributi/carovane; mappa regionale e operazioni strategiche.
+- [ ] **Fuori perimetro mobile:** geometria di edifici e fortificazioni e controllo tattico diretto, riservati al Builder 3D.
+- [ ] **Gate rilascio:** test end-to-end su tutti i domini, autorizzazione multi-campagna, sync browser↔mobile, nessun pulsante fittizio o logica simulata solo sul client. Alpha/beta interne progressive consentite; prima release pubblica parziale **non accettata**.
+- [ ] **Dettagli aperti:** matrice dei comandi, privilegi feudali, sincronizzazione temporale, UX, tecnologia mobile, push opzionali, offline e target prestazionali. Nessuna data di rilascio fissata.
+
+
 ## 2026-11-13 — Equipaggiamento delle unità: elmi e scudi
 
 **IMPLEMENTATO SU BRANCH `feature/unit-equipment-styles`, NON MERGE.** Scelta feudale dell'elmo e della forma dello scudo dei soldati, dal Centro di controllo › Militare › Equipaggiamento, come merlature e pendenza dei tetti. Dettagli in [STATUS](STATUS.md).

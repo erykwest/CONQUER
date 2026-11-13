@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-13 — MOB-B-01 · App mobile, primo rilascio pubblico con controllo completo (solo design)
+
+Il product owner ha selezionato **B**: la prima release Android/iOS deve supportare l'intero governo remoto — economia, lavoratori, fisco, cantieri localizzati, spedizioni/militare strategico, diplomazia/messaggi, tributi/carovane, mappa regionale, oltre a lobby e KPI multi-campagna. Alpha/beta interne progressive possibili, ma **nessun MVP pubblico read-only o gestionale parziale**. Riferimenti: D-MOB-B-261113 e SRS v0.2 nella draft PR #222. Stack e requisiti granulari restano aperti; nessun codice, schema o runtime modificato.
+
+
 ## 2026-11-13 — Equipaggiamento delle unità · elmi e scudi
 
 13/11/2026 — `feature/unit-equipment-styles` (pre-merge):
