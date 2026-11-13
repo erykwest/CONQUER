@@ -7,16 +7,17 @@ function fieldAvailableHouses(houses){
     const tier=economy?.KIND?.[s.type]?.classId;
     if(s.type!=='field'&&(tier===1||tier===2))reserved[tier]+=allocation[s.id]||0;
   }
-  const sorted=tier=>houses.filter(h=>houseLevel(h)===tier&&
-    window.ConquerLivestock?.lotKindForHouse(h)!==(tier===1?'shepherd':'cow'))
+  const sorted=tier=>houses.filter(h=>
+    (window.ConquerSocialClasses?.tierOfHouse?.(h)??houseLevel(h))===tier&&
+    !['shepherd','goat','cow','fisher'].includes(window.ConquerLivestock?.lotKindForHouse(h)))
     .sort((a,b)=>peasantHash(a.id)-peasantHash(b.id)).slice(reserved[tier]);
-  return {L1:[],L2:sorted(2),reserved};
+  return {L1:sorted(1),L2:[],reserved};
 }
 function fieldWorkAssignments(houses,fields){
-  // Only available L2 adults cultivate fields. L1 retain their other jobs.
+  // Fields are staffed by L1 servants, including former extraction L2 workers.
   const workforce=fieldAvailableHouses(houses);
   const reserved=workforce.reserved;
-  const key=houses.map(h=>[h.id,h.x,h.y,houseLevel(h)].join(':')).sort().join(',')+'|'+fields.map(f=>{
+  const key=houses.map(h=>[h.id,h.x,h.y,window.ConquerSocialClasses?.tierOfHouse?.(h)??houseLevel(h)].join(':')).sort().join(',')+'|'+fields.map(f=>{
     const crop=fieldCrop(f),layout=fieldLayout(f);
     return f.id+':'+layout.poly.map(p=>p.x+','+p.y).join(';')+':'+crop.phase+':'+
       (crop.ploughed?'P':'')+(crop.harvested?'H':'')+':'+fieldSeasonPhase(calendarDateFromDay().month)+
@@ -30,7 +31,7 @@ function fieldWorkAssignments(houses,fields){
     if(!fieldCropReady(field))continue;
     for(const cell of fieldGrid(field).cells)if(!fieldSlotDone(field,cell))slots.push({field,cell,used:false});
   }
-  const assignments=new Map(),ordered=workforce.L2;
+  const assignments=new Map(),ordered=workforce.L1;
   for(const house of ordered){
     const door=houseDoorInfo(house).outside;let best=null,bestScore=Infinity;
     for(const slot of slots){

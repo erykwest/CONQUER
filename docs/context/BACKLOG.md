@@ -1,5 +1,137 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## CAM-ROT-01 — Rotazione libera della camera (13/11/2026)
+
+- **FATTO SU BRANCH** `feature/free-camera-rotation`: rotazione a qualsiasi angolo con Shift + tasto centrale, scatti di 15° con Ctrl; pan invariato su tasto centrale/destro; Q/E a 90°.
+- **APERTO — fluidità:** durante il trascinamento ogni angolo ricostruisce scena statica e mesh (~150 ms, ~6 fps). Possibili vie: ombreggiatura delle facce in shader invece che nei colori dei vertici, cache statica non invalidata finché si trascina, scena 2D semplificata durante il drag.
+- **APERTO — revisione viste discrete:** controllare a angoli intermedi le scelte che oggi presuppongono quarti di giro (facce aperte dei cutaway, lato dei costruttori, anteprima d'assedio che cerca il quarto migliore).
+
+## MP-01…MP-06 — Multiplayer, lobby e colonizzazione feudale (design 13/11/2026)
+
+**STATO: SPECIFICA / DA IMPLEMENTARE.** [Contratto dettagliato e distinzioni deciso/proposto/aperto](../MULTIPLAYER-SERVER-SCOPE.md), decisione [D-MP-261113](DECISIONS.md#d-mp-261113--ingresso-multiplayer-e-colonizzazione-feudale-13112026). Dipendenza World/Feudal (M4); nessuna lobby o sostituzione bot implementata.
+
+- [ ] **MP-01:** capienze indicative 20–100, minimo effettivo di avvio, ciclo di server, ingresso durante la campagna, dati pubblici in lobby.
+- [ ] **MP-02:** separare territori rivendicati da villaggi fondati; slot umani distinti da bot e terre non colonizzate, mantenendo una sola sovranità per territorio.
+- [ ] **MP-03:** ingresso solo su posizione idonea, con priorità alle terre libere; proprietario può aprire un possedimento alla nuova fondazione umana **come suddito** invece dello sviluppo automatico. Niente takeover di bot né eredità dei loro progressi.
+- [ ] **MP-04:** definire mastio come eventuale blocco, spazio edificabile, permessi e diritti dei sudditi, integrazione con imposte/tributi, revoca, sconfitta e nuove iscrizioni.
+- [ ] **MP-05:** multiplayer ×1, calibrazione calendario/durata campagne, disponibilità regionale e partecipazione su più server (quest'ultima **proposta**, non decisa).
+- [ ] **MP-06:** solo in fase implementativa, QA su capienza, idoneità dello spawn, permessi, persistenza, non sovrapposizione e assenza di trasferimento dati dai bot.
+
+
+## 2026-11-13 - Preparazione merge PR #206
+
+Preparazione merge PR #206: main aggiornato riconciliato mantenendo moduli e documenti di entrambi i branch. Catalogo Wiki rigenerato. Gilda riferita agli artigiani L2; dazio botteghe e relativo malcontento addebitati a L2 anziche L3, con regressione riprodotta prima del fix. Fondazione: cinque scenari superati isolatamente con Node 22, ma timing intermittente oltre 100 ms nella suite anche su Node 22; verifica Actions ancora necessaria. Nessuna soglia allentata. Suite completa e Actions da completare prima del merge. Nessuna nuova funzione demografica, giudiziaria o archetipo edilizio.
+
+## 2026-11-13 - Verifica CI PR #206
+
+Corretta asserzione livestock obsoleta dopo SOC-CLASS-02. Test comportamentali su selettore agricolo reale, riserve cave, esclusione allevatori e conservazione della vocazione su 400 case migrate superati. Suite completa e CI da completare prima del merge. Nessuna modifica runtime o bilanciamento; ROADMAP e DECISIONS invariate. Demografia, 12 archetipi e funzioni giudiziarie fuori scope.
+
+## 2026-11-12 — SOC-CLASS-02 · Nuove classi sociali L1–L4
+
+**IMPLEMENTATO SU BRANCH PR #206, NON MERGE.** [Contratto](../CIVIL-CLASS-MIGRATION.md), decisione D-SOC-CLASS-261112.
+
+- [x] Ceti nuovi e conversione una tantum di residenti, economie e salvataggi local/cloud, con identità, numeri e monete conservati.
+- [x] Fusione del lavoro agricolo/estrattivo L1, vecchie botteghe L3 → artigiani L2, mercanti/scrivani/magistrati/amministratori L3 come ruoli e routine; proprietà private L4.
+- [x] Lealtà L4 come dato distinto da felicità L1–L3; nessun trigger militare.
+- [x] Regressione dedicata e prima bonifica fixture legacy; CI da validare.
+- [ ] Famiglie migranti reali, soddisfazione per ceto e L4 lealtà attiva.
+- [ ] Cambio di proprietario/ceto come ricostruzione completa del template con trasferimento/sostituzione abitanti.
+- [ ] Template 12 combinazioni, richiesta e densità lotti D1–D3, UI L2 artigiani e lavoro effettivo L3.
+- [ ] Approvazione partizione monetaria 25%/75% e collaudi browser, salvataggi reali, CI verde.
+
+
+## 2026-11-12 — CIV-EVT-01 · Effetti sociali degli eventi
+
+**SKELETON PREVIEW SULLA BRANCH DELLA PR #206; NESSUN TICK ATTIVO.** Contratto: [CIVIC-EVENT-EFFECTS-SKELETON](../CIVIC-EVENT-EFFECTS-SKELETON.md).
+
+- [x] Catalogo iniziale di otto eventi che riusa allestimenti `feast/joust/tourney/circus/theatre`, senza duplicarne il motore.
+- [x] Modificatori diversi di felicità L1–L3 e lealtà L4; influenza temporanea sul prestigio e proiezione non invasiva delle heatmap.
+- [x] QA dedicata scritta e agganciata alla suite urbana (esito Node/CI da verificare).
+- [ ] Adattare la UI degli eventi per distinguere gli allestimenti `feast` con `civicKind` e registrare partecipanti reali.
+- [ ] Collegare costi alla fonte economica canonica, felicità/lealtà alla popolazione per insediamento, e la durata al calendario.
+- [ ] Implementare immigrazione ed emigrazione L2–L3; L1 servi senza emigrazione, L4 lealtà senza ribellioni armate.
+- [ ] Bilanciare costi, modificatori, frequenza, raggio, prerequisiti; verificare QA Node, browser e CI.
+
+
+## 2026-11-12 — URB-HEAT-01 · Urbanistica a quattro heatmap
+
+**FASE 0 — SOLO SKELETON SU BRANCH, NON MERGE.** Contratto: [URBAN-HEATMAP-SKELETON](../URBAN-HEATMAP-SKELETON.md); decisione [D-URB-HEAT-261112](DECISIONS.md).
+
+- [x] API indipendente dal Builder con griglia deterministica: domanda L1–L4, prestigio, sicurezza e criminalità (7 canali, 4 sistemi).
+- [x] Sorgenti locali positive/negative, aree protette poligonali, interpolazione e lettura del lotto senza modificarlo.
+- [x] QA del modulo scritta e agganciata a `qa/urban-regression.cjs`; **PASS/FAIL da verificare in CI**.
+- [ ] Adapter da strutture, posti di lavoro e percorsi, mura/accessi, guardie e fonte autorevole Crime.
+- [ ] Domanda effettiva dei quattro ceti calcolata da famiglie in cerca e disponibilità abitativa.
+- [ ] D1–D3 sul lotto con capienza, multi-edificio/sopraelevazione e soglie anti-oscillazione.
+- [ ] Prestigio dell'edificio e ricostruzione completa del template al cambio ceto/proprietario.
+- [ ] Migrazione dei ceti L1–L4, L3+ e dei sistemi lavoro/economia/popolanI/salvataggi.
+- [ ] Quattro overlay debug nel Builder e regressioni browser/salvataggio.
+
+
+## 2026-11-13 — GILDA-01 · La Gilda: produttività delle botteghe L3
+
+**SPECIFICA APPROVATA. FASE 1 IMPLEMENTATA SU BRANCH `feature/gilda-fase1`, NON MERGE; fase 2 aperta (richiede SCOL-01 fase 3).** La fase 1 comprende il modulo `src/settlement-guild.js` (`ConquerGuild`), il bonus in `ConquerCommerce.daily`, la Gilda unica per villaggio, la scheda Gilda e la riga nel Profilo; dettagli in [STATUS](STATUS.md). Intervista con il product owner del 11–13/11/2026 (sessione «Gilda»). Decisione [D-GILDA-261113](DECISIONS.md). Base verificata: `main` e93b22b5. La Gilda **assorbe la Casa delle Corporazioni**: nessun edificio separato. Usa le ricette di [ECO-FIL-01](BACKLOG.md) e il contratto dei ruoli istruiti [D-SCOL-261112](DECISIONS.md); non tocca imposte né decreti di [FISCO-01](BACKLOG.md).
+
+**Stato live su `main` (verificato nel codice)**
+- `guild` è un civico legato a un pozzo (`WELL_CIVIC_TYPES` in `settlement-civic-annexes.js`, uno per tipo e per pozzo entro 9U), livelli L1–L3, costo 180 oro · 110 pietra · 120 legno, 6 giorni di cantiere (`settlement-core.js`). Modelli, cantiere, crollo, incendio (L1–L2 a graticcio) e cutaway esistono. Il cutaway (`settlement-civic3d.js`, `INTERIOR.guild1–3`) ha 2/2/3 scrittoi, banco, casse e pezze di stoffa.
+- **Nessun effetto di gioco.** Le botteghe L3 (`settlement-commerce.js`) producono `SHOP_OUTPUT_PER_DAY = 1` nei giorni feriali e vendono il sabato ai borsellini delle famiglie; gli incassi vanno a `wallet.L3`.
+
+**1. Ruolo**
+- **Solo produttività.** La Gilda non fissa prezzi né qualità, non crea monopoli o quote di mestiere, non gestisce apprendisti: queste voci sono escluse.
+- **Una sola Gilda per villaggio.** Il Builder rifiuta una seconda Gilda. Nei salvataggi che ne hanno più di una conta solo quella di livello più alto (a pari livello la più antica, id minore); le altre restano edifici senza effetto.
+- **Raggio: tutto il villaggio.** Il bonus vale per ogni bottega L3 completata, senza distanza dal pozzo della Gilda.
+
+**2. Bonus per livello**
+| Livello Gilda | Bonus massimo | Posti funzionari |
+| --- | --- | --- |
+| L1 | +25% | 1 |
+| L2 | +50% | 2 |
+| L3 | +100% | 3 |
+- **Bonus effettivo = bonus massimo × resa funzionari**, con resa = `ConquerEducated.coverage('guild.official').yield` (`minYield` 0). Esempio: Gilda L3 con 2 funzionari su 3 → +67%; senza funzionari → nessun bonus.
+- **Il bonus moltiplica produzione e consumo di materie** (ricette ECO-FIL-01): una bottega produce `1 × (1 + bonus)` unità al giorno feriale e consuma la ricetta in proporzione. Senza materie non produce di più; con scorta parziale produce in proporzione. Le frazioni si accumulano come oggi le scorte di bottega.
+- **Botteghe interessate:** fabbro, orafo, vasaio, tessitore, sarto, pellettiere, casaro, affumicatore, falegname (le botteghe L3 di ECO-FIL-01). **Escluse:** officina del castello (è del signore) e birraio della taverna (servizio, non bottega).
+- Più offerta abbassa i prezzi con il ritardo di una settimana già nel mercato (`recordMarketWeek`): è un effetto voluto, non compensato.
+
+**3. Funzionari della Gilda (ruolo istruito)**
+- Descrittore registrato nel contratto D-SCOL-261112: `{id:'guild.official', branch:'lay', label:'Funzionario della Gilda', owner:'GILDA-01', seats: livello della Gilda attiva (0 senza Gilda completata), minYield:0, payer:'guild'}`.
+- Salario standard del contratto: mensile, 2 × `wage.L3` × `wageMul` (cursore dei laici di SCOL-01).
+- **`payer:'guild'` è un pagatore nuovo** (modifica a D-SCOL-261112, come `church` per CHIESA-01): addebita la Cassa della Gilda (§4).
+
+**4. Cassa e quota sulle vendite**
+- **Cassa della Gilda:** un solo numero, `State.economy.guild.gold`, trattato come un borsellino in più. Nessun libro contabile, prezzo o felicità propri: **non è un secondo ledger**. Il signore non la tocca.
+- **Quota sulle vendite delle botteghe L3**, trattenuta il sabato su ogni vendita di Beni L3 e armi delle botteghe, **dopo** tassa sulle vendite e dazio di FISCO-01, su ciò che resta all'artigiano, e versata nella Cassa. Le vendite di servizi e dell'officina del castello non pagano quota.
+- **Pareggio automatico:** a inizio mese l'aliquota si ricalcola come `(salari dei funzionari del mese − saldo della Cassa) / vendite delle botteghe del mese precedente`, tra 0 e un **tetto del 15%**. Senza vendite nel mese precedente (Gilda appena aperta) vale il tetto. Il giocatore non ha un cursore.
+- **Pagamento a fine mese:** la Cassa paga quanti funzionari può, per intero. Gli altri non sono pagati e **per quel mese non coprono il ruolo** (stessa regola dei chierici di CHIESA-01): la resa, e quindi il bonus, scende. Il resto della Cassa passa al mese dopo e riduce l'aliquota successiva.
+- La quota è una contribuzione privata della corporazione, **non un'imposta**: l'Erario non la regola e non entra nell'efficienza di riscossione. Nessun effetto proprio sulla felicità L3.
+
+**5. Stanze e annessi**
+- **Nessun annesso e nessun modello nuovo.** Le stanze esistenti del cutaway ricevono un nome per livello: banco dei funzionari (L1), archivio dei marchi (L2), sala dei maestri (L3). Gli scrittoi del cutaway (2/2/3) mostrano i funzionari coperti. L'effetto dipende solo dal livello.
+
+**6. Legame con Municipio ed Erario**
+- **Nessun legame.** Nessun decreto nuovo, nessuna esenzione, imposte invariate. L'Erario mostra la quota della Gilda in sola lettura accanto al dazio, per chiarezza.
+
+**7. Interfaccia**
+- Scheda **«Gilda»** nell'ispettore: livello, bonus massimo ed effettivo, funzionari coperti/posti, aliquota del mese e sua causa, Cassa, vendite e quota del mese, botteghe ferme «senza materie».
+- Riga «Gilda: bonus · funzionari» nel Profilo › Generale. Avviso nel Centro di controllo quando un funzionario non è pagato o il ruolo è scoperto (avviso «scoperto» già previsto da SCOL-01).
+
+**8. Persistenza** (dentro `State.economy`, già salvato in locale e su cloud)
+- Blocco `guild`: `gold`, `rate` con la causa, `month` (vendite, quota incassata, salari pagati e non pagati, azzerati a ogni mese) e `lastMonth`.
+- **Migrazione lazy** in `state()`: il blocco nasce con `gold 0` e `rate 0` se manca. `economy.version` non cambia, quindi nessun reset.
+
+**Regole transitorie**
+- Finché SCOL-01 fase 3 non porta `registerRole`/`coverage`, la resa vale 1 con Gilda completata e la quota resta a 0 (nessun salario da pagare), come per esattori (FISCO-01) e culto (CHIESA-01).
+- Finché ECO-FIL-01 fase 2 non introduce il consumo di materie, il bonus moltiplica solo la produzione.
+
+**Dipendenze:** SCOL-01 fase 3 (registro dei ruoli, `coverage`, salari) con l'estensione `payer:'guild'`; ECO-FIL-01 fase 2 (ricette e consumo); FISCO-01 fase B per l'ordine di trattenuta dopo il dazio.
+
+**Valori provvisori da bilanciare:** bonus +25/+50/+100%, posti 1/2/3, tetto della quota 15%.
+
+**Fasi di implementazione proposte (una PR ciascuna, solo dopo conferma):**
+1. Gilda attiva unica (regola di collocamento e scelta nei salvataggi), bonus per livello in `ConquerCommerce.daily` con resa transitoria 1, scheda Gilda e riga nel Profilo. Regressione dedicata `qa/guild-regression.cjs`. **Fatta su branch `feature/gilda-fase1`** (il nome della stanza per livello compare già nell'intestazione della scheda).
+2. Ruolo `guild.official` con `payer:'guild'`, blocco `guild`, Cassa, quota del sabato in `sellGoods` dopo il dazio, pareggio mensile, pagamento e mancanze, avvisi, riga in sola lettura nell'Erario, nomi delle stanze nel cutaway. Richiede SCOL-01 fase 3.
+
+**Fuori da questa specifica:** monopoli, quote di mestiere, qualità e prezzi fissati dalla Gilda, apprendisti e promozioni, annessi (Magazzino, Scuola d'arte), esenzioni o privilegi per decreto, effetti sulle botteghe dell'officina del castello.
+
 ## 2026-11-13 — SCRIPT-01 · Scriptorium: la scuola degli Scolarizzati
 
 **SPECIFICA APPROVATA, NESSUN CODICE.** Intervista con il product owner del 13/11/2026 (sessione «Scriptorium»). Decisione [D-SCRIPT-261113](DECISIONS.md). Base verificata: `main` e93b22b5 (SCOL-01 fase 1 #208, CHIESA-01 fase 1 #205, ARTE grafica #195).
@@ -92,7 +224,7 @@
 | Chierico: gestore della Chiesa (`SERVICE_KINDS.church`) ed eventuale personale dello Scriptorium | chierici | Sessione **Chiesa** (da aprire), Scriptorium | La Chiesa. Finché la sessione Chiesa non decide, il castello paga per conto della Chiesa |
 | Esattore (circa 1 ogni 40 abitanti; Municipio e Bargello) | laici | FISCO-01 (#197) | Castello |
 | Giudice (tribunale del Municipio L2; bassa giustizia del Balivo) | laici | FISCO-01 / CRIME | Castello |
-| Funzionario della Gilda | laici | Sessione Gilda | Borsellino L3 delle botteghe |
+| Funzionario della Gilda (`guild.official`, posti 1/2/3 per livello) | laici | GILDA-01 | Cassa della Gilda, alimentata da una quota sulle vendite delle botteghe (`payer:'guild'`, D-GILDA-261113) |
 | Artista | laici | ARTE (#195) | A commissione (ARTE), nessun salario mensile |
 | Scrivano della diplomazia | laici | Diplomazia (cavalieri, corrieri), da assegnare | Castello |
 - Il **gestore della Locanda resta un L3 comune**, non uno scolarizzato.
@@ -417,6 +549,8 @@ BC-251105-05 tetto interno delle torri: **sul branch `feature/tower-inner-roof`,
 **PR aperte:** #186 cantieri avviabili senza scorte con approvvigionamento e priorità (CI verde, da rivedere) · #184 densità foreste e sottobosco (bozza) · #162 biomi regionali e settori (bozza, esperimento).
 
 **Lavoro non pubblicato (worktree locali, nessuna PR):** BC-251105-05 tetto interno dentro i merli (`feature/tower-inner-roof`, 1 commit + modifiche) · BC-251105-09 tetti della Long house (`feature/longhouse-roofs`, solo modifiche non committate) · `figure-billboards` (19 commit) · `combat-ai` (26 commit su remoto, ultima nota: assedio di 5 minuti fallito).
+
+**Catalogo edifici — ancora solo progetto, da confermare prima del codice:** Presidio antincendio, effetti dello Scriptorium, Bagni pubblici, Lavatoio, Approdo fluviale, Cortile domestico, Giardino dei semplici, Carbonaia. Avamposto: fatto con MIL-RES-01. Municipio e Palazzo del Balivo: progettati in FISCO-01 (10/11/2026). Gilda (con la Casa delle Corporazioni): progettata in GILDA-01 (13/11/2026). Il Corpo di Guardia esiste come stanza `guard` e sala del Municipio, senza pattuglie né allarmi propri.
 
 **Catalogo edifici — ancora solo progetto, da confermare prima del codice:** Presidio antincendio, Gilda/Corporazioni, Bagni pubblici, Lavatoio, Approdo fluviale, Cortile domestico, Giardino dei semplici, Carbonaia. Avamposto: fatto con MIL-RES-01. Municipio e Palazzo del Balivo: progettati in FISCO-01 (10/11/2026). Il Corpo di Guardia esiste come stanza `guard` e sala del Municipio, senza pattuglie né allarmi propri.
 

@@ -13,7 +13,8 @@
   // Ground-plane quarter turns of the camera (same convention as rotateViewPoint).
   function rotDir(x,y,turns){
     const q=((turns%4)+4)%4;
-    return q===1?[-y,x]:q===2?[-x,-y]:q===3?[y,-x]:[x,y];
+    if(Number.isInteger(q))return q===1?[-y,x]:q===2?[-x,-y]:q===3?[y,-x]:[x,y];
+    const a=q*Math.PI/2,c=Math.cos(a),s=Math.sin(a);return[x*c-y*s,x*s+y*c];
   }
   // Castle rule (castleSideShade): top faces keep the base colour, side faces take
   // one of two tones by their facing against a light at 30 degrees; pale materials
