@@ -27,6 +27,91 @@ Specifica di progetto concordata con l'utente il 09–10/11/2026. Ordine deciso 
 - **Osservazioni sullo stato attuale (non corrette qui):** il cambio di livello del Municipio è gratuito e istantaneo; gli annessi (orto di corte) sono gratuiti e istantanei; i posti `watchmen`/`prisoners` sono calcolati ma nessun sistema li legge.
 
 
+## 2026-11-12 — CHIESA-01 · La Chiesa come entità autonoma
+
+**SPECIFICA APPROVATA. Fase 1 (Cassa, offerte, lasciti, dono, scheda) IMPLEMENTATA SU BRANCH `feature/chiesa-fase1`, NON MERGE; fasi 2–3 aperte.** Intervista con il product owner del 12/11/2026 (sessione «Chiesa», nata dalla sessione Scolarizzati).
+- **Fase 1, cosa c'è:** modulo `src/settlement-church.js` (`ConquerChurch`) con blocco `State.economy.church` a migrazione lazy, offerte domenicali, lasciti a fine anno, dono 10/50/100 dal castello con +1 di Favore ogni 10 oro e registro delle cause. Scheda «Chiesa» nell'ispettore (classico e UI v2), riquadro «Chiesa: cassa · favore» nel Profilo › Generale. Agganci in `ConquerEconomy.tick`: domenica (offerte), fine anno (lasciti, contati nel mese che chiude), fine mese (chiusura del mese). Regressione `qa/church-regression.cjs` nel workflow Economy flows.
+- **Regola transitoria:** finché SCOL-01 non porta `ConquerEducated.coverage('church.priest')`, una chiesa completata celebra con resa 1. Il Favore, per ora, si muove solo con i doni. Capienza 60/150/300 già usata per la quota di fedeli serviti delle offerte.
+- **Fase 1, cosa manca (fasi 2–3):** salari dei chierici e riserva, rette clericali, Monastero, messa, prediche, carità, feste, co-finanziamento dei cantieri, avvisi nel Centro di controllo, altre cause del Favore. Decisione [D-CHIESA-261112](DECISIONS.md). Base verificata: `main` 431af30d. Completa [SCOL-01](BACKLOG.md) (contratto D-SCOL-261112, branch `docs/scolarizzati`, non ancora su `main`): definisce chi paga i chierici (`payer:'church'`) e come si fissa il loro salario. Usa la decima di FISCO-01 (branch `feature/bargello-balivo`, fase B non implementata) solo come fattore del Favore.
+
+**Stato live su `main` (verificato nel codice)**
+- `SERVICE_KINDS.church = {operatorTier:3, kind:'worship', income:'not-simulated'}` in `settlement-commerce.js`. Il gestore (`assignService`) è una casa L3 assegnata solo nei test, senza reddito né effetti.
+- Annessi della Chiesa (`settlement-civic-annexes.js`): Cimitero (L1, intrinseco), Orto delle erbe e Sagrato (L1), Scriptorium e Ospizio (L2), Monastero e Chiostro (L3). Nessuno ha effetti. Livelli della chiesa L1–L3 (`CIVIC_LEVEL_TYPES`); costo 320 oro, 360 pietra, 110 legno, 18 metallo; 10 giorni di cantiere. Non risulta un limite al numero di chiese.
+- Economia (`settlement-economy.js`): borsellini `wallet.L1–L4` e `castleGold`; `monthly` paga solo le classi 1–2; la felicità per classe si aggiorna nel mercato del sabato (`weekday 5`; il giorno 0 è lunedì) e la muovono solo il cibo, le razioni e l'infermeria; `annual` ricalcola `wage`.
+- La stanza `chapel` del castello esiste: dà prestigio 1 nell'assedio (`settlement-siege.js`) e nessun altro effetto.
+
+**1. L'istituzione e la Cassa**
+- **Una sola istituzione «la Chiesa» per villaggio**, anche con più chiese. Ogni edificio chiesa è una parrocchia. La **sede** è la chiesa di livello più alto; a pari livello vale la più antica (id minore). Il capo della Chiesa locale è un pievano (sede L2) o un arciprete (sede L3).
+- **Cassa della Chiesa:** un solo numero, `State.economy.church.gold`, trattato come un borsellino in più. Non ha libri contabili, prezzi, merci o felicità propri, quindi **non è un secondo ledger**. Il signore non può spenderla: vi agisce solo con doni, cantieri e politiche.
+- Senza chiese completate la Cassa resta ferma: nessuna entrata, nessuna spesa e salari dei chierici non pagati.
+
+**2. Entrate**
+| Voce | Regola | Valori provvisori |
+| --- | --- | --- |
+| **Offerte** (domenica, `weekday 6`) | Per ogni classe: `abitanti serviti × quota × resa del culto × (0,5 + felicità/100)`. Si tolgono dal borsellino della classe, mai oltre il saldo. Sono servite solo le classi raggiunte da una chiesa con chierici (capienza §5). Il signore non le tocca. | quota L1 0,02 · L2 0,05 · L3 0,1 · L4 0,3 oro |
+| **Lasciti** (fine anno, in `annual`) | Il 2% di `wallet.L3` e di `wallet.L4`, ciascuno solo se la felicità della classe è ≥ 50 e c'è almeno una chiesa completata. | 2%, soglia 50 |
+| **Dono del signore** | Pulsante «Dona alla Chiesa» (10 / 50 / 100 oro) dal `castleGold`. Alza il Favore (§6). | +1 di Favore ogni 10 oro |
+- **Decima:** l'unica è **quella del signore** (FISCO-01, in natura, riscossa dal Balivo). **La Chiesa non riscuote una decima e non ne riceve una quota.** Una decima del signore alta pesa sul Favore (§6).
+
+**3. Spese, in ordine fisso di priorità**
+1. **Salari dei chierici** (§4), sempre per primi.
+2. **Rette clericali:** quando uno Scriptorium è in modo Clericale, la retta di 20 oro per allievo la paga la Cassa e non il borsellino della classe (modifica SCOL-01 §2). Senza fondi non iscrive. Lo Scriptorium in modo Laico continua a far pagare il borsellino della classe.
+3. **Carità** (richiede l'Ospizio): ogni sabato spende 0,05 oro per ogni abitante L1/L2 assistito, fino alla capienza dell'Ospizio. A copertura piena dà +0,2 di felicità a settimana a L1 e L2, in proporzione all'oro speso.
+4. **Feste religiose:** al massimo una all'anno, se l'eccedenza sopra la riserva è ≥ 60 oro. Costa 40 oro e dà +1 di felicità una tantum a tutte le classi. Non si somma alla Festa patronale del Municipio (FISCO-01) nella stessa settimana: vale la maggiore.
+5. **Co-finanziamento dei cantieri:** quando il signore costruisce o migliora una chiesa o un suo annesso, la Cassa paga fino al 50% dell'oro del preventivo, entro l'eccedenza sopra la riserva. Il resto lo paga il castello.
+- **Riserva:** carità, feste e cantieri partono solo con la Cassa sopra **6 mesi di salari dei chierici**. Salari e rette non dipendono dalla riserva.
+
+**4. Chierici e salario**
+- I chierici sono gli scolarizzati del ramo `clergy` di SCOL-01. **Li paga la Cassa: il castello smette di pagarli per conto della Chiesa.**
+- **Il salario lo decide la Chiesa, una volta all'anno (`annual`), senza cursore per il giocatore.** Base 2 × `wage.L3`. Moltiplicatore 125% se la Cassa copre ≥ 12 mesi di salari, 75% se ne copre < 3, altrimenti 100%. Il moltiplicatore e la causa compaiono nella scheda Chiesa.
+- **Mancanza di fondi:** ogni mese la Cassa paga quanti chierici può, per intero e in ordine di priorità dei ruoli. Gli altri restano non pagati e per quel mese **non coprono il ruolo**: la resa scende secondo la regola di SCOL-01.
+- **Posti** (ruoli registrati con `payer:'church'`):
+  - `church.priest`: per ogni chiesa completata L1 1 · L2 2 · L3 3 (parroco, pievano o arciprete, più i chierici);
+  - `church.scriptoriumMaster`: +1 per ogni Scriptorium in modo Clericale (maestro);
+  - `church.monk`: +2 per ogni Monastero (L3).
+  - `minYield` 0: una chiesa senza chierici non celebra.
+- **Monastero come origine dei chierici:** ogni Monastero tiene un corso fisso Clericale di 2 novizi all'anno, **senza retta**, con la stessa iscrizione automatica e lo stesso tetto dello Scriptorium. Aggiunge un'origine a D-SCOL-261112 §6: resta il motore degli scolarizzati a crearli.
+
+**5. Messa e prediche**
+- **Messa** (domenica): ogni chiesa con chierici serve una capienza di fedeli (L1 60 · L2 150 · L3 300 abitanti). La quota servita è `min(1, capienza totale / abitanti)` e vale per tutte le classi. Le classi servite guadagnano `+0,2 × resa del culto × quota servita` di felicità a settimana. Resa del culto = `coverage('church.priest').yield`.
+- **Prediche**, con chierici presenti:
+  - **Favore ≥ 70:** a favore del signore, +0,1 di felicità a settimana a tutte le classi e un modificatore negativo della tensione di CRIME;
+  - **Favore ≤ 30:** contro il signore, −0,3 a settimana a L1 e L2 e un modificatore positivo della tensione.
+- **Ordine pubblico:** resta di CRIME, unica fonte (C-01). La Chiesa registra solo un modificatore; finché CRIME non lo legge, l'effetto è solo felicità.
+
+**6. Favore della Chiesa verso il signore**
+- Un indicatore da 0 a 100, che parte da 50 e si aggiorna il sabato. Il pannello ne elenca le cause.
+| Sale | Scende |
+| --- | --- |
+| Dono del signore: +1 ogni 10 oro | Decima del signore sopra il 10% (FISCO-01): −0,2 a settimana |
+| Cappella (`chapel`) nel castello: +0,1 a settimana | Esecuzione al patibolo o alla forca: −2 per evento (quando CRIME le simula) |
+| Cassa sopra la riserva: +0,1 a settimana | Ruoli dei chierici scoperti: −0,2 a settimana |
+- In questa fase **niente interdetto né scomunica**: restano un aggancio per la diplomazia.
+
+**7. Interfaccia**
+- Scheda **«Chiesa»** nell'ispettore di ogni chiesa, uguale per tutte perché l'istituzione è una. Mostra: Cassa e riserva; entrate e uscite del mese per voce; Favore con le cause; posti e coperti dei chierici per ruolo; salario deciso e causa; ultima e prossima festa; pulsante «Dona alla Chiesa».
+- Una riga «Chiesa: cassa · favore» nel Profilo › Generale. Avvisi nel Centro di controllo per chierici non pagati e per Favore ≤ 30.
+
+**8. Persistenza** (dentro `State.economy`, già salvato in locale e su cloud)
+- Blocco `church`:
+  - `gold`, `favor`, `wageMul` con la causa;
+  - `month` (entrate e uscite per voce, azzerate a ogni mese) e `lastMonth`;
+  - `feast` (anno dell'ultima festa e settimana attiva);
+  - `favorLog` (ultime cause, al massimo 8).
+- **Migrazione lazy** in `state()`: il blocco nasce con `gold 0` e `favor 50` se manca. `economy.version` non cambia, quindi nessun reset.
+
+**Dipendenze:** fasi 1–3 di SCOL-01 (contatori `clergy`, registro dei ruoli, `coverage`). FISCO-01 fase B per l'aliquota della decima; finché manca, il termine del Favore è inattivo. CRIME per il modificatore di tensione e per le esecuzioni. Decreto Festa patronale (FISCO-01) per la regola di non cumulo.
+
+**Valori provvisori da bilanciare:** quote delle offerte, fattore di felicità, lasciti 2% e soglia 50, doni 10/50/100, soglie del salario 3/12 mesi e moltiplicatori 75/125%, posti 1/2/3 + 1 + 2, capienze 60/150/300, +0,2 di messa, ±0,1/−0,3 di prediche, soglie del Favore 30/70, carità 0,05 e +0,2, festa 40 oro su soglia 60 con +1, co-finanziamento 50%, riserva di 6 mesi, novizi 2 l'anno.
+
+**Fasi di implementazione proposte (una PR ciascuna, solo dopo conferma e dopo SCOL-01 fase 3):**
+1. Blocco `church`, migrazione, offerte, lasciti, dono, scheda Chiesa e riga nel Profilo.
+2. Ruoli dei chierici con `payer:'church'`, posti per livello, salario dalla Cassa con regola annua e mancanze, rette clericali, corso del Monastero.
+3. Messa, Favore, prediche, carità, feste e co-finanziamento dei cantieri; aggancio del modificatore CRIME.
+Regressione dedicata: `qa/church-regression.cjs`.
+
+**Fuori da questa specifica:** decima ecclesiastica o quota della decima alla Chiesa (scartate); interdetto, scomunica, vescovo e Chiesa sovraregionale (diplomazia); merci della Chiesa (cera, vino da messa, pergamena); effetti di Chiostro, Orto delle erbe, Sagrato e Cimitero; feste indette dal signore attraverso la Chiesa.
+
 ## 2026-11-10 — ECO-FIL-01 · Filiere produttive complete
 
 **SPECIFICA APPROVATA. Fase 1 (miniera → metallo) IMPLEMENTATA SU BRANCH `feature/eco-fil-01-miniera-metallo`, NON MERGE; fasi 2–6 aperte.** Intervista con il product owner del 10/11/2026 (sessione «filiere», nata dalla sessione Gilda). Decisione [D-ECO-FIL-261110](DECISIONS.md). Base verificata: `main` 89e7a2c, non le note della mappa `CONQUER_ECONOMY_ULTIMA_REVISIONE_NOV10` (scritte su `feature/autonomous-urban-economy`). Chiude la decisione aperta «miniera stone/metal» (P0-08, ROADMAP M1) e gli errori di mappatura di `WORKSHOP_OUTPUT`. La Gilda (sessione dedicata) applica il suo +25/+50/+100% a queste ricette: il bonus moltiplica produzione **e** consumo di materie, quindi senza materie non produce di più.

@@ -203,6 +203,7 @@ function renderFunctionPanel(){
   if(CIVIC_LEVEL_TYPES.includes(s.type)){
     html+=`<div class="slot"><div class="slot-label">Civic development · L${civicLevel(s)} (skeleton)</div><div class="grid3">${civicLevels(s.type).map(level=>`<button data-civic-level="${level}" class="${civicLevel(s)===level?'active':''}">L${level}</button>`).join('')}</div><div class="legend">Three planned stages; no economy or service effects yet.</div></div>`;
   }
+  if(s.type==='church')html+=window.ConquerChurch?.panelHtml?.(s)||'';
   if(CIVIC_ANNEX_CATALOG[s.type]){
     const catalog=CIVIC_ANNEX_CATALOG[s.type],children=civicAnnexChildren(s.id);
     html+='<div class="slot"><div class="slot-label">Annexes · '+children.length+' built (skeleton)</div>'+
@@ -355,6 +356,7 @@ function renderFunctionPanel(){
   window.ConquerCrossings?.bindPanel(slots);
   window.ConquerKeepEntrance?.bindPanel(slots);
   window.ConquerSoldiers?.bindTowerPanel?.(slots,s);
+  window.ConquerChurch?.bindPanel?.(slots);
   // Every control acts through StructureCommands (src/settlement-structure-commands.js), shared with UI v2.
   const on=(selector,fn,event='onclick')=>slots.querySelectorAll(selector).forEach(el=>el[event]=e=>{const target=selectedStructure();if(target)fn(target.id,el,e)});
   on('[data-house-up]',id=>StructureCommands.changeHouseLevel(id,1));
