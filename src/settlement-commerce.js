@@ -230,6 +230,8 @@
     const alarm=(window.ConquerCombat?.alarmMode?.()||'off')!=='off';
     if(dow<5&&!alarm)spawnWorkshops(c,day);
     const demand=sectorDemand(residents());
+    // GILDA-01: the active guild multiplies every L3 workshop's daily output.
+    const out=roundGold(SHOP_OUTPUT_PER_DAY*(1+Math.max(0,finite(window.ConquerGuild?.bonus?.()))));
     for(const shop of Object.values(c.shops)){
       const good=Market.WORKSHOP_OUTPUT[shop.kind],kind=WORKSHOP_KINDS[shop.kind];
       if(!good||!kind)continue;
@@ -238,12 +240,12 @@
       Object.assign(shop,Urban.updateWorkshop(shop,{hour:dow===6?0:12,demand:demand[kind.demand]??.5,
         visitors:dow===5?1:0,artisanAvailable:!alarm}));
       if(!working)continue;
-      c.goods[good]=roundGold(c.goods[good]+SHOP_OUTPUT_PER_DAY);
-      c.week.supply[good]=roundGold(finite(c.week.supply[good])+SHOP_OUTPUT_PER_DAY);
-      shop.produced=roundGold(shop.produced+SHOP_OUTPUT_PER_DAY);
+      c.goods[good]=roundGold(c.goods[good]+out);
+      c.week.supply[good]=roundGold(finite(c.week.supply[good])+out);
+      shop.produced=roundGold(shop.produced+out);
       // L3 artisan goods are booked above; the L1 carter only depicts their
       // physical delivery to the market, never an extra economic transaction.
-      window.ConquerHaulage?.record?.({siteId:shop.houseId,good,qty:SHOP_OUTPUT_PER_DAY,
+      window.ConquerHaulage?.record?.({siteId:shop.houseId,good,qty:out,
         day,destination:'market'});
     }
     // Week N prices only see week N-1: one commodity per day, at most once a week.

@@ -142,6 +142,7 @@
       militaryAssignments:game?.militaryAssignments?.(),
       diplomacy:window.ConquerDiplomacy?.state?.(),
       church:window.ConquerChurch?.snapshot?.(),
+      guild:window.ConquerGuild?.snapshot?.(),
       sites:(State.structures||[]).filter(s=>s.construction && typeof underConstruction==='function' && underConstruction(s))
     };
     d.warnings = warnings(d);
@@ -179,6 +180,7 @@
       kpi('Tesoreria',fmt(d.economy?.castleGold),'Oro economico'),
       kpi('Cantieri',fmt(d.sites.length)),
       ...(d.church?.churches?[kpi('Chiesa',fmt(d.church.gold)+' oro','Favore '+fmt(d.church.favor)+'/100',d.church.favor<=30?'bad':'')]:[]),
+      ...(d.guild?.activeId?[kpi('Gilda','+'+Math.round(d.guild.bonus*100)+'%','Funzionari L'+d.guild.level+' · resa '+Math.round(d.guild.officialYield*100)+'%',d.guild.bonus<=0?'bad':'')]:[]),
       kpi('Cavalieri',fmt(d.knights?.current)),
       kpi('Avvisi',fmt(d.warnings.length),'',d.warnings.length?'bad':'good')
     ])+grid([

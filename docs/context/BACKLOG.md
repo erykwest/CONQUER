@@ -2,7 +2,7 @@
 
 ## 2026-11-13 — GILDA-01 · La Gilda: produttività delle botteghe L3
 
-**SPECIFICA APPROVATA, NESSUN CODICE.** Intervista con il product owner del 11–13/11/2026 (sessione «Gilda»). Decisione [D-GILDA-261113](DECISIONS.md). Base verificata: `main` e93b22b5. La Gilda **assorbe la Casa delle Corporazioni**: nessun edificio separato. Usa le ricette di [ECO-FIL-01](BACKLOG.md) e il contratto dei ruoli istruiti [D-SCOL-261112](DECISIONS.md); non tocca imposte né decreti di [FISCO-01](BACKLOG.md).
+**SPECIFICA APPROVATA. FASE 1 IMPLEMENTATA SU BRANCH `feature/gilda-fase1`, NON MERGE; fase 2 aperta (richiede SCOL-01 fase 3).** La fase 1 comprende il modulo `src/settlement-guild.js` (`ConquerGuild`), il bonus in `ConquerCommerce.daily`, la Gilda unica per villaggio, la scheda Gilda e la riga nel Profilo; dettagli in [STATUS](STATUS.md). Intervista con il product owner del 11–13/11/2026 (sessione «Gilda»). Decisione [D-GILDA-261113](DECISIONS.md). Base verificata: `main` e93b22b5. La Gilda **assorbe la Casa delle Corporazioni**: nessun edificio separato. Usa le ricette di [ECO-FIL-01](BACKLOG.md) e il contratto dei ruoli istruiti [D-SCOL-261112](DECISIONS.md); non tocca imposte né decreti di [FISCO-01](BACKLOG.md).
 
 **Stato live su `main` (verificato nel codice)**
 - `guild` è un civico legato a un pozzo (`WELL_CIVIC_TYPES` in `settlement-civic-annexes.js`, uno per tipo e per pozzo entro 9U), livelli L1–L3, costo 180 oro · 110 pietra · 120 legno, 6 giorni di cantiere (`settlement-core.js`). Modelli, cantiere, crollo, incendio (L1–L2 a graticcio) e cutaway esistono. Il cutaway (`settlement-civic3d.js`, `INTERIOR.guild1–3`) ha 2/2/3 scrittoi, banco, casse e pezze di stoffa.
@@ -59,7 +59,7 @@
 **Valori provvisori da bilanciare:** bonus +25/+50/+100%, posti 1/2/3, tetto della quota 15%.
 
 **Fasi di implementazione proposte (una PR ciascuna, solo dopo conferma):**
-1. Gilda attiva unica (regola di collocamento e scelta nei salvataggi), bonus per livello in `ConquerCommerce.daily` con resa transitoria 1, scheda Gilda e riga nel Profilo. Regressione dedicata `qa/guild-regression.cjs`.
+1. Gilda attiva unica (regola di collocamento e scelta nei salvataggi), bonus per livello in `ConquerCommerce.daily` con resa transitoria 1, scheda Gilda e riga nel Profilo. Regressione dedicata `qa/guild-regression.cjs`. **Fatta su branch `feature/gilda-fase1`** (il nome della stanza per livello compare già nell'intestazione della scheda).
 2. Ruolo `guild.official` con `payer:'guild'`, blocco `guild`, Cassa, quota del sabato in `sellGoods` dopo il dazio, pareggio mensile, pagamento e mancanze, avvisi, riga in sola lettura nell'Erario, nomi delle stanze nel cutaway. Richiede SCOL-01 fase 3.
 
 **Fuori da questa specifica:** monopoli, quote di mestiere, qualità e prezzi fissati dalla Gilda, apprendisti e promozioni, annessi (Magazzino, Scuola d'arte), esenzioni o privilegi per decreto, effetti sulle botteghe dell'officina del castello.

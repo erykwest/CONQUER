@@ -64,6 +64,9 @@ test('one town hall and one guild per well, bound to the nearest free well',()=>
  assert.equal(place('th2','townhall',th2[0],th2[1]),true);
  assert.equal(run("State.structures.find(s=>s.id==='th2').wellId"),'w2');
  assert.equal(run("structureLabel(State.structures.find(s=>s.id==='th2'))"),'Town hall · L1 · Borgo San Rocco');
+ // GILDA-01: one guild hall per village, even at a free quarter well.
+ assert.match(run("wellCivicPlacementCheck({id:'g2',type:'guild',x:140,y:121}).reason"),/one guild hall per village/);
+ assert.equal(free('guild',140,118),null,'a second guild hall is refused at the quarter well');
  const facts=JSON.parse(run("JSON.stringify(StructureCommands.describeStructure('th2').facts)"));
  assert.deepEqual(facts.find(f=>f.key==='square'),{key:'square',value:'Borgo San Rocco',center:false});
  // Designating the quarter as centre relabels its town hall.
