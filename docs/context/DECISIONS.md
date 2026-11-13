@@ -1,5 +1,14 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-MP-ACCOUNT-261113 — Profilo globale e partecipazioni multi-campagna (13/11/2026)
+
+- **DECISO dal product owner:** separare il profilo/account del giocatore dalla partita, permettendo a uno stesso account di essere **presente in più campagne/server contemporaneamente**. La lobby deve mostrare e riaprire tutte le sue partecipazioni.
+- **CONTRATTO:** account globale identificato da `user_id`, associazione a campagne distinta (`campaign_id + user_id`) e stato autorevole di ogni partita/feudo isolato per `campaign_id` / identificativo territoriale. Il giocatore può ricoprire ruoli feudali differenti nelle diverse campagne; risorse, unità, territori e progressi non vengono condivisi.
+- **GAP ATTUALE:** `src/settlement-app-persistence.js` usa oggi `settlements` con chiave di conflitto `user_id,world_cell_x,world_cell_y` e coordinate (0,0), senza discriminante di campagna. Serve progettare schema, migrazione, autenticazione e autorizzazioni per multi-server prima di implementare lobby e multiplayer.
+- **APERTO:** profilo pubblico globale vs identità del signore in partita, limiti di partecipazioni, ricompense globali e politiche di abbandono/sconfitta.
+- **STATO:** solo design documentato; non implementato. Specifica: [MULTIPLAYER-SERVER-SCOPE.md](../MULTIPLAYER-SERVER-SCOPE.md). ROADMAP M0–M5 invariata.
+
+
 ## D-MP-261113 — Ingresso multiplayer e colonizzazione feudale (13/11/2026)
 
 - **DECISO, solo design:** server multiplayer dimensionati indicativamente per 20–100 giocatori, con minimo di avvio ancora da fissare. Slot di giocatori, feudi bot e territori non colonizzati sono concetti distinti. I nuovi giocatori **non sostituiscono bot** e **non ereditano sviluppi IA**.
