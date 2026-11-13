@@ -46,7 +46,14 @@
     ['villager','Popolano','Popolazione','Civili'],
     ['spearman','Fanteria','Truppe','Militari'],['archer','Arciere','Truppe','Militari'],
     ['knight','Cavaliere','Truppe','Militari'],['wagon','Carro animato 2D','Veicoli','Carri'],
-    ['wagon3d','Carro animato 3D','Veicoli','Carri']
+    ['wagon3d','Carro animato 3D','Veicoli','Carri'],
+    // The in-game 2D horse (settlement-animals.js) and everything that rides or pulls with it.
+    ['horse2d','Cavallo 2D (passo)','Fauna','Cavalli 2D'],['horse2dGraze','Cavallo 2D (pascola)','Fauna','Cavalli 2D'],
+    ['knight2d','Cavaliere a cavallo 2D','Truppe','Cavalli 2D'],['messenger2d','Messaggero a cavallo 2D','Truppe','Cavalli 2D'],
+    ['wagonTeam','Carro con tiro 2D','Veicoli','Carri'],
+    // The other in-game 2D animals (livestock and wildlife), same painter as the horse.
+    ...[['sheep','Pecora'],['goat','Capra'],['cow','Mucca'],['deer','Cerva'],['stag','Cervo'],['wolf','Lupo'],['boar','Cinghiale'],['bear','Orso']]
+      .map(([k,name])=>[k+'2d',name+' 2D (passo)','Fauna','Animali 2D'])
   ];
   // Work animations: the villager with each tool of settlement-work-anim.js (action -> tool as in the Lab).
   const WORK=[['dig','shovel','Scavatore (pala)'],['chop','axe','Taglialegna (ascia)'],['pick','pickaxe','Cavatore (piccone)'],
@@ -465,6 +472,25 @@
     if(subject==='wagon'&&window.ConquerWagons?.drawWagon){
       window.ConquerWagons.drawWagon(g,w*.48,h*.64,Math.min(w*.48,h*.8),
         {chassis:'wagon',cargo:['crate','barrel'],team:[],facing:1,moving:false,t:0,distance:0});return;
+    }
+    // 2D horses exactly as the game draws them (fixed phase, art facing right).
+    const A=window.ConquerAnimals,M2=window.ConquerMounted2D;
+    if(subject==='horse2d'||subject==='horse2dGraze'){
+      if(A?.drawAnimal){const graze=subject==='horse2dGraze';
+        A.drawAnimal('horse',g,w*.5,h*.9,Math.min(w,h)*.5,{t:.15,mode:graze?'browse':'walk',blend:graze?.86:0,facing:1,coat:'brown'});return}
+    }
+    // Other 2D animals at the horse's box size (their own scale undone), mid-stride.
+    const sp2d=/^(\w+)2d$/.exec(subject)?.[1];
+    if(sp2d&&sp2d!=='horse'&&A?.SPECIES?.[sp2d]){
+      A.drawAnimal(sp2d,g,w*.5,h*.9,Math.min(w,h)*.5*1.9/(A.SPECIES[sp2d].scale||1),{t:.15,mode:'walk',facing:1});return;
+    }
+    if((subject==='knight2d'||subject==='messenger2d')&&M2?.draw&&A){
+      M2.draw(g,w*.48,h*.9,Math.min(w,h)*.36,{kind:subject==='knight2d'?'knight':'messenger',mode:'idle',t:0,facing:1,coat:'grey',
+        livery:{main:'#b32628',alt:'#eac15b'},paint:null});return;
+    }
+    if(subject==='wagonTeam'&&window.ConquerWagons?.drawWagon&&A){
+      window.ConquerWagons.drawWagon(g,w*.24,h*.78,Math.min(w*.17,h*.34),
+        {chassis:'wagon',cargo:['sack','crate','barrel'],team:[{coat:'brown'},{coat:'black'}],facing:1,moving:true,t:.15,distance:20});return;
     }
     const previous=ctx,oldScale=State.view.scale;
     try{

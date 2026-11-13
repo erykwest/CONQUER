@@ -21,12 +21,30 @@
 | **Home / Le mie campagne** | Campagne in cui l'account partecipa, selezione del feudo, situazione sintetica e avvisi | **DECISO** concettualmente |
 | **Lobby / Trova partita** | Catalogo dei server accessibili, parametri pubblici già definiti in MP-01 (età, progressi, utenti/bot, posti/territori idonei, eventuali orari regionali) | **DECISO** concettualmente |
 | **Dashboard di campagna** | KPI per feudo/campagna; collegamenti a gestione dettagliata, ordini, mappa e messaggistica | **DECISO** concettualmente; metriche esatte **APERTE** |
-| **Centro di controllo remoto** | Letture e modifiche gestionali pertinenti allo stesso stato usato nel Builder, con autorizzazioni | **DECISO** come funzione; perimetro comandi **APERTO** |
+| **Centro di controllo remoto** | Gestione economica, fiscale, militare strategica, diplomatica, lavoratori, cantieri già localizzati; senza Builder geometrico | **DECISO** perimetro funzionale generale; singoli comandi **APERTI** |
 | **Posta e notifiche** | Ricevuti/inviati, rapporti e allarmi per campagna, con i tempi simulati dove previsti | **DECISO** come dominio; unificazione UI **PROPOSTA** |
 | **Diplomazia, tributi, spedizioni** | Operazioni del feudo e stato delle azioni/convogli; comandi verso gli altri feudi rispettano le regole del mondo | **DECISO** come domini; semantica dei singoli comandi **APERTA** |
 | **Mappa regionale** | Lettura politica/territoriale e interazione contestuale con territori, feudi e missioni | **DECISO** come dominio; feature specifiche **APERTE** |
 
 **KPI candidati (PROPOSTI, non già scelti):** popolazione, felicità, scorte e autonomia alimentare, andamento economico/produzione, lavoratori, cantieri, guarnigione e allarmi, assedi, convogli in viaggio, tributi in arrivo/scadenza, lettere non lette, relazioni/vassallaggio, territori amministrati, tempi di aggiornamento dei dati. Evitare dashboard con valori inventati: distinguere **snapshot corrente** da **ultimo rapporto diplomatico ricevuto**.
+
+## 2a. Confine funzionale del remote control — DECISO (13/11/2026)
+
+**DECISO — gestione gestionale e strategica da browser, poi app mobili Android/iOS:** il controllo remoto deve permettere di amministrare il proprio insediamento **senza aprire la scena 3D**, con le stesse regole e autorizzazioni della partita:
+- **Economia e lavoro:** consultare produzione, risorse, scorte e KPI; assegnare lavoratori, priorità e politiche economiche tramite il Job Manager e comandi equivalenti del motore.
+- **Fisco e amministrazione:** consultare bilanci e tributi, impostare aliquote, decreti e politiche consentite dal ruolo del giocatore.
+- **Cantieri — programmazione, non geometria:** monitorare avanzamento, risorse e manodopera; pianificare attività, finanziamento e priorità su **strutture o progetti già localizzati**. La scelta/predisposizione delle coordinate e la geometria degli edifici non si effettua qui.
+- **Militare strategico:** consultare guarnigioni e allarmi, organizzare spedizioni, impartire ordini di marcia e altre azioni strategiche consentite.
+- **Diplomazia, posta e logistica:** corrispondenza della branch `messages` dopo integrazione, relazioni feudali, negoziazioni, tributi, carovane e operazioni connesse alla **mappa regionale**.
+
+**DECISO — funzioni riservate alla vista di gioco/Builder 3D:**
+- **Piazzamento geometrico preciso** e posizionamento di nuovi edifici e strutture sul terreno.
+- **Progettazione e modifica spaziale delle fortificazioni**, mura, porte, torri, geometrie e collegamenti.
+- **Controllo tattico diretto** di unità e battaglie nella scena. Gli **ordini strategici** e le spedizioni rimangono accessibili da remoto.
+
+**Confine operativo:** il remote control non diventa un secondo Builder grafico. Un ordine remoto relativo a un cantiere può agire su una costruzione già collocata o su una pianificazione amministrativa che non richiede coordinate; non piazza automaticamente edifici né aggira vincoli fisici o costi della simulazione. Le azioni avvengono tramite comandi autorevoli condivisi: nessuna nuova economia, nessun secondo motore militare.
+
+**Restano APERTI** catalogo completo dei singoli comandi, latenza dei comandi locali, autorizzazioni di sudditi e vassalli, eventuale pianificazione di edifici *non ancora collocati* senza decisione geometrica, UX e notifiche. Il perimetro generale gestione remota vs interazioni spaziali/tattiche **non è più aperto**.
 
 ## 3. Architettura da preservare
 
@@ -50,7 +68,7 @@
 
 ## 4. Decisioni ancora necessarie
 
-1. **Perimetro remote control:** tutti i comandi gestionali disponibili nel Builder o inizialmente solo controllo strategico, notifiche e operazioni a livello feudale? Il piazzamento geometrico di strutture nella vista 3D potrebbe restare esclusivo del Builder.
+1. **Dettaglio comandi:** inventario esatto dei comandi remoti per economia, fisco, lavoro, cantieri già localizzati, strategia, diplomazia e logistica; il **confine generale è deciso** nel §2a: niente piazzamento geometrico, progettazione spaziale o controllo tattico diretto.
 2. **Tempistica degli ordini remoti:** gestione locale applicata al tick successivo o anch'essa mediata da messaggeri/intermediari? Separare questo principio dai ritardi inter-feudo già previsti da `messages`.
 3. **Visibilità:** informazioni sempre live sul proprio feudo vs rapporti ritardati dei territori lontani/vassalli; quali KPI aggregare su più feudi e campagne?
 4. **Permessi:** quali operazioni può compiere un suddito, un vassallo o un sovrano su un possedimento altrui?
@@ -61,7 +79,7 @@
 
 - **RC-01 Hub account e multi-campagna:** home/lobby, membership, switch e riepiloghi indipendenti per partita.
 - **RC-02 KPI/snapshot autorevoli:** read model delle partecipazioni con fonti e timestamp, autorizzazioni e stati di allarme.
-- **RC-03 Comandi remoti:** API e permessi, validazioni, coda/esiti, stessa logica di gioco senza duplicazioni.
+- **RC-03 Comandi remoti:** API e permessi per economia, fisco, lavoro/Job Manager, cantieri già collocati, gestione militare strategica, diplomazia e logistica; validazioni, coda/esiti, stessa logica senza duplicazioni. **Esclusi** piazzamento geometrico, progettazione delle fortificazioni e controllo tattico diretto, riservati al Builder/3D.
 - **RC-04 Comunicazioni/messaggi:** analisi branch `messages`, porting selettivo, nodi reali, ETA, rapporti e integrazione diplomazia.
 - **RC-05 Strategia remota:** spedizioni, carovane/tributi, diplomazia e mappa regionale collegate a World/Feudal.
 - **RC-06 Mobile-ready:** web responsive, API neutrali alla piattaforma, poi eventuali app Android/iOS senza riscrivere regole.

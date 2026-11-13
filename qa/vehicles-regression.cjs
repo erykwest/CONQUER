@@ -16,7 +16,7 @@ function harness(structures){
     ctx:{save(){},restore(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},fill(){},stroke(){}}});
   vm.runInContext(read('src/settlement-vehicles.js'),c,{filename:'settlement-vehicles.js'});
   window.ConquerWagons={drawWagon:(g,x,y,size,o)=>{calls.wagon2d++;calls.last={size,...o}}};
-  return{V:window.ConquerVehicles,State,calls,window};
+  return{V:window.ConquerVehicles,State,calls,window,c};
 }
 const road=(id,a,b)=>({id,type:'road',a,b,width:.62});
 // A T junction: west-east street, a branch north at x=10, and a dead end south.
@@ -88,6 +88,47 @@ test('2D draw: main wagons with the 2D horse team, drivers and escorts, horse-si
   assert.equal(h.calls.last.size,h.State.view.scale*5.75,'same size as livestock and knights horses');
   h.V.draw({id:'k',vehicle:'coach',vehicles:1,guards:0,distance:4,speed:3},pts);
   assert.equal(h.calls.last.chassis,'carriage');assert.deepEqual([...h.calls.last.cargo],[]);
+});
+test('WebGL: each vehicle is one depth-tested 2D card from figure(), escorts stay soldier billboards',()=>{
+  const h=harness(NET),cards=[],pts=h.V.route({x:0,y:0},{x:30,y:0});
+  h.window.ConquerWorld3D={FIGURE_CARD_U:64/(12*4),figure:(p,z,key,paint,id,mirror,card)=>{cards.push({p,z,key,paint,id,mirror,card});return true}};
+  h.window.ConquerWagons.WAGON_SCALE=1.6;h.window.ConquerWagons.DEPTH={x:10,y:-16};
+  h.window.ConquerWagons.wagonLayout=({chassis,team})=>({bed:chassis==='cart'?[-70,70]:[-105,105],
+    chassis:{wheels:[{x:0,r:52}]},horses:team.length?[{x:chassis==='cart'?232:288}]:[]});
+  const n=h.V.draw({id:'c',vehicle:'wagon',vehicles:2,guards:2,distance:8,speed:3,good:'wood',qty:60},pts);
+  assert.equal(n,2);
+  assert.equal(h.calls.wagon2d,0,'no 2D wagon over the scene');
+  assert.equal(h.calls.sprites,2,'only the two escorts go through drawSoldierFigure (World3D collects them)');
+  assert.equal(cards.length,2,'one card per vehicle');
+  const [a]=cards;
+  assert.ok(a.card.span>1.2&&a.card.span<2.5,'the card is widened to hold wagon and team: '+a.card.span);
+  assert.ok(a.card.ox>0&&a.card.ox<.5,'eastbound: the card is shifted towards the team');
+  assert.equal(a.mirror,false);assert.match(a.key,/^veh\|wagon\|/);assert.match(a.id,/^vehicle-c-/);
+  // Painting the tile: wagon facing right, team, seated driver, and the gait phase in the key.
+  h.State.view.scale=4/a.card.span;let painted=null;
+  h.window.ConquerWagons.drawWagon=(g,x,y,size,o)=>{painted={x,y,size,...o};o.driver?.(g,x,y-5,size)};
+  const sprites=h.calls.sprites;
+  const keepW2s=h.c.w2s;h.c.w2s=()=>({x:32,y:48});   // as World3D's atlasTile does
+  a.paint({});h.c.w2s=keepW2s;
+  assert.ok(painted&&painted.facing===1&&painted.team.length===2,'tile painted facing right with two horses');
+  assert.ok(painted.x<32,'composition centred in the tile: bed origin left of the feet point');
+  assert.equal(h.calls.sprites,sprites+1,'seated driver painted into the same tile');
+  // Westbound: mirrored card, shift reversed. A coach card has no cargo in its key.
+  cards.length=0;
+  const west=h.V.route({x:30,y:0},{x:0,y:0});
+  h.V.draw({id:'w',vehicle:'coach',vehicles:1,guards:0,distance:6,speed:3},west);
+  assert.equal(cards[0].mirror,true);assert.ok(cards[0].card.ox<0);
+  assert.match(cards[0].key,/^veh\|carriage\|[^|]*\|\|/);
+  // Same look and gait phase -> same tile key; stopped vehicles share one still pose.
+  cards.length=0;
+  h.V.draw({id:'s',vehicle:'cart',vehicles:1,distance:5,speed:0,good:'stone',qty:40},pts);
+  h.V.draw({id:'s',vehicle:'cart',vehicles:1,distance:5.3,speed:0,good:'stone',qty:40},pts);
+  assert.equal(cards[0].key,cards[1].key);assert.match(cards[0].key,/\|still\|/);
+  // Outside a 3D frame figure() refuses: the 2D painter runs as before.
+  h.window.ConquerWorld3D.figure=()=>false;h.calls.wagon2d=0;
+  h.window.ConquerWagons.drawWagon=()=>{h.calls.wagon2d++};
+  h.V.draw({id:'f',vehicle:'wagon',vehicles:1,distance:8,speed:3},pts);
+  assert.equal(h.calls.wagon2d,1,'2D fallback');
 });
 test('no 3D figures: no Blender meshes for horses or wagons are loaded or referenced',()=>{
   const code=read('src/settlement-vehicles.js'),html=read('index.html');
