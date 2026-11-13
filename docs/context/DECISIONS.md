@@ -1,5 +1,15 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-MOB-B-261113 — Prima release pubblica mobile: controllo remoto completo (13/11/2026)
+
+- **DECISO dal product owner — scelta B:** la prima versione **pubblica** dell'app CONQUER per **Android e iOS** deve offrire il **controllo remoto completo** del feudo, non un MVP di sola dashboard/posta o soltanto economico.
+- **PERIMETRO OBBLIGATORIO:** account/lobby e partecipazioni multi-campagna con KPI; economia, Job Manager/lavoratori, fisco, gestione e priorità di cantieri **già collocati**, militare strategico/spedizioni, diplomazia, posta feudale `messages`, tributi/carovane e mappa regionale con operazioni strategiche. Ogni operazione deve applicarsi al **medesimo stato autorevole** del browser.
+- **ESCLUSO PER DECISIONI PRECEDENTI:** piazzamento geometrico e fortificazioni nel Builder/3D, controllo tattico diretto in battaglia (D-RC-BOUNDARY-261113).
+- **DISTINZIONE RELEASE:** alpha e beta interne possono introdurre moduli progressivamente; il lancio pubblico non è accettato finché tutti i domini obbligatori non sono operativi, testati e collegati al backend multiplayer. Non introdurre widget dimostrativi per coprire moduli mancanti.
+- **APERTO:** catalogo dettagliato dei comandi, autorizzazioni feudali, stack mobile, tempistiche, notifiche push, cache/offline e test di accettazione di dettaglio. Push e lettura offline non sono stati elevati a Must dalla scelta B.
+- **STATO:** solo scope documentale; l'app e il backend non sono implementati. Specifica in [bozza SRS v0.2, PR #222](https://github.com/erykwest/CONQUER/pull/222); la PR resta **draft** finché il resto della SRS non viene approvato. Nessun cambio runtime o milestone.
+
+
 ## D-RC-BOUNDARY-261113 — Confine tra gestione remota e vista 3D (13/11/2026)
 
 - **DECISO dal product owner:** nella main page e nel controllo remoto (browser; in seguito app Android/iOS) sono disponibili **gestione economica, fiscale, militare strategica e diplomatica**, comprese assegnazioni del lavoro, programmazione/priorità dei cantieri, spedizioni, tributi, carovane, messaggi e mappa regionale.
