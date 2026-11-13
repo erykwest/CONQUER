@@ -1,5 +1,14 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-RC-BOUNDARY-261113 — Confine tra gestione remota e vista 3D (13/11/2026)
+
+- **DECISO dal product owner:** nella main page e nel controllo remoto (browser; in seguito app Android/iOS) sono disponibili **gestione economica, fiscale, militare strategica e diplomatica**, comprese assegnazioni del lavoro, programmazione/priorità dei cantieri, spedizioni, tributi, carovane, messaggi e mappa regionale.
+- **DECISO:** la **vista 3D/Builder** resta necessaria per **piazzamento preciso degli edifici**, **progettazione spaziale delle fortificazioni** e **controllo tattico diretto delle battaglie**. Il remote control non duplica il Builder geometrico; programmazione dei cantieri da remoto significa amministrare lavori/progetti già localizzati, non scegliere coordinate o collocare nuove strutture.
+- **VINCOLO:** tutti i client usano i medesimi dati e comandi di gioco autorevoli, con permessi per campagna e feudo; non introdurre una seconda simulazione o aggirare disponibilità, costi, tempi e percorsi.
+- **APERTO:** inventario esatto dei comandi per ciascun dominio, tempi e conferme di applicazione, permessi feudali, pianificazione amministrativa di strutture non ancora posizionate, UX. Il **confine funzionale principale è approvato**.
+- **STATO:** solo documentazione; nessuna modifica al runtime, schema o milestone. [Specifica aggiornata](../REMOTE-CONTROL-SCOPE.md#2a-confine-funzionale-del-remote-control--deciso-13112026).
+
+
 ## D-CAPSULE-261113 — Profondità delle figure dal capsuloide, diverso per persone e animali (13/11/2026)
 
 - **DECISO (product owner, 13/11/2026; applica D-046):** in World3D ogni carta figura (soldati, civili, veicoli, animali) prende la profondità **per pixel dal suo capsuloide** (programma `card` di `settlement-world3d.js`, `gl_FragDepth`), non più una profondità piatta ai piedi. **Persone:** capsula verticale (raggio 0,12, dai piedi a 0,38). **Animali:** capsula orizzontale lungo il corpo, orientata con la direzione dell'animale (o con l'asse dello schermo quando non ne ha), misure dal contorno del corpo (`ConquerAnimals.capsule`). Il capsuloide degli animali è anche il loro collider (`colliders()`, tipo `animal:<specie>`); i civili restano senza collider.
