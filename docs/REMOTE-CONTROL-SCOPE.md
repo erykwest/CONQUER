@@ -28,6 +28,11 @@
 
 **KPI candidati (PROPOSTI, non già scelti):** popolazione, felicità, scorte e autonomia alimentare, andamento economico/produzione, lavoratori, cantieri, guarnigione e allarmi, assedi, convogli in viaggio, tributi in arrivo/scadenza, lettere non lette, relazioni/vassallaggio, territori amministrati, tempi di aggiornamento dei dati. Evitare dashboard con valori inventati: distinguere **snapshot corrente** da **ultimo rapporto diplomatico ricevuto**.
 
+**DECISO — visibilità dei vassalli (13/11/2026):** i dati del **proprio feudo** possono provenire dallo stato aggiornato sul server; **economia, eserciti, risorse e altri KPI dei feudi dei vassalli non sono consultabili live dal sovrano**. Il sovrano legge gli **snapshot dei resoconti ricevuti tramite messaggeri** e può **impostare la frequenza delle relative routine di rapporto**. La frequenza regola la produzione/spedizione dei rapporti, **non abbrevia il viaggio o la consegna**. Ogni rapporto mostra fonte e data simulata di redazione, non valori correnti retroattivi. L'assenza di un rapporto non dà accesso al dato live.
+
+**APERTO:** intervalli disponibili (il prototipo `messages` oggi usa 1/7/30 giorni, senza che questi siano fissati per multiplayer), pianificazione unica o per singolo vassallo, contenuti dei rapporti, costi e permessi dettagliati. Il backend deve far rispettare i limiti anche sulle API, non soltanto sulla UI.
+
+
 ## 2a. Confine funzionale del remote control — DECISO (13/11/2026)
 
 **DECISO — gestione gestionale e strategica da browser, poi app mobili Android/iOS:** il controllo remoto deve permettere di amministrare il proprio insediamento **senza aprire la scena 3D**, con le stesse regole e autorizzazioni della partita:
@@ -70,7 +75,7 @@
 
 1. **Dettaglio comandi:** inventario esatto dei comandi remoti per economia, fisco, lavoro, cantieri già localizzati, strategia, diplomazia e logistica; il **confine generale è deciso** nel §2a: niente piazzamento geometrico, progettazione spaziale o controllo tattico diretto.
 2. **Dettagli temporali ancora aperti:** definire durata e scheduling del tick, cosa accade a comandi accettati quando il server è in pausa e la semantica delle singole richieste inter-feudo. **Il principio è DECISO**: proprio feudo → primo tick utile; comunicazioni inter-feudo → recapito simulato.
-3. **Visibilità:** informazioni sempre live sul proprio feudo vs rapporti ritardati dei territori lontani/vassalli; quali KPI aggregare su più feudi e campagne?
+3. **Dettagli della visibilità (principio DECISO):** proprio feudo aggiornato direttamente; vassalli solo tramite rapporti recapitati, **frequenza impostata dal sovrano**. Da definire granularità della programmazione, contenuto, diritti e selezione dei KPI sulle schede aggregate.
 4. **Permessi:** quali operazioni può compiere un suddito, un vassallo o un sovrano su un possedimento altrui?
 5. **Stato offline:** notifiche e pianificazione azioni in server temporaneamente inattivi, comportamento di comandi accodati e conferma dell'esecuzione.
 6. **UX e piattaforme:** progettazione web responsive/API riusabili prima dell'app nativa; sequenza di rilascio, autenticazione e aggiornamenti real-time.
@@ -78,7 +83,7 @@
 ## 5. Tranche di lavoro future (non implementate)
 
 - **RC-01 Hub account e multi-campagna:** home/lobby, membership, switch e riepiloghi indipendenti per partita.
-- **RC-02 KPI/snapshot autorevoli:** read model delle partecipazioni con fonti e timestamp, autorizzazioni e stati di allarme.
+- **RC-02 KPI/snapshot autorevoli:** read model delle partecipazioni con fonti e timestamp, autorizzazioni e stati di allarme. Per i vassalli usare **soltanto rapporti effettivamente recapitati**; il sovrano può configurare la frequenza dei messaggeri di resoconto. Vietata lettura live degli inventari/statistiche dei vassalli in app/API.
 - **RC-03 Comandi remoti:** API e permessi per economia, fisco, lavoro/Job Manager, cantieri già collocati, gestione militare strategica, diplomazia e logistica; validazioni, coda/esiti, stessa logica senza duplicazioni. **Esclusi** piazzamento geometrico, progettazione delle fortificazioni e controllo tattico diretto, riservati al Builder/3D.
 - **RC-04 Comunicazioni/messaggi:** analisi branch `messages`, porting selettivo, nodi reali, ETA, rapporti e integrazione diplomazia.
 - **RC-05 Strategia remota:** spedizioni, carovane/tributi, diplomazia e mappa regionale collegate a World/Feudal.
