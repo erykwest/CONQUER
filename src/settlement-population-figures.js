@@ -227,16 +227,78 @@ function soldierBodyPath(base,bodyW,bodyH,top,bodyY){
   ctx.moveTo(base.x-bodyW*.42,top);ctx.lineTo(base.x+bodyW*.42,top);
   ctx.lineTo(base.x+bodyW*.50,bodyY+bodyH*.50);ctx.lineTo(base.x-bodyW*.50,bodyY+bodyH*.50);ctx.closePath();
 }
-function drawQuarteredShield(cx,cy,rx,ry,livery,stroke,scale,useHeraldry=true){
+// Shield outline in the feudal shape (unitShield()). Returns the box the arms are painted into.
+function soldierShieldPath(cx,cy,rx,ry,shape){
+  ctx.beginPath();
+  if(shape==='round'){
+    const r=(rx+ry)*.5;ctx.arc(cx,cy,r,0,Math.PI*2);return{x:cx-r,y:cy-r,w:r*2,h:r*2};
+  }
+  if(shape==='heater'){
+    const t=cy-ry*.9,b=cy+ry;
+    ctx.moveTo(cx-rx,t);ctx.lineTo(cx+rx,t);ctx.lineTo(cx+rx,cy);
+    ctx.quadraticCurveTo(cx+rx*.95,cy+ry*.62,cx,b);ctx.quadraticCurveTo(cx-rx*.95,cy+ry*.62,cx-rx,cy);ctx.closePath();
+    return{x:cx-rx,y:t,w:rx*2,h:b-t};
+  }
+  if(shape==='kite'){
+    const t=cy-ry*1.05,b=cy+ry*1.3;
+    ctx.moveTo(cx-rx,cy-ry*.55);ctx.quadraticCurveTo(cx-rx,t,cx,t);ctx.quadraticCurveTo(cx+rx,t,cx+rx,cy-ry*.55);
+    ctx.quadraticCurveTo(cx+rx*.8,cy+ry*.45,cx,b);ctx.quadraticCurveTo(cx-rx*.8,cy+ry*.45,cx-rx,cy-ry*.55);ctx.closePath();
+    return{x:cx-rx,y:t,w:rx*2,h:b-t};
+  }
+  if(shape==='pavise'){
+    const w=rx*1.05,t=cy-ry*1.3,b=cy+ry*1.15;
+    ctx.moveTo(cx-w,t+ry*.25);ctx.quadraticCurveTo(cx,t-ry*.12,cx+w,t+ry*.25);
+    ctx.lineTo(cx+w*.9,b);ctx.lineTo(cx-w*.9,b);ctx.closePath();
+    return{x:cx-w,y:t,w:w*2,h:b-t};
+  }
+  ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);return{x:cx-rx,y:cy-ry,w:rx*2,h:ry*2};
+}
+function drawQuarteredShield(cx,cy,rx,ry,livery,stroke,scale,useHeraldry=true,shape='oval'){
   ctx.save();
-  ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.clip();
-  if(!useHeraldry||!window.__conquerHeraldryCanvas?.paint(ctx,cx-rx,cy-ry,rx*2,ry*2)){
-    ctx.fillStyle=livery.main;ctx.fillRect(cx-rx,cy-ry,rx*2,ry*2);
-    ctx.fillStyle=livery.alt;ctx.fillRect(cx,cy-ry,rx,ry*2);
+  const box=soldierShieldPath(cx,cy,rx,ry,shape);ctx.clip();
+  if(!useHeraldry||!window.__conquerHeraldryCanvas?.paint(ctx,box.x,box.y,box.w,box.h)){
+    ctx.fillStyle=livery.main;ctx.fillRect(box.x,box.y,box.w,box.h);
+    ctx.fillStyle=livery.alt;ctx.fillRect(cx,box.y,box.w/2,box.h);
   }
   ctx.restore();
   ctx.save();ctx.strokeStyle=stroke;ctx.lineWidth=Math.max(.8,.9*scale);
-  ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.stroke();ctx.restore();
+  soldierShieldPath(cx,cy,rx,ry,shape);ctx.stroke();
+  if(shape==='round'){ctx.fillStyle='#9a9fa3';ctx.beginPath();ctx.arc(cx,cy,(rx+ry)*.16,0,Math.PI*2);ctx.fill();ctx.stroke();}
+  if(shape==='pavise'){ctx.beginPath();ctx.moveTo(cx,cy-ry*1.12);ctx.lineTo(cx,cy+ry*1.15);ctx.stroke();}
+  ctx.restore();
+}
+// Feudal equipment styles; the Asset Lab runs without settlement-core.js, so read the policy directly there.
+function soldierHelmetStyle(){return typeof unitHelmet==='function'?unitHelmet():State.policies?.unitHelmet||'cap'}
+function soldierShieldStyle(){return typeof unitShield==='function'?unitShield():State.policies?.unitShield||'oval'}
+// Steel headgear in the feudal style (unitHelmet()), over the head circle at (x,y) of radius r.
+const HELMET_STEEL='#70777c',HELMET_EDGE='rgba(30,30,30,.75)';
+function drawSoldierHelmet(x,y,r,style,scale){
+  const lw=Math.max(.6,.7*scale);
+  ctx.fillStyle=HELMET_STEEL;ctx.strokeStyle=HELMET_EDGE;ctx.lineWidth=lw;
+  if(style==='kettle'){
+    ctx.beginPath();ctx.arc(x,y-r*.15,r*.92,Math.PI,Math.PI*2);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.ellipse(x,y-r*.12,r*1.75,r*.32,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+  }else if(style==='nasal'){
+    ctx.beginPath();ctx.moveTo(x-r*1.02,y);ctx.quadraticCurveTo(x-r*.85,y-r*1.1,x,y-r*1.7);
+    ctx.quadraticCurveTo(x+r*.85,y-r*1.1,x+r*1.02,y);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.fillRect(x-r*.14,y-r*.1,r*.28,r*.75);
+  }else if(style==='barbuta'){
+    ctx.beginPath();ctx.arc(x,y,r*1.06,0,Math.PI*2);ctx.fill();ctx.stroke();
+    // T-shaped face opening.
+    ctx.fillStyle=VILLAGER_SKIN;
+    ctx.fillRect(x-r*.62,y-r*.22,r*1.24,r*.3);ctx.fillRect(x-r*.2,y-r*.22,r*.4,r*.95);
+  }else if(style==='greathelm'){
+    const w=r*1.08,t=y-r*1.2,b=y+r*1.05;
+    ctx.beginPath();ctx.moveTo(x-w,t+r*.18);ctx.lineTo(x+w,t+r*.18);ctx.lineTo(x+w*.98,b);ctx.lineTo(x-w*.98,b);ctx.closePath();
+    ctx.fill();ctx.stroke();
+    ctx.fillStyle='#8a9196';ctx.fillRect(x-w,t+r*.1,w*2,r*.16);
+    // Eye slit and the vertical reinforcement of the face plate.
+    ctx.fillStyle='#1d2022';ctx.fillRect(x-w*.82,y-r*.28,w*1.64,Math.max(.6,r*.18));
+    ctx.fillStyle='#5d6468';ctx.fillRect(x-r*.07,y-r*.1,r*.14,r*1.1);
+  }else{
+    ctx.beginPath();ctx.arc(x,y,r,Math.PI,Math.PI*2);ctx.lineTo(x-r,y);ctx.closePath();ctx.fill();
+    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();
+  }
 }
 function drawSoldierFigure(p,z,type,id,phase=0,liveryOverride=null){
   return withUrbanFigureOcclusion(p,z,()=>drawSoldierFigureUnmasked(p,z,type,id,phase,liveryOverride));
@@ -267,10 +329,9 @@ function drawSoldierFigureUnmasked(p,z,type,id,phase=0,liveryOverride=null){
   soldierBodyPath(base,bodyW,bodyH,top,bodyY);
   ctx.strokeStyle='rgba(25,24,22,.88)';ctx.lineWidth=Math.max(.7,.8*scale);ctx.stroke();
 
-  // Head + steel cap.
+  // Head + helmet: the realm's own soldiers wear the feudal helmet, foes (livery override) the cap.
   ctx.fillStyle=VILLAGER_SKIN;ctx.beginPath();ctx.arc(base.x,headY,headR,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#70777c';ctx.beginPath();ctx.arc(base.x,headY,headR,Math.PI,Math.PI*2);ctx.lineTo(base.x-headR,headY);ctx.closePath();ctx.fill();
-  ctx.strokeStyle='rgba(30,30,30,.75)';ctx.beginPath();ctx.arc(base.x,headY,headR,0,Math.PI*2);ctx.stroke();
+  drawSoldierHelmet(base.x,headY,headR,liveryOverride?'cap':soldierHelmetStyle(),scale);
 
   if(type==='spearman'){
     const x=base.x+bodyW*.55;
@@ -287,7 +348,7 @@ function drawSoldierFigureUnmasked(p,z,type,id,phase=0,liveryOverride=null){
     ctx.lineTo(bx+Math.cos(Math.PI*.55)*r,by+Math.sin(Math.PI*.55)*r);ctx.stroke();
   }else if(type!=='unarmed'){
     const swing=Math.sin(phase*Math.PI*2)*3.2*scale;
-    drawQuarteredShield(base.x-bodyW*.62,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery,'#b7aa8f',scale,!liveryOverride);
+    drawQuarteredShield(base.x-bodyW*.62,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery,'#b7aa8f',scale,!liveryOverride,liveryOverride?'oval':soldierShieldStyle());
     // Sword.
     ctx.strokeStyle='#c4c7c8';ctx.lineWidth=Math.max(1,1.15*scale);
     ctx.beginPath();ctx.moveTo(base.x+bodyW*.42,bodyY+bodyH*.16);ctx.lineTo(base.x+bodyW*.80+swing,top-7.5*scale);ctx.stroke();

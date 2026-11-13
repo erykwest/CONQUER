@@ -1,5 +1,15 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-13 — Equipaggiamento delle unità: elmi e scudi (branch `feature/unit-equipment-styles`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `settlement-core.js`: `UNIT_HELMETS`/`UNIT_SHIELDS` con costi per posto soldato, `unitHelmet()`, `unitShield()`, `unitEquipmentQuote(kind,style)` e `applyUnitEquipment(kind,style)` (posti = `ConquerSiege.capacity().soldiers`; paga con `canAfford`/`spendCost` come le merlature).
+  - `settlement-population-figures.js`: `drawSoldierHelmet` (5 elmi) e `soldierShieldPath` (5 forme) usati da `drawSoldierFigureUnmasked`; `settlement-combat-anim.js` usa la forma scelta per lo scudo in combattimento. Le unità con livrea propria (nemici) restano invariate.
+  - `settlement-panels.js`: sottoscheda Militare › Equipaggiamento con due schede (elmo, scudo), icone SVG e messaggio di risorse insufficienti. `game-api.js`: comandi `unitEquipmentQuote`, `setUnitEquipment`. Persistenza cloud dei due campi in `settlement-app-persistence.js`.
+  - `figures-lab.html`: selettori Elmo e Scudo per le truppe.
+- **PROVE LOCALI PASS:** `qa/panels-regression.cjs`, `qa/combat-anim-regression.cjs`, `qa/combat-render-regression.cjs`; nel browser: sottoscheda visibile, acquisto con costo corretto (24 posti), rifiuto per risorse, foglio delle 5 combinazioni nel Lab a tre zoom.
+- **NON ESEGUITO:** `node qa/asset-audit.mjs` (browser Playwright non installato in locale); cavalieri a cavallo (`settlement-mounted2d.js`) non toccati.
+
 ## 2026-11-13 — Figure dei ruoli mancanti (branch `feature/new-role-figures`, sopra `feature/role-outfits` e `feature/shop-artisan-tools`)
 
 - **CODICE SUL BRANCH, NON MERGE:**

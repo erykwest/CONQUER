@@ -330,6 +330,42 @@ const ROOF_PITCH_COST=Object.freeze({
 function roofPitch(){const v=Number(State.policies?.roofPitch);return ROOF_PITCHES.includes(v)?v:45}
 function roofPitchTan(){return Math.tan(roofPitch()*Math.PI/180)}
 function crenelStyle(){const v=State.policies?.crenelStyle;return CRENEL_STYLES.includes(v)?v:'flat'}
+// Feudal unit equipment (State.policies.unitHelmet / unitShield): the realm's foot soldiers wear one
+// helmet and carry one shield shape. Re-equipping pays per soldier place in the barracks, at the rate
+// of the target style; 'cap' and 'oval' are the original look.
+const UNIT_HELMETS=Object.freeze(['cap','kettle','nasal','barbuta','greathelm']);
+const UNIT_HELMET_COST=Object.freeze({
+  cap:Object.freeze({metal:1}),
+  kettle:Object.freeze({metal:1,gold:1}),
+  nasal:Object.freeze({metal:2,gold:1}),
+  barbuta:Object.freeze({metal:2,gold:2}),
+  greathelm:Object.freeze({metal:3,gold:3})
+});
+const UNIT_SHIELDS=Object.freeze(['oval','round','heater','kite','pavise']);
+const UNIT_SHIELD_COST=Object.freeze({
+  oval:Object.freeze({wood:1}),
+  round:Object.freeze({wood:1,metal:1}),
+  heater:Object.freeze({wood:1,gold:1}),
+  kite:Object.freeze({wood:2,gold:1}),
+  pavise:Object.freeze({wood:3,gold:2})
+});
+function unitHelmet(){const v=State.policies?.unitHelmet;return UNIT_HELMETS.includes(v)?v:'cap'}
+function unitShield(){const v=State.policies?.unitShield;return UNIT_SHIELDS.includes(v)?v:'oval'}
+function unitEquipmentSoldiers(){return Math.max(0,Math.round(Number(window.ConquerSiege?.capacity?.()?.soldiers)||0))}
+function unitEquipmentQuote(kind,style){
+  const table=kind==='shield'?UNIT_SHIELD_COST:UNIT_HELMET_COST,soldiers=unitEquipmentSoldiers(),cost={};
+  for(const [k,v] of Object.entries(table[style]||{}))cost[k]=v*soldiers;
+  return{kind,style,soldiers,cost};
+}
+function applyUnitEquipment(kind,style){
+  const list=kind==='shield'?UNIT_SHIELDS:kind==='helmet'?UNIT_HELMETS:null;
+  if(!list||!list.includes(style)||style===(kind==='shield'?unitShield():unitHelmet()))return{ok:false,reason:'unchanged'};
+  const quote=unitEquipmentQuote(kind,style);
+  if(!canAfford(quote.cost)||!spendCost(quote.cost))return{ok:false,reason:'funds',quote};
+  State.policies[kind==='shield'?'unitShield':'unitHelmet']=style;
+  markDirty(false,false,true);draw();
+  return{ok:true,quote};
+}
 const CHIMNEY_SPACING=1.5;
 const WELL_PLAZA_SIZE=3;
 // The paved square around the well is a no-build zone: houses, lots, fields and buildings

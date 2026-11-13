@@ -1,5 +1,14 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-13 — Equipaggiamento delle unità · elmi e scudi
+
+13/11/2026 — `feature/unit-equipment-styles` (pre-merge):
+- Nuove scelte globali `State.policies.unitHelmet` (cervelliera di base, cappello d'arme, elmo a nasale, barbuta, elmo a staio) e `State.policies.unitShield` (ovale di base, rotella, triangolare, a mandorla, pavese), persistite in locale e cloud.
+- Centro di controllo › Militare › nuova sottoscheda «Equipaggiamento», sul modello di merlature e pendenza dei tetti: anteprima, costo e «Adotta». Costo per posto soldato delle caserme (`UNIT_HELMET_COST`, `UNIT_SHIELD_COST`). Comandi `ConquerGame.commands.unitEquipmentQuote/setUnitEquipment`.
+- Le figure 2D dei soldati del feudo (fermi e in combattimento) disegnano l'elmo e lo scudo scelti; i nemici restano con cervelliera e scudo ovale. Selettori Elmo/Scudo nel Lab delle figure.
+
+STATUS, BACKLOG e CHANGELOG aggiornati; ROADMAP e DECISIONS invariate (estende lo schema esistente delle scelte feudali in `State.policies`).
+
 ## 2026-11-13 — Figure dei ruoli mancanti
 
 Branch `feature/new-role-figures`. I ruoli che esistevano solo nei conti ora hanno una figura con l'abito del mestiere e un gesto: il personale delle stanze del castello (cuoco, stalliere, armaiolo, cappellano, tesoriere, cerusico e inservienti, falconiere, colombaro, consiglieri), il prete, l'oste, le guardie e gli esattori del Bargello, i giudici del Balivo, i boscaioli del disboscamento. Il lavoro aggiunge 9 gesti, 8 pezzi di guardaroba, 12 abiti, voci nel Lab e una nuova regressione. ROADMAP e DECISIONS invariate.

@@ -134,7 +134,7 @@
   function drawSword(base,scale,bodyW,bodyH,bodyY,top,id,phase,livery,pose){
     const side=pose.dirX>=0?1:-1,swing=Math.sin(phase*Math.PI*2)*3.2*scale*(1-pose.ready);
     const guard=pose.ready*1.2*scale;
-    drawQuarteredShield(base.x-bodyW*.62+pose.dirX*guard,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery||soldierLivery(id),'#b7aa8f',scale,!livery);
+    drawQuarteredShield(base.x-bodyW*.62+pose.dirX*guard,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery||soldierLivery(id),'#b7aa8f',scale,!livery,livery?'oval':soldierShieldStyle());
     const hx=base.x+bodyW*.42,hy=bodyY+bodyH*.16;
     // Wind-up raises the blade back, the cut sweeps it down toward the foe.
     const theta=side*(pose.attack<0?pose.attack*.9:pose.attack*1.6)+side*pose.ready*.15;
