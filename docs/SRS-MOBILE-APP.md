@@ -1,9 +1,10 @@
 # CONQUER — Software Requirements Specification (SRS) · Mobile Companion
 
-**Versione:** 0.1 — bozza di lavoro, **non approvata nel complesso**  
+**Versione:** 0.2 — bozza di lavoro, **non approvata nel complesso** (scelta B approvata)  
 **Data:** 13 novembre 2026  
 **Destinazione:** Android e iOS; prima dipendenza: hub browser e backend multiplayer condiviso  
-**Stato:** SPEC / NO RUNTIME — nessuna app mobile implementata
+**Stato:** SPEC / NO RUNTIME — nessuna app mobile implementata  
+**Decisione approvata:** **B — primo rilascio pubblico con controllo remoto completo**, non versione ridotta.
 
 ## 0. Natura del documento e fonti
 
@@ -46,6 +47,16 @@ L'app serve a **consultare e governare più insediamenti in più campagne persis
 - **Suddito / vassallo / sovrano:** possibili ruoli distinti per campagna; **privilegi specifici ancora aperti**.
 - **Visitatore non iscritto:** consultazione della lobby pubblica, **se e come** consentita dall'autenticazione da definire (P).
 - **Backend autorevole:** decide risultati, disponibilità, tempi, autorizzazioni e conflitti di comandi; non è un secondo giocatore.
+
+## 1.4 Requisito per il primo rilascio pubblico — DECISO (scelta B)
+
+**D — First public release:** la prima versione mobile distribuita per Android e iOS deve già offrire **tutto il controllo remoto gestionale e strategico definito**, non soltanto home, lobby, KPI, messaggi o pochi comandi economici. Funzioni obbligatorie: account e partecipazioni multi-campagna, dashboard, **economia, lavoro/Job Manager, fisco, priorità e programmazione cantieri già collocati nel 3D, spedizioni e ordini militari strategici, diplomazia e posta feudale, tributi/carovane e mappa regionale interattiva**. Restano esclusi piazzamento geometrico, progettazione delle fortificazioni e controllo tattico diretto.
+
+**D — Distinzione rilascio/test:** versioni incrementali *interne*, alpha e beta sono ammesse per sviluppo e test, ma **non** costituiscono il primo rilascio pubblico accettato. Non si può pubblicare una dashboard read-only come versione finale del prodotto mobile.
+
+**C — Gate obbligatorio:** per essere pronto al rilascio, ogni dominio deve avere azioni reali persistite e validate da un backend autorevole, visibili in browser e app, con test end-to-end; niente pulsanti dimostrativi. **A:** inventario preciso dei singoli comandi per dominio e relativi permessi da approvare; il dettaglio non riduce il perimetro confermato.
+
+**P — Migliorie non obbligatorie al primo rilascio:** push di sistema, cache offline read-only e archivio campagne concluse, salvo diversa decisione. La **posta in-app**, la conferma degli ordini e gli errori comprensibili sono invece necessari.
 
 ## 2. Contesto applicativo e navigazione
 
@@ -100,7 +111,7 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 | FR-MIL-02 | Permette ordini strategici di spedizione/marcia e gestione logistica nei limiti dei permessi del ruolo. | D/C | Must |
 | FR-MIL-03 | Non attiva la modalità tattica per selezionare/controllare direttamente unità in battaglia. | D | Must |
 | FR-MAP-01 | Visualizza mappa regionale con territori, controllori, rapporti feudali e rotte consentite dalla visibilità del giocatore. | D/C | Must |
-| FR-MAP-02 | Dalla mappa apre dettagli e azioni strategiche applicabili al territorio, non il Builder geometrico. | P | Should |
+| FR-MAP-02 | Dalla mappa apre dettagli e azioni strategiche applicabili al territorio, non il Builder geometrico. | D/C | Must |
 | FR-LOG-01 | Consulta tributi, carovane, carico, scorte, destinazione e stato dei viaggi quando supportati dal backend. | D/C | Must |
 | FR-LOG-02 | Consente azioni logistiche autorizzate che rispettano risorse reali, ETA, intercettazioni e risultato del motore. | D/C | Must |
 
@@ -209,18 +220,22 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 
 **AT-10 — Ingresso a partita avviata:** la lobby non permette di fondare se mancano slot o posizioni idonee; non assegna al nuovo account un bot pre-sviluppato.
 
-## 8. Roadmap tecnica proposta (NON calendario approvato)
+**AT-11 — Completezza della release B:** su un server reale, la app deve poter eseguire e mostrare l'esito di almeno un percorso completo per ogni dominio approvato: assegnazione lavoratori, gestione economica, modifica fiscale, priorità di un cantiere già posizionato, ordine militare/spedizione, azione diplomatica e lettera, gestione di un tributo/carovana e comando strategico dalla mappa. Per ciascuno si verificano ruolo, costi, tempistiche, rifiuti, persistenza e sincronizzazione con browser. **L'inventario dei comandi per dominio resta da approvare**, quindi il solo superamento di questi scenari non autorizza automaticamente il rilascio.
 
-| Fase | Deliverable | Dipendenze |
+**AT-12 — Nessun modulo fittizio:** ogni sezione obbligatoria è alimentata da dati e azioni reali; se il backend World/Feudal o i messaggi inter-giocatore non sono disponibili, il lancio pubblico non è pronto, non si riduce tacitamente al piano A/C.
+
+## 8. Roadmap tecnica proposta — primo rilascio completo (nessuna data approvata)
+
+| Fase | Deliverable | Dipendenze / criterio di uscita |
 | --- | --- | --- |
-| **F0 — Contratti** | Account/membership, permessi, modello comandi e snapshot, chiarimento timing dei messaggi | Decisioni di scope e audit sistema attuale |
-| **F1 — Backend e hub web** | Stato autorevole per campagna, lobby, Home, dashboard KPI, API di lettura | World/Feudal, persistenza multi-server (MP-07), accesso server |
-| **F2 — Gestione remota web** | Comandi autorizzati per lavoro/economia/fisco/cantieri e poi strategia/diplomazia | API e moduli gameplay realmente disponibili |
-| **F3 — Mobile v0** | Account, multi-campagna, KPI, stati del server, inbox e accesso a funzionalità mature | F1; integrazione messaggi affidabile |
-| **F4 — Mobile v1** | Gestione economica, lavoro, fisco, cantieri localizzati, spedizioni, diplomazia, tributi e mappa | F2 e World/Feudal completo |
-| **F5 — Notifiche e qualità** | Push opzionali, preferenze, offline read-only, accessibility, battery/performance/security, pubblicazione store | Contratti eventi, QA su dispositivi, regole privacy |
+| **F0 — Contratti** | Membership, permessi, catalogo dei comandi, snapshot, temporalità messaggi e ordini | Requisiti di dettaglio e acceptance criteria da approvare |
+| **F1 — Backend + hub web** | Campagne autorevoli, lobby, dashboard, API lettura e scrittura | World/Feudal, MP-07, persistenza server e autorizzazioni |
+| **F2 — Controllo remoto web completo** | Tutti i domini: economia/lavoro/fisco/cantieri, militare/spedizioni, diplomazia/messaggi, tributi/carovane, mappa | Moduli reali, QA e contratti di comando |
+| **F3 — App alpha/beta interne** | Client mobile Android/iOS con gli stessi comandi, test utenti/dispositivi, sicurezza e accessibilità | F1–F2, test di sincronia con browser |
+| **F4 — Prima release pubblica Android/iOS (B)** | **Controllo remoto completo** di §1.4, tutti i Must e test AT-01…AT-12 | **Gate non derogabile:** nessuna release solo KPI, messaggi o comandi economici parziali |
+| **F5 — Miglioramenti** | Push opzionali, cache offline, archivio storico e ottimizzazioni, se approvati | Decisioni successive |
 
-La separazione in v0/v1 e l'ordine di introduzione delle feature sono **proposte**, non decisioni approvate. La futura app non dovrebbe duplicare le logiche del browser.
+**DECISO:** completezza del **primo rilascio pubblico**, non una data di pubblicazione. Le fasi incrementali interne non costituiscono una release pubblica ridotta. **A:** stack tecnologico, dettaglio comandi, notifiche push, modalità offline e pianificazione temporale.
 
 ## 9. Rischi e dipendenze reali del repository
 
@@ -235,7 +250,7 @@ La separazione in v0/v1 e l'ordine di introduzione delle feature sono **proposte
 
 | Q | Domanda | Impatto |
 | --- | --- | --- |
-| **Q-01** | App mobile **v0 di sola consultazione/messaggi**, oppure primo rilascio già con comandi economici? | MVP e sequencing |
+| **Q-01 — RISOLTA (B)** | Primo rilascio pubblico con **controllo remoto completo**: economia, lavoratori, fisco, cantieri già localizzati, spedizioni/militare strategico, diplomazia/messaggi, tributi/carovane, mappa e lobby multi-campagna. Alpha/beta interne possono essere progressive. | **DECISO**; catalogo dei singoli comandi ancora aperto |
 | **Q-02** | I comandi al proprio feudo sono applicati al tick successivo o hanno un tempo di comunicazione? | Backend e UX degli ordini |
 | **Q-03** | I KPI propri sono live mentre quelli dei vassalli arrivano per rapporto, o tutti live? | Visibilità e diplomazia |
 | **Q-04** | Quando il server regionale è in pausa, quali letture e azioni sono possibili? | Offline/server lifecycle |
@@ -248,6 +263,6 @@ La separazione in v0/v1 e l'ordine di introduzione delle feature sono **proposte
 
 ## 11. Definition of Ready della SRS
 
-L'SRS potrà essere promossa da **bozza v0.1** a **baseline approvata** soltanto quando: (1) le questioni Q-01…Q-10 prioritizzate avranno risposta o una decisione esplicita di rinvio; (2) per ogni funzione Must sarà disponibile una sorgente autorevole o una dipendenza di backend documentata; (3) saranno definiti i permessi dei ruoli; (4) saranno approvati MVP e criteri di accettazione; (5) sarà aggiornata la tracciabilità verso backlog e test.
+L'SRS potrà essere promossa da **bozza v0.2** a **baseline approvata** soltanto quando: (1) le questioni **Q-02…Q-10** prioritizzate avranno risposta o una decisione esplicita di rinvio (**Q-01 risolta: B**); (2) per ogni funzione Must sarà disponibile una sorgente autorevole o una dipendenza di backend documentata; (3) saranno definiti permessi dei ruoli e catalogo di tutti i comandi; (4) saranno approvati criteri di accettazione e gate B; (5) sarà aggiornata la tracciabilità verso backlog e test.
 
 **Nessuna funzionalità mobile è stata implementata da questo documento.**
