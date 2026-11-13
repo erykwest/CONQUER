@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-13 — MP-07 · Account separato dalle campagne (solo design)
+
+Confermato dal product owner: lo stesso account può partecipare a più server/campagne contemporaneamente. Separazione documentata tra identità globale, partecipazione `user_id + campaign_id` e progresso di feudi/mondo isolato per campagna. Evidenziato il gap concreto nei salvataggi Supabase attuali (`settlements` con `user_id,world_cell_x,world_cell_y`, senza `campaign_id`). Aggiornati specifica multiplayer, decisione D-MP-ACCOUNT-261113 e backlog MP-07. **Solo documentazione: nessuna migrazione SQL, codice o QA gameplay. ROADMAP e STATUS invariati.**
+
+
 ## 2026-11-13 — CAM-ROT-01 · Rotazione libera della camera
 
 13/11/2026 — `feature/free-camera-rotation` (pre-merge):
