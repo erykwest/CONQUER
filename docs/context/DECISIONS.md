@@ -1,5 +1,27 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-RC-BOUNDARY-261113 — Confine tra gestione remota e vista 3D (13/11/2026)
+
+- **DECISO dal product owner:** nella main page e nel controllo remoto (browser; in seguito app Android/iOS) sono disponibili **gestione economica, fiscale, militare strategica e diplomatica**, comprese assegnazioni del lavoro, programmazione/priorità dei cantieri, spedizioni, tributi, carovane, messaggi e mappa regionale.
+- **DECISO:** la **vista 3D/Builder** resta necessaria per **piazzamento preciso degli edifici**, **progettazione spaziale delle fortificazioni** e **controllo tattico diretto delle battaglie**. Il remote control non duplica il Builder geometrico; programmazione dei cantieri da remoto significa amministrare lavori/progetti già localizzati, non scegliere coordinate o collocare nuove strutture.
+- **VINCOLO:** tutti i client usano i medesimi dati e comandi di gioco autorevoli, con permessi per campagna e feudo; non introdurre una seconda simulazione o aggirare disponibilità, costi, tempi e percorsi.
+- **APERTO:** inventario esatto dei comandi per ciascun dominio, tempi e conferme di applicazione, permessi feudali, pianificazione amministrativa di strutture non ancora posizionate, UX. Il **confine funzionale principale è approvato**.
+- **STATO:** solo documentazione; nessuna modifica al runtime, schema o milestone. [Specifica aggiornata](../REMOTE-CONTROL-SCOPE.md#2a-confine-funzionale-del-remote-control--deciso-13112026).
+
+
+## D-CAPSULE-261113 — Profondità delle figure dal capsuloide, diverso per persone e animali (13/11/2026)
+
+- **DECISO (product owner, 13/11/2026; applica D-046):** in World3D ogni carta figura (soldati, civili, veicoli, animali) prende la profondità **per pixel dal suo capsuloide** (programma `card` di `settlement-world3d.js`, `gl_FragDepth`), non più una profondità piatta ai piedi. **Persone:** capsula verticale (raggio 0,12, dai piedi a 0,38). **Animali:** capsula orizzontale lungo il corpo, orientata con la direzione dell'animale (o con l'asse dello schermo quando non ne ha), misure dal contorno del corpo (`ConquerAnimals.capsule`). Il capsuloide degli animali è anche il loro collider (`colliders()`, tipo `animal:<specie>`); i civili restano senza collider.
+- **MOTIVO:** con la profondità piatta una figura appena davanti a un muro aveva il corpo tagliato dalla muratura dietro, e una carta animale larga prendeva in blocco la profondità del centro (artefatti nel cutaway e lungo muri e tettoie).
+- **ALTERNATIVE SCARTATE:** carte animale con la sola profondità dei piedi (gli artefatti sopra); mesh 3D degli animali (`ConquerAnimals3D`, esclusa da D-046/D-055).
+- **CONSEGUENZA:** bestiame e lupi in World3D sono carte dell'atlante figure con capsula; nel renderer 2D restano il disegno 2D con `withUrbanFigureOcclusion`. Cavalli di giostra/feste e cavalieri in combattimento restano 2D (DA FARE).
+
+## D-VEH-CARDS-261112 — Veicoli come carte 2D con profondità (12/11/2026)
+
+- **DECISO (applica D-046 e D-055, segue #201):** in World3D un veicolo su strada è **una carta 2D depth-tested** dell'atlante figure: pianale, carico, squadra di cavalli 2D e conducente dipinti insieme da `ConquerWagons.drawWagon`, carta allargata (`span`) e spostata verso i cavalli (`ox`). Nessuna mesh 3D di carri o cavalli; `ConquerWagons3D`/`ConquerAnimals3D` restano esclusi dal gioco.
+- **ALTERNATIVE SCARTATE:** carte separate per pianale e cavalli (il timone non resterebbe agganciato quando la strada non è orizzontale sullo schermo); caselle d'atlante più grandi per i soli veicoli (allocatore e LRU da duplicare, guadagno visibile solo oltre zoom 2,5).
+- **CONSEGUENZA:** `economic-balances-animations` non ha altri residui da recuperare; il branch si può archiviare.
+
 ## D-RC-261113 — Main page e controllo remoto multi-campagna (13/11/2026)
 
 - **DECISO dal product owner:** la pagina principale dopo l'accesso contiene sia la lobby delle campagne disponibili sia le campagne **in corso alle quali l'account partecipa**, con **KPI aggregati per insediamento** senza mischiare lo stato delle partite.

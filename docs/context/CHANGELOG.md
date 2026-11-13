@@ -4,6 +4,27 @@
 
 Branch `feature/role-outfits`. Il guardaroba ha 11 nuovi pezzi da lavoro (grembiuli di cuoio, di tela e del vasaio, farsetto, mantelletta, calotta, cuffia, cappello di feltro, tocco, berretto da marinaio, chiavi) e 16 abiti per mestiere. Le figure al lavoro li indossano: bottegai, lavoratori anonimi, costruttori e taglialegna nominati, pastore, carrettiere, carceriere e marinai. Ci sono voci nuove nell'Asset Lab (famiglia «Abiti da mestiere»), una regressione estesa e la baseline dell'audit aggiornata solo per queste voci. ROADMAP e DECISIONS invariate.
 
+## 2026-11-13 — RC-03 · Confine funzionale del remote control (solo design)
+
+Confermato dal product owner il perimetro: gestione da browser (futuro Android/iOS) di economia, fisco, lavoratori, pianificazione/priorità di cantieri già localizzati, strategia militare/spedizioni, diplomazia, posta, tributi, carovane e mappa regionale. Riservati al Builder/3D il piazzamento geometrico, la progettazione spaziale delle fortificazioni e il controllo tattico diretto. Specifica `docs/REMOTE-CONTROL-SCOPE.md` §2a, D-RC-BOUNDARY-261113 e RC-03 aggiornati. Solo documentazione, nessun codice o QA runtime; ROADMAP/STATUS invariati.
+
+
+## 2026-11-13 — Capsuloide delle figure (`feature/vehicles-depth-cards`)
+
+Le carte figura in World3D prendono la profondità per pixel dal capsuloide: verticale per le persone, orizzontale lungo il corpo per gli animali. Bestiame e lupi diventano carte con capsula e collider. Nuova decisione D-CAPSULE-261113 in DECISIONS; nuova prova `qa/animal-capsule-browser.mjs` nel workflow Main fixes. ROADMAP invariata.
+
+## 2026-11-13 — Animali 2D rivisti come il cavallo (`feature/vehicles-depth-cards`)
+
+Bestiame e fauna 2D passano alle zampe articolate del nuovo cavallo con passo ridotto per specie; capra e mucca ricevono il collo articolato, così al pascolo la testa resta attaccata. Tutte le zampe, cavallo compreso, sono ora articolate al ginocchio/garretto e si piegano nella fase di volo del passo e del galoppo. Nuova famiglia `Animali 2D` nel Lab con baseline e strumento `qa/animal-preview.mjs`. D-046 invariata (sempre figure 2D); ROADMAP e DECISIONS invariate.
+
+## 2026-11-12 — Cavallo 2D ridisegnato e anteprime in gioco (`feature/vehicles-depth-cards`)
+
+Il cavallo 2D, condiviso da ogni uso in gioco, passa da sagoma tozza da asino a proporzioni di cavallo (zampe lunghe articolate, collo pieno, testa fine), con passo meno a forbice; gear dei cavalieri adattato. Nuovi strumenti `qa/horse-gallery.js` e `qa/horse-preview.mjs` per le anteprime in gioco di tutti gli usi; cinque voci 2D del cavallo aggiunte al Lab con baseline. D-046 invariata (sempre figure 2D); ROADMAP invariata.
+
+## 2026-11-12 — Veicoli con profondità in World3D (`feature/vehicles-depth-cards`)
+
+Chiusura di `economic-balances-animations`: verificato che economia, veicoli 2D e cartelli sono già in main (#108, D-054, D-055) e che i file residui sono superati. Completato l'unico residuo dopo #201: carri, carretti e carrozze (cavalli e conducente compresi) entrano nel depth buffer come carte 2D dell'atlante figure (`figure()` con `card={span,ox}`), occlusi da murature e case; convogli dei cartelli disegnati con la popolazione. Nuove prove `vehicles-regression` (caso WebGL) e `vehicle-cards-browser.mjs` nel workflow Main fixes. Decisione D-VEH-CARDS-261112 (applica D-046). ROADMAP invariata. Nessun nuovo modello né asset: il Lab mostra già il carro 2D usato dalla carta, audit asset non necessario.
+
 ## 2026-11-13 — RC-01…RC-07 · Hub/lobby e remote control (solo documentazione)
 
 Definita main page multi-campagna con lobby e partite in corso, KPI aggregati per insediamento e gestione remota da browser, in futuro da app Android/iOS. Portata funzionale: messaggi, diplomazia, spedizioni, tributi, mappa regionale e controllo del feudo. Riletti centro pannelli su main e branch `messages` divergente (29 avanti / 317 indietro); riportata necessità di porting selettivo e API autorevoli senza simulatore duplicato. Specifica `docs/REMOTE-CONTROL-SCOPE.md`, D-RC-261113 e backlog RC-01…RC-07. **Nessun codice, test o asset modificato. ROADMAP e STATUS invariati.**
@@ -133,6 +154,11 @@ STATUS, BACKLOG e DECISIONS (regola transitoria della resa del culto) aggiornati
 - Modifiche al contratto D-SCOL-261112 descritte in D-CHIESA-261112.
 
 BACKLOG, STATUS e DECISIONS aggiornati; ROADMAP invariata; nessun codice.
+
+## 2026-11-13 — Bottegai al lavoro: vasaio, tessitore, sarto
+
+Branch `feature/shop-artisan-tools`. Tre nuovi attrezzi nelle animazioni di lavoro (argilla al tornio, spola, ago e filo): ora tutti i mestieri delle botteghe L3 lavorano invece di stare fermi. Voci nuove nell'Asset Lab, test e baseline dell'audit aggiornati. Il BACKLOG elenca le animazioni di lavoro ancora mancanti (rimboschimento, campi). ROADMAP e DECISIONS invariate: è un completamento visivo senza nuovi contratti.
+
 
 ## 2026-11-09 — BC-261109-02 · DEV e cantieri di ristrutturazione
 
