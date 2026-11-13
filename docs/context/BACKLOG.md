@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## CAM-ROT-01 — Rotazione libera della camera (13/11/2026)
+
+- **FATTO SU BRANCH** `feature/free-camera-rotation`: rotazione a qualsiasi angolo con Shift + tasto centrale, scatti di 15° con Ctrl; pan invariato su tasto centrale/destro; Q/E a 90°.
+- **APERTO — fluidità:** durante il trascinamento ogni angolo ricostruisce scena statica e mesh (~150 ms, ~6 fps). Possibili vie: ombreggiatura delle facce in shader invece che nei colori dei vertici, cache statica non invalidata finché si trascina, scena 2D semplificata durante il drag.
+- **APERTO — revisione viste discrete:** controllare a angoli intermedi le scelte che oggi presuppongono quarti di giro (facce aperte dei cutaway, lato dei costruttori, anteprima d'assedio che cerca il quarto migliore).
+
 ## MP-01…MP-06 — Multiplayer, lobby e colonizzazione feudale (design 13/11/2026)
 
 **STATO: SPECIFICA / DA IMPLEMENTARE.** [Contratto dettagliato e distinzioni deciso/proposto/aperto](../MULTIPLAYER-SERVER-SCOPE.md), decisione [D-MP-261113](DECISIONS.md#d-mp-261113--ingresso-multiplayer-e-colonizzazione-feudale-13112026). Dipendenza World/Feudal (M4); nessuna lobby o sostituzione bot implementata.
