@@ -1,5 +1,27 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-12 — SCOL-01 fase 1 · Scolarizzati: dati, tetto e ingaggio
+
+12/11/2026 — `feature/scol-01-fase1` (pre-merge):
+- Nuovo modulo `ConquerEducated`: contatori laici/chierici nelle case L3/L4 dentro `State.economy`, con migrazione lazy.
+- Tetto di 3 posti per casa L3 e 4 per casa L4. Eccedenza senza alloggio che rientra o emigra dopo 4 settimane.
+- Ingaggio del signore a 40 oro con arrivo in 14 giorni e rimborso se non c'è posto.
+- Sotto-righe nei pannelli e scheda «L3 · Istruiti» nel Job Manager.
+- Regressione `qa/educated-regression.cjs` aggiunta al workflow economico.
+- Nessun effetto sul lavoro finché non arrivano i ruoli (fase 3).
+
+Corretta nella specifica la frase «3 posti per casa»: la formula approvata dà 4 posti alle case L4. STATUS, BACKLOG, CHANGELOG e DECISIONS aggiornati; ROADMAP invariata.
+
+## 2026-11-12 — SCOL-01 · Scolarizzati (solo specifica)
+
+12/11/2026 — `docs/scolarizzati`: specifica della sottoclasse «Scolarizzati» approvata dal product owner.
+- Contatori laici/chierici sulle case L3/L4, senza secondo ledger.
+- Tre origini: Scriptorium con selettore Laico/Clericale, 4 allievi e 1 anno; immigrazione mensile; ingaggio a 40 oro con arrivo in 2 settimane.
+- Ruoli registrati dalle sessioni proprietarie, con resa proporzionale e soglia.
+- Salario 2 × L3 con cursore 50–200% che muove arrivi e partenze.
+- Penalità per disoccupazione istruita; eccedenza senza alloggio per 4 settimane.
+- Contratto D-SCOL-261112 in DECISIONS per Gilda, Scriptorium, FISCO-01, CRIME, ARTE, diplomazia e la futura sessione Chiesa.
+
 12/11/2026 — `feature/bargello-balivo` (FISCO-01 fase B, pre-merge):
 - Nuovo modulo Erario (`ConquerTreasury`) e scheda ERARIO nel Profilo, con cursori, efficienza e decreti.
 - Imposte nuove: testatico, dazio delle botteghe L3, pedaggio e decima in natura, riscosse con l'efficienza del Municipio del centro, dei Bargelli e dei Balivi.

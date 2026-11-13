@@ -1,5 +1,27 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-SCOL-261112 — Scolarizzati: sottoclasse istruita di L3/L4 e contratto dei ruoli istruiti (12/11/2026)
+
+- **DECISO (product owner, 12/11/2026), nessun codice:** specifica completa in [SCOL-01](BACKLOG.md).
+- **ALTERNATIVE SCARTATE:**
+  - quinta classe con borsellino e felicità propri (sarebbe un secondo ledger);
+  - casa intera «istruita»;
+  - specializzazione per mestiere.
+- **CONTRATTO PER LE ALTRE SESSIONI** (Gilda, Scriptorium, FISCO-01, CRIME, ARTE, diplomazia, Chiesa). Le sessioni non ridefiniscono classe, salario base o formazione: registrano ruoli.
+  1. **Chi sono.** Abitanti delle case L3/L4 contati in `State.economy.educated`, in due rami: `lay` (laici) e `clergy` (chierici). Tetto: `floor(L3/3) + floor(L4/3)` (3 posti per casa L3, 4 per casa L4), allievi compresi. Usano il borsellino e la felicità della loro classe; non esiste un ledger proprio.
+  2. **Ruoli.** Ogni sessione registra i suoi ruoli con un descrittore `{id, branch:'lay'|'clergy', label, owner, seats(state) → intero, minYield ∈ [0,1], payer:'castle'|'church'|'L3'|'commission'}`. API proposta: `ConquerEducated.registerRole(desc)`. La sessione che implementa la fase 3 di SCOL-01 la crea; finché non esiste, le sessioni documentano soltanto il descrittore.
+  3. **Lettura.** `ConquerEducated.coverage(roleId)` restituisce `{seats, assigned, ratio, yield}`, dove `yield = max(minYield, assigned/seats)` e `seats = 0` dà `yield = 1`. L'effetto del ruolo moltiplica per `yield` e non conta mai le persone per conto suo. Con `assigned = 0` e `seats > 0` il ruolo è «scoperto» e il motore degli scolarizzati mostra l'avviso.
+  4. **Allocazione.** Giornaliera, nella scheda Job Manager «L3 · Istruiti»: priorità, minimo e AUTO come `l1Jobs`/`l2Jobs`. Uno scolarizzato con un ruolo esce dai lavoratori L3/L4; senza ruolo lavora come L3 comune.
+  5. **Salario.** Mensile, 2 × `wage.L3` × `wageMul` (cursore 50–200%, solo laici; per i chierici decide la sessione Chiesa). È versato al borsellino della classe dello scolarizzato e addebitato al `payer`. I ruoli `commission` (artisti) non hanno salario mensile: ARTE paga a opera.
+  6. **Origini.** Solo il motore degli scolarizzati crea o toglie scolarizzati: Scriptorium (selettore Laico/Clericale, 4 allievi, 1 anno, retta 20 dal borsellino della classe, iscrizione automatica), immigrazione mensile dei laici e ingaggio del signore (40 oro, arrivo in 14 giorni). Le altre sessioni non aggiungono scolarizzati.
+- **ASSEGNAZIONI DEI RAMI:**
+  - laici: esattori e giudici (FISCO-01/CRIME), funzionari della Gilda, artisti (ARTE), scrivani (diplomazia);
+  - chierici: gestore della Chiesa ed eventuale personale dello Scriptorium.
+  - Il gestore della Locanda resta un L3 comune.
+- **NUOVA SESSIONE RICHIESTA:** la Chiesa come entità autonoma (tesoro, entrate, salario dei chierici, gerarchia). Fino ad allora il castello paga i chierici per conto della Chiesa.
+- **IPOTESI:** tutti i numeri sono provvisori. L'immigrazione dipende dall'assegnazione automatica dei gestori di Chiesa e Locanda, oggi assente.
+- **IMPATTO:** nessun file cambiato in questa tappa. Le fasi proposte toccheranno `src/settlement-economy.js` (allocazione, mensile, sabato), `settlement-commerce.js` (gestori), `settlement-civic-annexes.js` (Scriptorium), `settlement-panels.js` / `ui/shell.js` (sotto-righe, scheda Istruiti) e un nuovo modulo con `qa/educated-regression.cjs`. ROADMAP invariata.
+
 ## D-FISCO-261110 — Fisco: il Municipio riscuote, l'Erario decide; Bargello e Palazzo del Balivo (10/11/2026)
 
 - **DECISIONE DEL PRODUCT OWNER:** le aliquote si fissano dall'Erario (nuova scheda del Profilo) e non dipendono da alcun edificio. Il Municipio non fa né gestisce le tasse: determina l'**efficienza di riscossione** (incassato = dovuto × efficienza). Imposte: vendite (esistente), testatico, dazio sulle botteghe L3, pedaggio, decima.

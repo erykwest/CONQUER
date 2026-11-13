@@ -157,6 +157,17 @@
   }
   const population = d => d.economy?.population || {};
   const classBars = p => bars(CLASSES.map(k=>[k,p[k]]),max1(Object.values(p)));
+  // SCOL-01: educated residents are a sub-row of L3/L4, never a fifth class.
+  const educated = d => d.economy?.educated || null;
+  function educatedLine(d) {
+    const s = educated(d);
+    if(!s)return '';
+    return line('di cui scolarizzati (L3 · L4)',fmt(s.total)+' ('+fmt(s.byClass.L3)+' · '+fmt(s.byClass.L4)+')')+
+      line('laici · chierici',fmt(s.lay)+' · '+fmt(s.clergy))+
+      line('con ruolo · liberi · in formazione',fmt(s.assigned)+' · '+fmt(s.unassigned)+' · '+fmt(s.training))+
+      (s.homeless?line('senza alloggio',fmt(s.homeless)):'');
+  }
+  const classCard = d => classBars(population(d))+educatedLine(d);
   const warningList = (d,none) => d.warnings.length ? d.warnings.map(warn).join('') : empty(none);
 
   // ---- Views ------------------------------------------------------------------
@@ -171,7 +182,7 @@
       kpi('Cavalieri',fmt(d.knights?.current)),
       kpi('Avvisi',fmt(d.warnings.length),'',d.warnings.length?'bad':'good')
     ])+grid([
-      card('Classi sociali',classBars(p)),
+      card('Classi sociali',classCard(d)),
       card('Cibo: produzione e domanda',foodChart(d)),
       card('Evoluzione della felicità',welfareTrend(d),'',true),
       card('Segnalazioni',warningList(d,'Nessun allarme rilevato.'),'',true)
@@ -188,7 +199,7 @@
       kpi('Felicità media',fmt(d.economy?.welfare)+'/100'),
       kpi('Aliquota',fmt(tax)+'%')
     ])+grid([
-      card('Classi sociali',classBars(p)),
+      card('Classi sociali',classCard(d)),
       card('Felicità L1–L4',active.length?bars(active.map(k=>[k,h[k]]),100):empty('Nessun residente'),'Valori correnti, non storici.'),
       card('Tendenza felicità L1–L4',classTrend(d),'',true),
       card('Tassazione e razioni',policy),
@@ -223,10 +234,11 @@
   // Two independent job subpalettes, sharing a single editable queue renderer.
   function jobTierNav(){
     return '<nav class="cp-subnav" role="tablist" aria-label="Classi lavoratori">'+
-      ['L1','L2'].map(t=>'<button type="button" role="tab" data-cp-jobs-tier="'+t+'" aria-selected="'+(ui.jobTier===t)+'" class="'+(ui.jobTier===t?'active':'')+'">'+t+'</button>').join('')+'</nav>';
+      [['L1','L1'],['L2','L2'],['L3','L3 · Istruiti']].map(([t,label])=>'<button type="button" role="tab" data-cp-jobs-tier="'+t+'" aria-selected="'+(ui.jobTier===t)+'" class="'+(ui.jobTier===t?'active':'')+'">'+esc(label)+'</button>').join('')+'</nav>';
   }
   function jobs(d){
     if(ui.jobTier==='L2')return jobTierNav()+l2Jobs(d);
+    if(ui.jobTier==='L3')return jobTierNav()+educatedJobs(d);
     const e=d.economy||{},j=e.jobs||{},p=population(d),work=JOBS.map(([k,label])=>[label,j[k]]);
     const activity=(e.activities||[]).filter(a=>a.tier===1);
     const sites=activity.length?table(['Attività','Occupati','Proprietà'],activity.map(a=>[
@@ -241,7 +253,7 @@
     ])+grid([
       card('Priorità produzioni e mansioni L1',jobQueue(e,'L1'),'Le priorità si salvano nella partita.',true),
       card('Distribuzione delle mansioni L1',bars(work,max1(work.map(x=>x[1]))),'Manodopera assegnata dal motore economico.'),
-      card('Popolazione per classe',classBars(p),'L2–L4 mantengono capacità produttive proprie.'),
+      card('Popolazione per classe',classCard(d),'L2–L4 mantengono capacità produttive proprie.'),
       card('Storico occupazione',jobsTrend(d),'Le assegnazioni variano con cantieri, stagione e risorse.',true),
       card('Posti nelle attività',sites,'Occupati rilevati dal Job Manager economico.',true),
       ...(j.foodRisk?[card('Segnalazioni',warn('Possibile carenza alimentare rispetto al fabbisogno stimato.'),'',true)]:[])
@@ -265,6 +277,26 @@
         'Campi, cave e miniere utilizzano la sola manodopera L2.',true),
       card('Distribuzione L2 per produzione',tasks.length?bars(tasks.map(t=>[t.label,t.workers]),max1(tasks.map(t=>t.workers))):empty('Nessuna produzione L2 presente.')),
       card('Attività L2',sites,'I campi fuori stagione e le imprese disattivate non richiedono lavoratori.',true)
+    ]);
+  }
+  // SCOL-01 phase 1: counters, cap and the lord's hire. Roles, wages and courses come later.
+  const HIRE_BLOCK = {gold:'Oro del castello insufficiente.',seats:'Nessun posto libero nelle case L3/L4.',economy:'Economia non inizializzata.'};
+  function educatedJobs(d){
+    const s=educated(d);
+    if(!s)return empty('Scolarizzati non disponibili.');
+    const can=s.canHire||{ok:false};
+    const hire='<button type="button" class="cp-action" data-cp-educated-hire'+(can.ok?'':' disabled')+'>Ingaggia scolarizzato · '+fmt(s.hireCost)+' oro</button>'+
+      (can.ok?'':warn(HIRE_BLOCK[can.reason]||'Ingaggio non disponibile.'))+
+      line('In viaggio',fmt(s.hiresInTransit)+(s.nextArrival!=null?' · primo arrivo giorno '+fmt(s.nextArrival):''));
+    return kpis([
+      kpi('Scolarizzati',fmt(s.total),'Laici '+fmt(s.lay)+' · chierici '+fmt(s.clergy)),
+      kpi('Posti L3/L4',fmt(s.capacity.total),'Liberi '+fmt(s.free)),
+      kpi('Senza alloggio',fmt(s.homeless),'Emigrano dopo 4 settimane',s.homeless?'bad':''),
+      kpi('In viaggio',fmt(s.hiresInTransit),'Arrivano in '+fmt(s.hireDays)+' giorni')
+    ])+grid([
+      card('Ingaggio del signore',hire,'Il laico arriva dopo due settimane; senza un posto libero all’arrivo l’oro torna al castello.'),
+      card('Scolarizzati per classe',bars([['L3',s.byClass.L3],['L4',s.byClass.L4]],max1([s.capacity.L3,s.capacity.L4]))+educatedLine(d),'Un terzo dei residenti: 3 posti per casa L3, 4 per casa L4.'),
+      card('Ruoli istruiti',empty('Esattori, giudici, funzionari, chierici e artisti arriveranno con i loro edifici.'),'',true)
     ]);
   }
   function jobQueue(e,tier){
@@ -569,7 +601,7 @@
     ]);
   }
   const views = {general,people,economy,estate,stores,military,building,diplomacy,alerts};
-  const PALETTES = {jobs:['Job Manager','Priorità e assegnazioni L1 / L2'],trade:['Trade','Mercato, prezzi e quote di vendita'],erario:['Erario','Imposte, riscossione e decreti']};
+  const PALETTES = {jobs:['Job Manager','Priorità e assegnazioni L1 / L2, scolarizzati L3'],trade:['Trade','Mercato, prezzi e quote di vendita'],erario:['Erario','Imposte, riscossione e decreti']};
 
   // ---- Rendering --------------------------------------------------------------
   function nav(d) {
@@ -609,7 +641,8 @@
   if(root){
     root.addEventListener('click',ev=>{
       const tier = ev.target.closest('[data-cp-jobs-tier]');
-      if(tier){ui.jobTier=tier.dataset.cpJobsTier==='L2'?'L2':'L1';render();return;}
+      if(tier){ui.jobTier=['L2','L3'].includes(tier.dataset.cpJobsTier)?tier.dataset.cpJobsTier:'L1';render();return;}
+      if(ev.target.closest('[data-cp-educated-hire]')){window.ConquerGame?.commands?.hireEducated?.();render();return;}
       const msub = ev.target.closest('[data-cp-military-sub]');
       if(msub){ui.militaryTab=msub.dataset.cpMilitarySub==='garrisons'?'garrisons':'overview';render();return;}
       const collapse = ev.target.closest('[data-cp-circle-toggle]');

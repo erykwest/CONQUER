@@ -868,6 +868,7 @@
     });
     e.panelHistory.push({
       day,population:{...pop},welfare:round(e.welfare),happiness:{...e.happiness},
+      educated:window.ConquerEducated?.summary?.()?.total??null,
       prices:{...e.prices},jobs:{
         herding:worker.herding,logging:worker.logging,industry:worker.industry,
         building:worker.building,carter:Math.max(worker.carter,finite(e.weekCarterPeak)),idle:worker.idle
@@ -923,6 +924,7 @@
     for(let day=start;day<=end;day++){
       e.lastDay=day;
       daily(day);
+      window.ConquerEducated?.daily?.(day); // SCOL-01: educated cap, overflow, hire arrivals
       if(weekday(day)===5)market(day); // Saturday market; no civilian production
       window.ConquerCommerce?.daily?.(day); // L3 workshops and their goods market
       window.ConquerTreasury?.daily?.(day); // FISCO-01: Saturday tax collection, decrees

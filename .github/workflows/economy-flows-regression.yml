@@ -20,6 +20,8 @@ on:
       - 'src/settlement-population-figures.js'
       - 'src/ui/**'
       - 'qa/labor*.cjs'
+      - 'src/settlement-educated.js'
+      - 'qa/educated-regression.cjs'
       - 'qa/economy*.cjs'
       - 'qa/forestry-regression.cjs'
       - 'qa/storage-yard-regression.cjs'
@@ -90,6 +92,8 @@ jobs:
           node qa/construction-payroll-regression.cjs
           node qa/construction-commute-regression.cjs
           node qa/labor-jobs-regression.cjs
+          node --check src/settlement-educated.js
+          node qa/educated-regression.cjs
           node qa/economy-rations-regression.cjs
           node --check src/settlement-treasury.js
           node qa/treasury-regression.cjs
