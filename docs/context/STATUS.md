@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-13 — Selezione edifici: perimetro posteriore nascosto (branch `fix/selection-outline-occlusion`)
+
+- **CODICE SUL BRANCH, NON MERGE:** `selectionOutlineRuns` in `src/settlement-castle.js` spezza il perimetro di selezione e omette i lati dietro il volume e quelli visti di taglio con la camera libera. Il contorno 2D resta l'ultimo passaggio, sopra la scena WebGL: nessun depth test. I civici usano `ConquerCivic3D.builtParts(s)` (nuovo export in `settlement-civic3d.js`) per il footprint del livello corrente.
+- **TEST:** `mastio-selection-zoom-regression` con proiezione isometrica reale (torre, campo, piazza, casa, civico per livello); `well-civics`, `stonecolor`, `cutaway-floors`, `crime-buildings`, `court-people`, `civic3d` e `ci-p1` superate in locale. Catture Playwright prima/dopo di torre, chiesa, municipio e dei livelli L1–L3 di chiesa, taverna, municipio e gilda. CI da verificare.
+- **INVARIATO:** l'area cliccabile (`screenHitStructureBody`) usa ancora il footprint completo dei civici.
+
 ## 2026-11-13 — Abiti da mestiere (branch `feature/role-outfits`)
 
 - **CODICE SUL BRANCH, NON MERGE:**
