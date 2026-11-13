@@ -4,6 +4,22 @@
 
 `drawCastleSelection` non disegna più i lati del perimetro a terra nascosti dal volume dell'edificio: un lato è posteriore se appena sotto di esso sullo schermo c'è il footprint di un corpo con altezza reale. Vale per torri, mura, sezioni costruite, case e civici, anche in cutaway, con la vista ruotata e con la camera libera di CAM-ROT-01 (i lati visti di taglio restano nascosti dalla parete). Campi, cantieri, piazze e corpi bassi (cortili, industrie aperte, pozzi) mantengono il perimetro completo. I civici seguono ciò che sta in piedi al livello corrente (`ConquerCivic3D.builtParts`, tabella `BUILT`): la chiesa L1 non mostra più la croce L3. Regressione in `qa/mastio-selection-zoom-regression.cjs`. ROADMAP e DECISIONS invariate.
 
+## 2026-11-13 — Capsuloide delle figure (`feature/vehicles-depth-cards`)
+
+Le carte figura in World3D prendono la profondità per pixel dal capsuloide: verticale per le persone, orizzontale lungo il corpo per gli animali. Bestiame e lupi diventano carte con capsula e collider. Nuova decisione D-CAPSULE-261113 in DECISIONS; nuova prova `qa/animal-capsule-browser.mjs` nel workflow Main fixes. ROADMAP invariata.
+
+## 2026-11-13 — Animali 2D rivisti come il cavallo (`feature/vehicles-depth-cards`)
+
+Bestiame e fauna 2D passano alle zampe articolate del nuovo cavallo con passo ridotto per specie; capra e mucca ricevono il collo articolato, così al pascolo la testa resta attaccata. Tutte le zampe, cavallo compreso, sono ora articolate al ginocchio/garretto e si piegano nella fase di volo del passo e del galoppo. Nuova famiglia `Animali 2D` nel Lab con baseline e strumento `qa/animal-preview.mjs`. D-046 invariata (sempre figure 2D); ROADMAP e DECISIONS invariate.
+
+## 2026-11-12 — Cavallo 2D ridisegnato e anteprime in gioco (`feature/vehicles-depth-cards`)
+
+Il cavallo 2D, condiviso da ogni uso in gioco, passa da sagoma tozza da asino a proporzioni di cavallo (zampe lunghe articolate, collo pieno, testa fine), con passo meno a forbice; gear dei cavalieri adattato. Nuovi strumenti `qa/horse-gallery.js` e `qa/horse-preview.mjs` per le anteprime in gioco di tutti gli usi; cinque voci 2D del cavallo aggiunte al Lab con baseline. D-046 invariata (sempre figure 2D); ROADMAP invariata.
+
+## 2026-11-12 — Veicoli con profondità in World3D (`feature/vehicles-depth-cards`)
+
+Chiusura di `economic-balances-animations`: verificato che economia, veicoli 2D e cartelli sono già in main (#108, D-054, D-055) e che i file residui sono superati. Completato l'unico residuo dopo #201: carri, carretti e carrozze (cavalli e conducente compresi) entrano nel depth buffer come carte 2D dell'atlante figure (`figure()` con `card={span,ox}`), occlusi da murature e case; convogli dei cartelli disegnati con la popolazione. Nuove prove `vehicles-regression` (caso WebGL) e `vehicle-cards-browser.mjs` nel workflow Main fixes. Decisione D-VEH-CARDS-261112 (applica D-046). ROADMAP invariata. Nessun nuovo modello né asset: il Lab mostra già il carro 2D usato dalla carta, audit asset non necessario.
+
 ## 2026-11-13 — RC-01…RC-07 · Hub/lobby e remote control (solo documentazione)
 
 Definita main page multi-campagna con lobby e partite in corso, KPI aggregati per insediamento e gestione remota da browser, in futuro da app Android/iOS. Portata funzionale: messaggi, diplomazia, spedizioni, tributi, mappa regionale e controllo del feudo. Riletti centro pannelli su main e branch `messages` divergente (29 avanti / 317 indietro); riportata necessità di porting selettivo e API autorevoli senza simulatore duplicato. Specifica `docs/REMOTE-CONTROL-SCOPE.md`, D-RC-261113 e backlog RC-01…RC-07. **Nessun codice, test o asset modificato. ROADMAP e STATUS invariati.**

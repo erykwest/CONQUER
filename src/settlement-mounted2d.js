@@ -86,16 +86,19 @@
     limb(ctx,[root,[j.x-4,j.y+4]],o.livery.main,40,o.lw);
     line(ctx,[root[0]+6,root[1]-18],[j.x+2,j.y-14],o.livery.alt,9);
     headSpace(ctx,o,()=>{
-      poly(ctx,[[198,50],[214,34],[226,40],[230,70],[220,100],[204,92]],STEEL,OUTLINE,o.lw);                 // chanfron
-      ctx.fillStyle='#16181a';ctx.beginPath();ctx.arc(219,52,4,0,Math.PI*2);ctx.fill();
-      poly(ctx,[[212,32],[206,8],[198,-6],[204,-8],[216,10],[218,30]],o.livery.main,OUTLINE,o.lw*.8);     // plume
-      poly(ctx,[[206,8],[198,-6],[204,-8],[212,6]],o.livery.alt,null,o.lw);
+      // Chanfron down the face of the nose-down head (settlement-animals.js horse), eye hole, plume at the poll.
+      poly(ctx,[[212,33],[221,26],[232,34],[249,66],[246,78],[236,74],[220,50]],STEEL,OUTLINE,o.lw);
+      ctx.fillStyle='#16181a';ctx.beginPath();ctx.arc(224,42,4,0,Math.PI*2);ctx.fill();
+      poly(ctx,[[215,28],[209,6],[201,-6],[207,-8],[219,8],[221,24]],o.livery.main,OUTLINE,o.lw*.8);
+      poly(ctx,[[209,6],[201,-6],[207,-8],[215,4]],o.livery.alt,null,o.lw);
     });
   }
   function bridle(ctx,o){
     headSpace(ctx,o,()=>{
       ctx.strokeStyle=LEATHER_DARK;ctx.lineWidth=o.lw*1.6;ctx.lineCap='round';
-      ctx.beginPath();ctx.moveTo(212,36);ctx.lineTo(226,96);ctx.moveTo(204,72);ctx.lineTo(232,80);ctx.stroke();
+      // Cheek strap from behind the ear to the bit, browband, noseband across the muzzle.
+      ctx.beginPath();ctx.moveTo(213,31);ctx.lineTo(229,81);ctx.moveTo(213,33);ctx.lineTo(228,30);
+      ctx.moveTo(232,80);ctx.lineTo(247,66);ctx.stroke();
     });
   }
 
@@ -157,7 +160,8 @@
   }
   function reins(ctx,o){
     const sp=o.sp,j={x:(sp.joint.a.x+sp.joint.b.x)/2+o.pose.headX,y:(sp.joint.a.y+sp.joint.b.y)/2+o.pose.headY};
-    line(ctx,[150,64],[j.x+14,j.y+4],LEATHER_DARK,o.lw*1.3);
+    // To the bit at the corner of the mouth (head at rest: about 20,27 past the throat joint).
+    line(ctx,[150,64],[j.x+20,j.y+27],LEATHER_DARK,o.lw*1.3);
     limb(ctx,[[122,44],[138,62],[150,64]],o.livery.main,9,o.lw);
     ctx.fillStyle=SKIN;ctx.beginPath();ctx.arc(150,64,4.5,0,Math.PI*2);ctx.fill();
     poly(ctx,[[100,74],[112,74],[112,90],[100,90]],LEATHER,OUTLINE,o.lw);                           // satchel
