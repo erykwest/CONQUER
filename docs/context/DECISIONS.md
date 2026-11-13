@@ -1,5 +1,47 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-RC-BOUNDARY-261113 — Confine tra gestione remota e vista 3D (13/11/2026)
+
+- **DECISO dal product owner:** nella main page e nel controllo remoto (browser; in seguito app Android/iOS) sono disponibili **gestione economica, fiscale, militare strategica e diplomatica**, comprese assegnazioni del lavoro, programmazione/priorità dei cantieri, spedizioni, tributi, carovane, messaggi e mappa regionale.
+- **DECISO:** la **vista 3D/Builder** resta necessaria per **piazzamento preciso degli edifici**, **progettazione spaziale delle fortificazioni** e **controllo tattico diretto delle battaglie**. Il remote control non duplica il Builder geometrico; programmazione dei cantieri da remoto significa amministrare lavori/progetti già localizzati, non scegliere coordinate o collocare nuove strutture.
+- **VINCOLO:** tutti i client usano i medesimi dati e comandi di gioco autorevoli, con permessi per campagna e feudo; non introdurre una seconda simulazione o aggirare disponibilità, costi, tempi e percorsi.
+- **APERTO:** inventario esatto dei comandi per ciascun dominio, tempi e conferme di applicazione, permessi feudali, pianificazione amministrativa di strutture non ancora posizionate, UX. Il **confine funzionale principale è approvato**.
+- **STATO:** solo documentazione; nessuna modifica al runtime, schema o milestone. [Specifica aggiornata](../REMOTE-CONTROL-SCOPE.md#2a-confine-funzionale-del-remote-control--deciso-13112026).
+
+
+## D-CAPSULE-261113 — Profondità delle figure dal capsuloide, diverso per persone e animali (13/11/2026)
+
+- **DECISO (product owner, 13/11/2026; applica D-046):** in World3D ogni carta figura (soldati, civili, veicoli, animali) prende la profondità **per pixel dal suo capsuloide** (programma `card` di `settlement-world3d.js`, `gl_FragDepth`), non più una profondità piatta ai piedi. **Persone:** capsula verticale (raggio 0,12, dai piedi a 0,38). **Animali:** capsula orizzontale lungo il corpo, orientata con la direzione dell'animale (o con l'asse dello schermo quando non ne ha), misure dal contorno del corpo (`ConquerAnimals.capsule`). Il capsuloide degli animali è anche il loro collider (`colliders()`, tipo `animal:<specie>`); i civili restano senza collider.
+- **MOTIVO:** con la profondità piatta una figura appena davanti a un muro aveva il corpo tagliato dalla muratura dietro, e una carta animale larga prendeva in blocco la profondità del centro (artefatti nel cutaway e lungo muri e tettoie).
+- **ALTERNATIVE SCARTATE:** carte animale con la sola profondità dei piedi (gli artefatti sopra); mesh 3D degli animali (`ConquerAnimals3D`, esclusa da D-046/D-055).
+- **CONSEGUENZA:** bestiame e lupi in World3D sono carte dell'atlante figure con capsula; nel renderer 2D restano il disegno 2D con `withUrbanFigureOcclusion`. Cavalli di giostra/feste e cavalieri in combattimento restano 2D (DA FARE).
+
+## D-VEH-CARDS-261112 — Veicoli come carte 2D con profondità (12/11/2026)
+
+- **DECISO (applica D-046 e D-055, segue #201):** in World3D un veicolo su strada è **una carta 2D depth-tested** dell'atlante figure: pianale, carico, squadra di cavalli 2D e conducente dipinti insieme da `ConquerWagons.drawWagon`, carta allargata (`span`) e spostata verso i cavalli (`ox`). Nessuna mesh 3D di carri o cavalli; `ConquerWagons3D`/`ConquerAnimals3D` restano esclusi dal gioco.
+- **ALTERNATIVE SCARTATE:** carte separate per pianale e cavalli (il timone non resterebbe agganciato quando la strada non è orizzontale sullo schermo); caselle d'atlante più grandi per i soli veicoli (allocatore e LRU da duplicare, guadagno visibile solo oltre zoom 2,5).
+- **CONSEGUENZA:** `economic-balances-animations` non ha altri residui da recuperare; il branch si può archiviare.
+
+## D-RC-261113 — Main page e controllo remoto multi-campagna (13/11/2026)
+
+- **DECISO dal product owner:** la pagina principale dopo l'accesso contiene sia la lobby delle campagne disponibili sia le campagne **in corso alle quali l'account partecipa**, con **KPI aggregati per insediamento** senza mischiare lo stato delle partite.
+- **DECISO:** la stessa main page diventa il punto d'accesso al **controllo remoto** dei propri feudi, inizialmente da **browser** e in futuro tramite **app Android/iOS**, senza aprire la scena Builder/3D. Nell'interfaccia confluiscono messaggi e branch `messages`, diplomazia, spedizioni, tributi, mappa regionale e gestione dell'insediamento.
+- **VINCOLO DI ARCHITETTURA:** stesso stato autorevole di partita e medesime regole per ogni client, partecipazioni isolate per `campaign_id` (D-MP-ACCOUNT-261113), comandi autorizzati lato server, nessuna seconda economia o seconda simulazione in dashboard.
+- **PROPOSTO da verificare:** distinguere comandi amministrativi sul proprio feudo dalle comunicazioni diplomatiche trasportate con ETA simulata; non rendere istantanee le lettere della branch `messages` per il solo fatto che sono consultate da remoto.
+- **GAP CODE/BRANCH:** centro di controllo a nove viste già su `main` ma locale al runtime; `messages` è una branch ancora separata e divergente (29 commit avanti, 317 indietro nel confronto del 13/11). La sua postazione è su feudi esterni astratti, senza World/Feudal reale. Richiede porting selettivo, non merge cieco.
+- **APERTO:** portata degli ordini remoti (incluso Builder geometrico), tempi, visibilità/freschezza dei KPI, autorizzazioni su feudi di sudditi/vassalli, finestra offline, notifiche push e UI mobile.
+- **STATO:** solo scope documentale; [REMOTE-CONTROL-SCOPE.md](../REMOTE-CONTROL-SCOPE.md). Nessun codice aggiornato, ROADMAP M0–M5 invariata.
+
+
+## D-MP-ACCOUNT-261113 — Profilo globale e partecipazioni multi-campagna (13/11/2026)
+
+- **DECISO dal product owner:** separare il profilo/account del giocatore dalla partita, permettendo a uno stesso account di essere **presente in più campagne/server contemporaneamente**. La lobby deve mostrare e riaprire tutte le sue partecipazioni.
+- **CONTRATTO:** account globale identificato da `user_id`, associazione a campagne distinta (`campaign_id + user_id`) e stato autorevole di ogni partita/feudo isolato per `campaign_id` / identificativo territoriale. Il giocatore può ricoprire ruoli feudali differenti nelle diverse campagne; risorse, unità, territori e progressi non vengono condivisi.
+- **GAP ATTUALE:** `src/settlement-app-persistence.js` usa oggi `settlements` con chiave di conflitto `user_id,world_cell_x,world_cell_y` e coordinate (0,0), senza discriminante di campagna. Serve progettare schema, migrazione, autenticazione e autorizzazioni per multi-server prima di implementare lobby e multiplayer.
+- **APERTO:** profilo pubblico globale vs identità del signore in partita, limiti di partecipazioni, ricompense globali e politiche di abbandono/sconfitta.
+- **STATO:** solo design documentato; non implementato. Specifica: [MULTIPLAYER-SERVER-SCOPE.md](../MULTIPLAYER-SERVER-SCOPE.md). ROADMAP M0–M5 invariata.
+
+
 ## D-MP-261113 — Ingresso multiplayer e colonizzazione feudale (13/11/2026)
 
 - **DECISO, solo design:** server multiplayer dimensionati indicativamente per 20–100 giocatori, con minimo di avvio ancora da fissare. Slot di giocatori, feudi bot e territori non colonizzati sono concetti distinti. I nuovi giocatori **non sostituiscono bot** e **non ereditano sviluppi IA**.
