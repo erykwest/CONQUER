@@ -11,6 +11,11 @@
 
 STATUS, BACKLOG, CHANGELOG e DECISIONS (D-FIELD-LEND-261113, riscritta) aggiornati; ROADMAP invariata.
 
+## 2026-11-13 — RC-01…RC-07 · Hub/lobby e remote control (solo documentazione)
+
+Definita main page multi-campagna con lobby e partite in corso, KPI aggregati per insediamento e gestione remota da browser, in futuro da app Android/iOS. Portata funzionale: messaggi, diplomazia, spedizioni, tributi, mappa regionale e controllo del feudo. Riletti centro pannelli su main e branch `messages` divergente (29 avanti / 317 indietro); riportata necessità di porting selettivo e API autorevoli senza simulatore duplicato. Specifica `docs/REMOTE-CONTROL-SCOPE.md`, D-RC-261113 e backlog RC-01…RC-07. **Nessun codice, test o asset modificato. ROADMAP e STATUS invariati.**
+
+
 ## 2026-11-13 — MP-07 · Account separato dalle campagne (solo design)
 
 Confermato dal product owner: lo stesso account può partecipare a più server/campagne contemporaneamente. Separazione documentata tra identità globale, partecipazione `user_id + campaign_id` e progresso di feudi/mondo isolato per campagna. Evidenziato il gap concreto nei salvataggi Supabase attuali (`settlements` con `user_id,world_cell_x,world_cell_y`, senza `campaign_id`). Aggiornati specifica multiplayer, decisione D-MP-ACCOUNT-261113 e backlog MP-07. **Solo documentazione: nessuna migrazione SQL, codice o QA gameplay. ROADMAP e STATUS invariati.**
