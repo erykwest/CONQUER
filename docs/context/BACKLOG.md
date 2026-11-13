@@ -1,5 +1,17 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## MP-01…MP-06 — Multiplayer, lobby e colonizzazione feudale (design 13/11/2026)
+
+**STATO: SPECIFICA / DA IMPLEMENTARE.** [Contratto dettagliato e distinzioni deciso/proposto/aperto](../MULTIPLAYER-SERVER-SCOPE.md), decisione [D-MP-261113](DECISIONS.md#d-mp-261113--ingresso-multiplayer-e-colonizzazione-feudale-13112026). Dipendenza World/Feudal (M4); nessuna lobby o sostituzione bot implementata.
+
+- [ ] **MP-01:** capienze indicative 20–100, minimo effettivo di avvio, ciclo di server, ingresso durante la campagna, dati pubblici in lobby.
+- [ ] **MP-02:** separare territori rivendicati da villaggi fondati; slot umani distinti da bot e terre non colonizzate, mantenendo una sola sovranità per territorio.
+- [ ] **MP-03:** ingresso solo su posizione idonea, con priorità alle terre libere; proprietario può aprire un possedimento alla nuova fondazione umana **come suddito** invece dello sviluppo automatico. Niente takeover di bot né eredità dei loro progressi.
+- [ ] **MP-04:** definire mastio come eventuale blocco, spazio edificabile, permessi e diritti dei sudditi, integrazione con imposte/tributi, revoca, sconfitta e nuove iscrizioni.
+- [ ] **MP-05:** multiplayer ×1, calibrazione calendario/durata campagne, disponibilità regionale e partecipazione su più server (quest'ultima **proposta**, non decisa).
+- [ ] **MP-06:** solo in fase implementativa, QA su capienza, idoneità dello spawn, permessi, persistenza, non sovrapposizione e assenza di trasferimento dati dai bot.
+
+
 ## 2026-11-13 - Preparazione merge PR #206
 
 Preparazione merge PR #206: main aggiornato riconciliato mantenendo moduli e documenti di entrambi i branch. Catalogo Wiki rigenerato. Gilda riferita agli artigiani L2; dazio botteghe e relativo malcontento addebitati a L2 anziche L3, con regressione riprodotta prima del fix. Fondazione: cinque scenari superati isolatamente con Node 22, ma timing intermittente oltre 100 ms nella suite anche su Node 22; verifica Actions ancora necessaria. Nessuna soglia allentata. Suite completa e Actions da completare prima del merge. Nessuna nuova funzione demografica, giudiziaria o archetipo edilizio.
