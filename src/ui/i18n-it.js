@@ -56,7 +56,7 @@ export const T = {
     market: 'Mercato', tavern: 'Taverna', church: 'Chiesa', training: 'Addestramento',
     loggingCamp: 'Taglialegna', quarry: 'Cava', mine: 'Miniera', clayPit: 'Argilla', windmill: 'Mulino a vento', watermill: 'Mulino ad acqua',
     pillory: 'Gogna', gallows: 'Forca', scaffold: 'Patibolo',
-    plaza: 'Piazza', townhall: 'Municipio', guild: 'Gilda', brick: 'Mattoni', sloped: 'Pendio', walled: 'Terrazza murata', flat: 'Piano H0', dig: 'Scava 1U', raise: 'Alza 1U'
+    plaza: 'Piazza', townhall: 'Municipio', guild: 'Gilda', bargello: 'Bargello', balivo: 'Palazzo del Balivo', brick: 'Mattoni', sloped: 'Pendio', walled: 'Terrazza murata', flat: 'Piano H0', dig: 'Scava 1U', raise: 'Alza 1U'
   },
   hints: {
     select: 'Clic su un edificio per selezionarlo',
@@ -69,7 +69,7 @@ export const T = {
   structures: {
     towerSquare: 'Torre quadrata', towerRound: 'Torre rotonda', watchtower: 'Torre di guardia', palisadeTower: 'Torre lignea', frameTower: 'Torre lignea a telaio',
     gate: 'Porta in pietra', woodGate: 'Porta lignea', wall: 'Mura', palisade: 'Palizzata', built: 'Sezione costruita',
-    house: 'Casa', civicAnnex: 'Annesso', market: 'Mercato', tavern: 'Taverna', church: 'Chiesa', training: 'Campo di addestramento', plaza: 'Piazza', townhall: 'Municipio', guild: 'Gilda', windmill: 'Mulino a vento', watermill: 'Mulino ad acqua',
+    house: 'Casa', civicAnnex: 'Annesso', market: 'Mercato', tavern: 'Taverna', church: 'Chiesa', training: 'Campo di addestramento', plaza: 'Piazza', townhall: 'Municipio', guild: 'Gilda', bargello: 'Bargello', balivo: 'Palazzo del Balivo', windmill: 'Mulino a vento', watermill: 'Mulino ad acqua',
     loggingCamp: 'Campo taglialegna', quarry: 'Cava', mine: 'Miniera', moat: 'Fossato', bridge: 'Ponte', well: 'Pozzo'
   },
   inspector: {
@@ -78,13 +78,13 @@ export const T = {
     completed: 'Completata',
     cost: 'Costo',
     controls: {
-      tier: 'Impronta', height: 'Livelli', rotation: 'Angolo', roof: 'Tetto', woodRoof: 'Tetto',
+      tier: 'Impronta', height: 'Livelli', rotation: 'Angolo', roof: 'Tetto', woodRoof: 'Tetto', roofCover: 'Copertura',
       base: 'Base', skin: 'Rivestimento', side: 'Lato esterno', cutaway: 'Spaccato',
       weapon: 'Arma', bartizan: 'Garitte', roofShape: 'Falde', civicLevel: 'Sviluppo', plaza: 'Variante', upper: 'Piano alto', hoarding: 'Ballatoio', bell: 'Campana', lookout: 'Vedetta', outpost: 'Avamposto', signalFire: 'Fuoco di segnalazione', innerRoof: 'Tetto interno',
       wallStair: 'Scala al camminamento', wallStairPos: 'Posizione scala'
     },
     words: {
-      battlement: 'Merlato', machicolation: 'Caditoie', pitched: 'Falde', open: 'Piattaforma', pitched4: 'Falde · 4 pali',
+      battlement: 'Merlato', machicolation: 'Caditoie', pitched: 'Falde', open: 'Piattaforma', pitched4: 'Falde · 4 pali', cover_shingle: 'Scandole', cover_thatch: 'Paglia', cover_turf: 'Zolle erbose',
       masonry: 'Pietra', timber: 'Graticcio',
       standard: 'Standard', buttress: 'Contrafforti', splayed: 'A scarpa', arcade: 'Porticato', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', innerRoofOff: 'Nessuno', innerRoofOn: 'Dentro i merli',
       none: 'Nessuna', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide · 4 falde', gable: '2 falde', hip: '4 falde con colmo', paved: 'Lastricata', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana d\'allarme',
@@ -186,6 +186,7 @@ export const T = {
     rotation: 'La rotazione segue una griglia di 15°; torri secondarie e innesti delle mura seguono.',
     roof: 'Caditoie: merlatura in aggetto su mensole.',
     woodRoof: 'Piattaforma aperta oppure tetto a falde su 4 pali.',
+    roofCover: 'Manto della long house: scandole, paglia o zolle erbose; il fumo del focolare esce dallo sfiatatoio nel colmo.',
     base: 'A scarpa: alta 0,5. Contrafforti: da quota 0 a H1. Le fondamenta seguono l\'impronta.',
     skin: { wall: 'Caditoie non disponibili sui muri T1. Ballatoio: galleria lignea al posto del coronamento.', built: 'Porticato: il piano terra interno si apre sotto gli archi e il piano alto resta sopraelevato. Sotto il portico solo stalle, officina degli armaioli e magazzino.' },
     side: { wall: 'Decide da che parte stanno merlatura o ballatoio.', palisade: 'Camminamento e terrapieno vengono generati verso l\'interno.', built: 'Finestre esterne solo al piano alto; il portico segue il lato opposto.' },

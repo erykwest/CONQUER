@@ -17,6 +17,171 @@
 - **PROVE LOCALI PASS:** `qa/vehicles-regression.cjs` (nuovo caso carte WebGL), haulage, road-sign-convoy, l1-carter-market, slopeways; nuova prova browser `qa/vehicle-cards-browser.mjs` (carte reali, occlusione dentro una torre, riuso atlante, scorte, fallback 2D) e `figure-billboards-browser.mjs`/`main-fixes-browser.mjs` su `python -m http.server`. Controllo visivo nel pannello browser: posizione e scala uguali al 2D; nel 2D il conducente del carro resta davanti al pianale, nella carta siede sulla cassetta.
 - **LIMITI:** la carta ha una sola profondità (quella del pianale): un muro sottile tra pianale e cavalli non li separa. Risoluzione della carta del carro ~27 px/U (le figure 48 px/U): leggermente morbida oltre zoom 2,5. Staffetta a cavallo dell'Avamposto e figure della battaglia navale restano 2D. CI da verificare.
 
+## 2026-11-13 — CAM-ROT-01 · Rotazione libera della camera (branch `feature/free-camera-rotation`)
+
+- **CODICE SUL BRANCH, NON MERGE:** `State.view.rotation` resta in quarti di giro ma accetta valori frazionari. `rotateViewPoint` (2D), lo shader WebGL (`uRot` ora `vec2` cos/sin) e l'ombreggiatura delle facce (`rotDir` in `settlement-mesh3d.js` e `settlement-wagons3d.js`) seguono qualsiasi angolo; per i quarti interi il percorso esatto è invariato.
+- **Comandi:** Shift + tasto centrale trascinato = rotazione libera attorno al centro dello schermo (160 px = 90°); con Ctrl scatti di 15° (24 posizioni). Tasto centrale o destro da soli = pan come prima. Q/E e pulsanti ↺/↻ restano a 90° partendo dall'angolo corrente. Angolo salvato nel salvataggio locale/cloud come prima.
+- **QA:** 51 regressioni Node che toccano camera/mesh/input PASS. La CI ha poi rilevato `qa/builder-placement-regression.cjs`, che estrae gli handler di input e non dichiarava il nuovo stato `orbit`: il finto ambiente ora lo dichiara accanto a `pan`, test PASS in locale. Prova browser in gioco sul layout `TEST` (168 strutture): pan, rotazione libera 22,5°, scatto a 30°, viste a 45° e 105° coerenti (terreno, strade, case, mura, cutaway torri, minimappa); punto al centro invariato; nessun errore di render in console.
+- **LIMITI:** ogni nuovo angolo ricostruisce scena statica e mesh (~150 ms, come un giro di 90°): durante il trascinamento ~6 fps. Le scelte discrete legate alla vista (facce aperte del cutaway, lato dei costruttori) si calcolano sull'angolo reale e non sono state riviste una per una.
+
+## 2026-11-13 - Preparazione merge PR #206
+
+Preparazione merge PR #206: main aggiornato riconciliato mantenendo moduli e documenti di entrambi i branch. Catalogo Wiki rigenerato. Gilda riferita agli artigiani L2; dazio botteghe e relativo malcontento addebitati a L2 anziche L3, con regressione riprodotta prima del fix. Fondazione: cinque scenari superati isolatamente con Node 22, ma timing intermittente oltre 100 ms nella suite anche su Node 22; verifica Actions ancora necessaria. Nessuna soglia allentata. Suite completa e Actions da completare prima del merge. Nessuna nuova funzione demografica, giudiziaria o archetipo edilizio.
+
+## 2026-11-13 - Verifica CI PR #206
+
+Corretta asserzione livestock obsoleta dopo SOC-CLASS-02. Test comportamentali su selettore agricolo reale, riserve cave, esclusione allevatori e conservazione della vocazione su 400 case migrate superati. Suite completa e CI da completare prima del merge. Nessuna modifica runtime o bilanciamento; ROADMAP e DECISIONS invariate. Demografia, 12 archetipi e funzioni giudiziarie fuori scope.
+
+## 2026-11-12 — SOC-CLASS-02 · Migrazione reale ceti (branch PR #206)
+
+- **CODICE SUL BRANCH, NON MERGE:** `ConquerSocialClasses` + migratori save local/cloud, riassegnazione L1 campi/cava/miniera, botteghe e portafoglio artigiani L2, istruiti/mercanti L3, possedimenti L4.
+- **CENSIMENTO:** residenti delle vecchie case preservati tramite `householdResidents`, livelli sociali distinti da `densityLevel`; cohort IDs stabili e livestock precedente preservato. Monete conservate con partizione 25/75 provvisoria di ex-L4.
+- **TEST:** nuova QA `social-classes-regression` collegata all'urbanistica; regressioni obsolete di economia/industrie/carrettieri aggiornate. Test V8 di migrazione superato. CI GitHub in verifica: non dichiarare merge o completamento fino a verde.
+- **ANCORA APERTI:** veri L3 magistrati/scribani e L2 botteghe specializzate, migrazione/emigrazione, felicità/loyalty operative, trasformazione case e 12 archetipi.
+- [Contratto](../CIVIL-CLASS-MIGRATION.md).
+
+
+## 2026-11-12 — CIV-EVT-01 · Skeleton effetti eventi civili (branch PR #206)
+
+- **SU BRANCH, NON MERGE:** `src/settlement-civic-event-effects.js` offre otto archetipi di evento e preview di felicità L1–L3, lealtà L4, costi teorici, rendimenti decrescenti e prestigio locale temporaneo. Riusa `ConquerUrbanHeatmaps.at`, le fasi e gli allestimenti già esistenti.
+- **NO GAMEPLAY:** script caricato come API inattiva; nessun addebito, cronologia, migrazione, ricostruzione o modifica ai livelli delle famiglie. Non confondere i figuranti provvisori con partecipanti effettivi.
+- **QA:** `qa/civic-event-effects-regression.cjs` collegato alla suite urbana. Smoke V8 del modulo eseguito; test Node/browser e CI da verificare.
+- **Contratto:** [CIVIC-EVENT-EFFECTS-SKELETON](../CIVIC-EVENT-EFFECTS-SKELETON.md) e D-CIV-EVT-261112.
+
+
+## 2026-11-12 — URB-HEAT-01 skeleton quattro heatmap (branch `feature/urban-heatmap-skeleton-20261112`)
+
+- **CODICE SUL BRANCH, NON MERGE:** nuovo motore puro `src/settlement-urban-heatmaps.js` con sette valori (domanda L1–L4, prestigio, sicurezza, criminalità), sorgenti radiali/poligonali, griglia deterministica, interpolazione e campionamento del lotto Voronoi. Caricato come API inattiva prima del runtime urbano.
+- **QA:** `qa/urban-heatmaps-regression.cjs` aggiunto e richiamato dalla suite urbana esistente; esecuzione locale e CI ancora da verificare.
+- **NON IMPLEMENTATI:** adapter da Builder/Crime/guardie/mura, domanda demografica reale, aggiornamenti territoriali, rendering heatmap, densificazione, migrazione L1–L4, ricostruzione automatica e persistenza. Nessuna modifica a salvataggi, occupanti o fabbricati.
+- **Contratto:** [URBAN-HEATMAP-SKELETON](../URBAN-HEATMAP-SKELETON.md); [decisione D-URB-HEAT-261112](DECISIONS.md).
+
+
+## 2026-11-13 — GILDA-01 fase 1 · Bonus delle botteghe e Gilda unica (branch `feature/gilda-fase1`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - **Modulo `src/settlement-guild.js`** (`window.ConquerGuild`), caricato dopo scolarizzati e commercio in `index.html` e `camp/index.html`: Gilda attiva = completata di livello più alto, a pari livello id minore; bonus +25/+50/+100% × resa dei funzionari (`ConquerEducated.coverage('guild.official')` quando esiste, altrimenti 1); posti 1/2/3; `snapshot()` e `panelHtml()`.
+  - **Commercio:** `ConquerCommerce.daily` produce `1 × (1 + bonus)` per bottega L3 nei giorni feriali; il carrettiere registra la stessa quantità. Nessun consumo di materie finché manca ECO-FIL-01 fase 2.
+  - **Collocamento:** `wellCivicPlacementCheck` rifiuta una seconda Gilda nel villaggio («Only one guild hall per village»); i salvataggi con più Gilde ne fanno lavorare una sola, le altre mostrano «Gilda · inattiva».
+  - **Interfaccia:** scheda Gilda nell'ispettore classico e in UI2 (`GuildPanel`), KPI «Gilda» nel Profilo › Generale.
+  - **Nessun blocco salvato nuovo:** Cassa, quota e salari arrivano con la fase 2.
+- **PROVE LOCALI PASS:**
+  - nuova `qa/guild-regression.cjs`, 7 casi: senza Gilda, bonus per livello, cantiere, Gilda unica e inattiva, resa dei funzionari, vendite del sabato, cablaggio;
+  - `qa/well-civics-regression.cjs` con il rifiuto della seconda Gilda; `qa/l1-carter-market-regression.cjs` aggiornata alla quantità reale;
+  - tutte le 37 voci di `economy-flows-regression.yml` (aggiunta la nuova regressione) e altre 46 regressioni dei workflow che leggono commercio, annessi civici, pannelli, ispettore, shell o `index.html`;
+  - pagina caricata in locale: `ConquerGuild` presente, nessun errore in console.
+- **NON VERIFICATO:** scheda e KPI in una partita reale con Gilda costruita (coperti dai test di markup).
+
+## 2026-11-13 — GILDA-01 · Gilda (solo specifica, branch `docs/gilda-01`)
+
+- **SOLO DOCUMENTAZIONE:** specifica GILDA-01 in BACKLOG e decisione D-GILDA-261113 in DECISIONS. Nessun file di codice, test o asset cambiato; nessuna prova da eseguire.
+- **Stato live verificato su `main` e93b22b5:** la Gilda esiste come civico L1–L3 legato a un pozzo, con modelli e cutaway, ma senza effetti di gioco; le botteghe L3 producono 1 unità al giorno feriale.
+- **Prossimo passo:** fase 1 (bonus per livello con resa transitoria 1, Gilda unica per villaggio, scheda) solo dopo conferma del product owner.
+
+## 2026-11-13 — SCRIPT-01 · Specifica dello Scriptorium (solo documentazione)
+
+- **SPECIFICA APPROVATA, NESSUN CODICE:** maestro per Scriptorium, scuola ferma senza maestro, ingaggio del chierico, +1 Prestigio, codici miniati ARTE, interno in sezione. Dettagli in [BACKLOG](BACKLOG.md) e [D-SCRIPT-261113](DECISIONS.md).
+- **STATO LIVE verificato su `main` e93b22b5:** annesso `scriptorium` con solo modello esterno e nessun effetto; `ConquerEducated` senza corsi né ruoli (SCOL-01 fasi 2–3 aperte).
+- Nessun test eseguito: nessun codice cambiato.
+
+## 2026-11-12 — SCOL-01 fase 1 · Scolarizzati: dati, tetto, ingaggio (branch `feature/scol-01-fase1`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - **Modulo `src/settlement-educated.js`** (`window.ConquerEducated`), caricato dopo il commercio in `index.html` e `camp/index.html`:
+    - blocco `State.economy.educated` con `lay` e `clergy` ciascuno `{L3, L4}`, `homeless`, `courses`, `hires`, `wageMul`, `roles` e `lastMonthDay`;
+    - migrazione lazy a zero; `economy.version` invariato.
+  - **Tetto** `floor(L3/3) + floor(L4/3)`.
+  - **Controllo giornaliero**, agganciato a `ConquerEconomy.tick` dopo `daily`:
+    - l'eccedenza esce prima dai laici, passa ai posti liberi dell'altra classe e altrimenti resta «senza alloggio»;
+    - i senza alloggio rientrano quando si libera un posto ed emigrano dopo 28 giorni;
+    - gli ingaggi in viaggio arrivano come laici e occupano prima L3, poi L4. Senza posto all'arrivo, l'oro torna al castello.
+  - **Ingaggio:** `hire()` costa 40 oro dal castello, con arrivo dopo 14 giorni. È rifiutato senza oro o se i posti liberi sono già promessi agli ingaggi in viaggio.
+  - **Interfaccia:**
+    - `ConquerGame.read.economy().educated` e il comando `hireEducated`;
+    - sotto-righe «di cui scolarizzati» nelle carte «Classi sociali» e «Popolazione per classe»;
+    - nuova scheda «L3 · Istruiti» nel Job Manager (KPI, ingaggio, posti per classe, segnaposto dei ruoli);
+    - tooltip della popolazione nella shell UI2;
+    - `panelHistory[].educated`.
+  - **Ancora nessun effetto sul lavoro:** i ruoli non esistono ancora, quindi gli scolarizzati restano lavoratori L3/L4 comuni.
+- **PROVE LOCALI PASS:**
+  - nuova `qa/educated-regression.cjs`, 10 casi: tetto, migrazione, ingaggio e arrivo, rifiuti, rimborso, L3 prima di L4, eccedenza e rientro, emigrazione a 28 giorni, salvataggio JSON, limiti di lavoro invariati;
+  - tutte le 31 voci di `economy-flows-regression.yml`, dove la nuova regressione è stata aggiunta;
+  - le regressioni che leggono `index.html`.
+  - Le 5 prove di prestazioni basate su Playwright non sono eseguibili in locale (manca il modulo), quindi non sono attestate.
+- **PROVA BROWSER LOCALE:** con un villaggio di prova in memoria (una casa L3 e una L4), la scheda «L3 · Istruiti» mostra 7 posti, contatori e viaggio. Il pulsante d'ingaggio scala 40 oro e aggiunge un arrivo. Nessun errore in console.
+- **DA VERIFICARE:** CI del branch; prova in una partita reale con case L3/L4 costruite.
+
+## 2026-11-12 — SCOL-01 · Scolarizzati (solo specifica, branch `docs/scolarizzati`)
+
+- **NESSUN CODICE:** specifica approvata in [BACKLOG](BACKLOG.md), contratto [D-SCOL-261112](DECISIONS.md). Nessun test eseguito né richiesto.
+- **STATO LIVE VERIFICATO SU `main` 431af30d:**
+  - La popolazione per classe deriva dal livello delle case e non si salva.
+  - Nessuna mobilità di classe né immigrazione.
+  - Soldati come unico contatore sottratto a una classe.
+  - Il ciclo `monthly` non paga mai salari L3.
+  - Scriptorium senza effetti.
+  - Gestori di Chiesa e Locanda assegnati solo dai test.
+  - Giudici del tribunale decorativi.
+  - Nessun riferimento a istruzione, esattori o funzionari in `src/`.
+- **PROSSIMO:** fase 1 (dati, tetto, salvataggio, pannelli, ingaggio) su un branch nuovo da `main`, solo dopo conferma esplicita.
+
+## 2026-11-12 — FISCO-01 fase B · Erario, riscossione e decreti (branch `feature/bargello-balivo`)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:**
+  - `src/settlement-treasury.js` (`ConquerTreasury`), con lo stato in `State.economy.treasury`.
+  - Scheda ERARIO nel Profilo (`settlement-panels.js`, `settlement-heraldry.js`, `index.html`).
+  - Agganci in economia (decima, calmiere, tick), commercio (dazio, pedaggio) e combattimento (leva straordinaria via `leviedResident`/`refreshLevy`).
+  - Cursore `levy` rimosso da UI1 e UI2.
+  - Codex di Bargello e Balivo aggiornati.
+- **PROVE ESEGUITE:**
+  - `qa/treasury-regression.cjs`: 18 PASS, aggiunto al workflow Economy flows.
+  - Regressioni di economia, commercio, routine, convogli, codex e runtime: PASS in locale.
+  - Browser su `localhost:4431`: scheda Erario con efficienza 80% (Municipio L2 con sala delle guardie), quartiere con Bargello L1 al 70%, decreto Festa emanato, nessun errore in console.
+- **NON PROVATO:**
+  - Una partita lunga con riscossione reale del sabato. La logica settimanale è coperta solo dal test Node.
+  - La leva vista in gioco: gli uomini che vanno all'armeria senza allarme.
+  - La CI sul nuovo head.
+- **APERTI:** vedi BACKLOG FISCO-01. Pedaggio senza arrivi reali, CRIME non caricato, leva fuori dalla riserva e dai turni, giustizia ancora in proposta.
+
+## 2026-11-10 — FISCO-01 fase A · Bargello e Palazzo del Balivo (branch `feature/bargello-balivo`)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:** modelli `bargello1/2` (parti `hall`, `tower`) e `balivo1/2` (`hall`) in `tools/blender/build_civic.py`, generati con Blender 4.4 in `src/assets/civic-models.js`. I 53 modelli civici esistenti restano identici (confronto del JSON) e la palette è invariata.
+- **RUNTIME:** tipi civici con livelli L1–L2 (`civicMaxLevel`/`civicLevels`), costi e tempi, impronte, altezze, Builder e shell UI, etichette, collocamento (Bargello come `WELL_CIVIC_TYPES`; Balivo con `balivoPlacementCheck`), cantiere a graticcio L1, crollo con la torretta, incendio L1, fallback 2.5D/WebGL, cutaway per piani con stanze fisse e nuovo arredo `exactor`, Codex (2 voci approvate, catalogo rigenerato).
+- **PROVE ESEGUITE IN LOCALE:**
+  - 169 suite `qa/*.cjs`: tutte PASS tranne `mass-battle-performance` e `movement-collapse-performance`, che falliscono identiche su `main` (import di `circle/defensive-topology.mjs` e soglie di tempo); `asset-audit-scope.cjs` è uno strumento CI.
+  - `well-civics-regression` estesa con 3 test FISCO-01; conteggi Codex +2.
+  - Audit Lab sulle 4 voci nuove: 0 errori, 0 avvisi; baseline unita a mano (+4 voci, nessuna voce esistente toccata), secondo giro 0 nuovi / 0 cambiati.
+  - Smoke nel browser: modelli caricati, 8 cutaway (2 tipi × 2 livelli × 2 piani) disegnati senza errori, console pulita.
+- **NON VERIFICATO:** aspetto del cutaway a schermo (catture non disponibili con la finestra nascosta); GitHub Actions; collocamento giocato in partita. Nessun effetto di gioco (fase B).
+
+
+## 2026-11-12 — CHIESA-01 fase 1 · Cassa della Chiesa (branch `feature/chiesa-fase1`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - nuovo `src/settlement-church.js` (`ConquerChurch`): Cassa e Favore in `State.economy.church`, migrazione lazy; offerte domenicali per classe dai borsellini (quota × fedeli serviti × resa del culto × (0,5 + felicità/100)); lasciti annui del 2% di L3/L4 con felicità ≥ 50; dono 10/50/100 dal `castleGold`;
+  - `ConquerEconomy.tick` chiama la Chiesa la domenica, a fine mese e a fine anno (i lasciti prima della chiusura del mese);
+  - scheda «Chiesa» nell'ispettore classico (`settlement-app-rooms.js`) e in UI v2 (`ChurchPanel` in `ui/shell.js`); riquadro «Chiesa» nel Profilo › Generale (`settlement-panels.js`);
+  - `index.html`: script dopo `settlement-commerce.js` e versioni dei file toccati aggiornate; `wiki/catalog.json` rigenerato (impronta dei sorgenti).
+- **PROVE LOCALI PASS:**
+  - `qa/church-regression.cjs` (11 casi), aggiunto al workflow Economy flows;
+  - tutti i 31 comandi di `economy-flows-regression.yml`; `founding-regression` è instabile anche su `main` (risposta a tempo) e passa rilanciandolo;
+  - multi-wells, infirmary, events-builder, cutaway-floors, crime-buildings, codex-wiki, codex-catalog.
+- **BROWSER (preview locale, chiesa iniettata da console):** nessun errore in console; la scheda mostra Cassa, Favore, entrate e fedeli serviti; «Dona 10» sposta 10 oro dal castello alla Cassa e porta il Favore da 55 a 56; il riquadro «Chiesa 63,6 oro · Favore 56/100» compare nel Profilo › Generale.
+- **NON VERIFICATO:** CI su GitHub (branch non pushato); partita reale con chiesa costruita dal Builder.
+
+## 2026-11-12 — CHIESA-01 · La Chiesa come entità autonoma (solo specifica, branch `docs/chiesa`)
+
+- **NESSUN CODICE:** specifica approvata in [BACKLOG](BACKLOG.md), decisione [D-CHIESA-261112](DECISIONS.md). Nessun test eseguito né richiesto.
+- **STATO LIVE VERIFICATO SU `main` 431af30d:**
+  - `SERVICE_KINDS.church` ha `income:'not-simulated'` e il gestore si assegna solo nei test.
+  - Gli annessi della Chiesa non hanno effetti.
+  - Non esiste un fondo della Chiesa: solo `wallet.L1–L4` e `castleGold`.
+  - `monthly` non paga salari oltre la classe 2.
+  - La felicità si muove solo con cibo, razioni e infermeria.
+  - La Cappella del castello conta solo per il prestigio nell'assedio.
+- **DIPENDE DA:** SCOL-01 (branch `docs/scolarizzati`, non su `main`) fino alla fase 3; FISCO-01 fase B; CRIME.
+- **PROSSIMO:** fase 1 (Cassa, offerte, lasciti, dono, scheda) su un branch nuovo da `main`, solo dopo conferma esplicita e dopo la fase 3 di SCOL-01.
+
 ## 2026-11-10 — ECO-FIL-01 fase 1 · Miniera → metallo (branch `feature/eco-fil-01-miniera-metallo`)
 
 - **CODICE SUL BRANCH, NON MERGE:**
@@ -284,6 +449,8 @@ Base verificata `main` `bcf3cd788f18560221862fe1908edef4edb5f2d3`. [Censimento d
   - **Stanze nelle torri W1** (`functionCapacity`, `ConquerSiege.allowed`): le torri W1 hanno una stanza per piano ma tengono la scala a chiocciola (nessun arredo nel cutaway). Accettano solo, per scelta dell'utente: **Colombaia** (sempre all'ultimo piano, tetto a falde, in pietra, L2+), **Latrina**, **Prigione** (piano terra), **Tesoro**, **Armeria**. Il primo mastio T1 resta senza restrizioni (Sala comune).
   - **Latrina:** primo piano superiore (piano 2) delle torri W1 in pietra, mai torri di legno, W2–W3, porte o sezioni costruite. Lo sbalzo (`ROOM_EXTERIOR`, `mount:'face'`) va sulla faccia esterna libera della torre che guarda più lontano dal castello: mai la faccia interna, né una faccia dove si attacca un muro, una sezione o una sottotorre, né dove davanti c'è un edificio. Su una torre rotonda la scatola rientra nella curva. Le feritoie di quella faccia, al suo piano e sotto, lasciano il posto allo sbalzo e allo scarico (`takesTowerFace`).
   - **Revisione dell'utente (05/11):** una torre W1 con almeno una stanza assegnata perde la scala a chiocciola e apre i piani come le altre torri (scala a pioli, arredo); senza stanze la tiene. La latrina è **comune a 3 fori**: sbalzo largo 0,76 U e sporgente 0,22 U (prima 0,46 × 0,36), falda rifatta in tre corsi (la vecchia lastra aveva le facce rovesciate e nel 2.5D spariva). La stanza intera è la latrina: tre sedili contro la parete dello sbalzo, lavabo, scaffale, sgabello, candela. Nel cutaway lo sbalzo dietro la parete in piedi si disegna sopra quella parete e sotto pavimento e arredo; quello sul lato tagliato resta davanti.
+  - **Validazione visiva dell'utente (12/11):** esterno e cutaway dai 4 lati di torri W1 quadrata e rotonda e di una torre W3 con sottotorre W1 latrina (nuova variante del Lab). Sbalzo: falda unica con gronda corta su timpani, panca a 3 fori dentro lo sbalzo. Disegno 2.5D: sbalzo dietro la torre prima del corpo (coperto), sul lato tagliato senza facciata, senza scarichi nel cutaway; la torre madre copre lo sbalzo della sottotorre solo se gli sta davanti. Il 2.5D sarà dismesso in un branch a parte.
+
   - **Salvataggi:** una latrina già assegnata a una sezione costruita viene tolta al caricamento (`sanitizeRooms`).
 - **Asset Lab:** tolta la variante «Sezione costruita L2 + latrina» (9 voci di baseline). Nuove varianti di torre: «Pietra quadrata piccola L2 + latrina», «Pietra rotonda piccola L2 + latrina», «Pietra quadrata piccola L2 tetto + colombaia». Audit: 30 render, 0 falliti (avvisi solo sul cantiere, come le altre torri in locale); fogli rivisti e baseline aggiornata per queste voci.
 - **QA:** `qa/room-exterior-latrine-regression.cjs` riscritta sulle torri (faccia esterna, muro attaccato, torre rotonda, feritoia, regole di stanza). `qa/dovecote-regression.cjs`: la colombaia ora è ammessa nelle W1 e le W1 rifiutano le altre stanze. 127/127 `qa/*.cjs` non di performance PASS in locale.
@@ -334,6 +501,13 @@ Sul branch `feature/wood-tower-h2` (BC-251105-06, **non in main**): torre lignea
 
 
 Sul branch `fix/audit-sheet-grid` i fogli provini dell'audit per categoria dispongono gli asset in una griglia da 8 colonne (prima: un asset per riga e 7 celle vuote). Le celle vuote hanno uno sfondo neutro, non più verde. `node qa/asset-audit.mjs` in locale: 1081 render, 0 falliti, 120 avvisi, 52 nuovi, 36 cambiati: stessi esiti della baseline, perché i render non cambiano. Fogli `araldica` e `fortificazioni-porte` rivisti a vista. Baseline invariata.
+
+## 2026-11-09 — Coperture della long house e sfiatatoio (BC-251105-09, branch `feature/longhouse-roofs`, NON MAIN)
+
+- **Modello:** `longhouse_cover()` in `tools/blender/build_wood_fort.py` (Blender 4.4 headless) genera tre manti per W1 e W2: `shingle` (scandole, come prima), `thatch` (paglia spessa, colmo a rotolo legato) e `turf` (zolle erbose su tavolato, trave di ritegno in gronda). Ogni manto ha le sue parti `roof_yn.*`, `roof_yp.*`, `ridge.*`, `verge_a.*`/`verge_b.*` (sporto sul frontone, mantovane e tavole incrociate, spostati fuori da `end_a`/`end_b`) e `smoke.*` (sfiatatoio del focolare sul colmo: apertura scura sotto un piccolo cappello). Nuovi colori `roofThatch*`/`roofTurf*` (bianchi d'inverno). Gli altri 5 modelli lignei sono invariati.
+- **Gioco:** campo `s.roofCover` (`longhouseCover()`, assente = scandole); comando `setLonghouseCover` e scelta «Copertura» (Scandole / Paglia / Zolle erbose) nel pannello della long house; cambio gratuito. Lo sfiatatoio sta sulla campata di mezzo; il fumo esce da lì (`longhouseSmokeSpecs`, 2.5D), non nel cutaway. Salvataggi: `roofCover` resta solo sulle long house non a scandole.
+- **Lab:** quattro varianti nuove (W1/W2 · paglia, W1/W2 · zolle) in `settlement-asset-stage.js`, più le voci in `settlement-assets.js`.
+- **Prove:** `qa/wood3d-regression.cjs` (parti per manto, conteggi per campata, sfiatatoio unico, ricaduta sulle scandole, cutaway), `house3d`, `small-gate`, `clay-material` passano in locale. Audit del Lab (`node qa/asset-audit.mjs`): 1146 render, 0 errori, 124 avvisi (cantiere 25/50/75% delle sezioni larghe/lignee e danno leggero: preesistenti), 32 nuovi (le 4 varianti) e 4 cambiati (cutaway W1/W2 e campate: sporto e sfiatatoio); foglio `fortificazioni-mura` rivisto, baseline aggiornata. Dopo il merge di `main` (11/11): modello rigenerato (gli altri 6 modelli lignei, compresa la torre a telaio, identici a main), audit 1486 render, 0 errori; nella baseline aggiornate solo le 64 voci `castle:long-house-*` (gli altri ~180 render «cambiati» in locale non dipendono da questo branch e restano come in main). CI: `integrity` e `settlement-qa` fallivano su `codex-wiki-regression` perché `wiki/catalog.json` (impronta `sourceDigest` dei sorgenti, che include `settlement-core.js`) non era rigenerato; rigenerato con `node tools/export-codex.cjs`.
 
 ## Merlature doppie BC-251105-04 (branch `feature/double-crenel`, da `main` b1a2307, 05/11/2026, NON MAIN)
 

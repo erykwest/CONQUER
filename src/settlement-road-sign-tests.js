@@ -214,12 +214,15 @@
     return{sign:s,points:path,distance:totalLength(path)};
   }
   const pathLength=points=>window.ConquerVehicles?window.ConquerVehicles.makePath(points).total:totalLength(points);
-  // Where a trip starts: the keep for lord convoys, the market (or an L4 house)
-  // for merchants, an L4 house for a noble coach; the well as last resort.
+  // The merchant starts at the market or an educated L3 residence;
+  // the noble coach still belongs to an L4 residence.
   function originFor(kind){
     const done=s=>!(typeof underConstruction==='function'&&underConstruction(s));
-    const l4=State.structures.find(s=>s.type==='house'&&done(s)&&(typeof houseLevel==='function'?houseLevel(s):s.houseLevel)>=4);
-    if(kind==='merchant')return State.structures.find(s=>s.type==='market'&&done(s))||l4||well();
+    const tier=s=>window.ConquerSocialClasses?.tierOfHouse?.(s)??
+      (typeof houseLevel==='function'?houseLevel(s):s.houseLevel);
+    const l4=State.structures.find(s=>s.type==='house'&&done(s)&&tier(s)>=4);
+    const l3=State.structures.find(s=>s.type==='house'&&done(s)&&tier(s)===3);
+    if(kind==='merchant')return State.structures.find(s=>s.type==='market'&&done(s))||l3||well();
     if(kind==='coach')return l4||window.ConquerSiege?.mastio?.()||well();
     return window.ConquerSiege?.mastio?.()||well();
   }
@@ -248,18 +251,19 @@
     if(!cargo.length&&coinGold<=0)return{ok:false,reason:'Seleziona una merce oppure monete'};
     let ok=false;
     if(kind==='merchant'){
-      if(cargo.length)return{ok:false,reason:'Il mercato L4 non supporta ancora il prelievo atomico delle merci: prova con solo oro'};
+      if(cargo.length)return{ok:false,reason:'Il mercato L3 non supporta ancora il prelievo atomico delle merci: prova con solo oro'};
       const house=State.structures.find(s=>s.type==='house'&&
-        (typeof houseLevel==='function'?houseLevel(s):s.houseLevel)===4&&
+        (window.ConquerSocialClasses?.tierOfHouse?.(s)??
+          (typeof houseLevel==='function'?houseLevel(s):s.houseLevel))===3&&
         !(typeof underConstruction==='function'&&underConstruction(s)));
-      if(!house)return{ok:false,reason:'Serve una casa L4 completata'};
+      if(!house)return{ok:false,reason:'Serve una casa L3 completata'};
       ok=commerce()?.planJourney?.({id,source:'resident',houseId:house.id,
         originId:State.village.wellId,destinationId:'test-'+edge,
         coinGold,mercenaryCount:guards,vehicle});
       if(!ok)return{ok:false,reason:'Impossibile preparare il manifesto mercantile'};
       if(!commerce().reserveJourneyCoins(id)){
         commerce().cancelPlannedJourney(id);
-        return{ok:false,reason:'Oro L4 insufficiente'};
+        return{ok:false,reason:'Oro L3 insufficiente'};
       }
       c.journeys[id].status='test-moving';
     }else{
@@ -361,7 +365,7 @@
         '<div>Oro e merci accantonati nel registro, non distrutti.</div>'+
         '<button type="button" data-road-restore>Ripristina test e risorse</button></div>':
         '<label>Tipo <select data-road-kind><option value="gift">Dono signorile</option>'+
-        '<option value="tribute">Tributo signorile</option><option value="merchant">Mercante L4+ (solo monete)</option></select></label>'+
+        '<option value="tribute">Tributo signorile</option><option value="merchant">Mercante L3 (solo monete)</option></select></label>'+
         '<label>Merce <select data-road-good><option value="">Solo monete</option>'+
         goods.map(g=>'<option value="'+g+'"'+(g==='wood'?' selected':'')+'>'+g+'</option>').join('')+'</select></label>'+
         '<label>Quantità <input data-road-qty type="number" value="1" min="0" step="1" style="width:70px"></label>'+

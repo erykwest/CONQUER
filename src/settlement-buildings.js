@@ -174,7 +174,7 @@ function drawCivicStructure(s,preview=false){
   else if(s.type==='church')drawChurch(s,preview);
   else if(s.type==='training')drawTrainingField(s,preview);
   else if(s.type==='plaza')drawPlaza(s,preview);
-  else if(s.type==='townhall'||s.type==='guild')drawWellCivic(s,preview);
+  else if(['townhall','guild','bargello','balivo'].includes(s.type))drawWellCivic(s,preview);
 }
 // Town hall / guild hall fallback: gabled hall, plain civic tower.
 function drawWellCivic(s,preview=false){

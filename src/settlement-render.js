@@ -171,6 +171,8 @@ let castleBodyBitmapEnabled=localStorage.getItem('conquer.castleBodyBitmap.v1')!
 function renderCastleBodyContent(){
   // Opt-in 3D prototype (settlement-castle3d.js); falls through to the Canvas union renderer.
   if(window.ConquerCastle3D?.drawBody?.())return;
+  // Room exterior elements behind their structure (a garderobe on the far face) go first: the body hides them.
+  window.ConquerRoomExterior?.drawAll('back');
   // A merged single-colour 2D union cannot represent distinct wall/brick components.
   // Use the existing per-structure fallback for mixed masonry; do not rewrite topology.
   const hasBrick=castleBodyRenderableStructures().some(s=>masonryMaterial(s)==='brick'||(typeof isTimberLeanTo==='function'&&isTimberLeanTo(s)));

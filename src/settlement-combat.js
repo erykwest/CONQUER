@@ -319,6 +319,21 @@
       '🔕 Release: civilians and recalled recruits return to normal routines')+heardBy);
     return true;
   }
+  // Leva straordinaria (decree, FISCO-01): a stable, seeded share of the adult men of L1/L2 houses.
+  function leviedResident(house,resident){
+    const share=window.ConquerTreasury?.levyShare?.()||0;
+    if(!(share>0)||resident?.age!=='adult'||resident?.sex!=='male')return false;
+    if(Math.max(1,Math.round(Number(house?.houseLevel)||1))>2)return false;
+    let h=2166136261;
+    for(const ch of String(resident.id))h=Math.imul(h^ch.charCodeAt(0),16777619);
+    return (h>>>0)%100<share*100;
+  }
+  // The levy starts or ends: recruits re-route (to the armory, or home when released).
+  function refreshLevy(){
+    if(alarmMode()==='off'&&!(window.ConquerTreasury?.levyShare?.()>0))
+      residentMotion.forEach(m=>{if(m.mode==='recruit')m.equipped=false});
+    changed();requestCivilianAnimation();
+  }
   function recruitedResident(id){
     const motion=residentMotion.get(id),now=performance.now();
     return !!(motion?.mode==='recruit'&&motion.structureId&&now>=motion.startedAt+motion.duration
@@ -390,7 +405,8 @@
     const desired=civilianLegalPosition(p,house);
     const id=resident.id,now=performance.now(),alarm=heardAlarm(house,now);
     // Age takes precedence over sex: boys are children, never conscripted.
-    const mode=alarm==='off'?'release':
+    // FISCO-01: the Leva straordinaria keeps its share of L1/L2 men at the armory without an alarm.
+    const mode=alarm==='off'?(leviedResident(house,resident)?'recruit':'release'):
       (resident.age==='adult'&&resident.sex==='male'?'recruit':alarm);
     const prior=residentMotion.get(id);
     if(mode==='release'&&!prior){
@@ -1977,7 +1993,7 @@
     },
     wolfSpawnedFor:()=>combat?.wolvesSpawnedFor||null,
     recallCampUnit,clearCampSelection:clearCombatSelection,changedCamp:changed,
-    alarmMode,setAlarmMode,recruitedResident,heardAlarm,alarmRing:()=>alarmRing,
+    alarmMode,setAlarmMode,recruitedResident,leviedResident,refreshLevy,heardAlarm,alarmRing:()=>alarmRing,
     // Read-only summary for UI shells (UI v2 Difendi): no side effects.
     uiState:()=>{
       const allies=combat?.units.filter(u=>!u.defeated)||[],hostiles=combat?.enemy.filter(e=>!e.defeated&&!e.neutral)||[];
