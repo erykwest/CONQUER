@@ -4,7 +4,7 @@ const {compileDirectory,parseNote,serialize}=require('../tools/export-codex-cont
 const root=path.join(__dirname,'..'),source=path.join(root,'content/codex'),temp=fs.mkdtempSync(path.join(os.tmpdir(),'conquer-editorial-'));
 try{
   for(const file of fs.readdirSync(source).filter(f=>f.endsWith('.md')))fs.copyFileSync(path.join(source,file),path.join(temp,file));
-  const initial=compileDirectory(temp);assert.equal(initial.pages.length,157);
+  const initial=compileDirectory(temp);assert.equal(initial.pages.length,159);
   const scalar=parseNote('---\ncodex_id: topic:test\nkind: topic\ntitle: "Test"\neditorial_status: draft\naliases:\n  - Test Uno\n  - "Test Due"\n---\n','Test.md');
   assert.deepEqual(scalar.meta.aliases,['Test Uno','Test Due']);
   const towerFile=path.join(temp,'Torre.md'),original=fs.readFileSync(towerFile,'utf8');
@@ -15,7 +15,7 @@ try{
   assert.ok(tower.blocks.some(b=>b.type==='list'&&b.items.length===2));
   const newTopic='---\ncodex_id: topic:test-editoriale\nkind: topic\ntitle: Test Editoriale\neditorial_status: draft\naliases: []\n---\n\nBozza non pubblicabile.\n';
   fs.writeFileSync(path.join(temp,'Test Editoriale.md'),newTopic);
-  assert.equal(compileDirectory(temp).pages.length,157,'draft never exported');
+  assert.equal(compileDirectory(temp).pages.length,159,'draft never exported');
   fs.writeFileSync(towerFile,original+'\nTest [[Test Editoriale]].\n');
   assert.throws(()=>compileDirectory(temp),/requires a list of wikilinks|unpublished/);
   fs.writeFileSync(towerFile,original.replace('La torre','[[Destinazione Mancante]] La torre'));
@@ -24,7 +24,7 @@ try{
   fs.writeFileSync(path.join(temp,'Test Editoriale.md'),newTopic.replace('editorial_status: draft','editorial_status: approved').replace('Bozza non pubblicabile.','Leggi [[Torre|la torre]] e [[Torre#Sezione Assente|la sezione]].'));
   assert.throws(()=>compileDirectory(temp),/missing heading/);
   fs.writeFileSync(path.join(temp,'Test Editoriale.md'),newTopic.replace('editorial_status: draft','editorial_status: approved').replace('Bozza non pubblicabile.','Leggi [[Torre|la torre]].'));
-  updated=compileDirectory(temp);assert.equal(updated.pages.length,158);
+  updated=compileDirectory(temp);assert.equal(updated.pages.length,160);
   const custom=updated.pages.find(p=>p.id==='topic:test-editoriale');assert.ok(custom.blocks[0].tokens.some(t=>t.id==='building:tower'));
   fs.renameSync(towerFile,path.join(temp,'Torre Rinominata.md'));
   assert.ok(compileDirectory(temp).pages.some(p=>p.id==='building:tower'),'filename rename preserves stable ID and alias references');
@@ -32,7 +32,7 @@ try{
   fs.writeFileSync(path.join(temp,'Test Editoriale.md'),newTopic.replace('editorial_status: draft','editorial_status: approved').replace('Bozza non pubblicabile.','Leggi [[Torre#Funzionamento|il funzionamento]].'));
   assert.ok(compileDirectory(temp).pages.find(p=>p.id==='topic:test-editoriale').blocks[0].tokens.some(t=>t.anchor==='section-funzionamento'));
   const engine=vm.createContext({});vm.runInContext(serialize(temp),engine);
-  assert.equal(engine.ConquerWikiEditorial.pages.length,158,'generated runtime data contains approved edited content');
+  assert.equal(engine.ConquerWikiEditorial.pages.length,160,'generated runtime data contains approved edited content');
   assert.equal(fs.readFileSync(path.join(root,'src/codex-wiki-editorial.js'),'utf8').replace(/\r\n/g,'\n'),serialize(),'generated artifact fresh');
   console.log('PASS Obsidian: editable Markdown, stable IDs/renames, aliases, approval gate, links/headings, lists, draft exclusion and generated content');
 }finally{

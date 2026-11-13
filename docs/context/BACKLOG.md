@@ -1,5 +1,32 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-10 — FISCO-01 · Municipio, Erario, Bargello e Palazzo del Balivo
+
+Specifica di progetto concordata con l'utente il 09–10/11/2026. Ordine deciso dall'utente: **prima i modelli, poi le funzioni**. Decisione D-FISCO-261110.
+
+- **Fase A — modelli: IMPLEMENTATO SU BRANCH `feature/bargello-balivo`, NON MERGE.** Bargello L1–L2 (casa a graticcio o in pietra con torretta d'angolo, galleria di vedetta o merli, campanella, banco degli esattori, finestra della cella) e Palazzo del Balivo L1–L2 (magazzino della decima, scala esterna coperta o in pietra con loggia) in `tools/blender/build_civic.py`; voci del Builder, collocamento (pozzo di quartiere / contado), cantiere, crollo, incendio L1, cutaway per piani (sala delle guardie ed esattoria; magazzino della decima e sala della bassa giustizia), Asset Lab e Codex. **Nessun effetto di gioco.**
+  - **APERTO (fase A):** campanella del Bargello nella rete delle campane d'allarme (`ConquerAlarmBells`); figure di esattori e guardie nel cutaway; stato «cutaway» dei civici nel Lab (assente per tutti i civici); costi e tempi da bilanciare (proposta 140 oro/90 pietra/60 legno, 5 giorni; Balivo 170/120/80, 6 giorni).
+- **Fase B — funzioni: IMPLEMENTATO SULLO STESSO BRANCH (12/11/2026), NON MERGE.** Nuovo modulo `src/settlement-treasury.js` (`ConquerTreasury`), scheda **ERARIO** nel Profilo, regressione `qa/treasury-regression.cjs` (18 controlli). Fatto: quattro imposte nuove con riscossione il sabato dopo il mercato; efficienza per centro, quartiere (Bargello) e contado (Balivo, raggio 30U); sala delle guardie +5%; sospensione in allarme o assedio; sette decreti; leva straordinaria che tiene all'armeria una quota fissa, scelta per seme, degli uomini adulti delle case L1/L2; il cursore `levy` è rimosso. Lo stato vive in `State.economy.treasury`, quindi si salva con l'economia.
+  - **APERTO (fase B):**
+    - Il pedaggio scatta solo in `ConquerCommerce.confirmArrival` sugli arrivi `external`. Oggi nessun sistema chiama quella funzione, quindi il pedaggio rende 0 finché non arrivano carovane forestiere.
+    - CRIME (C-01) non è caricato nel gioco: Coprifuoco e Amnistia agiscono solo sulla felicità. L'amnistia chiama `ConquerCrime.amnesty` se esiste. Le guardie del Bargello e della sala delle guardie non alimentano ancora l'ordine pubblico.
+    - Bassa giustizia del Balivo: ruolo `fisco.judge` registrato, nessun effetto finché la proposta Giustizia non è confermata.
+    - Gli uomini in leva restano nei turni di lavoro L1/L2 e non entrano ancora nella riserva unica (MIL-RES-01).
+    - Esattori e giudici: i ruoli si registrano con `ConquerEducated.registerRole` quando il motore Scolarizzati esiste. Fino ad allora ogni posto conta come coperto (resa 1).
+    - Numeri provvisori, da bilanciare: aliquote massime, malumore (−1 a settimana all'aliquota massima), costi e durate dei decreti, tetti di Bargello (65/80%) e Balivo (60/75%), resa dei quartieri senza Bargello (×0,6) e del contado senza Balivo (×0,5).
+- **Fase B — specifica (concordata):**
+  - **Erario:** nuova scheda di primo livello nel Profilo, accanto a Job Manager e Trade. Un cursore per imposta con anteprima di gettito e felicità per classe. Le aliquote si impostano sempre, anche senza Municipio.
+  - **Imposte:** tassa sulle vendite (esistente, globale), testatico L1–L2 settimanale, dazio sugli incassi delle botteghe L3, pedaggio su convogli e carovane in entrata, decima in natura su campi e produttori L4. Ognuna toglie felicità solo alla classe che la paga.
+  - **Il Municipio non fa né gestisce le tasse: ne fissa l'efficienza di riscossione.** Incassato = dovuto × efficienza; il resto è evasione persa. Tetto per livello del Municipio del centro L1 60% · L2 75% · L3 85% (massimo assoluto 95%). Esattori (~40 abitanti ciascuno) dalla sala del consiglio — **personale istruito: classe, formazione e salari di esattori e giudici vengono dal contratto «Scolarizzati» (abitanti L3+ istruiti, sessione dedicata, D-… in DECISIONS), non da FISCO-01**; senza esattori 30%. Guardia cittadina +5%, felicità bassa fino a −20%, assedio o allarme sospendono la riscossione.
+  - **Bargello (edificio nuovo con torretta, uno per pozzo, solo nei quartieri):** esattori e guardie cittadine del quartiere (L1 2+2, L2 4+4 e cella di sicurezza). Senza Municipio del centro non riscuote. I quartieri lontani senza Bargello rendono meno.
+  - **Sala delle guardie del Municipio:** comando delle guardie cittadine (ordine pubblico e arresti per CRIME), +5% nel centro e bonus di coordinamento a tutti i Bargelli. Le guardie cittadine sono civili pagati, distinte dai soldati della Caserma (MIL-RES-01, #193).
+  - **Palazzo del Balivo (a sé stante, non legato a un pozzo, nel contado):** decima su campi e produttori fuori dai quartieri, bassa giustizia rurale (le cause gravi al tribunale del Municipio), ordine sulle strade fuori città. Non è la residenza del signore.
+  - **Decreti dalla sala del consiglio**, a durata e da rinnovare: Festa patronale (L1), Coprifuoco (L1), Elemosina (L1), Calmiere del pane (L2), Amnistia (L2), Bando di fiera (L3), **Leva straordinaria** (L2, o L1 in assedio/allarme): tiene mobilitata la milizia esistente (armeria → miliziano, `recruitArmory`) anche senza allarme per 2–4 settimane, 10–30% degli uomini L1/L2, entra nella riserva unica, sostituisce il cursore `levy` oggi inattivo; ripetuta entro 8 settimane pesa il doppio sulla felicità.
+  - **Giustizia — PROPOSTA, da confermare:** CRIME resta l'unica fonte di criminalità/ordine/tensione (C-01, nessun secondo ledger); tribunale L2 con cursore di severità (multa, gogna, prigione, patibolo), multe nel tesoro; senza tribunale i fermati restano in cella fino a capienza.
+- **Fuori scope / idee a parte:** appartamento del signore in visita nel mastio o in una torre; il Palazzo del Balivo non assorbe il Bargello.
+- **Osservazioni sullo stato attuale (non corrette qui):** il cambio di livello del Municipio è gratuito e istantaneo; gli annessi (orto di corte) sono gratuiti e istantanei; i posti `watchmen`/`prisoners` sono calcolati ma nessun sistema li legge.
+
+
 ## 2026-11-12 — CHIESA-01 · La Chiesa come entità autonoma
 
 **SPECIFICA APPROVATA. Fase 1 (Cassa, offerte, lasciti, dono, scheda) IMPLEMENTATA SU BRANCH `feature/chiesa-fase1`, NON MERGE; fasi 2–3 aperte.** Intervista con il product owner del 12/11/2026 (sessione «Chiesa», nata dalla sessione Scolarizzati).
@@ -243,7 +270,7 @@ BC-251105-05 tetto interno delle torri: **sul branch `feature/tower-inner-roof`,
 
 **Lavoro non pubblicato (worktree locali, nessuna PR):** BC-251105-05 tetto interno dentro i merli (`feature/tower-inner-roof`, 1 commit + modifiche) · BC-251105-09 tetti della Long house (`feature/longhouse-roofs`, solo modifiche non committate) · `figure-billboards` (19 commit) · `combat-ai` (26 commit su remoto, ultima nota: assedio di 5 minuti fallito).
 
-**Catalogo edifici — ancora solo progetto, da confermare prima del codice:** Presidio antincendio, Avamposto, funzioni del Municipio, Gilda/Corporazioni, effetti dello Scriptorium, Bagni pubblici, Lavatoio, Approdo fluviale, Cortile domestico, Giardino dei semplici, Carbonaia, Palazzo del Balivo. Il Corpo di Guardia esiste come stanza `guard` e sala del Municipio, senza pattuglie né allarmi propri.
+**Catalogo edifici — ancora solo progetto, da confermare prima del codice:** Presidio antincendio, Gilda/Corporazioni, effetti dello Scriptorium, Bagni pubblici, Lavatoio, Approdo fluviale, Cortile domestico, Giardino dei semplici, Carbonaia. Avamposto: fatto con MIL-RES-01. Municipio e Palazzo del Balivo: progettati in FISCO-01 (10/11/2026). Il Corpo di Guardia esiste come stanza `guard` e sala del Municipio, senza pattuglie né allarmi propri.
 
 **Seguiti aperti trasversali:** lanterna della Colombaia sul montaggio `roof` di `ROOM_EXTERIOR`; reclutamento dei cavalieri sullo stock reale dei cavalli; rintocco della campana nel motore audio; cosa legge il Prestigio; gronda e pluviale della Cisterna; assedio strategico S-01/02/03/04/10/15; CRIME C-01 e C-05; MARCH collegato a mappa e salvataggi; navi in gioco (MARE); ARTE: grafica e ancoraggi su branch, commissione/inventario aperti; UI v2 fase 5.
 
@@ -350,10 +377,10 @@ Tutte **DA CONFERMARE dall'utente** prima di qualsiasi codice (effetti, compatib
 
 - **Presidio antincendio:** upgrade di Pozzo/Cisterna; secchi e uomini pronti che spengono prima gli incendi nel raggio (sistema fuoco esistente).
 - **Avamposto:** ~~torre isolata che evolve Corpo di guardia e Stazione di posta~~ → **implementato su branch il 09/11/2026, vedi MIL-RES-01** (upgrade delle torri isolate; il Corpo di Guardia si fonde nella Caserma).
-- **Municipio:** funzioni amministrative.
+- **Municipio:** funzioni amministrative → progettate in FISCO-01 (10/11/2026).
 - **Gilda:** assorbe la Casa delle Corporazioni.
 - **Scriptorium (Chiesa L2):** servono effetti simulati.
-- **Annessi civici:** Bagni pubblici L1–L3, Lavatoio (civico L1 o upgrade del Pozzo), Approdo fluviale, Cortile domestico (upgrade delle case), Giardino dei semplici (annesso di Chiesa L2 / Ospedale), Carbonaia (annesso del Taglialegna), Palazzo del Balivo.
+- **Annessi civici:** Bagni pubblici L1–L3, Lavatoio (civico L1 o upgrade del Pozzo), Approdo fluviale, Cortile domestico (upgrade delle case), Giardino dei semplici (annesso di Chiesa L2 / Ospedale), Carbonaia (annesso del Taglialegna). Palazzo del Balivo → FISCO-01, modelli su `feature/bargello-balivo`.
 - **Seguiti aperti:** Colombaia sul montaggio `roof` di `ROOM_EXTERIOR`; reclutamento dei cavalieri sullo stock reale dei cavalli; suono della campana; cosa legge il Prestigio.
 - **Scartati, da non riproporre:** Ghiacciaia, Dogana, Stazione di posta (→ Avamposto), Scuola autonoma, Casa delle Corporazioni autonoma, Torre campanaria (→ Campana).
 

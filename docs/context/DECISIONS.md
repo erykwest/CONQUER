@@ -1,5 +1,21 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-FISCO-261110 — Fisco: il Municipio riscuote, l'Erario decide; Bargello e Palazzo del Balivo (10/11/2026)
+
+- **DECISIONE DEL PRODUCT OWNER:** le aliquote si fissano dall'Erario (nuova scheda del Profilo) e non dipendono da alcun edificio. Il Municipio non fa né gestisce le tasse: determina l'**efficienza di riscossione** (incassato = dovuto × efficienza). Imposte: vendite (esistente), testatico, dazio sulle botteghe L3, pedaggio, decima.
+- **EDIFICI NUOVI (eccezione voluta alla regola «stanze prima di edifici»):** **Bargello**, casa degli esattori e delle guardie cittadine di un quartiere, con torretta, uno per pozzo, L1–L2; **Palazzo del Balivo**, sede del funzionario del signore nel contado, fuori dai quartieri, L1–L2, a sé stante (non assorbe il Bargello e non è la residenza del signore). Le guardie cittadine sono civili pagati, distinte dai soldati della Caserma (D-MIL-RES-261109); la sala delle guardie del Municipio ne è il comando.
+- **PERSONALE ISTRUITO (12/11/2026):** esattori e giudici appartengono alla sottoclasse «Scolarizzati» (L3+ istruiti: formati nello Scriptorium, immigrati o ingaggiati dal signore), progettata in una sessione dedicata. FISCO-01 non definisce né la classe né i salari di questo personale: ne usa il contratto quando sarà registrato qui.
+- **DECRETI** dalla sala del consiglio, compresa la **leva straordinaria**, che riusa la milizia esistente (armeria → miliziano) tenendola mobilitata senza allarme e sostituisce il cursore `levy`.
+- **ORDINE:** prima i modelli (fase A, `feature/bargello-balivo`: modelli Blender, cantiere, cutaway, Lab, collocamento), poi le funzioni (fase B). La giustizia (tribunale con severità, multe nel tesoro, CRIME unica fonte) resta una proposta da confermare.
+- **CONTRATTO TECNICO (fase A):** `civicLevel` limita Bargello e Balivo a L2 (`civicMaxLevel`/`civicLevels`); il Bargello è un `WELL_CIVIC_TYPES`; il Balivo usa `balivoPlacementCheck` (villaggio fondato, fuori dalle zone abitate, ≥12U da ogni pozzo, ≥20U da un altro Balivo). Stanze fisse per piano in `INTERIOR[key].room/upper[].room`, nuovo arredo `exactor`. ROADMAP invariata.
+- **CONTRATTO TECNICO (fase B, 12/11/2026):**
+  - **Modulo.** `window.ConquerTreasury` (`src/settlement-treasury.js`), stato in `State.economy.treasury`. Nessun ledger nuovo: l'oro passa tra i borsellini di classe e `castleGold`, il malumore va sulla felicità di classe.
+  - **Formula.** Efficienza = `0,3 + (tetto − 0,3) × resa esattori`, più 0,05 con la sala delle guardie, meno fino a 0,20 se chi paga è scontento. Il massimo è 0,95; vale 0 in allarme o con nemici in campo.
+  - **Esattori.** La resa è `ConquerEducated.coverage('fisco.collector').yield` (contratto D-SCOL-261112) e vale 1 finché il motore manca.
+  - **Tassa sulle vendite.** Resta trattenuta per intero al mercato (`State.policies.tax`): l'efficienza non si applica, per non cambiare l'equilibrio esistente. L'Erario la mostra e la regola.
+  - **Agganci.** Decima in `daily()` dell'economia (raccolti e produzioni private, in natura al castello). Dazio in `sellGoods` del commercio. Pedaggio in `confirmArrival`. Calmiere sul prezzo del cibo. Riscossione con `ConquerTreasury.daily` dopo `ConquerCommerce.daily`.
+  - **Leva straordinaria.** `ConquerCombat.leviedResident`: quota fissa, scelta per seme dall'id del residente, tra gli uomini adulti delle case L1/L2. `refreshLevy` all'inizio e alla fine. Il cursore `levy` è rimosso dalla UI; `State.policies.levy` resta nei salvataggi ma non è letto.
+
 ## D-CHIESA-261112 — La Chiesa come entità autonoma (12/11/2026)
 
 - **DECISO (product owner, 12/11/2026), nessun codice:** specifica completa in [CHIESA-01](BACKLOG.md).

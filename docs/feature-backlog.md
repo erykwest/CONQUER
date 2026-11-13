@@ -1,5 +1,11 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+## 2026-11-10 — FISCO-01 · Bargello e Palazzo del Balivo (fase A: modelli)
+
+- **IMPLEMENTATO SU BRANCH `feature/bargello-balivo`, NON MERGE:** due civici nuovi nel Builder (Civics): **Bargello** presso un pozzo di quartiere (uno per pozzo, entro 9U, L1–L2, torretta d'angolo) e **Palazzo del Balivo** nel contado (fuori dalle zone abitate, ≥12U dai pozzi, ≥20U da un altro Balivo, L1–L2). Modelli Blender, cantiere (L1 a graticcio, L2 in muratura), crollo con la torretta, incendio solo L1, cutaway per piani, Lab e Codex.
+- **FATTO SU BRANCH (fase B, 12/11/2026):** Erario (scheda del Profilo), imposte e loro efficienza di riscossione, decima del Balivo, decreti e leva straordinaria.
+- **NON FATTO:** ordine pubblico di guardie cittadine e Bargello (CRIME), bassa giustizia del Balivo, pedaggio sugli arrivi reali, leva dentro la riserva unica. Dettagli in [BACKLOG](context/BACKLOG.md).
+
 ## 2026-11-09 — BC-261109-02 · DEV Free/Fast e cantieri di upgrade
 
 - [x] **SU BRANCH:** pulsanti indipendenti nel DEV, stato premuto accessibile, nessun salvataggio delle preferenze; risorse gratuite non convertibili in rimborsi.

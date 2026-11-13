@@ -660,9 +660,11 @@
           ?fieldLayout(s).area:Math.max(4,finite(s.w,3)*finite(s.h,2));
         const quantity=round(area*(s.type==='field'?2.5:1.1)*Math.min(1,staff/workerDemand(s).count));
         if(quantity<=0)continue;
+        // FISCO-01: the tithe takes its share in kind from private harvests.
+        const kept=a.owner==='private'&&window.ConquerTreasury?window.ConquerTreasury.tithe(e,spec.good,quantity,s):quantity;
         if(s.type==='field'&&hasMill){
-          e.cropStock[a.owner]=round((e.cropStock[a.owner]||0)+quantity);
-        }else put(e,spec.good,quantity,a.owner,s.id);
+          e.cropStock[a.owner]=round((e.cropStock[a.owner]||0)+kept);
+        }else put(e,spec.good,kept,a.owner,s.id);
         a.cyclesSeen=finite(s.crop?.cycles,a.cyclesSeen);
         a.lastHarvestYear=date.year;
         continue;
@@ -680,7 +682,12 @@
           e.weekConsumed[good]=round((e.weekConsumed[good]||0)+used);
         }
       }
-      if(produced>0)put(e,s.type==='quarry'&&s.extractionMode==='clay'?'clay':spec.good,produced,a.owner,s.id);
+      if(produced>0){
+        const good=s.type==='quarry'&&s.extractionMode==='clay'?'clay':spec.good;
+        // FISCO-01: the tithe on private (L4) producers, in kind.
+        const kept=a.owner==='private'&&window.ConquerTreasury?window.ConquerTreasury.tithe(e,good,produced,s):produced;
+        if(kept>0)put(e,good,kept,a.owner,s.id);
+      }
     }
   }
   function fulfill(e,good,amount,consumer){
@@ -740,6 +747,8 @@
       offered[good]=round(e.lots[good].reduce((sum,l)=>sum+l.qty,0));
       const pressure=(demand[good]+Math.max(0,finite(e.externalDemand[good]))+1)/(offered[good]+1);
       e.prices[good]=round(BASE[good]*clamp(Math.sqrt(pressure),.4,2.5));
+      // FISCO-01: the Calmiere del pane caps food at its base price.
+      if(window.ConquerTreasury)e.prices[good]=round(window.ConquerTreasury.priceCap(good,e.prices[good],BASE[good]));
     }
     // Castle rations are issued only on the lord's order and really leave the store.
     const mode=rationMode(),factor=RATIONS[mode];
@@ -916,6 +925,7 @@
       daily(day);
       if(weekday(day)===5)market(day); // Saturday market; no civilian production
       window.ConquerCommerce?.daily?.(day); // L3 workshops and their goods market
+      window.ConquerTreasury?.daily?.(day); // FISCO-01: Saturday tax collection, decrees
       window.ConquerChurch?.daily?.(day); // CHIESA-01: Sunday offerings into the Church treasury
       const today=dateAt(day),tomorrow=dateAt(day+1);
       if(today.year!==tomorrow.year)window.ConquerChurch?.annual?.(day); // bequests, booked in the closing month

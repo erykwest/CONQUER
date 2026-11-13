@@ -451,8 +451,11 @@
       kpi('Allarme',c.alarm||'—')
     ])+grid([
       card('Cavalleria disponibile',bars([['Cavalieri reclutati',k.current],['Posti disponibili',k.limit]],num(k.limit))),
-      card('Leva del feudo',line('Aliquota impostata',fmt(d.policy.levy)+'%')+
-        empty('Leva e mobilitazione non sono ancora collegate. La capienza non costituisce un organico effettivo.'))
+      card('Leva straordinaria',(()=>{
+        const T=window.ConquerTreasury, on=T?.active?.('levy'), a=on&&T.snapshot().decrees.levy.entry;
+        return on ? line('In vigore fino al giorno',fmt(a.end))+line('Uomini L1/L2 in armi',fmt(a.share)+'%') :
+          empty('Nessuna leva in vigore. La leva straordinaria è un decreto del consiglio: Profilo › Erario.');
+      })())
     ]);
   }
   function building(d) {
@@ -520,8 +523,53 @@
       card('Copertura del sistema',empty('Monitorati: domanda alimentare, razioni difensive e cantieri L1. Epidemie, tumulti e altri avvisi richiedono nuovi contratti dati.'),'',true)
     ]);
   }
+  // ---- Erario (FISCO-01): rates always settable; the town hall sets collection efficiency ----
+  const PCT = v => fmt(Math.round(num(v)*100))+'%';
+  const TAX_PAYERS = {sales:'paga L4 (venditori)',poll:'pagano L1 e L2',dues:'paga L3 (botteghe)',toll:'pagano i mercanti forestieri',tithe:'paga L4 (raccolti privati)'};
+  function erario() {
+    const T = window.ConquerTreasury;
+    if(!T)return card('Erario',empty('Modulo Erario non caricato.'));
+    const s = T.snapshot(), ef = s.efficiency, last = s.last;
+    const sliders = Object.entries(T.TAXES).map(([k,spec])=>{
+      const v = s.rates[k], p = T.preview(k,v)||{};
+      const value = spec.unit.startsWith('%') ? fmt(v)+'%' : num(v).toLocaleString('it-IT',{minimumFractionDigits:spec.step<1?2:0,maximumFractionDigits:2})+' oro';
+      const est = p.due==null ? 'gettito: si misura dopo una settimana con aliquota' :
+        'dovuto ≈ '+fmt(p.due)+' · incassato ≈ '+fmt(p.collected)+' oro/sett.';
+      const mood = p.unrest>0 ? ' · felicità −'+fmt(p.unrest)+'/sett.' : '';
+      // The sales tax is withheld at the market, in full: the town hall's efficiency does not apply.
+      const info = k==='sales' ? 'trattenuta al mercato, per intero' : 'efficienza '+PCT(p.efficiency)+' · '+est;
+      return '<label class="cp-input">'+esc(spec.label)+' <b>'+esc(value)+'</b>'+
+        '<input type="range" data-cp-tax="'+k+'" min="'+spec.min+'" max="'+spec.max+'" step="'+spec.step+'" value="'+v+'">'+
+        '<small>'+esc(spec.unit+' · '+TAX_PAYERS[k]+' · '+info+mood)+'</small></label>';
+    }).join('');
+    const quarters = ef.quarters.length ? ef.quarters.map(q=>line(q.name+(q.bargello?' · Bargello L'+q.bargello:' · senza Bargello'),PCT(q.efficiency))).join('') : empty('Nessun quartiere oltre il centro.');
+    const balivi = ef.balivi.length ? ef.balivi.map((b,i)=>line('Palazzo del Balivo '+(i+1)+' · L'+b.level,PCT(b.efficiency))).join('') : line('Contado senza Balivo',PCT(ef.countryside));
+    const decrees = Object.entries(T.DECREES).map(([id,spec])=>{
+      const st = s.decrees[id], on = st.active;
+      const extra = id==='levy'&&!on ?
+        select('data-cp-levy="days"','Durata',spec.options.days.map(n=>[String(n),n+' giorni']),String(ui.levyDays||spec.options.days[0]))+
+        select('data-cp-levy="share"','Uomini L1/L2',spec.options.share.map(n=>[String(n),n+'%']),String(ui.levyShare||spec.options.share[0])) : '';
+      const action = on ? '<b>In vigore fino al giorno '+fmt(st.entry.end)+'</b> <button type="button" class="cp-action" data-cp-revoke="'+id+'">Revoca</button>' :
+        st.status.ok ? '<button type="button" class="cp-action" data-cp-decree="'+id+'">Emana'+(spec.cost?' · '+fmt(spec.cost)+' oro':'')+'</button>' :
+        '<small>'+esc(st.status.reason)+'</small>';
+      return '<div class="cp-line"><span>'+esc(spec.label)+' <small>L'+spec.level+' · '+esc(spec.help)+'</small></span>'+action+'</div>'+extra;
+    }).join('');
+    const hist = last ? ['poll','dues','toll','tithe'].map(k=>line(T.TAXES[k].label,fmt(last.collected[k])+' / '+fmt(last.due[k])+(k==='tithe'?' (in natura)':' oro'))).join('') :
+      empty('Nessuna riscossione ancora: si incassa il sabato, dopo il mercato.');
+    return kpis([
+      kpi('Municipio del centro',ef.townhall?'L'+ef.townhall:'Assente',ef.townhall?'':'Riscossione al 30%',ef.townhall?'':'warn'),
+      kpi('Efficienza centro',PCT(ef.centre),ef.crisis?'Sospesa: allarme o assedio':'',ef.crisis?'bad':''),
+      kpi('Esattori',fmt(ef.collectors.seats)+' posti',ef.collectors.yield<1?'Coperti al '+PCT(ef.collectors.yield):'Personale istruito (Scolarizzati)'),
+      kpi('Sala delle guardie',ef.guardRoom?'Sì · +5%':'No')
+    ])+grid([
+      card('Imposte',sliders,'Le aliquote si fissano sempre, anche senza Municipio. Incassato = dovuto × efficienza; il resto è evasione.',true),
+      card('Efficienza di riscossione',line('Centro',PCT(ef.centre))+quarters+balivi,'Tetto del Municipio L1 60% · L2 75% · L3 85%, massimo 95%. Felicità bassa di chi paga: fino a −20%.'),
+      card('Ultima settimana · incassato / dovuto',hist),
+      card('Decreti del consiglio',(ui.decreeMsg?warn(ui.decreeMsg):'')+decrees,'Si emanano dalla sala del consiglio del Municipio del centro, a durata.',true)
+    ]);
+  }
   const views = {general,people,economy,estate,stores,military,building,diplomacy,alerts};
-  const PALETTES = {jobs:['Job Manager','Priorità e assegnazioni L1 / L2'],trade:['Trade','Mercato, prezzi e quote di vendita']};
+  const PALETTES = {jobs:['Job Manager','Priorità e assegnazioni L1 / L2'],trade:['Trade','Mercato, prezzi e quote di vendita'],erario:['Erario','Imposte, riscossione e decreti']};
 
   // ---- Rendering --------------------------------------------------------------
   function nav(d) {
@@ -543,7 +591,7 @@
     const [,title,subtitle] = palette ? [ui.mode,...palette] : (TABS.find(t=>t[0]===ui.tab) || TABS[0]);
     body.innerHTML = !d.founded
       ? card('Insediamento non fondato',empty('Fonda il villaggio: le risorse di test del Builder non sono statistiche economiche.'))
-      : '<div class="cp-head"><h2>'+esc(title)+'</h2><p>'+esc(subtitle)+'</p></div>'+(palette ? (ui.mode==='jobs'?jobs(d):trade(d)) : (views[ui.tab]||general)(d));
+      : '<div class="cp-head"><h2>'+esc(title)+'</h2><p>'+esc(subtitle)+'</p></div>'+(palette ? (ui.mode==='jobs'?jobs(d):ui.mode==='erario'?erario(d):trade(d)) : (views[ui.tab]||general)(d));
     [...(body.querySelectorAll?.('.cp-scroll')||[])].forEach((el,i)=>{ if(scrolls[i])el.scrollLeft = scrolls[i]; });
   }
   function open(mode='control') { ui.mode=Object.hasOwn(PALETTES,mode)?mode:'control'; render(); }
@@ -630,6 +678,15 @@
         ui.crenelMsg = out?.ok ? '' : out?.reason==='funds' ? 'Risorse insufficienti per rifare le merlature.' : '';
         render(); return;
       }
+      const decree = ev.target.closest('[data-cp-decree]');
+      if(decree){
+        const id=decree.dataset.cpDecree;
+        const out=window.ConquerTreasury?.issue?.(id,id==='levy'?{days:ui.levyDays,share:ui.levyShare}:{});
+        ui.decreeMsg = out?.ok ? '' : out?.reason||'';
+        render(); return;
+      }
+      const revoke = ev.target.closest('[data-cp-revoke]');
+      if(revoke){window.ConquerTreasury?.revoke?.(revoke.dataset.cpRevoke);ui.decreeMsg='';render();return;}
       if(ev.target.closest('[data-cp-action="caravans"]')){$('profileOverlay').hidden = true; window.ConquerGame?.commands?.openCaravans?.();}
     });
     root.addEventListener('input',ev=>{
@@ -641,6 +698,9 @@
       const el = ev.target, cmd = window.ConquerGame?.commands;
       if(el.dataset.cpJobMin)cmd?.[el.dataset.cpJobTier==='L2'?'setL2Minimum':'setL1Minimum']?.(el.dataset.cpJobMin,Number(el.value));
       if(el.dataset.cpPolicy)cmd?.setPolicy?.(el.dataset.cpPolicy,el.value);
+      if(el.dataset.cpTax)window.ConquerTreasury?.setRate?.(el.dataset.cpTax,Number(el.value));
+      if(el.dataset.cpLevy==='days')ui.levyDays=Number(el.value);
+      if(el.dataset.cpLevy==='share')ui.levyShare=Number(el.value);
       if(el.dataset.cpShare)cmd?.setSaleShare?.(el.dataset.cpShare,num(el.value));
       if(el.matches?.('[data-cp-price]'))ui.priceGood = el.value;
       if(el.matches?.('[data-cp-estate]'))ui.site = el.value;

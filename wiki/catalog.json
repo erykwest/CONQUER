@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceDigest": "c2bb7ea9cfe7d78c5dfc4c4b4b138dd0fd10300617ba10e78688c590a0d7d532",
+  "sourceDigest": "870bf3108bfa03b9e06097d877fab928032f1d012ef7bb829193885a05966c4f",
   "catalog": {
     "schemaVersion": 1,
     "categories": [
@@ -13,6 +13,106 @@
       "ship"
     ],
     "items": [
+      {
+        "id": "building:balivo",
+        "key": "balivo",
+        "label": "balivo",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "constructionCost/buildDuration"
+        },
+        "properties": {
+          "levels": [
+            1,
+            2
+          ]
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:bargello",
+        "key": "bargello",
+        "label": "bargello",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "constructionCost/buildDuration"
+        },
+        "properties": {
+          "levels": [
+            1,
+            2
+          ]
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
       {
         "id": "building:bridge",
         "key": "bridge",
@@ -7999,6 +8099,44 @@
             "gold": 180,
             "stone": 110,
             "wood": 120
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 6
+        }
+      }
+    },
+    "building:bargello": {
+      "structure": {
+        "type": "bargello"
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 140,
+            "stone": 90,
+            "wood": 60
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 5
+        }
+      }
+    },
+    "building:balivo": {
+      "structure": {
+        "type": "balivo"
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 170,
+            "stone": 120,
+            "wood": 80
           }
         },
         "time": {
