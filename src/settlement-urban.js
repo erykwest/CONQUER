@@ -193,9 +193,9 @@ function urbanLotHasMinimumSize(poly,preferredAngle=0){
 function urbanSpawnOccupants(){
   const out=window.ConquerCombat?.spawnOccupants?.()||[];
   const houses=completedSettlement('house'),fields=completedSettlement('field');
-  const assignments=fieldWorkAssignments(houses.filter(h=>houseLevel(h)<=2),fields),day=peasantVisualDay();
+  const assignments=fieldWorkAssignments(houses,fields),day=peasantVisualDay();
   for(const house of houses)for(const resident of houseResidents(house)){
-    let p=residentClassPosition(house,resident,day,assignments.get(house.id));
+    let p=residentClassPosition(house,resident,day,assignments.get(resident.id));
     if(p)p={x:p.x+resident.scatterX,y:p.y+resident.scatterY};
     p=window.ConquerCombat?.civilSpawnPosition?.(p,house,resident)??p;
     if(p)out.push({x:p.x,y:p.y,r:resident.age==='child'?.12:.22});

@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 // Reuse the VM/DOM harness; execute the real geometry, simulation and drawing functions.
 const fs=require('node:fs');
 const harness=fs.readFileSync(__dirname+'/urban-regression.cjs','utf8').split('let passed=0;')[0];
@@ -43,6 +43,7 @@ test('rural field rejects yellow zoning, forests, buildings, roads, other fields
  run("delete window.ConquerCombat.spawnOccupants");
 });
 
+run("function qaAllReleased(){const a=[...fieldWorkAssignments(completedSettlement('house'),completedSettlement('field')).values()];return a.every(x=>!!fieldSlotRelease(x.field,x.cell))}");
 run("function qaMonthStart(month,year){for(let d=0;d<950;d++){const date=calendarDateFromDay(d);if(date.month===month&&date.year===year&&date.day===1)return d}throw Error('Calendar month missing')}");
 test('merged L1 servants can claim field slots in ploughing season',()=>{
  farm();
@@ -69,7 +70,7 @@ test('October plough, March sow, autonomous spring growth, July harvest, next Oc
  run("c.phase='plough';c.ploughed=false;c.harvested=false;c.work=fieldLayout(qaField).cells.map(s=>s.end-s.start-.1);c.lastDay=qaAutumn;State.clock.day=qaAutumn+1;tickFields(qaAutumn+1)");
  assert.equal(run('c.ploughed'),true,'ploughing should finish in October');
  assert.equal(run('c.phase'),'plough','field stays ploughed until the sowing window');
- assert.equal(run("fieldWorkAssignments(completedSettlement('house'),[qaField]).size"),0,'completed field must release farmers');
+ assert.equal(run('qaAllReleased()'),true,'completed field must release farmers (home on foot, no idle standing)');
  run("c.lastDay=qaSpring-1;State.clock.day=qaSpring;tickFields(qaSpring)");
  assert.equal(run('c.phase'),'sow');
  // March 1 is Monday: no work is completed at midnight.
@@ -77,7 +78,9 @@ test('October plough, March sow, autonomous spring growth, July harvest, next Oc
  assert.equal(run('c.work[0]'),3,'March sowing rate 3U per farmer per completed working day');
  run("c.work=fieldLayout(qaField).cells.map(s=>s.end-s.start-.1);c.lastDay=qaSpring+1;State.clock.day=qaSpring+2;tickFields(qaSpring+2)");
  assert.equal(run('c.phase'),'grow');
- assert.equal(run("fieldWorkAssignments(completedSettlement('house'),[qaField]).size"),0,'growing fields must not claim farmers');
+ assert.equal(run('qaAllReleased()'),true,'growing fields must not keep farmers at work');
+ run("State.clock.day=qaSpring+3;globalThis.qaGrowSize=fieldWorkAssignments(completedSettlement('house'),[qaField]).size");assert.equal(run('qaGrowSize'),0,'growing fields must not claim farmers next morning');
+ run('State.clock.day=qaSpring+2');
  run("c.lastDay=qaJune-1;State.clock.day=qaJune;tickFields(qaJune)");
  assert.ok(run('c.growth')>.4&&run('c.growth')<1,'spring growth must be gradual');
  run("c.lastDay=qaJuly-1;State.clock.day=qaJuly;tickFields(qaJuly)");
@@ -95,8 +98,9 @@ test('finished seasonal fields release workers and preserve industrial reservati
  farm();
  run("State.structures.push({id:'other-field',type:'field',auto:true,x:114,y:104,points:[{x:112,y:103},{x:116,y:103},{x:116,y:105},{x:112,y:105}]},{id:'h1',type:'house',auto:true,x:101,y:110,w:1.5,h:1,houseLevel:1},{id:'h2',type:'house',auto:true,x:108,y:100,w:1.5,h:1,houseLevel:1});State.clock.day=qaAutumn;fieldCrop(qaField).ploughed=true;fieldCrop(State.structures[2]).phase='plough';fieldWorkAssignmentCache.key=null;globalThis.qaAssigned=[...fieldWorkAssignments(completedSettlement('house'),completedSettlement('field')).values()].map(a=>a.field.id)");
  assert.deepEqual(JSON.parse(JSON.stringify(run('qaAssigned'))),['other-field','other-field']);
- run("fieldCrop(qaField).ploughed=false;fieldCrop(State.structures[2]).ploughed=true;globalThis.qaReassigned=[...fieldWorkAssignments(completedSettlement('house'),completedSettlement('field')).values()].map(a=>a.field.id)");
- assert.deepEqual(JSON.parse(JSON.stringify(run('qaReassigned'))),['f','f'],'season/completion changes must invalidate assignment key');
+ run("fieldCrop(qaField).ploughed=false;fieldCrop(State.structures[2]).ploughed=true;globalThis.qaSameDay=[...fieldWorkAssignments(completedSettlement('house'),completedSettlement('field')).values()].map(a=>a.field.id);State.clock.day=qaAutumn+1;globalThis.qaReassigned=[...fieldWorkAssignments(completedSettlement('house'),completedSettlement('field')).values()].map(a=>a.field.id)");
+ assert.deepEqual(JSON.parse(JSON.stringify(run('qaReassigned'))),['f','f'],'the next morning reassigns farmers to the field with open strips');
+ assert.deepEqual(JSON.parse(JSON.stringify(run('qaSameDay'))),['other-field','other-field'],'nobody is moved mid-shift');
  run("globalThis.qaOldEconomy=window.ConquerEconomy;window.ConquerEconomy={KIND:{mine:{classId:1}},staffing:()=>({'logging':1})};State.structures.push({id:'logging',type:'mine',x:130,y:130});globalThis.qaIndustryAssignments=fieldWorkAssignments(completedSettlement('house'),completedSettlement('field')).size");
  assert.equal(run('qaIndustryAssignments'),1,'one L1 remains reserved for mining');
  run("window.ConquerEconomy=qaOldEconomy");
@@ -135,7 +139,7 @@ test('idle L1 servants open a field in the ploughing window without five houses'
   assert.equal(run('underConstruction(qaL2Field)'),false,'opening farmland should not require a construction delay');
   assert.ok(run('fieldLayout(qaL2Field).cells.length')>=1,'a new L1 field must have worker slots scaled to area');
   assert.equal(run('fieldQuadValid(qaL2Field.points)&&qaL2Field.points.every(p=>!window.ConquerCombat.areaState(p).yellow&&terrainPlateauElevation(p)===0)'),true);
-  assert.equal(run('fieldWorkAssignments(completedSettlement("house"),completedSettlement("field")).get("artisan")?.field.id'),run('qaL2Field.id'),'L1 must be assigned to its newly opened field');
+  run('State.clock.day=qaFirstAutumnMonday+1.40');assert.equal(run('fieldWorkAssignments(completedSettlement("house"),completedSettlement("field")).get("artisan:m:0")?.field.id'),run('qaL2Field.id'),'L1 must be assigned to its newly opened field the next morning');
   run("globalThis.qaL2Crop=fieldCrop(qaL2Field);qaL2Crop.lastDay=qaFirstAutumnMonday+.40;State.clock.day=qaFirstAutumnMonday+1.40;tickFields(State.clock.day)");
   assert.ok(run('qaL2Crop.work.reduce((a,b)=>a+b,0)')>0,'L1 must actually plough after opening the new field');
   assert.equal(run("State.structures.filter(s=>s.openedByL1).length"),1,'a busy L1 must not continually create new parcels');

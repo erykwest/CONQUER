@@ -98,7 +98,8 @@ function residentClassPosition(house,resident,day,assignment){
   if(weekly===6)return null; // Children keep the Sunday rest.
   if(weekly===5)return familyPosition(house,State.clock.day); // Saturday market trip.
   if(resident.age==='child')return childHomePosition(house,resident,shiftedDay);
-  // L1 servants including former quarry/miner L2 are eligible for field work.
+  // L1 servants staffed at a field this morning (assignment of this very
+  // resident) use the real serpentine field route (D-FIELD-LEND-261113).
   if(resident.sex==='male'&&assignment&&level===1)
     return peasantPosition(house,assignment,State.clock.day);
   if(level===1)return null;

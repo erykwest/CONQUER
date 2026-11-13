@@ -1,5 +1,18 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-13 — FIELD-LEND · Contadini senza lavoro al campo (branch `fix/idle-peasants`, rifatta su SOC-CLASS-02)
+
+- **STATO LIVE verificato su `main` 965d42c3 (SOC-CLASS-02):** campi, cave e miniere sono L1 e i campi stanno nel Job Manager L1. Il campo chiedeva tutte le sue strisce anche quando molte erano già finite, quindi pagava al campo L1 che restavano a casa. I contadini disegnati erano scelti casa per casa, separatamente dall'economia: un costruttore poteva ricevere una striscia che nessuno lavorava, e due adulti della stessa casa avrebbero preso la stessa striscia.
+- **CODICE SUL BRANCH, NON MERGE** ([D-FIELD-LEND-261113](DECISIONS.md)):
+  - `fieldMorningDemand` (settlement-fields): strisce aperte al primo calcolo del giorno, congelate fino a sera; 0 in crescita o fuori stagione. Lo usano `workerDemand`, Job Manager L1 e la sospensione dei campi in `laborAllocation`.
+  - `fieldWorkAssignments` prende il roster da `laborAllocation().assignedL1[campo]`: assegnazioni per id residente, striscia aperta più vicina del campo che lo paga, decisione mattutina stabile; `fieldSocialTier` sostituisce i controlli `houseLevel<=2` in figures e urban.
+  - `takeWorkers`: i campi prendono solo adulti con casa, non la squadra di fondazione.
+  - L'espansione dei campi in autunno parte dagli L1 che l'economia lascia inattivi.
+  - Restano dalla prima versione: `crop.slotEnd`, `fieldSlotRelease`, rientro a piedi, niente attrezzo su striscia finita.
+  - Rimosso il prestito L2 (`lendIdleFarmers`, `lentL2`, `lentIdle`, `farmhands`, `lentToL1`).
+- **PROVE LOCALI PASS:** `qa/idle-farmers-regression.cjs` (7 casi), `qa/fields-regression.cjs` (16 casi), 32 delle 33 voci di `economy-flows-regression.yml` più `qa/urban-regression.cjs`, e le regressioni social-classes, labor-jobs, construction-commute, educated, storage-yard, carter-market. `founding-regression` fallisce sul limite di tempo di 100 ms (131 ms), come annotato per #206 anche su main.
+- **NON VERIFICATO:** partita reale nel browser, prove di prestazioni Playwright, CI del branch.
+
 ## 2026-11-13 — CAM-ROT-01 · Rotazione libera della camera (branch `feature/free-camera-rotation`)
 
 - **CODICE SUL BRANCH, NON MERGE:** `State.view.rotation` resta in quarti di giro ma accetta valori frazionari. `rotateViewPoint` (2D), lo shader WebGL (`uRot` ora `vec2` cos/sin) e l'ombreggiatura delle facce (`rotDir` in `settlement-mesh3d.js` e `settlement-wagons3d.js`) seguono qualsiasi angolo; per i quarti interi il percorso esatto è invariato.

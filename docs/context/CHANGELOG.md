@@ -1,5 +1,16 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-13 — FIELD-LEND · Contadini senza lavoro al campo (rifatta su SOC-CLASS-02)
+
+13/11/2026 — `fix/idle-peasants` (pre-merge), riallineata a main 965d42c3 dopo SOC-CLASS-02 (campi L1):
+- Abbandonato il prestito L2 → L1 della prima versione: con #206 i campi sono L1 e i contadini senza lavoro restano nel pool L1.
+- Il campo chiede ogni giorno solo le strisce aperte al mattino (`fieldMorningDemand`), congelate fino a sera; in crescita o fuori stagione chiede 0.
+- I contadini disegnati alle strisce sono esattamente gli L1 che l'economia assegna al campo (`assignedL1`), una striscia per adulto (assegnazioni per id residente); la squadra di fondazione non va ai campi.
+- Chi finisce la striscia a metà turno rientra a piedi; nessuna riassegnazione a metà turno; niente attrezzo su una striscia finita.
+- `qa/idle-farmers-regression.cjs` riscritta (7 casi) e `qa/fields-regression.cjs` riconciliata; entrambe nel workflow economico.
+
+STATUS, BACKLOG, CHANGELOG e DECISIONS (D-FIELD-LEND-261113, riscritta) aggiornati; ROADMAP invariata.
+
 ## 2026-11-13 — RC-01…RC-07 · Hub/lobby e remote control (solo documentazione)
 
 Definita main page multi-campagna con lobby e partite in corso, KPI aggregati per insediamento e gestione remota da browser, in futuro da app Android/iOS. Portata funzionale: messaggi, diplomazia, spedizioni, tributi, mappa regionale e controllo del feudo. Riletti centro pannelli su main e branch `messages` divergente (29 avanti / 317 indietro); riportata necessità di porting selettivo e API autorevoli senza simulatore duplicato. Specifica `docs/REMOTE-CONTROL-SCOPE.md`, D-RC-261113 e backlog RC-01…RC-07. **Nessun codice, test o asset modificato. ROADMAP e STATUS invariati.**

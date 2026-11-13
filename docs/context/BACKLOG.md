@@ -1569,6 +1569,10 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 
 D-051 risolta per scelta dell’utente: campi solo L2. Recupero residuo jobmanager nel branch fix/fields-l2-only; chiusura dopo merge e rimozione della branch storica.
 
+- **FIELD-LEND · CODICE SU BRANCH `fix/idle-peasants` (13/11/2026, [D-FIELD-LEND-261113](DECISIONS.md)):** contadini senza lavoro al campo, rifatta dopo SOC-CLASS-02 (#206, campi L1). Ogni mattina lavorativa il campo chiede solo le strisce ancora aperte (0 in crescita o fuori stagione); gli L1 in più vanno a un altro campo in stagione, poi agli altri lavori L1 (cantieri, taglialegna, carrettieri…) secondo il Job Manager. Al campo si disegnano esattamente gli L1 che l'economia paga lì, uno per striscia; la squadra di fondazione non coltiva. Chi finisce a metà turno rientra a piedi e viene riassegnato la mattina dopo.
+  - **DA VERIFICARE:** prova in partita reale (maggio con un cantiere aperto: i contadini L1 compaiono al cantiere; ottobre a striscia finita: rientro a piedi). CI del branch.
+  - **APERTO, non in questa PR:** il salario dei campi si paga ancora sul personale presente nel giorno di paga (fuori stagione 0); resa autunnale e calendario fisico restano O-002.
+
 ## 2026-11-11 — Integrazione urgente figure-billboards (pre-merge)
 
 Recuperati i cinque commit residui 31cb32d, 2408397, 8e541fd, e4b06cc, 0ff543d sulla base main e4230db. La parte navale precedente era già in #150. Civili, lavoratori, carpentieri e marinai entrano nel depth buffer World3D; atlante 2048 con caselle 64px, 1024 posti, pose condivise, riuso LRU e upload incrementale. Conservati LOD militare, addOutbuilding, ingresso del mastio, arte e guarnigioni. Recuperati layout TEST, cache accesso pozzi, traslazione mesh navi, indice spaziale ostacoli e Trabucco DEV con scenario QA.

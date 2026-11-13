@@ -91,8 +91,8 @@ function drawPeasants(){
   if(!houses.length&&!founders)return;
   const day=peasantVisualDay(),dots=[];
   let representedPopulation=0,activeAgents=0;
-  const farmHouses=houses.filter(h=>houseLevel(h)===1||houseLevel(h)===2);
-  const assignments=fieldWorkAssignments(farmHouses,fields);
+  // Keyed by resident id: only the L1 the economy staffs at a field farm.
+  const assignments=fieldWorkAssignments(houses,fields);
   // Read the exact same named crews used by the manual construction tick.
   const constructionJobs=new Map();
   for(const [siteId,workers] of constructionCrewAssignments(State.clock.day)){
@@ -117,8 +117,9 @@ function drawPeasants(){
   const residentStride=State.view.scale<.30?3:State.view.scale<.55?2:1;
   for(const house of houses){
     representedPopulation+=housePopulationCapacity(house).total;
-    const kind=villagerClass(house),assignment=assignments.get(house.id);
+    const kind=villagerClass(house);
     for(const resident of houseResidents(house)){
+      const assignment=assignments.get(resident.id);
       // Alarm destinations are computed even for residents not selected by
       // distant-camera LOD, so mobilization does not depend on zoom level.
       const building=constructionJobs.get(resident.id);
@@ -132,7 +133,7 @@ function drawPeasants(){
       // The artisan of an open L3 workshop works at his bench, not at the door.
       const shop=!building&&!carter?window.ConquerShopCutaway?.artisanAt(house,resident,p):null;
       if(shop)p=shop.p;
-      else if(p&&!building&&!carter&&!(assignment&&resident.sex==='male'&&resident.age==='adult'&&houseLevel(house)<=2))
+      else if(p&&!building&&!carter&&!(assignment&&resident.sex==='male'&&resident.age==='adult'&&fieldSocialTier(house)===1))
         p={x:p.x+resident.scatterX,y:p.y+resident.scatterY};
       const combatP=window.ConquerCombat?.civilPosition(p,house,resident);
       if(combatP!==undefined)p=combatP; // null means safely inside the Common Hall.
@@ -199,7 +200,9 @@ function drawRaisedVillagers(){
 // A farmer standing at his field spot works it with the tool of the season:
 // hoe for ploughing, seed sack for sowing, sickle for the harvest.
 function fieldWork(p,assignment,house,resident){
-  if(!window.ConquerWorkAnim||!assignment||resident.sex!=='male'||resident.age!=='adult'||houseLevel(house)>2)return null;
+  if(!window.ConquerWorkAnim||!assignment||resident.sex!=='male'||resident.age!=='adult'||fieldSocialTier(house)!==1)return null;
+  // A strip without work (finished or field closed) never shows a working pose.
+  if(typeof fieldSlotRelease==='function'&&fieldSlotRelease(assignment.field,assignment.cell))return null;
   const spot=fieldWorkerPosition(assignment.field,assignment.cell);
   if(!spot||Math.hypot(p.x-spot.x,p.y-spot.y)>.02)return null;
   const tool=window.ConquerWorkAnim.FIELD_TOOL[fieldCrop(assignment.field).phase];
