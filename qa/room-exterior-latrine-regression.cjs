@@ -96,7 +96,7 @@ console.log('PASS the garderobe breaks, falls and is rebuilt');
 // ---- room rule: first upper floor of a W1 stone tower only, and only where the element fits.
 const rc=vm.createContext({window:{ConquerRoomExterior:RE},underConstruction:s=>!!s.building,structureLevel:s=>s.level||1,
   towerTier:s=>s.tier||1,isWoodTower:s=>s.material==='wood',isWideBuilt:s=>s.span==='wide',builtInteriorFloors:s=>s.span==='wide'?1:(s.level||1)});
-vm.runInContext([pick(castle,'functionCapacity'),pick(siege,'eligibleRoom'),pick(siege,'floor'),pick(siege,'allowed')].join('\n'),rc);
+vm.runInContext([pick(castle,'functionCapacity'),src('settlement-core.js').match(/const W1_TOWER_FUNCTIONS=[^\n]+/)[0],pick(siege,'eligibleRoom'),pick(siege,'floor'),pick(siege,'allowed')].join('\n'),rc);
 const allowed=vm.runInContext('allowed',rc);
 assert.ok(allowed(s,1,'latrine'),'W1 stone tower, first upper floor');
 assert.ok(!allowed(s,0,'latrine'),'not on the ground floor');
@@ -109,6 +109,25 @@ assert.ok(!allowed(s,1,'latrine'),'not where the garderobe cannot fit');
 ctx.State.structures=[s];
 assert.ok(JSON.parse(src('settlement-core.js').match(/const FUNCTION_CATALOG=(\[[^\n]+\]);/)[1].replace(/'/g,'"')).includes('latrine'));
 console.log('PASS latrine rooms only on the first upper floor of W1 stone towers, where the element fits');
+
+// ---- loading a save checks its latrines against the world being loaded, not the one still open
+const houses=[{id:'hE',type:'house',pts:[{x:.55,y:-2},{x:2,y:-2},{x:2,y:2},{x:.55,y:2}]},
+  {id:'hN',type:'house',pts:[{x:-2,y:.55},{x:2,y:.55},{x:2,y:2},{x:-2,y:2}]},{id:'hS',type:'house',pts:[{x:-2,y:-2},{x:2,y:-2},{x:2,y:-.55},{x:-2,y:-.55}]}];
+ctx.State.structures=[s,...houses];assert.equal(RE.placement(s,1,'latrine'),null,'houses on every outer face');
+const mc=vm.createContext({State:ctx.State,Math,Number,Object,Array,Map,Set,
+  window:{ConquerSiege:{sanitizeRooms:x=>x.functions.forEach((fn,i)=>{if(fn&&!allowed(x,i,fn))x.functions[i]=null})}},
+  houseLevel:()=>1,normalizeCivicDevelopment(){},clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),snapStructureAngle:a=>a,towerTier:x=>x.tier||1,
+  applyStructureTier(){},structureUsesDiscreteAngle:()=>false,normalizeStructureRotation(){},normalizeStructureVariants(){},
+  normalizeFunctions(){},isCivicAnnex:()=>false,WOOD_TOWER_STYLES:[]});
+vm.runInContext(pick(src('settlement-app-persistence.js'),'migrateStructures'),mc);
+const load=list=>vm.runInContext('migrateStructures',mc)(JSON.parse(JSON.stringify(list)));
+const openA=houses.map(h=>({...h}));ctx.State.structures=openA;
+const gameB=load([tower()]);
+assert.equal(gameB[0].functions[1],'latrine','game B keeps its latrine although game A has buildings in front of that face');
+assert.equal(ctx.State.structures,openA,'the open world is restored after the check');
+assert.equal(load([tower(),...houses])[0].functions[1],null,'a latrine blocked in its own save is still emptied');
+ctx.State.structures=[s];
+console.log('PASS loading a save checks latrines against its own world');
 
 // ---- W1 towers: the spiral stair only while no room is assigned; the latrine furnishes the whole room
 const sc=vm.createContext({isWoodTower:s=>s.material==='wood',towerTier:s=>s.tier||1});

@@ -220,16 +220,45 @@ function castleBodyCompositeBounds(){
     maxY:Math.max(...cloud.map(p=>p.y))+pad
   };
 }
+// The visual inputs of one structure, shared by every render cache key (2.5D castle body bitmap and
+// cutaway overlay here, the World 3D structure signature in settlement-world3d.js) so the lists cannot
+// drift apart: geometry, material, the fields of every declared variant (STRUCTURE_VARIANTS: roof,
+// hoarding, a small gate's timber upper storey, skins, bells...), rooms and their exterior damage.
+// A field missing here leaves a stale mesh or bitmap after the change (qa/render-cache-keys-regression.cjs).
+const STRUCTURE_VISUAL_FIELDS=Object.freeze(['id','type','shape','material','masonryMaterial','woodStyle','woodRoof','roofCover',
+  'roofStyle','bartizan','bell','innerRoof','signalFire','roofShape','baseStyle','skin','hoarding','upper','topWeapon',
+  'r','size','w','h','width','length','angle','rotationStep','level','tier','cutawayFloor','aSnap','bSnap','parentTowerId',
+  'orientationOffset','groundZ','foundationMinZ']);
+function structureVisualKey(s){
+  if(!s)return'';
+  const num=v=>v==null||v===''?'':Number.isFinite(Number(v))?String(+Number(v).toFixed(4)):String(v);
+  let k='';
+  for(const f of STRUCTURE_VISUAL_FIELDS)k+=num(s[f])+'|';
+  k+=(s.x!=null?num(s.x)+','+num(s.y):'')+'|'+(s.a?num(s.a.x)+','+num(s.a.y):'')+'|'+(s.b?num(s.b.x)+','+num(s.b.y):'')+'|';
+  k+=(s.flip?1:0)+''+(s.cutaway?1:0)+(s.signalFireSpent?'F':'')+(s.doorBurnt?'D':'')+(s.burnt?'X':'')+(s.brokenTop?'B':'')+'|';
+  // Every declared variant, whatever its name (a new upgrade is covered without editing this list).
+  const schema=typeof variantSchema==='function'?variantSchema(s):null;
+  if(schema)for(const key of Object.keys(schema).sort())k+=key+'='+(s[key]??'')+';';
+  if(s.functions?.length)k+='|'+JSON.stringify(s.functions);
+  if(s.roomExteriorHp)k+='|'+JSON.stringify(s.roomExteriorHp);
+  return k;
+}
+// Epoch for short-lived memos of derived geometry (archer slots, room exterior placement): it changes
+// whenever the game signals a scene, navigation or structure-list change, and at least once a second
+// as a backstop for in-place edits that signal nothing. 0 outside the browser runtime (node QA, Lab
+// stubs without the perf counters): callers then recompute every time.
+let structureMemoList=null,structureMemoListId=0;
+function structureMemoEpoch(){
+  const perf=typeof window!=='undefined'&&window.__conquerPerf;
+  if(!perf||typeof performance==='undefined'||!Array.isArray(State?.structures))return 0;
+  if(State.structures!==structureMemoList){structureMemoList=State.structures;structureMemoListId++}
+  const nav=typeof navPerf!=='undefined'?(navPerf.navInvalidations||0):0;
+  return structureMemoListId+':'+State.structures.length+':'+(perf.cacheInvalidations||0)+':'+nav+':'+Math.floor(performance.now()/1000);
+}
 function castleBodyVisualSignature(){
   const num=v=>Number.isFinite(Number(v))?+Number(v).toFixed(4):null;
-  const point=p=>p?[num(p.x),num(p.y)]:null;
-  const items=castleBodyRenderableStructures().map(s=>[
-    s.id||'',s.type||'',s.shape||'',s.material||'',s.masonryMaterial||'stone',s.woodStyle||'',s.woodRoof||'',
-    s.roofStyle||'',s.bartizan||'',s.bell||'',s.innerRoof||'',(s.signalFire||'')+(s.signalFireSpent?'F':''),s.roofShape||'',s.baseStyle||'',s.skin||'',num(s.x),num(s.y),num(s.r),num(s.size),
-    point(s.a),point(s.b),num(s.width),num(s.length),num(s.angle),s.rotationStep??null,
-    s.level??null,s.tier??null,!!s.flip,!!s.cutaway,s.cutawayFloor??null,JSON.stringify(s.functions||[]),JSON.stringify(s.roomExteriorHp||null),s.aSnap||null,s.bSnap||null,s.parentTowerId||null,
-    num(s.orientationOffset),num(s.groundZ),num(s.foundationMinZ)
-  ]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
+  const items=castleBodyRenderableStructures().map(s=>[s.id||'',structureVisualKey(s)])
+    .sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
   return JSON.stringify([
     1,window.ConquerCastle3D?.active?.()?'3d':'2d',State.season||'summer',State.visualPalette,State.stonePaletteId,num(State.view.scale),State.view.rotation||0,isPlanView()?'plan':'iso',staticCacheDpr(),
     !!window.__polygonClipping,crenelStyle(),roofPitch(),items

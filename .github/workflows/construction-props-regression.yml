@@ -19,6 +19,8 @@ on:
       - 'qa/construction-props-regression.cjs'
       - '.github/workflows/construction-props-regression.yml'
   workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   construction-props:
     runs-on: ubuntu-latest

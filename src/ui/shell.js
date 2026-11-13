@@ -329,24 +329,15 @@ function CrossingPanel({ id }) {
   });
   return html`<div class="u2-legacy" ref=${ref}></div>`;
 }
-// CHIESA-01: the Church tab (treasury, Favour, gifts) comes from settlement-church.js as markup.
-function ChurchPanel({ id }) {
+// Institution tabs come as markup from their module, named by `api`: CHIESA-01 window.ConquerChurch
+// (treasury, Favour, gifts; settlement-church.js), GILDA-01 window.ConquerGuild (workshop bonus, officials).
+function InstitutionPanel({ id, api }) {
   const ref = useRef(null);
   useEffect(() => {
     const s = State.structures.find(x => x.id === id);
     if (!ref.current || !s) return;
-    ref.current.innerHTML = window.ConquerChurch?.panelHtml?.(s) || '';
-    window.ConquerChurch?.bindPanel?.(ref.current);
-  });
-  return html`<div class="u2-legacy" ref=${ref}></div>`;
-}
-// GILDA-01: the Guild tab (workshop bonus, officials) comes from settlement-guild.js as markup.
-function GuildPanel({ id }) {
-  const ref = useRef(null);
-  useEffect(() => {
-    const s = State.structures.find(x => x.id === id);
-    if (!ref.current || !s) return;
-    ref.current.innerHTML = window.ConquerGuild?.panelHtml?.(s) || '';
+    ref.current.innerHTML = window[api]?.panelHtml?.(s) || '';
+    window[api]?.bindPanel?.(ref.current);
   });
   return html`<div class="u2-legacy" ref=${ref}></div>`;
 }
@@ -475,8 +466,8 @@ function Inspector({ snap, cmd }) {
             ${r.options.map(o => html`<option value=${o.value} disabled=${!o.allowed}>${T.functions[o.value] || o.value}</option>`)}
           </select></label>`)}</div>`}</div>`}
     ${d.legacy === 'crossing' && html`<${CrossingPanel} id=${d.id} />`}
-    ${d.type === 'church' && html`<${ChurchPanel} id=${d.id} />`}
-    ${d.type === 'guild' && html`<${GuildPanel} id=${d.id} />`}
+    ${d.type === 'church' && html`<${InstitutionPanel} id=${d.id} api="ConquerChurch" />`}
+    ${d.type === 'guild' && html`<${InstitutionPanel} id=${d.id} api="ConquerGuild" />`}
     ${hp && html`<div class="u2-group"><span class="u2-label" data-tip=${I.integrity} data-tip-body=${TIP.integrity} tabindex="0">${I.integrity}<i aria-hidden="true">?</i></span>
       <div class="u2-meter" data-tip=${I.masonry} data-tip-body=${hp.core + ' / ' + hp.coreMax}><small>${I.masonry}</small><${Bar} value=${hp.core} max=${hp.coreMax} /></div>
       ${hp.door != null && html`<div class="u2-meter" data-tip=${I.door} data-tip-body=${hp.door + ' / ' + hp.doorMax}><small>${I.door}</small><${Bar} value=${hp.door} max=${hp.doorMax} /></div>`}

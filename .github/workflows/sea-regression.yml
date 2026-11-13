@@ -21,6 +21,9 @@ on:
       - 'qa/biome-recipes-regression.cjs'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   sea-regression:
     runs-on: ubuntu-latest

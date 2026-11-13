@@ -33,7 +33,7 @@
   };
   const COUNTS={house1:[0,1],house2:[1,2],house3:[1,2],field:[0,1],loggingCamp:[2,4],quarry:[2,3],mine:[1,2],market:[3,5],tavern:[1,2],church:[0,1],training:[0,1],gate:[1,2]};
 
-  function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+  const hash=window.ConquerUtil.hash;
   function rngFor(key){return seedRand((Number(State.seed)||1)^hash(String(key)))}
   function pick(rnd,ctx,opts){
     const list=RULES[ctx].filter(([,,tag])=>!tag||(tag==='hay'?opts.hay:tag==='nearField'?opts.nearField:true)).filter(([a])=>M()?.assets?.[a]);

@@ -66,7 +66,7 @@
     const g=placementGroundZ(s);
     return Number.isFinite(g)?g:terrainElevation(s);
   }
-  function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+  const hash=window.ConquerUtil.hash;
   // One stake: unit body scaled to r x (bodyZ - z0), then a tip to tipZ (or a flat cap).
   function addStake(mesh,center,r,z0,bodyZ,tipZ,angle,seed){
     const ground=terrainElevation(center),base=ground+z0-(z0<=0?.06:0);

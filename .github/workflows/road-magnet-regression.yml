@@ -18,6 +18,9 @@ on:
       - '.github/workflows/road-magnet-regression.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   road-magnets:
     runs-on: ubuntu-latest

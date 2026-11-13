@@ -5,9 +5,14 @@
   const $ = id => document.getElementById(id);
   const num = n => Number.isFinite(Number(n)) ? Number(n) : 0;
   const fmt = n => n == null ? '—' : num(n).toLocaleString('it-IT',{maximumFractionDigits:1});
-  const esc = s => String(s ?? '—').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  // The UI's one HTML escaper, exported as ConquerPanels.escapeHtml for app-rooms and diplomacy.
+  const escapeHtml = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const esc = s => escapeHtml(s ?? '—');
   const max1 = values => Math.max(1,...values.map(num));
   const sum = values => values.reduce((n,x)=>n+num(x),0);
+  // Job Manager of a tier ('L2' or L1) in an economy read model, and its live task list.
+  const jobManagerOf = (e,tier) => (tier==='L2'?e?.jobManagerL2:e?.jobManager)||{};
+  const liveJobTasks = tier => jobManagerOf(window.ConquerGame?.read?.economy?.(),tier).tasks||[];
 
   const LABELS = {food:'Cibo',wood:'Legno',stone:'Pietra',clay:'Argilla',metal:'Metallo',equipment:'Equipaggiamento',luxury:'Lusso',materials:'Materiali',horses:'Cavalli',gold:'Oro'};
   const good = id => LABELS[id] || id;
@@ -262,7 +267,7 @@
     ]);
   }
   function l2Jobs(d){
-    const e=d.economy||{},p=population(d),manager=e.jobManagerL2||{},tasks=manager.tasks||[];
+    const e=d.economy||{},p=population(d),manager=jobManagerOf(e,'L2'),tasks=manager.tasks||[];
     const assigned=num(manager.assigned),available=num(manager.available);
     const activity=(e.activities||[]).filter(a=>a.tier===2);
     const sites=activity.length?table(['Attività L2','Occupati','Proprietà'],activity.map(a=>[
@@ -302,7 +307,7 @@
     ]);
   }
   function jobQueue(e,tier){
-    const jm=(tier==='L2'?e.jobManagerL2:e.jobManager)||{},tasks=jm.tasks||[];
+    const jm=jobManagerOf(e,tier),tasks=jm.tasks||[];
     if(!tasks.length)return empty('Nessuna mansione '+tier+' disponibile.');
     const info='<p class="cp-job-intro">Trascina le righe per modificare la priorità. I minimi sono riservati prima dei posti AUTO; se le richieste superano gli '+tier+' disponibili, prevale la priorità più alta.</p>';
     const columns='<div class="cp-job-columns"><span>PRIORITÀ · MANSIONE</span><span>MINIMUM WORKER</span><span>GESTIONE</span></div>';
@@ -631,8 +636,7 @@
   function open(mode='control') { ui.mode=Object.hasOwn(PALETTES,mode)?mode:'control'; render(); }
 
   function reorderJob(key,target,tier='L1'){
-    const economy=window.ConquerGame?.read?.economy?.();
-    const order=((tier==='L2'?economy?.jobManagerL2:economy?.jobManager)?.tasks||[]).map(t=>t.key);
+    const order=liveJobTasks(tier).map(t=>t.key);
     const from=order.indexOf(key),to=order.indexOf(target);
     if(from<0||to<0||from===to)return false;
     order.splice(from,1);order.splice(to,0,key);
@@ -676,8 +680,6 @@
       }
       const patrol = ev.target.closest('[data-cp-patrol]');
       if(patrol){window.ConquerGame?.commands?.adjustPatrols?.(patrol.dataset.cpPatrol==='add'?1:-1);render();return;}
-      const tower = ev.target.closest('[data-cp-tower-id]');
-      if(tower){window.ConquerGame?.commands?.adjustTowerArchers?.(tower.dataset.cpTowerId,Number(tower.dataset.cpTowerDelta));render();return;}
       const barracks = ev.target.closest('[data-cp-barracks-id]');
       if(barracks){window.ConquerGame?.commands?.adjustBarracksSquads?.(barracks.dataset.cpBarracksId,Number(barracks.dataset.cpBarracksDelta));render();return;}
       const tab = ev.target.closest('[data-cp-tab]');
@@ -685,15 +687,13 @@
       const auto = ev.target.closest('[data-cp-job-auto]');
       if(auto){
         const key=auto.dataset.cpJobAuto;
-        const tier=auto.dataset.cpJobTier==='L2'?'L2':'L1',economy=window.ConquerGame?.read?.economy?.();
-        const task=(tier==='L2'?economy?.jobManagerL2:economy?.jobManager)?.tasks?.find(t=>t.key===key);
+        const tier=auto.dataset.cpJobTier==='L2'?'L2':'L1',task=liveJobTasks(tier).find(t=>t.key===key);
         if(task)window.ConquerGame?.commands?.[tier==='L2'?'setL2Auto':'setL1Auto']?.(key,!task.auto);
         render();return;
       }
       const move = ev.target.closest('[data-cp-job-move]');
       if(move){
-        const economy=window.ConquerGame?.read?.economy?.();
-        const tasks=(move.dataset.cpJobTier==='L2'?economy?.jobManagerL2:economy?.jobManager)?.tasks||[];
+        const tasks=liveJobTasks(move.dataset.cpJobTier);
         const index=tasks.findIndex(t=>t.key===move.dataset.cpJobKey);
         const next=index+(move.dataset.cpJobMove==='up'?-1:1);
         if(index>=0&&next>=0&&next<tasks.length)reorderJob(tasks[index].key,tasks[next].key,move.dataset.cpJobTier==='L2'?'L2':'L1');
@@ -777,5 +777,5 @@
     // Simulation ticks do not all emit; a slow heartbeat keeps the numbers current.
     setInterval(refresh,4000);
   }
-  window.ConquerPanels = Object.freeze({open,render,tabs:TABS.map(x=>x[0])});
+  window.ConquerPanels = Object.freeze({open,render,tabs:TABS.map(x=>x[0]),escapeHtml});
 })();

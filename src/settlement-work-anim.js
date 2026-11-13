@@ -19,7 +19,7 @@
     seeds:{period:1.5,len:4.2,hit:.42,fx:'seeds'},
     sickle:{period:.95,len:3.6,hit:.5,fx:'stalks'}
   };
-  const ease=t=>t*t*(3-2*t),lerp=(a,b,t)=>a+(b-a)*t;
+  const ease=window.ConquerUtil.smoothstep,lerp=(a,b,t)=>a+(b-a)*t;
   // Piecewise keyframes [[u,th,lean,bob],...] -> pose at phase u.
   function keys(list,u){
     for(let i=0;i<list.length-1;i++){
@@ -41,8 +41,8 @@
     // Crouched, a low sweep through the stalks.
     sickle:[[0,1.25,.32,.12],[.35,1.0,.3,.11],[.5,2.55,.38,.14],[.7,2.45,.36,.13],[1,1.25,.32,.12]]
   };
-  function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
-  function rnd(seed){let a=seed|0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+  const hash=window.ConquerUtil.hash;
+  const rnd=window.ConquerUtil.rng;
   // Phase of a worker: each one keeps its own offset so a crew is never in step.
   function phaseOf(tool,id,t){
     const T=TOOLS[tool],k=(hash(String(id))%1000)/1000*T.period*.9,c=(t+k)/T.period;

@@ -13,7 +13,7 @@ const server=http.createServer((req,res)=>{
   const target=file.endsWith(path.sep)?path.join(file,'index.html'):file;
   fs.readFile(target,(err,data)=>{
     if(err){res.writeHead(404).end();return}
-    const mime={'.js':'text/javascript','.html':'text/html','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.json':'application/json'};
+    const mime={'.js':'text/javascript','.mjs':'text/javascript','.html':'text/html','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.json':'application/json'};
     res.setHeader('Content-Type',mime[path.extname(target)]||'application/octet-stream');res.end(data);
   });
 });

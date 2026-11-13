@@ -202,7 +202,7 @@
   // of gear in one venue gets its own pair (see uniquePairs).
   const PRIMARY=['#b8322c','#2f56a6','#d9b43a','#3f7d3a','#ece6d6'];
   const PAIRS=PRIMARY.flatMap(a=>PRIMARY.filter(b=>b!==a).map(b=>[a,b]));
-  function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+  const hash=window.ConquerUtil.hash;
   // Deterministic pair for an instance key (map seed + venue + item).
   const pairFor=key=>PAIRS[hash(((typeof State!=='undefined'&&State.seed)||1)+'|'+key)%PAIRS.length];
   // Pavilions add a scheme to their pair [A,B,scheme]: how the two colours fill walls,
@@ -470,6 +470,9 @@
     if(!s.camp)s.camp={leaders:1,squads:6,works:0,seed:0};
     const o=campOwner.get(s.camp);
     if(o&&o!==s)s.camp={...s.camp};
+    // Saves are untrusted: keep every index inside its table (CAMP_WORKS[c.works].name must exist).
+    const c=s.camp,fit=(v,[a,b],d)=>{v=Math.floor(Number(v));return Number.isFinite(v)?Math.max(a,Math.min(b,v)):d};
+    c.works=fit(c.works,[0,CAMP_WORKS.length-1],0);c.leaders=fit(c.leaders,CAMP_LIMITS.leaders,1);c.squads=fit(c.squads,CAMP_LIMITS.squads,6);
     campOwner.set(s.camp,s);return s.camp;
   };
   // Local layout of a camp structure (cached): encampment() centred on its lot, the

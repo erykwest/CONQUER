@@ -13,7 +13,7 @@
   const SESSION_START=.375,SESSION_END=.71;   // 9:00 - 17:00
   let occupancySource=null;
   const W=()=>window.ConquerWardrobe,C3=()=>window.ConquerCivic3D;
-  function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+  const hash=window.ConquerUtil.hash;
   const frac=x=>x-Math.floor(x);
   // Monday-Friday, by day, while the bell is silent.
   function inSession(){

@@ -166,6 +166,41 @@ test('amnesty: once, then a cooldown; bread cap holds food at its base price',()
   assert.equal(T.priceCap('food',3,2),2);assert.equal(T.priceCap('wood',3,2),3);
   ctx.State.clock.day=100;assert.equal(T.decreeStatus('amnesty').ok,true);
 });
+test('a decree issued on a Saturday, after that day\'s collection, still gets its weekly effect',()=>{
+  const run=(issueDay,legacy=false)=>{
+    const {T,econ,ctx}=world({structures:[townhall(3)],day:0});
+    for(let d=0;d<=issueDay;d++){ctx.State.clock.day=d;T.daily(d)}
+    const h=econ.happiness.L1,gold=econ.castleGold;
+    assert.equal(T.issue('feast').ok,true);
+    if(legacy)delete T.state().decrees.active.feast.owed;
+    for(let d=issueDay+1;d<=issueDay+14;d++){ctx.State.clock.day=d;T.daily(d)}
+    return{dh:econ.happiness.L1-h,gold:gold-econ.castleGold};
+  };
+  for(const d of [7,8,10,12]){const r=run(d);near(r.dh,1.5);near(r.gold,60)}
+  // A 14-day alms issued on Saturday pays two weeks, like on any other day.
+  const {T,econ,ctx}=world({structures:[townhall(3)],day:0});
+  for(let d=0;d<=12;d++){ctx.State.clock.day=d;T.daily(d)}
+  const w=econ.wallet.L1;T.issue('alms');
+  for(let d=13;d<=30;d++){ctx.State.clock.day=d;T.daily(d)}
+  near(econ.wallet.L1-w,2*20*.2);
+  // A decree from an older save (no flag) is never applied twice.
+  near(run(12,true).dh,0);
+});
+test('tithe in kind counts as this week\'s production, site included',()=>{
+  const {T,econ}=world({structures:[townhall(2)]});
+  econ.weekProduced={food:0};econ.weekProducedSites={};econ.activities={f1:{type:'field',owner:'private'}};
+  T.setRate('tithe',10);
+  T.tithe(econ,'food',100,{id:'f1',x:1,y:1});
+  near(econ.weekProduced.food,7.5);near(econ.weekProducedSites.f1.private.food,7.5);
+});
+test('a partially corrupt week does not break the tithe or the Saturday collection',()=>{
+  const {T,econ}=world({structures:[townhall(2)]});
+  econ.treasury={week:{due:{tithe:'x'},collected:null}};
+  T.setRate('tithe',10);
+  near(T.tithe(econ,'food',100,{x:1,y:1}),92.5);
+  near(T.state().week.collected.tithe,7.5);near(T.state().week.inKind.food,7.5);
+  T.weekly(12);near(T.snapshot().last.due.tithe,10);
+});
 test('wiring: economy, commerce, combat, panels and index load the Erario',()=>{
   const read=f=>fs.readFileSync(path.join(root,f),'utf8');
   assert.match(read('src/settlement-economy.js'),/ConquerTreasury\?\.daily\?\.\(day\)/);

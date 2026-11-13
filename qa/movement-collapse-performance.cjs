@@ -12,7 +12,7 @@ const server=http.createServer((req,res)=>{
   const file=path.resolve(root,'.'+decodeURIComponent(new URL(req.url,'http://localhost').pathname));
   if(!file.startsWith(root+path.sep)){res.writeHead(403).end();return}
   const saved=process.env.PERF_OVERLAY&&path.join(process.env.PERF_OVERLAY,path.relative(root,file));
-  fs.readFile(saved&&fs.existsSync(saved)?saved:file,(err,data)=>{if(err){res.writeHead(404).end();return}res.setHeader('Content-Type',({'.js':'text/javascript','.html':'text/html','.css':'text/css','.svg':'image/svg+xml'})[path.extname(file)]||'application/octet-stream');res.end(data)});
+  fs.readFile(saved&&fs.existsSync(saved)?saved:file,(err,data)=>{if(err){res.writeHead(404).end();return}res.setHeader('Content-Type',({'.js':'text/javascript','.mjs':'text/javascript','.json':'application/json','.html':'text/html','.css':'text/css','.svg':'image/svg+xml'})[path.extname(file)]||'application/octet-stream');res.end(data)});
 });
 async function main(){
   await new Promise(r=>server.listen(0,'127.0.0.1',r));

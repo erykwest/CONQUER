@@ -31,7 +31,7 @@ console.log('PASS Builder: four event-venue buttons in their group, placement, f
 // Runtime: make, footprint, label, cost, panel and lifecycle.
 const window={},State={seed:3,structures:[],clock:{day:10,speed:1}};
 const ctx=vm.createContext({window,State,Math,Object,Number,Array,Map,Set,String,JSON,Float32Array,performance:{now:()=>0}});
-for(const f of ['assets/scatter-model.js','assets/civic-models.js','assets/event-models.js','settlement-mesh3d.js','settlement-events3d.js'])vm.runInContext(read('src/'+f),ctx);
+for(const f of ['settlement-util.js','assets/scatter-model.js','assets/civic-models.js','assets/event-models.js','settlement-mesh3d.js','settlement-events3d.js'])vm.runInContext(read('src/'+f),ctx);
 const E=window.ConquerEvents3D;
 for(const v of VENUES){
   const s={...E.make(v),id:'b-'+v,x:50,y:60,angle:Math.PI/2};

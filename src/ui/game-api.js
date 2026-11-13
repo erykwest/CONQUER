@@ -125,6 +125,8 @@
     emit();
     return true;
   }
+  // Wraps a command that saves and notifies only when the underlying call reports a change.
+  const saved = fn => (...args) => { const ok = fn(...args); if (ok) { scheduleLocalSave(200); emit(); } return !!ok; };
   const commands = {
     press,
     setSpeed: speed => setTimeSpeed(speed),
@@ -168,37 +170,9 @@
       if(out.ok){scheduleLocalSave(200);emit();}
       return out;
     },
-    // L1 Job Manager: commands only; the economy remains the allocator and save owner.
-    setL1Minimum: (key, minimum) => {
-      const ok=window.ConquerEconomy?.setL1Minimum?.(key,minimum);
-      if(ok){scheduleLocalSave(200);emit();}
-      return !!ok;
-    },
-    setL1Auto: (key, enabled) => {
-      const ok=window.ConquerEconomy?.setL1Auto?.(key,enabled);
-      if(ok){scheduleLocalSave(200);emit();}
-      return !!ok;
-    },
-    setL1Order: order => {
-      const ok=window.ConquerEconomy?.setL1Order?.(order);
-      if(ok){scheduleLocalSave(200);emit();}
-      return !!ok;
-    },
-    setL2Minimum: (key, minimum) => {
-      const ok=window.ConquerEconomy?.setL2Minimum?.(key,minimum);
-      if(ok){scheduleLocalSave(200);emit();}
-      return !!ok;
-    },
-    setL2Auto: (key, enabled) => {
-      const ok=window.ConquerEconomy?.setL2Auto?.(key,enabled);
-      if(ok){scheduleLocalSave(200);emit();}
-      return !!ok;
-    },
-    setL2Order: order => {
-      const ok=window.ConquerEconomy?.setL2Order?.(order);
-      if(ok){scheduleLocalSave(200);emit();}
-      return !!ok;
-    },
+    // L1/L2 Job Manager: commands only; the economy remains the allocator and save owner.
+    ...Object.fromEntries(['setL1Minimum','setL1Auto','setL1Order','setL2Minimum','setL2Auto','setL2Order']
+      .map(name => [name, saved((...args) => window.ConquerEconomy?.[name]?.(...args))])),
     adjustPatrols: delta => {
       if(!State.village?.founded||!window.ConquerCombat?.units)return false;
       const before=window.ConquerCombat.units().filter(u=>u.kind==='patrol').length;
@@ -207,31 +181,11 @@
       if(ok&&after!==before)emit();
       return ok&&after!==before;
     },
-    adjustTowerArchers: (id, delta) => {
-      const ok=window.ConquerSiege?.changeArchers?.(id,delta);
-      if(ok){scheduleLocalSave(200);emit();}
-      return !!ok;
-    },
-    assignCirclePatrol: (sectorId,delta) => {
-      const ok=window.ConquerCombat?.assignCirclePatrol?.(sectorId,delta);
-      if(ok){scheduleLocalSave(200);emit();}
-      return !!ok;
-    },
-    adjustMacroArchers: (id,delta) => {
-      const ok=adjustMacroArchers(id,delta);
-      if(ok){scheduleLocalSave(200);emit();}
-      return !!ok;
-    },
-    adjustZoneArchers: (id,delta) => {
-      const ok=adjustZoneArchers(id,delta);
-      if(ok){scheduleLocalSave(200);emit();}
-      return !!ok;
-    },
-    adjustMacroSquads: (id,delta) => {
-      const ok=adjustMacroSquads(id,delta);
-      if(ok){scheduleLocalSave(200);emit();}
-      return !!ok;
-    },
+    adjustTowerArchers: saved((id, delta) => window.ConquerSiege?.changeArchers?.(id, delta)),
+    assignCirclePatrol: saved((sectorId, delta) => window.ConquerCombat?.assignCirclePatrol?.(sectorId, delta)),
+    adjustMacroArchers: saved((id, delta) => adjustMacroArchers(id, delta)),
+    adjustZoneArchers: saved((id, delta) => adjustZoneArchers(id, delta)),
+    adjustMacroSquads: saved((id, delta) => adjustMacroSquads(id, delta)),
     adjustBarracksSquads: (id, delta) => {
       const camp=window.ConquerCamp,roster=window.ConquerCombat?.units;
       if(!camp||!roster||!camp.barracks?.().some(b=>b.id===id))return false;

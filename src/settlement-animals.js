@@ -207,7 +207,7 @@
     sp.legList=sp.legs.split(/(?=M)/).map(s=>{const [x,y]=s.slice(1).trim().split(/[ ,]+/).map(Number);return{d:s,x,y:y+6}});
 
   const lerp=(a,b,k)=>a+(b-a)*k;
-  const ease=k=>k*k*(3-2*k);
+  const ease=window.ConquerUtil.smoothstep;
   // Pure gait maths for one mode, shared by all species.
   function gaitPose(mode,t,seed=0){
     const out={legs:[0,0,0,0],lift:[0,0,0,0],bob:0,head:0,tail:0,chew:0};

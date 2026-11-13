@@ -24,7 +24,7 @@ const ctx=vm.createContext({window,State,Math,Object,Number,Array,Map,Set,String
   closestPointOnSegment:(p,a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,L2=dx*dx+dy*dy,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/L2));return{x:a.x+t*dx,y:a.y+t*dy}},
   environmentContains:(f,p)=>f.type==='sea'&&pointInPolygon(p,f.points),
   pointSegmentDistance:()=>99,terrainElevation:()=>0,structureRotationStep:()=>0,seedRand:()=>Math.random});
-for(const f of ['heraldry-shapes.js','assets/ship-models.js','settlement-ships.js','settlement-ship-crew.js','settlement-quay.js','settlement-pier.js','settlement-naval-battle.js','settlement-fleet.js'])
+for(const f of ['settlement-util.js','heraldry-shapes.js','assets/ship-models.js','settlement-ships.js','settlement-ship-crew.js','settlement-quay.js','settlement-pier.js','settlement-naval-battle.js','settlement-fleet.js'])
   vm.runInContext(read('src/'+f),ctx);
 const F=window.ConquerFleet,NB=window.ConquerNavalBattle,M=window.ConquerShipModels;
 

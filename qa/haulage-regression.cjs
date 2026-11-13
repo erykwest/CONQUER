@@ -144,4 +144,26 @@ test('jobs aggregate per site, with strict active/pending bounds; reset is idemp
   h.H.reset();h.H.reset();
   assert.equal(h.H.snapshot().active,0);assert.equal(h.H.snapshot().pending,0);
 });
+test('an expanding stockyard keeps its carter (ConquerStorageYard.active), a new one does not',()=>{
+  const h=world();
+  h.yard.construction={workRequired:10,workDone:2,upgrade:{before:{yardSize:2}}};
+  assert.equal(h.Y.active().length,1,'the stockyard rule keeps an expanding yard active');
+  assert.equal(h.H.record({siteId:'camp',good:'wood',qty:2}),true,'its receipts still queue');
+  h.H.tick(.8);
+  assert.equal(h.H.snapshot().active,1,'the carter drives during the expansion');
+  for(let i=0;i<6;i++)h.H.tick(.25);
+  assert.equal(h.H.snapshot().active,1,'the trip is not dropped mid-way while the works go on');
+  const g=world();
+  g.yard.construction={workRequired:10,workDone:2};
+  assert.equal(g.H.record({siteId:'camp',good:'wood',qty:2}),false,'a yard still being built serves nobody');
+});
+test('the carter roster is not recomputed every frame between dispatch scans',()=>{
+  const h=world();let calls=0;const labor=h.E.laborAllocation;
+  h.window.ConquerEconomy={...h.E,laborAllocation:(...a)=>{calls++;return labor(...a)}};
+  h.H.record({siteId:'camp',good:'wood',qty:2});
+  h.H.tick(.8);const afterScan=calls;
+  for(let i=0;i<10;i++)h.H.tick(.016);
+  assert.ok(calls-afterScan<=1,'at most one allocation across ten short frames, got '+(calls-afterScan));
+  assert.equal(h.H.snapshot().active,1);
+});
 console.log(passed+' local haulage regression checks passed.');

@@ -222,7 +222,7 @@ console.log('PASS quay: shore or water, whitezone, sea face, piers branch off it
 
 // Test fleet: ships moor at the free berths of a pier with their sails furled, one each side,
 // alongside the deck; with no berth left they ride at anchor off the coast, sails set.
-for(const f of ['heraldry-shapes.js','assets/ship-models.js','settlement-ships.js','settlement-ship-crew.js','settlement-fleet.js'])vm.runInContext(read('src/'+f),ctx);
+for(const f of ['settlement-util.js','heraldry-shapes.js','assets/ship-models.js','settlement-ships.js','settlement-ship-crew.js','settlement-fleet.js'])vm.runInContext(read('src/'+f),ctx);
 const F=window.ConquerFleet,M2=window.ConquerShipModels;
 State.structures.length=0;State.structures.push(s);
 const one=F.spawn({key:'cocca',allegiance:'merchant'}),two=F.spawn({key:'barca',allegiance:'foreign'}),three=F.spawn({key:'nave',allegiance:'foreign',realm:'azure'});

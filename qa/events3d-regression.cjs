@@ -11,7 +11,7 @@ const src=f=>fs.readFileSync(path.join(__dirname,'..','src',f),'utf8');
 const window={},State={season:'summer',seed:7,heraldry:{c1:'#123456',c2:'#abcdef',c4:'#fedcba'}};
 const perf={t:0,now(){return this.t}};
 const ctx=vm.createContext({window,State,Math,Object,Number,Array,Map,Set,String,Float32Array,performance:perf});
-for(const f of ['assets/scatter-model.js','assets/civic-models.js','assets/event-models.js','settlement-mesh3d.js','settlement-events3d.js'])vm.runInContext(src(f),ctx);
+for(const f of ['settlement-util.js','assets/scatter-model.js','assets/civic-models.js','assets/event-models.js','settlement-mesh3d.js','settlement-events3d.js'])vm.runInContext(src(f),ctx);
 const M=window.ConquerEventModels,E=window.ConquerEvents3D;
 
 // Catalog: indexed parts, palette indices in range.

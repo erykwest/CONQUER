@@ -29,7 +29,7 @@ const ctx=vm.createContext({window,State,console,Math,Number,Object,Array,Map,Fl
   structureHeight:s=>[2.35,3.55,4.75][(s.level||1)-1],structureCenter:s=>({x:s.x,y:s.y}),
   structureInteriorVector:()=>({x:-1,y:0}),drawCastleSoldiers:()=>{}});
 vm.runInContext(src+'\nObject.assign(window,{towerTopWeapon,towerTopWeaponAllowed,setStructureVariant,normalizeStructureVariants});',ctx);
-for(const f of ['assets/siege-engines-model.js','settlement-siege-engines3d.js','settlement-tower-weapons.js'])
+for(const f of ['settlement-util.js','assets/siege-engines-model.js','settlement-siege-engines3d.js','settlement-tower-weapons.js'])
   vm.runInContext(fs.readFileSync(root+f,'utf8'),ctx);
 const W=window;
 const tower=(o={})=>W.normalizeStructureVariants({type:'tower',shape:'square',material:'stone',size:1.5,level:1,x:10,y:20,...o});

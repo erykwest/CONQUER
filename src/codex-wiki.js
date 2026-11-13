@@ -9,7 +9,9 @@
   const fold=s=>s.normalize('NFD').replace(/\p{Diacritic}/gu,'').toLocaleLowerCase('it');
   let api,data,host=null,embedded=false;
   try{
-    if(new URLSearchParams(location.search).get('embedded')==='1'&&parent!==window&&parent.location.origin===location.origin&&parent.ConquerWikiHost){host=parent.ConquerWikiHost;api=parent.ConquerGameCodex;embedded=true}
+    // A cross-origin parent throws on .location: treat it as standalone instead of failing the catalog.
+    const sameOriginParent=()=>{try{return parent!==window&&parent.location.origin===location.origin&&!!parent.ConquerWikiHost}catch(e){return false}};
+    if(new URLSearchParams(location.search).get('embedded')==='1'&&sameOriginParent()){host=parent.ConquerWikiHost;api=parent.ConquerGameCodex;embedded=true}
     if(!api){const response=await fetch('./catalog.json');if(!response.ok)throw new Error('Catalogo non disponibile');data=await response.json();api=ConquerCodex.fromSnapshot(data.catalog)}
     const content=ConquerWikiContent.create(api),pages=content.pages,rows=[...pages.values()].filter(p=>p.kind==='entry');
     document.body.classList.toggle('embedded',embedded);

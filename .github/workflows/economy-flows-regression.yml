@@ -66,6 +66,8 @@ on:
       - 'qa/vehicles*.cjs'
       - '.github/workflows/economy-flows-regression.yml'
   workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   economic-ledger:
     runs-on: ubuntu-latest

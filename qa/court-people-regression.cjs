@@ -14,7 +14,7 @@ const window={},State={season:'summer',structures:[],clock:{day:10.5}};
 const ctx=vm.createContext({window,State,Math,Object,Number,Array,Map,Set,String,Float32Array,
   isPlanView:()=>false,rotateViewPoint:p=>({x:p.x,y:p.y}),performance:{now:()=>0}});
 vm.runInContext(core.slice(core.indexOf('const CIVIC_TYPES='),core.indexOf('function civicParts(')),ctx);
-for(const f of ['assets/civic-models.js','settlement-mesh3d.js','settlement-civic3d.js','settlement-wardrobe.js','settlement-court-people.js'])vm.runInContext(src(f),ctx);
+for(const f of ['settlement-util.js','assets/civic-models.js','settlement-mesh3d.js','settlement-civic3d.js','settlement-wardrobe.js','settlement-court-people.js'])vm.runInContext(src(f),ctx);
 const C3=window.ConquerCivic3D,CP=window.ConquerCourtPeople,W=window.ConquerWardrobe;
 const hall=(floor,functions=['council','tribunal','prison'])=>({id:'th',type:'townhall',x:0,y:0,angle:0,civicLevel:3,functions,townhallRooms:1,cutawayFloor:floor});
 

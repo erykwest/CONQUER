@@ -25,11 +25,41 @@ assert.equal(floor('',null,true),0);
 
 // saveLocal returns false (and does not throw) when storage is full.
 const saveSrc=src.match(/function saveLocal\(\)\{[\s\S]*?\n\}/)[0];
+const guardSrc=src.slice(src.indexOf('function markLoadFailed('),src.indexOf('let localSaveTimer='));
 const indicator={textContent:''};
 const ctx={window:{},performance,console:{warn(){}},document:{getElementById:()=>indicator},
   localStorage:{setItem(){throw new Error('QuotaExceededError')}},localStorageKey:()=>'k',LOCAL_STORAGE_SCHEMA:1,
   LANDSCAPE_GENERATION_VERSION:1,State:new Proxy({},{get:(t,k)=>k==='clock'?{day:0}:k==='view'?{}:undefined})};
-assert.equal(vm.runInNewContext(saveSrc+';saveLocal()',ctx),false);
+assert.equal(vm.runInNewContext(guardSrc+saveSrc+';saveLocal()',ctx),false);
 assert.equal(indicator.textContent,'local save failed');
+
+// A load that throws half-way keeps the stored save: it is backed up once, autosave refuses to write
+// over it, the player is told in Italian; a new map (new seed) or a good load lets saving resume.
+const store=new Map(),msgs=[];
+const ls={getItem:k=>store.has(k)?store.get(k):null,setItem:(k,v)=>store.set(k,String(v)),removeItem:k=>store.delete(k),
+  key:i=>[...store.keys()][i]??null,get length(){return store.size}};
+const good=JSON.stringify({seed:7,structures:[{id:'t',type:'tower'}],village:{founded:true}});
+store.set('k',good);
+const lctx=vm.createContext({window:{},performance,console:{warn(){}},document:{getElementById:()=>indicator},localStorage:ls,
+  localStorageKey:()=>'k',LOCAL_STORAGE_SCHEMA:2,LANDSCAPE_GENERATION_VERSION:1,BIOMES:{},status:m=>msgs.push(m),
+  migrateStructures:()=>{throw new Error('broken record')},
+  State:{seed:1,clock:{day:0},view:{},resources:{},policies:{},village:{},structures:[]}});
+const loadSrc=src.slice(src.indexOf('function loadLocal(){'),src.indexOf('async function initSupabase('));
+vm.runInContext(guardSrc+saveSrc+'\n'+loadSrc,lctx);
+const backups=()=>[...store.keys()].filter(k=>k.startsWith('k.corrupt.'));
+vm.runInContext('loadLocal()',lctx);
+assert.ok(lctx.State.loadFailed,'the failed load is flagged');
+assert.equal(vm.runInContext('saveLocal()',lctx),false,'autosave refuses to write');
+assert.equal(store.get('k'),good,'the stored save is not overwritten');
+assert.equal(backups().length,1);assert.equal(store.get(backups()[0]),good,'a copy is set aside');
+assert.match(msgs.join('\n'),/Salvataggio non caricato/,'the player is told');
+vm.runInContext('loadLocal()',lctx);assert.equal(backups().length,1,'the same broken save is not copied twice');
+store.set('k.corrupt.1','old1');store.set('k.corrupt.2','old2');vm.runInContext('loadLocal()',lctx);
+assert.equal(backups().length,2,'at most the latest 2 copies');assert.ok(backups().every(k=>k!=='k.corrupt.1'));
+assert.match(src,/catch\(err\)\{markLoadFailed\(JSON\.stringify\(data\),err\);return\}State\.loadFailed=false;/,'cloud load: same guard, a good load clears it');
+assert.match(src,/async function saveCloud\(\)\{if\(saveBlocked\(\)\)/,'cloud save refuses too');
+lctx.State.seed=99;   // generateNewMap draws a fresh seed
+assert.equal(vm.runInContext('saveLocal()',lctx),true,'a new map saves again');
+assert.equal(lctx.State.loadFailed,false);assert.notEqual(store.get('k'),good);
 
 console.log('save-safety regression PASS');

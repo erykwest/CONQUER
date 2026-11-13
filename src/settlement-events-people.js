@@ -17,7 +17,7 @@
   const M=()=>window.ConquerEventModels?.models||{};
   const C=()=>window.ConquerCivicModels?.models||{};
   const S=3.5;                                       // metres per U (civic props are authored in metres)
-  function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+  const hash=window.ConquerUtil.hash;
   const lerp=(a,b,k)=>a+(b-a)*k,smooth=k=>{k=Math.max(0,Math.min(1,k));return k*k*(3-2*k)};
   const venueId=s=>String(s.id??(s.x+','+s.y));
   const seedOf=s=>((typeof State!=='undefined'&&State.seed)||1)+'|'+venueId(s);

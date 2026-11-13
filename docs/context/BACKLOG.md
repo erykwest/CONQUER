@@ -1,5 +1,33 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-13 — AUDIT-261113 · Seguiti dell'audit post-merge
+
+**Correzioni su branch `fix/audit-hardening-20261113`, NON MERGE** (dettagli in [STATUS](STATUS.md)). Restano aperti, in ordine di valore:
+
+**Da decidere (product owner)**
+- Falconiera e Cisterna sono ammesse anche nel mastio W4 (`towerTier>=2`), mentre #164/#144 parlavano di W2–W3; la Falconiera W4 non ha voliera sul tetto.
+- Da #155 le torri di vedetta lignee W1 accettano stanze (prigione, tesoreria, armeria): DECISIONS cita solo la pietra.
+- Una stanza Caserma catturata congeda i soldati per sempre (oro di reclutamento perso).
+
+**Prestazioni**
+- `ConquerEconomy.laborAllocation` gira ~4 volte per frame dal disegno (`drawPeasants`, `fieldAvailableHouses`, `drawWorkers`, `constructionCrewAssignments`, 100–165 ms per scenario castello): memorizzarla in `settlement-economy.js` con `structureMemoEpoch()`; `state()` può saltare la migrazione dopo la prima volta.
+- Le mesh delle case sono indicizzate su `urbanRevision`: un crollo le ricostruisce tutte. Chiavarle sulla forma della casa.
+- Caricamento: 5,6 MB degli 8,5 MB di JS iniziale sono dati di modelli; candidati al lazy load: navi/cantiere/pesca (solo mappe di mare), eventi, macchine d'assedio, forte ligneo; prima mettere `?.` in `settlement-codex.js` (:111, :116).
+
+**Hardening**
+- Il frame della simulazione è un solo try: un errore in un sottosistema (crescita, economia, cantieri…) blocca disegno e autosave a ogni frame. Dare a ciascuno contatore di errori e sospensione come il combattimento.
+- `?v=` dei salvataggi: nessun controllo di `schema` al load; caricamento locale e cloud ancora divergenti (una sola `applySavedState` condivisa).
+- supabase-js e polygon-clipping caricati da `esm.sh` senza SRI né CSP: copiarli in `src/vendor/`.
+- Allarme: stato di modulo (`reported`, `riders`, `pending`) non azzerato al caricamento.
+- Escaper residui senza `'` in `settlement-convoys.js` e `settlement-soldiers.js`.
+- `main` non è protetto: rendere obbligatori Context sync, settlement-qa e Runtime integrity.
+
+**Semplificazione e suddivisione ("chopping")**
+- `ConquerUtil`: aggiungere `lerp` (8 copie), `clamp01` (4), `darken` (3), point-in-polygon (5), espansione `parts()` delle mesh (civic3d/house3d/wood3d).
+- `jobManager`/`jobManagerL2` quasi identici (limiti diversi); `armories()`/`circleDepots()` su `activeRooms` con opzione `captured`.
+- Dividere `settlement-world.js` (strade, pozzi, rilievo, buchi nel bosco), `settlement-combat.js` (assalti → `settlement-siege-assault.js`, nebbia → nuovo modulo), `settlement-core.js` (motore dei cantieri → `settlement-construction.js`), `settlement-economy.js` (allocazione del lavoro → `settlement-labor.js`), `settlement-siege.js` (regole delle stanze → `settlement-room-rules.js`). Ogni divisione richiede di aggiornare gli harness QA che caricano il file per nome.
+- Il pittore 2.5D di triangoli è ripetuto in 4 file: eliminarlo con il ritiro del renderer 2.5D.
+
 ## 2026-11-13 — GILDA-01 · La Gilda: produttività delle botteghe L3
 
 **SPECIFICA APPROVATA. FASE 1 IMPLEMENTATA SU BRANCH `feature/gilda-fase1`, NON MERGE; fase 2 aperta (richiede SCOL-01 fase 3).** La fase 1 comprende il modulo `src/settlement-guild.js` (`ConquerGuild`), il bonus in `ConquerCommerce.daily`, la Gilda unica per villaggio, la scheda Gilda e la riga nel Profilo; dettagli in [STATUS](STATUS.md). Intervista con il product owner del 11–13/11/2026 (sessione «Gilda»). Decisione [D-GILDA-261113](DECISIONS.md). Base verificata: `main` e93b22b5. La Gilda **assorbe la Casa delle Corporazioni**: nessun edificio separato. Usa le ricette di [ECO-FIL-01](BACKLOG.md) e il contratto dei ruoli istruiti [D-SCOL-261112](DECISIONS.md); non tocca imposte né decreti di [FISCO-01](BACKLOG.md).

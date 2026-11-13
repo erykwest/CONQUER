@@ -229,6 +229,7 @@ function freshLandscapeSeed(){
   return Math.max(1,Math.floor(Math.random()*2147483647));
 }
 function generateNewMap(){
+  State.loadFailed=false;   // a fresh map may be saved again (the unreadable save stays backed up)
   // New games follow the calendar and procedural daylight/weather by default.
   State.seasonOverride=null;State.season=seasonForMonth(calendarDateFromDay(0).month);
   State.weatherOverride=null;State.daylightOverride=null;

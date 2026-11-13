@@ -33,7 +33,7 @@ const ctx=vm.createContext({window,State,Math,Object,Number,Array,Map,String,JSO
     const surface=local(s,1.5*.24*(s.doorLeft?-1:1),side*.5),normal={x:-n*side,y:c*side};
     return{surface,normal,tangent:{x:c,y:n},outside:{x:surface.x+normal.x*.28,y:surface.y+normal.y*.28}}}
 });
-for(const f of ['assets/furniture-model.js','assets/scatter-model.js','settlement-mesh3d.js','settlement-cutaway-furniture.js','settlement-shop-cutaway.js'])
+for(const f of ['settlement-util.js','assets/furniture-model.js','assets/scatter-model.js','settlement-mesh3d.js','settlement-cutaway-furniture.js','settlement-shop-cutaway.js'])
   vm.runInContext(src(f),ctx,{filename:f});
 const SC=window.ConquerShopCutaway;
 const trades=Object.keys(SC.TRADES);

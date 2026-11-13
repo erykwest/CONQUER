@@ -16,6 +16,9 @@ on:
       - '.github/workflows/builder-menu-regression.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   menu-regression:
     runs-on: ubuntu-latest

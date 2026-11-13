@@ -14,7 +14,7 @@ let weather={kind:'clear'},month=6;
 const sandbox={window,State,Math,Number,String,Object,Array,ctx:ctx2d,
   currentWeather:()=>weather,calendarDateFromDay:()=>({month})};
 const context=vm.createContext(sandbox);
-vm.runInContext(fs.readFileSync(path.join(__dirname,'..','src','settlement-wardrobe.js'),'utf8'),context);
+for(const f of ['settlement-util.js','settlement-wardrobe.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'..','src',f),'utf8'),context);
 const W=window.ConquerWardrobe;
 
 const KINDS=['peasant','artisan','merchant'];

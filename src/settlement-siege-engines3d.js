@@ -9,7 +9,7 @@
 // caller's sprites. Classic script; poses are pure functions of time.
 (function(){
   const M=()=>window.ConquerSiegeModel;
-  const clamp01=v=>Math.max(0,Math.min(1,v)),ease=k=>k*k*(3-2*k),easeIn=k=>k*k*k;
+  const clamp01=v=>Math.max(0,Math.min(1,v)),ease=window.ConquerUtil.smoothstep,easeIn=k=>k*k*k;
   const ph=(u,a,b)=>ease(clamp01((u-a)/(b-a))),lerp=(a,b,s)=>a+(b-a)*s;
   // Action cycles (seconds) and the angles they sweep (radians; positive pitch =
   // the forward end of a part goes down about its pivot).

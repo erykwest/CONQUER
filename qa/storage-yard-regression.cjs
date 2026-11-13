@@ -125,6 +125,19 @@ test('warehouse expansion checks space, pays materials and increases capacity, w
   assert.equal(h.yard.capacity(),5400);assert.equal(y.yardSize,6);
   assert.equal(h.yard.grow(y,8).ok,false);
 });
+test('an expanding stockyard keeps serving at its previous size until the works finish',()=>{
+  const h=harness();h.State.structures=[{id:'well',type:'well',x:100,y:100}];
+  h.economy.foundingCharter('well');
+  const y=h.yard.ensureForWell();h.State.devBuild={};
+  assert.equal(h.yard.grow(y,4).ok,true);
+  assert.equal(h.context.underConstruction(y),true);
+  assert.equal(h.yard.active().length,1,'the only stockyard does not vanish during expansion');
+  assert.equal(h.yard.capacity(),600,'pre-upgrade capacity while building');
+  y.construction.workDone=y.construction.workRequired;
+  assert.equal(h.yard.capacity(),2400);
+  h.State.structures.push({id:'new-yard',type:'storageYard',yardSize:2,construction:{version:2,startedDay:0,workRequired:2,workDone:0}});
+  assert.equal(h.yard.active().length,1,'a brand-new yard still counts only once built');
+});
 test('expansion refuses obstructed parcels and retains exact resources',()=>{
   const h=harness();h.State.structures=[{id:'well',type:'well',x:100,y:100}];
   h.economy.foundingCharter('well');
