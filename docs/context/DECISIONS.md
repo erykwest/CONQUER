@@ -1,5 +1,25 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-MP-ACCOUNT-261113 — Profilo globale e partecipazioni multi-campagna (13/11/2026)
+
+- **DECISO dal product owner:** separare il profilo/account del giocatore dalla partita, permettendo a uno stesso account di essere **presente in più campagne/server contemporaneamente**. La lobby deve mostrare e riaprire tutte le sue partecipazioni.
+- **CONTRATTO:** account globale identificato da `user_id`, associazione a campagne distinta (`campaign_id + user_id`) e stato autorevole di ogni partita/feudo isolato per `campaign_id` / identificativo territoriale. Il giocatore può ricoprire ruoli feudali differenti nelle diverse campagne; risorse, unità, territori e progressi non vengono condivisi.
+- **GAP ATTUALE:** `src/settlement-app-persistence.js` usa oggi `settlements` con chiave di conflitto `user_id,world_cell_x,world_cell_y` e coordinate (0,0), senza discriminante di campagna. Serve progettare schema, migrazione, autenticazione e autorizzazioni per multi-server prima di implementare lobby e multiplayer.
+- **APERTO:** profilo pubblico globale vs identità del signore in partita, limiti di partecipazioni, ricompense globali e politiche di abbandono/sconfitta.
+- **STATO:** solo design documentato; non implementato. Specifica: [MULTIPLAYER-SERVER-SCOPE.md](../MULTIPLAYER-SERVER-SCOPE.md). ROADMAP M0–M5 invariata.
+
+
+## D-MP-261113 — Ingresso multiplayer e colonizzazione feudale (13/11/2026)
+
+- **DECISO, solo design:** server multiplayer dimensionati indicativamente per 20–100 giocatori, con minimo di avvio ancora da fissare. Slot di giocatori, feudi bot e territori non colonizzati sono concetti distinti. I nuovi giocatori **non sostituiscono bot** e **non ereditano sviluppi IA**.
+- **DECISO:** rivendicare un territorio non equivale a fondare un villaggio. Priorità di spawn nei **territori liberi non rivendicati**; quando disponibili, i possedimenti **aperti dal titolare** alla gestione di un giocatore consentono la fondazione di un **nuovo** villaggio sotto **sudditanza** del proprietario, in alternativa allo sviluppo automatizzato.
+- **DECISO:** l'ingresso in una campagna avviata richiede contemporaneamente uno slot umano libero e una posizione fondabile idonea; le iscrizioni possono quindi arrestarsi prima della capienza nominale. Lobby con dati pubblici sul server (età, progresso, giocatori e bot, disponibilità) per scegliere la campagna.
+- **DECISO:** multiplayer sempre a velocità ×1; nessun controllo individuale ×3/×10/×100.
+- **ESEMPIO, NON PARAMETRO DECISO:** 100 territori, 30 slot giocatore, 30 bot iniziali e 10 giocatori T0 → 40 territori colonizzati e 60 inizialmente non colonizzati; i 20 posti umani residui non garantiscono altrettante posizioni fondabili.
+- **PROPOSTO/APERTI:** blocco allo spawn in presenza di mastio; autorizzazioni dettagliate e trattamento dei possedimenti già in sviluppo IA; scelta volontaria di entrare come suddito; soglia minima, durata campagna, finestre regionali, vittoria, gestione abbandono/sconfitta e partecipazione simultanea a più server.
+- **STATO:** solo documentazione, **non implementato** su `main`, nessuna modifica a runtime o milestone M0–M5. Contratto e lista dei punti aperti: [MULTIPLAYER-SERVER-SCOPE.md](../MULTIPLAYER-SERVER-SCOPE.md).
+
+
 ## 2026-11-13 - Preparazione merge PR #206
 
 Preparazione merge PR #206: main aggiornato riconciliato mantenendo moduli e documenti di entrambi i branch. Catalogo Wiki rigenerato. Gilda riferita agli artigiani L2; dazio botteghe e relativo malcontento addebitati a L2 anziche L3, con regressione riprodotta prima del fix. Fondazione: cinque scenari superati isolatamente con Node 22, ma timing intermittente oltre 100 ms nella suite anche su Node 22; verifica Actions ancora necessaria. Nessuna soglia allentata. Suite completa e Actions da completare prima del merge. Nessuna nuova funzione demografica, giudiziaria o archetipo edilizio.
