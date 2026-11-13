@@ -148,7 +148,7 @@ function mousePlacementHarness(type,options={}){
   const helpers=extractSpan(castle,'function orientedToolSpec(){','function boundaryPoint(');
   const down=extractSpan(app,"canvas.addEventListener('pointerdown',e=>{",'\nlet panFrame=0');
   const move=extractSpan(app,"canvas.addEventListener('pointermove',e=>{",'\nfunction finishCanvasPan()');
-  const code="let pan=null;function structureLabel(s){return s.type}\n"+helpers+'\n'+down+'\n'+move;
+  const code="let pan=null,orbit=null;function structureLabel(s){return s.type}\n"+helpers+'\n'+down+'\n'+move;
   vm.runInNewContext(code,context,{filename:'builder-orientation-events.js'});
   return{State,listeners,messages,allow:v=>{allowBuild=v}};
 }

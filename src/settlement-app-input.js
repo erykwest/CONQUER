@@ -1,6 +1,28 @@
 'use strict';
 // Pointer/canvas interactions and build tool controls. Extracted verbatim from settlement-app.js.
+// Shift + middle mouse (mouse 3) drag = free camera rotation around the screen centre; adding Ctrl snaps to 15°.
+// Plain middle/right drag still pans.
+let orbit=null,orbitFrame=0,orbitPending=null;
+const ORBIT_PX_PER_TURN=160;   // horizontal pixels per 90°
+function flushCameraOrbit(){
+  orbitFrame=0;if(!orbit||!orbitPending)return;
+  const {clientX,snap}=orbitPending;orbitPending=null;
+  setCameraRotation(orbit.start+(clientX-orbit.x)/ORBIT_PX_PER_TURN,{pivot:orbit.pivot,anchor:orbit.anchor,snap});
+  status('View rotation: '+cameraRotationDegrees()+'°'+(snap?' (15° snap)':' · +Ctrl = 15° steps'));
+}
+function finishCameraOrbit(){
+  if(!orbit)return;
+  if(orbitPending){if(orbitFrame)cancelAnimationFrame(orbitFrame);flushCameraOrbit()}
+  orbit=null;scheduleLocalSave(500);
+}
 canvas.addEventListener('pointerdown',e=>{
+  if(e.button===1&&e.shiftKey){
+    e.preventDefault();
+    const pivot=visibleCanvasCenter();
+    orbit={x:e.clientX,start:State.view.rotation||0,pivot,anchor:s2w(pivot.x,pivot.y)};
+    canvas.setPointerCapture(e.pointerId);
+    return
+  }
   if(e.button===1||e.button===2){
     pan={x:e.clientX,y:e.clientY,vx:State.view.x,vy:State.view.y};
     sceneCachePanPreview=true;
@@ -222,6 +244,11 @@ function flushCanvasPan(){
   draw();
 }
 canvas.addEventListener('pointermove',e=>{
+  if(orbit){
+    orbitPending={clientX:e.clientX,snap:e.ctrlKey};
+    if(!orbitFrame)orbitFrame=requestAnimationFrame(flushCameraOrbit);
+    return
+  }
   if(pan){
     panPending={clientX:e.clientX,clientY:e.clientY};
     if(!panFrame)panFrame=requestAnimationFrame(flushCanvasPan);
@@ -413,6 +440,10 @@ function finishCanvasPan(){
 }
 canvas.addEventListener('pointerup',finishCanvasPan);
 canvas.addEventListener('pointercancel',finishCanvasPan);
+canvas.addEventListener('pointerup',finishCameraOrbit);
+canvas.addEventListener('pointercancel',finishCameraOrbit);
+canvas.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault()});
+canvas.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault()});   // no browser autoscroll
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 let zoomFrame=0,zoomSettleTimer=0,zoomWheelDelta=0,zoomAnchor=null;
 function flushWheelZoom(){

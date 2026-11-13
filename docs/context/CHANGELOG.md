@@ -11,6 +11,79 @@
 
 STATUS, BACKLOG e CHANGELOG aggiornati; DECISIONS e ROADMAP invariate (correzioni e refactor senza nuove regole di gioco; il free build ristretto ai cantieri riallinea il comportamento allo scopo dichiarato da #194).
 
+## 2026-11-13 — Abiti da mestiere
+
+Branch `feature/role-outfits`. Il guardaroba ha 11 nuovi pezzi da lavoro (grembiuli di cuoio, di tela e del vasaio, farsetto, mantelletta, calotta, cuffia, cappello di feltro, tocco, berretto da marinaio, chiavi) e 16 abiti per mestiere. Le figure al lavoro li indossano: bottegai, lavoratori anonimi, costruttori e taglialegna nominati, pastore, carrettiere, carceriere e marinai. Ci sono voci nuove nell'Asset Lab (famiglia «Abiti da mestiere»), una regressione estesa e la baseline dell'audit aggiornata solo per queste voci. ROADMAP e DECISIONS invariate.
+
+## 2026-11-13 — RC-03 · Confine funzionale del remote control (solo design)
+
+Confermato dal product owner il perimetro: gestione da browser (futuro Android/iOS) di economia, fisco, lavoratori, pianificazione/priorità di cantieri già localizzati, strategia militare/spedizioni, diplomazia, posta, tributi, carovane e mappa regionale. Riservati al Builder/3D il piazzamento geometrico, la progettazione spaziale delle fortificazioni e il controllo tattico diretto. Specifica `docs/REMOTE-CONTROL-SCOPE.md` §2a, D-RC-BOUNDARY-261113 e RC-03 aggiornati. Solo documentazione, nessun codice o QA runtime; ROADMAP/STATUS invariati.
+
+
+## 2026-11-13 — Capsuloide delle figure (`feature/vehicles-depth-cards`)
+
+Le carte figura in World3D prendono la profondità per pixel dal capsuloide: verticale per le persone, orizzontale lungo il corpo per gli animali. Bestiame e lupi diventano carte con capsula e collider. Nuova decisione D-CAPSULE-261113 in DECISIONS; nuova prova `qa/animal-capsule-browser.mjs` nel workflow Main fixes. ROADMAP invariata.
+
+## 2026-11-13 — Animali 2D rivisti come il cavallo (`feature/vehicles-depth-cards`)
+
+Bestiame e fauna 2D passano alle zampe articolate del nuovo cavallo con passo ridotto per specie; capra e mucca ricevono il collo articolato, così al pascolo la testa resta attaccata. Tutte le zampe, cavallo compreso, sono ora articolate al ginocchio/garretto e si piegano nella fase di volo del passo e del galoppo. Nuova famiglia `Animali 2D` nel Lab con baseline e strumento `qa/animal-preview.mjs`. D-046 invariata (sempre figure 2D); ROADMAP e DECISIONS invariate.
+
+## 2026-11-12 — Cavallo 2D ridisegnato e anteprime in gioco (`feature/vehicles-depth-cards`)
+
+Il cavallo 2D, condiviso da ogni uso in gioco, passa da sagoma tozza da asino a proporzioni di cavallo (zampe lunghe articolate, collo pieno, testa fine), con passo meno a forbice; gear dei cavalieri adattato. Nuovi strumenti `qa/horse-gallery.js` e `qa/horse-preview.mjs` per le anteprime in gioco di tutti gli usi; cinque voci 2D del cavallo aggiunte al Lab con baseline. D-046 invariata (sempre figure 2D); ROADMAP invariata.
+
+## 2026-11-12 — Veicoli con profondità in World3D (`feature/vehicles-depth-cards`)
+
+Chiusura di `economic-balances-animations`: verificato che economia, veicoli 2D e cartelli sono già in main (#108, D-054, D-055) e che i file residui sono superati. Completato l'unico residuo dopo #201: carri, carretti e carrozze (cavalli e conducente compresi) entrano nel depth buffer come carte 2D dell'atlante figure (`figure()` con `card={span,ox}`), occlusi da murature e case; convogli dei cartelli disegnati con la popolazione. Nuove prove `vehicles-regression` (caso WebGL) e `vehicle-cards-browser.mjs` nel workflow Main fixes. Decisione D-VEH-CARDS-261112 (applica D-046). ROADMAP invariata. Nessun nuovo modello né asset: il Lab mostra già il carro 2D usato dalla carta, audit asset non necessario.
+
+## 2026-11-13 — RC-01…RC-07 · Hub/lobby e remote control (solo documentazione)
+
+Definita main page multi-campagna con lobby e partite in corso, KPI aggregati per insediamento e gestione remota da browser, in futuro da app Android/iOS. Portata funzionale: messaggi, diplomazia, spedizioni, tributi, mappa regionale e controllo del feudo. Riletti centro pannelli su main e branch `messages` divergente (29 avanti / 317 indietro); riportata necessità di porting selettivo e API autorevoli senza simulatore duplicato. Specifica `docs/REMOTE-CONTROL-SCOPE.md`, D-RC-261113 e backlog RC-01…RC-07. **Nessun codice, test o asset modificato. ROADMAP e STATUS invariati.**
+
+
+## 2026-11-13 — MP-07 · Account separato dalle campagne (solo design)
+
+Confermato dal product owner: lo stesso account può partecipare a più server/campagne contemporaneamente. Separazione documentata tra identità globale, partecipazione `user_id + campaign_id` e progresso di feudi/mondo isolato per campagna. Evidenziato il gap concreto nei salvataggi Supabase attuali (`settlements` con `user_id,world_cell_x,world_cell_y`, senza `campaign_id`). Aggiornati specifica multiplayer, decisione D-MP-ACCOUNT-261113 e backlog MP-07. **Solo documentazione: nessuna migrazione SQL, codice o QA gameplay. ROADMAP e STATUS invariati.**
+
+
+## 2026-11-13 — CAM-ROT-01 · Rotazione libera della camera
+
+13/11/2026 — `feature/free-camera-rotation` (pre-merge):
+- La vista ruota a qualsiasi angolo: Shift + tasto centrale trascinato, con Ctrl a scatti di 15°. Tasto centrale/destro da soli restano pan; Q/E e pulsanti girano di 90°.
+- Proiezione 2D, shader WebGL e ombreggiatura delle facce accettano angoli frazionari; i quarti interi usano lo stesso percorso esatto di prima.
+- QA: 51 regressioni Node PASS; prova in gioco sul layout `TEST` a 22,5°, 30°, 45° e 105°.
+- Limite: trascinamento a ~6 fps (ogni angolo ricostruisce scena e mesh).
+
+STATUS, BACKLOG e CHANGELOG aggiornati; ROADMAP e DECISIONS invariate (comando di camera, nessun contratto toccato).
+
+## 2026-11-13 — MP-01…MP-06 · Scope multiplayer e colonizzazione feudale (solo documentazione)
+
+Registrato il modello con posti umani separati dai bot e dai territori non colonizzati, ingresso su nuovi villaggi senza sostituzione bot, priorità delle terre libere e possedimenti aperti alla fondazione di sudditi, configurabili dal signore in alternativa all'autosviluppo. Esempio 100 territori / 30 posti umani / 30 bot non vincolante; lobby informativa, ×1 multiplayer e punti aperti su avvio, mastio, permessi e durata. Specifica [MULTIPLAYER-SERVER-SCOPE](../MULTIPLAYER-SERVER-SCOPE.md), decisione D-MP-261113, backlog MP-01…MP-06. **Nessun codice o QA runtime modificato/eseguito. ROADMAP invariata: World/Feudal resta M4.**
+
+
+## 2026-11-13 - Preparazione merge PR #206
+
+Preparazione merge PR #206: main aggiornato riconciliato mantenendo moduli e documenti di entrambi i branch. Catalogo Wiki rigenerato. Gilda riferita agli artigiani L2; dazio botteghe e relativo malcontento addebitati a L2 anziche L3, con regressione riprodotta prima del fix. Fondazione: cinque scenari superati isolatamente con Node 22, ma timing intermittente oltre 100 ms nella suite anche su Node 22; verifica Actions ancora necessaria. Nessuna soglia allentata. Suite completa e Actions da completare prima del merge. Nessuna nuova funzione demografica, giudiziaria o archetipo edilizio.
+
+## 2026-11-13 - Verifica CI PR #206
+
+Corretta asserzione livestock obsoleta dopo SOC-CLASS-02. Test comportamentali su selettore agricolo reale, riserve cave, esclusione allevatori e conservazione della vocazione su 400 case migrate superati. Suite completa e CI da completare prima del merge. Nessuna modifica runtime o bilanciamento; ROADMAP e DECISIONS invariate. Demografia, 12 archetipi e funzioni giudiziarie fuori scope.
+
+## 2026-11-12 — SOC-CLASS-02 · Migrazione ceti sul branch PR #206
+
+Migratore puro `ConquerSocialClasses` e applicazione una tantum ai save locali/cloud; census house L1+ex-L2 con abitanti conservati, L2 artigiani e L3 istruiti/mercanti, L4 nobiltà. Riassegnate professioni economiche, botteghe, routine sociali e fondi commerciali; nuova lealtà nobiliare; QA dedicata e regressioni aggiornate. Partizione 25/75 del vecchio portafoglio L4 da approvare. Codice su branch, non merge, CI completa da verificare; immigrazione/ricostruzione D1–D3 NON attivate. [Specifiche](../CIVIL-CLASS-MIGRATION.md).
+
+
+## 2026-11-12 — CIV-EVT-01 · Skeleton degli effetti civili (branch PR #206)
+
+Aggiunto `ConquerCivicEventEffects`, API read-only per 8 tipi di eventi civili con bonus differenziati di felicità L1–L3, lealtà L4, ripetizione e prestigio temporaneo; collegamento di anteprima alle heatmap PR #206. Riutilizzati allestimenti/fasi esistenti, nessun mutamento di salvataggi, costi o popolazione. Aggiunta regressione alla suite urbana, [contratto](../CIVIC-EVENT-EFFECTS-SKELETON.md) e decisione D-CIV-EVT-261112. Sul branch, non merge: Node/browser/CI da verificare.
+
+
+## 2026-11-12 — URB-HEAT-01 · Skeleton territoriale (branch feature)
+
+Aggiunto modulo isolato `ConquerUrbanHeatmaps` con quattro mappe concettuali (domanda L1–L4, prestigio, sicurezza, crimine), sette canali e lettura del lotto; script caricato senza simulazione attiva. Aggiunta regressione richiamata da QA urbana e specifica `docs/URBAN-HEATMAP-SKELETON.md`. **Sul branch, non merge; QA/CI da verificare; nessuna migrazione o modifica gameplay.** Contratti in D-URB-HEAT-261112. ROADMAP invariata: nessuna milestone ripianificata.
+
+
 ## 2026-11-13 — GILDA-01 fase 1 · Bonus delle botteghe e Gilda unica
 
 13/11/2026 — `feature/gilda-fase1` (pre-merge):
@@ -92,6 +165,11 @@ STATUS, BACKLOG e DECISIONS (regola transitoria della resa del culto) aggiornati
 - Modifiche al contratto D-SCOL-261112 descritte in D-CHIESA-261112.
 
 BACKLOG, STATUS e DECISIONS aggiornati; ROADMAP invariata; nessun codice.
+
+## 2026-11-13 — Bottegai al lavoro: vasaio, tessitore, sarto
+
+Branch `feature/shop-artisan-tools`. Tre nuovi attrezzi nelle animazioni di lavoro (argilla al tornio, spola, ago e filo): ora tutti i mestieri delle botteghe L3 lavorano invece di stare fermi. Voci nuove nell'Asset Lab, test e baseline dell'audit aggiornati. Il BACKLOG elenca le animazioni di lavoro ancora mancanti (rimboschimento, campi). ROADMAP e DECISIONS invariate: è un completamento visivo senza nuovi contratti.
+
 
 ## 2026-11-09 — BC-261109-02 · DEV e cantieri di ristrutturazione
 

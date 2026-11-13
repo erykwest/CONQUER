@@ -119,17 +119,18 @@ test('full accounting and rollback survives a persisted in-flight save',()=>{
   assert.equal(restored.eco.state().castle.wood,12);
   assert.equal(restored.road.active(),null);
 });
-test('merchant test uses only funded L4 coins, mercenary visuals are previews',()=>{
-  const h=harness(),e=h.eco.state(),before=e.wallet.L4;
+test('merchant test uses only funded L3 coins, mercenary visuals are previews',()=>{
+  const h=harness();h.State.structures.push({id:'house3',type:'house',houseLevel:3,x:112,y:112});
+  const e=h.eco.state(),before=e.wallet.L3;
   assert.equal(h.road.launch({edge:'south',kind:'merchant',good:'stone',
     qty:1,coinGold:5,guards:1}).ok,false,'market cargo not duplicated by a mock sale');
   const x=h.road.launch({edge:'south',kind:'merchant',coinGold:15,guards:2,vehicle:'cart'});
   assert.equal(x.ok,true);
-  assert.equal(e.wallet.L4,before-15);
+  assert.equal(e.wallet.L3,before-15);
   assert.equal(h.road.active().escortDailyGold,.4);
   assert.equal(h.cv.state().journeys[x.id].escort.heraldry,'neutral-brown');
   assert.equal(h.road.restore(),true);
-  assert.equal(e.wallet.L4,before);
+  assert.equal(e.wallet.L3,before);
 });
 test('scatter model draws four signs and wagon renderer animates the convoy',()=>{
   const h=harness(),e=h.eco.state();e.castleGold=40;e.castle.wood=15;

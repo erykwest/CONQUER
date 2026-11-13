@@ -16,7 +16,8 @@
   const lerp=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
   function kindForHouse(house){
     if(!house)return null;
-    const level=houseLevel(house);
+    const level=Number(house.legacyLivestockTier)||
+      (window.ConquerSocialClasses?.tierOfHouse?.(house)??houseLevel(house));
     if(level===1){
       // Near a pier or quay with a free berth: a fisherman's household (settlement-fishers.js).
       if(window.ConquerFishers?.isFisher(house))return 'fisher';
@@ -418,6 +419,10 @@
     let visible=0;
     for(const a of objects){
       if((a.species!=='horse'&&stride>1&&a.seed%stride!==0)||!worldPointVisible(a.p,.07,30))continue;
+      // World3D: a depth-tested card with the animal's horizontal body capsule (walls, sheds and
+      // cut-away floors hide it by its real depth); otherwise the 2D painter with urban masking.
+      if(window.ConquerAnimals.card?.(a.species,a.p,.07,{id:'animal:'+a.id,t:t*34,seed:a.seed%1000,facing:a.facing,
+        mode:a.mode,blend:a.mode==='browse'?.86:0,heading:a.heading,coat:a.coat})){visible++;continue}
       const screen=w2s(a.p,.07);
       const size=Math.max(1.5,State.view.scale*5.75);
       withUrbanFigureOcclusion(a.p,.07,()=>window.ConquerAnimals.drawAnimal(

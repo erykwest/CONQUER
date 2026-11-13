@@ -2400,7 +2400,7 @@ function spawnField(step,workerHouse=null){
   const houses=State.structures.filter(s=>s.type==='house'&&!underConstruction(s));
   const reason=!well?'no_well':!roads.length?'no_main_roads':
     !workerHouse&&autoList('house').length<5?'under_five_houses':null;
-  const source=workerHouse?'idle_L2':'village_growth';
+  const source=workerHouse?'idle_L1':'village_growth';
   const fail=(reason,detail={})=>{
     window.__conquerAnalytics?.event('FIELD_SPAWN_FAILURE',{step,source,reason,...detail},'warn');
     return false;
@@ -2443,7 +2443,7 @@ function spawnField(step,workerHouse=null){
     const a=rnd()*Math.PI*2,d=3+rnd()*4;
     addCandidate({x:h.x+Math.cos(a)*d,y:h.y+Math.sin(a)*d},.75);
   }
-  // Idle L2 artisans first look for a nearby piece of land they can walk to.
+  // Idle L1 servants first look for a nearby piece of land they can walk to.
   if(workerHouse)for(let i=0;i<110;i++){
     const a=rnd()*Math.PI*2,d=2.8+rnd()*6.5;
     const p={x:workerHouse.x+Math.cos(a)*d,y:workerHouse.y+Math.sin(a)*d};
@@ -2464,12 +2464,12 @@ function spawnField(step,workerHouse=null){
     if(!fieldAllowed(f,validationContext)){blocked++;continue}
     if(workerHouse){
       // Opening farmland IS the ploughing job, not a separate building project.
-      // The free L2 worker may start aratura on the very next simulation tick.
+      // The free L1 worker may start aratura on the very next simulation tick.
       delete f.construction;
-      f.openedByL2=workerHouse.id;
+      f.openedByL1=workerHouse.id;
     }
     State.structures.push(f);
-    // L2-cleared fields are immediately active: their access track must be too.
+    // L1-cleared fields are immediately active: their access track must be too.
     ensureSettlementRoadAccess(f,!!workerHouse);
     invalidateUrbanGeometry();
     window.__conquerAnalytics?.event('FIELD_SPAWN_RESULT',{

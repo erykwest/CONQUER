@@ -13,7 +13,10 @@ function rotateViewPoint(p,turns=State.view.rotation||0){
   if(q===1)return{x:c-dy,y:c+dx};
   if(q===2)return{x:c-dx,y:c-dy};
   if(q===3)return{x:c+dy,y:c-dx};
-  return{x:p.x,y:p.y};
+  if(q===0)return{x:p.x,y:p.y};
+  // Free camera rotation: `turns` may be fractional (quarter-turn units, 1/6 = 15°).
+  const a=q*Math.PI/2,ca=Math.cos(a),sa=Math.sin(a);
+  return{x:c+dx*ca-dy*sa,y:c+dx*sa+dy*ca};
 }
 function unrotateViewPoint(p,turns=State.view.rotation||0){return rotateViewPoint(p,-turns)}
 const reliefBandCache=new Map();

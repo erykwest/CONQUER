@@ -4,6 +4,7 @@
 // Overlays, not alternate skins: the procedural body keeps its class silhouette and
 // tunic colours, and the pieces stack (a cloak with a hood, a shawl under a hat).
 // Outfits are pure functions of resident id, month and weather: no state, no economy.
+// A figure at work (dot.role) wears its trade's clothes (ROLES) and the season fills the rest.
 // Classic script.
 (function(){
   // slot: body (over the tunic), head (over hair), neck (scarf/collar).
@@ -28,7 +29,40 @@
     clerkGown:{label:'Veste del cancelliere',slot:'body',role:'Cancelliere',palette:['#2f2b2c'],trim:'#d8cfb8',robe:true},
     clerkCap:{label:'Berretto del cancelliere',slot:'head',role:'Cancelliere',palette:['#2f2b2c']},
     prisonerShirt:{label:'Camicia del prigioniero',slot:'body',role:'Prigioniero',palette:['#b9ad8f'],ragged:true},
-    executionerHood:{label:'Cappuccio del boia',slot:'head',role:'Boia',palette:['#1f1b1c']}
+    executionerHood:{label:'Cappuccio del boia',slot:'head',role:'Boia',palette:['#1f1b1c']},
+    // Work clothes by trade (docs: STATUS 2026-11-13, outfit di mestiere).
+    leatherApron:{label:'Grembiule di cuoio',slot:'body',role:'Fabbro, falegname, conciatore, carpentiere navale',palette:['#6b4a30','#5e4129'],apron:true,strap:'#3e2c1d'},
+    clothApron:{label:'Grembiule di tela',slot:'body',role:'Orafo, tessitore, cavatore',palette:['#d8cfb8','#cfc4a8'],apron:true,strap:'#9c9078'},
+    clayApron:{label:'Grembiule del vasaio',slot:'body',role:'Vasaio',palette:['#b98b68'],apron:true,strap:'#7f4a2c',stain:'#8c5233'},
+    jerkin:{label:'Farsetto di cuoio',slot:'body',role:'Muratore, taglialegna, minatore, carrettiere, carceriere',palette:['#6b4f36','#5e4632','#73563a'],vest:true},
+    shepherdCape:{label:'Mantelletta del pastore',slot:'body',role:'Pastore',palette:['#7a6448','#6e5a40'],cape:true},
+    leatherCap:{label:'Calotta di cuoio',slot:'head',role:'Fabbro, cavatore, minatore, carceriere',palette:['#5a4030','#4f3826']},
+    linenCoif:{label:'Cuffia di lino',slot:'head',role:'Falegname, tessitore, muratore',palette:['#e6dcc6','#ddd2b9']},
+    feltHat:{label:'Cappello di feltro',slot:'head',role:'Pastore, carrettiere',palette:['#4f4436','#5b4a35','#463c30']},
+    flatCap:{label:'Tocco',slot:'head',role:'Orafo, sarto',palette:['#2f2b2c','#5a2f45','#2f4560']},
+    stockingCap:{label:'Berretto da marinaio',slot:'head',role:'Marinaio, pescatore, carpentiere navale',palette:['#9b3a2e','#a8503f','#3e5b7a']},
+    keys:{label:'Mazzo di chiavi',slot:'neck',role:'Carceriere',palette:['#5c6266']}
+  };
+  // Trade -> work clothes (role pieces; the free slots still take the season's pieces).
+  // `role` on a figure dot names one of these: the shop trades are the keys of TRADES
+  // in settlement-shop-cutaway.js, the others are set where the worker is drawn.
+  const ROLES={
+    blacksmith:{label:'Fabbro',pieces:['leatherApron','leatherCap']},
+    carpenter:{label:'Falegname',pieces:['leatherApron','linenCoif']},
+    leatherworker:{label:'Conciatore',pieces:['leatherApron']},
+    goldsmith:{label:'Orafo',pieces:['clothApron','flatCap']},
+    potter:{label:'Vasaio',pieces:['clayApron']},
+    weaver:{label:'Tessitore',pieces:['clothApron','linenCoif']},
+    tailor:{label:'Sarto',pieces:['flatCap']},
+    builder:{label:'Muratore',pieces:['jerkin','linenCoif']},
+    woodcutter:{label:'Taglialegna',pieces:['jerkin','woolHood']},
+    quarryman:{label:'Cavatore',pieces:['clothApron','leatherCap']},
+    miner:{label:'Minatore',pieces:['jerkin','leatherCap']},
+    shipwright:{label:'Carpentiere navale',pieces:['leatherApron','stockingCap']},
+    shepherd:{label:'Pastore',pieces:['shepherdCape','feltHat']},
+    carter:{label:'Carrettiere',pieces:['jerkin','feltHat']},
+    jailer:{label:'Carceriere',pieces:['jerkin','leatherCap','keys']},
+    sailor:{label:'Marinaio e pescatore',pieces:['stockingCap']}
   };
   const pieceOf=id=>PIECES[id]||ROLE_PIECES[id];
   // Calendar month (0 = January) -> share of residents dressed for the cold / the sun.
@@ -99,6 +133,12 @@
       if(c.kind!=='fog'&&roll(id,'hat')<L.summer*(HAT_SHARE[dot.kind]??.3))pieces.push('strawHat');
       if((c.windy||c.fog)&&c.season!=='summer'&&roll(id,'shawl')<.45)pieces.push('shawl');
     }
+    // At work the trade's clothes come first; the season only fills the slots they leave free.
+    const R=dot.role&&ROLES[dot.role];
+    if(R){
+      const taken=new Set(R.pieces.map(p=>pieceOf(p)?.slot));
+      return compose([...R.pieces,...pieces.filter(p=>!taken.has(pieceOf(p)?.slot))],id,dot.kind,dot.colors?.[0]);
+    }
     return compose(pieces,id,dot.kind,dot.colors?.[0]);
   }
 
@@ -127,8 +167,35 @@
       for(let k=1;k<=n;k++)ctx.lineTo(x-w*.54+w*1.08*k/n,hem+(k%2?h*.07:0));
       ctx.lineTo(x+w*.5,top+h*.2);ctx.lineTo(x+w*.26,top);ctx.closePath();
       ctx.fillStyle=o.colors.body;ctx.fill();outline(lw);
+    }else if(R?.apron){
+      // Work apron: a bib from the chest to the knees, neck strap and waist tie; the tunic shows at the sides.
+      const bib=top+h*.2,waist=bodyY+h*.02,hem=bodyY+h*.46;
+      ctx.beginPath();
+      ctx.moveTo(x-w*.2,bib);ctx.lineTo(x+w*.2,bib);ctx.lineTo(x+w*.24,waist);ctx.lineTo(x+w*.34,hem);
+      ctx.quadraticCurveTo(x,hem+h*.04,x-w*.34,hem);ctx.lineTo(x-w*.24,waist);ctx.closePath();
+      ctx.fillStyle=o.colors.body;ctx.fill();outline(lw);
+      if(fine){
+        ctx.strokeStyle=R.strap;ctx.lineWidth=Math.max(.5,w*.06);
+        ctx.beginPath();ctx.moveTo(x-w*.17,bib);ctx.lineTo(x-w*.1,top+h*.02);ctx.moveTo(x+w*.17,bib);ctx.lineTo(x+w*.1,top+h*.02);
+        ctx.moveTo(x-w*.42,waist);ctx.lineTo(x+w*.42,waist);ctx.stroke();
+        if(R.stain){ctx.fillStyle=R.stain;for(const [dx,dy,r] of [[-.1,.16,.07],[.12,.3,.06],[-.04,.36,.05]]){ctx.beginPath();ctx.ellipse(x+w*dx,bodyY+h*dy,w*r,h*r*.8,0,0,Math.PI*2);ctx.fill()}}
+      }
+    }else if(R?.vest){
+      // Leather jerkin: closed, sleeveless, to the hips, laced down the front.
+      const hem=bodyY+h*.2;
+      ctx.beginPath();
+      ctx.moveTo(x-w*.24,top-h*.01);ctx.lineTo(x-w*.48,top+h*.12);ctx.lineTo(x-w*.5,hem);
+      ctx.quadraticCurveTo(x,hem+h*.06,x+w*.5,hem);ctx.lineTo(x+w*.48,top+h*.12);ctx.lineTo(x+w*.24,top-h*.01);ctx.closePath();
+      ctx.fillStyle=o.colors.body;ctx.fill();outline(lw);
+      if(fine){
+        ctx.strokeStyle='rgba(33,24,16,.7)';ctx.lineWidth=Math.max(.4,w*.04);ctx.beginPath();
+        ctx.moveTo(x,top+h*.06);ctx.lineTo(x,hem+h*.03);
+        for(let k=0;k<3;k++){const y=top+h*(.14+k*.1);ctx.moveTo(x-w*.06,y);ctx.lineTo(x+w*.06,y+h*.04)}
+        ctx.stroke();
+        ctx.fillStyle='#3e2c1d';ctx.fillRect(x-w*.5,bodyY+h*.02,w,Math.max(.6,h*.05));   // belt
+      }
     }else if(o.body){
-      const cape=o.body==='rainCape',hem=bodyY+h*(cape?.14:.30);
+      const cape=o.body==='rainCape'||!!pieceOf(o.body)?.cape,hem=bodyY+h*(cape?.14:.30);
       ctx.beginPath();
       ctx.moveTo(x-w*.20,top-h*.02);ctx.lineTo(x-w*.50,top+h*.18);ctx.lineTo(x-w*.60,hem);
       ctx.quadraticCurveTo(x,hem+h*.10,x+w*.60,hem);ctx.lineTo(x+w*.50,top+h*.18);ctx.lineTo(x+w*.20,top-h*.02);ctx.closePath();
@@ -138,7 +205,7 @@
         ctx.beginPath();ctx.moveTo(x-w*.05,top+h*.12);ctx.lineTo(x-w*.14,hem+h*.06);ctx.lineTo(x+w*.14,hem+h*.06);ctx.lineTo(x+w*.05,top+h*.12);ctx.closePath();
         ctx.fillStyle=dot.colors?.[0]||'#8c6b3f';ctx.fill();
       }
-      const trim=PIECES[o.body].trim;
+      const trim=pieceOf(o.body)?.trim;
       if(trim&&fine){
         ctx.fillStyle=trim;ctx.beginPath();ctx.ellipse(x,top+h*.03,w*.34,h*.08,0,0,Math.PI*2);ctx.fill();
         if(o.body==='sheepskin'){ctx.strokeStyle=trim;ctx.lineWidth=Math.max(.6,h*.06);ctx.beginPath();ctx.moveTo(x-w*.58,hem);ctx.quadraticCurveTo(x,hem+h*.10,x+w*.58,hem);ctx.stroke()}
@@ -152,6 +219,11 @@
       ctx.fillStyle=o.colors.neck;
       ctx.beginPath();ctx.rect(x+w*.12,top+h*.08,w*.16,h*.36);ctx.fill();outline(lw*.7);
       ctx.beginPath();ctx.ellipse(x,top+h*.10,w*.46,h*.12,0,0,Math.PI*2);ctx.fill();outline(lw*.7);
+    }else if(o.neck==='keys'&&fine){
+      // Ring of keys hanging from the belt on the right hip.
+      const kx=x+w*.36,ky=bodyY+h*.1,r=Math.max(.5,w*.09);
+      ctx.strokeStyle=o.colors.neck;ctx.lineWidth=Math.max(.5,w*.05);
+      ctx.beginPath();ctx.arc(kx,ky,r,0,Math.PI*2);ctx.moveTo(kx-r*.4,ky+r);ctx.lineTo(kx-r*.6,ky+r*3.2);ctx.moveTo(kx+r*.5,ky+r);ctx.lineTo(kx+r*.9,ky+r*2.8);ctx.stroke();
     }
     ctx.restore();
   }
@@ -179,6 +251,31 @@
       ctx.beginPath();ctx.ellipse(x,headY-r*.42,r*1.85,r*.42,0,0,Math.PI*2);ctx.fill();outline(lw*.8);
       ctx.beginPath();ctx.ellipse(x,headY-r*.55,r*.88,r*.72,0,Math.PI,Math.PI*2);ctx.closePath();ctx.fill();outline(lw*.8);
       if(r>=1.2){ctx.strokeStyle='#7b5a2c';ctx.lineWidth=Math.max(.5,r*.18);ctx.beginPath();ctx.moveTo(x-r*.86,headY-r*.62);ctx.lineTo(x+r*.86,headY-r*.62);ctx.stroke()}
+    }else if(o.head==='leatherCap'){
+      // Close skullcap with a stitched seam.
+      ctx.fillStyle=c;ctx.beginPath();ctx.ellipse(x,headY-r*.3,r*1.04,r*.82,0,Math.PI,Math.PI*2);ctx.closePath();ctx.fill();outline(lw*.8);
+      if(r>=1.2){ctx.strokeStyle='rgba(33,24,16,.6)';ctx.lineWidth=Math.max(.4,r*.12);ctx.beginPath();ctx.moveTo(x,headY-r*1.1);ctx.lineTo(x,headY-r*.32);ctx.stroke()}
+    }else if(o.head==='linenCoif'){
+      // Linen coif over the hair, tied under the chin.
+      ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(x-r*1.06,headY+r*.25);ctx.quadraticCurveTo(x-r*1.2,headY-r*1.25,x,headY-r*1.2);
+      ctx.quadraticCurveTo(x+r*1.2,headY-r*1.25,x+r*1.06,headY+r*.25);ctx.lineTo(x+r*.8,headY+r*.3);ctx.quadraticCurveTo(x,headY-r*.85,x-r*.8,headY+r*.3);ctx.closePath();ctx.fill();outline(lw*.8);
+      if(r>=1.2){ctx.strokeStyle=c;ctx.lineWidth=Math.max(.4,r*.14);ctx.beginPath();ctx.moveTo(x-r*.95,headY+r*.25);ctx.quadraticCurveTo(x,headY+r*1.25,x+r*.95,headY+r*.25);ctx.stroke()}
+    }else if(o.head==='feltHat'){
+      // Wide felt brim turned down, low round crown with a cord.
+      ctx.fillStyle=c;
+      ctx.beginPath();ctx.moveTo(x-r*1.95,headY-r*.15);ctx.quadraticCurveTo(x,headY-r*.85,x+r*1.95,headY-r*.15);ctx.quadraticCurveTo(x,headY-r*.45,x-r*1.95,headY-r*.15);ctx.fill();outline(lw*.8);
+      ctx.beginPath();ctx.ellipse(x,headY-r*.6,r*.95,r*.78,0,Math.PI,Math.PI*2);ctx.closePath();ctx.fill();outline(lw*.8);
+      if(r>=1.2){ctx.strokeStyle='#2a221b';ctx.lineWidth=Math.max(.5,r*.16);ctx.beginPath();ctx.moveTo(x-r*.93,headY-r*.68);ctx.lineTo(x+r*.93,headY-r*.68);ctx.stroke()}
+    }else if(o.head==='flatCap'){
+      // Tocco: a flat round cap sitting square on the head.
+      ctx.fillStyle=c;
+      ctx.beginPath();ctx.ellipse(x,headY-r*.75,r*1.22,r*.42,0,0,Math.PI*2);ctx.fill();outline(lw*.8);
+      ctx.beginPath();ctx.rect(x-r*.95,headY-r*.78,r*1.9,r*.36);ctx.fill();outline(lw*.6);
+    }else if(o.head==='stockingCap'){
+      // Knitted stocking cap, the tail falling to one side.
+      ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(x-r*1.0,headY-r*.25);ctx.quadraticCurveTo(x-r*.9,headY-r*1.3,x+r*.2,headY-r*1.25);
+      ctx.quadraticCurveTo(x+r*1.6,headY-r*1.1,x+r*1.75,headY-r*.1);ctx.lineTo(x+r*1.3,headY-r*.2);ctx.quadraticCurveTo(x+r*1.1,headY-r*.55,x+r*.95,headY-r*.3);ctx.closePath();ctx.fill();outline(lw*.8);
+      if(r>=1.2){ctx.fillStyle='#e8e0c8';ctx.fillRect(x-r*1.02,headY-r*.42,r*2,Math.max(.5,r*.22))}
     }else if(o.head==='furCap'){
       ctx.fillStyle=c;ctx.beginPath();ctx.ellipse(x,headY-r*.55,r*1.02,r*.70,0,Math.PI,Math.PI*2);ctx.closePath();ctx.fill();outline(lw*.8);
       ctx.fillStyle=P.trim;ctx.beginPath();ctx.ellipse(x,headY-r*.5,r*1.12,r*.30,0,0,Math.PI*2);ctx.fill();outline(lw*.6);
@@ -195,6 +292,6 @@
     }
     ctx.restore();
   }
-  const api={PIECES,ROLE_PIECES,WINTER_BY_MONTH,SUMMER_BY_MONTH,preview:null,conditions,fromKind,levels,classPalette,compose,outfitFor,drawBody,drawHead};
+  const api={PIECES,ROLE_PIECES,ROLES,WINTER_BY_MONTH,SUMMER_BY_MONTH,preview:null,conditions,fromKind,levels,classPalette,compose,outfitFor,drawBody,drawHead};
   window.ConquerWardrobe=api;
 })();

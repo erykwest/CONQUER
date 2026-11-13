@@ -17,7 +17,25 @@ assert.match(renderer,/ConquerLivestock\?\.draw\(\)/);
 assert.match(source,/Math\.max\(1\.5,State\.view\.scale\*5\.75\)/);
 assert.match(urban,/function urbanL2CattleShelter\(house\)/);
 assert.match(urban,/type:'shed'.*roofH:1\.02/s);
-assert.match(fields,/tier===1\?'shepherd':'cow'/);
+// Exercise the actual field-worker selector with migrated social identities.
+const Social=require('../src/settlement-social-classes.js');
+const fieldWindow={ConquerSocialClasses:Social,
+  ConquerEconomy:{KIND:{quarry:{classId:1}},staffing:()=>({quarry:1})},
+  ConquerLivestock:{lotKindForHouse:h=>h.livestock}};
+const fieldSandbox={window:fieldWindow,State:{structures:[{id:'quarry',type:'quarry'}]},
+  houseLevel:h=>h.houseLevel,peasantHash:id=>Number(id)};
+vm.runInNewContext(fields,fieldSandbox);
+const workerHouses=[
+  {id:'1',socialTier:1,houseLevel:1,livestock:'garden'},
+  {id:'2',socialTier:1,houseLevel:1,legacyLivestockTier:2,livestock:'garden'},
+  ...['shepherd','goat','cow','fisher'].map((livestock,i)=>
+    ({id:String(i+3),socialTier:1,houseLevel:1,livestock})),
+  {id:'7',socialTier:2,houseLevel:2,livestock:'garden'},
+  {id:'8',socialTier:3,houseLevel:3,livestock:'garden'}];
+const available=fieldSandbox.fieldAvailableHouses(workerHouses);
+assert.deepEqual(Array.from(available.L1,h=>h.id),['2'],
+  'former L2 servants can farm; quarry reservation and livestock households stay excluded');
+assert.equal(available.L2.length,0,'artisans are not assigned to fields');
 assert.match(residents,/\['shepherd','cow'\]/);
 assert.match(source,/PASTURE_SPACING=2\.5/);
 assert.match(source,/animalFrameCache=\{key,objects:out\}/);
@@ -93,6 +111,18 @@ const sandbox={window,State,urbanRevision:1,environmentRevision:0,WORLD:200,peas
 };
 vm.runInNewContext(source,sandbox,{filename:'settlement-livestock.js'});
 const animals=window.ConquerLivestock;
+window.ConquerSocialClasses=Social;
+for(let old=1;old<=4;old++){
+  for(let i=0;i<100;i++){
+    const legacy={id:'migration-'+old+'-'+i,type:'house',houseLevel:old};
+    const prior=animals.lotKindForHouse(legacy);
+    const migrated=Social.migrateSave([legacy],null).structures[0];
+    assert.equal(animals.lotKindForHouse(migrated),prior,
+      'social migration preserves the household livestock allocation');
+  }
+}
+// Remaining geometry fixtures use the legacy level stub.
+delete window.ConquerSocialClasses;
 const ids={};
 for(let i=0;i<500&&Object.keys(ids).length<3;i++){
   const h={id:'l1-'+i,level:1};
@@ -278,3 +308,4 @@ assert.ok(Math.hypot(clear.center.x-interior.x,clear.center.y-interior.y)>clear.
   'even a building wholly inside the disk rejects that grazing pasture');
 
 console.log('Urban livestock integration regression PASS');
+

@@ -44,14 +44,13 @@ test('rural field rejects yellow zoning, forests, buildings, roads, other fields
 });
 
 run("function qaMonthStart(month,year){for(let d=0;d<950;d++){const date=calendarDateFromDay(d);if(date.month===month&&date.year===year&&date.day===1)return d}throw Error('Calendar month missing')}");
-test('legacy L1 households cannot claim field slots or advance crops',()=>{
+test('merged L1 servants can claim field slots in ploughing season',()=>{
  farm();
  run("State.structures.push({id:'legacy-l1',type:'house',auto:true,x:101,y:110,w:1.5,h:1,houseLevel:1});State.clock.day=qaMonthStart(9,1)+.4;fieldCrop(qaField).lastDay=State.clock.day-1;tickFields(State.clock.day)");
- assert.equal(run("fieldWorkAssignments(completedSettlement('house'),[qaField]).size"),0);
- assert.equal(run("fieldCrop(qaField).work.reduce((a,b)=>a+b,0)"),0);
+ assert.equal(run("fieldWorkAssignments(completedSettlement('house'),[qaField]).size"),1);
 });
 test('work progresses only during scheduled months and only on working weekdays',()=>{
- farm();run("globalThis.qaAutumn=qaMonthStart(9,1);globalThis.qaSpring=qaMonthStart(2,2);globalThis.qaJune=qaMonthStart(5,2);globalThis.qaJuly=qaMonthStart(6,2);globalThis.qaNextAutumn=qaMonthStart(9,2);State.structures.push({id:'h1',type:'house',auto:true,x:101,y:110,w:1.5,h:1,houseLevel:2},{id:'h2',type:'house',auto:true,x:108,y:100,w:1.5,h:1,houseLevel:2});State.clock.day=1;globalThis.qaOriginalPeasantPath=peasantPath;peasantPath=(h,a)=>[houseDoorInfo(h).outside,a.cell.world];tickFields(1)");
+ farm();run("globalThis.qaAutumn=qaMonthStart(9,1);globalThis.qaSpring=qaMonthStart(2,2);globalThis.qaJune=qaMonthStart(5,2);globalThis.qaJuly=qaMonthStart(6,2);globalThis.qaNextAutumn=qaMonthStart(9,2);State.structures.push({id:'h1',type:'house',auto:true,x:101,y:110,w:1.5,h:1,houseLevel:1},{id:'h2',type:'house',auto:true,x:108,y:100,w:1.5,h:1,houseLevel:1});State.clock.day=1;globalThis.qaOriginalPeasantPath=peasantPath;peasantPath=(h,a)=>[houseDoorInfo(h).outside,a.cell.world];tickFields(1)");
  assert.equal(run("fieldCrop(qaField).work.reduce((a,b)=>a+b,0)"),0,'June has no ploughing');
  assert.equal(run("fieldWorkAssignments(completedSettlement('house'),[qaField]).size"),0,'no idle-season worker allocations');
  run("globalThis.c=fieldCrop(qaField);c.lastDay=qaAutumn-1;State.clock.day=qaAutumn;tickFields(qaAutumn)");
@@ -94,12 +93,12 @@ test('October plough, March sow, autonomous spring growth, July harvest, next Oc
 });
 test('finished seasonal fields release workers and preserve industrial reservations',()=>{
  farm();
- run("State.structures.push({id:'other-field',type:'field',auto:true,x:114,y:104,points:[{x:112,y:103},{x:116,y:103},{x:116,y:105},{x:112,y:105}]},{id:'h1',type:'house',auto:true,x:101,y:110,w:1.5,h:1,houseLevel:2},{id:'h2',type:'house',auto:true,x:108,y:100,w:1.5,h:1,houseLevel:2});State.clock.day=qaAutumn;fieldCrop(qaField).ploughed=true;fieldCrop(State.structures[2]).phase='plough';fieldWorkAssignmentCache.key=null;globalThis.qaAssigned=[...fieldWorkAssignments(completedSettlement('house'),completedSettlement('field')).values()].map(a=>a.field.id)");
+ run("State.structures.push({id:'other-field',type:'field',auto:true,x:114,y:104,points:[{x:112,y:103},{x:116,y:103},{x:116,y:105},{x:112,y:105}]},{id:'h1',type:'house',auto:true,x:101,y:110,w:1.5,h:1,houseLevel:1},{id:'h2',type:'house',auto:true,x:108,y:100,w:1.5,h:1,houseLevel:1});State.clock.day=qaAutumn;fieldCrop(qaField).ploughed=true;fieldCrop(State.structures[2]).phase='plough';fieldWorkAssignmentCache.key=null;globalThis.qaAssigned=[...fieldWorkAssignments(completedSettlement('house'),completedSettlement('field')).values()].map(a=>a.field.id)");
  assert.deepEqual(JSON.parse(JSON.stringify(run('qaAssigned'))),['other-field','other-field']);
  run("fieldCrop(qaField).ploughed=false;fieldCrop(State.structures[2]).ploughed=true;globalThis.qaReassigned=[...fieldWorkAssignments(completedSettlement('house'),completedSettlement('field')).values()].map(a=>a.field.id)");
  assert.deepEqual(JSON.parse(JSON.stringify(run('qaReassigned'))),['f','f'],'season/completion changes must invalidate assignment key');
- run("globalThis.qaOldEconomy=window.ConquerEconomy;window.ConquerEconomy={KIND:{mine:{classId:2}},staffing:()=>({'logging':1})};State.structures.push({id:'logging',type:'mine',x:130,y:130});globalThis.qaIndustryAssignments=fieldWorkAssignments(completedSettlement('house'),completedSettlement('field')).size");
- assert.equal(run('qaIndustryAssignments'),1,'one L2 remains reserved for mining');
+ run("globalThis.qaOldEconomy=window.ConquerEconomy;window.ConquerEconomy={KIND:{mine:{classId:1}},staffing:()=>({'logging':1})};State.structures.push({id:'logging',type:'mine',x:130,y:130});globalThis.qaIndustryAssignments=fieldWorkAssignments(completedSettlement('house'),completedSettlement('field')).size");
+ assert.equal(run('qaIndustryAssignments'),1,'one L1 remains reserved for mining');
  run("window.ConquerEconomy=qaOldEconomy");
 });
 test('alarms prevent work but cannot stop autonomous crop growth or restart a paused day',()=>{
@@ -129,24 +128,24 @@ test('real village growth spawns four-corner H0 fields outside yellow zoning',()
  assert.ok(run('spawned')>0,'real spawn must find space');
  assert.equal(run("State.structures.filter(s=>s.type==='field').every(f=>fieldQuadValid(f.points)&&f.points.every(p=>!window.ConquerCombat.areaState(p).yellow&&terrainPlateauElevation(p)===0))"),true);
 });
-test('idle L2 workers open a field in the ploughing window without five houses',()=>{
+test('idle L1 servants open a field in the ploughing window without five houses',()=>{
   fixture();
-  run("State.structures.push({id:'main',type:'road',auto:true,roadClass:'arterial',routeId:'main',a:{x:100,y:100},b:{x:100,y:125},width:.5},{id:'artisan',type:'house',auto:true,x:101,y:108,w:1.5,h:1,houseLevel:2});invalidateNavigation();globalThis.qaFirstAutumnMonday=qaAutumn+((7-qaAutumn%7)%7);State.clock.day=qaFirstAutumnMonday+.40;tickFields(State.clock.day);globalThis.qaL2Field=State.structures.find(s=>s.openedByL2==='artisan')");
-  assert.equal(run('Boolean(qaL2Field)'),true,'an idle L2 should create farmland independently of five-house threshold');
+  run("State.structures.push({id:'main',type:'road',auto:true,roadClass:'arterial',routeId:'main',a:{x:100,y:100},b:{x:100,y:125},width:.5},{id:'artisan',type:'house',auto:true,x:101,y:108,w:1.5,h:1,houseLevel:1});invalidateNavigation();globalThis.qaFirstAutumnMonday=qaAutumn+((7-qaAutumn%7)%7);State.clock.day=qaFirstAutumnMonday+.40;tickFields(State.clock.day);globalThis.qaL2Field=State.structures.find(s=>s.openedByL1==='artisan')");
+  assert.equal(run('Boolean(qaL2Field)'),true,'an idle L1 should create farmland independently of five-house threshold');
   assert.equal(run('underConstruction(qaL2Field)'),false,'opening farmland should not require a construction delay');
-  assert.ok(run('fieldLayout(qaL2Field).cells.length')>=1,'a new L2 field must have worker slots scaled to area');
+  assert.ok(run('fieldLayout(qaL2Field).cells.length')>=1,'a new L1 field must have worker slots scaled to area');
   assert.equal(run('fieldQuadValid(qaL2Field.points)&&qaL2Field.points.every(p=>!window.ConquerCombat.areaState(p).yellow&&terrainPlateauElevation(p)===0)'),true);
-  assert.equal(run('fieldWorkAssignments(completedSettlement("house"),completedSettlement("field")).get("artisan")?.field.id'),run('qaL2Field.id'),'L2 must be assigned to its newly opened field');
+  assert.equal(run('fieldWorkAssignments(completedSettlement("house"),completedSettlement("field")).get("artisan")?.field.id'),run('qaL2Field.id'),'L1 must be assigned to its newly opened field');
   run("globalThis.qaL2Crop=fieldCrop(qaL2Field);qaL2Crop.lastDay=qaFirstAutumnMonday+.40;State.clock.day=qaFirstAutumnMonday+1.40;tickFields(State.clock.day)");
-  assert.ok(run('qaL2Crop.work.reduce((a,b)=>a+b,0)')>0,'L2 must actually plough after opening the new field');
-  assert.equal(run("State.structures.filter(s=>s.openedByL2).length"),1,'a busy L2 must not continually create new parcels');
+  assert.ok(run('qaL2Crop.work.reduce((a,b)=>a+b,0)')>0,'L1 must actually plough after opening the new field');
+  assert.equal(run("State.structures.filter(s=>s.openedByL1).length"),1,'a busy L1 must not continually create new parcels');
 });
-test('idle L2 expansion observes workdays, season and priority of mining and quarry work',()=>{
+test('idle L1 expansion observes workdays, season and priority of extraction work',()=>{
   fixture();
-  run("State.structures.push({id:'main',type:'road',auto:true,roadClass:'arterial',routeId:'main',a:{x:100,y:100},b:{x:100,y:125},width:.5},{id:'artisan',type:'house',auto:true,x:101,y:108,w:1.5,h:1,houseLevel:2});State.clock.day=qaJune+.40;tickFields(State.clock.day)");
-  assert.equal(run("State.structures.filter(s=>s.type==='field').length"),0,'L2 cannot expand outside autumn ploughing');
-  run("State.structures.push({id:'quarry',type:'quarry',x:125,y:125});globalThis.qaOldEconomy=window.ConquerEconomy;window.ConquerEconomy={KIND:{quarry:{classId:2}},staffing:()=>({quarry:1})};State.clock.day=qaAutumn+((7-qaAutumn%7)%7)+.40;tickFields(State.clock.day)");
-  assert.equal(run("State.structures.filter(s=>s.type==='field').length"),0,'L2 occupied in a quarry cannot open a field');
+  run("State.structures.push({id:'main',type:'road',auto:true,roadClass:'arterial',routeId:'main',a:{x:100,y:100},b:{x:100,y:125},width:.5},{id:'artisan',type:'house',auto:true,x:101,y:108,w:1.5,h:1,houseLevel:1});State.clock.day=qaJune+.40;tickFields(State.clock.day)");
+  assert.equal(run("State.structures.filter(s=>s.type==='field').length"),0,'L1 cannot expand outside autumn ploughing');
+  run("State.structures.push({id:'quarry',type:'quarry',x:125,y:125});globalThis.qaOldEconomy=window.ConquerEconomy;window.ConquerEconomy={KIND:{quarry:{classId:1}},staffing:()=>({quarry:1})};State.clock.day=qaAutumn+((7-qaAutumn%7)%7)+.40;tickFields(State.clock.day)");
+  assert.equal(run("State.structures.filter(s=>s.type==='field').length"),0,'L1 occupied in a quarry cannot open a field');
   run("window.ConquerEconomy=qaOldEconomy");
 });
 console.log(passed+' field regression checks passed.');

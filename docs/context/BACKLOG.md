@@ -28,6 +28,100 @@
 - Dividere `settlement-world.js` (strade, pozzi, rilievo, buchi nel bosco), `settlement-combat.js` (assalti → `settlement-siege-assault.js`, nebbia → nuovo modulo), `settlement-core.js` (motore dei cantieri → `settlement-construction.js`), `settlement-economy.js` (allocazione del lavoro → `settlement-labor.js`), `settlement-siege.js` (regole delle stanze → `settlement-room-rules.js`). Ogni divisione richiede di aggiornare gli harness QA che caricano il file per nome.
 - Il pittore 2.5D di triangoli è ripetuto in 4 file: eliminarlo con il ritiro del renderer 2.5D.
 
+## RC-01…RC-07 — Hub, dashboard e remote control multi-campagna (13/11/2026)
+
+**DECISO COME PRODOTTO, NON IMPLEMENTATO.** Specifica [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md); decisione D-RC-261113. Dipendenza MP-07, backend server autorevole e World/Feudal M4.
+
+- [ ] **RC-01:** homepage che unisce lobby delle partite disponibili e campagne del giocatore con navigazione multi-server.
+- [ ] **RC-02:** KPI di ogni insediamento / campagna con fonte autorevole, stato e tempi di aggiornamento.
+- [ ] **RC-03:** controllo remoto da browser (poi Android/iOS) di economia, fisco, lavoro/Job Manager, priorità e programmazione cantieri già localizzati, militare strategico/spedizioni, diplomazia, messaggi, tributi e carovane; comandi lato server e autorizzazioni. **Esclusi** piazzamento geometrico degli edifici, progettazione spaziale delle fortificazioni e controllo tattico diretto (solo Builder/3D); catalogo granulare dei comandi ancora aperto.
+- [ ] **RC-04:** integrare posta, report e routine dalla branch `messages` dopo analisi delle 29 commit avanti / 317 indietro rispetto a `main`; preservare ETA simulati e non duplicare la diplomazia.
+- [ ] **RC-05:** unificare diplomazia, spedizioni militari, tributi/convogli e mappa regionale con World/Feudal e permessi.
+- [ ] **RC-06:** web responsive e API condivise; app Android/iOS solo in una fase successiva.
+- [ ] **RC-07:** QA sicurezza (cross-campaign, permessi sudditi, comandi duplicati/concorrenti), freschezza KPI, offline e tempi di recapito.
+
+**DECISO:** confine gestione remota vs Builder/3D come D-RC-BOUNDARY-261113. **APERTO:** comandi immediati sulla propria colonia vs tempi simulati per operazioni inter-feudo, permessi, catalogo granulare dei comandi e filtri dei dati pubblici.
+
+
+## MP-07 — Profilo globale, partecipazioni multi-server e isolamento dello stato (design 13/11/2026)
+
+**DECISO / DA IMPLEMENTARE:** un account può partecipare simultaneamente a più campagne. Separare identità/autenticazione globale, record di partecipazione `user_id + campaign_id` e progressi/feudi isolati per campagna. Lobby: elenco campagne aperte e già partecipate. Nessun trasferimento fra server di risorse, edifici, armate o progresso. [Specifica](../MULTIPLAYER-SERVER-SCOPE.md#4a-separazione-account--campagna--feudo--decisione-13112026), [decisione](DECISIONS.md#d-mp-account-261113--profilo-globale-e-partecipazioni-multi-campagna-13112026).
+
+- [ ] Definire `campaign_id`, `membership_id`/partecipazione, `settlement_id`/`territory_id`, permessi e isolamento dei salvataggi.
+- [ ] Migrare schema cloud corrente: `src/settlement-app-persistence.js` salva con conflitto `user_id,world_cell_x,world_cell_y`, coordinate 0,0 e nessun `campaign_id`.
+- [ ] Separare araldica/titoli/relazioni della campagna da impostazioni e identità di account; definire nickname e storico.
+- [ ] Testare isolamento cross-campaign, accesso autorizzato, doppia iscrizione, cambio campagna, salvataggi legacy e sicurezza delle query.
+- [ ] Decidere numero massimo di campagne contemporanee, identità di personaggio, profilo pubblico e regole per account/abbandono.
+
+
+## CAM-ROT-01 — Rotazione libera della camera (13/11/2026)
+
+- **FATTO SU BRANCH** `feature/free-camera-rotation`: rotazione a qualsiasi angolo con Shift + tasto centrale, scatti di 15° con Ctrl; pan invariato su tasto centrale/destro; Q/E a 90°.
+- **APERTO — fluidità:** durante il trascinamento ogni angolo ricostruisce scena statica e mesh (~150 ms, ~6 fps). Possibili vie: ombreggiatura delle facce in shader invece che nei colori dei vertici, cache statica non invalidata finché si trascina, scena 2D semplificata durante il drag.
+- **APERTO — revisione viste discrete:** controllare a angoli intermedi le scelte che oggi presuppongono quarti di giro (facce aperte dei cutaway, lato dei costruttori, anteprima d'assedio che cerca il quarto migliore).
+
+## MP-01…MP-06 — Multiplayer, lobby e colonizzazione feudale (design 13/11/2026)
+
+**STATO: SPECIFICA / DA IMPLEMENTARE.** [Contratto dettagliato e distinzioni deciso/proposto/aperto](../MULTIPLAYER-SERVER-SCOPE.md), decisione [D-MP-261113](DECISIONS.md#d-mp-261113--ingresso-multiplayer-e-colonizzazione-feudale-13112026). Dipendenza World/Feudal (M4); nessuna lobby o sostituzione bot implementata.
+
+- [ ] **MP-01:** capienze indicative 20–100, minimo effettivo di avvio, ciclo di server, ingresso durante la campagna, dati pubblici in lobby.
+- [ ] **MP-02:** separare territori rivendicati da villaggi fondati; slot umani distinti da bot e terre non colonizzate, mantenendo una sola sovranità per territorio.
+- [ ] **MP-03:** ingresso solo su posizione idonea, con priorità alle terre libere; proprietario può aprire un possedimento alla nuova fondazione umana **come suddito** invece dello sviluppo automatico. Niente takeover di bot né eredità dei loro progressi.
+- [ ] **MP-04:** definire mastio come eventuale blocco, spazio edificabile, permessi e diritti dei sudditi, integrazione con imposte/tributi, revoca, sconfitta e nuove iscrizioni.
+- [ ] **MP-05:** multiplayer ×1, calibrazione calendario/durata campagne, disponibilità regionale e partecipazione su più server (quest'ultima **proposta**, non decisa).
+- [ ] **MP-06:** solo in fase implementativa, QA su capienza, idoneità dello spawn, permessi, persistenza, non sovrapposizione e assenza di trasferimento dati dai bot.
+
+
+## 2026-11-13 - Preparazione merge PR #206
+
+Preparazione merge PR #206: main aggiornato riconciliato mantenendo moduli e documenti di entrambi i branch. Catalogo Wiki rigenerato. Gilda riferita agli artigiani L2; dazio botteghe e relativo malcontento addebitati a L2 anziche L3, con regressione riprodotta prima del fix. Fondazione: cinque scenari superati isolatamente con Node 22, ma timing intermittente oltre 100 ms nella suite anche su Node 22; verifica Actions ancora necessaria. Nessuna soglia allentata. Suite completa e Actions da completare prima del merge. Nessuna nuova funzione demografica, giudiziaria o archetipo edilizio.
+
+## 2026-11-13 - Verifica CI PR #206
+
+Corretta asserzione livestock obsoleta dopo SOC-CLASS-02. Test comportamentali su selettore agricolo reale, riserve cave, esclusione allevatori e conservazione della vocazione su 400 case migrate superati. Suite completa e CI da completare prima del merge. Nessuna modifica runtime o bilanciamento; ROADMAP e DECISIONS invariate. Demografia, 12 archetipi e funzioni giudiziarie fuori scope.
+
+## 2026-11-12 — SOC-CLASS-02 · Nuove classi sociali L1–L4
+
+**IMPLEMENTATO SU BRANCH PR #206, NON MERGE.** [Contratto](../CIVIL-CLASS-MIGRATION.md), decisione D-SOC-CLASS-261112.
+
+- [x] Ceti nuovi e conversione una tantum di residenti, economie e salvataggi local/cloud, con identità, numeri e monete conservati.
+- [x] Fusione del lavoro agricolo/estrattivo L1, vecchie botteghe L3 → artigiani L2, mercanti/scrivani/magistrati/amministratori L3 come ruoli e routine; proprietà private L4.
+- [x] Lealtà L4 come dato distinto da felicità L1–L3; nessun trigger militare.
+- [x] Regressione dedicata e prima bonifica fixture legacy; CI da validare.
+- [ ] Famiglie migranti reali, soddisfazione per ceto e L4 lealtà attiva.
+- [ ] Cambio di proprietario/ceto come ricostruzione completa del template con trasferimento/sostituzione abitanti.
+- [ ] Template 12 combinazioni, richiesta e densità lotti D1–D3, UI L2 artigiani e lavoro effettivo L3.
+- [ ] Approvazione partizione monetaria 25%/75% e collaudi browser, salvataggi reali, CI verde.
+
+
+## 2026-11-12 — CIV-EVT-01 · Effetti sociali degli eventi
+
+**SKELETON PREVIEW SULLA BRANCH DELLA PR #206; NESSUN TICK ATTIVO.** Contratto: [CIVIC-EVENT-EFFECTS-SKELETON](../CIVIC-EVENT-EFFECTS-SKELETON.md).
+
+- [x] Catalogo iniziale di otto eventi che riusa allestimenti `feast/joust/tourney/circus/theatre`, senza duplicarne il motore.
+- [x] Modificatori diversi di felicità L1–L3 e lealtà L4; influenza temporanea sul prestigio e proiezione non invasiva delle heatmap.
+- [x] QA dedicata scritta e agganciata alla suite urbana (esito Node/CI da verificare).
+- [ ] Adattare la UI degli eventi per distinguere gli allestimenti `feast` con `civicKind` e registrare partecipanti reali.
+- [ ] Collegare costi alla fonte economica canonica, felicità/lealtà alla popolazione per insediamento, e la durata al calendario.
+- [ ] Implementare immigrazione ed emigrazione L2–L3; L1 servi senza emigrazione, L4 lealtà senza ribellioni armate.
+- [ ] Bilanciare costi, modificatori, frequenza, raggio, prerequisiti; verificare QA Node, browser e CI.
+
+
+## 2026-11-12 — URB-HEAT-01 · Urbanistica a quattro heatmap
+
+**FASE 0 — SOLO SKELETON SU BRANCH, NON MERGE.** Contratto: [URBAN-HEATMAP-SKELETON](../URBAN-HEATMAP-SKELETON.md); decisione [D-URB-HEAT-261112](DECISIONS.md).
+
+- [x] API indipendente dal Builder con griglia deterministica: domanda L1–L4, prestigio, sicurezza e criminalità (7 canali, 4 sistemi).
+- [x] Sorgenti locali positive/negative, aree protette poligonali, interpolazione e lettura del lotto senza modificarlo.
+- [x] QA del modulo scritta e agganciata a `qa/urban-regression.cjs`; **PASS/FAIL da verificare in CI**.
+- [ ] Adapter da strutture, posti di lavoro e percorsi, mura/accessi, guardie e fonte autorevole Crime.
+- [ ] Domanda effettiva dei quattro ceti calcolata da famiglie in cerca e disponibilità abitativa.
+- [ ] D1–D3 sul lotto con capienza, multi-edificio/sopraelevazione e soglie anti-oscillazione.
+- [ ] Prestigio dell'edificio e ricostruzione completa del template al cambio ceto/proprietario.
+- [ ] Migrazione dei ceti L1–L4, L3+ e dei sistemi lavoro/economia/popolanI/salvataggi.
+- [ ] Quattro overlay debug nel Builder e regressioni browser/salvataggio.
+
+
 ## 2026-11-13 — GILDA-01 · La Gilda: produttività delle botteghe L3
 
 **SPECIFICA APPROVATA. FASE 1 IMPLEMENTATA SU BRANCH `feature/gilda-fase1`, NON MERGE; fase 2 aperta (richiede SCOL-01 fase 3).** La fase 1 comprende il modulo `src/settlement-guild.js` (`ConquerGuild`), il bonus in `ConquerCommerce.daily`, la Gilda unica per villaggio, la scheda Gilda e la riga nel Profilo; dettagli in [STATUS](STATUS.md). Intervista con il product owner del 11–13/11/2026 (sessione «Gilda»). Decisione [D-GILDA-261113](DECISIONS.md). Base verificata: `main` e93b22b5. La Gilda **assorbe la Casa delle Corporazioni**: nessun edificio separato. Usa le ricette di [ECO-FIL-01](BACKLOG.md) e il contratto dei ruoli istruiti [D-SCOL-261112](DECISIONS.md); non tocca imposte né decreti di [FISCO-01](BACKLOG.md).
@@ -712,6 +806,11 @@ Fogli provini dell'audit: impaginazione a griglia per le categorie e sfondo neut
 - **Trabucco**: DA FARE serventi come unità di combattimento (oggi figure, `crewHit` solo via API), salvataggio con la partita, munizioni, il tiro parte a 9U dal bersaglio (volley) invece che dalla macchina; picchi residui ~200 ms nel tick di combattimento all'avvio dell'assalto (12 percorsi A* in un tick: distribuirli su più frame).
 - **Performance**: restano 20–40 ms di passata frontale WebGL (`world3dFrontMs`, include la copia del canvas WebGL sul 2D) e la popolazione a zoom alto; misurare con il pannello visibile e un profilo CPU. `lotKindForHouse` è chiamata centinaia di volte per frame.
 - **Personaggi 3D**: fatto per contadini, lavoratori, carpentieri e marinai. **DA FARE**: carrettieri sui veicoli e figure della battaglia navale ancora in 2D; i costruttori stanno solo sul lato verso la camera (con la profondità non serve più); misurare con un villaggio grande di giorno (nel test erano visibili solo 4 abitanti).
+- **Abiti da mestiere** (`settlement-wardrobe.js` `ROLES`): **SU BRANCH** `feature/role-outfits`. Hanno abiti propri i 7 bottegai, muratore, taglialegna, cavatore, minatore, carpentiere navale, pastore, carrettiere, carceriere, marinaio/pescatore. Li indossano al lavoro e nel tragitto; la stagione riempie solo gli slot liberi. **DA FARE**: ruoli ancora senza figura (prete, oste, cerusico, esattori, personale del castello, rimboschimento), che avranno abito e gesto quando nasceranno le figure; cocchiere e nobili restano con i colori fissi attuali.
+
+- **Animazioni di lavoro** (`settlement-work-anim.js`): **SU BRANCH** `feature/shop-artisan-tools` vasaio (argilla al tornio), tessitore (spola) e sarto (ago e filo); ora tutti i mestieri delle botteghe L3 lavorano. **DA FARE**: rimboschimento senza figure (solo contorno e percentuale; la pala è pronta e mai usata); nei campi si animano solo gli uomini adulti delle case L1–L2 e solo in aratura, semina e raccolta; vigneto e laboratorio di equipaggiamento hanno lavoratori solo nei conti (nessun edificio).
+
+- **Personaggi 3D**: fatto per contadini, lavoratori, carpentieri e marinai; **carri, carretti, carrozze con cavalli e conducenti come carte depth-tested sul branch `feature/vehicles-depth-cards` (12/11/2026, non merge)**. **Cavallo 2D ridisegnato** (proporzioni, passo, gear) sullo stesso branch, con anteprime in gioco `qa/horse-preview.mjs`; **animali 2D (bestiame e fauna) rivisti allo stesso modo** (13/11/2026: zampe a due segmenti che si piegano a ginocchio/garretto, anche sul cavallo; passo per specie, collo di capra e mucca, Lab `Animali 2D`); **capsuloide per la profondità delle figure** (D-CAPSULE-261113: verticale per le persone, orizzontale per gli animali; bestiame e lupi come carte con capsula e collider). **DA FARE**: cavalli di giostra/feste, cavalieri in combattimento e messaggero come carte con capsula orizzontale; capsula orizzontale anche per il tiro dei carri; verifica in partita con bestiame vicino a case e cutaway; figure della battaglia navale e staffetta a cavallo dell'Avamposto ancora in 2D; cavalieri in combattimento ancora fuori dal depth buffer (disegnati con `withUrbanFigureOcclusion`); i costruttori stanno solo sul lato verso la camera (con la profondità non serve più); misurare con un villaggio grande di giorno (nel test erano visibili solo 4 abitanti).
 - **Mura sulla banchina**: fatto il magnete. **DA FARE**: contorno di selezione alla quota della banchina; porte sulla banchina (torri fatte); muro che continua dalla banchina alla terraferma.
 - **Attracchi lungo la banchina**: fatto. **DA FARE**: segnare in gioco gli slot liberi/occupati (oggi visibili solo via `ConquerQuay.berths`).
 - **Banchina fuori whitezone**: fatto (parte da dentro, prosegue oltre). **DA FARE**: allo spigolo il lastricato delle due banchine si sovrappone (doppio strato, possibile z-fighting); un unico raccordo d'angolo sarebbe più pulito.

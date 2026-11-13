@@ -131,11 +131,11 @@ test('manual building collision and water exclusion still apply to extraction',(
   h.State.environment=[{id:'pond',type:'pond',points:rect(129,125,1,1)}];
   assert.match(h.industry.validate(quarry).reason,/forest, water or obstacle/);
 });
-test('two workers: camp 2 wood/day, quarry 2 stone/day, mine 1 metal/day (ECO-FIL-01)',()=>{
+test('merged L1 staffing: camp 2 wood/day, quarry 2 stone/day, mine 1 metal/day',()=>{
   const h=harness();
   h.State.structures=[
     ...Array.from({length:2},(_,i)=>({id:'l1-'+i,type:'house',houseLevel:1})),
-    ...Array.from({length:4},(_,i)=>({id:'l2-'+i,type:'house',houseLevel:2})),
+    ...Array.from({length:4},(_,i)=>({id:'merged-l1-'+i,type:'house',houseLevel:1})),
     ...['loggingCamp','quarry','mine'].map(type=>({id:type,type,economicOwner:'lord'}))
   ];
   h.economy.setShare('wood',100);h.economy.setShare('stone',100);h.economy.setShare('metal',100);
@@ -216,7 +216,7 @@ test('clay requires centre H0, respects whitezone, forests, roads and buildings'
 test('staffed clay extraction generates clay commodity without changing stone production',()=>{
   const h=harness();
   h.State.structures=[
-    ...Array.from({length:4},(_,i)=>({id:'l2-'+i,type:'house',houseLevel:2})),
+    ...Array.from({length:4},(_,i)=>({id:'l1-clay-'+i,type:'house',houseLevel:1})),
     {...h.industry.make('quarry',{x:108,y:100},'clay'),id:'clay-quarry'},
     {...h.industry.make('quarry',{x:129,y:120}),id:'stone-quarry'}
   ];

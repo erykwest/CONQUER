@@ -98,9 +98,9 @@
   function targets(house,resident,week){
     refreshCache();
     // Morning plan, not weekday index: Mon-Fri reuse the same cached paths.
-    const key=house.id+':'+resident.id+':'+activity(houseLevel(house),week,.25);
+    const key=house.id+':'+resident.id+':'+activity(window.ConquerSocialClasses?.tierOfHouse?.(house)??houseLevel(house),week,.25);
     if(targetCache.has(key))return targetCache.get(key);
-    const home=houseDoorInfo(house).outside,tier=houseLevel(house);
+    const home=houseDoorInfo(house).outside,tier=window.ConquerSocialClasses?.tierOfHouse?.(house)??houseLevel(house);
     const first=activity(tier,week,.25);
     let morning=null;
     if(first==='lot'){
@@ -117,7 +117,7 @@
     return result;
   }
   function position(house,resident,day=State.clock.day){
-    const frac=day-Math.floor(day),week=weekday(day),tier=houseLevel(house);
+    const frac=day-Math.floor(day),week=weekday(day),tier=window.ConquerSocialClasses?.tierOfHouse?.(house)??houseLevel(house);
     const stage=activity(tier,week,frac);
     if(stage==='home')return null;
     const t=targets(house,resident,week);

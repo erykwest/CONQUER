@@ -134,6 +134,9 @@ const orphanAllowlist=new Map([
  // re-validated against current main (main-fixes already smoke-tests the UI).
  ['clay-browser-regression.mjs','manual: retired clay-browser-smoke.yml'],
  ['urban-local-preview.mjs','manual: retired urban-local-preview.yml'],
+ // PNG preview generators from #202 (no assertions): sheets for judging 2D animals and horses by eye.
+ ['animal-preview.mjs','manual: writes output/animal-preview/*.png'],
+ ['horse-preview.mjs','manual: writes output/horse-preview/*.png'],
 ]);
 const orphans=[];
 for(const file of fs.readdirSync(path.join(root,'qa')).filter(x=>/\.(cjs|mjs)$/.test(x))){
