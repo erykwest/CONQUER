@@ -12,6 +12,7 @@ on:
       - 'src/settlement-industries.js'
       - 'src/settlement-population-figures.js'
       - 'src/settlement-render.js'
+      - 'src/settlement-shop-cutaway.js'
       - 'qa/work-anim-regression.cjs'
       - '.github/workflows/work-anim-regression.yml'
   workflow_dispatch:

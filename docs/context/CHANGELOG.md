@@ -4,6 +4,10 @@
 
 `drawCastleSelection` non disegna più i lati del perimetro a terra nascosti dal volume dell'edificio: un lato è posteriore se appena sotto di esso sullo schermo c'è il footprint di un corpo con altezza reale. Vale per torri, mura, sezioni costruite, case e civici, anche in cutaway, con la vista ruotata e con la camera libera di CAM-ROT-01 (i lati visti di taglio restano nascosti dalla parete). Campi, cantieri, piazze e corpi bassi (cortili, industrie aperte, pozzi) mantengono il perimetro completo. I civici seguono ciò che sta in piedi al livello corrente (`ConquerCivic3D.builtParts`, tabella `BUILT`): la chiesa L1 non mostra più la croce L3. Regressione in `qa/mastio-selection-zoom-regression.cjs`. ROADMAP e DECISIONS invariate.
 
+## 2026-11-13 — Abiti da mestiere
+
+Branch `feature/role-outfits`. Il guardaroba ha 11 nuovi pezzi da lavoro (grembiuli di cuoio, di tela e del vasaio, farsetto, mantelletta, calotta, cuffia, cappello di feltro, tocco, berretto da marinaio, chiavi) e 16 abiti per mestiere. Le figure al lavoro li indossano: bottegai, lavoratori anonimi, costruttori e taglialegna nominati, pastore, carrettiere, carceriere e marinai. Ci sono voci nuove nell'Asset Lab (famiglia «Abiti da mestiere»), una regressione estesa e la baseline dell'audit aggiornata solo per queste voci. ROADMAP e DECISIONS invariate.
+
 ## 2026-11-13 — RC-03 · Confine funzionale del remote control (solo design)
 
 Confermato dal product owner il perimetro: gestione da browser (futuro Android/iOS) di economia, fisco, lavoratori, pianificazione/priorità di cantieri già localizzati, strategia militare/spedizioni, diplomazia, posta, tributi, carovane e mappa regionale. Riservati al Builder/3D il piazzamento geometrico, la progettazione spaziale delle fortificazioni e il controllo tattico diretto. Specifica `docs/REMOTE-CONTROL-SCOPE.md` §2a, D-RC-BOUNDARY-261113 e RC-03 aggiornati. Solo documentazione, nessun codice o QA runtime; ROADMAP/STATUS invariati.
@@ -154,6 +158,11 @@ STATUS, BACKLOG e DECISIONS (regola transitoria della resa del culto) aggiornati
 - Modifiche al contratto D-SCOL-261112 descritte in D-CHIESA-261112.
 
 BACKLOG, STATUS e DECISIONS aggiornati; ROADMAP invariata; nessun codice.
+
+## 2026-11-13 — Bottegai al lavoro: vasaio, tessitore, sarto
+
+Branch `feature/shop-artisan-tools`. Tre nuovi attrezzi nelle animazioni di lavoro (argilla al tornio, spola, ago e filo): ora tutti i mestieri delle botteghe L3 lavorano invece di stare fermi. Voci nuove nell'Asset Lab, test e baseline dell'audit aggiornati. Il BACKLOG elenca le animazioni di lavoro ancora mancanti (rimboschimento, campi). ROADMAP e DECISIONS invariate: è un completamento visivo senza nuovi contratti.
+
 
 ## 2026-11-09 — BC-261109-02 · DEV e cantieri di ristrutturazione
 

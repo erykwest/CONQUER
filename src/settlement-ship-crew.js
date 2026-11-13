@@ -109,7 +109,7 @@
   const COLORS=[['#3e5b7a','#d9d2c3'],['#c9c2b0','#3e5b7a'],['#7a4b32','#d9d2c3'],['#2f4a61','#b9b09a'],['#d9d2c3','#6b4a33']];
   function dot(id,p){
     const h=hash(String(id));
-    return{p,id:String(id),kind:'peasant',sex:'male',age:'adult',colors:COLORS[h%COLORS.length],
+    return{p,id:String(id),kind:'peasant',sex:'male',age:'adult',role:'sailor',colors:COLORS[h%COLORS.length],
       hair:typeof villagerHair==='function'?villagerHair(String(id)):'brown'};
   }
   const darken=(hex,k)=>{const h=hex.replace('#','');return'#'+[0,2,4].map(i=>Math.round(parseInt(h.slice(i,i+2),16)*k).toString(16).padStart(2,'0')).join('')};

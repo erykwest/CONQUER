@@ -6,6 +6,24 @@
 - **TEST:** `mastio-selection-zoom-regression` con proiezione isometrica reale (torre, campo, piazza, casa, civico per livello); `well-civics`, `stonecolor`, `cutaway-floors`, `crime-buildings`, `court-people`, `civic3d` e `ci-p1` superate in locale. Catture Playwright prima/dopo di torre, chiesa, municipio e dei livelli L1–L3 di chiesa, taverna, municipio e gilda. CI da verificare.
 - **INVARIATO:** l'area cliccabile (`screenHitStructureBody`) usa ancora il footprint completo dei civici.
 
+## 2026-11-13 — Abiti da mestiere (branch `feature/role-outfits`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `ConquerWardrobe.ROLE_PIECES` ha 11 pezzi da lavoro in più: grembiule di cuoio, di tela e del vasaio (con le macchie), farsetto di cuoio allacciato con la cintura, mantelletta, calotta di cuoio, cuffia di lino, cappello di feltro, tocco, berretto da marinaio, mazzo di chiavi alla cintura.
+  - Nuova tabella `ROLES`: 16 mestieri, ognuno con una combinazione di pezzi diversa dagli altri.
+  - `outfitFor(dot)`: se la figura ha `dot.role`, gli slot del mestiere vincono e la stagione riempie solo quelli liberi (per esempio pioggia: il sarto tiene il tocco e prende la mantella).
+- **DOVE NASCE IL RUOLO:**
+  - residenti in `drawPeasants`: bottegaio al banco (`shop.kind`), costruttori e taglialegna nominati anche nel tragitto, carrettiere al piazzale, pastore al pascolo (stessa posizione di `shepherdPosition`), squadra dei fondatori;
+  - lavoratori anonimi (`ConquerWorkAnim.anonymous(id,p,role)`): muratori, taglialegna, cavatori, minatori, carpentieri navali;
+  - `ConquerShipCrew.dot` (marinai e pescatori); `DRIVER` dei veicoli (carrettiere); carceriere del tribunale;
+  - niente ruolo per chi è richiamato dall'allarme.
+- **PROVE LOCALI PASS:**
+  - `wardrobe-regression`, estesa: ogni bottega ha un abito, abiti tutti diversi, priorità sulla stagione, ogni pezzo si disegna, ruolo impostato nei punti di creazione;
+  - `court-people`, `asset-catalog`, `codex-wiki` (export della Wiki rigenerato);
+  - suite `qa/*.cjs`: fallisce solo `founding-regression`, che fallisce uguale su `main` 6b227926; i `*-performance` non sono stati eseguiti.
+- **AUDIT ASSET:** audit completo del Lab con 0 errori e 16 voci nuove («Abiti da mestiere»), riviste anche su un foglio grande, estate e inverno con neve. Nessuna bottega e nessuna figura del tribunale cambia oltre la soglia. Le altre 168 voci cambiate (alberi, torri) sono deriva già presente su main: la baseline non le include.
+- **DA VERIFICARE:** CI del branch.
+
 ## 2026-11-13 — Capsuloide per la profondità delle figure: verticale per le persone, orizzontale per gli animali (stesso branch)
 
 - **CODICE SUL BRANCH, NON MERGE (D-CAPSULE-261113):** nuovo programma WebGL `card` per tutte le carte figura (sostituisce `sprite` per soldati, civili e veicoli; `sprite` resta per alberi e altro): ogni pixel prende la profondità del punto dell'asse del capsuloide più vicino sullo schermo più il raggio verso la camera. Vertex buffer delle carte a 15 float (`aSeg0`, `aSeg1`, `aRad`), `drawCards()` per passata frontale e figure nelle stanze aperte.
@@ -203,6 +221,22 @@ Corretta asserzione livestock obsoleta dopo SOC-CLASS-02. Test comportamentali s
   - La Cappella del castello conta solo per il prestigio nell'assedio.
 - **DIPENDE DA:** SCOL-01 (branch `docs/scolarizzati`, non su `main`) fino alla fase 3; FISCO-01 fase B; CRIME.
 - **PROSSIMO:** fase 1 (Cassa, offerte, lasciti, dono, scheda) su un branch nuovo da `main`, solo dopo conferma esplicita e dopo la fase 3 di SCOL-01.
+
+## 2026-11-13 — Animazioni di lavoro dei bottegai (branch `feature/shop-artisan-tools`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `ConquerWorkAnim.TOOLS` passa da 7 a 10 attrezzi: `clay` (vasaio: mani sul vaso che sale al tornio, schizzi d'argilla), `shuttle` (tessitore: la spola va avanti e indietro all'altezza dell'ordito, filacce alla battuta), `needle` (sarto: ago nella stoffa e lunga tirata del filo, senza effetti).
+  - I tre pezzi da banco (vaso col tornio, spola col filo, stoffa col filo) si disegnano tra il corpo e il braccio. Le figure WebGL usano le stesse 8 fasi delle altre (`w|tool|fase|look`).
+  - `TRADES` di `settlement-shop-cutaway.js`: vasaio, tessitore e sarto non hanno più `tool:null`, quindi nessun bottegaio resta fermo al banco.
+  - Asset Lab, famiglia «Lavori»: nuove voci Vasaio (tornio), Tessitore (spola), Sarto (ago).
+- **PROVE LOCALI PASS:**
+  - `work-anim-regression` (10 attrezzi, ogni mestiere di bottega ha un attrezzo noto, i pezzi da banco si disegnano);
+  - `shop-cutaway-regression`, aggiornato: il tessitore ora usa la spola;
+  - `asset-catalog-regression`, `urban-workshops-regression`, `commerce-skeleton-regression`;
+  - suite `qa/*.cjs`: falliscono solo i `*-performance`, `asset-audit-scope` (strumento CLI) e `founding-regression`, che fallisce identico su `main` 95e8dd29.
+- **AUDIT ASSET:** `node qa/asset-audit.mjs` sulle 3 voci nuove e sulle botteghe L3 di vasaio, tessitore e sarto: 0 errori, 3 nuove, 1 cambiata (vasaio esterno, distanza 0,024). Fogli rivisti; baseline aggiornata solo per queste voci.
+- **DA VERIFICARE:** CI del branch.
+
 
 ## 2026-11-10 — ECO-FIL-01 fase 1 · Miniera → metallo (branch `feature/eco-fil-01-miniera-metallo`)
 

@@ -127,3 +127,40 @@ for(const k of Object.keys(W.PIECES))for(const s of [.5,3]){
   assert.ok(calls.fill>0,k+' draws at scale '+s);
 }
 console.log('PASS every piece draws');
+
+// Work clothes by trade: every role is made of known pieces, distinct from every other,
+// and the trade's slots win over the season while the free slots still dress for it.
+const roleKeys=Object.keys(W.ROLES);
+const src=f=>fs.readFileSync(path.join(__dirname,'..','src',f),'utf8');
+const trades=[...src('settlement-shop-cutaway.js').matchAll(/^\s*(\w+):\{tool:/gm)].map(m=>m[1]);
+assert.ok(trades.length>=7,'shop trades listed');
+for(const t of trades)assert.ok(W.ROLES[t],'shop trade '+t+' has work clothes');
+for(const r of ['builder','woodcutter','quarryman','miner','shipwright','shepherd','carter','jailer','sailor'])assert.ok(W.ROLES[r],r+' has work clothes');
+const looks=new Set();
+for(const [k,R] of Object.entries(W.ROLES)){
+  assert.ok(R.label&&R.pieces.length,k+' role entry');
+  for(const p of R.pieces)assert.ok(W.ROLE_PIECES[p]||W.PIECES[p],k+': piece '+p+' exists');
+  assert.equal(new Set(R.pieces.map(p=>(W.ROLE_PIECES[p]||W.PIECES[p]).slot)).size,R.pieces.length,k+': one piece per slot');
+  const key=[...R.pieces].sort().join('+');assert.ok(!looks.has(key),k+' looks different from the other trades');looks.add(key);
+}
+const smith={id:'s1',kind:'artisan',role:'blacksmith',colors:['#8c6b3f','#5d4a32']};
+assert.deepEqual([W.outfitFor(smith,W.fromKind('summer','clear')).body,W.outfitFor(smith,W.fromKind('summer','clear')).head],['leatherApron','leatherCap'],'the smith at the forge');
+assert.equal(W.outfitFor(smith,W.fromKind('winter','clear')).body,'leatherApron','the apron stays on in winter');
+const tailor={id:'t1',kind:'artisan',role:'tailor',colors:['#8c6b3f','#5d4a32']};
+assert.equal(W.outfitFor(tailor,W.fromKind('spring','rain')).body,'rainCape','a free slot still takes the rain cape');
+assert.equal(W.outfitFor(tailor,W.fromKind('spring','rain')).head,'flatCap','the trade keeps its cap');
+assert.equal(W.outfitFor({...smith,role:'nobody'},W.fromKind('summer','fog')),null,'an unknown role dresses by season only');
+for(const k of Object.keys(W.ROLE_PIECES))for(const s of [.5,3]){
+  calls.fill=0;calls.stroke=0;
+  const o=W.compose([k],'x');
+  W.drawBody(o,crowd[0],0,0,6*s,8*s);W.drawHead(o,0,-6*s,2.35*s);
+  assert.ok(calls.fill+calls.stroke>0||s<1,k+' draws at scale '+s);
+}
+// Where the figures are made, the role is set.
+assert.match(src('settlement-population-figures.js'),/role:combatP!==undefined\?undefined:inShop\?shop\.kind/,'residents at work carry their role');
+assert.match(src('settlement-work-anim.js'),/anonymous\(s\.id\+':builder'\+i,sp,'builder'\)/,'anonymous builders');
+assert.match(src('settlement-industries.js'),/'woodcutter'\)/,'anonymous woodcutters');
+assert.match(src('settlement-ship-crew.js'),/role:'sailor'/,'sailors');
+assert.match(src('settlement-vehicles.js'),/role:'carter'/,'carters');
+assert.match(src('settlement-court-people.js'),/jailer:\['jerkin','leatherCap','keys'\]/,'the jailer');
+console.log('PASS '+roleKeys.length+' trades with their own work clothes, worn at the job');

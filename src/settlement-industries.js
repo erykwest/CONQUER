@@ -297,7 +297,7 @@
         const point={x:start.x+(end.x-start.x)*progress-(end.y-start.y)/len*side,y:start.y+(end.y-start.y)*progress+(end.x-start.x)/len*side};
         const WA=window.ConquerWorkAnim;
         if(!WA||!worldPointVisible(point,0,40))continue;
-        const dot=WA.anonymous(s.id+':woodcutter'+i,point),back=t>=.47;
+        const dot=WA.anonymous(s.id+':woodcutter'+i,point,'woodcutter'),back=t>=.47;
         const facing=WA.facingOf(point,(end.x-start.x)*(back?-1:1),(end.y-start.y)*(back?-1:1));
         if(t>=.25&&t<.47)WA.drawWorker(dot,'axe',WA.now(),facing);else WA.drawCarrier(dot,'axe',facing);
       }
@@ -312,7 +312,7 @@
       for(let i=0;i<count;i++){
         const [lx,ly]=spots[i],p={x:s.x+lx*c-ly*sn,y:s.y+lx*sn+ly*c};
         if(!worldPointVisible(p,0,40))continue;
-        WA.drawWorker(WA.anonymous(s.id+':'+s.type+i,p),'pickaxe',clock,WA.facingOf(p,-c,-sn));
+        WA.drawWorker(WA.anonymous(s.id+':'+s.type+i,p,s.type==='mine'?'miner':'quarryman'),'pickaxe',clock,WA.facingOf(p,-c,-sn));
       }
     }
   }

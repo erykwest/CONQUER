@@ -57,7 +57,8 @@
   ];
   // Work animations: the villager with each tool of settlement-work-anim.js (action -> tool as in the Lab).
   const WORK=[['dig','shovel','Scavatore (pala)'],['chop','axe','Taglialegna (ascia)'],['pick','pickaxe','Cavatore (piccone)'],
-    ['build','hammer','Muratore (martello)'],['plough','hoe','Aratura (zappa)'],['sow','seeds','Semina'],['harvest','sickle','Mietitura (falce)']];
+    ['build','hammer','Muratore (martello)'],['plough','hoe','Aratura (zappa)'],['sow','seeds','Semina'],['harvest','sickle','Mietitura (falce)'],
+    ['throw','clay','Vasaio (tornio)'],['weave','shuttle','Tessitore (spola)'],['sew','needle','Sarto (ago)']];
   const SCHEMATICS=[
     ['well','Pozzo','Edifici','Servizi'],
     ['house1','Abitazione L1','Edifici','Abitazioni'],
@@ -170,6 +171,11 @@
     if(pieces.every(p=>window.ConquerWardrobe?.ROLE_PIECES?.[p]))
       items.push({id:'wardrobe:role:'+key,title,category:'Popolazione',family:'Costumi di ruolo',kind:'wardrobe',key,pieces,
         format:'Overlay',note:'Vestito per ruolo (tribunale), mai per stagione.',source:'src/settlement-wardrobe.js · src/settlement-court-people.js'});
+  // Work clothes by trade: what the figure wears at the job (the season fills the free slots).
+  for(const [key,role] of Object.entries(window.ConquerWardrobe?.ROLES||{}))
+    items.push({id:'wardrobe:trade:'+key,title:role.label,category:'Popolazione',family:'Abiti da mestiere',kind:'wardrobe',key,
+      pieces:role.pieces,format:'Overlay',note:'Indossato al lavoro: '+role.pieces.map(p=>window.ConquerWardrobe.ROLE_PIECES[p]?.label||window.ConquerWardrobe.PIECES[p]?.label).join(', ')+'.',
+      source:'src/settlement-wardrobe.js'});
   for(const [key,title,category,family] of SCHEMATICS){
     items.push({id:'procedural:'+key,title,category,family,kind:'schematic',key,format:'Parametrico',
       source:'Builder · asset generato dal motore',builder:true});

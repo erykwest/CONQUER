@@ -27,7 +27,7 @@ vm.runInContext(fs.readFileSync(path.join(__dirname,'..','src','settlement-work-
 const WA=window.ConquerWorkAnim;
 
 const tools=Object.keys(WA.TOOLS);
-assert.deepEqual(tools.sort(),['axe','hammer','hoe','pickaxe','seeds','shovel','sickle']);
+assert.deepEqual(tools.sort(),['axe','clay','hammer','hoe','needle','pickaxe','seeds','shovel','shuttle','sickle']);
 for(const tool of tools){
   const T=WA.TOOLS[tool];
   for(const t of [0,.3,.77,1.9]){
@@ -39,7 +39,25 @@ for(const tool of tools){
   assert.ok(Math.max(...swing)-Math.min(...swing)>.8,tool+' swings the tool');
   assert.notEqual(WA.pose(tool,'w1',.2).u.toFixed(3),WA.pose(tool,'w2',.2).u.toFixed(3),tool+': a crew is not in step');
 }
-console.log('PASS seven tools with periodic, out-of-step swings');
+console.log('PASS ten tools with periodic, out-of-step swings');
+
+// Every trade of an open shop works with its own tool: nobody stands idle at the bench.
+const shopSrc=fs.readFileSync(path.join(__dirname,'..','src','settlement-shop-cutaway.js'),'utf8');
+const trades=[...shopSrc.matchAll(/^\s*(\w+):\{tool:(null|'(\w+)')/gm)];
+assert.ok(trades.length>=7,'shop trades are listed');
+for(const [,trade,raw,tool] of trades){
+  assert.notEqual(raw,'null',trade+' has a work tool');
+  assert.ok(WA.TOOLS[tool],trade+' uses a known tool ('+tool+')');
+}
+assert.deepEqual(Object.fromEntries(trades.filter(m=>['potter','weaver','tailor'].includes(m[1])).map(m=>[m[1],m[3]])),
+  {potter:'clay',weaver:'shuttle',tailor:'needle'});
+// Bench pieces are painted: the pot, the shuttle, the cloth and thread.
+for(const tool of ['clay','shuttle','needle']){
+  calls.fill=0;calls.stroke=0;
+  WA.drawWorkerUnmasked({p:{x:5,y:5},id:'artisan',kind:'artisan',sex:'male',age:'adult',colors:['#7a6a4f','#5f6e7c'],hair:'brown'},tool,.3,1);
+  assert.ok(calls.fill>=2&&calls.stroke>=2,tool+' paints its bench piece');
+}
+console.log('PASS potter, weaver and tailor work at their benches');
 
 assert.deepEqual({...WA.FIELD_TOOL},{plough:'hoe',sow:'seeds',harvest:'sickle'});
 console.log('PASS field phases use hoe, seed sack and sickle');
