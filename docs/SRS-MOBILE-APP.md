@@ -1,10 +1,10 @@
 # CONQUER — Software Requirements Specification (SRS) · Mobile Companion
 
-**Versione:** 0.2 — bozza di lavoro, **non approvata nel complesso** (scelta B approvata)  
+**Versione:** 0.3 — bozza di lavoro, **non approvata nel complesso** (scelte B e tempistica ordini approvate)  
 **Data:** 13 novembre 2026  
 **Destinazione:** Android e iOS; prima dipendenza: hub browser e backend multiplayer condiviso  
 **Stato:** SPEC / NO RUNTIME — nessuna app mobile implementata  
-**Decisione approvata:** **B — primo rilascio pubblico con controllo remoto completo**, non versione ridotta.
+**Decisioni approvate:** **B — primo rilascio pubblico con controllo remoto completo**; **comandi amministrativi locali al prossimo tick utile, comunicazioni inter-feudo con recapito simulato**.
 
 ## 0. Natura del documento e fonti
 
@@ -161,6 +161,20 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 - I dati storici esistono soltanto se salvati dal motore; il dispositivo non inventa tendenze.
 - La stessa azione ripetuta con la stessa chiave di idempotenza deve avere un solo effetto (P per soluzione tecnica).
 
+## 4a. Contratto temporale degli ordini — DECISO (13/11/2026)
+
+**FR-TIME-01 (D/C, Must) — Amministrazione del proprio insediamento:** un comando gestionale autorizzato (es. lavoratori, aliquote, razioni, priorità di un cantiere già localizzato, ordini strategici preparatori sul proprio feudo) è **registrato dal server e applicato al primo tick di simulazione utile successivo alla ricezione/validazione**. L'invio da browser o mobile non comporta un ritardo di trasporto in-game aggiuntivo. La UI separa *ricevuto*, *accettato/in attesa di tick*, *applicato* e *rifiutato/fallito*. **La durata reale del tick non è fissata da questa SRS.**
+
+**FR-TIME-02 (D/C, Must) — Comunicazioni tra feudi:** lettere, messaggi diplomatici, richieste e ordini indirizzati ad altri feudi si considerano **spediti**, non **recapitati**, al momento dell'invio. Contenuto ed effetti lato destinatario diventano disponibili **solo al completamento della consegna prevista dal modello messaggeri/trasporti**, con ETA calcolata dal server secondo il calendario della campagna. La semplice presenza di un'app, dashboard, push o connessione diretta non anticipa il recapito. **Non** si presuppone che un messaggio attivi automaticamente un effetto/ordine al recapito: dipende dalla semantica del singolo tipo di messaggio ancora da definire.
+
+**FR-TIME-03 (D/C, Must) — Stesso modello temporale per tutti i client:** un comando impartito da app o browser segue le medesime regole; nessun vantaggio di velocità mobile e nessun secondo orologio simulativo.
+
+**FR-TIME-04 (P/C, Must) — Sicurezza durante pause o ritardi:** se il tick non avanza (server in pausa, offline o non disponibile), un ordine locale accettato **non viene dichiarato applicato** finché un tick utile non lo processa. Regole per accettare/codare comandi durante pause programmate sono **APERTE**.
+
+**FR-TIME-05 (P/C, Must) — Ordini che generano un viaggio:** la decisione locale di *preparare/avviare una spedizione o una carovana* può essere acquisita al tick successivo, ma **marcia, trasporto, intercettazione, arrivo e conseguenze** si svolgono nei tempi e con le condizioni proprie del motore World/Combat/Logistica; il tick non teletrasporta il risultato all'altro feudo.
+
+**A — Confini dei comandi:** autorizzazioni, ordine delle richieste concorrenti, conflitti di risorse al tick, calendario delle consegne, percorso/trasporto, failure e pause regionali devono essere definiti per singola operazione; questa decisione non attribuisce una durata arbitraria a un tick o a un viaggio.
+
 ## 5. Architettura candidata e contratti d'integrazione
 
 **Vincolo D:** unica simulazione autorevole condivisa da browser e futuro mobile. **Proposta P:** separare servizi di lettura (KPI, messaggi, stato) e invio comandi (validazione, accettazione, esito), con API neutre alla piattaforma. Il client può essere nativo o cross-platform: **tecnologia da decidere**.
@@ -176,7 +190,7 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 
 **Macchina stati consigliata per un comando (P):** creato sul client → ricevuto dal backend → validato/rifiutato → pianificato → applicato dal tick o concluso con errore → restituzione dell'esito; ogni salto di stato osservabile. Non confondere **accettazione** con **esecuzione**.
 
-**Due temporalità da specificare (A):** effetto dei comandi amministrativi sul proprio feudo e recapito delle lettere/azioni diplomatiche ad altri feudi. Le notifiche mobile sono un terzo canale informativo: non devono eludere il recapito in-game.
+**Due temporalità DECIDE:** i comandi gestionali sul proprio feudo sono applicati al **primo tick utile**; lettere e comunicazioni verso altri feudi sono consegnate **dopo il tempo di trasporto simulato** (FR-TIME-01…05). Le notifiche mobile sono un terzo canale puramente informativo e non eludono il recapito in-game. Durata esatta del tick e condizioni di pausa rimangono aperte.
 
 ## 6. Requisiti non funzionali e qualità
 
@@ -224,15 +238,21 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 
 **AT-12 — Nessun modulo fittizio:** ogni sezione obbligatoria è alimentata da dati e azioni reali; se il backend World/Feudal o i messaggi inter-giocatore non sono disponibili, il lancio pubblico non è pronto, non si riduce tacitamente al piano A/C.
 
+**AT-13 — Comando locale al tick:** un giocatore modifica l'aliquota sul proprio feudo dal telefono; il server valida l'ordine, lo mostra come *in attesa*, e lo applica una sola volta al primo tick utile. Il browser vede il valore solo dopo conferma del tick; prima non è spacciato per già applicato.
+
+**AT-14 — Lettera inter-feudo:** un signore invia una lettera a un altro feudo. Il mittente vede *in transito*, il destinatario non può leggerla (nemmeno chiamando direttamente le API) prima del recapito simulato; ricezione e relativi eventi si manifestano soltanto dopo consegna reale nel calendario.
+
+**AT-15 — Indipendenza dal canale e pausa:** browser e mobile producono lo stesso esito temporale. Se il server non processa tick, un comando accettato resta *non applicato*. Nessuna notifica anticipa la conoscenza di un contenuto che non è ancora stato consegnato.
+
 ## 8. Roadmap tecnica proposta — primo rilascio completo (nessuna data approvata)
 
 | Fase | Deliverable | Dipendenze / criterio di uscita |
 | --- | --- | --- |
-| **F0 — Contratti** | Membership, permessi, catalogo dei comandi, snapshot, temporalità messaggi e ordini | Requisiti di dettaglio e acceptance criteria da approvare |
+| **F0 — Contratti** | Membership, permessi, catalogo comandi, snapshot; implementare contratto **tick successivo vs recapito simulato** | Durata tick, pausa e semantica dei singoli comandi ancora da dettagliare |
 | **F1 — Backend + hub web** | Campagne autorevoli, lobby, dashboard, API lettura e scrittura | World/Feudal, MP-07, persistenza server e autorizzazioni |
 | **F2 — Controllo remoto web completo** | Tutti i domini: economia/lavoro/fisco/cantieri, militare/spedizioni, diplomazia/messaggi, tributi/carovane, mappa | Moduli reali, QA e contratti di comando |
 | **F3 — App alpha/beta interne** | Client mobile Android/iOS con gli stessi comandi, test utenti/dispositivi, sicurezza e accessibilità | F1–F2, test di sincronia con browser |
-| **F4 — Prima release pubblica Android/iOS (B)** | **Controllo remoto completo** di §1.4, tutti i Must e test AT-01…AT-12 | **Gate non derogabile:** nessuna release solo KPI, messaggi o comandi economici parziali |
+| **F4 — Prima release pubblica Android/iOS (B)** | **Controllo remoto completo** di §1.4, tutti i Must e test AT-01…AT-15 | **Gate non derogabile:** nessuna release solo KPI, messaggi o comandi economici parziali |
 | **F5 — Miglioramenti** | Push opzionali, cache offline, archivio storico e ottimizzazioni, se approvati | Decisioni successive |
 
 **DECISO:** completezza del **primo rilascio pubblico**, non una data di pubblicazione. Le fasi incrementali interne non costituiscono una release pubblica ridotta. **A:** stack tecnologico, dettaglio comandi, notifiche push, modalità offline e pianificazione temporale.
@@ -243,7 +263,7 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 - **Persistenza a singola colonia:** schema Supabase attuale con settlements e chiave user_id + coordinate cella; manca campaign_id. Migrazione e regole autorevoli vanno progettate prima della app multi-server.
 - **Centro di controllo già presente ma locale al runtime:** le nove viste non equivalgono a API sicure/remote.
 - **Branch messages separata:** ha un sistema di lettere con ETA e report, ma destinatari esterni astratti e nessun multiplayer inter-feudo autentico; occorre audit/porting selettivo, non merge cieco.
-- **Coerenza temporale:** multiplayer a ×1, ma durata reale delle campagne, pause regionali, rapporto calendario/tempo reale e tempi degli ordini sono ancora aperti.
+- **Coerenza temporale:** multiplayer a ×1; **DECISO** amministrazione locale al tick successivo e messaggi inter-feudo al recapito simulato. Restano aperti durata del tick, durata campagna, pause regionali e dettagli dei viaggi.
 - **Governance:** nessun privilegio feudale deve essere dedotto solo da proprietà o nickname, senza contratti server-side.
 
 ## 10. Questioni aperte da cristallizzare
@@ -251,7 +271,7 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 | Q | Domanda | Impatto |
 | --- | --- | --- |
 | **Q-01 — RISOLTA (B)** | Primo rilascio pubblico con **controllo remoto completo**: economia, lavoratori, fisco, cantieri già localizzati, spedizioni/militare strategico, diplomazia/messaggi, tributi/carovane, mappa e lobby multi-campagna. Alpha/beta interne possono essere progressive. | **DECISO**; catalogo dei singoli comandi ancora aperto |
-| **Q-02** | I comandi al proprio feudo sono applicati al tick successivo o hanno un tempo di comunicazione? | Backend e UX degli ordini |
+| **Q-02 — RISOLTA** | **Ordini al proprio feudo: primo tick utile, senza messaggero. Comunicazioni inter-feudo: trasporto e recapito simulati.** | **DECISO** — durata del tick, pause, categorie e conseguenze specifiche da dettagliare |
 | **Q-03** | I KPI propri sono live mentre quelli dei vassalli arrivano per rapporto, o tutti live? | Visibilità e diplomazia |
 | **Q-04** | Quando il server regionale è in pausa, quali letture e azioni sono possibili? | Offline/server lifecycle |
 | **Q-05** | Push su attacco, lettere, allarmi, scorte e fine spedizione: opt-in, priorità, silenziamento? | Notifiche, anti-FOMO |
@@ -263,6 +283,6 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 
 ## 11. Definition of Ready della SRS
 
-L'SRS potrà essere promossa da **bozza v0.2** a **baseline approvata** soltanto quando: (1) le questioni **Q-02…Q-10** prioritizzate avranno risposta o una decisione esplicita di rinvio (**Q-01 risolta: B**); (2) per ogni funzione Must sarà disponibile una sorgente autorevole o una dipendenza di backend documentata; (3) saranno definiti permessi dei ruoli e catalogo di tutti i comandi; (4) saranno approvati criteri di accettazione e gate B; (5) sarà aggiornata la tracciabilità verso backlog e test.
+L'SRS potrà essere promossa da **bozza v0.2** a **baseline approvata** soltanto quando: (1) le questioni **Q-03…Q-10** prioritizzate avranno risposta o una decisione esplicita di rinvio (**Q-01 risolta: B; Q-02 risolta: doppia temporalità**); (2) per ogni funzione Must sarà disponibile una sorgente autorevole o una dipendenza di backend documentata; (3) saranno definiti permessi dei ruoli e catalogo di tutti i comandi; (4) saranno approvati criteri di accettazione e gate B; (5) sarà aggiornata la tracciabilità verso backlog e test.
 
 **Nessuna funzionalità mobile è stata implementata da questo documento.**
