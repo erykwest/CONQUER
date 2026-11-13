@@ -98,7 +98,7 @@ test('tithe in kind: the castle stores get due × efficiency, the owner keeps th
   near(kept,100-10*.75);near(econ.castle.food,7.5);
   near(T.state().week.due.tithe,10);
 });
-test('Saturday: testatico from L1/L2 wallets, workshop dues from L3, unrest only on the payers',()=>{
+test('Saturday: testatico from L1/L2 wallets, workshop dues from L2, unrest only on the payers',()=>{
   const {T,econ,pop}=world({structures:[townhall(2)]});
   T.setRate('poll',.3);T.setRate('dues',20);
   near(T.accrueDues(50,null),50*.2*.75);
@@ -106,8 +106,8 @@ test('Saturday: testatico from L1/L2 wallets, workshop dues from L3, unrest only
   T.weekly(12);
   const poll=(pop.L1+pop.L2)*.3*.75;
   near(econ.castleGold,gold+poll+7.5);
-  near(econ.wallet.L1,100-pop.L1*.3*.75);near(econ.wallet.L3,100-7.5);
-  near(econ.happiness.L1,49);near(econ.happiness.L2,49);near(econ.happiness.L3,50-.8);
+  near(econ.wallet.L1,100-pop.L1*.3*.75);near(econ.wallet.L2,100-pop.L2*.3*.75-7.5);near(econ.wallet.L3,100);
+  near(econ.happiness.L1,49);near(econ.happiness.L2,49-.8);near(econ.happiness.L3,50);
   near(econ.happiness.L4,50);
   const last=T.snapshot().last;
   near(last.due.poll,(pop.L1+pop.L2)*.3);near(last.collected.dues,7.5);

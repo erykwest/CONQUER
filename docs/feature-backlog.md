@@ -1,5 +1,27 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+## 2026-11-13 - Preparazione merge PR #206
+
+Preparazione merge PR #206: main aggiornato riconciliato mantenendo moduli e documenti di entrambi i branch. Catalogo Wiki rigenerato. Gilda riferita agli artigiani L2; dazio botteghe e relativo malcontento addebitati a L2 anziche L3, con regressione riprodotta prima del fix. Fondazione: cinque scenari superati isolatamente con Node 22, ma timing intermittente oltre 100 ms nella suite anche su Node 22; verifica Actions ancora necessaria. Nessuna soglia allentata. Suite completa e Actions da completare prima del merge. Nessuna nuova funzione demografica, giudiziaria o archetipo edilizio.
+
+## 2026-11-13 - Verifica CI PR #206
+
+Corretta asserzione livestock obsoleta dopo SOC-CLASS-02. Test comportamentali su selettore agricolo reale, riserve cave, esclusione allevatori e conservazione della vocazione su 400 case migrate superati. Suite completa e CI da completare prima del merge. Nessuna modifica runtime o bilanciamento; ROADMAP e DECISIONS invariate. Demografia, 12 archetipi e funzioni giudiziarie fuori scope.
+
+## SOC-CLASS-02 — Fusione L1 e istituzione istruiti L3 (12/11/2026)
+
+**IMPLEMENTAZIONE SU PR #206, non ancora mergiata.** Popolazione sociale permanente L1 servi (compresi ex L2 minatori/cavatori), L2 artigiani (ex L3), L3 istruiti/mercanti (ex L4), L4 nobili e rendite. Migrazione save locali/cloud, census e denaro conservati, lavori L1 e botteghe L2, commercio/servizi L3, lealtà L4. [Specifica e limiti](CIVIL-CLASS-MIGRATION.md). **DA FARE:** vera migrazione demografica, Job Manager artigiani, servizi amministrativi di istruiti, ricostruzione case e densità D1–D3, test completi e approvazione ripartizione monetaria.
+
+
+## CIV-EVT-01 — Fiere, feste e giostre: effetti sociali (12/11/2026)
+
+**Skeleton sul branch PR #206, non attivo e non merge.** Otto eventi catalogati con effetto proposto su felicità dei servi L1, artigiani L2 e borghesi L3, e lealtà dei nobili L4. Prestigio locale temporaneo proiettato sulle heatmap, senza nuovi overlay o sistemi economici. Si riusano gli allestimenti già esistenti; `feast` richiede `civicKind` per distinguere fiera, festa religiosa, raccolto e banchetto. [Contratto](CIVIC-EVENT-EFFECTS-SKELETON.md). **Aperti:** integrazione con UI eventi, vero roster partecipanti, risorse, felicità insediamento, migrazioni, salvataggi, QA Node/browser e CI.
+
+
+## URB-HEAT-01 — Quattro heatmap e 12 archetipi abitativi (12/11/2026)
+
+**Skeleton su `feature/urban-heatmap-skeleton-20261112`, non merge né gameplay attivo.** Domanda abitativa multicanale L1–L4, prestigio, sicurezza e crimine locale; D1–D3 determina la densità del lotto Voronoi, mentre L1–L4 determina il template completo della casa. Nuova gerarchia sociale L1 lavoratori, L2 artigiani, L3 borghesi istruiti, L4 nobiltà (contratto in [decisioni](context/DECISIONS.md)). `src/settlement-urban-heatmaps.js`, `qa/urban-heatmaps-regression.cjs`, [specifica e dipendenze](URBAN-HEATMAP-SKELETON.md). **Aperti:** integrazione con Crime, mura/guardie, Job Manager, crescita lotti, ricostruzione, migrazione, QA browser e salvataggi.
+
 ## 2026-11-10 — FISCO-01 · Bargello e Palazzo del Balivo (fase A: modelli)
 
 - **IMPLEMENTATO SU BRANCH `feature/bargello-balivo`, NON MERGE:** due civici nuovi nel Builder (Civics): **Bargello** presso un pozzo di quartiere (uno per pozzo, entro 9U, L1–L2, torretta d'angolo) e **Palazzo del Balivo** nel contado (fuori dalle zone abitate, ≥12U dai pozzi, ≥20U da un altro Balivo, L1–L2). Modelli Blender, cantiere (L1 a graticcio, L2 in muratura), crollo con la torretta, incendio solo L1, cutaway per piani, Lab e Codex.

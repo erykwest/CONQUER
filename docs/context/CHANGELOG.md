@@ -1,15 +1,39 @@
 # Livello 5 — Diario delle variazioni del contesto
 
-## 2026-11-13 — FIELD-LEND · Contadini senza lavoro al campo
+## 2026-11-13 — FIELD-LEND · Contadini senza lavoro al campo (rifatta su SOC-CLASS-02)
 
-13/11/2026 — `fix/idle-peasants` (pre-merge):
-- Decisione mattutina del lavoro agricolo: striscia propria, poi striscia aperta di un altro campo in stagione, poi bracciante nel pool L1 in coda agli L1 (prima dei pastori).
-- Prestito solo nei mesi con lavoro agricolo e nella crescita di maggio–giugno.
+13/11/2026 — `fix/idle-peasants` (pre-merge), riallineata a main 965d42c3 dopo SOC-CLASS-02 (campi L1):
+- Abbandonato il prestito L2 → L1 della prima versione: con #206 i campi sono L1 e i contadini senza lavoro restano nel pool L1.
+- Il campo chiede ogni giorno solo le strisce aperte al mattino (`fieldMorningDemand`), congelate fino a sera; in crescita o fuori stagione chiede 0.
+- I contadini disegnati alle strisce sono esattamente gli L1 che l'economia assegna al campo (`assignedL1`), una striscia per adulto (assegnazioni per id residente); la squadra di fondazione non va ai campi.
 - Chi finisce la striscia a metà turno rientra a piedi; nessuna riassegnazione a metà turno; niente attrezzo su una striscia finita.
-- Il campo in stagione impiega solo le strisce aperte; il bracciante esce dalla quota L2; nuovi campi `lentL2` e `lentIdle` in `laborAllocation`, `farmhands` nel Job Manager L1, `lentToL1` nel Job Manager L2.
-- Nuova `qa/idle-farmers-regression.cjs`; `qa/fields-regression.cjs` adeguata alla decisione mattutina; entrambe nel workflow economico.
+- `qa/idle-farmers-regression.cjs` riscritta (7 casi) e `qa/fields-regression.cjs` riconciliata; entrambe nel workflow economico.
 
-STATUS, BACKLOG, CHANGELOG e DECISIONS (D-FIELD-LEND-261113) aggiornati; ROADMAP invariata.
+STATUS, BACKLOG, CHANGELOG e DECISIONS (D-FIELD-LEND-261113, riscritta) aggiornati; ROADMAP invariata.
+
+## 2026-11-13 - Preparazione merge PR #206
+
+Preparazione merge PR #206: main aggiornato riconciliato mantenendo moduli e documenti di entrambi i branch. Catalogo Wiki rigenerato. Gilda riferita agli artigiani L2; dazio botteghe e relativo malcontento addebitati a L2 anziche L3, con regressione riprodotta prima del fix. Fondazione: cinque scenari superati isolatamente con Node 22, ma timing intermittente oltre 100 ms nella suite anche su Node 22; verifica Actions ancora necessaria. Nessuna soglia allentata. Suite completa e Actions da completare prima del merge. Nessuna nuova funzione demografica, giudiziaria o archetipo edilizio.
+
+## 2026-11-13 - Verifica CI PR #206
+
+Corretta asserzione livestock obsoleta dopo SOC-CLASS-02. Test comportamentali su selettore agricolo reale, riserve cave, esclusione allevatori e conservazione della vocazione su 400 case migrate superati. Suite completa e CI da completare prima del merge. Nessuna modifica runtime o bilanciamento; ROADMAP e DECISIONS invariate. Demografia, 12 archetipi e funzioni giudiziarie fuori scope.
+
+## 2026-11-12 — SOC-CLASS-02 · Migrazione ceti sul branch PR #206
+
+Migratore puro `ConquerSocialClasses` e applicazione una tantum ai save locali/cloud; census house L1+ex-L2 con abitanti conservati, L2 artigiani e L3 istruiti/mercanti, L4 nobiltà. Riassegnate professioni economiche, botteghe, routine sociali e fondi commerciali; nuova lealtà nobiliare; QA dedicata e regressioni aggiornate. Partizione 25/75 del vecchio portafoglio L4 da approvare. Codice su branch, non merge, CI completa da verificare; immigrazione/ricostruzione D1–D3 NON attivate. [Specifiche](../CIVIL-CLASS-MIGRATION.md).
+
+
+## 2026-11-12 — CIV-EVT-01 · Skeleton degli effetti civili (branch PR #206)
+
+Aggiunto `ConquerCivicEventEffects`, API read-only per 8 tipi di eventi civili con bonus differenziati di felicità L1–L3, lealtà L4, ripetizione e prestigio temporaneo; collegamento di anteprima alle heatmap PR #206. Riutilizzati allestimenti/fasi esistenti, nessun mutamento di salvataggi, costi o popolazione. Aggiunta regressione alla suite urbana, [contratto](../CIVIC-EVENT-EFFECTS-SKELETON.md) e decisione D-CIV-EVT-261112. Sul branch, non merge: Node/browser/CI da verificare.
+
+
+## 2026-11-12 — URB-HEAT-01 · Skeleton territoriale (branch feature)
+
+Aggiunto modulo isolato `ConquerUrbanHeatmaps` con quattro mappe concettuali (domanda L1–L4, prestigio, sicurezza, crimine), sette canali e lettura del lotto; script caricato senza simulazione attiva. Aggiunta regressione richiamata da QA urbana e specifica `docs/URBAN-HEATMAP-SKELETON.md`. **Sul branch, non merge; QA/CI da verificare; nessuna migrazione o modifica gameplay.** Contratti in D-URB-HEAT-261112. ROADMAP invariata: nessuna milestone ripianificata.
+
+
 ## 2026-11-13 — GILDA-01 fase 1 · Bonus delle botteghe e Gilda unica
 
 13/11/2026 — `feature/gilda-fase1` (pre-merge):

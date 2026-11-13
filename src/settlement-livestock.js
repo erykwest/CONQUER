@@ -16,7 +16,8 @@
   const lerp=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
   function kindForHouse(house){
     if(!house)return null;
-    const level=houseLevel(house);
+    const level=Number(house.legacyLivestockTier)||
+      (window.ConquerSocialClasses?.tierOfHouse?.(house)??houseLevel(house));
     if(level===1){
       // Near a pier or quay with a free berth: a fisherman's household (settlement-fishers.js).
       if(window.ConquerFishers?.isFisher(house))return 'fisher';

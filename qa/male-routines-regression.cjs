@@ -113,7 +113,7 @@ check('resident dispatch keeps day jobs before 18:00, overrides them on weekends
   };
   const ctx=vm.createContext({State,window,Map,Math,Number,Object,Array,
     houseLevel:h=>h.houseLevel,peasantHash:()=>12345,
-    artisanPosition:()=>({x:21,y:0}),merchantPosition:()=>({x:31,y:0}),
+    artisanPosition:()=>({x:21,y:0}),merchantPosition:()=>({x:31,y:0}),educatedPosition:()=>({x:31,y:0}),
     elitePosition:()=>({x:41,y:0})});
   vm.runInContext(residents,ctx,{filename:'settlement-population-residents.js'});
   const run=(tier,person)=>vm.runInContext('residentClassPosition('+JSON.stringify({id:'h',houseLevel:tier})+
@@ -121,7 +121,7 @@ check('resident dispatch keeps day jobs before 18:00, overrides them on weekends
   // L1 builders and loggers are drawn by the construction commute in drawPeasants.
   assert.equal(run(1,man),null,'an L1 without field work stays out of the leisure cycle on weekday mornings');
   assert.equal(run(2,man).x,21,'original L2 cycle must survive on weekday mornings');
-  assert.equal(run(3,man).x,21,'L3 men work their own workshop or service on weekday mornings');
+  assert.equal(run(3,man).x,31,'L3 educated men work in commerce or municipal services');
   assert.equal(run(4,man).x,41,'original L4 cycle must survive on weekday mornings');
   for(const time of [.76,5.25,6.25]){
     State.clock.day=time;
