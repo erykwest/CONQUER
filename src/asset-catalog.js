@@ -50,7 +50,10 @@
     // The in-game 2D horse (settlement-animals.js) and everything that rides or pulls with it.
     ['horse2d','Cavallo 2D (passo)','Fauna','Cavalli 2D'],['horse2dGraze','Cavallo 2D (pascola)','Fauna','Cavalli 2D'],
     ['knight2d','Cavaliere a cavallo 2D','Truppe','Cavalli 2D'],['messenger2d','Messaggero a cavallo 2D','Truppe','Cavalli 2D'],
-    ['wagonTeam','Carro con tiro 2D','Veicoli','Carri']
+    ['wagonTeam','Carro con tiro 2D','Veicoli','Carri'],
+    // The other in-game 2D animals (livestock and wildlife), same painter as the horse.
+    ...[['sheep','Pecora'],['goat','Capra'],['cow','Mucca'],['deer','Cerva'],['stag','Cervo'],['wolf','Lupo'],['boar','Cinghiale'],['bear','Orso']]
+      .map(([k,name])=>[k+'2d',name+' 2D (passo)','Fauna','Animali 2D'])
   ];
   // Work animations: the villager with each tool of settlement-work-anim.js (action -> tool as in the Lab).
   const WORK=[['dig','shovel','Scavatore (pala)'],['chop','axe','Taglialegna (ascia)'],['pick','pickaxe','Cavatore (piccone)'],
@@ -467,6 +470,11 @@
     if(subject==='horse2d'||subject==='horse2dGraze'){
       if(A?.drawAnimal){const graze=subject==='horse2dGraze';
         A.drawAnimal('horse',g,w*.5,h*.9,Math.min(w,h)*.5,{t:.15,mode:graze?'browse':'walk',blend:graze?.86:0,facing:1,coat:'brown'});return}
+    }
+    // Other 2D animals at the horse's box size (their own scale undone), mid-stride.
+    const sp2d=/^(\w+)2d$/.exec(subject)?.[1];
+    if(sp2d&&sp2d!=='horse'&&A?.SPECIES?.[sp2d]){
+      A.drawAnimal(sp2d,g,w*.5,h*.9,Math.min(w,h)*.5*1.9/(A.SPECIES[sp2d].scale||1),{t:.15,mode:'walk',facing:1});return;
     }
     if((subject==='knight2d'||subject==='messenger2d')&&M2?.draw&&A){
       M2.draw(g,w*.48,h*.9,Math.min(w,h)*.36,{kind:subject==='knight2d'?'knight':'messenger',mode:'idle',t:0,facing:1,coat:'grey',
