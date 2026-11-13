@@ -11,6 +11,12 @@ on:
       - 'src/settlement-wardrobe.js'
       - 'src/settlement-population-figures.js'
       - 'src/settlement-work-anim.js'
+      - 'src/settlement-shop-cutaway.js'
+      - 'src/settlement-industries.js'
+      - 'src/settlement-shipyard.js'
+      - 'src/settlement-ship-crew.js'
+      - 'src/settlement-vehicles.js'
+      - 'src/settlement-court-people.js'
       - 'qa/wardrobe-regression.cjs'
       - '.github/workflows/wardrobe-regression.yml'
   workflow_dispatch:

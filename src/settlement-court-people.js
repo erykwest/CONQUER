@@ -50,7 +50,8 @@
     });
   }
   // ---------- figures
-  const ROLE_DRESS={judge:['judgeRobe','judgeCap'],clerk:['clerkGown','clerkCap'],prisoner:['prisonerShirt'],executioner:['executionerHood']};
+  const ROLE_DRESS={judge:['judgeRobe','judgeCap'],clerk:['clerkGown','clerkCap'],prisoner:['prisonerShirt'],executioner:['executionerHood'],
+    jailer:['jerkin','leatherCap','keys']};
   const PUBLIC_KINDS=['peasant','peasant','artisan','artisan','merchant'];
   function dotOf(s,a,p){
     const id=s.id+':court:'+a.id,kind=a.role==='public'?PUBLIC_KINDS[hash(id)%PUBLIC_KINDS.length]:['prisoner','executioner','jailer'].includes(a.role)?'peasant':'elite';

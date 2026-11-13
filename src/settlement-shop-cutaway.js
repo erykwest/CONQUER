@@ -410,7 +410,7 @@
   }
   function spotOf(house){
     const r=build(house);if(!r)return null;
-    return{p:r.room.toWorld(r.spot.a,r.spot.b),tool:TRADES[r.kind].tool,facing:facing(r)};
+    return{p:r.room.toWorld(r.spot.a,r.spot.b),tool:TRADES[r.kind].tool,facing:facing(r),kind:r.kind};
   }
   // The shop's artisan waiting at his own door (artisanPosition: an L3 shop operates at home)
   // stands at his bench while the house is open. Elsewhere (market, leisure) he stays where he is.
@@ -424,7 +424,7 @@
   // Asset Lab only: the stage has no population pass, so the open house shows its artisan itself.
   function drawStagedArtisan(house,r){
     const p=r.room.toWorld(r.spot.a,r.spot.b),tool=TRADES[r.kind].tool;
-    const dot={p,id:house.id+':m:0',kind:'artisan',sex:'male',age:'adult',hair:'brown',colors:['#7a6a4f','#5f6e7c']};
+    const dot={p,id:house.id+':m:0',kind:'artisan',role:r.kind,sex:'male',age:'adult',hair:'brown',colors:['#7a6a4f','#5f6e7c']};
     const W=window.ConquerWorkAnim;
     if(tool&&W)W.drawWorkerUnmasked(dot,tool,0,facing(r));
     else if(typeof drawVillagerFigureUnmasked==='function')drawVillagerFigureUnmasked(dot);

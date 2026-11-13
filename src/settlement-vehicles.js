@@ -164,7 +164,7 @@
   }
   // Same on-screen size as livestock, knights and the messenger's 2D horse.
   const teamSize=()=>Math.max(1.5,(State.view.scale||1)*5.75);
-  const DRIVER={kind:'peasant',age:'adult',sex:'male',colors:['#8a6a48','#5d4632'],hair:'#4a3626'};
+  const DRIVER={kind:'peasant',role:'carter',age:'adult',sex:'male',colors:['#8a6a48','#5d4632'],hair:'#4a3626'};
   const COACHMAN={kind:'merchant',age:'adult',sex:'male',colors:['#3f4f6e','#c8a44a'],hair:'#2e2620'};
   // Drivers sit at the front of the bed; the carter walks at the horse's head.
   function drawDriver(c,v){

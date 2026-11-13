@@ -49,6 +49,7 @@ function drawVillagerHead(id,x,y,r,sex='male',cachedHair=null){
   ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();
   ctx.restore();
 }
+const samePoint=(a,b)=>!!a&&!!b&&Math.abs(a.x-b.x)<1e-6&&Math.abs(a.y-b.y)<1e-6;
 // Everything that changes how a villager looks (not where): the key of its 3D figure tile.
 function villagerLookKey(dot){
   const outfit=window.ConquerWardrobe?.outfitFor(dot);
@@ -129,6 +130,9 @@ function drawPeasants(){
         building?constructionWorkerPosition(building.worker,building.site,State.clock.day):
         residentClassPosition(house,resident,day,assignment);
       if(carter&&!p)continue;
+      // The shepherd with his flock (residentClassPosition returned his pasture spot).
+      const shepherd=!building&&!carter&&p&&resident.sex==='male'&&resident.age==='adult'&&resident.index===0&&
+        houseLevel(house)<=2&&samePoint(p,window.ConquerLivestock?.shepherdPosition?.(house));
       // The artisan of an open L3 workshop works at his bench, not at the door.
       const shop=!building&&!carter?window.ConquerShopCutaway?.artisanAt(house,resident,p):null;
       if(shop)p=shop.p;
@@ -146,6 +150,9 @@ function drawPeasants(){
         p,depth:rp.x+rp.y,id:resident.id,kind,sex:resident.sex,age:resident.age,
         hair:resident.hair,colors:resident.colors,
         militia:window.ConquerCombat?.recruitedResident(resident.id)||false,
+        // Work clothes (settlement-wardrobe.js ROLES) while at the job or on the way to it.
+        role:combatP!==undefined?undefined:inShop?shop.kind:building?(building.site.type==='loggingCamp'?'woodcutter':'builder'):
+          carter?'carter':shepherd?'shepherd':undefined,
         work:inShop?(shop.tool&&window.ConquerWorkAnim?{tool:shop.tool,facing:shop.facing}:null):fieldWork(p,assignment,house,resident)
       });
       activeAgents++;
@@ -172,6 +179,7 @@ function drawPeasants(){
     if(residentStride>1&&hash%residentStride!==0)continue;
     const rp=rotateViewPoint(p);
     dots.push({p,depth:rp.x+rp.y,id,kind:'peasant',sex:'male',age:'adult',
+      role:building?(building.site.type==='loggingCamp'?'woodcutter':'builder'):carter?'carter':undefined,
       hair:villagerHair(id),colors:villagerBodyColors(id,'peasant'),militia:false});
     activeAgents++;
   }

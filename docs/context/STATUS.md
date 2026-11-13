@@ -1,5 +1,23 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-13 — Abiti da mestiere (branch `feature/role-outfits`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `ConquerWardrobe.ROLE_PIECES` ha 11 pezzi da lavoro in più: grembiule di cuoio, di tela e del vasaio (con le macchie), farsetto di cuoio allacciato con la cintura, mantelletta, calotta di cuoio, cuffia di lino, cappello di feltro, tocco, berretto da marinaio, mazzo di chiavi alla cintura.
+  - Nuova tabella `ROLES`: 16 mestieri, ognuno con una combinazione di pezzi diversa dagli altri.
+  - `outfitFor(dot)`: se la figura ha `dot.role`, gli slot del mestiere vincono e la stagione riempie solo quelli liberi (per esempio pioggia: il sarto tiene il tocco e prende la mantella).
+- **DOVE NASCE IL RUOLO:**
+  - residenti in `drawPeasants`: bottegaio al banco (`shop.kind`), costruttori e taglialegna nominati anche nel tragitto, carrettiere al piazzale, pastore al pascolo (stessa posizione di `shepherdPosition`), squadra dei fondatori;
+  - lavoratori anonimi (`ConquerWorkAnim.anonymous(id,p,role)`): muratori, taglialegna, cavatori, minatori, carpentieri navali;
+  - `ConquerShipCrew.dot` (marinai e pescatori); `DRIVER` dei veicoli (carrettiere); carceriere del tribunale;
+  - niente ruolo per chi è richiamato dall'allarme.
+- **PROVE LOCALI PASS:**
+  - `wardrobe-regression`, estesa: ogni bottega ha un abito, abiti tutti diversi, priorità sulla stagione, ogni pezzo si disegna, ruolo impostato nei punti di creazione;
+  - `court-people`, `asset-catalog`, `codex-wiki` (export della Wiki rigenerato);
+  - suite `qa/*.cjs`: fallisce solo `founding-regression`, che fallisce uguale su `main` 6b227926; i `*-performance` non sono stati eseguiti.
+- **AUDIT ASSET:** audit completo del Lab con 0 errori e 16 voci nuove («Abiti da mestiere»), riviste anche su un foglio grande, estate e inverno con neve. Nessuna bottega e nessuna figura del tribunale cambia oltre la soglia. Le altre 168 voci cambiate (alberi, torri) sono deriva già presente su main: la baseline non le include.
+- **DA VERIFICARE:** CI del branch.
+
 ## 2026-11-13 — GILDA-01 fase 1 · Bonus delle botteghe e Gilda unica (branch `feature/gilda-fase1`)
 
 - **CODICE SUL BRANCH, NON MERGE:**
