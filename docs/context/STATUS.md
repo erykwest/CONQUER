@@ -1,5 +1,129 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-13 — GILDA-01 fase 1 · Bonus delle botteghe e Gilda unica (branch `feature/gilda-fase1`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - **Modulo `src/settlement-guild.js`** (`window.ConquerGuild`), caricato dopo scolarizzati e commercio in `index.html` e `camp/index.html`: Gilda attiva = completata di livello più alto, a pari livello id minore; bonus +25/+50/+100% × resa dei funzionari (`ConquerEducated.coverage('guild.official')` quando esiste, altrimenti 1); posti 1/2/3; `snapshot()` e `panelHtml()`.
+  - **Commercio:** `ConquerCommerce.daily` produce `1 × (1 + bonus)` per bottega L3 nei giorni feriali; il carrettiere registra la stessa quantità. Nessun consumo di materie finché manca ECO-FIL-01 fase 2.
+  - **Collocamento:** `wellCivicPlacementCheck` rifiuta una seconda Gilda nel villaggio («Only one guild hall per village»); i salvataggi con più Gilde ne fanno lavorare una sola, le altre mostrano «Gilda · inattiva».
+  - **Interfaccia:** scheda Gilda nell'ispettore classico e in UI2 (`GuildPanel`), KPI «Gilda» nel Profilo › Generale.
+  - **Nessun blocco salvato nuovo:** Cassa, quota e salari arrivano con la fase 2.
+- **PROVE LOCALI PASS:**
+  - nuova `qa/guild-regression.cjs`, 7 casi: senza Gilda, bonus per livello, cantiere, Gilda unica e inattiva, resa dei funzionari, vendite del sabato, cablaggio;
+  - `qa/well-civics-regression.cjs` con il rifiuto della seconda Gilda; `qa/l1-carter-market-regression.cjs` aggiornata alla quantità reale;
+  - tutte le 37 voci di `economy-flows-regression.yml` (aggiunta la nuova regressione) e altre 46 regressioni dei workflow che leggono commercio, annessi civici, pannelli, ispettore, shell o `index.html`;
+  - pagina caricata in locale: `ConquerGuild` presente, nessun errore in console.
+- **NON VERIFICATO:** scheda e KPI in una partita reale con Gilda costruita (coperti dai test di markup).
+
+## 2026-11-13 — GILDA-01 · Gilda (solo specifica, branch `docs/gilda-01`)
+
+- **SOLO DOCUMENTAZIONE:** specifica GILDA-01 in BACKLOG e decisione D-GILDA-261113 in DECISIONS. Nessun file di codice, test o asset cambiato; nessuna prova da eseguire.
+- **Stato live verificato su `main` e93b22b5:** la Gilda esiste come civico L1–L3 legato a un pozzo, con modelli e cutaway, ma senza effetti di gioco; le botteghe L3 producono 1 unità al giorno feriale.
+- **Prossimo passo:** fase 1 (bonus per livello con resa transitoria 1, Gilda unica per villaggio, scheda) solo dopo conferma del product owner.
+
+## 2026-11-13 — SCRIPT-01 · Specifica dello Scriptorium (solo documentazione)
+
+- **SPECIFICA APPROVATA, NESSUN CODICE:** maestro per Scriptorium, scuola ferma senza maestro, ingaggio del chierico, +1 Prestigio, codici miniati ARTE, interno in sezione. Dettagli in [BACKLOG](BACKLOG.md) e [D-SCRIPT-261113](DECISIONS.md).
+- **STATO LIVE verificato su `main` e93b22b5:** annesso `scriptorium` con solo modello esterno e nessun effetto; `ConquerEducated` senza corsi né ruoli (SCOL-01 fasi 2–3 aperte).
+- Nessun test eseguito: nessun codice cambiato.
+
+## 2026-11-12 — SCOL-01 fase 1 · Scolarizzati: dati, tetto, ingaggio (branch `feature/scol-01-fase1`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - **Modulo `src/settlement-educated.js`** (`window.ConquerEducated`), caricato dopo il commercio in `index.html` e `camp/index.html`:
+    - blocco `State.economy.educated` con `lay` e `clergy` ciascuno `{L3, L4}`, `homeless`, `courses`, `hires`, `wageMul`, `roles` e `lastMonthDay`;
+    - migrazione lazy a zero; `economy.version` invariato.
+  - **Tetto** `floor(L3/3) + floor(L4/3)`.
+  - **Controllo giornaliero**, agganciato a `ConquerEconomy.tick` dopo `daily`:
+    - l'eccedenza esce prima dai laici, passa ai posti liberi dell'altra classe e altrimenti resta «senza alloggio»;
+    - i senza alloggio rientrano quando si libera un posto ed emigrano dopo 28 giorni;
+    - gli ingaggi in viaggio arrivano come laici e occupano prima L3, poi L4. Senza posto all'arrivo, l'oro torna al castello.
+  - **Ingaggio:** `hire()` costa 40 oro dal castello, con arrivo dopo 14 giorni. È rifiutato senza oro o se i posti liberi sono già promessi agli ingaggi in viaggio.
+  - **Interfaccia:**
+    - `ConquerGame.read.economy().educated` e il comando `hireEducated`;
+    - sotto-righe «di cui scolarizzati» nelle carte «Classi sociali» e «Popolazione per classe»;
+    - nuova scheda «L3 · Istruiti» nel Job Manager (KPI, ingaggio, posti per classe, segnaposto dei ruoli);
+    - tooltip della popolazione nella shell UI2;
+    - `panelHistory[].educated`.
+  - **Ancora nessun effetto sul lavoro:** i ruoli non esistono ancora, quindi gli scolarizzati restano lavoratori L3/L4 comuni.
+- **PROVE LOCALI PASS:**
+  - nuova `qa/educated-regression.cjs`, 10 casi: tetto, migrazione, ingaggio e arrivo, rifiuti, rimborso, L3 prima di L4, eccedenza e rientro, emigrazione a 28 giorni, salvataggio JSON, limiti di lavoro invariati;
+  - tutte le 31 voci di `economy-flows-regression.yml`, dove la nuova regressione è stata aggiunta;
+  - le regressioni che leggono `index.html`.
+  - Le 5 prove di prestazioni basate su Playwright non sono eseguibili in locale (manca il modulo), quindi non sono attestate.
+- **PROVA BROWSER LOCALE:** con un villaggio di prova in memoria (una casa L3 e una L4), la scheda «L3 · Istruiti» mostra 7 posti, contatori e viaggio. Il pulsante d'ingaggio scala 40 oro e aggiunge un arrivo. Nessun errore in console.
+- **DA VERIFICARE:** CI del branch; prova in una partita reale con case L3/L4 costruite.
+
+## 2026-11-12 — SCOL-01 · Scolarizzati (solo specifica, branch `docs/scolarizzati`)
+
+- **NESSUN CODICE:** specifica approvata in [BACKLOG](BACKLOG.md), contratto [D-SCOL-261112](DECISIONS.md). Nessun test eseguito né richiesto.
+- **STATO LIVE VERIFICATO SU `main` 431af30d:**
+  - La popolazione per classe deriva dal livello delle case e non si salva.
+  - Nessuna mobilità di classe né immigrazione.
+  - Soldati come unico contatore sottratto a una classe.
+  - Il ciclo `monthly` non paga mai salari L3.
+  - Scriptorium senza effetti.
+  - Gestori di Chiesa e Locanda assegnati solo dai test.
+  - Giudici del tribunale decorativi.
+  - Nessun riferimento a istruzione, esattori o funzionari in `src/`.
+- **PROSSIMO:** fase 1 (dati, tetto, salvataggio, pannelli, ingaggio) su un branch nuovo da `main`, solo dopo conferma esplicita.
+
+## 2026-11-12 — FISCO-01 fase B · Erario, riscossione e decreti (branch `feature/bargello-balivo`)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:**
+  - `src/settlement-treasury.js` (`ConquerTreasury`), con lo stato in `State.economy.treasury`.
+  - Scheda ERARIO nel Profilo (`settlement-panels.js`, `settlement-heraldry.js`, `index.html`).
+  - Agganci in economia (decima, calmiere, tick), commercio (dazio, pedaggio) e combattimento (leva straordinaria via `leviedResident`/`refreshLevy`).
+  - Cursore `levy` rimosso da UI1 e UI2.
+  - Codex di Bargello e Balivo aggiornati.
+- **PROVE ESEGUITE:**
+  - `qa/treasury-regression.cjs`: 18 PASS, aggiunto al workflow Economy flows.
+  - Regressioni di economia, commercio, routine, convogli, codex e runtime: PASS in locale.
+  - Browser su `localhost:4431`: scheda Erario con efficienza 80% (Municipio L2 con sala delle guardie), quartiere con Bargello L1 al 70%, decreto Festa emanato, nessun errore in console.
+- **NON PROVATO:**
+  - Una partita lunga con riscossione reale del sabato. La logica settimanale è coperta solo dal test Node.
+  - La leva vista in gioco: gli uomini che vanno all'armeria senza allarme.
+  - La CI sul nuovo head.
+- **APERTI:** vedi BACKLOG FISCO-01. Pedaggio senza arrivi reali, CRIME non caricato, leva fuori dalla riserva e dai turni, giustizia ancora in proposta.
+
+## 2026-11-10 — FISCO-01 fase A · Bargello e Palazzo del Balivo (branch `feature/bargello-balivo`)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:** modelli `bargello1/2` (parti `hall`, `tower`) e `balivo1/2` (`hall`) in `tools/blender/build_civic.py`, generati con Blender 4.4 in `src/assets/civic-models.js`. I 53 modelli civici esistenti restano identici (confronto del JSON) e la palette è invariata.
+- **RUNTIME:** tipi civici con livelli L1–L2 (`civicMaxLevel`/`civicLevels`), costi e tempi, impronte, altezze, Builder e shell UI, etichette, collocamento (Bargello come `WELL_CIVIC_TYPES`; Balivo con `balivoPlacementCheck`), cantiere a graticcio L1, crollo con la torretta, incendio L1, fallback 2.5D/WebGL, cutaway per piani con stanze fisse e nuovo arredo `exactor`, Codex (2 voci approvate, catalogo rigenerato).
+- **PROVE ESEGUITE IN LOCALE:**
+  - 169 suite `qa/*.cjs`: tutte PASS tranne `mass-battle-performance` e `movement-collapse-performance`, che falliscono identiche su `main` (import di `circle/defensive-topology.mjs` e soglie di tempo); `asset-audit-scope.cjs` è uno strumento CI.
+  - `well-civics-regression` estesa con 3 test FISCO-01; conteggi Codex +2.
+  - Audit Lab sulle 4 voci nuove: 0 errori, 0 avvisi; baseline unita a mano (+4 voci, nessuna voce esistente toccata), secondo giro 0 nuovi / 0 cambiati.
+  - Smoke nel browser: modelli caricati, 8 cutaway (2 tipi × 2 livelli × 2 piani) disegnati senza errori, console pulita.
+- **NON VERIFICATO:** aspetto del cutaway a schermo (catture non disponibili con la finestra nascosta); GitHub Actions; collocamento giocato in partita. Nessun effetto di gioco (fase B).
+
+
+## 2026-11-12 — CHIESA-01 fase 1 · Cassa della Chiesa (branch `feature/chiesa-fase1`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - nuovo `src/settlement-church.js` (`ConquerChurch`): Cassa e Favore in `State.economy.church`, migrazione lazy; offerte domenicali per classe dai borsellini (quota × fedeli serviti × resa del culto × (0,5 + felicità/100)); lasciti annui del 2% di L3/L4 con felicità ≥ 50; dono 10/50/100 dal `castleGold`;
+  - `ConquerEconomy.tick` chiama la Chiesa la domenica, a fine mese e a fine anno (i lasciti prima della chiusura del mese);
+  - scheda «Chiesa» nell'ispettore classico (`settlement-app-rooms.js`) e in UI v2 (`ChurchPanel` in `ui/shell.js`); riquadro «Chiesa» nel Profilo › Generale (`settlement-panels.js`);
+  - `index.html`: script dopo `settlement-commerce.js` e versioni dei file toccati aggiornate; `wiki/catalog.json` rigenerato (impronta dei sorgenti).
+- **PROVE LOCALI PASS:**
+  - `qa/church-regression.cjs` (11 casi), aggiunto al workflow Economy flows;
+  - tutti i 31 comandi di `economy-flows-regression.yml`; `founding-regression` è instabile anche su `main` (risposta a tempo) e passa rilanciandolo;
+  - multi-wells, infirmary, events-builder, cutaway-floors, crime-buildings, codex-wiki, codex-catalog.
+- **BROWSER (preview locale, chiesa iniettata da console):** nessun errore in console; la scheda mostra Cassa, Favore, entrate e fedeli serviti; «Dona 10» sposta 10 oro dal castello alla Cassa e porta il Favore da 55 a 56; il riquadro «Chiesa 63,6 oro · Favore 56/100» compare nel Profilo › Generale.
+- **NON VERIFICATO:** CI su GitHub (branch non pushato); partita reale con chiesa costruita dal Builder.
+
+## 2026-11-12 — CHIESA-01 · La Chiesa come entità autonoma (solo specifica, branch `docs/chiesa`)
+
+- **NESSUN CODICE:** specifica approvata in [BACKLOG](BACKLOG.md), decisione [D-CHIESA-261112](DECISIONS.md). Nessun test eseguito né richiesto.
+- **STATO LIVE VERIFICATO SU `main` 431af30d:**
+  - `SERVICE_KINDS.church` ha `income:'not-simulated'` e il gestore si assegna solo nei test.
+  - Gli annessi della Chiesa non hanno effetti.
+  - Non esiste un fondo della Chiesa: solo `wallet.L1–L4` e `castleGold`.
+  - `monthly` non paga salari oltre la classe 2.
+  - La felicità si muove solo con cibo, razioni e infermeria.
+  - La Cappella del castello conta solo per il prestigio nell'assedio.
+- **DIPENDE DA:** SCOL-01 (branch `docs/scolarizzati`, non su `main`) fino alla fase 3; FISCO-01 fase B; CRIME.
+- **PROSSIMO:** fase 1 (Cassa, offerte, lasciti, dono, scheda) su un branch nuovo da `main`, solo dopo conferma esplicita e dopo la fase 3 di SCOL-01.
 
 ## 2026-11-10 — ECO-FIL-01 fase 1 · Miniera → metallo (branch `feature/eco-fil-01-miniera-metallo`)
 
@@ -934,7 +1058,7 @@ Baseline verificata: main d8c89556d504a48cf64bb2c9927a5620ec1772b5. Nessuna PR n
 - **Codice presente su branch (non ancora `main`):** modalità Difendi — rail Comando/Zone/Pattuglie/Allarme (Prove d'assedio solo con `?dev=1`) e scheda; `ConquerCombat.uiState()` in sola lettura; i comandi premono i pulsanti del modulo di combattimento, nessuna mutazione diretta di `State` dalla UI. `settlement-combat.js?v=` conserva il suffisso fissato da `zones-visual-regression`.
 - **QA locale (28/10):** 73/77 regressioni `qa/*.cjs` PASS; i 4 FAIL sono le prove di performance che richiedono Playwright (non installato in locale), identiche su `main`. **Non eseguite:** `qa/ui-combat-regression.mjs` (browser) e verifica visiva della modalità Difendi in partita. CI da verificare sulla PR.
 - **Ancora aperto (fase 5):** messaggi di stato/log in i18n, pannello attraversamenti come dati, UI v2 come default e rimozione di `settlement-builder-ux.js`.
-- **Fix rapidi (branch `fix/ui-v2-quickfixes`, 10/11/2026, non ancora `main`):** barra risorse con Argilla (`T.resources.clay`); `Toast` traduce le righe di stato note (`T.status`) e nasconde gli id grezzi degli strumenti; `ConquerGame.snapshot().saveStatus` = `saved|unsaved|error`, così «local save failed» e «cloud error» non appaiono più come «Salvato»; tooltip `u2-tip-bottom` per i controlli nelle barre in alto e posizione orizzontale limitata alla finestra; media query delle barre in alto a 1220px con risorse limitate a `100% - 480px`; valori di Panoramica (`u2-stats-3`) a capo; stringhe di cantiere, Gestisci, Difendi e Codex in `i18n-it.js`. Versioni `?v=ui2-quickfix-2` per tema e API, `ui2-quickfix-2-lhroof1` per shell e i18n (dopo l'allineamento a `main` dell'11/11). **Prove:** 165/170 `qa/*.cjs` PASS (i 5 FAIL: quattro prove di performance senza Playwright e `asset-audit-scope` che richiede `--github-output`); verifica in browser locale a 1024, 1180 e 1440px (barre, tooltip, stato, salvataggio, Esc chiude la scheda strumento). **Non eseguite:** `qa/ui-combat-regression.mjs` e CI.
+- **Fix rapidi (branch `fix/ui-v2-quickfixes`, 10/11/2026, non ancora `main`):** barra risorse con Argilla (`T.resources.clay`); `Toast` traduce le righe di stato note (`T.status`) e nasconde gli id grezzi degli strumenti; `ConquerGame.snapshot().saveStatus` = `saved|unsaved|error`, così «local save failed» e «cloud error» non appaiono più come «Salvato»; tooltip `u2-tip-bottom` per i controlli nelle barre in alto e posizione orizzontale limitata alla finestra; media query delle barre in alto a 1220px con risorse limitate a `100% - 480px`; valori di Panoramica (`u2-stats-3`) a capo; stringhe di cantiere, Gestisci, Difendi e Codex in `i18n-it.js`. Versioni `?v=ui2-quickfix-3…` per tema, API, shell e i18n (dopo l'allineamento a `main` del 13/11). **Prove:** 165/170 `qa/*.cjs` PASS (i 5 FAIL: quattro prove di performance senza Playwright e `asset-audit-scope` che richiede `--github-output`); verifica in browser locale a 1024, 1180 e 1440px (barre, tooltip, stato, salvataggio, Esc chiude la scheda strumento). **Non eseguite:** `qa/ui-combat-regression.mjs` e CI.
 
 ## Fix main: strade, DEV e WebGL (23/10/2026, branch di fix)
 

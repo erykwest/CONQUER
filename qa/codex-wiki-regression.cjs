@@ -4,7 +4,7 @@ const root=path.join(__dirname,'..'),{generate}=require('../tools/export-codex.c
 const sandbox=vm.createContext({});
 for(const file of ['codex-catalog.js','codex-wiki-editorial.js','codex-wiki-content.js'])vm.runInContext(fs.readFileSync(path.join(root,'src',file),'utf8'),sandbox);
 const data=generate(),api=sandbox.ConquerCodex.fromSnapshot(data.catalog),wiki=sandbox.ConquerWikiContent.create(api);
-assert.equal(wiki.pages.size,142+7+8);
+assert.equal(wiki.pages.size,142+7+8+2);
 for(const p of wiki.pages.values()){
   assert.ok(p.title&&!p.title.includes('undefined'),p.id+' title');
   for(const text of p.text){

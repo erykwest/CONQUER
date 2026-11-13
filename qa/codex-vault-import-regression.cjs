@@ -34,7 +34,7 @@ try{
   assert.throws(()=>applyImport(plan,{artifactFile}),/Notes changed during import/,'concurrent save detected before writes');
   const fresh=prepareImport(options);applyImport(fresh,{artifactFile});
   assert.equal(applyImport(prepareImport(options),{artifactFile,check:true}).changed,0);
-  assert.equal(Object.keys(readNotes(author)).length,160);
+  assert.equal(Object.keys(readNotes(author)).length,162);
   console.log('PASS vault import: one-way sync, fresh export, unrelated-file exclusion, dry check, conflicts, invalid links, renames and concurrent saves');
 }finally{
   const resolved=fs.realpathSync(base),temp=fs.realpathSync(os.tmpdir());

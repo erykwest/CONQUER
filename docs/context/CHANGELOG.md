@@ -1,10 +1,91 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-13 — GILDA-01 fase 1 · Bonus delle botteghe e Gilda unica
+
+13/11/2026 — `feature/gilda-fase1` (pre-merge):
+- Nuovo modulo `ConquerGuild`: una Gilda attiva per villaggio, bonus +25/+50/+100% sulla produzione delle botteghe L3, scalato dalla resa dei funzionari (1 finché SCOL-01 non porta i ruoli).
+- Il Builder rifiuta una seconda Gilda; nei vecchi salvataggi lavora solo la migliore.
+- Scheda Gilda nell'ispettore (classico e UI2) e KPI nel Profilo.
+- Regressione `qa/guild-regression.cjs` nel workflow economico.
+
+STATUS, BACKLOG e CHANGELOG aggiornati; DECISIONS e ROADMAP invariate (la fase segue D-GILDA-261113).
+
+## 2026-11-13 — GILDA-01 · Gilda (solo specifica)
+
+13/11/2026 — `docs/gilda-01`: specifica della Gilda approvata dal product owner.
+- Solo produttività: +25/+50/+100% per livello su produzione e consumo delle botteghe L3, una Gilda attiva per villaggio.
+- Funzionari laici `guild.official` (posti 1/2/3, nessun bonus senza funzionari).
+- Cassa della Gilda alimentata da una quota sulle vendite a pareggio automatico (tetto 15%), dopo il dazio.
+- Nuovo pagatore `payer:'guild'` nel contratto D-SCOL-261112; nessun legame con Municipio ed Erario.
+- La Casa delle Corporazioni è assorbita: tolta dal catalogo «da confermare».
+
+BACKLOG, DECISIONS, STATUS e CHANGELOG aggiornati; ROADMAP invariata.
+
+13/11/2026 — `docs/scriptorium-effects`: specifica SCRIPT-01 approvata dal product owner (maestro laico `scriptorium.master`, scuola ferma senza maestro, ingaggio del chierico a 60 oro come modifica a D-SCOL-261112 §6, +1 Prestigio, codici miniati ARTE solo nello Scriptorium Clericale, interno in sezione come ultima fase). Nuova decisione D-SCRIPT-261113; voci di catalogo dello Scriptorium aggiornate. Nessun codice, test o asset modificato; ROADMAP invariata.
+
+## 2026-11-12 — SCOL-01 fase 1 · Scolarizzati: dati, tetto e ingaggio
+
+12/11/2026 — `feature/scol-01-fase1` (pre-merge):
+- Nuovo modulo `ConquerEducated`: contatori laici/chierici nelle case L3/L4 dentro `State.economy`, con migrazione lazy.
+- Tetto di 3 posti per casa L3 e 4 per casa L4. Eccedenza senza alloggio che rientra o emigra dopo 4 settimane.
+- Ingaggio del signore a 40 oro con arrivo in 14 giorni e rimborso se non c'è posto.
+- Sotto-righe nei pannelli e scheda «L3 · Istruiti» nel Job Manager.
+- Regressione `qa/educated-regression.cjs` aggiunta al workflow economico.
+- Nessun effetto sul lavoro finché non arrivano i ruoli (fase 3).
+
+Corretta nella specifica la frase «3 posti per casa»: la formula approvata dà 4 posti alle case L4. STATUS, BACKLOG, CHANGELOG e DECISIONS aggiornati; ROADMAP invariata.
+
+## 2026-11-12 — SCOL-01 · Scolarizzati (solo specifica)
+
+12/11/2026 — `docs/scolarizzati`: specifica della sottoclasse «Scolarizzati» approvata dal product owner.
+- Contatori laici/chierici sulle case L3/L4, senza secondo ledger.
+- Tre origini: Scriptorium con selettore Laico/Clericale, 4 allievi e 1 anno; immigrazione mensile; ingaggio a 40 oro con arrivo in 2 settimane.
+- Ruoli registrati dalle sessioni proprietarie, con resa proporzionale e soglia.
+- Salario 2 × L3 con cursore 50–200% che muove arrivi e partenze.
+- Penalità per disoccupazione istruita; eccedenza senza alloggio per 4 settimane.
+- Contratto D-SCOL-261112 in DECISIONS per Gilda, Scriptorium, FISCO-01, CRIME, ARTE, diplomazia e la futura sessione Chiesa.
+
+12/11/2026 — `feature/bargello-balivo` (FISCO-01 fase B, pre-merge):
+- Nuovo modulo Erario (`ConquerTreasury`) e scheda ERARIO nel Profilo, con cursori, efficienza e decreti.
+- Imposte nuove: testatico, dazio delle botteghe L3, pedaggio e decima in natura, riscosse con l'efficienza del Municipio del centro, dei Bargelli e dei Balivi.
+- Sette decreti del consiglio. La leva straordinaria tiene armata una quota di uomini L1/L2 senza allarme; il cursore `levy` è rimosso.
+- `qa/treasury-regression.cjs` aggiunto in CI. Contratto tecnico in D-FISCO-261110. ROADMAP invariata.
+
+12/11/2026 — `feature/bargello-balivo`: FISCO-01 rimanda al futuro contratto «Scolarizzati» per classe, formazione e salari di esattori e giudici (prima: «nuovo mestiere L2»). Solo documentazione.
+
+10/11/2026 — `feature/bargello-balivo` (FISCO-01 fase A, pre-merge): specifica fiscale concordata con l'utente (Erario, cinque imposte, efficienza di riscossione del Municipio, Bargello, sala delle guardie, Palazzo del Balivo, decreti con leva straordinaria; giustizia ancora proposta) in BACKLOG e D-FISCO-261110. Implementati solo i modelli: Bargello e Palazzo del Balivo L1–L2 da Blender, Builder, collocamento, cantiere, crollo, incendio, cutaway, Lab, Codex. Nessun effetto di gioco. ROADMAP invariata.
+
+09/11/2026 — CI P2.4 (`perf/ci-p24-specialist-test-ownership-20261109`): rimosse 9 invocazioni test duplicate da Codex Wiki, Main fixes e CAMP, mantenendo owner di regressione in Runtime integrity e settlement-qa (always-on PR). Codex Wiki mantiene Playwright e filtri dei suoi check browser, Main fixes mantiene WebGL/render e UI/Combat, CAMP conserva animali e pattuglie. Aggiunta guardia P2.4 in `qa/ci-p1-regression.cjs`; suite completa P0 e tutte le baseline/test immutate.
+
+
+## 2026-11-12 — CHIESA-01 fase 1 · Cassa della Chiesa
+
+12/11/2026 — `feature/chiesa-fase1`: la Chiesa ha una sua Cassa.
+- Ogni domenica le offerte arrivano dai borsellini delle classi servite da una chiesa.
+- A fine anno arrivano i lasciti di L3 e L4, se le due classi sono contente.
+- Il signore può donare 10, 50 o 100 oro e guadagna Favore.
+- Scheda «Chiesa» nell'ispettore di ogni chiesa e riquadro nel Profilo › Generale.
+- Nuova regressione `qa/church-regression.cjs`.
+
+STATUS, BACKLOG e DECISIONS (regola transitoria della resa del culto) aggiornati; ROADMAP invariata.
+
+## 2026-11-12 — CHIESA-01 · La Chiesa come entità autonoma (solo specifica)
+
+12/11/2026 — `docs/chiesa`: il product owner ha approvato la specifica della Chiesa come istituzione distinta dal castello.
+- Una sola istituzione per villaggio, con una Cassa che non è un secondo ledger.
+- Entrate: offerte domenicali, lasciti annui e doni del signore. Nessuna decima ecclesiastica.
+- Spese in ordine fisso: salari dei chierici, rette clericali, carità, feste, co-finanziamento dei cantieri.
+- La Chiesa decide ogni anno il salario dei chierici e smette di farli pagare al castello.
+- Posti per livello della chiesa; il Monastero forma 2 novizi l'anno.
+- Favore 0–100 verso il signore, che muove le prediche; messa domenicale con capienza.
+- Modifiche al contratto D-SCOL-261112 descritte in D-CHIESA-261112.
+
+BACKLOG, STATUS e DECISIONS aggiornati; ROADMAP invariata; nessun codice.
+
 ## 2026-11-10 — UI v2: fix rapidi dalla review dell'interfaccia (branch `fix/ui-v2-quickfixes`)
 
 - Review completa delle due UI: la v2 su `main` comanda ancora i pulsanti legacy nascosti e ogni strumento è definito in tre file; elenco dei buchi di parità nel [BACKLOG](BACKLOG.md#ux--ui-v2-isole-opt-in-ui2-26102026).
 - Fix: Argilla nella barra risorse, stato senza id grezzi e con le frasi legacy più frequenti in italiano, stato di salvataggio «errore», tooltip delle barre in alto verso il basso, barre in alto senza sovrapposizione a 1024px, Panoramica senza troncamenti, stringhe di `shell.js` in `i18n-it.js`. Stato e prove in [STATUS](STATUS.md). ROADMAP e DECISIONS invariate: nessun contratto di simulazione toccato.
-
 
 ## 2026-11-09 — BC-261109-02 · DEV e cantieri di ristrutturazione
 

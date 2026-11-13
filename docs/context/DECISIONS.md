@@ -1,5 +1,113 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-GILDA-261113 — La Gilda: produttività delle botteghe L3, funzionari pagati da una quota sulle vendite (13/11/2026)
+
+- **DECISO (product owner, 11–13/11/2026), nessun codice:** specifica completa in [GILDA-01](BACKLOG.md). La Gilda assorbe la Casa delle Corporazioni (nessun edificio separato).
+- **SCELTE:**
+  - solo produttività, una Gilda attiva per villaggio, raggio su tutto il villaggio;
+  - bonus +25/+50/+100% per L1/L2/L3 su produzione **e** consumo delle ricette ECO-FIL-01 (D-ECO-FIL-261110);
+  - personale = ruolo istruito laico `guild.official`, posti 1/2/3, `minYield` 0: senza funzionari nessun bonus;
+  - stipendi pagati da una **Cassa della Gilda** (`State.economy.guild.gold`, un borsellino in più, non un ledger) alimentata da una **quota sulle vendite** delle botteghe L3, trattenuta dopo tassa sulle vendite e dazio, con aliquota a **pareggio automatico** mensile e tetto 15%;
+  - nessun annesso né modello nuovo; nessun legame con Municipio ed Erario oltre a una riga in sola lettura.
+- **MODIFICA AL CONTRATTO D-SCOL-261112:** nuovo valore `payer:'guild'`, che addebita la Cassa della Gilda. Un funzionario non pagato non copre il ruolo per quel mese (stessa regola di `payer:'church'` in D-CHIESA-261112). Ruolo registrato: `guild.official`.
+- **ALTERNATIVE SCARTATE:**
+  - effetti su qualità, prezzi, apprendisti, monopoli e quote di mestiere;
+  - più Gilde con bonus per quartiere;
+  - funzionari pagati dal castello o direttamente dal borsellino L3;
+  - quota fissa al 5% o cursore del giocatore;
+  - annessi Magazzino e Scuola d'arte;
+  - esenzione dal dazio per decreto del Municipio.
+- **TRANSITORIO:** senza `ConquerEducated.coverage` la resa vale 1 e la quota 0; senza consumo di materie (ECO-FIL-01 fase 2) il bonus moltiplica solo la produzione.
+- **IMPATTO:** nessun file di codice cambiato. Le fasi toccheranno `settlement-commerce.js` (`daily`, `sellGoods`), il collocamento dei civici (`settlement-civic-annexes.js` / `settlement-app.js`), il modulo degli scolarizzati, l'Erario (riga in sola lettura), i pannelli e una nuova `qa/guild-regression.cjs`. ROADMAP invariata.
+
+## D-SCRIPT-261113 — Scriptorium: maestro, primo chierico, Prestigio e codici miniati (13/11/2026)
+
+- **DECISO (product owner, 13/11/2026), nessun codice:** specifica completa in [SCRIPT-01](BACKLOG.md). Lo Scriptorium è la scuola degli Scolarizzati e usa il contratto D-SCOL-261112 senza ridefinire la classe.
+- **SCELTE:**
+  - un maestro per Scriptorium del ramo del selettore; nuovo ruolo laico `scriptorium.master` (`payer:'castle'`, `minYield:0`), simmetrico a `church.scriptoriumMaster`;
+  - senza maestro la scuola si ferma: niente iscrizioni, corsi sospesi (la fine slitta di un giorno per giorno scoperto);
+  - +1 Prestigio per Scriptorium in `ConquerSiege.prestige()`;
+  - codici miniati come archetipo ARTE, commissionabili solo in uno Scriptorium Clericale e realizzati dal maestro chierico; la scuola continua durante il lavoro;
+  - interno in sezione con arredi, maestro e allievi, come ultima fase.
+- **MODIFICA AL CONTRATTO D-SCOL-261112 §6:** l'ingaggio del signore sceglie il ramo; il chierico lo manda il vescovo, 60 oro, 14 giorni. Motivo: con «senza maestro si ferma» uno Scriptorium Clericale non partirebbe mai senza un Monastero.
+- **ALTERNATIVE SCARTATE:**
+  - formazione come bonus individuale ad artigiani singoli (il gioco conta persone, non individui);
+  - effetto della scuola solo finché è attiva, senza persone formate;
+  - scuola laica tenuta da un chierico, o senza maestro;
+  - corsi più lenti o più piccoli senza maestro;
+  - chierico gratuito alla costruzione della chiesa; Scriptorium Clericale sbloccato solo dal Monastero;
+  - scrivani della diplomazia decisi qui (restano a una sessione Diplomazia);
+  - copie e libri come merce L3.
+- **IPOTESI:** tutti i numeri sono provvisori (ingaggio chierico 60 oro, codice 80 oro / 60 giorni, +1 Prestigio).
+- **IMPATTO:** nessun file di codice cambiato. Le fasi toccheranno `src/settlement-educated.js` (maestro, sospensione, ingaggio con ramo), `src/settlement-siege.js` (`prestige()`), il registro ARTE (`ConquerArtModels.catalog`), `src/settlement-civic3d.js` (interno), l'Asset Lab con la sua baseline e una regressione dedicata. ROADMAP invariata.
+
+## D-SCOL-261112 — Scolarizzati: sottoclasse istruita di L3/L4 e contratto dei ruoli istruiti (12/11/2026)
+
+- **DECISO (product owner, 12/11/2026), nessun codice:** specifica completa in [SCOL-01](BACKLOG.md).
+- **ALTERNATIVE SCARTATE:**
+  - quinta classe con borsellino e felicità propri (sarebbe un secondo ledger);
+  - casa intera «istruita»;
+  - specializzazione per mestiere.
+- **CONTRATTO PER LE ALTRE SESSIONI** (Gilda, Scriptorium, FISCO-01, CRIME, ARTE, diplomazia, Chiesa). Le sessioni non ridefiniscono classe, salario base o formazione: registrano ruoli.
+  1. **Chi sono.** Abitanti delle case L3/L4 contati in `State.economy.educated`, in due rami: `lay` (laici) e `clergy` (chierici). Tetto: `floor(L3/3) + floor(L4/3)` (3 posti per casa L3, 4 per casa L4), allievi compresi. Usano il borsellino e la felicità della loro classe; non esiste un ledger proprio.
+  2. **Ruoli.** Ogni sessione registra i suoi ruoli con un descrittore `{id, branch:'lay'|'clergy', label, owner, seats(state) → intero, minYield ∈ [0,1], payer:'castle'|'church'|'L3'|'commission'}`. API proposta: `ConquerEducated.registerRole(desc)`. La sessione che implementa la fase 3 di SCOL-01 la crea; finché non esiste, le sessioni documentano soltanto il descrittore.
+  3. **Lettura.** `ConquerEducated.coverage(roleId)` restituisce `{seats, assigned, ratio, yield}`, dove `yield = max(minYield, assigned/seats)` e `seats = 0` dà `yield = 1`. L'effetto del ruolo moltiplica per `yield` e non conta mai le persone per conto suo. Con `assigned = 0` e `seats > 0` il ruolo è «scoperto» e il motore degli scolarizzati mostra l'avviso.
+  4. **Allocazione.** Giornaliera, nella scheda Job Manager «L3 · Istruiti»: priorità, minimo e AUTO come `l1Jobs`/`l2Jobs`. Uno scolarizzato con un ruolo esce dai lavoratori L3/L4; senza ruolo lavora come L3 comune.
+  5. **Salario.** Mensile, 2 × `wage.L3` × `wageMul` (cursore 50–200%, solo laici; per i chierici decide la sessione Chiesa). È versato al borsellino della classe dello scolarizzato e addebitato al `payer`. I ruoli `commission` (artisti) non hanno salario mensile: ARTE paga a opera.
+  6. **Origini.** Solo il motore degli scolarizzati crea o toglie scolarizzati: Scriptorium (selettore Laico/Clericale, 4 allievi, 1 anno, retta 20 dal borsellino della classe, iscrizione automatica), immigrazione mensile dei laici e ingaggio del signore (40 oro, arrivo in 14 giorni). Le altre sessioni non aggiungono scolarizzati.
+- **ASSEGNAZIONI DEI RAMI:**
+  - laici: esattori e giudici (FISCO-01/CRIME), funzionari della Gilda, artisti (ARTE), scrivani (diplomazia);
+  - chierici: gestore della Chiesa ed eventuale personale dello Scriptorium.
+  - Il gestore della Locanda resta un L3 comune.
+- **NUOVA SESSIONE RICHIESTA:** la Chiesa come entità autonoma (tesoro, entrate, salario dei chierici, gerarchia). Fino ad allora il castello paga i chierici per conto della Chiesa.
+- **IPOTESI:** tutti i numeri sono provvisori. L'immigrazione dipende dall'assegnazione automatica dei gestori di Chiesa e Locanda, oggi assente.
+- **IMPATTO:** nessun file cambiato in questa tappa. Le fasi proposte toccheranno `src/settlement-economy.js` (allocazione, mensile, sabato), `settlement-commerce.js` (gestori), `settlement-civic-annexes.js` (Scriptorium), `settlement-panels.js` / `ui/shell.js` (sotto-righe, scheda Istruiti) e un nuovo modulo con `qa/educated-regression.cjs`. ROADMAP invariata.
+
+## D-FISCO-261110 — Fisco: il Municipio riscuote, l'Erario decide; Bargello e Palazzo del Balivo (10/11/2026)
+
+- **DECISIONE DEL PRODUCT OWNER:** le aliquote si fissano dall'Erario (nuova scheda del Profilo) e non dipendono da alcun edificio. Il Municipio non fa né gestisce le tasse: determina l'**efficienza di riscossione** (incassato = dovuto × efficienza). Imposte: vendite (esistente), testatico, dazio sulle botteghe L3, pedaggio, decima.
+- **EDIFICI NUOVI (eccezione voluta alla regola «stanze prima di edifici»):** **Bargello**, casa degli esattori e delle guardie cittadine di un quartiere, con torretta, uno per pozzo, L1–L2; **Palazzo del Balivo**, sede del funzionario del signore nel contado, fuori dai quartieri, L1–L2, a sé stante (non assorbe il Bargello e non è la residenza del signore). Le guardie cittadine sono civili pagati, distinte dai soldati della Caserma (D-MIL-RES-261109); la sala delle guardie del Municipio ne è il comando.
+- **PERSONALE ISTRUITO (12/11/2026):** esattori e giudici appartengono alla sottoclasse «Scolarizzati» (L3+ istruiti: formati nello Scriptorium, immigrati o ingaggiati dal signore), progettata in una sessione dedicata. FISCO-01 non definisce né la classe né i salari di questo personale: ne usa il contratto quando sarà registrato qui.
+- **DECRETI** dalla sala del consiglio, compresa la **leva straordinaria**, che riusa la milizia esistente (armeria → miliziano) tenendola mobilitata senza allarme e sostituisce il cursore `levy`.
+- **ORDINE:** prima i modelli (fase A, `feature/bargello-balivo`: modelli Blender, cantiere, cutaway, Lab, collocamento), poi le funzioni (fase B). La giustizia (tribunale con severità, multe nel tesoro, CRIME unica fonte) resta una proposta da confermare.
+- **CONTRATTO TECNICO (fase A):** `civicLevel` limita Bargello e Balivo a L2 (`civicMaxLevel`/`civicLevels`); il Bargello è un `WELL_CIVIC_TYPES`; il Balivo usa `balivoPlacementCheck` (villaggio fondato, fuori dalle zone abitate, ≥12U da ogni pozzo, ≥20U da un altro Balivo). Stanze fisse per piano in `INTERIOR[key].room/upper[].room`, nuovo arredo `exactor`. ROADMAP invariata.
+- **CONTRATTO TECNICO (fase B, 12/11/2026):**
+  - **Modulo.** `window.ConquerTreasury` (`src/settlement-treasury.js`), stato in `State.economy.treasury`. Nessun ledger nuovo: l'oro passa tra i borsellini di classe e `castleGold`, il malumore va sulla felicità di classe.
+  - **Formula.** Efficienza = `0,3 + (tetto − 0,3) × resa esattori`, più 0,05 con la sala delle guardie, meno fino a 0,20 se chi paga è scontento. Il massimo è 0,95; vale 0 in allarme o con nemici in campo.
+  - **Esattori.** La resa è `ConquerEducated.coverage('fisco.collector').yield` (contratto D-SCOL-261112) e vale 1 finché il motore manca.
+  - **Tassa sulle vendite.** Resta trattenuta per intero al mercato (`State.policies.tax`): l'efficienza non si applica, per non cambiare l'equilibrio esistente. L'Erario la mostra e la regola.
+  - **Agganci.** Decima in `daily()` dell'economia (raccolti e produzioni private, in natura al castello). Dazio in `sellGoods` del commercio. Pedaggio in `confirmArrival`. Calmiere sul prezzo del cibo. Riscossione con `ConquerTreasury.daily` dopo `ConquerCommerce.daily`.
+  - **Leva straordinaria.** `ConquerCombat.leviedResident`: quota fissa, scelta per seme dall'id del residente, tra gli uomini adulti delle case L1/L2. `refreshLevy` all'inizio e alla fine. Il cursore `levy` è rimosso dalla UI; `State.policies.levy` resta nei salvataggi ma non è letto.
+
+## D-CHIESA-261112 — La Chiesa come entità autonoma (12/11/2026)
+
+- **DECISO (product owner, 12/11/2026), nessun codice:** specifica completa in [CHIESA-01](BACKLOG.md).
+- **SCELTE:**
+  - una sola istituzione per villaggio, con un'unica **Cassa** (`State.economy.church.gold`): un borsellino in più, non un secondo ledger;
+  - entrate: offerte domenicali a testa, lasciti annui del 2% di L3/L4 felici, doni del signore;
+  - **nessuna decima ecclesiastica**: resta solo quella del signore (FISCO-01), che pesa sul Favore;
+  - spese in ordine fisso: salari dei chierici → rette clericali → carità (Ospizio) → feste → co-finanziamento dei cantieri; le ultime tre solo sopra una riserva di 6 mesi di salari;
+  - salario dei chierici deciso dalla Chiesa una volta all'anno, senza cursore del giocatore;
+  - Favore 0–100 verso il signore, che muove le prediche; messa domenicale con capienza per livello.
+- **ALTERNATIVE SCARTATE:**
+  - nessun fondo, con le offerte nel `castleGold`;
+  - fondo con magazzino in natura;
+  - offerte in percentuale del borsellino;
+  - decima unica con quota alla Chiesa, oppure due decime separate;
+  - cursore del signore sul salario dei chierici;
+  - una Cassa per ogni chiesa;
+  - interdetto e scomunica in questa fase.
+- **MODIFICHE AL CONTRATTO D-SCOL-261112** (branch `docs/scolarizzati`):
+  1. `payer:'church'` addebita la Cassa. Il castello smette di pagare per conto della Chiesa quando arriva la fase 2 di CHIESA-01.
+  2. Salario dei chierici: 2 × `wage.L3` × moltiplicatore annuo della Chiesa (75/100/125%). Un chierico non pagato non copre il ruolo per quel mese.
+  3. Rette dello Scriptorium in modo Clericale a carico della Cassa; in modo Laico restano al borsellino della classe.
+  4. Nuova origine: il **Monastero**, con un corso Clericale fisso di 2 novizi all'anno, senza retta, dentro il tetto. Resta il motore degli scolarizzati a creare i chierici.
+  5. Ruoli registrati: `church.priest` (posti 1/2/3 per chiesa L1/L2/L3), `church.scriptoriumMaster` (+1 per Scriptorium Clericale), `church.monk` (+2 per Monastero), tutti `branch:'clergy'`, `payer:'church'`, `minYield` 0.
+- **FASE 1 (branch `feature/chiesa-fase1`):** API `ConquerChurch` (`state`, `snapshot`, `donate`, `daily`, `monthly`, `annual`, `panelHtml`, `bindPanel`). La Cassa vive in `State.economy.church`, con migrazione lazy alla prima lettura e senza toccare `economy.version`. **Regola transitoria accettata con la fase 1:** senza `ConquerEducated` (SCOL-01 fase 3) la resa del culto è 1 per ogni chiesa completata; quando il modulo esiste, vale `coverage('church.priest').yield`.
+- **CONTRATTO CON CRIME:** l'ordine pubblico resta di CRIME (C-01). La Chiesa espone solo un modificatore di tensione dalle prediche e legge le esecuzioni per il Favore.
+- **IPOTESI:** tutti i numeri sono provvisori. Un villaggio può avere più chiese (nessun limite trovato nel codice).
+- **IMPATTO:** nessun file di codice cambiato. Le fasi toccheranno `src/settlement-economy.js` (domenica, `monthly`, `annual`), `settlement-commerce.js` (`SERVICE_KINDS.church`), `settlement-civic-annexes.js` (Scriptorium, Ospizio, Monastero), il modulo degli scolarizzati, i pannelli e un nuovo modulo con `qa/church-regression.cjs`. ROADMAP invariata.
+
 ## D-ECO-FIL-261110 — Filiere produttive complete (10/11/2026)
 
 - **DECISO (product owner, 10/11/2026), nessun codice:** specifica [ECO-FIL-01](BACKLOG.md).
