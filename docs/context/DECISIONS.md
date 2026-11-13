@@ -1,5 +1,14 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-RC-PAUSE-261113 — Preparazione di ordini durante pause regionali (13/11/2026)
+
+- **DECISO dal product owner:** durante una **pausa regionale programmata** della campagna il giocatore può **consultare la situazione congelata e preparare ordini** sul proprio feudo via browser/app, purché il servizio sia raggiungibile. L'intero mondo resta fermo: **nessun tick, produzione, costruzione, marcia, recapito o altro progresso temporale**.
+- **DECISO:** gli ordini preparati sono **in attesa**, non eseguiti; vengono elaborati al **primo tick utile alla riattivazione**, secondo D-RC-TIME-261113. Accettazione del comando e risultato simulato devono essere distinti. Per spedizioni e carovane la ripresa avvia le attività, non ne anticipa la durata di viaggio.
+- **GUARDRAIL TECNICO PROPOSTO:** validare nuovamente permessi, risorse e prerequisiti al tick di applicazione, deduplicare invii e rendere esplicito un eventuale rifiuto. Non trasferire la simulazione sul telefono.
+- **APERTO:** catalogo delle operazioni prenotabili, modifica/cancellazione della coda, limiti, ordine e conflitti alla ripresa, messaggi preparati vs spediti, regole di pausa regionali esatte. **Il telefono senza rete/server irraggiungibile è una questione diversa** dalla pausa di un server accessibile; sincronizzazione di ordini offline non decisa.
+- **STATO:** documentazione, nessun runtime modificato. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md) e [SRS mobile v0.5, draft PR #222](https://github.com/erykwest/CONQUER/pull/222). Q-04 risolta nel principio.
+
+
 ## D-RC-VASSAL-REPORTS-261113 — Resoconti dei vassalli a frequenza impostata dal sovrano (13/11/2026)
 
 - **DECISO dal product owner:** un sovrano **non consulta in tempo reale** i KPI economici, militari o patrimoniali dei feudi dei vassalli. Riceve informazioni soltanto attraverso **messaggeri di resoconto**.
