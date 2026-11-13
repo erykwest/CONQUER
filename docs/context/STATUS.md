@@ -57,6 +57,46 @@
 - **AUDIT ASSET:** audit completo del Lab con 0 errori e 16 voci nuove («Abiti da mestiere»), riviste anche su un foglio grande, estate e inverno con neve. Nessuna bottega e nessuna figura del tribunale cambia oltre la soglia. Le altre 168 voci cambiate (alberi, torri) sono deriva già presente su main: la baseline non le include.
 - **DA VERIFICARE:** CI del branch.
 
+## 2026-11-13 — CAM-ROT-01 · Rotazione libera della camera (branch `feature/free-camera-rotation`)
+
+- **CODICE SUL BRANCH, NON MERGE:** `State.view.rotation` resta in quarti di giro ma accetta valori frazionari. `rotateViewPoint` (2D), lo shader WebGL (`uRot` ora `vec2` cos/sin) e l'ombreggiatura delle facce (`rotDir` in `settlement-mesh3d.js` e `settlement-wagons3d.js`) seguono qualsiasi angolo; per i quarti interi il percorso esatto è invariato.
+- **Comandi:** Shift + tasto centrale trascinato = rotazione libera attorno al centro dello schermo (160 px = 90°); con Ctrl scatti di 15° (24 posizioni). Tasto centrale o destro da soli = pan come prima. Q/E e pulsanti ↺/↻ restano a 90° partendo dall'angolo corrente. Angolo salvato nel salvataggio locale/cloud come prima.
+- **QA:** 51 regressioni Node che toccano camera/mesh/input PASS. La CI ha poi rilevato `qa/builder-placement-regression.cjs`, che estrae gli handler di input e non dichiarava il nuovo stato `orbit`: il finto ambiente ora lo dichiara accanto a `pan`, test PASS in locale. Prova browser in gioco sul layout `TEST` (168 strutture): pan, rotazione libera 22,5°, scatto a 30°, viste a 45° e 105° coerenti (terreno, strade, case, mura, cutaway torri, minimappa); punto al centro invariato; nessun errore di render in console.
+- **LIMITI:** ogni nuovo angolo ricostruisce scena statica e mesh (~150 ms, come un giro di 90°): durante il trascinamento ~6 fps. Le scelte discrete legate alla vista (facce aperte del cutaway, lato dei costruttori) si calcolano sull'angolo reale e non sono state riviste una per una.
+
+## 2026-11-13 - Preparazione merge PR #206
+
+Preparazione merge PR #206: main aggiornato riconciliato mantenendo moduli e documenti di entrambi i branch. Catalogo Wiki rigenerato. Gilda riferita agli artigiani L2; dazio botteghe e relativo malcontento addebitati a L2 anziche L3, con regressione riprodotta prima del fix. Fondazione: cinque scenari superati isolatamente con Node 22, ma timing intermittente oltre 100 ms nella suite anche su Node 22; verifica Actions ancora necessaria. Nessuna soglia allentata. Suite completa e Actions da completare prima del merge. Nessuna nuova funzione demografica, giudiziaria o archetipo edilizio.
+
+## 2026-11-13 - Verifica CI PR #206
+
+Corretta asserzione livestock obsoleta dopo SOC-CLASS-02. Test comportamentali su selettore agricolo reale, riserve cave, esclusione allevatori e conservazione della vocazione su 400 case migrate superati. Suite completa e CI da completare prima del merge. Nessuna modifica runtime o bilanciamento; ROADMAP e DECISIONS invariate. Demografia, 12 archetipi e funzioni giudiziarie fuori scope.
+
+## 2026-11-12 — SOC-CLASS-02 · Migrazione reale ceti (branch PR #206)
+
+- **CODICE SUL BRANCH, NON MERGE:** `ConquerSocialClasses` + migratori save local/cloud, riassegnazione L1 campi/cava/miniera, botteghe e portafoglio artigiani L2, istruiti/mercanti L3, possedimenti L4.
+- **CENSIMENTO:** residenti delle vecchie case preservati tramite `householdResidents`, livelli sociali distinti da `densityLevel`; cohort IDs stabili e livestock precedente preservato. Monete conservate con partizione 25/75 provvisoria di ex-L4.
+- **TEST:** nuova QA `social-classes-regression` collegata all'urbanistica; regressioni obsolete di economia/industrie/carrettieri aggiornate. Test V8 di migrazione superato. CI GitHub in verifica: non dichiarare merge o completamento fino a verde.
+- **ANCORA APERTI:** veri L3 magistrati/scribani e L2 botteghe specializzate, migrazione/emigrazione, felicità/loyalty operative, trasformazione case e 12 archetipi.
+- [Contratto](../CIVIL-CLASS-MIGRATION.md).
+
+
+## 2026-11-12 — CIV-EVT-01 · Skeleton effetti eventi civili (branch PR #206)
+
+- **SU BRANCH, NON MERGE:** `src/settlement-civic-event-effects.js` offre otto archetipi di evento e preview di felicità L1–L3, lealtà L4, costi teorici, rendimenti decrescenti e prestigio locale temporaneo. Riusa `ConquerUrbanHeatmaps.at`, le fasi e gli allestimenti già esistenti.
+- **NO GAMEPLAY:** script caricato come API inattiva; nessun addebito, cronologia, migrazione, ricostruzione o modifica ai livelli delle famiglie. Non confondere i figuranti provvisori con partecipanti effettivi.
+- **QA:** `qa/civic-event-effects-regression.cjs` collegato alla suite urbana. Smoke V8 del modulo eseguito; test Node/browser e CI da verificare.
+- **Contratto:** [CIVIC-EVENT-EFFECTS-SKELETON](../CIVIC-EVENT-EFFECTS-SKELETON.md) e D-CIV-EVT-261112.
+
+
+## 2026-11-12 — URB-HEAT-01 skeleton quattro heatmap (branch `feature/urban-heatmap-skeleton-20261112`)
+
+- **CODICE SUL BRANCH, NON MERGE:** nuovo motore puro `src/settlement-urban-heatmaps.js` con sette valori (domanda L1–L4, prestigio, sicurezza, criminalità), sorgenti radiali/poligonali, griglia deterministica, interpolazione e campionamento del lotto Voronoi. Caricato come API inattiva prima del runtime urbano.
+- **QA:** `qa/urban-heatmaps-regression.cjs` aggiunto e richiamato dalla suite urbana esistente; esecuzione locale e CI ancora da verificare.
+- **NON IMPLEMENTATI:** adapter da Builder/Crime/guardie/mura, domanda demografica reale, aggiornamenti territoriali, rendering heatmap, densificazione, migrazione L1–L4, ricostruzione automatica e persistenza. Nessuna modifica a salvataggi, occupanti o fabbricati.
+- **Contratto:** [URBAN-HEATMAP-SKELETON](../URBAN-HEATMAP-SKELETON.md); [decisione D-URB-HEAT-261112](DECISIONS.md).
+
+
 ## 2026-11-13 — GILDA-01 fase 1 · Bonus delle botteghe e Gilda unica (branch `feature/gilda-fase1`)
 
 - **CODICE SUL BRANCH, NON MERGE:**

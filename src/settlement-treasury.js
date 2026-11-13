@@ -15,7 +15,7 @@
   const TAXES=Object.freeze({
     sales:{label:'Tassa sulle vendite',unit:'%',min:0,max:100,step:1,payers:['L4'],policy:'tax'},
     poll:{label:'Testatico',unit:'oro a testa / settimana',min:0,max:.3,step:.05,payers:['L1','L2']},
-    dues:{label:'Dazio delle botteghe',unit:'% degli incassi',min:0,max:25,step:1,payers:['L3']},
+    dues:{label:'Dazio delle botteghe',unit:'% degli incassi',min:0,max:25,step:1,payers:['L2']},
     toll:{label:'Pedaggio',unit:'oro a carovana',min:0,max:20,step:1,payers:[]},
     tithe:{label:'Decima',unit:'% del raccolto',min:0,max:15,step:1,payers:['L4']}
   });
@@ -206,7 +206,7 @@
   }
 
   // ---- accruals (called by the economy, commerce and trade) ----
-  // Workshop dues: share of an L3 workshop's takings, accrued where the shop stands.
+  // Workshop dues: share of an L2 workshop's takings, accrued where the shop stands.
   function accrueDues(amount,s){
     const r=rate('dues');if(!(r>0)||!(amount>0))return 0;
     const due=round(amount*r/100),t=state(),got=round(due*efficiency('dues',s));
@@ -254,10 +254,10 @@
         t.week.due.poll=round(t.week.due.poll+due);t.week.collected.poll=round(t.week.collected.poll+got);
       }
     }
-    // Workshop dues collected during the week, paid out of the L3 takings.
+    // Workshop dues collected during the week, paid out of the L2 takings.
     if(t.accrued.dues>0){
-      const got=round(Math.min(t.accrued.dues,Math.max(0,finite(e.wallet.L3))));
-      e.wallet.L3=round(finite(e.wallet.L3)-got);e.castleGold=round(finite(e.castleGold)+got);
+      const got=round(Math.min(t.accrued.dues,Math.max(0,finite(e.wallet.L2))));
+      e.wallet.L2=round(finite(e.wallet.L2)-got);e.castleGold=round(finite(e.castleGold)+got);
       t.week.collected.dues=round(t.week.collected.dues+got);t.accrued.dues=0;
     }
     // Unrest: only the class that pays, in proportion to the rate.

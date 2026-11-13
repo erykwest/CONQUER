@@ -28,12 +28,10 @@
 
   // ---------- shaders ----------
   const CAMERA=`
-    uniform int uRot;uniform float uS;uniform vec2 uV;uniform float uPlan;uniform vec2 uVp;uniform vec2 uDepth;
+    uniform vec2 uRot;uniform float uS;uniform vec2 uV;uniform float uPlan;uniform vec2 uVp;uniform vec2 uDepth;
+    // uRot = (cos, sin) of the camera yaw: same map as rotateViewPoint, any angle.
     vec2 rotq(vec2 p){vec2 d=p-vec2(100.0);
-      if(uRot==1)return vec2(100.0-d.y,100.0+d.x);
-      if(uRot==2)return vec2(100.0-d.x,100.0-d.y);
-      if(uRot==3)return vec2(100.0+d.y,100.0-d.x);
-      return p;}
+      return vec2(100.0+d.x*uRot.x-d.y*uRot.y,100.0+d.x*uRot.y+d.y*uRot.x);}
     // Same affine map as w2sRaw (isometric or plan) plus a monotonic view depth (larger = nearer).
     vec4 cam(vec3 w,vec2 px){
       vec2 q=rotq(w.xy);vec2 s;float d;
@@ -1616,7 +1614,7 @@
   function useProgram(gl,prog){gl.useProgram(prog.p);gl.bindVertexArray(prog.vao)}
   function setCamera(gl,prog,r){
     const L=prog.loc,plan=isPlanView();
-    gl.uniform1i(L.uRot,((State.view.rotation||0)%4+4)%4);gl.uniform1f(L.uS,U*State.view.scale);
+    {const q=((State.view.rotation||0)%4+4)%4,r=Number.isInteger(q)?[[1,0],[0,1],[-1,0],[0,-1]][q]:[Math.cos(q*Math.PI/2),Math.sin(q*Math.PI/2)];gl.uniform2f(L.uRot,r[0],r[1]);}gl.uniform1f(L.uS,U*State.view.scale);
     gl.uniform2f(L.uV,State.view.x,State.view.y);gl.uniform1f(L.uPlan,plan?1:0);gl.uniform2f(L.uVp,r.width,r.height);
     gl.uniform2f(L.uDepth,plan?-5:-80,plan?30:480);
   }
