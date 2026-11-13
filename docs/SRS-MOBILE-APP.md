@@ -1,10 +1,10 @@
 # CONQUER — Software Requirements Specification (SRS) · Mobile Companion
 
-**Versione:** 0.3 — bozza di lavoro, **non approvata nel complesso** (scelte B e tempistica ordini approvate)  
+**Versione:** 0.4 — bozza di lavoro, **non approvata nel complesso** (scelte B, Q-02 e Q-03 approvate)  
 **Data:** 13 novembre 2026  
 **Destinazione:** Android e iOS; prima dipendenza: hub browser e backend multiplayer condiviso  
 **Stato:** SPEC / NO RUNTIME — nessuna app mobile implementata  
-**Decisioni approvate:** **B — primo rilascio pubblico con controllo remoto completo**; **comandi amministrativi locali al prossimo tick utile, comunicazioni inter-feudo con recapito simulato**.
+**Decisioni approvate:** **B — primo rilascio pubblico con controllo remoto completo**; **comandi locali al primo tick utile, comunicazioni inter-feudo con recapito simulato**; **KPI dei vassalli solo tramite resoconti di messaggeri con frequenza impostabile dal sovrano**.
 
 ## 0. Natura del documento e fonti
 
@@ -97,6 +97,9 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 | FR-DASH-02 | Distingue valore corrente, storico, informazione obsoleta e ultimo aggiornamento. | P | Must |
 | FR-DASH-03 | Permette consultazione di popolazione, classi sociali, felicità/lealtà se realmente disponibili. | D/C | Must |
 | FR-DASH-04 | Espone risorse, produzione, scorte, tesoreria ed eventuale autonomia alimentare, mantenendo distinti inventari economici e difensivi. | D/C | Must |
+| FR-DASH-05 | I KPI del **feudo governato direttamente** sono letti dallo stato autorevole corrente; i KPI dei **feudi dei vassalli** sono disponibili al sovrano **solo dopo la consegna di un rapporto tramite messaggero**, non come lettura live dei loro dati. | D/C | Must |
+| FR-DASH-06 | Per ogni rapporto di vassallo visualizza **feudo sorgente, data simulata di redazione, data di ricezione, contenuti effettivamente comunicati e stato di aggiornamento**; distingue lo snapshot storico dal dato live del proprio insediamento. | D/C per distinzione; P per dettaglio UI | Must |
+| FR-DASH-07 | Il sovrano può **configurare la frequenza dei messaggeri di resoconto provenienti dai vassalli**; la modifica è un'azione autorizzata e non anticipa i rapporti ancora in viaggio. | D/C | Must |
 | FR-ECO-01 | Consente gestione di lavoro/Job Manager, priorità e assegnazioni consentite. | D/C | Must |
 | FR-ECO-02 | Consente politiche economiche e fiscali già supportate dal motore, inclusi tributi, aliquote e razioni se applicabili. | D/C | Must |
 | FR-CANT-01 | Permette monitoraggio, priorità, risorse e manodopera dei cantieri già collocati nel Builder. | D/C | Must |
@@ -122,7 +125,7 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 | FR-MSG-01 | Integra caselle ricevuti/inviati, non letti, rapporto e storico della posta feudale per campagna. | D/C | Must |
 | FR-MSG-02 | Supporta redazione/invio di comunicazioni, richieste o ordini diplomatici secondo le regole di recapito reali. | D/C | Must |
 | FR-MSG-03 | Mostra stato del messaggio: redatto/in transito/consegnato/altro esito, con ETA solo quando calcolabile. | P/C | Must |
-| FR-MSG-04 | La lettura sull'app **non anticipa** la consegna simulata; non espone messaggi o rapporti prima dei permessi/tempi previsti. | P/C | Must |
+| FR-MSG-04 | La lettura sull'app **non anticipa** la consegna simulata; non espone messaggi o rapporti prima dei permessi/tempi previsti. | D/C | Must |
 | FR-DIP-01 | Consulta relazioni, sudditanza e obblighi; consente azioni diplomatiche autorizzate dalla campagna. | D/C | Must |
 | FR-NOT-01 | Organizza avvisi per campagna: posta, attacco/assedio, scorte critiche, cantieri bloccati, spedizioni, tributi. | P/C | Should |
 | FR-NOT-02 | Supporta notifiche push Android/iOS, con consenso e preferenze granulari. | P/C | Should |
@@ -174,6 +177,18 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 **FR-TIME-05 (P/C, Must) — Ordini che generano un viaggio:** la decisione locale di *preparare/avviare una spedizione o una carovana* può essere acquisita al tick successivo, ma **marcia, trasporto, intercettazione, arrivo e conseguenze** si svolgono nei tempi e con le condizioni proprie del motore World/Combat/Logistica; il tick non teletrasporta il risultato all'altro feudo.
 
 **A — Confini dei comandi:** autorizzazioni, ordine delle richieste concorrenti, conflitti di risorse al tick, calendario delle consegne, percorso/trasporto, failure e pause regionali devono essere definiti per singola operazione; questa decisione non attribuisce una durata arbitraria a un tick o a un viaggio.
+
+## 4b. Visibilità feudale e frequenza dei messaggeri — DECISO (13/11/2026)
+
+**FR-REP-01 (D/C, Must):** il giocatore può leggere i dati aggiornati del **proprio insediamento** dallo stato autorevole della campagna. Per i **feudi governati dai propri vassalli**, il sovrano **non ottiene una finestra diretta in tempo reale** su economia, truppe e risorse: vede soltanto i contenuti dei rapporti effettivamente **consegnati**.
+
+**FR-REP-02 (D/C, Must):** il sovrano **imposta la frequenza dei messaggeri di resoconto dei vassalli** attraverso un comando remoto autorizzato. La programmazione determina *quando* i nuovi rapporti vengono prodotti/inviati, non la velocità con cui viaggiano. Ogni rapporto rispetta il sistema di trasporto e recapito simulato (FR-TIME-02). La disponibilità di un rapporto precedente non abilita la lettura del dato corrente.
+
+**FR-REP-03 (P/C, Must per tracciabilità):** il rapporto è uno **snapshot dei dati alla data simulata di redazione**, riportata insieme a fonte e data di consegna; non va aggiornato retroattivamente con valori correnti del feudo mittente. Se una metrica non è raccolta/comunicata, la UI deve mostrarla come non disponibile, senza indovinarla.
+
+**REUSE esistente, non implementazione multiplayer:** la branch `messages` comprende già routine con *sorgente, destinazione, frequenza (1/7/30 giorni), canale e sezioni*, e rapporti redatti al tempo simulato. Questi intervalli sono **opzioni del prototipo**, NON il catalogo di frequenze confermato per l'app: servono integrazione con vassalli veri, server autorevole e permessi.
+
+**APERTO:** opzioni/intervalli ammessi e costi delle frequenze, configurazione globale oppure differenziata per vassallo, chi ha diritto di imporre/inibire i resoconti, contenuti obbligatori/facoltativi, eventuali intercettazioni, messaggero vs piccione e come gestire assenza di strada o server in pausa. Nessuna frequenza fissa dedotta da questa decisione.
 
 ## 5. Architettura candidata e contratti d'integrazione
 
@@ -244,6 +259,12 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 
 **AT-15 — Indipendenza dal canale e pausa:** browser e mobile producono lo stesso esito temporale. Se il server non processa tick, un comando accettato resta *non applicato*. Nessuna notifica anticipa la conoscenza di un contenuto che non è ancora stato consegnato.
 
+**AT-16 — Report del vassallo, mai live:** dato il feudo di un vassallo il cui magazzino cambia dopo l'ultimo rapporto, il sovrano continua a vedere il valore dello **snapshot già ricevuto** con data della sua redazione, non il valore corrente; il backend rifiuta query live non autorizzate anche se inviate direttamente.
+
+**AT-17 — Frequenza configurabile:** un sovrano modifica tramite app/browser la cadenza dei resoconti dei propri vassalli; il server convalida il comando e la nuova pianificazione viene applicata secondo le regole di governo locale, senza rendere istantanei i rapporti in transito. Un nuovo rapporto diventa leggibile solo dopo composizione e consegna simulate.
+
+**AT-18 — Metadati e assenza rapporto:** se un rapporto non è ancora arrivato o non contiene una metrica, l'app mostra rispettivamente *in attesa di recapito* oppure *dato non comunicato*, senza sostituirlo con un valore live o inventato.
+
 ## 8. Roadmap tecnica proposta — primo rilascio completo (nessuna data approvata)
 
 | Fase | Deliverable | Dipendenze / criterio di uscita |
@@ -252,7 +273,7 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 | **F1 — Backend + hub web** | Campagne autorevoli, lobby, dashboard, API lettura e scrittura | World/Feudal, MP-07, persistenza server e autorizzazioni |
 | **F2 — Controllo remoto web completo** | Tutti i domini: economia/lavoro/fisco/cantieri, militare/spedizioni, diplomazia/messaggi, tributi/carovane, mappa | Moduli reali, QA e contratti di comando |
 | **F3 — App alpha/beta interne** | Client mobile Android/iOS con gli stessi comandi, test utenti/dispositivi, sicurezza e accessibilità | F1–F2, test di sincronia con browser |
-| **F4 — Prima release pubblica Android/iOS (B)** | **Controllo remoto completo** di §1.4, tutti i Must e test AT-01…AT-15 | **Gate non derogabile:** nessuna release solo KPI, messaggi o comandi economici parziali |
+| **F4 — Prima release pubblica Android/iOS (B)** | **Controllo remoto completo** di §1.4, tutti i Must e test AT-01…AT-18 | **Gate non derogabile:** nessuna release solo KPI, messaggi o comandi economici parziali |
 | **F5 — Miglioramenti** | Push opzionali, cache offline, archivio storico e ottimizzazioni, se approvati | Decisioni successive |
 
 **DECISO:** completezza del **primo rilascio pubblico**, non una data di pubblicazione. Le fasi incrementali interne non costituiscono una release pubblica ridotta. **A:** stack tecnologico, dettaglio comandi, notifiche push, modalità offline e pianificazione temporale.
@@ -272,7 +293,7 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 | --- | --- | --- |
 | **Q-01 — RISOLTA (B)** | Primo rilascio pubblico con **controllo remoto completo**: economia, lavoratori, fisco, cantieri già localizzati, spedizioni/militare strategico, diplomazia/messaggi, tributi/carovane, mappa e lobby multi-campagna. Alpha/beta interne possono essere progressive. | **DECISO**; catalogo dei singoli comandi ancora aperto |
 | **Q-02 — RISOLTA** | **Ordini al proprio feudo: primo tick utile, senza messaggero. Comunicazioni inter-feudo: trasporto e recapito simulati.** | **DECISO** — durata del tick, pause, categorie e conseguenze specifiche da dettagliare |
-| **Q-03** | I KPI propri sono live mentre quelli dei vassalli arrivano per rapporto, o tutti live? | Visibilità e diplomazia |
+| **Q-03 — RISOLTA** | **Feudo proprio: KPI aggiornati direttamente; feudi dei vassalli: solo rapporti ricevuti tramite messaggeri. Il sovrano può impostare la frequenza dei resoconti.** | **DECISO** — opzioni, costi, granularità e permessi delle routine ancora aperti |
 | **Q-04** | Quando il server regionale è in pausa, quali letture e azioni sono possibili? | Offline/server lifecycle |
 | **Q-05** | Push su attacco, lettere, allarmi, scorte e fine spedizione: opt-in, priorità, silenziamento? | Notifiche, anti-FOMO |
 | **Q-06** | Quanti account/personaggi/feudi può controllare un giocatore per campagna? | Autorizzazioni e interfaccia |
@@ -283,6 +304,6 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 
 ## 11. Definition of Ready della SRS
 
-L'SRS potrà essere promossa da **bozza v0.2** a **baseline approvata** soltanto quando: (1) le questioni **Q-03…Q-10** prioritizzate avranno risposta o una decisione esplicita di rinvio (**Q-01 risolta: B; Q-02 risolta: doppia temporalità**); (2) per ogni funzione Must sarà disponibile una sorgente autorevole o una dipendenza di backend documentata; (3) saranno definiti permessi dei ruoli e catalogo di tutti i comandi; (4) saranno approvati criteri di accettazione e gate B; (5) sarà aggiornata la tracciabilità verso backlog e test.
+L'SRS potrà essere promossa da **bozza v0.2** a **baseline approvata** soltanto quando: (1) le questioni **Q-04…Q-10** prioritizzate avranno risposta o una decisione esplicita di rinvio (**Q-01: B; Q-02: doppia temporalità; Q-03: report dei vassalli a frequenza configurabile**); (2) per ogni funzione Must sarà disponibile una sorgente autorevole o una dipendenza di backend documentata; (3) saranno definiti permessi dei ruoli e catalogo di tutti i comandi; (4) saranno approvati criteri di accettazione e gate B; (5) sarà aggiornata la tracciabilità verso backlog e test.
 
 **Nessuna funzionalità mobile è stata implementata da questo documento.**
