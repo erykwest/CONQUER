@@ -167,6 +167,9 @@ function wellCivicPlacementCheck(s){
   if(!isWellCivic(s))return{ok:true};
   const label=WELL_CIVIC_LABELS[s.type];
   if(!State.village?.founded)return{ok:false,reason:label+' needs a founded village'};
+  // GILDA-01: the guild serves the whole village, so only one guild hall may stand.
+  if(s.type==='guild'&&State.structures.some(o=>o.type==='guild'&&o.id!==s.id&&!o.destroyed))
+    return{ok:false,reason:'Only one guild hall per village'};
   const wells=wellCivicCandidates(s);
   if(!wells.length)return{ok:false,reason:label+' must stand within '+WELL_CIVIC_RANGE+'U of a completed well'};
   const well=wells.find(w=>w.id===s.wellId)||wells.find(w=>!wellCivicTaken(w,s.type,s.id));

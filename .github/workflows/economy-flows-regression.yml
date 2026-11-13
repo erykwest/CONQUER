@@ -34,6 +34,8 @@ on:
       - 'src/settlement-population-figures.js'
       - 'src/settlement-commerce.js'
       - 'src/settlement-church.js'
+      - 'src/settlement-guild.js'
+      - 'qa/guild*.cjs'
       - 'qa/church*.cjs'
       - 'src/settlement-storage-yard.js'
       - 'src/settlement-castle.js'
@@ -112,6 +114,8 @@ jobs:
           node qa/commerce-skeleton-regression.cjs
           node --check src/settlement-church.js
           node qa/church-regression.cjs
+          node --check src/settlement-guild.js
+          node qa/guild-regression.cjs
           node qa/urban-workshops-regression.cjs
           node qa/convoys-skeleton-regression.cjs
           node qa/road-sign-convoy-regression.cjs

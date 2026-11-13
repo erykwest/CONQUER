@@ -10,6 +10,26 @@
   - `tickFields` registra quando una striscia finisce (`crop.slotEnd`); `peasantPosition` riporta a casa a piedi chi la finisce a metà turno; `fieldWork` non mostra l'attrezzo su una striscia finita.
 - **PROVE LOCALI PASS:** nuova `qa/idle-farmers-regression.cjs` (6 casi: crescita con prestito al cantiere, aratura con due contadini e un bracciante contati una volta, striscia finita a metà turno con rientro a piedi e roster invariato fino al mattino, altro campo prima del prestito, nessun prestito a settembre e dicembre–febbraio, Job Manager L1 gestito); `qa/fields-regression.cjs` adeguata (16 casi); tutte le 31 voci di `economy-flows-regression.yml`, dove sono state aggiunte le due regressioni, più `qa/urban-regression.cjs`. `founding-regression` passa in locale su questo branch.
 - **NON VERIFICATO:** partita reale nel browser e prove di prestazioni Playwright (non eseguibili in locale). CI del branch.
+## 2026-11-13 — GILDA-01 fase 1 · Bonus delle botteghe e Gilda unica (branch `feature/gilda-fase1`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - **Modulo `src/settlement-guild.js`** (`window.ConquerGuild`), caricato dopo scolarizzati e commercio in `index.html` e `camp/index.html`: Gilda attiva = completata di livello più alto, a pari livello id minore; bonus +25/+50/+100% × resa dei funzionari (`ConquerEducated.coverage('guild.official')` quando esiste, altrimenti 1); posti 1/2/3; `snapshot()` e `panelHtml()`.
+  - **Commercio:** `ConquerCommerce.daily` produce `1 × (1 + bonus)` per bottega L3 nei giorni feriali; il carrettiere registra la stessa quantità. Nessun consumo di materie finché manca ECO-FIL-01 fase 2.
+  - **Collocamento:** `wellCivicPlacementCheck` rifiuta una seconda Gilda nel villaggio («Only one guild hall per village»); i salvataggi con più Gilde ne fanno lavorare una sola, le altre mostrano «Gilda · inattiva».
+  - **Interfaccia:** scheda Gilda nell'ispettore classico e in UI2 (`GuildPanel`), KPI «Gilda» nel Profilo › Generale.
+  - **Nessun blocco salvato nuovo:** Cassa, quota e salari arrivano con la fase 2.
+- **PROVE LOCALI PASS:**
+  - nuova `qa/guild-regression.cjs`, 7 casi: senza Gilda, bonus per livello, cantiere, Gilda unica e inattiva, resa dei funzionari, vendite del sabato, cablaggio;
+  - `qa/well-civics-regression.cjs` con il rifiuto della seconda Gilda; `qa/l1-carter-market-regression.cjs` aggiornata alla quantità reale;
+  - tutte le 37 voci di `economy-flows-regression.yml` (aggiunta la nuova regressione) e altre 46 regressioni dei workflow che leggono commercio, annessi civici, pannelli, ispettore, shell o `index.html`;
+  - pagina caricata in locale: `ConquerGuild` presente, nessun errore in console.
+- **NON VERIFICATO:** scheda e KPI in una partita reale con Gilda costruita (coperti dai test di markup).
+
+## 2026-11-13 — GILDA-01 · Gilda (solo specifica, branch `docs/gilda-01`)
+
+- **SOLO DOCUMENTAZIONE:** specifica GILDA-01 in BACKLOG e decisione D-GILDA-261113 in DECISIONS. Nessun file di codice, test o asset cambiato; nessuna prova da eseguire.
+- **Stato live verificato su `main` e93b22b5:** la Gilda esiste come civico L1–L3 legato a un pozzo, con modelli e cutaway, ma senza effetti di gioco; le botteghe L3 producono 1 unità al giorno feriale.
+- **Prossimo passo:** fase 1 (bonus per livello con resa transitoria 1, Gilda unica per villaggio, scheda) solo dopo conferma del product owner.
 
 ## 2026-11-13 — SCRIPT-01 · Specifica dello Scriptorium (solo documentazione)
 
