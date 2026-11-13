@@ -1,5 +1,31 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## RC-01…RC-07 — Hub, dashboard e remote control multi-campagna (13/11/2026)
+
+**DECISO COME PRODOTTO, NON IMPLEMENTATO.** Specifica [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md); decisione D-RC-261113. Dipendenza MP-07, backend server autorevole e World/Feudal M4.
+
+- [ ] **RC-01:** homepage che unisce lobby delle partite disponibili e campagne del giocatore con navigazione multi-server.
+- [ ] **RC-02:** KPI di ogni insediamento / campagna con fonte autorevole, stato e tempi di aggiornamento.
+- [ ] **RC-03:** remote control dei feudi da browser senza caricare Builder/3D, comandi server-side e autorizzazioni; ambito comandi da fissare.
+- [ ] **RC-04:** integrare posta, report e routine dalla branch `messages` dopo analisi delle 29 commit avanti / 317 indietro rispetto a `main`; preservare ETA simulati e non duplicare la diplomazia.
+- [ ] **RC-05:** unificare diplomazia, spedizioni militari, tributi/convogli e mappa regionale con World/Feudal e permessi.
+- [ ] **RC-06:** web responsive e API condivise; app Android/iOS solo in una fase successiva.
+- [ ] **RC-07:** QA sicurezza (cross-campaign, permessi sudditi, comandi duplicati/concorrenti), freschezza KPI, offline e tempi di recapito.
+
+**APERTO:** comandi immediati sulla propria colonia vs tempi simulati per operazioni inter-feudo, portata del Builder remoto, permessi e filtri dei dati pubblici.
+
+
+## MP-07 — Profilo globale, partecipazioni multi-server e isolamento dello stato (design 13/11/2026)
+
+**DECISO / DA IMPLEMENTARE:** un account può partecipare simultaneamente a più campagne. Separare identità/autenticazione globale, record di partecipazione `user_id + campaign_id` e progressi/feudi isolati per campagna. Lobby: elenco campagne aperte e già partecipate. Nessun trasferimento fra server di risorse, edifici, armate o progresso. [Specifica](../MULTIPLAYER-SERVER-SCOPE.md#4a-separazione-account--campagna--feudo--decisione-13112026), [decisione](DECISIONS.md#d-mp-account-261113--profilo-globale-e-partecipazioni-multi-campagna-13112026).
+
+- [ ] Definire `campaign_id`, `membership_id`/partecipazione, `settlement_id`/`territory_id`, permessi e isolamento dei salvataggi.
+- [ ] Migrare schema cloud corrente: `src/settlement-app-persistence.js` salva con conflitto `user_id,world_cell_x,world_cell_y`, coordinate 0,0 e nessun `campaign_id`.
+- [ ] Separare araldica/titoli/relazioni della campagna da impostazioni e identità di account; definire nickname e storico.
+- [ ] Testare isolamento cross-campaign, accesso autorizzato, doppia iscrizione, cambio campagna, salvataggi legacy e sicurezza delle query.
+- [ ] Decidere numero massimo di campagne contemporanee, identità di personaggio, profilo pubblico e regole per account/abbandono.
+
+
 ## CAM-ROT-01 — Rotazione libera della camera (13/11/2026)
 
 - **FATTO SU BRANCH** `feature/free-camera-rotation`: rotazione a qualsiasi angolo con Shift + tasto centrale, scatti di 15° con Ctrl; pan invariato su tasto centrale/destro; Q/E a 90°.
