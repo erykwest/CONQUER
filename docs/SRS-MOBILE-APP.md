@@ -1,10 +1,10 @@
 # CONQUER — Software Requirements Specification (SRS) · Mobile Companion
 
-**Versione:** 0.4 — bozza di lavoro, **non approvata nel complesso** (scelte B, Q-02 e Q-03 approvate)  
+**Versione:** 0.5 — bozza di lavoro, **non approvata nel complesso** (scelte B e Q-02…Q-04 approvate)  
 **Data:** 13 novembre 2026  
 **Destinazione:** Android e iOS; prima dipendenza: hub browser e backend multiplayer condiviso  
 **Stato:** SPEC / NO RUNTIME — nessuna app mobile implementata  
-**Decisioni approvate:** **B — primo rilascio pubblico con controllo remoto completo**; **comandi locali al primo tick utile, comunicazioni inter-feudo con recapito simulato**; **KPI dei vassalli solo tramite resoconti di messaggeri con frequenza impostabile dal sovrano**.
+**Decisioni approvate:** **B — primo rilascio pubblico con controllo remoto completo**; **comandi locali al primo tick utile, comunicazioni inter-feudo con recapito simulato**; **KPI dei vassalli solo tramite resoconti di messaggeri con frequenza impostabile dal sovrano**; **possibilità di preparare ordini a server regionale in pausa, senza avanzare la simulazione fino alla riattivazione**.
 
 ## 0. Natura del documento e fonti
 
@@ -139,7 +139,10 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 | FR-OPS-02 | Mostra uno snapshot locale di sola lettura quando manca rete, con indicazione esplicita che non è live. | P | Should |
 | FR-OPS-03 | La UI non dichiara eseguito un comando fino a conferma autorevole del server. | P/C | Must |
 | FR-OPS-04 | Invii ripetuti, retry e cambi rete non devono duplicare ordini/tributi/spedizioni. | P/C | Must |
-| FR-OPS-05 | Eventuale coda di comandi offline, suoi limiti e trattamento durante pausa del server restano **non decisi**. | A | — |
+| FR-OPS-05 | Durante una **pausa programmata della campagna**, un giocatore autenticato e connesso può **preparare e inviare ordini per l'esecuzione alla riattivazione**; la simulazione resta ferma. | D/C | Must |
+| FR-OPS-06 | Gli ordini preparati sono mostrati come **in attesa della ripresa**; non si dichiarano eseguiti né modificano risorse, edifici, unità o viaggi durante la pausa. | D/C | Must |
+| FR-OPS-07 | Alla ripresa, l'ordine viene sottoposto a **validazione delle condizioni correnti al momento dell'esecuzione** (permessi, risorse, conflitti, prerequisiti) prima di applicarsi al primo tick utile; gli ordini impossibili vengono rifiutati con esito visibile. | P/C — salvaguardia tecnica | Must |
+| FR-OPS-08 | La **coda locale del telefono privo di connessione** non è automaticamente coperta dalla regola di pausa regionale: comportamento di invio/retry offline resta da decidere. | A | — |
 
 ## 4. Modello dati logico e invarianti
 
@@ -172,11 +175,11 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 
 **FR-TIME-03 (D/C, Must) — Stesso modello temporale per tutti i client:** un comando impartito da app o browser segue le medesime regole; nessun vantaggio di velocità mobile e nessun secondo orologio simulativo.
 
-**FR-TIME-04 (P/C, Must) — Sicurezza durante pause o ritardi:** se il tick non avanza (server in pausa, offline o non disponibile), un ordine locale accettato **non viene dichiarato applicato** finché un tick utile non lo processa. Regole per accettare/codare comandi durante pause programmate sono **APERTE**.
+**FR-TIME-04 (D/C, Must) — Ordini durante pause programmate:** quando un server di campagna è in **pausa regionale programmata ma raggiungibile**, l'utente può **predisporre ordini** dal browser o dall'app, che rimangono **in attesa di ripresa**. Durante la pausa **non avanzano tick, risorse, viaggi, costruzioni, calendario né consegne**. Alla riattivazione gli ordini entrano nel processo del **primo tick utile**, con validazioni applicabili. Accettare/preparare ≠ eseguire. Questa decisione **non equivale** ad autorizzare ordini offline quando il telefono non ha connessione o il server è indisponibile.
 
 **FR-TIME-05 (P/C, Must) — Ordini che generano un viaggio:** la decisione locale di *preparare/avviare una spedizione o una carovana* può essere acquisita al tick successivo, ma **marcia, trasporto, intercettazione, arrivo e conseguenze** si svolgono nei tempi e con le condizioni proprie del motore World/Combat/Logistica; il tick non teletrasporta il risultato all'altro feudo.
 
-**A — Confini dei comandi:** autorizzazioni, ordine delle richieste concorrenti, conflitti di risorse al tick, calendario delle consegne, percorso/trasporto, failure e pause regionali devono essere definiti per singola operazione; questa decisione non attribuisce una durata arbitraria a un tick o a un viaggio.
+**A — Confini dei comandi:** autorizzazioni, ordine delle richieste concorrenti, conflitti di risorse al tick, calendario delle consegne, percorso/trasporto, failure, limite e modifica/cancellazione degli ordini in attesa, disponibilità di altri comandi durante pausa, e regime di server non raggiungibile devono essere definiti per singola operazione. **Il diritto di preparare ordini in pausa e l'assenza di progressione durante la pausa sono DECISI**; non si attribuisce una durata arbitraria a un tick o a un viaggio.
 
 ## 4b. Visibilità feudale e frequenza dei messaggeri — DECISO (13/11/2026)
 
@@ -265,6 +268,12 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 
 **AT-18 — Metadati e assenza rapporto:** se un rapporto non è ancora arrivato o non contiene una metrica, l'app mostra rispettivamente *in attesa di recapito* oppure *dato non comunicato*, senza sostituirlo con un valore live o inventato.
 
+**AT-19 — Preparazione in pausa programmata:** con server raggiungibile ma simulazione in pausa, un giocatore autenticato prepara un ordine economico e un ordine strategico autorizzati; ciascuno appare *in attesa della ripresa*. Prima della riattivazione nessun tick, carico, risorsa, spostamento, costruzione, rapporto o consegna avanza per effetto della preparazione.
+
+**AT-20 — Ripresa ed esito:** al riavvio, un ordine preparato valido viene valutato al primo tick utile e applicato una sola volta. Se nel frattempo risorse, permessi o prerequisiti non sono più compatibili, il server rifiuta l'ordine con motivazione tracciabile; app e browser vedono lo stesso esito.
+
+**AT-21 — Distinzione pausa/offline:** se un dispositivo è privo di rete o il server è irraggiungibile, l'app non mostra la preparazione come già registrata dal server né promette esecuzione automatica; una eventuale coda offline resta una funzionalità separata ancora da decidere.
+
 ## 8. Roadmap tecnica proposta — primo rilascio completo (nessuna data approvata)
 
 | Fase | Deliverable | Dipendenze / criterio di uscita |
@@ -273,7 +282,7 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 | **F1 — Backend + hub web** | Campagne autorevoli, lobby, dashboard, API lettura e scrittura | World/Feudal, MP-07, persistenza server e autorizzazioni |
 | **F2 — Controllo remoto web completo** | Tutti i domini: economia/lavoro/fisco/cantieri, militare/spedizioni, diplomazia/messaggi, tributi/carovane, mappa | Moduli reali, QA e contratti di comando |
 | **F3 — App alpha/beta interne** | Client mobile Android/iOS con gli stessi comandi, test utenti/dispositivi, sicurezza e accessibilità | F1–F2, test di sincronia con browser |
-| **F4 — Prima release pubblica Android/iOS (B)** | **Controllo remoto completo** di §1.4, tutti i Must e test AT-01…AT-18 | **Gate non derogabile:** nessuna release solo KPI, messaggi o comandi economici parziali |
+| **F4 — Prima release pubblica Android/iOS (B)** | **Controllo remoto completo** di §1.4, tutti i Must e test AT-01…AT-21 | **Gate non derogabile:** nessuna release solo KPI, messaggi o comandi economici parziali |
 | **F5 — Miglioramenti** | Push opzionali, cache offline, archivio storico e ottimizzazioni, se approvati | Decisioni successive |
 
 **DECISO:** completezza del **primo rilascio pubblico**, non una data di pubblicazione. Le fasi incrementali interne non costituiscono una release pubblica ridotta. **A:** stack tecnologico, dettaglio comandi, notifiche push, modalità offline e pianificazione temporale.
@@ -294,7 +303,7 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 | **Q-01 — RISOLTA (B)** | Primo rilascio pubblico con **controllo remoto completo**: economia, lavoratori, fisco, cantieri già localizzati, spedizioni/militare strategico, diplomazia/messaggi, tributi/carovane, mappa e lobby multi-campagna. Alpha/beta interne possono essere progressive. | **DECISO**; catalogo dei singoli comandi ancora aperto |
 | **Q-02 — RISOLTA** | **Ordini al proprio feudo: primo tick utile, senza messaggero. Comunicazioni inter-feudo: trasporto e recapito simulati.** | **DECISO** — durata del tick, pause, categorie e conseguenze specifiche da dettagliare |
 | **Q-03 — RISOLTA** | **Feudo proprio: KPI aggiornati direttamente; feudi dei vassalli: solo rapporti ricevuti tramite messaggeri. Il sovrano può impostare la frequenza dei resoconti.** | **DECISO** — opzioni, costi, granularità e permessi delle routine ancora aperti |
-| **Q-04** | Quando il server regionale è in pausa, quali letture e azioni sono possibili? | Offline/server lifecycle |
+| **Q-04 — RISOLTA (principio)** | Durante la pausa regionale l'utente può consultare lo stato congelato e preparare ordini; **nessuna simulazione avanza**, gli ordini saranno elaborati alla ripresa. | **DECISO** — tipi di ordini, limiti/cancellazioni, conflitti al tick e comportamento offline separato restano da precisare |
 | **Q-05** | Push su attacco, lettere, allarmi, scorte e fine spedizione: opt-in, priorità, silenziamento? | Notifiche, anti-FOMO |
 | **Q-06** | Quanti account/personaggi/feudi può controllare un giocatore per campagna? | Autorizzazioni e interfaccia |
 | **Q-07** | App native separate, cross-platform o web installabile per un primo rilascio? | Stack e distribuzione |
@@ -304,6 +313,6 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 
 ## 11. Definition of Ready della SRS
 
-L'SRS potrà essere promossa da **bozza v0.2** a **baseline approvata** soltanto quando: (1) le questioni **Q-04…Q-10** prioritizzate avranno risposta o una decisione esplicita di rinvio (**Q-01: B; Q-02: doppia temporalità; Q-03: report dei vassalli a frequenza configurabile**); (2) per ogni funzione Must sarà disponibile una sorgente autorevole o una dipendenza di backend documentata; (3) saranno definiti permessi dei ruoli e catalogo di tutti i comandi; (4) saranno approvati criteri di accettazione e gate B; (5) sarà aggiornata la tracciabilità verso backlog e test.
+L'SRS potrà essere promossa da **bozza v0.5** a **baseline approvata** soltanto quando: (1) le questioni **Q-05…Q-10** prioritizzate avranno risposta o una decisione esplicita di rinvio (**Q-01: B; Q-02: doppia temporalità; Q-03: report dei vassalli a frequenza configurabile; Q-04: ordini preparabili durante pausa e applicati alla ripresa**); (2) per ogni funzione Must sarà disponibile una sorgente autorevole o una dipendenza di backend documentata; (3) saranno definiti permessi dei ruoli e catalogo di tutti i comandi; (4) saranno approvati criteri di accettazione e gate B; (5) sarà aggiornata la tracciabilità verso backlog e test.
 
 **Nessuna funzionalità mobile è stata implementata da questo documento.**
