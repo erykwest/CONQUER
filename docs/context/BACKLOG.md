@@ -1,5 +1,16 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## RC-PAUSE-01 — Ordini in attesa durante la pausa regionale (13/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** durante la pausa regionale i client possono **predisporre ordini**, ma l'intera simulazione non avanza; la coda è processata al **primo tick utile dopo la ripresa**. [D-RC-PAUSE-261113](DECISIONS.md#d-rc-pause-261113--preparazione-di-ordini-durante-pause-regionali-13112026).
+
+- [ ] Distinguere server **raggiungibile ma in pausa** da server indisponibile e da dispositivo offline; leggere snapshot congelato con indicazione chiara di stato.
+- [ ] Permettere preparazione ordini sul proprio feudo mentre la simulazione è ferma, con stati *ricevuto/in attesa* e conferma di applicazione solo dopo il tick.
+- [ ] Riprendere tick, applicare solo comandi ancora validi (permessi, prerequisiti, risorse), deduplicare i retry; nessun progresso durante pausa per economia, edifici, movimenti, lettere.
+- [ ] QA su ordine validato/rifiutato al riavvio, concorrenza, isolamento di campagna, esito condiviso fra mobile/browser e nessun anticipo di simulazione.
+- [ ] **APERTO:** elenco comandi prenotabili, limiti/revoca/priorità, accettazione messaggi in coda, comportamento server irraggiungibile e sincronizzazione offline del telefono.
+
+
 ## RC-REPORT-01 — Rapporti dei vassalli e frequenza dei messaggeri (13/11/2026)
 
 **DECISO / NON IMPLEMENTATO:** KPI del feudo direttamente governato visibili dal server; KPI dei vassalli **non in tempo reale**, disponibili al sovrano solo attraverso **rapporti di messaggeri ricevuti**. Il sovrano può impostare la frequenza dei rapporti. [D-RC-VASSAL-REPORTS-261113](DECISIONS.md#d-rc-vassal-reports-261113--resoconti-dei-vassalli-a-frequenza-impostata-dal-sovrano-13112026).
@@ -59,7 +70,7 @@
 - [ ] **RC-06:** web responsive e API condivise; app Android/iOS solo in una fase successiva.
 - [ ] **RC-07:** QA sicurezza (cross-campaign, permessi sudditi, comandi duplicati/concorrenti), freschezza KPI, offline e tempi di recapito.
 
-**DECISO:** confine gestione remota vs Builder/3D (D-RC-BOUNDARY-261113) e doppia temporalità (D-RC-TIME-261113: proprio feudo al tick utile; lettere inter-feudo con recapito simulato). **APERTO:** permessi, catalogo granulare dei comandi, durata tick, gestione pause e filtri dei dati pubblici.
+**DECISO:** confine gestione remota vs Builder/3D (D-RC-BOUNDARY-261113), doppia temporalità (D-RC-TIME-261113) e preparazione ordini durante pausa regionale con esecuzione solo alla ripresa (D-RC-PAUSE-261113). **APERTO:** permessi, catalogo comandi, durata tick, politica/limiti di coda, modalità offline e filtri dei dati pubblici.
 
 
 ## MP-07 — Profilo globale, partecipazioni multi-server e isolamento dello stato (design 13/11/2026)
