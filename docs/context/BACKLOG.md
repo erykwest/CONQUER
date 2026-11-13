@@ -1,5 +1,16 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## RC-REPORT-01 — Rapporti dei vassalli e frequenza dei messaggeri (13/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** KPI del feudo direttamente governato visibili dal server; KPI dei vassalli **non in tempo reale**, disponibili al sovrano solo attraverso **rapporti di messaggeri ricevuti**. Il sovrano può impostare la frequenza dei rapporti. [D-RC-VASSAL-REPORTS-261113](DECISIONS.md#d-rc-vassal-reports-261113--resoconti-dei-vassalli-a-frequenza-impostata-dal-sovrano-13112026).
+
+- [ ] Gestire routine periodiche di report dei vassalli collegate a feudi reali; frequenza configurabile da un sovrano autorizzato, con validazione server e applicazione al tick utile.
+- [ ] Generare istantanee non retroattive alla redazione, trasportarle via posta feudale con ETA e consegna simulate, mostrare origine/data di redazione e ricezione.
+- [ ] Vietare in UI e API letture live di economia, eserciti o risorse dei feudi dei vassalli, inclusi accessi incrociati con membership su altri server.
+- [ ] Test di visibilità del dato vecchio rispetto al nuovo, lettera in transito, modifica della frequenza, tick in pausa e informazioni mancanti.
+- [ ] **APERTO:** cadenze ammesse (1/7/30 giorni appartiene al prototipo `messages`, non è requisito approvato), programmazione per vassallo oppure globale, costi, permessi e selezione delle sezioni.
+
+
 ## RC-TIME-01 — Tick locale vs recapito inter-feudo (decisione 13/11/2026)
 
 **DECISO / NON IMPLEMENTATO:** un comando amministrativo al proprio feudo viene applicato al **primo tick utile**, dopo validazione lato server; una comunicazione verso altro feudo viaggia e si consegna **secondo il tempo simulato**. [D-RC-TIME-261113](DECISIONS.md#d-rc-time-261113--due-temporalita-per-gli-ordini-remoti-13112026).

@@ -1,5 +1,14 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-RC-VASSAL-REPORTS-261113 — Resoconti dei vassalli a frequenza impostata dal sovrano (13/11/2026)
+
+- **DECISO dal product owner:** un sovrano **non consulta in tempo reale** i KPI economici, militari o patrimoniali dei feudi dei vassalli. Riceve informazioni soltanto attraverso **messaggeri di resoconto**.
+- **DECISO:** il sovrano può **impostare la frequenza** con cui riceve i rapporti periodici dei vassalli; ogni rapporto è uno snapshot dei dati alla data simulata di redazione e diventa visibile **solo al recapito simulato**, senza scorciatoie web/mobile o API. I dati del **feudo direttamente governato** rimangono consultabili tramite stato autorevole aggiornato.
+- **INTEGRAZIONE:** sulla branch `messages` esiste già una bozza di routine con sorgente/destinazione/frequenza 1/7/30 giorni, ma su feudi esterni astratti: tali intervalli non sono approvati come valori definitivi multiplayer.
+- **APERTO:** configurazione unica o specifica per vassallo, frequenze ammesse, costi, sezioni dei rapporti, permessi, eventuali blocchi/intercettazioni e regole durante pause. I privilegi dettagliati non sono definiti.
+- **STATO:** solo documentazione. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [SRS mobile v0.4 (draft #222)](https://github.com/erykwest/CONQUER/pull/222). Nessun backend/runtine modificato.
+
+
 ## D-RC-TIME-261113 — Due temporalità per gli ordini remoti (13/11/2026)
 
 - **DECISO dal product owner:** ordini amministrativi impartiti al **proprio feudo** da browser/app sono validati dal server e **applicati al primo tick utile successivo** alla ricezione, senza alcun trasporto fittizio del comando.

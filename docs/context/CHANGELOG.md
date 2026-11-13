@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-13 — RC-REPORT-01 · Resoconti dei vassalli programmabili (solo design)
+
+Il product owner ha deciso che **il sovrano non vede i KPI dei vassalli live**: riceve snapshot prodotti e **recapitati da messaggeri**, con **frequenza di resoconto da lui impostabile**. Lo stato del proprio feudo resta consultabile direttamente. Le routine 1/7/30 giorni della branch `messages` sono un precedente tecnico, non frequenze definitive approvate. Aggiornati SRS mobile v0.4 nella draft PR #222, REMOTE-CONTROL-SCOPE, D-RC-VASSAL-REPORTS-261113 e backlog RC-REPORT-01. **Solo documentazione, nessun codice.**
+
+
 ## 2026-11-13 — RC-TIME-01 · Temporalità degli ordini remoti (solo design)
 
 Confermato dal product owner: **ordini sul proprio feudo applicati al primo tick utile dopo validazione**; **lettere e comunicazioni inter-feudo recapitate secondo il tempo simulato**, senza accelerazione via browser o app. Distinti accettazione ed esecuzione; marcia e trasporto reali restano soggetti a durata di viaggio. Aggiornati `REMOTE-CONTROL-SCOPE.md`, decisione D-RC-TIME-261113 e backlog RC-TIME-01. La SRS mobile nella draft PR #222 è aggiornata a v0.3 (Q-02 risolta). **Solo documentazione, nessuna modifica a codice o schema.**
