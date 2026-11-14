@@ -190,22 +190,6 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 
 **A — Confini dei comandi:** autorizzazioni, ordine delle richieste concorrenti, conflitti di risorse al tick, calendario delle consegne, percorso/trasporto, failure, limite e modifica/cancellazione degli ordini in attesa, disponibilità di altri comandi durante pausa, e regime di server non raggiungibile devono essere definiti per singola operazione. **Il diritto di preparare ordini in pausa e l'assenza di progressione durante la pausa sono DECISI**; non si attribuisce una durata arbitraria a un tick o a un viaggio.
 
-## 4d. Personaggio unico, viaggi e governo dei feudi — DECISO (14/11/2026)
-
-**FR-CHAR-01 (D/C, Must):** ogni account possiede **un solo personaggio in ciascuna campagna**. Lo stesso account può avere personaggi differenti in campagne distinte. Acquisire più feudi non crea altri personaggi e non consuma slot umani aggiuntivi.
-
-**FR-CHAR-02 (D/C, Must):** il personaggio ha **un'unica posizione fisica** all'interno della campagna e può **viaggiare fra feudi** lungo la mappa secondo i tempi simulati. Essere proprietario o sovrano di un feudo non significa esservi presente.
-
-**FR-CHAR-03 (D/C, Must):** quando il personaggio **è presente** nel feudo da governare, può emettere direttamente i comandi gestionali autorizzati, applicati al **primo tick utile**. Per i **feudi lontani o non occupati fisicamente**, può (a) **recarsi sul posto**, oppure (b) **inviare ordini con messaggeri o piccioni**, sottoposti a tempistiche di spedizione, percorso e recapito. La gestione remota non è un potere telematico istantaneo all'interno della finzione feudale.
-
-**FR-CHAR-04 (D/C, Must):** la UI mobile e quella web indicano il **feudo di presenza**, i feudi posseduti, il canale di comando applicabile a ciascuno e lo stato di eventuali viaggi/messaggi. La posizione deve essere verificata dal backend, non dichiarata dal client.
-
-**FR-CHAR-05 (P/C, Must come salvaguardia):** dopo la consegna di un ordine a distanza, il server deve verificarne **permessi, prerequisiti e possibilità di esecuzione**; consegna di una lettera non equivale automaticamente all'esecuzione di un comando. La semantica di delega/amministrazione dei singoli ordini rimane da specificare.
-
-**INTEGRAZIONE CON Q-02 E Q-03:** il comando *locale* al tick successivo vale **solo dove il personaggio è presente**; il governo di altri feudi segue i tempi dei messaggeri/piccioni. Le informazioni dei feudi dei vassalli continuano ad arrivare tramite rapporti **recapitati**, con frequenza impostabile dal sovrano, senza letture live privilegiate.
-
-**APERTO:** requisiti delle piccionaie, disponibilità dei vettori, costi e velocità, rischi/intercettazione, percorso e sicurezza dei viaggi del personaggio, gestione del personaggio in transito, eventuali luogotenenti/deleghe e quali operazioni ammettono un ordine scritto. Non fissare intervalli, velocità o teletrasporti non approvati.
-
 ## 4b. Visibilità feudale e frequenza dei messaggeri — DECISO (13/11/2026)
 
 **FR-REP-01 (D/C, Must):** il giocatore può leggere i dati aggiornati del **proprio insediamento** dallo stato autorevole della campagna. Per i **feudi governati dai propri vassalli**, il sovrano **non ottiene una finestra diretta in tempo reale** su economia, truppe e risorse: vede soltanto i contenuti dei rapporti effettivamente **consegnati**.
@@ -227,6 +211,22 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 **P — soluzione di prodotto:** categorie almeno per attacchi/assedi, criticità economiche, posta recapitata, spedizioni, tributi e cantieri; preferenze conservate lato account; registrazione/revoca di token per dispositivo e gestione di più dispositivi; payload con anteprima minimizzata per evitare esposizione sulla schermata bloccata.
 
 **A — configurazione di dettaglio:** categorie definitive, stato iniziale delle singole categorie dopo il consenso, filtri globali versus per singola campagna, silenziamento temporaneo/orari quieti, granularità del contenuto mostrato nel push e momento della richiesta del permesso. **Non presumere** selettori inizialmente attivati né consenso OS preconcesso.
+
+## 4d. Personaggio unico, viaggi e governo dei feudi — DECISO (14/11/2026)
+
+**FR-CHAR-01 (D/C, Must):** ogni account possiede **un solo personaggio in ciascuna campagna**. Lo stesso account può avere personaggi differenti in campagne distinte. Acquisire più feudi non crea altri personaggi e non consuma slot umani aggiuntivi.
+
+**FR-CHAR-02 (D/C, Must):** il personaggio ha **un'unica posizione fisica** all'interno della campagna e può **viaggiare fra feudi** lungo la mappa secondo i tempi simulati. Essere proprietario o sovrano di un feudo non significa esservi presente.
+
+**FR-CHAR-03 (D/C, Must):** quando il personaggio **è presente** nel feudo da governare, può emettere direttamente i comandi gestionali autorizzati, applicati al **primo tick utile**. Per i **feudi lontani o non occupati fisicamente**, può (a) **recarsi sul posto**, oppure (b) **inviare ordini con messaggeri o piccioni**, sottoposti a tempistiche di spedizione, percorso e recapito. La gestione remota non è un potere telematico istantaneo all'interno della finzione feudale.
+
+**FR-CHAR-04 (D/C, Must):** la UI mobile e quella web indicano il **feudo di presenza**, i feudi posseduti, il canale di comando applicabile a ciascuno e lo stato di eventuali viaggi/messaggi. La posizione deve essere verificata dal backend, non dichiarata dal client.
+
+**FR-CHAR-05 (P/C, Must come salvaguardia):** dopo la consegna di un ordine a distanza, il server deve verificarne **permessi, prerequisiti e possibilità di esecuzione**; consegna di una lettera non equivale automaticamente all'esecuzione di un comando. La semantica di delega/amministrazione dei singoli ordini rimane da specificare.
+
+**INTEGRAZIONE CON Q-02 E Q-03:** il comando *locale* al tick successivo vale **solo dove il personaggio è presente**; il governo di altri feudi segue i tempi dei messaggeri/piccioni. Le informazioni dei feudi dei vassalli continuano ad arrivare tramite rapporti **recapitati**, con frequenza impostabile dal sovrano, senza letture live privilegiate.
+
+**APERTO:** requisiti delle piccionaie, disponibilità dei vettori, costi e velocità, rischi/intercettazione, percorso e sicurezza dei viaggi del personaggio, gestione del personaggio in transito, eventuali luogotenenti/deleghe e quali operazioni ammettono un ordine scritto. Non fissare intervalli, velocità o teletrasporti non approvati.
 
 ## 5. Architettura candidata e contratti d'integrazione
 
