@@ -1,7 +1,7 @@
 # CONQUER — Software Requirements Specification (SRS) · Mobile Companion
 
 **Versione:** 0.6 — bozza di lavoro, **non approvata nel complesso** (scelte B e Q-02…Q-05 approvate)  
-**Data:** 13 novembre 2026  
+**Ultimo aggiornamento:** 14 novembre 2026 (prima bozza 13 novembre 2026)  
 **Destinazione:** Android e iOS; prima dipendenza: hub browser e backend multiplayer condiviso  
 **Stato:** SPEC / NO RUNTIME — nessuna app mobile implementata  
 **Decisioni approvate:** **B — primo rilascio pubblico con controllo remoto completo**; **comandi locali al primo tick utile, comunicazioni inter-feudo con recapito simulato**; **KPI dei vassalli solo tramite resoconti di messaggeri con frequenza impostabile dal sovrano**; **ordini preparabili durante la pausa regionale**; **push subordinati al permesso OS e filtrabili per categoria dalle impostazioni dell'app**.
