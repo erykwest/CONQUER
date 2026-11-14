@@ -20,7 +20,7 @@
 - [ ] Bloccare **partenza, ingresso e consegna dei messaggeri ordinari** per il feudo sotto assedio, inclusi tentativi da app, browser e API senza duplicare la regola nel client.
 - [ ] Consentire **partenza dei piccioni** con vettore/rete operativa e recapito simulato; non applicare intercettazione ai piccioni che escono dal feudo assediato.
 - [ ] QA: invasione senza blocco automatico; assedio che rifiuta messaggeri uscenti; piccioni in uscita non intercettabili; impossibilità di spedire con canale assente; coerenza con fog of war.
-- [ ] **APERTO:** messaggeri in entrata o già partiti, pericoli dei messaggeri durante invasione, prerequisiti/reti dei piccioni, definizione temporale dell'assedio, ordini ammessi e informazioni su feudi assediati.
+- [ ] **APERTO:** destino dei messaggeri **già partiti che non possono entrare/consegnare**, rischi dei messaggeri durante invasione, destinatario dell'allarme, prerequisiti/reti dei piccioni, soglia di assedio e ordini ammessi. **Il blocco dell'ingresso è DECISO.**
 
 
 ## MOB-KPI-01 — Home: shortlist preliminare di sei indicatori (14/11/2026)
