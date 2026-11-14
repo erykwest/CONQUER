@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-14 — MOB-KPI-01 · Shortlist iniziale KPI Home (solo design preliminare)
+
+Il product owner ha considerato **«un buon inizio»** la proposta di sei gruppi KPI nella Home multi-insediamento: popolazione, tesoreria, scorte alimentari/autonomia, felicità/lealtà, produzione/occupazione e sicurezza militare. La **Q-08 rimane in definizione**, perché numeri/soglie, priorità e layout non sono approvati. Aggiornate SRS mobile v0.9 (draft PR #222), REMOTE-CONTROL-SCOPE e BACKLOG MOB-KPI-01. Nessun codice, mock definitivo o milestone modificati.
+
+
 ## 2026-11-14 — MOB-PLAT-01 · Una sola codebase Android/iOS (solo design)
 
 Q-07 SRS mobile chiusa dal product owner: **un'unica base di codice applicativa condivisa** per Android e iOS, con gli stessi contratti API e backend autorevole del browser. Nessun doppio client sviluppato separatamente; framework, UI web condivisa e versioni OS ancora aperti. Aggiornate SRS mobile v0.8 nella draft PR #222, REMOTE-CONTROL-SCOPE, D-MOB-CODEBASE-261114 e backlog MOB-PLAT-01. **Solo documentazione, nessun runtime/SQL modificato.**
