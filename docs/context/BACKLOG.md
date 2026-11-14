@@ -1,5 +1,16 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## MOB-PUSH-01 — Notifiche push con consenso OS e filtri per categoria (14/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** primo rilascio mobile con autorizzazione push Android/iOS e categorie configurabili dall'utente in app; **nessun push senza consenso OS e categoria abilitata**. [Decisione D-MOB-PUSH-261114](DECISIONS.md#d-mob-push-261114--push-permesso-del-dispositivo-e-filtri-per-categoria-14112026) · [SRS mobile v0.6 draft #222](https://github.com/erykwest/CONQUER/pull/222).
+
+- [ ] Implementare flusso permesso OS e impostazioni di selezione per categoria; consentire disabilitazione e revoca senza bloccare Home, gameplay o avvisi in-app.
+- [ ] Integrare servizio eventi/notifiche con identità, campagna, membership, scelta categoria e token dei dispositivi; nessuna fuga di notifiche fra account/feudi o campagne.
+- [ ] Generare push solo per eventi già visibili al destinatario (es. messaggi e rapporti solo **dopo** consegna simulata); payload minimizzato per le anteprime del telefono.
+- [ ] QA su permesso negato/revocato, categorie attive/spente, più dispositivi, avvisi in-app indipendenti e notifiche che non anticipano i tempi del mondo.
+- [ ] **APERTO:** elenco categorie, stato iniziale dei toggle, filtri per singola campagna, modalità silenziosa, anteprime sensibili, momento della richiesta permesso. Nessuna categoria di default approvata.
+
+
 ## RC-PAUSE-01 — Ordini in attesa durante la pausa regionale (13/11/2026)
 
 **DECISO / NON IMPLEMENTATO:** durante la pausa regionale i client possono **predisporre ordini**, ma l'intera simulazione non avanza; la coda è processata al **primo tick utile dopo la ripresa**. [D-RC-PAUSE-261113](DECISIONS.md#d-rc-pause-261113--preparazione-di-ordini-durante-pause-regionali-13112026).
