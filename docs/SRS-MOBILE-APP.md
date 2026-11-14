@@ -1,10 +1,10 @@
 # CONQUER — Software Requirements Specification (SRS) · Mobile Companion
 
-**Versione:** 0.6 — bozza di lavoro, **non approvata nel complesso** (scelte B e Q-02…Q-05 approvate)  
+**Versione:** 0.7 — bozza di lavoro, **non approvata nel complesso** (scelte B e Q-02…Q-06 approvate)  
 **Ultimo aggiornamento:** 14 novembre 2026 (prima bozza 13 novembre 2026)  
 **Destinazione:** Android e iOS; prima dipendenza: hub browser e backend multiplayer condiviso  
 **Stato:** SPEC / NO RUNTIME — nessuna app mobile implementata  
-**Decisioni approvate:** **B — primo rilascio pubblico con controllo remoto completo**; **comandi locali al primo tick utile, comunicazioni inter-feudo con recapito simulato**; **KPI dei vassalli solo tramite resoconti di messaggeri con frequenza impostabile dal sovrano**; **ordini preparabili durante la pausa regionale**; **push subordinati al permesso OS e filtrabili per categoria dalle impostazioni dell'app**.
+**Decisioni approvate:** **B — primo rilascio pubblico con controllo remoto completo**; **un personaggio per account/campagna, che governa più feudi solo viaggiando tra essi o mediante messaggeri/piccioni**; **comandi diretti dove il personaggio è presente al primo tick utile, comunicazioni inter-feudo con recapito simulato**; **KPI dei vassalli solo tramite resoconti di messaggeri con frequenza impostabile dal sovrano**; **ordini preparabili durante la pausa regionale**; **push subordinati al permesso OS e filtrabili per categoria dalle impostazioni dell'app**.
 
 ## 0. Natura del documento e fonti
 
@@ -82,6 +82,8 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 | FR-ACC-02 | Elenca e apre più campagne simultanee dello stesso account; dati isolati per campagna. | D/C | Must |
 | FR-ACC-03 | Consente di passare da una campagna all'altra senza sovrascrivere la precedente. | D/C | Must |
 | FR-ACC-04 | Mostra l'identità/ruolo feudale contestuale, distinta dal profilo globale. | D/C | Must |
+| FR-ACC-06 | Consente **un solo personaggio per account in ciascuna campagna**, senza creare personaggi alternativi per occupare altri slot dello stesso server; il personaggio può esercitare autorità su più feudi e territori. | D/C | Must |
+| FR-ACC-07 | Registra e rende visibili **posizione e stato di viaggio del personaggio per campagna**: si può essere presenti fisicamente in un solo luogo alla volta; lo spostamento tra feudi segue il tempo e i percorsi simulati. | D/C | Must |
 | FR-ACC-05 | Consente accesso/logout, gestione sessioni e revoca credenziali. Dettagli del provider da stabilire. | P | Must |
 | FR-LOB-01 | Mostra campagne disponibili e partecipazioni già attive in una sola area di ingresso. | D/C | Must |
 | FR-LOB-02 | Per ciascun server mostra metadati pubblici: età/fase, giocatori/bot, capienza, disponibilità reale di terre fondabili, progresso; orari regionali se esistenti. | D/C | Must |
@@ -127,6 +129,8 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 | FR-MSG-03 | Mostra stato del messaggio: redatto/in transito/consegnato/altro esito, con ETA solo quando calcolabile. | P/C | Must |
 | FR-MSG-04 | La lettura sull'app **non anticipa** la consegna simulata; non espone messaggi o rapporti prima dei permessi/tempi previsti. | D/C | Must |
 | FR-DIP-01 | Consulta relazioni, sudditanza e obblighi; consente azioni diplomatiche autorizzate dalla campagna. | D/C | Must |
+| FR-DIP-02 | Per amministrare direttamente un feudo diverso da quello dove si trova il personaggio, il giocatore deve **raggiungerlo fisicamente** oppure **inviare ordini tramite messaggeri o piccioni**; il client non applica comandi istantanei attraverso la sola selezione del feudo. | D/C | Must |
+| FR-DIP-03 | Mostra per ogni azione remota il canale richiesto (presenza / messaggero / piccione), gli stati di partenza e consegna, e l'eventuale ETA conosciuta; l'ordine rivolto ad altro feudo può produrre effetto **solo dopo la consegna e la successiva valutazione da parte del motore**. | D/C per canale/ritardo, P per dettaglio UI | Must |
 | FR-NOT-01 | Organizza avvisi in-app per campagna: posta, attacco/assedio, scorte critiche, cantieri bloccati, spedizioni, tributi. Gli avvisi in-app non richiedono consenso push OS. | D/C | Must |
 | FR-NOT-02 | Il client può chiedere il **permesso push tramite i meccanismi ufficiali di Android/iOS**, e rispetta il rifiuto o la revoca del permesso; senza autorizzazione **non invia push**. | D/C | Must |
 | FR-NOT-03 | L'app permette al giocatore di **abilitare/disabilitare selettivamente i push per categoria**, indipendentemente dall'autorizzazione generale del sistema operativo. | D/C | Must |
@@ -174,17 +178,33 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 
 ## 4a. Contratto temporale degli ordini — DECISO (13/11/2026)
 
-**FR-TIME-01 (D/C, Must) — Amministrazione del proprio insediamento:** un comando gestionale autorizzato (es. lavoratori, aliquote, razioni, priorità di un cantiere già localizzato, ordini strategici preparatori sul proprio feudo) è **registrato dal server e applicato al primo tick di simulazione utile successivo alla ricezione/validazione**. L'invio da browser o mobile non comporta un ritardo di trasporto in-game aggiuntivo. La UI separa *ricevuto*, *accettato/in attesa di tick*, *applicato* e *rifiutato/fallito*. **La durata reale del tick non è fissata da questa SRS.**
+**FR-TIME-01 (D/C, Must) — Amministrazione in presenza:** un comando gestionale autorizzato (es. lavoratori, aliquote, razioni, priorità di un cantiere già localizzato, ordini strategici preparatori) per il **feudo in cui il personaggio si trova fisicamente** è registrato dal server e **applicato al primo tick utile dopo ricezione/validazione**, senza messaggero. Questa regola **non autorizza gestione istantanea di altri feudi anche se appartenenti allo stesso giocatore**. La UI separa *ricevuto*, *accettato/in attesa di tick*, *applicato* e *rifiutato/fallito*. **Durata del tick non fissata qui**.
 
-**FR-TIME-02 (D/C, Must) — Comunicazioni tra feudi:** lettere, messaggi diplomatici, richieste e ordini indirizzati ad altri feudi si considerano **spediti**, non **recapitati**, al momento dell'invio. Contenuto ed effetti lato destinatario diventano disponibili **solo al completamento della consegna prevista dal modello messaggeri/trasporti**, con ETA calcolata dal server secondo il calendario della campagna. La semplice presenza di un'app, dashboard, push o connessione diretta non anticipa il recapito. **Non** si presuppone che un messaggio attivi automaticamente un effetto/ordine al recapito: dipende dalla semantica del singolo tipo di messaggio ancora da definire.
+**FR-TIME-02 (D/C, Must) — Comunicazioni e governo a distanza:** lettere, messaggi diplomatici, richieste e **ordini indirizzati a un feudo diverso da quello in cui il personaggio è presente, anche se di sua proprietà**, vengono trasmessi tramite **messaggeri/piccioni**. Un ordine inviato è **spedito**, non **recapitato/eseguito**; il destinatario lo riceve solo dopo il tempo di viaggio simulato. L'app non salta questo vincolo né anticipa i contenuti riservati. Una volta recapitato, l'eventuale applicazione è soggetta alle regole, ai permessi e al tick del feudo ricevente. Non tutte le lettere sono automaticamente ordini eseguibili: la semantica dipende dal tipo di messaggio.
 
-**FR-TIME-03 (D/C, Must) — Stesso modello temporale per tutti i client:** un comando impartito da app o browser segue le medesime regole; nessun vantaggio di velocità mobile e nessun secondo orologio simulativo.
+**FR-TIME-03 (D/C, Must) — Stesso modello temporale per tutti i client:** un comando impartito da app o browser segue le medesime regole e la **posizione del personaggio in quella campagna**; nessun vantaggio di velocità mobile, teletrasporto di autorità o secondo orologio simulativo.
 
 **FR-TIME-04 (D/C, Must) — Ordini durante pause programmate:** quando un server di campagna è in **pausa regionale programmata ma raggiungibile**, l'utente può **predisporre ordini** dal browser o dall'app, che rimangono **in attesa di ripresa**. Durante la pausa **non avanzano tick, risorse, viaggi, costruzioni, calendario né consegne**. Alla riattivazione gli ordini entrano nel processo del **primo tick utile**, con validazioni applicabili. Accettare/preparare ≠ eseguire. Questa decisione **non equivale** ad autorizzare ordini offline quando il telefono non ha connessione o il server è indisponibile.
 
 **FR-TIME-05 (P/C, Must) — Ordini che generano un viaggio:** la decisione locale di *preparare/avviare una spedizione o una carovana* può essere acquisita al tick successivo, ma **marcia, trasporto, intercettazione, arrivo e conseguenze** si svolgono nei tempi e con le condizioni proprie del motore World/Combat/Logistica; il tick non teletrasporta il risultato all'altro feudo.
 
 **A — Confini dei comandi:** autorizzazioni, ordine delle richieste concorrenti, conflitti di risorse al tick, calendario delle consegne, percorso/trasporto, failure, limite e modifica/cancellazione degli ordini in attesa, disponibilità di altri comandi durante pausa, e regime di server non raggiungibile devono essere definiti per singola operazione. **Il diritto di preparare ordini in pausa e l'assenza di progressione durante la pausa sono DECISI**; non si attribuisce una durata arbitraria a un tick o a un viaggio.
+
+## 4d. Personaggio unico, viaggi e governo dei feudi — DECISO (14/11/2026)
+
+**FR-CHAR-01 (D/C, Must):** ogni account possiede **un solo personaggio in ciascuna campagna**. Lo stesso account può avere personaggi differenti in campagne distinte. Acquisire più feudi non crea altri personaggi e non consuma slot umani aggiuntivi.
+
+**FR-CHAR-02 (D/C, Must):** il personaggio ha **un'unica posizione fisica** all'interno della campagna e può **viaggiare fra feudi** lungo la mappa secondo i tempi simulati. Essere proprietario o sovrano di un feudo non significa esservi presente.
+
+**FR-CHAR-03 (D/C, Must):** quando il personaggio **è presente** nel feudo da governare, può emettere direttamente i comandi gestionali autorizzati, applicati al **primo tick utile**. Per i **feudi lontani o non occupati fisicamente**, può (a) **recarsi sul posto**, oppure (b) **inviare ordini con messaggeri o piccioni**, sottoposti a tempistiche di spedizione, percorso e recapito. La gestione remota non è un potere telematico istantaneo all'interno della finzione feudale.
+
+**FR-CHAR-04 (D/C, Must):** la UI mobile e quella web indicano il **feudo di presenza**, i feudi posseduti, il canale di comando applicabile a ciascuno e lo stato di eventuali viaggi/messaggi. La posizione deve essere verificata dal backend, non dichiarata dal client.
+
+**FR-CHAR-05 (P/C, Must come salvaguardia):** dopo la consegna di un ordine a distanza, il server deve verificarne **permessi, prerequisiti e possibilità di esecuzione**; consegna di una lettera non equivale automaticamente all'esecuzione di un comando. La semantica di delega/amministrazione dei singoli ordini rimane da specificare.
+
+**INTEGRAZIONE CON Q-02 E Q-03:** il comando *locale* al tick successivo vale **solo dove il personaggio è presente**; il governo di altri feudi segue i tempi dei messaggeri/piccioni. Le informazioni dei feudi dei vassalli continuano ad arrivare tramite rapporti **recapitati**, con frequenza impostabile dal sovrano, senza letture live privilegiate.
+
+**APERTO:** requisiti delle piccionaie, disponibilità dei vettori, costi e velocità, rischi/intercettazione, percorso e sicurezza dei viaggi del personaggio, gestione del personaggio in transito, eventuali luogotenenti/deleghe e quali operazioni ammettono un ordine scritto. Non fissare intervalli, velocità o teletrasporti non approvati.
 
 ## 4b. Visibilità feudale e frequenza dei messaggeri — DECISO (13/11/2026)
 
@@ -223,7 +243,7 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 
 **Macchina stati consigliata per un comando (P):** creato sul client → ricevuto dal backend → validato/rifiutato → pianificato → applicato dal tick o concluso con errore → restituzione dell'esito; ogni salto di stato osservabile. Non confondere **accettazione** con **esecuzione**.
 
-**Due temporalità DECIDE:** i comandi gestionali sul proprio feudo sono applicati al **primo tick utile**; lettere e comunicazioni verso altri feudi sono consegnate **dopo il tempo di trasporto simulato** (FR-TIME-01…05). Le notifiche mobile sono un terzo canale puramente informativo e non eludono il recapito in-game. Durata esatta del tick e condizioni di pausa rimangono aperte.
+**Due temporalità DECIDE, condizionate alla presenza:** comandi gestionali **nel feudo dove si trova il personaggio** al primo tick utile; ordini e lettere **diretti a qualsiasi altro feudo**, anche se posseduto dal personaggio, **solo attraverso il recapito simulato via messaggero/piccione** (FR-CHAR-01…05 e FR-TIME-01…05). Le notifiche mobile non eludono la consegna e il client non teletrasporta il personaggio. Costi e durata del viaggio restano aperti.
 
 ## 6. Requisiti non funzionali e qualità
 
@@ -295,6 +315,14 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 
 **AT-24 — Tempo e privacy:** una lettera in transito o un rapporto non ancora consegnato non innescano push con contenuti/anticipazioni; un evento relativo a campagna o feudo non autorizzato non produce push visibile per l'account corrente. La scelta delle categorie non modifica il tempo della simulazione.
 
+**AT-25 — Unico personaggio in campagna:** dato un account già presente nella campagna A con un personaggio, il backend rifiuta la creazione di un secondo personaggio nello stesso server; il giocatore può comunque controllare più feudi e possedere un personaggio distinto in una campagna B.
+
+**AT-26 — Presenza e viaggio:** dato che il personaggio si trova nel feudo X e desidera governare Y, il server non permette di dichiarare presenza immediata in Y cambiando schermata; il viaggio impiega tempo simulato e raggiungere Y rende possibili i comandi diretti locali.
+
+**AT-27 — Governo remoto tramite vettore:** con personaggio in X, un ordine destinato al feudo posseduto Y viene spedito mediante messaggero/piccione, non applicato al tick successivo in Y; prima della consegna il feudo Y non cambia e il client mostra ordine *in transito*. Dopo la consegna il sistema valuta l'esecuzione e restituisce l'esito, senza violare le regole del feudo.
+
+**AT-28 — Stesse regole web/mobile:** cambiando client, campagna o tab della mappa, il personaggio mantiene posizione e stato di viaggio della campagna; nessuna API permette ordini locali in un feudo dove non è presente solo perché ne è il proprietario.
+
 ## 8. Roadmap tecnica proposta — primo rilascio completo (nessuna data approvata)
 
 | Fase | Deliverable | Dipendenze / criterio di uscita |
@@ -303,7 +331,7 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 | **F1 — Backend + hub web** | Campagne autorevoli, lobby, dashboard, API lettura e scrittura | World/Feudal, MP-07, persistenza server e autorizzazioni |
 | **F2 — Controllo remoto web completo** | Tutti i domini: economia/lavoro/fisco/cantieri, militare/spedizioni, diplomazia/messaggi, tributi/carovane, mappa | Moduli reali, QA e contratti di comando |
 | **F3 — App alpha/beta interne** | Client mobile Android/iOS con gli stessi comandi, test utenti/dispositivi, sicurezza e accessibilità | F1–F2, test di sincronia con browser |
-| **F4 — Prima release pubblica Android/iOS (B)** | **Controllo remoto completo** di §1.4, push con consenso OS + filtri per categoria, tutti i Must e test AT-01…AT-24 | **Gate non derogabile:** nessuna release solo KPI, messaggi o comandi economici parziali |
+| **F4 — Prima release pubblica Android/iOS (B)** | **Controllo remoto completo** di §1.4, push con consenso OS + filtri per categoria, tutti i Must e test AT-01…AT-28 | **Gate non derogabile:** nessuna release solo KPI, messaggi o comandi economici parziali |
 | **F5 — Miglioramenti** | Cache offline, archivio storico, filtri/silenziamento push avanzati e ottimizzazioni, se approvati | Decisioni successive |
 
 **DECISO:** completezza del **primo rilascio pubblico** e push con permesso OS + selettori per categoria; nessuna data di pubblicazione fissata. Le fasi incrementali interne non costituiscono una release pubblica ridotta. **A:** stack tecnologico, dettaglio comandi, tassonomia/default delle notifiche, modalità offline e pianificazione temporale.
@@ -326,7 +354,7 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 | **Q-03 — RISOLTA** | **Feudo proprio: KPI aggiornati direttamente; feudi dei vassalli: solo rapporti ricevuti tramite messaggeri. Il sovrano può impostare la frequenza dei resoconti.** | **DECISO** — opzioni, costi, granularità e permessi delle routine ancora aperti |
 | **Q-04 — RISOLTA (principio)** | Durante la pausa regionale l'utente può consultare lo stato congelato e preparare ordini; **nessuna simulazione avanza**, gli ordini saranno elaborati alla ripresa. | **DECISO** — tipi di ordini, limiti/cancellazioni, conflitti al tick e comportamento offline separato restano da precisare |
 | **Q-05 — RISOLTA (principio)** | **Push previa autorizzazione Android/iOS + preferenze selettive per categoria nell'app.** Il push viene emesso soltanto se entrambe le condizioni sono abilitate. | **DECISO** — elenco categorie, default, silenziamento e preferenze per-campagna ancora aperti |
-| **Q-06** | Quanti account/personaggi/feudi può controllare un giocatore per campagna? | Autorizzazioni e interfaccia |
+| **Q-06 — RISOLTA (principio)** | **Un personaggio per account/campagna, con più feudi governabili. Per comandare un altro feudo occorre spostarsi fisicamente oppure inviare messaggeri/piccioni, rispettando i tempi simulati.** | **DECISO** — viaggi, infrastruttura dei piccioni, deleghe e singoli tipi di ordine ancora aperti |
 | **Q-07** | App native separate, cross-platform o web installabile per un primo rilascio? | Stack e distribuzione |
 | **Q-08** | KPI della Home: quali 4–6 numeri sono davvero indispensabili? | Prodotto/UX |
 | **Q-09** | Il giocatore può dare ordini quando il feudo è assediato e quanto ne può conoscere? | Fog of war e difesa |
@@ -334,6 +362,6 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 
 ## 11. Definition of Ready della SRS
 
-L'SRS potrà essere promossa da **bozza v0.6** a **baseline approvata** soltanto quando: (1) le questioni **Q-06…Q-10** prioritizzate avranno risposta o una decisione esplicita di rinvio (**Q-01: B; Q-02: doppia temporalità; Q-03: report dei vassalli a frequenza configurabile; Q-04: ordini preparabili durante pausa e applicati alla ripresa; Q-05: push con autorizzazione OS e filtri di categoria**); (2) per ogni funzione Must sarà disponibile una sorgente autorevole o una dipendenza di backend documentata; (3) saranno definiti permessi dei ruoli e catalogo di tutti i comandi; (4) saranno approvati criteri di accettazione e gate B; (5) sarà aggiornata la tracciabilità verso backlog e test.
+L'SRS potrà essere promossa da **bozza v0.7** a **baseline approvata** soltanto quando: (1) le questioni **Q-07…Q-10** prioritizzate avranno risposta o una decisione esplicita di rinvio (**Q-01: B; Q-02: doppia temporalità; Q-03: report dei vassalli; Q-04: preparazione ordini in pausa; Q-05: push con consenso OS e filtri; Q-06: personaggio unico e governo dei feudi via viaggio/messaggeri/piccioni**); (2) per ogni funzione Must sarà disponibile una sorgente autorevole o una dipendenza di backend documentata; (3) saranno definiti permessi dei ruoli e catalogo di tutti i comandi; (4) saranno approvati criteri di accettazione e gate B; (5) sarà aggiornata la tracciabilità verso backlog e test.
 
 **Nessuna funzionalità mobile è stata implementata da questo documento.**
