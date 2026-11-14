@@ -1,5 +1,14 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-MOB-PUSH-261114 — Push: permesso del dispositivo e filtri per categoria (14/11/2026)
+
+- **DECISO dal product owner:** l'app Android/iOS deve richiedere il **permesso push del sistema operativo** e offrire **preferenze di ricezione selettive per categoria**. Entrambi i livelli si applicano: **permesso OS attivo AND categoria abilitata**. Revoca del permesso e disattivazione della categoria impediscono nuovi push corrispondenti.
+- **DECISO — non condizionare il gameplay:** posta e avvisi disponibili nell'app restano accessibili anche con i push disabilitati. Le notifiche non possono anticipare il recapito simulato di lettere e resoconti, né esporre dati di feudi dei vassalli non ancora riferiti al sovrano.
+- **CATEGORIE PROPOSTE, non approvate come elenco definitivo:** sicurezza/attacchi/assedi, criticità economiche, cantieri, posta/diplomazia, spedizioni, tributi.
+- **APERTO:** categorie definitive, stato iniziale dei singoli selettori, filtri globali vs per-campagna, silenziamento/orari quieti, anteprime su schermata bloccata, momento della richiesta del permesso e politica multi-dispositivo. Non presumere un consenso preventivo né selettori inizialmente tutti attivi.
+- **STATO:** documentazione e SRS v0.6 in [draft PR #222](https://github.com/erykwest/CONQUER/pull/222), Q-05 risolta nel principio. Nessun runtime, service push o schema implementato; ROADMAP invariata.
+
+
 ## D-RC-PAUSE-261113 — Preparazione di ordini durante pause regionali (13/11/2026)
 
 - **DECISO dal product owner:** durante una **pausa regionale programmata** della campagna il giocatore può **consultare la situazione congelata e preparare ordini** sul proprio feudo via browser/app, purché il servizio sia raggiungibile. L'intero mondo resta fermo: **nessun tick, produzione, costruzione, marcia, recapito o altro progresso temporale**.
