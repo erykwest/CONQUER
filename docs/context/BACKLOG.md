@@ -1,5 +1,16 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## SIEGE-COMMS-01 — Invasione vs assedio, messaggeri e piccioni (14/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** feudo **INVASO** diverso da **SOTTO ASSEDIO**. Durante l'assedio non partono messaggeri ordinari; i piccioni possono uscire **non intercettabili**, con tempo di recapito simulato e canale disponibile. L'invasione **non** attiva automaticamente quel blocco. [D-SIEGE-COMMS-261114](DECISIONS.md#d-siege-comms-261114--invasione-e-assedio-uscita-di-messaggeri-e-piccioni-14112026).
+
+- [ ] Integrare stato militare autorevole per `invaded` e `besieged` / stage equivalente, con criterio di transizione da decidere; non inferire assedio da semplice presenza ostile.
+- [ ] Bloccare **partenza dei messaggeri ordinari** dal feudo in assedio, inclusi tentativi da app, browser e API senza duplicare la regola nel client.
+- [ ] Consentire **partenza dei piccioni** con vettore/rete operativa e recapito simulato; non applicare intercettazione ai piccioni che escono dal feudo assediato.
+- [ ] QA: invasione senza blocco automatico; assedio che rifiuta messaggeri uscenti; piccioni in uscita non intercettabili; impossibilità di spedire con canale assente; coerenza con fog of war.
+- [ ] **APERTO:** messaggeri in entrata o già partiti, pericoli dei messaggeri durante invasione, prerequisiti/reti dei piccioni, definizione temporale dell'assedio, ordini ammessi e informazioni su feudi assediati.
+
+
 ## MOB-KPI-01 — Home: shortlist preliminare di sei indicatori (14/11/2026)
 
 **PROPOSTA ACCOLTA COME «UN BUON INIZIO», NON ANCORA APPROVATA IN VIA DEFINITIVA.** Q-08 SRS mobile **IN DEFINIZIONE**, [SRS v0.9 nella draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
