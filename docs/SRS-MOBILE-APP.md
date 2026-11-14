@@ -1,10 +1,10 @@
 # CONQUER — Software Requirements Specification (SRS) · Mobile Companion
 
-**Versione:** 0.5 — bozza di lavoro, **non approvata nel complesso** (scelte B e Q-02…Q-04 approvate)  
+**Versione:** 0.6 — bozza di lavoro, **non approvata nel complesso** (scelte B e Q-02…Q-05 approvate)  
 **Data:** 13 novembre 2026  
 **Destinazione:** Android e iOS; prima dipendenza: hub browser e backend multiplayer condiviso  
 **Stato:** SPEC / NO RUNTIME — nessuna app mobile implementata  
-**Decisioni approvate:** **B — primo rilascio pubblico con controllo remoto completo**; **comandi locali al primo tick utile, comunicazioni inter-feudo con recapito simulato**; **KPI dei vassalli solo tramite resoconti di messaggeri con frequenza impostabile dal sovrano**; **possibilità di preparare ordini a server regionale in pausa, senza avanzare la simulazione fino alla riattivazione**.
+**Decisioni approvate:** **B — primo rilascio pubblico con controllo remoto completo**; **comandi locali al primo tick utile, comunicazioni inter-feudo con recapito simulato**; **KPI dei vassalli solo tramite resoconti di messaggeri con frequenza impostabile dal sovrano**; **ordini preparabili durante la pausa regionale**; **push subordinati al permesso OS e filtrabili per categoria dalle impostazioni dell'app**.
 
 ## 0. Natura del documento e fonti
 
@@ -56,7 +56,7 @@ L'app serve a **consultare e governare più insediamenti in più campagne persis
 
 **C — Gate obbligatorio:** per essere pronto al rilascio, ogni dominio deve avere azioni reali persistite e validate da un backend autorevole, visibili in browser e app, con test end-to-end; niente pulsanti dimostrativi. **A:** inventario preciso dei singoli comandi per dominio e relativi permessi da approvare; il dettaglio non riduce il perimetro confermato.
 
-**P — Migliorie non obbligatorie al primo rilascio:** push di sistema, cache offline read-only e archivio campagne concluse, salvo diversa decisione. La **posta in-app**, la conferma degli ordini e gli errori comprensibili sono invece necessari.
+**D — Push nel perimetro mobile:** richiesta di autorizzazione alle notifiche tramite Android/iOS e controllo selettivo per categoria all'interno dell'app; riceverle richiede **sia permesso OS sia categoria abilitata**. L'utente mantiene accesso al gioco e agli avvisi in-app anche se nega il permesso. **P — Migliorie non obbligatorie al primo rilascio:** cache offline read-only e archivio campagne concluse. La posta in-app, la conferma degli ordini e gli errori comprensibili rimangono necessari.
 
 ## 2. Contesto applicativo e navigazione
 
@@ -127,9 +127,14 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 | FR-MSG-03 | Mostra stato del messaggio: redatto/in transito/consegnato/altro esito, con ETA solo quando calcolabile. | P/C | Must |
 | FR-MSG-04 | La lettura sull'app **non anticipa** la consegna simulata; non espone messaggi o rapporti prima dei permessi/tempi previsti. | D/C | Must |
 | FR-DIP-01 | Consulta relazioni, sudditanza e obblighi; consente azioni diplomatiche autorizzate dalla campagna. | D/C | Must |
-| FR-NOT-01 | Organizza avvisi per campagna: posta, attacco/assedio, scorte critiche, cantieri bloccati, spedizioni, tributi. | P/C | Should |
-| FR-NOT-02 | Supporta notifiche push Android/iOS, con consenso e preferenze granulari. | P/C | Should |
-| FR-NOT-03 | Non usa allarmi ingannevoli, countdown artificiosi o richieste di accesso obbligatorio per mantenere progressi. | P | Should |
+| FR-NOT-01 | Organizza avvisi in-app per campagna: posta, attacco/assedio, scorte critiche, cantieri bloccati, spedizioni, tributi. Gli avvisi in-app non richiedono consenso push OS. | D/C | Must |
+| FR-NOT-02 | Il client può chiedere il **permesso push tramite i meccanismi ufficiali di Android/iOS**, e rispetta il rifiuto o la revoca del permesso; senza autorizzazione **non invia push**. | D/C | Must |
+| FR-NOT-03 | L'app permette al giocatore di **abilitare/disabilitare selettivamente i push per categoria**, indipendentemente dall'autorizzazione generale del sistema operativo. | D/C | Must |
+| FR-NOT-04 | La consegna dei push richiede **due condizioni congiunte**: permesso OS attivo **e** categoria abilitata dall'utente. Revoca o disattivazione di una categoria impediscono nuovi push corrispondenti. | D/C | Must |
+| FR-NOT-05 | Le categorie iniziali **proposte** sono sicurezza (attacchi/assedi), economia e risorse critiche, cantieri, posta recapitata/diplomazia, spedizioni e tributi. Nomi esatti, categorie e priorità non sono ancora approvati. | P/C | Must per selettività; tassonomia A |
+| FR-NOT-06 | Il push informa solo di eventi **già visibili/autorizzati** al giocatore secondo i tempi della simulazione (lettere solo dopo il recapito, rapporti dei vassalli solo dopo la consegna). | D/C | Must |
+| FR-NOT-07 | Il rifiuto del permesso OS o la disattivazione di tutti i push non limita gameplay, controllo remoto, messaggi e avvisi consultabili in-app. | P/C | Must |
+| FR-NOT-08 | Evitare allarmi ingannevoli, countdown artificiosi e pressioni ad aprire l'app per mantenere i progressi. | P | Should |
 
 ### 3.5 Stato offline e comandi
 
@@ -166,6 +171,16 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 - Un ordine remoto non aggira costi, disponibilità, tempi, cammini, conoscenza della mappa o regole di consegna.
 - I dati storici esistono soltanto se salvati dal motore; il dispositivo non inventa tendenze.
 - La stessa azione ripetuta con la stessa chiave di idempotenza deve avere un solo effetto (P per soluzione tecnica).
+
+## 3.6 Modello di consenso push e filtri — DECISO (14/11/2026)
+
+**D — doppio livello indipendente:** (1) **consenso del sistema operativo** Android/iOS per l'invio push; (2) **selettori per categoria** disponibili nelle impostazioni dell'app. Il permesso OS non annulla la scelta delle singole categorie; le preferenze interne non possono aggirare un consenso OS negato/revocato. Il controllo effettivo del push è il loro **AND logico**, non un singolo interruttore.
+
+**D — separazione notifiche/gioco:** la casella postale, la timeline e gli avvisi in-app restano disponibili anche con push disabilitati; un push non anticipa consegne diplomatiche, rapporto dei vassalli o dati coperti da visibilità feudale. Le preferenze vanno riferite all'account corretto e valutate al momento dell'emissione.
+
+**P — soluzione di prodotto:** categorie almeno per attacchi/assedi, criticità economiche, posta recapitata, spedizioni, tributi e cantieri; preferenze conservate lato account; registrazione/revoca di token per dispositivo e gestione di più dispositivi; payload con anteprima minimizzata per evitare esposizione sulla schermata bloccata.
+
+**A — configurazione di dettaglio:** categorie definitive, stato iniziale delle singole categorie dopo il consenso, filtri globali versus per singola campagna, silenziamento temporaneo/orari quieti, granularità del contenuto mostrato nel push e momento della richiesta del permesso. **Non presumere** selettori inizialmente attivati né consenso OS preconcesso.
 
 ## 4a. Contratto temporale degli ordini — DECISO (13/11/2026)
 
@@ -204,7 +219,7 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 - Command gateway: comando contestuale, autorizzazione, deduplicazione, tracking esito.
 - Feudal messaging: inbox/outbox, invio, progresso di consegna, report.
 - World map: territori visibili, rotte, spedizioni, carovane/tributi.
-- Notification service: eventi, preferenze e registrazione dispositivi, se approvato.
+- Notification service: **D** consenso OS + preferenze push per categoria; eventi autorizzati e tempi di consegna. **P** persistenza delle preferenze, registrazione e revoca dispositivi/token, gestione del payload minimo e multi-dispositivo.
 
 **Macchina stati consigliata per un comando (P):** creato sul client → ricevuto dal backend → validato/rifiutato → pianificato → applicato dal tick o concluso con errore → restituzione dell'esito; ogni salto di stato osservabile. Non confondere **accettazione** con **esecuzione**.
 
@@ -274,6 +289,12 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 
 **AT-21 — Distinzione pausa/offline:** se un dispositivo è privo di rete o il server è irraggiungibile, l'app non mostra la preparazione come già registrata dal server né promette esecuzione automatica; una eventuale coda offline resta una funzionalità separata ancora da decidere.
 
+**AT-22 — Permesso del dispositivo:** alla negazione o revoca dell'autorizzazione push Android/iOS, il backend/client non manda notifiche push a quel dispositivo; Home, posta e avvisi in-app restano utilizzabili.
+
+**AT-23 — Filtraggio per categoria:** a permesso OS attivo, quando il giocatore disabilita la categoria spedizioni ma mantiene attiva la categoria posta, un evento spedizione non genera push mentre una lettera realmente recapitata può generarlo. Le categorie disattivate non sono riattivate tacitamente alla successiva sessione.
+
+**AT-24 — Tempo e privacy:** una lettera in transito o un rapporto non ancora consegnato non innescano push con contenuti/anticipazioni; un evento relativo a campagna o feudo non autorizzato non produce push visibile per l'account corrente. La scelta delle categorie non modifica il tempo della simulazione.
+
 ## 8. Roadmap tecnica proposta — primo rilascio completo (nessuna data approvata)
 
 | Fase | Deliverable | Dipendenze / criterio di uscita |
@@ -282,10 +303,10 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 | **F1 — Backend + hub web** | Campagne autorevoli, lobby, dashboard, API lettura e scrittura | World/Feudal, MP-07, persistenza server e autorizzazioni |
 | **F2 — Controllo remoto web completo** | Tutti i domini: economia/lavoro/fisco/cantieri, militare/spedizioni, diplomazia/messaggi, tributi/carovane, mappa | Moduli reali, QA e contratti di comando |
 | **F3 — App alpha/beta interne** | Client mobile Android/iOS con gli stessi comandi, test utenti/dispositivi, sicurezza e accessibilità | F1–F2, test di sincronia con browser |
-| **F4 — Prima release pubblica Android/iOS (B)** | **Controllo remoto completo** di §1.4, tutti i Must e test AT-01…AT-21 | **Gate non derogabile:** nessuna release solo KPI, messaggi o comandi economici parziali |
-| **F5 — Miglioramenti** | Push opzionali, cache offline, archivio storico e ottimizzazioni, se approvati | Decisioni successive |
+| **F4 — Prima release pubblica Android/iOS (B)** | **Controllo remoto completo** di §1.4, push con consenso OS + filtri per categoria, tutti i Must e test AT-01…AT-24 | **Gate non derogabile:** nessuna release solo KPI, messaggi o comandi economici parziali |
+| **F5 — Miglioramenti** | Cache offline, archivio storico, filtri/silenziamento push avanzati e ottimizzazioni, se approvati | Decisioni successive |
 
-**DECISO:** completezza del **primo rilascio pubblico**, non una data di pubblicazione. Le fasi incrementali interne non costituiscono una release pubblica ridotta. **A:** stack tecnologico, dettaglio comandi, notifiche push, modalità offline e pianificazione temporale.
+**DECISO:** completezza del **primo rilascio pubblico** e push con permesso OS + selettori per categoria; nessuna data di pubblicazione fissata. Le fasi incrementali interne non costituiscono una release pubblica ridotta. **A:** stack tecnologico, dettaglio comandi, tassonomia/default delle notifiche, modalità offline e pianificazione temporale.
 
 ## 9. Rischi e dipendenze reali del repository
 
@@ -304,7 +325,7 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 | **Q-02 — RISOLTA** | **Ordini al proprio feudo: primo tick utile, senza messaggero. Comunicazioni inter-feudo: trasporto e recapito simulati.** | **DECISO** — durata del tick, pause, categorie e conseguenze specifiche da dettagliare |
 | **Q-03 — RISOLTA** | **Feudo proprio: KPI aggiornati direttamente; feudi dei vassalli: solo rapporti ricevuti tramite messaggeri. Il sovrano può impostare la frequenza dei resoconti.** | **DECISO** — opzioni, costi, granularità e permessi delle routine ancora aperti |
 | **Q-04 — RISOLTA (principio)** | Durante la pausa regionale l'utente può consultare lo stato congelato e preparare ordini; **nessuna simulazione avanza**, gli ordini saranno elaborati alla ripresa. | **DECISO** — tipi di ordini, limiti/cancellazioni, conflitti al tick e comportamento offline separato restano da precisare |
-| **Q-05** | Push su attacco, lettere, allarmi, scorte e fine spedizione: opt-in, priorità, silenziamento? | Notifiche, anti-FOMO |
+| **Q-05 — RISOLTA (principio)** | **Push previa autorizzazione Android/iOS + preferenze selettive per categoria nell'app.** Il push viene emesso soltanto se entrambe le condizioni sono abilitate. | **DECISO** — elenco categorie, default, silenziamento e preferenze per-campagna ancora aperti |
 | **Q-06** | Quanti account/personaggi/feudi può controllare un giocatore per campagna? | Autorizzazioni e interfaccia |
 | **Q-07** | App native separate, cross-platform o web installabile per un primo rilascio? | Stack e distribuzione |
 | **Q-08** | KPI della Home: quali 4–6 numeri sono davvero indispensabili? | Prodotto/UX |
@@ -313,6 +334,6 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 
 ## 11. Definition of Ready della SRS
 
-L'SRS potrà essere promossa da **bozza v0.5** a **baseline approvata** soltanto quando: (1) le questioni **Q-05…Q-10** prioritizzate avranno risposta o una decisione esplicita di rinvio (**Q-01: B; Q-02: doppia temporalità; Q-03: report dei vassalli a frequenza configurabile; Q-04: ordini preparabili durante pausa e applicati alla ripresa**); (2) per ogni funzione Must sarà disponibile una sorgente autorevole o una dipendenza di backend documentata; (3) saranno definiti permessi dei ruoli e catalogo di tutti i comandi; (4) saranno approvati criteri di accettazione e gate B; (5) sarà aggiornata la tracciabilità verso backlog e test.
+L'SRS potrà essere promossa da **bozza v0.6** a **baseline approvata** soltanto quando: (1) le questioni **Q-06…Q-10** prioritizzate avranno risposta o una decisione esplicita di rinvio (**Q-01: B; Q-02: doppia temporalità; Q-03: report dei vassalli a frequenza configurabile; Q-04: ordini preparabili durante pausa e applicati alla ripresa; Q-05: push con autorizzazione OS e filtri di categoria**); (2) per ogni funzione Must sarà disponibile una sorgente autorevole o una dipendenza di backend documentata; (3) saranno definiti permessi dei ruoli e catalogo di tutti i comandi; (4) saranno approvati criteri di accettazione e gate B; (5) sarà aggiornata la tracciabilità verso backlog e test.
 
 **Nessuna funzionalità mobile è stata implementata da questo documento.**
