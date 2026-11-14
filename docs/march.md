@@ -12,6 +12,17 @@ Pagina: /march/ (file march/index.html). Non è un nuovo motore economico o un n
 - La campagna militare può proseguire dopo la conquista di uno o più feudi.
 - I due stili di gioco usano lo **stesso stato persistente** del mondo quando World/Feudal sarà integrato.
 
+## Decisione di design 14/11/2026 — INVASO vs SOTTO ASSEDIO (solo futuro World/Feudal)
+
+**DECISO:** distinguere semanticamente **invasione** del territorio e **assedio effettivo** del feudo. Razzia/presenza nemica sul territorio non equivalgono automaticamente a blocco postale dell'assedio.
+
+- **INVASO:** non applicare il divieto di uscita dei messaggeri previsto per l'assedio sulla sola base di questo stato. Rischi, intercettazioni e condizioni di movimento sotto invasione sono **APERTE**.
+- **SOTTO ASSEDIO:** il feudo **non può far partire messaggeri ordinari**. I **piccioni possono invece uscire e non sono intercettabili**, mantenendo requisiti del canale e tempi di trasporto simulati.
+- La distinzione deve essere applicata dal **server autorevole**, non solo dal pulsante della UI. Il blocco riguarda per ora le **partenze**: ingressi e messaggeri già in viaggio restano da definire.
+- Transizioni effettive tra invasione e assedio, requisiti piccionaie, costi/ETA, ordini remoti consentiti e fog of war restano da specificare. Non dedurre che i piccioni siano disponibili in assenza di rete operativa.
+
+**IMPORTANTE:** lo skeleton MARCH V0 descritto sotto non implementa questo blocco postale. Il suo stadio `siege` è un riferimento di progettazione, non prova dell'integrazione multiplayer. Tracciamento: [SRS mobile v0.10](https://github.com/erykwest/CONQUER/pull/222), [Remote Control](REMOTE-CONTROL-SCOPE.md) e D-SIEGE-COMMS-261114.
+
 ## Cosa contiene concretamente lo skeleton
 
 - Interfaccia HTML autonoma, mappa schematica a celle, quattro feudi **fixture demo**.
