@@ -83,6 +83,16 @@
 
 **APERTO:** quali tipologie di ordini si possono prenotare; ordine di elaborazione, limiti, modifica/cancellazione, gestione di competizione e risorse scarse sul primo tick, messaggi redatti vs effettivamente spediti, ed eventuali costi della preparazione. La pausa regionale stessa (fasce, calendario e accensione) rimane soggetta al design della campagna; il principio vale **se** tale pausa è prevista.
 
+## 3b. Push mobile: consenso OS e preferenze per categoria — DECISO (14/11/2026)
+
+**DECISO — doppio controllo:** la futura app Android/iOS richiede il **permesso per le notifiche push tramite il sistema operativo** e permette al giocatore di **scegliere separatamente quali categorie ricevere** nelle impostazioni dell'app. Un push è ammissibile soltanto se **l'autorizzazione OS è attiva E la relativa categoria è abilitata**. Il permesso generale non annulla le scelte per categoria; l'app non aggira mai un permesso negato o revocato.
+
+**DECISO — visibilità del gioco invariata:** avvisi, posta e rapporti consultabili in-app restano disponibili indipendentemente dalla scelta di ricevere push. Le notifiche su lettere e rapporti possono riferirsi solo a contenuti **già recapitati nella simulazione**, mai anticipare informazioni dei vassalli o altri feudi. Filtri e permessi devono operare per l'account/campagna corretti.
+
+**PROPOSTO — categorie iniziali:** sicurezza/attacchi/assedi; criticità economiche; cantieri; posta e diplomazia; spedizioni; tributi. **APERTO:** elenco e nomi definitivi, comportamento iniziale dei selettori dopo il consenso OS, silenziamento, filtri per singola campagna, testo visibile sulla schermata bloccata e momento della richiesta del permesso. **Non è stato stabilito** che tutte le categorie siano inizialmente attive.
+
+**DIPENDENZA:** notification service server-side, evento autorizzato e consegnato, preferenze utente, registrazione/revoca token per dispositivo e integrazione con provider Android/iOS. Il principio è confermato nella [SRS mobile v0.6, draft PR #222](https://github.com/erykwest/CONQUER/pull/222); implementazione futura, non pronta su `main`.
+
 ## 4. Decisioni ancora necessarie
 
 1. **Dettaglio comandi:** inventario esatto dei comandi remoti per economia, fisco, lavoro, cantieri già localizzati, strategia, diplomazia e logistica; il **confine generale è deciso** nel §2a: niente piazzamento geometrico, progettazione spaziale o controllo tattico diretto.
@@ -90,7 +100,7 @@
 3. **Dettagli della visibilità (principio DECISO):** proprio feudo aggiornato direttamente; vassalli solo tramite rapporti recapitati, **frequenza impostata dal sovrano**. Da definire granularità della programmazione, contenuto, diritti e selezione dei KPI sulle schede aggregate.
 4. **Permessi:** quali operazioni può compiere un suddito, un vassallo o un sovrano su un possedimento altrui?
 5. **Dettagli degli ordini in pausa (principio DECISO):** preparazione consentita durante pause regionali, applicazione solo al riavvio e nessun avanzamento del mondo; **APERTO** ordine/limiti/revoca, conflitti al tick, notifiche, gestione server irraggiungibile e coda offline sul dispositivo.
-6. **UX e piattaforme:** progettazione web responsive/API riusabili prima dell'app nativa; sequenza di rilascio, autenticazione e aggiornamenti real-time.
+6. **UX e piattaforme:** web responsive/API riusabili prima dell'app nativa; **push con consenso OS + filtri per categoria DECISI** (§3b). **APERTO:** tassonomia e default dei filtri, silenziamento, autenticazione, stack e aggiornamenti real-time.
 
 ## 5. Tranche di lavoro future (non implementate)
 
@@ -99,7 +109,7 @@
 - **RC-03 Comandi remoti:** API e permessi per economia, fisco, lavoro/Job Manager, cantieri già collocati, gestione militare strategica, diplomazia e logistica; validazioni, coda/esiti, stessa logica senza duplicazioni. **Esclusi** piazzamento geometrico, progettazione delle fortificazioni e controllo tattico diretto, riservati al Builder/3D.
 - **RC-04 Comunicazioni/messaggi:** analisi branch `messages`, porting selettivo, nodi reali, ETA, rapporti e integrazione diplomazia.
 - **RC-05 Strategia remota:** spedizioni, carovane/tributi, diplomazia e mappa regionale collegate a World/Feudal.
-- **RC-06 Mobile-ready:** web responsive, API neutrali alla piattaforma, poi eventuali app Android/iOS senza riscrivere regole.
+- **RC-06 Mobile-ready:** web responsive, API neutrali alla piattaforma, poi app Android/iOS senza riscrivere regole; **push con permesso del sistema operativo e selezione per categoria nell'app**, senza interferire con la visibilità/temporizzazione in-game.
 - **RC-07 QA e sicurezza:** isolamento tra campagne, autorizzazione, consistenza dello stato, velocità ×1 condivisa, messaggi ritardati, concorrenza/duplicati dei comandi e test multi-client.
 
 **Dipendenze e roadmap:** World/Feudal (M4), MP-07 account vs campagna, persistenza autorevole, Combat/Siege/Economy unici. Questo documento **non anticipa** le milestone esistenti né dichiara pronta la dashboard remota.
