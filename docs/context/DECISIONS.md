@@ -1,5 +1,15 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-FEUD-CHAR-261114 — Un personaggio per campagna, governo tramite presenza o messaggeri (14/11/2026)
+
+- **DECISO dal product owner:** **un solo personaggio per account in ciascuna campagna**, ma il personaggio può controllare e amministrare **più feudi/territori**. L'account può partecipare a più campagne con un personaggio distinto in ciascuna; più feudi non richiedono più slot giocatore.
+- **DECISO — presenza fisica:** il personaggio si trova in un solo luogo alla volta. Per governare **direttamente** un altro feudo deve **spostarsi** con tempi di viaggio simulati. In alternativa trasmette **ordini attraverso messaggeri o piccioni**, con tempo di trasporto e recapito simulato. La dashboard web/mobile non consente gestione istantanea dei feudi distanti.
+- **PRECISAZIONE di D-RC-TIME-261113:** il comando amministrativo applicabile al **primo tick utile** è quello del **feudo in cui è presente il personaggio**. Un ordine destinato a un altro feudo, anche se di proprietà del personaggio, richiede spostamento o corrispondenza; un messaggio recapitato non implica automaticamente l'esecuzione dell'azione, che va verificata dal motore.
+- **COERENZA:** la regola dei resoconti dei vassalli rimane invariata (nessun accesso live ai loro dati); l'eventuale visibilità dei feudi **propri** ma distanti non è ancora definita.
+- **APERTO:** prerequisiti piccionaie, velocità/costi/rischi dei viaggi, intercettazione, ordini ammessi da lettera, permessi e deleghe ad amministratori, comportamento durante il viaggio e visibilità dati dei feudi lontani.
+- **STATO:** solo documentazione. [MULTIPLAYER-SERVER-SCOPE](../MULTIPLAYER-SERVER-SCOPE.md), [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [SRS v0.7 draft PR #222](https://github.com/erykwest/CONQUER/pull/222). Nessun codice gameplay o milestone modificati.
+
+
 ## D-MOB-PUSH-261114 — Push: permesso del dispositivo e filtri per categoria (14/11/2026)
 
 - **DECISO dal product owner:** l'app Android/iOS deve richiedere il **permesso push del sistema operativo** e offrire **preferenze di ricezione selettive per categoria**. Entrambi i livelli si applicano: **permesso OS attivo AND categoria abilitata**. Revoca del permesso e disattivazione della categoria impediscono nuovi push corrispondenti.
