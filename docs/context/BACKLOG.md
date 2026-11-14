@@ -1,14 +1,26 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## SIEGE-COMMS-02 — Allarme automatico invasione e blocco bidirezionale messaggeri (14/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** ogni evento **nuovo** di invasione territorio genera **partenza automatica del messaggero d'allarme** se permessa. Durante **assedio** messaggeri ordinari **né entrano né escono**; consegne ordinarie non avvengono. I piccioni **in uscita** restano consentiti e non intercettabili se il canale è operativo. [D-SIEGE-COMMS-UPDATE-261114](DECISIONS.md#d-siege-comms-update-261114--blocco-bidirezionale-e-messaggero-automatico-allinvasione-14112026) · [SRS v0.11 PR #222](https://github.com/erykwest/CONQUER/pull/222).
+
+- [ ] Attivare dispatch automatico su **nuova invasione** del territorio: messaggero fisico e recapito simulato, non push/rapporto istantaneo; registrarne esito.
+- [ ] Validare lato server **ingresso, uscita e consegna** dei messaggeri contro stato del feudo; assedio attivo blocca tutti e tre.
+- [ ] **Proposta QA/idempotenza:** un allarme per evento distinto, non per tick; invasioni distinte generano tentativi distinti; non forzare un messaggero se il blocco è già attivo.
+- [ ] Preservare partenza piccioni in assedio, non intercettabilità e tempi di viaggio, senza canali inventati.
+- [ ] Testare sequenze invasione→assedio, partenza prima/dopo blocco, inbound senza consegna, UI e API, coerenza browser/mobile.
+- [ ] **APERTO:** destinatario e tragitto del messaggero automatico, attacchi contemporanei e ordinamento tick, sorte inbound già in transito, rischi in invasione, disponibilità piccionaie, ordini disponibili durante blocco.
+
+
 ## SIEGE-COMMS-01 — Invasione vs assedio, messaggeri e piccioni (14/11/2026)
 
-**DECISO / NON IMPLEMENTATO:** feudo **INVASO** diverso da **SOTTO ASSEDIO**. Durante l'assedio non partono messaggeri ordinari; i piccioni possono uscire **non intercettabili**, con tempo di recapito simulato e canale disponibile. L'invasione **non** attiva automaticamente quel blocco. [D-SIEGE-COMMS-261114](DECISIONS.md#d-siege-comms-261114--invasione-e-assedio-uscita-di-messaggeri-e-piccioni-14112026).
+**DECISO / NON IMPLEMENTATO:** feudo **INVASO** diverso da **SOTTO ASSEDIO**. Durante l'assedio **non entrano né escono messaggeri ordinari**; i piccioni possono uscire **non intercettabili**, con tempo di recapito simulato e canale disponibile. L'invasione **non** attiva automaticamente quel blocco e **fa partire un messaggero automatico di allarme** quando permesso. [D-SIEGE-COMMS-261114](DECISIONS.md#d-siege-comms-261114--invasione-e-assedio-uscita-di-messaggeri-e-piccioni-14112026).
 
 - [ ] Integrare stato militare autorevole per `invaded` e `besieged` / stage equivalente, con criterio di transizione da decidere; non inferire assedio da semplice presenza ostile.
-- [ ] Bloccare **partenza dei messaggeri ordinari** dal feudo in assedio, inclusi tentativi da app, browser e API senza duplicare la regola nel client.
+- [ ] Bloccare **partenza, ingresso e consegna dei messaggeri ordinari** per il feudo sotto assedio, inclusi tentativi da app, browser e API senza duplicare la regola nel client.
 - [ ] Consentire **partenza dei piccioni** con vettore/rete operativa e recapito simulato; non applicare intercettazione ai piccioni che escono dal feudo assediato.
 - [ ] QA: invasione senza blocco automatico; assedio che rifiuta messaggeri uscenti; piccioni in uscita non intercettabili; impossibilità di spedire con canale assente; coerenza con fog of war.
-- [ ] **APERTO:** messaggeri in entrata o già partiti, pericoli dei messaggeri durante invasione, prerequisiti/reti dei piccioni, definizione temporale dell'assedio, ordini ammessi e informazioni su feudi assediati.
+- [ ] **APERTO:** destino dei messaggeri **già partiti che non possono entrare/consegnare**, rischi dei messaggeri durante invasione, destinatario dell'allarme, prerequisiti/reti dei piccioni, soglia di assedio e ordini ammessi. **Il blocco dell'ingresso è DECISO.**
 
 
 ## MOB-KPI-01 — Home: shortlist preliminare di sei indicatori (14/11/2026)
