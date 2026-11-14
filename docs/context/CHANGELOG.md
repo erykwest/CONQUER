@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-14 — MP-08 / RC-CHAR-01 · Personaggio unico e governo fisico dei feudi (solo design)
+
+Il product owner ha deciso **un personaggio per account/campagna**, che può governare più feudi solo **spostandosi fisicamente** per la gestione diretta o **trasmettendo ordini tramite messaggeri/piccioni**. Precisato il contratto: il primo tick utile vale per comandi nel feudo di presenza; un feudo lontano non si governa istantaneamente cambiando schermata nel browser/mobile. Aggiornati MULTIPLAYER-SERVER-SCOPE, REMOTE-CONTROL-SCOPE, decisione D-FEUD-CHAR-261114 e backlog MP-08/RC-CHAR-01; SRS mobile v0.7 nella draft PR #222 (Q-06 risolta). **Solo documentazione; runtime, schema e roadmap invariati.**
+
+
 ## 2026-11-14 — MOB-PUSH-01 · Push autorizzati dal sistema e selezionabili per categoria (solo design)
 
 Il product owner ha chiuso Q-05: notifiche push soggette al consenso Android/iOS e **filtrabili per categoria nelle impostazioni dell'app**. L'invio richiede entrambi i livelli abilitati; la posta e gli avvisi in-app restano consultabili anche senza permesso push. Le notifiche non anticipano lettere/rapporti non ancora recapitati. Aggiornati REMOTE-CONTROL-SCOPE, D-MOB-PUSH-261114, backlog MOB-PUSH-01 e SRS v0.6 nella draft PR #222. Categorie e stato iniziale dei filtri ancora aperti. Solo documentazione, nessun runtime/SQL.

@@ -1,5 +1,16 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## MP-08 / RC-CHAR-01 — Un personaggio per campagna, governo multi-feudo con presenza o posta (14/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** un personaggio per account/campagna, capace di possedere e governare più feudi; **ordine diretto solo nel feudo fisicamente raggiunto**. Per feudi lontani servono **spostamento del personaggio o ordine recapitato tramite messaggero/piccione**. [D-FEUD-CHAR-261114](DECISIONS.md#d-feud-char-261114--un-personaggio-per-campagna-governo-tramite-presenza-o-messaggeri-14112026).
+
+- [ ] Modello server: vincolo `user_id+campaign_id` → personaggio singolo, presenza/posizione e stato di viaggio; territori e feudi posseduti multipli, senza slot giocatore aggiuntivi.
+- [ ] Gestione presenza: percorso e tempo di viaggio; solo il feudo fisicamente occupato consente comandi diretti al primo tick utile.
+- [ ] Ordini da remoto: selezione messaggero/piccione, spedizione/ETA/consegna, valutazione dopo il recapito; nessun comando istantaneo a feudi distanti via web/mobile/API.
+- [ ] UI/SRS: indicare posizione, feudo di presenza, possedimenti distanti, ordini in transito e relativi esiti; QA multi-feudo, multi-campagna, cambio schermata senza teletrasporto e isolamento dei permessi.
+- [ ] **APERTO:** requisito della piccionaia, velocità/costi/intercettazione, viaggio e sicurezza, deleghe, ordini trasmissibili e visibilità dei dati dei feudi *propri* ma lontani.
+
+
 ## MOB-PUSH-01 — Notifiche push con consenso OS e filtri per categoria (14/11/2026)
 
 **DECISO / NON IMPLEMENTATO:** primo rilascio mobile con autorizzazione push Android/iOS e categorie configurabili dall'utente in app; **nessun push senza consenso OS e categoria abilitata**. [Decisione D-MOB-PUSH-261114](DECISIONS.md#d-mob-push-261114--push-permesso-del-dispositivo-e-filtri-per-categoria-14112026) · [SRS mobile v0.6 draft #222](https://github.com/erykwest/CONQUER/pull/222).

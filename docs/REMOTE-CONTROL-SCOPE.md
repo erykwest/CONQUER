@@ -58,7 +58,7 @@
 **VINCOLO DI PROGETTO (derivato dal requisito di controllo remoto):** browser di gioco, dashboard web e futuri client mobili devono consumare **lo stesso modello autorevole di partita**. Le operazioni mutative devono essere validate lato server rispetto a `user_id`, `campaign_id`, `settlement_id`/ruolo feudale, disponibilità delle risorse e stato del mondo. La UI non deve modificare direttamente un salvataggio locale come se fosse il mondo condiviso.
 
 **DECISO — due canali logici distinti (13/11/2026):**
-1. **Comandi di amministrazione sul proprio feudo:** l'ordine viene ricevuto e validato dal backend autorevole, poi **applicato al primo tick utile successivo** senza messaggero né latenza simulata aggiuntiva. Accettazione e applicazione sono stati distinti; il client non dichiara l'esecuzione prima della conferma del motore. Il tempo reale di un tick **non è fissato da questa decisione**.
+1. **Comandi di amministrazione in presenza:** quando il personaggio si trova **fisicamente nel feudo da amministrare**, l'ordine viene ricevuto e validato dal backend autorevole, poi **applicato al primo tick utile** senza messaggero aggiuntivo. **Possedere altri feudi non ne rende istantanei i comandi**: per governarli bisogna trasferire il personaggio o inviare messaggeri/piccioni. Accettazione e applicazione sono stati distinti; durata reale del tick ancora da stabilire.
 2. **Comunicazioni verso altri feudi e persone:** lettere, richieste e ordini diplomatici indirizzati ad altri feudi rispettano **origine, destinazione, trasporto e tempo simulato di recapito**; inviare ≠ consegnare. Il destinatario non accede al contenuto o ai suoi effetti prima della consegna prevista dal motore; app, browser e notifiche non creano scorciatoie. Un messaggio recapitato non applica automaticamente una decisione diplomatica se la semantica di quel messaggio non lo prevede.
 
 **PROPOSTO:** layer di lettura leggero (snapshot, KPI, timeline ed eventi/avvisi) e layer di comando separati, senza richiedere scene 3D, canvas o simulazioni economiche parallele sul client. Prevedere audit/completamento/esito dei comandi e informazioni sulla freschezza dello snapshot. Le notifiche cross-campagna e i push mobili restano future. **DECISO**: il comando locale che avvia una spedizione viene acquisito al tick utile, ma spostamento, viaggio, intercettazione, arrivo e conseguenze si svolgono sempre con i tempi simulati propri del motore: nessun teletrasporto della spedizione al tick.
@@ -93,12 +93,24 @@
 
 **DIPENDENZA:** notification service server-side, evento autorizzato e consegnato, preferenze utente, registrazione/revoca token per dispositivo e integrazione con provider Android/iOS. Il principio è confermato nella [SRS mobile v0.6, draft PR #222](https://github.com/erykwest/CONQUER/pull/222); implementazione futura, non pronta su `main`.
 
+## 3c. Personaggio unico e governo dei feudi tramite presenza o corrispondenza — DECISO (14/11/2026)
+
+**DECISO:** ciascun account può avere **un solo personaggio in ogni campagna**, benché possa partecipare a più campagne simultanee e governare **più feudi/territori** dentro ciascuna. Questo non crea personaggi o slot umani aggiuntivi.
+
+**DECISO:** il personaggio ha una **posizione fisica unica** nella campagna. Per amministrare **direttamente** un feudo deve **spostarsi fisicamente** fino a quel feudo (viaggio soggetto ai tempi simulati). In alternativa, può inviare ordini a un feudo distante **mediante messaggeri o piccioni**: l'ordine non arriva/si applica istantaneamente perché il giocatore ha aperto una scheda diversa nella dashboard. La scelta del client (browser/mobile) non cambia la presenza del personaggio.
+
+**CORREZIONE DEL CONTRATTO TEMPORALE:** «ordine locale al primo tick utile» (§3) significa **ordine relativo al feudo in cui il personaggio è presente**, non qualsiasi feudo di sua proprietà. Se il personaggio è altrove, le comunicazioni hanno tempi di invio/trasporto/consegna simulati. Un ordine recapitato può essere eseguito solo secondo permessi e regole del feudo ricevente, senza presupporre che ogni lettera attivi automaticamente un effetto.
+
+**DIPENDENZE:** World/Feudal per presenza, identità e viaggio del personaggio; messaggi reali tra feudi, messaggeri/piccioni e loro tempi per comandi remoti; un backend autorevole condiviso. Il prototipo `messages` non equivale ancora a un multiplayer reale.
+
+**APERTO:** tempi e pericoli del viaggio, infrastrutture/prerequisiti della posta via piccione, costi/intercettazione, azioni consentite tramite messaggio, deleghe a amministratori, stato di comando durante il viaggio, modalità di lettura dei dati di *propri* feudi lontani. La regola già decisa sui **resoconti dei vassalli** resta valida: non diventano KPI live al cambio di schermata.
+
 ## 4. Decisioni ancora necessarie
 
 1. **Dettaglio comandi:** inventario esatto dei comandi remoti per economia, fisco, lavoro, cantieri già localizzati, strategia, diplomazia e logistica; il **confine generale è deciso** nel §2a: niente piazzamento geometrico, progettazione spaziale o controllo tattico diretto.
 2. **Dettagli temporali ancora aperti:** durata e scheduling del tick, coda e concorrenza al primo tick di ripresa, semantica delle singole richieste inter-feudo. **DECISO**: proprio feudo → primo tick utile; comunicazioni inter-feudo → recapito simulato; server regionale in pausa → ordini preparabili ma simulazione congelata fino alla ripresa.
 3. **Dettagli della visibilità (principio DECISO):** proprio feudo aggiornato direttamente; vassalli solo tramite rapporti recapitati, **frequenza impostata dal sovrano**. Da definire granularità della programmazione, contenuto, diritti e selezione dei KPI sulle schede aggregate.
-4. **Permessi:** quali operazioni può compiere un suddito, un vassallo o un sovrano su un possedimento altrui?
+4. **Permessi e presenza:** per ogni comando distinguere feudo dove **il personaggio è presente** e feudi comandati **a distanza tramite messaggero/piccione**; rimangono aperti i diritti di sudditi/vassalli/sovrani, le deleghe e quali ordini possano essere trasmessi.
 5. **Dettagli degli ordini in pausa (principio DECISO):** preparazione consentita durante pause regionali, applicazione solo al riavvio e nessun avanzamento del mondo; **APERTO** ordine/limiti/revoca, conflitti al tick, notifiche, gestione server irraggiungibile e coda offline sul dispositivo.
 6. **UX e piattaforme:** web responsive/API riusabili prima dell'app nativa; **push con consenso OS + filtri per categoria DECISI** (§3b). **APERTO:** tassonomia e default dei filtri, silenziamento, autenticazione, stack e aggiornamenti real-time.
 
@@ -106,7 +118,7 @@
 
 - **RC-01 Hub account e multi-campagna:** home/lobby, membership, switch e riepiloghi indipendenti per partita.
 - **RC-02 KPI/snapshot autorevoli:** read model delle partecipazioni con fonti e timestamp, autorizzazioni e stati di allarme. Per i vassalli usare **soltanto rapporti effettivamente recapitati**; il sovrano può configurare la frequenza dei messaggeri di resoconto. Vietata lettura live degli inventari/statistiche dei vassalli in app/API.
-- **RC-03 Comandi remoti:** API e permessi per economia, fisco, lavoro/Job Manager, cantieri già collocati, gestione militare strategica, diplomazia e logistica; validazioni, coda/esiti, stessa logica senza duplicazioni. **Esclusi** piazzamento geometrico, progettazione delle fortificazioni e controllo tattico diretto, riservati al Builder/3D.
+- **RC-03 Comandi remoti:** API e permessi per economia, fisco, lavoro/Job Manager, cantieri già collocati, gestione militare strategica, diplomazia e logistica; validazioni, coda/esiti, stessa logica senza duplicazioni. **Ordini diretti solo dove il personaggio si trova; altri feudi mediante viaggio o messaggeri/piccioni con recapito simulato.** Esclusi piazzamento geometrico, fortificazioni e controllo tattico diretto, riservati al Builder/3D.
 - **RC-04 Comunicazioni/messaggi:** analisi branch `messages`, porting selettivo, nodi reali, ETA, rapporti e integrazione diplomazia.
 - **RC-05 Strategia remota:** spedizioni, carovane/tributi, diplomazia e mappa regionale collegate a World/Feudal.
 - **RC-06 Mobile-ready:** web responsive, API neutrali alla piattaforma, poi app Android/iOS senza riscrivere regole; **push con permesso del sistema operativo e selezione per categoria nell'app**, senza interferire con la visibilità/temporizzazione in-game.
