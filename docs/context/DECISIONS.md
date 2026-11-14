@@ -1,5 +1,14 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-SIEGE-COMMS-261114 — Invasione e assedio: uscita di messaggeri e piccioni (14/11/2026)
+
+- **DECISO dal product owner:** distinguere gli stati **INVASO** e **SOTTO ASSEDIO**. La sola invasione del territorio **non** applica automaticamente il blocco dei messaggeri previsto per l'assedio.
+- **DECISO — stato SOTTO ASSEDIO:** **non possono partire messaggeri ordinari dal feudo assediato**. I **piccioni possono uscire e non sono intercettabili**; restano il tempo simulato di consegna e l'eventuale necessità di un canale/piccionaia disponibile. Nessun invio fittizio quando il vettore non esiste.
+- **CONTRATTO:** l'ammissibilità della partenza è verificata dal server autorevole in base allo stato del feudo; dashboard web/mobile e API non aggirano il blocco, né anticipano le informazioni recapitabili tramite piccione. Stadio `raiding/siege` di MARCH e trasporti della branch `messages` sono precedenti tecnici, **non** implementazione server pronta.
+- **APERTO:** criterio esatto di transizione invasione→assedio, possibili rischi dei messaggeri durante l'invasione, messaggeri **in entrata**, vettori già in viaggio, requisiti dettagliati dei piccioni e ordini disponibili sotto assedio. **Q-09 solo parzialmente risolta.**
+- **STATO:** design, nessuna modifica al gameplay. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [MARCH](../march.md), [SRS mobile v0.10 draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
+
+
 ## D-MOB-CODEBASE-261114 — Unica codebase Android/iOS (14/11/2026)
 
 - **DECISO dal product owner (Q-07):** realizzare **un'unica base di codice applicativa mobile** per Android e iOS, evitando due implementazioni separate. Sono ammessi adapter e configurazioni specifici delle piattaforme per permessi, notifiche, build e distribuzione.
