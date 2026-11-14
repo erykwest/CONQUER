@@ -1,5 +1,13 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-MOB-CODEBASE-261114 — Unica codebase Android/iOS (14/11/2026)
+
+- **DECISO dal product owner (Q-07):** realizzare **un'unica base di codice applicativa mobile** per Android e iOS, evitando due implementazioni separate. Sono ammessi adapter e configurazioni specifici delle piattaforme per permessi, notifiche, build e distribuzione.
+- **CONTRATTO:** i client mobili utilizzano le **stesse API autorevoli** del browser per account/campagna/personaggio, KPI, ordini, messaggeri, diplomazia, logistica e permessi. Nessuna seconda simulazione e nessuna duplicazione delle regole di governo del feudo.
+- **NON DECISO:** framework (Flutter, React Native o altro), condivisione della UI mobile con quella web, versioni OS supportate, pipeline e target di pubblicazione. La decisione non equivale a scegliere uno stack.
+- **STATO:** solo documentazione. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [SRS mobile v0.8 nella draft PR #222](https://github.com/erykwest/CONQUER/pull/222). Nessun codice o milestone cambiati.
+
+
 ## D-FEUD-CHAR-261114 — Un personaggio per campagna, governo tramite presenza o messaggeri (14/11/2026)
 
 - **DECISO dal product owner:** **un solo personaggio per account in ciascuna campagna**, ma il personaggio può controllare e amministrare **più feudi/territori**. L'account può partecipare a più campagne con un personaggio distinto in ciascuna; più feudi non richiedono più slot giocatore.
