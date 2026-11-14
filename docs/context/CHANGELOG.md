@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-14 — SIEGE-ALERT-RECIPIENT-01 · Destinatari feudali allarme invasione (solo design)
+
+Per i messaggeri d'allarme che partono automaticamente a ogni nuova invasione, il product owner ha indicato **chi governa il territorio se assente fisicamente, oppure il suo signore superiore nella catena feudale**. Identità e presenza devono provenire dal mondo autorevole; avviso consegnato solo dopo il tempo simulato. Priorità/escalation/copie multiple fra i destinatari ancora aperte. Integrate SRS mobile v0.12 nella draft PR #222, REMOTE-CONTROL-SCOPE, MARCH, decisione D-SIEGE-ALERT-RECIPIENT-261114 e backlog SIEGE-ALERT-RECIPIENT-01. Nessun runtime modificato.
+
+
 ## 2026-11-14 — SIEGE-COMMS-02 · Allarme automatico invasione e blocco completo messaggeri (solo design)
 
 Il product owner ha precisato Q-09: durante **assedio** il blocco dei **messaggeri ordinari** è **sia in entrata sia in uscita**, compreso il divieto di consegnare all'interno. Alla **nuova invasione di un territorio** parte **automaticamente un messaggero d'allarme** se la partenza è consentita; recapito con tempi simulati, non informazione live. I piccioni in uscita restano non intercettabili durante assedio, con rete disponibile. Salvaguardia proposta: un invio per evento d'invasione e non a ogni tick. Aggiornati REMOTE-CONTROL-SCOPE, MARCH, decisione D-SIEGE-COMMS-UPDATE-261114, backlog SIEGE-COMMS-02 e SRS mobile v0.11 nella PR draft #222. **Solo documenti, nessun runtime.**
