@@ -1,5 +1,14 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-SIEGE-ALERT-RECIPIENT-261114 — Destinatari feudali degli allarmi d'invasione (14/11/2026)
+
+- **DECISO dal product owner:** quando l'invasione di un territorio attiva il **messaggero automatico d'allarme**, i destinatari ammessi sono **il personaggio che governa quel territorio, se assente fisicamente**, oppure **il suo signore superiore nella catena feudale**.
+- **CONTRATTO:** governante, presenza e superiore devono essere risolti dal **modello feudale autorevole della stessa campagna**. L'app/browser non possono leggere in diretta un'invasione sconosciuta al personaggio: l'informazione viene ricevuta **solo dopo il tempo simulato di recapito** del messaggero.
+- **NON DECISO:** se l'invio al signore superiore avviene come alternativa, escalation o fallback, se più destinatari ricevono copie, quanto risalire la gerarchia in caso di assenza del superiore diretto, luogo/percorso e priorità delle transizioni invasione→assedio nello stesso tick. **Non inviare copie aggiuntive per default.**
+- **RESTA DECISO:** blocco di ingresso/uscita dei messaggeri durante assedio; piccioni in uscita non intercettabili, con rete disponibile; allarme automatico per ogni nuova invasione solo quando la partenza è possibile. Q-09 resta parzialmente definita.
+- **STATO:** documentazione; nessun codice di gioco o schema modificato. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [MARCH](../march.md), [SRS mobile v0.12 draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
+
+
 ## D-SIEGE-COMMS-UPDATE-261114 — Blocco bidirezionale e messaggero automatico all'invasione (14/11/2026)
 
 - **DECISO dal product owner:** nello stato **SOTTO ASSEDIO** i messaggeri ordinari **non possono entrare né uscire** dal feudo. Il divieto di ingresso impedisce anche la consegna di comunicazioni all'interno. Il blocco viene verificato lato server, non solo dall'app.

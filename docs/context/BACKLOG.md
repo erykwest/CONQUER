@@ -1,5 +1,15 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## SIEGE-ALERT-RECIPIENT-01 — Destinatari per l'allarme automatico di invasione (14/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** l'allarme generato da una nuova invasione va indirizzato a **chi governa il territorio se è assente**, **oppure al suo signore sopra nella catena feudale**. Destinazione e posizione si ricavano da dati autorevoli, e il recapito rispetta i tempi dei messaggeri. [D-SIEGE-ALERT-RECIPIENT-261114](DECISIONS.md#d-siege-alert-recipient-261114--destinatari-feudali-degli-allarmi-dinvasione-14112026) · [SRS mobile v0.12 draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
+
+- [ ] Risolvere il governante del territorio invaso, verificarne la **presenza fisica** e individuare il **superiore nella gerarchia feudale della stessa campagna**.
+- [ ] Creare un allarme automatico verso un destinatario ammesso, con percorso/tempo simulato; nessuna conoscenza anticipata via app/mobile/API.
+- [ ] QA su governante assente, superiore valido, isolamento tra campagne, recapito reale, destinatario mancante e blocco di assedio se il messaggero non può partire.
+- [ ] **APERTO:** priorità/fallback tra governante e superiore, eventuali copie multiple, risalita su più livelli gerarchici, gestione quando il governante è presente, luogo di recapito effettivo e rischi durante l'invasione. Non inventare l'algoritmo di inoltro.
+
+
 ## SIEGE-COMMS-02 — Allarme automatico invasione e blocco bidirezionale messaggeri (14/11/2026)
 
 **DECISO / NON IMPLEMENTATO:** ogni evento **nuovo** di invasione territorio genera **partenza automatica del messaggero d'allarme** se permessa. Durante **assedio** messaggeri ordinari **né entrano né escono**; consegne ordinarie non avvengono. I piccioni **in uscita** restano consentiti e non intercettabili se il canale è operativo. [D-SIEGE-COMMS-UPDATE-261114](DECISIONS.md#d-siege-comms-update-261114--blocco-bidirezionale-e-messaggero-automatico-allinvasione-14112026) · [SRS v0.11 PR #222](https://github.com/erykwest/CONQUER/pull/222).
