@@ -754,7 +754,16 @@ function withTowerBattlementOcclusion(piece,frame,drawFn){
   drawFn();
   ctx.restore();
 }
+// Italian machicolation pieces hang below the deck: in 2.5D those turned away from the viewer would
+// paint over the deck and the tower body (the 3D mesh has a depth buffer and keeps them).
+function battlementPieceFacesAway(piece){
+  if(!piece.out||typeof isPlanView==='function'&&isPlanView())return false;
+  const c={x:piece.pts.reduce((a,q)=>a+q.x,0)/piece.pts.length,y:piece.pts.reduce((a,q)=>a+q.y,0)/piece.pts.length};
+  const v=p=>{const q=rotateViewPoint(p);return q.x+q.y};
+  return v({x:c.x+piece.out.x*.1,y:c.y+piece.out.y*.1})-v(c)<-1e-4;
+}
 function drawBattlementPiece(piece,frame){
+  if(battlementPieceFacesAway(piece))return;
   return withProjectionGroundZ(piece.groundZ,()=>withTowerBattlementOcclusion(piece,frame,()=>{
     if(piece.kind==='palisadePost'){
       drawPalisadePostAt(piece.center,piece.r,piece.z0,piece.bodyZ,piece.tipZ,piece.angle||0);
@@ -765,6 +774,15 @@ function drawBattlementPiece(piece,frame){
       return;
     }
     if(piece.kind==='innerRoof'){drawTowerInnerRoof(piece.geo);return}
+    if(piece.kind==='machicolationArch'){
+      // Seamless fills: the spandrel is cut in strips, so each strip is stroked in its own colour.
+      for(const f of piece.faces){
+        const pts=f.pts.map(q=>w2s(q.p,q.z)),col=visualPaletteColor(f.tone==='shadow'?'#1f1b18':winterSnowColor('#7f756b'));
+        ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(const q of pts.slice(1))ctx.lineTo(q.x,q.y);ctx.closePath();
+        ctx.fillStyle=col;ctx.fill();ctx.strokeStyle=col;ctx.lineWidth=.6;ctx.stroke();
+      }
+      return;
+    }
     if(piece.kind==='machicolationCorbel'){
       extrudePolygonAt(piece.pts,piece.z0,piece.z1,{top:winterSnowColor('#887d72'),sideA:'#403b36',sideB:'#554d46',stroke:'#9f9183'});
       return;
@@ -955,44 +973,79 @@ function lCornerMerlons(fp,corners,z,h,d,owner){
   }
   return{pieces,start,end};
 }
-// Italian machicolations (towerItalianMachicolation, aesthetic only): every corbel is four stepped
-// courses, each as tall as the standard corbel (4x overall), the upper ones projecting further, and
-// the outer face between two corbels carries a small stepped arch (archetto) under the floor.
-// rec: corbels in perimeter order, {c: merlon centre, inward: unit vector to the tower, w: width}.
-const ITALIAN_MACH_COURSE=.245,ITALIAN_MACH_COURSES=4;
-function italianMachicolationPieces(rec,z,s,closed){
-  const pieces=[],inner=.165,top=z+.015,K='machicolationCorbel';
-  const tangent=r=>Math.atan2(r.inward.y,r.inward.x)+Math.PI/2;
-  for(const r of rec){
-    for(let k=0;k<ITALIAN_MACH_COURSES;k++){
-      const outer=-.02+k*.03,off=(inner+outer)/2,cc={x:r.c.x+r.inward.x*off,y:r.c.y+r.inward.y*off};
-      const z1=top-k*ITALIAN_MACH_COURSE;
-      pieces.push(battlementPolygonPiece(K,rectWorldPoints(cc.x,cc.y,r.w*(1-k*.08),inner-outer,tangent(r)),z1-ITALIAN_MACH_COURSE,z1,s));
+// Italian machicolations (towerItalianMachicolation, aesthetic only), after the Lombard castles
+// (Mantua, San Giorgio): slender corbels set close together, each of four stepped courses, the whole
+// band four times as tall as the standard corbel; round arches spring between them and the masonry
+// rises flush above the arches to the machicolation floor, the merlons on top. The corbels walk the
+// outer edge of the floor at an even step, apart from the merlons (a corbel on every corner).
+const ITALIAN_MACH={step:.24,height:.98,band:.36,courses:4,width:.07,face:.012,inner:.16,recess:.026};
+function italianMachicolationRing(s){
+  const floor=machicolationFloorPolygon(s);if(!floor||floor.pts.length<3)return[];
+  const pts=floor.pts,n=pts.length,c={x:s.x,y:s.y},out=[];
+  const area=pts.reduce((a,p,i)=>{const q=pts[(i+1)%n];return a+p.x*q.y-q.x*p.y},0),sg=area>0?1:-1;
+  // Inward normal of edge i (towards the tower), from the winding of the outline.
+  const nrm=i=>{const a=pts[i],b=pts[(i+1)%n],L=Math.hypot(b.x-a.x,b.y-a.y)||1;return{x:-sg*(b.y-a.y)/L,y:sg*(b.x-a.x)/L}};
+  const turn=i=>{const p=pts[(i-1+n)%n],q=pts[i],r=pts[(i+1)%n],d=Math.atan2(r.y-q.y,r.x-q.x)-Math.atan2(q.y-p.y,q.x-p.x);return Math.abs(Math.atan2(Math.sin(d),Math.cos(d)))};
+  let corners=[];for(let i=0;i<n;i++)if(turn(i)>25*Math.PI/180)corners.push(i);
+  const smooth=!corners.length;if(smooth)corners=[0];
+  corners.forEach((i0,k)=>{
+    const i1=smooth?n:corners[(k+1)%corners.length]+(corners[(k+1)%corners.length]<=i0?n:0);
+    const poly=[];for(let i=i0;i<=i1;i++)poly.push(i%n);
+    const lens=poly.slice(1).map((v,j)=>dist(pts[poly[j]],pts[v])),L=lens.reduce((a,b)=>a+b,0),count=Math.max(1,Math.round(L/ITALIAN_MACH.step));
+    for(let m=0;m<count;m++){
+      let t=m/count*L,seg=0;while(seg<lens.length-1&&t>lens[seg]){t-=lens[seg];seg++}
+      const ia=poly[seg],ib=poly[seg+1],f=lens[seg]>1e-9?Math.min(1,t/lens[seg]):0,a=pts[ia],b=pts[ib%n];
+      let u=nrm(ia%n);
+      if(m===0&&!smooth){const v=nrm((ia-1+n)%n),U=Math.hypot(u.x+v.x,u.y+v.y)||1;u={x:(u.x+v.x)/U,y:(u.y+v.y)/U}}
+      else if(smooth){const dx=c.x-(a.x+(b.x-a.x)*f),dy=c.y-(a.y+(b.y-a.y)*f),U=Math.hypot(dx,dy)||1;u={x:dx/U,y:dy/U}}
+      out.push({p:{x:a.x+(b.x-a.x)*f,y:a.y+(b.y-a.y)*f},u});
+    }
+  });
+  return out;
+}
+function italianMachicolationPieces(s){
+  const z=structureHeight(s),M=ITALIAN_MACH,top=z+.015,bottom=top-M.height,arch=z-M.band,floorZ=z-.055;
+  const course=(arch-bottom)/M.courses,ring=italianMachicolationRing(s),pieces=[],K='machicolationCorbel';
+  const at=(r,o)=>({x:r.p.x+r.u.x*o,y:r.p.y+r.u.y*o});
+  const widthOf=k=>M.width*(1-k*.07);
+  for(const r of ring){
+    const tangent=Math.atan2(r.u.y,r.u.x)+Math.PI/2;
+    // Courses from the top down: the lower the course, the less it projects.
+    for(let k=0;k<M.courses;k++){
+      const o=M.face+k*M.recess,cc=at(r,(o+M.inner)/2),z1=arch-k*course;
+      const piece=battlementPolygonPiece(K,rectWorldPoints(cc.x,cc.y,widthOf(k),M.inner-o,tangent),z1-course,z1,s);
+      piece.out={x:-r.u.x,y:-r.u.y};pieces.push(piece);
     }
   }
-  const n=rec.length,floorZ=z-.055;
-  for(let i=0;i<(closed?n:n-1);i++){
-    const A=rec[i],B=rec[(i+1)%n];
-    const pa=A.c,pb=B.c;
-    const L=Math.hypot(pb.x-pa.x,pb.y-pa.y);if(L<1e-6)continue;
-    const u={x:(pb.x-pa.x)/L,y:(pb.y-pa.y)/L},angle=Math.atan2(u.y,u.x),g=L-A.w/2-B.w/2;if(g<.06)continue;
-    const at=(t,len,z0,z1)=>{const c={x:pa.x+u.x*t,y:pa.y+u.y*t};pieces.push(battlementPolygonPiece(K,rectWorldPoints(c.x,c.y,len,.045,angle),z0,z1,s))};
-    const g0=A.w/2;
-    at(g0+g/2,g,floorZ-.2,floorZ);                                    // spandrel band under the floor
-    for(const [f,z0,z1] of [[.24,floorZ-.32,floorZ-.2],[.1,floorZ-.44,floorZ-.32]]){
-      at(g0+g*f/2,g*f,z0,z1);at(g0+g-g*f/2,g*f,z0,z1);               // haunches: the arch curve, stepped
-    }
+  for(let i=0;i<ring.length;i++){
+    const A=ring[i],B=ring[(i+1)%ring.length],qa=at(A,M.face),qb=at(B,M.face);
+    const L=Math.hypot(qb.x-qa.x,qb.y-qa.y);if(L<1e-6)continue;
+    const d={x:(qb.x-qa.x)/L,y:(qb.y-qa.y)/L},angle=Math.atan2(d.y,d.x);
+    let n={x:-d.y,y:d.x};if(n.x*A.u.x+n.y*A.u.y<0)n={x:-n.x,y:-n.y};
+    // The masonry above the arch, flush with the corbel heads, up to the floor slab.
+    const mid={x:(qa.x+qb.x)/2+n.x*.03,y:(qa.y+qb.y)/2+n.y*.03};
+    const band=battlementPolygonPiece(K,rectWorldPoints(mid.x,mid.y,L,.06,angle),arch,floorZ,s);
+    band.out={x:-n.x,y:-n.y};pieces.push(band);
+    // Round arch between the corbels: a spandrel on the face plane and the shadow of the opening behind.
+    const a0=M.width/2,b0=L-M.width/2,g=b0-a0;if(g<.04)continue;
+    const rad=g/2,crown=arch-.02,spring=crown-rad,P=(x,zz,o=0)=>({p:{x:qa.x+d.x*x+n.x*o,y:qa.y+d.y*x+n.y*o},z:zz});
+    const faces=[],wall=M.inner-.05-M.face;
+    faces.push({pts:[P(a0,arch,wall),P(b0,arch,wall),P(b0,spring-.22,wall),P(a0,spring-.22,wall)],tone:'shadow'});
+    const SEG=8,arc=[];for(let j=0;j<=SEG;j++){const th=j/SEG*Math.PI;arc.push([a0+rad-rad*Math.cos(th),spring+rad*Math.sin(th)])}
+    for(let j=0;j<SEG;j++){const [x0,z0]=arc[j],[x1,z1]=arc[j+1];faces.push({pts:[P(x0,arch),P(x1,arch),P(x1,z1),P(x0,z0)],tone:'archFace'})}
+    const piece=battlementPolygonPiece('machicolationArch',rectWorldPoints(mid.x,mid.y,g,.06,angle),spring-.22,arch,s);
+    // Painted just before its band, which hides the top of the recessed shadow.
+    piece.faces=faces;piece.out={x:-n.x,y:-n.y};piece.depth=band.depth-1e-4;pieces.push(piece);
   }
   return pieces;
 }
 function squareTowerBattlementPieces(s){
   const fp=footprintPoints(s),z=structureHeight(s);if(fp.length<4)return[];
   const pieces=[],center={x:s.x,y:s.y},cornerAngle=s.angle||0,mach=hasMachicolation(s),ital=towerItalianMachicolation(s);
-  const perSide=[0,3,4,5,7][towerTier(s)]||3,intervals=perSide-1,inset=mach?-.075:.115,corners=[],cornerRec=[],edgeRec=[];
+  const perSide=[0,3,4,5,7][towerTier(s)]||3,intervals=perSide-1,inset=mach?-.075:.115,corners=[];
   for(const corner of fp){
     const dx=center.x-corner.x,dy=center.y-corner.y,L=Math.hypot(dx,dy)||1,mc={x:corner.x+dx/L*inset,y:corner.y+dy/L*inset};
-    if(ital)cornerRec.push({c:mc,inward:{x:dx/L,y:dy/L},w:.115});
-    else if(mach){
+    if(mach&&!ital){
       const ML=Math.hypot(center.x-mc.x,center.y-mc.y)||1,cc={x:mc.x+(center.x-mc.x)/ML*.09,y:mc.y+(center.y-mc.y)/ML*.09};
       pieces.push(battlementPolygonPiece('machicolationCorbel',rectWorldPoints(cc.x,cc.y,.115,.15,cornerAngle),z-.23,z+.015,s));
     }
@@ -1003,11 +1056,10 @@ function squareTowerBattlementPieces(s){
   for(let e=0;e<fp.length;e++){
     const a=fp[e],b=fp[(e+1)%fp.length],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,angle=Math.atan2(dy,dx),mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
     let ix=center.x-mid.x,iy=center.y-mid.y,IL=Math.hypot(ix,iy)||1;ix/=IL;iy/=IL;
-    const run=[LC.start[e]];edgeRec[e]=[];
+    const run=[LC.start[e]];
     for(let i=1;i<intervals;i++){
       const t=i/intervals,mc={x:a.x+dx*t+ix*inset,y:a.y+dy*t+iy*inset};
-      if(ital)edgeRec[e].push({c:mc,inward:{x:ix,y:iy},w:.11});
-      else if(mach){
+      if(mach&&!ital){
         const cc={x:mc.x+ix*.09,y:mc.y+iy*.09};
         pieces.push(battlementPolygonPiece('machicolationCorbel',rectWorldPoints(cc.x,cc.y,.11,.15,angle),z-.23,z+.015,s));
       }
@@ -1017,30 +1069,29 @@ function squareTowerBattlementPieces(s){
     run.push(LC.end[e]);
     parapets.push(...parapetPieces(run,z,s));
   }
-  if(ital)pieces.push(...italianMachicolationPieces(fp.flatMap((_,e)=>[cornerRec[e],...edgeRec[e]]),z,s,true));
   return pieces.concat(parapets);
 }
 function roundTowerBattlementPieces(s){
   const z=structureHeight(s),mach=hasMachicolation(s),baseR=Number(s.r)||.5,r=Math.max(.16,baseR+(mach?.075:-.09));
   // Even merlon count from the ring's circumference: denser and narrower than on square towers so
   // the crown reads as a round crenellation (tier 1/2/3 → 8/12/18 merlons, more with machicolations).
-  const count=Math.max(8,2*Math.round(Math.PI*2*r/ROUND_MERLON_SPACING/2)),pieces=[],nodes=[],ital=towerItalianMachicolation(s),rec=[];
+  const count=Math.max(8,2*Math.round(Math.PI*2*r/ROUND_MERLON_SPACING/2)),pieces=[],nodes=[],ital=towerItalianMachicolation(s);
   for(let i=0;i<count;i++){
     const a=i/count*Math.PI*2,center={x:s.x+Math.cos(a)*r,y:s.y+Math.sin(a)*r};
-    if(ital)rec.push({c:center,inward:{x:-Math.cos(a),y:-Math.sin(a)},w:.095});
-    else if(mach){
+    if(mach&&!ital){
       const cr=baseR+.005,cc={x:s.x+Math.cos(a)*cr,y:s.y+Math.sin(a)*cr};
       pieces.push(battlementPolygonPiece('machicolationCorbel',rectWorldPoints(cc.x,cc.y,.095,.15,a+Math.PI/2),z-.23,z+.015,s));
     }
     pieces.push(battlementPiece(center,a+Math.PI/2,z,.17,.18,.23,s));
     nodes.push(merlonNode(center,a+Math.PI/2,.17,.18));
   }
-  if(ital)pieces.push(...italianMachicolationPieces(rec,z,s,true));
   return pieces.concat(parapetPieces(nodes,z,s,true));
 }
 function towerBattlementPieces(s){
   if(s.type!=='tower'||isWoodTower(s)||underConstruction(s)||!['battlement','machicolation'].includes(towerRoofStyle(s)))return[];
-  return withoutBuriedBattlements(s,s.shape==='round'?roundTowerBattlementPieces(s):isOrientedTower(s)?orientedTowerBattlementPieces(s):squareTowerBattlementPieces(s));
+  const crown=s.shape==='round'?roundTowerBattlementPieces(s):isOrientedTower(s)?orientedTowerBattlementPieces(s):squareTowerBattlementPieces(s);
+  if(towerItalianMachicolation(s))crown.push(...italianMachicolationPieces(s));
+  return withoutBuriedBattlements(s,crown);
 }
 // Restyling the feudal crenellation: every standing stone merlon is rebuilt at the target style's
 // rate (CRENEL_STYLE_COST). Brick structures pay clay instead of stone, as in constructionCost.

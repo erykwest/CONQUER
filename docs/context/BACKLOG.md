@@ -5,7 +5,8 @@
 **IMPLEMENTATO SU BRANCH `feat/caditoie-italiane-torri`, NON MERGE.** Variante estetica delle caditoie solo per le torri in pietra: mensole alte 4× a risalti raccordate da archetti, scelta dal menù del tetto accanto a Merlato / Caditoie / Falde. Dettagli in [STATUS](STATUS.md).
 - [x] Torri quadrate, rotonde e a D; 2.5D e 3D; voce nel Lab.
 - [ ] Facoltativo: estendere lo stile alle mura con caditoie e alle porte.
-- [ ] Facoltativo: archetti curvi veri (oggi a gradoni, coerenti con la grafica a blocchi).
+- [x] Archi a tutto sesto con apertura in ombra e fascia a filo, sul modello del Castello di San Giorgio (Mantova).
+- [ ] Facoltativo: finestrelle o merli tamponati nella fascia, come nel riferimento.
 
 ## MOB-PUSH-01 — Notifiche push con consenso OS e filtri per categoria (14/11/2026)
 
