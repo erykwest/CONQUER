@@ -2,7 +2,7 @@
 
 ## 2026-11-14 — TOW-MACH-IT · Caditoie all'italiana sulle torri
 
-Nuova opzione estetica nel menù del tetto delle torri in pietra: «Caditoie all'italiana», sul modello del Castello di San Giorgio a Mantova: mensole snelle e fitte a quattro corsi (banda 4× l'altezza delle caditoie attuali), archi a tutto sesto in ombra e muratura a filo sopra gli archi. Stesse regole delle caditoie standard (solo aspetto). Branch `feat/caditoie-italiane-torri`; Lab, test di regressione e baseline dell'audit aggiornati. ROADMAP e DECISIONS invariati (variante estetica, nessun contratto nuovo).
+Nuova opzione estetica nel menù del tetto delle torri in pietra: «Caditoie all'italiana», sul modello del Castello di San Giorgio a Mantova: mensole snelle e fitte, ognuna un unico pezzo inclinato (banda 4× l'altezza delle caditoie attuali), archi a tutto sesto senza riempimento scuro e muratura a filo sopra gli archi. Stesse regole delle caditoie standard (solo aspetto). Branch `feat/caditoie-italiane-torri`; Lab, test di regressione e baseline dell'audit aggiornati. ROADMAP e DECISIONS invariati (variante estetica, nessun contratto nuovo).
 
 
 ## 2026-11-14 — MOB-PUSH-01 · Push autorizzati dal sistema e selezionabili per categoria (solo design)

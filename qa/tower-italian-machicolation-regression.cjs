@@ -28,10 +28,18 @@ check('corbels are four times as tall, close-set, with round arches between them
   for(const extra of [{},{shape:'round',r:.75},{shape:'dee',size:1.5,tier:3,level:3}]){
     const std=tower('s',extra),it=tower('i',{...extra,machicolationStyle:'italian'});setup([std,it]);
     const a=corbels(std),b=corbels(it);
-    const arches=b.filter(p=>p.kind==='machicolationArch'),heads=b.filter(p=>p.kind==='machicolationCorbel').length;
-    assert.ok(a.length>0&&arches.length>a.length,'more corbels than the standard ones ('+(extra.shape||'square')+')');
-    assert.ok(heads>=arches.length*5,'four stepped courses and a flush band per bay');
-    assert.ok(arches.every(p=>p.faces.some(f=>f.tone==='shadow')&&p.faces.filter(f=>f.tone==='archFace').length>=8),'round arch over a shadowed opening');
+    const arches=b.filter(p=>p.kind==='machicolationArch'&&p.faces.some(f=>f.tone==='archFace'));
+    const heads=b.filter(p=>p.kind==='machicolationArch'&&p.faces.some(f=>f.tone==='front'));
+    assert.ok(a.length>0&&heads.length>a.length,'more corbels than the standard ones ('+(extra.shape||'square')+')');
+    assert.ok(heads.length>=arches.length,'one corbel per arch');
+    for(const h of heads){
+      const f=h.faces.find(x=>x.tone==='front').pts,top=f.filter(q=>q.z===h.z1),foot=f.filter(q=>q.z===h.z0);
+      assert.equal(top.length,2);assert.equal(foot.length,2);
+      const d=q=>Math.hypot(q.p.x-it.x,q.p.y-it.y);
+      assert.ok((d(top[0])+d(top[1]))/2>(d(foot[0])+d(foot[1]))/2+.05,'one inclined stone: the head projects, the foot meets the wall');
+    }
+    assert.equal(b.filter(p=>p.kind==='machicolationCorbel').length,arches.length,'a flush band per bay, no stacked courses');
+    assert.ok(arches.every(p=>p.faces.every(f=>f.tone==='archFace')&&p.faces.length>=8),'round arch, no dark fill under it');
     assert.ok(Math.abs(span(b,it)-4*span(a,std))<.02,'height x4: '+span(a,std).toFixed(3)+' -> '+span(b,it).toFixed(3));
     const merlons=t=>run('towerBattlementPieces')(t).filter(p=>!MACH.includes(p.kind)).length;
     assert.equal(merlons(it),merlons(std),'merlons and parapets unchanged');

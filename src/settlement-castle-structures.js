@@ -776,8 +776,9 @@ function drawBattlementPiece(piece,frame){
     if(piece.kind==='innerRoof'){drawTowerInnerRoof(piece.geo);return}
     if(piece.kind==='machicolationArch'){
       // Seamless fills: the spandrel is cut in strips, so each strip is stroked in its own colour.
+      // Corbels: the two sides far to near, then the inclined front.
       for(const f of piece.faces){
-        const pts=f.pts.map(q=>w2s(q.p,q.z)),col=visualPaletteColor(f.tone==='shadow'?'#1f1b18':winterSnowColor('#7f756b'));
+        const pts=f.pts.map(q=>w2s(q.p,q.z)),col=visualPaletteColor(f.tone==='side'?'#4d463f':f.tone==='front'?winterSnowColor('#6f665d'):winterSnowColor('#7f756b'));
         ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(const q of pts.slice(1))ctx.lineTo(q.x,q.y);ctx.closePath();
         ctx.fillStyle=col;ctx.fill();ctx.strokeStyle=col;ctx.lineWidth=.6;ctx.stroke();
       }
@@ -974,11 +975,11 @@ function lCornerMerlons(fp,corners,z,h,d,owner){
   return{pieces,start,end};
 }
 // Italian machicolations (towerItalianMachicolation, aesthetic only), after the Lombard castles
-// (Mantua, San Giorgio): slender corbels set close together, each of four stepped courses, the whole
+// (Mantua, San Giorgio): slender corbels set close together, each one inclined stone, the whole
 // band four times as tall as the standard corbel; round arches spring between them and the masonry
 // rises flush above the arches to the machicolation floor, the merlons on top. The corbels walk the
 // outer edge of the floor at an even step, apart from the merlons (a corbel on every corner).
-const ITALIAN_MACH={step:.24,height:.98,band:.36,courses:4,width:.07,face:.012,inner:.16,recess:.026};
+const ITALIAN_MACH={step:.24,height:.98,band:.36,width:.07,face:.012,inner:.16,footRecess:.085};
 function italianMachicolationRing(s){
   const floor=machicolationFloorPolygon(s);if(!floor||floor.pts.length<3)return[];
   const pts=floor.pts,n=pts.length,c={x:s.x,y:s.y},out=[];
@@ -1005,17 +1006,20 @@ function italianMachicolationRing(s){
 }
 function italianMachicolationPieces(s){
   const z=structureHeight(s),M=ITALIAN_MACH,top=z+.015,bottom=top-M.height,arch=z-M.band,floorZ=z-.055;
-  const course=(arch-bottom)/M.courses,ring=italianMachicolationRing(s),pieces=[],K='machicolationCorbel';
+  const ring=italianMachicolationRing(s),pieces=[],K='machicolationCorbel';
   const at=(r,o)=>({x:r.p.x+r.u.x*o,y:r.p.y+r.u.y*o});
-  const widthOf=k=>M.width*(1-k*.07);
   for(const r of ring){
-    const tangent=Math.atan2(r.u.y,r.u.x)+Math.PI/2;
-    // Courses from the top down: the lower the course, the less it projects.
-    for(let k=0;k<M.courses;k++){
-      const o=M.face+k*M.recess,cc=at(r,(o+M.inner)/2),z1=arch-k*course;
-      const piece=battlementPolygonPiece(K,rectWorldPoints(cc.x,cc.y,widthOf(k),M.inner-o,tangent),z1-course,z1,s);
-      piece.out={x:-r.u.x,y:-r.u.y};pieces.push(piece);
-    }
+    // One inclined stone: full projection under the band, tapering back to the wall at its foot.
+    const t={x:-r.u.y,y:r.u.x},foot=M.face+M.footRecess,wt=M.width/2,wb=M.width*.72/2;
+    const V=(side,o,zz,w)=>({p:{x:r.p.x+r.u.x*o+t.x*side*w,y:r.p.y+r.u.y*o+t.y*side*w},z:zz});
+    const sides=[-1,1].map(sd=>({pts:[V(sd,M.face,arch,wt),V(sd,M.inner,arch,wt),V(sd,M.inner,bottom,wb),V(sd,foot,bottom,wb)],tone:'side',
+      ref:{x:r.p.x+r.u.x*(M.face+M.inner)/2+t.x*sd*wt,y:r.p.y+r.u.y*(M.face+M.inner)/2+t.y*sd*wt}}));
+    const view=p=>{const q=rotateViewPoint(p);return q.x+q.y};
+    sides.sort((a,b)=>view(a.ref)-view(b.ref));
+    const front={pts:[V(-1,M.face,arch,wt),V(1,M.face,arch,wt),V(1,foot,bottom,wb),V(-1,foot,bottom,wb)],tone:'front'};
+    const cc=at(r,(M.face+M.inner)/2);
+    const piece=battlementPolygonPiece('machicolationArch',rectWorldPoints(cc.x,cc.y,M.width,M.inner-M.face,Math.atan2(t.y,t.x)),bottom,arch,s);
+    piece.faces=[...sides,front];piece.out={x:-r.u.x,y:-r.u.y};pieces.push(piece);
   }
   for(let i=0;i<ring.length;i++){
     const A=ring[i],B=ring[(i+1)%ring.length],qa=at(A,M.face),qb=at(B,M.face);
@@ -1026,15 +1030,14 @@ function italianMachicolationPieces(s){
     const mid={x:(qa.x+qb.x)/2+n.x*.03,y:(qa.y+qb.y)/2+n.y*.03};
     const band=battlementPolygonPiece(K,rectWorldPoints(mid.x,mid.y,L,.06,angle),arch,floorZ,s);
     band.out={x:-n.x,y:-n.y};pieces.push(band);
-    // Round arch between the corbels: a spandrel on the face plane and the shadow of the opening behind.
+    // Round arch between the corbels: a spandrel on the face plane, the opening left clear.
     const a0=M.width/2,b0=L-M.width/2,g=b0-a0;if(g<.04)continue;
     const rad=g/2,crown=arch-.02,spring=crown-rad,P=(x,zz,o=0)=>({p:{x:qa.x+d.x*x+n.x*o,y:qa.y+d.y*x+n.y*o},z:zz});
-    const faces=[],wall=M.inner-.05-M.face;
-    faces.push({pts:[P(a0,arch,wall),P(b0,arch,wall),P(b0,spring-.22,wall),P(a0,spring-.22,wall)],tone:'shadow'});
+    const faces=[];
     const SEG=8,arc=[];for(let j=0;j<=SEG;j++){const th=j/SEG*Math.PI;arc.push([a0+rad-rad*Math.cos(th),spring+rad*Math.sin(th)])}
     for(let j=0;j<SEG;j++){const [x0,z0]=arc[j],[x1,z1]=arc[j+1];faces.push({pts:[P(x0,arch),P(x1,arch),P(x1,z1),P(x0,z0)],tone:'archFace'})}
-    const piece=battlementPolygonPiece('machicolationArch',rectWorldPoints(mid.x,mid.y,g,.06,angle),spring-.22,arch,s);
-    // Painted just before its band, which hides the top of the recessed shadow.
+    const piece=battlementPolygonPiece('machicolationArch',rectWorldPoints(mid.x,mid.y,g,.06,angle),spring,arch,s);
+    // Painted just before its band, so the band edge stays crisp over the spandrel strips.
     piece.faces=faces;piece.out={x:-n.x,y:-n.y};piece.depth=band.depth-1e-4;pieces.push(piece);
   }
   return pieces;
