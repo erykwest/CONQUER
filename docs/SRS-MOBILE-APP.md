@@ -1,10 +1,10 @@
 # CONQUER — Software Requirements Specification (SRS) · Mobile Companion
 
-**Versione:** 0.7 — bozza di lavoro, **non approvata nel complesso** (scelte B e Q-02…Q-06 approvate)  
+**Versione:** 0.8 — bozza di lavoro, **non approvata nel complesso** (scelte B e Q-02…Q-07 approvate)  
 **Ultimo aggiornamento:** 14 novembre 2026 (prima bozza 13 novembre 2026)  
-**Destinazione:** Android e iOS; prima dipendenza: hub browser e backend multiplayer condiviso  
+**Destinazione:** Android e iOS da **un'unica base di codice mobile condivisa**; prima dipendenza: hub browser e backend multiplayer condiviso  
 **Stato:** SPEC / NO RUNTIME — nessuna app mobile implementata  
-**Decisioni approvate:** **B — primo rilascio pubblico con controllo remoto completo**; **un personaggio per account/campagna, che governa più feudi solo viaggiando tra essi o mediante messaggeri/piccioni**; **comandi diretti dove il personaggio è presente al primo tick utile, comunicazioni inter-feudo con recapito simulato**; **KPI dei vassalli solo tramite resoconti di messaggeri con frequenza impostabile dal sovrano**; **ordini preparabili durante la pausa regionale**; **push subordinati al permesso OS e filtrabili per categoria dalle impostazioni dell'app**.
+**Decisioni approvate:** **B — primo rilascio pubblico con controllo remoto completo**; **un'unica codebase mobile Android/iOS**; **un personaggio per account/campagna, che governa più feudi solo viaggiando tra essi o mediante messaggeri/piccioni**; **comandi diretti dove il personaggio è presente al primo tick utile, comunicazioni inter-feudo con recapito simulato**; **KPI dei vassalli solo tramite resoconti di messaggeri con frequenza impostabile dal sovrano**; **ordini preparabili durante la pausa regionale**; **push subordinati al permesso OS e filtrabili per categoria dalle impostazioni dell'app**.
 
 ## 0. Natura del documento e fonti
 
@@ -231,7 +231,7 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 
 ## 5. Architettura candidata e contratti d'integrazione
 
-**Vincolo D:** unica simulazione autorevole condivisa da browser e futuro mobile. **Proposta P:** separare servizi di lettura (KPI, messaggi, stato) e invio comandi (validazione, accettazione, esito), con API neutre alla piattaforma. Il client può essere nativo o cross-platform: **tecnologia da decidere**.
+**Vincolo D:** unica simulazione autorevole condivisa da browser e futuro mobile. **DECISO (Q-07):** Android e iOS devono essere sviluppati con **un'unica base di codice applicativo mobile condivisa**, non due implementazioni distinte; entrambi i client usano gli stessi contratti API e la stessa logica di governo remoto del browser. **Non è stato deciso** di unificare il codice della UI web e della UI mobile. **Proposta P:** separare servizi di lettura (KPI, messaggi, stato) e invio comandi (validazione, accettazione, esito), con API neutrali alla piattaforma. **Framework ancora aperto** (es. Flutter, React Native o altra soluzione cross-platform): nessuna tecnologia approvata in questa decisione.
 
 **Contratti logici candidati (NON API già disponibili):**
 - Identity: login, session, profilo e preferenze.
@@ -264,6 +264,8 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 | NFR-OPS-01 | Osservabilità | Errori e comandi tracciabili senza esporre contenuti riservati o credenziali nei log. | P / Must |
 | NFR-PRIV-01 | Privacy | Minimizzare dati personali, dispositivi e notifiche; definire retention, esportazione/cancellazione e documentazione privacy prima del rilascio. | P / Must |
 | NFR-PLAT-01 | Distribuzione | Rilascio Android/iOS e relative procedure store solo dopo backend e release candidate; versioni OS minime da scegliere. | A | — |
+| NFR-PLAT-02 | Architettura mobile | **Una base di codice applicativo condivisa Android/iOS**; adattamenti di piattaforma ammessi per permessi push, packaging, store, accessibilità e integrazioni native, senza duplicare moduli di logica di business. | D/C | Must |
+| NFR-PLAT-03 | Parità funzionale | I due sistemi operativi devono offrire **gli stessi domini di controllo remoto della release B**; differenze native non possono generare vantaggi di gameplay o permessi differenti. | D/C | Must |
 
 **Nota:** non sono approvati né una soglia SLA, né limiti di memoria/batteria, né target di dispositivi/OS. Questi valori vanno derivati da un prototipo e da test di carico, non inventati in questa SRS.
 
@@ -325,6 +327,10 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 
 **AT-28 — Stesse regole web/mobile:** cambiando client, campagna o tab della mappa, il personaggio mantiene posizione e stato di viaggio della campagna; nessuna API permette ordini locali in un feudo dove non è presente solo perché ne è il proprietario.
 
+**AT-29 — Codebase unica:** Android e iOS vengono costruiti dallo **stesso progetto applicativo mobile**, con varianti specifiche solo dove richieste dalle piattaforme. Il catalogo dei comandi non è duplicato in due implementazioni indipendenti.
+
+**AT-30 — Parità Android/iOS:** su dispositivi Android e iOS, gli stessi scenari di login, scelta campagna, KPI, posta, ordini strategici, fiscalità, cantieri e notifiche per categoria producono risultati equivalenti sul medesimo backend, rispettando i permessi nativi delle due piattaforme.
+
 ## 8. Roadmap tecnica proposta — primo rilascio completo (nessuna data approvata)
 
 | Fase | Deliverable | Dipendenze / criterio di uscita |
@@ -332,11 +338,11 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 | **F0 — Contratti** | Membership, permessi, catalogo comandi, snapshot; implementare contratto **tick successivo vs recapito simulato** | Durata tick, pausa e semantica dei singoli comandi ancora da dettagliare |
 | **F1 — Backend + hub web** | Campagne autorevoli, lobby, dashboard, API lettura e scrittura | World/Feudal, MP-07, persistenza server e autorizzazioni |
 | **F2 — Controllo remoto web completo** | Tutti i domini: economia/lavoro/fisco/cantieri, militare/spedizioni, diplomazia/messaggi, tributi/carovane, mappa | Moduli reali, QA e contratti di comando |
-| **F3 — App alpha/beta interne** | Client mobile Android/iOS con gli stessi comandi, test utenti/dispositivi, sicurezza e accessibilità | F1–F2, test di sincronia con browser |
-| **F4 — Prima release pubblica Android/iOS (B)** | **Controllo remoto completo** di §1.4, push con consenso OS + filtri per categoria, tutti i Must e test AT-01…AT-28 | **Gate non derogabile:** nessuna release solo KPI, messaggi o comandi economici parziali |
+| **F3 — App alpha/beta interne** | **Un unico progetto mobile cross-platform** compilabile per Android e iOS, con gli stessi comandi, test utenti/dispositivi, sicurezza e accessibilità | F1–F2; scelta framework ancora aperta; test di sincronia con browser |
+| **F4 — Prima release pubblica Android/iOS (B)** | **Controllo remoto completo** di §1.4, push con consenso OS + filtri per categoria, tutti i Must e test AT-01…AT-30 | **Gate non derogabile:** nessuna release solo KPI, messaggi o comandi economici parziali |
 | **F5 — Miglioramenti** | Cache offline, archivio storico, filtri/silenziamento push avanzati e ottimizzazioni, se approvati | Decisioni successive |
 
-**DECISO:** completezza del **primo rilascio pubblico** e push con permesso OS + selettori per categoria; nessuna data di pubblicazione fissata. Le fasi incrementali interne non costituiscono una release pubblica ridotta. **A:** stack tecnologico, dettaglio comandi, tassonomia/default delle notifiche, modalità offline e pianificazione temporale.
+**DECISO:** completezza del **primo rilascio pubblico**, **unica codebase applicativa Android/iOS** e push con permesso OS + selettori per categoria; nessuna data di pubblicazione fissata. Le fasi incrementali interne non costituiscono una release pubblica ridotta. **A:** framework cross-platform, dettaglio comandi, tassonomia/default delle notifiche, modalità offline e pianificazione temporale.
 
 ## 9. Rischi e dipendenze reali del repository
 
@@ -357,13 +363,13 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 | **Q-04 — RISOLTA (principio)** | Durante la pausa regionale l'utente può consultare lo stato congelato e preparare ordini; **nessuna simulazione avanza**, gli ordini saranno elaborati alla ripresa. | **DECISO** — tipi di ordini, limiti/cancellazioni, conflitti al tick e comportamento offline separato restano da precisare |
 | **Q-05 — RISOLTA (principio)** | **Push previa autorizzazione Android/iOS + preferenze selettive per categoria nell'app.** Il push viene emesso soltanto se entrambe le condizioni sono abilitate. | **DECISO** — elenco categorie, default, silenziamento e preferenze per-campagna ancora aperti |
 | **Q-06 — RISOLTA (principio)** | **Un personaggio per account/campagna, con più feudi governabili. Per comandare un altro feudo occorre spostarsi fisicamente oppure inviare messaggeri/piccioni, rispettando i tempi simulati.** | **DECISO** — viaggi, infrastruttura dei piccioni, deleghe e singoli tipi di ordine ancora aperti |
-| **Q-07** | App native separate, cross-platform o web installabile per un primo rilascio? | Stack e distribuzione |
+| **Q-07 — RISOLTA (principio)** | **Una sola base di codice applicativa per Android e iOS**, con backend e API comuni alla piattaforma web. Non sono richieste due app sviluppate separatamente. | **DECISO** — framework e grado di riuso UI col browser ancora aperti |
 | **Q-08** | KPI della Home: quali 4–6 numeri sono davvero indispensabili? | Prodotto/UX |
 | **Q-09** | Il giocatore può dare ordini quando il feudo è assediato e quanto ne può conoscere? | Fog of war e difesa |
 | **Q-10** | Lingue, target OS, requisiti prestazionali, retention, privacy e policy store? | Qualità e go-live |
 
 ## 11. Definition of Ready della SRS
 
-L'SRS potrà essere promossa da **bozza v0.7** a **baseline approvata** soltanto quando: (1) le questioni **Q-07…Q-10** prioritizzate avranno risposta o una decisione esplicita di rinvio (**Q-01: B; Q-02: doppia temporalità; Q-03: report dei vassalli; Q-04: preparazione ordini in pausa; Q-05: push con consenso OS e filtri; Q-06: personaggio unico e governo dei feudi via viaggio/messaggeri/piccioni**); (2) per ogni funzione Must sarà disponibile una sorgente autorevole o una dipendenza di backend documentata; (3) saranno definiti permessi dei ruoli e catalogo di tutti i comandi; (4) saranno approvati criteri di accettazione e gate B; (5) sarà aggiornata la tracciabilità verso backlog e test.
+L'SRS potrà essere promossa da **bozza v0.8** a **baseline approvata** soltanto quando: (1) le questioni **Q-08…Q-10** prioritizzate avranno risposta o una decisione esplicita di rinvio (**Q-01: B; Q-02: doppia temporalità; Q-03: report dei vassalli; Q-04: preparazione ordini in pausa; Q-05: push con consenso OS e filtri; Q-06: personaggio unico e governo via viaggio/messaggeri/piccioni; Q-07: unica base di codice Android/iOS**); (2) per ogni funzione Must sarà disponibile una sorgente autorevole o una dipendenza di backend documentata; (3) saranno definiti permessi dei ruoli e catalogo di tutti i comandi; (4) saranno approvati criteri di accettazione e gate B; (5) sarà aggiornata la tracciabilità verso backlog e test.
 
 **Nessuna funzionalità mobile è stata implementata da questo documento.**
