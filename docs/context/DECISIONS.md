@@ -12,7 +12,7 @@
 
 ## D-SIEGE-ALERT-RECIPIENT-261114 — Destinatari feudali degli allarmi d'invasione (14/11/2026) — INTERPRETAZIONE SUPERATA DA D-SIEGE-ATTACK-CONFIG-261114
 
-- **DECISO dal product owner:** quando l'invasione di un territorio attiva il **messaggero automatico d'allarme**, i destinatari ammessi sono **il personaggio che governa quel territorio, se assente fisicamente**, oppure **il suo signore superiore nella catena feudale**.
+- **INTERPRETAZIONE STORICA SUPERATA:** inizialmente si era inteso il **governante assente** o il **signore superiore** come due destinatari alternativi dello stesso allarme. Il product owner ha poi chiarito in **D-SIEGE-ATTACK-CONFIG-261114** che il governante assente riceve l'allarme base, mentre il superiore è raggiunto tramite un **flusso aggiuntivo configurabile**, separato da quello verso gli alleati.
 - **CONTRATTO:** governante, presenza e superiore devono essere risolti dal **modello feudale autorevole della stessa campagna**. L'app/browser non possono leggere in diretta un'invasione sconosciuta al personaggio: l'informazione viene ricevuta **solo dopo il tempo simulato di recapito** del messaggero.
 - **SUPERATO da D-SIEGE-ATTACK-CONFIG-261114:** il superiore feudale non è fallback dell'allarme base, ma destinatario di un **avviso aggiuntivo configurabile**, distinto da quello per gli alleati. Rimangono aperti il grado gerarchico, la sede/percorso e la gestione di attacchi concomitanti.
 - **RESTA DECISO:** blocco di ingresso/uscita dei messaggeri durante assedio; piccioni in uscita non intercettabili, con rete disponibile; allarme automatico per ogni nuova invasione solo quando la partenza è possibile. Q-09 resta parzialmente definita.
