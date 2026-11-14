@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-14 — SIEGE-COMMS-02 · Allarme automatico invasione e blocco completo messaggeri (solo design)
+
+Il product owner ha precisato Q-09: durante **assedio** il blocco dei **messaggeri ordinari** è **sia in entrata sia in uscita**, compreso il divieto di consegnare all'interno. Alla **nuova invasione di un territorio** parte **automaticamente un messaggero d'allarme** se la partenza è consentita; recapito con tempi simulati, non informazione live. I piccioni in uscita restano non intercettabili durante assedio, con rete disponibile. Salvaguardia proposta: un invio per evento d'invasione e non a ogni tick. Aggiornati REMOTE-CONTROL-SCOPE, MARCH, decisione D-SIEGE-COMMS-UPDATE-261114, backlog SIEGE-COMMS-02 e SRS mobile v0.11 nella PR draft #222. **Solo documenti, nessun runtime.**
+
+
 ## 2026-11-14 — SIEGE-COMMS-01 · Due fasi militari e blocco dei messaggeri in assedio (solo design)
 
 Chiarita Q-09 **in parte**: **INVASO** e **SOTTO ASSEDIO** sono stati diversi. In stato di assedio i **messaggeri ordinari non possono uscire** dal feudo; **i piccioni possono uscire e non sono intercettabili**, rispettando la disponibilità del canale e il tempo di recapito simulato. Durante invasione il blocco d'assedio non si applica automaticamente; ingresso dei messaggeri e condizioni di transizione ancora aperti. Specifiche aggiornate: REMOTE-CONTROL-SCOPE, MARCH, decisione D-SIEGE-COMMS-261114, backlog SIEGE-COMMS-01 e SRS mobile v0.10 nella draft PR #222. **Nessuna modifica a runtime o schema.**
