@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-14 — SIEGE-ATTACK-ALERTS-01 · Allarmi configurabili verso signore e alleati (solo design)
+
+Il product owner ha corretto l'interpretazione precedente: il **messaggero base** all'invasione avvisa il **governante se assente**. In aggiunta il signore può impostare **due allerte automatiche distinte**, «Allerta sempre il signore in caso di attacco» (al signore superiore) e «Allerta sempre gli alleati in caso di attacco» (agli alleati), **indipendenti e non mutuamente esclusive**. Le comunicazioni rispettano i tempi e il blocco dei vettori del mondo, non equivalgono a push istantanei. Trigger esatto di attacco e titolarità/ambito della configurazione da definire. Aggiornati REMOTE-CONTROL-SCOPE, MARCH, D-SIEGE-ATTACK-CONFIG-261114, backlog SIEGE-ATTACK-ALERTS-01, SRS v0.13 nella draft PR #222. **Nessuna modifica runtime.**
+
+
 ## 2026-11-14 — SIEGE-ALERT-RECIPIENT-01 · Destinatari feudali allarme invasione (solo design)
 
 Per i messaggeri d'allarme che partono automaticamente a ogni nuova invasione, il product owner ha indicato **chi governa il territorio se assente fisicamente, oppure il suo signore superiore nella catena feudale**. Identità e presenza devono provenire dal mondo autorevole; avviso consegnato solo dopo il tempo simulato. Priorità/escalation/copie multiple fra i destinatari ancora aperte. Integrate SRS mobile v0.12 nella draft PR #222, REMOTE-CONTROL-SCOPE, MARCH, decisione D-SIEGE-ALERT-RECIPIENT-261114 e backlog SIEGE-ALERT-RECIPIENT-01. Nessun runtime modificato.
