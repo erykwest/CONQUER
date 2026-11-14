@@ -1,10 +1,10 @@
 # CONQUER — Software Requirements Specification (SRS) · Mobile Companion
 
-**Versione:** 0.9 — bozza di lavoro, **non approvata nel complesso** (Q-08: shortlist KPI validata come punto di partenza, non ancora definitiva)  
+**Versione:** 0.10 — bozza di lavoro, **non approvata nel complesso** (Q-08 in definizione, Q-09: stati e vettori definiti parzialmente)  
 **Ultimo aggiornamento:** 14 novembre 2026 (prima bozza 13 novembre 2026)  
 **Destinazione:** Android e iOS da **un'unica base di codice mobile condivisa**; prima dipendenza: hub browser e backend multiplayer condiviso  
 **Stato:** SPEC / NO RUNTIME — nessuna app mobile implementata  
-**Decisioni approvate:** **B — primo rilascio pubblico con controllo remoto completo**; **un'unica codebase mobile Android/iOS**; **un personaggio per account/campagna, che governa più feudi solo viaggiando tra essi o mediante messaggeri/piccioni**; **comandi diretti dove il personaggio è presente al primo tick utile, comunicazioni inter-feudo con recapito simulato**; **KPI dei vassalli solo tramite resoconti di messaggeri con frequenza impostabile dal sovrano**; **ordini preparabili durante la pausa regionale**; **push subordinati al permesso OS e filtrabili per categoria dalle impostazioni dell'app**.
+**Decisioni approvate:** **B — primo rilascio pubblico con controllo remoto completo**; **due stati distinti, invasione e assedio: sotto assedio i messaggeri non possono uscire, i piccioni sì e non sono intercettabili**; **un'unica codebase mobile Android/iOS**; **un personaggio per account/campagna, che governa più feudi solo viaggiando tra essi o mediante messaggeri/piccioni**; **comandi diretti dove il personaggio è presente al primo tick utile, comunicazioni inter-feudo con recapito simulato**; **KPI dei vassalli solo tramite resoconti di messaggeri con frequenza impostabile dal sovrano**; **ordini preparabili durante la pausa regionale**; **push subordinati al permesso OS e filtrabili per categoria dalle impostazioni dell'app**.
 
 ## 0. Natura del documento e fonti
 
@@ -136,6 +136,7 @@ Il product owner ha valutato la proposta seguente **«un buon inizio»**. Questo
 | FR-MIL-01 | Consulta guarnigione, disponibilità militare, allarmi, stato di spedizioni e assedi se presenti sul server. | D/C | Must |
 | FR-MIL-02 | Permette ordini strategici di spedizione/marcia e gestione logistica nei limiti dei permessi del ruolo. | D/C | Must |
 | FR-MIL-03 | Non attiva la modalità tattica per selezionare/controllare direttamente unità in battaglia. | D | Must |
+| FR-MIL-04 | Distingue **invasione** del territorio e **assedio effettivo** del feudo come stati diversi; non applica automaticamente il blocco postale dell'assedio a una semplice invasione. | D/C | Must |
 | FR-MAP-01 | Visualizza mappa regionale con territori, controllori, rapporti feudali e rotte consentite dalla visibilità del giocatore. | D/C | Must |
 | FR-MAP-02 | Dalla mappa apre dettagli e azioni strategiche applicabili al territorio, non il Builder geometrico. | D/C | Must |
 | FR-LOG-01 | Consulta tributi, carovane, carico, scorte, destinazione e stato dei viaggi quando supportati dal backend. | D/C | Must |
@@ -149,6 +150,9 @@ Il product owner ha valutato la proposta seguente **«un buon inizio»**. Questo
 | FR-MSG-02 | Supporta redazione/invio di comunicazioni, richieste o ordini diplomatici secondo le regole di recapito reali. | D/C | Must |
 | FR-MSG-03 | Mostra stato del messaggio: redatto/in transito/consegnato/altro esito, con ETA solo quando calcolabile. | P/C | Must |
 | FR-MSG-04 | La lettura sull'app **non anticipa** la consegna simulata; non espone messaggi o rapporti prima dei permessi/tempi previsti. | D/C | Must |
+| FR-MSG-05 | Se il feudo è **sotto assedio**, non è consentita la **partenza di messaggeri ordinari dal feudo assediato**; la UI non permette di indicare come spediti messaggi tramite tale canale. | D/C | Must |
+| FR-MSG-06 | In stato **sotto assedio**, i **piccioni possono uscire** e **non possono essere intercettati**; l'invio resta soggetto alle normali condizioni di disponibilità del servizio e al suo tempo simulato di recapito. | D/C | Must |
+| FR-MSG-07 | In stato **invaso**, il sistema **non applica automaticamente il divieto di uscita dei messaggeri riservato all'assedio**; altri rischi o impedimenti legati all'invasione sono da specificare. | D/C | Must |
 | FR-DIP-01 | Consulta relazioni, sudditanza e obblighi; consente azioni diplomatiche autorizzate dalla campagna. | D/C | Must |
 | FR-DIP-02 | Per amministrare direttamente un feudo diverso da quello dove si trova il personaggio, il giocatore deve **raggiungerlo fisicamente** oppure **inviare ordini tramite messaggeri o piccioni**; il client non applica comandi istantanei attraverso la sola selezione del feudo. | D/C | Must |
 | FR-DIP-03 | Mostra per ogni azione remota il canale richiesto (presenza / messaggero / piccione), gli stati di partenza e consegna, e l'eventuale ETA conosciuta; l'ordine rivolto ad altro feudo può produrre effetto **solo dopo la consegna e la successiva valutazione da parte del motore**. | D/C per canale/ritardo, P per dettaglio UI | Must |
@@ -249,6 +253,22 @@ Il product owner ha valutato la proposta seguente **«un buon inizio»**. Questo
 **INTEGRAZIONE CON Q-02 E Q-03:** il comando *locale* al tick successivo vale **solo dove il personaggio è presente**; il governo di altri feudi segue i tempi dei messaggeri/piccioni. Le informazioni dei feudi dei vassalli continuano ad arrivare tramite rapporti **recapitati**, con frequenza impostabile dal sovrano, senza letture live privilegiate.
 
 **APERTO:** requisiti delle piccionaie, disponibilità dei vettori, costi e velocità, rischi/intercettazione, percorso e sicurezza dei viaggi del personaggio, gestione del personaggio in transito, eventuali luogotenenti/deleghe e quali operazioni ammettono un ordine scritto. Non fissare intervalli, velocità o teletrasporti non approvati.
+
+## 4e. Invasione vs assedio: isolamento delle comunicazioni — DECISO in parte (14/11/2026)
+
+**FR-SIEGE-01 (D/C, Must) — Due fasi semanticamente distinte:**
+1. **INVASO:** forze ostili operano nel territorio / nella regione del feudo; **non equivale automaticamente a un assedio**. L'invasione, da sola, **non attiva il divieto di uscita dei messaggeri previsto per l'assedio**.
+2. **SOTTO ASSEDIO:** il feudo si trova nello stato effettivo di assedio/blocco definito dal futuro motore World/Feudal/Siege. Finché questo stato è attivo, **nessun messaggero ordinario può lasciare il feudo assediato**.
+
+**FR-SIEGE-02 (D/C, Must) — Piccioni sotto assedio:** la partenza dei **piccioni** dal feudo assediato resta consentita e **non sono intercettabili**. Il recapito **non è istantaneo** e resta soggetto alla rete e ai tempi della posta simulata. La decisione non crea piccionaie o vettori dove non sono presenti.
+
+**FR-SIEGE-03 (D/C, Must) — Governo remoto e fog of war:** browser, app e API devono utilizzare lo **stesso stato effettivo** del feudo per consentire/vietare la spedizione; un ordine destinato ad altro feudo, redatto nella dashboard, **non può aggirare il blocco dei messaggeri** durante l'assedio. La UI offre il canale piccione **soltanto se disponibile**, con stato di invio e di consegna attendibile. Il destinatario conosce il contenuto solo dopo il recapito e secondo le sue autorizzazioni.
+
+**FR-SIEGE-04 (P/C, Must come salvaguardia) — Transizioni e comandi in attesa:** l'avvio/cessazione di un assedio deve aggiornare l'ammissibilità delle **nuove partenze** coerentemente con il tick autorevole. Come trattare lettere/messaggeri **già in viaggio** prima dell'inizio dell'assedio è **APERTO**: non inventare cattura, ritorno, annullamento o consegna automatica.
+
+**REUSE / LIMITI CODE:** `docs/march.md` identifica uno skeleton MARCH con stadi `approach`, `raiding`, `siege`, `breached` ed eventi futuri `siege-started`. Questo **non è ancora un contratto server integrato** di blocco della posta. La branch `messages` modella già lettere con messaggero o piccione, canale e ETA, ma manca l'isolamento World/Feudal reale. La colombaia del prototipo richiede prerequisiti: **non assumere** che ogni feudo possa spedire piccioni.
+
+**APERTO:** condizione esatta di transizione da invasione ad assedio; pericoli/rischi dei messaggeri **durante l'invasione**; messaggeri **in entrata** durante l'assedio (il divieto approvato riguarda l'uscita); destino dei messaggeri già partiti; ritorno dei piccioni e prerequisiti delle piccionaie; disponibilità e contenuto degli ordini strategici sotto assedio; dettaglio dei rapporti durante il blocco. **Q-09 è quindi risolta sulla distinzione dei due stati e sulle uscite, ma non su tutti i dettagli di gioco.**
 
 ## 5. Architettura candidata e contratti d'integrazione
 
@@ -356,6 +376,14 @@ Il product owner ha valutato la proposta seguente **«un buon inizio»**. Questo
 
 **AT-32 — Rispetto delle fonti (criterio PROPOSTO):** KPI della propria colonia aggiornati dal backend autorevole; indicatori dei vassalli ottenuti solo da rapporti consegnati con fonte e data, senza letture live abusive o confusione di snapshot fra campagne. Il test diverrà vincolante dopo la finalizzazione Q-08.
 
+**AT-33 — Invaso non significa assediato:** quando nemici hanno invaso il territorio ma non è iniziato un assedio effettivo, il blocco della partenza dei messaggeri **non** scatta per il solo stato *invaso*. Eventuali impedimenti aggiuntivi dell'invasione vanno testati soltanto dopo definizione.
+
+**AT-34 — Assedio blocca il messaggero uscente:** una volta attivo lo stato *sotto assedio*, qualsiasi tentativo di far **partire** un messaggero ordinario dal feudo assediato è rifiutato dal server, anche con richieste API dirette o client mobile; non viene creato un falso messaggio *in transito*.
+
+**AT-35 — Piccione non intercettabile:** con piccionaia/canale operativo, il feudo assediato può spedire una lettera tramite piccione, che percorre il suo tempo simulato di consegna **senza possibilità di intercettazione**. Il destinatario la legge soltanto dopo l'arrivo; il passaggio a *sotto assedio* non altera arbitrariamente la sua ETA.
+
+**AT-36 — Nessun canale fittizio:** quando un feudo assediato non dispone di un canale piccione utilizzabile, l'app segnala che non può inviare comunicazioni in uscita con i vettori disponibili; non crea automaticamente un piccione o una piccionaia.
+
 ## 8. Roadmap tecnica proposta — primo rilascio completo (nessuna data approvata)
 
 | Fase | Deliverable | Dipendenze / criterio di uscita |
@@ -364,7 +392,7 @@ Il product owner ha valutato la proposta seguente **«un buon inizio»**. Questo
 | **F1 — Backend + hub web** | Campagne autorevoli, lobby, dashboard, API lettura e scrittura | World/Feudal, MP-07, persistenza server e autorizzazioni |
 | **F2 — Controllo remoto web completo** | Tutti i domini: economia/lavoro/fisco/cantieri, militare/spedizioni, diplomazia/messaggi, tributi/carovane, mappa | Moduli reali, QA e contratti di comando |
 | **F3 — App alpha/beta interne** | **Un unico progetto mobile cross-platform** compilabile per Android e iOS, con gli stessi comandi, test utenti/dispositivi, sicurezza e accessibilità | F1–F2; scelta framework ancora aperta; test di sincronia con browser |
-| **F4 — Prima release pubblica Android/iOS (B)** | **Controllo remoto completo** di §1.4, push con consenso OS + filtri per categoria, tutti i Must e test AT-01…AT-30 (più AT-31/32 proposti, da approvare) | **Gate non derogabile:** nessuna release solo KPI, messaggi o comandi economici parziali |
+| **F4 — Prima release pubblica Android/iOS (B)** | **Controllo remoto completo** di §1.4, push con consenso OS + filtri per categoria, tutti i Must e test AT-01…AT-30 + AT-33…AT-36 (AT-31/32 proposti, da approvare) | **Gate non derogabile:** nessuna release solo KPI, messaggi o comandi economici parziali |
 | **F5 — Miglioramenti** | Cache offline, archivio storico, filtri/silenziamento push avanzati e ottimizzazioni, se approvati | Decisioni successive |
 
 **DECISO:** completezza del **primo rilascio pubblico**, **unica codebase applicativa Android/iOS** e push con permesso OS + selettori per categoria; nessuna data di pubblicazione fissata. Le fasi incrementali interne non costituiscono una release pubblica ridotta. **A:** framework cross-platform, dettaglio comandi, tassonomia/default delle notifiche, modalità offline e pianificazione temporale.
@@ -390,11 +418,11 @@ Il product owner ha valutato la proposta seguente **«un buon inizio»**. Questo
 | **Q-06 — RISOLTA (principio)** | **Un personaggio per account/campagna, con più feudi governabili. Per comandare un altro feudo occorre spostarsi fisicamente oppure inviare messaggeri/piccioni, rispettando i tempi simulati.** | **DECISO** — viaggi, infrastruttura dei piccioni, deleghe e singoli tipi di ordine ancora aperti |
 | **Q-07 — RISOLTA (principio)** | **Una sola base di codice applicativa per Android e iOS**, con backend e API comuni alla piattaforma web. Non sono richieste due app sviluppate separatamente. | **DECISO** — framework e grado di riuso UI col browser ancora aperti |
 | **Q-08 — IN DEFINIZIONE** | **Sei gruppi KPI proposti e accolti come «un buon inizio»:** popolazione; tesoreria; scorte/autonomia; felicità/lealtà; produzione/occupazione; sicurezza militare. | **SHORTLIST PRELIMINARE**, non elenco definitivo; metriche, alert, priorità/layout ancora aperti |
-| **Q-09** | Il giocatore può dare ordini quando il feudo è assediato e quanto ne può conoscere? | Fog of war e difesa |
+| **Q-09 — PARZIALMENTE RISOLTA** | **Due stati distinti: invaso ≠ sotto assedio.** Durante l'assedio **messaggeri in uscita bloccati; piccioni in uscita consentiti e non intercettabili**. L'invasione non blocca automaticamente i messaggeri per questa regola. | **DECISO** sui vettori uscenti; **APERTO** ingresso, rischio invasioni, transizioni, messaggeri già in viaggio e ordini disponibili |
 | **Q-10** | Lingue, target OS, requisiti prestazionali, retention, privacy e policy store? | Qualità e go-live |
 
 ## 11. Definition of Ready della SRS
 
-L'SRS potrà essere promossa da **bozza v0.9** a **baseline approvata** soltanto quando: (1) la **Q-08** (shortlist preliminarmente condivisa, ma non chiusa) e le questioni **Q-09…Q-10** prioritizzate avranno risposta o una decisione esplicita di rinvio (**Q-01: B; Q-02: doppia temporalità; Q-03: report dei vassalli; Q-04: preparazione ordini in pausa; Q-05: push con consenso OS e filtri; Q-06: personaggio unico e governo via viaggio/messaggeri/piccioni; Q-07: unica base di codice Android/iOS**); (2) per ogni funzione Must sarà disponibile una sorgente autorevole o una dipendenza di backend documentata; (3) saranno definiti permessi dei ruoli e catalogo di tutti i comandi; (4) saranno approvati criteri di accettazione e gate B; (5) sarà aggiornata la tracciabilità verso backlog e test.
+L'SRS potrà essere promossa da **bozza v0.10** a **baseline approvata** soltanto quando: (1) la **Q-08** (shortlist preliminare, non chiusa), la **Q-09** (distinzione invasione/assedio e vettori uscenti decisi, dettagli ancora aperti) e la **Q-10** avranno risposta o una decisione esplicita di rinvio (**Q-01: B; Q-02: doppia temporalità; Q-03: report dei vassalli; Q-04: preparazione ordini in pausa; Q-05: push con consenso OS e filtri; Q-06: personaggio unico e governo via viaggio/messaggeri/piccioni; Q-07: unica base di codice Android/iOS**); (2) per ogni funzione Must sarà disponibile una sorgente autorevole o una dipendenza di backend documentata; (3) saranno definiti permessi dei ruoli e catalogo di tutti i comandi; (4) saranno approvati criteri di accettazione e gate B; (5) sarà aggiornata la tracciabilità verso backlog e test.
 
 **Nessuna funzionalità mobile è stata implementata da questo documento.**
