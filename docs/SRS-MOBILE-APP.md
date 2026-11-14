@@ -1,6 +1,6 @@
 # CONQUER — Software Requirements Specification (SRS) · Mobile Companion
 
-**Versione:** 0.8 — bozza di lavoro, **non approvata nel complesso** (scelte B e Q-02…Q-07 approvate)  
+**Versione:** 0.9 — bozza di lavoro, **non approvata nel complesso** (Q-08: shortlist KPI validata come punto di partenza, non ancora definitiva)  
 **Ultimo aggiornamento:** 14 novembre 2026 (prima bozza 13 novembre 2026)  
 **Destinazione:** Android e iOS da **un'unica base di codice mobile condivisa**; prima dipendenza: hub browser e backend multiplayer condiviso  
 **Stato:** SPEC / NO RUNTIME — nessuna app mobile implementata  
@@ -102,11 +102,32 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 | FR-DASH-05 | I KPI del **feudo governato direttamente** sono letti dallo stato autorevole corrente; i KPI dei **feudi dei vassalli** sono disponibili al sovrano **solo dopo la consegna di un rapporto tramite messaggero**, non come lettura live dei loro dati. | D/C | Must |
 | FR-DASH-06 | Per ogni rapporto di vassallo visualizza **feudo sorgente, data simulata di redazione, data di ricezione, contenuti effettivamente comunicati e stato di aggiornamento**; distingue lo snapshot storico dal dato live del proprio insediamento. | D/C per distinzione; P per dettaglio UI | Must |
 | FR-DASH-07 | Il sovrano può **configurare la frequenza dei messaggeri di resoconto provenienti dai vassalli**; la modifica è un'azione autorizzata e non anticipa i rapporti ancora in viaggio. | D/C | Must |
+| FR-DASH-08 | Nella Home, ogni scheda di insediamento espone una sintesi selezionata di KPI; la **shortlist iniziale di sei gruppi** è riportata al §3.2a e può essere raffinata. | P — accolto come buon inizio, **non approvazione definitiva dell'elenco** | Should |
+| FR-DASH-09 | Le schede consentono accesso alla dashboard di dettaglio senza sovraccaricare la Home; allarmi e posta non vengono confusi con KPI inventati. | P | Should |
 | FR-ECO-01 | Consente gestione di lavoro/Job Manager, priorità e assegnazioni consentite. | D/C | Must |
 | FR-ECO-02 | Consente politiche economiche e fiscali già supportate dal motore, inclusi tributi, aliquote e razioni se applicabili. | D/C | Must |
 | FR-CANT-01 | Permette monitoraggio, priorità, risorse e manodopera dei cantieri già collocati nel Builder. | D/C | Must |
 | FR-CANT-02 | Non consente di scegliere coordinate o creare geometrie tramite app mobile. | D | Must |
 | FR-ECO-03 | Espone serie storiche solo per periodi effettivamente registrati; niente extrapolazioni spacciate per misure. | P | Should |
+
+### 3.2a Home — prima shortlist KPI da affinare (14/11/2026)
+
+Il product owner ha valutato la proposta seguente **«un buon inizio»**. Questo significa **direzione preliminarmente condivisa**, **non approvazione definitiva** delle metriche, del numero di elementi o del layout. Q-08 rimane **IN DEFINIZIONE**.
+
+| Gruppo KPI candidato | Informazione sintetica | Dettaglio / cautela |
+| --- | --- | --- |
+| **1. Popolazione** | Numero residenti | Eventuale variazione sul periodo solo se supportata dallo storico reale |
+| **2. Tesoreria** | Disponibilità finanziaria del feudo | Entrate/uscite e tendenze nella dashboard dettagliata, se disponibili |
+| **3. Scorte alimentari / autonomia** | Scorte e indicazione di sufficienza | Autonomia soltanto quando calcolata dal motore; mai confondere magazzino economico e difensivo |
+| **4. Felicità / lealtà** | Indicatori di stabilità sociale | Misure distinte per le classi/ruoli per cui esistono; evitare un indice unico arbitrario |
+| **5. Produzione / occupazione** | Stato delle attività e impiego lavoratori | Non inventare aggregati in assenza di dati del Job Manager o del ledger |
+| **6. Sicurezza militare** | Situazione guarnigione e rischio | Distinguere militari presenti, capacità ricettiva e allarmi reali |
+
+**P — composizione dell'interfaccia:** massimo sei gruppi principali per insediamento nella scheda Home, con collegamento ai pannelli analitici. Allarmi critici, posta consegnata, spedizioni, tributi e stato della campagna possono avere **indicatori contestuali separati**, senza occupare forzatamente uno dei sei gruppi.
+
+**VINCOLI GIÀ DECISI:** utilizzare solo stato server **autorizzato** e dati realmente esistenti; indicare data/freschezza del dato; non rendere live i KPI dei vassalli (solo rapporti recapitati); se una metrica non è calcolabile, mostrare assenza di dato e non valori dimostrativi.
+
+**APERTO:** quali sottovalori riassumere, soglie di attenzione e criticità, periodi di confronto, gerarchia visiva, eventuali KPI alternativi in base a stato/ruolo/assedio e contenuto su schermi piccoli. Richiede design e accettazione esplicita prima di chiudere Q-08.
 
 ### 3.3 Militare, mappa e logistica
 
@@ -331,6 +352,10 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 
 **AT-30 — Parità Android/iOS:** su dispositivi Android e iOS, gli stessi scenari di login, scelta campagna, KPI, posta, ordini strategici, fiscalità, cantieri e notifiche per categoria producono risultati equivalenti sul medesimo backend, rispettando i permessi nativi delle due piattaforme.
 
+**AT-31 — Shortlist KPI Home (criterio PROPOSTO):** su una scheda di insediamento con dati reali, i sei gruppi candidati mostrano valori riferiti al feudo corretto e consentono l'apertura del dettaglio; in assenza di valori storici o metriche non implementate mostrano «dato non disponibile» senza inventare informazioni. Il test diverrà vincolante solo dopo l'approvazione definitiva di Q-08.
+
+**AT-32 — Rispetto delle fonti (criterio PROPOSTO):** KPI della propria colonia aggiornati dal backend autorevole; indicatori dei vassalli ottenuti solo da rapporti consegnati con fonte e data, senza letture live abusive o confusione di snapshot fra campagne. Il test diverrà vincolante dopo la finalizzazione Q-08.
+
 ## 8. Roadmap tecnica proposta — primo rilascio completo (nessuna data approvata)
 
 | Fase | Deliverable | Dipendenze / criterio di uscita |
@@ -339,7 +364,7 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 | **F1 — Backend + hub web** | Campagne autorevoli, lobby, dashboard, API lettura e scrittura | World/Feudal, MP-07, persistenza server e autorizzazioni |
 | **F2 — Controllo remoto web completo** | Tutti i domini: economia/lavoro/fisco/cantieri, militare/spedizioni, diplomazia/messaggi, tributi/carovane, mappa | Moduli reali, QA e contratti di comando |
 | **F3 — App alpha/beta interne** | **Un unico progetto mobile cross-platform** compilabile per Android e iOS, con gli stessi comandi, test utenti/dispositivi, sicurezza e accessibilità | F1–F2; scelta framework ancora aperta; test di sincronia con browser |
-| **F4 — Prima release pubblica Android/iOS (B)** | **Controllo remoto completo** di §1.4, push con consenso OS + filtri per categoria, tutti i Must e test AT-01…AT-30 | **Gate non derogabile:** nessuna release solo KPI, messaggi o comandi economici parziali |
+| **F4 — Prima release pubblica Android/iOS (B)** | **Controllo remoto completo** di §1.4, push con consenso OS + filtri per categoria, tutti i Must e test AT-01…AT-30 (più AT-31/32 proposti, da approvare) | **Gate non derogabile:** nessuna release solo KPI, messaggi o comandi economici parziali |
 | **F5 — Miglioramenti** | Cache offline, archivio storico, filtri/silenziamento push avanzati e ottimizzazioni, se approvati | Decisioni successive |
 
 **DECISO:** completezza del **primo rilascio pubblico**, **unica codebase applicativa Android/iOS** e push con permesso OS + selettori per categoria; nessuna data di pubblicazione fissata. Le fasi incrementali interne non costituiscono una release pubblica ridotta. **A:** framework cross-platform, dettaglio comandi, tassonomia/default delle notifiche, modalità offline e pianificazione temporale.
@@ -364,12 +389,12 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 | **Q-05 — RISOLTA (principio)** | **Push previa autorizzazione Android/iOS + preferenze selettive per categoria nell'app.** Il push viene emesso soltanto se entrambe le condizioni sono abilitate. | **DECISO** — elenco categorie, default, silenziamento e preferenze per-campagna ancora aperti |
 | **Q-06 — RISOLTA (principio)** | **Un personaggio per account/campagna, con più feudi governabili. Per comandare un altro feudo occorre spostarsi fisicamente oppure inviare messaggeri/piccioni, rispettando i tempi simulati.** | **DECISO** — viaggi, infrastruttura dei piccioni, deleghe e singoli tipi di ordine ancora aperti |
 | **Q-07 — RISOLTA (principio)** | **Una sola base di codice applicativa per Android e iOS**, con backend e API comuni alla piattaforma web. Non sono richieste due app sviluppate separatamente. | **DECISO** — framework e grado di riuso UI col browser ancora aperti |
-| **Q-08** | KPI della Home: quali 4–6 numeri sono davvero indispensabili? | Prodotto/UX |
+| **Q-08 — IN DEFINIZIONE** | **Sei gruppi KPI proposti e accolti come «un buon inizio»:** popolazione; tesoreria; scorte/autonomia; felicità/lealtà; produzione/occupazione; sicurezza militare. | **SHORTLIST PRELIMINARE**, non elenco definitivo; metriche, alert, priorità/layout ancora aperti |
 | **Q-09** | Il giocatore può dare ordini quando il feudo è assediato e quanto ne può conoscere? | Fog of war e difesa |
 | **Q-10** | Lingue, target OS, requisiti prestazionali, retention, privacy e policy store? | Qualità e go-live |
 
 ## 11. Definition of Ready della SRS
 
-L'SRS potrà essere promossa da **bozza v0.8** a **baseline approvata** soltanto quando: (1) le questioni **Q-08…Q-10** prioritizzate avranno risposta o una decisione esplicita di rinvio (**Q-01: B; Q-02: doppia temporalità; Q-03: report dei vassalli; Q-04: preparazione ordini in pausa; Q-05: push con consenso OS e filtri; Q-06: personaggio unico e governo via viaggio/messaggeri/piccioni; Q-07: unica base di codice Android/iOS**); (2) per ogni funzione Must sarà disponibile una sorgente autorevole o una dipendenza di backend documentata; (3) saranno definiti permessi dei ruoli e catalogo di tutti i comandi; (4) saranno approvati criteri di accettazione e gate B; (5) sarà aggiornata la tracciabilità verso backlog e test.
+L'SRS potrà essere promossa da **bozza v0.9** a **baseline approvata** soltanto quando: (1) la **Q-08** (shortlist preliminarmente condivisa, ma non chiusa) e le questioni **Q-09…Q-10** prioritizzate avranno risposta o una decisione esplicita di rinvio (**Q-01: B; Q-02: doppia temporalità; Q-03: report dei vassalli; Q-04: preparazione ordini in pausa; Q-05: push con consenso OS e filtri; Q-06: personaggio unico e governo via viaggio/messaggeri/piccioni; Q-07: unica base di codice Android/iOS**); (2) per ogni funzione Must sarà disponibile una sorgente autorevole o una dipendenza di backend documentata; (3) saranno definiti permessi dei ruoli e catalogo di tutti i comandi; (4) saranno approvati criteri di accettazione e gate B; (5) sarà aggiornata la tracciabilità verso backlog e test.
 
 **Nessuna funzionalità mobile è stata implementata da questo documento.**
