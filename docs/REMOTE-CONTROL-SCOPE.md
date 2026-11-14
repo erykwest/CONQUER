@@ -105,6 +105,16 @@
 
 **APERTO:** tempi e pericoli del viaggio, infrastrutture/prerequisiti della posta via piccione, costi/intercettazione, azioni consentite tramite messaggio, deleghe a amministratori, stato di comando durante il viaggio, modalità di lettura dei dati di *propri* feudi lontani. La regola già decisa sui **resoconti dei vassalli** resta valida: non diventano KPI live al cambio di schermata.
 
+## 3d. Unica base di codice per Android e iOS — DECISO (14/11/2026)
+
+**DECISO — app mobile cross-platform:** la futura app Android e iOS sarà realizzata usando **un'unica base di codice applicativa condivisa**, con integrazioni native mirate quando necessarie (notifiche, permessi, distribuzione). Non si svilupperanno due prodotti indipendenti con logiche gestionali duplicate.
+
+**DECISO — backend comune:** l'app mobile utilizza gli **stessi contratti API e il medesimo stato autorevole** dell'hub browser. Identità, permessi feudali, tempi di recapito, KPI e ordini restano governati dal server; una sola codebase **mobile** non impone di condividere integralmente la UI del browser.
+
+**APERTO:** scelta del framework (Flutter/React Native/altro), riuso di componenti con il front-end web, dettagli di packaging, requisiti minimi OS e distribuzione store. La decisione riguarda **l'architettura condivisa**, non un framework specifico.
+
+**RIFERIMENTO:** [SRS mobile v0.8 nella draft PR #222](https://github.com/erykwest/CONQUER/pull/222), Q-07 risolta nel principio.
+
 ## 4. Decisioni ancora necessarie
 
 1. **Dettaglio comandi:** inventario esatto dei comandi remoti per economia, fisco, lavoro, cantieri già localizzati, strategia, diplomazia e logistica; il **confine generale è deciso** nel §2a: niente piazzamento geometrico, progettazione spaziale o controllo tattico diretto.
@@ -112,7 +122,7 @@
 3. **Dettagli della visibilità (principio DECISO):** proprio feudo aggiornato direttamente; vassalli solo tramite rapporti recapitati, **frequenza impostata dal sovrano**. Da definire granularità della programmazione, contenuto, diritti e selezione dei KPI sulle schede aggregate.
 4. **Permessi e presenza:** per ogni comando distinguere feudo dove **il personaggio è presente** e feudi comandati **a distanza tramite messaggero/piccione**; rimangono aperti i diritti di sudditi/vassalli/sovrani, le deleghe e quali ordini possano essere trasmessi.
 5. **Dettagli degli ordini in pausa (principio DECISO):** preparazione consentita durante pause regionali, applicazione solo al riavvio e nessun avanzamento del mondo; **APERTO** ordine/limiti/revoca, conflitti al tick, notifiche, gestione server irraggiungibile e coda offline sul dispositivo.
-6. **UX e piattaforme:** web responsive/API riusabili prima dell'app nativa; **push con consenso OS + filtri per categoria DECISI** (§3b). **APERTO:** tassonomia e default dei filtri, silenziamento, autenticazione, stack e aggiornamenti real-time.
+6. **UX e piattaforme:** **DECISO:** una sola codebase applicativa Android/iOS (§3d), API e stato condivisi con browser; push con consenso OS + filtri per categoria (§3b). **APERTO:** framework cross-platform, livello di condivisione UI con web, tassonomia e default dei filtri, silenziamento, autenticazione e aggiornamenti real-time.
 
 ## 5. Tranche di lavoro future (non implementate)
 
@@ -121,7 +131,7 @@
 - **RC-03 Comandi remoti:** API e permessi per economia, fisco, lavoro/Job Manager, cantieri già collocati, gestione militare strategica, diplomazia e logistica; validazioni, coda/esiti, stessa logica senza duplicazioni. **Ordini diretti solo dove il personaggio si trova; altri feudi mediante viaggio o messaggeri/piccioni con recapito simulato.** Esclusi piazzamento geometrico, fortificazioni e controllo tattico diretto, riservati al Builder/3D.
 - **RC-04 Comunicazioni/messaggi:** analisi branch `messages`, porting selettivo, nodi reali, ETA, rapporti e integrazione diplomazia.
 - **RC-05 Strategia remota:** spedizioni, carovane/tributi, diplomazia e mappa regionale collegate a World/Feudal.
-- **RC-06 Mobile-ready:** web responsive, API neutrali alla piattaforma, poi app Android/iOS senza riscrivere regole; **push con permesso del sistema operativo e selezione per categoria nell'app**, senza interferire con la visibilità/temporizzazione in-game.
+- **RC-06 Mobile-ready:** web responsive e API neutrali alla piattaforma, poi app **Android/iOS da un'unica base di codice condivisa**, senza riscrivere le regole; push con permesso OS e selezione per categoria, senza interferire con visibilità/temporizzazione in-game. Framework da scegliere.
 - **RC-07 QA e sicurezza:** isolamento tra campagne, autorizzazione, consistenza dello stato, velocità ×1 condivisa, messaggi ritardati, concorrenza/duplicati dei comandi e test multi-client.
 
 **Dipendenze e roadmap:** World/Feudal (M4), MP-07 account vs campagna, persistenza autorevole, Combat/Siege/Economy unici. Questo documento **non anticipa** le milestone esistenti né dichiara pronta la dashboard remota.
