@@ -162,6 +162,7 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 | Account | user_id | Identità trasversale, preferenze e login |
 | Campaign | campaign_id | Regole, calendario, regione, stato server |
 | Membership | campaign_id + user_id | Partecipazione e ruolo del giocatore nella campagna |
+| Character | campaign_id + character_id / membership_id | **Un solo personaggio per account/campagna**; posizione corrente, eventuale viaggio, titoli e autorità sui feudi |
 | Territory | campaign_id + territory_id | Sovranità, rivendicazione, idoneità allo spawn |
 | Settlement | campaign_id + settlement_id | Villaggio/feudo, popolazione, strutture, economy, armi |
 | Snapshot/KPI | campaign_id + settlement_id + versione | Dati e timestamp/fonte della lettura |
@@ -235,6 +236,7 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 **Contratti logici candidati (NON API già disponibili):**
 - Identity: login, session, profilo e preferenze.
 - Campaign directory: elenco pubblico, stato, eleggibilità di ingresso, partecipazioni dell'utente.
+- Character presence/travel: posizione autorevole per campagna, feudo di presenza, destinazioni e stato del viaggio, collegamento tra personaggio e possedimenti; nessun teletrasporto dei comandi tramite cambio scheda.
 - Campaign dashboard: snapshot di settlement, economia, popolazione, cantieri, sicurezza.
 - Command gateway: comando contestuale, autorizzazione, deduplicazione, tracking esito.
 - Feudal messaging: inbox/outbox, invio, progresso di consegna, report.
