@@ -1,10 +1,20 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
-## D-SIEGE-ALERT-RECIPIENT-261114 — Destinatari feudali degli allarmi d'invasione (14/11/2026)
+## D-SIEGE-ATTACK-CONFIG-261114 — Due allarmi d'attacco automatici configurabili (14/11/2026)
+
+- **CHIARIMENTO ESPLICITO del product owner:** il messaggero d'invasione al **governante assente** è l'**allarme base**; l'allarme al signore superiore **non è un semplice destinatario alternativo né un fallback**.
+- **DECISO:** il signore interessato alla ricezione degli avvisi può impostare **due funzioni distinte**, con etichette **«Allerta sempre il signore in caso di attacco»** (avviso automatico aggiuntivo verso il **signore superiore della catena feudale**) e **«Allerta sempre gli alleati in caso di attacco»** (avviso automatico aggiuntivo verso **gli alleati effettivi**).
+- **DECISO:** i due controlli sono **indipendenti** e possono coesistere. Disabilitarli impedisce i rispettivi avvisi aggiuntivi, **non** l'allarme base. Il singolo evento non trasmette conoscenza istantanea: destinatari, permessi e tempi di viaggio seguono la simulazione e il blocco in assedio (messaggeri né entrano né escono, piccioni in uscita consentiti e non intercettabili se operativi).
+- **NON CONFONDERE** queste funzioni con le preferenze di push Android/iOS (D-MOB-PUSH-261114), che agiscono **solo sulla notifica al dispositivo dopo che l'evento è conoscibile**.
+- **APERTO:** criterio esatto di «attacco» rispetto a «invasione»; chi modifica i due flag e a che livello (personaggio/feudo/campagna), la precisa localizzazione del signore, i legami di alleanza validi, eventuali duplicati, vettore utilizzabile per ciascun flusso e recapito in caso di assedio. Non imporre flag attivi di default senza ulteriore decisione.
+- **STATO:** solo documentazione, nessun motore di gioco modificato. Corregge D-SIEGE-ALERT-RECIPIENT-261114; [SRS v0.13 in draft PR #222](https://github.com/erykwest/CONQUER/pull/222), [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md).
+
+
+## D-SIEGE-ALERT-RECIPIENT-261114 — Destinatari feudali degli allarmi d'invasione (14/11/2026) — INTERPRETAZIONE SUPERATA DA D-SIEGE-ATTACK-CONFIG-261114
 
 - **DECISO dal product owner:** quando l'invasione di un territorio attiva il **messaggero automatico d'allarme**, i destinatari ammessi sono **il personaggio che governa quel territorio, se assente fisicamente**, oppure **il suo signore superiore nella catena feudale**.
 - **CONTRATTO:** governante, presenza e superiore devono essere risolti dal **modello feudale autorevole della stessa campagna**. L'app/browser non possono leggere in diretta un'invasione sconosciuta al personaggio: l'informazione viene ricevuta **solo dopo il tempo simulato di recapito** del messaggero.
-- **NON DECISO:** se l'invio al signore superiore avviene come alternativa, escalation o fallback, se più destinatari ricevono copie, quanto risalire la gerarchia in caso di assenza del superiore diretto, luogo/percorso e priorità delle transizioni invasione→assedio nello stesso tick. **Non inviare copie aggiuntive per default.**
+- **SUPERATO da D-SIEGE-ATTACK-CONFIG-261114:** il superiore feudale non è fallback dell'allarme base, ma destinatario di un **avviso aggiuntivo configurabile**, distinto da quello per gli alleati. Rimangono aperti il grado gerarchico, la sede/percorso e la gestione di attacchi concomitanti.
 - **RESTA DECISO:** blocco di ingresso/uscita dei messaggeri durante assedio; piccioni in uscita non intercettabili, con rete disponibile; allarme automatico per ogni nuova invasione solo quando la partenza è possibile. Q-09 resta parzialmente definita.
 - **STATO:** documentazione; nessun codice di gioco o schema modificato. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [MARCH](../march.md), [SRS mobile v0.12 draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
 
