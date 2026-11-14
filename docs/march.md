@@ -16,12 +16,12 @@ Pagina: /march/ (file march/index.html). Non è un nuovo motore economico o un n
 
 **DECISO:** distinguere semanticamente **invasione** del territorio e **assedio effettivo** del feudo. Razzia/presenza nemica sul territorio non equivalgono automaticamente a blocco postale dell'assedio.
 
-- **INVASO:** non applicare il divieto di uscita dei messaggeri previsto per l'assedio sulla sola base di questo stato. Rischi, intercettazioni e condizioni di movimento sotto invasione sono **APERTE**.
-- **SOTTO ASSEDIO:** il feudo **non può far partire messaggeri ordinari**. I **piccioni possono invece uscire e non sono intercettabili**, mantenendo requisiti del canale e tempi di trasporto simulati.
-- La distinzione deve essere applicata dal **server autorevole**, non solo dal pulsante della UI. Il blocco riguarda per ora le **partenze**: ingressi e messaggeri già in viaggio restano da definire.
-- Transizioni effettive tra invasione e assedio, requisiti piccionaie, costi/ETA, ordini remoti consentiti e fog of war restano da specificare. Non dedurre che i piccioni siano disponibili in assenza di rete operativa.
+- **INVASO:** ogni **nuova invasione del territorio** innesca automaticamente la **partenza di un messaggero d'allarme** quando consentita dallo stato del mondo, senza comando manuale; la sua consegna conserva il tempo di viaggio simulato. Non applicare il divieto d'assedio sulla sola base dell'invasione. Rischi, destinatario, intercettazioni e condizioni di movimento sotto invasione sono **APERTI**.
+- **SOTTO ASSEDIO:** il feudo **non può far entrare né partire messaggeri ordinari**, quindi nessuna consegna di messaggero in ingresso. I **piccioni possono invece uscire e non sono intercettabili**, mantenendo requisiti del canale e tempi di trasporto simulati.
+- La distinzione deve essere applicata dal **server autorevole**, non solo dalla UI. Il blocco di assedio riguarda **partenze e ingressi**; per i messaggeri già in viaggio è **deciso il divieto di entrare/consegnare**, ma **aperto** se attendono all'esterno, deviano o tornano.
+- Transizioni tra invasione e assedio, destinatario dell'allarme, prerequisiti piccionaie, costi/ETA, ordini remoti e fog of war restano da specificare. **Proposta tecnica:** un allarme per **evento d'invasione distinto**, non ogni tick/retry. Se la partenza è già vietata da assedio, non forzare il messaggero. Non dedurre piccioni disponibili senza rete operativa.
 
-**IMPORTANTE:** lo skeleton MARCH V0 descritto sotto non implementa questo blocco postale. Il suo stadio `siege` è un riferimento di progettazione, non prova dell'integrazione multiplayer. Tracciamento: [SRS mobile v0.10](https://github.com/erykwest/CONQUER/pull/222), [Remote Control](REMOTE-CONTROL-SCOPE.md) e D-SIEGE-COMMS-261114.
+**IMPORTANTE:** lo skeleton MARCH V0 descritto sotto non implementa questo blocco postale. Il suo stadio `siege` è un riferimento di progettazione, non prova dell'integrazione multiplayer. Tracciamento: [SRS mobile v0.11](https://github.com/erykwest/CONQUER/pull/222), [Remote Control](REMOTE-CONTROL-SCOPE.md) e D-SIEGE-COMMS-261114.
 
 ## Cosa contiene concretamente lo skeleton
 
