@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-14 — MOB-PLAT-01 · Una sola codebase Android/iOS (solo design)
+
+Q-07 SRS mobile chiusa dal product owner: **un'unica base di codice applicativa condivisa** per Android e iOS, con gli stessi contratti API e backend autorevole del browser. Nessun doppio client sviluppato separatamente; framework, UI web condivisa e versioni OS ancora aperti. Aggiornate SRS mobile v0.8 nella draft PR #222, REMOTE-CONTROL-SCOPE, D-MOB-CODEBASE-261114 e backlog MOB-PLAT-01. **Solo documentazione, nessun runtime/SQL modificato.**
+
+
 ## 2026-11-14 — MP-08 / RC-CHAR-01 · Personaggio unico e governo fisico dei feudi (solo design)
 
 Il product owner ha deciso **un personaggio per account/campagna**, che può governare più feudi solo **spostandosi fisicamente** per la gestione diretta o **trasmettendo ordini tramite messaggeri/piccioni**. Precisato il contratto: il primo tick utile vale per comandi nel feudo di presenza; un feudo lontano non si governa istantaneamente cambiando schermata nel browser/mobile. Aggiornati MULTIPLAYER-SERVER-SCOPE, REMOTE-CONTROL-SCOPE, decisione D-FEUD-CHAR-261114 e backlog MP-08/RC-CHAR-01; SRS mobile v0.7 nella draft PR #222 (Q-06 risolta). **Solo documentazione; runtime, schema e roadmap invariati.**
