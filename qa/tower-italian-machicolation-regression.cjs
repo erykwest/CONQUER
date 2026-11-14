@@ -45,6 +45,14 @@ check('corbels are four times as tall, close-set, with round arches between them
     assert.equal(merlons(it),merlons(std),'merlons and parapets unchanged');
   }
 });
+check('cutaway: no corbel, arch or band left on the opened side over the top floor',()=>{
+  const t=tower('cw',{size:2,tier:3,level:3,machicolationStyle:'italian'});setup([t]);
+  const all=corbels(t);assert.ok(all.length>0);
+  t.cutaway=true;assert.ok(run('structureCutaway')(t),'tower opened in cutaway');
+  const kept=corbels(t);
+  assert.ok(kept.length<all.length&&kept.length>0,'only the far side stays: '+all.length+' -> '+kept.length);
+  assert.ok(kept.every(p=>run('battlementPieceFacesAway')(p)),'every kept piece faces away from the camera');
+});
 check('the roof menu offers it as a fourth choice and the command sets both fields',()=>{
   const t=tower('m',{roofStyle:'battlement'});setup([t]);
   const C=run('StructureCommands');

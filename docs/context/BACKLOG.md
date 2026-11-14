@@ -6,7 +6,9 @@
 - [x] Torri quadrate, rotonde e a D; 2.5D e 3D; voce nel Lab.
 - [ ] Facoltativo: estendere lo stile alle mura con caditoie e alle porte.
 - [x] Mensole in un unico pezzo inclinato, archi a tutto sesto (senza scuro sotto) e fascia a filo, sul modello del Castello di San Giorgio (Mantova).
+- [x] Cutaway: mensole, archi e fascia del lato aperto tolti, l'ultimo piano resta visibile.
 - [ ] Facoltativo: finestrelle o merli tamponati nella fascia, come nel riferimento.
+- [ ] Botola del piano di copertura disegnata sopra il tetto interno (verificare anche con le caditoie standard).
 
 ## MOB-PUSH-01 — Notifiche push con consenso OS e filtri per categoria (14/11/2026)
 

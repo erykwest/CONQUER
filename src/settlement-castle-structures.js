@@ -1093,7 +1093,12 @@ function roundTowerBattlementPieces(s){
 function towerBattlementPieces(s){
   if(s.type!=='tower'||isWoodTower(s)||underConstruction(s)||!['battlement','machicolation'].includes(towerRoofStyle(s)))return[];
   const crown=s.shape==='round'?roundTowerBattlementPieces(s):isOrientedTower(s)?orientedTowerBattlementPieces(s):squareTowerBattlementPieces(s);
-  if(towerItalianMachicolation(s))crown.push(...italianMachicolationPieces(s));
+  if(towerItalianMachicolation(s)){
+    // Cutaway: the corbels, arches and band on the opened side would hang over the top floor in view;
+    // only those turned away from the camera stay (drawn by the 3D mesh, culled by the 2.5D painter).
+    const mach=italianMachicolationPieces(s);
+    crown.push(...(structureCutaway(s)?mach.filter(battlementPieceFacesAway):mach));
+  }
   return withoutBuriedBattlements(s,crown);
 }
 // Restyling the feudal crenellation: every standing stone merlon is rebuilt at the target style's
