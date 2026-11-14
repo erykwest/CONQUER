@@ -1,5 +1,16 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## MOB-PLAT-01 — Una codebase condivisa Android/iOS (14/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** la futura app mobile CONQUER sarà sviluppata con **una sola base di codice** per Android e iOS; entrambi i client useranno lo stesso backend e le stesse API del browser. [D-MOB-CODEBASE-261114](DECISIONS.md#d-mob-codebase-261114--unica-codebase-androidios-14112026) · [SRS mobile v0.8 draft #222](https://github.com/erykwest/CONQUER/pull/222).
+
+- [ ] Valutare e selezionare framework cross-platform idoneo alle interfacce gestionali, mappa strategica, notifiche push, store e sicurezza (scelta tecnica ancora aperta).
+- [ ] Progettare package di codice condiviso Android/iOS, con soli adapter nativi necessari per autenticazione, permessi/notifiche, distribuzione e lifecycle.
+- [ ] Verificare parità delle funzioni di governo remoto e delle autorizzazioni sui due OS, senza divergenza dal backend del browser.
+- [ ] QA su dispositivi Android/iOS reali, sessioni, deep link/notifiche e sincronizzazione degli ordini con lo stato server.
+- [ ] **APERTO:** condivisione UI con il browser, versioni minime OS, tooling CI/CD, app store.
+
+
 ## MP-08 / RC-CHAR-01 — Un personaggio per campagna, governo multi-feudo con presenza o posta (14/11/2026)
 
 **DECISO / NON IMPLEMENTATO:** un personaggio per account/campagna, capace di possedere e governare più feudi; **ordine diretto solo nel feudo fisicamente raggiunto**. Per feudi lontani servono **spostamento del personaggio o ordine recapitato tramite messaggero/piccione**. [D-FEUD-CHAR-261114](DECISIONS.md#d-feud-char-261114--un-personaggio-per-campagna-governo-tramite-presenza-o-messaggeri-14112026).
