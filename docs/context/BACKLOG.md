@@ -1,8 +1,21 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## SIEGE-ATTACK-POLICY-01 — Allarme base + due avvisi d'attacco configurabili (14/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** **base** allarme d'invasione al **governante assente**; **due opzioni indipendenti** del signore: «Allerta sempre il signore in caso di attacco» → **superiore feudale**; «Allerta sempre gli alleati in caso di attacco» → **alleati effettivi**. Non sono alternative o fallback del messaggero base. [D-SIEGE-ATTACK-POLICY-261114](DECISIONS.md#d-siege-attack-policy-261114--due-allerte-automatiche-dattacco-configurabili-14112026) · [SRS mobile v0.13 (draft #222)](https://github.com/erykwest/CONQUER/pull/222).
+
+- [ ] Modellare allarme base separato dalle preferenze di avviso d'attacco verso superiore/alleati; due switch indipendenti, con persistenza e autorizzazione server.
+- [ ] Determinare destinatari tramite catena feudale e alleanze **reali e della medesima campagna**; applicare il trasporto/re recapito simulato senza aggirare assedi o creare canali fittizi.
+- [ ] Rendere disponibili le due impostazioni nel controllo remoto browser/app con stati chiari e nessun effetto sui consensi push del dispositivo.
+- [ ] QA: entrambi OFF (solo base), superiore ON, alleati ON, entrambi ON; nessuna notizia prima della consegna; isolamento dei server e presenza del governante; niente duplicazione per retry.
+- [ ] **APERTO:** trigger di *attacco* vs *invasione*, momento esatto della diramazione (evento/ricezione), titolarità/ambito della preferenza, default, selezione alleati, scelta del vettore, percorsi e circolarità degli inoltri.
+
+**Nota:** il backlog precedente SIEGE-ALERT-RECIPIENT-01 conteneva un possibile fallback al superiore **superato da questa decisione**: non implementare due destinatari alternativi del messaggero base.
+
+
 ## SIEGE-ALERT-RECIPIENT-01 — Destinatari per l'allarme automatico di invasione (14/11/2026)
 
-**DECISO / NON IMPLEMENTATO:** l'allarme generato da una nuova invasione va indirizzato a **chi governa il territorio se è assente**, **oppure al suo signore sopra nella catena feudale**. Destinazione e posizione si ricavano da dati autorevoli, e il recapito rispetta i tempi dei messaggeri. [D-SIEGE-ALERT-RECIPIENT-261114](DECISIONS.md#d-siege-alert-recipient-261114--destinatari-feudali-degli-allarmi-dinvasione-14112026) · [SRS mobile v0.12 draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
+**SUPERATO PARZIALMENTE da SIEGE-ATTACK-POLICY-01:** l'allarme **base** generato da una nuova invasione va a **chi governa il territorio, se assente**; il signore superiore **non è un fallback**, ma viene avvisato soltanto dal **secondo flusso configurabile**, distinto da quello verso gli alleati. Recapito sempre simulato. [D-SIEGE-ALERT-RECIPIENT-261114](DECISIONS.md#d-siege-alert-recipient-261114--destinatari-feudali-degli-allarmi-dinvasione-14112026) · [SRS mobile v0.12 draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
 
 - [ ] Risolvere il governante del territorio invaso, verificarne la **presenza fisica** e individuare il **superiore nella gerarchia feudale della stessa campagna**.
 - [ ] Creare un allarme automatico verso un destinatario ammesso, con percorso/tempo simulato; nessuna conoscenza anticipata via app/mobile/API.
