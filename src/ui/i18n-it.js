@@ -84,7 +84,7 @@ export const T = {
       wallStair: 'Scala al camminamento', wallStairPos: 'Posizione scala'
     },
     words: {
-      battlement: 'Merlato', machicolation: 'Caditoie', pitched: 'Falde', open: 'Piattaforma', pitched4: 'Falde · 4 pali', cover_shingle: 'Scandole', cover_thatch: 'Paglia', cover_turf: 'Zolle erbose',
+      battlement: 'Merlato', machicolation: 'Caditoie', machicolationItalian: 'Caditoie all\'italiana', pitched: 'Falde', open: 'Piattaforma', pitched4: 'Falde · 4 pali', cover_shingle: 'Scandole', cover_thatch: 'Paglia', cover_turf: 'Zolle erbose',
       masonry: 'Pietra', timber: 'Graticcio',
       standard: 'Standard', buttress: 'Contrafforti', splayed: 'A scarpa', arcade: 'Porticato', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', innerRoofOff: 'Nessuno', innerRoofOn: 'Dentro i merli',
       none: 'Nessuna', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide · 4 falde', gable: '2 falde', hip: '4 falde con colmo', paved: 'Lastricata', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana d\'allarme',
@@ -92,7 +92,7 @@ export const T = {
       stairWood: 'Scala lignea · 4 oro, 14 legno', stairStone: 'Scala lapidea · 8 oro, 22 pietra', stairPos_start: 'Inizio muro', stairPos_middle: 'Centro', stairPos_end: 'Fine muro'
     },
     // Short labels shown on option buttons; the full word goes to the tooltip.
-    short: { masonry: 'Pietra', timber: 'Graticcio', battlement: 'Merli', machicolation: 'Caditoie', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', innerRoofOff: '—', innerRoofOn: 'Interno', none: '—', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide', gable: '2 falde', hip: 'Colmo', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana', lookoutOff: '—', lookoutOn: 'Vedetta', outpost: 'Avamposto', pyre: 'Pira', pyreRebuild: 'Ricostruisci', stairWood: 'Lignea', stairStone: 'Lapidea', stairPos_start: 'Inizio', stairPos_middle: 'Centro', stairPos_end: 'Fine' },
+    short: { masonry: 'Pietra', timber: 'Graticcio', battlement: 'Merli', machicolation: 'Caditoie', machicolationItalian: 'Italiane', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', innerRoofOff: '—', innerRoofOn: 'Interno', none: '—', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide', gable: '2 falde', hip: 'Colmo', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana', lookoutOff: '—', lookoutOn: 'Vedetta', outpost: 'Avamposto', pyre: 'Pira', pyreRebuild: 'Ricostruisci', stairWood: 'Lignea', stairStone: 'Lapidea', stairPos_start: 'Inizio', stairPos_middle: 'Centro', stairPos_end: 'Fine' },
     flip: 'Inverti', on: 'Attivo', off: 'Spento', toggles: 'Opzioni',
     rotateLeft: 'Ruota −15°', rotateRight: 'Ruota +15°', rotateFlip: 'Gira di 180°',
     facts: {
@@ -184,7 +184,7 @@ export const T = {
     tier: { tower: 'Una stanza per livello: T1 nessuna · T2 normale · T3 grande (capacità doppia).', wall: 'Spessore: T1 0,2U · T2 0,5U · T3 1U.' },
     height: 'Ogni livello aggiunge un piano e, dove possibile, una stanza.',
     rotation: 'La rotazione segue una griglia di 15°; torri secondarie e innesti delle mura seguono.',
-    roof: 'Caditoie: merlatura in aggetto su mensole.',
+    roof: 'Caditoie: merlatura in aggetto su mensole. All\'italiana: mensole alte quattro corsi a risalti raccordate da archetti; solo estetica, stesse regole delle caditoie.',
     woodRoof: 'Piattaforma aperta oppure tetto a falde su 4 pali.',
     roofCover: 'Manto della long house: scandole, paglia o zolle erbose; il fumo del focolare esce dallo sfiatatoio nel colmo.',
     base: 'A scarpa: alta 0,5. Contrafforti: da quota 0 a H1. Le fondamenta seguono l\'impronta.',

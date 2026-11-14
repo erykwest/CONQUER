@@ -225,7 +225,7 @@ function castleBodyVisualSignature(){
   const point=p=>p?[num(p.x),num(p.y)]:null;
   const items=castleBodyRenderableStructures().map(s=>[
     s.id||'',s.type||'',s.shape||'',s.material||'',s.masonryMaterial||'stone',s.woodStyle||'',s.woodRoof||'',
-    s.roofStyle||'',s.bartizan||'',s.bell||'',s.innerRoof||'',(s.signalFire||'')+(s.signalFireSpent?'F':''),s.roofShape||'',s.baseStyle||'',s.skin||'',num(s.x),num(s.y),num(s.r),num(s.size),
+    s.roofStyle||'',s.machicolationStyle||'',s.bartizan||'',s.bell||'',s.innerRoof||'',(s.signalFire||'')+(s.signalFireSpent?'F':''),s.roofShape||'',s.baseStyle||'',s.skin||'',num(s.x),num(s.y),num(s.r),num(s.size),
     point(s.a),point(s.b),num(s.width),num(s.length),num(s.angle),s.rotationStep??null,
     s.level??null,s.tier??null,!!s.flip,!!s.cutaway,s.cutawayFloor??null,JSON.stringify(s.functions||[]),JSON.stringify(s.roomExteriorHp||null),s.aSnap||null,s.bSnap||null,s.parentTowerId||null,
     num(s.orientationOffset),num(s.groundZ),num(s.foundationMinZ)

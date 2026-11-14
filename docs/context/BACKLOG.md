@@ -1,5 +1,15 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-14 — TOW-MACH-IT · Caditoie all'italiana sulle torri
+
+**IMPLEMENTATO SU BRANCH `feat/caditoie-italiane-torri`, NON MERGE.** Variante estetica delle caditoie solo per le torri in pietra: mensole alte 4× a risalti raccordate da archetti, scelta dal menù del tetto accanto a Merlato / Caditoie / Falde. Dettagli in [STATUS](STATUS.md).
+- [x] Torri quadrate, rotonde e a D; 2.5D e 3D; voce nel Lab.
+- [ ] Facoltativo: estendere lo stile alle mura con caditoie e alle porte.
+- [x] Mensole in un unico pezzo inclinato, archi a tutto sesto (senza scuro sotto) e fascia a filo, sul modello del Castello di San Giorgio (Mantova).
+- [x] Cutaway: mensole, archi e fascia del lato aperto tolti, l'ultimo piano resta visibile.
+- [ ] Facoltativo: finestrelle o merli tamponati nella fascia, come nel riferimento.
+- [ ] Botola del piano di copertura disegnata sopra il tetto interno (verificare anche con le caditoie standard).
+
 ## SIEGE-ATTACK-ALERTS-01 — Due allerte d'attacco automatiche configurabili (14/11/2026)
 
 **DECISO / NON IMPLEMENTATO:** il signore interessato agli avvisi può configurare **indipendentemente**:

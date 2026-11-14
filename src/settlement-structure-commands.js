@@ -86,8 +86,11 @@ const StructureCommands=(()=>{
   }
   function setTowerRoof(id,style){
     const target=find(id);if(!target||target.type!=='tower')return false;
-    if(!setStructureVariant(target,'roofStyle',style))return false;
-    refresh(target);status('Tower roof: '+(target.roofStyle==='pitched'?'pitched':target.roofStyle==='machicolation'?'machicolation':'battlement'));return true;
+    // 'machicolationItalian' is the machicolated top with the Italian look (machicolationStyle).
+    const italian=style==='machicolationItalian';
+    if(!setStructureVariant(target,'roofStyle',italian?'machicolation':style))return false;
+    if(target.roofStyle==='machicolation')setStructureVariant(target,'machicolationStyle',italian?'italian':'standard');
+    refresh(target);status('Tower roof: '+(target.roofStyle==='pitched'?'pitched':target.roofStyle==='machicolation'?(italian?'Italian machicolation':'machicolation'):'battlement'));return true;
   }
   // The hoarding of a tower or stone gate is mounted or taken down; the roof stays as built.
   function setHoarding(id,value){
@@ -411,7 +414,7 @@ const StructureCommands=(()=>{
       if(woodTower){
         if(woodTowerStyle(s)==='palisadeTower')d.controls.push(choice('woodRoof','setWoodRoof',[{value:'open',word:'open'},{value:'pitched',word:'pitched4'}],woodTowerRoof(s)));
       }else{
-        d.controls.push(choice('roof','setTowerRoof',[{value:'battlement',word:'battlement'},{value:'machicolation',word:'machicolation'},{value:'pitched',word:'pitched'}],towerRoofStyle(s)));
+        d.controls.push(choice('roof','setTowerRoof',[{value:'battlement',word:'battlement'},{value:'machicolation',word:'machicolation'},{value:'machicolationItalian',word:'machicolationItalian',disabled:s.shape==='half'},{value:'pitched',word:'pitched'}],towerRoofMenuValue(s)));
         if(s.shape!=='half')d.controls.push(hoardingChoice(s));
         if(s.shape!=='half')d.controls.push(choice('innerRoof','setTowerInnerRoof',[{value:'off',word:'innerRoofOff'},{value:'on',word:'innerRoofOn',disabled:!towerInnerRoofAllowed(s)}],towerInnerRoofMounted(s)?'on':'off'));
         d.controls.push(choice('weapon','setTowerWeapon',[{value:'none',word:'none'},{value:'mangonel',word:'mangonel',disabled:!towerTopWeaponAllowed(s)},{value:'ballista',word:'ballista',disabled:!towerTopWeaponAllowed(s)}],structureVariant(s,'topWeapon')));
