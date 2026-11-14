@@ -10,14 +10,29 @@
 - [ ] Facoltativo: finestrelle o merli tamponati nella fascia, come nel riferimento.
 - [ ] Botola del piano di copertura disegnata sopra il tetto interno (verificare anche con le caditoie standard).
 
+## SIEGE-ATTACK-ALERTS-01 — Due allerte d'attacco automatiche configurabili (14/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** il signore interessato agli avvisi può configurare **indipendentemente**:
+- **«Allerta sempre il signore in caso di attacco»** → avviso aggiuntivo diretto al **signore superiore** nella catena feudale;
+- **«Allerta sempre gli alleati in caso di attacco»** → avviso aggiuntivo diretto agli **alleati** della campagna.
+
+Questi **non** sostituiscono l'allarme base automatico d'invasione diretto al governante assente, né costituiscono un sistema di push istantanei. [D-SIEGE-ATTACK-CONFIG-261114](DECISIONS.md#d-siege-attack-config-261114--due-allarmi-dattacco-automatici-configurabili-14112026) · [SRS mobile v0.13 draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
+
+- [ ] Rappresentare **due preferenze separate** con validazione sul server autorevole per chi può impostarle e sul contesto feudale della campagna.
+- [ ] Risolvere signore superiore e alleati dalle relazioni reali, producendo **flussi distinti** con invio/consegna simulati, senza esposizione anticipata in UI o push.
+- [ ] Rispettare assedio e requisiti del vettore: blocco messaggeri in entrambe le direzioni, piccioni in uscita consentiti e non intercettabili con rete disponibile; nessun invio fittizio.
+- [ ] QA per le **quattro combinazioni dei due flag**, diritti di configurazione, isolamento campagne, assenza di legame feudale/alleanza e messaggi duplicati.
+- [ ] **APERTO:** semantica evento «attacco» vs «invasione», titolarità/ambito dei flag, default, destinatari multipli e loro percorso, regole di scelta messaggero/piccione. Non introdurre un fallback implicito al superiore né avvisi a tutti sempre attivi.
+
+
 ## SIEGE-ALERT-RECIPIENT-01 — Destinatari per l'allarme automatico di invasione (14/11/2026)
 
-**DECISO / NON IMPLEMENTATO:** l'allarme generato da una nuova invasione va indirizzato a **chi governa il territorio se è assente**, **oppure al suo signore sopra nella catena feudale**. Destinazione e posizione si ricavano da dati autorevoli, e il recapito rispetta i tempi dei messaggeri. [D-SIEGE-ALERT-RECIPIENT-261114](DECISIONS.md#d-siege-alert-recipient-261114--destinatari-feudali-degli-allarmi-dinvasione-14112026) · [SRS mobile v0.12 draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
+**DECISO / NON IMPLEMENTATO — interpretazione precedente superata:** il messaggero **base** dell'invasione si rivolge al **governante fisicamente assente**. L'avviso al superiore **non è un fallback**: è un **flusso automatico aggiuntivo configurabile** (SIEGE-ATTACK-ALERTS-01), distinto da quello per gli alleati. [D-SIEGE-ATTACK-CONFIG-261114](DECISIONS.md#d-siege-attack-config-261114--due-allarmi-dattacco-automatici-configurabili-14112026) · [SRS mobile v0.13 draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
 
 - [ ] Risolvere il governante del territorio invaso, verificarne la **presenza fisica** e individuare il **superiore nella gerarchia feudale della stessa campagna**.
-- [ ] Creare un allarme automatico verso un destinatario ammesso, con percorso/tempo simulato; nessuna conoscenza anticipata via app/mobile/API.
+- [ ] Creare allarme base automatico verso il **governante assente**, con percorso/tempo simulato; nessun fallback implicito al superiore e nessuna conoscenza anticipata via app/mobile/API.
 - [ ] QA su governante assente, superiore valido, isolamento tra campagne, recapito reale, destinatario mancante e blocco di assedio se il messaggero non può partire.
-- [ ] **APERTO:** priorità/fallback tra governante e superiore, eventuali copie multiple, risalita su più livelli gerarchici, gestione quando il governante è presente, luogo di recapito effettivo e rischi durante l'invasione. Non inventare l'algoritmo di inoltro.
+- [ ] **APERTO:** comportamento dell'allarme base se il governante è presente, luogo di recapito effettivo e rischi durante invasione. Per avvisi aggiuntivi al superiore/alleati vedere SIEGE-ATTACK-ALERTS-01; **nessuna priorità/fallback** fra allarme base e allarmi opzionali.
 
 
 ## SIEGE-COMMS-02 — Allarme automatico invasione e blocco bidirezionale messaggeri (14/11/2026)
