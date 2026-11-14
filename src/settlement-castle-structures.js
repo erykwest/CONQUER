@@ -955,13 +955,44 @@ function lCornerMerlons(fp,corners,z,h,d,owner){
   }
   return{pieces,start,end};
 }
+// Italian machicolations (towerItalianMachicolation, aesthetic only): every corbel is four stepped
+// courses, each as tall as the standard corbel (4x overall), the upper ones projecting further, and
+// the outer face between two corbels carries a small stepped arch (archetto) under the floor.
+// rec: corbels in perimeter order, {c: merlon centre, inward: unit vector to the tower, w: width}.
+const ITALIAN_MACH_COURSE=.245,ITALIAN_MACH_COURSES=4;
+function italianMachicolationPieces(rec,z,s,closed){
+  const pieces=[],inner=.165,top=z+.015,K='machicolationCorbel';
+  const tangent=r=>Math.atan2(r.inward.y,r.inward.x)+Math.PI/2;
+  for(const r of rec){
+    for(let k=0;k<ITALIAN_MACH_COURSES;k++){
+      const outer=-.02+k*.03,off=(inner+outer)/2,cc={x:r.c.x+r.inward.x*off,y:r.c.y+r.inward.y*off};
+      const z1=top-k*ITALIAN_MACH_COURSE;
+      pieces.push(battlementPolygonPiece(K,rectWorldPoints(cc.x,cc.y,r.w*(1-k*.08),inner-outer,tangent(r)),z1-ITALIAN_MACH_COURSE,z1,s));
+    }
+  }
+  const n=rec.length,floorZ=z-.055;
+  for(let i=0;i<(closed?n:n-1);i++){
+    const A=rec[i],B=rec[(i+1)%n];
+    const pa=A.c,pb=B.c;
+    const L=Math.hypot(pb.x-pa.x,pb.y-pa.y);if(L<1e-6)continue;
+    const u={x:(pb.x-pa.x)/L,y:(pb.y-pa.y)/L},angle=Math.atan2(u.y,u.x),g=L-A.w/2-B.w/2;if(g<.06)continue;
+    const at=(t,len,z0,z1)=>{const c={x:pa.x+u.x*t,y:pa.y+u.y*t};pieces.push(battlementPolygonPiece(K,rectWorldPoints(c.x,c.y,len,.045,angle),z0,z1,s))};
+    const g0=A.w/2;
+    at(g0+g/2,g,floorZ-.2,floorZ);                                    // spandrel band under the floor
+    for(const [f,z0,z1] of [[.24,floorZ-.32,floorZ-.2],[.1,floorZ-.44,floorZ-.32]]){
+      at(g0+g*f/2,g*f,z0,z1);at(g0+g-g*f/2,g*f,z0,z1);               // haunches: the arch curve, stepped
+    }
+  }
+  return pieces;
+}
 function squareTowerBattlementPieces(s){
   const fp=footprintPoints(s),z=structureHeight(s);if(fp.length<4)return[];
-  const pieces=[],center={x:s.x,y:s.y},cornerAngle=s.angle||0,mach=hasMachicolation(s);
-  const perSide=[0,3,4,5,7][towerTier(s)]||3,intervals=perSide-1,inset=mach?-.075:.115,corners=[];
+  const pieces=[],center={x:s.x,y:s.y},cornerAngle=s.angle||0,mach=hasMachicolation(s),ital=towerItalianMachicolation(s);
+  const perSide=[0,3,4,5,7][towerTier(s)]||3,intervals=perSide-1,inset=mach?-.075:.115,corners=[],cornerRec=[],edgeRec=[];
   for(const corner of fp){
     const dx=center.x-corner.x,dy=center.y-corner.y,L=Math.hypot(dx,dy)||1,mc={x:corner.x+dx/L*inset,y:corner.y+dy/L*inset};
-    if(mach){
+    if(ital)cornerRec.push({c:mc,inward:{x:dx/L,y:dy/L},w:.115});
+    else if(mach){
       const ML=Math.hypot(center.x-mc.x,center.y-mc.y)||1,cc={x:mc.x+(center.x-mc.x)/ML*.09,y:mc.y+(center.y-mc.y)/ML*.09};
       pieces.push(battlementPolygonPiece('machicolationCorbel',rectWorldPoints(cc.x,cc.y,.115,.15,cornerAngle),z-.23,z+.015,s));
     }
@@ -972,10 +1003,11 @@ function squareTowerBattlementPieces(s){
   for(let e=0;e<fp.length;e++){
     const a=fp[e],b=fp[(e+1)%fp.length],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,angle=Math.atan2(dy,dx),mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
     let ix=center.x-mid.x,iy=center.y-mid.y,IL=Math.hypot(ix,iy)||1;ix/=IL;iy/=IL;
-    const run=[LC.start[e]];
+    const run=[LC.start[e]];edgeRec[e]=[];
     for(let i=1;i<intervals;i++){
       const t=i/intervals,mc={x:a.x+dx*t+ix*inset,y:a.y+dy*t+iy*inset};
-      if(mach){
+      if(ital)edgeRec[e].push({c:mc,inward:{x:ix,y:iy},w:.11});
+      else if(mach){
         const cc={x:mc.x+ix*.09,y:mc.y+iy*.09};
         pieces.push(battlementPolygonPiece('machicolationCorbel',rectWorldPoints(cc.x,cc.y,.11,.15,angle),z-.23,z+.015,s));
       }
@@ -985,22 +1017,25 @@ function squareTowerBattlementPieces(s){
     run.push(LC.end[e]);
     parapets.push(...parapetPieces(run,z,s));
   }
+  if(ital)pieces.push(...italianMachicolationPieces(fp.flatMap((_,e)=>[cornerRec[e],...edgeRec[e]]),z,s,true));
   return pieces.concat(parapets);
 }
 function roundTowerBattlementPieces(s){
   const z=structureHeight(s),mach=hasMachicolation(s),baseR=Number(s.r)||.5,r=Math.max(.16,baseR+(mach?.075:-.09));
   // Even merlon count from the ring's circumference: denser and narrower than on square towers so
   // the crown reads as a round crenellation (tier 1/2/3 → 8/12/18 merlons, more with machicolations).
-  const count=Math.max(8,2*Math.round(Math.PI*2*r/ROUND_MERLON_SPACING/2)),pieces=[],nodes=[];
+  const count=Math.max(8,2*Math.round(Math.PI*2*r/ROUND_MERLON_SPACING/2)),pieces=[],nodes=[],ital=towerItalianMachicolation(s),rec=[];
   for(let i=0;i<count;i++){
     const a=i/count*Math.PI*2,center={x:s.x+Math.cos(a)*r,y:s.y+Math.sin(a)*r};
-    if(mach){
+    if(ital)rec.push({c:center,inward:{x:-Math.cos(a),y:-Math.sin(a)},w:.095});
+    else if(mach){
       const cr=baseR+.005,cc={x:s.x+Math.cos(a)*cr,y:s.y+Math.sin(a)*cr};
       pieces.push(battlementPolygonPiece('machicolationCorbel',rectWorldPoints(cc.x,cc.y,.095,.15,a+Math.PI/2),z-.23,z+.015,s));
     }
     pieces.push(battlementPiece(center,a+Math.PI/2,z,.17,.18,.23,s));
     nodes.push(merlonNode(center,a+Math.PI/2,.17,.18));
   }
+  if(ital)pieces.push(...italianMachicolationPieces(rec,z,s,true));
   return pieces.concat(parapetPieces(nodes,z,s,true));
 }
 function towerBattlementPieces(s){

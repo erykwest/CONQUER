@@ -254,7 +254,7 @@ function renderFunctionPanel(){
         const parent=State.structures.find(x=>x.id===s.parentTowerId);
         html+=`<div class="slot"><div class="legend">Subtower attached to ${parent?structureLabel(parent):'parent structure'}.</div></div>`;
       }
-      html+=`<div class="slot"><div class="slot-label">Tower roof</div><div class="grid3"><button data-tower-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-tower-roof="machicolation" class="${roof==='machicolation'?'active':''}">Machicolation</button><button data-tower-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div><div class="legend">Machicolation: merlatura in aggetto con mensole. Predispone il futuro attacco verticale a raggio 1U.</div></div>`;
+      html+=`<div class="slot"><div class="slot-label">Tower roof</div><div class="grid"><button data-tower-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-tower-roof="machicolation" class="${roof==='machicolation'&&!towerItalianMachicolation(s)?'active':''}">Machicolation</button><button data-tower-roof="machicolationItalian" ${s.shape==='half'?'disabled':''} class="${towerItalianMachicolation(s)?'active':''}">Caditoie all'italiana</button><button data-tower-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div><div class="legend">Machicolation: merlatura in aggetto con mensole. All'italiana: mensole alte quattro corsi raccordate da archetti (solo estetica, stesse regole). Predispone il futuro attacco verticale a raggio 1U.</div></div>`;
       if(s.shape!=='half')html+=hoardingSlot(s);
       if(s.shape!=='half'){
         const ir=towerInnerRoofMounted(s),irOk=towerInnerRoofAllowed(s);

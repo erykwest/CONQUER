@@ -19,6 +19,8 @@ on:
       - 'qa/bartizan-regression.cjs'
       - 'qa/tower-roof-shape-regression.cjs'
       - 'qa/tower-inner-roof-regression.cjs'
+      - 'qa/tower-italian-machicolation-regression.cjs'
+      - 'src/settlement-tower-shapes.js'
       - 'qa/dovecote-regression.cjs'
       - 'qa/falconry-regression.cjs'
       - 'src/settlement-diplomacy.js'
@@ -49,6 +51,8 @@ jobs:
         run: node qa/tower-roof-shape-regression.cjs
       - name: Inner roof inside the merlons (BC-251105-05)
         run: node qa/tower-inner-roof-regression.cjs
+      - name: Italian machicolations on towers (tall arched corbels, aesthetic)
+        run: node qa/tower-italian-machicolation-regression.cjs
       - name: Existing crown and tower weapon regressions
         run: |
           node qa/battlement-parapet-regression.cjs

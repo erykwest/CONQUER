@@ -86,7 +86,7 @@ function deeTowerButtresses(s,h){
 }
 // Crown: merlons walked along a local path at even spacing; every corner carries one.
 function orientedTowerBattlementPieces(s){
-  const z=structureHeight(s),mach=hasMachicolation(s),W=.22,D=.20,step=.34;
+  const z=structureHeight(s),mach=hasMachicolation(s),ital=towerItalianMachicolation(s),rec=[],W=.22,D=.20,step=.34;
   const {w,h}=orientedTowerDims(s),inset=mach?-.075:D/2+.005,closed=s.shape==='dee';
   const local=closed?deeTowerLocalOutline(s,inset):[[-w/2+.11,-h/2+inset],[w/2-inset,-h/2+inset],[w/2-inset,h/2-inset],[-w/2+.11,h/2-inset]];
   const pts=orientedTowerWorld(s,local),n=pts.length,center={x:s.x,y:s.y};
@@ -106,7 +106,8 @@ function orientedTowerBattlementPieces(s){
     for(let k=0;k<=(last?count:count-1);k++){
       let t=k/count*L,seg=0;while(seg<lens.length-1&&t>lens[seg]){t-=lens[seg];seg++}
       const a=poly[seg],b=poly[seg+1],f=lens[seg]>1e-9?Math.min(1,t/lens[seg]):0,c={x:a.x+(b.x-a.x)*f,y:a.y+(b.y-a.y)*f},angle=heading(a,b);
-      if(mach){
+      if(ital){let ix=center.x-c.x,iy=center.y-c.y;const IL=Math.hypot(ix,iy)||1;rec.push({c,inward:{x:ix/IL,y:iy/IL},w:.11})}
+      else if(mach){
         let ix=center.x-c.x,iy=center.y-c.y;const IL=Math.hypot(ix,iy)||1;ix/=IL;iy/=IL;
         const cc={x:c.x+ix*.09,y:c.y+iy*.09};
         pieces.push(battlementPolygonPiece('machicolationCorbel',rectWorldPoints(cc.x,cc.y,.11,.15,angle),z-.23,z+.015,s));
@@ -115,6 +116,7 @@ function orientedTowerBattlementPieces(s){
       nodes.push(merlonNode(c,angle,W,D));
     }
   });
+  if(ital)pieces.push(...italianMachicolationPieces(rec,z,s,closed));
   return pieces.concat(parapetPieces(nodes,z,s,closed));
 }
 // First crossing of segment a->b with a polygon boundary (null when the segment never meets it).

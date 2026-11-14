@@ -137,6 +137,19 @@ function structureAssetFamilyCatalog(){
       assetPointBase('tower',{shape,material:'stone',level,tier,roofStyle,baseStyle,...(shape==='round'?{r:size}:{size})})
     );
   }
+  // Italian machicolations (machicolationStyle 'italian'): tall stepped corbels joined by small arches,
+  // on every stone shape that takes machicolations, at each tier, lowest and tallest height.
+  for(const shape of ['square','round','dee'])for(let tier=1;tier<=3;tier++){
+    if(shape==='dee'&&tier===1)continue;
+    for(const level of [1,3]){
+      const size=shape==='dee'?[1,1.5,2][tier-1]:towerSizeForTier(shape,tier);
+      add(
+        'tower-stone-'+shape+'-t'+tier+'-l'+level+'-machicolation-italian',
+        'Stone '+shape+' tower T'+tier+' L'+level+' Italian machicolation',
+        assetPointBase('tower',{shape,material:'stone',level,tier,roofStyle:'machicolation',machicolationStyle:'italian',baseStyle:'standard',...(shape==='round'?{r:size}:{size})})
+      );
+    }
+  }
   // W4 Mastio (3U square): heights and roofs, then the room layouts of its floors in cutaway,
   // with three small corner subtowers and a medium one (keep-w4-corners in the Lab sheets).
   for(let level=1;level<=3;level++)for(const roofStyle of ['battlement','machicolation','pitched'])add(

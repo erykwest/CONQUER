@@ -393,7 +393,11 @@ const STRUCTURE_VARIANTS=Object.freeze({
     // Signal fire: a great pyre on a flat crenellated deck (rules: settlement-soldiers.js).
     signalFire:Object.freeze(['none','pyre']),
     // Inner roof: a pyramid/cone set back inside the merlons of a crenellated top (BC-251105-05).
-    innerRoof:Object.freeze(['off','on'])
+    innerRoof:Object.freeze(['off','on']),
+    // Look of a machicolated top: 'standard' single corbels, or 'italian' — tall corbels of four
+    // stepped courses (4x the standard height) joined by small arches, as on Italian communal towers.
+    // Aesthetic only: hasMachicolation() and every rule read roofStyle alone.
+    machicolationStyle:Object.freeze(['standard','italian'])
   }),
   gate:Object.freeze({
     roofStyle:Object.freeze(['battlement','pitched','flat']),
@@ -408,7 +412,7 @@ const STRUCTURE_VARIANTS=Object.freeze({
   })
 });
 const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
-  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid',hoarding:'off',bell:'none',signalFire:'none',innerRoof:'off'}),
+  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid',hoarding:'off',bell:'none',signalFire:'none',innerRoof:'off',machicolationStyle:'standard'}),
   gate:Object.freeze({roofStyle:'battlement',upper:'stone',hoarding:'off'}),
   wall:Object.freeze({skin:'standard'}),
   built:Object.freeze({skin:'standard'})
@@ -582,6 +586,11 @@ function hasMachicolation(s){
   if(s.type==='wall')return wallTier(s)>=2&&wallSkin(s)==='machicolation';
   return false;
 }
+
+// Italian machicolations (aesthetic): a machicolated stone tower drawn with the tall arched corbels.
+function towerItalianMachicolation(s){return !!s&&s.type==='tower'&&hasMachicolation(s)&&structureVariant(s,'machicolationStyle')==='italian'}
+// Value of the roof menu: the Italian machicolations are a fourth choice beside the three roof styles.
+function towerRoofMenuValue(s){return towerItalianMachicolation(s)?'machicolationItalian':towerRoofStyle(s)}
 
 // Oriented stone towers (geometry in settlement-tower-shapes.js): the open-backed semitower
 // 'half' and the D tower 'dee'. Keyed by tier; s.size = 1 / 1.5 / 2 as for square towers,

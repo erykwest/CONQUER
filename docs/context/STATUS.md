@@ -1,5 +1,15 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-14 — Caditoie all'italiana sulle torri (branch `feat/caditoie-italiane-torri`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `settlement-core.js`: nuova variante estetica torre `machicolationStyle` (`standard` | `italian`, default `standard`), `towerItalianMachicolation(s)` e `towerRoofMenuValue(s)`. `hasMachicolation()` e tutte le regole (combattimento, tetto interno, ballatoio, arma) leggono solo `roofStyle`: nessun effetto di gioco.
+  - `settlement-castle-structures.js`: `italianMachicolationPieces()` — mensole a 4 corsi a risalti (altezza 4× la mensola standard, 0,98U) e archetti a gradoni tra le mensole sotto il piano delle caditoie; usato da torri quadrate, rotonde e a D (`settlement-tower-shapes.js`). Stessi pezzi `machicolationCorbel` per 2.5D e mesh 3D. Le caditoie standard e le mura restano invariate.
+  - Menù tetto torre: quarta scelta «Caditoie all'italiana» (`setTowerRoof('machicolationItalian')` imposta `roofStyle:'machicolation'` + `machicolationStyle:'italian'`), nel pannello UI v2 (`settlement-structure-commands.js`, i18n) e nel pannello legacy (`settlement-app-rooms.js`). Non disponibile sulle semitorri. Il cambio apre un cantiere di modifica come le altre varianti.
+  - Lab: 4 righe in `GALLERY` (quadrata T2/T3, rotonda, D) e famiglie in `structureAssetFamilyCatalog`; chiavi di cache render/popolazione/cantiere aggiornate.
+- **PROVE LOCALI PASS:** `qa/tower-italian-machicolation-regression.cjs` (nuovo, in `tower-variants-regression.yml`), bartizan, tower-roof-shape, tower-inner-roof, tower-weapons, battlement-parapet, roof-pitch, subtower-junctions, dovecote, falconry, builder-menu, asset-catalog, asset-audit-scope, codex-catalog, ci-p0/p1, urban. Audit Lab `--category=Fortificazioni`: 0 errori; i 40 render nuovi rivisti e aggiunti alla baseline (solo voci nuove).
+- **NOTA AUDIT:** in locale 270 render «cambiati» anche su varianti non toccate (deriva d'ambiente del renderer, distanze 0,010–0,022); baseline esistente non riscritta.
+
 ## 2026-11-13 — Equipaggiamento delle unità: elmi e scudi (branch `feature/unit-equipment-styles`)
 
 - **CODICE SUL BRANCH, NON MERGE:**
