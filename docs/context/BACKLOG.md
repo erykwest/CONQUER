@@ -5,7 +5,7 @@
 **DECISO / NON IMPLEMENTATO:** **base** allarme d'invasione al **governante assente**; **due opzioni indipendenti** del signore: «Allerta sempre il signore in caso di attacco» → **superiore feudale**; «Allerta sempre gli alleati in caso di attacco» → **alleati effettivi**. Non sono alternative o fallback del messaggero base. [D-SIEGE-ATTACK-POLICY-261114](DECISIONS.md#d-siege-attack-policy-261114--due-allerte-automatiche-dattacco-configurabili-14112026) · [SRS mobile v0.13 (draft #222)](https://github.com/erykwest/CONQUER/pull/222).
 
 - [ ] Modellare allarme base separato dalle preferenze di avviso d'attacco verso superiore/alleati; due switch indipendenti, con persistenza e autorizzazione server.
-- [ ] Determinare destinatari tramite catena feudale e alleanze **reali e della medesima campagna**; applicare il trasporto/re recapito simulato senza aggirare assedi o creare canali fittizi.
+- [ ] Determinare destinatari tramite catena feudale e alleanze **reali e della medesima campagna**; applicare trasporto e recapito simulati senza aggirare assedi o creare canali fittizi.
 - [ ] Rendere disponibili le due impostazioni nel controllo remoto browser/app con stati chiari e nessun effetto sui consensi push del dispositivo.
 - [ ] QA: entrambi OFF (solo base), superiore ON, alleati ON, entrambi ON; nessuna notizia prima della consegna; isolamento dei server e presenza del governante; niente duplicazione per retry.
 - [ ] **APERTO:** trigger di *attacco* vs *invasione*, momento esatto della diramazione (evento/ricezione), titolarità/ambito della preferenza, default, selezione alleati, scelta del vettore, percorsi e circolarità degli inoltri.
