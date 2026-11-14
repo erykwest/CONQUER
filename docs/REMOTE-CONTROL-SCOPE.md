@@ -117,12 +117,25 @@
 
 **RIFERIMENTO:** [SRS mobile v0.8 nella draft PR #222](https://github.com/erykwest/CONQUER/pull/222), Q-07 risolta nel principio.
 
+## 3e. Due stati militari: territorio invaso e feudo sotto assedio — DECISO (14/11/2026)
+
+**DECISO — non sono sinonimi:**
+- **INVASO:** le forze ostili hanno invaso il territorio/la regione del feudo; questo **non equivale automaticamente a un assedio effettivo** e **non attiva da solo** il divieto di far uscire messaggeri riservato al blocco d'assedio. Eventuali rischi o restrizioni aggiuntive durante l'invasione restano da definire.
+- **SOTTO ASSEDIO:** un assedio effettivo è stato stabilito secondo lo stato autorevole del motore; **i messaggeri ordinari non possono lasciare il feudo assediato**. L'app, il browser e le API devono rifiutarne la partenza.
+- **PICCIONI DURANTE L'ASSEDIO:** possono **uscire** dal feudo e **non sono intercettabili**; mantengono i requisiti di una rete/piccionaia disponibile e il **tempo di recapito simulato**, senza teletrasporto o consegna anticipata.
+
+**RILEVANZA PER IL REMOTE CONTROL:** il personaggio può ricevere informazioni e comunicare con un feudo assediato **tramite piccioni disponibili** e senza intercettazione del vettore in uscita; gli ordini a distanza restano soggetti a viaggio/consegna e permessi. La sola selezione del feudo in dashboard non crea un canale informativo o di comando alternativo. Se il canale piccione è assente, il client non inventa la spedizione.
+
+**APERTO:** momento esatto in cui l'invasione diventa assedio; rischi dei messaggeri *durante l'invasione*; gestione dei messaggeri **in entrata** durante l'assedio (il divieto deliberato riguarda l'uscita); sorte dei vettori già partiti; prerequisiti/costi dei piccioni, composizione degli ordini e informazioni disponibili al giocatore lontano. La Q-09 della [SRS mobile v0.10, draft PR #222](https://github.com/erykwest/CONQUER/pull/222) è **parzialmente risolta**, non interamente chiusa.
+
+**STATO:** norma progettuale, **non gameplay multiplayer implementato**. MARCH contiene lo scheletro delle operazioni `raiding/siege`; la branch `messages` possiede i vettori messaggero/piccione, ma nessuno dei due sistemi realizza ancora il blocco postale di una campagna multiplayer autorevole.
+
 ## 4. Decisioni ancora necessarie
 
 1. **Dettaglio comandi:** inventario esatto dei comandi remoti per economia, fisco, lavoro, cantieri già localizzati, strategia, diplomazia e logistica; il **confine generale è deciso** nel §2a: niente piazzamento geometrico, progettazione spaziale o controllo tattico diretto.
 2. **Dettagli temporali ancora aperti:** durata e scheduling del tick, coda e concorrenza al primo tick di ripresa, semantica delle singole richieste inter-feudo. **DECISO**: proprio feudo → primo tick utile; comunicazioni inter-feudo → recapito simulato; server regionale in pausa → ordini preparabili ma simulazione congelata fino alla ripresa.
 3. **Dettagli della visibilità (principio DECISO):** proprio feudo aggiornato direttamente; vassalli solo tramite rapporti recapitati, **frequenza impostata dal sovrano**. Da definire granularità della programmazione, contenuto, diritti e selezione dei KPI sulle schede aggregate.
-4. **Permessi e presenza:** per ogni comando distinguere feudo dove **il personaggio è presente** e feudi comandati **a distanza tramite messaggero/piccione**; rimangono aperti i diritti di sudditi/vassalli/sovrani, le deleghe e quali ordini possano essere trasmessi.
+4. **Permessi, presenza e blocco:** distinguere comandi del feudo dove il personaggio è presente e ordini inviati a distanza; durante **assedio** non possono partire messaggeri ordinari, mentre i **piccioni non intercettabili** possono uscire se il canale è disponibile. Restano aperti diritti feudali, deleghe e ordini trasmissibili.
 5. **Dettagli degli ordini in pausa (principio DECISO):** preparazione consentita durante pause regionali, applicazione solo al riavvio e nessun avanzamento del mondo; **APERTO** ordine/limiti/revoca, conflitti al tick, notifiche, gestione server irraggiungibile e coda offline sul dispositivo.
 6. **UX e piattaforme:** **DECISO:** una sola codebase applicativa Android/iOS (§3d), API e stato condivisi con browser; push con consenso OS + filtri per categoria (§3b). **APERTO:** framework cross-platform, livello di condivisione UI con web, tassonomia e default dei filtri, silenziamento, autenticazione e aggiornamenti real-time.
 
@@ -131,7 +144,7 @@
 - **RC-01 Hub account e multi-campagna:** home/lobby, membership, switch e riepiloghi indipendenti per partita.
 - **RC-02 KPI/snapshot autorevoli:** read model delle partecipazioni con fonti e timestamp, autorizzazioni e stati di allarme. Per i vassalli usare **soltanto rapporti effettivamente recapitati**; il sovrano può configurare la frequenza dei messaggeri di resoconto. Vietata lettura live degli inventari/statistiche dei vassalli in app/API.
 - **RC-03 Comandi remoti:** API e permessi per economia, fisco, lavoro/Job Manager, cantieri già collocati, gestione militare strategica, diplomazia e logistica; validazioni, coda/esiti, stessa logica senza duplicazioni. **Ordini diretti solo dove il personaggio si trova; altri feudi mediante viaggio o messaggeri/piccioni con recapito simulato.** Esclusi piazzamento geometrico, fortificazioni e controllo tattico diretto, riservati al Builder/3D.
-- **RC-04 Comunicazioni/messaggi:** analisi branch `messages`, porting selettivo, nodi reali, ETA, rapporti e integrazione diplomazia.
+- **RC-04 Comunicazioni/messaggi:** analisi branch `messages`, porting selettivo, nodi reali, ETA, rapporti e integrazione diplomazia; **stato INVASO distinto da SOTTO ASSEDIO**: sotto assedio messaggeri in uscita bloccati, piccioni in uscita consentiti e non intercettabili (§3e).
 - **RC-05 Strategia remota:** spedizioni, carovane/tributi, diplomazia e mappa regionale collegate a World/Feudal.
 - **RC-06 Mobile-ready:** web responsive e API neutrali alla piattaforma, poi app **Android/iOS da un'unica base di codice condivisa**, senza riscrivere le regole; push con permesso OS e selezione per categoria, senza interferire con visibilità/temporizzazione in-game. Framework da scegliere.
 - **RC-07 QA e sicurezza:** isolamento tra campagne, autorizzazione, consistenza dello stato, velocità ×1 condivisa, messaggi ritardati, concorrenza/duplicati dei comandi e test multi-client.
