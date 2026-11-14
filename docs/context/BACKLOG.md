@@ -1,5 +1,16 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## MOB-KPI-01 — Home: shortlist preliminare di sei indicatori (14/11/2026)
+
+**PROPOSTA ACCOLTA COME «UN BUON INIZIO», NON ANCORA APPROVATA IN VIA DEFINITIVA.** Q-08 SRS mobile **IN DEFINIZIONE**, [SRS v0.9 nella draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
+
+- [ ] Valutare sei gruppi per ciascuna scheda insediamento: **popolazione**, **tesoreria**, **scorte alimentari/autonomia**, **felicità e lealtà**, **produzione e occupazione**, **sicurezza militare**.
+- [ ] Chiarire sottovalori, soglie e segnali di rischio, andamento storico realmente disponibile, ordine per situazione di gioco e densità visiva mobile.
+- [ ] Conservare KPI e badge per posta/allarmi distinti, accesso alla dashboard di dettaglio e indicazione di freschezza del dato.
+- [ ] Nessun dato live dei vassalli senza rapporto; nessun dato dimostrativo spacciato per partita reale.
+- [ ] **Prima della chiusura Q-08:** sottoporre composizione e layout alla conferma del product owner. Nessuna implementazione o milestone assegnata.
+
+
 ## MOB-PLAT-01 — Una codebase condivisa Android/iOS (14/11/2026)
 
 **DECISO / NON IMPLEMENTATO:** la futura app mobile CONQUER sarà sviluppata con **una sola base di codice** per Android e iOS; entrambi i client useranno lo stesso backend e le stesse API del browser. [D-MOB-CODEBASE-261114](DECISIONS.md#d-mob-codebase-261114--unica-codebase-androidios-14112026) · [SRS mobile v0.8 draft #222](https://github.com/erykwest/CONQUER/pull/222).
