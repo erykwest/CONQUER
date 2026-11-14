@@ -172,16 +172,6 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 - I dati storici esistono soltanto se salvati dal motore; il dispositivo non inventa tendenze.
 - La stessa azione ripetuta con la stessa chiave di idempotenza deve avere un solo effetto (P per soluzione tecnica).
 
-## 3.6 Modello di consenso push e filtri — DECISO (14/11/2026)
-
-**D — doppio livello indipendente:** (1) **consenso del sistema operativo** Android/iOS per l'invio push; (2) **selettori per categoria** disponibili nelle impostazioni dell'app. Il permesso OS non annulla la scelta delle singole categorie; le preferenze interne non possono aggirare un consenso OS negato/revocato. Il controllo effettivo del push è il loro **AND logico**, non un singolo interruttore.
-
-**D — separazione notifiche/gioco:** la casella postale, la timeline e gli avvisi in-app restano disponibili anche con push disabilitati; un push non anticipa consegne diplomatiche, rapporto dei vassalli o dati coperti da visibilità feudale. Le preferenze vanno riferite all'account corretto e valutate al momento dell'emissione.
-
-**P — soluzione di prodotto:** categorie almeno per attacchi/assedi, criticità economiche, posta recapitata, spedizioni, tributi e cantieri; preferenze conservate lato account; registrazione/revoca di token per dispositivo e gestione di più dispositivi; payload con anteprima minimizzata per evitare esposizione sulla schermata bloccata.
-
-**A — configurazione di dettaglio:** categorie definitive, stato iniziale delle singole categorie dopo il consenso, filtri globali versus per singola campagna, silenziamento temporaneo/orari quieti, granularità del contenuto mostrato nel push e momento della richiesta del permesso. **Non presumere** selettori inizialmente attivati né consenso OS preconcesso.
-
 ## 4a. Contratto temporale degli ordini — DECISO (13/11/2026)
 
 **FR-TIME-01 (D/C, Must) — Amministrazione del proprio insediamento:** un comando gestionale autorizzato (es. lavoratori, aliquote, razioni, priorità di un cantiere già localizzato, ordini strategici preparatori sul proprio feudo) è **registrato dal server e applicato al primo tick di simulazione utile successivo alla ricezione/validazione**. L'invio da browser o mobile non comporta un ritardo di trasporto in-game aggiuntivo. La UI separa *ricevuto*, *accettato/in attesa di tick*, *applicato* e *rifiutato/fallito*. **La durata reale del tick non è fissata da questa SRS.**
@@ -207,6 +197,16 @@ Ogni riga definisce un requisito tracciabile. La conferma del **dominio** non im
 **REUSE esistente, non implementazione multiplayer:** la branch `messages` comprende già routine con *sorgente, destinazione, frequenza (1/7/30 giorni), canale e sezioni*, e rapporti redatti al tempo simulato. Questi intervalli sono **opzioni del prototipo**, NON il catalogo di frequenze confermato per l'app: servono integrazione con vassalli veri, server autorevole e permessi.
 
 **APERTO:** opzioni/intervalli ammessi e costi delle frequenze, configurazione globale oppure differenziata per vassallo, chi ha diritto di imporre/inibire i resoconti, contenuti obbligatori/facoltativi, eventuali intercettazioni, messaggero vs piccione e come gestire assenza di strada o server in pausa. Nessuna frequenza fissa dedotta da questa decisione.
+
+## 4c. Consenso push e filtri per categoria — DECISO (14/11/2026)
+
+**D — doppio livello indipendente:** (1) **consenso del sistema operativo** Android/iOS per l'invio push; (2) **selettori per categoria** disponibili nelle impostazioni dell'app. Il permesso OS non annulla la scelta delle singole categorie; le preferenze interne non possono aggirare un consenso OS negato/revocato. Il controllo effettivo del push è il loro **AND logico**, non un singolo interruttore.
+
+**D — separazione notifiche/gioco:** la casella postale, la timeline e gli avvisi in-app restano disponibili anche con push disabilitati; un push non anticipa consegne diplomatiche, rapporto dei vassalli o dati coperti da visibilità feudale. Le preferenze vanno riferite all'account corretto e valutate al momento dell'emissione.
+
+**P — soluzione di prodotto:** categorie almeno per attacchi/assedi, criticità economiche, posta recapitata, spedizioni, tributi e cantieri; preferenze conservate lato account; registrazione/revoca di token per dispositivo e gestione di più dispositivi; payload con anteprima minimizzata per evitare esposizione sulla schermata bloccata.
+
+**A — configurazione di dettaglio:** categorie definitive, stato iniziale delle singole categorie dopo il consenso, filtri globali versus per singola campagna, silenziamento temporaneo/orari quieti, granularità del contenuto mostrato nel push e momento della richiesta del permesso. **Non presumere** selettori inizialmente attivati né consenso OS preconcesso.
 
 ## 5. Architettura candidata e contratti d'integrazione
 
