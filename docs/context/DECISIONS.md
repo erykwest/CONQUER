@@ -1,5 +1,15 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-SIEGE-COMMS-UPDATE-261114 — Blocco bidirezionale e messaggero automatico all'invasione (14/11/2026)
+
+- **DECISO dal product owner:** nello stato **SOTTO ASSEDIO** i messaggeri ordinari **non possono entrare né uscire** dal feudo. Il divieto di ingresso impedisce anche la consegna di comunicazioni all'interno. Il blocco viene verificato lato server, non solo dall'app.
+- **DECISO:** **ogni nuova invasione di territorio** provoca **automaticamente la partenza di un messaggero d'allarme**, senza intervento del giocatore, purché sia ancora possibile far partire un messaggero; è una lettera fisica soggetta a tempo simulato di recapito, **non una notifica remota istantanea**.
+- **RESTA DECISO:** invasione distinta dall'assedio; l'invasione non applica automaticamente il blocco postale d'assedio. Sotto assedio i **piccioni in uscita restano consentiti e non intercettabili**, se esiste un canale operativo.
+- **SALVAGUARDIA TECNICA PROPOSTA:** un messaggero d'allarme per **evento di invasione distinto**, non uno ogni tick/refresh/retry; non bypassare il blocco quando l'assedio impedisce già la partenza.
+- **APERTO:** destinatario/route dell'allarme, concorrenza invasione/assedio nello stesso tick, rischi durante invasione, sorte dei messaggeri già in viaggio (non possono entrare ma attendono/deviano/tornano?), prerequisiti canale piccioni, ordini sotto assedio. **Q-09 resta parzialmente definita.**
+- **STATO:** solo specifica, non implementata. Integra D-SIEGE-COMMS-261114; [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [MARCH](../march.md), [SRS mobile v0.11 nella PR draft #222](https://github.com/erykwest/CONQUER/pull/222).
+
+
 ## D-SIEGE-COMMS-261114 — Invasione e assedio: uscita di messaggeri e piccioni (14/11/2026)
 
 - **DECISO dal product owner:** distinguere gli stati **INVASO** e **SOTTO ASSEDIO**. La sola invasione del territorio **non** applica automaticamente il blocco dei messaggeri previsto per l'assedio.
