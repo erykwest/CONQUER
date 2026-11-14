@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceDigest": "1b4f73545548aec2ab455c61e842a236e26c79dfe1cf99491f7aa0939314e094",
+  "sourceDigest": "5c6936ff30be2d4e94a5ce26bb88f625c857861ea9ca6719b5e77cd0c5ba2a14",
   "catalog": {
     "schemaVersion": 1,
     "categories": [
@@ -1530,6 +1530,10 @@
             "innerRoof": [
               "off",
               "on"
+            ],
+            "machicolationStyle": [
+              "standard",
+              "italian"
             ]
           },
           "geometry": {
@@ -7027,6 +7031,100 @@
           "variant": "innerRoof",
           "value": "on",
           "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.machicolationStyle.italian",
+        "key": "italian",
+        "label": "tower · machicolationStyle · italian",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.machicolationStyle"
+        },
+        "properties": {
+          "variant": "machicolationStyle",
+          "value": "italian",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.machicolationStyle.standard",
+        "key": "standard",
+        "label": "tower · machicolationStyle · standard",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.machicolationStyle"
+        },
+        "properties": {
+          "variant": "machicolationStyle",
+          "value": "standard",
+          "default": true,
           "kind": "configuration"
         },
         "relations": [
