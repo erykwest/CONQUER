@@ -15,7 +15,7 @@
 - **DECISO dal product owner:** distinguere gli stati **INVASO** e **SOTTO ASSEDIO**. La sola invasione del territorio **non** applica automaticamente il blocco dei messaggeri previsto per l'assedio.
 - **DECISO — stato SOTTO ASSEDIO:** **non possono partire messaggeri ordinari dal feudo assediato**. I **piccioni possono uscire e non sono intercettabili**; restano il tempo simulato di consegna e l'eventuale necessità di un canale/piccionaia disponibile. Nessun invio fittizio quando il vettore non esiste.
 - **CONTRATTO:** l'ammissibilità della partenza è verificata dal server autorevole in base allo stato del feudo; dashboard web/mobile e API non aggirano il blocco, né anticipano le informazioni recapitabili tramite piccione. Stadio `raiding/siege` di MARCH e trasporti della branch `messages` sono precedenti tecnici, **non** implementazione server pronta.
-- **APERTO:** criterio esatto di transizione invasione→assedio, possibili rischi dei messaggeri durante l'invasione, messaggeri **in entrata**, vettori già in viaggio, requisiti dettagliati dei piccioni e ordini disponibili sotto assedio. **Q-09 solo parzialmente risolta.**
+- **SUPERATO IN PARTE da D-SIEGE-COMMS-UPDATE-261114:** ora è **DECISO** che i messaggeri **non entrano né escono** durante un assedio e che ad ogni nuova invasione parte automaticamente un messaggero d'allarme quando possibile. **RESTANO APERTI:** criterio invasione→assedio, rischi durante invasione, sorte dei vettori già in viaggio, destinatario dell'allarme, piccionaie e ordini sotto assedio. Q-09 parzialmente risolta.
 - **STATO:** design, nessuna modifica al gameplay. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [MARCH](../march.md), [SRS mobile v0.10 draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
 
 
