@@ -4,6 +4,11 @@
 
 Le figure di eventi, giostra, gogna, forca, patibolo, tribunale e personale in cutaway entrano nelle carte con capsula di World3D; il campo eventi perde il fondo verde. DECISIONS: D-CAPSULE-261113 estesa. Nuova prova `qa/event-figure-cards-browser.mjs` nel workflow Main fixes. ROADMAP invariata.
 
+## 2026-11-15 — WORLD-SPEED-01 · Rapporti di velocità strategica (solo design)
+
+Fissati dal product owner i rapporti sul riferimento **fanteria standard 1×**: **messaggero a piedi 1×**, **cavalleria standard e messaggero a cavallo 2×**, **carri per mercanti, rifornimenti e immigrati 1,5×**, a parità di percorso e condizioni. Riconosciuto il debito di integrazione: `src/settlement-convoys.js` e prototipo `messages` utilizzano ancora velocità convenzionali di 22 U/giorno, non una scala World/Feudal unificata. Aggiornati REMOTE-CONTROL-SCOPE, MARCH, convoys-skeleton, D-WORLD-SPEED-261115, backlog WORLD-SPEED-01 e SRS mobile v0.15 in draft PR #222. **Solo documentazione, nessun runtime/salvataggio modificato.**
+
+
 ## 2026-11-15 — MSG-FOOT-01 · Messaggero a piedi senza cavalli (solo design)
 
 Chiarito il sistema delle comunicazioni feudali: in assenza di cavalli, **messaggi, ordini e allarmi automatici d'invasione** possono viaggiare con un **messaggero a piedi**, con tempi simulati propri ancora da parametrizzare. L'assenza della cavalcatura non è motivo sufficiente per sopprimere un allarme. Sotto assedio entrata e uscita dei messaggeri terrestri restano vietate **sia a piedi sia a cavallo**; i piccioni conservano le regole precedenti. Aggiornate SRS mobile v0.14 nella draft PR #222, REMOTE-CONTROL-SCOPE, MARCH, D-MSG-FOOT-261115 e backlog MSG-FOOT-01. **Nessun runtime/SQL modificato.**

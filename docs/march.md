@@ -27,6 +27,14 @@ Pagina: /march/ (file march/index.html). Non è un nuovo motore economico o un n
 
 **IMPORTANTE:** lo skeleton MARCH V0 descritto sotto non implementa questo blocco postale. Il suo stadio `siege` è un riferimento di progettazione, non prova dell'integrazione multiplayer. Tracciamento: [SRS mobile v0.14](https://github.com/erykwest/CONQUER/pull/222), [Remote Control](REMOTE-CONTROL-SCOPE.md) e D-SIEGE-COMMS-261114.
 
+## Movimento strategico standard — decisione 15/11/2026
+
+Nel futuro motore condiviso World/Feudal, la **fanteria standard** stabilisce la velocità base **1×**. Nella stessa tratta e a parità di condizioni: **messaggero a piedi 1×**, **cavalleria standard e messaggero a cavallo 2×**, **carri mercantili, di rifornimento e degli immigrati 1,5×**.
+
+Questi sono **rapporti di velocità strategica**: non stabiliscono né una distanza assoluta/giorno né la velocità di animazione o del Combat tattico. Un allarme d'invasione che deve partire a piedi perché non ci sono cavalli viaggia a **1×**, non a 2×. In assedio, il blocco degli ingressi e delle uscite si applica a entrambi i messaggeri terrestri.
+
+**NON ANCORA INTEGRATO:** lo skeleton MARCH attuale non costituisce il modello autorevole della World Map; le durate locali e convenzionali dei convogli e della branch `messages` dovranno convergere sul riferimento `V_fanteria`. [Scope remote control §3g](REMOTE-CONTROL-SCOPE.md), [SRS mobile v0.15](https://github.com/erykwest/CONQUER/pull/222).
+
 ## Cosa contiene concretamente lo skeleton
 
 - Interfaccia HTML autonoma, mappa schematica a celle, quattro feudi **fixture demo**.
