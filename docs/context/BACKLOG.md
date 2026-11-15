@@ -6,6 +6,18 @@
 - [x] Tratto libero da A a B e aggancio esatto al magnete in un solo tratto.
 - [ ] Verificare a occhio, nel gioco, le giunzioni muro-muro e muro-torre ad angoli non multipli di 15°.
 
+## MIL-WALL-01 — Pattuglie sulle mura per giro di mura (15/11/2026)
+
+**IMPLEMENTATO SU BRANCH `fix/wall-patrol-rings`, NON MERGE.** [D-MIL-WALL-261115](DECISIONS.md#d-mil-wall-261115--pattuglie-delle-mura-per-giro-15112026).
+
+- [x] Pattuglie per giro di mura (componente connesso del cammino di ronda), non per segmento.
+- [x] 2 soldati della Caserma per pattuglia, coperte dopo le pattuglie White Zone; ritiro automatico se mancano soldati o paga.
+- [x] Assegnazione +/− per giro da Militare › Pattuglie e guarnigioni e dall'ispettore del muro (legacy e UI v2); motivo e arruolamento in linea se mancano soldati.
+- [x] Salvataggio robusto a brecce e unioni di giri.
+- [x] Cache dei posti arcieri per torre (`drawCastleSoldiers` ~9× più veloce).
+- [ ] Combattimento: le pattuglie delle mura sono figure disegnate, non unità di `ConquerCombat`; non avvistano né combattono (le vedette e le pattuglie White Zone sì).
+- [ ] Torce notturne per le pattuglie delle mura, come per le pattuglie White Zone.
+
 ## WORLD-SPEED-01 — Unificare velocità di fanteria, cavalleria, messaggeri e carri (15/11/2026)
 
 **DECISO / NON IMPLEMENTATO:** rapporti **fanteria 1×**, **messaggero a piedi 1×**, **cavalleria 2×**, **messaggero a cavallo 2×**, **carri mercanti/rifornimenti/immigrati 1,5×**; il riferimento è la velocità **strategica** di fanteria nella World Map, non unità/giorno arbitrariamente scelte. [D-WORLD-SPEED-261115](DECISIONS.md#d-world-speed-261115--rapporti-di-velocita-strategica-terrestri-15112026) · [SRS mobile v0.15 draft #222](https://github.com/erykwest/CONQUER/pull/222).

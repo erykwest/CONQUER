@@ -4,6 +4,10 @@
 
 Tolto il vincolo di giunzione a 15° per mura, palizzate e sezioni costruite: il tratto segue l'angolo del mouse e raggiunge un magnete in linea retta, senza il gomito automatico a due tratti. Torri e porte mantengono la rotazione a 15°. Branch `fix/wall-free-angle`. ROADMAP e DECISIONS invariati (nessuna decisione registrata sul reticolo delle mura).
 
+## 2026-11-15 — MIL-WALL-01 · Pattuglie sulle mura per giro
+
+15/11/2026 — `fix/wall-patrol-rings` (pre-merge): le pattuglie sulle mura non sono più una o due figure per ogni tratto, ma appartengono al giro di mura intero (mura e palizzate unite da torri e porte). Ogni pattuglia è di 2 soldati della Caserma e percorre tutto il giro; un giro nuovo parte senza pattuglie e il giocatore le assegna da Militare › Pattuglie e guarnigioni o dall'ispettore del muro, con arruolamento in linea se mancano soldati. Le assegnazioni si salvano e resistono alle brecce. Cache dei posti arcieri per torre: `drawCastleSoldiers` da 40 a 4,5 ms per frame. Nuovo modulo `settlement-wall-patrols.js`, test `qa/wall-patrol-regression.cjs`. STATUS, BACKLOG, DECISIONS aggiornati; ROADMAP invariata.
+
 ## 2026-11-15 — Equipaggiamento delle unità · cavalieri a cavallo
 
 15/11/2026 — `feature/knight-equipment-styles` (pre-merge): i cavalieri a cavallo del feudo (`settlement-mounted2d.js`) indossano l'elmo e portano lo scudo scelti in Militare › Equipaggiamento (5 elmi, 5 forme). Finché il giocatore non sceglie, e per i nemici e il messaggero, restano grande elmo e scudo appuntito originali. Nel Lab i selettori Elmo/Scudo valgono anche per «Cavaliere a cavallo», con l'opzione «Originale». Corretta la caduta: il cavaliere disarcionato non resta più sopra il fianco del cavallo, ma cade dietro la groppa e giace a terra; la lancia cade stesa davanti al cavallo. STATUS, BACKLOG e CHANGELOG aggiornati; ROADMAP e DECISIONS invariate.

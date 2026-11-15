@@ -1,5 +1,12 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-MIL-WALL-261115 — Pattuglie delle mura per giro (15/11/2026)
+
+- **DECISO dal product owner:** le pattuglie sulle mura si contano **per giro di mura**, non per segmento; dal pannello se ne assegnano di più o di meno.
+- **DECISO dal product owner:** ogni pattuglia delle mura costa **2 soldati della riserva della Caserma**, come le pattuglie White Zone (coerente con D-MIL-RES-261109); un giro nuovo parte con **0 pattuglie**.
+- **CONTRATTO TECNICO:** giro = componente connesso di `ConquerWallWalk.graph()`; id del giro `ring:<id muro minore>`. Stato salvato in `State.siege.soldiers.wallPatrols` = `[{walls:[id…], n}]`; una voce va al giro che contiene più muri suoi; voci di giri non percorribili restano dormienti finché un loro muro esiste. Ordine di copertura della riserva: spedizioni, avamposti, vedette, pattuglie White Zone, pattuglie delle mura. Massimo per giro: una pattuglia ogni 4U (almeno 1). `/camp` invariato.
+- **STATO:** implementato su `fix/wall-patrol-rings`, non in main. Le pattuglie delle mura non sono unità di combattimento.
+
 ## D-WORLD-SPEED-261115 — Rapporti di velocità strategica terrestri (15/11/2026)
 
 - **DECISO dal product owner:** riferimento comune **fanteria standard = 1×**; **messaggero a piedi = 1×**; **cavalleria standard = 2×**; **messaggero a cavallo = 2×**; **carri di mercanti, rifornimenti e immigrati = 1,5×**. Sono coefficienti sulla **stessa distanza/percorso a parità di condizioni**, riferiti al movimento strategico World/Feudal, non alla velocità di rendering o al combattimento tattico.
