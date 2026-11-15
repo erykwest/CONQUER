@@ -71,6 +71,8 @@ function migrateStructures(list){
     return s;
   });
 
+  // Walls and gates face out of the enclosure they form (settlement-castle-structures.js).
+  if(typeof faceFortificationsOut==='function')faceFortificationsOut(migrated);
   // Walls against a quay always face out to the water (settlement-quay.js rule).
   for(const s of migrated)window.ConquerQuay?.faceWallOut(s,migrated);
 

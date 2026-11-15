@@ -168,5 +168,26 @@ test('the covered ram shelters its crew at their posts',()=>{
   assert.ok(run("State.combat.storms.find(s=>s.kind==='ram').blows")>0,'and the ram swings');
   assert.equal(run("State.combat.enemy.filter(e=>e.atRam).length"),8,'drawn with both hands on the ram (no spear or shield)');
 });
+// Walls drawn clockwise (TEST's castle) had their exterior inside and the gate's passage along
+// the wall: on load the enclosure decides (faceFortificationsOut in migrateStructures).
+test('a ring of walls faces out and its gate passes across the wall, outwards',()=>{
+  for(const order of ['cw','ccw']){
+    const P=[{x:90,y:101},{x:110,y:101},{x:110,y:121},{x:90,y:121}];
+    const seq=order==='cw'?P:P.slice().reverse();
+    const walls=seq.map((a,i)=>({id:'w'+i,type:'wall',a:{...a},b:{...seq[(i+1)%4]},width:.5,level:2,tier:2}));
+    // The north wall gets a gate in its middle: split it around (100,101).
+    const n=walls.find(w=>w.a.y===101&&w.b.y===101),mid={x:100,y:101};
+    const n2={...n,id:'wn2',a:{...mid},b:{...n.b},aSnap:'g'};n.b={...mid};n.bSnap='g';
+    sandbox.qaList=[...walls,n2,{id:'g',type:'gate',x:100,y:101,angle:0,level:2,material:'stone'}];
+    run('faceFortificationsOut(qaList)');
+    for(const w of sandbox.qaList.filter(s=>s.type==='wall')){
+      const dx=w.b.x-w.a.x,dy=w.b.y-w.a.y,L=Math.hypot(dx,dy),side=w.flip?-1:1,ex=-dy/L*side,ey=dx/L*side;
+      const mx=(w.a.x+w.b.x)/2-100,my=(w.a.y+w.b.y)/2-111;
+      assert.ok(ex*mx+ey*my>0,order+' '+w.id+': exterior points out of the ring');
+    }
+    const g=sandbox.qaList.find(s=>s.id==='g');
+    assert.ok(Math.abs(Math.cos(g.angle))<1e-6&&Math.sin(g.angle)<0,order+': gate passage across the north wall, outward to -y (angle '+g.angle+')');
+  }
+});
 console.log(passed+' combat sector checks passed; '+failed+' failed.');if(failed)process.exitCode=1;
 `)(require,__dirname);

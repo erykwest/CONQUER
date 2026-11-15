@@ -636,6 +636,41 @@ function parapetPieces(nodes,z,owner,closed=false,crest=null){
   return pieces;
 }
 function wallExteriorSide(s){return s?.flip?-1:1}
+// Fortifications face out of what they enclose, whatever the direction the walls were drawn in:
+// in a run of 3+ joined walls (or palisades) each one's exterior (merlons, outer face, where
+// ladders and towers are set) points away from the run's centre; a gate seated between walls
+// has its passage across them (angle = outward normal). Mutates the list; quay walls are
+// faced to the water afterwards by ConquerQuay.faceWallOut, which wins.
+function faceFortificationsOut(list){
+  const lines=list.filter(s=>(s.type==='wall'||s.type==='palisade')&&s.a&&s.b);
+  if(!lines.length)return;
+  const key=p=>Math.round(p.x*10)+','+Math.round(p.y*10);
+  const ends=s=>[s.aSnap||key(s.a),s.bSnap||key(s.b)];
+  const parent=new Map(lines.map(s=>[s,s]));
+  const find=s=>{while(parent.get(s)!==s)s=parent.get(s);return s};
+  const byEnd=new Map();
+  for(const s of lines)for(const e of ends(s)){const o=byEnd.get(e);if(o)parent.set(find(s),find(o));else byEnd.set(e,s)}
+  const groups=new Map();
+  for(const s of lines){const r=find(s);if(!groups.has(r))groups.set(r,[]);groups.get(r).push(s)}
+  for(const g of groups.values()){
+    if(g.length<3)continue;
+    let cx=0,cy=0,W=0;
+    for(const s of g){const L=Math.hypot(s.b.x-s.a.x,s.b.y-s.a.y)||1e-6;cx+=(s.a.x+s.b.x)/2*L;cy+=(s.a.y+s.b.y)/2*L;W+=L}
+    cx/=W;cy/=W;
+    for(const s of g){
+      const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L;
+      const mx=(s.a.x+s.b.x)/2-cx,my=(s.a.y+s.b.y)/2-cy;
+      if(Math.abs(nx*mx+ny*my)>1e-6)s.flip=nx*mx+ny*my<0;
+    }
+  }
+  for(const gate of list){
+    if(gate.type!=='gate')continue;
+    const w=lines.find(s=>s.aSnap===gate.id||s.bSnap===gate.id);if(!w)continue;
+    const dx=w.b.x-w.a.x,dy=w.b.y-w.a.y,L=Math.hypot(dx,dy)||1,side=wallExteriorSide(w);
+    gate.angle=Math.atan2(dx/L*side,-dy/L*side);
+    if(typeof normalizeStructureRotation==='function'&&structureUsesDiscreteAngle(gate))normalizeStructureRotation(gate);
+  }
+}
 function battlementIntervalCount(length,spacing=BATTLEMENT_SPACING){
   return Math.max(1,Math.round(Math.max(.001,length)/spacing));
 }
