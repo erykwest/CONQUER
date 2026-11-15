@@ -224,9 +224,11 @@ canvas.addEventListener('pointerdown',e=>{
           normalizeStructuralLinearRoute(State.draft.a,e2.point,spec,!!(e2.structureId||e2.endpoint));
         if(route&&route.segments.length&&route.segments.every(seg=>seg.length>=.24)){
           const legs=route.segments.length;
-          if(commitStructuralLinearRoute(route,e2.structureId||null,spec)){
+          const done=commitStructuralLinearRoute(route,e2.structureId||null,spec);
+          if(done){
             State.draft=null;
-            status(legs===2?State.tool.label+' added · automatic 15° joint':State.tool.label+' ready for next segment');
+            const gates=done.gates?' · '+(done.gates===1?'gate':done.gates+' gates')+' on the main road':'';
+            status((legs===2?State.tool.label+' added · automatic 15° joint':State.tool.label+' ready for next segment')+gates);
           }
         }else status(e2.structureId||e2.endpoint?'No valid two-segment 15° route to this magnet':'Segment too short');
       }
@@ -354,9 +356,13 @@ canvas.addEventListener('pointermove',e=>{
         ...(index===route.segments.length-1&&snap.structureId?{bSnap:snap.structureId}:{})
       }));
       State.draft.previewSegments.forEach(seg=>window.ConquerQuay?.faceWallOut(seg));   // quay walls face out
+      // Crossing a main road: the ghost already shows the gate and the wall cut on its flanks.
+      const gatePlan=wallRoadGatePlan(State.draft.previewSegments);
+      if(!gatePlan.blocked&&gatePlan.gates.length)State.draft.previewSegments=[...gatePlan.gates.map(g=>({...g,previewOnly:true})),...gatePlan.walls];
       const previewCost=aggregateConstructionCost(State.draft.previewSegments);
       const legs=route.segments.length,total=route.length;
-      status(`${State.tool.label}: ${total.toFixed(2)}U · ${route.onQuay?'⚓ along the quay':legs===2?'2×15° legs · auto joint':'15°'} · ${costText(previewCost)} — click to confirm`);
+      const gateNote=gatePlan.blocked?' · ⚠ '+gatePlan.blocked:gatePlan.gates.length?' · '+(gatePlan.gates.length===1?'gate':gatePlan.gates.length+' gates')+' on the main road':'';
+      status(`${State.tool.label}: ${total.toFixed(2)}U · ${route.onQuay?'⚓ along the quay':legs===2?'2×15° legs · auto joint':'15°'}${gateNote} · ${costText(previewCost)} — click to confirm`);
     }else{
       State.draft.preview=null;State.draft.previewSegments=null;
       State.draft.invalidPreview={type:State.tool.linear,a:State.draft.a,b:snap.point,width:spec.width,length:dist(State.draft.a,snap.point)};

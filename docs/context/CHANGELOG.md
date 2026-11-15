@@ -1,5 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-15 — WALL-ROAD-GATE
+
+- Nuova regola di costruzione: muro/palizzata che incrocia una strada principale → porta sull'incrocio (legno / piccola W1 / grande W2-W3), muro tagliato sui fianchi. Test `qa/wall-road-gate-regression.cjs` collegato al workflow Road magnet. ROADMAP e DECISIONS invariati (regola di piazzamento locale, nessun contratto nuovo).
 ## 2026-11-15 — MIL-WALL-01 · Pattuglie sulle mura per giro
 
 15/11/2026 — `fix/wall-patrol-rings` (pre-merge): le pattuglie sulle mura non sono più una o due figure per ogni tratto, ma appartengono al giro di mura intero (mura e palizzate unite da torri e porte). Ogni pattuglia è di 2 soldati della Caserma e percorre tutto il giro; un giro nuovo parte senza pattuglie e il giocatore le assegna da Militare › Pattuglie e guarnigioni o dall'ispettore del muro, con arruolamento in linea se mancano soldati. Le assegnazioni si salvano e resistono alle brecce. Cache dei posti arcieri per torre: `drawCastleSoldiers` da 40 a 4,5 ms per frame. Nuovo modulo `settlement-wall-patrols.js`, test `qa/wall-patrol-regression.cjs`. STATUS, BACKLOG, DECISIONS aggiornati; ROADMAP invariata.
