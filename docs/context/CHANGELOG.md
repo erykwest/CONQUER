@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-15 — Capsuloide per eventi e giustizia; campo eventi senza verde (`feature/figure-capsules-events`)
+
+Le figure di eventi, giostra, gogna, forca, patibolo, tribunale e personale in cutaway entrano nelle carte con capsula di World3D; il campo eventi perde il fondo verde. DECISIONS: D-CAPSULE-261113 estesa. Nuova prova `qa/event-figure-cards-browser.mjs` nel workflow Main fixes. ROADMAP invariata.
+
 ### 2026-11-15 — FIELD-LEND preservato nel merge regionale
 
 - La CI su 6510709 era tutta verde (20 workflow). Durante l'attesa main e avanzato a 6c5ac79 (#212 FIELD-LEND): integrato senza conflitti di codice, unendo STATUS/CHANGELOG e rigenerando il catalogo. PASS locale idle-farmers (7), fields (16), export Wiki. Nuova CI da verificare; nessuna modifica alle ricette regionali.

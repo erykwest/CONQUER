@@ -229,6 +229,7 @@ Richiesto: eliminare il pattern ripetuto e usare il riferimento geometrico [Divi
 - **MOTIVO:** con la profondità piatta una figura appena davanti a un muro aveva il corpo tagliato dalla muratura dietro, e una carta animale larga prendeva in blocco la profondità del centro (artefatti nel cutaway e lungo muri e tettoie).
 - **ALTERNATIVE SCARTATE:** carte animale con la sola profondità dei piedi (gli artefatti sopra); mesh 3D degli animali (`ConquerAnimals3D`, esclusa da D-046/D-055).
 - **CONSEGUENZA:** bestiame e lupi in World3D sono carte dell'atlante figure con capsula; nel renderer 2D restano il disegno 2D con `withUrbanFigureOcclusion`. Cavalli di giostra/feste e cavalieri in combattimento restano 2D (DA FARE).
+- **ESTESO (15/11/2026, `feature/figure-capsules-events`):** passano dalle carte con capsula anche le figure degli eventi (sagra, circo, arena, palco, podio, accampamenti), della giostra (spettatori, scudieri, cavalieri, caduti; cavalli con gualdrappa nella capsula orizzontale), della giustizia pubblica (gogna, forca, patibolo), del tribunale e del personale nelle stanze in cutaway. In World3D non si usano più la ridipintura degli occlusori delle tribune né il ritaglio con la sagoma dell'opera; restano 2D solo i prigionieri dietro le sbarre (le sbarre sono un disegno 2D) e la lancia della giostra (tratto 2D).
 
 ## D-VEH-CARDS-261112 — Veicoli come carte 2D con profondità (12/11/2026)
 
