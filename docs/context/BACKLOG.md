@@ -2,12 +2,20 @@
 
 ### 2026-11-15 — Audit post-merge regionale, correzioni su branch
 
+- Merge autorizzato dall'utente: integrato main `1c27aeb` (torre a D), con soli conflitti documentali uniti. Precedente CI `5854c03`: 14 workflow PASS; nuovi controlli da verificare prima del merge definitivo. Restano aperti latenza locale e quota collinare costiera.
 - Allineamento finale main `17645c2`; CI Runtime ha rilevato il digest Wiki obsoleto dopo le correzioni: rigenerato solo `sourceDigest`, contenuti invariati. Wiki regression ed export --check PASS locali; nuova CI da verificare.
 - Esito consolidato locale: **201/202 PASS**, unico FAIL fondazione (116,07 ms > 100 ms). PR #250 draft, non mergiata. Integrato main `2782fc0` preservando pattuglie/porte stradali; controlli mirati post-integrazione PASS. CI della PR da verificare sul nuovo SHA.
 - Base verificata main `50096df` (PR #162); correzioni in `fix/regional-postmerge-20261115`, non mergiate. Riprodotti e corretti drenaggio cancellato da bordo montuoso, chiome perse con cache calda e selettore incoerente con i quattro biomi.
 - [Rapporto completo](POSTMERGE-REGRESSION-2026-11-15.md): base 198/199 test PASS dopo quattro ripetizioni LF; resta APERTO il picco della pianificazione stradale oltre 100 ms. Nuovi tre test prima FAIL/dopo PASS e ripetizione completa sul branch.
 - Browser: otto scene regionali, cinque idriche e apertura reale dalla regione; screenshot finali rivisti. Asset Lab completo: 1.612 render, zero errori ma 157 avvisi e baseline da riconciliare; Territorio corretto 16 render invariati. Nessuna accettazione massiva delle firme.
 - Roadmap/decisioni e bilanciamenti invariati. QA e limiti documentati per il commit regionale; le successive PR di main richiedono verifica propria.
+## 2026-11-15 — BC-251105-05 fix · Tetto interno della torre a D e bracere
+
+**IMPLEMENTATO SU BRANCH `fix/dtower-inner-roof-brazier`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Torre a D: tetto interno su colmo (padiglione sul retro, mezzo cono sul davanti), pendenza unica.
+- [x] Il tetto interno toglie il bracere (`towerHasBrazier`), che prima veniva disegnato sopra il tetto.
+- [ ] Regola: senza bracere gli arcieri della torre non tirano frecce incendiarie. Da applicare quando gli arcieri delle torri avranno le frecce incendiarie (oggi non le tirano mai): chiedere `towerHasBrazier(s)`.
+
 ## 2026-11-15 — WALL-FREE-ANGLE · Mura senza vincolo di giunzione a 15°
 
 **IMPLEMENTATO SU BRANCH `fix/wall-free-angle`, NON MERGE.** Mura, palizzate e sezioni costruite si tracciano a qualsiasi angolo; niente gomito automatico verso i magneti. Dettagli in [STATUS](STATUS.md).
@@ -241,7 +249,7 @@
 - [x] Mensole in un unico pezzo inclinato, archi a tutto sesto (senza scuro sotto) e fascia a filo, sul modello del Castello di San Giorgio (Mantova).
 - [x] Cutaway: mensole, archi e fascia del lato aperto tolti, l'ultimo piano resta visibile.
 - [ ] Facoltativo: finestrelle o merli tamponati nella fascia, come nel riferimento.
-- [ ] Botola del piano di copertura disegnata sopra il tetto interno (verificare anche con le caditoie standard).
+- [x] Botola del piano di copertura disegnata sopra il tetto interno: era il bracere, ora tolto dal tetto interno (`fix/dtower-inner-roof-brazier`).
 
 ## SIEGE-ATTACK-ALERTS-01 — Due allerte d'attacco automatiche configurabili (14/11/2026)
 
