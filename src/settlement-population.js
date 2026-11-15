@@ -81,8 +81,12 @@ function towerRoofFootprintPoints(s){
 // merlons' inner face, about 0.2 U, and a 0.22 U wall-walk), raised on a TOWER_INNER_ROOF_KERB high
 // stone kerb, then a pyramid (square / oriented) or a cone (round) at the feudal pitch to the apex.
 // Too small a ring (inner half span under 0.25 U, i.e. T1 towers) means no inner roof: `check`
-// only asks whether it fits. Returns {ring,h,eaveZ,apex,apexZ,half} or null.
+// only asks whether it fits. Returns {ring,h,eaveZ,apex,tail,apexZ,half} or null.
 // The ring is small: at least ~58° of pitch so the roof stands clear of the merlons.
+// The D tower's ring is long (a straight rear part, then the half round): a single apex over the
+// half round would leave the rear slopes almost flat, so its roof runs on a ridge from `tail` (a
+// half span in from the rear: hipped end) to `apex` (half cone over the round front). Elsewhere
+// tail = apex, a pyramid or a cone. All slopes rise at the same pitch.
 const TOWER_INNER_ROOF_MIN_TAN=1.6,TOWER_INNER_ROOF_INSET=.42,TOWER_INNER_ROOF_KERB=.14,TOWER_INNER_ROOF_MIN_HALF=.25;
 function towerInnerRoofGeometry(s,check=false){
   if(!s||s.type!=='tower'||isWoodTower(s)||s.shape==='half')return null;
@@ -94,8 +98,30 @@ function towerInnerRoofGeometry(s,check=false){
   else{const d=rectDims(s);half=Math.min(d.w,d.h)/2-k;ring=half>0?rectWorldPoints(s.x,s.y,d.w-k*2,d.h-k*2,s.angle||0):[]}
   if(!(half>=TOWER_INNER_ROOF_MIN_HALF)||ring.length<3)return null;
   if(check)return true;
-  const h=structureHeight(s),eaveZ=h+TOWER_INNER_ROOF_KERB;
-  return{ring,h,eaveZ,apex:towerRoofApex(s),apexZ:eaveZ+Math.max(roofPitchTan(),TOWER_INNER_ROOF_MIN_TAN)*half,half};
+  const h=structureHeight(s),eaveZ=h+TOWER_INNER_ROOF_KERB,apex=towerRoofApex(s);
+  let tail=apex;
+  if(s.shape==='dee'){
+    const d=orientedTowerDims(s),front=d.w/2-d.h/2;
+    tail=orientedTowerWorld(s,[[Math.min(front,-d.w/2+k+half),0]])[0];
+  }
+  return{ring,h,eaveZ,apex,tail,apexZ:eaveZ+Math.max(roofPitchTan(),TOWER_INNER_ROOF_MIN_TAN)*half,half};
+}
+// Roof faces, one per ring edge: each eave point climbs to its nearest point on the ridge
+// tail→apex (a triangle where both ends reach the same ridge point, a quad along the ridge).
+// [{i,pts:[{p,z}]}], shared by the 2.5D painter and the 3D mesh.
+function towerInnerRoofFaces(g){
+  if(!g)return[];
+  const a=g.tail||g.apex,b=g.apex,dx=b.x-a.x,dy=b.y-a.y,L2=dx*dx+dy*dy;
+  const t=p=>L2<1e-9?1:Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/L2));
+  const at=u=>u>=1?b:u<=0?a:{x:a.x+dx*u,y:a.y+dy*u};
+  const n=g.ring.length,out=[];
+  for(let i=0;i<n;i++){
+    const p=g.ring[i],q=g.ring[(i+1)%n],tp=t(p),tq=t(q);
+    const pts=[{p,z:g.eaveZ},{p:q,z:g.eaveZ},{p:at(tq),z:g.apexZ}];
+    if(Math.abs(tp-tq)>1e-6)pts.push({p:at(tp),z:g.apexZ});
+    out.push({i,pts});
+  }
+  return out;
 }
 // Square stone towers choose the shape of the pitched roof (variant `roofShape`): a pyramid, two
 // slopes on a ridge with stone gable ends, or four slopes on a ridge half as long as the roof (hip).
