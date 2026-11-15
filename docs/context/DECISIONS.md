@@ -1,5 +1,12 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-MSG-FOOT-261115 — Messaggero a piedi in assenza di cavalli (15/11/2026)
+
+- **DECISO dal product owner:** il messaggero terrestre può essere **a cavallo oppure a piedi**. Quando **non ci sono cavalli disponibili**, i messaggi, gli ordini e gli allarmi automatici (compreso quello generato all'invasione) possono partire con un **messaggero a piedi**, senza perdere la spedizione per la sola mancanza della cavalcatura.
+- **TEMPO SIMULATO:** il recapito deve seguire il tragitto e la modalità effettiva di spostamento. Non è immediato e **non presume la stessa velocità del cavallo**. Velocità, requisiti di portatore, costi e consumi restano da definire.
+- **ASSEDIO:** il messaggero a piedi **non aggira** il blocco: in stato SOTTO ASSEDIO, **nessun messaggero terrestre a piedi o a cavallo entra né esce dal feudo**. Rimane distinto il piccione in uscita, consentito e non intercettabile con canale operativo.
+- **STATO:** design, non implementazione del world multiplayer. La branch `messages` rappresenta attualmente un figurante montato e tempi astratti, non dimostra il vettore pedone implementato. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [MARCH](../march.md), [SRS mobile v0.14 draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
+
 ## D-MP-PUBLIC-261115 — Lobby anonima: solo statistiche generali server (15/11/2026)
 
 - **DECISO dal product owner:** senza login sono pubbliche **solo le statistiche generali e aggregate dei server**. La lobby può mostrare conteggi giocatori/bot, capienza, età/fase della partita, stato delle iscrizioni, livello massimo aggregato, disponibilità numerica di ingressi idonei e orari del server.
