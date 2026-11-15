@@ -1,5 +1,17 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## WORLD-SPEED-01 — Unificare velocità di fanteria, cavalleria, messaggeri e carri (15/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** rapporti **fanteria 1×**, **messaggero a piedi 1×**, **cavalleria 2×**, **messaggero a cavallo 2×**, **carri mercanti/rifornimenti/immigrati 1,5×**; il riferimento è la velocità **strategica** di fanteria nella World Map, non unità/giorno arbitrariamente scelte. [D-WORLD-SPEED-261115](DECISIONS.md#d-world-speed-261115--rapporti-di-velocita-strategica-terrestri-15112026) · [SRS mobile v0.15 draft #222](https://github.com/erykwest/CONQUER/pull/222).
+
+- [ ] Definire un **unico parametro autorevole** `V_fanteria` e calcolare velocità di tutti i cinque tipi come `1×, 1×, 2×, 2×, 1,5×` prima di modificatori di percorso.
+- [ ] Usare l'ETA del **messaggero pedone a 1×**, quando non ci sono cavalli; allarmi di invasione, rapporti e ordini devono poter partire senza inventare recapiti anticipati.
+- [ ] Armonizzare convogli di **mercanti, rifornimenti e immigrati** sul valore **1,5×**, senza applicarlo automaticamente a imbarcazioni o altri mezzi non inclusi.
+- [ ] Verificare le costanti **legacy 22 U/giorno** in `src/settlement-convoys.js` (convogli) e nella branch `messages` (corriere) e predisporre una **migrazione coerente** dei viaggi/ETA persistiti prima di passare al motore unico.
+- [ ] QA comparativo su stessa tratta: fanteria/pedone 1×, cavalleria/montato 2× e carri 1,5×, prima degli arrotondamenti del calendario; QA dopo modificatori stradali da specificare.
+- [ ] **APERTO:** valore assoluto del riferimento, terreni/strade/meteo, scorte e composizione convogli misti, eccezioni di unità, velocità imbarcazioni e piccioni. Nessuna modifica al runtime da questa decisione.
+
+
 ## MSG-FOOT-01 — Messaggero a piedi se non ci sono cavalli (15/11/2026)
 
 **DECISO / NON IMPLEMENTATO:** oltre al corriere a cavallo, è previsto il **messaggero a piedi** quando non sono disponibili cavalli. L'assenza di cavalcature **non annulla da sola** l'invio di lettere, ordini e **allarmi automatici d'invasione**, se un portatore e una rotta sono disponibili. **Sotto assedio sia pedoni sia montati non entrano/escono**, mentre i piccioni restano distinti. [D-MSG-FOOT-261115](DECISIONS.md#d-msg-foot-261115--messaggero-a-piedi-in-assenza-di-cavalli-15112026) · [SRS mobile v0.14 draft #222](https://github.com/erykwest/CONQUER/pull/222).
@@ -340,7 +352,8 @@ Questi **non** sostituiscono l'allarme base automatico d'invasione diretto al go
 ## 2026-11-13 — Equipaggiamento delle unità: elmi e scudi
 
 **IMPLEMENTATO SU BRANCH `feature/unit-equipment-styles`, NON MERGE.** Scelta feudale dell'elmo e della forma dello scudo dei soldati, dal Centro di controllo › Militare › Equipaggiamento, come merlature e pendenza dei tetti. Dettagli in [STATUS](STATUS.md).
-- Aperti: estendere la scelta ai cavalieri a cavallo (elmo e scudo in `settlement-mounted2d.js`); valutare un effetto di gioco (oggi solo estetico); audit del Lab da eseguire in CI.
+- Cavalieri a cavallo: fatto su `feature/knight-equipment-styles` (15/11/2026), vedi [STATUS](STATUS.md).
+- Aperti: valutare un effetto di gioco (oggi solo estetico); audit del Lab da eseguire in CI.
 
 ## 2026-11-13 — UI-SEL-01 · Perimetro di selezione fedele al volume
 

@@ -162,6 +162,26 @@
 
 **STATO:** sola specifica per backend World/Feudal e controllo remoto; non implementato. Riferimento [SRS mobile v0.13 (draft PR #222)](https://github.com/erykwest/CONQUER/pull/222).
 
+## 3g. Rapporti standard di velocità strategica — DECISO (15/11/2026)
+
+**RIFERIMENTO UNICO:** `V_fanteria` è la **velocità standard di fanteria nella World Map** (coefficiente **1×**), alla quale si rapportano tutti i seguenti movimenti strategici a parità di tratta e condizioni.
+
+| Unità/mezzo | Velocità rispetto alla fanteria |
+| --- | ---: |
+| Fanteria standard | **1×** |
+| Messaggero a piedi | **1×** |
+| Carri — **mercanti, rifornimenti, immigrati** | **1,5×** |
+| Cavalleria standard | **2×** |
+| Messaggero a cavallo | **2×** |
+
+**DECISO — tempi e flussi:** sia il messaggero a piedi sia il messaggero montato utilizzano questo modello di velocità; se un messaggio/allarme parte a piedi per mancanza di cavalli, il server deve stimarne la consegna sulla **velocità fanteria 1×**, non sul tempo del cavallo **2×**. Le diverse tipologie di **carro** condividono la velocità base **1,5×**, indipendentemente dalla funzione (mercato, rifornimenti, immigrazione). I modificatori della tratta, se presenti nel futuro World/Feudal, non devono far perdere la distinzione fra **fattori base** e ETA effettivo.
+
+**LIMITI DELLA DECISIONE:** non sono fissati **unità/giorno**, condizioni di strada/terreno/meteo, velocità di navi e piccioni, interazione con convogli militari/escorte, movimento tattico del Combat o grafica delle animazioni. Il valore numerico di `V_fanteria` andrà definito nel motore strategico condiviso.
+
+**DISALLINEAMENTO ESISTENTE — NON IMPLEMENTATO:** `src/settlement-convoys.js` in `main` usa **22 U/giorno** per convogli terrestri (`UNITS_PER_DAY`); la branch `messages` definisce **22 U/giorno** per messaggeri astratti. Tali costanti sono **legacy, non una conferma** dei rapporti 1×/1,5×/2×: la futura integrazione deve stabilire il riferimento standard, ricondurre i tempi esistenti ai coefficienti approvati e verificare compatibilità dei salvataggi/ETA.
+
+**TRACCIAMENTO:** [SRS mobile v0.15 — draft PR #222](https://github.com/erykwest/CONQUER/pull/222) e D-WORLD-SPEED-261115.
+
 ## 4. Decisioni ancora necessarie
 
 1. **Dettaglio comandi:** inventario esatto dei comandi remoti per economia, fisco, lavoro, cantieri già localizzati, strategia, diplomazia e logistica; il **confine generale è deciso** nel §2a: niente piazzamento geometrico, progettazione spaziale o controllo tattico diretto.
