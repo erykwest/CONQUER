@@ -683,6 +683,8 @@ function continuousForestTrees(f,bounds=null){
   return trees;
 }
 function forestTreeLayout(f,bounds=null){
+  // Array.map supplies an index as its second argument; only an explicit rectangle bounds a query.
+  if(!bounds||typeof bounds!=='object'||!['minX','maxX','minY','maxY'].every(k=>Number.isFinite(bounds[k])))bounds=null;
   ensureLandscapeRenderCaches();
   const cacheKey=forestLayoutKey(f);
   if(forestTreeLayoutCache.has(cacheKey)){const trees=forestTreeLayoutCache.get(cacheKey);return bounds?trees.filter(t=>t.p.x>=bounds.minX&&t.p.x<=bounds.maxX&&t.p.y>=bounds.minY&&t.p.y<=bounds.maxY):trees;}

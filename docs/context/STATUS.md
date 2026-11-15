@@ -46,6 +46,16 @@
 - **PROVE LOCALI PASS:** `qa/combat-render-regression.cjs`; nel Lab, foglio con le 6 combinazioni (originale + 5) a due grandezze e primo piano degli elmi, console senza errori.
 - **NON ESEGUITO in locale:** `node qa/asset-audit.mjs` (Playwright non installato); affidato alla CI `asset-lab`.
 
+### 2026-11-15 — Audit post-merge regionale, correzioni su branch
+
+- Merge autorizzato dall'utente: integrato main `1c27aeb` (torre a D), con soli conflitti documentali uniti. Precedente CI `5854c03`: 14 workflow PASS; nuovi controlli da verificare prima del merge definitivo. Restano aperti latenza locale e quota collinare costiera.
+- Allineamento finale main `17645c2`; CI Runtime ha rilevato il digest Wiki obsoleto dopo le correzioni: rigenerato solo `sourceDigest`, contenuti invariati. Wiki regression ed export --check PASS locali; nuova CI da verificare.
+- Esito consolidato locale: **201/202 PASS**, unico FAIL fondazione (116,07 ms > 100 ms). PR #250 draft, non mergiata. Integrato main `2782fc0` preservando pattuglie/porte stradali; controlli mirati post-integrazione PASS. CI della PR da verificare sul nuovo SHA.
+- Base verificata main `50096df` (PR #162); correzioni in `fix/regional-postmerge-20261115`, non mergiate. Riprodotti e corretti drenaggio cancellato da bordo montuoso, chiome perse con cache calda e selettore incoerente con i quattro biomi.
+- [Rapporto completo](POSTMERGE-REGRESSION-2026-11-15.md): base 198/199 test PASS dopo quattro ripetizioni LF; resta APERTO il picco della pianificazione stradale oltre 100 ms. Nuovi tre test prima FAIL/dopo PASS e ripetizione completa sul branch.
+- Browser: otto scene regionali, cinque idriche e apertura reale dalla regione; screenshot finali rivisti. Asset Lab completo: 1.612 render, zero errori ma 157 avvisi e baseline da riconciliare; Territorio corretto 16 render invariati. Nessuna accettazione massiva delle firme.
+- Roadmap/decisioni e bilanciamenti invariati. QA e limiti documentati per il commit regionale; le successive PR di main richiedono verifica propria.
+
 ## 2026-11-13 — AUDIT-261113 · Audit post-merge, hardening e semplificazione (branch `fix/audit-hardening-20261113`)
 
 - **AMBITO:** verifica delle 82 PR mergiate dal 30/10 al 13/11 (#103–#211) su `main` 6b227926, per gruppi (economia, job/cantieri, militare, torri/mura, stanze, rendering, CI, hardening). Nessuna PR sovrascritta da un merge successivo (identificatori e registri dei modelli controllati commit per commit).
