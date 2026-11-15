@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-15 — WALL-ROAD-GATE
+
+- Fatto sul branch `feature/wall-road-gates`: porta automatica del tipo corrispondente dove un nuovo muro/palizzata incrocia una strada principale. Aperto: un muro esistente attraversato in seguito da una nuova strada principale non riceve la porta (la strada resta bloccata come prima); livello porta = livello porta di default del costruttore.
+
+
 ### 2026-11-15 — FIELD-LEND preservato nel merge regionale
 
 - La CI su 6510709 era tutta verde (20 workflow). Durante l'attesa main e avanzato a 6c5ac79 (#212 FIELD-LEND): integrato senza conflitti di codice, unendo STATUS/CHANGELOG e rigenerando il catalogo. PASS locale idle-farmers (7), fields (16), export Wiki. Nuova CI da verificare; nessuna modifica alle ricette regionali.

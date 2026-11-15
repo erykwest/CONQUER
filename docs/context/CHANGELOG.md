@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-15 — WALL-ROAD-GATE
+
+- Nuova regola di costruzione: muro/palizzata che incrocia una strada principale → porta sull'incrocio (legno / piccola W1 / grande W2-W3), muro tagliato sui fianchi. Test `qa/wall-road-gate-regression.cjs` collegato al workflow Road magnet. ROADMAP e DECISIONS invariati (regola di piazzamento locale, nessun contratto nuovo).
+
+
 ### 2026-11-15 — FIELD-LEND preservato nel merge regionale
 
 - La CI su 6510709 era tutta verde (20 workflow). Durante l'attesa main e avanzato a 6c5ac79 (#212 FIELD-LEND): integrato senza conflitti di codice, unendo STATUS/CHANGELOG e rigenerando il catalogo. PASS locale idle-farmers (7), fields (16), export Wiki. Nuova CI da verificare; nessuna modifica alle ricette regionali.
