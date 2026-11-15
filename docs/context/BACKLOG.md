@@ -1,5 +1,27 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## MSG-FOOT-01 — Messaggero a piedi se non ci sono cavalli (15/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** oltre al corriere a cavallo, è previsto il **messaggero a piedi** quando non sono disponibili cavalli. L'assenza di cavalcature **non annulla da sola** l'invio di lettere, ordini e **allarmi automatici d'invasione**, se un portatore e una rotta sono disponibili. **Sotto assedio sia pedoni sia montati non entrano/escono**, mentre i piccioni restano distinti. [D-MSG-FOOT-261115](DECISIONS.md#d-msg-foot-261115--messaggero-a-piedi-in-assenza-di-cavalli-15112026) · [SRS mobile v0.14 draft #222](https://github.com/erykwest/CONQUER/pull/222).
+
+- [ ] Modellare disponibilità dei cavalli e modalità del messaggero terrestre: **montato** oppure **pedone**, con fallback al pedone quando il cavallo non è disponibile, se il servizio terrestre rimane praticabile.
+- [ ] Calcolare percorso, tempi ed ETA secondo la modalità di trasporto effettiva; nessuna velocità numerica viene stabilita da questo requisito.
+- [ ] Applicare stessa scelta anche ai **messaggeri automatici d'allarme per invasione** e alle altre comunicazioni feudali, senza anticipare il loro recapito nella dashboard.
+- [ ] Verificare server-side il **blocco bidirezionale in assedio** per entrambe le modalità; QA su cavalli presenti/assenti, consegna ritardata, attacco e assedio.
+- [ ] **APERTO:** velocità piedi/cavallo, disponibilità e costi dei portatori, percorso/terreno, rischi e intercettazione in stato invaso, gestione di un cavallo assegnato; il prototipo `messages` non è prova dell'implementazione del vettore a piedi.
+
+## MP-PUBLIC-01 — Visibilità anonima delle campagne (decisione 15/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** nella lobby senza login soltanto statistiche generali **aggregate** per server: capienza, conteggi giocatori/bot, anzianità/fase, stato ingressi, eventuale livello massimo in forma aggregata, posizioni di ingresso idonee come **numero** e orari regionali. **Escluse** mappe politiche e regionali, identità e classifiche nominali, dati dei feudi, eserciti, diplomazia, posta, movimenti e spawn precisi. Home informativa, tutorial e Codex pubblici invariati.
+
+- [ ] Definire i campi del riepilogo anonimo e costruire endpoint pubblico aggregato (nessun record segreto o dato per feudo).
+- [ ] Distinguere browser anonimo, account con login non partecipante e partecipante autorizzato; non presumere che login = accesso ai dati di tutti.
+- [ ] Test anti-leak di mappe, proprietari, messaggi, unità e dati territoriali nei payload anonimi e nei link/cache.
+- [ ] Decidere aggiornamento dei contatori, definizione di «attivo» e visibilità interna secondo ruoli feudali.
+
+**Riferimenti:** D-MP-PUBLIC-261115 e [scope multiplayer §3](../MULTIPLAYER-SERVER-SCOPE.md#3-lobby-e-scoperta-delle-partite). **Solo decisione documentale, nessun codice modificato.**
+
+
 ### 2026-11-15 — FIELD-LEND preservato nel merge regionale
 
 - La CI su 6510709 era tutta verde (20 workflow). Durante l'attesa main e avanzato a 6c5ac79 (#212 FIELD-LEND): integrato senza conflitti di codice, unendo STATUS/CHANGELOG e rigenerando il catalogo. PASS locale idle-farmers (7), fields (16), export Wiki. Nuova CI da verificare; nessuna modifica alle ricette regionali.
