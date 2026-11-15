@@ -34,15 +34,13 @@ const LANDSCAPE_RENDER_BUDGET=Object.freeze({
   terrainMarks:120,
   rockDensity:2.35,
   rockCrestDensity:.95,
-  forestDensity:.95,
-  forestMin:14,
-  forestMax:120,
   flowerClusters:520
 });
 let landscapeRenderCacheSeed=null;
 const steepRockLayoutCache=new Map();
 const forestTreeLayoutCache=new Map();
 const forestGroundLayoutCache=new Map();
+const forestShrubLayoutCache=new Map();
 let terrainMarkLayoutCache=null;
 let springFlowerLayoutCache=null;
 const springFlowerSprites=new Map();
@@ -93,6 +91,7 @@ function ensureLandscapeRenderCaches(){
   steepRockLayoutCache.clear();
   forestTreeLayoutCache.clear();
   forestGroundLayoutCache.clear();
+  forestShrubLayoutCache.clear();
   terrainMarkLayoutCache=null;
   springFlowerLayoutCache=null;
 }
@@ -207,10 +206,46 @@ function drawSteepSlopeRocks(level,band,winter){
   if(window.__conquerPerf)window.__conquerPerf.landscapeRocks=(window.__conquerPerf.landscapeRocks||0)+rocks.length;
   for(const rock of rocks)drawLowPolyRock(rock.p,rock.z,rock.size,rock.height,rock.seed,winter);
 }
+// Cover is projected onto each terrain face, never stretched across a whole hill.
+function woodedSurfaceFace(vertices,forests){
+  if(vertices.length<3||!forests.length)return;
+  const a=vertices[0],b=vertices[1],c=vertices.slice(2).find(p=>Math.abs((b.x-a.x)*(p.y-a.y)-(b.y-a.y)*(p.x-a.x))>1e-8);
+  if(!c)return;
+  const ux=b.x-a.x,uy=b.y-a.y,vx=c.x-a.x,vy=c.y-a.y,det=ux*vy-uy*vx;
+  if(Math.abs(det)<1e-8)return;
+  const dx=((b.z-a.z)*vy-(c.z-a.z)*uy)/det,dy=(ux*(c.z-a.z)-vx*(b.z-a.z))/det;
+  const z=p=>a.z+dx*(p.x-a.x)+dy*(p.y-a.y),poly=projectClippedTerrain(vertices);
+  if(poly.length<3||!screenPolygonVisible(poly,8))return;
+  const bounds=environmentPolygonBounds(vertices),winter=State.season==='winter';
+  const light=clamp((1-dx*.48-dy*.72)/Math.sqrt(1+dx*dx+dy*dy),.42,1.28);
+  for(const f of forests){
+    const box=environmentPolygonBounds(f.points);
+    if(box.maxX<bounds.minX||box.minX>bounds.maxX||box.maxY<bounds.minY||box.minY>bounds.maxY)continue;
+    const ring=points=>{ctx.beginPath();points.forEach((p,i)=>{const q=w2sRaw(p,z(p));i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)});ctx.closePath()};
+    ctx.save();ctx.beginPath();poly.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.clip();
+    ring(f.points);ctx.clip();
+    for(const hole of f.holes||[]){const h=environmentPolygonBounds(hole);if(h.maxX<bounds.minX||h.minX>bounds.maxX||h.maxY<bounds.minY||h.minY>bounds.maxY)continue;ctx.beginPath();ctx.rect(-1e5,-1e5,2e5,2e5);hole.forEach((p,i)=>{const q=w2sRaw(p,z(p));i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)});ctx.closePath();ctx.clip('evenodd')}
+    // Keep all the original undergrowth detail; shade over it per terrain face.
+    ctx.fillStyle=getForestGroundPattern();ctx.fillRect(-1e4,-1e4,2e4,2e4);
+    ctx.fillStyle=winter?'rgba(238,247,234,.10)':'rgba(104,147,66,.16)';ctx.fillRect(-1e4,-1e4,2e4,2e4);
+    ctx.globalAlpha=Math.abs(1-light)*.8;ctx.fillStyle=light<1?'#000':'#fff';ctx.fillRect(-1e4,-1e4,2e4,2e4);ctx.restore();
+  }
+}
+function forestReliefHulls(){
+  return (State.relief?.hills||[]).map(h=>convexHull(h.levels.flatMap(l=>[
+    ...l.top.map(p=>w2sRaw(p,l.z1)),...reliefEdgeBands(l).flatMap(terrainBandScreenPolygon)
+  ])));
+}
+function forestTreeOccluders(){
+  return reliefLevels().flatMap(l=>[
+    ...reliefEdgeBands(l).map(b=>({poly:terrainBandScreenPolygon(b),depth:[b.oa,b.ob,b.a,b.b].reduce((s,p)=>s+w2sRaw(p,0).y,0)/4})),
+    {poly:l.top.map(p=>w2sRaw(p,l.z1)),depth:l.top.reduce((s,p)=>s+w2sRaw(p,0).y,0)/l.top.length}
+  ]).map(f=>({...f,b:environmentPolygonBounds(f.poly)}));
+}
 function drawRelief(){
   ensureLandscapeRenderCaches();
   const winter=State.season==='winter',baseFill=winter?'#edf1ed':(BIOMES[State.biome]?.field||'#24291b');
-  const levels=reliefLevels().slice().sort((a,b)=>a.z1-b.z1);
+  const levels=reliefLevels().slice().sort((a,b)=>a.z1-b.z1),woods=State.environment.filter(f=>f.type==='forest');
   let bandsDrawn=0;
   if(window.__conquerPerf)window.__conquerPerf.landscapeRocks=0;
   for(const level of levels){
@@ -218,7 +253,11 @@ function drawRelief(){
     for(const band of bands){
       if(!screenPolygonVisible(terrainBandScreenPolygon(band),96))continue;
       bandsDrawn++;
-      if(band.kind==='gentle')drawGentleSlopeBand(band,winter);
+      if(band.kind==='gentle'){
+        drawGentleSlopeBand(band,winter);
+        const a={...band.oa,z:band.z0},b={...band.ob,z:band.z0},c={...band.b,z:band.z1},d={...band.a,z:band.z1};
+        woodedSurfaceFace([a,b,c],woods);woodedSurfaceFace([a,c,d],woods);
+      }
       else{
         const poly=projectClippedTerrain([
           {...band.oa,z:band.z0},{...band.ob,z:band.z0},{...band.b,z:band.z1},{...band.a,z:band.z1}
@@ -229,6 +268,7 @@ function drawRelief(){
     }
     const top=projectClippedTerrain(level.top.map(p=>({...p,z:level.z1})));
     if(top.length>=3&&screenPolygonVisible(top,96))pathPolygon(top,baseFill,winter?'rgba(118,128,121,.40)':'rgba(203,190,148,.22)',1.05);
+    woodedSurfaceFace(level.top.map(p=>({...p,z:level.z1})),woods);
   }
   window.ConquerTerraforming?.drawCommitted();
   if(window.__conquerPerf)window.__conquerPerf.reliefBandsDrawn=bandsDrawn;
@@ -309,6 +349,7 @@ function drawTerrain(){
   const terrainFill=winter?'#edf1ed':(BIOMES[State.biome]?.field||'#24291b');
   const terrainEdge=winter?'rgba(101,112,105,.34)':'rgba(225,214,190,.12)';
   pathPolygon(corners,terrainFill,terrainEdge,1);
+  window.ConquerRegionalLandscape?.drawGround();
   drawRelief();
   ctx.save();
   for(const mark of terrainMarkLayout()){
@@ -347,9 +388,9 @@ function mountainSnowColor(f,a,b,i){
 }
 // Cone surface height at p: linear from the base outline (0) to the apex (f.height).
 function mountainFacet(f,p){
-  const a=Math.atan2(p.y-f.y,p.x-f.x),n=f.points.length;
+  const outline=f.unclippedPoints||f.points,a=Math.atan2(p.y-f.y,p.x-f.x),n=outline.length;
   for(let i=0;i<n;i++){
-    const A=f.points[i],B=f.points[(i+1)%n];
+    const A=outline[i],B=outline[(i+1)%n];
     const aa=Math.atan2(A.y-f.y,A.x-f.x),ab=Math.atan2(B.y-f.y,B.x-f.x);
     let span=ab-aa;while(span<=-Math.PI)span+=2*Math.PI;while(span>Math.PI)span-=2*Math.PI;
     let d=a-aa;while(d<=-Math.PI)d+=2*Math.PI;while(d>Math.PI)d-=2*Math.PI;
@@ -358,7 +399,7 @@ function mountainFacet(f,p){
   return 0;
 }
 function mountainSurfaceZ(f,p){
-  const i=mountainFacet(f,p),A=f.points[i],B=f.points[(i+1)%f.points.length];
+  const outline=f.unclippedPoints||f.points,i=mountainFacet(f,p),A=outline[i],B=outline[(i+1)%outline.length];
   // Ray from the centre through p meets edge AB at the base: z falls linearly to it.
   const dx=p.x-f.x,dy=p.y-f.y,ex=B.x-A.x,ey=B.y-A.y,den=dx*ey-dy*ex;
   if(Math.abs(den)<1e-9)return 0;
@@ -414,17 +455,31 @@ function drawMountainPine(t){
   const h=Math.max(8,U*State.view.scale*2.4*t.scale),w=h*.75;
   ctx.drawImage(img,base.x-w/2,base.y-h*.97,w,h);
 }
+function mountainFacetPolygons(f,height=f.height||3.6){
+  const base=f.unclippedPoints||f.points,apex={x:f.x,y:f.y,z:height},faces=[];
+  const k=Math.min(1,mountainSnowZ()/height),at=p=>({x:f.x+(p.x-f.x)*(1-k),y:f.y+(p.y-f.y)*(1-k),z:height*k});
+  for(let i=0;i<base.length;i++){
+    const a={...base[i],z:0},b={...base[(i+1)%base.length],z:0},sa=at(a),sb=at(b);
+    const full=clipTerrainPolygon([a,b,apex]),cuts=[];
+    for(let j=0;j<full.length;j++){
+      const u=full[j],v=full[(j+1)%full.length];
+      const onBorder=(Math.abs(u.x-v.x)<1e-7&&(Math.abs(u.x)<1e-7||Math.abs(u.x-WORLD)<1e-7))||(Math.abs(u.y-v.y)<1e-7&&(Math.abs(u.y)<1e-7||Math.abs(u.y-WORLD)<1e-7));
+      if(onBorder&&Math.max(u.z,v.z)>1e-6)cuts.push([u,v,{...v,z:0},{...u,z:0}]);
+    }
+    faces.push({i,a,b,rock:clipTerrainPolygon(k<1?[a,b,sb,sa]:[a,b,apex]),snow:k<1?clipTerrainPolygon([sa,sb,apex]):[],cuts});
+  }
+  return faces;
+}
 function drawRaisedFan(f,height){
-  const base=f.points,center={x:f.x,y:f.y},top=w2s(center,height),faces=[];
+  const faces=[];
   const plan=typeof isPlanView==='function'&&isPlanView(),pines=f.height?mountainPineLayout(f):[];
   // Fraction of this peak's height where the map-wide snow line falls (1 = no snow).
-  const k=Math.min(1,mountainSnowZ()/height);
-  for(let i=0;i<base.length;i++){
-    const j=(i+1)%base.length,a=w2s(base[i]),b=w2s(base[j]);
-    const sa=w2s({x:f.x+(base[i].x-f.x)*(1-k),y:f.y+(base[i].y-f.y)*(1-k)},height*k);
-    const sb=w2s({x:f.x+(base[j].x-f.x)*(1-k),y:f.y+(base[j].y-f.y)*(1-k)},height*k);
-    faces.push({rock:k<1?[a,b,sb,sa]:[a,b,top],snow:k<1?[sa,sb,top]:null,depth:(a.y+b.y)/2,i,
-      color:mountainFaceColor(f,base[i],base[j],i),snowColor:mountainSnowColor(f,base[i],base[j],i)});
+  const project=poly=>poly.map(p=>w2sRaw(p,p.z));
+  for(const q of mountainFacetPolygons(f,height)){
+    const {i,a,b}=q,pa=w2s(a),pb=w2s(b);
+    faces.push({rock:project(q.rock),snow:q.snow.length?project(q.snow):null,depth:(pa.y+pb.y)/2,i,
+      color:mountainFaceColor(f,a,b,i),snowColor:mountainSnowColor(f,a,b,i)});
+    for(const cut of q.cuts)faces.push({rock:project(cut),snow:null,depth:project(cut).reduce((s,p)=>s+p.y,0)/4,i:-1,color:'#514a40'});
   }
   faces.sort((a,b)=>a.depth-b.depth);
   // Pines go with their facet, so nearer facets (and their pines) cover farther ones.
@@ -565,7 +620,7 @@ function getForestGroundPattern(){
 function forestGroundLayout(f){
   ensureLandscapeRenderCaches();
   if(forestGroundLayoutCache.has(f.id))return forestGroundLayoutCache.get(f.id);
-  const pts=(f.points||[]).map(p=>({x:p.x,y:p.y,z:terrainElevation(p)}));
+  const pts=(f.points||[]).map(p=>({x:p.x,y:p.y,z:0}));
   forestGroundLayoutCache.set(f.id,pts);return pts;
 }
 function drawForestGround(f){
@@ -584,7 +639,8 @@ function drawForestGround(f){
   ctx.clip();
   // Holes (clearings, banks, grooves): each one is cut out with an even-odd clip against a
   // covering rectangle; successive clips intersect, so overlapping holes stay open.
-  const holes=(f.holes||[]).map(h=>h.map(p=>w2sRaw(p,terrainElevation(p))));
+  const holes=(f.holes||[]).map(h=>h.map(p=>w2sRaw(p,0)));
+  for(const hull of forestReliefHulls()){ctx.beginPath();ctx.rect(-1e5,-1e5,2e5,2e5);hull.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.clip('evenodd')}
   for(const hole of holes){
     if(!screenPolygonVisible(hole,8))continue;
     ctx.beginPath();ctx.rect(-1e5,-1e5,2e5,2e5);
@@ -605,56 +661,62 @@ function drawForestGround(f){
   }
   ctx.restore();
 }
-function forestTreeCount(f){
-  return clamp(Math.round((f.rx||5)*(f.ry||4)*LANDSCAPE_RENDER_BUDGET.forestDensity),LANDSCAPE_RENDER_BUDGET.forestMin,LANDSCAPE_RENDER_BUDGET.forestMax);
-}
 // Holes (clearings, grooves) change the layout: key it by their count, not just the id.
 function forestLayoutKey(f){return f.id+':'+(f.holes?.length||0)}
-function clearForestLayoutCache(){forestTreeLayoutCache.clear()}
+function clearForestLayoutCache(){forestTreeLayoutCache.clear();forestGroundLayoutCache.clear();forestShrubLayoutCache.clear()}
 // Continuous woodland: a jittered grid over the map with fixed per-cell attributes, filtered by
 // containment, so carving a groove removes only the trees inside it instead of reshuffling all.
-const CONTINUOUS_FOREST_SPACING=4.4;
-function continuousForestTrees(f){
+const CONTINUOUS_FOREST_SPACING=4.4/Math.sqrt(2.5);
+function continuousForestTrees(f,bounds=null){
   const rnd=seedRand((State.seed^biomeHash(f.id))>>>0),n=Math.ceil(WORLD/CONTINUOUS_FOREST_SPACING),trees=[];
   for(let iy=0;iy<n;iy++)for(let ix=0;ix<n;ix++){
-    const p={x:(ix+.15+rnd()*.7)*CONTINUOUS_FOREST_SPACING,y:(iy+.15+rnd()*.7)*CONTINUOUS_FOREST_SPACING};
+    const p={x:(ix+.2+rnd()*.6)*CONTINUOUS_FOREST_SPACING,y:(iy+.2+rnd()*.6)*CONTINUOUS_FOREST_SPACING};
     const tree={p,shapeIndex:Math.floor(rnd()*FOREST_TREE_ASSETS.length),colorIndex:Math.floor(rnd()*FOREST_CANOPY_PALETTES.summer.length),flip:rnd()<.5,scale:.8+rnd()*.4};
+    if(bounds&&(p.x<bounds.minX||p.x>bounds.maxX||p.y<bounds.minY||p.y>bounds.maxY))continue;
     if(p.x<0||p.x>WORLD||p.y<0||p.y>WORLD||!environmentContains(f,p))continue;
-    tree.z=terrainElevation(p);trees.push(tree);
+    const slope=terrainSlopeKind(p);
+    if([-1.1,0,1.1].some(dx=>[-1.1,0,1.1].some(dy=>terrainSlopeKind({x:p.x+dx,y:p.y+dy})==='steep')))continue;
+    tree.z=terrainElevation(p);tree.slope=slope;
+    if(slope==='gentle'){const density=seedRand((Math.floor(p.x*100)*73856093^Math.floor(p.y*100)*19349663^State.seed)>>>0)();if(density>.72)continue;tree.scale*=.92;}
+    trees.push(tree);
   }
   return trees;
 }
-function forestTreeLayout(f){
+function forestTreeLayout(f,bounds=null){
   ensureLandscapeRenderCaches();
   const cacheKey=forestLayoutKey(f);
-  if(forestTreeLayoutCache.has(cacheKey))return forestTreeLayoutCache.get(cacheKey);
-  if(f.continuous){const trees=continuousForestTrees(f);forestTreeLayoutCache.set(cacheKey,trees);return trees}
-  const rnd=seedRand((State.seed^biomeHash(f.id))>>>0),trees=[],target=forestTreeCount(f);
-  // Sample the actual rotated, lobed polygon's bounds, not the nominal axis
-  // radii: every cove and peninsula must be eligible for trees.
-  const bounds={minX:Infinity,maxX:-Infinity,minY:Infinity,maxY:-Infinity};
-  for(const p of f.points||[]){
-    bounds.minX=Math.min(bounds.minX,p.x);bounds.maxX=Math.max(bounds.maxX,p.x);
-    bounds.minY=Math.min(bounds.minY,p.y);bounds.maxY=Math.max(bounds.maxY,p.y);
-  }
-  if(!Number.isFinite(bounds.minX)){
-    bounds.minX=f.x-f.rx;bounds.maxX=f.x+f.rx;
-    bounds.minY=f.y-f.ry;bounds.maxY=f.y+f.ry;
-  }
-  let attempts=0;
-  while(trees.length<target&&attempts<target*12){
-    attempts++;
-    const p={x:bounds.minX+rnd()*(bounds.maxX-bounds.minX),y:bounds.minY+rnd()*(bounds.maxY-bounds.minY)};
-    if(p.x<0||p.x>WORLD||p.y<0||p.y>WORLD||!environmentContains(f,p))continue;
-    trees.push({
-      p,z:terrainElevation(p),
-      shapeIndex:Math.floor(rnd()*FOREST_TREE_ASSETS.length),
-      colorIndex:Math.floor(rnd()*FOREST_CANOPY_PALETTES.summer.length),
-      flip:rnd()<.5,
-      scale:.8+rnd()*.4
-    });
-  }
+  if(forestTreeLayoutCache.has(cacheKey)){const trees=forestTreeLayoutCache.get(cacheKey);return bounds?trees.filter(t=>t.p.x>=bounds.minX&&t.p.x<=bounds.maxX&&t.p.y>=bounds.minY&&t.p.y<=bounds.maxY):trees;}
+  // One area-based spacing for all woods, including tiny, narrow and clipped
+  // isolated patches. No per-patch minimum or nominal-radius tree quota.
+  // Placement only needs nearby canopies; consume the same RNG but defer distant terrain queries.
+  if(bounds)return continuousForestTrees(f,bounds);
+  const trees=continuousForestTrees(f);
   forestTreeLayoutCache.set(cacheKey,trees);return trees;
+}
+// Real bush sprites, independently seeded and counted from the tree grid.
+const FOREST_SHRUB_SPACING=7.5;
+function forestShrubLayout(f){
+  ensureLandscapeRenderCaches();const key=forestLayoutKey(f);
+  if(forestShrubLayoutCache.has(key))return forestShrubLayoutCache.get(key);
+  const rnd=seedRand((State.seed^biomeHash(f.id+'|shrubs'))>>>0),shrubs=[],n=Math.ceil(WORLD/FOREST_SHRUB_SPACING);
+  for(let y=0;y<n;y++)for(let x=0;x<n;x++){
+    const p={x:(x+.15+rnd()*.7)*FOREST_SHRUB_SPACING,y:(y+.15+rnd()*.7)*FOREST_SHRUB_SPACING};
+    const shrub={p,width:1.6+rnd()*.7,scale:.85+rnd()*.3,shape:Math.floor(rnd()*7),shrub:true};
+    if(p.x>WORLD||p.y>WORLD||!environmentContains(f,p))continue;
+    const r=shrub.width/2;
+    if([-r,0,r].some(dx=>[-r,0,r].some(dy=>terrainSlopeKind({x:p.x+dx,y:p.y+dy})==='steep')))continue;
+    shrub.visualScale=.45+.10*seedRand(biomeHash(State.seed+'|'+f.id+'|'+x+'|'+y+'|size'))();
+    shrub.z=terrainElevation(p);shrub.flip=!!(biomeHash(State.seed+'|'+f.id+'|'+x+'|'+y)&1);shrubs.push(shrub);
+  }
+  forestShrubLayoutCache.set(key,shrubs);return shrubs;
+}
+function drawForestShrub(shrub){
+  if(!forestTreeSpritesReady)return false; // 3D ground bake uses upright billboards instead.
+  const season=State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer';
+  const img=typeof boundaryBushSprites!=='undefined'?boundaryBushSprites[season]?.[shrub.shape]:null;
+  if(!img)return false;
+  const base=w2sRaw(shrub.p,shrub.z),width=shrub.width*(shrub.visualScale??1)*U*State.view.scale,height=width*580/920*shrub.scale;
+  ctx.save();ctx.translate(base.x,base.y);if(shrub.flip)ctx.scale(-1,1);ctx.drawImage(img,-width/2,-height*.97,width,height);ctx.restore();return true;
 }
 function forestLikelyVisible(f,pad=100){
   const p={x:Number(f.x)||0,y:Number(f.y)||0},z=terrainElevation(p),s=w2sRaw(p,z),r=wrap.getBoundingClientRect();
@@ -664,14 +726,23 @@ function forestLikelyVisible(f,pad=100){
 function drawForestMask(f){
   if(!forestLikelyVisible(f))return;
   const tier=landscapeDetailTier();
-  const trees=forestTreeLayout(f)
+  const trees=[...forestTreeLayout(f)
     .filter((_,i)=>tier===0?i%2===0:tier===1?i%4!==3:true)
-    .filter(tree=>screenPointVisibleRaw(tree.p,tree.z,50))
+    .filter(tree=>screenPointVisibleRaw(tree.p,tree.z,50)),...forestShrubLayout(f).filter(b=>screenPointVisibleRaw(b.p,b.z,30))]
     .slice()
     .sort((a,b)=>w2sRaw(a.p,a.z).y-w2sRaw(b.p,b.z).y);
-  let drawn=0;
-  for(const tree of trees)if(drawTree(tree))drawn++;
-  if(window.__conquerPerf)window.__conquerPerf.forestTrees=(window.__conquerPerf.forestTrees||0)+drawn;
+  let drawn=0,shrubsDrawn=0;
+  const occluders=forestTreeOccluders();
+  for(const tree of trees){
+    const base=w2sRaw(tree.p,tree.z),depth=w2sRaw(tree.p,0).y,size=tree.shrub?tree.width*(tree.visualScale??1)*U*State.view.scale:Math.max(10,U*State.view.scale*2.25*tree.scale);
+    ctx.save();
+    for(const f of occluders){
+      if(f.depth<=depth+.5||f.b.maxX<base.x-size/2||f.b.minX>base.x+size/2||f.b.maxY<base.y-size||f.b.minY>base.y)continue;
+      ctx.beginPath();ctx.rect(-1e5,-1e5,2e5,2e5);f.poly.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.clip('evenodd');
+    }
+    if(tree.shrub){if(drawForestShrub(tree))shrubsDrawn++;}else if(drawTree(tree))drawn++;ctx.restore();
+  }
+  if(window.__conquerPerf){window.__conquerPerf.forestTrees=(window.__conquerPerf.forestTrees||0)+drawn;window.__conquerPerf.forestShrubs=(window.__conquerPerf.forestShrubs||0)+shrubsDrawn;}
 }
 
 function ellipseWorldPoints(f,n=28){
@@ -679,32 +750,71 @@ function ellipseWorldPoints(f,n=28){
   for(let i=0;i<n;i++){const a=i/n*Math.PI*2,x=Math.cos(a)*f.rx,y=Math.sin(a)*f.ry;pts.push({x:f.x+x*ca-y*sa,y:f.y+x*sa+y*ca})}
   return pts;
 }
+// Draw all water outlines before any water fill: shared interiors are covered by the union.
+function lakeShoreBands(f){
+  if(f.type!=='pond'||!['lake','marsh'].includes(f.waterBodyKind)&&State.biome!=='lake')return [];
+  const marsh=f.waterBodyKind==='marsh',landWidth=marsh?1.1:2.8,wetWidth=marsh?.35:.65;
+  return [f.points,...(f.holes||[])].filter(r=>r?.length>=3).flatMap(ring=>{
+    const land=[],wet=[];
+    for(let i=0;i<ring.length;i++){
+      const a=ring[(i+ring.length-1)%ring.length],b=ring[(i+1)%ring.length],p=ring[i],L=Math.hypot(b.x-a.x,b.y-a.y)||1;
+      let nx=-(b.y-a.y)/L,ny=(b.x-a.x)/L;
+      if(!environmentContains(f,{x:p.x+nx*.8,y:p.y+ny*.8})){nx=-nx;ny=-ny;}
+      land.push({x:p.x-nx*landWidth,y:p.y-ny*landWidth});wet.push({x:p.x+nx*wetWidth,y:p.y+ny*wetWidth});
+    }
+    const bands=[];
+    for(let i=0;i<ring.length;i++){
+      const j=(i+1)%ring.length,a=ring[i],b=ring[j];
+      if(a.x===b.x&&(a.x===0||a.x===WORLD)||a.y===b.y&&(a.y===0||a.y===WORLD))continue;
+      const poly=clipTerrainPolygon([land[i],land[j],wet[j],wet[i]]);if(poly.length>=3)bands.push(poly);
+    }
+    return bands;
+  });
+}
+function drawWaterLayer(features){
+  if(!features.length)return;
+  ctx.save();
+  for(const f of features)for(const band of lakeShoreBands(f))pathPolygon(projectPath(band),f.waterBodyKind==='marsh'?MARSH_WATER.bank:'#b9ac82',null,0);
+  if(features.some(f=>f.type==='sea'&&f.coastline))window.ConquerCoast?.drawGround(projectPath,(pts,c)=>pathPolygon(pts,c,null,0));
+  const body=(f,fill)=>{
+    ctx.save();for(const hole of f.holes||[]){const ring=projectPath(hole);ctx.beginPath();ctx.rect(-1e5,-1e5,2e5,2e5);ring.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.clip('evenodd')}
+    pathPolygon(projectPath(f.points),fill?f.fill:null,fill?null:f.edge,1.2);
+    if(fill&&f.waterBodyKind==='marsh'){
+      const ring=projectPath(f.points);ctx.beginPath();ring.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.clip();
+      const b=environmentPolygonBounds(f.points),rnd=seedRand((State.seed^biomeHash(f.id+':algae'))>>>0);ctx.globalAlpha=.32;
+      for(let y=b.minY+1;y<b.maxY;y+=4)for(let x=b.minX+1;x<b.maxX;x+=4){
+        const c={x:x+(rnd()-.5)*3,y:y+(rnd()-.5)*3};if(rnd()>.42||!environmentContains(f,c))continue;
+        const rx=.6+rnd()*1.1,ry=.4+rnd()*.7,patch=Array.from({length:9},(_,i)=>({x:c.x+Math.cos(i*Math.PI*2/9)*rx,y:c.y+Math.sin(i*Math.PI*2/9)*ry}));
+        pathPolygon(projectPath(patch),MARSH_WATER.algae,null,0);
+      }
+    }
+    ctx.restore();
+  };
+  const course=(f,fill)=>{
+    const pts=f.points.map(p=>w2s(p));if(!pts.length)return;
+    ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);
+    ctx.strokeStyle=fill?f.fill:f.edge;ctx.lineWidth=fill?Math.max(1.4,f.width*U*State.view.scale*.72):Math.max(2,(f.width+.35)*U*State.view.scale*.72);ctx.stroke();
+  };
+  for(const fill of [false,true])for(const f of features){
+    if(f.type==='river'||f.type==='stream')course(f,fill);else body(f,fill);
+  }
+  ctx.restore();
+}
 function drawEnvironment(){
-  if(window.__conquerPerf)window.__conquerPerf.forestTrees=0;
+  if(window.__conquerPerf){window.__conquerPerf.forestTrees=0;window.__conquerPerf.forestShrubs=0;}
   // Peaks overlap (main summits and their secondary ones): paint far to near, or by height in plan.
   const depth=f=>isPlanView()?(f.height||3.6):w2sRaw({x:f.x,y:f.y},0).y;
   const mountains=State.environment.filter(f=>f.type==='mountain').sort((a,b)=>depth(a)-depth(b));
   const ordered=[...State.environment.filter(f=>f.type!=='mountain'),...mountains];
   for(const f of ordered){
     ctx.save();
-    if(['stream','river'].includes(f.type)){
-      const pts=f.points.map(p=>w2s(p));ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);
-      ctx.strokeStyle=f.edge;ctx.lineWidth=Math.max(2,(f.width+.35)*U*State.view.scale*.72);ctx.stroke();ctx.strokeStyle=f.fill;ctx.lineWidth=Math.max(1.4,f.width*U*State.view.scale*.72);ctx.stroke();
-    }else if(['forest','pond','sea'].includes(f.type)){
-      if(f.type==='forest'){
-        if(!forestLikelyVisible(f)){ctx.restore();continue}
-        drawForestGround(f);
-        drawForestMask(f);
-      }else{
-        const pts=projectPath(f.points);pathPolygon(pts,f.fill,f.edge,1.2);
-      }
-      if(f.type==='sea'&&f.coastline){
-        // Beaches in the bays, rocks on the headlands (settlement-coast.js).
-        window.ConquerCoast?.drawGround(projectPath,(pts,c)=>pathPolygon(pts,c,null,0));
-        const coast=projectPath(f.coastline);ctx.beginPath();coast.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.strokeStyle='#b9cfca';ctx.lineWidth=2;ctx.stroke();
-      }
+    if(['stream','river','sea','pond'].includes(f.type)){
+      // Water is rendered once below, as one connected layer.
+    }else if(f.type==='forest'){
+      if(!forestLikelyVisible(f)){ctx.restore();continue}
+      drawForestGround(f);
     }else if(f.type==='mountain'){
-      pathPolygon(projectPath(f.points),f.fill,f.edge,1.2);drawRaisedFan(f,f.height||3.6);
+      // Peaks are painted after the unified water layer, preserving occlusion.
     }else if(['hill','rough'].includes(f.type)){
       const pts=ellipseWorldPoints(f);pathPolygon(projectPath(pts),f.fill,f.edge,1.1);
       if(f.type==='hill'){
@@ -714,6 +824,9 @@ function drawEnvironment(){
     }
     ctx.restore();
   }
+  drawWaterLayer(State.environment.filter(f=>['river','stream','sea','pond'].includes(f.type)));
+  for(const f of State.environment.filter(f=>f.type==='forest'))drawForestMask(f);
+  for(const f of mountains){pathPolygon(projectPath(f.points),f.fill,f.edge,1.2);drawRaisedFan(f,f.height||3.6);}
 }
 function drawGrid(){
   if(State.view.scale<.34)return;ctx.save();ctx.strokeStyle='rgba(255,255,255,.045)';ctx.lineWidth=1;

@@ -47,7 +47,7 @@ assert.match(landscape,/trunk='#2B1D16'/,'mountain pines use same dark bark');
 assert.match(landscape,/fetch\(path\+'\?v=bark1'\)/,'forest SVG loads are cache-busted');
 assert.match(boundaries,/name\+'\?v=bark1'/,'hedge SVG loads are cache-busted');
 assert.match(html,/settlement-landscape\.js\?v=[^"]+-bark1/,'landscape renderer is cache-busted');
-assert.match(html,/settlement-boundaries\.js\?v=bark1/,'hedge renderer is cache-busted');
+assert.match(html,/settlement-boundaries\.js\?v=[^"\s]*bark1/,'hedge renderer is cache-busted');
 assert.match(world3d,/add\(forestTreeSprites\.summer\)/,'WebGL2 shares tree sprites');
 assert.match(world3d,/boundaryBushSprites/,'WebGL2 shares bush sprites');
 console.log('PASS: 14 SVGs, pine bark, 3-season bushes, winter and shared Canvas/WebGL2 sprites');
