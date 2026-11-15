@@ -1,7 +1,7 @@
 {
  "version": 1,
  "generatedAt": "2026-11-12T15:42:06.228749+00:00",
- "note": "Reviewed 2026-11-15 postmerge audit: Territorio 16 unchanged renders, zero failures, five schematic warnings; eight real regional scenes reviewed after canopy and drainage fixes. Full audit 1612 renders has zero failures but 157 warnings, 12 new, 543 changed and two historical missing IDs: pending reconciliation, not accepted. Existing signatures and waiver preserved. See docs/context/POSTMERGE-REGRESSION-2026-11-15.md.",
+ "note": "Reviewed 2026-11-15 shore relief fix: Territorio 16 unchanged renders, zero failures, five schematic warnings; five before/after coastal scenes and real WebGL bake pixels verified. Existing signatures and waiver preserved; unrelated full-audit differences remain pending reconciliation. See docs/context/SHORE-RELIEF-FIX-2026-11-15.md.",
  "waivers": {
   "castle:pietra-quadrata-piccola-l2-latrina|damage-elemento-esterno-crollato|sagoma-conservata": "Falso positivo: la torre resta integra, le macerie dello sbalzo a terra allargano l'inquadratura e la torre risulta più piccola (rivisto nel foglio il 05/11/2026)."
  },

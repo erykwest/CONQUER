@@ -63,6 +63,12 @@
 **Riferimenti:** D-MP-PUBLIC-261115 e [scope multiplayer §3](../MULTIPLAYER-SERVER-SCOPE.md#3-lobby-e-scoperta-delle-partite). **Solo decisione documentale, nessun codice modificato.**
 
 
+### 2026-11-15 — Spiaggia sotto le scarpate (branch fix/coastal-cliff-beach-20261115)
+
+- Corretto l'ordine del disegno: sabbia e sponde di mare/lago/acquitrinio precedono i rilievi; acqua e confluenze conservano il proprio passaggio successivo. Stesso percorso per Canvas e texture WebGL. Ricette, larghezze e quote invariate.
+- Nuova regressione sul percorso reale terreno/ambiente: prima FAIL (sabbia sulla scarpata), dopo PASS in 16 combinazioni mare/lago, quattro rotazioni, isometria/vista dall'alto. Pixel della texture WebGL verificati; cinque snapshot costieri prima/dopo e cinque scenari idrici PASS. Lab Territorio: 16 invariati, zero errori, cinque avvisi di schema.
+- Implementato solo sul branch, non mergiato; CI da verificare sul commit pubblicato. [Prove e riproduzione](SHORE-RELIEF-FIX-2026-11-15.md). Roadmap e decisioni invariate: applicazione del contratto esistente di rilievo.
+
 ### 2026-11-15 — Audit post-merge regionale, correzioni su branch
 
 - Merge autorizzato dall'utente: integrato main `1c27aeb` (torre a D), con soli conflitti documentali uniti. Precedente CI `5854c03`: 14 workflow PASS; nuovi controlli da verificare prima del merge definitivo. Restano aperti latenza locale e quota collinare costiera.

@@ -23,6 +23,7 @@ on:
       - 'qa/biome-selector-regression.cjs'
       - 'qa/regional-boundary-drainage-regression.cjs'
       - 'qa/water-surface-regression.cjs'
+      - 'qa/shore-relief-occlusion-regression.cjs'
       - 'src/settlement-landscape.js'
       - 'src/settlement-coast.js'
       - 'qa/marsh-regression.cjs'
@@ -57,6 +58,7 @@ jobs:
           for file in src/*.js qa/*.cjs; do node --check "$file"; done
       - name: Run sea coverage and pier regressions
         run: |
+          node qa/shore-relief-occlusion-regression.cjs
           node qa/forest-canopy-query-regression.cjs
           node qa/biome-selector-regression.cjs
           node qa/regional-boundary-drainage-regression.cjs
