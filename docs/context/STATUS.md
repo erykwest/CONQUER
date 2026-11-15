@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-15 — Microfix: Rimuovi foresta usa i bypass DEV
+
+- Branch fix/microfix. Fast build DEV completa il job L1 di rimozione foresta al momento del clic (alberi tolti, legname accreditato, nessuna squadra né villaggio fondato richiesti) e, quando viene acceso, chiude anche i job in coda (ConquerForestry.applyDev). Free build DEV fa lavorare la squadra senza salari. Il terraforming (Sloped/Walled/Flat) era già istantaneo e gratuito: nessuna modifica.
+- Versioni ?v= in index.html aggiornate (-mfix1) per tutti gli script toccati dai microfix, così il browser non usa copie in cache.
+- PASS forestry (9, tre nuovi casi DEV) e regressioni cutaway/persone; verificato nel browser col clic reale: foresta rimossa subito con il messaggio «Fast build DEV: foresta rimossa». CI da eseguire.
+
 ### 2026-11-15 — Microfix: fedeli alla messa nel cutaway della chiesa
 
 - Branch fix/microfix. La domenica 6:00–12:00, senza allarme, il cutaway del piano terra della chiesa selezionata mostra i popolani seduti sui banchi della navata (circa 3 posti su 4, estrazione fissa per chiesa), oltre al prete all'altare. Prima c'era solo il prete. Figure decorative: nessun legame con residenti, offerte o capienza.

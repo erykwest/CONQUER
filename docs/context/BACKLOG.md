@@ -4,6 +4,7 @@
 
 - [x] Cutaway della chiesa: fedeli seduti sui banchi la domenica 6:00–12:00 (ConquerCivic3D.massSlots, ConquerCourtPeople.massInSession).
 - [ ] Proposta: legare il numero di fedeli ai residenti serviti (ConquerChurch.servedShare) quando arriverà la messa di CHIESA-01 fase 3.
+- [x] Rimuovi foresta rispetta Fast build (istantaneo) e Free build (senza salari) del menu DEV.
 - [x] Cutaway piano per piano: i merli (e caditoie, tetto interno, braciere) spariscono quando il piano in vista non è l'ultimo.
 
 ### 2026-11-15 — FIELD-LEND preservato nel merge regionale
