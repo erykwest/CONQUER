@@ -139,6 +139,14 @@
     window.ConquerAnimals?.drawAnimal?.('horse',ctx,sc.x,sc.y,size,{t:t*34*.12,seed,facing,mode,blend:mode==='browse'?.86:0});
     if(barding)caparison(sc,size,facing,barding,mode==='run'?t:0);
   }
+  // World3D: the same horse as a card in its body capsule, the caparison painted on the card.
+  // g = the ground's absolute height (the card's z is relative to the terrain under the horse).
+  function horseCard(p,g,mode,heading,seed,t,barding,id){
+    const A=window.ConquerAnimals;if(!A?.card||!window.ConquerWorld3D?.active?.())return false;
+    const z=g+.07-(typeof terrainElevation==='function'?terrainElevation(p):0);
+    return A.card('horse',p,z,{id,mode,t:t*34*.12,seed,heading,facing:screenFacing(p,heading),blend:mode==='browse'?.86:0,
+      overlayKey:barding?JSON.stringify(barding):'',overlay:barding?(g2,o)=>caparison(o,o.size,1,barding,mode==='run'?o.t:0):null});
+  }
   // Caparison over the 2D horse, in the horse art's own frame (cavallo_esteso.svg:
   // body y 92..188, ground centre 134,246, scale 1.9): a cloth parted in the two
   // colours of the knight, falling over the upper legs, with a gold hem.
@@ -165,6 +173,10 @@
     const g=Number.isFinite(s.groundZ)?s.groundZ:(typeof terrainElevation==='function'?terrainElevation(s):0);
     const list=[];
     const stride=State.view.scale<.3?3:State.view.scale<.5?2:1;
+    // World3D: people and horses are depth-tested cards in their capsules (vertical for people,
+    // along the body for horses), hidden by the stands and the tilt by their real depth.
+    const H=window.ConquerEventPeople?.helpers,cards=!!H?.cards?.();
+    const bucket=(v,n)=>Math.round(Math.max(0,Math.min(1,v||0))*n);
     // Spectators: seated, swaying; on the clash they jump up with their arms raised.
     for(const q of sc.spectators){
       if(stride>1&&hash(q.id)%stride)continue;
@@ -172,12 +184,33 @@
       const ph=hash(q.id)%628/100,c=TUNICS[hash(q.id)%TUNICS.length],kind=KINDS[hash(q.id+'k')%KINDS.length];
       const excite=sc.cheer*(.6+.4*((hash(q.id+'e')%100)/100));
       const hop=.012*Math.sin(clock*1.6+ph)+excite*.07*Math.abs(Math.sin(clock*11+ph));
+      if(cards){const arms=bucket(excite,4);
+        if(H.card(p,q.z+g-.12+hop,'jo|sp|'+kind+'|'+c.join(',')+'|'+q.id+'|'+arms,()=>{const f=figureAt(p,0,q.id,kind,c,0);armsUp(f,arms/4)},q.id))continue}
       list.push({p,draw:()=>{const f=figureAt(p,q.z+g-.12,q.id,kind,c,hop);armsUp(f,excite)}});
     }
     // Knights, riderless horses, unhorsed knights.
     sc.knights.forEach((k,i)=>{
       const seed=(hash(seedOf(s)+k.who)%900)+50,livery=liveryOf(s,k.who);
       const hp=W(k.horse.x,k.horse.y),head=dirW(k.horse.heading,0),id='knight-'+k.who;
+      if(cards&&horseCard(hp,g,k.horse.mode,head,seed,clock,livery,id)){
+        if(k.rider){
+          const rp=W(k.rider.x,k.rider.y),f=screenFacing(rp,head),L=JSON.stringify(livery);
+          H.card(rp,g+k.rider.z,'jo|rider|'+L+'|'+f,()=>{
+            drawSoldierFigureUnmasked(rp,0,'unarmed',id,0,livery);
+            const b=w2s(rp,0),sc=State.view.scale*.5;
+            drawQuarteredShield(b.x-2.6*sc*f,b.y-4.2*sc,2.7*sc,3.6*sc,livery,'#b7aa8f',sc,false)},id+':rider');
+          // The lance stays a 2D stroke between its two world points.
+          if(k.lance){const a=W(k.lance.from.x,k.lance.from.y),b=W(k.lance.tip.x,k.lance.tip.y);
+            list.push({p:hp,draw:()=>lanceLine({...a,z:g+k.lance.from.z},{...b,z:g+k.lance.tip.z},State.view.scale)})}
+        }
+        if(k.fallen){
+          const fp=W(k.fallen.x,k.fallen.y),f=screenFacing(fp,dirW(1,0)),rot=Math.round(k.fallen.rot*f*8)/8;
+          H.card(fp,g+k.fallen.z,'jo|fallen|'+JSON.stringify(livery)+'|'+rot,()=>{
+            const foot=w2s(fp,0);ctx.save();ctx.translate(foot.x,foot.y);ctx.rotate(rot);ctx.translate(-foot.x,-foot.y);
+            drawSoldierFigureUnmasked(fp,0,'unarmed',id,0,livery);ctx.restore()},id+':fallen');
+        }
+        return;
+      }
       list.push({p:hp,draw:()=>{
         horse(hp,k.horse.mode,head,seed,clock,livery);   // barded in the knight's colours
         if(k.rider){
@@ -202,8 +235,16 @@
     // Squires and grooms getting the next bout ready.
     for(const q of sc.squires){
       const p=W(q.p.x,q.p.y);
-      if(q.kind==='horse'){const h=dirW(q.heading,0);list.push({p,draw:()=>horse(p,q.mode,h,hash(q.id)%900,clock)});continue}
+      if(q.kind==='horse'){const h=dirW(q.heading,0);
+        if(cards&&horseCard(p,g,q.mode,h,hash(q.id)%900,clock,null,q.id))continue;
+        list.push({p,draw:()=>horse(p,q.mode,h,hash(q.id)%900,clock)});continue}
       const c=TUNICS[hash(q.id)%TUNICS.length],bob=q.walking?.015*Math.abs(Math.sin(clock*6+hash(q.id)%7)):0;
+      if(cards){const liv=q.carry==='shield'?liveryOf(s,hash(q.id)&1?'A':'B'):null;
+        if(H.card(p,g+.1+bob,'jo|sq|'+c.join(',')+'|'+q.id+'|'+(q.carry||''),()=>{
+          const f=figureAt(p,0,q.id,'peasant',c,0);
+          if(q.carry==='lance'){ctx.save();ctx.strokeStyle='#5a3d22';ctx.lineWidth=Math.max(1,f.scale*1.1);
+            ctx.beginPath();ctx.moveTo(f.base.x-f.bodyH*.35,f.bodyY+f.bodyH*.3);ctx.lineTo(f.base.x+f.bodyH*.9,f.bodyY-f.bodyH*2.2);ctx.stroke();ctx.restore()}
+          else if(liv)drawQuarteredShield(f.base.x+f.bodyH*.42,f.bodyY,f.bodyH*.32,f.bodyH*.42,liv,'#b7aa8f',f.scale,false)},q.id))continue}
       list.push({p,draw:()=>withUrbanFigureOcclusion(p,.1,()=>{
         const f=figureAt(p,g+.1,q.id,'peasant',c,bob);
         if(q.carry==='lance'){
@@ -215,7 +256,7 @@
       })});
     }
     // Balustrades, hangings and backrests in front of a spectator cover him (people.js).
-    for(const o of window.ConquerEventPeople?.occluderItems?.(s)||[])list.push(o);
+    if(!cards)for(const o of window.ConquerEventPeople?.occluderItems?.(s)||[])list.push(o);
     for(const it of list)it.d=viewDepthPoint(it.p);   // once per item, not per comparison
     list.sort((a,b)=>a.d-b.d);
     const P=window.ConquerEventPeople;

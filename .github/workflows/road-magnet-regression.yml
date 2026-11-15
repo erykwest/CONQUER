@@ -13,7 +13,9 @@ on:
       - 'src/settlement-placement.js'
       - 'src/settlement-castle-placement.js'
       - 'src/settlement-app-input.js'
+      - 'src/settlement-app.js'
       - 'qa/bridge-road-magnet-regression.cjs'
+      - 'qa/wall-road-gate-regression.cjs'
       - 'qa/linear-magnet-regression.cjs'
       - '.github/workflows/road-magnet-regression.yml'
   workflow_dispatch:
@@ -32,9 +34,10 @@ jobs:
           node-version: '22'
       - name: Check affected scripts
         run: |
-          for file in src/settlement-world.js src/settlement-placement.js src/settlement-castle-placement.js src/settlement-app-input.js; do node --check "$file"; done
+          for file in src/settlement-world.js src/settlement-placement.js src/settlement-castle-placement.js src/settlement-app-input.js src/settlement-app.js; do node --check "$file"; done
       - name: Bridge, gate and wall magnets
         run: |
           node qa/bridge-road-magnet-regression.cjs
           node qa/linear-magnet-regression.cjs
           node qa/builder-placement-regression.cjs
+          node qa/wall-road-gate-regression.cjs

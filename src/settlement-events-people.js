@@ -365,6 +365,17 @@
     window.ConquerAnimals?.drawAnimal?.('horse',ctx,sc.x,sc.y,size,{t:t*34*.12,seed,facing:screenFacing(p,heading),mode,blend:mode==='browse'?.86:0});
   }
   const groundOf=s=>Number.isFinite(s.groundZ)?s.groundZ:(typeof terrainElevation==='function'?terrainElevation(s):0);
+  // World3D: figures are depth-tested cards in their capsule (settlement-world3d.js figure()), so
+  // stands, stages, balustrades and the works of justice hide them by their real depth. Returns
+  // false outside a 3D frame: the caller paints in 2D (with its own occluder repaint or clip).
+  // z is absolute; key holds everything that changes the picture (continuous values bucketed).
+  const cards=()=>!!window.ConquerWorld3D?.active?.()&&!!window.ConquerWorld3D.figure;
+  function card(p,z,key,paint,id){
+    if(!cards())return false;
+    const ground=typeof terrainElevation==='function'?terrainElevation(p):0;
+    return window.ConquerWorld3D.figure(p,z-ground,key,paint,id);
+  }
+  const bucket=(v,n)=>Math.round(Math.max(0,Math.min(1,v||0))*n);
   // Draw a list of actors {id, x, y, z, action, hop, arms, juggle, fade} of a venue.
   function drawActors(s,actors,t){
     const g=groundOf(s),stride=State.view.scale<.3?3:State.view.scale<.5?2:1,list=[];
@@ -377,10 +388,23 @@
       const walk=a.action==='walk'?.015*Math.abs(Math.sin(t*6+hash(a.id)%7)):0;
       if(a.fighter){
         // A combatant: the soldier figure with shield and sword, in a pair of primaries.
-        const P=E().PAIRS,[m1,m2]=P[hash(seedOf(s)+'|'+a.id)%P.length];
-        list.push({p,draw:()=>drawSoldierFigureUnmasked(p,g+.1,'swordsman',a.id,a.swing,{main:m1,alt:m2,mainDark:m1,altDark:m2})});
+        const P=E().PAIRS,[m1,m2]=P[hash(seedOf(s)+'|'+a.id)%P.length],liv={main:m1,alt:m2,mainDark:m1,altDark:m2};
+        const swing=Math.floor(((a.swing%1)+1)%1*8)/8;
+        if(card(p,g+.1,'ev|fight|'+m1+m2+'|'+swing,()=>drawSoldierFigureUnmasked(p,0,'swordsman',a.id,swing,liv),a.id))continue;
+        list.push({p,draw:()=>drawSoldierFigureUnmasked(p,g+.1,'swordsman',a.id,a.swing,liv)});
         continue;
       }
+      // Card: the hop lifts the card (not the picture); arms and juggling are bucketed poses.
+      if(!(a.fade<.5)){
+        const arms=bucket(a.arms,4),jug=a.juggle?Math.floor(((t*1.4)%1)*8):-1;
+        const key='ev|'+kind+'|'+c.join(',')+'|'+a.id+'|'+arms+'|'+jug+'|'+(a.carry||'');
+        if(card(p,z+(a.hop||0)+walk,key,()=>{
+          const f=figureAt(p,0,a.id,kind,c,0);armsUp(f,arms/4);if(a.juggle)juggle(f,(jug+.5)/8/1.4);
+          if(a.carry==='lance'){
+            ctx.strokeStyle='#5a3d22';ctx.lineWidth=Math.max(1,f.scale*1.1);
+            ctx.beginPath();ctx.moveTo(f.base.x-f.bodyH*.35,f.bodyY+f.bodyH*.3);ctx.lineTo(f.base.x+f.bodyH*.9,f.bodyY-f.bodyH*2.2);ctx.stroke();
+          }},a.id))continue;
+      }else if(cards())continue;   // fading out at the big top's door: gone in the card renderer
       list.push({p,draw:()=>{
         ctx.save();if(a.fade!==undefined&&a.fade<1)ctx.globalAlpha*=Math.max(0,a.fade);
         const f=figureAt(p,z,a.id,kind,c,(a.hop||0)+walk);armsUp(f,a.arms||0);if(a.juggle)juggle(f,t);
@@ -406,12 +430,13 @@
         sc=setup==='feast'?feastScene(s,t):setup==='circus'?circusScene(s,t):setup==='joust'?null:venueScene(s,t);   // tourney, camp, theatre
       }else sc=venueScene(s,t);                       // arena lot, stage, podium: always lived in
       if(!sc)continue;
-      const list=drawActors(s,sc.actors,t).concat(occluderItems(s));
+      // The occluder repaint is only for 2D figures: cards are hidden by the stands' depth.
+      const list=drawActors(s,sc.actors,t).concat(cards()?[]:occluderItems(s));
       for(const it of list)it.d=viewDepthPoint(it.p);   // once per item, not per comparison
       list.sort((a,b)=>a.d-b.d);
       paintList(list);
     }
   }
   window.ConquerEventPeople={slots,occupants,setOccupancySource,provisional,feastScene,circusScene,venueScene,DUEL,draw,occluders,occluderItems,paintList,
-    helpers:{hash,figureAt,armsUp,horse,screenFacing,TUNICS,KINDS,groundOf,tick:()=>tick(),clock:()=>clock}};
+    helpers:{hash,figureAt,armsUp,horse,screenFacing,TUNICS,KINDS,groundOf,card,cards,bucket,tick:()=>tick(),clock:()=>clock}};
 })();

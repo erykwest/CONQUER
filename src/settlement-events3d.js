@@ -115,7 +115,7 @@
       {m:'propBunting',x:-6.0,y:6.6,a:0},{m:'propBunting',x:6.0,y:6.6,a:0}]}
   };
   const SHOWN_PHASES=new Set(['preparing','active','clearing']);
-  const GROUND=['#7f9a55','#6c8648'];
+  const GROUND='#8a7656';   // border of trodden earth round the festival ground
 
   const is=s=>s?.type==='eventVenue'&&!!VENUES[s.venue];
   const sizeOf=s=>s.venue==='armyCamp'?{w:Number(s.w)||VENUES.armyCamp.w,h:Number(s.h)||VENUES.armyCamp.h}:s.venue==='festivalGround'?{w:Number(s.w)||VENUES.festivalGround.w,h:Number(s.h)||VENUES.festivalGround.h}:{w:VENUES[s.venue].w,h:VENUES[s.venue].h};
@@ -288,16 +288,17 @@
     return[[-w/2,-h/2],[w/2,-h/2],[w/2,h/2],[-w/2,h/2]].map(([x,y])=>({x:s.x+x*c-y*sn,y:s.y+x*sn+y*c}));
   }
   const toWorld=(s,x,y)=>{const a=s.angle||0,c=Math.cos(a),sn=Math.sin(a);return{x:s.x+x*c-y*sn,y:s.y+x*sn+y*c}};
-  // The idle festival ground: a green pad with a darker border, painted first.
+  // The festival ground: no fill of its own (the terrain shows through, no green pad), only a
+  // thin border of trodden earth marking the lot, painted first.
   function groundMesh(s,z){
     const {w,h}=sizeOf(s),pos=[],col=[];
     const quad=(x0,y0,x1,y1,dz,colour)=>{
       const q=[toWorld(s,x0,y0),toWorld(s,x1,y0),toWorld(s,x1,y1),toWorld(s,x0,y1)];
       for(const t of [[0,1,2],[0,2,3]]){for(const i of t)pos.push(q[i].x,q[i].y,z+dz);col.push(colour)}
     };
-    const e=.12;
-    quad(-w/2,-h/2,w/2,h/2,.006,GROUND[1]);
-    quad(-w/2+e,-h/2+e,w/2-e,h/2-e,.012,GROUND[0]);
+    const e=.12,W=w/2,H=h/2;
+    quad(-W,-H,W,-H+e,.006,GROUND);quad(-W,H-e,W,H,.006,GROUND);
+    quad(-W,-H+e,-W+e,H-e,.006,GROUND);quad(W-e,-H+e,W,H-e,.006,GROUND);
     return{pos,col,gi:col.map(()=>0),groups:[[s.x,s.y,z]],groupBias:[-2e6]};   // under the models' own ground parts (arena sand)
   }
   function groundZ(s){

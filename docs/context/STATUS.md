@@ -1,5 +1,26 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-15 — Mura ad angolo libero (branch `fix/wall-free-angle`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `settlement-castle-placement.js`: `normalizeStructuralLinearRoute` non aggancia più muro, palizzata e sezione costruita al reticolo di 24 direzioni (15°) e non crea più il gomito automatico a due tratti verso un magnete. Il tratto va dritto dal punto A al punto B (o al magnete, raggiunto esattamente); oltre la lunghezza massima, fino a 2× max, due tratti collineari uguali. `rotationStep` resta solo se l'angolo cade sul reticolo, altrimenti `null` (stessa regola della migrazione dei salvataggi). Torri, porte ed edifici puntuali conservano la rotazione a 15°.
+  - `settlement-app-input.js`: messaggi di stato senza «15°» (mostra l'angolo reale del tratto), con la nota delle porte su strada di WALL-ROAD-GATE (#246) conservata nel merge.
+  - `qa/wall-road-gate-regression.cjs`: usa `freeLinearSegment` (ex `discreteLinearSegment`) e un caso nuovo, muro a ~19,8° che attraversa una strada principale: porta posata, due pezzi seduti sui fianchi.
+- **PROVE LOCALI PASS:** le 28 `qa/*.cjs` che toccano il piazzamento lineare (tra cui linear-magnet, wall-bays, lean-to, pier, oriented-towers) e builder-placement. Nel browser (`main` + branch): muro a 18,97° e secondo muro a −125,91° agganciato esattamente all'estremità libera del primo, un solo tratto, nessun errore in console.
+
+### 2026-11-15 — Figure di eventi e giustizia nel capsuloide; campo eventi senza fondo verde (`feature/figure-capsules-events`)
+
+- **CODICE SUL BRANCH (estende D-CAPSULE-261113):** in World3D le figure di `settlement-events-people.js` (sagra, circo, arena, palco, podio, accampamenti; combattenti con `drawSoldierFigureUnmasked` in carta), `settlement-events-joust.js` (spettatori, scudieri, cavaliere e scudo, caduto ruotato; cavalli con `ConquerAnimals.card` e gualdrappa come `overlay`), `settlement-court-people.js` (gogna, forca, patibolo, tribunale, personale delle sale civiche) e `settlement-staff-people.js` (personale delle stanze del castello in cutaway, via `drawWorker`/`drawVillagerFigure`) sono carte con capsula. Gesti e braccia in 4–5 pose, salto e oscillazione come quota della carta, chi sparisce alla porta del circo non è disegnato. In World3D niente ridipintura degli occlusori delle tribune e niente ritaglio con la sagoma dell'opera. Restano 2D: prigionieri dietro le sbarre, lancia della giostra, renderer 2D.
+- **CAMPO EVENTI:** `groundMesh` di `settlement-events3d.js` non ha più il fondo verde: solo un bordo sottile in terra battuta (`#8a7656`, quattro strisce).
+- **PROVE LOCALI PASS:** nuova `qa/event-figure-cards-browser.mjs` (forca, gogna e patibolo in sessione, palco, giostra: chiavi delle carte, capsula orizzontale dei cavalli, ripiego 2D; primi piani in `output/playwright/event-figure-cards/`), aggiunta al workflow Main fixes; `figure-billboards`, `animal-capsule`, `vehicle-cards` browser; 24 regressioni node (eventi, giostra, tribunale, crimine, cutaway, personale, botteghe, animali, veicoli), `events3d-regression` aggiornata al bordo. Audit Lab completo: nessuna voce degli eventi cambiata (le 178 «cambiate» sono torri, mura, porte e vegetazione, già diverse dalla baseline su main).
+
+
+### 2026-11-15 — WALL-ROAD-GATE: porta automatica dove un muro incrocia una strada principale
+
+- Tirando un muro o una palizzata che incrocia una strada principale (manuale, arteriale, del pozzo o della porta), sull'incrocio nasce un cantiere porta del tipo corrispondente e il muro si taglia sui due fianchi della porta (`wallRoadGatePlan` in `settlement-castle-placement.js`, usato da `commitStructuralLinearRoute` e dall'anteprima). Palizzata → porta in legno; muro pietra/argilla W1 → porta piccola, W2-W3 → porta grande; la muratura segue il muro.
+- La porta guarda l'esterno del muro con l'androne perpendicolare al muro; se la strada è troppo obliqua (>32°) si gira lungo la strada. Se la porta non è piazzabile (pendio, bosco, collisione) l'intera tratta è bloccata con il motivo. Un incrocio già coperto da una porta esistente non ne crea un'altra.
+- `manualRoadConflict`: l'estremo di un muro appoggiato a una porta non taglia la strada che passa nel suo androne (prima un'arteriale auto veniva rimossa e rideviata).
+- PASS locale `qa/wall-road-gate-regression.cjs` (6), gate-roads, bridge-road-magnet, linear-magnet, builder-placement, wall-bays, wall-slope, urban, small-gate, gate-breach. Verificato nel gioco con input reale (palizzata, W1 pietra, W3 argilla). CI da verificare; nessun merge in main.
 ## 2026-11-15 — Pattuglie sulle mura per giro (branch `fix/wall-patrol-rings`, MIL-WALL-01)
 
 - **CODICE SUL BRANCH, NON MERGE:** nuovo `src/settlement-wall-patrols.js` (`ConquerWallPatrols`). Un giro di mura è un componente connesso del cammino di ronda (`ConquerWallWalk.graph()`): mura T2+ e palizzate unite testa a testa o attraverso torri e porte. Le pattuglie non sono più figure per segmento (prima T2 = 1, T3 = 2 per tratto): ogni pattuglia è di 2 soldati della Caserma che percorrono tutto il giro, in fila, distribuite a distanze uguali; giro chiuso in tondo, aperto o con diramazioni avanti e indietro; invisibili dentro torri e porte. Un giro nuovo parte con 0 pattuglie. Il Mastio non ha porte sul cammino (D-MASTIO-01), quindi un giro che lo tocca risulta aperto.
