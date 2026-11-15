@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-15 — Figure di eventi e giustizia nel capsuloide; campo eventi senza fondo verde (`feature/figure-capsules-events`)
+
+- **CODICE SUL BRANCH (estende D-CAPSULE-261113):** in World3D le figure di `settlement-events-people.js` (sagra, circo, arena, palco, podio, accampamenti; combattenti con `drawSoldierFigureUnmasked` in carta), `settlement-events-joust.js` (spettatori, scudieri, cavaliere e scudo, caduto ruotato; cavalli con `ConquerAnimals.card` e gualdrappa come `overlay`), `settlement-court-people.js` (gogna, forca, patibolo, tribunale, personale delle sale civiche) e `settlement-staff-people.js` (personale delle stanze del castello in cutaway, via `drawWorker`/`drawVillagerFigure`) sono carte con capsula. Gesti e braccia in 4–5 pose, salto e oscillazione come quota della carta, chi sparisce alla porta del circo non è disegnato. In World3D niente ridipintura degli occlusori delle tribune e niente ritaglio con la sagoma dell'opera. Restano 2D: prigionieri dietro le sbarre, lancia della giostra, renderer 2D.
+- **CAMPO EVENTI:** `groundMesh` di `settlement-events3d.js` non ha più il fondo verde: solo un bordo sottile in terra battuta (`#8a7656`, quattro strisce).
+- **PROVE LOCALI PASS:** nuova `qa/event-figure-cards-browser.mjs` (forca, gogna e patibolo in sessione, palco, giostra: chiavi delle carte, capsula orizzontale dei cavalli, ripiego 2D; primi piani in `output/playwright/event-figure-cards/`), aggiunta al workflow Main fixes; `figure-billboards`, `animal-capsule`, `vehicle-cards` browser; 24 regressioni node (eventi, giostra, tribunale, crimine, cutaway, personale, botteghe, animali, veicoli), `events3d-regression` aggiornata al bordo. Audit Lab completo: nessuna voce degli eventi cambiata (le 178 «cambiate» sono torri, mura, porte e vegetazione, già diverse dalla baseline su main).
+
+
 ### 2026-11-15 — WALL-ROAD-GATE: porta automatica dove un muro incrocia una strada principale
 
 - Tirando un muro o una palizzata che incrocia una strada principale (manuale, arteriale, del pozzo o della porta), sull'incrocio nasce un cantiere porta del tipo corrispondente e il muro si taglia sui due fianchi della porta (`wallRoadGatePlan` in `settlement-castle-placement.js`, usato da `commitStructuralLinearRoute` e dall'anteprima). Palizzata → porta in legno; muro pietra/argilla W1 → porta piccola, W2-W3 → porta grande; la muratura segue il muro.
