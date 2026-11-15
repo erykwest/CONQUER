@@ -7,6 +7,15 @@
 - [Rapporto completo](POSTMERGE-REGRESSION-2026-11-15.md): base 198/199 test PASS dopo quattro ripetizioni LF; resta APERTO il picco della pianificazione stradale oltre 100 ms. Nuovi tre test prima FAIL/dopo PASS e ripetizione completa sul branch.
 - Browser: otto scene regionali, cinque idriche e apertura reale dalla regione; screenshot finali rivisti. Asset Lab completo: 1.612 render, zero errori ma 157 avvisi e baseline da riconciliare; Territorio corretto 16 render invariati. Nessuna accettazione massiva delle firme.
 - Roadmap/decisioni e bilanciamenti invariati. QA e limiti documentati per il commit regionale; le successive PR di main richiedono verifica propria.
+## 2026-11-15 — WALL-FREE-ANGLE · Mura ad angolo libero
+
+Tolto il vincolo di giunzione a 15° per mura, palizzate e sezioni costruite: il tratto segue l'angolo del mouse e raggiunge un magnete in linea retta, senza il gomito automatico a due tratti. Torri e porte mantengono la rotazione a 15°. Branch `fix/wall-free-angle`. ROADMAP e DECISIONS invariati (nessuna decisione registrata sul reticolo delle mura).
+
+### 2026-11-15 — Capsuloide per eventi e giustizia; campo eventi senza verde (`feature/figure-capsules-events`)
+
+Le figure di eventi, giostra, gogna, forca, patibolo, tribunale e personale in cutaway entrano nelle carte con capsula di World3D; il campo eventi perde il fondo verde. DECISIONS: D-CAPSULE-261113 estesa. Nuova prova `qa/event-figure-cards-browser.mjs` nel workflow Main fixes. ROADMAP invariata.
+
+
 ### 2026-11-15 — WALL-ROAD-GATE
 
 - Nuova regola di costruzione: muro/palizzata che incrocia una strada principale → porta sull'incrocio (legno / piccola W1 / grande W2-W3), muro tagliato sui fianchi. Test `qa/wall-road-gate-regression.cjs` collegato al workflow Road magnet. ROADMAP e DECISIONS invariati (regola di piazzamento locale, nessun contratto nuovo).

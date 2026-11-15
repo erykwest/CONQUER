@@ -48,9 +48,13 @@
   function drawAt(p,floorZ,id,role,tool,facing=facingOf(id)){
     const W=window.ConquerWorkAnim,t=W?.now?.()??0;
     const g=typeof structureProjectionGroundZ!=='undefined'&&Number.isFinite(structureProjectionGroundZ)?structureProjectionGroundZ:terrainElevation(p);
+    // drawWorker / drawVillagerFigure: in World3D a depth-tested card in the person capsule at the
+    // room's floor (the cut-away walls and floors hide it by depth), else the 2D painter.
     withProjectionGroundZ(g+floorZ,()=>{
       const d=dot(id,role,p);
-      if(W&&tool)W.drawWorkerUnmasked(d,tool,t,facing);else drawVillagerFigureUnmasked(d);
+      if(W&&tool)W.drawWorker(d,tool,t,facing);
+      else if(typeof drawVillagerFigure==='function')drawVillagerFigure(d);
+      else drawVillagerFigureUnmasked(d);
     });
   }
   // Castle rooms in cutaway (called by drawCutawayOccupants for each room slot).

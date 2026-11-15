@@ -4,6 +4,8 @@ Base verificata: `50096dfab8b76145fff2fa0c4fd5648f49a62581`, squash della PR #16
 
 ## Esito e difetti riprodotti
 
+Allineamento finale: integrato anche main `17645c2` (#238 angoli liberi delle mura e #243 figure eventi), con soli conflitti documentali. Nessuna nuova modifica ai biomi. Ripetuti selettore, chiome, salvataggi e context guard; regressioni porte stradali, eventi e drenaggio verificate separatamente dopo questo allineamento.
+
 | Priorità | Difetto su base | Correzione nel branch | Prova |
 |---|---|---|---|
 | Alta | Un bordo montuoso disconnette un tratto a monte e cancella tutto il fiume regionale (Colline, seed 1, montagne N, fiume E). | Conservato il tratto connesso più lungo e sufficientemente esteso. Se esiste una foce, resta soltanto la componente che raggiunge quella foce. Nessun attraversamento del rilievo. | Nuovo test prima FAIL, dopo PASS; fixture reale: 4 colline, 32,95% copertura, 1 fiume e 1 torrente. Verificati anche ostacolo completo, monconi troppo corti, foce e sponde libere. |
