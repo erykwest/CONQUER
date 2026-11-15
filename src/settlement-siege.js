@@ -59,11 +59,15 @@
   const within=(v,a,b)=>Math.max(a,Math.min(b,v));
   function initial(){return{version:1,stock:Object.fromEntries(STOCK_KEYS.map(k=>[k,0])),
     lastDay:State.clock.day,starvationDays:0,thirstDays:0,hygiene:100,ruins:[],earthworks:[],
-    circle:{captures:[],capturedRoomIds:[]},soldiers:{enlisted:0,paid:true,expedition:0}}}
-  // The soldiers' reserve (settlement-soldiers.js): enlisted L1 men, whether they were paid, men out on expedition.
+    circle:{captures:[],capturedRoomIds:[]},soldiers:{enlisted:0,paid:true,expedition:0,wallPatrols:[]}}}
+  // The soldiers' reserve (settlement-soldiers.js): enlisted L1 men, whether they were paid, men out on expedition,
+  // patrols assigned to each ring of walls (settlement-wall-patrols.js: the walls of the ring and how many).
   function soldierState(raw){
     const n=v=>Math.max(0,Math.floor(Number(v)||0));
-    return{enlisted:n(raw?.enlisted),paid:raw?.paid!==false,expedition:n(raw?.expedition)};
+    const wallPatrols=(Array.isArray(raw?.wallPatrols)?raw.wallPatrols:[])
+      .filter(e=>e&&Array.isArray(e.walls)&&e.walls.length&&n(e.n)>0).slice(0,200)
+      .map(e=>({walls:e.walls.slice(0,500).map(String),n:n(e.n)}));
+    return{enlisted:n(raw?.enlisted),paid:raw?.paid!==false,expedition:n(raw?.expedition),wallPatrols};
   }
   function state(){
     if(!State.siege||typeof State.siege!=='object')State.siege=initial();
@@ -466,19 +470,26 @@
   }
   // The same ordered tower slots drive UI, visible soldiers and combat fire.
   // Priority: usable roof, then embrasures from highest to lowest floor.
-  // Asked per tower by the garrison count (every tick), the soldiers' and cutaway occupants' passes
-  // and combat (every frame): memoised for one structureMemoEpoch (settlement-render.js: any scene,
-  // navigation or structure-list change, at most a second) and one structureVisualKey of the tower.
-  // Off outside the game runtime. Callers get their own array; the slot objects are read-only.
-  const archerSlotMemo=new WeakMap();
+  // archerSlots runs every frame for every tower (drawing, combat, panels) and walks all the
+  // structures several times per face and floor: keep the result per tower while the tower and
+  // the walls/towers attached to it are unchanged (one pass over the structures per call).
+  const slotCache=new WeakMap();
+  function slotKey(tower){
+    const own=JSON.stringify(tower,(k,v)=>k==='siegeIntegrity'||k==='archerCount'?undefined:v);
+    let near='';
+    for(const o of State.structures){
+      if(o===tower)continue;
+      if(o.aSnap===tower.id||o.bSnap===tower.id||o.id===tower.parentTowerId||o.parentTowerId===tower.id)
+        near+=o.id+(underConstruction(o)?'u':'c')+(o.level||1)+(o.tier||'')+(o.a?.x)+','+(o.a?.y)+','+(o.b?.x)+','+(o.b?.y)+(o.x)+','+(o.y)+';';
+    }
+    return own+'|'+near+'|'+(window.ConquerRoomExterior?'x':'');
+  }
   function archerSlots(tower){
     if(!tower||tower.type!=='tower'||underConstruction(tower)||tower.destroyed)return[];
-    const epoch=typeof structureMemoEpoch==='function'?structureMemoEpoch():0;
-    if(!epoch)return computeArcherSlots(tower);
-    const own=structureVisualKey(tower)+'|'+placementGroundZ(tower),hit=archerSlotMemo.get(tower);
-    if(hit&&hit.epoch===epoch&&hit.own===own)return hit.slots.slice();
+    const hit=slotCache.get(tower),key=slotKey(tower);
+    if(hit&&hit.key===key)return hit.slots.slice();
     const slots=computeArcherSlots(tower);
-    archerSlotMemo.set(tower,{epoch,own,slots});
+    slotCache.set(tower,{key,slots});
     return slots.slice();
   }
   function computeArcherSlots(tower){

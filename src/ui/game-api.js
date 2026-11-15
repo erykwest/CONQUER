@@ -193,6 +193,9 @@
       return ok&&after!==before;
     },
     adjustTowerArchers: saved((id, delta) => window.ConquerSiege?.changeArchers?.(id, delta)),
+    // Patrols of a whole ring of walls (settlement-wall-patrols.js): two reserve soldiers each.
+    adjustWallPatrols: saved((ringId, delta) => window.ConquerWallPatrols?.adjust?.(ringId, delta)),
+    enlistForWallPatrol: saved(() => (window.ConquerWallPatrols?.enlistForPatrol?.() || 0) > 0),
     assignCirclePatrol: saved((sectorId, delta) => window.ConquerCombat?.assignCirclePatrol?.(sectorId, delta)),
     adjustMacroArchers: saved((id, delta) => adjustMacroArchers(id, delta)),
     adjustZoneArchers: saved((id, delta) => adjustZoneArchers(id, delta)),
@@ -315,6 +318,7 @@
     outside.assigned=outside.towers.reduce((n,m)=>n+m.assigned,0);
     outside.active=outside.towers.reduce((n,m)=>n+m.active,0);
     return {circleReady,zones:zoneRows,outside,macros,patrols,otherBarracks,
+      wallRings:window.ConquerWallPatrols?.summary?.()||null,
       totalAssigned:macros.reduce((n,m)=>n+m.assigned,0),
       totalActive:macros.reduce((n,m)=>n+m.active,0),
       unassigned:allies.filter(u=>u.kind==='squad'&&!u.defeated&&!u.barracksId).length,
