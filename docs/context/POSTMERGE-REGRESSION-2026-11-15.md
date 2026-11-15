@@ -54,6 +54,8 @@ Audit completo sulla base: **572 asset, 1.612 render, 0 errori, 157 avvisi, 1 de
 
 ## Riproduzione e prove locali
 
+La prima CI integrata (`cec3d0d`) ha segnalato Runtime integrity: catalogo Wiki generato non aggiornato. Rigenerazione con `node tools/export-codex.cjs`: cambia soltanto `sourceDigest`, nessun contenuto del catalogo. Wiki regression ed export `--check` ripetuti PASS localmente. Il risultato della nuova CI va verificato sul commit che include questa correzione, senza usare i verdi dello SHA precedente.
+
 - `node qa/biome-selector-regression.cjs`
 - `node qa/forest-canopy-query-regression.cjs`
 - `node qa/regional-boundary-drainage-regression.cjs`

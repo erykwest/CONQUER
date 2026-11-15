@@ -2,6 +2,7 @@
 
 ### 2026-11-15 — Audit post-merge regionale, correzioni su branch
 
+- Allineamento finale main `17645c2`; CI Runtime ha rilevato il digest Wiki obsoleto dopo le correzioni: rigenerato solo `sourceDigest`, contenuti invariati. Wiki regression ed export --check PASS locali; nuova CI da verificare.
 - Esito consolidato locale: **201/202 PASS**, unico FAIL fondazione (116,07 ms > 100 ms). PR #250 draft, non mergiata. Integrato main `2782fc0` preservando pattuglie/porte stradali; controlli mirati post-integrazione PASS. CI della PR da verificare sul nuovo SHA.
 - Base verificata main `50096df` (PR #162); correzioni in `fix/regional-postmerge-20261115`, non mergiate. Riprodotti e corretti drenaggio cancellato da bordo montuoso, chiome perse con cache calda e selettore incoerente con i quattro biomi.
 - [Rapporto completo](POSTMERGE-REGRESSION-2026-11-15.md): base 198/199 test PASS dopo quattro ripetizioni LF; resta APERTO il picco della pianificazione stradale oltre 100 ms. Nuovi tre test prima FAIL/dopo PASS e ripetizione completa sul branch.
