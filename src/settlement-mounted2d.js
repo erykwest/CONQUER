@@ -200,17 +200,35 @@
     ctx.fillStyle=SKIN;ctx.beginPath();ctx.arc(150,64,4.5,0,Math.PI*2);ctx.fill();
     poly(ctx,[[100,74],[112,74],[112,90],[100,90]],LEATHER,OUTLINE,o.lw);                           // satchel
   }
-  function rider(ctx,o){
+  // Unhorsed: drawn in ground space (not on the horse's body), the rider tips backwards over the
+  // rump and lands on the ground behind the horse; the lance drops flat at its feet.
+  const SEAT=[110,88];
+  function fallen(ctx,o){
+    const f=clamp(o.fall,0,1),ground=o.sp.center.y-6;
+    const L=lanceGeometry({...o,attack:0});
+    // The lance leaves the hand first: it tips forward and lies on the ground in front of the horse.
     ctx.save();
-    if(o.fall>0){
-      // Out of the saddle: tips backwards off the horse and lands beside it.
-      ctx.translate(110,88);ctx.rotate(-o.fall*1.45);ctx.translate(-110,-88);
-      ctx.translate(-o.fall*36,o.fall*118);
-    }
-    if(o.kind==='knight')lance(ctx,o);
+    const lf=clamp(f*1.6,0,1),lx=L.grip[0]+lf*40,ly=L.grip[1]+(ground-4-L.grip[1])*lf*lf;
+    ctx.translate(lx,ly);ctx.rotate(Math.atan2(L.dir[1],L.dir[0])*(1-lf));
+    limb(ctx,[[-60,0],[300,0]],WOOD,6,o.lw*.8);
+    poly(ctx,[[322,0],[300,5],[300,-5]],STEEL,OUTLINE,o.lw*.7);
+    ctx.restore();
+    // Arc over the rump: x slides back linearly, y falls with gravity, the body turns to lie flat.
+    const dx=-180*f,dy=(ground-SEAT[1]-18)*f*f;
+    ctx.save();
+    ctx.translate(SEAT[0]+dx,SEAT[1]+dy);ctx.rotate(-f*1.5);ctx.translate(-SEAT[0],-SEAT[1]);
+    body(ctx,{...o,ready:0},false);
+    ctx.restore();
+  }
+  function body(ctx,o,withLance=true){
+    if(withLance&&o.kind==='knight')lance(ctx,o);
     torso(ctx,o);legs(ctx,o);
     if(o.kind==='knight')shield(ctx,o);else reins(ctx,o);
     head(ctx,o);
+  }
+  function rider(ctx,o){
+    ctx.save();
+    body(ctx,o);
     if(o.flash>0){ctx.globalAlpha*=.6*o.flash;poly(ctx,[[103,90],[143,90],[137,34],[109,34]],'#fff6e4',null,o.lw)}
     ctx.restore();
   }
@@ -223,6 +241,7 @@
     const state={kind,livery:opts.livery,paint:opts.paint,ready:p.ready||0,attack:p.attack||0,flash:p.flash||0,
       fall:p.fall||0,charge:opts.mode==='run',helmet:opts.helmet||null,shield:opts.shield||null};
     ctx.save();ctx.globalAlpha*=alpha;
+    let unhorsed=null;
     window.ConquerAnimals.drawAnimal('horse',ctx,x,y,size,{t:opts.t||0,seed:opts.seed||0,coat:opts.coat,
       facing:opts.facing,mode:opts.mode==='idle'?'idle':opts.mode||'idle',from:opts.from==='idle'?'idle':opts.from,blend:opts.blend,
       onBody:(c,info)=>{
@@ -230,8 +249,14 @@
         if(kind==='knight')caparison(c,o);else blanket(c,o);
         saddle(c,o,kind==='knight');
         if(kind==='knight')crinet(c,o);else bridle(c,o);
-        rider(c,o);
+        if(o.fall>0)unhorsed=o;else rider(c,o);
       }});
+    if(unhorsed){
+      // Same art space as drawAnimal, without the gait's bob and tilt: the ground stays put.
+      const sp=unhorsed.sp,s=size*(sp.scale||1)/256;
+      ctx.translate(x,y);ctx.scale(unhorsed.flip*s,s);ctx.translate(-sp.center.x,-sp.center.y);
+      fallen(ctx,unhorsed);
+    }
     ctx.restore();
   }
   window.ConquerMounted2D={draw,lanceGeometry};

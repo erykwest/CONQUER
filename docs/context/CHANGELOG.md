@@ -2,7 +2,7 @@
 
 ## 2026-11-15 — Equipaggiamento delle unità · cavalieri a cavallo
 
-15/11/2026 — `feature/knight-equipment-styles` (pre-merge): i cavalieri a cavallo del feudo (`settlement-mounted2d.js`) indossano l'elmo e portano lo scudo scelti in Militare › Equipaggiamento (5 elmi, 5 forme). Finché il giocatore non sceglie, e per i nemici e il messaggero, restano grande elmo e scudo appuntito originali. Nel Lab i selettori Elmo/Scudo valgono anche per «Cavaliere a cavallo», con l'opzione «Originale». STATUS, BACKLOG e CHANGELOG aggiornati; ROADMAP e DECISIONS invariate.
+15/11/2026 — `feature/knight-equipment-styles` (pre-merge): i cavalieri a cavallo del feudo (`settlement-mounted2d.js`) indossano l'elmo e portano lo scudo scelti in Militare › Equipaggiamento (5 elmi, 5 forme). Finché il giocatore non sceglie, e per i nemici e il messaggero, restano grande elmo e scudo appuntito originali. Nel Lab i selettori Elmo/Scudo valgono anche per «Cavaliere a cavallo», con l'opzione «Originale». Corretta la caduta: il cavaliere disarcionato non resta più sopra il fianco del cavallo, ma cade dietro la groppa e giace a terra; la lancia cade stesa davanti al cavallo. STATUS, BACKLOG e CHANGELOG aggiornati; ROADMAP e DECISIONS invariate.
 
 ## 2026-11-15 — WORLD-SPEED-01 · Rapporti di velocità strategica (solo design)
 

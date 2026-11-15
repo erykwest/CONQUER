@@ -2,7 +2,7 @@
 
 ## 2026-11-15 — Equipaggiamento dei cavalieri a cavallo (branch `feature/knight-equipment-styles`)
 
-- **CODICE SUL BRANCH, NON MERGE:** `ConquerMounted2D.draw` accetta `helmet` e `shield` (stili di `UNIT_HELMETS`/`UNIT_SHIELDS`; assenti o sconosciuti = grande elmo e scudo appuntito originali). `settlement-combat-render.js` li passa solo ai cavalieri del feudo e solo se `State.policies.unitHelmet/unitShield` è stato scelto. `figures-lab.html`: selettori anche per «Cavaliere a cavallo», opzione «Originale».
+- **CODICE SUL BRANCH, NON MERGE:** `ConquerMounted2D.draw` accetta `helmet` e `shield` (stili di `UNIT_HELMETS`/`UNIT_SHIELDS`; assenti o sconosciuti = grande elmo e scudo appuntito originali). `settlement-combat-render.js` li passa solo ai cavalieri del feudo e solo se `State.policies.unitHelmet/unitShield` è stato scelto. `figures-lab.html`: selettori anche per «Cavaliere a cavallo», opzione «Originale». Caduta (`pose.fall>0`): il cavaliere si disegna nello spazio del terreno, non del corpo del cavallo (`fallen()`), con arco dietro la groppa fino al suolo (`sp.center.y`) e lancia stesa a terra.
 - **PROVE LOCALI PASS:** `qa/combat-render-regression.cjs`; nel Lab, foglio con le 6 combinazioni (originale + 5) a due grandezze e primo piano degli elmi, console senza errori.
 - **NON ESEGUITO in locale:** `node qa/asset-audit.mjs` (Playwright non installato); affidato alla CI `asset-lab`.
 
