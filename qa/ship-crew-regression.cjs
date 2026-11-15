@@ -15,7 +15,7 @@ assert.match(lab,/ConquerShipCrew/,'the ship preview shows the crew');
 
 const window={};
 const ctx=vm.createContext({window,Math,Object,Number,Array,String,JSON});
-for(const f of ['heraldry-shapes.js','assets/ship-models.js','settlement-ships.js','settlement-ship-crew.js'])vm.runInContext(read('src/'+f),ctx);
+for(const f of ['settlement-util.js','heraldry-shapes.js','assets/ship-models.js','settlement-ships.js','settlement-ship-crew.js'])vm.runInContext(read('src/'+f),ctx);
 const M=window.ConquerShipModels,C=window.ConquerShipCrew;
 const SIZE={barca:2,cargo:3,caravella:5,cocca:8,nave:10};
 for(const [key,m] of Object.entries(M.ships)){

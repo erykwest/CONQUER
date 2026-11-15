@@ -142,7 +142,8 @@
     const cal=typeof calendarDateFromDay==='function'?calendarDateFromDay(value):null;
     return cal?cal.day+' '+cal.name+' A'+cal.year+' (g. '+(+value).toFixed(0)+')':'Giorno '+(+value).toFixed(0);
   }
-  function htmlEscape(v){return String(v).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
+  // Shared UI escaper (settlement-panels.js); numeric-entity fallback for harnesses that load this file alone.
+  function htmlEscape(v){return window.ConquerPanels?.escapeHtml?.(v)??String(v).replace(/[&<>"']/g,ch=>'&#'+ch.charCodeAt(0)+';')}
   function openLetter(){
     const m=state().incoming;if(!m||m.phase!=='waiting')return;
     byId('courierFrom').textContent='Dalla provincia a '+(EDGES[m.edge]||m.edge)+(m.by==='pigeon'?' · per colombo viaggiatore: la risposta parte subito':freshHorse()?' · la risposta riparte su un cavallo fresco delle scuderie':'');

@@ -21,6 +21,8 @@ on:
       - qa/camp-regression.cjs
       - qa/patrol-regression.cjs
       - .github/workflows/camp-regression.yml
+permissions:
+  contents: read
 jobs:
   camp-smoke:
     runs-on: ubuntu-latest

@@ -8,7 +8,7 @@
 // format, so a team sorts together with its wagon. Classic script; maths is pure.
 (function(){
   const MODELS=()=>window.ConquerAnimalModels;
-  const lerp=(a,b,k)=>a+(b-a)*k,ease=k=>k*k*(3-2*k);
+  const lerp=(a,b,k)=>a+(b-a)*k,ease=window.ConquerUtil.smoothstep;
   // Head carriage and body pose per mode (radians; positive pitch = nose down).
   //   neck: about the neck base; head: about the throat, relative to the neck.
   //   body: pitch about the hip with the hind legs planted; drop: lower to the ground;

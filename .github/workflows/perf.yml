@@ -1,0 +1,100 @@
+name: Performance benchmarks
+
+# Abort superseded PR runs of this workflow (never cancel scheduled/main runs).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Manual only: the five browser benchmarks are slow, need Google Chrome
+# (channel:'chrome') and produce measurements, not pass/fail gates for PRs.
+on:
+  workflow_dispatch:
+    inputs:
+      label:
+        description: 'Report label passed to every benchmark (letters, digits, . _ -)'
+        required: false
+        default: 'ci'
+      scripts:
+        description: 'Space-separated subset of qa/*-performance.cjs basenames (empty = all five)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  performance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install cached Chromium and pinned Playwright
+        uses: ./.github/actions/playwright-setup
+      - name: Provide Google Chrome for channel 'chrome'
+        shell: bash
+        run: |
+          # The shared action installs Playwright's Chromium only; the benchmarks
+          # launch channel:'chrome'. Runner images usually ship Chrome already.
+          if [[ -x /opt/google/chrome/chrome ]]; then
+            echo "Google Chrome already installed: $(/opt/google/chrome/chrome --version)"
+          else
+            npx playwright install --with-deps chrome
+          fi
+          node -e "const {chromium}=require('playwright'); chromium.launch({headless:true,channel:'chrome'}).then(async b=>{console.log('Chrome '+b.version()); await b.close()}).catch(e=>{console.error(e.message);process.exit(1)})"
+      - name: Run performance benchmarks sequentially
+        shell: bash
+        env:
+          PERF_LABEL: ${{ inputs.label }}
+          PERF_SCRIPTS: ${{ inputs.scripts }}
+        run: |
+          label="${PERF_LABEL:-ci}"
+          if [[ ! "$label" =~ ^[A-Za-z0-9._-]{1,64}$ ]]; then
+            echo "::error::Invalid label '$label'"
+            exit 1
+          fi
+          all=(
+            qa/construction-performance.cjs
+            qa/mass-battle-performance.cjs
+            qa/movement-collapse-performance.cjs
+            qa/fire-collapse-cutaway-performance.cjs
+            qa/siege-scenario-performance.cjs
+          )
+          selected=()
+          read -r -a names <<< "${PERF_SCRIPTS:-}"
+          for name in "${names[@]}"; do
+            name="${name#qa/}"
+            selected+=("qa/${name%.cjs}.cjs")
+          done
+          (( ${#selected[@]} )) || selected=("${all[@]}")
+          failed=()
+          for script in "${selected[@]}"; do
+            if [[ " ${all[*]} " != *" $script "* ]]; then
+              echo "::error::Unknown benchmark '$script'"
+              failed+=("$script")
+              continue
+            fi
+            echo "::group::$script $label"
+            if ! node "$script" "$label"; then
+              failed+=("$script")
+            fi
+            echo '::endgroup::'
+          done
+          if (( ${#failed[@]} )); then
+            for script in "${failed[@]}"; do
+              echo "::error file=$script::$script failed"
+            done
+            exit 1
+          fi
+      - name: Upload benchmark reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-${{ github.run_id }}
+          path: output/playwright/
+          if-no-files-found: warn
+          retention-days: 30

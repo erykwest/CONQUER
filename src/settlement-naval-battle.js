@@ -16,9 +16,9 @@
   const CA=()=>window.ConquerCombatAnim;
   const MEN={barca:2,cargo:3,caravella:5,cocca:8,nave:10};
   const ARROW_SPEED=14,APPROACH=14,GRAPPLE=2,BURN=22,SINK=16;
-  function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
-  function rng(seed){let a=seed|0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
-  const smooth=t=>t*t*(3-2*t);
+  const hash=window.ConquerUtil.hash;
+  const rng=window.ConquerUtil.rng;
+  const smooth=window.ConquerUtil.smoothstep;
   const model=s=>S().model(s.key);
   // Soldiers' livery: the realm's own heraldry for the player (null), a foreign realm's colours.
   function liveryOf(ship){

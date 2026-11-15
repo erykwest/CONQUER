@@ -63,7 +63,7 @@ const line=(text,re)=>{const m=text.match(re);assert.ok(m,String(re));return m[0
   const ctx=vm.createContext({window,State,Math,Object,Number,Array,Map,String,Float32Array,
     isPlanView:()=>false,rotateViewPoint:p=>({x:p.x,y:p.y})});
   vm.runInContext(core.slice(core.indexOf('const CIVIC_TYPES='),core.indexOf('function civicParts(')),ctx);
-  for(const f of ['assets/civic-models.js','settlement-mesh3d.js','settlement-civic3d.js'])vm.runInContext(src(f),ctx);
+  for(const f of ['settlement-util.js','assets/civic-models.js','settlement-mesh3d.js','settlement-civic3d.js'])vm.runInContext(src(f),ctx);
   const C3=window.ConquerCivic3D;
   const faces=(level,functions,floor=0)=>{
     State.structures=[{id:'th',type:'townhall',x:0,y:0,angle:0,civicLevel:level,cutawayFloor:floor,...(functions?{functions,townhallRooms:1}:{})}];State.selectedId='th';
@@ -107,7 +107,7 @@ const line=(text,re)=>{const m=text.match(re);assert.ok(m,String(re));return m[0
 {
   const window={},State={season:'summer',seed:7,heraldry:{}};
   const ctx=vm.createContext({window,State,Math,Object,Number,Array,Map,Set,String,Float32Array,performance:{now:()=>0}});
-  for(const f of ['assets/scatter-model.js','assets/civic-models.js','assets/event-models.js','settlement-mesh3d.js','settlement-events3d.js'])vm.runInContext(src(f),ctx);
+  for(const f of ['settlement-util.js','assets/scatter-model.js','assets/civic-models.js','assets/event-models.js','settlement-mesh3d.js','settlement-events3d.js'])vm.runInContext(src(f),ctx);
   const E=window.ConquerEvents3D;
   for(const [v,model] of [['pillory','justicePillory'],['gallows','justiceGallows'],['scaffold','justiceScaffold']]){
     const s={...E.make(v),id:v,x:0,y:0,angle:0};

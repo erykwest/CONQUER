@@ -12,7 +12,7 @@ const sandbox={window:{__CONQUER_ASSET_LAB__:true,addEventListener:noop},
   innerWidth:800,innerHeight:600,devicePixelRatio:1,localStorage:{getItem:()=>null,setItem:noop},
   setTimeout:noop,requestAnimationFrame:noop,location:{search:''}};
 const ctx=vm.createContext(sandbox),load=file=>vm.runInContext(read('src/'+file),ctx,{filename:file});
-const sources=['settlement-core.js','settlement-terraforming.js','settlement-civic-annexes.js','settlement-castle-placement.js',
+const sources=['settlement-util.js','settlement-core.js','settlement-terraforming.js','settlement-civic-annexes.js','settlement-castle-placement.js',
   'assets/industry-models.js','settlement-industries.js','settlement-events3d.js','settlement-pier.js','settlement-quay.js',
   'settlement-shipyard.js','assets/ship-models.js','settlement-ships.js',
   'settlement-crossings.js','settlement-gate-fittings.js','settlement-keep-entrance.js',

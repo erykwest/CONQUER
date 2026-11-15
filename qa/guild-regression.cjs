@@ -79,7 +79,7 @@ check('snapshot, inspector and wiring',()=>{
   assert.ok(html.indexOf('settlement-guild.js')<html.indexOf('settlement-app-rooms.js'),'guild before the inspector');
   assert.match(read('camp/index.html'),/settlement-guild\.js/);
   assert.match(read('src/settlement-app-rooms.js'),/ConquerGuild\?\.panelHtml\?\.\(s\)/);
-  assert.match(read('src/ui/shell.js'),/GuildPanel/);
+  assert.match(read('src/ui/shell.js'),/InstitutionPanel\} id=\$\{d\.id\} api="ConquerGuild"/);
   assert.match(read('src/settlement-panels.js'),/kpi\('Gilda'/);
   assert.match(read('src/settlement-commerce.js'),/ConquerGuild\?\.bonus\?\.\(\)/);
   assert.match(read('src/settlement-civic-annexes.js'),/Only one guild hall per village/);

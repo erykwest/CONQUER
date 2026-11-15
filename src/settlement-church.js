@@ -40,10 +40,8 @@
   function churches(){
     return (State.structures||[]).filter(s=>s.type==='church'&&completed(s));
   }
-  // Seat of the local Church: highest level, then the oldest (lowest id).
-  function seat(){
-    return churches().slice().sort((a,b)=>level(b)-level(a)||String(a.id).localeCompare(String(b.id),'en',{numeric:true}))[0]||null;
-  }
+  // Seat of the local Church: highest level, then the oldest (lowest id); shared rule in settlement-guild.js.
+  function seat(){return window.ConquerGuild.senior(churches())}
   function capacity(){
     return churches().reduce((n,s)=>n+CAPACITY[level(s)],0);
   }
@@ -144,7 +142,7 @@
     if(!s||s.type!=='church'||!completed(s))return '';
     const d=snapshot();if(!d)return '';
     const castle=finite(econ()?.state?.()?.castleGold);
-    const kv=(k,v)=>'<div class="kv"><span>'+k+'</span><b>'+v+'</b></div>';
+    const kv=window.ConquerGuild.kv;
     const income=m=>m?fmt(m.offerings)+' · '+fmt(m.bequests)+' · '+fmt(m.gifts):'—';
     const isSeat=d.seatId===String(s.id);
     return '<div class="slot church-panel"><div class="slot-label">Chiesa · '+TITLES[level(s)]+(isSeat?' · sede':'')+'</div>'+

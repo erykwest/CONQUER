@@ -273,7 +273,7 @@
     });
 
   const lerp=(a,b,k)=>a+(b-a)*k;
-  const ease=k=>k*k*(3-2*k);
+  const ease=window.ConquerUtil.smoothstep;
   // Pure gait maths for one mode, shared by all species.
   function gaitPose(mode,t,seed=0){
     // bend: flexion of each leg's joint, 0 = straight. It is positive in the swing phase (the

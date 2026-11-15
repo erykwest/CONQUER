@@ -23,7 +23,7 @@ const sandbox={window,State,Math,Number,String,Object,Array,Map,Date,performance
 let bodies=0;
 sandbox.drawVillagerFigureUnmasked=()=>{bodies++};
 const context=vm.createContext(sandbox);
-vm.runInContext(fs.readFileSync(path.join(__dirname,'..','src','settlement-work-anim.js'),'utf8'),context);
+for(const f of ['settlement-util.js','settlement-work-anim.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'..','src',f),'utf8'),context);
 const WA=window.ConquerWorkAnim;
 
 const tools=Object.keys(WA.TOOLS);

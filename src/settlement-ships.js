@@ -12,7 +12,7 @@
   M.models={...M.ships,...(M.boats||{})};
   const model=key=>M.models[key]||null;
   const SAIL_TIME=3;                       // seconds to raise or lower the sails
-  const smooth=t=>t*t*(3-2*t);
+  const smooth=window.ConquerUtil.smoothstep;
   // Heraldry. A ship belongs to the player's realm, to a foreign realm, or is a merchant:
   // warships fly their realm's flags and wear its arms on the sails; merchants fly the flag
   // of the realm they sail under but keep plain sails. Foreign realms are placeholders until

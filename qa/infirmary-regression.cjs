@@ -22,7 +22,7 @@ const rules=vm.createContext({
   towerTier:s=>Number(s.size)>=2?3:Number(s.size)>=1.5?2:1,
   builtInteriorFloors:s=>s.span==='wide'?1:(s.level||1),
 });
-vm.runInContext([pick(castle,'functionCapacity'),pick(siege,'eligibleRoom'),pick(siege,'floor'),pick(siege,'allowed')].join('\n'),rules);
+vm.runInContext([pick(castle,'functionCapacity'),src('settlement-core.js').match(/const W1_TOWER_FUNCTIONS=[^\n]+/)[0],pick(siege,'eligibleRoom'),pick(siege,'floor'),pick(siege,'allowed')].join('\n'),rules);
 const allowed=vm.runInContext('allowed',rules);
 check('infirmary on floors 1-2 of W1 sections and in the W2 hall only',()=>{
   const w1={type:'built',length:3,level:3},w2={type:'built',span:'wide',length:3,level:2};
@@ -46,6 +46,12 @@ function world({gold=100,founded=true}={}){
   ctx.functionSlotUnits=s=>s.span==='wide'||s.length>=3?2:1;
   ctx.pointBlockedForPeasant=()=>false;
   ctx.ConquerSiege={allowed,state:()=>({circle:{capturedRoomIds:[]}}),civilians:()=>0};
+  // The genuine room iterator of settlement-siege.js over this world.
+  ctx.allowed=allowed;
+  vm.createContext(ctx);
+  vm.runInContext('function capturedRoomIds(){return new Set(ConquerSiege.state().circle.capturedRoomIds)}\n'+
+    pick(siege,'eligibleRoom')+'\n'+pick(siege,'activeRooms'),ctx);
+  ctx.ConquerSiege.activeRooms=vm.runInContext('activeRooms',ctx);
   const roster=[];
   ctx.ConquerCombat={units:()=>roster,areaState:p=>({yellow:p.x<50})};
   ctx.ConquerCombatRules={MAX_E:150,MAX_B:150};

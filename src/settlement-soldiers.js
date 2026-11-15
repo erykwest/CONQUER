@@ -106,7 +106,9 @@
     }
     const wanted=towers().filter(s=>lookoutWanted(s)&&!s.outpost&&standing(s));
     for(const s of wanted){if(left<LOOKOUT_MEN)break;lookouts.add(s.id);left-=LOOKOUT_MEN}
-    const patrols=(C()?.units?.()||[]).filter(u=>u.kind==='patrol'&&!u.defeated&&!u.lost&&!u.ward);
+    // Fallen and wounded patrols still hold their men (they come back from the infirmary); only a
+    // patrol lost for good frees them, and chargeLosses() takes those men off the reserve.
+    const patrols=(C()?.units?.()||[]).filter(u=>u.kind==='patrol'&&!u.lost);
     const covered=Math.min(patrols.length,Math.floor(left/PATROL_MEN));left-=covered*PATROL_MEN;
     // Wall patrols, one ring of walls each (settlement-wall-patrols.js), after the White Zone patrols.
     const walls=W()?.wanted?.()||0;
@@ -117,6 +119,15 @@
     memoKey=key;return memo;
   }
   const invalidate=()=>{memo=null};
+  // A patrol lost for good (dead, or untreated past triage) costs its men once: they leave the reserve.
+  function chargeLosses(){
+    let men=0;
+    for(const u of C()?.units?.()||[])if(u.kind==='patrol'&&u.lost&&!u.reserveCharged){u.reserveCharged=true;men+=PATROL_MEN}
+    if(!men)return 0;
+    const x=st();x.enlisted=Math.max(0,enlisted()-men);
+    x.expedition=Math.min(Math.max(0,Math.floor(Number(x.expedition)||0)),x.enlisted);
+    invalidate();return men;
+  }
   function free(){return roster().free}
   function lookoutActive(s){return !!s&&roster().lookouts.has(s.id)}
   function outpostActive(s){return !!s&&!!roster().outposts.get(s.id)?.active}
@@ -222,21 +233,16 @@
     return [...byId.values()];
   }
   function signalPlan(outpost,origin=window.ConquerAlarmBells?.origin?.()){
-    if(!outpost||!origin)return null;
+    const shortest=window.ConquerAlarmBells?.shortestSignal;
+    if(!outpost||!origin||!shortest)return null;
     const all=signalNodes(),start=all.find(n=>n.id===outpost.id);if(!start)return null;
-    const open=all.filter(n=>n!==start).map(n=>({...n,t:Infinity,via:null}));
-    let last={...start,t:start.fire?FIRE_HOP:0,via:null};const done=[last];
     const hop=n=>n.fire?FIRE_HOP:(window.ConquerAlarmBells?.HOP??.6);
-    for(;;){
-      if(Math.hypot(origin.x-last.x,origin.y-last.y)<=last.r){
-        const path=[];for(let n=last;n;n=done.find(d=>d.id===n.via))path.unshift(n);
-        return{t:last.t,path};
-      }
-      for(const n of open){const d=Math.hypot(n.x-last.x,n.y-last.y);if(d<=last.r&&last.t+hop(n)<n.t){n.t=last.t+hop(n);n.via=last.id}}
-      let k=-1;for(let i=0;i<open.length;i++)if(Number.isFinite(open[i].t)&&(k<0||open[i].t<open[k].t))k=i;
-      if(k<0)return null;
-      last=open.splice(k,1)[0];done.push(last);
-    }
+    const {done,reached}=shortest({...start,t:start.fire?FIRE_HOP:0,via:null},all.filter(n=>n!==start),
+      (from,n)=>Math.hypot(n.x-from.x,n.y-from.y)<=from.r?hop(n):Infinity,
+      n=>Math.hypot(origin.x-n.x,origin.y-n.y)<=n.r);
+    if(!reached)return null;
+    const path=[];for(let n=reached;n;n=done.find(d=>d.id===n.via))path.unshift(n);
+    return{t:reached.t,path};
   }
   function lightFire(s,at){
     s.signalFireSpent=true;burning.set(s.id,at+FIRE_BURN_MS);
@@ -285,6 +291,7 @@
     const live=new Set((C()?.enemy?.()||[]).filter(e=>!e.defeated&&!(e.stats?.hp<=0)).map(e=>e.id));
     for(const id of reported)if(!live.has(id))reported.delete(id);
     for(const k of relayed)if(!live.has(k.slice(k.indexOf(':')+1)))relayed.delete(k);
+    if(chargeLosses())say('Patrol soldiers lost: '+enlisted()+' / '+posts()+' in the Barracks');
     enforcePatrols();
   }
   // Patrols the reserve no longer covers go back to the Barracks.
@@ -306,8 +313,10 @@
   // ---------- daily: wages, posts lost
   function tick(before,after){
     const days=Math.max(0,Number(after)-Number(before));if(!days)return;
+    chargeLosses();
     const x=st(),cap=posts();
     if(x.enlisted>cap){x.enlisted=cap;say('Barracks posts lost: soldiers discharged to '+cap)}
+    if(Number(x.expedition)>x.enlisted)x.expedition=x.enlisted;   // never more men away than enlisted
     const n=enlisted();
     if(n>0){
       const econ=E()?.state?.(),cost=wagePerDay(n)*days;

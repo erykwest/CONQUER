@@ -27,11 +27,22 @@
     goldsmith:{tool:'hammer',goods:['#d9b44a','#e8cf7a','#bfc4c7']}
   });
   const CF=()=>window.ConquerCutawayFurniture;
-  // Read straight from the economy save (asked per facade edge): ConquerCommerce.state() migrates
-  // on every call, its daily tick keeps the records current.
+  // Read straight from the economy save, its daily tick keeps the records current. Asked per facade
+  // edge (houseFacadePlan -> facadeCut), per house and per figure, while ConquerEconomy.state() runs
+  // its whole save migration on every call: the shops record is looked up once per
+  // structureMemoEpoch (settlement-render.js, at most a second) and while State.economy is the same
+  // object. The record itself is the live one, so a shop's day shows at once. Off outside the game.
+  let shopsMemo={epoch:0,economy:null,shops:null};
+  function shopsRecord(){
+    const epoch=typeof structureMemoEpoch==='function'?structureMemoEpoch():0;
+    if(epoch&&shopsMemo.epoch===epoch&&shopsMemo.economy===State.economy&&shopsMemo.economy)return shopsMemo.shops;
+    const shops=window.ConquerEconomy?.state?.()?.commerce?.shops||null;
+    shopsMemo={epoch,economy:State.economy,shops};
+    return shops;
+  }
   function shopOf(house){
     if(house?.shopKind)return{kind:house.shopKind,artisanId:house.id+':m:0',state:house.shopClosed?'closed':'working'};
-    return window.ConquerEconomy?.state?.()?.commerce?.shops?.[house?.id]||null;
+    return shopsRecord()?.[house?.id]||null;
   }
   function eligible(house){
     return !!house&&house.type==='house'&&houseLevel(house)===3&&
@@ -354,7 +365,7 @@
     const mesh=r.mesh,p=mesh.pos;
     for(let t=0;t<mesh.col.length;t++){
       const o=t*9;
-      m.face([{x:p[o],y:p[o+1],z:p[o+2]},{x:p[o+3],y:p[o+4],z:p[o+5]},{x:p[o+6],y:p[o+7],z:p[o+8]}],window.ConquerMesh3D.shadedHex(mesh,t));
+      m.face([{x:p[o],y:p[o+1],z:p[o+2]},{x:p[o+3],y:p[o+4],z:p[o+5]},{x:p[o+6],y:p[o+7],z:p[o+8]}],(window.ConquerMesh3D.shadedHexes?.(mesh)?.[t]??window.ConquerMesh3D.shadedHex(mesh,t)));
     }
     return true;
   }
@@ -375,7 +386,7 @@
   }
   // Which fronts are open: the scene caches rebuild when this changes (dawn, dusk, the shop's day).
   function frontSig(){
-    const shops=window.ConquerEconomy?.state?.()?.commerce?.shops;
+    const shops=shopsRecord();
     const day=daytime();
     let sig=day?'d':'n';
     if(shops)for(const [id,s] of Object.entries(shops))sig+='|'+id+':'+(day&&(s.state==='working'||s.state==='selling')?1:0)+':'+s.kind;
@@ -397,7 +408,7 @@
       const mesh=r.mesh,p=mesh.pos;
       for(let t=0;t<mesh.col.length;t++){
         const o=t*9;
-        m.face([{x:p[o],y:p[o+1],z:p[o+2]},{x:p[o+3],y:p[o+4],z:p[o+5]},{x:p[o+6],y:p[o+7],z:p[o+8]}],window.ConquerMesh3D.shadedHex(mesh,t));
+        m.face([{x:p[o],y:p[o+1],z:p[o+2]},{x:p[o+3],y:p[o+4],z:p[o+5]},{x:p[o+6],y:p[o+7],z:p[o+8]}],(window.ConquerMesh3D.shadedHexes?.(mesh)?.[t]??window.ConquerMesh3D.shadedHex(mesh,t)));
       }
     }
   }

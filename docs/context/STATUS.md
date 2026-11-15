@@ -48,6 +48,7 @@
 
 ### 2026-11-15 — Spiaggia sotto le scarpate (branch fix/coastal-cliff-beach-20261115)
 
+- Allineato main `1911369` (hardening #239), senza conflitti. Ripetuti PASS occlusione, coast, water-surface, wooded-relief, tree-bark ed export Wiki; cinque scene ripetute sulla versione integrata. CI da verificare sul nuovo SHA.
 - Corretto l'ordine del disegno: sabbia e sponde di mare/lago/acquitrinio precedono i rilievi; acqua e confluenze conservano il proprio passaggio successivo. Stesso percorso per Canvas e texture WebGL. Ricette, larghezze e quote invariate.
 - Nuova regressione sul percorso reale terreno/ambiente: prima FAIL (sabbia sulla scarpata), dopo PASS in 16 combinazioni mare/lago, quattro rotazioni, isometria/vista dall'alto. Pixel della texture WebGL verificati; cinque snapshot costieri prima/dopo e cinque scenari idrici PASS. Lab Territorio: 16 invariati, zero errori, cinque avvisi di schema.
 - Implementato solo sul branch, non mergiato; CI da verificare sul commit pubblicato. [Prove e riproduzione](SHORE-RELIEF-FIX-2026-11-15.md). Roadmap e decisioni invariate: applicazione del contratto esistente di rilievo.
@@ -61,6 +62,27 @@
 - [Rapporto completo](POSTMERGE-REGRESSION-2026-11-15.md): base 198/199 test PASS dopo quattro ripetizioni LF; resta APERTO il picco della pianificazione stradale oltre 100 ms. Nuovi tre test prima FAIL/dopo PASS e ripetizione completa sul branch.
 - Browser: otto scene regionali, cinque idriche e apertura reale dalla regione; screenshot finali rivisti. Asset Lab completo: 1.612 render, zero errori ma 157 avvisi e baseline da riconciliare; Territorio corretto 16 render invariati. Nessuna accettazione massiva delle firme.
 - Roadmap/decisioni e bilanciamenti invariati. QA e limiti documentati per il commit regionale; le successive PR di main richiedono verifica propria.
+
+## 2026-11-13 — AUDIT-261113 · Audit post-merge, hardening e semplificazione (branch `fix/audit-hardening-20261113`)
+
+- **AMBITO:** verifica delle 82 PR mergiate dal 30/10 al 13/11 (#103–#211) su `main` 6b227926, per gruppi (economia, job/cantieri, militare, torri/mura, stanze, rendering, CI, hardening). Nessuna PR sovrascritta da un merge successivo (identificatori e registri dei modelli controllati commit per commit).
+- **CODICE SUL BRANCH, NON MERGE — bug corretti (verificati con repro prima e dopo):**
+  - **Cantieri:** gli upgrade di ponti e fossati automatici (#194) restavano a 0 lavoro con i materiali spesi e 3 costruttori bloccati → `payConstructionWork` blocca solo i cantieri automatici che non sono upgrade.
+  - **Disboscamento:** con il Job Manager L1 attivo (#190) il taglio del bosco (#166) aveva 0 operai → `forestryDemand` entra nella domanda dei costruttori in modalità gestita.
+  - **Costruttori:** `constructionDemand` conta solo i cantieri lavorabili (materiali consegnati oltre l'avanzamento), come `constructionCrewAssignments`.
+  - **Piazzale:** durante l'espansione (#167/#194) il piazzale resta attivo alla capacità precedente; anche i carrettieri lo seguono.
+  - **Salvataggi:** una torre W2×H4 (#174) perdeva il 4° piano a ogni caricamento; la latrina W1 veniva verificata contro la partita precedente durante il load; un caricamento fallito lasciava che l'autosave sovrascrivesse il salvataggio buono → ora il save grezzo è copiato in `.corrupt.<ts>`, `State.loadFailed` blocca i salvataggi finché non si genera una mappa o si carica con successo.
+  - **Riserva dei soldati (#193):** le pattuglie cadute o in infermeria liberavano i loro uomini e quelle perse non scalavano `enlisted` → restano impegnate; una perdita definitiva si addebita una volta (`reserveCharged`). Spedizioni mai sopra gli arruolati.
+  - **Erario (#197):** un decreto emesso di sabato non aveva effetto settimanale → flag `owed`, ogni decreto vale giorni/7 applicazioni; la decima in natura entra in `weekProduced`; `state()` normalizza i campi della settimana.
+  - **Render:** ballatoi, piano ligneo della porta piccola, stile dei merli e pendenza dei tetti non invalidavano le cache (World 3D e 2.5D) → chiave unica `structureVisualKey(s)` in `settlement-render.js`.
+  - **Varie:** retry per-frame del bivacco 3D fallito, valori del campo militare fuori tabella, `initialSeed` con storage bloccato, kit case con un pezzo mancante, wiki incorporato cross-origin, messaggio della scala sulle mura, preset del Lab con cucina nel mastio W4, doppio caricamento di `settlement-mesh3d.js`, cache-buster di `house-models.js` e garderobe.
+  - **Sicurezza:** XSS memorizzata dai nomi di quartiere nell'ispettore classico → etichette passate per `ConquerPanels.escapeHtml` (escape anche di `'`).
+  - **Dev free build:** `canAfford`/`spendCost` non sono più gratuiti per tutto; il free build resta sui soli cantieri.
+- **PRESTAZIONI** (profilo CPU, vecchio `main` 112cb8f0 contro HEAD): cache per struttura delle stanze esterne e delle feritoie (`archerSlots` 59→14 ms webgl), ricerca del mare memorizzata (`rockAt` 344→12 ms), roster dei carrettieri non ricalcolato a ogni frame, ombreggiatura delle mesh 3,7× più veloce (frame max del crollo WebGL ~363→~310 ms, il vecchio era 170–200). Il crollo in canvas varia 2,9–4,1 s anche sul vecchio codice: nessuna regressione accertata.
+- **SEMPLIFICAZIONE (refactor a comportamento invariato):** nuovo `src/settlement-util.js` (`ConquerUtil.hash/rng/smoothstep`, caricato per primo) al posto di 22 copie; politiche L1/L2 del Job Manager unificate; `ConquerSiege.activeRooms`; `W1_TOWER_FUNCTIONS` in core; un solo Dijkstra delle campane (`ConquerAlarmBells.shortestSignal`, fuzz su 3000 layout identico); `InstitutionPanel` unico per Chiesa e Gilda; wrapper della game API generati; rimossa la copia ESM morta `src/economy/` (il suo test falliva e nessuno la importava).
+- **CI:** suite deterministica completa su ogni PR che non sia solo documentazione, con elenco di tutti i test falliti; controllo di sintassi su `src/**/*.js|mjs`; `permissions: contents: read` ovunque; run settimanali dei workflow browser; nuovo `perf.yml` manuale; guardia contro script QA orfani; Context sync esteso a `api/`, `tests/`, `crime/`, `march/`, `lab/`, `layouts/`.
+- **PROVE LOCALI PASS (checkout LF):** 179 script node (`qa/*.cjs`, `qa/*.test.mjs`, `tests/*.test.mjs`) 0 falliti; `node --check` su tutti i sorgenti; `export-codex --check` e `export-codex-content --check`; pagina di gioco e Asset Lab caricati in locale senza errori di console né 404; i 5 benchmark browser `*-performance.cjs` passano (prima 2 fallivano per il MIME `.mjs` mancante nei loro server).
+- **NON VERIFICATO:** partita reale con le nuove regole dei costruttori; i loop bash dei workflow (nessuna shell bash locale) finché la CI non gira sul branch.
 
 ### 2026-11-15 — FIELD-LEND preservato nel merge regionale
 

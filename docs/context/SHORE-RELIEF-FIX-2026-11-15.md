@@ -2,6 +2,8 @@
 
 Base main `1df9699` (PR #250). Implementazione su `fix/coastal-cliff-beach-20261115`, non ancora mergiata.
 
+Allineato anche main `1911369` (audit/hardening #239) con merge pulito, mantenendo utilità condivise e aggiornamenti economici. Test specifici e cinque scene ripetuti dopo l'integrazione; esito CI da verificare sul nuovo commit.
+
 ## Difetto e causa
 
 La sabbia veniva dipinta da `drawWaterLayer` dentro `drawEnvironment`, dopo `drawTerrain` e i rilievi. Il problema era presente anche nella texture piana che WebGL applica alle scarpate: una spiaggia vicina poteva sostituirne il colore.

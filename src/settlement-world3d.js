@@ -1456,14 +1456,15 @@
   // One pass per check: each structure is hashed once and folded into the categories it belongs to.
   // Category tests look at fields only (no terrain sampling), so this stays well under a millisecond.
   let sigPass=null;
+  // The per-structure visual fields are structureVisualKey (settlement-render.js), shared with the 2.5D
+  // castle body bitmap key: variants (hoarding, a gate's timber upper storey...), rooms, exterior damage.
   function structureKey(s){
-    return s.id+(underConstruction(s)?'u':'c')+(s.level||'')+(s.houseLevel||'')+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.b?.x??'')+(s.b?.y??'')+(s.angle||0)+(s.roofStyle||'')+(s.bartizan||'')+(s.bell||'')+(s.innerRoof||'')+(s.signalFire||'')+(s.signalFireSpent?'F':'')+(s.roofShape||'')+(s.baseStyle||'')+(s.skin||'')+(s.masonryMaterial||'stone')+(s.cutaway?1:0)+(s.width||'')+(s.span||'')+(s.material||'')+(s.groundZ??'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0)
+    return (typeof structureVisualKey==='function'?structureVisualKey(s):s.id+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.level||''))
+      +(underConstruction(s)?'u':'c')+(s.houseLevel||'')+(s.span||'')
       // Moat fill patches are baked into the ground: filling must re-bake it.
       +(s.fills?.length?s.fills.map(f=>(+f.at).toFixed(2)+':'+f.span+':'+(+f.progress).toFixed(3)).join(','):'')
       // The gate door's state swaps its facade decal.
-      +(s.type==='gate'?(window.ConquerSiege?.doorStage?.(s)||''):'')+(s.brokenTop?'B':'')
-      // Room functions with an exterior element change the outside (and their broken state).
-      +(s.functions?.some(fn=>window.ConquerRoomExterior?.spec(fn))?JSON.stringify(s.functions)+JSON.stringify(s.roomExteriorHp||null):'')
+      +(s.type==='gate'?(window.ConquerSiege?.doorStage?.(s)||''):'')
       // Mills swap to their gutted model mid-fire.
       +(window.ConquerIndustries3D?.variant?.(s)||'');
   }
@@ -1565,7 +1566,9 @@
     }
     // Castle side tones and the near/far battlement split depend on the quarter-turn: keep one mesh set
     // per rotation/plan variant so turning the camera back and forth never rebuilds.
-    const castleContent=[season,State.visualPalette,State.stonePaletteId,structuresSig('castle')].join('|');
+    // Merlon style and roof pitch are realm-wide policies (a paid restyle): they reshape every castle mesh.
+    const castleContent=[season,State.visualPalette,State.stonePaletteId,typeof crenelStyle==='function'?crenelStyle():'',
+      typeof roofPitch==='function'?roofPitch():'',structuresSig('castle')].join('|');
     if(S.castleContent!==castleContent){
       for(const v of S.castleVariants?.values()||[])for(const p of Object.values(v))gl.deleteBuffer(p.b);
       S.castleContent=castleContent;S.castleVariants=new Map();

@@ -21,11 +21,13 @@
   function guilds(){
     return (State.structures||[]).filter(s=>s.type==='guild'&&completed(s));
   }
+  // The senior of a set of one-per-village institutions: highest level, then the oldest
+  // (lowest id). Also the Church seat (settlement-church.js), with kv, via ConquerGuild.
+  const senior=list=>list.slice().sort((a,b)=>level(b)-level(a)||
+    String(a.id).localeCompare(String(b.id),'en',{numeric:true}))[0]||null;
+  const kv=(k,v)=>'<div class="kv"><span>'+k+'</span><b>'+v+'</b></div>';
   // Older saves may hold one guild per well: only the best one works.
-  function active(){
-    return guilds().slice().sort((a,b)=>level(b)-level(a)||
-      String(a.id).localeCompare(String(b.id),'en',{numeric:true}))[0]||null;
-  }
+  function active(){return senior(guilds())}
   function seats(){
     const g=active();
     return g?SEATS[level(g)]:0;
@@ -57,7 +59,6 @@
   function panelHtml(s){
     if(!s||s.type!=='guild'||!completed(s))return '';
     const d=snapshot();
-    const kv=(k,v)=>'<div class="kv"><span>'+k+'</span><b>'+v+'</b></div>';
     if(d.activeId!==String(s.id))
       return '<div class="slot guild-panel"><div class="slot-label">Gilda · inattiva</div>'+
         '<div class="legend">Una sola Gilda per villaggio: lavora quella di livello più alto. '+
@@ -73,5 +74,5 @@
       'Cassa della Gilda e quota sulle vendite: fase successiva.</div></div>';
   }
   window.ConquerGuild=Object.freeze({BONUS,SEATS,ROLE_ID,ROOMS,
-    guilds,active,seats,officialYield,maxBonus,bonus,snapshot,panelHtml});
+    guilds,active,seats,officialYield,maxBonus,bonus,snapshot,panelHtml,senior,kv});
 })();

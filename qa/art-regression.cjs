@@ -5,7 +5,7 @@
 const fs=require('node:fs');
 const harness=fs.readFileSync(__dirname+'/urban-regression.cjs','utf8').split('let passed=0;')[0];
 eval(harness+`
-for(const f of ['settlement-architecture.js','settlement-industries.js','settlement-wagons3d.js','assets/scatter-model.js','assets/furniture-model.js','assets/art-models.js','settlement-cutaway-furniture.js'])
+for(const f of ['settlement-util.js','settlement-architecture.js','settlement-industries.js','settlement-wagons3d.js','assets/scatter-model.js','assets/furniture-model.js','assets/art-models.js','settlement-cutaway-furniture.js'])
   run(fs.readFileSync(__dirname+'/../src/'+f,'utf8'));
 let passed=0;
 function check(name,body){body();passed++;console.log('PASS '+name)}

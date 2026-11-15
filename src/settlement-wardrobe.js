@@ -93,7 +93,7 @@
   // Civil classes by house level: peasant L1, artisan L2, merchant L3, elite L4.
   const HAT_SHARE={peasant:.75,artisan:.45,merchant:.3,elite:.2};
   const CLOAK_BY_CLASS={peasant:'sheepskin',artisan:'woolCloak',merchant:'furCloak',elite:'furCloak'};
-  function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+  const hash=window.ConquerUtil.hash;
   const roll=(id,salt)=>(hash(String(id)+':'+salt)%10000)/10000;
   const darken=(hex,k)=>k>=1?hex:'#'+[1,3,5].map(i=>Math.round(parseInt(hex.slice(i,i+2),16)*k).toString(16).padStart(2,'0')).join('');
   // The class palettes live in settlement-core.js (tunics); absent in a bare lab.

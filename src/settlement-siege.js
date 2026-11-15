@@ -121,8 +121,8 @@
     if(fn==='council'||fn==='tribunal'||fn==='guard')return false;
     if(!eligibleRoom(s)||index<0||index>=functionCapacity(s))return false;
     const l=floor(s,index),top=structureLevel(s);
-    // Small (W1) towers: the spiral stair fills the shaft, only a few rooms fit (user, 04/11/2026).
-    if(s.type==='tower'&&towerTier(s)===1&&!s.isMastio&&!['dovecote','latrine','prison','treasury','armory'].includes(fn))return false;
+    // Small (W1) towers: the spiral stair fills the shaft, only a few rooms fit (W1_TOWER_FUNCTIONS).
+    if(s.type==='tower'&&towerTier(s)===1&&!s.isMastio&&!W1_TOWER_FUNCTIONS.includes(fn))return false;
 
     // The portico of a W1 section is an open ground floor: only what lives under arches fits there.
     if(l===1&&s.type==='built'&&typeof isBuiltPortico==='function'&&isBuiltPortico(s)&&!PORTICO_FUNCTIONS.includes(fn))return false;
@@ -240,6 +240,16 @@
   }
   function capturedRoomIds(){
     return new Set(state().circle.capturedRoomIds);
+  }
+  // Working rooms: every allowed function of a finished, standing tower/gate/built section whose room
+  // the enemy has not captured. `want`: a function name, a predicate on it, or nothing for all.
+  function activeRooms(want){
+    const lost=capturedRoomIds(),match=typeof want==='function'?want:fn=>!want||fn===want,out=[];
+    for(const s of State.structures){
+      if(!eligibleRoom(s)||s.destroyed||!Array.isArray(s.functions))continue;
+      s.functions.forEach((fn,index)=>{if(fn&&match(fn)&&allowed(s,index,fn)&&!lost.has(s.id+':'+index))out.push({s,index,fn})});
+    }
+    return out;
   }
   function circleCaptureRecords(){
     return state().circle.captures.filter(r=>r&&r.reclaimed!==true);
@@ -393,10 +403,9 @@
   }
   // Where the bucket brigade draws water from a cistern: just outside its tower's ground door.
   function cisternTaps(){
-    const out=[],lost=capturedRoomIds();
-    for(const s of State.structures){
-      if(s.type!=='tower'||s.destroyed||!eligibleRoom(s)||!Array.isArray(s.functions))continue;
-      if(!s.functions.some((fn,i)=>fn==='cistern'&&allowed(s,i,fn)&&!lost.has(s.id+':'+i)))continue;
+    const out=[];
+    for(const s of new Set(activeRooms('cistern').map(r=>r.s))){
+      if(s.type!=='tower')continue;
       const door=(typeof towerDoorSpecs==='function'?towerDoorSpecs(s):[]).find(d=>d.baseZ<.2);
       const r=s.shape==='round'?(Number(s.r)||.75):(Number(s.size)||1.5)/2,a=Number(s.angle)||0;
       const at=door?{x:door.contact.x+door.outward.x*.35,y:door.contact.y+door.outward.y*.35}
@@ -411,37 +420,19 @@
   }
   // Soldiers served by working latrines: an allowed room, not captured, its garderobe standing.
   function latrineCapacity(){
-    const unavailable=capturedRoomIds();let total=0;
-    for(const s of State.structures){
-      if(!eligibleRoom(s)||s.destroyed||!Array.isArray(s.functions))continue;
-      s.functions.forEach((fn,i)=>{
-        if(fn==='latrine'&&allowed(s,i,fn)&&!unavailable.has(s.id+':'+i)&&!window.ConquerRoomExterior?.broken(s,i))
-          total+=LATRINE_SOLDIERS*functionSlotUnits(s,i);
-      });
-    }
+    let total=0;
+    for(const {s,index} of activeRooms('latrine'))
+      if(!window.ConquerRoomExterior?.broken(s,index))total+=LATRINE_SOLDIERS*functionSlotUnits(s,index);
     return total;
   }
   // Working falconries: an allowed room, not captured, its tower standing.
-  function mewsCount(){
-    const unavailable=capturedRoomIds();let n=0;
-    for(const s of State.structures){
-      if(!eligibleRoom(s)||s.destroyed||!Array.isArray(s.functions))continue;
-      s.functions.forEach((fn,i)=>{if(fn==='mews'&&allowed(s,i,fn)&&!unavailable.has(s.id+':'+i))n++});
-    }
-    return n;
-  }
+  function mewsCount(){return activeRooms('mews').length}
   // Castle prestige (user, 05/11/2026): what the lord's household shows off. Points per working room;
   // the falconry is its first source, the others are the rooms of the court. Read by the panel now,
   // by other systems later.
   function prestige(){
-    const unavailable=capturedRoomIds(),by={};let total=0;
-    for(const s of State.structures){
-      if(!eligibleRoom(s)||s.destroyed||!Array.isArray(s.functions))continue;
-      s.functions.forEach((fn,i)=>{
-        const p=PRESTIGE[fn];if(!p||!allowed(s,i,fn)||unavailable.has(s.id+':'+i))return;
-        by[fn]=(by[fn]||0)+p;total+=p;
-      });
-    }
+    const by={};let total=0;
+    for(const {fn} of activeRooms(f=>!!PRESTIGE[f])){const p=PRESTIGE[fn];by[fn]=(by[fn]||0)+p;total+=p}
     return{total,by};
   }
   function hygieneTarget(){
@@ -543,12 +534,12 @@
     }
     return result;
   }
-  function stationedArchers(tower){
+  function stationedArchers(tower,slots=archerSlots(tower)){
     const n=Number(tower?.archerCount);
-    return Math.min(archerSlots(tower).length,Number.isFinite(n)?Math.max(0,Math.floor(n)):0);
+    return Math.min(slots.length,Number.isFinite(n)?Math.max(0,Math.floor(n)):0);
   }
   // Sick archers (poor garrison hygiene) leave their posts empty.
-  function occupiedArcherSlots(tower){const n=stationedArchers(tower);return archerSlots(tower).slice(0,n-Math.round(n*sickShare()))}
+  function occupiedArcherSlots(tower){const slots=archerSlots(tower),n=stationedArchers(tower,slots);return slots.slice(0,n-Math.round(n*sickShare()))}
   function changeArchers(id,delta){
     const tower=State.structures.find(s=>s.id===id&&s.type==='tower');
     if(!tower||underConstruction(tower))return false;
@@ -1385,9 +1376,9 @@
   window.ConquerSiege={restore,state,initial,assignMastio,normalizeMastio,syncAutoMastio,ensureMastioHall,mastio,armories,allowed,sanitizeRooms,
     capacity,used,transfer,civilians,dailyFoodDemand,water,wellReachable,cisternTaps,tick,stableUnits,spareHorses,slaughterHorses,HORSE_FOOD,mewsCount,prestige,PRESTIGE,MEWS_FOOD,integrity,effectiveness,attackStructure,
     drawOverlay,summaryHtml,bindPanel,WEAPONS,healthMaximum,
-    circleCaptureRecords,circleDepots,circleStoreInventory,captureCircleSector,
+    circleCaptureRecords,circleDepots,circleStoreInventory,captureCircleSector,activeRooms,
     releaseCircleSector,
     bays,bayIndexAt,assaultCheck,dynamicMeshes,BAY_TARGET,doorStage,gateClosed,gateBreached,PORTCULLIS_HEALTH,setGateClosed,doorAsset,collapseBridge,isNight,gateNightWatch,startCollapse,rubbleAt,rubbleBlocks,rubbleFactor,collapsing:()=>playing().map(r=>r.id),needsAnimation:()=>playing().length>0,
-    archerSlots,stationedArchers,occupiedArcherSlots,changeArchers,
+    archerSlots,stationedArchers:tower=>stationedArchers(tower),occupiedArcherSlots,changeArchers,
     garrison,latrineCapacity,hygieneTarget,sickShare,roomExteriorHtml,repairRoomExterior};
 })();

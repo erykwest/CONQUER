@@ -10,7 +10,7 @@ const vm=require('node:vm');
 const src=f=>fs.readFileSync(path.join(__dirname,'..','src',f),'utf8');
 const window={},State={seed:9,structures:[],clock:{speed:0}};
 const ctx=vm.createContext({window,State,Math,Object,Number,Array,Map,Set,String,JSON,Float32Array,performance:{now:()=>0}});
-for(const f of ['assets/scatter-model.js','assets/civic-models.js','assets/event-models.js','settlement-mesh3d.js','settlement-events3d.js','settlement-events-people.js'])vm.runInContext(src(f),ctx);
+for(const f of ['settlement-util.js','assets/scatter-model.js','assets/civic-models.js','assets/event-models.js','settlement-mesh3d.js','settlement-events3d.js','settlement-events-people.js'])vm.runInContext(src(f),ctx);
 const P=window.ConquerEventPeople,E=window.ConquerEvents3D;
 const venue=(setup,extra={})=>({id:'v-'+setup,type:'eventVenue',venue:'festivalGround',x:0,y:0,angle:0,event:{setup,phase:'active'},...extra});
 

@@ -199,4 +199,28 @@ assert.doesNotMatch(y.elements.controlBody.innerHTML,/Tesoreria/);
 const z=fixture(true,0);
 z.context.window.ConquerPanels.open();
 assert.match(z.elements.controlBody.innerHTML,/Dati storici disponibili/);
-console.log('panels-regression PASS (9 views, weekly welfare/prices/jobs/production, commands, unbuilt/empty history)');
+// Shared escaper: one helper escapes & < > " ' and the inspector (app-rooms) escapes save-derived
+// labels and quarter names with it, or with its own fallback where panels.js is absent (camp/).
+const evil='<img src=x onerror=alert(1)>',escaped='&lt;img src=x onerror=alert(1)&gt;';
+assert.equal(x.context.window.ConquerPanels.escapeHtml(`&<>"'`),'&amp;&lt;&gt;&quot;&#39;');
+const roomsSource=fs.readFileSync(path.join(__dirname,'../src/settlement-app-rooms.js'),'utf8');
+assert.equal((roomsSource.match(/structureLabel\(/g)||[]).length,(roomsSource.match(/roomEsc\(structureLabel\(/g)||[]).length,'every inspector structureLabel is escaped');
+function inspector(s,panels){
+  const node=()=>({innerHTML:'',classList:{add(){},remove(){}},querySelector:()=>null,querySelectorAll:()=>[]});
+  const els={functionPanel:node(),functionInfo:node(),functionSlots:node()};
+  const ctx={window:{ConquerPanels:panels,ConquerIndustries:{is:t=>t.type==='quarry',definition:()=>({tier:1,workers:2,good:'stone'})}},
+    document:{getElementById:id=>els[id]},selectedStructure:()=>s,underConstruction:()=>false,isCivicAnnex:()=>false,
+    structureLabel:t=>'Cava · '+t.name,costText:()=>'',constructionCost:()=>({}),
+    StructureCommands:{describeStructure:()=>({well:{founded:true,center:false,canCenter:true,name:s.name}})}};
+  vm.runInNewContext(roomsSource,ctx,{filename:'settlement-app-rooms.js'});
+  ctx.renderFunctionPanel();
+  return els.functionInfo.innerHTML+els.functionSlots.innerHTML;
+}
+for(const panels of [x.context.window.ConquerPanels,undefined]){
+  for(const type of ['quarry','well']){
+    const html=inspector({id:'s1',type,name:evil},panels);
+    assert.doesNotMatch(html,/<img/,type+' label must not inject markup');
+    assert.ok(html.includes(panels?escaped:'&#60;img'),type+' label rendered as escaped text');
+  }
+}
+console.log('panels-regression PASS (9 views, weekly welfare/prices/jobs/production, commands, unbuilt/empty history, escaped inspector labels)');

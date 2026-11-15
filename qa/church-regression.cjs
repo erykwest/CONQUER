@@ -6,7 +6,7 @@ const vm=require('node:vm');
 const path=require('node:path');
 const ROOT=path.resolve(__dirname,'..');
 const read=f=>fs.readFileSync(path.join(ROOT,f),'utf8');
-const economyCode=read('src/settlement-economy.js'),churchCode=read('src/settlement-church.js');
+const economyCode=read('src/settlement-economy.js'),churchCode=read('src/settlement-church.js'),guildCode=read('src/settlement-guild.js');
 const html=read('index.html');
 // 30-day months, 12 months a year: month/year boundaries are deterministic.
 const calendarDateFromDay=day=>({day:day%30+1,month:Math.floor(day/30)%12,year:Math.floor(day/360)+1});
@@ -24,6 +24,7 @@ function harness({saved=null,churches=[{id:'church1',civicLevel:1}],houses={1:2,
     civicLevel:s=>Math.max(1,Math.min(3,Math.round(Number(s?.civicLevel)||1))),
     fieldLayout:()=>({cells:[{index:0}],area:4})});
   vm.runInContext(economyCode,ctx,{filename:'settlement-economy.js'});
+  vm.runInContext(guildCode,ctx,{filename:'settlement-guild.js'}); // Church seat rule and kv are shared from the Guild
   vm.runInContext(churchCode,ctx,{filename:'settlement-church.js'});
   return{State,window,e:window.ConquerEconomy,ch:window.ConquerChurch};
 }
@@ -139,7 +140,7 @@ test('inspector tab and wiring',()=>{
   assert.ok(html.indexOf('settlement-economy.js')<html.indexOf('settlement-church.js'),'church after economy');
   assert.ok(html.indexOf('settlement-church.js')<html.indexOf('settlement-app-rooms.js'),'church before the inspector');
   assert.match(read('src/settlement-app-rooms.js'),/ConquerChurch\?\.panelHtml\?\.\(s\)/);
-  assert.match(read('src/ui/shell.js'),/ChurchPanel/);
+  assert.match(read('src/ui/shell.js'),/InstitutionPanel\} id=\$\{d\.id\} api="ConquerChurch"/);
   assert.match(read('src/settlement-panels.js'),/kpi\('Chiesa'/);
 });
 console.log('church-regression: all passed');

@@ -15,18 +15,12 @@
   function roll(id){let h=2166136261;for(const c of String(id)){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return (h>>>0)/4294967296}
   let last={day:null,staffed:false,beds:0,ward:0,healing:0,free:0,admitted:0,lost:0,discharged:0};
 
+  // Working infirmaries (allowed() keeps them to built sections), from the siege room iterator.
   function rooms(){
-    const captured=new Set(window.ConquerSiege?.state?.().circle?.capturedRoomIds||[]),out=[];
-    for(const s of State.structures){
-      if(s.type!=='built'||s.destroyed||underConstruction(s)||!Array.isArray(s.functions))continue;
-      s.functions.forEach((fn,i)=>{
-        if(fn!=='infirmary'||captured.has(s.id+':'+i))return;
-        if(window.ConquerSiege&&!window.ConquerSiege.allowed(s,i,fn))return;
-        const size=functionSlotUnits(s,i);
-        out.push({id:s.id+':'+i,structure:s,slot:i,units:size,beds:BEDS_PER_UNIT*size});
-      });
-    }
-    return out;
+    return (window.ConquerSiege?.activeRooms?.('infirmary')||[]).filter(r=>r.s.type==='built').map(({s,index})=>{
+      const size=functionSlotUnits(s,index);
+      return {id:s.id+':'+index,structure:s,slot:index,units:size,beds:BEDS_PER_UNIT*size};
+    });
   }
   // Monthly wages of one surgeon (L3) and two attendants (L1) per room unit, per day.
   function wagePerDay(list=rooms()){
