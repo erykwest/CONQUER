@@ -106,6 +106,7 @@ const fnSrc=(text,name)=>{const m=text.match(new RegExp('function '+name+'\\([^)
   assert.match(src('settlement-render.js'),/s\.cutawayFloor\?\?null/,'2.5D overlay cache key');
   // The crest (merlons, machicolations, inner roof) goes with the floors above.
   assert.match(src('settlement-castle-structures.js'),/underConstruction\(s\)\|\|\(typeof cutawayCrestHidden==='function'&&cutawayCrestHidden\(s\)\)\)continue/,'2.5D battlements skip a cut crest');
+  assert.match(src('settlement-castle-structures.js'),/function battlementBrazierSources\(\)\{[\s\S]{0,400}cutawayCrestHidden\(s\)/,'the roof brazier goes with the crest');
   assert.match(src('settlement-castle3d.js'),/if\(typeof cutawayCrestHidden==='function'&&cutawayCrestHidden\(s\)\)continue/,'WebGL battlements skip a cut crest');
   assert.match(src('settlement-world3d.js'),/cutawayCrestHidden\(s\)\?'h':''/,'WebGL castle mesh rebuilds when the crest goes');
   assert.match(src('settlement-cutaway-furniture.js'),/faces\.filter\(f=>shown\(s,f\)\)/,'furniture of the floors above is not drawn');

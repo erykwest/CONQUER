@@ -7,8 +7,8 @@
 
 ### 2026-11-15 — Microfix: il selettore di piano del cutaway toglie i merli
 
-- Branch fix/microfix. Con il cutaway piano per piano su un piano sotto l'ultimo, torri, porte e sottotorri non disegnano più merli, caditoie e tetto interno (cutawayCrestHidden in settlement-castle.js), sia nel percorso 2.5D (drawCastleBattlements) sia in quello WebGL (ConquerCastle3D.addPieces); la chiave della mesh castello di World3D cambia quando la cresta sparisce, così la mesh si ricostruisce.
-- PASS cutaway-floors (nuove asserzioni) e 49 regressioni castello/cutaway; verificato nel browser sulla mesh WebGL di una torre a 3 piani (cresta presente in P2, assente in P1/P0). Le due suite Playwright non sono eseguibili in locale. CI da eseguire.
+- Branch fix/microfix. Con il cutaway piano per piano su un piano sotto l'ultimo, torri, porte e sottotorri non disegnano più merli, caditoie, tetto interno e braciere del tetto (cutawayCrestHidden in settlement-castle.js), sia nel percorso 2.5D (drawCastleBattlements) sia in quello WebGL (ConquerCastle3D.addPieces); la chiave della mesh castello di World3D cambia quando la cresta sparisce, così la mesh si ricostruisce.
+- PASS cutaway-floors (nuove asserzioni) e 49 regressioni castello/cutaway; verificato a vista nel browser su una torre quadra W2 a 3 piani: in P2 merli e braciere, in P1 e P0 nessuno dei due. Le due suite Playwright non sono eseguibili in locale. CI da eseguire.
 
 ### 2026-11-15 — FIELD-LEND preservato nel merge regionale
 

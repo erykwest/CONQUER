@@ -1377,7 +1377,8 @@ function towerTorchSources(){
 function battlementBrazierSources(){
   const out=[];
   for(const s of State.structures){
-    if(underConstruction(s))continue;
+    // A floor-by-floor cutaway below the top takes the roof brazier off with the crest.
+    if(underConstruction(s)||(typeof cutawayCrestHidden==='function'&&cutawayCrestHidden(s)))continue;
     if(s.type==='tower'&&isWoodTower(s)&&woodTowerStyle(s)==='palisadeTower'&&woodTowerRoof(s)==='open'){
       out.push({kind:'brazier',id:s.id+':wood-brazier',p:woodTowerLocal(s,.28,.24),z:1.90,groundZ:placementGroundZ(s)});
     }else if(s.type==='tower'&&!isWoodTower(s)&&['battlement','machicolation'].includes(towerRoofStyle(s))){
