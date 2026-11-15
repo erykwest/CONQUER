@@ -2,6 +2,7 @@
 
 ### 2026-11-15 — Audit post-merge regionale, correzioni su branch
 
+- Esito consolidato locale: **201/202 PASS**, unico FAIL fondazione (116,07 ms > 100 ms). PR #250 draft, non mergiata. Integrato main `2782fc0` preservando pattuglie/porte stradali; controlli mirati post-integrazione PASS. CI della PR da verificare sul nuovo SHA.
 - Base verificata main `50096df` (PR #162); correzioni in `fix/regional-postmerge-20261115`, non mergiate. Riprodotti e corretti drenaggio cancellato da bordo montuoso, chiome perse con cache calda e selettore incoerente con i quattro biomi.
 - [Rapporto completo](POSTMERGE-REGRESSION-2026-11-15.md): base 198/199 test PASS dopo quattro ripetizioni LF; resta APERTO il picco della pianificazione stradale oltre 100 ms. Nuovi tre test prima FAIL/dopo PASS e ripetizione completa sul branch.
 - Browser: otto scene regionali, cinque idriche e apertura reale dalla regione; screenshot finali rivisti. Asset Lab completo: 1.612 render, zero errori ma 157 avvisi e baseline da riconciliare; Territorio corretto 16 render invariati. Nessuna accettazione massiva delle firme.

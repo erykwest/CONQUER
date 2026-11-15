@@ -18,7 +18,7 @@ Il limite residuo riguarda `founding-regression.cjs`: la ripianificazione strada
 
 Ipotesi verificate: ricerca percorso, semplificazione, applicazione finale. I campioni lenti ricadono nella ricerca percorso. Una prova temporanea con pausa a ogni nodo invece che ogni quattro non risolve il problema (picco 196,94 ms): **scartata**, nessuna modifica al planner e nessun allentamento della soglia. Il limite era già annotato nella preparazione della PR regionale; resta aperto.
 
-Sul branch vengono aggiunti tre test per selettore, drenaggio e chiome, anche nel workflow Sea. Ripetizione completa dei 202 test: esito riportato nella voce di stato del branch e nel riepilogo finale della PR. I test specifici hydrology-network, landscape-order, water-surface, tree-density-balance e builder-placement sono PASS dopo le correzioni.
+Sul branch aggiunti tre test per selettore, drenaggio e chiome, anche nel workflow Sea. Ripetizione completa dei **202 test: 201 PASS, 1 FAIL**, sempre `founding-regression.cjs`, picco **116,07 ms**. Eseguita sulla correzione prima dell'integrazione di main `2782fc0`; log e JSON conservati. I test specifici hydrology-network, landscape-order, water-surface, tree-density-balance e builder-placement sono PASS dopo le correzioni. Dopo l'integrazione ripetuti selettore, chiome, salvataggi, pattuglie e porte stradali; la suite integrata completa resta responsabilità della CI della PR #250, il cui stato live va distinto da questi risultati locali.
 
 ## Browser reale
 
