@@ -1,5 +1,17 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## MP-PUBLIC-01 — Visibilità anonima delle campagne (decisione 15/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** nella lobby senza login soltanto statistiche generali **aggregate** per server: capienza, conteggi giocatori/bot, anzianità/fase, stato ingressi, eventuale livello massimo in forma aggregata, posizioni di ingresso idonee come **numero** e orari regionali. **Escluse** mappe politiche e regionali, identità e classifiche nominali, dati dei feudi, eserciti, diplomazia, posta, movimenti e spawn precisi. Home informativa, tutorial e Codex pubblici invariati.
+
+- [ ] Definire i campi del riepilogo anonimo e costruire endpoint pubblico aggregato (nessun record segreto o dato per feudo).
+- [ ] Distinguere browser anonimo, account con login non partecipante e partecipante autorizzato; non presumere che login = accesso ai dati di tutti.
+- [ ] Test anti-leak di mappe, proprietari, messaggi, unità e dati territoriali nei payload anonimi e nei link/cache.
+- [ ] Decidere aggiornamento dei contatori, definizione di «attivo» e visibilità interna secondo ruoli feudali.
+
+**Riferimenti:** D-MP-PUBLIC-261115 e [scope multiplayer §3](../MULTIPLAYER-SERVER-SCOPE.md#3-lobby-e-scoperta-delle-partite). **Solo decisione documentale, nessun codice modificato.**
+
+
 ### 2026-11-15 — FIELD-LEND preservato nel merge regionale
 
 - La CI su 6510709 era tutta verde (20 workflow). Durante l'attesa main e avanzato a 6c5ac79 (#212 FIELD-LEND): integrato senza conflitti di codice, unendo STATUS/CHANGELOG e rigenerando il catalogo. PASS locale idle-farmers (7), fields (16), export Wiki. Nuova CI da verificare; nessuna modifica alle ricette regionali.
