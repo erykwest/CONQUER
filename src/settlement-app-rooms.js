@@ -196,6 +196,8 @@ function renderFunctionPanel(){
     // Lookout, outpost and signal fire (settlement-soldiers.js).
     html+=window.ConquerSoldiers?.towerPanelHtml?.(s)||'';
   }
+  // Patrols of the whole ring of walls this wall belongs to (settlement-wall-patrols.js).
+  if(['wall','palisade'].includes(s.type)&&!building)html+=window.ConquerWallPatrols?.panelHtml?.(s)||'';
   if(['house','market','tavern','church','training','plaza','townhall','guild','bargello','balivo'].includes(s.type)){
     const deg=Math.round((Number(s.angle)||0)*180/Math.PI+360)%360;
     html+=`<div class="slot"><div class="slot-label">Building rotation · ${deg}°</div><div class="grid3"><button data-point-rotate="-1">↺ 15°</button><button data-point-rotate="12">⇄ 180°</button><button data-point-rotate="1">↻ 15°</button></div></div>`;
@@ -357,6 +359,7 @@ function renderFunctionPanel(){
   window.ConquerCrossings?.bindPanel(slots);
   window.ConquerKeepEntrance?.bindPanel(slots);
   window.ConquerSoldiers?.bindTowerPanel?.(slots,s);
+  window.ConquerWallPatrols?.bindPanel?.(slots,s);
   window.ConquerChurch?.bindPanel?.(slots);
   // Every control acts through StructureCommands (src/settlement-structure-commands.js), shared with UI v2.
   const on=(selector,fn,event='onclick')=>slots.querySelectorAll(selector).forEach(el=>el[event]=e=>{const target=selectedStructure();if(target)fn(target.id,el,e)});
