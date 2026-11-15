@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-15 — Mura ad angolo libero (branch `fix/wall-free-angle`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `settlement-castle-placement.js`: `normalizeStructuralLinearRoute` non aggancia più muro, palizzata e sezione costruita al reticolo di 24 direzioni (15°) e non crea più il gomito automatico a due tratti verso un magnete. Il tratto va dritto dal punto A al punto B (o al magnete, raggiunto esattamente); oltre la lunghezza massima, fino a 2× max, due tratti collineari uguali. `rotationStep` resta solo se l'angolo cade sul reticolo, altrimenti `null` (stessa regola della migrazione dei salvataggi). Torri, porte ed edifici puntuali conservano la rotazione a 15°.
+  - `settlement-app-input.js`: messaggi di stato senza «15°» (mostra l'angolo reale del tratto).
+- **PROVE LOCALI PASS:** le 28 `qa/*.cjs` che toccano il piazzamento lineare (tra cui linear-magnet, wall-bays, lean-to, pier, oriented-towers) e builder-placement. Nel browser (`main` + branch): muro a 18,97° e secondo muro a −125,91° agganciato esattamente all'estremità libera del primo, un solo tratto, nessun errore in console.
+
 ## 2026-11-14 — Caditoie all'italiana sulle torri (branch `feat/caditoie-italiane-torri`)
 
 - **CODICE SUL BRANCH, NON MERGE:**

@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-15 — WALL-FREE-ANGLE · Mura ad angolo libero
+
+Tolto il vincolo di giunzione a 15° per mura, palizzate e sezioni costruite: il tratto segue l'angolo del mouse e raggiunge un magnete in linea retta, senza il gomito automatico a due tratti. Torri e porte mantengono la rotazione a 15°. Branch `fix/wall-free-angle`. ROADMAP e DECISIONS invariati (nessuna decisione registrata sul reticolo delle mura).
+
 ## 2026-11-14 — TOW-MACH-IT · Caditoie all'italiana sulle torri
 
 Nuova opzione estetica nel menù del tetto delle torri in pietra: «Caditoie all'italiana», sul modello del Castello di San Giorgio a Mantova: mensole snelle e fitte, ognuna un unico pezzo inclinato (banda 4× l'altezza delle caditoie attuali), archi a tutto sesto senza riempimento scuro e muratura a filo sopra gli archi. In cutaway il lato aperto perde mensole e archi, così l'ultimo piano resta visibile. Stesse regole delle caditoie standard (solo aspetto). Branch `feat/caditoie-italiane-torri`; Lab, test di regressione e baseline dell'audit aggiornati. ROADMAP e DECISIONS invariati (variante estetica, nessun contratto nuovo).

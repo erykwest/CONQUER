@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-15 — WALL-FREE-ANGLE · Mura senza vincolo di giunzione a 15°
+
+**IMPLEMENTATO SU BRANCH `fix/wall-free-angle`, NON MERGE.** Mura, palizzate e sezioni costruite si tracciano a qualsiasi angolo; niente gomito automatico verso i magneti. Dettagli in [STATUS](STATUS.md).
+- [x] Tratto libero da A a B e aggancio esatto al magnete in un solo tratto.
+- [ ] Verificare a occhio, nel gioco, le giunzioni muro-muro e muro-torre ad angoli non multipli di 15°.
+
 ## 2026-11-14 — TOW-MACH-IT · Caditoie all'italiana sulle torri
 
 **IMPLEMENTATO SU BRANCH `feat/caditoie-italiane-torri`, NON MERGE.** Variante estetica delle caditoie solo per le torri in pietra: mensole alte 4× a risalti raccordate da archetti, scelta dal menù del tetto accanto a Merlato / Caditoie / Falde. Dettagli in [STATUS](STATUS.md).
