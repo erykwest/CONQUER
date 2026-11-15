@@ -1,5 +1,16 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## MSG-FOOT-01 — Messaggero a piedi se non ci sono cavalli (15/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** oltre al corriere a cavallo, è previsto il **messaggero a piedi** quando non sono disponibili cavalli. L'assenza di cavalcature **non annulla da sola** l'invio di lettere, ordini e **allarmi automatici d'invasione**, se un portatore e una rotta sono disponibili. **Sotto assedio sia pedoni sia montati non entrano/escono**, mentre i piccioni restano distinti. [D-MSG-FOOT-261115](DECISIONS.md#d-msg-foot-261115--messaggero-a-piedi-in-assenza-di-cavalli-15112026) · [SRS mobile v0.14 draft #222](https://github.com/erykwest/CONQUER/pull/222).
+
+- [ ] Modellare disponibilità dei cavalli e modalità del messaggero terrestre: **montato** oppure **pedone**, con fallback al pedone quando il cavallo non è disponibile, se il servizio terrestre rimane praticabile.
+- [ ] Calcolare percorso, tempi ed ETA secondo la modalità di trasporto effettiva; nessuna velocità numerica viene stabilita da questo requisito.
+- [ ] Applicare stessa scelta anche ai **messaggeri automatici d'allarme per invasione** e alle altre comunicazioni feudali, senza anticipare il loro recapito nella dashboard.
+- [ ] Verificare server-side il **blocco bidirezionale in assedio** per entrambe le modalità; QA su cavalli presenti/assenti, consegna ritardata, attacco e assedio.
+- [ ] **APERTO:** velocità piedi/cavallo, disponibilità e costi dei portatori, percorso/terreno, rischi e intercettazione in stato invaso, gestione di un cavallo assegnato; il prototipo `messages` non è prova dell'implementazione del vettore a piedi.
+
+
 ### 2026-11-15 — FIELD-LEND preservato nel merge regionale
 
 - La CI su 6510709 era tutta verde (20 workflow). Durante l'attesa main e avanzato a 6c5ac79 (#212 FIELD-LEND): integrato senza conflitti di codice, unendo STATUS/CHANGELOG e rigenerando il catalogo. PASS locale idle-farmers (7), fields (16), export Wiki. Nuova CI da verificare; nessuna modifica alle ricette regionali.
