@@ -28,6 +28,9 @@ Le figure di eventi, giostra, gogna, forca, patibolo, tribunale e personale in c
 
 Fissati dal product owner i rapporti sul riferimento **fanteria standard 1×**: **messaggero a piedi 1×**, **cavalleria standard e messaggero a cavallo 2×**, **carri per mercanti, rifornimenti e immigrati 1,5×**, a parità di percorso e condizioni. Riconosciuto il debito di integrazione: `src/settlement-convoys.js` e prototipo `messages` utilizzano ancora velocità convenzionali di 22 U/giorno, non una scala World/Feudal unificata. Aggiornati REMOTE-CONTROL-SCOPE, MARCH, convoys-skeleton, D-WORLD-SPEED-261115, backlog WORLD-SPEED-01 e SRS mobile v0.15 in draft PR #222. **Solo documentazione, nessun runtime/salvataggio modificato.**
 
+## 2026-11-15 — UI v2: ispettore dell'edificio selezionato, fix rapidi (branch `fix/inspector-quickfixes`)
+
+- Revisione dell'ispettore su `main` e layout TEST: crash del disegno animali, piazzale senza etichette, ispettore assente fuori da Costruisci, blocchi stanze vuoti, opzioni grigie senza motivo, demolizione senza conferma. Tutti corretti su branch; schede interne e anteprima dei costi restano aperte nel [BACKLOG](BACKLOG.md). Stato e prove in [STATUS](STATUS.md). ROADMAP e DECISIONS invariate.
 
 ## 2026-11-15 — MSG-FOOT-01 · Messaggero a piedi senza cavalli (solo design)
 
