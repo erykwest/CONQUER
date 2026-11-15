@@ -38,6 +38,16 @@
   }
   const KITE=[[-.5,-.5],[.5,-.5],[.5,0],[0,.5],[-.5,0]];
   const BANNER=[[-.5,-.5],[.5,-.5],[.5,.5],[-.5,.5]];
+  // Feudal shield shapes (State.policies.unitShield) as clips in the unit box, with their size
+  // in art units. Without a style the knight keeps the original pointed shield (KITE).
+  const ring=(n,fx,fy)=>Array.from({length:n},(_,i)=>{const a=i/n*Math.PI*2;return[fx(a),fy(a)]});
+  const SHIELD_SHAPES={
+    oval:{clip:ring(24,a=>Math.cos(a)*.5,a=>Math.sin(a)*.5),w:32,h:46},
+    round:{clip:ring(24,a=>Math.cos(a)*.5,a=>Math.sin(a)*.5),w:38,h:38,boss:true},
+    heater:{clip:[[-.5,-.5],[.5,-.5],[.5,0],[.42,.2],[.25,.37],[0,.5],[-.25,.37],[-.42,.2],[-.5,0]],w:32,h:46},
+    kite:{clip:[[-.5,-.3],[-.35,-.47],[0,-.5],[.35,-.47],[.5,-.3],[.35,.05],[0,.5],[-.35,.05]],w:30,h:60},
+    pavise:{clip:[[-.5,-.38],[0,-.5],[.5,-.38],[.45,.5],[-.45,.5]],w:34,h:62,ridge:true}
+  };
 
   // ---------- horse gear
   // Drape over the barrel with a dagged (scalloped) hem, longer at the chest and rump.
@@ -140,7 +150,27 @@
   }
   function head(ctx,o){
     const {lw}=o;
-    if(o.kind==='knight'){
+    const style=o.kind==='knight'?o.helmet:null;
+    if(style&&style!=='greathelm'){
+      // Feudal helmet (State.policies.unitHelmet): open helmets show the face under a mail coif.
+      const face=()=>{ctx.fillStyle=MAIL;ctx.beginPath();ctx.arc(123,22,13,0,Math.PI*2);ctx.fill();ctx.strokeStyle=OUTLINE;ctx.lineWidth=lw;ctx.stroke();
+        ctx.fillStyle=SKIN;ctx.beginPath();ctx.ellipse(126,24,7,8,0,0,Math.PI*2);ctx.fill()};
+      if(style==='barbuta'){
+        ctx.fillStyle=STEEL;ctx.beginPath();ctx.arc(123,20,14,0,Math.PI*2);ctx.fill();ctx.strokeStyle=OUTLINE;ctx.lineWidth=lw;ctx.stroke();
+        poly(ctx,[[118,16],[136,16],[136,21],[130,21],[130,32],[125,32],[125,21],[118,21]],SKIN,null,lw);      // T opening
+      }else{
+        face();
+        if(style==='kettle'){
+          poly(ctx,[[112,15],[114,6],[123,2],[132,6],[134,15]],STEEL,OUTLINE,lw);
+          line(ctx,[103,16],[143,16],STEEL_DARK,lw*3.2);                                             // wide brim
+        }else if(style==='nasal'){
+          poly(ctx,[[110,18],[115,6],[123,-4],[131,6],[136,18]],STEEL,OUTLINE,lw);
+          poly(ctx,[[127,17],[131,17],[131,29],[127,29]],STEEL,OUTLINE,lw*.7);                      // nasal
+        }else{
+          poly(ctx,[[110,19],[112,10],[123,5],[134,10],[136,19]],STEEL,OUTLINE,lw);                  // cervelliera
+        }
+      }
+    }else if(o.kind==='knight'){
       poly(ctx,[[112,34],[134,34],[136,10],[130,4],[116,4],[110,10]],STEEL,OUTLINE,lw);           // great helm
       line(ctx,[122,18],[136,18],'#16181a',lw*1.6,'butt');                                         // visor slit
       poly(ctx,[[116,4],[130,4],[128,-8],[118,-8]],o.livery.main,OUTLINE,lw*.8);                  // crest
@@ -153,10 +183,14 @@
   }
   function shield(ctx,o){
     // At the rider's near side, low over the thigh so the surcoat still shows.
-    const cx=112+o.ready*8,cy=88,w=32,h=50;
-    arms(ctx,o.flip,cx,cy,w,h,KITE,o.livery,o.paint);
-    ctx.save();ctx.translate(cx,cy);ctx.beginPath();KITE.forEach(([x,y],i)=>i?ctx.lineTo(x*w,y*h):ctx.moveTo(x*w,y*h));ctx.closePath();
-    ctx.strokeStyle=GOLD;ctx.lineWidth=o.lw*1.6;ctx.stroke();ctx.restore();
+    const shape=SHIELD_SHAPES[o.shield],clip=shape?.clip||KITE,w=shape?.w||32,h=shape?.h||50;
+    const cx=112+o.ready*8,cy=88+(h-50)*.3;
+    arms(ctx,o.flip,cx,cy,w,h,clip,o.livery,o.paint);
+    ctx.save();ctx.translate(cx,cy);ctx.beginPath();clip.forEach(([x,y],i)=>i?ctx.lineTo(x*w,y*h):ctx.moveTo(x*w,y*h));ctx.closePath();
+    ctx.strokeStyle=GOLD;ctx.lineWidth=o.lw*1.6;ctx.stroke();
+    if(shape?.boss){ctx.fillStyle=STEEL;ctx.beginPath();ctx.arc(0,0,w*.16,0,Math.PI*2);ctx.fill();ctx.strokeStyle=OUTLINE;ctx.lineWidth=o.lw;ctx.stroke()}
+    if(shape?.ridge)line(ctx,[0,-h*.5],[0,h*.5],GOLD,o.lw*1.2,'butt');
+    ctx.restore();
   }
   function reins(ctx,o){
     const sp=o.sp,j={x:(sp.joint.a.x+sp.joint.b.x)/2+o.pose.headX,y:(sp.joint.a.y+sp.joint.b.y)/2+o.pose.headY};
@@ -187,7 +221,7 @@
     const p=opts.pose||{},kind=opts.kind==='messenger'?'messenger':'knight';
     const alpha=p.alpha??1;if(alpha<=0)return;
     const state={kind,livery:opts.livery,paint:opts.paint,ready:p.ready||0,attack:p.attack||0,flash:p.flash||0,
-      fall:p.fall||0,charge:opts.mode==='run'};
+      fall:p.fall||0,charge:opts.mode==='run',helmet:opts.helmet||null,shield:opts.shield||null};
     ctx.save();ctx.globalAlpha*=alpha;
     window.ConquerAnimals.drawAnimal('horse',ctx,x,y,size,{t:opts.t||0,seed:opts.seed||0,coat:opts.coat,
       facing:opts.facing,mode:opts.mode==='idle'?'idle':opts.mode||'idle',from:opts.from==='idle'?'idle':opts.from,blend:opts.blend,

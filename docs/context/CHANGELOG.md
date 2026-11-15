@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-15 — Equipaggiamento delle unità · cavalieri a cavallo
+
+15/11/2026 — `feature/knight-equipment-styles` (pre-merge): i cavalieri a cavallo del feudo (`settlement-mounted2d.js`) indossano l'elmo e portano lo scudo scelti in Militare › Equipaggiamento (5 elmi, 5 forme). Finché il giocatore non sceglie, e per i nemici e il messaggero, restano grande elmo e scudo appuntito originali. Nel Lab i selettori Elmo/Scudo valgono anche per «Cavaliere a cavallo», con l'opzione «Originale». STATUS, BACKLOG e CHANGELOG aggiornati; ROADMAP e DECISIONS invariate.
+
 ## 2026-11-15 — WORLD-SPEED-01 · Rapporti di velocità strategica (solo design)
 
 Fissati dal product owner i rapporti sul riferimento **fanteria standard 1×**: **messaggero a piedi 1×**, **cavalleria standard e messaggero a cavallo 2×**, **carri per mercanti, rifornimenti e immigrati 1,5×**, a parità di percorso e condizioni. Riconosciuto il debito di integrazione: `src/settlement-convoys.js` e prototipo `messages` utilizzano ancora velocità convenzionali di 22 U/giorno, non una scala World/Feudal unificata. Aggiornati REMOTE-CONTROL-SCOPE, MARCH, convoys-skeleton, D-WORLD-SPEED-261115, backlog WORLD-SPEED-01 e SRS mobile v0.15 in draft PR #222. **Solo documentazione, nessun runtime/salvataggio modificato.**
