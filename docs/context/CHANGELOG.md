@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-15 — MIL-WALL-01 · catalogo Wiki rigenerato
+
+15/11/2026 — Dopo il merge di #248 il check `integrity` falliva perché `wiki/catalog.json` non era rigenerato. Rigenerato con `node tools/export-codex.cjs`; `--check` e `qa/codex-wiki-regression.cjs` PASS. Nessun cambio di gioco.
+
 ## 2026-11-15 — MIL-WALL-01 · Pattuglie sulle mura per giro
 
 15/11/2026 — `fix/wall-patrol-rings` (pre-merge): le pattuglie sulle mura non sono più una o due figure per ogni tratto, ma appartengono al giro di mura intero (mura e palizzate unite da torri e porte). Ogni pattuglia è di 2 soldati della Caserma e percorre tutto il giro; un giro nuovo parte senza pattuglie e il giocatore le assegna da Militare › Pattuglie e guarnigioni o dall'ispettore del muro, con arruolamento in linea se mancano soldati. Le assegnazioni si salvano e resistono alle brecce. Cache dei posti arcieri per torre: `drawCastleSoldiers` da 40 a 4,5 ms per frame. Nuovo modulo `settlement-wall-patrols.js`, test `qa/wall-patrol-regression.cjs`. STATUS, BACKLOG, DECISIONS aggiornati; ROADMAP invariata.

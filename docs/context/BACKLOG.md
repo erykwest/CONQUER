@@ -2,7 +2,7 @@
 
 ## MIL-WALL-01 — Pattuglie sulle mura per giro di mura (15/11/2026)
 
-**IMPLEMENTATO SU BRANCH `fix/wall-patrol-rings`, NON MERGE.** [D-MIL-WALL-261115](DECISIONS.md#d-mil-wall-261115--pattuglie-delle-mura-per-giro-15112026).
+**IN MAIN (#248, 5e3401e).** [D-MIL-WALL-261115](DECISIONS.md#d-mil-wall-261115--pattuglie-delle-mura-per-giro-15112026).
 
 - [x] Pattuglie per giro di mura (componente connesso del cammino di ronda), non per segmento.
 - [x] 2 soldati della Caserma per pattuglia, coperte dopo le pattuglie White Zone; ritiro automatico se mancano soldati o paga.

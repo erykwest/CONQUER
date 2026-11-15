@@ -8,6 +8,7 @@
 - **/camp** non carica il modulo e mantiene le figure per segmento.
 - **PRESTAZIONI:** `ConquerSiege.archerSlots` tiene in cache i posti per torre (chiave: stato della torre e di muri/torri agganciati, verificata a ogni chiamata). Layout TEST di notte: `drawCastleSoldiers` da 40 ms a 4,5 ms per frame, posti arcieri di tutte le torri da 3,8 a 0,2 ms; posti identici alla base.
 - **PROVE LOCALI PASS:** `qa/wall-patrol-regression.cjs` (10 controlli, aggiunto alla CI combat), caserma-avamposto, patrol, wallwalk, panels, refactor-app-population, military-circle-roster, siege-assault, bartizan. Nel browser (layout TEST): assegnazione da pannello Militare e ispettore con il mouse, arruolamento in linea, salvataggio e ricarica, soldati sul camminamento.
+- **MERGE:** #248 in main (5e3401e); catalogo Wiki rigenerato in PR successiva (check integrity).
 - **NON VERIFICATO:** fps reali nel pannello Browser (il pannello nascosto riduce i frame anche sulla base). Il lag notturno osservato è presente anche sulla base `ecdd6303`.
 
 ## 2026-11-15 — Equipaggiamento dei cavalieri a cavallo (branch `feature/knight-equipment-styles`)
