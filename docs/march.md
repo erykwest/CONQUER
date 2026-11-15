@@ -23,7 +23,9 @@ Pagina: /march/ (file march/index.html). Non è un nuovo motore economico o un n
 
 **DECISO — impostazioni separate di allarme per attacco:** il signore interessato alla ricezione degli avvisi può configurare **«Allerta sempre il signore in caso di attacco»** e **«Allerta sempre gli alleati in caso di attacco»**. Il primo invia una comunicazione aggiuntiva al superiore feudale; il secondo agli alleati della campagna. **Non** sono una scelta esclusiva e **non** sostituiscono il messaggero base per l'invasione quando il governante è assente. **APERTO:** regola precisa per l'evento «attacco» (non necessariamente coincidente con invasione), titolarità e ambito dei flag, messaggero/piccione e criteri di selezione degli alleati. Nessun bypass del blocco d'assedio.
 
-**IMPORTANTE:** lo skeleton MARCH V0 descritto sotto non implementa questo blocco postale. Il suo stadio `siege` è un riferimento di progettazione, non prova dell'integrazione multiplayer. Tracciamento: [SRS mobile v0.13](https://github.com/erykwest/CONQUER/pull/222), [Remote Control](REMOTE-CONTROL-SCOPE.md) e D-SIEGE-COMMS-261114.
+**DECISO (15/11/2026) — messaggeri terrestri alternativi:** se non ci sono **cavalli disponibili**, il messaggio o l'**allarme automatico d'invasione** può essere trasportato da **un messaggero a piedi**, anziché a cavallo, purché un vettore terrestre e una via siano disponibili. La consegna richiede **tempo di viaggio simulato** appropriato al vettore; non inventare velocità, costi o ETA numeriche. Durante **assedio**, il blocco di entrata/uscita vale per **entrambi**: a piedi **non** significa poter attraversare le linee d'assedio. I piccioni operativi conservano le proprie regole. Il prototipo di posta non prova che questa opzione sia già integrata nel motore multiplayer.
+
+**IMPORTANTE:** lo skeleton MARCH V0 descritto sotto non implementa questo blocco postale. Il suo stadio `siege` è un riferimento di progettazione, non prova dell'integrazione multiplayer. Tracciamento: [SRS mobile v0.14](https://github.com/erykwest/CONQUER/pull/222), [Remote Control](REMOTE-CONTROL-SCOPE.md) e D-SIEGE-COMMS-261114.
 
 ## Cosa contiene concretamente lo skeleton
 
