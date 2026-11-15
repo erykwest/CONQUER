@@ -68,9 +68,13 @@ function manualRoadConflict(road,manual){
   if(manual.type==='gate'&&roadUsesGatePassage(road,manual))return false;
   if(['bridge','ramp','stairway'].includes(manual.type)&&roadMeetsBridgeEnd(road,manual))return false;
   if(['wall','palisade','built'].includes(manual.type)){
-    return segmentsIntersect(road.a,road.b,manual.a,manual.b)||
-      pointSegmentDistance(manual.a,road.a,road.b)<=manual.width/2+(road.width||.3)/2||
-      pointSegmentDistance(manual.b,road.a,road.b)<=manual.width/2+(road.width||.3)/2;
+    // A wall end seated on a gate flank does not cut the road running through that gate's passage.
+    const nearEnd=end=>{
+      if(pointSegmentDistance(manual[end],road.a,road.b)>manual.width/2+(road.width||.3)/2)return false;
+      const snapId=manual[end+'Snap'],gate=snapId&&State.structures.find(g=>g.id===snapId&&g.type==='gate');
+      return !(gate&&roadUsesGatePassage(road,gate));
+    };
+    return segmentsIntersect(road.a,road.b,manual.a,manual.b)||nearEnd('a')||nearEnd('b');
   }
   if(manual.type==='tower'&&manual.shape==='round'){
     return pointSegmentDistance(manual,road.a,road.b)<=manual.r+(road.width||.3)/2+.08;

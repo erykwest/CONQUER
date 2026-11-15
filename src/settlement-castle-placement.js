@@ -38,6 +38,87 @@ function gateRoadSnap(p){
   const r=best.road;
   return{point:{x:best.point.x,y:best.point.y},axis:snapStructureAngle(Math.atan2(r.b.y-r.a.y,r.b.x-r.a.x)),roadId:r.id};
 }
+// Walls across a main road (WALL-ROAD-GATE): where a new wall or palisade crosses a main road
+// a gate of the matching type straddles the crossing and the wall is cut on its two flanks.
+// Palisade -> wood gate; stone/brick wall W1 -> small gate, W2-W3 -> large gate.
+function wallRoadGateRoad(r){
+  return r?.type==='road'&&!!r.a&&!!r.b&&(isPrimaryRoad(r)||r.roadClass==='arterial-gate'||r.roadClass==='arterial-repair');
+}
+function wallRoadGateSpec(wall){
+  if(wall?.type==='palisade')return{type:'gate',shape:'square',material:'wood',size:1.5,w:1,h:1.5,level:1,roofStyle:'flat',functions:[]};
+  if(wall?.type!=='wall')return null;
+  const small=wallTier(wall)<=1,size=small?GATE_SIZES.small:GATE_SIZES.large,max=small?SMALL_GATE_MAX_LEVEL:3;
+  return{type:'gate',shape:'square',material:'stone',masonryMaterial:wall.masonryMaterial==='brick'?'brick':'stone',
+    size,level:Math.min(max,Math.max(1,Number(State.buildLevels?.gate)||1)),functions:[]};
+}
+function segmentCrossing(a,b,c,d){
+  const rx=b.x-a.x,ry=b.y-a.y,sx=d.x-c.x,sy=d.y-c.y,den=rx*sy-ry*sx;
+  if(Math.abs(den)<1e-9)return null;
+  const qx=c.x-a.x,qy=c.y-a.y,t=(qx*sy-qy*sx)/den,u=(qx*ry-qy*rx)/den;
+  return t>=-1e-9&&t<=1+1e-9&&u>=-1e-9&&u<=1+1e-9?{t:clamp(t,0,1),point:{x:a.x+rx*t,y:a.y+ry*t}}:null;
+}
+// Main-road crossings along one wall segment, ordered from a to b. A crossing already covered
+// by an existing gate (the wall reaching a gate that stands on the road) is not a new gate.
+function wallRoadCrossings(wall){
+  const out=[];
+  for(const r of roadList(false)){
+    if(!wallRoadGateRoad(r))continue;
+    const x=segmentCrossing(wall.a,wall.b,r.a,r.b);if(!x)continue;
+    const covered=State.structures.some(g=>g.type==='gate'&&dist(g,x.point)<=Math.max(rectDims(g).w,rectDims(g).h)/2+.2);
+    if(covered||out.some(o=>dist(o.point,x.point)<.3))continue;   // road joints give the same crossing twice
+    out.push({...x,road:r});
+  }
+  return out.sort((p,q)=>p.t-q.t);
+}
+// The gate front faces the wall's exterior, passage across the wall; when the road crosses too
+// obliquely for that passage the gate turns along the road instead.
+function wallRoadGateAt(wall,cross,spec){
+  const wa=Math.atan2(wall.b.y-wall.a.y,wall.b.x-wall.a.x),out=wa+wallExteriorSide(wall)*Math.PI/2;
+  const ra=Math.atan2(cross.road.b.y-cross.road.a.y,cross.road.b.x-cross.road.a.x),along=Math.cos(ra-out)>=0?ra:ra+Math.PI;
+  let reason='gate not placeable';
+  for(const raw of [out,along]){
+    const angle=snapStructureAngle(raw);
+    const gate={id:uid(),...spec,functions:[],x:cross.point.x,y:cross.point.y,angle,rotationStep:structureRotationStep(angle),wallRoadGate:true};
+    if(!roadUsesGatePassage(cross.road,gate))continue;
+    const v=window.ConquerPlacement?.check(gate);
+    if(!v||v.ok)return{gate};
+    reason=v.reason;
+  }
+  return{gate:null,reason};
+}
+// Splits the planned wall segments at their main-road crossings. Returns the gates to add first
+// and the wall pieces, seated on the gate flanks (aSnap/bSnap) like a wall drawn to a gate.
+function wallRoadGatePlan(structures){
+  const gates=[],walls=[];
+  for(const wall of structures){
+    const spec=wallRoadGateSpec(wall),crossings=spec?wallRoadCrossings(wall):[];
+    if(!crossings.length){walls.push(wall);continue}
+    const placed=[];
+    for(const cross of crossings){
+      const prev=placed.at(-1);
+      if(prev&&dist(prev,cross.point)<Math.max(spec.w??spec.size,spec.h??spec.size)+.2)continue;   // gates side by side: one is enough
+      const {gate,reason}=wallRoadGateAt(wall,cross,spec);
+      if(!gate)return{blocked:'Gate on the main road: '+reason};
+      placed.push(gate);
+    }
+    // Pieces shorter than a wall break vanish into the gate; only the piece that still starts at
+    // wall.a (ends at wall.b) keeps that end's magnet and dogleg joint.
+    let start=null;
+    const piece=(fromGate,toGate)=>{
+      const a=fromGate?boundaryPoint(fromGate,wall.b):wall.a,b=toGate?boundaryPoint(toGate,wall.a):wall.b;
+      if(dist(a,b)<WALL_BREAK_MIN)return;
+      const s={...wall,id:walls.some(w=>w.id===wall.id)?uid():wall.id,a:{...a},b:{...b},length:dist(a,b),
+        aSnap:fromGate?fromGate.id:wall.aSnap||null,bSnap:toGate?toGate.id:wall.bSnap||null};
+      if(fromGate)delete s.aJoint;
+      if(toGate)delete s.bJoint;
+      walls.push(s);
+    };
+    for(const gate of placed){piece(start,gate);start=gate}
+    piece(start,null);
+    gates.push(...placed);
+  }
+  return{gates,walls,blocked:null};
+}
 // Orientation while the second click is pending: a locked angle wins; a road-snapped gate
 // keeps its passage on the road and only chooses which mouth faces out.
 function orientedDraftAngle(p){
