@@ -1,22 +1,5 @@
 # Livello 5 — Diario delle variazioni del contesto
 
-### 2026-11-15 — Audit post-merge regionale, correzioni su branch
-
-- Merge autorizzato dall'utente: integrato main `1c27aeb` (torre a D), con soli conflitti documentali uniti. Precedente CI `5854c03`: 14 workflow PASS; nuovi controlli da verificare prima del merge definitivo. Restano aperti latenza locale e quota collinare costiera.
-- Allineamento finale main `17645c2`; CI Runtime ha rilevato il digest Wiki obsoleto dopo le correzioni: rigenerato solo `sourceDigest`, contenuti invariati. Wiki regression ed export --check PASS locali; nuova CI da verificare.
-- Esito consolidato locale: **201/202 PASS**, unico FAIL fondazione (116,07 ms > 100 ms). PR #250 draft, non mergiata. Integrato main `2782fc0` preservando pattuglie/porte stradali; controlli mirati post-integrazione PASS. CI della PR da verificare sul nuovo SHA.
-- Base verificata main `50096df` (PR #162); correzioni in `fix/regional-postmerge-20261115`, non mergiate. Riprodotti e corretti drenaggio cancellato da bordo montuoso, chiome perse con cache calda e selettore incoerente con i quattro biomi.
-- [Rapporto completo](POSTMERGE-REGRESSION-2026-11-15.md): base 198/199 test PASS dopo quattro ripetizioni LF; resta APERTO il picco della pianificazione stradale oltre 100 ms. Nuovi tre test prima FAIL/dopo PASS e ripetizione completa sul branch.
-- Browser: otto scene regionali, cinque idriche e apertura reale dalla regione; screenshot finali rivisti. Asset Lab completo: 1.612 render, zero errori ma 157 avvisi e baseline da riconciliare; Territorio corretto 16 render invariati. Nessuna accettazione massiva delle firme.
-- Roadmap/decisioni e bilanciamenti invariati. QA e limiti documentati per il commit regionale; le successive PR di main richiedono verifica propria.
-## 2026-11-15 — Tetto interno: torre a D e bracere
-
-`fix/dtower-inner-roof-brazier`: il tetto interno della torre a D corre ora su un colmo (padiglione sul retro, mezzo cono sul davanti) con pendenza unica; il tetto interno toglie il bracere (prima veniva disegnato sopra il tetto, scambiato per una botola). Regola di prodotto registrata: senza bracere gli arcieri della torre non tirano frecce incendiarie (`towerHasBrazier`, da applicare quando le torri avranno frecce incendiarie). Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: nessun contratto cambiato.
-
-## 2026-11-15 — WALL-FREE-ANGLE · Mura ad angolo libero
-
-Tolto il vincolo di giunzione a 15° per mura, palizzate e sezioni costruite: il tratto segue l'angolo del mouse e raggiunge un magnete in linea retta, senza il gomito automatico a due tratti. Torri e porte mantengono la rotazione a 15°. Branch `fix/wall-free-angle`. ROADMAP e DECISIONS invariati (nessuna decisione registrata sul reticolo delle mura).
-
 ### 2026-11-15 — Capsuloide per eventi e giustizia; campo eventi senza verde (`feature/figure-capsules-events`)
 
 Le figure di eventi, giostra, gogna, forca, patibolo, tribunale e personale in cutaway entrano nelle carte con capsula di World3D; il campo eventi perde il fondo verde. DECISIONS: D-CAPSULE-261113 estesa. Nuova prova `qa/event-figure-cards-browser.mjs` nel workflow Main fixes. ROADMAP invariata.
@@ -46,6 +29,23 @@ Chiarito il sistema delle comunicazioni feudali: in assenza di cavalli, **messag
 
 Il product owner ha approvato **solo statistiche aggregate dei server senza login**, escludendo mappe politiche, classifiche nominali e dettagli strategici/gestionali delle campagne in corso. Codex/Wiki e sito informativo restano pubblici. Inserito il vincolo di autorizzazione per dati individuali anche dopo login; aggiornati `docs/MULTIPLAYER-SERVER-SCOPE.md`, `docs/REMOTE-CONTROL-SCOPE.md`, decisione D-MP-PUBLIC-261115 e backlog MP-PUBLIC-01. **Nessuna funzionalità o API implementata; ROADMAP/STATUS invariati.**
 
+
+### 2026-11-15 — Audit post-merge regionale, correzioni su branch
+
+- Merge autorizzato dall'utente: integrato main `1c27aeb` (torre a D), con soli conflitti documentali uniti. Precedente CI `5854c03`: 14 workflow PASS; nuovi controlli da verificare prima del merge definitivo. Restano aperti latenza locale e quota collinare costiera.
+- Allineamento finale main `17645c2`; CI Runtime ha rilevato il digest Wiki obsoleto dopo le correzioni: rigenerato solo `sourceDigest`, contenuti invariati. Wiki regression ed export --check PASS locali; nuova CI da verificare.
+- Esito consolidato locale: **201/202 PASS**, unico FAIL fondazione (116,07 ms > 100 ms). PR #250 draft, non mergiata. Integrato main `2782fc0` preservando pattuglie/porte stradali; controlli mirati post-integrazione PASS. CI della PR da verificare sul nuovo SHA.
+- Base verificata main `50096df` (PR #162); correzioni in `fix/regional-postmerge-20261115`, non mergiate. Riprodotti e corretti drenaggio cancellato da bordo montuoso, chiome perse con cache calda e selettore incoerente con i quattro biomi.
+- [Rapporto completo](POSTMERGE-REGRESSION-2026-11-15.md): base 198/199 test PASS dopo quattro ripetizioni LF; resta APERTO il picco della pianificazione stradale oltre 100 ms. Nuovi tre test prima FAIL/dopo PASS e ripetizione completa sul branch.
+- Browser: otto scene regionali, cinque idriche e apertura reale dalla regione; screenshot finali rivisti. Asset Lab completo: 1.612 render, zero errori ma 157 avvisi e baseline da riconciliare; Territorio corretto 16 render invariati. Nessuna accettazione massiva delle firme.
+- Roadmap/decisioni e bilanciamenti invariati. QA e limiti documentati per il commit regionale; le successive PR di main richiedono verifica propria.
+## 2026-11-15 — Tetto interno: torre a D e bracere
+
+`fix/dtower-inner-roof-brazier`: il tetto interno della torre a D corre ora su un colmo (padiglione sul retro, mezzo cono sul davanti) con pendenza unica; il tetto interno toglie il bracere (prima veniva disegnato sopra il tetto, scambiato per una botola). Regola di prodotto registrata: senza bracere gli arcieri della torre non tirano frecce incendiarie (`towerHasBrazier`, da applicare quando le torri avranno frecce incendiarie). Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: nessun contratto cambiato.
+
+## 2026-11-15 — WALL-FREE-ANGLE · Mura ad angolo libero
+
+Tolto il vincolo di giunzione a 15° per mura, palizzate e sezioni costruite: il tratto segue l'angolo del mouse e raggiunge un magnete in linea retta, senza il gomito automatico a due tratti. Torri e porte mantengono la rotazione a 15°. Branch `fix/wall-free-angle`. ROADMAP e DECISIONS invariati (nessuna decisione registrata sul reticolo delle mura).
 
 ### 2026-11-15 — FIELD-LEND preservato nel merge regionale
 

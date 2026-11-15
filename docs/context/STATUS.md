@@ -1,31 +1,5 @@
 # Livello 2 — Stato tecnico e prove
 
-### 2026-11-15 — Audit post-merge regionale, correzioni su branch
-
-- Merge autorizzato dall'utente: integrato main `1c27aeb` (torre a D), con soli conflitti documentali uniti. Precedente CI `5854c03`: 14 workflow PASS; nuovi controlli da verificare prima del merge definitivo. Restano aperti latenza locale e quota collinare costiera.
-- Allineamento finale main `17645c2`; CI Runtime ha rilevato il digest Wiki obsoleto dopo le correzioni: rigenerato solo `sourceDigest`, contenuti invariati. Wiki regression ed export --check PASS locali; nuova CI da verificare.
-- Esito consolidato locale: **201/202 PASS**, unico FAIL fondazione (116,07 ms > 100 ms). PR #250 draft, non mergiata. Integrato main `2782fc0` preservando pattuglie/porte stradali; controlli mirati post-integrazione PASS. CI della PR da verificare sul nuovo SHA.
-- Base verificata main `50096df` (PR #162); correzioni in `fix/regional-postmerge-20261115`, non mergiate. Riprodotti e corretti drenaggio cancellato da bordo montuoso, chiome perse con cache calda e selettore incoerente con i quattro biomi.
-- [Rapporto completo](POSTMERGE-REGRESSION-2026-11-15.md): base 198/199 test PASS dopo quattro ripetizioni LF; resta APERTO il picco della pianificazione stradale oltre 100 ms. Nuovi tre test prima FAIL/dopo PASS e ripetizione completa sul branch.
-- Browser: otto scene regionali, cinque idriche e apertura reale dalla regione; screenshot finali rivisti. Asset Lab completo: 1.612 render, zero errori ma 157 avvisi e baseline da riconciliare; Territorio corretto 16 render invariati. Nessuna accettazione massiva delle firme.
-- Roadmap/decisioni e bilanciamenti invariati. QA e limiti documentati per il commit regionale; le successive PR di main richiedono verifica propria.
-## 2026-11-15 — Tetto interno: torre a D e bracere rimosso (branch `fix/dtower-inner-roof-brazier`)
-
-- **CODICE SUL BRANCH, NON MERGE:**
-  - `settlement-population.js`: `towerInnerRoofGeometry` restituisce anche `tail`; sulla torre a D il tetto interno corre su un colmo dal retro (testata a padiglione, a mezza luce dal fondo) al centro della semicirconferenza (mezzo cono), invece di un'unica piramide con l'apice sul davanti che lasciava le falde posteriori quasi piatte. Nuovo `towerInnerRoofFaces(g)` (una falda per lato di gronda, triangolo o trapezio verso il colmo, stessa pendenza ovunque) usato sia dal 2.5D (`drawTowerInnerRoof`) sia dalla mesh 3D (`addTower`). Quadrate e rotonde invariate (`tail = apex`).
-  - `settlement-castle-structures.js`: **il tetto interno toglie il bracere** (decisione del product owner, 15/11/2026). Nuovo `towerHasBrazier(s)`: torre in pietra con merli o caditoie **senza** tetto interno; `battlementBrazierSources` lo usa, quindi niente blocco del bracere (prima disegnato sopra il tetto, sembrava una botola), niente fiamma né alone. Tooltip «Tetto interno» aggiornato («Toglie il bracere della piazza»).
-- **REGOLA DI PRODOTTO:** senza bracere gli arcieri della torre non tirano frecce incendiarie. Oggi gli arcieri delle torri non tirano frecce incendiarie in nessun caso (esistono solo come strumento di test e nella battaglia navale): quando arriveranno, dovranno chiedere `towerHasBrazier(s)`.
-- **PROVE LOCALI PASS:** `qa/tower-inner-roof-regression.cjs` (2 controlli nuovi: colmo e pendenza unica della D; nessun bracere sotto il tetto interno su quadrata, rotonda e D, bracere invariato senza), bartizan, battlement-parapet, dovecote, falconry, roof-pitch, subtower-junctions, tower-italian-machicolation, tower-roof-shape, tower-weapons, camp, fire.
-- **AUDIT LAB:** 6 voci «tetto interno» (58 render): 0 falliti, 0 cambiati, 6 avvisi preesistenti `cantiere-progressivo`; baseline invariata. Verifica visiva nel Lab (Modello 3D e Nel gioco).
-
-## 2026-11-15 — Mura ad angolo libero (branch `fix/wall-free-angle`)
-
-- **CODICE SUL BRANCH, NON MERGE:**
-  - `settlement-castle-placement.js`: `normalizeStructuralLinearRoute` non aggancia più muro, palizzata e sezione costruita al reticolo di 24 direzioni (15°) e non crea più il gomito automatico a due tratti verso un magnete. Il tratto va dritto dal punto A al punto B (o al magnete, raggiunto esattamente); oltre la lunghezza massima, fino a 2× max, due tratti collineari uguali. `rotationStep` resta solo se l'angolo cade sul reticolo, altrimenti `null` (stessa regola della migrazione dei salvataggi). Torri, porte ed edifici puntuali conservano la rotazione a 15°.
-  - `settlement-app-input.js`: messaggi di stato senza «15°» (mostra l'angolo reale del tratto), con la nota delle porte su strada di WALL-ROAD-GATE (#246) conservata nel merge.
-  - `qa/wall-road-gate-regression.cjs`: usa `freeLinearSegment` (ex `discreteLinearSegment`) e un caso nuovo, muro a ~19,8° che attraversa una strada principale: porta posata, due pezzi seduti sui fianchi.
-- **PROVE LOCALI PASS:** le 28 `qa/*.cjs` che toccano il piazzamento lineare (tra cui linear-magnet, wall-bays, lean-to, pier, oriented-towers) e builder-placement. Nel browser (`main` + branch): muro a 18,97° e secondo muro a −125,91° agganciato esattamente all'estremità libera del primo, un solo tratto, nessun errore in console.
-
 ### 2026-11-15 — Figure di eventi e giustizia nel capsuloide; campo eventi senza fondo verde (`feature/figure-capsules-events`)
 
 - **CODICE SUL BRANCH (estende D-CAPSULE-261113):** in World3D le figure di `settlement-events-people.js` (sagra, circo, arena, palco, podio, accampamenti; combattenti con `drawSoldierFigureUnmasked` in carta), `settlement-events-joust.js` (spettatori, scudieri, cavaliere e scudo, caduto ruotato; cavalli con `ConquerAnimals.card` e gualdrappa come `overlay`), `settlement-court-people.js` (gogna, forca, patibolo, tribunale, personale delle sale civiche) e `settlement-staff-people.js` (personale delle stanze del castello in cutaway, via `drawWorker`/`drawVillagerFigure`) sono carte con capsula. Gesti e braccia in 4–5 pose, salto e oscillazione come quota della carta, chi sparisce alla porta del circo non è disegnato. In World3D niente ridipintura degli occlusori delle tribune e niente ritaglio con la sagoma dell'opera. Restano 2D: prigionieri dietro le sbarre, lancia della giostra, renderer 2D.
@@ -54,6 +28,32 @@
 - **CODICE SUL BRANCH, NON MERGE:** `ConquerMounted2D.draw` accetta `helmet` e `shield` (stili di `UNIT_HELMETS`/`UNIT_SHIELDS`; assenti o sconosciuti = grande elmo e scudo appuntito originali). `settlement-combat-render.js` li passa solo ai cavalieri del feudo e solo se `State.policies.unitHelmet/unitShield` è stato scelto. `figures-lab.html`: selettori anche per «Cavaliere a cavallo», opzione «Originale». Caduta (`pose.fall>0`): il cavaliere si disegna nello spazio del terreno, non del corpo del cavallo (`fallen()`), con arco dietro la groppa fino al suolo (`sp.center.y`) e lancia stesa a terra.
 - **PROVE LOCALI PASS:** `qa/combat-render-regression.cjs`; nel Lab, foglio con le 6 combinazioni (originale + 5) a due grandezze e primo piano degli elmi, console senza errori.
 - **NON ESEGUITO in locale:** `node qa/asset-audit.mjs` (Playwright non installato); affidato alla CI `asset-lab`.
+
+### 2026-11-15 — Audit post-merge regionale, correzioni su branch
+
+- Merge autorizzato dall'utente: integrato main `1c27aeb` (torre a D), con soli conflitti documentali uniti. Precedente CI `5854c03`: 14 workflow PASS; nuovi controlli da verificare prima del merge definitivo. Restano aperti latenza locale e quota collinare costiera.
+- Allineamento finale main `17645c2`; CI Runtime ha rilevato il digest Wiki obsoleto dopo le correzioni: rigenerato solo `sourceDigest`, contenuti invariati. Wiki regression ed export --check PASS locali; nuova CI da verificare.
+- Esito consolidato locale: **201/202 PASS**, unico FAIL fondazione (116,07 ms > 100 ms). PR #250 draft, non mergiata. Integrato main `2782fc0` preservando pattuglie/porte stradali; controlli mirati post-integrazione PASS. CI della PR da verificare sul nuovo SHA.
+- Base verificata main `50096df` (PR #162); correzioni in `fix/regional-postmerge-20261115`, non mergiate. Riprodotti e corretti drenaggio cancellato da bordo montuoso, chiome perse con cache calda e selettore incoerente con i quattro biomi.
+- [Rapporto completo](POSTMERGE-REGRESSION-2026-11-15.md): base 198/199 test PASS dopo quattro ripetizioni LF; resta APERTO il picco della pianificazione stradale oltre 100 ms. Nuovi tre test prima FAIL/dopo PASS e ripetizione completa sul branch.
+- Browser: otto scene regionali, cinque idriche e apertura reale dalla regione; screenshot finali rivisti. Asset Lab completo: 1.612 render, zero errori ma 157 avvisi e baseline da riconciliare; Territorio corretto 16 render invariati. Nessuna accettazione massiva delle firme.
+- Roadmap/decisioni e bilanciamenti invariati. QA e limiti documentati per il commit regionale; le successive PR di main richiedono verifica propria.
+## 2026-11-15 — Tetto interno: torre a D e bracere rimosso (branch `fix/dtower-inner-roof-brazier`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `settlement-population.js`: `towerInnerRoofGeometry` restituisce anche `tail`; sulla torre a D il tetto interno corre su un colmo dal retro (testata a padiglione, a mezza luce dal fondo) al centro della semicirconferenza (mezzo cono), invece di un'unica piramide con l'apice sul davanti che lasciava le falde posteriori quasi piatte. Nuovo `towerInnerRoofFaces(g)` (una falda per lato di gronda, triangolo o trapezio verso il colmo, stessa pendenza ovunque) usato sia dal 2.5D (`drawTowerInnerRoof`) sia dalla mesh 3D (`addTower`). Quadrate e rotonde invariate (`tail = apex`).
+  - `settlement-castle-structures.js`: **il tetto interno toglie il bracere** (decisione del product owner, 15/11/2026). Nuovo `towerHasBrazier(s)`: torre in pietra con merli o caditoie **senza** tetto interno; `battlementBrazierSources` lo usa, quindi niente blocco del bracere (prima disegnato sopra il tetto, sembrava una botola), niente fiamma né alone. Tooltip «Tetto interno» aggiornato («Toglie il bracere della piazza»).
+- **REGOLA DI PRODOTTO:** senza bracere gli arcieri della torre non tirano frecce incendiarie. Oggi gli arcieri delle torri non tirano frecce incendiarie in nessun caso (esistono solo come strumento di test e nella battaglia navale): quando arriveranno, dovranno chiedere `towerHasBrazier(s)`.
+- **PROVE LOCALI PASS:** `qa/tower-inner-roof-regression.cjs` (2 controlli nuovi: colmo e pendenza unica della D; nessun bracere sotto il tetto interno su quadrata, rotonda e D, bracere invariato senza), bartizan, battlement-parapet, dovecote, falconry, roof-pitch, subtower-junctions, tower-italian-machicolation, tower-roof-shape, tower-weapons, camp, fire.
+- **AUDIT LAB:** 6 voci «tetto interno» (58 render): 0 falliti, 0 cambiati, 6 avvisi preesistenti `cantiere-progressivo`; baseline invariata. Verifica visiva nel Lab (Modello 3D e Nel gioco).
+
+## 2026-11-15 — Mura ad angolo libero (branch `fix/wall-free-angle`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `settlement-castle-placement.js`: `normalizeStructuralLinearRoute` non aggancia più muro, palizzata e sezione costruita al reticolo di 24 direzioni (15°) e non crea più il gomito automatico a due tratti verso un magnete. Il tratto va dritto dal punto A al punto B (o al magnete, raggiunto esattamente); oltre la lunghezza massima, fino a 2× max, due tratti collineari uguali. `rotationStep` resta solo se l'angolo cade sul reticolo, altrimenti `null` (stessa regola della migrazione dei salvataggi). Torri, porte ed edifici puntuali conservano la rotazione a 15°.
+  - `settlement-app-input.js`: messaggi di stato senza «15°» (mostra l'angolo reale del tratto), con la nota delle porte su strada di WALL-ROAD-GATE (#246) conservata nel merge.
+  - `qa/wall-road-gate-regression.cjs`: usa `freeLinearSegment` (ex `discreteLinearSegment`) e un caso nuovo, muro a ~19,8° che attraversa una strada principale: porta posata, due pezzi seduti sui fianchi.
+- **PROVE LOCALI PASS:** le 28 `qa/*.cjs` che toccano il piazzamento lineare (tra cui linear-magnet, wall-bays, lean-to, pier, oriented-towers) e builder-placement. Nel browser (`main` + branch): muro a 18,97° e secondo muro a −125,91° agganciato esattamente all'estremità libera del primo, un solo tratto, nessun errore in console.
 
 ### 2026-11-15 — FIELD-LEND preservato nel merge regionale
 
