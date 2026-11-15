@@ -341,6 +341,7 @@
     const plan=typeof isPlanView==='function'&&isPlanView();
     if(plan&&which==='front')return;
     for(const s of worldOut?State.structures.filter(castleVolume):castleParts()){
+      if(typeof cutawayCrestHidden==='function'&&cutawayCrestHidden(s))continue;   // floor-by-floor cutaway below the top: no crest
       withStructureVisualMaterial(s,()=>{
       const pieces=s.type==='tower'?towerCrownPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[];
       for(const p of pieces){

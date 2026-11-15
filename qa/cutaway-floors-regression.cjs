@@ -17,7 +17,8 @@ const fnSrc=(text,name)=>{const m=text.match(new RegExp('function '+name+'\\([^)
   const levels=s=>s.levels;
   const ctx=vm.createContext({State,window,Math,Number,
     clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),cutawayEligible:s=>!!s&&s.type!=='wall',isWoodTower:s=>s.material==='wood',cutawayFloorLevels:levels});
-  vm.runInContext(['civicFloorCutaway','cutawayFloorCount','cutawayVisibleFloor','cutawayCeilingZ','cutawayFloorShown'].map(n=>fnSrc(castle,n)).join('\n'),ctx);
+  ctx.structureHeight=()=>4.2;
+  vm.runInContext(['structureCutaway','civicFloorCutaway','cutawayFloorCount','cutawayVisibleFloor','cutawayCeilingZ','cutawayFloorShown','cutawayCrestHidden'].map(n=>fnSrc(castle,n)).join('\n'),ctx);
   const run=n=>vm.runInContext(n,ctx);
   const tower={id:'t',type:'tower',levels:[{z:.055},{z:1.6},{z:3.2}]};
   const sub={id:'s',type:'tower',parentTowerId:'t',levels:[{z:.055},{z:1.6}]};
@@ -32,7 +33,14 @@ const fnSrc=(text,name)=>{const m=text.match(new RegExp('function '+name+'\\([^)
   assert.equal(run('cutawayCeilingZ')(tower),3.2);
   assert.equal(run('cutawayCeilingZ')(sub),3.2,'a subtower follows its parent');
   assert.equal(run('cutawayFloorCount')(sub),1,'the arrows belong to the parent');
+  tower.cutaway=true;
+  assert.equal(run('cutawayCrestHidden')(tower),true,'a lower floor in view: the merlons go');
+  assert.equal(run('cutawayCrestHidden')(sub),true,'the subtower follows its parent');
   tower.cutawayFloor=9;assert.equal(run('cutawayVisibleFloor')(tower),2,'clamped to the top floor');
+  assert.equal(run('cutawayCrestHidden')(tower),false,'top floor in view: the merlons stay');
+  tower.cutawayFloor=0;tower.cutaway=false;
+  assert.equal(run('cutawayCrestHidden')(tower),false,'no cutaway: the merlons stay');
+  tower.cutawayFloor=9;
   window.ConquerCivic3D={cutawayActive:s=>s.type==='townhall',floorCount:()=>3,visibleFloor:()=>1};
   assert.equal(run('cutawayFloorCount')({type:'townhall'}),3,'civic buildings count their storeys');
   assert.equal(run('cutawayVisibleFloor')({type:'townhall'}),1);
@@ -96,6 +104,10 @@ const fnSrc=(text,name)=>{const m=text.match(new RegExp('function '+name+'\\([^)
   assert.match(src('settlement-world3d.js'),/H=Math\.min\(HF,cutawayCeilingZ\(s\)\)/,'WebGL castle cut');
   assert.match(src('settlement-world3d.js'),/cutawayCeilingZ\(s\),s\.x\?\?s\.a\?\.x/,'WebGL cutaway rebuilds on a floor change');
   assert.match(src('settlement-render.js'),/s\.cutawayFloor\?\?null/,'2.5D overlay cache key');
+  // The crest (merlons, machicolations, inner roof) goes with the floors above.
+  assert.match(src('settlement-castle-structures.js'),/underConstruction\(s\)\|\|\(typeof cutawayCrestHidden==='function'&&cutawayCrestHidden\(s\)\)\)continue/,'2.5D battlements skip a cut crest');
+  assert.match(src('settlement-castle3d.js'),/if\(typeof cutawayCrestHidden==='function'&&cutawayCrestHidden\(s\)\)continue/,'WebGL battlements skip a cut crest');
+  assert.match(src('settlement-world3d.js'),/cutawayCrestHidden\(s\)\?'h':''/,'WebGL castle mesh rebuilds when the crest goes');
   assert.match(src('settlement-cutaway-furniture.js'),/faces\.filter\(f=>shown\(s,f\)\)/,'furniture of the floors above is not drawn');
   assert.match(src('settlement-population-garrisons.js'),/cutawayFloorShown\(s,slot\.floor\)/,'no occupants in rooms taken off');
   console.log('PASS one command for the inspector and the arrows; every renderer honours the cut');

@@ -5,6 +5,11 @@
 - Branch fix/microfix. La domenica 6:00–12:00, senza allarme, il cutaway del piano terra della chiesa selezionata mostra i popolani seduti sui banchi della navata (circa 3 posti su 4, estrazione fissa per chiesa), oltre al prete all'altare. Prima c'era solo il prete. Figure decorative: nessun legame con residenti, offerte o capienza.
 - PASS staff-people (nuovo blocco Sunday Mass) e court-people; verificato a vista in gioco su una chiesa L2. CI da eseguire.
 
+### 2026-11-15 — Microfix: il selettore di piano del cutaway toglie i merli
+
+- Branch fix/microfix. Con il cutaway piano per piano su un piano sotto l'ultimo, torri, porte e sottotorri non disegnano più merli, caditoie e tetto interno (cutawayCrestHidden in settlement-castle.js), sia nel percorso 2.5D (drawCastleBattlements) sia in quello WebGL (ConquerCastle3D.addPieces); la chiave della mesh castello di World3D cambia quando la cresta sparisce, così la mesh si ricostruisce.
+- PASS cutaway-floors (nuove asserzioni) e 49 regressioni castello/cutaway; verificato nel browser sulla mesh WebGL di una torre a 3 piani (cresta presente in P2, assente in P1/P0). Le due suite Playwright non sono eseguibili in locale. CI da eseguire.
+
 ### 2026-11-15 — FIELD-LEND preservato nel merge regionale
 
 - La CI su 6510709 era tutta verde (20 workflow). Durante l'attesa main e avanzato a 6c5ac79 (#212 FIELD-LEND): integrato senza conflitti di codice, unendo STATUS/CHANGELOG e rigenerando il catalogo. PASS locale idle-farmers (7), fields (16), export Wiki. Nuova CI da verificare; nessuna modifica alle ricette regionali.

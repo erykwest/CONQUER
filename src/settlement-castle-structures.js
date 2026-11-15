@@ -1565,7 +1565,7 @@ function drawTowerInnerRoof(g){
 function drawCastleBattlements(){
   const pieces=[];
   for(const s of State.structures){
-    if(underConstruction(s))continue;
+    if(underConstruction(s)||(typeof cutawayCrestHidden==='function'&&cutawayCrestHidden(s)))continue;
     if(s.type==='tower'){
       pieces.push(...towerBattlementPieces(s));
       const inner=towerInnerRoofPiece(s);if(inner)pieces.push(inner);

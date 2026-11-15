@@ -752,6 +752,8 @@ function cutawayCeilingZ(s){
   const floors=cutawayFloorLevels(s),f=cutawayVisibleFloor(s);
   return f<floors.length-1?floors[f+1].z:Infinity;
 }
+// The crest (merlons, machicolations, inner roof) goes with the floors above the one in view.
+function cutawayCrestHidden(s){return !!s&&structureCutaway(s)&&cutawayCeilingZ(s)<structureHeight(s)-1e-6}
 // Floor i (and its room, furniture, ladder) is drawn when it lies below the cut.
 function cutawayFloorShown(s,i){const z=cutawayFloorLevels(s)[i]?.z;return !Number.isFinite(z)||z<cutawayCeilingZ(s)-.01}
 // Timber upper storey of a small gate: from the room floor to the eaves, jettied over the front

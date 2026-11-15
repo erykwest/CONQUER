@@ -3,6 +3,7 @@
 ### 2026-11-15 — Microfix: fedeli alla messa nel cutaway della chiesa
 
 - Aggiunti i popolani seduti sui banchi della chiesa durante la messa domenicale (6:00–12:00); test in qa/staff-people-regression.cjs. Roadmap e decisioni invariate.
+- Il selettore ▲/▼ del cutaway ora toglie anche la cresta merlata quando si scende sotto l'ultimo piano; test in qa/cutaway-floors-regression.cjs.
 
 ### 2026-11-15 — FIELD-LEND preservato nel merge regionale
 
