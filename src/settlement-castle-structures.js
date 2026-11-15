@@ -411,7 +411,7 @@ function structureScreenSilhouette(s){
       if(g)cloud.push(w2s(g.ridgeA,g.ridgeH),w2s(g.ridgeB,g.ridgeH));
     }
     const inner=s.type==='tower'&&towerInnerRoofGeometry(s);
-    if(inner)cloud.push(w2s(inner.apex,inner.apexZ));
+    if(inner)cloud.push(w2s(inner.apex,inner.apexZ),w2s(inner.tail,inner.apexZ));
     if(hasPointHoarding(s)){
       const z=pointHoardingBaseZ(s);
       for(const b of pointHoardingBays(s)){
@@ -773,8 +773,7 @@ function drawBattlementPiece(piece,frame){
       drawWoodPost(piece.center,piece.r,piece.z0,piece.tipZ,piece.angle||0);
       return;
     }
-    if(piece.kind==='innerRoof'){drawTowerInnerRoof(piece.geo);return}
-    if(piece.kind==='machicolationArch'){
+    if(piece.kind==='innerRoof'){drawTowerInnerRoof(piece.geo);return}    if(piece.kind==='machicolationArch'){
       // Seamless fills: the spandrel is cut in strips, so each strip is stroked in its own colour.
       // Corbels: the two sides far to near, then the inclined front.
       for(const f of piece.faces){
@@ -1374,13 +1373,18 @@ function towerTorchSources(){
   }
   return out;
 }
+// The brazier stands on the open deck of a crenellated / machicolated stone tower. The inner roof
+// takes the deck: no brazier under it (and so no fire for the archers' fire arrows).
+function towerHasBrazier(s){
+  return !!s&&s.type==='tower'&&!underConstruction(s)&&!isWoodTower(s)&&['battlement','machicolation'].includes(towerRoofStyle(s))&&!towerInnerRoofMounted(s);
+}
 function battlementBrazierSources(){
   const out=[];
   for(const s of State.structures){
     if(underConstruction(s))continue;
     if(s.type==='tower'&&isWoodTower(s)&&woodTowerStyle(s)==='palisadeTower'&&woodTowerRoof(s)==='open'){
       out.push({kind:'brazier',id:s.id+':wood-brazier',p:woodTowerLocal(s,.28,.24),z:1.90,groundZ:placementGroundZ(s)});
-    }else if(s.type==='tower'&&!isWoodTower(s)&&['battlement','machicolation'].includes(towerRoofStyle(s))){
+    }else if(towerHasBrazier(s)){
       const hash=peasantHash(s.id+'-brazier'),a=((hash%360)/180)*Math.PI;
       const r=s.shape==='round'?Math.max(.12,s.r*.34):Math.max(.12,(s.size||1)*.26);
       out.push({kind:'brazier',id:s.id+':brazier',p:{x:s.x+Math.cos(a)*r,y:s.y+Math.sin(a)*r},z:structureHeight(s)+.10,groundZ:placementGroundZ(s)});
@@ -1552,12 +1556,12 @@ function drawTowerInnerRoof(g){
   if(!g)return;
   const winter=State.season==='winter';
   extrudePolygonAt(g.ring,g.h,g.eaveZ,{top:'#6f665d',sideA:'#514a44',sideB:'#635951',stroke:'#8f8276'});
-  const apex=w2s(g.apex,g.apexZ),n=g.ring.length,round=n>8,faces=[];
-  for(let i=0;i<n;i++){
-    const a=w2s(g.ring[i],g.eaveZ),b=w2s(g.ring[(i+1)%n],g.eaveZ);
+  const round=g.ring.length>8,faces=[];
+  for(const f of towerInnerRoofFaces(g)){
+    const i=f.i,poly=f.pts.map(q=>w2s(q.p,q.z));
     const fill=round?(winter?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP][i%3]:['#303236','#3a3d42','#44474c'][i%3])
       :winter?(i%2?WINTER_SNOW_A:WINTER_SNOW_B):(i%2?'#34363a':'#42454a');
-    faces.push({poly:[a,b,apex],depth:(a.y+b.y)/2,fill});
+    faces.push({poly,depth:(poly[0].y+poly[1].y)/2,fill});
   }
   faces.sort((a,b)=>a.depth-b.depth);
   for(const f of faces)pathPolygon(f.poly,f.fill,round?null:winter?WINTER_SNOW_STROKE:'#5d6066',1);
@@ -1568,8 +1572,7 @@ function drawCastleBattlements(){
     if(underConstruction(s))continue;
     if(s.type==='tower'){
       pieces.push(...towerBattlementPieces(s));
-      const inner=towerInnerRoofPiece(s);if(inner)pieces.push(inner);
-      if(isWoodTower(s))pieces.push(...woodTowerFrontPieces(s));
+      const inner=towerInnerRoofPiece(s);if(inner)pieces.push(inner);      if(isWoodTower(s))pieces.push(...woodTowerFrontPieces(s));
     }else if(s.type==='gate')pieces.push(...gateBattlementPieces(s));
     else if(s.type==='wall')pieces.push(...wallBattlementPieces(s));
     else if(s.type==='palisade')pieces.push(...palisadeFrontPieces(s));

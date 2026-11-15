@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-15 — Tetto interno: torre a D e bracere
+
+`fix/dtower-inner-roof-brazier`: il tetto interno della torre a D corre ora su un colmo (padiglione sul retro, mezzo cono sul davanti) con pendenza unica; il tetto interno toglie il bracere (prima veniva disegnato sopra il tetto, scambiato per una botola). Regola di prodotto registrata: senza bracere gli arcieri della torre non tirano frecce incendiarie (`towerHasBrazier`, da applicare quando le torri avranno frecce incendiarie). Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: nessun contratto cambiato.
+
 ## 2026-11-15 — WALL-FREE-ANGLE · Mura ad angolo libero
 
 Tolto il vincolo di giunzione a 15° per mura, palizzate e sezioni costruite: il tratto segue l'angolo del mouse e raggiunge un magnete in linea retta, senza il gomito automatico a due tratti. Torri e porte mantengono la rotazione a 15°. Branch `fix/wall-free-angle`. ROADMAP e DECISIONS invariati (nessuna decisione registrata sul reticolo delle mura).
