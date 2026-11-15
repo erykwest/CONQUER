@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-15 — FIELD-LEND preservato nel merge regionale
+
+- La CI su 6510709 era tutta verde (20 workflow). Durante l'attesa main e avanzato a 6c5ac79 (#212 FIELD-LEND): integrato senza conflitti di codice, unendo STATUS/CHANGELOG e rigenerando il catalogo. PASS locale idle-farmers (7), fields (16), export Wiki. Nuova CI da verificare; nessuna modifica alle ricette regionali.
+
+
 ### 2026-11-15 — Riallineamento prima del merge autorizzato
 
 - Integrato main ecdd630 nel branch regionale. Conservati i quattro biomi e l'isolamento demo insieme a migrazione sociale v2, politiche elmi/scudi, nuove figure e caditoie italiane. Conflitti documentali uniti, versioni cache riconciliate senza duplicare script e catalogo Wiki rigenerato.
@@ -1897,6 +1902,10 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 ## Campi L2 — 05/11/2026
 
 D-051 risolta per scelta dell’utente: campi solo L2. Recupero residuo jobmanager nel branch fix/fields-l2-only; chiusura dopo merge e rimozione della branch storica.
+
+- **FIELD-LEND · CODICE SU BRANCH `fix/idle-peasants` (13/11/2026, [D-FIELD-LEND-261113](DECISIONS.md)):** contadini senza lavoro al campo, rifatta dopo SOC-CLASS-02 (#206, campi L1). Ogni mattina lavorativa il campo chiede solo le strisce ancora aperte (0 in crescita o fuori stagione); gli L1 in più vanno a un altro campo in stagione, poi agli altri lavori L1 (cantieri, taglialegna, carrettieri…) secondo il Job Manager. Al campo si disegnano esattamente gli L1 che l'economia paga lì, uno per striscia; la squadra di fondazione non coltiva. Chi finisce a metà turno rientra a piedi e viene riassegnato la mattina dopo.
+  - **DA VERIFICARE:** prova in partita reale (maggio con un cantiere aperto: i contadini L1 compaiono al cantiere; ottobre a striscia finita: rientro a piedi). CI del branch.
+  - **APERTO, non in questa PR:** il salario dei campi si paga ancora sul personale presente nel giorno di paga (fuori stagione 0); resa autunnale e calendario fisico restano O-002.
 
 ## 2026-11-11 — Integrazione urgente figure-billboards (pre-merge)
 

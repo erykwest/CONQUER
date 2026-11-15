@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-15 — FIELD-LEND preservato nel merge regionale
+
+- La CI su 6510709 era tutta verde (20 workflow). Durante l'attesa main e avanzato a 6c5ac79 (#212 FIELD-LEND): integrato senza conflitti di codice, unendo STATUS/CHANGELOG e rigenerando il catalogo. PASS locale idle-farmers (7), fields (16), export Wiki. Nuova CI da verificare; nessuna modifica alle ricette regionali.
+
+
 ### 2026-11-15 — Riallineamento prima del merge autorizzato
 
 - Integrato main ecdd630 nel branch regionale. Conservati i quattro biomi e l'isolamento demo insieme a migrazione sociale v2, politiche elmi/scudi, nuove figure e caditoie italiane. Conflitti documentali uniti, versioni cache riconciliate senza duplicare script e catalogo Wiki rigenerato.
@@ -161,6 +166,17 @@
 05/11/2026 — Aggiornamento REG-BIOME-PREVIEW su `experiment/regional-biome-sectors`: fasce fisse 25/25/100/25/25 U, blending smoothstep e corner continui con centro + due vicini; centro invariato, collegamento regionale ancora aperto. Verificati pesi, estremi delle fasce e continuità ai corner. Prova separata dal Builder.
 
 05/11/2026 — `experiment/regional-biome-sectors`: laboratorio separato con bioma centrale, quattro fasce cardinali, quattro corner quadrati di blending, seed e confronto schema/paesaggio. Fixture, non integrazione regionale o Builder. QA sintassi, pesi e browser; roadmap invariata, proposta regionale documentata senza modificare contratti approvati.
+
+## 2026-11-13 — FIELD-LEND · Contadini senza lavoro al campo (rifatta su SOC-CLASS-02)
+
+13/11/2026 — `fix/idle-peasants` (pre-merge), riallineata a main 965d42c3 dopo SOC-CLASS-02 (campi L1):
+- Abbandonato il prestito L2 → L1 della prima versione: con #206 i campi sono L1 e i contadini senza lavoro restano nel pool L1.
+- Il campo chiede ogni giorno solo le strisce aperte al mattino (`fieldMorningDemand`), congelate fino a sera; in crescita o fuori stagione chiede 0.
+- I contadini disegnati alle strisce sono esattamente gli L1 che l'economia assegna al campo (`assignedL1`), una striscia per adulto (assegnazioni per id residente); la squadra di fondazione non va ai campi.
+- Chi finisce la striscia a metà turno rientra a piedi; nessuna riassegnazione a metà turno; niente attrezzo su una striscia finita.
+- `qa/idle-farmers-regression.cjs` riscritta (7 casi) e `qa/fields-regression.cjs` riconciliata; entrambe nel workflow economico.
+
+STATUS, BACKLOG, CHANGELOG e DECISIONS (D-FIELD-LEND-261113, riscritta) aggiornati; ROADMAP invariata.
 
 ## 2026-11-14 — TOW-MACH-IT · Caditoie all'italiana sulle torri
 

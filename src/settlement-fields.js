@@ -146,8 +146,11 @@ function maybeExpandIdleL1Fields(houses,fields,day){
   // Avoid saturating the main thread if the village has no remaining zoned land.
   if(Number.isFinite(State.village.fieldExpansionFailedDay)&&
       wholeDay-State.village.fieldExpansionFailedDay<3)return 0;
-  const assigned=fieldWorkAssignments(houses,fields);
-  const idle=fieldAvailableHouses(houses).L1.filter(h=>!assigned.has(h.id));
+  // Idle = L1 the economy left without any job today (not merely off the fields).
+  const labor=window.ConquerEconomy?.laborAllocation?.(day);
+  const busy=new Set([...fieldWorkAssignments(houses,fields).values()].map(a=>a.house.id));
+  const idleIds=labor?new Set((labor.idle||[]).map(w=>w.houseId)):null;
+  const idle=fieldAvailableHouses(houses).L1.filter(h=>idleIds?idleIds.has(h.id):!busy.has(h.id));
   if(!idle.length)return 0;
   State.village.fieldExpansionAttemptDay=wholeDay;
   const t0=performance.now();
@@ -167,13 +170,10 @@ function maybeExpandIdleL1Fields(houses,fields,day){
   },created?'info':'warn');
   return created;
 }
-function tickFields(day=State.clock.day){
-  const fields=completedSettlement('field');
-  const houses=completedSettlement('house').filter(h=>
-    (window.ConquerSocialClasses?.tierOfHouse?.(h)??houseLevel(h))===1);
-  const month=calendarDateFromDay(day).month,season=fieldSeasonPhase(month);
-  // Prepare all crop states before assigning workers so a completed field
-  // immediately releases its workforce to any other available parcel.
+// Seasonal phase changes. Idempotent: run by tickFields and by the morning
+// field-work decision, whichever comes first on a new day.
+function fieldPrepareSeason(fields,day=State.clock.day){
+  const season=fieldSeasonPhase(calendarDateFromDay(day).month);
   for(const field of fields){
     const crop=fieldCrop(field);
     const year=calendarDateFromDay(day).year;
@@ -199,6 +199,37 @@ function tickFields(day=State.clock.day){
       crop.phase='sow';crop.work.fill(0);
     }
   }
+}
+// When a farmer's strip runs out of work during the shift: the day and the
+// route distance where he stopped, so he can walk home from that very spot.
+function fieldSlotRelease(field,cell,day=State.clock.day){
+  if(fieldCropReady(field,day)&&!fieldSlotDone(field,cell))return null;
+  const rec=fieldCrop(field).slotEnd?.[cell.index];
+  if(rec&&Math.floor(rec.day)===Math.floor(day)&&rec.day<=day)return rec;
+  // Ran out before this shift began (e.g. a long catch-up tick): stay home.
+  return {day:Math.floor(day),d:0,home:true};
+}
+// D-FIELD-LEND: the L1 a field employs today = its strips still open when the
+// day's roster is first decided (0 while growing or out of season). Frozen for
+// the whole day, so a strip finished mid-shift never moves its farmer to
+// another job before the next morning; he walks home (fieldSlotRelease).
+function fieldMorningDemand(field,day=State.clock.day){
+  const today=Math.floor(day),live=today===Math.floor(State.clock.day);
+  const crop=fieldCrop(field);
+  if(live&&crop.morningDemand?.day===today)return crop.morningDemand.n;
+  if(live)fieldPrepareSeason([field],day);
+  const n=fieldCropReady(field,day)?fieldLayout(field).cells.filter(c=>!fieldSlotDone(field,c)).length:0;
+  if(live)crop.morningDemand={day:today,n};
+  return n;
+}
+function tickFields(day=State.clock.day){
+  const fields=completedSettlement('field');
+  const houses=completedSettlement('house').filter(h=>
+    (window.ConquerSocialClasses?.tierOfHouse?.(h)??houseLevel(h))===1);
+  const month=calendarDateFromDay(day).month,season=fieldSeasonPhase(month);
+  // Prepare all crop states before assigning workers so a completed field
+  // immediately releases its workforce to any other available parcel.
+  fieldPrepareSeason(fields,day);
   const assignments=fieldWorkAssignments(houses,fields),alarm=window.ConquerCombat?.alarmMode?.()||'off';
   for(const field of fields){
     const crop=fieldCrop(field),layout=fieldLayout(field),before=crop.lastDay;
@@ -213,7 +244,22 @@ function tickFields(day=State.clock.day){
     for(const assignment of assignments.values())if(assignment.field.id===field.id){
       const cell=assignment.cell,route=peasantPath(assignment.house,assignment);
       if(!route?.length||dist(route.at(-1),cell.world)>.05)continue;
-      crop.work[cell.index]=Math.min(cell.end-cell.start,(crop.work[cell.index]||0)+work*rate);
+      const length=cell.end-cell.start,was=crop.work[cell.index]||0;
+      if(was>=length-1e-7)continue;
+      crop.work[cell.index]=Math.min(length,was+work*rate);
+      if(crop.work[cell.index]>=length-1e-7){
+        // Interpolate the moment of the working-day clock the strip ran out.
+        const need=(length-was)/rate,clock=fieldWorkClock(before)+need;
+        let at=day;
+        for(let d=Math.floor(before);d<=Math.floor(day);d++){
+          const from=Math.max(before,d+.14),to=Math.min(day,d+.52);
+          if(to<from||fieldWorkClock(to)<clock-1e-9)continue;
+          let lo=from,hi=to;
+          for(let i=0;i<24;i++){const mid=(lo+hi)/2;if(fieldWorkClock(mid)<clock)lo=mid;else hi=mid}
+          at=hi;break;
+        }
+        (crop.slotEnd??=[])[cell.index]={day:at,d:length};
+      }
       worked=true;
     }
     if(worked)State.dirty=true;
@@ -231,8 +277,8 @@ function fieldWorkerPosition(field,cell){
   const crop=fieldCrop(field);
   return fieldLayout(field).at(cell.start+Math.min(crop.work[cell.index]||0,cell.end-cell.start));
 }
-function fieldWorkerRoute(field,cell){
-  const layout=fieldLayout(field),end=cell.start+Math.min(fieldCrop(field).work[cell.index]||0,cell.end-cell.start);
+function fieldWorkerRoute(field,cell,done=fieldCrop(field).work[cell.index]||0){
+  const layout=fieldLayout(field),end=cell.start+Math.min(done,cell.end-cell.start);
   const points=[cell.world];
   for(const segment of layout.segments)if(segment.end>cell.start&&segment.end<end)points.push(segment.b);
   points.push(layout.at(end));return points;
