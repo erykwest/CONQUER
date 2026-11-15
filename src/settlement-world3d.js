@@ -850,7 +850,7 @@
   }
   function buildTrees(atlas){
     const v=[];if(!atlas)return new Float32Array(0);
-    const groves=(State.environment||[]).filter(f=>f.type==='forest').map(forestTreeLayout);
+    const groves=(State.environment||[]).filter(f=>f.type==='forest').map(f=>forestTreeLayout(f));
     groves.push(urbanLotCornerTrees());                  // single trees on plot corners
     for(const trees of groves){
       for(const t of trees){

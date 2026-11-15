@@ -194,16 +194,25 @@
   }
   let start=pts.findIndex(p=>!blocked(p)),end=pts.length-1;while(end>=0&&blocked(pts[end]))end--;
   if(start<0||end<=start)return null;
-  const out=[pts[start]];
+  const chunks=[];let out=[pts[start]];
   for(let i=start+1;i<=end;i++){
    if(!blocked(pts[i])&&clear(out.at(-1),pts[i])){out.push(pts[i]);continue;}
    let j=i;while(j<=end&&blocked(pts[j]))j++;
    // Leave space on both ends for a safe connection to the routing grid.
    let target=Math.min(j+3,end);while(target>j&&blocked(pts[target]))target--;
-   const a=out.at(-1),b=pts[target],path=detour(a,b);if(!path)return null;
+   const a=out.at(-1),b=pts[target],path=detour(a,b);
+   // A border range can disconnect a short upstream strip. Retain the viable inland reach.
+   if(!path){chunks.push(out);out=[b];i=target;continue;}
    out.push(...path.slice(1));i=target;
   }
-  return {...line,points:dense(out),reliefRouted:true};
+  chunks.push(out);
+  const arcLength=points=>points.reduce((sum,p,i)=>sum+(i?Math.hypot(p.x-points[i-1].x,p.y-points[i-1].y):0),0);
+  // A receiving mouth must remain on its original connected component.
+  const candidates=chunks.filter(points=>points.length>1&&(!line.mouth||Math.hypot(points.at(-1).x-line.points.at(-1).x,points.at(-1).y-line.points.at(-1).y)<1e-6));
+  candidates.sort((a,b)=>arcLength(b)-arcLength(a));
+  const best=candidates[0];
+  if(!best||chunks.length>1&&arcLength(best)<Math.min(40,arcLength(pts)*.35))return null;
+  return {...line,points:dense(best),reliefRouted:true,...(chunks.length>1?{reliefTrimmed:true}:{})};
  }
  function compose(env){
   const info=window.__CONQUER_REGIONAL_DEMO__||{},coastal=biomeCoastalLand();

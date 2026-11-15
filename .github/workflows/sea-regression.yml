@@ -54,6 +54,9 @@ jobs:
           for file in src/*.js qa/*.cjs; do node --check "$file"; done
       - name: Run sea coverage and pier regressions
         run: |
+          node qa/forest-canopy-query-regression.cjs
+          node qa/biome-selector-regression.cjs
+          node qa/regional-boundary-drainage-regression.cjs
           node qa/landscape-order-regression.cjs
           node qa/sporadic-hills-regression.cjs
           node qa/valley-hills-regression.cjs
