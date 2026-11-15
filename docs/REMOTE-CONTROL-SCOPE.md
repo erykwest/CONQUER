@@ -134,6 +134,18 @@
 
 **STATO:** norma progettuale, **non gameplay multiplayer implementato**. MARCH contiene lo scheletro delle operazioni `raiding/siege`; la branch `messages` possiede i vettori messaggero/piccione, ma nessuno dei due sistemi realizza ancora il blocco postale di una campagna multiplayer autorevole.
 
+## 3e-bis. Messaggero a piedi quando mancano cavalli — DECISO (15/11/2026)
+
+**DECISO — due modalità del messaggero terrestre:** oltre al messaggero **a cavallo**, esiste il **messaggero a piedi**. **Se non vi sono cavalli disponibili**, posta, ordini e **messaggeri automatici d'allarme per invasione** possono partire **a piedi**, purché l'invio terrestre sia altrimenti possibile. La mancanza della cavalcatura da sola non annulla un allarme o un ordine.
+
+**TEMPO DEL MONDO:** il messaggero a piedi percorre un tragitto nel mondo e il suo recapito **non è istantaneo**. Il client mostra il vettore effettivo e l'ETA calcolata dal backend; non si assume la velocità del messaggero montato né si stabiliscono in questa decisione valori numerici.
+
+**ASSEDIO:** **a piedi o a cavallo** sono entrambi **messaggeri terrestri ordinari** e **non possono entrare né uscire** dal feudo sotto assedio. Il messaggero pedone non aggira il blocco. I piccioni in uscita restano un vettore distinto, consentito e non intercettabile se operativo.
+
+**GAP TECNICO:** il prototipo della branch `messages` prevede un figurante montato e calcola una tratta convenzionale; ciò **non documenta un'integrazione multiplayer** del vettore a piedi. **APERTO:** velocità piedi/cavallo, percorso/terreno, disponibilità delle persone, gestione e costi delle cavalcature, scelta manuale/automatica e potenziali rischi di intercettazione in stato INVASO.
+
+**RIFERIMENTO:** [SRS mobile v0.14 (draft PR #222)](https://github.com/erykwest/CONQUER/pull/222).
+
 ## 3f. Allarmi di attacco aggiuntivi configurabili — DECISO (14/11/2026)
 
 **CORREZIONE DEL DESIGN PRECEDENTE (D-SIEGE-ALERT-RECIPIENT-261114):** il destinatario dell'**allarme base** per invasione è il **governante del territorio, se assente**. Non è corretto trattare il **signore superiore** come semplice alternativa o fallback automatico. Le comunicazioni al superiore o agli alleati appartengono invece a **due diversi allarmi automatici aggiuntivi**, attivati su preferenza del signore interessato.
@@ -162,7 +174,7 @@
 - **RC-01 Hub account e multi-campagna:** home/lobby, membership, switch e riepiloghi indipendenti per partita.
 - **RC-02 KPI/snapshot autorevoli:** read model delle partecipazioni con fonti e timestamp, autorizzazioni e stati di allarme. Per i vassalli usare **soltanto rapporti effettivamente recapitati**; il sovrano può configurare la frequenza dei messaggeri di resoconto. Vietata lettura live degli inventari/statistiche dei vassalli in app/API.
 - **RC-03 Comandi remoti:** API e permessi per economia, fisco, lavoro/Job Manager, cantieri già collocati, gestione militare strategica, diplomazia e logistica; validazioni, coda/esiti, stessa logica senza duplicazioni. **Ordini diretti solo dove il personaggio si trova; altri feudi mediante viaggio o messaggeri/piccioni con recapito simulato.** Esclusi piazzamento geometrico, fortificazioni e controllo tattico diretto, riservati al Builder/3D.
-- **RC-04 Comunicazioni/messaggi:** porting selettivo branch `messages`, nodi reali, ETA e rapporti; **INVASO** attiva messaggero automatico d'allarme; **SOTTO ASSEDIO** blocca messaggeri **sia in entrata sia in uscita**, ma consente piccioni in uscita non intercettabili (§3e).
+- **RC-04 Comunicazioni/messaggi:** porting selettivo branch `messages`, nodi reali, ETA e rapporti; **messaggeri a cavallo o a piedi se mancano cavalli** (§3e-bis), anche per l'allarme automatico d'invasione; sotto **ASSEDIO** entrambi i terrestri sono bloccati in ingresso e uscita, piccioni uscenti non intercettabili con canale operativo (§3e).
 - **RC-05 Strategia remota:** spedizioni, carovane/tributi, diplomazia e mappa regionale collegate a World/Feudal.
 - **RC-06 Mobile-ready:** web responsive e API neutrali alla piattaforma, poi app **Android/iOS da un'unica base di codice condivisa**, senza riscrivere le regole; push con permesso OS e selezione per categoria, senza interferire con visibilità/temporizzazione in-game. Framework da scegliere.
 - **RC-07 QA e sicurezza:** isolamento tra campagne, autorizzazione, consistenza dello stato, velocità ×1 condivisa, messaggi ritardati, concorrenza/duplicati dei comandi e test multi-client.
