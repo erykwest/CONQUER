@@ -120,8 +120,11 @@ function drawCastleSoldiers(){
     }
   }
 
-  // Wall and palisade patrol density follows tier: T1=0, T2=1, T3=2.
-  for(const wall of State.structures){
+  // Wall patrols walk whole rings of walls, as many as the player assigned to each ring
+  // (settlement-wall-patrols.js, MIL-WALL-01). /camp has no wall-patrol module and keeps the old
+  // decorative men per segment: T1=0, T2=1, T3=2.
+  if(window.ConquerWallPatrols)window.ConquerWallPatrols.draw();
+  else for(const wall of State.structures){
     if(!['wall','palisade'].includes(wall.type)||underConstruction(wall))continue;
     const tier=wallTier(wall),count=tier===1?0:tier===3?2:1;
     const z=wall.type==='palisade'?palisadePatrolSurface(wall).z:structureHeight(wall)+.10;
