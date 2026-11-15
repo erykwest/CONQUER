@@ -1,5 +1,33 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-MSG-FOOT-261115 — Messaggero a piedi in assenza di cavalli (15/11/2026)
+
+- **DECISO dal product owner:** il messaggero terrestre può essere **a cavallo oppure a piedi**. Quando **non ci sono cavalli disponibili**, i messaggi, gli ordini e gli allarmi automatici (compreso quello generato all'invasione) possono partire con un **messaggero a piedi**, senza perdere la spedizione per la sola mancanza della cavalcatura.
+- **TEMPO SIMULATO:** il recapito deve seguire il tragitto e la modalità effettiva di spostamento. Non è immediato e **non presume la stessa velocità del cavallo**. Velocità, requisiti di portatore, costi e consumi restano da definire.
+- **ASSEDIO:** il messaggero a piedi **non aggira** il blocco: in stato SOTTO ASSEDIO, **nessun messaggero terrestre a piedi o a cavallo entra né esce dal feudo**. Rimane distinto il piccione in uscita, consentito e non intercettabile con canale operativo.
+- **STATO:** design, non implementazione del world multiplayer. La branch `messages` rappresenta attualmente un figurante montato e tempi astratti, non dimostra il vettore pedone implementato. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [MARCH](../march.md), [SRS mobile v0.14 draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
+
+
+### 2026-11-12 — La quota collinare non impone una griglia
+
+La copertura minima deve essere raggiunta mantenendo varietà di superfici, contorni, rotazioni e distanze dei rilievi. Vietata la disposizione a file fisse come scorciatoia per soddisfare il 30%. Le catene montuose seguono il bordo regionale come direttrice, con dispersione longitudinale e trasversale delle singole cime; la medesima geometria è trasformata coerentemente per nord/est/sud/ovest.
+
+### 2026-11-12 — Bioma terrestre e proprietà dei confini
+
+Il terreno regionale hills corrisponde al bioma locale Colline, non Montagne. I quattro biomi terrestri sono Pianura, Colline (Valle alias), Foresta e Palude. Le catene montuose derivano dai bordi regionali espliciti/automatici e sono trasmesse in mountainSides; fiumi e costa restano proprietà additive della zona. Colline richiede 4–8 rilievi, almeno 30% di copertura, boschi 20–30% (target 25%) e 1–3 torrenti con attivazione 100%. Conservata l'eccezione zero torrenti per isole e penisole. Numero dei rilievi e quota di superficie sono vincoli distinti; non si aggiungono oltre otto rilievi per raggiungere la superficie.
+
+### 2026-11-12 — Valle equivale a Colline; quantità 4–8
+
+Valle è un alias compatibile di Colline nella generazione: stessa ricetta 4–8 rilievi H2–3 e normalizzazione dei seed e dei vicini, senza catene montuose proprie. Mare e Lago hanno un gate indipendente del 20% per 1–2 colline H1–2 sulle porzioni emerse; rimangono celle regionali non selezionabili. Il vecchio nome Vallata resta leggibile nei salvataggi/demo.
+
+### 2026-11-12 — Idrologia e orografia costiera
+
+Isole e penisole non generano torrenti e non accettano affluenti regionali di tipo torrente; la regola si applica a ogni bioma terrestre. I fiumi restano governati dalla rete regionale. I rilievi vengono accostati alle sponde effettive prima della composizione idrologica, preservando le quote e lo spazio dell'insediamento.
+
+### 2026-11-12 — Rilievi delle terre circondate dall'acqua
+
+Tre o quattro vicini cardinali dello stesso tipo mare/lago qualificano rispettivamente una penisola o un'isola. La ricetta centrale terrestre riceve tre colline di altezza 2–3, vicina alle 3–4 del bioma Colline, senza sostituire il bioma della vegetazione. Colline, Montagne e Valle mantengono la propria orografia. L'adattamento alle sponde ha precedenza sui rilievi.
+
 ## D-MP-PUBLIC-261115 — Lobby anonima: solo statistiche generali server (15/11/2026)
 
 - **DECISO dal product owner:** senza login sono pubbliche **solo le statistiche generali e aggregate dei server**. La lobby può mostrare conteggi giocatori/bot, capienza, età/fase della partita, stato delle iscrizioni, livello massimo aggregato, disponibilità numerica di ingressi idonei e orari del server.
