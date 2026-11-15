@@ -14,7 +14,7 @@ const commit=(type,tier,a,b,masonry='stone')=>{
   const S=run('State');
   S.tool={kind:'linear',linear:type,tier,label:type};S.buildLevels={...(S.buildLevels||{}),wall:1,wallTier:tier,gate:2};
   S.buildMasonryMaterial=masonry;S.draft={a};
-  const seg=run('discreteLinearSegment')(a,b);
+  const seg=run('freeLinearSegment')(a,b);
   return run('commitStructuralLinearRoute')({segments:[seg],joint:null,length:seg.length},null,run('currentLinearSpec')());
 };
 const gates=()=>run('State').structures.filter(s=>s.type==='gate');
@@ -52,6 +52,17 @@ check('an oblique road turns the gate along the road',()=>{
   const [g]=gates(),road=run('State').structures.find(s=>s.id==='r');
   assert.ok(g&&run('roadUsesGatePassage')(road,g),'passage follows the 45° road');
   for(const w of walls('wall'))assert.ok(run('window.ConquerPlacement').check(w).ok,'pieces clear the road');
+});
+check('a free-angle wall (off the 15° lattice) across the road still gets its gate',()=>{
+  reset([mainRoad('r',{x:100,y:94},{x:100,y:106})]);
+  const a={x:95,y:98.2},b={x:105,y:101.8};   // ~19.8°, WALL-FREE-ANGLE
+  assert.equal(commit('wall',2,a,b)?.gates,1,'one gate reported');
+  const [g]=gates(),road=run('State').structures.find(s=>s.id==='r');
+  assert.ok(g&&run('roadUsesGatePassage')(road,g),'road runs through the passage');
+  const w=walls('wall');
+  assert.equal(w.length,2,'two wall pieces');
+  assert.ok(w.some(s=>s.bSnap===g.id)&&w.some(s=>s.aSnap===g.id),'both pieces seated on the gate');
+  for(const s of w)assert.ok(run('window.ConquerPlacement').check(s).ok,'pieces clear the road');
 });
 check('secondary roads and walls that miss the road get no gate',()=>{
   reset([{id:'s',type:'road',roadClass:'reactive',width:.3,a:{x:100,y:94},b:{x:100,y:106}}]);

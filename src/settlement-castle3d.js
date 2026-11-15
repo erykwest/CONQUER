@@ -170,7 +170,7 @@
       m.prism(inner.ring,inner.h,inner.eaveZ,PAL.stone());
       m.tag='roof';
       const round=inner.ring.length>8,cols=round?(winter()?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP]:['#303236','#3a3d42','#44474c']):null;
-      m.pyramid(inner.ring,inner.eaveZ,inner.apex,inner.apexZ,i=>round?cols[i%3]:winter()?(i%2?WINTER_SNOW_A:WINTER_SNOW_B):(i%2?'#34363a':'#42454a'));
+      for(const f of towerInnerRoofFaces(inner))m.face(f.pts,round?cols[f.i%3]:winter()?(f.i%2?WINTER_SNOW_A:WINTER_SNOW_B):(f.i%2?'#34363a':'#42454a'));
       m.tag=tag;
     }
     for(const b of towerBartizans(s))addBartizan(m,b);

@@ -15,6 +15,22 @@
 
 - Branch fix/microfix. Con il cutaway piano per piano su un piano sotto l'ultimo, torri, porte e sottotorri non disegnano più merli, caditoie, tetto interno e braciere del tetto (cutawayCrestHidden in settlement-castle.js), sia nel percorso 2.5D (drawCastleBattlements) sia in quello WebGL (ConquerCastle3D.addPieces); la chiave della mesh castello di World3D cambia quando la cresta sparisce, così la mesh si ricostruisce.
 - PASS cutaway-floors (nuove asserzioni) e 49 regressioni castello/cutaway; verificato a vista nel browser su una torre quadra W2 a 3 piani: in P2 merli e braciere, in P1 e P0 nessuno dei due. Le due suite Playwright non sono eseguibili in locale. CI da eseguire.
+## 2026-11-15 — Tetto interno: torre a D e bracere rimosso (branch `fix/dtower-inner-roof-brazier`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `settlement-population.js`: `towerInnerRoofGeometry` restituisce anche `tail`; sulla torre a D il tetto interno corre su un colmo dal retro (testata a padiglione, a mezza luce dal fondo) al centro della semicirconferenza (mezzo cono), invece di un'unica piramide con l'apice sul davanti che lasciava le falde posteriori quasi piatte. Nuovo `towerInnerRoofFaces(g)` (una falda per lato di gronda, triangolo o trapezio verso il colmo, stessa pendenza ovunque) usato sia dal 2.5D (`drawTowerInnerRoof`) sia dalla mesh 3D (`addTower`). Quadrate e rotonde invariate (`tail = apex`).
+  - `settlement-castle-structures.js`: **il tetto interno toglie il bracere** (decisione del product owner, 15/11/2026). Nuovo `towerHasBrazier(s)`: torre in pietra con merli o caditoie **senza** tetto interno; `battlementBrazierSources` lo usa, quindi niente blocco del bracere (prima disegnato sopra il tetto, sembrava una botola), niente fiamma né alone. Tooltip «Tetto interno» aggiornato («Toglie il bracere della piazza»).
+- **REGOLA DI PRODOTTO:** senza bracere gli arcieri della torre non tirano frecce incendiarie. Oggi gli arcieri delle torri non tirano frecce incendiarie in nessun caso (esistono solo come strumento di test e nella battaglia navale): quando arriveranno, dovranno chiedere `towerHasBrazier(s)`.
+- **PROVE LOCALI PASS:** `qa/tower-inner-roof-regression.cjs` (2 controlli nuovi: colmo e pendenza unica della D; nessun bracere sotto il tetto interno su quadrata, rotonda e D, bracere invariato senza), bartizan, battlement-parapet, dovecote, falconry, roof-pitch, subtower-junctions, tower-italian-machicolation, tower-roof-shape, tower-weapons, camp, fire.
+- **AUDIT LAB:** 6 voci «tetto interno» (58 render): 0 falliti, 0 cambiati, 6 avvisi preesistenti `cantiere-progressivo`; baseline invariata. Verifica visiva nel Lab (Modello 3D e Nel gioco).
+
+## 2026-11-15 — Mura ad angolo libero (branch `fix/wall-free-angle`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `settlement-castle-placement.js`: `normalizeStructuralLinearRoute` non aggancia più muro, palizzata e sezione costruita al reticolo di 24 direzioni (15°) e non crea più il gomito automatico a due tratti verso un magnete. Il tratto va dritto dal punto A al punto B (o al magnete, raggiunto esattamente); oltre la lunghezza massima, fino a 2× max, due tratti collineari uguali. `rotationStep` resta solo se l'angolo cade sul reticolo, altrimenti `null` (stessa regola della migrazione dei salvataggi). Torri, porte ed edifici puntuali conservano la rotazione a 15°.
+  - `settlement-app-input.js`: messaggi di stato senza «15°» (mostra l'angolo reale del tratto), con la nota delle porte su strada di WALL-ROAD-GATE (#246) conservata nel merge.
+  - `qa/wall-road-gate-regression.cjs`: usa `freeLinearSegment` (ex `discreteLinearSegment`) e un caso nuovo, muro a ~19,8° che attraversa una strada principale: porta posata, due pezzi seduti sui fianchi.
+- **PROVE LOCALI PASS:** le 28 `qa/*.cjs` che toccano il piazzamento lineare (tra cui linear-magnet, wall-bays, lean-to, pier, oriented-towers) e builder-placement. Nel browser (`main` + branch): muro a 18,97° e secondo muro a −125,91° agganciato esattamente all'estremità libera del primo, un solo tratto, nessun errore in console.
 
 ### 2026-11-15 — Figure di eventi e giustizia nel capsuloide; campo eventi senza fondo verde (`feature/figure-capsules-events`)
 

@@ -6,6 +6,19 @@
 - [ ] Proposta: legare il numero di fedeli ai residenti serviti (ConquerChurch.servedShare) quando arriverà la messa di CHIESA-01 fase 3.
 - [x] Rimuovi foresta rispetta Fast build (istantaneo) e Free build (senza salari) del menu DEV.
 - [x] Cutaway piano per piano: i merli (e caditoie, tetto interno, braciere) spariscono quando il piano in vista non è l'ultimo.
+## 2026-11-15 — BC-251105-05 fix · Tetto interno della torre a D e bracere
+
+**IMPLEMENTATO SU BRANCH `fix/dtower-inner-roof-brazier`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Torre a D: tetto interno su colmo (padiglione sul retro, mezzo cono sul davanti), pendenza unica.
+- [x] Il tetto interno toglie il bracere (`towerHasBrazier`), che prima veniva disegnato sopra il tetto.
+- [ ] Regola: senza bracere gli arcieri della torre non tirano frecce incendiarie. Da applicare quando gli arcieri delle torri avranno le frecce incendiarie (oggi non le tirano mai): chiedere `towerHasBrazier(s)`.
+
+## 2026-11-15 — WALL-FREE-ANGLE · Mura senza vincolo di giunzione a 15°
+
+**IMPLEMENTATO SU BRANCH `fix/wall-free-angle`, NON MERGE.** Mura, palizzate e sezioni costruite si tracciano a qualsiasi angolo; niente gomito automatico verso i magneti. Dettagli in [STATUS](STATUS.md).
+- [x] Tratto libero da A a B e aggancio esatto al magnete in un solo tratto.
+- [ ] Verificare a occhio, nel gioco, le giunzioni muro-muro e muro-torre ad angoli non multipli di 15°.
+
 
 ### 2026-11-15 — WALL-ROAD-GATE
 
@@ -233,7 +246,7 @@
 - [x] Mensole in un unico pezzo inclinato, archi a tutto sesto (senza scuro sotto) e fascia a filo, sul modello del Castello di San Giorgio (Mantova).
 - [x] Cutaway: mensole, archi e fascia del lato aperto tolti, l'ultimo piano resta visibile.
 - [ ] Facoltativo: finestrelle o merli tamponati nella fascia, come nel riferimento.
-- [ ] Botola del piano di copertura disegnata sopra il tetto interno (verificare anche con le caditoie standard).
+- [x] Botola del piano di copertura disegnata sopra il tetto interno: era il bracere, ora tolto dal tetto interno (`fix/dtower-inner-roof-brazier`).
 
 ## SIEGE-ATTACK-ALERTS-01 — Due allerte d'attacco automatiche configurabili (14/11/2026)
 

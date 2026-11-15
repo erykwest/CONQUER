@@ -5,6 +5,7 @@ const fs=require('node:fs');
 const harness=fs.readFileSync(__dirname+'/urban-regression.cjs','utf8').split('let passed=0;')[0];
 eval(harness+`
 run(fs.readFileSync(__dirname+'/../src/settlement-architecture.js','utf8'));
+if(typeof run('typeof orientedTowerOutline')!=='undefined'&&run('typeof orientedTowerOutline')!=='function')run(fs.readFileSync(__dirname+'/../src/settlement-tower-shapes.js','utf8'));
 let passed=0;
 function check(name,body){body();passed++;console.log('PASS '+name)}
 const setup=list=>{run('State.structures').splice(0,Infinity,...list);return list};
@@ -43,6 +44,36 @@ check('the roof stands inside the merlons, on a kerb, and rises above them',()=>
     assert.ok(reach<inner-.15,'a wall-walk at least 0.15 U wide between roof and merlons');
     assert.ok(Math.abs(run('towerVisualTopHeight')(t)-g.apexZ)<1e-9,'visual top = apex');
   }
+});
+check('D tower: a ridge from the rear to the half round, every slope at the same pitch',()=>{
+  const t=tower('d',{shape:'dee',size:2,tier:3,level:3,innerRoof:'on'});setup([t]);
+  const g=geo(t);assert.ok(g,'large D takes the inner roof');
+  assert.ok(Math.hypot(g.tail.x-g.apex.x,g.tail.y-g.apex.y)>.3,'a ridge, not a single apex');
+  const faces=run('towerInnerRoofFaces')(g);
+  assert.equal(faces.length,g.ring.length,'one face per eave edge');
+  const tan=(g.apexZ-g.eaveZ)/g.half;
+  // Horizontal run from each eave line to the ridge = the half span: same pitch all round
+  // (eave edge midpoints; the two rear corners sit on the hips, a half span diagonally).
+  const a=g.tail,b=g.apex,dx=b.x-a.x,dy=b.y-a.y;
+  for(const f of faces){
+    const p={x:(f.pts[0].p.x+f.pts[1].p.x)/2,y:(f.pts[0].p.y+f.pts[1].p.y)/2};
+    const u=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy)));
+    const run_=Math.hypot(p.x-(a.x+dx*u),p.y-(a.y+dy*u));
+    assert.ok(Math.abs(run_-g.half)<.02,'eave '+run_.toFixed(3)+' U from the ridge, half span '+g.half.toFixed(3));
+  }
+  assert.ok(tan>=1.6-1e-9);
+  const sq=tower('s',{innerRoof:'on'});setup([sq]);const gs=geo(sq);
+  assert.ok(gs.tail===gs.apex,'square towers keep the pyramid');
+});
+check('the inner roof removes the brazier (no fire on the deck)',()=>{
+  for(const t of [tower('s',{innerRoof:'on'}),tower('r',{shape:'round',r:1,tier:3,level:3,innerRoof:'on'}),tower('d',{shape:'dee',size:2,tier:3,level:3,innerRoof:'on'})]){
+    setup([t]);
+    assert.ok(!run('towerHasBrazier')(t),t.shape+': no brazier under the inner roof');
+    assert.ok(!run('battlementBrazierSources')().some(x=>x.id.startsWith(t.id+':')),t.shape+': no brazier fixture, flame or glow');
+  }
+  const off=tower('o');setup([off]);
+  assert.ok(run('towerHasBrazier')(off),'no inner roof: the brazier stays');
+  assert.ok(run('battlementBrazierSources')().some(x=>x.id==='o:brazier'));
 });
 check('2.5D: one inner-roof piece among the merlons, only when mounted and built',()=>{
   const on=tower('a',{innerRoof:'on'}),off=tower('b'),site=tower('c',{innerRoof:'on',construction:{progress:.5}});

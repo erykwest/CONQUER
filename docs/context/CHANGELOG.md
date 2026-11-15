@@ -5,6 +5,13 @@
 - Aggiunti i popolani seduti sui banchi della chiesa durante la messa domenicale (6:00–12:00); test in qa/staff-people-regression.cjs. Roadmap e decisioni invariate.
 - Rimuovi foresta usa i bypass DEV Fast build e Free build; versioni cache degli script toccati aggiornate. Test in qa/forestry-regression.cjs.
 - Il selettore ▲/▼ del cutaway ora toglie anche la cresta merlata e il braciere del tetto quando si scende sotto l'ultimo piano; test in qa/cutaway-floors-regression.cjs.
+## 2026-11-15 — Tetto interno: torre a D e bracere
+
+`fix/dtower-inner-roof-brazier`: il tetto interno della torre a D corre ora su un colmo (padiglione sul retro, mezzo cono sul davanti) con pendenza unica; il tetto interno toglie il bracere (prima veniva disegnato sopra il tetto, scambiato per una botola). Regola di prodotto registrata: senza bracere gli arcieri della torre non tirano frecce incendiarie (`towerHasBrazier`, da applicare quando le torri avranno frecce incendiarie). Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: nessun contratto cambiato.
+
+## 2026-11-15 — WALL-FREE-ANGLE · Mura ad angolo libero
+
+Tolto il vincolo di giunzione a 15° per mura, palizzate e sezioni costruite: il tratto segue l'angolo del mouse e raggiunge un magnete in linea retta, senza il gomito automatico a due tratti. Torri e porte mantengono la rotazione a 15°. Branch `fix/wall-free-angle`. ROADMAP e DECISIONS invariati (nessuna decisione registrata sul reticolo delle mura).
 
 ### 2026-11-15 — Capsuloide per eventi e giustizia; campo eventi senza verde (`feature/figure-capsules-events`)
 
