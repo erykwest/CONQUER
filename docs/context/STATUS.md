@@ -6,6 +6,12 @@
 - **CAMPO EVENTI:** `groundMesh` di `settlement-events3d.js` non ha più il fondo verde: solo un bordo sottile in terra battuta (`#8a7656`, quattro strisce).
 - **PROVE LOCALI PASS:** nuova `qa/event-figure-cards-browser.mjs` (forca, gogna e patibolo in sessione, palco, giostra: chiavi delle carte, capsula orizzontale dei cavalli, ripiego 2D; primi piani in `output/playwright/event-figure-cards/`), aggiunta al workflow Main fixes; `figure-billboards`, `animal-capsule`, `vehicle-cards` browser; 24 regressioni node (eventi, giostra, tribunale, crimine, cutaway, personale, botteghe, animali, veicoli), `events3d-regression` aggiornata al bordo. Audit Lab completo: nessuna voce degli eventi cambiata (le 178 «cambiate» sono torri, mura, porte e vegetazione, già diverse dalla baseline su main).
 
+## 2026-11-15 — Equipaggiamento dei cavalieri a cavallo (branch `feature/knight-equipment-styles`)
+
+- **CODICE SUL BRANCH, NON MERGE:** `ConquerMounted2D.draw` accetta `helmet` e `shield` (stili di `UNIT_HELMETS`/`UNIT_SHIELDS`; assenti o sconosciuti = grande elmo e scudo appuntito originali). `settlement-combat-render.js` li passa solo ai cavalieri del feudo e solo se `State.policies.unitHelmet/unitShield` è stato scelto. `figures-lab.html`: selettori anche per «Cavaliere a cavallo», opzione «Originale». Caduta (`pose.fall>0`): il cavaliere si disegna nello spazio del terreno, non del corpo del cavallo (`fallen()`), con arco dietro la groppa fino al suolo (`sp.center.y`) e lancia stesa a terra.
+- **PROVE LOCALI PASS:** `qa/combat-render-regression.cjs`; nel Lab, foglio con le 6 combinazioni (originale + 5) a due grandezze e primo piano degli elmi, console senza errori.
+- **NON ESEGUITO in locale:** `node qa/asset-audit.mjs` (Playwright non installato); affidato alla CI `asset-lab`.
+
 ### 2026-11-15 — FIELD-LEND preservato nel merge regionale
 
 - La CI su 6510709 era tutta verde (20 workflow). Durante l'attesa main e avanzato a 6c5ac79 (#212 FIELD-LEND): integrato senza conflitti di codice, unendo STATUS/CHANGELOG e rigenerando il catalogo. PASS locale idle-farmers (7), fields (16), export Wiki. Nuova CI da verificare; nessuna modifica alle ricette regionali.
