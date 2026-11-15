@@ -2,6 +2,14 @@
 
 **Stato: skeleton tecnico sulla PR #55 Draft.** Nessuna partenza, navigazione, commercio, giorno di viaggio, consumo dei salari/trasporti o battaglia da convoglio è attiva. Non interpretare `status:'ready'` come una carovana partita.
 
+## Velocità dei carri nella futura World Map — DECISO (15/11/2026)
+
+**Carri di mercanti, rifornimenti e immigrati: velocità strategica base = 1,5× fanteria standard**, sulla stessa tratta e a parità di condizioni. Riferimento comune: **fanteria 1×**, **cavalleria 2×**. Il fattore riguarda la **velocità di viaggio del convoglio terrestre**, non la resa visiva dell'animazione né la sua capacità/costo.
+
+**Attenzione alla compatibilità:** l'attuale `src/settlement-convoys.js` calcola i tempi su **22 U/giorno** per i mezzi terrestri. È una **convenzione legacy**, che **non implementa né dimostra** il rapporto approvato. La futura integrazione World/Feudal deve utilizzare il parametro autorevole `V_fanteria × 1,5`, risolvere il valore assoluto della fanteria e validare le ETA rispetto a salvataggi/convogli già in viaggio. **Non cambiare retroattivamente i viaggi persistiti senza una regola di migrazione.**
+
+**APERTO:** modificatori di terreno/strade/meteo, velocità di gruppi misti e scorte, eventuali casi eccezionali per veicoli non qualificati come carri (carretti locali, carrozze, imbarcazioni). Vedi [REMOTE-CONTROL-SCOPE §3g](REMOTE-CONTROL-SCOPE.md) e [SRS mobile v0.15](https://github.com/erykwest/CONQUER/pull/222).
+
 ## Contratto comune dei mezzi
 
 Fonte di capacità e costo indicativo: `ConquerCommerce.VEHICLES`. La distinzione è tra capacità merci e posti passeggeri, non tra tipi di moneta.
