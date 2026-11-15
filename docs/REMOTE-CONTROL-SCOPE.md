@@ -19,7 +19,9 @@
 | Vista | Contenuto minimo / responsabilità | Stato |
 | --- | --- | --- |
 | **Home / Le mie campagne** | Campagne in cui l'account partecipa, selezione del feudo, situazione sintetica e avvisi | **DECISO** concettualmente |
-| **Lobby / Trova partita** | Catalogo dei server accessibili, parametri pubblici già definiti in MP-01 (età, progressi, utenti/bot, posti/territori idonei, eventuali orari regionali) | **DECISO** concettualmente |
+| **Lobby / Trova partita** | Senza login **solo statistiche generali aggregate** dei server (età/fase, stato, capienza, conteggi giocatori/bot, massimo livello in forma aggregata, conteggi posizioni idonee, eventuali orari regionali); **nessuna mappa politica, classifica nominale o dettaglio dei feudi** | **DECISO** il limite di visibilità anonima (15/11/2026); KPI esatti da affinare |
+**DECISO — confine pubblico/privato (15/11/2026):** il sito informativo e il Codex/Wiki sono accessibili senza login; nella lobby anonima sono pubblici **esclusivamente dati statistici aggregati dei server**. Le mie campagne, KPI dei singoli feudi, mappa regionale/politica, diplomazia, posta e controllo remoto sono accessibili solo dopo login **e autorizzazione alla specifica campagna/feudo**. Il login da solo non concede accesso ai dati riservati delle campagne altrui. [Contratto multiplayer §3](MULTIPLAYER-SERVER-SCOPE.md#3-lobby-e-scoperta-delle-partite).
+
 | **Dashboard di campagna** | KPI per feudo/campagna; collegamenti a gestione dettagliata, ordini, mappa e messaggistica | **DECISO** concettualmente; metriche esatte **APERTE** |
 | **Centro di controllo remoto** | Gestione economica, fiscale, militare strategica, diplomatica, lavoratori, cantieri già localizzati; senza Builder geometrico | **DECISO** perimetro funzionale generale; singoli comandi **APERTI** |
 | **Posta e notifiche** | Ricevuti/inviati, rapporti e allarmi per campagna, con i tempi simulati dove previsti | **DECISO** come dominio; unificazione UI **PROPOSTA** |
