@@ -1,10 +1,10 @@
 # CONQUER — Software Requirements Specification (SRS) · Mobile Companion
 
-**Versione:** 0.14 — bozza di lavoro, **non approvata nel complesso** (Q-08 in definizione, Q-09: messaggero a piedi in assenza di cavalli)  
+**Versione:** 0.15 — bozza di lavoro, **non approvata nel complesso** (Q-08 in definizione; regola velocità strategiche decisa, Q-09 parzialmente aperta)  
 **Ultimo aggiornamento:** 15 novembre 2026 (prima bozza 13 novembre 2026)  
 **Destinazione:** Android e iOS da **un'unica base di codice mobile condivisa**; prima dipendenza: hub browser e backend multiplayer condiviso  
 **Stato:** SPEC / NO RUNTIME — nessuna app mobile implementata  
-**Decisioni approvate:** **B — primo rilascio pubblico con controllo remoto completo**; **stati INVASO/SOTTO ASSEDIO distinti: allarme base di invasione al governante assente e due allerte configurabili separatamente verso signore superiore e alleati; messaggeri a piedi se mancano cavalli, blocco bidirezionale dei messaggeri in assedio; piccioni uscenti non intercettabili**; **un'unica codebase mobile Android/iOS**; **un personaggio per account/campagna, che governa più feudi solo viaggiando tra essi o mediante messaggeri/piccioni**; **comandi diretti dove il personaggio è presente al primo tick utile, comunicazioni inter-feudo con recapito simulato**; **KPI dei vassalli solo tramite resoconti di messaggeri con frequenza impostabile dal sovrano**; **ordini preparabili durante la pausa regionale**; **push subordinati al permesso OS e filtrabili per categoria dalle impostazioni dell'app**.
+**Decisioni approvate:** **B — primo rilascio pubblico con controllo remoto completo**; **stati INVASO/SOTTO ASSEDIO distinti: allarme base di invasione al governante assente e due allerte configurabili separatamente verso signore superiore e alleati; messaggeri a piedi se mancano cavalli; velocità strategiche relative: fanteria/pedone 1×, carri 1,5×, cavalleria/montato 2×; blocco bidirezionale dei messaggeri in assedio; piccioni uscenti non intercettabili**; **un'unica codebase mobile Android/iOS**; **un personaggio per account/campagna, che governa più feudi solo viaggiando tra essi o mediante messaggeri/piccioni**; **comandi diretti dove il personaggio è presente al primo tick utile, comunicazioni inter-feudo con recapito simulato**; **KPI dei vassalli solo tramite resoconti di messaggeri con frequenza impostabile dal sovrano**; **ordini preparabili durante la pausa regionale**; **push subordinati al permesso OS e filtrabili per categoria dalle impostazioni dell'app**.
 
 ## 0. Natura del documento e fonti
 
@@ -141,6 +141,29 @@ Il product owner ha valutato la proposta seguente **«un buon inizio»**. Questo
 | FR-MAP-02 | Dalla mappa apre dettagli e azioni strategiche applicabili al territorio, non il Builder geometrico. | D/C | Must |
 | FR-LOG-01 | Consulta tributi, carovane, carico, scorte, destinazione e stato dei viaggi quando supportati dal backend. | D/C | Must |
 | FR-LOG-02 | Consente azioni logistiche autorizzate che rispettano risorse reali, ETA, intercettazioni e risultato del motore. | D/C | Must |
+| FR-MOV-01 | La **fanteria standard** costituisce il riferimento di movimento strategico **1×** per unità e trasporti terrestri. | D/C | Must |
+| FR-MOV-02 | **Messaggero a piedi = 1×** e **messaggero a cavallo = 2×** della velocità standard della fanteria, sulla stessa tratta e a parità di condizioni. | D/C | Must |
+| FR-MOV-03 | **Cavalleria standard = 2×** della velocità di fanteria standard, sulla stessa tratta e a parità di condizioni. | D/C | Must |
+| FR-MOV-04 | **Carri per mercanti, rifornimenti e immigrati = 1,5×** della velocità di fanteria standard, sulla stessa tratta e a parità di condizioni. | D/C | Must |
+| FR-MOV-05 | L'ETA per ordini, messaggeri e carri usa velocità strategiche autorevoli e applica eventuali modificatori di terreno/percorso senza **confondere il rapporto base con un valore assoluto**. I client non inventano velocità né ETA. | D/C per rapporti, P/C per modifica tratta | Must |
+
+### 3.3a Velocità standard di movimento strategico — DECISO (15/11/2026)
+
+| Unità/vettore | Coefficiente sulla fanteria standard |
+| --- | ---: |
+| **Fanteria standard** | **1×** |
+| **Messaggero a piedi** | **1×** |
+| **Carri di mercanti, rifornimenti, immigrati** | **1,5×** |
+| **Cavalleria standard** | **2×** |
+| **Messaggero a cavallo** | **2×** |
+
+**D — modello relativo:** definire una sola **velocità strategica base della fanteria**; gli altri tipi la moltiplicano per i fattori stabiliti **sulla stessa tratta e a parità di condizioni**. Ne segue, prima di modificatori, che cavalleria e corriere montato procedono al doppio della fanteria, mentre i carri al 150%. **Non è stato fissato** un valore assoluto in unità di mappa/giorno.
+
+**D — ambito:** si tratta di **movimento strategico World/Feudal** e spedizioni di posta e convogli, **non** di velocità di animazione 2D/3D o di bilanciamento tattico Combat. Un ordine a distanza e un allarme d'invasione che ripiegano su **messaggero a piedi** seguono dunque **1×**, non il rapporto del montato. Le condizioni di assedio e le regole sui piccioni non cambiano.
+
+**DEBITO TECNICO VERIFICATO:** il prototipo `messages` su branch `messages` impiega una velocità **convenzionale** di 22 U/giorno per il messaggero e un figurante montato; `src/settlement-convoys.js` su main usa **22 U/giorno** per convogli terrestri (`UNITS_PER_DAY`). **Questi valori preesistenti non dimostrano** che il rapporto 1×/1,5×/2× sia già implementato. Non riutilizzarli come nuovi valori assoluti: durante l'integrazione occorre una velocità fanteria standard condivisa e la migrazione/verifica dei tempi legacy, senza introdurre un secondo motore del tempo.
+
+**APERTO:** valore assoluto base della fanteria, effetti di terreno/strade/meteo, guida dei carri e scorte, capacità/velocità di gruppi misti, movimento di piccioni/navi, raccordo con unità tattiche e ETA già calcolate in viaggi esistenti. I rapporti **base** sopra sono invece **decisi**.
 
 ### 3.4 Posta feudale, diplomazia e notifiche
 
@@ -276,9 +299,9 @@ Il product owner ha valutato la proposta seguente **«un buon inizio»**. Questo
 
 **APERTO — operatività degli avvisi aggiuntivi:** trigger esatto di **attacco** (non presumere che coincida sempre con INVASO), titolarità e ambito delle impostazioni (signore/feudo/campagna), chi può modificarle, quali alleanze qualificano i destinatari, eventuale risalita nella catena feudale, recapito multiplo e scelta del vettore (messaggero/piccione). Le opzioni governano **allarmi del mondo simulato**, **non** l'autorizzazione push OS di Q-05: il push è eventuale presentazione successiva a un recapito reale.
 
-**FR-SIEGE-08 (D/C, Must) — Messaggero a piedi quando non ci sono cavalli:** i **messaggeri terrestri** possono essere **montati** oppure **a piedi**. Se mancano **cavalli disponibili**, il motore può comunque spedire posta, ordini e **allarmi automatici d'invasione** mediante un **messaggero a piedi**, se la risorsa umana e il tragitto consentono la partenza. La mancanza del cavallo **non deve diventare, di per sé, perdita dell'allarme**. L'ETA va calcolata per il tipo effettivamente impiegato, senza assumere la velocità del cavallo o inventare tempi numerici. **In assedio entrambi i tipi terrestri non entrano né escono**, a differenza dei piccioni operativi.
+**FR-SIEGE-08 (D/C, Must) — Messaggero a piedi quando non ci sono cavalli:** i **messaggeri terrestri** possono essere **montati** oppure **a piedi**. Se mancano **cavalli disponibili**, il motore può comunque spedire posta, ordini e **allarmi automatici d'invasione** mediante un **messaggero a piedi**, se la risorsa umana e il tragitto consentono la partenza. La mancanza del cavallo **non deve diventare, di per sé, perdita dell'allarme**. L'ETA va calcolata per il tipo effettivamente impiegato, **1× fanteria per il pedone e 2× per il montato** a parità di tratta, senza inventare tempi numerici. **In assedio entrambi i tipi terrestri non entrano né escono**, a differenza dei piccioni operativi.
 
-**APERTO — parametrizzazione messaggeri:** velocità relative piedi/cavallo, requisiti e costi della persona, disponibilità/esaurimento cavalli, eventuale consumo/occupazione della cavalcatura, scelta esplicita vs automatica e rischi dei percorsi. Il prototipo `messages` nella branch dedicata mostra un **figurante montato** e un'ETA astratta: **non dimostra già implementato il messaggero a piedi**.
+**DECISO — rapporto velocità dei messaggeri:** **pedone 1× fanteria; montato 2×** (§3.3a). **APERTO:** valore assoluto di base, requisiti e costi della persona, disponibilità/esaurimento cavalli, eventuale consumo/occupazione della cavalcatura, scelta esplicita vs automatica e rischi dei percorsi. Il prototipo `messages` nella branch dedicata mostra un **figurante montato** e un'ETA astratta: **non dimostra già implementato il messaggero a piedi**.
 
 **FR-SIEGE-06 (D/C, Must) — Blocco bidirezionale sotto assedio:** i messaggeri ordinari **non possono entrare nel feudo assediato**, né **uscirne**. Un messaggero che non può entrare **non recapita** l'informazione al feudo né genera avvisi derivati dal contenuto. **APERTO:** se attende all'esterno, devia o torna indietro; come trattare i vettori già in viaggio quando comincia l'assedio. Il divieto approvato riguarda **ingresso/uscita effettivi** ed è verificato dal server.
 
@@ -426,6 +449,12 @@ Il product owner ha valutato la proposta seguente **«un buon inizio»**. Questo
 
 **AT-46 — Assedio blocca anche i pedoni:** in un feudo sotto assedio, un messaggero a piedi non può entrare né uscire e non può consegnare, come quello montato. Il canale piccione conserva le proprie regole non intercettabili.
 
+**AT-47 — Rapporti strategici di velocità:** data la **stessa distanza**, senza modificatori di tratta né interruzioni, una unità di **fanteria standard** e un **messaggero a piedi** avanzano alla velocità relativa **1×**, una unità di **cavalleria standard** e un **messaggero montato** a **2×**, i **carri mercantili/di rifornimento/di immigrati** a **1,5×**. Il test deve confrontare velocità/tempi **prima di arrotondamenti del calendario**.
+
+**AT-48 — Assenza di cavalli ed ETA:** un allarme automatico con nessun cavallo disponibile usa, se possibile, il messaggero a piedi e l'ETA di **1× fanteria**, non riutilizza il tempo di un messaggero montato. L'app mostra il vettore reale e il recapito al momento previsto dal motore.
+
+**AT-49 — Allineamento convogli legacy:** i carri per mercanti, rifornimenti e immigrati usano il rapporto **1,5×** sullo stesso riferimento del movimento strategico. La precedente costante **22 U/giorno** dei convogli non prevale automaticamente sui nuovi rapporti; il test di integrazione deve individuare ed eliminare la divergenza senza cambiare clandestinamente il tempo di viaggio già persistito.
+
 ## 8. Roadmap tecnica proposta — primo rilascio completo (nessuna data approvata)
 
 | Fase | Deliverable | Dipendenze / criterio di uscita |
@@ -434,7 +463,7 @@ Il product owner ha valutato la proposta seguente **«un buon inizio»**. Questo
 | **F1 — Backend + hub web** | Campagne autorevoli, lobby, dashboard, API lettura e scrittura | World/Feudal, MP-07, persistenza server e autorizzazioni |
 | **F2 — Controllo remoto web completo** | Tutti i domini: economia/lavoro/fisco/cantieri, militare/spedizioni, diplomazia/messaggi, tributi/carovane, mappa | Moduli reali, QA e contratti di comando |
 | **F3 — App alpha/beta interne** | **Un unico progetto mobile cross-platform** compilabile per Android e iOS, con gli stessi comandi, test utenti/dispositivi, sicurezza e accessibilità | F1–F2; scelta framework ancora aperta; test di sincronia con browser |
-| **F4 — Prima release pubblica Android/iOS (B)** | **Controllo remoto completo** di §1.4, push con consenso OS + filtri per categoria, tutti i Must e test AT-01…AT-30 + AT-33…AT-46 (AT-31/32 proposti, da approvare) | **Gate non derogabile:** nessuna release solo KPI, messaggi o comandi economici parziali |
+| **F4 — Prima release pubblica Android/iOS (B)** | **Controllo remoto completo** di §1.4, push con consenso OS + filtri per categoria, tutti i Must e test AT-01…AT-30 + AT-33…AT-49 (AT-31/32 proposti, da approvare) | **Gate non derogabile:** nessuna release solo KPI, messaggi o comandi economici parziali |
 | **F5 — Miglioramenti** | Cache offline, archivio storico, filtri/silenziamento push avanzati e ottimizzazioni, se approvati | Decisioni successive |
 
 **DECISO:** completezza del **primo rilascio pubblico**, **unica codebase applicativa Android/iOS** e push con permesso OS + selettori per categoria; nessuna data di pubblicazione fissata. Le fasi incrementali interne non costituiscono una release pubblica ridotta. **A:** framework cross-platform, dettaglio comandi, tassonomia/default delle notifiche, modalità offline e pianificazione temporale.
@@ -465,6 +494,6 @@ Il product owner ha valutato la proposta seguente **«un buon inizio»**. Questo
 
 ## 11. Definition of Ready della SRS
 
-L'SRS potrà essere promossa da **bozza v0.14** a **baseline approvata** soltanto quando: (1) la **Q-08** (shortlist preliminare, non chiusa), la **Q-09** (allarme base al governante assente anche tramite messaggero a piedi se mancano cavalli, più due avvisi configurabili; velocità e trigger di attacco ancora aperti) e la **Q-10** avranno risposta o una decisione esplicita di rinvio (**Q-01: B; Q-02: doppia temporalità; Q-03: report dei vassalli; Q-04: preparazione ordini in pausa; Q-05: push con consenso OS e filtri; Q-06: personaggio unico e governo via viaggio/messaggeri/piccioni; Q-07: unica base di codice Android/iOS**); (2) per ogni funzione Must sarà disponibile una sorgente autorevole o una dipendenza di backend documentata; (3) saranno definiti permessi dei ruoli e catalogo di tutti i comandi; (4) saranno approvati criteri di accettazione e gate B; (5) sarà aggiornata la tracciabilità verso backlog e test.
+L'SRS potrà essere promossa da **bozza v0.15** a **baseline approvata** soltanto quando: (1) la **Q-08** (shortlist preliminare, non chiusa), la **Q-09** (allarme base al governante assente anche tramite messaggero a piedi se mancano cavalli, più due avvisi configurabili; velocità assoluta e trigger di attacco ancora aperti) e la **Q-10** avranno risposta o una decisione esplicita di rinvio (**Q-01: B; Q-02: doppia temporalità; Q-03: report dei vassalli; Q-04: preparazione ordini in pausa; Q-05: push con consenso OS e filtri; Q-06: personaggio unico e governo via viaggio/messaggeri/piccioni; Q-07: unica base di codice Android/iOS**); (2) per ogni funzione Must sarà disponibile una sorgente autorevole o una dipendenza di backend documentata; (3) saranno definiti permessi dei ruoli e catalogo di tutti i comandi; (4) saranno approvati criteri di accettazione e gate B; (5) sarà aggiornata la tracciabilità verso backlog e test.
 
 **Nessuna funzionalità mobile è stata implementata da questo documento.**
