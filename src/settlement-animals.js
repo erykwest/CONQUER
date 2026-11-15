@@ -575,10 +575,13 @@
     let b=0,tp=0;
     if(f){const c=(o.t||0)*f+(o.seed||0)/(Math.PI*2);b=Math.floor((c-Math.floor(c))*PHASES);tp=(b+.5)/PHASES/f}
     const blend=o.blend??(mode==='browse'?1:0),coat=o.coat||'';
-    const key=['a',species,mode,blend,coat,b,sizeFactor].join('|');
+    // o.overlay(g,{x,y,size,facing:1,t}) paints extra gear over the animal (the joust caparison);
+    // o.overlayKey says what changes it.
+    const key=['a',species,mode,blend,coat,b,sizeFactor,o.overlayKey||''].join('|');
     const h=o.heading&&Math.hypot(o.heading.x,o.heading.y)>1e-6?o.heading:W.screenAxis?.(o.facing??1)||{x:1,y:0};
-    const paint=g=>{const s=w2s({x:0,y:0},0);
-      drawAnimal(species,g,s.x,s.y,Math.max(1.5,State.view.scale*sizeFactor),{t:tp,seed:0,facing:1,mode,blend,coat:o.coat})};
+    const paint=g=>{const s=w2s({x:0,y:0},0),size=Math.max(1.5,State.view.scale*sizeFactor);
+      drawAnimal(species,g,s.x,s.y,size,{t:tp,seed:0,facing:1,mode,blend,coat:o.coat});
+      if(o.overlay)o.overlay(g,{x:s.x,y:s.y,size,facing:1,t:tp})};
     return W.figure(p,z,key,paint,o.id??key,(o.facing??1)<0,{span:o.span||1,capsule:capsule(species,sizeFactor,h)});
   }
   const drawSheep=(ctx,x,y,size,opts)=>drawAnimal('sheep',ctx,x,y,size,opts);
