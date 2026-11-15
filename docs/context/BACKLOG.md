@@ -1269,7 +1269,9 @@ Circle: niente resa automatica del feudo; conquista di settore solo con presenza
 ## UX — UI v2 «Isole» (opt-in `?ui=2`, 26/10/2026)
 
 - **FASI 1–3 SU MAIN (`5ddefa6`):** guscio, API di gioco, Costruisci, Gestisci, comandi struttura.
-- **FASE 4 SU BRANCH `feature/ui-defend`, NON MERGE:** modalità Difendi (comando, zone, pattuglie, allarme; prove d'assedio solo DEV).
+- **FASE 4 SU MAIN (`ebdf084`, PR #88):** modalità Difendi (comando, zone, pattuglie, allarme; prove d'assedio solo DEV).
+- **FIX RAPIDI SU BRANCH `fix/ui-v2-quickfixes`, NON MERGE (10/11/2026):** Argilla nella barra risorse; stato senza id grezzi (`select`) e frasi legacy più frequenti in italiano; indicatore di salvataggio con stato «errore»; tooltip delle barre in alto aperti verso il basso e trattenuti nella finestra; barre in alto senza sovrapposizione sotto 1220px; valori composti di Panoramica a capo; circa 35 stringhe di `shell.js` spostate in `i18n-it.js`.
+- **ANCORA APERTO — parità con la legacy (review 10/11):** torre L4, luoghi per eventi, deposito, accampamento, cantieri navali, rimozione foresta, scelta bioma; ispettori di porte, pontile, banchina, rotazione industrie. Catalogo strumenti unico al posto delle tre copie (`index.html`, `settlement-builder-ux.js`, `shell.js`) e comandi veri in `game-api.js` al posto di `press(selector)`.
 - **ANCORA APERTO — fase 5:** messaggi di stato/log tradotti, pannello attraversamenti come dati, UI v2 default, rimozione `settlement-builder-ux.js` e aggiornamento degli id usati da `qa/ui-combat-regression.mjs`.
 
 ## Hardening: cause strade / DEV / WebGL (23/10/2026)
@@ -1743,3 +1745,8 @@ D-051 risolta per scelta dell’utente: campi solo L2. Recupero residuo jobmanag
 Recuperati i cinque commit residui 31cb32d, 2408397, 8e541fd, e4b06cc, 0ff543d sulla base main e4230db. La parte navale precedente era già in #150. Civili, lavoratori, carpentieri e marinai entrano nel depth buffer World3D; atlante 2048 con caselle 64px, 1024 posti, pose condivise, riuso LRU e upload incrementale. Conservati LOD militare, addOutbuilding, ingresso del mastio, arte e guarnigioni. Recuperati layout TEST, cache accesso pozzi, traslazione mesh navi, indice spaziale ostacoli e Trabucco DEV con scenario QA.
 
 QA locale: 165 regressioni deterministiche PASS. Aggiunta prova browser sul painter reale dei civili, occlusione da murature, riuso atlante, picking militare e fallback Canvas; inserita nel workflow Main fixes. Audit Lab completo: 1473 render, 0 errori; rivisti Popolazione, Truppe e confronto browser dietro la torre. Firme di queste categorie invariate; annotata la revisione nella baseline, senza accettare i 184 cambiati locali o i 15 stati tetto nuovi estranei a questa integrazione. Prova browser dedicata PASS. CI remota da completare prima del merge. Nessun nuovo modello, nessuna modifica alle priorità ROADMAP. Restano i limiti originari del Trabucco: non persistito, serventi colpibili solo via API, munizioni non simulate.
+
+
+## 2026-11-15 — Integrazione PR #199 (pre-merge)
+
+Riallineata UI2 quickfix alla main 6c5ac79; conflitto solo nel diario, mantenute entrambe le voci. PASS locale Builder menu, 5 runtime-integrity test, export Wiki fresco. Browser Chromium PASS: Argilla, barre senza sovrapposizioni a 1024/1180/1440px, saved/error/unsaved (anche errore cloud), nessun pageerror. CI del nuovo HEAD da verificare prima del merge. ROADMAP e DECISIONS invariate: nessuna nuova regola di simulazione.
