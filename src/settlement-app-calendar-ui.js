@@ -97,7 +97,20 @@ function rotateCamera(delta){
   State.view.rotation=((State.view.rotation||0)+delta+4)%4;
   const after=w2s(anchor);
   State.view.x+=pivot.x-after.x;State.view.y+=pivot.y-after.y;
-  State.draft=null;invalidateSceneCache();saveLocal();draw();status('View rotation: '+(State.view.rotation*90)+'°');
+  State.draft=null;invalidateSceneCache();saveLocal();draw();status('View rotation: '+cameraRotationDegrees()+'°');
+}
+// Free camera yaw (middle-mouse drag). `turns` is in quarter-turn units and may be fractional;
+// the world point under `pivot` (screen px) stays put. Snaps to 15° steps when asked.
+function cameraRotationDegrees(){return Math.round((((State.view.rotation||0)%4+4)%4)*90*10)/10%360}
+function setCameraRotation(turns,{pivot=visibleCanvasCenter(),anchor=null,snap=false}={}){
+  if(snap)turns=Math.round(turns*6)/6;
+  turns=((turns%4)+4)%4;
+  if(Math.abs(turns-Math.round(turns))<1e-9)turns=Math.round(turns)%4;
+  const a=anchor||s2w(pivot.x,pivot.y);
+  State.view.rotation=turns;
+  const after=w2s(a);
+  State.view.x+=pivot.x-after.x;State.view.y+=pivot.y-after.y;
+  State.draft=null;invalidateSceneCache();draw();
 }
 function syncPlanToggle(){
   const btn=document.getElementById('planToggle');

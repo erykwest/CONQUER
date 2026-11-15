@@ -203,7 +203,7 @@
       const tools=progress(s)<.25?['hammer','axe','hammer']:['hammer','hammer','axe'];
       for(let i=0;i<n;i++){
         const sp=spots[i];if(typeof worldPointVisible==='function'&&!worldPointVisible(sp,0,40))continue;
-        W.drawWorker(W.anonymous(s.id+':shipwright'+i,sp),tools[i],t,W.facingOf(sp,sp.to.x-sp.x,sp.to.y-sp.y));
+        W.drawWorker(W.anonymous(s.id+':shipwright'+i,sp,'shipwright'),tools[i],t,W.facingOf(sp,sp.to.x-sp.x,sp.to.y-sp.y));
       }
     }
   }

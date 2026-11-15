@@ -93,7 +93,7 @@ check('real private quarry production sends only its actually booked market outp
   assert.equal(t.destination,'market');
   assert.equal(t.destinationId,'market-1');
   assert.equal(t.baseId,'yard');
-  assert.equal(t.workerId,'founder:well:0');
+  assert.equal(t.workerId,'founder:well:2', 'quarry now reserves two L1 founders before the cart driver');
   assert.equal(w.E.state().lots.stone.reduce((n,x)=>n+x.qty,0),after,'route never changes market stocks');
   w.H.draw();
   assert.ok(w.drivers.includes(t.workerId),'wagon driver has the real L1 worker identity');
@@ -142,7 +142,7 @@ check('market goods require a real completed market and cannot spawn a fake sale
   cycle(w,2);assert.equal(w.H.snapshot().active,1);
 });
 check('market and yard share one available L1 carter per yard, not one per product',()=>{
-  const w=world({market:true,logging:true,quarry:true});
+  const w=world({market:true,logging:true,quarry:true,workers:6});
   w.H.record({siteId:'camp',good:'wood',qty:2,destination:'yard'});
   w.H.record({siteId:'quarry',good:'stone',qty:2,destination:'market'});
   w.H.record({siteId:'house-L2',good:'tools',qty:1,destination:'market'});

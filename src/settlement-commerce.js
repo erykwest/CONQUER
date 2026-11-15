@@ -60,11 +60,14 @@
     !(typeof underConstruction==='function'&&underConstruction(s));
   const localId=()=>State.village?.founded?String(State.village.wellId||''):'';
   const structure=id=>(State.structures||[]).find(s=>String(s.id)===String(id));
-  const l3House=id=>{
+  const houseOfTier=(id,tier)=>{
     const h=structure(id);
     return h?.type==='house'&&completed(h)&&
-      (typeof houseLevel==='function'?houseLevel(h):Number(h.houseLevel||1))===3?h:null;
+      (window.ConquerSocialClasses?.tierOfHouse?.(h)??
+        (typeof houseLevel==='function'?houseLevel(h):Number(h.houseLevel||1)))===tier?h:null;
   };
+  const l2House=id=>houseOfTier(id,2);
+  const l3House=id=>houseOfTier(id,3);
   const l4House=id=>{
     const h=structure(id);
     return h?.type==='house'&&completed(h)&&
@@ -110,7 +113,7 @@
     const c=state();
     if(!c)return null;
     for(const [id,shop] of Object.entries(c.shops)){
-      if(!l3House(id)||!WORKSHOP_KINDS[shop.kind])delete c.shops[id];
+      if(!l2House(id)||!WORKSHOP_KINDS[shop.kind])delete c.shops[id];
     }
     for(const [id,entry] of Object.entries(c.services)){
       const s=structure(id);
@@ -140,13 +143,13 @@
     return c;
   }
   function openShop(c,id,kind,source,day){
-    c.shops[id]={houseId:id,kind,ownerTier:3,channel:'local',status:'active',source,
+    c.shops[id]={houseId:id,kind,ownerTier:2,channel:'local',status:'active',source,
       artisanId:id+':m:0',state:'closed',createdDay:Math.floor(finite(day)),revenue:0,produced:0};
   }
   // Explicit registration (tests, future UI); the simulation spawns autonomously.
   function registerShop(houseId,kind){
     const c=sync(),id=String(houseId);
-    if(!c||!validId(id)||!l3House(id)||!WORKSHOP_KINDS[kind])return false;
+    if(!c||!validId(id)||!l2House(id)||!WORKSHOP_KINDS[kind])return false;
     if(Object.values(c.services).some(s=>s.operatorHouseId===id))return false;
     openShop(c,id,kind,'registered',State.clock?.day);
     State.dirty=true;return true;
@@ -170,11 +173,11 @@
     return{blacksmith:level('metal'),goldsmith:level('metal'),carpenter:level('wood'),
       leatherworker:level('wood'),potter:level('clay')||.5,weaver:.5,tailor:.5};
   }
-  // Each completed L3 house without a shop or service gets an autonomous
+  // Each completed L2 house without a shop or service gets an autonomous
   // workshop on a workday: one per house, trade drawn with soft weights.
   function spawnWorkshops(c,day){
     const busy=new Set([...Object.keys(c.shops),...Object.values(c.services).map(s=>s.operatorHouseId).filter(Boolean)]);
-    const houses=(State.structures||[]).filter(h=>h.type==='house'&&l3House(h.id)&&!busy.has(String(h.id)))
+    const houses=(State.structures||[]).filter(h=>h.type==='house'&&l2House(h.id)&&!busy.has(String(h.id)))
       .sort((a,b)=>String(a.id).localeCompare(String(b.id)));
     if(!houses.length)return 0;
     const pop=residents(),welfare=finite(window.ConquerEconomy?.state?.()?.welfare)/100;
@@ -182,7 +185,7 @@
     let opened=0;
     for(const h of houses){
       const proposal=Urban.proposeWorkshops({
-        houses:[{id:String(h.id),level:3}],artisans:[{id:String(h.id)+':m:0',tier:3}],existing,
+        houses:[{id:String(h.id),level:2}],artisans:[{id:String(h.id)+':m:0',tier:2}],existing,
         demand:sectorDemand(pop),resources:tradeResources(),prosperity:welfare,
         random:()=>seededRandom(h.id+'|'+Math.floor(day)),day:Math.floor(day)})[0];
       if(!proposal)continue;
@@ -194,7 +197,7 @@
     return opened;
   }
   // Saturday: households buy L3 goods with their own coins, richest first;
-  // artisans (wallet L3) receive the takings. No coin is created.
+  // artisans (wallet L2) receive the takings. No coin is created.
   function sellGoods(c,e){
     const pop=residents(),prices=c.market.prices,sold={},demand={};
     for(const [id,item] of Object.entries(Market.COMMODITIES)){
@@ -207,7 +210,7 @@
         if(!(qty>1e-6))continue;
         const paid=roundGold(qty*price);
         e.wallet[group]=roundGold(Math.max(0,finite(e.wallet[group])-paid));
-        e.wallet.L3=roundGold(finite(e.wallet.L3)+paid);
+        e.wallet.L2=roundGold(finite(e.wallet.L2)+paid);
         c.goods[id]=roundGold(c.goods[id]-qty);sold[id]+=qty;
         const makers=Object.values(c.shops).filter(s=>Market.WORKSHOP_OUTPUT[s.kind]===id);
         for(const s of makers){
@@ -293,13 +296,13 @@
     if(!Number.isSafeInteger(mercenaryCount)||mercenaryCount<0||mercenaryCount>40)return false;
     if(!quote)return false;
     if(source==='resident'&&
-      (originId!==local||!l4House(houseId)))return false;
+      (originId!==local||!l3House(houseId)))return false;
     if(source==='external'&&
       (destinationId!==local||houseId!==null))return false;
     const manifest=cargo.map(line=>({good:line.good,qty:line.qty}));
     c.journeys[id]={id,originId,destinationId,source,
       sourceHouseId:source==='resident'?String(houseId):null,
-      tier:4,role:'L4+',cargo:manifest,
+      tier:3,role:'L3',cargo:manifest,
       chest:{gold:roundGold(coinGold),reservedGold:0},
       escort:{type:'mercenary',count:mercenaryCount,armor:'leather',
         heraldry:'neutral-brown',employer:'merchant',wageMultiplier:2},
@@ -314,10 +317,10 @@
     if(!e||!j||j.status!=='planned'||j.source!=='resident'||
       j.originId!==localId()||!j.chest||
       j.chest.reservedGold>0||j.chest.gold<=0)return false;
-    const due=j.chest.gold,balance=Number(e.wallet?.L4);
+    const due=j.chest.gold,balance=Number(e.wallet?.L3);
     if(!Number.isFinite(balance)||balance<due)return false;
     // This is an internal wallet-to-cargo hold, not a trade or expense.
-    e.wallet.L4=roundGold(balance-due);
+    e.wallet.L3=roundGold(balance-due);
     j.chest.reservedGold=due;
     State.dirty=true;return true;
   }
@@ -328,7 +331,7 @@
     if(!j||j.status!=='planned')return false;
     if(j.source==='resident'&&j.chest?.reservedGold>0){
       const e=window.ConquerEconomy.state();
-      e.wallet.L4=roundGold(Number(e.wallet.L4||0)+j.chest.reservedGold);
+      e.wallet.L3=roundGold(Number(e.wallet.L3||0)+j.chest.reservedGold);
     }
     delete c.journeys[journeyId];
     State.dirty=true;return true;
@@ -359,7 +362,7 @@
   function worksiteForHouse(houseId){
     const c=state(),id=String(houseId);
     if(!c)return null;
-    if(c.shops[id]&&l3House(id))
+    if(c.shops[id]&&l2House(id))
       return{kind:'shop',structure:structure(id),shop:c.shops[id]};
     const service=Object.values(c.services).find(entry=>entry.operatorHouseId===id);
     const building=service&&structure(service.structureId);
@@ -382,7 +385,7 @@
     const journeys=Object.values(c.journeys);
     const lodging=Object.values(c.services).filter(s=>s.type==='tavern');
     return{
-      l3Shops:Object.keys(c.shops).length,
+      l3Shops:Object.keys(c.shops).length, // legacy field name, now L2 artisan shops
       l3Goods:roundGold(Market.aggregateGoods(c.goods).quantity),
       l3GoodsValue:roundGold(Market.aggregateGoods(c.goods).referenceValue),
       l3Revenue:roundGold(Object.values(c.shops).reduce((n,s)=>n+finite(s.revenue),0)),

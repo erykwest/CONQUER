@@ -114,7 +114,7 @@ const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
 // Asset Lab sandbox: one fixed world, so audit captures repeat across runs and machines.
 const initialSeed=(()=>{if(window.__CONQUER_ASSET_LAB__)return 20261023;const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
 const PROVISIONAL_RESOURCES=Object.freeze({gold:10000,population:10000,food:10000,wood:10000,stone:10000,clay:10000,metal:10000,equipment:10000});
-const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'test',season:'summer',seasonOverride:null,weatherOverride:null,neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2,builtWide:2},buildMasonryMaterial:'stone',resources:{...PROVISIONAL_RESOURCES},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,privateMasonryMaterial:'stone',nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
+const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'test',season:'summer',seasonOverride:null,weatherOverride:null,neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2,builtWide:2},buildMasonryMaterial:'stone',resources:{...PROVISIONAL_RESOURCES},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,socialSchemaVersion:2,accessRoadVersion:0,growthStep:0,privateMasonryMaterial:'stone',nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
 // DEV VISUAL PALETTE BEGIN: presentation only; never change structure material/cost/HP.
 const DEV_VISUAL_PALETTE_KEY='conquer.dev.visualPalette.v1';
 State.visualPalette=(()=>{try{return localStorage.getItem(DEV_VISUAL_PALETTE_KEY)==='clay'?'clay':'stone'}catch{return'stone'}})();
@@ -330,6 +330,42 @@ const ROOF_PITCH_COST=Object.freeze({
 function roofPitch(){const v=Number(State.policies?.roofPitch);return ROOF_PITCHES.includes(v)?v:45}
 function roofPitchTan(){return Math.tan(roofPitch()*Math.PI/180)}
 function crenelStyle(){const v=State.policies?.crenelStyle;return CRENEL_STYLES.includes(v)?v:'flat'}
+// Feudal unit equipment (State.policies.unitHelmet / unitShield): the realm's foot soldiers wear one
+// helmet and carry one shield shape. Re-equipping pays per soldier place in the barracks, at the rate
+// of the target style; 'cap' and 'oval' are the original look.
+const UNIT_HELMETS=Object.freeze(['cap','kettle','nasal','barbuta','greathelm']);
+const UNIT_HELMET_COST=Object.freeze({
+  cap:Object.freeze({metal:1}),
+  kettle:Object.freeze({metal:1,gold:1}),
+  nasal:Object.freeze({metal:2,gold:1}),
+  barbuta:Object.freeze({metal:2,gold:2}),
+  greathelm:Object.freeze({metal:3,gold:3})
+});
+const UNIT_SHIELDS=Object.freeze(['oval','round','heater','kite','pavise']);
+const UNIT_SHIELD_COST=Object.freeze({
+  oval:Object.freeze({wood:1}),
+  round:Object.freeze({wood:1,metal:1}),
+  heater:Object.freeze({wood:1,gold:1}),
+  kite:Object.freeze({wood:2,gold:1}),
+  pavise:Object.freeze({wood:3,gold:2})
+});
+function unitHelmet(){const v=State.policies?.unitHelmet;return UNIT_HELMETS.includes(v)?v:'cap'}
+function unitShield(){const v=State.policies?.unitShield;return UNIT_SHIELDS.includes(v)?v:'oval'}
+function unitEquipmentSoldiers(){return Math.max(0,Math.round(Number(window.ConquerSiege?.capacity?.()?.soldiers)||0))}
+function unitEquipmentQuote(kind,style){
+  const table=kind==='shield'?UNIT_SHIELD_COST:UNIT_HELMET_COST,soldiers=unitEquipmentSoldiers(),cost={};
+  for(const [k,v] of Object.entries(table[style]||{}))cost[k]=v*soldiers;
+  return{kind,style,soldiers,cost};
+}
+function applyUnitEquipment(kind,style){
+  const list=kind==='shield'?UNIT_SHIELDS:kind==='helmet'?UNIT_HELMETS:null;
+  if(!list||!list.includes(style)||style===(kind==='shield'?unitShield():unitHelmet()))return{ok:false,reason:'unchanged'};
+  const quote=unitEquipmentQuote(kind,style);
+  if(!canAfford(quote.cost)||!spendCost(quote.cost))return{ok:false,reason:'funds',quote};
+  State.policies[kind==='shield'?'unitShield':'unitHelmet']=style;
+  markDirty(false,false,true);draw();
+  return{ok:true,quote};
+}
 const CHIMNEY_SPACING=1.5;
 const WELL_PLAZA_SIZE=3;
 // The paved square around the well is a no-build zone: houses, lots, fields and buildings
@@ -357,7 +393,11 @@ const STRUCTURE_VARIANTS=Object.freeze({
     // Signal fire: a great pyre on a flat crenellated deck (rules: settlement-soldiers.js).
     signalFire:Object.freeze(['none','pyre']),
     // Inner roof: a pyramid/cone set back inside the merlons of a crenellated top (BC-251105-05).
-    innerRoof:Object.freeze(['off','on'])
+    innerRoof:Object.freeze(['off','on']),
+    // Look of a machicolated top: 'standard' single corbels, or 'italian' — tall corbels of four
+    // stepped courses (4x the standard height) joined by small arches, as on Italian communal towers.
+    // Aesthetic only: hasMachicolation() and every rule read roofStyle alone.
+    machicolationStyle:Object.freeze(['standard','italian'])
   }),
   gate:Object.freeze({
     roofStyle:Object.freeze(['battlement','pitched','flat']),
@@ -372,7 +412,7 @@ const STRUCTURE_VARIANTS=Object.freeze({
   })
 });
 const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
-  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid',hoarding:'off',bell:'none',signalFire:'none',innerRoof:'off'}),
+  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid',hoarding:'off',bell:'none',signalFire:'none',innerRoof:'off',machicolationStyle:'standard'}),
   gate:Object.freeze({roofStyle:'battlement',upper:'stone',hoarding:'off'}),
   wall:Object.freeze({skin:'standard'}),
   built:Object.freeze({skin:'standard'})
@@ -546,6 +586,11 @@ function hasMachicolation(s){
   if(s.type==='wall')return wallTier(s)>=2&&wallSkin(s)==='machicolation';
   return false;
 }
+
+// Italian machicolations (aesthetic): a machicolated stone tower drawn with the tall arched corbels.
+function towerItalianMachicolation(s){return !!s&&s.type==='tower'&&hasMachicolation(s)&&structureVariant(s,'machicolationStyle')==='italian'}
+// Value of the roof menu: the Italian machicolations are a fourth choice beside the three roof styles.
+function towerRoofMenuValue(s){return towerItalianMachicolation(s)?'machicolationItalian':towerRoofStyle(s)}
 
 // Oriented stone towers (geometry in settlement-tower-shapes.js): the open-backed semitower
 // 'half' and the D tower 'dee'. Keyed by tier; s.size = 1 / 1.5 / 2 as for square towers,

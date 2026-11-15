@@ -1,6 +1,6 @@
 'use strict';
 // GILDA-01 fase 1 (D-GILDA-261113): the Guild absorbs the Casa delle Corporazioni and
-// only raises the productivity of the L3 workshops, village-wide. One guild is active
+// only raises the productivity of the L2 workshops, village-wide. One guild is active
 // per village (highest level, then the oldest id); its bonus is +25/+50/+100% at
 // L1/L2/L3, scaled by the coverage of its educated officials (SCOL-01 role
 // 'guild.official', 1/2/3 seats, minYield 0). Until ConquerEducated exposes coverage
@@ -66,10 +66,10 @@
     const officials=coverage?Math.round(finite(coverage.assigned))+' / '+d.seats:
       d.seats+' / '+d.seats+' (provvisorio)';
     return '<div class="slot guild-panel"><div class="slot-label">Gilda · L'+d.level+' · '+ROOMS[d.level]+'</div>'+
-      kv('Bonus delle botteghe L3',pct(d.bonus)+' (massimo '+pct(d.maxBonus)+')')+
+      kv('Bonus delle botteghe L2',pct(d.bonus)+' (massimo '+pct(d.maxBonus)+')')+
       kv('Funzionari',officials)+
       kv('Botteghe nel villaggio',String(d.shops))+
-      '<div class="legend">Vale per tutte le botteghe L3 del villaggio. Senza funzionari nessun bonus. '+
+      '<div class="legend">Vale per tutte le botteghe L2 del villaggio. Senza funzionari nessun bonus. '+
       'Cassa della Gilda e quota sulle vendite: fase successiva.</div></div>';
   }
   window.ConquerGuild=Object.freeze({BONUS,SEATS,ROLE_ID,ROOMS,

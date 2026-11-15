@@ -21,9 +21,9 @@
     blacksmith:{tool:'hammer',goods:['#6f7377','#8c9094','#5e6266']},
     carpenter:{tool:'hammer',goods:['#a7814f','#8d6a3f','#b9925c']},
     leatherworker:{tool:'hammer',goods:['#7c4f2e','#94603a','#6a4126']},
-    potter:{tool:null,goods:['#a85f3a','#b8734a','#93522f']},
-    weaver:{tool:null,goods:['#5d7393','#a8503f','#c9a64e']},
-    tailor:{tool:null,goods:['#8a4d63','#4f6d5a','#c2b089']},
+    potter:{tool:'clay',goods:['#a85f3a','#b8734a','#93522f']},
+    weaver:{tool:'shuttle',goods:['#5d7393','#a8503f','#c9a64e']},
+    tailor:{tool:'needle',goods:['#8a4d63','#4f6d5a','#c2b089']},
     goldsmith:{tool:'hammer',goods:['#d9b44a','#e8cf7a','#bfc4c7']}
   });
   const CF=()=>window.ConquerCutawayFurniture;
@@ -410,7 +410,7 @@
   }
   function spotOf(house){
     const r=build(house);if(!r)return null;
-    return{p:r.room.toWorld(r.spot.a,r.spot.b),tool:TRADES[r.kind].tool,facing:facing(r)};
+    return{p:r.room.toWorld(r.spot.a,r.spot.b),tool:TRADES[r.kind].tool,facing:facing(r),kind:r.kind};
   }
   // The shop's artisan waiting at his own door (artisanPosition: an L3 shop operates at home)
   // stands at his bench while the house is open. Elsewhere (market, leisure) he stays where he is.
@@ -424,7 +424,7 @@
   // Asset Lab only: the stage has no population pass, so the open house shows its artisan itself.
   function drawStagedArtisan(house,r){
     const p=r.room.toWorld(r.spot.a,r.spot.b),tool=TRADES[r.kind].tool;
-    const dot={p,id:house.id+':m:0',kind:'artisan',sex:'male',age:'adult',hair:'brown',colors:['#7a6a4f','#5f6e7c']};
+    const dot={p,id:house.id+':m:0',kind:'artisan',role:r.kind,sex:'male',age:'adult',hair:'brown',colors:['#7a6a4f','#5f6e7c']};
     const W=window.ConquerWorkAnim;
     if(tool&&W)W.drawWorkerUnmasked(dot,tool,0,facing(r));
     else if(typeof drawVillagerFigureUnmasked==='function')drawVillagerFigureUnmasked(dot);

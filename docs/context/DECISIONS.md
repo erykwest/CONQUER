@@ -1,5 +1,191 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-SIEGE-ATTACK-CONFIG-261114 — Due allarmi d'attacco automatici configurabili (14/11/2026)
+
+- **CHIARIMENTO ESPLICITO del product owner:** il messaggero d'invasione al **governante assente** è l'**allarme base**; l'allarme al signore superiore **non è un semplice destinatario alternativo né un fallback**.
+- **DECISO:** il signore interessato alla ricezione degli avvisi può impostare **due funzioni distinte**, con etichette **«Allerta sempre il signore in caso di attacco»** (avviso automatico aggiuntivo verso il **signore superiore della catena feudale**) e **«Allerta sempre gli alleati in caso di attacco»** (avviso automatico aggiuntivo verso **gli alleati effettivi**).
+- **DECISO:** i due controlli sono **indipendenti** e possono coesistere. Disabilitarli impedisce i rispettivi avvisi aggiuntivi, **non** l'allarme base. Il singolo evento non trasmette conoscenza istantanea: destinatari, permessi e tempi di viaggio seguono la simulazione e il blocco in assedio (messaggeri né entrano né escono, piccioni in uscita consentiti e non intercettabili se operativi).
+- **NON CONFONDERE** queste funzioni con le preferenze di push Android/iOS (D-MOB-PUSH-261114), che agiscono **solo sulla notifica al dispositivo dopo che l'evento è conoscibile**.
+- **APERTO:** criterio esatto di «attacco» rispetto a «invasione»; chi modifica i due flag e a che livello (personaggio/feudo/campagna), la precisa localizzazione del signore, i legami di alleanza validi, eventuali duplicati, vettore utilizzabile per ciascun flusso e recapito in caso di assedio. Non imporre flag attivi di default senza ulteriore decisione.
+- **STATO:** solo documentazione, nessun motore di gioco modificato. Corregge D-SIEGE-ALERT-RECIPIENT-261114; [SRS v0.13 in draft PR #222](https://github.com/erykwest/CONQUER/pull/222), [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md).
+
+
+## D-SIEGE-ALERT-RECIPIENT-261114 — Destinatari feudali degli allarmi d'invasione (14/11/2026) — INTERPRETAZIONE SUPERATA DA D-SIEGE-ATTACK-CONFIG-261114
+
+- **INTERPRETAZIONE STORICA SUPERATA:** inizialmente si era inteso il **governante assente** o il **signore superiore** come due destinatari alternativi dello stesso allarme. Il product owner ha poi chiarito in **D-SIEGE-ATTACK-CONFIG-261114** che il governante assente riceve l'allarme base, mentre il superiore è raggiunto tramite un **flusso aggiuntivo configurabile**, separato da quello verso gli alleati.
+- **CONTRATTO:** governante, presenza e superiore devono essere risolti dal **modello feudale autorevole della stessa campagna**. L'app/browser non possono leggere in diretta un'invasione sconosciuta al personaggio: l'informazione viene ricevuta **solo dopo il tempo simulato di recapito** del messaggero.
+- **SUPERATO da D-SIEGE-ATTACK-CONFIG-261114:** il superiore feudale non è fallback dell'allarme base, ma destinatario di un **avviso aggiuntivo configurabile**, distinto da quello per gli alleati. Rimangono aperti il grado gerarchico, la sede/percorso e la gestione di attacchi concomitanti.
+- **RESTA DECISO:** blocco di ingresso/uscita dei messaggeri durante assedio; piccioni in uscita non intercettabili, con rete disponibile; allarme automatico per ogni nuova invasione solo quando la partenza è possibile. Q-09 resta parzialmente definita.
+- **STATO:** documentazione; nessun codice di gioco o schema modificato. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [MARCH](../march.md), [SRS mobile v0.12 draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
+
+
+## D-SIEGE-COMMS-UPDATE-261114 — Blocco bidirezionale e messaggero automatico all'invasione (14/11/2026)
+
+- **DECISO dal product owner:** nello stato **SOTTO ASSEDIO** i messaggeri ordinari **non possono entrare né uscire** dal feudo. Il divieto di ingresso impedisce anche la consegna di comunicazioni all'interno. Il blocco viene verificato lato server, non solo dall'app.
+- **DECISO:** **ogni nuova invasione di territorio** provoca **automaticamente la partenza di un messaggero d'allarme**, senza intervento del giocatore, purché sia ancora possibile far partire un messaggero; è una lettera fisica soggetta a tempo simulato di recapito, **non una notifica remota istantanea**.
+- **RESTA DECISO:** invasione distinta dall'assedio; l'invasione non applica automaticamente il blocco postale d'assedio. Sotto assedio i **piccioni in uscita restano consentiti e non intercettabili**, se esiste un canale operativo.
+- **SALVAGUARDIA TECNICA PROPOSTA:** un messaggero d'allarme per **evento di invasione distinto**, non uno ogni tick/refresh/retry; non bypassare il blocco quando l'assedio impedisce già la partenza.
+- **APERTO:** destinatario/route dell'allarme, concorrenza invasione/assedio nello stesso tick, rischi durante invasione, sorte dei messaggeri già in viaggio (non possono entrare ma attendono/deviano/tornano?), prerequisiti canale piccioni, ordini sotto assedio. **Q-09 resta parzialmente definita.**
+- **STATO:** solo specifica, non implementata. Integra D-SIEGE-COMMS-261114; [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [MARCH](../march.md), [SRS mobile v0.11 nella PR draft #222](https://github.com/erykwest/CONQUER/pull/222).
+
+
+## D-SIEGE-COMMS-261114 — Invasione e assedio: uscita di messaggeri e piccioni (14/11/2026)
+
+- **DECISO dal product owner:** distinguere gli stati **INVASO** e **SOTTO ASSEDIO**. La sola invasione del territorio **non** applica automaticamente il blocco dei messaggeri previsto per l'assedio.
+- **DECISO — stato SOTTO ASSEDIO:** **non possono partire messaggeri ordinari dal feudo assediato**. I **piccioni possono uscire e non sono intercettabili**; restano il tempo simulato di consegna e l'eventuale necessità di un canale/piccionaia disponibile. Nessun invio fittizio quando il vettore non esiste.
+- **CONTRATTO:** l'ammissibilità della partenza è verificata dal server autorevole in base allo stato del feudo; dashboard web/mobile e API non aggirano il blocco, né anticipano le informazioni recapitabili tramite piccione. Stadio `raiding/siege` di MARCH e trasporti della branch `messages` sono precedenti tecnici, **non** implementazione server pronta.
+- **SUPERATO IN PARTE da D-SIEGE-COMMS-UPDATE-261114:** ora è **DECISO** che i messaggeri **non entrano né escono** durante un assedio e che ad ogni nuova invasione parte automaticamente un messaggero d'allarme quando possibile. **RESTANO APERTI:** criterio invasione→assedio, rischi durante invasione, sorte dei vettori già in viaggio, destinatario dell'allarme, piccionaie e ordini sotto assedio. Q-09 parzialmente risolta.
+- **STATO:** design, nessuna modifica al gameplay. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [MARCH](../march.md), [SRS mobile v0.10 draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
+
+
+## D-MOB-CODEBASE-261114 — Unica codebase Android/iOS (14/11/2026)
+
+- **DECISO dal product owner (Q-07):** realizzare **un'unica base di codice applicativa mobile** per Android e iOS, evitando due implementazioni separate. Sono ammessi adapter e configurazioni specifici delle piattaforme per permessi, notifiche, build e distribuzione.
+- **CONTRATTO:** i client mobili utilizzano le **stesse API autorevoli** del browser per account/campagna/personaggio, KPI, ordini, messaggeri, diplomazia, logistica e permessi. Nessuna seconda simulazione e nessuna duplicazione delle regole di governo del feudo.
+- **NON DECISO:** framework (Flutter, React Native o altro), condivisione della UI mobile con quella web, versioni OS supportate, pipeline e target di pubblicazione. La decisione non equivale a scegliere uno stack.
+- **STATO:** solo documentazione. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [SRS mobile v0.8 nella draft PR #222](https://github.com/erykwest/CONQUER/pull/222). Nessun codice o milestone cambiati.
+
+
+## D-FEUD-CHAR-261114 — Un personaggio per campagna, governo tramite presenza o messaggeri (14/11/2026)
+
+- **DECISO dal product owner:** **un solo personaggio per account in ciascuna campagna**, ma il personaggio può controllare e amministrare **più feudi/territori**. L'account può partecipare a più campagne con un personaggio distinto in ciascuna; più feudi non richiedono più slot giocatore.
+- **DECISO — presenza fisica:** il personaggio si trova in un solo luogo alla volta. Per governare **direttamente** un altro feudo deve **spostarsi** con tempi di viaggio simulati. In alternativa trasmette **ordini attraverso messaggeri o piccioni**, con tempo di trasporto e recapito simulato. La dashboard web/mobile non consente gestione istantanea dei feudi distanti.
+- **PRECISAZIONE di D-RC-TIME-261113:** il comando amministrativo applicabile al **primo tick utile** è quello del **feudo in cui è presente il personaggio**. Un ordine destinato a un altro feudo, anche se di proprietà del personaggio, richiede spostamento o corrispondenza; un messaggio recapitato non implica automaticamente l'esecuzione dell'azione, che va verificata dal motore.
+- **COERENZA:** la regola dei resoconti dei vassalli rimane invariata (nessun accesso live ai loro dati); l'eventuale visibilità dei feudi **propri** ma distanti non è ancora definita.
+- **APERTO:** prerequisiti piccionaie, velocità/costi/rischi dei viaggi, intercettazione, ordini ammessi da lettera, permessi e deleghe ad amministratori, comportamento durante il viaggio e visibilità dati dei feudi lontani.
+- **STATO:** solo documentazione. [MULTIPLAYER-SERVER-SCOPE](../MULTIPLAYER-SERVER-SCOPE.md), [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [SRS v0.7 draft PR #222](https://github.com/erykwest/CONQUER/pull/222). Nessun codice gameplay o milestone modificati.
+
+
+## D-MOB-PUSH-261114 — Push: permesso del dispositivo e filtri per categoria (14/11/2026)
+
+- **DECISO dal product owner:** l'app Android/iOS deve richiedere il **permesso push del sistema operativo** e offrire **preferenze di ricezione selettive per categoria**. Entrambi i livelli si applicano: **permesso OS attivo AND categoria abilitata**. Revoca del permesso e disattivazione della categoria impediscono nuovi push corrispondenti.
+- **DECISO — non condizionare il gameplay:** posta e avvisi disponibili nell'app restano accessibili anche con i push disabilitati. Le notifiche non possono anticipare il recapito simulato di lettere e resoconti, né esporre dati di feudi dei vassalli non ancora riferiti al sovrano.
+- **CATEGORIE PROPOSTE, non approvate come elenco definitivo:** sicurezza/attacchi/assedi, criticità economiche, cantieri, posta/diplomazia, spedizioni, tributi.
+- **APERTO:** categorie definitive, stato iniziale dei singoli selettori, filtri globali vs per-campagna, silenziamento/orari quieti, anteprime su schermata bloccata, momento della richiesta del permesso e politica multi-dispositivo. Non presumere un consenso preventivo né selettori inizialmente tutti attivi.
+- **STATO:** documentazione e SRS v0.6 in [draft PR #222](https://github.com/erykwest/CONQUER/pull/222), Q-05 risolta nel principio. Nessun runtime, service push o schema implementato; ROADMAP invariata.
+
+
+## D-RC-PAUSE-261113 — Preparazione di ordini durante pause regionali (13/11/2026)
+
+- **DECISO dal product owner:** durante una **pausa regionale programmata** della campagna il giocatore può **consultare la situazione congelata e preparare ordini** sul proprio feudo via browser/app, purché il servizio sia raggiungibile. L'intero mondo resta fermo: **nessun tick, produzione, costruzione, marcia, recapito o altro progresso temporale**.
+- **DECISO:** gli ordini preparati sono **in attesa**, non eseguiti; vengono elaborati al **primo tick utile alla riattivazione**, secondo D-RC-TIME-261113. Accettazione del comando e risultato simulato devono essere distinti. Per spedizioni e carovane la ripresa avvia le attività, non ne anticipa la durata di viaggio.
+- **GUARDRAIL TECNICO PROPOSTO:** validare nuovamente permessi, risorse e prerequisiti al tick di applicazione, deduplicare invii e rendere esplicito un eventuale rifiuto. Non trasferire la simulazione sul telefono.
+- **APERTO:** catalogo delle operazioni prenotabili, modifica/cancellazione della coda, limiti, ordine e conflitti alla ripresa, messaggi preparati vs spediti, regole di pausa regionali esatte. **Il telefono senza rete/server irraggiungibile è una questione diversa** dalla pausa di un server accessibile; sincronizzazione di ordini offline non decisa.
+- **STATO:** documentazione, nessun runtime modificato. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md) e [SRS mobile v0.5, draft PR #222](https://github.com/erykwest/CONQUER/pull/222). Q-04 risolta nel principio.
+
+
+## D-RC-VASSAL-REPORTS-261113 — Resoconti dei vassalli a frequenza impostata dal sovrano (13/11/2026)
+
+- **DECISO dal product owner:** un sovrano **non consulta in tempo reale** i KPI economici, militari o patrimoniali dei feudi dei vassalli. Riceve informazioni soltanto attraverso **messaggeri di resoconto**.
+- **DECISO:** il sovrano può **impostare la frequenza** con cui riceve i rapporti periodici dei vassalli; ogni rapporto è uno snapshot dei dati alla data simulata di redazione e diventa visibile **solo al recapito simulato**, senza scorciatoie web/mobile o API. I dati del **feudo direttamente governato** rimangono consultabili tramite stato autorevole aggiornato.
+- **INTEGRAZIONE:** sulla branch `messages` esiste già una bozza di routine con sorgente/destinazione/frequenza 1/7/30 giorni, ma su feudi esterni astratti: tali intervalli non sono approvati come valori definitivi multiplayer.
+- **APERTO:** configurazione unica o specifica per vassallo, frequenze ammesse, costi, sezioni dei rapporti, permessi, eventuali blocchi/intercettazioni e regole durante pause. I privilegi dettagliati non sono definiti.
+- **STATO:** solo documentazione. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [SRS mobile v0.4 (draft #222)](https://github.com/erykwest/CONQUER/pull/222). Nessun backend/runtine modificato.
+
+
+## D-RC-TIME-261113 — Due temporalità per gli ordini remoti (13/11/2026)
+
+- **DECISO dal product owner:** ordini amministrativi impartiti al **proprio feudo** da browser/app sono validati dal server e **applicati al primo tick utile successivo** alla ricezione, senza alcun trasporto fittizio del comando.
+- **DECISO:** comunicazioni, richieste e ordini diplomatici **tra feudi** utilizzano i **tempi di invio, trasporto e consegna simulati** della posta feudale; invio ≠ ricezione. Non rendere disponibile al destinatario il contenuto prima della consegna e non consentire scorciatoie tramite API, dashboard o notifiche.
+- **DISTINZIONE DI STATO:** accettato/accodato ≠ applicato; la UI non deve anticipare l'esito. Un ordine sul proprio feudo che avvia una spedizione viene registrato al tick successivo, ma **viaggio, intercettazione e arrivo** mantengono i propri tempi simulati.
+- **APERTO:** durata fisica del tick e scheduling, comportamento dei comandi durante sospensioni regionali, ordine dei comandi concorrenti e conseguenze al recapito dei singoli tipi di messaggio. Nessuna accelerazione esclusiva di browser o app mobile.
+- **STATO:** solo specifica, nessun runtime cambiato. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md) e [SRS mobile v0.3 nella PR draft #222](https://github.com/erykwest/CONQUER/pull/222). Nessun cambio milestone.
+
+
+## D-MOB-B-261113 — Prima release pubblica mobile: controllo remoto completo (13/11/2026)
+
+- **DECISO dal product owner — scelta B:** la prima versione **pubblica** dell'app CONQUER per **Android e iOS** deve offrire il **controllo remoto completo** del feudo, non un MVP di sola dashboard/posta o soltanto economico.
+- **PERIMETRO OBBLIGATORIO:** account/lobby e partecipazioni multi-campagna con KPI; economia, Job Manager/lavoratori, fisco, gestione e priorità di cantieri **già collocati**, militare strategico/spedizioni, diplomazia, posta feudale `messages`, tributi/carovane e mappa regionale con operazioni strategiche. Ogni operazione deve applicarsi al **medesimo stato autorevole** del browser.
+- **ESCLUSO PER DECISIONI PRECEDENTI:** piazzamento geometrico e fortificazioni nel Builder/3D, controllo tattico diretto in battaglia (D-RC-BOUNDARY-261113).
+- **DISTINZIONE RELEASE:** alpha e beta interne possono introdurre moduli progressivamente; il lancio pubblico non è accettato finché tutti i domini obbligatori non sono operativi, testati e collegati al backend multiplayer. Non introdurre widget dimostrativi per coprire moduli mancanti.
+- **APERTO:** catalogo dettagliato dei comandi, autorizzazioni feudali, stack mobile, tempistiche, notifiche push, cache/offline e test di accettazione di dettaglio. Push e lettura offline non sono stati elevati a Must dalla scelta B.
+- **STATO:** solo scope documentale; l'app e il backend non sono implementati. Specifica in [bozza SRS v0.2, PR #222](https://github.com/erykwest/CONQUER/pull/222); la PR resta **draft** finché il resto della SRS non viene approvato. Nessun cambio runtime o milestone.
+
+
+## D-RC-BOUNDARY-261113 — Confine tra gestione remota e vista 3D (13/11/2026)
+
+- **DECISO dal product owner:** nella main page e nel controllo remoto (browser; in seguito app Android/iOS) sono disponibili **gestione economica, fiscale, militare strategica e diplomatica**, comprese assegnazioni del lavoro, programmazione/priorità dei cantieri, spedizioni, tributi, carovane, messaggi e mappa regionale.
+- **DECISO:** la **vista 3D/Builder** resta necessaria per **piazzamento preciso degli edifici**, **progettazione spaziale delle fortificazioni** e **controllo tattico diretto delle battaglie**. Il remote control non duplica il Builder geometrico; programmazione dei cantieri da remoto significa amministrare lavori/progetti già localizzati, non scegliere coordinate o collocare nuove strutture.
+- **VINCOLO:** tutti i client usano i medesimi dati e comandi di gioco autorevoli, con permessi per campagna e feudo; non introdurre una seconda simulazione o aggirare disponibilità, costi, tempi e percorsi.
+- **APERTO:** inventario esatto dei comandi per ciascun dominio, tempi e conferme di applicazione, permessi feudali, pianificazione amministrativa di strutture non ancora posizionate, UX. Il **confine funzionale principale è approvato**.
+- **STATO:** solo documentazione; nessuna modifica al runtime, schema o milestone. [Specifica aggiornata](../REMOTE-CONTROL-SCOPE.md#2a-confine-funzionale-del-remote-control--deciso-13112026).
+
+
+## D-CAPSULE-261113 — Profondità delle figure dal capsuloide, diverso per persone e animali (13/11/2026)
+
+- **DECISO (product owner, 13/11/2026; applica D-046):** in World3D ogni carta figura (soldati, civili, veicoli, animali) prende la profondità **per pixel dal suo capsuloide** (programma `card` di `settlement-world3d.js`, `gl_FragDepth`), non più una profondità piatta ai piedi. **Persone:** capsula verticale (raggio 0,12, dai piedi a 0,38). **Animali:** capsula orizzontale lungo il corpo, orientata con la direzione dell'animale (o con l'asse dello schermo quando non ne ha), misure dal contorno del corpo (`ConquerAnimals.capsule`). Il capsuloide degli animali è anche il loro collider (`colliders()`, tipo `animal:<specie>`); i civili restano senza collider.
+- **MOTIVO:** con la profondità piatta una figura appena davanti a un muro aveva il corpo tagliato dalla muratura dietro, e una carta animale larga prendeva in blocco la profondità del centro (artefatti nel cutaway e lungo muri e tettoie).
+- **ALTERNATIVE SCARTATE:** carte animale con la sola profondità dei piedi (gli artefatti sopra); mesh 3D degli animali (`ConquerAnimals3D`, esclusa da D-046/D-055).
+- **CONSEGUENZA:** bestiame e lupi in World3D sono carte dell'atlante figure con capsula; nel renderer 2D restano il disegno 2D con `withUrbanFigureOcclusion`. Cavalli di giostra/feste e cavalieri in combattimento restano 2D (DA FARE).
+
+## D-VEH-CARDS-261112 — Veicoli come carte 2D con profondità (12/11/2026)
+
+- **DECISO (applica D-046 e D-055, segue #201):** in World3D un veicolo su strada è **una carta 2D depth-tested** dell'atlante figure: pianale, carico, squadra di cavalli 2D e conducente dipinti insieme da `ConquerWagons.drawWagon`, carta allargata (`span`) e spostata verso i cavalli (`ox`). Nessuna mesh 3D di carri o cavalli; `ConquerWagons3D`/`ConquerAnimals3D` restano esclusi dal gioco.
+- **ALTERNATIVE SCARTATE:** carte separate per pianale e cavalli (il timone non resterebbe agganciato quando la strada non è orizzontale sullo schermo); caselle d'atlante più grandi per i soli veicoli (allocatore e LRU da duplicare, guadagno visibile solo oltre zoom 2,5).
+- **CONSEGUENZA:** `economic-balances-animations` non ha altri residui da recuperare; il branch si può archiviare.
+
+## D-RC-261113 — Main page e controllo remoto multi-campagna (13/11/2026)
+
+- **DECISO dal product owner:** la pagina principale dopo l'accesso contiene sia la lobby delle campagne disponibili sia le campagne **in corso alle quali l'account partecipa**, con **KPI aggregati per insediamento** senza mischiare lo stato delle partite.
+- **DECISO:** la stessa main page diventa il punto d'accesso al **controllo remoto** dei propri feudi, inizialmente da **browser** e in futuro tramite **app Android/iOS**, senza aprire la scena Builder/3D. Nell'interfaccia confluiscono messaggi e branch `messages`, diplomazia, spedizioni, tributi, mappa regionale e gestione dell'insediamento.
+- **VINCOLO DI ARCHITETTURA:** stesso stato autorevole di partita e medesime regole per ogni client, partecipazioni isolate per `campaign_id` (D-MP-ACCOUNT-261113), comandi autorizzati lato server, nessuna seconda economia o seconda simulazione in dashboard.
+- **PROPOSTO da verificare:** distinguere comandi amministrativi sul proprio feudo dalle comunicazioni diplomatiche trasportate con ETA simulata; non rendere istantanee le lettere della branch `messages` per il solo fatto che sono consultate da remoto.
+- **GAP CODE/BRANCH:** centro di controllo a nove viste già su `main` ma locale al runtime; `messages` è una branch ancora separata e divergente (29 commit avanti, 317 indietro nel confronto del 13/11). La sua postazione è su feudi esterni astratti, senza World/Feudal reale. Richiede porting selettivo, non merge cieco.
+- **APERTO:** portata degli ordini remoti (incluso Builder geometrico), tempi, visibilità/freschezza dei KPI, autorizzazioni su feudi di sudditi/vassalli, finestra offline, notifiche push e UI mobile.
+- **STATO:** solo scope documentale; [REMOTE-CONTROL-SCOPE.md](../REMOTE-CONTROL-SCOPE.md). Nessun codice aggiornato, ROADMAP M0–M5 invariata.
+
+
+## D-MP-ACCOUNT-261113 — Profilo globale e partecipazioni multi-campagna (13/11/2026)
+
+- **DECISO dal product owner:** separare il profilo/account del giocatore dalla partita, permettendo a uno stesso account di essere **presente in più campagne/server contemporaneamente**. La lobby deve mostrare e riaprire tutte le sue partecipazioni.
+- **CONTRATTO:** account globale identificato da `user_id`, associazione a campagne distinta (`campaign_id + user_id`) e stato autorevole di ogni partita/feudo isolato per `campaign_id` / identificativo territoriale. Il giocatore può ricoprire ruoli feudali differenti nelle diverse campagne; risorse, unità, territori e progressi non vengono condivisi.
+- **GAP ATTUALE:** `src/settlement-app-persistence.js` usa oggi `settlements` con chiave di conflitto `user_id,world_cell_x,world_cell_y` e coordinate (0,0), senza discriminante di campagna. Serve progettare schema, migrazione, autenticazione e autorizzazioni per multi-server prima di implementare lobby e multiplayer.
+- **APERTO:** profilo pubblico globale vs identità del signore in partita, limiti di partecipazioni, ricompense globali e politiche di abbandono/sconfitta.
+- **STATO:** solo design documentato; non implementato. Specifica: [MULTIPLAYER-SERVER-SCOPE.md](../MULTIPLAYER-SERVER-SCOPE.md). ROADMAP M0–M5 invariata.
+
+
+## D-MP-261113 — Ingresso multiplayer e colonizzazione feudale (13/11/2026)
+
+- **DECISO, solo design:** server multiplayer dimensionati indicativamente per 20–100 giocatori, con minimo di avvio ancora da fissare. Slot di giocatori, feudi bot e territori non colonizzati sono concetti distinti. I nuovi giocatori **non sostituiscono bot** e **non ereditano sviluppi IA**.
+- **DECISO:** rivendicare un territorio non equivale a fondare un villaggio. Priorità di spawn nei **territori liberi non rivendicati**; quando disponibili, i possedimenti **aperti dal titolare** alla gestione di un giocatore consentono la fondazione di un **nuovo** villaggio sotto **sudditanza** del proprietario, in alternativa allo sviluppo automatizzato.
+- **DECISO:** l'ingresso in una campagna avviata richiede contemporaneamente uno slot umano libero e una posizione fondabile idonea; le iscrizioni possono quindi arrestarsi prima della capienza nominale. Lobby con dati pubblici sul server (età, progresso, giocatori e bot, disponibilità) per scegliere la campagna.
+- **DECISO:** multiplayer sempre a velocità ×1; nessun controllo individuale ×3/×10/×100.
+- **ESEMPIO, NON PARAMETRO DECISO:** 100 territori, 30 slot giocatore, 30 bot iniziali e 10 giocatori T0 → 40 territori colonizzati e 60 inizialmente non colonizzati; i 20 posti umani residui non garantiscono altrettante posizioni fondabili.
+- **PROPOSTO/APERTI:** blocco allo spawn in presenza di mastio; autorizzazioni dettagliate e trattamento dei possedimenti già in sviluppo IA; scelta volontaria di entrare come suddito; soglia minima, durata campagna, finestre regionali, vittoria, gestione abbandono/sconfitta e partecipazione simultanea a più server.
+- **STATO:** solo documentazione, **non implementato** su `main`, nessuna modifica a runtime o milestone M0–M5. Contratto e lista dei punti aperti: [MULTIPLAYER-SERVER-SCOPE.md](../MULTIPLAYER-SERVER-SCOPE.md).
+
+
+## 2026-11-13 - Preparazione merge PR #206
+
+Preparazione merge PR #206: main aggiornato riconciliato mantenendo moduli e documenti di entrambi i branch. Catalogo Wiki rigenerato. Gilda riferita agli artigiani L2; dazio botteghe e relativo malcontento addebitati a L2 anziche L3, con regressione riprodotta prima del fix. Fondazione: cinque scenari superati isolatamente con Node 22, ma timing intermittente oltre 100 ms nella suite anche su Node 22; verifica Actions ancora necessaria. Nessuna soglia allentata. Suite completa e Actions da completare prima del merge. Nessuna nuova funzione demografica, giudiziaria o archetipo edilizio.
+
+## D-SOC-CLASS-261112 — Migrazione attiva dei ceti civili (12/11/2026)
+
+- **DECISO:** i ceti sono identità permanenti, non livelli evolutivi. L1 servi (ex L1 e L2), L2 artigiani (ex L3), L3 borghesia istruita (ex L4), L4 esclusivamente nobiltà possidente. L1 non emigra volontariamente; L2/L3 possono emigrare in futuro; L4 ha *lealtà* anziché emigrazione automatica o rivolte ora.
+- **IMPLEMENTATO SUL BRANCH PR #206:** `ConquerSocialClasses` migra local/cloud una volta, preserva residenti degli alloggi (3/6/9/12), beni/stock e portafogli complessivi; campi/cava/miniera adesso L1, botteghe L2, commercio residenziale e routine amministrative L3, proprietà L4.
+- **IPOTESI NON APPROVATA:** 25% delle vecchie monete L4 ai nuovi L3 e 75% al portafoglio L4 proprietario. Somma conservata, da decidere.
+- **APERTO:** immigrazione/emigrazione reale, trasferimento famiglie durante ricostruzione/cambio prestigio, 12 template D1–D3, mansionario e impieghi effettivi L3, lealtà funzionale, UI Job Manager L2 artigiano.
+- **CONTRATTO:** [CIVIL-CLASS-MIGRATION](../CIVIL-CLASS-MIGRATION.md). La migrazione non rende operativi i sistemi heatmap o gli eventi.
+
+
+## D-CIV-EVT-261112 — Eventi civili e dinamiche sociali (12/11/2026)
+
+- **DECISO DAL PRODUCT OWNER:** i popolani non evolvono tra ceti. L1 = servi vincolati, senza emigrazione volontaria; L2 artigiani e L3 borghesia istruita possono immigrare ed emigrare. L4 nobili proprietari: lealtà verso il potere, senza emigrazione automatica e senza simulazione di ribellioni armate in questa fase.
+- **DECISO:** fiere, giostre, feste religiose e altri eventi possono influire diversamente sui ceti e sul prestigio territoriale; per L4 il canale è la lealtà. Gli effetti devono essere reversibili/temporanei e non devono innescare ricostruzioni edilizie su oscillazioni effimere.
+- **DIREZIONE TECNICA:** riusare le sedi/scene e il ciclo degli eventi già nel gioco, con modulo puro di preview `ConquerCivicEventEffects` sovrapposto alle heatmap della PR #206. `feast` può rappresentare eventi sociali diversi e richiede un classificatore `civicKind` esplicito prima dell'applicazione degli effetti.
+- **NON APPROVATI:** importi, coefficienti sociali, durata e raggi, prerequisiti dei luoghi sacri, bilanciamento, impatto reale sulla migrazione e sistemi di rivolta. Sono segnaposto da collaudare.
+- **STATO:** skeleton su branch PR #206, non attivo; [contratto](../CIVIC-EVENT-EFFECTS-SKELETON.md).
+
+
+## D-URB-HEAT-261112 — Classi, densità e quattro heatmap territoriali (12/11/2026)
+
+- **DECISO dal product owner:** ceti civili L1 manodopera comune (inclusi contadini, pastori, cavatori/minatori); L2 artigiani; L3 borghesia istruita (mercanti, scribani, magistrati); L4 solo nobili proprietari, con rendite e possedimenti. Commercio L3 non equivale a possesso nobiliare L4.
+- **DECISO:** abitazione con prestigio L1–L4 e densità del lotto D1–D3: 12 archetipi. Il prestigio è insito nel template edilizio e nella composizione interna; al cambio che impone un diverso template, ricostruzione completa, non sostituzione di skin. Lotti con più fabbricati e fabbricati multipiano sono varianti possibili della densificazione.
+- **DECISO:** quattro heatmap territoriali: domanda residenziale (4 canali L1–L4), prestigio/degrado, sicurezza e criminalità. Piazza/abbellimenti aumentano prestigio, impianti produttivi possono ridurlo pur attirando lavoratori; domanda influenzata da lavoro, accessi, sicurezza, mura e crimine. La criminalità passa a scala locale, senza perdere l'eventuale aggregato di villaggio.
+- **DIREZIONE TECNICA:** lotto Voronoi come unità di densificazione; domanda effettiva dipende da famiglie e alloggi realmente disponibili; evitare ricostruzioni ad ogni minima fluttuazione con soglie e inerzia.
+- **NON DECISO:** coefficienti/raggi, tempi di aggiornamento, mapping definitivo dei 12 template, soglie D1–D3, politica proprietaria per le singole case, bilanciamento della criminalità territoriale e regole di migrazione dei salvataggi.
+- **STATO:** skeleton puro su branch `feature/urban-heatmap-skeleton-20261112` senza mutazioni di gioco; [contratto](../URBAN-HEATMAP-SKELETON.md).
+
 ## D-GILDA-261113 — La Gilda: produttività delle botteghe L3, funzionari pagati da una quota sulle vendite (13/11/2026)
 
 - **DECISO (product owner, 11–13/11/2026), nessun codice:** specifica completa in [GILDA-01](BACKLOG.md). La Gilda assorbe la Casa delle Corporazioni (nessun edificio separato).
@@ -545,6 +731,7 @@ Le decisioni D-033…D-038 delle branch #55 e `jobmanager` avevano numeri già u
 **D-057 · CODICE SU BRANCH `feature/houses-blender` (scelta dell'utente del 02/11; D-056 è dei pozzi multipli, D-058 e D-059 dei branch `fix/house-fire-collapse` e `feature/l3-workshop-cutaway`):** le case passano al 3D con un **kit modulare Blender** montato dal gioco sulle sue piante procedurali (proporzioni per id, schiere, ali L/T, sporto, `houseFacadePlan`, `houseDoorInfo`, `chimneySpecs` restano le regole); **pilota L3**, poi L1, L2, L4 con lo stesso kit. Il kit vale in World 3D (WebGL2); il fallback Canvas 2.5D conserva il disegno procedurale. **Alternative scartate:** un modello Blender intero per variante scalato sull'impronta (graticcio deformato, misure variabili delle schiere non rispettate); il kit anche nel painter 2.5D (falde e timpani non ordinabili senza depth buffer).
 **D-058 · CODICE SU BRANCH `fix/house-fire-collapse` (scelta dell'utente del 02/11; D-056 è dei pozzi multipli, D-057 e D-059 dei branch `feature/houses-blender` e `feature/l3-workshop-cutaway`):** una casa, una locanda o un mercato che un incendio consuma fino in fondo **crolla** (macerie e braci), a qualunque livello. **Alternativa scartata:** lasciarla in piedi con un aspetto «bruciato». Un incendio spento prima resta un danno; i mulini restano sventrati in piedi; fortificazioni in legno invariate.
 **D-059 · CODICE SU BRANCH `feature/l3-workshop-cutaway` (completa D-053; D-056 è dei pozzi multipli, D-057 e D-058 dei branch `feature/houses-blender` e `fix/house-fire-collapse`):** la bottega L3 si vede in sezione **solo quando la sua casa è selezionata**, come chiesa e locanda (#90); nessun interruttore né stato salvato. Si apre solo il pianterreno (la bottega su strada); il piano abitato sopra sparisce insieme a tetti e comignoli. L'artigiano viene disegnato al banco solo quando la sua routine lo terrebbe alla porta di casa, quindi le routine (D-052) e la produzione (D-053) restano l'unica fonte di verità. **Alternative scartate:** toggle `cutaway` persistente come per torri e porte (le case sono centinaia e generate dall'urbanistica); interni sempre aperti per tutte le botteghe (illeggibile a scala di città).
+**D-FIELD-LEND-261113 · CODICE SU BRANCH `fix/idle-peasants` (scelta dell'utente del 13/11/2026; riscritta lo stesso giorno dopo SOC-CLASS-02, D-SOC-CLASS-261112, che porta i campi su L1):** il contadino che stamattina non ha lavoro al campo non resta fermo né viene pagato per stare a casa. La scelta si fa **una volta per giorno lavorativo, al mattino**: (1) ogni campo in stagione chiede tanti L1 quante sono le strisce **ancora aperte** al primo calcolo del giorno (`fieldMorningDemand`, 0 in crescita o fuori stagione), numero congelato fino a sera; (2) gli L1 non necessari a un campo coprono le strisce aperte di un **altro campo** in stagione; (3) i restanti fanno gli **altri lavori L1** (cantieri, taglialegna, carrettieri, cantiere navale) secondo l'ordine e i minimi del Job Manager L1, oppure restano inattivi. **Chi è al campo:** si disegnano alle strisce esattamente gli L1 che l'economia assegna a quel campo (`assignedL1`), uno per striscia, con assegnazioni per singolo adulto; la squadra di fondazione, senza casa, non coltiva. Chi finisce la striscia a metà turno **rientra a piedi** e viene riassegnato la mattina dopo: nessuno spostato a metà turno, nessun attrezzo su una striscia finita. **Superato:** il prestito degli L2 al pool L1 della prima versione (gli L2 ora sono artigiani). **Alternative scartate:** riassegnazione immediata a metà giornata (squadre rimescolate a metà turno); campo che paga tutte le strisce anche se finite (L1 pagati a casa). Test: `qa/idle-farmers-regression.cjs`, `qa/fields-regression.cjs`.
 **Integrazione e status Git:** per l'elenco completo di feature merge e PR ancora aperte vale [AUDIT-2026-10-21](AUDIT-2026-10-21.md). Le righe più vecchie nel registro conservano il significato di *decisione storica* senza riscrivere retroattivamente il loro contesto.
 
 ## Conflitti decisionali da risolvere esplicitamente

@@ -96,6 +96,54 @@ context.State.structures=[{id:'w',type:'road'}];
 const before=strokes;vm.runInContext('drawCastleSelection()',context);assert.equal(strokes,before);
 console.log('PASS visual outline on houses and wood towers, not a permanent road highlight');
 
+// The building volume hides the ground perimeter behind it: with a real isometric
+// projection only the two front edges of a square tower are stroked; flat fields
+// and plaza-only civics keep the whole closed perimeter.
+{
+  const square=[{x:0,y:0},{x:1,y:0},{x:1,y:1},{x:0,y:1}];
+  let segments=[],cur=null,first=null;
+  const iso=vm.createContext({
+    State:{selectedId:'t',structures:[{id:'t',type:'tower'}]},
+    ctx:{save(){},restore(){},setLineDash(){},beginPath(){segments=[]},stroke(){},
+      moveTo(x,y){cur=first={x,y}},lineTo(x,y){segments.push([cur,{x,y}]);cur={x,y}},closePath(){segments.push([cur,first]);cur=first}},
+    withStructureGroundPlane:(s,fn)=>fn(),
+    isCivic:s=>s.type==='market',civicParts:()=>[{points:square,role:'plaza'}],
+    urbanHouseDisplayParts:()=>[{points:square}],
+    projectPath:(pts,z)=>pts.map(p=>({x:(p.x-p.y)*20,y:((p.x+p.y)*.5-z)*20})),
+    underConstruction:()=>false,structureHeight:s=>s.type==='market'?.78:s.type==='field'?0:3,
+    footprintPoints:()=>square,fieldPoints:()=>square,
+  });
+  vm.runInContext(selector,iso);
+  vm.runInContext('drawCastleSelection()',iso);
+  const key=([a,b])=>[a,b].map(p=>p.x+','+p.y).sort().join('|');
+  // Screen points of the front corners (1,0), (1,1), (0,1) at z .02.
+  const P=(x,y)=>({x:(x-y)*20,y:((x+y)*.5-.02)*20});
+  assert.deepEqual(segments.map(key).sort(),[[P(1,0),P(1,1)],[P(1,1),P(0,1)]].map(key).sort(),
+    'only the two front edges of the tower are stroked; the back edges stay behind the volume');
+  iso.State.structures=[{id:'t',type:'field'}];vm.runInContext('drawCastleSelection()',iso);
+  assert.equal(segments.length,4,'a flat field keeps its whole perimeter');
+  iso.State.structures=[{id:'t',type:'market'}];vm.runInContext('drawCastleSelection()',iso);
+  assert.equal(segments.length,4,'a plaza-only civic keeps its whole perimeter');
+  iso.State.structures=[{id:'t',type:'house'}];vm.runInContext('drawCastleSelection()',iso);
+  assert.equal(segments.length,2,'a house hides its back edges too');
+  // Free camera seen face-on: side edges project along the vertical and stay hidden by their walls.
+  const isoProject=iso.projectPath;
+  iso.projectPath=(pts,z)=>pts.map(p=>({x:p.x*20,y:(p.y*.5-z)*20}));
+  iso.State.structures=[{id:'t',type:'tower'}];vm.runInContext('drawCastleSelection()',iso);
+  assert.deepEqual(segments.map(key),[key([{x:20,y:9.6},{x:0,y:9.6}])],'face-on, only the front edge is stroked');
+  iso.projectPath=isoProject;
+  // A civic is outlined on what stands at its level (ConquerCivic3D.builtParts), not on the L3 footprint.
+  const chapel=[{x:0,y:0},{x:.5,y:0},{x:.5,y:.5},{x:0,y:.5}];
+  iso.window={ConquerCivic3D:{builtParts:()=>[{points:chapel,role:'body'}]}};
+  iso.State.structures=[{id:'t',type:'market'}];vm.runInContext('drawCastleSelection()',iso);
+  assert.ok(segments.flat().every(p=>Math.abs(p.x)<=10.01),'the outline follows the built parts of the current level');
+  assert.equal(segments.length,2,'built civic bodies hide their own back edges');
+  const civic3d=fs.readFileSync(root+'settlement-civic3d.js','utf8');
+  assert.match(civic3d,/function builtParts\(s\)\{[\s\S]*?BUILT\[s\.type\+level\][\s\S]*?bodyPolys\(s,level\)/);
+  assert.match(civic3d,/window\.ConquerCivic3D=\{[^}]*\bbuiltParts\b/);
+  console.log('PASS selection outline hides the perimeter behind the building volume and follows the civic level');
+}
+
 assert.match(population,/const base=w2s\(dot\.p,\.10\),scale=State\.view\.scale\*\.5/);
 assert.match(population,/function militaryScale\(\)\{[\s\S]*?return State\.view\.scale\*\.5;/);
 assert.match(render,/const ww=2\.1\*State\.view\.scale,wh=3\.25\*State\.view\.scale;/);
@@ -107,6 +155,6 @@ assert.match(render,/if\(!s\.isMastio\|\|!edge\|\|structureCutaway\(s\)\)return/
 assert.match(render,/s\.isMastio\)rows\.push\(\{floor:1,z:1\.53\}\)/);
 assert.match(render,/if\(!lit\)drawMastioWindowDrape\(s,edge/);
 assert.match(render,/if\(!lit\)drawMastioWindowDrape\(s,edge,row\.z/);
-assert.ok(!/strokeText\('★'/.test(siege),'old star marker is removed');
+assert.ok(!/strokeText\('â˜…'/.test(siege),'old star marker is removed');
 assert.match(app,/syncAutoMastio\?\.\(\)/);
 console.log('PASS internal heraldic window drapes, T1 keep window, no star');

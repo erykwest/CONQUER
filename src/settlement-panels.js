@@ -380,7 +380,7 @@
 
   // Centro di controllo → Militare shares the real Combat and Siege rosters.
   function militaryNav(){
-    const entries=[['overview','Riepilogo'],['garrisons','Pattuglie e guarnigioni']];
+    const entries=[['overview','Riepilogo'],['garrisons','Pattuglie e guarnigioni'],['equipment','Equipaggiamento']];
     return '<nav class="cp-subnav" role="tablist" aria-label="Gestione militare">'+entries.map(([k,label])=>
       '<button type="button" role="tab" data-cp-military-sub="'+k+'" aria-selected="'+(ui.militaryTab===k)+'" class="'+(ui.militaryTab===k?'active':'')+'">'+label+'</button>'
     ).join('')+'</nav>';
@@ -475,6 +475,7 @@
   function military(d) {
     const c=d.defense||{}, k=d.knights||{}, l=d.logistics||{};
     if(ui.militaryTab==='garrisons')return militaryNav()+militaryAssignments(d);
+    if(ui.militaryTab==='equipment')return militaryNav()+grid([equipmentCard('helmet'),equipmentCard('shield')]);
     const live = v => c.active ? fmt(v) : '—';
     return militaryNav()+kpis([
       kpi('Unità alleate',live(c.units),'Presenti nel combat'),
@@ -539,6 +540,36 @@
     const n = cmd.crenelQuote(current).merlons;
     return card('Stile delle merlature',rows+(ui.crenelMsg?warn(ui.crenelMsg):''),
       'Cambia tutti i '+fmt(n)+' merli in pietra del feudo; il costo cresce con il numero di merli. Le nuove costruzioni usano lo stile scelto.',true);
+  }
+  // Unit equipment: helmet and shield of the realm's foot soldiers (State.policies.unitHelmet/unitShield).
+  const HELMETS = [['cap','Cervelliera','Calotta semplice, lo stile di base.'],['kettle',"Cappello d'arme",'Tesa larga contro i colpi dall\'alto.'],['nasal','Elmo a nasale','Conico, con la lama sul naso.'],['barbuta','Barbuta','Chiude il capo, apertura a T sul volto.'],['greathelm','Elmo a staio','Elmo chiuso dei cavalieri: il più costoso.']];
+  const SHIELDS = [['oval','Ovale','Lo scudo di base.'],['round','Rotella','Tondo con umbone di ferro.'],['heater','Triangolare','Lo scudo araldico, a punta.'],['kite','A mandorla','Lungo e affusolato, copre la gamba.'],['pavise','Pavese','Grande e dritto, con costola: il più costoso.']];
+  const EQUIP_SVG = {
+    cap:'<circle cx="12" cy="13" r="6" fill="#e2b994"/><path d="M6 13a6 6 0 0 1 12 0z" fill="#70777c"/>',
+    kettle:'<circle cx="12" cy="14" r="5.5" fill="#e2b994"/><path d="M7 13a5 5 0 0 1 10 0z" fill="#70777c"/><ellipse cx="12" cy="13" rx="9" ry="1.8" fill="#70777c"/>',
+    nasal:'<circle cx="12" cy="14" r="5.5" fill="#e2b994"/><path d="M6.5 14Q7 8 12 4.5Q17 8 17.5 14z" fill="#70777c"/><rect x="11.2" y="13" width="1.6" height="4.5" fill="#70777c"/>',
+    barbuta:'<circle cx="12" cy="13" r="6.5" fill="#70777c"/><path d="M8.5 11.5h7v1.8h-2.3v5h-2.4v-5H8.5z" fill="#e2b994"/>',
+    greathelm:'<path d="M6 6h12l-.2 13H6.2z" fill="#70777c"/><rect x="6" y="5.4" width="12" height="1.2" fill="#8a9196"/><rect x="7" y="10.5" width="10" height="1.2" fill="#1d2022"/><rect x="11.5" y="11.7" width="1" height="6" fill="#5d6468"/>',
+    oval:'<ellipse cx="12" cy="12" rx="6.5" ry="8.5" fill="#2f4f75"/><path d="M12 3.5a6.5 8.5 0 0 1 0 17z" fill="#c6a457"/>',
+    round:'<circle cx="12" cy="12" r="8" fill="#2f4f75"/><path d="M12 4a8 8 0 0 1 0 16z" fill="#c6a457"/><circle cx="12" cy="12" r="2" fill="#9a9fa3"/>',
+    heater:'<path d="M5 4h14v8Q18.5 18 12 21Q5.5 18 5 12z" fill="#2f4f75"/><path d="M12 4h7v8Q18.5 18 12 21z" fill="#c6a457"/>',
+    kite:'<path d="M5 8Q5 3 12 3Q19 3 19 8Q17.5 15 12 22Q6.5 15 5 8z" fill="#2f4f75"/><path d="M12 3Q19 3 19 8Q17.5 15 12 22z" fill="#c6a457"/>',
+    pavise:'<path d="M5 5Q12 2.5 19 5L18.3 21H5.7z" fill="#2f4f75"/><path d="M12 3.6Q16 3.8 19 5L18.3 21H12z" fill="#c6a457"/><path d="M12 3.6V21" stroke="#3a3530" stroke-width=".8"/>'
+  };
+  const equipIcon = id => '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" style="flex:none;vertical-align:middle;margin-right:6px">'+(EQUIP_SVG[id]||'')+'</svg>';
+  function equipmentCard(kind) {
+    const cmd = window.ConquerGame?.commands;
+    if(!cmd?.unitEquipmentQuote)return '';
+    const shield = kind==='shield', list = shield ? SHIELDS : HELMETS;
+    const current = shield ? (typeof unitShield==='function'?unitShield():'oval') : (typeof unitHelmet==='function'?unitHelmet():'cap');
+    const rows = list.map(([id,label,tip])=>{
+      const q = cmd.unitEquipmentQuote(kind,id), on = id===current;
+      return '<div class="cp-line"><span style="display:flex;align-items:center">'+equipIcon(id)+'<span>'+esc(label)+' <small>'+esc(tip)+'</small></span></span>'+
+        (on ? '<b>In uso</b>' : '<button type="button" class="cp-action" data-cp-equip="'+kind+'" data-cp-equip-style="'+id+'">Adotta · '+esc(costLine(q.cost))+'</button>')+'</div>';
+    }).join('');
+    const n = cmd.unitEquipmentQuote(kind,current).soldiers;
+    return card(shield?'Forma dello scudo':'Tipo di elmo',rows+(ui.equipMsg?warn(ui.equipMsg):''),
+      'Riequipaggia i '+fmt(n)+' posti soldato delle caserme; il costo cresce con i posti. '+(shield?'Lo portano gli armigeri con spada':'Lo indossano fanti, lancieri e arcieri')+' del feudo; i nemici restano invariati.',true);
   }
   function diplomacy(d) {
     const s = d.diplomacy || {}, active = (s.caravans||[]).filter(c=>c.status!=='completed');
@@ -646,7 +677,13 @@
       if(tier){ui.jobTier=['L2','L3'].includes(tier.dataset.cpJobsTier)?tier.dataset.cpJobsTier:'L1';render();return;}
       if(ev.target.closest('[data-cp-educated-hire]')){window.ConquerGame?.commands?.hireEducated?.();render();return;}
       const msub = ev.target.closest('[data-cp-military-sub]');
-      if(msub){ui.militaryTab=msub.dataset.cpMilitarySub==='garrisons'?'garrisons':'overview';render();return;}
+      if(msub){ui.militaryTab=['garrisons','equipment'].includes(msub.dataset.cpMilitarySub)?msub.dataset.cpMilitarySub:'overview';render();return;}
+      const equip = ev.target.closest('[data-cp-equip]');
+      if(equip){
+        const out = window.ConquerGame?.commands?.setUnitEquipment?.(equip.dataset.cpEquip,equip.dataset.cpEquipStyle);
+        ui.equipMsg = out?.ok ? '' : out?.reason==='funds' ? 'Risorse insufficienti per riequipaggiare i soldati.' : '';
+        render(); return;
+      }
       const collapse = ev.target.closest('[data-cp-circle-toggle]');
       if(collapse){
         const id=collapse.dataset.cpCircleToggle;

@@ -153,8 +153,8 @@ test('a saved prepared convoy does not fund itself twice on reload',()=>{
 });
 test('mercenaries are merchant-funded brown leather escorts with double L2 daily wage',()=>{
   const h=harness(),e=h.economy.state();
-  const wallet=e.wallet.L4;
-  assert.equal(h.commerce.planJourney({id:'merchant',source:'resident',houseId:'home4',
+  const wallet=e.wallet.L3;
+  assert.equal(h.commerce.planJourney({id:'merchant',source:'resident',houseId:'home3',
     originId:'well',destinationId:'else',coinGold:10,cargo:[{good:'stone',qty:11}],
     mercenaryCount:2}),true);
   const j=h.convoys.state().journeys.merchant;
@@ -166,7 +166,7 @@ test('mercenaries are merchant-funded brown leather escorts with double L2 daily
   const quote=h.convoys.quoteJourneyCost('merchant',5);
   assert.deepEqual(plain(quote),{days:5,wagons:2,guards:2,vehiclePerDay:.4,
     escortPerDay:.4,transport:2,escort:2,total:4});
-  assert.equal(e.wallet.L4,wallet,'costs are estimates until travel is implemented');
+  assert.equal(e.wallet.L3,wallet,'costs are estimates until travel is implemented');
   assert.equal(h.convoys.assignMerchantEscorts('merchant',1),true);
   assert.equal(h.convoys.quoteJourneyCost('merchant',5).escort,1);
   assert.equal(h.convoys.quoteJourneyCost('merchant',NaN),null);

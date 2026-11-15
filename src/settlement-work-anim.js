@@ -3,7 +3,8 @@
 // villager figure (drawVillagerFigureUnmasked), like the combat animations draw
 // weapons over the soldier body. Tools: shovel (clay diggers), axe (woodcutters),
 // pickaxe (quarry and mine), hammer (builders), hoe (ploughing), seed sack (sowing),
-// sickle (harvest). Each tool has its own rhythm, body lean and a small effect at
+// sickle (harvest); at the shop benches: clay on the wheel (potter), shuttle (weaver),
+// needle and thread (tailor). Each tool has its own rhythm, body lean and a small effect at
 // the stroke (clods, chips, dust, seeds, cut stalks). Poses are pure functions of
 // time; workers are visual only. Classic script.
 (function(){
@@ -17,7 +18,22 @@
     shovel:{period:1.7,len:9,hit:.62,fx:'clod'},
     hoe:{period:1.25,len:9.5,hit:.6,fx:'soil'},
     seeds:{period:1.5,len:4.2,hit:.42,fx:'seeds'},
-    sickle:{period:.95,len:3.6,hit:.5,fx:'stalks'}
+    sickle:{period:.95,len:3.6,hit:.5,fx:'stalks'},
+    // Bench trades of the open shops (settlement-shop-cutaway.js).
+    clay:{period:2.2,len:1.2,hit:.5,fx:'slip'},       // potter: hands raise the wall of a pot on the wheel
+    shuttle:{period:.9,len:2.6,hit:.32,fx:'lint'},    // weaver: throw the shuttle, beat the weft
+    needle:{period:1.6,len:1.8,hit:.55,fx:null},      // tailor: stitch, pull the thread up and out
+    // Household, clergy and offices (settlement-staff-people.js). sweep:[th0,th1] moves the hand
+    // forward and back at a fixed height (y: fraction of the body height below the body centre).
+    ladle:{period:1.8,len:3.4,hit:.5,fx:'steam',sweep:[1.25,2.1],y:.04},  // cook: stirs the pot on the fire
+    brush:{period:1.1,len:1.6,hit:.5,fx:'dust',sweep:[1.2,2.2],y:-.08},  // groom: brushes the horse's flank
+    book:{period:5,len:2,hit:.8,fx:null},                                 // priest: reads, turns a page now and then
+    quill:{period:1.4,len:1.6,hit:.5,fx:null,calm:true,sweep:[1.5,2.0],y:.06},     // treasurer, collector: writes in the ledger
+    mortar:{period:.8,len:2.2,hit:.55,fx:'powder'},                       // surgeon: pounds herbs in a mortar
+    falcon:{period:3.2,len:2,hit:.3,fx:'feather',calm:true},                        // falconer: the bird on the raised fist
+    mug:{period:3,len:1.6,hit:.5,fx:null},                                // innkeeper: wipes a tankard, sets it down
+    speak:{period:4,len:1,hit:.5,fx:null},                                // councillor: speaks with a raised hand
+    bowl:{period:2.4,len:1.6,hit:.5,fx:null,calm:true}                              // orderly: carries a bowl with care
   };
   const ease=t=>t*t*(3-2*t),lerp=(a,b,t)=>a+(b-a)*t;
   // Piecewise keyframes [[u,th,lean,bob],...] -> pose at phase u.
@@ -39,7 +55,31 @@
     // Hand from the sack on the hip, a wide cast forward.
     seeds:[[0,2.8,.05,0],[.25,2.6,.06,0],[.42,.55,-.02,0],[.6,.9,0,0],[1,2.8,.05,0]],
     // Crouched, a low sweep through the stalks.
-    sickle:[[0,1.25,.32,.12],[.35,1.0,.3,.11],[.5,2.55,.38,.14],[.7,2.45,.36,.13],[1,1.25,.32,.12]]
+    sickle:[[0,1.25,.32,.12],[.35,1.0,.3,.11],[.5,2.55,.38,.14],[.7,2.45,.36,.13],[1,1.25,.32,.12]],
+    // Bent over the wheel: wet hands down to the clay, a slow pull up the wall, back down.
+    clay:[[0,2.4,.2,.06],[.15,2.4,.2,.06],[.5,1.3,.14,.04],[.62,1.3,.14,.04],[.9,2.4,.2,.06],[1,2.4,.2,.06]],
+    // Shuttle thrown forward through the shed, the beater pulled back hard against the cloth.
+    shuttle:[[0,1.2,.08,.02],[.22,2.1,.16,.04],[.32,2.15,.17,.04],[.5,1.2,.06,.02],[1,1.2,.08,.02]],
+    // Needle into the cloth, then the long pull of the thread up past the shoulder.
+    needle:[[0,2.4,.14,.02],[.2,2.45,.15,.03],[.55,.45,.02,0],[.7,.55,.02,0],[1,2.4,.14,.02]],
+    // Round and round the pot: the hand goes forward and back over the rim.
+    ladle:[[0,1.25,.12,.02],[.5,2.1,.16,.03],[1,1.25,.12,.02]],
+    // Long strokes along the flank, short return.
+    brush:[[0,1.2,.06,0],[.6,2.2,.12,.02],[.75,2.2,.12,.02],[1,1.2,.06,0]],
+    // Book held at the chest; a page turned near the end of the cycle (hand up and back).
+    book:[[0,1.9,.06,0],[.7,1.9,.06,0],[.8,.9,.04,0],[.9,1.9,.06,0],[1,1.9,.06,0]],
+    // Small strokes along the line, then back to the margin.
+    quill:[[0,1.5,.14,.02],[.7,2.0,.16,.02],[.8,1.5,.14,.02],[1,1.5,.14,.02]],
+    // Pestle up, pestle down hard.
+    mortar:[[0,1.2,.1,.01],[.4,.4,.06,0],[.55,1.9,.16,.03],[.7,1.8,.15,.03],[1,1.2,.1,.01]],
+    // Fist raised and still; the bird bates now and then (shown by the effect and the arm's sway).
+    falcon:[[0,.5,0,0],[.25,.35,-.02,0],[.4,.5,0,0],[1,.5,0,0]],
+    // Tankard wiped at the chest, lifted, set down on the counter.
+    mug:[[0,2.0,.04,0],[.4,2.0,.04,0],[.55,1.0,0,0],[.7,1.0,0,0],[.85,2.2,.08,.01],[1,2.0,.04,0]],
+    // Hand rises to make a point, then rests.
+    speak:[[0,2.6,0,0],[.3,2.6,0,0],[.45,.6,-.02,0],[.65,.8,-.02,0],[.8,2.6,0,0],[1,2.6,0,0]],
+    // Bowl held in front, gently rocking.
+    bowl:[[0,1.8,.05,0],[.5,1.95,.07,.01],[1,1.8,.05,0]]
   };
   function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
   function rnd(seed){let a=seed|0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
@@ -55,12 +95,101 @@
   // Tool tip offset from the grip for angle th and facing f (screen space, px).
   const dirOf=(th,f)=>({x:f*Math.sin(th),y:-Math.cos(th)});
   const HANDLE='#7a5937',IRON='#9da3a8',IRON_DARK='#5c6266';
+  // Bench work pieces, drawn between the body and the arm (B: the worker's body frame).
+  const CLAY='#a5653f',CLAY_DARK='#7f4a2c',CLAY_WET='#c48a62';
+  function drawBench(tool,g,f,s,B){
+    const lw=Math.max(.5,.35*s);ctx.lineCap='round';ctx.lineJoin='round';
+    if(tool==='clay'){
+      // Wheel head and the pot rising under the hands; a wet streak turns round it.
+      const cx=g.x+f*B.bodyW*.24,foot=B.bodyY+B.bodyH*.24,rw=B.bodyW*.42;
+      ctx.fillStyle='#5e4630';ctx.strokeStyle='#3d2c1d';ctx.lineWidth=lw;
+      ctx.beginPath();ctx.ellipse(cx,foot,rw,rw*.32,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+      const top=Math.min(foot-B.bodyH*.17,g.y+.4*s),hw=B.bodyW*.2,mw=B.bodyW*.27;
+      ctx.fillStyle=CLAY;ctx.strokeStyle=CLAY_DARK;
+      ctx.beginPath();ctx.moveTo(cx-hw*.9,foot);ctx.quadraticCurveTo(cx-mw*1.25,(foot+top)/2,cx-hw*.7,top);
+      ctx.lineTo(cx+hw*.7,top);ctx.quadraticCurveTo(cx+mw*1.25,(foot+top)/2,cx+hw*.9,foot);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle=CLAY_DARK;ctx.beginPath();ctx.ellipse(cx,top,hw*.7,Math.max(.3,hw*.22),0,0,Math.PI*2);ctx.fill();
+      const k=Math.sin(B.u*Math.PI*2*5);   // the streak runs round the pot five times a stroke
+      ctx.strokeStyle=CLAY_WET;ctx.lineWidth=Math.max(.5,.45*s);
+      ctx.beginPath();ctx.moveTo(cx+k*mw*.75,top+1*s);ctx.lineTo(cx+k*mw*.85,foot-.8*s);ctx.stroke();
+    }else if(tool==='shuttle'){
+      // Boat-shaped shuttle in the hand, a pale weft thread trailing back to the loom.
+      const l=TOOLS.shuttle.len*s*.85,w=.6*s,back={x:B.base.x+f*B.bodyW*1.2,y:B.bodyY+B.bodyH*.04};
+      ctx.strokeStyle='#e8e0c8';ctx.lineWidth=Math.max(.4,.25*s);
+      ctx.beginPath();ctx.moveTo(back.x,back.y);ctx.lineTo(g.x,g.y);ctx.stroke();
+      ctx.fillStyle='#b48a52';ctx.strokeStyle='#6b4a2a';ctx.lineWidth=lw;
+      ctx.beginPath();ctx.moveTo(g.x-l,g.y);ctx.quadraticCurveTo(g.x,g.y-w*2,g.x+l,g.y);ctx.quadraticCurveTo(g.x,g.y+w*2,g.x-l,g.y);ctx.fill();ctx.stroke();
+      ctx.fillStyle='#d8cfae';ctx.fillRect(g.x-l*.3,g.y-w*.5,l*.6,w);
+    }else if(tool==='needle'){
+      // Cloth held on the bench in front; the thread runs from it to the needle hand.
+      const cloth={x:B.base.x+f*B.bodyW*.78,y:B.bodyY+B.bodyH*.1};
+      ctx.fillStyle='#4f6d8a';ctx.strokeStyle='#3f5970';ctx.lineWidth=lw;
+      ctx.beginPath();ctx.moveTo(cloth.x-B.bodyW*.3,cloth.y+B.bodyH*.06);ctx.lineTo(cloth.x+B.bodyW*.3,cloth.y+B.bodyH*.02);
+      ctx.lineTo(cloth.x+B.bodyW*.26,cloth.y-B.bodyH*.06);ctx.lineTo(cloth.x-B.bodyW*.28,cloth.y-B.bodyH*.03);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.strokeStyle='#e8e0c8';ctx.lineWidth=Math.max(.35,.2*s);
+      ctx.beginPath();ctx.moveTo(cloth.x,cloth.y-B.bodyH*.04);ctx.quadraticCurveTo((cloth.x+g.x)/2+f*B.bodyW*.2,(cloth.y+g.y)/2,g.x,g.y);ctx.stroke();
+      ctx.strokeStyle=IRON;ctx.lineWidth=Math.max(.4,.3*s);
+      const L=TOOLS.needle.len*s*.5;
+      ctx.beginPath();ctx.moveTo(g.x-f*L*.2,g.y+L*.4);ctx.lineTo(g.x+f*L*.25,g.y-L*.6);ctx.stroke();
+    }else if(tool==='ladle'){
+      // Iron pot on its embers in front; the ladle from the hand down into the pot.
+      const px=B.base.x+f*B.bodyW*.95,py=B.bodyY+B.bodyH*.2,rw=B.bodyW*.34;
+      ctx.fillStyle='#d9692b';ctx.beginPath();ctx.ellipse(px,py+B.bodyH*.24,rw*.9,rw*.25,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#2f2b2c';ctx.strokeStyle='#151313';ctx.lineWidth=lw;
+      ctx.beginPath();ctx.moveTo(px-rw,py);ctx.quadraticCurveTo(px-rw*1.05,py+B.bodyH*.24,px,py+B.bodyH*.25);ctx.quadraticCurveTo(px+rw*1.05,py+B.bodyH*.24,px+rw,py);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle='#8a6a3a';ctx.beginPath();ctx.ellipse(px,py,rw,rw*.28,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.strokeStyle=HANDLE;ctx.lineWidth=Math.max(.6,.6*s);ctx.beginPath();ctx.moveTo(g.x,g.y);ctx.lineTo(px+(g.x-px)*.15,py+.5*s);ctx.stroke();
+    }else if(tool==='brush'){
+      ctx.fillStyle='#7a5937';ctx.strokeStyle='#3e2c1d';ctx.lineWidth=lw;
+      ctx.beginPath();ctx.rect(g.x-.9*s,g.y-.55*s,1.8*s,1.1*s);ctx.fill();ctx.stroke();
+      ctx.strokeStyle='#c9b48a';ctx.beginPath();ctx.moveTo(g.x+f*.9*s,g.y-.5*s);ctx.lineTo(g.x+f*1.3*s,g.y-.5*s);ctx.moveTo(g.x+f*.9*s,g.y+.5*s);ctx.lineTo(g.x+f*1.3*s,g.y+.5*s);ctx.stroke();
+    }else if(tool==='book'){
+      // Open book held at the chest by the other hand; the reading hand comes back to it.
+      const bx=B.base.x+f*B.bodyW*.5,by=B.bodyY-B.bodyH*.06,w=B.bodyW*.3,h=B.bodyH*.22,turn=B.u>.72&&B.u<.9;
+      ctx.fillStyle='#8e2a26';ctx.strokeStyle='#2a1a17';ctx.lineWidth=lw;
+      ctx.beginPath();ctx.rect(bx-w-.3*s,by-h/2-.2*s,2*w+.6*s,h+.4*s);ctx.fill();ctx.stroke();
+      ctx.fillStyle='#efe6cf';ctx.fillRect(bx-w,by-h/2,w*.95,h);ctx.fillRect(bx+w*.05,by-h/2,w*.95,h);
+      if(turn){ctx.beginPath();ctx.moveTo(bx,by-h/2);ctx.lineTo(g.x,g.y);ctx.lineTo(bx,by+h/2);ctx.closePath();ctx.fill()}
+    }else if(tool==='quill'){
+      // Ledger open on the desk under the hand, the quill rising from the fingers.
+      const lx=B.base.x+f*B.bodyW*.75,ly=B.bodyY+B.bodyH*.1,w=B.bodyW*.3,h=B.bodyH*.08;
+      ctx.fillStyle='#efe6cf';ctx.strokeStyle='rgba(33,24,16,.7)';ctx.lineWidth=Math.max(.4,.3*s);
+      ctx.beginPath();ctx.rect(lx-w,ly-h,2*w,h*2);ctx.fill();ctx.stroke();
+      ctx.strokeStyle='#2a2320';ctx.lineWidth=Math.max(.5,.35*s);ctx.beginPath();ctx.moveTo(g.x,g.y);ctx.lineTo(g.x+f*B.bodyW*.12,g.y-B.bodyH*.22);ctx.stroke();
+    }else if(tool==='mortar'){
+      // Stone mortar at the waist in front, the pestle from the fist into it.
+      const mx=B.base.x+f*B.bodyW*.72,my=B.bodyY+B.bodyH*.12,rw=B.bodyW*.2;
+      ctx.strokeStyle=IRON_DARK;ctx.lineWidth=Math.max(.7,.7*s);ctx.beginPath();ctx.moveTo(g.x,g.y-.6*s);ctx.lineTo(mx,Math.max(g.y+1.6*s,my-.3*s));ctx.stroke();
+      ctx.fillStyle='#a39e93';ctx.strokeStyle='#5c6266';ctx.lineWidth=lw;
+      ctx.beginPath();ctx.moveTo(mx-rw,my);ctx.quadraticCurveTo(mx,my+B.bodyH*.2,mx+rw,my);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.fillStyle='#6f8a4a';ctx.beginPath();ctx.ellipse(mx,my,rw*.85,rw*.22,0,0,Math.PI*2);ctx.fill();
+    }else if(tool==='falcon'){
+      // Leather glove and the hooded bird perched on it; the wings open when it bates.
+      // Slate-grey back and a pale breast: the bird reads against the falconer's brown tunic.
+      const bate=B.u>.2&&B.u<.42,bx=g.x+f*.3*s,by=g.y-1.1*s;
+      ctx.fillStyle='#7a5937';ctx.beginPath();ctx.arc(g.x,g.y,.85*s,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#5f6670';ctx.strokeStyle='#22262b';ctx.lineWidth=lw;
+      if(bate)for(const k of [-1,1]){ctx.beginPath();ctx.moveTo(bx,by-.7*s);ctx.quadraticCurveTo(bx+k*3*s,by-2.8*s,bx+k*3.4*s,by-.2*s);ctx.lineTo(bx,by);ctx.closePath();ctx.fill();ctx.stroke()}
+      ctx.beginPath();ctx.moveTo(bx-f*.2*s,by+.6*s);ctx.lineTo(bx-f*.9*s,by+1.6*s);ctx.lineTo(bx+f*.1*s,by+1.2*s);ctx.closePath();ctx.fill();ctx.stroke();
+      ctx.beginPath();ctx.ellipse(bx,by-.4*s,1*s,1.5*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.fillStyle='#ddd1b4';ctx.beginPath();ctx.ellipse(bx+f*.35*s,by-.3*s,.5*s,1.05*s,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#8e2a26';ctx.strokeStyle='#3a1412';ctx.beginPath();ctx.arc(bx+f*.15*s,by-2.1*s,.62*s,0,Math.PI*2);ctx.fill();ctx.stroke();
+    }else if(tool==='mug'||tool==='bowl'){
+      const w=(tool==='mug'?.75:1.25)*s,h=(tool==='mug'?1.3:.6)*s;
+      ctx.fillStyle=tool==='mug'?'#8a6a46':'#c9c2b0';ctx.strokeStyle='#3e2c1d';ctx.lineWidth=lw;
+      ctx.beginPath();
+      if(tool==='mug'){ctx.rect(g.x-w,g.y-h,2*w,h*1.6);ctx.fill();ctx.stroke();ctx.beginPath();ctx.arc(g.x+f*w*1.2,g.y-h*.2,w*.5,0,Math.PI*2);ctx.stroke()}
+      else{ctx.moveTo(g.x-w,g.y-h*.6);ctx.quadraticCurveTo(g.x,g.y+h*1.4,g.x+w,g.y-h*.6);ctx.closePath();ctx.fill();ctx.stroke()}
+    }
+  }
+  // Tools held at the bench or in the hand (no haft): drawn by drawBench.
+  const BENCH=new Set(['clay','shuttle','needle','ladle','brush','book','quill','mortar','falcon','mug','speak','bowl']);
   function drawTool(tool,g,f,th,s){
     const d=dirOf(th,f),L=TOOLS[tool].len*s,lw=Math.max(.9,.95*s);
     const a={x:g.x-d.x*L*.22,y:g.y-d.y*L*.22},b={x:g.x+d.x*L*.78,y:g.y+d.y*L*.78};
     const n={x:-d.y,y:d.x};   // perpendicular, rotated a quarter turn
     ctx.lineCap='round';
-    if(tool==='seeds')return;
+    if(tool==='seeds'||BENCH.has(tool))return;
     ctx.strokeStyle=HANDLE;ctx.lineWidth=lw;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
     ctx.fillStyle=IRON;ctx.strokeStyle=IRON_DARK;ctx.lineWidth=Math.max(.5,.35*s);
     ctx.beginPath();
@@ -106,11 +235,16 @@
     clod:{n:3,col:['#7d5a36','#9b7448'],v:[1.2,2.0],up:2.6,life:.6,size:.95},
     soil:{n:4,col:['#6e5236','#8a6a46'],v:[.4,1.0],up:1.4,life:.4,size:.6},
     seeds:{n:9,col:['#e7d49a','#c9b26c'],v:[.9,2.2],up:.9,life:.7,size:.35},
-    stalks:{n:4,col:['#d8b95a','#b89a3c'],v:[.3,1.0],up:1.1,life:.55,size:.7}
+    stalks:{n:4,col:['#d8b95a','#b89a3c'],v:[.3,1.0],up:1.1,life:.55,size:.7},
+    slip:{n:3,col:['#9b5a36','#c48a62'],v:[.3,.8],up:.7,life:.4,size:.45},
+    lint:{n:4,col:['#e8e0c8','#d8cfae'],v:[.2,.6],up:.5,life:.6,size:.35},
+    steam:{n:4,col:['#e8e8e4','#d4d6d4'],v:[.05,.2],up:.9,life:.9,size:.7},
+    powder:{n:3,col:['#6f8a4a','#9bb07a'],v:[.2,.5],up:.6,life:.35,size:.35},
+    feather:{n:2,col:['#8f7a5e','#cdb88c'],v:[.3,.8],up:.4,life:.8,size:.45}
   };
   function drawFx(tool,id,cycle,u,at,f,s){
     const T=TOOLS[tool],F=FX[T.fx],age=(u-T.hit)*T.period;
-    if(age<0||age>F.life)return;
+    if(!F||age<0||age>F.life)return;
     const r=rnd(hash(String(id))^Math.imul(cycle,2654435761)),grav=9*s;
     ctx.save();ctx.globalAlpha*=1-age/F.life*.7;
     for(let k=0;k<F.n;k++){
@@ -144,9 +278,14 @@
     // Hands rise with the tool: high when it points up, at the waist when down.
     const shoulder={x:base.x+f*bodyW*.18,y:top+bodyH*.2};
     // The sower's hand swings on the arm; tool hands rise with the tool.
+    // The weaver's hand travels forward and back through the shed at the height of the warp.
+    const reach=tool==='shuttle'?Math.max(0,Math.min(1,(P.th-1.2)/.95)):0;
     const g=sack?{x:shoulder.x+dirOf(P.th,f).x*bodyW*.95,y:shoulder.y+dirOf(P.th,f).y*bodyW*.95}
+      :tool==='shuttle'?{x:base.x+f*bodyW*(.3+.75*reach),y:bodyY+bodyH*(.02-.04*reach)}
+      :T.sweep?{x:base.x+f*bodyW*(.3+.75*Math.max(0,Math.min(1,(P.th-T.sweep[0])/(T.sweep[1]-T.sweep[0])))),y:bodyY+bodyH*T.y}
       :{x:base.x+f*bodyW*.48,y:bodyY-bodyH*(.08+.28*Math.cos(P.th))};
-    if(!sack)drawTool(tool,g,f,P.th,scale);
+    if(BENCH.has(tool))drawBench(tool,g,f,scale,{base,bodyW,bodyH,bodyY,u:P.u});
+    else if(!sack)drawTool(tool,g,f,P.th,scale);
     // Arm: shoulder to hand, in the darker tunic tone (or the cloak's, when wearing one).
     ctx.strokeStyle=darken(window.ConquerWardrobe?.outfitFor(dot)?.sleeve||dot.colors?.[0]||'#8c6b3f',.78);ctx.lineWidth=Math.max(.8,1.1*scale);ctx.lineCap='round';
     ctx.beginPath();ctx.moveTo(shoulder.x,shoulder.y);ctx.lineTo(g.x,g.y);ctx.stroke();
@@ -154,7 +293,8 @@
     // Effect origin: where the tool tip strikes (or the casting hand).
     const hitTh=keys(KEYS[tool],T.hit).th,d=dirOf(hitTh,f),L=T.len*scale*.78;
     const gHit={x:base.x+f*bodyW*.48,y:bodyY-bodyH*(.08+.28*Math.cos(hitTh))};
-    const at=sack?{x:base.x+f*bodyW*.9,y:bodyY-bodyH*.1}:{x:gHit.x+d.x*L,y:Math.min(base.y,gHit.y+d.y*L)};
+    const at=sack?{x:base.x+f*bodyW*.9,y:bodyY-bodyH*.1}:BENCH.has(tool)?{x:g.x+f*bodyW*.2,y:g.y}
+      :{x:gHit.x+d.x*L,y:Math.min(base.y,gHit.y+d.y*L)};
     ctx.restore();
     drawFx(tool,dot.id,P.cycle,P.u,{x:at.x,y:at.y+P.bob*bodyH},f,scale);
   }
@@ -191,9 +331,9 @@
   const now=()=>(typeof performance!=='undefined'?performance.now():Date.now())/1000;
   // Anonymous labourers are L1: grey and beige cloth.
   const WORKER_COLORS=[['#9c9078','#7d7a72'],['#b4a58a','#8f8b82'],['#a39e93','#7d7a72'],['#c8bda6','#9c9078'],['#8f8b82','#b9b2a3']];
-  function anonymous(id,p){
+  function anonymous(id,p,role){
     const h=hash(String(id));
-    return{p,id:String(id),kind:'peasant',sex:'male',age:'adult',colors:WORKER_COLORS[h%WORKER_COLORS.length],
+    return{p,id:String(id),kind:'peasant',sex:'male',age:'adult',role,colors:WORKER_COLORS[h%WORKER_COLORS.length],
       hair:typeof villagerHair==='function'?villagerHair(String(id)):'brown'};
   }
   // ---------- builders at construction sites (visual only)
@@ -224,7 +364,7 @@
       for(let i=0;i<n;i++){
         const sp=spots[(start+i*Math.max(1,Math.floor(spots.length/n)))%spots.length];
         if(!worldPointVisible(sp,0,40))continue;
-        drawWorker(anonymous(s.id+':builder'+i,sp),'hammer',t,facingOf(sp,sp.to.x-sp.x,sp.to.y-sp.y));
+        drawWorker(anonymous(s.id+':builder'+i,sp,'builder'),'hammer',t,facingOf(sp,sp.to.x-sp.x,sp.to.y-sp.y));
       }
     }
   }
