@@ -32,8 +32,11 @@ La colonizzazione umana di un possedimento non deve generare una copia del feudo
 ## 3. Lobby e scoperta delle partite
 
 - **DECISO a livello di prodotto:** il giocatore può scegliere a quale campagna/server unirsi in una **lobby** consultando informazioni pubbliche sullo stato della partita.
-- **Informazioni richieste / esempi da definire nella UI:** età reale del server e fase della campagna, capienza e giocatori presenti/attivi, bot presenti/attivi, progresso raggiunto (es. livello massimo), disponibilità reale di insediamenti indipendenti e di terre aperte alla sudditanza, eventuali fasce orarie regionali.
-- **APERTO:** definizione esatta di «giocatore attivo», pubblicità di classifiche/dettagli sensibili, classificazione di equità per i nuovi entranti e criteri di presentazione/filtraggio dei server.
+- **DECISO (15/11/2026) — visibilità senza login limitata alle sole statistiche generali dei server.** La lobby pubblica presenta dati aggregati utili per valutare se entrare: stato/iscrizioni aperte o chiuse, età/fase della campagna, capienza e numero di giocatori e bot presenti/attivi, massimo livello raggiunto in forma **aggregata**, numero di posizioni di ingresso idonee (libere e aperte alla sudditanza, solo conteggi), ed eventuali orari regionali. L'elenco esatto dei KPI resta configurabile.
+- **DECISO — niente dati di campagna dettagliati senza login:** non esporre mappe politiche/regionali, confini e appartenenze territoriali, classifiche nominali, identità di signori/giocatori, sviluppi dei singoli feudi, movimenti militari, scorte, rapporti, posta e diplomazia. Non pubblicare posizioni precise di spawn: solo conteggi aggregati.
+- **DECISO — accesso distinto dall'autorizzazione:** effettuare il login può consentire l'accesso alle proprie campagne, ma **non** rende automaticamente visibili i dati privati degli altri partecipanti. Un account autenticato non appartenente a una campagna vede soltanto le statistiche pubbliche della lobby, finché non entra; le viste strategiche/remote richiedono i relativi diritti di gioco.
+- **FUORI DA QUESTA RESTRIZIONE:** sito informativo, guide e **Codex/Wiki pubblica** restano consultabili senza login, perché non espongono lo stato corrente delle campagne.
+- **APERTO:** definizione esatta di «giocatore attivo», aggiornamento/cache dei contatori pubblici, filtri della lobby e visibilità dei dati ai partecipanti secondo i ruoli feudali. Non è più aperta la pubblicazione di mappe politiche o classifiche delle campagne in corso: **escluse dall'accesso anonimo**.
 
 ## 4. Tempo, campagne e partecipazione multi-server
 

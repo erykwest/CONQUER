@@ -3,6 +3,22 @@
 ### 2026-11-15 — WALL-ROAD-GATE
 
 - Nuova regola di costruzione: muro/palizzata che incrocia una strada principale → porta sull'incrocio (legno / piccola W1 / grande W2-W3), muro tagliato sui fianchi. Test `qa/wall-road-gate-regression.cjs` collegato al workflow Road magnet. ROADMAP e DECISIONS invariati (regola di piazzamento locale, nessun contratto nuovo).
+## 2026-11-15 — Equipaggiamento delle unità · cavalieri a cavallo
+
+15/11/2026 — `feature/knight-equipment-styles` (pre-merge): i cavalieri a cavallo del feudo (`settlement-mounted2d.js`) indossano l'elmo e portano lo scudo scelti in Militare › Equipaggiamento (5 elmi, 5 forme). Finché il giocatore non sceglie, e per i nemici e il messaggero, restano grande elmo e scudo appuntito originali. Nel Lab i selettori Elmo/Scudo valgono anche per «Cavaliere a cavallo», con l'opzione «Originale». Corretta la caduta: il cavaliere disarcionato non resta più sopra il fianco del cavallo, ma cade dietro la groppa e giace a terra; la lancia cade stesa davanti al cavallo. STATUS, BACKLOG e CHANGELOG aggiornati; ROADMAP e DECISIONS invariate.
+
+## 2026-11-15 — WORLD-SPEED-01 · Rapporti di velocità strategica (solo design)
+
+Fissati dal product owner i rapporti sul riferimento **fanteria standard 1×**: **messaggero a piedi 1×**, **cavalleria standard e messaggero a cavallo 2×**, **carri per mercanti, rifornimenti e immigrati 1,5×**, a parità di percorso e condizioni. Riconosciuto il debito di integrazione: `src/settlement-convoys.js` e prototipo `messages` utilizzano ancora velocità convenzionali di 22 U/giorno, non una scala World/Feudal unificata. Aggiornati REMOTE-CONTROL-SCOPE, MARCH, convoys-skeleton, D-WORLD-SPEED-261115, backlog WORLD-SPEED-01 e SRS mobile v0.15 in draft PR #222. **Solo documentazione, nessun runtime/salvataggio modificato.**
+
+
+## 2026-11-15 — MSG-FOOT-01 · Messaggero a piedi senza cavalli (solo design)
+
+Chiarito il sistema delle comunicazioni feudali: in assenza di cavalli, **messaggi, ordini e allarmi automatici d'invasione** possono viaggiare con un **messaggero a piedi**, con tempi simulati propri ancora da parametrizzare. L'assenza della cavalcatura non è motivo sufficiente per sopprimere un allarme. Sotto assedio entrata e uscita dei messaggeri terrestri restano vietate **sia a piedi sia a cavallo**; i piccioni conservano le regole precedenti. Aggiornate SRS mobile v0.14 nella draft PR #222, REMOTE-CONTROL-SCOPE, MARCH, D-MSG-FOOT-261115 e backlog MSG-FOOT-01. **Nessun runtime/SQL modificato.**
+
+## 2026-11-15 — MP-PUBLIC-01 · Lobby pubblica limitata a KPI generali server (solo documentazione)
+
+Il product owner ha approvato **solo statistiche aggregate dei server senza login**, escludendo mappe politiche, classifiche nominali e dettagli strategici/gestionali delle campagne in corso. Codex/Wiki e sito informativo restano pubblici. Inserito il vincolo di autorizzazione per dati individuali anche dopo login; aggiornati `docs/MULTIPLAYER-SERVER-SCOPE.md`, `docs/REMOTE-CONTROL-SCOPE.md`, decisione D-MP-PUBLIC-261115 e backlog MP-PUBLIC-01. **Nessuna funzionalità o API implementata; ROADMAP/STATUS invariati.**
 
 
 ### 2026-11-15 — FIELD-LEND preservato nel merge regionale
