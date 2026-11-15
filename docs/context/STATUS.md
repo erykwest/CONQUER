@@ -1,5 +1,10 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-15 — Microfix: fedeli alla messa nel cutaway della chiesa
+
+- Branch fix/microfix. La domenica 6:00–12:00, senza allarme, il cutaway del piano terra della chiesa selezionata mostra i popolani seduti sui banchi della navata (circa 3 posti su 4, estrazione fissa per chiesa), oltre al prete all'altare. Prima c'era solo il prete. Figure decorative: nessun legame con residenti, offerte o capienza.
+- PASS staff-people (nuovo blocco Sunday Mass) e court-people; verificato a vista in gioco su una chiesa L2. CI da eseguire.
+
 ### 2026-11-15 — FIELD-LEND preservato nel merge regionale
 
 - La CI su 6510709 era tutta verde (20 workflow). Durante l'attesa main e avanzato a 6c5ac79 (#212 FIELD-LEND): integrato senza conflitti di codice, unendo STATUS/CHANGELOG e rigenerando il catalogo. PASS locale idle-farmers (7), fields (16), export Wiki. Nuova CI da verificare; nessuna modifica alle ricette regionali.

@@ -34,8 +34,18 @@
   }
   // Town hall (tribunal, prison) and the other staffed civic interiors (ConquerCivic3D.roomSlots).
   const STAFFED=new Set(['townhall','church','tavern','bargello','balivo']);
+  // Sunday Mass, 6:00-12:00: the residents' Sunday morning at church (settlement-population-*male.js).
+  const MASS_START=.25,MASS_END=.5,SUNDAY=6;
+  function massInSession(){
+    if(typeof State==='undefined')return false;
+    const day=Number(State.clock?.day)||0;
+    const weekday=window.ConquerEconomy?.weekday?.(day)??(((Math.floor(day)%7)+7)%7);
+    if(weekday!==SUNDAY||(window.ConquerCombat?.alarmMode?.()||'off')!=='off')return false;
+    const f=typeof visualCycleFrac==='function'?visualCycleFrac():frac(day);
+    return f>=MASS_START&&f<MASS_END;
+  }
   function slots(s){
-    const list=C3()?.roomSlots?.(s)||[];
+    const list=(C3()?.roomSlots?.(s)||[]).concat(s?.type==='church'&&massInSession()?C3()?.massSlots?.(s)||[]:[]);
     return occupancySource?occupancySource(s,list)||[]:list;
   }
   // Actors at time t (seconds): pure, so the scene can be tested without a canvas.
@@ -264,6 +274,6 @@
     drawActor({id},a,()=>p,g);
   }
   function setOccupancySource(fn){occupancySource=typeof fn==='function'?fn:null}
-  window.ConquerCourtPeople={SESSION_START,SESSION_END,PILLORY_HOURS,JUSTICE_DAY,JUSTICE_HOURS,inSession,courtBuilding,slots,scene,
+  window.ConquerCourtPeople={SESSION_START,SESSION_END,MASS_START,MASS_END,PILLORY_HOURS,JUSTICE_DAY,JUSTICE_HOURS,inSession,massInSession,courtBuilding,slots,scene,
     justiceInSession,justiceSlots,justiceScene,draw,dotOf,drawCellPrisoner,setOccupancySource};
 })();

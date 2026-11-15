@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-15 — Microfix: fedeli alla messa nel cutaway della chiesa
+
+- Aggiunti i popolani seduti sui banchi della chiesa durante la messa domenicale (6:00–12:00); test in qa/staff-people-regression.cjs. Roadmap e decisioni invariate.
+
 ### 2026-11-15 — FIELD-LEND preservato nel merge regionale
 
 - La CI su 6510709 era tutta verde (20 workflow). Durante l'attesa main e avanzato a 6c5ac79 (#212 FIELD-LEND): integrato senza conflitti di codice, unendo STATUS/CHANGELOG e rigenerando il catalogo. PASS locale idle-farmers (7), fields (16), export Wiki. Nuova CI da verificare; nessuna modifica alle ricette regionali.

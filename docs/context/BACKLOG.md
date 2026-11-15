@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-15 — Microfix: messa domenicale visibile
+
+- [x] Cutaway della chiesa: fedeli seduti sui banchi la domenica 6:00–12:00 (ConquerCivic3D.massSlots, ConquerCourtPeople.massInSession).
+- [ ] Proposta: legare il numero di fedeli ai residenti serviti (ConquerChurch.servedShare) quando arriverà la messa di CHIESA-01 fase 3.
+
 ### 2026-11-15 — FIELD-LEND preservato nel merge regionale
 
 - La CI su 6510709 era tutta verde (20 workflow). Durante l'attesa main e avanzato a 6c5ac79 (#212 FIELD-LEND): integrato senza conflitti di codice, unendo STATUS/CHANGELOG e rigenerando il catalogo. PASS locale idle-farmers (7), fields (16), export Wiki. Nuova CI da verificare; nessuna modifica alle ricette regionali.
