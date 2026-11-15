@@ -1,5 +1,8 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-15 — WALL-ROAD-GATE
+
+- Fatto sul branch `feature/wall-road-gates`: porta automatica del tipo corrispondente dove un nuovo muro/palizzata incrocia una strada principale. Aperto: un muro esistente attraversato in seguito da una nuova strada principale non riceve la porta (la strada resta bloccata come prima); livello porta = livello porta di default del costruttore.
 ## MIL-WALL-01 — Pattuglie sulle mura per giro di mura (15/11/2026)
 
 **IMPLEMENTATO SU BRANCH `fix/wall-patrol-rings`, NON MERGE.** [D-MIL-WALL-261115](DECISIONS.md#d-mil-wall-261115--pattuglie-delle-mura-per-giro-15112026).

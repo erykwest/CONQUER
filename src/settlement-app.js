@@ -168,8 +168,12 @@ function linearRouteStructures(route,endSnapId,spec){
   });
 }
 function commitStructuralLinearRoute(route,endSnapId,spec){
-  const structures=linearRouteStructures(route,endSnapId,spec);
-  if(!structures.length)return false;
+  const planned=linearRouteStructures(route,endSnapId,spec);
+  if(!planned.length)return false;
+  // A wall across a main road gets a gate on the road (WALL-ROAD-GATE).
+  const plan=wallRoadGatePlan(planned);
+  if(plan.blocked){status('Route blocked: '+plan.blocked);return false}
+  const structures=plan.walls;
 
   // Preflight the whole dogleg before mutating state, so a two-leg wall is atomic
   // from the player's point of view.
@@ -181,8 +185,11 @@ function commitStructuralLinearRoute(route,endSnapId,spec){
       return false;
     }
   }
+  // Gates first: the wall pieces seat on their flanks and the road keeps its passage.
+  for(const g of plan.gates)if(!addStructure(g))return false;
   for(const s of structures)if(!addStructure(s))return false;
-  return true;
+  if(plan.gates.length)status(plan.gates.length===1?'Gate placed on the main road':plan.gates.length+' gates placed on the main roads');
+  return plan.gates.length?{gates:plan.gates.length}:true;
 }
 function deleteStructure(id){
   const target=State.structures.find(s=>s.id===id);if(!target)return;
