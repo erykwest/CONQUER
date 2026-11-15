@@ -1,5 +1,14 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-WORLD-SPEED-261115 — Rapporti di velocità strategica terrestri (15/11/2026)
+
+- **DECISO dal product owner:** riferimento comune **fanteria standard = 1×**; **messaggero a piedi = 1×**; **cavalleria standard = 2×**; **messaggero a cavallo = 2×**; **carri di mercanti, rifornimenti e immigrati = 1,5×**. Sono coefficienti sulla **stessa distanza/percorso a parità di condizioni**, riferiti al movimento strategico World/Feudal, non alla velocità di rendering o al combattimento tattico.
+- **CONSEGUENZA:** quando mancano cavalli, il messaggero a piedi della decisione D-MSG-FOOT-261115 conserva la partenza possibile ma usa **1× fanteria**, quindi **non** l'ETA del montato. Le ETA sono comunque calcolate dal motore sui percorsi realmente ammessi.
+- **VALIDAZIONE DEL REPOSITORY:** `src/settlement-convoys.js` main ha `UNITS_PER_DAY=22` per convogli terrestri; prototipo `messages` ha 22 U/giorno per messaggeri. Queste sono velocità **convenzionali esistenti**, **non** una realizzazione dei rapporti 1×/1,5×/2×. Durante l'integrazione occorre un riferimento World/Feudal condiviso e la verifica di compatibilità/salvataggi.
+- **APERTO:** valore assoluto della velocità standard della fanteria, modificatori della tratta (terreno/strade/meteo), convogli misti e scorte, unità non elencate, migrazione delle ETA già in corso. Nessun valore assoluto, modifica runtime o aggiornamento retroattivo di salvataggi deciso.
+- **STATO:** solo specifica, implementazione non eseguita. [REMOTE-CONTROL-SCOPE §3g](../REMOTE-CONTROL-SCOPE.md), [MARCH](../march.md), [CONVOYS](../convoys-skeleton.md), [SRS mobile v0.15 draft #222](https://github.com/erykwest/CONQUER/pull/222).
+
+
 ## D-MSG-FOOT-261115 — Messaggero a piedi in assenza di cavalli (15/11/2026)
 
 - **DECISO dal product owner:** il messaggero terrestre può essere **a cavallo oppure a piedi**. Quando **non ci sono cavalli disponibili**, i messaggi, gli ordini e gli allarmi automatici (compreso quello generato all'invasione) possono partire con un **messaggero a piedi**, senza perdere la spedizione per la sola mancanza della cavalcatura.
