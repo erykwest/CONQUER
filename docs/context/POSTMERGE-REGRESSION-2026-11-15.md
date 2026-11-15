@@ -1,6 +1,6 @@
 # Controllo antiregressivo dopo PR #162 — 15 novembre 2026
 
-Base verificata: `50096dfab8b76145fff2fa0c4fd5648f49a62581`, squash della PR #162. Correzioni sul branch `fix/regional-postmerge-20261115`, non ancora integrate in main. Il successivo main `5e3401e` aggiunge messaggeri/documentazione, equipaggiamento a cavallo e pattuglie sulle mura: questo audit resta riferito al commit regionale, non certifica quelle aggiunte.
+Base verificata: `50096dfab8b76145fff2fa0c4fd5648f49a62581`, squash della PR #162. Correzioni sul branch `fix/regional-postmerge-20261115`, PR #250 draft, non ancora integrate in main. Integrato nel branch il successivo main `2782fc0` (documentazione, equipaggiamento a cavallo, pattuglie sulle mura e porte automatiche sulle strade). Conflitti uniti conservando entrambe le sezioni documentali e i token cache; nessun doppio caricamento script. Controlli locali dopo integrazione: selettore, chiome, save-safety, pattuglie (10) e porte stradali (6) PASS. L'audit completo resta riferito al commit regionale; l'integrazione viene verificata separatamente dalla CI della PR.
 
 ## Esito e difetti riprodotti
 

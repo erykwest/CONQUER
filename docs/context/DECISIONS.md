@@ -1,5 +1,36 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-MIL-WALL-261115 — Pattuglie delle mura per giro (15/11/2026)
+
+- **DECISO dal product owner:** le pattuglie sulle mura si contano **per giro di mura**, non per segmento; dal pannello se ne assegnano di più o di meno.
+- **DECISO dal product owner:** ogni pattuglia delle mura costa **2 soldati della riserva della Caserma**, come le pattuglie White Zone (coerente con D-MIL-RES-261109); un giro nuovo parte con **0 pattuglie**.
+- **CONTRATTO TECNICO:** giro = componente connesso di `ConquerWallWalk.graph()`; id del giro `ring:<id muro minore>`. Stato salvato in `State.siege.soldiers.wallPatrols` = `[{walls:[id…], n}]`; una voce va al giro che contiene più muri suoi; voci di giri non percorribili restano dormienti finché un loro muro esiste. Ordine di copertura della riserva: spedizioni, avamposti, vedette, pattuglie White Zone, pattuglie delle mura. Massimo per giro: una pattuglia ogni 4U (almeno 1). `/camp` invariato.
+- **STATO:** implementato su `fix/wall-patrol-rings`, non in main. Le pattuglie delle mura non sono unità di combattimento.
+
+## D-WORLD-SPEED-261115 — Rapporti di velocità strategica terrestri (15/11/2026)
+
+- **DECISO dal product owner:** riferimento comune **fanteria standard = 1×**; **messaggero a piedi = 1×**; **cavalleria standard = 2×**; **messaggero a cavallo = 2×**; **carri di mercanti, rifornimenti e immigrati = 1,5×**. Sono coefficienti sulla **stessa distanza/percorso a parità di condizioni**, riferiti al movimento strategico World/Feudal, non alla velocità di rendering o al combattimento tattico.
+- **CONSEGUENZA:** quando mancano cavalli, il messaggero a piedi della decisione D-MSG-FOOT-261115 conserva la partenza possibile ma usa **1× fanteria**, quindi **non** l'ETA del montato. Le ETA sono comunque calcolate dal motore sui percorsi realmente ammessi.
+- **VALIDAZIONE DEL REPOSITORY:** `src/settlement-convoys.js` main ha `UNITS_PER_DAY=22` per convogli terrestri; prototipo `messages` ha 22 U/giorno per messaggeri. Queste sono velocità **convenzionali esistenti**, **non** una realizzazione dei rapporti 1×/1,5×/2×. Durante l'integrazione occorre un riferimento World/Feudal condiviso e la verifica di compatibilità/salvataggi.
+- **APERTO:** valore assoluto della velocità standard della fanteria, modificatori della tratta (terreno/strade/meteo), convogli misti e scorte, unità non elencate, migrazione delle ETA già in corso. Nessun valore assoluto, modifica runtime o aggiornamento retroattivo di salvataggi deciso.
+- **STATO:** solo specifica, implementazione non eseguita. [REMOTE-CONTROL-SCOPE §3g](../REMOTE-CONTROL-SCOPE.md), [MARCH](../march.md), [CONVOYS](../convoys-skeleton.md), [SRS mobile v0.15 draft #222](https://github.com/erykwest/CONQUER/pull/222).
+
+
+## D-MSG-FOOT-261115 — Messaggero a piedi in assenza di cavalli (15/11/2026)
+
+- **DECISO dal product owner:** il messaggero terrestre può essere **a cavallo oppure a piedi**. Quando **non ci sono cavalli disponibili**, i messaggi, gli ordini e gli allarmi automatici (compreso quello generato all'invasione) possono partire con un **messaggero a piedi**, senza perdere la spedizione per la sola mancanza della cavalcatura.
+- **TEMPO SIMULATO:** il recapito deve seguire il tragitto e la modalità effettiva di spostamento. Non è immediato e **non presume la stessa velocità del cavallo**. Velocità, requisiti di portatore, costi e consumi restano da definire.
+- **ASSEDIO:** il messaggero a piedi **non aggira** il blocco: in stato SOTTO ASSEDIO, **nessun messaggero terrestre a piedi o a cavallo entra né esce dal feudo**. Rimane distinto il piccione in uscita, consentito e non intercettabile con canale operativo.
+- **STATO:** design, non implementazione del world multiplayer. La branch `messages` rappresenta attualmente un figurante montato e tempi astratti, non dimostra il vettore pedone implementato. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [MARCH](../march.md), [SRS mobile v0.14 draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
+
+## D-MP-PUBLIC-261115 — Lobby anonima: solo statistiche generali server (15/11/2026)
+
+- **DECISO dal product owner:** senza login sono pubbliche **solo le statistiche generali e aggregate dei server**. La lobby può mostrare conteggi giocatori/bot, capienza, età/fase della partita, stato delle iscrizioni, livello massimo aggregato, disponibilità numerica di ingressi idonei e orari del server.
+- **NON PUBBLICI:** mappe politiche/regionali delle campagne in corso, confini e proprietari, classifiche nominali, dati dei singoli insediamenti, eserciti, risorse, messaggi, rapporti, diplomazia o posizioni precise di spawn. I KPI di un feudo e il remote control richiedono autenticazione e autorizzazione su quella campagna.
+- **NON CAMBIA:** Home informativa, guide e Codex/Wiki restano pubblici e senza login; la limitazione riguarda i **dati dinamici delle campagne**.
+- **APERTO:** scelta precisa dei KPI aggregati, caching/aggiornamento e permessi di visibilità interna secondo ruoli feudali. **STATO:** decisione di design, non implementata. [Specifica server](../MULTIPLAYER-SERVER-SCOPE.md#3-lobby-e-scoperta-delle-partite), [hub](../REMOTE-CONTROL-SCOPE.md).
+
+
 ### 2026-11-12 — La quota collinare non impone una griglia
 
 La copertura minima deve essere raggiunta mantenendo varietà di superfici, contorni, rotazioni e distanze dei rilievi. Vietata la disposizione a file fisse come scorciatoia per soddisfare il 30%. Le catene montuose seguono il bordo regionale come direttrice, con dispersione longitudinale e trasversale delle singole cime; la medesima geometria è trasformata coerentemente per nord/est/sud/ovest.

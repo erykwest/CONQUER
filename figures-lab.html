@@ -158,8 +158,8 @@ body.asset-catalog-static #labLegacyControls{display:none}
     <label id="balBox"><input id="sBallista" type="checkbox"> Balista</label>
   </div>
   <div class="group" id="equipBox"><span>Equipaggiamento</span>
-    <label>Elmo <select id="sHelmet"><option value="cap">Cervelliera</option><option value="kettle">Cappello d'arme</option><option value="nasal">Elmo a nasale</option><option value="barbuta">Barbuta</option><option value="greathelm">Elmo a staio</option></select></label>
-    <label>Scudo <select id="sShield"><option value="oval">Ovale</option><option value="round">Rotella</option><option value="heater">Triangolare</option><option value="kite">A mandorla</option><option value="pavise">Pavese</option></select></label>
+    <label>Elmo <select id="sHelmet"><option value="">Originale</option><option value="cap">Cervelliera</option><option value="kettle">Cappello d'arme</option><option value="nasal">Elmo a nasale</option><option value="barbuta">Barbuta</option><option value="greathelm">Elmo a staio</option></select></label>
+    <label>Scudo <select id="sShield"><option value="">Originale</option><option value="oval">Ovale</option><option value="round">Rotella</option><option value="heater">Triangolare</option><option value="kite">A mandorla</option><option value="pavise">Pavese</option></select></label>
   </div>
   <label id="wardrobeBox">Stagione/meteo <select id="wardrobe">
     <option value="summer|clear">Estate serena</option><option value="spring|wind">Primavera ventosa</option>
@@ -285,7 +285,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     $('wagonBox').hidden=!['wagon','wagon3d'].includes(subject);
     $('wagon3dBox').hidden=!(subject==='wagon3d'||['animal','siege','ship'].includes(kindOf(subject)));
     $('flipBox').hidden=subject!=='wagon';
-    $('equipBox').hidden=kindOf(subject)!=='soldier';
+    $('equipBox').hidden=kindOf(subject)!=='soldier'&&subject!=='mounted';
     const eng=kindOf(subject)==='siege'?subject.split(':')[1]:'',ammo=AMMO[eng];
     $('siegeUpBox').hidden=!ammo&&eng!=='mantlet';$('ammoBox').hidden=!ammo;$('balBox').hidden=eng!=='mantlet';
     if(ammo){const was=$('sAmmo').value;$('sAmmo').innerHTML=ammo.map(([k,l])=>'<option value="'+k+'">'+l+'</option>').join('');if(ammo.some(([k])=>k===was))$('sAmmo').value=was}
@@ -386,7 +386,8 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     if(action==='die'&&clock>=nextDeath){resetHero();CA.fall(hero,.1,foe);nextDeath=clock+3.4}
     const mode=action==='walk'?'walk':action==='run'?'run':'idle';
     const from=fromAction==='run'?'run':fromAction==='walk'?'walk':'idle';
-    const flat={kind,mode,from,blend:trans,t:clock,coat,pose:CA.pose(hero,0),livery:LIVERY,paint:labArms};
+    const flat={kind,mode,from,blend:trans,t:clock,coat,pose:CA.pose(hero,0),livery:LIVERY,paint:labArms,
+      helmet:$('sHelmet').value||null,shield:$('sShield').value||null};
     window.ConquerMounted2D.draw(g,W*.3,H*.66,200*k,{...flat,facing:1});
     window.ConquerMounted2D.draw(g,W*.68,H*.62,5.75*2.6*k,{...flat,facing:1});
     window.ConquerMounted2D.draw(g,W*.84,H*.62,5.75*2.6*k,{...flat,facing:-1});
