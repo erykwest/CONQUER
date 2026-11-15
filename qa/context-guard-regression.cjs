@@ -9,6 +9,14 @@ assert.equal(isOperational('index.html'), true);
 assert.equal(isOperational('docs/economy.md'), false);
 assert.equal(isOperational('docs/context/STATUS.md'), false);
 assert.equal(isOperational('.github/workflows/webgpu-smoke.yml'), false);
+for (const path of ['api/telemetry.js', 'tests/runtime-integrity.test.mjs', 'crime/index.html',
+  'march/march.js', 'lab/index.html', 'layouts/TEST.json', 'figures-lab.html']) {
+  assert.equal(isOperational(path), true, path + ' must require the context pyramid');
+}
+assert.equal(isOperational('lab/README.md'), false);
+assert.equal(isOperational('laboratory/x.js'), false);
+const guardSource = require('node:fs').readFileSync(require.resolve('../tools/context-guard.cjs'), 'utf8');
+assert.ok(guardSource.includes("'--diff-filter=ACDMRT'"), 'context guard must see deleted files');
 
 assert.deepEqual(validate(['docs/context/ROADMAP.md']).missing, []);
 assert.deepEqual(validate(['src/app.js']).missing, REQUIRED);

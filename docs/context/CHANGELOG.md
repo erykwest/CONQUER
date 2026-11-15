@@ -40,6 +40,16 @@ Chiarito il sistema delle comunicazioni feudali: in assenza di cavalli, **messag
 
 Il product owner ha approvato **solo statistiche aggregate dei server senza login**, escludendo mappe politiche, classifiche nominali e dettagli strategici/gestionali delle campagne in corso. Codex/Wiki e sito informativo restano pubblici. Inserito il vincolo di autorizzazione per dati individuali anche dopo login; aggiornati `docs/MULTIPLAYER-SERVER-SCOPE.md`, `docs/REMOTE-CONTROL-SCOPE.md`, decisione D-MP-PUBLIC-261115 e backlog MP-PUBLIC-01. **Nessuna funzionalità o API implementata; ROADMAP/STATUS invariati.**
 
+## 2026-11-13 — AUDIT-261113 · Audit post-merge, hardening e semplificazione
+
+13/11/2026 — `fix/audit-hardening-20261113` (pre-merge):
+- Audit delle 82 PR mergiate dal 30/10: nessuna sovrascritta; corretti i bug trovati (upgrade automatici fermi, disboscamento senza operai col Job Manager, torre H4 troncata al load, load fallito sovrascritto dall'autosave, latrina verificata sul mondo sbagliato, riserva dei soldati, decreti del sabato, cache del render, XSS dai nomi di quartiere).
+- Prestazioni: cache di feritoie e stanze esterne, ricerca del mare, roster dei carrettieri, ombreggiatura delle mesh.
+- Semplificazione a comportamento invariato: `src/settlement-util.js`, politiche L1/L2 unificate, `activeRooms`, Dijkstra delle campane unico, `InstitutionPanel`; rimossa la copia morta `src/economy/` (STATUS e BACKLOG che la citano restano come storia).
+- CI: suite completa su ogni PR non documentale, sintassi anche dei `.mjs`, permessi in sola lettura, run settimanali dei test browser, `perf.yml`, guardia degli script orfani, Context sync esteso.
+- Seguiti in BACKLOG (decisioni sulle stanze, `laborAllocation` per frame, lazy load dei modelli, divisione dei file grandi).
+
+STATUS, BACKLOG e CHANGELOG aggiornati; DECISIONS e ROADMAP invariate (correzioni e refactor senza nuove regole di gioco; il free build ristretto ai cantieri riallinea il comportamento allo scopo dichiarato da #194).
 
 ### 2026-11-15 — Audit post-merge regionale, correzioni su branch
 

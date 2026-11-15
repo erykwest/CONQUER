@@ -143,8 +143,9 @@ jobs:
 
   stonecolor-snapshots:
     name: Stonecolor palette snapshots
-    # Snapshot sheets are validation artifacts for the Stonecolor feature branch, not new baselines.
-    if: github.event_name == 'pull_request' && github.head_ref == 'feature/stonecolor'
+    # Snapshot sheets are on-demand validation artifacts, not new baselines. The original
+    # feature/stonecolor PR gate was merged in #187, so the job now runs only on manual runs.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:

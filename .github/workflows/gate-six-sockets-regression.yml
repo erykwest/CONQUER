@@ -13,6 +13,8 @@ on:
       - 'qa/gate-roads-regression.cjs'
       - 'qa/cutaway-furniture-regression.cjs'
       - '.github/workflows/gate-six-sockets-regression.yml'
+permissions:
+  contents: read
 jobs:
   gate-cutaway:
     runs-on: ubuntu-latest

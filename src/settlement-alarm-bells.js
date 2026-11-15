@@ -47,21 +47,30 @@
   }
   // From a node already sounding at t: in its radius a bell answers in HOP, a house hears in HEAR;
   // beyond it the news runs by voice from the radius edge.
-  const reach=(n,p,inRange)=>{const d=Math.hypot(p.x-n.x,p.y-n.y);return n.t+(d<=n.r?inRange:VOICE_BASE+VOICE_PER_U*(d-n.r))};
+  const lag=(n,p,inRange)=>{const d=Math.hypot(p.x-n.x,p.y-n.y);return d<=n.r?inRange:VOICE_BASE+VOICE_PER_U*(d-n.r)};
+  const reach=(n,p,inRange)=>n.t+lag(n,p,inRange);
+  // Dijkstra on signal time (seconds), shared with the outposts' signal chain (settlement-soldiers.js):
+  // `first` already sounds at first.t; cost(from,to) is the hop time, Infinity out of reach. Stops at
+  // the first node for which arrived(node) holds. done: nodes in ring order; open: never reached.
+  function shortestSignal(first,others,cost,arrived=()=>false){
+    const open=others.map(n=>({...n,t:Infinity,via:null})),done=[first];
+    for(let last=first;;){
+      if(arrived(last))return{done,open,reached:last};
+      for(const n of open){const t=last.t+cost(last,n);if(t<n.t){n.t=t;n.via=last.id}}
+      let k=-1;for(let i=0;i<open.length;i++)if(Number.isFinite(open[i].t)&&(k<0||open[i].t<open[k].t))k=i;
+      if(k<0)return{done,open,reached:null};
+      last=open.splice(k,1)[0];done.push(last);
+    }
+  }
   // Dijkstra from the command post over the bells; returns the bells with the time each one rings.
   function plan(structures=State.structures){
     const list=bells(structures),start=origin(structures,list);
     if(!start)return{origin:null,nodes:[]};
     const self=list.find(b=>b.id===start.id);
-    const nodes=[self?{...self,t:0,via:null}:{id:start.id,type:'command',x:start.x,y:start.y,r:0,t:0,via:null}];
-    const open=list.filter(b=>b!==self).map(b=>({...b,t:Infinity,via:null}));
-    let last=nodes[0];
-    while(open.length){
-      for(const b of open){const t=reach(last,b,HOP);if(t<b.t){b.t=t;b.via=last.id}}
-      let k=0;for(let i=1;i<open.length;i++)if(open[i].t<open[k].t)k=i;
-      last=open.splice(k,1)[0];nodes.push(last);
-    }
-    return{origin:start,nodes};
+    const first=self?{...self,t:0,via:null}:{id:start.id,type:'command',x:start.x,y:start.y,r:0,t:0,via:null};
+    // Voice carries beyond every radius, so all bells ring; unreachable ones (bad coordinates) close the list.
+    const {done,open}=shortestSignal(first,list.filter(b=>b!==self),(n,b)=>lag(n,b,HOP));
+    return{origin:start,nodes:[...done,...open]};
   }
   // Seconds before a household at p hears the alarm.
   function delay(ringPlan,p){
@@ -96,6 +105,6 @@
   }
   const pending=(r,now)=>!!r&&now<r.until;
 
-  window.ConquerAlarmBells=Object.freeze({towerBellAllowed,towerBell,hearingRadius,bells,origin,plan,delay,heardBell,ring,heard,pending,
+  window.ConquerAlarmBells=Object.freeze({towerBellAllowed,towerBell,hearingRadius,bells,origin,plan,shortestSignal,delay,heardBell,ring,heard,pending,
     TOWER_RADIUS,TOWNHALL_RADIUS,CHURCH_RADIUS,HEAR,HOP,VOICE_BASE,VOICE_PER_U,VOICE_MAX,APEX_ROOMS});
 })();

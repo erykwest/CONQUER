@@ -15,8 +15,15 @@
     return !!s&&!s.destroyed&&!s.abandoned&&!s.burnt&&!s.economyDisabled&&
       !(typeof underConstruction==='function'&&underConstruction(s));
   }
-  const yards=()=> (window.ConquerStorageYard?.active?.()||[]).filter(isActive)
+  // A stockyard serves while ConquerStorageYard.active() says so: an expanding yard keeps working at
+  // its pre-upgrade size during the works (construction.upgrade.before), so its carter keeps driving.
+  function yardServes(s){
+    return !!s&&!s.destroyed&&!s.abandoned&&!s.burnt&&!s.economyDisabled;
+  }
+  const yards=()=> (window.ConquerStorageYard?.active?.()||[]).filter(yardServes)
     .sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+  // Base or destination of a trip still serving: a yard by the stockyard rule, anything else by isActive.
+  const serving=(s,yardIds)=>!!s&&(yardIds.has(s.id)||s.type!=='storageYard'&&isActive(s));
   const markets=()=> (State.structures||[]).filter(s=>s.type==='market'&&isActive(s))
     .sort((a,b)=>String(a.id).localeCompare(String(b.id)));
   const getGood=good=>typeof good==='string'&&
@@ -146,16 +153,35 @@
         qty:t.qty,day,lastDay:day});
     }
   }
-  function tick(dt){
-    if(!State.village?.founded){if(pending.size||trips.length)reset();return false}
-    if(!(State.clock?.speed>0)||!Number.isFinite(dt)||dt<=0)return false;
-    const V=window.ConquerVehicles,E=window.ConquerEconomy;
-    if(!V||!E?.laborAllocation)return false;
-    const day=dayOf(),roster=E.laborAllocation(day).carters||[];
+  // The carter roster comes from the full ConquerEconomy.laborAllocation (every L1 job, industry
+  // and construction): too heavy for every frame. It is kept between dispatch scans while the game
+  // day, the shift, the alarm, the structure list and this module's own queue stay the same, and
+  // always recomputed on the frame that scans and dispatches. A carter displaced by a productive job
+  // thus leaves his wagon at the next scan (~0.55 s of game time) instead of on the same frame.
+  let rosterMemo=null;
+  function rosterKey(day){
+    return [Math.floor(day),onShift(day),(window.ConquerCombat?.alarmMode?.()||'off'),State.structures,
+      (State.structures||[]).length,pending.size,trips.length,trips.map(t=>t.baseId).join(',')];
+  }
+  function carterRoster(E,day,fresh){
+    const key=rosterKey(day);
+    if(!fresh&&rosterMemo&&rosterMemo.key.length===key.length&&rosterMemo.key.every((v,i)=>v===key[i]))return rosterMemo.roster;
+    const roster=E.laborAllocation(day).carters||[];
+    rosterMemo={key,roster};
+    // The week's carter peak changes only with the roster (a new day recomputes it too).
     if(roster.length&&onShift(day)){
       const economy=E.state();
       economy.weekCarterPeak=Math.max(finite(economy.weekCarterPeak),roster.length);
     }
+    return roster;
+  }
+  function tick(dt){
+    if(!State.village?.founded){if(pending.size||trips.length)reset();rosterMemo=null;return false}
+    if(!(State.clock?.speed>0)||!Number.isFinite(dt)||dt<=0)return false;
+    const V=window.ConquerVehicles,E=window.ConquerEconomy;
+    if(!V||!E?.laborAllocation)return false;
+    const day=dayOf(),roster=carterRoster(E,day,scan+dt>=.55);
+    const yardIds=new Set(yards().map(s=>s.id));
     const ids=new Set(roster.map(w=>w.id));
     const bases=dutyBases(day);
     const workerBaseById=new Map(roster.map((w,i)=>[w.id,bases[i]]));
@@ -164,7 +190,7 @@
     for(let i=trips.length-1;i>=0;i--){
       const t=trips[i];
       if((!t.virtualSource&&!isActive(source(t.siteId)))||
-        !isActive(source(t.baseId))||!isActive(source(t.destinationId))){
+        !serving(source(t.baseId),yardIds)||!serving(source(t.destinationId),yardIds)){
         trips.splice(i,1);continue;
       }
       // A carter displaced by a productive job is replaced only by another

@@ -112,7 +112,8 @@ const WEATHER_ZOOM_THRESHOLD=.5;
 const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
 const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
 // Asset Lab sandbox: one fixed world, so audit captures repeat across runs and machines.
-const initialSeed=(()=>{if(window.__CONQUER_REGIONAL_DEMO__)return window.__CONQUER_REGIONAL_DEMO__.seed;if(window.__CONQUER_ASSET_LAB__)return 20261023;const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
+// Blocked storage (SecurityError) or a corrupted value must not stop boot.
+const initialSeed=(()=>{if(window.__CONQUER_REGIONAL_DEMO__)return window.__CONQUER_REGIONAL_DEMO__.seed;if(window.__CONQUER_ASSET_LAB__)return 20261023;const k='conquer.seed.0.0',r=Math.floor(Math.random()*2147483647);let v=null;try{v=localStorage.getItem(k)}catch{}if(v&&Number.isFinite(+v))return +v;try{localStorage.setItem(k,String(r))}catch{}return r})();
 const PROVISIONAL_RESOURCES=Object.freeze({gold:10000,population:10000,food:10000,wood:10000,stone:10000,clay:10000,metal:10000,equipment:10000});
 const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:window.__CONQUER_REGIONAL_DEMO__?.biome||'test',season:'summer',seasonOverride:null,weatherOverride:null,neighborBiomes:window.__CONQUER_REGIONAL_DEMO__?.surroundingBiomes||{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2,builtWide:2},buildMasonryMaterial:'stone',resources:{...PROVISIONAL_RESOURCES},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,socialSchemaVersion:2,accessRoadVersion:0,growthStep:0,privateMasonryMaterial:'stone',nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
 // DEV VISUAL PALETTE BEGIN: presentation only; never change structure material/cost/HP.
@@ -455,6 +456,8 @@ const BIOMES=Object.freeze({
 const FUNCTION_CATALOG=['barracks','armory','storage','granary','kitchen','stables','nobleRoom','workshop','chapel','commonHall','throneHall','treasury','prison','latrine','infirmary','dovecote','cistern','mews'];
 // Ground floor under the arches of a W1 portico: stables, armourers' workshop, carts/stores.
 const PORTICO_FUNCTIONS=Object.freeze(['stables','workshop','storage']);
+// Small (W1) towers other than the Mastio: the spiral stair fills the shaft, only these rooms fit (user, 04/11/2026).
+const W1_TOWER_FUNCTIONS=Object.freeze(['dovecote','latrine','prison','treasury','armory']);
 const FUNCTION_LABELS={guard:'Guard post',barracks:'Barracks',armory:'Armory',storage:'Materials store',granary:'Granary',kitchen:'Kitchen',stables:'Stables',quarters:'Quarters',nobleRoom:'Noble chambers',workshop:'Armament workshop',chapel:'Chapel',commonHall:'Common hall',throneHall:'Throne hall',treasury:'Treasury',prison:'Prison',latrine:'Latrine',infirmary:'Infirmary',dovecote:'Dovecote',cistern:'Cistern',mews:'Falconry',council:'Council chamber',tribunal:'Tribunal'};
 // Town hall: one room per floor, as many as the civic level (L1 = the ground floor only),
 // shown one floor at a time in the floor-by-floor cutaway.
@@ -947,14 +950,14 @@ function constructionCost(s){
 function costText(cost){const icons={gold:'🪙',stone:'🪨',clay:'🧱',wood:'🪵',metal:'⛓'};const parts=RES_ORDER.filter(k=>(cost?.[k]||0)>0).map(k=>`${icons[k]} ${cost[k]}`);return parts.length?parts.join(' · '):'free'}
 // Before founding, the sandbox only permits placement of the founding well.
 // Once founded, the economic treasury and castle store own all construction assets.
+// DEV free build covers construction sites only (grantFreeConstructionMaterials and
+// the payroll bypass): soldiers, ships, repairs and restyles still pay here.
 function canAfford(cost){
-  if(typeof devBuildMode==='function'&&devBuildMode('freeBuild'))return true;
   if(State.village?.founded&&window.ConquerEconomy?.canBuild)
     return window.ConquerEconomy.canBuild(cost);
   return Object.entries(cost||{}).every(([k,v])=>(State.resources[k]||0)>=v);
 }
 function spendCost(cost){
-  if(typeof devBuildMode==='function'&&devBuildMode('freeBuild'))return true;
   if(State.village?.founded&&window.ConquerEconomy?.spendBuild){
     if(!window.ConquerEconomy.spendBuild(cost))return false;
   }else for(const [k,v] of Object.entries(cost||{}))

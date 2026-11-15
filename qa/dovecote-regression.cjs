@@ -28,7 +28,7 @@ const ctx=vm.createContext({
   builtInteriorFloors:s=>s.level||1,
 });
 vm.runInContext([pick(castle,'functionCapacity'),pick(core,'towerDovecoteAllowed'),pick(core,'towerDovecote'),
-  pick(siege,'eligibleRoom'),pick(siege,'floor'),pick(siege,'allowed')].join('\n'),ctx);
+  src('settlement-core.js').match(/const W1_TOWER_FUNCTIONS=[^\n]+/)[0],pick(siege,'eligibleRoom'),pick(siege,'floor'),pick(siege,'allowed')].join('\n'),ctx);
 const {allowed,towerDovecote}=vm.runInContext('({allowed,towerDovecote})',ctx);
 const tower=o=>({type:'tower',shape:'square',material:'stone',size:1.5,level:2,roofStyle:'pitched',...o});
 

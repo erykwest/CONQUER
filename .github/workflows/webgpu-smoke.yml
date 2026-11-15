@@ -27,6 +27,11 @@ on:
       - '.github/workflows/webgpu-smoke.yml'
       - '.github/actions/playwright-setup/action.yml'
   workflow_dispatch:
+  schedule:
+    - cron: '27 5 * * 0'
+
+permissions:
+  contents: read
 
 jobs:
   webgpu-smoke:

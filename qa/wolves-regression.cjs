@@ -43,6 +43,7 @@ const context=vm.createContext({
   clamp:(v,a,b)=>Math.min(b,Math.max(a,v)),
   withUrbanFigureOcclusion:(_p,_z,fn)=>fn(),performance:{now:()=>12345}
 });
+vm.runInContext(read('src/settlement-util.js'),context,{filename:'settlement-util.js'});
 vm.runInContext(art,context,{filename:'settlement-animals.js'});
 assert.ok(win.ConquerAnimals.SPECIES.wolf,'wolf SVG was transferred from animation');
 assert.equal(win.ConquerAnimals.SPECIES.wolf.modes.map(m=>m[0]).join(','),

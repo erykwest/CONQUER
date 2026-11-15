@@ -10,6 +10,7 @@ const check=new Function('require','__dirname',harness+`
 let passed=0;
 function test(name,body){body();passed++;console.log('PASS '+name)}
 run(moduleFile('economy'));
+run(moduleFile('util'));   // ConquerUtil (hash, rng, smoothstep) used by work-anim
 run(moduleFile('work-anim'));
 if(run('typeof window.ConquerWorkAnim?.FIELD_TOOL')!=='object')throw Error('work-anim not loaded');
 run("function qaMonthStart(month,year){for(let d=0;d<950;d++){const date=calendarDateFromDay(d);if(date.month===month&&date.year===year&&date.day===1)return d}throw Error('month')}");

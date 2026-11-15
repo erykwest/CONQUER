@@ -25,6 +25,8 @@ on:
       - 'qa/staff-people-regression.cjs'
       - '.github/workflows/wardrobe-regression.yml'
   workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   wardrobe:
     runs-on: ubuntu-latest

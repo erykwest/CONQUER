@@ -19,6 +19,9 @@ on:
       - 'qa/march-regression.cjs'
       - '.github/workflows/march-regression.yml'
 
+permissions:
+  contents: read
+
 jobs:
   march-regression:
     runs-on: ubuntu-latest

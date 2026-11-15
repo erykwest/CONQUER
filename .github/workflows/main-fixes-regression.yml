@@ -29,6 +29,9 @@ on:
       - qa/ui-combat-regression.mjs
       - .github/workflows/main-fixes-regression.yml
       - .github/actions/playwright-setup/action.yml
+  workflow_dispatch:
+  schedule:
+    - cron: '27 5 * * 0'
 permissions:
   contents: read
 jobs:
