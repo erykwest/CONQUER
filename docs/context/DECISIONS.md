@@ -1,5 +1,13 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-MP-PUBLIC-261115 — Lobby anonima: solo statistiche generali server (15/11/2026)
+
+- **DECISO dal product owner:** senza login sono pubbliche **solo le statistiche generali e aggregate dei server**. La lobby può mostrare conteggi giocatori/bot, capienza, età/fase della partita, stato delle iscrizioni, livello massimo aggregato, disponibilità numerica di ingressi idonei e orari del server.
+- **NON PUBBLICI:** mappe politiche/regionali delle campagne in corso, confini e proprietari, classifiche nominali, dati dei singoli insediamenti, eserciti, risorse, messaggi, rapporti, diplomazia o posizioni precise di spawn. I KPI di un feudo e il remote control richiedono autenticazione e autorizzazione su quella campagna.
+- **NON CAMBIA:** Home informativa, guide e Codex/Wiki restano pubblici e senza login; la limitazione riguarda i **dati dinamici delle campagne**.
+- **APERTO:** scelta precisa dei KPI aggregati, caching/aggiornamento e permessi di visibilità interna secondo ruoli feudali. **STATO:** decisione di design, non implementata. [Specifica server](../MULTIPLAYER-SERVER-SCOPE.md#3-lobby-e-scoperta-delle-partite), [hub](../REMOTE-CONTROL-SCOPE.md).
+
+
 ### 2026-11-12 — La quota collinare non impone una griglia
 
 La copertura minima deve essere raggiunta mantenendo varietà di superfici, contorni, rotazioni e distanze dei rilievi. Vietata la disposizione a file fisse come scorciatoia per soddisfare il 30%. Le catene montuose seguono il bordo regionale come direttrice, con dispersione longitudinale e trasversale delle singole cime; la medesima geometria è trasformata coerentemente per nord/est/sud/ovest.
