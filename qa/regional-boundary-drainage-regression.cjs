@@ -1,0 +1,21 @@
+'use strict';
+const fs=require('node:fs');
+const harness=fs.readFileSync(__dirname+'/urban-regression.cjs','utf8').split('let passed=0;')[0];
+new Function('require','__dirname',harness+`
+run(fs.readFileSync(__dirname+'/../src/regional-biome-rules.js','utf8'));run(moduleFile('regional-landscape'));run(moduleFile('hydrology'));
+run('State.relief={hills:[]};State.environment=[]');
+run('globalThis.qaLine={id:"regional-river",type:"river",width:4.4,points:[{x:100,y:0},{x:100,y:200}]};globalThis.qaWall={type:"mountain",points:[{x:0,y:20},{x:200,y:20},{x:200,y:40},{x:0,y:40}]}');
+assert.ok(run('window.ConquerHydrology.routeRelief(qaLine,[qaWall])'),'a disconnected upstream border strip must not erase the inland river');
+assert.ok(run('(()=>{const r=window.ConquerHydrology.routeRelief(qaLine,[qaWall]),blocked=window.ConquerHydrology.terrainGuard([qaWall],qaLine.width/2+2);return r.points[0].y>40&&r.points.at(-1).y===200&&r.points.every(p=>!blocked(p))})()'),'retained reach has clear banks');
+assert.ok(run('(()=>{const line={...qaLine,mouth:{kind:"sea",receiverId:"sea",point:{x:100,y:200}}},wall={...qaWall,points:qaWall.points.map(p=>({x:p.x,y:p.y+70}))},r=window.ConquerHydrology.routeRelief(line,[wall]);return r&&r.points.at(-1).y===200&&r.mouth.receiverId==="sea"})()'),'a mouth keeps its receiving component');
+assert.equal(run('window.ConquerHydrology.routeRelief(qaLine,[{type:"mountain",points:[{x:0,y:10},{x:200,y:10},{x:200,y:190},{x:0,y:190}]}])'),null,'tiny disconnected stubs are rejected');
+assert.equal(run('window.ConquerHydrology.routeRelief(qaLine,[])===qaLine'),true,'unobstructed drainage is unchanged');
+run('State.seed=1;State.biome="hills";window.__CONQUER_REGIONAL_DEMO__={mountainSides:["north"],hasRiver:true,riverSides:["east"]};State.structures=[];State.environment=[];State.relief=null;generateRelief();generateEnvironment()');
+const result=run('({hills:State.relief.hills.length,coverage:estimateReliefCoverage(80),rivers:State.environment.filter(f=>f.type==="river").length,streams:State.environment.filter(f=>f.type==="stream").length})');
+console.log(JSON.stringify(result));
+assert.ok(result.hills>=4&&result.coverage>=.30,'hill recipe retained');
+assert.ok(result.rivers>=1,'regional river must survive the mountain/hill composition');
+assert.ok(result.streams>=1&&result.streams<=3,'hill streams retained');
+assert.ok(run('(()=>{const o=[...State.environment.filter(f=>f.type==="mountain"),...State.relief.hills.map(h=>({type:"mountain",points:reliefHillFootprint(h)}))];return State.environment.filter(f=>["river","stream"].includes(f.type)).every(f=>f.points.every(p=>!window.ConquerHydrology.terrainGuard(o,f.width/2+2)(p)))})()'),'real river and tributaries keep clear banks');
+console.log('PASS regional boundary drainage: connected inland reach, real mouths, clear banks and HILLS quotas');
+`)(require,__dirname);

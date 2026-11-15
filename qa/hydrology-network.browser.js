@@ -9,7 +9,7 @@ async page=>{
   if(preset==='mouth-lake'&&actual.delta!==0)throw Error('Lake mouth must be direct');
   if(preset.startsWith('mouth-')&&!actual.mouths.includes(preset==='mouth-sea'?'sea':'lake'))throw Error('Missing mouth '+preset);
   if(preset.endsWith('confluence')&&!actual.confluences.length)throw Error('Missing confluence '+preset);
-  if(actual.biomes.join()!=='plains,forest,mountains,swamp')throw Error('Unexpected biome menu');
+  if(actual.biomes.join()!=='plains,hills,forest,swamp')throw Error('Unexpected biome menu');
   await page.screenshot({path:'output/playwright/hydrology-'+preset+'.png'});
  }
 }
