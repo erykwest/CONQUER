@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceDigest": "a05536dfa0c8dbf28ccd76acbbcafc7047c1bb895571b457af20f9097a50d6e7",
+  "sourceDigest": "d42562590af26ea43cac0326ca1be1c08e81d39847955fa209cac144d8c80d6f",
   "catalog": {
     "schemaVersion": 1,
     "categories": [
@@ -13,6 +13,106 @@
       "ship"
     ],
     "items": [
+      {
+        "id": "building:balivo",
+        "key": "balivo",
+        "label": "balivo",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "constructionCost/buildDuration"
+        },
+        "properties": {
+          "levels": [
+            1,
+            2
+          ]
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:bargello",
+        "key": "bargello",
+        "label": "bargello",
+        "category": "building",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "constructionCost/buildDuration"
+        },
+        "properties": {
+          "levels": [
+            1,
+            2
+          ]
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
       {
         "id": "building:bridge",
         "key": "bridge",
@@ -1430,6 +1530,10 @@
             "innerRoof": [
               "off",
               "on"
+            ],
+            "machicolationStyle": [
+              "standard",
+              "italian"
             ]
           },
           "geometry": {
@@ -6961,6 +7065,100 @@
         }
       },
       {
+        "id": "upgrade:tower.machicolationStyle.italian",
+        "key": "italian",
+        "label": "tower · machicolationStyle · italian",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.machicolationStyle"
+        },
+        "properties": {
+          "variant": "machicolationStyle",
+          "value": "italian",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.machicolationStyle.standard",
+        "key": "standard",
+        "label": "tower · machicolationStyle · standard",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.machicolationStyle"
+        },
+        "properties": {
+          "variant": "machicolationStyle",
+          "value": "standard",
+          "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
         "id": "upgrade:tower.roofShape.gable",
         "key": "gable",
         "label": "tower · roofShape · gable",
@@ -7999,6 +8197,44 @@
             "gold": 180,
             "stone": 110,
             "wood": 120
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 6
+        }
+      }
+    },
+    "building:bargello": {
+      "structure": {
+        "type": "bargello"
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 140,
+            "stone": 90,
+            "wood": 60
+          }
+        },
+        "time": {
+          "status": "known",
+          "value": 5
+        }
+      }
+    },
+    "building:balivo": {
+      "structure": {
+        "type": "balivo"
+      },
+      "quote": {
+        "cost": {
+          "status": "known",
+          "value": {
+            "gold": 170,
+            "stone": 120,
+            "wood": 80
           }
         },
         "time": {

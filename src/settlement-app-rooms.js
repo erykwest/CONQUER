@@ -142,7 +142,7 @@ function renderFunctionPanel(){
     const name=slots.querySelector('#wellNameInput');if(name)name.onchange=()=>StructureCommands.setWellName(s.id,name.value);
     return;
   }
-  if(!s||!['tower','gate','built','wall','palisade','house','market','tavern','church','training','plaza','townhall','guild','moat','bridge'].includes(s.type)){panel.classList.remove('open');return}
+  if(!s||!['tower','gate','built','wall','palisade','house','market','tavern','church','training','plaza','townhall','guild','bargello','balivo','moat','bridge'].includes(s.type)){panel.classList.remove('open');return}
   if(['moat','bridge'].includes(s.type)){
     panel.classList.add('open');
     const cost=s.buildCost||constructionCost(s);
@@ -196,13 +196,15 @@ function renderFunctionPanel(){
     // Lookout, outpost and signal fire (settlement-soldiers.js).
     html+=window.ConquerSoldiers?.towerPanelHtml?.(s)||'';
   }
-  if(['house','market','tavern','church','training','plaza','townhall','guild'].includes(s.type)){
+  if(['house','market','tavern','church','training','plaza','townhall','guild','bargello','balivo'].includes(s.type)){
     const deg=Math.round((Number(s.angle)||0)*180/Math.PI+360)%360;
     html+=`<div class="slot"><div class="slot-label">Building rotation · ${deg}°</div><div class="grid3"><button data-point-rotate="-1">↺ 15°</button><button data-point-rotate="12">⇄ 180°</button><button data-point-rotate="1">↻ 15°</button></div></div>`;
   }
   if(CIVIC_LEVEL_TYPES.includes(s.type)){
-    html+=`<div class="slot"><div class="slot-label">Civic development · L${civicLevel(s)} (skeleton)</div><div class="grid3">${[1,2,3].map(level=>`<button data-civic-level="${level}" class="${civicLevel(s)===level?'active':''}">L${level}</button>`).join('')}</div><div class="legend">Three planned stages; no economy or service effects yet.</div></div>`;
+    html+=`<div class="slot"><div class="slot-label">Civic development · L${civicLevel(s)} (skeleton)</div><div class="grid3">${civicLevels(s.type).map(level=>`<button data-civic-level="${level}" class="${civicLevel(s)===level?'active':''}">L${level}</button>`).join('')}</div><div class="legend">Three planned stages; no economy or service effects yet.</div></div>`;
   }
+  if(s.type==='church')html+=window.ConquerChurch?.panelHtml?.(s)||'';
+  if(s.type==='guild')html+=window.ConquerGuild?.panelHtml?.(s)||'';
   if(CIVIC_ANNEX_CATALOG[s.type]){
     const catalog=CIVIC_ANNEX_CATALOG[s.type],children=civicAnnexChildren(s.id);
     html+='<div class="slot"><div class="slot-label">Annexes · '+children.length+' built (skeleton)</div>'+
@@ -252,7 +254,7 @@ function renderFunctionPanel(){
         const parent=State.structures.find(x=>x.id===s.parentTowerId);
         html+=`<div class="slot"><div class="legend">Subtower attached to ${parent?structureLabel(parent):'parent structure'}.</div></div>`;
       }
-      html+=`<div class="slot"><div class="slot-label">Tower roof</div><div class="grid3"><button data-tower-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-tower-roof="machicolation" class="${roof==='machicolation'?'active':''}">Machicolation</button><button data-tower-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div><div class="legend">Machicolation: merlatura in aggetto con mensole. Predispone il futuro attacco verticale a raggio 1U.</div></div>`;
+      html+=`<div class="slot"><div class="slot-label">Tower roof</div><div class="grid"><button data-tower-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-tower-roof="machicolation" class="${roof==='machicolation'&&!towerItalianMachicolation(s)?'active':''}">Machicolation</button><button data-tower-roof="machicolationItalian" ${s.shape==='half'?'disabled':''} class="${towerItalianMachicolation(s)?'active':''}">Caditoie all'italiana</button><button data-tower-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div><div class="legend">Machicolation: merlatura in aggetto con mensole. All'italiana: mensole alte quattro corsi raccordate da archetti (solo estetica, stesse regole). Predispone il futuro attacco verticale a raggio 1U.</div></div>`;
       if(s.shape!=='half')html+=hoardingSlot(s);
       if(s.shape!=='half'){
         const ir=towerInnerRoofMounted(s),irOk=towerInnerRoofAllowed(s);
@@ -355,6 +357,7 @@ function renderFunctionPanel(){
   window.ConquerCrossings?.bindPanel(slots);
   window.ConquerKeepEntrance?.bindPanel(slots);
   window.ConquerSoldiers?.bindTowerPanel?.(slots,s);
+  window.ConquerChurch?.bindPanel?.(slots);
   // Every control acts through StructureCommands (src/settlement-structure-commands.js), shared with UI v2.
   const on=(selector,fn,event='onclick')=>slots.querySelectorAll(selector).forEach(el=>el[event]=e=>{const target=selectedStructure();if(target)fn(target.id,el,e)});
   on('[data-house-up]',id=>StructureCommands.changeHouseLevel(id,1));

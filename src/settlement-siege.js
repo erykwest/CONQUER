@@ -24,7 +24,7 @@
   });
   const PORTCULLIS_HEALTH=120;
   const BASE_HEALTH=Object.freeze({tower:260,gate:250,wall:130,built:170,palisade:75,
-    house:90,market:70,tavern:140,church:240,townhall:220,guild:150,windmill:110,watermill:120});
+    house:90,market:70,tavern:140,church:240,townhall:220,guild:150,bargello:160,balivo:170,windmill:110,watermill:120});
   const isMill=s=>['windmill','watermill'].includes(s?.type);
   // Structural cores require siege artillery: blades, arrows, rams and torches
   // cannot demolish walls, towers, gatehouses or built sections, even in wood.
@@ -766,7 +766,7 @@
     if(s.type==='palisade'||s.material==='wood'||(s.type==='bridge'&&s.variant!=='stone')||(s.type==='tower'&&isWoodTower(s))||(s.type==='gate'&&typeof isWoodGate==='function'&&isWoodGate(s)))return'wood';
     if(s.type==='house'||s.type==='tavern'||s.type==='market')return'timber';
     // Timber-framed guild halls (L1-L2) and the L1 town hall; their masonry levels fall as stone.
-    if(s.type==='guild'&&civicLevel(s)<3||s.type==='townhall'&&civicLevel(s)===1)return'timber';
+    if(s.type==='guild'&&civicLevel(s)<3||['townhall','bargello','balivo'].includes(s.type)&&civicLevel(s)===1)return'timber';
     return'stone';
   }
   function collapsePalette(s){
@@ -1168,10 +1168,11 @@
     // Everything standing comes down; walls that leant on it stay as open ends.
     const g=groundOf(s),H=structureHeight(s)+(['tower','gate'].includes(s.type)?.35:0);
     // The town hall comes down hall first, then its taller civic tower from its own height.
-    if(s.type==='townhall'&&typeof civicParts==='function'){
-      const L=civicLevel(s),lean=from?{x:s.x-from.x,y:s.y-from.y}:null;
+    // The Bargello the same way, its turret after the house.
+    if((s.type==='townhall'||s.type==='bargello')&&typeof civicParts==='function'){
+      const L=civicLevel(s),lean=from?{x:s.x-from.x,y:s.y-from.y}:null,bar=s.type==='bargello';
       for(const part of civicParts(s)){const tower=part.role==='tower';
-        startCollapse(s,g,g+(tower?[3.9,5.8,8.2]:[2.8,2.9,3.8])[L-1],{parts:[part.points],lean,cause:tower?'collapse-tower':'collapse',...(tower?{delay:.3}:{})})}
+        startCollapse(s,g,g+(bar?(tower?[3.9,4.9]:[2.4,2.7]):(tower?[3.9,5.8,8.2]:[2.8,2.9,3.8]))[L-1],{parts:[part.points],lean,cause:tower?'collapse-tower':'collapse',...(tower?{delay:.3}:{})})}
     }else if(!isLinear(s)&&H>.2)startCollapse(s,g,g+H,{lean:from?{x:(s.x??0)-from.x,y:(s.y??0)-from.y}:null});
     else{const x=state();x.ruins.push({id:s.id,type:s.type,x:s.x??(s.a.x+s.b.x)/2,y:s.y??(s.a.y+s.b.y)/2,day:State.clock.day})}
     // Exterior elements of its rooms (a garderobe on its corbels) come down with it.

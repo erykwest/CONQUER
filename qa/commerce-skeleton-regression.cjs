@@ -55,16 +55,16 @@ test('commerce boots empty without L4+ resident inflation or phantom transaction
   assert.equal(h.e.GOODS.length,7,'L3 goods live in the commerce catalog, not in the base market');
   assert.equal(h.c.state().services.inn.operatorHouseId,null,'no invented owner');
 });
-test('registering an L3 workshop moves no gold or base goods',()=>{
+test('registering an L2 artisan workshop moves no gold or base goods',()=>{
   const h=harness(),before=h.e.snapshot();
-  assert.equal(h.c.registerShop('home3','weaver'),true);
-  assert.equal(h.c.registerShop('home2','smith'),false,'L2 cannot own L3 shop');
-  assert.equal(h.c.registerShop('home4','smith'),false,'L4 cannot claim L3 shop');
+  assert.equal(h.c.registerShop('home2','weaver'),true);
+  assert.equal(h.c.registerShop('home3','smith'),false,'L3 educated cannot own artisan shop');
+  assert.equal(h.c.registerShop('home4','smith'),false,'L4 noble cannot operate an artisan shop');
   assert.equal(h.c.registerShop('home3b','invalid'),false);
-  assert.equal(h.c.state().shops.home3.status,'active');
-  assert.equal(h.c.state().shops.home3.channel,'local');
-  assert.equal(h.c.worksiteForHouse('home3').kind,'shop');
-  assert.equal(h.c.worksiteForHouse('home3').structure.id,'home3');
+  assert.equal(h.c.state().shops.home2.status,'active');
+  assert.equal(h.c.state().shops.home2.channel,'local');
+  assert.equal(h.c.worksiteForHouse('home2').kind,'shop');
+  assert.equal(h.c.worksiteForHouse('home2').structure.id,'home2');
   assert.equal(h.c.WORKSHOP_KINDS.weaver.outputs[0],'textiles');
   assert.equal(h.e.snapshot().castleGold,before.castleGold);
   assert.equal(h.c.snapshot().l3Shops,1);
@@ -74,7 +74,7 @@ test('L3 can operate inn/church, one local enterprise per household',()=>{
   const h=harness();
   assert.equal(h.c.assignService('inn','home3'),true);
   assert.equal(h.c.assignService('church','home3'),false,'operator cannot staff two businesses');
-  assert.equal(h.c.registerShop('home3','tanner'),false,'operator cannot duplicate a shop');
+  assert.equal(h.c.registerShop('home3','tanner'),false,'L3 service operator cannot own L2 workshop');
   assert.equal(h.c.assignService('church','home3b'),true);
   assert.equal(h.c.snapshot().l3OperatedServices,2);
   assert.equal(h.c.worksiteForHouse('home3').kind,'service');
@@ -92,16 +92,16 @@ test('primary-site portfolio uses existing economic ownership, without fabricati
   assert.equal(h.c.PRIMARY_KINDS.includes('loggingCamp'),true);
   assert.equal(h.c.PRIMARY_KINDS.includes('clayPit'),false,'new clay quarry not implemented yet');
 });
-test('resident L4+ trip and foreign L4+ manifest do not create cash or goods',()=>{
+test('resident L3 merchant trip and foreign manifest do not create cash or goods',()=>{
   const h=harness(),before=h.e.snapshot();
-  const resident={id:'out',source:'resident',houseId:'home4',originId:'well',destinationId:'other',
+  const resident={id:'out',source:'resident',houseId:'home3',originId:'well',destinationId:'other',
     cargo:[{good:'stone',qty:2}],coinGold:12};
   const foreign={id:'incoming',source:'external',originId:'other',destinationId:'well',
     cargo:[{good:'wood',qty:4}],coinGold:50};
   assert.equal(h.c.planJourney(resident),true);
   assert.equal(h.c.planJourney(foreign),true);
-  assert.equal(h.c.state().journeys.incoming.tier,4);
-  assert.equal(h.c.state().journeys.incoming.role,'L4+');
+  assert.equal(h.c.state().journeys.incoming.tier,3);
+  assert.equal(h.c.state().journeys.incoming.role,'L3');
   assert.equal(h.c.snapshot().l4PlusPlanned,2);
   assert.equal(h.c.snapshot().l4PlusDeclaredGold,62);
   assert.equal(h.c.snapshot().l4PlusHeldGold,0,'planning does not take coins from wallet');
@@ -152,50 +152,50 @@ test('capacity is based on single cargo type, not on coin amount',()=>{
   assert.equal(h.c.caravanQuote([],500).wagons,1);
   assert.equal(h.c.caravanQuote([{good:'stone',qty:2},{good:'food',qty:2}],1),null);
 });
-test('resident L4 chest is escrowed from existing wallet, and cancelling refunds once',()=>{
-  const h=harness(),before=h.e.state().wallet.L4,stock=asObject(h.e.snapshot().market);
-  const trip={id:'merchant',source:'resident',houseId:'home4',originId:'well',
-    destinationId:'foreign',cargo:[{good:'metal',qty:2}],coinGold:120};
+test('resident L3 merchant chest is escrowed from existing wallet, and cancelling refunds once',()=>{
+  const h=harness(),before=h.e.state().wallet.L3,stock=asObject(h.e.snapshot().market);
+  const trip={id:'merchant',source:'resident',houseId:'home3',originId:'well',
+    destinationId:'foreign',cargo:[{good:'metal',qty:2}],coinGold:40};
   assert.equal(h.c.planJourney(trip),true);
-  assert.equal(h.e.state().wallet.L4,before,'planning alone cannot duplicate spendable gold');
+  assert.equal(h.e.state().wallet.L3,before,'planning alone cannot duplicate spendable gold');
   assert.equal(h.c.reserveJourneyCoins('merchant'),true);
-  assert.equal(h.e.state().wallet.L4,before-120);
-  assert.equal(h.c.state().journeys.merchant.chest.reservedGold,120);
-  assert.equal(h.c.snapshot().l4PlusHeldGold,120);
+  assert.equal(h.e.state().wallet.L3,before-40);
+  assert.equal(h.c.state().journeys.merchant.chest.reservedGold,40);
+  assert.equal(h.c.snapshot().l4PlusHeldGold,40);
   assert.equal(h.c.reserveJourneyCoins('merchant'),false,'no second wallet debit');
   assert.equal(h.c.cancelPlannedJourney('merchant'),true);
-  assert.equal(h.e.state().wallet.L4,before,'cancellation returns exact reserved gold');
+  assert.equal(h.e.state().wallet.L3,before,'cancellation returns exact reserved gold');
   assert.equal(h.c.cancelPlannedJourney('merchant'),false,'no second refund');
   assert.deepEqual(asObject(h.e.snapshot().market),stock,
     'the coin chest must not modify goods stock');
 });
 test('no phantom chest: budget check, external funds and save/reload',()=>{
-  const h=harness(),wallet=h.e.state().wallet.L4;
-  assert.equal(h.c.planJourney({id:'unfunded',source:'resident',houseId:'home4',
+  const h=harness(),wallet=h.e.state().wallet.L3;
+  assert.equal(h.c.planJourney({id:'unfunded',source:'resident',houseId:'home3',
     originId:'well',destinationId:'city',coinGold:wallet+1}),true);
   assert.equal(h.c.reserveJourneyCoins('unfunded'),false);
-  assert.equal(h.e.state().wallet.L4,wallet);
+  assert.equal(h.e.state().wallet.L3,wallet);
   assert.equal(h.c.planJourney({id:'external',originId:'elsewhere',
     destinationId:'well',coinGold:9000}),true);
   assert.equal(h.c.reserveJourneyCoins('external'),false);
-  assert.equal(h.e.state().wallet.L4,wallet,'foreign chest never debits or credits local cash');
+  assert.equal(h.e.state().wallet.L3,wallet,'foreign chest never debits or credits local cash');
   assert.equal(h.c.cancelPlannedJourney('unfunded'),true);
   const saved=asObject(h.State.economy),resumed=harness(saved);
   assert.equal(resumed.c.snapshot().l4PlusDeclaredGold,9000);
-  assert.equal(resumed.e.state().wallet.L4,wallet);
+  assert.equal(resumed.e.state().wallet.L3,wallet);
   assert.equal(resumed.c.state().journeys.external.chest.reservedGold,0);
 });
 test('escrow survives save/reload without duplicate transfer or loss',()=>{
-  const h=harness(),wallet=h.e.state().wallet.L4;
-  h.c.planJourney({id:'funded',source:'resident',houseId:'home4',
+  const h=harness(),wallet=h.e.state().wallet.L3;
+  h.c.planJourney({id:'funded',source:'resident',houseId:'home3',
     originId:'well',destinationId:'x',coinGold:50});
   h.c.reserveJourneyCoins('funded');
   const resumed=harness(asObject(h.State.economy));
-  assert.equal(resumed.e.state().wallet.L4,wallet-50);
+  assert.equal(resumed.e.state().wallet.L3,wallet-50);
   assert.equal(resumed.c.snapshot().l4PlusHeldGold,50);
   assert.equal(resumed.c.reserveJourneyCoins('funded'),false);
   assert.equal(resumed.c.cancelPlannedJourney('funded'),true);
-  assert.equal(resumed.e.state().wallet.L4,wallet);
+  assert.equal(resumed.e.state().wallet.L3,wallet);
 });
 test('legacy V1 cargo with multiple goods remains stored but new trips are monotype',()=>{
   const h=harness();
@@ -251,7 +251,7 @@ test('inn lodging is capacity limited and depends on an explicitly confirmed arr
 });
 test('journey out of local settlement cannot fake arrival at home inn',()=>{
   const h=harness();
-  assert.equal(h.c.planJourney({id:'out',source:'resident',houseId:'home4',
+  assert.equal(h.c.planJourney({id:'out',source:'resident',houseId:'home3',
     originId:'well',destinationId:'city'}),true);
   assert.equal(h.c.confirmArrival('out'),false);
   assert.equal(h.c.configureInnCapacity('inn',1),true);
@@ -270,7 +270,7 @@ test('sync prunes removed services and resets stranded lodging safely',()=>{
 });
 test('old saves gain commerce state without resetting existing balances',()=>{
   const h=harness();
-  h.c.registerShop('home3','weaver');
+  h.c.registerShop('home2','weaver');
   h.c.assignService('church','home3b');
   h.c.configureInnCapacity('inn',4);
   h.c.planJourney({id:'v',originId:'city',destinationId:'well'});
@@ -284,9 +284,9 @@ test('old saves gain commerce state without resetting existing balances',()=>{
   assert.equal(resumed.c.snapshot().l3Shops,0,'new game clears commerce');
   assert.equal(resumed.c.snapshot().l4PlusPlanned,0,'new game clears manifests');
 });
-test('v2 money purse migrates to physical chest without replaying L4 escrow',()=>{
-  const h=harness(),wallet=h.e.state().wallet.L4;
-  h.c.planJourney({id:'legacy-funded',source:'resident',houseId:'home4',
+test('v2 money purse migrates to physical chest without replaying L3 merchant escrow',()=>{
+  const h=harness(),wallet=h.e.state().wallet.L3;
+  h.c.planJourney({id:'legacy-funded',source:'resident',houseId:'home3',
     originId:'well',destinationId:'foreign',coinGold:25});
   assert.equal(h.c.reserveJourneyCoins('legacy-funded'),true);
   const saved=asObject(h.State.economy),j=saved.commerce.journeys['legacy-funded'];
@@ -295,16 +295,16 @@ test('v2 money purse migrates to physical chest without replaying L4 escrow',()=
   const resumed=harness(saved),loaded=resumed.c.state().journeys['legacy-funded'];
   assert.deepEqual(asObject(loaded.chest),{gold:25,reservedGold:25});
   assert.equal(loaded.purse,undefined);
-  assert.equal(resumed.e.state().wallet.L4,wallet-25);
+  assert.equal(resumed.e.state().wallet.L3,wallet-25);
   assert.equal(resumed.c.reserveJourneyCoins('legacy-funded'),false,'no duplicated debit');
   assert.equal(resumed.c.cancelPlannedJourney('legacy-funded'),true);
-  assert.equal(resumed.e.state().wallet.L4,wallet,'no money lost during migration');
+  assert.equal(resumed.e.state().wallet.L3,wallet,'no money lost during migration');
 });
 test('legacy #55 blueprint trades migrate to the urban catalog',()=>{
-  const h=harness();h.c.registerShop('home3','weaver');
+  const h=harness();h.c.registerShop('home2','weaver');
   const saved=asObject(h.State.economy);
-  saved.commerce.shops.home3.kind='smith';saved.commerce.shops.home3.status='blueprint';saved.commerce.version=3;
-  const resumed=harness(saved),shop=resumed.c.state().shops.home3;
+  saved.commerce.shops.home2.kind='smith';saved.commerce.shops.home2.status='blueprint';saved.commerce.version=3;
+  const resumed=harness(saved),shop=resumed.c.state().shops.home2;
   assert.equal(shop.kind,'blacksmith');assert.equal(shop.status,'active');assert.equal(shop.revenue,0);
 });
 test('script order, persistence and L3 art direction stay compatible',()=>{
@@ -315,8 +315,8 @@ test('script order, persistence and L3 art direction stay compatible',()=>{
   assert.ok(local.includes('economy:State.economy||null'),'local saves carry nested commerce');
   assert.ok(local.includes('economy:State.economy||null'),'cloud saves carry nested commerce');
   assert.ok(/const CIVIC_TYPES=Object\.freeze\(\['market','tavern','church'/.test(core));
-  assert.ok(residentsCode.includes("if(level===3)return artisanPosition(house,shiftedDay)"));
-  assert.ok(residentsCode.includes("if(level===3)return'artisan'"));
+  assert.ok(residentsCode.includes("if(level===3)return educatedPosition(house,shiftedDay)"));
+  assert.ok(residentsCode.includes("if(level===3)return'merchant'"));
   const routines=fs.readFileSync(path.join(ROOT,'src/settlement-population-routines.js'),'utf8');
   assert.ok(routines.includes("window.ConquerCommerce?.worksiteForHouse?.(house.id)"));
 });

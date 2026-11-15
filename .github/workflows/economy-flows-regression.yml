@@ -8,6 +8,9 @@ on:
   pull_request:
     paths:
       - 'src/settlement-economy.js'
+      - 'src/settlement-treasury.js'
+      - 'src/settlement-combat.js'
+      - 'qa/treasury-regression.cjs'
       - 'src/settlement-panels.js'
       - 'src/settlement-panels.css'
       - 'src/settlement-heraldry.js'
@@ -17,6 +20,8 @@ on:
       - 'src/settlement-population-figures.js'
       - 'src/ui/**'
       - 'qa/labor*.cjs'
+      - 'src/settlement-educated.js'
+      - 'qa/educated-regression.cjs'
       - 'qa/economy*.cjs'
       - 'qa/forestry-regression.cjs'
       - 'qa/storage-yard-regression.cjs'
@@ -25,6 +30,10 @@ on:
       - 'src/settlement-haulage.js'
       - 'src/settlement-population-figures.js'
       - 'src/settlement-commerce.js'
+      - 'src/settlement-church.js'
+      - 'src/settlement-guild.js'
+      - 'qa/guild*.cjs'
+      - 'qa/church*.cjs'
       - 'src/settlement-storage-yard.js'
       - 'src/settlement-castle.js'
       - 'src/settlement-castle-placement.js'
@@ -85,7 +94,11 @@ jobs:
           node qa/construction-payroll-regression.cjs
           node qa/construction-commute-regression.cjs
           node qa/labor-jobs-regression.cjs
+          node --check src/settlement-educated.js
+          node qa/educated-regression.cjs
           node qa/economy-rations-regression.cjs
+          node --check src/settlement-treasury.js
+          node qa/treasury-regression.cjs
           node qa/founding-regression.cjs
           node qa/builder-placement-regression.cjs
           node qa/refactor-app-population-regression.cjs
@@ -94,6 +107,10 @@ jobs:
           node qa/male-routines-regression.cjs
           node qa/female-routines-regression.cjs
           node qa/commerce-skeleton-regression.cjs
+          node --check src/settlement-church.js
+          node qa/church-regression.cjs
+          node --check src/settlement-guild.js
+          node qa/guild-regression.cjs
           node qa/urban-workshops-regression.cjs
           node qa/convoys-skeleton-regression.cjs
           node qa/road-sign-convoy-regression.cjs

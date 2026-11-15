@@ -4,13 +4,40 @@
 // of parts: browsing lowers the same head, it never reshapes it.
 // Classic script, no dependencies; poses are pure functions of time.
 (function(){
+  // Jointed legs (13/11/2026), shared with the redrawn horse: the horse's near hind and near fore
+  // are the templates (thigh and hock / forearm and knee, cannon, hoof). jointLeg re-places one with
+  // its hip at (x,top), its sole on the ground, its width scaled by w; f = 1 when the animal faces
+  // right in its art, -1 when it faces left (the thigh always bulges backwards). The first point
+  // of the subpath stays the hip pivot.
+  const LEG_TEMPLATES={
+    hind:{d:'M80 124 L96 124 C98 146,94 168,88 190 L90 230 C91 236,92 242,92 246 L80 246 C80 242,81 236,82 230 L78 198 C72 194,66 184,64 168 C62 150,64 136,66 124 L80 124 Z',x:80,top:124,ground:246},
+    fore:{d:'M192 136 L202 136 C204 156,200 176,199 194 L198 232 C199 238,200 242,200 246 L187 246 C187 242,188 238,189 232 L188 198 C186 186,182 158,182 136 L192 136 Z',x:192,top:136,ground:246}
+  };
+  function jointLeg(kind,x,top,ground,w=1,f=1){
+    const T=LEG_TEMPLATES[kind],k=(ground-top)/(T.ground-T.top);
+    const nums=T.d.match(/-?\d+(\.\d+)?/g).map(Number);let i=0;
+    return T.d.replace(/-?\d+(\.\d+)?/g,()=>{
+      const v=nums[i],even=i%2===0;i++;
+      return String(Math.round((even?x+(v-T.x)*w*f:top+(v-T.top)*k)*10)/10);
+    });
+  }
+  // Legs in the horse's order: near hind, far hind, near fore, far fore. hx/fx = hip x of the
+  // near hind / near fore; each far leg sits `far` units towards the middle of the body.
+  const jointLegs=({hx,fx,far,hindTop,foreTop,ground,w,wFore=w,f})=>[
+    jointLeg('hind',hx,hindTop,ground,w,f),jointLeg('hind',hx+far*f,hindTop,ground,w,f),
+    jointLeg('fore',fx,foreTop,ground,wFore,f),jointLeg('fore',fx-far*f,foreTop,ground,wFore,f)
+  ].join(' ');
+  // Far legs behind the near ones.
+  const FAR_FIRST=[1,3,0,2];
   const SPECIES={
     // Source: pecora_estesa.svg (256×256, faces left).
     sheep:{
       artFacing:-1,
       body:'M74 96 C74 78,92 68,116 68 C128 56,154 58,166 72 C190 72,208 86,208 108 C220 116,224 128,220 142 C222 158,214 170,198 176 C188 190,166 196,146 192 C128 198,102 196,88 184 C66 182,52 166,52 144 C42 132,40 118,46 104 C44 92,54 84,66 82 C68 88,70 92,74 96 Z',
       head:'M58 78 C72 62,94 58,106 70 C112 76,112 88,106 96 C96 110,76 116,62 104 C50 94,50 86,58 78 Z M56 76 L46 66 L42 56 L52 56 L62 64 Z M96 74 L108 66 L118 64 L118 72 L104 82 Z',
-      legs:'M80 174 C86 174,92 178,92 184 L90 226 C90 232,86 238,80 238 C74 238,70 232,70 226 L72 184 C72 178,74 174,80 174 Z M112 178 C118 178,124 182,124 188 L124 230 C124 236,120 242,114 242 C108 242,104 236,104 230 L104 188 C104 182,106 178,112 178 Z M154 178 C160 178,166 182,166 188 L162 228 C162 236,158 242,152 242 C146 242,142 236,142 230 L144 188 C144 182,148 178,154 178 Z M186 170 C192 170,198 174,198 180 L194 224 C194 232,190 238,184 238 C178 238,174 232,174 226 L176 182 C176 176,180 170,186 170 Z',
+      // Jointed legs (hock behind, knee in front) under the fleece; small dark hooves.
+      legs:jointLegs({hx:174,fx:90,far:13,hindTop:148,foreTop:152,ground:242,w:.85,f:-1}),
+      legOrder:FAR_FIRST,hoof:6,stride:.75,
       tail:'M206 112 C220 114,224 122,222 130 C218 126,212 124,206 120 Z',
       pivot:{x:100,y:92},eye:{x:72,y:82},tailPivot:{x:206,y:116},center:{x:134,y:240},
       // Walk pulls the head clear of the fleece (as in the reference
@@ -19,7 +46,7 @@
       // Fleece-covered neck root, hidden in the body until the head drops.
       woolNeck:{x:80,y:122,width:34},
       colors:{body:'#f6f3ec',shade:'#e4ddd0',line:'#5e554b',head:'#e7b1ab',headLine:'#87534f',
-        leg:'#e7b1ab',legFar:'#c98f8a',legLine:'#87534f',eye:'#2b2321'}
+        leg:'#e7b1ab',legFar:'#c98f8a',legLine:'#87534f',eye:'#2b2321',hoof:'#5a4440'}
     },
     // Source: capra_estesa.svg (256×256, faces right). Horns redrawn to sweep
     // back over the neck like an ibex; head and neck move as one rigid piece.
@@ -29,10 +56,16 @@
       head:'M170 100 C176 82,192 68,210 62 C226 56,238 62,240 74 C242 90,234 104,222 112 C212 118,202 118,192 114 C188 124,182 132,172 138 C162 136,156 132,154 126 C160 120,166 112,170 100 Z',
       horn:'M211 68 C213 40,198 16,174 14 C162 14,152 22,148 36 C158 28,170 22,181 24 C196 30,203 50,201 70 Z',
       beard:'M228 112 C230 120,228 128,222 134 C220 128,218 120,220 112 Z',
-      legs:'M88 170 C94 170,98 174,98 180 L96 228 C96 234,92 240,86 240 C80 240,76 234,76 228 L78 180 C78 174,82 170,88 170 Z M120 176 C126 176,130 180,130 186 L130 232 C130 238,126 244,120 244 C114 244,110 238,110 232 L110 186 C110 180,114 176,120 176 Z M156 176 C162 176,166 180,166 186 L164 230 C164 238,160 244,154 244 C148 244,144 238,144 232 L146 186 C146 180,150 176,156 176 Z M188 168 C194 168,198 172,198 178 L196 226 C196 232,192 238,186 238 C180 238,176 232,176 226 L178 178 C178 172,182 168,188 168 Z',
+      // Slim jointed legs like the horse's; the walk swings them less (stride).
+      legs:jointLegs({hx:94,fx:184,far:13,hindTop:132,foreTop:138,ground:244,w:.8,f:1}),
+      legOrder:FAR_FIRST,stride:.75,
       tail:'M66 130 C56 124,54 112,60 104 C68 110,72 120,70 130 Z',
       pivot:{x:166,y:128},eye:{x:216,y:76},tailPivot:{x:66,y:128},center:{x:138,y:242},
-      pose:{walk:{x:10,y:-14,rot:0},browse:{x:6,y:30,rot:1.42}},
+      // Neck joint as on the horse: the skull is cut at the throat line a→b and rides on a
+      // tapered neck from inside the chest, so a lowered head stays attached to the body.
+      joint:{a:{x:197,y:66},b:{x:195,y:116}},
+      neck:{root:{x:174,y:124},rootWidth:44,tipWidth:46,tipOnJoint:true},
+      pose:{walk:{x:14,y:-16,rot:-.08},browse:{x:30,y:100,rot:1.2}},
       // The neck grows out of the body: the head group sits behind the body.
       hoof:12,farHorn:{x:-7,y:3},headBehind:true,
       colors:{body:'#d8c19a',shade:'#c4aa80',line:'#5f4a33',head:'#d8c19a',headLine:'#5f4a33',
@@ -49,36 +82,52 @@
         {d:'M212 84 C204 74,192 70,184 74 C188 84,200 90,212 90 Z',fill:'ear'},
         {d:'M236 96 C246 96,251 104,249 112 C246 121,236 122,231 116 C228 108,230 99,236 96 Z',fill:'muzzle'}
       ],
-      legs:'M76 166 C82 166,86 170,86 176 L86 230 C86 236,82 242,76 242 C70 242,66 236,66 230 L66 176 C66 170,70 166,76 166 Z M112 170 C118 170,122 174,122 180 L122 234 C122 240,118 246,112 246 C106 246,102 240,102 234 L102 180 C102 174,106 170,112 170 Z M160 168 C166 168,170 172,170 178 L168 232 C168 238,164 244,158 244 C152 244,148 238,148 232 L150 178 C150 172,154 168,160 168 Z M194 160 C200 160,204 164,204 170 L202 226 C202 232,198 238,192 238 C186 238,182 232,182 226 L184 170 C184 164,188 160,194 160 Z',
+      // Sturdy jointed legs (the horse's, wider and shorter); a slow, short walk.
+      legs:jointLegs({hx:80,fx:194,far:16,hindTop:128,foreTop:140,ground:244,w:1.4,wFore:1.3,f:1}),
+      legOrder:FAR_FIRST,stride:.6,
       tail:'M48 104 C38 122,32 150,34 186 C29 191,27 199,31 205 C37 202,41 195,39 187 C39 153,45 126,54 108 Z',
       pivot:{x:176,y:118},eye:{x:226,y:90},tailPivot:{x:50,y:106},center:{x:134,y:244},
-      pose:{walk:{x:16,y:4,rot:0},browse:{x:24,y:30,rot:1.25}},
+      // Short thick neck on a joint at the throat, carried low; browse reaches the grass.
+      joint:{a:{x:191,y:82},b:{x:197,y:124}},
+      neck:{root:{x:172,y:118},rootWidth:62,tipWidth:44,tipOnJoint:true},
+      pose:{walk:{x:10,y:6,rot:0},browse:{x:22,y:86,rot:1.2}},
       // In-world size relative to sheep and goats.
       hoof:12,headBehind:true,scale:1.7,
       colors:{body:'#7a5236',shade:'#694530',line:'#3b2617',head:'#7a5236',headLine:'#3b2617',
         leg:'#7a5236',legFar:'#5f3f29',legLine:'#3b2617',eye:'#1e140d',
         ear:'#5f3f29',muzzle:'#a47c5d',hoof:'#2a1c12'}
     },
-    // Source: cavallo_esteso.svg (256×256, faces right). Long hanging tail
-    // and a mane along the neck redrawn after the reference; coat variants.
+    // Horse (256×256, faces right), redrawn 12/11/2026 to real proportions: body as long as
+    // the withers are high, legs as long as the body is deep with knees, hocks and hooves,
+    // neck sloping forward from the withers, a long head carried nose-down. The back keeps
+    // the old height (saddle, riders, caparisons and wagon harness stay attached).
     horse:{
       artFacing:1,
-      body:'M54 130 C60 108,88 92,126 92 C150 84,176 90,190 106 C202 110,210 118,214 128 C220 144,214 158,200 168 C190 180,172 188,148 188 C124 188,96 184,76 174 C60 166,50 150,54 130 Z',
-      head:'M170 102 C174 84,182 68,194 52 C204 38,214 28,222 28 C226 28,228 32,228 38 C226 48,224 60,224 70 C226 84,230 94,236 104 C236 112,228 118,220 118 C210 120,198 118,190 112 C182 120,172 128,162 132 C156 128,154 120,156 112 C160 108,164 106,170 102 Z',
+      body:'M60 108 C58 94,68 86,86 84 C104 84,116 92,134 92 C150 92,162 84,176 80 C192 80,206 92,212 108 C218 122,216 138,206 148 C196 160,178 162,160 160 C138 158,116 150,96 148 C82 150,66 146,60 134 C56 126,58 116,60 108 Z',
+      head:'M201 46 C203 30,212 23,221 26 C231 30,241 46,249 63 C254 73,253 83,245 86 C239 88,233 86,229 82 C222 80,214 78,208 74 C200 68,198 56,201 46 Z',
       headParts:[
-        {d:'M217 34 L213 17 L226 29 Z',fill:'body'},
-        {d:'M166 104 C170 84,180 66,194 50 C202 41,210 33,219 30 C214 40,206 50,200 60 C190 74,183 88,178 106 Z',fill:'mane'}
+        {d:'M212 31 L211 15 L221 27 Z',fill:'body'},
+        {d:'M216 27 C222 30,225 37,223 44 C216 40,212 34,216 27 Z',fill:'mane'},
+        {d:'M243 76 C246 74,249 75,249 78 C247 80,244 79,243 76 Z',fill:'line'}
       ],
-      legs:'M80 172 C86 172,90 176,90 182 L88 230 C88 236,84 242,78 242 C72 242,68 236,68 230 L70 182 C70 176,74 172,80 172 Z M110 178 C116 178,120 182,120 188 L118 236 C118 242,114 248,108 248 C102 248,98 242,98 236 L100 188 C100 182,104 178,110 178 Z M156 176 C162 176,166 180,166 186 L164 232 C164 238,160 244,154 244 C148 244,144 238,144 232 L146 186 C146 180,150 176,156 176 Z M190 166 C196 166,200 170,200 176 L196 226 C196 232,192 238,186 238 C180 238,176 232,176 226 L180 176 C180 170,184 166,190 166 Z',
-      tail:'M60 124 C46 134,38 162,36 198 C35 208,41 214,47 207 C49 182,55 158,66 138 Z',
+      // Near hind, far hind, near fore, far fore (hips at the top of each leg).
+      legs:[
+        'M80 124 L96 124 C98 146,94 168,88 190 L90 230 C91 236,92 242,92 246 L80 246 C80 242,81 236,82 230 L78 198 C72 194,66 184,64 168 C62 150,64 136,66 124 L80 124 Z',
+        'M94 124 L110 124 C112 146,108 168,102 190 L104 230 C105 236,106 242,106 246 L94 246 C94 242,95 236,96 230 L92 198 C86 194,80 184,78 168 C76 150,78 136,80 124 L94 124 Z',
+        'M192 136 L202 136 C204 156,200 176,199 194 L198 232 C199 238,200 242,200 246 L187 246 C187 242,188 238,189 232 L188 198 C186 186,182 158,182 136 L192 136 Z',
+        'M176 136 L186 136 C188 156,184 176,183 194 L182 232 C183 238,184 242,184 246 L171 246 C171 242,172 238,173 232 L172 198 C170 186,166 158,166 136 L176 136 Z'
+      ].join(' '),
+      tail:'M64 94 C48 100,40 126,40 156 C40 178,44 194,50 204 C55 198,55 182,57 166 C59 138,63 116,72 104 Z',
       tailFill:'mane',
-      pivot:{x:166,y:118},eye:{x:222,y:52},tailPivot:{x:60,y:128},center:{x:134,y:246},
+      pivot:{x:184,y:100},eye:{x:224,y:42},tailPivot:{x:64,y:98},center:{x:134,y:246},
+      // Belly shade band low on the barrel; stride: shorter leg swing for the long legs.
+      shadeY:166,stride:.62,runStride:.9,
       // Dedicated neck joint: the neck is its own tapered piece from a root
       // hidden in the body to the throat (line a→b); the rigid head rides on
       // its end. Pose x/y move the throat, rot turns the head about it.
-      pose:{walk:{x:0,y:0,rot:0},browse:{x:36,y:120,rot:.55}},
-      joint:{a:{x:210,y:40},b:{x:194,y:108}},
-      neck:{root:{x:150,y:112},rootWidth:58,tipWidth:66,mane:12},
+      pose:{walk:{x:0,y:0,rot:0},browse:{x:12,y:145,rot:1.0}},
+      joint:{a:{x:206,y:34},b:{x:214,y:76}},
+      neck:{root:{x:186,y:110},rootWidth:72,tipWidth:42,mane:11},
       // In-world size: a horse stands well above sheep and people.
       hoof:12,headBehind:true,scale:1.9,
       colors:{body:'#8a5a35',shade:'#764b2b',line:'#3a2414',head:'#8a5a35',headLine:'#3a2414',
@@ -98,7 +147,6 @@
   // Legs are listed hind near, hind far, fore near, fore far — the order the
   // gallop and rearing poses rely on.
   const legs=(xs,make)=>xs.map(make).join(' ');
-  const slimLeg=(top,w)=>x=>`M${x-w/2} ${top} L${x+w/2} ${top} L${x+w/2-1} 238 C${x+w/2-1} 244,${x-w/2+1} 244,${x-w/2+1} 238 Z`;
   const pawLeg=(top,w)=>x=>`M${x-w/2} ${top} L${x+w/2} ${top} L${x+w/2-1} 234 C${x+w/2+3} 236,${x+w/2+3} 244,${x+w/2-4} 244 L${x-w/2+2} 244 C${x-w/2} 240,${x-w/2} 238,${x-w/2+1} 234 Z`;
   const DOMESTIC_MODES=[['walk','Walking'],['browse','Browse']];
   for(const sp of Object.values(SPECIES))sp.modes=DOMESTIC_MODES;
@@ -112,7 +160,9 @@
       {d:'M218 46 C220 32,228 22,238 20 C238 32,232 42,226 50 Z',fill:'ear'},
       {d:'M248 60 C254 60,256 66,252 68 C248 68,246 64,248 60 Z',fill:'nose'}
     ],
-    legs:legs([92,104,184,172],slimLeg(146,10)),
+    // Long fine jointed legs (horse templates, narrower).
+    legs:jointLegs({hx:94,fx:186,far:12,hindTop:128,foreTop:136,ground:244,w:.66,f:1}),
+    legOrder:FAR_FIRST,stride:.7,runStride:.95,
     tail:'M72 112 C64 104,62 94,68 90 C74 96,78 106,78 116 Z',tailFill:'tail',
     pivot:{x:184,y:114},eye:{x:226,y:54},tailPivot:{x:74,y:114},center:{x:134,y:244},
     joint:{a:{x:214,y:44},b:{x:204,y:70}},neck:{root:{x:184,y:114},rootWidth:40,tipWidth:26},
@@ -140,7 +190,9 @@
       {d:'M214 86 L222 64 L228 84 Z',fill:'ear'},
       {d:'M250 98 C256 98,258 104,252 106 C248 106,247 100,250 98 Z',fill:'nose'}
     ],
-    legs:legs([90,102,182,170],pawLeg(146,12)),
+    // Hock behind and wrist in front, as on the hoofed species.
+    legs:jointLegs({hx:92,fx:182,far:12,hindTop:128,foreTop:134,ground:244,w:.85,f:1}),
+    legOrder:FAR_FIRST,stride:.8,runStride:1,
     tail:'M68 118 C50 124,38 150,34 180 C32 196,44 200,50 188 C54 168,62 146,76 132 Z',tailFill:'tail',
     pivot:{x:178,y:114},eye:{x:226,y:92},tailPivot:{x:70,y:122},center:{x:134,y:244},
     joint:{a:{x:210,y:80},b:{x:202,y:110}},neck:{root:{x:178,y:114},rootWidth:50,tipWidth:34},
@@ -158,7 +210,8 @@
       {d:'M238 112 C248 112,256 118,254 126 C250 132,240 130,234 124 Z',fill:'muzzle'},
       {d:'M250 116 C256 116,258 122,253 124 C249 124,248 119,250 116 Z',fill:'nose'}
     ],
-    legs:legs([84,98,184,170],pawLeg(156,28)),
+    // Plantigrade: straight thick columns kept; a heavier, shorter walk.
+    legs:legs([84,98,184,170],pawLeg(156,28)),legOrder:FAR_FIRST,stride:.8,
     tail:'M58 128 C50 124,46 132,52 138 C56 136,58 132,58 128 Z',
     pivot:{x:192,y:116},eye:{x:222,y:106},tailPivot:{x:58,y:130},center:{x:134,y:244},
     pose:{walk:{x:0,y:0,rot:0},
@@ -189,7 +242,9 @@
       {d:'M244 136 C250 136,254 142,250 148 C246 150,242 146,242 142 Z',fill:'nose'},
       {d:'M232 144 C234 134,240 130,244 132 C242 138,238 142,232 144 Z',fill:'tusk'}
     ],
-    legs:legs([92,104,186,174],slimLeg(150,18)),
+    // Short stout jointed legs; quick short steps.
+    legs:jointLegs({hx:94,fx:186,far:12,hindTop:140,foreTop:146,ground:244,w:1.25,f:1}),
+    legOrder:FAR_FIRST,stride:.75,runStride:.9,
     tail:'M62 112 C52 104,44 110,48 116 C52 120,48 126,42 122 C44 130,54 128,56 120 C58 116,60 114,62 112 Z',
     pivot:{x:180,y:118},eye:{x:216,y:114},tailPivot:{x:62,y:114},center:{x:134,y:244},
     joint:{a:{x:204,y:98},b:{x:198,y:132}},neck:{root:{x:180,y:118},rootWidth:64,tipWidth:40,mane:9},
@@ -202,21 +257,37 @@
   // Coat variants are merged once, not per frame.
   for(const sp of Object.values(SPECIES))
     if(sp.coats)sp.coatColors=Object.fromEntries(Object.entries(sp.coats).map(([k,v])=>[k,{...sp.colors,...v}]));
-  // Each leg is its own subpath; its hip is the top of the subpath.
+  // Each leg is its own subpath; its hip is the top of the subpath. Legs are articulated: the
+  // joint (hock on the hind legs 0,1, knee on the fore legs 2,3) sits at a fixed share of the
+  // leg's height, matching the templates (hock 57%, knee 65%); `jointAt` overrides per species.
+  // The joint's x is the middle of the leg outline at that height, w its width there.
   for(const sp of Object.values(SPECIES))
-    sp.legList=sp.legs.split(/(?=M)/).map(s=>{const [x,y]=s.slice(1).trim().split(/[ ,]+/).map(Number);return{d:s,x,y:y+6}});
+    sp.legList=sp.legs.split(/(?=M)/).map((s,i)=>{
+      const n=s.match(/-?\d+(\.\d+)?/g).map(Number),pts=[];
+      for(let k=0;k+1<n.length;k+=2)pts.push({x:n[k],y:n[k+1]});
+      const top=pts[0].y,bottom=Math.max(...pts.map(p=>p.y)),hind=i<2;
+      const jy=top+(bottom-top)*(sp.jointAt?.[hind?0:1]??(hind?.57:.65));
+      const near=pts.filter(p=>Math.abs(p.y-jy)<14),xs=(near.length?near:pts).map(p=>p.x);
+      const x0=Math.min(...xs),x1=Math.max(...xs);
+      return{d:s,x:pts[0].x,y:top+6,hind,joint:{x:(x0+x1)/2,y:jy},w:Math.max(6,x1-x0)};
+    });
 
   const lerp=(a,b,k)=>a+(b-a)*k;
   const ease=k=>k*k*(3-2*k);
   // Pure gait maths for one mode, shared by all species.
   function gaitPose(mode,t,seed=0){
-    const out={legs:[0,0,0,0],lift:[0,0,0,0],bob:0,head:0,tail:0,chew:0};
+    // bend: flexion of each leg's joint, 0 = straight. It is positive in the swing phase (the
+    // foot travelling forward, off the ground) and turned into a signed angle below: the knee
+    // folds the fore foot back, the hock folds the hind foot forward.
+    const out={legs:[0,0,0,0],lift:[0,0,0,0],bend:[0,0,0,0],bob:0,head:0,tail:0,chew:0};
     if(mode==='walk'){
       const p=t*Math.PI*2*1.6+seed;
       // Diagonal gait: front-left with back-right.
-      const swing=[Math.sin(p),-Math.sin(p),-Math.sin(p),Math.sin(p)];
+      const sign=[1,-1,-1,1],swing=sign.map(k=>k*Math.sin(p)),fwd=sign.map(k=>Math.max(0,k*Math.cos(p)));
       out.legs=swing.map(s=>s*.38);
-      out.lift=swing.map(s=>Math.max(0,s)*5);
+      // The swinging foot clears the ground by folding the joint; a small lift on top.
+      out.bend=fwd.map(v=>v*.75);
+      out.lift=fwd.map(v=>v*3);
       out.bob=-Math.abs(Math.cos(p))*4+2;
       out.head=Math.sin(p*2)*.05;
       out.tail=Math.sin(p*2)*.18;
@@ -226,15 +297,19 @@
       out.head=nibble*.08;
       out.chew=nibble;
       const shift=Math.sin(t*.9+seed*3);
-      if(shift>.96){const s=Math.sin((shift-.96)/.04*Math.PI);out.legs[0]=-s*.22;out.lift[0]=s*4}
+      if(shift>.96){const s=Math.sin((shift-.96)/.04*Math.PI);out.legs[0]=-s*.22;out.lift[0]=s*3;out.bend[0]=s*.5}
       out.bob=Math.sin(t*1.3+seed)*.8;
       out.tail=Math.sin(t*5+seed)*(Math.sin(t*.7+seed)>.6?.25:.04);
     }else if(mode==='run'){
       // Gallop: hind pair (legs 0,1) and fore pair (2,3) reach together,
       // the body pitches over the stride. Leg order: hind near/far, fore near/far.
       const p=t*Math.PI*2*2.2+seed;
-      out.legs=[Math.sin(p),Math.sin(p+.35),Math.sin(p+Math.PI),Math.sin(p+Math.PI+.35)].map(s=>s*.6);
-      out.lift=out.legs.map(a=>Math.max(0,-a)*14);
+      const ph=[0,.35,Math.PI,Math.PI+.35];
+      out.legs=ph.map(o=>Math.sin(p+o)*.6);
+      // Legs coming forward fold tight under the body, then reach straight out.
+      const fwd=ph.map(o=>Math.max(0,Math.cos(p+o)));
+      out.bend=fwd.map(v=>v*1.25);
+      out.lift=fwd.map(v=>v*10);
       out.bob=-Math.abs(Math.sin(p))*8+3;
       out.head=Math.sin(p*2)*.06;
       out.tail=.25+Math.sin(p)*.15;
@@ -253,8 +328,12 @@
     const sp=SPECIES[species],spec=sp.pose[mode]||sp.pose.walk,dir=-sp.artFacing;
     const gait=spec.gait||(['walk','browse','run'].includes(mode)?mode:'still');
     const g=gaitPose(gait,t,seed),add=spec.legAdd||[0,0,0,0];
+    // Long-legged species swing less at the walk than the shared gait (stride), more at the gallop.
+    const k=gait==='run'?(sp.runStride??sp.stride??1):(sp.stride??1);
     return{
-      legs:g.legs.map((a,i)=>a*dir+add[i]),lift:g.lift,bob:g.bob,tail:g.tail*dir,
+      legs:g.legs.map((a,i)=>a*dir*k+add[i]),lift:g.lift.map(l=>l*k),bob:g.bob,tail:g.tail*dir,
+      // Signed joint angle (authored left-facing like the gait): hock + (foot forward), knee −.
+      bend:g.bend.map((b,i)=>b*(i<2?1:-1)*dir*(sp.bend??1)),
       headX:spec.x,headY:spec.y+(gait==='browse'?g.chew*2:0),headRot:spec.rot+g.head*dir,
       neck:spec.neck??(mode==='browse'?1:0),
       tilt:((spec.tilt??(mode==='browse'?-.05:0))+(g.pitch||0))*dir,
@@ -312,15 +391,10 @@
     // Rearing: the whole animal turns about its hind feet, hind legs stay planted.
     if(pose.bodyRot&&pose.bodyPivot)rotateAbout(ctx,pose.bodyPivot,pose.bodyRot);
     const hind=sp.hindLegs||[];
-    // Far legs (1, 3) a shade darker, all legs under the body.
-    sp.legList.forEach((leg,i)=>{
-      ctx.save();ctx.translate(0,-pose.lift[i]);rotateAbout(ctx,leg,pose.legs[i]-(hind.includes(i)?pose.bodyRot:0));
-      fillStroke(ctx,leg.d,i%2?c.legFar:c.leg,null,lw);
-      if(sp.hoof){
-        const p=path(leg.d);ctx.save();ctx.clip(p);ctx.fillStyle=c.hoof;
-        ctx.fillRect(leg.x-20,sp.center.y-sp.hoof-4,40,40);ctx.restore();
-      }
-      ctx.strokeStyle=c.legLine;ctx.lineWidth=lw;ctx.lineJoin='round';ctx.stroke(path(leg.d));
+    // Far legs (1, 3) a shade darker, all legs under the body; legOrder draws the far pair first.
+    (sp.legOrder||[0,1,2,3]).forEach(i=>{
+      ctx.save();ctx.translate(0,-pose.lift[i]);
+      drawLeg(ctx,sp,c,sp.legList[i],i,pose.legs[i]-(hind.includes(i)?pose.bodyRot:0),pose.bend?.[i]||0,lw);
       ctx.restore();
     });
     ctx.translate(0,pose.bob);
@@ -340,12 +414,35 @@
     fillStroke(ctx,sp.body,c.body,c.line,lw);
     // A low belly shade keeps light coats readable on light ground.
     ctx.save();ctx.clip(path(sp.body));ctx.fillStyle=c.shade;
-    ctx.beginPath();ctx.ellipse(sp.center.x,sp.center.y-50,110,24,0,0,Math.PI*2);ctx.fill();ctx.restore();
+    ctx.beginPath();ctx.ellipse(sp.center.x,sp.shadeY??sp.center.y-50,110,24,0,0,Math.PI*2);ctx.fill();ctx.restore();
     if(!sp.headBehind)drawHead(ctx,sp,c,pose,lw,size);
     // Riders and gear (settlement-mounted2d.js) draw in the body's art space, so they
     // follow the gait's bob and pitch; flip says whether the art is mirrored.
     if(opts.onBody)opts.onBody(ctx,{pose,lw,colors:c,sp,flip:facing*sp.artFacing});
     ctx.restore();
+  }
+  // One articulated leg: the whole leg turns about the hip (angle), the part below the joint
+  // turns again about the joint (bend). Each part is the same outline clipped at the joint, so
+  // the leg keeps its drawn shape when straight; a round cap in the leg colour hides the seam.
+  const HALF_UP=new Map(),HALF_DOWN=new Map();
+  function half(leg,up){
+    const cache=up?HALF_UP:HALF_DOWN;let p=cache.get(leg);if(p)return p;
+    p=new Path2D();const y=leg.joint.y+(up?2:-2);
+    if(up)p.rect(leg.joint.x-400,y-800,800,800);else p.rect(leg.joint.x-400,y,800,800);
+    cache.set(leg,p);return p;
+  }
+  function drawLeg(ctx,sp,c,leg,i,angle,bend,lw){
+    const fill=i%2?c.legFar:c.leg,p=path(leg.d);
+    rotateAbout(ctx,leg,angle);
+    ctx.strokeStyle=c.legLine;ctx.lineWidth=lw;ctx.lineJoin='round';
+    // Lower part (cannon and hoof), turned about the joint.
+    ctx.save();rotateAbout(ctx,leg.joint,bend);ctx.clip(half(leg,false));
+    ctx.fillStyle=fill;ctx.fill(p);
+    if(sp.hoof){ctx.save();ctx.clip(p);ctx.fillStyle=c.hoof;ctx.fillRect(leg.joint.x-40,sp.center.y-sp.hoof-4,80,40);ctx.restore()}
+    ctx.stroke(p);ctx.restore();
+    // Joint cap, then the upper part (thigh / forearm) over it.
+    if(bend){ctx.fillStyle=fill;ctx.beginPath();ctx.arc(leg.joint.x,leg.joint.y,leg.w/2-lw*.3,0,Math.PI*2);ctx.fill()}
+    ctx.save();ctx.clip(half(leg,true));ctx.fillStyle=fill;ctx.fill(p);ctx.stroke(p);ctx.restore();
   }
   // The head is rigid: only moved and rotated, never reshaped.
   function drawHead(ctx,sp,c,pose,lw,size){
@@ -353,11 +450,21 @@
       // Dedicated neck: tapered piece from the hidden root to the moved throat,
       // then the rigid head (cut at the throat) turned about its own joint.
       const {a,b}=sp.joint,j={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
-      drawNeck(ctx,sp,c,lw,{x:j.x+pose.headX,y:j.y+pose.headY});
+      // tipOnJoint: the neck ends exactly on the moved and turned throat line (no corner of the
+      // neck sticks out past a short, maneless crest such as the goat's or the cow's).
+      let edge=null;
+      if(sp.neck.tipOnJoint){
+        const cs=Math.cos(pose.headRot),sn=Math.sin(pose.headRot);
+        const turn=p=>({x:j.x+(p.x-j.x)*cs-(p.y-j.y)*sn+pose.headX,y:j.y+(p.x-j.x)*sn+(p.y-j.y)*cs+pose.headY});
+        edge={a:turn(a),b:turn(b)};
+      }
+      drawNeck(ctx,sp,c,lw,{x:j.x+pose.headX,y:j.y+pose.headY},edge);
       ctx.save();ctx.translate(pose.headX,pose.headY);rotateAbout(ctx,j,pose.headRot);
-      // Antlers reach past the throat line: they ride the head unclipped.
+      // Antlers and horns reach past the throat line: they ride the head unclipped.
       for(const s of sp.headStrokes||[])if(s.far)drawStroke(ctx,s,c,lw);
-      ctx.save();ctx.clip(jointSide(sp,true));drawHeadArt(ctx,sp,c,lw,size,false);ctx.restore();
+      if(sp.horn){ctx.save();ctx.translate(sp.farHorn.x,sp.farHorn.y);fillStroke(ctx,sp.horn,c.hornFar,c.hornLine,lw);ctx.restore()}
+      ctx.save();ctx.clip(jointSide(sp,true));drawHeadArt(ctx,sp,c,lw,size,false,false);ctx.restore();
+      if(sp.horn)fillStroke(ctx,sp.horn,c.horn,c.hornLine,lw);
       for(const s of sp.headStrokes||[])if(!s.far)drawStroke(ctx,s,c,lw);
       ctx.restore();
       return;
@@ -366,11 +473,23 @@
     drawHeadArt(ctx,sp,c,lw,size);
     ctx.restore();
   }
-  function drawNeck(ctx,sp,c,lw,tip){
+  function drawNeck(ctx,sp,c,lw,tip,edge=null){
     const n=sp.neck,r=n.root,dx=tip.x-r.x,dy=tip.y-r.y,len=Math.hypot(dx,dy)||1;
     // Normal pointing to the crest (away from the throat) carries the mane.
     let nx=dy/len,ny=-dx/len;
     if(nx*(sp.joint.a.x-sp.joint.b.x)+ny*(sp.joint.a.y-sp.joint.b.y)<0){nx=-nx;ny=-ny}
+    if(edge){
+      // Crest root → crest end of the throat line (a) → throat (b) → throat root.
+      ctx.beginPath();ctx.moveTo(r.x+nx*n.rootWidth/2,r.y+ny*n.rootWidth/2);
+      ctx.lineTo(edge.a.x,edge.a.y);ctx.lineTo(edge.b.x,edge.b.y);
+      ctx.lineTo(r.x-nx*n.rootWidth/2,r.y-ny*n.rootWidth/2);ctx.closePath();
+      ctx.fillStyle=c.head;ctx.fill();
+      // Outline the two sides only: no seam where the neck meets the head.
+      ctx.beginPath();ctx.moveTo(r.x+nx*n.rootWidth/2,r.y+ny*n.rootWidth/2);ctx.lineTo(edge.a.x,edge.a.y);
+      ctx.moveTo(edge.b.x,edge.b.y);ctx.lineTo(r.x-nx*n.rootWidth/2,r.y-ny*n.rootWidth/2);
+      ctx.strokeStyle=c.headLine;ctx.lineWidth=lw;ctx.lineCap='round';ctx.stroke();
+      return;
+    }
     const quad=(w0,w1,o0,o1)=>{ctx.beginPath();
       ctx.moveTo(r.x+nx*(w0/2+o0),r.y+ny*(w0/2+o0));ctx.lineTo(tip.x+nx*(w1/2+o1),tip.y+ny*(w1/2+o1));
       ctx.lineTo(tip.x-nx*w1/2,tip.y-ny*w1/2);ctx.lineTo(r.x-nx*w0/2,r.y-ny*w0/2);ctx.closePath()};
@@ -385,13 +504,13 @@
       ctx.fillStyle=c.mane;ctx.fill();ctx.strokeStyle=c.headLine;ctx.stroke();
     }
   }
-  function drawHeadArt(ctx,sp,c,lw,size,strokes=true){
-    if(sp.horn){ctx.save();ctx.translate(sp.farHorn.x,sp.farHorn.y);fillStroke(ctx,sp.horn,c.hornFar,c.hornLine,lw);ctx.restore()}
+  function drawHeadArt(ctx,sp,c,lw,size,strokes=true,horns=true){
+    if(sp.horn&&horns){ctx.save();ctx.translate(sp.farHorn.x,sp.farHorn.y);fillStroke(ctx,sp.horn,c.hornFar,c.hornLine,lw);ctx.restore()}
     if(strokes)for(const s of sp.headStrokes||[])if(s.far)drawStroke(ctx,s,c,lw);
     fillStroke(ctx,sp.head,c.head,c.headLine,lw);
     if(sp.beard)fillStroke(ctx,sp.beard,c.beard,c.headLine,lw);
     for(const part of sp.headParts||[])fillStroke(ctx,part.d,c[part.fill],c.headLine,lw);
-    if(sp.horn)fillStroke(ctx,sp.horn,c.horn,c.hornLine,lw);
+    if(sp.horn&&horns)fillStroke(ctx,sp.horn,c.horn,c.hornLine,lw);
     if(strokes)for(const s of sp.headStrokes||[])if(!s.far)drawStroke(ctx,s,c,lw);
     if(size>=24){ctx.fillStyle=c.eye;ctx.beginPath();ctx.arc(sp.eye.x,sp.eye.y,4.5,0,Math.PI*2);ctx.fill()}
   }
@@ -428,12 +547,46 @@
     p.lineTo(bx+dx*F+nx*F,by+dy*F+ny*F);p.lineTo(ax-dx*F+nx*F,ay-dy*F+ny*F);p.closePath();
     jointCache.set(key,p);return p;
   }
+  // Body capsule in world units (World3D card depth and collider, settlement-world3d.js): a
+  // horizontal capsule along the body, from the body outline of the art. sizeFactor = on-screen
+  // art box height per unit of view scale (livestock: 5.75); dir = unit world heading of the
+  // body. Art → world: horizontal px/(U·scale·1.22) along the screen, vertical px/(U·scale·0.9).
+  for(const sp of Object.values(SPECIES)){
+    const n=sp.body.match(/-?\d+(\.\d+)?/g).map(Number),xs=n.filter((_,i)=>i%2===0),ys=n.filter((_,i)=>i%2===1);
+    sp.bodyBox={x0:Math.min(...xs),x1:Math.max(...xs),y0:Math.min(...ys),y1:Math.max(...ys)};
+  }
+  function capsule(species,sizeFactor,dir){
+    const sp=SPECIES[species],b=sp.bodyBox,u=typeof U==='number'?U:12;
+    const px=sizeFactor*(sp.scale||1)/256,h=px/(u*1.22),v=px/(u*.9);
+    const half=(b.x1-b.x0)/2*h,len=Math.hypot(dir?.x||0,dir?.y||0)||1;
+    return{axis:{x:(dir?.x||1)/len*half,y:(dir?.y||0)/len*half},
+      z:(sp.center.y-(b.y0+b.y1)/2)*v,r:(b.y1-b.y0)/2*v,kind:'animal:'+species};
+  }
+  // World3D: the animal as a depth-tested card with its body capsule (settlement-world3d.js
+  // figure()). The gait is cut into PHASES poses per cycle, so every animal of the same species,
+  // mode and coat shares a few atlas tiles; the tile is painted facing right and mirrored.
+  // o: {id, mode, blend, t, seed, facing, coat, heading (world vector or null), sizeFactor (5.75),
+  // span}. Returns false when World3D is not collecting figures (the caller draws in 2D).
+  const PHASES=8,GAIT_FREQ={walk:1.6,run:2.2,browse:1};
+  function card(species,p,z,o={}){
+    const W=window.ConquerWorld3D;if(!W?.figure||!SPECIES[species])return false;
+    const sp=SPECIES[species],mode=o.mode||'walk',sizeFactor=Math.round((o.sizeFactor||5.75)*100)/100;
+    const gait=sp.pose[mode]?.gait||(GAIT_FREQ[mode]?mode:'still'),f=GAIT_FREQ[gait]||0;
+    let b=0,tp=0;
+    if(f){const c=(o.t||0)*f+(o.seed||0)/(Math.PI*2);b=Math.floor((c-Math.floor(c))*PHASES);tp=(b+.5)/PHASES/f}
+    const blend=o.blend??(mode==='browse'?1:0),coat=o.coat||'';
+    const key=['a',species,mode,blend,coat,b,sizeFactor].join('|');
+    const h=o.heading&&Math.hypot(o.heading.x,o.heading.y)>1e-6?o.heading:W.screenAxis?.(o.facing??1)||{x:1,y:0};
+    const paint=g=>{const s=w2s({x:0,y:0},0);
+      drawAnimal(species,g,s.x,s.y,Math.max(1.5,State.view.scale*sizeFactor),{t:tp,seed:0,facing:1,mode,blend,coat:o.coat})};
+    return W.figure(p,z,key,paint,o.id??key,(o.facing??1)<0,{span:o.span||1,capsule:capsule(species,sizeFactor,h)});
+  }
   const drawSheep=(ctx,x,y,size,opts)=>drawAnimal('sheep',ctx,x,y,size,opts);
   const drawGoat=(ctx,x,y,size,opts)=>drawAnimal('goat',ctx,x,y,size,opts);
   const drawCow=(ctx,x,y,size,opts)=>drawAnimal('cow',ctx,x,y,size,opts);
   const drawHorse=(ctx,x,y,size,opts)=>drawAnimal('horse',ctx,x,y,size,opts);
   window.ConquerAnimals={SPECIES,SHEEP:SPECIES.sheep,HEAD:SPECIES.sheep.pose,COLORS:SPECIES.sheep.colors,
     gaitPose,sheepPose:gaitPose,blendedPose:(t,seed,blend)=>blendedPose('sheep',t,seed,blend),blendedPoseOf:blendedPose,
-    modePose,transitionPose,
+    modePose,transitionPose,capsule,card,
     drawAnimal,drawSheep,drawGoat,drawCow,drawHorse};
 })();

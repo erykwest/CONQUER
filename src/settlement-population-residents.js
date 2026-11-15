@@ -6,12 +6,16 @@ function peasantAnimationActive(){
   return frac>=.035&&frac<=.96&&completedSettlement('house').length>0;
 }
 function housePopulationCapacity(house){
-  const level=houseLevel(house);
-  return{male:level,female:level,children:level,total:level*3};
+  const total=window.ConquerSocialClasses?.capacity?.(house)??houseLevel(house)*3;
+  const male=Math.ceil(total/3),female=Math.floor((total+1)/3);
+  return{male,female,children:total-male-female,total};
 }
 const houseResidentCache=new Map();
 function houseResidents(house){
-  const level=houseLevel(house),key=house.id+'|'+level;
+  const level=window.ConquerSocialClasses?.tierOfHouse?.(house)??houseLevel(house);
+  const generation=Math.max(0,Math.floor(Number(house.householdGeneration)||0));
+  const key=house.id+'|'+level+'|'+housePopulationCapacity(house).total+'|'+generation;
+  const residentPrefix=generation?house.id+':g'+generation:house.id;
   const cached=houseResidentCache.get(key);
   if(cached)return cached;
 
@@ -29,10 +33,10 @@ function houseResidents(house){
       colors:villagerBodyColors(id,kind)
     };
   };
-  for(let i=0;i<cap.male;i++)out.push(make(house.id+':m:'+i,'male','adult',i));
-  for(let i=0;i<cap.female;i++)out.push(make(house.id+':f:'+i,'female','adult',i));
+  for(let i=0;i<cap.male;i++)out.push(make(residentPrefix+':m:'+i,'male','adult',i));
+  for(let i=0;i<cap.female;i++)out.push(make(residentPrefix+':f:'+i,'female','adult',i));
   for(let i=0;i<cap.children;i++){
-    const id=house.id+':c:'+i;
+    const id=residentPrefix+':c:'+i;
     out.push(make(id,(peasantHash(id)&1)?'female':'male','child',i));
   }
   houseResidentCache.set(key,out);
@@ -82,32 +86,32 @@ function residentClassPosition(house,resident,day,assignment){
       window.ConquerMaleRoutines?.handles(State.clock.day))
     return window.ConquerMaleRoutines.position(house,resident,State.clock.day);
   // Flocks need their shepherd during the working day.
-  if((houseLevel(house)===1||houseLevel(house)===2)&&resident.sex==='male'&&
+  if((window.ConquerSocialClasses?.tierOfHouse?.(house)??houseLevel(house))===1&&resident.sex==='male'&&
       resident.age==='adult'&&resident.index===0&&
       ['shepherd','cow'].includes(window.ConquerLivestock?.lotKindForHouse(house)))
     return window.ConquerLivestock.shepherdPosition(house);
   const weekly=window.ConquerEconomy?.weekday(State.clock.day)??((Math.floor(State.clock.day)%7+7)%7);
-  const level=houseLevel(house),shiftedDay=day+(Number.isFinite(resident.timeOffset)?resident.timeOffset:residentTimeOffset(resident.id));
+  const level=window.ConquerSocialClasses?.tierOfHouse?.(house)??houseLevel(house),shiftedDay=day+(Number.isFinite(resident.timeOffset)?resident.timeOffset:residentTimeOffset(resident.id));
   // Adult women follow their own week: lot work, market, Sunday mass, leisure.
   if(resident.sex==='female'&&resident.age==='adult')
     return window.ConquerFemaleRoutines?.position(house,resident,State.clock.day)??null;
   if(weekly===6)return null; // Children keep the Sunday rest.
   if(weekly===5)return familyPosition(house,State.clock.day); // Saturday market trip.
   if(resident.age==='child')return childHomePosition(house,resident,shiftedDay);
-  // Both L1 and unoccupied L2 workers use the real serpentine field route.
-  if(resident.sex==='male'&&assignment&&(level===1||level===2))
+  // L1 servants including former quarry/miner L2 are eligible for field work.
+  if(resident.sex==='male'&&assignment&&level===1)
     return peasantPosition(house,assignment,State.clock.day);
   if(level===1)return null;
   if(level===2)return artisanPosition(house,shiftedDay);
-  // L3 residents work local shops/services. Traveling merchants are L4+
-  // manifests and must never be silently created by a resident daily routine.
-  if(level===3)return artisanPosition(house,shiftedDay);
+  // L2 artisans own the workshops; L3 educated residents trade/administer.
+  // No travelling manifest is created by a resident animation.
+  if(level===3)return educatedPosition(house,shiftedDay);
   return elitePosition(house,shiftedDay);
 }
 function villagerClass(house){
-  const level=houseLevel(house);
+  const level=window.ConquerSocialClasses?.tierOfHouse?.(house)??houseLevel(house);
   if(level>=4)return'elite';
-  if(level===3)return'artisan';
+  if(level===3)return'merchant';
   if(level===2)return'artisan';
   return'peasant';
 }

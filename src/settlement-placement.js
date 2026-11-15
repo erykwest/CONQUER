@@ -114,6 +114,8 @@
     if(!annexVerdict.ok)return annexVerdict;
     const wellVerdict=typeof wellCivicPlacementCheck==='function'?wellCivicPlacementCheck(s):valid();
     if(!wellVerdict.ok)return wellVerdict;
+    const balivoVerdict=typeof balivoPlacementCheck==='function'?balivoPlacementCheck(s):valid();
+    if(!balivoVerdict.ok)return balivoVerdict;
     // A pier reaches out over the sea: its own validation keeps the landing in the whitezone.
     // Quays (and the walls and towers built against them) start in the whitezone by their own rules.
     const harbour=window.ConquerPier?.is(s)||window.ConquerQuay?.is(s)||window.ConquerQuay?.wallGroundZ(s)!=null;

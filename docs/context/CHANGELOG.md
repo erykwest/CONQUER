@@ -1,5 +1,12 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-15 — Riallineamento prima del merge autorizzato
+
+- Integrato main ecdd630 nel branch regionale. Conservati i quattro biomi e l'isolamento demo insieme a migrazione sociale v2, politiche elmi/scudi, nuove figure e caditoie italiane. Conflitti documentali uniti, versioni cache riconciliate senza duplicare script e catalogo Wiki rigenerato.
+- PASS locale regional-demo (inclusa persistenza isolata), save-safety ed export Wiki; regressioni complete e CI sul nuovo commit da ricontrollare. L'autorizzazione al merge del 15 novembre non equivale a merge eseguito: esito definitivo nella PR #162.
+- Nessuna nuova regola di bioma o milestone; roadmap invariata. Restano i limiti idrici e di latenza già documentati.
+
+
 ### 2026-11-12 — Esito CI integrazione e budget Sea
 
 - Commit 1f5deb0: 19 workflow CI riusciti, inclusa la suite completa di regressione/routing e Asset Lab. Sea and pier interrotto dal timeout di 10 minuti dopo i controlli di flusso, senza assertion fallite. Budget portato a 15 minuti come la suite routing; nessun test rimosso e nome del check conservato.
@@ -155,8 +162,248 @@
 
 05/11/2026 — `experiment/regional-biome-sectors`: laboratorio separato con bioma centrale, quattro fasce cardinali, quattro corner quadrati di blending, seed e confronto schema/paesaggio. Fixture, non integrazione regionale o Builder. QA sintassi, pesi e browser; roadmap invariata, proposta regionale documentata senza modificare contratti approvati.
 
+## 2026-11-14 — TOW-MACH-IT · Caditoie all'italiana sulle torri
+
+Nuova opzione estetica nel menù del tetto delle torri in pietra: «Caditoie all'italiana», sul modello del Castello di San Giorgio a Mantova: mensole snelle e fitte, ognuna un unico pezzo inclinato (banda 4× l'altezza delle caditoie attuali), archi a tutto sesto senza riempimento scuro e muratura a filo sopra gli archi. In cutaway il lato aperto perde mensole e archi, così l'ultimo piano resta visibile. Stesse regole delle caditoie standard (solo aspetto). Branch `feat/caditoie-italiane-torri`; Lab, test di regressione e baseline dell'audit aggiornati. ROADMAP e DECISIONS invariati (variante estetica, nessun contratto nuovo).
+
+## 2026-11-14 — SIEGE-ATTACK-ALERTS-01 · Allarmi configurabili verso signore e alleati (solo design)
+
+Il product owner ha corretto l'interpretazione precedente: il **messaggero base** all'invasione avvisa il **governante se assente**. In aggiunta il signore può impostare **due allerte automatiche distinte**, «Allerta sempre il signore in caso di attacco» (al signore superiore) e «Allerta sempre gli alleati in caso di attacco» (agli alleati), **indipendenti e non mutuamente esclusive**. Le comunicazioni rispettano i tempi e il blocco dei vettori del mondo, non equivalgono a push istantanei. Trigger esatto di attacco e titolarità/ambito della configurazione da definire. Aggiornati REMOTE-CONTROL-SCOPE, MARCH, D-SIEGE-ATTACK-CONFIG-261114, backlog SIEGE-ATTACK-ALERTS-01, SRS v0.13 nella draft PR #222. **Nessuna modifica runtime.**
+
+
+## 2026-11-14 — SIEGE-ALERT-RECIPIENT-01 · Destinatari feudali allarme invasione (solo design)
+
+Per i messaggeri d'allarme che partono automaticamente a ogni nuova invasione, il product owner ha indicato **chi governa il territorio se assente fisicamente, oppure il suo signore superiore nella catena feudale**. Identità e presenza devono provenire dal mondo autorevole; avviso consegnato solo dopo il tempo simulato. Priorità/escalation/copie multiple fra i destinatari ancora aperte. Integrate SRS mobile v0.12 nella draft PR #222, REMOTE-CONTROL-SCOPE, MARCH, decisione D-SIEGE-ALERT-RECIPIENT-261114 e backlog SIEGE-ALERT-RECIPIENT-01. Nessun runtime modificato.
+
+
+## 2026-11-14 — SIEGE-COMMS-02 · Allarme automatico invasione e blocco completo messaggeri (solo design)
+
+Il product owner ha precisato Q-09: durante **assedio** il blocco dei **messaggeri ordinari** è **sia in entrata sia in uscita**, compreso il divieto di consegnare all'interno. Alla **nuova invasione di un territorio** parte **automaticamente un messaggero d'allarme** se la partenza è consentita; recapito con tempi simulati, non informazione live. I piccioni in uscita restano non intercettabili durante assedio, con rete disponibile. Salvaguardia proposta: un invio per evento d'invasione e non a ogni tick. Aggiornati REMOTE-CONTROL-SCOPE, MARCH, decisione D-SIEGE-COMMS-UPDATE-261114, backlog SIEGE-COMMS-02 e SRS mobile v0.11 nella PR draft #222. **Solo documenti, nessun runtime.**
+
+
+## 2026-11-14 — SIEGE-COMMS-01 · Due fasi militari e blocco dei messaggeri in assedio (solo design)
+
+Chiarita Q-09 **in parte**: **INVASO** e **SOTTO ASSEDIO** sono stati diversi. In stato di assedio i **messaggeri ordinari non possono uscire** dal feudo; **i piccioni possono uscire e non sono intercettabili**, rispettando la disponibilità del canale e il tempo di recapito simulato. Durante invasione il blocco d'assedio non si applica automaticamente; ingresso dei messaggeri e condizioni di transizione ancora aperti. Specifiche aggiornate: REMOTE-CONTROL-SCOPE, MARCH, decisione D-SIEGE-COMMS-261114, backlog SIEGE-COMMS-01 e SRS mobile v0.10 nella draft PR #222. **Nessuna modifica a runtime o schema.**
+
+
+## 2026-11-14 — MOB-KPI-01 · Shortlist iniziale KPI Home (solo design preliminare)
+
+Il product owner ha considerato **«un buon inizio»** la proposta di sei gruppi KPI nella Home multi-insediamento: popolazione, tesoreria, scorte alimentari/autonomia, felicità/lealtà, produzione/occupazione e sicurezza militare. La **Q-08 rimane in definizione**, perché numeri/soglie, priorità e layout non sono approvati. Aggiornate SRS mobile v0.9 (draft PR #222), REMOTE-CONTROL-SCOPE e BACKLOG MOB-KPI-01. Nessun codice, mock definitivo o milestone modificati.
+
+
+## 2026-11-14 — MOB-PLAT-01 · Una sola codebase Android/iOS (solo design)
+
+Q-07 SRS mobile chiusa dal product owner: **un'unica base di codice applicativa condivisa** per Android e iOS, con gli stessi contratti API e backend autorevole del browser. Nessun doppio client sviluppato separatamente; framework, UI web condivisa e versioni OS ancora aperti. Aggiornate SRS mobile v0.8 nella draft PR #222, REMOTE-CONTROL-SCOPE, D-MOB-CODEBASE-261114 e backlog MOB-PLAT-01. **Solo documentazione, nessun runtime/SQL modificato.**
+
+
+## 2026-11-14 — MP-08 / RC-CHAR-01 · Personaggio unico e governo fisico dei feudi (solo design)
+
+Il product owner ha deciso **un personaggio per account/campagna**, che può governare più feudi solo **spostandosi fisicamente** per la gestione diretta o **trasmettendo ordini tramite messaggeri/piccioni**. Precisato il contratto: il primo tick utile vale per comandi nel feudo di presenza; un feudo lontano non si governa istantaneamente cambiando schermata nel browser/mobile. Aggiornati MULTIPLAYER-SERVER-SCOPE, REMOTE-CONTROL-SCOPE, decisione D-FEUD-CHAR-261114 e backlog MP-08/RC-CHAR-01; SRS mobile v0.7 nella draft PR #222 (Q-06 risolta). **Solo documentazione; runtime, schema e roadmap invariati.**
+
+
+## 2026-11-14 — MOB-PUSH-01 · Push autorizzati dal sistema e selezionabili per categoria (solo design)
+
+Il product owner ha chiuso Q-05: notifiche push soggette al consenso Android/iOS e **filtrabili per categoria nelle impostazioni dell'app**. L'invio richiede entrambi i livelli abilitati; la posta e gli avvisi in-app restano consultabili anche senza permesso push. Le notifiche non anticipano lettere/rapporti non ancora recapitati. Aggiornati REMOTE-CONTROL-SCOPE, D-MOB-PUSH-261114, backlog MOB-PUSH-01 e SRS v0.6 nella draft PR #222. Categorie e stato iniziale dei filtri ancora aperti. Solo documentazione, nessun runtime/SQL.
+
+
+## 2026-11-13 — RC-PAUSE-01 · Preparazione ordini durante pause regionali (solo design)
+
+Decisione confermata: una campagna **in pausa regionale** resta completamente ferma, ma se raggiungibile consente **ordini preparati/in attesa** da browser e app; l'applicazione è rimandata al **primo tick utile alla ripresa**, senza anticipare produzioni, viaggi o consegne. Retry e convalida al riavvio sono salvaguardie progettuali; modalità offline del dispositivo distinta e non ancora definita. Aggiornati REMOTE-CONTROL-SCOPE, D-RC-PAUSE-261113, backlog RC-PAUSE-01 e SRS mobile v0.5 nella PR draft #222. **Nessun codice o schema modificato.**
+
+
+## 2026-11-13 — RC-REPORT-01 · Resoconti dei vassalli programmabili (solo design)
+
+Il product owner ha deciso che **il sovrano non vede i KPI dei vassalli live**: riceve snapshot prodotti e **recapitati da messaggeri**, con **frequenza di resoconto da lui impostabile**. Lo stato del proprio feudo resta consultabile direttamente. Le routine 1/7/30 giorni della branch `messages` sono un precedente tecnico, non frequenze definitive approvate. Aggiornati SRS mobile v0.4 nella draft PR #222, REMOTE-CONTROL-SCOPE, D-RC-VASSAL-REPORTS-261113 e backlog RC-REPORT-01. **Solo documentazione, nessun codice.**
+
+
+## 2026-11-13 — RC-TIME-01 · Temporalità degli ordini remoti (solo design)
+
+Confermato dal product owner: **ordini sul proprio feudo applicati al primo tick utile dopo validazione**; **lettere e comunicazioni inter-feudo recapitate secondo il tempo simulato**, senza accelerazione via browser o app. Distinti accettazione ed esecuzione; marcia e trasporto reali restano soggetti a durata di viaggio. Aggiornati `REMOTE-CONTROL-SCOPE.md`, decisione D-RC-TIME-261113 e backlog RC-TIME-01. La SRS mobile nella draft PR #222 è aggiornata a v0.3 (Q-02 risolta). **Solo documentazione, nessuna modifica a codice o schema.**
+
+
+## 2026-11-13 — MOB-B-01 · App mobile, primo rilascio pubblico con controllo completo (solo design)
+
+Il product owner ha selezionato **B**: la prima release Android/iOS deve supportare l'intero governo remoto — economia, lavoratori, fisco, cantieri localizzati, spedizioni/militare strategico, diplomazia/messaggi, tributi/carovane, mappa regionale, oltre a lobby e KPI multi-campagna. Alpha/beta interne progressive possibili, ma **nessun MVP pubblico read-only o gestionale parziale**. Riferimenti: D-MOB-B-261113 e SRS v0.2 nella draft PR #222. Stack e requisiti granulari restano aperti; nessun codice, schema o runtime modificato.
+
+
+## 2026-11-13 — Equipaggiamento delle unità · elmi e scudi
+
+13/11/2026 — `feature/unit-equipment-styles` (pre-merge):
+- Nuove scelte globali `State.policies.unitHelmet` (cervelliera di base, cappello d'arme, elmo a nasale, barbuta, elmo a staio) e `State.policies.unitShield` (ovale di base, rotella, triangolare, a mandorla, pavese), persistite in locale e cloud.
+- Centro di controllo › Militare › nuova sottoscheda «Equipaggiamento», sul modello di merlature e pendenza dei tetti: anteprima, costo e «Adotta». Costo per posto soldato delle caserme (`UNIT_HELMET_COST`, `UNIT_SHIELD_COST`). Comandi `ConquerGame.commands.unitEquipmentQuote/setUnitEquipment`.
+- Le figure 2D dei soldati del feudo (fermi e in combattimento) disegnano l'elmo e lo scudo scelti; i nemici restano con cervelliera e scudo ovale. Selettori Elmo/Scudo nel Lab delle figure.
+
+STATUS, BACKLOG e CHANGELOG aggiornati; ROADMAP e DECISIONS invariate (estende lo schema esistente delle scelte feudali in `State.policies`).
+
+## 2026-11-13 — Figure dei ruoli mancanti
+
+Branch `feature/new-role-figures`. I ruoli che esistevano solo nei conti ora hanno una figura con l'abito del mestiere e un gesto: il personale delle stanze del castello (cuoco, stalliere, armaiolo, cappellano, tesoriere, cerusico e inservienti, falconiere, colombaro, consiglieri), il prete, l'oste, le guardie e gli esattori del Bargello, i giudici del Balivo, i boscaioli del disboscamento. Il lavoro aggiunge 9 gesti, 8 pezzi di guardaroba, 12 abiti, voci nel Lab e una nuova regressione. ROADMAP e DECISIONS invariate.
+
+Prova in partita (22 scene di stanze e interni civici, più il disboscamento): tutto al suo posto. Corretto il falco del falconiere, che si confondeva con la tunica: ora ha il dorso grigio e il petto chiaro.
+
+## 2026-11-13 — Selezione edifici · perimetro senza lati posteriori e al livello corrente
+
+`drawCastleSelection` non disegna più i lati del perimetro a terra nascosti dal volume dell'edificio: un lato è posteriore se appena sotto di esso sullo schermo c'è il footprint di un corpo con altezza reale. Vale per torri, mura, sezioni costruite, case e civici, anche in cutaway, con la vista ruotata e con la camera libera di CAM-ROT-01 (i lati visti di taglio restano nascosti dalla parete). Campi, cantieri, piazze e corpi bassi (cortili, industrie aperte, pozzi) mantengono il perimetro completo. I civici seguono ciò che sta in piedi al livello corrente (`ConquerCivic3D.builtParts`, tabella `BUILT`): la chiesa L1 non mostra più la croce L3. Regressione in `qa/mastio-selection-zoom-regression.cjs`. ROADMAP e DECISIONS invariate.
+
+## 2026-11-13 — Abiti da mestiere
+
+Branch `feature/role-outfits`. Il guardaroba ha 11 nuovi pezzi da lavoro (grembiuli di cuoio, di tela e del vasaio, farsetto, mantelletta, calotta, cuffia, cappello di feltro, tocco, berretto da marinaio, chiavi) e 16 abiti per mestiere. Le figure al lavoro li indossano: bottegai, lavoratori anonimi, costruttori e taglialegna nominati, pastore, carrettiere, carceriere e marinai. Ci sono voci nuove nell'Asset Lab (famiglia «Abiti da mestiere»), una regressione estesa e la baseline dell'audit aggiornata solo per queste voci. ROADMAP e DECISIONS invariate.
+
+## 2026-11-13 — RC-03 · Confine funzionale del remote control (solo design)
+
+Confermato dal product owner il perimetro: gestione da browser (futuro Android/iOS) di economia, fisco, lavoratori, pianificazione/priorità di cantieri già localizzati, strategia militare/spedizioni, diplomazia, posta, tributi, carovane e mappa regionale. Riservati al Builder/3D il piazzamento geometrico, la progettazione spaziale delle fortificazioni e il controllo tattico diretto. Specifica `docs/REMOTE-CONTROL-SCOPE.md` §2a, D-RC-BOUNDARY-261113 e RC-03 aggiornati. Solo documentazione, nessun codice o QA runtime; ROADMAP/STATUS invariati.
+
+
+## 2026-11-13 — Capsuloide delle figure (`feature/vehicles-depth-cards`)
+
+Le carte figura in World3D prendono la profondità per pixel dal capsuloide: verticale per le persone, orizzontale lungo il corpo per gli animali. Bestiame e lupi diventano carte con capsula e collider. Nuova decisione D-CAPSULE-261113 in DECISIONS; nuova prova `qa/animal-capsule-browser.mjs` nel workflow Main fixes. ROADMAP invariata.
+
+## 2026-11-13 — Animali 2D rivisti come il cavallo (`feature/vehicles-depth-cards`)
+
+Bestiame e fauna 2D passano alle zampe articolate del nuovo cavallo con passo ridotto per specie; capra e mucca ricevono il collo articolato, così al pascolo la testa resta attaccata. Tutte le zampe, cavallo compreso, sono ora articolate al ginocchio/garretto e si piegano nella fase di volo del passo e del galoppo. Nuova famiglia `Animali 2D` nel Lab con baseline e strumento `qa/animal-preview.mjs`. D-046 invariata (sempre figure 2D); ROADMAP e DECISIONS invariate.
+
+## 2026-11-12 — Cavallo 2D ridisegnato e anteprime in gioco (`feature/vehicles-depth-cards`)
+
+Il cavallo 2D, condiviso da ogni uso in gioco, passa da sagoma tozza da asino a proporzioni di cavallo (zampe lunghe articolate, collo pieno, testa fine), con passo meno a forbice; gear dei cavalieri adattato. Nuovi strumenti `qa/horse-gallery.js` e `qa/horse-preview.mjs` per le anteprime in gioco di tutti gli usi; cinque voci 2D del cavallo aggiunte al Lab con baseline. D-046 invariata (sempre figure 2D); ROADMAP invariata.
+
+## 2026-11-12 — Veicoli con profondità in World3D (`feature/vehicles-depth-cards`)
+
+Chiusura di `economic-balances-animations`: verificato che economia, veicoli 2D e cartelli sono già in main (#108, D-054, D-055) e che i file residui sono superati. Completato l'unico residuo dopo #201: carri, carretti e carrozze (cavalli e conducente compresi) entrano nel depth buffer come carte 2D dell'atlante figure (`figure()` con `card={span,ox}`), occlusi da murature e case; convogli dei cartelli disegnati con la popolazione. Nuove prove `vehicles-regression` (caso WebGL) e `vehicle-cards-browser.mjs` nel workflow Main fixes. Decisione D-VEH-CARDS-261112 (applica D-046). ROADMAP invariata. Nessun nuovo modello né asset: il Lab mostra già il carro 2D usato dalla carta, audit asset non necessario.
+
+## 2026-11-13 — RC-01…RC-07 · Hub/lobby e remote control (solo documentazione)
+
+Definita main page multi-campagna con lobby e partite in corso, KPI aggregati per insediamento e gestione remota da browser, in futuro da app Android/iOS. Portata funzionale: messaggi, diplomazia, spedizioni, tributi, mappa regionale e controllo del feudo. Riletti centro pannelli su main e branch `messages` divergente (29 avanti / 317 indietro); riportata necessità di porting selettivo e API autorevoli senza simulatore duplicato. Specifica `docs/REMOTE-CONTROL-SCOPE.md`, D-RC-261113 e backlog RC-01…RC-07. **Nessun codice, test o asset modificato. ROADMAP e STATUS invariati.**
+
+
+## 2026-11-13 — MP-07 · Account separato dalle campagne (solo design)
+
+Confermato dal product owner: lo stesso account può partecipare a più server/campagne contemporaneamente. Separazione documentata tra identità globale, partecipazione `user_id + campaign_id` e progresso di feudi/mondo isolato per campagna. Evidenziato il gap concreto nei salvataggi Supabase attuali (`settlements` con `user_id,world_cell_x,world_cell_y`, senza `campaign_id`). Aggiornati specifica multiplayer, decisione D-MP-ACCOUNT-261113 e backlog MP-07. **Solo documentazione: nessuna migrazione SQL, codice o QA gameplay. ROADMAP e STATUS invariati.**
+
+
+## 2026-11-13 — CAM-ROT-01 · Rotazione libera della camera
+
+13/11/2026 — `feature/free-camera-rotation` (pre-merge):
+- La vista ruota a qualsiasi angolo: Shift + tasto centrale trascinato, con Ctrl a scatti di 15°. Tasto centrale/destro da soli restano pan; Q/E e pulsanti girano di 90°.
+- Proiezione 2D, shader WebGL e ombreggiatura delle facce accettano angoli frazionari; i quarti interi usano lo stesso percorso esatto di prima.
+- QA: 51 regressioni Node PASS; prova in gioco sul layout `TEST` a 22,5°, 30°, 45° e 105°.
+- Limite: trascinamento a ~6 fps (ogni angolo ricostruisce scena e mesh).
+
+STATUS, BACKLOG e CHANGELOG aggiornati; ROADMAP e DECISIONS invariate (comando di camera, nessun contratto toccato).
+
+## 2026-11-13 — MP-01…MP-06 · Scope multiplayer e colonizzazione feudale (solo documentazione)
+
+Registrato il modello con posti umani separati dai bot e dai territori non colonizzati, ingresso su nuovi villaggi senza sostituzione bot, priorità delle terre libere e possedimenti aperti alla fondazione di sudditi, configurabili dal signore in alternativa all'autosviluppo. Esempio 100 territori / 30 posti umani / 30 bot non vincolante; lobby informativa, ×1 multiplayer e punti aperti su avvio, mastio, permessi e durata. Specifica [MULTIPLAYER-SERVER-SCOPE](../MULTIPLAYER-SERVER-SCOPE.md), decisione D-MP-261113, backlog MP-01…MP-06. **Nessun codice o QA runtime modificato/eseguito. ROADMAP invariata: World/Feudal resta M4.**
+
+
+## 2026-11-13 - Preparazione merge PR #206
+
+Preparazione merge PR #206: main aggiornato riconciliato mantenendo moduli e documenti di entrambi i branch. Catalogo Wiki rigenerato. Gilda riferita agli artigiani L2; dazio botteghe e relativo malcontento addebitati a L2 anziche L3, con regressione riprodotta prima del fix. Fondazione: cinque scenari superati isolatamente con Node 22, ma timing intermittente oltre 100 ms nella suite anche su Node 22; verifica Actions ancora necessaria. Nessuna soglia allentata. Suite completa e Actions da completare prima del merge. Nessuna nuova funzione demografica, giudiziaria o archetipo edilizio.
+
+## 2026-11-13 - Verifica CI PR #206
+
+Corretta asserzione livestock obsoleta dopo SOC-CLASS-02. Test comportamentali su selettore agricolo reale, riserve cave, esclusione allevatori e conservazione della vocazione su 400 case migrate superati. Suite completa e CI da completare prima del merge. Nessuna modifica runtime o bilanciamento; ROADMAP e DECISIONS invariate. Demografia, 12 archetipi e funzioni giudiziarie fuori scope.
+
+## 2026-11-12 — SOC-CLASS-02 · Migrazione ceti sul branch PR #206
+
+Migratore puro `ConquerSocialClasses` e applicazione una tantum ai save locali/cloud; census house L1+ex-L2 con abitanti conservati, L2 artigiani e L3 istruiti/mercanti, L4 nobiltà. Riassegnate professioni economiche, botteghe, routine sociali e fondi commerciali; nuova lealtà nobiliare; QA dedicata e regressioni aggiornate. Partizione 25/75 del vecchio portafoglio L4 da approvare. Codice su branch, non merge, CI completa da verificare; immigrazione/ricostruzione D1–D3 NON attivate. [Specifiche](../CIVIL-CLASS-MIGRATION.md).
+
+
+## 2026-11-12 — CIV-EVT-01 · Skeleton degli effetti civili (branch PR #206)
+
+Aggiunto `ConquerCivicEventEffects`, API read-only per 8 tipi di eventi civili con bonus differenziati di felicità L1–L3, lealtà L4, ripetizione e prestigio temporaneo; collegamento di anteprima alle heatmap PR #206. Riutilizzati allestimenti/fasi esistenti, nessun mutamento di salvataggi, costi o popolazione. Aggiunta regressione alla suite urbana, [contratto](../CIVIC-EVENT-EFFECTS-SKELETON.md) e decisione D-CIV-EVT-261112. Sul branch, non merge: Node/browser/CI da verificare.
+
+
+## 2026-11-12 — URB-HEAT-01 · Skeleton territoriale (branch feature)
+
+Aggiunto modulo isolato `ConquerUrbanHeatmaps` con quattro mappe concettuali (domanda L1–L4, prestigio, sicurezza, crimine), sette canali e lettura del lotto; script caricato senza simulazione attiva. Aggiunta regressione richiamata da QA urbana e specifica `docs/URBAN-HEATMAP-SKELETON.md`. **Sul branch, non merge; QA/CI da verificare; nessuna migrazione o modifica gameplay.** Contratti in D-URB-HEAT-261112. ROADMAP invariata: nessuna milestone ripianificata.
+
+
+## 2026-11-13 — GILDA-01 fase 1 · Bonus delle botteghe e Gilda unica
+
+13/11/2026 — `feature/gilda-fase1` (pre-merge):
+- Nuovo modulo `ConquerGuild`: una Gilda attiva per villaggio, bonus +25/+50/+100% sulla produzione delle botteghe L3, scalato dalla resa dei funzionari (1 finché SCOL-01 non porta i ruoli).
+- Il Builder rifiuta una seconda Gilda; nei vecchi salvataggi lavora solo la migliore.
+- Scheda Gilda nell'ispettore (classico e UI2) e KPI nel Profilo.
+- Regressione `qa/guild-regression.cjs` nel workflow economico.
+
+STATUS, BACKLOG e CHANGELOG aggiornati; DECISIONS e ROADMAP invariate (la fase segue D-GILDA-261113).
+
+## 2026-11-13 — GILDA-01 · Gilda (solo specifica)
+
+13/11/2026 — `docs/gilda-01`: specifica della Gilda approvata dal product owner.
+- Solo produttività: +25/+50/+100% per livello su produzione e consumo delle botteghe L3, una Gilda attiva per villaggio.
+- Funzionari laici `guild.official` (posti 1/2/3, nessun bonus senza funzionari).
+- Cassa della Gilda alimentata da una quota sulle vendite a pareggio automatico (tetto 15%), dopo il dazio.
+- Nuovo pagatore `payer:'guild'` nel contratto D-SCOL-261112; nessun legame con Municipio ed Erario.
+- La Casa delle Corporazioni è assorbita: tolta dal catalogo «da confermare».
+
+BACKLOG, DECISIONS, STATUS e CHANGELOG aggiornati; ROADMAP invariata.
+
+13/11/2026 — `docs/scriptorium-effects`: specifica SCRIPT-01 approvata dal product owner (maestro laico `scriptorium.master`, scuola ferma senza maestro, ingaggio del chierico a 60 oro come modifica a D-SCOL-261112 §6, +1 Prestigio, codici miniati ARTE solo nello Scriptorium Clericale, interno in sezione come ultima fase). Nuova decisione D-SCRIPT-261113; voci di catalogo dello Scriptorium aggiornate. Nessun codice, test o asset modificato; ROADMAP invariata.
+
+## 2026-11-12 — SCOL-01 fase 1 · Scolarizzati: dati, tetto e ingaggio
+
+12/11/2026 — `feature/scol-01-fase1` (pre-merge):
+- Nuovo modulo `ConquerEducated`: contatori laici/chierici nelle case L3/L4 dentro `State.economy`, con migrazione lazy.
+- Tetto di 3 posti per casa L3 e 4 per casa L4. Eccedenza senza alloggio che rientra o emigra dopo 4 settimane.
+- Ingaggio del signore a 40 oro con arrivo in 14 giorni e rimborso se non c'è posto.
+- Sotto-righe nei pannelli e scheda «L3 · Istruiti» nel Job Manager.
+- Regressione `qa/educated-regression.cjs` aggiunta al workflow economico.
+- Nessun effetto sul lavoro finché non arrivano i ruoli (fase 3).
+
+Corretta nella specifica la frase «3 posti per casa»: la formula approvata dà 4 posti alle case L4. STATUS, BACKLOG, CHANGELOG e DECISIONS aggiornati; ROADMAP invariata.
+
+## 2026-11-12 — SCOL-01 · Scolarizzati (solo specifica)
+
+12/11/2026 — `docs/scolarizzati`: specifica della sottoclasse «Scolarizzati» approvata dal product owner.
+- Contatori laici/chierici sulle case L3/L4, senza secondo ledger.
+- Tre origini: Scriptorium con selettore Laico/Clericale, 4 allievi e 1 anno; immigrazione mensile; ingaggio a 40 oro con arrivo in 2 settimane.
+- Ruoli registrati dalle sessioni proprietarie, con resa proporzionale e soglia.
+- Salario 2 × L3 con cursore 50–200% che muove arrivi e partenze.
+- Penalità per disoccupazione istruita; eccedenza senza alloggio per 4 settimane.
+- Contratto D-SCOL-261112 in DECISIONS per Gilda, Scriptorium, FISCO-01, CRIME, ARTE, diplomazia e la futura sessione Chiesa.
+
+12/11/2026 — `feature/bargello-balivo` (FISCO-01 fase B, pre-merge):
+- Nuovo modulo Erario (`ConquerTreasury`) e scheda ERARIO nel Profilo, con cursori, efficienza e decreti.
+- Imposte nuove: testatico, dazio delle botteghe L3, pedaggio e decima in natura, riscosse con l'efficienza del Municipio del centro, dei Bargelli e dei Balivi.
+- Sette decreti del consiglio. La leva straordinaria tiene armata una quota di uomini L1/L2 senza allarme; il cursore `levy` è rimosso.
+- `qa/treasury-regression.cjs` aggiunto in CI. Contratto tecnico in D-FISCO-261110. ROADMAP invariata.
+
+12/11/2026 — `feature/bargello-balivo`: FISCO-01 rimanda al futuro contratto «Scolarizzati» per classe, formazione e salari di esattori e giudici (prima: «nuovo mestiere L2»). Solo documentazione.
+
+10/11/2026 — `feature/bargello-balivo` (FISCO-01 fase A, pre-merge): specifica fiscale concordata con l'utente (Erario, cinque imposte, efficienza di riscossione del Municipio, Bargello, sala delle guardie, Palazzo del Balivo, decreti con leva straordinaria; giustizia ancora proposta) in BACKLOG e D-FISCO-261110. Implementati solo i modelli: Bargello e Palazzo del Balivo L1–L2 da Blender, Builder, collocamento, cantiere, crollo, incendio, cutaway, Lab, Codex. Nessun effetto di gioco. ROADMAP invariata.
+
 09/11/2026 — CI P2.4 (`perf/ci-p24-specialist-test-ownership-20261109`): rimosse 9 invocazioni test duplicate da Codex Wiki, Main fixes e CAMP, mantenendo owner di regressione in Runtime integrity e settlement-qa (always-on PR). Codex Wiki mantiene Playwright e filtri dei suoi check browser, Main fixes mantiene WebGL/render e UI/Combat, CAMP conserva animali e pattuglie. Aggiunta guardia P2.4 in `qa/ci-p1-regression.cjs`; suite completa P0 e tutte le baseline/test immutate.
 
+
+
+## 2026-11-12 — CHIESA-01 fase 1 · Cassa della Chiesa
+
+12/11/2026 — `feature/chiesa-fase1`: la Chiesa ha una sua Cassa.
+- Ogni domenica le offerte arrivano dai borsellini delle classi servite da una chiesa.
+- A fine anno arrivano i lasciti di L3 e L4, se le due classi sono contente.
+- Il signore può donare 10, 50 o 100 oro e guadagna Favore.
+- Scheda «Chiesa» nell'ispettore di ogni chiesa e riquadro nel Profilo › Generale.
+- Nuova regressione `qa/church-regression.cjs`.
+
+STATUS, BACKLOG e DECISIONS (regola transitoria della resa del culto) aggiornati; ROADMAP invariata.
+
+## 2026-11-12 — CHIESA-01 · La Chiesa come entità autonoma (solo specifica)
+
+12/11/2026 — `docs/chiesa`: il product owner ha approvato la specifica della Chiesa come istituzione distinta dal castello.
+- Una sola istituzione per villaggio, con una Cassa che non è un secondo ledger.
+- Entrate: offerte domenicali, lasciti annui e doni del signore. Nessuna decima ecclesiastica.
+- Spese in ordine fisso: salari dei chierici, rette clericali, carità, feste, co-finanziamento dei cantieri.
+- La Chiesa decide ogni anno il salario dei chierici e smette di farli pagare al castello.
+- Posti per livello della chiesa; il Monastero forma 2 novizi l'anno.
+- Favore 0–100 verso il signore, che muove le prediche; messa domenicale con capienza.
+- Modifiche al contratto D-SCOL-261112 descritte in D-CHIESA-261112.
+
+BACKLOG, STATUS e DECISIONS aggiornati; ROADMAP invariata; nessun codice.
+
+## 2026-11-13 — Bottegai al lavoro: vasaio, tessitore, sarto
+
+Branch `feature/shop-artisan-tools`. Tre nuovi attrezzi nelle animazioni di lavoro (argilla al tornio, spola, ago e filo): ora tutti i mestieri delle botteghe L3 lavorano invece di stare fermi. Voci nuove nell'Asset Lab, test e baseline dell'audit aggiornati. Il BACKLOG elenca le animazioni di lavoro ancora mancanti (rimboschimento, campi). ROADMAP e DECISIONS invariate: è un completamento visivo senza nuovi contratti.
 
 
 ## 2026-11-09 — BC-261109-02 · DEV e cantieri di ristrutturazione

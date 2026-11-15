@@ -147,9 +147,9 @@ function startCivicAnnexPlacement(parent,annexType){
 }
 // Well civics: the town hall and the guild hall belong to a well's square, the village
 // centre or any quarter well. One of each per well, standing within reach of it.
-const WELL_CIVIC_TYPES=Object.freeze(['townhall','guild']);
+const WELL_CIVIC_TYPES=Object.freeze(['townhall','guild','bargello']);
 const WELL_CIVIC_RANGE=9;
-const WELL_CIVIC_LABELS=Object.freeze({townhall:'Town hall',guild:'Guild hall'});
+const WELL_CIVIC_LABELS=Object.freeze({townhall:'Town hall',guild:'Guild hall',bargello:'Bargello'});
 function isWellCivic(s){return !!s&&WELL_CIVIC_TYPES.includes(s.type)}
 function wellCivicTaken(well,type,exceptId=null){
   return State.structures.some(o=>o.type===type&&o.id!==exceptId&&o.wellId===well.id);
@@ -167,6 +167,9 @@ function wellCivicPlacementCheck(s){
   if(!isWellCivic(s))return{ok:true};
   const label=WELL_CIVIC_LABELS[s.type];
   if(!State.village?.founded)return{ok:false,reason:label+' needs a founded village'};
+  // GILDA-01: the guild serves the whole village, so only one guild hall may stand.
+  if(s.type==='guild'&&State.structures.some(o=>o.type==='guild'&&o.id!==s.id&&!o.destroyed))
+    return{ok:false,reason:'Only one guild hall per village'};
   const wells=wellCivicCandidates(s);
   if(!wells.length)return{ok:false,reason:label+' must stand within '+WELL_CIVIC_RANGE+'U of a completed well'};
   const well=wells.find(w=>w.id===s.wellId)||wells.find(w=>!wellCivicTaken(w,s.type,s.id));
@@ -178,4 +181,19 @@ function wellCivicLabel(s){
   const square=!well?'no well':typeof isVillageCenterWell==='function'&&isVillageCenterWell(well)?'village centre':
     (typeof wellDisplayName==='function'&&wellDisplayName(well))||'unnamed quarter';
   return WELL_CIVIC_LABELS[s.type]+' · L'+civicLevel(s)+' · '+square;
+}
+// Palazzo del Balivo (FISCO-01): the lord's bailiff over the countryside. It stands out in the
+// rural belt, away from the quarters: outside the housing zones, clear of every well, and apart
+// from any other bailiff's house (each one covers its own stretch of the contado).
+const BALIVO_WELL_CLEARANCE=12,BALIVO_SPACING=20;
+function balivoPlacementCheck(s){
+  if(s?.type!=='balivo')return{ok:true};
+  if(!State.village?.founded)return{ok:false,reason:'Palazzo del Balivo needs a founded village'};
+  const zone=window.ConquerCombat?.areaState?.(s);
+  if(zone?.yellow||zone?.green)return{ok:false,reason:'Palazzo del Balivo stands in the countryside, outside the housing zones'};
+  const well=State.structures.find(w=>w.type==='well'&&dist(s,w)<BALIVO_WELL_CLEARANCE);
+  if(well)return{ok:false,reason:'Palazzo del Balivo must stand at least '+BALIVO_WELL_CLEARANCE+'U from any well (the quarters)'};
+  if(State.structures.some(o=>o.type==='balivo'&&o.id!==s.id&&dist(s,o)<BALIVO_SPACING))
+    return{ok:false,reason:'Another Palazzo del Balivo already governs this countryside (within '+BALIVO_SPACING+'U)'};
+  return{ok:true};
 }

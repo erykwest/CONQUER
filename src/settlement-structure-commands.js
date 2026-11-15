@@ -86,8 +86,11 @@ const StructureCommands=(()=>{
   }
   function setTowerRoof(id,style){
     const target=find(id);if(!target||target.type!=='tower')return false;
-    if(!setStructureVariant(target,'roofStyle',style))return false;
-    refresh(target);status('Tower roof: '+(target.roofStyle==='pitched'?'pitched':target.roofStyle==='machicolation'?'machicolation':'battlement'));return true;
+    // 'machicolationItalian' is the machicolated top with the Italian look (machicolationStyle).
+    const italian=style==='machicolationItalian';
+    if(!setStructureVariant(target,'roofStyle',italian?'machicolation':style))return false;
+    if(target.roofStyle==='machicolation')setStructureVariant(target,'machicolationStyle',italian?'italian':'standard');
+    refresh(target);status('Tower roof: '+(target.roofStyle==='pitched'?'pitched':target.roofStyle==='machicolation'?(italian?'Italian machicolation':'machicolation'):'battlement'));return true;
   }
   // The hoarding of a tower or stone gate is mounted or taken down; the roof stays as built.
   function setHoarding(id,value){
@@ -366,7 +369,7 @@ const StructureCommands=(()=>{
       const well=wellCivicWell(s);
       d.facts.push({key:'square',value:well?wellDisplayName(well)||'—':'—',center:!!well&&isVillageCenterWell(well)});
     }
-    if(['house','market','tavern','church','training','plaza','townhall','guild'].includes(s.type))
+    if(['house','market','tavern','church','training','plaza','townhall','guild','bargello','balivo'].includes(s.type))
       d.controls.push({key:'rotation',cmd:'rotate',rotate:true,angle:Math.round((Number(s.angle)||0)*180/Math.PI+360)%360});
     if(s.type==='tower'){
       d.mastio={active:!!s.isMastio,disabled:building};
@@ -411,7 +414,7 @@ const StructureCommands=(()=>{
       if(woodTower){
         if(woodTowerStyle(s)==='palisadeTower')d.controls.push(choice('woodRoof','setWoodRoof',[{value:'open',word:'open'},{value:'pitched',word:'pitched4'}],woodTowerRoof(s)));
       }else{
-        d.controls.push(choice('roof','setTowerRoof',[{value:'battlement',word:'battlement'},{value:'machicolation',word:'machicolation'},{value:'pitched',word:'pitched'}],towerRoofStyle(s)));
+        d.controls.push(choice('roof','setTowerRoof',[{value:'battlement',word:'battlement'},{value:'machicolation',word:'machicolation'},{value:'machicolationItalian',word:'machicolationItalian',disabled:s.shape==='half'},{value:'pitched',word:'pitched'}],towerRoofMenuValue(s)));
         if(s.shape!=='half')d.controls.push(hoardingChoice(s));
         if(s.shape!=='half')d.controls.push(choice('innerRoof','setTowerInnerRoof',[{value:'off',word:'innerRoofOff'},{value:'on',word:'innerRoofOn',disabled:!towerInnerRoofAllowed(s)}],towerInnerRoofMounted(s)?'on':'off'));
         d.controls.push(choice('weapon','setTowerWeapon',[{value:'none',word:'none'},{value:'mangonel',word:'mangonel',disabled:!towerTopWeaponAllowed(s)},{value:'ballista',word:'ballista',disabled:!towerTopWeaponAllowed(s)}],structureVariant(s,'topWeapon')));
@@ -435,7 +438,7 @@ const StructureCommands=(()=>{
       d.controls.push(hoardingChoice(s));
     }
     if(typeof CIVIC_LEVEL_TYPES!=='undefined'&&CIVIC_LEVEL_TYPES.includes(s.type))
-      d.controls.push(choice('civicLevel','setCivicLevel',[1,2,3].map(n=>({value:n,label:'L'+n})),civicLevel(s)));
+      d.controls.push(choice('civicLevel','setCivicLevel',civicLevels(s.type).map(n=>({value:n,label:'L'+n})),civicLevel(s)));
     if((s.type==='church'||s.type==='townhall')&&window.ConquerAlarmBells)
       d.facts.push({key:'bellRange',value:window.ConquerAlarmBells.hearingRadius(s)+'U'});
     if(typeof isPlazaLike==='function'&&isPlazaLike(s))
