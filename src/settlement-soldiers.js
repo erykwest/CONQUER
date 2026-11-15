@@ -9,7 +9,8 @@
 //   outposts    a paid upgrade of an isolated tower outside the White Zone: OUTPOST_MEN soldiers and
 //               one horse from the stables, a lookout always on duty
 //   lookouts    one soldier on a tower: WITHOUT a lookout a tower no longer watches (combat observers)
-//   patrols     two soldiers each, on the White Zone border or on the town round (ConquerCombat)
+//   patrols     two soldiers each, on the White Zone border or on the town round (ConquerCombat),
+//               then those on the rings of walls (ConquerWallPatrols, one ring each)
 // Duty that the reserve no longer covers stops: an outpost or a lookout goes idle, an uncovered
 // patrol returns to the Barracks.
 // A patrol or a lookout that sights a hostile raises the alarm by itself. An outpost sends the word to
@@ -24,7 +25,9 @@
   const RIDER_SPEED=2.6;                       // U per combat second: a galloping relay, faster than a knight's march (1.5)
   const MIN_WHITE_GAP=.5;                      // an outpost stands clear of the White Zone
 
-  const S=()=>window.ConquerSiege,C=()=>window.ConquerCombat,E=()=>window.ConquerEconomy;
+  const S=()=>window.ConquerSiege,C=()=>window.ConquerCombat,E=()=>window.ConquerEconomy,W=()=>window.ConquerWallPatrols;
+  // The saved wall-patrol assignment, cheap to read: it changes the memo key when it changes.
+  const wallKey=()=>{const l=st().wallPatrols;return Array.isArray(l)?l.map(e=>(e?.n|0)+'@'+(e?.walls?.[0]||'')).join(','):''};
   const standing=s=>!!s&&!s.destroyed&&!s.ruined&&!s.ruin&&!underConstruction(s);
   const towers=()=>State.structures.filter(s=>s.type==='tower');
   const say=t=>{if(typeof status==='function')status(t)};
@@ -85,7 +88,7 @@
   let memo=null,memoKey='';
   function roster(){
     const now=typeof performance!=='undefined'?performance.now():0;
-    const key=Math.floor(now/250)+':'+State.structures.length+':'+enlisted()+':'+paid()+':'+(C()?.units?.().length||0);
+    const key=Math.floor(now/250)+':'+State.structures.length+':'+enlisted()+':'+paid()+':'+(C()?.units?.().length||0)+':'+wallKey();
     if(memo&&key===memoKey)return memo;
     let left=onDuty();
     const expedition=Math.min(left,Math.max(0,Math.floor(Number(st().expedition)||0)));left-=expedition;
@@ -105,8 +108,12 @@
     for(const s of wanted){if(left<LOOKOUT_MEN)break;lookouts.add(s.id);left-=LOOKOUT_MEN}
     const patrols=(C()?.units?.()||[]).filter(u=>u.kind==='patrol'&&!u.defeated&&!u.lost&&!u.ward);
     const covered=Math.min(patrols.length,Math.floor(left/PATROL_MEN));left-=covered*PATROL_MEN;
+    // Wall patrols, one ring of walls each (settlement-wall-patrols.js), after the White Zone patrols.
+    const walls=W()?.wanted?.()||0;
+    const wallCovered=Math.min(walls,Math.floor(left/PATROL_MEN));left-=wallCovered*PATROL_MEN;
     memo={posts:posts(),enlisted:enlisted(),onDuty:onDuty(),paid:paid(),expedition,outposts,lookouts,
-      lookoutsWanted:wanted.length,patrols:patrols.length,patrolsCovered:covered,free:Math.max(0,left)};
+      lookoutsWanted:wanted.length,patrols:patrols.length,patrolsCovered:covered,
+      wallPatrols:walls,wallPatrolsCovered:wallCovered,free:Math.max(0,left)};
     memoKey=key;return memo;
   }
   const invalidate=()=>{memo=null};
@@ -287,6 +294,13 @@
       const n=C().withdrawPatrols(extra);invalidate();
       if(n)say(n+' patrol(s) back to the Barracks: '+(paid()?'not enough soldiers':'the soldiers are unpaid'));
     }
+    const w=W();if(!w)return;
+    w.sync?.();
+    const r2=roster(),wallExtra=r2.wallPatrols-r2.wallPatrolsCovered;
+    if(wallExtra>0){
+      const n=w.trim(wallExtra);invalidate();
+      if(n)say(n+' wall patrol(s) back to the Barracks: '+(paid()?'not enough soldiers':'the soldiers are unpaid'));
+    }
   }
 
   // ---------- daily: wages, posts lost
@@ -414,6 +428,7 @@
     const r=roster();
     return{posts:r.posts,enlisted:r.enlisted,onDuty:r.onDuty,paid:r.paid,free:r.free,expedition:r.expedition,
       lookouts:r.lookouts.size,lookoutsWanted:r.lookoutsWanted,patrols:r.patrols,
+      wallPatrols:r.wallPatrols,wallPatrolsCovered:r.wallPatrolsCovered,
       outposts:[...r.outposts.values()].filter(o=>o.active).length,outpostsWanted:r.outposts.size,
       enlistable:enlistable(),wagePerDay:wagePerDay(),recruitCost:RECRUIT_COST.gold,riders:riders.length};
   }

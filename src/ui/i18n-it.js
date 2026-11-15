@@ -107,7 +107,7 @@ export const T = {
       tier: 'Impronta', height: 'Livelli', rotation: 'Angolo', roof: 'Tetto', woodRoof: 'Tetto', roofCover: 'Copertura',
       base: 'Base', skin: 'Rivestimento', side: 'Lato esterno', cutaway: 'Spaccato',
       weapon: 'Arma', bartizan: 'Garitte', roofShape: 'Falde', civicLevel: 'Sviluppo', plaza: 'Variante', upper: 'Piano alto', hoarding: 'Ballatoio', bell: 'Campana', lookout: 'Vedetta', outpost: 'Avamposto', signalFire: 'Fuoco di segnalazione', innerRoof: 'Tetto interno',
-      wallStair: 'Scala al camminamento', wallStairPos: 'Posizione scala'
+      wallStair: 'Scala al camminamento', wallStairPos: 'Posizione scala', wallPatrols: 'Pattuglie del giro'
     },
     words: {
       battlement: 'Merlato', machicolation: 'Caditoie', machicolationItalian: 'Caditoie all\'italiana', pitched: 'Falde', open: 'Piattaforma', pitched4: 'Falde · 4 pali', cover_shingle: 'Scandole', cover_thatch: 'Paglia', cover_turf: 'Zolle erbose',
@@ -124,7 +124,7 @@ export const T = {
     facts: {
       household: 'Capienza', residents: 'Uomini · donne · bambini', rooms: 'Stanze · capacità',
       variant: 'Variante', length: 'Lunghezza', subtower: 'Agganciata a', masonry: 'Muratura', square: 'Piazza del pozzo', bellRange: 'Campana · udito',
-      lookout: 'Vedetta', outpost: 'Avamposto', signalFire: 'Fuoco di segnalazione',
+      lookout: 'Vedetta', outpost: 'Avamposto', signalFire: 'Fuoco di segnalazione', wallRing: 'Giro di mura', wallPatrolNeed: 'Pattuglie',
       size: 'Dimensione', storageCapacity: 'Capienza', storedGoods: 'In deposito',
       food: 'Cibo', wood: 'Legno', stone: 'Pietra', clay: 'Argilla', metal: 'Metallo', equipment: 'Equipaggiamento', luxury: 'Lusso'
     },
@@ -239,6 +239,7 @@ export const T = {
     bartizan: 'Quattro garitte d\'angolo su mensole, solo torri grandi (T3) quadrate o rotonde. 3 tiratori per garitta, che colpiscono anche il piede della torre fino a 1U.',
     hoarding: 'Galleria di legno montata in guerra attorno alla cima, sotto la gronda se c\'è il tetto; il tetto resta. Non con le caditoie né con le garitte.',
     bell: 'Castello campanario sulla punta del tetto, solo torri T1-T2 con tetto a falde (anche di legno). Quando suona l\'allarme, chi è nel raggio lo sente subito e un\'altra campana nel raggio lo ripete; fuori dai raggi l\'allarme corre a voce, più lento. Raggio: H1 10U, H2 13U, H3 16U. Esclude colombaia e falconiera.',
+    wallPatrols: 'Pattuglie di tutto il giro di mura di cui fa parte questo tratto, non del solo tratto. Ogni pattuglia sono 2 soldati liberi della Caserma che percorrono il camminamento passando per torri e porte; più pattuglie si distribuiscono lungo il giro. Si regolano anche da Militare › Pattuglie e guarnigioni.',
     lookout: 'Un soldato della Caserma di guardia sulla torre. Senza vedetta la torre non vede; con la vedetta vede come sempre e, se avvista nemici, fa suonare l\'allarme da sola.',
     outpost: 'Solo una torre isolata (senza mura, porte o torri agganciate) fuori dalla White Zone. Presidio fisso di 4 soldati e 1 cavallo, vedetta sempre in servizio. Quando avvista nemici avvisa il castello con campane e fuochi a catena e manda una staffetta a cavallo.',
     signalFire: 'Pira grande sul terrazzo merlato di una torre in pietra senza macchine da guerra. Passa l\'allarme a catena come una campana, con raggio triplo, ma brucia una volta sola: poi va ricostruita (30 legno).',

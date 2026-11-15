@@ -226,6 +226,12 @@ const StructureCommands=(()=>{
     const target=find(id),M=window.ConquerSoldiers;if(target?.type!=='tower'||!M)return false;
     const ok=M.setSignalFire(id,value);if(ok)refresh(target,false);return ok;
   }
+  // Patrols on the whole ring of walls the wall belongs to: two reserve soldiers each.
+  function setWallPatrols(id,value){
+    const target=find(id),W=window.ConquerWallPatrols;if(!['wall','palisade'].includes(target?.type)||!W)return false;
+    const ring=W.ringOfWall(target.id);if(!ring){status('This wall carries no wall walk yet (T2+ walls and palisades, completed)');return false}
+    return W.set(ring.id,Number(value));
+  }
   function setCivicLevel(id,level){
     const target=find(id);if(!target||!CIVIC_LEVEL_TYPES.includes(target.type))return false;
     if(civicAnnexChildren(target.id).some(child=>civicAnnexDefinition(child,target)?.level>level)){
@@ -460,6 +466,16 @@ const StructureCommands=(()=>{
         if(cur!=='none')d.controls.push(choice('wallStairPos','setWallStairPos',Object.keys(WS.POSITIONS).map(v=>({value:v,word:'stairPos_'+v})),s.wallStair.pos||'middle'));
       }
     }
+    // Patrols of the ring of walls this wall belongs to (settlement-wall-patrols.js, MIL-WALL-01).
+    if(['wall','palisade'].includes(s.type)&&!building){
+      const wp=window.ConquerWallPatrols?.wallControl?.(s);
+      if(wp){
+        d.controls.push(choice('wallPatrols','setWallPatrols',wp.options,wp.current));
+        d.facts.push({key:'wallRing',value:wp.fact});
+        const need=window.ConquerWallPatrols.summary?.().shortfall;
+        if(need&&wp.current<wp.ring.max)d.facts.push({key:'wallPatrolNeed',value:need.text});
+      }
+    }
     if(['wall','palisade','built'].includes(s.type))d.controls.push({key:'side',cmd:'flipSide',toggle:true});
     if(cutawayEligible(s))d.controls.push({key:'cutaway',cmd:'toggleCutaway',toggle:true,active:structureCutaway(s),disabled:building});
     // Floor in view of an open cutaway (castle toggle or selected civic building), stepped with ▲ ▼.
@@ -487,7 +503,7 @@ const StructureCommands=(()=>{
   }
 
   const commands={setConstructionPriority,setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setLonghouseCover,setGateRoof,setGateUpper,setSkin,setWallStair,setWallStairPos,toggleCutaway,stepCutawayFloor,flipSide,
-    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerInnerRoof,setTowerLookout,setTowerOutpost,setTowerSignalFire,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,
+    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerInnerRoof,setTowerLookout,setTowerOutpost,setTowerSignalFire,setWallPatrols,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,
     describeStructure};
   for(const name of ['setTier','setHeight','setKeepFloorPlan','setTowerBase','setTowerRoof','setHoarding','setWoodRoof','setGateRoof','setGateUpper','setSkin','setTowerWeapon','setTowerRoofShape','setTowerBartizan','setTowerBell','setTowerInnerRoof','setCivicLevel','setPlazaVariant']){
     const execute=commands[name];

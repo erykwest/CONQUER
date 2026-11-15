@@ -1,5 +1,12 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-MIL-WALL-261115 — Pattuglie delle mura per giro (15/11/2026)
+
+- **DECISO dal product owner:** le pattuglie sulle mura si contano **per giro di mura**, non per segmento; dal pannello se ne assegnano di più o di meno.
+- **DECISO dal product owner:** ogni pattuglia delle mura costa **2 soldati della riserva della Caserma**, come le pattuglie White Zone (coerente con D-MIL-RES-261109); un giro nuovo parte con **0 pattuglie**.
+- **CONTRATTO TECNICO:** giro = componente connesso di `ConquerWallWalk.graph()`; id del giro `ring:<id muro minore>`. Stato salvato in `State.siege.soldiers.wallPatrols` = `[{walls:[id…], n}]`; una voce va al giro che contiene più muri suoi; voci di giri non percorribili restano dormienti finché un loro muro esiste. Ordine di copertura della riserva: spedizioni, avamposti, vedette, pattuglie White Zone, pattuglie delle mura. Massimo per giro: una pattuglia ogni 4U (almeno 1). `/camp` invariato.
+- **STATO:** implementato su `fix/wall-patrol-rings`, non in main. Le pattuglie delle mura non sono unità di combattimento.
+
 ## D-WORLD-SPEED-261115 — Rapporti di velocità strategica terrestri (15/11/2026)
 
 - **DECISO dal product owner:** riferimento comune **fanteria standard = 1×**; **messaggero a piedi = 1×**; **cavalleria standard = 2×**; **messaggero a cavallo = 2×**; **carri di mercanti, rifornimenti e immigrati = 1,5×**. Sono coefficienti sulla **stessa distanza/percorso a parità di condizioni**, riferiti al movimento strategico World/Feudal, non alla velocità di rendering o al combattimento tattico.
@@ -253,6 +260,7 @@ Richiesto: eliminare il pattern ripetuto e usare il riferimento geometrico [Divi
 - **MOTIVO:** con la profondità piatta una figura appena davanti a un muro aveva il corpo tagliato dalla muratura dietro, e una carta animale larga prendeva in blocco la profondità del centro (artefatti nel cutaway e lungo muri e tettoie).
 - **ALTERNATIVE SCARTATE:** carte animale con la sola profondità dei piedi (gli artefatti sopra); mesh 3D degli animali (`ConquerAnimals3D`, esclusa da D-046/D-055).
 - **CONSEGUENZA:** bestiame e lupi in World3D sono carte dell'atlante figure con capsula; nel renderer 2D restano il disegno 2D con `withUrbanFigureOcclusion`. Cavalli di giostra/feste e cavalieri in combattimento restano 2D (DA FARE).
+- **ESTESO (15/11/2026, `feature/figure-capsules-events`):** passano dalle carte con capsula anche le figure degli eventi (sagra, circo, arena, palco, podio, accampamenti), della giostra (spettatori, scudieri, cavalieri, caduti; cavalli con gualdrappa nella capsula orizzontale), della giustizia pubblica (gogna, forca, patibolo), del tribunale e del personale nelle stanze in cutaway. In World3D non si usano più la ridipintura degli occlusori delle tribune né il ritaglio con la sagoma dell'opera; restano 2D solo i prigionieri dietro le sbarre (le sbarre sono un disegno 2D) e la lancia della giostra (tratto 2D).
 
 ## D-VEH-CARDS-261112 — Veicoli come carte 2D con profondità (12/11/2026)
 
