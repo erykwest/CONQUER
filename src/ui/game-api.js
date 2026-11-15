@@ -223,6 +223,17 @@
       if(ok){scheduleLocalSave(200);emit();}
       return !!ok;
     },
+    // Patrols of a whole ring of walls (settlement-wall-patrols.js): two reserve soldiers each.
+    adjustWallPatrols: (ringId,delta) => {
+      const ok=window.ConquerWallPatrols?.adjust?.(ringId,delta);
+      if(ok){scheduleLocalSave(200);emit();}
+      return !!ok;
+    },
+    enlistForWallPatrol: () => {
+      const n=window.ConquerWallPatrols?.enlistForPatrol?.()||0;
+      if(n){scheduleLocalSave(200);emit();}
+      return n>0;
+    },
     assignCirclePatrol: (sectorId,delta) => {
       const ok=window.ConquerCombat?.assignCirclePatrol?.(sectorId,delta);
       if(ok){scheduleLocalSave(200);emit();}
@@ -361,6 +372,7 @@
     outside.assigned=outside.towers.reduce((n,m)=>n+m.assigned,0);
     outside.active=outside.towers.reduce((n,m)=>n+m.active,0);
     return {circleReady,zones:zoneRows,outside,macros,patrols,otherBarracks,
+      wallRings:window.ConquerWallPatrols?.summary?.()||null,
       totalAssigned:macros.reduce((n,m)=>n+m.assigned,0),
       totalActive:macros.reduce((n,m)=>n+m.active,0),
       unassigned:allies.filter(u=>u.kind==='squad'&&!u.defeated&&!u.barracksId).length,

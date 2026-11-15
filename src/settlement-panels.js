@@ -445,6 +445,31 @@
       '<div class="cp-circle-staffers">'+archerTools+patrolTools+'</div></div>'+
       (collapsed?'':'<div class="cp-circle-zone-body">'+detail+'</div>')+'</section>';
   }
+  // Wall patrols (MIL-WALL-01): one row per ring of walls, two reserve soldiers per patrol.
+  function wallRingRow(r,canAdd){
+    const len=(Math.round(num(r.length)*10)/10).toString().replace('.',',');
+    const idle=r.patrols-r.covered;
+    return '<div class="cp-job-garrison" data-cp-wall-ring="'+esc(r.id)+'"><div><b>'+esc(r.label)+'</b>'+
+      '<small>'+(r.closed?'Chiuso':'Aperto')+' · '+fmt(r.walls)+' tratti · '+len+'U</small>'+
+      '<small>'+fmt(r.patrols)+' / '+fmt(r.max)+' pattuglie · '+fmt(r.covered*2)+' soldati'+
+      (idle>0?' · '+fmt(idle)+' senza soldati':'')+'</small></div>'+
+      '<div class="cp-job-garrison-buttons">'+
+      '<button type="button" data-cp-wall-patrol="'+esc(r.id)+'" data-cp-wall-delta="-1"'+(!r.patrols?' disabled':'')+
+      ' aria-label="Richiama una pattuglia dal '+esc(r.label)+'">−</button>'+
+      '<button type="button" data-cp-wall-patrol="'+esc(r.id)+'" data-cp-wall-delta="1"'+(!canAdd||r.patrols>=r.max?' disabled':'')+
+      ' aria-label="Assegna una pattuglia al '+esc(r.label)+'">+</button></div></div>';
+  }
+  function wallRingsCard(w){
+    if(!w)return '';
+    const rows=(w.rings||[]).map(r=>wallRingRow(r,w.canAdd)).join('')||
+      empty('Nessun giro di mura percorribile: servono mura T2+ o palizzate completate.');
+    const f=w.rings?.length?w.shortfall:null;
+    const need=f?'<div class="cp-job-garrison"><div><b>Soldati liberi insufficienti</b><small>'+esc(f.text)+'</small></div>'+
+      (f.can?'<div class="cp-job-garrison-buttons"><button type="button" class="cp-action" data-cp-wall-enlist>Arruola '+fmt(f.need)+' · '+fmt(f.cost)+' oro</button></div>':'')+'</div>':'';
+    return card('Mura · pattuglie per giro',need+rows,
+      'Ogni pattuglia sono 2 soldati della Caserma che percorrono tutto il giro di mura, passando per torri e porte. '+
+      'Un giro nuovo parte senza pattuglie. Soldati liberi: '+fmt(w.free)+'.',true);
+  }
   function militaryAssignments(d){
     const a=d.militaryAssignments||{},patrols=a.patrols||[],zones=a.zones||[],outside=a.outside||{towers:[],otherBarracks:[],patrols:0,assigned:0,capacity:0};
     const reserved=num(outside.patrols),total=patrols.length;
@@ -467,6 +492,7 @@
     ])+grid([
       card('Riserva pattuglie',global,
         'Le pattuglie nella riserva seguono la White Zone. Assegnare a un settore trasferisce una pattuglia esistente, senza reclutarne una nuova.',true),
+      wallRingsCard(a.wallRings),
       card('CIRCLE · Settori e presidi',note+sectorRows+outRow,
         'Gerarchia reale: compartimento CIRCLE → torre madre. Il comando a livello settore distribuisce arcieri nei posti disponibili delle torri sottostanti.',true),
       ...(!a.hasCampManagement?[card('Caserme',empty('L’assegnazione di squadre nelle caserme è disponibile nella modalità /camp.'),'',true)]:[])
@@ -694,6 +720,12 @@
       const zonePatrol = ev.target.closest('[data-cp-circle-patrol]');
       if(zonePatrol){
         window.ConquerGame?.commands?.assignCirclePatrol?.(zonePatrol.dataset.cpCirclePatrol,Number(zonePatrol.dataset.cpCircleDelta));
+        render();return;
+      }
+      if(ev.target.closest('[data-cp-wall-enlist]')){window.ConquerGame?.commands?.enlistForWallPatrol?.();render();return;}
+      const wallPatrol = ev.target.closest('[data-cp-wall-patrol]');
+      if(wallPatrol){
+        window.ConquerGame?.commands?.adjustWallPatrols?.(wallPatrol.dataset.cpWallPatrol,Number(wallPatrol.dataset.cpWallDelta));
         render();return;
       }
       const zoneArcher = ev.target.closest('[data-cp-circle-archer]');

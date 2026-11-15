@@ -7,6 +7,55 @@
 - [x] Rimuovi foresta rispetta Fast build (istantaneo) e Free build (senza salari) del menu DEV.
 - [x] Cutaway piano per piano: i merli (e caditoie, tetto interno, braciere) spariscono quando il piano in vista non è l'ultimo.
 
+### 2026-11-15 — WALL-ROAD-GATE
+
+- Fatto sul branch `feature/wall-road-gates`: porta automatica del tipo corrispondente dove un nuovo muro/palizzata incrocia una strada principale. Aperto: un muro esistente attraversato in seguito da una nuova strada principale non riceve la porta (la strada resta bloccata come prima); livello porta = livello porta di default del costruttore.
+## MIL-WALL-01 — Pattuglie sulle mura per giro di mura (15/11/2026)
+
+**IMPLEMENTATO SU BRANCH `fix/wall-patrol-rings`, NON MERGE.** [D-MIL-WALL-261115](DECISIONS.md#d-mil-wall-261115--pattuglie-delle-mura-per-giro-15112026).
+
+- [x] Pattuglie per giro di mura (componente connesso del cammino di ronda), non per segmento.
+- [x] 2 soldati della Caserma per pattuglia, coperte dopo le pattuglie White Zone; ritiro automatico se mancano soldati o paga.
+- [x] Assegnazione +/− per giro da Militare › Pattuglie e guarnigioni e dall'ispettore del muro (legacy e UI v2); motivo e arruolamento in linea se mancano soldati.
+- [x] Salvataggio robusto a brecce e unioni di giri.
+- [x] Cache dei posti arcieri per torre (`drawCastleSoldiers` ~9× più veloce).
+- [ ] Combattimento: le pattuglie delle mura sono figure disegnate, non unità di `ConquerCombat`; non avvistano né combattono (le vedette e le pattuglie White Zone sì).
+- [ ] Torce notturne per le pattuglie delle mura, come per le pattuglie White Zone.
+
+## WORLD-SPEED-01 — Unificare velocità di fanteria, cavalleria, messaggeri e carri (15/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** rapporti **fanteria 1×**, **messaggero a piedi 1×**, **cavalleria 2×**, **messaggero a cavallo 2×**, **carri mercanti/rifornimenti/immigrati 1,5×**; il riferimento è la velocità **strategica** di fanteria nella World Map, non unità/giorno arbitrariamente scelte. [D-WORLD-SPEED-261115](DECISIONS.md#d-world-speed-261115--rapporti-di-velocita-strategica-terrestri-15112026) · [SRS mobile v0.15 draft #222](https://github.com/erykwest/CONQUER/pull/222).
+
+- [ ] Definire un **unico parametro autorevole** `V_fanteria` e calcolare velocità di tutti i cinque tipi come `1×, 1×, 2×, 2×, 1,5×` prima di modificatori di percorso.
+- [ ] Usare l'ETA del **messaggero pedone a 1×**, quando non ci sono cavalli; allarmi di invasione, rapporti e ordini devono poter partire senza inventare recapiti anticipati.
+- [ ] Armonizzare convogli di **mercanti, rifornimenti e immigrati** sul valore **1,5×**, senza applicarlo automaticamente a imbarcazioni o altri mezzi non inclusi.
+- [ ] Verificare le costanti **legacy 22 U/giorno** in `src/settlement-convoys.js` (convogli) e nella branch `messages` (corriere) e predisporre una **migrazione coerente** dei viaggi/ETA persistiti prima di passare al motore unico.
+- [ ] QA comparativo su stessa tratta: fanteria/pedone 1×, cavalleria/montato 2× e carri 1,5×, prima degli arrotondamenti del calendario; QA dopo modificatori stradali da specificare.
+- [ ] **APERTO:** valore assoluto del riferimento, terreni/strade/meteo, scorte e composizione convogli misti, eccezioni di unità, velocità imbarcazioni e piccioni. Nessuna modifica al runtime da questa decisione.
+
+
+## MSG-FOOT-01 — Messaggero a piedi se non ci sono cavalli (15/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** oltre al corriere a cavallo, è previsto il **messaggero a piedi** quando non sono disponibili cavalli. L'assenza di cavalcature **non annulla da sola** l'invio di lettere, ordini e **allarmi automatici d'invasione**, se un portatore e una rotta sono disponibili. **Sotto assedio sia pedoni sia montati non entrano/escono**, mentre i piccioni restano distinti. [D-MSG-FOOT-261115](DECISIONS.md#d-msg-foot-261115--messaggero-a-piedi-in-assenza-di-cavalli-15112026) · [SRS mobile v0.14 draft #222](https://github.com/erykwest/CONQUER/pull/222).
+
+- [ ] Modellare disponibilità dei cavalli e modalità del messaggero terrestre: **montato** oppure **pedone**, con fallback al pedone quando il cavallo non è disponibile, se il servizio terrestre rimane praticabile.
+- [ ] Calcolare percorso, tempi ed ETA secondo la modalità di trasporto effettiva; nessuna velocità numerica viene stabilita da questo requisito.
+- [ ] Applicare stessa scelta anche ai **messaggeri automatici d'allarme per invasione** e alle altre comunicazioni feudali, senza anticipare il loro recapito nella dashboard.
+- [ ] Verificare server-side il **blocco bidirezionale in assedio** per entrambe le modalità; QA su cavalli presenti/assenti, consegna ritardata, attacco e assedio.
+- [ ] **APERTO:** velocità piedi/cavallo, disponibilità e costi dei portatori, percorso/terreno, rischi e intercettazione in stato invaso, gestione di un cavallo assegnato; il prototipo `messages` non è prova dell'implementazione del vettore a piedi.
+
+## MP-PUBLIC-01 — Visibilità anonima delle campagne (decisione 15/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** nella lobby senza login soltanto statistiche generali **aggregate** per server: capienza, conteggi giocatori/bot, anzianità/fase, stato ingressi, eventuale livello massimo in forma aggregata, posizioni di ingresso idonee come **numero** e orari regionali. **Escluse** mappe politiche e regionali, identità e classifiche nominali, dati dei feudi, eserciti, diplomazia, posta, movimenti e spawn precisi. Home informativa, tutorial e Codex pubblici invariati.
+
+- [ ] Definire i campi del riepilogo anonimo e costruire endpoint pubblico aggregato (nessun record segreto o dato per feudo).
+- [ ] Distinguere browser anonimo, account con login non partecipante e partecipante autorizzato; non presumere che login = accesso ai dati di tutti.
+- [ ] Test anti-leak di mappe, proprietari, messaggi, unità e dati territoriali nei payload anonimi e nei link/cache.
+- [ ] Decidere aggiornamento dei contatori, definizione di «attivo» e visibilità interna secondo ruoli feudali.
+
+**Riferimenti:** D-MP-PUBLIC-261115 e [scope multiplayer §3](../MULTIPLAYER-SERVER-SCOPE.md#3-lobby-e-scoperta-delle-partite). **Solo decisione documentale, nessun codice modificato.**
+
+
 ### 2026-11-15 — FIELD-LEND preservato nel merge regionale
 
 - La CI su 6510709 era tutta verde (20 workflow). Durante l'attesa main e avanzato a 6c5ac79 (#212 FIELD-LEND): integrato senza conflitti di codice, unendo STATUS/CHANGELOG e rigenerando il catalogo. PASS locale idle-farmers (7), fields (16), export Wiki. Nuova CI da verificare; nessuna modifica alle ricette regionali.
@@ -325,7 +374,8 @@ Questi **non** sostituiscono l'allarme base automatico d'invasione diretto al go
 ## 2026-11-13 — Equipaggiamento delle unità: elmi e scudi
 
 **IMPLEMENTATO SU BRANCH `feature/unit-equipment-styles`, NON MERGE.** Scelta feudale dell'elmo e della forma dello scudo dei soldati, dal Centro di controllo › Militare › Equipaggiamento, come merlature e pendenza dei tetti. Dettagli in [STATUS](STATUS.md).
-- Aperti: estendere la scelta ai cavalieri a cavallo (elmo e scudo in `settlement-mounted2d.js`); valutare un effetto di gioco (oggi solo estetico); audit del Lab da eseguire in CI.
+- Cavalieri a cavallo: fatto su `feature/knight-equipment-styles` (15/11/2026), vedi [STATUS](STATUS.md).
+- Aperti: valutare un effetto di gioco (oggi solo estetico); audit del Lab da eseguire in CI.
 
 ## 2026-11-13 — UI-SEL-01 · Perimetro di selezione fedele al volume
 
@@ -1118,7 +1168,7 @@ Fogli provini dell'audit: impaginazione a griglia per le categorie e sfondo neut
 - **Figure dei ruoli mancanti** (`settlement-staff-people.js`): **SU BRANCH** `feature/new-role-figures`. Hanno una figura il personale delle stanze del castello, il prete, l'oste, le guardie e gli esattori del Bargello, i giudici del Balivo e i boscaioli del disboscamento. **DA FARE**: scolarizzati e chierici fuori dalla chiesa, mercante L4 in viaggio, guardia del levatoio, mugnaio (il mulino ha 0 lavoratori), vignaiolo (nessuna struttura); il personale delle stanze è decorativo e non legato ai posti dell'economia.
 - **Animazioni di lavoro** (`settlement-work-anim.js`): **IN MAIN** (#207) vasaio (argilla al tornio), tessitore (spola) e sarto (ago e filo); ora tutti i mestieri delle botteghe L3 lavorano. **DA FARE**: rimboschimento senza figure (solo contorno e percentuale; la pala è pronta e mai usata); nei campi si animano solo gli uomini adulti delle case L1–L2 e solo in aratura, semina e raccolta; vigneto e laboratorio di equipaggiamento hanno lavoratori solo nei conti (nessun edificio).
 
-- **Personaggi 3D**: fatto per contadini, lavoratori, carpentieri e marinai; **carri, carretti, carrozze con cavalli e conducenti come carte depth-tested sul branch `feature/vehicles-depth-cards` (12/11/2026, non merge)**. **Cavallo 2D ridisegnato** (proporzioni, passo, gear) sullo stesso branch, con anteprime in gioco `qa/horse-preview.mjs`; **animali 2D (bestiame e fauna) rivisti allo stesso modo** (13/11/2026: zampe a due segmenti che si piegano a ginocchio/garretto, anche sul cavallo; passo per specie, collo di capra e mucca, Lab `Animali 2D`); **capsuloide per la profondità delle figure** (D-CAPSULE-261113: verticale per le persone, orizzontale per gli animali; bestiame e lupi come carte con capsula e collider). **DA FARE**: cavalli di giostra/feste, cavalieri in combattimento e messaggero come carte con capsula orizzontale; capsula orizzontale anche per il tiro dei carri; verifica in partita con bestiame vicino a case e cutaway; figure della battaglia navale e staffetta a cavallo dell'Avamposto ancora in 2D; cavalieri in combattimento ancora fuori dal depth buffer (disegnati con `withUrbanFigureOcclusion`); i costruttori stanno solo sul lato verso la camera (con la profondità non serve più); misurare con un villaggio grande di giorno (nel test erano visibili solo 4 abitanti).
+- **Personaggi 3D**: fatto per contadini, lavoratori, carpentieri e marinai; **carri, carretti, carrozze con cavalli e conducenti come carte depth-tested sul branch `feature/vehicles-depth-cards` (12/11/2026, non merge)**. **Cavallo 2D ridisegnato** (proporzioni, passo, gear) sullo stesso branch, con anteprime in gioco `qa/horse-preview.mjs`; **animali 2D (bestiame e fauna) rivisti allo stesso modo** (13/11/2026: zampe a due segmenti che si piegano a ginocchio/garretto, anche sul cavallo; passo per specie, collo di capra e mucca, Lab `Animali 2D`); **capsuloide per la profondità delle figure** (D-CAPSULE-261113: verticale per le persone, orizzontale per gli animali; bestiame e lupi come carte con capsula e collider; 15/11/2026 anche eventi, giostra con i suoi cavalli, gogna/forca/patibolo, tribunale e personale nelle stanze in cutaway; campo eventi senza fondo verde). **DA FARE**: cavalieri in combattimento e messaggero come carte con capsula orizzontale; prigionieri dietro le sbarre (sbarre in 3D) e lancia della giostra ancora 2D; capsula orizzontale anche per il tiro dei carri; verifica in partita con bestiame vicino a case e cutaway; figure della battaglia navale e staffetta a cavallo dell'Avamposto ancora in 2D; cavalieri in combattimento ancora fuori dal depth buffer (disegnati con `withUrbanFigureOcclusion`); i costruttori stanno solo sul lato verso la camera (con la profondità non serve più); misurare con un villaggio grande di giorno (nel test erano visibili solo 4 abitanti).
 - **Mura sulla banchina**: fatto il magnete. **DA FARE**: contorno di selezione alla quota della banchina; porte sulla banchina (torri fatte); muro che continua dalla banchina alla terraferma.
 - **Attracchi lungo la banchina**: fatto. **DA FARE**: segnare in gioco gli slot liberi/occupati (oggi visibili solo via `ConquerQuay.berths`).
 - **Banchina fuori whitezone**: fatto (parte da dentro, prosegue oltre). **DA FARE**: allo spigolo il lastricato delle due banchine si sovrappone (doppio strato, possibile z-fighting); un unico raccordo d'angolo sarebbe più pulito.

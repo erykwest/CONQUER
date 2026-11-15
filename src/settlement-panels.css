@@ -186,3 +186,6 @@
   .cp-circle-macro{flex-wrap:wrap}
   .cp-circle-macro>.cp-circle-staffers{width:100%;justify-content:flex-start}
 }
+
+/* Wall patrols (settlement-wall-patrols.js): the legacy inspector shows disabled buttons as such. */
+[data-wall-patrols] button:disabled{opacity:.4;cursor:not-allowed}
