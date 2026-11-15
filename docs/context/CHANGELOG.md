@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-15 — UI v2: ispettore dell'edificio selezionato, fix rapidi (branch `fix/inspector-quickfixes`)
+
+- Revisione dell'ispettore su `main` e layout TEST: crash del disegno animali, piazzale senza etichette, ispettore assente fuori da Costruisci, blocchi stanze vuoti, opzioni grigie senza motivo, demolizione senza conferma. Tutti corretti su branch; schede interne e anteprima dei costi restano aperte nel [BACKLOG](BACKLOG.md). Stato e prove in [STATUS](STATUS.md). ROADMAP e DECISIONS invariate.
+
 ## 2026-11-15 — MSG-FOOT-01 · Messaggero a piedi senza cavalli (solo design)
 
 Chiarito il sistema delle comunicazioni feudali: in assenza di cavalli, **messaggi, ordini e allarmi automatici d'invasione** possono viaggiare con un **messaggero a piedi**, con tempi simulati propri ancora da parametrizzare. L'assenza della cavalcatura non è motivo sufficiente per sopprimere un allarme. Sotto assedio entrata e uscita dei messaggeri terrestri restano vietate **sia a piedi sia a cavallo**; i piccioni conservano le regole precedenti. Aggiornate SRS mobile v0.14 nella draft PR #222, REMOTE-CONTROL-SCOPE, MARCH, D-MSG-FOOT-261115 e backlog MSG-FOOT-01. **Nessun runtime/SQL modificato.**

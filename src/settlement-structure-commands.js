@@ -323,11 +323,12 @@ const StructureCommands=(()=>{
     // or room assignment are exposed before the project is finished.
     if(d.building)return d;
     if(window.ConquerStorageYard?.is(s)){
-      const Y=window.ConquerStorageYard,stock=Y.stocks(),n=Y.size(s);
+      const Y=window.ConquerStorageYard,stock=Y.stocks(),n=Y.size(s),capacity=Y.capacity(),used=Y.used();
       d.facts.push({key:'size',value:n+'×'+n+'U'},
-        {key:'storageCapacity',value:Y.capacity()+' unità'},
-        {key:'storedGoods',value:Y.used()+' unità'},
+        {key:'storageCapacity',value:capacity+' unità'},
+        {key:'storedGoods',value:used+' unità'},
         ...Object.entries(stock).filter(([,v])=>v>0).map(([key,value])=>({key,value})));
+      d.yard={used,capacity,over:used>capacity};
       if(n<6)d.controls.push(choice('yardSize','setYardSize',[2,4,6].filter(v=>v>=n).map(v=>({
         value:v,label:v+'×'+v+'U'})),n));
       return d;
@@ -405,7 +406,7 @@ const StructureCommands=(()=>{
       if(M){
         if(!s.outpost)d.controls.push(choice('lookout','setTowerLookout',[{value:'none',word:'lookoutOff'},{value:'on',word:'lookoutOn',disabled:building}],s.lookout?'on':'none'));
         const why=M.outpostBlocker(s);
-        d.controls.push(choice('outpost','setTowerOutpost',[{value:'none',word:'none'},{value:'outpost',word:'outpost',disabled:!s.outpost&&!!why}],s.outpost?'outpost':'none'));
+        d.controls.push(choice('outpost','setTowerOutpost',[{value:'none',word:'none'},{value:'outpost',word:'outpost',disabled:!s.outpost&&!!why,reason:why||null}],s.outpost?'outpost':'none'));
         if(!woodTower&&(M.signalFireAllowed(s)||M.signalFire(s)))
           d.controls.push(choice('signalFire','setTowerSignalFire',[{value:'none',word:'none'},{value:'pyre',word:M.signalFire(s)&&s.signalFireSpent?'pyreRebuild':'pyre'}],
             M.signalFire(s)&&!s.signalFireSpent?'pyre':'none'));

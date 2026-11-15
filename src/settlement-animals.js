@@ -441,7 +441,7 @@
     if(sp.hoof){ctx.save();ctx.clip(p);ctx.fillStyle=c.hoof;ctx.fillRect(leg.joint.x-40,sp.center.y-sp.hoof-4,80,40);ctx.restore()}
     ctx.stroke(p);ctx.restore();
     // Joint cap, then the upper part (thigh / forearm) over it.
-    if(bend){ctx.fillStyle=fill;ctx.beginPath();ctx.arc(leg.joint.x,leg.joint.y,leg.w/2-lw*.3,0,Math.PI*2);ctx.fill()}
+    if(bend){ctx.fillStyle=fill;ctx.beginPath();ctx.arc(leg.joint.x,leg.joint.y,Math.max(0,leg.w/2-lw*.3),0,Math.PI*2);ctx.fill()}
     ctx.save();ctx.clip(half(leg,true));ctx.fillStyle=fill;ctx.fill(p);ctx.stroke(p);ctx.restore();
   }
   // The head is rigid: only moved and rotated, never reshaped.

@@ -124,8 +124,21 @@ export const T = {
     facts: {
       household: 'Capienza', residents: 'Uomini · donne · bambini', rooms: 'Stanze · capacità',
       variant: 'Variante', length: 'Lunghezza', subtower: 'Agganciata a', masonry: 'Muratura', square: 'Piazza del pozzo', bellRange: 'Campana · udito',
-      lookout: 'Vedetta', outpost: 'Avamposto', signalFire: 'Fuoco di segnalazione'
+      lookout: 'Vedetta', outpost: 'Avamposto', signalFire: 'Fuoco di segnalazione',
+      size: 'Dimensione', storageCapacity: 'Capienza', storedGoods: 'In deposito',
+      food: 'Cibo', wood: 'Legno', stone: 'Pietra', clay: 'Argilla', metal: 'Metallo', equipment: 'Equipaggiamento', luxury: 'Lusso'
     },
+    yardOver: (used, cap) => 'Scorte oltre la capienza del piazzale: ' + used + ' su ' + cap + ' unità.',
+    buildCost: 'Costo di costruzione',
+    // Why an option is greyed out, for reasons the game modules still return in English.
+    reasons: {
+      'under construction': 'Non disponibile durante il cantiere.',
+      'needs an isolated tower (no walls, gates or attached towers)': 'Serve una torre isolata: senza mura, porte o torri agganciate.',
+      'must stand outside the White Zone': 'La torre deve trovarsi fuori dalla White Zone.'
+    },
+    disabledHint: 'Non disponibile ora',
+    demolishConfirm: name => 'Demolire «' + name + '»? L\'operazione non si può annullare.',
+    cancelSiteConfirm: name => 'Annullare il cantiere «' + name + '»? I materiali non ancora usati tornano in magazzino.',
     house: 'Livello sociale', houseDown: '− Riduci', houseUp: '+ Amplia',
     mastio: 'Mastio', mastioOn: 'Mastio attivo · rimuovi', mastioOff: 'Designa come mastio',
     keepEntrance: 'Ingresso', keepGround: 'A terra', keepWood: 'Legno', keepStone: 'Pietra',
