@@ -1,5 +1,19 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-15 — BC-251105-05 fix · Tetto interno della torre a D e bracere
+
+**IMPLEMENTATO SU BRANCH `fix/dtower-inner-roof-brazier`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Torre a D: tetto interno su colmo (padiglione sul retro, mezzo cono sul davanti), pendenza unica.
+- [x] Il tetto interno toglie il bracere (`towerHasBrazier`), che prima veniva disegnato sopra il tetto.
+- [ ] Regola: senza bracere gli arcieri della torre non tirano frecce incendiarie. Da applicare quando gli arcieri delle torri avranno le frecce incendiarie (oggi non le tirano mai): chiedere `towerHasBrazier(s)`.
+
+## 2026-11-15 — WALL-FREE-ANGLE · Mura senza vincolo di giunzione a 15°
+
+**IMPLEMENTATO SU BRANCH `fix/wall-free-angle`, NON MERGE.** Mura, palizzate e sezioni costruite si tracciano a qualsiasi angolo; niente gomito automatico verso i magneti. Dettagli in [STATUS](STATUS.md).
+- [x] Tratto libero da A a B e aggancio esatto al magnete in un solo tratto.
+- [ ] Verificare a occhio, nel gioco, le giunzioni muro-muro e muro-torre ad angoli non multipli di 15°.
+
+
 ### 2026-11-15 — WALL-ROAD-GATE
 
 - Fatto sul branch `feature/wall-road-gates`: porta automatica del tipo corrispondente dove un nuovo muro/palizzata incrocia una strada principale. Aperto: un muro esistente attraversato in seguito da una nuova strada principale non riceve la porta (la strada resta bloccata come prima); livello porta = livello porta di default del costruttore.
@@ -58,18 +72,6 @@
 - [Rapporto completo](POSTMERGE-REGRESSION-2026-11-15.md): base 198/199 test PASS dopo quattro ripetizioni LF; resta APERTO il picco della pianificazione stradale oltre 100 ms. Nuovi tre test prima FAIL/dopo PASS e ripetizione completa sul branch.
 - Browser: otto scene regionali, cinque idriche e apertura reale dalla regione; screenshot finali rivisti. Asset Lab completo: 1.612 render, zero errori ma 157 avvisi e baseline da riconciliare; Territorio corretto 16 render invariati. Nessuna accettazione massiva delle firme.
 - Roadmap/decisioni e bilanciamenti invariati. QA e limiti documentati per il commit regionale; le successive PR di main richiedono verifica propria.
-## 2026-11-15 — BC-251105-05 fix · Tetto interno della torre a D e bracere
-
-**IMPLEMENTATO SU BRANCH `fix/dtower-inner-roof-brazier`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
-- [x] Torre a D: tetto interno su colmo (padiglione sul retro, mezzo cono sul davanti), pendenza unica.
-- [x] Il tetto interno toglie il bracere (`towerHasBrazier`), che prima veniva disegnato sopra il tetto.
-- [ ] Regola: senza bracere gli arcieri della torre non tirano frecce incendiarie. Da applicare quando gli arcieri delle torri avranno le frecce incendiarie (oggi non le tirano mai): chiedere `towerHasBrazier(s)`.
-
-## 2026-11-15 — WALL-FREE-ANGLE · Mura senza vincolo di giunzione a 15°
-
-**IMPLEMENTATO SU BRANCH `fix/wall-free-angle`, NON MERGE.** Mura, palizzate e sezioni costruite si tracciano a qualsiasi angolo; niente gomito automatico verso i magneti. Dettagli in [STATUS](STATUS.md).
-- [x] Tratto libero da A a B e aggancio esatto al magnete in un solo tratto.
-- [ ] Verificare a occhio, nel gioco, le giunzioni muro-muro e muro-torre ad angoli non multipli di 15°.
 
 ### 2026-11-15 — FIELD-LEND preservato nel merge regionale
 
