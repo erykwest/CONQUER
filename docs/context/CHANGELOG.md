@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-15 — MSG-FOOT-01 · Messaggero a piedi senza cavalli (solo design)
+
+Chiarito il sistema delle comunicazioni feudali: in assenza di cavalli, **messaggi, ordini e allarmi automatici d'invasione** possono viaggiare con un **messaggero a piedi**, con tempi simulati propri ancora da parametrizzare. L'assenza della cavalcatura non è motivo sufficiente per sopprimere un allarme. Sotto assedio entrata e uscita dei messaggeri terrestri restano vietate **sia a piedi sia a cavallo**; i piccioni conservano le regole precedenti. Aggiornate SRS mobile v0.14 nella draft PR #222, REMOTE-CONTROL-SCOPE, MARCH, D-MSG-FOOT-261115 e backlog MSG-FOOT-01. **Nessun runtime/SQL modificato.**
+
+
 ### 2026-11-15 — FIELD-LEND preservato nel merge regionale
 
 - La CI su 6510709 era tutta verde (20 workflow). Durante l'attesa main e avanzato a 6c5ac79 (#212 FIELD-LEND): integrato senza conflitti di codice, unendo STATUS/CHANGELOG e rigenerando il catalogo. PASS locale idle-farmers (7), fields (16), export Wiki. Nuova CI da verificare; nessuna modifica alle ricette regionali.
