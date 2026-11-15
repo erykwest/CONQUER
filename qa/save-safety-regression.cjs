@@ -57,7 +57,8 @@ vm.runInContext('loadLocal()',lctx);assert.equal(backups().length,1,'the same br
 store.set('k.corrupt.1','old1');store.set('k.corrupt.2','old2');vm.runInContext('loadLocal()',lctx);
 assert.equal(backups().length,2,'at most the latest 2 copies');assert.ok(backups().every(k=>k!=='k.corrupt.1'));
 assert.match(src,/catch\(err\)\{markLoadFailed\(JSON\.stringify\(data\),err\);return\}State\.loadFailed=false;/,'cloud load: same guard, a good load clears it');
-assert.match(src,/async function saveCloud\(\)\{if\(saveBlocked\(\)\)/,'cloud save refuses too');
+// The regional demo (#162) returns before any save; otherwise the guard is the first check.
+assert.match(src,/async function saveCloud\(\)\{(?:if\(window\.__CONQUER_REGIONAL_DEMO__\)\{[^}]*\})?if\(saveBlocked\(\)\)/,'cloud save refuses too');
 lctx.State.seed=99;   // generateNewMap draws a fresh seed
 assert.equal(vm.runInContext('saveLocal()',lctx),true,'a new map saves again');
 assert.equal(lctx.State.loadFailed,false);assert.notEqual(store.get('k'),good);

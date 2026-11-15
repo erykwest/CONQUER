@@ -41,7 +41,16 @@
     feltHat:{label:'Cappello di feltro',slot:'head',role:'Pastore, carrettiere',palette:['#4f4436','#5b4a35','#463c30']},
     flatCap:{label:'Tocco',slot:'head',role:'Orafo, sarto',palette:['#2f2b2c','#5a2f45','#2f4560']},
     stockingCap:{label:'Berretto da marinaio',slot:'head',role:'Marinaio, pescatore, carpentiere navale',palette:['#9b3a2e','#a8503f','#3e5b7a']},
-    keys:{label:'Mazzo di chiavi',slot:'neck',role:'Carceriere',palette:['#5c6266']}
+    keys:{label:'Mazzo di chiavi',slot:'neck',role:'Carceriere, tesoriere',palette:['#5c6266']},
+    // Clergy, officials and household staff (figures of the castle rooms, church, tavern, Bargello, Balivo).
+    cassock:{label:'Tonaca',slot:'body',role:'Prete, cappellano',palette:['#1f1d22'],trim:'#efe9dc',robe:true},
+    stole:{label:'Stola',slot:'neck',role:'Prete, cappellano',palette:['#e8dcc0'],band:'#c6a457'},
+    notableGown:{label:'Veste da notabile',slot:'body',role:'Tesoriere, consigliere',palette:['#2f4a3a','#4a2f3f','#2f3a52'],trim:'#c6a457',robe:true},
+    surgeonGown:{label:'Camice del cerusico',slot:'body',role:'Cerusico',palette:['#6b2f2f'],trim:'#e8e0c8',robe:true},
+    bailiffRobe:{label:'Toga del Balivo',slot:'body',role:'Giudice del Balivo',palette:['#2f4560'],trim:'#efe9dc',robe:true},
+    tabard:{label:'Tabarro del Comune',slot:'body',role:'Esattore',palette:['#b8902f'],tabard:true,emblem:'#8e2a26'},
+    chainOfOffice:{label:"Catena d'ufficio",slot:'neck',role:'Consigliere',palette:['#d8b14a']},
+    cookCap:{label:'Berretto da cuoco',slot:'head',role:'Cuoco',palette:['#f1ece0']}
   };
   // Trade -> work clothes (role pieces; the free slots still take the season's pieces).
   // `role` on a figure dot names one of these: the shop trades are the keys of TRADES
@@ -62,7 +71,19 @@
     shepherd:{label:'Pastore',pieces:['shepherdCape','feltHat']},
     carter:{label:'Carrettiere',pieces:['jerkin','feltHat']},
     jailer:{label:'Carceriere',pieces:['jerkin','leatherCap','keys']},
-    sailor:{label:'Marinaio e pescatore',pieces:['stockingCap']}
+    sailor:{label:'Marinaio e pescatore',pieces:['stockingCap']},
+    priest:{label:'Prete e cappellano',pieces:['cassock','stole']},
+    cook:{label:'Cuoco',pieces:['clothApron','cookCap']},
+    groom:{label:'Stalliere',pieces:['jerkin','stockingCap']},
+    treasurer:{label:'Tesoriere',pieces:['notableGown','flatCap','keys']},
+    councillor:{label:'Consigliere',pieces:['notableGown','chainOfOffice','clerkCap']},
+    surgeon:{label:'Cerusico',pieces:['surgeonGown','flatCap']},
+    orderly:{label:"Inserviente dell'infermeria",pieces:['clothApron']},
+    falconer:{label:'Falconiere',pieces:['shepherdCape','leatherCap']},
+    dovekeeper:{label:'Colombaro',pieces:['clothApron','feltHat']},
+    innkeeper:{label:'Oste',pieces:['leatherApron','feltHat']},
+    exactor:{label:'Esattore',pieces:['tabard','flatCap']},
+    bailiff:{label:'Giudice del Balivo',pieces:['bailiffRobe','clerkCap']}
   };
   const pieceOf=id=>PIECES[id]||ROLE_PIECES[id];
   // Calendar month (0 = January) -> share of residents dressed for the cold / the sun.
@@ -194,6 +215,16 @@
         ctx.stroke();
         ctx.fillStyle='#3e2c1d';ctx.fillRect(x-w*.5,bodyY+h*.02,w,Math.max(.6,h*.05));   // belt
       }
+    }else if(R?.tabard){
+      // Tabard of the commune: an open-sided panel front and back to the knees, the town's emblem on the chest.
+      const hem=bodyY+h*.44;
+      ctx.beginPath();ctx.moveTo(x-w*.3,top-h*.01);ctx.lineTo(x+w*.3,top-h*.01);ctx.lineTo(x+w*.34,hem);ctx.lineTo(x-w*.34,hem);ctx.closePath();
+      ctx.fillStyle=o.colors.body;ctx.fill();outline(lw);
+      if(fine){
+        ctx.fillStyle=R.emblem;ctx.beginPath();ctx.moveTo(x-w*.12,top+h*.14);ctx.lineTo(x+w*.12,top+h*.14);ctx.lineTo(x+w*.12,top+h*.3);
+        ctx.quadraticCurveTo(x,top+h*.42,x-w*.12,top+h*.3);ctx.closePath();ctx.fill();
+        ctx.fillStyle='#3e2c1d';ctx.fillRect(x-w*.5,bodyY+h*.02,w,Math.max(.6,h*.05));
+      }
     }else if(o.body){
       const cape=o.body==='rainCape'||!!pieceOf(o.body)?.cape,hem=bodyY+h*(cape?.14:.30);
       ctx.beginPath();
@@ -219,6 +250,16 @@
       ctx.fillStyle=o.colors.neck;
       ctx.beginPath();ctx.rect(x+w*.12,top+h*.08,w*.16,h*.36);ctx.fill();outline(lw*.7);
       ctx.beginPath();ctx.ellipse(x,top+h*.10,w*.46,h*.12,0,0,Math.PI*2);ctx.fill();outline(lw*.7);
+    }else if(o.neck==='stole'){
+      // Stole: two pale bands from the neck down the front, gold crosses at the ends.
+      ctx.fillStyle=o.colors.neck;
+      for(const k of [-1,1]){ctx.beginPath();ctx.rect(x+k*w*.13-w*.06,top+h*.02,w*.12,h*.62);ctx.fill();outline(lw*.5)}
+      if(fine){ctx.fillStyle=pieceOf('stole').band;for(const k of [-1,1])ctx.fillRect(x+k*w*.13-w*.04,top+h*.54,w*.08,h*.05)}
+    }else if(o.neck==='chainOfOffice'){
+      // Gold chain across the shoulders with a pendant on the chest.
+      ctx.strokeStyle=o.colors.neck;ctx.lineWidth=Math.max(.6,w*.07);
+      ctx.beginPath();ctx.moveTo(x-w*.32,top+h*.04);ctx.quadraticCurveTo(x,top+h*.4,x+w*.32,top+h*.04);ctx.stroke();
+      ctx.fillStyle=o.colors.neck;ctx.beginPath();ctx.arc(x,top+h*.25,Math.max(.6,w*.08),0,Math.PI*2);ctx.fill();
     }else if(o.neck==='keys'&&fine){
       // Ring of keys hanging from the belt on the right hip.
       const kx=x+w*.36,ky=bodyY+h*.1,r=Math.max(.5,w*.09);
@@ -251,6 +292,10 @@
       ctx.beginPath();ctx.ellipse(x,headY-r*.42,r*1.85,r*.42,0,0,Math.PI*2);ctx.fill();outline(lw*.8);
       ctx.beginPath();ctx.ellipse(x,headY-r*.55,r*.88,r*.72,0,Math.PI,Math.PI*2);ctx.closePath();ctx.fill();outline(lw*.8);
       if(r>=1.2){ctx.strokeStyle='#7b5a2c';ctx.lineWidth=Math.max(.5,r*.18);ctx.beginPath();ctx.moveTo(x-r*.86,headY-r*.62);ctx.lineTo(x+r*.86,headY-r*.62);ctx.stroke()}
+    }else if(o.head==='cookCap'){
+      // Puffed linen cap of the kitchen, gathered in a band.
+      ctx.fillStyle=c;ctx.beginPath();ctx.ellipse(x,headY-r*1.05,r*1.12,r*.72,0,0,Math.PI*2);ctx.fill();outline(lw*.8);
+      ctx.beginPath();ctx.rect(x-r*.98,headY-r*.78,r*1.96,r*.4);ctx.fill();outline(lw*.6);
     }else if(o.head==='leatherCap'){
       // Close skullcap with a stitched seam.
       ctx.fillStyle=c;ctx.beginPath();ctx.ellipse(x,headY-r*.3,r*1.04,r*.82,0,Math.PI,Math.PI*2);ctx.closePath();ctx.fill();outline(lw*.8);

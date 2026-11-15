@@ -7,7 +7,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
-const src=name=>fs.readFileSync(__dirname+'/../src/'+name,'utf8');
+const src=name=>fs.readFileSync(__dirname+'/../src/'+name,'utf8').replace(/\r\n/g,'\n');
 const pick=(text,name)=>{
   const at=text.search(new RegExp('\\n[ ]*function '+name+'\\('));assert.ok(at>=0,name);
   const indent=text.slice(at+1).match(/^[ ]*/)[0],end=text.indexOf('\n'+indent+'function ',at+1);

@@ -1,7 +1,7 @@
 // Generated from content/codex/*.md. Do not edit; run node tools/export-codex-content.cjs.
 (function(root){root.ConquerWikiEditorial={
   "schemaVersion": 1,
-  "sourceDigest": "73ea7f0c943c5f45a6d47be67699c0aa4c03d460d892fdc2bad11f4f69657602",
+  "sourceDigest": "a8d37ce683028920d8eded00ecae69fe6aae67e94352993cc6ad3e377568facc",
   "pages": [
     {
       "id": "building:balivo",
@@ -7335,6 +7335,100 @@
       ],
       "text": [
         "Torre · Tetto interno dentro i merli appartiene ai miglioramenti delle fortificazioni: un tetto a piramide o a cono arretrato dentro i merli, su un cordolo, che lascia libero il cammino di ronda. Solo torri in pietra medie o grandi con merli o caditoie, senza arma né fuoco di segnalazione in cima. È soltanto estetico e non crea una stanza sotto: colombaia, falconiera e campana restano legate al tetto a falde."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:tower"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:tower.machicolationStyle.italian",
+      "kind": "entry",
+      "title": "Torre · Caditoie all'italiana",
+      "aliases": [
+        "Torre · Caditoie all'italiana"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Torre|Torre]] · Caditoie all'italiana appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: mensole alte e snelle, fitte lungo tutta la cima, raccordate da archetti a tutto sesto, con la muratura che sale a filo fin sotto i merli, come nei castelli lombardi. Si sceglie dal menù del tetto della torre, accanto a merlato, caditoie e falde; non è disponibile sulle semitorri. È soltanto estetica: difesa, tetto interno e ballatoio seguono le regole delle caditoie.",
+          "tokens": [
+            {
+              "text": "Torre",
+              "id": "building:tower"
+            },
+            {
+              "text": " · Caditoie all'italiana appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": mensole alte e snelle, fitte lungo tutta la cima, raccordate da archetti a tutto sesto, con la muratura che sale a filo fin sotto i merli, come nei castelli lombardi. Si sceglie dal menù del tetto della torre, accanto a merlato, caditoie e falde; non è disponibile sulle semitorri. È soltanto estetica: difesa, tetto interno e ballatoio seguono le regole delle caditoie."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Torre · Caditoie all'italiana appartiene ai miglioramenti delle fortificazioni: mensole alte e snelle, fitte lungo tutta la cima, raccordate da archetti a tutto sesto, con la muratura che sale a filo fin sotto i merli, come nei castelli lombardi. Si sceglie dal menù del tetto della torre, accanto a merlato, caditoie e falde; non è disponibile sulle semitorri. È soltanto estetica: difesa, tetto interno e ballatoio seguono le regole delle caditoie."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:tower"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:tower.machicolationStyle.standard",
+      "kind": "entry",
+      "title": "Torre · Caditoie standard",
+      "aliases": [
+        "Torre · Caditoie standard"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Torre|Torre]] · Caditoie standard appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: l'aspetto di base della sommità con caditoie, con una mensola corta sotto ogni merlo. È la scelta predefinita e vale solo per le torri in pietra con le caditoie.",
+          "tokens": [
+            {
+              "text": "Torre",
+              "id": "building:tower"
+            },
+            {
+              "text": " · Caditoie standard appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": l'aspetto di base della sommità con caditoie, con una mensola corta sotto ogni merlo. È la scelta predefinita e vale solo per le torri in pietra con le caditoie."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Torre · Caditoie standard appartiene ai miglioramenti delle fortificazioni: l'aspetto di base della sommità con caditoie, con una mensola corta sotto ogni merlo. È la scelta predefinita e vale solo per le torri in pietra con le caditoie."
       ],
       "related": [
         "category:upgrade",

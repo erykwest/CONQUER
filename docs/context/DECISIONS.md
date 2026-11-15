@@ -1,5 +1,219 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+### 2026-11-12 — La quota collinare non impone una griglia
+
+La copertura minima deve essere raggiunta mantenendo varietà di superfici, contorni, rotazioni e distanze dei rilievi. Vietata la disposizione a file fisse come scorciatoia per soddisfare il 30%. Le catene montuose seguono il bordo regionale come direttrice, con dispersione longitudinale e trasversale delle singole cime; la medesima geometria è trasformata coerentemente per nord/est/sud/ovest.
+
+### 2026-11-12 — Bioma terrestre e proprietà dei confini
+
+Il terreno regionale hills corrisponde al bioma locale Colline, non Montagne. I quattro biomi terrestri sono Pianura, Colline (Valle alias), Foresta e Palude. Le catene montuose derivano dai bordi regionali espliciti/automatici e sono trasmesse in mountainSides; fiumi e costa restano proprietà additive della zona. Colline richiede 4–8 rilievi, almeno 30% di copertura, boschi 20–30% (target 25%) e 1–3 torrenti con attivazione 100%. Conservata l'eccezione zero torrenti per isole e penisole. Numero dei rilievi e quota di superficie sono vincoli distinti; non si aggiungono oltre otto rilievi per raggiungere la superficie.
+
+### 2026-11-12 — Valle equivale a Colline; quantità 4–8
+
+Valle è un alias compatibile di Colline nella generazione: stessa ricetta 4–8 rilievi H2–3 e normalizzazione dei seed e dei vicini, senza catene montuose proprie. Mare e Lago hanno un gate indipendente del 20% per 1–2 colline H1–2 sulle porzioni emerse; rimangono celle regionali non selezionabili. Il vecchio nome Vallata resta leggibile nei salvataggi/demo.
+
+### 2026-11-12 — Idrologia e orografia costiera
+
+Isole e penisole non generano torrenti e non accettano affluenti regionali di tipo torrente; la regola si applica a ogni bioma terrestre. I fiumi restano governati dalla rete regionale. I rilievi vengono accostati alle sponde effettive prima della composizione idrologica, preservando le quote e lo spazio dell'insediamento.
+
+### 2026-11-12 — Rilievi delle terre circondate dall'acqua
+
+Tre o quattro vicini cardinali dello stesso tipo mare/lago qualificano rispettivamente una penisola o un'isola. La ricetta centrale terrestre riceve tre colline di altezza 2–3, vicina alle 3–4 del bioma Colline, senza sostituire il bioma della vegetazione. Colline, Montagne e Valle mantengono la propria orografia. L'adattamento alle sponde ha precedenza sui rilievi.
+
+## REG-UPRIGHT-SHRUBS - Orientamento dei cespugli (12/11/2026)
+
+In 3D i cespugli boschivi sono billboard verticali con profondita reale, come gli alberi, e non fanno parte della texture del suolo. Il flip sinistra/destra dipende stabilmente da seed e posizione nella griglia, senza rimescolare geometria o quantita. Stessa orientazione nel fallback 2D.
+
+## REG-REAL-FOREST-SHRUBS - Cespugli distinti dalla trama (12/11/2026)
+
+I cespugli richiesti sono elementi visibili con sagoma propria, non la texture del terreno. Si riusano i sette SVG dei cespugli gia presenti: distribuzione deterministica separata dagli alberi e non moltiplicata dal loro aumento di densita. Alberi e cespugli condividono ordine di profondita, quota e occlusione; restano esclusi dalle superfici ripide. Sono decorativi all interno dei poligoni boschivi esistenti e non alterano l economia.
+
+## REG-TREE-DENSITY - Alberi e sottobosco distinti (12/11/2026)
+
+Aumenta soltanto il numero di alberi: target 2.5x nella stessa area boscosa. Cespugli/scatter e dettaglio procedurale del sottobosco mantengono le quantita; il dettaglio sui rilievi torna alla piena visibilita con ombreggiatura separata. Esclusione assoluta delle superfici ripide e rispetto di 1.1U attorno alle radici rispetto alle scarpate. Restano ammessi sommita e pendii dolci. Coperture dei biomi e geometrie del terreno invariate.
+
+## REG-WOODED-RELIEF - Boschi sui rilievi (12/11/2026)
+
+Il bosco puo occupare sommita e pendii dolci, restando escluso dalle pareti rocciose ripide. Questo aggiorna la precedente esclusione totale bosco/collina: acqua stagnante e corsi restano separati dai rilievi. Rendering per superficie con quota e luce del versante, tronchi verticali e occlusione dei rilievi davanti agli alberi. Densita invariata sulle superfici piane e diradata sui pendii; stessi asset. Il contenimento boschivo esclude le scarpate rocciose anche per i validatori esistenti, senza cambiare produzione o regole economiche. Le vecchie radure salvate restano preservate.
+
+## REG-LANDSCAPE-ORDER - Priorita geometrica (12/11/2026)
+
+I rilievi vengono fissati prima dei corsi d acqua; fiumi e torrenti devono aggirarli con tutta la larghezza della sponda, senza eliminare le colline. Confluenze e foci vengono definite prima del riempimento vegetale e palustre. Boschi, stagni e acquitrini evitano rilievi e rete definitiva, anche nei settori ereditati. Mare e grandi laghi restano ricevitori geografici della rete. In casi senza percorso libero, un corso incompatibile viene scartato senza modificare il rilievo. Le frequenze e i target di copertura restano quelli concordati. Economia invariata, gestita nell altro branch.
+
+## REG-SPORADIC-HILLS - Frequenza dei rilievi (11/11/2026)
+
+La frequenza indica la probabilita di un territorio con colline, non la percentuale della superficie: Pianura 1/3 (1-2 rilievi), Foresta 1/2 (2-3), Palude 1/4 (uno). Seed separato dalla rete idrografica, stesso risultato a ogni rigenerazione. I vincoli geometrici restano prioritari nelle zone costiere e limitrofe. Gli acquitrini lasciano asciutti rilievi e versanti; le scarpate reali restano compatibili con gli attuali validatori estrattivi. L economia resta di competenza dell altro branch. Questa iterazione modifica distribuzione e quantità, usando la geometria terrazzata esistente.
+
+## REG-ORGANIC-COAST - Isole e penisole (11/11/2026)
+
+Con tre o quattro lati di mare oppure di lago, la costa non e limitata alle fasce di blending: un contorno ovale deformato dal seed determina i poligoni mare/terra. Isole racchiuse dal mare, penisole collegate al lato terrestre indicato dai vicini. Il centro insediativo resta asciutto; i margini della buildable zone possono essere costieri. Restano invariati golfo a un lato e promontorio a due lati. Nessuna modifica alle probabilita dei biomi o ai paesaggi gia salvati.
+
+## REG-SWAMP-BALANCE - Copertura Palude (11/11/2026)
+
+Il bilanciamento sostituisce il numero prefissato di acquitrini: obiettivo 25% acqua stagnante e 25% boschi, entrambi nell intervallo 20-30% della superficie palustre; il resto rimane aperto, salvo corsi d acqua. Le percentuali si misurano sulla porzione del bioma, distinguendo centro e vicini; le fasce interpolate raccordano i target. I poligoni condividono rendering e collisione. Il conteggio delle macchie deriva dalla geometria, non e un target. Pianura resta al 20% di boschi.
+
+## REG-MARSH — Acquitrini e mulino ad acqua (11/11/2026)
+
+La Palude contiene acquitrini: specchi di acqua stagnante marrone-verde, con sponde fangose, canneti e vegetazione galleggiante. Sono elementi naturali, non un nuovo bioma; implementati come pond con waterBodyKind=marsh, quindi non edificabili. Restano distinti dai laghi e dagli stagni ordinari; i corsi non vengono forzati a sfociare in un acquitrino. Il mulino ad acqua si orienta e si valida esclusivamente sulle rive di fiumi e torrenti: mare, laghi, stagni e acquitrini non sono sorgenti ammesse, e l impronta deve restare fuori da tutte queste acque. Quantita palustri ancora quelle attuali, senza nuovo bilanciamento percentuale. Nessuna rigenerazione dei salvataggi esistenti.
+
+## REG-FLOW-30 — Verso del primario e confluenze (11/11/2026)
+
+Sostituisce il precedente angolo retto: ingresso di default a 30 gradi rispetto alla tangente del primario nel verso di valle, senza immissioni controcorrente. Il verso dei punti del primario rappresenta monte-verso-valle. Priorita: foce locale, vettore del tratto regionale ricavato dalla rete verso mare/lago, distanza dalle sorgenti quando non raggiunge acqua, fallback deterministico dal seed. Il vettore regionale orienta il percorso locale esistente, senza cambiarne il piazzamento. Curve affluenti raccordate con continuita tangenziale a un terminale di 9U. Restano primario unico (precedenza al fiume), sbocchi distanziati, lati alternati e vincoli contro incroci e parallelismi. Nessuna rigenerazione dei salvataggi esistenti.
+
+## REG-STREAM-T-HIERARCHY — Primario e affluenti a T (10/11/2026)
+
+Con piu corsi, uno solo e primario: un fiume ha sempre precedenza sui torrenti. Gli altri corsi confluiscono direttamente nel primario a T, con sbocchi distinti, distanti almeno 28U lungo il corso e 18U in linea d aria. Vietati torrenti autonomi paralleli, incroci a X e confluenze multiple nello stesso punto. Le curve affluenti sono costruite dallo sbocco con terminale perpendicolare, lati alternati e controlli su altre acque e rilievi. Il coseno assoluto con l asse complessivo del primario non supera .75; tra le direzioni degli affluenti non supera .86. In mancanza di spazio si omette l affluente. Il limite 0–3 dei torrenti e le probabilita restano invariati. Le sponde definitive sostituiscono i tagli boschivi provvisori.
+
+## REG-STREAMS-0-3 — Numero dei torrenti (10/11/2026)
+
+Nuove mappe: estrazione uniforme tra zero e tre dopo il gate stream della ricetta. Il gate resta .45 in Pianura e 1 in Foresta/Montagne/Palude: le probabilita finali teoriche sono rispettivamente 66.25/11.25/11.25/11.25% e 25/25/25/25% per 0/1/2/3 torrenti. Gli scarti per vincoli geometrici possono ridurre il numero. Richieste esplicite della rete regionale condividono il limite di tre torrenti; non limitano i fiumi regionali. Gli affluenti terminano al primo incrocio, senza attraversamenti ripetuti del ricevente. Boschi calibrati dopo la geometria finale dell’acqua.
+
+## REG-PLAINS-WOODS-20 — Boschi in Pianura (10/11/2026)
+
+Boschi indica la copertura vegetale, Foresta il bioma. Nelle nuove mappe Pianura il target dei boschi e il 20% della superficie della pianura, inclusi nel denominatore i terreni occupati da altri elementi. Centro e pianure ereditate sono calibrati separatamente; le fasce interpolano i contributi dei biomi. Vincoli di acqua, rilievo e spazio iniziale hanno priorita. La discretizzazione e lo smoothing ammettono una tolleranza geometrica, verificata nei test entro 1.5 punti percentuali. Nessuna rigenerazione dei salvataggi.
+
+## REG-SEA-DELTA-30 — Lago diretto, mare ramificato (10/11/2026)
+
+La regola aggiornata sostituisce il precedente delta nell’ultimo 20% per entrambi i riceventi: lago con singolo sbocco diretto, mare con distributari nel 30% finale. Percentuale misurata lungo il corso, non per numero di vertici. Scelta progettuale esplicita: lo studio di Seybold et al. descrive anche delta lacustri; la loro esclusione qui e una regola del gioco, non una conclusione del paper. Riferimento: https://www.pnas.org/doi/10.1073/pnas.0705265104 ; versione autori letta https://arxiv.org/html/0711.3283v1. Il modello del gioco resta geometrico e deterministico.
+
+## REG-WATER-SURFACE — Continuita dell’acqua e delta (10/11/2026)
+
+I contorni delle singole acque non devono comparire dentro un’altra acqua: tutti i bordi precedono i riempimenti nel layer condiviso. Il lago ha una propria fascia di sponda sulle rive reali e sulle isole, non sul limite artificiale del mondo. Delta fluviale: due distributari nell’ultimo 20% misurato per lunghezza d’arco, piu stretti e con sbocchi reali nel corpo ricevente. Nessun cambiamento alla geometria dei salvataggi gia esistenti; i delta generati mantengono le proprie larghezze al caricamento.
+
+## REG-WATER-NETWORK — Biomi e rete idrografica (09/11/2026)
+
+Bioma terrestre regionale ereditato nella zona: Pianura, Foresta, Montagne, Palude. Mare e Lago sono celle acquatiche escluse dalla selezione e apertura; costa, valle, colline e fiume descrivono morfologia/idrografia, senza ulteriori scelte locali di bioma. Le ricette legacy restano leggibili per compatibilita. Confluenza solo dove il grafo regionale ha una diramazione, non per ogni coppia di lati fluviali. L’affluente termina sul corso ricevente; la foce nel corpo acqua ricevente. Laghi distinti da piccoli stagni: nessuna foce automatica in un normale stagno. Raccordi geometrici deterministici, non simulazione di portata, erosione o quota di bacino. La palude richiede un successivo bilanciamento visivo di acqua/vegetazione.
+
+## REG-MOUNTAIN-UNIFORM — Posizionamento anche con biomi uguali (06/11/2026)
+
+L’uguaglianza dei biomi non permette di saltare la composizione montana: la ricetta legacy non equivale alla distribuzione esplicita di otto settori montuosi. La composizione va attivata con contesto montano completo anche se centro e vicini sono tutti Montagne. Caso di regressione T297, seed 1555837107.
+
+## REG-MOUNTAIN-VARIATION — Catena irregolare (06/11/2026)
+
+Correzione richiesta: mantenere il raddoppio ma rimuovere l’effetto coppia. Distribuzione continua lungo i settori scelti con posizioni e dimensioni variabili; nei limitrofi sagome indipendenti e distanza variabile, fianchi ancora intersecati. Pendenze 37–63 gradi (prima 40–60), maggiore escursione dei raggi e quindi delle altezze, senza cambiare il taglio al confine.
+
+## REG-MOUNTAIN-DENSITY — Massicci e taglio al bordo (06/11/2026)
+
+Richiesta: raddoppiare le montagne, farle intersecare e tagliarle al confine come le colline. Coppie di cime per settore/massiccio, non rilievi isolati con distanza minima. Conservare il cono originale, ritagliare impronta e facce al quadrato del mondo interpolando Z; chiudere i tagli con sezioni verticali. Stesso dato geometrico per i due renderer. Salvataggi conservati; applicazione alla generazione delle nuove mappe.
+
+## REG-COAST-SHAPES — Morfologia costiera (06/11/2026)
+
+Richiesta utente: 1 lato mare produce golfi; 2 lati adiacenti un promontorio roccioso al loro angolo e golfi sui due fronti; 3 lati una penisola; 4 lati un’isola. Per due lati opposti non esiste un angolo comune: conservare due coste a golfo. Deformazione deterministica nelle fasce di blending, senza sommergere il centro terrestre o cambiare i corner diagonali puri. Le rocce del promontorio sono ostacoli reali. Mare non selezionabile nella regionale (chiarimento esplicito); laghi selezionabili.
+
+## REG-EIGHT-BIOMES — Campioni direzionali (06/11/2026)
+
+Otto direzioni locali non implicano otto confinanti Voronoi distinti: un raggio dal centroide identifica il territorio oltre il primo bordo. Lo stesso confinante puo occupare piu direzioni. Al bordo del mondo si prolunga il terreno selezionato. Fasce 25/25/100/25/25 U e diagonali indipendenti; pesi condivisi tra terreno e componenti. I poligoni composti sono usati da rendering e collisioni. I servizi costieri esistenti ricevono la costa continua principale di ciascun mare; gestione portuale di tutte le coste disconnesse resta fuori da questa iterazione.
+
+## REG-CENTRAL-BIOME — Prima la cella centrale (05/11/2026)
+
+Scelta esplicita: correggere prima il bioma centrale, rinviando gli otto vicini. Il terreno della cella determina la ricetta locale; i fiumi restano elementi aggiuntivi di confine. Contesto mancante: errore visibile, mai Pianura implicita. Specifica: docs/REGIONAL-BIOME-SECTORS-PREVIEW.md.
+
+## REG-BIOME-RIVER2 — Morfologia dei meandri (05/11/2026, branch sperimentale)
+
+Richiesto: eliminare il pattern ripetuto e usare il riferimento geometrico [Division by Zero](https://divisbyzero.com/2009/11/26/the-geometry-of-meandering-rivers/). Implementazione nel branch: integrazione per lunghezza del corso, raggi proporzionati alla larghezza (2–3w), parametri delle anse variabili per seed; mantenere ingresso nella buildable zone di almeno 25 px sul riferimento 600 px. Riferimento empirico, non simulazione idraulica. I salvataggi conservano la geometria precedente. [Specifica](../REGIONAL-BIOME-SECTORS-PREVIEW.md).
+
+## D-SIEGE-ATTACK-CONFIG-261114 — Due allarmi d'attacco automatici configurabili (14/11/2026)
+
+- **CHIARIMENTO ESPLICITO del product owner:** il messaggero d'invasione al **governante assente** è l'**allarme base**; l'allarme al signore superiore **non è un semplice destinatario alternativo né un fallback**.
+- **DECISO:** il signore interessato alla ricezione degli avvisi può impostare **due funzioni distinte**, con etichette **«Allerta sempre il signore in caso di attacco»** (avviso automatico aggiuntivo verso il **signore superiore della catena feudale**) e **«Allerta sempre gli alleati in caso di attacco»** (avviso automatico aggiuntivo verso **gli alleati effettivi**).
+- **DECISO:** i due controlli sono **indipendenti** e possono coesistere. Disabilitarli impedisce i rispettivi avvisi aggiuntivi, **non** l'allarme base. Il singolo evento non trasmette conoscenza istantanea: destinatari, permessi e tempi di viaggio seguono la simulazione e il blocco in assedio (messaggeri né entrano né escono, piccioni in uscita consentiti e non intercettabili se operativi).
+- **NON CONFONDERE** queste funzioni con le preferenze di push Android/iOS (D-MOB-PUSH-261114), che agiscono **solo sulla notifica al dispositivo dopo che l'evento è conoscibile**.
+- **APERTO:** criterio esatto di «attacco» rispetto a «invasione»; chi modifica i due flag e a che livello (personaggio/feudo/campagna), la precisa localizzazione del signore, i legami di alleanza validi, eventuali duplicati, vettore utilizzabile per ciascun flusso e recapito in caso di assedio. Non imporre flag attivi di default senza ulteriore decisione.
+- **STATO:** solo documentazione, nessun motore di gioco modificato. Corregge D-SIEGE-ALERT-RECIPIENT-261114; [SRS v0.13 in draft PR #222](https://github.com/erykwest/CONQUER/pull/222), [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md).
+
+
+## D-SIEGE-ALERT-RECIPIENT-261114 — Destinatari feudali degli allarmi d'invasione (14/11/2026) — INTERPRETAZIONE SUPERATA DA D-SIEGE-ATTACK-CONFIG-261114
+
+- **INTERPRETAZIONE STORICA SUPERATA:** inizialmente si era inteso il **governante assente** o il **signore superiore** come due destinatari alternativi dello stesso allarme. Il product owner ha poi chiarito in **D-SIEGE-ATTACK-CONFIG-261114** che il governante assente riceve l'allarme base, mentre il superiore è raggiunto tramite un **flusso aggiuntivo configurabile**, separato da quello verso gli alleati.
+- **CONTRATTO:** governante, presenza e superiore devono essere risolti dal **modello feudale autorevole della stessa campagna**. L'app/browser non possono leggere in diretta un'invasione sconosciuta al personaggio: l'informazione viene ricevuta **solo dopo il tempo simulato di recapito** del messaggero.
+- **SUPERATO da D-SIEGE-ATTACK-CONFIG-261114:** il superiore feudale non è fallback dell'allarme base, ma destinatario di un **avviso aggiuntivo configurabile**, distinto da quello per gli alleati. Rimangono aperti il grado gerarchico, la sede/percorso e la gestione di attacchi concomitanti.
+- **RESTA DECISO:** blocco di ingresso/uscita dei messaggeri durante assedio; piccioni in uscita non intercettabili, con rete disponibile; allarme automatico per ogni nuova invasione solo quando la partenza è possibile. Q-09 resta parzialmente definita.
+- **STATO:** documentazione; nessun codice di gioco o schema modificato. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [MARCH](../march.md), [SRS mobile v0.12 draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
+
+
+## D-SIEGE-COMMS-UPDATE-261114 — Blocco bidirezionale e messaggero automatico all'invasione (14/11/2026)
+
+- **DECISO dal product owner:** nello stato **SOTTO ASSEDIO** i messaggeri ordinari **non possono entrare né uscire** dal feudo. Il divieto di ingresso impedisce anche la consegna di comunicazioni all'interno. Il blocco viene verificato lato server, non solo dall'app.
+- **DECISO:** **ogni nuova invasione di territorio** provoca **automaticamente la partenza di un messaggero d'allarme**, senza intervento del giocatore, purché sia ancora possibile far partire un messaggero; è una lettera fisica soggetta a tempo simulato di recapito, **non una notifica remota istantanea**.
+- **RESTA DECISO:** invasione distinta dall'assedio; l'invasione non applica automaticamente il blocco postale d'assedio. Sotto assedio i **piccioni in uscita restano consentiti e non intercettabili**, se esiste un canale operativo.
+- **SALVAGUARDIA TECNICA PROPOSTA:** un messaggero d'allarme per **evento di invasione distinto**, non uno ogni tick/refresh/retry; non bypassare il blocco quando l'assedio impedisce già la partenza.
+- **APERTO:** destinatario/route dell'allarme, concorrenza invasione/assedio nello stesso tick, rischi durante invasione, sorte dei messaggeri già in viaggio (non possono entrare ma attendono/deviano/tornano?), prerequisiti canale piccioni, ordini sotto assedio. **Q-09 resta parzialmente definita.**
+- **STATO:** solo specifica, non implementata. Integra D-SIEGE-COMMS-261114; [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [MARCH](../march.md), [SRS mobile v0.11 nella PR draft #222](https://github.com/erykwest/CONQUER/pull/222).
+
+
+## D-SIEGE-COMMS-261114 — Invasione e assedio: uscita di messaggeri e piccioni (14/11/2026)
+
+- **DECISO dal product owner:** distinguere gli stati **INVASO** e **SOTTO ASSEDIO**. La sola invasione del territorio **non** applica automaticamente il blocco dei messaggeri previsto per l'assedio.
+- **DECISO — stato SOTTO ASSEDIO:** **non possono partire messaggeri ordinari dal feudo assediato**. I **piccioni possono uscire e non sono intercettabili**; restano il tempo simulato di consegna e l'eventuale necessità di un canale/piccionaia disponibile. Nessun invio fittizio quando il vettore non esiste.
+- **CONTRATTO:** l'ammissibilità della partenza è verificata dal server autorevole in base allo stato del feudo; dashboard web/mobile e API non aggirano il blocco, né anticipano le informazioni recapitabili tramite piccione. Stadio `raiding/siege` di MARCH e trasporti della branch `messages` sono precedenti tecnici, **non** implementazione server pronta.
+- **SUPERATO IN PARTE da D-SIEGE-COMMS-UPDATE-261114:** ora è **DECISO** che i messaggeri **non entrano né escono** durante un assedio e che ad ogni nuova invasione parte automaticamente un messaggero d'allarme quando possibile. **RESTANO APERTI:** criterio invasione→assedio, rischi durante invasione, sorte dei vettori già in viaggio, destinatario dell'allarme, piccionaie e ordini sotto assedio. Q-09 parzialmente risolta.
+- **STATO:** design, nessuna modifica al gameplay. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [MARCH](../march.md), [SRS mobile v0.10 draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
+
+
+## D-MOB-CODEBASE-261114 — Unica codebase Android/iOS (14/11/2026)
+
+- **DECISO dal product owner (Q-07):** realizzare **un'unica base di codice applicativa mobile** per Android e iOS, evitando due implementazioni separate. Sono ammessi adapter e configurazioni specifici delle piattaforme per permessi, notifiche, build e distribuzione.
+- **CONTRATTO:** i client mobili utilizzano le **stesse API autorevoli** del browser per account/campagna/personaggio, KPI, ordini, messaggeri, diplomazia, logistica e permessi. Nessuna seconda simulazione e nessuna duplicazione delle regole di governo del feudo.
+- **NON DECISO:** framework (Flutter, React Native o altro), condivisione della UI mobile con quella web, versioni OS supportate, pipeline e target di pubblicazione. La decisione non equivale a scegliere uno stack.
+- **STATO:** solo documentazione. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [SRS mobile v0.8 nella draft PR #222](https://github.com/erykwest/CONQUER/pull/222). Nessun codice o milestone cambiati.
+
+
+## D-FEUD-CHAR-261114 — Un personaggio per campagna, governo tramite presenza o messaggeri (14/11/2026)
+
+- **DECISO dal product owner:** **un solo personaggio per account in ciascuna campagna**, ma il personaggio può controllare e amministrare **più feudi/territori**. L'account può partecipare a più campagne con un personaggio distinto in ciascuna; più feudi non richiedono più slot giocatore.
+- **DECISO — presenza fisica:** il personaggio si trova in un solo luogo alla volta. Per governare **direttamente** un altro feudo deve **spostarsi** con tempi di viaggio simulati. In alternativa trasmette **ordini attraverso messaggeri o piccioni**, con tempo di trasporto e recapito simulato. La dashboard web/mobile non consente gestione istantanea dei feudi distanti.
+- **PRECISAZIONE di D-RC-TIME-261113:** il comando amministrativo applicabile al **primo tick utile** è quello del **feudo in cui è presente il personaggio**. Un ordine destinato a un altro feudo, anche se di proprietà del personaggio, richiede spostamento o corrispondenza; un messaggio recapitato non implica automaticamente l'esecuzione dell'azione, che va verificata dal motore.
+- **COERENZA:** la regola dei resoconti dei vassalli rimane invariata (nessun accesso live ai loro dati); l'eventuale visibilità dei feudi **propri** ma distanti non è ancora definita.
+- **APERTO:** prerequisiti piccionaie, velocità/costi/rischi dei viaggi, intercettazione, ordini ammessi da lettera, permessi e deleghe ad amministratori, comportamento durante il viaggio e visibilità dati dei feudi lontani.
+- **STATO:** solo documentazione. [MULTIPLAYER-SERVER-SCOPE](../MULTIPLAYER-SERVER-SCOPE.md), [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [SRS v0.7 draft PR #222](https://github.com/erykwest/CONQUER/pull/222). Nessun codice gameplay o milestone modificati.
+
+
+## D-MOB-PUSH-261114 — Push: permesso del dispositivo e filtri per categoria (14/11/2026)
+
+- **DECISO dal product owner:** l'app Android/iOS deve richiedere il **permesso push del sistema operativo** e offrire **preferenze di ricezione selettive per categoria**. Entrambi i livelli si applicano: **permesso OS attivo AND categoria abilitata**. Revoca del permesso e disattivazione della categoria impediscono nuovi push corrispondenti.
+- **DECISO — non condizionare il gameplay:** posta e avvisi disponibili nell'app restano accessibili anche con i push disabilitati. Le notifiche non possono anticipare il recapito simulato di lettere e resoconti, né esporre dati di feudi dei vassalli non ancora riferiti al sovrano.
+- **CATEGORIE PROPOSTE, non approvate come elenco definitivo:** sicurezza/attacchi/assedi, criticità economiche, cantieri, posta/diplomazia, spedizioni, tributi.
+- **APERTO:** categorie definitive, stato iniziale dei singoli selettori, filtri globali vs per-campagna, silenziamento/orari quieti, anteprime su schermata bloccata, momento della richiesta del permesso e politica multi-dispositivo. Non presumere un consenso preventivo né selettori inizialmente tutti attivi.
+- **STATO:** documentazione e SRS v0.6 in [draft PR #222](https://github.com/erykwest/CONQUER/pull/222), Q-05 risolta nel principio. Nessun runtime, service push o schema implementato; ROADMAP invariata.
+
+
+## D-RC-PAUSE-261113 — Preparazione di ordini durante pause regionali (13/11/2026)
+
+- **DECISO dal product owner:** durante una **pausa regionale programmata** della campagna il giocatore può **consultare la situazione congelata e preparare ordini** sul proprio feudo via browser/app, purché il servizio sia raggiungibile. L'intero mondo resta fermo: **nessun tick, produzione, costruzione, marcia, recapito o altro progresso temporale**.
+- **DECISO:** gli ordini preparati sono **in attesa**, non eseguiti; vengono elaborati al **primo tick utile alla riattivazione**, secondo D-RC-TIME-261113. Accettazione del comando e risultato simulato devono essere distinti. Per spedizioni e carovane la ripresa avvia le attività, non ne anticipa la durata di viaggio.
+- **GUARDRAIL TECNICO PROPOSTO:** validare nuovamente permessi, risorse e prerequisiti al tick di applicazione, deduplicare invii e rendere esplicito un eventuale rifiuto. Non trasferire la simulazione sul telefono.
+- **APERTO:** catalogo delle operazioni prenotabili, modifica/cancellazione della coda, limiti, ordine e conflitti alla ripresa, messaggi preparati vs spediti, regole di pausa regionali esatte. **Il telefono senza rete/server irraggiungibile è una questione diversa** dalla pausa di un server accessibile; sincronizzazione di ordini offline non decisa.
+- **STATO:** documentazione, nessun runtime modificato. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md) e [SRS mobile v0.5, draft PR #222](https://github.com/erykwest/CONQUER/pull/222). Q-04 risolta nel principio.
+
+
+## D-RC-VASSAL-REPORTS-261113 — Resoconti dei vassalli a frequenza impostata dal sovrano (13/11/2026)
+
+- **DECISO dal product owner:** un sovrano **non consulta in tempo reale** i KPI economici, militari o patrimoniali dei feudi dei vassalli. Riceve informazioni soltanto attraverso **messaggeri di resoconto**.
+- **DECISO:** il sovrano può **impostare la frequenza** con cui riceve i rapporti periodici dei vassalli; ogni rapporto è uno snapshot dei dati alla data simulata di redazione e diventa visibile **solo al recapito simulato**, senza scorciatoie web/mobile o API. I dati del **feudo direttamente governato** rimangono consultabili tramite stato autorevole aggiornato.
+- **INTEGRAZIONE:** sulla branch `messages` esiste già una bozza di routine con sorgente/destinazione/frequenza 1/7/30 giorni, ma su feudi esterni astratti: tali intervalli non sono approvati come valori definitivi multiplayer.
+- **APERTO:** configurazione unica o specifica per vassallo, frequenze ammesse, costi, sezioni dei rapporti, permessi, eventuali blocchi/intercettazioni e regole durante pause. I privilegi dettagliati non sono definiti.
+- **STATO:** solo documentazione. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [SRS mobile v0.4 (draft #222)](https://github.com/erykwest/CONQUER/pull/222). Nessun backend/runtine modificato.
+
+
+## D-RC-TIME-261113 — Due temporalità per gli ordini remoti (13/11/2026)
+
+- **DECISO dal product owner:** ordini amministrativi impartiti al **proprio feudo** da browser/app sono validati dal server e **applicati al primo tick utile successivo** alla ricezione, senza alcun trasporto fittizio del comando.
+- **DECISO:** comunicazioni, richieste e ordini diplomatici **tra feudi** utilizzano i **tempi di invio, trasporto e consegna simulati** della posta feudale; invio ≠ ricezione. Non rendere disponibile al destinatario il contenuto prima della consegna e non consentire scorciatoie tramite API, dashboard o notifiche.
+- **DISTINZIONE DI STATO:** accettato/accodato ≠ applicato; la UI non deve anticipare l'esito. Un ordine sul proprio feudo che avvia una spedizione viene registrato al tick successivo, ma **viaggio, intercettazione e arrivo** mantengono i propri tempi simulati.
+- **APERTO:** durata fisica del tick e scheduling, comportamento dei comandi durante sospensioni regionali, ordine dei comandi concorrenti e conseguenze al recapito dei singoli tipi di messaggio. Nessuna accelerazione esclusiva di browser o app mobile.
+- **STATO:** solo specifica, nessun runtime cambiato. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md) e [SRS mobile v0.3 nella PR draft #222](https://github.com/erykwest/CONQUER/pull/222). Nessun cambio milestone.
+
+
+## D-MOB-B-261113 — Prima release pubblica mobile: controllo remoto completo (13/11/2026)
+
+- **DECISO dal product owner — scelta B:** la prima versione **pubblica** dell'app CONQUER per **Android e iOS** deve offrire il **controllo remoto completo** del feudo, non un MVP di sola dashboard/posta o soltanto economico.
+- **PERIMETRO OBBLIGATORIO:** account/lobby e partecipazioni multi-campagna con KPI; economia, Job Manager/lavoratori, fisco, gestione e priorità di cantieri **già collocati**, militare strategico/spedizioni, diplomazia, posta feudale `messages`, tributi/carovane e mappa regionale con operazioni strategiche. Ogni operazione deve applicarsi al **medesimo stato autorevole** del browser.
+- **ESCLUSO PER DECISIONI PRECEDENTI:** piazzamento geometrico e fortificazioni nel Builder/3D, controllo tattico diretto in battaglia (D-RC-BOUNDARY-261113).
+- **DISTINZIONE RELEASE:** alpha e beta interne possono introdurre moduli progressivamente; il lancio pubblico non è accettato finché tutti i domini obbligatori non sono operativi, testati e collegati al backend multiplayer. Non introdurre widget dimostrativi per coprire moduli mancanti.
+- **APERTO:** catalogo dettagliato dei comandi, autorizzazioni feudali, stack mobile, tempistiche, notifiche push, cache/offline e test di accettazione di dettaglio. Push e lettura offline non sono stati elevati a Must dalla scelta B.
+- **STATO:** solo scope documentale; l'app e il backend non sono implementati. Specifica in [bozza SRS v0.2, PR #222](https://github.com/erykwest/CONQUER/pull/222); la PR resta **draft** finché il resto della SRS non viene approvato. Nessun cambio runtime o milestone.
+
+
 ## D-RC-BOUNDARY-261113 — Confine tra gestione remota e vista 3D (13/11/2026)
 
 - **DECISO dal product owner:** nella main page e nel controllo remoto (browser; in seguito app Android/iOS) sono disponibili **gestione economica, fiscale, militare strategica e diplomatica**, comprese assegnazioni del lavoro, programmazione/priorità dei cantieri, spedizioni, tributi, carovane, messaggi e mappa regionale.
@@ -629,6 +843,7 @@ Le decisioni D-033…D-038 delle branch #55 e `jobmanager` avevano numeri già u
 **D-057 · CODICE SU BRANCH `feature/houses-blender` (scelta dell'utente del 02/11; D-056 è dei pozzi multipli, D-058 e D-059 dei branch `fix/house-fire-collapse` e `feature/l3-workshop-cutaway`):** le case passano al 3D con un **kit modulare Blender** montato dal gioco sulle sue piante procedurali (proporzioni per id, schiere, ali L/T, sporto, `houseFacadePlan`, `houseDoorInfo`, `chimneySpecs` restano le regole); **pilota L3**, poi L1, L2, L4 con lo stesso kit. Il kit vale in World 3D (WebGL2); il fallback Canvas 2.5D conserva il disegno procedurale. **Alternative scartate:** un modello Blender intero per variante scalato sull'impronta (graticcio deformato, misure variabili delle schiere non rispettate); il kit anche nel painter 2.5D (falde e timpani non ordinabili senza depth buffer).
 **D-058 · CODICE SU BRANCH `fix/house-fire-collapse` (scelta dell'utente del 02/11; D-056 è dei pozzi multipli, D-057 e D-059 dei branch `feature/houses-blender` e `feature/l3-workshop-cutaway`):** una casa, una locanda o un mercato che un incendio consuma fino in fondo **crolla** (macerie e braci), a qualunque livello. **Alternativa scartata:** lasciarla in piedi con un aspetto «bruciato». Un incendio spento prima resta un danno; i mulini restano sventrati in piedi; fortificazioni in legno invariate.
 **D-059 · CODICE SU BRANCH `feature/l3-workshop-cutaway` (completa D-053; D-056 è dei pozzi multipli, D-057 e D-058 dei branch `feature/houses-blender` e `fix/house-fire-collapse`):** la bottega L3 si vede in sezione **solo quando la sua casa è selezionata**, come chiesa e locanda (#90); nessun interruttore né stato salvato. Si apre solo il pianterreno (la bottega su strada); il piano abitato sopra sparisce insieme a tetti e comignoli. L'artigiano viene disegnato al banco solo quando la sua routine lo terrebbe alla porta di casa, quindi le routine (D-052) e la produzione (D-053) restano l'unica fonte di verità. **Alternative scartate:** toggle `cutaway` persistente come per torri e porte (le case sono centinaia e generate dall'urbanistica); interni sempre aperti per tutte le botteghe (illeggibile a scala di città).
+**D-FIELD-LEND-261113 · CODICE SU BRANCH `fix/idle-peasants` (scelta dell'utente del 13/11/2026; riscritta lo stesso giorno dopo SOC-CLASS-02, D-SOC-CLASS-261112, che porta i campi su L1):** il contadino che stamattina non ha lavoro al campo non resta fermo né viene pagato per stare a casa. La scelta si fa **una volta per giorno lavorativo, al mattino**: (1) ogni campo in stagione chiede tanti L1 quante sono le strisce **ancora aperte** al primo calcolo del giorno (`fieldMorningDemand`, 0 in crescita o fuori stagione), numero congelato fino a sera; (2) gli L1 non necessari a un campo coprono le strisce aperte di un **altro campo** in stagione; (3) i restanti fanno gli **altri lavori L1** (cantieri, taglialegna, carrettieri, cantiere navale) secondo l'ordine e i minimi del Job Manager L1, oppure restano inattivi. **Chi è al campo:** si disegnano alle strisce esattamente gli L1 che l'economia assegna a quel campo (`assignedL1`), uno per striscia, con assegnazioni per singolo adulto; la squadra di fondazione, senza casa, non coltiva. Chi finisce la striscia a metà turno **rientra a piedi** e viene riassegnato la mattina dopo: nessuno spostato a metà turno, nessun attrezzo su una striscia finita. **Superato:** il prestito degli L2 al pool L1 della prima versione (gli L2 ora sono artigiani). **Alternative scartate:** riassegnazione immediata a metà giornata (squadre rimescolate a metà turno); campo che paga tutte le strisce anche se finite (L1 pagati a casa). Test: `qa/idle-farmers-regression.cjs`, `qa/fields-regression.cjs`.
 **Integrazione e status Git:** per l'elenco completo di feature merge e PR ancora aperte vale [AUDIT-2026-10-21](AUDIT-2026-10-21.md). Le righe più vecchie nel registro conservano il significato di *decisione storica* senza riscrivere retroattivamente il loro contesto.
 
 ## Conflitti decisionali da risolvere esplicitamente

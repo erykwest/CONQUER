@@ -226,7 +226,7 @@ function castleBodyCompositeBounds(){
 // hoarding, a small gate's timber upper storey, skins, bells...), rooms and their exterior damage.
 // A field missing here leaves a stale mesh or bitmap after the change (qa/render-cache-keys-regression.cjs).
 const STRUCTURE_VISUAL_FIELDS=Object.freeze(['id','type','shape','material','masonryMaterial','woodStyle','woodRoof','roofCover',
-  'roofStyle','bartizan','bell','innerRoof','signalFire','roofShape','baseStyle','skin','hoarding','upper','topWeapon',
+  'roofStyle','machicolationStyle','bartizan','bell','innerRoof','signalFire','roofShape','baseStyle','skin','hoarding','upper','topWeapon',
   'r','size','w','h','width','length','angle','rotationStep','level','tier','cutawayFloor','aSnap','bSnap','parentTowerId',
   'orientationOffset','groundZ','foundationMinZ']);
 function structureVisualKey(s){
@@ -489,6 +489,7 @@ function draw(){
   window.ConquerCourtPeople?.draw();   // the tribunal in session in the town hall cutaway
   window.ConquerIndustries?.drawWorkers();
   window.ConquerWorkAnim?.drawBuilders();
+  window.ConquerForestry?.drawCrews?.();   // L1 woodcutters at the forest clearings
   window.ConquerShipyard?.drawShipwrights();   // shipwrights along the hull on the slipways
   if(!window.ConquerWorld3D?.active?.())window.ConquerCoast?.draw();   // 2.5D: shore boulders (WebGL has them in the static scene)
   window.ConquerCoast?.drawWaves(performance.now()/1000);   // waves on the beaches, spray on the rocks, glints at sea

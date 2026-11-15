@@ -110,5 +110,15 @@ check('riverbanks: reeds, stones and bushes along a river, both sides, off the r
   assert.equal(JSON.stringify(again),JSON.stringify(bank),'deterministic');
   run('State.environment=[];State.structures=[]');
 });
+check('marshbanks reuse reeds and bushes only, deterministically, without dressing fresh ponds',()=>{
+  run('State.structures=[];State.environment=[{id:"marsh",type:"pond",waterBodyKind:"marsh",points:[{x:80,y:80},{x:120,y:80},{x:120,y:120},{x:80,y:120}]}]');
+  const bank=run('window.ConquerScatter.layout()').filter(p=>p.ctx==='marshbank');
+  assert.ok(bank.length>5,'marsh shoreline receives vegetation');
+  assert.ok(bank.every(p=>['reedBed','reedClump','bankBush'].includes(p.asset)&&p.owner==='marsh'),'no deep-water rocks or unrelated props');
+  assert.equal(JSON.stringify(run('window.ConquerScatter.layout()').filter(p=>p.ctx==='marshbank')),JSON.stringify(bank));
+  run('State.environment[0].waterBodyKind="pond"');
+  assert.equal(run('window.ConquerScatter.layout().filter(p=>p.ctx==="marshbank").length'),0);
+  run('State.environment=[]');
+});
 console.log('scatter regression: '+passed+' checks');
 `);

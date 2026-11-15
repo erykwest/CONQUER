@@ -58,7 +58,9 @@
   // Work animations: the villager with each tool of settlement-work-anim.js (action -> tool as in the Lab).
   const WORK=[['dig','shovel','Scavatore (pala)'],['chop','axe','Taglialegna (ascia)'],['pick','pickaxe','Cavatore (piccone)'],
     ['build','hammer','Muratore (martello)'],['plough','hoe','Aratura (zappa)'],['sow','seeds','Semina'],['harvest','sickle','Mietitura (falce)'],
-    ['throw','clay','Vasaio (tornio)'],['weave','shuttle','Tessitore (spola)'],['sew','needle','Sarto (ago)']];
+    ['throw','clay','Vasaio (tornio)'],['weave','shuttle','Tessitore (spola)'],['sew','needle','Sarto (ago)'],
+    ['stir','ladle','Cuoco (mestolo)'],['groom','brush','Stalliere (striglia)'],['pray','book','Prete (libro)'],['write','quill','Tesoriere ed esattore (penna)'],
+    ['pound','mortar','Cerusico (mortaio)'],['hawk','falcon','Falconiere (falco)'],['serve','mug','Oste (boccale)'],['speak','speak','Consigliere (parola)'],['tend','bowl','Inserviente (ciotola)']];
   const SCHEMATICS=[
     ['well','Pozzo','Edifici','Servizi'],
     ['house1','Abitazione L1','Edifici','Abitazioni'],

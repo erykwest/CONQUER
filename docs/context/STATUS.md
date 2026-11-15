@@ -21,6 +21,253 @@
 - **PROVE LOCALI PASS (checkout LF):** 179 script node (`qa/*.cjs`, `qa/*.test.mjs`, `tests/*.test.mjs`) 0 falliti; `node --check` su tutti i sorgenti; `export-codex --check` e `export-codex-content --check`; pagina di gioco e Asset Lab caricati in locale senza errori di console né 404; i 5 benchmark browser `*-performance.cjs` passano (prima 2 fallivano per il MIME `.mjs` mancante nei loro server).
 - **NON VERIFICATO:** partita reale con le nuove regole dei costruttori; i loop bash dei workflow (nessuna shell bash locale) finché la CI non gira sul branch.
 
+### 2026-11-15 — FIELD-LEND preservato nel merge regionale
+
+- La CI su 6510709 era tutta verde (20 workflow). Durante l'attesa main e avanzato a 6c5ac79 (#212 FIELD-LEND): integrato senza conflitti di codice, unendo STATUS/CHANGELOG e rigenerando il catalogo. PASS locale idle-farmers (7), fields (16), export Wiki. Nuova CI da verificare; nessuna modifica alle ricette regionali.
+
+
+### 2026-11-15 — Riallineamento prima del merge autorizzato
+
+- Integrato main ecdd630 nel branch regionale. Conservati i quattro biomi e l'isolamento demo insieme a migrazione sociale v2, politiche elmi/scudi, nuove figure e caditoie italiane. Conflitti documentali uniti, versioni cache riconciliate senza duplicare script e catalogo Wiki rigenerato.
+- PASS locale regional-demo (inclusa persistenza isolata), save-safety ed export Wiki; regressioni complete e CI sul nuovo commit da ricontrollare. L'autorizzazione al merge del 15 novembre non equivale a merge eseguito: esito definitivo nella PR #162.
+- Nessuna nuova regola di bioma o milestone; roadmap invariata. Restano i limiti idrici e di latenza già documentati.
+
+
+### 2026-11-12 — Esito CI integrazione e budget Sea
+
+- Commit 1f5deb0: 19 workflow CI riusciti, inclusa la suite completa di regressione/routing e Asset Lab. Sea and pier interrotto dal timeout di 10 minuti dopo i controlli di flusso, senza assertion fallite. Budget portato a 15 minuti come la suite routing; nessun test rimosso e nome del check conservato.
+- Riproduzione locale Windows: conferma fondazione corretta, ma picco di pianificazione stradale circa 116 ms oltre la soglia 100 ms; stessa suite PASS sul runner CI. Non garantita una soglia di latenza su ogni macchina.
+- Nessun merge in main; nuovo esito Sea da verificare.
+
+
+### 2026-11-12 — Correzioni emerse dalla CI di preparazione
+
+- Test cache di corteccia e magnete ponte aggiornati per accettare il token nella versione composta; test montagne adeguato a Valle alias Colline, senza catene autonome.
+- Conferma fondazione: preflight delle chiome limitato alla zona del piazzale, senza generare tutto il bosco al primo clic. Identici RNG, posizioni e attributi; confronto automatico con il layout completo. Caso Foresta 4242: circa 148 ms prima, 22 ms dopo nella riproduzione locale. Test placement e densità PASS.
+- La prima CI di integrazione aveva cinque workflow falliti (due condividono il test ponte). Verifica completa e CI successiva ancora necessarie; nessun merge in main.
+
+
+### 2026-11-12 — Preparazione merge regionale
+
+- Integrato `main` 95e8dd2 nel branch sperimentale. Conflitti risolti conservando documentazione di entrambi i filoni, versioni cache e firme degli asset; catalogo Wiki rigenerato dai provider unificati. Preservati economia ECO-FIL-01, figure, arte, coperture e latrine.
+- PASS hills-zone (cinque seed, alias e quattro bordi), landscape-order, regional-demo, regional-surroundings, water-surface, save-safety, economy-industries, Stonecolor, tower-inner-roof, room-exterior-latrine e roof-pitch; sintassi dei moduli integrati ed export Wiki. Normalizzata la lettura dei fine riga nel test latrine per Windows.
+- Cinque snapshot integrati `merge-ready-*` rivisti, zero errori JavaScript; quote colline/boschi e torrenti confermati.
+- Audit Territorio integrato: 16 render invariati, zero errori, cinque avvisi schematici noti. Nessun nuovo contratto o milestone: ROADMAP e decisioni progettuali invariate. Resta documentato il caso idrico seed 1 con montagna nord e fiume est. Preparazione sul branch, non merge in main; CI remota da verificare dopo il push.
+
+
+### 2026-11-12 — Montagne regionali +30%
+
+- Raggi delle cime di bordo aumentati da 7–15U a 9.1–19.5U; altezza aumenta nella stessa proporzione, pendenza, numero e centri restano identici. Ingombri usati anche da collisioni e generazione colline.
+- Cinque snapshot `mountains-plus30-*` rivisti: quattro orientamenti con seed 1 e nord seed 229. Colline 32.4–33.0%, boschi 24.7–24.8%, 1–2 torrenti; 16 cime per bordo. Audit Territorio: 16 invariati, zero errori, cinque avvisi schematici preesistenti.
+- Difetto preesistente riprodotto prima e dopo: HILLS seed 1, bordo montuoso nord + fiume est non genera rete idrica. Da correggere separatamente; non introdotto dall'aumento di scala.
+- PASS hills-zone (cinque seed, alias Valle e quattro bordi), organic-hills; cinque snapshot browser e audit Territorio.
+- Economia, roadmap e classificazione dei biomi invariate. Modifica sul branch sperimentale, nessun merge in main.
+
+
+### 2026-11-12 — Rilievi organici e cime disperse
+
+- Rimossa la griglia a due file e la rotazione quasi fissa che causavano la regressione visiva. Colline collocate per tentativi geometrici con rotazioni libere, rapporti fra assi e superfici differenti, contorni più lobati. Numero 4–8 e minimo 30% preservati senza aggiungere rilievi oltre il limite.
+- Catene di bordo: posizioni longitudinali irregolari e dispersione trasversale fino a circa ±23U sulla direttrice, raggi delle cime 7–15U; trasformazione coerente per le quattro direzioni. Conservati i corridoi di 7U tra colline e il margine esterno per la rete idrica.
+- Risolto anche un punto di instradamento: il raccordo della deviazione non può essere scelto di nuovo dentro un rilievo successivo. Test organic-hills falliva sulla vecchia disposizione a due file e passa sulla nuova; controlli dei quattro bordi, landscape-order e cinque snapshot regionali `organic-relief-*` rivisti.
+- Misure snapshot: colline 31.0–34.8%, boschi 24.7–24.9%, 1–3 torrenti. Audit Territorio 16 invariati, zero errori, cinque avvisi schematici preesistenti. Economia e roadmap invariate.
+
+### 2026-11-12 — HILLS regionale corretto e coperture reali
+
+- Esportazione HILLS → hills, biomi terrestri Pianura/Colline/Foresta/Palude. Valle resta alias. Bordi montuosi espliciti (`mountainSides`) esportati dalla regione come fiumi e costa; catene generate sui lati richiesti senza sostituire il bioma.
+- Colline: 4–8 rilievi dimensionati per almeno 30% di superficie, H2–3; boschi calibrati al 25% effettivo, entro 20–30%; estrazione torrenti 100%, 1–3. Il vincolo precedente di zero torrenti su isole/penisole resta prioritario.
+- Cinque aperture con payload regionali reali riviste: 4/7/8 rilievi e casi con fiume o bordo montuoso. Copertura colline 30.9–32.6%, boschi 24.6–24.9%, torrenti 1–3. Zero montagne senza bordi richiesti; 16 cime sul bordo nord richiesto.
+- PASS hills-zone (cinque seed, alias e quattro orientazioni dei bordi), regional-demo (mapping e proprietà trasmesse), ricette biomi (42). Audit Territorio: 16 render invariati, zero errori, cinque avvisi schematici preesistenti. Snapshot `hills-regional-*`.
+- Economia e roadmap invariate. Le ricette legacy non fanno parte dei biomi selezionabili; salvataggi esistenti non rigenerati.
+
+### 2026-11-12 — Quantità colline e alias Valle
+
+- Colline e Valle condividono la ricetta 4–8 rilievi, H2–3; Valle non genera più catene montuose o torrenti propri. Seed e pesi regionali normalizzati, colori terreno/minimappa allineati.
+- Mare e Lago: probabilità 20%, 1–2 rilievi H1–2. La sagoma del lago viene calcolata anche prima dei rilievi per mantenerli sulle porzioni emerse; selezione regionale dell'acqua invariata.
+- PASS ricette biomi (42), equivalenza Valle/Colline su tre seed inclusi 4 e 8 rilievi, colline sporadiche su 3000 seed per cinque biomi (Mare 20.0%, Lago 20.4%), isole/penisole (15). Cinque snapshot `hill-quantities-*` rivisti, conteggi 4/8/7/1/2. Audit Territorio 16 invariati, zero errori, cinque avvisi schematici preesistenti.
+- Aggiornata la tabella in BIOME-HILL-QUANTITIES.md. Nessun target sperimentale del 20% di superficie per Colline; quantità soltanto. Economia e roadmap invariate, salvataggi non rigenerati.
+
+### 2026-11-12 — Torrenti esclusi e colline sulla costa
+
+- Isole e penisole marittime/lacustri: stream=0 nella ricetta; esclusi anche torrenti passati alla composizione idrologica e affluenti regionali di tipo stream. I fiumi restano distinti.
+- Riposizionamento deterministico dei rilievi lungo le sponde effettive prima dell'idrologia, conservando numero, dimensioni e livelli. Controlli su acqua, distanza fra rilievi e spazio centrale.
+- Verifiche: 15 fixture isole/penisole senza torrenti, colline asciutte e a meno di 10U dalla sponda; landscape-order su sei fixture. Cinque scene `coastal-shores-*`: zero torrenti e piedi delle colline a circa 0–4U dalla costa. Audit Territorio: 16 render invariati, zero errori, cinque avvisi schematici preesistenti.
+- Economia e roadmap invariate.
+
+### 2026-11-12 — Isole e penisole collinari
+
+- Le terre con tre o quattro lati cardinali sul mare o sul lago ricevono una base di tre colline, con gli stessi livelli 2–3 del bioma Colline (ricetta 3–4 rilievi). Restano valide eventuali colline ereditate dai vicini; i biomi già più montuosi non vengono ridotti.
+- Boschi, paludi e corsi d'acqua mantengono le proprie ricette; l'adattamento regionale riposiziona i rilievi tagliati dalla costa prima dei corsi d'acqua. Le zone interne conservano le frequenze sporadiche precedenti.
+- Verifiche: isole/coste su 15 fixture con rilievi asciutti e determinismo; colline sporadiche su 9000 estrazioni; confronto esplorativo 48 combinazioni; cinque snapshot `coastal-hills-*` rivisti. Audit Territorio: 16 render invariati, zero errori, cinque avvisi schematici preesistenti.
+- Economia e roadmap invariate; regola geografica documentata in DECISIONS.
+
+### 2026-11-12 — Canneti delle paludi quadruplicati
+
+- Conservata la vegetazione di sponda originale, aggiunti tre canneti per ogni canneto esistente su ciascun acquitrinio, con controlli su ostacoli e distanze. Budget paludi separato da quello dei corsi d'acqua.
+- Confronto runtime su cinque situazioni: 92→368, 112→448, 29→116, 63→252, 43→172 canneti (4× in tutti i casi); catture `marsh-reeds4-*`. Cespugli, quote dei biomi ed economia invariati.
+- Verifiche: scatter-regression (8 controlli), marsh-regression; audit Territorio 16 render invariati, zero errori, cinque avvisi schematici preesistenti. Roadmap e contratti generali invariati.
+
+### 2026-11-12 — Cespugli dei boschi al 50%
+
+- Scala visiva uniforme di larghezza e altezza: 50% con variazione deterministica relativa di ±10% (45–55% della dimensione precedente), in 2D e nei billboard 3D.
+- Numero, posizioni, quota e flip preservati; siepi urbane e alberi invariati. Economia e roadmap invariate.
+- Verifica: forest-shrubs-regression PASS; cinque scene runtime `small-shrubs-*` riviste (sommità, pendio, scarpate, palude e foresta intera); audit Territorio 16 render, zero errori, cinque avvisi schematici preesistenti.
+
+12/11/2026 - REG-UPRIGHT-SHRUBS: risolto il difetto dei cespugli piatti: nel renderer 3D erano ancora dipinti nel bake del suolo. Ora sono billboard verticali nello stesso atlas degli alberi; il bake non li disegna e il fallback 2D resta corretto. Flip orizzontale deterministico per singolo cespuglio, applicato sia agli UV 3D sia al canvas 2D; posizioni e quantita invariate. PASS forest-shrubs (due orientamenti e nessuna pittura nel bake), tree-density (2.51x), save-safety, cinque scene browser 3D e screenshot upright-shrubs-*.png. Audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Roadmap/economia invariate.
+
+12/11/2026 - REG-REAL-FOREST-SHRUBS: corretta la confusione tra trama del sottobosco e cespugli visibili. Aggiunto strato separato di cespugli SVG riusando i sette asset esistenti delle siepi, con griglia indipendente dagli alberi, quota reale, stagioni e occlusione condivisa. Esclusi acqua/radure e pendii ripidi. Caricamento sprite invalida anche la cache paesaggio. Alberi invariati a circa 2.5x. PASS forest-shrubs (quattro situazioni), wooded-relief, woodland-density, tree-density, scatter (8), save-safety; cinque scene browser con verifica sprite caricati e cespugli effettivamente disegnati. Snapshot forest-shrubs-*.png, primo ravvicinato. Audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Economia e roadmap invariate; nessuna modifica ai salvataggi o alla copertura dei biomi.
+
+12/11/2026 - REG-TREE-DENSITY: alberi circa 2.5x a parita di superficie (griglia 4.4/sqrt(2.5) U, jitter contenuto); misurato 2.51x nel controllo su area fissa. Nessuna variazione a scatter, cespugli o numero di dettagli del sottobosco. Ripristinata la trama completa sui rilievi: luce applicata sopra il dettaglio anziche attenuarlo al 30%. Scarpate ripide sempre escluse, con fascia di rispetto 1.1U per le radici degli alberi. PASS tree-density-balance, wooded-relief, woodland-density, scatter (8), save-safety. Cinque snapshot tree-density-balanced-*.png; audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Roadmap ed economia invariate; nessuna modifica ai poligoni o ai salvataggi.
+
+12/11/2026 - REG-WOODED-RELIEF: boschi ammessi su sommita e pendii dolci; scarpate ripide escluse da alberi e contenimento boschivo. Rimossi divieti totali e radure automatiche sulle colline. Sottobosco proiettato separatamente su terrazze e facce inclinate, con luce direzionale; la campitura piana esclude la sagoma del rilievo. Alberi alla quota reale, diradamento deterministico sui pendii e occlusione dietro le superfici anteriori. PASS wooded-relief (tre seed), density, organic woods, ricette (42), landscape-order, Pianura 20%, Palude 20-30%, surroundings, industrie e save-safety. Cinque snapshot wooded-relief-*.png, inclusi dettagli di sommita, pendio, scarpata e Palude; audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Economia e roadmap invariate; geometrie dei salvataggi non rigenerate.
+
+12/11/2026 - REG-LANDSCAPE-ORDER: generazione con priorita rilievi -> rete idrografica definitiva -> boschi/stagni/acquitrini. Rimosso il calcolo dei torrenti dal piazzamento colline e rimossa la cancellazione dei rilievi nella fase idrologica. Primario deviato attorno a rilievi e montagne con margine di sponda; affluenti e delta rispettano gli stessi ostacoli. Riempimento regionale differito, acquitrini esclusi da fiumi e laghi/mare; boschi e radure costruiti sui percorsi finali e sulle impronte dei rilievi. PASS landscape-order (sei mappe + ostacolo controllato), quote colline, ricette (42), gerarchia, coperture Pianura/Palude, foci, surroundings, isole/penisole (15), montagne regionali, industrie e save-safety. Cinque snapshot landscape-order-*.png; audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Economia e roadmap invariate; nuove generazioni, salvataggi non rigenerati.
+
+11/11/2026 - REG-SPORADIC-HILLS: gate deterministico indipendente per bioma: Pianura 1/3 con 1-2 colline H1-2, Foresta 1/2 con 2-3 colline H2-3, Palude 1/4 con una collina H1-2. Primo rilievo favorito nella zona edificabile, centro insediativo libero; colline ereditate con budget limitato e campionamento indipendente. Acquitrini escludono i rilievi con margine asciutto di 4U, mantenendo il target di copertura. Nessuna modifica a produzione, cave, miniere o risorse: economia gestita nell altro branch. PASS 3000 seed/bioma (33.5%, 49.4%, 24.7%), conteggi finali, rocce, determinismo, ereditarieta, ricette biomi (42), surroundings, hydrology-network, gerarchia e save-safety. Cinque snapshot sporadic-hills-*.png; audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Roadmap invariata; forma dei rilievi esistente e salvataggi non rigenerati.
+
+11/11/2026 - REG-ORGANIC-COAST: isole e penisole marine/lacustri generate con contorno continuo ovale deformato, indipendente dalle quattro fasce rettilinee. Rotazione, numero di lobi (2-4), ampiezza e fase dipendono dal seed; penisole orientate verso il lato di terraferma con asse sinuoso. La costa puo entrare nei margini della buildable zone, mentre il centro resta asciutto. Sponde, collisioni e idrologia usano i poligoni reali. PASS island-coast (15 casi, tre seed e quattro orientamenti), surroundings, idrologia, foci mare/lago, estremita ereditate, Pianura 20% e save-safety. Cinque snapshot coast-organic-*.png (due isole marine, una lacustre, due penisole); audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Roadmap invariata: correzione della forma costiera esistente; salvataggi non rigenerati.
+
+11/11/2026 - REG-SWAMP-BALANCE: Palude con target 25% acquitrini e 25% boschi sulla superficie del bioma; intervallo richiesto 20-30% per ciascuno, restante terreno aperto al netto dei corsi d acqua. Superato il conteggio fisso 2-3 stagni: campo continuo ordinato per area, macchie organiche e seed deterministico. Centro e settori ereditati calibrati separatamente; boschi esclusi da acquitrini e rive. Pianura mantiene 20%. PASS swamp-balance (18 combinazioni, sei seed), marsh, Pianura 20%, hydrology-network, surroundings, water-surface, save-safety, scatter (8), economy-industries e ricette biomi (42). Cinque snapshot swamp-balanced-*.png; audit Territorio 16 invariati, zero errori e cinque avvisi schematici. Roadmap invariata: bilanciamento del bioma esistente; salvataggi non rigenerati.
+
+11/11/2026 — REG-MARSH: acquitrini marrone-verde come sottotipo pond/waterBodyKind=marsh, con sponda fangosa stretta, chiazze galleggianti e canneti/cespugli riusando gli asset esistenti. Stesso colore in minimappa e renderer condiviso 2D/terreno 3D. Palude centrale e settori ereditati producono acqua stagnante distinta da laghi/stagni ordinari; maschere separate e bordi ammorbiditi. Acquitrini centrali adattati alla buildable zone; restano non edificabili e non sono ricevitori automatici delle foci. Mantenute le quantita della ricetta esistente. Mulino ad acqua: il validatore gia accettava solo river/stream; nuovi test negativi per mare/stagno/lago/acquitrino e sovrapposizione con acqua ferma pur vicino a un torrente, piu controlli positivi fiume/torrente. PASS marsh, economy-industries, scatter (8), mills3d, asset-catalog, surroundings, hydrology-network, boschi20, water-surface e save-safety. Cinque snapshot marsh-*.png; audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Nessuna variazione di roadmap; salvataggi non rigenerati.
+
+11/11/2026 — REG-FLOW-30: sostituito il raccordo a T con ingresso a 30 gradi verso valle. Primario orientato dalla foce locale se presente, altrimenti dal vettore regionale derivato dalla distanza lungo la rete da mare/lago o dalle sorgenti; fallback deterministico dal seed quando mancano riferimenti. Export regionale include riverFlow. Affluenti con raccordo cubico continuo e terminale di 9U all angolo richiesto; preservati sbocchi separati, lati alternati e vincoli anti-incrocio/parallelo. PASS river-flow, gerarchia (anche inversione regionale), hydrology-network, stream-count, boschi20, surroundings, regional-demo, water-surface e save-safety. Cinque snapshot runtime streams-30-*.png e audit Territorio: 16 invariati, zero errori, cinque avvisi schematici. Nessun cambio a probabilita, roadmap o paesaggi gia salvati.
+
+10/11/2026 — REG-STREAM-T-HIERARCHY: un solo primario esplicito, sempre il fiume se presente. Gli altri corsi sono affluenti diretti con ultimo tratto normale al primario (T), innesti distanti almeno 28U lungo il percorso e 18U in linea d aria. Curve degli affluenti derivate dallo sbocco, lati alternati e vincoli angolari globali per evitare tratti paralleli o incroci a X; geometrie incompatibili con acqua/rocce/altri corsi scartate. Rimossi i tagli boschivi dei percorsi provvisori preservando radure e stagni naturali. PASS gerarchia/angoli/distanze/determinismo, hydrology-network, stream-count, boschi20, surroundings, water-surface, save-safety. Cinque snapshot runtime in output/playwright/streams-T-*.png; audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Nessun cambio di probabilita o roadmap; salvataggi non rigenerati.
+
+10/11/2026 — REG-STREAMS-0-3: estrazione deterministica uniforme 0–3 dopo il gate del bioma (Pianura .45, Foresta/Montagne/Palude 1). Probabilita effettiva teorica di almeno un torrente: 33.75% / 75%, prima degli scarti geometrici. Massimo tre torrenti complessivi inclusi gli affluenti regionali; fiumi regionali e delta restano distinti. Confluenza al primo incrocio, scarto degli innesti ostruiti per evitare anelli. Tutti i corsi entrano nei vincoli di rilievi/boschi; boschi regionali ricalibrati dopo foci e confluenze per preservare il target del 20%. PASS conteggi/determinismo/confluenze, biomi (42), boschi, water-surface, surroundings e save-safety. Cinque snapshot runtime 0/1/2/3 e palude in output/playwright/streams-0-3-*.png. Audit Territorio: 16 invariati, zero errori, cinque avvisi schematici. Nessuna rigenerazione dei salvataggi; roadmap invariata.
+
+10/11/2026 — REG-WOODLAND-DENSITY: rimosso il minimo di 14 alberi e il conteggio su raggi nominali nei boschi isolati. Stessa griglia jittered 4.4U dei boschi regionali, filtrata sui poligoni reali e sulle radure: densita omogenea anche per macchie piccole, strette o ritagliate. Geometrie e copertura boschiva immutate. Test fallito prima e PASS dopo; cinque snapshot runtime verificati (seed 12345/4242/229/777/90210) in output/playwright/density-fixed-*.png. Audit Lab Territorio: 16 invariati, zero errori, cinque avvisi di schemi illustrativi.
+
+10/11/2026 — REG-PLAINS-WOODS-20: boschi (copertura naturale) distinti dal bioma Foresta. Pianura con target 20% della superficie, non 0–1 macchie. Ricetta autonoma calibrata e composizione regionale calibrata separatamente su centro e settori di pianura ereditata; fasce miscelate. Acque, pendii ripidi e nucleo insediativo restano esclusi. PASS sei seed autonomi e misti con tolleranza raster 1.5 punti percentuali, determinismo e regressioni biomi/idrografia/coste/persistenza. Salvataggi esistenti non rigenerati. Nessuna modifica alla roadmap o ai modelli grafici.
+
+10/11/2026 — REG-COAST-ENDS: conservati gli endpoint delle rive reali sul bordo mondo; esclusi solo gli spigoli artificiali del mare. Tutte le rive separate ricevono spiaggia/rocce e onde con normali locali; coastline principale mantenuta per compatibilita. PASS inherited-coast, coast, regional-surroundings, water-surface e hydrology-network. Verifica browser non eseguita in questo intervento.
+
+10/11/2026 — REG-SEA-DELTA-30: correzione richiesta: foce lacustre diretta, senza distributari; diramazioni solo se il ricevente e mare. Due innesti nel tratto finale del 30% misurato per lunghezza d’arco (70–79% del percorso). Canale principale dominante, rami piu stretti; sponde e bordi continui preservati. Dodici fixture mare/lago e hydrology-network PASS. Riferimento morfologico Seybold/Andrade/Herrmann, Modeling river delta formation, DOI 10.1073/pnas.0705265104; versione autori https://arxiv.org/html/0711.3283v1. Non introdotta una simulazione dinamica di erosione/sedimentazione.
+
+10/11/2026 — REG-WATER-SURFACE: eliminati i bordi chiari interni a confluenze e foci con contorni acqua disegnati prima di tutti i riempimenti. Alberi e montagne mantengono la propria occlusione. Aggiunte sponde ai laghi (anche isole interne), ritagliate al mondo senza spiagge sul bordo artificiale della mappa. Foce fluviale con due rami distributari piu stretti, innestati dall’80–86% della lunghezza reale, ciascuno termina nel ricevente; caricamento preserva le larghezze ridotte. Schiuma marina interrotta agli sbocchi. PASS dodici fixture delta mare/lago, idrografia, test pixel contorni e sponda e cinque scenari browser. Audit Territorio: 16 render invariati, zero errori, cinque avvisi di schemi illustrativi.
+
+10/11/2026 — REG-WATER-CI: rigenerato wiki/catalog.json dopo il riallineamento delle sorgenti gameplay; unica differenza sourceDigest. PASS codex-wiki e export --check. PASS anche 42 biome-recipes, mountain-density e cinque fixture browser sulla versione integrata.
+
+10/11/2026 — REG-WATER-INTEGRATION: allineato il branch sperimentale a main 89e7a2c per risolvere i conflitti della PR e riattivare CI. Preservati Codex, palette Stonecolor, reset Haulage e isolamento completo delle demo nella persistenza. Risolti i renderer mantenendo facce montane ritagliate e fallback della palette. QA locale: regional-demo, hydrology-network, Stonecolor, Haulage (10), Builder menu, stockyard (8), coast, asset-catalog e save-safety PASS. Nessun merge del lavoro regionale in main.
+
+09/11/2026 — REG-WATER-NETWORK (branch): Mare e Lago non selezionabili, neanche via Shift o URL regionale; selezione eliminata se diventa acqua. Scelte locali nuove limitate a Pianura/Foresta/Montagne/Palude; bioma ereditato bloccato nelle mappe aperte dalla regione. Colline/Valle/Fiume/Mare/Lago restano solo compatibilita delle vecchie ricette/demo. Foci geometriche con sbocco reale nel mare o lago, distinto dagli stagni; confluenze fiume/fiume, torrente/fiume e torrente/torrente con endpoint condiviso, sponde e collisioni aggiornate. I nodi regionali a grado >=3 producono affluenti, le curve a grado 2 no. Idrografia prioritaria rispetto ai rilievi nelle nuove mappe regionali. Cinque demo URL e regressioni runtime/browser PASS. Palude resta da bilanciare quantitativamente, mantenendo per ora i valori esistenti.
+
+06/11/2026 — REG-MOUNTAIN-UNIFORM-FIX: riprodotto T297 della regione 1988, seed locale 1555837107, centro e otto campioni tutti Montagne. Il controllo active() disattivava erroneamente la composizione regionale quando tutti i biomi erano uguali, ripristinando la catena legacy su un breve arco. Il contesto montano completo ora compone sempre centro e otto settori. Test dedicato fallito prima della correzione, poi PASS per tutti gli otto settori, centro e ripetibilita; PASS anche surroundings e mountain-density. Mappe prive di contesto regionale completo restano sulle proprie ricette demo.
+
+06/11/2026 — REG-MOUNTAIN-VARIATION (branch): eliminata la posa fissa a doppietti. Cime distribuite lungo tutta la catena con jitter e basi variabili; limitrofi con sagome indipendenti e distanze 6–15 U, fallback compatto solo per vincoli acqua/bioma. Quantita raddoppiata e intersezioni mantenute. Intervallo pendenze ampliato da 40–60 a 37–63 gradi, raggi principali da .52–.60/.54–.62 a .48–.64/.49–.66 settori: maggiore delta di altezza conseguente. QA spaziatura irregolare, densita, intersezioni, tagli e determinismo PASS.
+
+06/11/2026 — REG-MOUNTAIN-DENSITY (branch, non main): raddoppiate le cime principali dei settori montuosi con coppie intersecate (Montagne 8–14, Valle 6–10) e mantenute le secondarie proporzionali. Limitrofi: seconda cima per ogni massiccio accettato, fianchi sovrapposti e apici distanziati (base annidata solo in spazi vincolati); fascia esterna portata al bordo. Non si scartano piu i rilievi che oltrepassano il mondo: impronta collisioni ritagliata e facce roccia/neve tagliate in XYZ con sezioni verticali, condivise da 2D e World3D. Outline originale conservato per quote dei pini. QA densita/intersezioni/tagli/determinismo PASS; demo seed 4242: centrali 4→8 principali, limitrofi 9→18. Audit Territorio: 12 render, zero errori/cambiamenti, cinque avvisi di schemi illustrativi; confronto montano reale eseguito nella demo.
+
+06/11/2026 — REG-DEMO-OVERLAY: rimosso su richiesta il pannello sovrapposto con selettore scenari e metriche. Le demo restano accessibili dai link, isolate dai salvataggi; ritorno regionale tramite il collegamento esistente nell’header.
+
+06/11/2026 — REG-COAST-SHAPES (branch sperimentale): coste deformate in base ai lati cardinali di mare: 1 golfi ampi, 2 adiacenti promontorio roccioso e due fronti a golfo, 3 penisola collegata al lato asciutto, 4 isola con angoli raccordati. Due lati opposti restano due fronti a golfo, senza falso promontorio. Fasce e corner diagonali preservati; geometria condivisa da acqua, rendering e collisioni. Minimappa corretta per i fori terra e le radure, verifica pixel terra/mare PASS. Browser: quattro scenari e selezione mare PASS (eventi DOM). Quattro scenari selezionabili nel pannello demo (gulf/headland/peninsula/island). Mare escluso da clic/Shift e apertura locale; conversione di selezione a mare ripulisce selezione e pannello. QA quattro casi, variazione costa >7 U, rocce, connessione penisola e isola con foro PASS.
+
+06/11/2026 — REG-EIGHT-BIOMES (branch sperimentale, non main): apertura regionale con otto campioni direzionali sulla geometria Voronoi reale. Fasce 25/25/100/25/25 U, corner esterni 25×25 del diagonale e blending a prodotto. Composizione ingame di suolo, boschi, acqua con isole/fori e rilievi; il centro usa la propria ricetta. Fiumi esistenti preservati. Uscite marittime campionate su tutti i settori acqua; compatibilita costa principale mantenuta. Demo Fronte misto disponibile; test determinismo, collisioni, pesi e diagonali PASS. Cache world: mantenuto il prefisso contrattuale bridge-magnet-1 con nuovo suffisso. Browser Chromium: campionamento di tutti i 630 territori PASS, demo mista e apertura da regione verificate. Bilanciamento quantitativo e dorsali continue restano aperti. Le vecchie demo senza campioni vanno riaperte dalla regionale.
+
+05/11/2026 — REG-CENTRAL-BIOME: corretto il bioma centrale in apertura dal territorio. Regole condivise: plain→Pianura, forest→Foresta, hills regionale→Montagne, sea→Mare, swamp→Palude, lake→Lago. Fiume di confine aggiuntivo, non sostitutivo del bioma. Contesto portabile nel link, session storage opzionale; dati mancanti mostrano errore, mai Pianura implicita. Scope scelto: prima il bioma centrale, otto influenze rinviate. QA mapping, ricette e trasferimento tra schede PASS.
+
+05/11/2026 — REG-SINGLE-CELL: correzione della rimozione incompleta dei raggruppamenti. Una cella Voronoi = un territorio: dettaglio fisso 1, pesi territoriali tutti 1; isole ricavate cambiando terreno della singola cella, senza fusioni o territori vuoti. Validazione finale dopo isole/laghi. QA browser su seed 1943/42/229/4242: 630 celle = 630 territori = 630 etichette. Recuperati otto SVG Mountain 1–8 da ARQE nel percorso ICON del repository; tutte le risposte HTTP 200. Vecchie mappe aggregate rigenerate con messaggio esplicito; modifiche associate alla vecchia topologia non riapplicate a ID diversi.
+
+05/11/2026 — REG-NOSUPER: rimossi i raggruppamenti geografici di supercelle dal World Lab: comandi unione/separazione, aggregazioni automatiche dei laghi, nomi/contorni aggregati ed export superCells. Ogni territorio resta indipendente. Import JSON e ritorno dalle demo ignorano i vecchi gruppi, preservando i territori. Selezione multipla per modifica e domini politici restano separati da questo raggruppamento geografico.
+
+05/11/2026 — REG-DEMO: Builder → Mappa regionale → selezione territorio → Apri mappa locale del territorio. Demo isolate senza lettura/scrittura della partita o cloud, seed ripetibile derivato da regione/territorio, ritorno alla stessa regione e selezione. Scenari Pianura/Colline/Foresta/Fiume/Montagne/Costa con ricette attuali e misure di copertura mappa/buildable su griglia 40×40, conteggi delle componenti. Bilanciamento quantitativo ancora da decidere dopo revisione. I confinanti reali sono esposti come contesto; composizione a otto biomi non ancora nel Builder.
+
+05/11/2026 — REG-BIOME-RIVER3: traslazione rigida del fiume generato di 15 U verso il centro lungo la normale del lato selezionato. Forma, raggi e parametri del seed preservati. Offset applicato dopo selezione del candidato per evitare cambi di forma. Nuove mappe/rigenerazione, salvataggi esistenti preservati.
+
+05/11/2026 — REG-BIOME-RIVER2: sostituite le quattro anse Bezier identiche con integrazione della direzione lungo la lunghezza del corso. Raggio delle singole anse 2–3 larghezze, aperture e lunghezze variabili per seed, geometria arrotondata ispirata a Leopold/Wolman e al riferimento fornito. Test precedente: solo 2 forme dopo aver rimosso rotazioni; nuovo test: almeno 60 forme su 64 seed. PASS 64 mappe runtime, 2.000 curve, 42 mappe biomi e save-safety. Penetrazione minima 25 px sul riferimento preservata. Nuove mappe, salvataggi esistenti non rigenerati.
+
+05/11/2026 — REG-BIOME-RIVER ingame su `experiment/regional-biome-sectors` (NON MAIN): `makeEnvWater` genera i nuovi fiumi sul perimetro buildable con quattro ampie anse alternate, penetrazione interna 12 U (36 px riferimento 600 px). Acqua reale nei renderer e nei vincoli di costruzione. QA 42 mappe biomi, 64 mappe fiume con collisioni/determinismo, 36 urban checks PASS. Mappe salvate preservate; applicazione alle mappe rigenerate. Gli otto biomi e le dorsali della fixture non sono ancora integrati nel Builder.
+
+05/11/2026 — Correzione REG-BIOME-PREVIEW: le anse fluviali devono penetrare nella buildable zone. Ampiezza fluviale 24 U dalla direttrice esterna a 12 U dal bordo: penetrazione 12 U, pari a 36 px sul canvas di riferimento 600 px (minimo richiesto 25 px). Dorsale invariata esterna. Verificati tutti gli otto percorsi con entrambi i versi del seed.
+
+05/11/2026 — REG-BIOME-PREVIEW: fiume e dorsale come spline di confine separate dai biomi. Meandri fluviali ampi, dorsale più lineare; otto percorsi per elemento (lati e raccordi ad angolo), ingressi/uscite sul bordo mappa. Rimosso il canale baricentrico del bioma Fiume. QA 16 percorsi: continuità, ripetibilità, estremi e assenza di attraversamento del centro. Quote, foce e collisioni tra elementi ancora aperte; nessuna integrazione Builder.
+
+05/11/2026 — REG-BIOME-PREVIEW: otto ingressi direzionali configurabili, corner esterni 25×25 U al 100% del bioma diagonale; blending a prodotto nelle fasce da 25 U, centro 100×100 U preservato. I diagonali possono essere mare o terra indipendentemente dai lati. Campionamento Voronoi reale ancora aperto; fixture separata dal Builder.
+
+05/11/2026 — Aggiornamento REG-BIOME-PREVIEW su `experiment/regional-biome-sectors`: fasce fisse 25/25/100/25/25 U, blending smoothstep e corner continui con centro + due vicini; centro invariato, collegamento regionale ancora aperto. Verificati pesi, estremi delle fasce e continuità ai corner. Prova separata dal Builder.
+
+05/11/2026 — `experiment/regional-biome-sectors` (NON MAIN): fixture cartografica in `lab/biome-sectors.html`, centro buildable zone, quattro fasce e corner quadrati di blending. Vicini configurabili, non collegati alla regione. QA sintassi/pesi e browser desktop/mobile; nessuna modifica al generatore Builder. Dettagli: [prova](../REGIONAL-BIOME-SECTORS-PREVIEW.md).
+
+
+## 2026-11-13 — FIELD-LEND · Contadini senza lavoro al campo (branch `fix/idle-peasants`, rifatta su SOC-CLASS-02)
+
+- **STATO LIVE verificato su `main` 965d42c3 (SOC-CLASS-02):** campi, cave e miniere sono L1 e i campi stanno nel Job Manager L1. Il campo chiedeva tutte le sue strisce anche quando molte erano già finite, quindi pagava al campo L1 che restavano a casa. I contadini disegnati erano scelti casa per casa, separatamente dall'economia: un costruttore poteva ricevere una striscia che nessuno lavorava, e due adulti della stessa casa avrebbero preso la stessa striscia.
+- **CODICE SUL BRANCH, NON MERGE** ([D-FIELD-LEND-261113](DECISIONS.md)):
+  - `fieldMorningDemand` (settlement-fields): strisce aperte al primo calcolo del giorno, congelate fino a sera; 0 in crescita o fuori stagione. Lo usano `workerDemand`, Job Manager L1 e la sospensione dei campi in `laborAllocation`.
+  - `fieldWorkAssignments` prende il roster da `laborAllocation().assignedL1[campo]`: assegnazioni per id residente, striscia aperta più vicina del campo che lo paga, decisione mattutina stabile; `fieldSocialTier` sostituisce i controlli `houseLevel<=2` in figures e urban.
+  - `takeWorkers`: i campi prendono solo adulti con casa, non la squadra di fondazione.
+  - L'espansione dei campi in autunno parte dagli L1 che l'economia lascia inattivi.
+  - Restano dalla prima versione: `crop.slotEnd`, `fieldSlotRelease`, rientro a piedi, niente attrezzo su striscia finita.
+  - Rimosso il prestito L2 (`lendIdleFarmers`, `lentL2`, `lentIdle`, `farmhands`, `lentToL1`).
+- **PROVE LOCALI PASS:** `qa/idle-farmers-regression.cjs` (7 casi), `qa/fields-regression.cjs` (16 casi), 32 delle 33 voci di `economy-flows-regression.yml` più `qa/urban-regression.cjs`, e le regressioni social-classes, labor-jobs, construction-commute, educated, storage-yard, carter-market. `founding-regression` fallisce sul limite di tempo di 100 ms (131 ms), come annotato per #206 anche su main.
+- **NON VERIFICATO:** partita reale nel browser, prove di prestazioni Playwright, CI del branch.
+
+## 2026-11-14 — Caditoie all'italiana sulle torri (branch `feat/caditoie-italiane-torri`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `settlement-core.js`: nuova variante estetica torre `machicolationStyle` (`standard` | `italian`, default `standard`), `towerItalianMachicolation(s)` e `towerRoofMenuValue(s)`. `hasMachicolation()` e tutte le regole (combattimento, tetto interno, ballatoio, arma) leggono solo `roofStyle`: nessun effetto di gioco.
+  - `settlement-castle-structures.js`: `italianMachicolationPieces(s)` sul modello del Castello di San Giorgio (Mantova): mensole snelle e fitte (passo 0,24U, indipendente dai merli, una su ogni spigolo), ognuna un unico pezzo inclinato che sporge in testa e rientra al muro al piede, banda alta 4× la mensola standard (0,98U); archi a tutto sesto tra le mensole, apertura lasciata libera (nessun riempimento scuro), e muratura piena a filo sopra gli archi fino al piano delle caditoie, merli in cima. Nuovo pezzo `machicolationArch` (facce libere: mensola inclinata o archetto) in 2.5D e mesh 3D; in 2.5D i pezzi rivolti lontano dalla camera non si dipingono (`battlementPieceFacesAway`). In cutaway restano solo mensole, archi e fascia del lato lontano: quelli del lato aperto coprivano l'ultimo piano. Torri quadrate, rotonde e a D; caditoie standard e mura invariate (render identici).
+  - Menù tetto torre: quarta scelta «Caditoie all'italiana» (`setTowerRoof('machicolationItalian')` imposta `roofStyle:'machicolation'` + `machicolationStyle:'italian'`), nel pannello UI v2 (`settlement-structure-commands.js`, i18n) e nel pannello legacy (`settlement-app-rooms.js`). Non disponibile sulle semitorri. Il cambio apre un cantiere di modifica come le altre varianti.
+  - Codex: due note approvate (`Torre · Caditoie standard`, `Torre · Caditoie all'italiana`) per le voci generate `upgrade:tower.machicolationStyle.*`; rigenerati `src/codex-wiki-editorial.js` e `wiki/catalog.json`, conteggi dei test Codex +2.
+  - Lab: 4 righe in `GALLERY` (quadrata T2/T3, rotonda, D) e famiglie in `structureAssetFamilyCatalog`; chiavi di cache render/popolazione/cantiere aggiornate.
+- **PROVE LOCALI PASS:** tutte le `qa/*-regression.cjs` (come lo step completo della CI), tra cui `qa/tower-italian-machicolation-regression.cjs` (nuovo, in `tower-variants-regression.yml`), bartizan, tower-roof-shape, tower-inner-roof, tower-weapons, battlement-parapet, roof-pitch, subtower-junctions, dovecote, falconry, builder-menu, asset-catalog, asset-audit-scope, codex-catalog, ci-p0/p1, urban. Audit Lab `--category=Fortificazioni`: 0 errori; i 40 render nuovi rivisti e aggiunti alla baseline (solo voci nuove).
+- **NOTA AUDIT:** in locale 270 render «cambiati» anche su varianti non toccate (deriva d'ambiente del renderer, distanze 0,010–0,022); baseline esistente non riscritta.
+
+## 2026-11-13 — Equipaggiamento delle unità: elmi e scudi (branch `feature/unit-equipment-styles`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `settlement-core.js`: `UNIT_HELMETS`/`UNIT_SHIELDS` con costi per posto soldato, `unitHelmet()`, `unitShield()`, `unitEquipmentQuote(kind,style)` e `applyUnitEquipment(kind,style)` (posti = `ConquerSiege.capacity().soldiers`; paga con `canAfford`/`spendCost` come le merlature).
+  - `settlement-population-figures.js`: `drawSoldierHelmet` (5 elmi) e `soldierShieldPath` (5 forme) usati da `drawSoldierFigureUnmasked`; `settlement-combat-anim.js` usa la forma scelta per lo scudo in combattimento. Le unità con livrea propria (nemici) restano invariate.
+  - `settlement-panels.js`: sottoscheda Militare › Equipaggiamento con due schede (elmo, scudo), icone SVG e messaggio di risorse insufficienti. `game-api.js`: comandi `unitEquipmentQuote`, `setUnitEquipment`. Persistenza cloud dei due campi in `settlement-app-persistence.js`.
+  - `figures-lab.html`: selettori Elmo e Scudo per le truppe.
+- **PROVE LOCALI PASS:** `qa/panels-regression.cjs`, `qa/combat-anim-regression.cjs`, `qa/combat-render-regression.cjs`; nel browser: sottoscheda visibile, acquisto con costo corretto (24 posti), rifiuto per risorse, foglio delle 5 combinazioni nel Lab a tre zoom.
+- **NON ESEGUITO:** `node qa/asset-audit.mjs` (browser Playwright non installato in locale); cavalieri a cavallo (`settlement-mounted2d.js`) non toccati.
+
+## 2026-11-13 — Figure dei ruoli mancanti (branch `feature/new-role-figures`, sopra `feature/role-outfits` e `feature/shop-artisan-tools`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - Nuovo `src/settlement-staff-people.js` (`ConquerStaffPeople`): personale delle stanze del castello in cutaway, presente di giorno (6-20) e assente durante l'allarme. La tabella `ROOM_STAFF` copre 10 funzioni:
+    - cucina: cuoco con mestolo, due nella stanza grande;
+    - scuderie: stalliere con striglia;
+    - armeria e officina d'armi: armaiolo col martello;
+    - cappella: cappellano col libro;
+    - tesoro: tesoriere con penna e registro;
+    - infermeria: cerusico col mortaio e inservienti con ciotola;
+    - falconiera: falconiere col falco sul pugno;
+    - colombaia: colombaro con la granaglia;
+    - sala del consiglio: consiglieri che parlano.
+  - Le stanze che non hanno soldati, nobili o prigionieri lo disegnano da `drawCutawayOccupants`.
+  - `ConquerCivic3D.roomSlots` copre chiesa, taverna, Bargello e Balivo (`staffSlots`):
+    - chiesa: prete all'altare;
+    - taverna: oste dietro il banco, dal lato delle botti;
+    - Bargello: due guardie nel corpo di guardia; al piano superiore due esattori al tavolo dei conti e chi paga sulla panca;
+    - Balivo: tre giudici, uno presiede, e il cancelliere nel tribunale al piano superiore.
+  - Le figure civiche passano da `ConquerCourtPeople`, che ora vale per tutti gli interni civici selezionati.
+  - Disboscamento L1: `ConquerForestry.drawCrews` disegna tanti boscaioli quanti sono i lavoratori pagati del cantiere, con l'ascia; il terzo usa la pala per le ceppaie. Solo nei giorni feriali e in orario di lavoro.
+  - 9 nuovi gesti in `settlement-work-anim.js`: ladle, brush, book, quill, mortar, falcon, mug, speak, bowl. I gesti `sweep` muovono la mano avanti e indietro a un'altezza fissa.
+  - 8 nuovi pezzi di guardaroba: tonaca, stola, veste da notabile, camice del cerusico, toga del Balivo, tabarro del Comune, catena d'ufficio, berretto da cuoco. 12 nuovi abiti di mestiere, 28 in tutto, ciascuno diverso dagli altri.
+  - Asset Lab: 9 gesti nella famiglia «Lavori» e 12 abiti nuovi.
+- **PROVE LOCALI PASS:**
+  - `staff-people-regression` (nuovo, nel workflow Wardrobe perché il numero di workflow è fisso a 26): stanze reali, abiti e gesti noti, orari e allarme, posti negli interni civici di tutti i livelli, squadre di disboscamento, collegamenti;
+  - `work-anim` (19 gesti), `wardrobe` (28 mestieri), `court-people`, `ci-p1`, `codex-wiki`;
+  - suite `qa/*.cjs` senza i `*-performance`: tutto verde tranne `founding-regression`, che fallisce uguale su main.
+- **AUDIT ASSET:** audit completo con 0 errori e 21 voci nuove, riviste su un foglio grande dei gesti. Baseline aggiornata solo per `figure:work:*` e `wardrobe:trade:*`. Le altre differenze (alberi, torri) sono deriva già presente su main.
+- **PROVA IN PARTITA (13/11):** gioco del branch in Chromium (WebGL SwiftShader), alle 10:30, 22 scene:
+  - stanze del castello in sezione, piano per piano: sezioni costruite W1 e W2 e torre grande L3 con cucina, cappella, scuderie, tesoro, infermeria, consiglio, armeria, officina, falconiera, colombaia;
+  - chiesa L1 e L3, taverna L1 e L2, Bargello L1 e L2 su entrambi i piani, Balivo L1 e L2;
+  - cantiere di disboscamento con 3 lavoratori.
+  - Esito: ogni figura sta nella sua stanza e al suo piano, con l'abito e il gesto giusti; di notte il cantiere è vuoto.
+  - Unico difetto trovato, corretto: il falco era marrone come la tunica del falconiere e non si vedeva. Ora ha il dorso grigio ardesia, il petto chiaro e la coda, ed è un po' più grande. Baseline aggiornata solo per `figure:work:hawk`.
+- **DA VERIFICARE:**
+  - CI del branch;
+  - l'ordine di merge: prima #207 e #213, poi questa PR.
+
+## 2026-11-13 — Selezione edifici: perimetro posteriore nascosto (branch `fix/selection-outline-occlusion`)
+
+- **CODICE SUL BRANCH, NON MERGE:** `selectionOutlineRuns` in `src/settlement-castle.js` spezza il perimetro di selezione e omette i lati dietro il volume e quelli visti di taglio con la camera libera. Il contorno 2D resta l'ultimo passaggio, sopra la scena WebGL: nessun depth test. I civici usano `ConquerCivic3D.builtParts(s)` (nuovo export in `settlement-civic3d.js`) per il footprint del livello corrente.
+- **TEST:** `mastio-selection-zoom-regression` con proiezione isometrica reale (torre, campo, piazza, casa, civico per livello); `well-civics`, `stonecolor`, `cutaway-floors`, `crime-buildings`, `court-people`, `civic3d` e `ci-p1` superate in locale. Catture Playwright prima/dopo di torre, chiesa, municipio e dei livelli L1–L3 di chiesa, taverna, municipio e gilda. CI da verificare.
+- **INVARIATO:** l'area cliccabile (`screenHitStructureBody`) usa ancora il footprint completo dei civici.
+
 ## 2026-11-13 — Abiti da mestiere (branch `feature/role-outfits`)
 
 - **CODICE SUL BRANCH, NON MERGE:**
@@ -1186,6 +1433,7 @@ Baseline verificata: main d8c89556d504a48cf64bb2c9927a5620ec1772b5. Nessuna PR n
 - **Codice presente su branch (non ancora `main`):** modalità Difendi — rail Comando/Zone/Pattuglie/Allarme (Prove d'assedio solo con `?dev=1`) e scheda; `ConquerCombat.uiState()` in sola lettura; i comandi premono i pulsanti del modulo di combattimento, nessuna mutazione diretta di `State` dalla UI. `settlement-combat.js?v=` conserva il suffisso fissato da `zones-visual-regression`.
 - **QA locale (28/10):** 73/77 regressioni `qa/*.cjs` PASS; i 4 FAIL sono le prove di performance che richiedono Playwright (non installato in locale), identiche su `main`. **Non eseguite:** `qa/ui-combat-regression.mjs` (browser) e verifica visiva della modalità Difendi in partita. CI da verificare sulla PR.
 - **Ancora aperto (fase 5):** messaggi di stato/log in i18n, pannello attraversamenti come dati, UI v2 come default e rimozione di `settlement-builder-ux.js`.
+- **Fix rapidi (branch `fix/ui-v2-quickfixes`, 10/11/2026, non ancora `main`):** barra risorse con Argilla (`T.resources.clay`); `Toast` traduce le righe di stato note (`T.status`) e nasconde gli id grezzi degli strumenti; `ConquerGame.snapshot().saveStatus` = `saved|unsaved|error`, così «local save failed» e «cloud error» non appaiono più come «Salvato»; tooltip `u2-tip-bottom` per i controlli nelle barre in alto e posizione orizzontale limitata alla finestra; media query delle barre in alto a 1220px con risorse limitate a `100% - 480px`; valori di Panoramica (`u2-stats-3`) a capo; stringhe di cantiere, Gestisci, Difendi e Codex in `i18n-it.js`. Versioni `?v=ui2-quickfix-3…` per tema, API, shell e i18n (dopo l'allineamento a `main` del 13/11). **Prove:** 165/170 `qa/*.cjs` PASS (i 5 FAIL: quattro prove di performance senza Playwright e `asset-audit-scope` che richiede `--github-output`); verifica in browser locale a 1024, 1180 e 1440px (barre, tooltip, stato, salvataggio, Esc chiude la scheda strumento). **Non eseguite:** `qa/ui-combat-regression.mjs` e CI.
 
 ## Fix main: strade, DEV e WebGL (23/10/2026, branch di fix)
 
@@ -1596,3 +1844,13 @@ Nel branch fix/fields-l2-only i campi richiedono esclusivamente L2 sia nel ledge
 Recuperati i cinque commit residui 31cb32d, 2408397, 8e541fd, e4b06cc, 0ff543d sulla base main e4230db. La parte navale precedente era già in #150. Civili, lavoratori, carpentieri e marinai entrano nel depth buffer World3D; atlante 2048 con caselle 64px, 1024 posti, pose condivise, riuso LRU e upload incrementale. Conservati LOD militare, addOutbuilding, ingresso del mastio, arte e guarnigioni. Recuperati layout TEST, cache accesso pozzi, traslazione mesh navi, indice spaziale ostacoli e Trabucco DEV con scenario QA.
 
 QA locale: 165 regressioni deterministiche PASS. Aggiunta prova browser sul painter reale dei civili, occlusione da murature, riuso atlante, picking militare e fallback Canvas; inserita nel workflow Main fixes. Audit Lab completo: 1473 render, 0 errori; rivisti Popolazione, Truppe e confronto browser dietro la torre. Firme di queste categorie invariate; annotata la revisione nella baseline, senza accettare i 184 cambiati locali o i 15 stati tetto nuovi estranei a questa integrazione. Prova browser dedicata PASS. CI remota da completare prima del merge. Nessun nuovo modello, nessuna modifica alle priorità ROADMAP. Restano i limiti originari del Trabucco: non persistito, serventi colpibili solo via API, munizioni non simulate.
+
+
+## 2026-11-15 — Integrazione PR #199 (pre-merge)
+
+Riallineata UI2 quickfix alla main 6c5ac79; conflitto solo nel diario, mantenute entrambe le voci. PASS locale Builder menu, 5 runtime-integrity test, export Wiki fresco. Browser Chromium PASS: Argilla, barre senza sovrapposizioni a 1024/1180/1440px, saved/error/unsaved (anche errore cloud), nessun pageerror. CI del nuovo HEAD da verificare prima del merge. ROADMAP e DECISIONS invariate: nessuna nuova regola di simulazione.
+
+
+## 2026-11-15 — Integrazione PR #162 dopo UI2 (pre-merge)
+
+Riallineato il branch regionale alla main a0ed0c7, preservando FIELD-LEND #212 e UI2 #199. Merge automatico senza conflitti di codice; regole regionali e limiti gia documentati invariati. Verifica finale affidata alla CI del nuovo HEAD (suite completa, Sea and pier, browser e Asset Lab) prima dello squash. ROADMAP e DECISIONS invariate rispetto alla PR: nessun requisito aggiunto in integrazione.

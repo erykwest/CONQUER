@@ -2,8 +2,34 @@
 export const T = {
   brand: 'Conquer',
   modes: { build: 'Costruisci', manage: 'Gestisci', defend: 'Difendi' },
-  resources: { gold: 'Oro', population: 'Pop.', food: 'Cibo', wood: 'Legno', stone: 'Pietra', metal: 'Metallo', equipment: 'Equip.' },
-  resourcesLong: { gold: 'Oro', population: 'Popolazione', food: 'Cibo', wood: 'Legno', stone: 'Pietra', metal: 'Metallo', equipment: 'Equipaggiamento' },
+  resources: { gold: 'Oro', population: 'Pop.', food: 'Cibo', wood: 'Legno', stone: 'Pietra', clay: 'Argilla', metal: 'Metallo', equipment: 'Equip.' },
+  resourcesLong: { gold: 'Oro', population: 'Popolazione', food: 'Cibo', wood: 'Legno', stone: 'Pietra', clay: 'Argilla', metal: 'Metallo', equipment: 'Equipaggiamento' },
+  resourcesShort: { gold: 'Oro', stone: 'Pie', wood: 'Leg', metal: 'Met', clay: 'Arg', food: 'Cibo', equipment: 'Equ' },
+  aria: { modes: 'Modalità', resources: 'Risorse', buildTools: 'Strumenti di costruzione' },
+  modeKey: n => 'Tasto ' + n,
+  codex: 'Codex',
+  codexEntry: 'Voce nel Codex',
+  // Status lines from the legacy modules that are bare ids or English (phase 5 moves all of them to keys).
+  status: {
+    select: 'Selezione: clicca una struttura',
+    Select: 'Selezione: clicca una struttura',
+    delete: 'Demolisci: clicca una struttura',
+    'Select a build tool': 'Scegli uno strumento di costruzione'
+  },
+  saveError: 'Salvataggio non riuscito',
+  site: {
+    sub: 'Cantiere in costruzione',
+    progress: 'Avanzamento lavori',
+    remaining: 'Lavoro residuo',
+    days: n => n + ' giornate',
+    materials: 'Materiali consegnati',
+    state: 'Stato',
+    waiting: 'In attesa',
+    priority: 'Priorità approvvigionamento',
+    priorityAria: 'Priorità cantiere',
+    hint: 'Il progetto rimane confermato anche senza scorte. I materiali disponibili sono assegnati prima ai cantieri con priorità più alta.'
+  },
+  floor: n => 'Piano ' + n,
   seasons: { spring: 'Primavera', summer: 'Estate', autumn: 'Autunno', winter: 'Inverno' },
   year: 'Anno',
   time: {
@@ -84,7 +110,7 @@ export const T = {
       wallStair: 'Scala al camminamento', wallStairPos: 'Posizione scala'
     },
     words: {
-      battlement: 'Merlato', machicolation: 'Caditoie', pitched: 'Falde', open: 'Piattaforma', pitched4: 'Falde · 4 pali', cover_shingle: 'Scandole', cover_thatch: 'Paglia', cover_turf: 'Zolle erbose',
+      battlement: 'Merlato', machicolation: 'Caditoie', machicolationItalian: 'Caditoie all\'italiana', pitched: 'Falde', open: 'Piattaforma', pitched4: 'Falde · 4 pali', cover_shingle: 'Scandole', cover_thatch: 'Paglia', cover_turf: 'Zolle erbose',
       masonry: 'Pietra', timber: 'Graticcio',
       standard: 'Standard', buttress: 'Contrafforti', splayed: 'A scarpa', arcade: 'Porticato', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', innerRoofOff: 'Nessuno', innerRoofOn: 'Dentro i merli',
       none: 'Nessuna', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide · 4 falde', gable: '2 falde', hip: '4 falde con colmo', paved: 'Lastricata', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana d\'allarme',
@@ -92,7 +118,7 @@ export const T = {
       stairWood: 'Scala lignea · 4 oro, 14 legno', stairStone: 'Scala lapidea · 8 oro, 22 pietra', stairPos_start: 'Inizio muro', stairPos_middle: 'Centro', stairPos_end: 'Fine muro'
     },
     // Short labels shown on option buttons; the full word goes to the tooltip.
-    short: { masonry: 'Pietra', timber: 'Graticcio', battlement: 'Merli', machicolation: 'Caditoie', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', innerRoofOff: '—', innerRoofOn: 'Interno', none: '—', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide', gable: '2 falde', hip: 'Colmo', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana', lookoutOff: '—', lookoutOn: 'Vedetta', outpost: 'Avamposto', pyre: 'Pira', pyreRebuild: 'Ricostruisci', stairWood: 'Lignea', stairStone: 'Lapidea', stairPos_start: 'Inizio', stairPos_middle: 'Centro', stairPos_end: 'Fine' },
+    short: { masonry: 'Pietra', timber: 'Graticcio', battlement: 'Merli', machicolation: 'Caditoie', machicolationItalian: 'Italiane', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', innerRoofOff: '—', innerRoofOn: 'Interno', none: '—', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide', gable: '2 falde', hip: 'Colmo', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana', lookoutOff: '—', lookoutOn: 'Vedetta', outpost: 'Avamposto', pyre: 'Pira', pyreRebuild: 'Ricostruisci', stairWood: 'Lignea', stairStone: 'Lapidea', stairPos_start: 'Inizio', stairPos_middle: 'Centro', stairPos_end: 'Fine' },
     flip: 'Inverti', on: 'Attivo', off: 'Spento', toggles: 'Opzioni',
     rotateLeft: 'Ruota −15°', rotateRight: 'Ruota +15°', rotateFlip: 'Gira di 180°',
     facts: {
@@ -165,6 +191,9 @@ export const T = {
     marketHelp: 'Vendi: quota della produzione del signore messa sul mercato. Riserva: scorta che il castello trattiene.',
     owner: { lord: 'Signore', private: 'Privata' },
     value: 'Valore', workers: 'Lavoratori', profit: 'Utile',
+    castleGold: 'Oro castello', capital: 'Capitale L4', wages: 'Salari', lastMarket: 'Mercato',
+    privateMasonry: 'Muratura case', capacity: 'Capienza',
+    colPrice: 'Prezzo', colMarket: 'Merc.', colCastle: 'Cast.', colOwner: 'Prop.', colWorkers: 'Lav.', colValue: 'Val.',
     buy: 'Compra per il signore', sellL4: 'Vendi ai privati', abandoned: 'Abbandonata',
     noActivities: 'Nessuna attività produttiva ancora attiva.',
     activityTypes: { field: 'Campo', loggingCamp: 'Taglialegna', quarry: 'Cava', mine: 'Miniera', workshop: 'Officina', vineyard: 'Vigneto' },
@@ -184,7 +213,7 @@ export const T = {
     tier: { tower: 'Una stanza per livello: T1 nessuna · T2 normale · T3 grande (capacità doppia).', wall: 'Spessore: T1 0,2U · T2 0,5U · T3 1U.' },
     height: 'Ogni livello aggiunge un piano e, dove possibile, una stanza.',
     rotation: 'La rotazione segue una griglia di 15°; torri secondarie e innesti delle mura seguono.',
-    roof: 'Caditoie: merlatura in aggetto su mensole.',
+    roof: 'Caditoie: merlatura in aggetto su mensole. All\'italiana: mensole alte quattro corsi a risalti raccordate da archetti; solo estetica, stesse regole delle caditoie.',
     woodRoof: 'Piattaforma aperta oppure tetto a falde su 4 pali.',
     roofCover: 'Manto della long house: scandole, paglia o zolle erbose; il fumo del focolare esce dallo sfiatatoio nel colmo.',
     base: 'A scarpa: alta 0,5. Contrafforti: da quota 0 a H1. Le fondamenta seguono l\'impronta.',
@@ -243,7 +272,7 @@ export const T = {
     sections: { command: 'Comando', zones: 'Zone', patrols: 'Pattuglie', alarm: 'Allarme', tests: 'Prove d\'assedio' },
     title: 'Difesa',
     alert: { clear: 'Calma', local: 'Allerta locale', general: 'Allarme generale' },
-    units: 'Unità', hostiles: 'Ostili', patrols: 'Pattuglie', selected: 'Selezionate',
+    units: 'Unità', hostiles: 'Ostili', patrols: 'Pattuglie', selected: 'Selezionate', state: 'Stato',
     fog: 'Nebbia', zones: 'Zone', view: 'Vista',
     orders: 'Ordini', deselect: 'Deseleziona',
     focused: { squad: 'Picchieri ×5', patrol: 'Pattuglia', knight: 'Cavaliere', captain: 'Capitano' },

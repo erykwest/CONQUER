@@ -55,7 +55,17 @@ La colonizzazione umana di un possedimento non deve generare una copia del feudo
 
 **VERIFICA DEL CODICE AL 13/11/2026:** in `src/settlement-app-persistence.js` il prototipo salva su `settlements` con `onConflict:'user_id,world_cell_x,world_cell_y'`, e `world_cell_x=0` / `world_cell_y=0`; la lettura usa le stesse coordinate, senza filtro `campaign_id`. Il modello corrente è a singolo mondo per account/posizione e **non è ancora compatibile** con partecipazioni multi-campagna. L'integrazione dovrà introdurre identificativi e autorizzazioni server per campagna, con piano di migrazione dei salvataggi esistenti; non basta aggiungere una voce nella lobby.
 
-**APERTO:** nickname pubblico globale vs nome del signore per campagna, limiti al numero di campagne contemporanee, politiche anti-multi-account, classifiche/storico tra partite, ricompense estetiche globali, salvataggi locali legacy, lifecycle delle partecipazioni dopo sconfitta/abbandono e autorizzazioni per l'eventuale gestione di più feudi nella stessa campagna.
+**DECISO (14/11/2026):** un solo personaggio per account/campagna, ma possibilità di governare più feudi **recandosi sul posto** o **inviando ordini tramite messaggeri/piccioni**. **APERTO:** nickname globale vs nome signore, limiti al numero di campagne, multi-account, storico e classifiche, ricompense globali, migrazione salvataggi, sconfitta/abbandono, permessi dei feudi, caratteristiche del viaggio e dei vettori.
+
+## 4b. Personaggio per campagna, più feudi e governo fisico — decisione 14/11/2026
+
+**DECISO — identità unica in ogni campagna:** un account ha **un solo personaggio per campagna**, non uno per insediamento. Può comunque controllare/conquistare/amministrare più feudi, senza occupare ulteriori slot umani. Su altri server lo stesso account ha un personaggio distinto.
+
+**DECISO — governo legato alla posizione:** il personaggio può essere **fisicamente in un feudo alla volta**. Per governarne un altro direttamente deve **viaggiare** fino al territorio, impiegando tempo simulato. Può invece inviare **ordini tramite messaggeri o piccioni**, rispettando trasporto, ETA, consegna e successiva applicazione autorizzata nel mondo. La lobby/il telefono non teletrasportano né il personaggio né gli effetti degli ordini.
+
+**COERENZA CON Q-02:** gli ordini locali al primo tick utile valgono nel **feudo di presenza**. Comandi rivolti ad altri feudi, anche se posseduti dallo stesso account, richiedono canale di comunicazione o viaggio. La visione dei vassalli resta limitata ai resoconti consegnati; l'esatta visibilità sui *propri feudi distanti* resta da specificare.
+
+**APERTO:** viaggio (percorso, rischi, durata), prerequisiti piccionaie e vettori, azioni comandabili a distanza, permessi della gerarchia, eventuali delegati, trattamento del personaggio in transito. **Stato: specifica, non implementazione.** [SRS mobile v0.7 draft PR #222](https://github.com/erykwest/CONQUER/pull/222) e [REMOTE-CONTROL-SCOPE](REMOTE-CONTROL-SCOPE.md).
 
 ## 5. Backlog di definizione — senza implementazione
 
@@ -67,5 +77,6 @@ La colonizzazione umana di un possedimento non deve generare una copia del feudo
 6. **MP-06 QA futura:** test per occupazione territoriale separata dalla fondazione, ingresso senza sostituzione bot, non-sovrapposizione spawn, capienza/idoneità, persistenza e autorizzazioni server.
 
 7. **MP-07 Identità multi-campagna:** profilo globale separato dalle partecipazioni e dallo stato dei feudi; schema, autorizzazioni e migrazione del salvataggio cloud attuale.
+8. **MP-08 Personaggio e presenza:** un personaggio per account/campagna, più feudi amministrabili; governare quelli distanti richiede viaggio fisico o ordini via messaggero/piccione, non un comando istantaneo da dashboard.
 
 **Dipendenze:** `World/Feudal` (roadmap M4), stato e ID unici di territori/feudi, economia e Combat/Siege condivisi, persistenza autorevole lato server; non introdurre un simulatore parallelo.

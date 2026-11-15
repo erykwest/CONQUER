@@ -68,6 +68,6 @@ vm.runInContext(['rotateVec','toLocalPoint'].map(n=>fn(placement,n)).join('\n')+
   assert.match(input,/\['wall','palisade','road'\]\.includes\(State\.tool\.linear\)/,'the road tool lights magnets before the first click');
   assert.match(placement,/s\.type!==\(road\?'bridge':type\)/,'bridge ends are drawn as road magnets');
   const html=fs.readFileSync(__dirname+'/../index.html','utf8');
-  assert.match(html,/settlement-world\.js\?v=bridge-magnet-1/,'index.html loads the new world script');
+  assert.match(html,/settlement-world\.js\?v=[^"\s]*bridge-magnet-1/,'index.html loads the new world script');
   console.log('PASS the road tool shows the bridge magnets');
 }

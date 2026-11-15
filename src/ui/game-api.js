@@ -109,8 +109,17 @@
       selection: selection(),
       village: State.village?.name || null,
       status: document.getElementById('status')?.textContent || '',
-      saved: document.getElementById('saveState')?.textContent || ''
+      saved: document.getElementById('saveState')?.textContent || '',
+      saveStatus: saveStatus()
     };
+  }
+  // 'saved' | 'unsaved' | 'error' from the legacy indicator ('unsaved', 'saved local',
+  // 'saved cloud', 'cloud ready', 'local save failed', 'cloud error', …).
+  function saveStatus() {
+    const text = (document.getElementById('saveState')?.textContent || '').toLowerCase();
+    if (/fail|error/.test(text)) return 'error';
+    if (/unsaved/.test(text)) return 'unsaved';
+    return 'saved';
   }
 
   // Legacy controls are still the source of truth for tool parameters in phase 1.
@@ -160,6 +169,8 @@
     },
     crenelQuote: style => crenelRestyleQuote(style),
     setCrenelStyle: style => { const out = applyCrenelStyle(style); emit(); return out; },
+    unitEquipmentQuote: (kind, style) => unitEquipmentQuote(kind, style),
+    setUnitEquipment: (kind, style) => { const out = applyUnitEquipment(kind, style); emit(); return out; },
     roofPitchQuote: pitch => roofPitchQuote(Number(pitch)),
     setRoofPitch: pitch => { const out = applyRoofPitch(pitch); emit(); return out; },
     setSaleShare:(good, pct) => { const ok = window.ConquerEconomy?.setShare(good, pct); scheduleLocalSave(200); emit(); return ok; },
