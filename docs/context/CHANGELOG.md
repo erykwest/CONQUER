@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-15 — MP-PUBLIC-01 · Lobby pubblica limitata a KPI generali server (solo documentazione)
+
+Il product owner ha approvato **solo statistiche aggregate dei server senza login**, escludendo mappe politiche, classifiche nominali e dettagli strategici/gestionali delle campagne in corso. Codex/Wiki e sito informativo restano pubblici. Inserito il vincolo di autorizzazione per dati individuali anche dopo login; aggiornati `docs/MULTIPLAYER-SERVER-SCOPE.md`, `docs/REMOTE-CONTROL-SCOPE.md`, decisione D-MP-PUBLIC-261115 e backlog MP-PUBLIC-01. **Nessuna funzionalità o API implementata; ROADMAP/STATUS invariati.**
+
+
 ### 2026-11-15 — FIELD-LEND preservato nel merge regionale
 
 - La CI su 6510709 era tutta verde (20 workflow). Durante l'attesa main e avanzato a 6c5ac79 (#212 FIELD-LEND): integrato senza conflitti di codice, unendo STATUS/CHANGELOG e rigenerando il catalogo. PASS locale idle-farmers (7), fields (16), export Wiki. Nuova CI da verificare; nessuna modifica alle ricette regionali.
