@@ -228,9 +228,9 @@ canvas.addEventListener('pointerdown',e=>{
           if(done){
             State.draft=null;
             const gates=done.gates?' · '+(done.gates===1?'gate':done.gates+' gates')+' on the main road':'';
-            status((legs===2?State.tool.label+' added · automatic 15° joint':State.tool.label+' ready for next segment')+gates);
+            status((legs===2?State.tool.label+' added · two straight legs':State.tool.label+' ready for next segment')+gates);
           }
-        }else status(e2.structureId||e2.endpoint?'No valid two-segment 15° route to this magnet':'Segment too short');
+        }else status(e2.structureId||e2.endpoint?'Magnet out of reach':'Segment too short');
       }
     }
   }
@@ -362,11 +362,11 @@ canvas.addEventListener('pointermove',e=>{
       const previewCost=aggregateConstructionCost(State.draft.previewSegments);
       const legs=route.segments.length,total=route.length;
       const gateNote=gatePlan.blocked?' · ⚠ '+gatePlan.blocked:gatePlan.gates.length?' · '+(gatePlan.gates.length===1?'gate':gatePlan.gates.length+' gates')+' on the main road':'';
-      status(`${State.tool.label}: ${total.toFixed(2)}U · ${route.onQuay?'⚓ along the quay':legs===2?'2×15° legs · auto joint':'15°'}${gateNote} · ${costText(previewCost)} — click to confirm`);
+      status(`${State.tool.label}: ${total.toFixed(2)}U · ${route.onQuay?'⚓ along the quay':legs===2?'2 straight legs':Math.round(((route.segments[0].angle*180/Math.PI)%360+360)%360)+'°'}${gateNote} · ${costText(previewCost)} — click to confirm`);
     }else{
       State.draft.preview=null;State.draft.previewSegments=null;
       State.draft.invalidPreview={type:State.tool.linear,a:State.draft.a,b:snap.point,width:spec.width,length:dist(State.draft.a,snap.point)};
-      status(snap.structureId||snap.endpoint?'No valid two-segment 15° route to this magnet':'Segment too short');
+      status(snap.structureId||snap.endpoint?'Magnet out of reach':'Segment too short');
     }
     draw();
     return

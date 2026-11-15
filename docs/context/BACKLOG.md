@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-15 — WALL-FREE-ANGLE · Mura senza vincolo di giunzione a 15°
+
+**IMPLEMENTATO SU BRANCH `fix/wall-free-angle`, NON MERGE.** Mura, palizzate e sezioni costruite si tracciano a qualsiasi angolo; niente gomito automatico verso i magneti. Dettagli in [STATUS](STATUS.md).
+- [x] Tratto libero da A a B e aggancio esatto al magnete in un solo tratto.
+- [ ] Verificare a occhio, nel gioco, le giunzioni muro-muro e muro-torre ad angoli non multipli di 15°.
+
+
 ### 2026-11-15 — WALL-ROAD-GATE
 
 - Fatto sul branch `feature/wall-road-gates`: porta automatica del tipo corrispondente dove un nuovo muro/palizzata incrocia una strada principale. Aperto: un muro esistente attraversato in seguito da una nuova strada principale non riceve la porta (la strada resta bloccata come prima); livello porta = livello porta di default del costruttore.
