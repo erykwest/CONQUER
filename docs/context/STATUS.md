@@ -13,6 +13,123 @@
 - **PROVE LOCALI PASS:** `qa/idle-farmers-regression.cjs` (7 casi), `qa/fields-regression.cjs` (16 casi), 32 delle 33 voci di `economy-flows-regression.yml` più `qa/urban-regression.cjs`, e le regressioni social-classes, labor-jobs, construction-commute, educated, storage-yard, carter-market. `founding-regression` fallisce sul limite di tempo di 100 ms (131 ms), come annotato per #206 anche su main.
 - **NON VERIFICATO:** partita reale nel browser, prove di prestazioni Playwright, CI del branch.
 
+## 2026-11-14 — Caditoie all'italiana sulle torri (branch `feat/caditoie-italiane-torri`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `settlement-core.js`: nuova variante estetica torre `machicolationStyle` (`standard` | `italian`, default `standard`), `towerItalianMachicolation(s)` e `towerRoofMenuValue(s)`. `hasMachicolation()` e tutte le regole (combattimento, tetto interno, ballatoio, arma) leggono solo `roofStyle`: nessun effetto di gioco.
+  - `settlement-castle-structures.js`: `italianMachicolationPieces(s)` sul modello del Castello di San Giorgio (Mantova): mensole snelle e fitte (passo 0,24U, indipendente dai merli, una su ogni spigolo), ognuna un unico pezzo inclinato che sporge in testa e rientra al muro al piede, banda alta 4× la mensola standard (0,98U); archi a tutto sesto tra le mensole, apertura lasciata libera (nessun riempimento scuro), e muratura piena a filo sopra gli archi fino al piano delle caditoie, merli in cima. Nuovo pezzo `machicolationArch` (facce libere: mensola inclinata o archetto) in 2.5D e mesh 3D; in 2.5D i pezzi rivolti lontano dalla camera non si dipingono (`battlementPieceFacesAway`). In cutaway restano solo mensole, archi e fascia del lato lontano: quelli del lato aperto coprivano l'ultimo piano. Torri quadrate, rotonde e a D; caditoie standard e mura invariate (render identici).
+  - Menù tetto torre: quarta scelta «Caditoie all'italiana» (`setTowerRoof('machicolationItalian')` imposta `roofStyle:'machicolation'` + `machicolationStyle:'italian'`), nel pannello UI v2 (`settlement-structure-commands.js`, i18n) e nel pannello legacy (`settlement-app-rooms.js`). Non disponibile sulle semitorri. Il cambio apre un cantiere di modifica come le altre varianti.
+  - Codex: due note approvate (`Torre · Caditoie standard`, `Torre · Caditoie all'italiana`) per le voci generate `upgrade:tower.machicolationStyle.*`; rigenerati `src/codex-wiki-editorial.js` e `wiki/catalog.json`, conteggi dei test Codex +2.
+  - Lab: 4 righe in `GALLERY` (quadrata T2/T3, rotonda, D) e famiglie in `structureAssetFamilyCatalog`; chiavi di cache render/popolazione/cantiere aggiornate.
+- **PROVE LOCALI PASS:** tutte le `qa/*-regression.cjs` (come lo step completo della CI), tra cui `qa/tower-italian-machicolation-regression.cjs` (nuovo, in `tower-variants-regression.yml`), bartizan, tower-roof-shape, tower-inner-roof, tower-weapons, battlement-parapet, roof-pitch, subtower-junctions, dovecote, falconry, builder-menu, asset-catalog, asset-audit-scope, codex-catalog, ci-p0/p1, urban. Audit Lab `--category=Fortificazioni`: 0 errori; i 40 render nuovi rivisti e aggiunti alla baseline (solo voci nuove).
+- **NOTA AUDIT:** in locale 270 render «cambiati» anche su varianti non toccate (deriva d'ambiente del renderer, distanze 0,010–0,022); baseline esistente non riscritta.
+
+## 2026-11-13 — Equipaggiamento delle unità: elmi e scudi (branch `feature/unit-equipment-styles`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `settlement-core.js`: `UNIT_HELMETS`/`UNIT_SHIELDS` con costi per posto soldato, `unitHelmet()`, `unitShield()`, `unitEquipmentQuote(kind,style)` e `applyUnitEquipment(kind,style)` (posti = `ConquerSiege.capacity().soldiers`; paga con `canAfford`/`spendCost` come le merlature).
+  - `settlement-population-figures.js`: `drawSoldierHelmet` (5 elmi) e `soldierShieldPath` (5 forme) usati da `drawSoldierFigureUnmasked`; `settlement-combat-anim.js` usa la forma scelta per lo scudo in combattimento. Le unità con livrea propria (nemici) restano invariate.
+  - `settlement-panels.js`: sottoscheda Militare › Equipaggiamento con due schede (elmo, scudo), icone SVG e messaggio di risorse insufficienti. `game-api.js`: comandi `unitEquipmentQuote`, `setUnitEquipment`. Persistenza cloud dei due campi in `settlement-app-persistence.js`.
+  - `figures-lab.html`: selettori Elmo e Scudo per le truppe.
+- **PROVE LOCALI PASS:** `qa/panels-regression.cjs`, `qa/combat-anim-regression.cjs`, `qa/combat-render-regression.cjs`; nel browser: sottoscheda visibile, acquisto con costo corretto (24 posti), rifiuto per risorse, foglio delle 5 combinazioni nel Lab a tre zoom.
+- **NON ESEGUITO:** `node qa/asset-audit.mjs` (browser Playwright non installato in locale); cavalieri a cavallo (`settlement-mounted2d.js`) non toccati.
+
+## 2026-11-13 — Figure dei ruoli mancanti (branch `feature/new-role-figures`, sopra `feature/role-outfits` e `feature/shop-artisan-tools`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - Nuovo `src/settlement-staff-people.js` (`ConquerStaffPeople`): personale delle stanze del castello in cutaway, presente di giorno (6-20) e assente durante l'allarme. La tabella `ROOM_STAFF` copre 10 funzioni:
+    - cucina: cuoco con mestolo, due nella stanza grande;
+    - scuderie: stalliere con striglia;
+    - armeria e officina d'armi: armaiolo col martello;
+    - cappella: cappellano col libro;
+    - tesoro: tesoriere con penna e registro;
+    - infermeria: cerusico col mortaio e inservienti con ciotola;
+    - falconiera: falconiere col falco sul pugno;
+    - colombaia: colombaro con la granaglia;
+    - sala del consiglio: consiglieri che parlano.
+  - Le stanze che non hanno soldati, nobili o prigionieri lo disegnano da `drawCutawayOccupants`.
+  - `ConquerCivic3D.roomSlots` copre chiesa, taverna, Bargello e Balivo (`staffSlots`):
+    - chiesa: prete all'altare;
+    - taverna: oste dietro il banco, dal lato delle botti;
+    - Bargello: due guardie nel corpo di guardia; al piano superiore due esattori al tavolo dei conti e chi paga sulla panca;
+    - Balivo: tre giudici, uno presiede, e il cancelliere nel tribunale al piano superiore.
+  - Le figure civiche passano da `ConquerCourtPeople`, che ora vale per tutti gli interni civici selezionati.
+  - Disboscamento L1: `ConquerForestry.drawCrews` disegna tanti boscaioli quanti sono i lavoratori pagati del cantiere, con l'ascia; il terzo usa la pala per le ceppaie. Solo nei giorni feriali e in orario di lavoro.
+  - 9 nuovi gesti in `settlement-work-anim.js`: ladle, brush, book, quill, mortar, falcon, mug, speak, bowl. I gesti `sweep` muovono la mano avanti e indietro a un'altezza fissa.
+  - 8 nuovi pezzi di guardaroba: tonaca, stola, veste da notabile, camice del cerusico, toga del Balivo, tabarro del Comune, catena d'ufficio, berretto da cuoco. 12 nuovi abiti di mestiere, 28 in tutto, ciascuno diverso dagli altri.
+  - Asset Lab: 9 gesti nella famiglia «Lavori» e 12 abiti nuovi.
+- **PROVE LOCALI PASS:**
+  - `staff-people-regression` (nuovo, nel workflow Wardrobe perché il numero di workflow è fisso a 26): stanze reali, abiti e gesti noti, orari e allarme, posti negli interni civici di tutti i livelli, squadre di disboscamento, collegamenti;
+  - `work-anim` (19 gesti), `wardrobe` (28 mestieri), `court-people`, `ci-p1`, `codex-wiki`;
+  - suite `qa/*.cjs` senza i `*-performance`: tutto verde tranne `founding-regression`, che fallisce uguale su main.
+- **AUDIT ASSET:** audit completo con 0 errori e 21 voci nuove, riviste su un foglio grande dei gesti. Baseline aggiornata solo per `figure:work:*` e `wardrobe:trade:*`. Le altre differenze (alberi, torri) sono deriva già presente su main.
+- **PROVA IN PARTITA (13/11):** gioco del branch in Chromium (WebGL SwiftShader), alle 10:30, 22 scene:
+  - stanze del castello in sezione, piano per piano: sezioni costruite W1 e W2 e torre grande L3 con cucina, cappella, scuderie, tesoro, infermeria, consiglio, armeria, officina, falconiera, colombaia;
+  - chiesa L1 e L3, taverna L1 e L2, Bargello L1 e L2 su entrambi i piani, Balivo L1 e L2;
+  - cantiere di disboscamento con 3 lavoratori.
+  - Esito: ogni figura sta nella sua stanza e al suo piano, con l'abito e il gesto giusti; di notte il cantiere è vuoto.
+  - Unico difetto trovato, corretto: il falco era marrone come la tunica del falconiere e non si vedeva. Ora ha il dorso grigio ardesia, il petto chiaro e la coda, ed è un po' più grande. Baseline aggiornata solo per `figure:work:hawk`.
+- **DA VERIFICARE:**
+  - CI del branch;
+  - l'ordine di merge: prima #207 e #213, poi questa PR.
+
+## 2026-11-13 — Selezione edifici: perimetro posteriore nascosto (branch `fix/selection-outline-occlusion`)
+
+- **CODICE SUL BRANCH, NON MERGE:** `selectionOutlineRuns` in `src/settlement-castle.js` spezza il perimetro di selezione e omette i lati dietro il volume e quelli visti di taglio con la camera libera. Il contorno 2D resta l'ultimo passaggio, sopra la scena WebGL: nessun depth test. I civici usano `ConquerCivic3D.builtParts(s)` (nuovo export in `settlement-civic3d.js`) per il footprint del livello corrente.
+- **TEST:** `mastio-selection-zoom-regression` con proiezione isometrica reale (torre, campo, piazza, casa, civico per livello); `well-civics`, `stonecolor`, `cutaway-floors`, `crime-buildings`, `court-people`, `civic3d` e `ci-p1` superate in locale. Catture Playwright prima/dopo di torre, chiesa, municipio e dei livelli L1–L3 di chiesa, taverna, municipio e gilda. CI da verificare.
+- **INVARIATO:** l'area cliccabile (`screenHitStructureBody`) usa ancora il footprint completo dei civici.
+
+## 2026-11-13 — Abiti da mestiere (branch `feature/role-outfits`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `ConquerWardrobe.ROLE_PIECES` ha 11 pezzi da lavoro in più: grembiule di cuoio, di tela e del vasaio (con le macchie), farsetto di cuoio allacciato con la cintura, mantelletta, calotta di cuoio, cuffia di lino, cappello di feltro, tocco, berretto da marinaio, mazzo di chiavi alla cintura.
+  - Nuova tabella `ROLES`: 16 mestieri, ognuno con una combinazione di pezzi diversa dagli altri.
+  - `outfitFor(dot)`: se la figura ha `dot.role`, gli slot del mestiere vincono e la stagione riempie solo quelli liberi (per esempio pioggia: il sarto tiene il tocco e prende la mantella).
+- **DOVE NASCE IL RUOLO:**
+  - residenti in `drawPeasants`: bottegaio al banco (`shop.kind`), costruttori e taglialegna nominati anche nel tragitto, carrettiere al piazzale, pastore al pascolo (stessa posizione di `shepherdPosition`), squadra dei fondatori;
+  - lavoratori anonimi (`ConquerWorkAnim.anonymous(id,p,role)`): muratori, taglialegna, cavatori, minatori, carpentieri navali;
+  - `ConquerShipCrew.dot` (marinai e pescatori); `DRIVER` dei veicoli (carrettiere); carceriere del tribunale;
+  - niente ruolo per chi è richiamato dall'allarme.
+- **PROVE LOCALI PASS:**
+  - `wardrobe-regression`, estesa: ogni bottega ha un abito, abiti tutti diversi, priorità sulla stagione, ogni pezzo si disegna, ruolo impostato nei punti di creazione;
+  - `court-people`, `asset-catalog`, `codex-wiki` (export della Wiki rigenerato);
+  - suite `qa/*.cjs`: fallisce solo `founding-regression`, che fallisce uguale su `main` 6b227926; i `*-performance` non sono stati eseguiti.
+- **AUDIT ASSET:** audit completo del Lab con 0 errori e 16 voci nuove («Abiti da mestiere»), riviste anche su un foglio grande, estate e inverno con neve. Nessuna bottega e nessuna figura del tribunale cambia oltre la soglia. Le altre 168 voci cambiate (alberi, torri) sono deriva già presente su main: la baseline non le include.
+- **DA VERIFICARE:** CI del branch.
+
+## 2026-11-13 — Capsuloide per la profondità delle figure: verticale per le persone, orizzontale per gli animali (stesso branch)
+
+- **CODICE SUL BRANCH, NON MERGE (D-CAPSULE-261113):** nuovo programma WebGL `card` per tutte le carte figura (sostituisce `sprite` per soldati, civili e veicoli; `sprite` resta per alberi e altro): ogni pixel prende la profondità del punto dell'asse del capsuloide più vicino sullo schermo più il raggio verso la camera. Vertex buffer delle carte a 15 float (`aSeg0`, `aSeg1`, `aRad`), `drawCards()` per passata frontale e figure nelle stanze aperte.
+- **ANIMALI COME CARTE:** `ConquerAnimals.card(species,p,z,opts)` (8 fasi per ciclo di andatura, tile dipinta verso destra e specchiata) e `ConquerAnimals.capsule(species,sizeFactor,dir)`; `figure()` accetta `card.capsule`; `ConquerWorld3D.screenAxis(facing)`. Bestiame (`settlement-livestock.js`) e lupi (`settlement-wolves.js`) passano dalle carte in World3D, con ripiego 2D invariato. Collider orizzontale per gli animali; `rayCapsule` e il debug dei collider gestiscono segmenti non verticali.
+- **PROVE LOCALI PASS:** nuova `qa/animal-capsule-browser.mjs` (capsula e collider del cavallo reale; carta dietro una torre nascosta; appena davanti alla faccia intera, 800/800 px) aggiunta al workflow Main fixes; `figure-billboards-browser.mjs`, `vehicle-cards-browser.mjs`; 26 regressioni node su animali, figure, veicoli, cutaway, combattimento, assedio e urbano. In locale il server `tools/serve.js` serve i `.mjs` come `application/octet-stream` (errori console non legati alla modifica): prove eseguite con `python -m http.server` come in CI, che su Windows ogni tanto rifiuta connessioni (ripetere).
+- **NON FATTO:** cavalli di giostra/feste, cavalieri in combattimento e messaggero restano 2D; tiro dei carri senza capsula orizzontale (la carta del veicolo usa quella verticale). Non verificato in una partita con bestiame vicino a case e cutaway reali.
+
+## 2026-11-13 — Animali 2D rivisti come il cavallo (stesso branch `feature/vehicles-depth-cards`)
+
+- **CODICE SUL BRANCH, NON MERGE:** in `ConquerAnimals` pecora, capra, mucca, cerva/cervo, lupo e cinghiale hanno zampe articolate ricavate dalle zampe del cavallo ridisegnato (`jointLeg`/`jointLegs`: coscia e garretto dietro, ginocchio davanti, stinco e zoccolo; larghezza e lunghezza per specie); l'orso tiene le colonne plantigrade. `stride`/`runStride` per specie (pecora e capra 0,75, mucca 0,6, cerva 0,7/0,95, lupo 0,8/1, cinghiale 0,75/0,9, orso 0,8): niente più passo «a forbice». `legOrder` disegna le zampe lontane dietro le vicine. Pecora con zoccoli scuri.
+- **COLLO ARTICOLATO PER CAPRA E MUCCA:** `joint` + `neck` come il cavallo, con `tipOnJoint` (il collo termina esattamente sulla linea della gola ruotata, senza spigoli né cucitura); al pascolo la testa resta attaccata al petto invece di galleggiare sotto il corpo. Corna della capra fuori dal ritaglio della gola.
+- **ZAMPE ARTICOLATE (tutte le specie, cavallo compreso):** ogni zampa è disegnata in due parti tagliate al giunto (garretto sulle posteriori al 57% dell'altezza, ginocchio sulle anteriori al 65%, `jointAt` per specie; `legList[i].joint`, `.w`), con un tappo tondo sul giunto. `gaitPose` dà `bend` per zampa: si piega nella fase di volo (piede che avanza), 0,75 rad al passo, 1,25 al galoppo, 0,5 nel passetto del pascolo; il ginocchio porta lo zoccolo indietro, il garretto in avanti. `lift` ora segue la fase di volo (3 al passo, 10 al galoppo) invece dell'angolo. `sp.bend` moltiplica per specie. Disegno del cavallo invariato (stesse sagome); audit `Cavalli 2D` e `Carri` 0 cambiati (pose del Lab quasi diritte).
+- **LAB:** nuova famiglia `Animali 2D` (`figure:sheep2d` … `figure:bear2d`, 8 voci, passo a metà falcata); audit 8 nuovi, 0 errori, baseline estesa solo per queste voci. Nota: `--update-baseline` con un filtro `--family` riscrive la baseline con le sole voci filtrate; le voci sono state unite a mano.
+- **ANTEPRIME:** `qa/animal-preview.mjs` (fogli `output/animal-preview/<tag>-domestic|wild.png`, tutte le modalità per specie; `ANIMAL_ONLY=goat,cow`).
+- **PROVE LOCALI PASS:** `animals`, `animals3d`, `wolves`, `urban-livestock`, `wagons`, `vehicles`, `joust`, `military-stables`, `diplomacy` regression.
+
+## 2026-11-12 — Cavallo 2D ridisegnato (stesso branch `feature/vehicles-depth-cards`)
+
+- **CODICE SUL BRANCH, NON MERGE:** il cavallo di `ConquerAnimals` (unico per scuderie, cavalieri, messaggero, staffetta dell'Avamposto, carri, giostra e feste) ha nuove proporzioni: corpo lungo quanto l'altezza al garrese, zampe lunghe quanto il corpo è alto con coscia, garretto, ginocchio e zoccoli, collo pieno inclinato in avanti, testa più lunga e fine portata a muso in giù. Dorso alla stessa quota di prima: sella, cavaliere, gualdrappe (anche della giostra) e finimenti dei carri restano agganciati. `stride`/`runStride` per specie (cavallo 0,62 al passo, 0,9 al galoppo), `shadeY` per l'ombra del ventre. `ConquerMounted2D`: frontale, pennacchio, briglia e redini adattati alla nuova testa.
+- **ANTEPRIME IN GIOCO:** `qa/horse-gallery.js` (`ConquerHorseGallery.show({scale})`, `sheet()`) mette sulla scena reale tutti gli usi del cavallo; `qa/horse-preview.mjs` salva i PNG prima/dopo in `output/horse-preview/` (zoom 8, 3 e 1,5, fasi del passo).
+- **LAB:** prima non c'era nessun cavallo 2D nel catalogo (il «Cavaliere» è un fante, il «Carro animato 2D» non ha il tiro). Aggiunti `figure:horse2d`, `figure:horse2dGraze`, `figure:knight2d`, `figure:messenger2d`, `figure:wagonTeam`; audit 5 nuovi, 0 errori, baseline aggiornata solo per queste voci.
+- **PROVE LOCALI PASS:** 45 regressioni che toccano animali, cavalieri, carri, bestiame, giostra e diplomazia (FAIL solo le due `*-performance` e lo strumento `asset-audit-scope`); `vehicle-cards-browser.mjs`. `asset-catalog-browser.mjs` non eseguito in locale (non usa `QA_CHROME`), da verificare in CI.
+
+## 2026-11-12 — Veicoli come carte con profondità in World3D (branch `feature/vehicles-depth-cards`, chiude `economic-balances-animations`)
+
+- **VERIFICA DEL BRANCH D'ORIGINE (`origin/economic-balances-animations` 4b10705, 142 commit su base pre-urban):** economia già in main con le cinque tappe (#108 per i veicoli, D-055); file residui solo sprite SVG di taglialegna e cava (sostituiti dalle mesh Blender) e `road-sign-model.js` (sostituito dal `signpost` scatter, D-054); mesh 3D di carri e cavalli escluse da D-046/D-055. Unico residuo ancora utile: i veicoli fuori dal depth buffer, segnato DA FARE dopo #201 («carrettieri sui veicoli ancora in 2D»). Nessun altro recupero.
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `ConquerWorld3D.figure(p,z,key,paint,id,mirror,card)` accetta `card={span,ox}`: carta larga `FIGURE_CARD_U×span`, dipinta a `SOLDIER_SR/span` nella stessa casella da 64 px dell'atlante, spostata di `ox` larghezze carta sullo schermo. Esporta `FIGURE_CARD_U`, `FIGURE_FEET`; `frameFigures()` riporta `span`, `ox`, `id`.
+  - `ConquerVehicles.draw`: in un frame World3D ogni veicolo (carretto, carro, carrozza) è **una** carta: `ConquerWagons.drawWagon` con la squadra di cavalli 2D e il conducente dipinti insieme (conducente seduto sulla cassetta tramite l'ancora `driver` del carro, carrettiere alla testa del cavallo). Chiave: telaio, mantelli, carico, fase d'andatura (8 fasi del passo `ConquerAnimals`, `still` da fermo), aspetto del conducente. Verso sinistra la carta è specchiata. Le scorte restano billboard dei soldati. Fuori da World3D (o con `_setFiguresForTest(false)`) il disegno 2D resta identico.
+  - `ConquerRoadSignTests.drawVehicles()`: convogli del signore/mercanti e viaggi in carrozza escono con la popolazione (prima del front pass) invece che sopra la scena; `draw()` disegna solo i cartelli (o anche i veicoli se `drawVehicles` non è stato chiamato).
+- **PROVE LOCALI PASS:** `qa/vehicles-regression.cjs` (nuovo caso carte WebGL), haulage, road-sign-convoy, l1-carter-market, slopeways; nuova prova browser `qa/vehicle-cards-browser.mjs` (carte reali, occlusione dentro una torre, riuso atlante, scorte, fallback 2D) e `figure-billboards-browser.mjs`/`main-fixes-browser.mjs` su `python -m http.server`. Controllo visivo nel pannello browser: posizione e scala uguali al 2D; nel 2D il conducente del carro resta davanti al pianale, nella carta siede sulla cassetta.
+- **LIMITI:** la carta ha una sola profondità (quella del pianale): un muro sottile tra pianale e cavalli non li separa. Risoluzione della carta del carro ~27 px/U (le figure 48 px/U): leggermente morbida oltre zoom 2,5. Staffetta a cavallo dell'Avamposto e figure della battaglia navale restano 2D. CI da verificare.
+
 ## 2026-11-13 — CAM-ROT-01 · Rotazione libera della camera (branch `feature/free-camera-rotation`)
 
 - **CODICE SUL BRANCH, NON MERGE:** `State.view.rotation` resta in quarti di giro ma accetta valori frazionari. `rotateViewPoint` (2D), lo shader WebGL (`uRot` ora `vec2` cos/sin) e l'ombreggiatura delle facce (`rotDir` in `settlement-mesh3d.js` e `settlement-wagons3d.js`) seguono qualsiasi angolo; per i quarti interi il percorso esatto è invariato.
@@ -177,6 +294,22 @@ Corretta asserzione livestock obsoleta dopo SOC-CLASS-02. Test comportamentali s
   - La Cappella del castello conta solo per il prestigio nell'assedio.
 - **DIPENDE DA:** SCOL-01 (branch `docs/scolarizzati`, non su `main`) fino alla fase 3; FISCO-01 fase B; CRIME.
 - **PROSSIMO:** fase 1 (Cassa, offerte, lasciti, dono, scheda) su un branch nuovo da `main`, solo dopo conferma esplicita e dopo la fase 3 di SCOL-01.
+
+## 2026-11-13 — Animazioni di lavoro dei bottegai (branch `feature/shop-artisan-tools`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `ConquerWorkAnim.TOOLS` passa da 7 a 10 attrezzi: `clay` (vasaio: mani sul vaso che sale al tornio, schizzi d'argilla), `shuttle` (tessitore: la spola va avanti e indietro all'altezza dell'ordito, filacce alla battuta), `needle` (sarto: ago nella stoffa e lunga tirata del filo, senza effetti).
+  - I tre pezzi da banco (vaso col tornio, spola col filo, stoffa col filo) si disegnano tra il corpo e il braccio. Le figure WebGL usano le stesse 8 fasi delle altre (`w|tool|fase|look`).
+  - `TRADES` di `settlement-shop-cutaway.js`: vasaio, tessitore e sarto non hanno più `tool:null`, quindi nessun bottegaio resta fermo al banco.
+  - Asset Lab, famiglia «Lavori»: nuove voci Vasaio (tornio), Tessitore (spola), Sarto (ago).
+- **PROVE LOCALI PASS:**
+  - `work-anim-regression` (10 attrezzi, ogni mestiere di bottega ha un attrezzo noto, i pezzi da banco si disegnano);
+  - `shop-cutaway-regression`, aggiornato: il tessitore ora usa la spola;
+  - `asset-catalog-regression`, `urban-workshops-regression`, `commerce-skeleton-regression`;
+  - suite `qa/*.cjs`: falliscono solo i `*-performance`, `asset-audit-scope` (strumento CLI) e `founding-regression`, che fallisce identico su `main` 95e8dd29.
+- **AUDIT ASSET:** `node qa/asset-audit.mjs` sulle 3 voci nuove e sulle botteghe L3 di vasaio, tessitore e sarto: 0 errori, 3 nuove, 1 cambiata (vasaio esterno, distanza 0,024). Fogli rivisti; baseline aggiornata solo per queste voci.
+- **DA VERIFICARE:** CI del branch.
+
 
 ## 2026-11-10 — ECO-FIL-01 fase 1 · Miniera → metallo (branch `feature/eco-fil-01-miniera-metallo`)
 
@@ -799,7 +932,7 @@ Baseline verificata: main d8c89556d504a48cf64bb2c9927a5620ec1772b5. Nessuna PR n
 - **P0 jobmanager:** allocatore e razioni già in #98, routine in #99. D-049 mantiene un unico allocatore ConquerEconomy; nessun ConquerJobManager duplicato. D-051 (campi solo L2) resta decisione aperta: la priorità del branch non cambia quel contratto.
 - **P0 knights:** settlement-mounted2d.js e settlement-animals.js sono identici tra knights e main; gameplay e diplomazia in #96. Le differenze 3D restano escluse da D-046.
 - **P2 messages:** conservata per futura riconciliazione, senza integrazione in questo lavoro.
-- **P3:** case, economic-balances-animations, feature/landscape-forests, feature/ui-shell, fix/biomes-restore, fix/render-spikes: verificare pertinenza residua prima di qualsiasi recupero.
+- **P3:** case, feature/landscape-forests, feature/ui-shell, fix/biomes-restore, fix/render-spikes: verificare pertinenza residua prima di qualsiasi recupero. `economic-balances-animations` verificata il 12/11/2026: unico residuo (veicoli nel depth buffer) in `feature/vehicles-depth-cards`, nient'altro da recuperare.
 - **QA locale:** 67/67 test circle, incluse due regressioni del main corrente; 113 suite qa/*-regression.cjs superate (112 in parallelo, founding ripetuta isolata dopo soglia temporale 119ms sotto carico). Non è una misura di prestazioni stabili. Nessun asset/renderer cambiato. Browser locale: moduli ES caricati, WebGL attivo, 400 cibo trasferiti al granaio e sottratti una sola volta alla conquista; banner di settore aggiornato. Ricaricamento mantiene una sola conquista; riconquista riapre il granaio (480 posti) senza restituire il cibo. Favicon 404 e avviso WebGPU Windows non riguardano circle. CI CIRCLE sul primo commit a4d8792 PASS (run 41604792313). Riallineamento successivo a main d8c89556 conserva #115 merlature; nuova CI e stato merge da verificare sul commit finale.
 
 

@@ -236,6 +236,8 @@
     const facing=wolf.wolfFace||1,seed=wolf.wolfSeed||0;
     const time=performance.now();
     const opts={mode,facing,seed,t:time/1000};
+    // World3D: depth-tested card with the wolf's horizontal body capsule (same size as below).
+    if(window.ConquerAnimals.card?.('wolf',wolf,.08,{...opts,id:'wolf:'+wolf.id,sizeFactor:size/Math.max(1e-6,State.view.scale)}))return;
     withUrbanFigureOcclusion(wolf,.08,()=>{
       if(typeof document==='undefined'||typeof g.drawImage!=='function'){
         window.ConquerAnimals.drawAnimal('wolf',g,p.x,p.y,size,opts);

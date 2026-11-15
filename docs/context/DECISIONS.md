@@ -1,5 +1,129 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-SIEGE-ATTACK-CONFIG-261114 — Due allarmi d'attacco automatici configurabili (14/11/2026)
+
+- **CHIARIMENTO ESPLICITO del product owner:** il messaggero d'invasione al **governante assente** è l'**allarme base**; l'allarme al signore superiore **non è un semplice destinatario alternativo né un fallback**.
+- **DECISO:** il signore interessato alla ricezione degli avvisi può impostare **due funzioni distinte**, con etichette **«Allerta sempre il signore in caso di attacco»** (avviso automatico aggiuntivo verso il **signore superiore della catena feudale**) e **«Allerta sempre gli alleati in caso di attacco»** (avviso automatico aggiuntivo verso **gli alleati effettivi**).
+- **DECISO:** i due controlli sono **indipendenti** e possono coesistere. Disabilitarli impedisce i rispettivi avvisi aggiuntivi, **non** l'allarme base. Il singolo evento non trasmette conoscenza istantanea: destinatari, permessi e tempi di viaggio seguono la simulazione e il blocco in assedio (messaggeri né entrano né escono, piccioni in uscita consentiti e non intercettabili se operativi).
+- **NON CONFONDERE** queste funzioni con le preferenze di push Android/iOS (D-MOB-PUSH-261114), che agiscono **solo sulla notifica al dispositivo dopo che l'evento è conoscibile**.
+- **APERTO:** criterio esatto di «attacco» rispetto a «invasione»; chi modifica i due flag e a che livello (personaggio/feudo/campagna), la precisa localizzazione del signore, i legami di alleanza validi, eventuali duplicati, vettore utilizzabile per ciascun flusso e recapito in caso di assedio. Non imporre flag attivi di default senza ulteriore decisione.
+- **STATO:** solo documentazione, nessun motore di gioco modificato. Corregge D-SIEGE-ALERT-RECIPIENT-261114; [SRS v0.13 in draft PR #222](https://github.com/erykwest/CONQUER/pull/222), [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md).
+
+
+## D-SIEGE-ALERT-RECIPIENT-261114 — Destinatari feudali degli allarmi d'invasione (14/11/2026) — INTERPRETAZIONE SUPERATA DA D-SIEGE-ATTACK-CONFIG-261114
+
+- **INTERPRETAZIONE STORICA SUPERATA:** inizialmente si era inteso il **governante assente** o il **signore superiore** come due destinatari alternativi dello stesso allarme. Il product owner ha poi chiarito in **D-SIEGE-ATTACK-CONFIG-261114** che il governante assente riceve l'allarme base, mentre il superiore è raggiunto tramite un **flusso aggiuntivo configurabile**, separato da quello verso gli alleati.
+- **CONTRATTO:** governante, presenza e superiore devono essere risolti dal **modello feudale autorevole della stessa campagna**. L'app/browser non possono leggere in diretta un'invasione sconosciuta al personaggio: l'informazione viene ricevuta **solo dopo il tempo simulato di recapito** del messaggero.
+- **SUPERATO da D-SIEGE-ATTACK-CONFIG-261114:** il superiore feudale non è fallback dell'allarme base, ma destinatario di un **avviso aggiuntivo configurabile**, distinto da quello per gli alleati. Rimangono aperti il grado gerarchico, la sede/percorso e la gestione di attacchi concomitanti.
+- **RESTA DECISO:** blocco di ingresso/uscita dei messaggeri durante assedio; piccioni in uscita non intercettabili, con rete disponibile; allarme automatico per ogni nuova invasione solo quando la partenza è possibile. Q-09 resta parzialmente definita.
+- **STATO:** documentazione; nessun codice di gioco o schema modificato. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [MARCH](../march.md), [SRS mobile v0.12 draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
+
+
+## D-SIEGE-COMMS-UPDATE-261114 — Blocco bidirezionale e messaggero automatico all'invasione (14/11/2026)
+
+- **DECISO dal product owner:** nello stato **SOTTO ASSEDIO** i messaggeri ordinari **non possono entrare né uscire** dal feudo. Il divieto di ingresso impedisce anche la consegna di comunicazioni all'interno. Il blocco viene verificato lato server, non solo dall'app.
+- **DECISO:** **ogni nuova invasione di territorio** provoca **automaticamente la partenza di un messaggero d'allarme**, senza intervento del giocatore, purché sia ancora possibile far partire un messaggero; è una lettera fisica soggetta a tempo simulato di recapito, **non una notifica remota istantanea**.
+- **RESTA DECISO:** invasione distinta dall'assedio; l'invasione non applica automaticamente il blocco postale d'assedio. Sotto assedio i **piccioni in uscita restano consentiti e non intercettabili**, se esiste un canale operativo.
+- **SALVAGUARDIA TECNICA PROPOSTA:** un messaggero d'allarme per **evento di invasione distinto**, non uno ogni tick/refresh/retry; non bypassare il blocco quando l'assedio impedisce già la partenza.
+- **APERTO:** destinatario/route dell'allarme, concorrenza invasione/assedio nello stesso tick, rischi durante invasione, sorte dei messaggeri già in viaggio (non possono entrare ma attendono/deviano/tornano?), prerequisiti canale piccioni, ordini sotto assedio. **Q-09 resta parzialmente definita.**
+- **STATO:** solo specifica, non implementata. Integra D-SIEGE-COMMS-261114; [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [MARCH](../march.md), [SRS mobile v0.11 nella PR draft #222](https://github.com/erykwest/CONQUER/pull/222).
+
+
+## D-SIEGE-COMMS-261114 — Invasione e assedio: uscita di messaggeri e piccioni (14/11/2026)
+
+- **DECISO dal product owner:** distinguere gli stati **INVASO** e **SOTTO ASSEDIO**. La sola invasione del territorio **non** applica automaticamente il blocco dei messaggeri previsto per l'assedio.
+- **DECISO — stato SOTTO ASSEDIO:** **non possono partire messaggeri ordinari dal feudo assediato**. I **piccioni possono uscire e non sono intercettabili**; restano il tempo simulato di consegna e l'eventuale necessità di un canale/piccionaia disponibile. Nessun invio fittizio quando il vettore non esiste.
+- **CONTRATTO:** l'ammissibilità della partenza è verificata dal server autorevole in base allo stato del feudo; dashboard web/mobile e API non aggirano il blocco, né anticipano le informazioni recapitabili tramite piccione. Stadio `raiding/siege` di MARCH e trasporti della branch `messages` sono precedenti tecnici, **non** implementazione server pronta.
+- **SUPERATO IN PARTE da D-SIEGE-COMMS-UPDATE-261114:** ora è **DECISO** che i messaggeri **non entrano né escono** durante un assedio e che ad ogni nuova invasione parte automaticamente un messaggero d'allarme quando possibile. **RESTANO APERTI:** criterio invasione→assedio, rischi durante invasione, sorte dei vettori già in viaggio, destinatario dell'allarme, piccionaie e ordini sotto assedio. Q-09 parzialmente risolta.
+- **STATO:** design, nessuna modifica al gameplay. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [MARCH](../march.md), [SRS mobile v0.10 draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
+
+
+## D-MOB-CODEBASE-261114 — Unica codebase Android/iOS (14/11/2026)
+
+- **DECISO dal product owner (Q-07):** realizzare **un'unica base di codice applicativa mobile** per Android e iOS, evitando due implementazioni separate. Sono ammessi adapter e configurazioni specifici delle piattaforme per permessi, notifiche, build e distribuzione.
+- **CONTRATTO:** i client mobili utilizzano le **stesse API autorevoli** del browser per account/campagna/personaggio, KPI, ordini, messaggeri, diplomazia, logistica e permessi. Nessuna seconda simulazione e nessuna duplicazione delle regole di governo del feudo.
+- **NON DECISO:** framework (Flutter, React Native o altro), condivisione della UI mobile con quella web, versioni OS supportate, pipeline e target di pubblicazione. La decisione non equivale a scegliere uno stack.
+- **STATO:** solo documentazione. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [SRS mobile v0.8 nella draft PR #222](https://github.com/erykwest/CONQUER/pull/222). Nessun codice o milestone cambiati.
+
+
+## D-FEUD-CHAR-261114 — Un personaggio per campagna, governo tramite presenza o messaggeri (14/11/2026)
+
+- **DECISO dal product owner:** **un solo personaggio per account in ciascuna campagna**, ma il personaggio può controllare e amministrare **più feudi/territori**. L'account può partecipare a più campagne con un personaggio distinto in ciascuna; più feudi non richiedono più slot giocatore.
+- **DECISO — presenza fisica:** il personaggio si trova in un solo luogo alla volta. Per governare **direttamente** un altro feudo deve **spostarsi** con tempi di viaggio simulati. In alternativa trasmette **ordini attraverso messaggeri o piccioni**, con tempo di trasporto e recapito simulato. La dashboard web/mobile non consente gestione istantanea dei feudi distanti.
+- **PRECISAZIONE di D-RC-TIME-261113:** il comando amministrativo applicabile al **primo tick utile** è quello del **feudo in cui è presente il personaggio**. Un ordine destinato a un altro feudo, anche se di proprietà del personaggio, richiede spostamento o corrispondenza; un messaggio recapitato non implica automaticamente l'esecuzione dell'azione, che va verificata dal motore.
+- **COERENZA:** la regola dei resoconti dei vassalli rimane invariata (nessun accesso live ai loro dati); l'eventuale visibilità dei feudi **propri** ma distanti non è ancora definita.
+- **APERTO:** prerequisiti piccionaie, velocità/costi/rischi dei viaggi, intercettazione, ordini ammessi da lettera, permessi e deleghe ad amministratori, comportamento durante il viaggio e visibilità dati dei feudi lontani.
+- **STATO:** solo documentazione. [MULTIPLAYER-SERVER-SCOPE](../MULTIPLAYER-SERVER-SCOPE.md), [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [SRS v0.7 draft PR #222](https://github.com/erykwest/CONQUER/pull/222). Nessun codice gameplay o milestone modificati.
+
+
+## D-MOB-PUSH-261114 — Push: permesso del dispositivo e filtri per categoria (14/11/2026)
+
+- **DECISO dal product owner:** l'app Android/iOS deve richiedere il **permesso push del sistema operativo** e offrire **preferenze di ricezione selettive per categoria**. Entrambi i livelli si applicano: **permesso OS attivo AND categoria abilitata**. Revoca del permesso e disattivazione della categoria impediscono nuovi push corrispondenti.
+- **DECISO — non condizionare il gameplay:** posta e avvisi disponibili nell'app restano accessibili anche con i push disabilitati. Le notifiche non possono anticipare il recapito simulato di lettere e resoconti, né esporre dati di feudi dei vassalli non ancora riferiti al sovrano.
+- **CATEGORIE PROPOSTE, non approvate come elenco definitivo:** sicurezza/attacchi/assedi, criticità economiche, cantieri, posta/diplomazia, spedizioni, tributi.
+- **APERTO:** categorie definitive, stato iniziale dei singoli selettori, filtri globali vs per-campagna, silenziamento/orari quieti, anteprime su schermata bloccata, momento della richiesta del permesso e politica multi-dispositivo. Non presumere un consenso preventivo né selettori inizialmente tutti attivi.
+- **STATO:** documentazione e SRS v0.6 in [draft PR #222](https://github.com/erykwest/CONQUER/pull/222), Q-05 risolta nel principio. Nessun runtime, service push o schema implementato; ROADMAP invariata.
+
+
+## D-RC-PAUSE-261113 — Preparazione di ordini durante pause regionali (13/11/2026)
+
+- **DECISO dal product owner:** durante una **pausa regionale programmata** della campagna il giocatore può **consultare la situazione congelata e preparare ordini** sul proprio feudo via browser/app, purché il servizio sia raggiungibile. L'intero mondo resta fermo: **nessun tick, produzione, costruzione, marcia, recapito o altro progresso temporale**.
+- **DECISO:** gli ordini preparati sono **in attesa**, non eseguiti; vengono elaborati al **primo tick utile alla riattivazione**, secondo D-RC-TIME-261113. Accettazione del comando e risultato simulato devono essere distinti. Per spedizioni e carovane la ripresa avvia le attività, non ne anticipa la durata di viaggio.
+- **GUARDRAIL TECNICO PROPOSTO:** validare nuovamente permessi, risorse e prerequisiti al tick di applicazione, deduplicare invii e rendere esplicito un eventuale rifiuto. Non trasferire la simulazione sul telefono.
+- **APERTO:** catalogo delle operazioni prenotabili, modifica/cancellazione della coda, limiti, ordine e conflitti alla ripresa, messaggi preparati vs spediti, regole di pausa regionali esatte. **Il telefono senza rete/server irraggiungibile è una questione diversa** dalla pausa di un server accessibile; sincronizzazione di ordini offline non decisa.
+- **STATO:** documentazione, nessun runtime modificato. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md) e [SRS mobile v0.5, draft PR #222](https://github.com/erykwest/CONQUER/pull/222). Q-04 risolta nel principio.
+
+
+## D-RC-VASSAL-REPORTS-261113 — Resoconti dei vassalli a frequenza impostata dal sovrano (13/11/2026)
+
+- **DECISO dal product owner:** un sovrano **non consulta in tempo reale** i KPI economici, militari o patrimoniali dei feudi dei vassalli. Riceve informazioni soltanto attraverso **messaggeri di resoconto**.
+- **DECISO:** il sovrano può **impostare la frequenza** con cui riceve i rapporti periodici dei vassalli; ogni rapporto è uno snapshot dei dati alla data simulata di redazione e diventa visibile **solo al recapito simulato**, senza scorciatoie web/mobile o API. I dati del **feudo direttamente governato** rimangono consultabili tramite stato autorevole aggiornato.
+- **INTEGRAZIONE:** sulla branch `messages` esiste già una bozza di routine con sorgente/destinazione/frequenza 1/7/30 giorni, ma su feudi esterni astratti: tali intervalli non sono approvati come valori definitivi multiplayer.
+- **APERTO:** configurazione unica o specifica per vassallo, frequenze ammesse, costi, sezioni dei rapporti, permessi, eventuali blocchi/intercettazioni e regole durante pause. I privilegi dettagliati non sono definiti.
+- **STATO:** solo documentazione. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md), [SRS mobile v0.4 (draft #222)](https://github.com/erykwest/CONQUER/pull/222). Nessun backend/runtine modificato.
+
+
+## D-RC-TIME-261113 — Due temporalità per gli ordini remoti (13/11/2026)
+
+- **DECISO dal product owner:** ordini amministrativi impartiti al **proprio feudo** da browser/app sono validati dal server e **applicati al primo tick utile successivo** alla ricezione, senza alcun trasporto fittizio del comando.
+- **DECISO:** comunicazioni, richieste e ordini diplomatici **tra feudi** utilizzano i **tempi di invio, trasporto e consegna simulati** della posta feudale; invio ≠ ricezione. Non rendere disponibile al destinatario il contenuto prima della consegna e non consentire scorciatoie tramite API, dashboard o notifiche.
+- **DISTINZIONE DI STATO:** accettato/accodato ≠ applicato; la UI non deve anticipare l'esito. Un ordine sul proprio feudo che avvia una spedizione viene registrato al tick successivo, ma **viaggio, intercettazione e arrivo** mantengono i propri tempi simulati.
+- **APERTO:** durata fisica del tick e scheduling, comportamento dei comandi durante sospensioni regionali, ordine dei comandi concorrenti e conseguenze al recapito dei singoli tipi di messaggio. Nessuna accelerazione esclusiva di browser o app mobile.
+- **STATO:** solo specifica, nessun runtime cambiato. [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md) e [SRS mobile v0.3 nella PR draft #222](https://github.com/erykwest/CONQUER/pull/222). Nessun cambio milestone.
+
+
+## D-MOB-B-261113 — Prima release pubblica mobile: controllo remoto completo (13/11/2026)
+
+- **DECISO dal product owner — scelta B:** la prima versione **pubblica** dell'app CONQUER per **Android e iOS** deve offrire il **controllo remoto completo** del feudo, non un MVP di sola dashboard/posta o soltanto economico.
+- **PERIMETRO OBBLIGATORIO:** account/lobby e partecipazioni multi-campagna con KPI; economia, Job Manager/lavoratori, fisco, gestione e priorità di cantieri **già collocati**, militare strategico/spedizioni, diplomazia, posta feudale `messages`, tributi/carovane e mappa regionale con operazioni strategiche. Ogni operazione deve applicarsi al **medesimo stato autorevole** del browser.
+- **ESCLUSO PER DECISIONI PRECEDENTI:** piazzamento geometrico e fortificazioni nel Builder/3D, controllo tattico diretto in battaglia (D-RC-BOUNDARY-261113).
+- **DISTINZIONE RELEASE:** alpha e beta interne possono introdurre moduli progressivamente; il lancio pubblico non è accettato finché tutti i domini obbligatori non sono operativi, testati e collegati al backend multiplayer. Non introdurre widget dimostrativi per coprire moduli mancanti.
+- **APERTO:** catalogo dettagliato dei comandi, autorizzazioni feudali, stack mobile, tempistiche, notifiche push, cache/offline e test di accettazione di dettaglio. Push e lettura offline non sono stati elevati a Must dalla scelta B.
+- **STATO:** solo scope documentale; l'app e il backend non sono implementati. Specifica in [bozza SRS v0.2, PR #222](https://github.com/erykwest/CONQUER/pull/222); la PR resta **draft** finché il resto della SRS non viene approvato. Nessun cambio runtime o milestone.
+
+
+## D-RC-BOUNDARY-261113 — Confine tra gestione remota e vista 3D (13/11/2026)
+
+- **DECISO dal product owner:** nella main page e nel controllo remoto (browser; in seguito app Android/iOS) sono disponibili **gestione economica, fiscale, militare strategica e diplomatica**, comprese assegnazioni del lavoro, programmazione/priorità dei cantieri, spedizioni, tributi, carovane, messaggi e mappa regionale.
+- **DECISO:** la **vista 3D/Builder** resta necessaria per **piazzamento preciso degli edifici**, **progettazione spaziale delle fortificazioni** e **controllo tattico diretto delle battaglie**. Il remote control non duplica il Builder geometrico; programmazione dei cantieri da remoto significa amministrare lavori/progetti già localizzati, non scegliere coordinate o collocare nuove strutture.
+- **VINCOLO:** tutti i client usano i medesimi dati e comandi di gioco autorevoli, con permessi per campagna e feudo; non introdurre una seconda simulazione o aggirare disponibilità, costi, tempi e percorsi.
+- **APERTO:** inventario esatto dei comandi per ciascun dominio, tempi e conferme di applicazione, permessi feudali, pianificazione amministrativa di strutture non ancora posizionate, UX. Il **confine funzionale principale è approvato**.
+- **STATO:** solo documentazione; nessuna modifica al runtime, schema o milestone. [Specifica aggiornata](../REMOTE-CONTROL-SCOPE.md#2a-confine-funzionale-del-remote-control--deciso-13112026).
+
+
+## D-CAPSULE-261113 — Profondità delle figure dal capsuloide, diverso per persone e animali (13/11/2026)
+
+- **DECISO (product owner, 13/11/2026; applica D-046):** in World3D ogni carta figura (soldati, civili, veicoli, animali) prende la profondità **per pixel dal suo capsuloide** (programma `card` di `settlement-world3d.js`, `gl_FragDepth`), non più una profondità piatta ai piedi. **Persone:** capsula verticale (raggio 0,12, dai piedi a 0,38). **Animali:** capsula orizzontale lungo il corpo, orientata con la direzione dell'animale (o con l'asse dello schermo quando non ne ha), misure dal contorno del corpo (`ConquerAnimals.capsule`). Il capsuloide degli animali è anche il loro collider (`colliders()`, tipo `animal:<specie>`); i civili restano senza collider.
+- **MOTIVO:** con la profondità piatta una figura appena davanti a un muro aveva il corpo tagliato dalla muratura dietro, e una carta animale larga prendeva in blocco la profondità del centro (artefatti nel cutaway e lungo muri e tettoie).
+- **ALTERNATIVE SCARTATE:** carte animale con la sola profondità dei piedi (gli artefatti sopra); mesh 3D degli animali (`ConquerAnimals3D`, esclusa da D-046/D-055).
+- **CONSEGUENZA:** bestiame e lupi in World3D sono carte dell'atlante figure con capsula; nel renderer 2D restano il disegno 2D con `withUrbanFigureOcclusion`. Cavalli di giostra/feste e cavalieri in combattimento restano 2D (DA FARE).
+
+## D-VEH-CARDS-261112 — Veicoli come carte 2D con profondità (12/11/2026)
+
+- **DECISO (applica D-046 e D-055, segue #201):** in World3D un veicolo su strada è **una carta 2D depth-tested** dell'atlante figure: pianale, carico, squadra di cavalli 2D e conducente dipinti insieme da `ConquerWagons.drawWagon`, carta allargata (`span`) e spostata verso i cavalli (`ox`). Nessuna mesh 3D di carri o cavalli; `ConquerWagons3D`/`ConquerAnimals3D` restano esclusi dal gioco.
+- **ALTERNATIVE SCARTATE:** carte separate per pianale e cavalli (il timone non resterebbe agganciato quando la strada non è orizzontale sullo schermo); caselle d'atlante più grandi per i soli veicoli (allocatore e LRU da duplicare, guadagno visibile solo oltre zoom 2,5).
+- **CONSEGUENZA:** `economic-balances-animations` non ha altri residui da recuperare; il branch si può archiviare.
+
 ## D-RC-261113 — Main page e controllo remoto multi-campagna (13/11/2026)
 
 - **DECISO dal product owner:** la pagina principale dopo l'accesso contiene sia la lobby delle campagne disponibili sia le campagne **in corso alle quali l'account partecipa**, con **KPI aggregati per insediamento** senza mischiare lo stato delle partite.

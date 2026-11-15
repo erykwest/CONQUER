@@ -152,7 +152,7 @@ window.ConquerEconomy={state:()=>({commerce:{shops:{h:{kind:'weaver',artisanId:'
 assert.equal(SC.artisanAt(house({shopKind:undefined}),res('h:m:0'),door),null,'a closed workshop (Sunday) is empty');
 window.ConquerEconomy={state:()=>({commerce:{shops:{h:{kind:'weaver',artisanId:'h:m:0',state:'working'}}}})};
 const weaver=SC.artisanAt(house({shopKind:undefined}),res('h:m:0'),door);
-assert.ok(weaver&&weaver.tool===null,'a weaver works without a striking tool');
+assert.ok(weaver&&weaver.tool==='shuttle','the weaver throws the shuttle at the loom');
 console.log('PASS the artisan works inside only when open and at work');
 
 // Street front of a closed house: shop window on the counter half, bracket sign beside the door.

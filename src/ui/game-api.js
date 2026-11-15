@@ -158,6 +158,8 @@
     },
     crenelQuote: style => crenelRestyleQuote(style),
     setCrenelStyle: style => { const out = applyCrenelStyle(style); emit(); return out; },
+    unitEquipmentQuote: (kind, style) => unitEquipmentQuote(kind, style),
+    setUnitEquipment: (kind, style) => { const out = applyUnitEquipment(kind, style); emit(); return out; },
     roofPitchQuote: pitch => roofPitchQuote(Number(pitch)),
     setRoofPitch: pitch => { const out = applyRoofPitch(pitch); emit(); return out; },
     setSaleShare:(good, pct) => { const ok = window.ConquerEconomy?.setShare(good, pct); scheduleLocalSave(200); emit(); return ok; },

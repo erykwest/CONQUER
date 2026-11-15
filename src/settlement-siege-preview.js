@@ -190,6 +190,11 @@
       ['Torre a D media L2 merli',{type:'tower',shape:'dee',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'battlement'}],
       ['Torre a D grande L3 caditoie',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'machicolation',baseStyle:'splayed'}],
       ['Torre a D grande L3 tetto',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched',baseStyle:'buttress'}],
+      // Italian machicolations (aesthetic): tall corbels of four stepped courses joined by small arches.
+      ['Pietra quadrata L3 caditoie all\'italiana',{type:'tower',shape:'square',material:'stone',level:3,tier:2,size:sq(2),roofStyle:'machicolation',machicolationStyle:'italian'}],
+      ['Grande quadrata L3 caditoie all\'italiana',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'machicolation',machicolationStyle:'italian'}],
+      ['Pietra rotonda L3 caditoie all\'italiana',{type:'tower',shape:'round',material:'stone',level:3,tier:2,r:rd(2),roofStyle:'machicolation',machicolationStyle:'italian'}],
+      ['Torre a D grande L3 caditoie all\'italiana',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'machicolation',machicolationStyle:'italian'}],
       // Cistern: the ground-floor room of W2/W3 stone towers (tank, hatch, buckets in the cutaway).
       ['Pietra quadrata L1 cisterna',{type:'tower',shape:'square',material:'stone',level:1,tier:2,size:sq(2),roofStyle:'battlement',functions:['cistern']}],
       ['Grande rotonda L2 cisterna',{type:'tower',shape:'round',material:'stone',level:2,tier:3,r:rd(3),roofStyle:'battlement',functions:['cistern',null]}],
