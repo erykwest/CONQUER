@@ -12,6 +12,29 @@ Pagina: /march/ (file march/index.html). Non è un nuovo motore economico o un n
 - La campagna militare può proseguire dopo la conquista di uno o più feudi.
 - I due stili di gioco usano lo **stesso stato persistente** del mondo quando World/Feudal sarà integrato.
 
+## Decisione di design 14/11/2026 — INVASO vs SOTTO ASSEDIO (solo futuro World/Feudal)
+
+**DECISO:** distinguere semanticamente **invasione** del territorio e **assedio effettivo** del feudo. Razzia/presenza nemica sul territorio non equivalgono automaticamente a blocco postale dell'assedio.
+
+- **INVASO:** ogni **nuova invasione del territorio** innesca automaticamente la **partenza di un messaggero d'allarme** quando consentita dallo stato del mondo, senza comando manuale. Il **messaggero base** è diretto al **governante del territorio, se fisicamente assente**; gli avvisi al **signore superiore** e agli **alleati** sono invece **due flussi automatici aggiuntivi configurabili separatamente** (vedi sotto). Recapito nei tempi simulati. Non applicare il divieto d'assedio sulla sola base dell'invasione. **APERTO:** che fare se il governante è presente, percorso, rischi e intercettazioni durante l'invasione; il superiore non è fallback implicito.
+- **SOTTO ASSEDIO:** il feudo **non può far entrare né partire messaggeri ordinari**, quindi nessuna consegna di messaggero in ingresso. I **piccioni possono invece uscire e non sono intercettabili**, mantenendo requisiti del canale e tempi di trasporto simulati.
+- La distinzione deve essere applicata dal **server autorevole**, non solo dalla UI. Il blocco di assedio riguarda **partenze e ingressi**; per i messaggeri già in viaggio è **deciso il divieto di entrare/consegnare**, ma **aperto** se attendono all'esterno, deviano o tornano.
+- Transizioni tra invasione e assedio, **criteri e ambito delle due allerte aggiuntive configurabili** (verso superiore e alleati), prerequisiti piccionaie, costi/ETA, ordini remoti e fog of war restano da specificare. **Proposta tecnica:** un allarme per **evento d'invasione distinto**, non ogni tick/retry. Se la partenza è già vietata da assedio, non forzare il messaggero. Non dedurre piccioni disponibili senza rete operativa.
+
+**DECISO — impostazioni separate di allarme per attacco:** il signore interessato alla ricezione degli avvisi può configurare **«Allerta sempre il signore in caso di attacco»** e **«Allerta sempre gli alleati in caso di attacco»**. Il primo invia una comunicazione aggiuntiva al superiore feudale; il secondo agli alleati della campagna. **Non** sono una scelta esclusiva e **non** sostituiscono il messaggero base per l'invasione quando il governante è assente. **APERTO:** regola precisa per l'evento «attacco» (non necessariamente coincidente con invasione), titolarità e ambito dei flag, messaggero/piccione e criteri di selezione degli alleati. Nessun bypass del blocco d'assedio.
+
+**DECISO (15/11/2026) — messaggeri terrestri alternativi:** se non ci sono **cavalli disponibili**, il messaggio o l'**allarme automatico d'invasione** può essere trasportato da **un messaggero a piedi**, anziché a cavallo, purché un vettore terrestre e una via siano disponibili. La consegna richiede **tempo di viaggio simulato** appropriato al vettore; non inventare velocità, costi o ETA numeriche. Durante **assedio**, il blocco di entrata/uscita vale per **entrambi**: a piedi **non** significa poter attraversare le linee d'assedio. I piccioni operativi conservano le proprie regole. Il prototipo di posta non prova che questa opzione sia già integrata nel motore multiplayer.
+
+**IMPORTANTE:** lo skeleton MARCH V0 descritto sotto non implementa questo blocco postale. Il suo stadio `siege` è un riferimento di progettazione, non prova dell'integrazione multiplayer. Tracciamento: [SRS mobile v0.14](https://github.com/erykwest/CONQUER/pull/222), [Remote Control](REMOTE-CONTROL-SCOPE.md) e D-SIEGE-COMMS-261114.
+
+## Movimento strategico standard — decisione 15/11/2026
+
+Nel futuro motore condiviso World/Feudal, la **fanteria standard** stabilisce la velocità base **1×**. Nella stessa tratta e a parità di condizioni: **messaggero a piedi 1×**, **cavalleria standard e messaggero a cavallo 2×**, **carri mercantili, di rifornimento e degli immigrati 1,5×**.
+
+Questi sono **rapporti di velocità strategica**: non stabiliscono né una distanza assoluta/giorno né la velocità di animazione o del Combat tattico. Un allarme d'invasione che deve partire a piedi perché non ci sono cavalli viaggia a **1×**, non a 2×. In assedio, il blocco degli ingressi e delle uscite si applica a entrambi i messaggeri terrestri.
+
+**NON ANCORA INTEGRATO:** lo skeleton MARCH attuale non costituisce il modello autorevole della World Map; le durate locali e convenzionali dei convogli e della branch `messages` dovranno convergere sul riferimento `V_fanteria`. [Scope remote control §3g](REMOTE-CONTROL-SCOPE.md), [SRS mobile v0.15](https://github.com/erykwest/CONQUER/pull/222).
+
 ## Cosa contiene concretamente lo skeleton
 
 - Interfaccia HTML autonoma, mappa schematica a celle, quattro feudi **fixture demo**.

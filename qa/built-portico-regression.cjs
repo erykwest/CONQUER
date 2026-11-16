@@ -27,7 +27,7 @@ const ctx=vm.createContext({
   clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),WeakMap,
 });
 vm.runInContext([core.match(/const PORTICO_FUNCTIONS=[^\n]+/)[0],pick(core,'isWideBuilt'),pick(core,'builtInteriorFloors'),pick(core,'isBuiltPortico'),
-  pick(castle,'functionCapacity'),pick(siege,'eligibleRoom'),pick(siege,'floor'),pick(siege,'allowed'),pick(arch,'builtArcadeLayout'),pick(arch,'builtLoggia'),
+  pick(castle,'functionCapacity'),src('settlement-core.js').match(/const W1_TOWER_FUNCTIONS=[^\n]+/)[0],pick(siege,'eligibleRoom'),pick(siege,'floor'),pick(siege,'allowed'),pick(arch,'builtArcadeLayout'),pick(arch,'builtLoggia'),
   pick(arch,'builtLoggiaCached'),pick(arch,'builtLoggiaWalkable'),pick(arch,'builtLoggiaStandPoint'),
   'this.out={allowed,builtArcadeLayout,builtLoggia,builtLoggiaWalkable,builtLoggiaStandPoint,PORTICO_FUNCTIONS};'].join('\n'),ctx);
 const {allowed,builtArcadeLayout,builtLoggia,builtLoggiaWalkable,builtLoggiaStandPoint,PORTICO_FUNCTIONS}=ctx.out;

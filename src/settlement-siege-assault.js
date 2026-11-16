@@ -16,7 +16,7 @@
 (function(){
   const SE=()=>window.ConquerSiegeEngines3D,MODEL=()=>window.ConquerSiegeModel;
   const m=v=>v/3.5;
-  const clamp01=v=>Math.max(0,Math.min(1,v)),ease=k=>k*k*(3-2*k),lerp=(a,b,s)=>a+(b-a)*s;
+  const clamp01=v=>Math.max(0,Math.min(1,v)),ease=window.ConquerUtil.smoothstep,lerp=(a,b,s)=>a+(b-a)*s;
   const seg=(t,a,b)=>clamp01((t-a)/(b-a));
   // Game defaults: H1 wall (structureHeight 1.15, tier 2 width .5), stone gatehouse
   // 1.5 x 1.5 x 2.8 sticking out of the wall face, water moat 1.5 wide (crossings

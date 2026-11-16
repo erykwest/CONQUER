@@ -25,7 +25,7 @@ async function loadBoundaryBushSprites(){
     }));
   }
   await Promise.all(jobs);
-  invalidateSceneCache('ground');if(typeof draw==='function')draw();
+  invalidateSceneCache();if(typeof draw==='function')draw();
 }
 function urbanHedgeBushes({a,b}){
   const L=dist(a,b),count=Math.max(1,Math.ceil(L/.42)),key=urbanBoundaryKey(a,b);

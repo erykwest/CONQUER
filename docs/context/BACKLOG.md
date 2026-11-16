@@ -5,6 +5,928 @@
 - **SU BRANCH `retire-25d-renderer`:** edifici, torri, mura, porte ed esterni delle stanze solo in World 3D; Asset Lab con controllo `renderer-3d`.
 - **APERTO:** stato «danneggiata» senza segni visibili in 3D (23 avvisi `danno-visibile`); drappo del Mastio come decal 3D; eliminare le funzioni di pittura 2.5D non più chiamate (castle, castle-structures, room-exterior, cutaway-furniture, architecture finestre/portali); ritirare o portare in 3D lo strumento DEV «Prerender + test»; workflow browser che usano `?renderer=canvas2d` (webgpu-smoke, clay-browser) da riallineare al contratto «senza WebGL2 nessun edificio».
 
+### 2026-11-16 — Fix: niente pascolo nei campi
+
+- [x] Il cerchio di pascolo di pecore e mucche non tocca nessun campo coltivato (0,2 U di margine), compresi i campi automatici L1 e quelli in cantiere.
+- [x] Un campo piazzato sopra un pascolo già assegnato sposta il gregge.
+- [ ] Proposta: escludere i campi anche dal tragitto casa–pascolo (oggi le greggi possono attraversarli camminando, non pascolarci).
+
+### 2026-11-15 — Microfix: messa domenicale visibile
+
+- [x] Cutaway della chiesa: fedeli seduti sui banchi la domenica 6:00–12:00 (ConquerCivic3D.massSlots, ConquerCourtPeople.massInSession).
+- [ ] Proposta: legare il numero di fedeli ai residenti serviti (ConquerChurch.servedShare) quando arriverà la messa di CHIESA-01 fase 3.
+- [x] Porta verso un muro H1: ballatoio interno fino alla scala a pioli della stanza.
+- [ ] Torri tonde: ballatoio curvo fino alla scala (oggi corto con scaletta propria).
+- [x] P1 delle torri in pietra allineato al camminamento delle mura (2,10).
+- [x] Torre fra due mura: entrambe le porte del cammino di ronda, la finestra della faccia cede il posto; World3D si aggiorna al cambio del mastio.
+- [x] Torre quadra d'angolo: niente porta al P0, salvo torre ruotata con il fronte verso l'interno dell'angolo (45°).
+- [ ] Porte delle torri d'angolo per le altre forme (tonde, a D): da definire.
+- [x] Rimuovi foresta rispetta Fast build (istantaneo) e Free build (senza salari) del menu DEV.
+- [x] Cutaway piano per piano: i merli (e caditoie, tetto interno, braciere) spariscono quando il piano in vista non è l'ultimo.
+## 2026-11-16 — UI-ALERTS-01 · Avvisi in gioco e diario degli eventi
+
+**IMPLEMENTATO SU BRANCH `feature/alert-feed`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Pila di avvisi in alto: titolo, dettagli espandibili, chiusura manuale e automatica se risolto.
+- [x] Sezione Gestisci › Diario degli eventi con filtri, persistita per seme.
+- [x] Avvisi collegati ai messaggi (messaggeri, colombi, risposte, carovane) con azioni dirette.
+- [x] Fix: il messaggero a cavallo si ferma davanti alla porta del Mastio, non dentro la sala comune.
+- [ ] Verificare nel gioco la posizione del messaggero con Mastio a ingresso rialzato e a piano terra.
+- [ ] Salvare il diario nel salvataggio di partita (oggi solo `localStorage` del browser).
+- [ ] Centrare la camera sulla struttura con «Mostra sulla mappa» (oggi la seleziona e apre l'ispettore).
+- [ ] Portare i messaggi di stato inglesi dei moduli legacy (`status()`) a chiavi tradotte e farli passare dal centro avvisi.
+## 2026-11-16 — THREAT-GEN-01 · Generatore di minacce
+
+**IMPLEMENTATO SU BRANCH `feature/wildlife-outlaws`, NON MERGE.** [D-THREATS-261116](DECISIONS.md#d-threats-261116--generatore-di-minacce-16112026). Dettagli in [STATUS](STATUS.md).
+- [x] Tiro giornaliero per tipo con probabilità dipendenti da stagione, ricchezza, popolazione, strade, boschi, edifici isolati.
+- [x] Difficoltà a tre livelli salvata nella partita.
+- [x] Avviso con «Vai» e registro degli eventi.
+- [x] Eventi rari: ~5 l'anno a Normale (orso uno ogni ~3 anni, ~1 razzia e ~1 brigantaggio l'anno), bloccati da test.
+- [ ] Verificare il ritmo su partite lunghe reali.
+- [ ] Avviso e registro anche nell'interfaccia UI v2 (oggi banner globale + pannello COMBAT del builder).
+- [ ] Mostrare la difficoltà alla creazione della partita, non solo nel pannello.
+
+## 2026-11-16 — WILD-OUT-01 · Fauna e fuorilegge in partita
+
+**IMPLEMENTATO SU BRANCH `feature/wildlife-outlaws`, NON MERGE.** [D-OUTLAWS-261116](DECISIONS.md#d-outlaws-261116--fuorilegge-briganti-banditi-predoni-16112026). Dettagli in [STATUS](STATUS.md).
+- [x] Lupi caricati nella partita (prima solo in `/camp`).
+- [x] Orso solitario e territoriale con tana nel bosco.
+- [x] Briganti: strada di confine presidiata, scambi −40% per strada (mercato settimanale e pedaggio).
+- [x] Banditi: covo di tende con guardie fisse, pizzo settimanale, bottino recuperato distruggendolo.
+- [x] Predoni: saccheggio di edifici isolati, fuga al confine, bottino perso o recuperato.
+- [x] Briganti e banditi: 2/3 ascia e scudo tondo, 1/3 arco; arcieri fermi al posto.
+- [x] Covo e blocco stradale in 3D con i modelli da campo, nel Lab (`banditLair3/4`, `brigandRoadblock`).
+- [ ] Rapinare i convogli del signore che escono dalla strada presidiata (oggi solo calo di mercato e pedaggio).
+- [ ] Bilanciare numeri, calendario, pizzo e merci rubate; avviso al giocatore più visibile della sola riga di stato.
+- [ ] Verifica a occhio con il gioco in primo piano (notte, World3D, pattuglie che incontrano i briganti).
+
+## 2026-11-16 — QA-DEEP-261116 · Seguiti del test antiregressivo profondo
+
+**FATTO su branch `fix/mastio-h4-load-20261116` (non merge):** il Mastio rimosso dal giocatore resta rimosso; la torre W3 non si piazza più a H4. Dettagli in [STATUS](STATUS.md).
+
+**APERTI**
+- Economia: `castleGold`, `wage` e campi simili salvati come stringhe vengono caricati e risalvati così come sono (letti come 0, nessun crash). Andrebbero convertiti in `ensureFlows`. Bassa priorità.
+- Bilanciamento (al product owner): con l'allocatore legacy l'industria viene prima dei costruttori, quindi un cantiere con i materiali consegnati può restare senza operai per oltre 120 giorni (stato «In attesa di operai L1 liberi»). Inoltre la crescita del villaggio è lenta (10–34 L1 al giorno 150).
+- DEV: un completamento in costruzione rapida dentro `addStructure` non chiama `syncAutoMastio`; lo stato in sessione differisce da quello dopo un caricamento.
+- QA locale: sei script browser fissano la porta 4173 senza override; Playwright 1.56.1 non trova il suo Chromium (1194) su questa macchina, quindi serve `QA_CHROME` o `npx playwright install chromium`.
+
+## 2026-11-16 — PERF-261116 · Prestazioni dei terreni regionali
+
+**FATTO su branch `perf/regional-roads-20261116` (non merge):** la pianificazione delle strade e la cottura del terreno tornano sotto i tempi di prima della #162 (dettagli in [STATUS](STATUS.md)). **Aperto:** il costo rimasto nella cottura è soprattutto in `drawRelief` (rocce e fasce), proporzionale al numero di colline.
+
+## 2026-11-15 — BC-251105-05 fix · Tetto interno della torre a D e bracere
+
+**IMPLEMENTATO SU BRANCH `fix/dtower-inner-roof-brazier`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Torre a D: tetto interno su colmo (padiglione sul retro, mezzo cono sul davanti), pendenza unica.
+- [x] Il tetto interno toglie il bracere (`towerHasBrazier`), che prima veniva disegnato sopra il tetto.
+- [ ] Regola: senza bracere gli arcieri della torre non tirano frecce incendiarie. Da applicare quando gli arcieri delle torri avranno le frecce incendiarie (oggi non le tirano mai): chiedere `towerHasBrazier(s)`.
+
+## 2026-11-15 — WALL-FREE-ANGLE · Mura senza vincolo di giunzione a 15°
+
+**IMPLEMENTATO SU BRANCH `fix/wall-free-angle`, NON MERGE.** Mura, palizzate e sezioni costruite si tracciano a qualsiasi angolo; niente gomito automatico verso i magneti. Dettagli in [STATUS](STATUS.md).
+- [x] Tratto libero da A a B e aggancio esatto al magnete in un solo tratto.
+- [ ] Verificare a occhio, nel gioco, le giunzioni muro-muro e muro-torre ad angoli non multipli di 15°.
+
+
+### 2026-11-15 — WALL-ROAD-GATE
+
+- Fatto sul branch `feature/wall-road-gates`: porta automatica del tipo corrispondente dove un nuovo muro/palizzata incrocia una strada principale. Aperto: un muro esistente attraversato in seguito da una nuova strada principale non riceve la porta (la strada resta bloccata come prima); livello porta = livello porta di default del costruttore.
+## MIL-WALL-01 — Pattuglie sulle mura per giro di mura (15/11/2026)
+
+**IMPLEMENTATO SU BRANCH `fix/wall-patrol-rings`, NON MERGE.** [D-MIL-WALL-261115](DECISIONS.md#d-mil-wall-261115--pattuglie-delle-mura-per-giro-15112026).
+
+- [x] Pattuglie per giro di mura (componente connesso del cammino di ronda), non per segmento.
+- [x] 2 soldati della Caserma per pattuglia, coperte dopo le pattuglie White Zone; ritiro automatico se mancano soldati o paga.
+- [x] Assegnazione +/− per giro da Militare › Pattuglie e guarnigioni e dall'ispettore del muro (legacy e UI v2); motivo e arruolamento in linea se mancano soldati.
+- [x] Salvataggio robusto a brecce e unioni di giri.
+- [x] Cache dei posti arcieri per torre (`drawCastleSoldiers` ~9× più veloce).
+- [ ] Combattimento: le pattuglie delle mura sono figure disegnate, non unità di `ConquerCombat`; non avvistano né combattono (le vedette e le pattuglie White Zone sì).
+- [ ] Torce notturne per le pattuglie delle mura, come per le pattuglie White Zone.
+
+## WORLD-SPEED-01 — Unificare velocità di fanteria, cavalleria, messaggeri e carri (15/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** rapporti **fanteria 1×**, **messaggero a piedi 1×**, **cavalleria 2×**, **messaggero a cavallo 2×**, **carri mercanti/rifornimenti/immigrati 1,5×**; il riferimento è la velocità **strategica** di fanteria nella World Map, non unità/giorno arbitrariamente scelte. [D-WORLD-SPEED-261115](DECISIONS.md#d-world-speed-261115--rapporti-di-velocita-strategica-terrestri-15112026) · [SRS mobile v0.15 draft #222](https://github.com/erykwest/CONQUER/pull/222).
+
+- [ ] Definire un **unico parametro autorevole** `V_fanteria` e calcolare velocità di tutti i cinque tipi come `1×, 1×, 2×, 2×, 1,5×` prima di modificatori di percorso.
+- [ ] Usare l'ETA del **messaggero pedone a 1×**, quando non ci sono cavalli; allarmi di invasione, rapporti e ordini devono poter partire senza inventare recapiti anticipati.
+- [ ] Armonizzare convogli di **mercanti, rifornimenti e immigrati** sul valore **1,5×**, senza applicarlo automaticamente a imbarcazioni o altri mezzi non inclusi.
+- [ ] Verificare le costanti **legacy 22 U/giorno** in `src/settlement-convoys.js` (convogli) e nella branch `messages` (corriere) e predisporre una **migrazione coerente** dei viaggi/ETA persistiti prima di passare al motore unico.
+- [ ] QA comparativo su stessa tratta: fanteria/pedone 1×, cavalleria/montato 2× e carri 1,5×, prima degli arrotondamenti del calendario; QA dopo modificatori stradali da specificare.
+- [ ] **APERTO:** valore assoluto del riferimento, terreni/strade/meteo, scorte e composizione convogli misti, eccezioni di unità, velocità imbarcazioni e piccioni. Nessuna modifica al runtime da questa decisione.
+
+
+## MSG-FOOT-01 — Messaggero a piedi se non ci sono cavalli (15/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** oltre al corriere a cavallo, è previsto il **messaggero a piedi** quando non sono disponibili cavalli. L'assenza di cavalcature **non annulla da sola** l'invio di lettere, ordini e **allarmi automatici d'invasione**, se un portatore e una rotta sono disponibili. **Sotto assedio sia pedoni sia montati non entrano/escono**, mentre i piccioni restano distinti. [D-MSG-FOOT-261115](DECISIONS.md#d-msg-foot-261115--messaggero-a-piedi-in-assenza-di-cavalli-15112026) · [SRS mobile v0.14 draft #222](https://github.com/erykwest/CONQUER/pull/222).
+
+- [ ] Modellare disponibilità dei cavalli e modalità del messaggero terrestre: **montato** oppure **pedone**, con fallback al pedone quando il cavallo non è disponibile, se il servizio terrestre rimane praticabile.
+- [ ] Calcolare percorso, tempi ed ETA secondo la modalità di trasporto effettiva; nessuna velocità numerica viene stabilita da questo requisito.
+- [ ] Applicare stessa scelta anche ai **messaggeri automatici d'allarme per invasione** e alle altre comunicazioni feudali, senza anticipare il loro recapito nella dashboard.
+- [ ] Verificare server-side il **blocco bidirezionale in assedio** per entrambe le modalità; QA su cavalli presenti/assenti, consegna ritardata, attacco e assedio.
+- [ ] **APERTO:** velocità piedi/cavallo, disponibilità e costi dei portatori, percorso/terreno, rischi e intercettazione in stato invaso, gestione di un cavallo assegnato; il prototipo `messages` non è prova dell'implementazione del vettore a piedi.
+
+## MP-PUBLIC-01 — Visibilità anonima delle campagne (decisione 15/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** nella lobby senza login soltanto statistiche generali **aggregate** per server: capienza, conteggi giocatori/bot, anzianità/fase, stato ingressi, eventuale livello massimo in forma aggregata, posizioni di ingresso idonee come **numero** e orari regionali. **Escluse** mappe politiche e regionali, identità e classifiche nominali, dati dei feudi, eserciti, diplomazia, posta, movimenti e spawn precisi. Home informativa, tutorial e Codex pubblici invariati.
+
+- [ ] Definire i campi del riepilogo anonimo e costruire endpoint pubblico aggregato (nessun record segreto o dato per feudo).
+- [ ] Distinguere browser anonimo, account con login non partecipante e partecipante autorizzato; non presumere che login = accesso ai dati di tutti.
+- [ ] Test anti-leak di mappe, proprietari, messaggi, unità e dati territoriali nei payload anonimi e nei link/cache.
+- [ ] Decidere aggiornamento dei contatori, definizione di «attivo» e visibilità interna secondo ruoli feudali.
+
+**Riferimenti:** D-MP-PUBLIC-261115 e [scope multiplayer §3](../MULTIPLAYER-SERVER-SCOPE.md#3-lobby-e-scoperta-delle-partite). **Solo decisione documentale, nessun codice modificato.**
+
+## 2026-11-13 — AUDIT-261113 · Seguiti dell'audit post-merge
+
+**Correzioni su branch `fix/audit-hardening-20261113`, NON MERGE** (dettagli in [STATUS](STATUS.md)). Restano aperti, in ordine di valore:
+
+**Da decidere (product owner)**
+- Falconiera e Cisterna sono ammesse anche nel mastio W4 (`towerTier>=2`), mentre #164/#144 parlavano di W2–W3; la Falconiera W4 non ha voliera sul tetto.
+- Da #155 le torri di vedetta lignee W1 accettano stanze (prigione, tesoreria, armeria): DECISIONS cita solo la pietra.
+- Una stanza Caserma catturata congeda i soldati per sempre (oro di reclutamento perso).
+
+**Prestazioni**
+- `ConquerEconomy.laborAllocation` gira ~4 volte per frame dal disegno (`drawPeasants`, `fieldAvailableHouses`, `drawWorkers`, `constructionCrewAssignments`, 100–165 ms per scenario castello): memorizzarla in `settlement-economy.js` con `structureMemoEpoch()`; `state()` può saltare la migrazione dopo la prima volta.
+- Le mesh delle case sono indicizzate su `urbanRevision`: un crollo le ricostruisce tutte. Chiavarle sulla forma della casa.
+- Caricamento: 5,6 MB degli 8,5 MB di JS iniziale sono dati di modelli; candidati al lazy load: navi/cantiere/pesca (solo mappe di mare), eventi, macchine d'assedio, forte ligneo; prima mettere `?.` in `settlement-codex.js` (:111, :116).
+
+**Hardening**
+- Il frame della simulazione è un solo try: un errore in un sottosistema (crescita, economia, cantieri…) blocca disegno e autosave a ogni frame. Dare a ciascuno contatore di errori e sospensione come il combattimento.
+- `?v=` dei salvataggi: nessun controllo di `schema` al load; caricamento locale e cloud ancora divergenti (una sola `applySavedState` condivisa).
+- supabase-js e polygon-clipping caricati da `esm.sh` senza SRI né CSP: copiarli in `src/vendor/`.
+- Allarme: stato di modulo (`reported`, `riders`, `pending`) non azzerato al caricamento.
+- Escaper residui senza `'` in `settlement-convoys.js` e `settlement-soldiers.js`.
+- `main` non è protetto: rendere obbligatori Context sync, settlement-qa e Runtime integrity.
+
+**Semplificazione e suddivisione ("chopping")**
+- `ConquerUtil`: aggiungere `lerp` (8 copie), `clamp01` (4), `darken` (3), point-in-polygon (5), espansione `parts()` delle mesh (civic3d/house3d/wood3d).
+- `jobManager`/`jobManagerL2` quasi identici (limiti diversi); `armories()`/`circleDepots()` su `activeRooms` con opzione `captured`.
+- Dividere `settlement-world.js` (strade, pozzi, rilievo, buchi nel bosco), `settlement-combat.js` (assalti → `settlement-siege-assault.js`, nebbia → nuovo modulo), `settlement-core.js` (motore dei cantieri → `settlement-construction.js`), `settlement-economy.js` (allocazione del lavoro → `settlement-labor.js`), `settlement-siege.js` (regole delle stanze → `settlement-room-rules.js`). Ogni divisione richiede di aggiornare gli harness QA che caricano il file per nome.
+- Il pittore 2.5D di triangoli è ripetuto in 4 file: eliminarlo con il ritiro del renderer 2.5D.
+
+### 2026-11-15 — Spiaggia sotto le scarpate (branch fix/coastal-cliff-beach-20261115)
+
+- Allineato main `1911369` (hardening #239), senza conflitti. Ripetuti PASS occlusione, coast, water-surface, wooded-relief, tree-bark ed export Wiki; cinque scene ripetute sulla versione integrata. CI da verificare sul nuovo SHA.
+- Corretto l'ordine del disegno: sabbia e sponde di mare/lago/acquitrinio precedono i rilievi; acqua e confluenze conservano il proprio passaggio successivo. Stesso percorso per Canvas e texture WebGL. Ricette, larghezze e quote invariate.
+- Nuova regressione sul percorso reale terreno/ambiente: prima FAIL (sabbia sulla scarpata), dopo PASS in 16 combinazioni mare/lago, quattro rotazioni, isometria/vista dall'alto. Pixel della texture WebGL verificati; cinque snapshot costieri prima/dopo e cinque scenari idrici PASS. Lab Territorio: 16 invariati, zero errori, cinque avvisi di schema.
+- Implementato solo sul branch, non mergiato; CI da verificare sul commit pubblicato. [Prove e riproduzione](SHORE-RELIEF-FIX-2026-11-15.md). Roadmap e decisioni invariate: applicazione del contratto esistente di rilievo.
+
+### 2026-11-15 — Audit post-merge regionale, correzioni su branch
+
+- Merge autorizzato dall'utente: integrato main `1c27aeb` (torre a D), con soli conflitti documentali uniti. Precedente CI `5854c03`: 14 workflow PASS; nuovi controlli da verificare prima del merge definitivo. Restano aperti latenza locale e quota collinare costiera.
+- Allineamento finale main `17645c2`; CI Runtime ha rilevato il digest Wiki obsoleto dopo le correzioni: rigenerato solo `sourceDigest`, contenuti invariati. Wiki regression ed export --check PASS locali; nuova CI da verificare.
+- Esito consolidato locale: **201/202 PASS**, unico FAIL fondazione (116,07 ms > 100 ms). PR #250 draft, non mergiata. Integrato main `2782fc0` preservando pattuglie/porte stradali; controlli mirati post-integrazione PASS. CI della PR da verificare sul nuovo SHA.
+- Base verificata main `50096df` (PR #162); correzioni in `fix/regional-postmerge-20261115`, non mergiate. Riprodotti e corretti drenaggio cancellato da bordo montuoso, chiome perse con cache calda e selettore incoerente con i quattro biomi.
+- [Rapporto completo](POSTMERGE-REGRESSION-2026-11-15.md): base 198/199 test PASS dopo quattro ripetizioni LF; resta APERTO il picco della pianificazione stradale oltre 100 ms. Nuovi tre test prima FAIL/dopo PASS e ripetizione completa sul branch.
+- Browser: otto scene regionali, cinque idriche e apertura reale dalla regione; screenshot finali rivisti. Asset Lab completo: 1.612 render, zero errori ma 157 avvisi e baseline da riconciliare; Territorio corretto 16 render invariati. Nessuna accettazione massiva delle firme.
+- Roadmap/decisioni e bilanciamenti invariati. QA e limiti documentati per il commit regionale; le successive PR di main richiedono verifica propria.
+
+### 2026-11-15 — FIELD-LEND preservato nel merge regionale
+
+- La CI su 6510709 era tutta verde (20 workflow). Durante l'attesa main e avanzato a 6c5ac79 (#212 FIELD-LEND): integrato senza conflitti di codice, unendo STATUS/CHANGELOG e rigenerando il catalogo. PASS locale idle-farmers (7), fields (16), export Wiki. Nuova CI da verificare; nessuna modifica alle ricette regionali.
+
+
+### 2026-11-15 — Riallineamento prima del merge autorizzato
+
+- Integrato main ecdd630 nel branch regionale. Conservati i quattro biomi e l'isolamento demo insieme a migrazione sociale v2, politiche elmi/scudi, nuove figure e caditoie italiane. Conflitti documentali uniti, versioni cache riconciliate senza duplicare script e catalogo Wiki rigenerato.
+- PASS locale regional-demo (inclusa persistenza isolata), save-safety ed export Wiki; regressioni complete e CI sul nuovo commit da ricontrollare. L'autorizzazione al merge del 15 novembre non equivale a merge eseguito: esito definitivo nella PR #162.
+- Nessuna nuova regola di bioma o milestone; roadmap invariata. Restano i limiti idrici e di latenza già documentati.
+
+
+### 2026-11-12 — Esito CI integrazione e budget Sea
+
+- Commit 1f5deb0: 19 workflow CI riusciti, inclusa la suite completa di regressione/routing e Asset Lab. Sea and pier interrotto dal timeout di 10 minuti dopo i controlli di flusso, senza assertion fallite. Budget portato a 15 minuti come la suite routing; nessun test rimosso e nome del check conservato.
+- Riproduzione locale Windows: conferma fondazione corretta, ma picco di pianificazione stradale circa 116 ms oltre la soglia 100 ms; stessa suite PASS sul runner CI. Non garantita una soglia di latenza su ogni macchina.
+- Nessun merge in main; nuovo esito Sea da verificare.
+
+
+### 2026-11-12 — Correzioni emerse dalla CI di preparazione
+
+- Test cache di corteccia e magnete ponte aggiornati per accettare il token nella versione composta; test montagne adeguato a Valle alias Colline, senza catene autonome.
+- Conferma fondazione: preflight delle chiome limitato alla zona del piazzale, senza generare tutto il bosco al primo clic. Identici RNG, posizioni e attributi; confronto automatico con il layout completo. Caso Foresta 4242: circa 148 ms prima, 22 ms dopo nella riproduzione locale. Test placement e densità PASS.
+- La prima CI di integrazione aveva cinque workflow falliti (due condividono il test ponte). Verifica completa e CI successiva ancora necessarie; nessun merge in main.
+
+
+### 2026-11-12 — Preparazione merge regionale
+
+- Integrato `main` 95e8dd2 nel branch sperimentale. Conflitti risolti conservando documentazione di entrambi i filoni, versioni cache e firme degli asset; catalogo Wiki rigenerato dai provider unificati. Preservati economia ECO-FIL-01, figure, arte, coperture e latrine.
+- PASS hills-zone (cinque seed, alias e quattro bordi), landscape-order, regional-demo, regional-surroundings, water-surface, save-safety, economy-industries, Stonecolor, tower-inner-roof, room-exterior-latrine e roof-pitch; sintassi dei moduli integrati ed export Wiki. Normalizzata la lettura dei fine riga nel test latrine per Windows.
+- Cinque snapshot integrati `merge-ready-*` rivisti, zero errori JavaScript; quote colline/boschi e torrenti confermati.
+- Audit Territorio integrato: 16 render invariati, zero errori, cinque avvisi schematici noti. Nessun nuovo contratto o milestone: ROADMAP e decisioni progettuali invariate. Resta documentato il caso idrico seed 1 con montagna nord e fiume est. Preparazione sul branch, non merge in main; CI remota da verificare dopo il push.
+
+
+### 2026-11-12 — Montagne regionali +30%
+
+- Raggi delle cime di bordo aumentati da 7–15U a 9.1–19.5U; altezza aumenta nella stessa proporzione, pendenza, numero e centri restano identici. Ingombri usati anche da collisioni e generazione colline.
+- Cinque snapshot `mountains-plus30-*` rivisti: quattro orientamenti con seed 1 e nord seed 229. Colline 32.4–33.0%, boschi 24.7–24.8%, 1–2 torrenti; 16 cime per bordo. Audit Territorio: 16 invariati, zero errori, cinque avvisi schematici preesistenti.
+- Difetto preesistente riprodotto prima e dopo: HILLS seed 1, bordo montuoso nord + fiume est non genera rete idrica. Da correggere separatamente; non introdotto dall'aumento di scala.
+- PASS hills-zone (cinque seed, alias Valle e quattro bordi), organic-hills; cinque snapshot browser e audit Territorio.
+- Economia, roadmap e classificazione dei biomi invariate. Modifica sul branch sperimentale, nessun merge in main.
+
+
+### 2026-11-12 — Rilievi organici e cime disperse
+
+- Rimossa la griglia a due file e la rotazione quasi fissa che causavano la regressione visiva. Colline collocate per tentativi geometrici con rotazioni libere, rapporti fra assi e superfici differenti, contorni più lobati. Numero 4–8 e minimo 30% preservati senza aggiungere rilievi oltre il limite.
+- Catene di bordo: posizioni longitudinali irregolari e dispersione trasversale fino a circa ±23U sulla direttrice, raggi delle cime 7–15U; trasformazione coerente per le quattro direzioni. Conservati i corridoi di 7U tra colline e il margine esterno per la rete idrica.
+- Risolto anche un punto di instradamento: il raccordo della deviazione non può essere scelto di nuovo dentro un rilievo successivo. Test organic-hills falliva sulla vecchia disposizione a due file e passa sulla nuova; controlli dei quattro bordi, landscape-order e cinque snapshot regionali `organic-relief-*` rivisti.
+- Misure snapshot: colline 31.0–34.8%, boschi 24.7–24.9%, 1–3 torrenti. Audit Territorio 16 invariati, zero errori, cinque avvisi schematici preesistenti. Economia e roadmap invariate.
+
+### 2026-11-12 — HILLS regionale corretto e coperture reali
+
+- Esportazione HILLS → hills, biomi terrestri Pianura/Colline/Foresta/Palude. Valle resta alias. Bordi montuosi espliciti (`mountainSides`) esportati dalla regione come fiumi e costa; catene generate sui lati richiesti senza sostituire il bioma.
+- Colline: 4–8 rilievi dimensionati per almeno 30% di superficie, H2–3; boschi calibrati al 25% effettivo, entro 20–30%; estrazione torrenti 100%, 1–3. Il vincolo precedente di zero torrenti su isole/penisole resta prioritario.
+- Cinque aperture con payload regionali reali riviste: 4/7/8 rilievi e casi con fiume o bordo montuoso. Copertura colline 30.9–32.6%, boschi 24.6–24.9%, torrenti 1–3. Zero montagne senza bordi richiesti; 16 cime sul bordo nord richiesto.
+- PASS hills-zone (cinque seed, alias e quattro orientazioni dei bordi), regional-demo (mapping e proprietà trasmesse), ricette biomi (42). Audit Territorio: 16 render invariati, zero errori, cinque avvisi schematici preesistenti. Snapshot `hills-regional-*`.
+- Economia e roadmap invariate. Le ricette legacy non fanno parte dei biomi selezionabili; salvataggi esistenti non rigenerati.
+
+### 2026-11-12 — Quantità colline e alias Valle
+
+- Colline e Valle condividono la ricetta 4–8 rilievi, H2–3; Valle non genera più catene montuose o torrenti propri. Seed e pesi regionali normalizzati, colori terreno/minimappa allineati.
+- Mare e Lago: probabilità 20%, 1–2 rilievi H1–2. La sagoma del lago viene calcolata anche prima dei rilievi per mantenerli sulle porzioni emerse; selezione regionale dell'acqua invariata.
+- PASS ricette biomi (42), equivalenza Valle/Colline su tre seed inclusi 4 e 8 rilievi, colline sporadiche su 3000 seed per cinque biomi (Mare 20.0%, Lago 20.4%), isole/penisole (15). Cinque snapshot `hill-quantities-*` rivisti, conteggi 4/8/7/1/2. Audit Territorio 16 invariati, zero errori, cinque avvisi schematici preesistenti.
+- Aggiornata la tabella in BIOME-HILL-QUANTITIES.md. Nessun target sperimentale del 20% di superficie per Colline; quantità soltanto. Economia e roadmap invariate, salvataggi non rigenerati.
+
+### 2026-11-12 — Torrenti esclusi e colline sulla costa
+
+- Isole e penisole marittime/lacustri: stream=0 nella ricetta; esclusi anche torrenti passati alla composizione idrologica e affluenti regionali di tipo stream. I fiumi restano distinti.
+- Riposizionamento deterministico dei rilievi lungo le sponde effettive prima dell'idrologia, conservando numero, dimensioni e livelli. Controlli su acqua, distanza fra rilievi e spazio centrale.
+- Verifiche: 15 fixture isole/penisole senza torrenti, colline asciutte e a meno di 10U dalla sponda; landscape-order su sei fixture. Cinque scene `coastal-shores-*`: zero torrenti e piedi delle colline a circa 0–4U dalla costa. Audit Territorio: 16 render invariati, zero errori, cinque avvisi schematici preesistenti.
+- Economia e roadmap invariate.
+
+### 2026-11-12 — Isole e penisole collinari
+
+- Le terre con tre o quattro lati cardinali sul mare o sul lago ricevono una base di tre colline, con gli stessi livelli 2–3 del bioma Colline (ricetta 3–4 rilievi). Restano valide eventuali colline ereditate dai vicini; i biomi già più montuosi non vengono ridotti.
+- Boschi, paludi e corsi d'acqua mantengono le proprie ricette; l'adattamento regionale riposiziona i rilievi tagliati dalla costa prima dei corsi d'acqua. Le zone interne conservano le frequenze sporadiche precedenti.
+- Verifiche: isole/coste su 15 fixture con rilievi asciutti e determinismo; colline sporadiche su 9000 estrazioni; confronto esplorativo 48 combinazioni; cinque snapshot `coastal-hills-*` rivisti. Audit Territorio: 16 render invariati, zero errori, cinque avvisi schematici preesistenti.
+- Economia e roadmap invariate; regola geografica documentata in DECISIONS.
+
+### 2026-11-12 — Canneti delle paludi quadruplicati
+
+- Conservata la vegetazione di sponda originale, aggiunti tre canneti per ogni canneto esistente su ciascun acquitrinio, con controlli su ostacoli e distanze. Budget paludi separato da quello dei corsi d'acqua.
+- Confronto runtime su cinque situazioni: 92→368, 112→448, 29→116, 63→252, 43→172 canneti (4× in tutti i casi); catture `marsh-reeds4-*`. Cespugli, quote dei biomi ed economia invariati.
+- Verifiche: scatter-regression (8 controlli), marsh-regression; audit Territorio 16 render invariati, zero errori, cinque avvisi schematici preesistenti. Roadmap e contratti generali invariati.
+
+### 2026-11-12 — Cespugli dei boschi al 50%
+
+- Scala visiva uniforme di larghezza e altezza: 50% con variazione deterministica relativa di ±10% (45–55% della dimensione precedente), in 2D e nei billboard 3D.
+- Numero, posizioni, quota e flip preservati; siepi urbane e alberi invariati. Economia e roadmap invariate.
+- Verifica: forest-shrubs-regression PASS; cinque scene runtime `small-shrubs-*` riviste (sommità, pendio, scarpate, palude e foresta intera); audit Territorio 16 render, zero errori, cinque avvisi schematici preesistenti.
+
+12/11/2026 - REG-UPRIGHT-SHRUBS: risolto il difetto dei cespugli piatti: nel renderer 3D erano ancora dipinti nel bake del suolo. Ora sono billboard verticali nello stesso atlas degli alberi; il bake non li disegna e il fallback 2D resta corretto. Flip orizzontale deterministico per singolo cespuglio, applicato sia agli UV 3D sia al canvas 2D; posizioni e quantita invariate. PASS forest-shrubs (due orientamenti e nessuna pittura nel bake), tree-density (2.51x), save-safety, cinque scene browser 3D e screenshot upright-shrubs-*.png. Audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Roadmap/economia invariate.
+
+12/11/2026 - REG-REAL-FOREST-SHRUBS: corretta la confusione tra trama del sottobosco e cespugli visibili. Aggiunto strato separato di cespugli SVG riusando i sette asset esistenti delle siepi, con griglia indipendente dagli alberi, quota reale, stagioni e occlusione condivisa. Esclusi acqua/radure e pendii ripidi. Caricamento sprite invalida anche la cache paesaggio. Alberi invariati a circa 2.5x. PASS forest-shrubs (quattro situazioni), wooded-relief, woodland-density, tree-density, scatter (8), save-safety; cinque scene browser con verifica sprite caricati e cespugli effettivamente disegnati. Snapshot forest-shrubs-*.png, primo ravvicinato. Audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Economia e roadmap invariate; nessuna modifica ai salvataggi o alla copertura dei biomi.
+
+12/11/2026 - REG-TREE-DENSITY: alberi circa 2.5x a parita di superficie (griglia 4.4/sqrt(2.5) U, jitter contenuto); misurato 2.51x nel controllo su area fissa. Nessuna variazione a scatter, cespugli o numero di dettagli del sottobosco. Ripristinata la trama completa sui rilievi: luce applicata sopra il dettaglio anziche attenuarlo al 30%. Scarpate ripide sempre escluse, con fascia di rispetto 1.1U per le radici degli alberi. PASS tree-density-balance, wooded-relief, woodland-density, scatter (8), save-safety. Cinque snapshot tree-density-balanced-*.png; audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Roadmap ed economia invariate; nessuna modifica ai poligoni o ai salvataggi.
+
+12/11/2026 - REG-WOODED-RELIEF: boschi ammessi su sommita e pendii dolci; scarpate ripide escluse da alberi e contenimento boschivo. Rimossi divieti totali e radure automatiche sulle colline. Sottobosco proiettato separatamente su terrazze e facce inclinate, con luce direzionale; la campitura piana esclude la sagoma del rilievo. Alberi alla quota reale, diradamento deterministico sui pendii e occlusione dietro le superfici anteriori. PASS wooded-relief (tre seed), density, organic woods, ricette (42), landscape-order, Pianura 20%, Palude 20-30%, surroundings, industrie e save-safety. Cinque snapshot wooded-relief-*.png, inclusi dettagli di sommita, pendio, scarpata e Palude; audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Economia e roadmap invariate; geometrie dei salvataggi non rigenerate.
+
+12/11/2026 - REG-LANDSCAPE-ORDER: generazione con priorita rilievi -> rete idrografica definitiva -> boschi/stagni/acquitrini. Rimosso il calcolo dei torrenti dal piazzamento colline e rimossa la cancellazione dei rilievi nella fase idrologica. Primario deviato attorno a rilievi e montagne con margine di sponda; affluenti e delta rispettano gli stessi ostacoli. Riempimento regionale differito, acquitrini esclusi da fiumi e laghi/mare; boschi e radure costruiti sui percorsi finali e sulle impronte dei rilievi. PASS landscape-order (sei mappe + ostacolo controllato), quote colline, ricette (42), gerarchia, coperture Pianura/Palude, foci, surroundings, isole/penisole (15), montagne regionali, industrie e save-safety. Cinque snapshot landscape-order-*.png; audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Economia e roadmap invariate; nuove generazioni, salvataggi non rigenerati.
+
+11/11/2026 - REG-SPORADIC-HILLS: gate deterministico indipendente per bioma: Pianura 1/3 con 1-2 colline H1-2, Foresta 1/2 con 2-3 colline H2-3, Palude 1/4 con una collina H1-2. Primo rilievo favorito nella zona edificabile, centro insediativo libero; colline ereditate con budget limitato e campionamento indipendente. Acquitrini escludono i rilievi con margine asciutto di 4U, mantenendo il target di copertura. Nessuna modifica a produzione, cave, miniere o risorse: economia gestita nell altro branch. PASS 3000 seed/bioma (33.5%, 49.4%, 24.7%), conteggi finali, rocce, determinismo, ereditarieta, ricette biomi (42), surroundings, hydrology-network, gerarchia e save-safety. Cinque snapshot sporadic-hills-*.png; audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Roadmap invariata; forma dei rilievi esistente e salvataggi non rigenerati.
+
+11/11/2026 - REG-ORGANIC-COAST: isole e penisole marine/lacustri generate con contorno continuo ovale deformato, indipendente dalle quattro fasce rettilinee. Rotazione, numero di lobi (2-4), ampiezza e fase dipendono dal seed; penisole orientate verso il lato di terraferma con asse sinuoso. La costa puo entrare nei margini della buildable zone, mentre il centro resta asciutto. Sponde, collisioni e idrologia usano i poligoni reali. Cinque snapshot coast-organic-*.png (due isole marine, una lacustre, due penisole); audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Roadmap invariata: correzione della forma costiera esistente; salvataggi non rigenerati.
+
+11/11/2026 - REG-SWAMP-BALANCE: Palude con target 25% acquitrini e 25% boschi sulla superficie del bioma; intervallo richiesto 20-30% per ciascuno, restante terreno aperto al netto dei corsi d acqua. Superato il conteggio fisso 2-3 stagni: campo continuo ordinato per area, macchie organiche e seed deterministico. Centro e settori ereditati calibrati separatamente; boschi esclusi da acquitrini e rive. Pianura mantiene 20%. Cinque snapshot swamp-balanced-*.png; audit Territorio 16 invariati, zero errori e cinque avvisi schematici. Roadmap invariata: bilanciamento del bioma esistente; salvataggi non rigenerati.
+
+11/11/2026 — REG-MARSH: acquitrini marrone-verde come sottotipo pond/waterBodyKind=marsh, con sponda fangosa stretta, chiazze galleggianti e canneti/cespugli riusando gli asset esistenti. Stesso colore in minimappa e renderer condiviso 2D/terreno 3D. Palude centrale e settori ereditati producono acqua stagnante distinta da laghi/stagni ordinari; maschere separate e bordi ammorbiditi. Acquitrini centrali adattati alla buildable zone; restano non edificabili e non sono ricevitori automatici delle foci. Mantenute le quantita della ricetta esistente. Mulino ad acqua: il validatore gia accettava solo river/stream; nuovi test negativi per mare/stagno/lago/acquitrino e sovrapposizione con acqua ferma pur vicino a un torrente, piu controlli positivi fiume/torrente. PASS marsh, economy-industries, scatter (8), mills3d, asset-catalog, surroundings, hydrology-network, boschi20, water-surface e save-safety. Cinque snapshot marsh-*.png; audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Nessuna variazione di roadmap; salvataggi non rigenerati.
+
+11/11/2026 — REG-FLOW-30: sostituito il raccordo a T con ingresso a 30 gradi verso valle. Primario orientato dalla foce locale se presente, altrimenti dal vettore regionale derivato dalla distanza lungo la rete da mare/lago o dalle sorgenti; fallback deterministico dal seed quando mancano riferimenti. Export regionale include riverFlow. Affluenti con raccordo cubico continuo e terminale di 9U all angolo richiesto; preservati sbocchi separati, lati alternati e vincoli anti-incrocio/parallelo. PASS river-flow, gerarchia (anche inversione regionale), hydrology-network, stream-count, boschi20, surroundings, regional-demo, water-surface e save-safety. Cinque snapshot runtime streams-30-*.png e audit Territorio: 16 invariati, zero errori, cinque avvisi schematici. Nessun cambio a probabilita, roadmap o paesaggi gia salvati.
+
+10/11/2026 — REG-STREAM-T-HIERARCHY: un solo primario esplicito, sempre il fiume se presente. Gli altri corsi sono affluenti diretti con ultimo tratto normale al primario (T), innesti distanti almeno 28U lungo il percorso e 18U in linea d aria. Curve degli affluenti derivate dallo sbocco, lati alternati e vincoli angolari globali per evitare tratti paralleli o incroci a X; geometrie incompatibili con acqua/rocce/altri corsi scartate. Rimossi i tagli boschivi dei percorsi provvisori preservando radure e stagni naturali. PASS gerarchia/angoli/distanze/determinismo, hydrology-network, stream-count, boschi20, surroundings, water-surface, save-safety. Cinque snapshot runtime in output/playwright/streams-T-*.png; audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Nessun cambio di probabilita o roadmap; salvataggi non rigenerati.
+
+10/11/2026 — REG-STREAMS-0-3: estrazione deterministica uniforme 0–3 dopo il gate del bioma (Pianura .45, Foresta/Montagne/Palude 1). Probabilita effettiva teorica di almeno un torrente: 33.75% / 75%, prima degli scarti geometrici. Massimo tre torrenti complessivi inclusi gli affluenti regionali; fiumi regionali e delta restano distinti. Confluenza al primo incrocio, scarto degli innesti ostruiti per evitare anelli. Tutti i corsi entrano nei vincoli di rilievi/boschi; boschi regionali ricalibrati dopo foci e confluenze per preservare il target del 20%. PASS conteggi/determinismo/confluenze, biomi (42), boschi, water-surface, surroundings e save-safety. Cinque snapshot runtime 0/1/2/3 e palude in output/playwright/streams-0-3-*.png. Audit Territorio: 16 invariati, zero errori, cinque avvisi schematici. Nessuna rigenerazione dei salvataggi; roadmap invariata.
+
+10/11/2026 — REG-WOODLAND-DENSITY: rimosso il minimo di 14 alberi e il conteggio su raggi nominali nei boschi isolati. Stessa griglia jittered 4.4U dei boschi regionali, filtrata sui poligoni reali e sulle radure: densita omogenea anche per macchie piccole, strette o ritagliate. Geometrie e copertura boschiva immutate. Test fallito prima e PASS dopo; cinque snapshot runtime verificati (seed 12345/4242/229/777/90210) in output/playwright/density-fixed-*.png. Audit Lab Territorio: 16 invariati, zero errori, cinque avvisi di schemi illustrativi.
+
+10/11/2026 — REG-PLAINS-WOODS-20: boschi (copertura naturale) distinti dal bioma Foresta. Pianura con target 20% della superficie, non 0–1 macchie. Ricetta autonoma calibrata e composizione regionale calibrata separatamente su centro e settori di pianura ereditata; fasce miscelate. Acque, pendii ripidi e nucleo insediativo restano esclusi. PASS sei seed autonomi e misti con tolleranza raster 1.5 punti percentuali, determinismo e regressioni biomi/idrografia/coste/persistenza. Salvataggi esistenti non rigenerati. Nessuna modifica alla roadmap o ai modelli grafici.
+
+10/11/2026 — REG-COAST-ENDS: conservati gli endpoint delle rive reali sul bordo mondo; esclusi solo gli spigoli artificiali del mare. Tutte le rive separate ricevono spiaggia/rocce e onde con normali locali; coastline principale mantenuta per compatibilita. PASS inherited-coast, coast, regional-surroundings, water-surface e hydrology-network. Verifica browser non eseguita in questo intervento.
+
+10/11/2026 — REG-SEA-DELTA-30: correzione richiesta: foce lacustre diretta, senza distributari; diramazioni solo se il ricevente e mare. Due innesti nel tratto finale del 30% misurato per lunghezza d’arco (70–79% del percorso). Canale principale dominante, rami piu stretti; sponde e bordi continui preservati. Dodici fixture mare/lago e hydrology-network PASS. Riferimento morfologico Seybold/Andrade/Herrmann, Modeling river delta formation, DOI 10.1073/pnas.0705265104; versione autori https://arxiv.org/html/0711.3283v1. Non introdotta una simulazione dinamica di erosione/sedimentazione.
+
+10/11/2026 — REG-WATER-SURFACE: eliminati i bordi chiari interni a confluenze e foci con contorni acqua disegnati prima di tutti i riempimenti. Alberi e montagne mantengono la propria occlusione. Aggiunte sponde ai laghi (anche isole interne), ritagliate al mondo senza spiagge sul bordo artificiale della mappa. Foce fluviale con due rami distributari piu stretti, innestati dall’80–86% della lunghezza reale, ciascuno termina nel ricevente; caricamento preserva le larghezze ridotte. Schiuma marina interrotta agli sbocchi. PASS dodici fixture delta mare/lago, idrografia, test pixel contorni e sponda e cinque scenari browser. Audit Territorio: 16 render invariati, zero errori, cinque avvisi di schemi illustrativi.
+
+10/11/2026 — REG-WATER-CI: rigenerato wiki/catalog.json dopo il riallineamento delle sorgenti gameplay; unica differenza sourceDigest. PASS codex-wiki e export --check. PASS anche 42 biome-recipes, mountain-density e cinque fixture browser sulla versione integrata.
+
+10/11/2026 — REG-WATER-INTEGRATION: allineato il branch sperimentale a main 89e7a2c per risolvere i conflitti della PR e riattivare CI. Preservati Codex, palette Stonecolor, reset Haulage e isolamento completo delle demo nella persistenza. Risolti i renderer mantenendo facce montane ritagliate e fallback della palette. QA locale: regional-demo, hydrology-network, Stonecolor, Haulage (10), Builder menu, stockyard (8), coast, asset-catalog e save-safety PASS. Nessun merge del lavoro regionale in main.
+
+09/11/2026 — REG-WATER-NETWORK (branch): Mare e Lago non selezionabili, neanche via Shift o URL regionale; selezione eliminata se diventa acqua. Scelte locali nuove limitate a Pianura/Foresta/Montagne/Palude; bioma ereditato bloccato nelle mappe aperte dalla regione. Colline/Valle/Fiume/Mare/Lago restano solo compatibilita delle vecchie ricette/demo. Foci geometriche con sbocco reale nel mare o lago, distinto dagli stagni; confluenze fiume/fiume, torrente/fiume e torrente/torrente con endpoint condiviso, sponde e collisioni aggiornate. I nodi regionali a grado >=3 producono affluenti, le curve a grado 2 no. Idrografia prioritaria rispetto ai rilievi nelle nuove mappe regionali. Cinque demo URL e regressioni runtime/browser PASS. Palude resta da bilanciare quantitativamente, mantenendo per ora i valori esistenti.
+
+06/11/2026 — REG-MOUNTAIN-UNIFORM-FIX: riprodotto T297 della regione 1988, seed locale 1555837107, centro e otto campioni tutti Montagne. Il controllo active() disattivava erroneamente la composizione regionale quando tutti i biomi erano uguali, ripristinando la catena legacy su un breve arco. Il contesto montano completo ora compone sempre centro e otto settori. Test dedicato fallito prima della correzione, poi PASS per tutti gli otto settori, centro e ripetibilita; PASS anche surroundings e mountain-density. Mappe prive di contesto regionale completo restano sulle proprie ricette demo.
+
+06/11/2026 — REG-MOUNTAIN-VARIATION (branch): eliminata la posa fissa a doppietti. Cime distribuite lungo tutta la catena con jitter e basi variabili; limitrofi con sagome indipendenti e distanze 6–15 U, fallback compatto solo per vincoli acqua/bioma. Quantita raddoppiata e intersezioni mantenute. Intervallo pendenze ampliato da 40–60 a 37–63 gradi, raggi principali da .52–.60/.54–.62 a .48–.64/.49–.66 settori: maggiore delta di altezza conseguente. QA spaziatura irregolare, densita, intersezioni, tagli e determinismo PASS.
+
+06/11/2026 — REG-MOUNTAIN-DENSITY (branch, non main): raddoppiate le cime principali dei settori montuosi con coppie intersecate (Montagne 8–14, Valle 6–10) e mantenute le secondarie proporzionali. Limitrofi: seconda cima per ogni massiccio accettato, fianchi sovrapposti e apici distanziati (base annidata solo in spazi vincolati); fascia esterna portata al bordo. Non si scartano piu i rilievi che oltrepassano il mondo: impronta collisioni ritagliata e facce roccia/neve tagliate in XYZ con sezioni verticali, condivise da 2D e World3D. Outline originale conservato per quote dei pini. QA densita/intersezioni/tagli/determinismo PASS; demo seed 4242: centrali 4→8 principali, limitrofi 9→18. Audit Territorio: 12 render, zero errori/cambiamenti, cinque avvisi di schemi illustrativi; confronto montano reale eseguito nella demo.
+
+06/11/2026 — REG-DEMO-OVERLAY: rimosso su richiesta il pannello sovrapposto con selettore scenari e metriche. Le demo restano accessibili dai link, isolate dai salvataggi; ritorno regionale tramite il collegamento esistente nell’header.
+
+06/11/2026 — REG-COAST-SHAPES (branch sperimentale): coste deformate in base ai lati cardinali di mare: 1 golfi ampi, 2 adiacenti promontorio roccioso e due fronti a golfo, 3 penisola collegata al lato asciutto, 4 isola con angoli raccordati. Due lati opposti restano due fronti a golfo, senza falso promontorio. Fasce e corner diagonali preservati; geometria condivisa da acqua, rendering e collisioni. Minimappa corretta per i fori terra e le radure, verifica pixel terra/mare PASS. Browser: quattro scenari e selezione mare PASS (eventi DOM). Quattro scenari selezionabili nel pannello demo (gulf/headland/peninsula/island). Mare escluso da clic/Shift e apertura locale; conversione di selezione a mare ripulisce selezione e pannello. QA quattro casi, variazione costa >7 U, rocce, connessione penisola e isola con foro PASS.
+
+06/11/2026 — REG-EIGHT-BIOMES (branch sperimentale, non main): apertura regionale con otto campioni direzionali sulla geometria Voronoi reale. Fasce 25/25/100/25/25 U, corner esterni 25×25 del diagonale e blending a prodotto. Composizione ingame di suolo, boschi, acqua con isole/fori e rilievi; il centro usa la propria ricetta. Fiumi esistenti preservati. Uscite marittime campionate su tutti i settori acqua; compatibilita costa principale mantenuta. Demo Fronte misto disponibile; test determinismo, collisioni, pesi e diagonali PASS. Cache world: mantenuto il prefisso contrattuale bridge-magnet-1 con nuovo suffisso. Browser Chromium: campionamento di tutti i 630 territori PASS, demo mista e apertura da regione verificate. Bilanciamento quantitativo e dorsali continue restano aperti. Le vecchie demo senza campioni vanno riaperte dalla regionale.
+
+05/11/2026 — REG-CENTRAL-BIOME: corretto il bioma centrale in apertura dal territorio. Regole condivise: plain→Pianura, forest→Foresta, hills regionale→Montagne, sea→Mare, swamp→Palude, lake→Lago. Fiume di confine aggiuntivo, non sostitutivo del bioma. Contesto portabile nel link, session storage opzionale; dati mancanti mostrano errore, mai Pianura implicita. Scope scelto: prima il bioma centrale, otto influenze rinviate. QA mapping, ricette e trasferimento tra schede PASS.
+
+05/11/2026 — REG-SINGLE-CELL: correzione della rimozione incompleta dei raggruppamenti. Una cella Voronoi = un territorio: dettaglio fisso 1, pesi territoriali tutti 1; isole ricavate cambiando terreno della singola cella, senza fusioni o territori vuoti. Validazione finale dopo isole/laghi. QA browser su seed 1943/42/229/4242: 630 celle = 630 territori = 630 etichette. Recuperati otto SVG Mountain 1–8 da ARQE nel percorso ICON del repository; tutte le risposte HTTP 200. Vecchie mappe aggregate rigenerate con messaggio esplicito; modifiche associate alla vecchia topologia non riapplicate a ID diversi.
+
+05/11/2026 — REG-NOSUPER: rimossi i raggruppamenti geografici di supercelle dal World Lab: comandi unione/separazione, aggregazioni automatiche dei laghi, nomi/contorni aggregati ed export superCells. Ogni territorio resta indipendente. Import JSON e ritorno dalle demo ignorano i vecchi gruppi, preservando i territori. Selezione multipla per modifica e domini politici restano separati da questo raggruppamento geografico.
+
+05/11/2026 — REG-DEMO: Builder → Mappa regionale → selezione territorio → Apri mappa locale del territorio. Demo isolate senza lettura/scrittura della partita o cloud, seed ripetibile derivato da regione/territorio, ritorno alla stessa regione e selezione. Scenari Pianura/Colline/Foresta/Fiume/Montagne/Costa con ricette attuali e misure di copertura mappa/buildable su griglia 40×40, conteggi delle componenti. Bilanciamento quantitativo ancora da decidere dopo revisione. I confinanti reali sono esposti come contesto; composizione a otto biomi non ancora nel Builder.
+
+05/11/2026 — REG-BIOME-RIVER3: traslazione rigida del fiume generato di 15 U verso il centro lungo la normale del lato selezionato. Forma, raggi e parametri del seed preservati. Offset applicato dopo selezione del candidato per evitare cambi di forma. Nuove mappe/rigenerazione, salvataggi esistenti preservati.
+
+05/11/2026 — REG-BIOME-RIVER2: sostituite le quattro anse Bezier identiche con integrazione della direzione lungo la lunghezza del corso. Raggio delle singole anse 2–3 larghezze, aperture e lunghezze variabili per seed, geometria arrotondata ispirata a Leopold/Wolman e al riferimento fornito. Test precedente: solo 2 forme dopo aver rimosso rotazioni; nuovo test: almeno 60 forme su 64 seed. PASS 64 mappe runtime, 2.000 curve, 42 mappe biomi e save-safety. Penetrazione minima 25 px sul riferimento preservata. Nuove mappe, salvataggi esistenti non rigenerati.
+
+05/11/2026 — REG-BIOME-RIVER ingame su `experiment/regional-biome-sectors` (NON MAIN): `makeEnvWater` genera i nuovi fiumi sul perimetro buildable con quattro ampie anse alternate, penetrazione interna 12 U (36 px riferimento 600 px). Acqua reale nei renderer e nei vincoli di costruzione. QA 42 mappe biomi, 64 mappe fiume con collisioni/determinismo, 36 urban checks PASS. Mappe salvate preservate; applicazione alle mappe rigenerate. Gli otto biomi e le dorsali della fixture non sono ancora integrati nel Builder.
+
+05/11/2026 — Correzione REG-BIOME-PREVIEW: le anse fluviali devono penetrare nella buildable zone. Ampiezza fluviale 24 U dalla direttrice esterna a 12 U dal bordo: penetrazione 12 U, pari a 36 px sul canvas di riferimento 600 px (minimo richiesto 25 px). Dorsale invariata esterna. Verificati tutti gli otto percorsi con entrambi i versi del seed.
+
+05/11/2026 — REG-BIOME-PREVIEW: fiume e dorsale come spline di confine separate dai biomi. Meandri fluviali ampi, dorsale più lineare; otto percorsi per elemento (lati e raccordi ad angolo), ingressi/uscite sul bordo mappa. Rimosso il canale baricentrico del bioma Fiume. QA 16 percorsi: continuità, ripetibilità, estremi e assenza di attraversamento del centro. Quote, foce e collisioni tra elementi ancora aperte; nessuna integrazione Builder.
+
+05/11/2026 — REG-BIOME-PREVIEW: otto ingressi direzionali configurabili, corner esterni 25×25 U al 100% del bioma diagonale; blending a prodotto nelle fasce da 25 U, centro 100×100 U preservato. I diagonali possono essere mare o terra indipendentemente dai lati. Campionamento Voronoi reale ancora aperto; fixture separata dal Builder.
+
+05/11/2026 — Aggiornamento REG-BIOME-PREVIEW su `experiment/regional-biome-sectors`: fasce fisse 25/25/100/25/25 U, blending smoothstep e corner continui con centro + due vicini; centro invariato, collegamento regionale ancora aperto. Verificati pesi, estremi delle fasce e continuità ai corner. Prova separata dal Builder.
+
+05/11/2026 — REG-BIOME-PREVIEW: prova cartografica disponibile su `experiment/regional-biome-sectors`, da valutare visivamente. APERTO: ereditare tutti i confinanti Voronoi (numero variabile), ripartirli lungo i lati, raccordare acqua/quote e integrare il generatore. [Specifica della prova](../REGIONAL-BIOME-SECTORS-PREVIEW.md).
+
+
+
+## 2026-11-14 — TOW-MACH-IT · Caditoie all'italiana sulle torri
+
+**IMPLEMENTATO SU BRANCH `feat/caditoie-italiane-torri`, NON MERGE.** Variante estetica delle caditoie solo per le torri in pietra: mensole alte 4× a risalti raccordate da archetti, scelta dal menù del tetto accanto a Merlato / Caditoie / Falde. Dettagli in [STATUS](STATUS.md).
+- [x] Torri quadrate, rotonde e a D; 2.5D e 3D; voce nel Lab.
+- [ ] Facoltativo: estendere lo stile alle mura con caditoie e alle porte.
+- [x] Mensole in un unico pezzo inclinato, archi a tutto sesto (senza scuro sotto) e fascia a filo, sul modello del Castello di San Giorgio (Mantova).
+- [x] Cutaway: mensole, archi e fascia del lato aperto tolti, l'ultimo piano resta visibile.
+- [ ] Facoltativo: finestrelle o merli tamponati nella fascia, come nel riferimento.
+- [x] Botola del piano di copertura disegnata sopra il tetto interno: era il bracere, ora tolto dal tetto interno (`fix/dtower-inner-roof-brazier`).
+
+## SIEGE-ATTACK-ALERTS-01 — Due allerte d'attacco automatiche configurabili (14/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** il signore interessato agli avvisi può configurare **indipendentemente**:
+- **«Allerta sempre il signore in caso di attacco»** → avviso aggiuntivo diretto al **signore superiore** nella catena feudale;
+- **«Allerta sempre gli alleati in caso di attacco»** → avviso aggiuntivo diretto agli **alleati** della campagna.
+
+Questi **non** sostituiscono l'allarme base automatico d'invasione diretto al governante assente, né costituiscono un sistema di push istantanei. [D-SIEGE-ATTACK-CONFIG-261114](DECISIONS.md#d-siege-attack-config-261114--due-allarmi-dattacco-automatici-configurabili-14112026) · [SRS mobile v0.13 draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
+
+- [ ] Rappresentare **due preferenze separate** con validazione sul server autorevole per chi può impostarle e sul contesto feudale della campagna.
+- [ ] Risolvere signore superiore e alleati dalle relazioni reali, producendo **flussi distinti** con invio/consegna simulati, senza esposizione anticipata in UI o push.
+- [ ] Rispettare assedio e requisiti del vettore: blocco messaggeri in entrambe le direzioni, piccioni in uscita consentiti e non intercettabili con rete disponibile; nessun invio fittizio.
+- [ ] QA per le **quattro combinazioni dei due flag**, diritti di configurazione, isolamento campagne, assenza di legame feudale/alleanza e messaggi duplicati.
+- [ ] **APERTO:** semantica evento «attacco» vs «invasione», titolarità/ambito dei flag, default, destinatari multipli e loro percorso, regole di scelta messaggero/piccione. Non introdurre un fallback implicito al superiore né avvisi a tutti sempre attivi.
+
+
+## SIEGE-ALERT-RECIPIENT-01 — Destinatari per l'allarme automatico di invasione (14/11/2026)
+
+**DECISO / NON IMPLEMENTATO — interpretazione precedente superata:** il messaggero **base** dell'invasione si rivolge al **governante fisicamente assente**. L'avviso al superiore **non è un fallback**: è un **flusso automatico aggiuntivo configurabile** (SIEGE-ATTACK-ALERTS-01), distinto da quello per gli alleati. [D-SIEGE-ATTACK-CONFIG-261114](DECISIONS.md#d-siege-attack-config-261114--due-allarmi-dattacco-automatici-configurabili-14112026) · [SRS mobile v0.13 draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
+
+- [ ] Risolvere il governante del territorio invaso, verificarne la **presenza fisica** e individuare il **superiore nella gerarchia feudale della stessa campagna**.
+- [ ] Creare allarme base automatico verso il **governante assente**, con percorso/tempo simulato; nessun fallback implicito al superiore e nessuna conoscenza anticipata via app/mobile/API.
+- [ ] QA su governante assente, superiore valido, isolamento tra campagne, recapito reale, destinatario mancante e blocco di assedio se il messaggero non può partire.
+- [ ] **APERTO:** comportamento dell'allarme base se il governante è presente, luogo di recapito effettivo e rischi durante invasione. Per avvisi aggiuntivi al superiore/alleati vedere SIEGE-ATTACK-ALERTS-01; **nessuna priorità/fallback** fra allarme base e allarmi opzionali.
+
+
+## SIEGE-COMMS-02 — Allarme automatico invasione e blocco bidirezionale messaggeri (14/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** ogni evento **nuovo** di invasione territorio genera **partenza automatica del messaggero d'allarme** se permessa. Durante **assedio** messaggeri ordinari **né entrano né escono**; consegne ordinarie non avvengono. I piccioni **in uscita** restano consentiti e non intercettabili se il canale è operativo. [D-SIEGE-COMMS-UPDATE-261114](DECISIONS.md#d-siege-comms-update-261114--blocco-bidirezionale-e-messaggero-automatico-allinvasione-14112026) · [SRS v0.11 PR #222](https://github.com/erykwest/CONQUER/pull/222).
+
+- [ ] Attivare dispatch automatico su **nuova invasione** del territorio: messaggero fisico e recapito simulato, non push/rapporto istantaneo; registrarne esito.
+- [ ] Validare lato server **ingresso, uscita e consegna** dei messaggeri contro stato del feudo; assedio attivo blocca tutti e tre.
+- [ ] **Proposta QA/idempotenza:** un allarme per evento distinto, non per tick; invasioni distinte generano tentativi distinti; non forzare un messaggero se il blocco è già attivo.
+- [ ] Preservare partenza piccioni in assedio, non intercettabilità e tempi di viaggio, senza canali inventati.
+- [ ] Testare sequenze invasione→assedio, partenza prima/dopo blocco, inbound senza consegna, UI e API, coerenza browser/mobile.
+- [ ] **APERTO:** destinatario e tragitto del messaggero automatico, attacchi contemporanei e ordinamento tick, sorte inbound già in transito, rischi in invasione, disponibilità piccionaie, ordini disponibili durante blocco.
+
+
+## SIEGE-COMMS-01 — Invasione vs assedio, messaggeri e piccioni (14/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** feudo **INVASO** diverso da **SOTTO ASSEDIO**. Durante l'assedio **non entrano né escono messaggeri ordinari**; i piccioni possono uscire **non intercettabili**, con tempo di recapito simulato e canale disponibile. L'invasione **non** attiva automaticamente quel blocco e **fa partire un messaggero automatico di allarme** quando permesso. [D-SIEGE-COMMS-261114](DECISIONS.md#d-siege-comms-261114--invasione-e-assedio-uscita-di-messaggeri-e-piccioni-14112026).
+
+- [ ] Integrare stato militare autorevole per `invaded` e `besieged` / stage equivalente, con criterio di transizione da decidere; non inferire assedio da semplice presenza ostile.
+- [ ] Bloccare **partenza, ingresso e consegna dei messaggeri ordinari** per il feudo sotto assedio, inclusi tentativi da app, browser e API senza duplicare la regola nel client.
+- [ ] Consentire **partenza dei piccioni** con vettore/rete operativa e recapito simulato; non applicare intercettazione ai piccioni che escono dal feudo assediato.
+- [ ] QA: invasione senza blocco automatico; assedio che rifiuta messaggeri uscenti; piccioni in uscita non intercettabili; impossibilità di spedire con canale assente; coerenza con fog of war.
+- [ ] **APERTO:** destino dei messaggeri **già partiti che non possono entrare/consegnare**, rischi dei messaggeri durante invasione, destinatario dell'allarme, prerequisiti/reti dei piccioni, soglia di assedio e ordini ammessi. **Il blocco dell'ingresso è DECISO.**
+
+
+## MOB-KPI-01 — Home: shortlist preliminare di sei indicatori (14/11/2026)
+
+**PROPOSTA ACCOLTA COME «UN BUON INIZIO», NON ANCORA APPROVATA IN VIA DEFINITIVA.** Q-08 SRS mobile **IN DEFINIZIONE**, [SRS v0.9 nella draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
+
+- [ ] Valutare sei gruppi per ciascuna scheda insediamento: **popolazione**, **tesoreria**, **scorte alimentari/autonomia**, **felicità e lealtà**, **produzione e occupazione**, **sicurezza militare**.
+- [ ] Chiarire sottovalori, soglie e segnali di rischio, andamento storico realmente disponibile, ordine per situazione di gioco e densità visiva mobile.
+- [ ] Conservare KPI e badge per posta/allarmi distinti, accesso alla dashboard di dettaglio e indicazione di freschezza del dato.
+- [ ] Nessun dato live dei vassalli senza rapporto; nessun dato dimostrativo spacciato per partita reale.
+- [ ] **Prima della chiusura Q-08:** sottoporre composizione e layout alla conferma del product owner. Nessuna implementazione o milestone assegnata.
+
+
+## MOB-PLAT-01 — Una codebase condivisa Android/iOS (14/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** la futura app mobile CONQUER sarà sviluppata con **una sola base di codice** per Android e iOS; entrambi i client useranno lo stesso backend e le stesse API del browser. [D-MOB-CODEBASE-261114](DECISIONS.md#d-mob-codebase-261114--unica-codebase-androidios-14112026) · [SRS mobile v0.8 draft #222](https://github.com/erykwest/CONQUER/pull/222).
+
+- [ ] Valutare e selezionare framework cross-platform idoneo alle interfacce gestionali, mappa strategica, notifiche push, store e sicurezza (scelta tecnica ancora aperta).
+- [ ] Progettare package di codice condiviso Android/iOS, con soli adapter nativi necessari per autenticazione, permessi/notifiche, distribuzione e lifecycle.
+- [ ] Verificare parità delle funzioni di governo remoto e delle autorizzazioni sui due OS, senza divergenza dal backend del browser.
+- [ ] QA su dispositivi Android/iOS reali, sessioni, deep link/notifiche e sincronizzazione degli ordini con lo stato server.
+- [ ] **APERTO:** condivisione UI con il browser, versioni minime OS, tooling CI/CD, app store.
+
+
+## MP-08 / RC-CHAR-01 — Un personaggio per campagna, governo multi-feudo con presenza o posta (14/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** un personaggio per account/campagna, capace di possedere e governare più feudi; **ordine diretto solo nel feudo fisicamente raggiunto**. Per feudi lontani servono **spostamento del personaggio o ordine recapitato tramite messaggero/piccione**. [D-FEUD-CHAR-261114](DECISIONS.md#d-feud-char-261114--un-personaggio-per-campagna-governo-tramite-presenza-o-messaggeri-14112026).
+
+- [ ] Modello server: vincolo `user_id+campaign_id` → personaggio singolo, presenza/posizione e stato di viaggio; territori e feudi posseduti multipli, senza slot giocatore aggiuntivi.
+- [ ] Gestione presenza: percorso e tempo di viaggio; solo il feudo fisicamente occupato consente comandi diretti al primo tick utile.
+- [ ] Ordini da remoto: selezione messaggero/piccione, spedizione/ETA/consegna, valutazione dopo il recapito; nessun comando istantaneo a feudi distanti via web/mobile/API.
+- [ ] UI/SRS: indicare posizione, feudo di presenza, possedimenti distanti, ordini in transito e relativi esiti; QA multi-feudo, multi-campagna, cambio schermata senza teletrasporto e isolamento dei permessi.
+- [ ] **APERTO:** requisito della piccionaia, velocità/costi/intercettazione, viaggio e sicurezza, deleghe, ordini trasmissibili e visibilità dei dati dei feudi *propri* ma lontani.
+
+
+## MOB-PUSH-01 — Notifiche push con consenso OS e filtri per categoria (14/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** primo rilascio mobile con autorizzazione push Android/iOS e categorie configurabili dall'utente in app; **nessun push senza consenso OS e categoria abilitata**. [Decisione D-MOB-PUSH-261114](DECISIONS.md#d-mob-push-261114--push-permesso-del-dispositivo-e-filtri-per-categoria-14112026) · [SRS mobile v0.6 draft #222](https://github.com/erykwest/CONQUER/pull/222).
+
+- [ ] Implementare flusso permesso OS e impostazioni di selezione per categoria; consentire disabilitazione e revoca senza bloccare Home, gameplay o avvisi in-app.
+- [ ] Integrare servizio eventi/notifiche con identità, campagna, membership, scelta categoria e token dei dispositivi; nessuna fuga di notifiche fra account/feudi o campagne.
+- [ ] Generare push solo per eventi già visibili al destinatario (es. messaggi e rapporti solo **dopo** consegna simulata); payload minimizzato per le anteprime del telefono.
+- [ ] QA su permesso negato/revocato, categorie attive/spente, più dispositivi, avvisi in-app indipendenti e notifiche che non anticipano i tempi del mondo.
+- [ ] **APERTO:** elenco categorie, stato iniziale dei toggle, filtri per singola campagna, modalità silenziosa, anteprime sensibili, momento della richiesta permesso. Nessuna categoria di default approvata.
+
+
+## RC-PAUSE-01 — Ordini in attesa durante la pausa regionale (13/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** durante la pausa regionale i client possono **predisporre ordini**, ma l'intera simulazione non avanza; la coda è processata al **primo tick utile dopo la ripresa**. [D-RC-PAUSE-261113](DECISIONS.md#d-rc-pause-261113--preparazione-di-ordini-durante-pause-regionali-13112026).
+
+- [ ] Distinguere server **raggiungibile ma in pausa** da server indisponibile e da dispositivo offline; leggere snapshot congelato con indicazione chiara di stato.
+- [ ] Permettere preparazione ordini sul proprio feudo mentre la simulazione è ferma, con stati *ricevuto/in attesa* e conferma di applicazione solo dopo il tick.
+- [ ] Riprendere tick, applicare solo comandi ancora validi (permessi, prerequisiti, risorse), deduplicare i retry; nessun progresso durante pausa per economia, edifici, movimenti, lettere.
+- [ ] QA su ordine validato/rifiutato al riavvio, concorrenza, isolamento di campagna, esito condiviso fra mobile/browser e nessun anticipo di simulazione.
+- [ ] **APERTO:** elenco comandi prenotabili, limiti/revoca/priorità, accettazione messaggi in coda, comportamento server irraggiungibile e sincronizzazione offline del telefono.
+
+
+## RC-REPORT-01 — Rapporti dei vassalli e frequenza dei messaggeri (13/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** KPI del feudo direttamente governato visibili dal server; KPI dei vassalli **non in tempo reale**, disponibili al sovrano solo attraverso **rapporti di messaggeri ricevuti**. Il sovrano può impostare la frequenza dei rapporti. [D-RC-VASSAL-REPORTS-261113](DECISIONS.md#d-rc-vassal-reports-261113--resoconti-dei-vassalli-a-frequenza-impostata-dal-sovrano-13112026).
+
+- [ ] Gestire routine periodiche di report dei vassalli collegate a feudi reali; frequenza configurabile da un sovrano autorizzato, con validazione server e applicazione al tick utile.
+- [ ] Generare istantanee non retroattive alla redazione, trasportarle via posta feudale con ETA e consegna simulate, mostrare origine/data di redazione e ricezione.
+- [ ] Vietare in UI e API letture live di economia, eserciti o risorse dei feudi dei vassalli, inclusi accessi incrociati con membership su altri server.
+- [ ] Test di visibilità del dato vecchio rispetto al nuovo, lettera in transito, modifica della frequenza, tick in pausa e informazioni mancanti.
+- [ ] **APERTO:** cadenze ammesse (1/7/30 giorni appartiene al prototipo `messages`, non è requisito approvato), programmazione per vassallo oppure globale, costi, permessi e selezione delle sezioni.
+
+
+## RC-TIME-01 — Tick locale vs recapito inter-feudo (decisione 13/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** un comando amministrativo al proprio feudo viene applicato al **primo tick utile**, dopo validazione lato server; una comunicazione verso altro feudo viaggia e si consegna **secondo il tempo simulato**. [D-RC-TIME-261113](DECISIONS.md#d-rc-time-261113--due-temporalita-per-gli-ordini-remoti-13112026).
+
+- [ ] Definire stati autorizzati e osservabili: ricevuto, accettato/in attesa di tick, applicato, rifiutato/fallito; vietare false conferme anticipate.
+- [ ] Messaggi inter-feudo: spedito/in transito/consegnato/errore, ETA server e accesso al contenuto solo dopo il recapito; nessuna scorciatoia mobile/browser/API.
+- [ ] Ordini di spedizione/carovana: acquisizione del comando al tick utile, viaggio e arrivo secondo i tempi del sistema strategico, non istantanei.
+- [ ] QA cross-client per comando locale al tick, comunicazione ritardata, pausa del mondo, tentativi anticipati e deduplicazione.
+- [ ] Da definire: durata tick, validazioni concorrenti, scheduling durante pausa server e semantica specifica dell'ordine al destinatario.
+
+
+## MOB-B-01 — Prima release pubblica mobile con remote control completo (decisione 13/11/2026)
+
+**DECISO / NON IMPLEMENTATO:** scelta **B** per Android e iOS; il primo rilascio pubblico deve includere i domini gestionali e strategici già approvati, non solo dashboard o messaggi. [D-MOB-B-261113](DECISIONS.md#d-mob-b-261113--prima-release-pubblica-mobile-controllo-remoto-completo-13112026) · [SRS mobile v0.2 draft PR #222](https://github.com/erykwest/CONQUER/pull/222).
+
+- [ ] **Prerequisiti:** backend multiplayer autorevole per account/campagne/feudi, API di lettura/scrittura e gestione permessi, World/Feudal, messaggistica inter-giocatore effettiva.
+- [ ] **Funzioni di release obbligatorie:** lobby e KPI multi-campagna; economia, lavoro/Job Manager, fisco, priorità dei cantieri già localizzati; militare strategico/spedizioni; diplomazia e lettere; tributi/carovane; mappa regionale e operazioni strategiche.
+- [ ] **Fuori perimetro mobile:** geometria di edifici e fortificazioni e controllo tattico diretto, riservati al Builder 3D.
+- [ ] **Gate rilascio:** test end-to-end su tutti i domini, autorizzazione multi-campagna, sync browser↔mobile, nessun pulsante fittizio o logica simulata solo sul client. Alpha/beta interne progressive consentite; prima release pubblica parziale **non accettata**.
+- [ ] **Dettagli aperti:** matrice dei comandi, privilegi feudali, sincronizzazione temporale, UX, tecnologia mobile, push opzionali, offline e target prestazionali. Nessuna data di rilascio fissata.
+
+
+## 2026-11-13 — Equipaggiamento delle unità: elmi e scudi
+
+**IMPLEMENTATO SU BRANCH `feature/unit-equipment-styles`, NON MERGE.** Scelta feudale dell'elmo e della forma dello scudo dei soldati, dal Centro di controllo › Militare › Equipaggiamento, come merlature e pendenza dei tetti. Dettagli in [STATUS](STATUS.md).
+- Cavalieri a cavallo: fatto su `feature/knight-equipment-styles` (15/11/2026), vedi [STATUS](STATUS.md).
+- Aperti: valutare un effetto di gioco (oggi solo estetico); audit del Lab da eseguire in CI.
+
+## 2026-11-13 — UI-SEL-01 · Perimetro di selezione fedele al volume
+
+**SU BRANCH `fix/selection-outline-occlusion`, NON MERGE.**
+
+- [x] Nascondere i lati del perimetro dietro il volume dell'edificio (torri, sezioni, case, civici, anche in cutaway).
+- [x] Perimetro dei civici al livello corrente (chiesa L1, taverna L1–L2), non al footprint L3.
+- [ ] Facoltativo: allineare anche l'area cliccabile dei civici al footprint del livello corrente.
+- [ ] Occlusione da parte di altri edifici davanti a quello selezionato (oggi il contorno resta sopra di essi).
+
+## RC-01…RC-07 — Hub, dashboard e remote control multi-campagna (13/11/2026)
+
+**DECISO COME PRODOTTO, NON IMPLEMENTATO.** Specifica [REMOTE-CONTROL-SCOPE](../REMOTE-CONTROL-SCOPE.md); decisione D-RC-261113. Dipendenza MP-07, backend server autorevole e World/Feudal M4.
+
+- [ ] **RC-01:** homepage che unisce lobby delle partite disponibili e campagne del giocatore con navigazione multi-server.
+- [ ] **RC-02:** KPI di ogni insediamento / campagna con fonte autorevole, stato e tempi di aggiornamento.
+- [ ] **RC-03:** controllo remoto da browser (poi Android/iOS) di economia, fisco, lavoro/Job Manager, priorità e programmazione cantieri già localizzati, militare strategico/spedizioni, diplomazia, messaggi, tributi e carovane; comandi lato server e autorizzazioni. **Esclusi** piazzamento geometrico degli edifici, progettazione spaziale delle fortificazioni e controllo tattico diretto (solo Builder/3D); catalogo granulare dei comandi ancora aperto.
+- [ ] **RC-04:** integrare posta, report e routine dalla branch `messages` dopo analisi delle 29 commit avanti / 317 indietro rispetto a `main`; preservare ETA simulati e non duplicare la diplomazia.
+- [ ] **RC-05:** unificare diplomazia, spedizioni militari, tributi/convogli e mappa regionale con World/Feudal e permessi.
+- [ ] **RC-06:** web responsive e API condivise; app Android/iOS solo in una fase successiva.
+- [ ] **RC-07:** QA sicurezza (cross-campaign, permessi sudditi, comandi duplicati/concorrenti), freschezza KPI, offline e tempi di recapito.
+
+**DECISO:** confine gestione remota vs Builder/3D (D-RC-BOUNDARY-261113), doppia temporalità (D-RC-TIME-261113) e preparazione ordini durante pausa regionale con esecuzione solo alla ripresa (D-RC-PAUSE-261113). **APERTO:** permessi, catalogo comandi, durata tick, politica/limiti di coda, modalità offline e filtri dei dati pubblici.
+
+
+## MP-07 — Profilo globale, partecipazioni multi-server e isolamento dello stato (design 13/11/2026)
+
+**DECISO / DA IMPLEMENTARE:** un account può partecipare simultaneamente a più campagne. Separare identità/autenticazione globale, record di partecipazione `user_id + campaign_id` e progressi/feudi isolati per campagna. Lobby: elenco campagne aperte e già partecipate. Nessun trasferimento fra server di risorse, edifici, armate o progresso. [Specifica](../MULTIPLAYER-SERVER-SCOPE.md#4a-separazione-account--campagna--feudo--decisione-13112026), [decisione](DECISIONS.md#d-mp-account-261113--profilo-globale-e-partecipazioni-multi-campagna-13112026).
+
+- [ ] Definire `campaign_id`, `membership_id`/partecipazione, `settlement_id`/`territory_id`, permessi e isolamento dei salvataggi.
+- [ ] Migrare schema cloud corrente: `src/settlement-app-persistence.js` salva con conflitto `user_id,world_cell_x,world_cell_y`, coordinate 0,0 e nessun `campaign_id`.
+- [ ] Separare araldica/titoli/relazioni della campagna da impostazioni e identità di account; definire nickname e storico.
+- [ ] Testare isolamento cross-campaign, accesso autorizzato, doppia iscrizione, cambio campagna, salvataggi legacy e sicurezza delle query.
+- [ ] Decidere numero massimo di campagne contemporanee, identità di personaggio, profilo pubblico e regole per account/abbandono.
+
+
+## CAM-ROT-01 — Rotazione libera della camera (13/11/2026)
+
+- **FATTO SU BRANCH** `feature/free-camera-rotation`: rotazione a qualsiasi angolo con Shift + tasto centrale, scatti di 15° con Ctrl; pan invariato su tasto centrale/destro; Q/E a 90°.
+- **APERTO — fluidità:** durante il trascinamento ogni angolo ricostruisce scena statica e mesh (~150 ms, ~6 fps). Possibili vie: ombreggiatura delle facce in shader invece che nei colori dei vertici, cache statica non invalidata finché si trascina, scena 2D semplificata durante il drag.
+- **APERTO — revisione viste discrete:** controllare a angoli intermedi le scelte che oggi presuppongono quarti di giro (facce aperte dei cutaway, lato dei costruttori, anteprima d'assedio che cerca il quarto migliore).
+
+## MP-01…MP-06 — Multiplayer, lobby e colonizzazione feudale (design 13/11/2026)
+
+**STATO: SPECIFICA / DA IMPLEMENTARE.** [Contratto dettagliato e distinzioni deciso/proposto/aperto](../MULTIPLAYER-SERVER-SCOPE.md), decisione [D-MP-261113](DECISIONS.md#d-mp-261113--ingresso-multiplayer-e-colonizzazione-feudale-13112026). Dipendenza World/Feudal (M4); nessuna lobby o sostituzione bot implementata.
+
+- [ ] **MP-01:** capienze indicative 20–100, minimo effettivo di avvio, ciclo di server, ingresso durante la campagna, dati pubblici in lobby.
+- [ ] **MP-02:** separare territori rivendicati da villaggi fondati; slot umani distinti da bot e terre non colonizzate, mantenendo una sola sovranità per territorio.
+- [ ] **MP-03:** ingresso solo su posizione idonea, con priorità alle terre libere; proprietario può aprire un possedimento alla nuova fondazione umana **come suddito** invece dello sviluppo automatico. Niente takeover di bot né eredità dei loro progressi.
+- [ ] **MP-04:** definire mastio come eventuale blocco, spazio edificabile, permessi e diritti dei sudditi, integrazione con imposte/tributi, revoca, sconfitta e nuove iscrizioni.
+- [ ] **MP-05:** multiplayer ×1, calibrazione calendario/durata campagne, disponibilità regionale e partecipazione su più server (quest'ultima **proposta**, non decisa).
+- [ ] **MP-06:** solo in fase implementativa, QA su capienza, idoneità dello spawn, permessi, persistenza, non sovrapposizione e assenza di trasferimento dati dai bot.
+
+
+## 2026-11-13 - Preparazione merge PR #206
+
+Preparazione merge PR #206: main aggiornato riconciliato mantenendo moduli e documenti di entrambi i branch. Catalogo Wiki rigenerato. Gilda riferita agli artigiani L2; dazio botteghe e relativo malcontento addebitati a L2 anziche L3, con regressione riprodotta prima del fix. Fondazione: cinque scenari superati isolatamente con Node 22, ma timing intermittente oltre 100 ms nella suite anche su Node 22; verifica Actions ancora necessaria. Nessuna soglia allentata. Suite completa e Actions da completare prima del merge. Nessuna nuova funzione demografica, giudiziaria o archetipo edilizio.
+
+## 2026-11-13 - Verifica CI PR #206
+
+Corretta asserzione livestock obsoleta dopo SOC-CLASS-02. Test comportamentali su selettore agricolo reale, riserve cave, esclusione allevatori e conservazione della vocazione su 400 case migrate superati. Suite completa e CI da completare prima del merge. Nessuna modifica runtime o bilanciamento; ROADMAP e DECISIONS invariate. Demografia, 12 archetipi e funzioni giudiziarie fuori scope.
+
+## 2026-11-12 — SOC-CLASS-02 · Nuove classi sociali L1–L4
+
+**IMPLEMENTATO SU BRANCH PR #206, NON MERGE.** [Contratto](../CIVIL-CLASS-MIGRATION.md), decisione D-SOC-CLASS-261112.
+
+- [x] Ceti nuovi e conversione una tantum di residenti, economie e salvataggi local/cloud, con identità, numeri e monete conservati.
+- [x] Fusione del lavoro agricolo/estrattivo L1, vecchie botteghe L3 → artigiani L2, mercanti/scrivani/magistrati/amministratori L3 come ruoli e routine; proprietà private L4.
+- [x] Lealtà L4 come dato distinto da felicità L1–L3; nessun trigger militare.
+- [x] Regressione dedicata e prima bonifica fixture legacy; CI da validare.
+- [ ] Famiglie migranti reali, soddisfazione per ceto e L4 lealtà attiva.
+- [ ] Cambio di proprietario/ceto come ricostruzione completa del template con trasferimento/sostituzione abitanti.
+- [ ] Template 12 combinazioni, richiesta e densità lotti D1–D3, UI L2 artigiani e lavoro effettivo L3.
+- [ ] Approvazione partizione monetaria 25%/75% e collaudi browser, salvataggi reali, CI verde.
+
+
+## 2026-11-12 — CIV-EVT-01 · Effetti sociali degli eventi
+
+**SKELETON PREVIEW SULLA BRANCH DELLA PR #206; NESSUN TICK ATTIVO.** Contratto: [CIVIC-EVENT-EFFECTS-SKELETON](../CIVIC-EVENT-EFFECTS-SKELETON.md).
+
+- [x] Catalogo iniziale di otto eventi che riusa allestimenti `feast/joust/tourney/circus/theatre`, senza duplicarne il motore.
+- [x] Modificatori diversi di felicità L1–L3 e lealtà L4; influenza temporanea sul prestigio e proiezione non invasiva delle heatmap.
+- [x] QA dedicata scritta e agganciata alla suite urbana (esito Node/CI da verificare).
+- [ ] Adattare la UI degli eventi per distinguere gli allestimenti `feast` con `civicKind` e registrare partecipanti reali.
+- [ ] Collegare costi alla fonte economica canonica, felicità/lealtà alla popolazione per insediamento, e la durata al calendario.
+- [ ] Implementare immigrazione ed emigrazione L2–L3; L1 servi senza emigrazione, L4 lealtà senza ribellioni armate.
+- [ ] Bilanciare costi, modificatori, frequenza, raggio, prerequisiti; verificare QA Node, browser e CI.
+
+
+## 2026-11-12 — URB-HEAT-01 · Urbanistica a quattro heatmap
+
+**FASE 0 — SOLO SKELETON SU BRANCH, NON MERGE.** Contratto: [URBAN-HEATMAP-SKELETON](../URBAN-HEATMAP-SKELETON.md); decisione [D-URB-HEAT-261112](DECISIONS.md).
+
+- [x] API indipendente dal Builder con griglia deterministica: domanda L1–L4, prestigio, sicurezza e criminalità (7 canali, 4 sistemi).
+- [x] Sorgenti locali positive/negative, aree protette poligonali, interpolazione e lettura del lotto senza modificarlo.
+- [x] QA del modulo scritta e agganciata a `qa/urban-regression.cjs`; **PASS/FAIL da verificare in CI**.
+- [ ] Adapter da strutture, posti di lavoro e percorsi, mura/accessi, guardie e fonte autorevole Crime.
+- [ ] Domanda effettiva dei quattro ceti calcolata da famiglie in cerca e disponibilità abitativa.
+- [ ] D1–D3 sul lotto con capienza, multi-edificio/sopraelevazione e soglie anti-oscillazione.
+- [ ] Prestigio dell'edificio e ricostruzione completa del template al cambio ceto/proprietario.
+- [ ] Migrazione dei ceti L1–L4, L3+ e dei sistemi lavoro/economia/popolanI/salvataggi.
+- [ ] Quattro overlay debug nel Builder e regressioni browser/salvataggio.
+
+
+## 2026-11-13 — GILDA-01 · La Gilda: produttività delle botteghe L3
+
+**SPECIFICA APPROVATA. FASE 1 IMPLEMENTATA SU BRANCH `feature/gilda-fase1`, NON MERGE; fase 2 aperta (richiede SCOL-01 fase 3).** La fase 1 comprende il modulo `src/settlement-guild.js` (`ConquerGuild`), il bonus in `ConquerCommerce.daily`, la Gilda unica per villaggio, la scheda Gilda e la riga nel Profilo; dettagli in [STATUS](STATUS.md). Intervista con il product owner del 11–13/11/2026 (sessione «Gilda»). Decisione [D-GILDA-261113](DECISIONS.md). Base verificata: `main` e93b22b5. La Gilda **assorbe la Casa delle Corporazioni**: nessun edificio separato. Usa le ricette di [ECO-FIL-01](BACKLOG.md) e il contratto dei ruoli istruiti [D-SCOL-261112](DECISIONS.md); non tocca imposte né decreti di [FISCO-01](BACKLOG.md).
+
+**Stato live su `main` (verificato nel codice)**
+- `guild` è un civico legato a un pozzo (`WELL_CIVIC_TYPES` in `settlement-civic-annexes.js`, uno per tipo e per pozzo entro 9U), livelli L1–L3, costo 180 oro · 110 pietra · 120 legno, 6 giorni di cantiere (`settlement-core.js`). Modelli, cantiere, crollo, incendio (L1–L2 a graticcio) e cutaway esistono. Il cutaway (`settlement-civic3d.js`, `INTERIOR.guild1–3`) ha 2/2/3 scrittoi, banco, casse e pezze di stoffa.
+- **Nessun effetto di gioco.** Le botteghe L3 (`settlement-commerce.js`) producono `SHOP_OUTPUT_PER_DAY = 1` nei giorni feriali e vendono il sabato ai borsellini delle famiglie; gli incassi vanno a `wallet.L3`.
+
+**1. Ruolo**
+- **Solo produttività.** La Gilda non fissa prezzi né qualità, non crea monopoli o quote di mestiere, non gestisce apprendisti: queste voci sono escluse.
+- **Una sola Gilda per villaggio.** Il Builder rifiuta una seconda Gilda. Nei salvataggi che ne hanno più di una conta solo quella di livello più alto (a pari livello la più antica, id minore); le altre restano edifici senza effetto.
+- **Raggio: tutto il villaggio.** Il bonus vale per ogni bottega L3 completata, senza distanza dal pozzo della Gilda.
+
+**2. Bonus per livello**
+| Livello Gilda | Bonus massimo | Posti funzionari |
+| --- | --- | --- |
+| L1 | +25% | 1 |
+| L2 | +50% | 2 |
+| L3 | +100% | 3 |
+- **Bonus effettivo = bonus massimo × resa funzionari**, con resa = `ConquerEducated.coverage('guild.official').yield` (`minYield` 0). Esempio: Gilda L3 con 2 funzionari su 3 → +67%; senza funzionari → nessun bonus.
+- **Il bonus moltiplica produzione e consumo di materie** (ricette ECO-FIL-01): una bottega produce `1 × (1 + bonus)` unità al giorno feriale e consuma la ricetta in proporzione. Senza materie non produce di più; con scorta parziale produce in proporzione. Le frazioni si accumulano come oggi le scorte di bottega.
+- **Botteghe interessate:** fabbro, orafo, vasaio, tessitore, sarto, pellettiere, casaro, affumicatore, falegname (le botteghe L3 di ECO-FIL-01). **Escluse:** officina del castello (è del signore) e birraio della taverna (servizio, non bottega).
+- Più offerta abbassa i prezzi con il ritardo di una settimana già nel mercato (`recordMarketWeek`): è un effetto voluto, non compensato.
+
+**3. Funzionari della Gilda (ruolo istruito)**
+- Descrittore registrato nel contratto D-SCOL-261112: `{id:'guild.official', branch:'lay', label:'Funzionario della Gilda', owner:'GILDA-01', seats: livello della Gilda attiva (0 senza Gilda completata), minYield:0, payer:'guild'}`.
+- Salario standard del contratto: mensile, 2 × `wage.L3` × `wageMul` (cursore dei laici di SCOL-01).
+- **`payer:'guild'` è un pagatore nuovo** (modifica a D-SCOL-261112, come `church` per CHIESA-01): addebita la Cassa della Gilda (§4).
+
+**4. Cassa e quota sulle vendite**
+- **Cassa della Gilda:** un solo numero, `State.economy.guild.gold`, trattato come un borsellino in più. Nessun libro contabile, prezzo o felicità propri: **non è un secondo ledger**. Il signore non la tocca.
+- **Quota sulle vendite delle botteghe L3**, trattenuta il sabato su ogni vendita di Beni L3 e armi delle botteghe, **dopo** tassa sulle vendite e dazio di FISCO-01, su ciò che resta all'artigiano, e versata nella Cassa. Le vendite di servizi e dell'officina del castello non pagano quota.
+- **Pareggio automatico:** a inizio mese l'aliquota si ricalcola come `(salari dei funzionari del mese − saldo della Cassa) / vendite delle botteghe del mese precedente`, tra 0 e un **tetto del 15%**. Senza vendite nel mese precedente (Gilda appena aperta) vale il tetto. Il giocatore non ha un cursore.
+- **Pagamento a fine mese:** la Cassa paga quanti funzionari può, per intero. Gli altri non sono pagati e **per quel mese non coprono il ruolo** (stessa regola dei chierici di CHIESA-01): la resa, e quindi il bonus, scende. Il resto della Cassa passa al mese dopo e riduce l'aliquota successiva.
+- La quota è una contribuzione privata della corporazione, **non un'imposta**: l'Erario non la regola e non entra nell'efficienza di riscossione. Nessun effetto proprio sulla felicità L3.
+
+**5. Stanze e annessi**
+- **Nessun annesso e nessun modello nuovo.** Le stanze esistenti del cutaway ricevono un nome per livello: banco dei funzionari (L1), archivio dei marchi (L2), sala dei maestri (L3). Gli scrittoi del cutaway (2/2/3) mostrano i funzionari coperti. L'effetto dipende solo dal livello.
+
+**6. Legame con Municipio ed Erario**
+- **Nessun legame.** Nessun decreto nuovo, nessuna esenzione, imposte invariate. L'Erario mostra la quota della Gilda in sola lettura accanto al dazio, per chiarezza.
+
+**7. Interfaccia**
+- Scheda **«Gilda»** nell'ispettore: livello, bonus massimo ed effettivo, funzionari coperti/posti, aliquota del mese e sua causa, Cassa, vendite e quota del mese, botteghe ferme «senza materie».
+- Riga «Gilda: bonus · funzionari» nel Profilo › Generale. Avviso nel Centro di controllo quando un funzionario non è pagato o il ruolo è scoperto (avviso «scoperto» già previsto da SCOL-01).
+
+**8. Persistenza** (dentro `State.economy`, già salvato in locale e su cloud)
+- Blocco `guild`: `gold`, `rate` con la causa, `month` (vendite, quota incassata, salari pagati e non pagati, azzerati a ogni mese) e `lastMonth`.
+- **Migrazione lazy** in `state()`: il blocco nasce con `gold 0` e `rate 0` se manca. `economy.version` non cambia, quindi nessun reset.
+
+**Regole transitorie**
+- Finché SCOL-01 fase 3 non porta `registerRole`/`coverage`, la resa vale 1 con Gilda completata e la quota resta a 0 (nessun salario da pagare), come per esattori (FISCO-01) e culto (CHIESA-01).
+- Finché ECO-FIL-01 fase 2 non introduce il consumo di materie, il bonus moltiplica solo la produzione.
+
+**Dipendenze:** SCOL-01 fase 3 (registro dei ruoli, `coverage`, salari) con l'estensione `payer:'guild'`; ECO-FIL-01 fase 2 (ricette e consumo); FISCO-01 fase B per l'ordine di trattenuta dopo il dazio.
+
+**Valori provvisori da bilanciare:** bonus +25/+50/+100%, posti 1/2/3, tetto della quota 15%.
+
+**Fasi di implementazione proposte (una PR ciascuna, solo dopo conferma):**
+1. Gilda attiva unica (regola di collocamento e scelta nei salvataggi), bonus per livello in `ConquerCommerce.daily` con resa transitoria 1, scheda Gilda e riga nel Profilo. Regressione dedicata `qa/guild-regression.cjs`. **Fatta su branch `feature/gilda-fase1`** (il nome della stanza per livello compare già nell'intestazione della scheda).
+2. Ruolo `guild.official` con `payer:'guild'`, blocco `guild`, Cassa, quota del sabato in `sellGoods` dopo il dazio, pareggio mensile, pagamento e mancanze, avvisi, riga in sola lettura nell'Erario, nomi delle stanze nel cutaway. Richiede SCOL-01 fase 3.
+
+**Fuori da questa specifica:** monopoli, quote di mestiere, qualità e prezzi fissati dalla Gilda, apprendisti e promozioni, annessi (Magazzino, Scuola d'arte), esenzioni o privilegi per decreto, effetti sulle botteghe dell'officina del castello.
+
+## 2026-11-13 — SCRIPT-01 · Scriptorium: la scuola degli Scolarizzati
+
+**SPECIFICA APPROVATA, NESSUN CODICE.** Intervista con il product owner del 13/11/2026 (sessione «Scriptorium»). Decisione [D-SCRIPT-261113](DECISIONS.md). Base verificata: `main` e93b22b5 (SCOL-01 fase 1 #208, CHIESA-01 fase 1 #205, ARTE grafica #195).
+
+**Confine.** Lo Scriptorium è **la scuola degli Scolarizzati** e non ridefinisce la classe. Da [SCOL-01](#2026-11-12--scol-01--scolarizzati-sottoclasse-istruita-di-l3l4) restano invariati: selettore Laico/Clericale, 4 allievi, corso di 1 anno, retta 20 oro, iscrizione automatica di lavoratori L3 poi L4, perdita degli allievi se lo Scriptorium cade. Da [CHIESA-01](#2026-11-12--chiesa-01--la-chiesa-come-entità-autonoma) restano invariati: in modo Clericale la retta la paga la Cassa, il ruolo `church.scriptoriumMaster` e il Monastero come seconda origine dei chierici. Questa specifica aggiunge solo quanto segue.
+
+**Stato live su `main`:** l'annesso `scriptorium` (Chiesa L2, 2,5×2U, uno per chiesa) ha il modello Blender esterno (`a_scriptorium` in `tools/blender/build_civic.py`), nessun effetto, nessun interno in sezione. `ConquerEducated` (#208) gestisce dati, tetto e ingaggio; corsi e ruoli sono le fasi 2–3 di SCOL-01, non ancora implementate.
+
+**1. Maestro**
+- Ogni Scriptorium ha **1 posto da maestro** del ramo del suo selettore:
+  - modo Clericale: `church.scriptoriumMaster` (già in D-CHIESA-261112, `payer:'church'`);
+  - modo Laico, **nuovo ruolo** `scriptorium.master`: `{branch:'lay', owner:'scriptorium', seats: 1 per Scriptorium Laico completato, minYield: 0, payer:'castle'}`.
+- **Senza maestro lo Scriptorium si ferma:** non iscrive nuovi allievi e gli allievi in corso restano sospesi. Il giorno di fine del corso si sposta in avanti di un giorno per ogni giorno senza maestro; nessun allievo si perde e nessuna retta torna. Con il maestro il corso riprende da dove era.
+- Il maestro è un ruolo come gli altri: si assegna dalla scheda «L3 · Istruiti» e ha salario mensile secondo SCOL-01 §5.
+
+**2. Il primo chierico: ingaggio con scelta del ramo** (modifica a D-SCOL-261112 §6)
+- Il pulsante «Ingaggia scolarizzato» chiede il **ramo**:
+  - laico: invariato, 40 oro dal castello, arrivo in 14 giorni;
+  - **chierico**: mandato dal vescovo, **60 oro** dal castello, arrivo in 14 giorni.
+- Stessa regola dei posti: all'arrivo serve un posto libero nel tetto, altrimenti l'oro torna al castello. Senza questa origine uno Scriptorium Clericale non potrebbe mai partire senza Monastero.
+
+**3. Prestigio**
+- **+1 Prestigio per ogni Scriptorium completato e in piedi**, di qualunque modo, anche fermo senza maestro. Si somma in `ConquerSiege.prestige()` con una voce `scriptorium` in `by`, leggendo gli annessi civici (stesso filtro dell'orto di corte: completato, in piedi, chiesa madre viva). Oggi nessun sistema legge il Prestigio: il punto vale quando lo leggerà qualcuno.
+
+**4. Codici miniati (opere ARTE)**
+- Nuovo archetipo ARTE **«codice miniato»**: un libro aperto su leggio, con forma fissa e colori scelti alla commissione (D-ART-COLORS-261109). Si colloca negli slot delle stanze come le altre opere ed è un bene unico e persistente (ART-251105-01…05).
+- **Solo in uno Scriptorium Clericale con il maestro presente.** Lo realizza il maestro chierico: non servono artisti ARTE.
+- Commissione: oro dal castello e tempo di lavoro. Valori provvisori: **80 oro, 60 giorni**. Uno per volta per Scriptorium.
+- **La scuola continua** mentre il maestro lavora al codice.
+- Se il maestro manca, il lavoro si sospende come il corso. Se lo Scriptorium cade o passa a Laico, la commissione si annulla e l'oro non torna.
+
+**5. Interno in sezione (ultima fase)**
+- Cutaway dello Scriptorium come quelli di Chiesa, Locanda, Municipio e Gilda (tabella `INTERIOR` di `settlement-civic3d.js`, `cutawayActive`):
+  - arredi: scrittoi, leggii, scaffali di codici, camino;
+  - figure: il maestro, se presente, e gli allievi in corso (fino a 4);
+  - il codice in lavorazione sul leggio quando c'è una commissione.
+- Lo stato si legge a colpo d'occhio: scuola attiva, ferma senza maestro, vuota.
+- Arredi e archetipo «codice miniato» entrano nell'Asset Lab con audit e baseline nella stessa PR (AGENTS.md).
+
+**6. Interfaccia**
+- Ispettore dello Scriptorium (si aggiunge a quanto previsto da SCOL-01 §9): stato del maestro (presente / scoperto: «scuola ferma»), giorni di sospensione accumulati, codice in lavorazione e giorni mancanti.
+- Scheda Istruiti: scelta del ramo nell'ingaggio, con il costo di ciascuno.
+
+**Fuori da questa specifica**
+- **Scrivani della diplomazia:** il ruolo resta senza proprietario fino a una sessione Diplomazia.
+- Copie e libri come merce L3, pergamena e filiera delle pelli.
+- Felicità o altri effetti culturali dello Scriptorium.
+- Codici realizzati dai monaci del Monastero o da artisti laici.
+
+**Dipendenze:** SCOL-01 fase 2 (corsi) e fase 3 (registro dei ruoli, scheda Istruiti); CHIESA-01 fase 2 (Cassa che paga il maestro chierico e le rette clericali); ARTE ART-251105-03 (interfaccia di commissione in gioco) per i codici miniati.
+
+**Valori provvisori da bilanciare:** ingaggio del chierico 60 oro; codice miniato 80 oro e 60 giorni; +1 Prestigio.
+
+**Fasi di implementazione proposte (una PR ciascuna, solo dopo conferma):**
+1. Maestro: ruolo `scriptorium.master`, sospensione dei corsi senza maestro, avviso nell'ispettore. Insieme a SCOL-01 fase 2–3 o subito dopo.
+2. Ingaggio con scelta del ramo (chierico 60 oro), nel motore `ConquerEducated`.
+3. Prestigio +1 per Scriptorium.
+4. Codici miniati: archetipo ARTE, commissione nello Scriptorium Clericale, Lab e audit. Dopo ART-251105-03.
+5. Interno in sezione con arredi e figure, Lab e audit.
+
+## 2026-11-12 — SCOL-01 · Scolarizzati, sottoclasse istruita di L3/L4
+
+**SPECIFICA APPROVATA. FASE 1 IMPLEMENTATA SU BRANCH `feature/scol-01-fase1`, NON MERGE; fasi 2–4 aperte.** La fase 1 comprende `src/settlement-educated.js` (`ConquerEducated`): contatori, tetto, eccedenza senza alloggio, ingaggio, salvataggio, sotto-righe nei pannelli e scheda «L3 · Istruiti». Dettagli e prove in [STATUS](STATUS.md). Intervista con il product owner del 12/11/2026 (sessione dedicata, nata dalla sessione Gilda). Contratto per le altre sessioni: [D-SCOL-261112](DECISIONS.md). Base verificata: `main` 431af30d. Gilda, Scriptorium, FISCO-01 (esattori, giudici), CRIME (tribunale), ARTE (artisti), diplomazia (scrivani) e la futura sessione Chiesa (chierici) **non definiscono la classe**: registrano i loro ruoli in questo contratto.
+
+**Stato live su `main` (verificato nel codice)**
+- La classe sociale coincide con il livello della casa: `ConquerEconomy.population()` somma `livello × 3` abitanti per casa completata e non viene salvato. Non esistono cittadini individuali né promozioni automatiche; si cambia classe solo con l'upgrade manuale della casa.
+- I lavoratori disponibili sono `floor(L2/3)`, `floor(L3/3)` e `L4` (`laborAllocation`). Oggi solo `KIND.workshop` consuma lavoratori L3; botteghe e servizi L3 sono legati alla casa.
+- Borsellini `wallet.L1–L4`, felicità per classe (mossa solo dal cibo, dalle razioni e dall'infermeria), `wage = {L1:1, L2:2, L3:3}` al mese, ricalcolato ogni anno con il benessere. Il ciclo `monthly` non paga mai salari a classi > 2.
+- Unico precedente di sottoclasse: i **soldati** (`State.siege.soldiers`), un contatore sottratto ai lavoratori L1, pagato nel `wallet.L1`, senza un secondo ledger.
+- Nessuna immigrazione: la popolazione cresce solo con le case L1 automatiche (`processVillageGrowth`).
+- Lo Scriptorium è un annesso della Chiesa L2 senza effetti (`settlement-civic-annexes.js`). I gestori di Chiesa e Locanda (`SERVICE_KINDS`, `assignService`) si assegnano solo nei test; non hanno reddito né effetti. Giudici e cancelliere del tribunale sono figure decorative (`ConquerCourtPeople`).
+
+**1. Definizione**
+- Gli **Scolarizzati** sono abitanti istruiti delle case L3 e L4, rappresentati da **contatori** come i soldati, non da una quinta classe. Usano il borsellino e la felicità della classe della loro casa: **nessun secondo ledger**.
+- **Due rami:** **laici** e **chierici**. Il ramo si cambia solo con un nuovo corso nello Scriptorium del ramo opposto.
+- **Tetto:** `posti = floor(abitanti L3 / 3) + floor(abitanti L4 / 3)`, cioè 3 posti per casa L3 (9 abitanti) e 4 per casa L4 (12 abitanti). Scolarizzati e allievi in corso insieme non superano il tetto. Ogni scolarizzato appartiene a L3 o a L4: le nuove entrate occupano prima i posti L3, poi quelli L4.
+- Uno scolarizzato **con un ruolo** esce dai lavoratori della sua classe (come i soldati da L1). Uno **senza ruolo** lavora come un L3 comune.
+
+**2. Origini**
+| Origine | Regola | Valori provvisori |
+| --- | --- | --- |
+| **Scriptorium** | Ogni Scriptorium ha un **selettore Laico / Clericale** e forma solo il ramo scelto, mai i due insieme. Il selettore si cambia dopo la costruzione: vale dalle iscrizioni successive, e gli allievi in corso finiscono nel ramo vecchio. **Iscrizione automatica**: quando ci sono posti liberi nel corso e nel tetto, iscrive un lavoratore L3 (poi L4) se il borsellino della sua classe può pagare la retta; senza fondi non iscrive. L'allievo non lavora per tutta la durata del corso. Più Scriptorium per villaggio sono ammessi (oggi è un annesso per chiesa). | 4 allievi per Scriptorium, corso di **1 anno di gioco**, retta 20 oro per allievo |
+| **Immigrazione** (mercato del lavoro, §5) | Controllo mensile; arrivano solo laici. Condizioni: felicità L3 ≥ 60 (≥ 50 se il salario è ≥ 150%), almeno una **locanda con gestore**, posti liberi nel tetto. Arrivi = `min(posti liberi, floor(base × moltiplicatore salario))`, con base 1, o 2 se la felicità L3 è ≥ 80. | — |
+| **Ingaggio del signore** | Pulsante «Ingaggia scolarizzato» nella scheda Istruiti: si pagano subito dal castello 40 oro e il laico **arriva dopo 2 settimane** (corriere). All'arrivo serve un posto libero, altrimenti l'oro torna al castello. Più ingaggi possono essere in viaggio insieme. | 40 oro, 14 giorni |
+- Le nuove partite e i vecchi salvataggi partono con **0 scolarizzati**.
+
+**3. Ruoli**
+| Ruolo | Ramo | Proprietario (posti, effetti) | Chi paga |
+| --- | --- | --- | --- |
+| Chierico: gestore della Chiesa (`SERVICE_KINDS.church`) ed eventuale personale dello Scriptorium | chierici | Sessione **Chiesa** (da aprire), Scriptorium | La Chiesa. Finché la sessione Chiesa non decide, il castello paga per conto della Chiesa |
+| Esattore (circa 1 ogni 40 abitanti; Municipio e Bargello) | laici | FISCO-01 (#197) | Castello |
+| Giudice (tribunale del Municipio L2; bassa giustizia del Balivo) | laici | FISCO-01 / CRIME | Castello |
+| Funzionario della Gilda (`guild.official`, posti 1/2/3 per livello) | laici | GILDA-01 | Cassa della Gilda, alimentata da una quota sulle vendite delle botteghe (`payer:'guild'`, D-GILDA-261113) |
+| Artista | laici | ARTE (#195) | A commissione (ARTE), nessun salario mensile |
+| Scrivano della diplomazia | laici | Diplomazia (cavalieri, corrieri), da assegnare | Castello |
+- Il **gestore della Locanda resta un L3 comune**, non uno scolarizzato.
+- Le sessioni proprietarie fissano il numero di posti e l'effetto del ruolo. Questa specifica fissa solo la classe, i rami, l'allocazione, i salari e la regola delle mancanze.
+
+**4. Allocazione e mancanze**
+- Nuova scheda **«L3 · Istruiti»** nel Job Manager, accanto a L1 e L2, con due liste (laici, chierici). Ogni ruolo ha priorità, minimo e AUTO, con lo stesso contratto di `l1Jobs` / `l2Jobs`: prima i minimi in ordine di priorità, poi l'eccedenza ai ruoli AUTO. Le assegnazioni si ricalcolano ogni giorno e non si salvano; si salvano solo le politiche.
+- **Resa proporzionale con soglia:** ogni ruolo rende `max(resaMinima, coperti / posti)`. La resa minima la sceglie il proprietario (es. FISCO: riscossione al 30% senza esattori).
+- Un ruolo con 0 coperti è **«scoperto»**: avviso nel Centro di controllo e nell'ispettore dell'edificio.
+
+**5. Salari e mercato del lavoro**
+- Salario mensile di default = **2 × `wage.L3`** (oggi 6 oro), versato al borsellino della classe dello scolarizzato (L3 o L4). Lo paga chi impiega (tabella §3). Chi non ha un ruolo non riceve salario.
+- **Cursore del salario dei laici** nella scheda Istruiti, dal **50% al 200%** del default. Il salario dei chierici lo deciderà la sessione Chiesa (fino ad allora resta al 100%).
+- Il cursore agisce sulla regola mensile dell'immigrazione (§2) e sulle partenze:
+  - con un moltiplicatore **< 0,8** se ne va 1 laico al mese, anche se ha un ruolo (prima quelli senza ruolo);
+  - con la felicità L3 **< 40** se ne va 1 laico in più.
+- «Cervelli attratti da altri stati» e «emigrati verso altri stati» sono un **aggancio per la diplomazia**: in questa fase non si simulano regni stranieri.
+
+**6. Felicità**
+- Nessun bisogno nuovo di merci.
+- **Disoccupazione istruita**, controllata il sabato: se più del 25% degli scolarizzati è senza ruolo, la felicità L3 perde 0,5. Se tutti hanno un ruolo, guadagna 0,2.
+
+**7. Perdita delle case**
+- Se il tetto scende (incendio, demolizione o retrocessione di case L3/L4), l'eccedenza diventa **«senza alloggio»** per 4 settimane, senza ruolo né salario. Se nel frattempo si libera un posto rientra, altrimenti emigra: prima i laici senza ruolo, poi gli altri.
+- Gli allievi in corso non si perdono per mancanza di case. Se si perde lo Scriptorium, si perdono i suoi allievi, e le rette non vengono restituite.
+
+**8. Persistenza** (dentro `State.economy`, già salvato in locale e su cloud)
+- Blocco `educated`:
+  - `lay` e `clergy`, ciascuno come `{L3, L4}`;
+  - `homeless` (eccedenza con il giorno di inizio);
+  - `courses[scriptoriumId] = {mode, students:[{cls, branch, endDay}]}`;
+  - `hires` (ingaggi in viaggio, con giorno di arrivo e oro pagato);
+  - `wageMul`;
+  - `roles` (ordine e impostazioni come `l1Jobs`);
+  - ultimo controllo mensile.
+- **Migrazione lazy** in `state()`: il blocco nasce a zero se manca. `economy.version` non cambia, quindi nessun reset.
+
+**9. Interfaccia**
+- Sotto-riga «di cui scolarizzati N (laici / chierici, con ruolo / liberi / in formazione / senza alloggio)» sotto L3 e L4: nel Profilo (Generale, Persone, Job Manager), nel tooltip della popolazione della shell e nella serie settimanale `panelHistory`.
+- Ispettore dello Scriptorium: selettore Laico/Clericale, allievi e mesi mancanti.
+- Scheda Istruiti: ruoli, coperti/posti, cursore del salario, ingaggio, arrivi e partenze del mese.
+
+**Dipendenze introdotte:** l'immigrazione richiede l'**assegnazione automatica dei gestori** di Chiesa e Locanda (oggi solo nei test). Il gestore della Chiesa diventa un chierico, quello della Locanda resta un L3 comune.
+
+**Valori provvisori da bilanciare:** corso (4 allievi, 1 anno), retta 20, ingaggio 40 oro e 14 giorni, salario 2 × `wage.L3`, intervallo del cursore 50–200%, soglie di felicità 40/50/60/80, ±0,5/0,2 di felicità, 4 settimane senza alloggio.
+
+**Fasi di implementazione proposte (una PR ciascuna, solo dopo conferma):**
+1. Modello dati, tetto, salvataggio e migrazione, eccedenza senza alloggio, sotto-righe nei pannelli, ingaggio. **Fatta su branch `feature/scol-01-fase1`.**
+2. Scriptorium: selettore, corsi, retta e iscrizione automatica.
+3. Registro dei ruoli, scheda Istruiti (priorità, minimo, AUTO), resa e avvisi, salari, felicità. Primo ruolo: gestore della Chiesa, con assegnazione automatica dei gestori di Chiesa e Locanda.
+4. Mercato del lavoro: immigrazione ed emigrazione mensili e cursore del salario.
+I ruoli di Gilda, FISCO, CRIME, ARTE e diplomazia entrano con le PR delle rispettive sessioni.
+
+**Fuori da questa specifica:** la Chiesa come entità autonoma (tesoro, offerte, decima ecclesiastica, gerarchia, salario dei chierici), che va in una sessione dedicata; i regni stranieri che attirano o cedono scolarizzati; merci come pergamena o libri; specializzazioni oltre i due rami; promozione delle case per istruzione.
+
+## 2026-11-10 — FISCO-01 · Municipio, Erario, Bargello e Palazzo del Balivo
+
+Specifica di progetto concordata con l'utente il 09–10/11/2026. Ordine deciso dall'utente: **prima i modelli, poi le funzioni**. Decisione D-FISCO-261110.
+
+- **Fase A — modelli: IMPLEMENTATO SU BRANCH `feature/bargello-balivo`, NON MERGE.** Bargello L1–L2 (casa a graticcio o in pietra con torretta d'angolo, galleria di vedetta o merli, campanella, banco degli esattori, finestra della cella) e Palazzo del Balivo L1–L2 (magazzino della decima, scala esterna coperta o in pietra con loggia) in `tools/blender/build_civic.py`; voci del Builder, collocamento (pozzo di quartiere / contado), cantiere, crollo, incendio L1, cutaway per piani (sala delle guardie ed esattoria; magazzino della decima e sala della bassa giustizia), Asset Lab e Codex. **Nessun effetto di gioco.**
+  - **APERTO (fase A):** campanella del Bargello nella rete delle campane d'allarme (`ConquerAlarmBells`); figure di esattori e guardie nel cutaway; stato «cutaway» dei civici nel Lab (assente per tutti i civici); costi e tempi da bilanciare (proposta 140 oro/90 pietra/60 legno, 5 giorni; Balivo 170/120/80, 6 giorni).
+- **Fase B — funzioni: IMPLEMENTATO SULLO STESSO BRANCH (12/11/2026), NON MERGE.** Nuovo modulo `src/settlement-treasury.js` (`ConquerTreasury`), scheda **ERARIO** nel Profilo, regressione `qa/treasury-regression.cjs` (18 controlli). Fatto: quattro imposte nuove con riscossione il sabato dopo il mercato; efficienza per centro, quartiere (Bargello) e contado (Balivo, raggio 30U); sala delle guardie +5%; sospensione in allarme o assedio; sette decreti; leva straordinaria che tiene all'armeria una quota fissa, scelta per seme, degli uomini adulti delle case L1/L2; il cursore `levy` è rimosso. Lo stato vive in `State.economy.treasury`, quindi si salva con l'economia.
+  - **APERTO (fase B):**
+    - Il pedaggio scatta solo in `ConquerCommerce.confirmArrival` sugli arrivi `external`. Oggi nessun sistema chiama quella funzione, quindi il pedaggio rende 0 finché non arrivano carovane forestiere.
+    - CRIME (C-01) non è caricato nel gioco: Coprifuoco e Amnistia agiscono solo sulla felicità. L'amnistia chiama `ConquerCrime.amnesty` se esiste. Le guardie del Bargello e della sala delle guardie non alimentano ancora l'ordine pubblico.
+    - Bassa giustizia del Balivo: ruolo `fisco.judge` registrato, nessun effetto finché la proposta Giustizia non è confermata.
+    - Gli uomini in leva restano nei turni di lavoro L1/L2 e non entrano ancora nella riserva unica (MIL-RES-01).
+    - Esattori e giudici: i ruoli si registrano con `ConquerEducated.registerRole` quando il motore Scolarizzati esiste. Fino ad allora ogni posto conta come coperto (resa 1).
+    - Numeri provvisori, da bilanciare: aliquote massime, malumore (−1 a settimana all'aliquota massima), costi e durate dei decreti, tetti di Bargello (65/80%) e Balivo (60/75%), resa dei quartieri senza Bargello (×0,6) e del contado senza Balivo (×0,5).
+- **Fase B — specifica (concordata):**
+  - **Erario:** nuova scheda di primo livello nel Profilo, accanto a Job Manager e Trade. Un cursore per imposta con anteprima di gettito e felicità per classe. Le aliquote si impostano sempre, anche senza Municipio.
+  - **Imposte:** tassa sulle vendite (esistente, globale), testatico L1–L2 settimanale, dazio sugli incassi delle botteghe L3, pedaggio su convogli e carovane in entrata, decima in natura su campi e produttori L4. Ognuna toglie felicità solo alla classe che la paga.
+  - **Il Municipio non fa né gestisce le tasse: ne fissa l'efficienza di riscossione.** Incassato = dovuto × efficienza; il resto è evasione persa. Tetto per livello del Municipio del centro L1 60% · L2 75% · L3 85% (massimo assoluto 95%). Esattori (~40 abitanti ciascuno) dalla sala del consiglio — **personale istruito: classe, formazione e salari di esattori e giudici vengono dal contratto «Scolarizzati» (abitanti L3+ istruiti, sessione dedicata, D-… in DECISIONS), non da FISCO-01**; senza esattori 30%. Guardia cittadina +5%, felicità bassa fino a −20%, assedio o allarme sospendono la riscossione.
+  - **Bargello (edificio nuovo con torretta, uno per pozzo, solo nei quartieri):** esattori e guardie cittadine del quartiere (L1 2+2, L2 4+4 e cella di sicurezza). Senza Municipio del centro non riscuote. I quartieri lontani senza Bargello rendono meno.
+  - **Sala delle guardie del Municipio:** comando delle guardie cittadine (ordine pubblico e arresti per CRIME), +5% nel centro e bonus di coordinamento a tutti i Bargelli. Le guardie cittadine sono civili pagati, distinte dai soldati della Caserma (MIL-RES-01, #193).
+  - **Palazzo del Balivo (a sé stante, non legato a un pozzo, nel contado):** decima su campi e produttori fuori dai quartieri, bassa giustizia rurale (le cause gravi al tribunale del Municipio), ordine sulle strade fuori città. Non è la residenza del signore.
+  - **Decreti dalla sala del consiglio**, a durata e da rinnovare: Festa patronale (L1), Coprifuoco (L1), Elemosina (L1), Calmiere del pane (L2), Amnistia (L2), Bando di fiera (L3), **Leva straordinaria** (L2, o L1 in assedio/allarme): tiene mobilitata la milizia esistente (armeria → miliziano, `recruitArmory`) anche senza allarme per 2–4 settimane, 10–30% degli uomini L1/L2, entra nella riserva unica, sostituisce il cursore `levy` oggi inattivo; ripetuta entro 8 settimane pesa il doppio sulla felicità.
+  - **Giustizia — PROPOSTA, da confermare:** CRIME resta l'unica fonte di criminalità/ordine/tensione (C-01, nessun secondo ledger); tribunale L2 con cursore di severità (multa, gogna, prigione, patibolo), multe nel tesoro; senza tribunale i fermati restano in cella fino a capienza.
+- **Fuori scope / idee a parte:** appartamento del signore in visita nel mastio o in una torre; il Palazzo del Balivo non assorbe il Bargello.
+- **Osservazioni sullo stato attuale (non corrette qui):** il cambio di livello del Municipio è gratuito e istantaneo; gli annessi (orto di corte) sono gratuiti e istantanei; i posti `watchmen`/`prisoners` sono calcolati ma nessun sistema li legge.
+
+
+## 2026-11-12 — CHIESA-01 · La Chiesa come entità autonoma
+
+**SPECIFICA APPROVATA. Fase 1 (Cassa, offerte, lasciti, dono, scheda) IMPLEMENTATA SU BRANCH `feature/chiesa-fase1`, NON MERGE; fasi 2–3 aperte.** Intervista con il product owner del 12/11/2026 (sessione «Chiesa», nata dalla sessione Scolarizzati).
+- **Fase 1, cosa c'è:** modulo `src/settlement-church.js` (`ConquerChurch`) con blocco `State.economy.church` a migrazione lazy, offerte domenicali, lasciti a fine anno, dono 10/50/100 dal castello con +1 di Favore ogni 10 oro e registro delle cause. Scheda «Chiesa» nell'ispettore (classico e UI v2), riquadro «Chiesa: cassa · favore» nel Profilo › Generale. Agganci in `ConquerEconomy.tick`: domenica (offerte), fine anno (lasciti, contati nel mese che chiude), fine mese (chiusura del mese). Regressione `qa/church-regression.cjs` nel workflow Economy flows.
+- **Regola transitoria:** finché SCOL-01 non porta `ConquerEducated.coverage('church.priest')`, una chiesa completata celebra con resa 1. Il Favore, per ora, si muove solo con i doni. Capienza 60/150/300 già usata per la quota di fedeli serviti delle offerte.
+- **Fase 1, cosa manca (fasi 2–3):** salari dei chierici e riserva, rette clericali, Monastero, messa, prediche, carità, feste, co-finanziamento dei cantieri, avvisi nel Centro di controllo, altre cause del Favore. Decisione [D-CHIESA-261112](DECISIONS.md). Base verificata: `main` 431af30d. Completa [SCOL-01](BACKLOG.md) (contratto D-SCOL-261112, branch `docs/scolarizzati`, non ancora su `main`): definisce chi paga i chierici (`payer:'church'`) e come si fissa il loro salario. Usa la decima di FISCO-01 (branch `feature/bargello-balivo`, fase B non implementata) solo come fattore del Favore.
+
+**Stato live su `main` (verificato nel codice)**
+- `SERVICE_KINDS.church = {operatorTier:3, kind:'worship', income:'not-simulated'}` in `settlement-commerce.js`. Il gestore (`assignService`) è una casa L3 assegnata solo nei test, senza reddito né effetti.
+- Annessi della Chiesa (`settlement-civic-annexes.js`): Cimitero (L1, intrinseco), Orto delle erbe e Sagrato (L1), Scriptorium e Ospizio (L2), Monastero e Chiostro (L3). Nessuno ha effetti. Livelli della chiesa L1–L3 (`CIVIC_LEVEL_TYPES`); costo 320 oro, 360 pietra, 110 legno, 18 metallo; 10 giorni di cantiere. Non risulta un limite al numero di chiese.
+- Economia (`settlement-economy.js`): borsellini `wallet.L1–L4` e `castleGold`; `monthly` paga solo le classi 1–2; la felicità per classe si aggiorna nel mercato del sabato (`weekday 5`; il giorno 0 è lunedì) e la muovono solo il cibo, le razioni e l'infermeria; `annual` ricalcola `wage`.
+- La stanza `chapel` del castello esiste: dà prestigio 1 nell'assedio (`settlement-siege.js`) e nessun altro effetto.
+
+**1. L'istituzione e la Cassa**
+- **Una sola istituzione «la Chiesa» per villaggio**, anche con più chiese. Ogni edificio chiesa è una parrocchia. La **sede** è la chiesa di livello più alto; a pari livello vale la più antica (id minore). Il capo della Chiesa locale è un pievano (sede L2) o un arciprete (sede L3).
+- **Cassa della Chiesa:** un solo numero, `State.economy.church.gold`, trattato come un borsellino in più. Non ha libri contabili, prezzi, merci o felicità propri, quindi **non è un secondo ledger**. Il signore non può spenderla: vi agisce solo con doni, cantieri e politiche.
+- Senza chiese completate la Cassa resta ferma: nessuna entrata, nessuna spesa e salari dei chierici non pagati.
+
+**2. Entrate**
+| Voce | Regola | Valori provvisori |
+| --- | --- | --- |
+| **Offerte** (domenica, `weekday 6`) | Per ogni classe: `abitanti serviti × quota × resa del culto × (0,5 + felicità/100)`. Si tolgono dal borsellino della classe, mai oltre il saldo. Sono servite solo le classi raggiunte da una chiesa con chierici (capienza §5). Il signore non le tocca. | quota L1 0,02 · L2 0,05 · L3 0,1 · L4 0,3 oro |
+| **Lasciti** (fine anno, in `annual`) | Il 2% di `wallet.L3` e di `wallet.L4`, ciascuno solo se la felicità della classe è ≥ 50 e c'è almeno una chiesa completata. | 2%, soglia 50 |
+| **Dono del signore** | Pulsante «Dona alla Chiesa» (10 / 50 / 100 oro) dal `castleGold`. Alza il Favore (§6). | +1 di Favore ogni 10 oro |
+- **Decima:** l'unica è **quella del signore** (FISCO-01, in natura, riscossa dal Balivo). **La Chiesa non riscuote una decima e non ne riceve una quota.** Una decima del signore alta pesa sul Favore (§6).
+
+**3. Spese, in ordine fisso di priorità**
+1. **Salari dei chierici** (§4), sempre per primi.
+2. **Rette clericali:** quando uno Scriptorium è in modo Clericale, la retta di 20 oro per allievo la paga la Cassa e non il borsellino della classe (modifica SCOL-01 §2). Senza fondi non iscrive. Lo Scriptorium in modo Laico continua a far pagare il borsellino della classe.
+3. **Carità** (richiede l'Ospizio): ogni sabato spende 0,05 oro per ogni abitante L1/L2 assistito, fino alla capienza dell'Ospizio. A copertura piena dà +0,2 di felicità a settimana a L1 e L2, in proporzione all'oro speso.
+4. **Feste religiose:** al massimo una all'anno, se l'eccedenza sopra la riserva è ≥ 60 oro. Costa 40 oro e dà +1 di felicità una tantum a tutte le classi. Non si somma alla Festa patronale del Municipio (FISCO-01) nella stessa settimana: vale la maggiore.
+5. **Co-finanziamento dei cantieri:** quando il signore costruisce o migliora una chiesa o un suo annesso, la Cassa paga fino al 50% dell'oro del preventivo, entro l'eccedenza sopra la riserva. Il resto lo paga il castello.
+- **Riserva:** carità, feste e cantieri partono solo con la Cassa sopra **6 mesi di salari dei chierici**. Salari e rette non dipendono dalla riserva.
+
+**4. Chierici e salario**
+- I chierici sono gli scolarizzati del ramo `clergy` di SCOL-01. **Li paga la Cassa: il castello smette di pagarli per conto della Chiesa.**
+- **Il salario lo decide la Chiesa, una volta all'anno (`annual`), senza cursore per il giocatore.** Base 2 × `wage.L3`. Moltiplicatore 125% se la Cassa copre ≥ 12 mesi di salari, 75% se ne copre < 3, altrimenti 100%. Il moltiplicatore e la causa compaiono nella scheda Chiesa.
+- **Mancanza di fondi:** ogni mese la Cassa paga quanti chierici può, per intero e in ordine di priorità dei ruoli. Gli altri restano non pagati e per quel mese **non coprono il ruolo**: la resa scende secondo la regola di SCOL-01.
+- **Posti** (ruoli registrati con `payer:'church'`):
+  - `church.priest`: per ogni chiesa completata L1 1 · L2 2 · L3 3 (parroco, pievano o arciprete, più i chierici);
+  - `church.scriptoriumMaster`: +1 per ogni Scriptorium in modo Clericale (maestro);
+  - `church.monk`: +2 per ogni Monastero (L3).
+  - `minYield` 0: una chiesa senza chierici non celebra.
+- **Monastero come origine dei chierici:** ogni Monastero tiene un corso fisso Clericale di 2 novizi all'anno, **senza retta**, con la stessa iscrizione automatica e lo stesso tetto dello Scriptorium. Aggiunge un'origine a D-SCOL-261112 §6: resta il motore degli scolarizzati a crearli.
+
+**5. Messa e prediche**
+- **Messa** (domenica): ogni chiesa con chierici serve una capienza di fedeli (L1 60 · L2 150 · L3 300 abitanti). La quota servita è `min(1, capienza totale / abitanti)` e vale per tutte le classi. Le classi servite guadagnano `+0,2 × resa del culto × quota servita` di felicità a settimana. Resa del culto = `coverage('church.priest').yield`.
+- **Prediche**, con chierici presenti:
+  - **Favore ≥ 70:** a favore del signore, +0,1 di felicità a settimana a tutte le classi e un modificatore negativo della tensione di CRIME;
+  - **Favore ≤ 30:** contro il signore, −0,3 a settimana a L1 e L2 e un modificatore positivo della tensione.
+- **Ordine pubblico:** resta di CRIME, unica fonte (C-01). La Chiesa registra solo un modificatore; finché CRIME non lo legge, l'effetto è solo felicità.
+
+**6. Favore della Chiesa verso il signore**
+- Un indicatore da 0 a 100, che parte da 50 e si aggiorna il sabato. Il pannello ne elenca le cause.
+| Sale | Scende |
+| --- | --- |
+| Dono del signore: +1 ogni 10 oro | Decima del signore sopra il 10% (FISCO-01): −0,2 a settimana |
+| Cappella (`chapel`) nel castello: +0,1 a settimana | Esecuzione al patibolo o alla forca: −2 per evento (quando CRIME le simula) |
+| Cassa sopra la riserva: +0,1 a settimana | Ruoli dei chierici scoperti: −0,2 a settimana |
+- In questa fase **niente interdetto né scomunica**: restano un aggancio per la diplomazia.
+
+**7. Interfaccia**
+- Scheda **«Chiesa»** nell'ispettore di ogni chiesa, uguale per tutte perché l'istituzione è una. Mostra: Cassa e riserva; entrate e uscite del mese per voce; Favore con le cause; posti e coperti dei chierici per ruolo; salario deciso e causa; ultima e prossima festa; pulsante «Dona alla Chiesa».
+- Una riga «Chiesa: cassa · favore» nel Profilo › Generale. Avvisi nel Centro di controllo per chierici non pagati e per Favore ≤ 30.
+
+**8. Persistenza** (dentro `State.economy`, già salvato in locale e su cloud)
+- Blocco `church`:
+  - `gold`, `favor`, `wageMul` con la causa;
+  - `month` (entrate e uscite per voce, azzerate a ogni mese) e `lastMonth`;
+  - `feast` (anno dell'ultima festa e settimana attiva);
+  - `favorLog` (ultime cause, al massimo 8).
+- **Migrazione lazy** in `state()`: il blocco nasce con `gold 0` e `favor 50` se manca. `economy.version` non cambia, quindi nessun reset.
+
+**Dipendenze:** fasi 1–3 di SCOL-01 (contatori `clergy`, registro dei ruoli, `coverage`). FISCO-01 fase B per l'aliquota della decima; finché manca, il termine del Favore è inattivo. CRIME per il modificatore di tensione e per le esecuzioni. Decreto Festa patronale (FISCO-01) per la regola di non cumulo.
+
+**Valori provvisori da bilanciare:** quote delle offerte, fattore di felicità, lasciti 2% e soglia 50, doni 10/50/100, soglie del salario 3/12 mesi e moltiplicatori 75/125%, posti 1/2/3 + 1 + 2, capienze 60/150/300, +0,2 di messa, ±0,1/−0,3 di prediche, soglie del Favore 30/70, carità 0,05 e +0,2, festa 40 oro su soglia 60 con +1, co-finanziamento 50%, riserva di 6 mesi, novizi 2 l'anno.
+
+**Fasi di implementazione proposte (una PR ciascuna, solo dopo conferma e dopo SCOL-01 fase 3):**
+1. Blocco `church`, migrazione, offerte, lasciti, dono, scheda Chiesa e riga nel Profilo.
+2. Ruoli dei chierici con `payer:'church'`, posti per livello, salario dalla Cassa con regola annua e mancanze, rette clericali, corso del Monastero.
+3. Messa, Favore, prediche, carità, feste e co-finanziamento dei cantieri; aggancio del modificatore CRIME.
+Regressione dedicata: `qa/church-regression.cjs`.
+
+**Fuori da questa specifica:** decima ecclesiastica o quota della decima alla Chiesa (scartate); interdetto, scomunica, vescovo e Chiesa sovraregionale (diplomazia); merci della Chiesa (cera, vino da messa, pergamena); effetti di Chiostro, Orto delle erbe, Sagrato e Cimitero; feste indette dal signore attraverso la Chiesa.
 
 ## 2026-11-10 — ECO-FIL-01 · Filiere produttive complete
 
@@ -164,7 +1086,9 @@ BC-251105-05 tetto interno delle torri: **sul branch `feature/tower-inner-roof`,
 
 **Lavoro non pubblicato (worktree locali, nessuna PR):** BC-251105-05 tetto interno dentro i merli (`feature/tower-inner-roof`, 1 commit + modifiche) · BC-251105-09 tetti della Long house (`feature/longhouse-roofs`, solo modifiche non committate) · `figure-billboards` (19 commit) · `combat-ai` (26 commit su remoto, ultima nota: assedio di 5 minuti fallito).
 
-**Catalogo edifici — ancora solo progetto, da confermare prima del codice:** Presidio antincendio, Avamposto, funzioni del Municipio, Gilda/Corporazioni, effetti dello Scriptorium, Bagni pubblici, Lavatoio, Approdo fluviale, Cortile domestico, Giardino dei semplici, Carbonaia, Palazzo del Balivo. Il Corpo di Guardia esiste come stanza `guard` e sala del Municipio, senza pattuglie né allarmi propri.
+**Catalogo edifici — ancora solo progetto, da confermare prima del codice:** Presidio antincendio, effetti dello Scriptorium, Bagni pubblici, Lavatoio, Approdo fluviale, Cortile domestico, Giardino dei semplici, Carbonaia. Avamposto: fatto con MIL-RES-01. Municipio e Palazzo del Balivo: progettati in FISCO-01 (10/11/2026). Gilda (con la Casa delle Corporazioni): progettata in GILDA-01 (13/11/2026). Il Corpo di Guardia esiste come stanza `guard` e sala del Municipio, senza pattuglie né allarmi propri.
+
+**Catalogo edifici — ancora solo progetto, da confermare prima del codice:** Presidio antincendio, Gilda/Corporazioni, Bagni pubblici, Lavatoio, Approdo fluviale, Cortile domestico, Giardino dei semplici, Carbonaia. Avamposto: fatto con MIL-RES-01. Municipio e Palazzo del Balivo: progettati in FISCO-01 (10/11/2026). Il Corpo di Guardia esiste come stanza `guard` e sala del Municipio, senza pattuglie né allarmi propri.
 
 **Seguiti aperti trasversali:** lanterna della Colombaia sul montaggio `roof` di `ROOM_EXTERIOR`; reclutamento dei cavalieri sullo stock reale dei cavalli; rintocco della campana nel motore audio; cosa legge il Prestigio; gronda e pluviale della Cisterna; assedio strategico S-01/02/03/04/10/15; CRIME C-01 e C-05; MARCH collegato a mappa e salvataggi; navi in gioco (MARE); ARTE: grafica e ancoraggi su branch, commissione/inventario aperti; UI v2 fase 5.
 
@@ -271,10 +1195,10 @@ Tutte **DA CONFERMARE dall'utente** prima di qualsiasi codice (effetti, compatib
 
 - **Presidio antincendio:** upgrade di Pozzo/Cisterna; secchi e uomini pronti che spengono prima gli incendi nel raggio (sistema fuoco esistente).
 - **Avamposto:** ~~torre isolata che evolve Corpo di guardia e Stazione di posta~~ → **implementato su branch il 09/11/2026, vedi MIL-RES-01** (upgrade delle torri isolate; il Corpo di Guardia si fonde nella Caserma).
-- **Municipio:** funzioni amministrative.
+- **Municipio:** funzioni amministrative → progettate in FISCO-01 (10/11/2026).
 - **Gilda:** assorbe la Casa delle Corporazioni.
-- **Scriptorium (Chiesa L2):** servono effetti simulati.
-- **Annessi civici:** Bagni pubblici L1–L3, Lavatoio (civico L1 o upgrade del Pozzo), Approdo fluviale, Cortile domestico (upgrade delle case), Giardino dei semplici (annesso di Chiesa L2 / Ospedale), Carbonaia (annesso del Taglialegna), Palazzo del Balivo.
+- **Scriptorium (Chiesa L2):** progettato in [SCRIPT-01](#2026-11-13--script-01--scriptorium-la-scuola-degli-scolarizzati) (13/11/2026).
+- **Annessi civici:** Bagni pubblici L1–L3, Lavatoio (civico L1 o upgrade del Pozzo), Approdo fluviale, Cortile domestico (upgrade delle case), Giardino dei semplici (annesso di Chiesa L2 / Ospedale), Carbonaia (annesso del Taglialegna). Palazzo del Balivo → FISCO-01, modelli su `feature/bargello-balivo`.
 - **Seguiti aperti:** Colombaia sul montaggio `roof` di `ROOM_EXTERIOR`; reclutamento dei cavalieri sullo stock reale dei cavalli; suono della campana; cosa legge il Prestigio.
 - **Scartati, da non riproporre:** Ghiacciaia, Dogana, Stazione di posta (→ Avamposto), Scuola autonoma, Casa delle Corporazioni autonoma, Torre campanaria (→ Campana).
 
@@ -364,6 +1288,11 @@ Fogli provini dell'audit: impaginazione a griglia per le categorie e sfondo neut
 - **Trabucco**: DA FARE serventi come unità di combattimento (oggi figure, `crewHit` solo via API), salvataggio con la partita, munizioni, il tiro parte a 9U dal bersaglio (volley) invece che dalla macchina; picchi residui ~200 ms nel tick di combattimento all'avvio dell'assalto (12 percorsi A* in un tick: distribuirli su più frame).
 - **Performance**: restano 20–40 ms di passata frontale WebGL (`world3dFrontMs`, include la copia del canvas WebGL sul 2D) e la popolazione a zoom alto; misurare con il pannello visibile e un profilo CPU. `lotKindForHouse` è chiamata centinaia di volte per frame.
 - **Personaggi 3D**: fatto per contadini, lavoratori, carpentieri e marinai. **DA FARE**: carrettieri sui veicoli e figure della battaglia navale ancora in 2D; i costruttori stanno solo sul lato verso la camera (con la profondità non serve più); misurare con un villaggio grande di giorno (nel test erano visibili solo 4 abitanti).
+- **Abiti da mestiere** (`settlement-wardrobe.js` `ROLES`): **IN MAIN** (#213). Hanno abiti propri i 7 bottegai, muratore, taglialegna, cavatore, minatore, carpentiere navale, pastore, carrettiere, carceriere, marinaio/pescatore. Li indossano al lavoro e nel tragitto; la stagione riempie solo gli slot liberi. **DA FARE**: ruoli ancora senza figura (prete, oste, cerusico, esattori, personale del castello, rimboschimento), che avranno abito e gesto quando nasceranno le figure; cocchiere e nobili restano con i colori fissi attuali.
+- **Figure dei ruoli mancanti** (`settlement-staff-people.js`): **SU BRANCH** `feature/new-role-figures`. Hanno una figura il personale delle stanze del castello, il prete, l'oste, le guardie e gli esattori del Bargello, i giudici del Balivo e i boscaioli del disboscamento. **DA FARE**: scolarizzati e chierici fuori dalla chiesa, mercante L4 in viaggio, guardia del levatoio, mugnaio (il mulino ha 0 lavoratori), vignaiolo (nessuna struttura); il personale delle stanze è decorativo e non legato ai posti dell'economia.
+- **Animazioni di lavoro** (`settlement-work-anim.js`): **IN MAIN** (#207) vasaio (argilla al tornio), tessitore (spola) e sarto (ago e filo); ora tutti i mestieri delle botteghe L3 lavorano. **DA FARE**: rimboschimento senza figure (solo contorno e percentuale; la pala è pronta e mai usata); nei campi si animano solo gli uomini adulti delle case L1–L2 e solo in aratura, semina e raccolta; vigneto e laboratorio di equipaggiamento hanno lavoratori solo nei conti (nessun edificio).
+
+- **Personaggi 3D**: fatto per contadini, lavoratori, carpentieri e marinai; **carri, carretti, carrozze con cavalli e conducenti come carte depth-tested sul branch `feature/vehicles-depth-cards` (12/11/2026, non merge)**. **Cavallo 2D ridisegnato** (proporzioni, passo, gear) sullo stesso branch, con anteprime in gioco `qa/horse-preview.mjs`; **animali 2D (bestiame e fauna) rivisti allo stesso modo** (13/11/2026: zampe a due segmenti che si piegano a ginocchio/garretto, anche sul cavallo; passo per specie, collo di capra e mucca, Lab `Animali 2D`); **capsuloide per la profondità delle figure** (D-CAPSULE-261113: verticale per le persone, orizzontale per gli animali; bestiame e lupi come carte con capsula e collider; 15/11/2026 anche eventi, giostra con i suoi cavalli, gogna/forca/patibolo, tribunale e personale nelle stanze in cutaway; campo eventi senza fondo verde). **DA FARE**: cavalieri in combattimento e messaggero come carte con capsula orizzontale; prigionieri dietro le sbarre (sbarre in 3D) e lancia della giostra ancora 2D; capsula orizzontale anche per il tiro dei carri; verifica in partita con bestiame vicino a case e cutaway; figure della battaglia navale e staffetta a cavallo dell'Avamposto ancora in 2D; cavalieri in combattimento ancora fuori dal depth buffer (disegnati con `withUrbanFigureOcclusion`); i costruttori stanno solo sul lato verso la camera (con la profondità non serve più); misurare con un villaggio grande di giorno (nel test erano visibili solo 4 abitanti).
 - **Mura sulla banchina**: fatto il magnete. **DA FARE**: contorno di selezione alla quota della banchina; porte sulla banchina (torri fatte); muro che continua dalla banchina alla terraferma.
 - **Attracchi lungo la banchina**: fatto. **DA FARE**: segnare in gioco gli slot liberi/occupati (oggi visibili solo via `ConquerQuay.berths`).
 - **Banchina fuori whitezone**: fatto (parte da dentro, prosegue oltre). **DA FARE**: allo spigolo il lastricato delle due banchine si sovrappone (doppio strato, possibile z-fighting); un unico raccordo d'angolo sarebbe più pulito.
@@ -690,7 +1619,11 @@ Circle: niente resa automatica del feudo; conquista di settore solo con presenza
 ## UX — UI v2 «Isole» (opt-in `?ui=2`, 26/10/2026)
 
 - **FASI 1–3 SU MAIN (`5ddefa6`):** guscio, API di gioco, Costruisci, Gestisci, comandi struttura.
-- **FASE 4 SU BRANCH `feature/ui-defend`, NON MERGE:** modalità Difendi (comando, zone, pattuglie, allarme; prove d'assedio solo DEV).
+- **FASE 4 SU MAIN (`ebdf084`, PR #88):** modalità Difendi (comando, zone, pattuglie, allarme; prove d'assedio solo DEV).
+- **FIX RAPIDI SU BRANCH `fix/ui-v2-quickfixes`, NON MERGE (10/11/2026):** Argilla nella barra risorse; stato senza id grezzi (`select`) e frasi legacy più frequenti in italiano; indicatore di salvataggio con stato «errore»; tooltip delle barre in alto aperti verso il basso e trattenuti nella finestra; barre in alto senza sovrapposizione sotto 1220px; valori composti di Panoramica a capo; circa 35 stringhe di `shell.js` spostate in `i18n-it.js`.
+- **ISPETTORE — FIX RAPIDI SU BRANCH `fix/inspector-quickfixes`, NON MERGE (15/11/2026):** crash del disegno degli animali (raggio negativo) che svuotava mappa e UI v2; etichette e avviso di capienza del piazzale magazzino; ispettore visibile anche in Gestisci e Difendi; niente blocco stanze vuoto su mura e moli; motivo delle opzioni grigie nel tooltip; conferma prima di demolire o annullare un cantiere; «Costo di costruzione» nel piè di scheda.
+- **ANCORA APERTO — ispettore (review 15/11):** schede interne Funzioni/Difesa/Aspetto/Struttura (la torre ha 17 righe, il doppio dell'altezza visibile); anteprima di costo e giorni prima delle modifiche a pagamento; pannelli per molo, banchina e industrie (produzione, scorte, resa); motivi di blocco restituiti in italiano da `ConquerSoldiers.outpostBlocker` e dagli altri moduli.
+- **ANCORA APERTO — parità con la legacy (review 10/11):** torre L4, luoghi per eventi, deposito, accampamento, cantieri navali, rimozione foresta, scelta bioma; ispettori di porte, pontile, banchina, rotazione industrie. Catalogo strumenti unico al posto delle tre copie (`index.html`, `settlement-builder-ux.js`, `shell.js`) e comandi veri in `game-api.js` al posto di `press(selector)`.
 - **ANCORA APERTO — fase 5:** messaggi di stato/log tradotti, pannello attraversamenti come dati, UI v2 default, rimozione `settlement-builder-ux.js` e aggiornamento degli id usati da `qa/ui-combat-regression.mjs`.
 
 ## Hardening: cause strade / DEV / WebGL (23/10/2026)
@@ -1155,8 +2088,22 @@ Fonti precise: [ECONOMY](sources/ECONOMY-2026-10-12.md), [VISUAL/AUDIO](sources/
 
 D-051 risolta per scelta dell’utente: campi solo L2. Recupero residuo jobmanager nel branch fix/fields-l2-only; chiusura dopo merge e rimozione della branch storica.
 
+- **FIELD-LEND · CODICE SU BRANCH `fix/idle-peasants` (13/11/2026, [D-FIELD-LEND-261113](DECISIONS.md)):** contadini senza lavoro al campo, rifatta dopo SOC-CLASS-02 (#206, campi L1). Ogni mattina lavorativa il campo chiede solo le strisce ancora aperte (0 in crescita o fuori stagione); gli L1 in più vanno a un altro campo in stagione, poi agli altri lavori L1 (cantieri, taglialegna, carrettieri…) secondo il Job Manager. Al campo si disegnano esattamente gli L1 che l'economia paga lì, uno per striscia; la squadra di fondazione non coltiva. Chi finisce a metà turno rientra a piedi e viene riassegnato la mattina dopo.
+  - **DA VERIFICARE:** prova in partita reale (maggio con un cantiere aperto: i contadini L1 compaiono al cantiere; ottobre a striscia finita: rientro a piedi). CI del branch.
+  - **APERTO, non in questa PR:** il salario dei campi si paga ancora sul personale presente nel giorno di paga (fuori stagione 0); resa autunnale e calendario fisico restano O-002.
+
 ## 2026-11-11 — Integrazione urgente figure-billboards (pre-merge)
 
 Recuperati i cinque commit residui 31cb32d, 2408397, 8e541fd, e4b06cc, 0ff543d sulla base main e4230db. La parte navale precedente era già in #150. Civili, lavoratori, carpentieri e marinai entrano nel depth buffer World3D; atlante 2048 con caselle 64px, 1024 posti, pose condivise, riuso LRU e upload incrementale. Conservati LOD militare, addOutbuilding, ingresso del mastio, arte e guarnigioni. Recuperati layout TEST, cache accesso pozzi, traslazione mesh navi, indice spaziale ostacoli e Trabucco DEV con scenario QA.
 
 QA locale: 165 regressioni deterministiche PASS. Aggiunta prova browser sul painter reale dei civili, occlusione da murature, riuso atlante, picking militare e fallback Canvas; inserita nel workflow Main fixes. Audit Lab completo: 1473 render, 0 errori; rivisti Popolazione, Truppe e confronto browser dietro la torre. Firme di queste categorie invariate; annotata la revisione nella baseline, senza accettare i 184 cambiati locali o i 15 stati tetto nuovi estranei a questa integrazione. Prova browser dedicata PASS. CI remota da completare prima del merge. Nessun nuovo modello, nessuna modifica alle priorità ROADMAP. Restano i limiti originari del Trabucco: non persistito, serventi colpibili solo via API, munizioni non simulate.
+
+
+## 2026-11-15 — Integrazione PR #199 (pre-merge)
+
+Riallineata UI2 quickfix alla main 6c5ac79; conflitto solo nel diario, mantenute entrambe le voci. PASS locale Builder menu, 5 runtime-integrity test, export Wiki fresco. Browser Chromium PASS: Argilla, barre senza sovrapposizioni a 1024/1180/1440px, saved/error/unsaved (anche errore cloud), nessun pageerror. CI del nuovo HEAD da verificare prima del merge. ROADMAP e DECISIONS invariate: nessuna nuova regola di simulazione.
+
+
+## 2026-11-15 — Integrazione PR #162 dopo UI2 (pre-merge)
+
+Riallineato il branch regionale alla main a0ed0c7, preservando FIELD-LEND #212 e UI2 #199. Merge automatico senza conflitti di codice; regole regionali e limiti gia documentati invariati. Verifica finale affidata alla CI del nuovo HEAD (suite completa, Sea and pier, browser e Asset Lab) prima dello squash. ROADMAP e DECISIONS invariate rispetto alla PR: nessun requisito aggiunto in integrazione.

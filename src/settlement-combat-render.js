@@ -240,7 +240,10 @@
       const s=w2s(p,z);
       M2.draw(ctx,s.x,s.y,Math.max(1.5,State.view.scale*5.75),{kind:'knight',facing:b.x>=a.x?1:-1,
         mode:r.mode,from:r.from,blend:r.blend,t:r.t,seed:peasantHash(id)%7,coat:HORSE_COATS[peasantHash(id)%7%4],
-        pose,livery:livery||soldierLivery(id),paint});
+        pose,livery:livery||soldierLivery(id),paint,
+        // The realm's own knights wear the feudal equipment once one is chosen (until then, and for
+        // foes with a livery override, the original great helm and pointed shield).
+        helmet:livery?null:State.policies?.unitHelmet||null,shield:livery?null:State.policies?.unitShield||null});
     });
     return true;
   }
@@ -265,6 +268,8 @@
       g.setLineDash([]);
     }
     window.ConquerCamp?.drawEncampments(g);
+    // Bandit lair tents and brigand roadblocks, under the figures.
+    window.ConquerOutlaws?.draw(g,{fog:!!combat.fog,seen:p=>spotted(p,observers())});
     const anim=window.ConquerCombatAnim;
     const characters=[];
     for(const u of combat.units){
@@ -326,7 +331,7 @@
       for(const e of combat.enemy){
         const down=e.defeated||e.stats?.hp<=0;
         if(down&&!anim?.dying(e))continue;
-        if(e.kind==='wolf'){
+        if(e.kind==='wolf'||e.faction==='wildlife'){
           // Wildlife remains a visible neutral creature by day; at night the
           // exact same entity is rendered while its combat flag turns hostile.
           if(!down&&(!combat.fog||spotted(e,sightSources)))window.ConquerWolves?.draw(g,e);
@@ -334,7 +339,7 @@
         }
         if(!spotted(e,sightSources))continue;
         const livery=window.ConquerCombatRules?.liveryOf(e.faction||'dev_hostile');
-        const figure=e.kind==='knight'||e.combatKind==='knight'?'knight':e.kind==='archer'||e.combatKind==='archer'?'archer':'spearman';
+        const figure=e.kind==='knight'||e.combatKind==='knight'?'knight':e.kind==='archer'||e.combatKind==='archer'?'archer':e.weapon==='axe'?'axeman':'spearman';
         drawPosedFigure(e,figure,e.id,livery,e,0,.08+(e.z||0));
         if(down)continue;
         if(e.torch)window.ConquerFire?.drawTorch(g,w2s(e,.08+(e.z||0)),State.view.scale,e.id);

@@ -11,7 +11,7 @@ const src=f=>fs.readFileSync(path.join(__dirname,'..','src',f),'utf8');
 const window={},State={season:'summer',seed:7,heraldry:{c1:'#123456',c2:'#abcdef',c4:'#fedcba'}};
 const perf={t:0,now(){return this.t}};
 const ctx=vm.createContext({window,State,Math,Object,Number,Array,Map,Set,String,Float32Array,performance:perf});
-for(const f of ['assets/scatter-model.js','assets/civic-models.js','assets/event-models.js','settlement-mesh3d.js','settlement-events3d.js'])vm.runInContext(src(f),ctx);
+for(const f of ['settlement-util.js','assets/scatter-model.js','assets/civic-models.js','assets/event-models.js','settlement-mesh3d.js','settlement-events3d.js'])vm.runInContext(src(f),ctx);
 const M=window.ConquerEventModels,E=window.ConquerEvents3D;
 
 // Catalog: indexed parts, palette indices in range.
@@ -73,7 +73,7 @@ for(const [name,setup] of Object.entries(E.SETUPS)){
  assert.ok(E.SETUPS.feast.items.filter(i=>i.m==='civic:prop_tableSet').length===16,'the feast has sixteen tables')}
 console.log('PASS setups ('+Object.keys(E.SETUPS).join(', ')+') fit their ground without overlaps');
 
-// Lifecycle: idle ground is a green pad; props arrive while preparing, leave while clearing.
+// Lifecycle: idle ground is a thin earth border (no green pad); props arrive while preparing, leave while clearing.
 const n=E.SETUPS.joust.items.length,count=ev=>E.setupItems(venue('festivalGround',{event:ev})).length;
 assert.equal(count(undefined),0,'idle ground has no props');
 assert.equal(count({setup:'joust',phase:'planned'}),0,'planned events build nothing yet');
@@ -83,7 +83,10 @@ assert.equal(count({setup:'joust',phase:'clearing',progress:1}),0,'cleared at th
 assert.equal(E.setupItems(venue('festivalGround',{w:6,h:10,event:{setup:'joust',phase:'active'}})).length,0,'a setup that does not fit is not shown');
 const idle=E.meshes(venue('festivalGround',{id:'g0'}),2);
 assert.equal(idle.length,1,'idle ground: one mesh');
-assert.ok(idle[0].col.every(c=>/^#[67]/.test(c))&&idle[0].groupBias[0]<=-1e6,'the idle ground is green and paints first');
+assert.ok(idle[0].col.every(c=>c==='#8a7656')&&idle[0].groupBias[0]<=-1e6,'the idle ground is an earth border (no green pad) and paints first');
+{const xs=[],ys=[];idle[0].pos.forEach((v,i)=>{if(i%3===0)xs.push(v);else if(i%3===1)ys.push(v)});
+  // Only a border: no triangle covers the middle of the lot.
+  assert.equal(idle[0].pos.length/9,8,'four border strips, no fill');}
 assert.ok(idle[0].pos.every((v,i)=>i%3!==2||Math.abs(v-2)<.05),'the ground pad sits on the ground level');
 console.log('PASS lifecycle: idle pad, preparing / active / clearing props');
 
@@ -152,7 +155,7 @@ console.log('PASS livery: realm heraldry on stands and stages, primary pairs on 
 // dynamic layer, anchored at the staff and only while the game runs.
 {
   const lot=venue('arenaLot',{id:'w1'}),fixedTris=E.meshes(lot,0).reduce((n,m)=>n+m.col.length,0);
-  const allTris=E.setupItems(lot).reduce((n,it)=>n+(E.triangles(it.m,{x:0,y:0},0)?.col.length||0),0)+4;   // + the lot's grass pad
+  const allTris=E.setupItems(lot).reduce((n,it)=>n+(E.triangles(it.m,{x:0,y:0},0)?.col.length||0),0)+8;   // + the lot's earth border (four strips)
   assert.ok(fixedTris<allTris,'cloth is out of the static scene');
   State.structures=[lot];State.clock={speed:1};
   perf.t=1000;const a=E.dynamicMeshes();perf.t=1200;const b=E.dynamicMeshes();

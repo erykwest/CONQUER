@@ -74,7 +74,9 @@ try{
   // Work animations open the live villager on the right tool.
   await page.evaluate(()=>window.ConquerAssetCatalog.select('figure:work:chop'));
   assert.equal(await page.locator('#actions [aria-pressed="true"]').getAttribute('data-action'),'chop');
-  assert.equal(await page.evaluate(()=>window.ConquerAssetCatalog.items.filter(x=>x.family==='Lavori').length),7);
+  // One Lab entry per work gesture of settlement-work-anim.js.
+  const work=await page.evaluate(()=>({lab:window.ConquerAssetCatalog.items.filter(x=>x.family==='Lavori').length,tools:Object.keys(window.ConquerWorkAnim?.TOOLS||{}).length}));
+  assert.ok(work.tools>=10&&work.lab===work.tools,'every work gesture is in the Lab: '+JSON.stringify(work));
   // The two industries use their rotatable 3D catalogue entries.
   for(const key of ['quarry','loggingCamp']){
     const id='model:ConquerIndustryModels:'+key;

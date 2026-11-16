@@ -33,7 +33,7 @@ function structureSceneLayers(s){
   if(s.type==='house'||s.type==='storageYard')return['ground','shadow','base'];
   if(isCivicAnnex(s))return['ground','shadow','base'];
   if(window.ConquerIndustries?.is(s))return['ground','shadow','base'];
-  const shadow=['house','tower','gate','wall','palisade','built','market','tavern','church','townhall','guild'].includes(s.type)?['shadow']:[];
+  const shadow=['house','tower','gate','wall','palisade','built','market','tavern','church','townhall','guild','bargello','balivo'].includes(s.type)?['shadow']:[];
   if(isCastlePart(s)||isRaisedPlacementCastlePoint(s))return[...shadow,'castleBody','castleFront'];
   // Palisades and timber fortifications are rendered in the non-union base layer.
   if(s.type==='palisade'||isWoodTower(s)||isWoodGate(s))return[...shadow,'base','castleFront'];
@@ -112,9 +112,10 @@ const WEATHER_ZOOM_THRESHOLD=.5;
 const SUPABASE_URL='https://fwpmcyxggvdtsuatovzo.supabase.co';
 const SUPABASE_KEY='sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv';
 // Asset Lab sandbox: one fixed world, so audit captures repeat across runs and machines.
-const initialSeed=(()=>{if(window.__CONQUER_ASSET_LAB__)return 20261023;const k='conquer.seed.0.0';let v=localStorage.getItem(k);if(!v){v=String(Math.floor(Math.random()*2147483647));localStorage.setItem(k,v)}return Number(v)})();
+// Blocked storage (SecurityError) or a corrupted value must not stop boot.
+const initialSeed=(()=>{if(window.__CONQUER_REGIONAL_DEMO__)return window.__CONQUER_REGIONAL_DEMO__.seed;if(window.__CONQUER_ASSET_LAB__)return 20261023;const k='conquer.seed.0.0',r=Math.floor(Math.random()*2147483647);let v=null;try{v=localStorage.getItem(k)}catch{}if(v&&Number.isFinite(+v))return +v;try{localStorage.setItem(k,String(r))}catch{}return r})();
 const PROVISIONAL_RESOURCES=Object.freeze({gold:10000,population:10000,food:10000,wood:10000,stone:10000,clay:10000,metal:10000,equipment:10000});
-const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:'test',season:'summer',seasonOverride:null,weatherOverride:null,neighborBiomes:{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2,builtWide:2},buildMasonryMaterial:'stone',resources:{...PROVISIONAL_RESOURCES},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,privateMasonryMaterial:'stone',nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
+const State={structures:[],environment:[],relief:null,tool:{kind:'select'},draft:null,selectedId:null,pendingWellId:null,seed:initialSeed,cell:{x:0,y:0},biome:window.__CONQUER_REGIONAL_DEMO__?.biome||'test',season:'summer',seasonOverride:null,weatherOverride:null,neighborBiomes:window.__CONQUER_REGIONAL_DEMO__?.surroundingBiomes||{},view:{scale:.72,x:0,y:0,rotation:0},buildLevels:{tower:1,gate:1,wall:1,wallTier:2,builtWide:2},buildMasonryMaterial:'stone',resources:{...PROVISIONAL_RESOURCES},policies:{tax:25,rations:50,levy:10},village:{name:null,wellId:null,founded:false,growthVersion:3,socialSchemaVersion:2,accessRoadVersion:0,growthStep:0,privateMasonryMaterial:'stone',nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries:null,baseRoadAngle:null},clock:{day:0,speed:0,lastSpeed:1},daylightOverride:null,dirty:false,supabase:null,user:null};
 // DEV VISUAL PALETTE BEGIN: presentation only; never change structure material/cost/HP.
 const DEV_VISUAL_PALETTE_KEY='conquer.dev.visualPalette.v1';
 State.visualPalette=(()=>{try{return localStorage.getItem(DEV_VISUAL_PALETTE_KEY)==='clay'?'clay':'stone'}catch{return'stone'}})();
@@ -229,7 +230,7 @@ function snapStructureAngle(angle){return structureAngleFromStep(structureRotati
 function structureUsesDiscreteAngle(s){
   // A tower against a stone quay keeps the quay's exact angle (settlement-quay.js).
   if(s?.type==='tower'&&s.quaySnap)return false;
-  return !!s&&['tower','gate','house','market','tavern','church','training','plaza','townhall','guild'].includes(s.type);
+  return !!s&&['tower','gate','house','market','tavern','church','training','plaza','townhall','guild','bargello','balivo'].includes(s.type);
 }
 function applyStructureRotation(s,angle=s?.angle||0){
   if(!s)return 0;
@@ -274,12 +275,13 @@ const COSTS={
   plaza:{gold:90,stone:80,wood:10},
   townhall:{gold:240,stone:210,wood:85,metal:10},
   guild:{gold:180,stone:110,wood:120},
+  bargello:{gold:140,stone:90,wood:60},balivo:{gold:170,stone:120,wood:80},
   training:{gold:90,stone:24,wood:70}
 };
 // Stone towers of the same tier, against the square one: curved masonry costs more, the open-
 // backed semitower half.
 const TOWER_SHAPE_COST=Object.freeze({square:1,round:1.5,dee:1.25,half:.5});
-const BUILD_DAYS={tower:[4,7,11,18],woodTower:[2.5,4],frameTower:6.5,gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,townhall:8,guild:6,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,longhouseBase:1.2,longhousePerU:.8,road:1,house:2.2,field:1.5};
+const BUILD_DAYS={tower:[4,7,11,18],woodTower:[2.5,4],frameTower:6.5,gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,townhall:8,guild:6,bargello:5,balivo:6,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,longhouseBase:1.2,longhousePerU:.8,road:1,house:2.2,field:1.5};
 const GROWTH_INTERVAL_DAYS=2.5;
 // One simulated 24-hour day lasts 48 real seconds at 1×.
 // All time controls multiply this common rate (3× = 16 s/day; 10× = 4.8 s/day; 100× = 0.48 s/day).
@@ -329,6 +331,42 @@ const ROOF_PITCH_COST=Object.freeze({
 function roofPitch(){const v=Number(State.policies?.roofPitch);return ROOF_PITCHES.includes(v)?v:45}
 function roofPitchTan(){return Math.tan(roofPitch()*Math.PI/180)}
 function crenelStyle(){const v=State.policies?.crenelStyle;return CRENEL_STYLES.includes(v)?v:'flat'}
+// Feudal unit equipment (State.policies.unitHelmet / unitShield): the realm's foot soldiers wear one
+// helmet and carry one shield shape. Re-equipping pays per soldier place in the barracks, at the rate
+// of the target style; 'cap' and 'oval' are the original look.
+const UNIT_HELMETS=Object.freeze(['cap','kettle','nasal','barbuta','greathelm']);
+const UNIT_HELMET_COST=Object.freeze({
+  cap:Object.freeze({metal:1}),
+  kettle:Object.freeze({metal:1,gold:1}),
+  nasal:Object.freeze({metal:2,gold:1}),
+  barbuta:Object.freeze({metal:2,gold:2}),
+  greathelm:Object.freeze({metal:3,gold:3})
+});
+const UNIT_SHIELDS=Object.freeze(['oval','round','heater','kite','pavise']);
+const UNIT_SHIELD_COST=Object.freeze({
+  oval:Object.freeze({wood:1}),
+  round:Object.freeze({wood:1,metal:1}),
+  heater:Object.freeze({wood:1,gold:1}),
+  kite:Object.freeze({wood:2,gold:1}),
+  pavise:Object.freeze({wood:3,gold:2})
+});
+function unitHelmet(){const v=State.policies?.unitHelmet;return UNIT_HELMETS.includes(v)?v:'cap'}
+function unitShield(){const v=State.policies?.unitShield;return UNIT_SHIELDS.includes(v)?v:'oval'}
+function unitEquipmentSoldiers(){return Math.max(0,Math.round(Number(window.ConquerSiege?.capacity?.()?.soldiers)||0))}
+function unitEquipmentQuote(kind,style){
+  const table=kind==='shield'?UNIT_SHIELD_COST:UNIT_HELMET_COST,soldiers=unitEquipmentSoldiers(),cost={};
+  for(const [k,v] of Object.entries(table[style]||{}))cost[k]=v*soldiers;
+  return{kind,style,soldiers,cost};
+}
+function applyUnitEquipment(kind,style){
+  const list=kind==='shield'?UNIT_SHIELDS:kind==='helmet'?UNIT_HELMETS:null;
+  if(!list||!list.includes(style)||style===(kind==='shield'?unitShield():unitHelmet()))return{ok:false,reason:'unchanged'};
+  const quote=unitEquipmentQuote(kind,style);
+  if(!canAfford(quote.cost)||!spendCost(quote.cost))return{ok:false,reason:'funds',quote};
+  State.policies[kind==='shield'?'unitShield':'unitHelmet']=style;
+  markDirty(false,false,true);draw();
+  return{ok:true,quote};
+}
 const CHIMNEY_SPACING=1.5;
 const WELL_PLAZA_SIZE=3;
 // The paved square around the well is a no-build zone: houses, lots, fields and buildings
@@ -356,7 +394,11 @@ const STRUCTURE_VARIANTS=Object.freeze({
     // Signal fire: a great pyre on a flat crenellated deck (rules: settlement-soldiers.js).
     signalFire:Object.freeze(['none','pyre']),
     // Inner roof: a pyramid/cone set back inside the merlons of a crenellated top (BC-251105-05).
-    innerRoof:Object.freeze(['off','on'])
+    innerRoof:Object.freeze(['off','on']),
+    // Look of a machicolated top: 'standard' single corbels, or 'italian' — tall corbels of four
+    // stepped courses (4x the standard height) joined by small arches, as on Italian communal towers.
+    // Aesthetic only: hasMachicolation() and every rule read roofStyle alone.
+    machicolationStyle:Object.freeze(['standard','italian'])
   }),
   gate:Object.freeze({
     roofStyle:Object.freeze(['battlement','pitched','flat']),
@@ -371,7 +413,7 @@ const STRUCTURE_VARIANTS=Object.freeze({
   })
 });
 const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
-  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid',hoarding:'off',bell:'none',signalFire:'none',innerRoof:'off'}),
+  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid',hoarding:'off',bell:'none',signalFire:'none',innerRoof:'off',machicolationStyle:'standard'}),
   gate:Object.freeze({roofStyle:'battlement',upper:'stone',hoarding:'off'}),
   wall:Object.freeze({skin:'standard'}),
   built:Object.freeze({skin:'standard'})
@@ -402,16 +444,20 @@ const BIOMES=Object.freeze({
   test:{label:'TEST',field:'#2a2818'},
   plains:{label:'Pianura',field:'#2a2818'},
   hills:{label:'Colline',field:'#2f2a19'},
-  valley:{label:'Vallata',field:'#28271a'},
+  valley:{label:'Vallata',field:'#2f2a19'},
   river:{label:'Fiume',field:'#24271c'},
   forest:{label:'Foresta',field:'#1f2516'},
   mountains:{label:'Montagne',field:'#2b2620'},
-  sea:{label:'Mare',field:'#2a2818'}
+  sea:{label:'Mare',field:'#2a2818'},
+  swamp:{label:'Palude',field:'#313d29'},
+  lake:{label:'Lago',field:'#263a35'}
 });
 // The castle guard post merged into the Barracks (D-MIL-RES-261109): 'guard' is a town hall room only.
 const FUNCTION_CATALOG=['barracks','armory','storage','granary','kitchen','stables','nobleRoom','workshop','chapel','commonHall','throneHall','treasury','prison','latrine','infirmary','dovecote','cistern','mews'];
 // Ground floor under the arches of a W1 portico: stables, armourers' workshop, carts/stores.
 const PORTICO_FUNCTIONS=Object.freeze(['stables','workshop','storage']);
+// Small (W1) towers other than the Mastio: the spiral stair fills the shaft, only these rooms fit (user, 04/11/2026).
+const W1_TOWER_FUNCTIONS=Object.freeze(['dovecote','latrine','prison','treasury','armory']);
 const FUNCTION_LABELS={guard:'Guard post',barracks:'Barracks',armory:'Armory',storage:'Materials store',granary:'Granary',kitchen:'Kitchen',stables:'Stables',quarters:'Quarters',nobleRoom:'Noble chambers',workshop:'Armament workshop',chapel:'Chapel',commonHall:'Common hall',throneHall:'Throne hall',treasury:'Treasury',prison:'Prison',latrine:'Latrine',infirmary:'Infirmary',dovecote:'Dovecote',cistern:'Cistern',mews:'Falconry',council:'Council chamber',tribunal:'Tribunal'};
 // Town hall: one room per floor, as many as the civic level (L1 = the ground floor only),
 // shown one floor at a time in the floor-by-floor cutaway.
@@ -545,6 +591,11 @@ function hasMachicolation(s){
   if(s.type==='wall')return wallTier(s)>=2&&wallSkin(s)==='machicolation';
   return false;
 }
+
+// Italian machicolations (aesthetic): a machicolated stone tower drawn with the tall arched corbels.
+function towerItalianMachicolation(s){return !!s&&s.type==='tower'&&hasMachicolation(s)&&structureVariant(s,'machicolationStyle')==='italian'}
+// Value of the roof menu: the Italian machicolations are a fourth choice beside the three roof styles.
+function towerRoofMenuValue(s){return towerItalianMachicolation(s)?'machicolationItalian':towerRoofStyle(s)}
 
 // Oriented stone towers (geometry in settlement-tower-shapes.js): the open-backed semitower
 // 'half' and the D tower 'dee'. Keyed by tier; s.size = 1 / 1.5 / 2 as for square towers,
@@ -792,11 +843,15 @@ function houseSideChimney(s){
     z0:0,z1:houseRidgeHeight(s)+.31,index:0,side:true,wall,normal};
 }
 function houseStructureHeight(s){const turret=houseTurretInfo(s);return turret?Math.max(houseRidgeHeight(s),turret.roofH):houseRidgeHeight(s)}
-const CIVIC_TYPES=Object.freeze(['market','tavern','church','training','plaza','townhall','guild']);
-const CIVIC_LEVEL_TYPES=Object.freeze(['market','tavern','church','plaza','townhall','guild']);
+const CIVIC_TYPES=Object.freeze(['market','tavern','church','training','plaza','townhall','guild','bargello','balivo']);
+const CIVIC_LEVEL_TYPES=Object.freeze(['market','tavern','church','plaza','townhall','guild','bargello','balivo']);
 const PLAZA_VARIANTS=Object.freeze(['paved','fountain','garden']);
 function isCivic(s){return !!s&&CIVIC_TYPES.includes(s.type)}
-function civicLevel(s){return Math.max(1,Math.min(3,Math.round(Number(s?.civicLevel)||1)))}
+// FISCO-01: the Bargello and the Palazzo del Balivo have two levels; the other civics three.
+// civicLevel stays self-contained (regressions evaluate it on its own); the others read it.
+function civicLevel(s){const max=s?.type==='bargello'||s?.type==='balivo'?2:3;return Math.max(1,Math.min(max,Math.round(Number(s?.civicLevel)||1)))}
+function civicMaxLevel(type){return civicLevel({type,civicLevel:99})}
+function civicLevels(type){return Array.from({length:civicMaxLevel(type)},(_,i)=>i+1)}
 function plazaVariant(s){return PLAZA_VARIANTS.includes(s?.plazaVariant)?s.plazaVariant:'paved'}
 const isPlazaLike=s=>s?.type==='plaza'||s?.type==='civicAnnex'&&s.annexType==='square';
 function normalizeCivicDevelopment(s){
@@ -824,6 +879,12 @@ function civicLocalParts(s){
     {cx:0,cy:-1.15,w:1.3,h:1.3,role:'tower',roofTurn:0}
   ];
   if(s.type==='guild')return[{cx:0,cy:0,w:3,h:2.5,role:'hall',roofTurn:Math.PI/2}];
+  // FISCO-01: the Bargello's turret on the front right corner; the Balivo's outside stair stays on its front.
+  if(s.type==='bargello')return[
+    {cx:0,cy:.25,w:2.6,h:2,role:'hall',roofTurn:0},
+    {cx:1.15,cy:-.75,w:1,h:1,role:'tower',roofTurn:0}
+  ];
+  if(s.type==='balivo')return[{cx:0,cy:.2,w:3.4,h:2.2,role:'hall',roofTurn:0}];
   return[];
 }
 function civicParts(s){
@@ -889,14 +950,14 @@ function constructionCost(s){
 function costText(cost){const icons={gold:'🪙',stone:'🪨',clay:'🧱',wood:'🪵',metal:'⛓'};const parts=RES_ORDER.filter(k=>(cost?.[k]||0)>0).map(k=>`${icons[k]} ${cost[k]}`);return parts.length?parts.join(' · '):'free'}
 // Before founding, the sandbox only permits placement of the founding well.
 // Once founded, the economic treasury and castle store own all construction assets.
+// DEV free build covers construction sites only (grantFreeConstructionMaterials and
+// the payroll bypass): soldiers, ships, repairs and restyles still pay here.
 function canAfford(cost){
-  if(typeof devBuildMode==='function'&&devBuildMode('freeBuild'))return true;
   if(State.village?.founded&&window.ConquerEconomy?.canBuild)
     return window.ConquerEconomy.canBuild(cost);
   return Object.entries(cost||{}).every(([k,v])=>(State.resources[k]||0)>=v);
 }
 function spendCost(cost){
-  if(typeof devBuildMode==='function'&&devBuildMode('freeBuild'))return true;
   if(State.village?.founded&&window.ConquerEconomy?.spendBuild){
     if(!window.ConquerEconomy.spendBuild(cost))return false;
   }else for(const [k,v] of Object.entries(cost||{}))

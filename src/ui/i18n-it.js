@@ -2,8 +2,46 @@
 export const T = {
   brand: 'Conquer',
   modes: { build: 'Costruisci', manage: 'Gestisci', defend: 'Difendi' },
-  resources: { gold: 'Oro', population: 'Pop.', food: 'Cibo', wood: 'Legno', stone: 'Pietra', metal: 'Metallo', equipment: 'Equip.' },
-  resourcesLong: { gold: 'Oro', population: 'Popolazione', food: 'Cibo', wood: 'Legno', stone: 'Pietra', metal: 'Metallo', equipment: 'Equipaggiamento' },
+  resources: { gold: 'Oro', population: 'Pop.', food: 'Cibo', wood: 'Legno', stone: 'Pietra', clay: 'Argilla', metal: 'Metallo', equipment: 'Equip.' },
+  resourcesLong: { gold: 'Oro', population: 'Popolazione', food: 'Cibo', wood: 'Legno', stone: 'Pietra', clay: 'Argilla', metal: 'Metallo', equipment: 'Equipaggiamento' },
+  resourcesShort: { gold: 'Oro', stone: 'Pie', wood: 'Leg', metal: 'Met', clay: 'Arg', food: 'Cibo', equipment: 'Equ' },
+  aria: { modes: 'Modalità', resources: 'Risorse', buildTools: 'Strumenti di costruzione' },
+  modeKey: n => 'Tasto ' + n,
+  codex: 'Codex',
+  codexEntry: 'Voce nel Codex',
+  // In-game notices (top centre) and the event journal (Gestisci › Diario).
+  alerts: {
+    aria: 'Avvisi', expand: 'Mostra dettagli', collapse: 'Nascondi dettagli', dismiss: 'Chiudi avviso',
+    dismissAll: 'Chiudi tutti', more: n => '+' + n + ' altri nel diario', resolved: 'Risolto',
+    focus: 'Mostra sulla mappa', openJournal: 'Apri il diario', repeated: n => '×' + n,
+    journal: 'Diario', journalSub: n => n + ' voci', journalEmpty: 'Nessun evento registrato in questa partita.',
+    journalClear: 'Svuota diario', journalClearConfirm: 'Svuotare il diario degli eventi?',
+    filters: { all: 'Tutti', danger: 'Gravi', warn: 'Avvisi', info: 'Notizie' },
+    phase: { raised: 'Inizio', resolved: 'Risolto', event: 'Evento' },
+    categories: { messages: 'Messaggi', military: 'Difesa', castle: 'Castello', construction: 'Cantieri', economy: 'Economia', population: 'Popolazione', game: 'Partita', general: 'Generale' },
+    day: d => 'Giorno ' + d
+  },
+  // Status lines from the legacy modules that are bare ids or English (phase 5 moves all of them to keys).
+  status: {
+    select: 'Selezione: clicca una struttura',
+    Select: 'Selezione: clicca una struttura',
+    delete: 'Demolisci: clicca una struttura',
+    'Select a build tool': 'Scegli uno strumento di costruzione'
+  },
+  saveError: 'Salvataggio non riuscito',
+  site: {
+    sub: 'Cantiere in costruzione',
+    progress: 'Avanzamento lavori',
+    remaining: 'Lavoro residuo',
+    days: n => n + ' giornate',
+    materials: 'Materiali consegnati',
+    state: 'Stato',
+    waiting: 'In attesa',
+    priority: 'Priorità approvvigionamento',
+    priorityAria: 'Priorità cantiere',
+    hint: 'Il progetto rimane confermato anche senza scorte. I materiali disponibili sono assegnati prima ai cantieri con priorità più alta.'
+  },
+  floor: n => 'Piano ' + n,
   seasons: { spring: 'Primavera', summer: 'Estate', autumn: 'Autunno', winter: 'Inverno' },
   year: 'Anno',
   time: {
@@ -56,7 +94,7 @@ export const T = {
     market: 'Mercato', tavern: 'Taverna', church: 'Chiesa', training: 'Addestramento',
     loggingCamp: 'Taglialegna', quarry: 'Cava', mine: 'Miniera', clayPit: 'Argilla', windmill: 'Mulino a vento', watermill: 'Mulino ad acqua',
     pillory: 'Gogna', gallows: 'Forca', scaffold: 'Patibolo',
-    plaza: 'Piazza', townhall: 'Municipio', guild: 'Gilda', brick: 'Mattoni', sloped: 'Pendio', walled: 'Terrazza murata', flat: 'Piano H0', dig: 'Scava 1U', raise: 'Alza 1U'
+    plaza: 'Piazza', townhall: 'Municipio', guild: 'Gilda', bargello: 'Bargello', balivo: 'Palazzo del Balivo', brick: 'Mattoni', sloped: 'Pendio', walled: 'Terrazza murata', flat: 'Piano H0', dig: 'Scava 1U', raise: 'Alza 1U'
   },
   hints: {
     select: 'Clic su un edificio per selezionarlo',
@@ -69,7 +107,7 @@ export const T = {
   structures: {
     towerSquare: 'Torre quadrata', towerRound: 'Torre rotonda', watchtower: 'Torre di guardia', palisadeTower: 'Torre lignea', frameTower: 'Torre lignea a telaio',
     gate: 'Porta in pietra', woodGate: 'Porta lignea', wall: 'Mura', palisade: 'Palizzata', built: 'Sezione costruita',
-    house: 'Casa', civicAnnex: 'Annesso', market: 'Mercato', tavern: 'Taverna', church: 'Chiesa', training: 'Campo di addestramento', plaza: 'Piazza', townhall: 'Municipio', guild: 'Gilda', windmill: 'Mulino a vento', watermill: 'Mulino ad acqua',
+    house: 'Casa', civicAnnex: 'Annesso', market: 'Mercato', tavern: 'Taverna', church: 'Chiesa', training: 'Campo di addestramento', plaza: 'Piazza', townhall: 'Municipio', guild: 'Gilda', bargello: 'Bargello', balivo: 'Palazzo del Balivo', windmill: 'Mulino a vento', watermill: 'Mulino ad acqua',
     loggingCamp: 'Campo taglialegna', quarry: 'Cava', mine: 'Miniera', moat: 'Fossato', bridge: 'Ponte', well: 'Pozzo'
   },
   inspector: {
@@ -81,10 +119,10 @@ export const T = {
       tier: 'Impronta', height: 'Livelli', rotation: 'Angolo', roof: 'Tetto', woodRoof: 'Tetto', roofCover: 'Copertura',
       base: 'Base', skin: 'Rivestimento', side: 'Lato esterno', cutaway: 'Spaccato',
       weapon: 'Arma', bartizan: 'Garitte', roofShape: 'Falde', civicLevel: 'Sviluppo', plaza: 'Variante', upper: 'Piano alto', hoarding: 'Ballatoio', bell: 'Campana', lookout: 'Vedetta', outpost: 'Avamposto', signalFire: 'Fuoco di segnalazione', innerRoof: 'Tetto interno',
-      wallStair: 'Scala al camminamento', wallStairPos: 'Posizione scala'
+      wallStair: 'Scala al camminamento', wallStairPos: 'Posizione scala', wallPatrols: 'Pattuglie del giro'
     },
     words: {
-      battlement: 'Merlato', machicolation: 'Caditoie', pitched: 'Falde', open: 'Piattaforma', pitched4: 'Falde · 4 pali', cover_shingle: 'Scandole', cover_thatch: 'Paglia', cover_turf: 'Zolle erbose',
+      battlement: 'Merlato', machicolation: 'Caditoie', machicolationItalian: 'Caditoie all\'italiana', pitched: 'Falde', open: 'Piattaforma', pitched4: 'Falde · 4 pali', cover_shingle: 'Scandole', cover_thatch: 'Paglia', cover_turf: 'Zolle erbose',
       masonry: 'Pietra', timber: 'Graticcio',
       standard: 'Standard', buttress: 'Contrafforti', splayed: 'A scarpa', arcade: 'Porticato', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', innerRoofOff: 'Nessuno', innerRoofOn: 'Dentro i merli',
       none: 'Nessuna', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide · 4 falde', gable: '2 falde', hip: '4 falde con colmo', paved: 'Lastricata', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana d\'allarme',
@@ -92,14 +130,27 @@ export const T = {
       stairWood: 'Scala lignea · 4 oro, 14 legno', stairStone: 'Scala lapidea · 8 oro, 22 pietra', stairPos_start: 'Inizio muro', stairPos_middle: 'Centro', stairPos_end: 'Fine muro'
     },
     // Short labels shown on option buttons; the full word goes to the tooltip.
-    short: { masonry: 'Pietra', timber: 'Graticcio', battlement: 'Merli', machicolation: 'Caditoie', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', innerRoofOff: '—', innerRoofOn: 'Interno', none: '—', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide', gable: '2 falde', hip: 'Colmo', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana', lookoutOff: '—', lookoutOn: 'Vedetta', outpost: 'Avamposto', pyre: 'Pira', pyreRebuild: 'Ricostruisci', stairWood: 'Lignea', stairStone: 'Lapidea', stairPos_start: 'Inizio', stairPos_middle: 'Centro', stairPos_end: 'Fine' },
+    short: { masonry: 'Pietra', timber: 'Graticcio', battlement: 'Merli', machicolation: 'Caditoie', machicolationItalian: 'Italiane', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', innerRoofOff: '—', innerRoofOn: 'Interno', none: '—', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide', gable: '2 falde', hip: 'Colmo', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana', lookoutOff: '—', lookoutOn: 'Vedetta', outpost: 'Avamposto', pyre: 'Pira', pyreRebuild: 'Ricostruisci', stairWood: 'Lignea', stairStone: 'Lapidea', stairPos_start: 'Inizio', stairPos_middle: 'Centro', stairPos_end: 'Fine' },
     flip: 'Inverti', on: 'Attivo', off: 'Spento', toggles: 'Opzioni',
     rotateLeft: 'Ruota −15°', rotateRight: 'Ruota +15°', rotateFlip: 'Gira di 180°',
     facts: {
       household: 'Capienza', residents: 'Uomini · donne · bambini', rooms: 'Stanze · capacità',
       variant: 'Variante', length: 'Lunghezza', subtower: 'Agganciata a', masonry: 'Muratura', square: 'Piazza del pozzo', bellRange: 'Campana · udito',
-      lookout: 'Vedetta', outpost: 'Avamposto', signalFire: 'Fuoco di segnalazione'
+      lookout: 'Vedetta', outpost: 'Avamposto', signalFire: 'Fuoco di segnalazione', wallRing: 'Giro di mura', wallPatrolNeed: 'Pattuglie',
+      size: 'Dimensione', storageCapacity: 'Capienza', storedGoods: 'In deposito',
+      food: 'Cibo', wood: 'Legno', stone: 'Pietra', clay: 'Argilla', metal: 'Metallo', equipment: 'Equipaggiamento', luxury: 'Lusso'
     },
+    yardOver: (used, cap) => 'Scorte oltre la capienza del piazzale: ' + used + ' su ' + cap + ' unità.',
+    buildCost: 'Costo di costruzione',
+    // Why an option is greyed out, for reasons the game modules still return in English.
+    reasons: {
+      'under construction': 'Non disponibile durante il cantiere.',
+      'needs an isolated tower (no walls, gates or attached towers)': 'Serve una torre isolata: senza mura, porte o torri agganciate.',
+      'must stand outside the White Zone': 'La torre deve trovarsi fuori dalla White Zone.'
+    },
+    disabledHint: 'Non disponibile ora',
+    demolishConfirm: name => 'Demolire «' + name + '»? L\'operazione non si può annullare.',
+    cancelSiteConfirm: name => 'Annullare il cantiere «' + name + '»? I materiali non ancora usati tornano in magazzino.',
     house: 'Livello sociale', houseDown: '− Riduci', houseUp: '+ Amplia',
     mastio: 'Mastio', mastioOn: 'Mastio attivo · rimuovi', mastioOff: 'Designa come mastio',
     keepEntrance: 'Ingresso', keepGround: 'A terra', keepWood: 'Legno', keepStone: 'Pietra',
@@ -142,7 +193,7 @@ export const T = {
     infirmary: 'Infermeria', dovecote: 'Colombaia', cistern: 'Cisterna', mews: 'Falconiera', council: 'Sala del consiglio', tribunal: 'Tribunale'
   },
   manage: {
-    sections: { overview: 'Panoramica', policies: 'Politiche', market: 'Mercato', activities: 'Attività', castle: 'Scorte del castello', game: 'Partita' },
+    sections: { overview: 'Panoramica', policies: 'Politiche', market: 'Mercato', activities: 'Attività', castle: 'Scorte del castello', journal: 'Diario degli eventi', game: 'Partita' },
     village: 'Villaggio', notFounded: 'Non ancora fondato · costruisci il pozzo',
     welfare: 'Benessere', capital: 'Capitale privato (L4)', castleGold: 'Oro del castello',
     population: 'Popolazione', classes: 'L1 · L2 · L3 · L4', wages: 'Salari L1 · L2 · L3',
@@ -165,6 +216,9 @@ export const T = {
     marketHelp: 'Vendi: quota della produzione del signore messa sul mercato. Riserva: scorta che il castello trattiene.',
     owner: { lord: 'Signore', private: 'Privata' },
     value: 'Valore', workers: 'Lavoratori', profit: 'Utile',
+    castleGold: 'Oro castello', capital: 'Capitale L4', wages: 'Salari', lastMarket: 'Mercato',
+    privateMasonry: 'Muratura case', capacity: 'Capienza',
+    colPrice: 'Prezzo', colMarket: 'Merc.', colCastle: 'Cast.', colOwner: 'Prop.', colWorkers: 'Lav.', colValue: 'Val.',
     buy: 'Compra per il signore', sellL4: 'Vendi ai privati', abandoned: 'Abbandonata',
     noActivities: 'Nessuna attività produttiva ancora attiva.',
     activityTypes: { field: 'Campo', loggingCamp: 'Taglialegna', quarry: 'Cava', mine: 'Miniera', workshop: 'Officina', vineyard: 'Vigneto' },
@@ -184,7 +238,7 @@ export const T = {
     tier: { tower: 'Una stanza per livello: T1 nessuna · T2 normale · T3 grande (capacità doppia).', wall: 'Spessore: T1 0,2U · T2 0,5U · T3 1U.' },
     height: 'Ogni livello aggiunge un piano e, dove possibile, una stanza.',
     rotation: 'La rotazione segue una griglia di 15°; torri secondarie e innesti delle mura seguono.',
-    roof: 'Caditoie: merlatura in aggetto su mensole.',
+    roof: 'Caditoie: merlatura in aggetto su mensole. All\'italiana: mensole alte quattro corsi a risalti raccordate da archetti; solo estetica, stesse regole delle caditoie.',
     woodRoof: 'Piattaforma aperta oppure tetto a falde su 4 pali.',
     roofCover: 'Manto della long house: scandole, paglia o zolle erbose; il fumo del focolare esce dallo sfiatatoio nel colmo.',
     base: 'A scarpa: alta 0,5. Contrafforti: da quota 0 a H1. Le fondamenta seguono l\'impronta.',
@@ -193,10 +247,11 @@ export const T = {
     cutaway: 'Apre la facciata verso la camera e mostra le stanze.',
     weapon: 'Solo su torri T2 senza tetto a falde né ballatoio.',
     roofShape: 'Solo estetica, stesso costo; con il tetto a falde. 2 falde: timpani in pietra. Colmo: 4 falde su un colmo lungo metà del tetto. Con il colmo, due bandiere.',
-    innerRoof: 'Tetto a piramide o cono arretrato dentro i merli su un cordolo: il cammino di ronda resta libero tra tetto e merli. Torri in pietra T2+ con merli o caditoie, senza arma né fuoco di segnalazione in cima. Solo estetica: nessuna stanza sotto (Colombaia, Falconiera e Campana restano sul tetto a falde).',
+    innerRoof: 'Tetto a piramide o cono arretrato dentro i merli su un cordolo: il cammino di ronda resta libero tra tetto e merli. Torri in pietra T2+ con merli o caditoie, senza arma né fuoco di segnalazione in cima. Toglie il bracere della piazza. Nessuna stanza sotto (Colombaia, Falconiera e Campana restano sul tetto a falde).',
     bartizan: 'Quattro garitte d\'angolo su mensole, solo torri grandi (T3) quadrate o rotonde. 3 tiratori per garitta, che colpiscono anche il piede della torre fino a 1U.',
     hoarding: 'Galleria di legno montata in guerra attorno alla cima, sotto la gronda se c\'è il tetto; il tetto resta. Non con le caditoie né con le garitte.',
     bell: 'Castello campanario sulla punta del tetto, solo torri T1-T2 con tetto a falde (anche di legno). Quando suona l\'allarme, chi è nel raggio lo sente subito e un\'altra campana nel raggio lo ripete; fuori dai raggi l\'allarme corre a voce, più lento. Raggio: H1 10U, H2 13U, H3 16U. Esclude colombaia e falconiera.',
+    wallPatrols: 'Pattuglie di tutto il giro di mura di cui fa parte questo tratto, non del solo tratto. Ogni pattuglia sono 2 soldati liberi della Caserma che percorrono il camminamento passando per torri e porte; più pattuglie si distribuiscono lungo il giro. Si regolano anche da Militare › Pattuglie e guarnigioni.',
     lookout: 'Un soldato della Caserma di guardia sulla torre. Senza vedetta la torre non vede; con la vedetta vede come sempre e, se avvista nemici, fa suonare l\'allarme da sola.',
     outpost: 'Solo una torre isolata (senza mura, porte o torri agganciate) fuori dalla White Zone. Presidio fisso di 4 soldati e 1 cavallo, vedetta sempre in servizio. Quando avvista nemici avvisa il castello con campane e fuochi a catena e manda una staffetta a cavallo.',
     signalFire: 'Pira grande sul terrazzo merlato di una torre in pietra senza macchine da guerra. Passa l\'allarme a catena come una campana, con raggio triplo, ma brucia una volta sola: poi va ricostruita (30 legno).',
@@ -243,7 +298,7 @@ export const T = {
     sections: { command: 'Comando', zones: 'Zone', patrols: 'Pattuglie', alarm: 'Allarme', tests: 'Prove d\'assedio' },
     title: 'Difesa',
     alert: { clear: 'Calma', local: 'Allerta locale', general: 'Allarme generale' },
-    units: 'Unità', hostiles: 'Ostili', patrols: 'Pattuglie', selected: 'Selezionate',
+    units: 'Unità', hostiles: 'Ostili', patrols: 'Pattuglie', selected: 'Selezionate', state: 'Stato',
     fog: 'Nebbia', zones: 'Zone', view: 'Vista',
     orders: 'Ordini', deselect: 'Deseleziona',
     focused: { squad: 'Picchieri ×5', patrol: 'Pattuglia', knight: 'Cavaliere', captain: 'Capitano' },

@@ -24,7 +24,7 @@
   });
   const PORTCULLIS_HEALTH=120;
   const BASE_HEALTH=Object.freeze({tower:260,gate:250,wall:130,built:170,palisade:75,
-    house:90,market:70,tavern:140,church:240,townhall:220,guild:150,windmill:110,watermill:120});
+    house:90,market:70,tavern:140,church:240,townhall:220,guild:150,bargello:160,balivo:170,windmill:110,watermill:120});
   const isMill=s=>['windmill','watermill'].includes(s?.type);
   // Structural cores require siege artillery: blades, arrows, rams and torches
   // cannot demolish walls, towers, gatehouses or built sections, even in wood.
@@ -59,11 +59,15 @@
   const within=(v,a,b)=>Math.max(a,Math.min(b,v));
   function initial(){return{version:1,stock:Object.fromEntries(STOCK_KEYS.map(k=>[k,0])),
     lastDay:State.clock.day,starvationDays:0,thirstDays:0,hygiene:100,ruins:[],earthworks:[],
-    circle:{captures:[],capturedRoomIds:[]},soldiers:{enlisted:0,paid:true,expedition:0}}}
-  // The soldiers' reserve (settlement-soldiers.js): enlisted L1 men, whether they were paid, men out on expedition.
+    circle:{captures:[],capturedRoomIds:[]},soldiers:{enlisted:0,paid:true,expedition:0,wallPatrols:[]}}}
+  // The soldiers' reserve (settlement-soldiers.js): enlisted L1 men, whether they were paid, men out on expedition,
+  // patrols assigned to each ring of walls (settlement-wall-patrols.js: the walls of the ring and how many).
   function soldierState(raw){
     const n=v=>Math.max(0,Math.floor(Number(v)||0));
-    return{enlisted:n(raw?.enlisted),paid:raw?.paid!==false,expedition:n(raw?.expedition)};
+    const wallPatrols=(Array.isArray(raw?.wallPatrols)?raw.wallPatrols:[])
+      .filter(e=>e&&Array.isArray(e.walls)&&e.walls.length&&n(e.n)>0).slice(0,200)
+      .map(e=>({walls:e.walls.slice(0,500).map(String),n:n(e.n)}));
+    return{enlisted:n(raw?.enlisted),paid:raw?.paid!==false,expedition:n(raw?.expedition),wallPatrols};
   }
   function state(){
     if(!State.siege||typeof State.siege!=='object')State.siege=initial();
@@ -117,8 +121,8 @@
     if(fn==='council'||fn==='tribunal'||fn==='guard')return false;
     if(!eligibleRoom(s)||index<0||index>=functionCapacity(s))return false;
     const l=floor(s,index),top=structureLevel(s);
-    // Small (W1) towers: the spiral stair fills the shaft, only a few rooms fit (user, 04/11/2026).
-    if(s.type==='tower'&&towerTier(s)===1&&!s.isMastio&&!['dovecote','latrine','prison','treasury','armory'].includes(fn))return false;
+    // Small (W1) towers: the spiral stair fills the shaft, only a few rooms fit (W1_TOWER_FUNCTIONS).
+    if(s.type==='tower'&&towerTier(s)===1&&!s.isMastio&&!W1_TOWER_FUNCTIONS.includes(fn))return false;
 
     // The portico of a W1 section is an open ground floor: only what lives under arches fits there.
     if(l===1&&s.type==='built'&&typeof isBuiltPortico==='function'&&isBuiltPortico(s)&&!PORTICO_FUNCTIONS.includes(fn))return false;
@@ -199,6 +203,8 @@
     // The first independent finished tower is the keep, regardless of whether
     // it is wood, round stone or square stone. Gates/watchtowers are excluded.
     if(State.structures.some(s=>s.type==='tower'&&s.isMastio&&mastioEligible(s)))return false;
+    // The player removed the designation: do not hand it back on the next load or completion.
+    if(State.village?.mastioDeclined)return false;
     const eligible=State.structures.filter(s=>mastioEligible(s)&&!underConstruction(s));
     if(!eligible.length)return false;
     eligible.sort((a,b)=>{
@@ -207,7 +213,8 @@
     });
     const first=eligible[0];
     first.isMastio=true;
-    if(!ensureMastioHall(first,true)){first.isMastio=false;return false}
+    // Automatic designation only takes a free room: it never empties one the player assigned.
+    if(!ensureMastioHall(first)){first.isMastio=false;return false}
     markDirty(false,['base','castleBody','castleFront']);
     window.__conquerAnalytics?.event('MASTIO_AUTO_DESIGNATED',{
       towerId:first.id,material:isWoodTower(first)?'wood':'stone',
@@ -229,6 +236,8 @@
     }
     for(const s of State.structures)if(s.type==='tower'&&s!==selected)s.isMastio=false;
     if(already)selected.isMastio=false;
+    // Remember the player's choice (saved with the village): syncAutoMastio must not undo it.
+    if(State.village){if(already)State.village.mastioDeclined=true;else delete State.village.mastioDeclined}
     markDirty(false,['base','castleBody','castleFront']);
     renderFunctionPanel();redraw();
     status(already?'Mastio designation removed':'Mastio designated — Common Hall secured');
@@ -236,6 +245,16 @@
   }
   function capturedRoomIds(){
     return new Set(state().circle.capturedRoomIds);
+  }
+  // Working rooms: every allowed function of a finished, standing tower/gate/built section whose room
+  // the enemy has not captured. `want`: a function name, a predicate on it, or nothing for all.
+  function activeRooms(want){
+    const lost=capturedRoomIds(),match=typeof want==='function'?want:fn=>!want||fn===want,out=[];
+    for(const s of State.structures){
+      if(!eligibleRoom(s)||s.destroyed||!Array.isArray(s.functions))continue;
+      s.functions.forEach((fn,index)=>{if(fn&&match(fn)&&allowed(s,index,fn)&&!lost.has(s.id+':'+index))out.push({s,index,fn})});
+    }
+    return out;
   }
   function circleCaptureRecords(){
     return state().circle.captures.filter(r=>r&&r.reclaimed!==true);
@@ -389,10 +408,9 @@
   }
   // Where the bucket brigade draws water from a cistern: just outside its tower's ground door.
   function cisternTaps(){
-    const out=[],lost=capturedRoomIds();
-    for(const s of State.structures){
-      if(s.type!=='tower'||s.destroyed||!eligibleRoom(s)||!Array.isArray(s.functions))continue;
-      if(!s.functions.some((fn,i)=>fn==='cistern'&&allowed(s,i,fn)&&!lost.has(s.id+':'+i)))continue;
+    const out=[];
+    for(const s of new Set(activeRooms('cistern').map(r=>r.s))){
+      if(s.type!=='tower')continue;
       const door=(typeof towerDoorSpecs==='function'?towerDoorSpecs(s):[]).find(d=>d.baseZ<.2);
       const r=s.shape==='round'?(Number(s.r)||.75):(Number(s.size)||1.5)/2,a=Number(s.angle)||0;
       const at=door?{x:door.contact.x+door.outward.x*.35,y:door.contact.y+door.outward.y*.35}
@@ -407,37 +425,19 @@
   }
   // Soldiers served by working latrines: an allowed room, not captured, its garderobe standing.
   function latrineCapacity(){
-    const unavailable=capturedRoomIds();let total=0;
-    for(const s of State.structures){
-      if(!eligibleRoom(s)||s.destroyed||!Array.isArray(s.functions))continue;
-      s.functions.forEach((fn,i)=>{
-        if(fn==='latrine'&&allowed(s,i,fn)&&!unavailable.has(s.id+':'+i)&&!window.ConquerRoomExterior?.broken(s,i))
-          total+=LATRINE_SOLDIERS*functionSlotUnits(s,i);
-      });
-    }
+    let total=0;
+    for(const {s,index} of activeRooms('latrine'))
+      if(!window.ConquerRoomExterior?.broken(s,index))total+=LATRINE_SOLDIERS*functionSlotUnits(s,index);
     return total;
   }
   // Working falconries: an allowed room, not captured, its tower standing.
-  function mewsCount(){
-    const unavailable=capturedRoomIds();let n=0;
-    for(const s of State.structures){
-      if(!eligibleRoom(s)||s.destroyed||!Array.isArray(s.functions))continue;
-      s.functions.forEach((fn,i)=>{if(fn==='mews'&&allowed(s,i,fn)&&!unavailable.has(s.id+':'+i))n++});
-    }
-    return n;
-  }
+  function mewsCount(){return activeRooms('mews').length}
   // Castle prestige (user, 05/11/2026): what the lord's household shows off. Points per working room;
   // the falconry is its first source, the others are the rooms of the court. Read by the panel now,
   // by other systems later.
   function prestige(){
-    const unavailable=capturedRoomIds(),by={};let total=0;
-    for(const s of State.structures){
-      if(!eligibleRoom(s)||s.destroyed||!Array.isArray(s.functions))continue;
-      s.functions.forEach((fn,i)=>{
-        const p=PRESTIGE[fn];if(!p||!allowed(s,i,fn)||unavailable.has(s.id+':'+i))return;
-        by[fn]=(by[fn]||0)+p;total+=p;
-      });
-    }
+    const by={};let total=0;
+    for(const {fn} of activeRooms(f=>!!PRESTIGE[f])){const p=PRESTIGE[fn];by[fn]=(by[fn]||0)+p;total+=p}
     return{total,by};
   }
   function hygieneTarget(){
@@ -475,8 +475,29 @@
   }
   // The same ordered tower slots drive UI, visible soldiers and combat fire.
   // Priority: usable roof, then embrasures from highest to lowest floor.
+  // archerSlots runs every frame for every tower (drawing, combat, panels) and walks all the
+  // structures several times per face and floor: keep the result per tower while the tower and
+  // the walls/towers attached to it are unchanged (one pass over the structures per call).
+  const slotCache=new WeakMap();
+  function slotKey(tower){
+    const own=JSON.stringify(tower,(k,v)=>k==='siegeIntegrity'||k==='archerCount'?undefined:v);
+    let near='';
+    for(const o of State.structures){
+      if(o===tower)continue;
+      if(o.aSnap===tower.id||o.bSnap===tower.id||o.id===tower.parentTowerId||o.parentTowerId===tower.id)
+        near+=o.id+(underConstruction(o)?'u':'c')+(o.level||1)+(o.tier||'')+(o.a?.x)+','+(o.a?.y)+','+(o.b?.x)+','+(o.b?.y)+(o.x)+','+(o.y)+';';
+    }
+    return own+'|'+near+'|'+(window.ConquerRoomExterior?'x':'');
+  }
   function archerSlots(tower){
     if(!tower||tower.type!=='tower'||underConstruction(tower)||tower.destroyed)return[];
+    const hit=slotCache.get(tower),key=slotKey(tower);
+    if(hit&&hit.key===key)return hit.slots.slice();
+    const slots=computeArcherSlots(tower);
+    slotCache.set(tower,{key,slots});
+    return slots.slice();
+  }
+  function computeArcherSlots(tower){
     const result=[],center={x:tower.x,y:tower.y};
     const wood=isWoodTower(tower);
     const openDeck=wood?woodTowerStyle(tower)==='palisadeTower'&&woodTowerRoof(tower)==='open'
@@ -518,12 +539,12 @@
     }
     return result;
   }
-  function stationedArchers(tower){
+  function stationedArchers(tower,slots=archerSlots(tower)){
     const n=Number(tower?.archerCount);
-    return Math.min(archerSlots(tower).length,Number.isFinite(n)?Math.max(0,Math.floor(n)):0);
+    return Math.min(slots.length,Number.isFinite(n)?Math.max(0,Math.floor(n)):0);
   }
   // Sick archers (poor garrison hygiene) leave their posts empty.
-  function occupiedArcherSlots(tower){const n=stationedArchers(tower);return archerSlots(tower).slice(0,n-Math.round(n*sickShare()))}
+  function occupiedArcherSlots(tower){const slots=archerSlots(tower),n=stationedArchers(tower,slots);return slots.slice(0,n-Math.round(n*sickShare()))}
   function changeArchers(id,delta){
     const tower=State.structures.find(s=>s.id===id&&s.type==='tower');
     if(!tower||underConstruction(tower))return false;
@@ -766,7 +787,7 @@
     if(s.type==='palisade'||s.material==='wood'||(s.type==='bridge'&&s.variant!=='stone')||(s.type==='tower'&&isWoodTower(s))||(s.type==='gate'&&typeof isWoodGate==='function'&&isWoodGate(s)))return'wood';
     if(s.type==='house'||s.type==='tavern'||s.type==='market')return'timber';
     // Timber-framed guild halls (L1-L2) and the L1 town hall; their masonry levels fall as stone.
-    if(s.type==='guild'&&civicLevel(s)<3||s.type==='townhall'&&civicLevel(s)===1)return'timber';
+    if(s.type==='guild'&&civicLevel(s)<3||['townhall','bargello','balivo'].includes(s.type)&&civicLevel(s)===1)return'timber';
     return'stone';
   }
   function collapsePalette(s){
@@ -1168,10 +1189,11 @@
     // Everything standing comes down; walls that leant on it stay as open ends.
     const g=groundOf(s),H=structureHeight(s)+(['tower','gate'].includes(s.type)?.35:0);
     // The town hall comes down hall first, then its taller civic tower from its own height.
-    if(s.type==='townhall'&&typeof civicParts==='function'){
-      const L=civicLevel(s),lean=from?{x:s.x-from.x,y:s.y-from.y}:null;
+    // The Bargello the same way, its turret after the house.
+    if((s.type==='townhall'||s.type==='bargello')&&typeof civicParts==='function'){
+      const L=civicLevel(s),lean=from?{x:s.x-from.x,y:s.y-from.y}:null,bar=s.type==='bargello';
       for(const part of civicParts(s)){const tower=part.role==='tower';
-        startCollapse(s,g,g+(tower?[3.9,5.8,8.2]:[2.8,2.9,3.8])[L-1],{parts:[part.points],lean,cause:tower?'collapse-tower':'collapse',...(tower?{delay:.3}:{})})}
+        startCollapse(s,g,g+(bar?(tower?[3.9,4.9]:[2.4,2.7]):(tower?[3.9,5.8,8.2]:[2.8,2.9,3.8]))[L-1],{parts:[part.points],lean,cause:tower?'collapse-tower':'collapse',...(tower?{delay:.3}:{})})}
     }else if(!isLinear(s)&&H>.2)startCollapse(s,g,g+H,{lean:from?{x:(s.x??0)-from.x,y:(s.y??0)-from.y}:null});
     else{const x=state();x.ruins.push({id:s.id,type:s.type,x:s.x??(s.a.x+s.b.x)/2,y:s.y??(s.a.y+s.b.y)/2,day:State.clock.day})}
     // Exterior elements of its rooms (a garderobe on its corbels) come down with it.
@@ -1359,9 +1381,9 @@
   window.ConquerSiege={restore,state,initial,assignMastio,normalizeMastio,syncAutoMastio,ensureMastioHall,mastio,armories,allowed,sanitizeRooms,
     capacity,used,transfer,civilians,dailyFoodDemand,water,wellReachable,cisternTaps,tick,stableUnits,spareHorses,slaughterHorses,HORSE_FOOD,mewsCount,prestige,PRESTIGE,MEWS_FOOD,integrity,effectiveness,attackStructure,
     drawOverlay,summaryHtml,bindPanel,WEAPONS,healthMaximum,
-    circleCaptureRecords,circleDepots,circleStoreInventory,captureCircleSector,
+    circleCaptureRecords,circleDepots,circleStoreInventory,captureCircleSector,activeRooms,
     releaseCircleSector,
     bays,bayIndexAt,assaultCheck,dynamicMeshes,BAY_TARGET,doorStage,gateClosed,gateBreached,PORTCULLIS_HEALTH,setGateClosed,doorAsset,collapseBridge,isNight,gateNightWatch,startCollapse,rubbleAt,rubbleBlocks,rubbleFactor,collapsing:()=>playing().map(r=>r.id),needsAnimation:()=>playing().length>0,
-    archerSlots,stationedArchers,occupiedArcherSlots,changeArchers,
+    archerSlots,stationedArchers:tower=>stationedArchers(tower),occupiedArcherSlots,changeArchers,
     garrison,latrineCapacity,hygieneTarget,sickShare,roomExteriorHtml,repairRoomExterior};
 })();

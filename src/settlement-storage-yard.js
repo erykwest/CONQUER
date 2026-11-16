@@ -15,9 +15,11 @@
   const size=s=>SIZES.includes(Number(s?.yardSize))?Number(s.yardSize):2;
   const is=s=>s?.type===TYPE;
   const list=()=>State.structures.filter(s=>is(s));
-  const active=()=>list().filter(s=>typeof underConstruction!=='function'||!underConstruction(s));
+  // An expanding yard keeps serving at its pre-upgrade size until the works end.
+  const building=s=>typeof underConstruction==='function'&&underConstruction(s);
+  const active=()=>list().filter(s=>!building(s)||s.construction?.upgrade?.before);
   const capacityOf=s=>600*Math.pow(size(s)/2,2);
-  const capacity=()=>active().reduce((sum,s)=>sum+capacityOf(s),0);
+  const capacity=()=>active().reduce((sum,s)=>sum+capacityOf(building(s)?s.construction.upgrade.before:s),0);
   function stocks(){
     const source=window.ConquerEconomy?.state?.()?.castle||{};
     return Object.fromEntries(GOODS.map(g=>[g,Math.max(0,number(source[g]))]));

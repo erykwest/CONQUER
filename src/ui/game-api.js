@@ -109,8 +109,17 @@
       selection: selection(),
       village: State.village?.name || null,
       status: document.getElementById('status')?.textContent || '',
-      saved: document.getElementById('saveState')?.textContent || ''
+      saved: document.getElementById('saveState')?.textContent || '',
+      saveStatus: saveStatus()
     };
+  }
+  // 'saved' | 'unsaved' | 'error' from the legacy indicator ('unsaved', 'saved local',
+  // 'saved cloud', 'cloud ready', 'local save failed', 'cloud error', …).
+  function saveStatus() {
+    const text = (document.getElementById('saveState')?.textContent || '').toLowerCase();
+    if (/fail|error/.test(text)) return 'error';
+    if (/unsaved/.test(text)) return 'unsaved';
+    return 'saved';
   }
 
   // Legacy controls are still the source of truth for tool parameters in phase 1.
@@ -125,6 +134,8 @@
     emit();
     return true;
   }
+  // Wraps a command that saves and notifies only when the underlying call reports a change.
+  const saved = fn => (...args) => { const ok = fn(...args); if (ok) { scheduleLocalSave(200); emit(); } return !!ok; };
   const commands = {
     press,
     setSpeed: speed => setTimeSpeed(speed),
@@ -158,41 +169,21 @@
     },
     crenelQuote: style => crenelRestyleQuote(style),
     setCrenelStyle: style => { const out = applyCrenelStyle(style); emit(); return out; },
+    unitEquipmentQuote: (kind, style) => unitEquipmentQuote(kind, style),
+    setUnitEquipment: (kind, style) => { const out = applyUnitEquipment(kind, style); emit(); return out; },
     roofPitchQuote: pitch => roofPitchQuote(Number(pitch)),
     setRoofPitch: pitch => { const out = applyRoofPitch(pitch); emit(); return out; },
     setSaleShare:(good, pct) => { const ok = window.ConquerEconomy?.setShare(good, pct); scheduleLocalSave(200); emit(); return ok; },
     setReserve: (good, qty) => { const ok = window.ConquerEconomy?.setTarget(good, qty); scheduleLocalSave(200); emit(); return ok; },
-    // L1 Job Manager: commands only; the economy remains the allocator and save owner.
-    setL1Minimum: (key, minimum) => {
-      const ok=window.ConquerEconomy?.setL1Minimum?.(key,minimum);
-      if(ok){scheduleLocalSave(200);emit();}
-      return !!ok;
+    // SCOL-01: the lord hires a lay scolarizzato (castle gold, arrives after two weeks).
+    hireEducated: () => {
+      const out=window.ConquerEducated?.hire?.()||{ok:false,reason:'economy'};
+      if(out.ok){scheduleLocalSave(200);emit();}
+      return out;
     },
-    setL1Auto: (key, enabled) => {
-      const ok=window.ConquerEconomy?.setL1Auto?.(key,enabled);
-      if(ok){scheduleLocalSave(200);emit();}
-      return !!ok;
-    },
-    setL1Order: order => {
-      const ok=window.ConquerEconomy?.setL1Order?.(order);
-      if(ok){scheduleLocalSave(200);emit();}
-      return !!ok;
-    },
-    setL2Minimum: (key, minimum) => {
-      const ok=window.ConquerEconomy?.setL2Minimum?.(key,minimum);
-      if(ok){scheduleLocalSave(200);emit();}
-      return !!ok;
-    },
-    setL2Auto: (key, enabled) => {
-      const ok=window.ConquerEconomy?.setL2Auto?.(key,enabled);
-      if(ok){scheduleLocalSave(200);emit();}
-      return !!ok;
-    },
-    setL2Order: order => {
-      const ok=window.ConquerEconomy?.setL2Order?.(order);
-      if(ok){scheduleLocalSave(200);emit();}
-      return !!ok;
-    },
+    // L1/L2 Job Manager: commands only; the economy remains the allocator and save owner.
+    ...Object.fromEntries(['setL1Minimum','setL1Auto','setL1Order','setL2Minimum','setL2Auto','setL2Order']
+      .map(name => [name, saved((...args) => window.ConquerEconomy?.[name]?.(...args))])),
     adjustPatrols: delta => {
       if(!State.village?.founded||!window.ConquerCombat?.units)return false;
       const before=window.ConquerCombat.units().filter(u=>u.kind==='patrol').length;
@@ -201,31 +192,14 @@
       if(ok&&after!==before)emit();
       return ok&&after!==before;
     },
-    adjustTowerArchers: (id, delta) => {
-      const ok=window.ConquerSiege?.changeArchers?.(id,delta);
-      if(ok){scheduleLocalSave(200);emit();}
-      return !!ok;
-    },
-    assignCirclePatrol: (sectorId,delta) => {
-      const ok=window.ConquerCombat?.assignCirclePatrol?.(sectorId,delta);
-      if(ok){scheduleLocalSave(200);emit();}
-      return !!ok;
-    },
-    adjustMacroArchers: (id,delta) => {
-      const ok=adjustMacroArchers(id,delta);
-      if(ok){scheduleLocalSave(200);emit();}
-      return !!ok;
-    },
-    adjustZoneArchers: (id,delta) => {
-      const ok=adjustZoneArchers(id,delta);
-      if(ok){scheduleLocalSave(200);emit();}
-      return !!ok;
-    },
-    adjustMacroSquads: (id,delta) => {
-      const ok=adjustMacroSquads(id,delta);
-      if(ok){scheduleLocalSave(200);emit();}
-      return !!ok;
-    },
+    adjustTowerArchers: saved((id, delta) => window.ConquerSiege?.changeArchers?.(id, delta)),
+    // Patrols of a whole ring of walls (settlement-wall-patrols.js): two reserve soldiers each.
+    adjustWallPatrols: saved((ringId, delta) => window.ConquerWallPatrols?.adjust?.(ringId, delta)),
+    enlistForWallPatrol: saved(() => (window.ConquerWallPatrols?.enlistForPatrol?.() || 0) > 0),
+    assignCirclePatrol: saved((sectorId, delta) => window.ConquerCombat?.assignCirclePatrol?.(sectorId, delta)),
+    adjustMacroArchers: saved((id, delta) => adjustMacroArchers(id, delta)),
+    adjustZoneArchers: saved((id, delta) => adjustZoneArchers(id, delta)),
+    adjustMacroSquads: saved((id, delta) => adjustMacroSquads(id, delta)),
     adjustBarracksSquads: (id, delta) => {
       const camp=window.ConquerCamp,roster=window.ConquerCombat?.units;
       if(!camp||!roster||!camp.barracks?.().some(b=>b.id===id))return false;
@@ -344,6 +318,7 @@
     outside.assigned=outside.towers.reduce((n,m)=>n+m.assigned,0);
     outside.active=outside.towers.reduce((n,m)=>n+m.active,0);
     return {circleReady,zones:zoneRows,outside,macros,patrols,otherBarracks,
+      wallRings:window.ConquerWallPatrols?.summary?.()||null,
       totalAssigned:macros.reduce((n,m)=>n+m.assigned,0),
       totalActive:macros.reduce((n,m)=>n+m.active,0),
       unassigned:allies.filter(u=>u.kind==='squad'&&!u.defeated&&!u.barracksId).length,
@@ -407,6 +382,7 @@
         happiness: s.happiness, rationMode: s.rationMode, castleFoodIssued: s.castleFoodIssued,
         jobs: econ.jobSummary?.() || null, jobManager: econ.jobManager?.() || null,
         jobManagerL2: econ.jobManagerL2?.() || null,
+        educated: window.ConquerEducated?.summary?.() || null,
         commerce: s.commerce || null,
         welfare: s.welfare, capital: s.capital, castleGold: s.castleGold, population: s.population, wage: s.wage,
         goods: (econ.GOODS || ECON_GOODS).map(g => ({ id: g, price: s.prices[g], market: s.market[g], castle: s.castle[g],

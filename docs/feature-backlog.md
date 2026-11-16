@@ -1,5 +1,61 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+10/11/2026 — REG-SEA-DELTA-30: correzione richiesta: foce lacustre diretta, senza distributari; diramazioni solo se il ricevente e mare. Due innesti nel tratto finale del 30% misurato per lunghezza d’arco (70–79% del percorso). Canale principale dominante, rami piu stretti; sponde e bordi continui preservati. Dodici fixture mare/lago e hydrology-network PASS. Riferimento morfologico Seybold/Andrade/Herrmann, Modeling river delta formation, DOI 10.1073/pnas.0705265104; versione autori https://arxiv.org/html/0711.3283v1. Non introdotta una simulazione dinamica di erosione/sedimentazione.
+
+10/11/2026 — REG-WATER-SURFACE: eliminati i bordi chiari interni a confluenze e foci con contorni acqua disegnati prima di tutti i riempimenti. Alberi e montagne mantengono la propria occlusione. Aggiunte sponde ai laghi (anche isole interne), ritagliate al mondo senza spiagge sul bordo artificiale della mappa. Foce fluviale con due rami distributari piu stretti, innestati dall’80–86% della lunghezza reale, ciascuno termina nel ricevente; caricamento preserva le larghezze ridotte. Schiuma marina interrotta agli sbocchi. PASS dodici fixture delta mare/lago, idrografia, test pixel contorni e sponda e cinque scenari browser. Audit Territorio: 16 render invariati, zero errori, cinque avvisi di schemi illustrativi.
+
+09/11/2026 — REG-WATER-NETWORK (branch): Mare e Lago non selezionabili, neanche via Shift o URL regionale; selezione eliminata se diventa acqua. Scelte locali nuove limitate a Pianura/Foresta/Montagne/Palude; bioma ereditato bloccato nelle mappe aperte dalla regione. Colline/Valle/Fiume/Mare/Lago restano solo compatibilita delle vecchie ricette/demo. Foci geometriche con sbocco reale nel mare o lago, distinto dagli stagni; confluenze fiume/fiume, torrente/fiume e torrente/torrente con endpoint condiviso, sponde e collisioni aggiornate. I nodi regionali a grado >=3 producono affluenti, le curve a grado 2 no. Idrografia prioritaria rispetto ai rilievi nelle nuove mappe regionali. Cinque demo URL e regressioni runtime/browser PASS. Palude resta da bilanciare quantitativamente, mantenendo per ora i valori esistenti.
+
+06/11/2026 — REG-MOUNTAIN-UNIFORM-FIX: riprodotto T297 della regione 1988, seed locale 1555837107, centro e otto campioni tutti Montagne. Il controllo active() disattivava erroneamente la composizione regionale quando tutti i biomi erano uguali, ripristinando la catena legacy su un breve arco. Il contesto montano completo ora compone sempre centro e otto settori. Test dedicato fallito prima della correzione, poi PASS per tutti gli otto settori, centro e ripetibilita; PASS anche surroundings e mountain-density. Mappe prive di contesto regionale completo restano sulle proprie ricette demo.
+
+06/11/2026 — REG-MOUNTAIN-VARIATION (branch): eliminata la posa fissa a doppietti. Cime distribuite lungo tutta la catena con jitter e basi variabili; limitrofi con sagome indipendenti e distanze 6–15 U, fallback compatto solo per vincoli acqua/bioma. Quantita raddoppiata e intersezioni mantenute. Intervallo pendenze ampliato da 40–60 a 37–63 gradi, raggi principali da .52–.60/.54–.62 a .48–.64/.49–.66 settori: maggiore delta di altezza conseguente. QA spaziatura irregolare, densita, intersezioni, tagli e determinismo PASS.
+
+06/11/2026 — REG-MOUNTAIN-DENSITY (branch, non main): raddoppiate le cime principali dei settori montuosi con coppie intersecate (Montagne 8–14, Valle 6–10) e mantenute le secondarie proporzionali. Limitrofi: seconda cima per ogni massiccio accettato, fianchi sovrapposti e apici distanziati (base annidata solo in spazi vincolati); fascia esterna portata al bordo. Non si scartano piu i rilievi che oltrepassano il mondo: impronta collisioni ritagliata e facce roccia/neve tagliate in XYZ con sezioni verticali, condivise da 2D e World3D. Outline originale conservato per quote dei pini. QA densita/intersezioni/tagli/determinismo PASS; demo seed 4242: centrali 4→8 principali, limitrofi 9→18. Audit Territorio: 12 render, zero errori/cambiamenti, cinque avvisi di schemi illustrativi; confronto montano reale eseguito nella demo.
+
+06/11/2026 — REG-DEMO-OVERLAY: rimosso su richiesta il pannello sovrapposto con selettore scenari e metriche. Le demo restano accessibili dai link, isolate dai salvataggi; ritorno regionale tramite il collegamento esistente nell’header.
+
+06/11/2026 — REG-COAST-SHAPES (branch sperimentale): coste deformate in base ai lati cardinali di mare: 1 golfi ampi, 2 adiacenti promontorio roccioso e due fronti a golfo, 3 penisola collegata al lato asciutto, 4 isola con angoli raccordati. Due lati opposti restano due fronti a golfo, senza falso promontorio. Fasce e corner diagonali preservati; geometria condivisa da acqua, rendering e collisioni. Quattro scenari selezionabili nel pannello demo (gulf/headland/peninsula/island). Mare escluso da clic/Shift e apertura locale; conversione di selezione a mare ripulisce selezione e pannello. QA quattro casi, variazione costa >7 U, rocce, connessione penisola e isola con foro PASS.
+
+06/11/2026 — REG-EIGHT-BIOMES (branch sperimentale, non main): apertura regionale con otto campioni direzionali sulla geometria Voronoi reale. Fasce 25/25/100/25/25 U, corner esterni 25×25 del diagonale e blending a prodotto. Composizione ingame di suolo, boschi, acqua con isole/fori e rilievi; il centro usa la propria ricetta. Fiumi esistenti preservati. Demo Fronte misto disponibile; test determinismo, collisioni, pesi e diagonali PASS. Bilanciamento quantitativo e dorsali continue restano aperti. Le vecchie demo senza campioni vanno riaperte dalla regionale.
+
+05/11/2026 — REG-CENTRAL-BIOME: corretto il bioma centrale in apertura dal territorio. Regole condivise: plain→Pianura, forest→Foresta, hills regionale→Montagne, sea→Mare, swamp→Palude, lake→Lago. Fiume di confine aggiuntivo, non sostitutivo del bioma. Contesto portabile nel link, session storage opzionale; dati mancanti mostrano errore, mai Pianura implicita. Scope scelto: prima il bioma centrale, otto influenze rinviate. QA mapping, ricette e trasferimento tra schede PASS.
+
+05/11/2026 — REG-DEMO: Builder → Mappa regionale → selezione territorio → Apri mappa locale del territorio. Demo isolate senza lettura/scrittura della partita o cloud, seed ripetibile derivato da regione/territorio, ritorno alla stessa regione e selezione. Scenari Pianura/Colline/Foresta/Fiume/Montagne/Costa con ricette attuali e misure di copertura mappa/buildable su griglia 40×40, conteggi delle componenti. Bilanciamento quantitativo ancora da decidere dopo revisione. I confinanti reali sono esposti come contesto; composizione a otto biomi non ancora nel Builder.
+
+05/11/2026 — REG-BIOME-RIVER2: sostituite le quattro anse Bezier identiche con integrazione della direzione lungo la lunghezza del corso. Raggio delle singole anse 2–3 larghezze, aperture e lunghezze variabili per seed, geometria arrotondata ispirata a Leopold/Wolman e al riferimento fornito. Test precedente: solo 2 forme dopo aver rimosso rotazioni; nuovo test: almeno 60 forme su 64 seed. PASS 64 mappe runtime, 2.000 curve, 42 mappe biomi e save-safety. Penetrazione minima 25 px sul riferimento preservata. Nuove mappe, salvataggi esistenti non rigenerati.
+
+05/11/2026 — REG-BIOME-RIVER ingame su `experiment/regional-biome-sectors` (NON MAIN): `makeEnvWater` genera i nuovi fiumi sul perimetro buildable con quattro ampie anse alternate, penetrazione interna 12 U (36 px riferimento 600 px). Acqua reale nei renderer e nei vincoli di costruzione. QA 42 mappe biomi, 64 mappe fiume con collisioni/determinismo, 36 urban checks PASS. Mappe salvate preservate; applicazione alle mappe rigenerate. Gli otto biomi e le dorsali della fixture non sono ancora integrati nel Builder.
+
+05/11/2026 — Esperimento REG-BIOME-PREVIEW: [prova cartografica](REGIONAL-BIOME-SECTORS-PREVIEW.md) su `experiment/regional-biome-sectors`, NON MAIN. Quattro lati e corner di blending. Integrazione con i confinanti Voronoi reali e generatore Builder ancora aperta.
+
+## 2026-11-13 - Preparazione merge PR #206
+
+Preparazione merge PR #206: main aggiornato riconciliato mantenendo moduli e documenti di entrambi i branch. Catalogo Wiki rigenerato. Gilda riferita agli artigiani L2; dazio botteghe e relativo malcontento addebitati a L2 anziche L3, con regressione riprodotta prima del fix. Fondazione: cinque scenari superati isolatamente con Node 22, ma timing intermittente oltre 100 ms nella suite anche su Node 22; verifica Actions ancora necessaria. Nessuna soglia allentata. Suite completa e Actions da completare prima del merge. Nessuna nuova funzione demografica, giudiziaria o archetipo edilizio.
+
+## 2026-11-13 - Verifica CI PR #206
+
+Corretta asserzione livestock obsoleta dopo SOC-CLASS-02. Test comportamentali su selettore agricolo reale, riserve cave, esclusione allevatori e conservazione della vocazione su 400 case migrate superati. Suite completa e CI da completare prima del merge. Nessuna modifica runtime o bilanciamento; ROADMAP e DECISIONS invariate. Demografia, 12 archetipi e funzioni giudiziarie fuori scope.
+
+## SOC-CLASS-02 — Fusione L1 e istituzione istruiti L3 (12/11/2026)
+
+**IMPLEMENTAZIONE SU PR #206, non ancora mergiata.** Popolazione sociale permanente L1 servi (compresi ex L2 minatori/cavatori), L2 artigiani (ex L3), L3 istruiti/mercanti (ex L4), L4 nobili e rendite. Migrazione save locali/cloud, census e denaro conservati, lavori L1 e botteghe L2, commercio/servizi L3, lealtà L4. [Specifica e limiti](CIVIL-CLASS-MIGRATION.md). **DA FARE:** vera migrazione demografica, Job Manager artigiani, servizi amministrativi di istruiti, ricostruzione case e densità D1–D3, test completi e approvazione ripartizione monetaria.
+
+
+## CIV-EVT-01 — Fiere, feste e giostre: effetti sociali (12/11/2026)
+
+**Skeleton sul branch PR #206, non attivo e non merge.** Otto eventi catalogati con effetto proposto su felicità dei servi L1, artigiani L2 e borghesi L3, e lealtà dei nobili L4. Prestigio locale temporaneo proiettato sulle heatmap, senza nuovi overlay o sistemi economici. Si riusano gli allestimenti già esistenti; `feast` richiede `civicKind` per distinguere fiera, festa religiosa, raccolto e banchetto. [Contratto](CIVIC-EVENT-EFFECTS-SKELETON.md). **Aperti:** integrazione con UI eventi, vero roster partecipanti, risorse, felicità insediamento, migrazioni, salvataggi, QA Node/browser e CI.
+
+
+## URB-HEAT-01 — Quattro heatmap e 12 archetipi abitativi (12/11/2026)
+
+**Skeleton su `feature/urban-heatmap-skeleton-20261112`, non merge né gameplay attivo.** Domanda abitativa multicanale L1–L4, prestigio, sicurezza e crimine locale; D1–D3 determina la densità del lotto Voronoi, mentre L1–L4 determina il template completo della casa. Nuova gerarchia sociale L1 lavoratori, L2 artigiani, L3 borghesi istruiti, L4 nobiltà (contratto in [decisioni](context/DECISIONS.md)). `src/settlement-urban-heatmaps.js`, `qa/urban-heatmaps-regression.cjs`, [specifica e dipendenze](URBAN-HEATMAP-SKELETON.md). **Aperti:** integrazione con Crime, mura/guardie, Job Manager, crescita lotti, ricostruzione, migrazione, QA browser e salvataggi.
+
+## 2026-11-10 — FISCO-01 · Bargello e Palazzo del Balivo (fase A: modelli)
+
+- **IMPLEMENTATO SU BRANCH `feature/bargello-balivo`, NON MERGE:** due civici nuovi nel Builder (Civics): **Bargello** presso un pozzo di quartiere (uno per pozzo, entro 9U, L1–L2, torretta d'angolo) e **Palazzo del Balivo** nel contado (fuori dalle zone abitate, ≥12U dai pozzi, ≥20U da un altro Balivo, L1–L2). Modelli Blender, cantiere (L1 a graticcio, L2 in muratura), crollo con la torretta, incendio solo L1, cutaway per piani, Lab e Codex.
+- **FATTO SU BRANCH (fase B, 12/11/2026):** Erario (scheda del Profilo), imposte e loro efficienza di riscossione, decima del Balivo, decreti e leva straordinaria.
+- **NON FATTO:** ordine pubblico di guardie cittadine e Bargello (CRIME), bassa giustizia del Balivo, pedaggio sugli arrivi reali, leva dentro la riserva unica. Dettagli in [BACKLOG](context/BACKLOG.md).
+
 ## 2026-11-09 — BC-261109-02 · DEV Free/Fast e cantieri di upgrade
 
 - [x] **SU BRANCH:** pulsanti indipendenti nel DEV, stato premuto accessibile, nessun salvataggio delle preferenze; risorse gratuite non convertibili in rimborsi.

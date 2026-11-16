@@ -20,7 +20,7 @@ const ctx=vm.createContext({
   builtInteriorFloors:s=>s.span==='wide'?1:(s.level||1),
   isBuiltPortico:()=>false,PORTICO_FUNCTIONS:[],
 });
-vm.runInContext([pick(castle,'functionCapacity'),pick(siege,'eligibleRoom'),pick(siege,'floor'),pick(siege,'allowed')].join('\n'),ctx);
+vm.runInContext([pick(castle,'functionCapacity'),src('settlement-core.js').match(/const W1_TOWER_FUNCTIONS=[^\n]+/)[0],pick(siege,'eligibleRoom'),pick(siege,'floor'),pick(siege,'allowed')].join('\n'),ctx);
 const allowed=vm.runInContext('allowed',ctx);
 
 const w1L1={type:'built',length:3,level:1},w1L2={type:'built',length:3,level:2},w2={type:'built',span:'wide',length:3,level:2};

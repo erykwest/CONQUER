@@ -115,7 +115,7 @@
       {m:'propBunting',x:-6.0,y:6.6,a:0},{m:'propBunting',x:6.0,y:6.6,a:0}]}
   };
   const SHOWN_PHASES=new Set(['preparing','active','clearing']);
-  const GROUND=['#7f9a55','#6c8648'];
+  const GROUND='#8a7656';   // border of trodden earth round the festival ground
 
   const is=s=>s?.type==='eventVenue'&&!!VENUES[s.venue];
   const sizeOf=s=>s.venue==='armyCamp'?{w:Number(s.w)||VENUES.armyCamp.w,h:Number(s.h)||VENUES.armyCamp.h}:s.venue==='festivalGround'?{w:Number(s.w)||VENUES.festivalGround.w,h:Number(s.h)||VENUES.festivalGround.h}:{w:VENUES[s.venue].w,h:VENUES[s.venue].h};
@@ -202,7 +202,7 @@
   // of gear in one venue gets its own pair (see uniquePairs).
   const PRIMARY=['#b8322c','#2f56a6','#d9b43a','#3f7d3a','#ece6d6'];
   const PAIRS=PRIMARY.flatMap(a=>PRIMARY.filter(b=>b!==a).map(b=>[a,b]));
-  function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+  const hash=window.ConquerUtil.hash;
   // Deterministic pair for an instance key (map seed + venue + item).
   const pairFor=key=>PAIRS[hash(((typeof State!=='undefined'&&State.seed)||1)+'|'+key)%PAIRS.length];
   // Pavilions add a scheme to their pair [A,B,scheme]: how the two colours fill walls,
@@ -288,16 +288,17 @@
     return[[-w/2,-h/2],[w/2,-h/2],[w/2,h/2],[-w/2,h/2]].map(([x,y])=>({x:s.x+x*c-y*sn,y:s.y+x*sn+y*c}));
   }
   const toWorld=(s,x,y)=>{const a=s.angle||0,c=Math.cos(a),sn=Math.sin(a);return{x:s.x+x*c-y*sn,y:s.y+x*sn+y*c}};
-  // The idle festival ground: a green pad with a darker border, painted first.
+  // The festival ground: no fill of its own (the terrain shows through, no green pad), only a
+  // thin border of trodden earth marking the lot, painted first.
   function groundMesh(s,z){
     const {w,h}=sizeOf(s),pos=[],col=[];
     const quad=(x0,y0,x1,y1,dz,colour)=>{
       const q=[toWorld(s,x0,y0),toWorld(s,x1,y0),toWorld(s,x1,y1),toWorld(s,x0,y1)];
       for(const t of [[0,1,2],[0,2,3]]){for(const i of t)pos.push(q[i].x,q[i].y,z+dz);col.push(colour)}
     };
-    const e=.12;
-    quad(-w/2,-h/2,w/2,h/2,.006,GROUND[1]);
-    quad(-w/2+e,-h/2+e,w/2-e,h/2-e,.012,GROUND[0]);
+    const e=.12,W=w/2,H=h/2;
+    quad(-W,-H,W,-H+e,.006,GROUND);quad(-W,H-e,W,H,.006,GROUND);
+    quad(-W,-H+e,-W+e,H-e,.006,GROUND);quad(W-e,-H+e,W,H-e,.006,GROUND);
     return{pos,col,gi:col.map(()=>0),groups:[[s.x,s.y,z]],groupBias:[-2e6]};   // under the models' own ground parts (arena sand)
   }
   function groundZ(s){
@@ -470,6 +471,9 @@
     if(!s.camp)s.camp={leaders:1,squads:6,works:0,seed:0};
     const o=campOwner.get(s.camp);
     if(o&&o!==s)s.camp={...s.camp};
+    // Saves are untrusted: keep every index inside its table (CAMP_WORKS[c.works].name must exist).
+    const c=s.camp,fit=(v,[a,b],d)=>{v=Math.floor(Number(v));return Number.isFinite(v)?Math.max(a,Math.min(b,v)):d};
+    c.works=fit(c.works,[0,CAMP_WORKS.length-1],0);c.leaders=fit(c.leaders,CAMP_LIMITS.leaders,1);c.squads=fit(c.squads,CAMP_LIMITS.squads,6);
     campOwner.set(s.camp,s);return s.camp;
   };
   // Local layout of a camp structure (cached): encampment() centred on its lot, the
@@ -658,6 +662,46 @@
       return{x:cx,y:cy,key,items,fires};
     })};
   }
+  // ---------- Outlaws (settlement-outlaws.js): the same campaign models, poorer and untidy.
+  // Bandit lair: three or four ridge tents pitched unevenly round one fire, doors in;
+  // a dun awning over the stolen goods (barrels, sacks, a crate), a weapon rack by the
+  // fire and a stolen cargo wagon pulled up at the edge. No livery, no order.
+  // -> {x,y,key,items:[{m,x,y,a,pair?}],fires:[{x,y,id}]}
+  const DUN=[['#6b5a3e','#4f5a37','gored'],['#5e4b36','#7a6a48','inverted']];
+  function banditLair(center,opts={}){
+    const seed=opts.seed??((typeof State!=='undefined'&&State.seed)||1),key=opts.key||'lair';
+    const rnd=k=>hash(seed+'|lair|'+key+'|'+k)/4294967296,blocked=opts.blocked||(()=>false);
+    const n=opts.tents||(rnd('n')<.5?3:4),start=rnd('s')*Math.PI*2,items=[];
+    const put=it=>{if(!blocked({x:it.x,y:it.y}))items.push(it)};
+    // Tents: an uneven ring leaving one wide gap (the way in, where the loot stands).
+    const gap=1.15,step=(Math.PI*2-gap)/n;
+    for(let k=0;k<n;k++){
+      const th=start+gap/2+(k+.5)*step+(rnd('t'+k)-.5)*step*.35,r=1.6+(rnd('r'+k)-.5)*.3;
+      put({m:rnd('m'+k)<.6?'tentRidgePlain':'tentRidge',x:center.x+Math.cos(th)*r,y:center.y+Math.sin(th)*r,
+        a:th-Math.PI/2+(rnd('a'+k)-.5)*.5});
+    }
+    // The gap: an awning over the loot, the stolen wagon a little further out.
+    const ux=Math.cos(start),uy=Math.sin(start),vx=-uy,vy=ux,at=(d,s)=>({x:center.x+ux*d+vx*s,y:center.y+uy*d+vy*s});
+    let p=at(1.7,.5);put({m:'campAwning',...p,a:start+Math.PI/2,pair:DUN[Math.floor(rnd('aw')*DUN.length)]});
+    p=at(1.35,-.45);put({m:'campBarrels',...p,a:rnd('b')*Math.PI*2});
+    p=at(1.95,-.35);put({m:'campSacks',...p,a:rnd('c')*Math.PI*2});
+    p=at(1.2,.1);put({m:'propArmourCrate',...p,a:rnd('d')*Math.PI*2});
+    p=at(2.75,-.55);put({m:'wagonCargo',...p,a:start+Math.PI/2+(rnd('w')-.5)*.8});
+    // Weapons stacked by the fire, on the side away from the way in.
+    p=at(-.95,.3);put({m:rnd('wr')<.5?'propSpearRack':'propWeaponRack',...p,a:start+Math.PI/2});
+    return{x:center.x,y:center.y,key,items,fires:[{x:center.x,y:center.y,id:key+':fire'}]};
+  }
+  // Brigand roadblock: a cargo wagon dragged across the road, a length of rough stakes
+  // closing the rest and a few stolen barrels beside it. heading: the road's direction.
+  function brigandRoadblock(post,heading=0,opts={}){
+    const key=opts.key||'roadblock',blocked=opts.blocked||(()=>false);
+    const ux=Math.cos(heading),uy=Math.sin(heading),vx=-uy,vy=ux,at=(d,s)=>({x:post.x+ux*d+vx*s,y:post.y+uy*d+vy*s});
+    const items=[{m:'wagonCargo',...at(0,0),a:heading+Math.PI/2+.18},
+      {m:'campPalisade',...at(.15,1.5),a:heading+Math.PI/2},
+      {m:'campBarrels',...at(-.85,-1.25),a:heading},
+      {m:'campSacks',...at(-1.1,1.1),a:heading+.6}].filter(it=>!blocked(it));
+    return{x:post.x,y:post.y,key,items,fires:[{x:post.x-ux*1.6-vx*1.4,y:post.y-uy*1.6-vy*1.4,id:key+':fire'}]};
+  }
   // Meshes of a bivouac for drawMeshes / the Lab (ground: number or function of a point).
   function bivouacMeshes(camps,ground=0){
     const z=typeof ground==='function'?ground:()=>ground,out=[];
@@ -813,7 +857,7 @@
     return{parts:{camp:{p,i:p.map((_,k)=>k).slice(0,p.length/3),c}},meta:{},livery:'realm'};
   }
   window.ConquerEvents3D={VENUES,SETUPS,PAIRS,BUILD,SETUP_NAMES,is,has,sizeOf,setupsFor,venueModel,setupItems,placedItems,pairFor,liveryOf,parts,triangles,itemRect,footprint,meshes,draw,addToBuilder,dynamicMeshes,toWorld,
-    make,label,cost,buildDays,tickEvents,setEvent,panelHtml,bindPanel,bivouac,bivouacMeshes,bivouacModel,encampment,encampmentFence,campLayout,fitCamp,CAMP_WORKS};
+    make,label,cost,buildDays,tickEvents,setEvent,panelHtml,bindPanel,bivouac,bivouacMeshes,bivouacModel,banditLair,brigandRoadblock,encampment,encampmentFence,campLayout,fitCamp,CAMP_WORKS};
   // Lab scenes: sample bivouacs in the Asset Lab catalog (ConquerCampScenes).
   if(window.ConquerEventModels){
     const M=window.ConquerEventModels,sq=(n,x=0)=>Array.from({length:n},(_,k)=>({id:'s'+k,kind:'squad',x:x+(k%3)*.4,y:Math.floor(k/3)*.4}));
@@ -822,6 +866,10 @@
       bivouacSquads:scene(sq(2)),
       bivouacCaptain:scene([{id:'cap',kind:'captain',x:0,y:0},...sq(5)]),
       bivouacKnightLarge:scene([{id:'kn',kind:'knight',x:0,y:0},...sq(9)]),
+      // Outlaws (settlement-outlaws.js): the bandit lair (3 and 4 tents) and a brigand roadblock.
+      banditLair3:bivouacModel(banditLair({x:0,y:0},{seed:7,key:'lab3',tents:3}),pal),
+      banditLair4:bivouacModel(banditLair({x:0,y:0},{seed:11,key:'lab4',tents:4}),pal),
+      brigandRoadblock:bivouacModel(brigandRoadblock({x:0,y:0},0,{key:'lab'}),pal),
       ...Object.fromEntries([['encampmentSmall',2,7,'fence'],['encampmentArmy',4,16,'palisade']].map(([name,nl,ns,works])=>{
         const camp=encampment({leaders:Array.from({length:nl},(_,k)=>({id:'l'+k,kind:k?'knight':'captain'})),squads:sq(ns)},{seed:7,key:name});
         return[name,bivouacModel({x:0,y:0,items:camp.items.concat(encampmentFence(camp,works))},pal)];

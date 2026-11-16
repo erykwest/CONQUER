@@ -49,6 +49,7 @@ function drawVillagerHead(id,x,y,r,sex='male',cachedHair=null){
   ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();
   ctx.restore();
 }
+const samePoint=(a,b)=>!!a&&!!b&&Math.abs(a.x-b.x)<1e-6&&Math.abs(a.y-b.y)<1e-6;
 // Everything that changes how a villager looks (not where): the key of its 3D figure tile.
 function villagerLookKey(dot){
   const outfit=window.ConquerWardrobe?.outfitFor(dot);
@@ -91,8 +92,8 @@ function drawPeasants(){
   if(!houses.length&&!founders)return;
   const day=peasantVisualDay(),dots=[];
   let representedPopulation=0,activeAgents=0;
-  const farmHouses=houses.filter(h=>houseLevel(h)===1||houseLevel(h)===2);
-  const assignments=fieldWorkAssignments(farmHouses,fields);
+  // Keyed by resident id: only the L1 the economy staffs at a field farm.
+  const assignments=fieldWorkAssignments(houses,fields);
   // Read the exact same named crews used by the manual construction tick.
   const constructionJobs=new Map();
   for(const [siteId,workers] of constructionCrewAssignments(State.clock.day)){
@@ -117,8 +118,9 @@ function drawPeasants(){
   const residentStride=State.view.scale<.30?3:State.view.scale<.55?2:1;
   for(const house of houses){
     representedPopulation+=housePopulationCapacity(house).total;
-    const kind=villagerClass(house),assignment=assignments.get(house.id);
+    const kind=villagerClass(house);
     for(const resident of houseResidents(house)){
+      const assignment=assignments.get(resident.id);
       // Alarm destinations are computed even for residents not selected by
       // distant-camera LOD, so mobilization does not depend on zoom level.
       const building=constructionJobs.get(resident.id);
@@ -129,10 +131,13 @@ function drawPeasants(){
         building?constructionWorkerPosition(building.worker,building.site,State.clock.day):
         residentClassPosition(house,resident,day,assignment);
       if(carter&&!p)continue;
+      // The shepherd with his flock (residentClassPosition returned his pasture spot).
+      const shepherd=!building&&!carter&&p&&resident.sex==='male'&&resident.age==='adult'&&resident.index===0&&
+        houseLevel(house)<=2&&samePoint(p,window.ConquerLivestock?.shepherdPosition?.(house));
       // The artisan of an open L3 workshop works at his bench, not at the door.
       const shop=!building&&!carter?window.ConquerShopCutaway?.artisanAt(house,resident,p):null;
       if(shop)p=shop.p;
-      else if(p&&!building&&!carter&&!(assignment&&resident.sex==='male'&&resident.age==='adult'&&houseLevel(house)<=2))
+      else if(p&&!building&&!carter&&!(assignment&&resident.sex==='male'&&resident.age==='adult'&&fieldSocialTier(house)===1))
         p={x:p.x+resident.scatterX,y:p.y+resident.scatterY};
       const combatP=window.ConquerCombat?.civilPosition(p,house,resident);
       if(combatP!==undefined)p=combatP; // null means safely inside the Common Hall.
@@ -146,6 +151,9 @@ function drawPeasants(){
         p,depth:rp.x+rp.y,id:resident.id,kind,sex:resident.sex,age:resident.age,
         hair:resident.hair,colors:resident.colors,
         militia:window.ConquerCombat?.recruitedResident(resident.id)||false,
+        // Work clothes (settlement-wardrobe.js ROLES) while at the job or on the way to it.
+        role:combatP!==undefined?undefined:inShop?shop.kind:building?(building.site.type==='loggingCamp'?'woodcutter':'builder'):
+          carter?'carter':shepherd?'shepherd':undefined,
         work:inShop?(shop.tool&&window.ConquerWorkAnim?{tool:shop.tool,facing:shop.facing}:null):fieldWork(p,assignment,house,resident)
       });
       activeAgents++;
@@ -172,6 +180,7 @@ function drawPeasants(){
     if(residentStride>1&&hash%residentStride!==0)continue;
     const rp=rotateViewPoint(p);
     dots.push({p,depth:rp.x+rp.y,id,kind:'peasant',sex:'male',age:'adult',
+      role:building?(building.site.type==='loggingCamp'?'woodcutter':'builder'):carter?'carter':undefined,
       hair:villagerHair(id),colors:villagerBodyColors(id,'peasant'),militia:false});
     activeAgents++;
   }
@@ -199,7 +208,9 @@ function drawRaisedVillagers(){
 // A farmer standing at his field spot works it with the tool of the season:
 // hoe for ploughing, seed sack for sowing, sickle for the harvest.
 function fieldWork(p,assignment,house,resident){
-  if(!window.ConquerWorkAnim||!assignment||resident.sex!=='male'||resident.age!=='adult'||houseLevel(house)>2)return null;
+  if(!window.ConquerWorkAnim||!assignment||resident.sex!=='male'||resident.age!=='adult'||fieldSocialTier(house)!==1)return null;
+  // A strip without work (finished or field closed) never shows a working pose.
+  if(typeof fieldSlotRelease==='function'&&fieldSlotRelease(assignment.field,assignment.cell))return null;
   const spot=fieldWorkerPosition(assignment.field,assignment.cell);
   if(!spot||Math.hypot(p.x-spot.x,p.y-spot.y)>.02)return null;
   const tool=window.ConquerWorkAnim.FIELD_TOOL[fieldCrop(assignment.field).phase];
@@ -219,16 +230,102 @@ function soldierBodyPath(base,bodyW,bodyH,top,bodyY){
   ctx.moveTo(base.x-bodyW*.42,top);ctx.lineTo(base.x+bodyW*.42,top);
   ctx.lineTo(base.x+bodyW*.50,bodyY+bodyH*.50);ctx.lineTo(base.x-bodyW*.50,bodyY+bodyH*.50);ctx.closePath();
 }
-function drawQuarteredShield(cx,cy,rx,ry,livery,stroke,scale,useHeraldry=true){
+// Shield outline in the feudal shape (unitShield()). Returns the box the arms are painted into.
+function soldierShieldPath(cx,cy,rx,ry,shape){
+  ctx.beginPath();
+  if(shape==='round'){
+    const r=(rx+ry)*.5;ctx.arc(cx,cy,r,0,Math.PI*2);return{x:cx-r,y:cy-r,w:r*2,h:r*2};
+  }
+  if(shape==='heater'){
+    const t=cy-ry*.9,b=cy+ry;
+    ctx.moveTo(cx-rx,t);ctx.lineTo(cx+rx,t);ctx.lineTo(cx+rx,cy);
+    ctx.quadraticCurveTo(cx+rx*.95,cy+ry*.62,cx,b);ctx.quadraticCurveTo(cx-rx*.95,cy+ry*.62,cx-rx,cy);ctx.closePath();
+    return{x:cx-rx,y:t,w:rx*2,h:b-t};
+  }
+  if(shape==='kite'){
+    const t=cy-ry*1.05,b=cy+ry*1.3;
+    ctx.moveTo(cx-rx,cy-ry*.55);ctx.quadraticCurveTo(cx-rx,t,cx,t);ctx.quadraticCurveTo(cx+rx,t,cx+rx,cy-ry*.55);
+    ctx.quadraticCurveTo(cx+rx*.8,cy+ry*.45,cx,b);ctx.quadraticCurveTo(cx-rx*.8,cy+ry*.45,cx-rx,cy-ry*.55);ctx.closePath();
+    return{x:cx-rx,y:t,w:rx*2,h:b-t};
+  }
+  if(shape==='pavise'){
+    const w=rx*1.05,t=cy-ry*1.3,b=cy+ry*1.15;
+    ctx.moveTo(cx-w,t+ry*.25);ctx.quadraticCurveTo(cx,t-ry*.12,cx+w,t+ry*.25);
+    ctx.lineTo(cx+w*.9,b);ctx.lineTo(cx-w*.9,b);ctx.closePath();
+    return{x:cx-w,y:t,w:w*2,h:b-t};
+  }
+  ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);return{x:cx-rx,y:cy-ry,w:rx*2,h:ry*2};
+}
+function drawQuarteredShield(cx,cy,rx,ry,livery,stroke,scale,useHeraldry=true,shape='oval'){
   ctx.save();
-  ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.clip();
-  if(!useHeraldry||!window.__conquerHeraldryCanvas?.paint(ctx,cx-rx,cy-ry,rx*2,ry*2)){
-    ctx.fillStyle=livery.main;ctx.fillRect(cx-rx,cy-ry,rx*2,ry*2);
-    ctx.fillStyle=livery.alt;ctx.fillRect(cx,cy-ry,rx,ry*2);
+  const box=soldierShieldPath(cx,cy,rx,ry,shape);ctx.clip();
+  if(!useHeraldry||!window.__conquerHeraldryCanvas?.paint(ctx,box.x,box.y,box.w,box.h)){
+    ctx.fillStyle=livery.main;ctx.fillRect(box.x,box.y,box.w,box.h);
+    ctx.fillStyle=livery.alt;ctx.fillRect(cx,box.y,box.w/2,box.h);
   }
   ctx.restore();
   ctx.save();ctx.strokeStyle=stroke;ctx.lineWidth=Math.max(.8,.9*scale);
-  ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);ctx.stroke();ctx.restore();
+  soldierShieldPath(cx,cy,rx,ry,shape);ctx.stroke();
+  if(shape==='round'){ctx.fillStyle='#9a9fa3';ctx.beginPath();ctx.arc(cx,cy,(rx+ry)*.16,0,Math.PI*2);ctx.fill();ctx.stroke();}
+  if(shape==='pavise'){ctx.beginPath();ctx.moveTo(cx,cy-ry*1.12);ctx.lineTo(cx,cy+ry*1.15);ctx.stroke();}
+  ctx.restore();
+}
+// Feudal equipment styles; the Asset Lab runs without settlement-core.js, so read the policy directly there.
+function soldierHelmetStyle(){return typeof unitHelmet==='function'?unitHelmet():State.policies?.unitHelmet||'cap'}
+function soldierShieldStyle(){return typeof unitShield==='function'?unitShield():State.policies?.unitShield||'oval'}
+// Steel headgear in the feudal style (unitHelmet()), over the head circle at (x,y) of radius r.
+const HELMET_STEEL='#70777c',HELMET_EDGE='rgba(30,30,30,.75)';
+function drawSoldierHelmet(x,y,r,style,scale){
+  const lw=Math.max(.6,.7*scale);
+  ctx.fillStyle=HELMET_STEEL;ctx.strokeStyle=HELMET_EDGE;ctx.lineWidth=lw;
+  if(style==='kettle'){
+    ctx.beginPath();ctx.arc(x,y-r*.15,r*.92,Math.PI,Math.PI*2);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.ellipse(x,y-r*.12,r*1.75,r*.32,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+  }else if(style==='nasal'){
+    ctx.beginPath();ctx.moveTo(x-r*1.02,y);ctx.quadraticCurveTo(x-r*.85,y-r*1.1,x,y-r*1.7);
+    ctx.quadraticCurveTo(x+r*.85,y-r*1.1,x+r*1.02,y);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.fillRect(x-r*.14,y-r*.1,r*.28,r*.75);
+  }else if(style==='barbuta'){
+    ctx.beginPath();ctx.arc(x,y,r*1.06,0,Math.PI*2);ctx.fill();ctx.stroke();
+    // T-shaped face opening.
+    ctx.fillStyle=VILLAGER_SKIN;
+    ctx.fillRect(x-r*.62,y-r*.22,r*1.24,r*.3);ctx.fillRect(x-r*.2,y-r*.22,r*.4,r*.95);
+  }else if(style==='greathelm'){
+    const w=r*1.08,t=y-r*1.2,b=y+r*1.05;
+    ctx.beginPath();ctx.moveTo(x-w,t+r*.18);ctx.lineTo(x+w,t+r*.18);ctx.lineTo(x+w*.98,b);ctx.lineTo(x-w*.98,b);ctx.closePath();
+    ctx.fill();ctx.stroke();
+    ctx.fillStyle='#8a9196';ctx.fillRect(x-w,t+r*.1,w*2,r*.16);
+    // Eye slit and the vertical reinforcement of the face plate.
+    ctx.fillStyle='#1d2022';ctx.fillRect(x-w*.82,y-r*.28,w*1.64,Math.max(.6,r*.18));
+    ctx.fillStyle='#5d6468';ctx.fillRect(x-r*.07,y-r*.1,r*.14,r*1.1);
+  }else{
+    ctx.beginPath();ctx.arc(x,y,r,Math.PI,Math.PI*2);ctx.lineTo(x-r,y);ctx.closePath();ctx.fill();
+    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();
+  }
+}
+// Outlaw axeman (settlement-outlaws.js): a round wooden shield with an iron boss on the
+// off arm and a bearded axe in the hand. pose (combat anim) or null: the axe is raised
+// back on the wind-up and comes down toward the foe on the blow.
+const OUTLAW_SHIELD={main:'#7b5a38',alt:'#6a4b2e',mainDark:'#7b5a38',altDark:'#6a4b2e'};
+function drawAxeAndRoundShield(base,scale,bodyW,bodyH,bodyY,top,pose=null){
+  const ready=pose?.ready||0,attack=pose?.attack||0,dirX=pose?.dirX??1;
+  const side=dirX>=0?1:-1;
+  drawQuarteredShield(base.x-bodyW*.6+dirX*ready*1.2*scale,bodyY+bodyH*.08,3.1*scale,3.1*scale,OUTLAW_SHIELD,'#3b2a1a',scale,false,'round');
+  const hx=base.x+bodyW*.42,hy=bodyY+bodyH*.16;
+  const theta=side*(attack<0?attack*1.1:attack*1.7)+side*ready*.2;
+  ctx.save();
+  ctx.translate(hx,hy);ctx.rotate(theta);ctx.translate(-hx,-hy);
+  const tx=base.x+bodyW*.72,ty=top-6.2*scale;
+  // Haft.
+  ctx.strokeStyle='#6e4f30';ctx.lineWidth=Math.max(1,1.2*scale);
+  ctx.beginPath();ctx.moveTo(hx,hy+1.2*scale);ctx.lineTo(tx,ty);ctx.stroke();
+  // Bearded head, edge facing out.
+  ctx.fillStyle='#a9adb0';ctx.strokeStyle='#3d4144';ctx.lineWidth=Math.max(.6,.6*scale);
+  ctx.beginPath();
+  ctx.moveTo(tx-.3*scale,ty+.4*scale);ctx.lineTo(tx+2.6*scale,ty-1.2*scale);
+  ctx.quadraticCurveTo(tx+3.4*scale,ty+1.4*scale,tx+2.5*scale,ty+3.6*scale);
+  ctx.lineTo(tx+.1*scale,ty+2.0*scale);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.restore();
 }
 function drawSoldierFigure(p,z,type,id,phase=0,liveryOverride=null){
   return withUrbanFigureOcclusion(p,z,()=>drawSoldierFigureUnmasked(p,z,type,id,phase,liveryOverride));
@@ -259,10 +356,9 @@ function drawSoldierFigureUnmasked(p,z,type,id,phase=0,liveryOverride=null){
   soldierBodyPath(base,bodyW,bodyH,top,bodyY);
   ctx.strokeStyle='rgba(25,24,22,.88)';ctx.lineWidth=Math.max(.7,.8*scale);ctx.stroke();
 
-  // Head + steel cap.
+  // Head + helmet: the realm's own soldiers wear the feudal helmet, foes (livery override) the cap.
   ctx.fillStyle=VILLAGER_SKIN;ctx.beginPath();ctx.arc(base.x,headY,headR,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#70777c';ctx.beginPath();ctx.arc(base.x,headY,headR,Math.PI,Math.PI*2);ctx.lineTo(base.x-headR,headY);ctx.closePath();ctx.fill();
-  ctx.strokeStyle='rgba(30,30,30,.75)';ctx.beginPath();ctx.arc(base.x,headY,headR,0,Math.PI*2);ctx.stroke();
+  drawSoldierHelmet(base.x,headY,headR,liveryOverride?'cap':soldierHelmetStyle(),scale);
 
   if(type==='spearman'){
     const x=base.x+bodyW*.55;
@@ -277,9 +373,11 @@ function drawSoldierFigureUnmasked(p,z,type,id,phase=0,liveryOverride=null){
     ctx.beginPath();ctx.moveTo(bx+Math.cos(-Math.PI*.55)*r,by+Math.sin(-Math.PI*.55)*r);
     ctx.lineTo(bx-r*.18,by);
     ctx.lineTo(bx+Math.cos(Math.PI*.55)*r,by+Math.sin(Math.PI*.55)*r);ctx.stroke();
+  }else if(type==='axeman'){
+    drawAxeAndRoundShield(base,scale,bodyW,bodyH,bodyY,top,null);
   }else if(type!=='unarmed'){
     const swing=Math.sin(phase*Math.PI*2)*3.2*scale;
-    drawQuarteredShield(base.x-bodyW*.62,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery,'#b7aa8f',scale,!liveryOverride);
+    drawQuarteredShield(base.x-bodyW*.62,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery,'#b7aa8f',scale,!liveryOverride,liveryOverride?'oval':soldierShieldStyle());
     // Sword.
     ctx.strokeStyle='#c4c7c8';ctx.lineWidth=Math.max(1,1.15*scale);
     ctx.beginPath();ctx.moveTo(base.x+bodyW*.42,bodyY+bodyH*.16);ctx.lineTo(base.x+bodyW*.80+swing,top-7.5*scale);ctx.stroke();

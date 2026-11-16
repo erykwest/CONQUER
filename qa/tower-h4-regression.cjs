@@ -40,3 +40,39 @@ assert.ok(Math.abs(h4-h3-1.2)<1e-9,'one more 1.2U storey');
 assert.ok(h4/1.5>3.5&&h4/1.5<4.5,'slender but plausible: '+(h4/1.5).toFixed(2)+':1');
 assert.ok(A.levelCostFactor(w2)>A.levelCostFactor({...w2,level:3})*1.4,'H4 costs ~45% more than H3');
 console.log('PASS H4 only on the square stone W2 tower');
+
+// Save/load: migrateStructures must keep the 4th storey of a W2 H4 tower (it used to clamp stone towers to 3).
+{
+  const persist=src('settlement-app-persistence.js'),mig=persist.match(/function migrateStructures\(list\)\{[\s\S]*?\n\}/);
+  assert.ok(mig,'migrateStructures found');
+  const base={Math,Number,Object,Array,JSON,Map,Set,isFinite,window:{},clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),
+    isOrientedTower:s=>s.shape==='dee'||s.shape==='half',isWoodTower:s=>s.material==='wood',isSmallGate:()=>false,isLonghouse:()=>false,isLeanTo:()=>false,
+    KEEP_W4_TIER:4,TOWER_H4_LEVEL:4,SMALL_GATE_MAX_LEVEL:2,snapStructureAngle:x=>x,structureUsesDiscreteAngle:()=>false,isCivicAnnex:()=>false};
+  // Every other global the migration touches is a no-op stub.
+  const mctx=vm.createContext(new Proxy(base,{has:()=>true,get:(t,k)=>k in t?t[k]:(k===Symbol.unscopables?undefined:(()=>undefined))}));
+  vm.runInContext([lineFn(core,'towerTier'),lineFn(core,'towerH4Allowed'),lineFn(core,'maxStructureLevel'),mig[0],'this.migrate=migrateStructures;'].join('\n'),mctx);
+  const [h4]=mctx.migrate([{id:'t4',type:'tower',shape:'square',material:'stone',size:1.5,level:4}]);
+  assert.equal(h4.level,4,'a saved W2 H4 tower keeps its 4th storey on load');
+  const [w3]=mctx.migrate([{id:'t3',type:'tower',shape:'square',material:'stone',size:2,level:4}]);
+  assert.equal(w3.level,3,'a W3 tower saved at level 4 is still clamped to H3');
+  console.log('PASS W2 H4 survives save/load; other towers stay clamped');
+}
+
+// Placement: the tower tool never commits a level its size cannot hold (a W3 at H4 was placed at 4
+// and silently lost the paid storey on the next load).
+{
+  const place=src('settlement-castle-placement.js');
+  const from=place.indexOf('function orientedToolSpec(){'),to=place.indexOf("  if(State.tool.kind==='gate')",from);
+  assert.ok(from>=0&&to>from,'orientedToolSpec found');
+  const pctx=vm.createContext({Math,Number,Object,Array,clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),
+    isOrientedTower:s=>s.shape==='dee',isWoodTower:s=>s.material==='wood',isSmallGate:()=>false,isLonghouse:()=>false,isLeanTo:()=>false,
+    KEEP_W4_TIER:4,TOWER_H4_LEVEL:4,SMALL_GATE_MAX_LEVEL:2,State:{tool:{},buildLevels:{tower:1},buildMasonryMaterial:'stone'}});
+  vm.runInContext([lineFn(core,'towerTier'),lineFn(core,'towerH4Allowed'),lineFn(core,'maxStructureLevel'),
+    place.slice(from,to)+'return null}','this.spec=orientedToolSpec;'].join('\n'),pctx);
+  const at=(size,level,shape='square')=>{pctx.State.tool={kind:'tower',shape,size,level,material:'stone'};return pctx.spec().level};
+  assert.equal(at(1.5,4),4,'the W2 square stone tower is placed at H4');
+  assert.equal(at(2,4),3,'a W3 tower asked at H4 is placed at H3');
+  assert.equal(at(1,4),3,'a W1 tower asked at H4 is placed at H3');
+  assert.equal(at(1.5,2),2,'lower levels are untouched');
+  console.log('PASS placement clamps the tower level to the tower ceiling');
+}

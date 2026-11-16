@@ -1,6 +1,28 @@
 'use strict';
 // Pointer/canvas interactions and build tool controls. Extracted verbatim from settlement-app.js.
+// Shift + middle mouse (mouse 3) drag = free camera rotation around the screen centre; adding Ctrl snaps to 15°.
+// Plain middle/right drag still pans.
+let orbit=null,orbitFrame=0,orbitPending=null;
+const ORBIT_PX_PER_TURN=160;   // horizontal pixels per 90°
+function flushCameraOrbit(){
+  orbitFrame=0;if(!orbit||!orbitPending)return;
+  const {clientX,snap}=orbitPending;orbitPending=null;
+  setCameraRotation(orbit.start+(clientX-orbit.x)/ORBIT_PX_PER_TURN,{pivot:orbit.pivot,anchor:orbit.anchor,snap});
+  status('View rotation: '+cameraRotationDegrees()+'°'+(snap?' (15° snap)':' · +Ctrl = 15° steps'));
+}
+function finishCameraOrbit(){
+  if(!orbit)return;
+  if(orbitPending){if(orbitFrame)cancelAnimationFrame(orbitFrame);flushCameraOrbit()}
+  orbit=null;scheduleLocalSave(500);
+}
 canvas.addEventListener('pointerdown',e=>{
+  if(e.button===1&&e.shiftKey){
+    e.preventDefault();
+    const pivot=visibleCanvasCenter();
+    orbit={x:e.clientX,start:State.view.rotation||0,pivot,anchor:s2w(pivot.x,pivot.y)};
+    canvas.setPointerCapture(e.pointerId);
+    return
+  }
   if(e.button===1||e.button===2){
     pan={x:e.clientX,y:e.clientY,vx:State.view.x,vy:State.view.y};
     sceneCachePanPreview=true;
@@ -52,7 +74,9 @@ canvas.addEventListener('pointerdown',e=>{
       const job=window.ConquerForestry?.start(ghost);
       if(job?.ok){
         State.draft=null;
-        status('Job L1 avviato · +'+ghost.wood+' legname a completamento · '+ghost.workRequired+' giornate lavoro');
+        const doneNow=job.job?.construction?.completedDay!=null;   // Fast build DEV: cleared at once
+        status(doneNow?'Fast build DEV: foresta rimossa · +'+ghost.wood+' legname':
+          'Job L1 avviato · +'+ghost.wood+' legname a completamento · '+ghost.workRequired+' giornate lavoro');
       }else status('Rimozione foresta bloccata: '+(job?.reason||'job non disponibile'));
       draw();return;
     }
@@ -202,11 +226,13 @@ canvas.addEventListener('pointerdown',e=>{
           normalizeStructuralLinearRoute(State.draft.a,e2.point,spec,!!(e2.structureId||e2.endpoint));
         if(route&&route.segments.length&&route.segments.every(seg=>seg.length>=.24)){
           const legs=route.segments.length;
-          if(commitStructuralLinearRoute(route,e2.structureId||null,spec)){
+          const done=commitStructuralLinearRoute(route,e2.structureId||null,spec);
+          if(done){
             State.draft=null;
-            status(legs===2?State.tool.label+' added · automatic 15° joint':State.tool.label+' ready for next segment');
+            const gates=done.gates?' · '+(done.gates===1?'gate':done.gates+' gates')+' on the main road':'';
+            status((legs===2?State.tool.label+' added · two straight legs':State.tool.label+' ready for next segment')+gates);
           }
-        }else status(e2.structureId||e2.endpoint?'No valid two-segment 15° route to this magnet':'Segment too short');
+        }else status(e2.structureId||e2.endpoint?'Magnet out of reach':'Segment too short');
       }
     }
   }
@@ -222,6 +248,11 @@ function flushCanvasPan(){
   draw();
 }
 canvas.addEventListener('pointermove',e=>{
+  if(orbit){
+    orbitPending={clientX:e.clientX,snap:e.ctrlKey};
+    if(!orbitFrame)orbitFrame=requestAnimationFrame(flushCameraOrbit);
+    return
+  }
   if(pan){
     panPending={clientX:e.clientX,clientY:e.clientY};
     if(!panFrame)panFrame=requestAnimationFrame(flushCanvasPan);
@@ -327,13 +358,17 @@ canvas.addEventListener('pointermove',e=>{
         ...(index===route.segments.length-1&&snap.structureId?{bSnap:snap.structureId}:{})
       }));
       State.draft.previewSegments.forEach(seg=>window.ConquerQuay?.faceWallOut(seg));   // quay walls face out
+      // Crossing a main road: the ghost already shows the gate and the wall cut on its flanks.
+      const gatePlan=wallRoadGatePlan(State.draft.previewSegments);
+      if(!gatePlan.blocked&&gatePlan.gates.length)State.draft.previewSegments=[...gatePlan.gates.map(g=>({...g,previewOnly:true})),...gatePlan.walls];
       const previewCost=aggregateConstructionCost(State.draft.previewSegments);
       const legs=route.segments.length,total=route.length;
-      status(`${State.tool.label}: ${total.toFixed(2)}U · ${route.onQuay?'⚓ along the quay':legs===2?'2×15° legs · auto joint':'15°'} · ${costText(previewCost)} — click to confirm`);
+      const gateNote=gatePlan.blocked?' · ⚠ '+gatePlan.blocked:gatePlan.gates.length?' · '+(gatePlan.gates.length===1?'gate':gatePlan.gates.length+' gates')+' on the main road':'';
+      status(`${State.tool.label}: ${total.toFixed(2)}U · ${route.onQuay?'⚓ along the quay':legs===2?'2 straight legs':Math.round(((route.segments[0].angle*180/Math.PI)%360+360)%360)+'°'}${gateNote} · ${costText(previewCost)} — click to confirm`);
     }else{
       State.draft.preview=null;State.draft.previewSegments=null;
       State.draft.invalidPreview={type:State.tool.linear,a:State.draft.a,b:snap.point,width:spec.width,length:dist(State.draft.a,snap.point)};
-      status(snap.structureId||snap.endpoint?'No valid two-segment 15° route to this magnet':'Segment too short');
+      status(snap.structureId||snap.endpoint?'Magnet out of reach':'Segment too short');
     }
     draw();
     return
@@ -413,6 +448,10 @@ function finishCanvasPan(){
 }
 canvas.addEventListener('pointerup',finishCanvasPan);
 canvas.addEventListener('pointercancel',finishCanvasPan);
+canvas.addEventListener('pointerup',finishCameraOrbit);
+canvas.addEventListener('pointercancel',finishCameraOrbit);
+canvas.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault()});
+canvas.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault()});   // no browser autoscroll
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 let zoomFrame=0,zoomSettleTimer=0,zoomWheelDelta=0,zoomAnchor=null;
 function flushWheelZoom(){
@@ -620,4 +659,4 @@ document.getElementById('villageNameInput').addEventListener('keydown',e=>{if(e.
 document.getElementById('closeFunctions').onclick=()=>{State.selectedId=null;renderFunctionPanel();draw()};
 document.getElementById('undoBtn').onclick=()=>{const s=[...State.structures].reverse().find(x=>!x.auto&&!x.foundingStockyard);if(s)deleteStructure(s.id)};
 document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement, including player terraforming, and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(refundableConstructionCost(s));const borderEntries=ensureBorderEntrySelection();State.structures=[];window.ConquerTerraforming?.clear();window.ConquerForestry?.clear();window.ConquerEconomy?.reset();State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty(true,'all');renderUI();draw()}};
-['tax','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty(false,false,true)});
+['tax'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty(false,false,true)});

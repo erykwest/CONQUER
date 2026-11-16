@@ -26,7 +26,9 @@
   function parts(key){
     let out=expanded.get(key);if(out)return out;
     out=[];
-    for(const [name,part] of Object.entries(DATA().models[key].parts)){
+    // A stale cached kit can lack a newer piece: skip it rather than throw and disable World 3D.
+    const model=DATA()?.models?.[key];if(!model?.parts)return out;
+    for(const [name,part] of Object.entries(model.parts)){
       const v=new Float32Array(part.i.length*3);
       for(let k=0;k<part.i.length;k++){const j=part.i[k]*3;v[k*3]=part.p[j];v[k*3+1]=part.p[j+1];v[k*3+2]=part.p[j+2]}
       out.push({name,v,c:part.c});
@@ -266,10 +268,11 @@
   function addToBuilder(m,house){
     if(!handles(house))return false;
     const mesh=geometry(house);if(!mesh)return false;
-    const p=mesh.pos;
+    // Shades are worked out once per cached mesh (ConquerMesh3D.shadedHexes), not per rebuild.
+    const p=mesh.pos,M=window.ConquerMesh3D,shades=M.shadedHexes?.(mesh);
     for(let t=0;t<mesh.col.length;t++){
       const o=t*9;
-      m.face([{x:p[o],y:p[o+1],z:p[o+2]},{x:p[o+3],y:p[o+4],z:p[o+5]},{x:p[o+6],y:p[o+7],z:p[o+8]}],window.ConquerMesh3D.shadedHex(mesh,t));
+      m.face([{x:p[o],y:p[o+1],z:p[o+2]},{x:p[o+3],y:p[o+4],z:p[o+5]},{x:p[o+6],y:p[o+7],z:p[o+8]}],shades?shades[t]:M.shadedHex(mesh,t));
     }
     return true;
   }

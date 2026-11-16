@@ -20,7 +20,7 @@ const core=src('settlement-core.js'),castle=src('settlement-castle-structures.js
 vm.runInContext(slice(core,'function isWoodTower(','function wallWidthForTier(')
   +slice(castle,'function palisadeSnapTarget(','function palisadeOctagon(')
   +slice(castle,'function palisadePostOffsetAt(','function drawPalisadePostLine('),ctx);
-for(const f of ['assets/wood-fort-models.js','settlement-mesh3d.js','settlement-wood3d.js'])vm.runInContext(src(f),ctx);
+for(const f of ['settlement-util.js','assets/wood-fort-models.js','settlement-mesh3d.js','settlement-wood3d.js'])vm.runInContext(src(f),ctx);
 const M=window.ConquerWoodFortModels,W=window.ConquerWood3D;
 
 // Every model is well formed.

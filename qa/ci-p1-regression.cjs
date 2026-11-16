@@ -4,13 +4,24 @@ const fs=require('node:fs'),path=require('node:path'),assert=require('node:asser
 const root=path.resolve(__dirname,'..'),read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const dir=path.join(root,'.github/workflows');
 const workflows=fs.readdirSync(dir).filter(x=>x.endsWith('.yml')).sort();
-assert.equal(workflows.length,26,'P0 workflow inventory must remain intact');
+// Inventory: the named owners must survive; new workflows may be added freely
+// (each one is still held to the per-workflow contracts below).
+const inventory=['asset-lab-regression.yml','builder-menu-regression.yml','camp-regression.yml','cans-regression.yml',
+ 'circle-regression.yml','codex-wiki.yml','combat-regression.yml','construction-props-regression.yml','context-governance.yml',
+ 'converge-regression.yml','crime-regression.yml','cutaway-floors-regression.yml','earthworks-regression.yml',
+ 'economy-flows-regression.yml','gate-six-sockets-regression.yml','main-fixes-regression.yml','march-regression.yml',
+ 'panels-browser-preview.yml','perf.yml','road-magnet-regression.yml','runtime-integrity.yml','sea-regression.yml',
+ 'settlement-routing-spawn.yml','tower-variants-regression.yml','wardrobe-regression.yml','webgpu-smoke.yml',
+ 'work-anim-regression.yml'];
+for(const name of inventory)assert.ok(workflows.includes(name),'workflow inventory lost '+name);
 const f=name=>read('.github/workflows/'+name);
 for(const name of workflows){
   const s=f(name);
   assert.match(s,/^concurrency:/m,'missing cancellation configuration in '+name);
   assert.ok(s.includes("github.event.pull_request.number || github.ref"),name+' must isolate PR refs');
   assert.ok(s.includes("cancel-in-progress: ${{ github.event_name == 'pull_request' }}"),name+' must not cancel completed/main/scheduled verification');
+  // Least privilege: every workflow declares a read-only token explicitly.
+  assert.match(s,/^permissions:\n  contents: read$/m,name+' must declare permissions: contents: read');
 }
 // P2.3: no push triggers pointing to deleted remote branches (verified 2026-11-06).
 // Preserve push validation on main, PR coverage on all seven specialist workflows.
@@ -35,7 +46,7 @@ for(const name of ['asset-lab-regression.yml','converge-regression.yml','main-fi
 }
 const settle=f('settlement-routing-spawn.yml');
 assert.ok(settle.includes("node qa/ci-p1-regression.cjs"),'P1 guard must execute on every PR');
-assert.ok(settle.includes('(core|app|app-simulation|app-persistence|world|world3d|castle3d|placement|castle-placement|population-navigation)'), '3D world/castle changes must receive complete suite');
+assert.ok(settle.includes("grep -Evq '^(docs/|.*\\.md$)'"),'every non-docs PR (3D world/castle included) must receive the complete suite');
 const asset=f('asset-lab-regression.yml');
 assert.ok(asset.includes('needs: asset-lab')&&asset.includes("if: needs.asset-lab.outputs.visual_needed == 'true'"),'Asset Lab must skip expensive visual audit only for non-visual PRs');
 assert.ok(asset.includes('audit_mode=full')&&asset.includes('node qa/asset-audit-scope.cjs')&&asset.includes('audit_sources'), 'asset scope must fail safe and publish explicit audit mode');
@@ -85,4 +96,55 @@ for(const test of ['qa/webgl-error-poll-regression.cjs','qa/paused-render-regres
 for(const test of ['qa/camp-regression.cjs','qa/wolves-regression.cjs','qa/patrol-regression.cjs'])
  assert.ok(f('camp-regression.yml').includes('node '+test),'camp lost behavioral regression: '+test);
 console.log('PASS CI P2.4: six Codex checks retained by all-PR runtime owner, routing/spawn checks retained by all-PR settlement owner; specialist browser, renderer and camp coverage preserved.');
-console.log('PASS CI P1: 26 concurrent workflows; 6 cached browser jobs; no duplicate full deterministic runners; preserved risk, economy, runtime and governance tests.');
+
+// Audit hardening (13/11/2026).
+// Runtime syntax covers nested src modules and api handlers, not only src/*.js.
+assert.ok(p24Runtime.includes("find src -type f \\( -name '*.js' -o -name '*.mjs' \\)")&&p24Runtime.includes("find api -maxdepth 1 -type f -name '*.js'"),
+ 'Runtime integrity must syntax-check src/**/*.js, src/**/*.mjs and api/*.js');
+// Browser workflows run weekly and on demand, so path filters cannot hide breakage forever.
+for(const name of ['main-fixes-regression.yml','panels-browser-preview.yml','converge-regression.yml','codex-wiki.yml','webgpu-smoke.yml','asset-lab-regression.yml']){
+ const s=f(name);
+ assert.match(s,/^  workflow_dispatch:/m,name+' needs manual dispatch');
+ assert.match(s,/^  schedule:\n    - cron: '/m,name+' needs a weekly schedule');
+}
+assert.ok(!asset.includes("github.head_ref == 'feature/stonecolor'"),'Stonecolor snapshots must not be gated on the merged feature branch');
+// Performance benchmarks: manual only, shared Playwright, Chrome for channel:'chrome', reports uploaded.
+const perf=f('perf.yml');
+assert.match(perf,/^on:\n  workflow_dispatch:/m,'perf.yml must be manual');
+assert.doesNotMatch(perf,/^  (pull_request|push|schedule):/m,'perf.yml must stay workflow_dispatch only');
+assert.ok(perf.includes('./.github/actions/playwright-setup')&&perf.includes('npx playwright install --with-deps chrome')&&perf.includes("channel:'chrome'"),'perf.yml must provide Chrome on top of the shared setup');
+assert.ok(perf.includes('path: output/playwright/'),'perf.yml must upload output/playwright');
+const perfScripts=fs.readdirSync(path.join(root,'qa')).filter(x=>x.endsWith('-performance.cjs'));
+assert.ok(perfScripts.length>=5,'performance benchmarks missing');
+for(const script of perfScripts)assert.ok(perf.includes('qa/'+script),'perf.yml does not run qa/'+script);
+
+// Orphan guard: every qa/*.cjs|*.mjs is run (or watched) by a workflow, is a
+// *-regression.cjs covered by the complete-suite glob, or is an allowlisted helper.
+const allWorkflowText=workflows.map(f).join('\n');
+const qaRefs=[...new Set(allWorkflowText.match(/qa\/[A-Za-z0-9_.*-]+/g)||[])];
+const globRe=g=>new RegExp('^'+g.replace(/[.+?^${}()|[\]\\]/g,'\\$&').replace(/\*/g,'[^/]*')+'$');
+const qaRefRes=qaRefs.map(globRe);
+const orphanAllowlist=new Map([
+ ['construction-fixture.cjs','helper required by several *-regression.cjs'],
+ ['codex-wiki-browser-checks.cjs','helper imported by qa/codex-wiki-browser.mjs'],
+ ['asset-audit-scope.cjs','helper run by Asset Lab scope selection'],
+ // Browser smokes of the workflows retired in CI P0 (clay-browser-smoke.yml,
+ // urban-local-preview.yml). Kept for manual local runs against
+ // `python3 -m http.server 4173`; not wired into CI because they have not been
+ // re-validated against current main (main-fixes already smoke-tests the UI).
+ ['clay-browser-regression.mjs','manual: retired clay-browser-smoke.yml'],
+ ['urban-local-preview.mjs','manual: retired urban-local-preview.yml'],
+ // PNG preview generators from #202 (no assertions): sheets for judging 2D animals and horses by eye.
+ ['animal-preview.mjs','manual: writes output/animal-preview/*.png'],
+ ['horse-preview.mjs','manual: writes output/horse-preview/*.png'],
+]);
+const orphans=[];
+for(const file of fs.readdirSync(path.join(root,'qa')).filter(x=>/\.(cjs|mjs)$/.test(x))){
+ if(file.endsWith('-regression.cjs'))continue; // complete suite: qa/*-regression.cjs
+ if(orphanAllowlist.has(file))continue;
+ if(!qaRefRes.some(re=>re.test('qa/'+file)))orphans.push('qa/'+file);
+}
+assert.deepEqual(orphans,[],'QA scripts not run by any workflow (wire them or allowlist with a reason): '+orphans.join(', '));
+for(const helper of orphanAllowlist.keys())assert.ok(fs.existsSync(path.join(root,'qa',helper)),'stale orphan allowlist entry qa/'+helper);
+console.log('PASS CI hardening: read-only permissions on '+workflows.length+' workflows; weekly browser runs; manual perf workflow; no orphan QA scripts.');
+console.log('PASS CI P1: '+workflows.length+' concurrent workflows; 6 cached browser jobs; no duplicate full deterministic runners; preserved risk, economy, runtime and governance tests.');

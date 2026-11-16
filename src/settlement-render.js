@@ -159,6 +159,40 @@ function drawShadowStaticScene(){
   perf.cacheShadowRebuilds=(perf.cacheShadowRebuilds||0)+1;
   window.__conquerAnalytics?.measure('CACHE_SHADOW',performance.now()-analyticsT0);
 }
+// The visual inputs of one structure, shared by the World 3D structure signature (settlement-world3d.js)
+// and the derived-geometry memos (room exteriors) so the lists cannot drift apart: geometry, material, the fields of every declared variant (STRUCTURE_VARIANTS: roof,
+// hoarding, a small gate's timber upper storey, skins, bells...), rooms and their exterior damage.
+// A field missing here leaves a stale mesh or bitmap after the change (qa/render-cache-keys-regression.cjs).
+const STRUCTURE_VISUAL_FIELDS=Object.freeze(['id','type','shape','material','masonryMaterial','woodStyle','woodRoof','roofCover',
+  'roofStyle','machicolationStyle','bartizan','bell','innerRoof','signalFire','roofShape','baseStyle','skin','hoarding','upper','topWeapon',
+  'r','size','w','h','width','length','angle','rotationStep','level','tier','cutawayFloor','aSnap','bSnap','parentTowerId',
+  'orientationOffset','groundZ','foundationMinZ','isMastio']);
+function structureVisualKey(s){
+  if(!s)return'';
+  const num=v=>v==null||v===''?'':Number.isFinite(Number(v))?String(+Number(v).toFixed(4)):String(v);
+  let k='';
+  for(const f of STRUCTURE_VISUAL_FIELDS)k+=num(s[f])+'|';
+  k+=(s.x!=null?num(s.x)+','+num(s.y):'')+'|'+(s.a?num(s.a.x)+','+num(s.a.y):'')+'|'+(s.b?num(s.b.x)+','+num(s.b.y):'')+'|';
+  k+=(s.flip?1:0)+''+(s.cutaway?1:0)+(s.signalFireSpent?'F':'')+(s.doorBurnt?'D':'')+(s.burnt?'X':'')+(s.brokenTop?'B':'')+'|';
+  // Every declared variant, whatever its name (a new upgrade is covered without editing this list).
+  const schema=typeof variantSchema==='function'?variantSchema(s):null;
+  if(schema)for(const key of Object.keys(schema).sort())k+=key+'='+(s[key]??'')+';';
+  if(s.functions?.length)k+='|'+JSON.stringify(s.functions);
+  if(s.roomExteriorHp)k+='|'+JSON.stringify(s.roomExteriorHp);
+  return k;
+}
+// Epoch for short-lived memos of derived geometry (archer slots, room exterior placement): it changes
+// whenever the game signals a scene, navigation or structure-list change, and at least once a second
+// as a backstop for in-place edits that signal nothing. 0 outside the browser runtime (node QA, Lab
+// stubs without the perf counters): callers then recompute every time.
+let structureMemoList=null,structureMemoListId=0;
+function structureMemoEpoch(){
+  const perf=typeof window!=='undefined'&&window.__conquerPerf;
+  if(!perf||typeof performance==='undefined'||!Array.isArray(State?.structures))return 0;
+  if(State.structures!==structureMemoList){structureMemoList=State.structures;structureMemoListId++}
+  const nav=typeof navPerf!=='undefined'?(navPerf.navInvalidations||0):0;
+  return structureMemoListId+':'+State.structures.length+':'+(perf.cacheInvalidations||0)+':'+nav+':'+Math.floor(performance.now()/1000);
+}
 let shopFrontSig=null;
 function ensureStaticSceneCaches(){
   // L3 shop fronts open at dawn and shut at dusk (settlement-shop-cutaway.js): repaint the houses.
@@ -262,11 +296,13 @@ function draw(){
   window.ConquerLivestock?.draw();
   drawPeasants();
   window.ConquerHaulage?.draw?.(); // Loaded carts to stockyards, empty return on completed roads
+  window.ConquerRoadSignTests?.drawVehicles?.(); // lord/merchant convoys and coach trips on the roads
   window.ConquerJoust?.draw();   // spectators, knights and squires on an active joust ground
   window.ConquerEventPeople?.draw();   // feast and circus: diners, sellers, players, queues
   window.ConquerCourtPeople?.draw();   // the tribunal in session in the town hall cutaway
   window.ConquerIndustries?.drawWorkers();
   window.ConquerWorkAnim?.drawBuilders();
+  window.ConquerForestry?.drawCrews?.();   // L1 woodcutters at the forest clearings
   window.ConquerShipyard?.drawShipwrights();   // shipwrights along the hull on the slipways
   if(!window.ConquerWorld3D?.active?.())window.ConquerCoast?.draw();   // 2.5D: shore boulders (WebGL has them in the static scene)
   window.ConquerCoast?.drawWaves(performance.now()/1000);   // waves on the beaches, spray on the rocks, glints at sea

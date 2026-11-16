@@ -46,11 +46,21 @@
     ['villager','Popolano','Popolazione','Civili'],
     ['spearman','Fanteria','Truppe','Militari'],['archer','Arciere','Truppe','Militari'],
     ['knight','Cavaliere','Truppe','Militari'],['wagon','Carro animato 2D','Veicoli','Carri'],
-    ['wagon3d','Carro animato 3D','Veicoli','Carri']
+    ['wagon3d','Carro animato 3D','Veicoli','Carri'],
+    // The in-game 2D horse (settlement-animals.js) and everything that rides or pulls with it.
+    ['horse2d','Cavallo 2D (passo)','Fauna','Cavalli 2D'],['horse2dGraze','Cavallo 2D (pascola)','Fauna','Cavalli 2D'],
+    ['knight2d','Cavaliere a cavallo 2D','Truppe','Cavalli 2D'],['messenger2d','Messaggero a cavallo 2D','Truppe','Cavalli 2D'],
+    ['wagonTeam','Carro con tiro 2D','Veicoli','Carri'],
+    // The other in-game 2D animals (livestock and wildlife), same painter as the horse.
+    ...[['sheep','Pecora'],['goat','Capra'],['cow','Mucca'],['deer','Cerva'],['stag','Cervo'],['wolf','Lupo'],['boar','Cinghiale'],['bear','Orso']]
+      .map(([k,name])=>[k+'2d',name+' 2D (passo)','Fauna','Animali 2D'])
   ];
   // Work animations: the villager with each tool of settlement-work-anim.js (action -> tool as in the Lab).
   const WORK=[['dig','shovel','Scavatore (pala)'],['chop','axe','Taglialegna (ascia)'],['pick','pickaxe','Cavatore (piccone)'],
-    ['build','hammer','Muratore (martello)'],['plough','hoe','Aratura (zappa)'],['sow','seeds','Semina'],['harvest','sickle','Mietitura (falce)']];
+    ['build','hammer','Muratore (martello)'],['plough','hoe','Aratura (zappa)'],['sow','seeds','Semina'],['harvest','sickle','Mietitura (falce)'],
+    ['throw','clay','Vasaio (tornio)'],['weave','shuttle','Tessitore (spola)'],['sew','needle','Sarto (ago)'],
+    ['stir','ladle','Cuoco (mestolo)'],['groom','brush','Stalliere (striglia)'],['pray','book','Prete (libro)'],['write','quill','Tesoriere ed esattore (penna)'],
+    ['pound','mortar','Cerusico (mortaio)'],['hawk','falcon','Falconiere (falco)'],['serve','mug','Oste (boccale)'],['speak','speak','Consigliere (parola)'],['tend','bowl','Inserviente (ciotola)']];
   const SCHEMATICS=[
     ['well','Pozzo','Edifici','Servizi'],
     ['house1','Abitazione L1','Edifici','Abitazioni'],
@@ -68,7 +78,7 @@
     :path.includes('/interior/')?'Interni':path.includes('/heraldry/')?'Araldica':'Territorio';
   const fileFamily=path=>path.includes('/architecture/')?'Elementi architettonici':path.split('/').slice(-2,-1)[0]||'SVG';
   const prettify=key=>key.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/[_-]+/g,' ').replace(/(\d+)/g,' $1').trim().replace(/^./,m=>m.toUpperCase());
-  const nameOverrides={church:'Chiesa',tavern:'Taverna',market:'Mercato',townhall:'Municipio',guild:'Gilda',quarry:'Cava',mine:'Miniera',clayPit:'Cava d’argilla',
+  const nameOverrides={church:'Chiesa',tavern:'Taverna',market:'Mercato',townhall:'Municipio',guild:'Gilda',bargello:'Bargello',balivo:'Palazzo del Balivo',quarry:'Cava',mine:'Miniera',clayPit:'Cava d’argilla',
     loggingCamp:'Campo taglialegna',stockyard2:'Piazzale · magazzino 2×2U',stockyard4:'Piazzale · magazzino 4×4U',stockyard6:'Piazzale · magazzino 6×6U',watermill:'Mulino ad acqua',windmill:'Mulino a vento',crate:'Cassa',barrel:'Botte',
     sheep:'Pecora',goat:'Capra',cow:'Mucca',horse:'Cavallo',deer:'Cerva',stag:'Cervo',wolf:'Lupo',bear:'Orso',boar:'Cinghiale',
     ram:'Ariete',catapult:'Mangano',trebuchet:'Trabucco',tower:'Torre d’assedio',tower2:'Torre d’assedio (variante)',
@@ -90,7 +100,7 @@
     const art=window.ConquerArtModels?.catalog?.[key];if(art)return art.label;
     const furled=/Furled$/.test(key),ship=window.ConquerShipModels?.ships?.[key.replace(/Furled$/,'')];
     if(ship)return ship.label+(ship.size==='large'?' · grande':' · piccola')+(furled?' · vele alzate':' · vele spiegate');
-    const m=/^(church|tavern|market|townhall|guild|windmill|watermill|quarry|mine|loggingCamp)(\d+)$/.exec(key);
+    const m=/^(church|tavern|market|townhall|guild|bargello|balivo|windmill|watermill|quarry|mine|loggingCamp)(\d+)$/.exec(key);
     return m?(nameOverrides[m[1]]||prettify(m[1]))+' · livello '+m[2]:prettify(key);
   }
   const items=[];
@@ -163,6 +173,11 @@
     if(pieces.every(p=>window.ConquerWardrobe?.ROLE_PIECES?.[p]))
       items.push({id:'wardrobe:role:'+key,title,category:'Popolazione',family:'Costumi di ruolo',kind:'wardrobe',key,pieces,
         format:'Overlay',note:'Vestito per ruolo (tribunale), mai per stagione.',source:'src/settlement-wardrobe.js · src/settlement-court-people.js'});
+  // Work clothes by trade: what the figure wears at the job (the season fills the free slots).
+  for(const [key,role] of Object.entries(window.ConquerWardrobe?.ROLES||{}))
+    items.push({id:'wardrobe:trade:'+key,title:role.label,category:'Popolazione',family:'Abiti da mestiere',kind:'wardrobe',key,
+      pieces:role.pieces,format:'Overlay',note:'Indossato al lavoro: '+role.pieces.map(p=>window.ConquerWardrobe.ROLE_PIECES[p]?.label||window.ConquerWardrobe.PIECES[p]?.label).join(', ')+'.',
+      source:'src/settlement-wardrobe.js'});
   for(const [key,title,category,family] of SCHEMATICS){
     items.push({id:'procedural:'+key,title,category,family,kind:'schematic',key,format:'Parametrico',
       source:'Builder · asset generato dal motore',builder:true});
@@ -458,6 +473,25 @@
     if(subject==='wagon'&&window.ConquerWagons?.drawWagon){
       window.ConquerWagons.drawWagon(g,w*.48,h*.64,Math.min(w*.48,h*.8),
         {chassis:'wagon',cargo:['crate','barrel'],team:[],facing:1,moving:false,t:0,distance:0});return;
+    }
+    // 2D horses exactly as the game draws them (fixed phase, art facing right).
+    const A=window.ConquerAnimals,M2=window.ConquerMounted2D;
+    if(subject==='horse2d'||subject==='horse2dGraze'){
+      if(A?.drawAnimal){const graze=subject==='horse2dGraze';
+        A.drawAnimal('horse',g,w*.5,h*.9,Math.min(w,h)*.5,{t:.15,mode:graze?'browse':'walk',blend:graze?.86:0,facing:1,coat:'brown'});return}
+    }
+    // Other 2D animals at the horse's box size (their own scale undone), mid-stride.
+    const sp2d=/^(\w+)2d$/.exec(subject)?.[1];
+    if(sp2d&&sp2d!=='horse'&&A?.SPECIES?.[sp2d]){
+      A.drawAnimal(sp2d,g,w*.5,h*.9,Math.min(w,h)*.5*1.9/(A.SPECIES[sp2d].scale||1),{t:.15,mode:'walk',facing:1});return;
+    }
+    if((subject==='knight2d'||subject==='messenger2d')&&M2?.draw&&A){
+      M2.draw(g,w*.48,h*.9,Math.min(w,h)*.36,{kind:subject==='knight2d'?'knight':'messenger',mode:'idle',t:0,facing:1,coat:'grey',
+        livery:{main:'#b32628',alt:'#eac15b'},paint:null});return;
+    }
+    if(subject==='wagonTeam'&&window.ConquerWagons?.drawWagon&&A){
+      window.ConquerWagons.drawWagon(g,w*.24,h*.78,Math.min(w*.17,h*.34),
+        {chassis:'wagon',cargo:['sack','crate','barrel'],team:[{coat:'brown'},{coat:'black'}],facing:1,moving:true,t:.15,distance:20});return;
     }
     const previous=ctx,oldScale=State.view.scale;
     try{

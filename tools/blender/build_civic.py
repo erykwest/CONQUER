@@ -1757,6 +1757,202 @@ def p_treeLinden(m):
     m.done('body', p)
 
 
+# ------------------------------------------------------------------ Bargello (FISCO-01)
+# civicLocalParts: hall 2.6 x 2 U at cy .25, turret 1 x 1 U at (1.15, -.75) on the front right corner.
+def bargello(m, L):
+    """Quarter house of the tax collectors and the town watch. L1: rubble ground floor with the
+    collectors' bench, a jettied timber-framed upper floor, a stone turret with a timber watch
+    gallery and a small bell. L2: all stone with string courses, a barred cell window, a taller
+    turret with corbelled square merlons round a lead spire."""
+    x0, x1 = -1.3 * S, 1.3 * S
+    yf, yb = -.75 * S, 1.25 * S
+    hc, hd, tw = (yf + yb) / 2, yb - yf, x1 - x0
+    gf = {1: 3.0, 2: 3.4}[L]
+    eave = {1: 5.8, 2: 6.8}[L]
+    wall = {1: 'stoneRough', 2: 'stone'}[L]
+    trim = {1: 'stoneRoughDark', 2: 'stoneTrim'}[L]
+    upper = {1: 'plasterWarm', 2: 'stone'}[L]
+    roof = ('roofShingle', 'roofShingleDark') if L == 1 else ('roofTile', 'roofTileDark')
+    glass = 'dark' if L == 1 else 'glass'
+    tcx, tcy, th = 1.15 * S, -.75 * S, .5 * S
+
+    p = m.part('hall')
+    p.box((0, hc, .15), (tw + .3, hd + .3, .3), trim)
+    p.box((0, hc, gf / 2), (tw, hd, gf), wall)
+    if L == 1:   # jettied timber upper floor
+        p.box((0, hc, (gf + eave) / 2), (tw + .4, hd + .4, eave - gf), upper)
+        for n, a, b in (((0, -1), (x0 - .2, yf - .2), (x1 + .2, yf - .2)), ((1, 0), (x1 + .2, yf - .2), (x1 + .2, yb + .2)),
+                        ((-1, 0), (x0 - .2, yb + .2), (x0 - .2, yf - .2)), ((0, 1), (x1 + .2, yb + .2), (x0 - .2, yb + .2))):
+            timber_wall(p, a, b, gf, eave, n, step=1.5)
+        for x in (-3.2, 3.2):   # brackets under the jetty
+            p.beam((x, yf, gf - .7), (x, yf - .2, gf), .16, .16, 'beam')
+    else:
+        p.box((0, hc, (gf + eave) / 2), (tw, hd, eave - gf), upper)
+        for z in (gf + .05, eave - .1):
+            p.box((0, hc, z), (tw + .2, hd + .2, .24), trim)
+        for sx in (-1, 1):   # quoins at the four corners
+            for k, z in enumerate((.6, 1.6, 2.6, 4.4, 5.4)):
+                w = .6 if k % 2 == 0 else .4
+                for yy, sy in ((yf, -1), (yb, 1)):
+                    p.box((sx * (x1 - w / 2), yy + sy * .05, z), (w, .12, .45), 'stoneLight')
+    # Door with a stone frame, the collectors' bench and counter window beside it, the arms over the door.
+    opening(p, (-2.4, yf), (0, -1), 1.4, 2.4, 0, 'woodDark', frame=trim, arch='round')
+    p.box((-2.4, yf - .3, .08), (2.0, .6, .16), trim)
+    opening(p, (.3, yf), (0, -1), 1.3, .9, 1.0, 'dark', frame=trim)
+    p.box((.3, yf - .35, .95), (1.6, .5, .1), 'woodLight')          # the counter sill
+    bench(p, .3, yf - .75, 2.2)
+    plate(p, (-2.4, yf - (.2 if L == 1 else 0)), (0, -1), [(-.35, gf + .5), (.35, gf + .5), (.35, gf + 1.1), (0, gf + 1.3), (-.35, gf + 1.1)][::-1],
+          'canvasRed', 0, .06)
+    for x in (-3.4, -1.2, 1.4):
+        opening(p, (x, yf - (.2 if L == 1 else 0)), (0, -1), .8, 1.1, gf + 1.0, glass, frame='woodDark' if L == 1 else trim)
+        if L == 1:
+            shutters(p, (x, yf - .2), (0, -1), .8, 1.1, gf + 1.0)
+    for x in (-3.0, 0, 3.0):
+        opening(p, (x, yb + (.2 if L == 1 else 0)), (0, 1), .8, 1.1, gf + 1.0, glass, frame='woodDark' if L == 1 else trim)
+    for sx in (-1, 1):
+        opening(p, (sx * (x1 + (.2 if L == 1 else 0)), hc + 1.0), (sx, 0), .8, 1.1, gf + 1.0, glass, frame='woodDark' if L == 1 else trim)
+    # The lock-up: a small barred window low on the back wall (the L2 holding cell).
+    cell = 'iron' if L == 2 else 'dark'
+    opening(p, (2.4, yb), (0, 1), .7, .5, 1.6, 'dark', frame=trim)
+    if L == 2:
+        for k in range(4):
+            p.box((2.4 - .27 + k * .18, yb + .1, 1.85), (.05, .06, .5), cell)
+    gable_roof(p, 0, hc, tw + (.4 if L == 1 else 0), hd + (.4 if L == 1 else 0), eave, eave + hd / 2 * (.85 if L == 1 else .6), 'x', roof,
+               gable_key=upper)
+    m.done('hall', p)
+
+    # The turret on the front right corner: watch room on top, a bell to call the watch.
+    tz = {1: 8.6, 2: 11.8}[L]
+    p = m.part('tower')
+    p.box((tcx, tcy, tz / 2), (2 * th, 2 * th, tz), wall if L == 2 else 'stoneRough')
+    p.box((tcx, tcy, .3), (2 * th + .25, 2 * th + .25, .6), trim)
+    if L == 2:
+        p.box((tcx, tcy, gf + .05), (2 * th + .14, 2 * th + .14, .24), trim)
+    for n in ((1, 0), (0, 1), (-1, 0), (0, -1)):
+        o = (tcx + n[0] * th, tcy + n[1] * th)
+        for z in ((2.0, 5.2) if L == 1 else (2.2, 5.6, 8.6)):
+            opening(p, o, n, .28, .9, z, 'dark')
+    opening(p, (tcx, tcy - th), (0, -1), 1.0, 2.2, 0, 'woodDark', frame=trim, arch='round')
+    if L == 1:   # timber watch gallery on beams, shingled pyramid
+        for n in ((1, 0), (0, 1), (-1, 0), (0, -1)):
+            for k in (-.6, .6):
+                a = (tcx + n[0] * th + (k * th if n[0] == 0 else 0), tcy + n[1] * th + (k * th if n[1] == 0 else 0), tz - .5)
+                p.beam(a, (a[0] + n[0] * .6, a[1] + n[1] * .6, tz), .16, .16, 'beam')
+        g = th + .6
+        p.box((tcx, tcy, tz + .1), (2 * g, 2 * g, .2), 'woodDark')
+        for sx in (-1, 1):
+            for sy in (-1, 1):
+                p.box((tcx + sx * (g - .1), tcy + sy * (g - .1), tz + 1.1), (.2, .2, 2.0), 'wood')
+        for n in ((1, 0), (0, 1), (-1, 0), (0, -1)):
+            p.box((tcx + n[0] * (g - .05), tcy + n[1] * (g - .05), tz + .55), (2 * g if n[0] == 0 else .1, .1 if n[0] == 0 else 2 * g, .9), 'woodLight')
+        bell(p, tcx, tcy, tz + .9, .32)
+        pyramid(p, tcx, tcy, 2 * g + .5, 2 * g + .5, tz + 2.1, tz + 4.4, roof)
+        p.box((tcx, tcy, tz + 4.6), (.1, .1, .45), 'iron')
+    else:        # corbelled parapet with square merlons round a lead spire
+        g = th + .35
+        for n in ((1, 0), (0, 1), (-1, 0), (0, -1)):
+            for k in (-.66, 0, .66):
+                c = (tcx + n[0] * (th + .15) + (k * th if n[0] == 0 else 0), tcy + n[1] * (th + .15) + (k * th if n[1] == 0 else 0))
+                p.box((c[0], c[1], tz - .35), (.4 if n[0] == 0 else .3, .3 if n[0] == 0 else .4, .7), trim)
+        p.box((tcx, tcy, tz + .25), (2 * g, 2 * g, .5), wall)
+        c = g - .2
+        for a, b in (((tcx - c, tcy - c), (tcx + c, tcy - c)), ((tcx + c, tcy - c), (tcx + c, tcy + c)),
+                     ((tcx + c, tcy + c), (tcx - c, tcy + c)), ((tcx - c, tcy + c), (tcx - c, tcy - c))):
+            merlons(p, a, b, tz + .5, wall, step=1.0)
+        bell(p, tcx, tcy, tz + .5, .36)
+        pyramid(p, tcx, tcy, 2 * th - .3, 2 * th - .3, tz + 1.9, tz + 5.0, ('roofLead', 'roofSlateDark'))
+        p.box((tcx, tcy, tz + 5.25), (.1, .1, .5), 'iron')
+        p.box((tcx + .4, tcy, tz + 5.3), (.7, .04, .4), 'canvasRed')   # pennant
+    lamp_post(p, tcx - th - .5, tcy - th - .4, 2.6)
+    m.done('tower', p)
+
+
+# ------------------------------------------------------------------ Palazzo del Balivo (FISCO-01)
+# civicLocalParts: hall 3.4 x 2.2 U at cy .2. The bailiff's house in the countryside: the rural
+# court sits upstairs, reached by an outside stair along the front; tithe stores below.
+def balivo(m, L):
+    """L1: a long farmhouse-palace, rubble ground floor with the tithe barn doors, a plastered
+    upper floor reached by a covered timber stair. L2: dressed stone, a three-arch loggia on the
+    upper floor over a stone stair, the lord's arms and a pennant on the ridge."""
+    x0, x1 = -1.7 * S, 1.7 * S
+    yf, yb = -.9 * S, 1.3 * S
+    hc, hd, tw = (yf + yb) / 2, yb - yf, x1 - x0
+    gf = {1: 3.2, 2: 3.6}[L]
+    eave = {1: 6.2, 2: 7.2}[L]
+    wall = {1: 'stoneRough', 2: 'stone'}[L]
+    trim = {1: 'stoneRoughDark', 2: 'stoneTrim'}[L]
+    upper = {1: 'plaster', 2: 'stone'}[L]
+    roof = ('roofShingle', 'roofShingleDark') if L == 1 else ('roofTile', 'roofTileDark')
+    glass = 'dark' if L == 1 else 'glass'
+    depth = .9 if L == 1 else 1.6          # stair (L1) / loggia (L2) set into the front
+    yl = yf + (depth if L == 2 else 0)     # the L2 upper wall stands back behind the loggia
+
+    p = m.part('hall')
+    p.box((0, hc, .15), (tw + .3, hd + .3, .3), trim)
+    p.box((0, hc, gf / 2), (tw, hd, gf), wall)
+    p.box((0, (yl + yb) / 2, (gf + eave) / 2), (tw, yb - yl, eave - gf), upper)
+    p.box((0, hc, gf + .05), (tw + .2, hd + .2, .24), trim)
+    # Tithe barn doors (ground floor, right), a small door to the stores (left).
+    for x, w in ((3.4, 2.4), (-4.4, 1.2)):
+        opening(p, (x, yf), (0, -1), w, 2.6 if w > 2 else 2.1, 0, 'woodDark', frame=trim, arch='round' if L == 2 else None)
+    for x in (.6, -1.6):
+        opening(p, (x, yf), (0, -1), .6, .6, 1.6, 'dark', frame=trim)
+    for x in (-4.0, 0, 4.0):
+        opening(p, (x, yb), (0, 1), .9, 1.2, gf + 1.1, glass, frame=trim if L == 2 else 'woodDark')
+        if L == 1:
+            shutters(p, (x, yb), (0, 1), .9, 1.2, gf + 1.1)
+    for sx in (-1, 1):
+        opening(p, (sx * x1, hc + .8), (sx, 0), .9, 1.2, gf + 1.1, glass, frame=trim if L == 2 else 'woodDark')
+    if L == 1:
+        # Upper front: windows, the court door at the stair head on the left.
+        opening(p, (-4.6, yf), (0, -1), 1.1, 2.1, gf + .3, 'woodDark', frame='woodDark')
+        for x in (-1.6, 1.4, 4.2):
+            opening(p, (x, yf), (0, -1), .9, 1.2, gf + 1.1, glass, frame='woodDark')
+            shutters(p, (x, yf), (0, -1), .9, 1.2, gf + 1.1)
+        # Covered timber stair rising along the front from the right to the landing on the left.
+        steps = 9
+        for k in range(steps):
+            u = k / (steps - 1)
+            x = -1.8 + (1 - u) * 3.6 - 0
+            p.box((x - 2.2, yf - .55, (k + 1) * gf / steps - .12), (.45, 1.0, .24), 'wood')
+        p.box((-4.6, yf - .55, gf + .1), (1.6, 1.1, .2), 'woodDark')                  # landing
+        for x in (-5.3, -3.9, -1.0, 1.4):
+            p.box((x, yf - 1.0, (gf + 2.4) / 2), (.16, .16, gf + 2.4), 'beam')
+        p.beam((-5.3, yf - 1.0, gf + .9), (1.4, yf - 1.0, .9), .08, .08, 'woodDark')  # handrail
+        slab(p, [(-5.6, yf - 1.3, gf + 2.3), (1.7, yf - 1.3, gf + 2.3), (1.7, yf, gf + 2.9), (-5.6, yf, gf + 2.9)], .12, roof[0])
+    else:
+        # Stone stair up the left end to a loggia of three round arches along the upper front.
+        steps = 10
+        for k in range(steps):   # solid stone flight along the front, rising to the loggia's left end
+            x = -.6 + (x0 + 1.2 + .6) * k / (steps - 1)
+            h = (k + 1) * gf / steps
+            p.box((x, yf - .55, h / 2), (.62, 1.0, h), trim if k % 2 else wall)
+        p.box((x0 + .6, yf - .55, gf - .1), (1.2, 1.0, .2), trim)                        # landing
+        p.box((0, (yf + yl) / 2, gf + .05), (tw, yl - yf, .3), trim)                   # loggia floor
+        xs = (-5.95, -1.98, 1.98, 5.95)
+        for x in xs:
+            p.cylinder(.26, 0, 'stoneLight', n=8, axis='z', center=(x * .97, yf + .3, 0), radii=[.34, .25, .25, .36],
+                       along=[gf + .2, gf + .5, eave - 1.6, eave - 1.2])
+        for xa, xb in zip(xs, xs[1:]):
+            plate(p, ((xa + xb) / 2, yf), (0, -1), [(-(xb - xa) / 2, eave), ((xb - xa) / 2, eave), ((xb - xa) / 2, eave - 1.2),
+                                                   (-(xb - xa) / 2, eave - 1.2)][::-1], upper, -.4, .02)
+        p.box((0, yf + .15, gf + .75), (tw - .4, .2, .9), trim)                        # parapet
+        opening(p, (-3.0, yl), (0, -1), 1.1, 2.2, gf + .3, 'woodDark', frame=trim, arch='round')
+        for x in (0, 3.6):
+            opening(p, (x, yl), (0, -1), .9, 1.3, gf + 1.0, glass, frame=trim, arch='round')
+        plate(p, (0, yf), (0, -1), [(-.4, gf - 1.4), (.4, gf - 1.4), (.4, gf - .7), (0, gf - .45), (-.4, gf - .7)][::-1], 'canvasBlue', 0, .06)
+    gable_roof(p, 0, hc, tw, hd, eave, eave + hd / 2 * (.8 if L == 1 else .6), 'x', roof, gable_key=upper)
+    if L == 2:
+        rz = eave + hd / 2 * .6
+        p.box((x1 - .3, hc, rz + .6), (.1, .1, 1.3), 'iron')
+        p.box((x1 - .3 + .4, hc, rz + 1.05), (.7, .04, .45), 'canvasBlue')
+    # The tithe: sacks and a cart by the barn door.
+    for dx, dy in ((5.4, -.9), (5.9, -1.4), (5.0, -1.5)):
+        sack(p, dx, yf + dy)
+    barrel(p, -6.3, yf - .8)
+    m.done('hall', p)
+
+
 PROPS = [('treeOak', p_treeOak), ('treeLinden', p_treeLinden),('graveStone', p_graveStone), ('graveWorn', p_graveWorn), ('graveCross', p_graveCross), ('graveSlab', p_graveSlab),
          ('graveTall', p_graveTall), ('cemeteryCross', p_cemeteryCross), ('cypress', p_cypress), ('cypressSmall', p_cypressSmall),
          ('tableSet', p_tableSet), ('tableBarrel', p_tableBarrel), ('tablePergola', p_tablePergola), ('flowerBush', p_flowerBush)]
@@ -1780,6 +1976,8 @@ def build_list():
     out += [('prop_' + k, fn) for k, fn in PROPS]
     out += [('almshouse', a_almshouse)]   # appended last, like the town hall and guild
     out += [('kitchenGarden', a_kitchenGarden)]   # town hall annex (BC-251105-11), appended last
+    for L in (1, 2):   # FISCO-01: Bargello and Palazzo del Balivo, appended last
+        out += [('bargello%d' % L, lambda m, L=L: bargello(m, L)), ('balivo%d' % L, lambda m, L=L: balivo(m, L))]
     return out
 
 

@@ -131,11 +131,11 @@ test('manual building collision and water exclusion still apply to extraction',(
   h.State.environment=[{id:'pond',type:'pond',points:rect(129,125,1,1)}];
   assert.match(h.industry.validate(quarry).reason,/forest, water or obstacle/);
 });
-test('two workers: camp 2 wood/day, quarry 2 stone/day, mine 1 metal/day (ECO-FIL-01)',()=>{
+test('merged L1 staffing: camp 2 wood/day, quarry 2 stone/day, mine 1 metal/day',()=>{
   const h=harness();
   h.State.structures=[
     ...Array.from({length:2},(_,i)=>({id:'l1-'+i,type:'house',houseLevel:1})),
-    ...Array.from({length:4},(_,i)=>({id:'l2-'+i,type:'house',houseLevel:2})),
+    ...Array.from({length:4},(_,i)=>({id:'merged-l1-'+i,type:'house',houseLevel:1})),
     ...['loggingCamp','quarry','mine'].map(type=>({id:type,type,economicOwner:'lord'}))
   ];
   h.economy.setShare('wood',100);h.economy.setShare('stone',100);h.economy.setShare('metal',100);
@@ -216,7 +216,7 @@ test('clay requires centre H0, respects whitezone, forests, roads and buildings'
 test('staffed clay extraction generates clay commodity without changing stone production',()=>{
   const h=harness();
   h.State.structures=[
-    ...Array.from({length:4},(_,i)=>({id:'l2-'+i,type:'house',houseLevel:2})),
+    ...Array.from({length:4},(_,i)=>({id:'l1-clay-'+i,type:'house',houseLevel:1})),
     {...h.industry.make('quarry',{x:108,y:100},'clay'),id:'clay-quarry'},
     {...h.industry.make('quarry',{x:129,y:120}),id:'stone-quarry'}
   ];
@@ -275,5 +275,24 @@ test('watermill wheel face aligns with water; distant bank fails placement',()=>
   assert.equal(h.placement.check(mill).ok,true);
   assert.equal(h.industry.validate({...mill,x:100}).ok,false);
   assert.equal(h.industry.make('watermill',{x:108.5,y:100}).w,2);
+});
+test('watermill rejects sea, pond, lake and marsh even beside a valid current',()=>{
+  for(const [type,kind] of [['sea',null],['pond','pond'],['pond','lake'],['pond','marsh']]){
+    const h=harness(),standing={id:'standing-water',type,waterBodyKind:kind,points:rect(112,100,4,12)};
+    h.State.environment=[standing];
+    const mill=h.industry.make('watermill',{x:109,y:100});
+    assert.equal(h.industry.validate(mill).ok,false,'standing shore cannot power mill: '+kind);
+    assert.equal(h.placement.check(mill).ok,false,'shared placement also rejects: '+kind);
+    h.State.environment=[{id:'flow',type:'stream',width:1,points:[{x:110,y:90},{x:110,y:110}]}];
+    const bankMill=h.industry.make('watermill',{x:108.5,y:100});
+    assert.equal(h.industry.validate(bankMill).ok,true,'dry stream-bank control');
+    h.State.environment.push({...standing,points:rect(108.5,100,1,1)});
+    assert.equal(h.industry.validate(bankMill).ok,false,'a nearby stream cannot override standing water under building: '+kind);
+    assert.equal(h.placement.check(bankMill).ok,false);
+  }
+  for(const type of ['river','stream']){
+    const h=harness();h.State.environment=[{id:'flow',type,width:1,points:[{x:110,y:90},{x:110,y:110}]}];
+    assert.equal(h.placement.check(h.industry.make('watermill',{x:108.5,y:100})).ok,true,type+' can power the wheel');
+  }
 });
 console.log('Industry regression: all checks passed.');

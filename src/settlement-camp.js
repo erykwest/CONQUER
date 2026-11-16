@@ -219,8 +219,9 @@
           fires=bivouacCache.camps.flatMap(c=>c.fires);
         }
       }catch(error){
-        // Preserve the original canvas tents if a 3D catalog fails at runtime.
-        bivouacCache={sig:null,camps:[],meshes:[]};
+        // Preserve the original canvas tents if a 3D catalog fails at runtime. Keep the
+        // signature: the same camp is not rebuilt (and warned about) again on every frame.
+        bivouacCache={sig,camps:[],meshes:[],failed:true};
         console.warn('CONQUER_CAMP_BIVOUAC_FALLBACK',error);
       }
     }

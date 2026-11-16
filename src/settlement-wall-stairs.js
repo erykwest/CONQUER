@@ -121,8 +121,11 @@
     if(!layout(s,spec)){status('Muro troppo corto per questa scala');return false}
     const cost=COST[kind];
     const before=structureUpgradeSnapshot(s);
-    s.wallStair=spec;beginStructureUpgrade(s,before,cost,1);refresh(s);
-    status(kind==='wood'?'Scala lignea costruita sul camminamento':'Scala lapidea costruita sul camminamento');return true;
+    s.wallStair=spec;
+    // Since #194 the stair is a paid building site, not an instant build.
+    const started=beginStructureUpgrade(s,before,cost,1);refresh(s);
+    status(started?(kind==='wood'?'Scala lignea in costruzione sul camminamento':'Scala lapidea in costruzione sul camminamento')
+      :(kind==='wood'?'Scala lignea sul camminamento':'Scala lapidea sul camminamento'));return true;
   }
   function setPos(s,pos){
     if(!stair(s)||!(pos in POSITIONS))return false;

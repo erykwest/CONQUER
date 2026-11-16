@@ -1,8 +1,79 @@
 // Generated from content/codex/*.md. Do not edit; run node tools/export-codex-content.cjs.
 (function(root){root.ConquerWikiEditorial={
   "schemaVersion": 1,
-  "sourceDigest": "b155180a50bd3f074e751a8dad576634a0a1601363a74921c3fa93b5d1bf0850",
+  "sourceDigest": "75738a27fdc0f86709b2c12807ae0f53ae5c199242d3491a7838315c7706b972",
   "pages": [
+    {
+      "id": "building:balivo",
+      "kind": "entry",
+      "title": "Palazzo del Balivo",
+      "aliases": [
+        "Palazzo del Balivo",
+        "Balivo"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "Il Palazzo del Balivo è la sede del funzionario del signore nel contado: sorge in campagna, lontano dai pozzi e dalle zone abitate, con il magazzino della decima al piano terra e la sala della bassa giustizia al piano superiore, raggiunta da una scala esterna. Appartiene agli [[Edifici|edifici]] civici e ha due livelli. Raccoglie la decima in natura sui campi e sui produttori privati del contado entro 30 unità: fino al 60% del dovuto al livello 1 e al 75% al livello 2. Dove non c'è un Balivo, la campagna rende la metà del centro. La bassa giustizia rurale e l'ordine sulle strade non sono ancora simulati.",
+          "tokens": [
+            {
+              "text": "Il Palazzo del Balivo è la sede del funzionario del signore nel contado: sorge in campagna, lontano dai pozzi e dalle zone abitate, con il magazzino della decima al piano terra e la sala della bassa giustizia al piano superiore, raggiunta da una scala esterna. Appartiene agli "
+            },
+            {
+              "text": "edifici",
+              "id": "category:building"
+            },
+            {
+              "text": " civici e ha due livelli. Raccoglie la decima in natura sui campi e sui produttori privati del contado entro 30 unità: fino al 60% del dovuto al livello 1 e al 75% al livello 2. Dove non c'è un Balivo, la campagna rende la metà del centro. La bassa giustizia rurale e l'ordine sulle strade non sono ancora simulati."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Il Palazzo del Balivo è la sede del funzionario del signore nel contado: sorge in campagna, lontano dai pozzi e dalle zone abitate, con il magazzino della decima al piano terra e la sala della bassa giustizia al piano superiore, raggiunta da una scala esterna. Appartiene agli edifici civici e ha due livelli. Raccoglie la decima in natura sui campi e sui produttori privati del contado entro 30 unità: fino al 60% del dovuto al livello 1 e al 75% al livello 2. Dove non c'è un Balivo, la campagna rende la metà del centro. La bassa giustizia rurale e l'ordine sulle strade non sono ancora simulati."
+      ],
+      "related": [
+        "category:building",
+        "topic:construction",
+        "building:townhall"
+      ],
+      "members": []
+    },
+    {
+      "id": "building:bargello",
+      "kind": "entry",
+      "title": "Bargello",
+      "aliases": [
+        "Bargello"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "Il Bargello è la casa degli esattori e delle guardie cittadine di un quartiere: sorge presso il pozzo del quartiere, uno per pozzo, ed è riconoscibile dalla torretta d'angolo con la vedetta e la campanella. Appartiene agli [[Edifici|edifici]] civici e ha due livelli. Riscuote le imposte fissate nell'Erario per le case e le botteghe del suo quartiere: al livello 1 fino al 65% del dovuto, al livello 2 fino all'80%, più un 5% se il Municipio del centro ha la sala delle guardie. Senza il Municipio del centro non riscuote, e un quartiere senza Bargello rende poco più della metà. Durante un allarme o un assedio la riscossione è sospesa. L'ordine pubblico delle sue guardie non è ancora simulato.",
+          "tokens": [
+            {
+              "text": "Il Bargello è la casa degli esattori e delle guardie cittadine di un quartiere: sorge presso il pozzo del quartiere, uno per pozzo, ed è riconoscibile dalla torretta d'angolo con la vedetta e la campanella. Appartiene agli "
+            },
+            {
+              "text": "edifici",
+              "id": "category:building"
+            },
+            {
+              "text": " civici e ha due livelli. Riscuote le imposte fissate nell'Erario per le case e le botteghe del suo quartiere: al livello 1 fino al 65% del dovuto, al livello 2 fino all'80%, più un 5% se il Municipio del centro ha la sala delle guardie. Senza il Municipio del centro non riscuote, e un quartiere senza Bargello rende poco più della metà. Durante un allarme o un assedio la riscossione è sospesa. L'ordine pubblico delle sue guardie non è ancora simulato."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Il Bargello è la casa degli esattori e delle guardie cittadine di un quartiere: sorge presso il pozzo del quartiere, uno per pozzo, ed è riconoscibile dalla torretta d'angolo con la vedetta e la campanella. Appartiene agli edifici civici e ha due livelli. Riscuote le imposte fissate nell'Erario per le case e le botteghe del suo quartiere: al livello 1 fino al 65% del dovuto, al livello 2 fino all'80%, più un 5% se il Municipio del centro ha la sala delle guardie. Senza il Municipio del centro non riscuote, e un quartiere senza Bargello rende poco più della metà. Durante un allarme o un assedio la riscossione è sospesa. L'ordine pubblico delle sue guardie non è ancora simulato."
+      ],
+      "related": [
+        "category:building",
+        "topic:construction",
+        "building:townhall"
+      ],
+      "members": []
+    },
     {
       "id": "building:bridge",
       "kind": "entry",
@@ -5572,7 +5643,11 @@
         "unit:knight",
         "unit:patrol",
         "unit:spearman",
-        "unit:wolf"
+        "unit:wolf",
+        "unit:bear",
+        "unit:outlaw",
+        "unit:outlawGuard",
+        "unit:outlawArcher"
       ]
     },
     {
@@ -5691,6 +5766,48 @@
       ],
       "text": [
         "Arciere è un profilo presente nel combattimento. Le statistiche descrivono il profilo e non costituiscono un costo di reclutamento."
+      ],
+      "related": [
+        "category:unit",
+        "topic:population",
+        "topic:combat"
+      ],
+      "members": []
+    },
+    {
+      "id": "unit:bear",
+      "kind": "entry",
+      "title": "Orso",
+      "aliases": [
+        "Orso"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "Orso è un animale selvatico solitario con la tana in un bosco lontano dal villaggio. Di giorno vaga vicino alla tana e di notte dorme; attacca soltanto chi si avvicina alla tana o a lui, e smette di inseguire quando l'intruso esce dal suo territorio. È un profilo del [[Combattimento E Assedio|combattimento]], molto più resistente di un [[Lupo]].",
+          "tokens": [
+            {
+              "text": "Orso è un animale selvatico solitario con la tana in un bosco lontano dal villaggio. Di giorno vaga vicino alla tana e di notte dorme; attacca soltanto chi si avvicina alla tana o a lui, e smette di inseguire quando l'intruso esce dal suo territorio. È un profilo del "
+            },
+            {
+              "text": "combattimento",
+              "id": "topic:combat"
+            },
+            {
+              "text": ", molto più resistente di un "
+            },
+            {
+              "text": "Lupo",
+              "id": "unit:wolf"
+            },
+            {
+              "text": "."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Orso è un animale selvatico solitario con la tana in un bosco lontano dal villaggio. Di giorno vaga vicino alla tana e di notte dorme; attacca soltanto chi si avvicina alla tana o a lui, e smette di inseguire quando l'intruso esce dal suo territorio. È un profilo del combattimento, molto più resistente di un Lupo."
       ],
       "related": [
         "category:unit",
@@ -5936,6 +6053,125 @@
       ],
       "text": [
         "Cavaliere è un profilo presente nel combattimento. Le statistiche descrivono il profilo e non costituiscono un costo di reclutamento."
+      ],
+      "related": [
+        "category:unit",
+        "topic:population",
+        "topic:combat"
+      ],
+      "members": []
+    },
+    {
+      "id": "unit:outlaw",
+      "kind": "entry",
+      "title": "Fuorilegge",
+      "aliases": [
+        "Fuorilegge"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "Fuorilegge è il profilo dei briganti e dei predoni armati di ascia e scudo tondo. I briganti presidiano una strada verso il confine e fanno calare gli scambi; i predoni saccheggiano gli edifici isolati e fuggono col bottino. È un profilo del [[Combattimento E Assedio|combattimento]]: le statistiche descrivono il profilo e non costituiscono un costo di reclutamento.",
+          "tokens": [
+            {
+              "text": "Fuorilegge è il profilo dei briganti e dei predoni armati di ascia e scudo tondo. I briganti presidiano una strada verso il confine e fanno calare gli scambi; i predoni saccheggiano gli edifici isolati e fuggono col bottino. È un profilo del "
+            },
+            {
+              "text": "combattimento",
+              "id": "topic:combat"
+            },
+            {
+              "text": ": le statistiche descrivono il profilo e non costituiscono un costo di reclutamento."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Fuorilegge è il profilo dei briganti e dei predoni armati di ascia e scudo tondo. I briganti presidiano una strada verso il confine e fanno calare gli scambi; i predoni saccheggiano gli edifici isolati e fuggono col bottino. È un profilo del combattimento: le statistiche descrivono il profilo e non costituiscono un costo di reclutamento."
+      ],
+      "related": [
+        "category:unit",
+        "topic:population",
+        "topic:combat"
+      ],
+      "members": []
+    },
+    {
+      "id": "unit:outlawArcher",
+      "kind": "entry",
+      "title": "Arciere Fuorilegge",
+      "aliases": [
+        "Arciere Fuorilegge"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "Arciere fuorilegge è il terzo di ogni banda di briganti o di banditi che porta l'arco. Non va in mischia: resta al suo posto e tira su chi si avvicina, come un [[Arciere]] ma meno resistente. È un profilo del [[Combattimento E Assedio|combattimento]].",
+          "tokens": [
+            {
+              "text": "Arciere fuorilegge è il terzo di ogni banda di briganti o di banditi che porta l'arco. Non va in mischia: resta al suo posto e tira su chi si avvicina, come un "
+            },
+            {
+              "text": "Arciere",
+              "id": "unit:archer"
+            },
+            {
+              "text": " ma meno resistente. È un profilo del "
+            },
+            {
+              "text": "combattimento",
+              "id": "topic:combat"
+            },
+            {
+              "text": "."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Arciere fuorilegge è il terzo di ogni banda di briganti o di banditi che porta l'arco. Non va in mischia: resta al suo posto e tira su chi si avvicina, come un Arciere ma meno resistente. È un profilo del combattimento."
+      ],
+      "related": [
+        "category:unit",
+        "topic:population",
+        "topic:combat"
+      ],
+      "members": []
+    },
+    {
+      "id": "unit:outlawGuard",
+      "kind": "entry",
+      "title": "Guardia del Covo",
+      "aliases": [
+        "Guardia Del Covo"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "Guardia del covo è il bandito armato di ascia e scudo tondo che sorveglia le tende del covo nel bosco. Resta al suo posto e attacca chi si avvicina; distrutto il covo, il bottino estorto torna al castello. È un profilo del [[Combattimento E Assedio|combattimento]], più resistente di un [[Fuorilegge]].",
+          "tokens": [
+            {
+              "text": "Guardia del covo è il bandito armato di ascia e scudo tondo che sorveglia le tende del covo nel bosco. Resta al suo posto e attacca chi si avvicina; distrutto il covo, il bottino estorto torna al castello. È un profilo del "
+            },
+            {
+              "text": "combattimento",
+              "id": "topic:combat"
+            },
+            {
+              "text": ", più resistente di un "
+            },
+            {
+              "text": "Fuorilegge",
+              "id": "unit:outlaw"
+            },
+            {
+              "text": "."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Guardia del covo è il bandito armato di ascia e scudo tondo che sorveglia le tende del covo nel bosco. Resta al suo posto e attacca chi si avvicina; distrutto il covo, il bottino estorto torna al castello. È un profilo del combattimento, più resistente di un Fuorilegge."
       ],
       "related": [
         "category:unit",
@@ -7264,6 +7500,100 @@
       ],
       "text": [
         "Torre · Tetto interno dentro i merli appartiene ai miglioramenti delle fortificazioni: un tetto a piramide o a cono arretrato dentro i merli, su un cordolo, che lascia libero il cammino di ronda. Solo torri in pietra medie o grandi con merli o caditoie, senza arma né fuoco di segnalazione in cima. È soltanto estetico e non crea una stanza sotto: colombaia, falconiera e campana restano legate al tetto a falde."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:tower"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:tower.machicolationStyle.italian",
+      "kind": "entry",
+      "title": "Torre · Caditoie all'italiana",
+      "aliases": [
+        "Torre · Caditoie all'italiana"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Torre|Torre]] · Caditoie all'italiana appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: mensole alte e snelle, fitte lungo tutta la cima, raccordate da archetti a tutto sesto, con la muratura che sale a filo fin sotto i merli, come nei castelli lombardi. Si sceglie dal menù del tetto della torre, accanto a merlato, caditoie e falde; non è disponibile sulle semitorri. È soltanto estetica: difesa, tetto interno e ballatoio seguono le regole delle caditoie.",
+          "tokens": [
+            {
+              "text": "Torre",
+              "id": "building:tower"
+            },
+            {
+              "text": " · Caditoie all'italiana appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": mensole alte e snelle, fitte lungo tutta la cima, raccordate da archetti a tutto sesto, con la muratura che sale a filo fin sotto i merli, come nei castelli lombardi. Si sceglie dal menù del tetto della torre, accanto a merlato, caditoie e falde; non è disponibile sulle semitorri. È soltanto estetica: difesa, tetto interno e ballatoio seguono le regole delle caditoie."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Torre · Caditoie all'italiana appartiene ai miglioramenti delle fortificazioni: mensole alte e snelle, fitte lungo tutta la cima, raccordate da archetti a tutto sesto, con la muratura che sale a filo fin sotto i merli, come nei castelli lombardi. Si sceglie dal menù del tetto della torre, accanto a merlato, caditoie e falde; non è disponibile sulle semitorri. È soltanto estetica: difesa, tetto interno e ballatoio seguono le regole delle caditoie."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:tower"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:tower.machicolationStyle.standard",
+      "kind": "entry",
+      "title": "Torre · Caditoie standard",
+      "aliases": [
+        "Torre · Caditoie standard"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Torre|Torre]] · Caditoie standard appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: l'aspetto di base della sommità con caditoie, con una mensola corta sotto ogni merlo. È la scelta predefinita e vale solo per le torri in pietra con le caditoie.",
+          "tokens": [
+            {
+              "text": "Torre",
+              "id": "building:tower"
+            },
+            {
+              "text": " · Caditoie standard appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": l'aspetto di base della sommità con caditoie, con una mensola corta sotto ogni merlo. È la scelta predefinita e vale solo per le torri in pietra con le caditoie."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Torre · Caditoie standard appartiene ai miglioramenti delle fortificazioni: l'aspetto di base della sommità con caditoie, con una mensola corta sotto ogni merlo. È la scelta predefinita e vale solo per le torri in pietra con le caditoie."
       ],
       "related": [
         "category:upgrade",

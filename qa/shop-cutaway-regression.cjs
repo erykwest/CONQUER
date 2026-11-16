@@ -33,7 +33,7 @@ const ctx=vm.createContext({window,State,Math,Object,Number,Array,Map,String,JSO
     const surface=local(s,1.5*.24*(s.doorLeft?-1:1),side*.5),normal={x:-n*side,y:c*side};
     return{surface,normal,tangent:{x:c,y:n},outside:{x:surface.x+normal.x*.28,y:surface.y+normal.y*.28}}}
 });
-for(const f of ['assets/furniture-model.js','assets/scatter-model.js','settlement-mesh3d.js','settlement-cutaway-furniture.js','settlement-shop-cutaway.js'])
+for(const f of ['settlement-util.js','assets/furniture-model.js','assets/scatter-model.js','settlement-mesh3d.js','settlement-cutaway-furniture.js','settlement-shop-cutaway.js'])
   vm.runInContext(src(f),ctx,{filename:f});
 const SC=window.ConquerShopCutaway;
 const trades=Object.keys(SC.TRADES);
@@ -152,7 +152,7 @@ window.ConquerEconomy={state:()=>({commerce:{shops:{h:{kind:'weaver',artisanId:'
 assert.equal(SC.artisanAt(house({shopKind:undefined}),res('h:m:0'),door),null,'a closed workshop (Sunday) is empty');
 window.ConquerEconomy={state:()=>({commerce:{shops:{h:{kind:'weaver',artisanId:'h:m:0',state:'working'}}}})};
 const weaver=SC.artisanAt(house({shopKind:undefined}),res('h:m:0'),door);
-assert.ok(weaver&&weaver.tool===null,'a weaver works without a striking tool');
+assert.ok(weaver&&weaver.tool==='shuttle','the weaver throws the shuttle at the loom');
 console.log('PASS the artisan works inside only when open and at work');
 
 // Street front of a closed house: shop window on the counter half, bracket sign beside the door.

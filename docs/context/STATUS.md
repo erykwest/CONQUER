@@ -6,6 +6,682 @@
 - **ASSET LAB:** il frame motore del Lab era caricato con `&renderer=canvas2d` (`asset-catalog.js` `ENGINE_URL`): le catture «Nel gioco» erano 2.5D. Ora `&world3d=1`. Corretto anche `ConquerMesh3D.drawCached`: col `performance.now()` congelato dallo stage solo il primo cantiere di un audit veniva dipinto (cantieri 25/50/75% vuoti; bug preesistente). Audit Fortificazioni in 3D: 1058 render, 0 falliti, 23 avvisi `danno-visibile` (lo stato «danneggiata» in 3D è uguale all'intatto), baseline rigenerata dopo revisione dei fogli. Stage sempre in 3D (`__CONQUER_ASSET_LAB__` ignora l'opt-out salvato), `ConquerWorld3D.invalidate()` a ogni cattura, campo `renderer` e controllo `renderer-3d` in `asset-audit.js`.
 - **RESTA 2.5D (seguiti):** drappo araldico del Mastio (`drawMastioDrapes`, overlay Canvas), strumento DEV «Prerender + test» (`settlement-assets.js`, usato anche da `house-catalog.html`), funzioni di pittura ormai non chiamate in `settlement-castle.js`/`settlement-castle-structures.js`/`settlement-room-exterior.js`/`settlement-cutaway-furniture.js` (da eliminare in una PR di pulizia).
 - **TEST:** `qa/*.cjs` 166/171 PASS; i 5 rimasti (`asset-audit-scope` senza argomenti, 4 `*-performance` senza Playwright) falliscono identici su `main`. Aggiornati i controlli sul sorgente 2.5D (clay-palette, cutaway-floors, refactor-module-boundaries, room-exterior-latrine, snow-tracks, stonecolor, wall-stairs, fire-collapse-cutaway-performance).
+### 2026-11-16 — Fix: le greggi non pascolano nei campi coltivati
+
+- Branch fix/sheep-fields. Il fix di ottobre (ea3d7112) escludeva gli edifici dal cerchio di pascolo ma saltava esplicitamente i `field`, e `urbanBuildingPolygons` non restituisce comunque il contorno dei campi: pecore e mucche potevano pascolare sopra i campi. Ora `pastureBuildingAllowed` (settlement-livestock.js) legge `fieldPoints` per ogni campo (del giocatore, automatico L1 e in cantiere) con lo stesso margine di 0,2 U. Poiché piazzare un campo non incrementa `urbanRevision`, i pascoli già assegnati vengono riverificati quando cambia il numero di strutture: un campo costruito sopra un pascolo sposta il gregge altrove.
+- PASS urban-livestock-regression (nuovi casi: campo sopra il pascolo, campo automatico, campo piazzato su un pascolo già in cache); i due nuovi casi falliscono sul codice precedente. Non verificato in una partita reale; CI da eseguire.
+
+### 2026-11-16 — Microfix: pianerottolo interno per la porta del muro H1
+
+- Branch fix/microfix. Una porta del cammino di ronda che si apre fra due pavimenti (muro H1, camminamento a 1,15, in una torre con P1 a 2,10) ha all'interno un ballatoio di legno alla quota della soglia, sui montanti, che corre lungo la parete fino all'angolo della scala a pioli della stanza (girando l'angolo se la scala è sulla parete accanto); senza scala nella stanza (torre L1) una scaletta propria. ConquerCutawayFurniture.landingSpecs / landingsWorld in settlement-cutaway-furniture.js, usati da 2.5D e WebGL. Le porte delle mura H2 poggiano sul P1 e non ne hanno.
+- PASS cutaway-furniture (nuovo caso: ballatoio alla soglia, raggiunge la scala, nessuno con muro H2) e 144 regressioni torri/cutaway/porte/mura; verificato nel browser sulle quattro rotazioni della camera (il ballatoio arriva a 0,1 dalla scala) e a vista. Torri tonde: ballatoio corto con scaletta propria. CI da eseguire.
+
+### 2026-11-16 — Microfix: P1 delle torri in pietra al livello del camminamento
+
+- Branch fix/microfix. Il P1 delle torri in pietra di livello 2+ sta ora a 2,10 (sommità delle mura H2, CURTAIN_WALK_Z) invece che a h/livello (1,58–1,90): la porta del cammino di ronda (2,08) si apre sul pavimento del piano. I piani superiori si dividono in parti uguali l'altezza restante (stanze di almeno 1,1). Una sola fonte (towerUpperFloorZ in settlement-castle.js) per cutaway, finestre, feritoie e posti degli arcieri (towerFloorZ); le porte affiancate seguono la torre come prima. Mura invariate; torri di legno invariate. La soglia della porta del cammino di ronda si aggancia al pavimento del piano se è entro 0,12 (towerDoorContactSpec): vista da dentro l'apertura non è più tagliata dal solaio (prima partiva 1 cm sotto le tavole).
+- PASS cutaway-floors (nuovo blocco) e 148 regressioni su torri/cutaway/porte/mura; verificato a vista nel browser su una torre quadra W2 L2 fra due mura: pavimento del P1 a filo del camminamento. Audit del Lab (qa/asset-audit.mjs) non eseguibile in locale (manca Playwright): da verificare in CI e, se cambia, aggiornare la baseline.
+
+### 2026-11-16 — Microfix: torre fra due mura mostra entrambe le porte del cammino di ronda
+
+- Branch fix/microfix. La finestra di una faccia cede il posto a una porta del cammino di ronda (o del tetto di una sottotorre) che si apre sulla stessa faccia alla stessa altezza (towerWindowGivesWayToDoor, esteso dall'ingresso rialzato del mastio): prima la finestra della faccia interna copriva la porta e la torre fra due mura ne mostrava una sola. Il mastio resta senza porte sulle mura.
+- La chiave delle strutture in World3D include isMastio: promuovere o togliere il mastio ricostruisce porte, finestre e drappo (prima restavano quelli vecchi).
+- PASS gate-tower-entrance (nuovi casi), keep-entrance, mastio-selection-zoom, cutaway-floors, house3d e le regressioni torri; verificato a vista nel browser su una torre quadra d'angolo non mastio: due porte, nessuna finestra sopra. CI da eseguire.
+
+### 2026-11-16 — Microfix: torre quadra d'angolo senza porta al piano terra
+
+- Branch fix/microfix. Una torre quadra indipendente con due mura agganciate ad angolo (meno di 150° fra le loro direzioni) non ha più la porta del P0, perché le mura le chiudono lo spazio d'accesso; la porta resta se la torre è ruotata così che il fronte (la sua direzione) guardi dentro l'angolo fra le mura (entro 30° dalla bisettrice), cioè il caso a 45°. Senza porta anche se un muro si aggancia nella parte centrale della faccia della porta (un aggancio sugli spigoli di quella faccia, come nella torre a 45°, la lascia libera). Restano le porte del cammino di ronda e l'ingresso rialzato del mastio; le torri tonde, a D, semitorri e quelle agganciate a una porta non cambiano. Niente strada di servizio verso una torre d'angolo senza porta (settlement-world.js).
+- PASS gate-tower-entrance (nuovi casi d'angolo), keep-entrance, cistern, cutaway-furniture, oriented-towers, subtower-junctions, wall-stairs. Verificato a vista nel browser su una torre quadra W2 L2 d'angolo: allineata alle mura solo le due porte del cammino di ronda; ruotata a 45° con il fronte verso il cortile anche la porta al P0. CI da eseguire.
+
+### 2026-11-15 — Microfix: Rimuovi foresta usa i bypass DEV
+
+- Branch fix/microfix. Fast build DEV completa il job L1 di rimozione foresta al momento del clic (alberi tolti, legname accreditato, nessuna squadra né villaggio fondato richiesti) e, quando viene acceso, chiude anche i job in coda (ConquerForestry.applyDev). Free build DEV fa lavorare la squadra senza salari. Il terraforming (Sloped/Walled/Flat) era già istantaneo e gratuito: nessuna modifica.
+- Versioni ?v= in index.html aggiornate (-mfix1) per tutti gli script toccati dai microfix, così il browser non usa copie in cache.
+- PASS forestry (9, tre nuovi casi DEV) e regressioni cutaway/persone; verificato nel browser col clic reale: foresta rimossa subito con il messaggio «Fast build DEV: foresta rimossa». CI da eseguire.
+
+### 2026-11-15 — Microfix: fedeli alla messa nel cutaway della chiesa
+
+- Branch fix/microfix. La domenica 6:00–12:00, senza allarme, il cutaway del piano terra della chiesa selezionata mostra i popolani seduti sui banchi della navata (circa 3 posti su 4, estrazione fissa per chiesa), oltre al prete all'altare. Prima c'era solo il prete. Figure decorative: nessun legame con residenti, offerte o capienza.
+- PASS staff-people (nuovo blocco Sunday Mass) e court-people; verificato a vista in gioco su una chiesa L2. CI da eseguire.
+
+### 2026-11-15 — Microfix: il selettore di piano del cutaway toglie i merli
+
+- Branch fix/microfix. Con il cutaway piano per piano su un piano sotto l'ultimo, torri, porte e sottotorri non disegnano più merli, caditoie, tetto interno e braciere del tetto (cutawayCrestHidden in settlement-castle.js), sia nel percorso 2.5D (drawCastleBattlements) sia in quello WebGL (ConquerCastle3D.addPieces); la chiave della mesh castello di World3D cambia quando la cresta sparisce, così la mesh si ricostruisce.
+- PASS cutaway-floors (nuove asserzioni) e 49 regressioni castello/cutaway; verificato a vista nel browser su una torre quadra W2 a 3 piani: in P2 merli e braciere, in P1 e P0 nessuno dei due. Le due suite Playwright non sono eseguibili in locale. CI da eseguire.
+## 2026-11-16 — Avvisi in gioco e diario degli eventi (branch `feature/alert-feed`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `src/ui/alerts.js`: centro avvisi puro (nessun DOM). *Condizioni* (`sync`) restano finché vere e si chiudono da sole `resolvedLinger` dopo la risoluzione, che conta solo dopo `resolveGrace` (4 s) di assenza; *eventi* (`push`) scadono da soli. `dismiss` nasconde a mano: una condizione chiusa torna solo se peggiora o si ripresenta dopo la risoluzione. Ogni inizio/risoluzione/evento va nel diario (max 300 voci).
+  - `src/ui/alert-watchers.js`: sondaggio ogni secondo, solo lettura. Condizioni: allarme generale/allerta locale (`ConquerCombat.uiState`), incendi (`ConquerFire`), razioni/sete/autonomia del castello, cantieri fermi per materiali (letti direttamente, non dallo stato del weekend), senza paghe o senza costruttori, rischio carestia, mercato senza cibo, malcontento, salvataggio fallito. Economia letta al massimo una volta per giorno di gioco o ogni 10 s. Eventi: costruzione completata, struttura in macerie, note dell'economia tradotte.
+  - **Messaggi** (`alert-watchers.js`, categoria `messages`): evento «Messaggero/Colombo in arrivo», condizione «Messaggero alla porta del Mastio»/«Lettera alla colombaia» con pulsante «Leggi il messaggio» (`ConquerDiplomacy.openLetter`), eventi «Richiesta accettata/rifiutata» dalla cronologia, carovane programmate/partite/di ritorno/rientrate e condizione «Carovana bloccata» con «Apri carovane». Gli avvisi accettano un campo `action` `{id,label,arg}` che la shell traduce in comando.
+  - `src/settlement-diplomacy.js`: il messaggero a cavallo ha come meta `doorstep(mastio)`: piedi della scala dell'ingresso rialzato (`ConquerKeepEntrance.footPoint`) o porta frontale (`towerDoorSpecs`) + 0,9U verso l'esterno, non più il centro del Mastio (dove finiva dentro la sala comune). `settleDoorstep` sposta un messaggero di un vecchio salvataggio diretto al centro. Colombo e carovana invariati.
+  - `src/ui/shell.js`/`theme.css`/`i18n-it.js`: componente `Alerts` in alto al centro (spostato nello spazio libero sotto 1240 px), azioni «Mostra sulla mappa» e «Apri il diario»; sezione Gestisci › `journal`. Diario in `localStorage` `conquer.journal.<seed>`. `window.ConquerAlerts` per la console.
+- **PROVE LOCALI PASS:** `node qa/ui-alerts-regression.mjs`, `qa/dovecote-regression.cjs` (soglia del Mastio, migrazione), `qa/diplomacy-regression.cjs`, `qa/military-stables-regression.cjs`, `qa/multi-wells-regression.cjs`. Nel browser: messaggero iniettato → «Messaggero in arrivo», «Messaggero alla porta del Mastio», il pulsante apre la lettera, il rifiuto risolve l'avviso e scrive «Richiesta rifiutata». Nel browser (`?ui=2`): pila, espansione, chiusura, «Apri il diario», filtri, persistenza dopo ricarica, avviso reale «Cantiere fermo per materiali» su un pozzo e nessuna risoluzione nei giorni di weekend; nessun errore in console.
+- **NON VERIFICATO NEL BROWSER:** posizione del messaggero davanti a un Mastio reale (con e senza ingresso rialzato), allarme, incendio, carestia e completamento cantiere in partita reale (stesse letture del pannello Difendi/Castello; il completamento è un diff di `underConstruction`).
+## 2026-11-16 — Generatore di minacce (branch `feature/wildlife-outlaws`)
+
+- **CODICE SUL BRANCH, NON MERGE:** nuovo `src/settlement-threats.js` (`ConquerThreats`), unico regista delle comparse di lupi, orso, briganti, banditi e predoni. Una volta per giorno di gioco tira un dado deterministico (seme + giorno + tipo) per ogni tipo; vince il tiro più fortunato, **al massimo una minaccia al giorno**. Ai giorni saltati ad alta velocità rilancia ogni giorno (fino a 30).
+  - **Eventi rari (richiesta del product owner, 16/11/2026: «un orso 3 volte l'anno è troppo»).** Probabilità di base al giorno: lupi 0,35%, orso 0,16%, briganti 0,4%, banditi 0,12%, predoni 0,18%; massimo 5% al giorno con qualsiasi moltiplicatore. Misura su 40 semi × 365 giorni con un giocatore che risolve ogni minaccia in 15 giorni (`qa/threats-regression.cjs`): a **Normale ~5 eventi l'anno** (lupi 2,0 nuovi branchi, orso 0,33, briganti 1,0, banditi 0,55, predoni 1,1); Tranquilla ~3; Dura ~7 (orso 0,5, predoni 1,5). Prima dei ritocchi: ~42 l'anno a Normale (orso ~4, predoni ~8).
+  - **Condizioni:** lupi ×2,5 in inverno, ×1,4 in autunno, ×1,5 se non c'è nessun branco. Orso mai in inverno (letargo), solo con un bosco e senza un altro orso vivo. Briganti × oro del castello/250 (0,5–2,5) × (1 + botteghe/10, fino a 2), servono strade al confine costruite. Banditi × (1 + popolazione/40, fino a 2,5), serve un bosco. Predoni × edifici isolati/3 (0,5–2) × merci/300 (0,5–2) × 1,4 in autunno, servono edifici isolati.
+  - **Grazia dopo la fondazione:** lupi 10 g, banditi 20, orso 30, briganti 30, predoni 45. **Quiete** dopo la fine di una banda o la comparsa: lupi 60 g, briganti 90, predoni 120, banditi 150, orso 240.
+  - **Difficoltà** Tranquilla / Normale / Dura: frequenza ×0,5 / ×1 / ×1,7; bande −1 / 0 / +2 uomini; grazia ×1,5 / ×1 / ×0,6; branchi di lupi insieme 1 / 2 / 3. Scelta nel pannello COMBAT, salvata in `combat.threats`.
+  - **Avviso:** banner in alto con icona, testo e pulsante «Vai» (centra la vista sul posto); registro degli ultimi 20 eventi (comparse e fini delle bande) nel pannello, con «Vai» per ciascuno; probabilità del giorno con il motivo di blocco.
+  - Pulsanti di prova per i cinque tipi nel pannello (stessa strada, stessi avvisi).
+- `settlement-outlaws.js` non ha più un calendario proprio: espone `feasible`, `active`, `lastEnded`, `spawn(type,{size})` e segnala la fine di ogni banda al generatore. `settlement-wolves.js` espone `spawnPack`, `spawnBear` (solo se nessun orso vive), `census`; i branchi e l'orso iniziali della fondazione restano.
+- **PROVE LOCALI PASS:** nuova `qa/threats-regression.cjs` (grazia, un evento al giorno, determinismo per seme, difficoltà su frequenza/taglia/branchi, orso e lupi d'inverno, ricchezza e briganti, quiete, recupero dei giorni saltati, eventi forzati, avvisi e registro), `wolves` (nuovi branchi e orso a richiesta), `outlaws` (aggiornata), suite Combat completa, treasury, commerce, codex. **Partita reale (Chromium headless):** villaggio fondato, difficoltà Dura, 60 giorni con il vero `simulationFrame`: briganti due volte, covo di banditi, nuovo branco di lupi; predoni bloccati per mancanza di edifici isolati; banner e «Vai» funzionanti; nessun errore di gioco.
+
+## 2026-11-16 — Fauna e fuorilegge in partita: lupi, orso, briganti, banditi, predoni (branch `feature/wildlife-outlaws`)
+
+- **CAUSA:** `settlement-wolves.js` era caricato solo da `/camp`, mai da `index.html`: in partita non c'erano lupi. L'orso esisteva solo come disegno (`ConquerAnimals.SPECIES.bear`), senza simulazione. I banditi non erano mai stati implementati.
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `index.html` carica `settlement-wolves.js` e il nuovo `settlement-outlaws.js` dopo `settlement-combat.js`.
+  - `settlement-wolves.js`: schema `packs-v3` (i salvataggi esistenti ricevono l'orso una volta). **Orso** solitario, tana in un bosco a 28–50U dal pozzo, fuori dalla zona gialla; neutrale, di notte dorme alla tana; diventa ostile solo se un soldato entra a 6U dalla tana o a 4U da lui, insegue fino a 11U dalla tana e poi torna calmo. Ha uno slot di percorso suo (con quello condiviso dei lupi restava fermo di notte). Disegno generico per specie (sprite 56×52 per l'orso).
+  - `settlement-combat.js`: `registerWolves` sostituisce tutta la fauna (`faction:'wildlife'`); la fauna non fa scattare l'avvistamento delle vedette; tick di `ConquerOutlaws`; API `outlawState` (persistita in `combat.outlaws`), `addEnemies`, `removeEnemies`, `groundLegs`.
+  - `settlement-combat-rules.js`: profili `bear` (45 PV, combattimento 4, armatura 1), `outlaw` (40/2/0), `outlawGuard` (60/2/1); fazione `outlaw` con livrea lana grezza/verde bosco.
+  - `settlement-outlaws.js` (nuovo): tre bande, nemici normali della simulazione tattica (mischia, frecce, cadute e allarme invariati).
+    - **Briganti** (4–6): presidiano una strada di confine già costruita, a ~48U dal pozzo, con un tronco di traverso. Ogni strada tenuta riduce gli scambi del 40% (minimo 30%): vendite settimanali al mercato (`settlement-commerce.js`) e pedaggio alle porte (`settlement-treasury.js`). Attaccano chi si avvicina a 6U, inseguono fino a 9U dal posto.
+    - **Banditi** (4–6 guardie): covo stabile di 3–4 tende di pelli e un fuoco in un bosco a 32–62U; guardie fisse ai loro posti, attaccano entro 9U e inseguono fino a 14U dal fuoco. Ogni settimana estorcono il 5% dell'oro del castello (max 15) nel loro bottino; distrutto il covo il bottino torna al castello.
+    - **Predoni** (5–8): entrano da un confine, puntano due edifici isolati (completati, oltre 14U dal pozzo; mai castello, mura, torri, porte, pozzi, strade, campi) e rubano 6 merci a testa (cibo, legno, pietra, metallo, argilla); poi tornano al confine. Con oltre metà dei caduti ripiegano. Se muoiono tutti il bottino torna; chi fugge porta via la sua parte. Senza edifici isolati non partono.
+    - *(Superato dal generatore di minacce, voce sopra.)* Calendario dalla prima giornata col villaggio fondato: covo dopo 8–16 giorni, briganti 14–24, predoni 20–30; dopo la fine di una banda la successiva dello stesso tipo dopo 30–50 / 12–24 / 16–28 giorni. Una banda per tipo alla volta. I caduti restano mezza giornata, poi vengono rimossi.
+    - Pannello COMBAT: pulsanti di prova «Briganti», «Covo banditi», «Predoni» e riga di stato delle bande con l'effetto (scambi %, bottino, saccheggio/fuga).
+- **PROVE LOCALI PASS:** `qa/wolves-regression.cjs` (aggiornata: fauna in `index.html`, schema v3, orso: una sola tana lontana, ignora i passanti, dorme di notte, carica chi si avvicina, guinzaglio, disegno), nuova `qa/outlaws-regression.cjs` (briganti e taglio degli scambi, covo con guardie, pizzo settimanale e recupero, predoni: bersagli periferici, saccheggio, fuga col bottino o restituzione, rotta, calendario), `combat-render`, `camp`, `treasury`, `commerce-skeleton`, `economy`, `economy-balance`, `animals`, `animals3d`, `circle-control`.
+- **PROVA NEL BROWSER (server locale, partita fondata dalla UI):** 12 lupi in due branchi e un orso; tre bande dai pulsanti, salvataggio e ricarica le conservano; briganti sulla strada sud a 48U, scambi 60%; predoni che saccheggiano due cascine isolate (60 merci) e ripiegano; squadra portata al covo: le guardie la circondano a distanza di mischia. Tende e fuoco del covo visibili nel bosco (cattura). Nessun errore in console. Il pannello del browser era nascosto: la simulazione è stata fatta avanzare chiamando `simulationFrame`.
+- **COVO E BLOCCO IN 3D:** `settlement-events3d.js` ha `banditLair(center,opts)` (3–4 tende da campo `tentRidge`/`tentRidgePlain` attorno al fuoco, tettoia color terra sul bottino, botti, sacchi, cassa, rastrelliera, carro rubato `wagonCargo`) e `brigandRoadblock(post,heading)` (carro di traverso sulla strada, tratto di `campPalisade`, botti, sacchi, fuoco). Disegnati con `bivouacMeshes`/`drawMeshes` come i bivacchi dell'esercito, fuoco col braciere dei bivacchi; il vecchio disegno canvas resta solo come ripiego senza catalogo 3D. Le tende si piantano tra gli alberi (nessun filtro sugli ostacoli: nel bosco ogni albero bloccava una tenda). Guardie del covo a 0,95U dal fuoco, briganti a 1,9U dal carro.
+- **ARMAMENTO (richiesta del product owner):** briganti e banditi sempre **2/3 ascia e scudo tondo, 1/3 arco** (arcieri = `round(n/3)`). Nuova figura `axeman` (`drawAxeAndRoundShield` in `settlement-population-figures.js`: scudo tondo di legno con umbone, ascia barbuta che si alza sulla carica e cala sul colpo; anche in `settlement-combat-anim.js`). Gli arcieri sono `kind:'archer'` (tirano col motore esistente) con profilo `outlawArcher` (35 PV, mira 2): `profileKind` rispetta un `profile` esplicito. Gli arcieri restano al loro posto e tirano, le asce vanno incontro all'intruso. I predoni solo ascia e scudo.
+- **LAB:** nuove voci `banditLair3`, `banditLair4`, `brigandRoadblock` nella famiglia «Bivacchi (composizioni)»; audit 0 falliti, baseline estesa solo con queste tre voci (audit della famiglia: 8 render, 0 nuovi, 0 cambiati). Catture in partita (Chromium headless) di covo e blocco riviste.
+- **APERTO:** le guardie restano invisibili finché nessuno le avvista (regola di tutti i nemici). Valori di bilanciamento provvisori.
+
+## 2026-11-16 — QA-DEEP-261116 · Test antiregressivo profondo e due fix di salvataggio (branch `fix/mastio-h4-load-20261116`)
+
+- **Test su `main` 1911369a (#239), checkout LF, senza modifiche al codice:**
+  - 214 script node: tutti PASS. `founding` sfora il limite di tempo locale come su `main` pulito; `stream-count` passa da solo in 156 s.
+  - 17 script browser (main-fixes, figure/vehicle/animal/event cards, ui-combat, siege-damage-converge, panels, construction, upgrades-dev, codex-wiki, asset-catalog, stonecolor, clay, urban-local-preview e anteprime): tutti PASS.
+  - Partite reali headless di 120–190 giorni di gioco: 4 seed (pianura, foresta, colline) in Canvas e World 3D, con salvataggio/ricarica e assedio DEV. Zero errori; nessuna violazione di NaN o negativi, doppie assegnazioni di operai, riserva dei soldati o cantieri bloccati.
+  - Salvataggi di 3 build precedenti (30/10, 13/11, prima di #239) caricati su `main`: tutti PASS, migrazione idempotente. I 3 salvataggi corrotti attivano la protezione del load fallito.
+- **CODICE SUL BRANCH, NON MERGE — due bug precedenti a #239:**
+  - **Mastio tolto dal giocatore:** tornava al ricaricamento e svuotava una stanza (caserma → sala comune; 32 → 16 posti). Origine 0e4306db (14/10). Ora `assignMastio` registra `State.village.mastioDeclined`, e `syncAutoMastio` rispetta la scelta e prende solo una stanza libera.
+  - **Torre W3 piazzata a H4:** il piano pagato si perdeva al caricamento (origine #174). Ora `orientedToolSpec` limita il livello a `maxStructureLevel`.
+- **PROVE:** `qa/mastio-selection-zoom-regression.cjs` (+2 casi) e `qa/tower-h4-regression.cjs` (+1 caso) falliscono su `main` e passano sul branch. Le altre 27 regressioni su Mastio e piazzamento passano. Repro browser degli agenti: Mastio tolto → dopo il reload resta tolto con 2 caserme e 32 posti; W3 H4 → piazzata H3, W2 H4 resta H4.
+- **NON CORRETTO (basso, in BACKLOG):** campi dell'economia salvati come stringhe (es. `castleGold:"lots"`) vengono caricati e risalvati invariati.
+
+## 2026-11-16 — PERF-261116 · Regressione di prestazioni della #162 (branch `perf/regional-roads-20261116`)
+
+- **Trovata dal test antiregressivo profondo** (A/B e bisezione su `main` con `qa/construction-performance.cjs`, scenario castello, due misure per commit). Prima della #162 (a0ed0c75): strade 1,8–2,0 s, disegno a regime 12–14 ms. Dalla #162 (50096dfa) in poi: 4,9–5,7 s e 28–34 ms. La #239 è neutra.
+- **Cause:**
+  - `environmentContains` calcolava `terrainSlopeKind` (via `reliefBandAt`) per ogni foresta prima del test sui confini: con il bosco al 20%, circa 32 volte per punto campionato.
+  - Nella cottura dei tile del terreno, `drawEnvironment` ricostruiva i gusci delle colline e gli occlusori degli alberi per ogni foresta, anche quando non c'erano sprite da disegnare.
+- **CODICE SUL BRANCH, NON MERGE:**
+  - test economici prima della pendenza, che si può anche passare da chi la conosce già (`settlement-world.js`);
+  - gusci e occlusori calcolati una volta per passata e memorizzati con `reliefBandRevision` (`settlement-landscape.js`, `settlement-castle.js`);
+  - chiavi numeriche per `reliefBandAt`.
+- **PROVE:**
+  - Output identici: la griglia di `environmentBlocksPoint`/`roadRepairPointClear` ha lo stesso hash, la geometria delle strade è identica, e i 128 tile del terreno sono identici pixel per pixel.
+  - Dopo il fix: strade 1,0–1,1 s, disegno 9,6–10,0 ms; la cottura dei 128 tile scende da 3,0 a 0,5 s.
+  - 41 regressioni PASS.
+  - Nuova `qa/environment-contains-perf-regression.cjs`: fallisce sul codice precedente e passa sul branch.
+  - mass-battle e fire-collapse senza regressioni.
+
+## 2026-11-15 — Tetto interno: torre a D e bracere rimosso (branch `fix/dtower-inner-roof-brazier`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `settlement-population.js`: `towerInnerRoofGeometry` restituisce anche `tail`; sulla torre a D il tetto interno corre su un colmo dal retro (testata a padiglione, a mezza luce dal fondo) al centro della semicirconferenza (mezzo cono), invece di un'unica piramide con l'apice sul davanti che lasciava le falde posteriori quasi piatte. Nuovo `towerInnerRoofFaces(g)` (una falda per lato di gronda, triangolo o trapezio verso il colmo, stessa pendenza ovunque) usato sia dal 2.5D (`drawTowerInnerRoof`) sia dalla mesh 3D (`addTower`). Quadrate e rotonde invariate (`tail = apex`).
+  - `settlement-castle-structures.js`: **il tetto interno toglie il bracere** (decisione del product owner, 15/11/2026). Nuovo `towerHasBrazier(s)`: torre in pietra con merli o caditoie **senza** tetto interno; `battlementBrazierSources` lo usa, quindi niente blocco del bracere (prima disegnato sopra il tetto, sembrava una botola), niente fiamma né alone. Tooltip «Tetto interno» aggiornato («Toglie il bracere della piazza»).
+- **REGOLA DI PRODOTTO:** senza bracere gli arcieri della torre non tirano frecce incendiarie. Oggi gli arcieri delle torri non tirano frecce incendiarie in nessun caso (esistono solo come strumento di test e nella battaglia navale): quando arriveranno, dovranno chiedere `towerHasBrazier(s)`.
+- **PROVE LOCALI PASS:** `qa/tower-inner-roof-regression.cjs` (2 controlli nuovi: colmo e pendenza unica della D; nessun bracere sotto il tetto interno su quadrata, rotonda e D, bracere invariato senza), bartizan, battlement-parapet, dovecote, falconry, roof-pitch, subtower-junctions, tower-italian-machicolation, tower-roof-shape, tower-weapons, camp, fire.
+- **AUDIT LAB:** 6 voci «tetto interno» (58 render): 0 falliti, 0 cambiati, 6 avvisi preesistenti `cantiere-progressivo`; baseline invariata. Verifica visiva nel Lab (Modello 3D e Nel gioco).
+
+## 2026-11-15 — Mura ad angolo libero (branch `fix/wall-free-angle`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `settlement-castle-placement.js`: `normalizeStructuralLinearRoute` non aggancia più muro, palizzata e sezione costruita al reticolo di 24 direzioni (15°) e non crea più il gomito automatico a due tratti verso un magnete. Il tratto va dritto dal punto A al punto B (o al magnete, raggiunto esattamente); oltre la lunghezza massima, fino a 2× max, due tratti collineari uguali. `rotationStep` resta solo se l'angolo cade sul reticolo, altrimenti `null` (stessa regola della migrazione dei salvataggi). Torri, porte ed edifici puntuali conservano la rotazione a 15°.
+  - `settlement-app-input.js`: messaggi di stato senza «15°» (mostra l'angolo reale del tratto), con la nota delle porte su strada di WALL-ROAD-GATE (#246) conservata nel merge.
+  - `qa/wall-road-gate-regression.cjs`: usa `freeLinearSegment` (ex `discreteLinearSegment`) e un caso nuovo, muro a ~19,8° che attraversa una strada principale: porta posata, due pezzi seduti sui fianchi.
+- **PROVE LOCALI PASS:** le 28 `qa/*.cjs` che toccano il piazzamento lineare (tra cui linear-magnet, wall-bays, lean-to, pier, oriented-towers) e builder-placement. Nel browser (`main` + branch): muro a 18,97° e secondo muro a −125,91° agganciato esattamente all'estremità libera del primo, un solo tratto, nessun errore in console.
+
+### 2026-11-15 — Figure di eventi e giustizia nel capsuloide; campo eventi senza fondo verde (`feature/figure-capsules-events`)
+
+- **CODICE SUL BRANCH (estende D-CAPSULE-261113):** in World3D le figure di `settlement-events-people.js` (sagra, circo, arena, palco, podio, accampamenti; combattenti con `drawSoldierFigureUnmasked` in carta), `settlement-events-joust.js` (spettatori, scudieri, cavaliere e scudo, caduto ruotato; cavalli con `ConquerAnimals.card` e gualdrappa come `overlay`), `settlement-court-people.js` (gogna, forca, patibolo, tribunale, personale delle sale civiche) e `settlement-staff-people.js` (personale delle stanze del castello in cutaway, via `drawWorker`/`drawVillagerFigure`) sono carte con capsula. Gesti e braccia in 4–5 pose, salto e oscillazione come quota della carta, chi sparisce alla porta del circo non è disegnato. In World3D niente ridipintura degli occlusori delle tribune e niente ritaglio con la sagoma dell'opera. Restano 2D: prigionieri dietro le sbarre, lancia della giostra, renderer 2D.
+- **CAMPO EVENTI:** `groundMesh` di `settlement-events3d.js` non ha più il fondo verde: solo un bordo sottile in terra battuta (`#8a7656`, quattro strisce).
+- **PROVE LOCALI PASS:** nuova `qa/event-figure-cards-browser.mjs` (forca, gogna e patibolo in sessione, palco, giostra: chiavi delle carte, capsula orizzontale dei cavalli, ripiego 2D; primi piani in `output/playwright/event-figure-cards/`), aggiunta al workflow Main fixes; `figure-billboards`, `animal-capsule`, `vehicle-cards` browser; 24 regressioni node (eventi, giostra, tribunale, crimine, cutaway, personale, botteghe, animali, veicoli), `events3d-regression` aggiornata al bordo. Audit Lab completo: nessuna voce degli eventi cambiata (le 178 «cambiate» sono torri, mura, porte e vegetazione, già diverse dalla baseline su main).
+
+
+### 2026-11-15 — WALL-ROAD-GATE: porta automatica dove un muro incrocia una strada principale
+
+- Tirando un muro o una palizzata che incrocia una strada principale (manuale, arteriale, del pozzo o della porta), sull'incrocio nasce un cantiere porta del tipo corrispondente e il muro si taglia sui due fianchi della porta (`wallRoadGatePlan` in `settlement-castle-placement.js`, usato da `commitStructuralLinearRoute` e dall'anteprima). Palizzata → porta in legno; muro pietra/argilla W1 → porta piccola, W2-W3 → porta grande; la muratura segue il muro.
+- La porta guarda l'esterno del muro con l'androne perpendicolare al muro; se la strada è troppo obliqua (>32°) si gira lungo la strada. Se la porta non è piazzabile (pendio, bosco, collisione) l'intera tratta è bloccata con il motivo. Un incrocio già coperto da una porta esistente non ne crea un'altra.
+- `manualRoadConflict`: l'estremo di un muro appoggiato a una porta non taglia la strada che passa nel suo androne (prima un'arteriale auto veniva rimossa e rideviata).
+- PASS locale `qa/wall-road-gate-regression.cjs` (6), gate-roads, bridge-road-magnet, linear-magnet, builder-placement, wall-bays, wall-slope, urban, small-gate, gate-breach. Verificato nel gioco con input reale (palizzata, W1 pietra, W3 argilla). CI da verificare; nessun merge in main.
+## 2026-11-15 — Pattuglie sulle mura per giro (branch `fix/wall-patrol-rings`, MIL-WALL-01)
+
+- **CODICE SUL BRANCH, NON MERGE:** nuovo `src/settlement-wall-patrols.js` (`ConquerWallPatrols`). Un giro di mura è un componente connesso del cammino di ronda (`ConquerWallWalk.graph()`): mura T2+ e palizzate unite testa a testa o attraverso torri e porte. Le pattuglie non sono più figure per segmento (prima T2 = 1, T3 = 2 per tratto): ogni pattuglia è di 2 soldati della Caserma che percorrono tutto il giro, in fila, distribuite a distanze uguali; giro chiuso in tondo, aperto o con diramazioni avanti e indietro; invisibili dentro torri e porte. Un giro nuovo parte con 0 pattuglie. Il Mastio non ha porte sul cammino (D-MASTIO-01), quindi un giro che lo tocca risulta aperto.
+- **RISERVA:** `ConquerSoldiers.roster()` copre le pattuglie delle mura dopo quelle della White Zone (`wallPatrols`, `wallPatrolsCovered`); quelle non coperte (pochi soldati o non pagati) tornano in Caserma. Salvataggio in `State.siege.soldiers.wallPatrols` come id dei muri del giro: sopravvive alle brecce, due giri uniti sommano le pattuglie, un giro tutto in costruzione aspetta senza tenere soldati.
+- **COMANDI:** Militare › Pattuglie e guarnigioni (riquadro «Mura · pattuglie per giro», +/− per giro), ispettore del muro legacy («Pattuglie del giro») e UI v2 (`setWallPatrols`, scelta 0…n). Con meno di 2 soldati liberi il + è disattivato, compare il motivo e un pulsante «Arruola N soldati · 15 oro ciascuno».
+- **/camp** non carica il modulo e mantiene le figure per segmento.
+- **PRESTAZIONI:** `ConquerSiege.archerSlots` tiene in cache i posti per torre (chiave: stato della torre e di muri/torri agganciati, verificata a ogni chiamata). Layout TEST di notte: `drawCastleSoldiers` da 40 ms a 4,5 ms per frame, posti arcieri di tutte le torri da 3,8 a 0,2 ms; posti identici alla base.
+- **PROVE LOCALI PASS:** `qa/wall-patrol-regression.cjs` (10 controlli, aggiunto alla CI combat), caserma-avamposto, patrol, wallwalk, panels, refactor-app-population, military-circle-roster, siege-assault, bartizan. Nel browser (layout TEST): assegnazione da pannello Militare e ispettore con il mouse, arruolamento in linea, salvataggio e ricarica, soldati sul camminamento.
+- **NON VERIFICATO:** fps reali nel pannello Browser (il pannello nascosto riduce i frame anche sulla base). Il lag notturno osservato è presente anche sulla base `ecdd6303`.
+
+## 2026-11-15 — Equipaggiamento dei cavalieri a cavallo (branch `feature/knight-equipment-styles`)
+
+- **CODICE SUL BRANCH, NON MERGE:** `ConquerMounted2D.draw` accetta `helmet` e `shield` (stili di `UNIT_HELMETS`/`UNIT_SHIELDS`; assenti o sconosciuti = grande elmo e scudo appuntito originali). `settlement-combat-render.js` li passa solo ai cavalieri del feudo e solo se `State.policies.unitHelmet/unitShield` è stato scelto. `figures-lab.html`: selettori anche per «Cavaliere a cavallo», opzione «Originale». Caduta (`pose.fall>0`): il cavaliere si disegna nello spazio del terreno, non del corpo del cavallo (`fallen()`), con arco dietro la groppa fino al suolo (`sp.center.y`) e lancia stesa a terra.
+- **PROVE LOCALI PASS:** `qa/combat-render-regression.cjs`; nel Lab, foglio con le 6 combinazioni (originale + 5) a due grandezze e primo piano degli elmi, console senza errori.
+- **NON ESEGUITO in locale:** `node qa/asset-audit.mjs` (Playwright non installato); affidato alla CI `asset-lab`.
+
+### 2026-11-15 — Spiaggia sotto le scarpate (branch fix/coastal-cliff-beach-20261115)
+
+- Allineato main `1911369` (hardening #239), senza conflitti. Ripetuti PASS occlusione, coast, water-surface, wooded-relief, tree-bark ed export Wiki; cinque scene ripetute sulla versione integrata. CI da verificare sul nuovo SHA.
+- Corretto l'ordine del disegno: sabbia e sponde di mare/lago/acquitrinio precedono i rilievi; acqua e confluenze conservano il proprio passaggio successivo. Stesso percorso per Canvas e texture WebGL. Ricette, larghezze e quote invariate.
+- Nuova regressione sul percorso reale terreno/ambiente: prima FAIL (sabbia sulla scarpata), dopo PASS in 16 combinazioni mare/lago, quattro rotazioni, isometria/vista dall'alto. Pixel della texture WebGL verificati; cinque snapshot costieri prima/dopo e cinque scenari idrici PASS. Lab Territorio: 16 invariati, zero errori, cinque avvisi di schema.
+- Implementato solo sul branch, non mergiato; CI da verificare sul commit pubblicato. [Prove e riproduzione](SHORE-RELIEF-FIX-2026-11-15.md). Roadmap e decisioni invariate: applicazione del contratto esistente di rilievo.
+
+### 2026-11-15 — Audit post-merge regionale, correzioni su branch
+
+- Merge autorizzato dall'utente: integrato main `1c27aeb` (torre a D), con soli conflitti documentali uniti. Precedente CI `5854c03`: 14 workflow PASS; nuovi controlli da verificare prima del merge definitivo. Restano aperti latenza locale e quota collinare costiera.
+- Allineamento finale main `17645c2`; CI Runtime ha rilevato il digest Wiki obsoleto dopo le correzioni: rigenerato solo `sourceDigest`, contenuti invariati. Wiki regression ed export --check PASS locali; nuova CI da verificare.
+- Esito consolidato locale: **201/202 PASS**, unico FAIL fondazione (116,07 ms > 100 ms). PR #250 draft, non mergiata. Integrato main `2782fc0` preservando pattuglie/porte stradali; controlli mirati post-integrazione PASS. CI della PR da verificare sul nuovo SHA.
+- Base verificata main `50096df` (PR #162); correzioni in `fix/regional-postmerge-20261115`, non mergiate. Riprodotti e corretti drenaggio cancellato da bordo montuoso, chiome perse con cache calda e selettore incoerente con i quattro biomi.
+- [Rapporto completo](POSTMERGE-REGRESSION-2026-11-15.md): base 198/199 test PASS dopo quattro ripetizioni LF; resta APERTO il picco della pianificazione stradale oltre 100 ms. Nuovi tre test prima FAIL/dopo PASS e ripetizione completa sul branch.
+- Browser: otto scene regionali, cinque idriche e apertura reale dalla regione; screenshot finali rivisti. Asset Lab completo: 1.612 render, zero errori ma 157 avvisi e baseline da riconciliare; Territorio corretto 16 render invariati. Nessuna accettazione massiva delle firme.
+- Roadmap/decisioni e bilanciamenti invariati. QA e limiti documentati per il commit regionale; le successive PR di main richiedono verifica propria.
+
+## 2026-11-13 — AUDIT-261113 · Audit post-merge, hardening e semplificazione (branch `fix/audit-hardening-20261113`)
+
+- **AMBITO:** verifica delle 82 PR mergiate dal 30/10 al 13/11 (#103–#211) su `main` 6b227926, per gruppi (economia, job/cantieri, militare, torri/mura, stanze, rendering, CI, hardening). Nessuna PR sovrascritta da un merge successivo (identificatori e registri dei modelli controllati commit per commit).
+- **CODICE SUL BRANCH, NON MERGE — bug corretti (verificati con repro prima e dopo):**
+  - **Cantieri:** gli upgrade di ponti e fossati automatici (#194) restavano a 0 lavoro con i materiali spesi e 3 costruttori bloccati → `payConstructionWork` blocca solo i cantieri automatici che non sono upgrade.
+  - **Disboscamento:** con il Job Manager L1 attivo (#190) il taglio del bosco (#166) aveva 0 operai → `forestryDemand` entra nella domanda dei costruttori in modalità gestita.
+  - **Costruttori:** `constructionDemand` conta solo i cantieri lavorabili (materiali consegnati oltre l'avanzamento), come `constructionCrewAssignments`.
+  - **Piazzale:** durante l'espansione (#167/#194) il piazzale resta attivo alla capacità precedente; anche i carrettieri lo seguono.
+  - **Salvataggi:** una torre W2×H4 (#174) perdeva il 4° piano a ogni caricamento; la latrina W1 veniva verificata contro la partita precedente durante il load; un caricamento fallito lasciava che l'autosave sovrascrivesse il salvataggio buono → ora il save grezzo è copiato in `.corrupt.<ts>`, `State.loadFailed` blocca i salvataggi finché non si genera una mappa o si carica con successo.
+  - **Riserva dei soldati (#193):** le pattuglie cadute o in infermeria liberavano i loro uomini e quelle perse non scalavano `enlisted` → restano impegnate; una perdita definitiva si addebita una volta (`reserveCharged`). Spedizioni mai sopra gli arruolati.
+  - **Erario (#197):** un decreto emesso di sabato non aveva effetto settimanale → flag `owed`, ogni decreto vale giorni/7 applicazioni; la decima in natura entra in `weekProduced`; `state()` normalizza i campi della settimana.
+  - **Render:** ballatoi, piano ligneo della porta piccola, stile dei merli e pendenza dei tetti non invalidavano le cache (World 3D e 2.5D) → chiave unica `structureVisualKey(s)` in `settlement-render.js`.
+  - **Varie:** retry per-frame del bivacco 3D fallito, valori del campo militare fuori tabella, `initialSeed` con storage bloccato, kit case con un pezzo mancante, wiki incorporato cross-origin, messaggio della scala sulle mura, preset del Lab con cucina nel mastio W4, doppio caricamento di `settlement-mesh3d.js`, cache-buster di `house-models.js` e garderobe.
+  - **Sicurezza:** XSS memorizzata dai nomi di quartiere nell'ispettore classico → etichette passate per `ConquerPanels.escapeHtml` (escape anche di `'`).
+  - **Dev free build:** `canAfford`/`spendCost` non sono più gratuiti per tutto; il free build resta sui soli cantieri.
+- **PRESTAZIONI** (profilo CPU, vecchio `main` 112cb8f0 contro HEAD): cache per struttura delle stanze esterne e delle feritoie (`archerSlots` 59→14 ms webgl), ricerca del mare memorizzata (`rockAt` 344→12 ms), roster dei carrettieri non ricalcolato a ogni frame, ombreggiatura delle mesh 3,7× più veloce (frame max del crollo WebGL ~363→~310 ms, il vecchio era 170–200). Il crollo in canvas varia 2,9–4,1 s anche sul vecchio codice: nessuna regressione accertata.
+- **SEMPLIFICAZIONE (refactor a comportamento invariato):** nuovo `src/settlement-util.js` (`ConquerUtil.hash/rng/smoothstep`, caricato per primo) al posto di 22 copie; politiche L1/L2 del Job Manager unificate; `ConquerSiege.activeRooms`; `W1_TOWER_FUNCTIONS` in core; un solo Dijkstra delle campane (`ConquerAlarmBells.shortestSignal`, fuzz su 3000 layout identico); `InstitutionPanel` unico per Chiesa e Gilda; wrapper della game API generati; rimossa la copia ESM morta `src/economy/` (il suo test falliva e nessuno la importava).
+- **CI:** suite deterministica completa su ogni PR che non sia solo documentazione, con elenco di tutti i test falliti; controllo di sintassi su `src/**/*.js|mjs`; `permissions: contents: read` ovunque; run settimanali dei workflow browser; nuovo `perf.yml` manuale; guardia contro script QA orfani; Context sync esteso a `api/`, `tests/`, `crime/`, `march/`, `lab/`, `layouts/`.
+- **PROVE LOCALI PASS (checkout LF):** 179 script node (`qa/*.cjs`, `qa/*.test.mjs`, `tests/*.test.mjs`) 0 falliti; `node --check` su tutti i sorgenti; `export-codex --check` e `export-codex-content --check`; pagina di gioco e Asset Lab caricati in locale senza errori di console né 404; i 5 benchmark browser `*-performance.cjs` passano (prima 2 fallivano per il MIME `.mjs` mancante nei loro server).
+- **NON VERIFICATO:** partita reale con le nuove regole dei costruttori; i loop bash dei workflow (nessuna shell bash locale) finché la CI non gira sul branch.
+
+### 2026-11-15 — FIELD-LEND preservato nel merge regionale
+
+- La CI su 6510709 era tutta verde (20 workflow). Durante l'attesa main e avanzato a 6c5ac79 (#212 FIELD-LEND): integrato senza conflitti di codice, unendo STATUS/CHANGELOG e rigenerando il catalogo. PASS locale idle-farmers (7), fields (16), export Wiki. Nuova CI da verificare; nessuna modifica alle ricette regionali.
+
+
+### 2026-11-15 — Riallineamento prima del merge autorizzato
+
+- Integrato main ecdd630 nel branch regionale. Conservati i quattro biomi e l'isolamento demo insieme a migrazione sociale v2, politiche elmi/scudi, nuove figure e caditoie italiane. Conflitti documentali uniti, versioni cache riconciliate senza duplicare script e catalogo Wiki rigenerato.
+- PASS locale regional-demo (inclusa persistenza isolata), save-safety ed export Wiki; regressioni complete e CI sul nuovo commit da ricontrollare. L'autorizzazione al merge del 15 novembre non equivale a merge eseguito: esito definitivo nella PR #162.
+- Nessuna nuova regola di bioma o milestone; roadmap invariata. Restano i limiti idrici e di latenza già documentati.
+
+
+### 2026-11-12 — Esito CI integrazione e budget Sea
+
+- Commit 1f5deb0: 19 workflow CI riusciti, inclusa la suite completa di regressione/routing e Asset Lab. Sea and pier interrotto dal timeout di 10 minuti dopo i controlli di flusso, senza assertion fallite. Budget portato a 15 minuti come la suite routing; nessun test rimosso e nome del check conservato.
+- Riproduzione locale Windows: conferma fondazione corretta, ma picco di pianificazione stradale circa 116 ms oltre la soglia 100 ms; stessa suite PASS sul runner CI. Non garantita una soglia di latenza su ogni macchina.
+- Nessun merge in main; nuovo esito Sea da verificare.
+
+
+### 2026-11-12 — Correzioni emerse dalla CI di preparazione
+
+- Test cache di corteccia e magnete ponte aggiornati per accettare il token nella versione composta; test montagne adeguato a Valle alias Colline, senza catene autonome.
+- Conferma fondazione: preflight delle chiome limitato alla zona del piazzale, senza generare tutto il bosco al primo clic. Identici RNG, posizioni e attributi; confronto automatico con il layout completo. Caso Foresta 4242: circa 148 ms prima, 22 ms dopo nella riproduzione locale. Test placement e densità PASS.
+- La prima CI di integrazione aveva cinque workflow falliti (due condividono il test ponte). Verifica completa e CI successiva ancora necessarie; nessun merge in main.
+
+
+### 2026-11-12 — Preparazione merge regionale
+
+- Integrato `main` 95e8dd2 nel branch sperimentale. Conflitti risolti conservando documentazione di entrambi i filoni, versioni cache e firme degli asset; catalogo Wiki rigenerato dai provider unificati. Preservati economia ECO-FIL-01, figure, arte, coperture e latrine.
+- PASS hills-zone (cinque seed, alias e quattro bordi), landscape-order, regional-demo, regional-surroundings, water-surface, save-safety, economy-industries, Stonecolor, tower-inner-roof, room-exterior-latrine e roof-pitch; sintassi dei moduli integrati ed export Wiki. Normalizzata la lettura dei fine riga nel test latrine per Windows.
+- Cinque snapshot integrati `merge-ready-*` rivisti, zero errori JavaScript; quote colline/boschi e torrenti confermati.
+- Audit Territorio integrato: 16 render invariati, zero errori, cinque avvisi schematici noti. Nessun nuovo contratto o milestone: ROADMAP e decisioni progettuali invariate. Resta documentato il caso idrico seed 1 con montagna nord e fiume est. Preparazione sul branch, non merge in main; CI remota da verificare dopo il push.
+
+
+### 2026-11-12 — Montagne regionali +30%
+
+- Raggi delle cime di bordo aumentati da 7–15U a 9.1–19.5U; altezza aumenta nella stessa proporzione, pendenza, numero e centri restano identici. Ingombri usati anche da collisioni e generazione colline.
+- Cinque snapshot `mountains-plus30-*` rivisti: quattro orientamenti con seed 1 e nord seed 229. Colline 32.4–33.0%, boschi 24.7–24.8%, 1–2 torrenti; 16 cime per bordo. Audit Territorio: 16 invariati, zero errori, cinque avvisi schematici preesistenti.
+- Difetto preesistente riprodotto prima e dopo: HILLS seed 1, bordo montuoso nord + fiume est non genera rete idrica. Da correggere separatamente; non introdotto dall'aumento di scala.
+- PASS hills-zone (cinque seed, alias Valle e quattro bordi), organic-hills; cinque snapshot browser e audit Territorio.
+- Economia, roadmap e classificazione dei biomi invariate. Modifica sul branch sperimentale, nessun merge in main.
+
+
+### 2026-11-12 — Rilievi organici e cime disperse
+
+- Rimossa la griglia a due file e la rotazione quasi fissa che causavano la regressione visiva. Colline collocate per tentativi geometrici con rotazioni libere, rapporti fra assi e superfici differenti, contorni più lobati. Numero 4–8 e minimo 30% preservati senza aggiungere rilievi oltre il limite.
+- Catene di bordo: posizioni longitudinali irregolari e dispersione trasversale fino a circa ±23U sulla direttrice, raggi delle cime 7–15U; trasformazione coerente per le quattro direzioni. Conservati i corridoi di 7U tra colline e il margine esterno per la rete idrica.
+- Risolto anche un punto di instradamento: il raccordo della deviazione non può essere scelto di nuovo dentro un rilievo successivo. Test organic-hills falliva sulla vecchia disposizione a due file e passa sulla nuova; controlli dei quattro bordi, landscape-order e cinque snapshot regionali `organic-relief-*` rivisti.
+- Misure snapshot: colline 31.0–34.8%, boschi 24.7–24.9%, 1–3 torrenti. Audit Territorio 16 invariati, zero errori, cinque avvisi schematici preesistenti. Economia e roadmap invariate.
+
+### 2026-11-12 — HILLS regionale corretto e coperture reali
+
+- Esportazione HILLS → hills, biomi terrestri Pianura/Colline/Foresta/Palude. Valle resta alias. Bordi montuosi espliciti (`mountainSides`) esportati dalla regione come fiumi e costa; catene generate sui lati richiesti senza sostituire il bioma.
+- Colline: 4–8 rilievi dimensionati per almeno 30% di superficie, H2–3; boschi calibrati al 25% effettivo, entro 20–30%; estrazione torrenti 100%, 1–3. Il vincolo precedente di zero torrenti su isole/penisole resta prioritario.
+- Cinque aperture con payload regionali reali riviste: 4/7/8 rilievi e casi con fiume o bordo montuoso. Copertura colline 30.9–32.6%, boschi 24.6–24.9%, torrenti 1–3. Zero montagne senza bordi richiesti; 16 cime sul bordo nord richiesto.
+- PASS hills-zone (cinque seed, alias e quattro orientazioni dei bordi), regional-demo (mapping e proprietà trasmesse), ricette biomi (42). Audit Territorio: 16 render invariati, zero errori, cinque avvisi schematici preesistenti. Snapshot `hills-regional-*`.
+- Economia e roadmap invariate. Le ricette legacy non fanno parte dei biomi selezionabili; salvataggi esistenti non rigenerati.
+
+### 2026-11-12 — Quantità colline e alias Valle
+
+- Colline e Valle condividono la ricetta 4–8 rilievi, H2–3; Valle non genera più catene montuose o torrenti propri. Seed e pesi regionali normalizzati, colori terreno/minimappa allineati.
+- Mare e Lago: probabilità 20%, 1–2 rilievi H1–2. La sagoma del lago viene calcolata anche prima dei rilievi per mantenerli sulle porzioni emerse; selezione regionale dell'acqua invariata.
+- PASS ricette biomi (42), equivalenza Valle/Colline su tre seed inclusi 4 e 8 rilievi, colline sporadiche su 3000 seed per cinque biomi (Mare 20.0%, Lago 20.4%), isole/penisole (15). Cinque snapshot `hill-quantities-*` rivisti, conteggi 4/8/7/1/2. Audit Territorio 16 invariati, zero errori, cinque avvisi schematici preesistenti.
+- Aggiornata la tabella in BIOME-HILL-QUANTITIES.md. Nessun target sperimentale del 20% di superficie per Colline; quantità soltanto. Economia e roadmap invariate, salvataggi non rigenerati.
+
+### 2026-11-12 — Torrenti esclusi e colline sulla costa
+
+- Isole e penisole marittime/lacustri: stream=0 nella ricetta; esclusi anche torrenti passati alla composizione idrologica e affluenti regionali di tipo stream. I fiumi restano distinti.
+- Riposizionamento deterministico dei rilievi lungo le sponde effettive prima dell'idrologia, conservando numero, dimensioni e livelli. Controlli su acqua, distanza fra rilievi e spazio centrale.
+- Verifiche: 15 fixture isole/penisole senza torrenti, colline asciutte e a meno di 10U dalla sponda; landscape-order su sei fixture. Cinque scene `coastal-shores-*`: zero torrenti e piedi delle colline a circa 0–4U dalla costa. Audit Territorio: 16 render invariati, zero errori, cinque avvisi schematici preesistenti.
+- Economia e roadmap invariate.
+
+### 2026-11-12 — Isole e penisole collinari
+
+- Le terre con tre o quattro lati cardinali sul mare o sul lago ricevono una base di tre colline, con gli stessi livelli 2–3 del bioma Colline (ricetta 3–4 rilievi). Restano valide eventuali colline ereditate dai vicini; i biomi già più montuosi non vengono ridotti.
+- Boschi, paludi e corsi d'acqua mantengono le proprie ricette; l'adattamento regionale riposiziona i rilievi tagliati dalla costa prima dei corsi d'acqua. Le zone interne conservano le frequenze sporadiche precedenti.
+- Verifiche: isole/coste su 15 fixture con rilievi asciutti e determinismo; colline sporadiche su 9000 estrazioni; confronto esplorativo 48 combinazioni; cinque snapshot `coastal-hills-*` rivisti. Audit Territorio: 16 render invariati, zero errori, cinque avvisi schematici preesistenti.
+- Economia e roadmap invariate; regola geografica documentata in DECISIONS.
+
+### 2026-11-12 — Canneti delle paludi quadruplicati
+
+- Conservata la vegetazione di sponda originale, aggiunti tre canneti per ogni canneto esistente su ciascun acquitrinio, con controlli su ostacoli e distanze. Budget paludi separato da quello dei corsi d'acqua.
+- Confronto runtime su cinque situazioni: 92→368, 112→448, 29→116, 63→252, 43→172 canneti (4× in tutti i casi); catture `marsh-reeds4-*`. Cespugli, quote dei biomi ed economia invariati.
+- Verifiche: scatter-regression (8 controlli), marsh-regression; audit Territorio 16 render invariati, zero errori, cinque avvisi schematici preesistenti. Roadmap e contratti generali invariati.
+
+### 2026-11-12 — Cespugli dei boschi al 50%
+
+- Scala visiva uniforme di larghezza e altezza: 50% con variazione deterministica relativa di ±10% (45–55% della dimensione precedente), in 2D e nei billboard 3D.
+- Numero, posizioni, quota e flip preservati; siepi urbane e alberi invariati. Economia e roadmap invariate.
+- Verifica: forest-shrubs-regression PASS; cinque scene runtime `small-shrubs-*` riviste (sommità, pendio, scarpate, palude e foresta intera); audit Territorio 16 render, zero errori, cinque avvisi schematici preesistenti.
+
+12/11/2026 - REG-UPRIGHT-SHRUBS: risolto il difetto dei cespugli piatti: nel renderer 3D erano ancora dipinti nel bake del suolo. Ora sono billboard verticali nello stesso atlas degli alberi; il bake non li disegna e il fallback 2D resta corretto. Flip orizzontale deterministico per singolo cespuglio, applicato sia agli UV 3D sia al canvas 2D; posizioni e quantita invariate. PASS forest-shrubs (due orientamenti e nessuna pittura nel bake), tree-density (2.51x), save-safety, cinque scene browser 3D e screenshot upright-shrubs-*.png. Audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Roadmap/economia invariate.
+
+12/11/2026 - REG-REAL-FOREST-SHRUBS: corretta la confusione tra trama del sottobosco e cespugli visibili. Aggiunto strato separato di cespugli SVG riusando i sette asset esistenti delle siepi, con griglia indipendente dagli alberi, quota reale, stagioni e occlusione condivisa. Esclusi acqua/radure e pendii ripidi. Caricamento sprite invalida anche la cache paesaggio. Alberi invariati a circa 2.5x. PASS forest-shrubs (quattro situazioni), wooded-relief, woodland-density, tree-density, scatter (8), save-safety; cinque scene browser con verifica sprite caricati e cespugli effettivamente disegnati. Snapshot forest-shrubs-*.png, primo ravvicinato. Audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Economia e roadmap invariate; nessuna modifica ai salvataggi o alla copertura dei biomi.
+
+12/11/2026 - REG-TREE-DENSITY: alberi circa 2.5x a parita di superficie (griglia 4.4/sqrt(2.5) U, jitter contenuto); misurato 2.51x nel controllo su area fissa. Nessuna variazione a scatter, cespugli o numero di dettagli del sottobosco. Ripristinata la trama completa sui rilievi: luce applicata sopra il dettaglio anziche attenuarlo al 30%. Scarpate ripide sempre escluse, con fascia di rispetto 1.1U per le radici degli alberi. PASS tree-density-balance, wooded-relief, woodland-density, scatter (8), save-safety. Cinque snapshot tree-density-balanced-*.png; audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Roadmap ed economia invariate; nessuna modifica ai poligoni o ai salvataggi.
+
+12/11/2026 - REG-WOODED-RELIEF: boschi ammessi su sommita e pendii dolci; scarpate ripide escluse da alberi e contenimento boschivo. Rimossi divieti totali e radure automatiche sulle colline. Sottobosco proiettato separatamente su terrazze e facce inclinate, con luce direzionale; la campitura piana esclude la sagoma del rilievo. Alberi alla quota reale, diradamento deterministico sui pendii e occlusione dietro le superfici anteriori. PASS wooded-relief (tre seed), density, organic woods, ricette (42), landscape-order, Pianura 20%, Palude 20-30%, surroundings, industrie e save-safety. Cinque snapshot wooded-relief-*.png, inclusi dettagli di sommita, pendio, scarpata e Palude; audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Economia e roadmap invariate; geometrie dei salvataggi non rigenerate.
+
+12/11/2026 - REG-LANDSCAPE-ORDER: generazione con priorita rilievi -> rete idrografica definitiva -> boschi/stagni/acquitrini. Rimosso il calcolo dei torrenti dal piazzamento colline e rimossa la cancellazione dei rilievi nella fase idrologica. Primario deviato attorno a rilievi e montagne con margine di sponda; affluenti e delta rispettano gli stessi ostacoli. Riempimento regionale differito, acquitrini esclusi da fiumi e laghi/mare; boschi e radure costruiti sui percorsi finali e sulle impronte dei rilievi. PASS landscape-order (sei mappe + ostacolo controllato), quote colline, ricette (42), gerarchia, coperture Pianura/Palude, foci, surroundings, isole/penisole (15), montagne regionali, industrie e save-safety. Cinque snapshot landscape-order-*.png; audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Economia e roadmap invariate; nuove generazioni, salvataggi non rigenerati.
+
+11/11/2026 - REG-SPORADIC-HILLS: gate deterministico indipendente per bioma: Pianura 1/3 con 1-2 colline H1-2, Foresta 1/2 con 2-3 colline H2-3, Palude 1/4 con una collina H1-2. Primo rilievo favorito nella zona edificabile, centro insediativo libero; colline ereditate con budget limitato e campionamento indipendente. Acquitrini escludono i rilievi con margine asciutto di 4U, mantenendo il target di copertura. Nessuna modifica a produzione, cave, miniere o risorse: economia gestita nell altro branch. PASS 3000 seed/bioma (33.5%, 49.4%, 24.7%), conteggi finali, rocce, determinismo, ereditarieta, ricette biomi (42), surroundings, hydrology-network, gerarchia e save-safety. Cinque snapshot sporadic-hills-*.png; audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Roadmap invariata; forma dei rilievi esistente e salvataggi non rigenerati.
+
+11/11/2026 - REG-ORGANIC-COAST: isole e penisole marine/lacustri generate con contorno continuo ovale deformato, indipendente dalle quattro fasce rettilinee. Rotazione, numero di lobi (2-4), ampiezza e fase dipendono dal seed; penisole orientate verso il lato di terraferma con asse sinuoso. La costa puo entrare nei margini della buildable zone, mentre il centro resta asciutto. Sponde, collisioni e idrologia usano i poligoni reali. PASS island-coast (15 casi, tre seed e quattro orientamenti), surroundings, idrologia, foci mare/lago, estremita ereditate, Pianura 20% e save-safety. Cinque snapshot coast-organic-*.png (due isole marine, una lacustre, due penisole); audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Roadmap invariata: correzione della forma costiera esistente; salvataggi non rigenerati.
+
+11/11/2026 - REG-SWAMP-BALANCE: Palude con target 25% acquitrini e 25% boschi sulla superficie del bioma; intervallo richiesto 20-30% per ciascuno, restante terreno aperto al netto dei corsi d acqua. Superato il conteggio fisso 2-3 stagni: campo continuo ordinato per area, macchie organiche e seed deterministico. Centro e settori ereditati calibrati separatamente; boschi esclusi da acquitrini e rive. Pianura mantiene 20%. PASS swamp-balance (18 combinazioni, sei seed), marsh, Pianura 20%, hydrology-network, surroundings, water-surface, save-safety, scatter (8), economy-industries e ricette biomi (42). Cinque snapshot swamp-balanced-*.png; audit Territorio 16 invariati, zero errori e cinque avvisi schematici. Roadmap invariata: bilanciamento del bioma esistente; salvataggi non rigenerati.
+
+11/11/2026 — REG-MARSH: acquitrini marrone-verde come sottotipo pond/waterBodyKind=marsh, con sponda fangosa stretta, chiazze galleggianti e canneti/cespugli riusando gli asset esistenti. Stesso colore in minimappa e renderer condiviso 2D/terreno 3D. Palude centrale e settori ereditati producono acqua stagnante distinta da laghi/stagni ordinari; maschere separate e bordi ammorbiditi. Acquitrini centrali adattati alla buildable zone; restano non edificabili e non sono ricevitori automatici delle foci. Mantenute le quantita della ricetta esistente. Mulino ad acqua: il validatore gia accettava solo river/stream; nuovi test negativi per mare/stagno/lago/acquitrino e sovrapposizione con acqua ferma pur vicino a un torrente, piu controlli positivi fiume/torrente. PASS marsh, economy-industries, scatter (8), mills3d, asset-catalog, surroundings, hydrology-network, boschi20, water-surface e save-safety. Cinque snapshot marsh-*.png; audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Nessuna variazione di roadmap; salvataggi non rigenerati.
+
+11/11/2026 — REG-FLOW-30: sostituito il raccordo a T con ingresso a 30 gradi verso valle. Primario orientato dalla foce locale se presente, altrimenti dal vettore regionale derivato dalla distanza lungo la rete da mare/lago o dalle sorgenti; fallback deterministico dal seed quando mancano riferimenti. Export regionale include riverFlow. Affluenti con raccordo cubico continuo e terminale di 9U all angolo richiesto; preservati sbocchi separati, lati alternati e vincoli anti-incrocio/parallelo. PASS river-flow, gerarchia (anche inversione regionale), hydrology-network, stream-count, boschi20, surroundings, regional-demo, water-surface e save-safety. Cinque snapshot runtime streams-30-*.png e audit Territorio: 16 invariati, zero errori, cinque avvisi schematici. Nessun cambio a probabilita, roadmap o paesaggi gia salvati.
+
+10/11/2026 — REG-STREAM-T-HIERARCHY: un solo primario esplicito, sempre il fiume se presente. Gli altri corsi sono affluenti diretti con ultimo tratto normale al primario (T), innesti distanti almeno 28U lungo il percorso e 18U in linea d aria. Curve degli affluenti derivate dallo sbocco, lati alternati e vincoli angolari globali per evitare tratti paralleli o incroci a X; geometrie incompatibili con acqua/rocce/altri corsi scartate. Rimossi i tagli boschivi dei percorsi provvisori preservando radure e stagni naturali. PASS gerarchia/angoli/distanze/determinismo, hydrology-network, stream-count, boschi20, surroundings, water-surface, save-safety. Cinque snapshot runtime in output/playwright/streams-T-*.png; audit Territorio 16 invariati, zero errori, cinque avvisi schematici. Nessun cambio di probabilita o roadmap; salvataggi non rigenerati.
+
+10/11/2026 — REG-STREAMS-0-3: estrazione deterministica uniforme 0–3 dopo il gate del bioma (Pianura .45, Foresta/Montagne/Palude 1). Probabilita effettiva teorica di almeno un torrente: 33.75% / 75%, prima degli scarti geometrici. Massimo tre torrenti complessivi inclusi gli affluenti regionali; fiumi regionali e delta restano distinti. Confluenza al primo incrocio, scarto degli innesti ostruiti per evitare anelli. Tutti i corsi entrano nei vincoli di rilievi/boschi; boschi regionali ricalibrati dopo foci e confluenze per preservare il target del 20%. PASS conteggi/determinismo/confluenze, biomi (42), boschi, water-surface, surroundings e save-safety. Cinque snapshot runtime 0/1/2/3 e palude in output/playwright/streams-0-3-*.png. Audit Territorio: 16 invariati, zero errori, cinque avvisi schematici. Nessuna rigenerazione dei salvataggi; roadmap invariata.
+
+10/11/2026 — REG-WOODLAND-DENSITY: rimosso il minimo di 14 alberi e il conteggio su raggi nominali nei boschi isolati. Stessa griglia jittered 4.4U dei boschi regionali, filtrata sui poligoni reali e sulle radure: densita omogenea anche per macchie piccole, strette o ritagliate. Geometrie e copertura boschiva immutate. Test fallito prima e PASS dopo; cinque snapshot runtime verificati (seed 12345/4242/229/777/90210) in output/playwright/density-fixed-*.png. Audit Lab Territorio: 16 invariati, zero errori, cinque avvisi di schemi illustrativi.
+
+10/11/2026 — REG-PLAINS-WOODS-20: boschi (copertura naturale) distinti dal bioma Foresta. Pianura con target 20% della superficie, non 0–1 macchie. Ricetta autonoma calibrata e composizione regionale calibrata separatamente su centro e settori di pianura ereditata; fasce miscelate. Acque, pendii ripidi e nucleo insediativo restano esclusi. PASS sei seed autonomi e misti con tolleranza raster 1.5 punti percentuali, determinismo e regressioni biomi/idrografia/coste/persistenza. Salvataggi esistenti non rigenerati. Nessuna modifica alla roadmap o ai modelli grafici.
+
+10/11/2026 — REG-COAST-ENDS: conservati gli endpoint delle rive reali sul bordo mondo; esclusi solo gli spigoli artificiali del mare. Tutte le rive separate ricevono spiaggia/rocce e onde con normali locali; coastline principale mantenuta per compatibilita. PASS inherited-coast, coast, regional-surroundings, water-surface e hydrology-network. Verifica browser non eseguita in questo intervento.
+
+10/11/2026 — REG-SEA-DELTA-30: correzione richiesta: foce lacustre diretta, senza distributari; diramazioni solo se il ricevente e mare. Due innesti nel tratto finale del 30% misurato per lunghezza d’arco (70–79% del percorso). Canale principale dominante, rami piu stretti; sponde e bordi continui preservati. Dodici fixture mare/lago e hydrology-network PASS. Riferimento morfologico Seybold/Andrade/Herrmann, Modeling river delta formation, DOI 10.1073/pnas.0705265104; versione autori https://arxiv.org/html/0711.3283v1. Non introdotta una simulazione dinamica di erosione/sedimentazione.
+
+10/11/2026 — REG-WATER-SURFACE: eliminati i bordi chiari interni a confluenze e foci con contorni acqua disegnati prima di tutti i riempimenti. Alberi e montagne mantengono la propria occlusione. Aggiunte sponde ai laghi (anche isole interne), ritagliate al mondo senza spiagge sul bordo artificiale della mappa. Foce fluviale con due rami distributari piu stretti, innestati dall’80–86% della lunghezza reale, ciascuno termina nel ricevente; caricamento preserva le larghezze ridotte. Schiuma marina interrotta agli sbocchi. PASS dodici fixture delta mare/lago, idrografia, test pixel contorni e sponda e cinque scenari browser. Audit Territorio: 16 render invariati, zero errori, cinque avvisi di schemi illustrativi.
+
+10/11/2026 — REG-WATER-CI: rigenerato wiki/catalog.json dopo il riallineamento delle sorgenti gameplay; unica differenza sourceDigest. PASS codex-wiki e export --check. PASS anche 42 biome-recipes, mountain-density e cinque fixture browser sulla versione integrata.
+
+10/11/2026 — REG-WATER-INTEGRATION: allineato il branch sperimentale a main 89e7a2c per risolvere i conflitti della PR e riattivare CI. Preservati Codex, palette Stonecolor, reset Haulage e isolamento completo delle demo nella persistenza. Risolti i renderer mantenendo facce montane ritagliate e fallback della palette. QA locale: regional-demo, hydrology-network, Stonecolor, Haulage (10), Builder menu, stockyard (8), coast, asset-catalog e save-safety PASS. Nessun merge del lavoro regionale in main.
+
+09/11/2026 — REG-WATER-NETWORK (branch): Mare e Lago non selezionabili, neanche via Shift o URL regionale; selezione eliminata se diventa acqua. Scelte locali nuove limitate a Pianura/Foresta/Montagne/Palude; bioma ereditato bloccato nelle mappe aperte dalla regione. Colline/Valle/Fiume/Mare/Lago restano solo compatibilita delle vecchie ricette/demo. Foci geometriche con sbocco reale nel mare o lago, distinto dagli stagni; confluenze fiume/fiume, torrente/fiume e torrente/torrente con endpoint condiviso, sponde e collisioni aggiornate. I nodi regionali a grado >=3 producono affluenti, le curve a grado 2 no. Idrografia prioritaria rispetto ai rilievi nelle nuove mappe regionali. Cinque demo URL e regressioni runtime/browser PASS. Palude resta da bilanciare quantitativamente, mantenendo per ora i valori esistenti.
+
+06/11/2026 — REG-MOUNTAIN-UNIFORM-FIX: riprodotto T297 della regione 1988, seed locale 1555837107, centro e otto campioni tutti Montagne. Il controllo active() disattivava erroneamente la composizione regionale quando tutti i biomi erano uguali, ripristinando la catena legacy su un breve arco. Il contesto montano completo ora compone sempre centro e otto settori. Test dedicato fallito prima della correzione, poi PASS per tutti gli otto settori, centro e ripetibilita; PASS anche surroundings e mountain-density. Mappe prive di contesto regionale completo restano sulle proprie ricette demo.
+
+06/11/2026 — REG-MOUNTAIN-VARIATION (branch): eliminata la posa fissa a doppietti. Cime distribuite lungo tutta la catena con jitter e basi variabili; limitrofi con sagome indipendenti e distanze 6–15 U, fallback compatto solo per vincoli acqua/bioma. Quantita raddoppiata e intersezioni mantenute. Intervallo pendenze ampliato da 40–60 a 37–63 gradi, raggi principali da .52–.60/.54–.62 a .48–.64/.49–.66 settori: maggiore delta di altezza conseguente. QA spaziatura irregolare, densita, intersezioni, tagli e determinismo PASS.
+
+06/11/2026 — REG-MOUNTAIN-DENSITY (branch, non main): raddoppiate le cime principali dei settori montuosi con coppie intersecate (Montagne 8–14, Valle 6–10) e mantenute le secondarie proporzionali. Limitrofi: seconda cima per ogni massiccio accettato, fianchi sovrapposti e apici distanziati (base annidata solo in spazi vincolati); fascia esterna portata al bordo. Non si scartano piu i rilievi che oltrepassano il mondo: impronta collisioni ritagliata e facce roccia/neve tagliate in XYZ con sezioni verticali, condivise da 2D e World3D. Outline originale conservato per quote dei pini. QA densita/intersezioni/tagli/determinismo PASS; demo seed 4242: centrali 4→8 principali, limitrofi 9→18. Audit Territorio: 12 render, zero errori/cambiamenti, cinque avvisi di schemi illustrativi; confronto montano reale eseguito nella demo.
+
+06/11/2026 — REG-DEMO-OVERLAY: rimosso su richiesta il pannello sovrapposto con selettore scenari e metriche. Le demo restano accessibili dai link, isolate dai salvataggi; ritorno regionale tramite il collegamento esistente nell’header.
+
+06/11/2026 — REG-COAST-SHAPES (branch sperimentale): coste deformate in base ai lati cardinali di mare: 1 golfi ampi, 2 adiacenti promontorio roccioso e due fronti a golfo, 3 penisola collegata al lato asciutto, 4 isola con angoli raccordati. Due lati opposti restano due fronti a golfo, senza falso promontorio. Fasce e corner diagonali preservati; geometria condivisa da acqua, rendering e collisioni. Minimappa corretta per i fori terra e le radure, verifica pixel terra/mare PASS. Browser: quattro scenari e selezione mare PASS (eventi DOM). Quattro scenari selezionabili nel pannello demo (gulf/headland/peninsula/island). Mare escluso da clic/Shift e apertura locale; conversione di selezione a mare ripulisce selezione e pannello. QA quattro casi, variazione costa >7 U, rocce, connessione penisola e isola con foro PASS.
+
+06/11/2026 — REG-EIGHT-BIOMES (branch sperimentale, non main): apertura regionale con otto campioni direzionali sulla geometria Voronoi reale. Fasce 25/25/100/25/25 U, corner esterni 25×25 del diagonale e blending a prodotto. Composizione ingame di suolo, boschi, acqua con isole/fori e rilievi; il centro usa la propria ricetta. Fiumi esistenti preservati. Uscite marittime campionate su tutti i settori acqua; compatibilita costa principale mantenuta. Demo Fronte misto disponibile; test determinismo, collisioni, pesi e diagonali PASS. Cache world: mantenuto il prefisso contrattuale bridge-magnet-1 con nuovo suffisso. Browser Chromium: campionamento di tutti i 630 territori PASS, demo mista e apertura da regione verificate. Bilanciamento quantitativo e dorsali continue restano aperti. Le vecchie demo senza campioni vanno riaperte dalla regionale.
+
+05/11/2026 — REG-CENTRAL-BIOME: corretto il bioma centrale in apertura dal territorio. Regole condivise: plain→Pianura, forest→Foresta, hills regionale→Montagne, sea→Mare, swamp→Palude, lake→Lago. Fiume di confine aggiuntivo, non sostitutivo del bioma. Contesto portabile nel link, session storage opzionale; dati mancanti mostrano errore, mai Pianura implicita. Scope scelto: prima il bioma centrale, otto influenze rinviate. QA mapping, ricette e trasferimento tra schede PASS.
+
+05/11/2026 — REG-SINGLE-CELL: correzione della rimozione incompleta dei raggruppamenti. Una cella Voronoi = un territorio: dettaglio fisso 1, pesi territoriali tutti 1; isole ricavate cambiando terreno della singola cella, senza fusioni o territori vuoti. Validazione finale dopo isole/laghi. QA browser su seed 1943/42/229/4242: 630 celle = 630 territori = 630 etichette. Recuperati otto SVG Mountain 1–8 da ARQE nel percorso ICON del repository; tutte le risposte HTTP 200. Vecchie mappe aggregate rigenerate con messaggio esplicito; modifiche associate alla vecchia topologia non riapplicate a ID diversi.
+
+05/11/2026 — REG-NOSUPER: rimossi i raggruppamenti geografici di supercelle dal World Lab: comandi unione/separazione, aggregazioni automatiche dei laghi, nomi/contorni aggregati ed export superCells. Ogni territorio resta indipendente. Import JSON e ritorno dalle demo ignorano i vecchi gruppi, preservando i territori. Selezione multipla per modifica e domini politici restano separati da questo raggruppamento geografico.
+
+05/11/2026 — REG-DEMO: Builder → Mappa regionale → selezione territorio → Apri mappa locale del territorio. Demo isolate senza lettura/scrittura della partita o cloud, seed ripetibile derivato da regione/territorio, ritorno alla stessa regione e selezione. Scenari Pianura/Colline/Foresta/Fiume/Montagne/Costa con ricette attuali e misure di copertura mappa/buildable su griglia 40×40, conteggi delle componenti. Bilanciamento quantitativo ancora da decidere dopo revisione. I confinanti reali sono esposti come contesto; composizione a otto biomi non ancora nel Builder.
+
+05/11/2026 — REG-BIOME-RIVER3: traslazione rigida del fiume generato di 15 U verso il centro lungo la normale del lato selezionato. Forma, raggi e parametri del seed preservati. Offset applicato dopo selezione del candidato per evitare cambi di forma. Nuove mappe/rigenerazione, salvataggi esistenti preservati.
+
+05/11/2026 — REG-BIOME-RIVER2: sostituite le quattro anse Bezier identiche con integrazione della direzione lungo la lunghezza del corso. Raggio delle singole anse 2–3 larghezze, aperture e lunghezze variabili per seed, geometria arrotondata ispirata a Leopold/Wolman e al riferimento fornito. Test precedente: solo 2 forme dopo aver rimosso rotazioni; nuovo test: almeno 60 forme su 64 seed. PASS 64 mappe runtime, 2.000 curve, 42 mappe biomi e save-safety. Penetrazione minima 25 px sul riferimento preservata. Nuove mappe, salvataggi esistenti non rigenerati.
+
+05/11/2026 — REG-BIOME-RIVER ingame su `experiment/regional-biome-sectors` (NON MAIN): `makeEnvWater` genera i nuovi fiumi sul perimetro buildable con quattro ampie anse alternate, penetrazione interna 12 U (36 px riferimento 600 px). Acqua reale nei renderer e nei vincoli di costruzione. QA 42 mappe biomi, 64 mappe fiume con collisioni/determinismo, 36 urban checks PASS. Mappe salvate preservate; applicazione alle mappe rigenerate. Gli otto biomi e le dorsali della fixture non sono ancora integrati nel Builder.
+
+05/11/2026 — Correzione REG-BIOME-PREVIEW: le anse fluviali devono penetrare nella buildable zone. Ampiezza fluviale 24 U dalla direttrice esterna a 12 U dal bordo: penetrazione 12 U, pari a 36 px sul canvas di riferimento 600 px (minimo richiesto 25 px). Dorsale invariata esterna. Verificati tutti gli otto percorsi con entrambi i versi del seed.
+
+05/11/2026 — REG-BIOME-PREVIEW: fiume e dorsale come spline di confine separate dai biomi. Meandri fluviali ampi, dorsale più lineare; otto percorsi per elemento (lati e raccordi ad angolo), ingressi/uscite sul bordo mappa. Rimosso il canale baricentrico del bioma Fiume. QA 16 percorsi: continuità, ripetibilità, estremi e assenza di attraversamento del centro. Quote, foce e collisioni tra elementi ancora aperte; nessuna integrazione Builder.
+
+05/11/2026 — REG-BIOME-PREVIEW: otto ingressi direzionali configurabili, corner esterni 25×25 U al 100% del bioma diagonale; blending a prodotto nelle fasce da 25 U, centro 100×100 U preservato. I diagonali possono essere mare o terra indipendentemente dai lati. Campionamento Voronoi reale ancora aperto; fixture separata dal Builder.
+
+05/11/2026 — Aggiornamento REG-BIOME-PREVIEW su `experiment/regional-biome-sectors`: fasce fisse 25/25/100/25/25 U, blending smoothstep e corner continui con centro + due vicini; centro invariato, collegamento regionale ancora aperto. Verificati pesi, estremi delle fasce e continuità ai corner. Prova separata dal Builder.
+
+05/11/2026 — `experiment/regional-biome-sectors` (NON MAIN): fixture cartografica in `lab/biome-sectors.html`, centro buildable zone, quattro fasce e corner quadrati di blending. Vicini configurabili, non collegati alla regione. QA sintassi/pesi e browser desktop/mobile; nessuna modifica al generatore Builder. Dettagli: [prova](../REGIONAL-BIOME-SECTORS-PREVIEW.md).
+
+
+## 2026-11-13 — FIELD-LEND · Contadini senza lavoro al campo (branch `fix/idle-peasants`, rifatta su SOC-CLASS-02)
+
+- **STATO LIVE verificato su `main` 965d42c3 (SOC-CLASS-02):** campi, cave e miniere sono L1 e i campi stanno nel Job Manager L1. Il campo chiedeva tutte le sue strisce anche quando molte erano già finite, quindi pagava al campo L1 che restavano a casa. I contadini disegnati erano scelti casa per casa, separatamente dall'economia: un costruttore poteva ricevere una striscia che nessuno lavorava, e due adulti della stessa casa avrebbero preso la stessa striscia.
+- **CODICE SUL BRANCH, NON MERGE** ([D-FIELD-LEND-261113](DECISIONS.md)):
+  - `fieldMorningDemand` (settlement-fields): strisce aperte al primo calcolo del giorno, congelate fino a sera; 0 in crescita o fuori stagione. Lo usano `workerDemand`, Job Manager L1 e la sospensione dei campi in `laborAllocation`.
+  - `fieldWorkAssignments` prende il roster da `laborAllocation().assignedL1[campo]`: assegnazioni per id residente, striscia aperta più vicina del campo che lo paga, decisione mattutina stabile; `fieldSocialTier` sostituisce i controlli `houseLevel<=2` in figures e urban.
+  - `takeWorkers`: i campi prendono solo adulti con casa, non la squadra di fondazione.
+  - L'espansione dei campi in autunno parte dagli L1 che l'economia lascia inattivi.
+  - Restano dalla prima versione: `crop.slotEnd`, `fieldSlotRelease`, rientro a piedi, niente attrezzo su striscia finita.
+  - Rimosso il prestito L2 (`lendIdleFarmers`, `lentL2`, `lentIdle`, `farmhands`, `lentToL1`).
+- **PROVE LOCALI PASS:** `qa/idle-farmers-regression.cjs` (7 casi), `qa/fields-regression.cjs` (16 casi), 32 delle 33 voci di `economy-flows-regression.yml` più `qa/urban-regression.cjs`, e le regressioni social-classes, labor-jobs, construction-commute, educated, storage-yard, carter-market. `founding-regression` fallisce sul limite di tempo di 100 ms (131 ms), come annotato per #206 anche su main.
+- **NON VERIFICATO:** partita reale nel browser, prove di prestazioni Playwright, CI del branch.
+
+## 2026-11-14 — Caditoie all'italiana sulle torri (branch `feat/caditoie-italiane-torri`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `settlement-core.js`: nuova variante estetica torre `machicolationStyle` (`standard` | `italian`, default `standard`), `towerItalianMachicolation(s)` e `towerRoofMenuValue(s)`. `hasMachicolation()` e tutte le regole (combattimento, tetto interno, ballatoio, arma) leggono solo `roofStyle`: nessun effetto di gioco.
+  - `settlement-castle-structures.js`: `italianMachicolationPieces(s)` sul modello del Castello di San Giorgio (Mantova): mensole snelle e fitte (passo 0,24U, indipendente dai merli, una su ogni spigolo), ognuna un unico pezzo inclinato che sporge in testa e rientra al muro al piede, banda alta 4× la mensola standard (0,98U); archi a tutto sesto tra le mensole, apertura lasciata libera (nessun riempimento scuro), e muratura piena a filo sopra gli archi fino al piano delle caditoie, merli in cima. Nuovo pezzo `machicolationArch` (facce libere: mensola inclinata o archetto) in 2.5D e mesh 3D; in 2.5D i pezzi rivolti lontano dalla camera non si dipingono (`battlementPieceFacesAway`). In cutaway restano solo mensole, archi e fascia del lato lontano: quelli del lato aperto coprivano l'ultimo piano. Torri quadrate, rotonde e a D; caditoie standard e mura invariate (render identici).
+  - Menù tetto torre: quarta scelta «Caditoie all'italiana» (`setTowerRoof('machicolationItalian')` imposta `roofStyle:'machicolation'` + `machicolationStyle:'italian'`), nel pannello UI v2 (`settlement-structure-commands.js`, i18n) e nel pannello legacy (`settlement-app-rooms.js`). Non disponibile sulle semitorri. Il cambio apre un cantiere di modifica come le altre varianti.
+  - Codex: due note approvate (`Torre · Caditoie standard`, `Torre · Caditoie all'italiana`) per le voci generate `upgrade:tower.machicolationStyle.*`; rigenerati `src/codex-wiki-editorial.js` e `wiki/catalog.json`, conteggi dei test Codex +2.
+  - Lab: 4 righe in `GALLERY` (quadrata T2/T3, rotonda, D) e famiglie in `structureAssetFamilyCatalog`; chiavi di cache render/popolazione/cantiere aggiornate.
+- **PROVE LOCALI PASS:** tutte le `qa/*-regression.cjs` (come lo step completo della CI), tra cui `qa/tower-italian-machicolation-regression.cjs` (nuovo, in `tower-variants-regression.yml`), bartizan, tower-roof-shape, tower-inner-roof, tower-weapons, battlement-parapet, roof-pitch, subtower-junctions, dovecote, falconry, builder-menu, asset-catalog, asset-audit-scope, codex-catalog, ci-p0/p1, urban. Audit Lab `--category=Fortificazioni`: 0 errori; i 40 render nuovi rivisti e aggiunti alla baseline (solo voci nuove).
+- **NOTA AUDIT:** in locale 270 render «cambiati» anche su varianti non toccate (deriva d'ambiente del renderer, distanze 0,010–0,022); baseline esistente non riscritta.
+
+## 2026-11-13 — Equipaggiamento delle unità: elmi e scudi (branch `feature/unit-equipment-styles`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `settlement-core.js`: `UNIT_HELMETS`/`UNIT_SHIELDS` con costi per posto soldato, `unitHelmet()`, `unitShield()`, `unitEquipmentQuote(kind,style)` e `applyUnitEquipment(kind,style)` (posti = `ConquerSiege.capacity().soldiers`; paga con `canAfford`/`spendCost` come le merlature).
+  - `settlement-population-figures.js`: `drawSoldierHelmet` (5 elmi) e `soldierShieldPath` (5 forme) usati da `drawSoldierFigureUnmasked`; `settlement-combat-anim.js` usa la forma scelta per lo scudo in combattimento. Le unità con livrea propria (nemici) restano invariate.
+  - `settlement-panels.js`: sottoscheda Militare › Equipaggiamento con due schede (elmo, scudo), icone SVG e messaggio di risorse insufficienti. `game-api.js`: comandi `unitEquipmentQuote`, `setUnitEquipment`. Persistenza cloud dei due campi in `settlement-app-persistence.js`.
+  - `figures-lab.html`: selettori Elmo e Scudo per le truppe.
+- **PROVE LOCALI PASS:** `qa/panels-regression.cjs`, `qa/combat-anim-regression.cjs`, `qa/combat-render-regression.cjs`; nel browser: sottoscheda visibile, acquisto con costo corretto (24 posti), rifiuto per risorse, foglio delle 5 combinazioni nel Lab a tre zoom.
+- **NON ESEGUITO:** `node qa/asset-audit.mjs` (browser Playwright non installato in locale); cavalieri a cavallo (`settlement-mounted2d.js`) non toccati.
+
+## 2026-11-13 — Figure dei ruoli mancanti (branch `feature/new-role-figures`, sopra `feature/role-outfits` e `feature/shop-artisan-tools`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - Nuovo `src/settlement-staff-people.js` (`ConquerStaffPeople`): personale delle stanze del castello in cutaway, presente di giorno (6-20) e assente durante l'allarme. La tabella `ROOM_STAFF` copre 10 funzioni:
+    - cucina: cuoco con mestolo, due nella stanza grande;
+    - scuderie: stalliere con striglia;
+    - armeria e officina d'armi: armaiolo col martello;
+    - cappella: cappellano col libro;
+    - tesoro: tesoriere con penna e registro;
+    - infermeria: cerusico col mortaio e inservienti con ciotola;
+    - falconiera: falconiere col falco sul pugno;
+    - colombaia: colombaro con la granaglia;
+    - sala del consiglio: consiglieri che parlano.
+  - Le stanze che non hanno soldati, nobili o prigionieri lo disegnano da `drawCutawayOccupants`.
+  - `ConquerCivic3D.roomSlots` copre chiesa, taverna, Bargello e Balivo (`staffSlots`):
+    - chiesa: prete all'altare;
+    - taverna: oste dietro il banco, dal lato delle botti;
+    - Bargello: due guardie nel corpo di guardia; al piano superiore due esattori al tavolo dei conti e chi paga sulla panca;
+    - Balivo: tre giudici, uno presiede, e il cancelliere nel tribunale al piano superiore.
+  - Le figure civiche passano da `ConquerCourtPeople`, che ora vale per tutti gli interni civici selezionati.
+  - Disboscamento L1: `ConquerForestry.drawCrews` disegna tanti boscaioli quanti sono i lavoratori pagati del cantiere, con l'ascia; il terzo usa la pala per le ceppaie. Solo nei giorni feriali e in orario di lavoro.
+  - 9 nuovi gesti in `settlement-work-anim.js`: ladle, brush, book, quill, mortar, falcon, mug, speak, bowl. I gesti `sweep` muovono la mano avanti e indietro a un'altezza fissa.
+  - 8 nuovi pezzi di guardaroba: tonaca, stola, veste da notabile, camice del cerusico, toga del Balivo, tabarro del Comune, catena d'ufficio, berretto da cuoco. 12 nuovi abiti di mestiere, 28 in tutto, ciascuno diverso dagli altri.
+  - Asset Lab: 9 gesti nella famiglia «Lavori» e 12 abiti nuovi.
+- **PROVE LOCALI PASS:**
+  - `staff-people-regression` (nuovo, nel workflow Wardrobe perché il numero di workflow è fisso a 26): stanze reali, abiti e gesti noti, orari e allarme, posti negli interni civici di tutti i livelli, squadre di disboscamento, collegamenti;
+  - `work-anim` (19 gesti), `wardrobe` (28 mestieri), `court-people`, `ci-p1`, `codex-wiki`;
+  - suite `qa/*.cjs` senza i `*-performance`: tutto verde tranne `founding-regression`, che fallisce uguale su main.
+- **AUDIT ASSET:** audit completo con 0 errori e 21 voci nuove, riviste su un foglio grande dei gesti. Baseline aggiornata solo per `figure:work:*` e `wardrobe:trade:*`. Le altre differenze (alberi, torri) sono deriva già presente su main.
+- **PROVA IN PARTITA (13/11):** gioco del branch in Chromium (WebGL SwiftShader), alle 10:30, 22 scene:
+  - stanze del castello in sezione, piano per piano: sezioni costruite W1 e W2 e torre grande L3 con cucina, cappella, scuderie, tesoro, infermeria, consiglio, armeria, officina, falconiera, colombaia;
+  - chiesa L1 e L3, taverna L1 e L2, Bargello L1 e L2 su entrambi i piani, Balivo L1 e L2;
+  - cantiere di disboscamento con 3 lavoratori.
+  - Esito: ogni figura sta nella sua stanza e al suo piano, con l'abito e il gesto giusti; di notte il cantiere è vuoto.
+  - Unico difetto trovato, corretto: il falco era marrone come la tunica del falconiere e non si vedeva. Ora ha il dorso grigio ardesia, il petto chiaro e la coda, ed è un po' più grande. Baseline aggiornata solo per `figure:work:hawk`.
+- **DA VERIFICARE:**
+  - CI del branch;
+  - l'ordine di merge: prima #207 e #213, poi questa PR.
+
+## 2026-11-13 — Selezione edifici: perimetro posteriore nascosto (branch `fix/selection-outline-occlusion`)
+
+- **CODICE SUL BRANCH, NON MERGE:** `selectionOutlineRuns` in `src/settlement-castle.js` spezza il perimetro di selezione e omette i lati dietro il volume e quelli visti di taglio con la camera libera. Il contorno 2D resta l'ultimo passaggio, sopra la scena WebGL: nessun depth test. I civici usano `ConquerCivic3D.builtParts(s)` (nuovo export in `settlement-civic3d.js`) per il footprint del livello corrente.
+- **TEST:** `mastio-selection-zoom-regression` con proiezione isometrica reale (torre, campo, piazza, casa, civico per livello); `well-civics`, `stonecolor`, `cutaway-floors`, `crime-buildings`, `court-people`, `civic3d` e `ci-p1` superate in locale. Catture Playwright prima/dopo di torre, chiesa, municipio e dei livelli L1–L3 di chiesa, taverna, municipio e gilda. CI da verificare.
+- **INVARIATO:** l'area cliccabile (`screenHitStructureBody`) usa ancora il footprint completo dei civici.
+
+## 2026-11-13 — Abiti da mestiere (branch `feature/role-outfits`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `ConquerWardrobe.ROLE_PIECES` ha 11 pezzi da lavoro in più: grembiule di cuoio, di tela e del vasaio (con le macchie), farsetto di cuoio allacciato con la cintura, mantelletta, calotta di cuoio, cuffia di lino, cappello di feltro, tocco, berretto da marinaio, mazzo di chiavi alla cintura.
+  - Nuova tabella `ROLES`: 16 mestieri, ognuno con una combinazione di pezzi diversa dagli altri.
+  - `outfitFor(dot)`: se la figura ha `dot.role`, gli slot del mestiere vincono e la stagione riempie solo quelli liberi (per esempio pioggia: il sarto tiene il tocco e prende la mantella).
+- **DOVE NASCE IL RUOLO:**
+  - residenti in `drawPeasants`: bottegaio al banco (`shop.kind`), costruttori e taglialegna nominati anche nel tragitto, carrettiere al piazzale, pastore al pascolo (stessa posizione di `shepherdPosition`), squadra dei fondatori;
+  - lavoratori anonimi (`ConquerWorkAnim.anonymous(id,p,role)`): muratori, taglialegna, cavatori, minatori, carpentieri navali;
+  - `ConquerShipCrew.dot` (marinai e pescatori); `DRIVER` dei veicoli (carrettiere); carceriere del tribunale;
+  - niente ruolo per chi è richiamato dall'allarme.
+- **PROVE LOCALI PASS:**
+  - `wardrobe-regression`, estesa: ogni bottega ha un abito, abiti tutti diversi, priorità sulla stagione, ogni pezzo si disegna, ruolo impostato nei punti di creazione;
+  - `court-people`, `asset-catalog`, `codex-wiki` (export della Wiki rigenerato);
+  - suite `qa/*.cjs`: fallisce solo `founding-regression`, che fallisce uguale su `main` 6b227926; i `*-performance` non sono stati eseguiti.
+- **AUDIT ASSET:** audit completo del Lab con 0 errori e 16 voci nuove («Abiti da mestiere»), riviste anche su un foglio grande, estate e inverno con neve. Nessuna bottega e nessuna figura del tribunale cambia oltre la soglia. Le altre 168 voci cambiate (alberi, torri) sono deriva già presente su main: la baseline non le include.
+- **DA VERIFICARE:** CI del branch.
+
+## 2026-11-13 — Capsuloide per la profondità delle figure: verticale per le persone, orizzontale per gli animali (stesso branch)
+
+- **CODICE SUL BRANCH, NON MERGE (D-CAPSULE-261113):** nuovo programma WebGL `card` per tutte le carte figura (sostituisce `sprite` per soldati, civili e veicoli; `sprite` resta per alberi e altro): ogni pixel prende la profondità del punto dell'asse del capsuloide più vicino sullo schermo più il raggio verso la camera. Vertex buffer delle carte a 15 float (`aSeg0`, `aSeg1`, `aRad`), `drawCards()` per passata frontale e figure nelle stanze aperte.
+- **ANIMALI COME CARTE:** `ConquerAnimals.card(species,p,z,opts)` (8 fasi per ciclo di andatura, tile dipinta verso destra e specchiata) e `ConquerAnimals.capsule(species,sizeFactor,dir)`; `figure()` accetta `card.capsule`; `ConquerWorld3D.screenAxis(facing)`. Bestiame (`settlement-livestock.js`) e lupi (`settlement-wolves.js`) passano dalle carte in World3D, con ripiego 2D invariato. Collider orizzontale per gli animali; `rayCapsule` e il debug dei collider gestiscono segmenti non verticali.
+- **PROVE LOCALI PASS:** nuova `qa/animal-capsule-browser.mjs` (capsula e collider del cavallo reale; carta dietro una torre nascosta; appena davanti alla faccia intera, 800/800 px) aggiunta al workflow Main fixes; `figure-billboards-browser.mjs`, `vehicle-cards-browser.mjs`; 26 regressioni node su animali, figure, veicoli, cutaway, combattimento, assedio e urbano. In locale il server `tools/serve.js` serve i `.mjs` come `application/octet-stream` (errori console non legati alla modifica): prove eseguite con `python -m http.server` come in CI, che su Windows ogni tanto rifiuta connessioni (ripetere).
+- **NON FATTO:** cavalli di giostra/feste, cavalieri in combattimento e messaggero restano 2D; tiro dei carri senza capsula orizzontale (la carta del veicolo usa quella verticale). Non verificato in una partita con bestiame vicino a case e cutaway reali.
+
+## 2026-11-13 — Animali 2D rivisti come il cavallo (stesso branch `feature/vehicles-depth-cards`)
+
+- **CODICE SUL BRANCH, NON MERGE:** in `ConquerAnimals` pecora, capra, mucca, cerva/cervo, lupo e cinghiale hanno zampe articolate ricavate dalle zampe del cavallo ridisegnato (`jointLeg`/`jointLegs`: coscia e garretto dietro, ginocchio davanti, stinco e zoccolo; larghezza e lunghezza per specie); l'orso tiene le colonne plantigrade. `stride`/`runStride` per specie (pecora e capra 0,75, mucca 0,6, cerva 0,7/0,95, lupo 0,8/1, cinghiale 0,75/0,9, orso 0,8): niente più passo «a forbice». `legOrder` disegna le zampe lontane dietro le vicine. Pecora con zoccoli scuri.
+- **COLLO ARTICOLATO PER CAPRA E MUCCA:** `joint` + `neck` come il cavallo, con `tipOnJoint` (il collo termina esattamente sulla linea della gola ruotata, senza spigoli né cucitura); al pascolo la testa resta attaccata al petto invece di galleggiare sotto il corpo. Corna della capra fuori dal ritaglio della gola.
+- **ZAMPE ARTICOLATE (tutte le specie, cavallo compreso):** ogni zampa è disegnata in due parti tagliate al giunto (garretto sulle posteriori al 57% dell'altezza, ginocchio sulle anteriori al 65%, `jointAt` per specie; `legList[i].joint`, `.w`), con un tappo tondo sul giunto. `gaitPose` dà `bend` per zampa: si piega nella fase di volo (piede che avanza), 0,75 rad al passo, 1,25 al galoppo, 0,5 nel passetto del pascolo; il ginocchio porta lo zoccolo indietro, il garretto in avanti. `lift` ora segue la fase di volo (3 al passo, 10 al galoppo) invece dell'angolo. `sp.bend` moltiplica per specie. Disegno del cavallo invariato (stesse sagome); audit `Cavalli 2D` e `Carri` 0 cambiati (pose del Lab quasi diritte).
+- **LAB:** nuova famiglia `Animali 2D` (`figure:sheep2d` … `figure:bear2d`, 8 voci, passo a metà falcata); audit 8 nuovi, 0 errori, baseline estesa solo per queste voci. Nota: `--update-baseline` con un filtro `--family` riscrive la baseline con le sole voci filtrate; le voci sono state unite a mano.
+- **ANTEPRIME:** `qa/animal-preview.mjs` (fogli `output/animal-preview/<tag>-domestic|wild.png`, tutte le modalità per specie; `ANIMAL_ONLY=goat,cow`).
+- **PROVE LOCALI PASS:** `animals`, `animals3d`, `wolves`, `urban-livestock`, `wagons`, `vehicles`, `joust`, `military-stables`, `diplomacy` regression.
+
+## 2026-11-12 — Cavallo 2D ridisegnato (stesso branch `feature/vehicles-depth-cards`)
+
+- **CODICE SUL BRANCH, NON MERGE:** il cavallo di `ConquerAnimals` (unico per scuderie, cavalieri, messaggero, staffetta dell'Avamposto, carri, giostra e feste) ha nuove proporzioni: corpo lungo quanto l'altezza al garrese, zampe lunghe quanto il corpo è alto con coscia, garretto, ginocchio e zoccoli, collo pieno inclinato in avanti, testa più lunga e fine portata a muso in giù. Dorso alla stessa quota di prima: sella, cavaliere, gualdrappe (anche della giostra) e finimenti dei carri restano agganciati. `stride`/`runStride` per specie (cavallo 0,62 al passo, 0,9 al galoppo), `shadeY` per l'ombra del ventre. `ConquerMounted2D`: frontale, pennacchio, briglia e redini adattati alla nuova testa.
+- **ANTEPRIME IN GIOCO:** `qa/horse-gallery.js` (`ConquerHorseGallery.show({scale})`, `sheet()`) mette sulla scena reale tutti gli usi del cavallo; `qa/horse-preview.mjs` salva i PNG prima/dopo in `output/horse-preview/` (zoom 8, 3 e 1,5, fasi del passo).
+- **LAB:** prima non c'era nessun cavallo 2D nel catalogo (il «Cavaliere» è un fante, il «Carro animato 2D» non ha il tiro). Aggiunti `figure:horse2d`, `figure:horse2dGraze`, `figure:knight2d`, `figure:messenger2d`, `figure:wagonTeam`; audit 5 nuovi, 0 errori, baseline aggiornata solo per queste voci.
+- **PROVE LOCALI PASS:** 45 regressioni che toccano animali, cavalieri, carri, bestiame, giostra e diplomazia (FAIL solo le due `*-performance` e lo strumento `asset-audit-scope`); `vehicle-cards-browser.mjs`. `asset-catalog-browser.mjs` non eseguito in locale (non usa `QA_CHROME`), da verificare in CI.
+
+## 2026-11-12 — Veicoli come carte con profondità in World3D (branch `feature/vehicles-depth-cards`, chiude `economic-balances-animations`)
+
+- **VERIFICA DEL BRANCH D'ORIGINE (`origin/economic-balances-animations` 4b10705, 142 commit su base pre-urban):** economia già in main con le cinque tappe (#108 per i veicoli, D-055); file residui solo sprite SVG di taglialegna e cava (sostituiti dalle mesh Blender) e `road-sign-model.js` (sostituito dal `signpost` scatter, D-054); mesh 3D di carri e cavalli escluse da D-046/D-055. Unico residuo ancora utile: i veicoli fuori dal depth buffer, segnato DA FARE dopo #201 («carrettieri sui veicoli ancora in 2D»). Nessun altro recupero.
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `ConquerWorld3D.figure(p,z,key,paint,id,mirror,card)` accetta `card={span,ox}`: carta larga `FIGURE_CARD_U×span`, dipinta a `SOLDIER_SR/span` nella stessa casella da 64 px dell'atlante, spostata di `ox` larghezze carta sullo schermo. Esporta `FIGURE_CARD_U`, `FIGURE_FEET`; `frameFigures()` riporta `span`, `ox`, `id`.
+  - `ConquerVehicles.draw`: in un frame World3D ogni veicolo (carretto, carro, carrozza) è **una** carta: `ConquerWagons.drawWagon` con la squadra di cavalli 2D e il conducente dipinti insieme (conducente seduto sulla cassetta tramite l'ancora `driver` del carro, carrettiere alla testa del cavallo). Chiave: telaio, mantelli, carico, fase d'andatura (8 fasi del passo `ConquerAnimals`, `still` da fermo), aspetto del conducente. Verso sinistra la carta è specchiata. Le scorte restano billboard dei soldati. Fuori da World3D (o con `_setFiguresForTest(false)`) il disegno 2D resta identico.
+  - `ConquerRoadSignTests.drawVehicles()`: convogli del signore/mercanti e viaggi in carrozza escono con la popolazione (prima del front pass) invece che sopra la scena; `draw()` disegna solo i cartelli (o anche i veicoli se `drawVehicles` non è stato chiamato).
+- **PROVE LOCALI PASS:** `qa/vehicles-regression.cjs` (nuovo caso carte WebGL), haulage, road-sign-convoy, l1-carter-market, slopeways; nuova prova browser `qa/vehicle-cards-browser.mjs` (carte reali, occlusione dentro una torre, riuso atlante, scorte, fallback 2D) e `figure-billboards-browser.mjs`/`main-fixes-browser.mjs` su `python -m http.server`. Controllo visivo nel pannello browser: posizione e scala uguali al 2D; nel 2D il conducente del carro resta davanti al pianale, nella carta siede sulla cassetta.
+- **LIMITI:** la carta ha una sola profondità (quella del pianale): un muro sottile tra pianale e cavalli non li separa. Risoluzione della carta del carro ~27 px/U (le figure 48 px/U): leggermente morbida oltre zoom 2,5. Staffetta a cavallo dell'Avamposto e figure della battaglia navale restano 2D. CI da verificare.
+
+## 2026-11-13 — CAM-ROT-01 · Rotazione libera della camera (branch `feature/free-camera-rotation`)
+
+- **CODICE SUL BRANCH, NON MERGE:** `State.view.rotation` resta in quarti di giro ma accetta valori frazionari. `rotateViewPoint` (2D), lo shader WebGL (`uRot` ora `vec2` cos/sin) e l'ombreggiatura delle facce (`rotDir` in `settlement-mesh3d.js` e `settlement-wagons3d.js`) seguono qualsiasi angolo; per i quarti interi il percorso esatto è invariato.
+- **Comandi:** Shift + tasto centrale trascinato = rotazione libera attorno al centro dello schermo (160 px = 90°); con Ctrl scatti di 15° (24 posizioni). Tasto centrale o destro da soli = pan come prima. Q/E e pulsanti ↺/↻ restano a 90° partendo dall'angolo corrente. Angolo salvato nel salvataggio locale/cloud come prima.
+- **QA:** 51 regressioni Node che toccano camera/mesh/input PASS. La CI ha poi rilevato `qa/builder-placement-regression.cjs`, che estrae gli handler di input e non dichiarava il nuovo stato `orbit`: il finto ambiente ora lo dichiara accanto a `pan`, test PASS in locale. Prova browser in gioco sul layout `TEST` (168 strutture): pan, rotazione libera 22,5°, scatto a 30°, viste a 45° e 105° coerenti (terreno, strade, case, mura, cutaway torri, minimappa); punto al centro invariato; nessun errore di render in console.
+- **LIMITI:** ogni nuovo angolo ricostruisce scena statica e mesh (~150 ms, come un giro di 90°): durante il trascinamento ~6 fps. Le scelte discrete legate alla vista (facce aperte del cutaway, lato dei costruttori) si calcolano sull'angolo reale e non sono state riviste una per una.
+
+## 2026-11-13 - Preparazione merge PR #206
+
+Preparazione merge PR #206: main aggiornato riconciliato mantenendo moduli e documenti di entrambi i branch. Catalogo Wiki rigenerato. Gilda riferita agli artigiani L2; dazio botteghe e relativo malcontento addebitati a L2 anziche L3, con regressione riprodotta prima del fix. Fondazione: cinque scenari superati isolatamente con Node 22, ma timing intermittente oltre 100 ms nella suite anche su Node 22; verifica Actions ancora necessaria. Nessuna soglia allentata. Suite completa e Actions da completare prima del merge. Nessuna nuova funzione demografica, giudiziaria o archetipo edilizio.
+
+## 2026-11-13 - Verifica CI PR #206
+
+Corretta asserzione livestock obsoleta dopo SOC-CLASS-02. Test comportamentali su selettore agricolo reale, riserve cave, esclusione allevatori e conservazione della vocazione su 400 case migrate superati. Suite completa e CI da completare prima del merge. Nessuna modifica runtime o bilanciamento; ROADMAP e DECISIONS invariate. Demografia, 12 archetipi e funzioni giudiziarie fuori scope.
+
+## 2026-11-12 — SOC-CLASS-02 · Migrazione reale ceti (branch PR #206)
+
+- **CODICE SUL BRANCH, NON MERGE:** `ConquerSocialClasses` + migratori save local/cloud, riassegnazione L1 campi/cava/miniera, botteghe e portafoglio artigiani L2, istruiti/mercanti L3, possedimenti L4.
+- **CENSIMENTO:** residenti delle vecchie case preservati tramite `householdResidents`, livelli sociali distinti da `densityLevel`; cohort IDs stabili e livestock precedente preservato. Monete conservate con partizione 25/75 provvisoria di ex-L4.
+- **TEST:** nuova QA `social-classes-regression` collegata all'urbanistica; regressioni obsolete di economia/industrie/carrettieri aggiornate. Test V8 di migrazione superato. CI GitHub in verifica: non dichiarare merge o completamento fino a verde.
+- **ANCORA APERTI:** veri L3 magistrati/scribani e L2 botteghe specializzate, migrazione/emigrazione, felicità/loyalty operative, trasformazione case e 12 archetipi.
+- [Contratto](../CIVIL-CLASS-MIGRATION.md).
+
+
+## 2026-11-12 — CIV-EVT-01 · Skeleton effetti eventi civili (branch PR #206)
+
+- **SU BRANCH, NON MERGE:** `src/settlement-civic-event-effects.js` offre otto archetipi di evento e preview di felicità L1–L3, lealtà L4, costi teorici, rendimenti decrescenti e prestigio locale temporaneo. Riusa `ConquerUrbanHeatmaps.at`, le fasi e gli allestimenti già esistenti.
+- **NO GAMEPLAY:** script caricato come API inattiva; nessun addebito, cronologia, migrazione, ricostruzione o modifica ai livelli delle famiglie. Non confondere i figuranti provvisori con partecipanti effettivi.
+- **QA:** `qa/civic-event-effects-regression.cjs` collegato alla suite urbana. Smoke V8 del modulo eseguito; test Node/browser e CI da verificare.
+- **Contratto:** [CIVIC-EVENT-EFFECTS-SKELETON](../CIVIC-EVENT-EFFECTS-SKELETON.md) e D-CIV-EVT-261112.
+
+
+## 2026-11-12 — URB-HEAT-01 skeleton quattro heatmap (branch `feature/urban-heatmap-skeleton-20261112`)
+
+- **CODICE SUL BRANCH, NON MERGE:** nuovo motore puro `src/settlement-urban-heatmaps.js` con sette valori (domanda L1–L4, prestigio, sicurezza, criminalità), sorgenti radiali/poligonali, griglia deterministica, interpolazione e campionamento del lotto Voronoi. Caricato come API inattiva prima del runtime urbano.
+- **QA:** `qa/urban-heatmaps-regression.cjs` aggiunto e richiamato dalla suite urbana esistente; esecuzione locale e CI ancora da verificare.
+- **NON IMPLEMENTATI:** adapter da Builder/Crime/guardie/mura, domanda demografica reale, aggiornamenti territoriali, rendering heatmap, densificazione, migrazione L1–L4, ricostruzione automatica e persistenza. Nessuna modifica a salvataggi, occupanti o fabbricati.
+- **Contratto:** [URBAN-HEATMAP-SKELETON](../URBAN-HEATMAP-SKELETON.md); [decisione D-URB-HEAT-261112](DECISIONS.md).
+
+
+## 2026-11-13 — GILDA-01 fase 1 · Bonus delle botteghe e Gilda unica (branch `feature/gilda-fase1`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - **Modulo `src/settlement-guild.js`** (`window.ConquerGuild`), caricato dopo scolarizzati e commercio in `index.html` e `camp/index.html`: Gilda attiva = completata di livello più alto, a pari livello id minore; bonus +25/+50/+100% × resa dei funzionari (`ConquerEducated.coverage('guild.official')` quando esiste, altrimenti 1); posti 1/2/3; `snapshot()` e `panelHtml()`.
+  - **Commercio:** `ConquerCommerce.daily` produce `1 × (1 + bonus)` per bottega L3 nei giorni feriali; il carrettiere registra la stessa quantità. Nessun consumo di materie finché manca ECO-FIL-01 fase 2.
+  - **Collocamento:** `wellCivicPlacementCheck` rifiuta una seconda Gilda nel villaggio («Only one guild hall per village»); i salvataggi con più Gilde ne fanno lavorare una sola, le altre mostrano «Gilda · inattiva».
+  - **Interfaccia:** scheda Gilda nell'ispettore classico e in UI2 (`GuildPanel`), KPI «Gilda» nel Profilo › Generale.
+  - **Nessun blocco salvato nuovo:** Cassa, quota e salari arrivano con la fase 2.
+- **PROVE LOCALI PASS:**
+  - nuova `qa/guild-regression.cjs`, 7 casi: senza Gilda, bonus per livello, cantiere, Gilda unica e inattiva, resa dei funzionari, vendite del sabato, cablaggio;
+  - `qa/well-civics-regression.cjs` con il rifiuto della seconda Gilda; `qa/l1-carter-market-regression.cjs` aggiornata alla quantità reale;
+  - tutte le 37 voci di `economy-flows-regression.yml` (aggiunta la nuova regressione) e altre 46 regressioni dei workflow che leggono commercio, annessi civici, pannelli, ispettore, shell o `index.html`;
+  - pagina caricata in locale: `ConquerGuild` presente, nessun errore in console.
+- **NON VERIFICATO:** scheda e KPI in una partita reale con Gilda costruita (coperti dai test di markup).
+
+## 2026-11-13 — GILDA-01 · Gilda (solo specifica, branch `docs/gilda-01`)
+
+- **SOLO DOCUMENTAZIONE:** specifica GILDA-01 in BACKLOG e decisione D-GILDA-261113 in DECISIONS. Nessun file di codice, test o asset cambiato; nessuna prova da eseguire.
+- **Stato live verificato su `main` e93b22b5:** la Gilda esiste come civico L1–L3 legato a un pozzo, con modelli e cutaway, ma senza effetti di gioco; le botteghe L3 producono 1 unità al giorno feriale.
+- **Prossimo passo:** fase 1 (bonus per livello con resa transitoria 1, Gilda unica per villaggio, scheda) solo dopo conferma del product owner.
+
+## 2026-11-13 — SCRIPT-01 · Specifica dello Scriptorium (solo documentazione)
+
+- **SPECIFICA APPROVATA, NESSUN CODICE:** maestro per Scriptorium, scuola ferma senza maestro, ingaggio del chierico, +1 Prestigio, codici miniati ARTE, interno in sezione. Dettagli in [BACKLOG](BACKLOG.md) e [D-SCRIPT-261113](DECISIONS.md).
+- **STATO LIVE verificato su `main` e93b22b5:** annesso `scriptorium` con solo modello esterno e nessun effetto; `ConquerEducated` senza corsi né ruoli (SCOL-01 fasi 2–3 aperte).
+- Nessun test eseguito: nessun codice cambiato.
+
+## 2026-11-12 — SCOL-01 fase 1 · Scolarizzati: dati, tetto, ingaggio (branch `feature/scol-01-fase1`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - **Modulo `src/settlement-educated.js`** (`window.ConquerEducated`), caricato dopo il commercio in `index.html` e `camp/index.html`:
+    - blocco `State.economy.educated` con `lay` e `clergy` ciascuno `{L3, L4}`, `homeless`, `courses`, `hires`, `wageMul`, `roles` e `lastMonthDay`;
+    - migrazione lazy a zero; `economy.version` invariato.
+  - **Tetto** `floor(L3/3) + floor(L4/3)`.
+  - **Controllo giornaliero**, agganciato a `ConquerEconomy.tick` dopo `daily`:
+    - l'eccedenza esce prima dai laici, passa ai posti liberi dell'altra classe e altrimenti resta «senza alloggio»;
+    - i senza alloggio rientrano quando si libera un posto ed emigrano dopo 28 giorni;
+    - gli ingaggi in viaggio arrivano come laici e occupano prima L3, poi L4. Senza posto all'arrivo, l'oro torna al castello.
+  - **Ingaggio:** `hire()` costa 40 oro dal castello, con arrivo dopo 14 giorni. È rifiutato senza oro o se i posti liberi sono già promessi agli ingaggi in viaggio.
+  - **Interfaccia:**
+    - `ConquerGame.read.economy().educated` e il comando `hireEducated`;
+    - sotto-righe «di cui scolarizzati» nelle carte «Classi sociali» e «Popolazione per classe»;
+    - nuova scheda «L3 · Istruiti» nel Job Manager (KPI, ingaggio, posti per classe, segnaposto dei ruoli);
+    - tooltip della popolazione nella shell UI2;
+    - `panelHistory[].educated`.
+  - **Ancora nessun effetto sul lavoro:** i ruoli non esistono ancora, quindi gli scolarizzati restano lavoratori L3/L4 comuni.
+- **PROVE LOCALI PASS:**
+  - nuova `qa/educated-regression.cjs`, 10 casi: tetto, migrazione, ingaggio e arrivo, rifiuti, rimborso, L3 prima di L4, eccedenza e rientro, emigrazione a 28 giorni, salvataggio JSON, limiti di lavoro invariati;
+  - tutte le 31 voci di `economy-flows-regression.yml`, dove la nuova regressione è stata aggiunta;
+  - le regressioni che leggono `index.html`.
+  - Le 5 prove di prestazioni basate su Playwright non sono eseguibili in locale (manca il modulo), quindi non sono attestate.
+- **PROVA BROWSER LOCALE:** con un villaggio di prova in memoria (una casa L3 e una L4), la scheda «L3 · Istruiti» mostra 7 posti, contatori e viaggio. Il pulsante d'ingaggio scala 40 oro e aggiunge un arrivo. Nessun errore in console.
+- **DA VERIFICARE:** CI del branch; prova in una partita reale con case L3/L4 costruite.
+
+## 2026-11-12 — SCOL-01 · Scolarizzati (solo specifica, branch `docs/scolarizzati`)
+
+- **NESSUN CODICE:** specifica approvata in [BACKLOG](BACKLOG.md), contratto [D-SCOL-261112](DECISIONS.md). Nessun test eseguito né richiesto.
+- **STATO LIVE VERIFICATO SU `main` 431af30d:**
+  - La popolazione per classe deriva dal livello delle case e non si salva.
+  - Nessuna mobilità di classe né immigrazione.
+  - Soldati come unico contatore sottratto a una classe.
+  - Il ciclo `monthly` non paga mai salari L3.
+  - Scriptorium senza effetti.
+  - Gestori di Chiesa e Locanda assegnati solo dai test.
+  - Giudici del tribunale decorativi.
+  - Nessun riferimento a istruzione, esattori o funzionari in `src/`.
+- **PROSSIMO:** fase 1 (dati, tetto, salvataggio, pannelli, ingaggio) su un branch nuovo da `main`, solo dopo conferma esplicita.
+
+## 2026-11-12 — FISCO-01 fase B · Erario, riscossione e decreti (branch `feature/bargello-balivo`)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:**
+  - `src/settlement-treasury.js` (`ConquerTreasury`), con lo stato in `State.economy.treasury`.
+  - Scheda ERARIO nel Profilo (`settlement-panels.js`, `settlement-heraldry.js`, `index.html`).
+  - Agganci in economia (decima, calmiere, tick), commercio (dazio, pedaggio) e combattimento (leva straordinaria via `leviedResident`/`refreshLevy`).
+  - Cursore `levy` rimosso da UI1 e UI2.
+  - Codex di Bargello e Balivo aggiornati.
+- **PROVE ESEGUITE:**
+  - `qa/treasury-regression.cjs`: 18 PASS, aggiunto al workflow Economy flows.
+  - Regressioni di economia, commercio, routine, convogli, codex e runtime: PASS in locale.
+  - Browser su `localhost:4431`: scheda Erario con efficienza 80% (Municipio L2 con sala delle guardie), quartiere con Bargello L1 al 70%, decreto Festa emanato, nessun errore in console.
+- **NON PROVATO:**
+  - Una partita lunga con riscossione reale del sabato. La logica settimanale è coperta solo dal test Node.
+  - La leva vista in gioco: gli uomini che vanno all'armeria senza allarme.
+  - La CI sul nuovo head.
+- **APERTI:** vedi BACKLOG FISCO-01. Pedaggio senza arrivi reali, CRIME non caricato, leva fuori dalla riserva e dai turni, giustizia ancora in proposta.
+
+## 2026-11-10 — FISCO-01 fase A · Bargello e Palazzo del Balivo (branch `feature/bargello-balivo`)
+
+- **IMPLEMENTATO SU BRANCH, NON MERGE:** modelli `bargello1/2` (parti `hall`, `tower`) e `balivo1/2` (`hall`) in `tools/blender/build_civic.py`, generati con Blender 4.4 in `src/assets/civic-models.js`. I 53 modelli civici esistenti restano identici (confronto del JSON) e la palette è invariata.
+- **RUNTIME:** tipi civici con livelli L1–L2 (`civicMaxLevel`/`civicLevels`), costi e tempi, impronte, altezze, Builder e shell UI, etichette, collocamento (Bargello come `WELL_CIVIC_TYPES`; Balivo con `balivoPlacementCheck`), cantiere a graticcio L1, crollo con la torretta, incendio L1, fallback 2.5D/WebGL, cutaway per piani con stanze fisse e nuovo arredo `exactor`, Codex (2 voci approvate, catalogo rigenerato).
+- **PROVE ESEGUITE IN LOCALE:**
+  - 169 suite `qa/*.cjs`: tutte PASS tranne `mass-battle-performance` e `movement-collapse-performance`, che falliscono identiche su `main` (import di `circle/defensive-topology.mjs` e soglie di tempo); `asset-audit-scope.cjs` è uno strumento CI.
+  - `well-civics-regression` estesa con 3 test FISCO-01; conteggi Codex +2.
+  - Audit Lab sulle 4 voci nuove: 0 errori, 0 avvisi; baseline unita a mano (+4 voci, nessuna voce esistente toccata), secondo giro 0 nuovi / 0 cambiati.
+  - Smoke nel browser: modelli caricati, 8 cutaway (2 tipi × 2 livelli × 2 piani) disegnati senza errori, console pulita.
+- **NON VERIFICATO:** aspetto del cutaway a schermo (catture non disponibili con la finestra nascosta); GitHub Actions; collocamento giocato in partita. Nessun effetto di gioco (fase B).
+
+
+## 2026-11-12 — CHIESA-01 fase 1 · Cassa della Chiesa (branch `feature/chiesa-fase1`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - nuovo `src/settlement-church.js` (`ConquerChurch`): Cassa e Favore in `State.economy.church`, migrazione lazy; offerte domenicali per classe dai borsellini (quota × fedeli serviti × resa del culto × (0,5 + felicità/100)); lasciti annui del 2% di L3/L4 con felicità ≥ 50; dono 10/50/100 dal `castleGold`;
+  - `ConquerEconomy.tick` chiama la Chiesa la domenica, a fine mese e a fine anno (i lasciti prima della chiusura del mese);
+  - scheda «Chiesa» nell'ispettore classico (`settlement-app-rooms.js`) e in UI v2 (`ChurchPanel` in `ui/shell.js`); riquadro «Chiesa» nel Profilo › Generale (`settlement-panels.js`);
+  - `index.html`: script dopo `settlement-commerce.js` e versioni dei file toccati aggiornate; `wiki/catalog.json` rigenerato (impronta dei sorgenti).
+- **PROVE LOCALI PASS:**
+  - `qa/church-regression.cjs` (11 casi), aggiunto al workflow Economy flows;
+  - tutti i 31 comandi di `economy-flows-regression.yml`; `founding-regression` è instabile anche su `main` (risposta a tempo) e passa rilanciandolo;
+  - multi-wells, infirmary, events-builder, cutaway-floors, crime-buildings, codex-wiki, codex-catalog.
+- **BROWSER (preview locale, chiesa iniettata da console):** nessun errore in console; la scheda mostra Cassa, Favore, entrate e fedeli serviti; «Dona 10» sposta 10 oro dal castello alla Cassa e porta il Favore da 55 a 56; il riquadro «Chiesa 63,6 oro · Favore 56/100» compare nel Profilo › Generale.
+- **NON VERIFICATO:** CI su GitHub (branch non pushato); partita reale con chiesa costruita dal Builder.
+
+## 2026-11-12 — CHIESA-01 · La Chiesa come entità autonoma (solo specifica, branch `docs/chiesa`)
+
+- **NESSUN CODICE:** specifica approvata in [BACKLOG](BACKLOG.md), decisione [D-CHIESA-261112](DECISIONS.md). Nessun test eseguito né richiesto.
+- **STATO LIVE VERIFICATO SU `main` 431af30d:**
+  - `SERVICE_KINDS.church` ha `income:'not-simulated'` e il gestore si assegna solo nei test.
+  - Gli annessi della Chiesa non hanno effetti.
+  - Non esiste un fondo della Chiesa: solo `wallet.L1–L4` e `castleGold`.
+  - `monthly` non paga salari oltre la classe 2.
+  - La felicità si muove solo con cibo, razioni e infermeria.
+  - La Cappella del castello conta solo per il prestigio nell'assedio.
+- **DIPENDE DA:** SCOL-01 (branch `docs/scolarizzati`, non su `main`) fino alla fase 3; FISCO-01 fase B; CRIME.
+- **PROSSIMO:** fase 1 (Cassa, offerte, lasciti, dono, scheda) su un branch nuovo da `main`, solo dopo conferma esplicita e dopo la fase 3 di SCOL-01.
+
+## 2026-11-13 — Animazioni di lavoro dei bottegai (branch `feature/shop-artisan-tools`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `ConquerWorkAnim.TOOLS` passa da 7 a 10 attrezzi: `clay` (vasaio: mani sul vaso che sale al tornio, schizzi d'argilla), `shuttle` (tessitore: la spola va avanti e indietro all'altezza dell'ordito, filacce alla battuta), `needle` (sarto: ago nella stoffa e lunga tirata del filo, senza effetti).
+  - I tre pezzi da banco (vaso col tornio, spola col filo, stoffa col filo) si disegnano tra il corpo e il braccio. Le figure WebGL usano le stesse 8 fasi delle altre (`w|tool|fase|look`).
+  - `TRADES` di `settlement-shop-cutaway.js`: vasaio, tessitore e sarto non hanno più `tool:null`, quindi nessun bottegaio resta fermo al banco.
+  - Asset Lab, famiglia «Lavori»: nuove voci Vasaio (tornio), Tessitore (spola), Sarto (ago).
+- **PROVE LOCALI PASS:**
+  - `work-anim-regression` (10 attrezzi, ogni mestiere di bottega ha un attrezzo noto, i pezzi da banco si disegnano);
+  - `shop-cutaway-regression`, aggiornato: il tessitore ora usa la spola;
+  - `asset-catalog-regression`, `urban-workshops-regression`, `commerce-skeleton-regression`;
+  - suite `qa/*.cjs`: falliscono solo i `*-performance`, `asset-audit-scope` (strumento CLI) e `founding-regression`, che fallisce identico su `main` 95e8dd29.
+- **AUDIT ASSET:** `node qa/asset-audit.mjs` sulle 3 voci nuove e sulle botteghe L3 di vasaio, tessitore e sarto: 0 errori, 3 nuove, 1 cambiata (vasaio esterno, distanza 0,024). Fogli rivisti; baseline aggiornata solo per queste voci.
+- **DA VERIFICARE:** CI del branch.
+
 
 ## 2026-11-10 — ECO-FIL-01 fase 1 · Miniera → metallo (branch `feature/eco-fil-01-miniera-metallo`)
 
@@ -628,7 +1304,7 @@ Baseline verificata: main d8c89556d504a48cf64bb2c9927a5620ec1772b5. Nessuna PR n
 - **P0 jobmanager:** allocatore e razioni già in #98, routine in #99. D-049 mantiene un unico allocatore ConquerEconomy; nessun ConquerJobManager duplicato. D-051 (campi solo L2) resta decisione aperta: la priorità del branch non cambia quel contratto.
 - **P0 knights:** settlement-mounted2d.js e settlement-animals.js sono identici tra knights e main; gameplay e diplomazia in #96. Le differenze 3D restano escluse da D-046.
 - **P2 messages:** conservata per futura riconciliazione, senza integrazione in questo lavoro.
-- **P3:** case, economic-balances-animations, feature/landscape-forests, feature/ui-shell, fix/biomes-restore, fix/render-spikes: verificare pertinenza residua prima di qualsiasi recupero.
+- **P3:** case, feature/landscape-forests, feature/ui-shell, fix/biomes-restore, fix/render-spikes: verificare pertinenza residua prima di qualsiasi recupero. `economic-balances-animations` verificata il 12/11/2026: unico residuo (veicoli nel depth buffer) in `feature/vehicles-depth-cards`, nient'altro da recuperare.
 - **QA locale:** 67/67 test circle, incluse due regressioni del main corrente; 113 suite qa/*-regression.cjs superate (112 in parallelo, founding ripetuta isolata dopo soglia temporale 119ms sotto carico). Non è una misura di prestazioni stabili. Nessun asset/renderer cambiato. Browser locale: moduli ES caricati, WebGL attivo, 400 cibo trasferiti al granaio e sottratti una sola volta alla conquista; banner di settore aggiornato. Ricaricamento mantiene una sola conquista; riconquista riapre il granaio (480 posti) senza restituire il cibo. Favicon 404 e avviso WebGPU Windows non riguardano circle. CI CIRCLE sul primo commit a4d8792 PASS (run 41604792313). Riallineamento successivo a main d8c89556 conserva #115 merlature; nuova CI e stato merge da verificare sul commit finale.
 
 
@@ -934,12 +1610,18 @@ Baseline verificata: main d8c89556d504a48cf64bb2c9927a5620ec1772b5. Nessuna PR n
 - **Builder:** il contorno di selezione disegna solo l'impronta unita a h0; mura, palizzate e sezioni costruite non si piazzano dentro le foreste; ogni edificio controlla anche le chiome degli alberi realmente disegnati (`settlement-placement.js`).
 - **QA locale (28/10, dopo il merge di `main` `5ddefa6`):** 73/77 `qa/*.cjs` PASS (incluse `civic3d`, `builder-placement`, `organic-forest`); i 4 FAIL sono le prove di performance che richiedono Playwright, assente in questo checkout. Audit del Lab (`qa/asset-audit.mjs`, Chrome locale): 465 render, 0 falliti, firme identiche a quelle di `main` sullo stesso browser (il cutaway civico appare solo in partita con l'edificio selezionato); baseline invariata. **Non eseguite:** verifica visiva del cutaway in partita su entrambi i renderer; CI della PR.
 
+## UI v2 — ispettore dell'edificio selezionato: fix rapidi (branch `fix/inspector-quickfixes`, 15/11/2026, non ancora `main`)
+
+- **Codice:** `settlement-animals.js` limita a zero il raggio del giunto delle zampe (il layout TEST con bestiame lanciava `IndexSizeError` a ogni frame, fermando mappa e UI v2). `describeStructure` aggiunge `d.yard` (usato, capienza, oltre) e `reason` sull'opzione Avamposto. `shell.js`: ispettore anche in Gestisci e Difendi al posto della scheda di modalità finché c'è una selezione; blocco stanze e fatto «Stanze 0 · 0» nascosti quando non ci sono stanze; tooltip delle opzioni disattivate con il motivo (o la regola del controllo); `confirm` prima di demolire o annullare un cantiere; piè di scheda «Costo di costruzione». `i18n-it.js`: etichette del piazzale e delle merci, motivi tradotti, messaggi di conferma. Versioni `legcap1`, `insp1`, `ui2-insp-2`.
+- **Prove:** 202/208 `qa/*.cjs` PASS (FAIL: cinque prove di performance senza Playwright e `asset-audit-scope` che richiede `--github-output`). Browser locale sul layout TEST: nessun nuovo errore di disegno, piazzale con etichette e avviso, mura senza blocco stanze, 8 opzioni grigie della torre con motivo, demolizione annullata dal dialogo, ispettore in Gestisci e ritorno a Panoramica alla chiusura. **Non eseguite:** `qa/ui-combat-regression.mjs`, audit del Lab, CI.
+
 ## UI v2 «Isole» — modalità Difendi (branch `feature/ui-defend`, 26/10/2026)
 
 - **Su `main` (`5ddefa6`, squash di `feature/ui-shell`):** UI v2 opt-in con `?ui=2`: `src/ui/game-api.js` (`window.ConquerGame`, comandi + letture di stato), `src/ui/shell.js` (Preact+htm vendorizzato, nessun build), `src/ui/i18n-it.js` (tutte le stringhe in italiano), `src/ui/theme.css`; modalità Costruisci e Gestisci con rail e scheda ispettore; `src/settlement-structure-commands.js` per le regole sulla struttura selezionata. La UI legacy resta il default.
 - **Codice presente su branch (non ancora `main`):** modalità Difendi — rail Comando/Zone/Pattuglie/Allarme (Prove d'assedio solo con `?dev=1`) e scheda; `ConquerCombat.uiState()` in sola lettura; i comandi premono i pulsanti del modulo di combattimento, nessuna mutazione diretta di `State` dalla UI. `settlement-combat.js?v=` conserva il suffisso fissato da `zones-visual-regression`.
 - **QA locale (28/10):** 73/77 regressioni `qa/*.cjs` PASS; i 4 FAIL sono le prove di performance che richiedono Playwright (non installato in locale), identiche su `main`. **Non eseguite:** `qa/ui-combat-regression.mjs` (browser) e verifica visiva della modalità Difendi in partita. CI da verificare sulla PR.
 - **Ancora aperto (fase 5):** messaggi di stato/log in i18n, pannello attraversamenti come dati, UI v2 come default e rimozione di `settlement-builder-ux.js`.
+- **Fix rapidi (branch `fix/ui-v2-quickfixes`, 10/11/2026, non ancora `main`):** barra risorse con Argilla (`T.resources.clay`); `Toast` traduce le righe di stato note (`T.status`) e nasconde gli id grezzi degli strumenti; `ConquerGame.snapshot().saveStatus` = `saved|unsaved|error`, così «local save failed» e «cloud error» non appaiono più come «Salvato»; tooltip `u2-tip-bottom` per i controlli nelle barre in alto e posizione orizzontale limitata alla finestra; media query delle barre in alto a 1220px con risorse limitate a `100% - 480px`; valori di Panoramica (`u2-stats-3`) a capo; stringhe di cantiere, Gestisci, Difendi e Codex in `i18n-it.js`. Versioni `?v=ui2-quickfix-3…` per tema, API, shell e i18n (dopo l'allineamento a `main` del 13/11). **Prove:** 165/170 `qa/*.cjs` PASS (i 5 FAIL: quattro prove di performance senza Playwright e `asset-audit-scope` che richiede `--github-output`); verifica in browser locale a 1024, 1180 e 1440px (barre, tooltip, stato, salvataggio, Esc chiude la scheda strumento). **Non eseguite:** `qa/ui-combat-regression.mjs` e CI.
 
 ## Fix main: strade, DEV e WebGL (23/10/2026, branch di fix)
 
@@ -1350,3 +2032,13 @@ Nel branch fix/fields-l2-only i campi richiedono esclusivamente L2 sia nel ledge
 Recuperati i cinque commit residui 31cb32d, 2408397, 8e541fd, e4b06cc, 0ff543d sulla base main e4230db. La parte navale precedente era già in #150. Civili, lavoratori, carpentieri e marinai entrano nel depth buffer World3D; atlante 2048 con caselle 64px, 1024 posti, pose condivise, riuso LRU e upload incrementale. Conservati LOD militare, addOutbuilding, ingresso del mastio, arte e guarnigioni. Recuperati layout TEST, cache accesso pozzi, traslazione mesh navi, indice spaziale ostacoli e Trabucco DEV con scenario QA.
 
 QA locale: 165 regressioni deterministiche PASS. Aggiunta prova browser sul painter reale dei civili, occlusione da murature, riuso atlante, picking militare e fallback Canvas; inserita nel workflow Main fixes. Audit Lab completo: 1473 render, 0 errori; rivisti Popolazione, Truppe e confronto browser dietro la torre. Firme di queste categorie invariate; annotata la revisione nella baseline, senza accettare i 184 cambiati locali o i 15 stati tetto nuovi estranei a questa integrazione. Prova browser dedicata PASS. CI remota da completare prima del merge. Nessun nuovo modello, nessuna modifica alle priorità ROADMAP. Restano i limiti originari del Trabucco: non persistito, serventi colpibili solo via API, munizioni non simulate.
+
+
+## 2026-11-15 — Integrazione PR #199 (pre-merge)
+
+Riallineata UI2 quickfix alla main 6c5ac79; conflitto solo nel diario, mantenute entrambe le voci. PASS locale Builder menu, 5 runtime-integrity test, export Wiki fresco. Browser Chromium PASS: Argilla, barre senza sovrapposizioni a 1024/1180/1440px, saved/error/unsaved (anche errore cloud), nessun pageerror. CI del nuovo HEAD da verificare prima del merge. ROADMAP e DECISIONS invariate: nessuna nuova regola di simulazione.
+
+
+## 2026-11-15 — Integrazione PR #162 dopo UI2 (pre-merge)
+
+Riallineato il branch regionale alla main a0ed0c7, preservando FIELD-LEND #212 e UI2 #199. Merge automatico senza conflitti di codice; regole regionali e limiti gia documentati invariati. Verifica finale affidata alla CI del nuovo HEAD (suite completa, Sea and pier, browser e Asset Lab) prima dello squash. ROADMAP e DECISIONS invariate rispetto alla PR: nessun requisito aggiunto in integrazione.

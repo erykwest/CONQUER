@@ -1,5 +1,8 @@
 'use strict';
 // Tower/building function panels and room controls. Extracted verbatim from settlement-app.js.
+// Labels carry save/player text (quarter and well names): escape them before innerHTML. The shared
+// escaper is ConquerPanels.escapeHtml; camp/ does not load settlement-panels.js, hence the fallback.
+function roomEsc(v){return window.ConquerPanels?.escapeHtml?.(v)??String(v).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';')}
 function siteLaborText(s){
   if(s?.auto&&s.spawnCost)
     return 'Spontaneous spawn: '+Number(s.spawnCost.laborGold||0).toFixed(2)+' gold in labor value (not charged to lord)';
@@ -30,7 +33,7 @@ function renderFunctionPanel(){
     const fmt=n=>Number(n).toLocaleString('it-IT',{maximumFractionDigits:2});
     panel.classList.add('open');
     info.innerHTML='<div class="construction-inspector">'+
-      '<div class="kv"><span>Cantiere</span><b>'+structureLabel(s)+'</b></div>'+
+      '<div class="kv"><span>Cantiere</span><b>'+roomEsc(structureLabel(s))+'</b></div>'+
       '<div class="site-label">Avanzamento lavori · '+progress+'%</div>'+
       '<div class="progress"><i style="width:'+progress+'%"></i></div>'+
       '<div class="kv"><span>Lavoro residuo</span><b>'+fmt(remainingDays(s))+' giornate</b></div>'+
@@ -79,7 +82,7 @@ function renderFunctionPanel(){
     const staff=econ?.staffing?.()[s.id]||0;
     const details=econ?.state()?.activities?.[s.id],owner=details?.owner||(s.economicOwner==='lord'?'lord':'private');
     panel.classList.add('open');
-    info.innerHTML=`<div class="kv"><span>Industry</span><b>${structureLabel(s)}</b></div><div class="kv"><span>Workers · L${spec.tier}</span><b>${staff} / ${spec.workers}</b></div><div class="kv"><span>Production</span><b>${staff} ${spec.good} / workday</b></div><div class="kv"><span>Owner</span><b>${owner==='lord'?'Lord':'Private L4'}</b></div><div class="cost-line">${costText(s.buildCost||constructionCost(s))}</div>${underConstruction(s)?`<div class="legend">Under construction · ${s.construction?.version===2?constructionWorkStatus(s)+' · '+remainingDays(s).toFixed(1)+' worker-days left':remainingDays(s).toFixed(1)+' calendar days'}</div>`:''}`;
+    info.innerHTML=`<div class="kv"><span>Industry</span><b>${roomEsc(structureLabel(s))}</b></div><div class="kv"><span>Workers · L${spec.tier}</span><b>${staff} / ${spec.workers}</b></div><div class="kv"><span>Production</span><b>${staff} ${spec.good} / workday</b></div><div class="kv"><span>Owner</span><b>${owner==='lord'?'Lord':'Private L4'}</b></div><div class="cost-line">${costText(s.buildCost||constructionCost(s))}</div>${underConstruction(s)?`<div class="legend">Under construction · ${s.construction?.version===2?constructionWorkStatus(s)+' · '+remainingDays(s).toFixed(1)+' worker-days left':remainingDays(s).toFixed(1)+' calendar days'}</div>`:''}`;
     if(s.type==='loggingCamp'){
       const snap=econ?.snapshot?.(),active=staff>0&&!underConstruction(s);
       info.innerHTML+='<div class="kv"><span>Legname castello (piazzale)</span><b>'+Number(snap?.castle?.wood||0).toFixed(1)+'</b></div>'+
@@ -96,7 +99,7 @@ function renderFunctionPanel(){
     // Event venue (settlement-events3d.js): dressing, event setup and start / stop.
     const E=window.ConquerEvents3D;
     panel.classList.add('open');
-    info.innerHTML='<div class="kv"><span>Spazio eventi</span><b>'+E.label(s)+'</b></div><div class="cost-line">'+costText(s.buildCost||E.cost(s))+'</div>'+
+    info.innerHTML='<div class="kv"><span>Spazio eventi</span><b>'+roomEsc(E.label(s))+'</b></div><div class="cost-line">'+costText(s.buildCost||E.cost(s))+'</div>'+
       (underConstruction(s)?'<div class="legend">In costruzione · '+remainingDays(s).toFixed(1)+'d</div>':'');
     slots.innerHTML=E.panelHtml(s);
     E.bindPanel(slots,s);
@@ -105,7 +108,7 @@ function renderFunctionPanel(){
   if(window.ConquerPier?.is(s)){
     const P=window.ConquerPier;
     panel.classList.add('open');
-    info.innerHTML='<div class="kv"><span>Porto</span><b>'+P.label(s)+'</b></div><div class="cost-line">'+costText(s.buildCost||P.cost(s))+'</div>'+
+    info.innerHTML='<div class="kv"><span>Porto</span><b>'+roomEsc(P.label(s))+'</b></div><div class="cost-line">'+costText(s.buildCost||P.cost(s))+'</div>'+
       (underConstruction(s)?'<div class="legend">In costruzione · '+remainingDays(s).toFixed(1)+'d</div>':'');
     slots.innerHTML=P.panelHtml(s);
     P.bindPanel(slots,s);
@@ -114,7 +117,7 @@ function renderFunctionPanel(){
   if(window.ConquerQuay?.is(s)){
     const Q=window.ConquerQuay;
     panel.classList.add('open');
-    info.innerHTML='<div class="kv"><span>Porto</span><b>'+Q.label(s)+'</b></div><div class="cost-line">'+costText(s.buildCost||Q.cost(s))+'</div>'+
+    info.innerHTML='<div class="kv"><span>Porto</span><b>'+roomEsc(Q.label(s))+'</b></div><div class="cost-line">'+costText(s.buildCost||Q.cost(s))+'</div>'+
       (underConstruction(s)?'<div class="legend">In costruzione · '+remainingDays(s).toFixed(1)+'d</div>':'');
     slots.innerHTML='<div class="legend">Banchina in pietra larga 2U. I moli in legno (L4, L12) si agganciano al suo bordo verso il mare.</div>';
     return;
@@ -122,7 +125,7 @@ function renderFunctionPanel(){
   if(isCivicAnnex(s)){
     const parent=State.structures.find(p=>p.id===s.parentId),spec=civicAnnexDefinition(s,parent);
     panel.classList.add('open');
-    info.innerHTML='<div class="kv"><span>Annex</span><b>'+(spec?.label||'Unknown')+'</b></div><div class="legend">Skeleton · '+(parent?structureLabel(parent):'orphan')+' · '+(spec?spec.w+'×'+spec.h+'U':'')+'</div>';
+    info.innerHTML='<div class="kv"><span>Annex</span><b>'+(spec?.label||'Unknown')+'</b></div><div class="legend">Skeleton · '+(parent?roomEsc(structureLabel(parent)):'orphan')+' · '+(spec?spec.w+'×'+spec.h+'U':'')+'</div>';
     slots.innerHTML='<div class="slot"><button data-annex-parent>← Parent building</button><button data-annex-delete>Remove annex</button><div class="legend">No workers, beds, goods or economy yet.</div></div>';
     slots.querySelector('[data-annex-parent]').onclick=()=>selectStructure(parent||null);
     slots.querySelector('[data-annex-delete]').onclick=()=>deleteStructure(s.id);
@@ -130,31 +133,31 @@ function renderFunctionPanel(){
   }
   if(s?.type==='well'){
     // Village well: centre designation (like the Mastio) and the quarter name of a non-centre well.
-    const w=StructureCommands.describeStructure(s.id).well,esc=v=>String(v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const w=StructureCommands.describeStructure(s.id).well;
     panel.classList.add('open');
-    info.innerHTML='<div class="kv"><span>Selected</span><b>Pozzo · '+esc(w.center?(w.villageName||'Centro villaggio'):(w.name||'Quartiere senza nome'))+'</b></div>'+
+    info.innerHTML='<div class="kv"><span>Selected</span><b>Pozzo · '+roomEsc(w.center?(w.villageName||'Centro villaggio'):(w.name||'Quartiere senza nome'))+'</b></div>'+
       '<div class="kv"><span>Ruolo</span><b>'+(w.center?'Centro villaggio':'Quartiere')+'</b></div>'+
       '<div class="kv"><span>Strada</span><b>'+(w.founding?'Strade maestre':w.mainRoad?'Principale verso il primo pozzo':'Da collegare')+'</b></div>';
     slots.innerHTML=(w.founded?'<div class="slot"><button data-well-center'+(w.canCenter?'':' disabled')+(w.center?' class="active"':'')+'>'+(w.center?'Centro villaggio · rimuovi':'Designa come centro villaggio')+'</button></div>':'')+
       (w.center?'<div class="legend">Il centro porta il nome del villaggio.</div>':
-        '<div class="slot"><label class="slot-label" for="wellNameInput">Nome quartiere / borgata</label><input id="wellNameInput" type="text" maxlength="32" placeholder="Quartiere o borgata" value="'+esc(w.name)+'"></div>');
+        '<div class="slot"><label class="slot-label" for="wellNameInput">Nome quartiere / borgata</label><input id="wellNameInput" type="text" maxlength="32" placeholder="Quartiere o borgata" value="'+roomEsc(w.name)+'"></div>');
     const center=slots.querySelector('[data-well-center]');if(center)center.onclick=()=>StructureCommands.toggleVillageCenter(s.id);
     const name=slots.querySelector('#wellNameInput');if(name)name.onchange=()=>StructureCommands.setWellName(s.id,name.value);
     return;
   }
-  if(!s||!['tower','gate','built','wall','palisade','house','market','tavern','church','training','plaza','townhall','guild','moat','bridge'].includes(s.type)){panel.classList.remove('open');return}
+  if(!s||!['tower','gate','built','wall','palisade','house','market','tavern','church','training','plaza','townhall','guild','bargello','balivo','moat','bridge'].includes(s.type)){panel.classList.remove('open');return}
   if(['moat','bridge'].includes(s.type)){
     panel.classList.add('open');
     const cost=s.buildCost||constructionCost(s);
     info.innerHTML='<div class="kv"><span>Selected</span><b>'+s.type.toUpperCase()+'</b></div>'+
-      '<div class="legend">'+s.variant+' · '+(s.length||0).toFixed(1)+'U · '+costText(cost)+'</div>';
+      '<div class="legend">'+roomEsc(s.variant)+' · '+(s.length||0).toFixed(1)+'U · '+costText(cost)+'</div>';
     slots.innerHTML=window.ConquerCrossings?.panel(s)||'';
     window.ConquerCrossings?.bindPanel(slots);return;
   }
   const simpleCivic=isCivic(s);
   if(s.type!=='house'&&!simpleCivic)normalizeFunctions(s);const cap=(s.type==='house'||simpleCivic)?0:functionCapacity(s),capUnits=(s.type==='house'||simpleCivic)?0:functionCapacityUnits(s);panel.classList.add('open');
   const building=underConstruction(s),pr=Math.round(constructionProgress(s)*100),woodTower=isWoodTower(s),woodGate=isWoodGate(s),canHeight=['tower','gate','wall','built'].includes(s.type)&&!woodTower&&!woodGate&&!isLonghouse(s),maxLevel=maxStructureLevel(s),canTier=['tower','wall','palisade'].includes(s.type)&&!woodTower;
-  info.innerHTML=`<div class="kv"><span>Selected</span><b>${structureLabel(s)}</b></div>${masonryMaterial(s)?`<div class="kv"><span>Muratura</span><b>${masonryMaterial(s)==='brick'?'Mattoni / Argilla':'Pietra'}</b></div>`:''}${s.type==='house'?(()=>{const pop=housePopulationCapacity(s);return `<div class="kv"><span>Household capacity</span><b>${pop.total}</b></div><div class="cost-line">${pop.male} male · ${pop.female} female · ${pop.children} children</div>`})():simpleCivic?`<div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div><div class="legend">Prototype civic building · functions/routines pending.</div>`:`<div class="kv"><span>Rooms</span><b>${cap} · ${capUnits} capacity</b></div><div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div>`}${building?`<div class="slot"><div class="site-label" data-construction-status="true">Under construction · ${s.construction?.version===2?constructionWorkStatus(s)+' · '+remainingDays(s).toFixed(1)+' worker-days left':remainingDays(s).toFixed(1)+' calendar days'}</div><div class="progress"><i style="width:${pr}%"></i></div></div>`:''}${isWideBuilt(s)?`<div class="legend" style="margin-top:7px">Wide hall: one LARGE ground-floor room with free double height (≥2U) — common hall, chapel, throne hall.</div>`:s.type==='built'?`<div class="legend" style="margin-top:7px">One room per level: &lt;2U = none · 2–&lt;3U = NORMAL · ≥3U = LARGE (2× capacity).</div>`:s.type==='tower'&&!woodTower?`<div class="legend" style="margin-top:7px">One room per level: T1 = none · T2 = NORMAL · T3 = LARGE (2× capacity).</div>`:''}`;
+  info.innerHTML=`<div class="kv"><span>Selected</span><b>${roomEsc(structureLabel(s))}</b></div>${masonryMaterial(s)?`<div class="kv"><span>Muratura</span><b>${masonryMaterial(s)==='brick'?'Mattoni / Argilla':'Pietra'}</b></div>`:''}${s.type==='house'?(()=>{const pop=housePopulationCapacity(s);return `<div class="kv"><span>Household capacity</span><b>${pop.total}</b></div><div class="cost-line">${pop.male} male · ${pop.female} female · ${pop.children} children</div>`})():simpleCivic?`<div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div><div class="legend">Prototype civic building · functions/routines pending.</div>`:`<div class="kv"><span>Rooms</span><b>${cap} · ${capUnits} capacity</b></div><div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div>`}${building?`<div class="slot"><div class="site-label" data-construction-status="true">Under construction · ${s.construction?.version===2?constructionWorkStatus(s)+' · '+remainingDays(s).toFixed(1)+' worker-days left':remainingDays(s).toFixed(1)+' calendar days'}</div><div class="progress"><i style="width:${pr}%"></i></div></div>`:''}${isWideBuilt(s)?`<div class="legend" style="margin-top:7px">Wide hall: one LARGE ground-floor room with free double height (≥2U) — common hall, chapel, throne hall.</div>`:s.type==='built'?`<div class="legend" style="margin-top:7px">One room per level: &lt;2U = none · 2–&lt;3U = NORMAL · ≥3U = LARGE (2× capacity).</div>`:s.type==='tower'&&!woodTower?`<div class="legend" style="margin-top:7px">One room per level: T1 = none · T2 = NORMAL · T3 = LARGE (2× capacity).</div>`:''}`;
   info.innerHTML+=siteLaborLine(s);
   // L3 commerce: autonomous workshop at home, or the service it operates.
   const commerce=window.ConquerCommerce;
@@ -196,13 +199,17 @@ function renderFunctionPanel(){
     // Lookout, outpost and signal fire (settlement-soldiers.js).
     html+=window.ConquerSoldiers?.towerPanelHtml?.(s)||'';
   }
-  if(['house','market','tavern','church','training','plaza','townhall','guild'].includes(s.type)){
+  // Patrols of the whole ring of walls this wall belongs to (settlement-wall-patrols.js).
+  if(['wall','palisade'].includes(s.type)&&!building)html+=window.ConquerWallPatrols?.panelHtml?.(s)||'';
+  if(['house','market','tavern','church','training','plaza','townhall','guild','bargello','balivo'].includes(s.type)){
     const deg=Math.round((Number(s.angle)||0)*180/Math.PI+360)%360;
     html+=`<div class="slot"><div class="slot-label">Building rotation · ${deg}°</div><div class="grid3"><button data-point-rotate="-1">↺ 15°</button><button data-point-rotate="12">⇄ 180°</button><button data-point-rotate="1">↻ 15°</button></div></div>`;
   }
   if(CIVIC_LEVEL_TYPES.includes(s.type)){
-    html+=`<div class="slot"><div class="slot-label">Civic development · L${civicLevel(s)} (skeleton)</div><div class="grid3">${[1,2,3].map(level=>`<button data-civic-level="${level}" class="${civicLevel(s)===level?'active':''}">L${level}</button>`).join('')}</div><div class="legend">Three planned stages; no economy or service effects yet.</div></div>`;
+    html+=`<div class="slot"><div class="slot-label">Civic development · L${civicLevel(s)} (skeleton)</div><div class="grid3">${civicLevels(s.type).map(level=>`<button data-civic-level="${level}" class="${civicLevel(s)===level?'active':''}">L${level}</button>`).join('')}</div><div class="legend">Three planned stages; no economy or service effects yet.</div></div>`;
   }
+  if(s.type==='church')html+=window.ConquerChurch?.panelHtml?.(s)||'';
+  if(s.type==='guild')html+=window.ConquerGuild?.panelHtml?.(s)||'';
   if(CIVIC_ANNEX_CATALOG[s.type]){
     const catalog=CIVIC_ANNEX_CATALOG[s.type],children=civicAnnexChildren(s.id);
     html+='<div class="slot"><div class="slot-label">Annexes · '+children.length+' built (skeleton)</div>'+
@@ -250,9 +257,9 @@ function renderFunctionPanel(){
       const roof=towerRoofStyle(s),base=towerBaseStyle(s);
       if(s.parentTowerId){
         const parent=State.structures.find(x=>x.id===s.parentTowerId);
-        html+=`<div class="slot"><div class="legend">Subtower attached to ${parent?structureLabel(parent):'parent structure'}.</div></div>`;
+        html+=`<div class="slot"><div class="legend">Subtower attached to ${parent?roomEsc(structureLabel(parent)):'parent structure'}.</div></div>`;
       }
-      html+=`<div class="slot"><div class="slot-label">Tower roof</div><div class="grid3"><button data-tower-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-tower-roof="machicolation" class="${roof==='machicolation'?'active':''}">Machicolation</button><button data-tower-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div><div class="legend">Machicolation: merlatura in aggetto con mensole. Predispone il futuro attacco verticale a raggio 1U.</div></div>`;
+      html+=`<div class="slot"><div class="slot-label">Tower roof</div><div class="grid"><button data-tower-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-tower-roof="machicolation" class="${roof==='machicolation'&&!towerItalianMachicolation(s)?'active':''}">Machicolation</button><button data-tower-roof="machicolationItalian" ${s.shape==='half'?'disabled':''} class="${towerItalianMachicolation(s)?'active':''}">Caditoie all'italiana</button><button data-tower-roof="pitched" class="${roof==='pitched'?'active':''}">Falde</button></div><div class="legend">Machicolation: merlatura in aggetto con mensole. All'italiana: mensole alte quattro corsi raccordate da archetti (solo estetica, stesse regole). Predispone il futuro attacco verticale a raggio 1U.</div></div>`;
       if(s.shape!=='half')html+=hoardingSlot(s);
       if(s.shape!=='half'){
         const ir=towerInnerRoofMounted(s),irOk=towerInnerRoofAllowed(s);
@@ -355,6 +362,8 @@ function renderFunctionPanel(){
   window.ConquerCrossings?.bindPanel(slots);
   window.ConquerKeepEntrance?.bindPanel(slots);
   window.ConquerSoldiers?.bindTowerPanel?.(slots,s);
+  window.ConquerWallPatrols?.bindPanel?.(slots,s);
+  window.ConquerChurch?.bindPanel?.(slots);
   // Every control acts through StructureCommands (src/settlement-structure-commands.js), shared with UI v2.
   const on=(selector,fn,event='onclick')=>slots.querySelectorAll(selector).forEach(el=>el[event]=e=>{const target=selectedStructure();if(target)fn(target.id,el,e)});
   on('[data-house-up]',id=>StructureCommands.changeHouseLevel(id,1));

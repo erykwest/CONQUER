@@ -29,12 +29,10 @@
 
   // ---------- shaders ----------
   const CAMERA=`
-    uniform int uRot;uniform float uS;uniform vec2 uV;uniform float uPlan;uniform vec2 uVp;uniform vec2 uDepth;
+    uniform vec2 uRot;uniform float uS;uniform vec2 uV;uniform float uPlan;uniform vec2 uVp;uniform vec2 uDepth;
+    // uRot = (cos, sin) of the camera yaw: same map as rotateViewPoint, any angle.
     vec2 rotq(vec2 p){vec2 d=p-vec2(100.0);
-      if(uRot==1)return vec2(100.0-d.y,100.0+d.x);
-      if(uRot==2)return vec2(100.0-d.x,100.0-d.y);
-      if(uRot==3)return vec2(100.0+d.y,100.0-d.x);
-      return p;}
+      return vec2(100.0+d.x*uRot.x-d.y*uRot.y,100.0+d.x*uRot.y+d.y*uRot.x);}
     // Same affine map as w2sRaw (isometric or plan) plus a monotonic view depth (larger = nearer).
     vec4 cam(vec3 w,vec2 px){
       vec2 q=rotq(w.xy);vec2 s;float d;
@@ -101,7 +99,33 @@
       void main(){gl_Position=cam(aAnchor,aCorner*aSize*uS);vUV=aUV;}`,
       `#version 300 es
       precision mediump float;in vec2 vUV;uniform sampler2D uAtlas;out vec4 o;
-      void main(){vec4 c=texture(uAtlas,vUV);if(c.a<0.45)discard;o=vec4(c.rgb/max(c.a,1e-3),1.0);}`]
+      void main(){vec4 c=texture(uAtlas,vUV);if(c.a<0.45)discard;o=vec4(c.rgb/max(c.a,1e-3),1.0);}`],
+    // Figure cards (people, animals, vehicles) with capsule depth: the card is a flat picture, but
+    // every pixel takes the depth of the figure's capsule (segment aSeg0→aSeg1 from the feet, radius
+    // aRad) at the point of the axis nearest on screen, plus the radius towards the camera. People:
+    // vertical capsule, so the head is as near as a head really is; animals: horizontal capsule along
+    // the body, so a horse half behind a wall or a cut-away floor is hidden by its real depth.
+    card:[`#version 300 es
+      ${CAMERA}
+      in vec3 aAnchor;in vec2 aCorner;in float aSize;in vec2 aUV;in vec3 aSeg0;in vec3 aSeg1;in float aRad;
+      out vec2 vUV;out vec2 vPx;out vec2 vS0;out vec2 vS1;out float vD0;out float vD1;out float vBias;
+      vec3 sd(vec3 w){vec2 q=rotq(w.xy);
+        if(uPlan>0.5)return vec3(uV+q*uS,w.z);
+        return vec3(uV.x+(q.x-q.y)*uS*0.8660254,uV.y+(q.x+q.y)*uS*0.5-w.z*uS*0.9,q.x+q.y+0.9*w.z);}
+      void main(){
+        vec3 a=sd(aAnchor),b0=sd(aAnchor+aSeg0),b1=sd(aAnchor+aSeg1);
+        vPx=aCorner*aSize*uS;vS0=b0.xy-a.xy;vS1=b1.xy-a.xy;vD0=b0.z;vD1=b1.z;
+        vBias=uPlan>0.5?aRad:aRad*1.2;
+        gl_Position=cam(aAnchor,vPx);vUV=aUV;}`,
+      `#version 300 es
+      precision highp float;in vec2 vUV;in vec2 vPx;in vec2 vS0;in vec2 vS1;in float vD0;in float vD1;in float vBias;
+      uniform sampler2D uAtlas;uniform vec2 uDepth;out vec4 o;
+      void main(){vec4 c=texture(uAtlas,vUV);if(c.a<0.45)discard;
+        vec2 seg=vS1-vS0;float L=dot(seg,seg);
+        float t=L>0.25?clamp(dot(vPx-vS0,seg)/L,0.0,1.0):0.5;
+        float d=mix(vD0,vD1,t)+vBias;
+        gl_FragDepth=clamp(1.0-(d-uDepth.x)/(uDepth.y-uDepth.x),0.0,1.0);
+        o=vec4(c.rgb/max(c.a,1e-3),1.0);}`]
   };
 
   function ensureGL(){
@@ -403,15 +427,14 @@
     const m=meshBuilder();
     for(const f of State.environment||[]){
       if(f.type!=='mountain'||!(f.points?.length>=3))continue;
-      const apex={x:f.x,y:f.y,z:f.height||MOUNTAIN_HEIGHT};
       // Rock up to the snow line (75% of the height), snow cap above it.
       // Map-wide snow line (75% of the tallest summit): lower peaks may stay bare.
-      const k=typeof mountainSnowZ==='function'?Math.min(1,mountainSnowZ()/apex.z):1,s=p=>({x:f.x+(p.x-f.x)*(1-k),y:f.y+(p.y-f.y)*(1-k),z:apex.z*k});
-      for(let i=0;i<f.points.length;i++){
-        const a=f.points[i],b=f.points[(i+1)%f.points.length];
+      for(const q of mountainFacetPolygons(f,f.height||MOUNTAIN_HEIGHT)){
+        const {i,a,b}=q;
         const rock=typeof mountainFaceColor==='function'?mountainFaceColor(f,a,b,i):(window.ConquerStoneColor?.shade(MOUNTAIN_FACES[i%2])||MOUNTAIN_FACES[i%2]);
-        m.face([{x:a.x,y:a.y,z:0},{x:b.x,y:b.y,z:0},s(b),s(a)],rock);
-        if(k<1)m.face([s(a),s(b),apex],mountainSnowColor(f,a,b,i));
+        m.face(q.rock,rock);
+        if(q.snow.length)m.face(q.snow,mountainSnowColor(f,a,b,i));
+        for(const cut of q.cuts)m.face(cut,window.ConquerStoneColor?.shade('#514a40')||'#514a40');
       }
     }
     return new Float32Array(m.tris);
@@ -774,7 +797,7 @@
       }else if(s.type==='tavern'){
         const rA=winter?WINTER_ROOF[0]:'#3b302b',rB=winter?WINTER_ROOF[1]:'#493930';
         m.gabled(part.center,part.w,part.h,turn,angle+turn,g,1.48,2.08,'#684f3d','#7b5e48',rA,rB,'#80624a');
-      }else if(s.type==='townhall'||s.type==='guild'){
+      }else if(['townhall','guild','bargello','balivo'].includes(s.type)){
         if(part.role==='tower')m.prism(part.points,g,g+3.0,'#7a746b','#6d675f','#7a746b');
         else m.gabled(part.center,part.w,part.h,turn,angle+turn,g,1.7,2.4,'#7a746b','#8b847a',winter?WINTER_ROOF[0]:'#7a4433',winter?WINTER_ROOF[1]:'#8a4c39','#968e82');
       }else if(s.type==='church'){
@@ -828,7 +851,7 @@
   }
   function buildTrees(atlas){
     const v=[];if(!atlas)return new Float32Array(0);
-    const groves=(State.environment||[]).filter(f=>f.type==='forest').map(forestTreeLayout);
+    const groves=(State.environment||[]).filter(f=>f.type==='forest').map(f=>forestTreeLayout(f));
     groves.push(urbanLotCornerTrees());                  // single trees on plot corners
     for(const trees of groves){
       for(const t of trees){
@@ -842,6 +865,19 @@
         for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(t.p.x,t.p.y,z,cx,cy,size,u,w)}
       }
     }
+    // Woodland bushes stand upright, like trees; never bake them flat into ground.
+    let forestBushes=0;
+    for(const f of State.environment||[]){
+      if(f.type!=='forest'||typeof forestShrubLayout!=='function')continue;
+      for(const b of forestShrubLayout(f)){
+        const uv=atlas.map.get('bush:'+b.shape);if(!uv)continue;
+        let [u0,v0,u1,v1]=uv;if(b.flip)[u0,u1]=[u1,u0];
+        const hr=580/920*b.scale,C=[[-.5,-.97*hr,u0,v0],[.5,-.97*hr,u1,v0],[.5,.03*hr,u1,v1],[-.5,.03*hr,u0,v1]];
+        for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(b.p.x,b.p.y,b.z+.01,cx,cy,b.width*(b.visualScale??1),u,w)}
+        forestBushes++;
+      }
+    }
+    S.stats.forestBushes=forestBushes;
     // Pines on the lower half of the mountains, standing on the cone surface.
     for(const f of State.environment||[]){
       if(f.type!=='mountain'||!f.height||typeof mountainPineLayout!=='function')continue;
@@ -1125,7 +1161,7 @@
     const sun=sunShadowState();if(!sun)return{data:new Float32Array(0),alpha:0};
     const v=[];
     for(const s of State.structures){
-      if(underConstruction(s)||!['house','tower','gate','wall','palisade','built','market','tavern','church','plaza','townhall','guild','civicAnnex'].includes(s.type))continue;
+      if(underConstruction(s)||!['house','tower','gate','wall','palisade','built','market','tavern','church','plaza','townhall','guild','bargello','balivo','civicAnnex'].includes(s.type))continue;
       const {fp,h}=shadowCasterGeometry(s);if(!fp?.length||h<=0)continue;
       const len=h*sun.lengthPerHeight,ox=sun.dx*len,oy=sun.dy*len,cloud=[];
       for(const p of fp){cloud.push({x:p.x,y:p.y});cloud.push({x:p.x+ox,y:p.y+oy})}
@@ -1421,14 +1457,17 @@
   // One pass per check: each structure is hashed once and folded into the categories it belongs to.
   // Category tests look at fields only (no terrain sampling), so this stays well under a millisecond.
   let sigPass=null;
+  // The per-structure visual fields are structureVisualKey (settlement-render.js), shared with the 2.5D
+  // castle body bitmap key: variants (hoarding, a gate's timber upper storey...), rooms, exterior damage.
   function structureKey(s){
-    return s.id+(underConstruction(s)?'u':'c')+(s.level||'')+(s.houseLevel||'')+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.b?.x??'')+(s.b?.y??'')+(s.angle||0)+(s.roofStyle||'')+(s.bartizan||'')+(s.bell||'')+(s.innerRoof||'')+(s.signalFire||'')+(s.signalFireSpent?'F':'')+(s.roofShape||'')+(s.baseStyle||'')+(s.skin||'')+(s.masonryMaterial||'stone')+(s.cutaway?1:0)+(s.width||'')+(s.span||'')+(s.material||'')+(s.groundZ??'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0)
+    return (typeof structureVisualKey==='function'?structureVisualKey(s):s.id+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.level||''))
+      +(underConstruction(s)?'u':'c')+(s.houseLevel||'')+(s.span||'')
+      // A subtower's crest follows its parent's floor in view (cutawayCrestHidden).
+      +(typeof cutawayCrestHidden==='function'&&cutawayCrestHidden(s)?'h':'')
       // Moat fill patches are baked into the ground: filling must re-bake it.
       +(s.fills?.length?s.fills.map(f=>(+f.at).toFixed(2)+':'+f.span+':'+(+f.progress).toFixed(3)).join(','):'')
       // The gate door's state swaps its facade decal.
-      +(s.type==='gate'?(window.ConquerSiege?.doorStage?.(s)||''):'')+(s.brokenTop?'B':'')
-      // Room functions with an exterior element change the outside (and their broken state).
-      +(s.functions?.some(fn=>window.ConquerRoomExterior?.spec(fn))?JSON.stringify(s.functions)+JSON.stringify(s.roomExteriorHp||null):'')
+      +(s.type==='gate'?(window.ConquerSiege?.doorStage?.(s)||''):'')
       // Mills swap to their gutted model mid-fire.
       +(window.ConquerIndustries3D?.variant?.(s)||'');
   }
@@ -1530,7 +1569,9 @@
     }
     // Castle side tones and the near/far battlement split depend on the quarter-turn: keep one mesh set
     // per rotation/plan variant so turning the camera back and forth never rebuilds.
-    const castleContent=[season,State.visualPalette,State.stonePaletteId,structuresSig('castle')].join('|');
+    // Merlon style and roof pitch are realm-wide policies (a paid restyle): they reshape every castle mesh.
+    const castleContent=[season,State.visualPalette,State.stonePaletteId,typeof crenelStyle==='function'?crenelStyle():'',
+      typeof roofPitch==='function'?roofPitch():'',structuresSig('castle')].join('|');
     if(S.castleContent!==castleContent){
       for(const v of S.castleVariants?.values()||[])for(const p of Object.values(v))gl.deleteBuffer(p.b);
       S.castleContent=castleContent;S.castleVariants=new Map();
@@ -1617,7 +1658,7 @@
   function useProgram(gl,prog){gl.useProgram(prog.p);gl.bindVertexArray(prog.vao)}
   function setCamera(gl,prog,r){
     const L=prog.loc,plan=isPlanView();
-    gl.uniform1i(L.uRot,((State.view.rotation||0)%4+4)%4);gl.uniform1f(L.uS,U*State.view.scale);
+    {const q=((State.view.rotation||0)%4+4)%4,r=Number.isInteger(q)?[[1,0],[0,1],[-1,0],[0,-1]][q]:[Math.cos(q*Math.PI/2),Math.sin(q*Math.PI/2)];gl.uniform2f(L.uRot,r[0],r[1]);}gl.uniform1f(L.uS,U*State.view.scale);
     gl.uniform2f(L.uV,State.view.x,State.view.y);gl.uniform1f(L.uPlan,plan?1:0);gl.uniform2f(L.uVp,r.width,r.height);
     gl.uniform2f(L.uDepth,plan?-5:-80,plan?30:480);
   }
@@ -1729,10 +1770,7 @@
       uploadAtlas(gl);
       let b=S.buf.soldiers;if(!b){b=gl.createBuffer();S.buf.soldiers=b}
       gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,soldiers,gl.STREAM_DRAW);
-      const sp=S.prog.sprite;useProgram(gl,sp);setCamera(gl,sp,r);
-      gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,S.tex.soldierAtlas);gl.uniform1i(sp.loc.uAtlas,0);
-      bindAttrib(gl,sp,'aAnchor',b,3,32,0);bindAttrib(gl,sp,'aCorner',b,2,32,12);bindAttrib(gl,sp,'aSize',b,1,32,20);bindAttrib(gl,sp,'aUV',b,2,32,24);
-      gl.drawArrays(gl.TRIANGLES,0,soldiers.length/8);
+      drawCards(gl,r,b,soldiers.length);
     }
     gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,1);
     drawMesh(gl,r,'castleFront');gl.disable(gl.POLYGON_OFFSET_FILL);drawMesh(gl,r,'castleFrontLines',gl.LINES);
@@ -1765,13 +1803,14 @@
     }
     return A.free.pop();
   }
-  function atlasTile(key,paint){
+  // span > 1: a wider card (vehicles) painted at SOLDIER_SR/span into the same 64px tile.
+  function atlasTile(key,paint,span=1){
     const hit=soldierAtlas.map.get(key);if(hit){hit.used=soldierAtlas.frame;return hit.uv}
     if(!soldierAtlas.canvas){soldierAtlas.canvas=document.createElement('canvas');soldierAtlas.canvas.width=soldierAtlas.canvas.height=FIG_ATLAS;soldierAtlas.g=soldierAtlas.canvas.getContext('2d',{willReadFrequently:true})}
     const i=takeSlot(),x=(i%FIG_COLS)*SOLDIER_TILE,y=Math.floor(i/FIG_COLS)*SOLDIER_TILE;
     const g=soldierAtlas.g;g.clearRect(x,y,SOLDIER_TILE,SOLDIER_TILE);   // CPU canvas: tile readback is cheap
     const keepView=State.view,keepW2s=w2s;
-    State.view={...keepView,scale:SOLDIER_SR};
+    State.view={...keepView,scale:SOLDIER_SR/(span>0?span:1)};
     w2s=()=>({x:x+SOLDIER_TILE/2,y:y+SOLDIER_TILE*SOLDIER_FEET});      // figure painters project only the feet
     try{withRenderContext(g,()=>paint(g,x,y))}
     catch(e){console.error(e)}
@@ -1797,11 +1836,25 @@
   // (look, pose, animation phase bucket, facing); paint() draws it with the figure painters, which
   // only project the feet point. Returns false outside a 3D frame (the caller paints in 2D).
   // mirror: the picture faces left (paint() always draws it facing right; the card flips it).
+  // card (optional): {span, ox} — span scales the card (FIGURE_CARD_U*span wide, painted at
+  // SOLDIER_SR/span, so the key must include it); ox shifts the card sideways on screen by
+  // ox card widths, for pictures whose feet point is not their middle (a wagon and its team).
   let figuresOn=true;   // benchmark switch: false paints civilians in 2D as before
-  function figure(p,z,key,paint,id=key,mirror=false){
+  // Unit world direction that the current view shows pointing right on screen (times facing):
+  // the body axis of a side-on animal that has no heading of its own.
+  function screenAxis(facing=1){
+    const o=w2sRaw({x:0,y:0},0),px=w2sRaw({x:1,y:0},0),py=w2sRaw({x:0,y:1},0);
+    const ax=px.x-o.x,ay=px.y-o.y,bx=py.x-o.x,by=py.y-o.y,det=ax*by-bx*ay||1;
+    const x=by/det,y=-ay/det,l=Math.hypot(x,y)||1,f=facing<0?-1:1;
+    return{x:x/l*f,y:y/l*f};
+  }
+  // card.capsule (optional): {axis:{x,y} half-length vector, z, r, kind} — a horizontal capsule
+  // (animals); without it the figure stands in the vertical person capsule.
+  function figure(p,z,key,paint,id=key,mirror=false,card=null){
     if(!collecting||!figuresOn)return false;
     const ground=Number.isFinite(structureProjectionGroundZ)?structureProjectionGroundZ:terrainElevation(p);
-    collecting.push({p:{x:p.x,y:p.y},z:z+ground,key:'civ|'+key,paint,id,type:'civilian',mirror:!!mirror});
+    const span=card&&card.span>0?card.span:1,ox=card&&Number.isFinite(card.ox)?card.ox:0;
+    collecting.push({p:{x:p.x,y:p.y},z:z+ground,key:'civ|'+key,paint,id,type:'civilian',mirror:!!mirror,span,ox,capsule:card?.capsule||null});
     return true;
   }
   // Prepare poses ahead ([{key,paint}]): painted in idle time, a few at a time, so a phase change
@@ -1844,20 +1897,42 @@
       g.beginPath();g.arc(x+SOLDIER_TILE/2,cy,r,0,Math.PI*2);g.fill();g.stroke();
     }:()=>drawSoldierFigureUnmasked({x:0,y:0},0,type,'FIG_ATLAS',bucket/8,livery));
   }
+  // Capsules (world units, relative to the feet point): people stand in a vertical one; an animal
+  // lies in a horizontal one along its heading (capsule.axis = half-length vector, z = axis height,
+  // r = radius). The capsule gives the card its per-pixel depth (SRC.card) and the picking collider.
+  const PERSON_CAPSULE={seg0:[0,0,CAPSULE.r],seg1:[0,0,CAPSULE.above],r:CAPSULE.r};
+  function cardCapsule(s){
+    const c=s.capsule;if(!c)return PERSON_CAPSULE;
+    const ax=c.axis?.x||0,ay=c.axis?.y||0,z=c.z||0;
+    return{seg0:[-ax,-ay,z],seg1:[ax,ay,z],r:c.r||.1};
+  }
+  const CARD_FLOATS=15;
   function buildSoldiers(list){
     const v=[],out=[];
     const herald=JSON.stringify(State.heraldry||null);
     if(soldierAtlas.heraldry!==herald){clearAtlas();soldierAtlas.heraldry=herald}
     soldierAtlas.frame++;
     for(const s of list){
-      let [u0,v0,u1,v1]=s.paint?atlasTile(s.key,s.paint):soldierTile(s.type,s.phase,s.livery);
+      const span=s.span||1,ox=s.ox||0,cap=cardCapsule(s);
+      let [u0,v0,u1,v1]=s.paint?atlasTile(s.key,s.paint,span):soldierTile(s.type,s.phase,s.livery);
       if(s.mirror)[u0,u1]=[u1,u0];
-      const C=[[-.5,-SOLDIER_FEET,u0,v0],[.5,-SOLDIER_FEET,u1,v0],[.5,1-SOLDIER_FEET,u1,v1],[-.5,1-SOLDIER_FEET,u0,v1]];
-      for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(s.p.x,s.p.y,s.z,cx,cy,SOLDIER_SIZE_U,u,w)}
+      const C=[[ox-.5,-SOLDIER_FEET,u0,v0],[ox+.5,-SOLDIER_FEET,u1,v0],[ox+.5,1-SOLDIER_FEET,u1,v1],[ox-.5,1-SOLDIER_FEET,u0,v1]];
+      for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(s.p.x,s.p.y,s.z,cx,cy,SOLDIER_SIZE_U*span,u,w,...cap.seg0,...cap.seg1,cap.r)}
       if(!s.paint)out.push({id:s.id,type:s.type,x:s.p.x,y:s.p.y,z0:s.z-CAPSULE.below,z1:s.z+CAPSULE.above,r:CAPSULE.r});
+      else if(s.capsule){
+        // Animal collider: the same horizontal capsule (segment from x-ax to x+ax at height z).
+        out.push({id:s.id,type:s.capsule.kind||'animal',x:s.p.x,y:s.p.y,ax:cap.seg1[0],ay:cap.seg1[1],z0:s.z+cap.seg0[2],z1:s.z+cap.seg1[2],r:cap.r});
+      }
     }
     colliders=out;
     return new Float32Array(v);
+  }
+  function drawCards(gl,r,b,floats){
+    const sp=S.prog.card,st=CARD_FLOATS*4;useProgram(gl,sp);setCamera(gl,sp,r);
+    gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,S.tex.soldierAtlas);gl.uniform1i(sp.loc.uAtlas,0);
+    bindAttrib(gl,sp,'aAnchor',b,3,st,0);bindAttrib(gl,sp,'aCorner',b,2,st,12);bindAttrib(gl,sp,'aSize',b,1,st,20);bindAttrib(gl,sp,'aUV',b,2,st,24);
+    bindAttrib(gl,sp,'aSeg0',b,3,st,32);bindAttrib(gl,sp,'aSeg1',b,3,st,44);bindAttrib(gl,sp,'aRad',b,1,st,56);
+    gl.drawArrays(gl.TRIANGLES,0,floats/CARD_FLOATS);
   }
   // Ray through a screen point (CSS px of #c): world points P(z) = s2wAtElevation(sx, sy, z) are collinear.
   function screenRay(sx,sy){
@@ -1865,14 +1940,22 @@
     return{o:{x:a.x,y:a.y,z:0},d:{x:b.x-a.x,y:b.y-a.y,z:10}};
   }
   // Distance between the ray line and a capsule axis segment (closest points of two 3D lines, clamped).
+  // The segment runs from (x-ax, y-ay, z0) to (x+ax, y+ay, z1): vertical for people (ax=ay=0),
+  // horizontal along the body for animals.
   function rayCapsule(ray,c){
-    if(isPlanView()){const dx=ray.o.x-c.x,dy=ray.o.y-c.y;return{dist:Math.hypot(dx,dy),t:c.z1}}
-    const u=ray.d,v={x:0,y:0,z:c.z1-c.z0},w={x:ray.o.x-c.x,y:ray.o.y-c.y,z:ray.o.z-c.z0};
-    const a=u.x*u.x+u.y*u.y+u.z*u.z,b=u.z*v.z,cc=v.z*v.z,d=u.x*w.x+u.y*w.y+u.z*w.z,e=v.z*w.z,den=a*cc-b*b;
-    let sN=den>1e-12?(b*e-cc*d)/den:0,tN=den>1e-12?(a*e-b*d)/den:0;
-    tN=clamp(tN,0,1);sN=(b*tN-d)/a;                                 // re-project onto the ray after clamping
-    const px=ray.o.x+u.x*sN-c.x,py=ray.o.y+u.y*sN-c.y,pz=ray.o.z+u.z*sN-(c.z0+v.z*tN);
-    return{dist:Math.hypot(px,py,pz),t:c.z0+v.z*tN};
+    const ax=c.ax||0,ay=c.ay||0,o={x:c.x-ax,y:c.y-ay,z:c.z0};
+    if(isPlanView()){
+      // Plan: the ray is vertical, distance to the segment's footprint.
+      const sx=2*ax,sy=2*ay,L=sx*sx+sy*sy,k=L>1e-12?clamp(((ray.o.x-o.x)*sx+(ray.o.y-o.y)*sy)/L,0,1):0;
+      return{dist:Math.hypot(ray.o.x-o.x-sx*k,ray.o.y-o.y-sy*k),t:c.z1};
+    }
+    const u=ray.d,v={x:2*ax,y:2*ay,z:c.z1-c.z0},w={x:ray.o.x-o.x,y:ray.o.y-o.y,z:ray.o.z-o.z};
+    const dot=(p,q)=>p.x*q.x+p.y*q.y+p.z*q.z;
+    const a=dot(u,u),b=dot(u,v),cc=dot(v,v),d=dot(u,w),e=dot(v,w),den=a*cc-b*b;
+    let tN=den>1e-12?(a*e-b*d)/den:0;
+    tN=clamp(tN,0,1);const sN=(b*tN-d)/a;                           // re-project onto the ray after clamping
+    const px=ray.o.x+u.x*sN-(o.x+v.x*tN),py=ray.o.y+u.y*sN-(o.y+v.y*tN),pz=ray.o.z+u.z*sN-(o.z+v.z*tN);
+    return{dist:Math.hypot(px,py,pz),t:o.z+v.z*tN};
   }
   function pickSoldier(sx,sy){
     const ray=screenRay(sx,sy);let best=null;
@@ -1886,8 +1969,15 @@
   function drawColliderDebug(){
     ctx.save();ctx.lineWidth=1;
     for(const c of colliders){
-      const ring=z=>circleWorldPoints(c.x,c.y,c.r,16).map(p=>w2sRaw(p,z));
       const hl=S.hover&&S.hover.id===c.id;ctx.strokeStyle=hl?'rgba(255,214,90,.95)':'rgba(120,220,255,.75)';
+      if(c.ax||c.ay){
+        // Horizontal (animal) capsule: a sphere outline at each end and the axis between them.
+        const ends=[{x:c.x-c.ax,y:c.y-c.ay,z:c.z0},{x:c.x+c.ax,y:c.y+c.ay,z:c.z1}];
+        for(const e of ends){const s=w2sRaw(e,e.z);ctx.beginPath();ctx.arc(s.x,s.y,c.r*U*State.view.scale,0,Math.PI*2);ctx.stroke()}
+        const a=w2sRaw(ends[0],ends[0].z),b=w2sRaw(ends[1],ends[1].z);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+        continue;
+      }
+      const ring=z=>circleWorldPoints(c.x,c.y,c.r,16).map(p=>w2sRaw(p,z));
       for(const z of [c.z0,c.z1]){const pts=ring(z);ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.stroke()}
       const l0=w2sRaw({x:c.x-c.r,y:c.y},c.z0),l1=w2sRaw({x:c.x-c.r,y:c.y},c.z1),r0=w2sRaw({x:c.x+c.r,y:c.y},c.z0),r1=w2sRaw({x:c.x+c.r,y:c.y},c.z1);
       ctx.beginPath();ctx.moveTo(l0.x,l0.y);ctx.lineTo(l1.x,l1.y);ctx.moveTo(r0.x,r0.y);ctx.lineTo(r1.x,r1.y);ctx.stroke();
@@ -1976,10 +2066,7 @@
     if(inside.length&&S.tex.soldierAtlas){
       const data=buildSoldiers(inside);let b=S.buf.indoorFigures;if(!b){b=gl.createBuffer();S.buf.indoorFigures=b}
       gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,data,gl.STREAM_DRAW);
-      const sp=S.prog.sprite;gl.useProgram(sp.p);setCamera(gl,sp,r);
-      gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,S.tex.soldierAtlas);gl.uniform1i(sp.loc.uAtlas,0);
-      bindAttrib(gl,sp,'aAnchor',b,3,32,0);bindAttrib(gl,sp,'aCorner',b,2,32,12);bindAttrib(gl,sp,'aSize',b,1,32,20);bindAttrib(gl,sp,'aUV',b,2,32,24);
-      gl.drawArrays(gl.TRIANGLES,0,data.length/8);
+      drawCards(gl,r,b,data.length);
       colliders=S.frameColliders||colliders;
     }
     gl.depthMask(true);
@@ -2069,8 +2156,8 @@
   }
   window.ConquerWorld3D={active,supported,setEnabled,drawBack,drawCastleOverlays,drawFront,
     drawNightLights3D,nightLightsEnabled,setNightLightsEnabled,drawMastioDrapes,drawEmissive,finishFrame,_setActiveForTest,
-    pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,addHouse,addOutbuilding,figure,prewarmFigures,_setFiguresForTest:on=>{figuresOn=!!on},
-    atlasCanvas:()=>soldierAtlas.canvas,frameFigures:()=>(S.frameFigures||[]).map(f=>({key:f.key||f.type,p:f.p,z:f.z,mirror:f.mirror})),atlasStats:()=>({tiles:soldierAtlas.next,capacity:FIG_COLS*FIG_COLS,resets:soldierAtlas.resets,painted:soldierAtlas.painted}),
+    pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,addHouse,addOutbuilding,figure,screenAxis,prewarmFigures,_setFiguresForTest:on=>{figuresOn=!!on},FIGURE_CARD_U:SOLDIER_SIZE_U,FIGURE_FEET:SOLDIER_FEET,
+    atlasCanvas:()=>soldierAtlas.canvas,frameFigures:()=>(S.frameFigures||[]).map(f=>({key:f.key||f.type,p:f.p,z:f.z,mirror:f.mirror,span:f.span||1,ox:f.ox||0,id:f.id,capsule:f.capsule||null})),atlasStats:()=>({tiles:soldierAtlas.next,capacity:FIG_COLS*FIG_COLS,resets:soldierAtlas.resets,painted:soldierAtlas.painted}),
     invalidate:()=>{S.sig={};S.contentDirty=true},
     _debugBake:bakeGround,
     status:()=>({enabled,supported:supported(),failed:S.failed,stats:{...S.stats},sig:{...S.sig},buffers:Object.fromEntries(Object.entries(S.buf).filter(([k])=>k.endsWith('#n')))})};

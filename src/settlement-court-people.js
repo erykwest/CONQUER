@@ -13,7 +13,7 @@
   const SESSION_START=.375,SESSION_END=.71;   // 9:00 - 17:00
   let occupancySource=null;
   const W=()=>window.ConquerWardrobe,C3=()=>window.ConquerCivic3D;
-  function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+  const hash=window.ConquerUtil.hash;
   const frac=x=>x-Math.floor(x);
   // Monday-Friday, by day, while the bell is silent.
   function inSession(){
@@ -29,17 +29,29 @@
   function courtBuilding(){
     if(typeof State==='undefined'||!State.selectedId)return null;
     const s=(State.structures||[]).find(o=>o.id===State.selectedId);
-    if(!s||s.type!=='townhall'||!C3()?.cutawayActive?.(s))return null;
+    if(!s||!STAFFED.has(s.type)||!C3()?.cutawayActive?.(s))return null;
     return s;
   }
+  // Town hall (tribunal, prison) and the other staffed civic interiors (ConquerCivic3D.roomSlots).
+  const STAFFED=new Set(['townhall','church','tavern','bargello','balivo']);
+  // Sunday Mass, 6:00-12:00: the residents' Sunday morning at church (settlement-population-*male.js).
+  const MASS_START=.25,MASS_END=.5,SUNDAY=6;
+  function massInSession(){
+    if(typeof State==='undefined')return false;
+    const day=Number(State.clock?.day)||0;
+    const weekday=window.ConquerEconomy?.weekday?.(day)??(((Math.floor(day)%7)+7)%7);
+    if(weekday!==SUNDAY||(window.ConquerCombat?.alarmMode?.()||'off')!=='off')return false;
+    const f=typeof visualCycleFrac==='function'?visualCycleFrac():frac(day);
+    return f>=MASS_START&&f<MASS_END;
+  }
   function slots(s){
-    const list=C3()?.roomSlots?.(s)||[];
+    const list=(C3()?.roomSlots?.(s)||[]).concat(s?.type==='church'&&massInSession()?C3()?.massSlots?.(s)||[]:[]);
     return occupancySource?occupancySource(s,list)||[]:list;
   }
   // Actors at time t (seconds): pure, so the scene can be tested without a canvas.
   function scene(s,t){
     return slots(s).map(sl=>{
-      const ph=hash(s.id+':'+sl.id)%1000/1000,a={...sl,phase:frac(t*.35+ph),gesture:0,bob:0,sway:0};
+      const ph=hash(s.id+':'+sl.id)%1000/1000,a={...sl,phase:frac(t*.35+ph),gesture:0,bob:0,sway:0,t};
       if(sl.action==='preside'){const c=frac(t/7+ph);a.gesture=c<.22?Math.sin(c/.22*Math.PI):0}
       else if(sl.action==='write')a.gesture=.5+.5*Math.sin(t*5+ph*9);
       else if(sl.action==='bound')a.sway=Math.sin(t*.9+ph*6)*.012;
@@ -50,15 +62,18 @@
     });
   }
   // ---------- figures
-  const ROLE_DRESS={judge:['judgeRobe','judgeCap'],clerk:['clerkGown','clerkCap'],prisoner:['prisonerShirt'],executioner:['executionerHood']};
+  const ROLE_DRESS={judge:['judgeRobe','judgeCap'],clerk:['clerkGown','clerkCap'],prisoner:['prisonerShirt'],executioner:['executionerHood'],
+    jailer:['jerkin','leatherCap','keys']};
   const PUBLIC_KINDS=['peasant','peasant','artisan','artisan','merchant'];
   function dotOf(s,a,p){
     const id=s.id+':court:'+a.id,kind=a.role==='public'?PUBLIC_KINDS[hash(id)%PUBLIC_KINDS.length]:['prisoner','executioner','jailer'].includes(a.role)?'peasant':'elite';
     const sex=a.role==='public'&&hash(id+':sex')%2?'female':'male';
     const colors=typeof villagerBodyColors==='function'?villagerBodyColors(id,kind):['#8c6b3f','#5d4a33'];
     const hair=a.role==='prisoner'?'brown':typeof villagerHair==='function'?villagerHair(id):'brown';
-    const dress=ROLE_DRESS[a.role];
+    const dress=ROLE_DRESS[a.role],trade=!dress&&W()?.ROLES?.[a.role];
     const own={prisoner:['#8a7f6a','#6d6352'],executioner:['#2e2624','#221c1b'],jailer:['#5a4030','#3e2c21']}[a.role];
+    // A trade (settlement-wardrobe.js ROLES) dresses for the season in its free slots; a costume of office does not.
+    if(trade)return{p,id,kind:window.ConquerStaffPeople?.KIND?.[a.role]||kind,role:a.role,sex,age:'adult',hair,colors:own||colors};
     return{p,id,kind,sex,age:'adult',hair,colors:own||colors,
       outfit:dress?W()?.compose(dress,id,kind)??null:null};
   }
@@ -73,15 +88,34 @@
     ctx.beginPath();ctx.moveTo(from.x,from.y);ctx.lineTo(to.x,to.y);ctx.stroke();
     ctx.fillStyle=VILLAGER_SKIN;ctx.beginPath();ctx.arc(to.x,to.y,Math.max(.5,.55*scale),0,Math.PI*2);ctx.fill();
   }
-  function drawActor(s,a,toWorld,ground){
+  // World3D: each actor is a depth-tested card in the vertical person capsule (settlement-world3d.js
+  // figure()), so the pillory, the gallows deck, the bench and the cut-away walls hide it by their
+  // real depth. Gestures are bucketed into a few poses. Returns false outside a 3D frame.
+  function cardActor(s,a,toWorld,ground){
+    const W=window.ConquerWorld3D;if(!W?.active?.()||!W.figure)return false;
+    const p=toWorld(a.x+a.sway,a.y),g=Math.round(Math.max(0,Math.min(1,a.gesture||0))*4)/4;
+    const z=ground+a.z+a.bob-(typeof terrainElevation==='function'?terrainElevation(p):0);
+    // Staff at work: the trade's stroke in 16 steps of a quarter second (a 4 s loop).
+    const step=a.tool?Math.floor(((a.t||0)*4)%16):0;
+    const key='court|'+s.id+'|'+a.id+'|'+a.role+'|'+a.action+'|'+g+'|'+step+'|'+(a.facing||1);
+    const b={...a,sway:0,bob:0,gesture:g,t:a.tool?step/4:a.t};
+    return W.figure(p,z,key,()=>paintActorAt(s,b,p),s.id+':court:'+a.id);
+  }
+  function drawActor(s,a,toWorld,ground,noCard=false){
+    if(!noCard&&cardActor(s,a,toWorld,ground))return;
     const p=toWorld(a.x+a.sway,a.y);
-    withProjectionGroundZ(ground+a.z+a.bob,()=>{
+    withProjectionGroundZ(ground+a.z+a.bob,()=>paintActorAt(s,a,p));
+  }
+  function paintActorAt(s,a,p){
+    {
       if(a.role==='guard'){drawSoldierFigureUnmasked(p,.09,'spearman',s.id+':court:'+a.id,a.phase);return}
       const dot=dotOf(s,a,p);
+      // Staff at work: the gesture of the trade (settlement-work-anim.js).
+      if(a.tool&&window.ConquerWorkAnim){window.ConquerWorkAnim.drawWorkerUnmasked(dot,a.tool,a.t??0,a.facing||1);return}
       drawVillagerFigureUnmasked(dot);
       const F=frame(p);if(F.scale<.16)return;
       const sleeve=darken(dot.outfit?.sleeve||dot.colors[0],.78);
-      if(a.role==='judge'&&a.gesture>0){
+      if((a.role==='judge'||a.role==='bailiff')&&a.gesture>0){
         // The presiding judge raises his right hand to speak.
         const sh={x:F.base.x+F.bodyW*.2,y:F.top+F.bodyH*.2};
         arm(sh,{x:sh.x+F.bodyW*.25,y:sh.y-F.bodyH*(.15+.35*a.gesture)},sleeve,F.scale);
@@ -114,13 +148,16 @@
         ctx.strokeStyle='#c2a46a';ctx.lineWidth=Math.max(.5,.45*F.scale);
         ctx.beginPath();ctx.ellipse(m.x,y,F.bodyW*.14,F.bodyH*.05,0,0,Math.PI*2);ctx.stroke();
       }
-    });
+    }
   }
   // Painted after the buildings, back to front.
   function draw(){
     const t=window.ConquerWorkAnim?.now?.()??performance.now()/1000;
     drawJustice(t);
     const s=courtBuilding();if(!s)return;
+    const ground0=typeof placementGroundZ==='function'&&Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s);
+    // Church, tavern, Bargello, Balivo: their people are in by day (settlement-staff-people.js).
+    if(s.type!=='townhall'){if(window.ConquerStaffPeople?.onDuty?.())paintActors(s,scene(s,t),ground0);return}
     // The tribunal sits by day; the prison is never empty.
     const role=C3().townhallRole?.(s,C3().visibleFloor(s));
     if(role!=='prison'&&!(role==='tribunal'&&inSession()))return;
@@ -231,12 +268,14 @@
     let order=actors.map(a=>({a,d:viewDepthPoint(toWorld(a.x,a.y))})).sort((p,q)=>p.d-q.d);
     if(bars){
       // Prisoners (behind the bars) first, then the bars, then whoever stands outside the cells.
+      // The bars are a 2D overlay, so the prisoners behind them stay 2D too (a card would cover them).
       const inside=order.filter(o=>o.a.role==='prisoner');
-      for(const {a} of inside)drawActor(s,a,toWorld,ground);
+      for(const {a} of inside)drawActor(s,a,toWorld,ground,true);
       paintBars(s,bars,toWorld,ground);
       order=order.filter(o=>o.a.role!=='prisoner');
     }
     for(const {a,d} of order){
+      if(cardActor(s,a,toWorld,ground))continue;   // World3D: depth-tested card, no clip needed
       // On the ground behind the work: hidden where the work stands in front.
       if(occluder&&a.z<.05&&d<occluder.depth){
         ctx.save();ctx.beginPath();ctx.rect(-1e4,-1e4,3e4,3e4);
@@ -251,9 +290,9 @@
     const g=typeof structureProjectionGroundZ!=='undefined'&&Number.isFinite(structureProjectionGroundZ)?structureProjectionGroundZ:terrainElevation(p);
     const a={id:'cell',role:'prisoner',action:sitting?'sit':'bars',x:0,y:0,z:floorZ-(sitting?.1:0),
       phase,gesture:.5+.5*Math.sin(phase*Math.PI*2),bob:0,sway:0};
-    drawActor({id},a,()=>p,g);
+    drawActor({id},a,()=>p,g,true);   // behind the cell's 2D bars: stays 2D
   }
   function setOccupancySource(fn){occupancySource=typeof fn==='function'?fn:null}
-  window.ConquerCourtPeople={SESSION_START,SESSION_END,PILLORY_HOURS,JUSTICE_DAY,JUSTICE_HOURS,inSession,courtBuilding,slots,scene,
+  window.ConquerCourtPeople={SESSION_START,SESSION_END,MASS_START,MASS_END,PILLORY_HOURS,JUSTICE_DAY,JUSTICE_HOURS,inSession,massInSession,courtBuilding,slots,scene,
     justiceInSession,justiceSlots,justiceScene,draw,dotOf,drawCellPrisoner,setOccupancySource};
 })();

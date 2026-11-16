@@ -13,13 +13,17 @@ function rotateViewPoint(p,turns=State.view.rotation||0){
   if(q===1)return{x:c-dy,y:c+dx};
   if(q===2)return{x:c-dx,y:c-dy};
   if(q===3)return{x:c+dy,y:c-dx};
-  return{x:p.x,y:p.y};
+  if(q===0)return{x:p.x,y:p.y};
+  // Free camera rotation: `turns` may be fractional (quarter-turn units, 1/6 = 15°).
+  const a=q*Math.PI/2,ca=Math.cos(a),sa=Math.sin(a);
+  return{x:c+dx*ca-dy*sa,y:c+dx*sa+dy*ca};
 }
 function unrotateViewPoint(p,turns=State.view.rotation||0){return rotateViewPoint(p,-turns)}
 const reliefBandCache=new Map();
 let reliefBandSpatialCache=null;
 function reliefLevels(){return State.relief?.hills?.flatMap(h=>h.levels||[])||[]}
-function clearReliefBandCache(){reliefBandCache.clear();reliefBandSpatialCache=null;terrainElevationIndex=null;placementGroundZMemo=new WeakMap()}
+let reliefBandRevision=0; // bumped with every band cache reset; keys view-space relief memos
+function clearReliefBandCache(){reliefBandRevision++;reliefBandCache.clear();reliefBandSpatialCache=null;terrainElevationIndex=null;placementGroundZMemo=new WeakMap()}
 function reliefEdgeBands(level){
   if(reliefBandCache.has(level.id))return reliefBandCache.get(level.id);
   const pts=level.top||[];if(pts.length<3)return[];
@@ -58,7 +62,7 @@ function reliefBandAt(p){
     for(const level of reliefLevels())for(const band of reliefEdgeBands(level)){
       for(let x=Math.floor(band.minX/size);x<=Math.floor(band.maxX/size);x++)
         for(let y=Math.floor(band.minY/size);y<=Math.floor(band.maxY/size);y++){
-          const key=x+','+y;
+          const key=x*65536+y; // numeric cell key: |y| stays far below 32768
           if(!cells.has(key))cells.set(key,[]);
           cells.get(key).push(band);
         }
@@ -67,7 +71,7 @@ function reliefBandAt(p){
   }
   const {cells,size}=reliefBandSpatialCache;
   let gentle=null;
-  for(const band of cells.get(Math.floor(p.x/size)+','+Math.floor(p.y/size))||[]){
+  for(const band of cells.get(Math.floor(p.x/size)*65536+Math.floor(p.y/size))||[]){
     if(p.x<band.minX||p.x>band.maxX||p.y<band.minY||p.y>band.maxY)continue;
     if(!pointInPolygon(p,band.poly))continue;
     if(band.kind==='steep')return band;
@@ -248,6 +252,8 @@ function structureHeight(s){
   if(s.type==='church')return 3.35;
   if(s.type==='townhall')return [2.6,3.2,3.8][civicLevel(s)-1];
   if(s.type==='guild')return [2.4,3.1,3.6][civicLevel(s)-1];
+  if(s.type==='bargello')return [3.9,4.9][civicLevel(s)-1];
+  if(s.type==='balivo')return [2.6,3.0][civicLevel(s)-1];
   if(s.type==='training')return .10;
   return 0;
 }
@@ -365,7 +371,7 @@ function unionGroundContactRings(polys){
     return polys;
   }
 }
-const PLACEMENT_FOUNDATION_TYPES=new Set(['tower','gate','tavern','church','townhall','guild']);
+const PLACEMENT_FOUNDATION_TYPES=new Set(['tower','gate','tavern','church','townhall','guild','bargello','balivo']);
 function isPlacementFoundationBuilding(s){
   // A tower against a quay stands on the quay's plinth instead (settlement-quay.js).
   return !!s&&!s.auto&&!s.quaySnap&&PLACEMENT_FOUNDATION_TYPES.has(s.type);
@@ -714,6 +720,15 @@ function cutawayFloorBasis(s,g){
     h:Math.max(.18,d.h-g.thickness*2)
   };
 }
+// Stone tower storeys: P1 sits at the curtain wall-walk (the top of an H2 wall, 2.10), so the
+// wall-walk doors open onto its floor; the storeys above share the rest of the height evenly.
+const CURTAIN_WALK_Z=2.10;
+function towerUpperFloorZ(s,i){
+  const level=structureLevel(s),h=structureHeight(s);
+  if(i<=0)return .055;
+  if(s?.type!=='tower'||isWoodTower(s)||level<2||h-CURTAIN_WALK_Z<(level-1)*1.1)return h*i/level;
+  return i===1?CURTAIN_WALK_Z:CURTAIN_WALK_Z+(h-CURTAIN_WALK_Z)*(i-1)/(level-1);
+}
 function cutawayFloorLevels(s){
   // Wide halls keep the full height free: a single ground floor at L2.
   const level=s.type==='built'?builtInteriorFloors(s):structureLevel(s),h=structureHeight(s),floors=[{z:.055,material:'stone'}];
@@ -722,7 +737,7 @@ function cutawayFloorLevels(s){
   // A gate's storeys line up with those of the stone tower flanking it (one floor level across).
   const flank=s.type==='gate'?State.structures.find(o=>o.parentTowerId===s.id&&o.type==='tower'&&!isWoodTower(o)&&!cutawaySpiralStair(o)):null;
   const fz=flank?cutawayFloorLevels(flank):[];
-  for(let i=1;i<level;i++)floors.push({z:fz[i]&&fz[i].z<h-.6?fz[i].z:h*i/level,material:'wood'});
+  for(let i=1;i<level;i++)floors.push({z:fz[i]&&fz[i].z<h-.6?fz[i].z:s.type==='tower'?towerUpperFloorZ(s,i):h*i/level,material:'wood'});
   return floors;
 }
 // Floor-by-floor cutaway, shared by the castle and the civic buildings (settlement-civic3d.js):
@@ -747,6 +762,8 @@ function cutawayCeilingZ(s){
   const floors=cutawayFloorLevels(s),f=cutawayVisibleFloor(s);
   return f<floors.length-1?floors[f+1].z:Infinity;
 }
+// The crest (merlons, machicolations, inner roof) goes with the floors above the one in view.
+function cutawayCrestHidden(s){return !!s&&structureCutaway(s)&&cutawayCeilingZ(s)<structureHeight(s)-1e-6}
 // Floor i (and its room, furniture, ladder) is drawn when it lies below the cut.
 function cutawayFloorShown(s,i){const z=cutawayFloorLevels(s)[i]?.z;return !Number.isFinite(z)||z<cutawayCeilingZ(s)-.01}
 // Timber upper storey of a small gate: from the room floor to the eaves, jettied over the front
@@ -1253,8 +1270,10 @@ function drawCastleSelection(){
   const s=State.structures?.find(item=>item.id===State.selectedId);
   if(!s||s.type==='road'||s.type==='moat'||s.type==='bridge')return;
   // Only the ground perimeter (h 0): the parts of a house or civic building merge into one outline.
+  // A civic follows what stands at its current level, not the L3 footprint.
+  const civic=isCivic(s)?((typeof window!=='undefined'&&window.ConquerCivic3D?.builtParts?.(s))||civicParts(s)):null;
   const parts=(s.type==='field'?[fieldPoints(s)]:s.type==='house'?urbanHouseDisplayParts(s).map(part=>part.points):
-    isCivic(s)?civicParts(s).map(part=>part.points):[footprintPoints(s)]).filter(points=>points?.length>=3);
+    civic?civic.map(part=>part.points):[footprintPoints(s)]).filter(points=>points?.length>=3);
   if(!parts.length)return;
   let rings=parts;
   const pc=typeof window!=='undefined'?window.__polygonClipping:null;
@@ -1262,20 +1281,62 @@ function drawCastleSelection(){
     try{rings=pc.union(...parts.map(points=>[points.map(p=>[p.x,p.y])])).flatMap(poly=>poly.map(cleanClipRing)).filter(r=>r.length>=3)}
     catch{rings=parts}
   }
+  // Bodies with a real volume hide the ground edges behind them; flat plazas, yards,
+  // open industries, fields and construction sites keep the whole perimeter.
+  const occluders=s.type==='field'||underConstruction(s)||!(structureHeight(s)>.56)?[]:
+    s.type==='house'?parts:civic?civic.filter(part=>!['plaza','square','training'].includes(part.role)).map(part=>part.points):parts;
   withStructureGroundPlane(s,()=>{
+    const runs=selectionOutlineRuns(rings,occluders.filter(points=>points?.length>=3));
     ctx.save();
     ctx.lineJoin='round';ctx.lineCap='round';ctx.setLineDash([]);
     // Black keyline provides contrast over snow, sandstone and grass.
     for(const [color,width] of [['rgba(24,16,10,.92)',4.5],['#ffc46e',2.25]]){
       ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();
-      for(const ring of rings){
-        projectPath(ring,.02).forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
-        ctx.closePath();
+      for(const run of runs){
+        run.points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+        if(run.closed)ctx.closePath();
       }
       ctx.stroke();
     }
     ctx.restore();
   });
+}
+// Screen polylines of the selection perimeter without the edges hidden behind the
+// building volume. A ground edge is behind the volume when, just below it on screen
+// (opposite to the projected vertical), lies the footprint of a body that rises.
+function selectionOutlineRuns(rings,occluders){
+  const inside=(p,poly)=>{
+    let hit=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+      const a=poly[i],b=poly[j];
+      if(((a.y>p.y)!==(b.y>p.y))&&(p.x<(b.x-a.x)*(p.y-a.y)/((b.y-a.y)||1e-9)+a.x))hit=!hit;
+    }return hit;
+  };
+  const bases=occluders.map(points=>projectPath(points,.02));
+  const runs=[];
+  for(const ring of rings){
+    const base=projectPath(ring,.02),top=projectPath(ring,1),n=base.length;
+    const hidden=base.map((a,i)=>{
+      if(!bases.length)return false;
+      const j=(i+1)%n,b=base[j];
+      let dx=(a.x-top[i].x)+(b.x-top[j].x),dy=(a.y-top[i].y)+(b.y-top[j].y);
+      const len=Math.hypot(dx,dy);if(!(len>1e-6))return false;
+      // An edge seen edge-on (free camera) runs up the wall's silhouette: the wall hides it.
+      const ex=b.x-a.x,ey=b.y-a.y,el=Math.hypot(ex,ey);
+      if(el>1e-6&&Math.abs(ex*dy-ey*dx)/(el*len)<.05)return true;
+      const probe={x:(a.x+b.x)/2+dx/len*1.5,y:(a.y+b.y)/2+dy/len*1.5};
+      return bases.some(poly=>inside(probe,poly));
+    });
+    if(!hidden.some(Boolean)){runs.push({points:base,closed:true});continue}
+    // Start right after a hidden edge so every visible run is one polyline.
+    const start=(hidden.indexOf(true)+1)%n;let run=null;
+    for(let k=0;k<n;k++){
+      const i=(start+k)%n,j=(i+1)%n;
+      if(hidden[i]){run=null;continue}
+      if(!run){run={points:[base[i]],closed:false};runs.push(run)}
+      run.points.push(base[j]);
+    }
+  }
+  return runs;
 }
 
 function worldDepth(s){const p=rotateViewPoint(structureCenter(s));return p.x+p.y;}

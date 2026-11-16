@@ -20,7 +20,13 @@ for(const s of ['pull_request:','workflow_dispatch:','schedule:','settlement-qa:
 }
 assert.match(workflow,/github\.event_name == 'pull_request' && steps\.tier\.outputs\.full == 'false'/);
 assert.match(workflow,/if: steps\.tier\.outputs\.full == 'true'/);
-assert.match(workflow,/src\/settlement-\(core\|app\|app-simulation\|app-persistence\|world\|world3d\|castle3d\|placement\|castle-placement\|population-navigation\)/);
+// Every PR touching anything outside docs/ and *.md runs the complete suite;
+// only documentation-only PRs fall back to the fast smoke.
+assert.ok(workflow.includes(`grep -Evq '^(docs/|.*\\.md$)' "$RUNNER_TEMP/ci-pr-changed.txt"`),'full tier must cover every non-docs PR');
+assert.doesNotMatch(workflow,/src\/settlement-\(core\|app/,'risk-gated module list must not return');
+// The complete loop must report every failing test, not stop at the first.
+assert.match(workflow,/failed\+=\("\$test"\)/);
+assert.match(workflow,/::error file=\$test::/);
 const count=fs.readdirSync(path.join(root,'qa')).filter(f=>f.endsWith('-regression.cjs')).length;
 assert.ok(count>100,'the full suite must still include all original deterministic regressions');
-console.log('PASS CI P0: 11 obsolete workflows retired; core checks retained; selective PR and complete risk/scheduled suites present ('+count+' deterministic tests).');
+console.log('PASS CI P0: 11 obsolete workflows retired; core checks retained; docs-only fast tier and complete non-docs PR/scheduled suite present ('+count+' deterministic tests).');

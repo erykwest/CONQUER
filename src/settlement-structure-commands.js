@@ -86,8 +86,11 @@ const StructureCommands=(()=>{
   }
   function setTowerRoof(id,style){
     const target=find(id);if(!target||target.type!=='tower')return false;
-    if(!setStructureVariant(target,'roofStyle',style))return false;
-    refresh(target);status('Tower roof: '+(target.roofStyle==='pitched'?'pitched':target.roofStyle==='machicolation'?'machicolation':'battlement'));return true;
+    // 'machicolationItalian' is the machicolated top with the Italian look (machicolationStyle).
+    const italian=style==='machicolationItalian';
+    if(!setStructureVariant(target,'roofStyle',italian?'machicolation':style))return false;
+    if(target.roofStyle==='machicolation')setStructureVariant(target,'machicolationStyle',italian?'italian':'standard');
+    refresh(target);status('Tower roof: '+(target.roofStyle==='pitched'?'pitched':target.roofStyle==='machicolation'?(italian?'Italian machicolation':'machicolation'):'battlement'));return true;
   }
   // The hoarding of a tower or stone gate is mounted or taken down; the roof stays as built.
   function setHoarding(id,value){
@@ -223,6 +226,12 @@ const StructureCommands=(()=>{
     const target=find(id),M=window.ConquerSoldiers;if(target?.type!=='tower'||!M)return false;
     const ok=M.setSignalFire(id,value);if(ok)refresh(target,false);return ok;
   }
+  // Patrols on the whole ring of walls the wall belongs to: two reserve soldiers each.
+  function setWallPatrols(id,value){
+    const target=find(id),W=window.ConquerWallPatrols;if(!['wall','palisade'].includes(target?.type)||!W)return false;
+    const ring=W.ringOfWall(target.id);if(!ring){status('This wall carries no wall walk yet (T2+ walls and palisades, completed)');return false}
+    return W.set(ring.id,Number(value));
+  }
   function setCivicLevel(id,level){
     const target=find(id);if(!target||!CIVIC_LEVEL_TYPES.includes(target.type))return false;
     if(civicAnnexChildren(target.id).some(child=>civicAnnexDefinition(child,target)?.level>level)){
@@ -320,11 +329,12 @@ const StructureCommands=(()=>{
     // or room assignment are exposed before the project is finished.
     if(d.building)return d;
     if(window.ConquerStorageYard?.is(s)){
-      const Y=window.ConquerStorageYard,stock=Y.stocks(),n=Y.size(s);
+      const Y=window.ConquerStorageYard,stock=Y.stocks(),n=Y.size(s),capacity=Y.capacity(),used=Y.used();
       d.facts.push({key:'size',value:n+'×'+n+'U'},
-        {key:'storageCapacity',value:Y.capacity()+' unità'},
-        {key:'storedGoods',value:Y.used()+' unità'},
+        {key:'storageCapacity',value:capacity+' unità'},
+        {key:'storedGoods',value:used+' unità'},
         ...Object.entries(stock).filter(([,v])=>v>0).map(([key,value])=>({key,value})));
+      d.yard={used,capacity,over:used>capacity};
       if(n<6)d.controls.push(choice('yardSize','setYardSize',[2,4,6].filter(v=>v>=n).map(v=>({
         value:v,label:v+'×'+v+'U'})),n));
       return d;
@@ -366,7 +376,7 @@ const StructureCommands=(()=>{
       const well=wellCivicWell(s);
       d.facts.push({key:'square',value:well?wellDisplayName(well)||'—':'—',center:!!well&&isVillageCenterWell(well)});
     }
-    if(['house','market','tavern','church','training','plaza','townhall','guild'].includes(s.type))
+    if(['house','market','tavern','church','training','plaza','townhall','guild','bargello','balivo'].includes(s.type))
       d.controls.push({key:'rotation',cmd:'rotate',rotate:true,angle:Math.round((Number(s.angle)||0)*180/Math.PI+360)%360});
     if(s.type==='tower'){
       d.mastio={active:!!s.isMastio,disabled:building};
@@ -402,7 +412,7 @@ const StructureCommands=(()=>{
       if(M){
         if(!s.outpost)d.controls.push(choice('lookout','setTowerLookout',[{value:'none',word:'lookoutOff'},{value:'on',word:'lookoutOn',disabled:building}],s.lookout?'on':'none'));
         const why=M.outpostBlocker(s);
-        d.controls.push(choice('outpost','setTowerOutpost',[{value:'none',word:'none'},{value:'outpost',word:'outpost',disabled:!s.outpost&&!!why}],s.outpost?'outpost':'none'));
+        d.controls.push(choice('outpost','setTowerOutpost',[{value:'none',word:'none'},{value:'outpost',word:'outpost',disabled:!s.outpost&&!!why,reason:why||null}],s.outpost?'outpost':'none'));
         if(!woodTower&&(M.signalFireAllowed(s)||M.signalFire(s)))
           d.controls.push(choice('signalFire','setTowerSignalFire',[{value:'none',word:'none'},{value:'pyre',word:M.signalFire(s)&&s.signalFireSpent?'pyreRebuild':'pyre'}],
             M.signalFire(s)&&!s.signalFireSpent?'pyre':'none'));
@@ -411,7 +421,7 @@ const StructureCommands=(()=>{
       if(woodTower){
         if(woodTowerStyle(s)==='palisadeTower')d.controls.push(choice('woodRoof','setWoodRoof',[{value:'open',word:'open'},{value:'pitched',word:'pitched4'}],woodTowerRoof(s)));
       }else{
-        d.controls.push(choice('roof','setTowerRoof',[{value:'battlement',word:'battlement'},{value:'machicolation',word:'machicolation'},{value:'pitched',word:'pitched'}],towerRoofStyle(s)));
+        d.controls.push(choice('roof','setTowerRoof',[{value:'battlement',word:'battlement'},{value:'machicolation',word:'machicolation'},{value:'machicolationItalian',word:'machicolationItalian',disabled:s.shape==='half'},{value:'pitched',word:'pitched'}],towerRoofMenuValue(s)));
         if(s.shape!=='half')d.controls.push(hoardingChoice(s));
         if(s.shape!=='half')d.controls.push(choice('innerRoof','setTowerInnerRoof',[{value:'off',word:'innerRoofOff'},{value:'on',word:'innerRoofOn',disabled:!towerInnerRoofAllowed(s)}],towerInnerRoofMounted(s)?'on':'off'));
         d.controls.push(choice('weapon','setTowerWeapon',[{value:'none',word:'none'},{value:'mangonel',word:'mangonel',disabled:!towerTopWeaponAllowed(s)},{value:'ballista',word:'ballista',disabled:!towerTopWeaponAllowed(s)}],structureVariant(s,'topWeapon')));
@@ -435,7 +445,7 @@ const StructureCommands=(()=>{
       d.controls.push(hoardingChoice(s));
     }
     if(typeof CIVIC_LEVEL_TYPES!=='undefined'&&CIVIC_LEVEL_TYPES.includes(s.type))
-      d.controls.push(choice('civicLevel','setCivicLevel',[1,2,3].map(n=>({value:n,label:'L'+n})),civicLevel(s)));
+      d.controls.push(choice('civicLevel','setCivicLevel',civicLevels(s.type).map(n=>({value:n,label:'L'+n})),civicLevel(s)));
     if((s.type==='church'||s.type==='townhall')&&window.ConquerAlarmBells)
       d.facts.push({key:'bellRange',value:window.ConquerAlarmBells.hearingRadius(s)+'U'});
     if(typeof isPlazaLike==='function'&&isPlazaLike(s))
@@ -454,6 +464,16 @@ const StructureCommands=(()=>{
         const ok=WS.eligible(s),cur=WS.stair(s)?.kind||'none';
         d.controls.push(choice('wallStair','setWallStair',[{value:'none',word:'none'},{value:'wood',word:'stairWood',disabled:!ok||cur==='stone'},{value:'stone',word:'stairStone',disabled:!ok}],cur));
         if(cur!=='none')d.controls.push(choice('wallStairPos','setWallStairPos',Object.keys(WS.POSITIONS).map(v=>({value:v,word:'stairPos_'+v})),s.wallStair.pos||'middle'));
+      }
+    }
+    // Patrols of the ring of walls this wall belongs to (settlement-wall-patrols.js, MIL-WALL-01).
+    if(['wall','palisade'].includes(s.type)&&!building){
+      const wp=window.ConquerWallPatrols?.wallControl?.(s);
+      if(wp){
+        d.controls.push(choice('wallPatrols','setWallPatrols',wp.options,wp.current));
+        d.facts.push({key:'wallRing',value:wp.fact});
+        const need=window.ConquerWallPatrols.summary?.().shortfall;
+        if(need&&wp.current<wp.ring.max)d.facts.push({key:'wallPatrolNeed',value:need.text});
       }
     }
     if(['wall','palisade','built'].includes(s.type))d.controls.push({key:'side',cmd:'flipSide',toggle:true});
@@ -483,7 +503,7 @@ const StructureCommands=(()=>{
   }
 
   const commands={setConstructionPriority,setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setLonghouseCover,setGateRoof,setGateUpper,setSkin,setWallStair,setWallStairPos,toggleCutaway,stepCutawayFloor,flipSide,
-    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerInnerRoof,setTowerLookout,setTowerOutpost,setTowerSignalFire,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,
+    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerInnerRoof,setTowerLookout,setTowerOutpost,setTowerSignalFire,setWallPatrols,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,
     describeStructure};
   for(const name of ['setTier','setHeight','setKeepFloorPlan','setTowerBase','setTowerRoof','setHoarding','setWoodRoof','setGateRoof','setGateUpper','setSkin','setTowerWeapon','setTowerRoofShape','setTowerBartizan','setTowerBell','setTowerInnerRoof','setCivicLevel','setPlazaVariant']){
     const execute=commands[name];

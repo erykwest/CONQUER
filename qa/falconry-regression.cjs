@@ -21,7 +21,7 @@ const ctx=vm.createContext({window:{},Math,Number,Object,Array,JSON,
   isWideBuilt:()=>false,builtInteriorFloors:s=>s.level||1,functionSlotUnits:()=>1,
 });
 vm.runInContext([pick(castle,'functionCapacity'),pick(core,'towerDovecoteAllowed'),pick(core,'towerMewsAllowed'),pick(core,'towerMews'),
-  pick(siege,'eligibleRoom'),pick(siege,'floor'),pick(siege,'allowed')].join('\n'),ctx);
+  src('settlement-core.js').match(/const W1_TOWER_FUNCTIONS=[^\n]+/)[0],pick(siege,'eligibleRoom'),pick(siege,'floor'),pick(siege,'allowed')].join('\n'),ctx);
 const {allowed,towerMews}=vm.runInContext('({allowed,towerMews})',ctx);
 const tower=o=>({type:'tower',shape:'square',material:'stone',size:1.5,level:2,roofStyle:'pitched',...o});
 assert.ok(allowed(tower(),1,'mews'),'W2 L2 top floor under a pitched roof');
@@ -40,7 +40,7 @@ console.log('PASS falconry only on the top floor of W2-W3 stone towers L2+ with 
 const consts=['MEWS_FOOD','PRESTIGE'].map(n=>siege.match(new RegExp('const '+n+'=[^\\n]+'))[0]).join('\n');
 const hc=vm.createContext({Object,Math,Number,Array,window:{},State:{structures:[]},cap:{food:240},
   eligibleRoom:s=>!!s&&['tower','built','gate'].includes(s.type),allowed:(s,i,fn)=>!(s.bad||[]).includes(i),capturedRoomIds:()=>new Set(hc.captured||[])});
-vm.runInContext(consts+'\n'+pick(siege,'mewsCount')+'\n'+pick(siege,'prestige'),hc);
+vm.runInContext(consts+'\n'+pick(siege,'activeRooms')+'\n'+pick(siege,'mewsCount')+'\n'+pick(siege,'prestige'),hc);
 const {mewsCount,prestige}=vm.runInContext('({mewsCount,prestige})',hc);
 hc.State.structures=[{id:'a',type:'tower',functions:[null,'mews']},{id:'b',type:'tower',functions:['throneHall','nobleRoom','mews']},{id:'c',type:'built',functions:['chapel','treasury']}];
 assert.equal(mewsCount(),2);

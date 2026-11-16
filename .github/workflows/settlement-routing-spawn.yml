@@ -6,8 +6,9 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # The workflow/job identifiers are retained to avoid changing check names.
-# PRs run fast route/spawn checks; shared engine edits also run the complete
-# deterministic suite before merging. Weekly/manual runs always run everything.
+# Every PR that changes anything outside docs/ and *.md runs the complete
+# deterministic suite (~90 s); documentation-only PRs run the fast smoke.
+# Weekly/manual runs always run everything.
 on:
   pull_request:
     branches: [main]
@@ -53,14 +54,14 @@ jobs:
           git diff --name-only --diff-filter=ACDMRT "$BASE_SHA...$HEAD_SHA" > "$RUNNER_TEMP/ci-pr-changed.txt"
           echo 'Changed paths:'
           cat "$RUNNER_TEMP/ci-pr-changed.txt"
-          # Shared application state, world generation, persistence, navigation,
-          # terrain/placement or app entrypoint modifications are high risk.
-          if grep -Eq '^(index\.html|src/settlement-(core|app|app-simulation|app-persistence|world|world3d|castle3d|placement|castle-placement|population-navigation)\.js|\.github/workflows/settlement-routing-spawn\.yml|qa/ci-(p0|p1)-regression\.cjs)$' "$RUNNER_TEMP/ci-pr-changed.txt"; then
+          # Specialist path filters cannot be trusted to cover every source a test
+          # reads, so any path outside docs/ and *.md runs the complete suite.
+          if grep -Evq '^(docs/|.*\.md$)' "$RUNNER_TEMP/ci-pr-changed.txt"; then
             echo 'full=true' >> "$GITHUB_OUTPUT"
-            echo 'Shared-engine change: complete pre-merge regression suite'
+            echo 'Code, test, asset or config change: complete pre-merge regression suite'
           else
             echo 'full=false' >> "$GITHUB_OUTPUT"
-            echo 'Isolated change: targeted fast smoke; subsystem workflows remain active'
+            echo 'Documentation-only change: fast smoke'
           fi
       - name: Fast settlement and routing checks
         if: github.event_name == 'pull_request' && steps.tier.outputs.full == 'false'
@@ -70,14 +71,28 @@ jobs:
           node qa/river-forest-detour-regression.cjs
           node qa/main-road-finalization-regression.cjs
           node qa/urban2-spawn-regression.cjs
-      - name: Complete deterministic regressions (risk/manual/weekly)
+      - name: Complete deterministic regressions (non-docs PR/manual/weekly)
         if: steps.tier.outputs.full == 'true'
+        shell: bash
         run: |
+          # Run every test and report all failures instead of stopping at the first.
+          failed=()
           for test in qa/*-regression.cjs; do
-            echo "Running $test"
-            node "$test"
+            echo "::group::$test"
+            if ! node "$test"; then
+              failed+=("$test")
+            fi
+            echo '::endgroup::'
           done
-      - name: Syntax-check all source modules (risk/manual/weekly)
+          if (( ${#failed[@]} )); then
+            for test in "${failed[@]}"; do
+              echo "::error file=$test::$test failed"
+            done
+            echo "${#failed[@]} deterministic regression(s) failed." >&2
+            exit 1
+          fi
+          echo 'All deterministic regressions passed.'
+      - name: Syntax-check all source modules (non-docs PR/manual/weekly)
         if: steps.tier.outputs.full == 'true'
         run: |
           for src in src/*.js; do

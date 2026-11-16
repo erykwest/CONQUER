@@ -157,6 +157,10 @@ body.asset-catalog-static #labLegacyControls{display:none}
     <label id="ammoBox">Munizioni <select id="sAmmo"></select></label>
     <label id="balBox"><input id="sBallista" type="checkbox"> Balista</label>
   </div>
+  <div class="group" id="equipBox"><span>Equipaggiamento</span>
+    <label>Elmo <select id="sHelmet"><option value="">Originale</option><option value="cap">Cervelliera</option><option value="kettle">Cappello d'arme</option><option value="nasal">Elmo a nasale</option><option value="barbuta">Barbuta</option><option value="greathelm">Elmo a staio</option></select></label>
+    <label>Scudo <select id="sShield"><option value="">Originale</option><option value="oval">Ovale</option><option value="round">Rotella</option><option value="heater">Triangolare</option><option value="kite">A mandorla</option><option value="pavise">Pavese</option></select></label>
+  </div>
   <label id="wardrobeBox">Stagione/meteo <select id="wardrobe">
     <option value="summer|clear">Estate serena</option><option value="spring|wind">Primavera ventosa</option>
     <option value="autumn|fog">Autunno nebbioso</option><option value="summer|rain">Pioggia</option>
@@ -241,19 +245,20 @@ function withProjectionGroundZ(g,fn){return fn()}
 function peasantHash(s){let h=2166136261;for(const ch of String(s)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
 function villagerHair(id){return['blonde','brown','black','gray','red'][peasantHash(id)%5]}
 </script>
-<script src="./src/settlement-wardrobe.js?v=lab-1"></script>
-<script src="./src/settlement-population-figures.js?v=lab-2"></script>
-<script src="./src/settlement-combat-anim.js?v=lab-1"></script>
-<script src="./src/settlement-work-anim.js?v=lab-1"></script>
-<script src="./src/settlement-animals.js?v=lab-3"></script>
+<script src="./src/settlement-util.js?v=util-1-a261113"></script>
+<script src="./src/settlement-wardrobe.js?v=lab-1-a261113"></script>
+<script src="./src/settlement-population-figures.js?v=lab-2-outlaws3"></script>
+<script src="./src/settlement-combat-anim.js?v=lab-1-outlaws3"></script>
+<script src="./src/settlement-work-anim.js?v=lab-1-a261113"></script>
+<script src="./src/settlement-animals.js?v=lab-3-legcap1-a261113"></script>
 <script src="./src/settlement-mounted2d.js?v=lab-1"></script>
 <script src="./src/settlement-wagons.js?v=lab-1"></script>
 <script src="./src/assets/wagon-model.js?v=lab-1"></script>
 <script src="./src/settlement-wagons3d.js?v=lab-2"></script>
 <script src="./src/assets/animal-models.js?v=lab-1"></script>
-<script src="./src/settlement-animals3d.js?v=lab-1"></script>
+<script src="./src/settlement-animals3d.js?v=lab-1-a261113"></script>
 <script src="./src/assets/siege-engines-model.js?v=lab-5"></script>
-<script src="./src/settlement-siege-engines3d.js?v=lab-5"></script>
+<script src="./src/settlement-siege-engines3d.js?v=lab-5-a261113"></script>
 <script>
 (function(){
   const A=window.ConquerAnimals,CA=window.ConquerCombatAnim,WA=window.ConquerWorkAnim,W2=window.ConquerWagons,c=document.getElementById('c'),g=c.getContext('2d');
@@ -281,6 +286,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     $('wagonBox').hidden=!['wagon','wagon3d'].includes(subject);
     $('wagon3dBox').hidden=!(subject==='wagon3d'||['animal','siege','ship'].includes(kindOf(subject)));
     $('flipBox').hidden=subject!=='wagon';
+    $('equipBox').hidden=kindOf(subject)!=='soldier'&&subject!=='mounted';
     const eng=kindOf(subject)==='siege'?subject.split(':')[1]:'',ammo=AMMO[eng];
     $('siegeUpBox').hidden=!ammo&&eng!=='mantlet';$('ammoBox').hidden=!ammo;$('balBox').hidden=eng!=='mantlet';
     if(ammo){const was=$('sAmmo').value;$('sAmmo').innerHTML=ammo.map(([k,l])=>'<option value="'+k+'">'+l+'</option>').join('');if(ammo.some(([k])=>k===was))$('sAmmo').value=was}
@@ -289,6 +295,9 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
   // Wardrobe preview: the lab has no calendar or weather, so the select stands in for both.
   function setWardrobe(){const [season,weather]=$('wardrobe').value.split('|');window.ConquerWardrobe.preview={season,weather}}
   $('wardrobe').onchange=setWardrobe;setWardrobe();
+  // Feudal unit equipment (State.policies.unitHelmet/unitShield), as chosen in Militare › Equipaggiamento.
+  function setEquip(){const p=State.policies||(State.policies={});p.unitHelmet=$('sHelmet').value;p.unitShield=$('sShield').value}
+  $('sHelmet').onchange=$('sShield').onchange=setEquip;setEquip();
   document.querySelectorAll('[data-subject]').forEach(b=>b.onclick=()=>{subject=b.dataset.subject;fromAction=action='walk';trans=1;renderButtons()});
   $('actions').onclick=e=>{const k=e.target.dataset?.action;if(k&&k!==action){fromAction=action;action=k;trans=0;renderButtons()}};
 
@@ -378,7 +387,8 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     if(action==='die'&&clock>=nextDeath){resetHero();CA.fall(hero,.1,foe);nextDeath=clock+3.4}
     const mode=action==='walk'?'walk':action==='run'?'run':'idle';
     const from=fromAction==='run'?'run':fromAction==='walk'?'walk':'idle';
-    const flat={kind,mode,from,blend:trans,t:clock,coat,pose:CA.pose(hero,0),livery:LIVERY,paint:labArms};
+    const flat={kind,mode,from,blend:trans,t:clock,coat,pose:CA.pose(hero,0),livery:LIVERY,paint:labArms,
+      helmet:$('sHelmet').value||null,shield:$('sShield').value||null};
     window.ConquerMounted2D.draw(g,W*.3,H*.66,200*k,{...flat,facing:1});
     window.ConquerMounted2D.draw(g,W*.68,H*.62,5.75*2.6*k,{...flat,facing:1});
     window.ConquerMounted2D.draw(g,W*.84,H*.62,5.75*2.6*k,{...flat,facing:-1});
@@ -627,20 +637,20 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
   requestAnimationFrame(frame);
 })();
 </script>
-<script src="./src/settlement-mesh3d.js?v=asset-lab-2"></script>
-<script src="./src/settlement-storage-yard.js?v=stockyard-lab-1"></script>
-<script src="./src/assets/civic-models.js?v=well-civics-1"></script>
+<script src="./src/settlement-mesh3d.js?v=asset-lab-2-a261113"></script>
+<script src="./src/settlement-storage-yard.js?v=stockyard-lab-1-a261113"></script>
+<script src="./src/assets/civic-models.js?v=bargello-1-barg1"></script>
 <script src="./src/assets/industry-models.js?v=asset-lab-1"></script>
 <script src="./src/assets/scatter-model.js?v=riverbank1"></script>
 <script src="./src/assets/ship-models.js?v=ships-3"></script>
 <script src="./src/assets/fishing-models.js?v=fishers1"></script>
 <script src="./src/assets/shipyard-models.js?v=yard5"></script>
 <script src="./src/assets/waterside-models.js?v=waterside2"></script>
-<script src="./src/settlement-ships.js?v=boats1"></script>
-<script src="./src/settlement-ship-crew.js?v=crew-1"></script>
+<script src="./src/settlement-ships.js?v=boats1-a261113"></script>
+<script src="./src/settlement-ship-crew.js?v=crew-1-a261113"></script>
 <script src="./src/assets/event-models.js?v=asset-lab-6"></script>
-<script src="./src/settlement-events3d.js?v=asset-lab-8"></script>
-<script src="./src/assets/house-models.js?v=house3d-1"></script>
+<script src="./src/settlement-events3d.js?v=asset-lab-8-a261113-outlaws2"></script>
+<script src="./src/assets/house-models.js?v=house3d-4"></script>
 <script src="./src/assets/belfry-models.js?v=bell1"></script>
 <script src="./src/assets/mews-models.js?v=mews1"></script>
 <script src="./src/assets/pyre-models.js?v=milres1"></script>
@@ -655,7 +665,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 <script src="./src/heraldry-symbols.js?v=asset-lab-1"></script>
 <script src="./src/heraldry-shapes.js?v=ships-1"></script>
 <script src="./src/asset-manifest.js?v=asset-lab-3"></script>
-<script src="./src/asset-catalog.js?v=asset-lab-13-stonecolor-milres1-arte2"></script>
+<script src="./src/asset-catalog.js?v=asset-lab-13-stonecolor-milres1-arte2-barg1"></script>
 <script src="./src/asset-audit.js?v=asset-lab-8-stonecolor"></script>
 </body>
 </html>

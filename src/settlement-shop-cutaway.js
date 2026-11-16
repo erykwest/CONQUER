@@ -21,17 +21,28 @@
     blacksmith:{tool:'hammer',goods:['#6f7377','#8c9094','#5e6266']},
     carpenter:{tool:'hammer',goods:['#a7814f','#8d6a3f','#b9925c']},
     leatherworker:{tool:'hammer',goods:['#7c4f2e','#94603a','#6a4126']},
-    potter:{tool:null,goods:['#a85f3a','#b8734a','#93522f']},
-    weaver:{tool:null,goods:['#5d7393','#a8503f','#c9a64e']},
-    tailor:{tool:null,goods:['#8a4d63','#4f6d5a','#c2b089']},
+    potter:{tool:'clay',goods:['#a85f3a','#b8734a','#93522f']},
+    weaver:{tool:'shuttle',goods:['#5d7393','#a8503f','#c9a64e']},
+    tailor:{tool:'needle',goods:['#8a4d63','#4f6d5a','#c2b089']},
     goldsmith:{tool:'hammer',goods:['#d9b44a','#e8cf7a','#bfc4c7']}
   });
   const CF=()=>window.ConquerCutawayFurniture;
-  // Read straight from the economy save (asked per facade edge): ConquerCommerce.state() migrates
-  // on every call, its daily tick keeps the records current.
+  // Read straight from the economy save, its daily tick keeps the records current. Asked per facade
+  // edge (houseFacadePlan -> facadeCut), per house and per figure, while ConquerEconomy.state() runs
+  // its whole save migration on every call: the shops record is looked up once per
+  // structureMemoEpoch (settlement-render.js, at most a second) and while State.economy is the same
+  // object. The record itself is the live one, so a shop's day shows at once. Off outside the game.
+  let shopsMemo={epoch:0,economy:null,shops:null};
+  function shopsRecord(){
+    const epoch=typeof structureMemoEpoch==='function'?structureMemoEpoch():0;
+    if(epoch&&shopsMemo.epoch===epoch&&shopsMemo.economy===State.economy&&shopsMemo.economy)return shopsMemo.shops;
+    const shops=window.ConquerEconomy?.state?.()?.commerce?.shops||null;
+    shopsMemo={epoch,economy:State.economy,shops};
+    return shops;
+  }
   function shopOf(house){
     if(house?.shopKind)return{kind:house.shopKind,artisanId:house.id+':m:0',state:house.shopClosed?'closed':'working'};
-    return window.ConquerEconomy?.state?.()?.commerce?.shops?.[house?.id]||null;
+    return shopsRecord()?.[house?.id]||null;
   }
   function eligible(house){
     return !!house&&house.type==='house'&&houseLevel(house)===3&&
@@ -354,7 +365,7 @@
     const mesh=r.mesh,p=mesh.pos;
     for(let t=0;t<mesh.col.length;t++){
       const o=t*9;
-      m.face([{x:p[o],y:p[o+1],z:p[o+2]},{x:p[o+3],y:p[o+4],z:p[o+5]},{x:p[o+6],y:p[o+7],z:p[o+8]}],window.ConquerMesh3D.shadedHex(mesh,t));
+      m.face([{x:p[o],y:p[o+1],z:p[o+2]},{x:p[o+3],y:p[o+4],z:p[o+5]},{x:p[o+6],y:p[o+7],z:p[o+8]}],(window.ConquerMesh3D.shadedHexes?.(mesh)?.[t]??window.ConquerMesh3D.shadedHex(mesh,t)));
     }
     return true;
   }
@@ -375,7 +386,7 @@
   }
   // Which fronts are open: the scene caches rebuild when this changes (dawn, dusk, the shop's day).
   function frontSig(){
-    const shops=window.ConquerEconomy?.state?.()?.commerce?.shops;
+    const shops=shopsRecord();
     const day=daytime();
     let sig=day?'d':'n';
     if(shops)for(const [id,s] of Object.entries(shops))sig+='|'+id+':'+(day&&(s.state==='working'||s.state==='selling')?1:0)+':'+s.kind;
@@ -397,7 +408,7 @@
       const mesh=r.mesh,p=mesh.pos;
       for(let t=0;t<mesh.col.length;t++){
         const o=t*9;
-        m.face([{x:p[o],y:p[o+1],z:p[o+2]},{x:p[o+3],y:p[o+4],z:p[o+5]},{x:p[o+6],y:p[o+7],z:p[o+8]}],window.ConquerMesh3D.shadedHex(mesh,t));
+        m.face([{x:p[o],y:p[o+1],z:p[o+2]},{x:p[o+3],y:p[o+4],z:p[o+5]},{x:p[o+6],y:p[o+7],z:p[o+8]}],(window.ConquerMesh3D.shadedHexes?.(mesh)?.[t]??window.ConquerMesh3D.shadedHex(mesh,t)));
       }
     }
   }
@@ -410,7 +421,7 @@
   }
   function spotOf(house){
     const r=build(house);if(!r)return null;
-    return{p:r.room.toWorld(r.spot.a,r.spot.b),tool:TRADES[r.kind].tool,facing:facing(r)};
+    return{p:r.room.toWorld(r.spot.a,r.spot.b),tool:TRADES[r.kind].tool,facing:facing(r),kind:r.kind};
   }
   // The shop's artisan waiting at his own door (artisanPosition: an L3 shop operates at home)
   // stands at his bench while the house is open. Elsewhere (market, leisure) he stays where he is.
@@ -424,7 +435,7 @@
   // Asset Lab only: the stage has no population pass, so the open house shows its artisan itself.
   function drawStagedArtisan(house,r){
     const p=r.room.toWorld(r.spot.a,r.spot.b),tool=TRADES[r.kind].tool;
-    const dot={p,id:house.id+':m:0',kind:'artisan',sex:'male',age:'adult',hair:'brown',colors:['#7a6a4f','#5f6e7c']};
+    const dot={p,id:house.id+':m:0',kind:'artisan',role:r.kind,sex:'male',age:'adult',hair:'brown',colors:['#7a6a4f','#5f6e7c']};
     const W=window.ConquerWorkAnim;
     if(tool&&W)W.drawWorkerUnmasked(dot,tool,0,facing(r));
     else if(typeof drawVillagerFigureUnmasked==='function')drawVillagerFigureUnmasked(dot);

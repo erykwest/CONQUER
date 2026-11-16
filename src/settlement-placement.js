@@ -67,7 +67,7 @@
         if(f.type!=='forest'||!f.points?.length)continue;
         const fb=environmentPolygonBounds(f.points);
         if(fb.maxX<b.minX-pad||fb.minX>b.maxX+pad||fb.maxY<b.minY-pad||fb.minY>b.maxY+pad)continue;
-        for(const t of forestTreeLayout(f)){
+        for(const t of forestTreeLayout(f,{minX:b.minX-pad,maxX:b.maxX+pad,minY:b.minY-pad,maxY:b.maxY+pad})){
           const p=t.p;
           if(p.x<b.minX-pad||p.x>b.maxX+pad||p.y<b.minY-pad||p.y>b.maxY+pad)continue;
           if(pointInPolygon(p,poly))return true;
@@ -114,6 +114,8 @@
     if(!annexVerdict.ok)return annexVerdict;
     const wellVerdict=typeof wellCivicPlacementCheck==='function'?wellCivicPlacementCheck(s):valid();
     if(!wellVerdict.ok)return wellVerdict;
+    const balivoVerdict=typeof balivoPlacementCheck==='function'?balivoPlacementCheck(s):valid();
+    if(!balivoVerdict.ok)return balivoVerdict;
     // A pier reaches out over the sea: its own validation keeps the landing in the whitezone.
     // Quays (and the walls and towers built against them) start in the whitezone by their own rules.
     const harbour=window.ConquerPier?.is(s)||window.ConquerQuay?.is(s)||window.ConquerQuay?.wallGroundZ(s)!=null;

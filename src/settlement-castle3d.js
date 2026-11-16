@@ -170,7 +170,7 @@
       m.prism(inner.ring,inner.h,inner.eaveZ,PAL.stone());
       m.tag='roof';
       const round=inner.ring.length>8,cols=round?(winter()?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP]:['#303236','#3a3d42','#44474c']):null;
-      m.pyramid(inner.ring,inner.eaveZ,inner.apex,inner.apexZ,i=>round?cols[i%3]:winter()?(i%2?WINTER_SNOW_A:WINTER_SNOW_B):(i%2?'#34363a':'#42454a'));
+      for(const f of towerInnerRoofFaces(inner))m.face(f.pts,round?cols[f.i%3]:winter()?(f.i%2?WINTER_SNOW_A:WINTER_SNOW_B):(f.i%2?'#34363a':'#42454a'));
       m.tag=tag;
     }
     for(const b of towerBartizans(s))addBartizan(m,b);
@@ -332,6 +332,7 @@
   }
   // One battlement piece: corbel or merlon body, plus the crenel-style crown prisms (merlonStyleParts).
   function prismPiece(m,p){
+    if(p.kind==='machicolationArch'){for(const f of p.faces)m.face(f.pts,PAL.corbel());return}
     m.prism(p.pts,p.z0,p.z1,p.kind==='machicolationCorbel'?PAL.corbel():PAL.merlon());
     for(const q of p.styleParts||[])if(q.faces)for(const f of q.faces)m.face(f.pts,merlonFaceColor(f.tone));
     else m.prism(q.pts,q.z0,q.z1,q.tone==='slit'?PAL.slit():PAL.merlon());
@@ -340,6 +341,7 @@
     const plan=typeof isPlanView==='function'&&isPlanView();
     if(plan&&which==='front')return;
     for(const s of worldOut?State.structures.filter(castleVolume):castleParts()){
+      if(typeof cutawayCrestHidden==='function'&&cutawayCrestHidden(s))continue;   // floor-by-floor cutaway below the top: no crest
       withStructureVisualMaterial(s,()=>{
       const pieces=s.type==='tower'?towerCrownPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[];
       for(const p of pieces){
