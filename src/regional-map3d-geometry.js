@@ -293,7 +293,7 @@
     const t0=typeof performance!=='undefined'?performance.now():Date.now();
     detail=clamp(Math.trunc(Number(detail))||20,1,40);
     deformation=clamp(Number(deformation)||0,0,1);
-    const vertices=[],trees=[],reeds=[],peaks=[];
+    const vertices=[],trees=[],reeds=[],peaks=[],pickRanges=[];
     let subcells=0,triangles=0,mountains=0;
     function face(a,b,c,rgb,variation=0,shaded=true) {
       const u={x:b.x-a.x,y:b.y-a.y,z:b.z-a.z};
@@ -322,12 +322,15 @@
       const parent=byMacro.get(part.macroId)||poly;
       const centerZ=elevation(center,parent,terrain,snapshot.seed);
       const middle={...center,z:centerZ};
+      const firstVertex=vertices.length/6;
       subcells++;
       for(let i=0;i<poly.length;i++){
         const a=poly[i],b=poly[(i+1)%poly.length];
         face(middle,{...a,z:elevation(a,parent,terrain,snapshot.seed)},
           {...b,z:elevation(b,parent,terrain,snapshot.seed)},shade,0,false);
       }
+      // Terrain triangles only; subsequent mountains are deliberately not selectable.
+      pickRanges.push({macroId:part.macroId,firstVertex,vertexCount:vertices.length/6-firstVertex});
     }
     for(const cell of snapshot.cells) {
       const poly=cell.polygon,terrain=snapshot.terrain[cell.macroId]||'plain';
@@ -401,12 +404,52 @@
     }
     const {borders,coastlines,unmatched}=aggregateEdges(base.parts,snapshot.terrain,snapshot.cells);
     return{
-      vertices:new Float32Array(vertices),trees,reeds,peaks,borders,coastlines,
+      vertices:new Float32Array(vertices),pickRanges,trees,reeds,peaks,borders,coastlines,
       stats:{territories:snapshot.cells.length,subcells,triangles,mountains,
              trees:trees.length,reeds:reeds.length,unmatchedEdges:unmatched,
              floats:vertices.length,generationMs:(typeof performance!=='undefined'?performance.now():Date.now())-t0}
     };
   }
+  // Project the *same mesh triangles rendered by WebGL* and select the frontmost
+  // matching canonical macro ID. Works with warped global microcells, any pan,
+  // azimuth, zoom and the Builder's fixed isometric camera. Never selects by the
+  // old 2D polygons, so the click follows the new visual boundary exactly.
+  function pickTerritory(scene,camera,pixelX,pixelY) {
+    if (!scene?.pickRanges?.length || !scene.vertices || !camera ||
+        !Number.isFinite(pixelX) || !Number.isFinite(pixelY)) return null;
+    const v=scene.vertices;
+    const c=camera, xcos=c.cos, xsin=c.sin, scale=c.scale;
+    const px=camera.width/2+(camera.panX||0);
+    const py=camera.height/2+(camera.panY||0);
+    const hitVertex=index=>{
+      const off=index*6, dx=v[off]-c.cx, dy=v[off+1]-c.cy;
+      const qx=dx*xcos-dy*xsin, qy=dx*xsin+dy*xcos, z=v[off+2];
+      return {x:px+(qx-qy)*.8660254*scale,
+              y:py+((qx+qy)*.5-z*.9)*scale,
+              depth:qx+qy+z*.9};
+    };
+    const within=(a,b,c)=>{
+      const denominator=(b.y-c.y)*(a.x-c.x)+(c.x-b.x)*(a.y-c.y);
+      if(Math.abs(denominator)<1e-9)return null;
+      const u=((b.y-c.y)*(pixelX-c.x)+(c.x-b.x)*(pixelY-c.y))/denominator;
+      if(u < -1e-6 || u > 1+1e-6)return null;
+      const w=((c.y-a.y)*(pixelX-c.x)+(a.x-c.x)*(pixelY-c.y))/denominator;
+      if(w < -1e-6 || u+w > 1+1e-6)return null;
+      return u*a.depth+w*b.depth+(1-u-w)*c.depth;
+    };
+    let best=-Infinity, selected=null;
+    for(const range of scene.pickRanges){
+      for(let i=range.firstVertex;i<range.firstVertex+range.vertexCount;i+=3){
+        const a=hitVertex(i),b=hitVertex(i+1),c=hitVertex(i+2);
+        if(pixelX<Math.min(a.x,b.x,c.x)-.001 || pixelX>Math.max(a.x,b.x,c.x)+.001 ||
+           pixelY<Math.min(a.y,b.y,c.y)-.001 || pixelY>Math.max(a.y,b.y,c.y)+.001)continue;
+        const depth=within(a,b,c);
+        if(depth!==null && depth>best){best=depth;selected=range.macroId;}
+      }
+    }
+    return selected;
+  }
   return {area,centroid,clip,subdivide,edgeDistance,elevation,sourceColor,
+          pickTerritory,
           globalMicrocells,aggregateEdges,buildScene};
 });
