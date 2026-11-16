@@ -67,6 +67,14 @@ const fnSrc=(text,name)=>{const m=text.match(new RegExp('function '+name+'\\([^)
   }
   assert.equal(towerUpperFloorZ({type:'tower',level:2,tier:1,wood:true},1),2.35/2,'timber towers keep their own frame');
   assert.match(castle,/s\.type==='tower'\?towerUpperFloorZ\(s,i\):h\*i\/level/,'cutaway floors use the same storeys');
+  // The wall-walk door sits on the P1 planks (its opening seen from inside is not clipped by the slab).
+  const dctx=vm.createContext({Math,clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),structureHeight:s=>s.h,
+    closestFootprintEdge:()=>null,cutawayFloorLevels:()=>[{z:.055},{z:2.10}]});
+  vm.runInContext(fnSrc(arch,'towerDoorContactSpec')+'\nthis.f=towerDoorContactSpec;',dctx);
+  const door=dctx.f({x:0,y:0,shape:'round',h:3.79},{x:1,y:0},{h:2.10},'wall');
+  assert.equal(door.baseZ,2.10,'wall-walk door sill on the P1 floor');
+  const low=dctx.f({x:0,y:0,shape:'round',h:3.79},{x:1,y:0},{h:1.15},'wall');
+  assert.ok(Math.abs(low.baseZ-1.13)<1e-9,'no storey at an H1 wall-walk: the door keeps its height');
   console.log('PASS stone towers: P1 at the curtain wall-walk (2.10), upper storeys share the rest');
 }
 

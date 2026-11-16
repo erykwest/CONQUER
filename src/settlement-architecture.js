@@ -225,6 +225,10 @@ function towerDoorContactSpec(tower,contact,wall=null,kind='wall'){
     // readable and architecturally useful instead of burying it behind masonry.
     const towerH=structureHeight(tower),wallH=structureHeight(wall);
     baseZ=clamp(wallH-.02,.08,Math.max(.08,towerH-.98));
+    // A storey floor at that height is the door's sill: the opening seen from inside starts on
+    // the planks instead of a hair under them (the floor slab clipped it).
+    const sill=(typeof cutawayFloorLevels==='function'?cutawayFloorLevels(tower):[]).find(f=>Math.abs(f.z-baseZ)<.12);
+    if(sill)baseZ=sill.z;
     apexZ=Math.min(towerH-.16,baseZ+.92);
     if(apexZ-baseZ<.48)return null;
   }
