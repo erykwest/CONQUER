@@ -9,6 +9,21 @@
 - 16/11: torre quadra d'angolo senza porta al P0 (salvo rotazione a 45° verso l'interno); test in qa/gate-tower-entrance-regression.cjs.
 - Rimuovi foresta usa i bypass DEV Fast build e Free build; versioni cache degli script toccati aggiornate. Test in qa/forestry-regression.cjs.
 - Il selettore ▲/▼ del cutaway ora toglie anche la cresta merlata e il braciere del tetto quando si scende sotto l'ultimo piano; test in qa/cutaway-floors-regression.cjs.
+## 2026-11-16 — QA-DEEP-261116 · Test antiregressivo profondo e fix di salvataggio
+
+16/11/2026 — `fix/mastio-h4-load-20261116` (pre-merge):
+- Verifiche su `main` 1911369a: suite node (214 script), 17 script browser, partite headless da 120–190 giorni, compatibilità con i salvataggi di 3 build precedenti, salvataggi corrotti. Nessuna regressione di #239.
+- Correzioni: il Mastio rimosso non torna al caricamento e non svuota più una stanza; la torre W3 non viene piazzata a H4.
+- Seguiti in BACKLOG (stringhe nell'economia salvata, bilanciamento costruttori/industria).
+
+STATUS, BACKLOG e CHANGELOG aggiornati; DECISIONS e ROADMAP invariate (correzioni a regole già decise: H4 solo W2 da #174, Mastio scelto dal giocatore).
+
+## 2026-11-16 — PERF-261116 · Regressione di prestazioni della #162
+
+16/11/2026 — `perf/regional-roads-20261116` (pre-merge): la bisezione individua nella #162 il rallentamento della pianificazione delle strade (×2,6) e del disegno del castello a regime (×2,5). Il fix è a output identico: la pendenza delle foreste si calcola solo dentro il poligono, e gusci e occlusori una volta per passata. Dopo il fix: strade 1,0–1,1 s (erano 5,7), disegno 10 ms (erano 29). Nuova guardia `qa/environment-contains-perf-regression.cjs`.
+
+STATUS, BACKLOG e CHANGELOG aggiornati; DECISIONS e ROADMAP invariate.
+
 ## 2026-11-15 — Tetto interno: torre a D e bracere
 
 `fix/dtower-inner-roof-brazier`: il tetto interno della torre a D corre ora su un colmo (padiglione sul retro, mezzo cono sul davanti) con pendenza unica; il tetto interno toglie il bracere (prima veniva disegnato sopra il tetto, scambiato per una botola). Regola di prodotto registrata: senza bracere gli arcieri della torre non tirano frecce incendiarie (`towerHasBrazier`, da applicare quando le torri avranno frecce incendiarie). Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: nessun contratto cambiato.

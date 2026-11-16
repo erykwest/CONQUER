@@ -231,7 +231,20 @@ function woodedSurfaceFace(vertices,forests){
     ctx.globalAlpha=Math.abs(1-light)*.8;ctx.fillStyle=light<1?'#000':'#fff';ctx.fillRect(-1e4,-1e4,2e4,2e4);ctx.restore();
   }
 }
+// Pure function of relief + projection: memoised so the tiles of a ground bake (same view,
+// different crop) and successive frames of a still camera do not rebuild every hull.
+let forestReliefHullMemo=null;
 function forestReliefHulls(){
+  const v=State.view,hills=State.relief?.hills;
+  const key=[reliefBandRevision,v.x,v.y,v.scale,v.rotation||0,!!v.plan,hills?.length||0].join('|');
+  const tops=(hills||[]).flatMap(h=>h.levels.map(l=>l.top)),m=forestReliefHullMemo;
+  if(m&&m.key===key&&m.relief===State.relief&&m.hills===hills&&
+    m.tops.length===tops.length&&m.tops.every((t,i)=>t===tops[i]))return m.hulls;
+  const hulls=forestReliefHullsUncached();
+  forestReliefHullMemo={key,relief:State.relief,hills,tops,hulls};
+  return hulls;
+}
+function forestReliefHullsUncached(){
   return (State.relief?.hills||[]).map(h=>convexHull(h.levels.flatMap(l=>[
     ...l.top.map(p=>w2sRaw(p,l.z1)),...reliefEdgeBands(l).flatMap(terrainBandScreenPolygon)
   ])));
@@ -624,7 +637,8 @@ function forestGroundLayout(f){
   const pts=(f.points||[]).map(p=>({x:p.x,y:p.y,z:0}));
   forestGroundLayoutCache.set(f.id,pts);return pts;
 }
-function drawForestGround(f){
+// `hulls`: forestReliefHulls() for this view, shared by every forest of one drawEnvironment().
+function drawForestGround(f,hulls=null){
   const layout=forestGroundLayout(f),pts=layout.map(p=>w2sRaw(p,p.z));
   if(!pts.length||!screenPolygonVisible(pts,72))return;
   ctx.save();
@@ -641,7 +655,7 @@ function drawForestGround(f){
   // Holes (clearings, banks, grooves): each one is cut out with an even-odd clip against a
   // covering rectangle; successive clips intersect, so overlapping holes stay open.
   const holes=(f.holes||[]).map(h=>h.map(p=>w2sRaw(p,0)));
-  for(const hull of forestReliefHulls()){ctx.beginPath();ctx.rect(-1e5,-1e5,2e5,2e5);hull.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.clip('evenodd')}
+  for(const hull of hulls||forestReliefHulls()){ctx.beginPath();ctx.rect(-1e5,-1e5,2e5,2e5);hull.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.clip('evenodd')}
   for(const hole of holes){
     if(!screenPolygonVisible(hole,8))continue;
     ctx.beginPath();ctx.rect(-1e5,-1e5,2e5,2e5);
@@ -726,8 +740,10 @@ function forestLikelyVisible(f,pad=100){
   const extent=Math.hypot(f.rx||5,f.ry||4)*1.4*U*State.view.scale*1.55+pad+staticCullOverscan();
   return s.x>=-extent&&s.y>=-extent&&s.x<=r.width+extent&&s.y<=r.height+extent;
 }
-function drawForestMask(f){
-  if(!forestLikelyVisible(f))return;
+// `occluders`: forestTreeOccluders() for this view, shared by every forest of one drawEnvironment().
+function drawForestMask(f,occluders=null){
+  // Without sprites (the WebGL ground bake) neither trees nor shrubs paint anything.
+  if(!forestTreeSpritesReady||!forestLikelyVisible(f))return;
   const tier=landscapeDetailTier();
   const trees=[...forestTreeLayout(f)
     .filter((_,i)=>tier===0?i%2===0:tier===1?i%4!==3:true)
@@ -735,7 +751,7 @@ function drawForestMask(f){
     .slice()
     .sort((a,b)=>w2sRaw(a.p,a.z).y-w2sRaw(b.p,b.z).y);
   let drawn=0,shrubsDrawn=0;
-  const occluders=forestTreeOccluders();
+  occluders=occluders||forestTreeOccluders();
   for(const tree of trees){
     const base=w2sRaw(tree.p,tree.z),depth=w2sRaw(tree.p,0).y,size=tree.shrub?tree.width*(tree.visualScale??1)*U*State.view.scale:Math.max(10,U*State.view.scale*2.25*tree.scale);
     ctx.save();
@@ -815,13 +831,15 @@ function drawEnvironment(){
   const depth=f=>isPlanView()?(f.height||3.6):w2sRaw({x:f.x,y:f.y},0).y;
   const mountains=State.environment.filter(f=>f.type==='mountain').sort((a,b)=>depth(a)-depth(b));
   const ordered=[...State.environment.filter(f=>f.type!=='mountain'),...mountains];
+  // Relief hulls/occluders depend only on the view: project them once per pass, not per forest.
+  let hulls=null,occluders=null;
   for(const f of ordered){
     ctx.save();
     if(['stream','river','sea','pond'].includes(f.type)){
       // Water is rendered once below, as one connected layer.
     }else if(f.type==='forest'){
       if(!forestLikelyVisible(f)){ctx.restore();continue}
-      drawForestGround(f);
+      drawForestGround(f,hulls||=forestReliefHulls());
     }else if(f.type==='mountain'){
       // Peaks are painted after the unified water layer, preserving occlusion.
     }else if(['hill','rough'].includes(f.type)){
@@ -834,7 +852,7 @@ function drawEnvironment(){
     ctx.restore();
   }
   drawWaterLayer(State.environment.filter(f=>['river','stream','sea','pond'].includes(f.type)));
-  for(const f of State.environment.filter(f=>f.type==='forest'))drawForestMask(f);
+  if(forestTreeSpritesReady)for(const f of State.environment.filter(f=>f.type==='forest'))drawForestMask(f,occluders||=forestTreeOccluders());
   for(const f of mountains){pathPolygon(projectPath(f.points),f.fill,f.edge,1.2);drawRaisedFan(f,f.height||3.6);}
 }
 function drawGrid(){

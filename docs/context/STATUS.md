@@ -36,6 +36,36 @@
 
 - Branch fix/microfix. Con il cutaway piano per piano su un piano sotto l'ultimo, torri, porte e sottotorri non disegnano più merli, caditoie, tetto interno e braciere del tetto (cutawayCrestHidden in settlement-castle.js), sia nel percorso 2.5D (drawCastleBattlements) sia in quello WebGL (ConquerCastle3D.addPieces); la chiave della mesh castello di World3D cambia quando la cresta sparisce, così la mesh si ricostruisce.
 - PASS cutaway-floors (nuove asserzioni) e 49 regressioni castello/cutaway; verificato a vista nel browser su una torre quadra W2 a 3 piani: in P2 merli e braciere, in P1 e P0 nessuno dei due. Le due suite Playwright non sono eseguibili in locale. CI da eseguire.
+## 2026-11-16 — QA-DEEP-261116 · Test antiregressivo profondo e due fix di salvataggio (branch `fix/mastio-h4-load-20261116`)
+
+- **Test su `main` 1911369a (#239), checkout LF, senza modifiche al codice:**
+  - 214 script node: tutti PASS. `founding` sfora il limite di tempo locale come su `main` pulito; `stream-count` passa da solo in 156 s.
+  - 17 script browser (main-fixes, figure/vehicle/animal/event cards, ui-combat, siege-damage-converge, panels, construction, upgrades-dev, codex-wiki, asset-catalog, stonecolor, clay, urban-local-preview e anteprime): tutti PASS.
+  - Partite reali headless di 120–190 giorni di gioco: 4 seed (pianura, foresta, colline) in Canvas e World 3D, con salvataggio/ricarica e assedio DEV. Zero errori; nessuna violazione di NaN o negativi, doppie assegnazioni di operai, riserva dei soldati o cantieri bloccati.
+  - Salvataggi di 3 build precedenti (30/10, 13/11, prima di #239) caricati su `main`: tutti PASS, migrazione idempotente. I 3 salvataggi corrotti attivano la protezione del load fallito.
+- **CODICE SUL BRANCH, NON MERGE — due bug precedenti a #239:**
+  - **Mastio tolto dal giocatore:** tornava al ricaricamento e svuotava una stanza (caserma → sala comune; 32 → 16 posti). Origine 0e4306db (14/10). Ora `assignMastio` registra `State.village.mastioDeclined`, e `syncAutoMastio` rispetta la scelta e prende solo una stanza libera.
+  - **Torre W3 piazzata a H4:** il piano pagato si perdeva al caricamento (origine #174). Ora `orientedToolSpec` limita il livello a `maxStructureLevel`.
+- **PROVE:** `qa/mastio-selection-zoom-regression.cjs` (+2 casi) e `qa/tower-h4-regression.cjs` (+1 caso) falliscono su `main` e passano sul branch. Le altre 27 regressioni su Mastio e piazzamento passano. Repro browser degli agenti: Mastio tolto → dopo il reload resta tolto con 2 caserme e 32 posti; W3 H4 → piazzata H3, W2 H4 resta H4.
+- **NON CORRETTO (basso, in BACKLOG):** campi dell'economia salvati come stringhe (es. `castleGold:"lots"`) vengono caricati e risalvati invariati.
+
+## 2026-11-16 — PERF-261116 · Regressione di prestazioni della #162 (branch `perf/regional-roads-20261116`)
+
+- **Trovata dal test antiregressivo profondo** (A/B e bisezione su `main` con `qa/construction-performance.cjs`, scenario castello, due misure per commit). Prima della #162 (a0ed0c75): strade 1,8–2,0 s, disegno a regime 12–14 ms. Dalla #162 (50096dfa) in poi: 4,9–5,7 s e 28–34 ms. La #239 è neutra.
+- **Cause:**
+  - `environmentContains` calcolava `terrainSlopeKind` (via `reliefBandAt`) per ogni foresta prima del test sui confini: con il bosco al 20%, circa 32 volte per punto campionato.
+  - Nella cottura dei tile del terreno, `drawEnvironment` ricostruiva i gusci delle colline e gli occlusori degli alberi per ogni foresta, anche quando non c'erano sprite da disegnare.
+- **CODICE SUL BRANCH, NON MERGE:**
+  - test economici prima della pendenza, che si può anche passare da chi la conosce già (`settlement-world.js`);
+  - gusci e occlusori calcolati una volta per passata e memorizzati con `reliefBandRevision` (`settlement-landscape.js`, `settlement-castle.js`);
+  - chiavi numeriche per `reliefBandAt`.
+- **PROVE:**
+  - Output identici: la griglia di `environmentBlocksPoint`/`roadRepairPointClear` ha lo stesso hash, la geometria delle strade è identica, e i 128 tile del terreno sono identici pixel per pixel.
+  - Dopo il fix: strade 1,0–1,1 s, disegno 9,6–10,0 ms; la cottura dei 128 tile scende da 3,0 a 0,5 s.
+  - 41 regressioni PASS.
+  - Nuova `qa/environment-contains-perf-regression.cjs`: fallisce sul codice precedente e passa sul branch.
+  - mass-battle e fire-collapse senza regressioni.
+
 ## 2026-11-15 — Tetto interno: torre a D e bracere rimosso (branch `fix/dtower-inner-roof-brazier`)
 
 - **CODICE SUL BRANCH, NON MERGE:**
