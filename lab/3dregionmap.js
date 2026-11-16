@@ -8,10 +8,14 @@
   const notes = document.getElementById('perfNotes');
   const status = document.getElementById('sceneStatus');
   const quality = document.getElementById('detail');
+  const deformation = document.getElementById('deformation');
   const showTrees = document.getElementById('showTrees');
+  const showReeds = document.getElementById('showReeds');
   const showBorders = document.getElementById('showBorders');
   const resetView = document.getElementById('resetView');
   const geometry = window.ConquerRegion3DGeometry;
+  // Reuse the Builder's real Blender scatter geometry; bake only two reed mesh sprites once.
+  const scatterModels = window.ConquerScatterModel;
   // Recolor only the canopy fill of the seven Builder SVG trees; their silhouettes and trunks stay intact.
   const treeImages = Array.from({ length: 7 }, (_, i) => {
     const image = new Image();
@@ -31,6 +35,36 @@
     return image;
   });
   let gl, program, vertexBuffer, locations, scene = null, snapshot = null, seenRevision = -1;
+  const reedSprites = ['reedBed','reedClump'].map(makeReedSprite);
+  function makeReedSprite(name) {
+    if (!scatterModels?.assets?.[name]) return null;
+    const asset=scatterModels.assets[name], palette=scatterModels.palette;
+    const sprite=document.createElement('canvas');
+    sprite.width=160; sprite.height=256;
+    const ctx=sprite.getContext('2d');
+    if (!ctx) return null;
+    const vertex=i=>{
+      const x=asset.v[3*i], y=asset.v[3*i+1], z=asset.v[3*i+2];
+      return {x:80+(x-y)*105, y:235+(x+y)*18-z*330, d:x+y+z*.9};
+    };
+    const faces=[];
+    for (let t=0;t<asset.i.length;t+=3){
+      const a=vertex(asset.i[t]),b=vertex(asset.i[t+1]),c=vertex(asset.i[t+2]);
+      faces.push({a,b,c,color:palette[asset.c[t/3]]||'#6b7a38',
+                  d:(a.d+b.d+c.d)/3});
+    }
+    faces.sort((a,b)=>a.d-b.d);
+    for (const face of faces) {
+      ctx.beginPath();
+      ctx.moveTo(face.a.x,face.a.y);
+      ctx.lineTo(face.b.x,face.b.y);
+      ctx.lineTo(face.c.x,face.c.y);
+      ctx.closePath();
+      ctx.fillStyle=face.color;
+      ctx.fill();
+    }
+    return sprite;
+  }
   let lastFrameMs = 0, lastUploadMs = 0, lastSyncMs = 0, rebuilding = false, needsRedraw = false;
   // Same projection and camera conventions as the Settlement Builder.
   const ISO_X = .8660254, ISO_Y = .5, ISO_Z = .9;
@@ -58,7 +92,7 @@
     '#version 300 es',
     'precision mediump float;',
     'in vec3 vColor; out vec4 outputColor;',
-    'void main() { outputColor=vec4(pow(vColor,vec3(0.92)),1.0); }'
+    'void main() { outputColor=vec4(vColor,1.0); }'
   ].join('\n');
   function makeShader(type, source) {
     const shader = gl.createShader(type);
@@ -149,40 +183,27 @@
     const pixelRatio = c.width / Math.max(1, surface.clientWidth);
 
     if (showBorders.checked) {
-      // Always draw the original gameplay territories, never the visual Voronoi microcells.
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
+      // These are the *new* shared boundaries of microcells grouped by owner,
+      // not the old straight macro Voronoi polygons. Draw after terrain.
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       ctx.beginPath();
-      for (const cell of snapshot.cells) {
-        const poly = cell.polygon;
-        if (!poly || poly.length < 3) continue;
-        const first = project({ ...poly[0], z: .24 }, c);
-        ctx.moveTo(first.x, first.y);
-        for (let i = 1; i < poly.length; i++) {
-          const p = project({ ...poly[i], z: .24 }, c);
-          ctx.lineTo(p.x, p.y);
-        }
-        ctx.closePath();
+      for (const edge of scene.borders || []) {
+        const a=project({ ...edge.start,z:.24 },c), b=project({ ...edge.end,z:.24 },c);
+        ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
       }
       ctx.lineWidth = 1.05 * pixelRatio;
-      ctx.strokeStyle = 'rgba(24, 34, 29, .72)';
+      ctx.strokeStyle = 'rgba(24,34,29,.75)';
       ctx.stroke();
 
-      // Highlight the actual shoreline, including land-water shared edges.
       ctx.beginPath();
-      for (const edge of snapshot.edges || []) {
-        const ids = edge.macroIds || [];
-        const water = id => ['sea', 'lake'].includes(snapshot.terrain[id]);
-        const coastline = ids.length === 1 || (ids.length === 2 && water(ids[0]) !== water(ids[1]));
-        if (!coastline) continue;
-        const a = project({ ...edge.start, z: .3 }, c), b = project({ ...edge.end, z: .3 }, c);
-        ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+      for (const edge of scene.coastlines || []) {
+        const a=project({ ...edge.start,z:.3 },c), b=project({ ...edge.end,z:.3 },c);
+        ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
       }
       ctx.lineWidth = 1.6 * pixelRatio;
-      ctx.strokeStyle = 'rgba(221, 203, 160, .83)';
+      ctx.strokeStyle = 'rgba(221,203,160,.83)';
       ctx.stroke();
     }
-
     const rivers = new Set(snapshot.rivers || []);
     const automatic = new Set(snapshot.generatedRiverEdges || []);
     ctx.beginPath();
@@ -199,19 +220,32 @@
     ctx.lineWidth = 2.2 * pixelRatio;
     ctx.stroke();
 
-    if (showTrees.checked) {
-      const trees = scene.trees.map(t => ({ t, p: project(t, c) }))
-        .sort((a, b) => a.p.depth - b.p.depth);
-      for (const { t, p } of trees) {
-        const image = treeImages[t.variant];
-        if (!image.complete || !image.naturalWidth) continue;
-        const size = Math.max(3, t.size * c.scale);
-        if (p.x < -size || p.y < -size || p.x > c.width + size || p.y > c.height + size) continue;
-        ctx.globalAlpha = .94;
-        ctx.drawImage(image, p.x - size / 2, p.y - size * .86, size, size);
+    // Sort forest trees and marsh reed beds together so camera yaw has stable overlap.
+    const scatter=[];
+    const collect=(items,kind)=>{
+      for(const t of items||[]){
+        const p=project(t,c),size=Math.max(3,t.size*c.scale);
+        if(p.x < -size || p.y < -size || p.x > c.width+size || p.y > c.height+size) continue;
+        scatter.push({t,p,size,kind});
       }
-      ctx.globalAlpha = 1;
+    };
+    if(showTrees.checked)collect(scene.trees,'tree');
+    if(showReeds.checked)collect(scene.reeds,'reed');
+    scatter.sort((a,b)=>a.p.depth-b.p.depth);
+    ctx.globalAlpha=.96;
+    for(const {t,p,size,kind} of scatter){
+      if(kind==='tree'){
+        const image=treeImages[t.variant];
+        if(!image.complete || !image.naturalWidth)continue;
+        ctx.drawImage(image,p.x-size/2,p.y-size*.86,size,size);
+      }else{
+        const image=reedSprites[t.variant];
+        if(!image)continue;
+        ctx.drawImage(image,p.x-size*.3125,p.y-size*.94,size*.625,size);
+      }
     }
+    ctx.globalAlpha=1;
+
   }
   function geometryKey(a, b) {
     const one = a.x.toFixed(3) + ',' + a.y.toFixed(3);
@@ -237,6 +271,7 @@
     notes.textContent = scene.stats.territories + ' territori · ' + scene.stats.subcells + ' sottocelle · ' +
       scene.stats.triangles.toLocaleString('it-IT') + ' triangoli · ' +
       scene.stats.mountains + ' montagne · ' + scene.stats.trees + ' alberi · ' +
+      (scene.stats.reeds||0) + ' canneti · ' +
       scene.stats.generationMs.toFixed(0) + ' ms mesh CPU · ' + lastUploadMs.toFixed(1) +
       ' ms upload GPU · ' + lastFrameMs.toFixed(1) + ' ms draw CPU';
   }
@@ -245,13 +280,13 @@
     rebuilding = true;
     try {
       status.textContent = 'Genero mesh locale (i territori originali restano invariati)…';
-      const next = geometry.buildScene(snapshot, Number(quality.value));
+      const next = geometry.buildScene(snapshot, Number(quality.value), Number(deformation.value) / 100);
       const uploadBegin = performance.now();
       gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, next.vertices, gl.STATIC_DRAW);
       lastUploadMs = performance.now() - uploadBegin;
       scene = next;
-      status.textContent = 'WebGL2 attivo · dettaglio visivo ' + quality.value + '× · biomi originali, nessuna modifica al gameplay';
+      status.textContent = 'WebGL2 attivo · mesh globale ' + quality.value + '× → territori organici (' + deformation.value + '%) · palette 2D originale · gameplay invariato';
       draw();
     } catch (error) {
       status.textContent = 'Errore anteprima: ' + error.message;
@@ -281,7 +316,7 @@
     const results = [];
     try {
       for (const count of variants) {
-        const t = performance.now(), sceneTest = geometry.buildScene(snapshot, count);
+        const t = performance.now(), sceneTest = geometry.buildScene(snapshot, count, Number(deformation.value) / 100);
         results.push(count + '×: ' + (performance.now() - t).toFixed(0) + ' ms · ' +
           sceneTest.stats.triangles.toLocaleString('it-IT') + ' triangoli');
       }
@@ -365,7 +400,8 @@
     draw();
   });
 
-  for (const input of [showTrees, showBorders]) input.addEventListener('input', draw);
+  for (const input of [showTrees, showReeds, showBorders]) input.addEventListener('input', draw);
+  deformation.addEventListener('change', rebuild);
   quality.addEventListener('change', rebuild);
   document.getElementById('refresh').addEventListener('click', () => {
     seenRevision = -1; syncFromSource();
