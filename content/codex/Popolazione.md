@@ -24,3 +24,7 @@ La popolazione vive nelle case e partecipa alla [[Produzione|produzione]]. Le co
 - [[Pattuglia]]
 - [[Lanciere]]
 - [[Lupo]]
+- [[Orso]]
+- [[Fuorilegge]]
+- [[Guardia Del Covo]]
+- [[Arciere Fuorilegge]]

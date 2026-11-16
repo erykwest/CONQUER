@@ -1,5 +1,17 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-16 — THREAT-GEN-01 · Minacce rare
+
+Probabilità del generatore ridotte di circa 8 volte, grazia e quiete allungate: a Normale ~5 eventi l'anno invece di ~42 (orso uno ogni ~3 anni, ~1 razzia l'anno). Tassi bloccati in `qa/threats-regression.cjs`. STATUS, BACKLOG, DECISIONS aggiornati; ROADMAP invariata.
+
+## 2026-11-16 — THREAT-GEN-01 · Generatore di minacce
+
+Nuovo `settlement-threats.js`: ogni giorno di gioco tira per lupi, orso, briganti, banditi e predoni con probabilità legate a stagione, ricchezza, popolazione, strade, boschi ed edifici isolati; difficoltà Tranquilla/Normale/Dura; avviso con «Vai» e registro. I fuorilegge perdono il calendario fisso. Nuova `qa/threats-regression.cjs`. STATUS, BACKLOG, DECISIONS (D-THREATS-261116) aggiornati; ROADMAP invariata.
+
+## 2026-11-16 — WILD-OUT-01 · Lupi, orso e tre tipi di fuorilegge in partita
+
+`feature/wildlife-outlaws`: i lupi tornano in partita (il modulo era caricato solo da `/camp`); nuovo orso territoriale con tana nel bosco; nuovo `settlement-outlaws.js` con briganti (strada presidiata, scambi −40%), banditi (covo di tende con guardie, pizzo settimanale) e predoni (saccheggio di edifici isolati e fuga). Briganti e banditi armati 2/3 ascia e scudo tondo, 1/3 arco. Covo e blocco stradale composti con i modelli 3D da campo (tende, tettoia, carro, botti, palizzata) e registrati nel Lab. Nuova `qa/outlaws-regression.cjs`, `qa/wolves-regression.cjs` estesa all'orso. STATUS, BACKLOG, DECISIONS aggiornati; ROADMAP invariata (nessuna milestone cambia).
+
 ## 2026-11-16 — QA-DEEP-261116 · Test antiregressivo profondo e fix di salvataggio
 
 16/11/2026 — `fix/mastio-h4-load-20261116` (pre-merge):

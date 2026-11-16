@@ -8,6 +8,12 @@
     spearman:Object.freeze({hp:100,combat:2,armor:2,aim:null,front:3}),
     patrol:Object.freeze({hp:40,combat:2,armor:2,aim:null,front:2}),
     wolf:Object.freeze({hp:12,combat:3,armor:0,aim:null,front:1}),
+    bear:Object.freeze({hp:45,combat:4,armor:1,aim:null,front:1}),
+    // Outlaws: light, unarmoured men; a lair guard is the best of them.
+    outlaw:Object.freeze({hp:40,combat:2,armor:0,aim:null,front:1}),
+    outlawGuard:Object.freeze({hp:60,combat:2,armor:1,aim:null,front:1}),
+    // Outlaw bowman: shoots like an archer (kind 'archer'), lighter than a realm archer.
+    outlawArcher:Object.freeze({hp:35,combat:1,armor:0,aim:2,front:1,range:15}),
     infantry:Object.freeze({hp:100,combat:2,armor:1,aim:null,front:1}),
     knight:Object.freeze({hp:30,combat:3,armor:3,aim:null,front:1}),
     captain:Object.freeze({hp:30,combat:3,armor:3,aim:null,front:1}),
@@ -17,7 +23,9 @@
   // A PVP team can supply its own palette / emblems later.
   const FACTIONS={
     realm:{livery:null},
-    dev_hostile:{livery:{main:'#171716',alt:'#e3bd31',mainDark:'#090909',altDark:'#95781a'}}
+    dev_hostile:{livery:{main:'#171716',alt:'#e3bd31',mainDark:'#090909',altDark:'#95781a'}},
+    // Outlaws wear no colours of a lord: undyed wool and forest green.
+    outlaw:{livery:{main:'#4a5233',alt:'#7a6446',mainDark:'#2c3120',altDark:'#4c3e2b'}}
   };
   const shots=[],meleeFlashes=[],stones=[];
   let elapsed=0,combatClock=0;
@@ -32,7 +40,8 @@
     }
   }
   const liveryOf=id=>FACTIONS[id]?.livery||null;
-  const profileKind=u=>u.kind==='squad'?'spearman':u.kind==='patrol'?'patrol':u.kind==='knight'?'knight':u.kind==='captain'?'captain':u.kind==='archer'?'archer':u.combatKind||'infantry';
+  // An explicit profile (outlaw bowmen are kind 'archer' to shoot, with their own numbers) wins.
+  const profileKind=u=>u.profile&&PROFILES[u.profile]?u.profile:u.kind==='squad'?'spearman':u.kind==='patrol'?'patrol':u.kind==='knight'?'knight':u.kind==='captain'?'captain':u.kind==='archer'?'archer':u.combatKind||'infantry';
   function boundaryPoints(isAllowed,worldSize=200,step=1.25){
     const edge=step*.576,points=[];
     for(let y=step/2;y<worldSize;y+=step)for(let x=step/2;x<worldSize;x+=step){
