@@ -3,6 +3,7 @@
 ## D-THREATS-261116 — Generatore di minacce (16/11/2026)
 
 - **DECISO dal product owner:** lupi, orso, briganti, banditi e predoni compaiono tramite un **generatore di eventi** a **probabilità + condizioni** (tiro giornaliero, probabilità dipendente dallo stato dell'insediamento, tempi di quiete); **difficoltà a 3 livelli** (Tranquilla / Normale / Dura) che cambia frequenza e dimensione delle bande, scelta e salvata nella partita; il giocatore è avvisato con **avviso + registro** (pulsante «Vai» sul posto).
+- **DECISO dal product owner (16/11/2026):** le minacce devono essere **rare** (un orso tre volte l'anno, o tre razzie, è troppo). Obiettivo adottato: ~5 eventi l'anno a Normale, orso circa uno ogni 3 anni.
 - **PROPOSTO (valori provvisori):** probabilità di base, moltiplicatori, grazia e quiete descritti in [STATUS](STATUS.md); al massimo una minaccia al giorno; tiri deterministici per seme e giorno.
 - **CONTRATTO TECNICO:** `ConquerThreats` decide *quando*; `ConquerWolves` e `ConquerOutlaws` decidono *dove* e *come*. Stato in `combat.threats` (difficoltà, ultimo giorno tirato, ultime comparse, registro).
 - **STATO:** implementato su `feature/wildlife-outlaws`, non in main.

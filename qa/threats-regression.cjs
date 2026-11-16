@@ -59,38 +59,55 @@ function world({seed=4242,difficulty='normal',winter=false,gold=300,founded=true
   assert.ok(w.spawned.every(s=>s.type==='wolves'||s.type==='bear'),'only wildlife in the first days');
   const why=w.api.explain('raiders').why;assert.equal(why,'periodo di grazia');
 }
-// At most one new threat per day; deterministic per seed.
-{
-  const a=world(),b=world();a.api.tick(.1);b.api.tick(.1);
-  // Free the bands as they appear, so every day can roll everything.
-  for(let d=0;d<300;d++){a.advance(1);b.advance(1);for(const k of ['brigands','bandits','raiders']){a.kill(k);b.kill(k)}}
-  const perDay=new Map();for(const s of a.spawned)perDay.set(s.day,(perDay.get(s.day)||0)+1);
-  assert.ok([...perDay.values()].every(n=>n===1),'never two threats on the same day');
-  assert.deepEqual(a.spawned,b.spawned,'same seed, same events');
-  const kinds=new Set(a.spawned.map(s=>s.type));
-  for(const t of ['wolves','bear','brigands','bandits','raiders'])assert.ok(kinds.has(t),'over a long game every kind appears: '+t);
-  const c=world({seed:99});c.api.tick(.1);c.advance(300);
-  assert.notDeepEqual(c.spawned.map(s=>s.day+s.type),a.spawned.map(s=>s.day+s.type),'another seed, another story');
+// A player who deals with every threat about two weeks after it appears.
+function year(difficulty,seed,days=365){
+  const w=world({difficulty,seed});w.api.tick(.1);
+  for(let d=0;d<days;d++){
+    w.advance(1);
+    for(const s of w.spawned)if(!s.done&&w.State.clock.day-s.day>=15){s.done=true;w.kill(s.type);
+      if(['brigands','bandits','raiders'].includes(s.type))w.lastEnded[s.type]=w.State.clock.day}
+  }
+  return w.spawned;
 }
-// Difficulty: frequency, band size and wolf-pack cap.
+const SEEDS=Array.from({length:40},(_,i)=>1000+i*7919);
+const rates=d=>{const sum={wolves:0,bear:0,brigands:0,bandits:0,raiders:0},all=[];
+  for(const s of SEEDS)for(const e of year(d,s)){sum[e.type]++;all.push(e)}
+  for(const k in sum)sum[k]/=SEEDS.length;sum.total=Object.values(sum).reduce((a,b)=>a+b,0);sum.all=all;return sum};
+// Rare events (16/11/2026, «un orso 3 volte l'anno è troppo»): about five a year at Normale.
 {
-  const count=d=>{const w=world({difficulty:d});w.api.tick(.1);
-    for(let i=0;i<365;i++){w.advance(1);for(const k of ['brigands','bandits','raiders'])w.kill(k);w.kill('wolves');w.kill('bear')}
-    return w.spawned};
-  const easy=count('easy'),hard=count('hard');
-  assert.ok(hard.length>easy.length*1.6,'hard brings many more threats than easy ('+easy.length+' vs '+hard.length+')');
+  const easy=rates('easy'),normal=rates('normal'),hard=rates('hard');
+  const show=r=>['wolves','bear','brigands','bandits','raiders'].map(k=>k+' '+r[k].toFixed(2)).join(', ');
+  assert.ok(normal.bear<=.5,'Normale: a bear at most every two years ('+show(normal)+')');
+  assert.ok(normal.raiders<=1.5&&normal.brigands<=1.5,'Normale: about one raid and one roadblock a year ('+show(normal)+')');
+  assert.ok(normal.bandits<=.8,'Normale: a bandit lair at most every ~1.5 years ('+show(normal)+')');
+  assert.ok(normal.wolves<=2.5,'Normale: at most ~2 new wolf packs a year ('+show(normal)+')');
+  assert.ok(normal.total>=3&&normal.total<=6.5,'Normale: 3–6.5 threats a year ('+normal.total.toFixed(1)+')');
+  assert.ok(hard.bear<=.7&&hard.raiders<=2,'even Dura stays rare ('+show(hard)+')');
+  assert.ok(hard.total>easy.total*1.8,'Dura brings many more than Tranquilla ('+easy.total.toFixed(1)+' vs '+hard.total.toFixed(1)+')');
   const avg=list=>{const s=list.filter(x=>x.type==='raiders');return s.reduce((n,x)=>n+x.size,0)/Math.max(1,s.length)};
-  assert.ok(avg(hard)>=avg(easy)+2.5,'hard raids are bigger');
-  const w=world({difficulty:'easy'});w.api.tick(.1);w.advance(200);
+  assert.ok(avg(hard.all)>=avg(easy.all)+2.5,'Dura raids are bigger');
+}
+// At most one new threat per day; deterministic per seed; every kind over a long game.
+{
+  const a=year('normal',4242,6*365),b=year('normal',4242,6*365);
+  const perDay=new Map();for(const s of a)perDay.set(s.day,(perDay.get(s.day)||0)+1);
+  assert.ok([...perDay.values()].every(n=>n===1),'never two threats on the same day');
+  assert.deepEqual(a,b,'same seed, same events');
+  const kinds=new Set(SEEDS.slice(0,10).flatMap(s=>year('normal',s,6*365)).map(s=>s.type));
+  for(const t of ['wolves','bear','brigands','bandits','raiders'])assert.ok(kinds.has(t),'over long games every kind appears: '+t);
+  const c=year('normal',99,6*365);
+  assert.notDeepEqual(c.map(s=>s.day+s.type),a.map(s=>s.day+s.type),'another seed, another story');
+}
+{
+  const w=world({difficulty:'easy'});w.api.tick(.1);w.advance(2000);
   assert.ok(w.spawned.filter(s=>s.type==='wolves').length<=1,'easy: one wolf pack at a time');
   assert.equal(w.api.setDifficulty('hard'),true);assert.equal(w.api.difficulty(),'hard');
   assert.equal(w.api.setDifficulty('nightmare'),false,'unknown difficulty refused');
-}
-// Seasons: the bear hibernates; wolves are bolder in winter.
+}// Seasons: the bear hibernates; wolves are bolder in winter.
 {
-  const w=world({winter:true});w.api.tick(.1);w.advance(10);
+  const w=world({winter:true});w.api.tick(.1);w.advance(60);
   assert.equal(w.api.explain('bear').why,'in letargo','no new bear in winter');
-  const summer=world();summer.api.tick(.1);summer.advance(10);
+  const summer=world();summer.api.tick(.1);summer.advance(60);
   for(const x of [w,summer])for(let i=0;i<4;i++)x.kill('wolves');
   w.State.clock.day=summer.State.clock.day+=20;w.state().last={};summer.state().last={};
   assert.ok(w.api.explain('wolves').p>summer.api.explain('wolves').p*2,'winter makes wolf packs much more likely');
@@ -98,14 +115,14 @@ function world({seed=4242,difficulty='normal',winter=false,gold=300,founded=true
 // Conditions: gold draws brigands; one band of a kind at a time; cooldown after its end.
 {
   const poor=world({gold:50}),rich=world({gold:900});
-  for(const w of [poor,rich]){w.api.tick(.1);w.advance(30)}
-  poor.kill('brigands');rich.kill('brigands');
+  for(const w of [poor,rich]){w.api.tick(.1);w.advance(40)}
+  poor.kill('brigands');rich.kill('brigands');poor.state().last={};rich.state().last={};
   assert.ok(rich.api.explain('brigands').p>poor.api.explain('brigands').p*3,'a rich village draws brigands');
   const w=world();w.api.tick(.1);w.advance(30);
   w.active.bandits=true;assert.equal(w.api.explain('bandits').why,'banda già attiva');
   w.active.bandits=false;w.lastEnded.bandits=w.State.clock.day-2;
   assert.equal(w.api.explain('bandits').why,'appena avvenuto','quiet after a band ends');
-  w.lastEnded.bandits=w.State.clock.day-40;assert.equal(w.api.explain('bandits').why,null);
+  w.lastEnded.bandits=w.State.clock.day-200;assert.equal(w.api.explain('bandits').why,null);
 }
 // Catch-up at high speed: every crossed day is rolled once.
 {
@@ -127,4 +144,4 @@ function world({seed=4242,difficulty='normal',winter=false,gold=300,founded=true
   for(let i=0;i<40;i++)w.api.force('wolves');
   assert.ok(w.api.log().length<=20,'the log keeps the last 20 events');
 }
-console.log('PASS threats: founding and grace, one event a day, deterministic per seed, difficulty (frequency, size, packs), winter bear and wolves, wealth and brigands, cooldowns, catch-up, forcing, warnings and log');
+console.log('PASS threats: rare (about five a year at Normale), founding and grace, one event a day, deterministic per seed, difficulty (frequency, size, packs), winter bear and wolves, wealth and brigands, cooldowns, catch-up, forcing, warnings and log');

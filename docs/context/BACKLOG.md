@@ -6,7 +6,8 @@
 - [x] Tiro giornaliero per tipo con probabilità dipendenti da stagione, ricchezza, popolazione, strade, boschi, edifici isolati.
 - [x] Difficoltà a tre livelli salvata nella partita.
 - [x] Avviso con «Vai» e registro degli eventi.
-- [ ] Bilanciare probabilità, grazia e quiete su partite lunghe reali.
+- [x] Eventi rari: ~5 l'anno a Normale (orso uno ogni ~3 anni, ~1 razzia e ~1 brigantaggio l'anno), bloccati da test.
+- [ ] Verificare il ritmo su partite lunghe reali.
 - [ ] Avviso e registro anche nell'interfaccia UI v2 (oggi banner globale + pannello COMBAT del builder).
 - [ ] Mostrare la difficoltà alla creazione della partita, non solo nel pannello.
 

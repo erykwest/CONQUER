@@ -21,9 +21,12 @@
   });
   // Provisional values (to be balanced): base chance per day, days of grace
   // after founding, days of quiet after the previous band of the kind ends.
-  const BASE={wolves:.04,bear:.02,brigands:.03,bandits:.025,raiders:.025};
-  const GRACE={wolves:2,bear:4,brigands:14,bandits:8,raiders:20};
-  const COOLDOWN={wolves:6,bear:20,brigands:12,bandits:30,raiders:16};
+  // Tuned (16/11/2026) for about 4–5 threats a year at Normale with a player who
+  // deals with each in ~2 weeks: ~1.5 new wolf packs, a bear every ~2 years, ~1
+  // brigand roadblock, a bandit lair every ~2 years, ~1 raid (qa/threats-regression).
+  const BASE={wolves:.0035,bear:.0016,brigands:.004,bandits:.0012,raiders:.0018};
+  const GRACE={wolves:10,bear:30,brigands:30,bandits:20,raiders:45};
+  const COOLDOWN={wolves:60,bear:240,brigands:90,bandits:150,raiders:120};
   const DIFFICULTY=Object.freeze({
     easy:{label:'Tranquilla',freq:.5,size:-1,grace:1.5,packs:1},
     normal:{label:'Normale',freq:1,size:0,grace:1,packs:2},
@@ -97,7 +100,8 @@
     }else if(type==='raiders'){
       p*=clamp(ctx.outlying/3,.5,2)*clamp(ctx.goods/300,.5,2)*(ctx.season==='autumn'?1.4:1);
     }
-    return clamp(p*level().freq,0,.5);
+    // Never more than 5% a day, however rich, big or wintry the settlement.
+    return clamp(p*level().freq,0,.05);
   }
   function odds(day=Math.floor(today())){
     const st=state();if(!st||!founded())return{};

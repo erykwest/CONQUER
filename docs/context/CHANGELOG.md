@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-16 — THREAT-GEN-01 · Minacce rare
+
+Probabilità del generatore ridotte di circa 8 volte, grazia e quiete allungate: a Normale ~5 eventi l'anno invece di ~42 (orso uno ogni ~3 anni, ~1 razzia l'anno). Tassi bloccati in `qa/threats-regression.cjs`. STATUS, BACKLOG, DECISIONS aggiornati; ROADMAP invariata.
+
 ## 2026-11-16 — THREAT-GEN-01 · Generatore di minacce
 
 Nuovo `settlement-threats.js`: ogni giorno di gioco tira per lupi, orso, briganti, banditi e predoni con probabilità legate a stagione, ricchezza, popolazione, strade, boschi ed edifici isolati; difficoltà Tranquilla/Normale/Dura; avviso con «Vai» e registro. I fuorilegge perdono il calendario fisso. Nuova `qa/threats-regression.cjs`. STATUS, BACKLOG, DECISIONS (D-THREATS-261116) aggiornati; ROADMAP invariata.
