@@ -53,16 +53,31 @@ for(const detail of [1,8,20,40]){
   assert.ok(scene.borders.length>0 && scene.coastlines.length>0,'aggregated visual borders + coasts');
   assert.ok(scene.trees.every(t=>terrain[t.macroId]==='forest'),'trees only in forests');
   assert.ok(scene.reeds.every(t=>terrain[t.macroId]==='swamp'),'reeds only in marshes');
-  assert.ok(scene.trees.every(t=>t.size>=29&&t.size<=50.5),'forest scale is 5× original');
+  assert.ok(scene.trees.every(t=>t.size>=14.5&&t.size<=25.25),'forest scale is 2.5× original, half the last 5× sprite');
   assert.ok(scene.reeds.every(t=>t.size>=29&&t.size<=50.5),'reed scale is 5× original');
   assert.ok(scene.trees.length>=cells.filter(c=>terrain[c.macroId]==='forest').length*30,
             'forest scatter >=10x original 3 trees per territory');
   assert.ok(scene.reeds.length>=cells.filter(c=>terrain[c.macroId]==='swamp').length*10,
             'marsh scatter >=10x original 1 reed per territory');
-  // Sea mesh surfaces must contain exact original 2D RGB after GPU conversion.
-  assert.ok(Math.abs(scene.vertices[3]-136/255)<1e-6 &&
-            Math.abs(scene.vertices[4]-169/255)<1e-6 &&
-            Math.abs(scene.vertices[5]-178/255)<1e-6, '2D source palette forwarded unchanged');
+  // The exact 2D palette is preserved for plain/forest/swamp, whereas sea/lake
+  // and hills regain subtle microcell colour modulation. All modulation is
+  // deterministic and relative to the authoritative World Lab base colour.
+  const colorsByTerrain = {};
+  for(const range of scene.pickRanges) {
+    const biome = terrain[range.macroId];
+    const i = range.firstVertex * 6;
+    const colors = colorsByTerrain[biome] ||= new Set();
+    colors.add([scene.vertices[i+3],scene.vertices[i+4],scene.vertices[i+5]].map(v=>v.toFixed(6)).join(','));
+    if(['plain','forest','swamp'].includes(biome)) {
+      const expected = sourceColor(fills[range.macroId]);
+      for(let c=0;c<3;c++)assert.ok(Math.abs(scene.vertices[i+3+c]-expected[c]/255)<1e-6,
+                                  'unmodified World Lab color for '+biome);
+    }
+  }
+  for(const biome of ['sea','hills'])
+    assert.ok(colorsByTerrain[biome]?.size>3,biome+' has visible chromatic variation');
+  for(const biome of ['plain','forest','swamp'])
+    assert.ok(colorsByTerrain[biome]?.size===1,biome+' retains exact original 2D palette');
   results.push({detail,ms:Math.round(ms),subcells:scene.stats.subcells,
     triangles:scene.stats.triangles,trees:scene.stats.trees,reeds:scene.stats.reeds,
     borders:scene.borders.length,MiB:+(scene.vertices.byteLength/(1024*1024)).toFixed(2)});
@@ -100,6 +115,6 @@ for(const detail of [1,8,20,40]){
     );
   }
 }
-console.log('PASS region3d: global microcells, palette, vegetation, and depth-correct 3D territory picking under 12 camera transforms.');
+console.log('PASS region3d: global microcells, water/hill chromatic variation, half-size trees and 3D picking.');
 console.table(results);
 console.log('Synthetic CPU-only baseline. Browser/WebGL visuals and FPS remain separate checks.');
