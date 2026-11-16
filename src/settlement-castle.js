@@ -22,7 +22,8 @@ function unrotateViewPoint(p,turns=State.view.rotation||0){return rotateViewPoin
 const reliefBandCache=new Map();
 let reliefBandSpatialCache=null;
 function reliefLevels(){return State.relief?.hills?.flatMap(h=>h.levels||[])||[]}
-function clearReliefBandCache(){reliefBandCache.clear();reliefBandSpatialCache=null;terrainElevationIndex=null;placementGroundZMemo=new WeakMap()}
+let reliefBandRevision=0; // bumped with every band cache reset; keys view-space relief memos
+function clearReliefBandCache(){reliefBandRevision++;reliefBandCache.clear();reliefBandSpatialCache=null;terrainElevationIndex=null;placementGroundZMemo=new WeakMap()}
 function reliefEdgeBands(level){
   if(reliefBandCache.has(level.id))return reliefBandCache.get(level.id);
   const pts=level.top||[];if(pts.length<3)return[];
@@ -61,7 +62,7 @@ function reliefBandAt(p){
     for(const level of reliefLevels())for(const band of reliefEdgeBands(level)){
       for(let x=Math.floor(band.minX/size);x<=Math.floor(band.maxX/size);x++)
         for(let y=Math.floor(band.minY/size);y<=Math.floor(band.maxY/size);y++){
-          const key=x+','+y;
+          const key=x*65536+y; // numeric cell key: |y| stays far below 32768
           if(!cells.has(key))cells.set(key,[]);
           cells.get(key).push(band);
         }
@@ -70,7 +71,7 @@ function reliefBandAt(p){
   }
   const {cells,size}=reliefBandSpatialCache;
   let gentle=null;
-  for(const band of cells.get(Math.floor(p.x/size)+','+Math.floor(p.y/size))||[]){
+  for(const band of cells.get(Math.floor(p.x/size)*65536+Math.floor(p.y/size))||[]){
     if(p.x<band.minX||p.x>band.maxX||p.y<band.minY||p.y>band.maxY)continue;
     if(!pointInPolygon(p,band.poly))continue;
     if(band.kind==='steep')return band;
