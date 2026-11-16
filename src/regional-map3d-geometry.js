@@ -294,6 +294,8 @@
     detail=clamp(Math.trunc(Number(detail))||20,1,40);
     deformation=clamp(Number(deformation)||0,0,1);
     const vertices=[],trees=[],reeds=[],peaks=[],pickRanges=[];
+    const pickBucketSize=64, pickBuckets=new Map();
+    let pickMaxAbsZ=0;
     let subcells=0,triangles=0,mountains=0;
     function face(a,b,c,rgb,variation=0,shaded=true) {
       const u={x:b.x-a.x,y:b.y-a.y,z:b.z-a.z};
@@ -330,7 +332,22 @@
           {...b,z:elevation(b,parent,terrain,snapshot.seed)},shade,0,false);
       }
       // Terrain triangles only; subsequent mountains are deliberately not selectable.
-      pickRanges.push({macroId:part.macroId,firstVertex,vertexCount:vertices.length/6-firstVertex});
+      const vertexCount=vertices.length/6-firstVertex;
+      const index=pickRanges.length;
+      let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+      for(let i=firstVertex*6;i<vertices.length;i+=6){
+        minX=Math.min(minX,vertices[i]);maxX=Math.max(maxX,vertices[i]);
+        minY=Math.min(minY,vertices[i+1]);maxY=Math.max(maxY,vertices[i+1]);
+        pickMaxAbsZ=Math.max(pickMaxAbsZ,Math.abs(vertices[i+2]));
+      }
+      pickRanges.push({macroId:part.macroId,firstVertex,vertexCount,minX,minY,maxX,maxY});
+      for(let gy=Math.floor(minY/pickBucketSize);gy<=Math.floor(maxY/pickBucketSize);gy++){
+        for(let gx=Math.floor(minX/pickBucketSize);gx<=Math.floor(maxX/pickBucketSize);gx++){
+          const key=gx+','+gy;
+          if(!pickBuckets.has(key))pickBuckets.set(key,[]);
+          pickBuckets.get(key).push(index);
+        }
+      }
     }
     for(const cell of snapshot.cells) {
       const poly=cell.polygon,terrain=snapshot.terrain[cell.macroId]||'plain';
@@ -404,7 +421,7 @@
     }
     const {borders,coastlines,unmatched}=aggregateEdges(base.parts,snapshot.terrain,snapshot.cells);
     return{
-      vertices:new Float32Array(vertices),pickRanges,trees,reeds,peaks,borders,coastlines,
+      vertices:new Float32Array(vertices),pickRanges,pickIndex:{bucketSize:pickBucketSize,buckets:pickBuckets,maxAbsZ:pickMaxAbsZ},trees,reeds,peaks,borders,coastlines,
       stats:{territories:snapshot.cells.length,subcells,triangles,mountains,
              trees:trees.length,reeds:reeds.length,unmatchedEdges:unmatched,
              floats:vertices.length,generationMs:(typeof performance!=='undefined'?performance.now():Date.now())-t0}
@@ -437,8 +454,28 @@
       if(w < -1e-6 || u+w > 1+1e-6)return null;
       return u*a.depth+w*b.depth+(1-u-w)*c.depth;
     };
+    // Reverse the Builder's iso transform at ground elevation, then include the
+    // maximum possible z displacement. This gives a tiny candidate window even
+    // when zoomed, panned or yaw-rotated, without missing elevated hill triangles.
+    const index=scene.pickIndex;
+    let candidates=scene.pickRanges;
+    if(index?.buckets){
+      const difference=(pixelX-px)/(scale*.8660254);
+      const sum=(pixelY-py)/(scale*.5);
+      const qx=(difference+sum)/2,qy=(sum-difference)/2;
+      const worldX=c.cx+qx*xcos+qy*xsin;
+      const worldY=c.cy-qx*xsin+qy*xcos;
+      const radius=2+Math.max(3,index.maxAbsZ)*1.5;
+      const bucket=index.bucketSize, ids=new Set();
+      for(let gy=Math.floor((worldY-radius)/bucket);gy<=Math.floor((worldY+radius)/bucket);gy++)
+        for(let gx=Math.floor((worldX-radius)/bucket);gx<=Math.floor((worldX+radius)/bucket);gx++)
+          for(const id of index.buckets.get(gx+','+gy)||[])ids.add(id);
+      candidates=[...ids].map(id=>scene.pickRanges[id]).filter(r=>
+        worldX+radius>=r.minX && worldX-radius<=r.maxX &&
+        worldY+radius>=r.minY && worldY-radius<=r.maxY);
+    }
     let best=-Infinity, selected=null;
-    for(const range of scene.pickRanges){
+    for(const range of candidates){
       for(let i=range.firstVertex;i<range.firstVertex+range.vertexCount;i+=3){
         const a=hitVertex(i),b=hitVertex(i+1),c=hitVertex(i+2);
         if(pixelX<Math.min(a.x,b.x,c.x)-.001 || pixelX>Math.max(a.x,b.x,c.x)+.001 ||
