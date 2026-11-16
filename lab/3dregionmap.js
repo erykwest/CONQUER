@@ -260,16 +260,14 @@
       ctx.strokeStyle = 'rgba(221,203,160,.83)';
       ctx.stroke();
     }
-    const rivers = new Set(snapshot.rivers || []);
-    const automatic = new Set(snapshot.generatedRiverEdges || []);
+    // The renderer must only draw derived ORGANIC macro seams, never source
+    // 2D river segments: those straight edges no longer match warped territory borders.
     ctx.beginPath();
-    for (const edge of snapshot.edges || []) {
-      const ids = edge.macroIds || [];
-      const river = (ids.length === 2 && rivers.has(ids.slice().sort((a, b) => a - b).join('-'))) ||
-        automatic.has(geometryKey(edge.start, edge.end));
-      if (!river) continue;
-      const a = project({ ...edge.start, z: .37 }, c), b = project({ ...edge.end, z: .37 }, c);
-      ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+    for (const edge of scene.riverEdges || []) {
+      const a=project({...edge.start,z:.39},c);
+      const b=project({...edge.end,z:.39},c);
+      ctx.moveTo(a.x,a.y);
+      ctx.lineTo(b.x,b.y);
     }
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     ctx.strokeStyle = '#76c9d4';
@@ -331,7 +329,8 @@
       scene.stats.mountains + ' montagne innevate · ' + (scene.stats.hills||0) + ' colline tronco-piramidali · ' + scene.stats.trees + ' alberi · ' +
       (scene.stats.reeds||0) + ' canneti · ' +
       scene.stats.generationMs.toFixed(0) + ' ms mesh CPU · ' + lastUploadMs.toFixed(1) +
-      ' ms upload GPU · ' + lastFrameMs.toFixed(1) + ' ms draw CPU';
+      ' ms upload GPU · ' + lastFrameMs.toFixed(1) + ' ms draw CPU · ' +
+      (scene.riverStats?.visualSegments||0) + ' tratti fluviali sui confini';
   }
   function rebuild() {
     if (!snapshot || !gl || rebuilding) return;
