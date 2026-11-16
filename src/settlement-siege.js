@@ -203,6 +203,8 @@
     // The first independent finished tower is the keep, regardless of whether
     // it is wood, round stone or square stone. Gates/watchtowers are excluded.
     if(State.structures.some(s=>s.type==='tower'&&s.isMastio&&mastioEligible(s)))return false;
+    // The player removed the designation: do not hand it back on the next load or completion.
+    if(State.village?.mastioDeclined)return false;
     const eligible=State.structures.filter(s=>mastioEligible(s)&&!underConstruction(s));
     if(!eligible.length)return false;
     eligible.sort((a,b)=>{
@@ -211,7 +213,8 @@
     });
     const first=eligible[0];
     first.isMastio=true;
-    if(!ensureMastioHall(first,true)){first.isMastio=false;return false}
+    // Automatic designation only takes a free room: it never empties one the player assigned.
+    if(!ensureMastioHall(first)){first.isMastio=false;return false}
     markDirty(false,['base','castleBody','castleFront']);
     window.__conquerAnalytics?.event('MASTIO_AUTO_DESIGNATED',{
       towerId:first.id,material:isWoodTower(first)?'wood':'stone',
@@ -233,6 +236,8 @@
     }
     for(const s of State.structures)if(s.type==='tower'&&s!==selected)s.isMastio=false;
     if(already)selected.isMastio=false;
+    // Remember the player's choice (saved with the village): syncAutoMastio must not undo it.
+    if(State.village){if(already)State.village.mastioDeclined=true;else delete State.village.mastioDeclined}
     markDirty(false,['base','castleBody','castleFront']);
     renderFunctionPanel();redraw();
     status(already?'Mastio designation removed':'Mastio designated — Common Hall secured');
