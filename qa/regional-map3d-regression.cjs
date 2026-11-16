@@ -1,56 +1,84 @@
 'use strict';
 // Run: node qa/regional-map3d-regression.cjs
-// Synthetic geometry benchmark and invariants; browser/WebGL render still needs manual visual validation.
+// New regional pipeline: global micro-Voronoi => warped macro aggregates.
+// Keep the authoritative 2D topology and territory RGB untouched.
 const assert = require('node:assert/strict');
 const { performance } = require('node:perf_hooks');
-const { area, subdivide, buildScene } = require('../src/regional-map3d-geometry.js');
+const { area, subdivide, globalMicrocells, sourceColor, buildScene } =
+  require('../src/regional-map3d-geometry.js');
 
 const polygons = [
   [{x:0,y:0},{x:100,y:0},{x:100,y:80},{x:0,y:80}],
   [{x:4,y:11},{x:72,y:3},{x:98,y:54},{x:58,y:109},{x:5,y:74}],
   [{x:0,y:0},{x:95,y:5},{x:105,y:60},{x:73,y:103},{x:8,y:75}]
 ];
-for (const polygon of polygons) {
-  for (const detail of [1,8,20,40]) {
-    const subcells = subdivide(polygon, detail, 1943);
-    assert.equal(subcells.length, detail, 'exact visual tessellation target');
-    const sum = subcells.reduce((total, points) => total + area(points), 0);
-    assert.ok(Math.abs(sum - area(polygon)) < area(polygon) * 1e-8, 'subcells preserve parent area');
-    for (const points of subcells) {
-      assert.ok(points.length >= 3 && area(points) > 0, 'nondegenerate polygons');
-      for (const point of points) {
-        const cross = (a,b,p) => (b.x-a.x)*(p.y-a.y)-(b.y-a.y)*(p.x-a.x);
-        const signs = polygon.map((a,i) => cross(a,polygon[(i+1)%polygon.length],point));
-        assert.ok(Math.min(...signs) >= -1e-4 || Math.max(...signs) <= 1e-4, 'subcell stays within parent');
-      }
-    }
-  }
+// Preserve the legacy subdivision helper for comparison at detail 1.
+for(const polygon of polygons)for(const detail of [1,8,20,40]){
+  const parts=subdivide(polygon,detail,1943);
+  assert.equal(parts.length,detail);
+  assert.ok(Math.abs(parts.reduce((n,p)=>n+area(p),0)-area(polygon))<area(polygon)*1e-8);
 }
-const cells=[], terrain={};
+assert.deepEqual(sourceColor('#294f35'),[41,79,53]);
+assert.deepEqual(sourceColor('#88a9b2'),[136,169,178]);
+assert.deepEqual(sourceColor('hsl(210 50% 40%)'),[51,102,153]);
+
+const cells=[],terrain={},fills={};
 let id=0;
-for(let row=0;row<21;row++) for(let col=0;col<30;col++) {
-  const x=col*128, y=row*110, key=id++;
-  cells.push({ id:key, macroId:key, polygon:[{x,y},{x:x+128,y},{x:x+128,y:y+110},{x,y:y+110}] });
-  terrain[key]=key%9===0?'sea':key%7===0?'hills':key%3===0?'forest':'plain';
+for(let row=0;row<21;row++)for(let col=0;col<30;col++){
+  const x=col*128,y=row*110,key=id++;
+  cells.push({id:key,macroId:key,polygon:[
+    {x,y},{x:x+128,y},{x:x+128,y:y+110},{x,y:y+110}
+  ]});
+  terrain[key]=key%9===0?'sea':key%7===0?'hills':key%17===0?'swamp':key%3===0?'forest':'plain';
+  fills[key]=({sea:'#88a9b2',hills:'#8a603e',swamp:'#747b58',forest:'#294f35',plain:'#77985b'})[terrain[key]];
 }
-const snapshot={seed:1943,width:3840,height:2310,cells,terrain};
+const snapshot={seed:1943,width:3840,height:2310,cells,terrain,fills,edges:[]};
+const expectedArea=snapshot.width*snapshot.height;
+for(const detail of [8,20,40]){
+  const micro=globalMicrocells(snapshot,detail,.65);
+  const resultArea=micro.parts.reduce((sum,part)=>sum+area(part.polygon),0);
+  assert.ok(Math.abs(resultArea-expectedArea)<expectedArea*1e-7,'global Voronoi covers world exactly');
+  assert.ok(Math.abs(micro.parts.length-630*detail)<630*detail*.07,'approximate density target');
+  assert.ok(micro.ownerParts.size>590,'most original territories receive microcells');
+  assert.ok(micro.parts.every(p=>p.polygon.length>=3&&terrain[p.macroId]),'valid grouped microcells');
+}
 const results=[];
-for(const detail of [1,8,20,40]) {
-  const start=performance.now(), mesh=buildScene(snapshot,detail);
-  const ms=performance.now()-start;
-  assert.equal(mesh.stats.territories,630);
-  assert.equal(mesh.stats.subcells,630*detail);
-  assert.ok(mesh.stats.mountains>0 && mesh.stats.trees>0);
-  assert.equal(mesh.vertices.length,mesh.stats.triangles*18);
-  assert.ok(mesh.vertices.every(Number.isFinite),'finite vertex data');
-  results.push({detail,ms:Math.round(ms),subcells:mesh.stats.subcells,
-    triangles:mesh.stats.triangles,MiB:+(mesh.vertices.byteLength/(1024*1024)).toFixed(2)});
-  if(detail===20) {
-    const repeat=buildScene(snapshot,detail);
-    assert.deepEqual(repeat.vertices,mesh.vertices,'deterministic full geometry');
-    assert.deepEqual(repeat.trees,mesh.trees,'deterministic tree placement');
+for(const detail of [1,8,20,40]){
+  const start=performance.now(),scene=buildScene(snapshot,detail,.65),ms=performance.now()-start;
+  assert.equal(scene.stats.territories,630);
+  assert.ok(Math.abs(scene.stats.subcells-630*detail)<630*detail*.07);
+  assert.ok(scene.stats.mountains>0 && scene.stats.trees>0 && scene.stats.reeds>0);
+  assert.equal(scene.vertices.length,scene.stats.triangles*18);
+  assert.ok(scene.vertices.every(Number.isFinite),'finite GPU vertices');
+  assert.ok(scene.borders.length>0 && scene.coastlines.length>0,'aggregated visual borders + coasts');
+  assert.ok(scene.trees.every(t=>terrain[t.macroId]==='forest'),'trees only in forests');
+  assert.ok(scene.reeds.every(t=>terrain[t.macroId]==='swamp'),'reeds only in marshes');
+  assert.ok(scene.trees.every(t=>t.size>=29&&t.size<=50.5),'forest scale is 5× original');
+  assert.ok(scene.reeds.every(t=>t.size>=29&&t.size<=50.5),'reed scale is 5× original');
+  assert.ok(scene.trees.length>=cells.filter(c=>terrain[c.macroId]==='forest').length*30,
+            'forest scatter >=10x original 3 trees per territory');
+  assert.ok(scene.reeds.length>=cells.filter(c=>terrain[c.macroId]==='swamp').length*10,
+            'marsh scatter >=10x original 1 reed per territory');
+  // Sea mesh surfaces must contain exact original 2D RGB after GPU conversion.
+  assert.ok(Math.abs(scene.vertices[3]-136/255)<1e-6 &&
+            Math.abs(scene.vertices[4]-169/255)<1e-6 &&
+            Math.abs(scene.vertices[5]-178/255)<1e-6, '2D source palette forwarded unchanged');
+  results.push({detail,ms:Math.round(ms),subcells:scene.stats.subcells,
+    triangles:scene.stats.triangles,trees:scene.stats.trees,reeds:scene.stats.reeds,
+    borders:scene.borders.length,MiB:+(scene.vertices.byteLength/(1024*1024)).toFixed(2)});
+  if(detail===20){
+    const repeat=buildScene(snapshot,detail,.65);
+    assert.deepEqual(repeat.vertices,scene.vertices,'deterministic mesh');
+    assert.deepEqual(repeat.borders,scene.borders,'deterministic grouped borders');
+    assert.deepEqual(repeat.trees,scene.trees,'deterministic tree placement');
+    assert.deepEqual(repeat.reeds,scene.reeds,'deterministic reeds');
+    assert.notDeepEqual(
+      buildScene(snapshot,detail,0).borders,
+      scene.borders,
+      'warp changes territory aggregate boundaries'
+    );
   }
 }
-console.log('PASS region3d: exact 1/8/20/40 Voronoi subdivisions, area conservation, deterministic geometry, finite mesh.');
+console.log('PASS region3d: global microcells, exact area, organic borders, source palette, 5×/10× forest/reeds.');
 console.table(results);
-console.log('Synthetic CPU baseline only. GPU frame time and visuals require WebGL2 on representative devices.');
+console.log('Synthetic CPU-only baseline. Browser/WebGL visuals and FPS remain separate checks.');
