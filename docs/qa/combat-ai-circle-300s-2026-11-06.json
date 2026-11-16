@@ -1,0 +1,399 @@
+{
+  "label": "combat-ai-concentric-300s-valid",
+  "head": "0feccec",
+  "branch": "combat-ai",
+  "dirty": true,
+  "seconds": 300,
+  "concentric": true,
+  "startedAt": "2026-11-06T14:18:52.026Z",
+  "errors": [],
+  "functionalResult": "FAIL: passage movement and defender fallback stalled",
+  "runtimeCodeCommit": "a3ebb866d581ead8285af3609c84c2c03df056b9",
+  "runnerCommit": "245e85f",
+  "provenance": "The run started on local 0feccec with fixture/runner edits subsequently committed as 245e85f. Combat runtime source remained unchanged throughout.",
+  "gameSeconds": 300.2,
+  "wallSeconds": 4532.3,
+  "setup": {
+    "blockedStarts": [],
+    "ram": false,
+    "tower": false,
+    "trebuchets": 0,
+    "attackers": 43,
+    "attackersHp": 350,
+    "defenders": 5,
+    "defendersHp": 58,
+    "sectors": [
+      {
+        "id": "circle-1",
+        "depth": 1,
+        "state": "secure",
+        "mastio": false
+      },
+      {
+        "id": "circle-2",
+        "depth": 2,
+        "state": "secure",
+        "mastio": true
+      }
+    ],
+    "structures": 176,
+    "archers": 0
+  },
+  "tickMs": {
+    "n": 1579,
+    "p50": 2533.9,
+    "p95": 8686.2,
+    "max": 21341.6
+  },
+  "drawMs": {
+    "n": 1499,
+    "p50": 20.6,
+    "p95": 51,
+    "max": 6421.4
+  },
+  "frameMs": {
+    "n": 1627,
+    "p50": 2516.7,
+    "p95": 8715.3,
+    "max": 21417.1
+  },
+  "captures": [],
+  "stationaryIntervals": [
+    {
+      "from": 0,
+      "to": 60,
+      "survivors": 42,
+      "stationaryWithin001U": 0,
+      "withActiveLegs": 8,
+      "atKeep": 0
+    },
+    {
+      "from": 60,
+      "to": 120,
+      "survivors": 37,
+      "stationaryWithin001U": 5,
+      "withActiveLegs": 0,
+      "atKeep": 0
+    },
+    {
+      "from": 120,
+      "to": 180,
+      "survivors": 33,
+      "stationaryWithin001U": 33,
+      "withActiveLegs": 0,
+      "atKeep": 0
+    },
+    {
+      "from": 180,
+      "to": 240,
+      "survivors": 30,
+      "stationaryWithin001U": 30,
+      "withActiveLegs": 0,
+      "atKeep": 0
+    },
+    {
+      "from": 240,
+      "to": 300,
+      "survivors": 26,
+      "stationaryWithin001U": 26,
+      "withActiveLegs": 0,
+      "atKeep": 0
+    }
+  ],
+  "checkpoints": [
+    {
+      "gameSeconds": 0,
+      "attackersAlive": 43,
+      "defendersAlive": 5,
+      "attackersHp": 350,
+      "defendersHp": 58,
+      "sectors": [
+        {
+          "id": "circle-1",
+          "depth": 1,
+          "mastio": false,
+          "state": "alert",
+          "control": {
+            "groundEnemies": 0,
+            "groundDefenders": 4,
+            "wallEnemies": 0,
+            "wallDefenders": 0,
+            "climbingEnemies": 0
+          }
+        },
+        {
+          "id": "circle-2",
+          "depth": 2,
+          "mastio": true,
+          "state": "alert",
+          "control": {
+            "groundEnemies": 0,
+            "groundDefenders": 1,
+            "wallEnemies": 0,
+            "wallDefenders": 0,
+            "climbingEnemies": 0
+          }
+        }
+      ],
+      "doors": [
+        {
+          "id": "go",
+          "stage": "intact",
+          "closed": true
+        },
+        {
+          "id": "gi",
+          "stage": "intact",
+          "closed": true
+        }
+      ],
+      "targetSeconds": 0,
+      "screenshot": "combat-ai-concentric-300s-valid-webgl-000s.png"
+    },
+    {
+      "gameSeconds": 60.233699999999835,
+      "attackersAlive": 42,
+      "defendersAlive": 4,
+      "attackersHp": 332,
+      "defendersHp": 44,
+      "sectors": [
+        {
+          "id": "circle-1",
+          "depth": 1,
+          "mastio": false,
+          "state": "contested",
+          "control": {
+            "groundEnemies": 20,
+            "groundDefenders": 2,
+            "wallEnemies": 0,
+            "wallDefenders": 0,
+            "climbingEnemies": 0
+          }
+        },
+        {
+          "id": "circle-2",
+          "depth": 2,
+          "mastio": true,
+          "state": "alert",
+          "control": {
+            "groundEnemies": 0,
+            "groundDefenders": 2,
+            "wallEnemies": 0,
+            "wallDefenders": 0,
+            "climbingEnemies": 0
+          }
+        }
+      ],
+      "doors": [
+        {
+          "id": "go",
+          "stage": "broken",
+          "closed": false
+        },
+        {
+          "id": "gi",
+          "stage": "intact",
+          "closed": false
+        }
+      ],
+      "targetSeconds": 60,
+      "screenshot": "combat-ai-concentric-300s-valid-webgl-060s.png"
+    },
+    {
+      "gameSeconds": 120.05029999999982,
+      "attackersAlive": 37,
+      "defendersAlive": 2,
+      "attackersHp": 289,
+      "defendersHp": 20,
+      "sectors": [
+        {
+          "id": "circle-1",
+          "depth": 1,
+          "mastio": false,
+          "state": "alert",
+          "control": {
+            "groundEnemies": 0,
+            "groundDefenders": 2,
+            "wallEnemies": 0,
+            "wallDefenders": 0,
+            "climbingEnemies": 0
+          }
+        },
+        {
+          "id": "circle-2",
+          "depth": 2,
+          "mastio": true,
+          "state": "alert",
+          "control": {
+            "groundEnemies": 0,
+            "groundDefenders": 0,
+            "wallEnemies": 0,
+            "wallDefenders": 0,
+            "climbingEnemies": 0
+          }
+        }
+      ],
+      "doors": [
+        {
+          "id": "go",
+          "stage": "broken",
+          "closed": false
+        },
+        {
+          "id": "gi",
+          "stage": "intact",
+          "closed": false
+        }
+      ],
+      "targetSeconds": 120,
+      "screenshot": "combat-ai-concentric-300s-valid-webgl-120s.png"
+    },
+    {
+      "gameSeconds": 180.08369999999974,
+      "attackersAlive": 33,
+      "defendersAlive": 2,
+      "attackersHp": 268,
+      "defendersHp": 20,
+      "sectors": [
+        {
+          "id": "circle-1",
+          "depth": 1,
+          "mastio": false,
+          "state": "alert",
+          "control": {
+            "groundEnemies": 0,
+            "groundDefenders": 2,
+            "wallEnemies": 0,
+            "wallDefenders": 0,
+            "climbingEnemies": 0
+          }
+        },
+        {
+          "id": "circle-2",
+          "depth": 2,
+          "mastio": true,
+          "state": "alert",
+          "control": {
+            "groundEnemies": 0,
+            "groundDefenders": 0,
+            "wallEnemies": 0,
+            "wallDefenders": 0,
+            "climbingEnemies": 0
+          }
+        }
+      ],
+      "doors": [
+        {
+          "id": "go",
+          "stage": "broken",
+          "closed": false
+        },
+        {
+          "id": "gi",
+          "stage": "intact",
+          "closed": false
+        }
+      ],
+      "targetSeconds": 180,
+      "screenshot": "combat-ai-concentric-300s-valid-webgl-180s.png"
+    },
+    {
+      "gameSeconds": 240.13359999999963,
+      "attackersAlive": 30,
+      "defendersAlive": 2,
+      "attackersHp": 244,
+      "defendersHp": 20,
+      "sectors": [
+        {
+          "id": "circle-1",
+          "depth": 1,
+          "mastio": false,
+          "state": "alert",
+          "control": {
+            "groundEnemies": 0,
+            "groundDefenders": 2,
+            "wallEnemies": 0,
+            "wallDefenders": 0,
+            "climbingEnemies": 0
+          }
+        },
+        {
+          "id": "circle-2",
+          "depth": 2,
+          "mastio": true,
+          "state": "alert",
+          "control": {
+            "groundEnemies": 0,
+            "groundDefenders": 0,
+            "wallEnemies": 0,
+            "wallDefenders": 0,
+            "climbingEnemies": 0
+          }
+        }
+      ],
+      "doors": [
+        {
+          "id": "go",
+          "stage": "broken",
+          "closed": false
+        },
+        {
+          "id": "gi",
+          "stage": "intact",
+          "closed": false
+        }
+      ],
+      "targetSeconds": 240,
+      "screenshot": "combat-ai-concentric-300s-valid-webgl-240s.png"
+    },
+    {
+      "gameSeconds": 300.2001999999997,
+      "attackersAlive": 26,
+      "defendersAlive": 2,
+      "attackersHp": 221,
+      "defendersHp": 20,
+      "sectors": [
+        {
+          "id": "circle-1",
+          "depth": 1,
+          "mastio": false,
+          "state": "alert",
+          "control": {
+            "groundEnemies": 0,
+            "groundDefenders": 2,
+            "wallEnemies": 0,
+            "wallDefenders": 0,
+            "climbingEnemies": 0
+          }
+        },
+        {
+          "id": "circle-2",
+          "depth": 2,
+          "mastio": true,
+          "state": "alert",
+          "control": {
+            "groundEnemies": 0,
+            "groundDefenders": 0,
+            "wallEnemies": 0,
+            "wallDefenders": 0,
+            "climbingEnemies": 0
+          }
+        }
+      ],
+      "doors": [
+        {
+          "id": "go",
+          "stage": "broken",
+          "closed": false
+        },
+        {
+          "id": "gi",
+          "stage": "intact",
+          "closed": false
+        }
+      ],
+      "targetSeconds": 300,
+      "screenshot": "combat-ai-concentric-300s-valid-webgl-300s.png"
+    }
+  ]
+}
