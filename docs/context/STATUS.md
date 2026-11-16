@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-16 — ASSET-AUDIT-261116: audit completo del Lab di nuovo verde
+
+- Branch fix/asset-audit-baseline. Il job `browser` di «Asset Lab regression» falliva su ogni PR da quando la #251 è entrata in main: un errore (`sagoma-conservata` su «Pietra rotonda piccola L2 + latrina», stato elemento esterno crollato: copertura 56%) e 197 render cambiati rispetto a una baseline del 12/11.
+- L'errore era un falso positivo: la torre resta intera, ma le macerie della latrina allargano il riquadro di ingombro (86 → 153 px) e diluiscono la densità di pixel su cui il controllo misurava la sagoma. Ora `sagoma-conservata` (src/asset-audit.js) confronta le aree disegnate (copertura × larghezza × altezza, a scala fissa). Simulato sui 1615 render della CI: sparisce solo il falso positivo, nessun nuovo errore; la falconiera crollata resta al 77%.
+- Cambiati rivisti sui fogli provini: alberi e cespugli SVG (file fermi all'8/11: solo rasterizzazione Linux contro la baseline generata su Windows), brecce delle mura (macerie), tetti per pendenza, tetti interni, fuochi di segnalazione, latrine, addossati, caditoie all'italiana: cambi voluti delle PR unite fra il 12 e il 16/11. Baseline rigenerata dal report della CI (stessa rasterizzazione del controllo).
+- Trovato e non corretto qui: il cantiere 2.5D di molte torri in pietra di livello 2+ nel Lab mostra solo gli operai, senza muratura né impalcature, e l'esito cambia da una sessione all'altra (colombaia e tetto interno con cantiere in una run, senza nell'altra). Già presente nella baseline del 12/11 (torre «Pietra quadrata L2»: copertura 0,0185); è la causa di gran parte degli avvisi `cantiere-progressivo`. Vedi BACKLOG.
+
 ### 2026-11-16 — MOVE-LAG-261116: l'ordine di movimento non blocca più il gioco
 
 - Branch fix/move-order-lag. Un ordine di movimento a un'unità bloccava il gioco per secondi quando il percorso diretto era ostruito: `infantryRoute` (settlement-combat.js) lanciava l'A* con il filtro d'ingombro `cliffClearForFootprint`, e questo filtro (come i controlli `safeMilitarySegment` sul percorso trovato) chiamava `pointBlockedForPeasant` senza lo snapshot degli ostacoli, scorrendo tutte le strutture e ricalcolando la sagoma di ogni casa per ogni punto campionato (5 offset della squadra × migliaia di nodi).

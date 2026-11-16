@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-16 — ASSET-AUDIT-261116 · Audit del Lab
+
+- [x] `sagoma-conservata` misura le aree, non la densità nel riquadro: niente falso errore quando le macerie di un elemento esterno cadono lontano.
+- [x] Baseline dell'audit rigenerata dalla CI (Linux) dopo la revisione dei 197 cambiati.
+- [ ] BUG: il cantiere 2.5D di molte torri in pietra L2+ nel Lab è vuoto (solo operai) e cambia da una run all'altra; da capire se è il Lab (`ConquerAssetStage.capture`) o il renderer del cantiere in gioco. Causa di gran parte degli avvisi `cantiere-progressivo`.
+
 ### 2026-11-16 — MOVE-LAG-261116 · Lag sull'ordine di movimento
 
 - [x] L'ordine di movimento con percorso aggirante non blocca più il gioco per secondi (snapshot degli ostacoli nei controlli d'ingombro militari).

@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-16 — ASSET-AUDIT-261116 · Audit del Lab di nuovo verde
+
+`fix/asset-audit-baseline`: il controllo `sagoma-conservata` confronta le aree disegnate invece della densità nel riquadro (falso errore sulla torre tonda con latrina crollata); baseline `qa/asset-audit-baseline.json` rigenerata dal report della CI dopo la revisione dei render cambiati dal 12/11. Segnalato in BACKLOG il cantiere vuoto delle torri in pietra L2+ nel Lab. ROADMAP e DECISIONS invariate: nessun contratto di gioco cambiato.
+
 ### 2026-11-16 — MOVE-LAG-261116 · Ordine di movimento senza lag
 
 `fix/move-order-lag`: l'A* passa il suo snapshot degli ostacoli ad `allowedAt` e gli ordini militari lo riusano in tutti i controlli d'ingombro; un ordine con aggiramento passa da 6–10 s a 0,2–0,6 s su una scena densa, con percorsi identici. Test in qa/movement-path-performance-regression.cjs. ROADMAP e DECISIONS invariate: nessun contratto di gioco cambiato.
