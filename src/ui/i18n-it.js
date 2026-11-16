@@ -9,6 +9,18 @@ export const T = {
   modeKey: n => 'Tasto ' + n,
   codex: 'Codex',
   codexEntry: 'Voce nel Codex',
+  // In-game notices (top centre) and the event journal (Gestisci › Diario).
+  alerts: {
+    aria: 'Avvisi', expand: 'Mostra dettagli', collapse: 'Nascondi dettagli', dismiss: 'Chiudi avviso',
+    dismissAll: 'Chiudi tutti', more: n => '+' + n + ' altri nel diario', resolved: 'Risolto',
+    focus: 'Mostra sulla mappa', openJournal: 'Apri il diario', repeated: n => '×' + n,
+    journal: 'Diario', journalSub: n => n + ' voci', journalEmpty: 'Nessun evento registrato in questa partita.',
+    journalClear: 'Svuota diario', journalClearConfirm: 'Svuotare il diario degli eventi?',
+    filters: { all: 'Tutti', danger: 'Gravi', warn: 'Avvisi', info: 'Notizie' },
+    phase: { raised: 'Inizio', resolved: 'Risolto', event: 'Evento' },
+    categories: { military: 'Difesa', castle: 'Castello', construction: 'Cantieri', economy: 'Economia', population: 'Popolazione', game: 'Partita', general: 'Generale' },
+    day: d => 'Giorno ' + d
+  },
   // Status lines from the legacy modules that are bare ids or English (phase 5 moves all of them to keys).
   status: {
     select: 'Selezione: clicca una struttura',
@@ -181,7 +193,7 @@ export const T = {
     infirmary: 'Infermeria', dovecote: 'Colombaia', cistern: 'Cisterna', mews: 'Falconiera', council: 'Sala del consiglio', tribunal: 'Tribunale'
   },
   manage: {
-    sections: { overview: 'Panoramica', policies: 'Politiche', market: 'Mercato', activities: 'Attività', castle: 'Scorte del castello', game: 'Partita' },
+    sections: { overview: 'Panoramica', policies: 'Politiche', market: 'Mercato', activities: 'Attività', castle: 'Scorte del castello', journal: 'Diario degli eventi', game: 'Partita' },
     village: 'Villaggio', notFounded: 'Non ancora fondato · costruisci il pozzo',
     welfare: 'Benessere', capital: 'Capitale privato (L4)', castleGold: 'Oro del castello',
     population: 'Popolazione', classes: 'L1 · L2 · L3 · L4', wages: 'Salari L1 · L2 · L3',

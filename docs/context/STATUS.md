@@ -1,5 +1,14 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-16 — Avvisi in gioco e diario degli eventi (branch `feature/alert-feed`)
+
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `src/ui/alerts.js`: centro avvisi puro (nessun DOM). *Condizioni* (`sync`) restano finché vere e si chiudono da sole `resolvedLinger` dopo la risoluzione, che conta solo dopo `resolveGrace` (4 s) di assenza; *eventi* (`push`) scadono da soli. `dismiss` nasconde a mano: una condizione chiusa torna solo se peggiora o si ripresenta dopo la risoluzione. Ogni inizio/risoluzione/evento va nel diario (max 300 voci).
+  - `src/ui/alert-watchers.js`: sondaggio ogni secondo, solo lettura. Condizioni: allarme generale/allerta locale (`ConquerCombat.uiState`), incendi (`ConquerFire`), razioni/sete/autonomia del castello, cantieri fermi per materiali (letti direttamente, non dallo stato del weekend), senza paghe o senza costruttori, rischio carestia, mercato senza cibo, malcontento, salvataggio fallito. Economia letta al massimo una volta per giorno di gioco o ogni 10 s. Eventi: costruzione completata, struttura in macerie, note dell'economia tradotte.
+  - `src/ui/shell.js`/`theme.css`/`i18n-it.js`: componente `Alerts` in alto al centro (spostato nello spazio libero sotto 1240 px), azioni «Mostra sulla mappa» e «Apri il diario»; sezione Gestisci › `journal`. Diario in `localStorage` `conquer.journal.<seed>`. `window.ConquerAlerts` per la console.
+- **PROVE LOCALI PASS:** `node qa/ui-alerts-regression.mjs`. Nel browser (`?ui=2`): pila, espansione, chiusura, «Apri il diario», filtri, persistenza dopo ricarica, avviso reale «Cantiere fermo per materiali» su un pozzo e nessuna risoluzione nei giorni di weekend; nessun errore in console.
+- **NON VERIFICATO NEL BROWSER:** allarme, incendio, carestia e completamento cantiere in partita reale (stesse letture del pannello Difendi/Castello; il completamento è un diff di `underConstruction`).
+
 ## 2026-11-15 — Tetto interno: torre a D e bracere rimosso (branch `fix/dtower-inner-roof-brazier`)
 
 - **CODICE SUL BRANCH, NON MERGE:**

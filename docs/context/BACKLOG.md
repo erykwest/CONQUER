@@ -1,5 +1,14 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-16 — UI-ALERTS-01 · Avvisi in gioco e diario degli eventi
+
+**IMPLEMENTATO SU BRANCH `feature/alert-feed`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Pila di avvisi in alto: titolo, dettagli espandibili, chiusura manuale e automatica se risolto.
+- [x] Sezione Gestisci › Diario degli eventi con filtri, persistita per seme.
+- [ ] Salvare il diario nel salvataggio di partita (oggi solo `localStorage` del browser).
+- [ ] Centrare la camera sulla struttura con «Mostra sulla mappa» (oggi la seleziona e apre l'ispettore).
+- [ ] Portare i messaggi di stato inglesi dei moduli legacy (`status()`) a chiavi tradotte e farli passare dal centro avvisi.
+
 ## 2026-11-15 — BC-251105-05 fix · Tetto interno della torre a D e bracere
 
 **IMPLEMENTATO SU BRANCH `fix/dtower-inner-roof-brazier`, NON MERGE.** Dettagli in [STATUS](STATUS.md).

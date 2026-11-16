@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-16 — UI-ALERTS-01 · Avvisi in gioco e diario degli eventi
+
+`feature/alert-feed`: pila di avvisi in alto al centro (UI v2) con titolo, dettagli espandibili, chiusura manuale e chiusura automatica (eventi dopo 9 s, 20 s se gravi; condizioni solo dopo la risoluzione, con 4 s di tolleranza contro lo sfarfallio). Nuova sezione Gestisci › Diario degli eventi con filtri per gravità e categoria, persistita per seme nel browser. Moduli `src/ui/alerts.js` (logica pura) e `src/ui/alert-watchers.js`; test `qa/ui-alerts-regression.mjs` e workflow `UI alerts regression`. ROADMAP e DECISIONS invariate: nessun contratto di gioco cambiato, la UI legge solo lo stato.
+
 ## 2026-11-15 — Tetto interno: torre a D e bracere
 
 `fix/dtower-inner-roof-brazier`: il tetto interno della torre a D corre ora su un colmo (padiglione sul retro, mezzo cono sul davanti) con pendenza unica; il tetto interno toglie il bracere (prima veniva disegnato sopra il tetto, scambiato per una botola). Regola di prodotto registrata: senza bracere gli arcieri della torre non tirano frecce incendiarie (`towerHasBrazier`, da applicare quando le torri avranno frecce incendiarie). Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: nessun contratto cambiato.
