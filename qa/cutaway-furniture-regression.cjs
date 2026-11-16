@@ -191,5 +191,26 @@ check('real WebGL2 cutaway mesh builds for single/all towers and every camera tu
     }
   }
 });
+check('a door between two floors (H1 wall-walk) gets a landing and a ladder',()=>{
+  run("State.view.rotation=0;window.ConquerCutawayFurniture.clear();");
+  run("State.structures.push({id:'t4',type:'tower',shape:'square',size:2,x:96,y:112,level:2,material:'stone',angle:0,functions:[],cutaway:true},{id:'w4',type:'wall',a:{x:97,y:112},b:{x:103,y:112},width:.5,level:1,aSnap:'t4'});normalizeFunctions(State.structures.find(s=>s.id==='t4'))");
+  const t4=run("State.structures.find(s=>s.id==='t4')"),L=F().landingSpecs(t4);
+  assert.equal(L.length,1,'one landing for the H1 wall door');
+  assert.ok(Math.abs(L[0].door.baseZ-1.13)<1e-6&&L[0].floor===0,'at the H1 walk, on the ground floor');
+  const tops=F().worldFaces(t4).filter(f=>f.n[2]===1&&Math.abs(f.pts[0][2]-1.13)<1e-6);
+  assert.ok(tops.length>=1,'the landing deck at the sill');
+  const pts=tops.flatMap(f=>f.pts);
+  for(const p of pts)assert.ok(p[0]>95&&p[0]<97&&p[1]>111&&p[1]<113,'the deck stands inside the tower');
+  // It reaches the corner of the room's ladder: the ladder rails start next to the deck.
+  const room=run("window.ConquerCutawayFurniture.layoutStructure")(t4,run('cutawayWallGeometry')(t4)).find(r=>r.slot.floor===0&&r.ladder);
+  const lad=room.F.toWorld(room.ladder.u,room.ladder.v);
+  const near=Math.min(...tops.map(f=>{const xs=f.pts.map(p=>p[0]),ys=f.pts.map(p=>p[1]);
+    const dx=Math.max(Math.min(...xs)-lad.x,0,lad.x-Math.max(...xs)),dy=Math.max(Math.min(...ys)-lad.y,0,lad.y-Math.max(...ys));return Math.hypot(dx,dy)}));
+  assert.ok(near<.2,'the deck runs to the ladder ('+near.toFixed(2)+')');
+  // An H2 wall door opens on the P1 floor: no landing.
+  run("State.structures.find(s=>s.id==='w4').level=2;window.ConquerCutawayFurniture.clear()");
+  assert.equal(F().landingSpecs(t4).length,0,'an H2 wall-walk door sits on P1: no landing');
+  run("State.structures=State.structures.filter(s=>!['t4','w4'].includes(s.id))");
+});
 console.log('cutaway furniture regression: '+passed+' checks');
 `);

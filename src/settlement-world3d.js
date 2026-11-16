@@ -1461,6 +1461,8 @@
   function structureKey(s){
     return (typeof structureVisualKey==='function'?structureVisualKey(s):s.id+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.level||''))
       +(underConstruction(s)?'u':'c')+(s.houseLevel||'')+(s.span||'')
+      // A subtower's crest follows its parent's floor in view (cutawayCrestHidden).
+      +(typeof cutawayCrestHidden==='function'&&cutawayCrestHidden(s)?'h':'')
       // Moat fill patches are baked into the ground: filling must re-bake it.
       +(s.fills?.length?s.fills.map(f=>(+f.at).toFixed(2)+':'+f.span+':'+(+f.progress).toFixed(3)).join(','):'')
       // The gate door's state swaps its facade decal.

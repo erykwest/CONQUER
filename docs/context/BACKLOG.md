@@ -20,6 +20,29 @@
 - **QA BROWSER:** variante TEST con due cinte e mastio interno, 43 assalitori / 5 difensori, prova 60 s conclusa: 0 assalitori e 1 difensore caduti, 0 conquiste, settore esterno conteso, mastio sicuro. Tick massimo 10,7 s; [report](../qa/combat-ai-circle-2026-11-06.md). Il layout originale non chiude una cinta per il raster: trattare distintamente i due scenari.
 - **RESIDUI:** piazzamento autonomo di scale/torri (oggi il piano arma l'ariete; scale e torri già assegnate sono usate), profilazione dei picchi delle ricerche di percorso, riconciliazione generale con main separata. Nessuna chiusura delle milestone strategiche o dell'assedio completo.
 
+### 2026-11-15 — Microfix: messa domenicale visibile
+
+- [x] Cutaway della chiesa: fedeli seduti sui banchi la domenica 6:00–12:00 (ConquerCivic3D.massSlots, ConquerCourtPeople.massInSession).
+- [ ] Proposta: legare il numero di fedeli ai residenti serviti (ConquerChurch.servedShare) quando arriverà la messa di CHIESA-01 fase 3.
+- [x] Porta verso un muro H1: ballatoio interno fino alla scala a pioli della stanza.
+- [ ] Torri tonde: ballatoio curvo fino alla scala (oggi corto con scaletta propria).
+- [x] P1 delle torri in pietra allineato al camminamento delle mura (2,10).
+- [x] Torre fra due mura: entrambe le porte del cammino di ronda, la finestra della faccia cede il posto; World3D si aggiorna al cambio del mastio.
+- [x] Torre quadra d'angolo: niente porta al P0, salvo torre ruotata con il fronte verso l'interno dell'angolo (45°).
+- [ ] Porte delle torri d'angolo per le altre forme (tonde, a D): da definire.
+- [x] Rimuovi foresta rispetta Fast build (istantaneo) e Free build (senza salari) del menu DEV.
+- [x] Cutaway piano per piano: i merli (e caditoie, tetto interno, braciere) spariscono quando il piano in vista non è l'ultimo.
+## 2026-11-16 — UI-ALERTS-01 · Avvisi in gioco e diario degli eventi
+
+**IMPLEMENTATO SU BRANCH `feature/alert-feed`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Pila di avvisi in alto: titolo, dettagli espandibili, chiusura manuale e automatica se risolto.
+- [x] Sezione Gestisci › Diario degli eventi con filtri, persistita per seme.
+- [x] Avvisi collegati ai messaggi (messaggeri, colombi, risposte, carovane) con azioni dirette.
+- [x] Fix: il messaggero a cavallo si ferma davanti alla porta del Mastio, non dentro la sala comune.
+- [ ] Verificare nel gioco la posizione del messaggero con Mastio a ingresso rialzato e a piano terra.
+- [ ] Salvare il diario nel salvataggio di partita (oggi solo `localStorage` del browser).
+- [ ] Centrare la camera sulla struttura con «Mostra sulla mappa» (oggi la seleziona e apre l'ispettore).
+- [ ] Portare i messaggi di stato inglesi dei moduli legacy (`status()`) a chiavi tradotte e farli passare dal centro avvisi.
 ## 2026-11-16 — THREAT-GEN-01 · Generatore di minacce
 
 **IMPLEMENTATO SU BRANCH `feature/wildlife-outlaws`, NON MERGE.** [D-THREATS-261116](DECISIONS.md#d-threats-261116--generatore-di-minacce-16112026). Dettagli in [STATUS](STATUS.md).

@@ -720,6 +720,15 @@ function cutawayFloorBasis(s,g){
     h:Math.max(.18,d.h-g.thickness*2)
   };
 }
+// Stone tower storeys: P1 sits at the curtain wall-walk (the top of an H2 wall, 2.10), so the
+// wall-walk doors open onto its floor; the storeys above share the rest of the height evenly.
+const CURTAIN_WALK_Z=2.10;
+function towerUpperFloorZ(s,i){
+  const level=structureLevel(s),h=structureHeight(s);
+  if(i<=0)return .055;
+  if(s?.type!=='tower'||isWoodTower(s)||level<2||h-CURTAIN_WALK_Z<(level-1)*1.1)return h*i/level;
+  return i===1?CURTAIN_WALK_Z:CURTAIN_WALK_Z+(h-CURTAIN_WALK_Z)*(i-1)/(level-1);
+}
 function cutawayFloorLevels(s){
   // Wide halls keep the full height free: a single ground floor at L2.
   const level=s.type==='built'?builtInteriorFloors(s):structureLevel(s),h=structureHeight(s),floors=[{z:.055,material:'stone'}];
@@ -728,7 +737,7 @@ function cutawayFloorLevels(s){
   // A gate's storeys line up with those of the stone tower flanking it (one floor level across).
   const flank=s.type==='gate'?State.structures.find(o=>o.parentTowerId===s.id&&o.type==='tower'&&!isWoodTower(o)&&!cutawaySpiralStair(o)):null;
   const fz=flank?cutawayFloorLevels(flank):[];
-  for(let i=1;i<level;i++)floors.push({z:fz[i]&&fz[i].z<h-.6?fz[i].z:h*i/level,material:'wood'});
+  for(let i=1;i<level;i++)floors.push({z:fz[i]&&fz[i].z<h-.6?fz[i].z:s.type==='tower'?towerUpperFloorZ(s,i):h*i/level,material:'wood'});
   return floors;
 }
 // Floor-by-floor cutaway, shared by the castle and the civic buildings (settlement-civic3d.js):
@@ -753,6 +762,8 @@ function cutawayCeilingZ(s){
   const floors=cutawayFloorLevels(s),f=cutawayVisibleFloor(s);
   return f<floors.length-1?floors[f+1].z:Infinity;
 }
+// The crest (merlons, machicolations, inner roof) goes with the floors above the one in view.
+function cutawayCrestHidden(s){return !!s&&structureCutaway(s)&&cutawayCeilingZ(s)<structureHeight(s)-1e-6}
 // Floor i (and its room, furniture, ladder) is drawn when it lies below the cut.
 function cutawayFloorShown(s,i){const z=cutawayFloorLevels(s)[i]?.z;return !Number.isFinite(z)||z<cutawayCeilingZ(s)-.01}
 // Timber upper storey of a small gate: from the room floor to the eaves, jettied over the front

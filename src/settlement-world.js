@@ -859,6 +859,8 @@ function towerSecondaryBranchAccessPoint(tower,target){
         y:front.contact.y+front.outward.y*.30
       };
     }
+    // A corner square tower without a ground-floor door gets no service road.
+    if(typeof squareTowerGroundDoorBlocked==='function'&&squareTowerGroundDoorBlocked(tower))return null;
   }
 
   const a=Number(tower.angle)||0,ray={x:tower.x+Math.cos(a)*4,y:tower.y+Math.sin(a)*4};

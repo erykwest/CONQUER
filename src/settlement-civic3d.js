@@ -540,6 +540,23 @@
     }
     return out;
   }
+  // The faithful at Sunday Mass: seated on the nave pews (the same rows as interiorParts), facing
+  // the altar. About three seats in four are taken, a fixed draw per church. The court people's pass
+  // adds them only during Mass (ConquerCourtPeople.massInSession).
+  function massSlots(s){
+    if(s?.type!=='church')return[];
+    const key=modelKey(s),spec=INTERIOR[key];if(!spec?.nave)return[];
+    const span=floorSpan(s,key);if(span.floor!==0)return[];
+    const [hw,y0,y1]=spec.nave,z=span.z+FLOOR_Z,out=[];
+    let h=2166136261;for(const c of String(s.id)+':mass')h=Math.imul(h^c.charCodeAt(0),16777619);
+    const rnd=()=>((h=Math.imul(h^(h>>>13),1597334677)>>>0)%1000)/1000;
+    for(let y=y0,r=0;y<=y1+1e-6;y+=.42,r++)for(const sx of [-1,1]){
+      const xa=sx<0?-hw+.1:.16,xb=sx<0?-.16:hw-.1;
+      for(let x=xa+.15,k=0;x<xb-.08;x+=.3,k++)
+        if(rnd()<.75)out.push({id:'faithful'+r+(sx<0?'L':'R')+k,role:'public',action:'sit',x,y:y+.01,z:z+.1-.12});
+    }
+    return out;
+  }
   function roomSlots(s){
     if(s&&['church','tavern','bargello','balivo'].includes(s.type))return staffSlots(s);
     if(s?.type!=='townhall')return[];
@@ -751,5 +768,5 @@
     return true;
   }
   window.ConquerCivic3D={modelKey,has,parts,builtParts,triangles,draw,addToBuilder,addCutawayToBuilder,cutawayId,cutawaySig,cutawayActive,
-    floorCount,visibleFloor,floorSpan,UPPER_ROOMS,townhallRole,roomSlots,prisonBars,prisonCellCount,PRISON_CELL_MAX,lotProps,allLotProps};
+    floorCount,visibleFloor,floorSpan,UPPER_ROOMS,townhallRole,roomSlots,massSlots,prisonBars,prisonCellCount,PRISON_CELL_MAX,lotProps,allLotProps};
 })();

@@ -225,11 +225,51 @@ function towerDoorContactSpec(tower,contact,wall=null,kind='wall'){
     // readable and architecturally useful instead of burying it behind masonry.
     const towerH=structureHeight(tower),wallH=structureHeight(wall);
     baseZ=clamp(wallH-.02,.08,Math.max(.08,towerH-.98));
+    // A storey floor at that height is the door's sill: the opening seen from inside starts on
+    // the planks instead of a hair under them (the floor slab clipped it).
+    const sill=(typeof cutawayFloorLevels==='function'?cutawayFloorLevels(tower):[]).find(f=>Math.abs(f.z-baseZ)<.12);
+    if(sill)baseZ=sill.z;
     apexZ=Math.min(towerH-.16,baseZ+.92);
     if(apexZ-baseZ<.48)return null;
   }
 
   return{kind,contact:anchor,tangent,outward,baseZ,apexZ,wallId:wall?.id||null};
+}
+// Walls snapped to a tower: where each one touches it and the direction it leaves in.
+function towerWallLinks(tower){
+  const out=[];
+  for(const wall of State.structures){
+    if(wall.type!=='wall'||underConstruction(wall))continue;
+    const end=wall.aSnap===tower.id?'a':wall.bSnap===tower.id?'b':null;if(!end)continue;
+    const contact=wall[end],far=wall[end==='a'?'b':'a'],dx=far.x-contact.x,dy=far.y-contact.y,L=Math.hypot(dx,dy);
+    if(L>1e-6)out.push({wall,contact,dir:{x:dx/L,y:dy/L}});
+  }
+  return out;
+}
+// Square tower: is there room for its ground-floor door on the front face (local +x, `angle`)?
+// Not when a wall plugs into that face, nor on a corner tower (two walls meeting at an angle)
+// unless the front looks into the corner between them, i.e. the tower turned 45° so the walls
+// meet two faces and the front stays free towards the inside.
+const CORNER_TOWER_MAX_ANGLE=150*Math.PI/180,CORNER_DOOR_TOLERANCE=Math.cos(30*Math.PI/180);
+function squareTowerGroundDoorBlocked(tower){
+  if(!tower||tower.type!=='tower'||tower.parentTowerId||tower.shape==='round'||
+    (typeof isOrientedTower==='function'&&isOrientedTower(tower))||towerGateParent(tower))return false;
+  const links=towerWallLinks(tower);if(!links.length)return false;
+  // A wall plugged into the middle of the door face (fp[1]-fp[2]) buries the door; one at a
+  // corner of that face (a tower turned 45° on a wall corner) leaves it free.
+  const fp=footprintPoints(tower);
+  if(fp.length>=4&&links.some(l=>{
+    const a=fp[1],b=fp[2],dx=b.x-a.x,dy=b.y-a.y,L2=dx*dx+dy*dy||1,t=((l.contact.x-a.x)*dx+(l.contact.y-a.y)*dy)/L2;
+    return t>.15&&t<.85&&Math.hypot(a.x+dx*t-l.contact.x,a.y+dy*t-l.contact.y)<.25;
+  }))return true;
+  let corner=null;
+  for(let i=0;i<links.length;i++)for(let j=i+1;j<links.length;j++){
+    const p=links[i].dir,q=links[j].dir,ang=Math.acos(clamp(p.x*q.x+p.y*q.y,-1,1));
+    if(ang<CORNER_TOWER_MAX_ANGLE&&(!corner||ang<corner.ang))corner={ang,p,q};
+  }
+  if(!corner)return false;   // walls in line: the tower stands along a curtain, not at a corner
+  const bx=corner.p.x+corner.q.x,by=corner.p.y+corner.q.y,BL=Math.hypot(bx,by)||1,a=tower.angle||0;
+  return(Math.cos(a)*bx+Math.sin(a)*by)/BL<CORNER_DOOR_TOLERANCE;
 }
 function towerDoorSpecs(tower){
   if(!tower||tower.type!=='tower'||underConstruction(tower))return[];
@@ -267,7 +307,8 @@ function towerDoorSpecs(tower){
     // Mastio with a raised entrance: the front door opens on the first upper storey.
     const sill=window.ConquerKeepEntrance?.sill?.(tower);
     if(front&&sill!=null){front.baseZ=sill;front.apexZ=Math.min(structureHeight(tower)-.16,sill+.92);front.raised=true}
-    if(front)specs.push(front);
+    // A corner square tower has no room for the ground-floor door (a raised keep entrance stays).
+    if(front&&(front.raised||!squareTowerGroundDoorBlocked(tower)))specs.push(front);
   }
 
   // Additional doors at every true wall socket connected to this tower. The Mastio has none:
@@ -400,7 +441,9 @@ function towerLevelHeight(s,level){
 const TOWER_OPENING_EYE_Z=.44;
 function towerFloorZ(s,floor){
   const level=structureLevel(s);
-  return floor<=1?.055:structureHeight(s)*(Math.min(floor,level)-1)/level;
+  if(floor<=1)return .055;
+  // The same storeys as the cutaway (settlement-castle.js towerUpperFloorZ: P1 at the wall-walk).
+  return typeof towerUpperFloorZ==='function'?towerUpperFloorZ(s,Math.min(floor,level)-1):structureHeight(s)*(Math.min(floor,level)-1)/level;
 }
 function towerOpeningZ(s,floor){return towerFloorZ(s,floor)+TOWER_OPENING_EYE_Z}
 // Unit outward direction of each tower face: footprint edges for square towers, the
@@ -447,13 +490,20 @@ function towerEdgeOnDivider(s,edge,z){
 }
 // A raised keep door opens on the first upper storey (floor 2): on that floor it takes the
 // place of the window, and of the heraldic drape, on the face it opens through.
+// Likewise a wall-walk (or roof) door gives way to nothing: the window of its face on the storey
+// it opens onto steps aside, so a tower between two walls shows both doors.
 function towerWindowGivesWayToDoor(s,edgeOrDir,floor){
-  if(floor!==2||window.ConquerKeepEntrance?.sill?.(s)==null)return false;
-  const door=towerDoorSpecs(s).find(d=>d.raised);if(!door)return false;
   let nx=edgeOrDir.nx,ny=edgeOrDir.ny;
   if(edgeOrDir.a){nx=(edgeOrDir.a.x+edgeOrDir.b.x)/2-s.x;ny=(edgeOrDir.a.y+edgeOrDir.b.y)/2-s.y}
-  const L=Math.hypot(nx,ny)||1;
-  return (nx*door.outward.x+ny*door.outward.y)/L>.7;
+  const L=Math.hypot(nx,ny)||1,facing=d=>(nx*d.outward.x+ny*d.outward.y)/L>.7;
+  const raised=window.ConquerKeepEntrance?.sill?.(s)!=null;
+  const z=floor>=2?towerOpeningZ(s,floor):1.53;   // the window's centre on that storey
+  return towerDoorSpecs(s).some(d=>{
+    if(d.raised)return raised&&floor===2&&facing(d);
+    if(d.kind!=='wall'&&d.kind!=='roof')return false;
+    const top=d.baseZ+Math.max(.18,d.apexZ-d.baseZ)/2;   // drawn height: half the opening (drawTowerDoorSpec)
+    return facing(d)&&d.baseZ<z+.3&&top>z-.3;
+  });
 }
 function towerSlitFace(s,face,floor){
   const dir=towerFaceDirections(s).find(d=>d.face===face);

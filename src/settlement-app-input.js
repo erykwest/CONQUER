@@ -74,7 +74,9 @@ canvas.addEventListener('pointerdown',e=>{
       const job=window.ConquerForestry?.start(ghost);
       if(job?.ok){
         State.draft=null;
-        status('Job L1 avviato · +'+ghost.wood+' legname a completamento · '+ghost.workRequired+' giornate lavoro');
+        const doneNow=job.job?.construction?.completedDay!=null;   // Fast build DEV: cleared at once
+        status(doneNow?'Fast build DEV: foresta rimossa · +'+ghost.wood+' legname':
+          'Job L1 avviato · +'+ghost.wood+' legname a completamento · '+ghost.workRequired+' giornate lavoro');
       }else status('Rimozione foresta bloccata: '+(job?.reason||'job non disponibile'));
       draw();return;
     }

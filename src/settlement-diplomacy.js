@@ -28,6 +28,7 @@
     x.caravans=Array.isArray(x.caravans)?x.caravans:[];
     x.history=Array.isArray(x.history)?x.history.slice(-40):[];
     x.sequence=Math.max(0,Math.floor(num(x.sequence)));
+    if(x.incoming&&!x.incoming.doorstep)settleDoorstep(x.incoming);
     return x;
   }
   function changed(){if(typeof markDirty==='function')markDirty(false,false,true)}
@@ -36,6 +37,30 @@
   function point(s){return {x:num(s?.x,WORLD/2),y:num(s?.y,WORLD/2)}}
   // Without a mastio, envoys head for the designated village centre well.
   function destination(){return mastio()||(typeof villageCenterWell==='function'?villageCenterWell():null)||State.structures.find(s=>s.type==='well'&&!underConstruction(s))}
+  // A horseman does not ride into the keep's hall: he halts on the ground outside the front
+  // door, or at the foot of a raised entrance's stair, a horse's length out.
+  const DOORSTEP_CLEARANCE=.9;
+  function doorstep(s){
+    if(!s)return null;
+    if(s.type!=='tower')return point(s);
+    const away=(p,from,k)=>{const dx=p.x-from.x,dy=p.y-from.y,L=Math.hypot(dx,dy)||1;return{x:p.x+dx/L*k,y:p.y+dy/L*k}};
+    const foot=window.ConquerKeepEntrance?.footPoint?.(s);
+    if(foot&&Number.isFinite(foot.x)&&Number.isFinite(foot.y))return away(point(foot),point(s),DOORSTEP_CLEARANCE*.6);
+    const front=typeof towerDoorSpecs==='function'?towerDoorSpecs(s).find(d=>d.kind==='front'):null;
+    if(front?.contact&&front?.outward)return{x:front.contact.x+front.outward.x*DOORSTEP_CLEARANCE,y:front.contact.y+front.outward.y*DOORSTEP_CLEARANCE};
+    const a=s.angle||0,extent=s.shape==='round'?num(s.r,.5):num(s.size,1)/2;
+    return{x:s.x+Math.cos(a)*(extent+DOORSTEP_CLEARANCE),y:s.y+Math.sin(a)*(extent+DOORSTEP_CLEARANCE)};
+  }
+  // Older saves sent the courier to the keep's centre: move a mounted courier still on the way
+  // (or waiting) to the doorstep, keeping the rest of his route.
+  function settleDoorstep(m){
+    if(!m||m.by==='pigeon'||m.doorstep||!Array.isArray(m.route)||m.route.length<2)return;
+    const keep=mastio(),end=m.route.at(-1);
+    if(!keep)return; // structures not loaded yet: try again on the next read
+    if(dist(end,point(keep))>.05){m.doorstep=true;return}
+    const step=doorstep(keep);if(!step)return;
+    m.route=[...m.route.slice(0,-1),step];m.goal=step;m.doorstep=true;
+  }
   function routeFrom(entry,goal,id){
     // Use the real road graph when its external link has been built; only fall back to a waypoint proxy.
     let route=null;
@@ -83,12 +108,13 @@
     if(!entries.length)return false;
     const entry=entries[choice(State.seed+'|courier|edge|'+x.sequence,entries.length)];
     const loft=loftFor(point(entry));
-    const route=loft?[point(entry),point(loft)]:routeFrom(entry,goal,x.sequence);
+    const stop=loft?point(loft):doorstep(goal);
+    const route=loft?[point(entry),stop]:routeFrom(entry,stop,x.sequence);
     const duration=loft?Math.max(MIN_PIGEON_DAYS,routeLength(route)*DAYS_PER_COURIER_UNIT/PIGEON_SPEEDUP)
       :Math.max(.5,routeLength(route)*DAYS_PER_COURIER_UNIT);
-    x.incoming={id:'courier-'+x.sequence,edge:entry.edge,entry:point(entry),goal:point(loft||goal),
+    x.incoming={id:'courier-'+x.sequence,edge:entry.edge,entry:point(entry),goal:stop,
       route,spawnDay:at,arrivalDay:at+duration,phase:'arriving',request:DEFAULT_REQUEST,
-      by:loft?'pigeon':'courier',...(loft?{loftId:loft.id}:{})};
+      by:loft?'pigeon':'courier',doorstep:true,...(loft?{loftId:loft.id}:{})};
     x.sequence++;
     scheduleNext(x,at);
     changed();refreshUI();
