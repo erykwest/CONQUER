@@ -39,7 +39,7 @@ footer { padding:11px 15px; border-top:1px solid #39483f; background:#182421; fo
 <body>
 <header>
 <strong>CONQUER · WORLD ATLAS 3D</strong>
-<p>Prototipo isolato: 20 sotto-celle Voronoi visuali per territorio, rilievi low-poly e le sette silhouette di alberi del Builder. A sinistra la mappa autoritativa; a destra la rappresentazione sperimentale. Nessuna mutazione di territori, adiacenze o salvataggi.</p>
+<p>Prototipo isolato: prima una mesh globale di microcelle Voronoi, poi la loro aggregazione deformata in territori organici. Colori identici alla mappa 2D; foreste con alberi SVG e paludi con canneti del Builder. Gameplay, adiacenze e salvataggi invariati.</p>
 </header>
 <main>
 <section class="panel" aria-label="Mappa 2D originale">
@@ -52,7 +52,11 @@ footer { padding:11px 15px; border-top:1px solid #39483f; background:#182421; fo
 <label class="control">Sottocelle / territorio
 <select id="detail"><option value="1">1 · Originale</option><option value="8">8 · Low</option><option value="20" selected>20 · Target</option><option value="40">40 · Stress test</option></select>
 </label>
-<label class="control check"><input id="showTrees" type="checkbox" checked> Alberi Builder</label>
+<label class="control">Deformazione contorni
+<input id="deformation" type="range" min="0" max="100" step="5" value="65" aria-label="Deformazione confini microcellulari">
+</label>
+<label class="control check"><input id="showTrees" type="checkbox" checked> Alberi ×5 / ×10</label>
+<label class="control check"><input id="showReeds" type="checkbox" checked> Canneti paludi ×5 / ×10</label>
 <label class="control check"><input id="showBorders" type="checkbox" checked> Confini territoriali</label>
 <div class="actions"><button type="button" id="resetView">Centra vista</button><button type="button" id="refresh">Aggiorna</button><button type="button" id="benchmark">Benchmark 1× / 20×</button></div>
 </div>
@@ -65,11 +69,12 @@ footer { padding:11px 15px; border-top:1px solid #39483f; background:#182421; fo
 <footer>
 <div id="perfNotes" aria-live="polite"></div>
 <div id="benchmarkResult" aria-live="polite"></div>
-<div class="small">Il rilievo è una mesh WebGL2 autentica; gli alberi riusano gli SVG del Builder come billboard 2D proiettati nella camera 3D. La tessellazione è locale al territorio e non modifica il Voronoi di simulazione. I tempi dipendono dal dispositivo.</div>
+<div class="small">Mesh globale di microcelle Voronoi, aggregazione visiva tramite campo di deformazione; colori ricavati direttamente dal World Lab 2D. Alberi SVG originali e canneti derivati dai modelli Blender del Builder, come billboard; la mappa di gameplay resta invariata. Tempi dipendenti dal dispositivo.</div>
 </footer>
 </section>
 </main>
 <script src="../src/regional-map3d-geometry.js"></script>
+<script src="../src/assets/scatter-model.js"></script>
 <script src="./3dregionmap.js"></script>
 </body>
 </html>
