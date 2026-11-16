@@ -231,6 +231,36 @@ function towerDoorContactSpec(tower,contact,wall=null,kind='wall'){
 
   return{kind,contact:anchor,tangent,outward,baseZ,apexZ,wallId:wall?.id||null};
 }
+// Walls snapped to a tower: where each one touches it and the direction it leaves in.
+function towerWallLinks(tower){
+  const out=[];
+  for(const wall of State.structures){
+    if(wall.type!=='wall'||underConstruction(wall))continue;
+    const end=wall.aSnap===tower.id?'a':wall.bSnap===tower.id?'b':null;if(!end)continue;
+    const contact=wall[end],far=wall[end==='a'?'b':'a'],dx=far.x-contact.x,dy=far.y-contact.y,L=Math.hypot(dx,dy);
+    if(L>1e-6)out.push({wall,contact,dir:{x:dx/L,y:dy/L}});
+  }
+  return out;
+}
+// Square tower: is there room for its ground-floor door on the front face (local +x, `angle`)?
+// Not when a wall plugs into that face, nor on a corner tower (two walls meeting at an angle)
+// unless the front looks into the corner between them, i.e. the tower turned 45° so the walls
+// meet two faces and the front stays free towards the inside.
+const CORNER_TOWER_MAX_ANGLE=150*Math.PI/180,CORNER_DOOR_TOLERANCE=Math.cos(30*Math.PI/180);
+function squareTowerGroundDoorBlocked(tower){
+  if(!tower||tower.type!=='tower'||tower.parentTowerId||tower.shape==='round'||
+    (typeof isOrientedTower==='function'&&isOrientedTower(tower))||towerGateParent(tower))return false;
+  const links=towerWallLinks(tower);if(!links.length)return false;
+  if(links.some(l=>closestFootprintEdge(tower,l.contact)?.index===1))return true;   // a wall on the door face
+  let corner=null;
+  for(let i=0;i<links.length;i++)for(let j=i+1;j<links.length;j++){
+    const p=links[i].dir,q=links[j].dir,ang=Math.acos(clamp(p.x*q.x+p.y*q.y,-1,1));
+    if(ang<CORNER_TOWER_MAX_ANGLE&&(!corner||ang<corner.ang))corner={ang,p,q};
+  }
+  if(!corner)return false;   // walls in line: the tower stands along a curtain, not at a corner
+  const bx=corner.p.x+corner.q.x,by=corner.p.y+corner.q.y,BL=Math.hypot(bx,by)||1,a=tower.angle||0;
+  return(Math.cos(a)*bx+Math.sin(a)*by)/BL<CORNER_DOOR_TOLERANCE;
+}
 function towerDoorSpecs(tower){
   if(!tower||tower.type!=='tower'||underConstruction(tower))return[];
   const specs=[];
@@ -267,7 +297,8 @@ function towerDoorSpecs(tower){
     // Mastio with a raised entrance: the front door opens on the first upper storey.
     const sill=window.ConquerKeepEntrance?.sill?.(tower);
     if(front&&sill!=null){front.baseZ=sill;front.apexZ=Math.min(structureHeight(tower)-.16,sill+.92);front.raised=true}
-    if(front)specs.push(front);
+    // A corner square tower has no room for the ground-floor door (a raised keep entrance stays).
+    if(front&&(front.raised||!squareTowerGroundDoorBlocked(tower)))specs.push(front);
   }
 
   // Additional doors at every true wall socket connected to this tower. The Mastio has none:
