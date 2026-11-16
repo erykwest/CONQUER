@@ -1,5 +1,18 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-16 — QA-DEEP-261116 · Test antiregressivo profondo e due fix di salvataggio (branch `fix/mastio-h4-load-20261116`)
+
+- **Test su `main` 1911369a (#239), checkout LF, senza modifiche al codice:**
+  - 214 script node: tutti PASS. `founding` sfora il limite di tempo locale come su `main` pulito; `stream-count` passa da solo in 156 s.
+  - 17 script browser (main-fixes, figure/vehicle/animal/event cards, ui-combat, siege-damage-converge, panels, construction, upgrades-dev, codex-wiki, asset-catalog, stonecolor, clay, urban-local-preview e anteprime): tutti PASS.
+  - Partite reali headless di 120–190 giorni di gioco: 4 seed (pianura, foresta, colline) in Canvas e World 3D, con salvataggio/ricarica e assedio DEV. Zero errori; nessuna violazione di NaN o negativi, doppie assegnazioni di operai, riserva dei soldati o cantieri bloccati.
+  - Salvataggi di 3 build precedenti (30/10, 13/11, prima di #239) caricati su `main`: tutti PASS, migrazione idempotente. I 3 salvataggi corrotti attivano la protezione del load fallito.
+- **CODICE SUL BRANCH, NON MERGE — due bug precedenti a #239:**
+  - **Mastio tolto dal giocatore:** tornava al ricaricamento e svuotava una stanza (caserma → sala comune; 32 → 16 posti). Origine 0e4306db (14/10). Ora `assignMastio` registra `State.village.mastioDeclined`, e `syncAutoMastio` rispetta la scelta e prende solo una stanza libera.
+  - **Torre W3 piazzata a H4:** il piano pagato si perdeva al caricamento (origine #174). Ora `orientedToolSpec` limita il livello a `maxStructureLevel`.
+- **PROVE:** `qa/mastio-selection-zoom-regression.cjs` (+2 casi) e `qa/tower-h4-regression.cjs` (+1 caso) falliscono su `main` e passano sul branch. Le altre 27 regressioni su Mastio e piazzamento passano. Repro browser degli agenti: Mastio tolto → dopo il reload resta tolto con 2 caserme e 32 posti; W3 H4 → piazzata H3, W2 H4 resta H4.
+- **NON CORRETTO (basso, in BACKLOG):** campi dell'economia salvati come stringhe (es. `castleGold:"lots"`) vengono caricati e risalvati invariati.
+
 ## 2026-11-15 — Tetto interno: torre a D e bracere rimosso (branch `fix/dtower-inner-roof-brazier`)
 
 - **CODICE SUL BRANCH, NON MERGE:**
