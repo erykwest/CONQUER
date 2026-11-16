@@ -4,7 +4,7 @@
 // Keep the authoritative 2D topology and territory RGB untouched.
 const assert = require('node:assert/strict');
 const { performance } = require('node:perf_hooks');
-const { area, subdivide, globalMicrocells, sourceColor, buildScene } =
+const { area, subdivide, globalMicrocells, sourceColor, buildScene, pickTerritory } =
   require('../src/regional-map3d-geometry.js');
 
 const polygons = [
@@ -67,6 +67,27 @@ for(const detail of [1,8,20,40]){
     triangles:scene.stats.triangles,trees:scene.stats.trees,reeds:scene.stats.reeds,
     borders:scene.borders.length,MiB:+(scene.vertices.byteLength/(1024*1024)).toFixed(2)});
   if(detail===20){
+    assert.equal(scene.pickRanges.length,scene.stats.subcells,'every microcell carries canonical owner metadata');
+    assert.ok(scene.pickIndex.buckets.size>0,'spatial index built for picking');
+    // Test the actual projected triangle, including yaw, zoom and pan.
+    // Ground-plane inverse alone would pick the wrong territory on raised hills.
+    const sample = scene.pickRanges.find(range=>range.macroId===33);
+    assert.ok(sample && terrain[sample.macroId]==='forest');
+    for(const angle of [0,Math.PI/2,-.6,1.7])for(const scale of [.7,1.4,3.2]){
+      const camera={width:800,height:600,cx:snapshot.width/2,cy:snapshot.height/2,
+        cos:Math.cos(angle),sin:Math.sin(angle),scale,panX:113,panY:-70};
+      const points=[0,1,2].map(j=>{
+        const i=(sample.firstVertex+j)*6;
+        const x=scene.vertices[i]-camera.cx,y=scene.vertices[i+1]-camera.cy,z=scene.vertices[i+2];
+        const qx=x*camera.cos-y*camera.sin,qy=x*camera.sin+y*camera.cos;
+        return{x:camera.width/2+(qx-qy)*.8660254*scale+camera.panX,
+               y:camera.height/2+((qx+qy)*.5-z*.9)*scale+camera.panY};
+      });
+      const sx=points.reduce((n,p)=>n+p.x,0)/3,sy=points.reduce((n,p)=>n+p.y,0)/3;
+      assert.equal(pickTerritory(scene,camera,sx,sy),33,
+        'pick must resolve rendered warped microcell with any camera transform');
+      assert.equal(pickTerritory(scene,camera,-1e5,-1e5),null,'outside world cannot pick');
+    }
     const repeat=buildScene(snapshot,detail,.65);
     assert.deepEqual(repeat.vertices,scene.vertices,'deterministic mesh');
     assert.deepEqual(repeat.borders,scene.borders,'deterministic grouped borders');
@@ -79,6 +100,6 @@ for(const detail of [1,8,20,40]){
     );
   }
 }
-console.log('PASS region3d: global microcells, exact area, organic borders, source palette, 5×/10× forest/reeds.');
+console.log('PASS region3d: global microcells, palette, vegetation, and depth-correct 3D territory picking under 12 camera transforms.');
 console.table(results);
 console.log('Synthetic CPU-only baseline. Browser/WebGL visuals and FPS remain separate checks.');
