@@ -1,5 +1,18 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-16 — WILD-OUT-01 · Fauna e fuorilegge in partita
+
+**IMPLEMENTATO SU BRANCH `feature/wildlife-outlaws`, NON MERGE.** [D-OUTLAWS-261116](DECISIONS.md#d-outlaws-261116--fuorilegge-briganti-banditi-predoni-16112026). Dettagli in [STATUS](STATUS.md).
+- [x] Lupi caricati nella partita (prima solo in `/camp`).
+- [x] Orso solitario e territoriale con tana nel bosco.
+- [x] Briganti: strada di confine presidiata, scambi −40% per strada (mercato settimanale e pedaggio).
+- [x] Banditi: covo di tende con guardie fisse, pizzo settimanale, bottino recuperato distruggendolo.
+- [x] Predoni: saccheggio di edifici isolati, fuga al confine, bottino perso o recuperato.
+- [ ] Tende del covo e barricata dei briganti come modelli nel Lab (oggi disegno canvas 2.5D, fuori catalogo).
+- [ ] Rapinare i convogli del signore che escono dalla strada presidiata (oggi solo calo di mercato e pedaggio).
+- [ ] Bilanciare numeri, calendario, pizzo e merci rubate; avviso al giocatore più visibile della sola riga di stato.
+- [ ] Verifica a occhio con il gioco in primo piano (notte, World3D, pattuglie che incontrano i briganti).
+
 ## 2026-11-15 — BC-251105-05 fix · Tetto interno della torre a D e bracere
 
 **IMPLEMENTATO SU BRANCH `fix/dtower-inner-roof-brazier`, NON MERGE.** Dettagli in [STATUS](STATUS.md).

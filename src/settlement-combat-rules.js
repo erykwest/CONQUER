@@ -8,6 +8,10 @@
     spearman:Object.freeze({hp:100,combat:2,armor:2,aim:null,front:3}),
     patrol:Object.freeze({hp:40,combat:2,armor:2,aim:null,front:2}),
     wolf:Object.freeze({hp:12,combat:3,armor:0,aim:null,front:1}),
+    bear:Object.freeze({hp:45,combat:4,armor:1,aim:null,front:1}),
+    // Outlaws: light, unarmoured men; a lair guard is the best of them.
+    outlaw:Object.freeze({hp:40,combat:2,armor:0,aim:null,front:1}),
+    outlawGuard:Object.freeze({hp:60,combat:2,armor:1,aim:null,front:1}),
     infantry:Object.freeze({hp:100,combat:2,armor:1,aim:null,front:1}),
     knight:Object.freeze({hp:30,combat:3,armor:3,aim:null,front:1}),
     captain:Object.freeze({hp:30,combat:3,armor:3,aim:null,front:1}),
@@ -17,7 +21,9 @@
   // A PVP team can supply its own palette / emblems later.
   const FACTIONS={
     realm:{livery:null},
-    dev_hostile:{livery:{main:'#171716',alt:'#e3bd31',mainDark:'#090909',altDark:'#95781a'}}
+    dev_hostile:{livery:{main:'#171716',alt:'#e3bd31',mainDark:'#090909',altDark:'#95781a'}},
+    // Outlaws wear no colours of a lord: undyed wool and forest green.
+    outlaw:{livery:{main:'#4a5233',alt:'#7a6446',mainDark:'#2c3120',altDark:'#4c3e2b'}}
   };
   const shots=[],meleeFlashes=[],stones=[];
   let elapsed=0,combatClock=0;

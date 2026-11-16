@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-16 — WILD-OUT-01 · Lupi, orso e tre tipi di fuorilegge in partita
+
+`feature/wildlife-outlaws`: i lupi tornano in partita (il modulo era caricato solo da `/camp`); nuovo orso territoriale con tana nel bosco; nuovo `settlement-outlaws.js` con briganti (strada presidiata, scambi −40%), banditi (covo di tende con guardie, pizzo settimanale) e predoni (saccheggio di edifici isolati e fuga). Nuova `qa/outlaws-regression.cjs`, `qa/wolves-regression.cjs` estesa all'orso. STATUS, BACKLOG, DECISIONS aggiornati; ROADMAP invariata (nessuna milestone cambia).
+
 ## 2026-11-15 — Tetto interno: torre a D e bracere
 
 `fix/dtower-inner-roof-brazier`: il tetto interno della torre a D corre ora su un colmo (padiglione sul retro, mezzo cono sul davanti) con pendenza unica; il tetto interno toglie il bracere (prima veniva disegnato sopra il tetto, scambiato per una botola). Regola di prodotto registrata: senza bracere gli arcieri della torre non tirano frecce incendiarie (`towerHasBrazier`, da applicare quando le torri avranno frecce incendiarie). Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: nessun contratto cambiato.

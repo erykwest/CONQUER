@@ -268,6 +268,8 @@
       g.setLineDash([]);
     }
     window.ConquerCamp?.drawEncampments(g);
+    // Bandit lair tents and brigand roadblocks, under the figures.
+    window.ConquerOutlaws?.draw(g,{fog:!!combat.fog,seen:p=>spotted(p,observers())});
     const anim=window.ConquerCombatAnim;
     const characters=[];
     for(const u of combat.units){
@@ -329,7 +331,7 @@
       for(const e of combat.enemy){
         const down=e.defeated||e.stats?.hp<=0;
         if(down&&!anim?.dying(e))continue;
-        if(e.kind==='wolf'){
+        if(e.kind==='wolf'||e.faction==='wildlife'){
           // Wildlife remains a visible neutral creature by day; at night the
           // exact same entity is rendered while its combat flag turns hostile.
           if(!down&&(!combat.fog||spotted(e,sightSources)))window.ConquerWolves?.draw(g,e);

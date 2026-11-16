@@ -1,5 +1,23 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-16 — Fauna e fuorilegge in partita: lupi, orso, briganti, banditi, predoni (branch `feature/wildlife-outlaws`)
+
+- **CAUSA:** `settlement-wolves.js` era caricato solo da `/camp`, mai da `index.html`: in partita non c'erano lupi. L'orso esisteva solo come disegno (`ConquerAnimals.SPECIES.bear`), senza simulazione. I banditi non erano mai stati implementati.
+- **CODICE SUL BRANCH, NON MERGE:**
+  - `index.html` carica `settlement-wolves.js` e il nuovo `settlement-outlaws.js` dopo `settlement-combat.js`.
+  - `settlement-wolves.js`: schema `packs-v3` (i salvataggi esistenti ricevono l'orso una volta). **Orso** solitario, tana in un bosco a 28–50U dal pozzo, fuori dalla zona gialla; neutrale, di notte dorme alla tana; diventa ostile solo se un soldato entra a 6U dalla tana o a 4U da lui, insegue fino a 11U dalla tana e poi torna calmo. Ha uno slot di percorso suo (con quello condiviso dei lupi restava fermo di notte). Disegno generico per specie (sprite 56×52 per l'orso).
+  - `settlement-combat.js`: `registerWolves` sostituisce tutta la fauna (`faction:'wildlife'`); la fauna non fa scattare l'avvistamento delle vedette; tick di `ConquerOutlaws`; API `outlawState` (persistita in `combat.outlaws`), `addEnemies`, `removeEnemies`, `groundLegs`.
+  - `settlement-combat-rules.js`: profili `bear` (45 PV, combattimento 4, armatura 1), `outlaw` (40/2/0), `outlawGuard` (60/2/1); fazione `outlaw` con livrea lana grezza/verde bosco.
+  - `settlement-outlaws.js` (nuovo): tre bande, nemici normali della simulazione tattica (mischia, frecce, cadute e allarme invariati).
+    - **Briganti** (4–6): presidiano una strada di confine già costruita, a ~48U dal pozzo, con un tronco di traverso. Ogni strada tenuta riduce gli scambi del 40% (minimo 30%): vendite settimanali al mercato (`settlement-commerce.js`) e pedaggio alle porte (`settlement-treasury.js`). Attaccano chi si avvicina a 6U, inseguono fino a 9U dal posto.
+    - **Banditi** (4–6 guardie): covo stabile di 3–4 tende di pelli e un fuoco in un bosco a 32–62U; guardie fisse ai loro posti, attaccano entro 9U e inseguono fino a 14U dal fuoco. Ogni settimana estorcono il 5% dell'oro del castello (max 15) nel loro bottino; distrutto il covo il bottino torna al castello.
+    - **Predoni** (5–8): entrano da un confine, puntano due edifici isolati (completati, oltre 14U dal pozzo; mai castello, mura, torri, porte, pozzi, strade, campi) e rubano 6 merci a testa (cibo, legno, pietra, metallo, argilla); poi tornano al confine. Con oltre metà dei caduti ripiegano. Se muoiono tutti il bottino torna; chi fugge porta via la sua parte. Senza edifici isolati non partono.
+    - Calendario dalla prima giornata col villaggio fondato: covo dopo 8–16 giorni, briganti 14–24, predoni 20–30; dopo la fine di una banda la successiva dello stesso tipo dopo 30–50 / 12–24 / 16–28 giorni. Una banda per tipo alla volta. I caduti restano mezza giornata, poi vengono rimossi.
+    - Pannello COMBAT: pulsanti di prova «Briganti», «Covo banditi», «Predoni» e riga di stato delle bande con l'effetto (scambi %, bottino, saccheggio/fuga).
+- **PROVE LOCALI PASS:** `qa/wolves-regression.cjs` (aggiornata: fauna in `index.html`, schema v3, orso: una sola tana lontana, ignora i passanti, dorme di notte, carica chi si avvicina, guinzaglio, disegno), nuova `qa/outlaws-regression.cjs` (briganti e taglio degli scambi, covo con guardie, pizzo settimanale e recupero, predoni: bersagli periferici, saccheggio, fuga col bottino o restituzione, rotta, calendario), `combat-render`, `camp`, `treasury`, `commerce-skeleton`, `economy`, `economy-balance`, `animals`, `animals3d`, `circle-control`.
+- **PROVA NEL BROWSER (server locale, partita fondata dalla UI):** 12 lupi in due branchi e un orso; tre bande dai pulsanti, salvataggio e ricarica le conservano; briganti sulla strada sud a 48U, scambi 60%; predoni che saccheggiano due cascine isolate (60 merci) e ripiegano; squadra portata al covo: le guardie la circondano a distanza di mischia. Tende e fuoco del covo visibili nel bosco (cattura). Nessun errore in console. Il pannello del browser era nascosto: la simulazione è stata fatta avanzare chiamando `simulationFrame`.
+- **APERTO:** tende del covo e tronco dei briganti sono disegnati sul canvas tattico (come le tende di ripiego di `/camp`), non sono modelli 3D e **non sono nel Lab**; in World3D gli alberi davanti alle tende non le coprono. Le guardie restano invisibili finché nessuno le avvista (regola di tutti i nemici). Valori di bilanciamento provvisori.
+
 ## 2026-11-15 — Tetto interno: torre a D e bracere rimosso (branch `fix/dtower-inner-roof-brazier`)
 
 - **CODICE SUL BRANCH, NON MERGE:**
