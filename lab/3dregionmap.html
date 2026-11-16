@@ -40,7 +40,7 @@ footer { padding:11px 15px; border-top:1px solid #39483f; background:#182421; fo
 <body>
 <header>
 <strong>CONQUER · WORLD ATLAS 3D</strong>
-<p>Prototipo isolato: prima una mesh globale di microcelle Voronoi, poi la loro aggregazione deformata in territori organici. Colori identici alla mappa 2D; foreste con alberi SVG e paludi con canneti del Builder. Gameplay, adiacenze e salvataggi invariati.</p>
+<p>Prototipo isolato: prima una mesh globale di microcelle Voronoi, poi la loro aggregazione deformata in territori organici. Colori originali del World Lab, con variazione cromatica su acqua e colline; foreste con alberi SVG ridimensionati e paludi con canneti del Builder. Gameplay, adiacenze e salvataggi invariati.</p>
 </header>
 <main>
 <section class="panel" aria-label="Mappa 2D originale">
@@ -56,7 +56,7 @@ footer { padding:11px 15px; border-top:1px solid #39483f; background:#182421; fo
 <label class="control">Deformazione contorni
 <input id="deformation" type="range" min="0" max="100" step="5" value="65" aria-label="Deformazione confini microcellulari">
 </label>
-<label class="control check"><input id="showTrees" type="checkbox" checked> Alberi ×5 / ×10</label>
+<label class="control check"><input id="showTrees" type="checkbox" checked> Alberi ×2,5 / ×10</label>
 <label class="control check"><input id="showReeds" type="checkbox" checked> Canneti paludi ×5 / ×10</label>
 <label class="control check"><input id="showBorders" type="checkbox" checked> Confini territoriali</label>
 <div class="actions"><button type="button" id="resetView">Centra vista</button><button type="button" id="refresh">Aggiorna</button><button type="button" id="benchmark">Benchmark 1× / 20×</button></div>
@@ -71,7 +71,7 @@ footer { padding:11px 15px; border-top:1px solid #39483f; background:#182421; fo
 <footer>
 <div id="perfNotes" aria-live="polite"></div>
 <div id="benchmarkResult" aria-live="polite"></div>
-<div class="small">Mesh globale di microcelle Voronoi, aggregazione visiva tramite campo di deformazione; colori ricavati direttamente dal World Lab 2D. Alberi SVG originali e canneti derivati dai modelli Blender del Builder, come billboard; la mappa di gameplay resta invariata. Tempi dipendenti dal dispositivo.</div>
+<div class="small">Mesh globale di microcelle Voronoi, aggregazione visiva tramite campo di deformazione; colori del World Lab 2D, leggermente modulati solo su acqua e colline. Alberi SVG originali e canneti derivati dai modelli Blender del Builder, come billboard; la mappa di gameplay resta invariata. Tempi dipendenti dal dispositivo.</div>
 </footer>
 </section>
 </main>
