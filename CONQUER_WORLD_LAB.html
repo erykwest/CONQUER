@@ -743,6 +743,10 @@
       </div>
 
       <div class="field">
+        <a href="lab/3dregionmap.html" target="_blank" rel="noopener" style="display:block;padding:9px 11px;text-align:center;border:1px solid #9a8354;color:#f1d9a5;text-decoration:none;background:#25322d;font-size:.78rem">↗ Anteprima regionale 3D · sperimentale</a>
+      </div>
+
+      <div class="field">
         <label for="seed">Seed numerico</label>
         <input id="seed" type="number" min="1" max="2147483646" step="1" value="1943">
       </div>
@@ -3353,6 +3357,22 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         }
       }
 
+      // Read-only bridge for the isolated 3D experiment. Gameplay and saves stay 2D/Voronoi.
+      window.ConquerRegion3DSnapshot = () => !state ? null : ({
+        revision: window.ConquerRegion3DRevision || 0,
+        seed: state.seed,
+        width: state.configuration.width,
+        height: state.configuration.height,
+        cells: state.cells.map(c => ({ id: c.id, macroId: c.macroId, polygon: c.polygon })),
+        terrain: { ...state.terrain },
+        edges: state.edges.map(e => ({
+          start: e.start, end: e.end,
+          macroIds: [...new Set(e.cells.map(c => c.macroId))]
+        })),
+        rivers: [...state.rivers],
+        selectedMacros: [...selectedMacros]
+      });
+
       function render() {
         selectedMacros = new Set([...selectedMacros].filter(id => !isWaterTerrain(state.terrain[id])));
         if (selectedMacro !== null && isWaterTerrain(state.terrain[selectedMacro])) {
@@ -3673,6 +3693,7 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         }
         svg.append(defsLayer, cellsLayer, campaignLayer, selectedLayer, microLayer, macroLayer, politicalLayer, politicalColorLayer, attackLayer, structureLayer, coastlineLayer, labelsLayer, adventureLayer, capitalLayer, topSymbolsLayer);
         updateGridBorderVisibility();
+        window.ConquerRegion3DRevision = (window.ConquerRegion3DRevision || 0) + 1;
         if (selectedMacro !== null) selectMacro(selectedMacro);
       }
 
