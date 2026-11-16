@@ -1,5 +1,16 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-16 — UI-ALERTS-01 · Avvisi in gioco e diario degli eventi
+
+**IMPLEMENTATO SU BRANCH `feature/alert-feed`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Pila di avvisi in alto: titolo, dettagli espandibili, chiusura manuale e automatica se risolto.
+- [x] Sezione Gestisci › Diario degli eventi con filtri, persistita per seme.
+- [x] Avvisi collegati ai messaggi (messaggeri, colombi, risposte, carovane) con azioni dirette.
+- [x] Fix: il messaggero a cavallo si ferma davanti alla porta del Mastio, non dentro la sala comune.
+- [ ] Verificare nel gioco la posizione del messaggero con Mastio a ingresso rialzato e a piano terra.
+- [ ] Salvare il diario nel salvataggio di partita (oggi solo `localStorage` del browser).
+- [ ] Centrare la camera sulla struttura con «Mostra sulla mappa» (oggi la seleziona e apre l'ispettore).
+- [ ] Portare i messaggi di stato inglesi dei moduli legacy (`status()`) a chiavi tradotte e farli passare dal centro avvisi.
 ## 2026-11-16 — THREAT-GEN-01 · Generatore di minacce
 
 **IMPLEMENTATO SU BRANCH `feature/wildlife-outlaws`, NON MERGE.** [D-THREATS-261116](DECISIONS.md#d-threats-261116--generatore-di-minacce-16112026). Dettagli in [STATUS](STATUS.md).
