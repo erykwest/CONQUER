@@ -4,6 +4,10 @@
 
 `fix/move-order-lag`: l'A* passa il suo snapshot degli ostacoli ad `allowedAt` e gli ordini militari lo riusano in tutti i controlli d'ingombro; un ordine con aggiramento passa da 6–10 s a 0,2–0,6 s su una scena densa, con percorsi identici. Test in qa/movement-path-performance-regression.cjs. ROADMAP e DECISIONS invariate: nessun contratto di gioco cambiato.
 
+### 2026-11-16 — Fix: le greggi non pascolano nei campi coltivati
+
+- `pastureBuildingAllowed` ora tratta i campi (`fieldPoints`) come ostacoli invece di saltarli; i pascoli in cache vengono riverificati quando cambia l'elenco delle strutture. Test in qa/urban-livestock-regression.cjs; versione cache di settlement-livestock.js aggiornata. ROADMAP e DECISIONS invariate.
+
 ### 2026-11-15 — Microfix: fedeli alla messa nel cutaway della chiesa
 
 - Aggiunti i popolani seduti sui banchi della chiesa durante la messa domenicale (6:00–12:00); test in qa/staff-people-regression.cjs. Roadmap e decisioni invariate.

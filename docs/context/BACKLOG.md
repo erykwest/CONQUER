@@ -5,6 +5,12 @@
 - [x] L'ordine di movimento con percorso aggirante non blocca più il gioco per secondi (snapshot degli ostacoli nei controlli d'ingombro militari).
 - [ ] Restano 0,2–0,6 s per un ordine con aggiramento lungo su una mappa densa (A* sincrono condiviso con i popolani): valutare il calcolo cooperativo su più frame (`findPeasantPathWork`) per gli ordini di gruppo.
 
+### 2026-11-16 — Fix: niente pascolo nei campi
+
+- [x] Il cerchio di pascolo di pecore e mucche non tocca nessun campo coltivato (0,2 U di margine), compresi i campi automatici L1 e quelli in cantiere.
+- [x] Un campo piazzato sopra un pascolo già assegnato sposta il gregge.
+- [ ] Proposta: escludere i campi anche dal tragitto casa–pascolo (oggi le greggi possono attraversarli camminando, non pascolarci).
+
 ### 2026-11-15 — Microfix: messa domenicale visibile
 
 - [x] Cutaway della chiesa: fedeli seduti sui banchi la domenica 6:00–12:00 (ConquerCivic3D.massSlots, ConquerCourtPeople.massInSession).

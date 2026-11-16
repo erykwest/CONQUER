@@ -307,5 +307,35 @@ const clear=refreshSheepPasture();
 assert.ok(Math.hypot(clear.center.x-interior.x,clear.center.y-interior.y)>clear.radius+.20+.20-1e-6,
   'even a building wholly inside the disk rejects that grazing pasture');
 
+// Crop fields are never pasture. urbanBuildingPolygons() yields nothing for
+// fields, so the livestock module must read fieldPoints() itself.
+sandbox.fieldPoints=s=>rectAround({x:s.x,y:s.y},s.half);
+const fieldClear=(p,f)=>{
+  const ring=sandbox.fieldPoints(f);
+  return !sandbox.pointInPolygon(p.center,ring)&&
+    ring.every((v,i)=>sandbox.pointSegmentDistance(p.center,v,ring[(i+1)%ring.length])>p.radius+.20-1e-6);
+};
+{
+  const before=animals.pastures().find(p=>p.id===houses[2].id);
+  const field={id:'qa-field-over-pasture',type:'field',x:before.center.x,y:before.center.y,half:.6};
+  houses.push(field);
+  const moved=refreshSheepPasture();
+  assert.ok(fieldClear(moved,field),'a crop field must reject any grazing disk touching it');
+  const auto={id:'qa-auto-field',type:'field',auto:true,x:moved.center.x+moved.radius+.1,y:moved.center.y,half:.3};
+  houses.push(auto);
+  const again=refreshSheepPasture();
+  assert.ok(fieldClear(again,auto),'auto L1 fields are not pasture either');
+}
+// Placing a field does not bump urbanRevision: an already-claimed pasture
+// must still be evicted when a field is laid over it.
+{
+  const claimed=animals.pastures().find(p=>p.id===houses[2].id);
+  const late={id:'qa-field-late',type:'field',x:claimed.center.x,y:claimed.center.y,half:.5};
+  houses.push(late);
+  animals.animals();runPastureJobs();
+  const now=animals.pastures().find(p=>p.id===houses[2].id);
+  assert.ok(now&&fieldClear(now,late),'a field built on a cached pasture moves the flock elsewhere');
+}
+
 console.log('Urban livestock integration regression PASS');
 
