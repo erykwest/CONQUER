@@ -484,13 +484,20 @@ function towerEdgeOnDivider(s,edge,z){
 }
 // A raised keep door opens on the first upper storey (floor 2): on that floor it takes the
 // place of the window, and of the heraldic drape, on the face it opens through.
+// Likewise a wall-walk (or roof) door gives way to nothing: the window of its face on the storey
+// it opens onto steps aside, so a tower between two walls shows both doors.
 function towerWindowGivesWayToDoor(s,edgeOrDir,floor){
-  if(floor!==2||window.ConquerKeepEntrance?.sill?.(s)==null)return false;
-  const door=towerDoorSpecs(s).find(d=>d.raised);if(!door)return false;
   let nx=edgeOrDir.nx,ny=edgeOrDir.ny;
   if(edgeOrDir.a){nx=(edgeOrDir.a.x+edgeOrDir.b.x)/2-s.x;ny=(edgeOrDir.a.y+edgeOrDir.b.y)/2-s.y}
-  const L=Math.hypot(nx,ny)||1;
-  return (nx*door.outward.x+ny*door.outward.y)/L>.7;
+  const L=Math.hypot(nx,ny)||1,facing=d=>(nx*d.outward.x+ny*d.outward.y)/L>.7;
+  const raised=window.ConquerKeepEntrance?.sill?.(s)!=null;
+  const z=floor>=2?towerOpeningZ(s,floor):1.53;   // the window's centre on that storey
+  return towerDoorSpecs(s).some(d=>{
+    if(d.raised)return raised&&floor===2&&facing(d);
+    if(d.kind!=='wall'&&d.kind!=='roof')return false;
+    const top=d.baseZ+Math.max(.18,d.apexZ-d.baseZ)/2;   // drawn height: half the opening (drawTowerDoorSpec)
+    return facing(d)&&d.baseZ<z+.3&&top>z-.3;
+  });
 }
 function towerSlitFace(s,face,floor){
   const dir=towerFaceDirections(s).find(d=>d.face===face);

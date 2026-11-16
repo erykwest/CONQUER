@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-16 — Microfix: torre fra due mura mostra entrambe le porte del cammino di ronda
+
+- Branch fix/microfix. La finestra di una faccia cede il posto a una porta del cammino di ronda (o del tetto di una sottotorre) che si apre sulla stessa faccia alla stessa altezza (towerWindowGivesWayToDoor, esteso dall'ingresso rialzato del mastio): prima la finestra della faccia interna copriva la porta e la torre fra due mura ne mostrava una sola. Il mastio resta senza porte sulle mura.
+- La chiave delle strutture in World3D include isMastio: promuovere o togliere il mastio ricostruisce porte, finestre e drappo (prima restavano quelli vecchi).
+- PASS gate-tower-entrance (nuovi casi), keep-entrance, mastio-selection-zoom, cutaway-floors, house3d e le regressioni torri; verificato a vista nel browser su una torre quadra d'angolo non mastio: due porte, nessuna finestra sopra. CI da eseguire.
+
 ### 2026-11-16 — Microfix: torre quadra d'angolo senza porta al piano terra
 
 - Branch fix/microfix. Una torre quadra indipendente con due mura agganciate ad angolo (meno di 150° fra le loro direzioni) non ha più la porta del P0, perché le mura le chiudono lo spazio d'accesso; la porta resta se la torre è ruotata così che il fronte (la sua direzione) guardi dentro l'angolo fra le mura (entro 30° dalla bisettrice), cioè il caso a 45°. Senza porta anche se un muro si aggancia nella parte centrale della faccia della porta (un aggancio sugli spigoli di quella faccia, come nella torre a 45°, la lascia libera). Restano le porte del cammino di ronda e l'ingresso rialzato del mastio; le torri tonde, a D, semitorri e quelle agganciate a una porta non cambiano. Niente strada di servizio verso una torre d'angolo senza porta (settlement-world.js).

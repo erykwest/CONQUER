@@ -15,7 +15,8 @@ const src=[
   pick(/function towerWallLinks\(tower\)\{[\s\S]*?\n\}/,'towerWallLinks'),
   pick(/const CORNER_TOWER_MAX_ANGLE=[^\n]*/,'corner constants'),
   pick(/function squareTowerGroundDoorBlocked\(tower\)\{[\s\S]*?\n\}/,'squareTowerGroundDoorBlocked'),
-  pick(/function towerDoorSpecs\(tower\)\{[\s\S]*?\n\}/,'towerDoorSpecs')
+  pick(/function towerDoorSpecs\(tower\)\{[\s\S]*?\n\}/,'towerDoorSpecs'),
+  pick(/function towerWindowGivesWayToDoor\(s,edgeOrDir,floor\)\{[\s\S]*?\n\}/,'towerWindowGivesWayToDoor')
 ].join('\n');
 const State={structures:[]};
 const rect=(s)=>{const w=s.size,h=s.size,a=s.angle||0,c=Math.cos(a),n=Math.sin(a);
@@ -29,8 +30,9 @@ const ctx=vm.createContext({State,Math,window:{},
   // ray from the centre to the square's edge
   boundaryPoint:(s,p)=>{const dx=p.x-s.x,dy=p.y-s.y,k=(s.size/2)/Math.max(Math.abs(dx),Math.abs(dy));return{x:s.x+dx*k,y:s.y+dy*k}},
   towerDoorContactSpec:(tower,contact,wall,kind)=>({kind,contact,outward:{x:contact.x-tower.x,y:contact.y-tower.y},baseZ:0})});
-vm.runInContext(src+'\nthis.api={structureInteriorVector,towerDoorSpecs};',ctx);
-const {structureInteriorVector,towerDoorSpecs}=ctx.api;
+ctx.towerOpeningZ=(s,floor)=>.835+(floor-1)*1.5;
+vm.runInContext(src+'\nthis.api={structureInteriorVector,towerDoorSpecs,towerWindowGivesWayToDoor};',ctx);
+const {structureInteriorVector,towerDoorSpecs,towerWindowGivesWayToDoor}=ctx.api;
 const near=(a,b,msg)=>assert.ok(Math.abs(a-b)<1e-6,msg+' ('+a+' vs '+b+')');
 
 for(const angle of [0,Math.PI/2,Math.PI]){
@@ -95,4 +97,18 @@ console.log('PASS towers hooked to a gate enter from the gate rear, interior sid
   assert.equal(front(r).length,1,'round corner towers keep their door (for now)');
   assert.match(fs.readFileSync(__dirname+'/../src/settlement-world.js','utf8'),/squareTowerGroundDoorBlocked\(tower\)\)return null/,'no service road to a door-less corner tower');
   console.log('PASS corner square towers: no ground door unless turned 45° into the corner');
+}
+{
+  // Two walls on a tower: the window of a face steps aside for the wall-walk door opening there.
+  const t={id:'d',type:'tower',shape:'square',size:2,x:0,y:0,angle:0};
+  ctx.towerDoorContactSpec=(tower,contact,wall,kind)=>{const o={x:contact.x-tower.x,y:contact.y-tower.y},L=Math.hypot(o.x,o.y)||1;
+    return{kind,contact,outward:{x:o.x/L,y:o.y/L},baseZ:wall?2.08:.035,apexZ:wall?3:.98}};
+  State.structures=[t,{id:'w1',type:'wall',a:{x:1,y:0},b:{x:10,y:0},aSnap:'d'},{id:'w2',type:'wall',a:{x:0,y:10},b:{x:0,y:1},bSnap:'d'}];
+  const face=(nx,ny)=>({nx,ny});
+  assert.equal(towerWindowGivesWayToDoor(t,face(1,0),2),true,'east face, storey 2: the wall door takes the window place');
+  assert.equal(towerWindowGivesWayToDoor(t,face(0,1),2),true,'south face, storey 2: the wall door takes the window place');
+  assert.equal(towerWindowGivesWayToDoor(t,face(-1,0),2),false,'a face without a door keeps its window');
+  assert.equal(towerWindowGivesWayToDoor(t,face(1,0),3),false,'other storeys keep their window');
+  assert.match(fs.readFileSync(__dirname+'/../src/settlement-world3d.js','utf8'),/\(s\.isMastio\?'M':''\)/,'World3D rebuilds doors and windows when the mastio changes');
+  console.log('PASS wall-walk doors take the place of the window on their face');
 }
