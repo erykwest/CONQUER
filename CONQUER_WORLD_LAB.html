@@ -3357,7 +3357,15 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         }
       }
 
-      // Read-only bridge for the isolated 3D experiment. Gameplay and saves stay 2D/Voronoi.
+      // Read-only data plus delegated territory selection for the isolated 3D experiment.
+      // Only the authoritative World Lab updates its selection state and menu.
+      window.ConquerRegion3DSelection = () => [...selectedMacros];
+      window.ConquerRegion3DSelectTerritory = (macroId, extendSelection = false) => {
+        const id = Number(macroId);
+        if (!Number.isInteger(id) || !state?.macros[id] || isWaterTerrain(state.terrain[id])) return false;
+        selectMacro(id, !!extendSelection);
+        return true;
+      };
       window.ConquerRegion3DSnapshot = () => !state ? null : ({
         revision: window.ConquerRegion3DRevision || 0,
         seed: state.seed,
@@ -3368,6 +3376,7 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         // Pixel-identical source RGB for each territory: same macroFill used by the 2D SVG.
         // Includes the active terrain palette, neutral desaturation and political fills.
         fills: Object.fromEntries(state.macros.map(macro => [macro.id, macroFill(macro.id)])),
+        names: Object.fromEntries(state.macros.map(macro => [macro.id, territoryName(macro)])),
         edges: state.edges.map(e => ({
           start: e.start, end: e.end,
           macroIds: [...new Set(e.cells.map(c => c.macroId))]
