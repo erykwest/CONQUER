@@ -9,6 +9,21 @@
 - 16/11: torre quadra d'angolo senza porta al P0 (salvo rotazione a 45° verso l'interno); test in qa/gate-tower-entrance-regression.cjs.
 - Rimuovi foresta usa i bypass DEV Fast build e Free build; versioni cache degli script toccati aggiornate. Test in qa/forestry-regression.cjs.
 - Il selettore ▲/▼ del cutaway ora toglie anche la cresta merlata e il braciere del tetto quando si scende sotto l'ultimo piano; test in qa/cutaway-floors-regression.cjs.
+## 2026-11-16 — UI-ALERTS-01 · Avvisi in gioco e diario degli eventi
+
+`feature/alert-feed`: pila di avvisi in alto al centro (UI v2) con titolo, dettagli espandibili, chiusura manuale e chiusura automatica (eventi dopo 9 s, 20 s se gravi; condizioni solo dopo la risoluzione, con 4 s di tolleranza contro lo sfarfallio). Nuova sezione Gestisci › Diario degli eventi con filtri per gravità e categoria, persistita per seme nel browser. Moduli `src/ui/alerts.js` (logica pura) e `src/ui/alert-watchers.js`; test `qa/ui-alerts-regression.mjs` e workflow `UI alerts regression`. Gli avvisi sono collegati ai messaggi (messaggero/colombo in arrivo, lettera in attesa con «Leggi il messaggio», risposta accettata/rifiutata, stati delle carovane). Fix: il messaggero a cavallo si ferma fuori, davanti alla porta del Mastio (o ai piedi della scala dell'ingresso rialzato), invece di entrare nella sala comune; i salvataggi vecchi vengono spostati sulla soglia. ROADMAP e DECISIONS invariate: nessun contratto di gioco cambiato, la UI legge solo lo stato.
+## 2026-11-16 — THREAT-GEN-01 · Minacce rare
+
+Probabilità del generatore ridotte di circa 8 volte, grazia e quiete allungate: a Normale ~5 eventi l'anno invece di ~42 (orso uno ogni ~3 anni, ~1 razzia l'anno). Tassi bloccati in `qa/threats-regression.cjs`. STATUS, BACKLOG, DECISIONS aggiornati; ROADMAP invariata.
+
+## 2026-11-16 — THREAT-GEN-01 · Generatore di minacce
+
+Nuovo `settlement-threats.js`: ogni giorno di gioco tira per lupi, orso, briganti, banditi e predoni con probabilità legate a stagione, ricchezza, popolazione, strade, boschi ed edifici isolati; difficoltà Tranquilla/Normale/Dura; avviso con «Vai» e registro. I fuorilegge perdono il calendario fisso. Nuova `qa/threats-regression.cjs`. STATUS, BACKLOG, DECISIONS (D-THREATS-261116) aggiornati; ROADMAP invariata.
+
+## 2026-11-16 — WILD-OUT-01 · Lupi, orso e tre tipi di fuorilegge in partita
+
+`feature/wildlife-outlaws`: i lupi tornano in partita (il modulo era caricato solo da `/camp`); nuovo orso territoriale con tana nel bosco; nuovo `settlement-outlaws.js` con briganti (strada presidiata, scambi −40%), banditi (covo di tende con guardie, pizzo settimanale) e predoni (saccheggio di edifici isolati e fuga). Briganti e banditi armati 2/3 ascia e scudo tondo, 1/3 arco. Covo e blocco stradale composti con i modelli 3D da campo (tende, tettoia, carro, botti, palizzata) e registrati nel Lab. Nuova `qa/outlaws-regression.cjs`, `qa/wolves-regression.cjs` estesa all'orso. STATUS, BACKLOG, DECISIONS aggiornati; ROADMAP invariata (nessuna milestone cambia).
+
 ## 2026-11-16 — QA-DEEP-261116 · Test antiregressivo profondo e fix di salvataggio
 
 16/11/2026 — `fix/mastio-h4-load-20261116` (pre-merge):

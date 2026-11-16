@@ -200,13 +200,15 @@
   // artisans (wallet L2) receive the takings. No coin is created.
   function sellGoods(c,e){
     const pop=residents(),prices=c.market.prices,sold={},demand={};
+    // OUTLAWS: brigands holding a road keep merchants away; fewer goods change hands.
+    const trade=Math.max(0,Math.min(1,finite(window.ConquerOutlaws?.tradeFactor?.()??1)));
     for(const [id,item] of Object.entries(Market.COMMODITIES)){
       demand[id]=0;sold[id]=0;
       for(const group of ['L4','L3','L2','L1']){
         const want=pop[group]*L3_GOODS_NEED[group]*item.tradeWeight;
         demand[id]+=want;
         const price=Math.max(.01,finite(prices[id]||item.basePrice));
-        const qty=Math.min(want,c.goods[id],Math.max(0,finite(e.wallet[group]))/price);
+        const qty=Math.min(want*trade,c.goods[id],Math.max(0,finite(e.wallet[group]))/price);
         if(!(qty>1e-6))continue;
         const paid=roundGold(qty*price);
         e.wallet[group]=roundGold(Math.max(0,finite(e.wallet[group])-paid));

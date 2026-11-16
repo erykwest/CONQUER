@@ -1,0 +1,33 @@
+name: UI alerts regression
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - src/ui/alerts.js
+      - src/ui/alert-watchers.js
+      - src/ui/shell.js
+      - src/ui/i18n-it.js
+      - qa/ui-alerts-regression.mjs
+      - .github/workflows/ui-alerts-regression.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  alerts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Syntax
+        run: |
+          node --check src/ui/alert-watchers.js
+          node --check src/ui/alerts.js
+      - name: Alert center and journal
+        run: node qa/ui-alerts-regression.mjs

@@ -12,6 +12,42 @@
 - [ ] Porte delle torri d'angolo per le altre forme (tonde, a D): da definire.
 - [x] Rimuovi foresta rispetta Fast build (istantaneo) e Free build (senza salari) del menu DEV.
 - [x] Cutaway piano per piano: i merli (e caditoie, tetto interno, braciere) spariscono quando il piano in vista non è l'ultimo.
+## 2026-11-16 — UI-ALERTS-01 · Avvisi in gioco e diario degli eventi
+
+**IMPLEMENTATO SU BRANCH `feature/alert-feed`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Pila di avvisi in alto: titolo, dettagli espandibili, chiusura manuale e automatica se risolto.
+- [x] Sezione Gestisci › Diario degli eventi con filtri, persistita per seme.
+- [x] Avvisi collegati ai messaggi (messaggeri, colombi, risposte, carovane) con azioni dirette.
+- [x] Fix: il messaggero a cavallo si ferma davanti alla porta del Mastio, non dentro la sala comune.
+- [ ] Verificare nel gioco la posizione del messaggero con Mastio a ingresso rialzato e a piano terra.
+- [ ] Salvare il diario nel salvataggio di partita (oggi solo `localStorage` del browser).
+- [ ] Centrare la camera sulla struttura con «Mostra sulla mappa» (oggi la seleziona e apre l'ispettore).
+- [ ] Portare i messaggi di stato inglesi dei moduli legacy (`status()`) a chiavi tradotte e farli passare dal centro avvisi.
+## 2026-11-16 — THREAT-GEN-01 · Generatore di minacce
+
+**IMPLEMENTATO SU BRANCH `feature/wildlife-outlaws`, NON MERGE.** [D-THREATS-261116](DECISIONS.md#d-threats-261116--generatore-di-minacce-16112026). Dettagli in [STATUS](STATUS.md).
+- [x] Tiro giornaliero per tipo con probabilità dipendenti da stagione, ricchezza, popolazione, strade, boschi, edifici isolati.
+- [x] Difficoltà a tre livelli salvata nella partita.
+- [x] Avviso con «Vai» e registro degli eventi.
+- [x] Eventi rari: ~5 l'anno a Normale (orso uno ogni ~3 anni, ~1 razzia e ~1 brigantaggio l'anno), bloccati da test.
+- [ ] Verificare il ritmo su partite lunghe reali.
+- [ ] Avviso e registro anche nell'interfaccia UI v2 (oggi banner globale + pannello COMBAT del builder).
+- [ ] Mostrare la difficoltà alla creazione della partita, non solo nel pannello.
+
+## 2026-11-16 — WILD-OUT-01 · Fauna e fuorilegge in partita
+
+**IMPLEMENTATO SU BRANCH `feature/wildlife-outlaws`, NON MERGE.** [D-OUTLAWS-261116](DECISIONS.md#d-outlaws-261116--fuorilegge-briganti-banditi-predoni-16112026). Dettagli in [STATUS](STATUS.md).
+- [x] Lupi caricati nella partita (prima solo in `/camp`).
+- [x] Orso solitario e territoriale con tana nel bosco.
+- [x] Briganti: strada di confine presidiata, scambi −40% per strada (mercato settimanale e pedaggio).
+- [x] Banditi: covo di tende con guardie fisse, pizzo settimanale, bottino recuperato distruggendolo.
+- [x] Predoni: saccheggio di edifici isolati, fuga al confine, bottino perso o recuperato.
+- [x] Briganti e banditi: 2/3 ascia e scudo tondo, 1/3 arco; arcieri fermi al posto.
+- [x] Covo e blocco stradale in 3D con i modelli da campo, nel Lab (`banditLair3/4`, `brigandRoadblock`).
+- [ ] Rapinare i convogli del signore che escono dalla strada presidiata (oggi solo calo di mercato e pedaggio).
+- [ ] Bilanciare numeri, calendario, pizzo e merci rubate; avviso al giocatore più visibile della sola riga di stato.
+- [ ] Verifica a occhio con il gioco in primo piano (notte, World3D, pattuglie che incontrano i briganti).
+
 ## 2026-11-16 — QA-DEEP-261116 · Seguiti del test antiregressivo profondo
 
 **FATTO su branch `fix/mastio-h4-load-20261116` (non merge):** il Mastio rimosso dal giocatore resta rimosso; la torre W3 non si piazza più a H4. Dettagli in [STATUS](STATUS.md).

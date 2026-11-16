@@ -1,7 +1,9 @@
 // CONQUER interface v2 ("Isole"): floating wood-and-gold tablets over a full-bleed map.
 // Opt-in with ?ui=2 (persisted; ?ui=1 goes back). Reads the game only through window.ConquerGame.
 import { html, render, useState, useEffect, useRef } from '../vendor/htm-preact-3.1.1.js';
-import { T } from './i18n-it.js?v=ui2-insp-2-wallpatrol2';
+import { T } from './i18n-it.js?v=ui2-insp-2-wallpatrol2-alerts3';
+import { createAlertCenter } from './alerts.js?v=alerts3';
+import { createWatchers } from './alert-watchers.js?v=alerts3';
 
 const STORE_KEY = 'conquer.ui.v2', MODE_KEY = 'conquer.ui.mode', DEV_KEY = 'conquer.dev';
 const params = new URLSearchParams(location.search);
@@ -42,6 +44,9 @@ const ICON = {
   zones: 'M4 20c3 0 4-2 4-4 0-1.5 1-3 3-3s3 1.5 3 3M14 13l6-9M9 20h11',
   patrols: 'M7 21l2-7M9 14l-3-4 4-2 3 3 3-1M10 4.5a1.5 1.5 0 1 0 0 .01M17 3v18',
   alarm: 'M6 17V11a6 6 0 0 1 12 0v6l2 2H4zM10 21h4',
+  journal: 'M6 3h11a2 2 0 0 1 2 2v16H7a2 2 0 0 1-2-2V4M5 19a2 2 0 0 1 2-2h12M9 7h6M9 11h6',
+  chevron: 'M6 9l6 6 6-6',
+  target: 'M12 3v4M12 17v4M3 12h4M17 12h4M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z',
   tests: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 11v2'
 };
 const Icon = ({ name, size = 20 }) => html`
@@ -207,9 +212,9 @@ function Row({ label, tip, children }) {
     <span class="u2-label" data-tip=${tip ? label : null} data-tip-body=${tip || null} tabindex=${tip ? 0 : null}>${label}${tip && html`<i aria-hidden="true">?</i>`}</span>
     <div class="u2-ctl">${children}</div></div>`;
 }
-function Seg({ options, onPick, wrap }) {
+function Seg({ options, onPick, wrap, nowrap }) {
   // More than three choices wrap three per line instead of shrinking into unreadable buttons.
-  return html`<div class=${'u2-seg' + (wrap || options.length > 3 ? ' u2-wrap' : '')}>${options.map(o => html`
+  return html`<div class=${'u2-seg' + (wrap || (options.length > 3 && !nowrap) ? ' u2-wrap' : '')}>${options.map(o => html`
     <button type="button" class=${o.active ? 'on' : ''} aria-pressed=${!!o.active} disabled=${!!o.disabled}
       data-tip=${o.tip || null} data-tip-body=${o.tipBody || null} onClick=${() => onPick(o)}>${o.label}</button>`)}</div>`;
 }
@@ -495,7 +500,7 @@ function Inspector({ snap, cmd }) {
 
 // ---------- Gestisci ----------
 const M = T.manage;
-const MANAGE_SECTIONS = ['overview', 'policies', 'market', 'activities', 'castle', 'game'];
+const MANAGE_SECTIONS = ['overview', 'policies', 'market', 'activities', 'castle', 'journal', 'game'];
 function ManageRail({ section, setSection }) {
   return html`<nav class="u2-tablet u2-rail" aria-label=${T.modes.manage}>
     ${MANAGE_SECTIONS.map(id => html`
@@ -588,10 +593,92 @@ function GameInfo({ game }) {
     </div>
     <button type="button" class="u2-primary" data-tip=${M.save} data-tip-body=${TIP.save} onClick=${game.commands.saveCloud}>${M.save}</button>`;
 }
-const MANAGE_VIEWS = { overview: Overview, policies: Policies, market: Market, activities: Activities, castle: CastleStores, game: GameInfo };
+// ---------- avvisi e diario ----------
+const A = T.alerts;
+const SEV_FILTER = { all: () => true, danger: e => e.severity === 'danger', warn: e => e.severity === 'warn', info: e => e.severity === 'info' || e.severity === 'good' };
+const journalDate = e => {
+  if (!Number.isFinite(e.day)) return '';
+  try { const c = calendarDateFromDay(e.day); return c.day + ' ' + ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'][c.month] + ' ' + c.year; }
+  catch { return A.day(Math.floor(e.day)); }
+};
+// Alert buttons: action ids from alert-watchers.js → game commands.
+const ALERT_ACTIONS = {
+  readLetter: () => window.ConquerDiplomacy?.openLetter?.(),
+  caravans: arg => window.ConquerDiplomacy?.openCaravans?.(arg || undefined)
+};
+const runAlertAction = a => { const fn = a && ALERT_ACTIONS[a.id]; if (fn) { fn(a.arg); window.ConquerGame?.emit?.(); } };
+function Journal({ game }) {
+  const [, force] = useState(0);
+  const [filter, setFilter] = useState('all');
+  const [category, setCategory] = useState('all');
+  useEffect(() => alertCenter.subscribe(() => force(n => n + 1)), []);
+  const all = alertCenter.journal();
+  const cats = ['all', ...Object.keys(A.categories).filter(c => all.some(e => e.category === c))];
+  const list = all.filter(SEV_FILTER[filter]).filter(e => category === 'all' || e.category === category);
+  return html`
+    <${Seg} nowrap=${true} options=${Object.keys(A.filters).map(k => ({ label: A.filters[k], active: filter === k, k }))} onPick=${o => setFilter(o.k)} />
+    ${cats.length > 2 && html`<${Seg} wrap=${true} options=${cats.map(k => ({ label: k === 'all' ? A.filters.all : A.categories[k], active: category === k, k }))} onPick=${o => setCategory(o.k)} />`}
+    ${list.length === 0 ? html`<p class="u2-hint">${A.journalEmpty}</p>` : html`<ol class="u2-journal">${list.map(e => html`
+      <li key=${e.id} class=${'u2-j u2-sev-' + e.severity}>
+        <div class="u2-j-head"><i class="u2-dot" aria-hidden="true"></i><b>${e.title}</b>
+          <time>${journalDate(e)}</time></div>
+        ${e.detail && html`<p>${e.detail}</p>`}
+        <div class="u2-j-meta"><span>${A.categories[e.category] || e.category}</span><span>${A.phase[e.phase] || e.phase}</span>
+          ${e.action?.id === 'caravans' && html`<button type="button" class="u2-mini" onClick=${() => runAlertAction(e.action)}>${e.action.label}</button>`}
+          ${e.focusId != null && State.structures?.some(s => s.id === e.focusId) && html`<button type="button" class="u2-mini" data-tip=${A.focus}
+            onClick=${() => game.commands.select(e.focusId)}><${Icon} name="target" size=${12} /></button>`}</div>
+      </li>`)}</ol>`}`;
+}
+function JournalFooter() {
+  return html`<button type="button" class="u2-mini" disabled=${alertCenter.journal().length === 0}
+    onClick=${() => { if (confirm(A.journalClearConfirm)) alertCenter.clearJournal(); }}>${A.journalClear}</button>`;
+}
+function Alerts({ openJournal, cmd }) {
+  const [view, setView] = useState(alertCenter.visible());
+  const [open, setOpen] = useState(() => new Set());
+  useEffect(() => {
+    const refresh = () => setView(alertCenter.visible());
+    const off = alertCenter.subscribe(refresh);
+    // The remaining-time bars move between game polls too.
+    const timer = setInterval(refresh, 500);
+    return () => { off(); clearInterval(timer); };
+  }, []);
+  if (!view.items.length) return null;
+  const toggle = key => setOpen(prev => { const next = new Set(prev); next.has(key) ? next.delete(key) : next.add(key); return next; });
+  return html`<section class="u2-alerts" aria-label=${A.aria} aria-live="polite">
+    ${view.items.map(a => {
+      const expanded = open.has(a.key);
+      return html`<article key=${a.key} class=${'u2-tablet u2-alert u2-sev-' + a.severity + (a.resolved ? ' resolved' : '') + (expanded ? ' open' : '')}>
+        <div class="u2-alert-head">
+          <i class="u2-dot" aria-hidden="true">${a.resolved ? '✓' : a.severity === 'danger' ? '!' : a.severity === 'warn' ? '!' : 'i'}</i>
+          <button type="button" class="u2-alert-title" aria-expanded=${expanded} data-tip=${expanded ? A.collapse : A.expand}
+            onClick=${() => toggle(a.key)}>
+            <b>${a.title}</b>${a.count > 1 && !a.resolved && html`<small>${A.repeated(a.count)}</small>`}
+            <span class="u2-chev"><${Icon} name="chevron" size=${14} /></span></button>
+          ${a.action && ALERT_ACTIONS[a.action.id] && html`<button type="button" class="u2-mini u2-alert-act" onClick=${() => runAlertAction(a.action)}>${a.action.label}</button>`}
+          <button type="button" class="u2-close" aria-label=${A.dismiss} data-tip=${A.dismiss} onClick=${() => alertCenter.dismiss(a.key)}>×</button>
+        </div>
+        ${expanded && html`<div class="u2-alert-body">
+          ${a.detail && html`<p>${a.detail}</p>`}
+          <div class="u2-alert-actions">
+            ${a.focusId != null && State.structures?.some(s => s.id === a.focusId) && html`<button type="button" class="u2-mini" onClick=${() => cmd.select(a.focusId)}>${A.focus}</button>`}
+            <button type="button" class="u2-mini" onClick=${openJournal}>${A.openJournal}</button>
+          </div></div>`}
+        ${a.remaining != null && html`<div class="u2-alert-timer"><i style=${'width:' + Math.round(a.remaining * 100) + '%'}></i></div>`}
+      </article>`;
+    })}
+    ${(view.hidden > 0 || view.items.length > 1) && html`<div class="u2-alerts-more">
+      ${view.hidden > 0 && html`<button type="button" class="u2-link" onClick=${openJournal}>${A.more(view.hidden)}</button>`}
+      ${view.items.length > 1 && html`<button type="button" class="u2-link" onClick=${() => alertCenter.dismissAll()}>${A.dismissAll}</button>`}
+    </div>`}
+  </section>`;
+}
+
+const MANAGE_VIEWS = { overview: Overview, policies: Policies, market: Market, activities: Activities, castle: CastleStores, journal: Journal, game: GameInfo };
 function ManageCard({ section, game }) {
   const View = MANAGE_VIEWS[section];
-  return html`<${Card} title=${M.sections[section]} wide=${section === 'market' || section === 'activities'}>${View && html`<${View} game=${game} />`}</${Card}>`;
+  return html`<${Card} title=${M.sections[section]} wide=${section === 'market' || section === 'activities' || section === 'journal'}
+    footer=${section === 'journal' ? html`<${JournalFooter} />` : null}>${View && html`<${View} game=${game} />`}</${Card}>`;
 }
 
 // ---------- Difendi ----------
@@ -685,8 +772,37 @@ function Toast({ snap }) {
   </div>`;
 }
 
+// One alert center per page. The journal is kept per village seed in this browser
+// (localStorage, best effort): live alerts are rebuilt from the game state on every poll.
+const alertCenter = createAlertCenter();
+const JOURNAL_KEY = 'conquer.journal.';
+let journalSeed = null, journalTimer = 0;
+const saveJournal = () => { if (journalSeed != null) try { localStorage.setItem(JOURNAL_KEY + journalSeed, JSON.stringify(alertCenter.exportJournal())); } catch {} };
+function syncJournalStore() {
+  const seed = typeof State !== 'undefined' ? State.seed : null;
+  if (seed == null || String(seed) === journalSeed) return;
+  clearTimeout(journalTimer);
+  saveJournal();
+  journalSeed = String(seed);
+  try { alertCenter.importJournal(JSON.parse(localStorage.getItem(JOURNAL_KEY + journalSeed) || '[]')); } catch { alertCenter.importJournal([]); }
+}
+alertCenter.subscribe(() => {
+  if (journalSeed == null) return;
+  clearTimeout(journalTimer);
+  journalTimer = setTimeout(saveJournal, 1500);
+});
+addEventListener('pagehide', () => { clearTimeout(journalTimer); saveJournal(); });
+
 function App() {
   const game = window.ConquerGame;
+  useEffect(() => {
+    const watchers = createWatchers(game, alertCenter, { structureNames: T.structures });
+    const poll = () => { syncJournalStore(); watchers.poll(); };
+    poll();
+    const timer = setInterval(poll, 1000);
+    window.ConquerAlerts = alertCenter;
+    return () => clearInterval(timer);
+  }, []);
   const [snap, setSnap] = useState(game.snapshot());
   const [mode, setModeState] = useState(['build', 'manage', 'defend'].includes(recall(MODE_KEY)) ? recall(MODE_KEY) : 'build');
   const setMode = m => { setModeState(m); remember(MODE_KEY, m); if (m !== 'build') game.commands.press('[data-tool="select"]'); };
@@ -717,6 +833,7 @@ function App() {
       ? html`<${Inspector} snap=${snap} cmd=${cmd} />` : html`<${ManageCard} section=${section} game=${game} />`}`}
     ${mode === 'defend' && html`<${DefendRail} section=${defSection} setSection=${setDefSection} />${snap.selection?.detail
       ? html`<${Inspector} snap=${snap} cmd=${cmd} />` : html`<${DefendCard} section=${defSection} game=${game} snap=${snap} />`}`}
+    <${Alerts} cmd=${cmd} openJournal=${() => { setMode('manage'); setSection('journal'); cmd.deselect(); }} />
     <${TimeBar} snap=${snap} cmd=${cmd} />
     <${Toast} snap=${snap} />
     <${Tooltip} />`;

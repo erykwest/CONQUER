@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceDigest": "ba10d8f20ed4712393040e9ad4e10e477d67882922d2ae2f697d563c951947a2",
+  "sourceDigest": "e8ce5922a797d8d1ca93fd0f78a4403cfc1e3c5625b3fe55f59550f95386da23",
   "catalog": {
     "schemaVersion": 1,
     "categories": [
@@ -5380,6 +5380,52 @@
         }
       },
       {
+        "id": "unit:bear",
+        "key": "bear",
+        "label": "bear",
+        "category": "unit",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-combat-rules.js",
+          "symbol": "PROFILES.bear"
+        },
+        "properties": {
+          "kind": "combat-profile",
+          "statistics": {
+            "hp": 45,
+            "combat": 4,
+            "armor": 1,
+            "aim": null,
+            "front": 1
+          }
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
         "id": "unit:captain",
         "key": "captain",
         "label": "captain",
@@ -5681,6 +5727,145 @@
             "hp": 30,
             "combat": 3,
             "armor": 3,
+            "aim": null,
+            "front": 1
+          }
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "unit:outlaw",
+        "key": "outlaw",
+        "label": "outlaw",
+        "category": "unit",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-combat-rules.js",
+          "symbol": "PROFILES.outlaw"
+        },
+        "properties": {
+          "kind": "combat-profile",
+          "statistics": {
+            "hp": 40,
+            "combat": 2,
+            "armor": 0,
+            "aim": null,
+            "front": 1
+          }
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "unit:outlawArcher",
+        "key": "outlawArcher",
+        "label": "outlawArcher",
+        "category": "unit",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-combat-rules.js",
+          "symbol": "PROFILES.outlawArcher"
+        },
+        "properties": {
+          "kind": "combat-profile",
+          "statistics": {
+            "hp": 35,
+            "combat": 1,
+            "armor": 0,
+            "aim": 2,
+            "front": 1,
+            "range": 15
+          }
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "unit:outlawGuard",
+        "key": "outlawGuard",
+        "label": "outlawGuard",
+        "category": "unit",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-combat-rules.js",
+          "symbol": "PROFILES.outlawGuard"
+        },
+        "properties": {
+          "kind": "combat-profile",
+          "statistics": {
+            "hp": 60,
+            "combat": 2,
+            "armor": 1,
             "aim": null,
             "front": 1
           }

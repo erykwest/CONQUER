@@ -624,7 +624,7 @@
     for(const intruder of combat.enemy){
       if(intruder.neutral||intruder.defeated||intruder.stats?.hp<=0)continue;
       // Lookouts, patrols and outposts raise the alarm themselves (settlement-soldiers.js).
-      if(soldiers&&intruder.kind!=='wolf'){
+      if(soldiers&&intruder.kind!=='wolf'&&intruder.faction!=='wildlife'){
         const seers=sources.filter(s=>sourceSees(s,intruder));
         if(!seers.length)continue;
         soldiers.sighted(intruder,seers);
@@ -1618,6 +1618,11 @@
     if(!combat||!activeWell()||!Number.isFinite(dt)||dt<=0)return;
     dt=Math.min(dt,.25);
     window.ConquerWolves?.tick(dt);
+    // Outlaws (brigands, bandit lair, raiders) are ordinary enemy entities;
+    // their spawning and AI belong to settlement-outlaws.js.
+    window.ConquerOutlaws?.tick(dt);
+    // The threat generator decides, once a game day, what appears next.
+    window.ConquerThreats?.tick(dt);
     window.ConquerCamp?.synchronize();
     window.ConquerSoldiers?.frame(dt);
     updatePatrols(performance.now());
@@ -1988,10 +1993,18 @@
     // lifecycle belongs to the dedicated fauna simulation.
     registerWolves:(token,wolves)=>{
       if(!combat||combat.wolvesSpawnedFor===token)return false;
-      combat.enemy=combat.enemy.filter(e=>e.kind!=='wolf').concat(wolves);
+      combat.enemy=combat.enemy.filter(e=>e.kind!=='wolf'&&e.faction!=='wildlife').concat(wolves);
       combat.wolvesSpawnedFor=token;changed();return true;
     },
     wolfSpawnedFor:()=>combat?.wolvesSpawnedFor||null,
+    // Outlaw bands: persisted with the combat snapshot (combat.outlaws).
+    outlawState:()=>combat?(combat.outlaws||(combat.outlaws={version:1,bands:[],nextBandId:1,lastDay:null,lastEnded:{}})):null,
+    // Threat generator (settlement-threats.js): difficulty, daily rolls, event log.
+    threatState:()=>combat?(combat.threats||(combat.threats={version:1,difficulty:'normal',lastDay:null,foundedDay:null,last:{},log:[]})):null,
+    addEnemies:list=>{if(!combat||!list?.length)return false;combat.enemy.push(...list);changed();return true},
+    removeEnemies:pred=>{if(!combat)return 0;const before=combat.enemy.length;combat.enemy=combat.enemy.filter(e=>!pred(e));const n=before-combat.enemy.length;if(n)changed();return n},
+    // A ground walk for AI that never uses walls (outlaws): same router as the assault AI.
+    groundLegs:(u,goal)=>[groundLeg({x:u.x,y:u.y},goal,u)],
     recallCampUnit,clearCampSelection:clearCombatSelection,changedCamp:changed,
     alarmMode,setAlarmMode,recruitedResident,leviedResident,refreshLevy,heardAlarm,alarmRing:()=>alarmRing,
     // Read-only summary for UI shells (UI v2 Difendi): no side effects.

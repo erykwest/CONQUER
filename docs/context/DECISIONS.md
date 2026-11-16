@@ -1,5 +1,22 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-THREATS-261116 — Generatore di minacce (16/11/2026)
+
+- **DECISO dal product owner:** lupi, orso, briganti, banditi e predoni compaiono tramite un **generatore di eventi** a **probabilità + condizioni** (tiro giornaliero, probabilità dipendente dallo stato dell'insediamento, tempi di quiete); **difficoltà a 3 livelli** (Tranquilla / Normale / Dura) che cambia frequenza e dimensione delle bande, scelta e salvata nella partita; il giocatore è avvisato con **avviso + registro** (pulsante «Vai» sul posto).
+- **DECISO dal product owner (16/11/2026):** le minacce devono essere **rare** (un orso tre volte l'anno, o tre razzie, è troppo). Obiettivo adottato: ~5 eventi l'anno a Normale, orso circa uno ogni 3 anni.
+- **PROPOSTO (valori provvisori):** probabilità di base, moltiplicatori, grazia e quiete descritti in [STATUS](STATUS.md); al massimo una minaccia al giorno; tiri deterministici per seme e giorno.
+- **CONTRATTO TECNICO:** `ConquerThreats` decide *quando*; `ConquerWolves` e `ConquerOutlaws` decidono *dove* e *come*. Stato in `combat.threats` (difficoltà, ultimo giorno tirato, ultime comparse, registro).
+- **STATO:** implementato su `feature/wildlife-outlaws`, non in main.
+
+## D-OUTLAWS-261116 — Fuorilegge: briganti, banditi, predoni (16/11/2026)
+
+- **DECISO dal product owner:** i banditi sono di **tre tipi**. **Briganti**: assediano una delle strade e rubano a mercanti e carovane, con conseguente riduzione degli scambi. **Banditi**: hanno un covo stabile (di solito in un bosco) fatto di tende e con guardie permanenti. **Predoni**: invadono il territorio per depredare gli edifici periferici, **non** per catturare il castello.
+- **DECISO dal product owner:** lupi e orso devono essere presenti in partita, non solo in `/camp`.
+- **DECISO dal product owner (16/11/2026):** briganti e banditi sono sempre **2/3 con ascia e scudo rotondo e 1/3 con arco**.
+- **PROPOSTO (valori provvisori, da bilanciare):** predoni solo ascia e scudo; briganti −40% scambi per strada tenuta (minimo 30%) su vendite settimanali e pedaggio; covo con pizzo settimanale del 5% dell'oro (max 15) restituito alla distruzione; predoni 6 merci rubate a testa su due edifici, ritirata con metà dei caduti; calendario dopo la fondazione 8–16 / 14–24 / 20–30 giorni, ripresa 30–50 / 12–24 / 16–28; una banda per tipo; orso ostile solo vicino alla tana (6U) o a sé (4U).
+- **CONTRATTO TECNICO:** i fuorilegge sono nemici di `ConquerCombat` con `faction:'outlaw'`, `outlawBand` e `outlawRole`; le bande sono salvate in `combat.outlaws`. La fauna ha `faction:'wildlife'` e non alza l'allarme delle vedette. `ConquerOutlaws.tradeFactor()` è l'unico moltiplicatore degli scambi dovuto ai fuorilegge.
+- **STATO:** implementato su `feature/wildlife-outlaws`, non in main.
+
 ## D-MIL-WALL-261115 — Pattuglie delle mura per giro (15/11/2026)
 
 - **DECISO dal product owner:** le pattuglie sulle mura si contano **per giro di mura**, non per segmento; dal pannello se ne assegnano di più o di meno.
