@@ -649,22 +649,26 @@
   }
   const SQUAD_FOOTPRINT=[[-.55,-.22],[0,-.22],[.55,-.22],[-.55,.33],[0,.33]];
   function militaryOffsets(kind){return kind==='squad'?SQUAD_FOOTPRINT:[[0,0]]}
-  function cliffClearForFootprint(p,kind){
+  // `parts` is a peasantObstacleSnapshot(): without it every sample scans all
+  // structures and rebuilds each house footprint, which made a single move
+  // order freeze the game for seconds on a built-up map (MOVE-LAG-261116).
+  function cliffClearForFootprint(p,kind,parts=null){
     return militaryOffsets(kind).every(([ox,oy])=>{
       const q={x:p.x+ox,y:p.y+oy};
-      return !pointBlockedForPeasant(q)&&(!terrainSegmentCrossesCliff(q,q)||!!window.ConquerCrossings?.segmentCanCrossCliff(q,q));
+      return !pointBlockedForPeasant(q,undefined,parts)&&(!terrainSegmentCrossesCliff(q,q)||!!window.ConquerCrossings?.segmentCanCrossCliff(q,q));
     });
   }
-  function safeMilitarySegment(a,b,id,kind){
-    return peasantSegmentClear(a,b,id)&&militaryOffsets(kind).every(([ox,oy])=>
-      peasantSegmentClear({x:a.x+ox,y:a.y+oy},{x:b.x+ox,y:b.y+oy},id));
+  function safeMilitarySegment(a,b,id,kind,parts=null){
+    return peasantSegmentClear(a,b,id,parts)&&militaryOffsets(kind).every(([ox,oy])=>
+      peasantSegmentClear({x:a.x+ox,y:a.y+oy},{x:b.x+ox,y:b.y+oy},id,parts));
   }
   function infantryRoute(start,goal,id,kind='knight'){
-    if(safeMilitarySegment(start,goal,id,kind))return [start,goal];
+    const parts=typeof peasantObstacleSnapshot==='function'?peasantObstacleSnapshot():null;
+    if(safeMilitarySegment(start,goal,id,kind,parts))return [start,goal];
     const roads=roadNetworkPath(start,goal,id);
-    if(roads?.length>1&&roads.slice(1).every((p,i)=>safeMilitarySegment(roads[i],p,id,kind)))return roads;
-    const path=findPeasantPath(start,goal,id,14,p=>cliffClearForFootprint(p,kind));
-    return path?.length>1&&path.slice(1).every((p,i)=>safeMilitarySegment(path[i],p,id,kind))?path:null;
+    if(roads?.length>1&&roads.slice(1).every((p,i)=>safeMilitarySegment(roads[i],p,id,kind,parts)))return roads;
+    const path=findPeasantPath(start,goal,id,14,(p,snapshot)=>cliffClearForFootprint(p,kind,snapshot||parts));
+    return path?.length>1&&path.slice(1).every((p,i)=>safeMilitarySegment(path[i],p,id,kind,parts))?path:null;
   }
   class PatrolMinHeap{
     constructor(){this.a=[]}

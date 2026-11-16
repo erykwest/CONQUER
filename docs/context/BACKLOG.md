@@ -19,6 +19,16 @@
 - **IMPLEMENTATO E TESTATO LOCALMENTE:** integrazione circle con il ledger Siege, cattura/riconquista e salvataggio; agganci di breccia e navigazione; ripresa della campagna dopo ariete/scale/torri; collegamento delle brecce alla porta interna; ripiegamento dalle mura e dalla mischia.
 - **QA BROWSER:** variante TEST con due cinte e mastio interno, 43 assalitori / 5 difensori, prova 60 s conclusa: 0 assalitori e 1 difensore caduti, 0 conquiste, settore esterno conteso, mastio sicuro. Tick massimo 10,7 s; [report](../qa/combat-ai-circle-2026-11-06.md). Il layout originale non chiude una cinta per il raster: trattare distintamente i due scenari.
 - **RESIDUI:** piazzamento autonomo di scale/torri (oggi il piano arma l'ariete; scale e torri già assegnate sono usate), profilazione dei picchi delle ricerche di percorso, riconciliazione generale con main separata. Nessuna chiusura delle milestone strategiche o dell'assedio completo.
+### 2026-11-16 — MOVE-LAG-261116 · Lag sull'ordine di movimento
+
+- [x] L'ordine di movimento con percorso aggirante non blocca più il gioco per secondi (snapshot degli ostacoli nei controlli d'ingombro militari).
+- [ ] Restano 0,2–0,6 s per un ordine con aggiramento lungo su una mappa densa (A* sincrono condiviso con i popolani): valutare il calcolo cooperativo su più frame (`findPeasantPathWork`) per gli ordini di gruppo.
+
+### 2026-11-16 — Fix: niente pascolo nei campi
+
+- [x] Il cerchio di pascolo di pecore e mucche non tocca nessun campo coltivato (0,2 U di margine), compresi i campi automatici L1 e quelli in cantiere.
+- [x] Un campo piazzato sopra un pascolo già assegnato sposta il gregge.
+- [ ] Proposta: escludere i campi anche dal tragitto casa–pascolo (oggi le greggi possono attraversarli camminando, non pascolarci).
 
 ### 2026-11-15 — Microfix: messa domenicale visibile
 
