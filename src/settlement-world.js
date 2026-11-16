@@ -1933,13 +1933,15 @@ function carveForestGroove(road){
 function pointInPolygon(point,pts){
   let inside=false;for(let i=0,j=pts.length-1;i<pts.length;j=i++){const a=pts[i],b=pts[j],hit=((a.y>point.y)!==(b.y>point.y))&&(point.x<(b.x-a.x)*(point.y-a.y)/((b.y-a.y)||1e-9)+a.x);if(hit)inside=!inside}return inside;
 }
-function environmentContains(f,p,pad=0){
-  if(f.type==='forest'&&terrainSlopeKind(p)==='steep')return false;
-  if(['forest','mountain','pond','sea'].includes(f.type)){
+// `slope` may carry terrainSlopeKind(p) when the caller already knows it.
+function environmentContains(f,p,pad=0,slope){
+  if(f.type==='forest'||f.type==='mountain'||f.type==='pond'||f.type==='sea'){
     if(!f.points?.length)return false;
+    // Cheap bounds/polygon tests first: the steep-slope query is the costly one.
     const bounds=environmentPolygonBounds(f.points);
     if(p.x<bounds.minX||p.x>bounds.maxX||p.y<bounds.minY||p.y>bounds.maxY)return false;
     if(!pointInPolygon(p,f.points))return false;
+    if(f.type==='forest'&&(slope===undefined?terrainSlopeKind(p):slope)==='steep')return false;
     return !forestHoleAt(f,p);
   }
   if(['hill','rough'].includes(f.type)){const ca=Math.cos(-(f.angle||0)),sa=Math.sin(-(f.angle||0)),dx=p.x-f.x,dy=p.y-f.y,x=dx*ca-dy*sa,y=dx*sa+dy*ca;return x*x/((f.rx+pad)*(f.rx+pad))+y*y/((f.ry+pad)*(f.ry+pad))<=1}
@@ -1958,6 +1960,8 @@ function primaryRoadTerrainBlocked(p){
   // Rivers and streams are traversable only through their timber bridges.
   return environmentBlocksPoint(p,'primary');
 }
+const ENV_ROAD_BLOCKERS=new Set(['sea','mountain','pond','forest','hill','rough']);
+const ENV_SETTLEMENT_BLOCKERS=new Set(['sea','mountain','pond','forest','river','stream']);
 function environmentBlocksPoint(p,mode='settlement'){
   const slope=terrainSlopeKind(p),primary=mode==='primary';
   if(primary)mode='road';
@@ -1967,10 +1971,11 @@ function environmentBlocksPoint(p,mode='settlement'){
   if(mode==='settlement'&&slope)return true;
   // Shore rocks: no roads, no auto houses (settlement-coast.js).
   if((mode==='road'||mode==='settlement')&&window.ConquerCoast?.rockAt(p))return true;
+  // Any slope returned above, so the forest steep test reuses `slope`.
   for(const f of State.environment){
     if(primary&&f.type==='forest'&&f.continuous)continue;
-    if(mode==='road'&&['sea','mountain','pond','forest','hill','rough'].includes(f.type)&&environmentContains(f,p,.45))return true;
-    if(mode==='settlement'&&['sea','mountain','pond','forest','river','stream'].includes(f.type)&&environmentContains(f,p,.20))return true;
+    if(mode==='road'&&ENV_ROAD_BLOCKERS.has(f.type)&&environmentContains(f,p,.45,slope))return true;
+    if(mode==='settlement'&&ENV_SETTLEMENT_BLOCKERS.has(f.type)&&environmentContains(f,p,.20,slope))return true;
   }
   return false;
 }
