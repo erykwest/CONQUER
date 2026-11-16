@@ -1,5 +1,9 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-16 — Assedio: aperti dopo il merge di main
+
+- **APERTO:** fasi di sollevamento della scala e del ponte della torre d'assalto nel combattimento vero (oggi solo nell'anteprima `?siege=`); voce wiki per l'ariete leggero; regola mura/porte verso l'esterno anche al momento della costruzione (oggi al caricamento); assedio lungo con i due arieti e il trabucco; prestazioni delle ricerche di percorso.
+
 ## 2026-11-13 — Assedio: difesa dalle mura e arieti
 
 - **FATTO su combat-ai:** copertura di feritoie/merli/tetto dell'ariete, arcieri delle torri bersagliabili e mobili tra le torri, frecce incendiarie sulle macchine, porta più resistente, ariete leggero (4) e coperto (8) validati nell'Asset Lab.

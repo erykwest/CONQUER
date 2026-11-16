@@ -1,5 +1,12 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-16 — combat-ai: fortificazioni verso l'esterno, merge di main, fionda del trabucco
+
+- `faceFortificationsOut` (settlement-castle-structures.js, chiamata da `migrateStructures`): le mura di una cinta guardano fuori dal recinto e le porte tra due tratti hanno il passaggio attraverso il muro verso l'esterno; i muri sul molo restano rivolti all'acqua.
+- Merge di `origin/main` in combat-ai; scala delle unità rinumerata D-060; disegno del combattimento portato in `settlement-combat-render.js` (squadre dell'ariete senza armi, fiamme sulle macchine, macchine bruciate nascoste).
+- Trabucco: `ConquerFire.volley(s,'stone',origin,{from})` lancia la pietra dal punto reale della fionda al rilascio (`ConquerTrebuchets` legge il modello 3D), con arco 3D e tempo di volo dalla distanza.
+- L'ariete leggero segue il ciclo dell'ariete invece di una voce propria in `CYCLE` (il codex della wiki elenca `CYCLE`); `wiki/catalog.json` rigenerato.
+
 ## 2026-11-06 — Runner assedio con screenshot periodici
 
 - Aggiunto `SIEGE_SCREENSHOT_INTERVAL`: pause di acquisizione ai checkpoint simulati, screenshot in gioco e JSON progressivo con unità, porte, perdite e settori. Completata prova di 300,2 s con 6 screenshot: 43→26 assalitori, 5→2 difensori mobili, 0 conquiste. Esito funzionale KO (stallo nei varchi e ritirata incompleta), tick massimo 21,34 s. [Report](../qa/combat-ai-circle-300s-2026-11-06.md). Nessuna modifica al comportamento del gioco. Corrette nella fixture le posizioni iniziali del capitano e di una pattuglia; il runner rifiuta partenze su terreno bloccato. CI circle estesa al controllo sintattico del runner degli screenshot.
