@@ -12,6 +12,7 @@ on:
       - 'src/settlement-camp.js'
       - 'src/settlement-wolves.js'
       - 'src/settlement-outlaws.js'
+      - 'src/settlement-threats.js'
       - 'src/settlement-commerce.js'
       - 'src/settlement-treasury.js'
       - 'src/settlement-mounted2d.js'
@@ -34,6 +35,7 @@ on:
       - 'qa/camp-regression.cjs'
       - 'qa/wolves-regression.cjs'
       - 'qa/outlaws-regression.cjs'
+      - 'qa/threats-regression.cjs'
       - 'index.html'
       - 'camp/index.html'
       - '.github/workflows/combat-regression.yml'
@@ -43,6 +45,7 @@ on:
       - 'src/settlement-camp.js'
       - 'src/settlement-wolves.js'
       - 'src/settlement-outlaws.js'
+      - 'src/settlement-threats.js'
       - 'src/settlement-commerce.js'
       - 'src/settlement-treasury.js'
       - 'src/settlement-mounted2d.js'
@@ -67,6 +70,7 @@ on:
       - 'qa/camp-regression.cjs'
       - 'qa/wolves-regression.cjs'
       - 'qa/outlaws-regression.cjs'
+      - 'qa/threats-regression.cjs'
       - 'index.html'
       - 'camp/index.html'
       - '.github/workflows/combat-regression.yml'
@@ -90,6 +94,7 @@ jobs:
           node --check src/settlement-wall-patrols.js
           node --check src/settlement-wolves.js
           node --check src/settlement-outlaws.js
+          node --check src/settlement-threats.js
       - name: Rendering boundaries and combat behavior
         run: |
           node qa/combat-render-regression.cjs
@@ -105,6 +110,7 @@ jobs:
           node qa/military-stables-regression.cjs
           node qa/wolves-regression.cjs
           node qa/outlaws-regression.cjs
+          node qa/threats-regression.cjs
           node qa/diplomacy-regression.cjs
           node qa/siege-assault-regression.cjs
           node qa/keep-entrance-regression.cjs

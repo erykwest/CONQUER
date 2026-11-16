@@ -1,5 +1,15 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-16 — THREAT-GEN-01 · Generatore di minacce
+
+**IMPLEMENTATO SU BRANCH `feature/wildlife-outlaws`, NON MERGE.** [D-THREATS-261116](DECISIONS.md#d-threats-261116--generatore-di-minacce-16112026). Dettagli in [STATUS](STATUS.md).
+- [x] Tiro giornaliero per tipo con probabilità dipendenti da stagione, ricchezza, popolazione, strade, boschi, edifici isolati.
+- [x] Difficoltà a tre livelli salvata nella partita.
+- [x] Avviso con «Vai» e registro degli eventi.
+- [ ] Bilanciare probabilità, grazia e quiete su partite lunghe reali.
+- [ ] Avviso e registro anche nell'interfaccia UI v2 (oggi banner globale + pannello COMBAT del builder).
+- [ ] Mostrare la difficoltà alla creazione della partita, non solo nel pannello.
+
 ## 2026-11-16 — WILD-OUT-01 · Fauna e fuorilegge in partita
 
 **IMPLEMENTATO SU BRANCH `feature/wildlife-outlaws`, NON MERGE.** [D-OUTLAWS-261116](DECISIONS.md#d-outlaws-261116--fuorilegge-briganti-banditi-predoni-16112026). Dettagli in [STATUS](STATUS.md).

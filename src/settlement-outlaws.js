@@ -16,10 +16,8 @@
     bandits:{label:'Banditi',size:[4,6],aggro:9,leash:14},
     raiders:{label:'Predoni',size:[5,8],aggro:5,leash:7}
   });
-  // Days after the first founded tick before each kind may first appear,
-  // and the pause after a band ends. Provisional values (to be balanced).
-  const FIRST={bandits:[8,16],brigands:[14,24],raiders:[20,30]};
-  const AGAIN={bandits:[30,50],brigands:[12,24],raiders:[16,28]};
+  // When a band appears is decided by the threat generator (settlement-threats.js):
+  // this module only places it, runs it and applies its effects.
   const TRADE_LOSS=.4,TRADE_FLOOR=.3;          // per road held, and minimum
   const LAIR_TOLL_SHARE=.05,LAIR_TOLL_CAP=15;   // weekly extortion
   const RAID_TARGETS=2,RAID_PLUNDER_S=4,RAID_TAKE_PER_MAN=6,RAID_ROUT=.5;
@@ -43,7 +41,7 @@
     !pointBlockedForPeasant(p,'outlaw')&&!terrainSegmentCrossesCliff(p,p);
   const well=()=>State.village?.founded&&State.structures.find(s=>s.id===State.village.wellId&&s.type==='well');
   const today=()=>Number(State.clock?.day)||0;
-  let enabled=true,planned=0,lastUi='';
+  let planned=0,lastUi='';
 
   function state(){return C()?.outlawState?.()||null}
   const bands=()=>state()?.bands||[];
@@ -148,12 +146,24 @@
     const archers=bowmen(band.type,spots.length);
     return spots.map((p,i)=>man(band,role,p,i,withPost?p:null,i>=spots.length-archers));
   };
-  function spawn(type,{edge=null,quiet=false}={}){
+  // Can a band of this type appear now? (Roads to hold, a wood for the lair,
+  // outlying buildings to plunder.) Used by the threat generator's conditions.
+  function feasible(type){
+    const w=well(),st=state();
+    if(!w||!st||!TYPES[type]||st.bands.some(b=>b.type===type&&!b.over))return false;
+    if(type==='brigands'){
+      const plan=State.village?.roadPlan||[];
+      return plan.some(r=>State.structures.some(s=>s.type==='road'&&s.routeId===r.id));
+    }
+    if(type==='bandits')return(State.environment||[]).some(f=>f.type==='forest');
+    return landEdges().some(e=>{const p=borderPoint(e,w);return p&&raidTargets(w,p,[]).length>0});
+  }
+  function spawn(type,{edge=null,quiet=false,size=null}={}){
     const w=well(),st=state();
     if(!w||!st||!TYPES[type])return null;
     if(st.bands.some(b=>b.type===type&&!b.over))return null;
     const seed=State.seed+':'+type+':'+st.nextBandId+':'+Math.floor(today());
-    const n=between(TYPES[type].size,hash(seed+':n'));
+    const n=Number.isInteger(size)&&size>0?Math.min(12,size):between(TYPES[type].size,hash(seed+':n'));
     const edges=landEdges();
     if(type==='brigands'){
       // A border route with road actually built on it: one of them at random.
@@ -192,24 +202,12 @@
   }
   const edgeName=e=>({north:'nord',south:'sud',east:'est',west:'ovest'})[e]||e;
 
-  function schedule(){
-    const st=state(),d=today();
-    for(const type of Object.keys(TYPES)){
-      if(Number.isFinite(st.schedule[type]))continue;
-      st.schedule[type]=d+between(FIRST[type],hash(State.seed+':first:'+type));
-    }
-    for(const type of Object.keys(TYPES)){
-      if(!enabled||d<st.schedule[type]||st.bands.some(b=>b.type===type&&!b.over))continue;
-      const band=spawn(type);
-      // While a band is out the next one waits for it to end (endBand);
-      // no room (no roads, no forest...): try again in a few days.
-      st.schedule[type]=d+(band?9999:3);
-    }
-  }
   function endBand(band,outcome){
     const st=state();
     band.over=true;band.outcome=outcome;band.endedDay=today();
-    st.schedule[band.type]=today()+between(AGAIN[band.type],hash(band.id+':again'));
+    // The generator's cooldown counts from here.
+    (st.lastEnded||(st.lastEnded={}))[band.type]=today();
+    window.ConquerThreats?.ended?.(band.type,outcome,band);
     // The living leave the map now; the dead lie where they fell for half a
     // day (fall animation, the scene of the fight), then are cleared.
     C().removeEnemies(e=>e.outlawBand===band.id&&alive(e));
@@ -390,7 +388,6 @@
     const t0=performance.now();
     planned=0;
     try{
-      schedule();
       sweep();
       for(const band of bands().slice()){
         if(band.over)continue;
@@ -522,22 +519,15 @@
   function mountUi(){
     const alarm=document.getElementById('combatAlarm');
     if(!alarm||document.getElementById('combatOutlaws'))return;
-    const row=document.createElement('div');row.className='combat-row';
-    row.innerHTML='<button data-outlaws="brigands" title="Briganti bloccano una strada verso il confine e derubano i mercanti">Briganti</button>'+
-      '<button data-outlaws="bandits" title="Un covo di banditi con tende e guardie in un bosco">Covo banditi</button>'+
-      '<button data-outlaws="raiders" title="Predoni entrano dal confine e saccheggiano gli edifici isolati">Predoni</button>';
+    // Status of the active bands; the test buttons live in the threat
+    // generator's panel (settlement-threats.js), with its warnings and log.
     const legend=document.createElement('div');legend.className='legend';legend.id='combatOutlaws';legend.textContent='Nessun fuorilegge';
-    alarm.insertAdjacentElement('beforebegin',row);row.insertAdjacentElement('afterend',legend);
-    row.addEventListener('click',ev=>{
-      const type=ev.target?.dataset?.outlaws;if(!type)return;
-      if(!spawn(type))status('Impossibile: fonda il villaggio o elimina prima la banda attiva dello stesso tipo');
-      updateUi();
-    });
+    alarm.insertAdjacentElement('beforebegin',legend);
   }
   if(typeof document!=='undefined')mountUi();
 
   window.ConquerOutlaws=Object.freeze({TYPES,tick,draw,spawn,tradeFactor,summary,bands,
-    setEnabled:on=>{enabled=!!on},enabled:()=>enabled,
+    feasible,active:type=>bands().some(b=>b.type===type&&!b.over),lastEnded:type=>state()?.lastEnded?.[type]??null,
     // Remove every band at once (dev / tests): no loot is returned.
-    clear:()=>{const st=state();if(!st)return;C().removeEnemies(e=>e.faction==='outlaw');st.bands=[];st.schedule={}}});
+    clear:()=>{const st=state();if(!st)return;C().removeEnemies(e=>e.faction==='outlaw');st.bands=[];st.lastEnded={}}});
 })();

@@ -1,5 +1,12 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-THREATS-261116 — Generatore di minacce (16/11/2026)
+
+- **DECISO dal product owner:** lupi, orso, briganti, banditi e predoni compaiono tramite un **generatore di eventi** a **probabilità + condizioni** (tiro giornaliero, probabilità dipendente dallo stato dell'insediamento, tempi di quiete); **difficoltà a 3 livelli** (Tranquilla / Normale / Dura) che cambia frequenza e dimensione delle bande, scelta e salvata nella partita; il giocatore è avvisato con **avviso + registro** (pulsante «Vai» sul posto).
+- **PROPOSTO (valori provvisori):** probabilità di base, moltiplicatori, grazia e quiete descritti in [STATUS](STATUS.md); al massimo una minaccia al giorno; tiri deterministici per seme e giorno.
+- **CONTRATTO TECNICO:** `ConquerThreats` decide *quando*; `ConquerWolves` e `ConquerOutlaws` decidono *dove* e *come*. Stato in `combat.threats` (difficoltà, ultimo giorno tirato, ultime comparse, registro).
+- **STATO:** implementato su `feature/wildlife-outlaws`, non in main.
+
 ## D-OUTLAWS-261116 — Fuorilegge: briganti, banditi, predoni (16/11/2026)
 
 - **DECISO dal product owner:** i banditi sono di **tre tipi**. **Briganti**: assediano una delle strade e rubano a mercanti e carovane, con conseguente riduzione degli scambi. **Banditi**: hanno un covo stabile (di solito in un bosco) fatto di tende e con guardie permanenti. **Predoni**: invadono il territorio per depredare gli edifici periferici, **non** per catturare il castello.

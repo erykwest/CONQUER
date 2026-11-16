@@ -216,3 +216,22 @@ context.document=undefined;
 api.draw({},bear);
 assert.equal(artCalls[0][0],'bear','the bear is drawn with its own art');
 console.log('PASS solitary bear: den in the wild, ignores passers-by, sleeps at night, charges trespassers, leash');
+
+// ---- On demand, for the threat generator ----
+win.ConquerCombat.addEnemies=list=>{fauna.push(...list);wolves=fauna.filter(w=>w.kind==='wolf');return true};
+win.ConquerCombat.removeEnemies=pred=>{const n=fauna.length;fauna=fauna.filter(e=>!pred(e));wolves=fauna.filter(w=>w.kind==='wolf');return n-fauna.length};
+night=false;
+const census0=api.census();
+assert.equal(census0.bears,1);assert.equal(census0.packs,2);
+const extra=api.spawnPack({size:4,key:'qa-pack'});
+assert.ok(extra&&extra.size===4,'a new pack of the requested size');
+assert.equal(api.census().packs,3,'counted as a third pack');
+const newcomers=fauna.filter(w=>w.wolfPackId===extra.packId);
+assert.ok(newcomers.every(w=>w.neutral&&Math.hypot(w.x-100,w.y-100)>=28),'daytime newcomers are neutral, out in the wild');
+assert.equal(api.spawnBear({key:'qa-bear'}),null,'never a second living bear');
+bear.defeated=true;
+const cub=api.spawnBear({key:'qa-bear'});
+assert.ok(cub,'a new bear once the old one is dead');
+assert.ok(!fauna.includes(bear),'the dead are cleared when a newcomer arrives');
+assert.equal(api.census().bears,1);
+console.log('PASS fauna on demand: new packs, a new bear only when none lives, census');

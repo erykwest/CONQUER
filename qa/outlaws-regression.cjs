@@ -73,7 +73,6 @@ function world(){
 // ---- brigands --------------------------------------------------------------
 {
   const w=world(),api=w.api;
-  api.setEnabled(false);
   assert.equal(api.tradeFactor(),1,'no brigands, full trade');
   const band=api.spawn('brigands');
   assert.ok(band,'brigands spawn');
@@ -104,13 +103,12 @@ function world(){
   w.run(.5);
   assert.equal(api.tradeFactor(),1,'killing the brigands frees the road');
   assert.ok(w.messages.some(m=>/liberata/.test(m)));
-  assert.ok(w.state().schedule.brigands>w.State.clock.day,'next band scheduled later');
+  assert.equal(api.lastEnded('brigands'),w.State.clock.day,'the end is recorded for the generator cooldown');
 }
 
 // ---- bandit lair -------------------------------------------------------------
 {
   const w=world(),api=w.api;
-  api.setEnabled(false);
   const band=api.spawn('bandits');
   assert.ok(band,'a lair is pitched');
   assert.ok(band.center.x>110&&band.center.y<90,'in the wood '+JSON.stringify(band.center));
@@ -144,7 +142,6 @@ function world(){
 // ---- raiders -------------------------------------------------------------------
 function raid(kill){
   const w=world(),api=w.api;
-  api.setEnabled(false);
   const band=api.spawn('raiders',{edge:'south'});
   assert.ok(band,'raiders arrive');
   assert.ok(band.entry.y>190,'from the chosen border');
@@ -177,7 +174,6 @@ raid(false);raid(true);
 // ---- rout ------------------------------------------------------------------------
 {
   const w=world(),api=w.api;
-  api.setEnabled(false);
   const band=api.spawn('raiders',{edge:'south'});
   const men=w.enemy();
   for(let i=0;i<Math.ceil(men.length*.6);i++)men[i].defeated=true;
@@ -185,16 +181,19 @@ raid(false);raid(true);
   assert.equal(band.phase,'retreat','heavy losses make raiders flee');
 }
 
-// ---- schedule ----------------------------------------------------------------------
+// ---- feasibility (used by the threat generator) ------------------------------------
 {
   const w=world(),api=w.api;
   w.run(.25);
-  assert.equal(w.state().bands.length,0,'nothing on the first day');
-  const sched=w.state().schedule;
-  assert.ok(sched.bandits>=8&&sched.brigands>=14&&sched.raiders>=20,'grace period after founding');
-  w.State.clock.day=40;w.run(.25);
-  assert.deepEqual(w.state().bands.map(b=>b.type).sort(),['bandits','brigands','raiders'],'all three kinds appear in time');
+  assert.equal(w.state().bands.length,0,'the module never spawns on its own: the threat generator decides');
+  assert.equal(api.feasible('brigands'),true,'a built road to the border');
+  assert.equal(api.feasible('bandits'),true,'a wood');
+  assert.equal(api.feasible('raiders'),true,'outlying buildings');
+  api.spawn('bandits');
+  assert.equal(api.feasible('bandits'),false,'one band of a kind at a time');
+  assert.equal(api.active('bandits'),true);
+  const big=api.spawn('brigands',{size:9});
+  assert.equal(w.enemy().filter(e=>e.outlawBand===big.id).length,9,'the generator can set the band size');
   api.clear();
   assert.equal(w.enemy().length,0);
-}
-console.log('PASS outlaws: brigands hold a road and cut trade; bandit lair with guards, weekly toll, stash recovered; raiders plunder outlying buildings, flee or drop the loot; schedule');
+}console.log('PASS outlaws: brigands hold a road and cut trade; bandit lair with guards, weekly toll, stash recovered; raiders plunder outlying buildings, flee or drop the loot; feasibility and size for the generator');

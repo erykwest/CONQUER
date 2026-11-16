@@ -98,6 +98,60 @@
       wolfState:'roaming',wolfMode:'walk',wolfFace:1,wolfWanderIndex:0,
       wolfDecisionIn:0,wolfTargetId:null,wolfPath:null,wolfPathIndex:1};
   }
+  // ---- spawning on demand (threat generator, settlement-threats.js) ----
+  const wellNow=()=>State.village?.founded&&State.structures.find(s=>s.id===State.village.wellId&&s.type==='well');
+  const living=list=>list.filter(a=>!a.defeated&&!(a.stats&&a.stats.hp<=0));
+  // A wild spot: a wood 30–55U out, outside the yellow zone (any free spot if no wood).
+  function wildSpot(well,key){
+    let fallback=null;
+    for(let attempt=0;attempt<160;attempt++){
+      const a=mixed(key+':a:'+attempt)*Math.PI*2,r=30+mixed(key+':r:'+attempt)*25;
+      const p={x:well.x+Math.cos(a)*r,y:well.y+Math.sin(a)*r};
+      if(!free(p)||combat().areaState(p).yellow)continue;
+      if(inForest(p))return p;
+      fallback??=p;
+    }
+    return fallback;
+  }
+  // Clear the dead of the fauna before adding new animals (their fall is long over).
+  const clearDead=()=>combat().removeEnemies?.(e=>e.faction==='wildlife'&&(e.defeated||e.stats?.hp<=0));
+  // A new wolf pack moves into the woods. size: 3–6 (default seeded).
+  function spawnPack({size=null,key=null}={}){
+    const well=wellNow(),tactical=combat();if(!well||!tactical?.addEnemies)return null;
+    const k=key||(State.seed+':pack:'+Math.floor(State.clock?.day||0));
+    const center=wildSpot(well,k);if(!center)return null;
+    const n=Number.isInteger(size)?Math.max(MIN_PACK,Math.min(8,size)):MIN_PACK+Math.floor(mixed(k+':n')*(MAX_PACK-MIN_PACK+1));
+    const packId='wild-pack-'+k.replace(/[^\w-]/g,'-'),night=isNight(),members=[];
+    for(let i=0;i<n;i++){
+      for(let t=0;t<22;t++){
+        const a=i*Math.PI*2/n+t*.45,r=.9+(t%6)*.35,p={x:center.x+Math.cos(a)*r,y:center.y+Math.sin(a)*r};
+        if(!free(p)||members.some(m=>distance(m,p)<.65))continue;
+        members.push({id:packId+'-'+i,kind:'wolf',combatKind:'wolf',faction:'wildlife',
+          wolfPackId:packId,wolfPackIndex:i,neutral:!night,defeated:false,x:p.x,y:p.y,home:{...center},
+          wolfSeed:mixed(k+':s:'+i),wolfState:night?'alert':'roaming',wolfMode:night?'howl':'walk',wolfFace:i%2?1:-1,
+          wolfWanderIndex:0,wolfDecisionIn:0,wolfTargetId:null,wolfPath:null,wolfPathIndex:1});
+        break;
+      }
+    }
+    if(members.length<MIN_PACK)return null;
+    clearDead();tactical.addEnemies(members);spriteFrames.clear();
+    return{packId,center,size:members.length};
+  }
+  // A bear takes a den in the woods (only if none is alive).
+  function spawnBear({key=null}={}){
+    const well=wellNow(),tactical=combat();if(!well||!tactical?.addEnemies)return null;
+    if(living(bears()).length)return null;
+    const k=key||(State.seed+':bear:'+Math.floor(State.clock?.day||0));
+    const p=wildSpot(well,k);if(!p)return null;
+    const bear={...bearAt(well,p,mixed(k+':s')),id:'wild-bear-'+k.replace(/[^\w-]/g,'-')};
+    clearDead();tactical.addEnemies([bear]);
+    return{id:bear.id,center:p};
+  }
+  // Living packs (by pack id) and bears, for the generator's caps.
+  function census(){
+    const packs=new Set(living(pack()).map(w=>w.wolfPackId||w.id));
+    return{packs:packs.size,wolves:living(pack()).length,bears:living(bears()).length};
+  }
   function choosePackTargets(wolves){
     const soldiers=combat()?.units().filter(live)||[];
     const groups=new Map(),targets=new Map();
@@ -357,6 +411,6 @@
       g.drawImage(sprite.canvas,p.x-box.x,p.y-box.y);
     });
   }
-  window.ConquerWolves={ensure,tick,draw,isNight,pack,bears,wildlife,wolfDrawSize};
+  window.ConquerWolves={ensure,tick,draw,isNight,pack,bears,wildlife,wolfDrawSize,spawnPack,spawnBear,census};
   ensure();
 })();

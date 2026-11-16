@@ -1621,6 +1621,8 @@
     // Outlaws (brigands, bandit lair, raiders) are ordinary enemy entities;
     // their spawning and AI belong to settlement-outlaws.js.
     window.ConquerOutlaws?.tick(dt);
+    // The threat generator decides, once a game day, what appears next.
+    window.ConquerThreats?.tick(dt);
     window.ConquerCamp?.synchronize();
     window.ConquerSoldiers?.frame(dt);
     updatePatrols(performance.now());
@@ -1996,7 +1998,9 @@
     },
     wolfSpawnedFor:()=>combat?.wolvesSpawnedFor||null,
     // Outlaw bands: persisted with the combat snapshot (combat.outlaws).
-    outlawState:()=>combat?(combat.outlaws||(combat.outlaws={version:1,bands:[],nextBandId:1,lastDay:null,schedule:{}})):null,
+    outlawState:()=>combat?(combat.outlaws||(combat.outlaws={version:1,bands:[],nextBandId:1,lastDay:null,lastEnded:{}})):null,
+    // Threat generator (settlement-threats.js): difficulty, daily rolls, event log.
+    threatState:()=>combat?(combat.threats||(combat.threats={version:1,difficulty:'normal',lastDay:null,foundedDay:null,last:{},log:[]})):null,
     addEnemies:list=>{if(!combat||!list?.length)return false;combat.enemy.push(...list);changed();return true},
     removeEnemies:pred=>{if(!combat)return 0;const before=combat.enemy.length;combat.enemy=combat.enemy.filter(e=>!pred(e));const n=before-combat.enemy.length;if(n)changed();return n},
     // A ground walk for AI that never uses walls (outlaws): same router as the assault AI.
