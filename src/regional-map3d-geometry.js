@@ -293,10 +293,10 @@
     const t0=typeof performance!=='undefined'?performance.now():Date.now();
     detail=clamp(Math.trunc(Number(detail))||20,1,40);
     deformation=clamp(Number(deformation)||0,0,1);
-    const vertices=[],trees=[],reeds=[],peaks=[],pickRanges=[];
+    const vertices=[],trees=[],reeds=[],peaks=[],mountainSummits=[],pickRanges=[];
     const pickBucketSize=64, pickBuckets=new Map();
     let pickMaxAbsZ=0;
-    let subcells=0,triangles=0,mountains=0;
+    let subcells=0,triangles=0,mountains=0,hills=0;
     function face(a,b,c,rgb,variation=0,shaded=true) {
       const u={x:b.x-a.x,y:b.y-a.y,z:b.z-a.z};
       const v={x:c.x-a.x,y:c.y-a.y,z:c.z-a.z};
@@ -388,27 +388,46 @@
                       variant:Math.floor(random()*2),size:5*(5.8+random()*4.3)});
         }
       } else if(terrain==='hills'){
-        const count=area(poly)>110?2:1;
-        for(let k=0;k<count;k++){
-          const center=weightedSample(owned,random);
-          const radius=Math.min(8,Math.max(2.5,edgeDistance(center,poly)*.76));
-          const baseZ=elevation(center,poly,terrain,snapshot.seed);
-          const apex={x:center.x+(random()-.5)*radius*.25,
-                      y:center.y+(random()-.5)*radius*.25,z:baseZ+8+random()*15};
-          const shade=rgbCache.get(cell.macroId)||sourceColor(snapshot.fills[cell.macroId]);
-          const sides=9;
-          for(let i=0;i<sides;i++){
-            const a=i*Math.PI*2/sides,b=(i+1)*Math.PI*2/sides;
-            face({x:center.x+Math.cos(a)*radius,y:center.y+Math.sin(a)*radius,z:baseZ},
-                 {x:center.x+Math.cos(b)*radius,y:center.y+Math.sin(b)*radius,z:baseZ},
-                 apex,shade,(random()-.5)*.17);
-          }
-          peaks.push({...apex,radius});
-          mountains++;
+        // Replace small pointed hill cones with broad, polygonal truncated pyramids.
+        // Both footprint and elevation are approximately 5x the old 3D hills.
+        // A single broad landmark per territory avoids dense, overlapping cones.
+        const center=weightedSample(owned,random);
+        const originalRadius=Math.min(8,Math.max(2.5,edgeDistance(center,poly)*.76));
+        const baseRadius=originalRadius*5;
+        const topRadius=baseRadius*(.43+random()*.1);
+        const baseZ=elevation(center,poly,terrain,snapshot.seed);
+        const height=(8+random()*15)*5;
+        const topZ=baseZ+height;
+        const shade=rgbCache.get(cell.macroId)||sourceColor(snapshot.fills[cell.macroId]);
+        const sides=7+Math.floor(random()*3),phase=random()*Math.PI*2;
+        const lower=[],upper=[];
+        for(let i=0;i<sides;i++){
+          const a=phase+i*Math.PI*2/sides;
+          lower.push({x:center.x+Math.cos(a)*baseRadius,
+                      y:center.y+Math.sin(a)*baseRadius,z:baseZ});
+          upper.push({x:center.x+Math.cos(a)*topRadius,
+                      y:center.y+Math.sin(a)*topRadius,z:topZ});
         }
+        // Side walls are true trapezoids (two triangular faces), not an apex.
+        for(let i=0;i<sides;i++){
+          const j=(i+1)%sides,variation=(random()-.5)*.12;
+          face(lower[i],lower[j],upper[j],shade,variation);
+          face(lower[i],upper[j],upper[i],shade,variation);
+        }
+        // Closed horizontal summit plateau (triangulated fan).
+        for(let i=0;i<sides;i++){
+          const j=(i+1)%sides;
+          face({x:center.x,y:center.y,z:topZ},upper[i],upper[j],
+               shade,.10);
+        }
+        peaks.push({type:'hill',macroId:cell.macroId,x:center.x,y:center.y,
+                    z:topZ,baseZ,height,radius:baseRadius,topRadius,sides});
+        hills++;
       }
     }
-    // Existing mountain barriers remain part of the authoritative gameplay layer.
+    // The authoritative mountain barrier edges still determine ridge locations.
+    // Their visible peaks are now >=5x in footprint and 8x in height,
+    // with a snowy upper third of each peak (snow line at hMax * 2/3).
     const handPlaced=new Set(snapshot.mountainRanges||[]);
     const generated=new Set(snapshot.automaticMountainEdges||[]);
     for(const edge of snapshot.edges||[]){
@@ -419,26 +438,53 @@
       const key=one<two?one+'|'+two:two+'|'+one;
       if(!handPlaced.has(pair)&&!generated.has(key))continue;
       const dx=edge.end.x-edge.start.x,dy=edge.end.y-edge.start.y;
-      const length=Math.hypot(dx,dy),count=Math.max(1,Math.min(6,Math.round(length/27)));
+      const length=Math.hypot(dx,dy);
+      // Fewer but much larger summits avoid heavy overlaps along short ridges.
+      const count=Math.max(1,Math.min(4,Math.round(length/120)));
       const random=rng((snapshot.seed ^ Math.imul((ids[0]||0)+1,12582917) ^ Math.round(length*31))>>>0);
       for(let index=0;index<count;index++){
-        const t=(index+.5+(random()-.5)*.28)/count;
+        const t=(index+.5+(random()-.5)*.25)/count;
         const x=edge.start.x+dx*t,y=edge.start.y+dy*t;
-        const r=2.9+random()*3.2,top=7+random()*9,sides=7;
-        const apex={x:x+(random()-.5)*2,y:y+(random()-.5)*2,z:top};
-        for(let k=0;k<sides;k++){
-          const a=k*Math.PI*2/sides,b=(k+1)*Math.PI*2/sides;
-          face({x:x+Math.cos(a)*r,y:y+Math.sin(a)*r,z:0},
-               {x:x+Math.cos(b)*r,y:y+Math.sin(b)*r,z:0},
-               apex,[139,132,122],(random()-.5)*.14);
+        const originalRadius=2.9+random()*3.2;
+        const radius=originalRadius*5;
+        const height=(7+random()*9)*8;
+        const baseZ=0,topZ=baseZ+height;
+        const snowStart=baseZ+height*2/3;
+        const sides=7+Math.floor(random()*3);
+        const phase=random()*Math.PI*2;
+        const base=[],snowline=[];
+        const summit={x:x+(random()-.5)*radius*.13,
+                      y:y+(random()-.5)*radius*.13,z:topZ};
+        for(let i=0;i<sides;i++){
+          const theta=phase+i*Math.PI*2/sides;
+          const bx=x+Math.cos(theta)*radius,by=y+Math.sin(theta)*radius;
+          base.push({x:bx,y:by,z:baseZ});
+          const snowFraction=(snowStart-baseZ)/height;
+          snowline.push({
+            x:bx+(summit.x-bx)*snowFraction,
+            y:by+(summit.y-by)*snowFraction,
+            z:snowStart
+          });
         }
+        const stone=[139,132,122],snow=[233,238,236];
+        for(let k=0;k<sides;k++){
+          const next=(k+1)%sides;
+          // Faceted rock lower two thirds.
+          const shade=(random()-.5)*.18;
+          face(base[k],base[next],snowline[next],stone,shade);
+          face(base[k],snowline[next],snowline[k],stone,shade);
+          // Clean snowy upper third, with a distinct light cap.
+          face(snowline[k],snowline[next],summit,snow,(random()-.5)*.10);
+        }
+        mountainSummits.push({x,y,z:topZ,baseZ,height,radius,snowStart,
+                              snowyHeight:topZ-snowStart,sides});
         mountains++;
       }
     }
     const {borders,coastlines,unmatched}=aggregateEdges(base.parts,snapshot.terrain,snapshot.cells);
     return{
-      vertices:new Float32Array(vertices),pickRanges,pickIndex:{bucketSize:pickBucketSize,buckets:pickBuckets,maxAbsZ:pickMaxAbsZ},trees,reeds,peaks,borders,coastlines,
-      stats:{territories:snapshot.cells.length,subcells,triangles,mountains,
+      vertices:new Float32Array(vertices),pickRanges,pickIndex:{bucketSize:pickBucketSize,buckets:pickBuckets,maxAbsZ:pickMaxAbsZ},trees,reeds,peaks,mountainSummits,borders,coastlines,
+      stats:{territories:snapshot.cells.length,subcells,triangles,mountains,hills,
              trees:trees.length,reeds:reeds.length,unmatchedEdges:unmatched,
              floats:vertices.length,generationMs:(typeof performance!=='undefined'?performance.now():Date.now())-t0}
     };
