@@ -277,6 +277,144 @@
     for (const e of edges.values()) borders.push({...e,macroIds:[e.macroId]});
     return {borders,coastlines,unmatched:edges.size};
   }
+
+  // Project authored and generated 2D rivers onto the same ORGANIC microcell
+  // seams that are actually rendered as the 3D territory borders. Manual river
+  // pairs occupy their whole new shared boundary; automatically generated river
+  // segments trace only the matching subpath, avoiding accidental full-pair rivers.
+  // No gameplay river edges or save identifiers are changed.
+  function deriveRiverBorders(snapshot,borders) {
+    const pairKey=ids=>ids.length===2?ids.slice().sort((a,b)=>a-b).join('-'):null;
+    const pointKey=p=>p.x.toFixed(3)+','+p.y.toFixed(3);
+    const edgeKey=e=>{
+      const a=pointKey(e.start),b=pointKey(e.end);
+      return a<b?a+'|'+b:b+'|'+a;
+    };
+    const endpointKey=p=>p.x.toFixed(2)+','+p.y.toFixed(2);
+    const pointDistance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+    const distanceToSegment=(p,a,b)=>{
+      const dx=b.x-a.x,dy=b.y-a.y,d=dx*dx+dy*dy||1;
+      const t=clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/d,0,1);
+      return Math.hypot(p.x-a.x-dx*t,p.y-a.y-dy*t);
+    };
+    const manualPairs=new Set(snapshot.rivers||[]);
+    const generatedKeys=new Set(snapshot.generatedRiverEdges||[]);
+    const visual=new Map(),chosen=new Set(),riverEdges=[];
+    let mappedAutomatic=0,unmatchedAutomatic=0;
+    for(let i=0;i<borders.length;i++){
+      const edge=borders[i],pair=pairKey(edge.macroIds||[]);
+      if(!pair)continue;
+      if(!visual.has(pair))visual.set(pair,[]);
+      visual.get(pair).push({edge,index:i});
+      if(manualPairs.has(pair))chosen.add(i);
+    }
+    const graphCache=new Map();
+    function borderGraph(pair) {
+      if(graphCache.has(pair))return graphCache.get(pair);
+      const nodes=new Map();
+      const add=p=>{
+        const key=endpointKey(p);
+        if(!nodes.has(key))nodes.set(key,{key,x:p.x,y:p.y,links:[]});
+        return nodes.get(key);
+      };
+      for(const {edge,index} of visual.get(pair)||[]){
+        const a=add(edge.start),b=add(edge.end);
+        const length=pointDistance(a,b);
+        if(length<=1e-6)continue;
+        a.links.push({to:b.key,index,length});
+        b.links.push({to:a.key,index,length});
+      }
+      // Only paths within the SAME connected component can represent a
+      // continuous section of the original river.
+      const components=[],visited=new Set();
+      for(const node of nodes.values()){
+        if(visited.has(node.key))continue;
+        const component=[],todo=[node];visited.add(node.key);
+        while(todo.length){
+          const current=todo.pop();component.push(current);
+          for(const e of current.links)if(!visited.has(e.to)){
+            visited.add(e.to);todo.push(nodes.get(e.to));
+          }
+        }
+        components.push(component);
+      }
+      const graph={nodes,components};
+      graphCache.set(pair,graph);
+      return graph;
+    }
+    function traceSegment(pair,original){
+      const {nodes,components}=borderGraph(pair);
+      if(!nodes.size)return null;
+      let start=null,end=null,score=Infinity;
+      for(const component of components){
+        let nearestStart=null,nearestEnd=null,ds=Infinity,de=Infinity;
+        for(const node of component){
+          const a=pointDistance(node,original.start),b=pointDistance(node,original.end);
+          if(a<ds){ds=a;nearestStart=node;}
+          if(b<de){de=b;nearestEnd=node;}
+        }
+        if(ds+de<score){score=ds+de;start=nearestStart;end=nearestEnd;}
+      }
+      if(!start||!end)return null;
+      if(start.key===end.key){
+        // Coarse visual detail: one microcell seam may represent the original
+        // whole segment, so choose its closest edge instead of a zero path.
+        let nearest=null,best=Infinity;
+        const midpoint={x:(original.start.x+original.end.x)/2,
+                        y:(original.start.y+original.end.y)/2};
+        for(const candidate of visual.get(pair)||[]){
+          const d=distanceToSegment(midpoint,candidate.edge.start,candidate.edge.end);
+          if(d<best){best=d;nearest=candidate.index;}
+        }
+        return nearest===null?null:[nearest];
+      }
+      const distances=new Map([[start.key,0]]),previous=new Map();
+      const queue=[{key:start.key,dist:0}];
+      while(queue.length){
+        queue.sort((a,b)=>b.dist-a.dist);
+        const current=queue.pop();
+        if(current.dist!==distances.get(current.key))continue;
+        if(current.key===end.key)break;
+        const node=nodes.get(current.key);
+        for(const link of node.links){
+          const edge=borders[link.index];
+          const midpoint={x:(edge.start.x+edge.end.x)/2,
+                          y:(edge.start.y+edge.end.y)/2};
+          const away=distanceToSegment(midpoint,original.start,original.end);
+          const cost=link.length*(1+Math.min(4,away/32));
+          const total=current.dist+cost;
+          if(total>= (distances.get(link.to)??Infinity))continue;
+          distances.set(link.to,total);
+          previous.set(link.to,{from:current.key,index:link.index});
+          queue.push({key:link.to,dist:total});
+        }
+      }
+      if(!previous.has(end.key))return null;
+      const path=[];let cursor=end.key;
+      while(cursor!==start.key){
+        const step=previous.get(cursor);
+        if(!step)return null;
+        path.push(step.index);
+        cursor=step.from;
+      }
+      return path;
+    }
+    for(const source of snapshot.edges||[]){
+      if(!generatedKeys.has(edgeKey(source)))continue;
+      const pair=pairKey(source.macroIds||[]);
+      if(!pair||manualPairs.has(pair))continue;
+      const segments=traceSegment(pair,source);
+      if(!segments?.length){unmatchedAutomatic++;continue;}
+      for(const index of segments)chosen.add(index);
+      mappedAutomatic++;
+    }
+    for(const index of [...chosen].sort((a,b)=>a-b))riverEdges.push(borders[index]);
+    return {riverEdges,riverStats:{
+      manualPairs:manualPairs.size,manualVisualEdges:[...chosen].filter(i=>manualPairs.has(pairKey(borders[i].macroIds||[]))).length,
+      mappedAutomatic,unmatchedAutomatic,visualSegments:riverEdges.length
+    }};
+  }
+
   function weightedSample(parts, random) {
     let total=0;
     for(const part of parts) total+=part.weight??(part.weight=area(part.polygon));
@@ -464,7 +602,7 @@
         const offset=(strand-1)*radius*.75+(random()-.5)*radius*.12;
         const x=edge.start.x+dx*t+normalX*offset;
         const y=edge.start.y+dy*t+normalY*offset;
-        const height=(7+random()*9)*8;
+        const height=(7+random()*9)*4; // Half of the previous peak Z; XY remains unchanged.
         const baseZ=0,topZ=baseZ+height;
         const snowStart=baseZ+height*2/3;
         const sides=7+Math.floor(random()*3);
@@ -499,8 +637,9 @@
       }
     }
     const {borders,coastlines,unmatched}=aggregateEdges(base.parts,snapshot.terrain,snapshot.cells);
+    const {riverEdges,riverStats}=deriveRiverBorders(snapshot,borders);
     return{
-      vertices:new Float32Array(vertices),pickRanges,pickIndex:{bucketSize:pickBucketSize,buckets:pickBuckets,maxAbsZ:pickMaxAbsZ},trees,reeds,peaks,mountainSummits,borders,coastlines,
+      vertices:new Float32Array(vertices),pickRanges,pickIndex:{bucketSize:pickBucketSize,buckets:pickBuckets,maxAbsZ:pickMaxAbsZ},trees,reeds,peaks,mountainSummits,borders,coastlines,riverEdges,riverStats,
       stats:{territories:snapshot.cells.length,subcells,triangles,mountains,hills,
              trees:trees.length,reeds:reeds.length,unmatchedEdges:unmatched,
              floats:vertices.length,generationMs:(typeof performance!=='undefined'?performance.now():Date.now())-t0}
@@ -567,5 +706,5 @@
   }
   return {area,centroid,clip,subdivide,edgeDistance,elevation,sourceColor,
           pickTerritory,
-          globalMicrocells,aggregateEdges,buildScene};
+          globalMicrocells,aggregateEdges,deriveRiverBorders,buildScene};
 });
