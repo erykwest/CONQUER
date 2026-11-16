@@ -1,5 +1,10 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-16 — Microfix: P1 delle torri in pietra al livello del camminamento
+
+- Branch fix/microfix. Il P1 delle torri in pietra di livello 2+ sta ora a 2,10 (sommità delle mura H2, CURTAIN_WALK_Z) invece che a h/livello (1,58–1,90): la porta del cammino di ronda (2,08) si apre sul pavimento del piano. I piani superiori si dividono in parti uguali l'altezza restante (stanze di almeno 1,1). Una sola fonte (towerUpperFloorZ in settlement-castle.js) per cutaway, finestre, feritoie e posti degli arcieri (towerFloorZ); le porte affiancate seguono la torre come prima. Mura invariate; torri di legno invariate.
+- PASS cutaway-floors (nuovo blocco) e 148 regressioni su torri/cutaway/porte/mura; verificato a vista nel browser su una torre quadra W2 L2 fra due mura: pavimento del P1 a filo del camminamento. Audit del Lab (qa/asset-audit.mjs) non eseguibile in locale (manca Playwright): da verificare in CI e, se cambia, aggiornare la baseline.
+
 ### 2026-11-16 — Microfix: torre fra due mura mostra entrambe le porte del cammino di ronda
 
 - Branch fix/microfix. La finestra di una faccia cede il posto a una porta del cammino di ronda (o del tetto di una sottotorre) che si apre sulla stessa faccia alla stessa altezza (towerWindowGivesWayToDoor, esteso dall'ingresso rialzato del mastio): prima la finestra della faccia interna copriva la porta e la torre fra due mura ne mostrava una sola. Il mastio resta senza porte sulle mura.

@@ -437,7 +437,9 @@ function towerLevelHeight(s,level){
 const TOWER_OPENING_EYE_Z=.44;
 function towerFloorZ(s,floor){
   const level=structureLevel(s);
-  return floor<=1?.055:structureHeight(s)*(Math.min(floor,level)-1)/level;
+  if(floor<=1)return .055;
+  // The same storeys as the cutaway (settlement-castle.js towerUpperFloorZ: P1 at the wall-walk).
+  return typeof towerUpperFloorZ==='function'?towerUpperFloorZ(s,Math.min(floor,level)-1):structureHeight(s)*(Math.min(floor,level)-1)/level;
 }
 function towerOpeningZ(s,floor){return towerFloorZ(s,floor)+TOWER_OPENING_EYE_Z}
 // Unit outward direction of each tower face: footprint edges for square towers, the

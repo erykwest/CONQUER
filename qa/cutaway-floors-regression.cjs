@@ -47,6 +47,29 @@ const fnSrc=(text,name)=>{const m=text.match(new RegExp('function '+name+'\\([^)
   console.log('PASS castle: floor in view, cut at the next floor, subtowers follow the parent');
 }
 
+// ---------- stone towers: P1 at the curtain wall-walk
+{
+  const castle=src('settlement-castle.js'),arch=src('settlement-architecture.js');
+  const H={1:2.35,2:3.55,3:4.75,4:5.95};
+  const ctx=vm.createContext({Math,structureLevel:s=>s.level,structureHeight:s=>s.wood?2.35:s.type==='wall'?2.1:H[s.level]+(s.tier-1)*.12,isWoodTower:s=>!!s.wood});
+  vm.runInContext(castle.match(/const CURTAIN_WALK_Z=[^\n]*/)[0]+'\n'+fnSrc(castle,'towerUpperFloorZ')+'\n'+fnSrc(arch,'towerFloorZ')+'\nthis.api={towerUpperFloorZ,towerFloorZ,CURTAIN_WALK_Z};',ctx);
+  const {towerUpperFloorZ,towerFloorZ,CURTAIN_WALK_Z}=ctx.api;
+  assert.equal(CURTAIN_WALK_Z,2.10,'the top of an H2 wall');
+  assert.match(castle,/if\(s\.type==='wall'\)return \[1\.15,2\.10\]/,'H2 walls stand 2.10 high');
+  for(const level of [2,3,4])for(const tier of [1,2,3]){
+    const t={type:'tower',level,tier},h=ctx.structureHeight(t);
+    assert.equal(towerUpperFloorZ(t,1),2.10,'L'+level+' T'+tier+': P1 on the wall-walk');
+    assert.equal(towerFloorZ(t,2),2.10,'windows and slits use the same P1');
+    for(let i=2;i<level;i++){
+      const z=towerUpperFloorZ(t,i);
+      assert.ok(z-towerUpperFloorZ(t,i-1)>=1.1&&h-z>=1.1,'L'+level+' T'+tier+' P'+i+': room at least 1.1 high');
+    }
+  }
+  assert.equal(towerUpperFloorZ({type:'tower',level:2,tier:1,wood:true},1),2.35/2,'timber towers keep their own frame');
+  assert.match(castle,/s\.type==='tower'\?towerUpperFloorZ\(s,i\):h\*i\/level/,'cutaway floors use the same storeys');
+  console.log('PASS stone towers: P1 at the curtain wall-walk (2.10), upper storeys share the rest');
+}
+
 // ---------- civic: town hall storeys
 {
   const core=src('settlement-core.js'),window={},State={season:'summer',structures:[]};
