@@ -32,7 +32,11 @@ for(let row=0;row<21;row++)for(let col=0;col<30;col++){
   terrain[key]=key%9===0?'sea':key%7===0?'hills':key%17===0?'swamp':key%3===0?'forest':'plain';
   fills[key]=({sea:'#88a9b2',hills:'#8a603e',swamp:'#747b58',forest:'#294f35',plain:'#77985b'})[terrain[key]];
 }
-const snapshot={seed:1943,width:3840,height:2310,cells,terrain,fills,edges:[]};
+// Supply an actual authored ridge edge: mountains must be counted separately
+// from hills, and their snow band must begin at 2/3 of hMax.
+const ridge={start:{x:128,y:110},end:{x:128,y:220},macroIds:[30,31]};
+const snapshot={seed:1943,width:3840,height:2310,cells,terrain,fills,
+  edges:[ridge],mountainRanges:['30-31']};
 const expectedArea=snapshot.width*snapshot.height;
 for(const detail of [8,20,40]){
   const micro=globalMicrocells(snapshot,detail,.65);
@@ -47,7 +51,25 @@ for(const detail of [1,8,20,40]){
   const start=performance.now(),scene=buildScene(snapshot,detail,.65),ms=performance.now()-start;
   assert.equal(scene.stats.territories,630);
   assert.ok(Math.abs(scene.stats.subcells-630*detail)<630*detail*.07);
-  assert.ok(scene.stats.mountains>0 && scene.stats.trees>0 && scene.stats.reeds>0);
+  assert.ok(scene.stats.hills>0 && scene.stats.mountains>0 && scene.stats.trees>0 && scene.stats.reeds>0);
+  assert.equal(scene.peaks.length,scene.stats.hills,'hills are separate frustum landmarks');
+  for(const hill of scene.peaks) {
+    assert.equal(hill.type,'hill');
+    assert.ok(hill.sides>=7 && hill.sides<=9,'polygonal truncated-pyramid base');
+    assert.ok(hill.radius>=12.5 && hill.radius<=40,'hill horizontal size 5x');
+    assert.ok(hill.height>=40 && hill.height<=115,'hill elevation size 5x');
+    assert.ok(hill.topRadius<hill.radius*.55 && hill.topRadius>hill.radius*.40,
+              'hill has a flat, smaller polygonal top, not a cone apex');
+  }
+  assert.equal(scene.mountainSummits.length,scene.stats.mountains,'snowcap summit metadata');
+  for(const mountain of scene.mountainSummits) {
+    assert.ok(mountain.radius>=14.5 && mountain.radius<=30.5,'mountain footprint >=5x');
+    assert.ok(mountain.height>=56 && mountain.height<=128,'mountain height >=5x');
+    assert.ok(Math.abs(mountain.snowyHeight/mountain.height-1/3)<1e-9,
+              'snow covers upper third of hMax');
+    assert.ok(Math.abs(mountain.snowStart-mountain.baseZ-mountain.height*2/3)<1e-9,
+              'snowline at 2/3 total peak height');
+  }
   assert.equal(scene.vertices.length,scene.stats.triangles*18);
   assert.ok(scene.vertices.every(Number.isFinite),'finite GPU vertices');
   assert.ok(scene.borders.length>0 && scene.coastlines.length>0,'aggregated visual borders + coasts');
@@ -115,6 +137,6 @@ for(const detail of [1,8,20,40]){
     );
   }
 }
-console.log('PASS region3d: global microcells, water/hill chromatic variation, half-size trees and 3D picking.');
+console.log('PASS region3d: global microcells, 5x hill frustums, 5x/8x snowy mountains, palette, vegetation and selection.');
 console.table(results);
 console.log('Synthetic CPU-only baseline. Browser/WebGL visuals and FPS remain separate checks.');
