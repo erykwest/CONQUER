@@ -3365,6 +3365,9 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         height: state.configuration.height,
         cells: state.cells.map(c => ({ id: c.id, macroId: c.macroId, polygon: c.polygon })),
         terrain: { ...state.terrain },
+        // Pixel-identical source RGB for each territory: same macroFill used by the 2D SVG.
+        // Includes the active terrain palette, neutral desaturation and political fills.
+        fills: Object.fromEntries(state.macros.map(macro => [macro.id, macroFill(macro.id)])),
         edges: state.edges.map(e => ({
           start: e.start, end: e.end,
           macroIds: [...new Set(e.cells.map(c => c.macroId))]
