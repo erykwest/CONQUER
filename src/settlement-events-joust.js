@@ -13,7 +13,7 @@
   const BOUT=10,START=1.2,ARRIVE=4.2,IMPACT=(START+ARRIVE)/2,END=5.6,LANE=.46;
   const FALL=.9,GET_UP=6.4,UP_DONE=7.0,BACK=9.6;
   const SEAT=.38;                                 // rider's seat above the ground (U)
-  function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+  const hash=window.ConquerUtil.hash;
   const smooth=k=>{k=Math.max(0,Math.min(1,k));return k*k*(3-2*k)};
   const lerp=(a,b,k)=>a+(b-a)*k;
   const seedOf=s=>((typeof State!=='undefined'&&State.seed)||1)+'|'+(s.id??(s.x+','+s.y));

@@ -203,7 +203,9 @@ check('wired into the game: save, reserve, drawing, panel, inspector, scripts',(
   assert.match(gar,/if\(window\.ConquerWallPatrols\)window\.ConquerWallPatrols\.draw\(\);\s*else for\(const wall of State\.structures\)/,'rings drawn; /camp keeps the old men');
   assert.match(src('settlement-panels.js'),/data-cp-wall-patrol=/);
   assert.match(src('settlement-panels.js'),/commands\?\.adjustWallPatrols\?\.\(/);
-  assert.match(src('ui/game-api.js'),/adjustWallPatrols: \(ringId,delta\) =>/);
+  // Wrapped by saved() (save + emit when the command reports a change), like the other commands.
+assert.match(src('ui/game-api.js'),/adjustWallPatrols: saved\(\(ringId, ?delta\) => window\.ConquerWallPatrols\?\.adjust\?\.\(ringId, ?delta\)\)/);
+assert.match(src('ui/game-api.js'),/enlistForWallPatrol: saved\(/);
   assert.match(src('ui/game-api.js'),/wallRings:window\.ConquerWallPatrols\?\.summary\?\.\(\)/);
   const cmds=src('settlement-structure-commands.js');
   assert.match(cmds,/choice\('wallPatrols','setWallPatrols',wp\.options,wp\.current\)/);

@@ -236,7 +236,7 @@
     }
     return out.map((a,k)=>({...a,key:room.key+':art'+k}));
   }
-  function hashStr(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+  const hashStr=window.ConquerUtil.hash;
 
   // ---------- room recipes: counts scale with the room size
   // A long table parallel to the main wall with a bench on each long side.

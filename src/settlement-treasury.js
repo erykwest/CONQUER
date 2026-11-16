@@ -38,7 +38,7 @@
     curfew:{label:'Coprifuoco',level:1,days:14,cost:0,help:'Strade vuote la notte: meno crimine, popolani scontenti.'},
     alms:{label:'Elemosina',level:1,days:14,cost:0,help:'Il castello distribuisce oro ai poveri (L1) ogni settimana.'},
     breadCap:{label:'Calmiere del pane',level:2,days:28,cost:0,help:'Il prezzo del cibo non supera il prezzo base: scontenta i proprietari (L4).'},
-    amnesty:{label:'Amnistia',level:2,days:0,cost:0,cooldown:56,help:'Libera i prigionieri: il popolo apprezza.'},
+    amnesty:{label:'Amnistia',level:2,days:0,cost:0,cooldown:56,help:'Perdono generale: i popolani (L1/L2) più contenti.'},
     fair:{label:'Bando di fiera',level:3,days:7,cost:100,help:'Una settimana di fiera: pedaggio sospeso, commercianti e proprietari contenti.'},
     levy:{label:'Leva straordinaria',level:2,crisisLevel:1,days:14,cost:0,options:{days:[14,21,28],share:[10,20,30]},
       help:'Tiene mobilitata la milizia anche senza allarme: una parte degli uomini L1/L2 resta in armi.'}
@@ -57,6 +57,8 @@
     if(!t.accrued||typeof t.accrued!=='object')t.accrued={};
     for(const k of NEW_TAXES)t.accrued[k]=Math.max(0,finite(t.accrued[k]));
     if(!t.week||typeof t.week!=='object')t.week=emptyWeek();
+    for(const k of ['due','collected','inKind'])if(!t.week[k]||typeof t.week[k]!=='object')t.week[k]={};
+    for(const k of NEW_TAXES){t.week.due[k]=finite(t.week.due[k]);t.week.collected[k]=finite(t.week.collected[k])}
     if(!Array.isArray(t.history))t.history=[];
     if(!t.decrees||typeof t.decrees!=='object')t.decrees={};
     if(!t.decrees.active||typeof t.decrees.active!=='object')t.decrees.active={};
@@ -222,6 +224,12 @@
     t.week.collected.tithe=round(t.week.collected.tithe+got);
     t.week.inKind[good]=round((t.week.inKind[good]||0)+got);
     if(e?.castle)e.castle[good]=round(finite(e.castle[good])+got); // in kind, into the castle stores
+    // Still produced this week by that site (as put() accounts it): the charts must not lose the tithe.
+    if(got>0&&e?.weekProduced&&typeof e.weekProduced==='object')e.weekProduced[good]=round(finite(e.weekProduced[good])+got);
+    if(got>0&&s?.id&&e?.activities?.[s.id]&&e.weekProducedSites&&typeof e.weekProducedSites==='object'){
+      const site=e.weekProducedSites[s.id]||(e.weekProducedSites[s.id]={}),own=site.private||(site.private={});
+      own[good]=round(finite(own[good])+got);
+    }
     return round(qty-got);
   }
   // Toll on a caravan or convoy coming in at the gates. Foreign merchants pay; the fair waives it.
@@ -241,7 +249,6 @@
   function weekly(day){
     const t=state(),e=economy()?.state?.();if(!e)return;
     const pop=economy().population();
-    const happiness=e.happiness;
     // Testatico: per head of L1 and L2, from their class wallets, collected quarter by quarter.
     const poll=rate('poll');
     if(poll>0){
@@ -267,13 +274,16 @@
       for(const g of TAXES[k].payers)unrest[g]+=MAX_UNREST*share;
     }
     applyDecreesWeekly(day,e,pop,unrest);
-    for(const g of Object.keys(unrest))if(unrest[g]&&finite(pop[g])>0)
-      happiness[g]=clamp(round(finite(happiness[g],50)-unrest[g]),0,100);
+    applyUnrest(e,pop,unrest);
     t.history.push({day,due:{...t.week.due},collected:{...t.week.collected},inKind:{...t.week.inKind},
       efficiency:efficiencyReport().centre});
     if(t.history.length>12)t.history.splice(0,t.history.length-12);
     t.last=t.history[t.history.length-1];
     t.week=emptyWeek();
+  }
+  function applyUnrest(e,pop,unrest){
+    for(const g of Object.keys(unrest))if(unrest[g]&&finite(pop[g])>0)
+      e.happiness[g]=clamp(round(finite(e.happiness[g],50)-unrest[g]),0,100);
   }
   // Average testatico efficiency over the houses, weighted by quarter.
   function pollEfficiency(){
@@ -308,6 +318,9 @@
     if(spec.cost&&e)e.castleGold=round(finite(e.castleGold)-spec.cost);
     let days=spec.days;
     const entry={start:day,end:day+Math.max(0,days-1)};
+    // Issued on a Saturday after that day's collection: it would lapse before its last Saturday,
+    // so it is owed one weekly run, paid when it lapses. Saves without the flag owe nothing.
+    if(economy()?.weekday?.(day)===5&&t.lastDay>=day)entry.owed=true;
     if(id==='levy'){
       days=spec.options.days.includes(+params.days)?+params.days:spec.days;
       entry.end=day+days-1;
@@ -337,21 +350,22 @@
   }
   // Share of L1/L2 men kept under arms by the levy (0 when none).
   function levyShare(){return active('levy')?finite(holder().treasury.decrees.active.levy.share)/100:0}
+  // One week of a decree: unrest per class (negative = happier); the alms paid from the castle.
+  function decreeWeek(id,a,e,pop,unrest){
+    if(id==='feast')for(const g of Object.keys(unrest))unrest[g]-=1.5;
+    if(id==='curfew'){unrest.L1+=.4;unrest.L2+=.4}
+    if(id==='alms'){
+      const gift=round(Math.min(finite(pop.L1)*.2,Math.max(0,finite(e.castleGold))));
+      e.castleGold=round(finite(e.castleGold)-gift);e.wallet.L1=round(finite(e.wallet.L1)+gift);
+      unrest.L1-=.8;
+    }
+    if(id==='breadCap')unrest.L4+=.6;
+    if(id==='fair'){unrest.L3-=1;unrest.L4-=1}
+    if(id==='levy'){const w=(a.share/10)*.3*(a.repeat?2:1);unrest.L1+=w;unrest.L2+=w}
+  }
   function applyDecreesWeekly(day,e,pop,unrest){
     const t=state();
-    for(const [id,a] of Object.entries(t.decrees.active)){
-      if(day<a.start)continue;
-      if(id==='feast')for(const g of Object.keys(unrest))unrest[g]-=1.5;
-      if(id==='curfew'){unrest.L1+=.4;unrest.L2+=.4}
-      if(id==='alms'){
-        const gift=round(Math.min(finite(pop.L1)*.2,Math.max(0,finite(e.castleGold))));
-        e.castleGold=round(finite(e.castleGold)-gift);e.wallet.L1=round(finite(e.wallet.L1)+gift);
-        unrest.L1-=.8;
-      }
-      if(id==='breadCap')unrest.L4+=.6;
-      if(id==='fair'){unrest.L3-=1;unrest.L4-=1}
-      if(id==='levy'){const w=(a.share/10)*.3*(a.repeat?2:1);unrest.L1+=w;unrest.L2+=w}
-    }
+    for(const [id,a] of Object.entries(t.decrees.active))if(day>=a.start)decreeWeek(id,a,e,pop,unrest);
     for(const [id,a] of Object.entries(t.decrees.active))if(day>a.end){
       delete t.decrees.active[id];
       if(id==='levy')window.ConquerCombat?.refreshLevy?.();
@@ -362,9 +376,12 @@
     const t=state();
     if(day<=t.lastDay)return;
     t.lastDay=day;
-    // Decrees that expire mid-week stop at once (the levy releases the militia).
+    // Decrees that expire mid-week stop at once (the levy releases the militia);
+    // one issued after a Saturday collection gets its owed week now.
     for(const [id,a] of Object.entries(t.decrees.active))if(day>a.end){
       delete t.decrees.active[id];
+      const e=economy()?.state?.();
+      if(a.owed&&e){const pop=economy().population(),unrest={L1:0,L2:0,L3:0,L4:0};decreeWeek(id,a,e,pop,unrest);applyUnrest(e,pop,unrest)}
       if(id==='levy')window.ConquerCombat?.refreshLevy?.();
     }
     if(economy()?.weekday?.(day)===5)weekly(day);

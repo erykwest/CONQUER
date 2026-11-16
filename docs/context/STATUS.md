@@ -77,6 +77,44 @@
 - **PROVE LOCALI PASS:** `qa/combat-render-regression.cjs`; nel Lab, foglio con le 6 combinazioni (originale + 5) a due grandezze e primo piano degli elmi, console senza errori.
 - **NON ESEGUITO in locale:** `node qa/asset-audit.mjs` (Playwright non installato); affidato alla CI `asset-lab`.
 
+### 2026-11-15 — Spiaggia sotto le scarpate (branch fix/coastal-cliff-beach-20261115)
+
+- Allineato main `1911369` (hardening #239), senza conflitti. Ripetuti PASS occlusione, coast, water-surface, wooded-relief, tree-bark ed export Wiki; cinque scene ripetute sulla versione integrata. CI da verificare sul nuovo SHA.
+- Corretto l'ordine del disegno: sabbia e sponde di mare/lago/acquitrinio precedono i rilievi; acqua e confluenze conservano il proprio passaggio successivo. Stesso percorso per Canvas e texture WebGL. Ricette, larghezze e quote invariate.
+- Nuova regressione sul percorso reale terreno/ambiente: prima FAIL (sabbia sulla scarpata), dopo PASS in 16 combinazioni mare/lago, quattro rotazioni, isometria/vista dall'alto. Pixel della texture WebGL verificati; cinque snapshot costieri prima/dopo e cinque scenari idrici PASS. Lab Territorio: 16 invariati, zero errori, cinque avvisi di schema.
+- Implementato solo sul branch, non mergiato; CI da verificare sul commit pubblicato. [Prove e riproduzione](SHORE-RELIEF-FIX-2026-11-15.md). Roadmap e decisioni invariate: applicazione del contratto esistente di rilievo.
+
+### 2026-11-15 — Audit post-merge regionale, correzioni su branch
+
+- Merge autorizzato dall'utente: integrato main `1c27aeb` (torre a D), con soli conflitti documentali uniti. Precedente CI `5854c03`: 14 workflow PASS; nuovi controlli da verificare prima del merge definitivo. Restano aperti latenza locale e quota collinare costiera.
+- Allineamento finale main `17645c2`; CI Runtime ha rilevato il digest Wiki obsoleto dopo le correzioni: rigenerato solo `sourceDigest`, contenuti invariati. Wiki regression ed export --check PASS locali; nuova CI da verificare.
+- Esito consolidato locale: **201/202 PASS**, unico FAIL fondazione (116,07 ms > 100 ms). PR #250 draft, non mergiata. Integrato main `2782fc0` preservando pattuglie/porte stradali; controlli mirati post-integrazione PASS. CI della PR da verificare sul nuovo SHA.
+- Base verificata main `50096df` (PR #162); correzioni in `fix/regional-postmerge-20261115`, non mergiate. Riprodotti e corretti drenaggio cancellato da bordo montuoso, chiome perse con cache calda e selettore incoerente con i quattro biomi.
+- [Rapporto completo](POSTMERGE-REGRESSION-2026-11-15.md): base 198/199 test PASS dopo quattro ripetizioni LF; resta APERTO il picco della pianificazione stradale oltre 100 ms. Nuovi tre test prima FAIL/dopo PASS e ripetizione completa sul branch.
+- Browser: otto scene regionali, cinque idriche e apertura reale dalla regione; screenshot finali rivisti. Asset Lab completo: 1.612 render, zero errori ma 157 avvisi e baseline da riconciliare; Territorio corretto 16 render invariati. Nessuna accettazione massiva delle firme.
+- Roadmap/decisioni e bilanciamenti invariati. QA e limiti documentati per il commit regionale; le successive PR di main richiedono verifica propria.
+
+## 2026-11-13 — AUDIT-261113 · Audit post-merge, hardening e semplificazione (branch `fix/audit-hardening-20261113`)
+
+- **AMBITO:** verifica delle 82 PR mergiate dal 30/10 al 13/11 (#103–#211) su `main` 6b227926, per gruppi (economia, job/cantieri, militare, torri/mura, stanze, rendering, CI, hardening). Nessuna PR sovrascritta da un merge successivo (identificatori e registri dei modelli controllati commit per commit).
+- **CODICE SUL BRANCH, NON MERGE — bug corretti (verificati con repro prima e dopo):**
+  - **Cantieri:** gli upgrade di ponti e fossati automatici (#194) restavano a 0 lavoro con i materiali spesi e 3 costruttori bloccati → `payConstructionWork` blocca solo i cantieri automatici che non sono upgrade.
+  - **Disboscamento:** con il Job Manager L1 attivo (#190) il taglio del bosco (#166) aveva 0 operai → `forestryDemand` entra nella domanda dei costruttori in modalità gestita.
+  - **Costruttori:** `constructionDemand` conta solo i cantieri lavorabili (materiali consegnati oltre l'avanzamento), come `constructionCrewAssignments`.
+  - **Piazzale:** durante l'espansione (#167/#194) il piazzale resta attivo alla capacità precedente; anche i carrettieri lo seguono.
+  - **Salvataggi:** una torre W2×H4 (#174) perdeva il 4° piano a ogni caricamento; la latrina W1 veniva verificata contro la partita precedente durante il load; un caricamento fallito lasciava che l'autosave sovrascrivesse il salvataggio buono → ora il save grezzo è copiato in `.corrupt.<ts>`, `State.loadFailed` blocca i salvataggi finché non si genera una mappa o si carica con successo.
+  - **Riserva dei soldati (#193):** le pattuglie cadute o in infermeria liberavano i loro uomini e quelle perse non scalavano `enlisted` → restano impegnate; una perdita definitiva si addebita una volta (`reserveCharged`). Spedizioni mai sopra gli arruolati.
+  - **Erario (#197):** un decreto emesso di sabato non aveva effetto settimanale → flag `owed`, ogni decreto vale giorni/7 applicazioni; la decima in natura entra in `weekProduced`; `state()` normalizza i campi della settimana.
+  - **Render:** ballatoi, piano ligneo della porta piccola, stile dei merli e pendenza dei tetti non invalidavano le cache (World 3D e 2.5D) → chiave unica `structureVisualKey(s)` in `settlement-render.js`.
+  - **Varie:** retry per-frame del bivacco 3D fallito, valori del campo militare fuori tabella, `initialSeed` con storage bloccato, kit case con un pezzo mancante, wiki incorporato cross-origin, messaggio della scala sulle mura, preset del Lab con cucina nel mastio W4, doppio caricamento di `settlement-mesh3d.js`, cache-buster di `house-models.js` e garderobe.
+  - **Sicurezza:** XSS memorizzata dai nomi di quartiere nell'ispettore classico → etichette passate per `ConquerPanels.escapeHtml` (escape anche di `'`).
+  - **Dev free build:** `canAfford`/`spendCost` non sono più gratuiti per tutto; il free build resta sui soli cantieri.
+- **PRESTAZIONI** (profilo CPU, vecchio `main` 112cb8f0 contro HEAD): cache per struttura delle stanze esterne e delle feritoie (`archerSlots` 59→14 ms webgl), ricerca del mare memorizzata (`rockAt` 344→12 ms), roster dei carrettieri non ricalcolato a ogni frame, ombreggiatura delle mesh 3,7× più veloce (frame max del crollo WebGL ~363→~310 ms, il vecchio era 170–200). Il crollo in canvas varia 2,9–4,1 s anche sul vecchio codice: nessuna regressione accertata.
+- **SEMPLIFICAZIONE (refactor a comportamento invariato):** nuovo `src/settlement-util.js` (`ConquerUtil.hash/rng/smoothstep`, caricato per primo) al posto di 22 copie; politiche L1/L2 del Job Manager unificate; `ConquerSiege.activeRooms`; `W1_TOWER_FUNCTIONS` in core; un solo Dijkstra delle campane (`ConquerAlarmBells.shortestSignal`, fuzz su 3000 layout identico); `InstitutionPanel` unico per Chiesa e Gilda; wrapper della game API generati; rimossa la copia ESM morta `src/economy/` (il suo test falliva e nessuno la importava).
+- **CI:** suite deterministica completa su ogni PR che non sia solo documentazione, con elenco di tutti i test falliti; controllo di sintassi su `src/**/*.js|mjs`; `permissions: contents: read` ovunque; run settimanali dei workflow browser; nuovo `perf.yml` manuale; guardia contro script QA orfani; Context sync esteso a `api/`, `tests/`, `crime/`, `march/`, `lab/`, `layouts/`.
+- **PROVE LOCALI PASS (checkout LF):** 179 script node (`qa/*.cjs`, `qa/*.test.mjs`, `tests/*.test.mjs`) 0 falliti; `node --check` su tutti i sorgenti; `export-codex --check` e `export-codex-content --check`; pagina di gioco e Asset Lab caricati in locale senza errori di console né 404; i 5 benchmark browser `*-performance.cjs` passano (prima 2 fallivano per il MIME `.mjs` mancante nei loro server).
+- **NON VERIFICATO:** partita reale con le nuove regole dei costruttori; i loop bash dei workflow (nessuna shell bash locale) finché la CI non gira sul branch.
+
 ### 2026-11-15 — FIELD-LEND preservato nel merge regionale
 
 - La CI su 6510709 era tutta verde (20 workflow). Durante l'attesa main e avanzato a 6c5ac79 (#212 FIELD-LEND): integrato senza conflitti di codice, unendo STATUS/CHANGELOG e rigenerando il catalogo. PASS locale idle-farmers (7), fields (16), export Wiki. Nuova CI da verificare; nessuna modifica alle ricette regionali.
@@ -1482,6 +1520,11 @@ Baseline verificata: main d8c89556d504a48cf64bb2c9927a5620ec1772b5. Nessuna PR n
 - **Su `main` (#90):** chiesa o locanda selezionata mostrata in sezione: piano di taglio rivolto alla camera che taglia il guscio Blender a davanzale, toglie tetti e gronde; arredi (panche, altare, fonte, pulpito per la chiesa; tavoli, bancone, botti, focolari per la locanda). In WebGL l'edificio selezionato ha un buffer `civicCutaway` ricostruito a ogni quarto di giro; Esc invalida entrambi i renderer (`src/settlement-civic3d.js`, `settlement-world3d.js`, `settlement-castle.js`, `settlement-render.js`).
 - **Builder:** il contorno di selezione disegna solo l'impronta unita a h0; mura, palizzate e sezioni costruite non si piazzano dentro le foreste; ogni edificio controlla anche le chiome degli alberi realmente disegnati (`settlement-placement.js`).
 - **QA locale (28/10, dopo il merge di `main` `5ddefa6`):** 73/77 `qa/*.cjs` PASS (incluse `civic3d`, `builder-placement`, `organic-forest`); i 4 FAIL sono le prove di performance che richiedono Playwright, assente in questo checkout. Audit del Lab (`qa/asset-audit.mjs`, Chrome locale): 465 render, 0 falliti, firme identiche a quelle di `main` sullo stesso browser (il cutaway civico appare solo in partita con l'edificio selezionato); baseline invariata. **Non eseguite:** verifica visiva del cutaway in partita su entrambi i renderer; CI della PR.
+
+## UI v2 — ispettore dell'edificio selezionato: fix rapidi (branch `fix/inspector-quickfixes`, 15/11/2026, non ancora `main`)
+
+- **Codice:** `settlement-animals.js` limita a zero il raggio del giunto delle zampe (il layout TEST con bestiame lanciava `IndexSizeError` a ogni frame, fermando mappa e UI v2). `describeStructure` aggiunge `d.yard` (usato, capienza, oltre) e `reason` sull'opzione Avamposto. `shell.js`: ispettore anche in Gestisci e Difendi al posto della scheda di modalità finché c'è una selezione; blocco stanze e fatto «Stanze 0 · 0» nascosti quando non ci sono stanze; tooltip delle opzioni disattivate con il motivo (o la regola del controllo); `confirm` prima di demolire o annullare un cantiere; piè di scheda «Costo di costruzione». `i18n-it.js`: etichette del piazzale e delle merci, motivi tradotti, messaggi di conferma. Versioni `legcap1`, `insp1`, `ui2-insp-2`.
+- **Prove:** 202/208 `qa/*.cjs` PASS (FAIL: cinque prove di performance senza Playwright e `asset-audit-scope` che richiede `--github-output`). Browser locale sul layout TEST: nessun nuovo errore di disegno, piazzale con etichette e avviso, mura senza blocco stanze, 8 opzioni grigie della torre con motivo, demolizione annullata dal dialogo, ispettore in Gestisci e ritorno a Panoramica alla chiusura. **Non eseguite:** `qa/ui-combat-regression.mjs`, audit del Lab, CI.
 
 ## UI v2 «Isole» — modalità Difendi (branch `feature/ui-defend`, 26/10/2026)
 

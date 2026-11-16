@@ -192,7 +192,9 @@
   function payConstructionWork(site,requestedWork){
     const c=site?.construction,e=state();
     const request=Math.max(0,finite(requestedWork));
-    if(!State.village?.founded||site.auto||c?.version!==2||!request)
+    // Automatic growth is self-financed; a lord-ordered upgrade of an
+    // automatic structure (bridge, moat...) is paid like any manual site.
+    if(!State.village?.founded||site.auto&&!c?.upgrade||c?.version!==2||!request)
       return{work:0,paid:0};
     const rate=constructionWagePerWorkday();
     if(rate<=0)return{work:request,paid:0};
@@ -323,6 +325,10 @@
     if(typeof fieldMorningDemand==='function')return fieldMorningDemand(s,day)<=0;
     return typeof fieldCropReady==='function'&&!fieldCropReady(s,day);
   }
+  // A disabled, destroyed or abandoned site, or a field idle today, draws no workers.
+  function siteInactive(e,s,day){
+    return !!(s.economyDisabled||s.destroyed||s.abandoned||e.activities[s.id]?.abandoned||fieldIdleToday(s,day));
+  }
 
   // One ordered list for every controllable L1 occupation. Protected herders
   // and fishermen have their own rules and cannot be double-booked here.
@@ -333,10 +339,8 @@
     const labels={loggingCamp:'Taglialegna',vineyard:'Vigneto',field:'Campi',quarry:'Cava',mine:'Miniera'};
     const tasks=sites.map(s=>{
       const capacity=workerDemand(s).count;
-      const inactive=s.economyDisabled||s.destroyed||s.abandoned||e.activities[s.id]?.abandoned||
-        fieldIdleToday(s,day);
       return {key:'site:'+s.id,kind:'site',id:String(s.id),
-        label:(labels[s.type]||s.type)+' · '+s.id,capacity,demand:inactive?0:capacity};
+        label:(labels[s.type]||s.type)+' · '+s.id,capacity,demand:siteInactive(e,s,day)?0:capacity};
     });
     for(const s of window.ConquerShipyard?.demand?.()||[]){
       const capacity=Math.max(0,Math.floor(finite(window.ConquerShipyard.WORKERS)));
@@ -345,19 +349,54 @@
     }
     const carterDemand=Math.max(0,Math.floor(finite(window.ConquerHaulage?.workerDemand?.(day))));
     tasks.push({key:'carter',kind:'carter',label:'Carrettieri',capacity:carterDemand,demand:carterDemand});
-    const buildDemand=Math.max(0,constructionDemand(day));
+    const buildDemand=Math.max(0,constructionDemand(day)+forestryDemand(day));
     tasks.push({key:'builders',kind:'builders',label:'Costruttori',capacity:buildDemand,demand:buildDemand});
     return tasks;
   }
-  function orderedL1Tasks(day=State.clock?.day){
-    const tasks=l1Tasks(day),order=state().l1Jobs.order;
-    const priorities=new Map(order.map((key,i)=>[key,i]));
-    return tasks.sort((a,b)=>{
-      const pa=priorities.has(a.key)?priorities.get(a.key):Infinity;
-      const pb=priorities.has(b.key)?priorities.get(b.key):Infinity;
-      return pa-pb;
-    });
+  // Shared L1/L2 Job Manager policy: tier 1 → l1Tasks/l1Jobs, tier 2 → l2Tasks/l2Jobs.
+  function tierTasks(tier,day){return (tier===2?l2Tasks:l1Tasks)(day)}
+  function tierJobs(tier){return state()[tier===2?'l2Jobs':'l1Jobs']}
+  function orderedTierTasks(tier,day){
+    const tasks=tierTasks(tier,day),priorities=new Map(tierJobs(tier).order.map((key,i)=>[key,i]));
+    return tasks.sort((a,b)=>(priorities.get(a.key)??Infinity)-(priorities.get(b.key)??Infinity));
   }
+  function setTierMinimum(tier,key,value){
+    const task=tierTasks(tier).find(t=>t.key===key),n=Number(value);
+    if(!task||!Number.isInteger(n)||n<0)return false;
+    const jobs=tierJobs(tier);
+    jobs.settings[key]={...(jobs.settings[key]||{}),minimum:clamp(n,0,task.capacity)};
+    jobs.enabled=true;return true;
+  }
+  function setTierAuto(tier,key,enabled){
+    if(typeof enabled!=='boolean'||!tierTasks(tier).some(t=>t.key===key))return false;
+    const jobs=tierJobs(tier);
+    jobs.settings[key]={...(jobs.settings[key]||{}),auto:enabled};
+    jobs.enabled=true;return true;
+  }
+  function setTierOrder(tier,order){
+    const keys=tierTasks(tier).map(t=>t.key);
+    if(!Array.isArray(order)||order.length!==keys.length||
+      new Set(order).size!==order.length||order.some(key=>!keys.includes(key)))return false;
+    const jobs=tierJobs(tier);jobs.order=order.slice();jobs.enabled=true;return true;
+  }
+  // Two-pass rank-order staffing. Pass 1 guarantees minima (high-priority jobs
+  // win when the minima exceed the workforce); pass 2 lets AUTO fill demand,
+  // MANUAL stays capped at its minimum. available() bounds each grant; grant()
+  // may return how many it actually staffed (fewer than asked), else all n count.
+  function staffTasks(jobs,tasks,available,grant){
+    const assigned=Object.fromEntries(tasks.map(t=>[t.key,0]));
+    for(let pass=0;pass<2;pass++)for(const task of tasks){
+      const setting=jobs.settings[task.key]||{},already=assigned[task.key];
+      const minimum=clamp(Math.floor(finite(setting.minimum)),0,task.demand);
+      const wanted=pass===0?Math.max(0,minimum-already):
+        setting.auto===false?0:Math.max(0,task.demand-already);
+      const n=Math.min(wanted,available());
+      if(n<=0)continue;
+      const got=grant(task,n);assigned[task.key]+=got??n;
+    }
+  }
+  function orderedL1Tasks(day){return orderedTierTasks(1,day)}
+  function orderedL2Tasks(day){return orderedTierTasks(2,day)}
   function jobManager(day=State.clock?.day){
     const e=state(),labor=laborAllocation(day);
     return {managed:!!e.l1Jobs.enabled,available:labor.limits.L1,
@@ -371,25 +410,9 @@
           auto:setting.auto!==false};
       })};
   }
-  function setL1Minimum(key,value){
-    const task=l1Tasks().find(t=>t.key===key),n=Number(value);
-    if(!task||!Number.isFinite(n)||!Number.isInteger(n)||n<0)return false;
-    const e=state(),setting=e.l1Jobs.settings[key]||{};
-    e.l1Jobs.settings[key]={...setting,minimum:clamp(n,0,task.capacity)};
-    e.l1Jobs.enabled=true;return true;
-  }
-  function setL1Auto(key,enabled){
-    if(typeof enabled!=='boolean'||!l1Tasks().some(t=>t.key===key))return false;
-    const e=state(),setting=e.l1Jobs.settings[key]||{};
-    e.l1Jobs.settings[key]={...setting,auto:enabled};
-    e.l1Jobs.enabled=true;return true;
-  }
-  function setL1Order(order){
-    const keys=l1Tasks().map(t=>t.key);
-    if(!Array.isArray(order)||order.length!==keys.length||
-      new Set(order).size!==order.length||order.some(key=>!keys.includes(key)))return false;
-    const e=state();e.l1Jobs.order=order.slice();e.l1Jobs.enabled=true;return true;
-  }
+  function setL1Minimum(key,value){return setTierMinimum(1,key,value)}
+  function setL1Auto(key,enabled){return setTierAuto(1,key,enabled)}
+  function setL1Order(order){return setTierOrder(1,order)}
 
 
   // L2 jobs share the L1 priority/minimum/AUTO contract but use only the
@@ -400,16 +423,9 @@
       .sort((a,b)=>String(a.id).localeCompare(String(b.id)))
       .map(s=>{
         const capacity=workerDemand(s).count;
-        const inactive=s.economyDisabled||s.destroyed||s.abandoned||e.activities[s.id]?.abandoned||
-          fieldIdleToday(s,day);
         return {key:'site:'+s.id,kind:'site',id:String(s.id),
-          label:(labels[s.type]||s.type)+' · '+s.id,capacity,demand:inactive?0:capacity};
+          label:(labels[s.type]||s.type)+' · '+s.id,capacity,demand:siteInactive(e,s,day)?0:capacity};
       });
-  }
-  function orderedL2Tasks(day=State.clock?.day){
-    const tasks=l2Tasks(day),order=state().l2Jobs.order;
-    const priorities=new Map(order.map((key,i)=>[key,i]));
-    return tasks.sort((a,b)=>(priorities.get(a.key)??Infinity)-(priorities.get(b.key)??Infinity));
   }
   function jobManagerL2(day=State.clock?.day){
     const e=state(),labor=laborAllocation(day);
@@ -422,25 +438,9 @@
     return {managed:!!e.l2Jobs.enabled,available:labor.limits.L2,
       assigned:tasks.reduce((n,t)=>n+t.workers,0),tasks};
   }
-  function setL2Minimum(key,value){
-    const task=l2Tasks().find(t=>t.key===key),n=Number(value);
-    if(!task||!Number.isInteger(n)||n<0)return false;
-    const e=state(),prior=e.l2Jobs.settings[key]||{};
-    e.l2Jobs.settings[key]={...prior,minimum:clamp(n,0,task.capacity)};
-    e.l2Jobs.enabled=true;return true;
-  }
-  function setL2Auto(key,enabled){
-    if(typeof enabled!=='boolean'||!l2Tasks().some(t=>t.key===key))return false;
-    const e=state(),prior=e.l2Jobs.settings[key]||{};
-    e.l2Jobs.settings[key]={...prior,auto:enabled};
-    e.l2Jobs.enabled=true;return true;
-  }
-  function setL2Order(order){
-    const keys=l2Tasks().map(t=>t.key);
-    if(!Array.isArray(order)||order.length!==keys.length||
-      new Set(order).size!==order.length||order.some(key=>!keys.includes(key)))return false;
-    const e=state();e.l2Jobs.order=order.slice();e.l2Jobs.enabled=true;return true;
-  }
+  function setL2Minimum(key,value){return setTierMinimum(2,key,value)}
+  function setL2Auto(key,enabled){return setTierAuto(2,key,enabled)}
+  function setL2Order(order){return setTierOrder(2,order)}
 
   // Field strips are worked by named household adults (drawn at their strip by
   // fieldWorkAssignments); the founding crew has no house and never farms.
@@ -498,17 +498,9 @@
     // regardless of whether L1 is managed or uses the legacy algorithm.
     const allocateL2=()=>{
       if(!e.l2Jobs.enabled)return;
-      const tasks=orderedL2Tasks(day),assigned=Object.fromEntries(tasks.map(t=>[t.key,0]));
-      for(let pass=0;pass<2;pass++)for(const task of tasks){
-        const setting=e.l2Jobs.settings[task.key]||{},already=assigned[task.key];
-        const minimum=clamp(Math.floor(finite(setting.minimum)),0,task.demand);
-        const wanted=pass===0?Math.max(0,minimum-already):
-          setting.auto===false?0:Math.max(0,task.demand-already);
-        const count=Math.min(wanted,remaining.L2);
-        if(count<=0)continue;
-        remaining.L2-=count;assigned[task.key]+=count;
-        allocated[task.id]=(allocated[task.id]||0)+count;
-      }
+      staffTasks(e.l2Jobs,orderedL2Tasks(day),()=>remaining.L2,(task,count)=>{
+        remaining.L2-=count;allocated[task.id]=(allocated[task.id]||0)+count;
+      });
     };
     // Edited Job Manager policies take over ONLY the configurable L1 pool.
     // L2/L3 production, protected herders and fishermen retain their own rules.
@@ -517,31 +509,17 @@
         const req=workerDemand(s),group=classKey(req.tier);
         if(group==='L1'){allocated[s.id]=0;assignedL1[s.id]=[];continue;}
         if(group==='L2'&&e.l2Jobs.enabled){allocated[s.id]=0;continue;}
-        const activity=e.activities[s.id];
-        const suspended=s.economyDisabled||s.destroyed||s.abandoned||activity?.abandoned||
-          fieldIdleToday(s,day);
-        const count=suspended?0:Math.min(req.count,remaining[group]);
+        const count=siteInactive(e,s,day)?0:Math.min(req.count,remaining[group]);
         remaining[group]-=count;allocated[s.id]=count;
       }
       allocateL2();
       const shipwrights={},carters=[],builders=[];
-      const tasks=orderedL1Tasks(day);
+      // Fields take only household adults (takeWorkers), so a grant may fall short of the request.
       const siteOf=new Map(activeStructures().map(s=>[String(s.id),s]));
-      const assigned=Object.fromEntries(tasks.map(t=>[t.key,0]));
-      // Pass 1: guarantee minima in rank order; high-priority jobs win when
-      // the minima together exceed the available L1 workforce.
-      // Pass 2: AUTO fills remaining capacity in rank order. MANUAL is capped
-      // at its minimum and cannot silently consume spare workers.
-      for(let pass=0;pass<2;pass++)for(const task of tasks){
-        const setting=e.l1Jobs.settings[task.key]||{},already=assigned[task.key];
-        const minimum=clamp(Math.floor(finite(setting.minimum)),0,task.demand);
-        const wanted=pass===0?Math.max(0,minimum-already):
-          setting.auto===false?0:Math.max(0,task.demand-already);
-        const want=Math.min(wanted,remaining.L1,l1Available.length);
-        if(want<=0)continue;
+      staffTasks(e.l1Jobs,orderedL1Tasks(day),()=>Math.min(remaining.L1,l1Available.length),(task,want)=>{
         const workers=takeWorkers(l1Available,want,task.kind==='site'?siteOf.get(task.id):null),n=workers.length;
-        if(n<=0)continue;
-        remaining.L1-=n;assigned[task.key]+=n;
+        if(n<=0)return 0;
+        remaining.L1-=n;
         if(task.kind==='site'){
           (assignedL1[task.id]??=[]).push(...workers);
           allocated[task.id]=(allocated[task.id]||0)+n;
@@ -551,7 +529,8 @@
           allocated[task.id]=(allocated[task.id]||0)+n;
         }else if(task.kind==='carter')carters.push(...workers);
         else if(task.kind==='builders')builders.push(...workers);
-      }
+        return n;
+      });
       const idle=[];
       for(const w of l1Available)(herdIds.has(w.houseId)?herders:idle).push(w);
       // Construction receives ONLY its own roster: manual limits cannot be
@@ -569,11 +548,7 @@
     // Industry positions are staffed before assigning only spare L1 to manual
     // construction. An out-of-season field does not reserve a worker forever.
     for(const s of activeStructures().sort((a,b)=>(a.type==='field'?1:0)-(b.type==='field'?1:0)||String(a.id).localeCompare(String(b.id)))){
-      const activity=e.activities[s.id];
-      if(s.economyDisabled||s.destroyed||s.abandoned||activity?.abandoned||
-          fieldIdleToday(s,day)){
-        allocated[s.id]=0;continue;
-      }
+      if(siteInactive(e,s,day)){allocated[s.id]=0;continue;}
       const req=workerDemand(s),group=classKey(req.tier);
       if(group==='L2'&&e.l2Jobs.enabled){allocated[s.id]=0;continue;}
       // Logging is essential only while wood is low; otherwise camps take
@@ -630,8 +605,20 @@
     if(!State.village?.founded||!buildersFunded()||
         (window.ConquerCombat?.alarmMode?.()||'off')!=='off')return 0;
     const perSite=typeof CONSTRUCTION_MAX_WORKERS==='number'?CONSTRUCTION_MAX_WORKERS:3;
-    return(State.structures||[]).filter(s=>s.construction?.version===2&&
-      !complete(s)&&finite(s.construction.startedDay)<=finite(day)).length*perSite;
+    // Only workable sites, as in constructionCrewAssignments: one still waiting
+    // for materials must not hold builders while the loggers starve.
+    const supplied=s=>typeof constructionMaterialInfo!=='function'||typeof constructionProgress!=='function'||
+      constructionMaterialInfo(s).progress>constructionProgress(s)+1e-9;
+    return(State.structures||[]).filter(s=>s.construction?.version===2&&!(s.auto&&!s.construction.upgrade)&&
+      !complete(s)&&finite(s.construction.startedDay)<=finite(day)&&supplied(s)).length*perSite;
+  }
+  // Managed L1 only: forest clearance shares the builder roster (legacy mode
+  // already lends it every spare adult), three crew per open clearing.
+  function forestryDemand(day){
+    if(!State.village?.founded||!buildersFunded()||
+        (window.ConquerCombat?.alarmMode?.()||'off')!=='off')return 0;
+    return(window.ConquerForestry?.jobs?.()||[]).filter(j=>finite(j.construction?.workDone)<finite(j.construction?.workRequired)&&
+      finite(j.construction?.startedDay)<=finite(day)).length*3;
   }
   function activeCapacity(){return laborAllocation().allocated}
   function buildersFunded(){

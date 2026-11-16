@@ -16,6 +16,8 @@ on:
       - 'qa/work-anim-regression.cjs'
       - '.github/workflows/work-anim-regression.yml'
   workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   work-anim:
     runs-on: ubuntu-latest

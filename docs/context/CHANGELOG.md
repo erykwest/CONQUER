@@ -36,6 +36,9 @@ Le figure di eventi, giostra, gogna, forca, patibolo, tribunale e personale in c
 
 Fissati dal product owner i rapporti sul riferimento **fanteria standard 1×**: **messaggero a piedi 1×**, **cavalleria standard e messaggero a cavallo 2×**, **carri per mercanti, rifornimenti e immigrati 1,5×**, a parità di percorso e condizioni. Riconosciuto il debito di integrazione: `src/settlement-convoys.js` e prototipo `messages` utilizzano ancora velocità convenzionali di 22 U/giorno, non una scala World/Feudal unificata. Aggiornati REMOTE-CONTROL-SCOPE, MARCH, convoys-skeleton, D-WORLD-SPEED-261115, backlog WORLD-SPEED-01 e SRS mobile v0.15 in draft PR #222. **Solo documentazione, nessun runtime/salvataggio modificato.**
 
+## 2026-11-15 — UI v2: ispettore dell'edificio selezionato, fix rapidi (branch `fix/inspector-quickfixes`)
+
+- Revisione dell'ispettore su `main` e layout TEST: crash del disegno animali, piazzale senza etichette, ispettore assente fuori da Costruisci, blocchi stanze vuoti, opzioni grigie senza motivo, demolizione senza conferma. Tutti corretti su branch; schede interne e anteprima dei costi restano aperte nel [BACKLOG](BACKLOG.md). Stato e prove in [STATUS](STATUS.md). ROADMAP e DECISIONS invariate.
 
 ## 2026-11-15 — MSG-FOOT-01 · Messaggero a piedi senza cavalli (solo design)
 
@@ -45,6 +48,33 @@ Chiarito il sistema delle comunicazioni feudali: in assenza di cavalli, **messag
 
 Il product owner ha approvato **solo statistiche aggregate dei server senza login**, escludendo mappe politiche, classifiche nominali e dettagli strategici/gestionali delle campagne in corso. Codex/Wiki e sito informativo restano pubblici. Inserito il vincolo di autorizzazione per dati individuali anche dopo login; aggiornati `docs/MULTIPLAYER-SERVER-SCOPE.md`, `docs/REMOTE-CONTROL-SCOPE.md`, decisione D-MP-PUBLIC-261115 e backlog MP-PUBLIC-01. **Nessuna funzionalità o API implementata; ROADMAP/STATUS invariati.**
 
+## 2026-11-13 — AUDIT-261113 · Audit post-merge, hardening e semplificazione
+
+13/11/2026 — `fix/audit-hardening-20261113` (pre-merge):
+- Audit delle 82 PR mergiate dal 30/10: nessuna sovrascritta; corretti i bug trovati (upgrade automatici fermi, disboscamento senza operai col Job Manager, torre H4 troncata al load, load fallito sovrascritto dall'autosave, latrina verificata sul mondo sbagliato, riserva dei soldati, decreti del sabato, cache del render, XSS dai nomi di quartiere).
+- Prestazioni: cache di feritoie e stanze esterne, ricerca del mare, roster dei carrettieri, ombreggiatura delle mesh.
+- Semplificazione a comportamento invariato: `src/settlement-util.js`, politiche L1/L2 unificate, `activeRooms`, Dijkstra delle campane unico, `InstitutionPanel`; rimossa la copia morta `src/economy/` (STATUS e BACKLOG che la citano restano come storia).
+- CI: suite completa su ogni PR non documentale, sintassi anche dei `.mjs`, permessi in sola lettura, run settimanali dei test browser, `perf.yml`, guardia degli script orfani, Context sync esteso.
+- Seguiti in BACKLOG (decisioni sulle stanze, `laborAllocation` per frame, lazy load dei modelli, divisione dei file grandi).
+
+STATUS, BACKLOG e CHANGELOG aggiornati; DECISIONS e ROADMAP invariate (correzioni e refactor senza nuove regole di gioco; il free build ristretto ai cantieri riallinea il comportamento allo scopo dichiarato da #194).
+
+### 2026-11-15 — Spiaggia sotto le scarpate (branch fix/coastal-cliff-beach-20261115)
+
+- Allineato main `1911369` (hardening #239), senza conflitti. Ripetuti PASS occlusione, coast, water-surface, wooded-relief, tree-bark ed export Wiki; cinque scene ripetute sulla versione integrata. CI da verificare sul nuovo SHA.
+- Corretto l'ordine del disegno: sabbia e sponde di mare/lago/acquitrinio precedono i rilievi; acqua e confluenze conservano il proprio passaggio successivo. Stesso percorso per Canvas e texture WebGL. Ricette, larghezze e quote invariate.
+- Nuova regressione sul percorso reale terreno/ambiente: prima FAIL (sabbia sulla scarpata), dopo PASS in 16 combinazioni mare/lago, quattro rotazioni, isometria/vista dall'alto. Pixel della texture WebGL verificati; cinque snapshot costieri prima/dopo e cinque scenari idrici PASS. Lab Territorio: 16 invariati, zero errori, cinque avvisi di schema.
+- Implementato solo sul branch, non mergiato; CI da verificare sul commit pubblicato. [Prove e riproduzione](SHORE-RELIEF-FIX-2026-11-15.md). Roadmap e decisioni invariate: applicazione del contratto esistente di rilievo.
+
+### 2026-11-15 — Audit post-merge regionale, correzioni su branch
+
+- Merge autorizzato dall'utente: integrato main `1c27aeb` (torre a D), con soli conflitti documentali uniti. Precedente CI `5854c03`: 14 workflow PASS; nuovi controlli da verificare prima del merge definitivo. Restano aperti latenza locale e quota collinare costiera.
+- Allineamento finale main `17645c2`; CI Runtime ha rilevato il digest Wiki obsoleto dopo le correzioni: rigenerato solo `sourceDigest`, contenuti invariati. Wiki regression ed export --check PASS locali; nuova CI da verificare.
+- Esito consolidato locale: **201/202 PASS**, unico FAIL fondazione (116,07 ms > 100 ms). PR #250 draft, non mergiata. Integrato main `2782fc0` preservando pattuglie/porte stradali; controlli mirati post-integrazione PASS. CI della PR da verificare sul nuovo SHA.
+- Base verificata main `50096df` (PR #162); correzioni in `fix/regional-postmerge-20261115`, non mergiate. Riprodotti e corretti drenaggio cancellato da bordo montuoso, chiome perse con cache calda e selettore incoerente con i quattro biomi.
+- [Rapporto completo](POSTMERGE-REGRESSION-2026-11-15.md): base 198/199 test PASS dopo quattro ripetizioni LF; resta APERTO il picco della pianificazione stradale oltre 100 ms. Nuovi tre test prima FAIL/dopo PASS e ripetizione completa sul branch.
+- Browser: otto scene regionali, cinque idriche e apertura reale dalla regione; screenshot finali rivisti. Asset Lab completo: 1.612 render, zero errori ma 157 avvisi e baseline da riconciliare; Territorio corretto 16 render invariati. Nessuna accettazione massiva delle firme.
+- Roadmap/decisioni e bilanciamenti invariati. QA e limiti documentati per il commit regionale; le successive PR di main richiedono verifica propria.
 
 ### 2026-11-15 — FIELD-LEND preservato nel merge regionale
 

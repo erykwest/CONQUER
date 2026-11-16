@@ -54,6 +54,17 @@ test('upgrading an automatic public bridge still requires its materials and staf
  reset();run("State.bridge={id:'bridge',type:'bridge',auto:true,variant:'wood',a:{x:100,y:100},b:{x:103,y:100},length:3,width:1.2};State.previous=structureUpgradeSnapshot(State.bridge);State.bridge.variant='stone';State.structures.push(State.bridge);beginStructureUpgrade(State.bridge,State.previous,{stone:10},1)");
  assert.equal(run("State.bridge.construction.version"),2);assert.equal(run("constructionMaterialInfo(State.bridge).progress"),0);
  run("State.clock.day=.52;tickConstructionWork(0,.52)");assert.equal(run("State.bridge.construction.workDone"),0);
+ run("window.ConquerEconomy.state().castleGold=50");
+ assert.equal(run("window.ConquerEconomy.jobManager(.6).tasks.find(t=>t.key==='builders').demand"),0,'a site waiting for materials reserves no builders');
+ run("window.ConquerEconomy.state().castle.stone=10;for(let d=1;d<5;d++){State.clock.day=d;tickConstructionWork(d-1+(d===1?.52:0),d)}");
+ assert.equal(run("underConstruction(State.bridge)"),false,'paid crew completes the upgrade of an automatic structure');
+ assert(run("State.bridge.construction.wagesPaid>0&&window.ConquerEconomy.state().castleGold<50"),'the lord pays the upgrade wages');
+ assert.equal(run("window.ConquerEconomy.state().castle.stone"),0);
+});
+test('free build stays scoped to construction: direct spending still charges the treasury',()=>{
+ reset();run("State.devBuild.freeBuild=true;window.ConquerEconomy.state().castleGold=5");
+ assert.equal(run("canAfford({gold:10})"),false);assert.equal(run("spendCost({gold:10})"),false);
+ assert.equal(run("spendCost({gold:4})&&window.ConquerEconomy.state().castleGold"),1);
 });
 test('renovation save state retains exact quote and rollback through JSON migration',()=>{
  reset();run("StructureCommands.setHeight('t',2);State.saved=JSON.stringify(State.structures[1]);State.structures[1]=migrateStructures([JSON.parse(State.saved)])[0]");

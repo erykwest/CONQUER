@@ -196,6 +196,25 @@ function roomExteriorPlacement(s,index,fn){
   }
   return null;
 }
+// Room placements of a structure, memoised: a placement scans every structure for obstacles and the
+// tower faces for walls, and the renderers, the slit rows (towerSlitFace, per face and floor), archer
+// slots and the garrison ask for it many times a frame. The memo lives for one structureMemoEpoch
+// (settlement-render.js: any scene/navigation/structure-list change, at most a second) and one
+// structureVisualKey of s (its rooms, variants, geometry); outside the game runtime it is off.
+// Broken state and the upgrade elements' active rules are always read live.
+const roomExteriorPlacementMemo=new WeakMap();
+function roomExteriorRoomPlacements(s){
+  const fns=Array.isArray(s.functions)?s.functions:[];
+  const compute=()=>fns.map((fn,i)=>roomExteriorSpec(fn)?roomExteriorPlacement(s,i,fn):null);
+  const epoch=typeof structureMemoEpoch==='function'?structureMemoEpoch():0;
+  if(!epoch)return compute();
+  const own=typeof structureVisualKey==='function'?structureVisualKey(s):JSON.stringify(fns);
+  const hit=roomExteriorPlacementMemo.get(s);
+  if(hit&&hit.epoch===epoch&&hit.own===own)return hit.list;
+  const list=compute();
+  roomExteriorPlacementMemo.set(s,{epoch,own,list});
+  return list;
+}
 // Placed elements of a structure (rooms whose function has an exterior element and fits).
 // Broken ones are left out unless asked for.
 function roomExteriorElements(s,{broken=false}={}){
@@ -206,9 +225,13 @@ function roomExteriorElements(s,{broken=false}={}){
     e.broken=roomExteriorBroken(s,e.index);
     if(broken||!e.broken)out.push(e);
   }
+  if(!s.functions?.some(roomExteriorSpec))return out;
+  const placed=roomExteriorRoomPlacements(s);
   (Array.isArray(s.functions)?s.functions:[]).forEach((fn,i)=>{
     if(!roomExteriorSpec(fn))return;
-    const e=roomExteriorPlacement(s,i,fn);if(!e)return;
+    const p=placed[i];if(!p)return;
+    // A copy: callers tag and filter the elements they get.
+    const e={...p};
     e.broken=roomExteriorBroken(s,i);
     if(broken||!e.broken)out.push(e);
   });
@@ -315,7 +338,7 @@ function roomExteriorTakesWindow(s,side,z,off){
 }
 // Tower slits ask this: the face of a tower garderobe has no slit on its floor nor below (the chute).
 function roomExteriorTakesTowerFace(s,face,floor){
-  if(s?.type!=='tower'||!s.functions?.some(roomExteriorSpec))return false;
+  if(s?.type!=='tower'||!s.functions?.some(fn=>roomExteriorSpec(fn)?.mount==='face'))return false;
   return roomExteriorElements(s,{broken:true}).some(e=>e.side==='tower'&&e.face===face&&floor<=e.floor);
 }
 // Element hit by an impact point (artillery), within reach of its box.

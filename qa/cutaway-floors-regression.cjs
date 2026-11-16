@@ -84,7 +84,7 @@ const fnSrc=(text,name)=>{const m=text.match(new RegExp('function '+name+'\\([^)
   const ctx=vm.createContext({window,State,Math,Object,Number,Array,Map,String,Float32Array,
     isPlanView:()=>false,rotateViewPoint:p=>({x:p.x,y:p.y})});
   vm.runInContext(core.slice(core.indexOf('const CIVIC_TYPES='),core.indexOf('function civicParts(')),ctx);
-  for(const f of ['assets/civic-models.js','settlement-mesh3d.js','settlement-civic3d.js'])vm.runInContext(src(f),ctx);
+  for(const f of ['settlement-util.js','assets/civic-models.js','settlement-mesh3d.js','settlement-civic3d.js'])vm.runInContext(src(f),ctx);
   const C3=window.ConquerCivic3D;
   const hall=(level,floor)=>({id:'th',type:'townhall',x:0,y:0,angle:0,civicLevel:level,...(floor==null?{}:{cutawayFloor:floor})});
   assert.deepEqual([1,2,3].map(l=>C3.floorCount(hall(l))),[2,2,3],'storeys of the L1-L3 town hall models');
@@ -134,7 +134,8 @@ const fnSrc=(text,name)=>{const m=text.match(new RegExp('function '+name+'\\([^)
   assert.match(src('settlement-castle.js'),/height=Math\.min\(full,cutawayCeilingZ\(s\)\)/,'2.5D castle cut');
   assert.match(src('settlement-world3d.js'),/H=Math\.min\(HF,cutawayCeilingZ\(s\)\)/,'WebGL castle cut');
   assert.match(src('settlement-world3d.js'),/cutawayCeilingZ\(s\),s\.x\?\?s\.a\?\.x/,'WebGL cutaway rebuilds on a floor change');
-  assert.match(src('settlement-render.js'),/s\.cutawayFloor\?\?null/,'2.5D overlay cache key');
+  // The 2.5D overlay key: castleBodyVisualSignature over structureVisualKey, whose fields list has the floor.
+  assert.match(src('settlement-render.js'),/STRUCTURE_VISUAL_FIELDS=[^;]*'cutawayFloor'/,'2.5D overlay cache key');
   // The crest (merlons, machicolations, inner roof) goes with the floors above.
   assert.match(src('settlement-castle-structures.js'),/underConstruction\(s\)\|\|\(typeof cutawayCrestHidden==='function'&&cutawayCrestHidden\(s\)\)\)continue/,'2.5D battlements skip a cut crest');
   assert.match(src('settlement-castle-structures.js'),/function battlementBrazierSources\(\)\{[\s\S]{0,400}cutawayCrestHidden\(s\)/,'the roof brazier goes with the crest');

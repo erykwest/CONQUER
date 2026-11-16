@@ -36,7 +36,11 @@ function world({gold=500,posts=16,horses=3,enlistable=20,wells=[{x:100,y:100}],w
     setAlarmMode:m=>{alarm=m;return true},withdrawPatrols:n=>{let k=0;while(k<n&&units.some(u=>u.kind==='patrol')){units.splice(units.findLastIndex(u=>u.kind==='patrol'),1);k++}return k}};
   ctx.ConquerAlarmBells={TOWER_RADIUS:[10,13,16],HOP:.6,bells:()=>ctx.State.structures.filter(s=>s.bell==='bell').map(s=>({id:s.id,x:s.x,y:s.y,r:13})),
     origin:()=>({id:'keep',x:wells[0].x,y:wells[0].y})};
-  vm.createContext(ctx);vm.runInContext(src('settlement-soldiers.js'),ctx);
+  vm.createContext(ctx);
+  // The genuine (pure) signal Dijkstra of settlement-alarm-bells.js.
+  const bellsSrc=src('settlement-alarm-bells.js'),at=bellsSrc.indexOf('\n  function shortestSignal(');
+  vm.runInContext(bellsSrc.slice(at,bellsSrc.indexOf('\n  function ',at+1)),ctx);
+  ctx.ConquerAlarmBells.shortestSignal=ctx.shortestSignal;vm.runInContext(src('settlement-soldiers.js'),ctx);
   return{M:ctx.ConquerSoldiers,ctx,siege,econ,units,enemy,alarm:()=>alarm,setAlarm:m=>{alarm=m}};
 }
 const tower=(id,x,y,extra={})=>({id,type:'tower',shape:'square',size:1.5,level:2,x,y,material:'stone',...extra});

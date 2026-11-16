@@ -30,6 +30,9 @@ on:
       - '.github/workflows/tower-variants-regression.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   tower-variants:
     runs-on: ubuntu-latest

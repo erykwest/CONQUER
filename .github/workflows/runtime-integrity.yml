@@ -30,9 +30,27 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Runtime syntax
+      - name: Runtime syntax (src/**/*.js, src/**/*.mjs, api/*.js)
+        shell: bash
         run: |
-          for file in src/*.js api/*.js; do node --check "$file"; done
+          # ES-module .js files (export/import without a package.json "type") are
+          # re-checked as .mjs so the result does not depend on Node's syntax detection.
+          failed=0
+          count=0
+          while IFS= read -r -d '' file; do
+            count=$((count + 1))
+            if node --check "$file" 2>"$RUNNER_TEMP/check.err"; then continue; fi
+            if [[ "$file" == *.js ]] && grep -Eq '^[[:space:]]*(import|export)' "$file"; then
+              cp "$file" "$RUNNER_TEMP/esm-check.mjs"
+              if node --check "$RUNNER_TEMP/esm-check.mjs" 2>"$RUNNER_TEMP/check.err"; then continue; fi
+            fi
+            cat "$RUNNER_TEMP/check.err" >&2
+            echo "::error file=$file::syntax check failed"
+            failed=1
+          done < <({ find src -type f \( -name '*.js' -o -name '*.mjs' \) -print0; find api -maxdepth 1 -type f -name '*.js' -print0; } | sort -z)
+          echo "Syntax-checked $count files"
+          test "$count" -gt 0
+          exit "$failed"
       - name: Local diagnostics and disabled remote telemetry
         run: node --test tests/runtime-integrity.test.mjs
       - name: Autumn foliage calendar and renderer regression

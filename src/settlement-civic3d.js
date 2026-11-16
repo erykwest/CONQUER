@@ -101,7 +101,7 @@
   const BUILT={church1:[{cx:0,cy:-.05,w:2.1,h:4.15},{cx:0,cy:-2.52,w:1.2,h:1.25}],
     tavern1:[{cx:0,cy:.77,w:2.2,h:3.46},{cx:.6,cy:-1.72,w:3.4,h:1.55}],
     tavern2:[{cx:0,cy:.77,w:2.2,h:3.46},{cx:0,cy:-1.72,w:4.6,h:1.55}]};
-  function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+  const hash=window.ConquerUtil.hash;
   function rng(key){let a=((typeof State!=='undefined'&&Number(State.seed))||1)^hash(String(key));
     return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
   function pick(rnd,list){let r=rnd()*list.reduce((s,[,w])=>s+w,0);for(const [a,w] of list)if((r-=w)<0)return a;return list[0][0]}

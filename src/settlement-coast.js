@@ -10,7 +10,18 @@
 (() => {
   const HEADLAND=1.2,ROCK_LAND=2.6,ROCK_SEA=1.2,BEACH_LAND=3,STEP=1.5;
   const SEA_DIR={north:{x:0,y:-1},south:{x:0,y:1},west:{x:-1,y:0},east:{x:1,y:0}};
-  const seasOf=()=>(typeof State!=='undefined'&&State.environment||[]).filter(f=>f.type==='sea'&&(f.coastlines?.some(c=>c.length>1)||f.coastline?.length>1));
+  // rockAt is asked for every point the road planner samples: filtering a long environment list for
+  // the seas each time cost more than the test itself. Kept while the list, its length and
+  // environmentRevision stay the same and every remembered entry is still a sea with a coastline.
+  const hasCoast=f=>f?.type==='sea'&&(f.coastlines?.some(c=>c.length>1)||f.coastline?.length>1);
+  let seasMemo={list:null,length:-1,rev:null,seas:[]};
+  const seasOf=()=>{
+    const list=typeof State!=='undefined'&&State.environment||[],rev=typeof environmentRevision!=='undefined'?environmentRevision:0;
+    const m=seasMemo;
+    if(m.list===list&&m.length===list.length&&m.rev===rev&&m.seas.every(hasCoast))return m.seas;
+    seasMemo={list,length:list.length,rev,seas:list.filter(hasCoast)};
+    return seasMemo.seas;
+  };
   let cache={key:null,data:null};
   const lerp=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
   // Fine points along the coast from parameter u0 to u1 (u = vertex index + fraction).

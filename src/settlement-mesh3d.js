@@ -35,10 +35,17 @@
     return[uy*vz-uz*vy,uz*vx-ux*vz,ux*vy-uy*vx];
   }
   // Shaded hex colour of triangle t for a fixed world light (WebGL static meshes).
+  // A colour takes only a few shade factors: the shaded hex is kept per (colour, factor).
+  const shadedCache=new Map();
   function shadedHex(mesh,t){
-    const base=rgb(mesh.col[t]),[nx,ny,nz]=triNormal(mesh.pos,t*9);
-    const f=shadeFactor(nx,ny,nz,0,base);
-    return toHex(base.map(c=>c*f));
+    const hex=mesh.col[t],base=rgb(hex),p=mesh.pos,o=t*9;
+    const ux=p[o+3]-p[o],uy=p[o+4]-p[o+1],uz=p[o+5]-p[o+2],vx=p[o+6]-p[o],vy=p[o+7]-p[o+1],vz=p[o+8]-p[o+2];
+    const f=shadeFactor(uy*vz-uz*vy,uz*vx-ux*vz,ux*vy-uy*vx,0,base);
+    let byF=shadedCache.get(hex);
+    if(!byF){if(shadedCache.size>4096)shadedCache.clear();byF=new Map();shadedCache.set(hex,byF)}
+    let out=byF.get(f);
+    if(out===undefined){out=toHex(base.map(c=>c*f));byF.set(f,out)}
+    return out;
   }
   // Depth-sorted painter. meshes: [{pos,col,gi?,groups?,groupBias?,flat?}] in world space;
   // view: {project(x,y,z)->{x,y}, depth(x,y,z) (larger = nearer), turns}. Meshes with
@@ -126,5 +133,15 @@
       project:(x,y,z)=>w2sRaw({x,y},z),
       depth:(x,y,z)=>{if(plan)return z;const q=rotateViewPoint({x,y});return q.x+q.y+ISO_Z*z}};
   }
-  window.ConquerMesh3D={rgb,toHex,rotDir,shadeFactor,shadedHex,drawMeshes,drawCached,gameView};
+  // Every triangle's shadedHex, worked out once per mesh object: the cached house, shop and front
+  // meshes are pushed into a fresh World 3D builder on every rebuild of the buildings buffer.
+  const shadedMemo=new WeakMap();
+  function shadedHexes(mesh){
+    let out=shadedMemo.get(mesh);
+    if(out&&out.length===mesh.col.length&&out.pos===mesh.pos&&out.col===mesh.col)return out;
+    const n=mesh.col.length;out=new Array(n);for(let t=0;t<n;t++)out[t]=shadedHex(mesh,t);out.pos=mesh.pos;out.col=mesh.col;
+    shadedMemo.set(mesh,out);
+    return out;
+  }
+  window.ConquerMesh3D={rgb,toHex,rotDir,shadeFactor,shadedHex,shadedHexes,drawMeshes,drawCached,gameView};
 })();

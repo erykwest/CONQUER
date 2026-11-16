@@ -1,7 +1,7 @@
 // CONQUER interface v2 ("Isole"): floating wood-and-gold tablets over a full-bleed map.
 // Opt-in with ?ui=2 (persisted; ?ui=1 goes back). Reads the game only through window.ConquerGame.
 import { html, render, useState, useEffect, useRef } from '../vendor/htm-preact-3.1.1.js';
-import { T } from './i18n-it.js?v=ui2-quickfix-3-gilda1-wallpatrol2';
+import { T } from './i18n-it.js?v=ui2-insp-2-wallpatrol2';
 
 const STORE_KEY = 'conquer.ui.v2', MODE_KEY = 'conquer.ui.mode', DEV_KEY = 'conquer.dev';
 const params = new URLSearchParams(location.search);
@@ -295,9 +295,9 @@ function structureTitle(d) {
   return S[d.type] || d.label;
 }
 const RES_SHORT = T.resourcesShort;
-function Cost({ cost }) {
+function Cost({ cost, title = I.cost }) {
   const parts = Object.entries(cost || {}).filter(([, v]) => v > 0);
-  return html`<span class="u2-cost" data-tip=${I.cost} data-tip-body=${parts.map(([k, v]) => T.resourcesLong[k] + ' ' + fmt(v)).join(' · ')} tabindex="0">
+  return html`<span class="u2-cost" data-tip=${title} data-tip-body=${parts.map(([k, v]) => T.resourcesLong[k] + ' ' + fmt(v)).join(' · ')} tabindex="0">
     ${parts.map(([k, v]) => html`<span><small>${RES_SHORT[k] || k}</small>${fmt(v)}</span>`)}</span>`;
 }
 const controlTip = (ctl, type) => {
@@ -308,11 +308,13 @@ const controlTip = (ctl, type) => {
 function Control({ ctl, run, type }) {
   const label = I.controls[ctl.key], tip = controlTip(ctl, type);
   // Buttons show a short label; the full name (and any detail after " · ") goes to the tooltip.
+  // A greyed-out option explains itself: its own reason, else the control's rule.
+  const why = o => o.disabled ? (I.reasons[o.reason] || o.reason || (typeof tip === 'string' ? tip : null) || I.disabledHint) : null;
   if (ctl.options) return html`<${Row} label=${label} tip=${tip}>
     <${Seg} options=${ctl.options.map(o => {
       const [head, detail] = String(o.label || '').split(' · ');
-      return o.word ? { ...o, label: I.short[o.word] || I.words[o.word], tip: I.words[o.word] }
-        : { ...o, label: head, tip: detail ? head : null, tipBody: detail || null };
+      return o.word ? { ...o, label: I.short[o.word] || I.words[o.word], tip: I.words[o.word], tipBody: why(o) }
+        : { ...o, label: head, tip: detail || o.disabled ? head : null, tipBody: [detail, why(o)].filter(Boolean).join(' · ') || null };
     })} onPick=${o => run(ctl.cmd, o.value)} /></${Row}>`;
   if (ctl.rotate) return html`<${Row} label=${label + ' ' + ctl.angle + '°'} tip=${tip}>
     <${Seg} options=${[{ label: '−15°', v: -1, tip: I.rotateLeft }, { label: '180°', v: 'flip', tip: I.rotateFlip }, { label: '+15°', v: 1, tip: I.rotateRight }]}
@@ -333,24 +335,15 @@ function CrossingPanel({ id }) {
   });
   return html`<div class="u2-legacy" ref=${ref}></div>`;
 }
-// CHIESA-01: the Church tab (treasury, Favour, gifts) comes from settlement-church.js as markup.
-function ChurchPanel({ id }) {
+// Institution tabs come as markup from their module, named by `api`: CHIESA-01 window.ConquerChurch
+// (treasury, Favour, gifts; settlement-church.js), GILDA-01 window.ConquerGuild (workshop bonus, officials).
+function InstitutionPanel({ id, api }) {
   const ref = useRef(null);
   useEffect(() => {
     const s = State.structures.find(x => x.id === id);
     if (!ref.current || !s) return;
-    ref.current.innerHTML = window.ConquerChurch?.panelHtml?.(s) || '';
-    window.ConquerChurch?.bindPanel?.(ref.current);
-  });
-  return html`<div class="u2-legacy" ref=${ref}></div>`;
-}
-// GILDA-01: the Guild tab (workshop bonus, officials) comes from settlement-guild.js as markup.
-function GuildPanel({ id }) {
-  const ref = useRef(null);
-  useEffect(() => {
-    const s = State.structures.find(x => x.id === id);
-    if (!ref.current || !s) return;
-    ref.current.innerHTML = window.ConquerGuild?.panelHtml?.(s) || '';
+    ref.current.innerHTML = window[api]?.panelHtml?.(s) || '';
+    window[api]?.bindPanel?.(ref.current);
   });
   return html`<div class="u2-legacy" ref=${ref}></div>`;
 }
@@ -373,6 +366,11 @@ function Inspector({ snap, cmd }) {
   const d = snap.selection?.detail;
   if (!d) return null;
   const run = (name, ...args) => cmd.structure(name, d.id, ...args);
+  // Demolition (or cancelling a site) is not undoable: ask first.
+  const demolish = () => {
+    const name = structureTitle(d) || d.label || '';
+    if (confirm(d.building ? I.cancelSiteConfirm(name) : I.demolishConfirm(name))) cmd.demolish(d.id);
+  };
   // Construction has a different palette from the operational inspector.
   // This branch intentionally precedes every completed-building control.
   if (d.building) {
@@ -381,7 +379,7 @@ function Inspector({ snap, cmd }) {
     return html`<${Card} title=${structureTitle(d)} sub=${S.sub} onClose=${cmd.deselect}
       footer=${html`<${Cost} cost=${d.cost} />
         <button type="button" class="u2-icon-btn u2-danger" aria-label=${I.demolish}
-          data-tip=${I.demolish} onClick=${() => cmd.demolish(d.id)}>
+          data-tip=${I.demolish} onClick=${demolish}>
           <${Icon} name="delete" size=${18} /></button>`}>
       <div class="u2-stats">
         <${Stat} label=${S.progress} value=${Math.round(b.progress * 100) + '%'} />
@@ -410,15 +408,19 @@ function Inspector({ snap, cmd }) {
 
   const sub = d.building ? I.underConstruction(d.building.days) : d.houseLevel ? 'L' + d.houseLevel
     : d.well ? (d.well.center ? d.well.villageName || I.wellCenter : d.well.name || I.wellUnnamed) : I.completed;
-  const facts = d.facts.map(f => [I.facts[f.key], f.key === 'masonry' ? I.masonryValues[f.value] || f.value : f.center ? I.wellCenter + ' · ' + f.value : f.value]);
+  // Structures without rooms (walls, piers…) do not show an empty rooms block.
+  const noRooms = d.rooms && !d.rooms.pending && d.rooms.slots.length === 0;
+  const facts = d.facts.filter(f => !(noRooms && f.key === 'rooms'))
+    .map(f => [I.facts[f.key] || f.key, f.key === 'masonry' ? I.masonryValues[f.value] || f.value : f.center ? I.wellCenter + ' · ' + f.value : f.value]);
   if (d.industry) facts.push([I.workers + ' L' + d.industry.tier, d.industry.workers + '/' + d.industry.max], [I.owner, d.industry.owner === 'lord' ? I.ownerLord : I.ownerPrivate]);
   const hp = d.integrity;
   return html`<${Card} title=${structureTitle(d)} sub=${sub} onClose=${cmd.deselect}
-    footer=${html`<${Cost} cost=${d.cost} />
+    footer=${html`<${Cost} cost=${d.cost} title=${I.buildCost} />
       <a class="u2-codex-link" href=${window.ConquerWikiHost?.href() || './wiki/'} onClick=${e => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) { e.preventDefault(); window.ConquerWikiHost?.openSelection(); } }}>${T.codexEntry}</a>
-      <button type="button" class="u2-icon-btn u2-danger" aria-label=${I.demolish} data-tip=${I.demolish} onClick=${() => cmd.demolish(d.id)}><${Icon} name="delete" size=${18} /></button>`}>
+      <button type="button" class="u2-icon-btn u2-danger" aria-label=${I.demolish} data-tip=${I.demolish} onClick=${demolish}><${Icon} name="delete" size=${18} /></button>`}>
     ${d.building && html`<${Bar} value=${d.building.progress} max=${1} />`}
     ${facts.length > 0 && html`<div class="u2-stats">${facts.map(([k, v]) => html`<${Stat} label=${k} value=${v} />`)}</div>`}
+    ${d.yard?.over && html`<p class="u2-warn">${I.yardOver(fmt(d.yard.used), fmt(d.yard.capacity))}</p>`}
     ${d.annex && html`<${Row} label=${I.annex} tip=${I.annexHelp}>
       <${Seg} options=${[{ label: I.annexParent, disabled: !d.annex.parentId }]} onPick=${() => cmd.select(d.annex.parentId)} /></${Row}>`}
     ${d.well && html`<${WellPanel} d=${d} run=${run} />`}
@@ -471,7 +473,7 @@ function Inspector({ snap, cmd }) {
     ${d.keepPlans && d.keepPlans.floors.map(f => html`<${Row} label=${I.keepPlan(f.floor)} tip=${TIP.keepPlan}>
       <${Seg} options=${d.keepPlans.plans.map(p => ({ label: I.keepPlans[p.value] || p.value, active: p.value === f.plan, v: p.value, tip: I.keepPlanRooms(p.rooms) }))}
         onPick=${o => run('setKeepFloorPlan', f.floor, o.v)} /></${Row}>`)}
-    ${d.rooms && html`<div class="u2-group"><span class="u2-label" data-tip=${I.roomsTitle} data-tip-body=${TIP.rooms} tabindex="0">${I.roomsTitle}<i aria-hidden="true">?</i></span>
+    ${d.rooms && !noRooms && html`<div class="u2-group"><span class="u2-label" data-tip=${I.roomsTitle} data-tip-body=${TIP.rooms} tabindex="0">${I.roomsTitle}<i aria-hidden="true">?</i></span>
       ${d.rooms.pending ? html`<p class="u2-hint">${I.roomsPending}</p>` : d.rooms.slots.length === 0 ? html`<p class="u2-hint">${I.roomsNone}</p>` :
         html`<div class="u2-rooms">${d.rooms.slots.map(r => html`<label class="u2-room" data-tip=${T.floor((d.keepPlans ? r.floor : r.index) + 1)} data-tip-body=${I.room((d.keepPlans ? r.floor : r.index) + 1, r.size, r.units)}>
           <span>P${(d.keepPlans ? r.floor : r.index) + 1}${d.keepPlans ? String.fromCharCode(97 + r.room) : ''}${r.size === 'large' ? '+' : ''}</span>
@@ -480,8 +482,8 @@ function Inspector({ snap, cmd }) {
             ${r.options.map(o => html`<option value=${o.value} disabled=${!o.allowed}>${T.functions[o.value] || o.value}</option>`)}
           </select></label>`)}</div>`}</div>`}
     ${d.legacy === 'crossing' && html`<${CrossingPanel} id=${d.id} />`}
-    ${d.type === 'church' && html`<${ChurchPanel} id=${d.id} />`}
-    ${d.type === 'guild' && html`<${GuildPanel} id=${d.id} />`}
+    ${d.type === 'church' && html`<${InstitutionPanel} id=${d.id} api="ConquerChurch" />`}
+    ${d.type === 'guild' && html`<${InstitutionPanel} id=${d.id} api="ConquerGuild" />`}
     ${hp && html`<div class="u2-group"><span class="u2-label" data-tip=${I.integrity} data-tip-body=${TIP.integrity} tabindex="0">${I.integrity}<i aria-hidden="true">?</i></span>
       <div class="u2-meter" data-tip=${I.masonry} data-tip-body=${hp.core + ' / ' + hp.coreMax}><small>${I.masonry}</small><${Bar} value=${hp.core} max=${hp.coreMax} /></div>
       ${hp.door != null && html`<div class="u2-meter" data-tip=${I.door} data-tip-body=${hp.door + ' / ' + hp.doorMax}><small>${I.door}</small><${Bar} value=${hp.door} max=${hp.doorMax} /></div>`}
@@ -705,13 +707,16 @@ function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [mode]);
   const cmd = game.commands;
+  // A selected structure shows its inspector in every mode; closing it brings the mode card back.
   return html`
     <${ModeBar} mode=${mode} setMode=${setMode} />
     <${ResourceBar} snap=${snap} cmd=${cmd} />
     ${mode === 'build' && html`<${ToolRail} snap=${snap} cmd=${cmd} />${snap.selection?.detail
       ? html`<${Inspector} snap=${snap} cmd=${cmd} />` : html`<${ToolCard} snap=${snap} cmd=${cmd} />`}`}
-    ${mode === 'manage' && html`<${ManageRail} section=${section} setSection=${setSection} /><${ManageCard} section=${section} game=${game} />`}
-    ${mode === 'defend' && html`<${DefendRail} section=${defSection} setSection=${setDefSection} /><${DefendCard} section=${defSection} game=${game} snap=${snap} />`}
+    ${mode === 'manage' && html`<${ManageRail} section=${section} setSection=${setSection} />${snap.selection?.detail
+      ? html`<${Inspector} snap=${snap} cmd=${cmd} />` : html`<${ManageCard} section=${section} game=${game} />`}`}
+    ${mode === 'defend' && html`<${DefendRail} section=${defSection} setSection=${setDefSection} />${snap.selection?.detail
+      ? html`<${Inspector} snap=${snap} cmd=${cmd} />` : html`<${DefendCard} section=${defSection} game=${game} snap=${snap} />`}`}
     <${TimeBar} snap=${snap} cmd=${cmd} />
     <${Toast} snap=${snap} />
     <${Tooltip} />`;

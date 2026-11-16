@@ -109,6 +109,6 @@ console.log('PASS towers hooked to a gate enter from the gate rear, interior sid
   assert.equal(towerWindowGivesWayToDoor(t,face(0,1),2),true,'south face, storey 2: the wall door takes the window place');
   assert.equal(towerWindowGivesWayToDoor(t,face(-1,0),2),false,'a face without a door keeps its window');
   assert.equal(towerWindowGivesWayToDoor(t,face(1,0),3),false,'other storeys keep their window');
-  assert.match(fs.readFileSync(__dirname+'/../src/settlement-world3d.js','utf8'),/\(s\.isMastio\?'M':''\)/,'World3D rebuilds doors and windows when the mastio changes');
+  assert.match(fs.readFileSync(__dirname+'/../src/settlement-render.js','utf8'),/STRUCTURE_VISUAL_FIELDS=[^;]*'isMastio'/,'both renderers rebuild doors and windows when the mastio changes');
   console.log('PASS wall-walk doors take the place of the window on their face');
 }

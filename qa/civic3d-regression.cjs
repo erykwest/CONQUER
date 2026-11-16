@@ -13,7 +13,7 @@ const slice=(text,from,to)=>text.slice(text.indexOf(from),text.indexOf(to,text.i
 const window={},State={season:'summer'};
 const ctx=vm.createContext({window,State,Math,Object,Number,Array,Map,String,Float32Array});
 vm.runInContext(slice(core,'const CIVIC_TYPES=','function civicParts(')+slice(annexes,'const CIVIC_ANNEX_CATALOG=','function isCivicAnnex('),ctx);
-for(const f of ['assets/civic-models.js','settlement-mesh3d.js','settlement-civic3d.js'])vm.runInContext(src(f),ctx);
+for(const f of ['settlement-util.js','assets/civic-models.js','settlement-mesh3d.js','settlement-civic3d.js'])vm.runInContext(src(f),ctx);
 const M=window.ConquerCivicModels,C3=window.ConquerCivic3D;
 const run=code=>vm.runInContext(code,ctx);
 

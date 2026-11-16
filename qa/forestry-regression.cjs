@@ -147,4 +147,20 @@ test('DEV Free build pays no wages, the crew still works',()=>{
   h.api.tick(1,5);
   assert.equal(h.side.credited,quote.wood);
 });
+test('managed L1 Job Manager staffs forest clearance through the builder roster',()=>{
+  // Real economy + forestry runtime: the managed roster must count open clearings.
+  const urban=read('qa/urban-regression.cjs').split('let passed=0;')[0];
+  eval(urban+`
+  run(moduleFile('economy'));run(moduleFile('forestry'));run('function renderUI(){}');run("function constructionWorkerPath(){return true}");
+  for(const managed of [false,true]){
+    run("State.devBuild={};State.village={founded:true,wellId:'well',foundingWorkers:3};State.clock.day=0;State.structures=[{id:'well',type:'well',x:100,y:100}];State.economy=null;window.ConquerEconomy.reset();window.ConquerEconomy.state().castleGold=500;");
+    run("State.relief=State.relief||{};State.relief.forestryJobs=[{id:'forest-clear-1',center:{x:110,y:110},radius:3,shape:'round',wood:10,coveredArea:4,construction:{version:2,startedDay:0,lastWorkDay:0,workRequired:3,workDone:0,workers:0,wagesPaid:0}}]");
+    run("window.ConquerEconomy.state().l1Jobs.enabled="+managed);
+    assert.equal(run("window.ConquerForestry.crews(.4).get('forest-clear-1').length"),3,(managed?'managed':'legacy')+' crew');
+    run("window.ConquerForestry.tick(0,5)");
+    assert.equal(run("State.relief.forestryJobs[0].construction.workDone"),3,(managed?'managed':'legacy')+' clearance completes');
+  }
+  assert.equal(run("window.ConquerEconomy.jobManager(.4).tasks.find(t=>t.key==='builders').demand"),0,'a finished clearing frees the roster');
+  `);
+});
 console.log(count+' forestry regression checks passed.');
