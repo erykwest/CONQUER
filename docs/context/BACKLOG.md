@@ -1,5 +1,9 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-16 — PERF-261116 · Prestazioni dei terreni regionali
+
+**FATTO su branch `perf/regional-roads-20261116` (non merge):** la pianificazione delle strade e la cottura del terreno tornano sotto i tempi di prima della #162 (dettagli in [STATUS](STATUS.md)). **Aperto:** il costo rimasto nella cottura è soprattutto in `drawRelief` (rocce e fasce), proporzionale al numero di colline.
+
 ## 2026-11-15 — BC-251105-05 fix · Tetto interno della torre a D e bracere
 
 **IMPLEMENTATO SU BRANCH `fix/dtower-inner-roof-brazier`, NON MERGE.** Dettagli in [STATUS](STATUS.md).

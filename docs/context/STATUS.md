@@ -1,5 +1,22 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-16 — PERF-261116 · Regressione di prestazioni della #162 (branch `perf/regional-roads-20261116`)
+
+- **Trovata dal test antiregressivo profondo** (A/B e bisezione su `main` con `qa/construction-performance.cjs`, scenario castello, due misure per commit). Prima della #162 (a0ed0c75): strade 1,8–2,0 s, disegno a regime 12–14 ms. Dalla #162 (50096dfa) in poi: 4,9–5,7 s e 28–34 ms. La #239 è neutra.
+- **Cause:**
+  - `environmentContains` calcolava `terrainSlopeKind` (via `reliefBandAt`) per ogni foresta prima del test sui confini: con il bosco al 20%, circa 32 volte per punto campionato.
+  - Nella cottura dei tile del terreno, `drawEnvironment` ricostruiva i gusci delle colline e gli occlusori degli alberi per ogni foresta, anche quando non c'erano sprite da disegnare.
+- **CODICE SUL BRANCH, NON MERGE:**
+  - test economici prima della pendenza, che si può anche passare da chi la conosce già (`settlement-world.js`);
+  - gusci e occlusori calcolati una volta per passata e memorizzati con `reliefBandRevision` (`settlement-landscape.js`, `settlement-castle.js`);
+  - chiavi numeriche per `reliefBandAt`.
+- **PROVE:**
+  - Output identici: la griglia di `environmentBlocksPoint`/`roadRepairPointClear` ha lo stesso hash, la geometria delle strade è identica, e i 128 tile del terreno sono identici pixel per pixel.
+  - Dopo il fix: strade 1,0–1,1 s, disegno 9,6–10,0 ms; la cottura dei 128 tile scende da 3,0 a 0,5 s.
+  - 41 regressioni PASS.
+  - Nuova `qa/environment-contains-perf-regression.cjs`: fallisce sul codice precedente e passa sul branch.
+  - mass-battle e fire-collapse senza regressioni.
+
 ## 2026-11-15 — Tetto interno: torre a D e bracere rimosso (branch `fix/dtower-inner-roof-brazier`)
 
 - **CODICE SUL BRANCH, NON MERGE:**

@@ -1,5 +1,11 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-16 — PERF-261116 · Regressione di prestazioni della #162
+
+16/11/2026 — `perf/regional-roads-20261116` (pre-merge): la bisezione individua nella #162 il rallentamento della pianificazione delle strade (×2,6) e del disegno del castello a regime (×2,5). Il fix è a output identico: la pendenza delle foreste si calcola solo dentro il poligono, e gusci e occlusori una volta per passata. Dopo il fix: strade 1,0–1,1 s (erano 5,7), disegno 10 ms (erano 29). Nuova guardia `qa/environment-contains-perf-regression.cjs`.
+
+STATUS, BACKLOG e CHANGELOG aggiornati; DECISIONS e ROADMAP invariate.
+
 ## 2026-11-15 — Tetto interno: torre a D e bracere
 
 `fix/dtower-inner-roof-brazier`: il tetto interno della torre a D corre ora su un colmo (padiglione sul retro, mezzo cono sul davanti) con pendenza unica; il tetto interno toglie il bracere (prima veniva disegnato sopra il tetto, scambiato per una botola). Regola di prodotto registrata: senza bracere gli arcieri della torre non tirano frecce incendiarie (`towerHasBrazier`, da applicare quando le torri avranno frecce incendiarie). Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: nessun contratto cambiato.
