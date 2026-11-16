@@ -87,8 +87,18 @@ const horse=diplomacy([keep]);
 assert.ok(horse.D.spawn(10));
 const h=horse.State.diplomacy.incoming;
 assert.equal(h.by,'courier');assert.ok(!horse.Dove.active());
-const road=Math.abs(80-50)+Math.abs(60-0);         // the stub road: north-south then east-west
+// The horseman halts outside the keep's front door (angle 0: east face, +0.9U clearance),
+// never inside the hall at the keep's centre.
+assert.ok(Math.abs(h.goal.x-61.9)<1e-9&&h.goal.y===80,'the courier stops on the doorstep');
+assert.ok(Math.max(Math.abs(h.goal.x-keep.x),Math.abs(h.goal.y-keep.y))>keep.size/2+.5,'outside the keep footprint');
+assert.deepEqual(h.route.at(-1),h.goal);
+const road=Math.abs(80-50)+Math.abs(61.9-0);       // the stub road: north-south then east-west
 assert.ok(Math.abs(h.arrivalDay-10-road/22)<1e-9,'the courier rides the road at 1/22 day per U');
+// An old save with the courier riding to the keep's centre is moved to the doorstep.
+horse.State.diplomacy.incoming={...h,goal:{x:60,y:80},route:[{x:0,y:50},{x:60,y:80}],doorstep:undefined};
+const moved=horse.D.state().incoming;
+assert.ok(moved.doorstep&&Math.abs(moved.route.at(-1).x-61.9)<1e-9,'old saves: courier moved to the doorstep');
+horse.State.diplomacy.incoming=h;
 horse.D.tick(10,h.arrivalDay);assert.equal(h.phase,'waiting');
 horse.D.finishResponse(false);
 assert.equal(horse.State.diplomacy.incoming.phase,'returning','the courier rides back');
@@ -108,7 +118,8 @@ post.D.finishResponse(true);
 assert.equal(post.State.diplomacy.incoming,null,'the answer leaves by pigeon: no return ride, channel free');
 assert.equal(post.State.diplomacy.history.at(-1).by,'pigeon');
 assert.equal(post.planned.length,1,'an accepted request still plans the tribute caravan');
-assert.equal(post.planned[0].routeDistance,road,'the caravan keeps the road distance, not the pigeon flight');
+// The caravan leaves from the keep itself (its stores), not from the courier's doorstep.
+assert.equal(post.planned[0].routeDistance,Math.abs(80-50)+Math.abs(60-0),'the caravan keeps the road distance, not the pigeon flight');
 console.log('PASS with a dovecote letters arrive by pigeon 4x faster and the answer needs no courier');
 
 // ---------- visual wiring: the lantern on the roof, the cutaway room, the Lab

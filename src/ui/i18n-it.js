@@ -18,7 +18,7 @@ export const T = {
     journalClear: 'Svuota diario', journalClearConfirm: 'Svuotare il diario degli eventi?',
     filters: { all: 'Tutti', danger: 'Gravi', warn: 'Avvisi', info: 'Notizie' },
     phase: { raised: 'Inizio', resolved: 'Risolto', event: 'Evento' },
-    categories: { military: 'Difesa', castle: 'Castello', construction: 'Cantieri', economy: 'Economia', population: 'Popolazione', game: 'Partita', general: 'Generale' },
+    categories: { messages: 'Messaggi', military: 'Difesa', castle: 'Castello', construction: 'Cantieri', economy: 'Economia', population: 'Popolazione', game: 'Partita', general: 'Generale' },
     day: d => 'Giorno ' + d
   },
   // Status lines from the legacy modules that are bare ids or English (phase 5 moves all of them to keys).

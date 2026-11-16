@@ -129,6 +129,67 @@ export function createWatchers(game, center, { econEveryMs = 10000, now = () => 
     return (econCache = out);
   }
 
+  // ---- messages (settlement-diplomacy.js): couriers, pigeon letters, tribute caravans ----
+  const EDGES = { north: 'Nord', south: 'Sud', east: 'Est', west: 'Ovest' };
+  const READ = { id: 'readLetter', label: 'Leggi il messaggio' };
+  const caravansAction = id => ({ id: 'caravans', label: 'Apri carovane', arg: id ?? null });
+  // Raw read of the saved state: ConquerDiplomacy.state() would create it as a side effect.
+  const diplomacy = () => S()?.diplomacy && S().diplomacy.version === 1 ? S().diplomacy : null;
+  function messageConditions() {
+    const out = [], m = diplomacy()?.incoming;
+    if (m?.phase === 'waiting') out.push({ key: 'message-' + m.id, severity: 'warn', category: 'messages',
+      title: m.by === 'pigeon' ? 'Lettera alla colombaia' : 'Messaggero alla porta del Mastio',
+      detail: 'La provincia a ' + (EDGES[m.edge] || m.edge) + ' chiede ' + fmt(m.request) + ' monete e attende una risposta.',
+      resolvedTitle: 'Messaggio evaso', action: READ });
+    for (const c of caravanList()) if (c.status === 'blocked') out.push({ key: 'caravan-blocked-' + c.id, severity: 'warn', category: 'messages',
+      title: 'Carovana bloccata', detail: 'Risorse insufficienti per la partenza verso la provincia a ' + (EDGES[c.edge] || c.edge || '?') + '.',
+      resolvedTitle: 'Carovana sbloccata', action: caravansAction(c.id) });
+    return out;
+  }
+  const caravanList = () => { try { return g('ConquerDiplomacy')?.caravans?.() || []; } catch { return []; } };
+  let arrivals = null, answers = null, caravanStatus = new Map();
+  const CARAVAN_EVENTS = {
+    planned: c => ({ title: 'Carovana programmata', detail: 'Partenza il giorno ' + Math.ceil(Number(c.departDay) || 0) + '.' }),
+    outbound: c => ({ title: 'Carovana partita', detail: 'Verso la provincia a ' + (EDGES[c.edge] || c.edge || '?') + '.' }),
+    returning: () => ({ title: 'Carovana sulla via del ritorno', detail: 'Il carico è stato consegnato.' }),
+    completed: () => ({ title: 'Carovana rientrata', detail: 'L’equipaggio è tornato al castello.' })
+  };
+  function messageEvents(reseed, today) {
+    const x = diplomacy(), m = x?.incoming, history = Array.isArray(x?.history) ? x.history : [];
+    const list = caravanList(), statusNow = new Map(list.map(c => [c.id, c.status]));
+    const sig = h => h ? h.day + '|' + h.edge + '|' + h.accepted : null;
+    if (reseed || !arrivals) {
+      arrivals = new Set(m ? [m.id] : []); answers = sig(history.at(-1)); caravanStatus = statusNow;
+      return;
+    }
+    if (m && m.phase === 'arriving' && !arrivals.has(m.id)) {
+      arrivals.add(m.id);
+      center.push({ key: 'msg-arrive-' + m.id, severity: 'info', category: 'messages',
+        title: m.by === 'pigeon' ? 'Colombo viaggiatore in arrivo' : 'Messaggero in arrivo',
+        detail: m.by === 'pigeon' ? 'Una lettera dalla provincia a ' + (EDGES[m.edge] || m.edge) + ' vola verso la colombaia.'
+          : 'Un cavaliere dalla provincia a ' + (EDGES[m.edge] || m.edge) + ' cavalca verso il Mastio.' }, today);
+    }
+    // The history keeps only the last 40 answers: find the last one already announced.
+    const seenAt = answers == null ? -1 : history.map(sig).lastIndexOf(answers);
+    const fresh = sig(history.at(-1)) === answers ? [] : seenAt >= 0 ? history.slice(seenAt + 1) : history.slice(-1);
+    for (const h of fresh) {
+      center.push({ key: 'msg-answer-' + h.day + '-' + h.edge, severity: 'info', category: 'messages',
+        title: h.accepted ? 'Richiesta accettata' : 'Richiesta rifiutata',
+        detail: (h.accepted ? 'Tributo di ' + fmt(h.request) + ' monete alla provincia a ' + (EDGES[h.edge] || h.edge) + ': programma la carovana.'
+          : 'La provincia a ' + (EDGES[h.edge] || h.edge) + ' non riceverà le ' + fmt(h.request) + ' monete.') +
+          (h.by === 'pigeon' ? ' Risposta per colombo.' : h.by === 'horse' ? ' Risposta su un cavallo fresco.' : ''),
+        action: h.accepted ? caravansAction(null) : null }, today);
+    }
+    answers = sig(history.at(-1));
+    for (const c of list) {
+      const before = caravanStatus.get(c.id);
+      if (before === c.status) continue;
+      const make = CARAVAN_EVENTS[c.status];
+      if (before != null && make) center.push({ key: 'caravan-' + c.id + '-' + c.status, severity: 'info', category: 'messages', ...make(c), action: caravansAction(c.id) }, today);
+    }
+    caravanStatus = statusNow;
+  }
+
   function saveConditions() {
     return game.snapshot?.().saveStatus === 'error'
       ? [{ key: 'save', severity: 'warn', category: 'game', title: 'Salvataggio non riuscito', detail: 'L’ultimo salvataggio non è andato a buon fine.', resolvedTitle: 'Partita salvata' }]
@@ -157,6 +218,7 @@ export function createWatchers(game, center, { econEveryMs = 10000, now = () => 
       }
     }
     sites = nowSites; ruins = nowRuins;
+    messageEvents(reseed, today);
     const notes = g('ConquerEconomy')?.state?.()?.events;
     if (Array.isArray(notes)) {
       const keyOf = n => n.day + '|' + n.label;
@@ -175,7 +237,7 @@ export function createWatchers(game, center, { econEveryMs = 10000, now = () => 
     if (!S()) return;
     try {
       events();
-      center.sync([...defenseConditions(), ...castleConditions(), ...siteConditions(), ...economyConditions(), ...saveConditions()], day());
+      center.sync([...defenseConditions(), ...messageConditions(), ...castleConditions(), ...siteConditions(), ...economyConditions(), ...saveConditions()], day());
     } catch (err) { console.warn('alert poll failed', err); }
     center.tick();
   }

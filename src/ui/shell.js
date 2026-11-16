@@ -1,9 +1,9 @@
 // CONQUER interface v2 ("Isole"): floating wood-and-gold tablets over a full-bleed map.
 // Opt-in with ?ui=2 (persisted; ?ui=1 goes back). Reads the game only through window.ConquerGame.
 import { html, render, useState, useEffect, useRef } from '../vendor/htm-preact-3.1.1.js';
-import { T } from './i18n-it.js?v=ui2-insp-2-wallpatrol2-alerts1';
-import { createAlertCenter } from './alerts.js?v=alerts2';
-import { createWatchers } from './alert-watchers.js?v=alerts2';
+import { T } from './i18n-it.js?v=ui2-insp-2-wallpatrol2-alerts3';
+import { createAlertCenter } from './alerts.js?v=alerts3';
+import { createWatchers } from './alert-watchers.js?v=alerts3';
 
 const STORE_KEY = 'conquer.ui.v2', MODE_KEY = 'conquer.ui.mode', DEV_KEY = 'conquer.dev';
 const params = new URLSearchParams(location.search);
@@ -601,6 +601,12 @@ const journalDate = e => {
   try { const c = calendarDateFromDay(e.day); return c.day + ' ' + ['gen', 'feb', 'mar', 'apr', 'mag', 'giu', 'lug', 'ago', 'set', 'ott', 'nov', 'dic'][c.month] + ' ' + c.year; }
   catch { return A.day(Math.floor(e.day)); }
 };
+// Alert buttons: action ids from alert-watchers.js → game commands.
+const ALERT_ACTIONS = {
+  readLetter: () => window.ConquerDiplomacy?.openLetter?.(),
+  caravans: arg => window.ConquerDiplomacy?.openCaravans?.(arg || undefined)
+};
+const runAlertAction = a => { const fn = a && ALERT_ACTIONS[a.id]; if (fn) { fn(a.arg); window.ConquerGame?.emit?.(); } };
 function Journal({ game }) {
   const [, force] = useState(0);
   const [filter, setFilter] = useState('all');
@@ -618,6 +624,7 @@ function Journal({ game }) {
           <time>${journalDate(e)}</time></div>
         ${e.detail && html`<p>${e.detail}</p>`}
         <div class="u2-j-meta"><span>${A.categories[e.category] || e.category}</span><span>${A.phase[e.phase] || e.phase}</span>
+          ${e.action?.id === 'caravans' && html`<button type="button" class="u2-mini" onClick=${() => runAlertAction(e.action)}>${e.action.label}</button>`}
           ${e.focusId != null && State.structures?.some(s => s.id === e.focusId) && html`<button type="button" class="u2-mini" data-tip=${A.focus}
             onClick=${() => game.commands.select(e.focusId)}><${Icon} name="target" size=${12} /></button>`}</div>
       </li>`)}</ol>`}`;
@@ -648,6 +655,7 @@ function Alerts({ openJournal, cmd }) {
             onClick=${() => toggle(a.key)}>
             <b>${a.title}</b>${a.count > 1 && !a.resolved && html`<small>${A.repeated(a.count)}</small>`}
             <span class="u2-chev"><${Icon} name="chevron" size=${14} /></span></button>
+          ${a.action && ALERT_ACTIONS[a.action.id] && html`<button type="button" class="u2-mini u2-alert-act" onClick=${() => runAlertAction(a.action)}>${a.action.label}</button>`}
           <button type="button" class="u2-close" aria-label=${A.dismiss} data-tip=${A.dismiss} onClick=${() => alertCenter.dismiss(a.key)}>×</button>
         </div>
         ${expanded && html`<div class="u2-alert-body">

@@ -160,6 +160,7 @@ body.ui2.ui2-dev #devTools{top:var(--u2-top);right:var(--u2-gap);z-index:12}
 #ui2 .u2-alert-body p{margin:0;font-size:12.5px;line-height:1.35;color:var(--u2-soft)}
 #ui2 .u2-alert-actions{display:flex;flex-wrap:wrap;gap:4px}
 #ui2 .u2-alert-actions .u2-mini{font-weight:600}
+#ui2 .u2-alert-act{flex:0 0 auto;white-space:nowrap}
 #ui2 .u2-alert-timer{position:absolute;left:0;right:0;bottom:0;height:2px;background:rgba(0,0,0,.25)}
 #ui2 .u2-alert-timer i{display:block;height:100%;background:var(--u2-sev);opacity:.7;transition:width .5s linear}
 #ui2 .u2-alerts-more{display:flex;justify-content:center;gap:12px;pointer-events:auto}

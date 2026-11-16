@@ -100,4 +100,20 @@ const small = createAlertCenter({ now: () => t, journalMax: 2 });
 for (let i = 0; i < 5; i++) small.push({ title: 'E' + i });
 assert.deepEqual(small.journal().map(e => e.title), ['E4', 'E3']);
 
+// Actions (messages): kept while active, dropped once resolved, carried into the journal.
+{
+  let u = 0;
+  const box = createAlertCenter({ now: () => u, resolveGrace: 0 });
+  const letter = [{ key: 'message-courier-3', severity: 'warn', category: 'messages', title: 'Messaggero alla porta',
+    resolvedTitle: 'Messaggio evaso', action: { id: 'readLetter', label: 'Leggi il messaggio' } }];
+  box.sync(letter, 1);
+  assert.deepEqual(box.visible().items[0].action, { id: 'readLetter', label: 'Leggi il messaggio', arg: null });
+  assert.equal(box.journal()[0].action.id, 'readLetter');
+  box.sync([], 2);
+  assert.equal(box.visible().items[0].action, null, 'nothing to act on once answered');
+  assert.equal(box.journal()[0].action, null);
+  box.push({ key: 'c', title: 'Carovana partita', action: { id: 'caravans', label: 'Apri carovane', arg: 'caravan-1' } }, 3);
+  assert.equal(box.visible().items.find(a => a.key === 'c').action.arg, 'caravan-1');
+}
+
 console.log('ui-alerts-regression: ok');

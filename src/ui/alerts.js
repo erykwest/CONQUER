@@ -37,14 +37,16 @@ export function createAlertCenter({
       key: entry.key, phase, day: Number.isFinite(day) ? day : null, at: now(),
       severity: phase === 'resolved' ? 'good' : entry.severity,
       category: entry.category || 'general', title: entry.title, detail: entry.detail || '',
-      focusId: entry.focusId ?? null
+      focusId: entry.focusId ?? null, action: phase === 'resolved' ? null : entry.action || null
     });
     if (journal.length > journalMax) journal.length = journalMax;
   }
   const clean = c => ({
     key: String(c.key), severity: SEVERITY[c.severity] != null ? c.severity : 'info',
     category: c.category || 'general', title: String(c.title || ''), detail: String(c.detail || ''),
-    resolvedTitle: c.resolvedTitle ? String(c.resolvedTitle) : null, focusId: c.focusId ?? null
+    resolvedTitle: c.resolvedTitle ? String(c.resolvedTitle) : null, focusId: c.focusId ?? null,
+    // Optional button: { id, label, arg } — the shell maps `id` to a game command.
+    action: c.action && c.action.id ? { id: String(c.action.id), label: String(c.action.label || c.action.id), arg: c.action.arg ?? null } : null
   });
 
   // Conditions currently true. Anything active and missing from the list is resolved.
@@ -66,8 +68,8 @@ export function createAlertCenter({
       }
       const worse = rank(c.severity) > rank(a.severity);
       if (worse) { log({ ...a, ...c }, 'raised', day); a.dismissed = false; a.raisedAt = t; }
-      if (worse || a.title !== c.title || a.detail !== c.detail || a.severity !== c.severity || a.focusId !== c.focusId) {
-        Object.assign(a, { severity: c.severity, title: c.title, detail: c.detail, focusId: c.focusId, resolvedTitle: c.resolvedTitle, category: c.category });
+      if (worse || a.title !== c.title || a.detail !== c.detail || a.severity !== c.severity || a.focusId !== c.focusId || a.action?.arg !== c.action?.arg) {
+        Object.assign(a, { severity: c.severity, title: c.title, detail: c.detail, focusId: c.focusId, resolvedTitle: c.resolvedTitle, category: c.category, action: c.action });
         dirty = true;
       }
     }
@@ -128,6 +130,8 @@ export function createAlertCenter({
         key: a.key, kind: a.kind, severity: a.resolvedAt != null ? 'good' : a.severity, category: a.category,
         title: a.resolvedAt != null && a.resolvedTitle ? a.resolvedTitle : a.title, detail: a.detail,
         resolved: a.resolvedAt != null, focusId: a.focusId, count: a.count,
+        // A resolved condition has nothing left to act on.
+        action: a.resolvedAt != null ? null : a.action,
         // 0..1 of the time left before it leaves by itself (null: stays until resolved or dismissed).
         remaining: Number.isFinite(expiresAt(a)) ? Math.max(0, Math.min(1, (expiresAt(a) - t) / (a.kind === 'event' ? (a.severity === 'danger' ? dangerTtl : eventTtl) : resolvedLinger))) : null
       }));

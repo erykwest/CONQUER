@@ -5,6 +5,9 @@
 **IMPLEMENTATO SU BRANCH `feature/alert-feed`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
 - [x] Pila di avvisi in alto: titolo, dettagli espandibili, chiusura manuale e automatica se risolto.
 - [x] Sezione Gestisci › Diario degli eventi con filtri, persistita per seme.
+- [x] Avvisi collegati ai messaggi (messaggeri, colombi, risposte, carovane) con azioni dirette.
+- [x] Fix: il messaggero a cavallo si ferma davanti alla porta del Mastio, non dentro la sala comune.
+- [ ] Verificare nel gioco la posizione del messaggero con Mastio a ingresso rialzato e a piano terra.
 - [ ] Salvare il diario nel salvataggio di partita (oggi solo `localStorage` del browser).
 - [ ] Centrare la camera sulla struttura con «Mostra sulla mappa» (oggi la seleziona e apre l'ispettore).
 - [ ] Portare i messaggi di stato inglesi dei moduli legacy (`status()`) a chiavi tradotte e farli passare dal centro avvisi.
