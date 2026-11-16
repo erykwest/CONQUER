@@ -235,7 +235,9 @@
   // Toll on a caravan or convoy coming in at the gates. Foreign merchants pay; the fair waives it.
   function toll(source=''){
     const r=rate('toll');if(!(r>0)||active('fair'))return 0;
-    const t=state(),got=round(r*efficiency('toll'));
+    // OUTLAWS: merchants robbed on a road held by brigands pay less at the gate.
+    const trade=Math.max(0,Math.min(1,finite(window.ConquerOutlaws?.tradeFactor?.()??1)));
+    const t=state(),got=round(r*efficiency('toll')*trade);
     t.week.due.toll=round(t.week.due.toll+r);
     t.week.collected.toll=round(t.week.collected.toll+got);
     const e=economy()?.state?.();

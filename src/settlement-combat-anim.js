@@ -90,6 +90,7 @@
       }
       drawSoldierFigureUnmasked(p,z,armed?'unarmed':type,id,phase,livery);
       if(type==='spearman')drawSpear(base,scale,bodyW,bodyH,bodyY,headY,pose);
+      else if(type==='axeman'&&typeof drawAxeAndRoundShield==='function')drawAxeAndRoundShield(base,scale,bodyW,bodyH,bodyY,top,pose);
       else if(armed)drawSword(base,scale,bodyW,bodyH,bodyY,top,id,phase,livery,pose);
       if(pose.flash>0){
         ctx.fillStyle='rgba(255,246,228,'+(.8*pose.flash).toFixed(3)+')';

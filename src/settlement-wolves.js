@@ -5,12 +5,18 @@
 (function(){
   // Two small cohesive packs limit total wolf AI work while making the
   // encounter feel like real wildlife rather than four scattered individuals.
-  const PACK_COUNT=2,MIN_PACK=3,MAX_PACK=6,PACK_SCHEMA='packs-v2';
+  // packs-v3 adds the solitary bear: older saves gain it exactly once.
+  const PACK_COUNT=2,MIN_PACK=3,MAX_PACK=6,PACK_SCHEMA='packs-v3';
   const DETECT=12,LOST=17,MELEE=.85;
+  // Bear: territorial, not a hunter. It ignores soldiers passing at a
+  // distance and charges only those who come near its den or itself.
+  const BEAR_DEN_ALERT=6,BEAR_SELF_ALERT=4,BEAR_LEASH=11;
   let nightCache=null;
   const combat=()=>window.ConquerCombat;
   const isNight=()=>solarIsNight();
   const pack=()=>combat()?.enemy().filter(e=>e.kind==='wolf')||[];
+  const bears=()=>combat()?.enemy().filter(e=>e.kind==='bear')||[];
+  const wildlife=()=>combat()?.enemy().filter(e=>e.faction==='wildlife')||[];
   const hash=s=>(peasantHash('camp-wolf:'+s)>>>0)/4294967296;
   const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
   const live=u=>u&&!u.defeated&&u.stats?.hp!==0&&!u.routing&&u.campState!=='barracks';
@@ -61,6 +67,91 @@
     }
     return wolves;
   }
+  // Forest points by deterministic sampling; the bear prefers a wood well
+  // outside the village. Without forests it still gets a quiet spot.
+  function inForest(p){
+    return(State.environment||[]).some(f=>f.type==='forest'&&
+      typeof environmentContains==='function'&&environmentContains(f,p));
+  }
+  // Attempt keys differ only in their last digits: avalanche the hash so the
+  // attempts really scatter round the village instead of a narrow wedge.
+  const mixed=s=>{
+    let h=peasantHash('camp-bear:'+s)>>>0;
+    h^=h>>>15;h=Math.imul(h,2246822507);h^=h>>>13;h=Math.imul(h,3266489909);h^=h>>>16;
+    return(h>>>0)/4294967296;
+  };
+  function createBear(well){
+    let fallback=null;
+    for(let attempt=0;attempt<160;attempt++){
+      const seed=mixed(State.seed+':'+well.id+':'+attempt);
+      const angle=seed*Math.PI*2,radius=28+mixed(well.id+':r:'+attempt)*22;
+      const p={x:well.x+Math.cos(angle)*radius,y:well.y+Math.sin(angle)*radius};
+      if(!free(p)||combat().areaState(p).yellow)continue;
+      if(!inForest(p)){fallback??=p;continue}
+      return bearAt(well,p,seed);
+    }
+    return fallback?bearAt(well,fallback,.5):null;
+  }
+  function bearAt(well,p,seed){
+    return{id:'wild-bear-'+well.id,kind:'bear',combatKind:'bear',faction:'wildlife',
+      neutral:true,defeated:false,x:p.x,y:p.y,home:{x:p.x,y:p.y},wolfSeed:seed,
+      wolfState:'roaming',wolfMode:'walk',wolfFace:1,wolfWanderIndex:0,
+      wolfDecisionIn:0,wolfTargetId:null,wolfPath:null,wolfPathIndex:1};
+  }
+  // ---- spawning on demand (threat generator, settlement-threats.js) ----
+  const wellNow=()=>State.village?.founded&&State.structures.find(s=>s.id===State.village.wellId&&s.type==='well');
+  const living=list=>list.filter(a=>!a.defeated&&!(a.stats&&a.stats.hp<=0));
+  // A wild spot: a wood 30–55U out, outside the yellow zone (any free spot if no wood).
+  function wildSpot(well,key){
+    let fallback=null;
+    for(let attempt=0;attempt<160;attempt++){
+      const a=mixed(key+':a:'+attempt)*Math.PI*2,r=30+mixed(key+':r:'+attempt)*25;
+      const p={x:well.x+Math.cos(a)*r,y:well.y+Math.sin(a)*r};
+      if(!free(p)||combat().areaState(p).yellow)continue;
+      if(inForest(p))return p;
+      fallback??=p;
+    }
+    return fallback;
+  }
+  // Clear the dead of the fauna before adding new animals (their fall is long over).
+  const clearDead=()=>combat().removeEnemies?.(e=>e.faction==='wildlife'&&(e.defeated||e.stats?.hp<=0));
+  // A new wolf pack moves into the woods. size: 3–6 (default seeded).
+  function spawnPack({size=null,key=null}={}){
+    const well=wellNow(),tactical=combat();if(!well||!tactical?.addEnemies)return null;
+    const k=key||(State.seed+':pack:'+Math.floor(State.clock?.day||0));
+    const center=wildSpot(well,k);if(!center)return null;
+    const n=Number.isInteger(size)?Math.max(MIN_PACK,Math.min(8,size)):MIN_PACK+Math.floor(mixed(k+':n')*(MAX_PACK-MIN_PACK+1));
+    const packId='wild-pack-'+k.replace(/[^\w-]/g,'-'),night=isNight(),members=[];
+    for(let i=0;i<n;i++){
+      for(let t=0;t<22;t++){
+        const a=i*Math.PI*2/n+t*.45,r=.9+(t%6)*.35,p={x:center.x+Math.cos(a)*r,y:center.y+Math.sin(a)*r};
+        if(!free(p)||members.some(m=>distance(m,p)<.65))continue;
+        members.push({id:packId+'-'+i,kind:'wolf',combatKind:'wolf',faction:'wildlife',
+          wolfPackId:packId,wolfPackIndex:i,neutral:!night,defeated:false,x:p.x,y:p.y,home:{...center},
+          wolfSeed:mixed(k+':s:'+i),wolfState:night?'alert':'roaming',wolfMode:night?'howl':'walk',wolfFace:i%2?1:-1,
+          wolfWanderIndex:0,wolfDecisionIn:0,wolfTargetId:null,wolfPath:null,wolfPathIndex:1});
+        break;
+      }
+    }
+    if(members.length<MIN_PACK)return null;
+    clearDead();tactical.addEnemies(members);spriteFrames.clear();
+    return{packId,center,size:members.length};
+  }
+  // A bear takes a den in the woods (only if none is alive).
+  function spawnBear({key=null}={}){
+    const well=wellNow(),tactical=combat();if(!well||!tactical?.addEnemies)return null;
+    if(living(bears()).length)return null;
+    const k=key||(State.seed+':bear:'+Math.floor(State.clock?.day||0));
+    const p=wildSpot(well,k);if(!p)return null;
+    const bear={...bearAt(well,p,mixed(k+':s')),id:'wild-bear-'+k.replace(/[^\w-]/g,'-')};
+    clearDead();tactical.addEnemies([bear]);
+    return{id:bear.id,center:p};
+  }
+  // Living packs (by pack id) and bears, for the generator's caps.
+  function census(){
+    const packs=new Set(living(pack()).map(w=>w.wolfPackId||w.id));
+    return{packs:packs.size,wolves:living(pack()).length,bears:living(bears()).length};
+  }
   function choosePackTargets(wolves){
     const soldiers=combat()?.units().filter(live)||[];
     const groups=new Map(),targets=new Map();
@@ -91,7 +182,8 @@
     // four separate wolves exactly once, without resetting on each redraw.
     const token=String(State.seed)+':'+well.id+':'+PACK_SCHEMA;
     if(tactical.wolfSpawnedFor()!==token){
-      if(tactical.registerWolves(token,createPack(well))){
+      const bear=createBear(well);
+      if(tactical.registerWolves(token,createPack(well).concat(bear?[bear]:[]))){
         nightCache=null;
         spriteFrames.clear();
       }
@@ -163,6 +255,50 @@
       if(step>=len-.025)wolf.wolfPathIndex++;
     }
   }
+  // One bear step; returns true when it used this tick's route budget.
+  function bearStep(bear,dt,night,mayPlan){
+    const home=bear.home||bear;
+    const soldiers=combat()?.units().filter(live)||[];
+    const prior=soldiers.find(u=>u.id===bear.wolfTargetId);
+    let target=null;
+    if(prior&&distance(prior,home)<BEAR_LEASH)target=prior;
+    else{
+      let best=Infinity;
+      for(const u of soldiers){
+        const d=distance(u,bear);
+        if((distance(u,home)<BEAR_DEN_ALERT||d<BEAR_SELF_ALERT)&&d<best){best=d;target=u}
+      }
+    }
+    bear.wolfDecisionIn=(bear.wolfDecisionIn||0)-dt;
+    if(target){
+      // Disturbed: hostile until the intruder leaves its territory.
+      bear.neutral=false;bear.wolfTargetId=target.id;bear.wolfState='hunting';
+      if(distance(bear,target)<=MELEE){bear.wolfPath=null;bear.wolfMode='stand';return false}
+      bear.wolfMode='walk';
+      let used=false;
+      if(bear.wolfDecisionIn<=0&&mayPlan){
+        used=true;routeTo(bear,{x:target.x,y:target.y});bear.wolfDecisionIn=bear.wolfPath?1:2.4;
+      }
+      advance(bear,dt,1.1);
+      return used;
+    }
+    bear.neutral=true;bear.wolfTargetId=null;
+    const away=distance(bear,home);
+    if(night){
+      // Sleeps at the den; walks back first if a chase took it away.
+      bear.wolfState='sleeping';
+      if(away<.6){bear.wolfPath=null;bear.wolfMode='sleep';return false}
+    }else bear.wolfState='roaming';
+    let used=false;
+    if(bear.wolfDecisionIn<=0&&mayPlan){
+      used=true;
+      routeTo(bear,night||away>4?home:wanderTarget(bear));
+      bear.wolfDecisionIn=bear.wolfPath?4+bear.wolfSeed*3:6;
+    }
+    bear.wolfMode=bear.wolfPath?.length?'walk':night?'sleep':'walk';
+    advance(bear,dt,.3);
+    return used;
+  }
   function tick(dt){
     if(!Number.isFinite(dt)||dt<=0)return;
     const t0=performance.now();
@@ -209,6 +345,12 @@
         advance(wolf,dt,night?.54:.38);
       }
     }
+    // The (single) bear has its own route slot: sharing the wolves' slot let
+    // two packs starve it of every plan at night.
+    for(const bear of bears()){
+      if(bear.defeated||bear.stats?.hp===0)continue;
+      if(bearStep(bear,dt,night,true)){planned++;if(!bear.wolfPath)failed++}
+    }
     const ms=performance.now()-t0,perf=window.__conquerPerf||(window.__conquerPerf={});
     perf.wolfAiMs=ms;
     perf.wolfAiMaxMs=Math.max(perf.wolfAiMaxMs||0,ms);
@@ -227,20 +369,26 @@
   const HUMAN_BODY_HEIGHT=9.064,WOLF_ART_HEIGHT=180;
   function wolfDrawSize(){return HUMAN_BODY_HEIGHT*militaryScale()*.7*256/WOLF_ART_HEIGHT}
   // Small cached canvas instead of 96x96; 6–12 wolves now cost less to composite.
-  const spriteFrames=new Map(),SPRITE_W=32,SPRITE_H=32,SPRITE_X=16,SPRITE_Y=25;
+  // The bear's art carries its own 1.7 intrinsic scale; .8 keeps it about
+  // 1.35× a wolf, i.e. a heavy animal still shorter than a standing man.
+  const SPECIES_SIZE={wolf:1,bear:.8};
+  const SPRITES={wolf:{w:32,h:32,x:16,y:25},bear:{w:56,h:52,x:28,y:42}};
+  const spriteFrames=new Map();
   function draw(g,wolf){
-    if(!window.ConquerAnimals?.SPECIES?.wolf||wolf.defeated||wolf.stats?.hp===0)return;
+    const species=wolf.kind==='bear'?'bear':'wolf';
+    if(!window.ConquerAnimals?.SPECIES?.[species]||wolf.defeated||wolf.stats?.hp===0)return;
     const p=w2s(wolf,.08);
-    const size=wolfDrawSize();
-    const mode=wolf.wolfMode||(isNight()?'howl':'walk');
+    const size=wolfDrawSize()*SPECIES_SIZE[species];
+    const mode=wolf.wolfMode||(species==='bear'?'walk':isNight()?'howl':'walk');
     const facing=wolf.wolfFace||1,seed=wolf.wolfSeed||0;
     const time=performance.now();
     const opts={mode,facing,seed,t:time/1000};
-    // World3D: depth-tested card with the wolf's horizontal body capsule (same size as below).
-    if(window.ConquerAnimals.card?.('wolf',wolf,.08,{...opts,id:'wolf:'+wolf.id,sizeFactor:size/Math.max(1e-6,State.view.scale)}))return;
+    const box=SPRITES[species];
+    // World3D: depth-tested card with the animal's horizontal body capsule (same size as below).
+    if(window.ConquerAnimals.card?.(species,wolf,.08,{...opts,id:species+':'+wolf.id,sizeFactor:size/Math.max(1e-6,State.view.scale)}))return;
     withUrbanFigureOcclusion(wolf,.08,()=>{
       if(typeof document==='undefined'||typeof g.drawImage!=='function'){
-        window.ConquerAnimals.drawAnimal('wolf',g,p.x,p.y,size,opts);
+        window.ConquerAnimals.drawAnimal(species,g,p.x,p.y,size,opts);
         return;
       }
       const frame=Math.floor((time+seed*115)/125);
@@ -248,21 +396,21 @@
       if(!sprite||sprite.size!==size||sprite.mode!==mode||
          sprite.facing!==facing||sprite.frame!==frame){
         const canvas=sprite?.canvas||document.createElement('canvas');
-        if(canvas.width!==SPRITE_W)canvas.width=SPRITE_W;
-        if(canvas.height!==SPRITE_H)canvas.height=SPRITE_H;
+        if(canvas.width!==box.w)canvas.width=box.w;
+        if(canvas.height!==box.h)canvas.height=box.h;
         const c=canvas.getContext('2d');
         if(!c){
-          window.ConquerAnimals.drawAnimal('wolf',g,p.x,p.y,size,opts);
+          window.ConquerAnimals.drawAnimal(species,g,p.x,p.y,size,opts);
           return;
         }
-        c.clearRect(0,0,SPRITE_W,SPRITE_H);
-        window.ConquerAnimals.drawAnimal('wolf',c,SPRITE_X,SPRITE_Y,size,opts);
+        c.clearRect(0,0,box.w,box.h);
+        window.ConquerAnimals.drawAnimal(species,c,box.x,box.y,size,opts);
         sprite={canvas,size,mode,facing,frame};
         spriteFrames.set(wolf.id,sprite);
       }
-      g.drawImage(sprite.canvas,p.x-SPRITE_X,p.y-SPRITE_Y);
+      g.drawImage(sprite.canvas,p.x-box.x,p.y-box.y);
     });
   }
-  window.ConquerWolves={ensure,tick,draw,isNight,pack,wolfDrawSize};
+  window.ConquerWolves={ensure,tick,draw,isNight,pack,bears,wildlife,wolfDrawSize,spawnPack,spawnBear,census};
   ensure();
 })();

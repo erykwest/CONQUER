@@ -1,7 +1,7 @@
 // Generated from content/codex/*.md. Do not edit; run node tools/export-codex-content.cjs.
 (function(root){root.ConquerWikiEditorial={
   "schemaVersion": 1,
-  "sourceDigest": "a8d37ce683028920d8eded00ecae69fe6aae67e94352993cc6ad3e377568facc",
+  "sourceDigest": "75738a27fdc0f86709b2c12807ae0f53ae5c199242d3491a7838315c7706b972",
   "pages": [
     {
       "id": "building:balivo",
@@ -5643,7 +5643,11 @@
         "unit:knight",
         "unit:patrol",
         "unit:spearman",
-        "unit:wolf"
+        "unit:wolf",
+        "unit:bear",
+        "unit:outlaw",
+        "unit:outlawGuard",
+        "unit:outlawArcher"
       ]
     },
     {
@@ -5762,6 +5766,48 @@
       ],
       "text": [
         "Arciere è un profilo presente nel combattimento. Le statistiche descrivono il profilo e non costituiscono un costo di reclutamento."
+      ],
+      "related": [
+        "category:unit",
+        "topic:population",
+        "topic:combat"
+      ],
+      "members": []
+    },
+    {
+      "id": "unit:bear",
+      "kind": "entry",
+      "title": "Orso",
+      "aliases": [
+        "Orso"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "Orso è un animale selvatico solitario con la tana in un bosco lontano dal villaggio. Di giorno vaga vicino alla tana e di notte dorme; attacca soltanto chi si avvicina alla tana o a lui, e smette di inseguire quando l'intruso esce dal suo territorio. È un profilo del [[Combattimento E Assedio|combattimento]], molto più resistente di un [[Lupo]].",
+          "tokens": [
+            {
+              "text": "Orso è un animale selvatico solitario con la tana in un bosco lontano dal villaggio. Di giorno vaga vicino alla tana e di notte dorme; attacca soltanto chi si avvicina alla tana o a lui, e smette di inseguire quando l'intruso esce dal suo territorio. È un profilo del "
+            },
+            {
+              "text": "combattimento",
+              "id": "topic:combat"
+            },
+            {
+              "text": ", molto più resistente di un "
+            },
+            {
+              "text": "Lupo",
+              "id": "unit:wolf"
+            },
+            {
+              "text": "."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Orso è un animale selvatico solitario con la tana in un bosco lontano dal villaggio. Di giorno vaga vicino alla tana e di notte dorme; attacca soltanto chi si avvicina alla tana o a lui, e smette di inseguire quando l'intruso esce dal suo territorio. È un profilo del combattimento, molto più resistente di un Lupo."
       ],
       "related": [
         "category:unit",
@@ -6007,6 +6053,125 @@
       ],
       "text": [
         "Cavaliere è un profilo presente nel combattimento. Le statistiche descrivono il profilo e non costituiscono un costo di reclutamento."
+      ],
+      "related": [
+        "category:unit",
+        "topic:population",
+        "topic:combat"
+      ],
+      "members": []
+    },
+    {
+      "id": "unit:outlaw",
+      "kind": "entry",
+      "title": "Fuorilegge",
+      "aliases": [
+        "Fuorilegge"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "Fuorilegge è il profilo dei briganti e dei predoni armati di ascia e scudo tondo. I briganti presidiano una strada verso il confine e fanno calare gli scambi; i predoni saccheggiano gli edifici isolati e fuggono col bottino. È un profilo del [[Combattimento E Assedio|combattimento]]: le statistiche descrivono il profilo e non costituiscono un costo di reclutamento.",
+          "tokens": [
+            {
+              "text": "Fuorilegge è il profilo dei briganti e dei predoni armati di ascia e scudo tondo. I briganti presidiano una strada verso il confine e fanno calare gli scambi; i predoni saccheggiano gli edifici isolati e fuggono col bottino. È un profilo del "
+            },
+            {
+              "text": "combattimento",
+              "id": "topic:combat"
+            },
+            {
+              "text": ": le statistiche descrivono il profilo e non costituiscono un costo di reclutamento."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Fuorilegge è il profilo dei briganti e dei predoni armati di ascia e scudo tondo. I briganti presidiano una strada verso il confine e fanno calare gli scambi; i predoni saccheggiano gli edifici isolati e fuggono col bottino. È un profilo del combattimento: le statistiche descrivono il profilo e non costituiscono un costo di reclutamento."
+      ],
+      "related": [
+        "category:unit",
+        "topic:population",
+        "topic:combat"
+      ],
+      "members": []
+    },
+    {
+      "id": "unit:outlawArcher",
+      "kind": "entry",
+      "title": "Arciere Fuorilegge",
+      "aliases": [
+        "Arciere Fuorilegge"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "Arciere fuorilegge è il terzo di ogni banda di briganti o di banditi che porta l'arco. Non va in mischia: resta al suo posto e tira su chi si avvicina, come un [[Arciere]] ma meno resistente. È un profilo del [[Combattimento E Assedio|combattimento]].",
+          "tokens": [
+            {
+              "text": "Arciere fuorilegge è il terzo di ogni banda di briganti o di banditi che porta l'arco. Non va in mischia: resta al suo posto e tira su chi si avvicina, come un "
+            },
+            {
+              "text": "Arciere",
+              "id": "unit:archer"
+            },
+            {
+              "text": " ma meno resistente. È un profilo del "
+            },
+            {
+              "text": "combattimento",
+              "id": "topic:combat"
+            },
+            {
+              "text": "."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Arciere fuorilegge è il terzo di ogni banda di briganti o di banditi che porta l'arco. Non va in mischia: resta al suo posto e tira su chi si avvicina, come un Arciere ma meno resistente. È un profilo del combattimento."
+      ],
+      "related": [
+        "category:unit",
+        "topic:population",
+        "topic:combat"
+      ],
+      "members": []
+    },
+    {
+      "id": "unit:outlawGuard",
+      "kind": "entry",
+      "title": "Guardia del Covo",
+      "aliases": [
+        "Guardia Del Covo"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "Guardia del covo è il bandito armato di ascia e scudo tondo che sorveglia le tende del covo nel bosco. Resta al suo posto e attacca chi si avvicina; distrutto il covo, il bottino estorto torna al castello. È un profilo del [[Combattimento E Assedio|combattimento]], più resistente di un [[Fuorilegge]].",
+          "tokens": [
+            {
+              "text": "Guardia del covo è il bandito armato di ascia e scudo tondo che sorveglia le tende del covo nel bosco. Resta al suo posto e attacca chi si avvicina; distrutto il covo, il bottino estorto torna al castello. È un profilo del "
+            },
+            {
+              "text": "combattimento",
+              "id": "topic:combat"
+            },
+            {
+              "text": ", più resistente di un "
+            },
+            {
+              "text": "Fuorilegge",
+              "id": "unit:outlaw"
+            },
+            {
+              "text": "."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Guardia del covo è il bandito armato di ascia e scudo tondo che sorveglia le tende del covo nel bosco. Resta al suo posto e attacca chi si avvicina; distrutto il covo, il bottino estorto torna al castello. È un profilo del combattimento, più resistente di un Fuorilegge."
       ],
       "related": [
         "category:unit",
