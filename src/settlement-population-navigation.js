@@ -409,7 +409,7 @@ function* smoothPeasantPathWork(points,sourceHouseId,allowedAt=null,obstaclePart
     for(let j=points.length-1;j>i+1;j--){
       if(j%8===0)yield;
       if(!peasantSegmentClear(points[i],points[j],sourceHouseId,obstacleParts))continue;
-      if(allowedAt){const length=dist(points[i],points[j]);let valid=true;for(let k=0;k<=Math.ceil(length/.5);k++){const t=k/Math.max(1,Math.ceil(length/.5));if(!allowedAt({x:points[i].x+(points[j].x-points[i].x)*t,y:points[i].y+(points[j].y-points[i].y)*t})){valid=false;break}}if(!valid)continue;}
+      if(allowedAt){const length=dist(points[i],points[j]);let valid=true;for(let k=0;k<=Math.ceil(length/.5);k++){const t=k/Math.max(1,Math.ceil(length/.5));if(!allowedAt({x:points[i].x+(points[j].x-points[i].x)*t,y:points[i].y+(points[j].y-points[i].y)*t},obstacleParts)){valid=false;break}}if(!valid)continue;}
       const originalCost=prefix[j]-prefix[i],shortcutCost=peasantSegmentTravelCost(points[i],points[j]);
       // Only simplify if the shortcut preserves the road preference found by A*.
       if(shortcutCost<=originalCost*1.06){chosen=j;break}
@@ -431,7 +431,7 @@ function findPeasantPath(start,goal,sourceHouseId,pad=8,allowedAt=null){
 function* findPeasantPathWork(start,goal,sourceHouseId,pad=8,allowedAt=null){
   const step=PEASANT_PATH_STEP;
   const obstacleParts=peasantObstacleSnapshot(),blockedNodes=new Map(),costs=new Map();
-  const blocked=(x,y)=>{const k=key(x,y);if(!blockedNodes.has(k)){const p=pos(x,y);blockedNodes.set(k,pointBlockedForPeasant(p,sourceHouseId,obstacleParts)||!!(allowedAt&&!allowedAt(p)))}return blockedNodes.get(k)};
+  const blocked=(x,y)=>{const k=key(x,y);if(!blockedNodes.has(k)){const p=pos(x,y);blockedNodes.set(k,pointBlockedForPeasant(p,sourceHouseId,obstacleParts)||!!(allowedAt&&!allowedAt(p,obstacleParts)))}return blockedNodes.get(k)};
   const cost=(x,y)=>{const k=key(x,y);if(!costs.has(k))costs.set(k,peasantTerrainCost(pos(x,y)));return costs.get(k)};
   const minX=Math.floor((Math.min(start.x,goal.x)-pad)/step),maxX=Math.ceil((Math.max(start.x,goal.x)+pad)/step);
   const minY=Math.floor((Math.min(start.y,goal.y)-pad)/step),maxY=Math.ceil((Math.max(start.y,goal.y)+pad)/step);

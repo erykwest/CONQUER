@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-16 — MOVE-LAG-261116: l'ordine di movimento non blocca più il gioco
+
+- Branch fix/move-order-lag. Un ordine di movimento a un'unità bloccava il gioco per secondi quando il percorso diretto era ostruito: `infantryRoute` (settlement-combat.js) lanciava l'A* con il filtro d'ingombro `cliffClearForFootprint`, e questo filtro (come i controlli `safeMilitarySegment` sul percorso trovato) chiamava `pointBlockedForPeasant` senza lo snapshot degli ostacoli, scorrendo tutte le strutture e ricalcolando la sagoma di ogni casa per ogni punto campionato (5 offset della squadra × migliaia di nodi).
+- Fix: `findPeasantPathWork` passa il proprio `obstacleParts` come secondo argomento ad `allowedAt` (A* e smoothing); `infantryRoute` costruisce uno snapshot per ordine e lo usa in tutti i controlli d'ingombro. Percorsi identici a prima.
+- Misure nel browser su una scena di prova (96 case, strada, pozzo), tre ordini con aggiramento: 5,9 s → 0,20 s; 9,7 s → 0,63 s; 6,5 s → 0,33 s. Ordine reale col clic in gioco: 138 ms. PASS movement-path-performance (nuovo caso: snapshot passato ad allowedAt e riusato da infantryRoute) e 15 regressioni di combattimento/pattuglie/campo/mura. CI da eseguire.
+
 ### 2026-11-16 — Fix: le greggi non pascolano nei campi coltivati
 
 - Branch fix/sheep-fields. Il fix di ottobre (ea3d7112) escludeva gli edifici dal cerchio di pascolo ma saltava esplicitamente i `field`, e `urbanBuildingPolygons` non restituisce comunque il contorno dei campi: pecore e mucche potevano pascolare sopra i campi. Ora `pastureBuildingAllowed` (settlement-livestock.js) legge `fieldPoints` per ogni campo (del giocatore, automatico L1 e in cantiere) con lo stesso margine di 0,2 U. Poiché piazzare un campo non incrementa `urbanRevision`, i pascoli già assegnati vengono riverificati quando cambia il numero di strutture: un campo costruito sopra un pascolo sposta il gregge altrove.

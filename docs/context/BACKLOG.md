@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-16 — MOVE-LAG-261116 · Lag sull'ordine di movimento
+
+- [x] L'ordine di movimento con percorso aggirante non blocca più il gioco per secondi (snapshot degli ostacoli nei controlli d'ingombro militari).
+- [ ] Restano 0,2–0,6 s per un ordine con aggiramento lungo su una mappa densa (A* sincrono condiviso con i popolani): valutare il calcolo cooperativo su più frame (`findPeasantPathWork`) per gli ordini di gruppo.
+
 ### 2026-11-16 — Fix: niente pascolo nei campi
 
 - [x] Il cerchio di pascolo di pecore e mucche non tocca nessun campo coltivato (0,2 U di margine), compresi i campi automatici L1 e quelli in cantiere.
