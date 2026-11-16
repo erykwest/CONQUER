@@ -328,7 +328,7 @@
     lastFrameMs = performance.now() - begin;
     notes.textContent = scene.stats.territories + ' territori · ' + scene.stats.subcells + ' sottocelle · ' +
       scene.stats.triangles.toLocaleString('it-IT') + ' triangoli · ' +
-      scene.stats.mountains + ' montagne · ' + scene.stats.trees + ' alberi · ' +
+      scene.stats.mountains + ' montagne innevate · ' + (scene.stats.hills||0) + ' colline tronco-piramidali · ' + scene.stats.trees + ' alberi · ' +
       (scene.stats.reeds||0) + ' canneti · ' +
       scene.stats.generationMs.toFixed(0) + ' ms mesh CPU · ' + lastUploadMs.toFixed(1) +
       ' ms upload GPU · ' + lastFrameMs.toFixed(1) + ' ms draw CPU';
