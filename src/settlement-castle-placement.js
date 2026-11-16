@@ -5,7 +5,12 @@ function toLocalPoint(s,p){const a=-(s.angle||0),v=rotateVec(p.x-s.x,p.y-s.y,a);
 function rectDims(s){if(isOrientedTower(s))return orientedTowerDims(s);const w=Number(s.w??s.size??1),h=Number(s.h??s.size??w);return{w,h}}
 function placementAngle(center,p){return snapStructureAngle(Math.atan2(p.y-center.y,p.x-center.x))}
 function orientedToolSpec(){
-  if(State.tool.kind==='tower')return{type:'tower',shape:State.tool.shape,level:State.tool.level||State.buildLevels.tower,material:State.tool.material||'stone',masonryMaterial:State.buildMasonryMaterial,woodStyle:State.tool.woodStyle,woodRoof:State.tool.woodRoof,...(State.tool.shape==='round'?{r:State.tool.size}:{size:State.tool.size}),functions:[]};
+  if(State.tool.kind==='tower'){
+    const spec={type:'tower',shape:State.tool.shape,level:State.tool.level||State.buildLevels.tower,material:State.tool.material||'stone',masonryMaterial:State.buildMasonryMaterial,woodStyle:State.tool.woodStyle,woodRoof:State.tool.woodRoof,...(State.tool.shape==='round'?{r:State.tool.size}:{size:State.tool.size}),functions:[]};
+    // H4 exists only on the square stone W2 tower (#174): never place a level the load would clamp away.
+    if(typeof maxStructureLevel==='function')spec.level=Math.max(1,Math.min(Number(spec.level)||1,maxStructureLevel(spec)));
+    return spec;
+  }
   if(State.tool.kind==='gate'){
     if(State.tool.material==='wood')return{type:'gate',shape:'square',material:'wood',size:1.5,w:1,h:1.5,level:1,roofStyle:'flat',functions:[]};
     const size=State.tool.size||GATE_SIZES.large,max=size<1.25?SMALL_GATE_MAX_LEVEL:3;

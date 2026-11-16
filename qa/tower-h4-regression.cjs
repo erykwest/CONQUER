@@ -57,3 +57,22 @@ console.log('PASS H4 only on the square stone W2 tower');
   assert.equal(w3.level,3,'a W3 tower saved at level 4 is still clamped to H3');
   console.log('PASS W2 H4 survives save/load; other towers stay clamped');
 }
+
+// Placement: the tower tool never commits a level its size cannot hold (a W3 at H4 was placed at 4
+// and silently lost the paid storey on the next load).
+{
+  const place=src('settlement-castle-placement.js');
+  const from=place.indexOf('function orientedToolSpec(){'),to=place.indexOf("  if(State.tool.kind==='gate')",from);
+  assert.ok(from>=0&&to>from,'orientedToolSpec found');
+  const pctx=vm.createContext({Math,Number,Object,Array,clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),
+    isOrientedTower:s=>s.shape==='dee',isWoodTower:s=>s.material==='wood',isSmallGate:()=>false,isLonghouse:()=>false,isLeanTo:()=>false,
+    KEEP_W4_TIER:4,TOWER_H4_LEVEL:4,SMALL_GATE_MAX_LEVEL:2,State:{tool:{},buildLevels:{tower:1},buildMasonryMaterial:'stone'}});
+  vm.runInContext([lineFn(core,'towerTier'),lineFn(core,'towerH4Allowed'),lineFn(core,'maxStructureLevel'),
+    place.slice(from,to)+'return null}','this.spec=orientedToolSpec;'].join('\n'),pctx);
+  const at=(size,level,shape='square')=>{pctx.State.tool={kind:'tower',shape,size,level,material:'stone'};return pctx.spec().level};
+  assert.equal(at(1.5,4),4,'the W2 square stone tower is placed at H4');
+  assert.equal(at(2,4),3,'a W3 tower asked at H4 is placed at H3');
+  assert.equal(at(1,4),3,'a W1 tower asked at H4 is placed at H3');
+  assert.equal(at(1.5,2),2,'lower levels are untouched');
+  console.log('PASS placement clamps the tower level to the tower ceiling');
+}

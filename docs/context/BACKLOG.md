@@ -25,6 +25,20 @@
 - [ ] Bilanciare numeri, calendario, pizzo e merci rubate; avviso al giocatore più visibile della sola riga di stato.
 - [ ] Verifica a occhio con il gioco in primo piano (notte, World3D, pattuglie che incontrano i briganti).
 
+## 2026-11-16 — QA-DEEP-261116 · Seguiti del test antiregressivo profondo
+
+**FATTO su branch `fix/mastio-h4-load-20261116` (non merge):** il Mastio rimosso dal giocatore resta rimosso; la torre W3 non si piazza più a H4. Dettagli in [STATUS](STATUS.md).
+
+**APERTI**
+- Economia: `castleGold`, `wage` e campi simili salvati come stringhe vengono caricati e risalvati così come sono (letti come 0, nessun crash). Andrebbero convertiti in `ensureFlows`. Bassa priorità.
+- Bilanciamento (al product owner): con l'allocatore legacy l'industria viene prima dei costruttori, quindi un cantiere con i materiali consegnati può restare senza operai per oltre 120 giorni (stato «In attesa di operai L1 liberi»). Inoltre la crescita del villaggio è lenta (10–34 L1 al giorno 150).
+- DEV: un completamento in costruzione rapida dentro `addStructure` non chiama `syncAutoMastio`; lo stato in sessione differisce da quello dopo un caricamento.
+- QA locale: sei script browser fissano la porta 4173 senza override; Playwright 1.56.1 non trova il suo Chromium (1194) su questa macchina, quindi serve `QA_CHROME` o `npx playwright install chromium`.
+
+## 2026-11-16 — PERF-261116 · Prestazioni dei terreni regionali
+
+**FATTO su branch `perf/regional-roads-20261116` (non merge):** la pianificazione delle strade e la cottura del terreno tornano sotto i tempi di prima della #162 (dettagli in [STATUS](STATUS.md)). **Aperto:** il costo rimasto nella cottura è soprattutto in `drawRelief` (rocce e fasce), proporzionale al numero di colline.
+
 ## 2026-11-15 — BC-251105-05 fix · Tetto interno della torre a D e bracere
 
 **IMPLEMENTATO SU BRANCH `fix/dtower-inner-roof-brazier`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
