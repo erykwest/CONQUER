@@ -7,6 +7,7 @@
   const spritesCanvas = document.getElementById('treeBillboards');
   const notes = document.getElementById('perfNotes');
   const status = document.getElementById('sceneStatus');
+  const selectedTerritory = document.getElementById('selectedTerritory');
   const quality = document.getElementById('detail');
   const deformation = document.getElementById('deformation');
   const showTrees = document.getElementById('showTrees');
@@ -71,6 +72,7 @@
   const ORBIT_PX_PER_TURN = 160; // Builder: 160 px for 90 degrees.
   let panX = 0, panY = 0, viewRotation = 0, viewZoom = 1;
   let interaction = null;
+  let selectedIds = new Set(), lastSelectionKey = '';
 
   const vertexShader = [
     '#version 300 es',
@@ -177,10 +179,64 @@
     panX += (c.width / 2 - projected.x) * surface.clientWidth / c.width;
     panY += (c.height / 2 - projected.y) * surface.clientHeight / c.height;
   }
+  function updateSelection(ids, force = false) {
+    const next = [...new Set((ids || []).map(Number))].filter(Number.isInteger).sort((a,b)=>a-b);
+    const key = next.join(',');
+    if(!force && key===lastSelectionKey) return;
+    selectedIds = new Set(next);
+    lastSelectionKey = key;
+    if(selectedTerritory) {
+      selectedTerritory.textContent = !next.length ? 'Clic sinistro: seleziona territorio · Maiusc + clic: selezione multipla' :
+        next.length===1 ? 'Territorio selezionato: '+(snapshot?.names?.[next[0]] || ('#'+next[0])) :
+        next.length+' territori selezionati';
+    }
+    draw();
+  }
+  function syncSelection() {
+    if(!snapshot) return;
+    try {
+      const source = frame.contentWindow?.ConquerRegion3DSelection?.();
+      if(Array.isArray(source)) updateSelection(source);
+    } catch(e) {
+      console.warn('Impossibile sincronizzare la selezione del World Lab:',e);
+    }
+  }
+  function paintSelected(c, ctx, pixelRatio) {
+    if(!selectedIds.size || !scene.pickRanges) return;
+    const v=scene.vertices;
+    ctx.beginPath();
+    for(const range of scene.pickRanges) {
+      if(!selectedIds.has(range.macroId))continue;
+      for(let i=range.firstVertex;i<range.firstVertex+range.vertexCount;i+=3) {
+        const a=project({x:v[i*6],y:v[i*6+1],z:v[i*6+2]},c);
+        const b=project({x:v[(i+1)*6],y:v[(i+1)*6+1],z:v[(i+1)*6+2]},c);
+        const d=project({x:v[(i+2)*6],y:v[(i+2)*6+1],z:v[(i+2)*6+2]},c);
+        ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.lineTo(d.x,d.y);ctx.closePath();
+      }
+    }
+    ctx.fillStyle='rgba(229,168,63,.20)';
+    ctx.fill();
+  }
+  function outlineSelected(c, ctx, pixelRatio) {
+    if(!selectedIds.size)return;
+    ctx.beginPath();
+    for(const edge of scene.borders || []) {
+      const ids=edge.macroIds||[];
+      if(!ids.some(id=>selectedIds.has(id)))continue;
+      // Shared edges between two selected territories are not part of the selection outline.
+      if(ids.length===2 && ids.every(id=>selectedIds.has(id)))continue;
+      const a=project({...edge.start,z:.4},c), b=project({...edge.end,z:.4},c);
+      ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
+    }
+    ctx.strokeStyle='#f2cf83';
+    ctx.lineWidth=2.7*pixelRatio;
+    ctx.stroke();
+  }
   function overlay(c) {
     const ctx = spritesCanvas.getContext('2d');
     ctx.clearRect(0, 0, c.width, c.height);
     const pixelRatio = c.width / Math.max(1, surface.clientWidth);
+    paintSelected(c,ctx,pixelRatio);
 
     if (showBorders.checked) {
       // These are the *new* shared boundaries of microcells grouped by owner,
@@ -245,6 +301,8 @@
       }
     }
     ctx.globalAlpha=1;
+    // Highlight must remain visible above vegetation and optional borders.
+    outlineSelected(c,ctx,pixelRatio);
 
   }
   function geometryKey(a, b) {
@@ -305,6 +363,7 @@
       snapshot = source;
       seenRevision = revision;
       lastSyncMs = performance.now();
+      updateSelection(source.selectedMacros || [], true);
       rebuild();
     } catch (e) {
       status.textContent = 'La mappa sorgente deve essere aperta sullo stesso dominio: ' + e.message;
@@ -341,6 +400,27 @@
     viewZoom = nextZoom;
     draw();
   }
+
+  // Left-click picks the visible 3D mesh (not the old polygon), while selection,
+  // menu and multiselect semantics remain delegated to the authoritative World Lab.
+  surface.addEventListener('click', event => {
+    if(event.button!==0 || !scene || !snapshot || rebuilding || interaction)return;
+    const rect=surface.getBoundingClientRect();
+    if(!rect.width || !rect.height)return;
+    const x=(event.clientX-rect.left)*canvas.width/rect.width;
+    const y=(event.clientY-rect.top)*canvas.height/rect.height;
+    const macroId=geometry.pickTerritory(scene,camera(),x,y);
+    if(macroId===null)return;
+    try {
+      const accepted=frame.contentWindow?.ConquerRegion3DSelectTerritory?.(macroId,event.shiftKey);
+      if(accepted) {
+        syncSelection();
+        event.preventDefault();
+      }
+    } catch(e) {
+      console.warn('Selezione 3D non disponibile nel World Lab:',e);
+    }
+  });
 
   // Builder input contract: middle drag pans, Shift+middle drag changes yaw,
   // wheel zooms. Ground projection and elevation remain locked.
@@ -412,7 +492,7 @@
     initialize();
     resize();
     new ResizeObserver(resize).observe(surface);
-    window.setInterval(syncFromSource, 700);
+    window.setInterval(() => { syncFromSource(); syncSelection(); }, 700);
     status.textContent = 'Attendo la generazione della mappa originale…';
   } catch (e) {
     status.textContent = e.message;
