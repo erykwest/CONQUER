@@ -181,6 +181,34 @@
         }
       }
     }
+    // Follow the World Lab's real impassable ridge edges; avoid inventing new topology.
+    const handPlaced = new Set(snapshot.mountainRanges || []);
+    const generated = new Set(snapshot.automaticMountainEdges || []);
+    for (const edge of snapshot.edges || []) {
+      const ids = edge.macroIds || [];
+      const pair = ids.length === 2 ? ids.slice().sort((a, b) => a - b).join('-') : '';
+      const one = edge.start.x.toFixed(3) + ',' + edge.start.y.toFixed(3);
+      const two = edge.end.x.toFixed(3) + ',' + edge.end.y.toFixed(3);
+      const key = one < two ? one + '|' + two : two + '|' + one;
+      if (!handPlaced.has(pair) && !generated.has(key)) continue;
+      const dx = edge.end.x - edge.start.x, dy = edge.end.y - edge.start.y;
+      const length = Math.hypot(dx, dy);
+      const count = Math.max(1, Math.min(6, Math.round(length / 27)));
+      const random = rng((snapshot.seed ^ Math.imul(ids[0] + 1, 12582917) ^ Math.round(length * 31)) >>> 0);
+      for (let index = 0; index < count; index++) {
+        const t = (index + .5 + (random() - .5) * .28) / count;
+        const x = edge.start.x + dx * t, y = edge.start.y + dy * t;
+        const r = 2.9 + random() * 3.2, top = 7 + random() * 9, sides = 7;
+        const apex = { x: x + (random() - .5) * 2, y: y + (random() - .5) * 2, z: top };
+        for (let k = 0; k < sides; k++) {
+          const a = k * Math.PI * 2 / sides, b = (k + 1) * Math.PI * 2 / sides;
+          face({ x: x + Math.cos(a) * r, y: y + Math.sin(a) * r, z: 0 },
+               { x: x + Math.cos(b) * r, y: y + Math.sin(b) * r, z: 0 },
+               apex, [139, 132, 122], (random() - .5) * .14);
+        }
+        mountains++;
+      }
+    }
     return {
       vertices: new Float32Array(vertices), trees, peaks,
       stats: { territories: snapshot.cells.length, subcells, triangles, mountains,
