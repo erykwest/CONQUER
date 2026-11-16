@@ -1,5 +1,11 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-MELEE-261116 — Mischia contro più nemici (16/11/2026)
+
+- **CONTRATTO TECNICO:** in `ConquerCombatRules.update` ogni nemico a contatto e non impegnato scambia colpi col difensore più vicino; l'energia di mischia si consuma una volta per round per unità; energia 0 vale −1 al combattimento (minimo 1), non 0. Morale (brain) invariato.
+- **MOTIVO:** segnalazione del product owner (nessuno moriva contro un branco di lupi): stallo eterno da sfinimento e un solo nemico attivo per difensore.
+- **STATO:** implementato su `fix/outlaw-combat-stats`, non in main. Bilanciamento lupi/squadre e scala dei fuorilegge aperti.
+
 ## D-THREATS-261116 — Generatore di minacce (16/11/2026)
 
 - **DECISO dal product owner:** lupi, orso, briganti, banditi e predoni compaiono tramite un **generatore di eventi** a **probabilità + condizioni** (tiro giornaliero, probabilità dipendente dallo stato dell'insediamento, tempi di quiete); **difficoltà a 3 livelli** (Tranquilla / Normale / Dura) che cambia frequenza e dimensione delle bande, scelta e salvata nella partita; il giocatore è avvisato con **avviso + registro** (pulsante «Vai» sul posto).

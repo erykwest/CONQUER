@@ -1,5 +1,16 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-16 — Mischia contro più nemici: nessuno moriva coi lupi (branch `fix/outlaw-combat-stats`)
+
+- **CAUSA (segnalata dal product owner: «durante uno scambio con un branco di lupi nessuno muore»):** in `settlement-combat-rules.js` (1) ogni difensore scambiava colpi solo col nemico più vicino, gli altri lupi a contatto restavano fermi; (2) l'energia calava di 1 per scambio e in mischia non si recuperava: dopo ~150 secondi entrambi a 0, e con energia 0 il combattimento effettivo era 0, quindi **nessuno poteva più colpire** (stallo eterno, ricostruito con le regole vere: squadra ferma a 14 PV, due lupi vivi per sempre).
+- **CODICE SUL BRANCH, NON MERGE:**
+  - ogni nemico a contatto non ancora impegnato attacca il difensore più vicino (`exchange`), stessi dadi, danni e animazioni;
+  - l'energia si consuma **una volta per round** di mischia (un secondo di combattimento), anche se gli avversari sono cinque;
+  - chi è sfinito combatte con −1 (minimo 1) ma continua a colpire; chi è scosso (morale sotto metà) resta come prima;
+  - le frecce assegnano le statistiche al bersaglio con la stessa regola della mischia (`profileKind`), coerenza senza effetti visibili.
+- **EFFETTO (regole vere, dadi con seme):** una squadra di 5 lancieri batte un branco di 5 lupi 15+ volte su 20 restando ferita; una pattuglia di 2 contro 5 lupi muore 15+ volte su 20. In partita (Chromium headless, notte, `simulationFrame`): squadra contro branco di 6 → 3 lupi uccisi, squadra caduta.
+- **PROVE LOCALI PASS:** nuova `qa/melee-outnumbered-regression.cjs`; suite Combat completa (22 test, tra cui mass-battle, siege-assault, naval-battle); wolves, outlaws, threats.
+
 ### 2026-11-16 — Microfix: pianerottolo interno per la porta del muro H1
 
 - Branch fix/microfix. Una porta del cammino di ronda che si apre fra due pavimenti (muro H1, camminamento a 1,15, in una torre con P1 a 2,10) ha all'interno un ballatoio di legno alla quota della soglia, sui montanti, che corre lungo la parete fino all'angolo della scala a pioli della stanza (girando l'angolo se la scala è sulla parete accanto); senza scala nella stanza (torre L1) una scaletta propria. ConquerCutawayFurniture.landingSpecs / landingsWorld in settlement-cutaway-furniture.js, usati da 2.5D e WebGL. Le porte delle mura H2 poggiano sul P1 e non ne hanno.

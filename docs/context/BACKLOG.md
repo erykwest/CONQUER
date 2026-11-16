@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-16 — COMBAT-MELEE-01 · Mischia contro più nemici
+
+**IMPLEMENTATO SU BRANCH `fix/outlaw-combat-stats`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Tutti i nemici a contatto attaccano; energia una volta per round; niente stallo da sfinimento.
+- [ ] Bilanciare lupi contro squadre (oggi un branco da 6 può annientare una squadra di notte).
+- [ ] Riportare i fuorilegge alla scala dei soldati (~20 PV a uomo): oggi 40/60/35 PV a figura.
+
 ### 2026-11-15 — Microfix: messa domenicale visibile
 
 - [x] Cutaway della chiesa: fedeli seduti sui banchi la domenica 6:00–12:00 (ConquerCivic3D.massSlots, ConquerCourtPeople.massInSession).

@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-16 — COMBAT-MELEE-01 · Nessuno moriva coi lupi
+
+Regole della mischia corrette: ogni nemico a contatto attacca, l'energia si consuma una volta per round, gli sfiniti continuano a colpire (prima lo scontro si bloccava per sempre). Nuova `qa/melee-outnumbered-regression.cjs`. STATUS, BACKLOG, DECISIONS aggiornati; ROADMAP invariata.
+
 ### 2026-11-15 — Microfix: fedeli alla messa nel cutaway della chiesa
 
 - Aggiunti i popolani seduti sui banchi della chiesa durante la messa domenicale (6:00–12:00); test in qa/staff-people-regression.cjs. Roadmap e decisioni invariate.
