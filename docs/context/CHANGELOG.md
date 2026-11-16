@@ -2,6 +2,7 @@
 
 ### 2026-11-16 — Bandiere, torce e braciere della palizzata in 3D
 
+- Asset Lab: il controllo «sagoma conservata» esclude anche lo stato «elemento esterno crollato» (rosso su main dalla #251).
 - Bandiere delle torri come quelle delle navi, supporti 3D delle torce delle torri, alone del fuoco non più tagliato, braciere della torre a palizzata dal modello Blender. Test in qa/tower-fittings-regression.cjs. Roadmap e decisioni invariate.
 
 ### 2026-11-16 — Braciere delle torri in 3D
