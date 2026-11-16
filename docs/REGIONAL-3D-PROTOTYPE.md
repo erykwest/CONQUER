@@ -16,7 +16,7 @@ The original 2D World Lab is still authoritative: 30 × 21 = 630 gameplay territ
 3. **Derive visual outlines:** a paired microcell edge with different territory owners becomes a 3D-view border; land/water owner changes become coastlines. Borders no longer trace the canonical coarse polygons in the 3D preview.
 4. **Use actual colours from 2D:** \`ConquerRegion3DSnapshot().fills\` supplies the original World Lab's \`macroFill(macroId)\` output for each cell, including neutral and political colour treatment. The 3D terrain's top faces use the same base RGB values, with subtle deterministic brightness modulation restored on sea, lake and hill microcells only. Plain, forest and swamp stay exactly at their original 2D RGB values. Hill/ridge side faces still receive shading.
 5. **Populate regional vegetation:** reuse the original seven Builder forest SVG silhouettes exclusively in forest-owned fine aggregates, with 2.5× the old prototype sprite size (half of the preceding 5× version) and at least 10× the number (30–70 trees per forest macro). In swamp aggregates, use billboard sprites baked from the Builder's existing Blender \`reedBed\` and \`reedClump\` scatter meshes, with 10–30 reed beds per swamp macro and unchanged 5× regional size. Both are seed-deterministic.
-6. **Large mountainous relief:** visual mountain-barrier peaks have 5× the previous footprint and approximately 8× the height, with a distinct snow cap starting at two thirds of each peak's height (upper one third). Hill cones have been replaced with seven- to nine-sided truncated polygonal pyramids, 5× wider and taller than the earlier hills, with a closed flat summit. The smaller set of mountain peaks along each ridge prevents excessive visual overlap. Distinct mountain and hill counters reflect the two forms; no gameplay topology changes.
+6. **Rebalanced relief (latest):** each hill territory generates **2–5** flat-topped, seven- to nine-sided truncated-pyramid mesas, distributed with a seeded separation heuristic. Relative to the preceding 5× frustum, each mesa has **50% XY footprint radius** and **20% Z height**. Mountains along each authored ridge keep their height and snow cap above 2/3 of the peak height, but now have **200% of the preceding base XY radius** and **3× the preceding number of peaks**. Every old ridge-group spawns three staggered summits across the ridge direction. Distinct mountain and hill counters remain; gameplay topology is unchanged.
 7. **Present as fixed Builder-style isometry:** middle mouse (mouse3) drag pans, Shift+middle mouse drag rotates yaw around the screen-centre target, wheel zooms around the cursor. No change to camera pitch or height.
 
 The \`1× Originale\` option deliberately uses original coarse macrocell geometry to support A/B comparison. At 8×/20×/40× the global microcell-first pipeline is used.
@@ -27,16 +27,16 @@ The \`1× Originale\` option deliberately uses original coarse macrocell geometr
 
 | Detail | Global visual subcells | Mesh triangles | Vertex buffer | CPU generation | Trees | Reeds |
 |---|---:|---:|---:|---:|---:|---:|
-| 1× canonical | 630 | 3,960 | 0.27 MiB | ~48 ms | 5,545 | 516 |
-| 8× global | 5,183 | 32,234 | 2.21 MiB | ~602 ms | 5,545 | 516 |
-| 20× global | 12,903 | 78,272 | 5.37 MiB | ~1,489 ms | 5,545 | 516 |
-| 40× global | 25,551 | 153,987 | 10.57 MiB | ~2,876 ms | 5,545 | 516 |
+| 1× canonical | 630 | 9,129 | 0.63 MiB | ~95 ms | 5,545 | 516 |
+| 8× global | 5,183 | 37,403 | 2.57 MiB | ~712 ms | 5,545 | 516 |
+| 20× global | 12,903 | 83,441 | 5.73 MiB | ~1,594 ms | 5,545 | 516 |
+| 40× global | 25,551 | 159,156 | 10.93 MiB | ~3,103 ms | 5,545 | 516 |
 
 Global micro Voronoi polygon areas cover the world extent to numerical tolerance. Microcell count is intentionally approximate, because the global site grid is sized by total world area, not split into exactly 20 sites per macro. The deforming owner field does not change the finite rectangular map bounds.
 
 ## Verification
 
-- \`qa/regional-map3d-regression.cjs\`: area conservation, deterministic mesh and grouping, deformable borders and coastlines, palette conversion from 2D hex/HSL, finite GPU arrays, forest-only trees and swamp-only reeds, 2.5×/10× forest and 5×/10× marsh scaling. Spatially indexed, depth-correct territory picking is tested under 12 camera transforms.
+- \`qa/regional-map3d-regression.cjs\`: area conservation, deterministic mesh and grouping, deformable borders and coastlines, palette conversion from 2D hex/HSL, finite GPU arrays, forest-only trees and swamp-only reeds, 2.5×/10× forest and 5×/10× marsh scaling. Spatially indexed, depth-correct territory picking is tested under 12 camera transforms. The latest checks additionally assert 2–5 mesas per hill territory at 50% XY / 20% Z, triple mountain counts and doubled mountain base size, while preserving the one-third snow cap.
 - Script syntax and simulated renderer execution: model-based reed sprite construction, WebGL draw submission, border draw, regional forest/reed billboards, middle-mouse pan, Shift+middle yaw and wheel zoom.
 - **Not yet established:** real browser screenshots, verified WebGL FPS/GPU profiling, low-end mobile memory/thermal behaviour or full visual art-direction approval. Static server or a Vercel preview is needed for real visual review.
 
