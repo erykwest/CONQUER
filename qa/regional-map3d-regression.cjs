@@ -56,14 +56,24 @@ for(const detail of [1,8,20,40]){
   for(const hill of scene.peaks) {
     assert.equal(hill.type,'hill');
     assert.ok(hill.sides>=7 && hill.sides<=9,'polygonal truncated-pyramid base');
-    assert.ok(hill.radius>=12.5 && hill.radius<=40,'hill horizontal size 5x');
-    assert.ok(hill.height>=40 && hill.height<=115,'hill elevation size 5x');
+    assert.ok(hill.radius>=6.25 && hill.radius<=20,'hill XY half the preceding frustum');
+    assert.ok(hill.height>=8 && hill.height<=23,'hill Z 20% of preceding frustum');
     assert.ok(hill.topRadius<hill.radius*.55 && hill.topRadius>hill.radius*.40,
               'hill has a flat, smaller polygonal top, not a cone apex');
   }
+  // Every hill territory gets between 2 and 5 separate frustums.
+  const hillsByMacro=new Map();
+  for(const hill of scene.peaks) hillsByMacro.set(hill.macroId,(hillsByMacro.get(hill.macroId)||0)+1);
+  const hillTerritories=cells.filter(cell=>terrain[cell.macroId]==='hills');
+  assert.equal(hillsByMacro.size,hillTerritories.length,'all hill territories contain relief');
+  for(const cell of hillTerritories)
+    assert.ok(hillsByMacro.get(cell.macroId)>=2 && hillsByMacro.get(cell.macroId)<=5,
+              '2 to 5 mesas per hill territory');
+  const priorPerEdge=Math.max(1,Math.min(4,Math.round(110/120)));
+  assert.equal(scene.stats.mountains,priorPerEdge*3,'mountain ridge tripled relative to old count');
   assert.equal(scene.mountainSummits.length,scene.stats.mountains,'snowcap summit metadata');
   for(const mountain of scene.mountainSummits) {
-    assert.ok(mountain.radius>=14.5 && mountain.radius<=30.5,'mountain footprint >=5x');
+    assert.ok(mountain.radius>=29 && mountain.radius<=61,'mountain base XY 200% of prior footprint');
     assert.ok(mountain.height>=56 && mountain.height<=128,'mountain height >=5x');
     assert.ok(Math.abs(mountain.snowyHeight/mountain.height-1/3)<1e-9,
               'snow covers upper third of hMax');
@@ -137,6 +147,6 @@ for(const detail of [1,8,20,40]){
     );
   }
 }
-console.log('PASS region3d: global microcells, 5x hill frustums, 5x/8x snowy mountains, palette, vegetation and selection.');
+console.log('PASS region3d: 2-5 mesas per hill territory (50% XY / 20% Z), mountain bases 200% and peaks 3x, snow caps, palette and picking.');
 console.table(results);
 console.log('Synthetic CPU-only baseline. Browser/WebGL visuals and FPS remain separate checks.');
