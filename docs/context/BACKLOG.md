@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-16 — Fix: niente pascolo nei campi
+
+- [x] Il cerchio di pascolo di pecore e mucche non tocca nessun campo coltivato (0,2 U di margine), compresi i campi automatici L1 e quelli in cantiere.
+- [x] Un campo piazzato sopra un pascolo già assegnato sposta il gregge.
+- [ ] Proposta: escludere i campi anche dal tragitto casa–pascolo (oggi le greggi possono attraversarli camminando, non pascolarci).
+
 ### 2026-11-15 — Microfix: messa domenicale visibile
 
 - [x] Cutaway della chiesa: fedeli seduti sui banchi la domenica 6:00–12:00 (ConquerCivic3D.massSlots, ConquerCourtPeople.massInSession).

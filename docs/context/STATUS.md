@@ -1,5 +1,10 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-16 — Fix: le greggi non pascolano nei campi coltivati
+
+- Branch fix/sheep-fields. Il fix di ottobre (ea3d7112) escludeva gli edifici dal cerchio di pascolo ma saltava esplicitamente i `field`, e `urbanBuildingPolygons` non restituisce comunque il contorno dei campi: pecore e mucche potevano pascolare sopra i campi. Ora `pastureBuildingAllowed` (settlement-livestock.js) legge `fieldPoints` per ogni campo (del giocatore, automatico L1 e in cantiere) con lo stesso margine di 0,2 U. Poiché piazzare un campo non incrementa `urbanRevision`, i pascoli già assegnati vengono riverificati quando cambia il numero di strutture: un campo costruito sopra un pascolo sposta il gregge altrove.
+- PASS urban-livestock-regression (nuovi casi: campo sopra il pascolo, campo automatico, campo piazzato su un pascolo già in cache); i due nuovi casi falliscono sul codice precedente. Non verificato in una partita reale; CI da eseguire.
+
 ### 2026-11-16 — Microfix: pianerottolo interno per la porta del muro H1
 
 - Branch fix/microfix. Una porta del cammino di ronda che si apre fra due pavimenti (muro H1, camminamento a 1,15, in una torre con P1 a 2,10) ha all'interno un ballatoio di legno alla quota della soglia, sui montanti, che corre lungo la parete fino all'angolo della scala a pioli della stanza (girando l'angolo se la scala è sulla parete accanto); senza scala nella stanza (torre L1) una scaletta propria. ConquerCutawayFurniture.landingSpecs / landingsWorld in settlement-cutaway-furniture.js, usati da 2.5D e WebGL. Le porte delle mura H2 poggiano sul P1 e non ne hanno.
