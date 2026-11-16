@@ -35,13 +35,13 @@ Global micro Voronoi polygon areas cover the world extent to numerical tolerance
 
 ## Verification
 
-- \`qa/regional-map3d-regression.cjs\`: area conservation, deterministic mesh and grouping, deformable borders and coastlines, palette conversion from 2D hex/HSL, finite GPU arrays, forest-only trees and swamp-only reeds, 5×/10× scaling.
+- \`qa/regional-map3d-regression.cjs\`: area conservation, deterministic mesh and grouping, deformable borders and coastlines, palette conversion from 2D hex/HSL, finite GPU arrays, forest-only trees and swamp-only reeds, 5×/10× scaling. Spatially indexed, depth-correct territory picking is tested under 12 camera transforms.
 - Script syntax and simulated renderer execution: model-based reed sprite construction, WebGL draw submission, border draw, regional forest/reed billboards, middle-mouse pan, Shift+middle yaw and wheel zoom.
 - **Not yet established:** real browser screenshots, verified WebGL FPS/GPU profiling, low-end mobile memory/thermal behaviour or full visual art-direction approval. Static server or a Vercel preview is needed for real visual review.
 
 ## Visual limitations and future integration
 
-- **This changes the preview's visual borders/coastlines, not simulation ownership.** There is no inverse mapping for clicking newly displaced edges yet. Do not migrate territory selection, pathfinding, game water barriers, saves or AI to this geometry without explicit gameplay remapping.
+- **This changes the preview's visual borders/coastlines, not simulation ownership.** Left-click selection now picks the exact rendered 3D microcell triangle, maps it back to its original macro territory ID, and delegates selection (including Shift+click multi-selection) to the World Lab. The selected aggregate is highlighted in 3D, and selections from 2D synchronize back to 3D. Do not migrate gameplay ownership, pathfinding, game water barriers, saves or AI to this geometry without explicit gameplay remapping.
 - Original manual river and mountain barrier paths still reference canonical topology. They are drawn over the new organic geometry and may not perfectly follow newly deformed territory edges. A shared semantic-to-visual edge mapping is a separate task.
 - Trees and reeds are 2D billboards projected with the same fixed isometric camera as the mesh, not depth-tested volumetric tree meshes; scenery can overlap mountain faces incorrectly.
 - The original map's outer rectangular domain remains the same; the **internal** region/biome boundaries are organic. Distinct sea/land borders are derived from aggregated microcells.
