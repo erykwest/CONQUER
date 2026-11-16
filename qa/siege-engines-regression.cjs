@@ -17,14 +17,14 @@ for(const [name,e] of Object.entries(M.engines)){
     assert.equal(p.v.length,p.c.length*9,name+' '+part+': nine coordinates per triangle');
     assert.ok(p.c.every(i=>i>=0&&i<M.palette.length),name+' '+part+': palette colours');
   }
-  assert.equal(e.wheels.at.length,{ladder:0,mantlet:2,tower2:6,ballista:0}[name]??4,name+' wheels');
+  assert.equal(e.wheels.at.length,{ladder:0,mantlet:2,tower2:6,ballista:0,ramLight:0}[name]??4,name+' wheels');
   assert.ok(e.crew.length>=2,name+' has a crew');
   for(const mode of ['idle','move','fire','setup'])for(let t=0;t<13;t+=.37){
     const m=SE.triangles(name,{x:3,y:4,heading:t},{mode,t,distance:t,ammo:['stone','fire','scatter'][Math.round(t)%3],ballista:t>6});
     assert.ok(m.pos.every(Number.isFinite),name+' '+mode+' is finite');
   }
 }
-console.log('PASS eight engines, well-formed parts, every pose finite');
+console.log('PASS nine engines, well-formed parts, every pose finite');
 
 // Helpers: z range of one part in a posed engine.
 const partRange=(e,part)=>{let s=0;for(const [n,p] of Object.entries(M.engines[e].parts)){if(n===part)return[s,s+p.c.length*9];if(n!=='wheel'&&n!=='hides')s+=p.c.length*9}};
