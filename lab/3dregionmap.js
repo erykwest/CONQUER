@@ -13,6 +13,7 @@
   const zoom = document.getElementById('zoom');
   const showTrees = document.getElementById('showTrees');
   const showBorders = document.getElementById('showBorders');
+  const resetView = document.getElementById('resetView');
   const geometry = window.ConquerRegion3DGeometry;
   // Recolor only the canopy fill of the seven Builder SVG trees; their silhouettes and trunks stay intact.
   const treeImages = Array.from({ length: 7 }, (_, i) => {
@@ -34,12 +35,15 @@
   });
   let gl, program, vertexBuffer, locations, scene = null, snapshot = null, seenRevision = -1;
   let lastFrameMs = 0, lastUploadMs = 0, lastSyncMs = 0, rebuilding = false, needsRedraw = false;
+  let panX = 0, panY = 0;
+  const pointers = new Map();
+  let dragMode = 'pan';
 
   const vertexShader = [
     '#version 300 es',
     'precision highp float;',
     'in vec3 aPosition; in vec3 aColor;',
-    'uniform vec2 uCenter; uniform vec2 uScreen; uniform vec2 uYaw;',
+    'uniform vec2 uCenter; uniform vec2 uScreen; uniform vec2 uYaw; uniform vec2 uPan;',
     'uniform float uPitch; uniform float uScale;',
     'out vec3 vColor;',
     'void main() {',
@@ -48,7 +52,7 @@
     ' float y=p.x*uYaw.y+p.y*uYaw.x;',
     ' float sy=y*sin(uPitch)-aPosition.z*cos(uPitch);',
     ' float depth=y*cos(uPitch)+aPosition.z*sin(uPitch);',
-    ' gl_Position=vec4(2.0*x*uScale/uScreen.x, -2.0*sy*uScale/uScreen.y, -depth/7000.0, 1.0);',
+    ' gl_Position=vec4(2.0*(x*uScale+uPan.x)/uScreen.x, -2.0*(sy*uScale+uPan.y)/uScreen.y, -depth/7000.0, 1.0);',
     ' vColor=aColor;',
     '}'
   ].join('\n');
@@ -74,7 +78,7 @@
     gl.linkProgram(program);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw Error(gl.getProgramInfoLog(program));
     gl.useProgram(program);
-    const attrs = ['aPosition', 'aColor'], uniforms = ['uCenter', 'uScreen', 'uYaw', 'uPitch', 'uScale'];
+    const attrs = ['aPosition', 'aColor'], uniforms = ['uCenter', 'uScreen', 'uYaw', 'uPitch', 'uScale', 'uPan'];
     locations = Object.fromEntries([...attrs, ...uniforms].map(name => [
       name, attrs.includes(name) ? gl.getAttribLocation(program, name) : gl.getUniformLocation(program, name)
     ]));
@@ -115,6 +119,8 @@
       width, height, angle, pitch: p,
       cos: Math.cos(angle), sin: Math.sin(angle),
       scale: fit * Number(zoom.value),
+      panX: panX * width / Math.max(1, surface.clientWidth),
+      panY: panY * height / Math.max(1, surface.clientHeight),
       cx: snapshot.width / 2, cy: snapshot.height / 2
     };
   }
@@ -122,30 +128,67 @@
     const dx = point.x - c.cx, dy = point.y - c.cy;
     const x = dx * c.cos - dy * c.sin, y = dx * c.sin + dy * c.cos;
     return {
-      x: c.width / 2 + x * c.scale,
-      y: c.height / 2 + (y * Math.sin(c.pitch) - (point.z || 0) * Math.cos(c.pitch)) * c.scale,
+      x: c.width / 2 + x * c.scale + c.panX,
+      y: c.height / 2 + (y * Math.sin(c.pitch) - (point.z || 0) * Math.cos(c.pitch)) * c.scale + c.panY,
       depth: y * Math.cos(c.pitch) + (point.z || 0) * Math.sin(c.pitch)
     };
   }
   function overlay(c) {
     const ctx = spritesCanvas.getContext('2d');
     ctx.clearRect(0, 0, c.width, c.height);
-    if (showBorders.checked || snapshot.rivers?.length) {
-      ctx.lineJoin = 'round';
+    const pixelRatio = c.width / Math.max(1, surface.clientWidth);
+
+    if (showBorders.checked) {
+      // Always draw the original gameplay territories, never the visual Voronoi microcells.
       ctx.lineCap = 'round';
-      const rivers = new Set(snapshot.rivers || []);
-      const automatic = new Set(snapshot.generatedRiverEdges || []);
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      for (const cell of snapshot.cells) {
+        const poly = cell.polygon;
+        if (!poly || poly.length < 3) continue;
+        const first = project({ ...poly[0], z: .24 }, c);
+        ctx.moveTo(first.x, first.y);
+        for (let i = 1; i < poly.length; i++) {
+          const p = project({ ...poly[i], z: .24 }, c);
+          ctx.lineTo(p.x, p.y);
+        }
+        ctx.closePath();
+      }
+      ctx.lineWidth = 1.05 * pixelRatio;
+      ctx.strokeStyle = 'rgba(24, 34, 29, .72)';
+      ctx.stroke();
+
+      // Highlight the actual shoreline, including land-water shared edges.
+      ctx.beginPath();
       for (const edge of snapshot.edges || []) {
         const ids = edge.macroIds || [];
-        const river = (ids.length === 2 && rivers.has(ids.slice().sort((a, b) => a - b).join('-'))) ||
-          automatic.has(geometryKey(edge.start, edge.end));
-        if (!river && (!showBorders.checked || ids.length !== 2)) continue;
-        const a = project({ ...edge.start, z: .15 }, c), b = project({ ...edge.end, z: .15 }, c);
-        ctx.strokeStyle = river ? '#76c9d4' : 'rgba(37,40,33,.44)';
-        ctx.lineWidth = river ? Math.max(1.4, c.scale * 2.2) : .8;
-        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        const water = id => ['sea', 'lake'].includes(snapshot.terrain[id]);
+        const coastline = ids.length === 1 || (ids.length === 2 && water(ids[0]) !== water(ids[1]));
+        if (!coastline) continue;
+        const a = project({ ...edge.start, z: .3 }, c), b = project({ ...edge.end, z: .3 }, c);
+        ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
       }
+      ctx.lineWidth = 1.6 * pixelRatio;
+      ctx.strokeStyle = 'rgba(221, 203, 160, .83)';
+      ctx.stroke();
     }
+
+    const rivers = new Set(snapshot.rivers || []);
+    const automatic = new Set(snapshot.generatedRiverEdges || []);
+    ctx.beginPath();
+    for (const edge of snapshot.edges || []) {
+      const ids = edge.macroIds || [];
+      const river = (ids.length === 2 && rivers.has(ids.slice().sort((a, b) => a - b).join('-'))) ||
+        automatic.has(geometryKey(edge.start, edge.end));
+      if (!river) continue;
+      const a = project({ ...edge.start, z: .37 }, c), b = project({ ...edge.end, z: .37 }, c);
+      ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+    }
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#76c9d4';
+    ctx.lineWidth = 2.2 * pixelRatio;
+    ctx.stroke();
+
     if (showTrees.checked) {
       const trees = scene.trees.map(t => ({ t, p: project(t, c) }))
         .sort((a, b) => a.p.depth - b.p.depth);
@@ -178,6 +221,7 @@
     gl.uniform2f(locations.uYaw, c.cos, c.sin);
     gl.uniform1f(locations.uPitch, c.pitch);
     gl.uniform1f(locations.uScale, c.scale);
+    gl.uniform2f(locations.uPan, c.panX, c.panY);
     gl.drawArrays(gl.TRIANGLES, 0, scene.vertices.length / 6);
     overlay(c);
     lastFrameMs = performance.now() - begin;
@@ -239,6 +283,86 @@
     }
     quality.value = String(actual);
   }
+
+  function zoomAt(factor, clientX, clientY) {
+    const oldZoom = Number(zoom.value);
+    const nextZoom = Math.min(Number(zoom.max), Math.max(Number(zoom.min), oldZoom * factor));
+    if (nextZoom === oldZoom) return;
+    const rect = surface.getBoundingClientRect();
+    const x = clientX - rect.left - rect.width / 2;
+    const y = clientY - rect.top - rect.height / 2;
+    const ratio = nextZoom / oldZoom;
+    panX = x - (x - panX) * ratio;
+    panY = y - (y - panY) * ratio;
+    zoom.value = String(nextZoom);
+    draw();
+  }
+
+  // Left drag pans, right/Shift drag orbits, wheel zooms around the pointer.
+  // Pointer capture also supports touch drag and two-finger pinch.
+  surface.addEventListener('contextmenu', event => event.preventDefault());
+  surface.addEventListener('wheel', event => {
+    event.preventDefault();
+    zoomAt(Math.exp(-event.deltaY * (event.deltaMode === 1 ? .034 : .0016)), event.clientX, event.clientY);
+  }, { passive: false });
+  surface.addEventListener('pointerdown', event => {
+    if (event.pointerType !== 'touch' && event.button !== 0 && event.button !== 2) return;
+    event.preventDefault();
+    surface.setPointerCapture(event.pointerId);
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (pointers.size === 1) {
+      dragMode = event.button === 2 || event.shiftKey || event.altKey ? 'rotate' : 'pan';
+      surface.classList.add('dragging');
+    } else dragMode = 'pinch';
+  });
+  surface.addEventListener('pointermove', event => {
+    const before = pointers.get(event.pointerId);
+    if (!before) return;
+    const dx = event.clientX - before.x, dy = event.clientY - before.y;
+    if (pointers.size >= 2) {
+      const others = [...pointers.entries()].filter(([id]) => id !== event.pointerId);
+      const other = others[0][1];
+      const oldDistance = Math.hypot(before.x - other.x, before.y - other.y);
+      const newDistance = Math.hypot(event.clientX - other.x, event.clientY - other.y);
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      panX += dx / 2; panY += dy / 2;
+      if (oldDistance > 10 && newDistance > 10) {
+        zoomAt(newDistance / oldDistance, (event.clientX + other.x) / 2, (event.clientY + other.y) / 2);
+      } else draw();
+      return;
+    }
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (dragMode === 'rotate') {
+      const degrees = Number(yaw.value) + dx * .48;
+      yaw.value = String(((degrees + 180) % 360 + 360) % 360 - 180);
+      pitch.value = String(Math.max(Number(pitch.min), Math.min(Number(pitch.max), Number(pitch.value) + dy * .25)));
+    } else {
+      panX += dx; panY += dy;
+    }
+    draw();
+  });
+  function endPointer(event) {
+    pointers.delete(event.pointerId);
+    if (surface.hasPointerCapture(event.pointerId)) surface.releasePointerCapture(event.pointerId);
+    if (!pointers.size) surface.classList.remove('dragging');
+    else if (pointers.size === 1) dragMode = 'pan';
+  }
+  surface.addEventListener('pointerup', endPointer);
+  surface.addEventListener('pointercancel', endPointer);
+  surface.addEventListener('lostpointercapture', event => {
+    pointers.delete(event.pointerId);
+    if (!pointers.size) surface.classList.remove('dragging');
+  });
+  surface.addEventListener('dblclick', () => {
+    panX = panY = 0;
+    zoom.value = '1';
+    draw();
+  });
+  resetView.addEventListener('click', () => {
+    panX = panY = 0;
+    yaw.value = '-27'; pitch.value = '54'; zoom.value = '1';
+    draw();
+  });
 
   for (const input of [yaw, pitch, zoom, showTrees, showBorders]) input.addEventListener('input', draw);
   quality.addEventListener('change', rebuild);
