@@ -36,14 +36,19 @@ function drawStructure(s,preview=false){
     if(assembled&&window.ConquerAssembly.draw(s))return;
     ctx.save();if(preview)ctx.globalAlpha=.58;else if(underConstruction(s))ctx.globalAlpha=.42;
     if(isPlacementFoundationBuilding(s))drawPlacementFoundation(s,preview);
-    if(window.ConquerIndustries?.is(s))window.ConquerIndustries.render(s,preview);
+    if(window.ConquerStorageYard?.is(s))window.ConquerStorageYard.draw(s,preview);
+    else if(window.ConquerIndustries?.is(s))window.ConquerIndustries.render(s,preview);
     else if(window.ConquerEvents3D?.is(s))window.ConquerEvents3D.draw(s,preview);   // event venues (settlement-events3d.js)
     else if(window.ConquerPier?.is(s))window.ConquerPier.draw(s,preview);           // timber pier (settlement-pier.js)
     else if(window.ConquerQuay?.is(s))window.ConquerQuay.draw(s,preview);           // stone quay (settlement-quay.js)
+    else if(window.ConquerSlopeways?.is(s))window.ConquerSlopeways.draw(s,preview); // ramp / stairway (settlement-slopeways.js)
     else if(isCivic(s))drawCivicStructure(s,preview);
     else if(isCivicAnnex(s))drawCivicAnnex(s,preview);
     else if(['tower','gate','well'].includes(s.type))drawPointStructure(s,preview);
     else if(s.type==='palisade')drawPalisade(s,preview);
+    // Timber longhouse: Blender model; open in cutaway, its room right after it, in depth order (it
+    // is not a castle part, so the castle body / cutaway composites neither bound nor refresh it).
+    else if(isLonghouse(s)&&window.ConquerWood3D?.draw(s,preview)){if(!preview&&structureCutaway(s))window.ConquerCutawayFurniture?.draw(s,cutawayWallGeometry(s))}
     else{drawLinearBase(s,preview);if(!underConstruction(s))drawBuiltDetails(s,preview)}
     ctx.restore();
   };
@@ -166,15 +171,18 @@ let castleBodyBitmapEnabled=localStorage.getItem('conquer.castleBodyBitmap.v1')!
 function renderCastleBodyContent(){
   // Opt-in 3D prototype (settlement-castle3d.js); falls through to the Canvas union renderer.
   if(window.ConquerCastle3D?.drawBody?.())return;
+  // Room exterior elements behind their structure (a garderobe on the far face) go first: the body hides them.
+  window.ConquerRoomExterior?.drawAll('back');
   // A merged single-colour 2D union cannot represent distinct wall/brick components.
   // Use the existing per-structure fallback for mixed masonry; do not rewrite topology.
-  const hasBrick=castleBodyRenderableStructures().some(s=>masonryMaterial(s)==='brick');
-  const unionOk=hasBrick?false:drawCastleUnion();
+  const hasBrick=castleBodyRenderableStructures().some(s=>masonryMaterial(s)==='brick'||(typeof isTimberLeanTo==='function'&&isTimberLeanTo(s)));
+  // The union has no individual structure context: explicitly mark it as stone masonry.
+  const unionOk=hasBrick?false:withStructureVisualMaterial({type:'wall',masonryMaterial:'stone'},drawCastleUnion);
   if(!unionOk){
     const fallback=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)&&!structureCutaway(s)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
     for(const s of fallback)drawStructure(s);
   }else{
-    drawCastleUnionDetails();
+    withStructureVisualMaterial({type:'wall',masonryMaterial:'stone'},drawCastleUnionDetails);
   }
 
   // Point fortifications on slopes are intentionally kept out of the wall
@@ -190,6 +198,8 @@ function renderCastleBodyContent(){
   drawTowerDoors();
   drawTowerRoofs();
   drawGateRoofs();
+  window.ConquerRoomExterior?.drawAll();
+  window.ConquerWallStairs?.drawAll();
 }
 function castleBodyRenderableStructures(){
   return State.structures.filter(s=>(isCastlePart(s)||isRaisedPlacementCastlePoint(s))&&!underConstruction(s));
@@ -210,19 +220,48 @@ function castleBodyCompositeBounds(){
     maxY:Math.max(...cloud.map(p=>p.y))+pad
   };
 }
+// The visual inputs of one structure, shared by every render cache key (2.5D castle body bitmap and
+// cutaway overlay here, the World 3D structure signature in settlement-world3d.js) so the lists cannot
+// drift apart: geometry, material, the fields of every declared variant (STRUCTURE_VARIANTS: roof,
+// hoarding, a small gate's timber upper storey, skins, bells...), rooms and their exterior damage.
+// A field missing here leaves a stale mesh or bitmap after the change (qa/render-cache-keys-regression.cjs).
+const STRUCTURE_VISUAL_FIELDS=Object.freeze(['id','type','shape','material','masonryMaterial','woodStyle','woodRoof','roofCover',
+  'roofStyle','machicolationStyle','bartizan','bell','innerRoof','signalFire','roofShape','baseStyle','skin','hoarding','upper','topWeapon',
+  'r','size','w','h','width','length','angle','rotationStep','level','tier','cutawayFloor','aSnap','bSnap','parentTowerId',
+  'orientationOffset','groundZ','foundationMinZ']);
+function structureVisualKey(s){
+  if(!s)return'';
+  const num=v=>v==null||v===''?'':Number.isFinite(Number(v))?String(+Number(v).toFixed(4)):String(v);
+  let k='';
+  for(const f of STRUCTURE_VISUAL_FIELDS)k+=num(s[f])+'|';
+  k+=(s.x!=null?num(s.x)+','+num(s.y):'')+'|'+(s.a?num(s.a.x)+','+num(s.a.y):'')+'|'+(s.b?num(s.b.x)+','+num(s.b.y):'')+'|';
+  k+=(s.flip?1:0)+''+(s.cutaway?1:0)+(s.signalFireSpent?'F':'')+(s.doorBurnt?'D':'')+(s.burnt?'X':'')+(s.brokenTop?'B':'')+'|';
+  // Every declared variant, whatever its name (a new upgrade is covered without editing this list).
+  const schema=typeof variantSchema==='function'?variantSchema(s):null;
+  if(schema)for(const key of Object.keys(schema).sort())k+=key+'='+(s[key]??'')+';';
+  if(s.functions?.length)k+='|'+JSON.stringify(s.functions);
+  if(s.roomExteriorHp)k+='|'+JSON.stringify(s.roomExteriorHp);
+  return k;
+}
+// Epoch for short-lived memos of derived geometry (archer slots, room exterior placement): it changes
+// whenever the game signals a scene, navigation or structure-list change, and at least once a second
+// as a backstop for in-place edits that signal nothing. 0 outside the browser runtime (node QA, Lab
+// stubs without the perf counters): callers then recompute every time.
+let structureMemoList=null,structureMemoListId=0;
+function structureMemoEpoch(){
+  const perf=typeof window!=='undefined'&&window.__conquerPerf;
+  if(!perf||typeof performance==='undefined'||!Array.isArray(State?.structures))return 0;
+  if(State.structures!==structureMemoList){structureMemoList=State.structures;structureMemoListId++}
+  const nav=typeof navPerf!=='undefined'?(navPerf.navInvalidations||0):0;
+  return structureMemoListId+':'+State.structures.length+':'+(perf.cacheInvalidations||0)+':'+nav+':'+Math.floor(performance.now()/1000);
+}
 function castleBodyVisualSignature(){
   const num=v=>Number.isFinite(Number(v))?+Number(v).toFixed(4):null;
-  const point=p=>p?[num(p.x),num(p.y)]:null;
-  const items=castleBodyRenderableStructures().map(s=>[
-    s.id||'',s.type||'',s.shape||'',s.material||'',s.masonryMaterial||'stone',s.woodStyle||'',s.woodRoof||'',
-    s.roofStyle||'',s.baseStyle||'',s.skin||'',num(s.x),num(s.y),num(s.r),num(s.size),
-    point(s.a),point(s.b),num(s.width),num(s.length),num(s.angle),s.rotationStep??null,
-    s.level??null,s.tier??null,!!s.flip,!!s.cutaway,JSON.stringify(s.functions||[]),s.aSnap||null,s.bSnap||null,s.parentTowerId||null,
-    num(s.orientationOffset),num(s.groundZ),num(s.foundationMinZ)
-  ]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
+  const items=castleBodyRenderableStructures().map(s=>[s.id||'',structureVisualKey(s)])
+    .sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
   return JSON.stringify([
-    1,window.ConquerCastle3D?.active?.()?'3d':'2d',State.season||'summer',State.visualPalette,num(State.view.scale),State.view.rotation||0,isPlanView()?'plan':'iso',staticCacheDpr(),
-    !!window.__polygonClipping,items
+    1,window.ConquerCastle3D?.active?.()?'3d':'2d',State.season||'summer',State.visualPalette,State.stonePaletteId,num(State.view.scale),State.view.rotation||0,isPlanView()?'plan':'iso',staticCacheDpr(),
+    !!window.__polygonClipping,crenelStyle(),roofPitch(),items
   ]);
 }
 function drawCastleBodyBitmap(){
@@ -333,7 +372,11 @@ document.getElementById('castleCacheToggle')?.addEventListener('click',()=>setCa
 document.getElementById('castleCacheBenchmark')?.addEventListener('click',()=>benchmarkCastleBodyCache(3));
 updateCastleCacheControls();
 
+let shopFrontSig=null;
 function ensureStaticSceneCaches(){
+  // L3 shop fronts open at dawn and shut at dusk (settlement-shop-cutaway.js): repaint the houses.
+  const shopSig=window.ConquerShopCutaway?.frontSig?.()??null;
+  if(shopSig!==shopFrontSig){if(shopFrontSig!==null)invalidateSceneCache(['base']);shopFrontSig=shopSig}
   const builders=[
     ['landscape',drawLandscapeStaticScene],
     ['ground',drawGroundStaticScene],
@@ -382,7 +425,7 @@ let lastCivicCutawayId=null;
 function draw(){
   // A selected church / inn is drawn in cutaway inside the base layer; Escape and the
   // panel's close button deselect without invalidating it.
-  const civicCut=window.ConquerCivic3D?.cutawayId?.()||null;
+  const civicCut=window.ConquerCivic3D?.cutawaySig?.()||null;   // id@floor
   if(civicCut!==lastCivicCutawayId){lastCivicCutawayId=civicCut;invalidateSceneCache('base')}
   const r=wrap.getBoundingClientRect();
   const phaseStart=performance.now(),phaseStats={};
@@ -421,6 +464,7 @@ function draw(){
   // Dynamic placement overlay: switching tools must not invalidate or rebuild
   // the static landscape cache, and the WebGPU path must show the same outline.
   drawBuildArea();
+  window.ConquerForestry?.drawJobs();
   for(const field of completedSettlement('field'))drawFieldWork(field);
 
   // Construction sites remain dynamic at ground/building depth.
@@ -438,10 +482,14 @@ function draw(){
   // preserving the existing occlusion behaviour.
   window.ConquerLivestock?.draw();
   drawPeasants();
+  window.ConquerHaulage?.draw?.(); // Loaded carts to stockyards, empty return on completed roads
+  window.ConquerRoadSignTests?.drawVehicles?.(); // lord/merchant convoys and coach trips on the roads
   window.ConquerJoust?.draw();   // spectators, knights and squires on an active joust ground
   window.ConquerEventPeople?.draw();   // feast and circus: diners, sellers, players, queues
+  window.ConquerCourtPeople?.draw();   // the tribunal in session in the town hall cutaway
   window.ConquerIndustries?.drawWorkers();
   window.ConquerWorkAnim?.drawBuilders();
+  window.ConquerForestry?.drawCrews?.();   // L1 woodcutters at the forest clearings
   window.ConquerShipyard?.drawShipwrights();   // shipwrights along the hull on the slipways
   if(!window.ConquerWorld3D?.active?.())window.ConquerCoast?.draw();   // 2.5D: shore boulders (WebGL has them in the static scene)
   window.ConquerCoast?.drawWaves(performance.now()/1000);   // waves on the beaches, spray on the rocks, glints at sea
@@ -453,11 +501,13 @@ function draw(){
 
   drawTowerFlags();
   drawCastleSoldiers();
+  window.ConquerTrebuchets?.draw();   // enemy trebuchets: crews (and the 2.5D outline)
   markPhase('castle-units');
   if(world3d)window.ConquerWorld3D.drawFront(r);else blitSceneCache('castleFront');
   window.ConquerFleet?.drawFigures();   // 3D: crews, fires and arrows over the ships of the front pass
   window.ConquerGulls?.draw(performance.now()/1000);   // seagulls over the coast, above the ships
   window.ConquerSiege?.drawOverlay();
+  if(typeof drawRaisedVillagers==='function')drawRaisedVillagers();   // on the Mastio's outer stair
   drawCastleFireFixtures();
 
   // The drawbridge is an exterior shield when raised. Paint portals and
@@ -466,20 +516,20 @@ function draw(){
   if(world3d)window.ConquerWorld3D.drawMastioDrapes();
   else{drawFacadeWindows(false,1,false);drawGatePortals()}
   window.ConquerCrossings?.drawDynamic();
+  window.ConquerKeepEntrance?.animate();
   window.ConquerGates?.tick();
   drawChimneysAndSmoke();
 
   if(State.draft?.mode==='terraform'){
-    window.ConquerTerraforming?.drawGhost(State.draft.preview);
+    if(State.tool?.mode==='forest')window.ConquerForestry?.drawGhost(State.draft.preview);
+    else window.ConquerTerraforming?.drawGhost(State.draft.preview);
   }else if(['moat','bridge'].includes(State.draft?.preview?.type))window.ConquerCrossings?.drawPreview(State.draft.preview);
   if(State.draft?.mode!=='terraform'&&State.draft?.previewSegments?.length){
     const segments=State.draft.previewSegments;
-    const totalCost=aggregateConstructionCost(segments);
-    const routeUnderfunded=!canAfford(totalCost);
     for(const segment of segments){
       drawStructure(segment,true);
       const verdict=builderGhostVerdict(segment);
-      if(!verdict.ok||routeUnderfunded)drawInvalidPlacementGhost(segment);
+      if(!verdict.ok)drawInvalidPlacementGhost(segment);
     }
   }else if(State.draft?.mode!=='terraform'&&State.draft?.preview){
     const ghost=State.draft.preview;

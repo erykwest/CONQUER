@@ -1,5 +1,22 @@
 # CONQUER — Piramide di contesto
 
+**Remote control multi-campagna (13/11/2026, solo design):** [Main page, lobby, KPI e comando remoto](../REMOTE-CONTROL-SCOPE.md) — futura UI web/mobile per posta, diplomazia, spedizioni, tributi, mappa regionale e gestione senza Builder. Non implementato su `main`. Decisione D-RC-261113.
+
+
+**Scope multiplayer (13/11/2026, solo design):** [Server, slot giocatori/bot, ingresso tardivo e colonizzazione feudale](../MULTIPLAYER-SERVER-SCOPE.md), decisione [D-MP-261113](DECISIONS.md). Nessun sistema server/lobby integrato su `main`; la roadmap M4 non viene anticipata.
+
+
+**Codex Obsidian (branch feature):** [contenuti Markdown dal vault personale alla Wiki](../CODEX-OBSIDIAN.md), import con validazione e controllo conflitti, prezzi/regole dai provider.
+
+**Codex Wiki (05/11/2026, branch feature):** [consultazione ipertestuale web/in-game](../CODEX-WIKI.md), con keywords di sovracategoria collegate a pagine e catalogo pubblico generato.
+
+**CODEX fase 2 (05/11/2026, branch feature):** [contratto catalogo normalizzato v1](../CODEX-CATALOG.md); API read-only, quote dai provider gameplay e snapshot portabile. UI Wiki ancora da implementare.
+
+**CONQUER CODEX (05/11/2026):** [censimento iniziale dei cataloghi](../CODEX-CATALOG-AUDIT.md), base `main` `bcf3cd7`; audit documentale, catalogo unificato ancora da implementare.
+
+**Nuovo laboratorio CRIME (02/11/2026):** [specifica criminalità, ordine pubblico, sommosse e strutture repressive](../crime.md). Skeleton sperimentale su branch `feature/crime-skeleton` con route `/crime/`: indicatori e fasi simulate su fixture, non collegati ai popolani, agli edifici o ai salvataggi del Builder.
+
+
 **Nuovo filone MARCH (30/10/2026):** [specifica modalità attacco](../march.md). Skeleton su branch feature/march-skeleton: prototipo locale su fixture, non world map/feudi integrati. Il ritiro lascia danni e bottino persistenti nello scenario, la conquista è volontaria.
 
 

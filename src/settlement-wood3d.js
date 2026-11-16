@@ -13,8 +13,10 @@
   function modelKey(s){
     if(!s)return null;
     if(isWoodGate(s))return'woodGate';
+    if(isLonghouse(s))return isWideBuilt(s)?'longhouse_w2':'longhouse_w1';
     if(!isWoodTower(s))return null;
     if(woodTowerStyle(s)==='watchtower')return'watchtower';
+    if(woodTowerStyle(s)==='frameTower')return DATA()?.models?.frameTower?'frameTower':null;
     return woodTowerRoof(s)==='open'?'palisadeTower_open':'palisadeTower_roofed';
   }
   // Structures this module draws in the world renderer (sites keep their ghost / assembly).
@@ -64,7 +66,7 @@
     const g=placementGroundZ(s);
     return Number.isFinite(g)?g:terrainElevation(s);
   }
-  function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+  const hash=window.ConquerUtil.hash;
   // One stake: unit body scaled to r x (bodyZ - z0), then a tip to tipZ (or a flat cap).
   function addStake(mesh,center,r,z0,bodyZ,tipZ,angle,seed){
     const ground=terrainElevation(center),base=ground+z0-(z0<=0?.06:0);
@@ -162,6 +164,35 @@
     return out;
   }
   const cutaway=s=>typeof structureCutaway==='function'&&structureCutaway(s);
+  // Longhouse laid along a->b: one 1 U bay model per U (stretched to the exact length), the door
+  // gable at a and the closed gable at b. In cutaway the roof goes (the far slope would cover the
+  // back of the room from above, as the stone section's cutaway has no roof), and so do the wall
+  // and gable facing the camera; the plank floor shows, as the palisade tower's open sides.
+  function longhouse(s){
+    const key=modelKey(s),mesh={pos:[],col:[]};
+    const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,angle=Math.atan2(dy,dx);
+    const ground=Math.min(terrainElevation(s.a),terrainElevation(s.b)),n=Math.max(1,Math.round(L)),sx=L/n;
+    const ux=dx/L,uy=dy/L,c={x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2};
+    // Roof cover parts carry the cover as suffix (build_wood_fort.py LONGHOUSE_COVERS).
+    const v='.'+longhouseCover(s),roof=['roof_yn'+v,'roof_yp'+v,'ridge'+v];
+    let skip=new Set(['floor']),open=false;
+    if(cutaway(s)&&!(typeof isPlanView==='function'&&isPlanView())){
+      const d0=viewDepthPoint(c),near=p=>viewDepthPoint(p)>d0+1e-6;
+      skip=new Set();open=true;
+      const yn=near({x:c.x+uy,y:c.y-ux});
+      skip.add(yn?'wall_yn':'wall_yp');
+      skip.add(near(s.a)?'end_a':'end_b');
+    }
+    const bay=['wall_yn','wall_yp','floor',...(open?[]:roof)].filter(n=>!skip.has(n));
+    // The hearth's smoke hole sits on the middle bay (its smoke: longhouseSmokeSpecs).
+    const mid=Math.floor((n-1)/2);
+    for(let i=0;i<n;i++)addModel(mesh,key,{x:s.a.x+ux*i*sx,y:s.a.y+uy*i*sx,angle,sx},ground,i===mid&&!open?[...bay,'smoke'+v]:bay);
+    for(const [end,p] of [['a',s.a],['b',s.b]]){
+      const only=[...(skip.has('end_'+end)?[]:['end_'+end]),...(open?[]:['verge_'+end+v])];
+      if(only.length)addModel(mesh,key,{x:p.x,y:p.y,angle},ground,only);
+    }
+    return mesh;
+  }
   function pointModel(s){
     const key=modelKey(s),ground=groundOf(s),mesh={pos:[],col:[]};
     if(key==='woodGate'){
@@ -170,20 +201,29 @@
       addModel(mesh,key,{x:s.x,y:s.y,angle:s.angle||0,sx:d.w/1,sy:d.h/1.5},ground);
     }else{
       const names=parts(key).map(p=>p.name),open=cutaway(s)?openSides(s):null;
-      const only=names.filter(n=>open?!open.has(n):!INTERIOR.includes(n));
+      // Room exterior elements (settlement-room-exterior.js): the alarm-bell belfry takes the roof
+      // top and its finial replaces the flag pole.
+      const belfry=window.ConquerRoomExterior?.triangles(s)||[];
+      // Frame tower front: ground door, or (Mastio raised entrance) the P1 doorway in place of
+      // the front's middle post and with no door below.
+      const raised=window.ConquerKeepEntrance?.sill?.(s)!=null;
+      const drop=new Set(raised?['door','frontMid']:['doorRaised']);
+      const only=names.filter(n=>(open?!open.has(n):!INTERIOR.includes(n))&&!(belfry.length&&n==='flag')&&!drop.has(n));
       addModel(mesh,key,{x:s.x,y:s.y,angle:s.angle||0},ground,only);
+      for(const t of belfry){for(const q of t.pts)mesh.pos.push(q.p.x,q.p.y,ground+q.z);mesh.col.push(t.hex)}
     }
     return mesh;
   }
   // World geometry of one structure: model meshes (shaded by face normal) + pre-shaded faces.
   const cache=new Map();
   function geometry(s){
-    const sig=[s.type,s.x,s.y,s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.angle||0,s.width,s.tier,s.woodStyle,s.woodRoof,s.roofStyle,s.w,s.h,s.size,
+    const sig=[s.type,s.x,s.y,s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.angle||0,s.width,s.tier,s.woodStyle,s.woodRoof,s.roofCover,s.roofStyle,s.bell,s.w,s.h,s.size,
       s.aSnap,s.bSnap,s.flip?1:0,s.groundZ,State.season,State.relief?.seed,JSON.stringify(State.relief?.terraforming||[]).length,
-      cutaway(s)?'cut'+[...openSides(s)].join(','):'',Object.values(heraldry()).join('')].join('|');
+      cutaway(s)?'cut'+(isLonghouse(s)?State.view?.rotation:[...openSides(s)].join(',')):'',s.span,Object.values(heraldry()).join(''),window.ConquerKeepEntrance?.sill?.(s)??''].join('|');
     const hit=s.id&&cache.get(s.id);if(hit&&hit.sig===sig)return hit.geo;
     let geo;
     if(s.type==='palisade')geo=palisade(s);
+    else if(isLonghouse(s))geo={mesh:longhouse(s),faces:[]};
     else geo={mesh:pointModel(s),faces:[],foundation:foundation(s)};
     // Pre-shaded faces as one flat mesh for the 2.5D painter.
     const flat={pos:[],col:[],flat:true};

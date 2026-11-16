@@ -6,6 +6,8 @@ eval(harness+`
 const queue=[];
 sandbox.setTimeout=fn=>{queue.push(fn);return queue.length};
 run("function markDirty(){};function renderUI(){};function draw(){}");
+run(moduleFile('placement'));
+run(moduleFile('storage-yard'));
 const app=moduleFile('app');
 run(app.slice(app.indexOf("document.getElementById('confirmVillageBtn').onclick"),app.indexOf("document.getElementById('cancelVillageBtn').onclick")));
 let passed=0;
@@ -23,6 +25,9 @@ function confirm(){
  assert.ok(performance.now()-start<100,'name confirmation must return promptly');
  assert.equal(run('State.village.founded'),true);
  assert.equal(run('State.village.foundingWorkers'),4,'Founding must leave four L1 workers available before any house');
+ assert.equal(run("State.structures.filter(s=>s.type==='storageYard').length"),1,'a physical stockyard must spawn on founding');
+ assert.equal(run("State.structures.filter(s=>s.type==='storageYard').every(s=>Math.hypot(s.x-100,s.y-100)<=7&&s.w===2&&s.h===2)"),true,'stockyard must fit within 7U of founding well');
+
  assert.equal(run('roadList().length'),0,'planning must not run inside the name handler');
  assert.ok(queue.length>0);
 }

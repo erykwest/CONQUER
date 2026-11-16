@@ -73,7 +73,7 @@ test('with the gate broken in, the way is open',()=>{
   tick(250);
   assert.ok(U('sq').y>91,'through the gate passage, inside the walls: y='+U('sq').y.toFixed(2));
 });
-// Unit scale (D-056): small HP, the natural 6, the knight's double blow, old saves rescaled.
+// Unit scale (D-060): small HP, the natural 6, the knight's double blow, old saves rescaled.
 const R=context.window.ConquerCombatRules;
 test('unit profiles on the game scale',()=>{
   const hp=k=>R.ensure({kind:k,combatKind:k},k).maxHp;

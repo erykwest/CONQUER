@@ -51,14 +51,16 @@ gothicAssetSizeForLevel=function(s){
   return{w:base.w*scale,h:base.h*scale};
 };
 
-function punchBuiltArcadeOpenings(edge,count,h){
-  const dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
-  const cell=edge.length/count,baseZ=.025,springZ=.04+h*.56,apexZ=.04+h*.93;
+// One opening per arch of every bay (builtArcadeLayout), not one per bay.
+function punchBuiltArcadeOpenings(a){
+  const edge=a.edge,dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
+  const h=a.h,baseZ=.025,springZ=.04+h*.56,apexZ=.04+h*.93,cell=a.cell*.96/a.arches;
+  const centres=a.bays.flatMap(b=>Array.from({length:a.arches},(_,k)=>edge.length/2+b.off+(k+.5-a.arches/2)*cell));
   ctx.save();
   ctx.globalCompositeOperation='destination-out';
   ctx.fillStyle='#000';
-  for(let i=0;i<count;i++){
-    const along=(i+.5)*cell,half=cell*.30;
+  for(const along of centres){
+    const half=cell*.30;
     const c={x:edge.a.x+ux*along,y:edge.a.y+uy*along};
     const l={x:c.x-ux*half,y:c.y-uy*half},r={x:c.x+ux*half,y:c.y+uy*half};
     const lb=w2s(l,baseZ),rb=w2s(r,baseZ),ls=w2s(l,springZ),rs=w2s(r,springZ),ap=w2s(c,apexZ);
@@ -72,15 +74,11 @@ function punchBuiltArcadeOpenings(edge,count,h){
 }
 
 drawBuiltArcade=function(s){
-  if(!s||s.type!=='built'||underConstruction(s)||builtSkin(s)!=='arcade')return;
-  const inside=-wallExteriorSide(s);if(inside!==linearFrontSide(s))return;
-  const edge=linearFacadeEdge(s,inside),h=Math.min(1.18,structureHeight(s)-.22);
-  if(h<=.18||edge.length<.35)return;
-  const key=edge.length<2.35?'arcade2':'arcade3',count=key==='arcade2'?2:3,centerZ=.04+h/2;
+  const a=builtArcadeLayout(s);if(!a||a.side!==linearFrontSide(s))return;
   // The portico is a real opening in the castle-body cache: cut the masonry
   // first, then draw only the stone arcade frame on top.
-  punchBuiltArcadeOpenings(edge,count,h);
-  drawArchitectureAssetOnEdge(edge,centerZ,edge.length*.94,h,key,0,false,1);
+  punchBuiltArcadeOpenings(a);
+  for(const b of a.bays)drawArchitectureAssetOnEdge(a.edge,a.centerZ,b.w,a.h,a.key,b.off,false,1);
 };
 
 if(typeof clearStructureCompositeCache==='function')clearStructureCompositeCache();

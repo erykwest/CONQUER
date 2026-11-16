@@ -11,7 +11,7 @@ const src=f=>fs.readFileSync(path.join(__dirname,'..','src',f),'utf8');
 const window={},State={season:'summer',seed:7,heraldry:{c1:'#123456',c2:'#abcdef',c4:'#fedcba'}};
 const perf={t:0,now(){return this.t}};
 const ctx=vm.createContext({window,State,Math,Object,Number,Array,Map,Set,String,Float32Array,performance:perf});
-for(const f of ['assets/scatter-model.js','assets/civic-models.js','assets/event-models.js','settlement-mesh3d.js','settlement-events3d.js'])vm.runInContext(src(f),ctx);
+for(const f of ['settlement-util.js','assets/scatter-model.js','assets/civic-models.js','assets/event-models.js','settlement-mesh3d.js','settlement-events3d.js'])vm.runInContext(src(f),ctx);
 const M=window.ConquerEventModels,E=window.ConquerEvents3D;
 
 // Catalog: indexed parts, palette indices in range.
@@ -73,7 +73,7 @@ for(const [name,setup] of Object.entries(E.SETUPS)){
  assert.ok(E.SETUPS.feast.items.filter(i=>i.m==='civic:prop_tableSet').length===16,'the feast has sixteen tables')}
 console.log('PASS setups ('+Object.keys(E.SETUPS).join(', ')+') fit their ground without overlaps');
 
-// Lifecycle: idle ground is a green pad; props arrive while preparing, leave while clearing.
+// Lifecycle: idle ground is a thin earth border (no green pad); props arrive while preparing, leave while clearing.
 const n=E.SETUPS.joust.items.length,count=ev=>E.setupItems(venue('festivalGround',{event:ev})).length;
 assert.equal(count(undefined),0,'idle ground has no props');
 assert.equal(count({setup:'joust',phase:'planned'}),0,'planned events build nothing yet');
@@ -83,7 +83,10 @@ assert.equal(count({setup:'joust',phase:'clearing',progress:1}),0,'cleared at th
 assert.equal(E.setupItems(venue('festivalGround',{w:6,h:10,event:{setup:'joust',phase:'active'}})).length,0,'a setup that does not fit is not shown');
 const idle=E.meshes(venue('festivalGround',{id:'g0'}),2);
 assert.equal(idle.length,1,'idle ground: one mesh');
-assert.ok(idle[0].col.every(c=>/^#[67]/.test(c))&&idle[0].groupBias[0]<=-1e6,'the idle ground is green and paints first');
+assert.ok(idle[0].col.every(c=>c==='#8a7656')&&idle[0].groupBias[0]<=-1e6,'the idle ground is an earth border (no green pad) and paints first');
+{const xs=[],ys=[];idle[0].pos.forEach((v,i)=>{if(i%3===0)xs.push(v);else if(i%3===1)ys.push(v)});
+  // Only a border: no triangle covers the middle of the lot.
+  assert.equal(idle[0].pos.length/9,8,'four border strips, no fill');}
 assert.ok(idle[0].pos.every((v,i)=>i%3!==2||Math.abs(v-2)<.05),'the ground pad sits on the ground level');
 console.log('PASS lifecycle: idle pad, preparing / active / clearing props');
 
@@ -124,13 +127,35 @@ for(const g of [venue('arenaLot',{id:'u1'}),venue('festivalGround',{id:'u2',even
  items.forEach((it,i)=>{if(!it.m.startsWith('tent'))return;const c=[...new Set(ms[i+1].col)].filter(x=>PRIMARY.has(x)).sort();const k=c.join();
   assert.ok(!seen.has(k),(g.venue+'/'+(g.event?.setup||''))+': two tents share colours '+k);seen.add(k)});
  assert.ok(seen.size>=4,'venue deals several pairs')}
+// Pavilion schemes: one pair fills walls, gores and valance in different ways.
+{const red=sc=>E.triangles('tentOctagon',{x:0,y:0},0,['#b8322c','#2f56a6',sc]).col.filter(c=>c==='#b8322c').length;
+ assert.equal(new Set(['gored','solid','roof','inverted'].map(red)).size,4,'each scheme fills the pavilion differently')}
+// Encampment: quarters, no two tents overlapping, everything inside the boundary,
+// nobles behind the parade ground, the gate at the front, deterministic.
+for(const [nl,ns] of [[1,3],[2,7],[4,16]]){
+ const army={leaders:Array.from({length:nl},(_,k)=>({id:'l'+k})),squads:Array.from({length:ns},(_,k)=>({id:'s'+k}))};
+ const c=E.encampment(army,{seed:7,key:'t'+ns});
+ assert.equal(c.quarters.nobles,nl,'every leader pitches a pavilion');
+ assert.equal(c.quarters.companies,Math.ceil(ns/3),'squads grouped in companies of three');
+ assert.equal(c.fires.length,ns,'one fire per squad');
+ const tents=c.items.filter(it=>/^tent/.test(it.m));
+ tents.forEach((a,i)=>tents.slice(i+1).forEach(b=>assert.ok(Math.hypot(a.x-b.x,a.y-b.y)>1,'tents keep apart')));
+ const inside=p=>{let n=false;const P=c.perimeter;for(let i=0,j=P.length-1;i<P.length;j=i++)if((P[i].y>p.y)!==(P[j].y>p.y)&&p.x<(P[j].x-P[i].x)*(p.y-P[i].y)/(P[j].y-P[i].y)+P[i].x)n=!n;return n};
+ c.items.forEach(it=>assert.ok(inside(it),it.m+' inside the boundary'));
+ c.items.filter(it=>/^tent(Octagon|Square)/.test(it.m)).forEach(it=>assert.ok(it.y>0,'nobles at the back'));
+ assert.ok(c.gate.y<Math.min(...c.items.map(it=>it.y)),'gate at the front');
+ assert.deepEqual(E.encampment(army,{seed:7,key:'t'+ns}),c,'deterministic');
+ const pairs=new Set(c.items.filter(it=>it.pair&&/^tent/.test(it.m)).map(it=>it.pair.slice(0,2).sort().join()));
+ assert.equal(pairs.size,nl,'each pavilion its own livery');
+}
+console.log('PASS encampment: quarters, spacing, boundary, gate, liveries');
 console.log('PASS livery: realm heraldry on stands and stages, primary pairs on knights\' gear');
 
 // Wind: cloth (pennons, bunting, banners) leaves the static scene and waves on the
 // dynamic layer, anchored at the staff and only while the game runs.
 {
   const lot=venue('arenaLot',{id:'w1'}),fixedTris=E.meshes(lot,0).reduce((n,m)=>n+m.col.length,0);
-  const allTris=E.setupItems(lot).reduce((n,it)=>n+(E.triangles(it.m,{x:0,y:0},0)?.col.length||0),0)+4;   // + the lot's grass pad
+  const allTris=E.setupItems(lot).reduce((n,it)=>n+(E.triangles(it.m,{x:0,y:0},0)?.col.length||0),0)+8;   // + the lot's earth border (four strips)
   assert.ok(fixedTris<allTris,'cloth is out of the static scene');
   State.structures=[lot];State.clock={speed:1};
   perf.t=1000;const a=E.dynamicMeshes();perf.t=1200;const b=E.dynamicMeshes();

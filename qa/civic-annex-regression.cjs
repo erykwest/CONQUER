@@ -43,7 +43,7 @@ let passed=0;
 function test(name,fn){fn();passed++;console.log('PASS '+name)}
 function parent(type,level=3){State.structures=[{id:'main',type,x:100,y:100,civicLevel:level,angle:0}];State.lots=type==='market'?[]:[{civicId:'main',points:square(100,100,16,16)}]}
 test('catalog offers owned annexes for three civic parent types, with levels and dimensions',()=>{
-  assert.equal(run("Object.keys(CIVIC_ANNEX_CATALOG.church).length"),6);
+  assert.equal(run("Object.keys(CIVIC_ANNEX_CATALOG.church).length"),7);   // + almshouse (crime)
   assert.equal(run("CIVIC_ANNEX_CATALOG.church.square.kind"),'plaza');
   assert.equal(run("Object.keys(CIVIC_ANNEX_CATALOG.tavern).length"),5);
   assert.equal(run("CIVIC_ANNEX_CATALOG.church.cemetery.intrinsic"),true);
@@ -133,5 +133,25 @@ test('annex cap, parent ownership, catalog migration shape and panel action',()=
   assert.equal(a.w,3);assert.equal(a.h,2.5);
   State.structures=[a];
   assert.match(run("civicAnnexPlacementCheck(State.structures[0]).reason"),/Missing/);
+});
+test('town hall kitchen garden (orto di corte): open ground within 7U, max 2, feeds the economy list',()=>{
+  State.structures=[{id:'main',type:'townhall',x:100,y:100,civicLevel:1,angle:0}];State.lots=[];
+  assert.equal(run("Object.keys(CIVIC_ANNEX_CATALOG.townhall).join()"),'kitchenGarden');
+  const g=run("makeCivicAnnex(State.structures[0],'kitchenGarden',100,105)");
+  assert.equal(g.w,3);assert.equal(g.h,2);
+  assert.equal(sandbox.window.ConquerPlacement.check(g).ok,true);
+  g.x=109;
+  assert.match(sandbox.window.ConquerPlacement.check(g).reason,/within 7U/);
+  g.x=100;State.lots=[{houseId:'private',points:square(100,105,2,2)}];
+  assert.match(sandbox.window.ConquerPlacement.check(g).reason,/owned Voronoi lot/);
+  State.lots=[];
+  const h=run("makeCivicAnnex(State.structures[0],'kitchenGarden',96,105)");
+  State.structures.push(g,h);
+  assert.equal(run("kitchenGardens().length"),2);
+  assert.equal(run("startCivicAnnexPlacement(State.structures[0],'kitchenGarden')"),false,'cap of two gardens');
+  g.destroyed=true;
+  assert.equal(run("kitchenGardens().length"),1,'a destroyed garden yields nothing');
+  State.structures[0].destroyed=true;
+  assert.equal(run("kitchenGardens().length"),0,'nor does a garden of a destroyed town hall');
 });
 console.log(passed+' civic annex regression checks passed.');

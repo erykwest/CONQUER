@@ -2,13 +2,19 @@
 // Construction placement, tower snapping, wall routing, and room models. Runtime semantics preserved from the monolith.
 function rotateVec(x,y,a){const ca=Math.cos(a),sa=Math.sin(a);return{x:x*ca-y*sa,y:x*sa+y*ca}}
 function toLocalPoint(s,p){const a=-(s.angle||0),v=rotateVec(p.x-s.x,p.y-s.y,a);return v}
-function rectDims(s){const w=Number(s.w??s.size??1),h=Number(s.h??s.size??w);return{w,h}}
+function rectDims(s){if(isOrientedTower(s))return orientedTowerDims(s);const w=Number(s.w??s.size??1),h=Number(s.h??s.size??w);return{w,h}}
 function placementAngle(center,p){return snapStructureAngle(Math.atan2(p.y-center.y,p.x-center.x))}
 function orientedToolSpec(){
-  if(State.tool.kind==='tower')return{type:'tower',shape:State.tool.shape,level:State.tool.level||State.buildLevels.tower,material:State.tool.material||'stone',masonryMaterial:State.buildMasonryMaterial,woodStyle:State.tool.woodStyle,woodRoof:State.tool.woodRoof,...(State.tool.shape==='round'?{r:State.tool.size}:{size:State.tool.size}),functions:[]};
+  if(State.tool.kind==='tower'){
+    const spec={type:'tower',shape:State.tool.shape,level:State.tool.level||State.buildLevels.tower,material:State.tool.material||'stone',masonryMaterial:State.buildMasonryMaterial,woodStyle:State.tool.woodStyle,woodRoof:State.tool.woodRoof,...(State.tool.shape==='round'?{r:State.tool.size}:{size:State.tool.size}),functions:[]};
+    // H4 exists only on the square stone W2 tower (#174): never place a level the load would clamp away.
+    if(typeof maxStructureLevel==='function')spec.level=Math.max(1,Math.min(Number(spec.level)||1,maxStructureLevel(spec)));
+    return spec;
+  }
   if(State.tool.kind==='gate'){
     if(State.tool.material==='wood')return{type:'gate',shape:'square',material:'wood',size:1.5,w:1,h:1.5,level:1,roofStyle:'flat',functions:[]};
-    return{type:'gate',shape:'square',material:'stone',masonryMaterial:State.buildMasonryMaterial,size:1.5,level:State.tool.level||State.buildLevels.gate,functions:[]};
+    const size=State.tool.size||GATE_SIZES.large,max=size<1.25?SMALL_GATE_MAX_LEVEL:3;
+    return{type:'gate',shape:'square',material:'stone',masonryMaterial:State.buildMasonryMaterial,size,level:Math.min(max,State.tool.level||State.buildLevels.gate),functions:[]};
   }
   // Future point-buildings can pass a placementSpec without adding another interaction path.
   if(State.tool.placementSpec&&State.tool.placementSpec.shape!=='round')return{...State.tool.placementSpec,masonryMaterial:State.buildMasonryMaterial};
@@ -37,6 +43,87 @@ function gateRoadSnap(p){
   const r=best.road;
   return{point:{x:best.point.x,y:best.point.y},axis:snapStructureAngle(Math.atan2(r.b.y-r.a.y,r.b.x-r.a.x)),roadId:r.id};
 }
+// Walls across a main road (WALL-ROAD-GATE): where a new wall or palisade crosses a main road
+// a gate of the matching type straddles the crossing and the wall is cut on its two flanks.
+// Palisade -> wood gate; stone/brick wall W1 -> small gate, W2-W3 -> large gate.
+function wallRoadGateRoad(r){
+  return r?.type==='road'&&!!r.a&&!!r.b&&(isPrimaryRoad(r)||r.roadClass==='arterial-gate'||r.roadClass==='arterial-repair');
+}
+function wallRoadGateSpec(wall){
+  if(wall?.type==='palisade')return{type:'gate',shape:'square',material:'wood',size:1.5,w:1,h:1.5,level:1,roofStyle:'flat',functions:[]};
+  if(wall?.type!=='wall')return null;
+  const small=wallTier(wall)<=1,size=small?GATE_SIZES.small:GATE_SIZES.large,max=small?SMALL_GATE_MAX_LEVEL:3;
+  return{type:'gate',shape:'square',material:'stone',masonryMaterial:wall.masonryMaterial==='brick'?'brick':'stone',
+    size,level:Math.min(max,Math.max(1,Number(State.buildLevels?.gate)||1)),functions:[]};
+}
+function segmentCrossing(a,b,c,d){
+  const rx=b.x-a.x,ry=b.y-a.y,sx=d.x-c.x,sy=d.y-c.y,den=rx*sy-ry*sx;
+  if(Math.abs(den)<1e-9)return null;
+  const qx=c.x-a.x,qy=c.y-a.y,t=(qx*sy-qy*sx)/den,u=(qx*ry-qy*rx)/den;
+  return t>=-1e-9&&t<=1+1e-9&&u>=-1e-9&&u<=1+1e-9?{t:clamp(t,0,1),point:{x:a.x+rx*t,y:a.y+ry*t}}:null;
+}
+// Main-road crossings along one wall segment, ordered from a to b. A crossing already covered
+// by an existing gate (the wall reaching a gate that stands on the road) is not a new gate.
+function wallRoadCrossings(wall){
+  const out=[];
+  for(const r of roadList(false)){
+    if(!wallRoadGateRoad(r))continue;
+    const x=segmentCrossing(wall.a,wall.b,r.a,r.b);if(!x)continue;
+    const covered=State.structures.some(g=>g.type==='gate'&&dist(g,x.point)<=Math.max(rectDims(g).w,rectDims(g).h)/2+.2);
+    if(covered||out.some(o=>dist(o.point,x.point)<.3))continue;   // road joints give the same crossing twice
+    out.push({...x,road:r});
+  }
+  return out.sort((p,q)=>p.t-q.t);
+}
+// The gate front faces the wall's exterior, passage across the wall; when the road crosses too
+// obliquely for that passage the gate turns along the road instead.
+function wallRoadGateAt(wall,cross,spec){
+  const wa=Math.atan2(wall.b.y-wall.a.y,wall.b.x-wall.a.x),out=wa+wallExteriorSide(wall)*Math.PI/2;
+  const ra=Math.atan2(cross.road.b.y-cross.road.a.y,cross.road.b.x-cross.road.a.x),along=Math.cos(ra-out)>=0?ra:ra+Math.PI;
+  let reason='gate not placeable';
+  for(const raw of [out,along]){
+    const angle=snapStructureAngle(raw);
+    const gate={id:uid(),...spec,functions:[],x:cross.point.x,y:cross.point.y,angle,rotationStep:structureRotationStep(angle),wallRoadGate:true};
+    if(!roadUsesGatePassage(cross.road,gate))continue;
+    const v=window.ConquerPlacement?.check(gate);
+    if(!v||v.ok)return{gate};
+    reason=v.reason;
+  }
+  return{gate:null,reason};
+}
+// Splits the planned wall segments at their main-road crossings. Returns the gates to add first
+// and the wall pieces, seated on the gate flanks (aSnap/bSnap) like a wall drawn to a gate.
+function wallRoadGatePlan(structures){
+  const gates=[],walls=[];
+  for(const wall of structures){
+    const spec=wallRoadGateSpec(wall),crossings=spec?wallRoadCrossings(wall):[];
+    if(!crossings.length){walls.push(wall);continue}
+    const placed=[];
+    for(const cross of crossings){
+      const prev=placed.at(-1);
+      if(prev&&dist(prev,cross.point)<Math.max(spec.w??spec.size,spec.h??spec.size)+.2)continue;   // gates side by side: one is enough
+      const {gate,reason}=wallRoadGateAt(wall,cross,spec);
+      if(!gate)return{blocked:'Gate on the main road: '+reason};
+      placed.push(gate);
+    }
+    // Pieces shorter than a wall break vanish into the gate; only the piece that still starts at
+    // wall.a (ends at wall.b) keeps that end's magnet and dogleg joint.
+    let start=null;
+    const piece=(fromGate,toGate)=>{
+      const a=fromGate?boundaryPoint(fromGate,wall.b):wall.a,b=toGate?boundaryPoint(toGate,wall.a):wall.b;
+      if(dist(a,b)<WALL_BREAK_MIN)return;
+      const s={...wall,id:walls.some(w=>w.id===wall.id)?uid():wall.id,a:{...a},b:{...b},length:dist(a,b),
+        aSnap:fromGate?fromGate.id:wall.aSnap||null,bSnap:toGate?toGate.id:wall.bSnap||null};
+      if(fromGate)delete s.aJoint;
+      if(toGate)delete s.bJoint;
+      walls.push(s);
+    };
+    for(const gate of placed){piece(start,gate);start=gate}
+    piece(start,null);
+    gates.push(...placed);
+  }
+  return{gates,walls,blocked:null};
+}
 // Orientation while the second click is pending: a locked angle wins; a road-snapped gate
 // keeps its passage on the road and only chooses which mouth faces out.
 function orientedDraftAngle(p){
@@ -52,6 +139,7 @@ function commitOrientedPlacement(center,angle){
   const snap=spec.type==='tower'?{
     wallId:State.draft?.wallSnapId||null,
     wallEnd:State.draft?.wallSnapEnd||null,
+    wallSeat:Number.isFinite(State.draft?.wallSeat)?State.draft.wallSeat:null,
     parentTowerId:State.draft?.parentTowerId||null,
     subtowerSocket:State.draft?.subtowerSocket||null,
     subtowerAngle:Number.isFinite(State.draft?.subtowerAngle)?State.draft.subtowerAngle:null
@@ -73,6 +161,7 @@ function commitOrientedPlacement(center,angle){
 }
 function boundaryPoint(s,target){
   if(!s||!['tower','gate'].includes(s.type))return target;
+  if(isOrientedTower(s))return orientedTowerBoundaryPoint(s,target);
   const dx=target.x-s.x,dy=target.y-s.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;let edge;
   if(s.shape==='round')edge=s.r;
   else{
@@ -136,7 +225,8 @@ function snapAnchor(p){
   if(quay&&quay.score<bestScore){best={id:quay.structureId};bestPoint=quay.point;bestScore=quay.score}
   for(const s of State.structures){
     if(!['tower','gate'].includes(s.type)||underConstruction(s))continue;
-    const q=boundaryPoint(s,p),score=dist(p,q);
+    // Oriented towers take walls on their two flank seats, on the line of the curtain.
+    const q=isOrientedTower(s)?orientedTowerSeats(s).sort((a,b)=>dist(p,a)-dist(p,b))[0]:boundaryPoint(s,p),score=dist(p,q);
     if(score<=radius&&score<bestScore){best=s;bestPoint=q;bestScore=score}
   }
   const end=linearEndpointSnap(p,State.tool?.linear,radius);
@@ -198,6 +288,7 @@ function gateSubtowerAttachment(parent,child,socketOrFront){
   const m=socket.match(/^gate-(front|rear|side):(\d)$/);if(!m)return null;
   const i=Number(m[2]),corner=m[1]==='side'?{x:(fp[i].x+fp[(i+1)%4].x)/2,y:(fp[i].y+fp[(i+1)%4].y)/2}:fp[i];
   let ux=corner.x-parent.x,uy=corner.y-parent.y,L=Math.hypot(ux,uy)||1;ux/=L;uy/=L;
+  if(isOrientedTower(child))return orientedGateFlankAttachment(parent,child,socket);
   const angle=child.shape==='square'?(parent.angle||0):0;
   let support;
   if(child.shape==='round')support=Number(child.r)||.5;
@@ -214,6 +305,8 @@ function gateSubtowerAttachment(parent,child,socketOrFront){
 }
 function subtowerAttachmentAtSocket(parent,child,socket,radialAngle){
   if(!parent||!['tower','gate'].includes(parent.type)||!child||child.type!=='tower')return null;
+  // Oriented towers only flank gates; they neither carry nor become tower subtowers.
+  if(parent.type==='tower'&&(isOrientedTower(parent)||isOrientedTower(child)))return null;
   if(parent.type==='gate'){
     return gateSubtowerAttachment(parent,child,GATE_SUBTOWER_SOCKETS.includes(socket)?socket:'gate-front:1');
   }
@@ -243,7 +336,7 @@ function nearestSubtowerPlacementSnap(p){
     if(parent.auto||!['tower','gate'].includes(parent.type)||underConstruction(parent)||(parent.type==='tower'&&isWoodTower(parent))||isWoodGate(parent))continue;
 
     // Tower parent: classic hierarchy, child must be strictly smaller.
-    if(parent.type==='tower'&&towerTier(parent)<=childTier)continue;
+    if(parent.type==='tower'&&(towerTier(parent)<=childTier||isOrientedTower(parent)||isOrientedTower(child)))continue;
 
     // Gate parent: four corner sockets and two flank-centre sockets.
     if(parent.type==='gate'){
@@ -294,7 +387,7 @@ function repositionSubtower(child){
     const offset=snapStructureAngle(Number.isFinite(Number(child.orientationOffset))?Number(child.orientationOffset):0);
     child.orientationOffset=offset;
     applyStructureRotation(child,attachment.angle+offset);
-  }
+  }else if(isOrientedTower(child))applyStructureRotation(child,attachment.angle);
   child.subtowerSocket=attachment.subtowerSocket;
   child.subtowerAngle=attachment.subtowerAngle;
   return true;
@@ -345,6 +438,10 @@ function towerPlacementSnap(p){
   const subtower=nearestSubtowerPlacementSnap(p);
   if(subtower)return subtower;
   const wall=nearestWallPlacementSnap(p);
+  if(wall&&isOrientedTowerShape(State.tool.shape)&&State.tool.material!=='wood'){
+    const w=State.structures.find(s=>s.id===wall.wallId);
+    if(w)return{...wall,...orientedTowerWallSnap(State.tool.shape,Number(State.tool.size),w,wall.wallEnd,p)};
+  }
   if(wall)return wall;
   // Against a stone quay, its inner side (the door) turned to the quay (settlement-quay.js).
   const quay=window.ConquerQuay?.snapTower(p,towerToolPrototype());
@@ -372,7 +469,23 @@ function wallFragmentFrom(source,a,b,aSnap,bSnap,ratio){
     length:dist(a,b),
     buildCost:proportionalBuildCost(source.buildCost,ratio)
   };
-  if(source.construction)fragment.construction={...source.construction};
+  if(source.construction){
+    fragment.construction={...source.construction};
+    if(source.construction.materialsDelivered){
+      const scale=values=>Object.fromEntries(Object.entries(values||{}).map(([k,v])=>[k,Math.floor(v*ratio*1000+1e-7)/1000]));
+      fragment.buildCost=scale(source.buildCost);
+      fragment.construction.materialsDelivered=scale(source.construction.materialsDelivered);
+      if(source.construction.materialsRequired)fragment.construction.materialsRequired=scale(source.construction.materialsRequired);
+      if(source.construction.materialsFree)fragment.construction.materialsFree=scale(source.construction.materialsFree);
+      if(source.construction.upgrade){
+        const before=source.construction.upgrade.before;
+        fragment.construction.upgrade={before:{...structureUpgradeSnapshot(before),id:fragment.id,a:fragment.a,b:fragment.b,aSnap:fragment.aSnap,bSnap:fragment.bSnap,length:fragment.length,buildCost:scale(before.buildCost)}};
+      }
+      fragment.construction.materialsConsumed=scale(source.construction.materialsConsumed||Object.fromEntries(Object.entries(source.buildCost||{}).map(([k,v])=>[k,v*constructionProgress(source)])));
+      fragment.construction.workRequired*=ratio;fragment.construction.workDone*=ratio;
+      fragment.construction.wagesPaid=(source.construction.wagesPaid||0)*ratio;
+    }
+  }
   normalizeStructureVariants(fragment);
   return fragment;
 }
@@ -430,7 +543,8 @@ function regenerateTowerWallPair(tower,wall,end,anchor=null){
 
   // Watchtower = open frame: palisade keeps the original endpoint beneath it.
   // Solid towers/gates use the exact footprint boundary.
-  const contact=passThrough?original:boundaryPoint(tower,other);
+  const towerContact=()=>isOrientedTower(tower)?orientedTowerWallContact(tower,other,wall[end]):boundaryPoint(tower,other);
+  const contact=passThrough?original:towerContact();
   wall[end]={x:contact.x,y:contact.y};
   wall.length=dist(wall.a,wall.b);
   if(end==='a')wall.aSnap=tower.id;else wall.bSnap=tower.id;
@@ -439,7 +553,7 @@ function regenerateTowerWallPair(tower,wall,end,anchor=null){
   normalizeStructureVariants(wall);
   normalizeFunctions(tower);
   invalidateCastleColliderGeometry(tower,wall);
-  return passThrough||dist(wall[end],boundaryPoint(tower,other))<=.015;
+  return passThrough||dist(wall[end],towerContact())<=.015;
 }
 function attachTowerToWallEndpoint(wallId,end,tower,anchor){
   const wall=State.structures.find(s=>s.id===wallId&&['wall','palisade'].includes(s.type));
@@ -511,12 +625,19 @@ function breakWallForTower(wallId,tower){
     fragments.push(wallFragmentFrom(wall,p1,wall.b,tower.id,wall.bSnap,(L-cut1)/L));
   }
 
+  if(wall.construction?.materialsDelivered){
+    const old=refundableConstructionCost(wall),refund={};
+    for(const [k,v] of Object.entries(old))refund[k]=Math.max(0,v-fragments.reduce((n,f)=>n+(refundableConstructionCost(f)[k]||0),0));
+    refundCost(refund);
+  }
   const idx=State.structures.findIndex(s=>s.id===wall.id);
   if(idx>=0)State.structures.splice(idx,1,...fragments);
   castleUnionCache.key=null;
   return true;
 }
 function addTowerWithPlacement(tower,snap={}){
+  if(isOrientedTower(tower)&&Number.isFinite(snap.wallSeat))tower.wallSeat=snap.wallSeat;
+  if(isKeepW4(tower)&&(snap.parentTowerId||!keepW4Available(tower))){status(snap.parentTowerId?'The W4 keep stands on its own':'Only one W4 keep per settlement');return false}
   if(snap.parentTowerId){
     const parent=State.structures.find(s=>s.id===snap.parentTowerId&&['tower','gate'].includes(s.type));
     if(!parent){status('Subtower parent is no longer available');return false}
@@ -557,63 +678,58 @@ function currentLinearSpec(){
 }
 function normalizeLinear(a,b,spec,snapAngle=false){let dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy);if(L<.0001)return null;const target=clamp(L,spec.min,spec.max),rawAngle=Math.atan2(dy,dx),angle=snapAngle?snapStructureAngle(rawAngle):rawAngle,ux=Math.cos(angle),uy=Math.sin(angle);return{a,b:{x:a.x+ux*target,y:a.y+uy*target},length:target,angle,rotationStep:snapAngle?structureRotationStep(angle):null}}
 function structureAngleDelta(a,b){return Math.abs(Math.atan2(Math.sin(a-b),Math.cos(a-b)))}
-function discreteLinearSegment(a,b){
+// Walls take any heading: no 15° lattice, no automatic dogleg. rotationStep is kept only when
+// the heading happens to fall on the lattice (same rule as the save migration).
+function freeLinearSegment(a,b){
   const dx=b.x-a.x,dy=b.y-a.y,length=Math.hypot(dx,dy);
   if(length<1e-6)return null;
-  const angle=snapStructureAngle(Math.atan2(dy,dx));
-  return{a:{x:a.x,y:a.y},b:{x:b.x,y:b.y},length,angle,rotationStep:structureRotationStep(angle)};
+  const angle=Math.atan2(dy,dx),step=structureAngleDelta(angle,snapStructureAngle(angle))<1e-6?structureRotationStep(angle):null;
+  return{a:{x:a.x,y:a.y},b:{x:b.x,y:b.y},length,angle,rotationStep:step};
 }
 function normalizeStructuralLinearRoute(a,b,spec,exactEnd=false){
   if(!exactEnd){
-    const single=normalizeLinear(a,b,spec,true);
-    return single?{segments:[single],joint:null,length:single.length,exactEnd:false}:null;
+    const single=normalizeLinear(a,b,spec,false);
+    const seg=single&&freeLinearSegment(single.a,single.b);
+    return seg?{segments:[seg],joint:null,length:seg.length,exactEnd:false}:null;
   }
-
-  const vx=b.x-a.x,vy=b.y-a.y,direct=Math.hypot(vx,vy);
-  if(direct<1e-6)return null;
-  const rawAngle=Math.atan2(vy,vx),snapped=snapStructureAngle(rawAngle);
-  if(structureAngleDelta(rawAngle,snapped)<1e-7&&direct<=spec.max+1e-6){
-    const single=discreteLinearSegment(a,b);
+  // Exact magnet: a straight run to it; beyond the max length, two equal collinear legs.
+  const direct=Math.hypot(b.x-a.x,b.y-a.y),max=Number(spec.max)||Infinity;
+  if(direct<1e-6||direct>2*max+1e-6)return null;
+  if(direct<=max+1e-6){
+    const single=freeLinearSegment(a,b);
     return single?{segments:[single],joint:null,length:single.length,exactEnd:true}:null;
   }
-
-  // Exact magnet + forced structural angles: solve A -> joint -> B using
-  // two vectors from the 24-direction lattice. The score strongly favours a
-  // joint near the middle, then minimal detour and a gentle change of heading.
-  const minLeg=Math.min(.5,Math.max(.25,(Number(spec.min)||1)*.35));
-  const maxLeg=Number(spec.max)||Infinity;
-  let best=null;
-  for(let i=0;i<STRUCTURE_ANGLE_STEPS;i++){
-    const a1=structureAngleFromStep(i),d1x=Math.cos(a1),d1y=Math.sin(a1);
-    for(let j=0;j<STRUCTURE_ANGLE_STEPS;j++){
-      const a2=structureAngleFromStep(j),d2x=Math.cos(a2),d2y=Math.sin(a2);
-      const det=d1x*d2y-d1y*d2x;
-      if(Math.abs(det)<1e-8)continue;
-      const t=(vx*d2y-vy*d2x)/det;
-      const u=(d1x*vy-d1y*vx)/det;
-      if(t<minLeg||u<minLeg||t>maxLeg+1e-6||u>maxLeg+1e-6)continue;
-      const turn=structureAngleDelta(a2,a1);
-      if(turn>Math.PI/2+1e-6)continue;
-      const total=t+u,balance=Math.abs(t-u)/Math.max(total,1e-6);
-      const inflation=Math.max(0,total/direct-1);
-      const headingFit=structureAngleDelta(a1,rawAngle)+structureAngleDelta(a2,rawAngle);
-      const score=balance*4+inflation*3+turn*.45+headingFit*.18;
-      if(!best||score<best.score){
-        best={score,joint:{x:a.x+d1x*t,y:a.y+d1y*t},a1,a2,t,u,total};
-      }
-    }
-  }
-  if(!best)return null;
-  const first=discreteLinearSegment(a,best.joint),second=discreteLinearSegment(best.joint,b);
-  if(!first||!second)return null;
-  return{segments:[first,second],joint:best.joint,length:best.total,exactEnd:true};
+  const joint={x:(a.x+b.x)/2,y:(a.y+b.y)/2},first=freeLinearSegment(a,joint),second=freeLinearSegment(joint,b);
+  return first&&second?{segments:[first,second],joint,length:direct,exactEnd:true}:null;
 }
 function linePoly(s){
   const a=s.a,b=s.b,dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L*s.width/2,ny=dx/L*s.width/2;
   return[{x:a.x+nx,y:a.y+ny},{x:b.x+nx,y:b.y+ny},{x:b.x-nx,y:b.y-ny},{x:a.x-nx,y:a.y-ny}];
 }
+// Function slots run floor by floor; the W4 keep has several rooms per floor (keepFloorRooms),
+// every other structure one. Slot i -> {floor, room, rect} (rect: fractions of the floor).
+function functionSlotLayout(s){
+  const cap=functionCapacity(s);
+  if(!isKeepW4(s))return Array.from({length:cap},(_,i)=>({floor:i+functionFloorOffset(s),room:0,rect:[0,0,1,1]}));
+  const out=[];
+  for(let floor=0;floor<structureLevel(s);floor++)keepFloorRooms(s,floor).forEach((rect,room)=>out.push({floor,room,rect}));
+  return out;
+}
+// Rooms keep their floor when the layout changes (floor plan, tier): the roles of each floor go
+// back on the same floor, empty rooms dropped first when it has fewer rooms.
+function functionsByFloor(s){
+  const out=[];functionSlotLayout(s).forEach((x,i)=>(out[x.floor]||(out[x.floor]=[])).push(s.functions?.[i]||null));return out;
+}
+function restoreFunctionsByFloor(s,byFloor){
+  const L=functionSlotLayout(s),want=[];L.forEach(x=>want[x.floor]=(want[x.floor]||0)+1);
+  const lists=want.map((n,f)=>{const list=(byFloor[f]||[]).slice();while(list.length>n&&list.includes(null))list.splice(list.lastIndexOf(null),1);return list});
+  s.functions=L.map(x=>lists[x.floor]?.length?lists[x.floor].shift():null);
+  normalizeFunctions(s);return s;
+}
+function functionSlotFloor(s,index){return isKeepW4(s)?functionSlotLayout(s)[index]?.floor??0:index+functionFloorOffset(s)}
 function functionSlotSize(s,index=0){
   if(!s)return'normal';
+  if(isKeepW4(s)){const r=functionSlotLayout(s)[index]?.rect;return r&&(r[2]-r[0])*(r[3]-r[1])<.4?'normal':'large'}
   if(s.type==='tower')return towerTier(s)>=3?'large':'normal';
   if(s.type==='built')return isWideBuilt(s)||Number(s.length)>=3?'large':'normal';
   return'normal';
@@ -624,14 +740,22 @@ function functionFloorOffset(s){return s?.type==='gate'?1:0}
 function functionCapacity(s){
   if(!s)return 0;
   if(s.type==='gate')return Math.max(0,structureLevel(s)-1);
-  if(s.type==='tower')return towerTier(s)>=2||s.isMastio?structureLevel(s):0; // The first T1 wood/stone keep needs its Common Hall.
+  if(typeof isKeepW4==='function'&&isKeepW4(s)){let n=0;for(let f=0;f<structureLevel(s);f++)n+=keepFloorRooms(s,f).length;return n}
+  // One room per floor. W1 towers keep their spiral stair and take only dovecote, latrine, prison,
+  // treasury and armory (settlement-siege.js allowed), except the first T1 keep (its Common Hall).
+  if(s.type==='tower')return structureLevel(s);
   if(s.type==='built')return Number(s.length)>=2?builtInteriorFloors(s):0;
+  if(s.type==='townhall')return civicLevel(s);
   return 0;
 }
 function functionCapacityUnits(s){
   let total=0;for(let i=0;i<functionCapacity(s);i++)total+=functionSlotUnits(s,i);return total;
 }
 function normalizeFunctions(s){
+  if(s.type==='townhall')return normalizeTownhallRooms(s);
+  const w4=typeof isKeepW4==='function'&&isKeepW4(s);
+  if(w4)s.keepPlans=Array.from({length:3},(_,f)=>keepFloorPlan(s,f));
+  else delete s.keepPlans;
   const cap=functionCapacity(s);if(!Array.isArray(s.functions))s.functions=[];
   // Migrate once: prior saves placed a functional room on the traversable gate floor.
   if(s.type==='gate'&&!s.gateGroundIsPassage){
@@ -642,9 +766,19 @@ function normalizeFunctions(s){
   while(s.functions.length<cap)s.functions.push(null);
   return s;
 }
+// Town hall rooms: room i is floor i. Town halls saved before their rooms keep the council hall
+// they always showed on the ground floor.
+function normalizeTownhallRooms(s){
+  const cap=functionCapacity(s);
+  if(!Array.isArray(s.functions)||!s.townhallRooms){s.functions=['council'];s.townhallRooms=1}
+  // The prison only on the ground floor (room 0).
+  s.functions=s.functions.slice(0,cap).map((fn,i)=>TOWNHALL_FUNCTION_CATALOG.includes(fn)&&(fn!=='tribunal'||cap>=2)&&(fn!=='prison'||i===0)?fn:null);
+  while(s.functions.length<cap)s.functions.push(null);
+  return s;
+}
 // Variant contract:
  // tower/gate -> roofStyle
  // wall/built -> skin
  // Renderer/UI steps must use structureVariant()/setStructureVariant() rather
  // than creating duplicate structure types.
-function structureLabel(s){if(!s)return'';if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.label(s);if(window.ConquerPier?.is(s))return window.ConquerPier.label(s);if(window.ConquerQuay?.is(s))return window.ConquerQuay.label(s);if(isCivicAnnex(s))return 'Annex · '+(civicAnnexDefinition(s)?.label||s.annexType||'unknown');if(window.ConquerIndustries?.is(s)){const t=window.ConquerIndustries.TYPES[s.type];return t.name+' · '+t.w+'×'+t.h+'U'};if(s.type==='house'){const l=houseLevel(s);return `House · L${l}${l===3?' · '+housePlanType(s)+' plan':l===4?' · elite · '+houseTurretType(s)+' turret':''}`};if(s.type==='market')return`Market · 4×4U · L${civicLevel(s)}`;if(s.type==='tavern')return`Tavern · double-T plan · L${civicLevel(s)}`;if(s.type==='church')return`Church · large · L${civicLevel(s)}`;if(s.type==='plaza')return`Piazza · ${plazaVariant(s)} · L${civicLevel(s)}`;if(s.type==='training')return'Training field · 5×4U';if(s.type==='well')return'Village well';if(s.type==='gate')return isWoodGate(s)?'Wood gate 1.5×1U · H1 · flat deck · battlements':`Gate 1.5×1.5U · L${structureLevel(s)}`;if(s.type==='tower'){if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?`Wood watchtower 1×1U · H1`:`Wood tower 1.5×1.5U · H1 · ${woodTowerRoof(s)==='pitched'?'pitched roof':'open top'}`;return (s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'')};if(s.type==='built')return`${isWideBuilt(s)?'Wide hall':'Built section'} ${s.length.toFixed(2)}U${isWideBuilt(s)?' × 2U':''} · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;if(s.type==='palisade')return`Palisade ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U)`;if(s.type==='road')return`${s.manualMain?'Main road':'Road'} ${(s.length||dist(s.a,s.b)).toFixed(2)}U`;return s.type}
+function structureLabel(s){if(!s)return'';if(s.type==='storageYard')return'Piazzale · Magazzino '+(s.yardSize||2)+'×'+(s.yardSize||2)+'U';if(window.ConquerEvents3D?.is(s))return window.ConquerEvents3D.label(s);if(window.ConquerPier?.is(s))return window.ConquerPier.label(s);if(window.ConquerQuay?.is(s))return window.ConquerQuay.label(s);if(isCivicAnnex(s))return 'Annex · '+(civicAnnexDefinition(s)?.label||s.annexType||'unknown');if(window.ConquerIndustries?.is(s)){const t=window.ConquerIndustries.TYPES[s.type];return t.name+' · '+t.w+'×'+t.h+'U'};if(s.type==='house'){const l=houseLevel(s);return `House · L${l}${l===3?' · '+housePlanType(s)+' plan':l===4?' · elite · '+houseTurretType(s)+' turret':''}`};if(s.type==='market')return`Market · 4×4U · L${civicLevel(s)}`;if(s.type==='tavern')return`Tavern · double-T plan · L${civicLevel(s)}`;if(s.type==='church')return`Church · large · L${civicLevel(s)}`;if(typeof isWellCivic==='function'&&isWellCivic(s))return wellCivicLabel(s);if(s.type==='balivo')return`Palazzo del Balivo · L${civicLevel(s)} · countryside`;if(s.type==='plaza')return`Piazza · ${plazaVariant(s)} · L${civicLevel(s)}`;if(s.type==='training')return'Training field · 5×4U';if(s.type==='well')return'Village well';if(s.type==='gate')return isWoodGate(s)?'Wood gate 1.5×1U · H1 · flat deck · battlements':isSmallGate(s)?`Small gate 1×1U · L${structureLevel(s)}`:`Gate 1.5×1.5U · L${structureLevel(s)}`;if(s.type==='tower'){if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?`Wood watchtower 1×1U · H1`:`Wood tower 1.5×1.5U · H1 · ${woodTowerRoof(s)==='pitched'?'pitched roof':'open top'}`;if(isOrientedTower(s))return orientedTowerLabel(s)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'');return(s.shape==='round'?`Round tower R${s.r}U`:`Square tower ${s.size}×${s.size}U`)+` · T${towerTier(s)} · L${structureLevel(s)}`+(s.parentTowerId?' · SUB':'')};if(s.type==='built')return`${isLeanTo(s)?'Lean-to W1':isLonghouse(s)?(isWideBuilt(s)?'Longhouse W2':'Longhouse W1'):isWideBuilt(s)?'Wide hall':'Built section'} ${s.length.toFixed(2)}U${isWideBuilt(s)?' × 2U':''} · L${structureLevel(s)}`;if(s.type==='wall')return`Wall ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U) · L${structureLevel(s)}`;if(s.type==='palisade')return`Palisade ${s.length.toFixed(2)}U · T${wallTier(s)} (${s.width}U)`;if(s.type==='road')return`${s.manualMain?'Main road':'Road'} ${(s.length||dist(s.a,s.b)).toFixed(2)}U`;return s.type}

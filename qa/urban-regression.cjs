@@ -16,7 +16,7 @@ setTimeout:()=>0,clearTimeout(){},requestAnimationFrame:()=>0,cancelAnimationFra
 navigator:{},fetch:()=>new Promise(()=>{}),atob:s=>Buffer.from(s,'base64').toString('binary'),btoa:s=>Buffer.from(s,'binary').toString('base64')};
 const context=vm.createContext(sandbox);
 function run(s){return vm.runInContext(s,context)}
-function moduleFile(n){const groups={castle:['castle','landscape','castle-placement','castle-structures','buildings'],population:['population','population-fields','population-navigation','population-routines','population-residents','population-figures','population-garrisons'],app:['app','app-rooms','app-input','app-persistence','app-calendar-ui','app-simulation','app-bootstrap']};const files=groups[n]||[n];return files.map(part=>fs.readFileSync(__dirname+'/../src/settlement-'+part+'.js','utf8')).join('\n')}
+function moduleFile(n){const groups={combat:['combat-render','combat'],castle:['castle','landscape','castle-placement','castle-structures','buildings'],population:['population','population-fields','population-navigation','population-routines','population-residents','population-figures','population-garrisons'],app:['app','app-rooms','app-input','app-persistence','app-calendar-ui','app-simulation','app-bootstrap']};const files=groups[n]||[n];return files.map(part=>fs.readFileSync(__dirname+'/../src/settlement-'+part+'.js','utf8')).join('\n')}
 for(const n of ['core','civic-annexes','world','castle','urban','fields','boundaries','siege','population'])run(moduleFile(n));
 run('function draw(){}; function setTool(){}; function scheduleLocalSave(){}; function renderFunctionPanel(){}');
 const appSource=moduleFile('app');
@@ -171,7 +171,10 @@ test('corner trees: one roll per shared corner, never two trees on one site',()=
 });
 test('facades: two windows per floor on long sides of L2+, timber frame on upper floors and gables',()=>{
  const plans=level=>run("(()=>{State.structures=[{id:'fp',type:'house',x:100,y:100,w:1.8,h:1.1,angle:0,houseLevel:"+level+"}];invalidateUrbanGeometry();const e=urbanHouseGeometry()[0],p=e.parts[0];return p.points.map((a,i)=>{const edge={a,b:p.points[(i+1)%p.points.length]},pl=houseFacadePlan(e.house,{...p,turret:null},edge);return{L:dist(edge.a,edge.b),wall:p.bodyH,ridge:p.roofH,...pl}})})()");
- for(const w of plans(1)){assert.equal(w.windows.length,1);assert.equal(w.beams.length,0)}
+ // L1: one window per wall, except the gable end carrying the chimney stack (houseSideChimney).
+ const cottage=plans(1);
+ for(const w of cottage){assert.ok(w.windows.length<=1);assert.equal(w.beams.length,0)}
+ assert.equal(cottage.filter(w=>!w.windows.length).length,1,'only the chimney gable is blind');
  for(const level of [2,3,4]){
   const walls=plans(level),long=walls.filter(w=>w.L>1.5),short=walls.filter(w=>w.L<1.5);
   assert.ok(long.length>=1&&short.length>=1);
@@ -269,12 +272,13 @@ test('building over the yard removes the whole lot, house and private spur witho
  assert.equal(run("State.structures.some(s=>s.id==='new-tower')"),true);
  assert.equal(run("urbanFenceSegments().length"),0);
 });
-test('a failed paid building placement does not clear a lot',()=>{
+test('an unfunded tower confirms its footprint as a persistent construction site',()=>{
  zoningFixture();
  run("State.structures.push({id:'home',type:'house',auto:true,x:106,y:104,w:1.5,h:1,angle:0});invalidateNavigation();State.resources={gold:0,stone:0,wood:0,metal:0};globalThis.result=addStructure({id:'expensive',type:'tower',shape:'square',size:1,x:108,y:106,angle:0})");
- assert.equal(run('result'),false);
- assert.equal(run("State.structures.some(s=>s.id==='home')"),true);
- assert.equal(run("urbanLots().length"),1);
+ assert.equal(run('result'),true);
+ assert.equal(run("State.structures.some(s=>s.id==='expensive')"),true);
+ assert.equal(run("underConstruction(State.structures.find(s=>s.id==='expensive'))"),true);
+ assert.equal(run("State.resources.gold"),0,'confirmation does not create a negative stockpile');
 });
 test('minimum parcel holds a real 2x2 square, including rotated lots, and rejects thin large-area slivers',()=>{
  assert.equal(run('urbanLotHasMinimumSize([{x:0,y:0},{x:2,y:0},{x:2,y:2},{x:0,y:2}])'),true);
@@ -333,5 +337,8 @@ test('civil development defaults, level clamping and three piazza variants norma
   assert.equal(run("civicParts({type:'plaza',x:130,y:120}).length"),1);
   assert.equal(run("CIVIC_TYPES.includes('market')&&CIVIC_TYPES.includes('plaza')"),true);
 });
+require('./urban-heatmaps-regression.cjs');
+require('./social-classes-regression.cjs');
+require('./civic-event-effects-regression.cjs');
 console.log(passed+' urban regression checks passed.');
 

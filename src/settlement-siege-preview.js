@@ -152,15 +152,77 @@
       ['Pietra quadrata L1',{type:'tower',shape:'square',material:'stone',level:1,tier:2,size:sq(2),roofStyle:'battlement'}],
       ['Pietra quadrata L2',{type:'tower',shape:'square',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'battlement'}],
       ['Pietra quadrata L3',{type:'tower',shape:'square',material:'stone',level:3,tier:2,size:sq(2),roofStyle:'battlement'}],
+      ['Pietra quadrata W2 H4 merli',{type:'tower',shape:'square',material:'stone',level:4,tier:2,size:sq(2),roofStyle:'battlement'}],
+      ['Pietra quadrata W2 H4 tetto',{type:'tower',shape:'square',material:'stone',level:4,tier:2,size:sq(2),roofStyle:'pitched'}],
       ['Pietra quadrata L3 tetto',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched'}],
       ['Pietra rotonda L3 caditoie',{type:'tower',shape:'round',material:'stone',level:3,tier:2,r:rd(2),roofStyle:'machicolation'}],
       ['Grande quadrata L3 merli',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'battlement'}],
       ['Grande quadrata L3 caditoie',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'machicolation',baseStyle:'buttress'}],
       ['Grande rotonda L3 merli',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'battlement',baseStyle:'splayed'}],
+      ['Pietra quadrata L2 merli + ballatoio',{type:'tower',shape:'square',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'battlement',hoarding:'on'}],
+      ['Grande rotonda L3 merli + ballatoio',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'battlement',hoarding:'on'}],
+      ['Torre a D media L2 merli + ballatoio',{type:'tower',shape:'dee',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'battlement',hoarding:'on'}],
+      ['Pietra quadrata L3 tetto + ballatoio',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched',hoarding:'on'}],
+      ['Grande rotonda L3 tetto + ballatoio',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'pitched',hoarding:'on'}],
+      ['Torre a D grande L3 tetto + ballatoio',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched',hoarding:'on'}],
       ['Grande rotonda L3 tetto',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'pitched'}],
+      // Dovecote (Colombaia): the top room under the pitched roof, its lantern on the apex.
+      ['Pietra quadrata L2 tetto + colombaia',{type:'tower',shape:'square',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'pitched',functions:[null,'dovecote']}],
+      // Falconry (Falconiera): the top room under the pitched roof, the mews cage on the roof.
+      ['Pietra quadrata L2 tetto + falconiera',{type:'tower',shape:'square',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'pitched',functions:[null,'mews']}],
+      ['Grande rotonda L3 tetto + falconiera',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'pitched',functions:[null,null,'mews']}],
+      ['Grande quadrata L3 2 falde + falconiera',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched',roofShape:'gable',functions:[null,null,'mews']}],
+
+      ['Pietra quadrata piccola L2 tetto + colombaia',{type:'tower',shape:'square',material:'stone',level:2,tier:1,size:sq(1),roofStyle:'pitched',functions:[null,'dovecote']}],
+      ['Grande rotonda L3 tetto + colombaia',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'pitched',functions:[null,null,'dovecote']}],
+      ['Torre a D grande L3 tetto + colombaia',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched',functions:[null,null,'dovecote']}],
+      ['Grande quadrata L3 garitte merlate',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'battlement',bartizan:'battlement'}],
+      ['Grande rotonda L3 garitte a guglia',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'battlement',bartizan:'pitched'}],
+      ['Grande quadrata L3 tetto 2 falde',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched',roofShape:'gable'}],
+      ['Grande quadrata L3 tetto con colmo',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched',roofShape:'hip',bartizan:'pitched'}],
+      ['Mastio W4 L3 merli',{type:'tower',shape:'square',material:'stone',level:3,tier:4,size:sq(4),roofStyle:'battlement'}],
+      ['Mastio W4 L2 caditoie',{type:'tower',shape:'square',material:'stone',level:2,tier:4,size:sq(4),roofStyle:'machicolation'}],
+      ['Mastio W4 L3 tetto con colmo',{type:'tower',shape:'square',material:'stone',level:3,tier:4,size:sq(4),roofStyle:'pitched',roofShape:'hip',bartizan:'pitched'}],
+      ['Mastio W4 L3 piante 1+2 / 4 / sala',{type:'tower',shape:'square',material:'stone',level:3,tier:4,size:sq(4),roofStyle:'battlement',keepPlans:['three','quad','hall'],functions:['commonHall','granary','storage','barracks','armory','nobleRoom','chapel','throneHall']}],
+      ['Mastio W4 L3 piante 2 / 2 / 4',{type:'tower',shape:'square',material:'stone',level:3,tier:4,size:sq(4),roofStyle:'battlement',keepPlans:['halves','halves','quad'],functions:['commonHall','granary','barracks','armory','nobleRoom','nobleRoom','treasury','chapel']}],
+      ['Semitorre piccola L2',{type:'tower',shape:'half',material:'stone',level:2,tier:1,size:sq(1),roofStyle:'battlement'}],
+      ['Semitorre media L3',{type:'tower',shape:'half',material:'stone',level:3,tier:2,size:sq(2),roofStyle:'battlement'}],
+      ['Torre a D media L2 merli',{type:'tower',shape:'dee',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'battlement'}],
+      ['Torre a D grande L3 caditoie',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'machicolation',baseStyle:'splayed'}],
+      ['Torre a D grande L3 tetto',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched',baseStyle:'buttress'}],
+      // Italian machicolations (aesthetic): tall corbels of four stepped courses joined by small arches.
+      ['Pietra quadrata L3 caditoie all\'italiana',{type:'tower',shape:'square',material:'stone',level:3,tier:2,size:sq(2),roofStyle:'machicolation',machicolationStyle:'italian'}],
+      ['Grande quadrata L3 caditoie all\'italiana',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'machicolation',machicolationStyle:'italian'}],
+      ['Pietra rotonda L3 caditoie all\'italiana',{type:'tower',shape:'round',material:'stone',level:3,tier:2,r:rd(2),roofStyle:'machicolation',machicolationStyle:'italian'}],
+      ['Torre a D grande L3 caditoie all\'italiana',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'machicolation',machicolationStyle:'italian'}],
+      // Cistern: the ground-floor room of W2/W3 stone towers (tank, hatch, buckets in the cutaway).
+      ['Pietra quadrata L1 cisterna',{type:'tower',shape:'square',material:'stone',level:1,tier:2,size:sq(2),roofStyle:'battlement',functions:['cistern']}],
+      ['Grande rotonda L2 cisterna',{type:'tower',shape:'round',material:'stone',level:2,tier:3,r:rd(3),roofStyle:'battlement',functions:['cistern',null]}],
+      // Inner roof inside the merlons (BC-251105-05): square, round and D, crenellated or machicolated.
+      ['Pietra quadrata L2 merli + tetto interno',{type:'tower',shape:'square',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'battlement',innerRoof:'on'}],
+      ['Grande quadrata L3 caditoie + tetto interno',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'machicolation',innerRoof:'on'}],
+      ['Pietra rotonda L2 merli + tetto interno',{type:'tower',shape:'round',material:'stone',level:2,tier:2,r:rd(2),roofStyle:'battlement',innerRoof:'on'}],
+      ['Grande rotonda L3 merli + tetto interno + garitte',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'battlement',innerRoof:'on',bartizan:'battlement'}],
+      ['Torre a D grande L3 merli + tetto interno',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'battlement',innerRoof:'on'}],
+      ['Grande quadrata L3 merli + tetto interno + ballatoio',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'battlement',innerRoof:'on',hoarding:'on'}],
       ['Legno vedetta',{type:'tower',shape:'square',material:'wood',woodStyle:'watchtower',woodRoof:'pitched',level:1,tier:1,size:1}],
       ['Legno media aperta',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'open',level:1,tier:2,size:1.5}],
-      ['Legno media tetto',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'pitched',level:1,tier:2,size:1.5}]
+      ['Legno media tetto',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'pitched',level:1,tier:2,size:1.5}],
+      ['Legno telaio H2',{type:'tower',shape:'square',material:'wood',woodStyle:'frameTower',woodRoof:'pitched',level:2,tier:2,size:1.5}],
+      ['Legno telaio H2 mastio rialzato',{type:'tower',shape:'square',material:'wood',woodStyle:'frameTower',woodRoof:'pitched',level:2,tier:2,size:1.5,isMastio:true,keepEntrance:{stair:'wood',side:1,drawbridge:null}}],
+      // Alarm bell: the belfry on the roof of T1-T2 towers, stone and timber (settlement-alarm-bells.js).
+      ['Pietra quadrata piccola L1 tetto + campana',{type:'tower',shape:'square',material:'stone',level:1,tier:1,size:sq(1),roofStyle:'pitched',bell:'bell'}],
+      ['Pietra rotonda L2 tetto + campana',{type:'tower',shape:'round',material:'stone',level:2,tier:2,r:rd(2),roofStyle:'pitched',bell:'bell'}],
+      ['Pietra quadrata L3 2 falde + campana',{type:'tower',shape:'square',material:'stone',level:3,tier:2,size:sq(2),roofStyle:'pitched',roofShape:'gable',bell:'bell'}],
+      ['Torre a D media L2 tetto + campana',{type:'tower',shape:'dee',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'pitched',bell:'bell'}],
+      ['Legno vedetta + campana',{type:'tower',shape:'square',material:'wood',woodStyle:'watchtower',woodRoof:'pitched',level:1,tier:1,size:1,bell:'bell'}],
+      ['Legno media tetto + campana',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'pitched',level:1,tier:2,size:1.5,bell:'bell'}],
+      // Signal fire: the pyre on the flat crenellated deck of a stone tower (settlement-soldiers.js).
+      ['Pietra quadrata media L2 merlata + fuoco di segnalazione',{type:'tower',shape:'square',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'battlement',signalFire:'pyre'}],
+      ['Pietra rotonda media L3 caditoie + fuoco di segnalazione',{type:'tower',shape:'round',material:'stone',level:3,tier:2,r:rd(2),roofStyle:'machicolation',signalFire:'pyre'}],
+      // Latrine: the first upper floor of a small (W1) stone tower, its garderobe on a free outer face.
+      ['Pietra quadrata piccola L2 + latrina',{type:'tower',shape:'square',material:'stone',level:2,tier:1,size:sq(1),roofStyle:'battlement',functions:[null,'latrine']}],
+      ['Pietra rotonda piccola L2 + latrina',{type:'tower',shape:'round',material:'stone',level:2,tier:1,r:rd(1),roofStyle:'battlement',functions:[null,'latrine']}]
     ],
     walls:[
       ['Muro sottile T1 H1',{type:'wall',tier:1,level:1,skin:'standard'}],
@@ -168,9 +230,16 @@
       ['Muro spesso T3 H1',{type:'wall',tier:3,level:1,skin:'standard'}],
       ['Muro medio T2 H2',{type:'wall',tier:2,level:2,skin:'standard'}],
       ['Muro spesso T3 H2',{type:'wall',tier:3,level:2,skin:'standard'}],
+      ['Muro medio T2 H1 merlo doppio',{type:'wall',tier:2,level:1,skin:'standard',labCrenelStyle:'double'}],
+      ['Muro spesso T3 H2 merlo doppio',{type:'wall',tier:3,level:2,skin:'standard',labCrenelStyle:'double'}],
+      ['Muro medio T2 H1 doppia fila',{type:'wall',tier:2,level:1,skin:'standard',labCrenelStyle:'tworow'}],
+      ['Muro spesso T3 H2 doppia fila',{type:'wall',tier:3,level:2,skin:'standard',labCrenelStyle:'tworow'}],
       ['T2 H2 caditoie',{type:'wall',tier:2,level:2,skin:'machicolation'}],
       ['T2 H2 hoardings',{type:'wall',tier:2,level:2,skin:'hoarding'}],
       ['T1 H1 hoardings',{type:'wall',tier:1,level:1,skin:'hoarding'}],
+      // BC-251105-01/02: stair from the bailey to the wall walk (settlement-wall-stairs.js); flipped so the interior face, with the flight, faces the camera.
+      ['T2 H1 scala lignea',{type:'wall',tier:2,level:1,skin:'standard',flip:true,wallStair:{kind:'wood',pos:'middle'}}],
+      ['T2 H2 scala lapidea',{type:'wall',tier:2,level:2,skin:'standard',flip:true,wallStair:{kind:'stone',pos:'middle'}}],
       ['Palizzata T1',{type:'palisade',tier:1,level:1}],
       ['Palizzata T2',{type:'palisade',tier:2,level:1}],
       ['Palizzata T3',{type:'palisade',tier:3,level:1}]
@@ -180,7 +249,15 @@
       ['Porta pietra L2',{type:'gate',shape:'square',material:'stone',size:1.5,level:2,roofStyle:'battlement'}],
       ['Porta pietra L3',{type:'gate',shape:'square',material:'stone',size:1.5,level:3,roofStyle:'battlement'}],
       ['Porta pietra L3 tetto',{type:'gate',shape:'square',material:'stone',size:1.5,level:3,roofStyle:'pitched'}],
-      ['Porta legno',{type:'gate',shape:'square',material:'wood',size:1.5,w:1,h:1.5,level:1,roofStyle:'flat'}]
+      ['Porta pietra L2 merli + ballatoio',{type:'gate',shape:'square',material:'stone',size:1.5,level:2,roofStyle:'battlement',hoarding:'on'}],
+      ['Porta pietra L3 tetto + ballatoio',{type:'gate',shape:'square',material:'stone',size:1.5,level:3,roofStyle:'pitched',hoarding:'on'}],
+      ['Porta piccola L2 merli + ballatoio',{type:'gate',shape:'square',material:'stone',size:1,level:2,roofStyle:'battlement',hoarding:'on'}],
+      ['Porta piccola L2 tetto + ballatoio',{type:'gate',shape:'square',material:'stone',size:1,level:2,roofStyle:'pitched',hoarding:'on'}],
+      ['Porta legno',{type:'gate',shape:'square',material:'wood',size:1.5,w:1,h:1.5,level:1,roofStyle:'flat'}],
+      ['Porta piccola L1',{type:'gate',shape:'square',material:'stone',size:1,level:1,roofStyle:'battlement'}],
+      ['Porta piccola L2',{type:'gate',shape:'square',material:'stone',size:1,level:2,roofStyle:'battlement'}],
+      ['Porta piccola L2 tetto',{type:'gate',shape:'square',material:'stone',size:1,level:2,roofStyle:'pitched'}],
+      ['Porta piccola L2 graticcio',{type:'gate',shape:'square',material:'stone',size:1,level:2,roofStyle:'pitched',upper:'timber'}]
     ]
   };
   function hpTo(s,f){
@@ -217,6 +294,11 @@
     if(spec.type==='gate')out.push(['portone incrinato',s=>doorTo(s,.5)],['portone sfondato',s=>doorTo(s,0)]);
     // Only towers and gatehouses fail a storey at a time (settlement-siege.js storeyCollapse).
     if(!wood&&['tower','gate'].includes(spec.type))for(let k=1;k<L;k++)out.push(['crollo '+k+(k>1?' piani':' piano'),s=>{if(spec.type==='gate')doorTo(s,0);hpTo(s,(L-k)/L-.02)}]);
+    // A trebuchet hit next to a room's exterior element (the garderobe) brings down the box alone.
+    if(spec.functions?.some(fn=>window.ConquerRoomExterior?.spec(fn)))out.push(['elemento esterno crollato',s=>{
+      for(const e of window.ConquerRoomExterior.elements(s))
+        window.ConquerSiege.attackStructure(s.id,'trebuchet',100,{x:e.anchor.x+e.normal.x*.15,y:e.anchor.y+e.normal.y*.15});
+    }]);
     out.push(['distrutta',s=>{if(spec.type==='gate')doorTo(s,0);hpTo(s,0)}]);
     return out;
   }

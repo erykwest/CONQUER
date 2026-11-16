@@ -9,7 +9,7 @@ const path=require('node:path');
 const vm=require('node:vm');
 const window={};
 const ctx=vm.createContext({window,Math,Object,Number,Array,Map,Float32Array,String});
-for(const f of ['assets/siege-engines-model.js','settlement-siege-engines3d.js'])
+for(const f of ['settlement-util.js','assets/siege-engines-model.js','settlement-siege-engines3d.js'])
   vm.runInContext(fs.readFileSync(path.join(__dirname,'..','src',f),'utf8'),ctx);
 const M=window.ConquerSiegeModel,SE=window.ConquerSiegeEngines3D;
 for(const [name,e] of Object.entries(M.engines)){

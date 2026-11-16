@@ -15,7 +15,7 @@ const server=http.createServer((req,res)=>{
   const saved=overlay&&path.join(overlay,path.relative(root,file));
   fs.readFile(saved&&fs.existsSync(saved)?saved:file,(err,data)=>{
     if(err){res.writeHead(404).end();return}
-    res.setHeader('Content-Type',({'.js':'text/javascript','.html':'text/html','.css':'text/css','.svg':'image/svg+xml','.png':'image/png'})[path.extname(file)]||'application/octet-stream');res.end(data);
+    res.setHeader('Content-Type',({'.js':'text/javascript','.mjs':'text/javascript','.json':'application/json','.html':'text/html','.css':'text/css','.svg':'image/svg+xml','.png':'image/png'})[path.extname(file)]||'application/octet-stream');res.end(data);
   });
 });
 async function main(){

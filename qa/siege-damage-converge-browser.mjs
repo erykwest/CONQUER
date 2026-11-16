@@ -6,7 +6,7 @@ import {chromium} from 'playwright';
 const out='output/playwright/converge';
 const baseUrl=process.env.CONQUER_QA_URL||'http://127.0.0.1:4173';
 fs.mkdirSync(out,{recursive:true});
-const browser=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-webgl']});
+const browser=await chromium.launch({headless:true,executablePath:process.env.QA_CHROME||undefined,args:['--use-angle=swiftshader','--enable-webgl']});
 const results=[];
 try{
   for(const mode of ['canvas','webgl']){
@@ -17,7 +17,7 @@ try{
       (mode==='canvas'?'renderer=canvas2d':'world3d=1'),{waitUntil:'domcontentloaded'});
     await page.waitForFunction(()=>!!window.ConquerGates&&!!window.ConquerSiege&&typeof selectStructure==='function');
     const initial=await page.evaluate(()=>{
-      State.clock.speed=0;State.clock.day=20;State.environment=[];
+      State.devBuild={fastBuild:true};State.clock.speed=0;State.clock.day=20;State.environment=[];
       State.daylightOverride='day';State.seasonOverride='summer';State.weatherOverride='sun';
       State.relief={hills:[],seed:12345};clearReliefBandCache();
       State.resources={gold:1000,wood:1000,stone:1000,metal:1000};

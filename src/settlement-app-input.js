@@ -1,6 +1,28 @@
 'use strict';
 // Pointer/canvas interactions and build tool controls. Extracted verbatim from settlement-app.js.
+// Shift + middle mouse (mouse 3) drag = free camera rotation around the screen centre; adding Ctrl snaps to 15°.
+// Plain middle/right drag still pans.
+let orbit=null,orbitFrame=0,orbitPending=null;
+const ORBIT_PX_PER_TURN=160;   // horizontal pixels per 90°
+function flushCameraOrbit(){
+  orbitFrame=0;if(!orbit||!orbitPending)return;
+  const {clientX,snap}=orbitPending;orbitPending=null;
+  setCameraRotation(orbit.start+(clientX-orbit.x)/ORBIT_PX_PER_TURN,{pivot:orbit.pivot,anchor:orbit.anchor,snap});
+  status('View rotation: '+cameraRotationDegrees()+'°'+(snap?' (15° snap)':' · +Ctrl = 15° steps'));
+}
+function finishCameraOrbit(){
+  if(!orbit)return;
+  if(orbitPending){if(orbitFrame)cancelAnimationFrame(orbitFrame);flushCameraOrbit()}
+  orbit=null;scheduleLocalSave(500);
+}
 canvas.addEventListener('pointerdown',e=>{
+  if(e.button===1&&e.shiftKey){
+    e.preventDefault();
+    const pivot=visibleCanvasCenter();
+    orbit={x:e.clientX,start:State.view.rotation||0,pivot,anchor:s2w(pivot.x,pivot.y)};
+    canvas.setPointerCapture(e.pointerId);
+    return
+  }
   if(e.button===1||e.button===2){
     pan={x:e.clientX,y:e.clientY,vx:State.view.x,vy:State.view.y};
     sceneCachePanPreview=true;
@@ -35,8 +57,27 @@ canvas.addEventListener('pointerdown',e=>{
     if(addStructure(quay)){State.draft=null;status('Banchina costruita — scegli il prossimo punto A')}
     draw();return
   }
+  if(State.tool.kind==='slopeway'){
+    // Ramp / stairway: bank A on one plateau, bank B on the other (settlement-slopeways.js).
+    const W=window.ConquerSlopeways,q={x:snapGrid(p.x),y:snapGrid(p.y)};
+    if(!State.draft?.a){State.draft={a:q,preview:null};status(W.SPEC[State.tool.slopeway].label+': attacco A fissato — clicca l’altro pianoro');draw();return}
+    const way={id:uid(),masonryMaterial:State.buildMasonryMaterial,...W.make(State.tool.slopeway,State.draft.a,q)};
+    if(addStructure(way)){State.draft=null;status(W.SPEC[way.type].label+' in costruzione · dislivello '+Math.abs(way.zb-way.za).toFixed(1)+'U — scegli il prossimo attacco')}
+    draw();return
+  }
   if(!inBuild(p)){status('Build only inside the central 100×100U area');return}
   if(State.tool.kind==='terraform'){
+    if(State.tool.mode==='forest'){
+      const ghost=window.ConquerForestry?.preview(p,State.tool);
+      State.draft={mode:'terraform',preview:ghost};
+      if(!ghost?.ok){status('Rimozione foresta bloccata: '+(ghost?.reason||'terreno non valido'));draw();return}
+      const job=window.ConquerForestry?.start(ghost);
+      if(job?.ok){
+        State.draft=null;
+        status('Job L1 avviato · +'+ghost.wood+' legname a completamento · '+ghost.workRequired+' giornate lavoro');
+      }else status('Rimozione foresta bloccata: '+(job?.reason||'job non disponibile'));
+      draw();return;
+    }
     const ghost=window.ConquerTerraforming?.preview(p,State.tool);
     if(!ghost?.ok){status('Terraforming blocked: '+(ghost?.reason||'invalid terrain'));State.draft={mode:'terraform',preview:ghost};draw();return}
     if(window.ConquerTerraforming.commit(ghost)){
@@ -49,6 +90,12 @@ canvas.addEventListener('pointerdown',e=>{
       status((ghost.mode==='flat'?'Flat':ghost.mode==='walled'?'Walled terrace':'Sloped')+' applied · H '+ghost.targetZ.toFixed(0));
       draw();
     }
+    return;
+  }
+  if(State.tool.kind==='leanTo'){
+    const r=window.ConquerLeanTo?.atPoint(p);
+    if(!r?.ok){status('Lean-to blocked: '+(r?.reason||'no wall'));return}
+    if(addStructure(r.structure))status('Lean-to placed against the wall · choose its room in the panel');
     return;
   }
   if(State.tool.kind==='civicAnnex'){
@@ -70,6 +117,7 @@ canvas.addEventListener('pointerdown',e=>{
       mode:'orient',center:q,angle,lockedAngle,
       wallSnapId:snap.wallId||null,
       wallSnapEnd:snap.wallEnd||null,
+      wallSeat:Number.isFinite(snap.wallSeat)?snap.wallSeat:null,
       parentTowerId:snap.parentTowerId||null,
       subtowerSocket:snap.subtowerSocket||null,
       subtowerAngle:Number.isFinite(snap.subtowerAngle)?snap.subtowerAngle:null,
@@ -93,9 +141,15 @@ canvas.addEventListener('pointerdown',e=>{
     status(structureLabel(State.draft.preview)+' position fixed — move cursor to rotate, click to confirm');draw();return
   }
   if(State.tool.kind==='well'){
-    if(State.village.founded||State.structures.some(s=>s.type==='well')){status('This settlement already has a village well');return}
+    const founding=!State.village.founded;
+    if(founding&&State.structures.some(s=>s.type==='well')){status('Name the village before building another well');return}
     const q={x:snapGrid(p.x),y:snapGrid(p.y)},well={id:uid(),type:'well',masonryMaterial:State.buildMasonryMaterial,x:q.x,y:q.y};
-    if(addStructure(well))openVillageModal(well);return
+    // Only the first well founds the village; later wells are expansion centres.
+    if(addStructure(well)){
+      if(founding)openVillageModal(well);
+      else status('Well built · '+(wellMainRoads(well).length?'main road linked to the founding well':'no main road route found'));
+    }
+    return
   }
   if(State.tool.kind==='crossing'){
     const moat=['dry','water'].includes(State.tool.crossing);
@@ -170,11 +224,13 @@ canvas.addEventListener('pointerdown',e=>{
           normalizeStructuralLinearRoute(State.draft.a,e2.point,spec,!!(e2.structureId||e2.endpoint));
         if(route&&route.segments.length&&route.segments.every(seg=>seg.length>=.24)){
           const legs=route.segments.length;
-          if(commitStructuralLinearRoute(route,e2.structureId||null,spec)){
+          const done=commitStructuralLinearRoute(route,e2.structureId||null,spec);
+          if(done){
             State.draft=null;
-            status(legs===2?State.tool.label+' added · automatic 15° joint':State.tool.label+' ready for next segment');
+            const gates=done.gates?' · '+(done.gates===1?'gate':done.gates+' gates')+' on the main road':'';
+            status((legs===2?State.tool.label+' added · two straight legs':State.tool.label+' ready for next segment')+gates);
           }
-        }else status(e2.structureId||e2.endpoint?'No valid two-segment 15° route to this magnet':'Segment too short');
+        }else status(e2.structureId||e2.endpoint?'Magnet out of reach':'Segment too short');
       }
     }
   }
@@ -190,6 +246,11 @@ function flushCanvasPan(){
   draw();
 }
 canvas.addEventListener('pointermove',e=>{
+  if(orbit){
+    orbitPending={clientX:e.clientX,snap:e.ctrlKey};
+    if(!orbitFrame)orbitFrame=requestAnimationFrame(flushCameraOrbit);
+    return
+  }
   if(pan){
     panPending={clientX:e.clientX,clientY:e.clientY};
     if(!panFrame)panFrame=requestAnimationFrame(flushCanvasPan);
@@ -199,6 +260,13 @@ canvas.addEventListener('pointermove',e=>{
   // Four signposts behave like interactive wayfinding markers in select mode.
   if(canvas.style)canvas.style.cursor=State.tool.kind==='select'&&window.ConquerRoadSignTests?.hit?.(pointerScreen(e))?'pointer':'';
   if(State.tool.kind==='terraform'){
+    if(State.tool.mode==='forest'){
+      const ghost=window.ConquerForestry?.preview(p,State.tool);
+      State.draft={mode:'terraform',preview:ghost};
+      status(ghost?.ok?'Rimuovi foresta · job L1 · +'+ghost.wood+' legname a completamento · '+ghost.workRequired+' giornate lavoro':
+        'Rimozione foresta bloccata: '+(ghost?.reason||'terreno non valido'));
+      draw();return;
+    }
     const ghost=window.ConquerTerraforming?.preview(p,State.tool);
     State.draft={mode:'terraform',preview:ghost};
     status(!ghost?.ok?'Terraforming blocked: '+(ghost?.reason||'invalid terrain'):
@@ -212,6 +280,17 @@ canvas.addEventListener('pointermove',e=>{
     State.draft.preview=preview.length>=.02?preview:null;
     const v=State.draft.preview&&window.ConquerPlacement?.check(State.draft.preview);
     status(v&&!v.ok?'Banchina: '+v.reason:(m?'⚓ ':'')+'Banchina '+preview.length.toFixed(1)+'U — clicca il punto B');
+    draw();return;
+  }
+  if(State.tool.kind==='slopeway'){
+    if(!State.draft?.a)return;
+    const W=window.ConquerSlopeways,b={x:snapGrid(p.x),y:snapGrid(p.y)};
+    const preview=W.make(State.tool.slopeway,State.draft.a,b),v=preview.length>=.5?window.ConquerPlacement?.check(preview,{checkCost:false}):null;
+    const survey=preview.length>=.5?W.validate(preview):null;
+    State.draft.preview=survey?.ok?{...preview,za:survey.za,zb:survey.zb}:null;
+    State.draft.invalidPreview=survey&&!survey.ok?preview:null;
+    status(!survey?W.label(State.tool.slopeway):!survey.ok?survey.reason:v&&!v.ok?v.reason:
+      W.SPEC[preview.type].label+' '+preview.length.toFixed(1)+'U · dislivello '+survey.rise.toFixed(1)+'U · pendenza 1:'+(1/survey.grade).toFixed(1)+' · '+costText(W.cost(preview))+' — clicca per confermare');
     draw();return;
   }
   if(State.tool.kind==='crossing'){
@@ -268,7 +347,7 @@ canvas.addEventListener('pointermove',e=>{
     const route=window.ConquerQuay?.wallRoute(State.draft.a,snap.point,State.draft.aSnap,snap.structureId,spec)||
       normalizeStructuralLinearRoute(State.draft.a,snap.point,spec,!!(snap.structureId||snap.endpoint));
     if(route){
-      const base={type:State.tool.linear,width:spec.width,masonryMaterial:State.buildMasonryMaterial,level:State.tool.level||State.buildLevels.wall,tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined,...(State.tool.span==='wide'?{span:'wide'}:{})};
+      const base={type:State.tool.linear,width:spec.width,masonryMaterial:State.buildMasonryMaterial,level:State.tool.level||State.buildLevels.wall,tier:['wall','palisade'].includes(State.tool.linear)?(State.tool.tier||State.buildLevels.wallTier):undefined,...(State.tool.span==='wide'?{span:'wide'}:{}),...(State.tool.material==='wood'?{material:'wood',level:1}:{})};
       State.draft.invalidPreview=null;
       State.draft.preview=null;
       State.draft.previewSegments=route.segments.map((seg,index)=>({
@@ -277,16 +356,27 @@ canvas.addEventListener('pointermove',e=>{
         ...(index===route.segments.length-1&&snap.structureId?{bSnap:snap.structureId}:{})
       }));
       State.draft.previewSegments.forEach(seg=>window.ConquerQuay?.faceWallOut(seg));   // quay walls face out
+      // Crossing a main road: the ghost already shows the gate and the wall cut on its flanks.
+      const gatePlan=wallRoadGatePlan(State.draft.previewSegments);
+      if(!gatePlan.blocked&&gatePlan.gates.length)State.draft.previewSegments=[...gatePlan.gates.map(g=>({...g,previewOnly:true})),...gatePlan.walls];
       const previewCost=aggregateConstructionCost(State.draft.previewSegments);
       const legs=route.segments.length,total=route.length;
-      status(`${State.tool.label}: ${total.toFixed(2)}U · ${route.onQuay?'⚓ along the quay':legs===2?'2×15° legs · auto joint':'15°'} · ${costText(previewCost)} — click to confirm`);
+      const gateNote=gatePlan.blocked?' · ⚠ '+gatePlan.blocked:gatePlan.gates.length?' · '+(gatePlan.gates.length===1?'gate':gatePlan.gates.length+' gates')+' on the main road':'';
+      status(`${State.tool.label}: ${total.toFixed(2)}U · ${route.onQuay?'⚓ along the quay':legs===2?'2 straight legs':Math.round(((route.segments[0].angle*180/Math.PI)%360+360)%360)+'°'}${gateNote} · ${costText(previewCost)} — click to confirm`);
     }else{
       State.draft.preview=null;State.draft.previewSegments=null;
       State.draft.invalidPreview={type:State.tool.linear,a:State.draft.a,b:snap.point,width:spec.width,length:dist(State.draft.a,snap.point)};
-      status(snap.structureId||snap.endpoint?'No valid two-segment 15° route to this magnet':'Segment too short');
+      status(snap.structureId||snap.endpoint?'Magnet out of reach':'Segment too short');
     }
     draw();
     return
+  }
+  if(State.tool.kind==='leanTo'){
+    const r=window.ConquerLeanTo?.atPoint(p);
+    State.draft=r?.ok?{mode:'hover',preview:r.structure}:null;
+    const verdict=r?.ok?window.ConquerPlacement?.check(r.structure):r;
+    status(verdict&&!verdict.ok?'Lean-to blocked: '+verdict.reason:'Lean-to W1 · '+r.structure.length.toFixed(2)+'U · '+costText(constructionCost(r.structure))+' — click to confirm');
+    draw();return;
   }
   if(State.tool.kind==='civicAnnex'){
     const parent=State.structures.find(x=>x.id===State.tool.parentId);
@@ -313,6 +403,7 @@ canvas.addEventListener('pointermove',e=>{
         mode:'hover',
         wallSnapId:snap.wallId||null,
         wallSnapEnd:snap.wallEnd||null,
+        wallSeat:Number.isFinite(snap.wallSeat)?snap.wallSeat:null,
         parentTowerId:snap.parentTowerId||null,
         subtowerSocket:snap.subtowerSocket||null,
         subtowerAngle:Number.isFinite(snap.subtowerAngle)?snap.subtowerAngle:null,
@@ -355,6 +446,10 @@ function finishCanvasPan(){
 }
 canvas.addEventListener('pointerup',finishCanvasPan);
 canvas.addEventListener('pointercancel',finishCanvasPan);
+canvas.addEventListener('pointerup',finishCameraOrbit);
+canvas.addEventListener('pointercancel',finishCameraOrbit);
+canvas.addEventListener('auxclick',e=>{if(e.button===1)e.preventDefault()});
+canvas.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault()});   // no browser autoscroll
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 let zoomFrame=0,zoomSettleTimer=0,zoomWheelDelta=0,zoomAnchor=null;
 function flushWheelZoom(){
@@ -406,15 +501,15 @@ function setBuildMasonryMaterial(next){
 }
 for(const b of document.querySelectorAll('[data-build-masonry]'))b.onclick=()=>setBuildMasonryMaterial(b.dataset.buildMasonry);
 for(const b of document.querySelectorAll('[data-tool]'))b.onclick=()=>setTool({kind:b.dataset.tool,label:b.textContent.trim(),el:b});
-for(const b of document.querySelectorAll('[data-tower]'))b.onclick=()=>{const level=State.buildLevels.tower,dummy={type:'tower',material:'stone',masonryMaterial:State.buildMasonryMaterial,shape:b.dataset.tower,level,...(b.dataset.tower==='round'?{r:Number(b.dataset.size)}:{size:Number(b.dataset.size)})};setTool({kind:'tower',material:'stone',shape:b.dataset.tower,size:Number(b.dataset.size),level,label:`${b.dataset.tower} tower ${b.dataset.size}U · L${level} · ${buildDuration(dummy).toFixed(0)}d · ${costText(constructionCost(dummy))}`,el:b})};
-for(const b of document.querySelectorAll('[data-wood-tower]'))b.onclick=()=>{const style=b.dataset.woodTower,size=style==='watchtower'?1:1.5,woodRoof=style==='watchtower'?'pitched':'open',dummy={type:'tower',material:'wood',woodStyle:style,woodRoof,shape:'square',size,level:1};setTool({kind:'tower',material:'wood',woodStyle:style,woodRoof,shape:'square',size,level:1,label:`${style==='watchtower'?'Wood watchtower':'Wood tower'} · H1 · ${buildDuration(dummy).toFixed(1)}d · ${costText(constructionCost(dummy))}`,el:b})};
+for(const b of document.querySelectorAll('[data-tower]'))b.onclick=()=>{const level=State.buildLevels.tower,dummy={type:'tower',material:'stone',masonryMaterial:State.buildMasonryMaterial,shape:b.dataset.tower,level,...(b.dataset.tower==='round'?{r:Number(b.dataset.size)}:{size:Number(b.dataset.size)})};setTool({kind:'tower',material:'stone',shape:b.dataset.tower,size:Number(b.dataset.size),level,label:`${isOrientedTowerShape(b.dataset.tower)?orientedTowerLabel(dummy):b.dataset.tower+' tower '+b.dataset.size+'U'} · L${level} · ${buildDuration(dummy).toFixed(0)}d · ${costText(constructionCost(dummy))}`,el:b})};
+for(const b of document.querySelectorAll('[data-wood-tower]'))b.onclick=()=>{const style=b.dataset.woodTower,size=woodTowerSize(style),level=woodTowerLevel(style),woodRoof=style==='palisadeTower'?'open':'pitched',dummy={type:'tower',material:'wood',woodStyle:style,woodRoof,shape:'square',size,level};setTool({kind:'tower',material:'wood',woodStyle:style,woodRoof,shape:'square',size,level,label:`${style==='watchtower'?'Wood watchtower':style==='frameTower'?'Timber frame tower':'Wood tower'} · H${level} · ${buildDuration(dummy).toFixed(1)}d · ${costText(constructionCost(dummy))}`,el:b})};
 document.querySelector('[data-main-road]').onclick=e=>setTool({kind:'linear',linear:'road',label:'Main road — choose point A',el:e.currentTarget});
 for(const b of document.querySelectorAll('[data-terraform]'))b.onclick=()=>{
   const radius=Number(document.querySelector('[data-terraform-radius].active')?.dataset.terraformRadius)||4;
   const delta=Number(document.querySelector('[data-terraform-delta].active')?.dataset.terraformDelta)||1;
-  const mode=b.dataset.terraform==='walled'?'walled':b.dataset.terraform==='flat'?'flat':'terrain';
+  const mode=b.dataset.terraform==='forest'?'forest':b.dataset.terraform==='walled'?'walled':b.dataset.terraform==='flat'?'flat':'terrain';
   const shape=document.querySelector('[data-terraform-shape].active')?.dataset.terraformShape==='square'?'square':'round';
-  setTool({kind:'terraform',mode,shape,radius,delta,label:(mode==='flat'?'Flat H0':mode==='walled'?'Walled terrace':'Sloped')+' · '+shape+(mode==='flat'?' · SUBTRACT':(delta<0?' · lower':' · raise')+' 1U')+' · R'+radius,el:b});
+  setTool({kind:'terraform',mode,shape,radius,delta,label:mode==='forest'?'Rimuovi foresta · job L1 · R'+radius:(mode==='flat'?'Flat H0':mode==='walled'?'Walled terrace':'Sloped')+' · '+shape+(mode==='flat'?' · SUBTRACT':(delta<0?' · lower':' · raise')+' 1U')+' · R'+radius,el:b});
 };
 for(const b of document.querySelectorAll('[data-terraform-shape]'))b.onclick=()=>{
   const shape=b.dataset.terraformShape==='square'?'square':'round';
@@ -454,7 +549,7 @@ for(const b of document.querySelectorAll('[data-crossing-width]'))b.onclick=()=>
     status('Crossing width: '+width+'U');draw();
   }
 };
-for(const b of document.querySelectorAll('[data-linear]'))b.onclick=()=>{const tier=State.buildLevels.wallTier,wide=b.dataset.linear==='builtWide',linear=wide?'built':b.dataset.linear,isPalisade=linear==='palisade',level=isPalisade?1:wide?State.buildLevels.builtWide:State.buildLevels.wall;setTool({kind:'linear',linear,...(wide?{span:'wide'}:{}),level,tier,label:(linear==='wall'?`Wall T${tier}`:isPalisade?`Palisade T${tier}`:wide?'Wide hall 2U':'Built section')+(isPalisade?'':` L${level}`)+` — choose point A`,el:b})};
+for(const b of document.querySelectorAll('[data-linear]'))b.onclick=()=>{if(b.dataset.linear==='leanTo'){setTool({kind:'leanTo',linear:'built',leanTo:true,leanMaterial:State.tool?.leanMaterial||'wood',level:1,label:'Lean-to W1 — click the inner side of an H2 wall',el:b});return}const tier=State.buildLevels.wallTier,kind=b.dataset.linear,wood=kind==='longhouse'||kind==='longhouseWide',wide=kind==='builtWide'||kind==='longhouseWide',linear=wide||wood?'built':kind,isPalisade=linear==='palisade',level=isPalisade||wood?1:wide?State.buildLevels.builtWide:State.buildLevels.wall;setTool({kind:'linear',linear,...(wide?{span:'wide'}:{}),...(wood?{material:'wood'}:{}),level,tier,label:(linear==='wall'?`Wall T${tier}`:isPalisade?`Palisade T${tier}`:wood?(wide?'Wide longhouse 2U':'Longhouse 1U'):wide?'Wide hall 2U':'Built section')+(isPalisade?'':` L${level}`)+` — choose point A`,el:b})};
 document.querySelectorAll('[data-tower-level]').forEach(b=>b.onclick=()=>{State.buildLevels.tower=Number(b.dataset.towerLevel);document.querySelectorAll('[data-tower-level]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='tower'&&State.tool.material!=='wood'){State.tool.level=State.buildLevels.tower;State.draft=null;status('Tower height: '+State.buildLevels.tower+' level'+(State.buildLevels.tower>1?'s':''));draw()}});
 document.querySelectorAll('[data-wall-tier]').forEach(b=>b.onclick=()=>{State.buildLevels.wallTier=Number(b.dataset.wallTier);document.querySelectorAll('[data-wall-tier]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='linear'&&['wall','palisade'].includes(State.tool.linear)){State.tool.tier=State.buildLevels.wallTier;State.draft=null;status((State.tool.linear==='palisade'?'Palisade':'Wall')+' tier: T'+State.buildLevels.wallTier+' · '+wallWidthForTier(State.buildLevels.wallTier)+'U');draw()}});
 document.querySelectorAll('[data-wall-level]').forEach(b=>b.onclick=()=>{const wide=State.tool.kind==='linear'&&State.tool.span==='wide';State.buildLevels[wide?'builtWide':'wall']=Number(b.dataset.wallLevel);document.querySelectorAll('[data-wall-level]').forEach(x=>x.classList.toggle('active',x===b));if(State.tool.kind==='linear'&&['wall','built'].includes(State.tool.linear)){State.tool.level=Number(b.dataset.wallLevel);State.draft=null;status((wide?'Wide hall':'Wall')+' height: '+State.tool.level+' level'+(State.tool.level>1?'s':''));draw()}});
@@ -464,19 +559,24 @@ document.querySelectorAll('[data-gate-level]').forEach(b=>b.onclick=()=>{
     status('Wood gate height is fixed at H1');
     draw();return;
   }
-  State.buildLevels.gate=Number(b.dataset.gateLevel);
-  document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',x===b));
+  // The small gate stops at L2.
+  const small=State.tool.kind==='gate'&&State.tool.size<1.25;
+  State.buildLevels.gate=Math.min(Number(b.dataset.gateLevel),small?SMALL_GATE_MAX_LEVEL:3);
+  document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',Number(x.dataset.gateLevel)===State.buildLevels.gate));
   if(State.tool.kind==='gate'){
     State.tool.level=State.buildLevels.gate;State.draft=null;
-    const dummy={type:'gate',material:'stone',masonryMaterial:State.buildMasonryMaterial,level:State.buildLevels.gate};
+    const dummy={type:'gate',material:'stone',masonryMaterial:State.buildMasonryMaterial,size:State.tool.size,level:State.buildLevels.gate};
     status('Gate height: L'+State.buildLevels.gate+' · '+buildDuration(dummy).toFixed(1)+'d');
     draw();
   }
 });
-document.querySelector('[data-gate]').onclick=e=>{
-  const level=State.buildLevels.gate,dummy={type:'gate',material:'stone',masonryMaterial:State.buildMasonryMaterial,level};
+// Stone gates: the gatehouse (data-gate-size 1.5) and the small gate (1).
+for(const b of document.querySelectorAll('[data-gate]'))b.onclick=e=>{
+  const size=Number(b.dataset.gateSize)||GATE_SIZES.large,small=size<1.25;
+  const level=Math.min(State.buildLevels.gate,small?SMALL_GATE_MAX_LEVEL:3),dummy={type:'gate',material:'stone',masonryMaterial:State.buildMasonryMaterial,size,level};
+  State.buildLevels.gate=level;
   document.querySelectorAll('[data-gate-level]').forEach(x=>x.classList.toggle('active',Number(x.dataset.gateLevel)===level));
-  setTool({kind:'gate',material:'stone',level,label:'Gate 1.5×1.5U · L'+level+' · '+buildDuration(dummy).toFixed(1)+'d · '+costText(constructionCost(dummy)),el:e.currentTarget});
+  setTool({kind:'gate',material:'stone',size,level,label:(small?'Small gate 1×1U · L':'Gate 1.5×1.5U · L')+level+' · '+buildDuration(dummy).toFixed(1)+'d · '+costText(constructionCost(dummy)),el:e.currentTarget});
 };
 document.querySelector('[data-wood-gate]').onclick=e=>{
   const dummy={type:'gate',material:'wood',w:1,h:1.5,level:1};
@@ -487,13 +587,23 @@ for(const b of document.querySelectorAll('[data-civic]'))b.onclick=()=>{
   const type=b.dataset.civic,spec={type,shape:'civic'};
   setTool({kind:'civic',placementSpec:spec,label:structureLabel(spec)+' · '+BUILD_DAYS[type]+'d · '+costText(constructionCost({...spec,masonryMaterial:State.buildMasonryMaterial})),el:b});
 };
+for(const b of document.querySelectorAll('[data-storage-yard]'))b.onclick=()=>{
+  if(!State.village.founded){status('Fonda prima un villaggio con un pozzo');return}
+  const candidate=window.ConquerStorageYard.make();
+  setTool({kind:'civic',placementSpec:candidate,label:'Piazzale magazzino · 2×2U · '+costText(constructionCost(candidate)),el:b});
+};
+// Per-worker daily output from the engine contract (e.g. mine 1 metal / 2 L2 = 0.5).
+const industryRatePerWorker=type=>{
+  const k=window.ConquerEconomy?.KIND?.[type];
+  return k&&k.rate&&k.workers?Math.round(k.rate/k.workers*100)/100:1;
+};
 for(const b of document.querySelectorAll('[data-industry]'))b.onclick=()=>{
    const type=b.dataset.industry,extractionMode=b.dataset.extractionMode==='clay'?'clay':'stone';
    const candidate=window.ConquerIndustries.make(type,{x:0,y:0},extractionMode);
    const spec=window.ConquerIndustries.definition(candidate);
    setTool({kind:'industry',industry:type,
      placementSpec:candidate,
-     label:spec.name+' · '+spec.w+'×'+spec.h+'U'+(spec.workers?' · L'+spec.tier+' ×'+spec.workers:'')+(window.ConquerIndustries.isMill({type})?' · Crop → Food':' · 1 '+spec.good+'/worker/day')+' · '+costText(constructionCost({...candidate,masonryMaterial:State.buildMasonryMaterial})),el:b});
+     label:spec.name+' · '+spec.w+'×'+spec.h+'U'+(spec.workers?' · L'+spec.tier+' ×'+spec.workers:'')+(window.ConquerIndustries.isMill({type})?' · Crop → Food':' · '+industryRatePerWorker(type)+' '+spec.good+'/worker/day')+' · '+costText(constructionCost({...candidate,masonryMaterial:State.buildMasonryMaterial})),el:b});
  };
  // Event venues (settlement-events3d.js): podium, stage, festival ground, arena lot.
  for(const b of document.querySelectorAll('[data-event-venue]'))b.onclick=()=>{
@@ -511,6 +621,11 @@ for(const b of document.querySelectorAll('[data-industry]'))b.onclick=()=>{
    setTool({kind:'pier',placementSpec:spec,label:P.label(spec)+' · '+P.buildDays(spec)+'d · '+costText(P.cost(spec)),el:b});
  };
  // Stone quay (settlement-quay.js): two clicks, along the shore or out in the water.
+ for(const b of document.querySelectorAll('[data-slopeway]'))b.onclick=()=>{
+   const W=window.ConquerSlopeways;if(!W)return;
+   const type=b.dataset.slopeway==='stairway'?'stairway':'ramp';
+   setTool({kind:'slopeway',slopeway:type,label:W.label(type)+' · 2 clic: pianoro basso e pianoro alto · '+costText(W.SPEC[type].costPerU)+'/U',el:b});
+ };
  for(const b of document.querySelectorAll('[data-quay]'))b.onclick=()=>{
    const Q=window.ConquerQuay;if(!Q)return;
    setTool({kind:'quay',label:Q.label()+' · 2 clic · lungo la riva o in acqua · '+costText(Q.SPEC.costPerU)+'/U',el:b});
@@ -522,22 +637,24 @@ document.getElementById('confirmVillageBtn').onclick=()=>{
   const borderEntries=ensureBorderEntrySelection();
   State.village={...State.village,name,wellId:well.id,founded:true,foundingWorkers:4,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};
   window.ConquerEconomy?.foundingCharter?.(well.id);
+  const yard=window.ConquerStorageYard?.ensureForWell?.(well);
   closeVillageModal();
+  // Report a failed placement in the persistent founding status below.
   connectBorderMainRoadsInFrames(mainSegments=>{
     markDirty(true,['ground','base']);
     renderUI();
     const connected=ensureRoadPlan().filter(r=>arterialRouteContinuous(r.id)).length;
-    status(`${name} founded — ${connected}/4 border main roads connected${mainSegments?` · ${mainSegments} segments`:''}`);
+    status(`${name} founded — ${connected}/4 border main roads connected${mainSegments?` · ${mainSegments} segments`:''}${yard?' · Piazzale 2×2U':' · ⚠ PIAZZALE NON POSIZIONATO (7U occupate)'}`);
     processVillageGrowth();draw();
   });
   markDirty(true,['ground','base']);
   renderUI();
-  status(`${name} founded — connecting border main roads…`);
+  status(`${name} founded — connecting border main roads…${yard?' · Piazzale 2×2U':' · ⚠ nessun lotto magazzino libero entro 7U'}`);
   draw();
 };
 document.getElementById('cancelVillageBtn').onclick=()=>{const id=State.pendingWellId;closeVillageModal();if(id)deleteStructure(id)};
 document.getElementById('villageNameInput').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('confirmVillageBtn').click()});
 document.getElementById('closeFunctions').onclick=()=>{State.selectedId=null;renderFunctionPanel();draw()};
-document.getElementById('undoBtn').onclick=()=>{const s=[...State.structures].reverse().find(x=>!x.auto);if(s)deleteStructure(s.id)};
-document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement, including player terraforming, and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(s.buildCost);const borderEntries=ensureBorderEntrySelection();State.structures=[];window.ConquerTerraforming?.clear();window.ConquerEconomy?.reset();State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty(true,'all');renderUI();draw()}};
-['tax','levy'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty(false,false,true)});
+document.getElementById('undoBtn').onclick=()=>{const s=[...State.structures].reverse().find(x=>!x.auto&&!x.foundingStockyard);if(s)deleteStructure(s.id)};
+document.getElementById('clearBtn').onclick=()=>{if(confirm('Clear the settlement, including player terraforming, and refund player-built structures?')){for(const s of State.structures)if(!s.auto&&s.buildCost)refundCost(refundableConstructionCost(s));const borderEntries=ensureBorderEntrySelection();State.structures=[];window.ConquerTerraforming?.clear();window.ConquerForestry?.clear();window.ConquerEconomy?.reset();State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};State.selectedId=null;renderFunctionPanel();markDirty(true,'all');renderUI();draw()}};
+['tax'].forEach(k=>document.getElementById(k).oninput=e=>{State.policies[k]=Number(e.target.value);markDirty(false,false,true)});

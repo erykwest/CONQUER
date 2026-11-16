@@ -1,5 +1,136 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+10/11/2026 — REG-SEA-DELTA-30: correzione richiesta: foce lacustre diretta, senza distributari; diramazioni solo se il ricevente e mare. Due innesti nel tratto finale del 30% misurato per lunghezza d’arco (70–79% del percorso). Canale principale dominante, rami piu stretti; sponde e bordi continui preservati. Dodici fixture mare/lago e hydrology-network PASS. Riferimento morfologico Seybold/Andrade/Herrmann, Modeling river delta formation, DOI 10.1073/pnas.0705265104; versione autori https://arxiv.org/html/0711.3283v1. Non introdotta una simulazione dinamica di erosione/sedimentazione.
+
+10/11/2026 — REG-WATER-SURFACE: eliminati i bordi chiari interni a confluenze e foci con contorni acqua disegnati prima di tutti i riempimenti. Alberi e montagne mantengono la propria occlusione. Aggiunte sponde ai laghi (anche isole interne), ritagliate al mondo senza spiagge sul bordo artificiale della mappa. Foce fluviale con due rami distributari piu stretti, innestati dall’80–86% della lunghezza reale, ciascuno termina nel ricevente; caricamento preserva le larghezze ridotte. Schiuma marina interrotta agli sbocchi. PASS dodici fixture delta mare/lago, idrografia, test pixel contorni e sponda e cinque scenari browser. Audit Territorio: 16 render invariati, zero errori, cinque avvisi di schemi illustrativi.
+
+09/11/2026 — REG-WATER-NETWORK (branch): Mare e Lago non selezionabili, neanche via Shift o URL regionale; selezione eliminata se diventa acqua. Scelte locali nuove limitate a Pianura/Foresta/Montagne/Palude; bioma ereditato bloccato nelle mappe aperte dalla regione. Colline/Valle/Fiume/Mare/Lago restano solo compatibilita delle vecchie ricette/demo. Foci geometriche con sbocco reale nel mare o lago, distinto dagli stagni; confluenze fiume/fiume, torrente/fiume e torrente/torrente con endpoint condiviso, sponde e collisioni aggiornate. I nodi regionali a grado >=3 producono affluenti, le curve a grado 2 no. Idrografia prioritaria rispetto ai rilievi nelle nuove mappe regionali. Cinque demo URL e regressioni runtime/browser PASS. Palude resta da bilanciare quantitativamente, mantenendo per ora i valori esistenti.
+
+06/11/2026 — REG-MOUNTAIN-UNIFORM-FIX: riprodotto T297 della regione 1988, seed locale 1555837107, centro e otto campioni tutti Montagne. Il controllo active() disattivava erroneamente la composizione regionale quando tutti i biomi erano uguali, ripristinando la catena legacy su un breve arco. Il contesto montano completo ora compone sempre centro e otto settori. Test dedicato fallito prima della correzione, poi PASS per tutti gli otto settori, centro e ripetibilita; PASS anche surroundings e mountain-density. Mappe prive di contesto regionale completo restano sulle proprie ricette demo.
+
+06/11/2026 — REG-MOUNTAIN-VARIATION (branch): eliminata la posa fissa a doppietti. Cime distribuite lungo tutta la catena con jitter e basi variabili; limitrofi con sagome indipendenti e distanze 6–15 U, fallback compatto solo per vincoli acqua/bioma. Quantita raddoppiata e intersezioni mantenute. Intervallo pendenze ampliato da 40–60 a 37–63 gradi, raggi principali da .52–.60/.54–.62 a .48–.64/.49–.66 settori: maggiore delta di altezza conseguente. QA spaziatura irregolare, densita, intersezioni, tagli e determinismo PASS.
+
+06/11/2026 — REG-MOUNTAIN-DENSITY (branch, non main): raddoppiate le cime principali dei settori montuosi con coppie intersecate (Montagne 8–14, Valle 6–10) e mantenute le secondarie proporzionali. Limitrofi: seconda cima per ogni massiccio accettato, fianchi sovrapposti e apici distanziati (base annidata solo in spazi vincolati); fascia esterna portata al bordo. Non si scartano piu i rilievi che oltrepassano il mondo: impronta collisioni ritagliata e facce roccia/neve tagliate in XYZ con sezioni verticali, condivise da 2D e World3D. Outline originale conservato per quote dei pini. QA densita/intersezioni/tagli/determinismo PASS; demo seed 4242: centrali 4→8 principali, limitrofi 9→18. Audit Territorio: 12 render, zero errori/cambiamenti, cinque avvisi di schemi illustrativi; confronto montano reale eseguito nella demo.
+
+06/11/2026 — REG-DEMO-OVERLAY: rimosso su richiesta il pannello sovrapposto con selettore scenari e metriche. Le demo restano accessibili dai link, isolate dai salvataggi; ritorno regionale tramite il collegamento esistente nell’header.
+
+06/11/2026 — REG-COAST-SHAPES (branch sperimentale): coste deformate in base ai lati cardinali di mare: 1 golfi ampi, 2 adiacenti promontorio roccioso e due fronti a golfo, 3 penisola collegata al lato asciutto, 4 isola con angoli raccordati. Due lati opposti restano due fronti a golfo, senza falso promontorio. Fasce e corner diagonali preservati; geometria condivisa da acqua, rendering e collisioni. Quattro scenari selezionabili nel pannello demo (gulf/headland/peninsula/island). Mare escluso da clic/Shift e apertura locale; conversione di selezione a mare ripulisce selezione e pannello. QA quattro casi, variazione costa >7 U, rocce, connessione penisola e isola con foro PASS.
+
+06/11/2026 — REG-EIGHT-BIOMES (branch sperimentale, non main): apertura regionale con otto campioni direzionali sulla geometria Voronoi reale. Fasce 25/25/100/25/25 U, corner esterni 25×25 del diagonale e blending a prodotto. Composizione ingame di suolo, boschi, acqua con isole/fori e rilievi; il centro usa la propria ricetta. Fiumi esistenti preservati. Demo Fronte misto disponibile; test determinismo, collisioni, pesi e diagonali PASS. Bilanciamento quantitativo e dorsali continue restano aperti. Le vecchie demo senza campioni vanno riaperte dalla regionale.
+
+05/11/2026 — REG-CENTRAL-BIOME: corretto il bioma centrale in apertura dal territorio. Regole condivise: plain→Pianura, forest→Foresta, hills regionale→Montagne, sea→Mare, swamp→Palude, lake→Lago. Fiume di confine aggiuntivo, non sostitutivo del bioma. Contesto portabile nel link, session storage opzionale; dati mancanti mostrano errore, mai Pianura implicita. Scope scelto: prima il bioma centrale, otto influenze rinviate. QA mapping, ricette e trasferimento tra schede PASS.
+
+05/11/2026 — REG-DEMO: Builder → Mappa regionale → selezione territorio → Apri mappa locale del territorio. Demo isolate senza lettura/scrittura della partita o cloud, seed ripetibile derivato da regione/territorio, ritorno alla stessa regione e selezione. Scenari Pianura/Colline/Foresta/Fiume/Montagne/Costa con ricette attuali e misure di copertura mappa/buildable su griglia 40×40, conteggi delle componenti. Bilanciamento quantitativo ancora da decidere dopo revisione. I confinanti reali sono esposti come contesto; composizione a otto biomi non ancora nel Builder.
+
+05/11/2026 — REG-BIOME-RIVER2: sostituite le quattro anse Bezier identiche con integrazione della direzione lungo la lunghezza del corso. Raggio delle singole anse 2–3 larghezze, aperture e lunghezze variabili per seed, geometria arrotondata ispirata a Leopold/Wolman e al riferimento fornito. Test precedente: solo 2 forme dopo aver rimosso rotazioni; nuovo test: almeno 60 forme su 64 seed. PASS 64 mappe runtime, 2.000 curve, 42 mappe biomi e save-safety. Penetrazione minima 25 px sul riferimento preservata. Nuove mappe, salvataggi esistenti non rigenerati.
+
+05/11/2026 — REG-BIOME-RIVER ingame su `experiment/regional-biome-sectors` (NON MAIN): `makeEnvWater` genera i nuovi fiumi sul perimetro buildable con quattro ampie anse alternate, penetrazione interna 12 U (36 px riferimento 600 px). Acqua reale nei renderer e nei vincoli di costruzione. QA 42 mappe biomi, 64 mappe fiume con collisioni/determinismo, 36 urban checks PASS. Mappe salvate preservate; applicazione alle mappe rigenerate. Gli otto biomi e le dorsali della fixture non sono ancora integrati nel Builder.
+
+05/11/2026 — Esperimento REG-BIOME-PREVIEW: [prova cartografica](REGIONAL-BIOME-SECTORS-PREVIEW.md) su `experiment/regional-biome-sectors`, NON MAIN. Quattro lati e corner di blending. Integrazione con i confinanti Voronoi reali e generatore Builder ancora aperta.
+
+## 2026-11-13 - Preparazione merge PR #206
+
+Preparazione merge PR #206: main aggiornato riconciliato mantenendo moduli e documenti di entrambi i branch. Catalogo Wiki rigenerato. Gilda riferita agli artigiani L2; dazio botteghe e relativo malcontento addebitati a L2 anziche L3, con regressione riprodotta prima del fix. Fondazione: cinque scenari superati isolatamente con Node 22, ma timing intermittente oltre 100 ms nella suite anche su Node 22; verifica Actions ancora necessaria. Nessuna soglia allentata. Suite completa e Actions da completare prima del merge. Nessuna nuova funzione demografica, giudiziaria o archetipo edilizio.
+
+## 2026-11-13 - Verifica CI PR #206
+
+Corretta asserzione livestock obsoleta dopo SOC-CLASS-02. Test comportamentali su selettore agricolo reale, riserve cave, esclusione allevatori e conservazione della vocazione su 400 case migrate superati. Suite completa e CI da completare prima del merge. Nessuna modifica runtime o bilanciamento; ROADMAP e DECISIONS invariate. Demografia, 12 archetipi e funzioni giudiziarie fuori scope.
+
+## SOC-CLASS-02 — Fusione L1 e istituzione istruiti L3 (12/11/2026)
+
+**IMPLEMENTAZIONE SU PR #206, non ancora mergiata.** Popolazione sociale permanente L1 servi (compresi ex L2 minatori/cavatori), L2 artigiani (ex L3), L3 istruiti/mercanti (ex L4), L4 nobili e rendite. Migrazione save locali/cloud, census e denaro conservati, lavori L1 e botteghe L2, commercio/servizi L3, lealtà L4. [Specifica e limiti](CIVIL-CLASS-MIGRATION.md). **DA FARE:** vera migrazione demografica, Job Manager artigiani, servizi amministrativi di istruiti, ricostruzione case e densità D1–D3, test completi e approvazione ripartizione monetaria.
+
+
+## CIV-EVT-01 — Fiere, feste e giostre: effetti sociali (12/11/2026)
+
+**Skeleton sul branch PR #206, non attivo e non merge.** Otto eventi catalogati con effetto proposto su felicità dei servi L1, artigiani L2 e borghesi L3, e lealtà dei nobili L4. Prestigio locale temporaneo proiettato sulle heatmap, senza nuovi overlay o sistemi economici. Si riusano gli allestimenti già esistenti; `feast` richiede `civicKind` per distinguere fiera, festa religiosa, raccolto e banchetto. [Contratto](CIVIC-EVENT-EFFECTS-SKELETON.md). **Aperti:** integrazione con UI eventi, vero roster partecipanti, risorse, felicità insediamento, migrazioni, salvataggi, QA Node/browser e CI.
+
+
+## URB-HEAT-01 — Quattro heatmap e 12 archetipi abitativi (12/11/2026)
+
+**Skeleton su `feature/urban-heatmap-skeleton-20261112`, non merge né gameplay attivo.** Domanda abitativa multicanale L1–L4, prestigio, sicurezza e crimine locale; D1–D3 determina la densità del lotto Voronoi, mentre L1–L4 determina il template completo della casa. Nuova gerarchia sociale L1 lavoratori, L2 artigiani, L3 borghesi istruiti, L4 nobiltà (contratto in [decisioni](context/DECISIONS.md)). `src/settlement-urban-heatmaps.js`, `qa/urban-heatmaps-regression.cjs`, [specifica e dipendenze](URBAN-HEATMAP-SKELETON.md). **Aperti:** integrazione con Crime, mura/guardie, Job Manager, crescita lotti, ricostruzione, migrazione, QA browser e salvataggi.
+
+## 2026-11-10 — FISCO-01 · Bargello e Palazzo del Balivo (fase A: modelli)
+
+- **IMPLEMENTATO SU BRANCH `feature/bargello-balivo`, NON MERGE:** due civici nuovi nel Builder (Civics): **Bargello** presso un pozzo di quartiere (uno per pozzo, entro 9U, L1–L2, torretta d'angolo) e **Palazzo del Balivo** nel contado (fuori dalle zone abitate, ≥12U dai pozzi, ≥20U da un altro Balivo, L1–L2). Modelli Blender, cantiere (L1 a graticcio, L2 in muratura), crollo con la torretta, incendio solo L1, cutaway per piani, Lab e Codex.
+- **FATTO SU BRANCH (fase B, 12/11/2026):** Erario (scheda del Profilo), imposte e loro efficienza di riscossione, decima del Balivo, decreti e leva straordinaria.
+- **NON FATTO:** ordine pubblico di guardie cittadine e Bargello (CRIME), bassa giustizia del Balivo, pedaggio sugli arrivi reali, leva dentro la riserva unica. Dettagli in [BACKLOG](context/BACKLOG.md).
+
+## 2026-11-09 — BC-261109-02 · DEV Free/Fast e cantieri di upgrade
+
+- [x] **SU BRANCH:** pulsanti indipendenti nel DEV, stato premuto accessibile, nessun salvataggio delle preferenze; risorse gratuite non convertibili in rimborsi.
+- [x] **UPGRADE:** cantiere su altezza/tier/varianti civiche e strutturali, espansione piazzale, scale e levatoi, grata, ponte e fossato. Costo intervento separato, snapshot per annullamento, stato persistito e niente secondo intervento sovrapposto.
+- [x] **CASE AUTO:** cantiere anche al cambio di livello tramite inspector; futura promozione autonoma deve richiamare lo stesso comando. Condizioni di promozione scorporate nella chat dedicata.
+- [ ] **ACCETTAZIONE:** Actions del nuovo head e audit Lab prima dell'integrazione. Dominio e Chromium UI1/UI2 provati localmente; nessun nuovo asset o modello.
+
+
+## 2026-11-08 — BC-261108-01 · Cantieri senza prefinanziamento, sei priorità
+
+- [x] **SU BRANCH `feature/construction-staged-priority-20261108`, pre-merge:** il ghost e gli elementi lineari (compresi ponti/fossati) sono confermabili anche senza stock sufficiente. Lo stesso preventivo esistente determina la spesa finale, ma è consumato progressivamente dal ledger economico durante i lavori, con consegne indipendenti per tipologia e avanzamento limitato dalla risorsa più carente.
+- [x] **Priorità per cantiere:** Molto basso, Basso, Medio (default), Alto, Molto alto, Critico; rifornimento e assegnazione dei costruttori L1 in tale ordine. Lavoro con limite di materiali ricevuti, fermo senza materie prime; nessuna nuova professione o stock alternativo.
+- [x] **Inspector provvisorio:** stato, barra lavorazione e barra rifornimento, quantità per materiale, priorità modificabile; reintegro dell'inspector completo alla fine. Entrambe le UI.
+- [x] **Compatibilità salvataggi:** vecchi cantieri V2 già prepagati; nuovi rimborsano solo il consegnato non consumato alla demolizione. Nessun costo fisso all'apertura del progetto.
+- [x] **QA locale 09/11, PR #186:** regressioni materiali, equità a pari priorità e rimborsi PASS; browser reale UI1/UI2, salvataggio locale/ripresa, completamento e annullamento PASS. **Actions del nuovo head ancora da verificare.** L'approvvigionamento fisico per ogni carro resta escluso dalla feature.
+## 2026-11-09 — MIL-CIRCLE-02 · Settori CIRCLE e una riga per macrostruttura difensiva
+
+- **BRANCH `feature/circle-military-zones-macrotowers-20261109`:** «Pattuglie e guarnigioni» ora presenta zone difensive reali CIRCLE; distribuzione di pattuglie tra riserva White Zone e settori tramite il roster Combat; arcieri assegnabili per settore e per torre madre con sottotorri aggregate (`parentTowerId`), usando esclusivamente i posti Siege esistenti. Caserme nelle sottotorri integrate nel conteggio della torre madre quando `/camp` è attivo.
+- **DA VALIDARE:**  test CI/browser, castelli con perimetri complessi e pattuglie con percorsi non raggiungibili, poi merge. Nessuna creazione di soldati dalla semplice assegnazione.
+
+
+## 2026-11-09 — JM-L2-01 / MIL-PG-01 · L2 e pattuglie/guarnigioni
+
+- **SU BRANCH `feature/jobmanager-l2-military-garrisons-20261109`:** Job Manager con sottopalette L1/L2, L2 gestibile con drag-and-drop/minimo/AUTO, priorità e riserve proprie. Militare con sottopaletta «Pattuglie e guarnigioni» per pattuglie White Zone, presidio arcieri delle torri e squadre di caserma dove `ConquerCamp` è attivo.
+- **DA VALIDARE:** GitHub Actions e prove in browser, quindi merge; trasferimenti individuali tra guarnigioni o nuovi sistemi di leva non inclusi.
+
+
+## 2026-11-09 — JM-L1-01 · Job Manager L1 modificabile
+
+- **SU BRANCH `feature/l1-jobmanager-priority-20261109`:** lavorazioni L1 e mansioni di costruzione, carrettieri e cantieri navali riordinabili con drag-and-drop; minimi numerici e AUTO/manuale operativi nel motore economico. I minimi precedono l'eccedenza AUTO; persistono nel save. Pastori protetti, pescatori e tier L2–L4 non vengono riassegnati.
+- **DA CHIUDERE:** CI, verifica visuale drag-and-drop/touch e controllo in partita del turno di lavorazione. Non dichiarare concluso su `main` prima del merge. Riferimento decisionale D-L1-JOB-261109.
+
+
+## STONECOLOR — Palette pietra per territorio (approvata 08/11/2026)
+
+- `feature/stonecolor`: 5 palette (grigio attuale, arenaria, tufo, calcare, granito), ciascuna con cinque toni di luce/ombra definiti in [STONECOLOR-PALETTE-VALIDATION.md](STONECOLOR-PALETTE-VALIDATION.md).
+- Nuova mappa → scelta casuale stabile; Profilo → Ambiente → cambio estetico globale; salvataggio locale e cloud.
+- Componenti litici (castello, edifici, scarpate, rocce, costa, scogli, cave/scatter, banchine); esclusione argilla/mattoni e di oggetti non minerali. Reimpiego asset/mesh, niente trasformazioni costi o HP.
+- QA/CI e confronto visuale Canvas e World3D da verificare prima del merge.
+
+
+## 2026-11-06 — L1 Carrettieri per Piazzale e Mercato (branch `feature/l1-carter-jobs-market-20261106`, prima del merge)
+
+- **LAVORO REALE:** professione Carrettiere in `ConquerEconomy.laborAllocation`: fino a un occupato per magazzino con carichi raggiungibili, dopo i produttori essenziali e prima dei costruttori. `jobSummary.carter`, grafici e storico settimanale. Ogni lavoratore L1 non è né inattivo né costruttore né il personaggio due volte disegnato durante la guida. Orari per nuove partenze nei feriali, stop durante allarme; carri fermi senza personale disponibile, produzione invariata.
+- **ROUTE:** piazzale → sito produttivo, viaggio a vuoto; carico → Piazzale per quota del signore, oppure Mercato per quota `e.lots` e beni reali delle botteghe L3 → piazzale a vuoto. Percorsi solo su viabilità terminata; nessuna consegna se la destinazione richiesta non esiste. Asset preesistenti ConquerWagons e cavalli 2D.
+- **SOLO ESTETICO:** nessuna modifica economica al momento della consegna. Unica fonte di verità rimane il ledger, inclusi i beni L3. Test `qa/l1-carter-market-regression.cjs`, estensione della QA haulage precedente.
+
+
+**Contenuti Codex in Obsidian (branch):** [pipeline editoriale e cinque note approfondite](CODEX-OBSIDIAN.md). UI, link e testi dalla copia validata del vault; requisiti e bilanciamento del Builder invariati.
+
+**Codex Wiki (branch `feature/codex-wiki`):** [UI condivisa e link contestuali Builder](CODEX-WIKI.md), keyword verso sovracategorie, ricerca e relazioni. Nessuna modifica ai requisiti di costruzione.
+
+**CODEX, 05/11/2026:** [catalogo normalizzato v1](CODEX-CATALOG.md) implementato su `feature/codex-normalized-catalog`, non ancora main. Riusa le definizioni Builder; nessun nuovo edificio o requisito tecnologico. Link e pagine Wiki rimangono fase 3.
+
+## 2026-11-06 — Carretti locali produzione → Piazzale (branch `feature/local-production-haulage-20261106`, non ancora in main)
+
+- **P1 VISUAL LOGISTICS · IMPLEMENTATO SU BRANCH:** il libro economico emette eventi solo su `received>0` per la quota trattenuta da una produzione L1–L3; la bonifica forestale emette un evento dal luogo del taglio, senza accrediti aggiuntivi. I carrettieri usano l'asset carro/cavallo 2D di `ConquerVehicles` e `ConquerWagons`. Carico → strada completata → miglior Piazzale collegato → scarico → ritorno vuoto, fino a 4 simultanei, con pause e coda limitata.
+- **Nessuna doppia economia:** la consegna è visiva, le merci sono già contabilizzate da `ConquerEconomy`; mai aggiornare `State.resources` o `State.economy.castle` per l'arrivo del carretto. Nessun veicolo se manca la viabilità; le spedizioni private o vendute al mercato richiedono altra specifica. Test `qa/haulage-regression.cjs`.
+
+
+## 2026-11-05 — Piazzale di stoccaggio al villaggio (branch `feature/founding-storage-yard-20261105`)
+
+- **P0-03 / P0-05 · SU BRANCH (non MAIN fino al merge):** alla fondazione del villaggio un Piazzale 2×2U è cercato entro 7U dal pozzo in un'area con terreno valido, non alberata e senza conflitti; è inoltre piazzabile dal Builder. Può crescere a 4×4U e 6×6U pagando materiali e oro, con capacità 600/2400/5400 unità aggregata.
+- **Stock iniziali:** rappresentati fisicamente nel piazzale e mostrati nell'ispettore, conservati esclusivamente in `ConquerEconomy.state().castle`; non aggiungere una seconda economia locale al magazzino.
+- **Bug taglialegna:** con piazzale attivo un L1 ha priorità sul cantiere, per scongiurare la produzione zero con quattro fondatori impegnati in opere; con charter a 200 legname e target 70, la produzione trattenuta non incrementava il deposito e andava tutta al mercato. Dal branch, la quota non destinata alla vendita cresce nel castello fino a capienza del piazzale; il resto viene offerto al mercato. I tempi e la manodopera L1 non sono cambiati.
+- **Da collaudare:** casi di fondazione con vincoli forestali senza spazio entro 7U, scene e animazioni carico/scarico reali, eventuali esigenze di capacity tuning; test `qa/storage-yard-regression.cjs` e GitHub Actions.
+
+
+## 2026-11-05 — Forestry L1, tool del Terraforming (fix urgente su branch `fix/forestry-l1-clearing-cost-20261105`)
+
+- **P0-02 · IMPLEMENTATO SUL BRANCH, NON VALIDATO COME CORE COMPLETO:** nuovo tool «Rimuovi foresta», non istantaneo; assegna lavori L1 finanziati con fino a 3 popolani per job, lascia gli alberi finché il lavoro non termina, apre radure persistenti e accredita il legname al magazzino del castello. Resa iniziale 2,5 legname/U²; 0,7 giornate operaio/U². Restano fuori rigenerazione e abbattimento periodico automatico dalle industrie.
+- **P0-05 · FIX SUL BRANCH:** edificio taglialegna 5 legname, 35 oro (precedente 25 legname); palette, preview e spesa reali usano il costo unico in `settlement-industries.js`.
+- **Verifiche:** `qa/forestry-regression.cjs` e workflow Economy flows aggiornato; esito da confermare dalla PR.
+
+
 ## Stato corrente su main — 30 ottobre 2026
 
 > **Audit sostitutivo della fotografia del 22–23/10:** [AUDIT-2026-10-30](context/AUDIT-2026-10-30.md), ref `main` `cf5699922`. **15 nuclei CORE MAIN, 8 voci PARZIALI** su 23 ID Builder; questo non certifica la QA browser completa. Il precedente conteggio 13/10 più sotto resta esclusivamente **storico**.
@@ -13,6 +144,60 @@
 
 **PR ancora OPEN (non su main):** [#109](https://github.com/erykwest/CONQUER/pull/109) test CI economia, [#110](https://github.com/erykwest/CONQUER/pull/110) livree/bivacchi/campi fortificabili, [#111](https://github.com/erykwest/CONQUER/pull/111) multi-pozzo e centri di quartiere. Gli screenshot demo dei pannelli non sono prove di produzione reale.
 
+
+## 2026-11-05 — ARTE · commissioni, esposizione e circolazione delle opere
+
+> **NUOVO SOTTOSISTEMA · BACKLOG APERTO, NON IMPLEMENTATO.** Le priorità A-P0/A-P1/A-P2 sono relative al solo filone ARTE e non anticipano la roadmap generale. Proprietà e opere devono restare dati di gioco, non semplici scatter/furniture grafici.
+
+### A-P0 — Percorso completo dalla stanza all'opera posseduta
+- [ ] **ART-251105-01 — Catalogo abbellimenti.** Quadri, arazzi e sculture, con varianti di stile/dimensioni e compatibilità con le stanze. Distinguere **archetipo grafico** (asset riutilizzabile) da **opera individuale** (oggetto con ID univoco). *Archetipi grafici su `feature/arte-graphics` (non in main):* `ConquerArtModels` da `tools/blender/build_art.py`, 19 pezzi — icona, trittico, ritratto, paesaggio, caccia, arazzo millefleurs e fregio narrativo in taglia piccola/grande; busto in marmo; statua in marmo/pietra/bronzo; santo ligneo policromo in tabernacolo — con `catalog` (kind/archetype/size/material/mount). L'opera individuale (ID, proprietà) resta da fare con 03/04.
+- [ ] **ART-251105-02 — Slot decorativi delle stanze.** Catalogo consultabile partendo da una stanza del castello; ancoraggi di parete (quadri/arazzi), pavimento/piedistallo (sculture) e, in futuro, superfici d'arredo. Verificare disponibilità, ingombro e persistenza. Riutilizzare Built Sections, cutaway, furniture e Asset Lab: non creare un secondo Builder. *Ancoraggi su `feature/arte-graphics`:* `ConquerCutawayFurniture.artSlots(s)` / `artFits(slot, nome)`, calcolati dopo gli arredi di ogni stanza (pareti visibili negli intervalli liberi, con larghezza libera; pavimento verso le pareti). Mancano persistenza dell'occupazione e UI di consultazione, che dipendono da 03/04.
+- [ ] **ART-251105-03 — «Commissiona opera d'arte».** *Colori pronti su `feature/arte-graphics`:* la commissione sceglie i colori degli slot dell'archetipo (`ConquerArtColors`, D-ART-COLORS-261109) e l'opera salva solo `{slotId: hex}`; forme fisse per ora. Dalla stanza selezionata: scelta della tipologia/variante e della destinazione prevista; costo in oro, tempo di realizzazione e stato della commessa. A completamento l'opera entra nell'inventario del castello e, se lo slot è ancora valido/libero, viene esposta nella stanza richiesta. Se la destinazione è indisponibile, resta nell'inventario senza sparire.
+- [ ] **ART-251105-04 — Inventario persistente delle opere.** Ogni esemplare ha ID, archetipo, proprietà, collocazione o deposito, stato della commissione e dati essenziali; evitare duplicazione di opere dopo salvataggio/caricamento, demolizione, spostamento o completamento di commesse.
+- [ ] **ART-251105-05 — Rimozione e ricollocazione.** Rimuovere un'opera dalla stanza senza distruggerla, conservarla nell'inventario e ricollocarla in qualsiasi slot compatibile e disponibile, anche in un'altra stanza. Un'opera può essere esposta **in un solo luogo alla volta**.
+
+**Accettazione del vertical slice ARTE:** seleziono una stanza → scelgo un quadro/arazzo/scultura → commissiono pagando una volta → il tempo avanza → l'opera viene prodotta e mostrata nel cutaway → la rimuovo e la ricolloco → il salvataggio/caricamento conserva proprietà e posizione. Collaudo in 3D e fallback 2.5D, Asset Lab per nuovi asset, QA dei vincoli di slot e della contabilità.
+
+### A-P1 — Funzioni culturali e valore storico
+- [ ] **ART-251105-06 — Galleria d'arte / Atelier [DA VALUTARE].** Nuove *funzioni di stanza*, non edifici autonomi. La galleria espone collezioni; l'Atelier può ospitare artisti e commissioni continuative. **Non rendere l'Atelier obbligatorio** per commissionare a un artista esterno.
+- [ ] **ART-251105-07 — Scheda dell'opera.** Titolo, autore (anche esterno), qualità, provenienza, proprietari precedenti e valore, nei limiti dei sistemi di personaggi speciali effettivamente disponibili. Possibile effetto su prestigio/attrattività, con formula e bilanciamento **da decidere**; evitare bonus automatici per ogni oggetto decorativo.
+
+### A-P2 — Economia e diplomazia
+- [ ] **ART-251105-08 — Vendita.** Dall'inventario/esposizione alla cessione dell'oggetto: rimuovere la proprietà e la collocazione locale una sola volta, accreditando l'oro nel ledger economico canonico; prezzo/mercato e acquirente da definire.
+- [ ] **ART-251105-09 — Donazione estera.** Trasferire un'opera identificata a un altro feudo/regno come dono diplomatico, con perdita effettiva della proprietà locale e beneficio relazionale **da definire**. Dipende da identità dei regni e diplomazia condivisa; non creare stati fittizi o un secondo sistema commerciale.
+
+**Dipendenze e confini:** Built Sections e funzioni di stanza, cutaway/furniture e renderer, inventario/salvataggi, ledger oro, futuri artisti/ospiti, diplomazia/mercato interregno. Le opere sono beni mobili unici, non nuove risorse aggregate. Commercio e doni restano differiti finché non esistono i rispettivi contratti condivisi.
+
+## 2026-11-05 — Builder / Castello: upgrade architettonici richiesti
+
+> **NUOVE RICHIESTE · BACKLOG APERTO, NON IMPLEMENTATO IN QUESTA MODIFICA.** Task raccolti il 05/11/2026. Non confondere questi requisiti con le varianti già documentate su branch o con feature verificate in `main`. La priorità tra i task non è ancora assegnata.
+
+### Mura e camminamenti
+- [x] **BC-251105-01 — Scala lignea per i camminamenti.** Upgrade/accesso in legno dalle quote a terra al cammino di ronda; definire aggancio, ingombro e accessibilità. **Su `feature/bc-scale` (non in main):** rampa lungo la faccia interna di un muro in pietra T2/T3, ~60°, larga 0,30U, ultimo gradino a filo del camminamento; posizione Inizio/Centro/Fine; accesso della rete wall-walk.
+- [x] **BC-251105-02 — Scala lapidea per i camminamenti.** Variante in pietra con la stessa funzione di accesso, distinta da quella lignea; verificare il raccordo alla quota delle mura. **Su `feature/bc-scale` (non in main):** rampa piena ~45°, larga 0,36U, con cordolo sul lato aperto e pilastrino di sbarco alla quota del camminamento; upgrade dalla lignea.
+- [x] **BC-251105-03 — Edifici addossati alle mura.** *(branch `feature/wall-buildings`: sezione W1 `leanTo` contro muri H2, stesse stanze della W1.)* Consentire una tipologia di edificio accostato alla faccia interna delle mura, con attacco geometrico e gestione delle interferenze con il camminamento.
+- [x] **BC-251105-04 — Merlature doppie.** Nuova configurazione di merlatura doppia; **non equivale** allo stile del merlo «a doppia falda» (`feat/crenel-styles`, in main con #115). Geometria: stile globale `double` = merlo lungo il doppio sulle mura, sequenza 11011011 invece di 1010101 (1 = merlo a piena altezza, 0 = parapetto). Conservato anche lo stile `tworow` = seconda fila di merli sul bordo interno del cammino. Torri e porte invariate. Branch `feature/double-crenel`.
+
+### Torri
+- [x] **BC-251105-05 — Inner roof delle torri.** Copertura interna delle torri; definire relazione con sommità, merli, cutaway e locali sottostanti. **Sul branch `feature/tower-inner-roof` (NON MAIN):** variante `innerRoof` off/on = tetto a piramide (quadrate, a D) o cono (rotonde) arretrato dentro i merli di torri in pietra T2+ con merli o caditoie, su un cordolo di 0,14U, con cammino di ronda libero (~0,22U). Esclude l'arma in cima; compatibile con ballatoio e garitte. Non è un tetto a falde: nessuna stanza sotto, quindi Colombaia, Falconiera e Campana (`ROOM_EXTERIOR` 'roof') restano sul tetto a falde. Cutaway: come il tetto a falde. Test `qa/tower-inner-roof-regression.cjs`; 6 righe nel Lab (galleria fortificazioni).
+- [x] **BC-251105-06 — Torre lignea H2 con frame.** Variante torre in legno alta H2 con telaio/orditura leggibile nel modello. **Implementata su `feature/wood-tower-h2` (PR, non ancora in main):** `woodStyle:'frameTower'`, 1,5×1,5U, H2 fisso, sempre coperta; piano terra chiuso in tronchi, telaio controventato a vista solo al P1; modello Blender `frameTower` in `build_wood_fort.py`, cantiere, cutaway (lati verso la camera, solaio e scale interne) e Lab (`castle:legno-telaio-h2`, `castle:legno-telaio-h2-mastio-rialzato`). Compatibile con l'**ingresso rialzato del mastio**: unica torre lignea ammessa da `settlement-keep-entrance.js`; soglia al P1 (1,28), porta del P1 sul fronte (+x) al posto del montante centrale, nessuna porta a terra.
+- [x] **BC-251105-07 — Torre W2 × H4.** **[SU BRANCH `feature/tower-w2-h4`, non main]** Valutata e approvata dall'utente (06/11): quarto piano solo per la torre quadrata in pietra W2 (1,5U) indipendente; niente legno, tonde, D/semitorri, sottotorri, porte; W1/W3/W4 restano a H3 al massimo. Altezza 5,95+0,12 U (≈4,1:1 sulla base), costo ×3,35 rispetto a L1 (+45% su H3), una stanza NORMAL per piano come le altre W2. **Residui:** assedio (scale d'assalto contro quota H4, gittata/visuale dalla cima, crollo dei piani) non ribilanciato; il pulsante «4 levels» su torri non W2 viene ridotto a H3 senza avviso.
+
+### Coperture
+- [ ] **BC-251105-08 — Tetti inclinati a 75°.** Valutare e introdurre la pendenza a 75° nel sistema di tetti pertinente, coordinandola con `feat/roof-pitch` (30°/45°/60°, mergiato in main con PR #157). **Implementato su `feature/roof-pitch-75` (NON MERGE):** `ROOF_PITCHES` 30/45/60/75, costo 75° = 9 legno + 3 oro + 1 pietra per tetto, scheda «Pendenza dei tetti», stati «Tetto 30°/60°/75°» nell'Asset Lab, `qa/roof-pitch-regression.cjs`.
+- [x] **BC-251105-09 — Upgrade tetti Longhouse.** Revisionare le coperture delle longhouse lignee W1/W2, con dipendenza da `feature/wood-longhouse` e dal suo modello modulare. **Su branch `feature/longhouse-roofs` (NON MAIN):** manti scandole/paglia/zolle nel modello Blender, scelta «Copertura» nel pannello, sfiatatoio nel colmo con fumo, varianti nel Lab.
+- [x] **BC-251105-10 — Upgrade tetti edifici addossati alle mura.** *(branch `feature/wall-buildings`: falda unica, colmo 0,12U sotto il camminamento; pendenza propria, indipendente da `feat/roof-pitch`.)* Disegnare le coperture dedicate ai nuovi edifici addossati, gestendo attacco alle mura e interferenze con parapetti/camminamenti; dipende da BC-251105-03.
+
+### Ambiente
+- [x] **BC-251105-11 — Giardino → Orto di corte.** Scelto dall'utente il 06/11/2026: annesso `kitchenGarden` del Municipio, 3×2U, max 2, entro 7U su terreno aperto; 2 cibo del signore per giornata lavorativa per orto, anche in allarme/assedio. Branch `feature/orto-di-corte` (pre-merge).
+
+### Terreno e percorsi su dislivelli
+- [x] **BC-251105-12 — Rampe per superare i dislivelli.** *(Branch `feature/ramps-stairs`, 06/11: rampa 2U, pendenza max 1:4, sviluppo 2–16U, rilevato contro il pendio; pedoni, mezzi pesanti e carri via grafo stradale; non in main.)* Elemento costruibile per connettere due quote del terreno, anche in presenza di pendii scoscesi e terrazzamenti; valutare pendenze massime, sviluppo e raccordi con strade, suolo e percorsi delle unità. Verificare separatamente l'eventuale percorribilità dei carri.
+- [x] **BC-251105-13 — Scalinate per pendii e colline.** *(Branch `feature/ramps-stairs`, 06/11: scalinata 1U, pendenza 1:4–1:1, gradini sul terreno reale, solo pedoni; non in main.)* Elemento costruibile a gradini per collegare quote diverse su versanti ripidi, con attacco a pianori/terrazzamenti, corretto orientamento e accessibilità pedonale; distinta dalle scale che salgono ai camminamenti delle mura (BC-251105-01/02).
+
+**Accettazione BC-12/13:** la geometria segue le quote reali del terreno; entrambe le estremità si connettono a superfici percorribili; il pathfinding delle unità riconosce i collegamenti, senza attraversare pendii non accessibili; costruzione, collisioni, salvataggio e visualizzazione 3D/2.5D sono verificati.
+
+**Dipendenze/QA da affrontare in implementazione, non eseguite ora:** coordinare BC-01/02/03/04 con geometrie dei camminamenti; BC-08/09/10 con coperture già esistenti; BC-05/06/07 con livelli, cutaway e modelli delle torri. Al rilascio verificare Asset Lab, visualizzazione 3D e 2.5D, collisioni, persistenza e regressioni pertinenti. Il riferimento inter-sistemi è [BACKLOG](context/BACKLOG.md).
 
 ## 2026-10-29 — Storici gestionali e anteprime visive · note storiche dalla branch `panels` (merged #103 il 30/10)
 
@@ -115,6 +300,7 @@
 ## P3 — Rifinitura ambientale
 
 - [x] **P3-21 — Sette varianti di alberi SVG.** **[CORE MAIN · QA/integrazione se necessaria]** Gli asset sono già nel repository: verificare uso effettivo nel renderer forestale, varietà e prestazioni. **Accettazione:** distribuzione seeded, riconoscibilità delle sagome, culling/cache e nessun peggioramento significativo dei frame time.
+  - **Polish stagionale su branch `autumn` (07/11/2026, non su `main`):** progressione autunnale da verde estivo a marrone su 91 giorni, passaggi giallo/arancione/rosso differenziati per posizione e seed, stesso sistema per foreste e alberi di lotto. Test `qa/autumn-foliage-regression.cjs` in CI; verifica grafica WebGL2/Canvas in attesa. Nessun SVG o modello aggiuntivo.
 - [x] **P3-22 — Scatter procedurale antropico.** **[CORE MAIN · QA/integrazione se necessaria]** Preparare circa 25 silhouette nelle sette famiglie: carri, merci, cartelli, ruote/rottami, cataste, attrezzi agricoli e arredi da lavoro. **Accettazione:** distribuzione contestuale (strade, crocevia, cantieri, boschi, periferie), non random uniforme; nessuna interferenza ingiustificata con percorsi e selezione.
 
 **Milestone P3:** alberi e scatter **implementati su main**; soltanto QA/prestazioni/polish correttivo, non nuova generazione da zero.

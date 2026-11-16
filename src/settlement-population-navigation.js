@@ -13,6 +13,7 @@ const navPerf={
 Object.assign(navPerf,window.__conquerPerf||{});
 window.__conquerPerf=navPerf;
 function invalidateNavigation(hard=true,{urban=true}={}){
+  window.ConquerCircle?.invalidate?.('navigation topology changed');
   // Destination trees depend on the exact road graph, so any topology change
   // drops them. Individual resident routes survive soft extensions.
   navPerf.navInvalidations=(navPerf.navInvalidations||0)+1;
@@ -272,8 +273,8 @@ function roadNetworkPath(start,goal,sourceHouseId){
   return clear;
 }
 function peasantObstacleSignature(){
-  return State.structures.filter(s=>['house','tower','gate','wall','palisade','built','well','road','market','tavern','church','training','plaza','civicAnnex'].includes(s.type)).map(s=>{
-    if(['wall','palisade','built','road'].includes(s.type))return [s.id,s.type,s.a.x,s.a.y,s.b.x,s.b.y,s.width,JSON.stringify(s.functions||[]),underConstruction(s)?1:0].join(',');
+  return State.structures.filter(s=>['house','tower','gate','wall','palisade','built','well','road','market','tavern','church','training','plaza','civicAnnex','ramp','stairway'].includes(s.type)).map(s=>{
+    if(['wall','palisade','built','road','ramp','stairway'].includes(s.type))return [s.id,s.type,s.a.x,s.a.y,s.b.x,s.b.y,s.width,JSON.stringify(s.functions||[]),underConstruction(s)?1:0,s.skin||'',s.flip?1:0,s.level||''].join(',');
     return [s.id,s.type,s.x,s.y,s.w,s.h,s.r,s.size,s.angle,s.houseLevel,JSON.stringify(s.functions||[]),underConstruction(s)?1:0].join(',');
   }).join('|');
 }
@@ -290,6 +291,21 @@ function peasantObstacleSnapshot(){
   const parts=new Map();
   for(const s of State.structures)if(s.type==='house'||isCivic(s))parts.set(s,s.type==='house'?urbanHouseDisplayParts(s):civicParts(s));
   parts.circles=State.structures.filter(s=>s.type==='well'||(['tower','ruin'].includes(s.type)&&s.shape==='round'));
+  // Spatial index: a search samples tens of thousands of points, and each one used to test every
+  // structure of the map. Cells of 4U list the structures whose (generous) bounds reach them.
+  const CELL=4,grid=new Map(),pad=PEASANT_CLEARANCE+.6;
+  const add=(s,x0,y0,x1,y1)=>{for(let cx=Math.floor((x0-pad)/CELL);cx<=Math.floor((x1+pad)/CELL);cx++)for(let cy=Math.floor((y0-pad)/CELL);cy<=Math.floor((y1+pad)/CELL);cy++){const k=cx*4096+cy;let l=grid.get(k);if(!l)grid.set(k,l=[]);l.push(s)}};
+  for(const s of State.structures){
+    if(s.a&&s.b){const w=(Number(s.width)||1)/2;add(s,Math.min(s.a.x,s.b.x)-w,Math.min(s.a.y,s.b.y)-w,Math.max(s.a.x,s.b.x)+w,Math.max(s.a.y,s.b.y)+w);continue}
+    const poly=parts.get(s);
+    if(poly?.length){let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;for(const part of poly)for(const q of part.points){x0=Math.min(x0,q.x);y0=Math.min(y0,q.y);x1=Math.max(x1,q.x);y1=Math.max(y1,q.y)}if(Number.isFinite(x0)){add(s,x0,y0,x1,y1);continue}}
+    if(!Number.isFinite(s.x)||!Number.isFinite(s.y)){parts.unindexed=(parts.unindexed||[]).concat(s);continue}
+    let R=1;try{const d=rectDims(s);R=Math.hypot(d.w||0,d.h||0)/2}catch{}
+    R=Math.max(R,Number(s.r)||0,(Number(s.size)||0)*.75,Number(s.w)||0,Number(s.h)||0)+(s.type==='gate'?5:1);   // a gate's drawbridge reaches out
+    add(s,s.x-R,s.y-R,s.x+R,s.y+R);
+  }
+  const EMPTY=[],extra=parts.unindexed||EMPTY;
+  parts.near=p=>{const l=grid.get(Math.floor(p.x/CELL)*4096+Math.floor(p.y/CELL))||EMPTY;return extra.length?l.concat(extra):l};
   return parts;
 }
 // A quay built over the rocks is walkable.
@@ -299,8 +315,9 @@ function pointBlockedForPeasant(p,sourceHouseId,obstacleParts=null){
   if(urbanFencePointBlocked(p,PEASANT_CLEARANCE))return true;
   if(window.ConquerCoast?.rockAt(p)&&!quayAt(p))return true;            // shore rocks (settlement-coast.js)
   if(terrainSlopeKind(p)==='steep'&&!window.ConquerCrossings?.onBridge(p))return true;
+  if(window.ConquerSlopeways?.blocksPoint(p))return true;     // raised sides of a ramp/stairway
   if(window.ConquerSiege?.rubbleBlocks?.(p))return true;      // the high core of a collapse heap
-  for(const s of State.structures){
+  for(const s of (obstacleParts?.near?obstacleParts.near(p):State.structures)){
     if(s.id===sourceHouseId&&s.type!=='house')continue;
     if(!['house','tower','gate','wall','palisade','built','well','market','tavern','church','training','plaza','civicAnnex','ruin'].includes(s.type))continue;
     if(isCivicAnnex(s)&&['garden','yard'].includes(civicAnnexDefinition(s)?.kind))continue;
@@ -318,10 +335,19 @@ function pointBlockedForPeasant(p,sourceHouseId,obstacleParts=null){
     }
 
     if(['wall','palisade','built'].includes(s.type)){
+      // A W1 portico: its walkway under the arches is open to walkers.
+      if(s.type==='built'&&builtLoggiaWalkable(s,p,.04))continue;
       if(pointSegmentDistance(p,s.a,s.b)<=Number(s.width)/2+PEASANT_CLEARANCE)return true;
       continue;
     }
     if(s.type==='well'){if(dist(p,s)<=.62+PEASANT_CLEARANCE)return true;continue}
+    // The Mastio's outer stair and landing: walkers go round them, up only from the foot.
+    if(s.type==='tower'&&s.keepEntrance){
+      for(const poly of window.ConquerKeepEntrance?.obstacles?.(s)||[]){
+        if(pointInPolygon(p,poly))return true;
+        for(let i=0;i<poly.length;i++)if(pointSegmentDistance(p,poly[i],poly[(i+1)%poly.length])<=PEASANT_CLEARANCE*.6)return true;
+      }
+    }
     if((s.type==='tower'||s.type==='ruin')&&s.shape==='round'){if(dist(p,s)<=s.r+PEASANT_CLEARANCE)return true;continue}
     if(s.type==='house'||isCivic(s)){
       const parts=obstacleParts?.get(s)||(s.type==='house'?urbanHouseDisplayParts(s):civicParts(s));

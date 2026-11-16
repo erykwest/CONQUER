@@ -1,5 +1,10 @@
 name: Road magnet regression
 
+# Abort superseded PR runs of this workflow (never cancel scheduled/main runs).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 on:
   pull_request:
     branches: [main]
@@ -8,11 +13,15 @@ on:
       - 'src/settlement-placement.js'
       - 'src/settlement-castle-placement.js'
       - 'src/settlement-app-input.js'
+      - 'src/settlement-app.js'
       - 'qa/bridge-road-magnet-regression.cjs'
-      - 'qa/gate-fittings-regression.cjs'
+      - 'qa/wall-road-gate-regression.cjs'
       - 'qa/linear-magnet-regression.cjs'
       - '.github/workflows/road-magnet-regression.yml'
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   road-magnets:
@@ -25,10 +34,10 @@ jobs:
           node-version: '22'
       - name: Check affected scripts
         run: |
-          for file in src/settlement-world.js src/settlement-placement.js src/settlement-castle-placement.js src/settlement-app-input.js; do node --check "$file"; done
+          for file in src/settlement-world.js src/settlement-placement.js src/settlement-castle-placement.js src/settlement-app-input.js src/settlement-app.js; do node --check "$file"; done
       - name: Bridge, gate and wall magnets
         run: |
           node qa/bridge-road-magnet-regression.cjs
-          node qa/gate-fittings-regression.cjs
           node qa/linear-magnet-regression.cjs
           node qa/builder-placement-regression.cjs
+          node qa/wall-road-gate-regression.cjs

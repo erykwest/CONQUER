@@ -67,7 +67,7 @@
         if(f.type!=='forest'||!f.points?.length)continue;
         const fb=environmentPolygonBounds(f.points);
         if(fb.maxX<b.minX-pad||fb.minX>b.maxX+pad||fb.maxY<b.minY-pad||fb.minY>b.maxY+pad)continue;
-        for(const t of forestTreeLayout(f)){
+        for(const t of forestTreeLayout(f,{minX:b.minX-pad,maxX:b.maxX+pad,minY:b.minY-pad,maxY:b.maxY+pad})){
           const p=t.p;
           if(p.x<b.minX-pad||p.x>b.maxX+pad||p.y<b.minY-pad||p.y>b.maxY+pad)continue;
           if(pointInPolygon(p,poly))return true;
@@ -96,7 +96,7 @@
     if(other.type==='road'){
       if(s.type==='market'||s.type==='plaza')return false; // public squares allow crossing roads.
       if(s.type==='gate'&&roadUsesGatePassage(other,s))return false; // the road runs through the passage.
-      if(s.type==='bridge'&&roadMeetsBridgeEnd(other,s))return false; // the road leads onto the deck.
+      if(['bridge','ramp','stairway'].includes(s.type)&&roadMeetsBridgeEnd(other,s))return false; // the road leads onto the deck.
       return polys.some(poly=>roadTouchesPolygon(other,poly,.04));
     }
     if(s.type==='road'){
@@ -112,6 +112,10 @@
     const polys=contact(s);
     const annexVerdict=civicAnnexPlacementCheck(s);
     if(!annexVerdict.ok)return annexVerdict;
+    const wellVerdict=typeof wellCivicPlacementCheck==='function'?wellCivicPlacementCheck(s):valid();
+    if(!wellVerdict.ok)return wellVerdict;
+    const balivoVerdict=typeof balivoPlacementCheck==='function'?balivoPlacementCheck(s):valid();
+    if(!balivoVerdict.ok)return balivoVerdict;
     // A pier reaches out over the sea: its own validation keeps the landing in the whitezone.
     // Quays (and the walls and towers built against them) start in the whitezone by their own rules.
     const harbour=window.ConquerPier?.is(s)||window.ConquerQuay?.is(s)||window.ConquerQuay?.wallGroundZ(s)!=null;
@@ -120,9 +124,11 @@
     const onQuay=window.ConquerQuay?.is(s)||window.ConquerQuay?.wallGroundZ(s)!=null||(s.type==='pier'&&s.onQuay);
     if(!onQuay&&window.ConquerCoast&&samples(polys).some(p=>window.ConquerCoast.rockAt(p)))return invalid('Scogli: qui si può costruire solo la banchina');
     const ignored=ignoreSet(options);
-    if(s.type==='well'&&!options.ignoreFounding&&(
-      State.village?.founded||State.structures.some(o=>o.type==='well'&&!ignored.has(o.id))
-    ))return invalid('A village well already exists');
+    // Only one founding well: until the village is named, a second well cannot be placed.
+    // Once founded, further wells are ordinary buildings (expansion centres).
+    if(s.type==='well'&&!options.ignoreFounding&&!State.village?.founded&&
+      State.structures.some(o=>o.type==='well'&&!ignored.has(o.id))
+    )return invalid('The founding well is waiting for the village name');
     if(window.ConquerIndustries?.is(s)){
       const industry=window.ConquerIndustries.validate(s);
       if(!industry.ok)return industry;
@@ -133,6 +139,13 @@
       // Quays only ask for the whitezone and water: no buildable-terrain rules.
       const quay=window.ConquerQuay.validate(s);
       if(!quay.ok)return quay;
+    }else if(window.ConquerSlopeways?.is(s)){
+      // Ramps and stairways climb a slope on purpose: their own survey of both plateaus,
+      // grade and terrain profile replaces the flat-terrace rule.
+      const way=window.ConquerSlopeways.validate(s);
+      if(!way.ok)return way;
+      const inForest=p=>(State.environment||[]).some(f=>f.type==='forest'&&environmentContains(f,p));
+      if(samples(polys).some(inForest)||blockedByTrees(polys))return invalid('Rampa/scalinata attraversa un bosco');
     }else if(isLine(s)){
       if(s.type==='road'){
         const d=dist(s.a,s.b);
@@ -142,8 +155,8 @@
           const t=i/steps,p={x:s.a.x+(s.b.x-s.a.x)*t,y:s.a.y+(s.b.y-s.a.y)*t};
           if((isPrimaryRoad(s)?primaryRoadTerrainBlocked(p):environmentBlocksPoint(p,'road')))return invalid('Road crosses an impassable obstacle or cliff');
         }
-      }else if(buildableTerrainElevationForStructure(s)==null){
-        return invalid('Wall segment crosses incompatible terrain');
+      }else if(!wallTerrainVerdict(s).ok){
+        return invalid(wallTerrainVerdict(s).reason);
       }else{
         // Walls, palisades and built sections only checked the terrain: they ran through woods.
         const inForest=p=>(State.environment||[]).some(f=>f.type==='forest'&&environmentContains(f,p));
@@ -167,10 +180,6 @@
       if(other.type==='road'&&s.type==='road')continue;
       if(regularCollision(s,other,polys,options))
         return invalid('Footprint overlaps an existing structure or road');
-    }
-    if(options.checkCost!==false&&!s.auto){
-      const cost=constructionCost(s);
-      if(!canAfford(cost))return invalid('Insufficient resources: '+costText(cost));
     }
     return valid();
   }

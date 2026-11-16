@@ -9,11 +9,11 @@
 // caller's sprites. Classic script; poses are pure functions of time.
 (function(){
   const M=()=>window.ConquerSiegeModel;
-  const clamp01=v=>Math.max(0,Math.min(1,v)),ease=k=>k*k*(3-2*k),easeIn=k=>k*k*k;
+  const clamp01=v=>Math.max(0,Math.min(1,v)),ease=window.ConquerUtil.smoothstep,easeIn=k=>k*k*k;
   const ph=(u,a,b)=>ease(clamp01((u-a)/(b-a))),lerp=(a,b,s)=>a+(b-a)*s;
   // Action cycles (seconds) and the angles they sweep (radians; positive pitch =
   // the forward end of a part goes down about its pivot).
-  const CYCLE={ram:1.8,ramLight:1.8,catapult:4.2,trebuchet:6,tower:6,tower2:6,ladder:7,mantlet:3.5,ballista:3.5};
+  const CYCLE={ram:1.8,catapult:4.2,trebuchet:6,tower:6,tower2:6,ladder:7,mantlet:3.5,ballista:3.5};
   // Trebuchet set-up loop for {mode:'setup'}: packed, unpack, set up, pack again.
   const SETUP=13;
   // Ram: drawn back on its ropes, then driven forward into the gate.
@@ -128,7 +128,9 @@
   }
   // Pose for {mode:'idle'|'move'|'fire'|'setup', t, distance, deploy, ammo, ballista}.
   function pose(engine,state={}){
-    const fire=state.mode==='fire',k=fire?((state.t||0)%CYCLE[engine])/CYCLE[engine]:0;
+    // The light ram swings to the ram's beat (it is not a separate entry of CYCLE: the codex lists CYCLE).
+    const cyc=CYCLE[engine==='ramLight'?'ram':engine];
+    const fire=state.mode==='fire',k=fire?((state.t||0)%cyc)/cyc:0;
     if(engine==='ram'||engine==='ramLight')return fire?ramPose(k):{ram:0};
     if(engine==='catapult')return{...catapultPose(k),ammo:state.ammo,mounted:!!state.mounted};
     if(engine==='tower'||engine==='tower2')return towerPose(state,engine);

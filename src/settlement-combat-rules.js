@@ -4,13 +4,19 @@
 (function(){
   const D12=[1,2,2,3,3,3,4,4,4,5,5,6];
   const MAX_E=150,MAX_B=150;
-  // Unit scale of the game (D-056, 05/11/2026): small HP so a duel lasts about half a minute and
+  // Unit scale of the game (D-060, 05/11/2026): small HP so a duel lasts about half a minute and
   // fire from the walls matters. Dice, combat, armour and frontage are the Coffee Battles ones;
   // dmg is the hp taken by one landed blow (the knight's charge counts double).
   const PROFILES=Object.freeze({
     spearman:Object.freeze({hp:12,combat:2,armor:2,aim:null,front:3,dmg:1}),
     patrol:Object.freeze({hp:10,combat:2,armor:2,aim:null,front:2,dmg:1}),
     wolf:Object.freeze({hp:12,combat:3,armor:0,aim:null,front:1,dmg:1}),
+    bear:Object.freeze({hp:45,combat:4,armor:1,aim:null,front:1,dmg:2}),
+    // Outlaws: light, unarmoured men; a lair guard is the best of them (D-060 scale: below the 8 hp man-at-arms).
+    outlaw:Object.freeze({hp:6,combat:2,armor:0,aim:null,front:1,dmg:1}),
+    outlawGuard:Object.freeze({hp:8,combat:2,armor:1,aim:null,front:1,dmg:1}),
+    // Outlaw bowman: shoots like an archer (kind 'archer'), lighter than a realm archer.
+    outlawArcher:Object.freeze({hp:5,combat:1,armor:0,aim:2,front:1,range:15,dmg:1}),
     infantry:Object.freeze({hp:8,combat:2,armor:1,aim:null,front:1,dmg:1}),
     knight:Object.freeze({hp:20,combat:3,armor:3,aim:null,front:1,dmg:2}),
     captain:Object.freeze({hp:16,combat:3,armor:3,aim:null,front:1,dmg:1}),
@@ -20,7 +26,9 @@
   // A PVP team can supply its own palette / emblems later.
   const FACTIONS={
     realm:{livery:null},
-    dev_hostile:{livery:{main:'#171716',alt:'#e3bd31',mainDark:'#090909',altDark:'#95781a'}}
+    dev_hostile:{livery:{main:'#171716',alt:'#e3bd31',mainDark:'#090909',altDark:'#95781a'}},
+    // Outlaws wear no colours of a lord: undyed wool and forest green.
+    outlaw:{livery:{main:'#4a5233',alt:'#7a6446',mainDark:'#2c3120',altDark:'#4c3e2b'}}
   };
   const shots=[],meleeFlashes=[],stones=[];
   let elapsed=0,combatClock=0;
@@ -35,7 +43,8 @@
     }
   }
   const liveryOf=id=>FACTIONS[id]?.livery||null;
-  const profileKind=u=>u.kind==='squad'?'spearman':u.kind==='patrol'?'patrol':u.kind==='knight'?'knight':u.kind==='captain'?'captain':u.kind==='archer'?'archer':u.combatKind||'infantry';
+  // An explicit profile (outlaw bowmen are kind 'archer' to shoot, with their own numbers) wins.
+  const profileKind=u=>u.profile&&PROFILES[u.profile]?u.profile:u.kind==='squad'?'spearman':u.kind==='patrol'?'patrol':u.kind==='knight'?'knight':u.kind==='captain'?'captain':u.kind==='archer'?'archer':u.combatKind||'infantry';
   function boundaryPoints(isAllowed,worldSize=200,step=1.25){
     const edge=step*.576,points=[];
     for(let y=step/2;y<worldSize;y+=step)for(let x=step/2;x<worldSize;x+=step){
@@ -250,7 +259,7 @@
       if(owner&&(!living(owner)||owner.defeated||owner.routing||owner.engaged||owner.climbing))continue;
       let target=null,best=Infinity;
       for(const e of targets){
-        if(!e.post&&(!living(e)||e.routing||e.neutral))continue;
+        if(!e.post)if(!living(e)||e.routing||e.neutral)continue;   // tower posts are always valid targets
         const d=Math.hypot(shooter.x-e.x,shooter.y-e.y);
         if(d>shooterRange(shooter,{...e,h:e.h??shooter.terrainAt(e)})||d>=best)continue;
         if(!visibleFn(e,shooter))continue;
@@ -324,32 +333,8 @@
     for(let i=meleeFlashes.length-1;i>=0;i--)if(elapsed>meleeFlashes[i].at+.65)meleeFlashes.splice(i,1);
     for(let i=stones.length-1;i>=0;i--)if(elapsed>stones[i].start+stones[i].duration+.25)stones.splice(i,1);
   }
-  function drawEffects(g,project){
-    g.save();
-    for(const p of shots){
-      const t=Math.min(1,(elapsed-p.start)/p.duration);
-      const rise=Math.sin(Math.PI*t)*Math.min(3,Math.hypot(p.to.x-p.from.x,p.to.y-p.from.y)*.20);
-      const x=p.from.x+(p.to.x-p.from.x)*t,y=p.from.y+(p.to.y-p.from.y)*t;
-      const z=p.from.z+(p.to.z-p.from.z)*t+rise;
-      const pos=project({x,y},z);
-      const end=project({x:p.from.x+(p.to.x-p.from.x)*Math.min(1,t+.045),y:p.from.y+(p.to.y-p.from.y)*Math.min(1,t+.045)},
-        p.from.z+(p.to.z-p.from.z)*Math.min(1,t+.045)+Math.sin(Math.PI*Math.min(1,t+.045))*Math.min(3,Math.hypot(p.to.x-p.from.x,p.to.y-p.from.y)*.20));
-      g.strokeStyle='#d7c6a1';g.lineWidth=2;g.beginPath();g.moveTo(pos.x,pos.y);g.lineTo(end.x,end.y);g.stroke();
-    }
-    for(const s of stones){
-      // Falls with gravity from the gallery; a puff where it lands.
-      const t=Math.min(1,(elapsed-s.start)/s.duration),k=t*t;
-      const at=project({x:s.from.x+(s.to.x-s.from.x)*t,y:s.from.y+(s.to.y-s.from.y)*t},s.from.z+(s.to.z-s.from.z)*k);
-      if(t<1){g.globalAlpha=1;g.fillStyle='#8e877c';g.strokeStyle='#4a453f';g.lineWidth=1;g.beginPath();g.arc(at.x,at.y,3.2,0,Math.PI*2);g.fill();g.stroke()}
-      else{const age=(elapsed-s.start-s.duration)/.25;g.globalAlpha=Math.max(0,.6-age*.6);g.fillStyle='#c9bda7';g.beginPath();g.arc(at.x,at.y,4+age*6,0,Math.PI*2);g.fill();g.globalAlpha=1}
-    }
-    for(const f of meleeFlashes){
-      const age=(elapsed-f.at)/.65,at=project(f,.16);
-      g.globalAlpha=Math.max(0,1-age);g.strokeStyle='#f3dcc0';g.lineWidth=1.8;
-      g.beginPath();g.moveTo(at.x-5,at.y-11-age*5);g.lineTo(at.x+6,at.y-3-age*5);g.stroke();
-    }
-    g.restore();
-  }
-  window.ConquerCombatRules={PROFILES,FACTIONS,configureFactions,liveryOf,boundaryPoints,nextBoundaryIndex,traceBoundaryIndices,orderedBoundaryPoints,shouldRebuildBoundary,ensure,living,meleePair,shooterRange,update,drawEffects,dropStone,STONE_DAMAGE,
+  window.ConquerCombatRules={PROFILES,MAX_E,MAX_B,FACTIONS,configureFactions,liveryOf,boundaryPoints,nextBoundaryIndex,traceBoundaryIndices,orderedBoundaryPoints,shouldRebuildBoundary,ensure,living,meleePair,shooterRange,update,dropStone,STONE_DAMAGE,
+    // Borrowed read-only effect state; presentation never advances these queues.
+    visualEffects:()=>({shots,stones,meleeFlashes,elapsed}),
     get time(){return elapsed},reset(){shots.length=0;meleeFlashes.length=0;stones.length=0;elapsed=0;combatClock=0;window.ConquerCombatAnim?.reset()}};
 })();

@@ -6,7 +6,7 @@ const path=require('node:path');
 const vm=require('node:vm');
 const root=path.resolve(__dirname,'..');
 const rulesSource=fs.readFileSync(path.join(root,'src','settlement-combat-rules.js'),'utf8');
-const runtimeSource=fs.readFileSync(path.join(root,'src','settlement-combat.js'),'utf8');
+const runtimeSource=fs.readFileSync(path.join(root,'src','settlement-combat.js'),'utf8')+'\n'+fs.readFileSync(path.join(root,'src','settlement-combat-render.js'),'utf8');
 const context=vm.createContext({window:{},Math});
 vm.runInContext(rulesSource,context,{filename:'settlement-combat-rules.js'});
 const rules=context.window.ConquerCombatRules;

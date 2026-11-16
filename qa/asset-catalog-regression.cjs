@@ -61,10 +61,10 @@ assert(/window\.ConquerSiegePreview=\{[^}]*GALLERY,galleryStructure,[^}]*assetMe
 // The sandbox never touches the player's save, the cloud or telemetry.
 const index=read('index.html'),persistence=read('src/settlement-app-persistence.js'),core=read('src/settlement-core.js');
 assert(index.includes("window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetlab') === '1'"));
-assert(/function saveLocal\(\)\{\n  if\(window\.__CONQUER_ASSET_LAB__\)return;/.test(persistence),'Sandbox must not save locally');
+assert(/function saveLocal\(\)\{\r?\n  if\(window\.__CONQUER_ASSET_LAB__\)return;/.test(persistence),'Sandbox must not save locally');
 assert(/if\(window\.__CONQUER_ASSET_LAB__\)return 'conquer\.assetlab\.sandbox'/.test(persistence),'Sandbox must read its own empty slot');
 assert(/async function initSupabase\(\)\{if\(window\.__CONQUER_ASSET_LAB__\)return;/.test(persistence),'Sandbox must not sign in to the cloud');
-assert(/if\(window\.__CONQUER_ASSET_LAB__\|\|!sample/.test(core),'Sandbox must not send telemetry');
+assert(!core.includes('/rest/v1/simulation_telemetry'),'Neither sandbox nor game may write public telemetry; behavioral coverage: tests/runtime-integrity.test.mjs');
 
 // Work animations: one entry per tool of settlement-work-anim.js.
 const workTools=[...read('src/settlement-work-anim.js').matchAll(/^    (\w+):\{period:/gm)].map(m=>m[1]);

@@ -4,7 +4,7 @@ Codice verificato: `combat-ai`, `a3ebb866d581ead8285af3609c84c2c03df056b9`. Ness
 
 ## Modifiche e prove
 
-Port selettivo dell'integrazione circle/Siege (scorte, conquista, riconquista e persistenza), registrazione delle brecce e invalidazione dalla navigazione. Gli assalitori riprendono la campagna dopo ariete, scala o torre; i difensori si sganciano e scendono dalle mura per ripiegare. Nessuna modifica alla scala D-056 o agli HP delle strutture.
+Port selettivo dell'integrazione circle/Siege (scorte, conquista, riconquista e persistenza), registrazione delle brecce e invalidazione dalla navigazione. Gli assalitori riprendono la campagna dopo ariete, scala o torre; i difensori si sganciano e scendono dalle mura per ripiegare. Nessuna modifica alla scala D-060 o agli HP delle strutture.
 
 PASS locale: 67 test circle (7 file), 9 controlli campagna, 9 controlli ingaggio e suite selection, mass battle, patrol, siege damage, siege assault e siege engines. CI [CIRCLE regression 42200441339](https://github.com/erykwest/CONQUER/actions/runs/42200441339) PASS sul commit codice.
 

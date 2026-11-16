@@ -1,5 +1,5 @@
 'use strict';
-// CONQUER world 3D prototype — the whole static scene on WebGL2 with the camera as shader uniforms.
+// CONQUER world 3D prototype â€” the whole static scene on WebGL2 with the camera as shader uniforms.
 //
 // Static geometry is uploaded once and only rebuilt when its content changes; pan, zoom, rotation and
 // plan view are pure uniform changes (no scene-cache rebuilds). Everything reuses the game's own data:
@@ -28,12 +28,10 @@
 
   // ---------- shaders ----------
   const CAMERA=`
-    uniform int uRot;uniform float uS;uniform vec2 uV;uniform float uPlan;uniform vec2 uVp;uniform vec2 uDepth;
+    uniform vec2 uRot;uniform float uS;uniform vec2 uV;uniform float uPlan;uniform vec2 uVp;uniform vec2 uDepth;
+    // uRot = (cos, sin) of the camera yaw: same map as rotateViewPoint, any angle.
     vec2 rotq(vec2 p){vec2 d=p-vec2(100.0);
-      if(uRot==1)return vec2(100.0-d.y,100.0+d.x);
-      if(uRot==2)return vec2(100.0-d.x,100.0-d.y);
-      if(uRot==3)return vec2(100.0+d.y,100.0-d.x);
-      return p;}
+      return vec2(100.0+d.x*uRot.x-d.y*uRot.y,100.0+d.x*uRot.y+d.y*uRot.x);}
     // Same affine map as w2sRaw (isometric or plan) plus a monotonic view depth (larger = nearer).
     vec4 cam(vec3 w,vec2 px){
       vec2 q=rotq(w.xy);vec2 s;float d;
@@ -100,7 +98,33 @@
       void main(){gl_Position=cam(aAnchor,aCorner*aSize*uS);vUV=aUV;}`,
       `#version 300 es
       precision mediump float;in vec2 vUV;uniform sampler2D uAtlas;out vec4 o;
-      void main(){vec4 c=texture(uAtlas,vUV);if(c.a<0.45)discard;o=vec4(c.rgb/max(c.a,1e-3),1.0);}`]
+      void main(){vec4 c=texture(uAtlas,vUV);if(c.a<0.45)discard;o=vec4(c.rgb/max(c.a,1e-3),1.0);}`],
+    // Figure cards (people, animals, vehicles) with capsule depth: the card is a flat picture, but
+    // every pixel takes the depth of the figure's capsule (segment aSeg0→aSeg1 from the feet, radius
+    // aRad) at the point of the axis nearest on screen, plus the radius towards the camera. People:
+    // vertical capsule, so the head is as near as a head really is; animals: horizontal capsule along
+    // the body, so a horse half behind a wall or a cut-away floor is hidden by its real depth.
+    card:[`#version 300 es
+      ${CAMERA}
+      in vec3 aAnchor;in vec2 aCorner;in float aSize;in vec2 aUV;in vec3 aSeg0;in vec3 aSeg1;in float aRad;
+      out vec2 vUV;out vec2 vPx;out vec2 vS0;out vec2 vS1;out float vD0;out float vD1;out float vBias;
+      vec3 sd(vec3 w){vec2 q=rotq(w.xy);
+        if(uPlan>0.5)return vec3(uV+q*uS,w.z);
+        return vec3(uV.x+(q.x-q.y)*uS*0.8660254,uV.y+(q.x+q.y)*uS*0.5-w.z*uS*0.9,q.x+q.y+0.9*w.z);}
+      void main(){
+        vec3 a=sd(aAnchor),b0=sd(aAnchor+aSeg0),b1=sd(aAnchor+aSeg1);
+        vPx=aCorner*aSize*uS;vS0=b0.xy-a.xy;vS1=b1.xy-a.xy;vD0=b0.z;vD1=b1.z;
+        vBias=uPlan>0.5?aRad:aRad*1.2;
+        gl_Position=cam(aAnchor,vPx);vUV=aUV;}`,
+      `#version 300 es
+      precision highp float;in vec2 vUV;in vec2 vPx;in vec2 vS0;in vec2 vS1;in float vD0;in float vD1;in float vBias;
+      uniform sampler2D uAtlas;uniform vec2 uDepth;out vec4 o;
+      void main(){vec4 c=texture(uAtlas,vUV);if(c.a<0.45)discard;
+        vec2 seg=vS1-vS0;float L=dot(seg,seg);
+        float t=L>0.25?clamp(dot(vPx-vS0,seg)/L,0.0,1.0):0.5;
+        float d=mix(vD0,vD1,t)+vBias;
+        gl_FragDepth=clamp(1.0-(d-uDepth.x)/(uDepth.y-uDepth.x),0.0,1.0);
+        o=vec4(c.rgb/max(c.a,1e-3),1.0);}`]
   };
 
   function ensureGL(){
@@ -244,7 +268,7 @@
         return{edit,minX:Math.min(...xs),maxX:Math.max(...xs),
           minY:Math.min(...ys),maxY:Math.max(...ys)};
       });
-      // Broadphase: register edit bounds in 8U buckets once. A 100×100U
+      // Broadphase: register edit bounds in 8U buckets once. A 100Ã—100U
       // 0.5U terrain rebuild has 40,000 cells; almost all must bypass CSG
       // clipping entirely instead of scanning every authored polygon.
       const BIN=8,bins=new Map(),binKey=(x,y)=>x+','+y;
@@ -402,15 +426,14 @@
     const m=meshBuilder();
     for(const f of State.environment||[]){
       if(f.type!=='mountain'||!(f.points?.length>=3))continue;
-      const apex={x:f.x,y:f.y,z:f.height||MOUNTAIN_HEIGHT};
       // Rock up to the snow line (75% of the height), snow cap above it.
       // Map-wide snow line (75% of the tallest summit): lower peaks may stay bare.
-      const k=typeof mountainSnowZ==='function'?Math.min(1,mountainSnowZ()/apex.z):1,s=p=>({x:f.x+(p.x-f.x)*(1-k),y:f.y+(p.y-f.y)*(1-k),z:apex.z*k});
-      for(let i=0;i<f.points.length;i++){
-        const a=f.points[i],b=f.points[(i+1)%f.points.length];
-        const rock=typeof mountainFaceColor==='function'?mountainFaceColor(f,a,b,i):MOUNTAIN_FACES[i%2];
-        m.face([{x:a.x,y:a.y,z:0},{x:b.x,y:b.y,z:0},s(b),s(a)],rock);
-        if(k<1)m.face([s(a),s(b),apex],mountainSnowColor(f,a,b,i));
+      for(const q of mountainFacetPolygons(f,f.height||MOUNTAIN_HEIGHT)){
+        const {i,a,b}=q;
+        const rock=typeof mountainFaceColor==='function'?mountainFaceColor(f,a,b,i):(window.ConquerStoneColor?.shade(MOUNTAIN_FACES[i%2])||MOUNTAIN_FACES[i%2]);
+        m.face(q.rock,rock);
+        if(q.snow.length)m.face(q.snow,mountainSnowColor(f,a,b,i));
+        for(const cut of q.cuts)m.face(cut,window.ConquerStoneColor?.shade('#514a40')||'#514a40');
       }
     }
     return new Float32Array(m.tris);
@@ -426,11 +449,11 @@
           const segments=window.ConquerTerraforming?.exposedWallSegments?.(edit,i)||
             [{a:edit.top[i],b:edit.top[(i+1)%edit.top.length]}];
           for(const {a,b} of segments)
-            m.face([{...a,z:edit.baseZ},{...b,z:edit.baseZ},{...b,z:edit.targetZ},{...a,z:edit.targetZ}],i%2?'#49443f':'#686057');
+            m.face([{...a,z:edit.baseZ},{...b,z:edit.baseZ},{...b,z:edit.targetZ},{...a,z:edit.targetZ}],window.ConquerStoneColor?.shade(i%2?'#49443f':'#686057')||(i%2?'#49443f':'#686057'));
         }
       }else if(edit.mode==='flat'){
         for(const {a,b,baseZ,baseZB,targetZ,targetZB} of window.ConquerTerraforming?.flatWallSegments?.(edit)||[])
-          m.face([{...a,z:baseZ},{...b,z:baseZB},{...b,z:targetZB},{...a,z:targetZ}],'#686057');
+          m.face([{...a,z:baseZ},{...b,z:baseZB},{...b,z:targetZB},{...a,z:targetZ}],window.ConquerStoneColor?.shade('#686057')||'#686057');
       }
     }
     const borders=[t=>({x:t,y:0}),t=>({x:W,y:t}),t=>({x:W-t,y:W}),t=>({x:0,y:W-t})];
@@ -438,14 +461,14 @@
       let prev=at(0),hp=terrainElevation(prev);
       for(let i=1;i<=n;i++){
         const p=at(i*EDGE_STEP),h=terrainElevation(p);
-        if(hp>.001||h>.001)m.face([{...prev,z:0},{...p,z:0},{...p,z:h},{...prev,z:hp}],EDGE_SECTION[side%2]);
+        if(hp>.001||h>.001)m.face([{...prev,z:0},{...p,z:0},{...p,z:h},{...prev,z:hp}],window.ConquerStoneColor?.shade(EDGE_SECTION[side%2])||EDGE_SECTION[side%2]);
         prev=p;hp=h;
       }
     });
     return new Float32Array(m.tris);
   }
-  // Bake the existing 2D ground drawing in plan view (rotation 0) into a TEX_SIZE² canvas covering
-  // [x0,x0+size]². With `tile` ({ox,oy}) only that TILE_PX² window of the same texture is painted:
+  // Bake the existing 2D ground drawing in plan view (rotation 0) into a TEX_SIZEÂ² canvas covering
+  // [x0,x0+size]Â². With `tile` ({ox,oy}) only that TILE_PXÂ² window of the same texture is painted:
   // the mapping stays the full texture's, translated, so repeating ground patterns line up across tiles.
   function bakeGround(x0,y0,size,tile=null){
     const N=tile?TILE_PX:TEX_SIZE,ox=tile?.ox||0,oy=tile?.oy||0;
@@ -459,7 +482,7 @@
     // World window actually painted, for culling roads and fields.
     const wx0=x0+ox/px,wy0=y0+oy/px,wsize=N/px;
     const inside=s=>{if(!tile)return true;const b=groundItemBounds(s);return !b||(b.x0<wx0+wsize&&b.x1>wx0&&b.y0<wy0+wsize&&b.y1>wy0)};
-    // The landscape culls against [0,width]² of the rect, which for a translated tile still holds
+    // The landscape culls against [0,width]Â² of the rect, which for a translated tile still holds
     // everything above and left of it: a far tile would cost a full bake. Cull to the tile instead.
     const keepCull=[screenPointVisibleRaw,screenPolygonVisible,forestLikelyVisible];
     if(tile){
@@ -568,7 +591,7 @@
     S.groundQueue=[];
   }
   // One tile per frame: a tile costs a few ms, the whole queue of a typical edit (2-6 tiles) is gone
-  // before the construction site is noticed. Mipmaps of a 4096² texture are rebuilt once, when its
+  // before the construction site is noticed. Mipmaps of a 4096Â² texture are rebuilt once, when its
   // last queued tile is in (until then the minified levels show the previous ground for a few frames).
   function pumpGroundTiles(gl){
     const t=S.groundQueue.shift();if(!t)return;
@@ -597,7 +620,8 @@
       const dx=e.b.x-e.a.x,dy=e.b.y-e.a.y,L=Math.hypot(dx,dy);if(L<1e-4)continue;
       const ang=Math.atan2(dy,dx),mid={x:(e.a.x+e.b.x)/2,y:(e.a.y+e.b.y)/2},g=terrainElevation(mid);
       if(e.material==='wall'){                                                  // drawUrbanWall
-        m.prism(rectWorldPoints(mid.x,mid.y,L,.13,ang),g,g+.36,winter?'#e5e9df':'#a3937a','#766a59','#8b7c67');
+        const stone=hex=>window.ConquerStoneColor?.shade(hex)||hex;
+         m.prism(rectWorldPoints(mid.x,mid.y,L,.13,ang),g,g+.36,winter?'#e5e9df':stone('#a3937a'),stone('#766a59'),stone('#8b7c67'));
       }else if(e.material!=='hedge'){                                           // drawUrbanFence
         for(const z of [.13,.30])m.prism(rectWorldPoints(mid.x,mid.y,L,.035,ang),g+z-.018,g+z+.018,'#806442','#6b5338','#806442');
         const count=Math.max(1,Math.ceil(L/.65));
@@ -613,6 +637,8 @@
       if(window.ConquerEvents3D?.is(s))window.ConquerEvents3D.addToBuilder(m,s);   // event venues and their setups
       else if(window.ConquerPier?.is(s))window.ConquerPier.addToBuilder(m,s);      // timber pier over the sea
       else if(window.ConquerQuay?.is(s))window.ConquerQuay.addToBuilder(m,s);      // stone quay
+      else if(window.ConquerStorageYard?.is(s))window.ConquerStorageYard.addToBuilder(m,s);
+      else if(window.ConquerSlopeways?.is(s))window.ConquerSlopeways.addToBuilder(m,s);  // ramp / stairway
       else if(isCivic(s))withStructureVisualMaterial(s,()=>addCivic(m,s,winter));
       else if(isCivicAnnex(s))withStructureVisualMaterial(s,()=>addCivicAnnex(m,s,winter));
       else if(window.ConquerIndustries?.is(s)){
@@ -620,8 +646,9 @@
         if(!window.ConquerIndustries3D?.addToBuilder(m,s,g))m.prism(ConquerIndustries.footprint(s),g,g+.35,def.color,def.edge,def.edge);
       }else if(s.type==='well')withStructureVisualMaterial(s,()=>{
         const g=terrainElevation(s);
-        m.prism(rectWorldPoints(s.x,s.y,WELL_PLAZA_SIZE,WELL_PLAZA_SIZE,0),g,g+.055,'#8d816e','#655b4f','#74695a');
-        m.prism(circleWorldPoints(s.x,s.y,.62,20),g+.055,g+.42,'#84796d','#4e4740','#5d554d');
+        const stone=hex=>window.ConquerStoneColor?.shade(hex)||hex;
+         m.prism(rectWorldPoints(s.x,s.y,WELL_PLAZA_SIZE,WELL_PLAZA_SIZE,0),g,g+.055,stone('#8d816e'),stone('#655b4f'),stone('#74695a'));
+        m.prism(circleWorldPoints(s.x,s.y,.62,20),g+.055,g+.42,stone('#84796d'),stone('#4e4740'),stone('#5d554d'));
         m.face(circleWorldPoints(s.x,s.y,.36,16).map(p=>({x:p.x,y:p.y,z:g+.425})),'#172023');
       });
     }
@@ -633,8 +660,19 @@
   // house piece by piece; the WebGL builder has no tag and ignores it.
   function addHouse(m,entry,winter){
     const house=entry.house,lvl=houseLevel(house);
+    // An open L3 workshop: its bodies live in the cutaway buffer (settlement-shop-cutaway.js).
+    const shopOpen=!m.tag&&!!window.ConquerShopCutaway?.active(house);
+    // Kit houses (settlement-house3d.js): bodies, roofs, frame, windows, door and chimneys come from
+    // the Blender kit; the yard outbuildings and a workshop's street front stay here. The
+    // construction assembly (m.tag) builds its own copy of the house piece by piece.
+    if(!m.tag&&!shopOpen&&window.ConquerHouse3D?.addToBuilder(m,house)){
+      for(const part of entry.parts)if(part.kind==='outbuilding')addOutbuilding(m,house,part,winter);
+      window.ConquerShopCutaway?.addFront(m,house);
+      return;
+    }
     for(const part of entry.parts){
       if(part.kind==='outbuilding'){addOutbuilding(m,house,part,winter);continue}
+      if(shopOpen)continue;
       const faces=urbanHouseFaces(house,part),n=part.points.length,base=terrainElevation(part.center);
       const split=base+(part.kind==='turret'?part.floorZ:houseFloorBreak(part.bodyH));
       const bp=part.basePoints;
@@ -660,6 +698,7 @@
         m.tag?.('gable');m.face(roof(faces[n+2]),gable);m.face(roof(faces[n+3]),gable);
       }
     }
+    if(shopOpen)return;
     // L4 dormers (urbanHouseDormers): cream front and cheeks, slate gable roof.
     const dormerColors={front:'#e0ca91',cheek:'#c8ae70',gable:'#d9c184',
       roofA:winter?WINTER_ROOF[0]:'#303237',roofB:winter?WINTER_ROOF[1]:'#3a3d42'};
@@ -672,6 +711,8 @@
       const g=terrainElevation(c.center);
       m.prism(rectWorldPoints(c.center.x,c.center.y,.22,.20,c.angle||0),g+c.z0,g+c.z1,'#3b302c','#332824','#493732');
     }
+    // L3 workshop street front: shop window and bracket sign (settlement-shop-cutaway.js).
+    if(!m.tag)window.ConquerShopCutaway?.addFront(m,house);
   }
   // L3/L4 yard outbuildings (urbanLotOutbuildings), same palette as drawUrbanOutbuilding.
   function addOutbuilding(m,house,part,winter){
@@ -755,6 +796,9 @@
       }else if(s.type==='tavern'){
         const rA=winter?WINTER_ROOF[0]:'#3b302b',rB=winter?WINTER_ROOF[1]:'#493930';
         m.gabled(part.center,part.w,part.h,turn,angle+turn,g,1.48,2.08,'#684f3d','#7b5e48',rA,rB,'#80624a');
+      }else if(['townhall','guild','bargello','balivo'].includes(s.type)){
+        if(part.role==='tower')m.prism(part.points,g,g+3.0,'#7a746b','#6d675f','#7a746b');
+        else m.gabled(part.center,part.w,part.h,turn,angle+turn,g,1.7,2.4,'#7a746b','#8b847a',winter?WINTER_ROOF[0]:'#7a4433',winter?WINTER_ROOF[1]:'#8a4c39','#968e82');
       }else if(s.type==='church'){
         if(part.role==='tower'){
           m.prism(part.points,g,g+2.72,'#676a6c','#5a5d5f','#676a6c');
@@ -782,8 +826,15 @@
   function buildTreeAtlas(){
     if(!forestTreeSpritesReady)return null;
     const season=State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer';
-    const sets=forestTreeSprites[season]||[],tiles=[];
-    sets.forEach((byColor,shape)=>(byColor||[]).forEach((img,color)=>img&&tiles.push({key:shape+':'+color,img,aspect:1})));
+    const tiles=[];
+    // Autumn reuses the summer greens for stage zero; later stages use six warm tones.
+    // Atlas pixels remain static throughout the season: only per-tree UVs advance.
+    const add=(sets,offset=0)=>(sets||[]).forEach((byColor,shape)=>(byColor||[]).forEach((img,color)=>
+      img&&tiles.push({key:shape+':'+(offset+color),img,aspect:1})));
+    if(season==='autumn'){
+      add(forestTreeSprites.summer);
+      add(forestTreeSprites.autumn,FOREST_CANOPY_PALETTES.summer.length);
+    }else add(forestTreeSprites[season]);
     // Hedge bushes (drawUrbanHedge): 920x580 sprites.
     (window.boundaryBushSprites?.[season]||(typeof boundaryBushSprites!=='undefined'?boundaryBushSprites[season]:[])||[])
       .forEach((img,shape)=>img&&tiles.push({key:'bush:'+shape,img,aspect:580/920}));
@@ -799,17 +850,33 @@
   }
   function buildTrees(atlas){
     const v=[];if(!atlas)return new Float32Array(0);
-    const groves=(State.environment||[]).filter(f=>f.type==='forest').map(forestTreeLayout);
+    const groves=(State.environment||[]).filter(f=>f.type==='forest').map(f=>forestTreeLayout(f));
     groves.push(urbanLotCornerTrees());                  // single trees on plot corners
     for(const trees of groves){
       for(const t of trees){
-        const uv=atlas.map.get(t.shapeIndex+':'+(atlas.season==='winter'?0:t.colorIndex));if(!uv)continue;
+        const stage=atlas.season==='autumn'?autumnFoliageStage(t):0;
+        const canopyIndex=atlas.season==='winter'?0:
+          atlas.season==='autumn'&&stage>0?FOREST_CANOPY_PALETTES.summer.length+stage-1:t.colorIndex;
+        const uv=atlas.map.get(t.shapeIndex+':'+canopyIndex);if(!uv)continue;
         let [u0,v0,u1,v1]=uv;if(t.flip)[u0,u1]=[u1,u0];
         const size=2.25*t.scale,z=t.z||0;
         const C=[[-.5,-.94,u0,v0],[.5,-.94,u1,v0],[.5,.06,u1,v1],[-.5,.06,u0,v1]];
         for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(t.p.x,t.p.y,z,cx,cy,size,u,w)}
       }
     }
+    // Woodland bushes stand upright, like trees; never bake them flat into ground.
+    let forestBushes=0;
+    for(const f of State.environment||[]){
+      if(f.type!=='forest'||typeof forestShrubLayout!=='function')continue;
+      for(const b of forestShrubLayout(f)){
+        const uv=atlas.map.get('bush:'+b.shape);if(!uv)continue;
+        let [u0,v0,u1,v1]=uv;if(b.flip)[u0,u1]=[u1,u0];
+        const hr=580/920*b.scale,C=[[-.5,-.97*hr,u0,v0],[.5,-.97*hr,u1,v0],[.5,.03*hr,u1,v1],[-.5,.03*hr,u0,v1]];
+        for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(b.p.x,b.p.y,b.z+.01,cx,cy,b.width*(b.visualScale??1),u,w)}
+        forestBushes++;
+      }
+    }
+    S.stats.forestBushes=forestBushes;
     // Pines on the lower half of the mountains, standing on the cone surface.
     for(const f of State.environment||[]){
       if(f.type!=='mountain'||!f.height||typeof mountainPineLayout!=='function')continue;
@@ -836,14 +903,31 @@
   // Same placement rules as drawFacadeWindows / drawGatePortals / drawTowerDoors / drawHouseFacadeWindows,
   // but on every facade: the depth buffer decides what is visible, so the set is camera-independent.
   const DECAL_KEYS=['gatePortal','towerDoor','arrowSlit','gothicL1','gothicL2','gothicL3','arcade2','arcade3','gatePortalDamaged','gatePortalBroken','gatePortalFrame','gateBanner','hallLancet'];
+  // Windows whose glass lights up at night: the emissive pane is the sprite's own glass, not a box.
+  const GLASS_KEYS=['gothicL1','gothicL2','gothicL3'];
+  // Glass mask of a window sprite: the dark blue panes, without the black leading and the stone.
+  function glassMask(img){
+    const c=document.createElement('canvas');c.width=img.width;c.height=img.height;
+    const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(img,0,0);
+    const d=g.getImageData(0,0,c.width,c.height),p=d.data;
+    for(let i=0;i<p.length;i+=4){
+      const r=p[i],gg=p[i+1],b=p[i+2],lum=(r+gg+b)/3,glass=p[i+3]>200&&b>=r&&lum>28&&lum<120;
+      p[i]=p[i+1]=p[i+2]=255;p[i+3]=glass?255:0;
+    }
+    g.putImageData(d,0,0);return c;
+  }
   function buildDecalAtlas(){
     window.ConquerGates?.ensureSprites();
-    const T=256,cols=4,c=document.createElement('canvas');c.width=cols*T;c.height=4*T;
+    const tiles=[...DECAL_KEYS,'__white','__glow',...GLASS_KEYS.map(k=>'__glass:'+k)];
+    const T=256,cols=4,c=document.createElement('canvas');c.width=cols*T;c.height=Math.ceil(tiles.length/cols)*T;
     const g=c.getContext('2d'),map=new Map();
-    const tiles=[...DECAL_KEYS,'__white','__glow'];
     tiles.forEach((k,i)=>{
       const x=(i%cols)*T,y=Math.floor(i/cols)*T;
       if(k==='__white'){g.fillStyle='#fff';g.fillRect(x,y,16,16);map.set(k,[(x+4)/c.width,(y+4)/c.height,(x+12)/c.width,(y+12)/c.height]);return}
+      if(k.startsWith('__glass:')){
+        const img=architectureSprite(k.slice(8));if(!img)return;
+        g.drawImage(glassMask(img),x,y);map.set(k,[x/c.width,y/c.height,(x+img.width)/c.width,(y+img.height)/c.height]);return;
+      }
       if(k==='__glow'){
         const radial=g.createRadialGradient(x+T/2,y+T/2,0,x+T/2,y+T/2,T/2-2);
         radial.addColorStop(0,'rgba(255,239,190,0.90)');
@@ -873,18 +957,21 @@
     };
     // These emissive panes and soft halos are generated only when facade geometry changes.
     // Intensity is a uniform: sunset/sunrise never recreate their buffers.
-    const lightWindow=(edge,centerZ,width,height,offset,ground,out)=>{
+    // key: a window sprite with a glass mask lights its panes over the whole sprite; without one
+    // (house windows) a pane-sized box lights up.
+    const lightWindow=(edge,centerZ,width,height,offset,ground,out,key=null)=>{
       const halo=facadeAssetWorldSpan(edge,width*3.4,offset);
       quad(halo.a,halo.b,ground+centerZ-height*1.7,ground+centerZ+height*1.7,
         '__glow',out,[1,.67,.32,.33],.032,lights);
-      const glass=facadeAssetWorldSpan(edge,width*.8,offset);
-      quad(glass.a,glass.b,ground+centerZ-height*.4,ground+centerZ+height*.4,
-        '__white',out,[1,.77,.38,.77],.027,lights);
+      const mask=key&&atlas.map.has('__glass:'+key)?'__glass:'+key:null;
+      const glass=facadeAssetWorldSpan(edge,mask?width:width*.8,offset),h=mask?.5:.4;
+      quad(glass.a,glass.b,ground+centerZ-height*h,ground+centerZ+height*h,
+        mask||'__white',out,[1,.77,.38,mask?.9:.77],.027,lights);
     };
     const onEdge=(edge,centerZ,width,height,key,offset,ground,out)=>{
       const span=facadeAssetWorldSpan(edge,width,offset);
       quad(span.a,span.b,ground+centerZ-height/2,ground+centerZ+height/2,key,out);
-      if(key.startsWith('gothic'))lightWindow(edge,centerZ,width,height,offset,ground,out);
+      if(key.startsWith('gothic'))lightWindow(edge,centerZ,width,height,offset,ground,out,key);
     };
     const edgesOf=fp=>fp.map((a,i)=>({a,b:fp[(i+1)%fp.length],index:i}));
     // A beam from wall point p0 to p1 ({off,z}), `width` thick within the wall plane.
@@ -915,7 +1002,7 @@
             for(let i=0;i<4;i++){
               const a=base+i*Math.PI/2,o={x:Math.cos(a),y:Math.sin(a)},cc={x:s.x+o.x*r,y:s.y+o.y*r},tx=-o.y,ty=o.x;
               const edge={a:{x:cc.x-tx*span/2,y:cc.y-ty*span/2},b:{x:cc.x+tx*span/2,y:cc.y+ty*span/2}};
-              if(i===0){if(!towerEdgeOnDivider(s,edge,row.z))onEdge(edge,row.z,sz.w*.86,sz.h,key,0,ground,o);}
+              if(i===0){if(!towerEdgeOnDivider(s,edge,row.z)&&!towerWindowGivesWayToDoor(s,edge,row.floor))onEdge(edge,row.z,sz.w*.86,sz.h,key,0,ground,o);}
               else if(towerSlitFace(s,i,row.floor))onEdge(edge,row.z,.22,.60,'arrowSlit',0,ground,o);
             }
           }
@@ -923,10 +1010,11 @@
           const interior=interiorFacadeEdgeIndex(s);
           for(const row of rows){
             const key=towerGothicAssetForRow(s,row),sz=towerGothicAssetSizeForRow(s,row);if(!key)continue;
-            for(const edge of edgesOf(footprintPoints(s))){
+            for(const edge of edgesOf(towerFacadePoints(s))){
+              if(s.shape==='half'&&edge.index===ORIENTED_FACADE_REAR)continue;   // open gorge
               const o=outward(edge,center);
-              if(edge.index===interior)onEdge(edge,row.z,sz.w,sz.h,key,0,ground,o);
-              else if(towerSlitFace(s,edge.index,row.floor))onEdge(edge,row.z,.22,.60,'arrowSlit',0,ground,o);
+              if(edge.index===interior){if(!towerWindowGivesWayToDoor(s,edge,row.floor))onEdge(edge,row.z,sz.w,sz.h,key,0,ground,o)}
+              else if(towerSlitFace(s,edge.index,row.floor)){const se=towerSlitEdge(s,edge);onEdge(se,row.z,.22,.60,'arrowSlit',0,ground,se===edge?o:outward(se,center))}
             }
           }
         }
@@ -937,37 +1025,50 @@
         // the portcullis are meshes (settlement-gate-fittings.js).
         const fittings=window.ConquerGates?.decalSpecs(s)||[];
         for(const d of fittings)onEdge(d.edge,d.centerZ,d.width,d.height,d.key,d.offset,ground,d.edge.normal);
+        // Timber upper storey: frame strips and house windows (with their night glow).
+        if(gateTimberUpper(s))for(const f of gateTimberFacade(s)){
+          const e=f.edge,o=outward(e,center),L=Math.hypot(e.b.x-e.a.x,e.b.y-e.a.y)||1,ux=(e.b.x-e.a.x)/L,uy=(e.b.y-e.a.y)/L;
+          const m={x:(e.a.x+e.b.x)/2,y:(e.a.y+e.b.y)/2},at=off=>({x:m.x+ux*off,y:m.y+uy*off}),hw=HOUSE_WINDOW_HALF_W,hh=HOUSE_WINDOW_HALF_H;
+          for(const [p0,p1] of f.beams)strip(at,ground,p0,p1,HOUSE_TIMBER_W,o,[59/255,42/255,30/255,1],.009);
+          for(const w of f.windows){
+            const c=at(w.off);
+            quad({x:c.x-ux*hw,y:c.y-uy*hw},{x:c.x+ux*hw,y:c.y+uy*hw},ground+w.z-hh,ground+w.z+hh,'__white',o,[35/255*.82,29/255*.82,24/255*.82,.82]);
+            lightWindow(e,w.z,hw*2,hh*2,w.off,ground,o);
+          }
+        }
         for(const edge of edgesOf(footprintPoints(s))){
           const o=outward(edge,center);
           // front / rear; the door shows its state (cracked, broken in: settlement-siege.js)
-          if(!fittings.length&&(edge.index===1||edge.index===3))onEdge(edge,.705,.90,1.35,window.ConquerSiege?.doorAsset?.(s)||'gatePortal',0,ground,o);
+          if(!fittings.length&&(edge.index===1||edge.index===3)){const d=gateClosedPortal(s);onEdge(edge,d.centerZ,d.width,d.height,window.ConquerSiege?.doorAsset?.(s)||'gatePortal',0,ground,o)}
           for(const z of gateWindowRows(s)){
             if(edge.index===interior)onEdge(edge,z,sz.w,sz.h,key,0,ground,o);
-            else onEdge(edge,z,.24,.62,'arrowSlit',0,ground,o);
+            else for(const off of gateSlitOffsets(edge))onEdge(edge,z,.24,.62,'arrowSlit',off,ground,o);
           }
         }
-      }else if(s.type==='built'){
-        const inside=-wallExteriorSide(s);
+      }else if(s.type==='built'&&!isLonghouse(s)){
         for(const [side,z,density,key,aw,ah,,fixed] of builtWindowRows(s)){
           const edge=linearFacadeEdge(s,side),count=builtWindowCount(edge,density,fixed,aw),cell=edge.length/count;
           const ground=terrainElevation({x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2}),o=outward(edge,center);
-          for(let i=0;i<count;i++)onEdge(edge,z,Math.min(aw,cell*.82),ah,key,(i+.5)*cell-edge.length/2,ground,o);
+          for(let i=0;i<count;i++){const off=(i+.5)*cell-edge.length/2;if(!window.ConquerRoomExterior?.takesWindow(s,side,z,off))onEdge(edge,z,Math.min(aw,cell*.82),ah,key,off,ground,o)}
         }
-        if(builtSkin(s)==='arcade'){                                            // drawBuiltArcade, interior facade
-          const edge=linearFacadeEdge(s,inside),h=Math.min(1.46,structureHeight(s)-.16);
-          if(h>.18&&edge.length>=.35){
-            const count=Math.max(1,Math.round(edge.length/2.55)),cell=edge.length/count,centerZ=.04+h/2,key=cell<2.25?'arcade2':'arcade3';
-            const ground=terrainElevation({x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2}),o=outward(edge,center),DARK=[36/255,33/255,31/255,1];
-            for(let i=0;i<count;i++){
-              const off=(i+.5)*cell-edge.length/2,w=cell*.96,span=facadeAssetWorldSpan(edge,w,off);
-              quad(span.a,span.b,ground+centerZ-h*.43,ground+centerZ+h*.43,'__white',o,DARK,.008);   // drawFacadeAssetBackdrop
-              onEdge(edge,centerZ,w,h,key,off,ground,o);
-            }
+        // W1 portico: carved loggia in the castle body (builtLoggia). The W2 hall keeps the arcade decal.
+        const arcade=!isBuiltPortico(s)&&builtArcadeLayout(s);
+        if(arcade){
+          const {edge,h,centerZ,key}=arcade;
+          const ground=terrainElevation({x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2}),o=outward(edge,center),DARK=[36/255,33/255,31/255,1];
+          for(const {off,w} of arcade.bays){
+            const span=facadeAssetWorldSpan(edge,w,off);
+            quad(span.a,span.b,ground+centerZ-h*.43,ground+centerZ+h*.43,'__white',o,DARK,.008);   // drawFacadeAssetBackdrop
+            onEdge(edge,centerZ,w,h,key,off,ground,o);
           }
         }
       }else if(s.type==='house'){
+        if(window.ConquerShopCutaway?.active(s))continue;   // an open workshop keeps no facade
         const WIN=[35/255*.82,29/255*.82,24/255*.82,.82],TIMBER=[59/255,42/255,30/255,1];
         const entry=houseGeometry.get(s.id);
+        // Kit houses (settlement-house3d.js) carry frame, windows and door as geometry: only the
+        // night window lights stay here.
+        const kit=!!window.ConquerHouse3D?.handles(s);
         // World-space beam from {p,z} a to b on a surface with horizontal outward normal n.
         const beam=(a,b,n,ground,push)=>{
           const uv=atlas.map.get('__white');if(!uv)return;
@@ -979,13 +1080,13 @@
         };
         const pane=(w,ground,push)=>{
           const t=w.tangent,a={x:w.p.x-t.x*w.hw,y:w.p.y-t.y*w.hw},b={x:w.p.x+t.x*w.hw,y:w.p.y+t.y*w.hw};
-          quad(a,b,ground+w.z-w.hh,ground+w.z+w.hh,'__white',w.normal,WIN,push);
+          if(!kit)quad(a,b,ground+w.z-w.hh,ground+w.z+w.hh,'__white',w.normal,WIN,push);
           lightWindow({a:{x:w.p.x-t.x*.5,y:w.p.y-t.y*.5},b:{x:w.p.x+t.x*.5,y:w.p.y+t.y*.5}},w.z,w.hw*2,w.hh*2,0,ground,w.normal);
         };
         for(const part of entry?.parts||[]){
           if(part.kind==='turret'){
             const ground=terrainElevation(part.center),plan=houseTurretFacade(part);
-            for(const b of plan.beams)beam(b.a,b.b,b.normal,ground,.015);
+            if(!kit)for(const b of plan.beams)beam(b.a,b.b,b.normal,ground,.015);
             for(const w of plan.windows)pane(w,ground,.022);
             continue;
           }
@@ -996,13 +1097,13 @@
             const dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,hw=HOUSE_WINDOW_HALF_W,hh=HOUSE_WINDOW_HALF_H;
             const plan=houseFacadePlan(s,part,edge),at=off=>({x:m.x+ux*off,y:m.y+uy*off});
             // Timber frame strips sit just under the windows (smaller wall offset).
-            for(const [p0,p1] of plan.beams)strip(at,ground,p0,p1,HOUSE_TIMBER_W,o,TIMBER,.009);
+            if(!kit)for(const [p0,p1] of plan.beams)strip(at,ground,p0,p1,HOUSE_TIMBER_W,o,TIMBER,.009);
             // drawWindowOnEdge: 2.1 x 3.25 px per view-scale unit -> .175U x ~.30U
             // Ground-floor openings on a jettied side sit on the recessed stone wall.
             const fb=houseFloorBreak(part.bodyH),recess=part.basePoints&&(edge.index===0||edge.index===2)?houseJetty(s):0;
             for(const w of plan.windows){
               const k=w.z<fb?recess:0,c=at(w.off),e={a:{x:edge.a.x-o.x*k,y:edge.a.y-o.y*k},b:{x:edge.b.x-o.x*k,y:edge.b.y-o.y*k}};
-              quad({x:c.x-ux*hw-o.x*k,y:c.y-uy*hw-o.y*k},{x:c.x+ux*hw-o.x*k,y:c.y+uy*hw-o.y*k},ground+w.z-hh,ground+w.z+hh,'__white',o,WIN);
+              if(!kit)quad({x:c.x-ux*hw-o.x*k,y:c.y-uy*hw-o.y*k},{x:c.x+ux*hw-o.x*k,y:c.y+uy*hw-o.y*k},ground+w.z-hh,ground+w.z+hh,'__white',o,WIN);
               lightWindow(e,w.z,hw*2,hh*2,w.off,ground,o);
             }
           }
@@ -1010,7 +1111,7 @@
         for(const dormer of entry?.dormers||[])pane(dormer.window,terrainElevation(dormer.partCenter),.012);
         const d=houseDoorInfo(s),hw=Math.min(.08,(Number(s.w)||1.5)*.0533),g=terrainElevation(d.surface),DOOR=[57/255,39/255,30/255,1];
         const ds={x:d.surface.x-d.normal.x*houseJetty(s),y:d.surface.y-d.normal.y*houseJetty(s)};
-        quad({x:ds.x-d.tangent.x*hw,y:ds.y-d.tangent.y*hw},{x:ds.x+d.tangent.x*hw,y:ds.y+d.tangent.y*hw},g+.04,g+HOUSE_DOOR_TOP,'__white',d.normal,DOOR);
+        if(!kit)quad({x:ds.x-d.tangent.x*hw,y:ds.y-d.tangent.y*hw},{x:ds.x+d.tangent.x*hw,y:ds.y+d.tangent.y*hw},g+.04,g+HOUSE_DOOR_TOP,'__white',d.normal,DOOR);
       }
     }
     return{decals:new Float32Array(v),lights:new Float32Array(lights)};
@@ -1059,7 +1160,7 @@
     const sun=sunShadowState();if(!sun)return{data:new Float32Array(0),alpha:0};
     const v=[];
     for(const s of State.structures){
-      if(underConstruction(s)||!['house','tower','gate','wall','palisade','built','market','tavern','church','plaza','civicAnnex'].includes(s.type))continue;
+      if(underConstruction(s)||!['house','tower','gate','wall','palisade','built','market','tavern','church','plaza','townhall','guild','bargello','balivo','civicAnnex'].includes(s.type))continue;
       const {fp,h}=shadowCasterGeometry(s);if(!fp?.length||h<=0)continue;
       const len=h*sun.lengthPerHeight,ox=sun.dx*len,oy=sun.dy*len,cloud=[];
       for(const p of fp){cloud.push({x:p.x,y:p.y});cloud.push({x:p.x+ox,y:p.y+oy})}
@@ -1080,7 +1181,7 @@
     const c=rgb(hex),lum=(c[0]+c[1]+c[2])/3,kk=lum>.7?1-(1-k)*.55:k;
     return'#'+c.map(x=>Math.round(clamp(x*kk,0,1)*255).toString(16).padStart(2,'0')).join('');
   }
-  // Convex polygon clip (Sutherland–Hodgman) of a ground polygon against a convex clip polygon.
+  // Convex polygon clip (Sutherlandâ€“Hodgman) of a ground polygon against a convex clip polygon.
   function clipConvex(subject,clip){
     let out=subject;const area=clip.reduce((a,p,i)=>{const q=clip[(i+1)%clip.length];return a+p.x*q.y-q.x*p.y},0),sgn=area>=0?1:-1;
     for(let i=0;i<clip.length&&out.length;i++){
@@ -1122,7 +1223,7 @@
     }
     return pieces;
   }
-  // Parts of segment p-q outside every convex blocker (Cyrus–Beck interval per blocker).
+  // Parts of segment p-q outside every convex blocker (Cyrusâ€“Beck interval per blocker).
   function segMinus(p,q,blockers){
     let parts=[[0,1]];
     for(const B of blockers){
@@ -1147,6 +1248,15 @@
     // m: interior (inner walls, cut jambs, floors, openings, furniture) - kept in full light at night;
     // sh: exterior shell (outer faces, crest ring, roof deck) - lit like the rest of the castle.
     const m=meshBuilder(),sh=meshBuilder(),em=meshBuilder(),winter=State.season==='winter',turns=State.view.rotation||0;
+    // Windows and slits seen from inside: the same sprites as outside (decal atlas), facing the
+    // room; a flat pane only while the atlas is not built yet.
+    const dv=[],atlasMap=typeof S!=='undefined'?S.decalMap:null;
+    const decal=(at,dir,z0,z1,w,key,hex)=>{
+      const uv=atlasMap?.get(key);if(!uv){openingQuad(m,at,dir,z0,z1,w,hex);return}
+      const t={x:-dir.y,y:dir.x},a={x:at.x-t.x*w/2,y:at.y-t.y*w/2},b={x:at.x+t.x*w/2,y:at.y+t.y*w/2},[u0,v0,u1,v1]=uv;
+      const P=[[a,z1,u0,v0],[b,z1,u1,v0],[b,z0,u1,v1],[a,z0,u0,v1]];
+      for(const k of [0,1,2,0,2,3]){const [p,z,u,v]=P[k];dv.push(p.x,p.y,z,u,v,1,1,1,1)}
+    };
     const W3=window.ConquerWagons3D,FU=window.ConquerCutawayFurniture;
     // Furniture and ladders (world xy, z on the structure plane).
     const addFurniture=s=>{
@@ -1159,10 +1269,19 @@
       }
     };
     for(const s of State.structures){
-      if(!structureCutaway(s)||underConstruction(s))continue;
+      if(underConstruction(s))continue;
+      if(!structureCutaway(s)){
+        // Closed W1 portico: only the furniture under its arches.
+        if(isBuiltPortico(s))for(const f of FU?.loggiaFaces?.(s)||[]){
+          const pts=f.pts.map(p=>({x:p[0],y:p[1],z:terrainElevation({x:p[0],y:p[1]})+p[2]}));
+          m.face(pts,shadeHex(f.hex,W3?W3.shadeFactor(f.n[0],f.n[1],f.n[2],turns):1));if(f.emissive)em.face(pts,f.hex);
+        }
+        continue;
+      }
       // Timber tower: the Blender model minus the sides facing this quarter-turn, then its room.
       if(window.ConquerWood3D?.addCutawayToBuilder?.(sh,s)){addFurniture(s);continue}
-      const g0=cutawayWallGeometry(s),H=structureHeight(s),n=Math.min(g0.outer.length,g0.inner.length);
+      // Floor-by-floor cutaway: H is the cut (the ceiling of the floor in view), HF the full height.
+      const g0=cutawayWallGeometry(s),HF=structureHeight(s),H=Math.min(HF,cutawayCeilingZ(s)),n=Math.min(g0.outer.length,g0.inner.length);
       // Inner ring re-indexed so inner[i] is the vertex nearest outer[i] (built sections list them
       // in another order, which made the crest quads cross over the whole room).
       const g={...g0,inner:g0.outer.slice(0,n).map(o=>g0.inner.reduce((b,p)=>Math.hypot(p.x-o.x,p.y-o.y)<Math.hypot(b.x-o.x,b.y-o.y)?p:b,g0.inner[0]))};
@@ -1177,6 +1296,8 @@
         if(blk.length&&top<H)mesh.face([Z(p,top),Z(q,top),Z(q,H),Z(p,H)],hex);
       };
       const plane=s.type==='tower'||s.type==='gate',G0=plane?(Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s)):null;
+      const stoneTone=hex=>State.visualPalette==='clay'||(typeof masonryMaterial==='function'&&masonryMaterial(s)==='brick')?hex:(window.ConquerStoneColor?.shade(hex)||hex);
+      const floorTone=hex=>State.visualPalette==='clay'?hex:(window.ConquerStoneColor?.shade(hex)||hex);
       const Z=(p,z)=>({x:p.x,y:p.y,z:(plane?G0:terrainElevation(p))+z});
       let keep,jambs;
       if(s.type==='built'){
@@ -1186,9 +1307,25 @@
         const open=cutawayTransparentFaceIndexes(s,g);
         keep=new Set([...Array(n).keys()].filter(i=>!open.has(i)));jambs=cutawayBoundaryVertices(open,n);
       }
+      // Timber-framed small gate: masonry up to the frame's floor, plaster above (outside and in).
+      const timber=s.type==='gate'&&gateTimberUpper(s),zf=timber?Math.min(gateTimberFloorZ(s),H):H;
+      const band=(mesh,p,q,z0,z1,hex)=>mesh.face([Z(p,z0),Z(q,z0),Z(q,z1),Z(p,z1)],hex);
+      const loggia=isBuiltPortico(s)?builtLoggia(s):null,lc=structureCenter(s),ln=s.b?{x:-(s.b.y-s.a.y),y:s.b.x-s.a.x}:null;
+      const loggiaEdge=(p,q)=>!!loggia&&loggia.cap<H&&Math.sign(((p.x+q.x)/2-lc.x)*ln.x+((p.y+q.y)/2-lc.y)*ln.y)===loggia.side;
       for(const i of keep){
         const j=(i+1)%n,o0=g.outer[i],o1=g.outer[j],i0=g.inner[i],i1=g.inner[j];
-        wallFace(sh,o0,o1,castleSideShade(o0,o1));wallFace(m,i0,i1,'#61574f');
+        if(timber){
+          band(sh,o0,o1,0,zf,stoneTone(castleSideShade(o0,o1)));band(sh,o0,o1,zf,H,'#d9ccb0');
+          band(m,i0,i1,0,zf,stoneTone('#61574f'));band(m,i0,i1,zf,H,'#cbbd9f');
+        }else if(loggiaEdge(o0,o1)){
+          // W1 portico on the standing wall: masonry only above the loggia, its piers and arches below.
+          band(sh,o0,o1,loggia.cap,H,stoneTone(castleSideShade(o0,o1)));band(m,i0,i1,loggia.cap,H,stoneTone('#61574f'));
+          for(const f of loggia.faces)if(f.part==='arcade'){
+            const P=f.pts.map(q=>Z(q.p,q.z));let nx=0,ny=0,nz=0;
+            for(let k=0;k<P.length;k++){const a=P[k],b=P[(k+1)%P.length];nx+=(a.y-b.y)*(a.z+b.z);ny+=(a.z-b.z)*(a.x+b.x);nz+=(a.x-b.x)*(a.y+b.y)}
+            const l=Math.hypot(nx,ny,nz)||1;sh.face(P,shadeHex(stoneTone('#8a7f74'),W3?W3.shadeFactor(nx/l,ny/l,nz/l,turns):1));
+          }
+        }else{wallFace(sh,o0,o1,stoneTone(castleSideShade(o0,o1)));wallFace(m,i0,i1,stoneTone('#61574f'))}
       }
       // Subtower: the parent stays intact, and a dividing wall closes the subtower along the
       // parent's outline where it runs through the subtower footprint.
@@ -1202,7 +1339,7 @@
           if(1-t>1e-4)ins.push([t,1]);
           for(const [u,v] of ins){
             const A={x:p.x+(q.x-p.x)*u,y:p.y+(q.y-p.y)*u},B={x:p.x+(q.x-p.x)*v,y:p.y+(q.y-p.y)*v};
-            m.face([Z(A,0),Z(B,0),Z(B,top),Z(A,top)],'#61574f');
+            m.face([Z(A,0),Z(B,0),Z(B,top),Z(A,top)],stoneTone('#61574f'));
             // Connecting door through the dividing wall, on the subtower's ground floor.
             const len=Math.hypot(B.x-A.x,B.y-A.y);
             if(len>.45&&top>.7){
@@ -1211,23 +1348,29 @@
             }
           }
         }
-      }      for(const v of jambs)if(outside(g.outer[v])&&outside(g.inner[v]))m.face([Z(g.outer[v],0),Z(g.inner[v],0),Z(g.inner[v],H),Z(g.outer[v],H)],'#82776c');
-      const ring=winter?WINTER_SNOW_TOP:'#8f857a';
+      }      for(const v of jambs)if(outside(g.outer[v])&&outside(g.inner[v])){
+        m.face([Z(g.outer[v],0),Z(g.inner[v],0),Z(g.inner[v],zf),Z(g.outer[v],zf)],stoneTone('#82776c'));
+        if(timber)m.face([Z(g.outer[v],zf),Z(g.inner[v],zf),Z(g.inner[v],H),Z(g.outer[v],H)],'#5b412c');   // cut corner post
+      }
+      const ring=timber?'#5b412c':winter?WINTER_SNOW_TOP:stoneTone('#8f857a');   // a frame's cut top is its head plate
       for(let i=0;i<n;i++){const j=(i+1)%n;facesOut([g.outer[i],g.outer[j],g.inner[j],g.inner[i]],ring,sh,H)}
-      if(s.type==='tower'&&towerRoofStyle(s)==='battlement')facesOut(g.inner,winter?WINTER_SNOW_TOP:'#8f857a',sh,H-.01);
+      // Room exterior elements stand outside the cut: whole, lit with the shell.
+      for(const t of window.ConquerRoomExterior?.triangles(s)||[])sh.face(t.pts.map(q=>Z(q.p,q.z)),t.hex);
+      if(H>=HF-1e-6&&s.type==='tower'&&towerRoofStyle(s)==='battlement')facesOut(g.inner,winter?WINTER_SNOW_TOP:stoneTone('#8f857a'),sh,H-.01);
       // Floors: slab, then tiles (stone ground floor) or planks (wooden upper floors) clipped to the room.
       const basis=cutawayFloorBasis(s,g),ca=Math.cos(basis.angle),sa=Math.sin(basis.angle);
       const L=(u,v)=>({x:basis.center.x+u*ca-v*sa,y:basis.center.y+u*sa+v*ca});
       for(const floor of cutawayFloorLevels(s)){
         const stone=floor.material==='stone',z=floor.z,th=stone?.045:.065;
-        facesOut(g.inner,stone?'#7f796f':'#795a3a',m,z);
-        for(let i=0;i<g.inner.length;i++){for(const [a,b] of segMinus(g.inner[i],g.inner[(i+1)%g.inner.length],under(z)))m.face([Z(a,z-th),Z(b,z-th),Z(b,z),Z(a,z)],stone?'#5a554d':'#5b402b')}
+        if(z>=H-.01)continue;
+        facesOut(g.inner,stone?floorTone('#7f796f'):'#795a3a',m,z);
+        for(let i=0;i<g.inner.length;i++){for(const [a,b] of segMinus(g.inner[i],g.inner[(i+1)%g.inner.length],under(z)))m.face([Z(a,z-th),Z(b,z-th),Z(b,z),Z(a,z)],stone?floorTone('#5a554d'):'#5b402b')}
         if(stone){
           const tile=.32,nx=Math.ceil(basis.w/tile),ny=Math.ceil(basis.h/tile);
           for(let ix=0;ix<nx;ix++)for(let iy=0;iy<ny;iy++){
             if((ix+iy)%2)continue;
             const u0=-basis.w/2+ix*tile,v0=-basis.h/2+iy*tile,q=clipConvex([L(u0,v0),L(u0+tile,v0),L(u0+tile,v0+tile),L(u0,v0+tile)],g.inner);
-            if(q.length>2)facesOut(q,'#8d877c',m,z+.003);
+            if(q.length>2)facesOut(q,floorTone('#8d877c'),m,z+.003);
           }
         }else{
           const plank=.18,across=basis.h<=basis.w,span=across?basis.h:basis.w,len=across?basis.w:basis.h;
@@ -1248,13 +1391,14 @@
       if(s.type==='tower'){
         for(const row of towerWindowRows(s))for(const d of towerFaceDirections(s)){
           const dir={x:d.nx,y:d.ny};if(!keptDir(dir))continue;
-          const at=innerAt(dir),zc=row.z;if(!outside(at,zc))continue;
-          if(d.interior&&towerGothicAssetForRow(s,row))openingQuad(m,at,dir,(plane?G0:0)+zc-.2,(plane?G0:0)+zc+.2,.26,'#8fa2b2');
-          else if(towerSlitFace(s,d.face,row.floor))openingQuad(m,at,dir,(plane?G0:0)+zc-.16,(plane?G0:0)+zc+.16,.06,'#1c1612');
+          const at=innerAt(dir),zc=row.z;if(zc>=H||!outside(at,zc))continue;
+          const key=d.interior&&!towerWindowGivesWayToDoor(s,d,row.floor)&&towerGothicAssetForRow(s,row),z=(plane?G0:0)+zc;
+          if(key){const sz=towerGothicAssetSizeForRow(s,row);decal(at,dir,z-sz.h/2,z+sz.h/2,sz.w,key,'#8fa2b2')}
+          else if(towerSlitFace(s,d.face,row.floor))decal(at,dir,z-.3,z+.3,.22,'arrowSlit','#1c1612');
         }
         for(const spec of (typeof towerDoorSpecs==='function'?towerDoorSpecs(s):[])){
           const dir={x:spec.outward.x,y:spec.outward.y};if(!keptDir(dir))continue;
-          const at={x:spec.contact.x-dir.x*(g.thickness+.006),y:spec.contact.y-dir.y*(g.thickness+.006)};if(!outside(at))continue;
+          const at={x:spec.contact.x-dir.x*(g.thickness+.006),y:spec.contact.y-dir.y*(g.thickness+.006)};if(spec.baseZ>=H||!outside(at))continue;
           openingQuad(m,at,dir,G0+spec.baseZ+.01,G0+Math.min(spec.apexZ,spec.baseZ+.6),.3,'#1f1712');
         }
       }else if(s.type==='gate'){
@@ -1263,24 +1407,64 @@
           if(!keep.has(e))continue;
           const a=g.inner[e],b=g.inner[(e+1)%4],mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2},mo={x:(fp[e].x+fp[(e+1)%4].x)/2,y:(fp[e].y+fp[(e+1)%4].y)/2};
           const dl=Math.hypot(mo.x-s.x,mo.y-s.y)||1,dir={x:(mo.x-s.x)/dl,y:(mo.y-s.y)/dl};
-          openingQuad(m,{x:mid.x-dir.x*.006,y:mid.y-dir.y*.006},dir,G0+.06,G0+1.05,.78,'#1f1712');
+          const pk=(window.ConquerGates?.portalOf?.(s).width??1.2)/1.2;   // smaller on the small gate
+          openingQuad(m,{x:mid.x-dir.x*.006,y:mid.y-dir.y*.006},dir,G0+.06,G0+1.05*(1+pk)/2,.78*pk,'#1f1712');
+        }
+        // Room openings seen from inside, as outside: window on the rear, slits on the front and flanks.
+        const sz=gothicAssetSizeForLevel(s);
+        for(let e=0;e<4;e++){
+          if(!keep.has(e))continue;
+          const a=g.inner[e],b=g.inner[(e+1)%4],L=Math.hypot(b.x-a.x,b.y-a.y)||1,u={x:(b.x-a.x)/L,y:(b.y-a.y)/L};
+          const mo={x:(fp[e].x+fp[(e+1)%4].x)/2,y:(fp[e].y+fp[(e+1)%4].y)/2},dl=Math.hypot(mo.x-s.x,mo.y-s.y)||1,dir={x:(mo.x-s.x)/dl,y:(mo.y-s.y)/dl};
+          const edge={a:fp[e],b:fp[(e+1)%4],index:e},rear=e===interiorFacadeEdgeIndex(s);
+          // Timber frame: its house windows, seen from inside.
+          if(timber)for(const w of gateTimberFacade(s)[e].windows.filter(w=>w.z<H)){
+            const at={x:(a.x+b.x)/2+u.x*w.off-dir.x*.006,y:(a.y+b.y)/2+u.y*w.off-dir.y*.006};
+            openingQuad(m,at,dir,G0+w.z-HOUSE_WINDOW_HALF_H,G0+w.z+HOUSE_WINDOW_HALF_H,HOUSE_WINDOW_HALF_W*2+.04,'#5b412c');
+            openingQuad(m,{x:at.x-dir.x*.002,y:at.y-dir.y*.002},dir,G0+w.z-HOUSE_WINDOW_HALF_H+.02,G0+w.z+HOUSE_WINDOW_HALF_H-.02,HOUSE_WINDOW_HALF_W*2,'#8fa2b2');
+          }
+          for(const z of gateWindowRows(s).filter(z=>z<H))for(const off of rear?[0]:gateSlitOffsets(edge)){
+            const at={x:(a.x+b.x)/2+u.x*off-dir.x*.006,y:(a.y+b.y)/2+u.y*off-dir.y*.006};
+            if(rear)decal(at,dir,G0+z-sz.h/2,G0+z+sz.h/2,sz.w,gothicAssetForLevel(s),'#8fa2b2');
+            else decal(at,dir,G0+z-.31,G0+z+.31,.24,'arrowSlit','#1c1612');
+          }
+        }
+      }else if(s.type==='built'){
+        // W2 hall portico (a decal) seen from inside when it stands on the rear wall; the W1 loggia is
+        // geometry (above). On the near side it goes with the wall.
+        const arcade=!loggia&&builtArcadeLayout(s),c=structureCenter(s);
+        const seg={x:s.b.x-s.a.x,y:s.b.y-s.a.y},L=Math.hypot(seg.x,seg.y)||1,u={x:seg.x/L,y:seg.y/L};
+        for(const e of keep){
+          if(!arcade||arcade.centerZ+arcade.h/2>H)break;
+          const a=g.inner[e],b=g.inner[(e+1)%n],mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+          const side=Math.sign(-u.y*(mid.x-c.x)+u.x*(mid.y-c.y));if(side!==arcade.side)continue;
+          const dir={x:-u.y*side,y:u.x*side},ec={x:(arcade.edge.a.x+arcade.edge.b.x)/2,y:(arcade.edge.a.y+arcade.edge.b.y)/2};
+          const t=(ec.x-mid.x)*u.x+(ec.y-mid.y)*u.y,G=terrainElevation(mid),{h,centerZ:cz}=arcade;
+          for(const {off,w} of arcade.bays){
+            const at=k=>({x:mid.x+u.x*(t+off)-dir.x*k,y:mid.y+u.y*(t+off)-dir.y*k});
+            openingQuad(m,at(.006),dir,G+cz-h*.43,G+cz+h*.43,w,'#24211f');
+            decal(at(.009),dir,G+cz-h/2,G+cz+h/2,w,arcade.key,'#6d655c');
+          }
         }
       }
       addFurniture(s);
     }
-    return{main:new Float32Array(m.tris),shell:new Float32Array(sh.tris),em:new Float32Array(em.tris)};
+    return{main:new Float32Array(m.tris),shell:new Float32Array(sh.tris),em:new Float32Array(em.tris),dec:new Float32Array(dv)};
   }
 
   // ---------- content signatures (cheap, per frame) ----------
   // One pass per check: each structure is hashed once and folded into the categories it belongs to.
   // Category tests look at fields only (no terrain sampling), so this stays well under a millisecond.
   let sigPass=null;
+  // The per-structure visual fields are structureVisualKey (settlement-render.js), shared with the 2.5D
+  // castle body bitmap key: variants (hoarding, a gate's timber upper storey...), rooms, exterior damage.
   function structureKey(s){
-    return s.id+(underConstruction(s)?'u':'c')+(s.level||'')+(s.houseLevel||'')+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.b?.x??'')+(s.b?.y??'')+(s.angle||0)+(s.roofStyle||'')+(s.baseStyle||'')+(s.skin||'')+(s.masonryMaterial||'stone')+(s.cutaway?1:0)+(s.width||'')+(s.groundZ??'')+(s.aSnap||'')+(s.bSnap||'')+(s.flip?1:0)
+    return (typeof structureVisualKey==='function'?structureVisualKey(s):s.id+(s.x??s.a?.x??'')+(s.y??s.a?.y??'')+(s.level||''))
+      +(underConstruction(s)?'u':'c')+(s.houseLevel||'')+(s.span||'')
       // Moat fill patches are baked into the ground: filling must re-bake it.
       +(s.fills?.length?s.fills.map(f=>(+f.at).toFixed(2)+':'+f.span+':'+(+f.progress).toFixed(3)).join(','):'')
       // The gate door's state swaps its facade decal.
-      +(s.type==='gate'?(window.ConquerSiege?.doorStage?.(s)||''):'')+(s.brokenTop?'B':'')
+      +(s.type==='gate'?(window.ConquerSiege?.doorStage?.(s)||''):'')
       // Mills swap to their gutted model mid-fire.
       +(window.ConquerIndustries3D?.variant?.(s)||'');
   }
@@ -1296,7 +1480,7 @@
   const SIG_CATEGORIES=[
     {name:'ground',test:s=>s.type==='road'||s.type==='field'||s.type==='house'||s.type==='moat'||s.type==='bridge'||s.type==='palisade'},
     {name:'buildings',test:s=>s.type==='house'||s.type==='field'||s.type==='well'||s.type==='pier'||s.type==='quay'||CIVIC_TYPES.includes(s.type)||!!window.ConquerIndustries?.TYPES?.[s.type]
-      ||s.type==='palisade'||isWoodTower(s)||isWoodGate(s)},
+      ||s.type==='palisade'||isWoodTower(s)||isWoodGate(s)||isLonghouse(s)},
     {name:'castle',test:s=>!s.auto&&['tower','gate','wall','built'].includes(s.type)},
     {name:'hedges',test:s=>s.type==='house'||s.type==='field'},
     {name:'all',test:()=>true}
@@ -1334,9 +1518,13 @@
   }
   function ensureContent(gl){
     // Deselecting with Escape does not invalidate the scene: the civic cutaway is checked here too.
-    const civicCut=window.ConquerCivic3D?.cutawayId?.()||null;
-    if(!S.contentDirty&&S.sig.terrain&&S.lastUrbanRev===urbanRev()&&S.civicCut===civicCut){S.stats.ensureMs=0;pumpGroundTiles(gl);return}
-    S.civicCut=civicCut;
+    // An open L3 workshop (settlement-shop-cutaway.js) follows the selection the same way.
+    // Shop fronts open at dawn and shut at dusk: their signature rebuilds the buildings too.
+    // civicCut: '<id>@<storey in view>' (cutawaySig), so a floor change rebuilds the cutaway.
+    const civicCut=(window.ConquerCivic3D?.cutawaySig||window.ConquerCivic3D?.cutawayId)?.()||null,shopCut=window.ConquerShopCutaway?.activeId?.()||null;
+    const shopFront=window.ConquerShopCutaway?.frontSig?.()||'';
+    if(!S.contentDirty&&S.sig.terrain&&S.lastUrbanRev===urbanRev()&&S.civicCut===civicCut&&S.shopCut===shopCut&&S.shopFront===shopFront){S.stats.ensureMs=0;pumpGroundTiles(gl);return}
+    S.civicCut=civicCut;S.shopCut=shopCut;S.shopFront=shopFront;
     S.contentDirty=false;S.lastUrbanRev=urbanRev();computeSigPass();
     const t0=performance.now(),st=S.stats;
     const season=State.season||'summer',rot=State.view.rotation||0,plan=isPlanView();
@@ -1347,7 +1535,7 @@
     // Relief, terraforming and forests shape the terrain meshes: those rebuild them and re-bake the
     // whole ground. Season and wetness re-bake the whole ground too. Structure and urban-lot edits only
     // re-bake the tiles they touch, one per frame (pumpGroundTiles).
-    const meshSig=[season,State.biome,State.relief?.seed,terraformSig,(State.environment||[]).length,envRev].join('|');
+    const meshSig=[season,State.stonePaletteId,State.biome,State.relief?.seed,terraformSig,(State.environment||[]).length,envRev].join('|');
     const gSig=[meshSig,wet()].join('|');
     const tSig=[gSig,groundLotsSignature(),structuresSig('ground')].join('|');
     if(S.sig.terrain!==tSig){
@@ -1366,18 +1554,21 @@
     }
     pumpGroundTiles(gl);
     // Heraldry: flags and drapes of the timber fortifications take the realm's colours.
-    const bSig=[season,State.visualPalette,window.ConquerCoast?.shore()?.stretches?.length||0,State.seed,urbanRev(),structuresSig('buildings'),civicCut,JSON.stringify(State.heraldry||null)].join('|');
+    const bSig=[season,State.visualPalette,State.stonePaletteId,window.ConquerCoast?.shore()?.stretches?.length||0,State.seed,urbanRev(),structuresSig('buildings'),window.ConquerStorageYard?.visualSignature?.()||'',civicCut,shopCut,shopFront,JSON.stringify(State.heraldry||null)].join('|');
     if(S.sig.buildings!==bSig){const a=performance.now();upload(gl,'buildings',buildBuildings());S.sig.buildings=bSig;st.buildingsMs=performance.now()-a}
     // The selected church / inn in cutaway: its section plane follows the camera quarter-turn.
     const cutSig=[bSig,rot,plan].join('|');
     if(S.sig.civicCutaway!==cutSig){
-      const m=meshBuilder(true),s=civicCut&&State.structures.find(x=>x.id===civicCut);
+      const cutId=civicCut&&civicCut.split('@')[0],m=meshBuilder(true),s=cutId&&State.structures.find(x=>x.id===cutId);
       if(s)withStructureVisualMaterial(s,()=>ConquerCivic3D.addCutawayToBuilder(m,Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s)));
+      if(shopCut)window.ConquerShopCutaway.addToBuilder(m);
       upload(gl,'civicCutaway',new Float32Array(m.tris));S.sig.civicCutaway=cutSig;
     }
     // Castle side tones and the near/far battlement split depend on the quarter-turn: keep one mesh set
     // per rotation/plan variant so turning the camera back and forth never rebuilds.
-    const castleContent=[season,State.visualPalette,structuresSig('castle')].join('|');
+    // Merlon style and roof pitch are realm-wide policies (a paid restyle): they reshape every castle mesh.
+    const castleContent=[season,State.visualPalette,State.stonePaletteId,typeof crenelStyle==='function'?crenelStyle():'',
+      typeof roofPitch==='function'?roofPitch():'',structuresSig('castle')].join('|');
     if(S.castleContent!==castleContent){
       for(const v of S.castleVariants?.values()||[])for(const p of Object.values(v))gl.deleteBuffer(p.b);
       S.castleContent=castleContent;S.castleVariants=new Map();
@@ -1394,16 +1585,22 @@
       for(const [name,part] of [['castleBody','body'],['castleLines','lines'],['castleFront','front'],['castleFrontLines','frontLines']]){S.buf[name]=v[part].b;S.buf[name+'#n']=v[part].n}
       S.sig.castle=cSig;st.castleMs=performance.now()-a;
     }
-    const treeSig=[season,forestTreeSpritesReady,(State.environment||[]).length,envRev,State.seed,urbanRev(),structuresSig('hedges'),
+    const atlasSig=[season,forestTreeSpritesReady,
       Object.keys((typeof boundaryBushSprites!=='undefined'&&boundaryBushSprites[season])||{}).length].join('|');
-    if(S.sig.trees!==treeSig){
-      const a=performance.now(),atlas=buildTreeAtlas();
-      if(atlas)uploadTexture(gl,'atlas',atlas.canvas);
-      upload(gl,'trees',buildTrees(atlas));S.sig.trees=treeSig;st.treesMs=performance.now()-a;
+    if(S.sig.treeAtlas!==atlasSig){
+      S.treeAtlas=buildTreeAtlas();
+      if(S.treeAtlas)uploadTexture(gl,'atlas',S.treeAtlas.canvas);
+      S.sig.treeAtlas=atlasSig;
     }
-    const dSig=[structuresSig('all'),Object.keys(architectureSprites).length,window.ConquerGates?.ensureSprites()||''].join('|');
+    const treeSig=[atlasSig,season==='autumn'?autumnFoliageStep():-1,
+      (State.environment||[]).length,envRev,State.seed,urbanRev(),structuresSig('hedges')].join('|');
+    if(S.sig.trees!==treeSig){
+      const a=performance.now();
+      upload(gl,'trees',buildTrees(S.treeAtlas));S.sig.trees=treeSig;st.treesMs=performance.now()-a;
+    }
+    const dSig=[structuresSig('all'),shopCut,shopFront,Object.keys(architectureSprites).length,window.ConquerGates?.ensureSprites()||''].join('|');
     if(S.sig.decals!==dSig){
-      const a=performance.now(),atlas=buildDecalAtlas();uploadTexture(gl,'decalAtlas',atlas.canvas);
+      const a=performance.now(),atlas=buildDecalAtlas();uploadTexture(gl,'decalAtlas',atlas.canvas);S.decalMap=atlas.map;
       const baked=buildDecals(atlas);
       upload(gl,'decals',baked.decals);
       upload(gl,'nightWindows',baked.lights);
@@ -1413,7 +1610,7 @@
     // Environmental scatter (settlement-scatter.js): the layout follows content, the two-tone
     // side shading follows the camera quarter-turn, so keep one buffer per rotation.
     if(window.ConquerScatter&&window.ConquerScatterModel){
-      const scContent=[season,State.seed,State.relief?.seed,(State.environment||[]).length,urbanRev(),structuresSig('all')].join('|');
+      const scContent=[season,State.stonePaletteId,State.seed,State.relief?.seed,(State.environment||[]).length,urbanRev(),structuresSig('all')].join('|');
       if(S.scatterContent!==scContent){
         const a=performance.now();
         for(const v of S.scatterVariants?.values()||[])gl.deleteBuffer(v.b);
@@ -1429,21 +1626,23 @@
       S.buf.scatter=v.b;S.buf['scatter#n']=v.n;
     }
     // Cutaway interiors: rebuilt on content change, one buffer pair per camera quarter-turn.
-    const cut=State.structures.filter(s=>structureCutaway(s)&&!underConstruction(s));
-    const cutContent=cut.length?[season,S.castleContent,JSON.stringify(State.heraldry||null),!!window.ConquerFurnitureModel,
-      ...cut.map(s=>[s.id,JSON.stringify(s.functions||[]),structureLevel(s),s.x??s.a?.x,s.y??s.a?.y,s.b?.x,s.b?.y,s.angle,s.size,s.r,s.isMastio?1:0].join(':'))].join('|'):'';
+    // W1 porticos join even when closed: their loggia furniture shows through the arches.
+    const cut=State.structures.filter(s=>(structureCutaway(s)||isBuiltPortico(s))&&!underConstruction(s));
+    const cutContent=cut.length?[season,S.castleContent,JSON.stringify(State.heraldry||null),!!window.ConquerFurnitureModel,S.sig.decals,
+      ...cut.map(s=>[s.id,JSON.stringify(s.functions||[]),structureLevel(s),structureCutaway(s)?1:0,s.skin,cutawayCeilingZ(s),s.x??s.a?.x,s.y??s.a?.y,s.b?.x,s.b?.y,s.angle,s.size,s.r,s.isMastio?1:0].join(':'))].join('|'):'';
     if(S.cutContent!==cutContent){
-      for(const v of S.cutVariants?.values()||[]){gl.deleteBuffer(v.main.b);gl.deleteBuffer(v.shell.b);gl.deleteBuffer(v.em.b)}
+      for(const v of S.cutVariants?.values()||[]){gl.deleteBuffer(v.main.b);gl.deleteBuffer(v.shell.b);gl.deleteBuffer(v.em.b);gl.deleteBuffer(v.dec.b)}
       S.cutContent=cutContent;S.cutVariants=new Map();
     }
     if(cut.length){
       const key=rot+'|'+plan;let v=S.cutVariants.get(key);
       if(!v){
         const a=performance.now(),d=buildCutaway(),mk=x=>{const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,x,gl.STATIC_DRAW);return{b,n:x.length}};
-        v={main:mk(d.main),shell:mk(d.shell),em:mk(d.em)};S.cutVariants.set(key,v);st.cutawayMs=performance.now()-a;st.cutawayTris=d.main.length/18;
+        v={main:mk(d.main),shell:mk(d.shell),em:mk(d.em),dec:mk(d.dec)};S.cutVariants.set(key,v);st.cutawayMs=performance.now()-a;st.cutawayTris=d.main.length/18;
       }
       S.buf.cutaway=v.main.b;S.buf['cutaway#n']=v.main.n;S.buf.cutawayShell=v.shell.b;S.buf['cutawayShell#n']=v.shell.n;S.buf.cutawayEm=v.em.b;S.buf['cutawayEm#n']=v.em.n;
-    }else{S.buf['cutaway#n']=0;S.buf['cutawayShell#n']=0;S.buf['cutawayEm#n']=0}
+      S.buf.cutawayDecals=v.dec.b;S.buf['cutawayDecals#n']=v.dec.n;
+    }else{S.buf['cutaway#n']=0;S.buf['cutawayShell#n']=0;S.buf['cutawayEm#n']=0;S.buf['cutawayDecals#n']=0}
     const sun=sunShadowState(),sSig=[sun?Math.round(sun.phase*64):'night',S.sig.buildings,S.castleContent].join('|');
     if(S.sig.shadow!==sSig){const a=performance.now(),sh=buildShadows();upload(gl,'shadow',sh.data);S.shadowAlpha=sh.alpha;S.sig.shadow=sSig;st.shadowMs=performance.now()-a}
     st.ensureMs=performance.now()-t0;
@@ -1456,7 +1655,7 @@
   function useProgram(gl,prog){gl.useProgram(prog.p);gl.bindVertexArray(prog.vao)}
   function setCamera(gl,prog,r){
     const L=prog.loc,plan=isPlanView();
-    gl.uniform1i(L.uRot,((State.view.rotation||0)%4+4)%4);gl.uniform1f(L.uS,U*State.view.scale);
+    {const q=((State.view.rotation||0)%4+4)%4,r=Number.isInteger(q)?[[1,0],[0,1],[-1,0],[0,-1]][q]:[Math.cos(q*Math.PI/2),Math.sin(q*Math.PI/2)];gl.uniform2f(L.uRot,r[0],r[1]);}gl.uniform1f(L.uS,U*State.view.scale);
     gl.uniform2f(L.uV,State.view.x,State.view.y);gl.uniform1f(L.uPlan,plan?1:0);gl.uniform2f(L.uVp,r.width,r.height);
     gl.uniform2f(L.uDepth,plan?-5:-80,plan?30:480);
   }
@@ -1469,6 +1668,15 @@
     const pr=S.prog.mesh;useProgram(gl,pr);setCamera(gl,pr,r);
     bindAttrib(gl,pr,'aPos',S.buf[name],3,24,0);bindAttrib(gl,pr,'aCol',S.buf[name],3,24,12);
     gl.drawArrays(mode,0,n/6);
+  }
+  function drawDecalBuffer(gl,r,name){
+    const n=S.buf[name+'#n'];if(!n||!S.tex.decalAtlas)return;
+    const dp=S.prog.decal;useProgram(gl,dp);setCamera(gl,dp,r);
+    gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,S.tex.decalAtlas);gl.uniform1i(dp.loc.uAtlas,0);
+    gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
+    const b=S.buf[name];bindAttrib(gl,dp,'aPos',b,3,36,0);bindAttrib(gl,dp,'aUV',b,2,36,12);bindAttrib(gl,dp,'aCol',b,4,36,20);
+    gl.drawArrays(gl.TRIANGLES,0,n/9);
+    gl.depthMask(true);gl.disable(gl.BLEND);
   }
   function resizeTo(r){
     const dpr=Math.min(devicePixelRatio||1,2),W=Math.max(1,Math.round(r.width*dpr)),H=Math.max(1,Math.round(r.height*dpr));
@@ -1499,15 +1707,9 @@
     drawMesh(gl,r,'mountains');drawMesh(gl,r,'terrainEdges');drawMesh(gl,r,'buildings');drawMesh(gl,r,'civicCutaway');drawMesh(gl,r,'scatter');drawMesh(gl,r,'castleBody');drawMesh(gl,r,'cutaway');drawMesh(gl,r,'cutawayShell');
     gl.disable(gl.POLYGON_OFFSET_FILL);
     drawMesh(gl,r,'castleLines',gl.LINES);
-    // facade decals: blended over their walls, depth-tested, no depth write
-    if(S.buf['decals#n']&&S.tex.decalAtlas){
-      const dp=S.prog.decal;useProgram(gl,dp);setCamera(gl,dp,r);
-      gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,S.tex.decalAtlas);gl.uniform1i(dp.loc.uAtlas,0);
-      gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
-      const b=S.buf.decals;bindAttrib(gl,dp,'aPos',b,3,36,0);bindAttrib(gl,dp,'aUV',b,2,36,12);bindAttrib(gl,dp,'aCol',b,4,36,20);
-      gl.drawArrays(gl.TRIANGLES,0,S.buf['decals#n']/9);
-      gl.depthMask(true);gl.disable(gl.BLEND);
-    }
+    // facade decals (and the cutaway's windows seen from inside): blended over their walls,
+    // depth-tested, no depth write
+    drawDecalBuffer(gl,r,'decals');drawDecalBuffer(gl,r,'cutawayDecals');
     // trees
     if(S.buf['trees#n']&&S.tex.atlas){
       const sp=S.prog.sprite;useProgram(gl,sp);setCamera(gl,sp,r);
@@ -1565,10 +1767,7 @@
       uploadAtlas(gl);
       let b=S.buf.soldiers;if(!b){b=gl.createBuffer();S.buf.soldiers=b}
       gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,soldiers,gl.STREAM_DRAW);
-      const sp=S.prog.sprite;useProgram(gl,sp);setCamera(gl,sp,r);
-      gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,S.tex.soldierAtlas);gl.uniform1i(sp.loc.uAtlas,0);
-      bindAttrib(gl,sp,'aAnchor',b,3,32,0);bindAttrib(gl,sp,'aCorner',b,2,32,12);bindAttrib(gl,sp,'aSize',b,1,32,20);bindAttrib(gl,sp,'aUV',b,2,32,24);
-      gl.drawArrays(gl.TRIANGLES,0,soldiers.length/8);
+      drawCards(gl,r,b,soldiers.length);
     }
     gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,1);
     drawMesh(gl,r,'castleFront');gl.disable(gl.POLYGON_OFFSET_FILL);drawMesh(gl,r,'castleFrontLines',gl.LINES);
@@ -1601,13 +1800,14 @@
     }
     return A.free.pop();
   }
-  function atlasTile(key,paint){
+  // span > 1: a wider card (vehicles) painted at SOLDIER_SR/span into the same 64px tile.
+  function atlasTile(key,paint,span=1){
     const hit=soldierAtlas.map.get(key);if(hit){hit.used=soldierAtlas.frame;return hit.uv}
     if(!soldierAtlas.canvas){soldierAtlas.canvas=document.createElement('canvas');soldierAtlas.canvas.width=soldierAtlas.canvas.height=FIG_ATLAS;soldierAtlas.g=soldierAtlas.canvas.getContext('2d',{willReadFrequently:true})}
     const i=takeSlot(),x=(i%FIG_COLS)*SOLDIER_TILE,y=Math.floor(i/FIG_COLS)*SOLDIER_TILE;
     const g=soldierAtlas.g;g.clearRect(x,y,SOLDIER_TILE,SOLDIER_TILE);   // CPU canvas: tile readback is cheap
     const keepView=State.view,keepW2s=w2s;
-    State.view={...keepView,scale:SOLDIER_SR};
+    State.view={...keepView,scale:SOLDIER_SR/(span>0?span:1)};
     w2s=()=>({x:x+SOLDIER_TILE/2,y:y+SOLDIER_TILE*SOLDIER_FEET});      // figure painters project only the feet
     try{withRenderContext(g,()=>paint(g,x,y))}
     catch(e){console.error(e)}
@@ -1633,11 +1833,25 @@
   // (look, pose, animation phase bucket, facing); paint() draws it with the figure painters, which
   // only project the feet point. Returns false outside a 3D frame (the caller paints in 2D).
   // mirror: the picture faces left (paint() always draws it facing right; the card flips it).
+  // card (optional): {span, ox} — span scales the card (FIGURE_CARD_U*span wide, painted at
+  // SOLDIER_SR/span, so the key must include it); ox shifts the card sideways on screen by
+  // ox card widths, for pictures whose feet point is not their middle (a wagon and its team).
   let figuresOn=true;   // benchmark switch: false paints civilians in 2D as before
-  function figure(p,z,key,paint,id=key,mirror=false){
+  // Unit world direction that the current view shows pointing right on screen (times facing):
+  // the body axis of a side-on animal that has no heading of its own.
+  function screenAxis(facing=1){
+    const o=w2sRaw({x:0,y:0},0),px=w2sRaw({x:1,y:0},0),py=w2sRaw({x:0,y:1},0);
+    const ax=px.x-o.x,ay=px.y-o.y,bx=py.x-o.x,by=py.y-o.y,det=ax*by-bx*ay||1;
+    const x=by/det,y=-ay/det,l=Math.hypot(x,y)||1,f=facing<0?-1:1;
+    return{x:x/l*f,y:y/l*f};
+  }
+  // card.capsule (optional): {axis:{x,y} half-length vector, z, r, kind} — a horizontal capsule
+  // (animals); without it the figure stands in the vertical person capsule.
+  function figure(p,z,key,paint,id=key,mirror=false,card=null){
     if(!collecting||!figuresOn)return false;
     const ground=Number.isFinite(structureProjectionGroundZ)?structureProjectionGroundZ:terrainElevation(p);
-    collecting.push({p:{x:p.x,y:p.y},z:z+ground,key:'civ|'+key,paint,id,type:'civilian',mirror:!!mirror});
+    const span=card&&card.span>0?card.span:1,ox=card&&Number.isFinite(card.ox)?card.ox:0;
+    collecting.push({p:{x:p.x,y:p.y},z:z+ground,key:'civ|'+key,paint,id,type:'civilian',mirror:!!mirror,span,ox,capsule:card?.capsule||null});
     return true;
   }
   // Prepare poses ahead ([{key,paint}]): painted in idle time, a few at a time, so a phase change
@@ -1680,20 +1894,42 @@
       g.beginPath();g.arc(x+SOLDIER_TILE/2,cy,r,0,Math.PI*2);g.fill();g.stroke();
     }:()=>drawSoldierFigureUnmasked({x:0,y:0},0,type,'FIG_ATLAS',bucket/8,livery));
   }
+  // Capsules (world units, relative to the feet point): people stand in a vertical one; an animal
+  // lies in a horizontal one along its heading (capsule.axis = half-length vector, z = axis height,
+  // r = radius). The capsule gives the card its per-pixel depth (SRC.card) and the picking collider.
+  const PERSON_CAPSULE={seg0:[0,0,CAPSULE.r],seg1:[0,0,CAPSULE.above],r:CAPSULE.r};
+  function cardCapsule(s){
+    const c=s.capsule;if(!c)return PERSON_CAPSULE;
+    const ax=c.axis?.x||0,ay=c.axis?.y||0,z=c.z||0;
+    return{seg0:[-ax,-ay,z],seg1:[ax,ay,z],r:c.r||.1};
+  }
+  const CARD_FLOATS=15;
   function buildSoldiers(list){
     const v=[],out=[];
     const herald=JSON.stringify(State.heraldry||null);
     if(soldierAtlas.heraldry!==herald){clearAtlas();soldierAtlas.heraldry=herald}
     soldierAtlas.frame++;
     for(const s of list){
-      let [u0,v0,u1,v1]=s.paint?atlasTile(s.key,s.paint):soldierTile(s.type,s.phase,s.livery);
+      const span=s.span||1,ox=s.ox||0,cap=cardCapsule(s);
+      let [u0,v0,u1,v1]=s.paint?atlasTile(s.key,s.paint,span):soldierTile(s.type,s.phase,s.livery);
       if(s.mirror)[u0,u1]=[u1,u0];
-      const C=[[-.5,-SOLDIER_FEET,u0,v0],[.5,-SOLDIER_FEET,u1,v0],[.5,1-SOLDIER_FEET,u1,v1],[-.5,1-SOLDIER_FEET,u0,v1]];
-      for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(s.p.x,s.p.y,s.z,cx,cy,SOLDIER_SIZE_U,u,w)}
+      const C=[[ox-.5,-SOLDIER_FEET,u0,v0],[ox+.5,-SOLDIER_FEET,u1,v0],[ox+.5,1-SOLDIER_FEET,u1,v1],[ox-.5,1-SOLDIER_FEET,u0,v1]];
+      for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(s.p.x,s.p.y,s.z,cx,cy,SOLDIER_SIZE_U*span,u,w,...cap.seg0,...cap.seg1,cap.r)}
       if(!s.paint)out.push({id:s.id,type:s.type,x:s.p.x,y:s.p.y,z0:s.z-CAPSULE.below,z1:s.z+CAPSULE.above,r:CAPSULE.r});
+      else if(s.capsule){
+        // Animal collider: the same horizontal capsule (segment from x-ax to x+ax at height z).
+        out.push({id:s.id,type:s.capsule.kind||'animal',x:s.p.x,y:s.p.y,ax:cap.seg1[0],ay:cap.seg1[1],z0:s.z+cap.seg0[2],z1:s.z+cap.seg1[2],r:cap.r});
+      }
     }
     colliders=out;
     return new Float32Array(v);
+  }
+  function drawCards(gl,r,b,floats){
+    const sp=S.prog.card,st=CARD_FLOATS*4;useProgram(gl,sp);setCamera(gl,sp,r);
+    gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,S.tex.soldierAtlas);gl.uniform1i(sp.loc.uAtlas,0);
+    bindAttrib(gl,sp,'aAnchor',b,3,st,0);bindAttrib(gl,sp,'aCorner',b,2,st,12);bindAttrib(gl,sp,'aSize',b,1,st,20);bindAttrib(gl,sp,'aUV',b,2,st,24);
+    bindAttrib(gl,sp,'aSeg0',b,3,st,32);bindAttrib(gl,sp,'aSeg1',b,3,st,44);bindAttrib(gl,sp,'aRad',b,1,st,56);
+    gl.drawArrays(gl.TRIANGLES,0,floats/CARD_FLOATS);
   }
   // Ray through a screen point (CSS px of #c): world points P(z) = s2wAtElevation(sx, sy, z) are collinear.
   function screenRay(sx,sy){
@@ -1701,14 +1937,22 @@
     return{o:{x:a.x,y:a.y,z:0},d:{x:b.x-a.x,y:b.y-a.y,z:10}};
   }
   // Distance between the ray line and a capsule axis segment (closest points of two 3D lines, clamped).
+  // The segment runs from (x-ax, y-ay, z0) to (x+ax, y+ay, z1): vertical for people (ax=ay=0),
+  // horizontal along the body for animals.
   function rayCapsule(ray,c){
-    if(isPlanView()){const dx=ray.o.x-c.x,dy=ray.o.y-c.y;return{dist:Math.hypot(dx,dy),t:c.z1}}
-    const u=ray.d,v={x:0,y:0,z:c.z1-c.z0},w={x:ray.o.x-c.x,y:ray.o.y-c.y,z:ray.o.z-c.z0};
-    const a=u.x*u.x+u.y*u.y+u.z*u.z,b=u.z*v.z,cc=v.z*v.z,d=u.x*w.x+u.y*w.y+u.z*w.z,e=v.z*w.z,den=a*cc-b*b;
-    let sN=den>1e-12?(b*e-cc*d)/den:0,tN=den>1e-12?(a*e-b*d)/den:0;
-    tN=clamp(tN,0,1);sN=(b*tN-d)/a;                                 // re-project onto the ray after clamping
-    const px=ray.o.x+u.x*sN-c.x,py=ray.o.y+u.y*sN-c.y,pz=ray.o.z+u.z*sN-(c.z0+v.z*tN);
-    return{dist:Math.hypot(px,py,pz),t:c.z0+v.z*tN};
+    const ax=c.ax||0,ay=c.ay||0,o={x:c.x-ax,y:c.y-ay,z:c.z0};
+    if(isPlanView()){
+      // Plan: the ray is vertical, distance to the segment's footprint.
+      const sx=2*ax,sy=2*ay,L=sx*sx+sy*sy,k=L>1e-12?clamp(((ray.o.x-o.x)*sx+(ray.o.y-o.y)*sy)/L,0,1):0;
+      return{dist:Math.hypot(ray.o.x-o.x-sx*k,ray.o.y-o.y-sy*k),t:c.z1};
+    }
+    const u=ray.d,v={x:2*ax,y:2*ay,z:c.z1-c.z0},w={x:ray.o.x-o.x,y:ray.o.y-o.y,z:ray.o.z-o.z};
+    const dot=(p,q)=>p.x*q.x+p.y*q.y+p.z*q.z;
+    const a=dot(u,u),b=dot(u,v),cc=dot(v,v),d=dot(u,w),e=dot(v,w),den=a*cc-b*b;
+    let tN=den>1e-12?(a*e-b*d)/den:0;
+    tN=clamp(tN,0,1);const sN=(b*tN-d)/a;                           // re-project onto the ray after clamping
+    const px=ray.o.x+u.x*sN-(o.x+v.x*tN),py=ray.o.y+u.y*sN-(o.y+v.y*tN),pz=ray.o.z+u.z*sN-(o.z+v.z*tN);
+    return{dist:Math.hypot(px,py,pz),t:o.z+v.z*tN};
   }
   function pickSoldier(sx,sy){
     const ray=screenRay(sx,sy);let best=null;
@@ -1722,8 +1966,15 @@
   function drawColliderDebug(){
     ctx.save();ctx.lineWidth=1;
     for(const c of colliders){
-      const ring=z=>circleWorldPoints(c.x,c.y,c.r,16).map(p=>w2sRaw(p,z));
       const hl=S.hover&&S.hover.id===c.id;ctx.strokeStyle=hl?'rgba(255,214,90,.95)':'rgba(120,220,255,.75)';
+      if(c.ax||c.ay){
+        // Horizontal (animal) capsule: a sphere outline at each end and the axis between them.
+        const ends=[{x:c.x-c.ax,y:c.y-c.ay,z:c.z0},{x:c.x+c.ax,y:c.y+c.ay,z:c.z1}];
+        for(const e of ends){const s=w2sRaw(e,e.z);ctx.beginPath();ctx.arc(s.x,s.y,c.r*U*State.view.scale,0,Math.PI*2);ctx.stroke()}
+        const a=w2sRaw(ends[0],ends[0].z),b=w2sRaw(ends[1],ends[1].z);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+        continue;
+      }
+      const ring=z=>circleWorldPoints(c.x,c.y,c.r,16).map(p=>w2sRaw(p,z));
       for(const z of [c.z0,c.z1]){const pts=ring(z);ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.stroke()}
       const l0=w2sRaw({x:c.x-c.r,y:c.y},c.z0),l1=w2sRaw({x:c.x-c.r,y:c.y},c.z1),r0=w2sRaw({x:c.x+c.r,y:c.y},c.z0),r1=w2sRaw({x:c.x+c.r,y:c.y},c.z1);
       ctx.beginPath();ctx.moveTo(l0.x,l0.y);ctx.lineTo(l1.x,l1.y);ctx.moveTo(r0.x,r0.y);ctx.lineTo(r1.x,r1.y);ctx.stroke();
@@ -1737,7 +1988,7 @@
   function residual2D(){
     // Palisades, wood towers and wood gates are 3D (settlement-wood3d.js); without their models
     // they keep the 2.5D drawing (per frame).
-    const items=State.structures.filter(s=>!underConstruction(s)&&(s.type==='palisade'||isWoodTower(s)||isWoodGate(s))&&!window.ConquerWood3D?.handles(s))
+    const items=State.structures.filter(s=>!underConstruction(s)&&(s.type==='palisade'||isWoodTower(s)||isWoodGate(s)||isLonghouse(s))&&!window.ConquerWood3D?.handles(s))
       .sort((a,b)=>worldDepth(a)-worldDepth(b));
     for(const s of items)drawStructure(s);
   }
@@ -1752,10 +2003,11 @@
     ctx.drawImage(S.canvas,0,0,r.width,r.height);
     if(isPlanView())drawGrid();             // 5U lines + 0.5U snap lattice (plan view editor aid)
     residual2D();
-    // Village name over the well (screen-space text in drawPointStructure).
-    if(State.village.founded&&State.village.name)for(const s of State.structures){
+    // Village name over the centre well, quarter names over the others (as drawPointStructure).
+    if(State.village.founded)for(const s of State.structures){
       if(s.type!=='well'||underConstruction(s))continue;
-      const p=w2s({x:s.x,y:s.y},.46);ctx.fillStyle='#f2e6d3';ctx.font='700 12px system-ui';ctx.textAlign='center';ctx.fillText(State.village.name,p.x,p.y-12);
+      const label=wellDisplayName(s);if(!label)continue;
+      const p=w2s({x:s.x,y:s.y},.46);ctx.fillStyle='#f2e6d3';ctx.font=(isVillageCenterWell(s)?'700 12px':'italic 600 11px')+' system-ui';ctx.textAlign='center';ctx.fillText(label,p.x,p.y-12);
     }
     const p=perf();p.world3dBackMs=performance.now()-t1;p.world3dEnsureMs=t1-t0;
     return true;
@@ -1805,15 +2057,13 @@
     const gl=S.gl,r=wrap.getBoundingClientRect();
     gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.depthMask(false);
     gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,1);drawMesh(gl,r,'cutaway');drawMesh(gl,r,'cutawayEm');gl.disable(gl.POLYGON_OFFSET_FILL);
+    drawDecalBuffer(gl,r,'cutawayDecals');gl.depthMask(false);
     // Figures inside the open rooms (occupants, archers at the slits) share the room light.
     const inside=(S.frameFigures||[]).filter(f=>/-room-|:slit:/.test(String(f.id)));
     if(inside.length&&S.tex.soldierAtlas){
       const data=buildSoldiers(inside);let b=S.buf.indoorFigures;if(!b){b=gl.createBuffer();S.buf.indoorFigures=b}
       gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,data,gl.STREAM_DRAW);
-      const sp=S.prog.sprite;gl.useProgram(sp.p);setCamera(gl,sp,r);
-      gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,S.tex.soldierAtlas);gl.uniform1i(sp.loc.uAtlas,0);
-      bindAttrib(gl,sp,'aAnchor',b,3,32,0);bindAttrib(gl,sp,'aCorner',b,2,32,12);bindAttrib(gl,sp,'aSize',b,1,32,20);bindAttrib(gl,sp,'aUV',b,2,32,24);
-      gl.drawArrays(gl.TRIANGLES,0,data.length/8);
+      drawCards(gl,r,b,data.length);
       colliders=S.frameColliders||colliders;
     }
     gl.depthMask(true);
@@ -1866,7 +2116,8 @@
     // Breach rubble (siege) and ladders/assault towers set against the walls (combat).
     // Mill sails and wheels turn every frame (industries).
     // Gate door leaves, portcullis and torch brackets (gate fittings).
-    for(const source of [window.ConquerSiege,window.ConquerCombat,window.ConquerIndustries3D,window.ConquerGates]){
+    // The Mastio's raised entrance: stair and drawbridge leaf (keep entrance).
+    for(const source of [window.ConquerSiege,window.ConquerCombat,window.ConquerIndustries3D,window.ConquerGates,window.ConquerKeepEntrance,window.ConquerTrebuchets]){
       try{for(const m of source?.dynamicMeshes?.()||[])dynamicQueue.push(m)}catch(e){console.error(e)}
     }
     // Event flags, bunting and banners wave in the wind (settlement-events3d.js).
@@ -1908,8 +2159,8 @@
   }
   window.ConquerWorld3D={active,supported,setEnabled,drawBack,drawCastleOverlays,drawFront,
     drawNightLights3D,nightLightsEnabled,setNightLightsEnabled,drawMastioDrapes,drawEmissive,finishFrame,_setActiveForTest,
-    pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,addHouse,figure,prewarmFigures,_setFiguresForTest:on=>{figuresOn=!!on},
-    atlasCanvas:()=>soldierAtlas.canvas,frameFigures:()=>(S.frameFigures||[]).map(f=>({key:f.key||f.type,p:f.p,z:f.z,mirror:f.mirror})),atlasStats:()=>({tiles:soldierAtlas.next,capacity:FIG_COLS*FIG_COLS,resets:soldierAtlas.resets,painted:soldierAtlas.painted}),
+    pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,addHouse,addOutbuilding,figure,screenAxis,prewarmFigures,_setFiguresForTest:on=>{figuresOn=!!on},FIGURE_CARD_U:SOLDIER_SIZE_U,FIGURE_FEET:SOLDIER_FEET,
+    atlasCanvas:()=>soldierAtlas.canvas,frameFigures:()=>(S.frameFigures||[]).map(f=>({key:f.key||f.type,p:f.p,z:f.z,mirror:f.mirror,span:f.span||1,ox:f.ox||0,id:f.id,capsule:f.capsule||null})),atlasStats:()=>({tiles:soldierAtlas.next,capacity:FIG_COLS*FIG_COLS,resets:soldierAtlas.resets,painted:soldierAtlas.painted}),
     invalidate:()=>{S.sig={};S.contentDirty=true},
     _debugBake:bakeGround,
     status:()=>({enabled,supported:supported(),failed:S.failed,stats:{...S.stats},sig:{...S.sig},buffers:Object.fromEntries(Object.entries(S.buf).filter(([k])=>k.endsWith('#n')))})};

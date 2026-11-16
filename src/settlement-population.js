@@ -51,38 +51,121 @@ function sunShadowState(){
   };
 }
 function towerRoofRise(s){
+  // A hoarding on the crenellated top rises above it to its lean-to ridge (build_hoarding.py).
+  if(s?.type==='tower'&&towerInnerRoofMounted(s)){
+    const g=towerInnerRoofGeometry(s);
+    return Math.max(g?g.apexZ-g.h:0,towerHoardingMounted(s)?.69:0);
+  }
+  if(s?.type==='tower'&&towerRoofStyle(s)==='battlement'&&towerHoardingMounted(s))return .69;
   if(!s||s.type!=='tower'||towerRoofStyle(s)!=='pitched')return 0;
-  const span=s.shape==='round'?Number(s.r||.5)*2:Number(s.size||1);
-  return s.shape==='round'
-    ?clamp(span*.53,.54,1.04)
-    :clamp(span*.45,.48,.92);
+  // Feudal roof pitch (roofPitch()): the slope rises from the eave over the roof's half span, the
+  // radius on round towers, the shorter half side on square ones.
+  const overhang=.07,d=s.shape==='round'?null:rectDims(s);
+  const half=s.shape==='round'?Number(s.r||.5)+overhang:Math.min(d.w,d.h)/2+overhang;
+  return roofPitchTan()*half;
 }
 function towerVisualTopHeight(s){
   if(!s||s.type!=='tower')return structureHeight(s);
   return structureHeight(s)+towerRoofRise(s);
 }
+function towerRoofApex(s){return s?.shape==='dee'?deeTowerRoofApex(s):{x:s.x,y:s.y}}
 function towerRoofFootprintPoints(s){
   if(!s||s.type!=='tower')return[];
   const overhang=.07;
   if(s.shape==='round')return circleWorldPoints(s.x,s.y,Number(s.r||.5)+overhang,24);
+  if(isOrientedTower(s))return orientedTowerOutline(s,-overhang);
   const d=rectDims(s);
   return rectWorldPoints(s.x,s.y,d.w+overhang*2,d.h+overhang*2,s.angle||0);
 }
+// Inner roof (BC-251105-05): the outline drawn TOWER_INNER_ROOF_INSET in from the face (past the
+// merlons' inner face, about 0.2 U, and a 0.22 U wall-walk), raised on a TOWER_INNER_ROOF_KERB high
+// stone kerb, then a pyramid (square / oriented) or a cone (round) at the feudal pitch to the apex.
+// Too small a ring (inner half span under 0.25 U, i.e. T1 towers) means no inner roof: `check`
+// only asks whether it fits. Returns {ring,h,eaveZ,apex,tail,apexZ,half} or null.
+// The ring is small: at least ~58° of pitch so the roof stands clear of the merlons.
+// The D tower's ring is long (a straight rear part, then the half round): a single apex over the
+// half round would leave the rear slopes almost flat, so its roof runs on a ridge from `tail` (a
+// half span in from the rear: hipped end) to `apex` (half cone over the round front). Elsewhere
+// tail = apex, a pyramid or a cone. All slopes rise at the same pitch.
+const TOWER_INNER_ROOF_MIN_TAN=1.6,TOWER_INNER_ROOF_INSET=.42,TOWER_INNER_ROOF_KERB=.14,TOWER_INNER_ROOF_MIN_HALF=.25;
+function towerInnerRoofGeometry(s,check=false){
+  if(!s||s.type!=='tower'||isWoodTower(s)||s.shape==='half')return null;
+  if(!check&&!towerInnerRoofMounted(s))return null;
+  const k=TOWER_INNER_ROOF_INSET,round=s.shape==='round';
+  let ring,half;
+  if(round){half=Number(s.r||.5)-k;ring=half>0?circleWorldPoints(s.x,s.y,half,24):[]}
+  else if(isOrientedTower(s)){const d=orientedTowerDims(s);half=Math.min(d.w,d.h)/2-k;ring=half>0?orientedTowerOutline(s,k):[]}
+  else{const d=rectDims(s);half=Math.min(d.w,d.h)/2-k;ring=half>0?rectWorldPoints(s.x,s.y,d.w-k*2,d.h-k*2,s.angle||0):[]}
+  if(!(half>=TOWER_INNER_ROOF_MIN_HALF)||ring.length<3)return null;
+  if(check)return true;
+  const h=structureHeight(s),eaveZ=h+TOWER_INNER_ROOF_KERB,apex=towerRoofApex(s);
+  let tail=apex;
+  if(s.shape==='dee'){
+    const d=orientedTowerDims(s),front=d.w/2-d.h/2;
+    tail=orientedTowerWorld(s,[[Math.min(front,-d.w/2+k+half),0]])[0];
+  }
+  return{ring,h,eaveZ,apex,tail,apexZ:eaveZ+Math.max(roofPitchTan(),TOWER_INNER_ROOF_MIN_TAN)*half,half};
+}
+// Roof faces, one per ring edge: each eave point climbs to its nearest point on the ridge
+// tail→apex (a triangle where both ends reach the same ridge point, a quad along the ridge).
+// [{i,pts:[{p,z}]}], shared by the 2.5D painter and the 3D mesh.
+function towerInnerRoofFaces(g){
+  if(!g)return[];
+  const a=g.tail||g.apex,b=g.apex,dx=b.x-a.x,dy=b.y-a.y,L2=dx*dx+dy*dy;
+  const t=p=>L2<1e-9?1:Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/L2));
+  const at=u=>u>=1?b:u<=0?a:{x:a.x+dx*u,y:a.y+dy*u};
+  const n=g.ring.length,out=[];
+  for(let i=0;i<n;i++){
+    const p=g.ring[i],q=g.ring[(i+1)%n],tp=t(p),tq=t(q);
+    const pts=[{p,z:g.eaveZ},{p:q,z:g.eaveZ},{p:at(tq),z:g.apexZ}];
+    if(Math.abs(tp-tq)>1e-6)pts.push({p:at(tp),z:g.apexZ});
+    out.push({i,pts});
+  }
+  return out;
+}
+// Square stone towers choose the shape of the pitched roof (variant `roofShape`): a pyramid, two
+// slopes on a ridge with stone gable ends, or four slopes on a ridge half as long as the roof (hip).
+// The ridge runs along the tower's local x axis at the pyramid's apex height. Faces keep the
+// pyramid's edge order (0: front slope, 1: +x end, 2: back slope, 3: -x end) so shading matches.
+function towerRoofShape(s){return s?.type==='tower'&&(s.shape||'square')==='square'&&!isWoodTower(s)&&towerRoofStyle(s)==='pitched'?structureVariant(s,'roofShape')||'pyramid':'pyramid'}
+function squareTowerRoofGeometry(s){
+  const fp=towerRoofFootprintPoints(s);if(fp.length!==4)return null;
+  const shape=towerRoofShape(s),h=structureHeight(s),ridgeH=towerVisualTopHeight(s);
+  const lerp=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t}),e0=lerp(fp[0],fp[3],.5),e1=lerp(fp[1],fp[2],.5);
+  const t=shape==='gable'?0:shape==='hip'?.25:.5,ridgeA=lerp(e0,e1,t),ridgeB=lerp(e0,e1,1-t);
+  const eave=p=>({p,z:h}),ridge=p=>({p,z:ridgeH}),end=shape==='gable'?'gable':'roof';
+  return{shape,h,ridgeH,footprint:fp,ridgeA,ridgeB,faces:[
+    {i:0,kind:'roof',pts:[eave(fp[0]),eave(fp[1]),ridge(ridgeB),ridge(ridgeA)]},
+    {i:1,kind:end,pts:[eave(fp[1]),eave(fp[2]),ridge(ridgeB)]},
+    {i:2,kind:'roof',pts:[eave(fp[2]),eave(fp[3]),ridge(ridgeA),ridge(ridgeB)]},
+    {i:3,kind:end,pts:[eave(fp[3]),eave(fp[0]),ridge(ridgeA)]}
+  ].map(f=>({...f,pts:f.pts.filter((q,k,a)=>k===0||q.p!==a[k-1].p)}))};
+}
 function gateRoofRise(s){
   if(!s||s.type!=='gate'||gateRoofStyle(s)!=='pitched')return 0;
-  return .66;
+  if(gateTimberUpper(s))return GATE_TIMBER_RIDGE-structureHeight(s);
+  // Feudal roof pitch over the half span: across the passage on the large gate, along it on the
+  // small one (whose ridge turns, see gateRoofGeometry).
+  const d=rectDims(s),overhang=.08;
+  return roofPitchTan()*((isSmallGate(s)?d.w:d.h)/2+overhang);
 }
 function gateRoofGeometry(s){
   if(!s||s.type!=='gate'||gateRoofStyle(s)!=='pitched')return null;
-  const d=rectDims(s),overhang=.08,h=structureHeight(s),rise=gateRoofRise(s);
-  const hx=d.w/2+overhang,hy=d.h/2+overhang,ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0);
+  const d=rectDims(s),overhang=.08,h=structureHeight(s),rise=gateRoofRise(s),jetty=gateTimberUpper(s)?GATE_JETTY:0;
+  const hx=d.w/2+jetty+overhang,hy=d.h/2+overhang,ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0);
   const local=(x,y)=>({x:s.x+x*ca-y*sa,y:s.y+x*sa+y*ca});
-  const c0=local(-hx,-hy),c1=local(hx,-hy),c2=local(hx,hy),c3=local(-hx,hy);
+  const c0=local(-hx,-hy),c1=local(hx,-hy),c2=local(hx,hy),c3=local(-hx,hy),footprint=[c0,c1,c2,c3];
+  // The small gate (stone or timber storey) turns the ridge across the passage: slopes over the
+  // front and the rear, gables on the flanks (same corner roles: ridgeA between c3 and c0, ridgeB
+  // between c1 and c2).
+  if(isSmallGate(s))return{h,ridgeH:h+rise,c0,c1:c3,c2:c2,c3:c1,ridgeA:local(0,-hy),ridgeB:local(0,hy),footprint};
   const ridgeA=local(-hx,0),ridgeB=local(hx,0);
-  return{h,ridgeH:h+rise,c0,c1,c2,c3,ridgeA,ridgeB,footprint:[c0,c1,c2,c3]};
+  return{h,ridgeH:h+rise,c0,c1,c2,c3,ridgeA,ridgeB,footprint};
 }
 function gateVisualTopHeight(s){
   if(!s||s.type!=='gate')return structureHeight(s);
+  // A hoarding on the crenellated top rises above it to its lean-to ridge (build_hoarding.py).
+  if(gateRoofStyle(s)==='battlement'&&gateHoardingMounted(s))return structureHeight(s)+.69;
   return structureHeight(s)+gateRoofRise(s);
 }
 function structureVisualTopHeight(s){
@@ -93,7 +176,7 @@ function structureVisualTopHeight(s){
 function shadowStructureHeight(s){
   if(s?.type==='house')return houseStructureHeight(s);
   if(s?.type==='built'){const g=builtRoofGeometry(s);return g?.ridgeH||structureHeight(s)}
-  if(s?.type==='tower'&&towerRoofStyle(s)==='pitched')return towerVisualTopHeight(s);
+  if(s?.type==='tower'&&(towerRoofStyle(s)==='pitched'||towerInnerRoofMounted(s)))return towerVisualTopHeight(s);
   if(s?.type==='gate'&&gateRoofStyle(s)==='pitched')return gateVisualTopHeight(s);
   return structureHeight(s);
 }
@@ -111,7 +194,7 @@ const shadowCasterGeometryCache=new Map();
 function shadowCasterSignature(s){
   return[
     s.id,s.type,s.x,s.y,s.angle,s.w,s.h,s.r,s.size,s.level,s.tier,s.houseLevel,s.width,
-    s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.roofStyle,s.baseStyle,s.material,s.woodStyle,s.woodRoof,
+    s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.roofStyle,s.machicolationStyle,s.bartizan,s.bell,s.innerRoof,s.signalFire,s.signalFireSpent,s.lookout,s.outpost?.readyDay,s.roofShape,s.baseStyle,s.material,s.woodStyle,s.woodRoof,
     s.type==='house'&&(s.auto||s.urbanRedeveloped)&&houseLevel(s)>=3?urbanRevision:0
   ].join('|');
 }

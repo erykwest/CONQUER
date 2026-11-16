@@ -20,6 +20,11 @@ Goal: many development commits and CI checks, **one automatic production deploym
 - La protezione `main` deve richiedere il check `Context sync` per bloccare realmente PR incomplete; senza required status check il fallimento è solo segnalato. Non aggirare la regola con un merge manuale.
 - Questa policy vale anche quando il lavoro viene svolto da assistenti/agent: **chi scrive il codice aggiorna la piramide**, non l'utente.
 
+## Verifica visiva: usare il Lab, non catture in gioco
+- Per controllare un asset o un renderer (modelli 3D, tende, accampamenti, livree, varianti) gli agent aprono l'**Asset Lab** (`/figures-lab.html`, o `/lab`) e ispezionano lì l'elemento, oppure usano `ConquerAssetAudit.inspect(id, stato)` / `ConquerAssetAudit.sheet({family})` dalla console. **Non** si avvia una partita né si costruiscono scene in gioco solo per fare screenshot: è lento e non ripetibile.
+- **Ogni nuovo modello (o registro di modelli, o composizione come un accampamento) va inserito nel Lab nella stessa PR in cui nasce**: un modello che non compare nel catalogo non è finito.
+- Se l'elemento non c'è nel Lab, prima lo si aggiunge al catalogo (`src/asset-catalog.js`, `MODEL_SOURCES`, e lo script del registro in `figures-lab.html`), poi lo si verifica. La cattura in gioco serve solo per comportamenti che il Lab non può mostrare (simulazione, IA, input).
+
 ## Asset visivi: audit obbligatorio
 - Ogni PR che aggiunge o cambia un asset visivo (SVG/PNG, modelli 3D, varianti di torri/mura/porte, renderer di cantiere, danno o cutaway) esegue l'audit del Lab (`node qa/asset-audit.mjs`), rivede i fogli provini e aggiorna `qa/asset-audit-baseline.json` dopo la revisione. Procedura completa: [docs/ASSET-LAB-AUDIT.md](docs/ASSET-LAB-AUDIT.md).
 

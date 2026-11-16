@@ -34,8 +34,9 @@ Definizioni: `src/settlement-civic-annexes.js` → `CIVIC_ANNEX_CATALOG`. `level
 | Mercato | `loggia` | L2 | 2 | 3×1.5 | Annesso pubblico |
 | Mercato | `warehouse` | L3 | 2 | 2.5×2 | Annesso pubblico |
 | Mercato | `shop` | L3 | 4 | 1.75×1.5 | Annesso pubblico |
+| Municipio | `kitchenGarden` | L1 | 2 | 3×2 | Orto di corte: terreno aperto entro 7U, **resa reale** 2 cibo/giorno lavorativo |
 
-**Totale: 14 voci, di cui 13 costruibili e 1 intrinseca.** La `plaza` non ha per ora un catalogo di annessi: è un edificio civico pubblico a sé, 5×5 U, con `civicLevel` L1–L3 e `plazaVariant` `paved`, `fountain`, `garden`. Anche `training` è civico, ma non usa attualmente i livelli L1–L3.
+**Totale: 15 voci, di cui 14 costruibili e 1 intrinseca** (la tabella non elenca `square` e `almshouse` della chiesa). L'orto di corte è il primo annesso con un effetto economico: `kitchenGardens()` + `KITCHEN_GARDEN_FOOD_PER_DAY` in `settlement-economy.js`. La `plaza` non ha per ora un catalogo di annessi: è un edificio civico pubblico a sé, 5×5 U, con `civicLevel` L1–L3 e `plazaVariant` `paved`, `fountain`, `garden`. Anche `training` è civico, ma non usa attualmente i livelli L1–L3.
 
 ## 3. Mappa dei moduli: dove intervenire
 

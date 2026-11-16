@@ -72,9 +72,9 @@ test('central valid point placement',()=>{
 test('whole footprint, not just centre, must remain in whitezone',()=>{
   const h=harness();assert.equal(h.check({type:'market',x:149.4,y:100,w:2,h:2}).ok,false);
 });
-test('unaffordable placement is invalid',()=>{
+test('ghost placement remains valid with no construction resources',()=>{
   const h=harness();h.setCash(0);
-  assert.match(h.check({type:'market',x:100,y:100,w:2,h:2}).reason,/Insufficient/);
+  assert.equal(h.check({type:'market',x:100,y:100,w:2,h:2}).ok,true);
 });
 test('terrain obstruction makes ghost invalid',()=>{
   const h=harness();h.setBlocked(true);
@@ -96,9 +96,11 @@ test('attached subtorri remain valid when their parent rotates',()=>{
   assert.equal(h.check({...h.State.structures[0],angle:Math.PI/4},
     {ignoreId:'parent',checkCost:false}).ok,true);
 });
-test('existing village cannot found a second well',()=>{
-  const h=harness();h.State.village.founded=true;
-  assert.equal(h.check({type:'well',x:100,y:100}).ok,false);
+test('only one founding well; a founded village may build further wells',()=>{
+  const h=harness();h.State.structures.push({id:'well',type:'well',x:100,y:100});
+  assert.equal(h.check({type:'well',x:120,y:120}).ok,false,'unnamed founding well blocks a second one');
+  h.State.village.founded=true;
+  assert.equal(h.check({type:'well',x:120,y:120}).ok,true,'later wells are expansion centres');
 });
 test('road crossing whitezone boundary is invalid',()=>{
   const h=harness();
@@ -146,7 +148,7 @@ function mousePlacementHarness(type,options={}){
   const helpers=extractSpan(castle,'function orientedToolSpec(){','function boundaryPoint(');
   const down=extractSpan(app,"canvas.addEventListener('pointerdown',e=>{",'\nlet panFrame=0');
   const move=extractSpan(app,"canvas.addEventListener('pointermove',e=>{",'\nfunction finishCanvasPan()');
-  const code="let pan=null;function structureLabel(s){return s.type}\n"+helpers+'\n'+down+'\n'+move;
+  const code="let pan=null,orbit=null;function structureLabel(s){return s.type}\n"+helpers+'\n'+down+'\n'+move;
   vm.runInNewContext(code,context,{filename:'builder-orientation-events.js'});
   return{State,listeners,messages,allow:v=>{allowBuild=v}};
 }

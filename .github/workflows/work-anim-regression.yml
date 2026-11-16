@@ -1,4 +1,9 @@
 name: Work animation regression
+
+# Abort superseded PR runs of this workflow (never cancel scheduled/main runs).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 on:
   pull_request:
     branches: [main]
@@ -7,9 +12,12 @@ on:
       - 'src/settlement-industries.js'
       - 'src/settlement-population-figures.js'
       - 'src/settlement-render.js'
+      - 'src/settlement-shop-cutaway.js'
       - 'qa/work-anim-regression.cjs'
       - '.github/workflows/work-anim-regression.yml'
   workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   work-anim:
     runs-on: ubuntu-latest

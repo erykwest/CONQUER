@@ -16,8 +16,8 @@ const REQUIRED = Object.freeze([
 
 function isOperational(path) {
   return (
-    /^(src|qa|camp|assets|public|scripts|tools|server|supabase)\//.test(path) ||
-    /^(index\.html|package(-lock)?\.json|vercel\.json)$/.test(path)
+    /^(src|qa|camp|assets|public|scripts|tools|server|supabase|api|tests|crime|march|lab|layouts)\//.test(path) ||
+    /^(index\.html|figures-lab\.html|package(-lock)?\.json|vercel\.json)$/.test(path)
   ) && !path.endsWith('.md');
 }
 
@@ -35,7 +35,8 @@ function gitChangedFiles(base, head) {
   if (!/^[a-f0-9]{40}$/.test(base) || !/^[a-f0-9]{40}$/.test(head)) {
     throw new Error('Expected 40-char commit SHA for base and head');
   }
-  const out = execFileSync('git', ['diff', '--name-only', '--diff-filter=ACMRT', base + '...' + head],
+  // D is included: deleting code/tests/assets is an operational change too.
+  const out = execFileSync('git', ['diff', '--name-only', '--diff-filter=ACDMRT', base + '...' + head],
     { encoding: 'utf8', maxBuffer: 4 * 1024 * 1024 });
   return out.split(/\r?\n/).filter(Boolean);
 }

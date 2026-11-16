@@ -36,7 +36,7 @@
   }
   function castleSource(s){
     const C=window.ConquerCastle3D;
-    if(!C?.structureWorld||!['tower','gate','wall','built'].includes(s.type)||call('isWoodTower',s)||call('isWoodGate',s))return null;
+    if(!C?.structureWorld||!['tower','gate','wall','built'].includes(s.type)||call('isWoodTower',s)||call('isWoodGate',s)||call('isLonghouse',s))return null;
     const {tris,tags}=C.structureWorld(s),pos=[],col=[],tag=[];
     // Stone gates already come carved (ConquerGates.addGateBody: piers, vault, leaves);
     // only a solid block needs its passage cut here.
@@ -131,6 +131,23 @@
       :/^roof/.test(keyOf.get(hex)||'roof')?'roof':'body');
     return{pos:mesh.pos,col:mesh.col,tag,flat:false,ground};
   }
+  // Kit house (settlement-house3d.js, World 3D): the finished house is the Blender kit on the
+  // house plan, already tagged (walls and openings, timber frame ahead of the infill, gables,
+  // roofs and chimneys last); yard outbuildings come from the plain house as before.
+  function kitHouseSource(s){
+    const K=window.ConquerHouse3D,M=window.ConquerMesh3D,W3=window.ConquerWorld3D;
+    if(s.type!=='house'||!K?.handles?.(s)||!M||!W3?.active?.())return null;
+    const mesh=K.geometry(s);if(!mesh)return null;
+    const pos=mesh.pos.slice(),col=mesh.col.map((_,t)=>M.shadedHex(mesh,t)),tag=mesh.tag.slice();
+    const entry=urbanHouseGeometry().find(e=>e.house===s||e.house.id===s.id),winter=typeof State!=='undefined'&&State.season==='winter';
+    let cur='body';
+    const m={tag(t){cur=t==='roof'?'roof':'body'},
+      face(vs,hex){for(let i=1;i<vs.length-1;i++){for(const p of [vs[0],vs[i],vs[i+1]])pos.push(p.x,p.y,p.z);col.push(hex);tag.push(cur)}},
+      prism(pts,z0,z1,top,sideA,sideB){m.face(pts.map(p=>({x:p.x,y:p.y,z:z1})),top);
+        for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length];m.face([{x:a.x,y:a.y,z:z0},{x:b.x,y:b.y,z:z0},{x:b.x,y:b.y,z:z1},{x:a.x,y:a.y,z:z1}],i%2?sideA:sideB)}}};
+    for(const part of entry?.parts||[])if(part.kind==='outbuilding'&&W3.addOutbuilding)W3.addOutbuilding(m,s,part,winter);
+    return{pos,col,tag,flat:true,ground:call('terrainElevation',call('structureCenter',s))||0};
+  }
   // Urban house (all levels, jetties, turrets, dormers, yard outbuildings): stone ground
   // floor, timber-framed plastered upper floors, roofs and gables.
   function houseSource(s){
@@ -177,7 +194,7 @@
     if(!s||s.type==='ruin')return null;
     const site=s.construction;
     if(site)delete s.construction;
-    try{return castleSource(s)||civicSource(s)||houseSource(s)||woodSource(s)||palisadeSource(s)}
+    try{return castleSource(s)||civicSource(s)||kitHouseSource(s)||houseSource(s)||woodSource(s)||palisadeSource(s)}
     finally{if(site)s.construction=site}
   }
   // Stone castle parts, civic buildings with a model, and urban houses (village-grown, auto).
@@ -186,7 +203,7 @@
     if(s.type==='house')return true;
     if(s.auto)return false;
     if(s.type==='palisade')return !!s.a&&!!s.b;
-    if(['tower','gate'].includes(s.type)&&(call('isWoodTower',s)||call('isWoodGate',s)))return !!window.ConquerWood3D?.modelKey?.(s);
+    if(['tower','gate','built'].includes(s.type)&&(call('isWoodTower',s)||call('isWoodGate',s)||call('isLonghouse',s)))return !!window.ConquerWood3D?.modelKey?.(s);
     if(['tower','gate','wall','built'].includes(s.type))return true;
     return !!window.ConquerCivic3D?.has?.(s)&&s.type!=='civicAnnex';
   }
@@ -320,9 +337,9 @@
   // ---------- cache and drawing
   const cache=new Map();
   function geomKey(s){
-    return[s.type,s.x,s.y,s.angle,s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.size,s.r,s.w,s.h,s.level,s.civicLevel,s.houseLevel,s.roofStyle,s.baseStyle,
+    return[s.type,s.x,s.y,s.angle,s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.size,s.r,s.w,s.h,s.level,s.civicLevel,s.houseLevel,s.roofStyle,s.machicolationStyle,s.bartizan,s.bell,s.innerRoof,s.signalFire,s.roofShape,s.baseStyle,
       s.material,s.woodStyle,s.woodRoof,s.tier,s.width,s.flip?1:0,
-      s.masonryMaterial,s.groundZ,State.season,State.view?.rotation||0].join('|');
+      s.masonryMaterial,s.groundZ,State.season,State.visualPalette,State.stonePaletteId,State.view?.rotation||0].join('|');
   }
   function entry(s){
     const key=geomKey(s);let e=cache.get(s.id);

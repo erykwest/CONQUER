@@ -18,21 +18,60 @@
     }
     return{x:100,y:100};
   }
+  // L3 workshops (settlement-shop-cutaway.js): one L3 house per trade, closed and opened.
+  function shopVariants(){
+    const T=window.ConquerShopCutaway?.TRADES,K=window.ConquerCommerce?.WORKSHOP_KINDS;
+    return T?Object.keys(T).map(kind=>({id:'bottega-l3-'+kind,label:'Bottega L3 · '+(K?.[kind]?.label||kind),family:'Botteghe L3',category:'Edifici',
+      // Door side towards the default camera: the thumbnail shows the street front and its sign.
+      spec:{type:'house',auto:true,houseLevel:3,w:1.5,h:1,doorSide:1,groundZ:0,shopKind:kind}})):[];
+  }
   // Every variant of the gallery (wood ones too: the 2.5D path draws them) plus a built section.
   function variants(){
     const G=SP().GALLERY;
     return[...G.towers.map(r=>['Torri',r]),...G.walls.map(r=>['Mura',r]),
       ['Mura',['Sezione costruita T2',{type:'built',tier:2,level:1}]],
-      ['Mura',['Sala larga 2U',{type:'built',span:'wide',tier:2,level:2,flip:true,functions:['throneHall']}]],...G.gates.map(r=>['Porte',r])]
-      .map(([family,[label,spec]])=>({id:slug(label),label,family,spec}));
+      ['Mura',['Sezione porticata L2',{type:'built',tier:2,level:2,skin:'arcade',functions:['stables',null]}]],
+      ['Mura',['Sala larga 2U',{type:'built',span:'wide',tier:2,level:2,flip:true,functions:['throneHall']}]],
+      // Infirmary wards (W1 section on both floors, W2 hall): the cutaway shows the furnished rooms.
+      ['Mura',['Infermeria · sezione L2',{type:'built',tier:2,level:2,functions:['infirmary','infirmary']}]],
+      ['Mura',['Infermeria · sala larga',{type:'built',span:'wide',tier:2,level:2,flip:true,functions:['infirmary']}]],
+      // A W3 tower with an attached W1 subtower whose upper room is a latrine (garderobe on its free face).
+      ['Torri',['Grande quadrata L3 + sottotorre W1 latrina',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:2,roofStyle:'battlement',
+        attach:[{dx:1.45,dy:0,spec:{type:'tower',shape:'square',material:'stone',level:2,tier:1,size:1,roofStyle:'battlement',functions:[null,'latrine']}}]}]],
+      // Military stables (settlement-siege.js stableUnits): stall rows down the long room.
+      ['Mura',['Scuderia militare · sezione L1',{type:'built',tier:2,level:1,functions:['stables']}]],
+      // Timber longhouse (settlement-wood3d.js): W1 / W2 span, ground floor only, the stone section's rooms.
+      ['Mura',['Long house W1',{type:'built',material:'wood',level:1}]],
+      ['Mura',['Long house W2',{type:'built',material:'wood',span:'wide',level:1,flip:true}]],
+      // Roof covers (BC-251105-09): thatch and turf beside the default shingles, smoke hole on the ridge.
+      ['Mura',['Long house W1 · paglia',{type:'built',material:'wood',level:1,roofCover:'thatch'}]],
+      ['Mura',['Long house W1 · zolle',{type:'built',material:'wood',level:1,roofCover:'turf'}]],
+      ['Mura',['Long house W2 · paglia',{type:'built',material:'wood',span:'wide',level:1,flip:true,roofCover:'thatch'}]],
+      ['Mura',['Long house W2 · zolle',{type:'built',material:'wood',span:'wide',level:1,flip:true,roofCover:'turf'}]],
+      ['Mura',['Long house W1 · scuderia',{type:'built',material:'wood',level:1,functions:['stables']}]],
+      // Lean-to against the inner face of an H2 wall (settlement-lean-to.js): single-pitch roof.
+      // Timber + thatch by default; stone and brick on request.
+      ['Mura',['Addossato alle mura W1 · legno',{type:'built',leanTo:true,leanMaterial:'wood',leanSide:1,flip:true,level:1,functions:[]}]],
+      ['Mura',['Addossato alle mura W1 · legno · scuderia',{type:'built',leanTo:true,leanMaterial:'wood',leanSide:-1,level:1,functions:['stables']}]],
+      ['Mura',['Addossato alle mura W1 · pietra',{type:'built',leanTo:true,leanMaterial:'stone',leanSide:1,flip:true,level:1,functions:[]}]],
+      ['Mura',['Addossato alle mura W1 · mattoni',{type:'built',leanTo:true,leanMaterial:'brick',masonryMaterial:'brick',leanSide:1,flip:true,level:1,functions:[]}]],
+      ['Mura',['Long house W2 · sala comune',{type:'built',material:'wood',span:'wide',level:1,flip:true,functions:['commonHall']}]],...G.gates.map(r=>['Porte',r])]
+      .map(([family,[label,spec]])=>({id:slug(label),label,family,spec})).concat(shopVariants());
   }
   function find(id){const v=variants().find(x=>x.id===id);if(!v)throw new Error('asset stage: unknown variant '+id);return v}
   function states(id){
-    const {spec}=find(id),s=SP().galleryStructure(spec,0,0);
+    const {spec}=find(id);
+    // Open front by day (intact), shutters closed (night, Sunday), cutaway when selected.
+    if(spec.type==='house')return[{id:'intact',label:'Nel gioco',group:'intatto'},{id:'closed',label:'Bottega chiusa',group:'chiusa'},{id:'cutaway',label:'Cutaway',group:'cutaway'}];
+    const s=SP().galleryStructure(spec,0,0);
     const out=[{id:'intact',label:'Nel gioco',group:'intatto'}];
     for(const p of BUILD_STEPS)out.push({id:'build-'+Math.round(p*100),label:'Cantiere '+Math.round(p*100)+'%',group:'costruzione',progress:p});
     for(const [phase] of SP().galleryPhases(spec).slice(1))out.push({id:'damage-'+slug(phase),label:phase,group:'danno',phase});
     if(cutawayEligible(s))out.push({id:'cutaway',label:'Cutaway',group:'cutaway'});
+    // Pitched stone roofs: one state per non-default feudal pitch (ROOF_PITCHES, 45° is "intact").
+    const pitched=s.type==='tower'&&!isWoodTower(s)&&towerRoofStyle(s)==='pitched'||
+      s.type==='gate'&&gateRoofStyle(s)==='pitched'&&!gateTimberUpper(s);
+    if(pitched)for(const p of ROOF_PITCHES)if(p!==45)out.push({id:'pitch-'+p,label:'Tetto '+p+'°',group:'pendenza',pitch:p});
     return out;
   }
   // Fixed light, weather and clock: two captures of the same state are comparable.
@@ -55,6 +94,11 @@
   function apply(spec,state,id){
     // A fixed id: collapse seeds (and so the rubble heaps) derive from it.
     const s={...SP().galleryStructure(spec,spot.x,spot.y),id:'assetlab-'+id};State.structures.push(s);
+    // Attached subtowers (spec.attach: [{dx,dy,spec}]): staged with their parent, which they follow
+    // in cutaway (structureCutaway).
+    (spec.attach||[]).forEach((a,i)=>State.structures.push({...SP().galleryStructure(a.spec,spot.x+a.dx,spot.y+a.dy),id:'assetlab-'+id+'-sub'+i,parentTowerId:s.id}));
+    // Houses are drawn from the urban geometry cache (walls, timber frame, windows): rebuild it.
+    if(s.type==='house')invalidateUrbanGeometry();
     if(state.progress!=null){
       // 10 days of work around the fixed clock, so progress is exactly the one asked for.
       s.construction={startedDay:State.clock.day-state.progress*10,completeDay:State.clock.day+(1-state.progress)*10};
@@ -66,10 +110,22 @@
       // Settled rubble, as a saved game reloads it, not the blocks still falling.
       window.ConquerSiege?.restore(JSON.parse(JSON.stringify(State.siege)));
     }
-    if(state.id==='cutaway')s.cutaway=true;
+    if(state.id==='cutaway')s[s.type==='house'?'shopCutaway':'cutaway']=true;
+    if(state.id==='closed')s.shopClosed=true;
     return State.structures.find(x=>x.id===s.id)||State.structures[0]||null;
   }
   const STRUCTURE_LAYERS=['ground','shadow','base','castleBody','castleFront'];
+  // Canvas-pixel coverage of a house: its urban faces plus the workshop's street front.
+  function houseSilhouette(s,W,H){
+    const c=document.getElementById('c'),k=c.width/document.getElementById('wrap').getBoundingClientRect().width;
+    const cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');g.fillStyle='#fff';
+    const fill=pts=>{g.beginPath();pts.forEach((q,i)=>i?g.lineTo(q.x*k,q.y*k):g.moveTo(q.x*k,q.y*k));g.closePath();g.fill()};
+    const entry=urbanHouseGeometry().find(e=>e.house.id===s.id);
+    for(const part of entry?.parts||[]){const gz=terrainElevation(part.center);for(const f of urbanHouseFaces(s,part))fill(f.map(v=>w2s(v.p,v.z-gz)))}
+    const m=window.ConquerShopCutaway?.buildFront(s)?.mesh;
+    if(m)for(let t=0;t<m.col.length;t++){const o=t*9;fill([0,3,6].map(j=>w2sRaw({x:m.pos[o+j],y:m.pos[o+j+1]},m.pos[o+j+2])))}
+    return g.getImageData(0,0,W,H).data;
+  }
   function frame(){
     invalidateSceneCache(STRUCTURE_LAYERS);window.ConquerWallWalk?.invalidate?.();draw();
     const c=document.getElementById('c');
@@ -79,7 +135,7 @@
     if(!s)return{present:false};
     const st=window.ConquerSiege?.integrity?.(s);
     return{present:true,type:s.type,material:s.material||'stone',level:s.level??null,tier:s.tier??null,
-      progress:+constructionProgress(s).toFixed(3),cutaway:structureCutaway(s),ruined:!!(s.ruined||s.ruin),
+      progress:+constructionProgress(s).toFixed(3),cutaway:structureCutaway(s)||!!window.ConquerShopCutaway?.active(s),ruined:!!(s.ruined||s.ruin),
       hp:st?.core?+(st.core.hp/st.core.max).toFixed(3):null,door:st?.door?+(st.door.hp/st.door.max).toFixed(3):null};
   }
   // capture(id, stateId, {rotation 0..3, scale}) -> {dataUrl, width, height, coverage, structure}
@@ -95,6 +151,9 @@
     // Breaches split a wall into new segments with uid() (crypto.randomUUID): counted ids keep their
     // rubble seeds stable too.
     let serial=0;crypto.randomUUID=()=>'assetlab-'+id+'-'+(serial++);
+    // Pitch states set the feudal roof pitch for this capture only (roofPitch() reads State.policies).
+    const policies=State.policies||(State.policies={}),keepPitch=policies.roofPitch;
+    policies.roofPitch=state.pitch??45;
     try{
       const t=[realNow()],lap=()=>t.push(realNow());
       clear();steady(rotation,scale);lap();
@@ -102,8 +161,11 @@
       frame();const empty=frame();lap();
       const s=apply(v.spec,state,id);lap();const full=frame();lap();
       const W=full.width,H=full.height,a=full.data,b=empty.data,mask=new Uint8Array(W*H);
+      // Dark timber frames, iron brackets and shop shutters are within 30 of the dark stage ground:
+      // inside the house's own projected silhouette a finer threshold applies.
+      const near=s?.type==='house'?houseSilhouette(s,W,H):null;
       for(let i=0,p=0;p<W*H;p++,i+=4)
-        if(Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2])>30)mask[p]=1;
+        if(Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2])>(near?.[i+3]?8:30))mask[p]=1;
       // Background is what is unchanged AND reachable from the frame edge: a crack or a door the
       // colour of the grass inside the silhouette stays part of the structure.
       const bg=new Uint8Array(W*H),queue=new Int32Array(W*H);let qh=0,qt=0;
@@ -137,7 +199,9 @@
       return{...result,dataUrl,width:w,height:h,origin:[x0,y0],ms:{clear:ms[0],empty:ms[1],stage:ms[2],full:ms[3],mask:ms[4],encode:ms[5]}};
     }finally{
       delete performance.now;delete crypto.randomUUID;
+      if(keepPitch===undefined)delete policies.roofPitch;else policies.roofPitch=keepPitch;
       State.structures=keep;window.ConquerSiege?.restore({...(State.siege||{}),ruins:[]});invalidateSceneCache(STRUCTURE_LAYERS);
+      if(v.spec.type==='house')invalidateUrbanGeometry();
     }
   }
   window.ConquerAssetStage={variants,states,capture};

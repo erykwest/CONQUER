@@ -9,28 +9,58 @@
   const gallery=byId('assetGallery'),filters=byId('assetCategoryFilters'),details=byId('assetDetail');
   if(!gallery||!filters||!details)return;
   const STATIC_FILES=window.CONQUER_ASSET_FILES||[],ROTATION_SETS=window.CONQUER_ASSET_ROTATIONS||{};
-  const CATEGORY_ORDER=['Tutti','Edifici','Fortificazioni','Produzione','Popolazione','Truppe','Fauna','Veicoli','Assedio','Natura','Scatter','Interni','Componenti','Araldica','Territorio'];
+  const CATEGORY_ORDER=['Tutti','Edifici','Fortificazioni','Produzione','Popolazione','Truppe','Fauna','Veicoli','Assedio','Eventi','Natura','Scatter','Interni','Componenti','Araldica','Territorio'];
   const MODEL_SOURCES=[
     {global:'ConquerCivicModels',collection:'models',category:'Edifici',family:'Edifici civili'},
     {global:'ConquerIndustryModels',collection:'models',category:'Produzione',family:'Industrie'},
+    {global:'ConquerStorageYard',collection:'models',category:'Produzione',family:'Piazzali e magazzini'},
     {global:'ConquerScatterModel',collection:'assets',category:'Scatter',family:'Oggetti ambientali'},
     {global:'ConquerWagonModel',collection:'parts',category:'Veicoli',family:'Componenti dei carri'},
     {global:'ConquerSiegeModel',collection:'engines',category:'Assedio',family:'Macchine d’assedio'},
     {global:'ConquerShipModels',collection:'lab',category:'Veicoli',family:'Navi'},
     {global:'ConquerFishingModels',collection:'models',category:'Produzione',family:'Pescatori'},
     {global:'ConquerShipyardModels',collection:'models',category:'Produzione',family:'Cantiere navale'},
-    {global:'ConquerWatersideModels',collection:'models',category:'Territorio',family:'Riva e approdi'}
+    {global:'ConquerWatersideModels',collection:'models',category:'Territorio',family:'Riva e approdi'},
+    {global:'ConquerEventModels',collection:'models',category:'Eventi',family:'Eventi e accampamenti'},
+    {global:'ConquerCampScenes',collection:'models',category:'Eventi',family:'Bivacchi (composizioni)'},
+    {global:'ConquerHouseModels',collection:'models',category:'Edifici',family:'Kit case'},
+    {global:'ConquerFurnitureModel',collection:'pieces',category:'Interni',family:'Arredi del cutaway'},
+    // ARTE (ART-251105-01): graphic archetypes of paintings, tapestries and sculptures, one family per kind.
+    {global:'ConquerArtModels',collection:'pieces',category:'Interni',family:'Opere d’arte'},
+    // Elements a room adds to the outside of its building (ROOM_EXTERIOR, settlement-room-exterior.js).
+    // Blender parts listed under Edifici, as the house kit: Fortificazioni holds only engine meshes and
+    // Componenti only architectural texture files (qa/asset-catalog-browser.mjs).
+    {global:'ConquerGarderobeModels',collection:'models',category:'Edifici',family:'Elementi esterni delle stanze'},
+    {global:'ConquerDovecoteModels',collection:'models',category:'Edifici',family:'Colombaia (lanterna sul tetto)'},
+    {global:'ConquerBelfryModels',collection:'models',category:'Edifici',family:'Elementi esterni delle stanze'},
+    {global:'ConquerMewsModels',collection:'models',category:'Edifici',family:'Elementi esterni delle stanze'},
+    // Signal-fire pyre on a flat tower deck (MIL-RES-01, settlement-soldiers.js).
+    {global:'ConquerPyreModels',collection:'models',category:'Edifici',family:'Elementi esterni delle stanze'},
+    // Wall-walk stairs (BC-251105-01/02, settlement-wall-stairs.js): timber and masonry flight, rise 1 U.
+    {global:'ConquerWallStairModels',collection:'models',category:'Edifici',family:'Scale ai camminamenti'},
+    // Ramps and hill stairways (BC-251105-12/13): parametric pieces shown against a model cliff.
+    {global:'ConquerSlopewayModels',collection:'models',category:'Territorio',family:'Rampe e scalinate'}
     // Timber fortifications (ConquerWoodFortModels) are listed as engine meshes under Fortificazioni.
   ];
   const SUBJECTS=[
     ['villager','Popolano','Popolazione','Civili'],
     ['spearman','Fanteria','Truppe','Militari'],['archer','Arciere','Truppe','Militari'],
     ['knight','Cavaliere','Truppe','Militari'],['wagon','Carro animato 2D','Veicoli','Carri'],
-    ['wagon3d','Carro animato 3D','Veicoli','Carri']
+    ['wagon3d','Carro animato 3D','Veicoli','Carri'],
+    // The in-game 2D horse (settlement-animals.js) and everything that rides or pulls with it.
+    ['horse2d','Cavallo 2D (passo)','Fauna','Cavalli 2D'],['horse2dGraze','Cavallo 2D (pascola)','Fauna','Cavalli 2D'],
+    ['knight2d','Cavaliere a cavallo 2D','Truppe','Cavalli 2D'],['messenger2d','Messaggero a cavallo 2D','Truppe','Cavalli 2D'],
+    ['wagonTeam','Carro con tiro 2D','Veicoli','Carri'],
+    // The other in-game 2D animals (livestock and wildlife), same painter as the horse.
+    ...[['sheep','Pecora'],['goat','Capra'],['cow','Mucca'],['deer','Cerva'],['stag','Cervo'],['wolf','Lupo'],['boar','Cinghiale'],['bear','Orso']]
+      .map(([k,name])=>[k+'2d',name+' 2D (passo)','Fauna','Animali 2D'])
   ];
   // Work animations: the villager with each tool of settlement-work-anim.js (action -> tool as in the Lab).
   const WORK=[['dig','shovel','Scavatore (pala)'],['chop','axe','Taglialegna (ascia)'],['pick','pickaxe','Cavatore (piccone)'],
-    ['build','hammer','Muratore (martello)'],['plough','hoe','Aratura (zappa)'],['sow','seeds','Semina'],['harvest','sickle','Mietitura (falce)']];
+    ['build','hammer','Muratore (martello)'],['plough','hoe','Aratura (zappa)'],['sow','seeds','Semina'],['harvest','sickle','Mietitura (falce)'],
+    ['throw','clay','Vasaio (tornio)'],['weave','shuttle','Tessitore (spola)'],['sew','needle','Sarto (ago)'],
+    ['stir','ladle','Cuoco (mestolo)'],['groom','brush','Stalliere (striglia)'],['pray','book','Prete (libro)'],['write','quill','Tesoriere ed esattore (penna)'],
+    ['pound','mortar','Cerusico (mortaio)'],['hawk','falcon','Falconiere (falco)'],['serve','mug','Oste (boccale)'],['speak','speak','Consigliere (parola)'],['tend','bowl','Inserviente (ciotola)']];
   const SCHEMATICS=[
     ['well','Pozzo','Edifici','Servizi'],
     ['house1','Abitazione L1','Edifici','Abitazioni'],
@@ -48,21 +78,29 @@
     :path.includes('/interior/')?'Interni':path.includes('/heraldry/')?'Araldica':'Territorio';
   const fileFamily=path=>path.includes('/architecture/')?'Elementi architettonici':path.split('/').slice(-2,-1)[0]||'SVG';
   const prettify=key=>key.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/[_-]+/g,' ').replace(/(\d+)/g,' $1').trim().replace(/^./,m=>m.toUpperCase());
-  const nameOverrides={church:'Chiesa',tavern:'Taverna',market:'Mercato',quarry:'Cava',mine:'Miniera',clayPit:'Cava d’argilla',
-    loggingCamp:'Campo taglialegna',watermill:'Mulino ad acqua',windmill:'Mulino a vento',crate:'Cassa',barrel:'Botte',
+  const nameOverrides={church:'Chiesa',tavern:'Taverna',market:'Mercato',townhall:'Municipio',guild:'Gilda',bargello:'Bargello',balivo:'Palazzo del Balivo',quarry:'Cava',mine:'Miniera',clayPit:'Cava d’argilla',
+    loggingCamp:'Campo taglialegna',stockyard2:'Piazzale · magazzino 2×2U',stockyard4:'Piazzale · magazzino 4×4U',stockyard6:'Piazzale · magazzino 6×6U',watermill:'Mulino ad acqua',windmill:'Mulino a vento',crate:'Cassa',barrel:'Botte',
     sheep:'Pecora',goat:'Capra',cow:'Mucca',horse:'Cavallo',deer:'Cerva',stag:'Cervo',wolf:'Lupo',bear:'Orso',boar:'Cinghiale',
     ram:'Ariete',catapult:'Mangano',trebuchet:'Trabucco',tower:'Torre d’assedio',tower2:'Torre d’assedio (variante)',
     ladder:'Scala d’assedio',mantlet:'Mantelletto',ballista:'Balista',
     stake:'Palo di palizzata',watchtower:'Torre di vedetta in legno',palisadeTower_open:'Torre a palizzata aperta',
-    palisadeTower_roofed:'Torre a palizzata coperta',woodGate:'Porta in legno',
+    palisadeTower_roofed:'Torre a palizzata coperta',frameTower:'Torre lignea a telaio H2',woodGate:'Porta in legno',
     netRack:'Rete stesa ad asciugare',fishRack:'Rastrelliera del pesce',fishBaskets:'Ceste del pescato',
     slipwayL1:'Scalo di varo L1',slipwayL2:'Scalo di varo L2',shed:'Tettoia del cantiere navale',frames:'Ossatura di scafo',
-    barchetta:'Barchetta a remi',riverJetty:'Molo fluviale',rocksA:'Scogli A',rocksB:'Scogli B',rocksC:'Scoglio alto',reef:'Secca di scogli',beachBoat:'Barca tirata a secco',driftwood:'Legni portati dal mare'};
+    barchetta:'Barchetta a remi',riverJetty:'Molo fluviale',rocksA:'Scogli A',rocksB:'Scogli B',rocksC:'Scoglio alto',reef:'Secca di scogli',beachBoat:'Barca tirata a secco',driftwood:'Legni portati dal mare',garderobe:'Latrina a sbalzo (garderobe)',
+    infirmaryBed:'Letto d’infermeria',herbShelf:'Scaffale delle erbe',washBasin:'Bacile',
+    lantern:'Colombaia · lanterna sul tetto',nestWall:'Colombaia · parete dei nidi',perch:'Colombaia · posatoio',
+    mews:'Falconiera · voliera sul tetto',pyre:'Fuoco di segnalazione · pira sul terrazzo',
+    stairWood:'Scala lignea al camminamento',stairStone:'Scala lapidea al camminamento',
+    belfry:'Castello campanario · campana d’allarme',rampH1:'Rampa · dislivello H1 · 1:4.5',rampH2:'Rampa · dislivello H2 · 1:4.25',stairwayH1:'Scalinata · dislivello H1',stairwayH2:'Scalinata · dislivello H2',
+    justicePillory:'Gogna',justiceGallows:'Forca',justiceScaffold:'Patibolo',almshouse:'Ospizio (annesso della chiesa)',kitchenGarden:'Orto di corte (annesso del municipio)'};
+  const ART_FAMILY={painting:'Opere d’arte · quadri',tapestry:'Opere d’arte · arazzi',sculpture:'Opere d’arte · sculture'};
   function titleFor(key){
     if(nameOverrides[key])return nameOverrides[key];
+    const art=window.ConquerArtModels?.catalog?.[key];if(art)return art.label;
     const furled=/Furled$/.test(key),ship=window.ConquerShipModels?.ships?.[key.replace(/Furled$/,'')];
     if(ship)return ship.label+(ship.size==='large'?' · grande':' · piccola')+(furled?' · vele alzate':' · vele spiegate');
-    const m=/^(church|tavern|market|windmill|watermill|quarry|mine|loggingCamp)(\d+)$/.exec(key);
+    const m=/^(church|tavern|market|townhall|guild|bargello|balivo|windmill|watermill|quarry|mine|loggingCamp)(\d+)$/.exec(key);
     return m?(nameOverrides[m[1]]||prettify(m[1]))+' · livello '+m[2]:prettify(key);
   }
   const items=[];
@@ -92,14 +130,19 @@
       const isCivicNature=isCivicProp&&/^prop_(tree|cypress|flowerBush)/.test(key);
       const isCivicFurniture=isCivicProp&&/^prop_table/.test(key);
       // A civic shop/stable/warehouse is a building, not an interior furnishing.
-      const category=isCivicNature?'Natura':isCivicFurniture?'Interni':isCivicProp?'Scatter':source.category;
-      const family=source.global==='ConquerScatterModel'?prettify(collection[key].family||'Oggetti ambientali')
-        :isCivicNature?'Vegetazione 3D':isCivicFurniture?'Arredi 3D':isCivicProp?'Elementi ambientali':source.family;
+      // Pillory and gallows are piazza works of public justice, placed like the event venues.
+      const isJustice=source.global==='ConquerEventModels'&&key.startsWith('justice');
+      const category=isCivicNature?'Natura':isCivicFurniture?'Interni':isCivicProp?'Scatter':isJustice?'Edifici':source.category;
+      const family=isJustice?'Giustizia':source.global==='ConquerScatterModel'?prettify(collection[key].family||'Oggetti ambientali')
+        :isCivicNature?'Vegetazione 3D':isCivicFurniture?'Arredi 3D':isCivicProp?'Elementi ambientali'
+        :source.global==='ConquerArtModels'?ART_FAMILY[registry.catalog?.[key]?.kind]||source.family:source.family;
       items.push({id:'model:'+source.global+':'+key,title:titleFor(key),category,family,
         kind:'model',registry:source.global,collection:source.collection,key,source:'src/assets/'+
-          ({ConquerCivicModels:'civic-models.js',ConquerIndustryModels:'industry-models.js',
+          ({ConquerCivicModels:'civic-models.js',ConquerIndustryModels:'industry-models.js',ConquerStorageYard:'../settlement-storage-yard.js',
             ConquerScatterModel:'scatter-model.js',ConquerWagonModel:'wagon-model.js',
-            ConquerSiegeModel:'siege-engines-model.js',ConquerWoodFortModels:'wood-fort-models.js',
+            ConquerSiegeModel:'siege-engines-model.js',ConquerWoodFortModels:'wood-fort-models.js',ConquerEventModels:'event-models.js',ConquerCampScenes:'../settlement-events3d.js',
+            ConquerHouseModels:'house-models.js',ConquerGarderobeModels:'garderobe-models.js',ConquerFurnitureModel:'furniture-model.js',ConquerArtModels:'art-models.js',ConquerDovecoteModels:'dovecote-models.js',ConquerBelfryModels:'belfry-models.js',ConquerSlopewayModels:'../settlement-slopeways.js',ConquerWallStairModels:'wall-stair-models.js',
+            ConquerMewsModels:'mews-models.js',ConquerPyreModels:'pyre-models.js',
             ConquerShipModels:'ship-models.js',ConquerFishingModels:'fishing-models.js',ConquerShipyardModels:'shipyard-models.js',ConquerWatersideModels:'waterside-models.js'}[source.global]),
         format:'Modello 3D',subject:source.global==='ConquerSiegeModel'&&key!=='tower2'?'siege:'+key
           :source.global==='ConquerShipModels'&&window.ConquerShipModels.ships?.[key.replace(/Furled$/,'')]?'ship:'+key.replace(/Furled$/,''):null});
@@ -124,6 +167,17 @@
     items.push({id:'wardrobe:'+key,title:wardrobe[key].label,category:'Popolazione',family:'Abbigliamento stagionale',
       kind:'wardrobe',key,format:'Overlay',note:'Si attiva: '+wardrobe[key].when+'.',source:'src/settlement-wardrobe.js'});
   }
+  // Costumes of office (crime): whole outfits by role, as the tribunal scene dresses them.
+  for(const [key,title,pieces] of [['judge','Giudice',['judgeRobe','judgeCap']],['clerk','Cancelliere',['clerkGown','clerkCap']],
+    ['prisoner','Prigioniero',['prisonerShirt']],['executioner','Boia',['executionerHood']]])
+    if(pieces.every(p=>window.ConquerWardrobe?.ROLE_PIECES?.[p]))
+      items.push({id:'wardrobe:role:'+key,title,category:'Popolazione',family:'Costumi di ruolo',kind:'wardrobe',key,pieces,
+        format:'Overlay',note:'Vestito per ruolo (tribunale), mai per stagione.',source:'src/settlement-wardrobe.js · src/settlement-court-people.js'});
+  // Work clothes by trade: what the figure wears at the job (the season fills the free slots).
+  for(const [key,role] of Object.entries(window.ConquerWardrobe?.ROLES||{}))
+    items.push({id:'wardrobe:trade:'+key,title:role.label,category:'Popolazione',family:'Abiti da mestiere',kind:'wardrobe',key,
+      pieces:role.pieces,format:'Overlay',note:'Indossato al lavoro: '+role.pieces.map(p=>window.ConquerWardrobe.ROLE_PIECES[p]?.label||window.ConquerWardrobe.PIECES[p]?.label).join(', ')+'.',
+      source:'src/settlement-wardrobe.js'});
   for(const [key,title,category,family] of SCHEMATICS){
     items.push({id:'procedural:'+key,title,category,family,kind:'schematic',key,format:'Parametrico',
       source:'Builder · asset generato dal motore',builder:true});
@@ -141,7 +195,18 @@
   // destruction gallery's variant list, meshed by ConquerCastle3D.worldMeshes(): the castle the player sees.
   const ENGINE_URL='./index.html?assetlab=1&renderer=canvas2d';
   const status=text=>{const el=byId('assetEngineStatus');if(el)el.textContent=text};
-  let engine=null;
+  let engine=null,stonePaletteId='gray';
+  const STONE_ASSETS=new Set(['stonePile','riverStones','riverBoulder','milestone']);
+  const COAST_ROCKS=new Set(['rocksA','rocksB','rocksC','reef']);
+  const SLOPEWAY_STONE=new Set(['#a59f92','#968f82','#b8b1a2','#8d887d','#7c776c','#b0aa9c','#a19b8d','#7d786d','#868176']);
+  // Material-role gating: never recolor a whole Blender model because its palette contains grey.
+  function isGeologicalTone(item,role,hex){
+    if(item.registry==='ConquerIndustryModels')return ['quarry','mine'].includes(item.key)&&/^(rock|gravel|block|rubble)/i.test(role||'');
+    if(item.registry==='ConquerScatterModel')return STONE_ASSETS.has(item.key)&&/^stone/i.test(role||'');
+    if(item.registry==='ConquerWatersideModels')return COAST_ROCKS.has(item.key)&&/^rock/i.test(role||'');
+    if(item.registry==='ConquerSlopewayModels')return SLOPEWAY_STONE.has(String(hex).toLowerCase());
+    return /^(stone|paving)/i.test(role||'')||item.registry==='ConquerHouseModels'&&role==='step';
+  }
   const slug=s=>s.toLocaleLowerCase('it').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
   function loadEngine(){
     const frame=document.createElement('iframe');
@@ -168,6 +233,7 @@
   // each damage phase, cutaway — captured on demand by the stage.
   function onEngine(w){
     engine=w;
+    if(w.ConquerStoneColor?.current()!==stonePaletteId)w.ConquerStoneColor?.preview(stonePaletteId);
     let meshes=0;
     for(const v of w.ConquerAssetStage.variants()){
       // Wood towers, wood gates and palisades are meshed by ConquerWood3D (Blender models).
@@ -175,7 +241,7 @@
       // Thumbnails are fitted to the card: the height tells L1 from L3.
       let top=0;if(mesh)for(let i=2;i<mesh.pos.length;i+=3)top=Math.max(top,mesh.pos[i]);
       const states=[...(mesh?[{id:'3d',label:'Modello 3D',group:'3d'}]:[]),...w.ConquerAssetStage.states(v.id)];
-      items.push({id:'castle:'+v.id,stageId:v.id,title:v.label,category:'Fortificazioni',family:v.family,kind:'castle',spec:v.spec,
+      items.push({id:'castle:'+v.id,stageId:v.id,title:v.label,category:v.category||'Fortificazioni',family:v.family,kind:'castle',spec:v.spec,
         key:v.spec.type,mesh,states,format:(mesh?'Modello 3D · h '+top.toFixed(1)+' U':'Solo 2.5D')+' · '+(states.length-(mesh?1:0))+' stati',
         source:'src/settlement-asset-stage.js · '+(!mesh?'percorso 2.5D':w.ConquerWood3D?.handles?.(v.spec)?'src/settlement-wood3d.js':'src/settlement-castle3d.js')+' (varianti: src/settlement-siege-preview.js)',builder:true});
       if(mesh)meshes++;
@@ -188,7 +254,7 @@
   const captureCache=new Map();
   function engineCapture(item,stateId,rotation=0){
     if(!engine||!item.stageId)return null;
-    const key=item.stageId+'|'+stateId+'|'+rotation;
+    const key=item.stageId+'|'+stateId+'|'+rotation+'|'+stonePaletteId;
     if(!captureCache.has(key))captureCache.set(key,engine.ConquerAssetStage.capture(item.stageId,stateId,{rotation}));
     return captureCache.get(key);
   }
@@ -209,10 +275,13 @@
 
   // The same indexed/triangle Blender geometry used by the game, not screenshots or illustrations.
   const meshCache=new Map();
-  function modelMesh(item){
-    if(meshCache.has(item.id))return meshCache.get(item.id);
+  // paint: palette-key overrides (ARTE commissioning colours, only in the inspector preview, so
+  // the gallery and the audit always show the archetype's own colours).
+  function modelMesh(item,paint=null){
+    const cacheKey=item.id+'|'+stonePaletteId+(paint?'|'+JSON.stringify(paint):'');
+    if(meshCache.has(cacheKey))return meshCache.get(cacheKey);
     let mesh;
-    if(item.kind==='castle')mesh=item.mesh;
+    if(item.kind==='castle')mesh=toLabMesh(engine?.ConquerSiegePreview?.assetMesh(item.spec))||item.mesh;
     else if(item.kind==='animal'&&window.ConquerAnimals3D){
       mesh=window.ConquerAnimals3D.triangles(item.key,{x:0,y:0,heading:0},{mode:'idle',t:0,seed:1},
         window.ConquerAnimals3D.coatColors(item.key,'brown'));
@@ -231,19 +300,23 @@
             }
           }else pos.push(...verts.slice(t*9,t*9+9));
           const color=part.c?.[t]??0;
-          col.push(typeof color==='string'?color:(palette[color]||'#a69a83'));
+          const sourceHex=typeof color==='string'?color:(palette[color]||'#a69a83');
+          const role=typeof color==='number'?db.paletteKeys?.[color]:null;
+          const stoneApi=engine?.ConquerStoneColor;
+          if(paint&&role&&paint[role]){col.push(paint[role]);continue}
+          col.push(stoneApi&&stonePaletteId!=='gray'&&isGeologicalTone(item,role,sourceHex)?stoneApi.shade(sourceHex):sourceHex);
         }
       }
       mesh={pos:new Float32Array(pos),col};
     }
     if(!mesh||!mesh.pos?.length)return null;
-    meshCache.set(item.id,mesh);
+    meshCache.set(cacheKey,mesh);
     return mesh;
   }
   // Forced occupancy: 'off', 'depth' (figures tested against the depth buffer, the correct
   // occlusion) or 'overlay' (figures painted over the scene, as the game's 2D population pass).
   let occupancyMode='off';
-  function renderModel(canvas,item,rotationDegrees=0,occupancy=occupancyMode){return renderMesh(canvas,modelMesh(item),rotationDegrees,occupancy)}
+  function renderModel(canvas,item,rotationDegrees=0,occupancy=occupancyMode,paint=null){return renderMesh(canvas,modelMesh(item,paint),rotationDegrees,occupancy)}
   function renderMesh(canvas,mesh,rotationDegrees=0,occupancy='off'){
     const g=canvas.getContext('2d'),w=canvas.width,h=canvas.height;g.clearRect(0,0,w,h);
     if(!mesh)return placeholder(canvas,'ANTEPRIMA NON DISPONIBILE');
@@ -400,6 +473,25 @@
       window.ConquerWagons.drawWagon(g,w*.48,h*.64,Math.min(w*.48,h*.8),
         {chassis:'wagon',cargo:['crate','barrel'],team:[],facing:1,moving:false,t:0,distance:0});return;
     }
+    // 2D horses exactly as the game draws them (fixed phase, art facing right).
+    const A=window.ConquerAnimals,M2=window.ConquerMounted2D;
+    if(subject==='horse2d'||subject==='horse2dGraze'){
+      if(A?.drawAnimal){const graze=subject==='horse2dGraze';
+        A.drawAnimal('horse',g,w*.5,h*.9,Math.min(w,h)*.5,{t:.15,mode:graze?'browse':'walk',blend:graze?.86:0,facing:1,coat:'brown'});return}
+    }
+    // Other 2D animals at the horse's box size (their own scale undone), mid-stride.
+    const sp2d=/^(\w+)2d$/.exec(subject)?.[1];
+    if(sp2d&&sp2d!=='horse'&&A?.SPECIES?.[sp2d]){
+      A.drawAnimal(sp2d,g,w*.5,h*.9,Math.min(w,h)*.5*1.9/(A.SPECIES[sp2d].scale||1),{t:.15,mode:'walk',facing:1});return;
+    }
+    if((subject==='knight2d'||subject==='messenger2d')&&M2?.draw&&A){
+      M2.draw(g,w*.48,h*.9,Math.min(w,h)*.36,{kind:subject==='knight2d'?'knight':'messenger',mode:'idle',t:0,facing:1,coat:'grey',
+        livery:{main:'#b32628',alt:'#eac15b'},paint:null});return;
+    }
+    if(subject==='wagonTeam'&&window.ConquerWagons?.drawWagon&&A){
+      window.ConquerWagons.drawWagon(g,w*.24,h*.78,Math.min(w*.17,h*.34),
+        {chassis:'wagon',cargo:['sack','crate','barrel'],team:[{coat:'brown'},{coat:'black'}],facing:1,moving:true,t:.15,distance:20});return;
+    }
     const previous=ctx,oldScale=State.view.scale;
     try{
       ctx=g;State.view.scale=Math.min(w*.09,h*.14);
@@ -430,7 +522,7 @@
       [['peasant','male'],['artisan','female'],['merchant','male'],['elite','female']].forEach(([kind,sex],i)=>{
         const id='wardrobe-'+item.key+'-'+kind,pal=W.classPalette(kind)||['#8c6b3f','#5d4a32'],colors=[pal[0],pal[2]];
         drawVillagerFigureUnmasked({id,kind,sex,age:'adult',hair:'brown',colors,
-          outfit:W.compose([item.key],id,kind,colors[0]),p:{x:w*(.2+i*.2),y:h*.74}});
+          outfit:W.compose(item.pieces||[item.key],id,kind,colors[0]),p:{x:w*(.2+i*.2),y:h*.74}});
       });
     }catch(error){
       console.warn('Asset Lab wardrobe thumbnail could not render',item.key,error);
@@ -465,11 +557,54 @@
     canvas.setAttribute('role','img');canvas.setAttribute('aria-label','Anteprima '+item.title);
     container.appendChild(canvas);
     if(item.kind==='schematic')return renderSchema(canvas,item);
-    if(item.kind==='model'||item.kind==='animal'||item.kind==='castle')return renderModel(canvas,item,rotationDegrees);
+    if(item.kind==='model'||item.kind==='animal'||item.kind==='castle')return renderModel(canvas,item,rotationDegrees,occupancyMode,large?artPaint(item):null);
     if(item.kind==='figure')return renderFigure(canvas,item,rotationDegrees);
     if(item.kind==='wardrobe')return renderWardrobe(canvas,item);
   }
   let currentCategory='Tutti',currentFamily='',currentFormat='',query='',selectedId='',selectedRotation=0,selectedItem=null,selectedState=null;
+  // ARTE commissioning colours: the inspector of a work of art lets you choose the colour of each
+  // slot (ConquerArtColors), as the commission will; the choice lives here, per archetype.
+  const artColors={};
+  const isArt=item=>item?.registry==='ConquerArtModels'&&!!window.ConquerArtColors;
+  function artPaint(item){return isArt(item)?window.ConquerArtColors.paint(item.key,artColors[item.key]):null}
+  function renderArtColors(item){
+    const box=byId('assetArtColors');if(!box)return;
+    box.replaceChildren();box.hidden=!isArt(item);if(box.hidden)return;
+    const AC=window.ConquerArtColors,chosen=AC.normalize(item.key,artColors[item.key]);
+    const refresh=()=>{renderArtColors(item);makePreview(item,byId('assetDetailPreview'),true,selectedRotation,selectedState)};
+    const set=(id,hex)=>{artColors[item.key]={...AC.normalize(item.key,artColors[item.key]),[id]:hex};refresh()};
+    const head=document.createElement('div');head.className='art-colors-head';
+    head.innerHTML='<span class="caption">Colori della commissione</span>';
+    const reset=document.createElement('button');reset.type='button';reset.textContent='Colori originali';
+    reset.disabled=!Object.keys(AC.diff(item.key,artColors[item.key])).length;
+    reset.onclick=()=>{delete artColors[item.key];refresh()};head.appendChild(reset);box.appendChild(head);
+    for(const slot of AC.slots(item.key)){
+      const row=document.createElement('div');row.className='art-color-row';
+      const label=document.createElement('label');label.textContent=slot.label;
+      const pick=document.createElement('input');pick.type='color';pick.value=chosen[slot.id];pick.id='artColor-'+slot.id;
+      label.htmlFor=pick.id;pick.title='Colore libero';pick.addEventListener('change',()=>set(slot.id,pick.value));
+      const sw=document.createElement('div');sw.className='art-swatches';
+      for(const [name,hex] of Object.entries(AC.swatches(slot.swatches))){
+        const b=document.createElement('button');b.type='button';b.style.background=hex;b.title=name;b.setAttribute('aria-label',slot.label+': '+name);
+        b.setAttribute('aria-pressed',String(hex.toLowerCase()===chosen[slot.id]));b.onclick=()=>set(slot.id,hex.toLowerCase());sw.appendChild(b);
+      }
+      row.append(label,pick,sw);box.appendChild(row);
+    }
+  }
+  function setStonePalette(id){
+    if(!['gray','sandstone','tuff','limestone','granite'].includes(id))return false;
+    if(stonePaletteId===id)return true;
+    stonePaletteId=id;
+    byId('assetStoneColor').value=id;
+    // The iframe runs the actual engine. Preview suppresses local/cloud saves and resource changes.
+    engine?.ConquerStoneColor?.preview(id);
+    meshCache.clear();captureCache.clear();
+    window.ConquerAssetAudit?.invalidate?.();
+    refresh();
+    if(selectedItem)selectItem(selectedItem,selectedState);
+    return true;
+  }
+  byId('assetStoneColor')?.addEventListener('change',e=>setStonePalette(e.target.value));
   let observer=null;
   const snapshotMode=()=>selectedItem?.kind==='castle'&&selectedState&&selectedState!=='3d';
   function renderStateBar(item){
@@ -526,6 +661,7 @@
       if(item.action)document.querySelector('#actions [data-action="'+item.action+'"]')?.click();
     }else makePreview(item,art,true,selectedRotation,selectedState);
     const link=byId('assetBuilderLink');link.hidden=!item.builder;
+    renderArtColors(item);
     details.hidden=false;
   }
   function rotateSelection(delta){
@@ -621,7 +757,7 @@
     byId('assetSearch').value='';byId('assetFormat').value='';refresh()});
   window.ConquerAssetCatalog={items,refresh,select:(id,state)=>{const item=items.find(x=>x.id===id);if(item)selectItem(item,state)},
     selectState,get selected(){return selectedId},get state(){return selectedState},get rotation(){return selectedRotation},
-    get engineReady(){return !!engine},
+    get engineReady(){return !!engine},get stonePaletteId(){return stonePaletteId},setStonePalette,
     // The Lab's own renderers, for src/asset-audit.js: the audit looks at exactly what the Lab shows.
     lab:{makePreview,modelMesh,engineCapture,defaultState,rotationFrame},exportImage};
   // Reparent the existing native animation canvas: the animator retains its context.

@@ -38,6 +38,16 @@
   }
   const KITE=[[-.5,-.5],[.5,-.5],[.5,0],[0,.5],[-.5,0]];
   const BANNER=[[-.5,-.5],[.5,-.5],[.5,.5],[-.5,.5]];
+  // Feudal shield shapes (State.policies.unitShield) as clips in the unit box, with their size
+  // in art units. Without a style the knight keeps the original pointed shield (KITE).
+  const ring=(n,fx,fy)=>Array.from({length:n},(_,i)=>{const a=i/n*Math.PI*2;return[fx(a),fy(a)]});
+  const SHIELD_SHAPES={
+    oval:{clip:ring(24,a=>Math.cos(a)*.5,a=>Math.sin(a)*.5),w:32,h:46},
+    round:{clip:ring(24,a=>Math.cos(a)*.5,a=>Math.sin(a)*.5),w:38,h:38,boss:true},
+    heater:{clip:[[-.5,-.5],[.5,-.5],[.5,0],[.42,.2],[.25,.37],[0,.5],[-.25,.37],[-.42,.2],[-.5,0]],w:32,h:46},
+    kite:{clip:[[-.5,-.3],[-.35,-.47],[0,-.5],[.35,-.47],[.5,-.3],[.35,.05],[0,.5],[-.35,.05]],w:30,h:60},
+    pavise:{clip:[[-.5,-.38],[0,-.5],[.5,-.38],[.45,.5],[-.45,.5]],w:34,h:62,ridge:true}
+  };
 
   // ---------- horse gear
   // Drape over the barrel with a dagged (scalloped) hem, longer at the chest and rump.
@@ -86,16 +96,19 @@
     limb(ctx,[root,[j.x-4,j.y+4]],o.livery.main,40,o.lw);
     line(ctx,[root[0]+6,root[1]-18],[j.x+2,j.y-14],o.livery.alt,9);
     headSpace(ctx,o,()=>{
-      poly(ctx,[[198,50],[214,34],[226,40],[230,70],[220,100],[204,92]],STEEL,OUTLINE,o.lw);                 // chanfron
-      ctx.fillStyle='#16181a';ctx.beginPath();ctx.arc(219,52,4,0,Math.PI*2);ctx.fill();
-      poly(ctx,[[212,32],[206,8],[198,-6],[204,-8],[216,10],[218,30]],o.livery.main,OUTLINE,o.lw*.8);     // plume
-      poly(ctx,[[206,8],[198,-6],[204,-8],[212,6]],o.livery.alt,null,o.lw);
+      // Chanfron down the face of the nose-down head (settlement-animals.js horse), eye hole, plume at the poll.
+      poly(ctx,[[212,33],[221,26],[232,34],[249,66],[246,78],[236,74],[220,50]],STEEL,OUTLINE,o.lw);
+      ctx.fillStyle='#16181a';ctx.beginPath();ctx.arc(224,42,4,0,Math.PI*2);ctx.fill();
+      poly(ctx,[[215,28],[209,6],[201,-6],[207,-8],[219,8],[221,24]],o.livery.main,OUTLINE,o.lw*.8);
+      poly(ctx,[[209,6],[201,-6],[207,-8],[215,4]],o.livery.alt,null,o.lw);
     });
   }
   function bridle(ctx,o){
     headSpace(ctx,o,()=>{
       ctx.strokeStyle=LEATHER_DARK;ctx.lineWidth=o.lw*1.6;ctx.lineCap='round';
-      ctx.beginPath();ctx.moveTo(212,36);ctx.lineTo(226,96);ctx.moveTo(204,72);ctx.lineTo(232,80);ctx.stroke();
+      // Cheek strap from behind the ear to the bit, browband, noseband across the muzzle.
+      ctx.beginPath();ctx.moveTo(213,31);ctx.lineTo(229,81);ctx.moveTo(213,33);ctx.lineTo(228,30);
+      ctx.moveTo(232,80);ctx.lineTo(247,66);ctx.stroke();
     });
   }
 
@@ -137,7 +150,27 @@
   }
   function head(ctx,o){
     const {lw}=o;
-    if(o.kind==='knight'){
+    const style=o.kind==='knight'?o.helmet:null;
+    if(style&&style!=='greathelm'){
+      // Feudal helmet (State.policies.unitHelmet): open helmets show the face under a mail coif.
+      const face=()=>{ctx.fillStyle=MAIL;ctx.beginPath();ctx.arc(123,22,13,0,Math.PI*2);ctx.fill();ctx.strokeStyle=OUTLINE;ctx.lineWidth=lw;ctx.stroke();
+        ctx.fillStyle=SKIN;ctx.beginPath();ctx.ellipse(126,24,7,8,0,0,Math.PI*2);ctx.fill()};
+      if(style==='barbuta'){
+        ctx.fillStyle=STEEL;ctx.beginPath();ctx.arc(123,20,14,0,Math.PI*2);ctx.fill();ctx.strokeStyle=OUTLINE;ctx.lineWidth=lw;ctx.stroke();
+        poly(ctx,[[118,16],[136,16],[136,21],[130,21],[130,32],[125,32],[125,21],[118,21]],SKIN,null,lw);      // T opening
+      }else{
+        face();
+        if(style==='kettle'){
+          poly(ctx,[[112,15],[114,6],[123,2],[132,6],[134,15]],STEEL,OUTLINE,lw);
+          line(ctx,[103,16],[143,16],STEEL_DARK,lw*3.2);                                             // wide brim
+        }else if(style==='nasal'){
+          poly(ctx,[[110,18],[115,6],[123,-4],[131,6],[136,18]],STEEL,OUTLINE,lw);
+          poly(ctx,[[127,17],[131,17],[131,29],[127,29]],STEEL,OUTLINE,lw*.7);                      // nasal
+        }else{
+          poly(ctx,[[110,19],[112,10],[123,5],[134,10],[136,19]],STEEL,OUTLINE,lw);                  // cervelliera
+        }
+      }
+    }else if(o.kind==='knight'){
       poly(ctx,[[112,34],[134,34],[136,10],[130,4],[116,4],[110,10]],STEEL,OUTLINE,lw);           // great helm
       line(ctx,[122,18],[136,18],'#16181a',lw*1.6,'butt');                                         // visor slit
       poly(ctx,[[116,4],[130,4],[128,-8],[118,-8]],o.livery.main,OUTLINE,lw*.8);                  // crest
@@ -150,29 +183,52 @@
   }
   function shield(ctx,o){
     // At the rider's near side, low over the thigh so the surcoat still shows.
-    const cx=112+o.ready*8,cy=88,w=32,h=50;
-    arms(ctx,o.flip,cx,cy,w,h,KITE,o.livery,o.paint);
-    ctx.save();ctx.translate(cx,cy);ctx.beginPath();KITE.forEach(([x,y],i)=>i?ctx.lineTo(x*w,y*h):ctx.moveTo(x*w,y*h));ctx.closePath();
-    ctx.strokeStyle=GOLD;ctx.lineWidth=o.lw*1.6;ctx.stroke();ctx.restore();
+    const shape=SHIELD_SHAPES[o.shield],clip=shape?.clip||KITE,w=shape?.w||32,h=shape?.h||50;
+    const cx=112+o.ready*8,cy=88+(h-50)*.3;
+    arms(ctx,o.flip,cx,cy,w,h,clip,o.livery,o.paint);
+    ctx.save();ctx.translate(cx,cy);ctx.beginPath();clip.forEach(([x,y],i)=>i?ctx.lineTo(x*w,y*h):ctx.moveTo(x*w,y*h));ctx.closePath();
+    ctx.strokeStyle=GOLD;ctx.lineWidth=o.lw*1.6;ctx.stroke();
+    if(shape?.boss){ctx.fillStyle=STEEL;ctx.beginPath();ctx.arc(0,0,w*.16,0,Math.PI*2);ctx.fill();ctx.strokeStyle=OUTLINE;ctx.lineWidth=o.lw;ctx.stroke()}
+    if(shape?.ridge)line(ctx,[0,-h*.5],[0,h*.5],GOLD,o.lw*1.2,'butt');
+    ctx.restore();
   }
   function reins(ctx,o){
     const sp=o.sp,j={x:(sp.joint.a.x+sp.joint.b.x)/2+o.pose.headX,y:(sp.joint.a.y+sp.joint.b.y)/2+o.pose.headY};
-    line(ctx,[150,64],[j.x+14,j.y+4],LEATHER_DARK,o.lw*1.3);
+    // To the bit at the corner of the mouth (head at rest: about 20,27 past the throat joint).
+    line(ctx,[150,64],[j.x+20,j.y+27],LEATHER_DARK,o.lw*1.3);
     limb(ctx,[[122,44],[138,62],[150,64]],o.livery.main,9,o.lw);
     ctx.fillStyle=SKIN;ctx.beginPath();ctx.arc(150,64,4.5,0,Math.PI*2);ctx.fill();
     poly(ctx,[[100,74],[112,74],[112,90],[100,90]],LEATHER,OUTLINE,o.lw);                           // satchel
   }
-  function rider(ctx,o){
+  // Unhorsed: drawn in ground space (not on the horse's body), the rider tips backwards over the
+  // rump and lands on the ground behind the horse; the lance drops flat at its feet.
+  const SEAT=[110,88];
+  function fallen(ctx,o){
+    const f=clamp(o.fall,0,1),ground=o.sp.center.y-6;
+    const L=lanceGeometry({...o,attack:0});
+    // The lance leaves the hand first: it tips forward and lies on the ground in front of the horse.
     ctx.save();
-    if(o.fall>0){
-      // Out of the saddle: tips backwards off the horse and lands beside it.
-      ctx.translate(110,88);ctx.rotate(-o.fall*1.45);ctx.translate(-110,-88);
-      ctx.translate(-o.fall*36,o.fall*118);
-    }
-    if(o.kind==='knight')lance(ctx,o);
+    const lf=clamp(f*1.6,0,1),lx=L.grip[0]+lf*40,ly=L.grip[1]+(ground-4-L.grip[1])*lf*lf;
+    ctx.translate(lx,ly);ctx.rotate(Math.atan2(L.dir[1],L.dir[0])*(1-lf));
+    limb(ctx,[[-60,0],[300,0]],WOOD,6,o.lw*.8);
+    poly(ctx,[[322,0],[300,5],[300,-5]],STEEL,OUTLINE,o.lw*.7);
+    ctx.restore();
+    // Arc over the rump: x slides back linearly, y falls with gravity, the body turns to lie flat.
+    const dx=-180*f,dy=(ground-SEAT[1]-18)*f*f;
+    ctx.save();
+    ctx.translate(SEAT[0]+dx,SEAT[1]+dy);ctx.rotate(-f*1.5);ctx.translate(-SEAT[0],-SEAT[1]);
+    body(ctx,{...o,ready:0},false);
+    ctx.restore();
+  }
+  function body(ctx,o,withLance=true){
+    if(withLance&&o.kind==='knight')lance(ctx,o);
     torso(ctx,o);legs(ctx,o);
     if(o.kind==='knight')shield(ctx,o);else reins(ctx,o);
     head(ctx,o);
+  }
+  function rider(ctx,o){
+    ctx.save();
+    body(ctx,o);
     if(o.flash>0){ctx.globalAlpha*=.6*o.flash;poly(ctx,[[103,90],[143,90],[137,34],[109,34]],'#fff6e4',null,o.lw)}
     ctx.restore();
   }
@@ -183,8 +239,9 @@
     const p=opts.pose||{},kind=opts.kind==='messenger'?'messenger':'knight';
     const alpha=p.alpha??1;if(alpha<=0)return;
     const state={kind,livery:opts.livery,paint:opts.paint,ready:p.ready||0,attack:p.attack||0,flash:p.flash||0,
-      fall:p.fall||0,charge:opts.mode==='run'};
+      fall:p.fall||0,charge:opts.mode==='run',helmet:opts.helmet||null,shield:opts.shield||null};
     ctx.save();ctx.globalAlpha*=alpha;
+    let unhorsed=null;
     window.ConquerAnimals.drawAnimal('horse',ctx,x,y,size,{t:opts.t||0,seed:opts.seed||0,coat:opts.coat,
       facing:opts.facing,mode:opts.mode==='idle'?'idle':opts.mode||'idle',from:opts.from==='idle'?'idle':opts.from,blend:opts.blend,
       onBody:(c,info)=>{
@@ -192,8 +249,14 @@
         if(kind==='knight')caparison(c,o);else blanket(c,o);
         saddle(c,o,kind==='knight');
         if(kind==='knight')crinet(c,o);else bridle(c,o);
-        rider(c,o);
+        if(o.fall>0)unhorsed=o;else rider(c,o);
       }});
+    if(unhorsed){
+      // Same art space as drawAnimal, without the gait's bob and tilt: the ground stays put.
+      const sp=unhorsed.sp,s=size*(sp.scale||1)/256;
+      ctx.translate(x,y);ctx.scale(unhorsed.flip*s,s);ctx.translate(-sp.center.x,-sp.center.y);
+      fallen(ctx,unhorsed);
+    }
     ctx.restore();
   }
   window.ConquerMounted2D={draw,lanceGeometry};

@@ -4,7 +4,7 @@ function inBuild(p){return p.x>=BUILD_MIN&&p.x<=BUILD_MAX&&p.y>=BUILD_MIN&&p.y<=
 function pointHit(s,p){if(s.type==='well')return dist(p,s)<=.75;if(s.shape==='round')return dist(p,s)<=s.r;const q=toLocalPoint(s,p),d=rectDims(s);return Math.abs(q.x)<=d.w/2&&Math.abs(q.y)<=d.h/2}
 function linearHit(s,p){const ax=s.a.x,ay=s.a.y,bx=s.b.x,by=s.b.y,dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy,t=clamp(((p.x-ax)*dx+(p.y-ay)*dy)/(L2||1),0,1),q={x:ax+t*dx,y:ay+t*dy};return dist(p,q)<=Math.max(.45,s.width*.55)}
 function structureAt(p){
-  const points=State.structures.filter(s=>!s.auto&&['tower','gate','well','market','tavern','church','training','plaza','civicAnnex','loggingCamp','quarry','mine','windmill','watermill'].includes(s.type));
+  const points=State.structures.filter(s=>!s.auto&&['tower','gate','well','market','tavern','church','training','plaza','townhall','guild','bargello','balivo','civicAnnex','storageYard','loggingCamp','quarry','mine','windmill','watermill'].includes(s.type));
   for(let i=points.length-1;i>=0;i--)if(pointHit(points[i],p))return points[i];
   const linear=State.structures.filter(s=>(!s.auto||s.type==='road'&&s.routeId||s.type==='bridge'&&s.primaryBridgeFor)&&['wall','palisade','built','road','moat','bridge'].includes(s.type));
   for(let i=linear.length-1;i>=0;i--)if(linearHit(linear[i],p))return linear[i];
@@ -18,7 +18,7 @@ function structureAtScreen(p){
   for(const s of manual)if(screenHitStructure(s,p))return s;
   return null;
 }
-function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-wood-tower],[data-crossing],[data-linear],[data-main-road],[data-terraform],[data-gate],[data-wood-gate],[data-well],[data-civic],[data-industry],[data-event-venue],[data-pier],[data-quay],[data-combat-brush],#combatOrders').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
+function setTool(tool){State.tool=tool;State.draft=null;document.querySelectorAll('[data-tool],[data-tower],[data-wood-tower],[data-crossing],[data-linear],[data-main-road],[data-terraform],[data-gate],[data-wood-gate],[data-well],[data-civic],[data-industry],[data-storage-yard],[data-event-venue],[data-pier],[data-quay],[data-slopeway],[data-combat-brush],#combatOrders').forEach(b=>b.classList.remove('active'));if(tool.el)tool.el.classList.add('active');status(tool.label||tool.kind);draw()}
 function markDirty(hardNavigation=true,staticChanged=true,scheduleSave=true){
   State.dirty=true;
   if(hardNavigation){
@@ -40,7 +40,8 @@ function markStructureDirty(s,hardNavigation=true,scheduleSave=true){
   markDirty(hardNavigation,structureSceneLayers(s),scheduleSave);
 }
 function changeHouseDensity(target,level){
-  if(level===houseLevel(target))return;
+  if(level===houseLevel(target)||underConstruction(target))return false;
+  const before=structureUpgradeSnapshot(target);
   const candidate={...target,houseLevel:level,
     urbanRedeveloped:!target.auto&&level>=3};
   const houses=State.structures.filter(s=>s.type==='house').map(s=>s.id===target.id?candidate:s);
@@ -59,6 +60,7 @@ function changeHouseDensity(target,level){
   if(level>=3&&count){
     State.structures=State.structures.filter(s=>s.type!=='road'||s.accessFor!==target.id);
   }else if(level<3&&target.auto)ensureSettlementRoadAccess(target,true);
+  beginStructureUpgrade(target,before,null,BUILD_DAYS.house);
   markStructureDirty(target);
   renderFunctionPanel();draw();
   status('House L'+level+(count?' · '+count+' streetfront '+(count===1?'building':'buildings'):' · waiting for primary road frontage'));
@@ -74,6 +76,8 @@ function addStructure(s){
     if(!site.ok){status(site.reason);return false}
     s.groundZ=site.ground;s.resourceTarget=site.resourceTarget;
   }
+  // Town hall and guild hall are bound to the well whose square they stand on.
+  if(typeof isWellCivic==='function'&&isWellCivic(s))s.wellId=wellCivicPlacementCheck(s).well?.id||null;
   normalizeStructureRotation(s);
   window.ConquerQuay?.faceWallOut(s);
   normalizeCivicDevelopment(s);
@@ -99,22 +103,29 @@ function addStructure(s){
       // Quay top at the deck level, its sea face fixed once at placement.
       const site=window.ConquerQuay.validate(s);
       s.groundZ=0;s.seaSide=site.side;s.length=dist(s.a,s.b);
+    }else if(window.ConquerSlopeways?.is(s)){
+      // Ramp/stairway: the two plateau levels it joins, surveyed on the real terrain.
+      const way=window.ConquerSlopeways.validate(s);
+      if(!way.ok){status(way.reason);return false}
+      s.za=way.za;s.zb=way.zb;s.length=way.length;s.groundZ=Math.min(way.za,way.zb);
     }else{
-      const groundZ=buildableTerrainElevationForStructure(s);
-      if(groundZ==null){status('Build only on a single flat terrace — slopes and mixed elevations are not buildable for this structure');return false}
+      const groundZ=linearBuildGroundZ(s);
+      if(groundZ==null){status(s.type==='wall'?wallTerrainVerdict(s).reason:'Build only on a single flat terrace — slopes and mixed elevations are not buildable for this structure');return false}
       s.groundZ=groundZ;
     }
     const cost=constructionCost(s);
-    if(!canAfford(cost)){status('Insufficient resources — '+costText(cost));return false}
-    s.buildCost=cost;spendCost(cost);beginConstruction(s);
+    // Confirmation creates a project, not an upfront debit.
+    s.buildCost=cost;beginConstruction(s);
     displaced=removeOverlappingAuto(s);
   }
   State.structures.push(s);
-  if(isCivicAnnex(s)||['church','tavern','house'].includes(s.type))invalidateUrbanGeometry();
+  if(isCivicAnnex(s)||['church','tavern','house','well'].includes(s.type))invalidateUrbanGeometry();
   let reactive=0;
   if(!s.auto){
     reactive+=repairDisplacedRoads(displaced.roads,s);
     if(isCivic(s))reactive+=ensureSettlementRoadAccess(s);
+    // A later well joins the founding well's network with one main road (no border roads).
+    if(s.type==='well'&&State.village.founded){reactive+=buildWellMainConnection(s);window.ConquerCombat?.invalidateRoutes?.()}
     if(s.type==='well')reactive+=reconcileTowerSecondaryBranches(Infinity,true);
     if(displaced.removed||reactive){
       const bits=[];
@@ -146,6 +157,7 @@ function linearRouteStructures(route,endSnapId,spec){
       flip:false,functions:[],masonryMaterial:State.buildMasonryMaterial
     };
     if(State.tool.span==='wide')s.span='wide';
+    if(State.tool.material==='wood'&&s.type==='built'){s.material='wood';s.level=1;delete s.masonryMaterial}
     if(i===0&&State.draft?.aSnap)s.aSnap=State.draft.aSnap;
     if(i===route.segments.length-1&&endSnapId)s.bSnap=endSnapId;
     if(groupId)s.routeGroupId=groupId;
@@ -156,29 +168,45 @@ function linearRouteStructures(route,endSnapId,spec){
   });
 }
 function commitStructuralLinearRoute(route,endSnapId,spec){
-  const structures=linearRouteStructures(route,endSnapId,spec);
-  if(!structures.length)return false;
+  const planned=linearRouteStructures(route,endSnapId,spec);
+  if(!planned.length)return false;
+  // A wall across a main road gets a gate on the road (WALL-ROAD-GATE).
+  const plan=wallRoadGatePlan(planned);
+  if(plan.blocked){status('Route blocked: '+plan.blocked);return false}
+  const structures=plan.walls;
 
   // Preflight the whole dogleg before mutating state, so a two-leg wall is atomic
   // from the player's point of view.
   for(const s of structures){
     const verdict=window.ConquerPlacement?.check(s);
     if(verdict&&!verdict.ok){status('Route blocked: '+verdict.reason);return false}
-    if(buildableTerrainElevationForStructure(s)==null){
-      status('Route crosses incompatible terrain — choose another joint or endpoint');
+    if(linearBuildGroundZ(s)==null){
+      status(s.type==='wall'?'Route blocked: '+wallTerrainVerdict(s).reason:'Route crosses incompatible terrain — choose another joint or endpoint');
       return false;
     }
   }
-  const totalCost=aggregateConstructionCost(structures);
-  if(!canAfford(totalCost)){
-    status('Insufficient resources — '+costText(totalCost));
-    return false;
-  }
+  // Gates first: the wall pieces seat on their flanks and the road keeps its passage.
+  for(const g of plan.gates)if(!addStructure(g))return false;
   for(const s of structures)if(!addStructure(s))return false;
-  return true;
+  if(plan.gates.length)status(plan.gates.length===1?'Gate placed on the main road':plan.gates.length+' gates placed on the main roads');
+  return plan.gates.length?{gates:plan.gates.length}:true;
 }
 function deleteStructure(id){
   const target=State.structures.find(s=>s.id===id);if(!target)return;
+  if(underConstruction(target)&&target.construction?.upgrade){
+    const before=target.construction.upgrade.before,refund=refundableConstructionCost(target);
+    const damage=target.siegeIntegrity?JSON.parse(JSON.stringify(target.siegeIntegrity)):null;
+    refundCost(refund);
+    for(const key of Object.keys(target))delete target[key];
+    Object.assign(target,before);
+    if(damage)target.siegeIntegrity=damage; // Cancelling work never heals siege damage.
+    if(target.type==='tower'){repositionSubtower(target);syncSubtowerTree(target.id)}
+    if(target.type==='house')invalidateUrbanGeometry();
+    markStructureDirty(target);renderFunctionPanel();draw();return;
+  }
+  if(window.ConquerStorageYard?.is(target)&&!window.ConquerStorageYard.canRemove(target)){
+    status('Sposta le scorte in un altro piazzale prima di eliminare l’unico magazzino');return;
+  }
 
   if(target.type==='road'&&target.routeId){
     const deleted=new Set(State.village.deletedMainRoutes||[]);deleted.add(target.routeId);
@@ -186,16 +214,27 @@ function deleteStructure(id){
   }
   if(target.type==='tower')restoreTowerWallConnections(target);
   const removedChildren=civicAnnexChildren(id);
-  for(const child of removedChildren)if(child.buildCost)refundCost(child.buildCost);
+  for(const child of removedChildren)if(child.buildCost)refundCost(refundableConstructionCost(child));
   if(['tower','gate'].includes(target.type))detachSubtowerChildren(target.id);
-  if(!target.auto&&target.buildCost&&!(target.type==='bridge'&&target.variant==='wood'))refundCost(target.buildCost);
-  if(target.type==='well'){
+  if(!target.auto&&target.buildCost&&(target.construction?.materialsDelivered||!(target.type==='bridge'&&target.variant==='wood')))refundCost(refundableConstructionCost(target));
+  const foundingWellTarget=target.type==='well'&&(!State.village.founded||target.id===State.village.wellId);
+  if(foundingWellTarget){
     State.combat=null;window.ConquerCombat?.restore(null);
     const borderEntries=ensureBorderEntrySelection();
-    State.structures=State.structures.filter(s=>!s.auto&&s.id!==id);
+    // The village goes with its founding well, later wells included (refunded).
+    for(const w of State.structures)if(w.type==='well'&&w.id!==id&&!w.auto&&w.buildCost)refundCost(refundableConstructionCost(w));
+    State.structures=State.structures.filter(s=>!s.auto&&!s.foundingStockyard&&s.id!==id&&s.type!=='well');
     window.ConquerEconomy?.reset?.();State.resources={...PROVISIONAL_RESOURCES};
     State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};
-  }else State.structures=State.structures.filter(s=>s.id!==id&&s.accessFor!==id&&s.repairFor!==id&&s.gateFor!==id&&s.branchTargetId!==id&&s.parentId!==id);
+  }else{
+    State.structures=State.structures.filter(s=>s.id!==id&&s.accessFor!==id&&s.repairFor!==id&&s.gateFor!==id&&s.wellFor!==id&&s.branchTargetId!==id&&s.parentId!==id);
+    if(target.type==='well'){
+      // A later well: its main road goes with it; the centre role falls back to the founding well.
+      if(State.village.centerWellId===id)delete State.village.centerWellId;
+      State.village.deletedMainRoutes=(State.village.deletedMainRoutes||[]).filter(r=>r!==wellMainRouteId(target));
+      invalidateUrbanGeometry();window.ConquerCombat?.invalidateRoutes?.();
+    }
+  }
   if(target.type==='tower')window.ConquerSiege?.syncAutoMastio?.();
   reconcileTowerSecondaryBranches(Infinity,true);
   if(State.selectedId===id||removedChildren.some(child=>child.id===State.selectedId))State.selectedId=null;
@@ -255,7 +294,7 @@ function turnGate(target,delta,label='Gate rotated'){
 }
 function flipGate(target){return turnGate(target,Math.PI,'Gate front flipped')}
 function rotatePointStructure(target,steps=1){
-  if(!target||!['house','market','tavern','church','training','plaza','civicAnnex','loggingCamp','quarry','mine','windmill'].includes(target.type))return false;
+  if(!target||!['house','market','tavern','church','training','plaza','townhall','guild','bargello','balivo','civicAnnex','loggingCamp','quarry','mine','windmill'].includes(target.type))return false;
   if(civicAnnexChildren(target.id).length){status('Remove annexes before rotating the parent complex');return false;}
   const oldAngle=Number(target.angle)||0,next=snapStructureAngle(oldAngle+STRUCTURE_ANGLE_STEP*steps);
   const candidate={...target,angle:next,rotationStep:structureRotationStep(next)};
@@ -270,7 +309,7 @@ function rotatePointStructure(target,steps=1){
   }else if(window.ConquerIndustries?.is(target)){
     target.groundZ=window.ConquerIndustries.validate(target).ground;
   }else{
-    target.groundZ=buildableTerrainElevationForStructure(target);
+    target.groundZ=linearBuildGroundZ(target);
   }
   if(target.type==='house')invalidateUrbanGeometry();
   markStructureDirty(target,true,true);

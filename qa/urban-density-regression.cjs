@@ -244,6 +244,7 @@ const app=['app','app-rooms','app-input','app-persistence','app-calendar-ui','ap
 const actionStart=app.indexOf('function changeHouseDensity(');
 const actionEnd=app.indexOf('function selectedStructure(){',actionStart);
 assert.ok(actionStart>=0&&actionEnd>actionStart,'house upgrade handler must be available');
+require('./construction-fixture.cjs')(context);sandbox.BUILD_DAYS={house:2.2};
 run(app.slice(actionStart,actionEnd));
 const messages=[];
 sandbox.status=message=>messages.push(message);

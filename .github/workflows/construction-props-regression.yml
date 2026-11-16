@@ -1,4 +1,9 @@
 name: Construction props regression
+
+# Abort superseded PR runs of this workflow (never cancel scheduled/main runs).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 on:
   pull_request:
     branches: [main]
@@ -14,6 +19,8 @@ on:
       - 'qa/construction-props-regression.cjs'
       - '.github/workflows/construction-props-regression.yml'
   workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   construction-props:
     runs-on: ubuntu-latest

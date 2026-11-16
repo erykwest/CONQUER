@@ -59,8 +59,8 @@ vm.runInContext(['rotateVec','toLocalPoint'].map(n=>fn(placement,n)).join('\n')+
   assert.equal(ctx.roadMeetsBridgeEnd(road(-5,-3,0,0),bridge),true,'a road arriving at end a');
   assert.equal(ctx.roadMeetsBridgeEnd(road(4,0,1,.3),bridge),false,'a road doubling back over the deck');
   assert.equal(ctx.roadMeetsBridgeEnd(road(4.6,0,9,2),bridge),false,'a road that only passes near the end');
-  assert.match(world,/manual\.type==='bridge'&&roadMeetsBridgeEnd\(road,manual\)\)return false/,'roads may touch the bridge they lead onto');
-  assert.match(read('settlement-placement.js'),/s\.type==='bridge'&&roadMeetsBridgeEnd\(other,s\)\)return false/,'and bridges the road they lead from');
+  assert.match(world,/\['bridge','ramp','stairway'\]\.includes\(manual\.type\)&&roadMeetsBridgeEnd\(road,manual\)\)return false/,'roads may touch the bridge they lead onto');
+  assert.match(read('settlement-placement.js'),/\['bridge','ramp','stairway'\]\.includes\(s\.type\)&&roadMeetsBridgeEnd\(other,s\)\)return false/,'and bridges the road they lead from');
   console.log('PASS a road joined to a bridge end is not an overlap');
 }
 {
@@ -68,6 +68,6 @@ vm.runInContext(['rotateVec','toLocalPoint'].map(n=>fn(placement,n)).join('\n')+
   assert.match(input,/\['wall','palisade','road'\]\.includes\(State\.tool\.linear\)/,'the road tool lights magnets before the first click');
   assert.match(placement,/s\.type!==\(road\?'bridge':type\)/,'bridge ends are drawn as road magnets');
   const html=fs.readFileSync(__dirname+'/../index.html','utf8');
-  assert.match(html,/settlement-world\.js\?v=bridge-magnet-1/,'index.html loads the new world script');
+  assert.match(html,/settlement-world\.js\?v=[^"\s]*bridge-magnet-1/,'index.html loads the new world script');
   console.log('PASS the road tool shows the bridge magnets');
 }

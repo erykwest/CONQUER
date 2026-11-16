@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CONQUER — CRIME / Ordine pubblico</title>
+<style>
+:root{color-scheme:dark;--bg:#151b19;--panel:#252e29;--panel2:#2e3931;--line:#4b5b4e;--ink:#eae4d4;--muted:#b4b9a8;--gold:#dfc180;--red:#d68176;--green:#91b79a;--amber:#d6b377}
+*{box-sizing:border-box}html{min-width:320px}body{margin:0;font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;background:radial-gradient(ellipse at top,#28352d 0,#151b19 58%);color:var(--ink)}
+header,main,footer{max-width:1250px;margin:auto;padding:0 22px}header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding-top:28px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+h1,h2,h3,p{margin-top:0}h1{font-family:Georgia,serif;font-size:2.25rem;letter-spacing:.13em;color:var(--gold);line-height:1;margin-bottom:4px}h2{font:1.42rem Georgia,serif;color:#f0dfb5}h3{font:1.1rem Georgia,serif;color:#ead7aa}
+small,.small,.muted{color:var(--muted)}.eyebrow{font-size:.7rem;text-transform:uppercase;letter-spacing:.15em;color:var(--gold)}header nav{display:flex;gap:16px;flex-wrap:wrap}a{color:var(--gold);text-decoration:none}a:hover{text-decoration:underline}
+main{padding-top:22px;padding-bottom:30px}.intro{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:20px}.intro p{max-width:660px;color:var(--muted);margin-bottom:0}.notice{background:#3a3225;border:1px solid #8e7850;color:#f4e5bd;border-radius:4px;padding:9px 13px;font-size:.8rem;max-width:310px}
+.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:15px}.metric,.panel{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:17px}
+.metric h3{font:700 .77rem system-ui,sans-serif;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:0 0 8px}
+.metric .value{font:2.1rem Georgia,serif;font-variant-numeric:tabular-nums}.metric .track{height:8px;background:#131b18;border-radius:8px;overflow:hidden;margin-top:10px}.metric .fill{display:block;height:100%;transition:width .15s ease-out}
+#crimeBar{background:var(--red)}#orderBar{background:var(--green)}#tensionBar{background:var(--amber)}
+.layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(290px,1fr);gap:14px}.stack{display:grid;gap:14px;align-content:start}
+.phase{border-left:4px solid var(--gold);padding:12px;background:var(--panel2);margin-bottom:12px}.phase strong{display:block;color:var(--gold);font:1.24rem Georgia,serif}.phase p{margin:4px 0 0;color:var(--muted);font-size:.88rem}
+.phases{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin-bottom:15px}.step{font-size:.68rem;text-align:center;color:var(--muted);border:1px solid var(--line);padding:8px 4px;border-radius:3px}.step.active{border-color:var(--gold);background:#564630;color:#ffe3aa;font-weight:bold}
+.controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.control{display:block;background:#1c2520;border:1px solid #46554b;padding:10px;border-radius:4px;font-size:.83rem}.control .head{display:flex;justify-content:space-between;gap:6px;margin-bottom:5px}output{color:var(--gold);font-variant-numeric:tabular-nums}input[type=range]{width:100%;accent-color:#c6a86a}select{width:100%;background:#1c2520;color:var(--ink);padding:8px;border:1px solid var(--line);font:inherit}
+.facility{display:flex;align-items:flex-start;gap:10px;cursor:pointer;border-top:1px solid #435047;padding:10px 0}.facility:first-child{border-top:0}.facility input{margin-top:5px;accent-color:#c7aa70}.facility strong{display:block}.facility small{display:block;font-size:.76rem}.facility .detail{font-size:.79rem;color:#c9c8b7}
+.facility.locked{opacity:.62;cursor:not-allowed}.buttons{display:flex;gap:9px;flex-wrap:wrap;margin-top:15px}.action{background:#39463c;border:1px solid #77856d;color:var(--ink);padding:9px 12px;border-radius:4px;cursor:pointer;font-weight:650}.action:hover:not(:disabled){background:#4f5d4e}.action.primary{background:#695b3a;border-color:#d8b87a}.action.alert{background:#5d3e36;border-color:#bf8b79}.action.ghost{background:transparent}.action:disabled{opacity:.4;cursor:not-allowed}
+#chart{display:block;width:100%;height:auto;background:#1b231f;border:1px solid #435146;border-radius:4px}#chart .gridline{stroke:#405044;stroke-width:1}#chart polyline{fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}.crime-line{stroke:var(--red)}.order-line{stroke:var(--green)}.tension-line{stroke:var(--amber)}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.77rem;color:var(--muted);margin-top:8px}.legend b{font-weight:normal}.legend .crime{color:var(--red)}.legend .order{color:var(--green)}.legend .tension{color:var(--amber)}
+#log{list-style:none;margin:0;padding:0;max-height:290px;overflow:auto}#log li{font-size:.82rem;color:#d1d1c0;border-bottom:1px solid #425046;padding:7px 0}#log li:first-child{color:var(--gold)}
+#status{margin-top:10px;border:1px solid #6b754f;border-radius:4px;background:#2c392b;padding:10px;color:#f0dfb5;font-size:.83rem;min-height:42px}
+footer{padding-top:0;padding-bottom:28px;font-size:.78rem;color:var(--muted)}code{color:#f1d7a5}
+@media(max-width:850px){.layout{grid-template-columns:1fr}.intro{display:block}.notice{margin-top:12px;max-width:none}}
+@media(max-width:540px){header,main,footer{padding-left:12px;padding-right:12px}header{align-items:flex-start;flex-direction:column}.metrics{gap:7px}.metric{padding:11px}.metric .value{font-size:1.6rem}.controls{grid-template-columns:1fr}.phases{gap:3px}.step{font-size:.61rem;padding:8px 2px}}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="eyebrow">CONQUER / Settlement lab</div><h1>CRIME</h1><div class="small">Criminalità · giustizia · ordine pubblico</div></div>
+  <nav aria-label="Navigazione"><a href="../index.html">Builder</a><a href="../march/">March</a><a href="../camp/">Camp</a></nav>
+</header>
+<main>
+  <section class="intro">
+    <div><div class="eyebrow">Skeleton V0 · motore indipendente</div><h2>Giustizia, paura e consenso</h2><p>Modifica tasse, carestia, guardie e assistenza. Osserva come malcontento e criminalità evolvono in proteste, sommosse o rivolte. Le strutture punitive possono frenare il crimine, ma alimentare tensione.</p></div>
+    <div class="notice"><strong>TEST LOCALE</strong><div>Scenario fittizio, non collegato a popolani, edifici, economia, Combat o salvataggi del feudo.</div></div>
+  </section>
+  <section class="metrics" aria-label="Indicatori sociali" aria-live="polite">
+    <div class="metric"><h3>Criminalità</h3><div class="value" id="crimeValue">—</div><div class="track"><span id="crimeBar" class="fill"></span></div></div>
+    <div class="metric"><h3>Ordine pubblico</h3><div class="value" id="orderValue">—</div><div class="track"><span id="orderBar" class="fill"></span></div></div>
+    <div class="metric"><h3>Tensione sociale</h3><div class="value" id="tensionValue">—</div><div class="track"><span id="tensionBar" class="fill"></span></div></div>
+  </section>
+  <div class="layout">
+    <div class="stack">
+      <section class="panel">
+        <h2>Situazione del villaggio <small id="day">Giorno 1</small></h2>
+        <div class="phase"><strong id="phaseTitle">Calma</strong><p id="phaseText">—</p></div>
+        <div class="phases" id="phaseSteps" aria-label="Evoluzione delle tensioni"></div>
+        <div class="buttons">
+          <button id="advance" type="button" class="action primary">▶ 1 giorno</button>
+          <button id="advance7" type="button" class="action">⏩ 7 giorni</button>
+          <button id="crisis" type="button" class="action alert">Simula carestia</button>
+          <button id="stabilize" type="button" class="action">Misure sociali</button>
+          <button id="reset" type="button" class="action ghost">Azzera scenario</button>
+        </div>
+        <div id="status" role="status" aria-live="polite">Scenario pronto.</div>
+      </section>
+      <section class="panel">
+        <h2>Politiche feudali <small>fixture</small></h2>
+        <div class="controls">
+          <label class="control"><span class="head"><span>Tassazione</span><output id="out-tax" for="policy-tax">25</output></span><input id="policy-tax" data-policy="tax" type="range" min="0" max="100" step="1"></label>
+          <label class="control"><span class="head"><span>Scarsità alimentare (TEST)</span><output id="out-foodStress" for="policy-foodStress">35</output></span><input id="policy-foodStress" data-policy="foodStress" type="range" min="0" max="100" step="1"></label>
+          <label class="control"><span class="head"><span>Guardie impiegate</span><output id="out-guards" for="policy-guards">10</output></span><input id="policy-guards" data-policy="guards" type="range" min="0" max="40" step="1"></label>
+          <label class="control"><span class="head"><span>Assistenza sociale</span><output id="out-relief" for="policy-relief">20</output></span><input id="policy-relief" data-policy="relief" type="range" min="0" max="100" step="1"></label>
+          <label class="control"><span class="head"><span>Severità delle pene</span></span><select id="policy-severity" data-policy="severity"><option value="0">Indulgente</option><option value="1">Ordinaria</option><option value="2">Repressiva</option></select></label>
+        </div>
+        <p class="small" style="margin:12px 0 0">Le leve sono parametri del laboratorio, non risorse o ordini reali della partita.</p>
+      </section>
+      <section class="panel"><h2>Andamento <small>ultimi 60 giorni</small></h2>
+        <svg id="chart" viewBox="0 0 520 165" role="img" aria-label="Storico criminalità, ordine pubblico e tensione sociale"><title>Storico indicatori sociali</title></svg>
+        <div class="legend"><b class="crime">● Criminalità</b><b class="order">● Ordine</b><b class="tension">● Tensione</b></div>
+      </section>
+    </div>
+    <div class="stack">
+      <section class="panel"><h2>Strutture e funzioni <small>fixture</small></h2><div id="facilities"></div><p class="small" style="margin:10px 0 0">Interruttori di prova: il laboratorio non legge ancora le strutture costruite nel Builder. La prigione non può essere disattivata finché ospita detenuti.</p></section>
+      <section class="panel"><h2>Giustizia e cronaca</h2><div class="small" id="detention">Detenuti 0/12</div><ol id="log" aria-live="polite"></ol></section>
+    </div>
+  </div>
+</main>
+<footer>CRIME conserva soltanto questa fixture nel browser (<code>conquer.crime.prototype.v1</code>). Ordine, sommossa e rivolta sono stati simulati, non ancora routine animate, scontri reali o nuove strutture 3D.</footer>
+<script src="./engine.js"></script>
+<script src="./ui.js"></script>
+</body>
+</html>

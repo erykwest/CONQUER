@@ -1,8 +1,16 @@
-name: Economy flows regression
+﻿name: Economy flows regression
+
+# Abort superseded PR runs of this workflow (never cancel scheduled/main runs).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 on:
   pull_request:
     paths:
       - 'src/settlement-economy.js'
+      - 'src/settlement-treasury.js'
+      - 'src/settlement-combat.js'
+      - 'qa/treasury-regression.cjs'
       - 'src/settlement-panels.js'
       - 'src/settlement-panels.css'
       - 'src/settlement-heraldry.js'
@@ -12,11 +20,57 @@ on:
       - 'src/settlement-population-figures.js'
       - 'src/ui/**'
       - 'qa/labor*.cjs'
+      - 'src/settlement-fields.js'
+      - 'qa/fields-regression.cjs'
+      - 'qa/idle-farmers-regression.cjs'
+      - 'src/settlement-educated.js'
+      - 'qa/educated-regression.cjs'
       - 'qa/economy*.cjs'
+      - 'qa/forestry-regression.cjs'
+      - 'qa/storage-yard-regression.cjs'
+      - 'qa/haulage-regression.cjs'
+      - 'qa/l1-carter-market-regression.cjs'
+      - 'src/settlement-haulage.js'
+      - 'src/settlement-population-figures.js'
+      - 'src/settlement-commerce.js'
+      - 'src/settlement-church.js'
+      - 'src/settlement-guild.js'
+      - 'qa/guild*.cjs'
+      - 'qa/church*.cjs'
+      - 'src/settlement-storage-yard.js'
+      - 'src/settlement-castle.js'
+      - 'src/settlement-castle-placement.js'
+      - 'src/settlement-app-rooms.js'
+      - 'src/settlement-structure-commands.js'
+      - 'src/settlement-app-persistence.js'
+      - 'src/settlement-world3d.js'
+      - 'src/settlement-forestry.js'
+      - 'src/settlement-industries.js'
+      - 'src/settlement-app-input.js'
+      - 'src/settlement-app-simulation.js'
+      - 'src/settlement-render.js'
+      - 'src/settlement-builder-ux.js'
       - 'qa/construction*.cjs'
       - 'src/settlement-core.js'
+      - 'src/settlement-population-*.js'
+      - 'src/settlement-commerce.js'
+      - 'src/settlement-urban-economy.js'
+      - 'src/settlement-market-economy.js'
+      - 'src/settlement-convoys.js'
+      - 'src/settlement-diplomacy.js'
+      - 'src/settlement-road-sign-tests.js'
+      - 'src/settlement-vehicles.js'
+      - 'src/settlement-wagons.js'
+      - 'qa/*routines*.cjs'
+      - 'qa/commerce*.cjs'
+      - 'qa/urban-workshops*.cjs'
+      - 'qa/convoys*.cjs'
+      - 'qa/road-sign*.cjs'
+      - 'qa/vehicles*.cjs'
       - '.github/workflows/economy-flows-regression.yml'
   workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   economic-ledger:
     runs-on: ubuntu-latest
@@ -32,14 +86,40 @@ jobs:
           node qa/economy-panel-history-regression.cjs
           node qa/economy-regression.cjs
           node qa/economy-industries-regression.cjs
+          node --check src/settlement-forestry.js
+          node qa/forestry-regression.cjs
+          node --check src/settlement-storage-yard.js
+          node qa/storage-yard-regression.cjs
+          node --check src/settlement-haulage.js
+          node qa/haulage-regression.cjs
+          node qa/l1-carter-market-regression.cjs
           node qa/economy-balance-regression.cjs
           node qa/economy-builder-integration.cjs
           node qa/construction-workers-regression.cjs
           node qa/construction-payroll-regression.cjs
           node qa/construction-commute-regression.cjs
           node qa/labor-jobs-regression.cjs
+          node qa/fields-regression.cjs
+          node qa/idle-farmers-regression.cjs
+          node --check src/settlement-educated.js
+          node qa/educated-regression.cjs
           node qa/economy-rations-regression.cjs
-          node qa/save-safety-regression.cjs
+          node --check src/settlement-treasury.js
+          node qa/treasury-regression.cjs
           node qa/founding-regression.cjs
           node qa/builder-placement-regression.cjs
           node qa/refactor-app-population-regression.cjs
+      - name: Routines, commerce, convoys and vehicles regressions
+        run: |
+          node qa/male-routines-regression.cjs
+          node qa/female-routines-regression.cjs
+          node qa/commerce-skeleton-regression.cjs
+          node --check src/settlement-church.js
+          node qa/church-regression.cjs
+          node --check src/settlement-guild.js
+          node qa/guild-regression.cjs
+          node qa/urban-workshops-regression.cjs
+          node qa/convoys-skeleton-regression.cjs
+          node qa/road-sign-convoy-regression.cjs
+          node qa/diplomacy-regression.cjs
+          node qa/vehicles-regression.cjs

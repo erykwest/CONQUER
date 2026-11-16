@@ -9,7 +9,7 @@ const root=path.resolve(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const art=read('src/settlement-animals.js');
 const wolvesSrc=read('src/settlement-wolves.js');
-const combatSrc=read('src/settlement-combat.js');
+const combatSrc=read('src/settlement-combat.js')+'\n'+read('src/settlement-combat-render.js');
 const rulesSrc=read('src/settlement-combat-rules.js');
 const html=read('camp/index.html');
 assert.match(html,/settlement-animals\.js/);
@@ -17,15 +17,20 @@ assert.match(html,/settlement-wolves\.js/);
 assert.ok(html.indexOf('settlement-animals.js')<html.indexOf('settlement-wolves.js'));
 assert.match(combatSrc,/ConquerWolves\?\.tick\(dt\)/);
 assert.match(combatSrc,/ConquerWolves\?\.draw\(g,e\)/);
-let night=false,token=null,wolves=[],registerCount=0,artCalls=[];
+// The game itself, not only /camp, loads the fauna after the combat module.
+const game=read('index.html');
+assert.ok(game.indexOf('settlement-combat.js')>0&&game.indexOf('settlement-combat.js')<game.indexOf('settlement-wolves.js'),
+  'index.html loads the fauna after combat');
+assert.ok(game.indexOf('settlement-animals.js')<game.indexOf('settlement-wolves.js'));
+let night=false,token=null,wolves=[],fauna=[],registerCount=0,artCalls=[];
 const soldiers=[];
 const win={ConquerCombat:{
-  enemy:()=>wolves,units:()=>soldiers,
+  enemy:()=>fauna,units:()=>soldiers,
   areaState:p=>({yellow:Math.hypot(p.x-100,p.y-100)<14}),
   wolfSpawnedFor:()=>token,
   registerWolves:(id,pack)=>{
     if(id===token)return false;
-    token=id;wolves=pack;registerCount++;return true
+    token=id;fauna=pack;wolves=pack.filter(w=>w.kind==='wolf');registerCount++;return true
   }
 }};
 const state={
@@ -43,6 +48,7 @@ const context=vm.createContext({
   clamp:(v,a,b)=>Math.min(b,Math.max(a,v)),
   withUrbanFigureOcclusion:(_p,_z,fn)=>fn(),performance:{now:()=>12345}
 });
+vm.runInContext(read('src/settlement-util.js'),context,{filename:'settlement-util.js'});
 vm.runInContext(art,context,{filename:'settlement-animals.js'});
 assert.ok(win.ConquerAnimals.SPECIES.wolf,'wolf SVG was transferred from animation');
 assert.equal(win.ConquerAnimals.SPECIES.wolf.modes.map(m=>m[0]).join(','),
@@ -70,7 +76,7 @@ for(const [id,members] of packs){
   assert.ok(members.every(w=>Math.hypot(w.x-den.x,w.y-den.y)<4),
     'pack members spawn together rather than scattered around the village');
 }
-assert.equal(win.ConquerCombat.wolfSpawnedFor().endsWith('packs-v2'),true,
+assert.equal(win.ConquerCombat.wolfSpawnedFor().endsWith('packs-v3'),true,
   'new pack schema upgrades older saves exactly once');
 api.ensure();assert.equal(registerCount,1,'subsequent render must not respawn pack');
 api.tick(.25);
@@ -171,3 +177,61 @@ assert.equal(svgPaints,2,'sprite refreshes for next animated gait frame');
 
 
 console.log('PASS imported wolf SVG, stable spawning, daytime neutral, nocturnal hunt/melee, dawn release');
+
+// ---- The bear: one, solitary, territorial (not a hunter) ----
+context.peasantSegmentClear=()=>true;
+context.performance.now=()=>12345;
+const bears=fauna.filter(b=>b.kind==='bear');
+assert.equal(bears.length,1,'exactly one bear is spawned with the packs');
+const bear=bears[0];
+assert.equal(bear.faction,'wildlife');assert.equal(bear.combatKind,'bear');
+assert.ok(Math.hypot(bear.x-100,bear.y-100)>=28,'the bear dens far from the well');
+assert.ok(!bear.wolfPackId,'the bear belongs to no pack');
+assert.equal(rules.PROFILES.bear.hp>rules.PROFILES.wolf.hp,true,'a bear is much tougher than a wolf');
+soldiers.length=0;night=false;
+const den={...bear.home};
+// A soldier passing at a distance is ignored, day or night.
+soldiers.push({id:'far',kind:'patrol',x:den.x+15,y:den.y,defeated:false});
+for(let i=0;i<4;i++)api.tick(.25);
+assert.equal(bear.neutral,true,'a distant soldier does not disturb the bear');
+assert.equal(bear.wolfTargetId,null);
+// At night it sleeps at its den.
+night=true;bear.x=den.x;bear.y=den.y;bear.wolfPath=null;
+api.tick(.25);
+assert.equal(bear.wolfMode,'sleep','at night the bear sleeps at its den');
+// A soldier who comes near the den wakes it: it charges.
+soldiers[0]={id:'near',kind:'patrol',x:den.x+3,y:den.y,defeated:false};
+const gap0=Math.hypot(bear.x-soldiers[0].x,bear.y-soldiers[0].y);
+for(let i=0;i<8;i++)api.tick(.25);
+assert.equal(bear.neutral,false,'trespassing near the den makes the bear hostile');
+assert.equal(bear.wolfTargetId,'near');
+assert.ok(Math.hypot(bear.x-soldiers[0].x,bear.y-soldiers[0].y)<gap0-.3,'the bear charges the intruder');
+// Once the intruder is out of its territory it gives up and calms down.
+soldiers[0].x=den.x+30;
+api.tick(.25);
+assert.equal(bear.neutral,true,'the bear does not chase beyond its territory');
+assert.equal(bear.wolfTargetId,null);
+artCalls=[];win.ConquerAnimals.drawAnimal=(...args)=>artCalls.push(args);
+context.document=undefined;
+api.draw({},bear);
+assert.equal(artCalls[0][0],'bear','the bear is drawn with its own art');
+console.log('PASS solitary bear: den in the wild, ignores passers-by, sleeps at night, charges trespassers, leash');
+
+// ---- On demand, for the threat generator ----
+win.ConquerCombat.addEnemies=list=>{fauna.push(...list);wolves=fauna.filter(w=>w.kind==='wolf');return true};
+win.ConquerCombat.removeEnemies=pred=>{const n=fauna.length;fauna=fauna.filter(e=>!pred(e));wolves=fauna.filter(w=>w.kind==='wolf');return n-fauna.length};
+night=false;
+const census0=api.census();
+assert.equal(census0.bears,1);assert.equal(census0.packs,2);
+const extra=api.spawnPack({size:4,key:'qa-pack'});
+assert.ok(extra&&extra.size===4,'a new pack of the requested size');
+assert.equal(api.census().packs,3,'counted as a third pack');
+const newcomers=fauna.filter(w=>w.wolfPackId===extra.packId);
+assert.ok(newcomers.every(w=>w.neutral&&Math.hypot(w.x-100,w.y-100)>=28),'daytime newcomers are neutral, out in the wild');
+assert.equal(api.spawnBear({key:'qa-bear'}),null,'never a second living bear');
+bear.defeated=true;
+const cub=api.spawnBear({key:'qa-bear'});
+assert.ok(cub,'a new bear once the old one is dead');
+assert.ok(!fauna.includes(bear),'the dead are cleared when a newcomer arrives');
+assert.equal(api.census().bears,1);
+console.log('PASS fauna on demand: new packs, a new bear only when none lives, census');

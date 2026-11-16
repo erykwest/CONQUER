@@ -22,6 +22,9 @@ function harness(options={}){
     underConstruction:s=>s.construction?.version===2?s.construction.workDone<s.construction.workRequired:
       s.construction?State.clock.day<s.construction.completeDay:false,
     buildDuration:s=>s.workDays??4,
+    // Synthetic crew-only sites have no bills. Shortage/partial-delivery
+    // behavior is independently covered by construction-priority-regression.
+    constructionCost:()=>({}),
     calendarDateFromDay:date,
     document:{getElementById:()=>null}
   });

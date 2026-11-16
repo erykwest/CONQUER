@@ -9,6 +9,7 @@ new Function('require','__dirname',harness+`
 run(fs.readFileSync(__dirname+'/../src/settlement-architecture.js','utf8'));
 run(fs.readFileSync(__dirname+'/../src/settlement-wallwalk.js','utf8'));
 // The siege-engine models give the ram crews their real posts (4 light, 8 covered).
+if(typeof ConquerUtil==='undefined'&&!sandbox.window?.ConquerUtil)run(fs.readFileSync(__dirname+'/../src/settlement-util.js','utf8'));
 run(fs.readFileSync(__dirname+'/../src/assets/siege-engines-model.js','utf8'));
 run(fs.readFileSync(__dirname+'/../src/settlement-siege-engines3d.js','utf8'));
 let passed=0,failed=0;

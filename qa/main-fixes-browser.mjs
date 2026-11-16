@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import {chromium} from 'playwright';
 const base=process.env.CONQUER_QA_URL||'http://127.0.0.1:4173';
 const out='output/playwright/main-fixes';fs.mkdirSync(out,{recursive:true});
-const browser=await chromium.launch({headless:true,args:['--use-angle=swiftshader','--enable-webgl']});
+const browser=await chromium.launch({headless:true,executablePath:process.env.QA_CHROME||undefined,args:['--use-angle=swiftshader','--enable-webgl']});
 const errors=[],warnings=[];
 try{
  const context=await browser.newContext({viewport:{width:1440,height:900}});
@@ -22,7 +22,7 @@ try{
  await page.goto(base+'/index.html?assetlab=1&world3d=1',{waitUntil:'domcontentloaded'});
  await page.waitForFunction(()=>!!window.ConquerGates&&!!window.ConquerWorld3D);
  await page.evaluate(()=>{
-   State.clock.speed=0;State.clock.day=20;State.daylightOverride='day';State.weatherOverride='sun';State.seasonOverride='summer';
+   State.devBuild={fastBuild:true};State.clock.speed=0;State.clock.day=20;State.daylightOverride='day';State.weatherOverride='sun';State.seasonOverride='summer';
    State.environment=[];State.relief={hills:[],seed:12345};clearReliefBandCache();
    State.resources={gold:1000,metal:1000,wood:1000};State.structures=[];ConquerSiege.restore(null);
    const gate={id:'qa-gate',type:'gate',material:'stone',shape:'square',tier:2,size:1.5,level:1,x:100,y:100,angle:0,functions:[]};

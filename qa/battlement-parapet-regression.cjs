@@ -9,17 +9,22 @@ let passed=0;
 function check(name,body){body();passed++;console.log('PASS '+name)}
 const setup=list=>{run('State.structures').splice(0,Infinity,...list);return list};
 const tower=(id,extra={})=>({id,type:'tower',shape:'square',material:'stone',size:1.5,tier:2,level:1,roofStyle:'battlement',x:100,y:100,angle:0,functions:[],...extra});
-const split=pieces=>({merlons:pieces.filter(p=>!p.kind),parapets:pieces.filter(p=>p.kind==='parapet')});
+// An L corner merlon is two arm pieces: count each corner once.
+const split=pieces=>{
+  const merlons=pieces.filter(p=>!p.kind);
+  return{merlons,parapets:pieces.filter(p=>p.kind==='parapet'),positions:merlons.length-merlons.filter(p=>p.cornerArm).length/2};
+};
 const centroid=p=>({x:p.pts.reduce((a,q)=>a+q.x,0)/p.pts.length,y:p.pts.reduce((a,q)=>a+q.y,0)/p.pts.length});
 
 check('square, round and gate crowns have one parapet block per crenel',()=>{
   const [sq,rd,gt]=setup([tower('s'),tower('r',{shape:'round',r:.75,x:110}),{id:'g',type:'gate',material:'stone',level:1,roofStyle:'battlement',x:120,y:100,angle:0,size:1.6}]);
   const s=split(run('towerBattlementPieces')(sq));
-  assert.equal(s.parapets.length,s.merlons.length,'closed square ring: as many gaps as merlons');
+  assert.equal(s.parapets.length,s.positions,'closed square ring: as many gaps as merlons');
+  assert.equal(s.merlons.filter(p=>p.cornerArm).length,8,'four L corners, two arms each');
   const r=split(run('towerBattlementPieces')(rd));
   assert.equal(r.parapets.length,r.merlons.length,'closed round ring');
   const g=split(run('gateBattlementPieces')(gt));
-  if(g.merlons.length)assert.equal(g.parapets.length,g.merlons.length,'closed gate ring');
+  if(g.merlons.length)assert.equal(g.parapets.length,g.positions,'closed gate ring');
   for(const p of [...s.parapets,...r.parapets]){
     const h=p.z1-p.z0;assert.ok(h>.05&&h<.2,'parapet is lower than a merlon: '+h);
     assert.ok(Math.abs(p.z0-run('structureHeight')(p.ownerId==='s'?sq:rd))<1e-9,'parapet sits on the crown');
@@ -40,6 +45,47 @@ check('round towers: more merlons, growing with the tier',()=>{
   const counts=[1,2,3].map(t=>{const [rd]=setup([tower('r',{shape:'round',tier:t,r:[0,.5,.75,1][t]})]);return split(run('towerBattlementPieces')(rd)).merlons.length});
   assert.ok(counts[0]>=8&&counts[1]>counts[0]&&counts[2]>counts[1],'merlons per tier: '+counts);
   assert.ok(counts.every(n=>n%2===0),'even count keeps the ring symmetric');
+});
+check('crenel styles: crown parts per style, restyle priced per merlon',()=>{
+  const [sq]=setup([tower('s'),tower('b',{x:110,masonryMaterial:'brick'})]);
+  run('State').policies.crenelStyle='flat';
+  assert.ok(split(run('towerBattlementPieces')(sq)).merlons.every(p=>!p.styleParts),'flat: plain blocks');
+  for(const style of ['gabled','swallowtail']){
+    run('State').policies.crenelStyle=style;
+    assert.ok(split(run('towerBattlementPieces')(sq)).merlons.every(p=>p.styleParts?.length),style+': every merlon has a crown');
+  }
+  const q=run('crenelRestyleQuote')('swallowtail'),n=q.merlons/2;
+  assert.ok(n>0&&q.cost.stone===3*n&&q.cost.clay===3*n&&q.cost.gold===4*n,'stone vs brick pricing: '+JSON.stringify(q));
+  run('State').policies.crenelStyle='flat';
+});
+check('double merlon: 11011 run on walls, merlons twice as long as the crenels',()=>{
+  const [w]=setup([{id:'w',type:'wall',material:'stone',level:1,width:.5,a:{x:100,y:100},b:{x:105,y:100}}]);
+  run('State').policies.crenelStyle='double';
+  const {merlons,parapets}=split(run('wallBattlementPieces')(w));
+  const span=m=>{const xs=m.pts.map(q=>q.x);return[Math.min(...xs),Math.max(...xs)]};
+  const runs=merlons.map(span).sort((a,b)=>a[0]-b[0]);
+  assert.ok(merlons.every(m=>m.doubleMerlon&&!m.styleParts),'plain double merlons');
+  for(let i=1;i<runs.length-1;i++)assert.ok(Math.abs(runs[i][1]-runs[i][0]-.56)<.01,'inner merlons are .56 long');
+  for(let i=1;i<runs.length;i++){const gap=runs[i][0]-runs[i-1][1],prev=runs[i-1][1]-runs[i-1][0];
+    assert.ok(gap>.15&&gap<.4,'crenel about one plain merlon wide: '+gap.toFixed(3));if(i>1)assert.ok(prev>1.6*gap,'merlon â‰ˆ 2Ã— crenel')}
+  assert.ok(runs[0][0]>=99.99&&runs.at(-1)[1]<=105.01,'end merlons stay on the wall');
+  assert.equal(parapets.length,merlons.length-1);
+  run('State').policies.crenelStyle='flat';
+});
+check('two-row crenellation: second inner row on walls, towers unchanged',()=>{
+  const [w,sq]=setup([{id:'w',type:'wall',material:'stone',level:1,width:.5,a:{x:100,y:100},b:{x:105,y:100}},tower('s',{x:120})]);
+  run('State').policies.crenelStyle='flat';
+  const flat=split(run('wallBattlementPieces')(w)),flatTower=split(run('towerBattlementPieces')(sq)).merlons.length;
+  run('State').policies.crenelStyle='tworow';
+  const dbl=split(run('wallBattlementPieces')(w)),inner=dbl.merlons.filter(p=>p.innerRow);
+  assert.equal(inner.length,flat.merlons.length,'one inner merlon per outer merlon');
+  assert.equal(dbl.parapets.length,2*flat.parapets.length,'breastwork on both faces');
+  assert.ok(inner.every(p=>!p.styleParts&&p.centerY!==null),'inner merlons are plain blocks');
+  const ys=m=>m.pts.reduce((a,q)=>a+q.y,0)/m.pts.length;
+  assert.ok(Math.sign(ys(inner[0])-100)!==Math.sign(ys(dbl.merlons.find(p=>!p.innerRow))-100),'rows on opposite faces');
+  assert.equal(split(run('towerBattlementPieces')(sq)).merlons.length,flatTower,'towers keep one ring');
+  assert.ok(run('crenelRestyleQuote')('tworow').merlons>run('crenelRestyleQuote')('flat').merlons,'quote counts both rows');
+  run('State').policies.crenelStyle='flat';
 });
 console.log('battlement parapet regression: '+passed+' checks');
 `);

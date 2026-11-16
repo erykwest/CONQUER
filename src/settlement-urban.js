@@ -193,9 +193,9 @@ function urbanLotHasMinimumSize(poly,preferredAngle=0){
 function urbanSpawnOccupants(){
   const out=window.ConquerCombat?.spawnOccupants?.()||[];
   const houses=completedSettlement('house'),fields=completedSettlement('field');
-  const assignments=fieldWorkAssignments(houses.filter(h=>houseLevel(h)<=2),fields),day=peasantVisualDay();
+  const assignments=fieldWorkAssignments(houses,fields),day=peasantVisualDay();
   for(const house of houses)for(const resident of houseResidents(house)){
-    let p=residentClassPosition(house,resident,day,assignments.get(house.id));
+    let p=residentClassPosition(house,resident,day,assignments.get(resident.id));
     if(p)p={x:p.x+resident.scatterX,y:p.y+resident.scatterY};
     p=window.ConquerCombat?.civilSpawnPosition?.(p,house,resident)??p;
     if(p)out.push({x:p.x,y:p.y,r:resident.age==='child'?.12:.22});
@@ -807,7 +807,8 @@ function drawUrbanFence({a,b}){
 function drawUrbanWall({a,b}){
   const L=dist(a,b),nx=-(b.y-a.y)/L*.065,ny=(b.x-a.x)/L*.065;
   const poly=[{x:a.x+nx,y:a.y+ny},{x:b.x+nx,y:b.y+ny},{x:b.x-nx,y:b.y-ny},{x:a.x-nx,y:a.y-ny}];
-  extrudePolygon(poly,.36,{top:State.season==='winter'?'#e5e9df':'#a3937a',sideA:'#766a59',sideB:'#8b7c67',stroke:'rgba(57,49,39,.65)'});
+  const stone=hex=>window.ConquerStoneColor?.shade(hex)||hex;
+  extrudePolygon(poly,.36,{top:State.season==='winter'?'#e5e9df':stone('#a3937a'),sideA:stone('#766a59'),sideB:stone('#8b7c67'),stroke:'rgba(57,49,39,.65)'});
   ctx.strokeStyle='rgba(57,49,39,.4)';
   for(const z of [.12,.24]){
     const p=w2s(a,z),q=w2s(b,z);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.stroke();
@@ -908,7 +909,7 @@ function houseFacadePlan(house,part,edge){
   const pts=part.points,i=pts.indexOf(edge.a),other=i>=0?dist(pts[(i+1)%pts.length],pts[(i+2)%pts.length]):0;
   const long=level>=2&&L>=1&&L>=other-1e-6;
   const offs=long?[-L/4,L/4]:[0];
-  const windows=houseFacadeDoorCut(house,edge,rows.flatMap(z=>offs.map(off=>({off,z}))));
+  const windows=houseFacadeChimneyCut(house,edge,houseFacadeDoorCut(house,edge,rows.flatMap(z=>offs.map(off=>({off,z})))));
   const beams=[];
   if(level<2)return{windows,beams};
   const fb=houseFloorBreak(wallH),top=wallH,t=HOUSE_TIMBER_W/2,half=L/2;
@@ -941,7 +942,9 @@ function houseFacadePlan(house,part,edge){
     seg(0,top,0,ridge-t*2);seg(-hc,zc,hc,zc);
     seg(-half*.62,top+t,-t,top+(ridge-top)*.72);seg(half*.62,top+t,t,top+(ridge-top)*.72);
   }
-  return houseFacadeTurretCut(part,edge,{windows,beams});
+  // An L3 workshop's shop window replaces the ground-floor window it falls on.
+  const shopWindows=(typeof window!=='undefined'&&window.ConquerShopCutaway?.facadeCut(house,part,edge,windows))||windows;
+  return houseFacadeTurretCut(part,edge,{windows:shopWindows,beams});
 }
 // A window never sits on or over the door: any window reaching down into the door's height keeps
 // HOUSE_DOOR_CLEARANCE beside the door leaf, or is dropped.
@@ -955,6 +958,15 @@ function houseFacadeDoorCut(house,edge,windows){
   const halfDoor=Math.min(.08,(Number(house.w)||1.5)*.0533);
   return windows.filter(w=>w.z-HOUSE_WINDOW_HALF_H>HOUSE_DOOR_TOP+HOUSE_DOOR_CLEARANCE||
     Math.abs(w.off-off)>=HOUSE_WINDOW_HALF_W+halfDoor+HOUSE_DOOR_CLEARANCE);
+}
+// The L1 gable-end chimney (houseSideChimney) takes the place of the window on its wall.
+function houseFacadeChimneyCut(house,edge,windows){
+  const c=typeof houseSideChimney==='function'?houseSideChimney(house):null;if(!c)return windows;
+  const L=dist(edge.a,edge.b)||1,ux=(edge.b.x-edge.a.x)/L,uy=(edge.b.y-edge.a.y)/L;
+  const dx=c.wall.x-(edge.a.x+edge.b.x)/2,dy=c.wall.y-(edge.a.y+edge.b.y)/2;
+  if(Math.abs(-dx*uy+dy*ux)>.05||Math.abs(dx*ux+dy*uy)>L/2)return windows;
+  const off=dx*ux+dy*uy;
+  return windows.filter(w=>Math.abs(w.off-off)>=HOUSE_WINDOW_HALF_W+L1_CHIMNEY_HALF_W+.04);
 }
 // The L4 corner turret stands in front of part of its own facade: that stretch keeps no window
 // or beam (horizontal plates are split around it).
@@ -1171,7 +1183,7 @@ function urbanOcclusionPieces(){
     for(const part of entry.parts){
       const faces=urbanHouseFaces(entry.house,part);
       const projected=faces.flat().map(v=>w2sRaw(v.p,v.z));
-      pieces.push({faces,buildingKey:part.buildingKey||null,maxDepth:Math.max(...part.points.map(viewDepthPoint)),
+      pieces.push({faces,houseId:entry.house.id,buildingKey:part.buildingKey||null,maxDepth:Math.max(...part.points.map(viewDepthPoint)),
         minX:Math.min(...projected.map(p=>p.x)),maxX:Math.max(...projected.map(p=>p.x)),
         minY:Math.min(...projected.map(p=>p.y)),maxY:Math.max(...projected.map(p=>p.y))});
     }
@@ -1183,7 +1195,9 @@ function withUrbanFigureOcclusion(p,z,drawFn,ignoreBuildingKey=null){
   // of architectural faces costs far more than it contributes visually.
   if(State.view.scale<.48)return drawFn();
   const screen=w2s(p,z),depth=viewDepthPoint(p),r=wrap.getBoundingClientRect();
-  const pieces=urbanOcclusionPieces().filter(q=>(ignoreBuildingKey==null||q.buildingKey!==ignoreBuildingKey)&&q.maxDepth>depth&&
+  // An open L3 workshop no longer hides anyone (its walls are cut to the sill).
+  const open=window.ConquerShopCutaway?.activeId?.()||'',openIds=open?open.split(','):[];
+  const pieces=urbanOcclusionPieces().filter(q=>(ignoreBuildingKey==null||q.buildingKey!==ignoreBuildingKey)&&!openIds.includes(q.houseId)&&q.maxDepth>depth&&
     q.minX<screen.x+28&&q.maxX>screen.x-28&&q.minY<screen.y+12&&q.maxY>screen.y-44);
   if(!pieces.length)return drawFn();
   ctx.save();

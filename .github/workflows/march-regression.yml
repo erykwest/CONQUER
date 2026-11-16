@@ -1,5 +1,10 @@
 name: March skeleton regression
 
+# Abort superseded PR runs of this workflow (never cancel scheduled/main runs).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 on:
   pull_request:
     paths:
@@ -13,6 +18,9 @@ on:
       - 'march/**'
       - 'qa/march-regression.cjs'
       - '.github/workflows/march-regression.yml'
+
+permissions:
+  contents: read
 
 jobs:
   march-regression:

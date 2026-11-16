@@ -5,15 +5,20 @@
   const $ = id => document.getElementById(id);
   const num = n => Number.isFinite(Number(n)) ? Number(n) : 0;
   const fmt = n => n == null ? '—' : num(n).toLocaleString('it-IT',{maximumFractionDigits:1});
-  const esc = s => String(s ?? '—').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  // The UI's one HTML escaper, exported as ConquerPanels.escapeHtml for app-rooms and diplomacy.
+  const escapeHtml = s => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const esc = s => escapeHtml(s ?? '—');
   const max1 = values => Math.max(1,...values.map(num));
   const sum = values => values.reduce((n,x)=>n+num(x),0);
+  // Job Manager of a tier ('L2' or L1) in an economy read model, and its live task list.
+  const jobManagerOf = (e,tier) => (tier==='L2'?e?.jobManagerL2:e?.jobManager)||{};
+  const liveJobTasks = tier => jobManagerOf(window.ConquerGame?.read?.economy?.(),tier).tasks||[];
 
   const LABELS = {food:'Cibo',wood:'Legno',stone:'Pietra',clay:'Argilla',metal:'Metallo',equipment:'Equipaggiamento',luxury:'Lusso',materials:'Materiali',horses:'Cavalli',gold:'Oro'};
   const good = id => LABELS[id] || id;
   const PRICE_GOODS = Object.keys(LABELS).filter(k=>!['materials','horses','gold'].includes(k));
   const CLASSES = ['L1','L2','L3','L4'];
-  const COLORS = ['#bcd18b','#e7ac77','#97bfd9','#d9a4cf','#d9c0a4'];
+  const COLORS = ['#bcd18b','#e7ac77','#97bfd9','#d9a4cf','#d9c0a4','#a3d3c8'];
   const TABS = [
     ['general','Generale','Quadro d’insieme del feudo'],
     ['people','Popolazione','Classi, felicità e politiche fiscali'],
@@ -28,7 +33,7 @@
   const HISTORY_WEEKS = 26;
 
   // UI selection survives re-renders and reopening the tab.
-  const ui = {tab:'general',priceGood:'food',site:'all'};
+  const ui = {tab:'general',mode:'control',priceGood:'food',site:'all',jobTier:'L1',militaryTab:'overview',circleCollapsed:new Set()};
 
   // ---- Building blocks -------------------------------------------------------
   const card = (title,body,foot='',wide=false) =>
@@ -114,8 +119,8 @@
   }
   const welfareTrend = d => historical(d,[{label:'Felicità media',color:COLORS[0],read:w=>w.welfare}],'Felicità della popolazione');
   const classTrend = d => historical(d,CLASSES.map((k,i)=>({label:k,color:COLORS[i],read:w=>w.population?.[k]>0?w.happiness?.[k]:null})),'Felicità per classe');
-  const JOBS = [['building','Costruttori'],['herding','Pastori'],['logging','Boscaioli'],['industry','Industrie L1'],['idle','L1 inattivi']];
-  const jobsTrend = d => historical(d,JOBS.map(([k,label],i)=>({label,color:COLORS[i],read:w=>w.jobs?.[k]})),'Occupazione L1 per mansione');
+  const JOBS = [['building','Costruttori'],['herding','Pastori'],['logging','Boscaioli'],['industry','Industrie L1'],['carter','Carrettieri'],['idle','L1 inattivi']];
+  const jobsTrend = d => historical(d,JOBS.map(([k,label],i)=>({label,color:COLORS[i],read:w=>w.jobs?.[k]})),'Occupazione L1 per mansione (carrettieri: picco settimanale)');
   const priceTrend = d => historical(d,[{label:good(ui.priceGood),color:COLORS[1],read:w=>w.prices?.[ui.priceGood]}],'Prezzo settimanale');
   function estateTrend(d,lordSites) {
     if(ui.site!=='all'&&!lordSites.some(a=>a.id===ui.site))ui.site='all';
@@ -139,7 +144,10 @@
       logistics:game?.logistics?.(),
       defense:game?.defense?.(),
       knights:game?.knights?.(),
+      militaryAssignments:game?.militaryAssignments?.(),
       diplomacy:window.ConquerDiplomacy?.state?.(),
+      church:window.ConquerChurch?.snapshot?.(),
+      guild:window.ConquerGuild?.snapshot?.(),
       sites:(State.structures||[]).filter(s=>s.construction && typeof underConstruction==='function' && underConstruction(s))
     };
     d.warnings = warnings(d);
@@ -155,6 +163,17 @@
   }
   const population = d => d.economy?.population || {};
   const classBars = p => bars(CLASSES.map(k=>[k,p[k]]),max1(Object.values(p)));
+  // SCOL-01: educated residents are a sub-row of L3/L4, never a fifth class.
+  const educated = d => d.economy?.educated || null;
+  function educatedLine(d) {
+    const s = educated(d);
+    if(!s)return '';
+    return line('di cui scolarizzati (L3 · L4)',fmt(s.total)+' ('+fmt(s.byClass.L3)+' · '+fmt(s.byClass.L4)+')')+
+      line('laici · chierici',fmt(s.lay)+' · '+fmt(s.clergy))+
+      line('con ruolo · liberi · in formazione',fmt(s.assigned)+' · '+fmt(s.unassigned)+' · '+fmt(s.training))+
+      (s.homeless?line('senza alloggio',fmt(s.homeless)):'');
+  }
+  const classCard = d => classBars(population(d))+educatedLine(d);
   const warningList = (d,none) => d.warnings.length ? d.warnings.map(warn).join('') : empty(none);
 
   // ---- Views ------------------------------------------------------------------
@@ -165,10 +184,12 @@
       kpi('Felicità',welfare==null?'—':fmt(welfare)+'/100','',welfare!=null&&welfare<40?'bad':''),
       kpi('Tesoreria',fmt(d.economy?.castleGold),'Oro economico'),
       kpi('Cantieri',fmt(d.sites.length)),
+      ...(d.church?.churches?[kpi('Chiesa',fmt(d.church.gold)+' oro','Favore '+fmt(d.church.favor)+'/100',d.church.favor<=30?'bad':'')]:[]),
+      ...(d.guild?.activeId?[kpi('Gilda','+'+Math.round(d.guild.bonus*100)+'%','Funzionari L'+d.guild.level+' · resa '+Math.round(d.guild.officialYield*100)+'%',d.guild.bonus<=0?'bad':'')]:[]),
       kpi('Cavalieri',fmt(d.knights?.current)),
       kpi('Avvisi',fmt(d.warnings.length),'',d.warnings.length?'bad':'good')
     ])+grid([
-      card('Classi sociali',classBars(p)),
+      card('Classi sociali',classCard(d)),
       card('Cibo: produzione e domanda',foodChart(d)),
       card('Evoluzione della felicità',welfareTrend(d),'',true),
       card('Segnalazioni',warningList(d,'Nessun allarme rilevato.'),'',true)
@@ -185,21 +206,25 @@
       kpi('Felicità media',fmt(d.economy?.welfare)+'/100'),
       kpi('Aliquota',fmt(tax)+'%')
     ])+grid([
-      card('Classi sociali',classBars(p)),
+      card('Classi sociali',classCard(d)),
       card('Felicità L1–L4',active.length?bars(active.map(k=>[k,h[k]]),100):empty('Nessun residente'),'Valori correnti, non storici.'),
       card('Tendenza felicità L1–L4',classTrend(d),'',true),
       card('Tassazione e razioni',policy),
       card('Festività',line('Sabato','Mercato')+line('Domenica','Riposo')+empty('Festività straordinarie e loro effetti sulla felicità: TBD.'))
     ]);
   }
-  function economy(d) {
-    const e = d.economy || {}, j = e.jobs || {}, goods = e.goods || [];
-    const jobs = JOBS.map(([k,label])=>[label,j[k]]);
-    const market = goods.length ? table(['Bene','Prezzo','Mercato','Castello','Vendita'],goods.map(g=>[
+  // One live market table used by Economy and the Trade palette.
+  function marketTable(goods) {
+    return goods.length ? table(['Bene','Prezzo','Mercato','Castello','Vendita'],goods.map(g=>[
       '<th>'+esc(good(g.id))+'</th>','<td>'+fmt(g.price)+'</td>','<td>'+fmt(g.market)+'</td>','<td>'+fmt(g.castle)+'</td>',
       '<td><select data-cp-share="'+esc(g.id)+'" aria-label="Quota vendita '+esc(good(g.id))+'">'+
         [0,25,50,75,100].map(n=>'<option value="'+n+'"'+(num(g.share)===n?' selected':'')+'>'+n+'%</option>').join('')+'</select></td>'
     ])) : empty('Mercato non inizializzato.');
+  }
+  function economy(d) {
+    const e = d.economy || {}, j = e.jobs || {};
+    const jobs = JOBS.map(([k,label])=>[label,j[k]]);
+    const market = marketTable(e.goods || []);
     return kpis([
       kpi('Capitale L4',fmt(e.capital),'Oro privato'),
       kpi('Tesoreria',fmt(e.castleGold),'Oro signore'),
@@ -212,6 +237,115 @@
       card('Mercato, prezzi e vendite',market,'La domanda esterna non viene generata automaticamente.',true)
     ]);
   }
+
+  // Two independent job subpalettes, sharing a single editable queue renderer.
+  function jobTierNav(){
+    return '<nav class="cp-subnav" role="tablist" aria-label="Classi lavoratori">'+
+      [['L1','L1'],['L2','L2'],['L3','L3 · Istruiti']].map(([t,label])=>'<button type="button" role="tab" data-cp-jobs-tier="'+t+'" aria-selected="'+(ui.jobTier===t)+'" class="'+(ui.jobTier===t?'active':'')+'">'+esc(label)+'</button>').join('')+'</nav>';
+  }
+  function jobs(d){
+    if(ui.jobTier==='L2')return jobTierNav()+l2Jobs(d);
+    if(ui.jobTier==='L3')return jobTierNav()+educatedJobs(d);
+    const e=d.economy||{},j=e.jobs||{},p=population(d),work=JOBS.map(([k,label])=>[label,j[k]]);
+    const activity=(e.activities||[]).filter(a=>a.tier===1);
+    const sites=activity.length?table(['Attività','Occupati','Proprietà'],activity.map(a=>[
+      '<th>'+esc(a.type)+' · '+esc(a.id)+'</th>','<td>'+fmt(a.workers)+'</td>',
+      '<td>'+esc(a.owner==='lord'?'Signore':'Privati')+'</td>'
+    ])):empty('Nessuna attività produttiva L1 registrata.');
+    return jobTierNav()+kpis([
+      kpi('L1 residenti',fmt(p.L1)),
+      kpi('L1 al lavoro',fmt(sum(work.filter(([label])=>label!=='L1 inattivi').map(x=>x[1]))),'Mansioni correnti'),
+      kpi('L1 inattivi',fmt(j.idle),'Disponibili'),
+      kpi('Cantieri',fmt(j.building),'Costruttori assegnati')
+    ])+grid([
+      card('Priorità produzioni e mansioni L1',jobQueue(e,'L1'),'Le priorità si salvano nella partita.',true),
+      card('Distribuzione delle mansioni L1',bars(work,max1(work.map(x=>x[1]))),'Manodopera assegnata dal motore economico.'),
+      card('Popolazione per classe',classCard(d),'L2–L4 mantengono capacità produttive proprie.'),
+      card('Storico occupazione',jobsTrend(d),'Le assegnazioni variano con cantieri, stagione e risorse.',true),
+      card('Posti nelle attività',sites,'Occupati rilevati dal Job Manager economico.',true),
+      ...(j.foodRisk?[card('Segnalazioni',warn('Possibile carenza alimentare rispetto al fabbisogno stimato.'),'',true)]:[])
+    ]);
+  }
+  function l2Jobs(d){
+    const e=d.economy||{},p=population(d),manager=jobManagerOf(e,'L2'),tasks=manager.tasks||[];
+    const assigned=num(manager.assigned),available=num(manager.available);
+    const activity=(e.activities||[]).filter(a=>a.tier===2);
+    const sites=activity.length?table(['Attività L2','Occupati','Proprietà'],activity.map(a=>[
+      '<th>'+esc(a.type)+' · '+esc(a.id)+'</th>','<td>'+fmt(a.workers)+'</td>',
+      '<td>'+esc(a.owner==='lord'?'Signore':'Privati')+'</td>'
+    ])):empty('Nessun sito produttivo L2 operativo.');
+    return kpis([
+      kpi('L2 residenti',fmt(p.L2)),
+      kpi('L2 disponibili',fmt(available),'Adulto produttivo per nucleo'),
+      kpi('L2 assegnati',fmt(assigned),'Oggi'),
+      kpi('L2 inattivi',fmt(Math.max(0,available-assigned)),'Posti non impiegati')
+    ])+grid([
+      card('Priorità produzioni e mansioni L2',jobQueue(e,'L2'),
+        'Campi, cave e miniere utilizzano la sola manodopera L2.',true),
+      card('Distribuzione L2 per produzione',tasks.length?bars(tasks.map(t=>[t.label,t.workers]),max1(tasks.map(t=>t.workers))):empty('Nessuna produzione L2 presente.')),
+      card('Attività L2',sites,'I campi fuori stagione e le imprese disattivate non richiedono lavoratori.',true)
+    ]);
+  }
+  // SCOL-01 phase 1: counters, cap and the lord's hire. Roles, wages and courses come later.
+  const HIRE_BLOCK = {gold:'Oro del castello insufficiente.',seats:'Nessun posto libero nelle case L3/L4.',economy:'Economia non inizializzata.'};
+  function educatedJobs(d){
+    const s=educated(d);
+    if(!s)return empty('Scolarizzati non disponibili.');
+    const can=s.canHire||{ok:false};
+    const hire='<button type="button" class="cp-action" data-cp-educated-hire'+(can.ok?'':' disabled')+'>Ingaggia scolarizzato · '+fmt(s.hireCost)+' oro</button>'+
+      (can.ok?'':warn(HIRE_BLOCK[can.reason]||'Ingaggio non disponibile.'))+
+      line('In viaggio',fmt(s.hiresInTransit)+(s.nextArrival!=null?' · primo arrivo giorno '+fmt(s.nextArrival):''));
+    return kpis([
+      kpi('Scolarizzati',fmt(s.total),'Laici '+fmt(s.lay)+' · chierici '+fmt(s.clergy)),
+      kpi('Posti L3/L4',fmt(s.capacity.total),'Liberi '+fmt(s.free)),
+      kpi('Senza alloggio',fmt(s.homeless),'Emigrano dopo 4 settimane',s.homeless?'bad':''),
+      kpi('In viaggio',fmt(s.hiresInTransit),'Arrivano in '+fmt(s.hireDays)+' giorni')
+    ])+grid([
+      card('Ingaggio del signore',hire,'Il laico arriva dopo due settimane; senza un posto libero all’arrivo l’oro torna al castello.'),
+      card('Scolarizzati per classe',bars([['L3',s.byClass.L3],['L4',s.byClass.L4]],max1([s.capacity.L3,s.capacity.L4]))+educatedLine(d),'Un terzo dei residenti: 3 posti per casa L3, 4 per casa L4.'),
+      card('Ruoli istruiti',empty('Esattori, giudici, funzionari, chierici e artisti arriveranno con i loro edifici.'),'',true)
+    ]);
+  }
+  function jobQueue(e,tier){
+    const jm=jobManagerOf(e,tier),tasks=jm.tasks||[];
+    if(!tasks.length)return empty('Nessuna mansione '+tier+' disponibile.');
+    const info='<p class="cp-job-intro">Trascina le righe per modificare la priorità. I minimi sono riservati prima dei posti AUTO; se le richieste superano gli '+tier+' disponibili, prevale la priorità più alta.</p>';
+    const columns='<div class="cp-job-columns"><span>PRIORITÀ · MANSIONE</span><span>MINIMUM WORKER</span><span>GESTIONE</span></div>';
+    const rows=tasks.map((t,i)=>{
+      const unmet=jm.managed&&t.minimum>t.workers&&t.demand>0;
+      return '<div class="cp-job-row'+(unmet?' cp-job-short':'')+'" data-cp-job-row="'+esc(t.key)+'" data-cp-job-tier="'+tier+'" draggable="true" role="listitem" aria-label="Priorità '+(i+1)+': '+esc(t.label)+'">'+
+        '<span class="cp-job-drag" title="Trascina per cambiare priorità" aria-hidden="true">⠿</span>'+
+        '<span class="cp-job-rank">'+(i+1)+'.</span>'+
+        '<div class="cp-job-name"><strong>'+esc(t.label)+'</strong><small>'+fmt(t.workers)+' / '+fmt(t.demand)+' lavoratori'+(unmet?' · minimo non raggiunto':t.demand===0?' · nessuna richiesta attiva':'')+'</small></div>'+
+        '<label class="cp-job-min">Minimum worker<input type="number" inputmode="numeric" min="0" max="'+t.capacity+'" step="1" value="'+t.minimum+'" data-cp-job-min="'+esc(t.key)+'" data-cp-job-tier="'+tier+'" aria-label="Minimum worker · '+esc(t.label)+'"></label>'+
+        '<div class="cp-job-mode"><button type="button" class="cp-job-auto'+(t.auto?' is-auto':'')+'" aria-pressed="'+(t.auto?'true':'false')+'" data-cp-job-auto="'+esc(t.key)+'" data-cp-job-tier="'+tier+'" title="'+(t.auto?'Automatico: assegna i posti residui secondo priorità':'Manuale: assegna soltanto il minimo richiesto')+'">AUTO</button><small>'+(t.auto?'automatico':'manuale')+'</small></div>'+
+        '<div class="cp-job-move"><button type="button" data-cp-job-move="up" data-cp-job-key="'+esc(t.key)+'" data-cp-job-tier="'+tier+'" aria-label="Sposta '+esc(t.label)+' in alto"'+(i===0?' disabled':'')+'>↑</button>'+
+        '<button type="button" data-cp-job-move="down" data-cp-job-key="'+esc(t.key)+'" data-cp-job-tier="'+tier+'" aria-label="Sposta '+esc(t.label)+' in basso"'+(i===tasks.length-1?' disabled':'')+'>↓</button></div></div>';
+    }).join('');
+    const note=tier==='L1'?'Pastori protetti e pescatori non sono riassegnabili.':
+      'L2 è indipendente da L1; i campi fuori stagione non assorbono lavoratori.';
+    return info+(!jm.managed?'<p class="cp-job-legacy">Assegnazione '+tier+' precedente ancora attiva; i nuovi controlli entrano in vigore alla prima modifica.</p>':'')+
+      '<div class="cp-job-queue" role="list" aria-label="Priorità delle mansioni '+tier+'">'+columns+rows+'</div>'+
+      '<p class="cp-foot">AUTO attivo: dopo i minimi completa i posti disponibili in ordine di priorità. AUTO spento: assegna esattamente il minimo quando disponibile. '+note+'</p>';
+  }
+
+  // Trade is a view over the existing market ledger, prices and sale-share command.
+  function trade(d) {
+    const e=d.economy||{}, goods=e.goods||[];
+    return kpis([
+      kpi('Oro del signore',fmt(e.castleGold),'Tesoreria'),
+      kpi('Capitale mercanti L4',fmt(e.capital),'Oro privato'),
+      kpi('Merci al mercato',fmt(sum(goods.map(g=>g.market))),'Scorte nel ledger'),
+      kpi('Cicli di mercato',fmt(d.snapshot?.weeks),'Settimane contabilizzate')
+    ])+grid([
+      card('Scambi e quote di vendita',marketTable(goods),'Le quote regolano la vendita tramite il motore economico esistente.',true),
+      card('Prezzi nel tempo',select('data-cp-price','Bene',PRICE_GOODS.map(k=>[k,good(k)]),ui.priceGood)+priceTrend(d),'Storico solo se sono disponibili mercati settimanali.',true),
+      card('Carovane',line('Convogli attivi',fmt((d.diplomacy?.caravans||[]).filter(c=>c.status!=='completed').length))+
+        '<button type="button" class="cp-action" data-cp-action="caravans">Apri gestione carovane</button>',
+        'I convogli strategici sono gestiti dalla funzione esistente.')
+    ]);
+  }
+
   function estate(d) {
     const items = d.economy?.activities || [], lord = items.filter(a=>a.owner==='lord');
     const weekGoods = d.snapshot?.balance?.goods;
@@ -248,10 +382,133 @@
       card('Capienza dei magazzini',siege.map(g=>line(good(g.id),fmt(g.stock)+' / '+fmt(g.cap))).join('')||empty('Nessun deposito assegnato.'),'',true)
     ]);
   }
-  function military(d) {
-    const c = d.defense || {}, k = d.knights || {}, l = d.logistics || {};
-    const live = v => c.active ? fmt(v) : '—';
+
+  // Centro di controllo → Militare shares the real Combat and Siege rosters.
+  function militaryNav(){
+    const entries=[['overview','Riepilogo'],['garrisons','Pattuglie e guarnigioni'],['equipment','Equipaggiamento']];
+    return '<nav class="cp-subnav" role="tablist" aria-label="Gestione militare">'+entries.map(([k,label])=>
+      '<button type="button" role="tab" data-cp-military-sub="'+k+'" aria-selected="'+(ui.militaryTab===k)+'" class="'+(ui.militaryTab===k?'active':'')+'">'+label+'</button>'
+    ).join('')+'</nav>';
+  }
+
+  // Operational CIRCLE hierarchy: closed defensive sectors → macro towers.
+  // parentTowerId children are summed into one row, never shown as extra towers.
+  const CIRCLE_STATES={secure:'Sicuro',alert:'Allerta',threatened:'Minacciato',
+    infiltrated:'Infiltrato',contested:'Conteso',invaded:'Invaso',
+    compromised:'Compromesso',captured:'Occupato',unassessed:'Da valutare',outside:'Esterno'};
+  function circleMacroRow(m){
+    const child=m.subtowers===1?'1 sottotorre aggregata':m.subtowers>1?
+      m.subtowers+' sottotorri aggregate':'Torre indipendente';
+    const details=fmt(m.assigned)+' / '+fmt(m.capacity)+' arcieri · '+fmt(m.active)+' operativi';
+    const archers='<div class="cp-circle-staff"><span>Arcieri</span><div class="cp-job-garrison-buttons">'+
+      '<button type="button" data-cp-macro-id="'+esc(m.id)+'" data-cp-macro-delta="-1"'+
+      (!m.assigned?' disabled':'')+' aria-label="Rimuovi arciere da '+esc(m.label)+'">−</button>'+
+      '<button type="button" data-cp-macro-id="'+esc(m.id)+'" data-cp-macro-delta="1"'+
+      (m.assigned>=m.capacity?' disabled':'')+' aria-label="Assegna arciere a '+esc(m.label)+'">+</button></div></div>';
+    const squads=m.squadCapacity?'<div class="cp-circle-staff"><span>Armigeri '+fmt(m.squads)+'/'+fmt(m.squadCapacity)+'</span>'+
+      '<div class="cp-job-garrison-buttons">'+
+      '<button type="button" data-cp-macro-squad="'+esc(m.id)+'" data-cp-macro-squad-delta="-1"'+
+      (!m.squads?' disabled':'')+' aria-label="Rimuovi squadra da '+esc(m.label)+'">−</button>'+
+      '<button type="button" data-cp-macro-squad="'+esc(m.id)+'" data-cp-macro-squad-delta="1"'+
+      (m.squads>=m.squadCapacity?' disabled':'')+' aria-label="Assegna squadra a '+esc(m.label)+'">+</button></div></div>':'';
+    return '<div class="cp-job-garrison cp-circle-macro" data-cp-macro="'+esc(m.id)+'">'+
+      '<div class="cp-circle-macro-name"><b>'+esc(m.label)+'</b><small>'+esc(child)+'</small>'+
+      '<small>'+details+'</small></div><div class="cp-circle-staffers">'+archers+squads+'</div></div>';
+  }
+  function circleBarracksRow(b){
+    return '<div class="cp-job-garrison"><div><b>'+esc(b.label)+'</b>'+
+      '<small>'+fmt(b.assigned)+' / '+fmt(b.capacity)+' squadre da 5 armigeri</small></div>'+
+      '<div class="cp-job-garrison-buttons">'+
+      '<button type="button" data-cp-barracks-id="'+esc(b.id)+'" data-cp-barracks-delta="-1"'+(!b.assigned?' disabled':'')+' aria-label="Rimuovi squadra">−</button>'+
+      '<button type="button" data-cp-barracks-id="'+esc(b.id)+'" data-cp-barracks-delta="1"'+
+      (b.assigned>=b.capacity?' disabled':'')+' aria-label="Assegna squadra">+</button></div></div>';
+  }
+  function circleZoneRow(zone,unassigned,hasCircle=true){
+    const collapsed=ui.circleCollapsed.has(zone.id);
+    const isOutside=zone.id==='outside';
+    const summary=fmt(zone.assigned)+'/'+fmt(zone.capacity)+' arcieri · '+fmt(zone.patrols)+' pattuglie';
+    const archerTools='<div class="cp-circle-staff"><span>Arcieri</span><div class="cp-job-garrison-buttons">'+
+      '<button type="button" data-cp-circle-archer="'+esc(zone.id)+'" data-cp-circle-delta="-1"'+
+      (!zone.assigned?' disabled':'')+' aria-label="Rimuovi un arciere dal '+esc(zone.label)+'">−</button>'+
+      '<button type="button" data-cp-circle-archer="'+esc(zone.id)+'" data-cp-circle-delta="1"'+
+      (zone.assigned>=zone.capacity?' disabled':'')+' aria-label="Assegna un arciere al '+esc(zone.label)+'">+</button></div></div>';
+    const patrolTools=isOutside?'':'<div class="cp-circle-staff"><span>Pattuglie</span><div class="cp-job-garrison-buttons">'+
+      '<button type="button" data-cp-circle-patrol="'+esc(zone.id)+'" data-cp-circle-delta="-1"'+
+      (!zone.patrols?' disabled':'')+' aria-label="Richiama una pattuglia dal '+esc(zone.label)+'">−</button>'+
+      '<button type="button" data-cp-circle-patrol="'+esc(zone.id)+'" data-cp-circle-delta="1"'+
+      (!unassigned?' disabled':'')+' aria-label="Assegna una pattuglia al '+esc(zone.label)+'">+</button></div></div>';
+    const macros=zone.towers||[],rooms=zone.otherBarracks||[];
+    const detail=macros.map(circleMacroRow).join('')+rooms.map(circleBarracksRow).join('')||
+      empty('Nessuna torre o caserma operativa associata a questo compartimento.');
+    return '<section class="cp-circle-zone" data-cp-zone="'+esc(zone.id)+'">'+
+      '<div class="cp-circle-zone-head">'+
+      '<button type="button" class="cp-circle-expand" data-cp-circle-toggle="'+esc(zone.id)+'" aria-expanded="'+(!collapsed)+'">'+
+      '<span aria-hidden="true">'+(collapsed?'▸':'▾')+'</span><span><b>'+esc(zone.label)+
+      (zone.mastio?' · Mastio':'')+'</b><small>'+esc(isOutside?'Nessun compartimento difensivo chiuso':
+        'CIRCLE · livello '+zone.depth+' · '+(CIRCLE_STATES[zone.state]||zone.state))+'</small>'+
+      '<small>'+summary+'</small></span></button>'+
+      '<div class="cp-circle-staffers">'+archerTools+patrolTools+'</div></div>'+
+      (collapsed?'':'<div class="cp-circle-zone-body">'+detail+'</div>')+'</section>';
+  }
+  // Wall patrols (MIL-WALL-01): one row per ring of walls, two reserve soldiers per patrol.
+  function wallRingRow(r,canAdd){
+    const len=(Math.round(num(r.length)*10)/10).toString().replace('.',',');
+    const idle=r.patrols-r.covered;
+    return '<div class="cp-job-garrison" data-cp-wall-ring="'+esc(r.id)+'"><div><b>'+esc(r.label)+'</b>'+
+      '<small>'+(r.closed?'Chiuso':'Aperto')+' · '+fmt(r.walls)+' tratti · '+len+'U</small>'+
+      '<small>'+fmt(r.patrols)+' / '+fmt(r.max)+' pattuglie · '+fmt(r.covered*2)+' soldati'+
+      (idle>0?' · '+fmt(idle)+' senza soldati':'')+'</small></div>'+
+      '<div class="cp-job-garrison-buttons">'+
+      '<button type="button" data-cp-wall-patrol="'+esc(r.id)+'" data-cp-wall-delta="-1"'+(!r.patrols?' disabled':'')+
+      ' aria-label="Richiama una pattuglia dal '+esc(r.label)+'">−</button>'+
+      '<button type="button" data-cp-wall-patrol="'+esc(r.id)+'" data-cp-wall-delta="1"'+(!canAdd||r.patrols>=r.max?' disabled':'')+
+      ' aria-label="Assegna una pattuglia al '+esc(r.label)+'">+</button></div></div>';
+  }
+  function wallRingsCard(w){
+    if(!w)return '';
+    const rows=(w.rings||[]).map(r=>wallRingRow(r,w.canAdd)).join('')||
+      empty('Nessun giro di mura percorribile: servono mura T2+ o palizzate completate.');
+    const f=w.rings?.length?w.shortfall:null;
+    const need=f?'<div class="cp-job-garrison"><div><b>Soldati liberi insufficienti</b><small>'+esc(f.text)+'</small></div>'+
+      (f.can?'<div class="cp-job-garrison-buttons"><button type="button" class="cp-action" data-cp-wall-enlist>Arruola '+fmt(f.need)+' · '+fmt(f.cost)+' oro</button></div>':'')+'</div>':'';
+    return card('Mura · pattuglie per giro',need+rows,
+      'Ogni pattuglia sono 2 soldati della Caserma che percorrono tutto il giro di mura, passando per torri e porte. '+
+      'Un giro nuovo parte senza pattuglie. Soldati liberi: '+fmt(w.free)+'.',true);
+  }
+  function militaryAssignments(d){
+    const a=d.militaryAssignments||{},patrols=a.patrols||[],zones=a.zones||[],outside=a.outside||{towers:[],otherBarracks:[],patrols:0,assigned:0,capacity:0};
+    const reserved=num(outside.patrols),total=patrols.length;
+    const global='<div class="cp-job-garrison"><div><b>Riserva White Zone</b>'+
+      '<small>'+fmt(reserved)+' pattuglie disponibili per assegnazioni CIRCLE · '+fmt(total)+' complessive</small></div>'+
+      '<div class="cp-job-garrison-buttons"><button type="button" data-cp-patrol="remove"'+
+      (!reserved?' disabled':'')+' aria-label="Rimuovi una pattuglia dalla riserva">−</button>'+
+      '<button type="button" data-cp-patrol="add" aria-label="Aggiungi una pattuglia alla riserva">+</button></div></div>';
+    const totalTowers=(a.macros||[]);
+    const sectorRows=zones.map(z=>circleZoneRow(z,reserved)).join('');
+    const outsideVisible=outside.towers?.length||outside.otherBarracks?.length;
+    const outRow=outsideVisible?circleZoneRow(outside,reserved,false):'';
+    const note=!a.circleReady?warn('CIRCLE non è ancora disponibile: le torri sono elencate fuori dai compartimenti.'):
+      !zones.length?empty('CIRCLE non rileva ancora zone difensive chiuse: completa il perimetro per assegnare presidi per settore.'):'';
     return kpis([
+      kpi('Settori CIRCLE',fmt(zones.length),'Compartimenti chiusi reali'),
+      kpi('Pattuglie assegnate',fmt(total-reserved),'Nei settori CIRCLE'),
+      kpi('Arcieri assegnati',fmt(a.totalAssigned),'Nelle torri e sottotorri'),
+      kpi('Macrostrutture',fmt(totalTowers.length),'Torri madri con sottotorri aggregate')
+    ])+grid([
+      card('Riserva pattuglie',global,
+        'Le pattuglie nella riserva seguono la White Zone. Assegnare a un settore trasferisce una pattuglia esistente, senza reclutarne una nuova.',true),
+      wallRingsCard(a.wallRings),
+      card('CIRCLE · Settori e presidi',note+sectorRows+outRow,
+        'Gerarchia reale: compartimento CIRCLE → torre madre. Il comando a livello settore distribuisce arcieri nei posti disponibili delle torri sottostanti.',true),
+      ...(!a.hasCampManagement?[card('Caserme',empty('L’assegnazione di squadre nelle caserme è disponibile nella modalità /camp.'),'',true)]:[])
+    ]);
+  }
+  function military(d) {
+    const c=d.defense||{}, k=d.knights||{}, l=d.logistics||{};
+    if(ui.militaryTab==='garrisons')return militaryNav()+militaryAssignments(d);
+    if(ui.militaryTab==='equipment')return militaryNav()+grid([equipmentCard('helmet'),equipmentCard('shield')]);
+    const live = v => c.active ? fmt(v) : '—';
+    return militaryNav()+kpis([
       kpi('Unità alleate',live(c.units),'Presenti nel combat'),
       kpi('Pattuglie',live(c.patrols)),
       kpi('Cavalieri',k.current==null?'—':fmt(k.current)+' / '+fmt(k.limit)),
@@ -260,8 +517,11 @@
       kpi('Allarme',c.alarm||'—')
     ])+grid([
       card('Cavalleria disponibile',bars([['Cavalieri reclutati',k.current],['Posti disponibili',k.limit]],num(k.limit))),
-      card('Leva del feudo',line('Aliquota impostata',fmt(d.policy.levy)+'%')+
-        empty('Leva e mobilitazione non sono ancora collegate. La capienza non costituisce un organico effettivo.'))
+      card('Leva straordinaria',(()=>{
+        const T=window.ConquerTreasury, on=T?.active?.('levy'), a=on&&T.snapshot().decrees.levy.entry;
+        return on ? line('In vigore fino al giorno',fmt(a.end))+line('Uomini L1/L2 in armi',fmt(a.share)+'%') :
+          empty('Nessuna leva in vigore. La leva straordinaria è un decreto del consiglio: Profilo › Erario.');
+      })())
     ]);
   }
   function building(d) {
@@ -278,8 +538,69 @@
       kpi('Salari cantieri',fmt(d.snapshot?.constructionPayroll),'Oro già pagato')
     ])+grid([
       card('Lavoratori allocati',bars(work,max1(work.map(x=>x[1])))),
-      card('Progresso lavori',tasks||empty('Nessun cantiere in corso.'),'Tempi e lavoro derivano dalla simulazione L1 già attiva.')
+      card('Progresso lavori',tasks||empty('Nessun cantiere in corso.'),'Tempi e lavoro derivano dalla simulazione L1 già attiva.'),
+      crenelCard(),
+      roofPitchCard()
     ]);
+  }
+  const PITCHES = [[30,'30°','Tetti bassi, il più economico.'],[45,'45°','Pendenza di base.'],[60,'60°','Tetti ripidi a guglia: più legname.'],[75,'75°','Guglie slanciate: il più costoso, serve anche pietra.']];
+  function roofPitchCard() {
+    const cmd = window.ConquerGame?.commands;
+    if(!cmd?.roofPitchQuote)return '';
+    const current = typeof roofPitch==='function' ? roofPitch() : 45;
+    const rows = PITCHES.map(([id,label,tip])=>{
+      const q = cmd.roofPitchQuote(id), on = id===current;
+      return '<div class="cp-line"><span>'+esc(label)+' <small>'+esc(tip)+'</small></span>'+
+        (on ? '<b>In uso</b>' : '<button type="button" class="cp-action" data-cp-pitch="'+id+'">Adotta · '+esc(costLine(q.cost))+'</button>')+'</div>';
+    }).join('');
+    const n = cmd.roofPitchQuote(current).roofs;
+    return card('Pendenza dei tetti',rows+(ui.pitchMsg?warn(ui.pitchMsg):''),
+      'Rifà i '+fmt(n)+' tetti a falde di torri e porte; il costo cresce con il numero di tetti. Le nuove costruzioni usano la pendenza scelta.',true);
+  }
+  const CRENELS = [['flat','Piatta','Blocco squadrato, lo stile di base.'],['gabled','Doppia falda','Sommità a due spioventi.'],['swallowtail','Coda di rondine','Corna a V e feritoia: la più costosa.'],['double','Merlo doppio','Merli lunghi il doppio sulle mura: due pieni, un vuoto.'],['tworow','Doppia fila','Seconda fila di merli sul lato interno del cammino delle mura.']];
+  const costLine = cost => Object.entries(cost||{}).filter(([,v])=>v>0).map(([k,v])=>fmt(v)+' '+good(k)).join(' · ') || 'gratis';
+  function crenelCard() {
+    const cmd = window.ConquerGame?.commands;
+    if(!cmd?.crenelQuote)return '';
+    const current = typeof crenelStyle==='function' ? crenelStyle() : 'flat';
+    const rows = CRENELS.map(([id,label,tip])=>{
+      const q = cmd.crenelQuote(id), on = id===current;
+      return '<div class="cp-line"><span>'+esc(label)+' <small>'+esc(tip)+'</small></span>'+
+        (on ? '<b>In uso</b>' : '<button type="button" class="cp-action" data-cp-crenel="'+id+'">Adotta · '+esc(costLine(q.cost))+'</button>')+'</div>';
+    }).join('');
+    const n = cmd.crenelQuote(current).merlons;
+    return card('Stile delle merlature',rows+(ui.crenelMsg?warn(ui.crenelMsg):''),
+      'Cambia tutti i '+fmt(n)+' merli in pietra del feudo; il costo cresce con il numero di merli. Le nuove costruzioni usano lo stile scelto.',true);
+  }
+  // Unit equipment: helmet and shield of the realm's foot soldiers (State.policies.unitHelmet/unitShield).
+  const HELMETS = [['cap','Cervelliera','Calotta semplice, lo stile di base.'],['kettle',"Cappello d'arme",'Tesa larga contro i colpi dall\'alto.'],['nasal','Elmo a nasale','Conico, con la lama sul naso.'],['barbuta','Barbuta','Chiude il capo, apertura a T sul volto.'],['greathelm','Elmo a staio','Elmo chiuso dei cavalieri: il più costoso.']];
+  const SHIELDS = [['oval','Ovale','Lo scudo di base.'],['round','Rotella','Tondo con umbone di ferro.'],['heater','Triangolare','Lo scudo araldico, a punta.'],['kite','A mandorla','Lungo e affusolato, copre la gamba.'],['pavise','Pavese','Grande e dritto, con costola: il più costoso.']];
+  const EQUIP_SVG = {
+    cap:'<circle cx="12" cy="13" r="6" fill="#e2b994"/><path d="M6 13a6 6 0 0 1 12 0z" fill="#70777c"/>',
+    kettle:'<circle cx="12" cy="14" r="5.5" fill="#e2b994"/><path d="M7 13a5 5 0 0 1 10 0z" fill="#70777c"/><ellipse cx="12" cy="13" rx="9" ry="1.8" fill="#70777c"/>',
+    nasal:'<circle cx="12" cy="14" r="5.5" fill="#e2b994"/><path d="M6.5 14Q7 8 12 4.5Q17 8 17.5 14z" fill="#70777c"/><rect x="11.2" y="13" width="1.6" height="4.5" fill="#70777c"/>',
+    barbuta:'<circle cx="12" cy="13" r="6.5" fill="#70777c"/><path d="M8.5 11.5h7v1.8h-2.3v5h-2.4v-5H8.5z" fill="#e2b994"/>',
+    greathelm:'<path d="M6 6h12l-.2 13H6.2z" fill="#70777c"/><rect x="6" y="5.4" width="12" height="1.2" fill="#8a9196"/><rect x="7" y="10.5" width="10" height="1.2" fill="#1d2022"/><rect x="11.5" y="11.7" width="1" height="6" fill="#5d6468"/>',
+    oval:'<ellipse cx="12" cy="12" rx="6.5" ry="8.5" fill="#2f4f75"/><path d="M12 3.5a6.5 8.5 0 0 1 0 17z" fill="#c6a457"/>',
+    round:'<circle cx="12" cy="12" r="8" fill="#2f4f75"/><path d="M12 4a8 8 0 0 1 0 16z" fill="#c6a457"/><circle cx="12" cy="12" r="2" fill="#9a9fa3"/>',
+    heater:'<path d="M5 4h14v8Q18.5 18 12 21Q5.5 18 5 12z" fill="#2f4f75"/><path d="M12 4h7v8Q18.5 18 12 21z" fill="#c6a457"/>',
+    kite:'<path d="M5 8Q5 3 12 3Q19 3 19 8Q17.5 15 12 22Q6.5 15 5 8z" fill="#2f4f75"/><path d="M12 3Q19 3 19 8Q17.5 15 12 22z" fill="#c6a457"/>',
+    pavise:'<path d="M5 5Q12 2.5 19 5L18.3 21H5.7z" fill="#2f4f75"/><path d="M12 3.6Q16 3.8 19 5L18.3 21H12z" fill="#c6a457"/><path d="M12 3.6V21" stroke="#3a3530" stroke-width=".8"/>'
+  };
+  const equipIcon = id => '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" style="flex:none;vertical-align:middle;margin-right:6px">'+(EQUIP_SVG[id]||'')+'</svg>';
+  function equipmentCard(kind) {
+    const cmd = window.ConquerGame?.commands;
+    if(!cmd?.unitEquipmentQuote)return '';
+    const shield = kind==='shield', list = shield ? SHIELDS : HELMETS;
+    const current = shield ? (typeof unitShield==='function'?unitShield():'oval') : (typeof unitHelmet==='function'?unitHelmet():'cap');
+    const rows = list.map(([id,label,tip])=>{
+      const q = cmd.unitEquipmentQuote(kind,id), on = id===current;
+      return '<div class="cp-line"><span style="display:flex;align-items:center">'+equipIcon(id)+'<span>'+esc(label)+' <small>'+esc(tip)+'</small></span></span>'+
+        (on ? '<b>In uso</b>' : '<button type="button" class="cp-action" data-cp-equip="'+kind+'" data-cp-equip-style="'+id+'">Adotta · '+esc(costLine(q.cost))+'</button>')+'</div>';
+    }).join('');
+    const n = cmd.unitEquipmentQuote(kind,current).soldiers;
+    return card(shield?'Forma dello scudo':'Tipo di elmo',rows+(ui.equipMsg?warn(ui.equipMsg):''),
+      'Riequipaggia i '+fmt(n)+' posti soldato delle caserme; il costo cresce con i posti. '+(shield?'Lo portano gli armigeri con spada':'Lo indossano fanti, lancieri e arcieri')+' del feudo; i nemici restano invariati.',true);
   }
   function diplomacy(d) {
     const s = d.diplomacy || {}, active = (s.caravans||[]).filter(c=>c.status!=='completed');
@@ -298,7 +619,53 @@
       card('Copertura del sistema',empty('Monitorati: domanda alimentare, razioni difensive e cantieri L1. Epidemie, tumulti e altri avvisi richiedono nuovi contratti dati.'),'',true)
     ]);
   }
+  // ---- Erario (FISCO-01): rates always settable; the town hall sets collection efficiency ----
+  const PCT = v => fmt(Math.round(num(v)*100))+'%';
+  const TAX_PAYERS = {sales:'paga L4 (venditori)',poll:'pagano L1 e L2',dues:'paga L3 (botteghe)',toll:'pagano i mercanti forestieri',tithe:'paga L4 (raccolti privati)'};
+  function erario() {
+    const T = window.ConquerTreasury;
+    if(!T)return card('Erario',empty('Modulo Erario non caricato.'));
+    const s = T.snapshot(), ef = s.efficiency, last = s.last;
+    const sliders = Object.entries(T.TAXES).map(([k,spec])=>{
+      const v = s.rates[k], p = T.preview(k,v)||{};
+      const value = spec.unit.startsWith('%') ? fmt(v)+'%' : num(v).toLocaleString('it-IT',{minimumFractionDigits:spec.step<1?2:0,maximumFractionDigits:2})+' oro';
+      const est = p.due==null ? 'gettito: si misura dopo una settimana con aliquota' :
+        'dovuto ≈ '+fmt(p.due)+' · incassato ≈ '+fmt(p.collected)+' oro/sett.';
+      const mood = p.unrest>0 ? ' · felicità −'+fmt(p.unrest)+'/sett.' : '';
+      // The sales tax is withheld at the market, in full: the town hall's efficiency does not apply.
+      const info = k==='sales' ? 'trattenuta al mercato, per intero' : 'efficienza '+PCT(p.efficiency)+' · '+est;
+      return '<label class="cp-input">'+esc(spec.label)+' <b>'+esc(value)+'</b>'+
+        '<input type="range" data-cp-tax="'+k+'" min="'+spec.min+'" max="'+spec.max+'" step="'+spec.step+'" value="'+v+'">'+
+        '<small>'+esc(spec.unit+' · '+TAX_PAYERS[k]+' · '+info+mood)+'</small></label>';
+    }).join('');
+    const quarters = ef.quarters.length ? ef.quarters.map(q=>line(q.name+(q.bargello?' · Bargello L'+q.bargello:' · senza Bargello'),PCT(q.efficiency))).join('') : empty('Nessun quartiere oltre il centro.');
+    const balivi = ef.balivi.length ? ef.balivi.map((b,i)=>line('Palazzo del Balivo '+(i+1)+' · L'+b.level,PCT(b.efficiency))).join('') : line('Contado senza Balivo',PCT(ef.countryside));
+    const decrees = Object.entries(T.DECREES).map(([id,spec])=>{
+      const st = s.decrees[id], on = st.active;
+      const extra = id==='levy'&&!on ?
+        select('data-cp-levy="days"','Durata',spec.options.days.map(n=>[String(n),n+' giorni']),String(ui.levyDays||spec.options.days[0]))+
+        select('data-cp-levy="share"','Uomini L1/L2',spec.options.share.map(n=>[String(n),n+'%']),String(ui.levyShare||spec.options.share[0])) : '';
+      const action = on ? '<b>In vigore fino al giorno '+fmt(st.entry.end)+'</b> <button type="button" class="cp-action" data-cp-revoke="'+id+'">Revoca</button>' :
+        st.status.ok ? '<button type="button" class="cp-action" data-cp-decree="'+id+'">Emana'+(spec.cost?' · '+fmt(spec.cost)+' oro':'')+'</button>' :
+        '<small>'+esc(st.status.reason)+'</small>';
+      return '<div class="cp-line"><span>'+esc(spec.label)+' <small>L'+spec.level+' · '+esc(spec.help)+'</small></span>'+action+'</div>'+extra;
+    }).join('');
+    const hist = last ? ['poll','dues','toll','tithe'].map(k=>line(T.TAXES[k].label,fmt(last.collected[k])+' / '+fmt(last.due[k])+(k==='tithe'?' (in natura)':' oro'))).join('') :
+      empty('Nessuna riscossione ancora: si incassa il sabato, dopo il mercato.');
+    return kpis([
+      kpi('Municipio del centro',ef.townhall?'L'+ef.townhall:'Assente',ef.townhall?'':'Riscossione al 30%',ef.townhall?'':'warn'),
+      kpi('Efficienza centro',PCT(ef.centre),ef.crisis?'Sospesa: allarme o assedio':'',ef.crisis?'bad':''),
+      kpi('Esattori',fmt(ef.collectors.seats)+' posti',ef.collectors.yield<1?'Coperti al '+PCT(ef.collectors.yield):'Personale istruito (Scolarizzati)'),
+      kpi('Sala delle guardie',ef.guardRoom?'Sì · +5%':'No')
+    ])+grid([
+      card('Imposte',sliders,'Le aliquote si fissano sempre, anche senza Municipio. Incassato = dovuto × efficienza; il resto è evasione.',true),
+      card('Efficienza di riscossione',line('Centro',PCT(ef.centre))+quarters+balivi,'Tetto del Municipio L1 60% · L2 75% · L3 85%, massimo 95%. Felicità bassa di chi paga: fino a −20%.'),
+      card('Ultima settimana · incassato / dovuto',hist),
+      card('Decreti del consiglio',(ui.decreeMsg?warn(ui.decreeMsg):'')+decrees,'Si emanano dalla sala del consiglio del Municipio del centro, a durata.',true)
+    ]);
+  }
   const views = {general,people,economy,estate,stores,military,building,diplomacy,alerts};
+  const PALETTES = {jobs:['Job Manager','Priorità e assegnazioni L1 / L2, scolarizzati L3'],trade:['Trade','Mercato, prezzi e quote di vendita'],erario:['Erario','Imposte, riscossione e decreti']};
 
   // ---- Rendering --------------------------------------------------------------
   function nav(d) {
@@ -314,22 +681,116 @@
     const d = get();
     // Keep horizontal table scroll across live refreshes.
     const scrolls = [...(body.querySelectorAll?.('.cp-scroll')||[])].map(el=>el.scrollLeft);
-    $('controlNav').innerHTML = nav(d);
-    const [,title,subtitle] = TABS.find(t=>t[0]===ui.tab) || TABS[0];
+    const palette=PALETTES[ui.mode];
+    $('controlNav').hidden=!!palette;
+    $('controlNav').innerHTML=palette?'':nav(d);
+    const [,title,subtitle] = palette ? [ui.mode,...palette] : (TABS.find(t=>t[0]===ui.tab) || TABS[0]);
     body.innerHTML = !d.founded
       ? card('Insediamento non fondato',empty('Fonda il villaggio: le risorse di test del Builder non sono statistiche economiche.'))
-      : '<div class="cp-head"><h2>'+esc(title)+'</h2><p>'+esc(subtitle)+'</p></div>'+(views[ui.tab]||general)(d);
+      : '<div class="cp-head"><h2>'+esc(title)+'</h2><p>'+esc(subtitle)+'</p></div>'+(palette ? (ui.mode==='jobs'?jobs(d):ui.mode==='erario'?erario(d):trade(d)) : (views[ui.tab]||general)(d));
     [...(body.querySelectorAll?.('.cp-scroll')||[])].forEach((el,i)=>{ if(scrolls[i])el.scrollLeft = scrolls[i]; });
   }
-  function open() { render(); }
+  function open(mode='control') { ui.mode=Object.hasOwn(PALETTES,mode)?mode:'control'; render(); }
+
+  function reorderJob(key,target,tier='L1'){
+    const order=liveJobTasks(tier).map(t=>t.key);
+    const from=order.indexOf(key),to=order.indexOf(target);
+    if(from<0||to<0||from===to)return false;
+    order.splice(from,1);order.splice(to,0,key);
+    return !!window.ConquerGame?.commands?.[tier==='L2'?'setL2Order':'setL1Order']?.(order);
+  }
 
   const root = $('profileControl');
   if(root){
     root.addEventListener('click',ev=>{
+      const tier = ev.target.closest('[data-cp-jobs-tier]');
+      if(tier){ui.jobTier=['L2','L3'].includes(tier.dataset.cpJobsTier)?tier.dataset.cpJobsTier:'L1';render();return;}
+      if(ev.target.closest('[data-cp-educated-hire]')){window.ConquerGame?.commands?.hireEducated?.();render();return;}
+      const msub = ev.target.closest('[data-cp-military-sub]');
+      if(msub){ui.militaryTab=['garrisons','equipment'].includes(msub.dataset.cpMilitarySub)?msub.dataset.cpMilitarySub:'overview';render();return;}
+      const equip = ev.target.closest('[data-cp-equip]');
+      if(equip){
+        const out = window.ConquerGame?.commands?.setUnitEquipment?.(equip.dataset.cpEquip,equip.dataset.cpEquipStyle);
+        ui.equipMsg = out?.ok ? '' : out?.reason==='funds' ? 'Risorse insufficienti per riequipaggiare i soldati.' : '';
+        render(); return;
+      }
+      const collapse = ev.target.closest('[data-cp-circle-toggle]');
+      if(collapse){
+        const id=collapse.dataset.cpCircleToggle;
+        if(ui.circleCollapsed.has(id))ui.circleCollapsed.delete(id);
+        else ui.circleCollapsed.add(id);
+        render();return;
+      }
+      const zonePatrol = ev.target.closest('[data-cp-circle-patrol]');
+      if(zonePatrol){
+        window.ConquerGame?.commands?.assignCirclePatrol?.(zonePatrol.dataset.cpCirclePatrol,Number(zonePatrol.dataset.cpCircleDelta));
+        render();return;
+      }
+      if(ev.target.closest('[data-cp-wall-enlist]')){window.ConquerGame?.commands?.enlistForWallPatrol?.();render();return;}
+      const wallPatrol = ev.target.closest('[data-cp-wall-patrol]');
+      if(wallPatrol){
+        window.ConquerGame?.commands?.adjustWallPatrols?.(wallPatrol.dataset.cpWallPatrol,Number(wallPatrol.dataset.cpWallDelta));
+        render();return;
+      }
+      const zoneArcher = ev.target.closest('[data-cp-circle-archer]');
+      if(zoneArcher){
+        window.ConquerGame?.commands?.adjustZoneArchers?.(zoneArcher.dataset.cpCircleArcher,Number(zoneArcher.dataset.cpCircleDelta));
+        render();return;
+      }
+      const macroArcher = ev.target.closest('[data-cp-macro-id]');
+      if(macroArcher){
+        window.ConquerGame?.commands?.adjustMacroArchers?.(macroArcher.dataset.cpMacroId,Number(macroArcher.dataset.cpMacroDelta));
+        render();return;
+      }
+      const macroSquad = ev.target.closest('[data-cp-macro-squad]');
+      if(macroSquad){
+        window.ConquerGame?.commands?.adjustMacroSquads?.(macroSquad.dataset.cpMacroSquad,Number(macroSquad.dataset.cpMacroSquadDelta));
+        render();return;
+      }
+      const patrol = ev.target.closest('[data-cp-patrol]');
+      if(patrol){window.ConquerGame?.commands?.adjustPatrols?.(patrol.dataset.cpPatrol==='add'?1:-1);render();return;}
+      const barracks = ev.target.closest('[data-cp-barracks-id]');
+      if(barracks){window.ConquerGame?.commands?.adjustBarracksSquads?.(barracks.dataset.cpBarracksId,Number(barracks.dataset.cpBarracksDelta));render();return;}
       const tab = ev.target.closest('[data-cp-tab]');
-      if(tab){ui.tab = tab.dataset.cpTab; render(); return;}
+      if(tab){ui.tab = tab.dataset.cpTab; ui.mode='control'; render(); return;}
+      const auto = ev.target.closest('[data-cp-job-auto]');
+      if(auto){
+        const key=auto.dataset.cpJobAuto;
+        const tier=auto.dataset.cpJobTier==='L2'?'L2':'L1',task=liveJobTasks(tier).find(t=>t.key===key);
+        if(task)window.ConquerGame?.commands?.[tier==='L2'?'setL2Auto':'setL1Auto']?.(key,!task.auto);
+        render();return;
+      }
+      const move = ev.target.closest('[data-cp-job-move]');
+      if(move){
+        const tasks=liveJobTasks(move.dataset.cpJobTier);
+        const index=tasks.findIndex(t=>t.key===move.dataset.cpJobKey);
+        const next=index+(move.dataset.cpJobMove==='up'?-1:1);
+        if(index>=0&&next>=0&&next<tasks.length)reorderJob(tasks[index].key,tasks[next].key,move.dataset.cpJobTier==='L2'?'L2':'L1');
+        render();return;
+      }
       const trade = ev.target.closest('[data-cp-transfer]');
       if(trade){window.ConquerGame?.commands?.transferActivity?.(trade.dataset.cpTransfer,trade.dataset.cpOwner); render(); return;}
+      const pitch = ev.target.closest('[data-cp-pitch]');
+      if(pitch){
+        const out = window.ConquerGame?.commands?.setRoofPitch?.(pitch.dataset.cpPitch);
+        ui.pitchMsg = out?.ok ? '' : out?.reason==='funds' ? 'Risorse insufficienti per rifare i tetti.' : '';
+        render(); return;
+      }
+      const crenel = ev.target.closest('[data-cp-crenel]');
+      if(crenel){
+        const out = window.ConquerGame?.commands?.setCrenelStyle?.(crenel.dataset.cpCrenel);
+        ui.crenelMsg = out?.ok ? '' : out?.reason==='funds' ? 'Risorse insufficienti per rifare le merlature.' : '';
+        render(); return;
+      }
+      const decree = ev.target.closest('[data-cp-decree]');
+      if(decree){
+        const id=decree.dataset.cpDecree;
+        const out=window.ConquerTreasury?.issue?.(id,id==='levy'?{days:ui.levyDays,share:ui.levyShare}:{});
+        ui.decreeMsg = out?.ok ? '' : out?.reason||'';
+        render(); return;
+      }
+      const revoke = ev.target.closest('[data-cp-revoke]');
+      if(revoke){window.ConquerTreasury?.revoke?.(revoke.dataset.cpRevoke);ui.decreeMsg='';render();return;}
       if(ev.target.closest('[data-cp-action="caravans"]')){$('profileOverlay').hidden = true; window.ConquerGame?.commands?.openCaravans?.();}
     });
     root.addEventListener('input',ev=>{
@@ -339,19 +800,51 @@
     });
     root.addEventListener('change',ev=>{
       const el = ev.target, cmd = window.ConquerGame?.commands;
+      if(el.dataset.cpJobMin)cmd?.[el.dataset.cpJobTier==='L2'?'setL2Minimum':'setL1Minimum']?.(el.dataset.cpJobMin,Number(el.value));
       if(el.dataset.cpPolicy)cmd?.setPolicy?.(el.dataset.cpPolicy,el.value);
+      if(el.dataset.cpTax)window.ConquerTreasury?.setRate?.(el.dataset.cpTax,Number(el.value));
+      if(el.dataset.cpLevy==='days')ui.levyDays=Number(el.value);
+      if(el.dataset.cpLevy==='share')ui.levyShare=Number(el.value);
       if(el.dataset.cpShare)cmd?.setSaleShare?.(el.dataset.cpShare,num(el.value));
       if(el.matches?.('[data-cp-price]'))ui.priceGood = el.value;
       if(el.matches?.('[data-cp-estate]'))ui.site = el.value;
       render();
     });
+    // HTML drag and drop, plus keyboard/touch move buttons on every row.
+    root.addEventListener('dragstart',ev=>{
+      const row=ev.target.closest?.('[data-cp-job-row]');
+      if(!row||ev.target.closest?.('button,input'))return;
+      ui.dragJob={key:row.dataset.cpJobRow,tier:row.dataset.cpJobTier==='L2'?'L2':'L1'};
+      if(ev.dataTransfer){ev.dataTransfer.effectAllowed='move';ev.dataTransfer.setData('text/plain',ui.dragJob.key);}
+      row.classList?.add('cp-job-dragging');
+    });
+    root.addEventListener('dragover',ev=>{
+      const row=ev.target.closest?.('[data-cp-job-row]');
+      if(!ui.dragJob||!row)return;
+      ev.preventDefault();
+      if(ev.dataTransfer)ev.dataTransfer.dropEffect='move';
+      root.querySelectorAll?.('.cp-job-over').forEach(el=>el.classList.remove('cp-job-over'));
+      if(row.dataset.cpJobRow!==ui.dragJob.key)row.classList?.add('cp-job-over');
+    });
+    root.addEventListener('drop',ev=>{
+      const row=ev.target.closest?.('[data-cp-job-row]'),drag=ui.dragJob;
+      if(!row||!drag||drag.tier!==(row.dataset.cpJobTier==='L2'?'L2':'L1'))return;
+      ev.preventDefault();
+      ui.dragJob=null;
+      reorderJob(drag.key,row.dataset.cpJobRow,drag.tier);
+      render();
+    });
+    root.addEventListener('dragend',()=>{
+      ui.dragJob=null;
+      root.querySelectorAll?.('.cp-job-dragging,.cp-job-over').forEach(el=>el.classList.remove('cp-job-dragging','cp-job-over'));
+    });
     // Live refresh while visible; never while the player is using a control inside.
-    const refresh = () => { if(!$('profileOverlay')?.hidden && !root.hidden && !root.contains(document.activeElement))render(); };
+    const refresh = () => { if(!ui.dragJob&&!$('profileOverlay')?.hidden && !root.hidden && !root.contains(document.activeElement))render(); };
     let pending = false;
     const throttled = () => { if(pending)return; pending = true; setTimeout(()=>{pending = false; refresh();},500); };
     if(typeof window.ConquerGame?.subscribe==='function')window.ConquerGame.subscribe(throttled);
     // Simulation ticks do not all emit; a slow heartbeat keeps the numbers current.
     setInterval(refresh,4000);
   }
-  window.ConquerPanels = Object.freeze({open,render,tabs:TABS.map(x=>x[0])});
+  window.ConquerPanels = Object.freeze({open,render,tabs:TABS.map(x=>x[0]),escapeHtml});
 })();

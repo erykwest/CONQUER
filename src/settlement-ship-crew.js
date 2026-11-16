@@ -10,8 +10,8 @@
 (() => {
   const M=window.ConquerShipModels,S=window.ConquerShips;if(!M?.ships||!S)return;
   const WALK=.32,CLIMB=.5,HOLD=.8;          // U/s on deck, U/s up the rigging, s aloft after the sails stop
-  function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
-  function rng(seed){let a=seed|0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+  const hash=window.ConquerUtil.hash;
+  const rng=window.ConquerUtil.rng;
   // Point at arc-length fraction u along a polyline of [x,y,z].
   function along(path,u){
     const L=[0];for(let i=1;i<path.length;i++)L.push(L[i-1]+Math.hypot(...[0,1,2].map(k=>path[i][k]-path[i-1][k])));
@@ -109,7 +109,7 @@
   const COLORS=[['#3e5b7a','#d9d2c3'],['#c9c2b0','#3e5b7a'],['#7a4b32','#d9d2c3'],['#2f4a61','#b9b09a'],['#d9d2c3','#6b4a33']];
   function dot(id,p){
     const h=hash(String(id));
-    return{p,id:String(id),kind:'peasant',sex:'male',age:'adult',colors:COLORS[h%COLORS.length],
+    return{p,id:String(id),kind:'peasant',sex:'male',age:'adult',role:'sailor',colors:COLORS[h%COLORS.length],
       hair:typeof villagerHair==='function'?villagerHair(String(id)):'brown'};
   }
   const darken=(hex,k)=>{const h=hex.replace('#','');return'#'+[0,2,4].map(i=>Math.round(parseInt(h.slice(i,i+2),16)*k).toString(16).padStart(2,'0')).join('')};

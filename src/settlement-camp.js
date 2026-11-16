@@ -190,15 +190,47 @@
     g.strokeStyle='#554637';g.lineWidth=Math.max(.7,State.view.scale);
     g.beginPath();g.moveTo(T.x,T.y);g.lineTo(mid.x,mid.y);g.stroke();
   }
+  let bivouacCache={sig:null,camps:[],meshes:[]};
   function drawEncampments(g){
     const campers=units().filter(u=>u.campState==='camped'&&!u.defeated&&
       ['squad','knight','captain'].includes(u.kind));
     if(!campers.length)return;
+    // Each night camp must show a shelter. A valid 3D catalog alone is not
+    // enough: terrain/obstacle filtering can remove every tent from a camp.
+    const E=window.ConquerEvents3D,M=window.ConquerMesh3D;
+    let fires=campers.map(u=>({x:u.x+.68,y:u.y-.25,id:u.id}));
+    let draw3D=false,fallbackCampers=campers;
+    const sig=[State.seed,State.heraldry?.c1,State.heraldry?.c2,State.structures.length,
+      ...campers.map(u=>u.id+'@'+u.x.toFixed(2)+','+u.y.toFixed(2))].join('|');
+    if(E?.bivouac&&E?.bivouacMeshes&&M?.drawMeshes&&M?.gameView){
+      try{
+        if(bivouacCache.sig!==sig){
+          const camps=E.bivouac(campers,{blocked:p=>typeof pointBlockedForPeasant==='function'&&pointBlockedForPeasant(p)}).camps;
+          bivouacCache={sig,camps,meshes:E.bivouacMeshes(camps,p=>terrainElevation(p)).filter(m=>m?.col?.length)};
+        }
+        const sheltered=new Set();
+        for(const camp of bivouacCache.camps){
+          if(camp.items.some(it=>it.m?.startsWith('tent')))
+            for(const id of camp.key.split(','))sheltered.add(id);
+        }
+        draw3D=bivouacCache.meshes.length>0;
+        if(draw3D){
+          fallbackCampers=campers.filter(u=>!sheltered.has(String(u.id)));
+          fires=bivouacCache.camps.flatMap(c=>c.fires);
+        }
+      }catch(error){
+        // Preserve the original canvas tents if a 3D catalog fails at runtime. Keep the
+        // signature: the same camp is not rebuilt (and warned about) again on every frame.
+        bivouacCache={sig,camps:[],meshes:[],failed:true};
+        console.warn('CONQUER_CAMP_BIVOUAC_FALLBACK',error);
+      }
+    }
     withRenderContext(g,()=>{
-      for(const unit of campers){
-        tent(g,unit);
-        const fire={kind:'brazier',id:unit.id+':camp-brazier',
-          p:{x:unit.x+.68,y:unit.y-.25},z:.14,groundZ:terrainElevation(unit)};
+      if(draw3D)M.drawMeshes(g,bivouacCache.meshes,M.gameView());
+      for(const unit of fallbackCampers)tent(g,unit);
+      for(const f of fires){
+        const fire={kind:'brazier',id:f.id+':camp-brazier',
+          p:{x:f.x,y:f.y},z:.14,groundZ:terrainElevation(f)};
         drawBrazierFixture(fire);
         const base=w2sRaw(fire.p,fire.groundZ+fire.z+.08);
         const scale=clamp(State.view.scale,.55,1.45);

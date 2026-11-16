@@ -12,6 +12,8 @@ function drawCutawayOccupants(){
   for(const s of structures){
     const render=()=>{
       for(const slot of cutawayRoomSlots(s)){
+        // Floor-by-floor cutaway: nobody stands in the rooms taken off above the floor in view.
+        if(typeof cutawayFloorShown==='function'&&!cutawayFloorShown(s,slot.floor))continue;
         let count=0,kind=null;
         if(slot.role==='barracks'||slot.role==='quarters'){
           count=3;kind='soldier';
@@ -23,7 +25,15 @@ function drawCutawayOccupants(){
           }
         }
         else if(slot.role==='nobleRoom'){count=slot.size==='large'?2:1;kind='noble'}
-        if(!count)continue;
+        // Prison (ground floor): one to five prisoners per cell, a large room has two cells
+        // (settlement-court-people.js draws them; the capacity is in settlement-siege.js).
+        else if(slot.role==='prison'&&window.ConquerCourtPeople){
+          const max=window.ConquerCivic3D?.PRISON_CELL_MAX||5,cells=slot.size==='large'?2:1;
+          for(let c=0;c<cells;c++)count+=1+peasantHash(s.id+'-cell-'+slot.index+'-'+c)%max;
+          kind='prisoner';
+        }
+        // The household of the other rooms: cook, groom, chaplain, treasurer... (settlement-staff-people.js).
+        if(!count){window.ConquerStaffPeople?.drawRoom(s,slot);continue}
         const spots=window.ConquerCutawayFurniture?.standSpots(s,slot,count);
         const positions=cutawayOccupantLayout(count),items=[];
         for(let i=0;i<count;i++){
@@ -36,6 +46,7 @@ function drawCutawayOccupants(){
         for(const item of items){
           const id=s.id+'-room-'+slot.index+'-'+item.i;
           if(kind==='soldier')drawSoldierFigure(item.p,slot.z+.09,'unarmed',id,item.phase);
+          else if(kind==='prisoner')window.ConquerCourtPeople.drawCellPrisoner(item.p,slot.z,id,item.phase,item.i>0);
           else drawNobleFigure(item.p,slot.z+.09,id,item.phase);
         }
       }
@@ -109,14 +120,20 @@ function drawCastleSoldiers(){
     }
   }
 
-  // Wall and palisade patrol density follows tier: T1=0, T2=1, T3=2.
-  for(const wall of State.structures){
+  // Wall patrols walk whole rings of walls, as many as the player assigned to each ring
+  // (settlement-wall-patrols.js, MIL-WALL-01). /camp has no wall-patrol module and keeps the old
+  // decorative men per segment: T1=0, T2=1, T3=2.
+  if(window.ConquerWallPatrols)window.ConquerWallPatrols.draw();
+  else for(const wall of State.structures){
     if(!['wall','palisade'].includes(wall.type)||underConstruction(wall))continue;
     const tier=wallTier(wall),count=tier===1?0:tier===3?2:1;
     const z=wall.type==='palisade'?palisadePatrolSurface(wall).z:structureHeight(wall)+.10;
     for(let i=0;i<count;i++){
       const p=wallPatrolPoint(wall,day,i,count);
-      if(worldPointVisible(p,z,48))drawSoldierFigure(p,z,'spearman',wall.id+':patrol:'+i,day+i*.5);
+      // On a stepped wall the patrol walks on its section's top and up the flights at the steps.
+      const L2=(wall.b.x-wall.a.x)**2+(wall.b.y-wall.a.y)**2||1,t=((p.x-wall.a.x)*(wall.b.x-wall.a.x)+(p.y-wall.a.y)*(wall.b.y-wall.a.y))/L2;
+      const g=wall.type==='wall'?wallWalkGroundAt(wall,t):null,pz=Number.isFinite(g)?z+g-terrainElevation(p):z;
+      if(worldPointVisible(p,pz,48))drawSoldierFigure(p,pz,'spearman',wall.id+':patrol:'+i,day+i*.5);
     }
   }
 
@@ -136,6 +153,8 @@ function drawCastleSoldiers(){
       });
     }
   }
+  // Lookouts of the Barracks reserve on the open decks (settlement-soldiers.js).
+  window.ConquerSoldiers?.drawLookouts?.();
 }
 function drawTrainingSoldiers(){
   const day=peasantVisualDay(),dots=[];

@@ -137,11 +137,50 @@ function structureAssetFamilyCatalog(){
       assetPointBase('tower',{shape,material:'stone',level,tier,roofStyle,baseStyle,...(shape==='round'?{r:size}:{size})})
     );
   }
+  // Italian machicolations (machicolationStyle 'italian'): tall stepped corbels joined by small arches,
+  // on every stone shape that takes machicolations, at each tier, lowest and tallest height.
+  for(const shape of ['square','round','dee'])for(let tier=1;tier<=3;tier++){
+    if(shape==='dee'&&tier===1)continue;
+    for(const level of [1,3]){
+      const size=shape==='dee'?[1,1.5,2][tier-1]:towerSizeForTier(shape,tier);
+      add(
+        'tower-stone-'+shape+'-t'+tier+'-l'+level+'-machicolation-italian',
+        'Stone '+shape+' tower T'+tier+' L'+level+' Italian machicolation',
+        assetPointBase('tower',{shape,material:'stone',level,tier,roofStyle:'machicolation',machicolationStyle:'italian',baseStyle:'standard',...(shape==='round'?{r:size}:{size})})
+      );
+    }
+  }
+  // W4 Mastio (3U square): heights and roofs, then the room layouts of its floors in cutaway,
+  // with three small corner subtowers and a medium one (keep-w4-corners in the Lab sheets).
+  for(let level=1;level<=3;level++)for(const roofStyle of ['battlement','machicolation','pitched'])add(
+    'tower-stone-square-w4-l'+level+'-'+roofStyle,'Mastio W4 L'+level+' '+roofStyle,
+    assetPointBase('tower',{shape:'square',material:'stone',level,tier:KEEP_W4_TIER,roofStyle,baseStyle:'standard',size:3,isMastio:true})
+  );
+  for(const plans of [['three','quad','hall'],['halves','halves','halves'],['hall','quad','quad'],['quad','three','hall']])add(
+    'tower-stone-square-w4-plans-'+plans.join('-'),'Mastio W4 floors '+plans.join(' / '),
+    assetPointBase('tower',{shape:'square',material:'stone',level:3,tier:KEEP_W4_TIER,roofStyle:'battlement',baseStyle:'standard',size:3,isMastio:true,keepPlans:plans,cutaway:true})
+  );
+  // The hoarding is mounted on a tower as built: one entry per shape, tier and roof it can go on.
+  for(const shape of ['square','round','dee'])for(let tier=1;tier<=3;tier++)for(const roofStyle of ['battlement','pitched']){
+    if(shape==='dee'&&tier===1)continue;
+    const size=shape==='dee'?[1,1.5,2][tier-1]:towerSizeForTier(shape,tier);
+    add(
+      'tower-stone-'+shape+'-t'+tier+'-l2-'+roofStyle+'-hoarding',
+      'Stone '+shape+' tower T'+tier+' L2 '+roofStyle+' with hoarding',
+      assetPointBase('tower',{shape,material:'stone',level:2,tier,roofStyle,baseStyle:'standard',hoarding:'on',...(shape==='round'?{r:size}:{size})})
+    );
+  }
   add('tower-wood-watch','Wood watchtower',assetPointBase('tower',{shape:'square',material:'wood',woodStyle:'watchtower',woodRoof:'pitched',level:1,size:1,tier:1}));
   for(const woodRoof of ['open','pitched'])add('tower-wood-medium-'+woodRoof,'Wood medium tower '+woodRoof,assetPointBase('tower',{shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof,level:1,size:1.5,tier:2}));
+  add('tower-wood-frame-h2','Wood frame tower H2',assetPointBase('tower',{shape:'square',material:'wood',woodStyle:'frameTower',woodRoof:'pitched',level:2,size:1.5,tier:2}));
   for(let level=1;level<=3;level++)for(const roofStyle of ['battlement','pitched'])add(
     'gate-stone-l'+level+'-'+roofStyle,'Stone gate L'+level+' '+roofStyle,
     assetPointBase('gate',{shape:'square',material:'stone',size:1.5,level,roofStyle})
+  );
+  // Hoarding mounted on the large and the small stone gate, crenellated or roofed.
+  for(const size of [1.5,1])for(const roofStyle of ['battlement','pitched'])add(
+    'gate-stone-'+(size<1.25?'small':'large')+'-l2-'+roofStyle+'-hoarding','Stone '+(size<1.25?'small':'large')+' gate L2 '+roofStyle+' with hoarding',
+    assetPointBase('gate',{shape:'square',material:'stone',size,level:2,roofStyle,hoarding:'on'})
   );
   add('gate-wood','Wood gate',assetPointBase('gate',{shape:'square',material:'wood',size:1.5,w:1,h:1.5,level:1,roofStyle:'flat'}));
   for(let tier=1;tier<=3;tier++)for(let level=1;level<=2;level++)for(const skin of (tier===1?['standard','hoarding']:['standard','machicolation','hoarding']))for(const length of STRUCTURE_ASSET_TEST_LENGTHS.wall)add(
@@ -160,6 +199,16 @@ function structureAssetFamilyCatalog(){
     'built-wide-l'+level+'-'+skin+'-'+length,'Wide hall L'+level+' '+skin+' '+length+'U',
     assetLinearBase('built',length,{span:'wide',level,skin,width:TYPES.builtWide.width,functions:[]})
   );
+  // Timber longhouse: the W1 / W2 spans in wood, ground floor only.
+  for(const length of STRUCTURE_ASSET_TEST_LENGTHS.built)add('longhouse-w1-'+length,'Longhouse W1 '+length+'U',assetLinearBase('built',length,{material:'wood',level:1,width:1,functions:[]}));
+  // Lean-to against an H2 wall (settlement-lean-to.js): one storey, single-pitch roof; both wall sides.
+  for(const mat of ['wood','stone','brick'])for(const side of [1,-1])for(const length of STRUCTURE_ASSET_TEST_LENGTHS.built)add('lean-to-'+mat+'-'+(side===1?'n':'s')+'-'+length,'Lean-to W1 '+mat+' '+(side===1?'wall +n':'wall -n')+' '+length+'U',assetLinearBase('built',length,{leanTo:true,leanMaterial:mat,masonryMaterial:mat==='brick'?'brick':'stone',leanSide:side,flip:side===1,level:1,width:1,functions:[]}));
+  for(const length of STRUCTURE_ASSET_TEST_LENGTHS.builtWide)add('longhouse-w2-'+length,'Longhouse W2 '+length+'U',assetLinearBase('built',length,{material:'wood',span:'wide',level:1,width:TYPES.builtWide.width,functions:[]}));
+  // Longhouse roof covers (BC-251105-09): thatch and turf beside the default shingles.
+  for(const roofCover of ['thatch','turf']){
+    for(const length of STRUCTURE_ASSET_TEST_LENGTHS.built)add('longhouse-w1-'+roofCover+'-'+length,'Longhouse W1 '+roofCover+' '+length+'U',assetLinearBase('built',length,{material:'wood',level:1,width:1,roofCover,functions:[]}));
+    for(const length of STRUCTURE_ASSET_TEST_LENGTHS.builtWide)add('longhouse-w2-'+roofCover+'-'+length,'Longhouse W2 '+roofCover+' '+length+'U',assetLinearBase('built',length,{material:'wood',span:'wide',level:1,width:TYPES.builtWide.width,roofCover,functions:[]}));
+  }
   for(const type of CIVIC_TYPES){
     if(CIVIC_LEVEL_TYPES.includes(type))for(let level=1;level<=3;level++){
       if(type==='plaza')for(const variant of PLAZA_VARIANTS)add('civic-plaza-l'+level+'-'+variant,'Piazza L'+level+' '+variant,assetPointBase(type,{civicLevel:level,plazaVariant:variant}));
@@ -205,7 +254,7 @@ function instantiateStructureAsset(def,step=0){
 function structureAssetSignature(def,step){
   return [
     STRUCTURE_ASSET_PIPELINE_VERSION,def.key,'r'+String(step).padStart(2,'0'),
-    State.season||'summer'
+    State.season||'summer',crenelStyle(),'p'+roofPitch()
   ].join('|');
 }
 function withStructureAssetSandbox(s,canvas,drawFn){
@@ -265,7 +314,7 @@ function assetPixelHash(canvas){
   return(h>>>0).toString(16).padStart(8,'0');
 }
 function expectedShadowCaster(s){
-  return ['house','tower','gate','wall','palisade','built','market','tavern','church'].includes(s.type);
+  return ['house','tower','gate','wall','palisade','built','market','tavern','church','townhall','guild','bargello','balivo'].includes(s.type);
 }
 function validateAssetShadowGeometry(s){
   if(!expectedShadowCaster(s))return{tested:0,failed:0};

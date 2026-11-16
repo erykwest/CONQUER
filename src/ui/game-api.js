@@ -67,11 +67,13 @@
       linear: t.linear || null,
       span: t.span || null,
       crossing: t.crossing || null,
+      slopeway: t.slopeway || null,
       width: t.width ?? null,
       civic: t.placementSpec?.type && t.kind === 'civic' ? t.placementSpec.type : null,
       industry: t.industry || null,
       extraction: t.placementSpec?.extractionMode || null,
       reach: t.placementSpec?.reach || null,
+      venue: t.kind === 'event' ? t.venue || null : null,
       mode: t.mode || null,
       radius: t.radius ?? null,
       delta: t.delta ?? null,
@@ -107,8 +109,17 @@
       selection: selection(),
       village: State.village?.name || null,
       status: document.getElementById('status')?.textContent || '',
-      saved: document.getElementById('saveState')?.textContent || ''
+      saved: document.getElementById('saveState')?.textContent || '',
+      saveStatus: saveStatus()
     };
+  }
+  // 'saved' | 'unsaved' | 'error' from the legacy indicator ('unsaved', 'saved local',
+  // 'saved cloud', 'cloud ready', 'local save failed', 'cloud error', …).
+  function saveStatus() {
+    const text = (document.getElementById('saveState')?.textContent || '').toLowerCase();
+    if (/fail|error/.test(text)) return 'error';
+    if (/unsaved/.test(text)) return 'unsaved';
+    return 'saved';
   }
 
   // Legacy controls are still the source of truth for tool parameters in phase 1.
@@ -123,6 +134,8 @@
     emit();
     return true;
   }
+  // Wraps a command that saves and notifies only when the underlying call reports a change.
+  const saved = fn => (...args) => { const ok = fn(...args); if (ok) { scheduleLocalSave(200); emit(); } return !!ok; };
   const commands = {
     press,
     setSpeed: speed => setTimeSpeed(speed),
@@ -154,8 +167,48 @@
       markDirty(false, false, true);
       return true;
     },
-    setSaleShare: (good, pct) => { const ok = window.ConquerEconomy?.setShare(good, pct); scheduleLocalSave(200); emit(); return ok; },
+    crenelQuote: style => crenelRestyleQuote(style),
+    setCrenelStyle: style => { const out = applyCrenelStyle(style); emit(); return out; },
+    unitEquipmentQuote: (kind, style) => unitEquipmentQuote(kind, style),
+    setUnitEquipment: (kind, style) => { const out = applyUnitEquipment(kind, style); emit(); return out; },
+    roofPitchQuote: pitch => roofPitchQuote(Number(pitch)),
+    setRoofPitch: pitch => { const out = applyRoofPitch(pitch); emit(); return out; },
+    setSaleShare:(good, pct) => { const ok = window.ConquerEconomy?.setShare(good, pct); scheduleLocalSave(200); emit(); return ok; },
     setReserve: (good, qty) => { const ok = window.ConquerEconomy?.setTarget(good, qty); scheduleLocalSave(200); emit(); return ok; },
+    // SCOL-01: the lord hires a lay scolarizzato (castle gold, arrives after two weeks).
+    hireEducated: () => {
+      const out=window.ConquerEducated?.hire?.()||{ok:false,reason:'economy'};
+      if(out.ok){scheduleLocalSave(200);emit();}
+      return out;
+    },
+    // L1/L2 Job Manager: commands only; the economy remains the allocator and save owner.
+    ...Object.fromEntries(['setL1Minimum','setL1Auto','setL1Order','setL2Minimum','setL2Auto','setL2Order']
+      .map(name => [name, saved((...args) => window.ConquerEconomy?.[name]?.(...args))])),
+    adjustPatrols: delta => {
+      if(!State.village?.founded||!window.ConquerCombat?.units)return false;
+      const before=window.ConquerCombat.units().filter(u=>u.kind==='patrol').length;
+      const ok=press(delta>0?'#combatPatrolAdd':'#combatPatrolRemove');
+      const after=window.ConquerCombat.units().filter(u=>u.kind==='patrol').length;
+      if(ok&&after!==before)emit();
+      return ok&&after!==before;
+    },
+    adjustTowerArchers: saved((id, delta) => window.ConquerSiege?.changeArchers?.(id, delta)),
+    // Patrols of a whole ring of walls (settlement-wall-patrols.js): two reserve soldiers each.
+    adjustWallPatrols: saved((ringId, delta) => window.ConquerWallPatrols?.adjust?.(ringId, delta)),
+    enlistForWallPatrol: saved(() => (window.ConquerWallPatrols?.enlistForPatrol?.() || 0) > 0),
+    assignCirclePatrol: saved((sectorId, delta) => window.ConquerCombat?.assignCirclePatrol?.(sectorId, delta)),
+    adjustMacroArchers: saved((id, delta) => adjustMacroArchers(id, delta)),
+    adjustZoneArchers: saved((id, delta) => adjustZoneArchers(id, delta)),
+    adjustMacroSquads: saved((id, delta) => adjustMacroSquads(id, delta)),
+    adjustBarracksSquads: (id, delta) => {
+      const camp=window.ConquerCamp,roster=window.ConquerCombat?.units;
+      if(!camp||!roster||!camp.barracks?.().some(b=>b.id===id))return false;
+      const before=roster().filter(u=>u.kind==='squad'&&u.barracksId===id&&!u.defeated).length;
+      if(delta>0)camp.addSquad(id);else camp.removeSquad(id);
+      const after=roster().filter(u=>u.kind==='squad'&&u.barracksId===id&&!u.defeated).length;
+      if(after!==before){scheduleLocalSave(200);emit();}
+      return after!==before;
+    },
     transferActivity: (id, owner) => {
       const ok = window.ConquerEconomy?.transfer(id, owner);
       if (!ok) status('Insufficient economic capital for enterprise transfer');
@@ -192,11 +245,119 @@
     }
   };
 
+  // CIRCLE supplies the zone identity. A tower's parentTowerId forms the
+  // authoritative macro-structure; never count its subtowers as separate rows.
+  function militaryCircleRoster(){
+    const combat=window.ConquerCombat,siege=window.ConquerSiege,
+      camp=window.ConquerCamp,circle=window.ConquerCircle;
+    const allies=combat?.units?.()||[];
+    const circleReady=!!circle?.getStatus?.().ready;
+    const compartments=circleReady?(circle?.getSnapshot?.()?.compartments||[]):[];
+    const zoneIds=new Set(compartments.map(z=>z.id));
+    const towers=(State.structures||[]).filter(s=>s.type==='tower'&&!s.destroyed&&
+      !(typeof underConstruction==='function'&&underConstruction(s)));
+    const byId=new Map(towers.map(s=>[String(s.id),s]));
+    const rootOf=s=>{
+      let at=s;
+      const seen=new Set([String(s.id)]);
+      while(at.parentTowerId&&byId.has(String(at.parentTowerId))&&!seen.has(String(at.parentTowerId))){
+        at=byId.get(String(at.parentTowerId));seen.add(String(at.id));
+      }
+      return at;
+    };
+    const roots=new Map();
+    for(const tower of towers){
+      const root=rootOf(tower),key=String(root.id);
+      if(!roots.has(key))roots.set(key,{id:key,root,members:[]});
+      roots.get(key).members.push(tower);
+    }
+    const campRooms=camp?.barracks?.()||[];
+    const macros=[...roots.values()].map(group=>{
+      const ordered=group.members.sort((a,b)=>a.id===group.id?-1:b.id===group.id?1:
+        String(a.id).localeCompare(String(b.id)));
+      const members=ordered.map(t=>({id:String(t.id),capacity:siege?.archerSlots?.(t)?.length||0,
+        assigned:siege?.stationedArchers?.(t)||0,active:siege?.occupiedArcherSlots?.(t)?.length||0}));
+      const rooms=campRooms.filter(b=>rootOf(byId.get(String(b.structure?.id))||{})?.id===group.id&&
+        byId.has(String(b.structure?.id))).map(b=>({id:b.id,capacity:b.capacity,
+        assigned:allies.filter(u=>u.kind==='squad'&&u.barracksId===b.id&&!u.defeated).length}));
+      const name=typeof structureLabel==='function'?structureLabel(group.root):null;
+      const zoneCandidates=[group.root,...ordered.filter(t=>t!==group.root)];
+      const sector=zoneCandidates.map(t=>circleReady?circle?.sectorForStructure?.(t):null)
+        .find(id=>zoneIds.has(id))||null;
+      return {id:group.id,zoneId:sector,label:group.root.isMastio?'Mastio · '+group.id:
+        (name||'Torre · '+group.id),subtowers:Math.max(0,ordered.length-1),
+        capacity:members.reduce((n,t)=>n+t.capacity,0),assigned:members.reduce((n,t)=>n+t.assigned,0),
+        active:members.reduce((n,t)=>n+t.active,0),
+        squadCapacity:rooms.reduce((n,b)=>n+b.capacity,0),squads:rooms.reduce((n,b)=>n+b.assigned,0),
+        rooms,members};
+    }).sort((a,b)=>a.label.localeCompare(b.label,'it'));
+    const otherBarracks=campRooms.filter(b=>!byId.has(String(b.structure?.id)))
+      .map(b=>({id:b.id,label:'Caserma · '+b.id,capacity:b.capacity,
+        assigned:allies.filter(u=>u.kind==='squad'&&u.barracksId===b.id&&!u.defeated).length,
+        zoneId:zoneIds.has(circle?.sectorForStructure?.(b.structure))
+          ?circle.sectorForStructure(b.structure):null}));
+    const patrols=allies.filter(u=>u.kind==='patrol'&&!u.defeated).map(u=>({
+      id:String(u.id),zoneId:zoneIds.has(u.circleSectorId)?u.circleSectorId:null,
+      active:!u.routing&&!u.campState,position:u.target?'in marcia':'di pattuglia'
+    }));
+    const zoneRows=compartments.map((sector,i)=>{
+      const grouped=macros.filter(m=>m.zoneId===sector.id);
+      const rooms=otherBarracks.filter(b=>b.zoneId===sector.id);
+      return {id:sector.id,label:'Settore '+(i+1),depth:sector.depth||1,
+        state:sector.state||'unassessed',mastio:!!sector.mastio,
+        area:sector.area,patrols:patrols.filter(p=>p.zoneId===sector.id).length,
+        towers:grouped,otherBarracks:rooms,
+        capacity:grouped.reduce((n,m)=>n+m.capacity,0),
+        assigned:grouped.reduce((n,m)=>n+m.assigned,0),
+        active:grouped.reduce((n,m)=>n+m.active,0)};
+    }).sort((a,b)=>a.depth-b.depth||a.label.localeCompare(b.label,'it'));
+    const outside={id:'outside',label:'Fuori dai compartimenti CIRCLE',depth:0,state:'outside',
+      patrols:patrols.filter(p=>!p.zoneId).length,towers:macros.filter(m=>!m.zoneId),
+      otherBarracks:otherBarracks.filter(b=>!b.zoneId)};
+    outside.capacity=outside.towers.reduce((n,m)=>n+m.capacity,0);
+    outside.assigned=outside.towers.reduce((n,m)=>n+m.assigned,0);
+    outside.active=outside.towers.reduce((n,m)=>n+m.active,0);
+    return {circleReady,zones:zoneRows,outside,macros,patrols,otherBarracks,
+      wallRings:window.ConquerWallPatrols?.summary?.()||null,
+      totalAssigned:macros.reduce((n,m)=>n+m.assigned,0),
+      totalActive:macros.reduce((n,m)=>n+m.active,0),
+      unassigned:allies.filter(u=>u.kind==='squad'&&!u.defeated&&!u.barracksId).length,
+      hasCampManagement:!!camp};
+  }
+  function adjustMacroArchers(id,delta){
+    const macro=militaryCircleRoster().macros.find(m=>m.id===String(id));
+    if(!macro||!Number.isFinite(Number(delta))||!Math.sign(Number(delta)))return false;
+    const order=delta>0?macro.members:macro.members.slice().reverse();
+    const target=order.find(m=>delta>0?m.assigned<m.capacity:m.assigned>0);
+    return !!target&&!!window.ConquerSiege?.changeArchers?.(target.id,delta);
+  }
+  function adjustZoneArchers(id,delta){
+    const zones=militaryCircleRoster(),zone=id==='outside'?zones.outside:
+      zones.zones.find(z=>z.id===id);
+    if(!zone||!Math.sign(Number(delta)))return false;
+    const list=delta>0?zone.towers:zone.towers.slice().reverse();
+    const target=list.find(m=>delta>0?m.assigned<m.capacity:m.assigned>0);
+    return !!target&&adjustMacroArchers(target.id,delta);
+  }
+  function adjustMacroSquads(id,delta){
+    const macro=militaryCircleRoster().macros.find(m=>m.id===String(id));
+    if(!macro||!Math.sign(Number(delta)))return false;
+    const rooms=delta>0?macro.rooms:macro.rooms.slice().reverse();
+    const target=rooms.find(b=>delta>0?b.assigned<b.capacity:b.assigned>0);
+    if(!target)return false;
+    const before=target.assigned;
+    if(delta>0)window.ConquerCamp?.addSquad?.(target.id);
+    else window.ConquerCamp?.removeSquad?.(target.id);
+    return militaryCircleRoster().macros.find(m=>m.id===String(id))?.rooms
+      .find(b=>b.id===target.id)?.assigned!==before;
+  }
+
   // ---- read models for the panels that are not part of every snapshot ----
   const ECON_GOODS = ['food', 'wood', 'stone', 'metal', 'equipment', 'luxury'];
   const read = {
     defense() { return window.ConquerCombat?.uiState?.() || null; },
     knights() { return window.ConquerCombat?.knightRecruitment?.() || null; },
+    militaryAssignments(){ return militaryCircleRoster(); },
     caravans() {
       const d = window.ConquerDiplomacy;
       return d ? (d.caravans?.() || []).filter(c => c.status !== 'completed').length : null;
@@ -214,11 +375,15 @@
       const s = econ.snapshot(), e = econ.state(), staff = econ.staffing?.() || {};
       const activities = Object.entries(e.activities)
         .filter(([id]) => State.structures.some(x => x.id === id))
-        .map(([id, a]) => ({ id, type: a.type, owner: a.owner, value: econ.assetValue(a), workers: staff[id] || 0,
+        .map(([id, a]) => ({ id, type: a.type, tier: econ.KIND?.[a.type]?.classId || null,
+          owner: a.owner, value: econ.assetValue(a), workers: staff[id] || 0,
           profit: a.profit ?? null, abandoned: !!a.abandoned }));
       return {
         happiness: s.happiness, rationMode: s.rationMode, castleFoodIssued: s.castleFoodIssued,
-        jobs: econ.jobSummary?.() || null, commerce: s.commerce || null,
+        jobs: econ.jobSummary?.() || null, jobManager: econ.jobManager?.() || null,
+        jobManagerL2: econ.jobManagerL2?.() || null,
+        educated: window.ConquerEducated?.summary?.() || null,
+        commerce: s.commerce || null,
         welfare: s.welfare, capital: s.capital, castleGold: s.castleGold, population: s.population, wage: s.wage,
         goods: (econ.GOODS || ECON_GOODS).map(g => ({ id: g, price: s.prices[g], market: s.market[g], castle: s.castle[g],
           share: e.saleShare[g], reserve: e.target[g] })),
@@ -241,6 +406,7 @@
         ],
         autonomy: daily > 0 ? Math.floor(x.stock.food / daily) : null, daily,
         meals: cap.meals, soldiers: cap.soldiers, knights: cap.knights, shortfall: x.starvationDays || 0,
+        water: { ...siege.water(), cisterns: cap.water }, thirst: x.thirstDays || 0,
         transfers: ['food', 'wood', 'stone', 'metal', 'equipment', 'gold', 'horses'].map(key => {
           const group = MATERIALS.includes(key) ? 'materials' : key;
           return { id: key, enabled: (cap[group] || 0) > siege.used(group) && (State.resources[key] || 0) > 0 };

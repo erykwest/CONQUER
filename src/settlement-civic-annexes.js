@@ -6,6 +6,8 @@ const CIVIC_ANNEX_CATALOG=Object.freeze({
     cemetery:{label:'Cemetery',level:1,w:2.2,h:2.2,max:1,kind:'cemetery',intrinsic:true},
     herbGarden:{label:'Herb garden',level:1,w:2,h:2,max:2,kind:'garden'},
     scriptorium:{label:'Scriptorium',level:2,w:2.5,h:2,max:1,kind:'stone'},
+    // Ospizio: shelter for the poor and the sick (crime skeleton: care against unrest).
+    almshouse:{label:'Almshouse',level:2,w:4.5,h:2.4,max:1,kind:'stone'},
     monastery:{label:'Monastery',level:3,w:3,h:2.5,max:1,kind:'stone'},
     cloister:{label:'Cloister',level:3,w:2.5,h:2.5,max:1,kind:'yard'},
     // Church square (sagrato): a piazza in front of or beside the church, three variants.
@@ -23,8 +25,23 @@ const CIVIC_ANNEX_CATALOG=Object.freeze({
     loggia:{label:'Covered loggia',level:2,w:3,h:1.5,max:2,kind:'timber'},
     warehouse:{label:'Warehouse',level:3,w:2.5,h:2,max:2,kind:'timber'},
     shop:{label:'Shop',level:3,w:1.75,h:1.5,max:4,kind:'timber'}
+  }),
+  // Orto di corte (BC-251105-11): the town hall's kitchen garden. Unlike the rest of
+  // this skeleton it has a real yield: see KITCHEN_GARDEN_FOOD_PER_DAY in the economy.
+  townhall:Object.freeze({
+    kitchenGarden:{label:'Kitchen garden',level:1,w:3,h:2,max:2,kind:'garden'}
   })
 });
+// The town hall owns no Voronoi lot: its garden stays on open ground close by.
+const TOWNHALL_ANNEX_RANGE=7;
+// Completed, standing kitchen gardens of finished town halls (the economy's food source).
+function kitchenGardens(){
+  return State.structures.filter(s=>isCivicAnnex(s)&&s.annexType==='kitchenGarden'&&
+    !s.destroyed&&!s.burnt&&!underConstruction(s)&&(()=>{
+      const parent=State.structures.find(p=>p.id===s.parentId);
+      return parent?.type==='townhall'&&!parent.destroyed&&!underConstruction(parent);
+    })());
+}
 function isCivicAnnex(s){return !!s&&s.type==='civicAnnex'}
 function civicAnnexDefinition(s,parent=State.structures.find(p=>p.id===s?.parentId)){
   return parent&&CIVIC_ANNEX_CATALOG[parent.type]?.[s?.annexType]||null;
@@ -88,7 +105,12 @@ function civicAnnexPlacementCheck(s){
   if(siblings.length>=spec.max)return{ok:false,reason:'Maximum annex count reached'};
   const footprint=civicAnnexFootprint(s);
   if(footprint.length!==4)return{ok:false,reason:'Invalid annex footprint'};
-  if(parent.type==='market'){
+  if(parent.type==='townhall'){
+    if(dist(s,parent)>TOWNHALL_ANNEX_RANGE)
+      return{ok:false,reason:'Kitchen garden must remain within '+TOWNHALL_ANNEX_RANGE+'U of the town hall'};
+    if(urbanLots().some(lot=>urbanPolygonsOverlap(footprint,lot.points)))
+      return{ok:false,reason:'Kitchen garden cannot occupy an owned Voronoi lot'};
+  }else if(parent.type==='market'){
     // Public market pieces grow near the square, but never claim a private parcel.
     if(dist(s,parent)>9)return{ok:false,reason:'Market annex must remain within 9U of its square'};
     if(urbanLots().some(lot=>urbanPolygonsOverlap(footprint,lot.points)))
@@ -122,4 +144,56 @@ function startCivicAnnexPlacement(parent,annexType){
   }
   setTool({kind:'civicAnnex',parentId:parent.id,annexType,label:'Place '+spec.label+' inside the complex · click to build'});
   return true;
+}
+// Well civics: the town hall and the guild hall belong to a well's square, the village
+// centre or any quarter well. One of each per well, standing within reach of it.
+const WELL_CIVIC_TYPES=Object.freeze(['townhall','guild','bargello']);
+const WELL_CIVIC_RANGE=9;
+const WELL_CIVIC_LABELS=Object.freeze({townhall:'Town hall',guild:'Guild hall',bargello:'Bargello'});
+function isWellCivic(s){return !!s&&WELL_CIVIC_TYPES.includes(s.type)}
+function wellCivicTaken(well,type,exceptId=null){
+  return State.structures.some(o=>o.type===type&&o.id!==exceptId&&o.wellId===well.id);
+}
+function wellCivicCandidates(s){
+  return State.structures.filter(w=>w.type==='well'&&!underConstruction(w)&&dist(s,w)<=WELL_CIVIC_RANGE)
+    .sort((a,b)=>dist(s,a)-dist(s,b));
+}
+// The saved well while it stands in reach, otherwise the nearest free well in reach.
+function wellCivicWell(s){
+  const wells=wellCivicCandidates(s);
+  return wells.find(w=>w.id===s?.wellId)||wells.find(w=>!wellCivicTaken(w,s.type,s.id))||null;
+}
+function wellCivicPlacementCheck(s){
+  if(!isWellCivic(s))return{ok:true};
+  const label=WELL_CIVIC_LABELS[s.type];
+  if(!State.village?.founded)return{ok:false,reason:label+' needs a founded village'};
+  // GILDA-01: the guild serves the whole village, so only one guild hall may stand.
+  if(s.type==='guild'&&State.structures.some(o=>o.type==='guild'&&o.id!==s.id&&!o.destroyed))
+    return{ok:false,reason:'Only one guild hall per village'};
+  const wells=wellCivicCandidates(s);
+  if(!wells.length)return{ok:false,reason:label+' must stand within '+WELL_CIVIC_RANGE+'U of a completed well'};
+  const well=wells.find(w=>w.id===s.wellId)||wells.find(w=>!wellCivicTaken(w,s.type,s.id));
+  if(!well)return{ok:false,reason:'The nearest well already has a '+label.toLowerCase()};
+  return{ok:true,well};
+}
+function wellCivicLabel(s){
+  const well=wellCivicWell(s);
+  const square=!well?'no well':typeof isVillageCenterWell==='function'&&isVillageCenterWell(well)?'village centre':
+    (typeof wellDisplayName==='function'&&wellDisplayName(well))||'unnamed quarter';
+  return WELL_CIVIC_LABELS[s.type]+' · L'+civicLevel(s)+' · '+square;
+}
+// Palazzo del Balivo (FISCO-01): the lord's bailiff over the countryside. It stands out in the
+// rural belt, away from the quarters: outside the housing zones, clear of every well, and apart
+// from any other bailiff's house (each one covers its own stretch of the contado).
+const BALIVO_WELL_CLEARANCE=12,BALIVO_SPACING=20;
+function balivoPlacementCheck(s){
+  if(s?.type!=='balivo')return{ok:true};
+  if(!State.village?.founded)return{ok:false,reason:'Palazzo del Balivo needs a founded village'};
+  const zone=window.ConquerCombat?.areaState?.(s);
+  if(zone?.yellow||zone?.green)return{ok:false,reason:'Palazzo del Balivo stands in the countryside, outside the housing zones'};
+  const well=State.structures.find(w=>w.type==='well'&&dist(s,w)<BALIVO_WELL_CLEARANCE);
+  if(well)return{ok:false,reason:'Palazzo del Balivo must stand at least '+BALIVO_WELL_CLEARANCE+'U from any well (the quarters)'};
+  if(State.structures.some(o=>o.type==='balivo'&&o.id!==s.id&&dist(s,o)<BALIVO_SPACING))
+    return{ok:false,reason:'Another Palazzo del Balivo already governs this countryside (within '+BALIVO_SPACING+'U)'};
+  return{ok:true};
 }

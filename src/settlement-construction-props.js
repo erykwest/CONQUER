@@ -42,7 +42,7 @@
     // Village houses grow on their own (auto) but are real building sites too.
     if(!s||s.auto&&s.type!=='house'||SKIP.has(s.type)||window.ConquerIndustries?.is?.(s))return null;
     const H=Number(call('structureHeight',s))||0;
-    const wood=s.type==='palisade'||s.type==='house'||s.type==='market'||s.type==='pier'||!!call('isWoodTower',s)||!!call('isWoodGate',s)||!!call('isCivicAnnex',s);
+    const wood=s.type==='palisade'||s.type==='house'||s.type==='market'||s.type==='pier'||!!call('isWoodTower',s)||!!call('isWoodGate',s)||!!call('isCivicAnnex',s)||s.type==='guild'&&call('civicLevel',s)<3||['townhall','bargello','balivo'].includes(s.type)&&call('civicLevel',s)===1;
     const masonry=!wood;
     return{H,masonry,brick:s.masonryMaterial==='brick',
       scaffold:H>=.9&&s.type!=='palisade'&&!call('isWoodGate',s),
@@ -64,9 +64,12 @@
     const area=pts=>{let a=0;for(let i=0;i<pts.length;i++){const p=pts[i],q=pts[(i+1)%pts.length];a+=p.x*q.y-q.x*p.y}return Math.abs(a/2)};
     let pts=polys.reduce((best,p)=>area(p)>area(best)?p:best,polys[0]).filter(Boolean);
     if(pts.length<3)return null;
+    // A D tower keeps its flat back: only the half round is cut into bays.
+    const dee=s.type==='tower'&&s.shape==='dee'&&fn('deeTowerLocalOutline');
+    if(dee){const {bay}=units();pts=orientedTowerWorld(s,deeTowerLocalOutline(s,0,Math.max(2,Math.round(Math.PI*orientedTowerDims(s).h/2/bay))))}
     const c={x:pts.reduce((a,p)=>a+p.x,0)/pts.length,y:pts.reduce((a,p)=>a+p.y,0)/pts.length};
     let r=0;for(const p of pts)r=Math.max(r,Math.hypot(p.x-c.x,p.y-c.y));
-    if(pts.length>12){
+    if(!dee&&pts.length>12){
       const {bay}=units(),k=Math.max(4,Math.round(2*Math.PI*r/bay)),a0=Number(s.angle)||0;
       pts=Array.from({length:k},(_,i)=>{const a=a0+i/k*Math.PI*2;return{x:c.x+Math.cos(a)*r,y:c.y+Math.sin(a)*r}});
     }
@@ -227,7 +230,8 @@
             const v=part.i[t*3+k]*3,x=part.p[v],y=part.p[v+1];
             pos.push(it.x+x*c-y*sn,it.y+x*sn+y*c,it.z+part.p[v+2]);
           }
-          col.push(pal[part.c[t]]);gi.push(g);
+          const hex=pal[part.c[t]],role=data.paletteKeys[part.c[t]];
+          col.push(['rock','block','blockDressed'].includes(role)?(window.ConquerStoneColor?.shade(hex)||hex):hex);gi.push(g);
         }
         let cx=0,cy=0,cz=0;const n=(pos.length-start)/3||1;
         for(let i=start;i<pos.length;i+=3){cx+=pos[i];cy+=pos[i+1];cz+=pos[i+2]}
@@ -242,7 +246,7 @@
   function stateKey(s,p){
     const {storey}=units(),k=siteKind(s);
     return[s.id,phaseOf(p),k?Math.round(built(s,k,p)/storey*8):0,Math.round(raised(p)*20),State.view?.rotation||0,
-      s.x,s.y,s.angle,s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.w,s.h,s.size,s.r,s.groundZ,(State.structures||[]).length].join('|');
+      s.x,s.y,s.angle,s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.w,s.h,s.size,s.r,s.groundZ,State.stonePaletteId,(State.structures||[]).length].join('|');
   }
   function siteMesh(s){
     const p=call('constructionProgress',s)??1;if(!(p<1)||!(State.view?.scale>=MIN_SCALE))return null;

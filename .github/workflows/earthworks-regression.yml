@@ -1,4 +1,9 @@
 name: Siege earthworks regression
+
+# Abort superseded PR runs of this workflow (never cancel scheduled/main runs).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 on:
   pull_request:
     branches: [main]
@@ -11,6 +16,8 @@ on:
       - 'qa/earthworks-regression.cjs'
       - 'qa/terraforming-regression.cjs'
       - '.github/workflows/earthworks-regression.yml'
+permissions:
+  contents: read
 jobs:
   earthworks:
     runs-on: ubuntu-latest

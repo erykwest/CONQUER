@@ -1,16 +1,37 @@
 name: Main fixes regression
+
+# Abort superseded PR runs of this workflow (never cancel scheduled/main runs).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 on:
-  push:
-    branches: [fix/main-founding-dev-webgl-20261023]
   pull_request:
     branches: [main]
     paths:
       - src/settlement-world.js
       - src/settlement-world3d.js
-      - qa/main-road-finalization-regression.cjs
       - qa/main-fixes-browser.mjs
+      - qa/figure-billboards-browser.mjs
+      - qa/vehicle-cards-browser.mjs
+      - qa/animal-capsule-browser.mjs
+      - qa/event-figure-cards-browser.mjs
+      - src/settlement-events-people.js
+      - src/settlement-events-joust.js
+      - src/settlement-events3d.js
+      - src/settlement-court-people.js
+      - src/settlement-staff-people.js
+      - src/settlement-animals.js
+      - src/settlement-livestock.js
+      - src/settlement-wolves.js
+      - src/settlement-vehicles.js
+      - src/settlement-wagons.js
+      - src/settlement-road-sign-tests.js
       - qa/ui-combat-regression.mjs
       - .github/workflows/main-fixes-regression.yml
+      - .github/actions/playwright-setup/action.yml
+  workflow_dispatch:
+  schedule:
+    - cron: '27 5 * * 0'
 permissions:
   contents: read
 jobs:
@@ -24,29 +45,25 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
-      - name: Deterministic regressions
+      # Always-on settlement-qa owns road finalization and spawn in fast/full tiers.
+      - name: Renderer-specific deterministic regressions
         run: |
-          for test in qa/*-regression.cjs; do
-            echo "Running $test"
-            node "$test"
-          done
+          node qa/webgl-error-poll-regression.cjs
+          node qa/paused-render-regression.cjs
       - name: JavaScript syntax
         run: |
-          for file in src/*.js qa/*.cjs qa/*.mjs; do node --check "$file"; done
-      - name: Context sync against main
-        run: CONTEXT_BASE_SHA="$(git rev-parse origin/main)" CONTEXT_HEAD_SHA="$GITHUB_SHA" node tools/context-guard.cjs
+          for file in src/settlement-world.js src/settlement-world3d.js src/settlement-vehicles.js src/settlement-animals.js src/settlement-livestock.js src/settlement-wolves.js qa/main-fixes-browser.mjs qa/vehicle-cards-browser.mjs qa/animal-capsule-browser.mjs qa/event-figure-cards-browser.mjs src/settlement-events-people.js src/settlement-events-joust.js src/settlement-court-people.js src/settlement-staff-people.js qa/ui-combat-regression.mjs; do node --check "$file"; done
   browser:
-    runs-on: ubuntu-latest
+    # Pinned like the other browser jobs: Playwright 1.56 has no Chromium build for ubuntu-latest (26.04).
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
-      - name: Install Chromium
-        run: |
-          npm install --no-save --no-package-lock playwright@1.56.1
-          npx playwright install chromium
+      - name: Install cached Chromium and pinned Playwright
+        uses: ./.github/actions/playwright-setup
       - name: Start local server
         run: |
           python3 -m http.server 4173 --bind 127.0.0.1 >/tmp/main-fixes-http.log 2>&1 &
@@ -58,15 +75,24 @@ jobs:
           exit 1
       - name: WebGL rebuilds and genuine context-loss fallback
         run: node qa/main-fixes-browser.mjs
+      - name: Civilian billboards, occlusion and atlas reuse
+        run: node qa/figure-billboards-browser.mjs
+      - name: Vehicle cards (carts, wagons, coaches), occlusion and 2D fallback
+        run: node qa/vehicle-cards-browser.mjs
+      - name: Animal capsules (horizontal body capsule depth and collider)
+        run: node qa/animal-capsule-browser.mjs
+      - name: Event, joust and justice figures as capsule cards
+        run: node qa/event-figure-cards-browser.mjs
       - name: Procedural defaults, explicit DEV controls and full UI/Combat
         run: node qa/ui-combat-regression.mjs
-      - name: Asset Lab visual audit
-        run: node qa/asset-audit.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: main-fixes-browser
           path: |
             output/playwright/main-fixes/
-            artifacts/asset-audit/
+            output/playwright/figure-billboards/
+            output/playwright/vehicle-cards/
+            output/playwright/animal-capsule/
+            output/playwright/event-figure-cards/
           retention-days: 7

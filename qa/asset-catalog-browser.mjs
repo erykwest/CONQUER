@@ -18,7 +18,7 @@ try{
       models:list.filter(x=>x.kind==='model').length,
       categories:new Set(list.map(x=>x.category)).size,nav:document.querySelectorAll('#assetCategoryFilters button').length};
   });
-  assert.ok(inventory.total>=150&&inventory.files>=36&&inventory.models>=100,JSON.stringify(inventory));
+  assert.ok(inventory.total>=150&&inventory.files>=35&&inventory.models>=100,JSON.stringify(inventory));
   assert.ok(inventory.categories>=11&&inventory.nav>=11,JSON.stringify(inventory));
 
   // Fortifications: meshed by the game in the sandbox frame, stone towers / walls / gates.
@@ -31,6 +31,19 @@ try{
   const castlePixels=await page.locator('#assetDetailPreview canvas').evaluate(c=>{
     const d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let n=0;for(let p=3;p<d.length;p+=4)if(d[p])n++;return n});
   assert.ok(castlePixels>5000,'Castle tower should draw real geometry: '+castlePixels);
+  // Stonecolor is a Lab option, not a second material class: real stone changes, clay does not.
+  const originalStone=await page.locator('#assetDetailPreview canvas').evaluate(c=>c.toDataURL());
+  await page.locator('#assetStoneColor').selectOption('sandstone');
+  assert.equal(await page.evaluate(()=>window.ConquerAssetCatalog.stonePaletteId),'sandstone');
+  const sandstoneStone=await page.locator('#assetDetailPreview canvas').evaluate(c=>c.toDataURL());
+  assert.notEqual(sandstoneStone,originalStone,'Engine-generated masonry must use the selected Lab stone color');
+  await page.evaluate(()=>window.ConquerAssetCatalog.select('model:ConquerIndustryModels:clayPit'));
+  const claySandstone=await page.locator('#assetDetailPreview canvas').evaluate(c=>c.toDataURL());
+  await page.locator('#assetStoneColor').selectOption('granite');
+  assert.equal(await page.locator('#assetDetailPreview canvas').evaluate(c=>c.toDataURL()),claySandstone,
+    'Changing stone color must not recolor the clay quarry');
+  await page.locator('#assetStoneColor').selectOption('gray');
+  await page.evaluate(()=>window.ConquerAssetCatalog.select('castle:pietra-quadrata-l3'));
   const castleBefore=await page.locator('#assetDetailPreview canvas').evaluate(c=>c.toDataURL());
   await page.locator('#assetRotateRight').click();
   assert.notEqual(await page.locator('#assetDetailPreview canvas').evaluate(c=>c.toDataURL()),castleBefore,'Castle meshes must rotate');
@@ -61,11 +74,17 @@ try{
   // Work animations open the live villager on the right tool.
   await page.evaluate(()=>window.ConquerAssetCatalog.select('figure:work:chop'));
   assert.equal(await page.locator('#actions [aria-pressed="true"]').getAttribute('data-action'),'chop');
-  assert.equal(await page.evaluate(()=>window.ConquerAssetCatalog.items.filter(x=>x.family==='Lavori').length),7);
-  // Rotation sets step through their pre-rendered frames.
-  await page.evaluate(()=>window.ConquerAssetCatalog.select('file:src/assets/economy/stone_quarry.svg'));
-  await page.locator('#assetRotateRight').click();
-  assert.match(await page.locator('#assetDetailPreview img').getAttribute('src'),/stone_quarry_015\.svg$/);
+  // One Lab entry per work gesture of settlement-work-anim.js.
+  const work=await page.evaluate(()=>({lab:window.ConquerAssetCatalog.items.filter(x=>x.family==='Lavori').length,tools:Object.keys(window.ConquerWorkAnim?.TOOLS||{}).length}));
+  assert.ok(work.tools>=10&&work.lab===work.tools,'every work gesture is in the Lab: '+JSON.stringify(work));
+  // The two industries use their rotatable 3D catalogue entries.
+  for(const key of ['quarry','loggingCamp']){
+    const id='model:ConquerIndustryModels:'+key;
+    assert.ok(await page.evaluate(id=>window.ConquerAssetCatalog.items.some(x=>x.id===id&&x.kind==='model'),id),id);
+    await page.evaluate(id=>window.ConquerAssetCatalog.select(id),id);
+    await page.locator('#assetRotateRight').click();
+    assert.equal(await page.locator('#assetRotationValue').textContent(),'15°');
+  }
   // Search only looks at real fields.
   await page.locator('#assetSearch').fill('undefined');
   assert.equal(await page.locator('.asset-card').count(),0,'Missing fields must not be searchable');
