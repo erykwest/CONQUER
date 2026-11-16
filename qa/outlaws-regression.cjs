@@ -82,7 +82,14 @@ function world(){
   assert.ok(Math.hypot(band.post.x-100,band.post.y-100)>=25,'well away from the village');
   const men=w.enemy().filter(e=>e.outlawBand===band.id);
   assert.ok(men.length>=4&&men.length<=6,'a band of 4-6');
-  assert.ok(men.every(e=>e.faction==='outlaw'&&e.kind==='outlaw'&&!e.neutral));
+  assert.ok(men.every(e=>e.faction==='outlaw'&&!e.neutral));
+  // Two thirds axe and round shield, one third bows.
+  const bows=men.filter(e=>e.weapon==='bow'),axes=men.filter(e=>e.weapon==='axe');
+  assert.equal(bows.length,Math.round(men.length/3),'one third of the brigands are bowmen');
+  assert.equal(axes.length,men.length-bows.length,'the rest carry axe and round shield');
+  assert.ok(bows.every(e=>e.kind==='archer'&&e.combatKind==='archer'&&e.profile==='outlawArcher'),'bowmen shoot as archers with their own profile');
+  assert.ok(axes.every(e=>e.kind==='outlaw'),'axemen fight in melee');
+  assert.ok(rules.PROFILES.outlawArcher.aim,'the outlaw bow profile can shoot');
   assert.equal(api.spawn('brigands'),null,'one band of a kind at a time');
   assert.ok(Math.abs(api.tradeFactor()-.6)<1e-9,'a held road cuts trade by 40%');
   // A soldier far off is ignored; one who comes near is attacked.
@@ -91,7 +98,8 @@ function world(){
   assert.ok(men.every(e=>!e.legs),'brigands stay at their post');
   w.units[0].x=band.post.x+4;
   w.run(.5);
-  assert.ok(men.some(e=>e.legs?.length),'brigands go for a soldier who approaches');
+  assert.ok(axes.some(e=>e.legs?.length),'axemen go for a soldier who approaches');
+  assert.ok(bows.every(e=>!e.legs),'bowmen hold their post and shoot');
   for(const e of men)e.defeated=true;
   w.run(.5);
   assert.equal(api.tradeFactor(),1,'killing the brigands frees the road');
@@ -108,8 +116,9 @@ function world(){
   assert.ok(band.center.x>110&&band.center.y<90,'in the wood '+JSON.stringify(band.center));
   assert.ok(band.tents.length>=3,'with several tents');
   const guards=w.enemy().filter(e=>e.outlawBand===band.id);
-  assert.ok(guards.length>=4&&guards.every(g=>g.outlawRole==='guard'&&g.combatKind==='outlawGuard'&&g.post),
-    'standing guards, each at a post');
+  assert.ok(guards.length>=4&&guards.every(g=>g.outlawRole==='guard'&&g.post),'standing guards, each at a post');
+  assert.equal(guards.filter(g=>g.weapon==='bow').length,Math.round(guards.length/3),'one third of the guards are bowmen');
+  assert.ok(guards.filter(g=>g.weapon==='axe').every(g=>g.combatKind==='outlawGuard'));
   // A week passes: the lair extorts a toll from the castle.
   const gold0=w.economy.castleGold;
   w.State.clock.day+=7;w.run(.25);
@@ -122,7 +131,7 @@ function world(){
   assert.ok(guards.every(g=>Math.hypot(g.x-g.post.x,g.y-g.post.y)<.5),'guards stay at the tents');
   w.units[0].x=band.center.x+6;
   w.run(.5);
-  assert.ok(guards.some(g=>g.legs?.length),'guards attack whoever comes near the lair');
+  assert.ok(guards.some(g=>g.weapon==='axe'&&g.legs?.length),'guards attack whoever comes near the lair');
   for(const g of guards)g.defeated=true;
   w.run(.25);
   assert.equal(w.economy.castleGold,gold0,'destroying the lair recovers the stash');

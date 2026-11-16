@@ -133,10 +133,21 @@
     st.bands.push(band);
     return band;
   }
-  function man(band,role,p,i,post=null){
-    return{id:band.id+'-'+i,kind:'outlaw',combatKind:role==='guard'?'outlawGuard':'outlaw',faction:'outlaw',
-      outlawBand:band.id,outlawRole:role,x:p.x,y:p.y,post:post?{x:post.x,y:post.y}:null,defeated:false};
+  // Brigands and bandits: always two thirds axe and round shield, one third bows
+  // (archers = round(n/3), the last men of the band). Raiders come to plunder:
+  // axes and shields only.
+  const bowmen=(type,n)=>type==='raiders'?0:Math.round(n/3);
+  function man(band,role,p,i,post=null,bow=false){
+    const base={id:band.id+'-'+i,faction:'outlaw',outlawBand:band.id,outlawRole:role,
+      x:p.x,y:p.y,post:post?{x:post.x,y:post.y}:null,defeated:false};
+    // A bowman is kind 'archer' so the combat module lets him shoot; own profile.
+    if(bow)return{...base,kind:'archer',combatKind:'archer',profile:'outlawArcher',weapon:'bow'};
+    return{...base,kind:'outlaw',combatKind:role==='guard'?'outlawGuard':'outlaw',weapon:'axe'};
   }
+  const crew=(band,role,spots,withPost)=>{
+    const archers=bowmen(band.type,spots.length);
+    return spots.map((p,i)=>man(band,role,p,i,withPost?p:null,i>=spots.length-archers));
+  };
   function spawn(type,{edge=null,quiet=false}={}){
     const w=well(),st=state();
     if(!w||!st||!TYPES[type])return null;
@@ -155,7 +166,7 @@
       const band=newBand(type,{edge:pick,post,heading:block.heading,robbed:0});
       // Men stand round the wagon across the road, not inside it.
       const spots=ringAround(post,n,1.9,seed);
-      C().addEnemies(spots.map((p,i)=>man(band,'brigand',p,i,p)));
+      C().addEnemies(crew(band,'brigand',spots,true));
       if(!quiet)status('Briganti sulla strada '+edgeName(pick)+': i mercanti vengono derubati, gli scambi calano');
       return band;
     }
@@ -164,7 +175,7 @@
       const tents=ringAround(center,3+(n>4?1:0),2.2,seed+':t').map((p,i)=>({x:p.x,y:p.y,a:Math.atan2(center.y-p.y,center.x-p.x),i}));
       const band=newBand(type,{center,tents,stash:0,lastTollWeek:Math.floor(today()/7)});
       const posts=ringAround(center,n,.95,seed+':g');
-      C().addEnemies(posts.map((p,i)=>man(band,'guard',p,i,p)));
+      C().addEnemies(crew(band,'guard',posts,true));
       if(!quiet)status('Un covo di banditi nel bosco: le guardie difendono le tende e taglieggiano il villaggio');
       return band;
     }
@@ -175,7 +186,7 @@
     const band=newBand('raiders',{edge:pick,entry,phase:'approach',targetId:null,visited:[],loot:{},
       lootTotal:0,plunderClock:0,startCount:n});
     const spots=ringAround(entry,n,1,seed);
-    C().addEnemies(spots.map((p,i)=>man(band,'raider',p,i)));
+    C().addEnemies(crew(band,'raider',spots,false));
     if(!quiet)status('Predoni dal confine '+edgeName(pick)+': puntano agli edifici isolati');
     return band;
   }
@@ -283,6 +294,12 @@
   }
   function holdPost(e,type){
     const post=e.post||e;
+    // Bowmen keep their post and shoot (the combat rules aim for them); only
+    // the axemen go out to meet an intruder.
+    if(e.weapon==='bow'){
+      if(dist(e,post)>.4&&!e.legs?.length&&e.outlawReplan<=0&&!nearestFoe(e,MELEE+.4))plan(e,post);
+      return;
+    }
     if(defend(e,post,type))return;
     if(dist(e,post)>.4&&!e.legs?.length&&e.outlawReplan<=0)plan(e,post);
   }

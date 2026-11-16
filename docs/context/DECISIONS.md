@@ -4,7 +4,8 @@
 
 - **DECISO dal product owner:** i banditi sono di **tre tipi**. **Briganti**: assediano una delle strade e rubano a mercanti e carovane, con conseguente riduzione degli scambi. **Banditi**: hanno un covo stabile (di solito in un bosco) fatto di tende e con guardie permanenti. **Predoni**: invadono il territorio per depredare gli edifici periferici, **non** per catturare il castello.
 - **DECISO dal product owner:** lupi e orso devono essere presenti in partita, non solo in `/camp`.
-- **PROPOSTO (valori provvisori, da bilanciare):** briganti −40% scambi per strada tenuta (minimo 30%) su vendite settimanali e pedaggio; covo con pizzo settimanale del 5% dell'oro (max 15) restituito alla distruzione; predoni 6 merci rubate a testa su due edifici, ritirata con metà dei caduti; calendario dopo la fondazione 8–16 / 14–24 / 20–30 giorni, ripresa 30–50 / 12–24 / 16–28; una banda per tipo; orso ostile solo vicino alla tana (6U) o a sé (4U).
+- **DECISO dal product owner (16/11/2026):** briganti e banditi sono sempre **2/3 con ascia e scudo rotondo e 1/3 con arco**.
+- **PROPOSTO (valori provvisori, da bilanciare):** predoni solo ascia e scudo; briganti −40% scambi per strada tenuta (minimo 30%) su vendite settimanali e pedaggio; covo con pizzo settimanale del 5% dell'oro (max 15) restituito alla distruzione; predoni 6 merci rubate a testa su due edifici, ritirata con metà dei caduti; calendario dopo la fondazione 8–16 / 14–24 / 20–30 giorni, ripresa 30–50 / 12–24 / 16–28; una banda per tipo; orso ostile solo vicino alla tana (6U) o a sé (4U).
 - **CONTRATTO TECNICO:** i fuorilegge sono nemici di `ConquerCombat` con `faction:'outlaw'`, `outlawBand` e `outlawRole`; le bande sono salvate in `combat.outlaws`. La fauna ha `faction:'wildlife'` e non alza l'allarme delle vedette. `ConquerOutlaws.tradeFactor()` è l'unico moltiplicatore degli scambi dovuto ai fuorilegge.
 - **STATO:** implementato su `feature/wildlife-outlaws`, non in main.
 

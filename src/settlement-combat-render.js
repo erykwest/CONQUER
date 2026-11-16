@@ -339,7 +339,7 @@
         }
         if(!spotted(e,sightSources))continue;
         const livery=window.ConquerCombatRules?.liveryOf(e.faction||'dev_hostile');
-        const figure=e.kind==='knight'||e.combatKind==='knight'?'knight':e.kind==='archer'||e.combatKind==='archer'?'archer':'spearman';
+        const figure=e.kind==='knight'||e.combatKind==='knight'?'knight':e.kind==='archer'||e.combatKind==='archer'?'archer':e.weapon==='axe'?'axeman':'spearman';
         drawPosedFigure(e,figure,e.id,livery,e,0,.08+(e.z||0));
         if(down)continue;
         if(e.torch)window.ConquerFire?.drawTorch(g,w2s(e,.08+(e.z||0)),State.view.scale,e.id);

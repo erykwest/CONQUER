@@ -2,7 +2,7 @@
 
 ## 2026-11-16 — WILD-OUT-01 · Lupi, orso e tre tipi di fuorilegge in partita
 
-`feature/wildlife-outlaws`: i lupi tornano in partita (il modulo era caricato solo da `/camp`); nuovo orso territoriale con tana nel bosco; nuovo `settlement-outlaws.js` con briganti (strada presidiata, scambi −40%), banditi (covo di tende con guardie, pizzo settimanale) e predoni (saccheggio di edifici isolati e fuga). Covo e blocco stradale composti con i modelli 3D da campo (tende, tettoia, carro, botti, palizzata) e registrati nel Lab. Nuova `qa/outlaws-regression.cjs`, `qa/wolves-regression.cjs` estesa all'orso. STATUS, BACKLOG, DECISIONS aggiornati; ROADMAP invariata (nessuna milestone cambia).
+`feature/wildlife-outlaws`: i lupi tornano in partita (il modulo era caricato solo da `/camp`); nuovo orso territoriale con tana nel bosco; nuovo `settlement-outlaws.js` con briganti (strada presidiata, scambi −40%), banditi (covo di tende con guardie, pizzo settimanale) e predoni (saccheggio di edifici isolati e fuga). Briganti e banditi armati 2/3 ascia e scudo tondo, 1/3 arco. Covo e blocco stradale composti con i modelli 3D da campo (tende, tettoia, carro, botti, palizzata) e registrati nel Lab. Nuova `qa/outlaws-regression.cjs`, `qa/wolves-regression.cjs` estesa all'orso. STATUS, BACKLOG, DECISIONS aggiornati; ROADMAP invariata (nessuna milestone cambia).
 
 ## 2026-11-15 — Tetto interno: torre a D e bracere
 

@@ -303,6 +303,30 @@ function drawSoldierHelmet(x,y,r,style,scale){
     ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();
   }
 }
+// Outlaw axeman (settlement-outlaws.js): a round wooden shield with an iron boss on the
+// off arm and a bearded axe in the hand. pose (combat anim) or null: the axe is raised
+// back on the wind-up and comes down toward the foe on the blow.
+const OUTLAW_SHIELD={main:'#7b5a38',alt:'#6a4b2e',mainDark:'#7b5a38',altDark:'#6a4b2e'};
+function drawAxeAndRoundShield(base,scale,bodyW,bodyH,bodyY,top,pose=null){
+  const ready=pose?.ready||0,attack=pose?.attack||0,dirX=pose?.dirX??1;
+  const side=dirX>=0?1:-1;
+  drawQuarteredShield(base.x-bodyW*.6+dirX*ready*1.2*scale,bodyY+bodyH*.08,3.1*scale,3.1*scale,OUTLAW_SHIELD,'#3b2a1a',scale,false,'round');
+  const hx=base.x+bodyW*.42,hy=bodyY+bodyH*.16;
+  const theta=side*(attack<0?attack*1.1:attack*1.7)+side*ready*.2;
+  ctx.save();
+  ctx.translate(hx,hy);ctx.rotate(theta);ctx.translate(-hx,-hy);
+  const tx=base.x+bodyW*.72,ty=top-6.2*scale;
+  // Haft.
+  ctx.strokeStyle='#6e4f30';ctx.lineWidth=Math.max(1,1.2*scale);
+  ctx.beginPath();ctx.moveTo(hx,hy+1.2*scale);ctx.lineTo(tx,ty);ctx.stroke();
+  // Bearded head, edge facing out.
+  ctx.fillStyle='#a9adb0';ctx.strokeStyle='#3d4144';ctx.lineWidth=Math.max(.6,.6*scale);
+  ctx.beginPath();
+  ctx.moveTo(tx-.3*scale,ty+.4*scale);ctx.lineTo(tx+2.6*scale,ty-1.2*scale);
+  ctx.quadraticCurveTo(tx+3.4*scale,ty+1.4*scale,tx+2.5*scale,ty+3.6*scale);
+  ctx.lineTo(tx+.1*scale,ty+2.0*scale);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.restore();
+}
 function drawSoldierFigure(p,z,type,id,phase=0,liveryOverride=null){
   return withUrbanFigureOcclusion(p,z,()=>drawSoldierFigureUnmasked(p,z,type,id,phase,liveryOverride));
 }
@@ -349,6 +373,8 @@ function drawSoldierFigureUnmasked(p,z,type,id,phase=0,liveryOverride=null){
     ctx.beginPath();ctx.moveTo(bx+Math.cos(-Math.PI*.55)*r,by+Math.sin(-Math.PI*.55)*r);
     ctx.lineTo(bx-r*.18,by);
     ctx.lineTo(bx+Math.cos(Math.PI*.55)*r,by+Math.sin(Math.PI*.55)*r);ctx.stroke();
+  }else if(type==='axeman'){
+    drawAxeAndRoundShield(base,scale,bodyW,bodyH,bodyY,top,null);
   }else if(type!=='unarmed'){
     const swing=Math.sin(phase*Math.PI*2)*3.2*scale;
     drawQuarteredShield(base.x-bodyW*.62,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery,'#b7aa8f',scale,!liveryOverride,liveryOverride?'oval':soldierShieldStyle());

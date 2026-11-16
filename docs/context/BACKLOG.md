@@ -8,6 +8,7 @@
 - [x] Briganti: strada di confine presidiata, scambi −40% per strada (mercato settimanale e pedaggio).
 - [x] Banditi: covo di tende con guardie fisse, pizzo settimanale, bottino recuperato distruggendolo.
 - [x] Predoni: saccheggio di edifici isolati, fuga al confine, bottino perso o recuperato.
+- [x] Briganti e banditi: 2/3 ascia e scudo tondo, 1/3 arco; arcieri fermi al posto.
 - [x] Covo e blocco stradale in 3D con i modelli da campo, nel Lab (`banditLair3/4`, `brigandRoadblock`).
 - [ ] Rapinare i convogli del signore che escono dalla strada presidiata (oggi solo calo di mercato e pedaggio).
 - [ ] Bilanciare numeri, calendario, pizzo e merci rubate; avviso al giocatore più visibile della sola riga di stato.
