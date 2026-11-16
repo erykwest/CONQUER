@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-16 — MOVE-LAG-261116: l'ordine di movimento non blocca più il gioco
+
+- Branch fix/move-order-lag. Un ordine di movimento a un'unità bloccava il gioco per secondi quando il percorso diretto era ostruito: `infantryRoute` (settlement-combat.js) lanciava l'A* con il filtro d'ingombro `cliffClearForFootprint`, e questo filtro (come i controlli `safeMilitarySegment` sul percorso trovato) chiamava `pointBlockedForPeasant` senza lo snapshot degli ostacoli, scorrendo tutte le strutture e ricalcolando la sagoma di ogni casa per ogni punto campionato (5 offset della squadra × migliaia di nodi).
+- Fix: `findPeasantPathWork` passa il proprio `obstacleParts` come secondo argomento ad `allowedAt` (A* e smoothing); `infantryRoute` costruisce uno snapshot per ordine e lo usa in tutti i controlli d'ingombro. Percorsi identici a prima.
+- Misure nel browser su una scena di prova (96 case, strada, pozzo), tre ordini con aggiramento: 5,9 s → 0,20 s; 9,7 s → 0,63 s; 6,5 s → 0,33 s. Ordine reale col clic in gioco: 138 ms. PASS movement-path-performance (nuovo caso: snapshot passato ad allowedAt e riusato da infantryRoute) e 15 regressioni di combattimento/pattuglie/campo/mura. CI da eseguire.
+
 ### 2026-11-16 — Microfix: pianerottolo interno per la porta del muro H1
 
 - Branch fix/microfix. Una porta del cammino di ronda che si apre fra due pavimenti (muro H1, camminamento a 1,15, in una torre con P1 a 2,10) ha all'interno un ballatoio di legno alla quota della soglia, sui montanti, che corre lungo la parete fino all'angolo della scala a pioli della stanza (girando l'angolo se la scala è sulla parete accanto); senza scala nella stanza (torre L1) una scaletta propria. ConquerCutawayFurniture.landingSpecs / landingsWorld in settlement-cutaway-furniture.js, usati da 2.5D e WebGL. Le porte delle mura H2 poggiano sul P1 e non ne hanno.

@@ -37,5 +37,15 @@ test('an unreachable fire never becomes a straight line through a wall',()=>{
   assert.equal(run('State.fire.splashes.length'),0);
  }finally{run('findPeasantPathWork=qaOriginalPathWork')}
 });
+test('A* hands its obstacle snapshot to allowedAt, and military orders use it (MOVE-LAG-261116)',()=>{
+ setup();run("State.structures=[{id:'well',type:'well',x:100,y:100},{id:'house',type:'house',auto:true,houseLevel:2,x:102,y:100,w:1.5,h:1}];invalidateNavigation();globalThis.qaSnapshots=0;globalThis.qaCalls=0;findPeasantPath({x:98,y:100},{x:106,y:100},null,8,(p,parts)=>{qaCalls++;if(parts&&parts.near)qaSnapshots++;return true})");
+ assert.ok(run('qaCalls>0'));
+ assert.equal(run('qaSnapshots===qaCalls'),true,'every allowedAt call must receive the snapshot');
+ const combat=fs.readFileSync(__dirname+'/../src/settlement-combat.js','utf8');
+ const route=combat.slice(combat.indexOf('function infantryRoute('),combat.indexOf('class PatrolMinHeap{'));
+ assert.match(route,/peasantObstacleSnapshot\\(\\)/,'infantryRoute must build one obstacle snapshot per order');
+ assert.match(route,/cliffClearForFootprint\\(p,kind,snapshot\\|\\|parts\\)/,'the footprint filter must reuse the A* snapshot');
+ assert.equal((route.match(/safeMilitarySegment\\([^)]*,parts\\)/g)||[]).length,3,'every footprint segment check must reuse the snapshot');
+});
 console.log(passed+' movement/path performance checks passed.');
 `)(require,__dirname);

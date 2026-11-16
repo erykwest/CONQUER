@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-16 — MOVE-LAG-261116 · Ordine di movimento senza lag
+
+`fix/move-order-lag`: l'A* passa il suo snapshot degli ostacoli ad `allowedAt` e gli ordini militari lo riusano in tutti i controlli d'ingombro; un ordine con aggiramento passa da 6–10 s a 0,2–0,6 s su una scena densa, con percorsi identici. Test in qa/movement-path-performance-regression.cjs. ROADMAP e DECISIONS invariate: nessun contratto di gioco cambiato.
+
 ### 2026-11-15 — Microfix: fedeli alla messa nel cutaway della chiesa
 
 - Aggiunti i popolani seduti sui banchi della chiesa durante la messa domenicale (6:00–12:00); test in qa/staff-people-regression.cjs. Roadmap e decisioni invariate.

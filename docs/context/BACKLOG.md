@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-16 — MOVE-LAG-261116 · Lag sull'ordine di movimento
+
+- [x] L'ordine di movimento con percorso aggirante non blocca più il gioco per secondi (snapshot degli ostacoli nei controlli d'ingombro militari).
+- [ ] Restano 0,2–0,6 s per un ordine con aggiramento lungo su una mappa densa (A* sincrono condiviso con i popolani): valutare il calcolo cooperativo su più frame (`findPeasantPathWork`) per gli ordini di gruppo.
+
 ### 2026-11-15 — Microfix: messa domenicale visibile
 
 - [x] Cutaway della chiesa: fedeli seduti sui banchi la domenica 6:00–12:00 (ConquerCivic3D.massSlots, ConquerCourtPeople.massInSession).
