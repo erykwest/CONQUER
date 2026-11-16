@@ -8,9 +8,6 @@
   const notes = document.getElementById('perfNotes');
   const status = document.getElementById('sceneStatus');
   const quality = document.getElementById('detail');
-  const yaw = document.getElementById('yaw');
-  const pitch = document.getElementById('pitch');
-  const zoom = document.getElementById('zoom');
   const showTrees = document.getElementById('showTrees');
   const showBorders = document.getElementById('showBorders');
   const resetView = document.getElementById('resetView');
@@ -35,24 +32,25 @@
   });
   let gl, program, vertexBuffer, locations, scene = null, snapshot = null, seenRevision = -1;
   let lastFrameMs = 0, lastUploadMs = 0, lastSyncMs = 0, rebuilding = false, needsRedraw = false;
-  let panX = 0, panY = 0;
-  const pointers = new Map();
-  let dragMode = 'pan';
+  // Same projection and camera conventions as the Settlement Builder.
+  const ISO_X = .8660254, ISO_Y = .5, ISO_Z = .9;
+  const ORBIT_PX_PER_TURN = 160; // Builder: 160 px for 90 degrees.
+  let panX = 0, panY = 0, viewRotation = 0, viewZoom = 1;
+  let interaction = null;
 
   const vertexShader = [
     '#version 300 es',
     'precision highp float;',
     'in vec3 aPosition; in vec3 aColor;',
     'uniform vec2 uCenter; uniform vec2 uScreen; uniform vec2 uYaw; uniform vec2 uPan;',
-    'uniform float uPitch; uniform float uScale;',
+    'uniform float uScale;',
     'out vec3 vColor;',
     'void main() {',
     ' vec2 p=aPosition.xy-uCenter;',
-    ' float x=p.x*uYaw.x-p.y*uYaw.y;',
-    ' float y=p.x*uYaw.y+p.y*uYaw.x;',
-    ' float sy=y*sin(uPitch)-aPosition.z*cos(uPitch);',
-    ' float depth=y*cos(uPitch)+aPosition.z*sin(uPitch);',
-    ' gl_Position=vec4(2.0*(x*uScale+uPan.x)/uScreen.x, -2.0*(sy*uScale+uPan.y)/uScreen.y, -depth/7000.0, 1.0);',
+    ' vec2 q=vec2(p.x*uYaw.x-p.y*uYaw.y,p.x*uYaw.y+p.y*uYaw.x);',
+    ' vec2 iso=vec2((q.x-q.y)*0.8660254,(q.x+q.y)*0.5-aPosition.z*0.9);',
+    ' float depth=q.x+q.y+0.9*aPosition.z;',
+    ' gl_Position=vec4(2.0*(iso.x*uScale+uPan.x)/uScreen.x, -2.0*(iso.y*uScale+uPan.y)/uScreen.y, -depth/7000.0, 1.0);',
     ' vColor=aColor;',
     '}'
   ].join('\n');
@@ -78,7 +76,7 @@
     gl.linkProgram(program);
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw Error(gl.getProgramInfoLog(program));
     gl.useProgram(program);
-    const attrs = ['aPosition', 'aColor'], uniforms = ['uCenter', 'uScreen', 'uYaw', 'uPitch', 'uScale', 'uPan'];
+    const attrs = ['aPosition', 'aColor'], uniforms = ['uCenter', 'uScreen', 'uYaw', 'uScale', 'uPan'];
     locations = Object.fromEntries([...attrs, ...uniforms].map(name => [
       name, attrs.includes(name) ? gl.getAttribLocation(program, name) : gl.getUniformLocation(program, name)
     ]));
@@ -108,17 +106,16 @@
     if (scene) draw();
   }
   function camera() {
-    const rad = Math.PI / 180;
-    const angle = Number(yaw.value) * rad;
-    const p = Number(pitch.value) * rad;
-    const width = canvas.width, height = canvas.height;
-    const spanX = Math.abs(snapshot.width * Math.cos(angle)) + Math.abs(snapshot.height * Math.sin(angle));
-    const spanY = Math.abs(snapshot.width * Math.sin(angle)) + Math.abs(snapshot.height * Math.cos(angle));
-    const fit = Math.min(width / (spanX + 70), height / (spanY * Math.sin(p) + 85));
+    const width = canvas.width, height = canvas.height, angle = viewRotation;
+    // Fixed builder assonometric elevation. Rotation never changes scale.
+    const fit = Math.min(
+      width / (ISO_X * (snapshot.width + snapshot.height) + 70),
+      height / (ISO_Y * (snapshot.width + snapshot.height) + 85)
+    );
     return {
-      width, height, angle, pitch: p,
+      width, height, angle,
       cos: Math.cos(angle), sin: Math.sin(angle),
-      scale: fit * Number(zoom.value),
+      scale: fit * viewZoom,
       panX: panX * width / Math.max(1, surface.clientWidth),
       panY: panY * height / Math.max(1, surface.clientHeight),
       cx: snapshot.width / 2, cy: snapshot.height / 2
@@ -126,12 +123,25 @@
   }
   function project(point, c) {
     const dx = point.x - c.cx, dy = point.y - c.cy;
-    const x = dx * c.cos - dy * c.sin, y = dx * c.sin + dy * c.cos;
+    const qx = dx * c.cos - dy * c.sin, qy = dx * c.sin + dy * c.cos;
     return {
-      x: c.width / 2 + x * c.scale + c.panX,
-      y: c.height / 2 + (y * Math.sin(c.pitch) - (point.z || 0) * Math.cos(c.pitch)) * c.scale + c.panY,
-      depth: y * Math.cos(c.pitch) + (point.z || 0) * Math.sin(c.pitch)
+      x: c.width / 2 + (qx - qy) * ISO_X * c.scale + c.panX,
+      y: c.height / 2 + ((qx + qy) * ISO_Y - (point.z || 0) * ISO_Z) * c.scale + c.panY,
+      depth: qx + qy + (point.z || 0) * ISO_Z
     };
+  }
+  function groundPointAtScreenCenter() {
+    // Inverse of the Builder's ground projection: stable orbit pivot after panning.
+    const c = camera();
+    const difference = -c.panX / (c.scale * ISO_X), sum = -c.panY / (c.scale * ISO_Y);
+    const qx = (difference + sum) / 2, qy = (sum - difference) / 2;
+    return { x: c.cx + qx * c.cos + qy * c.sin,
+             y: c.cy - qx * c.sin + qy * c.cos, z: 0 };
+  }
+  function keepAnchorAtScreenCenter(anchor) {
+    const c = camera(), projected = project(anchor, c);
+    panX += (c.width / 2 - projected.x) * surface.clientWidth / c.width;
+    panY += (c.height / 2 - projected.y) * surface.clientHeight / c.height;
   }
   function overlay(c) {
     const ctx = spritesCanvas.getContext('2d');
@@ -219,7 +229,6 @@
     gl.uniform2f(locations.uCenter, c.cx, c.cy);
     gl.uniform2f(locations.uScreen, c.width, c.height);
     gl.uniform2f(locations.uYaw, c.cos, c.sin);
-    gl.uniform1f(locations.uPitch, c.pitch);
     gl.uniform1f(locations.uScale, c.scale);
     gl.uniform2f(locations.uPan, c.panX, c.panY);
     gl.drawArrays(gl.TRIANGLES, 0, scene.vertices.length / 6);
@@ -285,86 +294,78 @@
   }
 
   function zoomAt(factor, clientX, clientY) {
-    const oldZoom = Number(zoom.value);
-    const nextZoom = Math.min(Number(zoom.max), Math.max(Number(zoom.min), oldZoom * factor));
-    if (nextZoom === oldZoom) return;
+    // Settlement Builder cursor-anchored wheel zoom.
+    const nextZoom = Math.min(10, Math.max(.2, viewZoom * factor));
+    if (nextZoom === viewZoom) return;
     const rect = surface.getBoundingClientRect();
-    const x = clientX - rect.left - rect.width / 2;
-    const y = clientY - rect.top - rect.height / 2;
-    const ratio = nextZoom / oldZoom;
-    panX = x - (x - panX) * ratio;
-    panY = y - (y - panY) * ratio;
-    zoom.value = String(nextZoom);
+    const sx = clientX - rect.left - rect.width / 2;
+    const sy = clientY - rect.top - rect.height / 2;
+    const ratio = nextZoom / viewZoom;
+    panX = sx - (sx - panX) * ratio;
+    panY = sy - (sy - panY) * ratio;
+    viewZoom = nextZoom;
     draw();
   }
 
-  // Left drag pans, right/Shift drag orbits, wheel zooms around the pointer.
-  // Pointer capture also supports touch drag and two-finger pinch.
+  // Builder input contract: middle drag pans, Shift+middle drag changes yaw,
+  // wheel zooms. Ground projection and elevation remain locked.
+  surface.addEventListener('pointerdown', event => {
+    if (event.button !== 1 || event.pointerType === 'touch') return;
+    event.preventDefault();
+    interaction = {
+      id: event.pointerId, mode: event.shiftKey ? 'orbit' : 'pan',
+      startX: event.clientX, startY: event.clientY,
+      panX, panY, rotation: viewRotation,
+      anchor: snapshot && event.shiftKey ? groundPointAtScreenCenter() : null
+    };
+    surface.setPointerCapture(event.pointerId);
+    surface.classList.add('dragging');
+  });
+  surface.addEventListener('pointermove', event => {
+    if (!interaction || interaction.id !== event.pointerId) return;
+    event.preventDefault();
+    if (interaction.mode === 'orbit') {
+      const delta = (event.clientX - interaction.startX) / ORBIT_PX_PER_TURN;
+      const rawAngle = interaction.rotation + delta * Math.PI / 2;
+      viewRotation = event.ctrlKey
+        ? Math.round(rawAngle / (Math.PI / 12)) * Math.PI / 12
+        : rawAngle;
+      if (snapshot && interaction.anchor) keepAnchorAtScreenCenter(interaction.anchor);
+    } else {
+      panX = interaction.panX + event.clientX - interaction.startX;
+      panY = interaction.panY + event.clientY - interaction.startY;
+    }
+    draw();
+  });
+  function finishCameraInteraction(event) {
+    if (!interaction || interaction.id !== event.pointerId) return;
+    interaction = null;
+    if (surface.hasPointerCapture(event.pointerId)) surface.releasePointerCapture(event.pointerId);
+    surface.classList.remove('dragging');
+  }
+  surface.addEventListener('pointerup', finishCameraInteraction);
+  surface.addEventListener('pointercancel', finishCameraInteraction);
+  surface.addEventListener('lostpointercapture', event => {
+    if (interaction && interaction.id === event.pointerId) {
+      interaction = null;
+      surface.classList.remove('dragging');
+    }
+  });
+  surface.addEventListener('auxclick', event => { if (event.button === 1) event.preventDefault(); });
+  surface.addEventListener('mousedown', event => { if (event.button === 1) event.preventDefault(); });
   surface.addEventListener('contextmenu', event => event.preventDefault());
   surface.addEventListener('wheel', event => {
     event.preventDefault();
-    zoomAt(Math.exp(-event.deltaY * (event.deltaMode === 1 ? .034 : .0016)), event.clientX, event.clientY);
+    const steps = Math.max(-3, Math.min(3, event.deltaY / 100));
+    zoomAt(Math.pow(1.12, -steps), event.clientX, event.clientY);
   }, { passive: false });
-  surface.addEventListener('pointerdown', event => {
-    if (event.pointerType !== 'touch' && event.button !== 0 && event.button !== 2) return;
-    event.preventDefault();
-    surface.setPointerCapture(event.pointerId);
-    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-    if (pointers.size === 1) {
-      dragMode = event.button === 2 || event.shiftKey || event.altKey ? 'rotate' : 'pan';
-      surface.classList.add('dragging');
-    } else dragMode = 'pinch';
-  });
-  surface.addEventListener('pointermove', event => {
-    const before = pointers.get(event.pointerId);
-    if (!before) return;
-    const dx = event.clientX - before.x, dy = event.clientY - before.y;
-    if (pointers.size >= 2) {
-      const others = [...pointers.entries()].filter(([id]) => id !== event.pointerId);
-      const other = others[0][1];
-      const oldDistance = Math.hypot(before.x - other.x, before.y - other.y);
-      const newDistance = Math.hypot(event.clientX - other.x, event.clientY - other.y);
-      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-      panX += dx / 2; panY += dy / 2;
-      if (oldDistance > 10 && newDistance > 10) {
-        zoomAt(newDistance / oldDistance, (event.clientX + other.x) / 2, (event.clientY + other.y) / 2);
-      } else draw();
-      return;
-    }
-    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-    if (dragMode === 'rotate') {
-      const degrees = Number(yaw.value) + dx * .48;
-      yaw.value = String(((degrees + 180) % 360 + 360) % 360 - 180);
-      pitch.value = String(Math.max(Number(pitch.min), Math.min(Number(pitch.max), Number(pitch.value) + dy * .25)));
-    } else {
-      panX += dx; panY += dy;
-    }
-    draw();
-  });
-  function endPointer(event) {
-    pointers.delete(event.pointerId);
-    if (surface.hasPointerCapture(event.pointerId)) surface.releasePointerCapture(event.pointerId);
-    if (!pointers.size) surface.classList.remove('dragging');
-    else if (pointers.size === 1) dragMode = 'pan';
-  }
-  surface.addEventListener('pointerup', endPointer);
-  surface.addEventListener('pointercancel', endPointer);
-  surface.addEventListener('lostpointercapture', event => {
-    pointers.delete(event.pointerId);
-    if (!pointers.size) surface.classList.remove('dragging');
-  });
-  surface.addEventListener('dblclick', () => {
-    panX = panY = 0;
-    zoom.value = '1';
-    draw();
-  });
   resetView.addEventListener('click', () => {
-    panX = panY = 0;
-    yaw.value = '-27'; pitch.value = '54'; zoom.value = '1';
+    panX = panY = viewRotation = 0;
+    viewZoom = 1;
     draw();
   });
 
-  for (const input of [yaw, pitch, zoom, showTrees, showBorders]) input.addEventListener('input', draw);
+  for (const input of [showTrees, showBorders]) input.addEventListener('input', draw);
   quality.addEventListener('change', rebuild);
   document.getElementById('refresh').addEventListener('click', () => {
     seenRevision = -1; syncFromSource();
