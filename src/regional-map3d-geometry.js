@@ -108,113 +108,305 @@
     const range = type === 'hills' ? 3.8 : type === 'forest' ? .85 : .45;
     return Math.max(0, fade * (base + wave * range + w2 * range * .37));
   }
-  const PALETTE = {
-    plain: [185, 170, 119], forest: [64, 91, 59], hills: [128, 116, 99],
-    swamp: [93, 109, 85], sea: [45, 88, 107], lake: [64, 111, 126],
-    campaign: [192, 172, 118]
-  };
-  function buildScene(snapshot, detail) {
-    if (!snapshot || !Array.isArray(snapshot.cells) || !snapshot.terrain) throw Error('Invalid world snapshot');
-    const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now();
-    const vertices = [], trees = [], peaks = [];
-    let subcells = 0, triangles = 0, mountains = 0;
-    function face(a, b, c, rgb, variation) {
-      const u = { x: b.x - a.x, y: b.y - a.y, z: b.z - a.z };
-      const v = { x: c.x - a.x, y: c.y - a.y, z: c.z - a.z };
-      const nx = u.y * v.z - u.z * v.y, ny = u.z * v.x - u.x * v.z, nz = u.x * v.y - u.y * v.x;
-      const norm = Math.hypot(nx, ny, nz) || 1;
-      const light = clamp(.79 + (.34 * Math.abs(nz) + .23 * nx - .18 * ny) / norm + variation, .42, 1.23);
-      const cr = clamp(rgb[0] * light / 255, 0, 1), cg = clamp(rgb[1] * light / 255, 0, 1), cb = clamp(rgb[2] * light / 255, 0, 1);
-      for (const p of [a, b, c]) vertices.push(p.x, p.y, p.z, cr, cg, cb);
-      triangles++;
+
+  // Visual map pipeline inspired by Mapgen4's dense-mesh-first approach.
+  // 1. Global jittered triangular-site Voronoi mesh (nearby candidates only).
+  // 2. Assign microcells to the canonical macro territories through a smooth warp.
+  // 3. Render the resulting aggregates and derive their *actual* shared borders.
+  // This does not mutate the authoritative World Lab topology or saves.
+  function sourceColor(value) {
+    const hex = /^#([0-9a-f]{6})$/i.exec(String(value || ''));
+    if (hex) return [0, 2, 4].map(i => parseInt(hex[1].slice(i, i + 2), 16));
+    const hsl = /^hsl\(\s*([\d.]+)(?:deg)?[,\s]+([\d.]+)%[,\s]+([\d.]+)%\s*\)$/i.exec(String(value || ''));
+    if (hsl) {
+      const h = (Number(hsl[1]) % 360 + 360) % 360, sat = Number(hsl[2]) / 100, light = Number(hsl[3]) / 100;
+      const chroma = (1 - Math.abs(2 * light - 1)) * sat;
+      const x = chroma * (1 - Math.abs((h / 60) % 2 - 1)), m = light - chroma / 2;
+      const v = h < 60 ? [chroma, x, 0] : h < 120 ? [x, chroma, 0] :
+                h < 180 ? [0, chroma, x] : h < 240 ? [0, x, chroma] :
+                h < 300 ? [x, 0, chroma] : [chroma, 0, x];
+      return v.map(n => Math.round((n + m) * 255));
     }
+    throw Error('Missing or unsupported authoritative 2D fill: ' + value);
+  }
+
+  function hashed(x, y, seed) {
+    let h = (seed ^ Math.imul(x, 374761393) ^ Math.imul(y, 668265263)) >>> 0;
+    h = Math.imul(h ^ h >>> 13, 1274126177);
+    return ((h ^ h >>> 16) >>> 0) / 4294967296;
+  }
+  function noise(x, y, seed) {
+    const i = Math.floor(x), j = Math.floor(y);
+    let u = x - i, v = y - j;
+    u = u * u * (3 - 2 * u);
+    v = v * v * (3 - 2 * v);
+    const a = hashed(i, j, seed), b = hashed(i + 1, j, seed);
+    const c = hashed(i, j + 1, seed), d = hashed(i + 1, j + 1, seed);
+    return 2 * ((a + (b - a) * u) * (1 - v) + (c + (d - c) * u) * v) - 1;
+  }
+  function warpPoint(p, spacing, deformation, seed) {
+    const power = clamp(deformation, 0, 1);
+    if (!power) return p;
+    const broad = spacing * 5.8, fine = spacing * 2.3;
+    const amp = spacing * 3.1 * power;
+    return {
+      x: p.x + amp * (0.77 * noise(p.x / broad, p.y / broad, seed ^ 0x71e31)
+                   + 0.23 * noise(p.x / fine, p.y / fine, seed ^ 0x91c42)),
+      y: p.y + amp * (0.77 * noise(p.x / broad, p.y / broad, seed ^ 0x7cb19)
+                   + 0.23 * noise(p.x / fine, p.y / fine, seed ^ 0x28ab3))
+    };
+  }
+  function pointInPolygon(point, poly) {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const a = poly[i], b = poly[j];
+      if ((a.y > point.y) !== (b.y > point.y) &&
+          point.x < (b.x - a.x) * (point.y - a.y) / (b.y - a.y) + a.x) inside = !inside;
+    }
+    return inside;
+  }
+  function macroIndex(snapshot) {
+    const bucketSize = 128, bins = new Map(), macros = [];
     for (const cell of snapshot.cells) {
       const poly = cell.polygon;
-      if (!poly || poly.length < 3) continue;
-      const terrain = snapshot.terrain[cell.macroId] || 'plain';
-      const shade = PALETTE[terrain] || PALETTE.plain;
-      const random = rng((snapshot.seed ^ Math.imul(cell.macroId + 1, 2654435761)) >>> 0);
-      const parts = subdivide(poly, detail, (snapshot.seed ^ Math.imul(cell.id + 1, 2246822519)) >>> 0);
-      subcells += parts.length;
-      for (const p of parts) {
-        const center = centroid(p);
-        const cz = elevation(center, poly, terrain, snapshot.seed);
-        const tone = (random() - .5) * .09;
-        const middle = { ...center, z: cz };
-        for (let i = 0; i < p.length; i++) {
-          const a = p[i], b = p[(i + 1) % p.length];
-          face(middle, { ...a, z: elevation(a, poly, terrain, snapshot.seed) },
-            { ...b, z: elevation(b, poly, terrain, snapshot.seed) }, shade, tone);
-        }
+      if (!poly?.length) continue;
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const p of poly) {
+        x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y);
+        x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y);
       }
-      if (terrain === 'hills') {
-        // Real low-poly cone meshes, separate from the fine relief tessellation.
-        const count = area(poly) > 110 ? 2 : 1;
-        for (let k = 0; k < count; k++) {
-          let center = centroid(poly);
-          for (let attempt = 0; attempt < 12; attempt++) {
-            const candidate = sample(poly, random);
-            if (edgeDistance(candidate, poly) > 4) { center = candidate; break; }
-          }
-          const radius = Math.min(8, Math.max(2.5, edgeDistance(center, poly) * .76));
-          const baseZ = elevation(center, poly, terrain, snapshot.seed);
-          const height = 8 + random() * 15;
-          const apex = { x: center.x + (random() - .5) * radius * .25,
-                         y: center.y + (random() - .5) * radius * .25, z: baseZ + height };
-          const sides = 9;
-          const color = [130 + random() * 15, 124 + random() * 12, 113 + random() * 10];
-          for (let i = 0; i < sides; i++) {
-            const a = i * Math.PI * 2 / sides, b = (i + 1) * Math.PI * 2 / sides;
-            face({ x: center.x + Math.cos(a) * radius, y: center.y + Math.sin(a) * radius, z: baseZ },
-                 { x: center.x + Math.cos(b) * radius, y: center.y + Math.sin(b) * radius, z: baseZ },
-                 apex, color, (random() - .5) * .17);
-          }
-          peaks.push({ ...apex, radius });
-          mountains++;
-        }
-      } else if (terrain === 'forest' || terrain === 'swamp') {
-        const count = terrain === 'forest' ? 3 + Math.floor(random() * 5) : 1 + Math.floor(random() * 3);
-        for (let k = 0; k < count; k++) {
-          const p = sample(poly, random);
-          trees.push({ x: p.x, y: p.y, z: elevation(p, poly, terrain, snapshot.seed),
-                       variant: Math.floor(random() * 7), size: 5.8 + random() * 4.3 });
+      const entry = {id:cell.macroId, polygon:poly, center:centroid(poly), box:[x0,y0,x1,y1]};
+      macros.push(entry);
+      for (let y=Math.floor(y0/bucketSize);y<=Math.floor(y1/bucketSize);y++) {
+        for (let x=Math.floor(x0/bucketSize);x<=Math.floor(x1/bucketSize);x++) {
+          const key=x+','+y;
+          if (!bins.has(key)) bins.set(key, []);
+          bins.get(key).push(entry);
         }
       }
     }
-    // Follow the World Lab's real impassable ridge edges; avoid inventing new topology.
-    const handPlaced = new Set(snapshot.mountainRanges || []);
-    const generated = new Set(snapshot.automaticMountainEdges || []);
-    for (const edge of snapshot.edges || []) {
-      const ids = edge.macroIds || [];
-      const pair = ids.length === 2 ? ids.slice().sort((a, b) => a - b).join('-') : '';
-      const one = edge.start.x.toFixed(3) + ',' + edge.start.y.toFixed(3);
-      const two = edge.end.x.toFixed(3) + ',' + edge.end.y.toFixed(3);
-      const key = one < two ? one + '|' + two : two + '|' + one;
-      if (!handPlaced.has(pair) && !generated.has(key)) continue;
-      const dx = edge.end.x - edge.start.x, dy = edge.end.y - edge.start.y;
-      const length = Math.hypot(dx, dy);
-      const count = Math.max(1, Math.min(6, Math.round(length / 27)));
-      const random = rng((snapshot.seed ^ Math.imul(ids[0] + 1, 12582917) ^ Math.round(length * 31)) >>> 0);
-      for (let index = 0; index < count; index++) {
-        const t = (index + .5 + (random() - .5) * .28) / count;
-        const x = edge.start.x + dx * t, y = edge.start.y + dy * t;
-        const r = 2.9 + random() * 3.2, top = 7 + random() * 9, sides = 7;
-        const apex = { x: x + (random() - .5) * 2, y: y + (random() - .5) * 2, z: top };
-        for (let k = 0; k < sides; k++) {
-          const a = k * Math.PI * 2 / sides, b = (k + 1) * Math.PI * 2 / sides;
-          face({ x: x + Math.cos(a) * r, y: y + Math.sin(a) * r, z: 0 },
-               { x: x + Math.cos(b) * r, y: y + Math.sin(b) * r, z: 0 },
-               apex, [139, 132, 122], (random() - .5) * .14);
+    function owner(p) {
+      const candidates = bins.get(Math.floor(p.x/bucketSize)+','+Math.floor(p.y/bucketSize)) || [];
+      for (const entry of candidates) {
+        const [x0,y0,x1,y1] = entry.box;
+        if (p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1 && pointInPolygon(p, entry.polygon))
+          return entry.id;
+      }
+      // Outside the finite map or on a shared floating-point edge: choose nearest.
+      // The nearest-centroid fallback stays deterministic.
+      let best = null, bestD = Infinity;
+      const pool = candidates.length ? candidates : macros;
+      for (const entry of pool) {
+        const d = (p.x-entry.center.x)**2 + (p.y-entry.center.y)**2;
+        if (d < bestD) { best=entry; bestD=d; }
+      }
+      return best?.id ?? null;
+    }
+    return owner;
+  }
+  function globalMicrocells(snapshot, detail, deformation) {
+    const width=snapshot.width, height=snapshot.height;
+    const totalTarget = snapshot.cells.length * detail;
+    // Triangular lattice, jittered for irregular Voronoi cells, not a square grid.
+    const spacing = Math.sqrt(width * height / (totalTarget * Math.sqrt(3) / 2));
+    const rowStep = spacing * Math.sqrt(3)/2, jitter = spacing * .19;
+    const rows = Math.ceil(height / rowStep) + 5, cols = Math.ceil(width / spacing) + 5;
+    const sites = new Map();
+    const seed=snapshot.seed>>>0;
+    const key=(row,col)=>row+','+col;
+    for (let row=-2;row<rows;row++) for(let col=-2;col<cols;col++) {
+      const rnd=rng((seed ^ Math.imul(row+5003, 2654435761) ^ Math.imul(col+4001, 2246822519))>>>0);
+      sites.set(key(row,col),{
+        x:(col+(row&1)*.5)*spacing+(rnd()-.5)*2*jitter,
+        y:row*rowStep+(rnd()-.5)*2*jitter,
+        row,col
+      });
+    }
+    const locate = macroIndex(snapshot), parts=[], ownerParts=new Map();
+    const parent = new Map(snapshot.cells.map(c=>[c.macroId,c.polygon]));
+    const originalRect=[{x:0,y:0},{x:width,y:0},{x:width,y:height},{x:0,y:height}];
+    for (const site of sites.values()) {
+      if (site.x < -spacing || site.y < -spacing ||
+          site.x > width+spacing || site.y > height+spacing) continue;
+      let poly=originalRect;
+      // With <19% jitter and a triangular lattice the nearest possible site
+      // is within a two-ring neighbourhood, keeping complexity O(microcells).
+      for (let y=site.row-2; y<=site.row+2 && poly.length>=3; y++) {
+        for (let x=site.col-2; x<=site.col+2 && poly.length>=3; x++) {
+          if (site.row===y && site.col===x) continue;
+          const other=sites.get(key(y,x));
+          if (!other) continue;
+          poly=clip(poly,2*(other.x-site.x),2*(other.y-site.y),
+             other.x**2+other.y**2-site.x**2-site.y**2);
+        }
+      }
+      if (poly.length<3 || area(poly)<EPS) continue;
+      const warped=warpPoint(site,spacing,deformation,seed);
+      let macroId=locate(warped);
+      if (macroId===null) macroId=locate(site);
+      if (!parent.has(macroId)) continue;
+      const part={polygon:poly,macroId};
+      parts.push(part);
+      if (!ownerParts.has(macroId)) ownerParts.set(macroId, []);
+      ownerParts.get(macroId).push(part);
+    }
+    return {parts,ownerParts,spacing};
+  }
+  function aggregateEdges(parts, terrain, originalCells) {
+    const edges=new Map(), borders=[], coastlines=[];
+    const round=p=>Math.round(p*100)/100;
+    const pkey=p=>round(p.x)+','+round(p.y);
+    for (const part of parts) {
+      const poly=part.polygon;
+      for (let i=0;i<poly.length;i++) {
+        const a=poly[i],b=poly[(i+1)%poly.length];
+        const aa=pkey(a),bb=pkey(b);
+        if (aa===bb) continue;
+        const key=aa<bb?aa+'|'+bb:bb+'|'+aa;
+        if (edges.has(key)) {
+          const prev=edges.get(key);edges.delete(key);
+          if (prev.macroId===part.macroId) continue;
+          const edge={start:a,end:b,macroIds:[prev.macroId,part.macroId]};
+          borders.push(edge);
+          const isWater=id=>terrain[id]==='sea'||terrain[id]==='lake';
+          if (isWater(prev.macroId)!==isWater(part.macroId)) coastlines.push(edge);
+        } else edges.set(key,{start:a,end:b,macroId:part.macroId});
+      }
+    }
+    // Domain exterior is an outline. It isn't a coastline unless land meets water.
+    for (const e of edges.values()) borders.push({...e,macroIds:[e.macroId]});
+    return {borders,coastlines,unmatched:edges.size};
+  }
+  function weightedSample(parts, random) {
+    let total=0;
+    for(const part of parts) total+=part.weight??(part.weight=area(part.polygon));
+    let n=random()*total;
+    for (const part of parts) {
+      n-=part.weight;
+      if (n<=0) return sample(part.polygon,random);
+    }
+    return sample(parts[parts.length-1].polygon,random);
+  }
+  function buildScene(snapshot, detail, deformation=.65) {
+    if (!snapshot || !Array.isArray(snapshot.cells) || !snapshot.terrain || !snapshot.fills)
+      throw Error('Invalid 3D snapshot: authoritative 2D territory fills are required');
+    const t0=typeof performance!=='undefined'?performance.now():Date.now();
+    detail=clamp(Math.trunc(Number(detail))||20,1,40);
+    deformation=clamp(Number(deformation)||0,0,1);
+    const vertices=[],trees=[],reeds=[],peaks=[];
+    let subcells=0,triangles=0,mountains=0;
+    function face(a,b,c,rgb,variation=0,shaded=true) {
+      const u={x:b.x-a.x,y:b.y-a.y,z:b.z-a.z};
+      const v={x:c.x-a.x,y:c.y-a.y,z:c.z-a.z};
+      const nx=u.y*v.z-u.z*v.y,ny=u.z*v.x-u.x*v.z,nz=u.x*v.y-u.y*v.x;
+      const norm=Math.hypot(nx,ny,nz)||1;
+      const light=shaded?clamp(.79+(.34*Math.abs(nz)+.23*nx-.18*ny)/norm+variation,.42,1.23):1;
+      const cr=clamp(rgb[0]*light/255,0,1),cg=clamp(rgb[1]*light/255,0,1),cb=clamp(rgb[2]*light/255,0,1);
+      for(const p of [a,b,c])vertices.push(p.x,p.y,p.z,cr,cg,cb);
+      triangles++;
+    }
+    const base = detail===1 ? {
+      parts:snapshot.cells.map(c=>({macroId:c.macroId,polygon:c.polygon})),
+      ownerParts:new Map(snapshot.cells.map(c=>[c.macroId,[{polygon:c.polygon,macroId:c.macroId}]])),
+      spacing:Math.sqrt(snapshot.width*snapshot.height/snapshot.cells.length)
+    } : globalMicrocells(snapshot,detail,deformation);
+    const byMacro=new Map(snapshot.cells.map(c=>[c.macroId,c.polygon]));
+    const rgbCache=new Map();
+    for(const part of base.parts) {
+      const poly=part.polygon;
+      if(!poly||poly.length<3)continue;
+      const terrain=snapshot.terrain[part.macroId]||'plain';
+      if(!rgbCache.has(part.macroId))rgbCache.set(part.macroId,sourceColor(snapshot.fills[part.macroId]));
+      const shade=rgbCache.get(part.macroId);
+      const center=centroid(poly);
+      const parent=byMacro.get(part.macroId)||poly;
+      const centerZ=elevation(center,parent,terrain,snapshot.seed);
+      const middle={...center,z:centerZ};
+      subcells++;
+      for(let i=0;i<poly.length;i++){
+        const a=poly[i],b=poly[(i+1)%poly.length];
+        face(middle,{...a,z:elevation(a,parent,terrain,snapshot.seed)},
+          {...b,z:elevation(b,parent,terrain,snapshot.seed)},shade,0,false);
+      }
+    }
+    for(const cell of snapshot.cells) {
+      const poly=cell.polygon,terrain=snapshot.terrain[cell.macroId]||'plain';
+      const owned=base.ownerParts.get(cell.macroId);
+      if(!owned?.length)continue;
+      const random=rng((snapshot.seed ^ Math.imul(cell.macroId+1,2654435761))>>>0);
+      if(terrain==='forest') {
+        // Original prototype: 3..7 tiny trees per territory, size 5.8..10.1.
+        // Requested: >=10x population and 5x sprite size.
+        const count=30+Math.floor(random()*41);
+        for(let i=0;i<count;i++){
+          const p=weightedSample(owned,random);
+          trees.push({x:p.x,y:p.y,z:elevation(p,poly,terrain,snapshot.seed),
+                      variant:Math.floor(random()*7),size:5*(5.8+random()*4.3)});
+        }
+      } else if(terrain==='swamp'){
+        // Use the actual Builder reedBed/reedClump meshes as projected billboards.
+        const count=10+Math.floor(random()*21);
+        for(let i=0;i<count;i++){
+          const p=weightedSample(owned,random);
+          reeds.push({x:p.x,y:p.y,z:elevation(p,poly,terrain,snapshot.seed),
+                      variant:Math.floor(random()*2),size:5*(5.8+random()*4.3)});
+        }
+      } else if(terrain==='hills'){
+        const count=area(poly)>110?2:1;
+        for(let k=0;k<count;k++){
+          const center=weightedSample(owned,random);
+          const radius=Math.min(8,Math.max(2.5,edgeDistance(center,poly)*.76));
+          const baseZ=elevation(center,poly,terrain,snapshot.seed);
+          const apex={x:center.x+(random()-.5)*radius*.25,
+                      y:center.y+(random()-.5)*radius*.25,z:baseZ+8+random()*15};
+          const shade=rgbCache.get(cell.macroId)||sourceColor(snapshot.fills[cell.macroId]);
+          const sides=9;
+          for(let i=0;i<sides;i++){
+            const a=i*Math.PI*2/sides,b=(i+1)*Math.PI*2/sides;
+            face({x:center.x+Math.cos(a)*radius,y:center.y+Math.sin(a)*radius,z:baseZ},
+                 {x:center.x+Math.cos(b)*radius,y:center.y+Math.sin(b)*radius,z:baseZ},
+                 apex,shade,(random()-.5)*.17);
+          }
+          peaks.push({...apex,radius});
+          mountains++;
+        }
+      }
+    }
+    // Existing mountain barriers remain part of the authoritative gameplay layer.
+    const handPlaced=new Set(snapshot.mountainRanges||[]);
+    const generated=new Set(snapshot.automaticMountainEdges||[]);
+    for(const edge of snapshot.edges||[]){
+      const ids=edge.macroIds||[];
+      const pair=ids.length===2?ids.slice().sort((a,b)=>a-b).join('-'):'';
+      const one=edge.start.x.toFixed(3)+','+edge.start.y.toFixed(3);
+      const two=edge.end.x.toFixed(3)+','+edge.end.y.toFixed(3);
+      const key=one<two?one+'|'+two:two+'|'+one;
+      if(!handPlaced.has(pair)&&!generated.has(key))continue;
+      const dx=edge.end.x-edge.start.x,dy=edge.end.y-edge.start.y;
+      const length=Math.hypot(dx,dy),count=Math.max(1,Math.min(6,Math.round(length/27)));
+      const random=rng((snapshot.seed ^ Math.imul((ids[0]||0)+1,12582917) ^ Math.round(length*31))>>>0);
+      for(let index=0;index<count;index++){
+        const t=(index+.5+(random()-.5)*.28)/count;
+        const x=edge.start.x+dx*t,y=edge.start.y+dy*t;
+        const r=2.9+random()*3.2,top=7+random()*9,sides=7;
+        const apex={x:x+(random()-.5)*2,y:y+(random()-.5)*2,z:top};
+        for(let k=0;k<sides;k++){
+          const a=k*Math.PI*2/sides,b=(k+1)*Math.PI*2/sides;
+          face({x:x+Math.cos(a)*r,y:y+Math.sin(a)*r,z:0},
+               {x:x+Math.cos(b)*r,y:y+Math.sin(b)*r,z:0},
+               apex,[139,132,122],(random()-.5)*.14);
         }
         mountains++;
       }
     }
-    return {
-      vertices: new Float32Array(vertices), trees, peaks,
-      stats: { territories: snapshot.cells.length, subcells, triangles, mountains,
-               trees: trees.length, floats: vertices.length,
-               generationMs: (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0 }
+    const {borders,coastlines,unmatched}=aggregateEdges(base.parts,snapshot.terrain,snapshot.cells);
+    return{
+      vertices:new Float32Array(vertices),trees,reeds,peaks,borders,coastlines,
+      stats:{territories:snapshot.cells.length,subcells,triangles,mountains,
+             trees:trees.length,reeds:reeds.length,unmatchedEdges:unmatched,
+             floats:vertices.length,generationMs:(typeof performance!=='undefined'?performance.now():Date.now())-t0}
     };
   }
-  return { area, centroid, clip, subdivide, edgeDistance, elevation, buildScene };
+  return {area,centroid,clip,subdivide,edgeDistance,elevation,sourceColor,
+          globalMicrocells,aggregateEdges,buildScene};
 });
