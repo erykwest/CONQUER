@@ -9,7 +9,7 @@
   const horseCache=new Map();
   let animalFrameCache={key:null,objects:[]};
   const PASTURE_SPACING=2.5; // free ground between grazing patches, in U
-  let cacheSignature='';
+  let cacheSignature='',pastureStructureCount=-1;
   const smooth=t=>{t=clamp(t,0,1);return t*t*(3-2*t)};
   const hash=s=>peasantHash(String(s))>>>0;
   const rand=h=>{h=(Math.imul(h^h>>>16,0x7feb352d)>>>0);h=(Math.imul(h^h>>>15,0x846ca68b)>>>0);return ((h^h>>>16)>>>0)/4294967296};
@@ -45,6 +45,18 @@
       // never publish a stale route after house upgrades or construction.
       for(const job of pendingPastures.values())if(job.timer!=null&&typeof clearTimeout==='function')clearTimeout(job.timer);
       pendingPastures.clear();
+    }
+    // Placing a field (or any non-house building) does not bump
+    // urbanRevision. Re-validate claimed pastures whenever the structure
+    // list changes, so a field laid over a pasture evicts the flock.
+    const structureCount=State.structures?.length||0;
+    if(structureCount!==pastureStructureCount){
+      pastureStructureCount=structureCount;
+      for(const [owner,pasture] of routeCache){
+        if(pasture&&!pastureBuildingAllowed(pasture.center,pasture.radius)){
+          routeCache.delete(owner);animalFrameCache.key=null;
+        }
+      }
     }
   }
   function isFreePenPoint(p,lot,house,accepted,clearance){
@@ -144,8 +156,15 @@
     // eight compass samples are clear. Test each solid footprint exactly.
     const clearance=radius+.20;
     for(const building of State.structures){
-      if(['field','road','moat','bridge'].includes(building.type))continue;
-      for(const polygon of urbanBuildingPolygons(building)){
+      if(['road','moat','bridge'].includes(building.type))continue;
+      // Crop fields (player-built and auto L1 plots, even while being laid
+      // out) are not pasture: flocks may never graze on them.
+      // urbanBuildingPolygons() returns nothing for fields, so read the
+      // field outline directly.
+      const polygons=building.type==='field'?
+        (typeof fieldPoints==='function'?[fieldPoints(building)]:[]):
+        urbanBuildingPolygons(building);
+      for(const polygon of polygons){
         if(!polygon?.length)continue;
         const xs=polygon.map(v=>v.x),ys=polygon.map(v=>v.y);
         if(center.x<Math.min(...xs)-clearance||center.x>Math.max(...xs)+clearance||

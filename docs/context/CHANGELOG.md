@@ -8,6 +8,10 @@
 
 - Il corpo del braciere su torri e porte in pietra entra nella mesh del castello con test di profondità; il canvas lo dipinge solo dove la mesh non c'è. Test in qa/tower-inner-roof-regression.cjs. Roadmap e decisioni invariate.
 
+### 2026-11-16 — Fix: le greggi non pascolano nei campi coltivati
+
+- `pastureBuildingAllowed` ora tratta i campi (`fieldPoints`) come ostacoli invece di saltarli; i pascoli in cache vengono riverificati quando cambia l'elenco delle strutture. Test in qa/urban-livestock-regression.cjs; versione cache di settlement-livestock.js aggiornata. ROADMAP e DECISIONS invariate.
+
 ### 2026-11-15 — Microfix: fedeli alla messa nel cutaway della chiesa
 
 - Aggiunti i popolani seduti sui banchi della chiesa durante la messa domenicale (6:00–12:00); test in qa/staff-people-regression.cjs. Roadmap e decisioni invariate.
