@@ -75,11 +75,11 @@
       const t=k/8,p={x:r.a.x+(r.b.x-r.a.x)*t,y:r.a.y+(r.b.y-r.a.y)*t},d=dist(p,w);
       // Far enough to be outside the walls, not so far it is off the map.
       const s=d<25?-1e3:-Math.abs(d-48);
-      if(s>score&&free(p)&&!C().areaState(p).yellow){score=s;best=p}
+      if(s>score&&free(p)&&!C().areaState(p).yellow){score=s;best={...p,heading:Math.atan2(r.b.y-r.a.y,r.b.x-r.a.x)}}
     }
     if(best)return best;
     const b=borderPoint(edge,w);
-    return b?{x:b.x+(w.x-b.x)*.18,y:b.y+(w.y-b.y)*.18}:null;
+    return b?{x:b.x+(w.x-b.x)*.18,y:b.y+(w.y-b.y)*.18,heading:Math.atan2(w.y-b.y,w.x-b.x)}:null;
   }
   function lairSite(w,seed){
     let fallback=null;
@@ -150,9 +150,11 @@
       const withRoads=edges.filter(e=>plan.some(r=>r.edge===e&&
         State.structures.some(s=>s.type==='road'&&s.routeId===r.id)));
       const pick=edge||(withRoads.length?withRoads:edges)[Math.floor(hash(seed+':e')*(withRoads.length||edges.length))];
-      const post=pick&&roadblock(pick,w);if(!post)return null;
-      const band=newBand(type,{edge:pick,post,robbed:0});
-      const spots=ringAround(post,n,1.1,seed);
+      const block=pick&&roadblock(pick,w);if(!block)return null;
+      const post={x:block.x,y:block.y};
+      const band=newBand(type,{edge:pick,post,heading:block.heading,robbed:0});
+      // Men stand round the wagon across the road, not inside it.
+      const spots=ringAround(post,n,1.9,seed);
       C().addEnemies(spots.map((p,i)=>man(band,'brigand',p,i,p)));
       if(!quiet)status('Briganti sulla strada '+edgeName(pick)+': i mercanti vengono derubati, gli scambi calano');
       return band;
@@ -161,7 +163,7 @@
       const center=lairSite(w,seed);if(!center)return null;
       const tents=ringAround(center,3+(n>4?1:0),2.2,seed+':t').map((p,i)=>({x:p.x,y:p.y,a:Math.atan2(center.y-p.y,center.x-p.x),i}));
       const band=newBand(type,{center,tents,stash:0,lastTollWeek:Math.floor(today()/7)});
-      const posts=ringAround(center,n,1.3,seed+':g');
+      const posts=ringAround(center,n,.95,seed+':g');
       C().addEnemies(posts.map((p,i)=>man(band,'guard',p,i,p)));
       if(!quiet)status('Un covo di banditi nel bosco: le guardie difendono le tende e taglieggiano il villaggio');
       return band;
@@ -425,20 +427,63 @@
     g.strokeStyle='#6b4c2e';g.lineWidth=Math.max(1,State.view.scale*2.4);
     g.beginPath();g.moveTo(P.x,P.y-1);g.lineTo(Q.x,Q.y-1);g.stroke();g.lineCap='butt';
   }
+  // 3D: the lair and the roadblock are compositions of the campaign models
+  // (ConquerEvents3D.banditLair / brigandRoadblock, also in the Asset Lab),
+  // drawn with the same mesh path as the army bivouacs. Cached per band.
+  const sceneCache=new Map();
+  function scene(band){
+    const E3=window.ConquerEvents3D,M=window.ConquerMesh3D;
+    if(!E3?.banditLair||!E3?.bivouacMeshes||!M?.drawMeshes||!M?.gameView)return null;
+    const sig=band.id+'|'+State.seed+'|'+State.structures.length;
+    const hit=sceneCache.get(band.id);if(hit&&hit.sig===sig)return hit;
+    let entry;
+    try{
+      // No 'blocked' filter: a lair is pitched among the trees of its wood (every
+      // tree is an obstacle to walkers, so filtering dropped most of the tents).
+      const layout=band.type==='bandits'
+        ?E3.banditLair(band.center,{seed:State.seed,key:band.id,tents:band.tents?.length})
+        :E3.brigandRoadblock(band.post,band.heading||0,{key:band.id});
+      const meshes=E3.bivouacMeshes([layout],p=>terrainElevation(p)).filter(m=>m?.col?.length);
+      entry={sig,meshes,fires:layout.fires,ok:meshes.length>0};
+    }catch(error){
+      // Keep the signature: a failing catalog is not rebuilt (and warned) every frame.
+      console.warn('CONQUER_OUTLAW_SCENE_FALLBACK',error);entry={sig,meshes:[],fires:[],ok:false};
+    }
+    sceneCache.set(band.id,entry);
+    return entry;
+  }
+  // Camp fire as the army bivouac draws it: brazier fixture, warm glow, flame.
+  function bivouacFire(g,f){
+    if(typeof drawBrazierFixture!=='function'){campfire(g,f,f.id);return}
+    const fire={kind:'brazier',id:f.id+':outlaw-fire',p:{x:f.x,y:f.y},z:.14,groundZ:terrainElevation(f)};
+    drawBrazierFixture(fire);
+    const base=w2sRaw(fire.p,fire.groundZ+fire.z+.08),scale=Math.max(.55,Math.min(1.45,State.view.scale));
+    const radius=15*scale,glow=g.createRadialGradient(base.x,base.y,0,base.x,base.y,radius);
+    glow.addColorStop(0,'rgba(255,198,88,.42)');glow.addColorStop(.55,'rgba(242,145,48,.18)');glow.addColorStop(1,'rgba(242,145,48,0)');
+    g.save();g.globalCompositeOperation='screen';g.fillStyle=glow;g.beginPath();g.arc(base.x,base.y,radius,0,Math.PI*2);g.fill();g.restore();
+    drawScreenFlame(base,scale,fire.id,true);
+  }
   function draw(g,{fog=false,seen=()=>true}={}){
-    const list=bands().filter(b=>!b.over);
+    const list=bands().filter(b=>!b.over&&b.type!=='raiders');
+    for(const id of sceneCache.keys())if(!list.some(b=>b.id===id))sceneCache.delete(id);
     if(!list.length)return;
+    const M=window.ConquerMesh3D;
     withRenderContext(g,()=>{
       for(const band of list){
+        const at=band.type==='bandits'?band.center:band.post;
+        if(!at||fog&&!seen(at))continue;
+        const s=scene(band);
+        if(s?.ok){
+          M.drawMeshes(g,s.meshes,M.gameView());
+          for(const f of s.fires)bivouacFire(g,f);
+          continue;
+        }
+        // Fallback without the 3D catalog: the flat canvas tents / log.
         if(band.type==='bandits'){
-          if(fog&&!seen(band.center))continue;
           const tents=band.tents.slice().sort((a,b)=>viewDepthPoint(a)-viewDepthPoint(b));
           for(const t of tents)tent(g,t);
           campfire(g,band.center,band.id+':fire');
-        }else if(band.type==='brigands'&&band.post){
-          if(fog&&!seen(band.post))continue;
-          barricade(g,band.post,band.id);
-        }
+        }else barricade(g,band.post,band.id);
       }
     });
   }
