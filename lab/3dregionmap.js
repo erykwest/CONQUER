@@ -14,11 +14,22 @@
   const showTrees = document.getElementById('showTrees');
   const showBorders = document.getElementById('showBorders');
   const geometry = window.ConquerRegion3DGeometry;
+  // Recolor only the canopy fill of the seven Builder SVG trees; their silhouettes and trunks stay intact.
   const treeImages = Array.from({ length: 7 }, (_, i) => {
     const image = new Image();
-    image.src = '../src/assets/forest/tree_0' + (i + 1) + '_' +
+    const path = '../src/assets/forest/tree_0' + (i + 1) + '_' +
       ['tonda','affusolata','conica','ombrello','goccia','stratificata','asimmetrica'][i] + '.svg';
     image.onload = () => { if (scene) draw(); };
+    const canopy = ['#567649','#476a46','#648153','#517245','#587744','#476d59','#657b4b'][i];
+    fetch(path).then(r => {
+      if (!r.ok) throw Error('sprite ' + r.status);
+      return r.text();
+    }).then(svg => {
+      const blob = new Blob([svg.replace(/#3B5174/gi, canopy)], { type:'image/svg+xml' });
+      const objectUrl = URL.createObjectURL(blob);
+      image.onload = () => { URL.revokeObjectURL(objectUrl); if (scene) draw(); };
+      image.src = objectUrl;
+    }).catch(() => { image.src = path; });
     return image;
   });
   let gl, program, vertexBuffer, locations, scene = null, snapshot = null, seenRevision = -1;
