@@ -3370,6 +3370,7 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
           macroIds: [...new Set(e.cells.map(c => c.macroId))]
         })),
         rivers: [...state.rivers],
+        generatedRiverEdges: [...state.generatedRiverEdges],
         selectedMacros: [...selectedMacros]
       });
 
