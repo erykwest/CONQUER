@@ -1388,11 +1388,11 @@ function battlementBrazierSources(){
     }else if(towerHasBrazier(s)){
       const hash=peasantHash(s.id+'-brazier'),a=((hash%360)/180)*Math.PI;
       const r=s.shape==='round'?Math.max(.12,s.r*.34):Math.max(.12,(s.size||1)*.26);
-      out.push({kind:'brazier',id:s.id+':brazier',p:{x:s.x+Math.cos(a)*r,y:s.y+Math.sin(a)*r},z:structureHeight(s)+.10,groundZ:placementGroundZ(s)});
+      out.push({kind:'brazier',id:s.id+':brazier',structureId:s.id,p:{x:s.x+Math.cos(a)*r,y:s.y+Math.sin(a)*r},z:structureHeight(s)+.10,groundZ:placementGroundZ(s)});
     }else if(s.type==='gate'&&gateRoofStyle(s)==='battlement'){
       const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0),half=.43*rectDims(s).w/1.5;
       for(const side of [-1,1]){
-        out.push({kind:'brazier',id:s.id+':brazier:'+side,p:{x:s.x+ca*half*side,y:s.y+sa*half*side},z:structureHeight(s)+.10,groundZ:placementGroundZ(s)});
+        out.push({kind:'brazier',id:s.id+':brazier:'+side,structureId:s.id,p:{x:s.x+ca*half*side,y:s.y+sa*half*side},z:structureHeight(s)+.10,groundZ:placementGroundZ(s)});
       }
     }
   }
@@ -1424,15 +1424,22 @@ function drawTorchFixture(src){
   ctx.lineTo(p.x+1.0*scale,p.y+2.4*scale);ctx.lineTo(p.x-1.0*scale,p.y+2.4*scale);ctx.closePath();ctx.fill();
   ctx.restore();
 }
+// The iron brazier on a stone tower or gate roof: a 0.20U block, its top just under the flame.
+// One geometry for the 2.5D canvas and the castle mesh (settlement-castle3d.js addPieces).
+const BRAZIER_COLORS=Object.freeze({top:'#5d4b3d',sideA:'#39312b',sideB:'#493d34',stroke:'#7b654f'});
+function brazierFixtureBox(src){return{pts:rectWorldPoints(src.p.x,src.p.y,.20,.20,0),z0:src.z-.08,z1:src.z+.03,groundZ:src.groundZ}}
+// Stone tower and gate braziers on the castle roofs, by structure (the timber palisade tower keeps its own).
+function structureBrazierBoxes(s){return battlementBrazierSources().filter(src=>src.structureId===s.id).map(brazierFixtureBox)}
 function drawBrazierFixture(src){
-  const pts=rectWorldPoints(src.p.x,src.p.y,.20,.20,0);
-  withProjectionGroundZ(src.groundZ,()=>extrudePolygonAt(pts,src.z-.08,src.z+.03,{top:'#5d4b3d',sideA:'#39312b',sideB:'#493d34',stroke:'#7b654f'}));
+  const b=brazierFixtureBox(src);
+  withProjectionGroundZ(b.groundZ,()=>extrudePolygonAt(b.pts,b.z0,b.z1,BRAZIER_COLORS));
 }
 function drawCastleFireFixtures(){
   for(const src of towerTorchSources())drawTorchFixture(src);
   // Gate torches have mesh brackets in the 3D world.
   if(!window.ConquerWorld3D?.active?.())for(const src of window.ConquerGates?.torchSources()||[])drawTorchFixture(src);
-  for(const src of battlementBrazierSources())drawBrazierFixture(src);
+  // Braziers the castle mesh already builds in 3D (depth-tested) are not painted again on top.
+  for(const src of battlementBrazierSources())if(!window.ConquerCastle3D?.ownsBrazier?.(src))drawBrazierFixture(src);
 }
 // WebGL2 owns the glow halo; only the small animated flame remains a Canvas effect.
 function drawFireFlamesOnly(nf){

@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-16 — Braciere 3D
+
+- [x] Corpo del braciere di torri e porte in pietra nella mesh del castello (test di profondità), su branch `fix/brazier-3d`.
+- [ ] Braciere della torre a palizzata di legno: ancora 2.5D (mesh Blender di settlement-wood3d.js da valutare).
+
 ### 2026-11-15 — Microfix: messa domenicale visibile
 
 - [x] Cutaway della chiesa: fedeli seduti sui banchi la domenica 6:00–12:00 (ConquerCivic3D.massSlots, ConquerCourtPeople.massInSession).

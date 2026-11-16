@@ -1,5 +1,10 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-16 — Braciere delle torri e delle porte in 3D (`fix/brazier-3d`)
+
+- Il corpo del braciere sul tetto di torri e porte merlate in pietra è ora un pezzo della mesh del castello (ConquerCastle3D addPieces, tavolozza PAL.brazier), con test di profondità e divisione vicino/lontano come i merli. Prima era un'estrusione 2.5D dipinta dopo il passaggio frontale anche in World3D, quindi mai coperta da muri, merli o altre torri. Una sola geometria (brazierFixtureBox in settlement-castle-structures.js) per mesh e canvas; il canvas lo dipinge solo dove la mesh non lo possiede (ConquerCastle3D.ownsBrazier: World3D sempre; corpo WebGL 2.5D salvo le strutture in cutaway; renderer canvas puro sempre). Le sorgenti del braciere portano structureId. Fiamma e bagliore invariati; il braciere della torre a palizzata di legno resta 2.5D.
+- PASS tower-inner-roof (nuove asserzioni: blocco nella mesh, ownsBrazier, il canvas salta i bracieri della mesh), cutaway-floors, battlement-parapet, machicolation, roof-shape, oriented-towers, camp, fire, small-gate, render-cache-keys; verificato nel browser in World3D: braciere sul tetto disegnato dalla mesh, nessun errore in console. Audit del Lab da CI.
+
 ### 2026-11-16 — Microfix: pianerottolo interno per la porta del muro H1
 
 - Branch fix/microfix. Una porta del cammino di ronda che si apre fra due pavimenti (muro H1, camminamento a 1,15, in una torre con P1 a 2,10) ha all'interno un ballatoio di legno alla quota della soglia, sui montanti, che corre lungo la parete fino all'angolo della scala a pioli della stanza (girando l'angolo se la scala è sulla parete accanto); senza scala nella stanza (torre L1) una scaletta propria. ConquerCutawayFurniture.landingSpecs / landingsWorld in settlement-cutaway-furniture.js, usati da 2.5D e WebGL. Le porte delle mura H2 poggiano sul P1 e non ne hanno.

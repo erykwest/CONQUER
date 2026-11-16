@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-16 — Braciere delle torri in 3D
+
+- Il corpo del braciere su torri e porte in pietra entra nella mesh del castello con test di profondità; il canvas lo dipinge solo dove la mesh non c'è. Test in qa/tower-inner-roof-regression.cjs. Roadmap e decisioni invariate.
+
 ### 2026-11-15 — Microfix: fedeli alla messa nel cutaway della chiesa
 
 - Aggiunti i popolani seduti sui banchi della chiesa durante la messa domenicale (6:00–12:00); test in qa/staff-people-regression.cjs. Roadmap e decisioni invariate.
