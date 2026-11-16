@@ -4,8 +4,57 @@
 // Keep the authoritative 2D topology and territory RGB untouched.
 const assert = require('node:assert/strict');
 const { performance } = require('node:perf_hooks');
-const { area, subdivide, globalMicrocells, sourceColor, buildScene, pickTerritory } =
+const { area, subdivide, globalMicrocells, sourceColor, buildScene, pickTerritory, deriveRiverBorders } =
   require('../src/regional-map3d-geometry.js');
+
+// River regression: automatic rivers must follow ONLY the corresponding segment
+// of the newly warped macro border. Manual rivers mark the whole shared border.
+const pt=(x,y)=>({x,y});
+const visualRiverBorders=[
+  {start:pt(0,0),end:pt(4,1),macroIds:[0,1]},
+  {start:pt(4,1),end:pt(8,-1),macroIds:[0,1]},
+  {start:pt(8,-1),end:pt(12,1),macroIds:[0,1]},
+  {start:pt(12,1),end:pt(16,0),macroIds:[0,1]},
+  {start:pt(4,1),end:pt(4,5),macroIds:[1,2]}
+];
+const canonicalRiver={start:pt(0,0),end:pt(8,0),macroIds:[0,1]};
+const canonicalRiverKey='0.000,0.000|8.000,0.000';
+const generated=deriveRiverBorders({
+  rivers:[],edges:[canonicalRiver],generatedRiverEdges:[canonicalRiverKey]
+},visualRiverBorders);
+assert.equal(generated.riverStats.mappedAutomatic,1);
+assert.equal(generated.riverStats.unmatchedAutomatic,0);
+assert.equal(generated.riverEdges.length,2,'generated river follows two matching warped border edges');
+assert.ok(generated.riverEdges.every(edge=>visualRiverBorders.includes(edge)),
+          'all rendered rivers are existing visual territory borders');
+assert.ok(generated.riverEdges.every(edge=>edge.macroIds.join('-')==='0-1'),
+          'automatic rivers cannot cross unrelated territories');
+const manual=deriveRiverBorders({rivers:['0-1'],edges:[],generatedRiverEdges:[]},
+                                visualRiverBorders);
+assert.equal(manual.riverEdges.length,4,'manual river paints complete organic shared border');
+assert.equal(deriveRiverBorders({rivers:[],edges:[],generatedRiverEdges:[]},
+                               visualRiverBorders).riverEdges.length,0,
+             'no ghost rivers without game river data');
+
+// Integrated warped microcell test: river coordinates must come directly from
+// aggregateEdges, rather than obsolete straight original 2D line geometry.
+const cellsOnRiver=[
+  {id:0,macroId:0,polygon:[pt(0,0),pt(120,0),pt(120,120),pt(0,120)]},
+  {id:1,macroId:1,polygon:[pt(120,0),pt(240,0),pt(240,120),pt(120,120)]}
+];
+const origRiver={start:pt(120,0),end:pt(120,120),macroIds:[0,1]};
+const origRiverKey='120.000,0.000|120.000,120.000';
+const sceneRiver=buildScene({
+  seed:471,width:240,height:120,cells:cellsOnRiver,
+  terrain:{0:'plain',1:'plain'},fills:{0:'#77985b',1:'#77985b'},
+  edges:[origRiver],generatedRiverEdges:[origRiverKey]
+},20,.65);
+assert.equal(sceneRiver.riverStats.mappedAutomatic,1,'original automatic river remapped');
+assert.ok(sceneRiver.riverEdges.length>0,'3D scene includes derived river edges');
+assert.ok(sceneRiver.riverEdges.every(edge=>sceneRiver.borders.includes(edge)),
+          'scene river edges are exact organic border object references');
+assert.ok(sceneRiver.riverEdges.every(edge=>edge.macroIds.includes(0)&&edge.macroIds.includes(1)),
+          'rendered river segments stay on both banks of the same pair');
 
 const polygons = [
   [{x:0,y:0},{x:100,y:0},{x:100,y:80},{x:0,y:80}],
@@ -74,7 +123,7 @@ for(const detail of [1,8,20,40]){
   assert.equal(scene.mountainSummits.length,scene.stats.mountains,'snowcap summit metadata');
   for(const mountain of scene.mountainSummits) {
     assert.ok(mountain.radius>=29 && mountain.radius<=61,'mountain base XY 200% of prior footprint');
-    assert.ok(mountain.height>=56 && mountain.height<=128,'mountain height >=5x');
+    assert.ok(mountain.height>=28 && mountain.height<=64,'mountain Z is 50% of the prior version');
     assert.ok(Math.abs(mountain.snowyHeight/mountain.height-1/3)<1e-9,
               'snow covers upper third of hMax');
     assert.ok(Math.abs(mountain.snowStart-mountain.baseZ-mountain.height*2/3)<1e-9,
@@ -147,6 +196,6 @@ for(const detail of [1,8,20,40]){
     );
   }
 }
-console.log('PASS region3d: 2-5 mesas per hill territory (50% XY / 20% Z), mountain bases 200% and peaks 3x, snow caps, palette and picking.');
+console.log('PASS region3d: mountain Z halved, snowlines scaled, river subpaths on organic borders, mesas, vegetation, and picking.');
 console.table(results);
 console.log('Synthetic CPU-only baseline. Browser/WebGL visuals and FPS remain separate checks.');
