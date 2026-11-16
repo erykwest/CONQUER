@@ -3,6 +3,7 @@
 ### 2026-11-15 — Microfix: fedeli alla messa nel cutaway della chiesa
 
 - Aggiunti i popolani seduti sui banchi della chiesa durante la messa domenicale (6:00–12:00); test in qa/staff-people-regression.cjs. Roadmap e decisioni invariate.
+- 16/11: porta verso un muro H1 con ballatoio interno fino alla scala a pioli; test in qa/cutaway-furniture-regression.cjs.
 - 16/11: P1 delle torri in pietra a 2,10, a filo del camminamento delle mura; piani superiori ridistribuiti; soglia della porta del cammino di ronda sul pavimento del P1 (niente glitch visto da dentro). Test in qa/cutaway-floors-regression.cjs; audit Lab da CI.
 - 16/11: la finestra cede il posto alla porta del cammino di ronda sulla stessa faccia; World3D si aggiorna al cambio del mastio. Test in qa/gate-tower-entrance-regression.cjs.
 - 16/11: torre quadra d'angolo senza porta al P0 (salvo rotazione a 45° verso l'interno); test in qa/gate-tower-entrance-regression.cjs.

@@ -1,5 +1,10 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-16 — Microfix: pianerottolo interno per la porta del muro H1
+
+- Branch fix/microfix. Una porta del cammino di ronda che si apre fra due pavimenti (muro H1, camminamento a 1,15, in una torre con P1 a 2,10) ha all'interno un ballatoio di legno alla quota della soglia, sui montanti, che corre lungo la parete fino all'angolo della scala a pioli della stanza (girando l'angolo se la scala è sulla parete accanto); senza scala nella stanza (torre L1) una scaletta propria. ConquerCutawayFurniture.landingSpecs / landingsWorld in settlement-cutaway-furniture.js, usati da 2.5D e WebGL. Le porte delle mura H2 poggiano sul P1 e non ne hanno.
+- PASS cutaway-furniture (nuovo caso: ballatoio alla soglia, raggiunge la scala, nessuno con muro H2) e 144 regressioni torri/cutaway/porte/mura; verificato nel browser sulle quattro rotazioni della camera (il ballatoio arriva a 0,1 dalla scala) e a vista. Torri tonde: ballatoio corto con scaletta propria. CI da eseguire.
+
 ### 2026-11-16 — Microfix: P1 delle torri in pietra al livello del camminamento
 
 - Branch fix/microfix. Il P1 delle torri in pietra di livello 2+ sta ora a 2,10 (sommità delle mura H2, CURTAIN_WALK_Z) invece che a h/livello (1,58–1,90): la porta del cammino di ronda (2,08) si apre sul pavimento del piano. I piani superiori si dividono in parti uguali l'altezza restante (stanze di almeno 1,1). Una sola fonte (towerUpperFloorZ in settlement-castle.js) per cutaway, finestre, feritoie e posti degli arcieri (towerFloorZ); le porte affiancate seguono la torre come prima. Mura invariate; torri di legno invariate. La soglia della porta del cammino di ronda si aggancia al pavimento del piano se è entro 0,12 (towerDoorContactSpec): vista da dentro l'apertura non è più tagliata dal solaio (prima partiva 1 cm sotto le tavole).

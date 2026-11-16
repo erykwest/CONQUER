@@ -4,6 +4,8 @@
 
 - [x] Cutaway della chiesa: fedeli seduti sui banchi la domenica 6:00–12:00 (ConquerCivic3D.massSlots, ConquerCourtPeople.massInSession).
 - [ ] Proposta: legare il numero di fedeli ai residenti serviti (ConquerChurch.servedShare) quando arriverà la messa di CHIESA-01 fase 3.
+- [x] Porta verso un muro H1: ballatoio interno fino alla scala a pioli della stanza.
+- [ ] Torri tonde: ballatoio curvo fino alla scala (oggi corto con scaletta propria).
 - [x] P1 delle torri in pietra allineato al camminamento delle mura (2,10).
 - [x] Torre fra due mura: entrambe le porte del cammino di ronda, la finestra della faccia cede il posto; World3D si aggiorna al cambio del mastio.
 - [x] Torre quadra d'angolo: niente porta al P0, salvo torre ruotata con il fronte verso l'interno dell'angolo (45°).
