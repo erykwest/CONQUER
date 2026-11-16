@@ -410,7 +410,9 @@
     }
     for(const index of [...chosen].sort((a,b)=>a-b))riverEdges.push(borders[index]);
     return {riverEdges,riverStats:{
-      manualPairs:manualPairs.size,manualVisualEdges:[...chosen].filter(i=>manualPairs.has(pairKey(borders[i].macroIds||[]))).length,
+      manualPairs:manualPairs.size,
+      unmatchedManual:[...manualPairs].filter(pair=>!(visual.get(pair)||[]).length).length,
+      manualVisualEdges:[...chosen].filter(i=>manualPairs.has(pairKey(borders[i].macroIds||[]))).length,
       mappedAutomatic,unmatchedAutomatic,visualSegments:riverEdges.length
     }};
   }
