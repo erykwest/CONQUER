@@ -388,46 +388,57 @@
                       variant:Math.floor(random()*2),size:5*(5.8+random()*4.3)});
         }
       } else if(terrain==='hills'){
-        // Replace small pointed hill cones with broad, polygonal truncated pyramids.
-        // Both footprint and elevation are approximately 5x the old 3D hills.
-        // A single broad landmark per territory avoids dense, overlapping cones.
-        const center=weightedSample(owned,random);
-        const originalRadius=Math.min(8,Math.max(2.5,edgeDistance(center,poly)*.76));
-        const baseRadius=originalRadius*5;
-        const topRadius=baseRadius*(.43+random()*.1);
-        const baseZ=elevation(center,poly,terrain,snapshot.seed);
-        const height=(8+random()*15)*5;
-        const topZ=baseZ+height;
+        // 2–5 separate low, broad polygonal mesas per hill territory.
+        // Each is 50% in XY and 20% in Z relative to the preceding single
+        // 5x hill frustum. Keep the same 7–9-sided flat-top silhouette.
+        const count=2+Math.floor(random()*4);
         const shade=rgbCache.get(cell.macroId)||sourceColor(snapshot.fills[cell.macroId]);
-        const sides=7+Math.floor(random()*3),phase=random()*Math.PI*2;
-        const lower=[],upper=[];
-        for(let i=0;i<sides;i++){
-          const a=phase+i*Math.PI*2/sides;
-          lower.push({x:center.x+Math.cos(a)*baseRadius,
-                      y:center.y+Math.sin(a)*baseRadius,z:baseZ});
-          upper.push({x:center.x+Math.cos(a)*topRadius,
-                      y:center.y+Math.sin(a)*topRadius,z:topZ});
+        const placed=[];
+        for(let k=0;k<count;k++){
+          // Favor separated positions instead of stacking the increased number
+          // of hill props at the same centroid.
+          let center=null,spacing=-Infinity;
+          for(let attempt=0;attempt<14;attempt++){
+            const candidate=weightedSample(owned,random);
+            const distance=placed.length
+              ? Math.min(...placed.map(p=>Math.hypot(candidate.x-p.x,candidate.y-p.y)))
+              : Infinity;
+            if(distance>spacing){center=candidate;spacing=distance;}
+          }
+          const originalRadius=Math.min(8,Math.max(2.5,edgeDistance(center,poly)*.76));
+          const baseRadius=originalRadius*2.5;
+          const topRadius=baseRadius*(.43+random()*.1);
+          const baseZ=elevation(center,poly,terrain,snapshot.seed);
+          const height=8+random()*15;
+          const topZ=baseZ+height;
+          const sides=7+Math.floor(random()*3),phase=random()*Math.PI*2;
+          const lower=[],upper=[];
+          for(let i=0;i<sides;i++){
+            const theta=phase+i*Math.PI*2/sides;
+            lower.push({x:center.x+Math.cos(theta)*baseRadius,
+                        y:center.y+Math.sin(theta)*baseRadius,z:baseZ});
+            upper.push({x:center.x+Math.cos(theta)*topRadius,
+                        y:center.y+Math.sin(theta)*topRadius,z:topZ});
+          }
+          for(let i=0;i<sides;i++){
+            const j=(i+1)%sides,variation=(random()-.5)*.12;
+            face(lower[i],lower[j],upper[j],shade,variation);
+            face(lower[i],upper[j],upper[i],shade,variation);
+          }
+          for(let i=0;i<sides;i++){
+            face({x:center.x,y:center.y,z:topZ},upper[i],upper[(i+1)%sides],
+                 shade,.10);
+          }
+          peaks.push({type:'hill',macroId:cell.macroId,x:center.x,y:center.y,
+                      z:topZ,baseZ,height,radius:baseRadius,topRadius,sides});
+          placed.push(center);
+          hills++;
         }
-        // Side walls are true trapezoids (two triangular faces), not an apex.
-        for(let i=0;i<sides;i++){
-          const j=(i+1)%sides,variation=(random()-.5)*.12;
-          face(lower[i],lower[j],upper[j],shade,variation);
-          face(lower[i],upper[j],upper[i],shade,variation);
-        }
-        // Closed horizontal summit plateau (triangulated fan).
-        for(let i=0;i<sides;i++){
-          const j=(i+1)%sides;
-          face({x:center.x,y:center.y,z:topZ},upper[i],upper[j],
-               shade,.10);
-        }
-        peaks.push({type:'hill',macroId:cell.macroId,x:center.x,y:center.y,
-                    z:topZ,baseZ,height,radius:baseRadius,topRadius,sides});
-        hills++;
       }
     }
     // The authoritative mountain barrier edges still determine ridge locations.
-    // Their visible peaks are now >=5x in footprint and 8x in height,
-    // with a snowy upper third of each peak (snow line at hMax * 2/3).
+    // Their peaks now have 2x the previous base XY size (10x original)
+    // and three times as many summits, with snow over the upper third.
     const handPlaced=new Set(snapshot.mountainRanges||[]);
     const generated=new Set(snapshot.automaticMountainEdges||[]);
     for(const edge of snapshot.edges||[]){
@@ -439,14 +450,20 @@
       if(!handPlaced.has(pair)&&!generated.has(key))continue;
       const dx=edge.end.x-edge.start.x,dy=edge.end.y-edge.start.y;
       const length=Math.hypot(dx,dy);
-      // Fewer but much larger summits avoid heavy overlaps along short ridges.
-      const count=Math.max(1,Math.min(4,Math.round(length/120)));
+      const previousCount=Math.max(1,Math.min(4,Math.round(length/120)));
+      const count=previousCount*3; // At least 3x the prior per-edge summits.
+      const normalX=length>0?-dy/length:0,normalY=length>0?dx/length:1;
       const random=rng((snapshot.seed ^ Math.imul((ids[0]||0)+1,12582917) ^ Math.round(length*31))>>>0);
       for(let index=0;index<count;index++){
-        const t=(index+.5+(random()-.5)*.25)/count;
-        const x=edge.start.x+dx*t,y=edge.start.y+dy*t;
+        // Spread each triple of broad summits across the ridge (three staggered
+        // strands), rather than dropping three large mountains on one point.
+        const group=Math.floor(index/3),strand=index%3;
+        const t=(group+.5+(strand-1)*.18+(random()-.5)*.12)/previousCount;
         const originalRadius=2.9+random()*3.2;
-        const radius=originalRadius*5;
+        const radius=originalRadius*10; // 200% of preceding 5x base XY.
+        const offset=(strand-1)*radius*.75+(random()-.5)*radius*.12;
+        const x=edge.start.x+dx*t+normalX*offset;
+        const y=edge.start.y+dy*t+normalY*offset;
         const height=(7+random()*9)*8;
         const baseZ=0,topZ=baseZ+height;
         const snowStart=baseZ+height*2/3;
