@@ -23,7 +23,7 @@ function fixture(){
     woodTowerStyle:s=>s.woodStyle||'palisadeTower',
     underConstruction:s=>Number(s.construction?.completeDay)>State.clock.day,
     isBuiltPortico:()=>false,PORTICO_FUNCTIONS:[],
-    markDirty:()=>{},renderFunctionPanel:()=>{},draw:()=>{},status:()=>{}
+    markDirty:()=>{},renderFunctionPanel:()=>{},draw:()=>{},redraw:()=>{},status:()=>{}
   });
   vm.runInContext(capacitySrc+'\n'+normaliseSrc+'\n'+siege,ctx);
   return{State,window,events,context:ctx};
@@ -68,6 +68,32 @@ const stone=(id,day,shape='square')=>({
   assert.equal(h.window.ConquerSiege.syncAutoMastio(),false);
   assert.equal(h.window.ConquerSiege.mastio().id,'manual','existing keep is preserved');
   console.log('PASS saved/manual mastio remains selected');
+}
+{
+  // The player removes the designation and fills the room: a later sync (every load, every
+  // completion) must neither hand the title back nor empty the room.
+  const h=fixture();h.State.village={};h.State.structures=[wood('keep',2)];
+  const S=h.window.ConquerSiege;
+  assert.equal(S.syncAutoMastio(),true);
+  assert.equal(S.assignMastio('keep'),true,'toggle removes the designation');
+  assert.equal(h.State.village.mastioDeclined,true,'the refusal is saved with the village');
+  h.State.structures[0].functions=['granary'];
+  assert.equal(S.syncAutoMastio(),false,'a declined keep is not re-designated');
+  assert.ok(!h.State.structures[0].isMastio);
+  assert.deepEqual(Array.from(h.State.structures[0].functions),['granary'],'the room is kept');
+  assert.equal(S.assignMastio('keep'),false,'designating needs a free room for the Common Hall');
+  h.State.structures[0].functions=[null];
+  assert.equal(S.assignMastio('keep'),true,'designating again works');
+  assert.equal(h.State.village.mastioDeclined,undefined,'and clears the refusal');
+  console.log('PASS a removed Mastio stays removed across syncs and never empties a room');
+}
+{
+  // Automatic designation takes only a free room: a full first tower is skipped, not emptied.
+  const h=fixture();h.State.village={};const full=wood('full',2);full.functions=['granary'];
+  h.State.structures=[full];
+  assert.equal(h.window.ConquerSiege.syncAutoMastio(),false);
+  assert.deepEqual(Array.from(full.functions),['granary']);
+  console.log('PASS automatic designation never replaces an assigned room');
 }
 
 // Actual selection routine works on houses and wooden towers, not only

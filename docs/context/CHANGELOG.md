@@ -1,5 +1,14 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+## 2026-11-16 — QA-DEEP-261116 · Test antiregressivo profondo e fix di salvataggio
+
+16/11/2026 — `fix/mastio-h4-load-20261116` (pre-merge):
+- Verifiche su `main` 1911369a: suite node (214 script), 17 script browser, partite headless da 120–190 giorni, compatibilità con i salvataggi di 3 build precedenti, salvataggi corrotti. Nessuna regressione di #239.
+- Correzioni: il Mastio rimosso non torna al caricamento e non svuota più una stanza; la torre W3 non viene piazzata a H4.
+- Seguiti in BACKLOG (stringhe nell'economia salvata, bilanciamento costruttori/industria).
+
+STATUS, BACKLOG e CHANGELOG aggiornati; DECISIONS e ROADMAP invariate (correzioni a regole già decise: H4 solo W2 da #174, Mastio scelto dal giocatore).
+
 ## 2026-11-15 — Tetto interno: torre a D e bracere
 
 `fix/dtower-inner-roof-brazier`: il tetto interno della torre a D corre ora su un colmo (padiglione sul retro, mezzo cono sul davanti) con pendenza unica; il tetto interno toglie il bracere (prima veniva disegnato sopra il tetto, scambiato per una botola). Regola di prodotto registrata: senza bracere gli arcieri della torre non tirano frecce incendiarie (`towerHasBrazier`, da applicare quando le torri avranno frecce incendiarie). Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: nessun contratto cambiato.
