@@ -228,7 +228,7 @@ function castleBodyCompositeBounds(){
 const STRUCTURE_VISUAL_FIELDS=Object.freeze(['id','type','shape','material','masonryMaterial','woodStyle','woodRoof','roofCover',
   'roofStyle','machicolationStyle','bartizan','bell','innerRoof','signalFire','roofShape','baseStyle','skin','hoarding','upper','topWeapon',
   'r','size','w','h','width','length','angle','rotationStep','level','tier','cutawayFloor','aSnap','bSnap','parentTowerId',
-  'orientationOffset','groundZ','foundationMinZ']);
+  'orientationOffset','groundZ','foundationMinZ','isMastio']);
 function structureVisualKey(s){
   if(!s)return'';
   const num=v=>v==null||v===''?'':Number.isFinite(Number(v))?String(+Number(v).toFixed(4)):String(v);

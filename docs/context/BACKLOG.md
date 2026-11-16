@@ -1,5 +1,17 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-15 — Microfix: messa domenicale visibile
+
+- [x] Cutaway della chiesa: fedeli seduti sui banchi la domenica 6:00–12:00 (ConquerCivic3D.massSlots, ConquerCourtPeople.massInSession).
+- [ ] Proposta: legare il numero di fedeli ai residenti serviti (ConquerChurch.servedShare) quando arriverà la messa di CHIESA-01 fase 3.
+- [x] Porta verso un muro H1: ballatoio interno fino alla scala a pioli della stanza.
+- [ ] Torri tonde: ballatoio curvo fino alla scala (oggi corto con scaletta propria).
+- [x] P1 delle torri in pietra allineato al camminamento delle mura (2,10).
+- [x] Torre fra due mura: entrambe le porte del cammino di ronda, la finestra della faccia cede il posto; World3D si aggiorna al cambio del mastio.
+- [x] Torre quadra d'angolo: niente porta al P0, salvo torre ruotata con il fronte verso l'interno dell'angolo (45°).
+- [ ] Porte delle torri d'angolo per le altre forme (tonde, a D): da definire.
+- [x] Rimuovi foresta rispetta Fast build (istantaneo) e Free build (senza salari) del menu DEV.
+- [x] Cutaway piano per piano: i merli (e caditoie, tetto interno, braciere) spariscono quando il piano in vista non è l'ultimo.
 ## 2026-11-16 — UI-ALERTS-01 · Avvisi in gioco e diario degli eventi
 
 **IMPLEMENTATO SU BRANCH `feature/alert-feed`, NON MERGE.** Dettagli in [STATUS](STATUS.md).

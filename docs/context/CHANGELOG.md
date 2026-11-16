@@ -1,5 +1,14 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-15 — Microfix: fedeli alla messa nel cutaway della chiesa
+
+- Aggiunti i popolani seduti sui banchi della chiesa durante la messa domenicale (6:00–12:00); test in qa/staff-people-regression.cjs. Roadmap e decisioni invariate.
+- 16/11: porta verso un muro H1 con ballatoio interno fino alla scala a pioli; test in qa/cutaway-furniture-regression.cjs.
+- 16/11: P1 delle torri in pietra a 2,10, a filo del camminamento delle mura; piani superiori ridistribuiti; soglia della porta del cammino di ronda sul pavimento del P1 (niente glitch visto da dentro). Test in qa/cutaway-floors-regression.cjs; audit Lab da CI.
+- 16/11: la finestra cede il posto alla porta del cammino di ronda sulla stessa faccia; World3D si aggiorna al cambio del mastio. Test in qa/gate-tower-entrance-regression.cjs.
+- 16/11: torre quadra d'angolo senza porta al P0 (salvo rotazione a 45° verso l'interno); test in qa/gate-tower-entrance-regression.cjs.
+- Rimuovi foresta usa i bypass DEV Fast build e Free build; versioni cache degli script toccati aggiornate. Test in qa/forestry-regression.cjs.
+- Il selettore ▲/▼ del cutaway ora toglie anche la cresta merlata e il braciere del tetto quando si scende sotto l'ultimo piano; test in qa/cutaway-floors-regression.cjs.
 ## 2026-11-16 — UI-ALERTS-01 · Avvisi in gioco e diario degli eventi
 
 `feature/alert-feed`: pila di avvisi in alto al centro (UI v2) con titolo, dettagli espandibili, chiusura manuale e chiusura automatica (eventi dopo 9 s, 20 s se gravi; condizioni solo dopo la risoluzione, con 4 s di tolleranza contro lo sfarfallio). Nuova sezione Gestisci › Diario degli eventi con filtri per gravità e categoria, persistita per seme nel browser. Moduli `src/ui/alerts.js` (logica pura) e `src/ui/alert-watchers.js`; test `qa/ui-alerts-regression.mjs` e workflow `UI alerts regression`. Gli avvisi sono collegati ai messaggi (messaggero/colombo in arrivo, lettera in attesa con «Leggi il messaggio», risposta accettata/rifiutata, stati delle carovane). Fix: il messaggero a cavallo si ferma fuori, davanti alla porta del Mastio (o ai piedi della scala dell'ingresso rialzato), invece di entrare nella sala comune; i salvataggi vecchi vengono spostati sulla soglia. ROADMAP e DECISIONS invariate: nessun contratto di gioco cambiato, la UI legge solo lo stato.

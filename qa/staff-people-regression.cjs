@@ -82,6 +82,27 @@ const C3=window.ConquerCivic3D,CP=window.ConquerCourtPeople,W=window.ConquerWard
   console.log('PASS civic interiors: priest, innkeeper, the watch and collectors of the Bargello, the Balivo judges');
 }
 
+// ---------- Sunday Mass: the faithful on the pews
+{
+  const b=(L,floor=0)=>({id:'church'+L+'@'+floor,type:'church',x:0,y:0,angle:0,civicLevel:L,cutawayFloor:floor});
+  for(const L of [1,2,3]){
+    const m=C3.massSlots(b(L));
+    assert.ok(m.length>=6,'church L'+L+': the faithful fill the pews ('+m.length+')');
+    assert.ok(m.every(a=>a.role==='public'&&a.action==='sit'),'seated public');
+    assert.equal(JSON.stringify(C3.massSlots(b(L))),JSON.stringify(m),'a fixed draw per church');
+  }
+  assert.ok(C3.massSlots(b(3)).length>C3.massSlots(b(1)).length,'a larger church, more faithful');
+  const church=b(2);
+  State.clock.day=13.4;   // Sunday (day 6 of the week), 9:36
+  assert.equal(CP.massInSession(),true,'Sunday morning: Mass');
+  assert.equal(CP.slots(church).length,1+C3.massSlots(church).length,'the priest and the faithful');
+  State.clock.day=13.6;assert.equal(CP.massInSession(),false,'Sunday afternoon: no Mass');
+  State.clock.day=12.4;assert.equal(CP.massInSession(),false,'Saturday: no Mass');
+  assert.equal(CP.slots(church).length,1,'only the priest on other days');
+  State.clock.day=10.5;
+  console.log('PASS Sunday Mass: the faithful sit on the pews of the church cutaway');
+}
+
 // ---------- forest clearings
 {
   const fo=src('settlement-forestry.js');

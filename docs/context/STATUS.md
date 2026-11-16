@@ -1,5 +1,41 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-16 — Microfix: pianerottolo interno per la porta del muro H1
+
+- Branch fix/microfix. Una porta del cammino di ronda che si apre fra due pavimenti (muro H1, camminamento a 1,15, in una torre con P1 a 2,10) ha all'interno un ballatoio di legno alla quota della soglia, sui montanti, che corre lungo la parete fino all'angolo della scala a pioli della stanza (girando l'angolo se la scala è sulla parete accanto); senza scala nella stanza (torre L1) una scaletta propria. ConquerCutawayFurniture.landingSpecs / landingsWorld in settlement-cutaway-furniture.js, usati da 2.5D e WebGL. Le porte delle mura H2 poggiano sul P1 e non ne hanno.
+- PASS cutaway-furniture (nuovo caso: ballatoio alla soglia, raggiunge la scala, nessuno con muro H2) e 144 regressioni torri/cutaway/porte/mura; verificato nel browser sulle quattro rotazioni della camera (il ballatoio arriva a 0,1 dalla scala) e a vista. Torri tonde: ballatoio corto con scaletta propria. CI da eseguire.
+
+### 2026-11-16 — Microfix: P1 delle torri in pietra al livello del camminamento
+
+- Branch fix/microfix. Il P1 delle torri in pietra di livello 2+ sta ora a 2,10 (sommità delle mura H2, CURTAIN_WALK_Z) invece che a h/livello (1,58–1,90): la porta del cammino di ronda (2,08) si apre sul pavimento del piano. I piani superiori si dividono in parti uguali l'altezza restante (stanze di almeno 1,1). Una sola fonte (towerUpperFloorZ in settlement-castle.js) per cutaway, finestre, feritoie e posti degli arcieri (towerFloorZ); le porte affiancate seguono la torre come prima. Mura invariate; torri di legno invariate. La soglia della porta del cammino di ronda si aggancia al pavimento del piano se è entro 0,12 (towerDoorContactSpec): vista da dentro l'apertura non è più tagliata dal solaio (prima partiva 1 cm sotto le tavole).
+- PASS cutaway-floors (nuovo blocco) e 148 regressioni su torri/cutaway/porte/mura; verificato a vista nel browser su una torre quadra W2 L2 fra due mura: pavimento del P1 a filo del camminamento. Audit del Lab (qa/asset-audit.mjs) non eseguibile in locale (manca Playwright): da verificare in CI e, se cambia, aggiornare la baseline.
+
+### 2026-11-16 — Microfix: torre fra due mura mostra entrambe le porte del cammino di ronda
+
+- Branch fix/microfix. La finestra di una faccia cede il posto a una porta del cammino di ronda (o del tetto di una sottotorre) che si apre sulla stessa faccia alla stessa altezza (towerWindowGivesWayToDoor, esteso dall'ingresso rialzato del mastio): prima la finestra della faccia interna copriva la porta e la torre fra due mura ne mostrava una sola. Il mastio resta senza porte sulle mura.
+- La chiave delle strutture in World3D include isMastio: promuovere o togliere il mastio ricostruisce porte, finestre e drappo (prima restavano quelli vecchi).
+- PASS gate-tower-entrance (nuovi casi), keep-entrance, mastio-selection-zoom, cutaway-floors, house3d e le regressioni torri; verificato a vista nel browser su una torre quadra d'angolo non mastio: due porte, nessuna finestra sopra. CI da eseguire.
+
+### 2026-11-16 — Microfix: torre quadra d'angolo senza porta al piano terra
+
+- Branch fix/microfix. Una torre quadra indipendente con due mura agganciate ad angolo (meno di 150° fra le loro direzioni) non ha più la porta del P0, perché le mura le chiudono lo spazio d'accesso; la porta resta se la torre è ruotata così che il fronte (la sua direzione) guardi dentro l'angolo fra le mura (entro 30° dalla bisettrice), cioè il caso a 45°. Senza porta anche se un muro si aggancia nella parte centrale della faccia della porta (un aggancio sugli spigoli di quella faccia, come nella torre a 45°, la lascia libera). Restano le porte del cammino di ronda e l'ingresso rialzato del mastio; le torri tonde, a D, semitorri e quelle agganciate a una porta non cambiano. Niente strada di servizio verso una torre d'angolo senza porta (settlement-world.js).
+- PASS gate-tower-entrance (nuovi casi d'angolo), keep-entrance, cistern, cutaway-furniture, oriented-towers, subtower-junctions, wall-stairs. Verificato a vista nel browser su una torre quadra W2 L2 d'angolo: allineata alle mura solo le due porte del cammino di ronda; ruotata a 45° con il fronte verso il cortile anche la porta al P0. CI da eseguire.
+
+### 2026-11-15 — Microfix: Rimuovi foresta usa i bypass DEV
+
+- Branch fix/microfix. Fast build DEV completa il job L1 di rimozione foresta al momento del clic (alberi tolti, legname accreditato, nessuna squadra né villaggio fondato richiesti) e, quando viene acceso, chiude anche i job in coda (ConquerForestry.applyDev). Free build DEV fa lavorare la squadra senza salari. Il terraforming (Sloped/Walled/Flat) era già istantaneo e gratuito: nessuna modifica.
+- Versioni ?v= in index.html aggiornate (-mfix1) per tutti gli script toccati dai microfix, così il browser non usa copie in cache.
+- PASS forestry (9, tre nuovi casi DEV) e regressioni cutaway/persone; verificato nel browser col clic reale: foresta rimossa subito con il messaggio «Fast build DEV: foresta rimossa». CI da eseguire.
+
+### 2026-11-15 — Microfix: fedeli alla messa nel cutaway della chiesa
+
+- Branch fix/microfix. La domenica 6:00–12:00, senza allarme, il cutaway del piano terra della chiesa selezionata mostra i popolani seduti sui banchi della navata (circa 3 posti su 4, estrazione fissa per chiesa), oltre al prete all'altare. Prima c'era solo il prete. Figure decorative: nessun legame con residenti, offerte o capienza.
+- PASS staff-people (nuovo blocco Sunday Mass) e court-people; verificato a vista in gioco su una chiesa L2. CI da eseguire.
+
+### 2026-11-15 — Microfix: il selettore di piano del cutaway toglie i merli
+
+- Branch fix/microfix. Con il cutaway piano per piano su un piano sotto l'ultimo, torri, porte e sottotorri non disegnano più merli, caditoie, tetto interno e braciere del tetto (cutawayCrestHidden in settlement-castle.js), sia nel percorso 2.5D (drawCastleBattlements) sia in quello WebGL (ConquerCastle3D.addPieces); la chiave della mesh castello di World3D cambia quando la cresta sparisce, così la mesh si ricostruisce.
+- PASS cutaway-floors (nuove asserzioni) e 49 regressioni castello/cutaway; verificato a vista nel browser su una torre quadra W2 a 3 piani: in P2 merli e braciere, in P1 e P0 nessuno dei due. Le due suite Playwright non sono eseguibili in locale. CI da eseguire.
 ## 2026-11-16 — Avvisi in gioco e diario degli eventi (branch `feature/alert-feed`)
 
 - **CODICE SUL BRANCH, NON MERGE:**

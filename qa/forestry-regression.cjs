@@ -15,8 +15,8 @@ function inside(p,poly){
   return yes;
 }
 const rect=(x,y,r)=>[{x:x-r,y:y-r},{x:x+r,y:y-r},{x:x+r,y:y+r},{x:x-r,y:y+r}];
-function harness({workers=2,reserved=0,wealth=100}={}){
-  const State={village:{founded:true,wellId:'well'},clock:{day:0},
+function harness({workers=2,reserved=0,wealth=100,devBuild={},founded=true}={}){
+  const State={village:{founded,wellId:'well'},clock:{day:0},devBuild,
     structures:[],resources:{wood:0},relief:{hills:[],terraforming:[]},
     environment:[{id:'wood-1',type:'forest',points:rect(100,100,7)}]};
   const side={paid:0,credited:0,credits:[],saved:0,invalidated:0};
@@ -39,6 +39,7 @@ function harness({workers=2,reserved=0,wealth=100}={}){
     clearForestLayoutCache:()=>side.invalidated++,
     invalidateSceneCache:()=>side.invalidated++,
     markDirty:()=>side.invalidated++,
+    devBuildMode:key=>State.devBuild?.[key]===true,
     console,Math,Number,Object,Array});
   vm.runInContext(forestSource,ctx,{filename:'settlement-forestry.js'});
   return{api:ctx.window.ConquerForestry,State,side,woodAt};
@@ -114,6 +115,37 @@ test('persisted jobs resume from stored progress and overlapping queued areas ar
   h.api.tick(1,2);
   assert.ok(h.api.jobs()[0].construction.workDone>original);
   assert.equal(h.side.credited,0);
+});
+test('DEV Fast build clears at once, even before the village is founded',()=>{
+  const h=harness({devBuild:{fastBuild:true},founded:false,workers:0});
+  const quote=h.api.preview({x:100,y:100},{radius:2});
+  assert.equal(quote.ok,true,quote.reason);
+  const r=h.api.start(quote);
+  assert.equal(r.ok,true);
+  const c=h.api.jobs()[0].construction;
+  assert.equal(c.workDone,c.workRequired,'done on placement');
+  assert.equal(h.side.credited,quote.wood,'the wood is credited');
+  assert.equal(h.side.paid,0,'no wage-backed work');
+  assert.equal(h.woodAt(h.State.environment[0],{x:100,y:100}),false,'the trees are gone');
+  h.api.tick(0,5);assert.equal(h.side.credits.length,1,'credited once');
+  assert.match(read('src/settlement-app-calendar-ui.js'),/ConquerForestry\?\.applyDev\?\.\(\)/,'switching Fast build on clears queued jobs');
+});
+test('DEV Fast build switched on later finishes the queued clearings',()=>{
+  const h=harness();
+  h.api.start(h.api.preview({x:100,y:100},{radius:2}));
+  h.State.devBuild={fastBuild:true};
+  assert.equal(h.api.applyDev(),1);
+  assert.equal(h.side.credits.length,1);
+});
+test('DEV Free build pays no wages, the crew still works',()=>{
+  const h=harness({devBuild:{freeBuild:true},wealth:0});
+  const quote=h.api.preview({x:100,y:100},{radius:2});
+  h.api.start(quote);
+  h.api.tick(0,1);
+  assert.ok(h.api.jobs()[0].construction.workDone>0,'unpaid but working');
+  assert.equal(h.side.paid,0);
+  h.api.tick(1,5);
+  assert.equal(h.side.credited,quote.wood);
 });
 test('managed L1 Job Manager staffs forest clearance through the builder roster',()=>{
   // Real economy + forestry runtime: the managed roster must count open clearings.

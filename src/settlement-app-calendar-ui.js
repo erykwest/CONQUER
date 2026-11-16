@@ -213,7 +213,8 @@ function setDevBuildMode(key){
     applyConstructionDev(s);if(!underConstruction(s))completed.push(s);
   }
   if(completed.length)runSettlementMaintenance('completion',completed);
-  if(completed.length||devBuildMode('freeBuild'))markDirty(false,true);
+  const cleared=window.ConquerForestry?.applyDev?.()||0;   // queued forest clearings too
+  if(completed.length||cleared||devBuildMode('freeBuild'))markDirty(false,true);
   syncDevButtons();renderFunctionPanel();renderUI();draw();
 }
 function ensureDevControls(){
