@@ -516,6 +516,8 @@
   // cutaway structures to the canvas.
   function ownsBrazier(src){
     const s=src?.structureId&&State.structures.find(o=>o.id===src.structureId);
+    // The open palisade tower carries its brazier in its Blender model (settlement-wood3d.js).
+    if(s&&isWoodTower(s))return !!window.ConquerWood3D?.handles?.(s);
     if(!s||!castleVolume(s))return false;
     if(window.ConquerWorld3D?.active?.())return true;
     return active()&&!structureCutaway(s);

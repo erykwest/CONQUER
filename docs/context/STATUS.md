@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-16 — Finiture delle torri in 3D: bandiere, torce, braciere della palizzata (`fix/brazier-3d`)
+
+- Nuovo settlement-tower-fittings.js (sorgente dinamica di World3D): supporti 3D delle torce ai lati della porta al P0 delle torri in pietra (piastra, manico, coppa sotto la fiamma, come le torce delle porte) e bandiere dei tetti a punta e delle bertesche a punta come quelle delle navi (asta, puntale dorato, drappo 10×6 con lo stemma del regno via ConquerHeraldryShapes, che sventola sottovento con windHeading). Punti d'attacco condivisi con il 2.5D (towerFlagAnchors); con World3D attivo drawTowerFlags e le torce 2.5D delle torri non disegnano più.
+- Alone del fuoco: il billboard del bagliore aveva una sola profondità (quella della fiamma) e la facciata, più vicina salendo in isometrica, lo tagliava piatto sopra la torcia; lo shader fireLight ora sposta la profondità verso la camera come un piano verticale per la fiamma, più un quarto della dimensione.
+- Torre a palizzata aperta: il braciere è nel modello Blender (build_wood_fort.py `brazier`: tre gambe, vasca ottagonale di ferro, braci; colore `ember` aggiunto in coda alla tavolozza), rigenerato wood-fort-models.js (cambia solo palisadeTower_open); il blocco 2.5D non viene più disegnato dove ConquerWood3D disegna il modello.
+- PASS nuova qa/tower-fittings-regression.cjs (5) e 143 regressioni legno/torri/castello/fuoco/catalogo; verificato nel browser in World3D: bandiera 3D con lo stemma sul tetto a punta, torce con supporti e alone intero, braciere Blender sul ballatoio. Audit del Lab (fogli della torre a palizzata) da CI.
+
 ### 2026-11-16 — Braciere delle torri e delle porte in 3D (`fix/brazier-3d`)
 
 - Il corpo del braciere sul tetto di torri e porte merlate in pietra è ora un pezzo della mesh del castello (ConquerCastle3D addPieces, tavolozza PAL.brazier), con test di profondità e divisione vicino/lontano come i merli. Prima era un'estrusione 2.5D dipinta dopo il passaggio frontale anche in World3D, quindi mai coperta da muri, merli o altre torri. Una sola geometria (brazierFixtureBox in settlement-castle-structures.js) per mesh e canvas; il canvas lo dipinge solo dove la mesh non lo possiede (ConquerCastle3D.ownsBrazier: World3D sempre; corpo WebGL 2.5D salvo le strutture in cutaway; renderer canvas puro sempre). Le sorgenti del braciere portano structureId. Fiamma e bagliore invariati; il braciere della torre a palizzata di legno resta 2.5D.

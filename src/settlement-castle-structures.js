@@ -1305,16 +1305,22 @@ function drawGateRoofs(){
   for(const s of gates)withStructureVisualMaterial(s,()=>drawGateRoof(s));
 }
 function midpoint2(a,b){return{x:(a.x+b.x)/2,y:(a.y+b.y)/2}}
-function drawQuarteredTowerFlag(tower){
-  if(!tower||isWoodTower(tower)||underConstruction(tower)||tower.type!=='tower')return;
+// Where a stone tower flies its flags: {at, z (above the tower's ground), key, size}. A roof with a
+// ridge flies one at each end of it, a pyramid one on its apex; a smaller pennant tops every pitched
+// bartizan. Shared by the 2.5D painter and the 3D flags (settlement-tower-fittings.js).
+function towerFlagAnchors(tower){
+  if(!tower||tower.type!=='tower'||isWoodTower(tower)||underConstruction(tower))return[];
+  const out=[];
   if(towerRoofStyle(tower)==='pitched'){
-    // A roof with a ridge flies a flag at each end of it, a pyramid one on its apex.
     const g=towerRoofShape(tower)!=='pyramid'&&squareTowerRoofGeometry(tower);
-    if(g){drawQuarteredFlagAt(g.ridgeA,g.ridgeH,tower.id+'-flag');drawQuarteredFlagAt(g.ridgeB,g.ridgeH,tower.id+'-flag-2')}
-    else drawQuarteredFlagAt({x:tower.x,y:tower.y},towerApexFlagZ(tower),tower.id+'-flag');
+    if(g){out.push({at:g.ridgeA,z:g.ridgeH,key:tower.id+'-flag',size:1},{at:g.ridgeB,z:g.ridgeH,key:tower.id+'-flag-2',size:1})}
+    else out.push({at:{x:tower.x,y:tower.y},z:towerApexFlagZ(tower),key:tower.id+'-flag',size:1});
   }
-  // A smaller pennant on the spire of every pitched bartizan.
-  towerBartizans(tower).forEach((b,i)=>{if(b.style==='pitched')drawQuarteredFlagAt(b.center,b.apexZ,tower.id+'-bartizan-'+i,.7)});
+  towerBartizans(tower).forEach((b,i)=>{if(b.style==='pitched')out.push({at:b.center,z:b.apexZ,key:tower.id+'-bartizan-'+i,size:.7})});
+  return out;
+}
+function drawQuarteredTowerFlag(tower){
+  for(const f of towerFlagAnchors(tower))drawQuarteredFlagAt(f.at,f.z,f.key,f.size);
 }
 function drawQuarteredFlagAt(at,z,seedKey,size=1){
   const scale=clamp(State.view.scale,.55,1.45)*size,base=w2s(at,z);
@@ -1346,6 +1352,7 @@ function drawQuarteredFlagAt(at,z,seedKey,size=1){
   ctx.restore();
 }
 function drawTowerFlags(){
+  if(window.ConquerTowerFittings?.ownsFlags?.())return;   // World3D: waving flag meshes
   const towers=State.structures
     .filter(s=>s.type==='tower'&&!isWoodTower(s)&&!underConstruction(s)&&(towerRoofStyle(s)==='pitched'||towerBartizan(s)==='pitched'))
     .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
@@ -1384,7 +1391,7 @@ function battlementBrazierSources(){
     // A floor-by-floor cutaway below the top takes the roof brazier off with the crest.
     if(underConstruction(s)||(typeof cutawayCrestHidden==='function'&&cutawayCrestHidden(s)))continue;
     if(s.type==='tower'&&isWoodTower(s)&&woodTowerStyle(s)==='palisadeTower'&&woodTowerRoof(s)==='open'){
-      out.push({kind:'brazier',id:s.id+':wood-brazier',p:woodTowerLocal(s,.28,.24),z:1.90,groundZ:placementGroundZ(s)});
+      out.push({kind:'brazier',id:s.id+':wood-brazier',structureId:s.id,p:woodTowerLocal(s,.28,.24),z:1.90,groundZ:placementGroundZ(s)});
     }else if(towerHasBrazier(s)){
       const hash=peasantHash(s.id+'-brazier'),a=((hash%360)/180)*Math.PI;
       const r=s.shape==='round'?Math.max(.12,s.r*.34):Math.max(.12,(s.size||1)*.26);
@@ -1429,13 +1436,14 @@ function drawTorchFixture(src){
 const BRAZIER_COLORS=Object.freeze({top:'#5d4b3d',sideA:'#39312b',sideB:'#493d34',stroke:'#7b654f'});
 function brazierFixtureBox(src){return{pts:rectWorldPoints(src.p.x,src.p.y,.20,.20,0),z0:src.z-.08,z1:src.z+.03,groundZ:src.groundZ}}
 // Stone tower and gate braziers on the castle roofs, by structure (the timber palisade tower keeps its own).
-function structureBrazierBoxes(s){return battlementBrazierSources().filter(src=>src.structureId===s.id).map(brazierFixtureBox)}
+function structureBrazierBoxes(s){return battlementBrazierSources().filter(src=>src.structureId===s.id&&!src.id.endsWith(':wood-brazier')).map(brazierFixtureBox)}
 function drawBrazierFixture(src){
   const b=brazierFixtureBox(src);
   withProjectionGroundZ(b.groundZ,()=>extrudePolygonAt(b.pts,b.z0,b.z1,BRAZIER_COLORS));
 }
 function drawCastleFireFixtures(){
-  for(const src of towerTorchSources())drawTorchFixture(src);
+  // Tower door torches have mesh brackets in the 3D world too (settlement-tower-fittings.js).
+  if(!window.ConquerWorld3D?.active?.())for(const src of towerTorchSources())drawTorchFixture(src);
   // Gate torches have mesh brackets in the 3D world.
   if(!window.ConquerWorld3D?.active?.())for(const src of window.ConquerGates?.torchSources()||[])drawTorchFixture(src);
   // Braziers the castle mesh already builds in 3D (depth-tested) are not painted again on top.

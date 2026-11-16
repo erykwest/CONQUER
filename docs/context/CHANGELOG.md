@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-16 — Bandiere, torce e braciere della palizzata in 3D
+
+- Bandiere delle torri come quelle delle navi, supporti 3D delle torce delle torri, alone del fuoco non più tagliato, braciere della torre a palizzata dal modello Blender. Test in qa/tower-fittings-regression.cjs. Roadmap e decisioni invariate.
+
 ### 2026-11-16 — Braciere delle torri in 3D
 
 - Il corpo del braciere su torri e porte in pietra entra nella mesh del castello con test di profondità; il canvas lo dipinge solo dove la mesh non c'è. Test in qa/tower-inner-roof-regression.cjs. Roadmap e decisioni invariate.
