@@ -54,6 +54,7 @@ These numbers were measured before adding canonical mountain-ridge cones; a rech
 - This is a regional **3D visual layer**, not a conversion of simulation topology to 3D.
 - Forest tree graphics are billboard sprites, not volumetric 3D meshes. Overlays do not yet have per-tree occlusion against mountain polygons.
 - The renderer does not yet render settlements, army agents, roads, ports, nation colors, or player-selection picking in 3D. Keep the 2D source map for these functions.
+- The 20x subcells deform the **interior tessellation**, not the canonical outer perimeter of a territory or coastline. A future visually displaced coastline must retain an inverse mapping to the original pick/collision polygon.
 - Relief height here is cartographic and procedural, not sourced from elevation data in the Builder. Matching persistent hills and combat terrain across scales requires a shared world elevation field.
 - At 20x the startup CPU generation is material (~1-2s synthetic). Cache meshes by seed/terrain revision, add progressive detail by zoom and frustum culling, batch sprites into GPU instancing, and use a web worker/OffscreenCanvas if this becomes production.
 - Do not run the original global Voronoi routine on 20x gameplay cells. Preserve original territory IDs, hydrology, adjacency, actions, pathfinding, saves, and transition to the local builder.
