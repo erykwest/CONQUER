@@ -2,8 +2,8 @@
 
 ### 2026-11-16 — Microfix: torre quadra d'angolo senza porta al piano terra
 
-- Branch fix/microfix. Una torre quadra indipendente con due mura agganciate ad angolo (meno di 150° fra le loro direzioni) non ha più la porta del P0, perché le mura le chiudono lo spazio d'accesso; la porta resta se la torre è ruotata così che il fronte (la sua direzione) guardi dentro l'angolo fra le mura (entro 30° dalla bisettrice), cioè il caso a 45°. Senza porta anche se un muro si aggancia sulla faccia della porta. Restano le porte del cammino di ronda e l'ingresso rialzato del mastio; le torri tonde, a D, semitorri e quelle agganciate a una porta non cambiano. Niente strada di servizio verso una torre d'angolo senza porta (settlement-world.js).
-- PASS gate-tower-entrance (nuovi casi d'angolo), keep-entrance, cistern, cutaway-furniture, oriented-towers, subtower-junctions, wall-stairs. Verifica a vista in gioco non completata (pannello del browser nascosto). CI da eseguire.
+- Branch fix/microfix. Una torre quadra indipendente con due mura agganciate ad angolo (meno di 150° fra le loro direzioni) non ha più la porta del P0, perché le mura le chiudono lo spazio d'accesso; la porta resta se la torre è ruotata così che il fronte (la sua direzione) guardi dentro l'angolo fra le mura (entro 30° dalla bisettrice), cioè il caso a 45°. Senza porta anche se un muro si aggancia nella parte centrale della faccia della porta (un aggancio sugli spigoli di quella faccia, come nella torre a 45°, la lascia libera). Restano le porte del cammino di ronda e l'ingresso rialzato del mastio; le torri tonde, a D, semitorri e quelle agganciate a una porta non cambiano. Niente strada di servizio verso una torre d'angolo senza porta (settlement-world.js).
+- PASS gate-tower-entrance (nuovi casi d'angolo), keep-entrance, cistern, cutaway-furniture, oriented-towers, subtower-junctions, wall-stairs. Verificato a vista nel browser su una torre quadra W2 L2 d'angolo: allineata alle mura solo le due porte del cammino di ronda; ruotata a 45° con il fronte verso il cortile anche la porta al P0. CI da eseguire.
 
 ### 2026-11-15 — Microfix: Rimuovi foresta usa i bypass DEV
 

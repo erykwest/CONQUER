@@ -72,6 +72,12 @@ console.log('PASS towers hooked to a gate enter from the gate rear, interior sid
   for(const angle of [0,Math.PI/2,Math.PI,-Math.PI/2])
     assert.equal(front(corner(angle)).length,0,'aligned corner tower (angle '+angle.toFixed(2)+'): no ground door');
   assert.equal(front(corner(Math.PI/4)).length,1,'turned 45° facing the courtyard: the door stays');
+  {
+    // Turned 45° with the walls snapped to the two corners of the front face (on the curtain lines).
+    const t={id:'c',type:'tower',shape:'square',size:2,x:0,y:0,angle:Math.PI/4},v=Math.SQRT2;
+    State.structures=[t,{id:'w1',type:'wall',a:{x:v,y:0},b:{x:10,y:0},aSnap:'c'},{id:'w2',type:'wall',a:{x:0,y:10},b:{x:0,y:v},bSnap:'c'}];
+    assert.equal(front(t).length,1,'turned 45°, walls on the corners of the front face: the door stays');
+  }
   assert.equal(front(corner(Math.PI/4+Math.PI)).length,0,'turned 45° facing the field: no door');
   // Walls in line (a tower along a curtain): the door is not touched.
   const t={id:'m',type:'tower',shape:'square',size:2,x:0,y:0,angle:Math.PI/2};

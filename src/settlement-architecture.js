@@ -251,7 +251,13 @@ function squareTowerGroundDoorBlocked(tower){
   if(!tower||tower.type!=='tower'||tower.parentTowerId||tower.shape==='round'||
     (typeof isOrientedTower==='function'&&isOrientedTower(tower))||towerGateParent(tower))return false;
   const links=towerWallLinks(tower);if(!links.length)return false;
-  if(links.some(l=>closestFootprintEdge(tower,l.contact)?.index===1))return true;   // a wall on the door face
+  // A wall plugged into the middle of the door face (fp[1]-fp[2]) buries the door; one at a
+  // corner of that face (a tower turned 45° on a wall corner) leaves it free.
+  const fp=footprintPoints(tower);
+  if(fp.length>=4&&links.some(l=>{
+    const a=fp[1],b=fp[2],dx=b.x-a.x,dy=b.y-a.y,L2=dx*dx+dy*dy||1,t=((l.contact.x-a.x)*dx+(l.contact.y-a.y)*dy)/L2;
+    return t>.15&&t<.85&&Math.hypot(a.x+dx*t-l.contact.x,a.y+dy*t-l.contact.y)<.25;
+  }))return true;
   let corner=null;
   for(let i=0;i<links.length;i++)for(let j=i+1;j<links.length;j++){
     const p=links[i].dir,q=links[j].dir,ang=Math.acos(clamp(p.x*q.x+p.y*q.y,-1,1));
