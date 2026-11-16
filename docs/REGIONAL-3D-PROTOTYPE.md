@@ -1,63 +1,54 @@
-# CONQUER — 3D regional map visual experiment
+# CONQUER — Regional map 3D: global microcell-first experiment
 
-**Branch:** 3dregionmap (from main, 16 November 2026)  
-**Preview:** lab/3dregionmap.html  
-**Status:** runnable WebGL2 prototype + synthetic geometry benchmark; visual browser validation on representative GPUs remains pending. Do not merge as production renderer.
+**Branch:** \`3dregionmap\` · **Viewer:** \`lab/3dregionmap.html\`  
+**Status:** working WebGL2 prototype, source-linked World Lab 2D, synthetic geometry/input regressions. Do not merge to production without real-browser performance/visual review.
 
-## Hypothesis
+## Design reference
 
-The canonical World Lab deliberately uses one Voronoi cell per territory. In CONQUER_WORLD_LAB.html, buildVoronoi() clips each site against every other site (quadratic). At the default 30 x 21 territories there are 630 original sites. Replacing each with 20 gameplay sites would increase them to 12,600 and raise pairwise site comparisons by approximately 400x; worse, it would change adjacency, rivers, selection, battle and save semantics. This is deliberately NOT implemented.
+Inspired conceptually by [Red Blob Games' Mapgen4](https://github.com/redblobgames/mapgen4): build a dense dual/Voronoi-like mesh first and use that foundation to form terrain, coastlines and outlines. Unlike Mapgen4, this experiment uses its own simple spatially local Voronoi clipper over a jittered triangular lattice. No code or external packages have been copied or vendored from Mapgen4.
 
-The experiment keeps the exact original regional polygons and builds 1/8/20/40 *visual-only* clipped Voronoi polygons **independently inside each territory**, with a single Lloyd relaxation pass. As a result, there are 630 independent local tessellations, each at most 40 sites, not one global N=12,600 tessellation. Polygon areas add up to the original territory areas and the source game remains unchanged.
+The original 2D World Lab is still authoritative: 30 × 21 = 630 gameplay territories by default, one canonical Voronoi polygon per territory; game simulation, roads, rivers, adiacencies, selection and save schemas remain untouched. In particular we do **not** run the original quadratic global \`buildVoronoi\` on 12,600 gameplay cells.
 
-## What has been implemented
+## Updated procedural pipeline
 
-- Read-only CONQUER_WORLD_LAB.html bridge with revision counter, original cell polygons, biomes, river edges, impassable mountain chain edges. The existing generation, simulation, UI, and persistence are untouched (apart from a link and the bridge).
-- Side-by-side viewer with the original editable 2D World Lab in an iframe and a 3D WebGL2 landscape at right.
-- 3D terrain mesh per visual subcell, smooth heights within each original polygon, independent low-poly mountain peaks and actual barrier ridges using the original mountain-edge definitions. The mesh stays static for zoom/orbit.
-- Reuse of all seven Builder SVG tree silhouettes, transformed into cartographic green-canopy screen-aligned billboards. Source SVG files are not modified; their existing 3D Builder rendering model also uses billboards.
-- Water at a lower elevation, optional displayed territory boundaries, original manual + auto-generated river-edge overlays, adjustable camera yaw, pitch and zoom.
-- A/B detail selector at 1, 8, 20 and 40 visual subcells/territory, local CPU mesh-generation time, GPU upload CPU time and CPU draw submission time. The A/B 1x/20x benchmark can be rerun for the current source map.
+1. **Generate the fine mesh first:** approximately \`630 × detail\` global microcell sites on a triangular, deterministically jittered lattice, for detail 8/20/40. For each site, clip against its two-ring neighbourhood, never against every site in the world. Generation is linear in the target site count with a small bounded neighbour set.
+2. **Group into territories second:** use the canonical 2D polygons only to assign each fine site's owner, sampling a continuous, seeded 2D warp field before looking up the owner. Warp strength is adjustable from 0 to 100%. The resulting territory aggregates have irregular borders and coastlines made of actual shared microcell edges.
+3. **Derive visual outlines:** a paired microcell edge with different territory owners becomes a 3D-view border; land/water owner changes become coastlines. Borders no longer trace the canonical coarse polygons in the 3D preview.
+4. **Use actual colours from 2D:** \`ConquerRegion3DSnapshot().fills\` supplies the original World Lab's \`macroFill(macroId)\` output for each cell, including neutral and political colour treatment. The 3D terrain's top faces use those RGB values without applying the old alternative palette or a colour-correction curve. Hill/ridge side faces still receive shading.
+5. **Populate regional vegetation:** reuse the original seven Builder forest SVG silhouettes exclusively in forest-owned fine aggregates, with 5× the old prototype sprite size and at least 10× the number (30–70 trees per forest macro). In swamp aggregates, use billboard sprites baked from the Builder's existing Blender \`reedBed\` and \`reedClump\` scatter meshes, with 10–30 reed beds per swamp macro and the same 5× regional size. Both are seed-deterministic.
+6. **Present as fixed Builder-style isometry:** middle mouse (mouse3) drag pans, Shift+middle mouse drag rotates yaw around the screen-centre target, wheel zooms around the cursor. No change to camera pitch or height.
 
-## Preliminary reproducible synthetic benchmark
+The \`1× Originale\` option deliberately uses original coarse macrocell geometry to support A/B comparison. At 8×/20×/40× the global microcell-first pipeline is used.
 
-Environment: V8 isolated CPU evaluation, synthetic 30 x 21 grid of 630 convex territories, 1943 seed, the same biome distribution rule across runs. **Not** a frame-rate measurement or a browser/GPU certification.
+## Synthetic CPU benchmark
 
-| Visual detail | Visual polygons | Approx triangles | Vertex buffer | CPU generation |
-|---|---:|---:|---:|---:|
-| 1x | 630 | 3,960 | 0.27 MiB | 36 ms |
-| 8x | 5,040 | 25,924 | 1.78 MiB | 353 ms |
-| 20x | 12,600 | 67,506 | 4.64 MiB | 1,461 ms |
-| 40x | 25,200 | 138,860 | 9.53 MiB | 4,836 ms |
+630 adjacent rectangular canonical territories, 30 × 21, 128 × 110 world units each, seed 1943, with representative sea/forest/hill/swamp/plain types. Numbers are for the latest pipeline, not the previous territory-local clipping algorithm. CPU timing varies by machine.
 
-These numbers were measured before adding canonical mountain-ridge cones; a recheck with an example barrier produced 67,534 triangles, 4.64 MiB and about 1,857 ms at 20x. CPU timing depends strongly on the JS runtime, machine, source polygon complexity and visual density.
+| Detail | Global visual subcells | Mesh triangles | Vertex buffer | CPU generation | Trees | Reeds |
+|---|---:|---:|---:|---:|---:|---:|
+| 1× canonical | 630 | 3,960 | 0.27 MiB | ~48 ms | 5,545 | 516 |
+| 8× global | 5,183 | 32,234 | 2.21 MiB | ~602 ms | 5,545 | 516 |
+| 20× global | 12,903 | 78,272 | 5.37 MiB | ~1,489 ms | 5,545 | 516 |
+| 40× global | 25,551 | 153,987 | 10.57 MiB | ~2,876 ms | 5,545 | 516 |
+
+Global micro Voronoi polygon areas cover the world extent to numerical tolerance. Microcell count is intentionally approximate, because the global site grid is sized by total world area, not split into exactly 20 sites per macro. The deforming owner field does not change the finite rectangular map bounds.
 
 ## Verification
 
-- Script syntax: checked for all new .js/.cjs files.
-- Local tessellation: area preservation tested on rectangular and irregular convex polygons at 1, 8, 20, and 40 sites, with zero material area error.
-- Determinism: same seed + source snapshot + detail produces the same vertices, trees and peaks.
-- Synthetic stress: 630 source territories, 12,600 visual polygons and finite vertex data.
-- Automated test checked in: node qa/regional-map3d-regression.cjs.
-- **Not yet measured:** actual rendered WebGL2 FPS, GPU time, mobile memory, browser screenshots, real-world browser load times, GPU crash recovery beyond the displayed fallback notice. The viewer will fall back to the original 2D editor if WebGL2 is unavailable; it does not itself render a Canvas-only 3D replacement.
+- \`qa/regional-map3d-regression.cjs\`: area conservation, deterministic mesh and grouping, deformable borders and coastlines, palette conversion from 2D hex/HSL, finite GPU arrays, forest-only trees and swamp-only reeds, 5×/10× scaling.
+- Script syntax and simulated renderer execution: model-based reed sprite construction, WebGL draw submission, border draw, regional forest/reed billboards, middle-mouse pan, Shift+middle yaw and wheel zoom.
+- **Not yet established:** real browser screenshots, verified WebGL FPS/GPU profiling, low-end mobile memory/thermal behaviour or full visual art-direction approval. Static server or a Vercel preview is needed for real visual review.
 
-## How to try
+## Visual limitations and future integration
 
-1. Serve the repository with a static HTTP server (for example, python -m http.server 4193 in the repo root). Do not use file:// because the iframe and Builder SVG fetches require same-origin HTTP.
-2. Open http://localhost:4193/lab/3dregionmap.html, or launch the preview from the World Lab sidebar.
-3. Generate a map in the left iframe (changing seed/terrain is supported). The right pane detects the revision change and rebuilds only the *visual* mesh.
-4. Compare 1x versus 20x and run the benchmark button. Move camera sliders: zoom and rotation are GPU uniform updates; they do not regenerate Voronoi geometry.
-5. Inspect low-end devices and GPU load before recommending any migration.
+- **This changes the preview's visual borders/coastlines, not simulation ownership.** There is no inverse mapping for clicking newly displaced edges yet. Do not migrate territory selection, pathfinding, game water barriers, saves or AI to this geometry without explicit gameplay remapping.
+- Original manual river and mountain barrier paths still reference canonical topology. They are drawn over the new organic geometry and may not perfectly follow newly deformed territory edges. A shared semantic-to-visual edge mapping is a separate task.
+- Trees and reeds are 2D billboards projected with the same fixed isometric camera as the mesh, not depth-tested volumetric tree meshes; scenery can overlap mountain faces incorrectly.
+- The original map's outer rectangular domain remains the same; the **internal** region/biome boundaries are organic. Distinct sea/land borders are derived from aggregated microcells.
+- A production renderer should cache meshes by seed/palette/warp revision, progressively LOD distant geometry, and eventually use worker/OffscreenCanvas and GPU sprite instancing rather than sorting and painting thousands of 2D billboards for every camera update.
 
-## Known limits and next steps
+## Preview
 
-- This is a regional **3D visual layer**, not a conversion of simulation topology to 3D.
-- Forest tree graphics are billboard sprites, not volumetric 3D meshes. Overlays do not yet have per-tree occlusion against mountain polygons.
-- The renderer does not yet render settlements, army agents, roads, ports, nation colors, or player-selection picking in 3D. Keep the 2D source map for these functions.
-- The 20x subcells deform the **interior tessellation**, not the canonical outer perimeter of a territory or coastline. A future visually displaced coastline must retain an inverse mapping to the original pick/collision polygon.
-- Relief height here is cartographic and procedural, not sourced from elevation data in the Builder. Matching persistent hills and combat terrain across scales requires a shared world elevation field.
-- At 20x the startup CPU generation is material (~1-2s synthetic). Cache meshes by seed/terrain revision, add progressive detail by zoom and frustum culling, batch sprites into GPU instancing, and use a web worker/OffscreenCanvas if this becomes production.
-- Do not run the original global Voronoi routine on 20x gameplay cells. Preserve original territory IDs, hydrology, adjacency, actions, pathfinding, saves, and transition to the local builder.
-- In production, consider making 8x the distant LOD, 20x only near the camera and 1x for strategic silhouettes, rather than defaulting to 20x everywhere.
+Serve the repository root over HTTP and open \`/lab/3dregionmap.html\` (do not use \`file://\`). In the left iframe, generate/edit the authoritative 2D map. The right pane detects the 2D revision, then builds its own global microcell mesh. Choose 8/20/40 detail, vary the deformation slider, and toggle tree/reed populations. The benchmark button reports CPU construction time (not GPU FPS).
 
-**Recommendation:** Technically feasible with a single visual 3D map layer on top of original Voronoi gameplay data. The current prototype establishes the data boundary and CPU scaling, but does not yet establish full visual quality or device-level performance.
+**Conclusion:** the dense-microcell-first model allows much more organic cartographic contours without changing the canonical game grid. It is a promising experimental direction, but visual and GPU-level assessment is still required.
