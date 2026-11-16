@@ -340,7 +340,7 @@
         const count=30+Math.floor(random()*41);
         for(let i=0;i<count;i++){
           const p=weightedSample(owned,random);
-          trees.push({x:p.x,y:p.y,z:elevation(p,poly,terrain,snapshot.seed),
+          trees.push({macroId:cell.macroId,x:p.x,y:p.y,z:elevation(p,poly,terrain,snapshot.seed),
                       variant:Math.floor(random()*7),size:5*(5.8+random()*4.3)});
         }
       } else if(terrain==='swamp'){
@@ -348,7 +348,7 @@
         const count=10+Math.floor(random()*21);
         for(let i=0;i<count;i++){
           const p=weightedSample(owned,random);
-          reeds.push({x:p.x,y:p.y,z:elevation(p,poly,terrain,snapshot.seed),
+          reeds.push({macroId:cell.macroId,x:p.x,y:p.y,z:elevation(p,poly,terrain,snapshot.seed),
                       variant:Math.floor(random()*2),size:5*(5.8+random()*4.3)});
         }
       } else if(terrain==='hills'){
