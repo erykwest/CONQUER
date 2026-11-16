@@ -302,7 +302,7 @@
       const v={x:c.x-a.x,y:c.y-a.y,z:c.z-a.z};
       const nx=u.y*v.z-u.z*v.y,ny=u.z*v.x-u.x*v.z,nz=u.x*v.y-u.y*v.x;
       const norm=Math.hypot(nx,ny,nz)||1;
-      const light=shaded?clamp(.79+(.34*Math.abs(nz)+.23*nx-.18*ny)/norm+variation,.42,1.23):1;
+      const light=shaded?clamp(.79+(.34*Math.abs(nz)+.23*nx-.18*ny)/norm+variation,.42,1.23):clamp(1+variation,.75,1.25);
       const cr=clamp(rgb[0]*light/255,0,1),cg=clamp(rgb[1]*light/255,0,1),cb=clamp(rgb[2]*light/255,0,1);
       for(const p of [a,b,c])vertices.push(p.x,p.y,p.z,cr,cg,cb);
       triangles++;
@@ -324,12 +324,28 @@
       const parent=byMacro.get(part.macroId)||poly;
       const centerZ=elevation(center,parent,terrain,snapshot.seed);
       const middle={...center,z:centerZ};
+      // Keep the World Lab's exact palette as the base; restore low-frequency
+      // chromatic relief only to sea/lake and hills, with a small per-microcell
+      // modulation reminiscent of the original renderer's +-4.5% tone.
+      const chromaticBiome=terrain==='sea'||terrain==='lake'||terrain==='hills';
+      const macroNoise=chromaticBiome
+        ? noise(center.x/105,center.y/105,(snapshot.seed>>>0)^0x65ad4)
+        : 0;
+      const microNoise=chromaticBiome
+        ? noise(center.x/38,center.y/38,(snapshot.seed>>>0)^0x83d21)
+        : 0;
+      const microGrain=chromaticBiome
+        ? hashed(Math.round(center.x*10),Math.round(center.y*10),(snapshot.seed>>>0)^0x19f4a)-.5
+        : 0;
+      const variation=chromaticBiome
+        ? (.65*macroNoise+.35*microNoise)*(terrain==='hills'?.18:.13)+microGrain*.09
+        : 0;
       const firstVertex=vertices.length/6;
       subcells++;
       for(let i=0;i<poly.length;i++){
         const a=poly[i],b=poly[(i+1)%poly.length];
         face(middle,{...a,z:elevation(a,parent,terrain,snapshot.seed)},
-          {...b,z:elevation(b,parent,terrain,snapshot.seed)},shade,0,false);
+          {...b,z:elevation(b,parent,terrain,snapshot.seed)},shade,variation,false);
       }
       // Terrain triangles only; subsequent mountains are deliberately not selectable.
       const vertexCount=vertices.length/6-firstVertex;
@@ -356,12 +372,12 @@
       const random=rng((snapshot.seed ^ Math.imul(cell.macroId+1,2654435761))>>>0);
       if(terrain==='forest') {
         // Original prototype: 3..7 tiny trees per territory, size 5.8..10.1.
-        // Requested: >=10x population and 5x sprite size.
+        // Density stays >=10x original; tree sprite size is now 2.5x (half the prior 5x).
         const count=30+Math.floor(random()*41);
         for(let i=0;i<count;i++){
           const p=weightedSample(owned,random);
           trees.push({macroId:cell.macroId,x:p.x,y:p.y,z:elevation(p,poly,terrain,snapshot.seed),
-                      variant:Math.floor(random()*7),size:5*(5.8+random()*4.3)});
+                      variant:Math.floor(random()*7),size:2.5*(5.8+random()*4.3)});
         }
       } else if(terrain==='swamp'){
         // Use the actual Builder reedBed/reedClump meshes as projected billboards.
