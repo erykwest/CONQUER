@@ -350,6 +350,7 @@ function drawTerrain(){
   const terrainEdge=winter?'rgba(101,112,105,.34)':'rgba(225,214,190,.12)';
   pathPolygon(corners,terrainFill,terrainEdge,1);
   window.ConquerRegionalLandscape?.drawGround();
+  drawShoreGround(State.environment.filter(f=>['sea','pond'].includes(f.type)));
   drawRelief();
   ctx.save();
   for(const mark of terrainMarkLayout()){
@@ -773,11 +774,17 @@ function lakeShoreBands(f){
     return bands;
   });
 }
-function drawWaterLayer(features){
+// Beaches lie below relief: share this order between Canvas and the plan-view WebGL bake.
+function drawShoreGround(features){
   if(!features.length)return;
   ctx.save();
   for(const f of features)for(const band of lakeShoreBands(f))pathPolygon(projectPath(band),f.waterBodyKind==='marsh'?MARSH_WATER.bank:'#b9ac82',null,0);
   if(features.some(f=>f.type==='sea'&&f.coastline))window.ConquerCoast?.drawGround(projectPath,(pts,c)=>pathPolygon(pts,c,null,0));
+  ctx.restore();
+}
+function drawWaterLayer(features){
+  if(!features.length)return;
+  ctx.save();
   const body=(f,fill)=>{
     ctx.save();for(const hole of f.holes||[]){const ring=projectPath(hole);ctx.beginPath();ctx.rect(-1e5,-1e5,2e5,2e5);ring.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.clip('evenodd')}
     pathPolygon(projectPath(f.points),fill?f.fill:null,fill?null:f.edge,1.2);
