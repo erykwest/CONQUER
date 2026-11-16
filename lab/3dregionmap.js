@@ -303,11 +303,6 @@
     outlineSelected(c,ctx,pixelRatio);
 
   }
-  function geometryKey(a, b) {
-    const one = a.x.toFixed(3) + ',' + a.y.toFixed(3);
-    const two = b.x.toFixed(3) + ',' + b.y.toFixed(3);
-    return one < two ? one + '|' + two : two + '|' + one;
-  }
   function draw() {
     if (!gl || !scene || !snapshot) return;
     const begin = performance.now();
@@ -330,7 +325,10 @@
       (scene.stats.reeds||0) + ' canneti · ' +
       scene.stats.generationMs.toFixed(0) + ' ms mesh CPU · ' + lastUploadMs.toFixed(1) +
       ' ms upload GPU · ' + lastFrameMs.toFixed(1) + ' ms draw CPU · ' +
-      (scene.riverStats?.visualSegments||0) + ' tratti fluviali sui confini';
+      (scene.riverStats?.visualSegments||0) + ' tratti fluviali sui confini' +
+      ((scene.riverStats?.unmatchedAutomatic||0)+(scene.riverStats?.unmatchedManual||0)
+        ? ' · ⚠ ' + ((scene.riverStats?.unmatchedAutomatic||0)+(scene.riverStats?.unmatchedManual||0)) + ' tratti non mappati'
+        : '');
   }
   function rebuild() {
     if (!snapshot || !gl || rebuilding) return;
