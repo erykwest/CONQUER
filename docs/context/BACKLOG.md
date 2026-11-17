@@ -11,6 +11,7 @@
 - [ ] Guardie (pattuglia da 2): lancia senza scudo; di notte il portatorcia tiene **anche** la lancia (oggi la torcia la sostituisce, figura `unarmed`).
 - [x] Leva (popolani all'allarme o in leva straordinaria): abiti di classe del popolano (anche quelli di stagione) e cappuccio araldico (`levyHood`, partito nei due colori dello stemma); lancia e scudo del regno, oppure arcieri di leva con l'arco (circa uno su tre, scelto in modo stabile per persona).
 - [ ] Leva: decidere se la quota di arcieri va scelta dal giocatore (oggi fissa, un terzo).
+- [x] I maschi L3/L4 non combattono mai: `canFight` esclude le case di livello 3 e 4 sia dall'allarme sia dalla leva; all'allarme si riparano con donne e bambini. [D-MIL-FIG-261117](DECISIONS.md#d-mil-fig-261117--chi-combatte-e-come-si-riconosce-17112026).
 
 ### 2026-11-16 — ASSET-AUDIT-261116 · Audit del Lab
 

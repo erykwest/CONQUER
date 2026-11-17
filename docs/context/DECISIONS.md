@@ -1,5 +1,13 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-MIL-FIG-261117 — Chi combatte e come si riconosce (17/11/2026)
+
+- **DECISO dal product owner (17/11/2026):** i maschi delle case L3 (mercanti) e L4 (nobili) **non combattono mai**: né l'allarme né la leva li manda all'armeria; all'allarme si riparano con donne e bambini. Combattono solo i maschi adulti L1/L2.
+- **DECISO dal product owner (17/11/2026):** tre figure militari distinte. Guardie (pattuglia): lancia, niente scudo. Picchieri (squadra): lancia e scudo; il primo è l'araldo del reggimento, l'unico con lo stendardo, che porta al posto della lancia; stendardo 3 volte la vecchia bandierina. Leva: abiti da popolano più cappuccio con i colori dello stemma, con lancia e scudo oppure arco. La lancia sta nella mano destra del soldato (lato sinistro dello schermo, la figura guarda chi osserva).
+- **CONTRATTO TECNICO:** `canFight(house,resident)` in `settlement-combat.js` è l'unica regola per allarme e leva; figure `spearman` / `pikeman` / `herald` e `drawLevyFigure`. Protetto da `qa/combat-figures-roles-regression.cjs`.
+- **PROPOSTO (da confermare):** un reclutato su tre è arciere di leva, scelto in modo stabile per persona.
+- **STATO:** implementato su `fix/squad-pikemen-shield`, non in main.
+
 ## D-MELEE-261116 — Mischia contro più nemici (16/11/2026)
 
 - **CONTRATTO TECNICO:** in `ConquerCombatRules.update` ogni nemico a contatto e non impegnato scambia colpi col difensore più vicino; l'energia di mischia si consuma una volta per round per unità; energia 0 vale −1 al combattimento (minimo 1), non 0. Morale (brain) invariato.

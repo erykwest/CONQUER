@@ -314,16 +314,22 @@
     changed();draw();requestCivilianAnimation();
     const pealing=(alarmRing?.plan?.nodes||[]).filter(n=>n.r>0).length;
     const heardBy=mode==='off'?'':pealing?' · '+pealing+' bell(s) ringing':' · no bell: the alarm spreads by word of mouth';
-    status((mode==='green'?'🔔 Green alarm: women and children → safe zones; adult men → closest armory':
-      mode==='hall'?'🔔 Red alarm: women and children → Mastio Common Hall; adult men → closest armory':
+    status((mode==='green'?'🔔 Green alarm: women, children and L3/L4 men → safe zones; L1/L2 adult men → closest armory':
+      mode==='hall'?'🔔 Red alarm: women, children and L3/L4 men → Mastio Common Hall; L1/L2 adult men → closest armory':
       '🔕 Release: civilians and recalled recruits return to normal routines')+heardBy);
     return true;
   }
-  // Leva straordinaria (decree, FISCO-01): a stable, seeded share of the adult men of L1/L2 houses.
+  // Who can be armed: only adult men of L1 (peasant) and L2 (artisan) houses. MEN OF L3
+  // (MERCHANT) AND L4 (NOBLE) HOUSES NEVER FIGHT: neither the alarm nor the levy calls them to
+  // the armory; at the alarm they take shelter with the women and children (product owner, 17/11/2026).
+  function canFight(house,resident){
+    if(resident?.age!=='adult'||resident?.sex!=='male')return false;
+    return Math.max(1,Math.round(Number(house?.houseLevel)||1))<=2;
+  }
+  // Leva straordinaria (decree, FISCO-01): a stable, seeded share of the men who can fight (L1/L2).
   function leviedResident(house,resident){
     const share=window.ConquerTreasury?.levyShare?.()||0;
-    if(!(share>0)||resident?.age!=='adult'||resident?.sex!=='male')return false;
-    if(Math.max(1,Math.round(Number(house?.houseLevel)||1))>2)return false;
+    if(!(share>0)||!canFight(house,resident))return false;
     let h=2166136261;
     for(const ch of String(resident.id))h=Math.imul(h^ch.charCodeAt(0),16777619);
     return (h>>>0)%100<share*100;
@@ -404,10 +410,11 @@
     if(!activeWell())return p;
     const desired=civilianLegalPosition(p,house);
     const id=resident.id,now=performance.now(),alarm=heardAlarm(house,now);
-    // Age takes precedence over sex: boys are children, never conscripted.
+    // Age takes precedence over sex: boys are children, never conscripted. L3/L4 men never fight
+    // (canFight): at the alarm they shelter like the women and children.
     // FISCO-01: the Leva straordinaria keeps its share of L1/L2 men at the armory without an alarm.
     const mode=alarm==='off'?(leviedResident(house,resident)?'recruit':'release'):
-      (resident.age==='adult'&&resident.sex==='male'?'recruit':alarm);
+      (canFight(house,resident)?'recruit':alarm);
     const prior=residentMotion.get(id);
     if(mode==='release'&&!prior){
       if(desired)residentLastPosition.set(id,desired);
