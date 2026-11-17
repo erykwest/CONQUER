@@ -1668,13 +1668,13 @@ y: 1.2 + random() * Math.max(1, finalRows * Math.sqrt(3) / 2 - 2.4)
       let conquerSimulationTimer = null;
 
       function conquerMacroAdjacency() {
-        // Political/economic proximity: eight fixed logical slots, O(1).
-        // Rivers, roads and coastlines still use real Voronoi edge geometry.
+        // Gameplay movement must use REAL shared Voronoi edges, not the
+        // eight additional fixed logical proximity references.
         const adjacency=new Map(state.macros.map(m=>[m.id,new Set()]));
         for(const macro of state.macros){
           if(!conquerIsLand(macro.id))continue;
-          for(const id of state.configuration.neighbors8?.[macro.id]||[]){
-            if(id!==null&&conquerIsLand(id))adjacency.get(macro.id).add(id);
+          for(const id of state.configuration.physicalAdjacency?.[macro.id]||[]){
+            if(conquerIsLand(id))adjacency.get(macro.id).add(id);
           }
         }
         return adjacency;
@@ -1967,8 +1967,7 @@ y: 1.2 + random() * Math.max(1, finalRows * Math.sqrt(3) / 2 - 2.4)
 
       function conquerNeighbors(macroId) {
         if(!state)return [];
-        return (state.configuration.neighbors8?.[macroId]||[])
-          .filter(id=>id!==null);
+        return state.configuration.physicalAdjacency?.[macroId]?.slice()||[];
       }
 
       function initializeConquerState(targetState) {
@@ -3428,6 +3427,8 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
       window.ConquerRegion8Neighbors = macroId =>
         state?.configuration?.neighbors8?.[macroId]?.slice() ||
         Array(8).fill(null);
+      window.ConquerRegionPhysicalNeighbors = macroId =>
+        state?.configuration?.physicalAdjacency?.[macroId]?.slice()||[];
 
       window.ConquerRegion3DSnapshot = () => !state ? null : ({
         revision: window.ConquerRegion3DRevision || 0,
@@ -3438,6 +3439,7 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         terrain: { ...state.terrain },
         areaBalance: state.configuration.areaBalance,
         neighbors8: state.configuration.neighbors8,
+        physicalAdjacency: state.configuration.physicalAdjacency,
         // Pixel-identical source RGB for each territory: same macroFill used by the 2D SVG.
         // Includes the active terrain palette, neutral desaturation and political fills.
         fills: Object.fromEntries(state.macros.map(macro => [macro.id, macroFill(macro.id)])),
@@ -4525,6 +4527,18 @@ const currentOwner = ownerByName.get(key);
           let macros = buildMacros(cells, configuration);
           validateState(cells, macros, configuration);
           const edges = buildEdges(cells);
+          // Cache physical border neighbors once. Direct O(1) lookup and
+          // independent of the eight logical proximity slots.
+          const physical=new Map(cells.map(c=>[c.macroId,new Set()]));
+          for(const edge of edges){
+            const ids=[...new Set(edge.cells.map(c=>c.macroId))];
+            if(ids.length!==2)continue;
+            physical.get(ids[0])?.add(ids[1]);
+            physical.get(ids[1])?.add(ids[0]);
+          }
+          configuration.physicalAdjacency=Object.fromEntries(
+            [...physical].map(([id,neighbors])=>[id,[...neighbors].sort((a,b)=>a-b)])
+          );
           let terrain = Object.fromEntries(macros.map((macro) => [macro.id, macro.terrain]));
           ({ macros, terrain } = splitCoastalForests(macros, edges, terrain));
           state = {
