@@ -192,7 +192,9 @@
     lastSelectionKey = key;
     if(selectedTerritory) {
       selectedTerritory.textContent = !next.length ? 'Clic sinistro: seleziona territorio · Maiusc + clic: selezione multipla' :
-        next.length===1 ? 'Territorio selezionato: '+(snapshot?.names?.[next[0]] || ('#'+next[0])) :
+        next.length===1 ? 'Territorio selezionato: '+(snapshot?.names?.[next[0]] || ('#'+next[0])) +
+        ' · 8 slot (NO,N,NE,O,E,SO,S,SE): ' +
+        (snapshot?.neighbors8?.[next[0]]||[]).map(id=>id===null?'—':(snapshot?.names?.[id]||('#'+id))).join(', ') :
         next.length+' territori selezionati';
     }
     draw();
@@ -370,7 +372,9 @@
       (scene.stats.reeds||0) + ' canneti · ' +
       scene.stats.generationMs.toFixed(0) + ' ms mesh CPU · ' + lastUploadMs.toFixed(1) +
       ' ms upload GPU · ' + lastFrameMs.toFixed(1) + ' ms draw CPU · ' +
-      (scene.riverStats?.visualSegments||0) + ' tratti fluviali sui confini' +
+      (scene.riverStats?.visualSegments||0) + ' tratti fluviali sui confini · ' +
+      scene.stats.visualFragments.toLocaleString('it-IT') + ' frammenti visuali · area max ±' +
+      (scene.stats.maxVisualAreaDeviation*100).toFixed(1) + '%' +
       ((scene.riverStats?.unmatchedAutomatic||0)+(scene.riverStats?.unmatchedManual||0)
         ? ' · ⚠ ' + ((scene.riverStats?.unmatchedAutomatic||0)+(scene.riverStats?.unmatchedManual||0)) + ' tratti non mappati'
         : '');
