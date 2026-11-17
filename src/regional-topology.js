@@ -1,6 +1,6 @@
 'use strict';
-// Square logical topology with O(1) Moore neighborhoods and bounded-area,
-// weighted Voronoi geometry. Independent of presentation and simulation.
+// Square O(1) Moore LOGIC, staggered/irregular Voronoi GEOMETRY.
+// The two are independent. Balanced power cells preserve territory areas.
 (function(root){
   const OFFSETS=Object.freeze([
     [-1,-1],[-1,0],[-1,1],
@@ -62,23 +62,48 @@
       return polygon;
     });
   }
+  function nonMooreContacts(cells){
+    // Physical Voronoi neighbors must remain a subset of the eight logical
+    // Moore slots, even though most polygons have six (or more) sides.
+    const edges=new Map();
+    let incompatible=0;
+    for(const site of cells){
+      const poly=site.polygon;
+      for(let i=0;i<poly.length;i++){
+        const p=poly[i],q=poly[(i+1)%poly.length];
+        const a=p.x.toFixed(3)+','+p.y.toFixed(3);
+        const b=q.x.toFixed(3)+','+q.y.toFixed(3);
+        const key=a<b?a+'|'+b:b+'|'+a;
+        const previous=edges.get(key);
+        if(previous===undefined){edges.set(key,site);continue;}
+        if(Math.abs(site.macroRow-previous.macroRow)>1||
+           Math.abs(site.macroCol-previous.macroCol)>1)incompatible++;
+        edges.delete(key);
+      }
+    }
+    return incompatible;
+  }
   function balancedVoronoi(input,config){
     if(!input?.length||!config?.width||!config?.height)
       throw Error('Invalid region topology geometry');
     const target=config.width*config.height/input.length;
     const stepX=config.width/config.finalCols,stepY=config.height/config.finalRows;
-    let sites,weights,polys,areas,maxDeviation,passes,shrinkApplied=1;
+    let sites,weights,polys,areas,maxDeviation,passes,shrinkApplied=1,invalidEdges=Infinity;
     // Target 3.5% rather than the outer ±10% allowance. The remaining margin
     // permits a small, continuous organic deformation in the 3D atlas while
     // guaranteeing its visual territory areas also stay within ±10%.
     // Scale displacement back only as an emergency fallback.
     for(const shrink of [1,.75,.5,.25,0]){
       shrinkApplied=shrink;
-      sites=input.map(site=>({
-        ...site,
-        x:(site.macroCol+.5)*stepX+(site.x-(site.macroCol+.5)*stepX)*shrink,
-        y:(site.macroRow+.5)*stepY+(site.y-(site.macroRow+.5)*stepY)*shrink
-      }));
+      // Never shrink back to square-site coordinates. Keep the staggered
+      // Voronoi anchors and damp ONLY the random jitter if needed.
+      sites=input.map(site=>{
+        const anchorX=site.anchorX??(site.macroCol+.5)*stepX;
+        const anchorY=site.anchorY??(site.macroRow+.5)*stepY;
+        return {...site,
+          x:anchorX+(site.x-anchorX)*shrink,
+          y:anchorY+(site.y-anchorY)*shrink};
+      });
       weights=new Float64Array(sites.length);
       for(passes=0;passes<28;passes++){
         polys=polygons(sites,config,weights);
@@ -87,9 +112,12 @@
         if(maxDeviation<=.035)break;
         for(let i=0;i<sites.length;i++)weights[i]-=(areas[i]-target)*.35;
       }
-      if(maxDeviation<=.035)break;
+      if(maxDeviation<=.035){
+        invalidEdges=nonMooreContacts(sites.map((site,i)=>({...site,polygon:polys[i]})));
+        if(invalidEdges===0)break;
+      }
     }
-    if(maxDeviation>.10||areas.some(a=>!Number.isFinite(a)||a<=0))
+    if(maxDeviation>.10||invalidEdges!==0||areas.some(a=>!Number.isFinite(a)||a<=0))
       throw Error('Territory generation failed ±10% area constraint');
     const total=areas.reduce((a,b)=>a+b,0);
     if(Math.abs(total-config.width*config.height)>config.width*config.height*1e-7)
@@ -99,7 +127,8 @@
       cells,
       stats:{
         average:target,minArea:Math.min(...areas),maxArea:Math.max(...areas),
-        maxDeviation,passes,siteShrink:shrinkApplied,totalArea:total
+        maxDeviation,passes,siteShrink:shrinkApplied,totalArea:total,
+        nonMooreContacts:invalidEdges
       }
     };
   }
