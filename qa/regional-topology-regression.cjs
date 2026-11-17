@@ -64,7 +64,7 @@ for(const [cols,rows] of [[30,21],[12,8],[2,2]])for(const seed of [1943,71241]){
     }
     assert.ok(cells.every(cell=>fineCounts.get(cell.macroId)===20));
     const hexLike=fine.filter(cell=>
-      cell.polygon.length>=5&&cell.polygon.length<=7).length;
+      cell.baseSides>=5&&cell.baseSides<=7).length;
     assert.ok(hexLike>fine.length*.7,'microsites are mostly hex-like 5–7 sided Voronoi, not squares');
     assert.ok(cells.every(cell=>cell.polygon.length>=16),
       'aggregated macro polygons have many irregular sides, not square or macro-hex shapes');
@@ -115,6 +115,10 @@ for(const [cols,rows] of [[30,21],[12,8],[2,2]])for(const seed of [1943,71241]){
       checked3D=true;
     }
     assert.ok(configuration.areaBalance.maxDeviation<=.10);
+    assert.equal(configuration.areaBalance.deformationMultiplier,5,
+      'visible Voronoi edge distortion must be five times baseline');
+    assert.ok(configuration.areaBalance.warpAmplitude>0,
+      'strong organic warp must actually deform the final polygons');
     checked++;
   }
 }
