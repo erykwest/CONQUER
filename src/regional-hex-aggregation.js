@@ -38,7 +38,7 @@
         poly=clip(poly,2*(other.x-site.x),2*(other.y-site.y),
           other.x**2+other.y**2-site.x**2-site.y**2+weight-other.basePower-macroWeights[other.macroId]);
       }
-      return {...site,polygon:poly};
+      return {...site,polygon:poly,baseSides:poly.length};
     });
   }
   function outerBoundary(group){
