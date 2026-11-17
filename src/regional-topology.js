@@ -1,0 +1,107 @@
+'use strict';
+// Square logical topology with O(1) Moore neighborhoods and bounded-area,
+// weighted Voronoi geometry. Independent of presentation and simulation.
+(function(root){
+  const OFFSETS=Object.freeze([
+    [-1,-1],[-1,0],[-1,1],
+    [0,-1],[0,1],
+    [1,-1],[1,0],[1,1]
+  ]);
+  const directions=Object.freeze(['NW','N','NE','W','E','SW','S','SE']);
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+  function neighbors8(sites){
+    const ids=new Map(sites.map(site=>[site.macroRow+','+site.macroCol,site.macroId]));
+    return Object.fromEntries(sites.map(site=>[
+      site.macroId,
+      OFFSETS.map(([row,col])=>ids.get((site.macroRow+row)+','+(site.macroCol+col))??null)
+    ]));
+  }
+  function area(poly){
+    if(!poly||poly.length<3)return 0;
+    let twice=0;
+    for(let i=0;i<poly.length;i++){
+      const a=poly[i],b=poly[(i+1)%poly.length];
+      twice+=a.x*b.y-b.x*a.y;
+    }
+    return Math.abs(twice)*.5;
+  }
+  function clip(poly,a,b,c){
+    const next=[];
+    for(let i=0;i<poly.length;i++){
+      const u=poly[i],v=poly[(i+1)%poly.length];
+      const du=a*u.x+b*u.y-c,dv=a*v.x+b*v.y-c;
+      const uIn=du<=1e-8,vIn=dv<=1e-8;
+      if(uIn!==vIn){
+        const t=clamp(du/(du-dv),0,1);
+        next.push({x:u.x+(v.x-u.x)*t,y:u.y+(v.y-u.y)*t});
+      }
+      if(vIn)next.push(v);
+    }
+    return next.filter((p,i)=>{
+      const q=next[(i+next.length-1)%next.length];
+      return (p.x-q.x)**2+(p.y-q.y)**2>1e-14;
+    });
+  }
+  function polygons(sites,config,weights){
+    const {finalRows:rows,finalCols:cols,width,height}=config;
+    const lookup=new Map(sites.map((site,i)=>[site.macroRow+','+site.macroCol,i]));
+    const bounds=[{x:0,y:0},{x:width,y:0},{x:width,y:height},{x:0,y:height}];
+    return sites.map((site,i)=>{
+      let polygon=bounds;
+      // A bounded two-ring grid search includes every potentially competitive
+      // power site at <=22% displacement and the calibrated weight range.
+      for(let dr=-2;dr<=2&&polygon.length>=3;dr++)
+        for(let dc=-2;dc<=2&&polygon.length>=3;dc++){
+          const j=lookup.get((site.macroRow+dr)+','+(site.macroCol+dc));
+          if(j===undefined||j===i)continue;
+          const other=sites[j];
+          polygon=clip(polygon,2*(other.x-site.x),2*(other.y-site.y),
+            other.x**2+other.y**2-site.x**2-site.y**2+weights[i]-weights[j]);
+        }
+      return polygon;
+    });
+  }
+  function balancedVoronoi(input,config){
+    if(!input?.length||!config?.width||!config?.height)
+      throw Error('Invalid region topology geometry');
+    const target=config.width*config.height/input.length;
+    const stepX=config.width/config.finalCols,stepY=config.height/config.finalRows;
+    let sites,weights,polys,areas,maxDeviation,passes,shrinkApplied=1;
+    // Scale displacement back only as an emergency fallback. In practice
+    // calibrated site weights converge within a handful of iterations.
+    for(const shrink of [1,.75,.5,.25,0]){
+      shrinkApplied=shrink;
+      sites=input.map(site=>({
+        ...site,
+        x:(site.macroCol+.5)*stepX+(site.x-(site.macroCol+.5)*stepX)*shrink,
+        y:(site.macroRow+.5)*stepY+(site.y-(site.macroRow+.5)*stepY)*shrink
+      }));
+      weights=new Float64Array(sites.length);
+      for(passes=0;passes<28;passes++){
+        polys=polygons(sites,config,weights);
+        areas=polys.map(area);
+        maxDeviation=Math.max(...areas.map(a=>Math.abs(a/target-1)));
+        if(maxDeviation<=.095)break;
+        for(let i=0;i<sites.length;i++)weights[i]-=(areas[i]-target)*.35;
+      }
+      if(maxDeviation<=.095)break;
+    }
+    if(maxDeviation>.10||areas.some(a=>!Number.isFinite(a)||a<=0))
+      throw Error('Territory generation failed ±10% area constraint');
+    const total=areas.reduce((a,b)=>a+b,0);
+    if(Math.abs(total-config.width*config.height)>config.width*config.height*1e-7)
+      throw Error('Territory polygons have gaps or overlaps');
+    const cells=sites.map((site,i)=>({...site,polygon:polys[i]}));
+    return {
+      cells,
+      stats:{
+        average:target,minArea:Math.min(...areas),maxArea:Math.max(...areas),
+        maxDeviation,passes,siteShrink:shrinkApplied,totalArea:total
+      }
+    };
+  }
+  const api=Object.freeze({directions,neighbors8,area,balancedVoronoi});
+  if(typeof module!=='undefined'&&module.exports)module.exports=api;
+  root.ConquerRegionalTopology=api;
+})(typeof window==='object'?window:{});
