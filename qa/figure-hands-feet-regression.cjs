@@ -31,6 +31,13 @@ const dot='({id:"v1",kind:"peasant",sex:"male",age:"adult",hair:"brown",colors:[
 for(const kind of ['peasant','artisan','merchant','elite'])
   assert.deepEqual(count(()=>run('drawVillagerFigureUnmasked({...'+dot+',kind:"'+kind+'"})')),{hands:2,feet:2},kind+' has two hands and two feet');
 assert.deepEqual(count(()=>run('drawVillagerFigureUnmasked({...'+dot+',age:"child"})')),{hands:2,feet:2},'children too');
+// L4 ladies: disc and bell skirt are one shape down to the ground; shoe tips under the hem, hands on the disc rim.
+assert.equal(run('villagerShape({kind:"elite",sex:"female"})'),'lady');
+assert.equal(run('villagerShape({kind:"elite",sex:"male"})'),'elite');
+assert.ok(run('villagerBodyBottom("lady",0,6,8)')>run('villagerBodyBottom("elite",0,6,8)')+1,'the gown reaches below the disc');
+assert.deepEqual(count(()=>run('drawVillagerFigureUnmasked({...'+dot+',kind:"elite",sex:"female"})')),{hands:2,feet:2},'L4 lady');
+const rim=run('villagerSideHand("lady",0,0,6,8,1,1)');
+assert.ok(Math.abs(Math.hypot(rim.x,rim.y)-3.2)<.2,'lady hand sits on the disc rim');
 assert.deepEqual(count(()=>run('drawVillagerFigureUnmasked('+dot+',"far",1)')),{hands:1,feet:2},'far hand only');
 assert.deepEqual(count(()=>run('drawVillagerFigureUnmasked('+dot+',"none")')),{hands:0,feet:2},'no hand (seed bag side)');
 console.log('PASS civilians: two hands, two feet; workers keep only the far hand');

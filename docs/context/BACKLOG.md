@@ -5,6 +5,8 @@
 **IMPLEMENTATO SU BRANCH `feature/figure-hands-feet`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
 - [x] Mani rosa e piedi ovali marroni su civili, lavoratori, soldati (fermi e in combattimento), ostili, nobili.
 - [x] Mani rosa ai cavalieri e messaggeri a cavallo; gambe mantenute (scelta del product owner).
+- [x] Dame L4: gonna a campana unita al busto in un'unica sagoma, mani sul bordo, punte delle scarpe (variante F scelta dal product owner).
+- [ ] Uomini L4: le mani ai fianchi restano staccate dal disco; valutare la variante «mani sul bordo».
 - [ ] Il portatore di torcia della pattuglia notturna ha le mani ai fianchi: la torcia parte poco sopra la mano destra, non da dentro.
 - [ ] Le figure in cache 3D (`ConquerWorld3D.figure`) si ridisegnano con il nuovo aspetto: verificarlo in partita su una città popolata (non coperto dal Lab).
 

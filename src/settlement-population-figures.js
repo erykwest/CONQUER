@@ -8,6 +8,11 @@ function bodyPath(kind,x,y,w,h){
     ctx.rect(x-w/2,y-h/2,w,h);
   }else if(kind==='merchant'){
     ctx.ellipse(x,y,w/2,h/2,0,0,Math.PI*2);
+  }else if(kind==='lady'){
+    // L4 lady (FIG-HANDS-261117): the L4 disc runs on into a bell skirt down to the ground, one shape.
+    const r=Math.min(w,h)/2,a=.35,hem=ladyHemY(y,w,h);
+    ctx.arc(x,y,r,a,Math.PI-a,true);
+    ctx.lineTo(x-r*1.18,hem);ctx.quadraticCurveTo(x,hem+h*.14,x+r*1.18,hem);ctx.closePath();
   }else{
     const r=Math.min(w,h)/2;ctx.arc(x,y,r,0,Math.PI*2);
   }
@@ -59,16 +64,27 @@ function drawFigureHand(x,y,s){
   ctx.beginPath();ctx.arc(x,y,.72*s,0,Math.PI*2);ctx.fill();ctx.stroke();
 }
 // Drawn before the body, which covers their upper half: they peek out under the hem.
-function drawFigureFeet(x,bottom,bodyW,s){
+// k scales the feet: 1 for the whole foot, smaller for the shoe tips under a gown.
+function drawFigureFeet(x,bottom,bodyW,s,k=1){
   if(s<FIGURE_LIMB_MIN_S)return;
   ctx.fillStyle=FIGURE_FOOT;ctx.strokeStyle=FIGURE_LIMB_EDGE;ctx.lineWidth=Math.max(.5,.35*s);
   for(const side of[-1,1]){
-    ctx.beginPath();ctx.ellipse(x+side*bodyW*.21+.25*s,bottom+.1*s,1.05*s,.52*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.ellipse(x+side*bodyW*.21*k+.25*s,bottom+.1*s*k,1.05*s*k,.52*s*k,0,0,Math.PI*2);ctx.fill();ctx.stroke();
   }
 }
+// Hem of the L4 lady's bell skirt (bodyPath 'lady'), below the disc.
+function ladyHemY(y,w,h){return y+Math.min(w,h)/2+h*.19}
+// Body shape of a civilian: L4 women wear the bell gown.
+function villagerShape(dot){return dot.kind==='elite'&&dot.sex==='female'?'lady':dot.kind}
 // Lower edge of a civilian body shape (bodyPath): the L4 disc is narrower than it is tall.
 function villagerBodyBottom(kind,bodyY,bodyW,bodyH){
+  if(kind==='lady')return ladyHemY(bodyY,bodyW,bodyH)+bodyH*.065;   // the curved hem dips below its corners
   return bodyY+(kind==='peasant'||kind==='artisan'||kind==='merchant'?bodyH/2:Math.min(bodyW,bodyH)/2);
+}
+// Where a civilian's hand rests at its side (side -1 left, 1 right): on the rim of the lady's disc.
+function villagerSideHand(kind,x,bodyY,bodyW,bodyH,s,side){
+  if(kind==='lady'){const r=Math.min(bodyW,bodyH)/2;return{x:x+side*(r+.2*s),y:bodyY+r*.15}}
+  return{x:x+side*(bodyW*.5+.15*s),y:bodyY+bodyH*.2};
 }
 const samePoint=(a,b)=>!!a&&!!b&&Math.abs(a.x-b.x)<1e-6&&Math.abs(a.y-b.y)<1e-6;
 // Everything that changes how a villager looks (not where): the key of its 3D figure tile.
@@ -85,16 +101,18 @@ function drawVillagerFigure(dot){
 // near one is drawn by the work animation at the tool), or 'none'.
 function drawVillagerFigureUnmasked(dot,hands='both',facing=1){
   const base=w2s(dot.p,.10),scale=State.view.scale*.5;
-  const kind=dot.kind,sizeFactor=dot.age==='child'?.5:1;
+  const kind=villagerShape(dot),sizeFactor=dot.age==='child'?.5:1;
   const bodyW=6.0*scale*sizeFactor,bodyH=8.0*scale*sizeFactor,s=scale*sizeFactor;
   const headR=2.35*scale*sizeFactor,bodyY=base.y-bodyH*.16,headY=bodyY-bodyH/2-headR*.68;
   // Seasonal wardrobe overlays (cloak, hood, hat) for cold months and bad weather.
   const outfit=window.ConquerWardrobe?.outfitFor(dot);
-  drawFigureFeet(base.x,villagerBodyBottom(kind,bodyY,bodyW,bodyH),bodyW,s);
+  // Under the gown only the shoe tips show.
+  drawFigureFeet(base.x,villagerBodyBottom(kind,bodyY,bodyW,bodyH),bodyW,s,kind==='lady'?.76:1);
   drawSplitVillagerBody(kind,base.x,bodyY,bodyW,bodyH,dot.colors[0],dot.colors[1]);
   if(outfit)window.ConquerWardrobe.drawBody(outfit,dot,base.x,bodyY,bodyW,bodyH);
-  for(const side of hands==='both'?[-1,1]:hands==='far'?[facing<0?1:-1]:[])
-    drawFigureHand(base.x+side*(bodyW*.5+.15*s),bodyY+bodyH*.2,s);
+  for(const side of hands==='both'?[-1,1]:hands==='far'?[facing<0?1:-1]:[]){
+    const h=villagerSideHand(kind,base.x,bodyY,bodyW,bodyH,s,side);drawFigureHand(h.x,h.y,s);
+  }
   drawVillagerHead(dot.id,base.x,headY,headR,dot.sex,dot.hair);
   if(outfit)window.ConquerWardrobe.drawHead(outfit,base.x,headY,headR);
 }
