@@ -232,31 +232,55 @@
     const key=(row,col)=>row+','+col;
     for (let row=-2;row<rows;row++) for(let col=-2;col<cols;col++) {
       const rnd=rng((seed ^ Math.imul(row+5003, 2654435761) ^ Math.imul(col+4001, 2246822519))>>>0);
+      const baseX=(col+(row&1)*.5)*spacing,baseY=row*rowStep;
+      const dx=(rnd()-.5)*2*jitter,dy=(rnd()-.5)*2*jitter;
+      const basePower=(rnd()-.5)*powerSpread;
       sites.set(key(row,col),{
-        x:(col+(row&1)*.5)*spacing+(rnd()-.5)*2*jitter,
-        y:row*rowStep+(rnd()-.5)*2*jitter,
-        power:(rnd()-.5)*powerSpread,
-        row,col
+        x:baseX+dx,y:baseY+dy,power:basePower,
+        baseX,baseY,dx,dy,basePower,row,col
       });
     }
     const locate=macroIndex(snapshot),fragments=[],ownerParts=new Map();
     const originalRect=[{x:0,y:0},{x:width,y:0},{x:width,y:height},{x:0,y:height}];
-    let siteCount=0;
-    for(const site of sites.values()){
-      if(site.x < -spacing||site.y < -spacing||
-         site.x > width+spacing||site.y > height+spacing)continue;
-      let poly=originalRect;
-      for(let y=site.row-2;y<=site.row+2&&poly.length>=3;y++){
-        for(let x=site.col-2;x<=site.col+2&&poly.length>=3;x++){
-          if(site.row===y&&site.col===x)continue;
-          const other=sites.get(key(y,x));
-          if(!other)continue;
-          poly=clip(poly,2*(other.x-site.x),2*(other.y-site.y),
-            other.x**2+other.y**2-site.x**2-site.y**2+site.power-other.power);
-        }
+    // Keep the 200% fine-cell ceiling for *every* seed. Rare seeds have
+    // exceptional weighted polygons >2.1x even before warping; gently reduce
+    // fine-site jitter and power without ever altering canonical territories.
+    let fineCells=[],fineScale=1,largestFineRatio=Infinity;
+    const referenceArea=width*height/totalTarget;
+    for(const scale of [1,.90,.80,.70,.60,.50,.35,0]){
+      fineScale=scale;
+      for(const site of sites.values()){
+        site.x=site.baseX+site.dx*scale;
+        site.y=site.baseY+site.dy*scale;
+        site.power=site.basePower*scale;
       }
-      if(poly.length<3||area(poly)<EPS)continue;
-      siteCount++;
+      fineCells=[];
+      let largest=0;
+      for(const site of sites.values()){
+        if(site.x < -spacing||site.y < -spacing||
+           site.x > width+spacing||site.y > height+spacing)continue;
+        let poly=originalRect;
+        for(let y=site.row-2;y<=site.row+2&&poly.length>=3;y++){
+          for(let x=site.col-2;x<=site.col+2&&poly.length>=3;x++){
+            if(site.row===y&&site.col===x)continue;
+            const other=sites.get(key(y,x));
+            if(!other)continue;
+            poly=clip(poly,2*(other.x-site.x),2*(other.y-site.y),
+              other.x**2+other.y**2-site.x**2-site.y**2+site.power-other.power);
+          }
+        }
+        const polygonArea=area(poly);
+        if(poly.length<3||polygonArea<EPS)continue;
+        fineCells.push({site,poly});
+        if(polygonArea>largest)largest=polygonArea;
+      }
+      largestFineRatio=largest/referenceArea;
+      if(largestFineRatio<=2.06)break;
+    }
+    if(largestFineRatio>2.06)
+      throw Error('Unable to limit fine Voronoi area for seed');
+    const siteCount=fineCells.length;
+    for(const {site,poly} of fineCells){
       const x0=Math.min(...poly.map(p=>p.x)),x1=Math.max(...poly.map(p=>p.x));
       const y0=Math.min(...poly.map(p=>p.y)),y1=Math.max(...poly.map(p=>p.y));
       // Intersect each fine cell with the actual balanced canonical territory
@@ -323,7 +347,7 @@
       ownerParts.get(part.macroId).push(part);
     }
     return {parts,ownerParts,spacing,siteCount,visualAreaDeviation:maxVisualDeviation,
-      maxMicrocellAreaRatio,appliedWarp};
+      maxMicrocellAreaRatio,appliedWarp,fineScale,largestFineRatio};
 
   }
   function aggregateEdges(parts, terrain, originalCells) {
@@ -525,7 +549,7 @@
       parts:snapshot.cells.map(c=>({macroId:c.macroId,polygon:c.polygon})),
       ownerParts:new Map(snapshot.cells.map(c=>[c.macroId,[{polygon:c.polygon,macroId:c.macroId}]])),
       spacing:Math.sqrt(snapshot.width*snapshot.height/snapshot.cells.length),
-      siteCount:snapshot.cells.length,maxMicrocellAreaRatio:1,
+      siteCount:snapshot.cells.length,maxMicrocellAreaRatio:1,fineScale:1,largestFineRatio:1,
       visualAreaDeviation:Math.max(...snapshot.cells.map(c=>
         Math.abs(area(c.polygon)/(snapshot.width*snapshot.height/snapshot.cells.length)-1))),
       appliedWarp:0
@@ -724,6 +748,7 @@
       stats:{territories:snapshot.cells.length,subcells,visualFragments,
              maxVisualAreaDeviation:base.visualAreaDeviation,
              maxMicrocellAreaRatio:base.maxMicrocellAreaRatio,appliedWarp:base.appliedWarp,
+             fineScale:base.fineScale,
              triangles,mountains,hills,
              trees:trees.length,reeds:reeds.length,unmatchedEdges:unmatched,
              floats:vertices.length,generationMs:(typeof performance!=='undefined'?performance.now():Date.now())-t0}
