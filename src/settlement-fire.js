@@ -131,13 +131,19 @@
     if(s.a&&s.b){const k=rnd();return{x:s.a.x+(s.b.x-s.a.x)*k,y:s.a.y+(s.b.y-s.a.y)*k,z:g+H*(.6+rnd()*.4)}}
     const r=radius(s)*.6,a=rnd()*Math.PI*2;return{x:c.x+Math.cos(a)*r*rnd(),y:c.y+Math.sin(a)*r*rnd(),z:g+H*(.6+rnd()*.4)};
   }
-  function volley(s,kind='arrows',origin=null){
+  // opts.from: the real 3D launch point (a trebuchet's sling at release); the stone then flies
+  // from there, its time of flight from the distance (about 12 U/s, 1.2..3 s).
+  function volley(s,kind='arrows',origin=null,opts={}){
     if(!s)return 0;
     const c=centre(s),rnd=Math.random;
     let dx=origin?c.x-origin.x:-1,dy=origin?c.y-origin.y:0;const dl=Math.hypot(dx,dy)||1;dx/=dl;dy/=dl;
-    const from={x:c.x+dx*9,y:c.y+dy*9};from.z=groundAt(from)+.6;
+    const launch=opts.from&&Number.isFinite(opts.from.z)?{x:opts.from.x,y:opts.from.y,z:opts.from.z}:null;
+    const from=launch||{x:c.x+dx*9,y:c.y+dy*9};if(!launch)from.z=groundAt(from)+.6;
     const shots=store().shots;
-    if(kind==='stone'){shots.push({kind,id:s.id,from,to:aimPoint(s,rnd),t:0,delay:0,dur:2.2});loop();return 1}
+    if(kind==='stone'){
+      const to=aimPoint(s,rnd),dur=launch?Math.max(1.2,Math.min(3,Math.hypot(to.x-from.x,to.y-from.y)/12)):2.2;
+      shots.push({kind,id:s.id,from,to,t:0,delay:0,dur});loop();return 1;
+    }
     for(let i=0;i<8;i++)shots.push({kind:'arrow',id:s.id,from:{x:from.x+(rnd()-.5)*1.5,y:from.y+(rnd()-.5)*1.5,z:from.z},to:aimPoint(s,rnd),t:0,delay:i*.12,dur:.9+rnd()*.2});
     loop();return 8;
   }

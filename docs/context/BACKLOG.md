@@ -4,9 +4,47 @@
 
 **IMPLEMENTATO SU BRANCH `fix/outlaw-combat-stats`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
 - [x] Tutti i nemici a contatto attaccano; energia una volta per round; niente stallo da sfinimento.
-- [x] Lupi più deboli (10 PV): una squadra batte un branco di 6 nell'~85% dei casi, ferita.
-- [x] Fuorilegge alla scala dei soldati: 20 PV e armatura 1 (ascia e scudo), guardie 26, arcieri 16.
+- [x] Lupi più deboli sulla scala D-060 (5 PV, combattimento 2): una squadra batte 4 lupi ~85%, 6 lupi ~57%.
+- [x] Orso riscalato (14 PV, combattimento 2, danno 2): il cavaliere lo uccide, una squadra da sola raramente.
+- [x] Fuorilegge già alla scala dei soldati con #258 (6/8/5 PV): verificati, invariati.
 - [ ] Verificare il ritmo degli scontri in partite reali (a velocità 1 uno scontro dura 1–2 minuti).
+
+### 2026-11-16 — Braciere 3D
+
+- [x] Corpo del braciere di torri e porte in pietra nella mesh del castello (test di profondità), su branch `fix/brazier-3d`.
+- [x] Braciere della torre a palizzata di legno nel modello Blender (build_wood_fort.py).
+- [x] Bandiere dei tetti a punta e delle bertesche in 3D, come le navi; supporti 3D delle torce delle torri; alone del fuoco non più tagliato dalla facciata.
+- [ ] Fumo dei comignoli: resta un effetto 2D (non struttura).
+## 2026-11-16 — Assedio: aperti dopo il merge di main
+
+- **APERTO:** fasi di sollevamento della scala e del ponte della torre d'assalto nel combattimento vero (oggi solo nell'anteprima `?siege=`); voce wiki per l'ariete leggero; regola mura/porte verso l'esterno anche al momento della costruzione (oggi al caricamento); assedio lungo con i due arieti e il trabucco; prestazioni delle ricerche di percorso.
+
+## 2026-11-13 — Assedio: difesa dalle mura e arieti
+
+- **FATTO su combat-ai:** copertura di feritoie/merli/tetto dell'ariete, arcieri delle torri bersagliabili e mobili tra le torri, frecce incendiarie sulle macchine, porta più resistente, ariete leggero (4) e coperto (8) validati nell'Asset Lab.
+- **APERTO:** assedio lungo con i due arieti; audit completo del Lab e baseline per il nuovo modello `ramLight`; tempo di trasporto/montaggio degli arieti (oggi compaiono davanti alla porta, quindi il leggero non è ancora «più agile»); i trabucchi non prendono fuoco; arcieri in cammino tra le torri non visibili e persi se si ricarica; prestazioni delle ricerche di percorso.
+
+## 2026-11-06 — Verifica estesa
+
+- Prova da 300 s sulla variante concentrica TEST richiesta dall’utente: conclusa con 6 screenshot: 17 assalitori e 3 difensori caduti, 0 conquiste. **Corretti l'11/11:** assalitori fermi nei varchi e pattuglie bloccate in ritirata (in 180 s entrambi i settori catturati). **KO ancora aperto:** ricerche di percorso molto lente (tick p95 6,5 s, massimo 26,8 s). [Report](../qa/combat-ai-circle-300s-2026-11-06.md). La prova precedente da 60 s resta una misura separata. Corrette nella fixture le posizioni iniziali del capitano e di una pattuglia; il runner rifiuta partenze su terreno bloccato. CI circle estesa al controllo sintattico del runner degli screenshot.
+
+
+## 2026-11-06 — Campagna per settori, branch combat-ai
+
+- **IMPLEMENTATO E TESTATO LOCALMENTE:** integrazione circle con il ledger Siege, cattura/riconquista e salvataggio; agganci di breccia e navigazione; ripresa della campagna dopo ariete/scale/torri; collegamento delle brecce alla porta interna; ripiegamento dalle mura e dalla mischia.
+- **QA BROWSER:** variante TEST con due cinte e mastio interno, 43 assalitori / 5 difensori, prova 60 s conclusa: 0 assalitori e 1 difensore caduti, 0 conquiste, settore esterno conteso, mastio sicuro. Tick massimo 10,7 s; [report](../qa/combat-ai-circle-2026-11-06.md). Il layout originale non chiude una cinta per il raster: trattare distintamente i due scenari.
+- **RESIDUI:** piazzamento autonomo di scale/torri (oggi il piano arma l'ariete; scale e torri già assegnate sono usate), profilazione dei picchi delle ricerche di percorso, riconciliazione generale con main separata. Nessuna chiusura delle milestone strategiche o dell'assedio completo.
+
+### 2026-11-16 — MOVE-LAG-261116 · Lag sull'ordine di movimento
+
+- [x] L'ordine di movimento con percorso aggirante non blocca più il gioco per secondi (snapshot degli ostacoli nei controlli d'ingombro militari).
+- [ ] Restano 0,2–0,6 s per un ordine con aggiramento lungo su una mappa densa (A* sincrono condiviso con i popolani): valutare il calcolo cooperativo su più frame (`findPeasantPathWork`) per gli ordini di gruppo.
+
+### 2026-11-16 — Fix: niente pascolo nei campi
+
+- [x] Il cerchio di pascolo di pecore e mucche non tocca nessun campo coltivato (0,2 U di margine), compresi i campi automatici L1 e quelli in cantiere.
+- [x] Un campo piazzato sopra un pascolo già assegnato sposta il gregge.
+- [ ] Proposta: escludere i campi anche dal tragitto casa–pascolo (oggi le greggi possono attraversarli camminando, non pascolarci).
 
 ### 2026-11-15 — Microfix: messa domenicale visibile
 
@@ -1282,6 +1320,11 @@ Fogli provini dell'audit: impaginazione a griglia per le categorie e sfondo neut
 - **SUL BRANCH `mare`, NON MAIN**: mare al 30% della mappa; Molo in legno di 8U sulla costa con due attracchi esposti da `ConquerPier.moorings(s)`.
 - **Navi**: 5 modelli Blender pronti (3 piccole, 2 grandi), solo nell'Asset Lab.
 - **Navi in gioco**: flotta di test nel menu DEV (non salvata). **DA FARE**: salvataggio, arrivo/partenza in navigazione, selezione della nave nel gioco, ordine con il renderer WebGL invece del livello sovrapposto, picchi di disegno isolati.
+- **Assedio per settori**: mancano dal port di circle l'integrazione con l'assedio di main (magazzini per settore, `captureCircleSector`, `markBreach` alle brecce) e l'aggancio di invalidazione in `settlement-population-navigation.js`; arriveranno con il merge di main. Le brecce nelle mura non sono ancora usate come passaggi verso il settore successivo (solo porte e torri d'assalto). Le torri d'assalto/scale non vengono ancora piazzate dal piano degli assalitori, solo l'ariete.
+- **Combattimento, prestazioni**: nell'assedio TEST molti tick da 0,5–1,4 s e picchi di 6–12 s (al caricamento e quando la porta cede): profilare `assaultThink`/`planLegs` e le ricerche di percorso.
+- **Combattimento**: scala delle unità decisa (D-060). Picco di 4–9 s quando la porta cede (`breakIn` e ricalcoli d'assalto), anche senza la nuova IA: profilare. I difensori sulle mura non scendono da soli a combattere a terra.
+- **Performance**: restano 20–40 ms di passata frontale WebGL (`world3dFrontMs`, include la copia del canvas WebGL sul 2D) e la popolazione a zoom alto; misurare con il pannello visibile e un profilo CPU. `lotKindForHouse` è chiamata centinaia di volte per frame.
+- **Personaggi 3D**: fatto per contadini, lavoratori, carpentieri e marinai. **DA FARE**: carrettieri sui veicoli e figure della battaglia navale ancora in 2D; i costruttori stanno solo sul lato verso la camera (con la profondità non serve più); misurare con un villaggio grande di giorno (nel test erano visibili solo 4 abitanti).
 - **Trabucco**: DA FARE serventi come unità di combattimento (oggi figure, `crewHit` solo via API), salvataggio con la partita, munizioni, il tiro parte a 9U dal bersaglio (volley) invece che dalla macchina; picchi residui ~200 ms nel tick di combattimento all'avvio dell'assalto (12 percorsi A* in un tick: distribuirli su più frame).
 - **Performance**: restano 20–40 ms di passata frontale WebGL (`world3dFrontMs`, include la copia del canvas WebGL sul 2D) e la popolazione a zoom alto; misurare con il pannello visibile e un profilo CPU. `lotKindForHouse` è chiamata centinaia di volte per frame.
 - **Personaggi 3D**: fatto per contadini, lavoratori, carpentieri e marinai. **DA FARE**: carrettieri sui veicoli e figure della battaglia navale ancora in 2D; i costruttori stanno solo sul lato verso la camera (con la profondità non serve più); misurare con un villaggio grande di giorno (nel test erano visibili solo 4 abitanti).

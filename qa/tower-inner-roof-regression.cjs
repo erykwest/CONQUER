@@ -74,6 +74,22 @@ check('the inner roof removes the brazier (no fire on the deck)',()=>{
   const off=tower('o');setup([off]);
   assert.ok(run('towerHasBrazier')(off),'no inner roof: the brazier stays');
   assert.ok(run('battlementBrazierSources')().some(x=>x.id==='o:brazier'));
+  // The brazier body is part of the castle mesh (depth-tested in 3D), not painted on top.
+  if(run("typeof window.ConquerCastle3D")==='undefined')run(fs.readFileSync(__dirname+'/../src/settlement-castle3d.js','utf8'));
+  const C3=run('window.ConquerCastle3D'),src=run('battlementBrazierSources')().find(x=>x.id==='o:brazier');
+  assert.equal(src.structureId,'o','the brazier knows its tower');
+  const box=run('brazierFixtureBox')(src);
+  const meshHasBrazier=()=>{const m=C3.worldMeshes(),all=[m.body,m.front];
+    // A brazier top: a vertex at the box top height inside its footprint.
+    const zTop=box.z1+box.groundZ;
+    return all.some(t=>{for(let i=0;i<t.length;i+=6)if(Math.abs(t[i+2]-zTop)<1e-4&&Math.abs(t[i]-src.p.x)<=.1001&&Math.abs(t[i+1]-src.p.y)<=.1001)return true;return false})};
+  assert.ok(meshHasBrazier(),'the castle mesh builds the brazier block');
+  run("window.ConquerWorld3D={active:()=>true}");
+  assert.equal(C3.ownsBrazier(src),true,'World3D: the mesh owns the brazier, the canvas does not paint it');
+  run("window.ConquerWorld3D={active:()=>false}");
+  assert.equal(C3.ownsBrazier(src),C3.active(),'2.5D: the canvas paints it unless the WebGL castle body is on');
+  run("delete window.ConquerWorld3D");
+  assert.ok(fs.readFileSync(__dirname+'/../src/settlement-castle-structures.js','utf8').includes('if(!window.ConquerCastle3D?.ownsBrazier?.(src))drawBrazierFixture(src)'),'the canvas skips braziers the mesh owns');
 });
 check('2.5D: one inner-roof piece among the merlons, only when mounted and built',()=>{
   const on=tower('a',{innerRoof:'on'}),off=tower('b'),site=tower('c',{innerRoof:'on',construction:{progress:.5}});

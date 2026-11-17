@@ -174,8 +174,10 @@
           'solo '+d.changed+' pixel diversi dalla struttura intatta ('+(d.share*100).toFixed(2)+'%)')});
       }
       // A structure still standing (not collapsed, not destroyed) keeps most of its silhouette.
+      // A fallen exterior element ("elemento esterno crollato") is a collapse too: its rubble widens
+      // the framing, so the standing structure covers less of the picture without losing anything.
       for(const r of rs){
-        if(!/^damage-/.test(r.state)||!s.intact?.coverage||/crollo|distrutt|breccia|brecce/.test(r.state))continue;
+        if(!/^damage-/.test(r.state)||!s.intact?.coverage||/crollo|crollat|distrutt|breccia|brecce/.test(r.state))continue;
         const kept=r.coverage/s.intact.coverage;
         out.push({id,state:r.state,check:check('sagoma-conservata',kept>.6,'fail',
           'copertura '+(kept*100).toFixed(0)+'% della struttura intatta'+(r.structure?.present?' (struttura presente, hp '+r.structure.hp+')':''))});

@@ -2,7 +2,63 @@
 
 ## 2026-11-16 — COMBAT-MELEE-01 · Nessuno moriva coi lupi
 
-Regole della mischia corrette: ogni nemico a contatto attacca, l'energia si consuma una volta per round, gli sfiniti continuano a colpire (prima lo scontro si bloccava per sempre). Bilanciamento: lupo 10 PV; fuorilegge 20 PV e armatura 1, guardie 26, arcieri 16. Nuova `qa/melee-outnumbered-regression.cjs` con i tassi di vittoria. STATUS, BACKLOG, DECISIONS aggiornati; ROADMAP invariata.
+Regole della mischia corrette: ogni nemico a contatto attacca, l'energia si consuma una volta per round, gli sfiniti continuano a colpire (prima lo scontro si bloccava per sempre). Bilanciamento sulla scala D-060 di #258: lupo 5 PV combattimento 2, orso 14 PV combattimento 2; fuorilegge di #258 invariati. Nuova `qa/melee-outnumbered-regression.cjs` con i tassi di vittoria. STATUS, BACKLOG, DECISIONS aggiornati; ROADMAP invariata.
+
+### 2026-11-16 — Bandiere, torce e braciere della palizzata in 3D
+
+- Asset Lab: il controllo «sagoma conservata» esclude anche lo stato «elemento esterno crollato» (rosso su main dalla #251).
+- Bandiere delle torri come quelle delle navi, supporti 3D delle torce delle torri, alone del fuoco non più tagliato, braciere della torre a palizzata dal modello Blender. Test in qa/tower-fittings-regression.cjs. Roadmap e decisioni invariate.
+
+### 2026-11-16 — Braciere delle torri in 3D
+
+- Il corpo del braciere su torri e porte in pietra entra nella mesh del castello con test di profondità; il canvas lo dipinge solo dove la mesh non c'è. Test in qa/tower-inner-roof-regression.cjs. Roadmap e decisioni invariate.
+## 2026-11-16 — combat-ai: fortificazioni verso l'esterno, merge di main, fionda del trabucco
+
+- `faceFortificationsOut` (settlement-castle-structures.js, chiamata da `migrateStructures`): le mura di una cinta guardano fuori dal recinto e le porte tra due tratti hanno il passaggio attraverso il muro verso l'esterno; i muri sul molo restano rivolti all'acqua.
+- Merge di `origin/main` in combat-ai; scala delle unità rinumerata D-060; disegno del combattimento portato in `settlement-combat-render.js` (squadre dell'ariete senza armi, fiamme sulle macchine, macchine bruciate nascoste).
+- Trabucco: `ConquerFire.volley(s,'stone',origin,{from})` lancia la pietra dal punto reale della fionda al rilascio (`ConquerTrebuchets` legge il modello 3D), con arco 3D e tempo di volo dalla distanza.
+- L'ariete leggero segue il ciclo dell'ariete invece di una voce propria in `CYCLE` (il codex della wiki elenca `CYCLE`); `wiki/catalog.json` rigenerato.
+
+## 2026-11-06 — Runner assedio con screenshot periodici
+
+- Aggiunto `SIEGE_SCREENSHOT_INTERVAL`: pause di acquisizione ai checkpoint simulati, screenshot in gioco e JSON progressivo con unità, porte, perdite e settori. Completata prova di 300,2 s con 6 screenshot: 43→26 assalitori, 5→2 difensori mobili, 0 conquiste. Esito funzionale KO (stallo nei varchi e ritirata incompleta), tick massimo 21,34 s. [Report](../qa/combat-ai-circle-300s-2026-11-06.md). Nessuna modifica al comportamento del gioco. Corrette nella fixture le posizioni iniziali del capitano e di una pattuglia; il runner rifiuta partenze su terreno bloccato. CI circle estesa al controllo sintattico del runner degli screenshot.
+
+
+## 2026-11-06 — combat-ai: completamento del port circle e regressioni
+
+- Port selettivo dell'integrazione Siege/circle da main: scorte fisiche per settore, cattura, riconquista, persistenza, brecce e invalidazione della navigazione. Ripristinati i 2 test d'integrazione esclusi nel primo port.
+- Corretti il mancato ritorno alla campagna dopo gli assalti, il collegamento dei settori compromessi ai portali interni e il ripiegamento da mura/mischia. La regressione di attraversamento ora non dipende da frecce casuali delle porte.
+- 67 test circle e regressioni pertinenti PASS; runner browser TEST/variante concentrica di 60 s con perdite e settori, CI sul branch. Browser 60 s sulla variante concentrica: 43→43 assalitori vivi, 5→4 difensori, porta esterna sfondata, 0 settori conquistati (esterno conteso), mastio sicuro, 0 errori JS; picchi fino a 10,7 s. [Report](../qa/combat-ai-circle-2026-11-06.md). CI PASS su `a3ebb86`. Branch non integrato in main.
+
+
+## 2026-11-13 — Difesa dalle mura, fuoco sulle macchine e due arieti
+
+- Copertura dalle frecce in `settlement-combat-rules.js`: feritoia 90%, merli (cammino di ronda e tetto delle torri) 70%, tetto dell'ariete coperto 90%. Gli arcieri delle torri (posti `occupiedArcherSlots`) diventano bersagli: un colpo che supera la copertura toglie un arciere dalla torre.
+- Arcieri senza bersaglio da 6 s: uno per torre ogni 4 s si sposta (1,2 U/s) nella torre libera più vicina al nemico entro 15 U.
+- Frecce incendiarie dai posti sul tetto delle torri: 25% di innesco su un ariete, una torre d'assalto o una scala entro 3 U dal bersaglio. Il fuoco cresce (scala al doppio, pioggia al 30%), la squadra libera lo spegne finché è piccolo, a fuoco pieno la macchina è persa e un nuovo ariete per la stessa porta arriva dopo 40 s. Le pietre dei ballatoi ignorano gli uomini sotto il tetto.
+- Ariete: forza per uomo 0,04 (circa 90 colpi, 2,7 min con 4 uomini, per la porta da 85 HP). Due varianti: `light` (4 uomini, nuovo modello Blender `ramLight`: trave corta all'altezza delle mani con due traverse) e `covered` (8 uomini, modello attuale, due file per lato sotto il tetto). Con almeno 8 fanti liberi gli assalitori montano il coperto. Le squadre al loro posto sono disegnate senza armi (`atRam`).
+- Asset Lab: «Ariete coperto» e «Ariete leggero» con azione «Colpo». Runner dell'assedio: `SIEGE_SPEED`, `SIEGE_FOCUS`, `SIEGE_ZOOM`, stato delle macchine e arcieri per torre negli snapshot; nella fixture concentrica 5 arcieri e mura con `flip` (merli all'esterno).
+
+## 2026-11-11 — Assedio concentrico: blocco nei varchi
+
+- Chi resta nel varco di una porta (che non appartiene a nessun settore) prosegue dritto verso il lato più profondo; prima era trattato come «fuori» e rimandato alla porta esterna.
+- L'imbocco di una porta si sceglie dal settore in cui si trova l'unità, non dalla distanza in linea d'aria: accanto a una cinta l'imbocco più vicino può essere dietro il muro (causa delle pattuglie ferme nella prova di 5 minuti).
+- Se il percorso con l'ingombro della formazione non raggiunge l'imbocco: dritti entro 3 U, altrimenti a un punto davanti all'imbocco, come ultima risorsa a fila singola.
+- Dopo un percorso fallito: attesa di 4 s (assalitori) o 3 s (ritirata); dopo 4 fallimenti la pattuglia tiene la posizione per 20 s invece di ricalcolare all'infinito.
+
+## 2026-11-02 — Mare al 30% e Molo (branch `mare`)
+
+- Assedio per settori concentrici (logica simmetrica su /circle). Portati da `main` solo `src/settlement-circle.js`, `src/circle/*.mjs`, 5 test `qa/circle-*.test.mjs` e il workflow (senza merge: 18 conflitti); agganci in `settlement-app-simulation.js` (`updateControl`, `tickOccupation`, `invalidate` a costruzione completata) e invalidazione dal combattimento quando la cinta cambia. **Assalitori** (`campaignThink`): vogliono il mastio e attraversano i settori uno alla volta lungo i portali di circle; combattono i difensori dello stesso settore, passano dalle porte aperte o sfondate, per una porta chiusa armano un ariete con gli armigeri più vicini mentre gli altri aspettano fuori (arcieri a 10U). **Difensori** (`fallbackThink`): tengono il settore più esterno; se cade (invaso, compromesso, preso) o sono due contro uno ripiegano nel settore interno, aprono la porta interna se serve e la richiudono dopo l'ultimo; in ritirata non ingaggiano; il mastio è l'ultimo baluardo.
+- Scala delle unità (D-060, supera D-041 per le unità): HP fante 8, picchieri 12, pattuglia 10, arciere 6, cavaliere 20, capitano 16; il cavaliere colpisce per 2; in mischia un 6 naturale va a segno se il totale vince. Strutture e macchine invariate (crolli molto rari). Salvataggi con la vecchia scala riscalati in proporzione al caricamento (`ConquerCombatRules.ensure`).
+- Combattimento: difensori e assalitori si cercano (`settlement-combat.js`, `defenderThink`/`raidThink`). Prima la mischia scattava solo sotto 1U e nessuno si avvicinava: la guarnigione restava ai suoi posti mentre gli assalitori passavano. Ora un difensore libero a terra va contro l'ostile più vicino nel suo raggio (pattuglie 12U, squadre e capitano 18U, cavalieri 22U), un assalitore senza compito d'assalto va contro il difensore più vicino (arcieri fermi a 10U, gli altri al contatto); un ordine del giocatore non viene mai scavalcato. Raggiungibilità con una mappa ad aree (griglia 0,5U della cinta: mura, torri, porte chiuse) così nessuno cerca un percorso attraverso le mura (una ricerca A* fallita costava secondi); al più 3 ricerche per tick; attraverso una porta aperta o sfondata si passa con tappe nel passaggio, come l'ariete. Valori di HP, armature, dadi invariati (D-041).
+
+### 2026-11-16 — MOVE-LAG-261116 · Ordine di movimento senza lag
+
+`fix/move-order-lag`: l'A* passa il suo snapshot degli ostacoli ad `allowedAt` e gli ordini militari lo riusano in tutti i controlli d'ingombro; un ordine con aggiramento passa da 6–10 s a 0,2–0,6 s su una scena densa, con percorsi identici. Test in qa/movement-path-performance-regression.cjs. ROADMAP e DECISIONS invariate: nessun contratto di gioco cambiato.
+
+### 2026-11-16 — Fix: le greggi non pascolano nei campi coltivati
+
+- `pastureBuildingAllowed` ora tratta i campi (`fieldPoints`) come ostacoli invece di saltarli; i pascoli in cache vengono riverificati quando cambia l'elenco delle strutture. Test in qa/urban-livestock-regression.cjs; versione cache di settlement-livestock.js aggiornata. ROADMAP e DECISIONS invariate.
 
 ### 2026-11-15 — Microfix: fedeli alla messa nel cutaway della chiesa
 

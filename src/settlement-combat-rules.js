@@ -4,22 +4,25 @@
 (function(){
   const D12=[1,2,2,3,3,3,4,4,4,5,5,6];
   const MAX_E=150,MAX_B=150;
+  // Unit scale of the game (D-060, 05/11/2026): small HP so a duel lasts about half a minute and
+  // fire from the walls matters. Dice, combat, armour and frontage are the Coffee Battles ones;
+  // dmg is the hp taken by one landed blow (the knight's charge counts double).
   const PROFILES=Object.freeze({
-    spearman:Object.freeze({hp:100,combat:2,armor:2,aim:null,front:3}),
-    patrol:Object.freeze({hp:40,combat:2,armor:2,aim:null,front:2}),
-    // Wolf: 10 hp (17/11/2026): a squad beats a pack of six most times, wounded; a lone patrol barely holds three.
-    wolf:Object.freeze({hp:10,combat:3,armor:0,aim:null,front:1}),
-    bear:Object.freeze({hp:45,combat:4,armor:1,aim:null,front:1}),
-    // Outlaws on the soldiers' scale (~20 hp a man, 17/11/2026): axe and round shield give armour 1;
-    // a lair guard is the best of them. A squad beats any band but pays for it.
-    outlaw:Object.freeze({hp:20,combat:2,armor:1,aim:null,front:1}),
-    outlawGuard:Object.freeze({hp:26,combat:2,armor:1,aim:null,front:1}),
+    spearman:Object.freeze({hp:12,combat:2,armor:2,aim:null,front:3,dmg:1}),
+    patrol:Object.freeze({hp:10,combat:2,armor:2,aim:null,front:2,dmg:1}),
+    // Fauna on the D-060 scale (17/11/2026): a wolf is less than a man (a squad beats a pack of six about half the time,
+    // four most times); a bear is the worst beast (a knight kills it, a squad alone seldom, a lone footman never).
+    wolf:Object.freeze({hp:5,combat:2,armor:0,aim:null,front:1,dmg:1}),
+    bear:Object.freeze({hp:14,combat:2,armor:1,aim:null,front:1,dmg:2}),
+    // Outlaws: light, unarmoured men; a lair guard is the best of them (D-060 scale: below the 8 hp man-at-arms).
+    outlaw:Object.freeze({hp:6,combat:2,armor:0,aim:null,front:1,dmg:1}),
+    outlawGuard:Object.freeze({hp:8,combat:2,armor:1,aim:null,front:1,dmg:1}),
     // Outlaw bowman: shoots like an archer (kind 'archer'), lighter than a realm archer.
-    outlawArcher:Object.freeze({hp:16,combat:1,armor:0,aim:2,front:1,range:15}),
-    infantry:Object.freeze({hp:100,combat:2,armor:1,aim:null,front:1}),
-    knight:Object.freeze({hp:30,combat:3,armor:3,aim:null,front:1}),
-    captain:Object.freeze({hp:30,combat:3,armor:3,aim:null,front:1}),
-    archer:Object.freeze({hp:100,combat:1,armor:0,aim:2,front:1,range:15})
+    outlawArcher:Object.freeze({hp:5,combat:1,armor:0,aim:2,front:1,range:15,dmg:1}),
+    infantry:Object.freeze({hp:8,combat:2,armor:1,aim:null,front:1,dmg:1}),
+    knight:Object.freeze({hp:20,combat:3,armor:3,aim:null,front:1,dmg:2}),
+    captain:Object.freeze({hp:16,combat:3,armor:3,aim:null,front:1,dmg:1}),
+    archer:Object.freeze({hp:6,combat:1,armor:0,aim:2,front:1,range:15,dmg:1})
   });
   // Faction IDs are data, not a render-side "enemy = black" conditional.
   // A PVP team can supply its own palette / emblems later.
@@ -163,9 +166,14 @@
   }
   const shouldRebuildBoundary=(painting,hasCache,signatureChanged)=>signatureChanged&&(!painting||!hasCache);
   function ensure(entity,kind){
+    // The unit's own profile wins over the kind a caller passes (a shot passes combatKind only).
+    const own=profileKind(entity),p=(entity.kind||entity.combatKind)&&PROFILES[own]?PROFILES[own]:PROFILES[kind]||PROFILES.infantry;
     if(!entity.stats){
-      const p=PROFILES[kind]||PROFILES.infantry;
       entity.stats={hp:p.hp,maxHp:p.hp,energy:MAX_E,brain:MAX_B,combat:p.combat,armor:p.armor,aim:p.aim,shock:0};
+    }else if(entity.stats.maxHp!==p.hp&&Number(entity.stats.maxHp)>0){
+      // Saved on another scale (the old 30-100 HP): keep the same share of health.
+      const s=entity.stats,share=Math.max(0,Math.min(1,(Number(s.hp)||0)/Number(s.maxHp)));
+      s.hp=s.hp<=0?0:Math.max(1,Math.round(p.hp*share));s.maxHp=p.hp;
     }
     if(!Number.isFinite(entity.meleeClock))entity.meleeClock=0;
     return entity.stats;
@@ -200,11 +208,13 @@
     let hitA=0,hitB=0;
     const ca=effectiveCombat(a),cb=effectiveCombat(b);
     for(let i=0;i<count;i++){
-      const sa=roll()+ca,sb=roll()+cb;
-      if(sa>sb&&ca>0&&sa-sb>b.stats.armor)hitB++;
-      else if(sb>sa&&cb>0&&sb-sa>a.stats.armor)hitA++;
+      // A natural 6 always lands when its total wins: armour 3 is strong, not immunity.
+      const ra=roll(),rb=roll(),sa=ra+ca,sb=rb+cb;
+      if(sa>sb&&ca>0&&(sa-sb>b.stats.armor||ra===6))hitB++;
+      else if(sb>sa&&cb>0&&(sb-sa>a.stats.armor||rb===6))hitA++;
     }
-    applyDamage(a,hitA,b);applyDamage(b,hitB,a);
+    const dmgOf=u=>PROFILES[profileKind(u)]?.dmg||1;
+    applyDamage(a,hitA*dmgOf(b),b);applyDamage(b,hitB*dmgOf(a),a);
     // Fighting tires once per melee round, however many foes press in: a man
     // surrounded by five wolves must not tire five times as fast.
     for(const u of [a,b]){
@@ -247,6 +257,9 @@
     }
     return hits;
   }
+  const SLIT_COVER=.9,MERLON_COVER=.7,ROOF_COVER=.9;
+  // A tower archer is an unarmoured archer (armour 0) before the slit's cover.
+  const postHit=()=>{const die=roll();return die===6||(die!==1&&die+PROFILES.archer.aim>=6)};
   function shooterRange(shooter,target){
     const targetH=Number.isFinite(target.h)?target.h:target.height??0;
     // +1/-1 range for every relative altitude level. Positive downhill,
@@ -259,18 +272,25 @@
       if(owner&&(!living(owner)||owner.defeated||owner.routing||owner.engaged||owner.climbing))continue;
       let target=null,best=Infinity;
       for(const e of targets){
-        if(!living(e)||e.routing||e.neutral)continue;
+        if(!e.post)if(!living(e)||e.routing||e.neutral)continue;   // tower posts are always valid targets
         const d=Math.hypot(shooter.x-e.x,shooter.y-e.y);
         if(d>shooterRange(shooter,{...e,h:e.h??shooter.terrainAt(e)})||d>=best)continue;
         if(!visibleFn(e,shooter))continue;
         target=e;best=d;
       }
       if(!shooter.clock)shooter.clock=0;
-      if(!target){shooter.clock=0;continue}
+      // idle: seconds without a target (the garrison moves archers with nothing to shoot at).
+      if(!target){shooter.clock=0;shooter.idle=(shooter.idle||0)+dt;continue}
+      shooter.idle=0;
       shooter.clock+=dt;
       if(shooter.clock<2)continue;
       shooter.clock%=2;
-      const hit=shotHit(shooter,target),shot=arrow(shooter,target,hit);
+      // Cover against arrows: a slit stops 90% of the hits, merlons on a wall walk 70%.
+      // A covered ram's shed covers its crew at their posts (90%).
+      const cover=target.post?target.post.cover??SLIT_COVER:target.underRoof?ROOF_COVER:target.wall?MERLON_COVER:0;
+      const hit=(target.post?postHit():shotHit(shooter,target))&&!(cover&&Math.random()<cover),shot=arrow(shooter,target,hit);
+      shooter.onLoose?.(target,hit);
+      if(hit&&target.post){target.post.hit?.();continue}
       if(hit){
         applyDamage(target,1,owner||shooter);
         window.ConquerCombatAnim?.hurt(target,shot.duration);
@@ -337,7 +357,8 @@
     }
     if(combatClock>=1){combatClock%=1;meleeRound++}
     shoot(dt,shooters,enemy,visibleFn);
-    shoot(dt,enemyShooters,friendly,enemyVisibleFn);
+    // Staffed tower posts are targets too: the hostiles shoot at the archers behind the slits.
+    shoot(dt,enemyShooters,friendly.concat(shooters.filter(s=>s.post)),enemyVisibleFn);
     for(let i=shots.length-1;i>=0;i--)if(elapsed>shots[i].start+shots[i].duration)shots.splice(i,1);
     for(let i=meleeFlashes.length-1;i>=0;i--)if(elapsed>meleeFlashes[i].at+.65)meleeFlashes.splice(i,1);
     for(let i=stones.length-1;i>=0;i--)if(elapsed>stones[i].start+stones[i].duration+.25)stones.splice(i,1);
