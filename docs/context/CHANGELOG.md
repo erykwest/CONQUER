@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-16 — GORE-01: sangue, frecce, cadaveri e mutilazioni sul campo (opzione)
+
+- Nuovo `src/settlement-gore.js` (ConquerGore): macchie di sangue a ogni colpo, frecce mancate conficcate nel terreno, frecce nei corpi, cadaveri, decapitazioni, squartamenti, braccia mozzate, schiacciati dalle pietre. Dissolvenza lineare come le impronte sulla neve ma in 2 giorni di gioco. Interruttore nel pannello DEV (sezione VIOLENZA), salvato in `localStorage` `conquer.gore.v1`; spento toglie anche il sangue delle cadute. Voci nel Lab (famiglia «Campo di battaglia»). Test `qa/gore-regression.cjs`. ROADMAP e DECISIONS invariate: stato visivo transitorio, nessun salvataggio cambiato.
+
 ### 2026-11-16 — ASSET-AUDIT-261116 · Audit del Lab di nuovo verde
 
 `fix/asset-audit-baseline`: il controllo `sagoma-conservata` confronta le aree disegnate invece della densità nel riquadro (falso errore sulla torre tonda con latrina crollata); baseline `qa/asset-audit-baseline.json` rigenerata dal report della CI dopo la revisione dei render cambiati dal 12/11. Segnalato in BACKLOG il cantiere vuoto delle torri in pietra L2+ nel Lab. ROADMAP e DECISIONS invariate: nessun contratto di gioco cambiato.

@@ -83,7 +83,8 @@
       ctx.save();
       ctx.globalAlpha*=pose.alpha;
       ctx.translate(pose.dirX*reach,pose.dirY*reach*.6-Math.abs(pose.bob)*.5*scale);
-      if(pose.blood>0)drawBlood(base,scale,bodyH,pose);
+      // The gore option (settlement-gore.js) also governs the blood of the fall itself.
+      if(pose.blood>0&&window.ConquerGore?.enabled?.()!==false)drawBlood(base,scale,bodyH,pose);
       if(pose.fall>0){
         // Fall away from the foe, pivoting on the feet.
         ctx.translate(base.x,base.y);ctx.rotate((pose.dirX>0?-1:1)*pose.fall*1.45);ctx.translate(-base.x,-base.y);
@@ -150,5 +151,5 @@
   function reset(){lastEventEnd=-1e9}
   window.ConquerCombatAnim={strike,hurt,fall,dying,active,pose,foeOf,attackCurve,drawFigure,reset,
     setClock(t){clockOverride=Number.isFinite(t)?t:null},
-    TIMING:Object.freeze({STRIKE,HURT,FALL,GONE,LAST,IMPACT:STRIKE*.55})};
+    TIMING:Object.freeze({STRIKE,HURT,FALL,FADE_FROM,GONE,LAST,IMPACT:STRIKE*.55})};
 })();
