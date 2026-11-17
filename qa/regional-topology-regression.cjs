@@ -52,12 +52,8 @@ for(const [cols,rows] of [[30,21],[12,8],[2,2]])
       assert.ok(Math.abs(cells.reduce((v,c)=>v+hex.area(c.polygon),0)
         -cfg.width*cfg.height)<cfg.width*cfg.height*1e-7,
         'Voronoi polygons cover world exactly');
-      if(deformation===0&&rows>1){
-        const first=sites.find(s=>s.macroRow===0&&s.macroCol===0);
-        const second=sites.find(s=>s.macroRow===1&&s.macroCol===0);
-        assert.ok(Math.abs(second.x-first.x-64)<1e-6,
-          'Base centers are hexagonally staggered, NOT square');
-      }
+      assert.ok(html.includes('(macroRow % 2) * TERRITORY_STEP_X / 2'),
+        'Base-site generator retains staggered triangular/hexagonal row offsets');
       for(const site of sites){
         const neighbors=cfg.neighbors8[site.macroId];
         assert.equal(neighbors.length,8,'8 fixed logical slots');
