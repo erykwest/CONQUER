@@ -178,7 +178,11 @@
       // the framing, so the standing structure covers less of the picture without losing anything.
       for(const r of rs){
         if(!/^damage-/.test(r.state)||!s.intact?.coverage||/crollo|crollat|distrutt|breccia|brecce/.test(r.state))continue;
-        const kept=r.coverage/s.intact.coverage;
+        // Compare drawn areas, not densities: captures share one scale and are cropped to what is
+        // drawn, so rubble or debris thrown wide of a structure that is still whole widens the box
+        // and dilutes its density (ASSET-AUDIT-261116).
+        const area=x=>x.width&&x.height?x.coverage*x.width*x.height:x.coverage;
+        const kept=area(r)/area(s.intact);
         out.push({id,state:r.state,check:check('sagoma-conservata',kept>.6,'fail',
           'copertura '+(kept*100).toFixed(0)+'% della struttura intatta'+(r.structure?.present?' (struttura presente, hp '+r.structure.hp+')':''))});
       }
