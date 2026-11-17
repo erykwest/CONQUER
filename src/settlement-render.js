@@ -444,13 +444,16 @@ function draw(){
   const world3d=window.ConquerWorld3D?.active?.()&&window.ConquerWorld3D.drawBack(r);
   if(world3d){
     window.ConquerSnowTracks?.draw();
+    window.ConquerGore?.draw();
   }else{
   ensureStaticSceneCaches();
   // Keep moving footprints above the terrain but BELOW completed buildings.
   // With WebGPU active, exclude the base layer from its compositing pass and
   // blit that cached bitmap on the front canvas after the snow. Otherwise
   // WebGPU's opaque static canvas would always bury the footprints entirely.
-  const snowUnderBuildings=State.season==='winter'&&(window.ConquerSnowTracks?.count?.()||0)>0;
+  // Battlefield gore (blood, arrows, corpses) shares the same under-buildings slot.
+  const snowUnderBuildings=(State.season==='winter'&&(window.ConquerSnowTracks?.count?.()||0)>0)||
+    (window.ConquerGore?.count?.()||0)>0;
   const gpuStatic=window.ConquerWebGPU?.renderStaticLayers?.(r,snowUnderBuildings)===true;
   if(!gpuStatic){
     blitSceneCache('landscape');
@@ -458,6 +461,7 @@ function draw(){
     blitSceneCache('shadow');
   }
   window.ConquerSnowTracks?.draw();
+  window.ConquerGore?.draw();
   if(!gpuStatic||snowUnderBuildings)blitSceneCache('base');
   }
 

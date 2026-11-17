@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-16 — GORE-01: sangue, frecce, cadaveri e mutilazioni sul campo (opzione)
+
+- Nuovo `src/settlement-gore.js` (ConquerGore): macchie di sangue a ogni colpo, frecce mancate conficcate nel terreno, frecce nei corpi, cadaveri, decapitazioni, squartamenti, braccia mozzate, schiacciati dalle pietre. Dissolvenza lineare come le impronte sulla neve ma in 2 giorni di gioco. Interruttore nel pannello DEV (sezione VIOLENZA), salvato in `localStorage` `conquer.gore.v1`; spento toglie anche il sangue delle cadute. Voci nel Lab (famiglia «Campo di battaglia»). Test `qa/gore-regression.cjs`. ROADMAP e DECISIONS invariate: stato visivo transitorio, nessun salvataggio cambiato.
+
 ### 2026-11-16 — Fix: le greggi non pascolano nei campi coltivati
 
 - `pastureBuildingAllowed` ora tratta i campi (`fieldPoints`) come ostacoli invece di saltarli; i pascoli in cache vengono riverificati quando cambia l'elenco delle strutture. Test in qa/urban-livestock-regression.cjs; versione cache di settlement-livestock.js aggiornata. ROADMAP e DECISIONS invariate.

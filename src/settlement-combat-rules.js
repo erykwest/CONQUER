@@ -187,6 +187,13 @@
     if(s.brain<=0&&s.hp>0)u.routing=true;
     if(source&&hits>0){source.damageDealt=(source.damageDealt||0)+hits}
   }
+  // A man goes down: the fall animation plays, and (GORE-01, optional) his corpse stays.
+  function fallen(u,delay,foe){
+    const anim=window.ConquerCombatAnim;
+    if(anim?.dying?.(u))return;
+    anim?.fall(u,delay,foe);
+    window.ConquerGore?.died(u,delay,foe,anim?.TIMING);
+  }
   function meleePair(a,b,count){
     ensure(a,profileKind(a));
     ensure(b,profileKind(b));
@@ -230,7 +237,8 @@
     if(hits){
       applyDamage(target,hits*STONE_DAMAGE,source);
       window.ConquerCombatAnim?.hurt(target,fall);
-      if(target.defeated)window.ConquerCombatAnim?.fall(target,fall,source);
+      window.ConquerGore?.hit(target,'stone',source,fall);
+      if(target.defeated)fallen(target,fall,source);
     }
     return hits;
   }
@@ -261,8 +269,9 @@
       if(hit){
         applyDamage(target,1,owner||shooter);
         window.ConquerCombatAnim?.hurt(target,shot.duration);
-        if(target.defeated)window.ConquerCombatAnim?.fall(target,shot.duration,owner||shooter);
-      }
+        window.ConquerGore?.hit(target,'arrow',owner||shooter,shot.duration);
+        if(target.defeated)fallen(target,shot.duration,owner||shooter);
+      }else window.ConquerGore?.miss(shot,target);   // the arrow stays stuck in the ground
     }
   }
   function update(dt,friendly,enemy,shooters,visibleFn,canContact=()=>true,enemyShooters=[],enemyVisibleFn=visibleFn){
@@ -291,16 +300,18 @@
       if(combatClock>=1){
         const frontage=Math.min(PROFILES[profileKind(a)].front,PROFILES[profileKind(nearest)].front);
         const {hitA,hitB}=meleePair(a,nearest,Math.max(1,frontage));
-        const anim=window.ConquerCombatAnim;
+        const anim=window.ConquerCombatAnim,gore=window.ConquerGore;
+        // Damage lands on the thrust, not on the wind-up.
+        const impact=anim?anim.TIMING.IMPACT:0;
         if(anim){
-          // Damage lands on the thrust, not on the wind-up.
-          const impact=anim.TIMING.IMPACT;
           anim.strike(a,nearest);anim.strike(nearest,a);
           if(hitA)anim.hurt(a,impact);
           if(hitB)anim.hurt(nearest,impact);
-          if(a.defeated)anim.fall(a,impact,nearest);
-          if(nearest.defeated)anim.fall(nearest,impact,a);
         }
+        if(hitA)gore?.hit(a,'melee',nearest,impact);
+        if(hitB)gore?.hit(nearest,'melee',a,impact);
+        if(a.defeated)fallen(a,impact,nearest);
+        if(nearest.defeated)fallen(nearest,impact,a);
         if(meleeFlashes.length>50)meleeFlashes.shift();
         meleeFlashes.push({x:(a.x+nearest.x)/2,y:(a.y+nearest.y)/2,at:elapsed});
       }

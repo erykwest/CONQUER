@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-16 — GORE-01: conseguenze visibili della battaglia (opzionale)
+
+- Branch feature/gore. `settlement-gore.js` riceve gli eventi reali di `settlement-combat-rules.js`: colpo di freccia/mischia/pietra → schizzo di sangue orientato dal colpo; freccia mancata → freccia piantata oltre il bersaglio, inclinata verso l'arciere; morte (`fallen()` → anim.fall + ConquerGore.died) → cadavere con la livrea dell'unità, arma a terra, pozza sotto il torso e frecce ricevute conficcate. Le squadre lasciano 5 corpi, le pattuglie 2, come le figure. Mutilazioni deterministiche per id e dipendenti dall'arma: ascia (40% decapitato, 25% squartato, 15% braccio), cavaliere, lancia; pietre = schiacciato; lupi = solo sangue. Il cadavere compare in dissolvenza mentre la figura che cade svanisce (TIMING.FADE_FROM→GONE).
+- Dissolvenza: stessa legge lineare delle impronte (opacità 1 − età/durata, minimo 0,09), durata 2 giorni di simulazione (impronte: 1); il sangue scurisce col tempo. Tetti: 1400 macchie, 700 frecce, 260 cadaveri. Disegnato sotto gli edifici come le impronte (WebGPU: il livello base viene escluso anche quando c'è gore). Stato transitorio, non salvato; azzerato con nuova mappa o tornando indietro nel tempo.
+- Opzione: pannello DEV › VIOLENZA · CAMPO DI BATTAGLIA, pulsante «Gore ON/OFF», attivo di default, salvato in `localStorage` `conquer.gore.v1`. Spento: pulisce il campo, non registra nulla e toglie anche la pozza/spruzzo dell'animazione di caduta.
+- PASS gore-regression (nuovo), snow-tracks, combat-anim, refactor-module-boundaries (hook World3D aggiornato). Screenshot in gioco (layout TEST, battaglia reale con hp ridotti per farla durare secondi) e nel Lab in `output/playwright/gore/` (non versionati). Audit del Lab (`qa/asset-audit.mjs`) e CI da eseguire.
+
 ### 2026-11-16 — Fix: le greggi non pascolano nei campi coltivati
 
 - Branch fix/sheep-fields. Il fix di ottobre (ea3d7112) escludeva gli edifici dal cerchio di pascolo ma saltava esplicitamente i `field`, e `urbanBuildingPolygons` non restituisce comunque il contorno dei campi: pecore e mucche potevano pascolare sopra i campi. Ora `pastureBuildingAllowed` (settlement-livestock.js) legge `fieldPoints` per ogni campo (del giocatore, automatico L1 e in cantiere) con lo stesso margine di 0,2 U. Poiché piazzare un campo non incrementa `urbanRevision`, i pascoli già assegnati vengono riverificati quando cambia il numero di strutture: un campo costruito sopra un pascolo sposta il gregge altrove.

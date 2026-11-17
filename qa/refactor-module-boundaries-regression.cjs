@@ -32,7 +32,7 @@ const render3dHooks=[
   ["1,window.ConquerCastle3D?.active?.()?'3d':'2d',State.season||'summer',State.visualPalette,State.stonePaletteId,num(State.view.scale),State.view.rotation||0,isPlanView()?'plan':'iso',staticCacheDpr(),",
    "1,State.season||'summer',num(State.view.scale),State.view.rotation||0,staticCacheDpr(),"],
   ['()=>{if(!window.ConquerCastle3D?.drawFront?.())drawCastleBattlements()}','()=>drawCastleBattlements()'],
-  ['  // Opt-in full-scene 3D prototype (settlement-world3d.js): replaces every static scene cache.\n  const world3d=window.ConquerWorld3D?.active?.()&&window.ConquerWorld3D.drawBack(r);\n  if(world3d){\n    window.ConquerSnowTracks?.draw();\n  }else{\n',''],
+  ['  // Opt-in full-scene 3D prototype (settlement-world3d.js): replaces every static scene cache.\n  const world3d=window.ConquerWorld3D?.active?.()&&window.ConquerWorld3D.drawBack(r);\n  if(world3d){\n    window.ConquerSnowTracks?.draw();\n    window.ConquerGore?.draw();\n  }else{\n',''],
   ["  if(!gpuStatic||snowUnderBuildings)blitSceneCache('base');\n  }\n","  if(!gpuStatic||snowUnderBuildings)blitSceneCache('base');\n"],
   ["if(world3d)window.ConquerWorld3D.drawCastleOverlays();else blitSceneCache('castleBody');","blitSceneCache('castleBody');"],
   ["if(world3d)window.ConquerWorld3D.drawFront(r);else blitSceneCache('castleFront');","blitSceneCache('castleFront');"],

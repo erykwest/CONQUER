@@ -249,6 +249,7 @@ function generateNewMap(){
   State.weatherOverride=null;State.daylightOverride=null;
   weatherCacheKey='';weatherCacheValue=null;cloudLayerKey='';puddleCacheKey='';
   window.ConquerSnowTracks?.reset();
+  window.ConquerGore?.reset();
   State.clock.speed=0;
   State.clock.day=0;
   State.draft=null;State.selectedId=null;
