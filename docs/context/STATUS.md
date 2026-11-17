@@ -1,5 +1,10 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-17 — REGION3D-TOKENS · Token low-poly per la mappa regionale 3D
+
+- Branch `feature/region3d-tokens` (da `3dregionmap`), non mergiato. Nuovo builder Blender `tools/blender/build_region_tokens.py` → `src/assets/region-token-models.js` (`window.ConquerRegionTokenModels`): villaggio (5 casette a capanna, 70 tri), castello (cortina, 4 torri, mastio con bandiera, 91), molo (pontile a T su 6 pali, 56), nave (cocca con vela quadra, 33), truppe (3 soldati con lance e stendardo, 74). Distillati dai kit del Builder (casette a 60°, pietra/ardesia civica, cocca, pontile su pali, palette originali); unità token (raggio ~1, origine a terra/linea d'acqua), chiavi `team`/`teamDark` per il colore del proprietario, bandiere e vela a piano singolo (senza culling, come il renderer region3d).
+- PASS `qa/region-tokens-regression.cjs` (budget triangoli, appoggio a terra, colore proprietario, presenza nel Lab). Verificati nell'Asset Lab (Territorio › Mappa regionale (token)) e in anteprime Workbench. **Non ancora collegati** a `lab/3dregionmap.js`: posizionamento per territorio e tinta del proprietario da fare.
+
 ### 2026-11-17 — LOCAL-HEX-01: mappa locale con il contorno del territorio esagonale
 
 - Branch `feature/local-hex-shape`, dipendente da `3dregionmap` (non da main). Quando il World Lab apre un territorio, il payload porta ora `shape`: il poligono Voronoi reale della cella e quelli dei vicini **fisici** (lati condivisi).

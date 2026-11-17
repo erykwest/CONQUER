@@ -1,5 +1,13 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-17 — REGION3D-TOKENS · Token della mappa regionale 3D
+
+**IMPLEMENTATO SU BRANCH `feature/region3d-tokens`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Kit Blender low-poly: villaggio, castello, molo, nave, truppe (≤ 91 triangoli ciascuno), nell'Asset Lab.
+- [ ] Disegnarli in `lab/3dregionmap.js` (stesso buffer del terreno, ombreggiatura per faccia, tinta `team` dal colore politico).
+- [ ] Regole di posizionamento: villaggio/castello per insediamento, molo e nave sulle coste, truppe per armata.
+- [ ] Varianti di livello (villaggio grande, castello a 2 torri) solo se servono dopo la prova a vista.
+
 ### 2026-11-17 — LOCAL-HEX-01 · Mappa locale ereditata dal territorio esagonale
 
 **IMPLEMENTATO SU BRANCH `feature/local-hex-shape` (base `3dregionmap`), NON MERGE.** Dettagli in [STATUS](STATUS.md).

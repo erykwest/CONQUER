@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-17 — REGION3D-TOKENS · Token low-poly della mappa regionale 3D
+
+- Nuovo kit Blender `build_region_tokens.py` → `region-token-models.js`: villaggio, castello, molo, nave e truppe stilizzati (33–91 triangoli), nel catalogo dell'Asset Lab; test `qa/region-tokens-regression.cjs`. Non ancora collegati al renderer region3d. Roadmap e decisioni invariate.
+
 ### 2026-11-17 — LOCAL-HEX-01: contorno esagonale ereditato dalla mappa regionale
 
 - `feature/local-hex-shape` (da `3dregionmap`): nuovo `src/regional-local-shape.js`, payload `shape` dal World Lab, zona edificabile poligonale, bordo offset 50U, biomi dai vicini fisici, ingressi stradali e uscite marine sul bordo poligonale. Test `qa/local-hex-shape-regression.cjs`; `wiki/catalog.json` rigenerato. Nuova decisione D-LOCAL-HEX-261117 in DECISIONS; ROADMAP invariata.

@@ -67,6 +67,10 @@ Verification: `qa/regional-map3d-placeholders-regression.cjs` covers all five pr
 - The original map's outer rectangular domain remains the same; the **internal** region/biome boundaries are organic. Distinct sea/land borders are derived from aggregated microcells.
 - A production renderer should cache meshes by seed/palette/warp revision, progressively LOD distant geometry, and eventually use worker/OffscreenCanvas and GPU sprite instancing rather than sorting and painting thousands of 2D billboards for every camera update.
 
+## Map tokens (not yet drawn)
+
+`tools/blender/build_region_tokens.py` → `src/assets/region-token-models.js` (`window.ConquerRegionTokenModels`) provides five flat-coloured, very low-poly tokens distilled from the Builder kits: `village` (70 tris), `castle` (91), `pier` (56), `ship` (33), `troops` (74). Token units: origin on the ground (waterline for pier and ship), +X forward, +Z up, footprint radius ~1, so the renderer scales each by one number. Indexed `p`/`i` plus one palette index per triangle (`c`), the same layout as the other Blender registries; `team`/`teamDark` are meant to take the owner's political colour, `*Dark` keys are pre-shaded faces because this renderer has no lighting. Flags and the sail are single planes and rely on the renderer's lack of back-face culling. They are listed in the Asset Lab under Territorio › Mappa regionale (token); wiring them into `lab/3dregionmap.js` is still open.
+
 ## Preview
 
 Serve the repository root over HTTP and open \`/lab/3dregionmap.html\` (do not use \`file://\`). In the left iframe, generate/edit the authoritative 2D map. The right pane detects the 2D revision, then builds its own global microcell mesh. Choose 8/20/40 detail, vary the deformation slider, and toggle tree/reed populations. The benchmark button reports CPU construction time (not GPU FPS).

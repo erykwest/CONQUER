@@ -39,7 +39,9 @@
     // Wall-walk stairs (BC-251105-01/02, settlement-wall-stairs.js): timber and masonry flight, rise 1 U.
     {global:'ConquerWallStairModels',collection:'models',category:'Edifici',family:'Scale ai camminamenti'},
     // Ramps and hill stairways (BC-251105-12/13): parametric pieces shown against a model cliff.
-    {global:'ConquerSlopewayModels',collection:'models',category:'Territorio',family:'Rampe e scalinate'}
+    {global:'ConquerSlopewayModels',collection:'models',category:'Territorio',family:'Rampe e scalinate'},
+    // Regional 3D map tokens (lab/3dregionmap.html): village, castle, pier, ship, troops, < 100 tris each.
+    {global:'ConquerRegionTokenModels',collection:'models',category:'Territorio',family:'Mappa regionale (token)'}
     // Timber fortifications (ConquerWoodFortModels) are listed as engine meshes under Fortificazioni.
   ];
   const SUBJECTS=[
@@ -142,7 +144,7 @@
             ConquerScatterModel:'scatter-model.js',ConquerWagonModel:'wagon-model.js',
             ConquerSiegeModel:'siege-engines-model.js',ConquerWoodFortModels:'wood-fort-models.js',ConquerEventModels:'event-models.js',ConquerCampScenes:'../settlement-events3d.js',
             ConquerHouseModels:'house-models.js',ConquerGarderobeModels:'garderobe-models.js',ConquerFurnitureModel:'furniture-model.js',ConquerArtModels:'art-models.js',ConquerDovecoteModels:'dovecote-models.js',ConquerBelfryModels:'belfry-models.js',ConquerSlopewayModels:'../settlement-slopeways.js',ConquerWallStairModels:'wall-stair-models.js',
-            ConquerMewsModels:'mews-models.js',ConquerPyreModels:'pyre-models.js',
+            ConquerMewsModels:'mews-models.js',ConquerPyreModels:'pyre-models.js',ConquerRegionTokenModels:'region-token-models.js',
             ConquerShipModels:'ship-models.js',ConquerFishingModels:'fishing-models.js',ConquerShipyardModels:'shipyard-models.js',ConquerWatersideModels:'waterside-models.js'}[source.global]),
         format:'Modello 3D',subject:source.global==='ConquerSiegeModel'&&key!=='tower2'?'siege:'+key
           :source.global==='ConquerShipModels'&&window.ConquerShipModels.ships?.[key.replace(/Furled$/,'')]?'ship:'+key.replace(/Furled$/,''):null});
