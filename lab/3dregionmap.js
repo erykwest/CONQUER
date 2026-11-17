@@ -5,6 +5,8 @@
   const surface = document.getElementById('preview3d');
   const canvas = document.getElementById('terrain3d');
   const spritesCanvas = document.getElementById('treeBillboards');
+  const markerCanvas = document.getElementById('markerBillboards');
+  const markerLegend = document.getElementById('markerLegend');
   const notes = document.getElementById('perfNotes');
   const status = document.getElementById('sceneStatus');
   const selectedTerritory = document.getElementById('selectedTerritory');
@@ -13,8 +15,10 @@
   const showTrees = document.getElementById('showTrees');
   const showReeds = document.getElementById('showReeds');
   const showBorders = document.getElementById('showBorders');
+  const showExamples = document.getElementById('showExamples');
   const resetView = document.getElementById('resetView');
   const geometry = window.ConquerRegion3DGeometry;
+  const placeholder = window.ConquerRegionalPlaceholders;
   // Reuse the Builder's real Blender scatter geometry; bake only two reed mesh sprites once.
   const scatterModels = window.ConquerScatterModel;
   // Recolor only the canopy fill of the seven Builder SVG trees; their silhouettes and trunks stay intact.
@@ -36,6 +40,7 @@
     return image;
   });
   let gl, program, vertexBuffer, locations, scene = null, snapshot = null, seenRevision = -1;
+  let liveMarkers=[],exampleMarkers=[],lastMarkerDraw=0;
   const reedSprites = ['reedBed','reedClump'].map(makeReedSprite);
   function makeReedSprite(name) {
     if (!scatterModels?.assets?.[name]) return null;
@@ -136,7 +141,7 @@
     const ratio = Math.min(window.devicePixelRatio || 1, 2);
     const w = Math.max(1, Math.round(rect.width * ratio));
     const h = Math.max(1, Math.round(rect.height * ratio));
-    for (const c of [canvas, spritesCanvas]) {
+    for (const c of [canvas, spritesCanvas, markerCanvas]) {
       if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
     }
     if (scene) draw();
@@ -232,6 +237,45 @@
     ctx.lineWidth=2.7*pixelRatio;
     ctx.stroke();
   }
+  function refreshMarkerLegend() {
+    if(!markerLegend || !placeholder)return;
+    const real=placeholder.counts(liveMarkers),demo=placeholder.counts(showExamples.checked?exampleMarkers:[]);
+    const actual=Object.values(real).reduce((a,b)=>a+b,0);
+    const sample=Object.values(demo).reduce((a,b)=>a+b,0);
+    markerLegend.textContent =
+      'Cubo arancione: villaggio · Cubo grigio: castello · Striscia marrone: porto · '+
+      'Rettangolo marrone: nave · 2 cilindri: truppe · '+
+      actual+' simboli reali'+(sample?' · '+sample+' esempi dimostrativi':'');
+  }
+  function drawMarkers(now=performance.now()) {
+    if(!markerCanvas)return;
+    const ctx=markerCanvas.getContext('2d');
+    if(!ctx)return;
+    ctx.clearRect(0,0,markerCanvas.width,markerCanvas.height);
+    if(!snapshot || !scene || !placeholder)return;
+    const markers=showExamples.checked?liveMarkers.concat(exampleMarkers):liveMarkers;
+    if(!markers.length)return;
+    const c=camera();
+    placeholder.paint(ctx,markers,point=>project(point,c),c,now);
+  }
+  function syncLiveMarkers(){
+    if(!placeholder || !frame.contentWindow)return;
+    try {
+      // Read changing fleet/army coordinates without regenerating 13k microcells.
+      const raw=frame.contentWindow.ConquerRegion3DMarkerSnapshot?.()||[];
+      liveMarkers=placeholder.normalize(raw);
+      refreshMarkerLegend();
+      drawMarkers();
+    } catch(e) { console.warn('Regional 3D marker data bridge:',e); }
+  }
+  function animatePlaceholders(now){
+    // Only the small upper icon canvas is redrawn while test ships sail;
+    // the expensive terrain mesh and thousands of tree billboards stay cached.
+    if(scene && showExamples.checked && now-lastMarkerDraw>45){
+      lastMarkerDraw=now;drawMarkers(now);
+    }
+    window.requestAnimationFrame(animatePlaceholders);
+  }
   function overlay(c) {
     const ctx = spritesCanvas.getContext('2d');
     ctx.clearRect(0, 0, c.width, c.height);
@@ -318,6 +362,7 @@
     gl.uniform2f(locations.uPan, c.panX, c.panY);
     gl.drawArrays(gl.TRIANGLES, 0, scene.vertices.length / 6);
     overlay(c);
+    drawMarkers();
     lastFrameMs = performance.now() - begin;
     notes.textContent = scene.stats.territories + ' territori · ' + scene.stats.subcells + ' sottocelle · ' +
       scene.stats.triangles.toLocaleString('it-IT') + ' triangoli · ' +
@@ -341,6 +386,8 @@
       gl.bufferData(gl.ARRAY_BUFFER, next.vertices, gl.STATIC_DRAW);
       lastUploadMs = performance.now() - uploadBegin;
       scene = next;
+      exampleMarkers = placeholder?.demo(snapshot,scene)||[];
+      refreshMarkerLegend();
       status.textContent = 'WebGL2 attivo · mesh globale ' + quality.value + '× → territori organici (' + deformation.value + '%) · palette 2D originale · gameplay invariato';
       draw();
     } catch (error) {
@@ -362,6 +409,7 @@
       lastSyncMs = performance.now();
       updateSelection(source.selectedMacros || [], true);
       rebuild();
+      syncLiveMarkers();
     } catch (e) {
       status.textContent = 'La mappa sorgente deve essere aperta sullo stesso dominio: ' + e.message;
     }
@@ -478,6 +526,7 @@
   });
 
   for (const input of [showTrees, showReeds, showBorders]) input.addEventListener('input', draw);
+  showExamples.addEventListener('input', () => { refreshMarkerLegend(); drawMarkers(); });
   deformation.addEventListener('change', rebuild);
   quality.addEventListener('change', rebuild);
   document.getElementById('refresh').addEventListener('click', () => {
@@ -489,7 +538,8 @@
     initialize();
     resize();
     new ResizeObserver(resize).observe(surface);
-    window.setInterval(() => { syncFromSource(); syncSelection(); }, 700);
+    window.setInterval(() => { syncFromSource(); syncSelection(); syncLiveMarkers(); }, 700);
+    if(typeof window.requestAnimationFrame==='function')window.requestAnimationFrame(animatePlaceholders);
     status.textContent = 'Attendo la generazione della mappa originale…';
   } catch (e) {
     status.textContent = e.message;
