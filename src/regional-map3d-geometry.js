@@ -277,7 +277,7 @@
             sense*(dy*a.x-dx*a.y));
         }
         if(intersection.length<3||area(intersection)<EPS)continue;
-        fragments.push({macroId:macro.id,polygon:intersection});
+        fragments.push({macroId:macro.id,siteKey:site.row+','+site.col,polygon:intersection});
       }
     }
     // Warp every shared fragment vertex using the same deterministic field,
@@ -299,7 +299,7 @@
         cache.set(key,shifted);
         return shifted;
       };
-      parts=fragments.map(p=>({macroId:p.macroId,polygon:p.polygon.map(deformPoint)}));
+      parts=fragments.map(p=>({macroId:p.macroId,siteKey:p.siteKey,polygon:p.polygon.map(deformPoint)}));
       const actual=new Map();
       let valid=true;
       for(const p of parts){
