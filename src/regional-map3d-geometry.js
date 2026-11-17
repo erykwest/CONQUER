@@ -51,21 +51,59 @@
       return (q.x - prev.x) ** 2 + (q.y - prev.y) ** 2 > EPS * EPS;
     });
   }
-  // Uniform sampling of a convex polygon by area-weighted triangle fans.
-  function sample(p, random) {
-    const triangles = [], anchor = p[0];
-    let total = 0;
-    for (let i = 1; i < p.length - 1; i++) {
-      const b = p[i], c = p[i + 1];
-      const size = Math.abs((b.x - anchor.x) * (c.y - anchor.y) - (b.y - anchor.y) * (c.x - anchor.x)) * .5;
-      if (size > EPS) { total += size; triangles.push({ b, c, end: total }); }
+  // Fivefold organic warping makes some hexagonal microcells concave. Use
+  // ear clipping instead of centroid triangle fans, avoiding missing/extra
+  // rendered terrain and sampling points outside polygon footprints.
+  function triangulate(p){
+    if(p.length<3)return [];
+    let signed=0;
+    for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length];signed+=a.x*b.y-b.x*a.y;}
+    const winding=signed>=0?1:-1,indices=p.map((_,i)=>i),tris=[];
+    const cross=(a,b,c)=>(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
+    let passes=0;
+    while(indices.length>3){
+      let cut=false;
+      for(let i=0;i<indices.length;i++){
+        const ai=indices[(i+indices.length-1)%indices.length],
+              bi=indices[i],ci=indices[(i+1)%indices.length];
+        const a=p[ai],b=p[bi],c=p[ci];
+        if(winding*cross(a,b,c)<=EPS)continue;
+        let obstructed=false;
+        for(const j of indices){
+          if(j===ai||j===bi||j===ci)continue;
+          const q=p[j];
+          if(winding*cross(a,b,q)>=-EPS&&winding*cross(b,c,q)>=-EPS&&
+             winding*cross(c,a,q)>=-EPS){obstructed=true;break;}
+        }
+        if(obstructed)continue;
+        tris.push([a,b,c]);indices.splice(i,1);cut=true;break;
+      }
+      if(!cut||++passes>p.length*p.length)
+        throw Error('Invalid warped microcell polygon; ear clipping cannot triangulate');
     }
-    if (!triangles.length) return centroid(p);
-    const n = random() * total;
-    const t = triangles.find(t => n <= t.end) || triangles[triangles.length - 1];
-    const r = Math.sqrt(random()), s = random();
-    return { x: (1 - r) * anchor.x + r * (1 - s) * t.b.x + r * s * t.c.x,
-             y: (1 - r) * anchor.y + r * (1 - s) * t.b.y + r * s * t.c.y };
+    tris.push(indices.map(i=>p[i]));
+    return tris;
+  }
+  // Sample within exact triangulation, including locally concave cells.
+  const triangleCache=new WeakMap();
+  function sample(p,random){
+    if(p.length<3)return centroid(p);
+    let tris=triangleCache.get(p);
+    if(!tris){
+      let total=0;
+      tris=triangulate(p).map(([a,b,c])=>{
+        total+=Math.abs((b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x))*.5;
+        return {a,b,c,end:total};
+      });
+      triangleCache.set(p,tris);
+    }
+    const total=tris[tris.length-1]?.end||0;
+    if(total<EPS)return centroid(p);
+    const target=random()*total;
+    const t=tris.find(t=>target<=t.end)||tris[tris.length-1];
+    const r=Math.sqrt(random()),f=random();
+    return {x:(1-r)*t.a.x+r*(1-f)*t.b.x+r*f*t.c.x,
+            y:(1-r)*t.a.y+r*(1-f)*t.b.y+r*f*t.c.y};
   }
   function cellsForSites(polygon, sites) {
     return sites.map((site, i) => {
@@ -593,8 +631,7 @@
       const shade=rgbCache.get(part.macroId);
       const center=centroid(poly);
       const parent=byMacro.get(part.macroId)||poly;
-      const centerZ=elevation(center,parent,terrain,snapshot.seed);
-      const middle={...center,z:centerZ};
+
       // Keep the World Lab's exact palette as the base; restore low-frequency
       // chromatic relief only to sea/lake and hills, with a small per-microcell
       // modulation reminiscent of the original renderer's +-4.5% tone.
@@ -613,10 +650,10 @@
         : 0;
       const firstVertex=vertices.length/6;
       visualFragments++;
-      for(let i=0;i<poly.length;i++){
-        const a=poly[i],b=poly[(i+1)%poly.length];
-        face(middle,{...a,z:elevation(a,parent,terrain,snapshot.seed)},
-          {...b,z:elevation(b,parent,terrain,snapshot.seed)},shade,variation,false);
+      for(const [a,b,c] of triangulate(poly)){
+        face({...a,z:elevation(a,parent,terrain,snapshot.seed)},
+          {...b,z:elevation(b,parent,terrain,snapshot.seed)},
+          {...c,z:elevation(c,parent,terrain,snapshot.seed)},shade,variation,false);
       }
       // Terrain triangles only; subsequent mountains are deliberately not selectable.
       const vertexCount=vertices.length/6-firstVertex;
@@ -841,7 +878,7 @@
     }
     return selected;
   }
-  return {area,centroid,clip,subdivide,edgeDistance,elevation,sourceColor,
+  return {area,centroid,clip,triangulate,subdivide,edgeDistance,elevation,sourceColor,
           pickTerritory,
           globalMicrocells,aggregateEdges,deriveRiverBorders,buildScene};
 });
