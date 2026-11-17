@@ -5,7 +5,7 @@
 - [x] `sagoma-conservata` misura le aree, non la densità nel riquadro: niente falso errore quando le macerie di un elemento esterno cadono lontano.
 - [x] Baseline dell'audit rigenerata dalla CI (Linux) dopo la revisione dei 197 cambiati.
 - [ ] BUG: il cantiere 2.5D di molte torri in pietra L2+ nel Lab è vuoto (solo operai) e cambia da una run all'altra; da capire se è il Lab (`ConquerAssetStage.capture`) o il renderer del cantiere in gioco. Causa di gran parte degli avvisi `cantiere-progressivo`.
-- [ ] Le catture 2.5D delle fortificazioni non sono ripetibili fra due run della CI: con la baseline appena rigenerata dalla CI, la run successiva (17/11) segna 678 «cambiati», tutti sotto 0,05 e solo fortificazioni (intatta, cutaway, danni, pendenze). SVG e modelli 3D restano identici. Trovare la sorgente (luce, clock, cache) e renderle deterministiche, altrimenti i «cambiati» in CI non servono alla revisione.
+- [ ] Le catture 2.5D delle fortificazioni cambiano con la data reale: due run CI dello stesso giorno (17/11) hanno firme identiche, ma contro la baseline del giorno prima (16/11) segnano 678 «cambiati», tutti sotto 0,05 e solo fortificazioni (intatta, cutaway, danni, pendenze); SVG e modelli 3D restano identici. Trovare cosa legge la data (luce, stagione, giorno della settimana) e fissarla nello stage, altrimenti i «cambiati» in CI crescono ogni giorno. Baseline rigenerata dalla run del 17/11.
 
 ### 2026-11-16 — Braciere 3D
 
