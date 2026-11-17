@@ -522,7 +522,10 @@
       parts:snapshot.cells.map(c=>({macroId:c.macroId,polygon:c.polygon})),
       ownerParts:new Map(snapshot.cells.map(c=>[c.macroId,[{polygon:c.polygon,macroId:c.macroId}]])),
       spacing:Math.sqrt(snapshot.width*snapshot.height/snapshot.cells.length),
-      siteCount:snapshot.cells.length,visualAreaDeviation:0,appliedWarp:0
+      siteCount:snapshot.cells.length,
+      visualAreaDeviation:Math.max(...snapshot.cells.map(c=>
+        Math.abs(area(c.polygon)/(snapshot.width*snapshot.height/snapshot.cells.length)-1))),
+      appliedWarp:0
     } : globalMicrocells(snapshot,detail,deformation);
     subcells=base.siteCount;
     const byMacro=new Map(snapshot.cells.map(c=>[c.macroId,c.polygon]));
