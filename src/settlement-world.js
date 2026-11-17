@@ -1357,11 +1357,11 @@ function biomeMountains(){
   if(Array.isArray(sides)&&sides.length){
     const rnd=biomeStream(0x60a4f7e1),out=[];
     for(const side of [...new Set(sides)].filter(s=>['north','east','south','west'].includes(s)))for(let i=0;i<16;i++){
-      const t=i===0?0:i===15?200:clamp((i+.5)*200/16+(rnd()-.5)*22,0,200),off=45+Math.sin(t/35+State.seed)*8+(rnd()-.5)*30;
-      const p=side==='north'?{x:t,y:off}:side==='south'?{x:t,y:200-off}:side==='west'?{x:off,y:t}:{x:200-off,y:t};
+      const t=i===0?0:i===15?WORLD:clamp((i+.5)*WORLD/16+(rnd()-.5)*22,0,WORLD),off=45+Math.sin(t/35+State.seed)*8+(rnd()-.5)*30;
+      const p=side==='north'?{x:t,y:off}:side==='south'?{x:t,y:WORLD-off}:side==='west'?{x:off,y:t}:{x:WORLD-off,y:t};
       // Uniform 130% size: preserve seeded centres and slope, enlarge physical footprint and height.
       const peak=makeEnvBlob(rnd,'mountain',t,off,(7+rnd()*8)*1.3,(7+rnd()*8)*1.3,'#56493c','#968470',18,.1);
-      const turn=q=>side==='north'?q:side==='south'?{x:q.x,y:200-q.y}:side==='west'?{x:q.y,y:q.x}:{x:200-q.y,y:q.x};
+      const turn=q=>side==='north'?q:side==='south'?{x:q.x,y:WORLD-q.y}:side==='west'?{x:q.y,y:q.x}:{x:WORLD-q.y,y:q.x};
       peak.points=peak.points.map(turn);peak.x=p.x;peak.y=p.y;if(side==='east'||side==='west')[peak.rx,peak.ry]=[peak.ry,peak.rx];
       peak.unclippedPoints=peak.points;peak.points=clipTerrainPolygon(peak.points).map(q=>({x:q.x,y:q.y}));
       peak.id='regional-border-'+side+'-'+i;peak.regionalBorder=true;peak.slopeDeg=37+rnd()*26;peak.height=Math.sqrt(peak.rx*peak.ry)*Math.tan(peak.slopeDeg*Math.PI/180);out.push(peak);
@@ -1478,8 +1478,8 @@ function biomeTownClear(points){
 function generateDenseHills(count,obstacles,canonical=false){
   const sides=window.__CONQUER_REGIONAL_DEMO__?.mountainSides||[],side=sides.length===1?sides[0]:null;
   if(!canonical&&side&&side!=='north'){
-    const toNorth=p=>side==='south'?{x:p.x,y:200-p.y}:side==='west'?{x:p.y,y:p.x}:{x:p.y,y:200-p.x};
-    const fromNorth=p=>side==='south'?{x:p.x,y:200-p.y}:side==='west'?{x:p.y,y:p.x}:{x:200-p.y,y:p.x};
+    const toNorth=p=>side==='south'?{x:p.x,y:WORLD-p.y}:side==='west'?{x:p.y,y:p.x}:{x:p.y,y:WORLD-p.x};
+    const fromNorth=p=>side==='south'?{x:p.x,y:WORLD-p.y}:side==='west'?{x:p.y,y:p.x}:{x:WORLD-p.y,y:p.x};
     generateDenseHills(count,obstacles.map(o=>({...o,points:o.points.map(toNorth)})),true);
     for(const hill of State.relief.hills){hill.center=fromNorth(hill.center);for(const level of hill.levels){level.center=fromNorth(level.center);level.top=level.top.map(fromNorth);}}
     clearReliefBandCache();return;
@@ -1489,7 +1489,7 @@ function generateDenseHills(count,obstacles,canonical=false){
     const rnd=seedRand((State.seed^0x2d571a3^Math.imul(layout+1,0x45d9f3b))>>>0),hills=[];
     const weights=Array.from({length:count},()=>.65+rnd()*.8).sort((a,b)=>b-a),sum=weights.reduce((a,b)=>a+b,0);
     for(let i=0;i<count;i++){
-      const area=40000*(.29+(layout%4)*.01)*weights[i]/sum;
+      const area=WORLD*WORLD*(.29+(layout%4)*.01)*weights[i]/sum;
       for(let attempt=0;attempt<220;attempt++){
         const aspect=.65+rnd()*1.05,rx=Math.sqrt(area/Math.PI*aspect),ry=Math.sqrt(area/Math.PI/aspect);
         const center={x:18+rnd()*164,y:18+rnd()*164};
@@ -2002,7 +2002,7 @@ function currentGrowthRadius(){
   return Math.min(18,5.2+step*.30);
 }
 function growthRng(step,salt=0){
-  const well=State.structures.find(s=>s.id===State.village.wellId)||{x:100,y:100};
+  const well=State.structures.find(s=>s.id===State.village.wellId)||{x:WORLD/2,y:WORLD/2};
   return seedRand((villageSeed(well)^Math.imul(step+1,2654435761)^salt)>>>0);
 }
 const BORDER_ENTRY_SIDES=['north','east','south','west'];
@@ -2033,14 +2033,14 @@ function borderEdgeLabel(edge){
   if(it[edge])return it[edge];
   const s=localShape(),id=typeof edge==='string'&&edge.startsWith('hex:')?edge.slice(4):null,sec=id&&s?.sectors.find(x=>x.id===id);
   if(!sec)return String(edge);
-  const p=s.runSample(id,.5)||{x:100,y:100},a=Math.atan2(p.y-100,p.x-100);
+  const c=WORLD/2,p=s.runSample(id,.5)||{x:c,y:c},a=Math.atan2(p.y-c,p.x-c);
   const names=['est','sud-est','sud','sud-ovest','ovest','nord-ovest','nord','nord-est'];
   return names[((Math.round(a/(Math.PI/4))%8)+8)%8]+(sec.code!=null?' ('+sec.code+')':'');
 }
 // Hex sea exits: one per continuous wet stretch of the world border.
 function hexSeaBorderEntries(s){
   const seas=State.environment.filter(f=>f.type==='sea'),N=480,out=[];
-  const wetAt=i=>{const p=s.pointAt((i+.5)/N*s.perimeter),dx=100-p.x,dy=100-p.y,l=Math.hypot(dx,dy)||1,q={x:p.x+dx/l*1.5,y:p.y+dy/l*1.5};return seas.some(f=>environmentContains(f,q))};
+  const wetAt=i=>{const p=s.pointAt((i+.5)/N*s.perimeter),dx=WORLD/2-p.x,dy=WORLD/2-p.y,l=Math.hypot(dx,dy)||1,q={x:p.x+dx/l*1.5,y:p.y+dy/l*1.5};return seas.some(f=>environmentContains(f,q))};
   const wet=Array.from({length:N},(_,i)=>wetAt(i));
   if(!wet.some(Boolean))return out;
   let start=wet.findIndex((w,i)=>w&&!wet[(i+N-1)%N]);
@@ -2048,7 +2048,7 @@ function hexSeaBorderEntries(s){
   for(let k=0;k<N;){
     const i=(start+k)%N;if(!wet[i]){k++;continue}
     let m=k;while(m<N&&wet[(start+m)%N])m++;
-    if(m-k>=3){const p=s.pointAt(((start+(k+m)/2)%N)/N*s.perimeter),sec=s.sectorAt({x:p.x+(100-p.x)*.02,y:p.y+(100-p.y)*.02});
+    if(m-k>=3){const p=s.pointAt(((start+(k+m)/2)%N)/N*s.perimeter),sec=s.sectorAt({x:p.x+(WORLD/2-p.x)*.02,y:p.y+(WORLD/2-p.y)*.02});
       out.push({id:'sea-hex-'+(sec?.id??'x')+'-'+i,edge:'hex:'+(sec?.id??'x'),kind:'sea',x:p.x,y:p.y})}
     k=m;
   }

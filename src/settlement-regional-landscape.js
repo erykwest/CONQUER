@@ -4,7 +4,11 @@
   const rules=window.ConquerRegionalBiomeRules;
   // Hex territory outline (src/regional-local-shape.js): sectors of the real physical neighbours.
   const hex=()=>window.ConquerLocalShape?.current?.()||null;
-  const inCentre=p=>{const s=hex();return s?s.inBuild(p):p.x>=50&&p.x<=150&&p.y>=50&&p.y<=150};
+  // Canvas size (200U legacy, 240U hex) and the 2U sampling grid that covers it.
+  const W=()=>typeof WORLD==='number'?WORLD:200,C=()=>W()/2,N=()=>Math.round(W()/2);
+  // The central recipe is generated over the whole canvas and shrunk into the middle half.
+  const toC=v=>W()/4+v/2;
+  const inCentre=p=>{const s=hex();if(s)return s.inBuild(p);const a=C()-50,b=C()+50;return p.x>=a&&p.x<=b&&p.y>=a&&p.y<=b};
   const canonical=b=>b==='valley'?'hills':b;
   const neighbors=()=>{const n=window.__CONQUER_REGIONAL_DEMO__?.surroundingBiomes;for(const d in n)if(n[d]==='valley')return Object.fromEntries(Object.entries(n).map(([d,b])=>[d,canonical(b)]));return n};
   // Uniform mountains still need explicit placement in every surrounding sector.
@@ -30,8 +34,8 @@
     const phase=hash(7,11,State.seed)*Math.PI*2;
     let total=0,weight=0;
     for(const side of shape.sides){
-      const t=(side==='north'||side==='south'?p.x:p.y)/200;
-      const d=side==='north'?p.y:side==='south'?200-p.y:side==='west'?p.x:200-p.x;
+      const t=(side==='north'||side==='south'?p.x:p.y)/W();
+      const d=side==='north'?p.y:side==='south'?W()-p.y:side==='west'?p.x:W()-p.x;
       const influence=Math.exp(-Math.pow((d-38)/30,2));
       // Two broad bays per front, with a seed-dependent position and unequal lobes.
       const bays=.5+.29*Math.cos(t*Math.PI*4+phase)+.07*Math.sin(t*Math.PI*2-phase);
@@ -41,20 +45,20 @@
     if(shape.corner)threshold+=.46*Math.exp(-((p.x-shape.corner.x)**2+(p.y-shape.corner.y)**2)/300);
     if(shape.kind==='island'||shape.kind==='peninsula'){
       // Round the land corners instead of tracing a square island/peninsula.
-      const ax=Math.abs(p.x-100),ay=Math.abs(p.y-100);
+      const ax=Math.abs(p.x-C()),ay=Math.abs(p.y-C());
       threshold-=.26*Math.max(0,Math.min(1,(Math.min(ax,ay)-42)/25));
     }
     return Math.max(.12,Math.min(.94,threshold));
   }
   function enclosedCoastSea(p,shape){
     const phase=hash(17,29,State.seed)*Math.PI*2;
-    let u=p.x-100,v=p.y-100,rx=68,ry=62;
+    let u=p.x-C(),v=p.y-C(),rx=68,ry=62;
     if(shape.kind==='peninsula'){
       // The missing sea side is the land attachment. Keep its centre connected.
       const land=['north','east','south','west'].find(side=>!shape.sides.includes(side));
       if(land==='east')u=-u;
-      else if(land==='north'){u=p.y-100;v=p.x-100;}
-      else if(land==='south'){u=100-p.y;v=p.x-100;}
+      else if(land==='north'){u=p.y-C();v=p.x-C();}
+      else if(land==='south'){u=C()-p.y;v=p.x-C();}
       v-=7*Math.sin(u/45+phase);u+=42;rx=110;ry=59;
     }else{
       // Rotate an oval before adding large, unequal coves and headlands.
@@ -67,8 +71,8 @@
     return r>outline?1:0;
   }
   const area=r=>r.reduce((s,p,i)=>s+p.x*r[(i+1)%r.length].y-r[(i+1)%r.length].x*p.y,0)/2;
-  function rings(mask,n=100){
-    const edges=new Map(),step=200/n;
+  function rings(mask,n=N()){
+    const edges=new Map(),step=W()/n;
     const add=(x,y,xx,yy,d)=>{const k=x+','+y;if(!edges.has(k))edges.set(k,[]);edges.get(k).push({x:xx,y:yy,d})};
     for(let y=0;y<n;y++)for(let x=0;x<n;x++)if(mask[y*n+x]){
       if(!y||!mask[(y-1)*n+x])add(x,y,x+1,y,0);
@@ -90,12 +94,12 @@
       const simple=ring.filter((p,i)=>{const a=ring[(i+ring.length-1)%ring.length],b=ring[(i+1)%ring.length];return(a.x-p.x)*(b.y-p.y)!==(a.y-p.y)*(b.x-p.x)});
       if(simple.length<3||Math.abs(area(simple))<step*step*.5)continue;
       // Smooth grid corners without moving points off the world boundary.
-      out.push(simple.map((p,i)=>{if(p.x===0||p.y===0||p.x===200||p.y===200)return p;const a=simple[(i+simple.length-1)%simple.length],b=simple[(i+1)%simple.length];return{x:(a.x+6*p.x+b.x)/8,y:(a.y+6*p.y+b.y)/8}}));
+      out.push(simple.map((p,i)=>{if(p.x===0||p.y===0||p.x===W()||p.y===W())return p;const a=simple[(i+simple.length-1)%simple.length],b=simple[(i+1)%simple.length];return{x:(a.x+6*p.x+b.x)/8,y:(a.y+6*p.y+b.y)/8}}));
     }
     return out;
   }
   function roundMarshRing(ring){
-    const border=p=>p.x===0||p.y===0||p.x===200||p.y===200;
+    const border=p=>p.x===0||p.y===0||p.x===W()||p.y===W();
     for(let pass=0;pass<2;pass++){
       const out=[];
       for(let i=0;i<ring.length;i++){
@@ -120,18 +124,18 @@
     if(!active()||State.relief.regionalAdjusted)return;
     // The central recipe is fitted to its own 100U square; height levels remain real terraces.
     for(const hill of State.relief.hills){
-      if(hill.center)hill.center={x:50+hill.center.x/2,y:50+hill.center.y/2};
+      if(hill.center)hill.center={x:toC(hill.center.x),y:toC(hill.center.y)};
       hill.rx/=2;hill.ry/=2;
-      for(const level of hill.levels){level.center={x:50+level.center.x/2,y:50+level.center.y/2};level.top=level.top.map(p=>({x:50+p.x/2,y:50+p.y/2}));}
+      for(const level of hill.levels){level.center={x:toC(level.center.x),y:toC(level.center.y)};level.top=level.top.map(p=>({x:toC(p.x),y:toC(p.y)}));}
     }
     const rnd=seedRand((State.seed^signature()^0x39f71a)>>>0);let index=State.relief.hills.length;
-    for(let y=13;y<200;y+=25)for(let x=13;x<200;x+=25){
+    for(let y=13;y<W();y+=25)for(let x=13;x<W();x+=25){
       const p={x:x+(rnd()-.5)*5,y:y+(rnd()-.5)*5},w=weights(p),biome=Object.keys(w).sort((a,b)=>w[b]-w[a])[0];
       if(inCentre(p)||hex()&&!hex().inWorld(p,-6)||!['hills','mountains','valley'].includes(biome)||w[biome]<.7)continue;
       if(rnd()>.45)continue;
       const hill=makeProceduralHill(rnd,index++,{center:p,rx:7+rnd()*3,ry:6+rnd()*2,maxHeight:1});
       const foot=reliefHillFootprint(hill);
-      if(foot.some(q=>q.x<0||q.y<0||q.x>200||q.y>200||(weights(q)[biome]||0)<.08)||!hillSpacingOk(hill,State.relief.hills))continue;
+      if(foot.some(q=>q.x<0||q.y<0||q.x>W()||q.y>W()||(weights(q)[biome]||0)<.08)||!hillSpacingOk(hill,State.relief.hills))continue;
       State.relief.hills.push(hill);
     }
     // Sparse neighbouring relief has its own budget and sampling stream.
@@ -139,11 +143,11 @@
     for(const biome of ['plains','forest','swamp']){
       const count=biomeHillPlan(biome).count;
       for(let i=0;i<count;i++)for(let attempt=0;attempt<240;attempt++){
-        const p={x:5+sparseRnd()*190,y:5+sparseRnd()*190};
+        const p={x:5+sparseRnd()*(W()-10),y:5+sparseRnd()*(W()-10)};
         if(inCentre(p)||hex()&&!hex().inWorld(p,-6)||(weights(p)[biome]||0)<.7)continue;
         const hill=makeProceduralHill(sparseRnd,index,{center:p,rx:8+sparseRnd()*4,ry:7+sparseRnd()*2,maxHeight:biome==='forest'?2:1});
         const foot=reliefHillFootprint(hill);
-        if(foot.some(q=>q.x<0||q.y<0||q.x>200||q.y>200||(weights(q)[biome]||0)<.08)||!hillSpacingOk(hill,State.relief.hills))continue;
+        if(foot.some(q=>q.x<0||q.y<0||q.x>W()||q.y>W()||(weights(q)[biome]||0)<.08)||!hillSpacingOk(hill,State.relief.hills))continue;
         State.relief.hills.push(hill);index++;break;
       }
     }
@@ -155,13 +159,13 @@
     const key=State.seed+'-'+signature(),rnd=seedRand((State.seed^signature()^0x18405c)>>>0),coast=coastShape();
     const lakeSides=hex()?[]:['north','east','south','west'].filter(side=>neighbors()?.[side]==='lake');
     const lakeShape=lakeSides.length>=3?{kind:lakeSides.length===4?'island':'peninsula',sides:lakeSides}:null;
-    const forests=base.filter(f=>f.type==='forest'),centralSea=base.filter(f=>f.type==='sea'),centralPonds=base.filter(f=>f.type==='pond').map(f=>f.waterBodyKind==='marsh'?{...f,x:50+f.x/2,y:50+f.y/2,rx:f.rx/2,ry:f.ry/2,points:f.points.map(p=>({x:50+p.x/2,y:50+p.y/2}))}:f);
+    const forests=base.filter(f=>f.type==='forest'),centralSea=base.filter(f=>f.type==='sea'),centralPonds=base.filter(f=>f.type==='pond').map(f=>f.waterBodyKind==='marsh'?{...f,x:toC(f.x),y:toC(f.y),rx:f.rx/2,ry:f.ry/2,points:f.points.map(p=>({x:toC(p.x),y:toC(p.y)}))}:f);
     const lines=base.filter(f=>f.type==='river'||f.type==='stream');
     const mountains=base.filter(f=>f.type==='mountain').map(f=>f.regionalBorder?f:({...f,id:'regional-center-'+f.id,
-      x:50+f.x/2,y:50+f.y/2,rx:f.rx/2,ry:f.ry/2,height:f.height/2,
-      unclippedPoints:(f.unclippedPoints||f.points).map(p=>({x:50+p.x/2,y:50+p.y/2})),points:f.points.map(p=>({x:50+p.x/2,y:50+p.y/2}))}));
-    const n=100,seaMask=new Uint8Array(n*n),pondMask=new Uint8Array(n*n),marshMask=new Uint8Array(n*n);
-    const samples=[],swampWet=deferCover?new Uint8Array(10000):swampMarshMask(true);
+      x:toC(f.x),y:toC(f.y),rx:f.rx/2,ry:f.ry/2,height:f.height/2,
+      unclippedPoints:(f.unclippedPoints||f.points).map(p=>({x:toC(p.x),y:toC(p.y)})),points:f.points.map(p=>({x:toC(p.x),y:toC(p.y)}))}));
+    const n=N(),seaMask=new Uint8Array(n*n),pondMask=new Uint8Array(n*n),marshMask=new Uint8Array(n*n);
+    const samples=[],swampWet=deferCover?new Uint8Array(n*n):swampMarshMask(true);
     for(let y=0;y<n;y++)for(let x=0;x<n;x++){
       const p={x:(x+.5)*2,y:(y+.5)*2},w=field(p),c=w['@center']||0;
       const sea=coast.kind==='island'||coast.kind==='peninsula'?enclosedCoastSea(p,coast):(w.sea||0)+c*(centralSea.some(f=>environmentContains(f,p))?1:0);
@@ -179,7 +183,7 @@
     for(const sea of waters.filter(f=>f.type==='sea')){
       const runs=[];
       for(const ring of [sea.points,...sea.holes]){
-        const borderEdge=(a,b)=>(a.x===b.x&&(a.x===0||a.x===200))||(a.y===b.y&&(a.y===0||a.y===200));
+        const borderEdge=(a,b)=>(a.x===b.x&&(a.x===0||a.x===W()))||(a.y===b.y&&(a.y===0||a.y===W()));
         const start=ring.findIndex((p,i)=>borderEdge(p,ring[(i+1)%ring.length]));
         if(start<0){runs.push([...ring,ring[0]]);continue;}
         let run=[];
@@ -194,7 +198,7 @@
       sea.coastlines=runs.sort((a,b)=>length(b)-length(a));
       sea.coastline=sea.coastlines[0]||[];
       sea.side=['north','east','south','west'].sort((a,b)=>{
-        const score=side=>Array.from({length:20},(_,i)=>edgeSample(side,(i+.5)/20)).filter(p=>environmentContains(sea,{x:Math.max(1,Math.min(199,p.x)),y:Math.max(1,Math.min(199,p.y))})).length;
+        const score=side=>Array.from({length:20},(_,i)=>edgeSample(side,(i+.5)/20)).filter(p=>environmentContains(sea,{x:Math.max(1,Math.min(W()-1,p.x)),y:Math.max(1,Math.min(W()-1,p.y))})).length;
         return score(b)-score(a);
       })[0];
     }
@@ -211,8 +215,8 @@
     }
     // Real peaks in the neighbouring mountain sectors. They never intrude into the central biome.
     const regionalPeaks=[];
-    for(let y=12;y<200;y+=22)for(let x=12;x<200;x+=22){
-      const p={x:(x<20?6:x>180?194:x)+(rnd()-.5)*5,y:(y<20?6:y>180?194:y)+(rnd()-.5)*5},w=weights(p);
+    for(let y=12;y<W();y+=22)for(let x=12;x<W();x+=22){
+      const p={x:(x<20?6:x>W()-20?W()-6:x)+(rnd()-.5)*5,y:(y<20?6:y>W()-20?W()-6:y)+(rnd()-.5)*5},w=weights(p);
       if(inCentre(p)||hex()&&!hex().inWorld(p,-4)||(w.mountains||0)<.65||blocked(p))continue;
       const peak=makeEnvBlob(rnd,'mountain',p.x,p.y,7+rnd()*4,7+rnd()*4,'#56493c','#968470',18,.1);
       peak.unclippedPoints=peak.points;
@@ -228,7 +232,7 @@
       for(let j=0;j<8;j++){
         const angle=a+j*Math.PI/4,distance=6+pairRnd()*9,dx=Math.cos(angle)*distance,dy=Math.sin(angle)*distance;
         const p={x:peak.x+dx,y:peak.y+dy};
-        if(p.x<0||p.x>200||p.y<0||p.y>200||inCentre(p)||hex()&&!hex().inWorld(p)||blocked(p)||(weights(p).mountains||0)<.5)continue;
+        if(p.x<0||p.x>W()||p.y<0||p.y>W()||inCentre(p)||hex()&&!hex().inWorld(p)||blocked(p)||(weights(p).mountains||0)<.5)continue;
         const size=.78+pairRnd()*.38;
         const outline=makeEnvBlob(pairRnd,'mountain',p.x,p.y,peak.rx*size,peak.ry*(.8+pairRnd()*.35),'#56493c','#968470',18,.1);
         const raw=outline.points;
@@ -238,7 +242,7 @@
       }
       if(!twin){
         const raw=peak.unclippedPoints.map(p=>({x:peak.x+(p.x-peak.x)*.98,y:peak.y+(p.y-peak.y)*.98}));
-        twin={...peak,x:clamp(peak.x+Math.cos(a)*4,.1,199.9),y:clamp(peak.y+Math.sin(a)*4,.1,199.9),unclippedPoints:raw,points:clipTerrainPolygon(raw).map(p=>({x:p.x,y:p.y}))};
+        twin={...peak,x:clamp(peak.x+Math.cos(a)*4,.1,W()-.1),y:clamp(peak.y+Math.sin(a)*4,.1,W()-.1),unclippedPoints:raw,points:clipTerrainPolygon(raw).map(p=>({x:p.x,y:p.y}))};
       }
       twin.id=peak.id+'-pair';twin.slopeDeg=37+pairRnd()*26;twin.height=Math.sqrt(twin.rx*twin.ry)*Math.tan(twin.slopeDeg*Math.PI/180);
       mountains.push(twin);
@@ -249,14 +253,14 @@
       // Coast clipping may remove a recipe hill. Replace it on dry land before hydrology.
       const hillRnd=seedRand((State.seed^signature()^0x72a91d)>>>0);let added=false;
       for(let attempt=0;State.relief.hills.length<3&&attempt<600;attempt++){
-        const center={x:55+hillRnd()*90,y:55+hillRnd()*90};
+        const center={x:C()-45+hillRnd()*90,y:C()-45+hillRnd()*90};
         const hill=makeProceduralHill(hillRnd,State.relief.hills.length,{center,rx:8+hillRnd()*3,ry:5+hillRnd()*2,maxHeight:2+Math.floor(hillRnd()*2)});
         const foot=reliefHillFootprint(hill);
         if(!biomeTownClear(foot)||!hillSpacingOk(hill,State.relief.hills)||foot.some(p=>waters.some(f=>environmentContains(f,p,1))))continue;
         State.relief.hills.push(hill);added=true;clearReliefBandCache();
       }
       if(!State.relief.coastalPositioned){
-        const shore=waters.filter(f=>f.type==='sea'||f.waterBodyKind==='lake').flatMap(f=>[f.points,...(f.holes||[])]).flat().filter(p=>p.x>1&&p.y>1&&p.x<199&&p.y<199);
+        const shore=waters.filter(f=>f.type==='sea'||f.waterBodyKind==='lake').flatMap(f=>[f.points,...(f.holes||[])]).flat().filter(p=>p.x>1&&p.y>1&&p.x<W()-1&&p.y<W()-1);
         const coastRnd=seedRand((State.seed^signature()^0x2c0871)>>>0),placed=[];
         for(const hill of State.relief.hills){
           let best=null,bestGap=Infinity;
@@ -265,7 +269,7 @@
             const center={x:anchor.x+Math.cos(angle)*d,y:anchor.y+Math.sin(angle)*d},dx=center.x-hill.center.x,dy=center.y-hill.center.y;
             const shift=p=>({x:p.x+dx,y:p.y+dy});
             const candidate={...hill,center,levels:hill.levels.map(l=>({...l,center:shift(l.center),top:l.top.map(shift)}))},foot=reliefHillFootprint(candidate);
-            if(!biomeTownClear(foot)||!hillSpacingOk(candidate,placed)||foot.some(p=>p.x<2||p.y<2||p.x>198||p.y>198||waters.some(f=>environmentContains(f,p,2))))continue;
+            if(!biomeTownClear(foot)||!hillSpacingOk(candidate,placed)||foot.some(p=>p.x<2||p.y<2||p.x>W()-2||p.y>W()-2||waters.some(f=>environmentContains(f,p,2))))continue;
             const gap=Math.min(...foot.map(p=>Math.min(...shore.map(q=>dist(p,q)))));
             if(gap<bestGap){best=candidate;bestGap=gap;}
             if(gap<4)break;
@@ -291,15 +295,16 @@
   });
   // Rank a smooth field to control actual wetland area, independently of patch count.
   function swampMarshMask(regional,lines=[],bodies=[]){
-    if(regional&&State.biome!=='swamp'&&!Object.values(neighbors()||{}).includes('swamp'))return new Uint8Array(10000);
+    const n=N();
+    if(regional&&State.biome!=='swamp'&&!Object.values(neighbors()||{}).includes('swamp')&&!hex()?.sectors.some(s=>s.biome==='swamp'))return new Uint8Array(n*n);
     const hillObstacles=State.relief.hills.map(h=>{const points=reliefHillFootprint(h);return{points,b:environmentPolygonBounds(points)}});
     const onHill=p=>hillObstacles.some(({points,b})=>p.x>=b.minX-4&&p.x<=b.maxX+4&&p.y>=b.minY-4&&p.y<=b.maxY+4&&(pointInPolygon(p,points)||points.some((a,i)=>pointSegmentDistance(p,a,points[(i+1)%points.length])<4)));
-    const mask=new Uint8Array(10000),groups=[{total:0,items:[]},{total:0,items:[]}],items=[];
-    for(let y=0;y<100;y++)for(let x=0;x<100;x++){
-      const p={x:x*2+1,y:y*2+1},i=y*100+x,zone=inCentre(p)?0:1;
+    const mask=new Uint8Array(n*n),groups=[{total:0,items:[]},{total:0,items:[]}],items=[];
+    for(let y=0;y<n;y++)for(let x=0;x<n;x++){
+      const p={x:x*2+1,y:y*2+1},i=y*n+x,zone=inCentre(p)?0:1;
       const weight=regional?(weights(p).swamp||0):1;
       if(weight>.999)groups[zone].total++;
-      if(weight<=0||dist(p,{x:100,y:100})<8||onHill(p)||lines.some(f=>environmentContains(f,p,4))||woodlandWet(bodies,p))continue;
+      if(weight<=0||dist(p,{x:C(),y:C()})<8||onHill(p)||lines.some(f=>environmentContains(f,p,4))||woodlandWet(bodies,p))continue;
       const value=noise(p.x/12,p.y/12,State.seed+51),item={i,value,weight,zone};items.push(item);
       if(weight>.999)groups[zone].items.push(item);
     }
@@ -323,7 +328,7 @@
       const cover=Object.fromEntries(biomes.map(b=>[b,(w[b]||0)+(canonical(State.biome)===b?c:0)]));
       const pure=biomes.find(b=>cover[b]>.999),calibrated=biomes.some(b=>cover[b]>0);
       if(pure)groups[pure][zone].total++;
-      if(wet||lines.some(f=>environmentContains(f,p,2))||dryMountains.some(f=>environmentContains(f,p))||terrainSlopeKind(p)==='steep'||calibrated&&dist(p,{x:100,y:100})<8)continue;
+      if(wet||lines.some(f=>environmentContains(f,p,2))||dryMountains.some(f=>environmentContains(f,p))||terrainSlopeKind(p)==='steep'||calibrated&&dist(p,{x:C(),y:C()})<8)continue;
       const scale=calibrated?18:9,value=noise(p.x/scale,p.y/scale,State.seed+91);
       eligible.push({i,value,cover,zone,pure});
       if(pure)groups[pure][zone].candidates.push({i,value});
@@ -349,7 +354,7 @@
       const marshes=State.biome==='swamp'?features(swampMarshMask(false,env.filter(f=>f.type==='river'||f.type==='stream'),env.filter(f=>f.type==='sea'||f.type==='pond')),'pond','swamp-marsh-'+State.seed).map(f=>{styleMarshWater(f);f.points=roundMarshRing(f.points);f.holes=f.holes.map(roundMarshRing);return f}):[];
       env=[...env.filter(f=>f.waterBodyKind!=='marsh'),...marshes];
       const samples=[],water=env.filter(f=>f.type==='pond'||f.type==='sea');
-      for(let y=0;y<100;y++)for(let x=0;x<100;x++){
+      for(let y=0;y<N();y++)for(let x=0;x<N();x++){
         const p={x:(x+.5)*2,y:(y+.5)*2};
         samples.push({p,w:{},c:1,wet:woodlandWet(water,p)});
       }
@@ -375,12 +380,12 @@
       const canvas=document.createElement('canvas');canvas.width=canvas.height=256;const g=canvas.getContext('2d'),img=g.createImageData(256,256);
       const colors=Object.fromEntries(Object.entries(BIOMES).map(([b,v])=>[b,[1,3,5].map(i=>parseInt(v.field.slice(i,i+2),16))]));
       for(let y=0;y<256;y++)for(let x=0;x<256;x++){
-        const w=weights({x:(x+.5)*200/256,y:(y+.5)*200/256}),i=(y*256+x)*4;
+        const w=weights({x:(x+.5)*W()/256,y:(y+.5)*W()/256}),i=(y*256+x)*4;
         for(let k=0;k<3;k++)img.data[i+k]=Object.entries(w).reduce((s,[b,v])=>s+colors[b][k]*v,0);img.data[i+3]=255;
       }
       g.putImageData(img,0,0);groundCache={key,canvas};
     }
-    const a=w2sRaw({x:0,y:0},0),b=w2sRaw({x:200,y:0},0),d=w2sRaw({x:0,y:200},0);
+    const a=w2sRaw({x:0,y:0},0),b=w2sRaw({x:W(),y:0},0),d=w2sRaw({x:0,y:W()},0);
     ctx.save();ctx.transform((b.x-a.x)/256,(b.y-a.y)/256,(d.x-a.x)/256,(d.y-a.y)/256,a.x,a.y);ctx.drawImage(groundCache.canvas,0,0);ctx.restore();
   }
   window.ConquerRegionalLandscape={active,weights,adjustRelief,compose,finalizeWoodlands,drawGround,rings,coastShape,coastThreshold};

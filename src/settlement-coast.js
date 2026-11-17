@@ -148,7 +148,7 @@
     const seas=seasOf(),key=cache.key;if(glintCache.key===key)return glintCache.pts;
     const pts=[];
     for(let i=0;i<160&&seas.length;i++){
-      const p={x:h01(i*7+1)*200,y:h01(i*7+2)*200};
+      const p={x:h01(i*7+1)*WORLD,y:h01(i*7+2)*WORLD};
       if(typeof environmentContains==='function'&&seas.some(sea=>environmentContains(sea,p,-3)))pts.push({...p,ph:h01(i*7+3)});
     }
     glintCache={key,pts};return pts;

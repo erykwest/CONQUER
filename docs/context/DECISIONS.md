@@ -4,7 +4,7 @@
 
 - **DECISO dal product owner:** la mappa locale eredita il contorno del territorio regionale; la zona edificabile ha la forma della cella e il bordo esterno è un offset di 50U. La griglia regionale è esagonale: i biomi dell'anello vengono dai vicini **fisici** (di norma 6), e strade e rotte marine vanno ripensate su questa base.
 - **CONTRATTO TECNICO:** `ConquerLocalShape.create(shape)` → `build`, `outer`, `sectors`, `runs`, `weights(p,centro)`, `inBuild`, `inWorld`, `runSample(id,t)`. I bordi stradali esagonali si chiamano `hex:<macroId>`; `edgeSample` li risolve. Senza `shape` vale il modello quadrato.
-- **PROPOSTO (provvisorio):** scala adattata al lato più lungo della cella dentro il riquadro 100U, per non toccare `WORLD=200` e le coordinate fisse; da rivedere se l'area edificabile ridotta non va bene.
+- **DECISO dal product owner (17/11/2026):** le mappe esagonali usano **WORLD = 240U** per mantenere l'area edificabile classica di 10000 U²; le mappe quadrate restano a 200U. Una cella troppo allungata viene ridotta quanto basta a stare nel canvas.
 - **STATO:** implementato su `feature/local-hex-shape`, non in main.
 
 ## D-THREATS-261116 — Generatore di minacce (16/11/2026)

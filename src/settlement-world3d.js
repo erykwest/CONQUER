@@ -60,7 +60,7 @@
       void main(){
         vec2 dUV=(vW-uDetailRect.xy)/uDetailRect.z;
         bool inDetail=all(greaterThanEqual(dUV,vec2(0.002)))&&all(lessThanEqual(dUV,vec2(0.998)));
-        vec4 c=inDetail?texture(uDetail,dUV):texture(uWorld,clamp(vW/200.0,0.0,1.0));
+        vec4 c=inDetail?texture(uDetail,dUV):texture(uWorld,clamp(vW/${Number(WORLD).toFixed(1)},0.0,1.0));
         o=vec4(c.rgb,1.0);}`],
     decal:[`#version 300 es
       ${CAMERA}
