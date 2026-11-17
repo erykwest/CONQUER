@@ -167,7 +167,11 @@
   }
   function macroIndex(snapshot) {
     const bucketSize = 128, bins = new Map(), macros = [];
-    for (const cell of snapshot.cells) {
+    // The source now owns twenty actual convex Voronoi microcells per logical
+    // square-grid center. Index those convex cells rather than their (possibly
+    // concave) aggregated macro outlines for geometric operations.
+    const source=(snapshot.fineCells?.length?snapshot.fineCells:snapshot.cells);
+    for (const cell of source) {
       const poly = cell.polygon;
       if (!poly?.length) continue;
       let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -175,7 +179,7 @@
         x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y);
         x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y);
       }
-      const entry = {id:cell.macroId, polygon:poly, center:centroid(poly), box:[x0,y0,x1,y1]};
+      const entry = {id:cell.macroId, sourceId:macros.length,polygon:poly,center:centroid(poly),box:[x0,y0,x1,y1]};
       macros.push(entry);
       for (let y=Math.floor(y0/bucketSize);y<=Math.floor(y1/bucketSize);y++) {
         for (let x=Math.floor(x0/bucketSize);x<=Math.floor(x1/bucketSize);x++) {
@@ -209,7 +213,7 @@
           for(const entry of bins.get(x+','+y)||[]){
             const box=entry.box;
             if(box[0]<=maxX&&box[2]>=minX&&box[1]<=maxY&&box[3]>=minY)
-              found.set(entry.id,entry);
+              found.set(entry.sourceId,entry);
           }
       return [...found.values()];
     };
@@ -545,7 +549,31 @@
       for(const p of [a,b,c])vertices.push(p.x,p.y,p.z,cr,cg,cb);
       triangles++;
     }
-    const base = detail===1 ? {
+    // The World Lab now generates EXACTLY twenty Voronoi cells per square
+    // logical territory. Use those real cells as the visual mesh: never fan-
+    // triangulate their concave aggregated territory outlines or invent a
+    // second incompatible Voronoi grid over the authoritative geometry.
+    const actualFine=Array.isArray(snapshot.fineCells)&&snapshot.fineCells.length>0;
+    const sourceBase=actualFine?(()=>{
+      const parts=snapshot.fineCells.map(c=>({
+        macroId:c.macroId,siteKey:String(c.id),polygon:c.polygon
+      }));
+      const ownerParts=new Map(),areas=new Map();
+      for(const part of parts){
+        if(!ownerParts.has(part.macroId))ownerParts.set(part.macroId,[]);
+        ownerParts.get(part.macroId).push(part);
+        areas.set(part.macroId,(areas.get(part.macroId)||0)+area(part.polygon));
+      }
+      const avg=snapshot.width*snapshot.height/snapshot.cells.length;
+      const microAvg=snapshot.width*snapshot.height/parts.length;
+      return {parts,ownerParts,siteCount:parts.length,
+        spacing:Math.sqrt(microAvg),fineScale:1,appliedWarp:0,
+        maxMicrocellAreaRatio:Math.max(...parts.map(p=>area(p.polygon)/microAvg)),
+        visualAreaDeviation:Math.max(...snapshot.cells.map(c=>
+          Math.abs((areas.get(c.macroId)||0)/avg-1))
+      )};
+    })():null;
+    const base = sourceBase || (detail===1 ? {
       parts:snapshot.cells.map(c=>({macroId:c.macroId,polygon:c.polygon})),
       ownerParts:new Map(snapshot.cells.map(c=>[c.macroId,[{polygon:c.polygon,macroId:c.macroId}]])),
       spacing:Math.sqrt(snapshot.width*snapshot.height/snapshot.cells.length),
@@ -553,7 +581,7 @@
       visualAreaDeviation:Math.max(...snapshot.cells.map(c=>
         Math.abs(area(c.polygon)/(snapshot.width*snapshot.height/snapshot.cells.length)-1))),
       appliedWarp:0
-    } : globalMicrocells(snapshot,detail,deformation);
+    } : globalMicrocells(snapshot,detail,deformation));
     subcells=base.siteCount;
     const byMacro=new Map(snapshot.cells.map(c=>[c.macroId,c.polygon]));
     const rgbCache=new Map();
