@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceDigest": "e8ce5922a797d8d1ca93fd0f78a4403cfc1e3c5625b3fe55f59550f95386da23",
+  "sourceDigest": "72c5a738a1b2a574abdf86be9831711fef5a7dcc717304e40b5f7eaeb26cf859",
   "catalog": {
     "schemaVersion": 1,
     "categories": [
@@ -5345,12 +5345,13 @@
         "properties": {
           "kind": "combat-profile",
           "statistics": {
-            "hp": 100,
+            "hp": 6,
             "combat": 1,
             "armor": 0,
             "aim": 2,
             "front": 1,
-            "range": 15
+            "range": 15,
+            "dmg": 1
           }
         },
         "relations": [],
@@ -5396,7 +5397,8 @@
             "combat": 4,
             "armor": 1,
             "aim": null,
-            "front": 1
+            "front": 1,
+            "dmg": 2
           }
         },
         "relations": [],
@@ -5438,11 +5440,12 @@
         "properties": {
           "kind": "combat-profile",
           "statistics": {
-            "hp": 30,
+            "hp": 16,
             "combat": 3,
             "armor": 3,
             "aim": null,
-            "front": 1
+            "front": 1,
+            "dmg": 1
           }
         },
         "relations": [],
@@ -5678,11 +5681,12 @@
         "properties": {
           "kind": "combat-profile",
           "statistics": {
-            "hp": 100,
+            "hp": 8,
             "combat": 2,
             "armor": 1,
             "aim": null,
-            "front": 1
+            "front": 1,
+            "dmg": 1
           }
         },
         "relations": [],
@@ -5724,11 +5728,12 @@
         "properties": {
           "kind": "combat-profile",
           "statistics": {
-            "hp": 30,
+            "hp": 20,
             "combat": 3,
             "armor": 3,
             "aim": null,
-            "front": 1
+            "front": 1,
+            "dmg": 2
           }
         },
         "relations": [],
@@ -5770,11 +5775,12 @@
         "properties": {
           "kind": "combat-profile",
           "statistics": {
-            "hp": 40,
+            "hp": 6,
             "combat": 2,
             "armor": 0,
             "aim": null,
-            "front": 1
+            "front": 1,
+            "dmg": 1
           }
         },
         "relations": [],
@@ -5816,12 +5822,13 @@
         "properties": {
           "kind": "combat-profile",
           "statistics": {
-            "hp": 35,
+            "hp": 5,
             "combat": 1,
             "armor": 0,
             "aim": 2,
             "front": 1,
-            "range": 15
+            "range": 15,
+            "dmg": 1
           }
         },
         "relations": [],
@@ -5863,11 +5870,12 @@
         "properties": {
           "kind": "combat-profile",
           "statistics": {
-            "hp": 60,
+            "hp": 8,
             "combat": 2,
             "armor": 1,
             "aim": null,
-            "front": 1
+            "front": 1,
+            "dmg": 1
           }
         },
         "relations": [],
@@ -5909,11 +5917,12 @@
         "properties": {
           "kind": "combat-profile",
           "statistics": {
-            "hp": 40,
+            "hp": 10,
             "combat": 2,
             "armor": 2,
             "aim": null,
-            "front": 2
+            "front": 2,
+            "dmg": 1
           }
         },
         "relations": [],
@@ -5955,11 +5964,12 @@
         "properties": {
           "kind": "combat-profile",
           "statistics": {
-            "hp": 100,
+            "hp": 12,
             "combat": 2,
             "armor": 2,
             "aim": null,
-            "front": 3
+            "front": 3,
+            "dmg": 1
           }
         },
         "relations": [],
@@ -6005,7 +6015,8 @@
             "combat": 3,
             "armor": 0,
             "aim": null,
-            "front": 1
+            "front": 1,
+            "dmg": 1
           }
         },
         "relations": [],

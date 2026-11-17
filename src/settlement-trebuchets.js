@@ -36,13 +36,20 @@
   function remove(id){const i=list.findIndex(t=>t.id===id);if(i>=0)list.splice(i,1);requestFrame()}
   function clear(){list.length=0;requestFrame()}
   function crewHit(id){const t=list.find(x=>x.id===id);if(t&&t.crew>0)t.crew--;return t?.crew??0}
+  // World point of the stone in the sling just before the release of the current cycle (the
+  // model's burning ball: ammo 'fire' marks it), or null without the 3D engine model.
+  function slingPoint(t){
+    const se=SE();if(!se)return null;
+    const n=CYCLE(),at=Math.floor(t.clock/n)*n+(RELEASE-.01)*n;
+    return se.triangles('trebuchet',place(t),{mode:'fire',t:at,ammo:'fire'}).burning?.[0]||null;
+  }
   function shoot(t){
     let s=State.structures.find(x=>x.id===t.target);
     if(!standing(s)){s=pickTarget(t);t.target=s?.id||null;if(s){const c=centre(s);t.heading=Math.atan2(c.y-t.y,c.x-t.x)}}
     if(!s)return;
     const c=centre(s);
-    // volley() throws from the far side of `origin`: mirror the engine through the target.
-    window.ConquerFire?.volley?.(s,'stone',{x:2*c.x-t.x,y:2*c.y-t.y});
+    // The burning stone leaves from the sling, where the model holds it at the release.
+    window.ConquerFire?.volley?.(s,'stone',{x:2*c.x-t.x,y:2*c.y-t.y},{from:slingPoint(t)});
     const out=window.ConquerSiege?.attackStructure?.(s.id,'trebuchet',FORCE);
     t.shots++;t.last={target:s.id,ok:!!out?.ok,damage:out?.damage||0};
   }
