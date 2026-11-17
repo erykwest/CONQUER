@@ -56,10 +56,7 @@ try{
   assert.ok(joust.some(f=>f.key.startsWith('civ|jo|rider|')),'riders are cards');
   const status=await page.evaluate(()=>ConquerWorld3D.status().failed);
   assert.equal(status,null);
-  // Canvas fallback: without World3D the same scenes paint in 2D without errors.
-  await page.evaluate(()=>{ConquerWorld3D._setActiveForTest(false);draw()});
-  await page.screenshot({path:out+'/4-giostra-2d.png'});
   assert.deepEqual(errors,[]);
   fs.writeFileSync(out+'/report.json',JSON.stringify({setup,court:court.length,horses,errors},null,2));
-  console.log('PASS event figures as capsule cards: justice works, stage, joust (horses, riders, spectators) and 2D fallback');
+  console.log('PASS event figures as capsule cards: justice works, stage, joust (horses, riders, spectators)');
 }finally{await browser.close()}

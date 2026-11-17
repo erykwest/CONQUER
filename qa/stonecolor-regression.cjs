@@ -61,7 +61,6 @@ const deps={
  'src/settlement-house3d.js':['State.stonePaletteId','structureVisualMaterial','ConquerStoneColor?.shade'],
  'src/settlement-civic3d.js':['State.stonePaletteId',"startsWith('stone')","startsWith('paving')"],
 // settlement-render.js lost its 2.5D castle cache key (World 3D only).
- 'src/settlement-castle.js':['function drawStoneTileFloor','ConquerStoneColor?.shade'],
  'src/settlement-shop-cutaway.js':['State.stonePaletteId','ConquerStoneColor?.shade'],
  'src/settlement-cutaway-furniture.js':['State.stonePaletteId',"f.key?.startsWith('stone')"],
  'src/settlement-crossings.js':['State.stonePaletteId','ConquerStoneColor?.shade'],

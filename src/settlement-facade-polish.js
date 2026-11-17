@@ -50,36 +50,3 @@ gothicAssetSizeForLevel=function(s){
   const t=clamp(towerTier(s),1,3),scale=t===1?.56:t===2?.76:.94;
   return{w:base.w*scale,h:base.h*scale};
 };
-
-// One opening per arch of every bay (builtArcadeLayout), not one per bay.
-function punchBuiltArcadeOpenings(a){
-  const edge=a.edge,dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
-  const h=a.h,baseZ=.025,springZ=.04+h*.56,apexZ=.04+h*.93,cell=a.cell*.96/a.arches;
-  const centres=a.bays.flatMap(b=>Array.from({length:a.arches},(_,k)=>edge.length/2+b.off+(k+.5-a.arches/2)*cell));
-  ctx.save();
-  ctx.globalCompositeOperation='destination-out';
-  ctx.fillStyle='#000';
-  for(const along of centres){
-    const half=cell*.30;
-    const c={x:edge.a.x+ux*along,y:edge.a.y+uy*along};
-    const l={x:c.x-ux*half,y:c.y-uy*half},r={x:c.x+ux*half,y:c.y+uy*half};
-    const lb=w2s(l,baseZ),rb=w2s(r,baseZ),ls=w2s(l,springZ),rs=w2s(r,springZ),ap=w2s(c,apexZ);
-    ctx.beginPath();
-    ctx.moveTo(lb.x,lb.y);ctx.lineTo(rb.x,rb.y);ctx.lineTo(rs.x,rs.y);
-    ctx.quadraticCurveTo(rs.x+(ap.x-rs.x)*.54,rs.y+(ap.y-rs.y)*.36,ap.x,ap.y);
-    ctx.quadraticCurveTo(ls.x+(ap.x-ls.x)*.54,ls.y+(ap.y-ls.y)*.36,ls.x,ls.y);
-    ctx.closePath();ctx.fill();
-  }
-  ctx.restore();
-}
-
-drawBuiltArcade=function(s){
-  const a=builtArcadeLayout(s);if(!a||a.side!==linearFrontSide(s))return;
-  // The portico is a real opening in the castle-body cache: cut the masonry
-  // first, then draw only the stone arcade frame on top.
-  punchBuiltArcadeOpenings(a);
-  for(const b of a.bays)drawArchitectureAssetOnEdge(a.edge,a.centerZ,b.w,a.h,a.key,b.off,false,1);
-};
-
-if(typeof clearStructureCompositeCache==='function')clearStructureCompositeCache();
-if(typeof invalidateSceneCache==='function')invalidateSceneCache();

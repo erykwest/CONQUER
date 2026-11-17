@@ -75,13 +75,6 @@ check('the inner roof removes the brazier (no fire on the deck)',()=>{
   assert.ok(run('towerHasBrazier')(off),'no inner roof: the brazier stays');
   assert.ok(run('battlementBrazierSources')().some(x=>x.id==='o:brazier'));
 });
-check('2.5D: one inner-roof piece among the merlons, only when mounted and built',()=>{
-  const on=tower('a',{innerRoof:'on'}),off=tower('b'),site=tower('c',{innerRoof:'on',construction:{progress:.5}});
-  setup([on,off,site]);
-  assert.equal(run('towerInnerRoofPiece')(on)?.kind,'innerRoof');
-  assert.equal(run('towerInnerRoofPiece')(off),null);
-  assert.equal(run('towerBattlementPieces')(on).length,run('towerBattlementPieces')(off).length,'merlons unchanged');
-});
 check('rooms under the roof keep asking for a pitched roof (Colombaia, Falconiera, Campana)',()=>{
   const t=tower('a',{level:2,innerRoof:'on'});setup([t]);
   assert.ok(!run('towerDovecoteAllowed')(t),'no dovecote under an inner roof');

@@ -135,8 +135,6 @@
       for(let t=0;t<mesh.col.length;t++){const o=t*9;m.face([{x:p[o],y:p[o+1],z:p[o+2]},{x:p[o+3],y:p[o+4],z:p[o+5]},{x:p[o+6],y:p[o+7],z:p[o+8]}],window.ConquerMesh3D.shadedHex(mesh,t))}
     }
   }
-  // 2D scene: the boulders drawn after the ground and before the structures.
-  function draw(){const list=meshes();if(list.length&&window.ConquerMesh3D)window.ConquerMesh3D.drawMeshes(ctx,list,window.ConquerMesh3D.gameView())}
   // Waves (graphics only, real time, both renderers, painted before the ships): foam lines
   // running up the beaches and drawing back, spray bursting on the rocks and glints out at sea.
   // The weather sets the swell (calm .6, wind 1, storm 1.6); at night only faint glints remain.
@@ -214,5 +212,5 @@
     if(drawn&&typeof requestSceneDraw==='function')requestSceneDraw();
     return drawn;
   }
-  window.ConquerCoast=Object.freeze({HEADLAND,ROCK_LAND,ROCK_SEA,shore,stretches,kindAt,rockAt,drawGround,meshes,addToBuilder,draw,drawWaves});
+  window.ConquerCoast=Object.freeze({HEADLAND,ROCK_LAND,ROCK_SEA,shore,stretches,kindAt,rockAt,drawGround,meshes,addToBuilder,drawWaves});
 })();

@@ -260,16 +260,6 @@
     for(const f of geo.faces)m.face(f.pts,f.hex);
     return true;
   }
-  // 2.5D Canvas: the same triangles through the depth-sorted painter (shaded per camera turn).
-  function draw(s,preview=false){
-    if(!handles(s))return false;
-    const geo=geometry(s),list=[geo.foundation,geo.mesh,geo.flat].filter(m=>m&&m.col.length);
-    // The gate's door leaves (ConquerGates, shared with the stone gates); world3d adds them per frame.
-    const leaves=isWoodGate(s)&&!preview?window.ConquerGates?.gateMesh?.(s):null;
-    if(leaves&&leaves.col.length)list.push(leaves);
-    window.ConquerMesh3D.drawMeshes(ctx,list,window.ConquerMesh3D.gameView());
-    return true;
-  }
   // Interleaved x,y,z,r,g,b triangles (the world3d buffer layout) of some structures: the Asset Lab
   // shows and audits these through ConquerSiegePreview.assetMesh. Model triangles keep their base
   // colours here, because the Lab's painter shades faces itself (shading twice darkens the timber).
@@ -283,5 +273,5 @@
     }
     return new Float32Array(out);
   }
-  window.ConquerWood3D={modelKey,handles,parts,geometry,addToBuilder,addCutawayToBuilder,openSides,draw,worldTriangles};
+  window.ConquerWood3D={modelKey,handles,parts,geometry,addToBuilder,addCutawayToBuilder,openSides,worldTriangles};
 })();

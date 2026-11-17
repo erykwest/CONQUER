@@ -10,17 +10,10 @@
 //     ConquerCastle3D.worldMeshes(); sun shadows from shadowCasterGeometry()/sunShadowState();
 //   - trees as depth-tested billboards using the forest SVG sprites.
 // Dynamic figures, decals and overlays keep drawing in 2D on #c (step 2 moves soldiers into 3D).
-// On by default where WebGL2 works; the 2.5D Canvas path is the fallback.
-// Opt-out: ?world3d=0 (persisted, page reloads on toggle) or ConquerWorld3D.setEnabled(false).
+// The only renderer of the world (D-RENDER-3D-261111): there is no 2.5D Canvas fallback and no
+// opt-out. Without WebGL2, or after a renderer failure, draw() shows a "WebGL2 required" notice.
 (()=>{
-  const STORE_KEY='conquer.world3d.v2';
-  const fromUrl=(()=>{try{const v=new URLSearchParams(location.search).get('world3d');return v===null?null:v!=='0'}catch{return null}})();
-  const forcedCanvas=(()=>{try{return new URLSearchParams(location.search).get('renderer')==='canvas2d'}catch{return false}})();
-  // The Asset Lab audits the 3D frame only: a persisted opt-out never applies to its sandbox.
-  let enabled=!forcedCanvas&&(window.__CONQUER_ASSET_LAB__||(fromUrl??(()=>{try{return localStorage.getItem(STORE_KEY)!=='0'}catch{return true}})()));
-  // Branch-local A/B: ?nightlight=0 keeps the same WebGL2 world, but uses old Canvas lights.
-  let useGpuNightLights=(()=>{try{return new URLSearchParams(location.search).get('nightlight')!=='0'}catch{return true}})();
-  if(fromUrl!==null){try{localStorage.setItem(STORE_KEY,fromUrl?'1':'0')}catch{}}
+  let enabled=true;
 
   const TEX_SIZE=4096;                                   // world texture 200U, detail texture = build area
   const DETAIL={x0:BUILD_MIN,y0:BUILD_MIN,size:BUILD_MAX-BUILD_MIN};
@@ -2000,7 +1993,6 @@
     try{
     pollRendererError(gl);
     collecting=[];                           // soldiers drawn this frame go to the 3D front pass
-    const gpu=document.getElementById('gpuCanvas');if(gpu&&gpu.style.visibility!=='hidden')gpu.style.visibility='hidden';
     ensureContent(gl);
     const t1=performance.now();renderBack(r);
     ctx.drawImage(S.canvas,0,0,r.width,r.height);
@@ -2022,16 +2014,12 @@
   }
   function disableRenderer(err){
     S.failed='world3d-draw: '+String(err?.message||err);enabled=false;collecting=null;
-    const gpu=document.getElementById('gpuCanvas');if(gpu)gpu.style.visibility='';
-    window.ConquerWebGPU?.invalidate?.();invalidateSceneCache();
-    console.warn('World 3D disabled (buildings need WebGL2, no Canvas fallback):',S.failed);
+    console.warn('World 3D disabled (the world needs WebGL2, no Canvas fallback):',S.failed);
   }
   function finishFrame(){
     try{deferRendererError(S.gl);return true}
     catch(err){disableRenderer(err);return false}
   }
-  function nightLightsEnabled(){return useGpuNightLights}
-  function setNightLightsEnabled(on){useGpuNightLights=!!on;draw()}
   function drawNightLights3D(r){
     const nf=nightFactor();if(nf<=.01)return;
     const started=performance.now();
@@ -2048,9 +2036,6 @@
       S.nightLightReported=true;
       window.__conquerAnalytics?.event('NIGHTLIGHT_3D_ACTIVE',{windowQuads,fireSources,mode:'webgl2'},'info');
     }
-  }
-  function drawCastleOverlays(){
-    // Arcades are 3D decals and cutaway rooms render in WebGL2; Canvas owns only the fallback path.
   }
   // Night: open interiors stay in full light. The whole cutaway mesh (and its flames) is redrawn
   // over the night overlay, depth-tested against this frame's scene (depth buffer is preserved),
@@ -2071,12 +2056,6 @@
     }
     gl.depthMask(true);
     ctx.drawImage(S.canvas,0,0,r.width,r.height);
-  }
-  // Mastio heraldic drape stays 2D for now: run the facade pass on the mastio towers only.
-  function drawMastioDrapes(){
-    const all=State.structures,mastio=all.filter(s=>s.isMastio&&!underConstruction(s)&&!structureCutaway(s));
-    if(!mastio.length)return;
-    try{State.structures=mastio;drawFacadeWindows(false,1,false)}finally{State.structures=all}
   }
   // ---------- dynamic meshes: queued during the frame like soldiers ----------
   // mesh: {pos: 9 world coords per triangle, col: one CSS hex per triangle}. Flat colours take the
@@ -2134,13 +2113,6 @@
     if(S.debugColliders)drawColliderDebug();
     perf().world3dFrontMs=performance.now()-t0;
   }
-  function setEnabled(on){enabled=!!on;try{localStorage.setItem(STORE_KEY,enabled?'1':'0')}catch{}location.reload()}
-  // Benchmark hook: switch modes in place (no reload). Restores the WebGPU canvas when leaving 3D.
-  function _setActiveForTest(on){
-    enabled=!!on;
-    if(!enabled){const gpu=document.getElementById('gpuCanvas');if(gpu)gpu.style.visibility='';window.ConquerWebGPU?.invalidate?.()}
-    invalidateSceneCache();
-  }
   // Debug: show capsules; hovering highlights the soldier picked by the camera ray.
   function setColliderDebug(on){
     S.debugColliders=!!on;
@@ -2154,8 +2126,8 @@
     }
     draw();
   }
-  window.ConquerWorld3D={active,supported,setEnabled,drawBack,drawCastleOverlays,drawFront,
-    drawNightLights3D,nightLightsEnabled,setNightLightsEnabled,drawMastioDrapes,drawEmissive,finishFrame,_setActiveForTest,
+  window.ConquerWorld3D={active,supported,drawBack,drawFront,
+    drawNightLights3D,drawEmissive,finishFrame,
     pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,addHouse,addOutbuilding,figure,screenAxis,prewarmFigures,_setFiguresForTest:on=>{figuresOn=!!on},FIGURE_CARD_U:SOLDIER_SIZE_U,FIGURE_FEET:SOLDIER_FEET,
     atlasCanvas:()=>soldierAtlas.canvas,frameFigures:()=>(S.frameFigures||[]).map(f=>({key:f.key||f.type,p:f.p,z:f.z,mirror:f.mirror,span:f.span||1,ox:f.ox||0,id:f.id,capsule:f.capsule||null})),atlasStats:()=>({tiles:soldierAtlas.next,capacity:FIG_COLS*FIG_COLS,resets:soldierAtlas.resets,painted:soldierAtlas.painted}),
     invalidate:()=>{S.sig={};S.contentDirty=true},

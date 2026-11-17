@@ -28,7 +28,6 @@
 <body>
 <header><div class="brand">CONQUER</div><div class="sub">CAMP · Military encampments</div><div id="resources"></div><button id="profileBtn" type="button">PROFILE</button></header>
 <div id="wrap">
-  <canvas id="gpuCanvas" aria-hidden="true"></canvas>
   <canvas id="c"></canvas>
   <svg id="weatherCloudLayer" aria-hidden="true" preserveAspectRatio="none"></svg>
   <canvas id="weatherCanvas" aria-hidden="true"></canvas>
@@ -191,16 +190,6 @@
       </div>
       <div class="dev-section">
         <span class="dev-label">ASSET PIPELINE</span>
-        <div id="assetCompileReadout" class="dev-hint">Non compilato</div>
-        <div class="dev-row">
-          <button id="assetCompileBtn" type="button" title="Prerender and validate every structural asset at all 24 angles">Prerender + test</button>
-          <button id="assetExportBtn" type="button" title="Export the latest asset QA report">Export QA</button>
-        </div>
-        <div class="dev-row">
-        </div>
-        <div class="dev-row">
-          <button id="assetCacheClearBtn" type="button" title="Clear structural and composite bitmap caches">Clear asset cache</button>
-        </div>
       </div>
       <div class="dev-section">
         <span class="dev-label">METEO</span>
@@ -231,7 +220,6 @@
 <script src="./src/settlement-util.js?v=util-1-a261113"></script>
 <script src="./src/settlement-core.js?v=slopes-merge-1-wc1-hoard1-hardening2-dove1-bell1-portico6-longhouse1-mare-stonecolor1-sites2-upgrades1-milres1-lhroof1-barg1-a261113"></script>
 <script src="./src/settlement-tower-shapes.js?v=dee-slits-1"></script>
-<script src="./src/settlement-webgpu.js?v=webgpu-2"></script>
 <script src="./src/settlement-world.js?v=bridge-magnet-1-wc1-mare-p261116"></script>
 <script src="./src/settlement-castle.js?v=stair-hl-1-floors1-longhouse2-mare-stonecolor2-barg1-p261116"></script>
 <script src="./src/settlement-landscape.js?v=refactor-1-mare-autumn1-bark1-stonecolor1-p261116"></script>
@@ -272,7 +260,6 @@
 <script src="./src/settlement-room-exterior.js?v=room-exterior-1-bell1-milres1-a261113"></script>
 <script src="./src/settlement-castle3d.js?v=tower-hoarding-2-dove1-bell1-portico6"></script>
 <script src="./src/settlement-world3d.js?v=keep-entrance-1-wc1-floors1-house3d-portico6-longhouse2-mare-autumn1-stonecolor1-stonecolor2-milres1-fig3d-26111-fig3d-2611111-barg1-a261113"></script>
-<script src="./src/settlement-assets.js"></script>
 <script src="./src/settlement-facade-polish.js"></script>
 <script src="./src/settlement-economy.js?v=subpalettes-l2-garrisons-261109-upgrades1-milres1-fisco1-chiesa1-scol1-gilda1-a261113"></script>
 <script src="./src/settlement-urban-economy.js?v=economy-commerce-1"></script>

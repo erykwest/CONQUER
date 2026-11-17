@@ -1,24 +1,13 @@
 'use strict';
-// CONQUER castle 3D prototype — WebGL2 rasteriser for the castleBody / castleFront scene caches.
+// CONQUER castle 3D — world-space mesh builders for the castle (towers, walls, gates, built sections).
 //
-// Geometry is NOT duplicated here: every volume comes from the same world-space builders the
-// Canvas 2.5D renderer already uses (unionFootprintPoints, *BattlementPieces, machicolationFloorPolygon,
-// towerRoofFootprintPoints, gateRoofGeometry, builtRoofGeometry, chimneySpecs, stone tower bases,
-// wallExteriorLayout for hoarding). Vertices are projected with the game's own w2sRaw, so the output
-// lands pixel-exact in the existing caches; a z-buffer replaces painter sorting, band unions and
-// occlusion clips. Flat colours reproduce castleSideShade / the union palette.
-//
-// Opt-in: ?castle3d=1 (persisted) or ConquerCastle3D.setEnabled(true). ?castle3d=0 disables.
-// Without WebGL2 (or on any GL error) the Canvas union renderer stays canonical.
+// Geometry is NOT duplicated here: every volume comes from the shared world-space builders
+// (unionFootprintPoints, *BattlementPieces, machicolationFloorPolygon, towerRoofFootprintPoints,
+// gateRoofGeometry, builtRoofGeometry, chimneySpecs, stone tower bases, wallExteriorLayout for
+// hoarding). World 3D (settlement-world3d.js) draws worldMeshes(); the construction assembly reveals
+// structureWorld() piece by piece. Flat colours reproduce castleSideShade / the union palette.
 (()=>{
-  const STORE_KEY='conquer.castle3d.v1';
   const DEPTH_K=ISO_Z;                    // depth = q.x + q.y + ISO_Z*z (monotonic along the view ray)
-  const fromUrl=(()=>{try{const v=new URLSearchParams(location.search).get('castle3d');return v===null?null:v!=='0'}catch{return null}})();
-  let enabled=fromUrl??(()=>{try{return localStorage.getItem(STORE_KEY)==='1'}catch{return false}})();
-  if(fromUrl!==null){try{localStorage.setItem(STORE_KEY,fromUrl?'1':'0')}catch{}}
-
-  const gpu={canvas:null,gl:null,prog:null,buf:null,loc:null,failed:null};
-  const perf=()=>window.__conquerPerf||(window.__conquerPerf={});
 
   // ---------- palettes (top, light side, dark side, top outline) ----------
   // The outline is the stroke extrudePolygonAt draws around the top face. Union bodies get none here:
@@ -240,17 +229,6 @@
       m.face([{p:at(w0,outerOff),z:h-.02},{p:at(w1,outerOff),z:h-.02},{p:at(w1,innerOff),z:lo},{p:at(w0,innerOff),z:lo}],'#3f2c20');
     }
   }
-  // Body geometry is needed twice per rebuild (colour pass for castleBody, depth pre-pass for
-  // castleFront): keep the last build keyed by the castle cache signature.
-  const bodyMemo={key:null,tris:null};
-  function buildBody(){
-    // Vertices are in screen space: the signature covers structures/scale/rotation, add the pan.
-    const key=typeof castleBodyVisualSignature==='function'?castleBodyVisualSignature()+'|'+State.view.x+'|'+State.view.y:null;
-    if(key&&bodyMemo.key===key)return bodyMemo.tris;
-    const tris=memoGround(buildBodyUncached);
-    bodyMemo.key=key;bodyMemo.tris=tris;
-    return tris;
-  }
   function addFoundation(m,s){
     // drawPlacementFoundation: ground-contact ring walls from the terrain up to the placement plane.
     const baseZ=placementGroundZ(s);
@@ -313,11 +291,6 @@
   }
   // Triangle arrays carry their top-face outlines along (same 6-float vertex layout, GL_LINES pairs).
   function withLines(m){const t=m.tris;t.lines=m.lines;t.tags=m.tags;return t}
-  function buildBodyUncached(){return bodyMesh(castleParts(),true)}
-  // Full volumes of cutaway structures, used only as depth occluders (their look stays 2.5D).
-  function buildCutawayDepth(){return memoGround(()=>bodyMesh(cutawayParts()))}
-  function buildFront(){return memoGround(()=>{const m=makeMesh();addPieces(m,'front');return withLines(m)})}
-
   // Battlements are split around their owner: pieces on the far half belong to the castle body (drawn
   // before patrols, so soldiers on the walkway stay in front of them), pieces on the near half go to
   // castleFront (drawn after patrols). The 2.5D renderer gets the same effect by clipping far merlons
@@ -354,90 +327,6 @@
     }
   }
 
-  // ---------- WebGL2 ----------
-  const VS=`#version 300 es
-    in vec3 aPos;in vec3 aCol;uniform vec4 uBounds;uniform vec2 uDepth;out vec3 vCol;
-    void main(){
-      float x=(aPos.x-uBounds.x)/uBounds.z*2.0-1.0, y=1.0-(aPos.y-uBounds.y)/uBounds.w*2.0;
-      float z=1.0-2.0*(aPos.z-uDepth.x)/max(uDepth.y-uDepth.x,1e-4);   // larger depth value = nearer
-      gl_Position=vec4(x,y,z,1.0);vCol=aCol;
-    }`;
-  const FS=`#version 300 es
-    precision mediump float;in vec3 vCol;out vec4 o;void main(){o=vec4(vCol,1.0);}`;
-  function ensureGL(){
-    if(gpu.gl)return gpu.gl;
-    if(gpu.failed)return null;
-    try{
-      const c=document.createElement('canvas');
-      const gl=c.getContext('webgl2',{antialias:true,alpha:true,premultipliedAlpha:true,preserveDrawingBuffer:true,depth:true,stencil:true});
-      if(!gl)throw new Error('webgl2-unavailable');
-      const sh=(type,src)=>{const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s};
-      const prog=gl.createProgram();gl.attachShader(prog,sh(gl.VERTEX_SHADER,VS));gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,FS));gl.linkProgram(prog);
-      if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(prog));
-      Object.assign(gpu,{canvas:c,gl,prog,buf:gl.createBuffer(),loc:{
-        pos:gl.getAttribLocation(prog,'aPos'),col:gl.getAttribLocation(prog,'aCol'),
-        bounds:gl.getUniformLocation(prog,'uBounds'),depth:gl.getUniformLocation(prog,'uDepth')}});
-      c.addEventListener('webglcontextlost',e=>{e.preventDefault();gpu.gl=null;gpu.failed='context-lost'});
-      return gl;
-    }catch(err){gpu.failed=String(err?.message||err);console.warn('Castle 3D unavailable:',gpu.failed);return null}
-  }
-  function drawTris(gl,tris,mode=gl.TRIANGLES){
-    if(!tris?.length)return;
-    gl.bindBuffer(gl.ARRAY_BUFFER,gpu.buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(tris),gl.STREAM_DRAW);
-    gl.enableVertexAttribArray(gpu.loc.pos);gl.vertexAttribPointer(gpu.loc.pos,3,gl.FLOAT,false,24,0);
-    gl.enableVertexAttribArray(gpu.loc.col);gl.vertexAttribPointer(gpu.loc.col,3,gl.FLOAT,false,24,12);
-    gl.drawArrays(mode,0,tris.length/6);
-  }
-  function screenBounds(sets){
-    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity,dMin=Infinity,dMax=-Infinity;
-    for(const t of sets)for(let i=0;i<t.length;i+=6){
-      const x=t[i],y=t[i+1],d=t[i+2];
-      if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y;if(d<dMin)dMin=d;if(d>dMax)dMax=d;
-    }
-    if(!Number.isFinite(minX))return null;
-    const pad=2;
-    return{x:Math.floor(minX-pad),y:Math.floor(minY-pad),w:Math.ceil(maxX-minX+pad*2),h:Math.ceil(maxY-minY+pad*2),dMin:dMin-1,dMax:dMax+1};
-  }
-  // Rasterise: depthOnly tris write depth (colour masked), colour tris are drawn on top with depth test.
-  // maskToDepth: colour only lands where depthOnly geometry covers the pixel (stencil).
-  function rasterise(depthOnly,colour,maskToDepth=false){
-    const gl=ensureGL();if(!gl)return null;
-    const b=screenBounds([depthOnly,colour]);if(!b)return{empty:true};
-    const dpr=staticCacheDpr(),maxSide=gl.getParameter(gl.MAX_RENDERBUFFER_SIZE);
-    const scale=Math.min(dpr,maxSide/Math.max(b.w,1),maxSide/Math.max(b.h,1));
-    const W=Math.max(1,Math.round(b.w*scale)),H=Math.max(1,Math.round(b.h*scale));
-    if(gpu.canvas.width!==W||gpu.canvas.height!==H){gpu.canvas.width=W;gpu.canvas.height=H}
-    gl.viewport(0,0,W,H);gl.useProgram(gpu.prog);
-    gl.uniform4f(gpu.loc.bounds,b.x,b.y,b.w,b.h);gl.uniform2f(gpu.loc.depth,b.dMin,b.dMax);
-    gl.clearColor(0,0,0,0);gl.clearDepth(1);gl.clearStencil(0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT|gl.STENCIL_BUFFER_BIT);
-    gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.disable(gl.CULL_FACE);
-    // Faces are pushed back slightly so the top-face outlines (drawn without offset) win the depth test.
-    gl.enable(gl.POLYGON_OFFSET_FILL);gl.polygonOffset(1,1);
-    if(maskToDepth){gl.enable(gl.STENCIL_TEST);gl.stencilFunc(gl.ALWAYS,1,0xff);gl.stencilOp(gl.KEEP,gl.REPLACE,gl.REPLACE)}
-    else gl.disable(gl.STENCIL_TEST);
-    if(depthOnly.length){gl.colorMask(false,false,false,false);drawTris(gl,depthOnly);gl.colorMask(true,true,true,true)}
-    if(maskToDepth){gl.stencilFunc(gl.EQUAL,1,0xff);gl.stencilOp(gl.KEEP,gl.KEEP,gl.KEEP)}
-    drawTris(gl,colour);
-    gl.disable(gl.POLYGON_OFFSET_FILL);
-    drawTris(gl,colour.lines,gl.LINES);
-    gl.disable(gl.STENCIL_TEST);
-    const err=gl.getError();if(err){gpu.failed='gl-error-'+err;return null}
-    return{bounds:b};
-  }
-
-  // ---------- cache hooks ----------
-  function supported(){return !!ensureGL()}
-  function active(){return enabled&&supported()}
-
-  // The castle is drawn by the World 3D renderer from worldMeshes() (settlement-world3d.js); the
-  // old castleBody/castleFront Canvas-cache rasteriser was retired with the 2.5D path.
-  function setEnabled(on){
-    enabled=!!on;
-    try{localStorage.setItem(STORE_KEY,enabled?'1':'0')}catch{}
-    window.__conquerAssetCompiler?.clearComposite?.();
-    invalidateSceneCache(['castleBody','castleFront']);draw();
-    return active();
-  }
   // World-space castle meshes (6 floats per vertex: x, y, z, r, g, b; .lines = outlines) for the
   // full-scene renderer. Side shading and the near/far battlement split follow the current view
   // rotation, so callers rebuild on rotation change.
@@ -466,8 +355,6 @@
       });
     }finally{worldOut=false}
   }
-  window.ConquerCastle3D={active,supported,setEnabled,worldMeshes,structureWorld,castleParts:()=>castleParts(),
-    castleVolume:s=>castleVolume(s),PAL,
-    status:()=>({enabled,supported:supported(),failed:gpu.failed,bodyMs:perf().castle3dBodyMs,frontMs:perf().castle3dFrontMs,bodyTris:perf().castle3dBodyTris,frontTris:perf().castle3dFrontTris}),
-    _build:{body:buildBody,front:buildFront}};
+  window.ConquerCastle3D={worldMeshes,structureWorld,castleParts:()=>castleParts(),
+    castleVolume:s=>castleVolume(s),PAL};
 })();

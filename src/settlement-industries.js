@@ -219,41 +219,6 @@
     }
     return{ok:true,ground,resourceTarget:'steep',distance:0};
   }
-  function render(s,preview=false){
-    if(!is(s))return;
-    const type=definition(s),poly=footprint(s);
-    const ground=Number.isFinite(s.groundZ)?s.groundZ:
-      s.type==='loggingCamp'?terrainElevation(s):groundLevel(s);
-    const selected=State.selectedId===s.id;
-    // Blender-built model (settlement-industries3d.js); the platform below is the fallback.
-    // (The structure selection outline is drawn by the shared selection pass.)
-    if(window.ConquerIndustries3D?.draw(s,ground,preview))return;
-    // Placeholder platform uses one surveyed elevation even when it spans rock.
-    const h=.35;
-    const tint=hex=>s.type==='quarry'&&!isClayQuarry(s)?(window.ConquerStoneColor?.shade(hex)||hex):hex;
-    const shade=tint(type.edge);
-    ctx.save();
-    if(preview)ctx.globalAlpha*=.62;
-    withProjectionGroundZ(ground,()=>{
-    extrudePolygonAt(poly,0,h,{
-      top:tint(type.color),sideA:shade,sideB:shade,stroke:selected?'#f4b76f':'#c4bcb0'
-    });
-    const center=w2s({x:s.x,y:s.y},h+.04);
-    ctx.fillStyle=isMill(s)?'#594405':s.type==='mine'?'#f4eee6':'#211d17';
-    ctx.font='bold '+Math.max(9,Math.round(U*State.view.scale*.74))+'px system-ui';
-    ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(isMill(s)?(s.type==='watermill'?'A':'V'):
-      s.type==='loggingCamp'?'L':isClayQuarry(s)?'A':s.type==='quarry'?'C':'M',center.x,center.y);
-    // Direction marker scales to the footprint (1×1 mine through 3×3 quarry).
-    const angle=Number(s.angle)||0,front=type.w/2;
-    const tip=w2s({x:s.x+Math.cos(angle)*front*.82,y:s.y+Math.sin(angle)*front*.82},h+.055);
-    const back=w2s({x:s.x+Math.cos(angle)*front*.30,y:s.y+Math.sin(angle)*front*.30},h+.055);
-    ctx.strokeStyle=s.type==='mine'?'#f2c879':'#f7d78c';
-    ctx.lineWidth=Math.max(1.4,State.view.scale*2);
-    ctx.beginPath();ctx.moveTo(back.x,back.y);ctx.lineTo(tip.x,tip.y);ctx.stroke();
-    });
-    ctx.restore();
-  }
   function forestAccessPoint(s){
     const hit=nearestForest({x:s.x,y:s.y});
     if(!hit.forest)return null;
@@ -316,5 +281,5 @@
       }
     }
   }
-  window.ConquerIndustries=Object.freeze({TYPES,is,isMill,isClayQuarry,definition,make,footprint,groundLevel,normalizeFootprint,validate,orientToWater,render,drawWorkers,nearestForest,nearestSlope,nearestClayWater});
+  window.ConquerIndustries=Object.freeze({TYPES,is,isMill,isClayQuarry,definition,make,footprint,groundLevel,normalizeFootprint,validate,orientToWater,drawWorkers,nearestForest,nearestSlope,nearestClayWater});
 })();

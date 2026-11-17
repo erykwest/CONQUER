@@ -11,12 +11,13 @@ const architecture=fs.readFileSync(__dirname+'/../src/settlement-architecture.js
 for(const [name,src] of [['castle-structures',structures],['architecture',architecture]]){
   assert.doesNotMatch(src,/for\(const [a-z]+ of [a-zA-Z]+\)\{\s*const hull=[^\n]*\n?[^\n]*ctx\.moveTo\(hull\[0\]\.x,hull\[0\]\.y\)[\s\S]{0,200}?ctx\.closePath\(\)\s*\}\s*\n?\s*ctx\.clip\('evenodd'\)/,name+': hulls must not share one even-odd clip path');
 }
-for(const fn of ['withPalisadeConnectionOcclusion','withStructureDetailOcclusion','withBuiltRoofOcclusionClip','withTowerBattlementOcclusion','withPointRoofOcclusion']){
+// The 2.5D structure painters (palisade, details, battlements, roofs, tower doors) were retired with the
+// Canvas renderer (D-RENDER-3D-261111); the chimney smoke over built sections still clips.
+for(const fn of ['withBuiltRoofOcclusionClip']){
   const body=structures.match(new RegExp('function '+fn+'\\([^)]*\\)\\{[\\s\\S]*?\\n\\}'))?.[0];
   assert.ok(body,fn+' exists');
   assert.match(body,/clipOutsideHulls\(/,fn+' uses clipOutsideHulls');
 }
-assert.match(architecture,/clipOutsideHulls\(occ\.map\(structureScreenSilhouette\)/,'tower door occlusion uses clipOutsideHulls');
 
 // Behaviour: one frame+hull clip per valid hull, degenerate hulls skipped.
 const fnSrc=structures.match(/function clipOutsideHulls\([^)]*\)\{[\s\S]*?\n\}/)[0];

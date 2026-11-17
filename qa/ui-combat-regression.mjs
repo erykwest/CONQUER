@@ -7,7 +7,7 @@ const page=await browser.newPage({viewport:{width:1280,height:900}});
 const errors=[];
 page.on('pageerror',e=>errors.push(String(e.stack||e)));
 try{
-  await page.goto((process.env.CONQUER_QA_URL||'http://127.0.0.1:4173')+'/?renderer=canvas2d',{waitUntil:'domcontentloaded',timeout:60000});
+  await page.goto((process.env.CONQUER_QA_URL||'http://127.0.0.1:4173')+'/',{waitUntil:'domcontentloaded',timeout:60000});
   await page.waitForFunction(()=>!!window.ConquerCombat&&!!document.querySelector('#builder.ux-builder'),{timeout:15000});
   const dom=await page.evaluate(()=>({
     combat:!!document.getElementById('combatControls'),

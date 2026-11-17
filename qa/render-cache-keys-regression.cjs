@@ -2,8 +2,8 @@
 // Render cache keys: every visual input of a castle structure must change the keys the renderers
 // cache on, or the old mesh / bitmap stays on screen after the change (towers audit, 13/11/2026:
 // a hoarding mounted or burnt, a small gate's timber upper storey, a paid merlon or roof-pitch restyle).
-// One per-structure helper, structureVisualKey (settlement-render.js), feeds the 2.5D castle body
-// bitmap key (castleBodyVisualSignature) and the World 3D structure signature (structureKey); the
+// One per-structure helper, structureVisualKey (settlement-render.js), feeds the World 3D structure
+// signature (structureKey); the
 // World 3D castle content key also carries the realm-wide crenelStyle() and roofPitch().
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
@@ -55,13 +55,11 @@ test('geometry, rooms, damage and burn state are in the key',()=>{
   assert.equal(structureVisualKey({...t}),k,'stable for the same structure');
 });
 test('both renderers key on the shared helper; World 3D castle content carries the realm restyles',()=>{
-  const sig=block(render,'function castleBodyVisualSignature(){','\n}\n');
-  assert.match(sig,/structureVisualKey\(s\)/,'2.5D castle body bitmap key');
-  assert.match(sig,/crenelStyle\(\),roofPitch\(\)/);
+  // The 2.5D castle body bitmap and its key were retired (D-RENDER-3D-261111).
+  assert.doesNotMatch(render,/function castleBodyVisualSignature\(/);
   const key=block(world3d,'function structureKey(s){','\n  }\n');
   assert.match(key,/structureVisualKey\(s\)/,'World 3D structure signature');
   const content=world3d.match(/const castleContent=\[[^\n]+\n[^\n]+/)[0];
   assert.match(content,/crenelStyle\(\)/);assert.match(content,/roofPitch\(\)/);
-  assert.match(render,/const key='cutaway\|'\+castleBodyVisualSignature\(\)/,'cutaway overlay key reuses the body signature');
 });
 console.log(passed+' render cache key checks passed.');

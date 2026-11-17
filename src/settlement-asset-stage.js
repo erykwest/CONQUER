@@ -26,7 +26,7 @@
       // Door side towards the default camera: the thumbnail shows the street front and its sign.
       spec:{type:'house',auto:true,houseLevel:3,w:1.5,h:1,doorSide:1,groundZ:0,shopKind:kind}})):[];
   }
-  // Every variant of the gallery (wood ones too: the 2.5D path draws them) plus a built section.
+  // Every variant of the gallery (wood ones too) plus a built section.
   function variants(){
     const G=SP().GALLERY;
     return[...G.towers.map(r=>['Torri',r]),...G.walls.map(r=>['Mura',r]),
@@ -115,7 +115,6 @@
     if(state.id==='closed')s.shopClosed=true;
     return State.structures.find(x=>x.id===s.id)||State.structures[0]||null;
   }
-  const STRUCTURE_LAYERS=['ground','shadow','base','castleBody','castleFront'];
   // Canvas-pixel coverage of a house: its urban faces plus the workshop's street front.
   function houseSilhouette(s,W,H){
     const c=document.getElementById('c'),k=c.width/document.getElementById('wrap').getBoundingClientRect().width;
@@ -127,11 +126,10 @@
     if(m)for(let t=0;t<m.col.length;t++){const o=t*9;fill([0,3,6].map(j=>w2sRaw({x:m.pos[o+j],y:m.pos[o+j+1]},m.pos[o+j+2])))}
     return g.getImageData(0,0,W,H).data;
   }
-  // Buildings render only in World 3D (D-RENDER-3D-261111): a capture without it is an error, not
-  // a 2.5D image.
+  // The world renders only in World 3D (D-RENDER-3D-261111): a capture without it is an error.
   function renderer(){return window.ConquerWorld3D?.active?.()?'webgl2':'none'}
   function frame(){
-    invalidateSceneCache(STRUCTURE_LAYERS);window.ConquerWallWalk?.invalidate?.();window.ConquerWorld3D?.invalidate?.();draw();
+    invalidateSceneCache();window.ConquerWallWalk?.invalidate?.();window.ConquerWorld3D?.invalidate?.();draw();
     const c=document.getElementById('c');
     return c.getContext('2d').getImageData(0,0,c.width,c.height);
   }

@@ -92,3 +92,9 @@ la geometria resta (eventualmente spostata in moduli `*-geometry.js`).
 
 Rischi: test `qa/*.cjs` che fanno grep sul sorgente 2.5D (es. `built-portico-regression.cjs`);
 CI senza GPU; macchine senza WebGL2 perdono il gioco (accettato dalla decisione).
+
+## 6. Stato al 17/11/2026
+
+Fasi 1–7 eseguite sul branch per tutti gli edifici, non solo le fortificazioni (estensione decisa
+dall'utente). Restano fuori scatter e figure. Aperti: drappo del Mastio in 3D, tende dipinte con
+`ConquerMesh3D.drawMeshes`, baseline dell'audit del Lab da rigenerare.

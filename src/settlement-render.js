@@ -1,5 +1,5 @@
 'use strict';
-// Renderer scene orchestrator and cached layer composition. Shared classic-script globals.
+// Renderer frame orchestrator: World 3D scene plus the dynamic Canvas overlays. Shared classic-script globals.
 function drawDayNightOverlay(){
   const r=wrap.getBoundingClientRect(),nf=nightFactor();
   if(window.ConquerAmbientLight){
@@ -14,13 +14,20 @@ function drawDayNightOverlay(){
   ctx.save();ctx.fillStyle='rgba(6,10,18,'+(NIGHT_OVERLAY_MAX*nf).toFixed(3)+')';ctx.fillRect(0,0,r.width,r.height);ctx.restore();
 }
 function drawNo3DNotice(r){
-  // Buildings render only in WebGL2 (D-RENDER-3D-261111): say so instead of drawing a 2.5D castle.
+  // The world renders only in WebGL2 (D-RENDER-3D-261111): say so, there is no Canvas fallback.
   ctx.save();ctx.fillStyle='rgba(12,10,8,.78)';ctx.fillRect(r.width/2-190,18,380,46);
   ctx.fillStyle='#f2e6d3';ctx.font='600 13px system-ui';ctx.textAlign='center';
-  ctx.fillText('Edifici non disponibili: serve WebGL2',r.width/2,38);
+  ctx.fillText('Il gioco richiede WebGL2',r.width/2,38);
   ctx.font='11px system-ui';ctx.fillStyle='rgba(242,230,211,.78)';
   ctx.fillText(window.ConquerWorld3D?.status?.().failed||'Il renderer 3D non è attivo su questo browser.',r.width/2,55);
   ctx.restore();
+}
+// Developer panel: the renderer in use (World 3D, or none with the reason).
+let rendererReadoutState=null;
+function updateRendererReadout(ok){
+  if(ok===rendererReadoutState)return;rendererReadoutState=ok;
+  const el=document.getElementById('rendererReadout');if(!el)return;
+  el.textContent=ok?'Renderer: World 3D (WebGL2)':'Renderer: nessuno · '+(window.ConquerWorld3D?.status?.().failed||'WebGL2 non disponibile');
 }
 function drawConstructionProgress(s){
   const p=w2s(structureCenter(s),structureHeight(s)+.65),pr=constructionProgress(s),w=34,h=5;ctx.save();ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(p.x-w/2,p.y-18,w,h);ctx.fillStyle='#e08a3c';ctx.fillRect(p.x-w/2,p.y-18,w*pr,h);ctx.strokeStyle='rgba(255,255,255,.3)';ctx.strokeRect(p.x-w/2,p.y-18,w,h);if(s.construction?.version===2){ctx.font='9px sans-serif';ctx.textAlign='center';ctx.fillStyle='rgba(255,255,255,.95)';ctx.fillText((s.construction.workers||0)+' L1',p.x,p.y-23)}ctx.restore();
@@ -28,42 +35,16 @@ function drawConstructionProgress(s){
 function drawStructure(s,preview=false){
   if(s?.type==='road'){drawAutoStructure(s,preview);return}
   if(s?.type==='ruin')return;          // ruined stumps are drawn with their rubble (ConquerSiege)
-  // A site with an assembly is drawn piece by piece (opaque) instead of as a translucent ghost.
-  const assembled=!preview&&underConstruction(s)&&window.ConquerAssembly?.has(s);
-  // Fortifications have no 2.5D body any more (D-RENDER-3D-261111): finished ones are World 3D
-  // meshes, sites are assembled from the same meshes, ghosts are their footprint volume.
-  if(isFortificationStructure(s)){
-    if(!preview&&!underConstruction(s))return;
-    if(!(assembled&&window.ConquerAssembly.draw(s)))drawPlacementVolume(s,'rgba(244,214,160,.22)','rgba(244,214,160,.92)');
-    if(!preview)drawConstructionProgress(s);
-    return;
-  }
-  const render=()=>{
-    if(assembled&&window.ConquerAssembly.draw(s))return;
-    ctx.save();if(preview)ctx.globalAlpha=.58;else if(underConstruction(s))ctx.globalAlpha=.42;
-    if(isPlacementFoundationBuilding(s))drawPlacementFoundation(s,preview);
-    if(window.ConquerStorageYard?.is(s))window.ConquerStorageYard.draw(s,preview);
-    else if(window.ConquerIndustries?.is(s))window.ConquerIndustries.render(s,preview);
-    else if(window.ConquerEvents3D?.is(s))window.ConquerEvents3D.draw(s,preview);   // event venues (settlement-events3d.js)
-    else if(window.ConquerPier?.is(s))window.ConquerPier.draw(s,preview);           // timber pier (settlement-pier.js)
-    else if(window.ConquerQuay?.is(s))window.ConquerQuay.draw(s,preview);           // stone quay (settlement-quay.js)
-    else if(window.ConquerSlopeways?.is(s))window.ConquerSlopeways.draw(s,preview); // ramp / stairway (settlement-slopeways.js)
-    else if(isCivic(s))drawCivicStructure(s,preview);
-    else if(isCivicAnnex(s))drawCivicAnnex(s,preview);
-    else if(['tower','gate','well'].includes(s.type))drawPointStructure(s,preview);
-    else if(s.type==='palisade')drawPalisade(s,preview);
-    // Timber longhouse: Blender model; open in cutaway, its room right after it, in depth order (it
-    // is not a castle part, so the castle body / cutaway composites neither bound nor refresh it).
-    else if(isLonghouse(s)&&window.ConquerWood3D?.draw(s,preview)){if(!preview&&structureCutaway(s))window.ConquerCutawayFurniture?.draw(s,cutawayWallGeometry(s))}
-    else{drawLinearBase(s,preview);if(!underConstruction(s))drawBuiltDetails(s,preview)}
-    ctx.restore();
-  };
-  withStructureVisualMaterial(s,()=>{if(isPlacementFoundationBuilding(s))withStructureGroundPlane(s,render);else render()});
-  if(!preview&&underConstruction(s)){
-    if(isPlacementFoundationBuilding(s))withStructureGroundPlane(s,()=>drawConstructionProgress(s));
-    else if(window.ConquerIndustries?.is(s))withProjectionGroundZ(s.groundZ,()=>drawConstructionProgress(s));
-    else drawConstructionProgress(s);
-  }
+  // No building has a 2.5D Canvas body (D-RENDER-3D-261111): finished ones are World 3D meshes.
+  // Here only the overlays: a site is assembled from the same meshes (ConquerAssembly) or shown as
+  // its footprint volume, with its progress bar; a placement ghost is its footprint volume.
+  if(!preview&&!underConstruction(s))return;
+  const assembled=!preview&&window.ConquerAssembly?.has(s)&&window.ConquerAssembly.draw(s);
+  if(!assembled)drawPlacementVolume(s,'rgba(244,214,160,.22)','rgba(244,214,160,.92)');
+  if(preview)return;
+  if(isPlacementFoundationBuilding(s))withStructureGroundPlane(s,()=>drawConstructionProgress(s));
+  else if(window.ConquerIndustries?.is(s))withProjectionGroundZ(s.groundZ,()=>drawConstructionProgress(s));
+  else drawConstructionProgress(s);
 }
 // Preserve the normal translucent preview; tint its actual footprint red
 // only when the same nonmutating preflight used by the commit would reject it.
@@ -80,9 +61,6 @@ function builderGhostVerdict(ghost){
   // so validations never run again on unchanged frames.
   ghost._ghostCheck=result;
   return result;
-}
-function isFortificationStructure(s){
-  return !!s&&['tower','gate','wall','palisade','built'].includes(s.type);
 }
 function drawInvalidPlacementGhost(ghost){
   drawPlacementVolume(ghost,'rgba(232,40,47,.38)','rgba(255,76,83,.98)');
@@ -115,49 +93,6 @@ function drawPlacementVolume(ghost,fill,stroke){
     });
   }
   ctx.restore();
-}
-function drawLandscapeStaticScene(){
-  const analyticsT0=performance.now();
-  const entry=prepareSceneCache('landscape');
-  withRenderContext(entry.ctx,()=>{
-    drawTerrain();
-    drawGrid();
-    drawEnvironment();
-  });
-  entry.dirty=false;
-  const perf=window.__conquerPerf||(window.__conquerPerf={});
-  perf.cacheLandscapeRebuilds=(perf.cacheLandscapeRebuilds||0)+1;
-  window.__conquerAnalytics?.measure('CACHE_LANDSCAPE',performance.now()-analyticsT0);
-}
-function drawGroundStaticScene(){
-  const analyticsT0=performance.now();
-  const entry=prepareSceneCache('ground');
-  withRenderContext(entry.ctx,()=>{
-    // Ground network changes frequently during growth/completion but must never
-    // force terrain/environment rasterization.
-    State.structures
-      .filter(s=>(s.type==='road'||(s.auto&&s.type==='field'))&&!underConstruction(s))
-      .forEach(drawAutoStructure);
-
-    // Weather-ground detail is isolated here. Wet/dry transitions invalidate
-    // only this cheap layer instead of terrain + every building.
-    drawPuddleLayer();
-    drawUrbanLots();
-    window.ConquerCrossings?.drawGround();
-  });
-  entry.dirty=false;
-  const perf=window.__conquerPerf||(window.__conquerPerf={});
-  perf.cacheGroundRebuilds=(perf.cacheGroundRebuilds||0)+1;
-  window.__conquerAnalytics?.measure('CACHE_GROUND',performance.now()-analyticsT0);
-}
-function drawShadowStaticScene(){
-  const analyticsT0=performance.now();
-  const entry=prepareSceneCache('shadow');
-  withRenderContext(entry.ctx,()=>drawDynamicShadows());
-  entry.dirty=false;
-  const perf=window.__conquerPerf||(window.__conquerPerf={});
-  perf.cacheShadowRebuilds=(perf.cacheShadowRebuilds||0)+1;
-  window.__conquerAnalytics?.measure('CACHE_SHADOW',performance.now()-analyticsT0);
 }
 // The visual inputs of one structure, shared by the World 3D structure signature (settlement-world3d.js)
 // and the derived-geometry memos (room exteriors) so the lists cannot drift apart: geometry, material, the fields of every declared variant (STRUCTURE_VARIANTS: roof,
@@ -193,53 +128,6 @@ function structureMemoEpoch(){
   const nav=typeof navPerf!=='undefined'?(navPerf.navInvalidations||0):0;
   return structureMemoListId+':'+State.structures.length+':'+(perf.cacheInvalidations||0)+':'+nav+':'+Math.floor(performance.now()/1000);
 }
-let shopFrontSig=null;
-function ensureStaticSceneCaches(){
-  // L3 shop fronts open at dawn and shut at dusk (settlement-shop-cutaway.js): repaint the houses.
-  const shopSig=window.ConquerShopCutaway?.frontSig?.()??null;
-  if(shopSig!==shopFrontSig){if(shopFrontSig!==null)invalidateSceneCache(['base']);shopFrontSig=shopSig}
-  // Buildings, towers, walls and gates render only in 3D (settlement-world3d.js, decision
-  // D-RENDER-3D-261111). Without WebGL2 the Canvas keeps the terrain and ground network only.
-  const builders=[
-    ['landscape',drawLandscapeStaticScene],
-    ['ground',drawGroundStaticScene]
-  ];
-
-  // A projection mismatch cannot safely reuse the old raster. Content-only
-  // invalidations can: keep showing the previous bitmap for one or two frames
-  // while expensive layers rebuild individually.
-  let projectionMismatch=false,coldStart=false;
-  for(const [name] of builders){
-    const entry=sceneCache[name];
-    if(!entry.view)coldStart=true;
-    if(!sceneCacheZoomPreview&&!sceneCachePanPreview&&entry.view&&!sceneCacheProjectionCompatible(entry)){
-      entry.dirty=true;
-      projectionMismatch=true;
-    }
-  }
-
-  const stagePriority=new Map([
-    ['ground',0],['landscape',1]
-  ]);
-  const dirty=builders
-    .filter(([name])=>sceneCache[name].dirty)
-    .sort((a,b)=>(stagePriority.get(a[0])??99)-(stagePriority.get(b[0])??99));
-  if(!dirty.length)return;
-
-  // Initial load, pause/edit mode and camera projection changes favor immediate
-  // correctness. During running simulation, topology-only rebuilds are staged
-  // one cache per visual frame to prevent 100–200ms combined long tasks.
-  if(coldStart||projectionMismatch||State.clock.speed<=0){
-    for(const [,build] of dirty)build();
-    return;
-  }
-
-  const [name,build]=dirty[0];
-  const t0=performance.now();
-  build();
-  const ms=performance.now()-t0;
-  window.__conquerAnalytics?.measure('CACHE_STAGE',ms,{layer:name,remaining:dirty.length-1});
-}
 let lastCivicCutawayId=null;
 function draw(){
   // A selected church / inn is drawn in cutaway inside the base layer; Escape and the
@@ -259,23 +147,14 @@ function draw(){
   beginPopulationFrame(r);
   ctx=screenCtx;
   screenCtx.clearRect(0,0,r.width,r.height);
-  // The static scene is the 3D world (settlement-world3d.js). Buildings have no Canvas path:
-  // without WebGL2 only terrain and ground are drawn, with a notice (drawNo3DNotice).
-  const world3d=window.ConquerWorld3D?.active?.()&&window.ConquerWorld3D.drawBack(r);
-  if(world3d){
-    window.ConquerSnowTracks?.draw();
-  }else{
-  ensureStaticSceneCaches();
-  const gpuStatic=window.ConquerWebGPU?.renderStaticLayers?.(r,true)===true;
-  if(!gpuStatic){
-    blitSceneCache('landscape');
-    blitSceneCache('ground');
-  }
+  // The world is World 3D only (settlement-world3d.js, D-RENDER-3D-261111): no Canvas fallback.
+  // Without WebGL2, or after a renderer failure, the frame is the "WebGL2 required" notice.
+  const world3d=!!(window.ConquerWorld3D?.active?.()&&window.ConquerWorld3D.drawBack(r));
+  updateRendererReadout(world3d);
+  if(!world3d){drawNo3DNotice(r);endPopulationFrame();return}
   window.ConquerSnowTracks?.draw();
-  }
 
-  // Dynamic placement overlay: switching tools must not invalidate or rebuild
-  // the static landscape cache, and the WebGPU path must show the same outline.
+  // Dynamic placement overlay: switching tools must not invalidate or rebuild the 3D scene.
   drawBuildArea();
   window.ConquerForestry?.drawJobs();
   for(const field of completedSettlement('field'))drawFieldWork(field);
@@ -304,7 +183,6 @@ function draw(){
   window.ConquerWorkAnim?.drawBuilders();
   window.ConquerForestry?.drawCrews?.();   // L1 woodcutters at the forest clearings
   window.ConquerShipyard?.drawShipwrights();   // shipwrights along the hull on the slipways
-  if(!window.ConquerWorld3D?.active?.())window.ConquerCoast?.draw();   // 2.5D: shore boulders (WebGL has them in the static scene)
   window.ConquerCoast?.drawWaves(performance.now()/1000);   // waves on the beaches, spray on the rocks, glints at sea
   window.ConquerFleet?.draw();   // ships at the piers or at anchor, with their crews (settlement-fleet.js)
   markPhase('population');
@@ -313,19 +191,16 @@ function draw(){
 
   drawTowerFlags();
   drawCastleSoldiers();
-  window.ConquerTrebuchets?.draw();   // enemy trebuchets: crews (and the 2.5D outline)
+  window.ConquerTrebuchets?.draw();   // enemy trebuchets: the crews at their posts
   markPhase('castle-units');
-  if(world3d)window.ConquerWorld3D.drawFront(r);
+  window.ConquerWorld3D.drawFront(r);
   window.ConquerFleet?.drawFigures();   // 3D: crews, fires and arrows over the ships of the front pass
   window.ConquerGulls?.draw(performance.now()/1000);   // seagulls over the coast, above the ships
   window.ConquerSiege?.drawOverlay();
   if(typeof drawRaisedVillagers==='function')drawRaisedVillagers();   // on the Mastio's outer stair
   drawCastleFireFixtures();
 
-  // The drawbridge is an exterior shield when raised. Paint portals and
-  // windows FIRST, then the moving drawbridge so it physically covers them
-  // on the outward Gate facade (stone and timber alike).
-  if(world3d)window.ConquerWorld3D.drawMastioDrapes();
+  // Moving drawbridges, the Mastio entrance and gate leaves.
   window.ConquerCrossings?.drawDynamic();
   window.ConquerKeepEntrance?.animate();
   window.ConquerGates?.tick();
@@ -363,13 +238,11 @@ function draw(){
   }
   drawDayNightOverlay();
   // WebGL2 lights share the real scene depth and are composited after colour grading.
-  // Canvas keeps its original complete night path as the fallback.
-  if(world3d)window.ConquerWorld3D.drawNightLights3D(r);
-  if(world3d&&!window.ConquerWorld3D.finishFrame()){
-    // A failed checkpoint leaves terrain and the WebGL2 notice (no Canvas buildings).
+  window.ConquerWorld3D.drawNightLights3D(r);
+  if(!window.ConquerWorld3D.finishFrame()){
+    // A failed checkpoint disables World 3D: the next frame is the WebGL2 notice.
     draw();return;
   }
-  if(!world3d)drawNo3DNotice(r);
   // High-contrast dynamic outline stays visible above roofs, windows and light.
   drawCastleSelection();
   // Road signposts and convoys on the arterial roads, above scene caches;

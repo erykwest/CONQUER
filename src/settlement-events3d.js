@@ -419,16 +419,6 @@
     }
     return out;
   }
-  // 2.5D: paint into the current ctx.
-  function draw(s,preview=false){
-    if(!has(s)||!window.ConquerMesh3D)return false;
-    const list=meshes(s,groundZ(s));
-    ctx.save();
-    if(preview)ctx.globalAlpha*=.62;
-    window.ConquerMesh3D.drawMeshes(ctx,list,window.ConquerMesh3D.gameView());
-    ctx.restore();
-    return true;
-  }
   // WebGL: add to a world3d meshBuilder with fixed-light shaded colours.
   function addToBuilder(m,s,ground){
     if(!has(s)||!window.ConquerMesh3D)return false;
@@ -856,7 +846,7 @@
     }
     return{parts:{camp:{p,i:p.map((_,k)=>k).slice(0,p.length/3),c}},meta:{},livery:'realm'};
   }
-  window.ConquerEvents3D={VENUES,SETUPS,PAIRS,BUILD,SETUP_NAMES,is,has,sizeOf,setupsFor,venueModel,setupItems,placedItems,pairFor,liveryOf,parts,triangles,itemRect,footprint,meshes,draw,addToBuilder,dynamicMeshes,toWorld,
+  window.ConquerEvents3D={VENUES,SETUPS,PAIRS,BUILD,SETUP_NAMES,is,has,sizeOf,setupsFor,venueModel,setupItems,placedItems,pairFor,liveryOf,parts,triangles,itemRect,footprint,meshes,addToBuilder,dynamicMeshes,toWorld,
     make,label,cost,buildDays,tickEvents,setEvent,panelHtml,bindPanel,bivouac,bivouacMeshes,bivouacModel,banditLair,brigandRoadblock,encampment,encampmentFence,campLayout,fitCamp,CAMP_WORKS};
   // Lab scenes: sample bivouacs in the Asset Lab catalog (ConquerCampScenes).
   if(window.ConquerEventModels){

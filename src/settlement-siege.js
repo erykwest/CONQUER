@@ -959,11 +959,11 @@
     const out=state().ruins.map(ruinMesh).filter(Boolean);
     for(const s of State.structures)if(s.type==='ruin')out.push(['windmill','watermill'].includes(s.ruinOf)&&window.ConquerIndustries3D?.has(s)
       ?window.ConquerIndustries3D.triangles(s,Number(s.groundZ)||groundOf(s)):stumpMesh(s));
-    if(window.ConquerWorld3D?.active?.())for(const s of State.structures){
+    for(const s of State.structures){
       const m=s.type==='gate'?window.ConquerCrossings?.drawbridgeMesh?.(s):s.type==='bridge'?window.ConquerCrossings?.bridgeMesh?.(s):null;
       if(m)out.push(m);
     }
-    if(window.ConquerWorld3D?.active?.())out.push(...(window.ConquerEarthworks?.meshes?.()||[]));
+    out.push(...(window.ConquerEarthworks?.meshes?.()||[]));
     for(const s of State.structures)if(s.brokenTop&&['tower','gate'].includes(s.type)&&!underConstruction(s))out.push(crownMesh(s));
     return out;
   }
@@ -1046,8 +1046,7 @@
     invalidateStructureScene(g);invalidateSceneCache();markDirty(true,true,true);renderFunctionPanel();redraw();
     status('The gate is broken in');
   }
-  // 2.5D portals follow the door's state. architecture's drawGatePortals is wrapped once
-  // every script has run.
+  // World 3D gate decals follow the door's state (DECAL_KEYS in settlement-world3d.js).
   const DOOR_ASSETS={gatePortalDamaged:'./src/assets/architecture/gate_portal_damaged.png',
     gatePortalBroken:'./src/assets/architecture/gate_portal_broken.png'};
   function doorAsset(g){const st=doorStage(g);return st==='broken'?'gatePortalBroken':st==='damaged'?'gatePortalDamaged':'gatePortal'}
@@ -1062,22 +1061,7 @@
       img.src=path+'?v=prepared-1';
     }
   }
-  window.addEventListener?.('DOMContentLoaded',()=>{
-    loadDoorAssets();
-    if(typeof drawGatePortals!=='function')return;
-    drawGatePortals=function(){
-      for(const s of State.structures){
-        if(s.type!=='gate'||isWoodGate(s)||underConstruction(s))continue;
-        const key=doorAsset(s);
-        withStructureGroundPlane(s,()=>withStructureDetailOcclusion(s,1.38,()=>{
-          for(const edge of gateFacadeEdges(s)){
-            if(edge.role!=='front'&&edge.role!=='rear')continue;
-            drawGatePortalOnEdge(edge,s,key);
-          }
-        }));
-      }
-    };
-  });
+  window.addEventListener?.('DOMContentLoaded',loadDoorAssets);
   function attackStructure(id,weapon,force=1,part='core'){
     const s=State.structures.find(x=>x.id===id);
     if(!s||underConstruction(s)||!BASE_HEALTH[s.type])return{ok:false,damage:0,reason:'Invalid or unfinished fortification'};
@@ -1222,51 +1206,6 @@
     ctx.beginPath();ctx.moveTo(p.x-5*s,p.y-5*s);ctx.lineTo(p.x+2*s,p.y+s);
     ctx.lineTo(p.x-2*s,p.y+7*s);ctx.lineTo(p.x+6*s,p.y+12*s);ctx.stroke();
   }
-  // 2.5D: painter-sorted flat-shaded triangles. Cache the entire settled layer so
-  // overlapping heaps retain the same painter order as the moving geometry.
-  let rubbleBitmap=null,rubbleBitmapRevision=0;
-  function drawRubble2D(meshes){
-    const api=window.__conquerAssetCompiler;
-    if(!meshes.length){rubbleBitmap=null;return}
-    if(!api?.renderComposite||meshes.some(m=>!m.static)){drawMeshes2D(meshes);return}
-    const projection=[State.view.scale,State.view.rotation||0,isPlanView(),staticCacheDpr()].join('|');
-    if(!rubbleBitmap||rubbleBitmap.projection!==projection||meshes.length!==rubbleBitmap.meshes.length||meshes.some((m,i)=>m!==rubbleBitmap.meshes[i])){
-      let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
-      for(const m of meshes)for(let i=0;i<m.pos.length;i+=3){const p=w2sRaw({x:m.pos[i],y:m.pos[i+1]},m.pos[i+2]);minX=Math.min(minX,p.x);minY=Math.min(minY,p.y);maxX=Math.max(maxX,p.x);maxY=Math.max(maxY,p.y)}
-      rubbleBitmap={meshes:meshes.slice(),projection,key:'rubble|'+(++rubbleBitmapRevision),x:State.view.x,y:State.view.y,bounds:{minX:minX-2,minY:minY-2,maxX:maxX+2,maxY:maxY+2}};
-    }
-    const r=rubbleBitmap,dx=State.view.x-r.x,dy=State.view.y-r.y,b=r.bounds;
-    const result=api.renderComposite('rubble',r.key,{minX:b.minX+dx,minY:b.minY+dy,maxX:b.maxX+dx,maxY:b.maxY+dy},()=>drawMeshes2D(meshes));
-    if(!result.ok)drawMeshes2D(meshes);
-  }
-  function drawMeshes2D(meshes){
-    const items=[],batch=meshes.every(m=>m.static);
-    for(const m of meshes){
-      const p=m.pos;
-      for(let t=0;t<m.col.length;t++){
-        const i=t*9,ux=p[i+3]-p[i],uy=p[i+4]-p[i+1],uz=p[i+5]-p[i+2],vx=p[i+6]-p[i],vy=p[i+7]-p[i+1],vz=p[i+8]-p[i+2];
-        const nz=ux*vy-uy*vx,len=Math.hypot(uy*vz-uz*vy,uz*vx-ux*vz,nz)||1;
-        const c={x:(p[i]+p[i+3]+p[i+6])/3,y:(p[i+1]+p[i+4]+p[i+7])/3},q=rotateViewPoint(c);
-        items.push({m,i,d:q.x+q.y+ISO_Z*(p[i+2]+p[i+5]+p[i+8])/3,f:nz/len>.5?1:nz/len<-.5?.5:.76,col:m.col[t]});
-      }
-    }
-    items.sort((a,b)=>a.d-b.d);
-    let color=null;
-    const flush=()=>{if(color!==null){ctx.fill();ctx.stroke()}};
-    ctx.lineWidth=.6;
-    for(const it of items){
-      const p=it.m.pos,i=it.i,a=w2sRaw({x:p[i],y:p[i+1]},p[i+2]);let b=w2sRaw({x:p[i+3],y:p[i+4]},p[i+5]),c=w2sRaw({x:p[i+6],y:p[i+7]},p[i+8]);
-      const h=it.col.replace('#',''),r=parseInt(h.slice(0,2),16)*it.f|0,g=parseInt(h.slice(2,4),16)*it.f|0,bl=parseInt(h.slice(4,6),16)*it.f|0;
-      const next='rgb('+r+','+g+','+bl+')';
-      if(!batch){ctx.fillStyle=ctx.strokeStyle=next;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.lineTo(c.x,c.y);ctx.closePath();ctx.fill();ctx.stroke();continue}
-      // Same-colour static triangles can share one fill/stroke, in painter
-      // order. Uniform winding prevents overlapping subpaths cancelling out.
-      if((b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x)<0)[b,c]=[c,b];
-      if(next!==color){flush();color=next;ctx.fillStyle=ctx.strokeStyle=color;ctx.beginPath()}
-      ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.lineTo(c.x,c.y);ctx.closePath();
-    }
-    flush();
-  }
   function drawOverlay(){
     ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
     for(const s of State.structures){
@@ -1282,8 +1221,7 @@
       }
       crack(s.x!==undefined?s:{x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2},structureHeight(s)*.55,.4);
     }
-    const world3d=window.ConquerWorld3D?.active?.();
-    // Collapses: dust over the falling blocks (both renderers); in 2.5D the blocks and heaps too.
+    // Collapses: dust over the falling blocks (the blocks and heaps are World 3D meshes).
     if(C()){
       for(const r of playing()){
         for(const d of C().dust(r.spec,now()-started.get(r.id))){
@@ -1291,19 +1229,10 @@
           ctx.fillStyle='rgba(190,176,152,'+d.a.toFixed(3)+')';ctx.beginPath();ctx.ellipse(p.x,p.y,rad,rad*.72,0,0,Math.PI*2);ctx.fill();
         }
       }
-      if(!world3d)drawRubble2D([...dynamicMeshes(),...(window.ConquerIndustries3D?.dynamicMeshes?.()||[]),...(window.ConquerEvents3D?.dynamicMeshes?.()||[]),
-        ...(window.ConquerKeepEntrance?.dynamicMeshes?.()||[])]);
     }
     for(const r of state().ruins){
       if(r.spec)continue;
-      if(r.type==='breach'&&r.a&&r.b){
-        if(world3d)continue;                  // drawn as 3D rubble (dynamicMeshes)
-        const L=Math.hypot(r.b.x-r.a.x,r.b.y-r.a.y)||1,nx=-(r.b.y-r.a.y)/L,ny=(r.b.x-r.a.x)/L,w=(r.width||.5)/2+.3;
-        const q=[[r.a,w],[r.b,w],[r.b,-w],[r.a,-w]].map(([p,o])=>w2s({x:p.x+nx*o,y:p.y+ny*o},0));
-        ctx.fillStyle='#857867';ctx.strokeStyle='#4f4337';ctx.lineWidth=1;
-        ctx.beginPath();q.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.fill();ctx.stroke();
-        continue;
-      }
+      if(r.type==='breach'&&r.a&&r.b)continue;   // drawn as 3D rubble (dynamicMeshes)
       const p=w2s(r,0),z=State.view.scale;
       ctx.fillStyle='#796653';ctx.strokeStyle='#49372c';ctx.lineWidth=1;
       ctx.beginPath();ctx.ellipse(p.x,p.y,Math.max(3,8*z),Math.max(2,4*z),0,0,Math.PI*2);ctx.fill();ctx.stroke();

@@ -23,7 +23,7 @@ async function main(){
   const browser=await chromium.launch({headless:true,channel:'chrome',args:['--disable-background-timer-throttling','--disable-renderer-backgrounding','--disable-backgrounding-occluded-windows']});
   const report={label,browser:browser.version(),base:require('node:child_process').execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),errors:[],results:[]};
   try{
-    for(const mode of (process.env.PERF_MODES||'webgl,canvas').split(','))for(const scenario of (process.env.PERF_SCENARIOS||'fire,damage,collapse,cutaway').split(',')){
+    for(const mode of (process.env.PERF_MODES||'webgl').split(','))for(const scenario of (process.env.PERF_SCENARIOS||'fire,damage,collapse,cutaway').split(',')){
       const context=await browser.newContext({viewport:{width:1440,height:900},deviceScaleFactor:1});
       await context.route(/supabase\.co\//,r=>r.abort());
       await context.addInitScript(()=>{localStorage.setItem('conquer.seed.0.0','12345');let seed=12345;Math.random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296)});
@@ -36,7 +36,7 @@ async function main(){
         };
       });
       const page=await context.newPage();page.on('pageerror',e=>report.errors.push({mode,scenario,error:e.message}));
-      await page.goto(`http://127.0.0.1:${server.address().port}/index.html?`+(mode==='webgl'?'world3d=1':'renderer=canvas2d'),{waitUntil:'networkidle'});
+      await page.goto(`http://127.0.0.1:${server.address().port}/index.html?`+'world3d=1',{waitUntil:'networkidle'});
       await page.waitForFunction(()=>typeof draw==='function'&&!!window.ConquerFire&&!!window.ConquerSiege);
       await page.evaluate(scenario=>{
         State.clock.speed=0;State.clock.day=20;State.season='summer';State.seasonOverride='summer';State.daylightOverride=.5;

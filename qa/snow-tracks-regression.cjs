@@ -67,9 +67,6 @@ assert.match(pop,/ConquerSnowTracks\?\.observe\(resident\.id,p,State\.clock\.day
 assert.match(combat,/ConquerSnowTracks\?\.observe\(u\.id,u,State\.clock\.day/,'military movement must feed tracks');
 assert.match(render,/ConquerSnowTracks\?\.draw\(\)/,'tracks are included in the render pipeline');
 assert.ok(render.indexOf('window.ConquerSnowTracks?.draw();')<render.indexOf('drawCutawayOccupants();'),'snow footprints render before buildings and figures');
-const gpu=fs.readFileSync(__dirname+'/../src/settlement-webgpu.js','utf8');
-assert.match(gpu,/renderStaticLayers\(viewport=wrap\.getBoundingClientRect\(\),excludeBase=false\)/,'WebGPU compositor must support moving base after snow');
-assert.match(render,/renderStaticLayers\?\.\(r,true\)/,'WebGPU never composites a 2.5D building base');
 assert.ok(html.indexOf('settlement-snow-tracks.js')>html.indexOf('settlement-population.js'));
 assert.ok(html.indexOf('settlement-snow-tracks.js')<html.indexOf('settlement-render.js'));
 console.log('PASS dynamic winter snow footprints, alternation, cavalry, expiry, seasons and load order');

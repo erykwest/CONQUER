@@ -4,24 +4,12 @@ const canvas=document.getElementById('c'),weatherCanvas=document.getElementById(
 let ctx=canvas.getContext('2d');
 const screenCtx=ctx;
 const weatherCtx=weatherCanvas?weatherCanvas.getContext('2d'):null;
-const sceneCache={
-  // Keep immutable world art completely separate from settlement topology.
-  // Terrain/environment is expensive (hundreds of rocks/relief bands) but only
-  // changes with landscape/season/projection, not when a house or road completes.
-  landscape:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null,gpuDirty:true},
-  ground:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null,gpuDirty:true},
-  shadow:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null,gpuDirty:true},
-  base:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null,gpuDirty:true},
-  castleBody:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null,gpuDirty:true},
-  castleFront:{canvas:document.createElement('canvas'),ctx:null,dirty:true,view:null,gpuDirty:true}
-};
-for(const layer of Object.values(sceneCache))layer.ctx=layer.canvas.getContext('2d');
+// Scene change signal. World 3D (settlement-world3d.js) wraps this function and recomputes its
+// content signatures after a call; the layer names are kept as hints for callers. There is no Canvas
+// scene cache any more: the world renders only in WebGL2 (D-RENDER-3D-261111).
 function invalidateSceneCache(layer='all'){
   const perf=window.__conquerPerf||(window.__conquerPerf={});
   perf.cacheInvalidations=(perf.cacheInvalidations||0)+1;
-  const layers=Array.isArray(layer)?layer:[layer];
-  if(layers.includes('all')){for(const item of Object.values(sceneCache)){item.dirty=true;item.gpuDirty=true}return}
-  for(const name of layers)if(sceneCache[name]){sceneCache[name].dirty=true;sceneCache[name].gpuDirty=true}
 }
 function invalidateSettlementScene(includeCastle=true){
   invalidateSceneCache(includeCastle?['ground','shadow','base','castleBody','castleFront']:['ground','shadow','base']);
@@ -35,7 +23,6 @@ function structureSceneLayers(s){
   if(window.ConquerIndustries?.is(s))return['ground','shadow','base'];
   const shadow=['house','tower','gate','wall','palisade','built','market','tavern','church','townhall','guild','bargello','balivo'].includes(s.type)?['shadow']:[];
   if(isCastlePart(s)||isRaisedPlacementCastlePoint(s))return[...shadow,'castleBody','castleFront'];
-  // Palisades and timber fortifications are rendered in the non-union base layer.
   if(s.type==='palisade'||isWoodTower(s)||isWoodGate(s))return[...shadow,'base','castleFront'];
   return[...shadow,'base'];
 }
@@ -46,66 +33,10 @@ function withRenderContext(next,fn){
   const prev=ctx;ctx=next;
   try{return fn()}finally{ctx=prev}
 }
-const STATIC_CACHE_DPR_CAP=1.5;
+// Off-screen margin culled by the ground bake (settlement-landscape.js staticCullOverscan).
 const STATIC_CACHE_OVERSCAN=240;
-function staticCacheDpr(){return Math.min(devicePixelRatio||1,STATIC_CACHE_DPR_CAP)}
-function prepareSceneCache(layer){
-  const r=wrap.getBoundingClientRect(),d=staticCacheDpr(),entry=sceneCache[layer],m=STATIC_CACHE_OVERSCAN;
-  const logicalW=r.width+m*2,logicalH=r.height+m*2;
-  const w=Math.max(1,Math.round(logicalW*d)),h=Math.max(1,Math.round(logicalH*d));
-  if(entry.canvas.width!==w||entry.canvas.height!==h){
-    entry.canvas.width=w;entry.canvas.height=h;entry.dirty=true;
-  }
-  entry.ctx.setTransform(1,0,0,1,0,0);
-  entry.ctx.clearRect(0,0,entry.canvas.width,entry.canvas.height);
-  entry.gpuDirty=true;
-  entry.ctx.setTransform(d,0,0,d,m*d,m*d);
-  entry.view={
-    x:State.view.x,y:State.view.y,scale:State.view.scale,
-    rotation:State.view.rotation||0,width:r.width,height:r.height,dpr:d,overscan:m
-  };
-  return entry;
-}
 let sceneCacheZoomPreview=false;
 let sceneCachePanPreview=false;
-function sceneCacheProjectionCompatible(entry){
-  const v=entry?.view,r=wrap.getBoundingClientRect(),d=staticCacheDpr();
-  if(!v
-    ||Math.abs(v.scale-State.view.scale)>=1e-9
-    ||v.rotation!==(State.view.rotation||0)
-    ||Math.abs(v.width-r.width)>=.5
-    ||Math.abs(v.height-r.height)>=.5
-    ||Math.abs(v.dpr-d)>=1e-9)return false;
-  const m=Number(v.overscan)||0,limit=m*.78;
-  return Math.abs(State.view.x-v.x)<=limit&&Math.abs(State.view.y-v.y)<=limit;
-}
-function blitSceneCache(layer){
-  const r=wrap.getBoundingClientRect(),entry=sceneCache[layer],v=entry.view;
-  if(!v)return;
-  const m=Number(v.overscan)||0;
-
-  // Pan keeps the original 1:1 cache translation. This preserves the overscan
-  // envelope and avoids exposing/clipping the cached bitmap at the viewport edge.
-  if(!sceneCacheZoomPreview){
-    const dx=State.view.x-v.x,dy=State.view.y-v.y;
-    screenCtx.drawImage(
-      entry.canvas,
-      0,0,entry.canvas.width,entry.canvas.height,
-      dx-m,dy-m,r.width+m*2,r.height+m*2
-    );
-    return;
-  }
-
-  // Only an active wheel gesture may temporarily reproject a stale-scale cache.
-  const ratio=(Number(State.view.scale)||1)/(Number(v.scale)||1);
-  const dx=State.view.x+(-m-v.x)*ratio;
-  const dy=State.view.y+(-m-v.y)*ratio;
-  screenCtx.drawImage(
-    entry.canvas,
-    0,0,entry.canvas.width,entry.canvas.height,
-    dx,dy,(r.width+m*2)*ratio,(r.height+m*2)*ratio
-  );
-}
 const U=12,WORLD=200,BUILD=100,BUILD_MIN=50,BUILD_MAX=150,GRID=.5;
 const ISO_X=.8660254,ISO_Y=.5,ISO_Z=.9;
 const WEATHER_ZOOM_THRESHOLD=.5;
@@ -1365,14 +1296,8 @@ function pointRadius(s){
       maintenance:{lastMs:+finite(p.lastMaintenanceMs).toFixed(2),runs:finite(p.maintenanceRuns),deltaRuns:delta('maintenanceRuns',p)},
       save:{lastMs:+finite(p.lastSaveMs).toFixed(2)},
       renderer:{
-        mode:p.webgpuActive?'webgpu':'canvas2d',
-        webgpuSupported:!!p.webgpuSupported,
-        webgpuActive:!!p.webgpuActive,
-        webgpuFrames:finite(p.webgpuFrames),
-        webgpuUploads:finite(p.webgpuUploads),
-        webgpuLastFrameMs:+finite(p.webgpuLastFrameMs).toFixed(3),
-        webgpuLastUploadMs:+finite(p.webgpuLastUploadMs).toFixed(3),
-        fallbackReason:p.webgpuFallbackReason||null
+        mode:window.ConquerWorld3D?.active?.()?'world3d':'none',
+        failed:window.ConquerWorld3D?.status?.().failed||null
       },
       navigation:{
         graphBuilds:finite(p.graphBuilds),deltaGraphBuilds:delta('graphBuilds',p),

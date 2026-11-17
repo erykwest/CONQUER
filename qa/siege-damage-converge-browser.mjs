@@ -9,12 +9,12 @@ fs.mkdirSync(out,{recursive:true});
 const browser=await chromium.launch({headless:true,executablePath:process.env.QA_CHROME||undefined,args:['--use-angle=swiftshader','--enable-webgl']});
 const results=[];
 try{
-  for(const mode of ['canvas','webgl']){
+  for(const mode of ['webgl']){
     const context=await browser.newContext({viewport:{width:1440,height:900}});
     const page=await context.newPage(),errors=[];
     page.on('pageerror',e=>errors.push(String(e.stack||e)));
     await page.goto(baseUrl+'/index.html?assetlab=1&'+
-      (mode==='canvas'?'renderer=canvas2d':'world3d=1'),{waitUntil:'domcontentloaded'});
+      'world3d=1',{waitUntil:'domcontentloaded'});
     await page.waitForFunction(()=>!!window.ConquerGates&&!!window.ConquerSiege&&typeof selectStructure==='function');
     const initial=await page.evaluate(()=>{
       State.devBuild={fastBuild:true};State.clock.speed=0;State.clock.day=20;State.environment=[];

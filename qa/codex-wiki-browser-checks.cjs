@@ -55,7 +55,7 @@ module.exports=async page=>{
   await page.unroute('**/wiki/catalog.json');await page.getByRole('button',{name:'Riprova'}).click();
   await page.getByRole('heading',{level:1,name:'Torre',exact:true}).waitFor();
   let publicFetches=0;page.on('request',request=>{if(request.url().endsWith('/wiki/catalog.json'))publicFetches++});
-  await page.goto(base+'/index.html?assetlab=1&renderer=canvas2d&ui=2');
+  await page.goto(base+'/index.html?assetlab=1&ui=2');
   await page.waitForFunction(()=>!!window.ConquerWikiHost&&!!window.ConquerGameCodex&&!!document.querySelector('#ui2'));
   await page.evaluate(()=>{State.clock.speed=0;State.selectedId=null;State.tool={kind:'tower',shape:'square',size:1.5,level:1};renderUI();setTool(State.tool)});
   const before=await page.evaluate(()=>JSON.stringify({resources:State.resources,structures:State.structures,economy:State.economy,selection:State.selectedId,tool:State.tool}));
@@ -82,7 +82,7 @@ module.exports=async page=>{
   await page.locator('#ui2 .u2-codex-link').click();
   await page.frameLocator('#codex-dialog iframe').getByRole('heading',{level:1,name:'Torre',exact:true}).waitFor();
   await page.getByRole('button',{name:'Chiudi Codex'}).click();
-  await page.goto(base+'/index.html?assetlab=1&renderer=canvas2d&ui=1');
+  await page.goto(base+'/index.html?assetlab=1&ui=1');
   await page.waitForFunction(()=>!!window.ConquerWikiHost);
   await page.locator('#profileBtn').click();
   await page.locator('#profileCodexBtn').click();
