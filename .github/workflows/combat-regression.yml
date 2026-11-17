@@ -36,6 +36,7 @@ on:
       - 'qa/wolves-regression.cjs'
       - 'qa/outlaws-regression.cjs'
       - 'qa/threats-regression.cjs'
+      - 'qa/melee-outnumbered-regression.cjs'
       - 'index.html'
       - 'camp/index.html'
       - '.github/workflows/combat-regression.yml'
@@ -71,6 +72,7 @@ on:
       - 'qa/wolves-regression.cjs'
       - 'qa/outlaws-regression.cjs'
       - 'qa/threats-regression.cjs'
+      - 'qa/melee-outnumbered-regression.cjs'
       - 'index.html'
       - 'camp/index.html'
       - '.github/workflows/combat-regression.yml'
@@ -111,6 +113,7 @@ jobs:
           node qa/wolves-regression.cjs
           node qa/outlaws-regression.cjs
           node qa/threats-regression.cjs
+          node qa/melee-outnumbered-regression.cjs
           node qa/diplomacy-regression.cjs
           node qa/siege-assault-regression.cjs
           node qa/keep-entrance-regression.cjs

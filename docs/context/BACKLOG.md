@@ -1,5 +1,14 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-16 — COMBAT-MELEE-01 · Mischia contro più nemici
+
+**IMPLEMENTATO SU BRANCH `fix/outlaw-combat-stats`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Tutti i nemici a contatto attaccano; energia una volta per round; niente stallo da sfinimento.
+- [x] Lupi più deboli sulla scala D-060 (5 PV, combattimento 2): una squadra batte 4 lupi ~85%, 6 lupi ~57%.
+- [x] Orso riscalato (14 PV, combattimento 2, danno 2): il cavaliere lo uccide, una squadra da sola raramente.
+- [x] Fuorilegge già alla scala dei soldati con #258 (6/8/5 PV): verificati, invariati.
+- [ ] Verificare il ritmo degli scontri in partite reali (a velocità 1 uno scontro dura 1–2 minuti).
+
 ### 2026-11-16 — Braciere 3D
 
 - [x] Corpo del braciere di torri e porte in pietra nella mesh del castello (test di profondità), su branch `fix/brazier-3d`.

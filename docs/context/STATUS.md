@@ -1,5 +1,17 @@
 # Livello 2 — Stato tecnico e prove
 
+## 2026-11-16 — Mischia contro più nemici: nessuno moriva coi lupi (branch `fix/outlaw-combat-stats`)
+
+- **CAUSA (segnalata dal product owner: «durante uno scambio con un branco di lupi nessuno muore»):** in `settlement-combat-rules.js` (1) ogni difensore scambiava colpi solo col nemico più vicino, gli altri lupi a contatto restavano fermi; (2) l'energia calava di 1 per scambio e in mischia non si recuperava: dopo ~150 secondi entrambi a 0, e con energia 0 il combattimento effettivo era 0, quindi **nessuno poteva più colpire** (stallo eterno, ricostruito con le regole vere: squadra ferma a 14 PV, due lupi vivi per sempre).
+- **CODICE SUL BRANCH, NON MERGE:**
+  - ogni nemico a contatto non ancora impegnato attacca il difensore più vicino (`exchange`), stessi dadi, danni e animazioni;
+  - l'energia si consuma **una volta per round** di mischia (un secondo di combattimento), anche se gli avversari sono cinque;
+  - chi è sfinito combatte con −1 (minimo 1) ma continua a colpire; chi è scosso (morale sotto metà) resta come prima;
+  - le frecce assegnano le statistiche al bersaglio con la stessa regola della mischia (`profileKind`), coerenza senza effetti visibili.
+- **EFFETTO (regole vere, dadi con seme):** una squadra di 5 lancieri batte un branco di 5 lupi 15+ volte su 20 restando ferita; una pattuglia di 2 contro 5 lupi muore 15+ volte su 20. In partita (Chromium headless, notte, `simulationFrame`): squadra contro branco di 6 → 3 lupi uccisi, squadra caduta.
+- **BILANCIAMENTO (richiesta del product owner, 17/11/2026), sulla scala D-060 entrata in main con #258** (fante 8, squadra 12, pattuglia 10, cavaliere 20, danno per colpo): lupo 12/3 → **5 PV, combattimento 2** (con 12 un lupo valeva una squadra intera e, con l'accerchiamento, 4 lupi annientavano sempre una squadra); orso 45/4 → **14 PV, combattimento 2**, armatura 1, danno 2 (prima nessuna unità, nemmeno un cavaliere, lo batteva mai). Fuorilegge: **valori di #258 mantenuti** (ascia 6, guardia 8, arciere 5, già sotto il fante); lo scudo ad armatura 1 provato e scartato (li rendeva troppo forti). Con le regole vere (40 prove): squadra contro 6 lupi ~57%, contro 4 ~85%; fante contro 2 lupi ~80%; orso: cavaliere 100%, squadra da sola ~30%, fante mai; squadra contro 6 briganti ~45%, fante contro 1 brigante ~93%, pattuglia contro 2 ~98%. Bloccato in `qa/melee-outnumbered-regression.cjs`; `wiki/catalog.json` rigenerato. Il merge di main combina il danno per colpo (`dmg`) con l'energia una volta per round.
+- **PROVE LOCALI PASS:** nuova `qa/melee-outnumbered-regression.cjs`; suite Combat completa (22 test, tra cui mass-battle, siege-assault, naval-battle); wolves, outlaws, threats.
+
 ### 2026-11-16 — Finiture delle torri in 3D: bandiere, torce, braciere della palizzata (`fix/brazier-3d`)
 
 - Nuovo settlement-tower-fittings.js (sorgente dinamica di World3D): supporti 3D delle torce ai lati della porta al P0 delle torri in pietra (piastra, manico, coppa sotto la fiamma, come le torce delle porte) e bandiere dei tetti a punta e delle bertesche a punta come quelle delle navi (asta, puntale dorato, drappo 10×6 con lo stemma del regno via ConquerHeraldryShapes, che sventola sottovento con windHeading). Punti d'attacco condivisi con il 2.5D (towerFlagAnchors); con World3D attivo drawTowerFlags e le torce 2.5D delle torri non disegnano più.
