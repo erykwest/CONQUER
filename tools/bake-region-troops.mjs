@@ -14,6 +14,8 @@ import {chromium} from 'playwright';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const url = process.env.ASSET_LAB_URL || 'http://127.0.0.1:4173/figures-lab.html';
 const KINDS = ['spearman', 'archer', 'knight', 'mounted'];
+// Default CONQUER heraldry field colours (src/heraldry-shapes.js, HERALDRY_DEFAULT of the markers).
+const HERALDRY = ['#b32628', '#eac15b'];
 // Squad as seen on the regional map: feet positions in token units (radius ~1), back row first.
 const FORMATION = [
   {kind: 'archer', x: -0.34, y: -0.30}, {kind: 'archer', x: -0.34, y: 0.30},
@@ -26,10 +28,15 @@ try {
   const page = await browser.newPage({viewport: {width: 1200, height: 800}, deviceScaleFactor: 1});
   await page.goto(url, {waitUntil: 'domcontentloaded', timeout: 60000});
   await page.waitForFunction(() => window.ConquerAssetAudit && window.ConquerAssetCatalog?.engineReady, {timeout: 120000});
-  const sprites = await page.evaluate(kinds => {
+  const sprites = await page.evaluate(([kinds, arms]) => {
     // Same painting path as the Lab thumbnails (renderFigure in src/asset-catalog.js), on a big tile.
-    const W = 192, H = 256, out = {};
-    for (const kind of kinds) {
+    // The realm's own soldiers (feudal helmet), in the default heraldry field colours c1/c2 that the
+    // regional troop markers use (regional-map3d-placeholders.js), so the map can swap in the owner's.
+    const W = 192, H = 256, out = {}, livery = {main: arms[0], alt: arms[1], mainDark: arms[0], altDark: arms[1]};
+    const keepLivery = soldierLivery, keepCanvas = window.__conquerHeraldryCanvas;
+    soldierLivery = () => livery; window.__conquerHeraldryCanvas = null;
+    try {
+      for (const kind of kinds) {
       const c = document.createElement('canvas'); c.width = W; c.height = H;
       const g = c.getContext('2d'), feet = {x: W * .5, y: H * .86};
       const previous = ctx, oldScale = State.view.scale;
@@ -37,7 +44,7 @@ try {
         ctx = g; State.view.scale = W * .09;
         if (kind === 'mounted') {
           window.ConquerMounted2D.draw(g, feet.x, feet.y, W * .30, {kind: 'knight', mode: 'idle', t: 0, facing: 1, coat: 'grey',
-            livery: soldierLivery('region-token-mounted'), paint: null});
+            livery, paint: null});
         } else {
           const unit = {id: 'region-token-' + kind, engaged: false};
           window.ConquerCombatAnim.drawFigure(feet, 0, kind, unit.id, 0, null, window.ConquerCombatAnim.pose(unit, 0));
@@ -54,9 +61,10 @@ try {
       const t = document.createElement('canvas'); t.width = x1 - x0 + 1; t.height = y1 - y0 + 1;
       t.getContext('2d').drawImage(c, -x0, -y0);
       out[kind] = {png: t.toDataURL('image/png'), w: t.width, h: t.height, feetX: +(feet.x - x0).toFixed(1), feetY: +(feet.y - y0).toFixed(1), unit: W * .09};
-    }
+      }
+    } finally { soldierLivery = keepLivery; window.__conquerHeraldryCanvas = keepCanvas }
     return out;
-  }, KINDS);
+  }, [KINDS, HERALDRY]);
   const dir = path.join(root, 'src/assets/regional');
   fs.mkdirSync(dir, {recursive: true});
   const meta = {};
@@ -70,7 +78,8 @@ try {
     '// The game\'s own troop figures baked from the Asset Lab for the regional 3D map: draw each as a\n' +
     '// camera-facing billboard with its feet (feetX, feetY px in the sprite) on the formation point\n' +
     '// (token units, +X forward). pxPerToken: sprite pixels per token unit (all baked at one scale,\n' +
-    '// a foot soldier without weapon is ~0.45 token tall).\n' +
-    'window.ConquerRegionTroopSprites=' + JSON.stringify({sprites: meta, pxPerToken: 180, formation: FORMATION}) + ';\n';
+    '// a foot soldier without weapon is ~0.45 token tall). heraldry: the c1/c2 the livery was painted\n' +
+    '// in; a troops marker recolours those exact pixels with its own colors [c1, c2].\n' +
+    'window.ConquerRegionTroopSprites=' + JSON.stringify({sprites: meta, pxPerToken: 180, heraldry: HERALDRY, formation: FORMATION}) + ';\n';
   fs.writeFileSync(path.join(root, 'src/assets/region-troop-sprites.js'), js);
 } finally { await browser.close() }

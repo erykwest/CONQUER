@@ -14,7 +14,13 @@ assert.strictEqual(R.palette.length, R.paletteKeys.length);
 const team = R.paletteKeys.indexOf('team'), teamDark = R.paletteKeys.indexOf('teamDark');
 assert.ok(team >= 0 && teamDark >= 0, 'owner colour keys');
 
-const BUDGET = { village1: 60, village2: 110, village3: 140, village4: 200, castle: 100, pier: 60, ship: 40 };
+const BUDGET = { village1: 60, village2: 110, village3: 140, village4: 200, castle: 100, port: 60, ship: 40 };
+// One token per marker kind of src/regional-map3d-placeholders.js (troops are sprites, below).
+const placeholders = read('src/regional-map3d-placeholders.js');
+for (const kind of ['village', 'castle', 'port', 'ship', 'troops']) assert.ok(placeholders.includes(`'${kind}'`), 'marker kind ' + kind);
+assert.deepStrictEqual(JSON.parse(JSON.stringify(R.markers)), { village: ['village1', 'village2', 'village3', 'village4'], castle: 'castle', port: 'port', ship: 'ship' });
+const HERALDRY_DEFAULT = /HERALDRY_DEFAULT=Object\.freeze\(\[([^\]]+)\]\)/.exec(placeholders)[1].match(/#[0-9a-f]{6}/gi);
+assert.strictEqual(R.palette[R.paletteKeys.indexOf('team')], HERALDRY_DEFAULT[0], "'team' is the default heraldry c1");
 assert.deepStrictEqual(Object.keys(R.models).sort(), Object.keys(BUDGET).sort(), 'exactly the expected tokens');
 // The village grows L1 -> L4 like the game's houses: more triangles and taller each level.
 for (let k = 2; k <= 4; k++) {
@@ -46,6 +52,7 @@ const ctxT = { window: {} }; vm.createContext(ctxT);
 vm.runInContext(read('src/assets/region-troop-sprites.js'), ctxT);
 const T = ctxT.window.ConquerRegionTroopSprites;
 assert.ok(T && T.pxPerToken > 0 && T.formation.length >= 3, 'troop sprites + formation');
+assert.deepStrictEqual([...T.heraldry], HERALDRY_DEFAULT, 'troop livery baked in the markers\' default heraldry c1/c2');
 for (const kind of ['spearman', 'archer', 'knight', 'mounted']) {
   const s = T.sprites[kind];
   assert.ok(s && fs.existsSync(path.join(root, s.file)), kind + ' sprite baked');
