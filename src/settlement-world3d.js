@@ -916,9 +916,25 @@
     }
     g.putImageData(d,0,0);return c;
   }
+  // The Mastio's heraldic drape (the realm's arms, swallowtail hem, gilt edge, iron rod), painted
+  // into one T×T atlas tile as a 100×120 banner: the decal quad stretches it to its world size.
+  function paintMastioDrape(g,x,y,T){
+    g.save();g.translate(x,y);g.scale(T/100,T/120);
+    const shape=()=>{g.beginPath();g.moveTo(0,0);g.lineTo(100,0);g.lineTo(100,120);g.lineTo(50,105);g.lineTo(0,120);g.closePath()};
+    shape();g.fillStyle='#322218';g.fill();g.save();g.clip();
+    const herald=State.heraldry||{};
+    if(!window.__conquerHeraldryCanvas?.paint(g,0,0,100,120)){
+      g.fillStyle=herald.c1||REIGN_COLOR_1;g.fillRect(0,0,100,120);
+      g.fillStyle=herald.c2||REIGN_COLOR_2;g.fillRect(50,0,50,120);
+    }
+    g.restore();
+    shape();g.strokeStyle='rgba(244,222,179,.84)';g.lineWidth=3.3;g.stroke();
+    g.beginPath();g.moveTo(0,3);g.lineTo(100,3);g.strokeStyle='#9d8253';g.lineWidth=6;g.stroke();
+    g.restore();
+  }
   function buildDecalAtlas(){
     window.ConquerGates?.ensureSprites();
-    const tiles=[...DECAL_KEYS,'__white','__glow',...GLASS_KEYS.map(k=>'__glass:'+k)];
+    const tiles=[...DECAL_KEYS,'__white','__glow','__mastioDrape',...GLASS_KEYS.map(k=>'__glass:'+k)];
     const T=256,cols=4,c=document.createElement('canvas');c.width=cols*T;c.height=Math.ceil(tiles.length/cols)*T;
     const g=c.getContext('2d'),map=new Map();
     tiles.forEach((k,i)=>{
@@ -937,6 +953,7 @@
         g.fillStyle=radial;g.fillRect(x+1,y+1,T-2,T-2);
         map.set(k,[(x+1)/c.width,(y+1)/c.height,(x+T-1)/c.width,(y+T-1)/c.height]);return;
       }
+      if(k==='__mastioDrape'){paintMastioDrape(g,x,y,T);map.set(k,[x/c.width,y/c.height,(x+T)/c.width,(y+T)/c.height]);return}
       const img=architectureSprite(k);if(!img)return;
       g.drawImage(img,x,y);map.set(k,[x/c.width,y/c.height,(x+img.width)/c.width,(y+img.height)/c.height]);
     });
@@ -973,6 +990,12 @@
       quad(span.a,span.b,ground+centerZ-height/2,ground+centerZ+height/2,key,out);
       if(key.startsWith('gothic'))lightWindow(edge,centerZ,width,height,offset,ground,out,key);
     };
+    // Mastio heraldry hangs below the sill of its castle-facing window (one per window row).
+    const drape=(s,edge,windowZ,windowW,windowH,ground,out,push=.016)=>{
+      if(!s.isMastio)return;
+      const width=Math.max(.30,windowW*1.08),height=.64,top=windowZ-windowH/2-.055,span=facadeAssetWorldSpan(edge,width,0);
+      quad(span.a,span.b,ground+top-height,ground+top,'__mastioDrape',out,WHITE,push);
+    };
     const edgesOf=fp=>fp.map((a,i)=>({a,b:fp[(i+1)%fp.length],index:i}));
     // A beam from wall point p0 to p1 ({off,z}), `width` thick within the wall plane.
     const strip=(at,ground,p0,p1,width,out,col,push)=>{
@@ -1002,7 +1025,7 @@
             for(let i=0;i<4;i++){
               const a=base+i*Math.PI/2,o={x:Math.cos(a),y:Math.sin(a)},cc={x:s.x+o.x*r,y:s.y+o.y*r},tx=-o.y,ty=o.x;
               const edge={a:{x:cc.x-tx*span/2,y:cc.y-ty*span/2},b:{x:cc.x+tx*span/2,y:cc.y+ty*span/2}};
-              if(i===0){if(!towerEdgeOnDivider(s,edge,row.z)&&!towerWindowGivesWayToDoor(s,edge,row.floor))onEdge(edge,row.z,sz.w*.86,sz.h,key,0,ground,o);}
+              if(i===0){if(!towerEdgeOnDivider(s,edge,row.z)&&!towerWindowGivesWayToDoor(s,edge,row.floor)){onEdge(edge,row.z,sz.w*.86,sz.h,key,0,ground,o);drape(s,edge,row.z,sz.w*.86,sz.h,ground,o)}}
               else if(towerSlitFace(s,i,row.floor))onEdge(edge,row.z,.22,.60,'arrowSlit',0,ground,o);
             }
           }
@@ -1013,10 +1036,22 @@
             for(const edge of edgesOf(towerFacadePoints(s))){
               if(s.shape==='half'&&edge.index===ORIENTED_FACADE_REAR)continue;   // open gorge
               const o=outward(edge,center);
-              if(edge.index===interior){if(!towerWindowGivesWayToDoor(s,edge,row.floor))onEdge(edge,row.z,sz.w,sz.h,key,0,ground,o)}
+              if(edge.index===interior){if(!towerWindowGivesWayToDoor(s,edge,row.floor)){onEdge(edge,row.z,sz.w,sz.h,key,0,ground,o);drape(s,edge,row.z,sz.w,sz.h,ground,o)}}
               else if(towerSlitFace(s,edge.index,row.floor)){const se=towerSlitEdge(s,edge);onEdge(se,row.z,.22,.60,'arrowSlit',0,ground,se===edge?o:outward(se,center))}
             }
           }
+        }
+      }else if(s.type==='tower'&&s.isMastio&&woodTowerStyle(s)!=='watchtower'){
+        // A wooden keep has a timber-framed castle-facing window too, with the drape below it;
+        // the frame tower's raised doorway takes its place.
+        const ground=Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s);
+        const interior=interiorFacadeEdgeIndex(s),edge=edgesOf(towerFacadePoints(s)).find(e=>e.index===interior);
+        if(edge&&!towerWindowGivesWayToDoor(s,edge,2)){
+          const o=outward(edge,center),z=Math.min(structureHeight(s)-.53,1.45);
+          const span=facadeAssetWorldSpan(edge,.40,0);
+          quad(span.a,span.b,ground+z-.25,ground+z+.25,'gothicL1',o,WHITE,.03);
+          lightWindow(edge,z,.40,.50,0,ground,o,'gothicL1');
+          drape(s,edge,z,.40,.50,ground,o,.034);
         }
       }else if(s.type==='gate'&&!isWoodGate(s)){
         const ground=Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s);
@@ -1600,7 +1635,8 @@
       const a=performance.now();
       upload(gl,'trees',buildTrees(S.treeAtlas));S.sig.trees=treeSig;st.treesMs=performance.now()-a;
     }
-    const dSig=[structuresSig('all'),shopCut,shopFront,Object.keys(architectureSprites).length,window.ConquerGates?.ensureSprites()||''].join('|');
+    const dSig=[structuresSig('all'),shopCut,shopFront,Object.keys(architectureSprites).length,window.ConquerGates?.ensureSprites()||'',
+      window.__conquerHeraldryCanvas?.signature?.()||JSON.stringify(State.heraldry||null)].join('|');
     if(S.sig.decals!==dSig){
       const a=performance.now(),atlas=buildDecalAtlas();uploadTexture(gl,'decalAtlas',atlas.canvas);S.decalMap=atlas.map;
       const baked=buildDecals(atlas);
@@ -2138,6 +2174,7 @@
     pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,addHouse,addOutbuilding,figure,screenAxis,prewarmFigures,_setFiguresForTest:on=>{figuresOn=!!on},FIGURE_CARD_U:SOLDIER_SIZE_U,FIGURE_FEET:SOLDIER_FEET,
     atlasCanvas:()=>soldierAtlas.canvas,frameFigures:()=>(S.frameFigures||[]).map(f=>({key:f.key||f.type,p:f.p,z:f.z,mirror:f.mirror,span:f.span||1,ox:f.ox||0,id:f.id,capsule:f.capsule||null})),atlasStats:()=>({tiles:soldierAtlas.next,capacity:FIG_COLS*FIG_COLS,resets:soldierAtlas.resets,painted:soldierAtlas.painted}),
     invalidate:()=>{S.sig={};S.contentDirty=true},
+    decalFloats:()=>S.buf['decals#n']|0,   // QA: size of the baked facade decal buffer
     _debugBake:bakeGround,
     status:()=>({enabled,supported:supported(),failed:S.failed,stats:{...S.stats},sig:{...S.sig},buffers:Object.fromEntries(Object.entries(S.buf).filter(([k])=>k.endsWith('#n')))})};
 })();
