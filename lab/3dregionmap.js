@@ -392,7 +392,9 @@
       scene = next;
       exampleMarkers = placeholder?.demo(snapshot,scene)||[];
       refreshMarkerLegend();
-      status.textContent = 'WebGL2 attivo · mesh globale ' + quality.value + '× → territori organici (' + deformation.value + '%) · palette 2D originale · gameplay invariato';
+      status.textContent = snapshot.fineCells?.length
+        ? 'WebGL2 · 20 Voronoi esagonali casuali per centro quadrato · territori aggregati · 8 vicini logici fissi · area ±10%'
+        : 'WebGL2 attivo · mesh globale ' + quality.value + '× → territori organici (' + deformation.value + '%) · palette 2D originale';
       draw();
     } catch (error) {
       status.textContent = 'Errore anteprima: ' + error.message;
@@ -409,6 +411,10 @@
       const source = w.ConquerRegion3DSnapshot?.();
       if (!source) return;
       snapshot = source;
+      const hasCanonicalMicrocells=Array.isArray(source.fineCells)&&source.fineCells.length>0;
+      quality.disabled=hasCanonicalMicrocells;
+      deformation.disabled=hasCanonicalMicrocells;
+      if(hasCanonicalMicrocells)quality.value='20';
       seenRevision = revision;
       lastSyncMs = performance.now();
       updateSelection(source.selectedMacros || [], true);
@@ -420,7 +426,7 @@
   }
   function benchmark() {
     if (!snapshot || rebuilding) return;
-    const actual = Number(quality.value), variants = [1, 20];
+    const actual = Number(quality.value), variants = snapshot.fineCells?.length ? [20] : [1,20];
     const results = [];
     try {
       for (const count of variants) {
@@ -429,7 +435,7 @@
           sceneTest.stats.triangles.toLocaleString('it-IT') + ' triangoli');
       }
       document.getElementById('benchmarkResult').textContent = results.join(' | ') +
-        ' — CPU locale, non FPS né test GPU cross-device.';
+        (snapshot.fineCells?.length?' — 20 microcelle canoniche fisse dalla mappa 2D.':' — CPU locale, non FPS né test GPU cross-device.');
     } catch (e) {
       document.getElementById('benchmarkResult').textContent = e.message;
     }
