@@ -43,7 +43,7 @@
     const bySlot=new Map(sites.map((site,i)=>[site.macroRow+','+site.macroCol,i]));
     const neighbors=sites.map((site,i)=>{
       const nearby=[];
-      for(let dr=-3;dr<=3;dr++)for(let dc=-3;dc<=3;dc++){
+      for(let dr=-2;dr<=2;dr++)for(let dc=-2;dc<=2;dc++){
         const j=bySlot.get((site.macroRow+dr)+','+(site.macroCol+dc));
         if(j!==undefined&&j!==i)nearby.push(j);
       }
