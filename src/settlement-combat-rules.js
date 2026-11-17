@@ -4,20 +4,25 @@
 (function(){
   const D12=[1,2,2,3,3,3,4,4,4,5,5,6];
   const MAX_E=150,MAX_B=150;
+  // Unit scale of the game (D-060, 05/11/2026): small HP so a duel lasts about half a minute and
+  // fire from the walls matters. Dice, combat, armour and frontage are the Coffee Battles ones;
+  // dmg is the hp taken by one landed blow (the knight's charge counts double).
   const PROFILES=Object.freeze({
-    spearman:Object.freeze({hp:100,combat:2,armor:2,aim:null,front:3}),
-    patrol:Object.freeze({hp:40,combat:2,armor:2,aim:null,front:2}),
-    wolf:Object.freeze({hp:12,combat:3,armor:0,aim:null,front:1}),
-    bear:Object.freeze({hp:45,combat:4,armor:1,aim:null,front:1}),
-    // Outlaws: light, unarmoured men; a lair guard is the best of them.
-    outlaw:Object.freeze({hp:40,combat:2,armor:0,aim:null,front:1}),
-    outlawGuard:Object.freeze({hp:60,combat:2,armor:1,aim:null,front:1}),
+    spearman:Object.freeze({hp:12,combat:2,armor:2,aim:null,front:3,dmg:1}),
+    patrol:Object.freeze({hp:10,combat:2,armor:2,aim:null,front:2,dmg:1}),
+    // Fauna on the D-060 scale (17/11/2026): a wolf is less than a man (a squad beats a pack of six about half the time,
+    // four most times); a bear is the worst beast (a knight kills it, a squad alone seldom, a lone footman never).
+    wolf:Object.freeze({hp:5,combat:2,armor:0,aim:null,front:1,dmg:1}),
+    bear:Object.freeze({hp:14,combat:2,armor:1,aim:null,front:1,dmg:2}),
+    // Outlaws: light, unarmoured men; a lair guard is the best of them (D-060 scale: below the 8 hp man-at-arms).
+    outlaw:Object.freeze({hp:6,combat:2,armor:0,aim:null,front:1,dmg:1}),
+    outlawGuard:Object.freeze({hp:8,combat:2,armor:1,aim:null,front:1,dmg:1}),
     // Outlaw bowman: shoots like an archer (kind 'archer'), lighter than a realm archer.
-    outlawArcher:Object.freeze({hp:35,combat:1,armor:0,aim:2,front:1,range:15}),
-    infantry:Object.freeze({hp:100,combat:2,armor:1,aim:null,front:1}),
-    knight:Object.freeze({hp:30,combat:3,armor:3,aim:null,front:1}),
-    captain:Object.freeze({hp:30,combat:3,armor:3,aim:null,front:1}),
-    archer:Object.freeze({hp:100,combat:1,armor:0,aim:2,front:1,range:15})
+    outlawArcher:Object.freeze({hp:5,combat:1,armor:0,aim:2,front:1,range:15,dmg:1}),
+    infantry:Object.freeze({hp:8,combat:2,armor:1,aim:null,front:1,dmg:1}),
+    knight:Object.freeze({hp:20,combat:3,armor:3,aim:null,front:1,dmg:2}),
+    captain:Object.freeze({hp:16,combat:3,armor:3,aim:null,front:1,dmg:1}),
+    archer:Object.freeze({hp:6,combat:1,armor:0,aim:2,front:1,range:15,dmg:1})
   });
   // Faction IDs are data, not a render-side "enemy = black" conditional.
   // A PVP team can supply its own palette / emblems later.
@@ -28,7 +33,7 @@
     outlaw:{livery:{main:'#4a5233',alt:'#7a6446',mainDark:'#2c3120',altDark:'#4c3e2b'}}
   };
   const shots=[],meleeFlashes=[],stones=[];
-  let elapsed=0,combatClock=0;
+  let elapsed=0,combatClock=0,meleeRound=0;
   const roll=()=>D12[Math.floor(Math.random()*D12.length)];
   function configureFactions(data){
     for(const [id,entry] of Object.entries(data||{})){
@@ -161,9 +166,14 @@
   }
   const shouldRebuildBoundary=(painting,hasCache,signatureChanged)=>signatureChanged&&(!painting||!hasCache);
   function ensure(entity,kind){
+    // The unit's own profile wins over the kind a caller passes (a shot passes combatKind only).
+    const own=profileKind(entity),p=(entity.kind||entity.combatKind)&&PROFILES[own]?PROFILES[own]:PROFILES[kind]||PROFILES.infantry;
     if(!entity.stats){
-      const p=PROFILES[kind]||PROFILES.infantry;
       entity.stats={hp:p.hp,maxHp:p.hp,energy:MAX_E,brain:MAX_B,combat:p.combat,armor:p.armor,aim:p.aim,shock:0};
+    }else if(entity.stats.maxHp!==p.hp&&Number(entity.stats.maxHp)>0){
+      // Saved on another scale (the old 30-100 HP): keep the same share of health.
+      const s=entity.stats,share=Math.max(0,Math.min(1,(Number(s.hp)||0)/Number(s.maxHp)));
+      s.hp=s.hp<=0?0:Math.max(1,Math.round(p.hp*share));s.maxHp=p.hp;
     }
     if(!Number.isFinite(entity.meleeClock))entity.meleeClock=0;
     return entity.stats;
@@ -171,8 +181,12 @@
   function living(u){return !!u&&(!u.stats||u.stats.hp>0)}
   function effectiveCombat(u){
     const v=ensure(u,profileKind(u));
-    if(v.energy<=0||v.brain<=0)return 0;
-    return Math.max(0,v.combat-(v.brain/MAX_B<=.5?1:0));
+    if(v.brain<=0)return 0;
+    // Exhausted (no energy left) fights worse, but still fights: at 0 both
+    // sides of a long melee could no longer hit and stood locked forever.
+    const base=Math.max(0,v.combat-(v.brain/MAX_B<=.5?1:0));
+    if(base===0)return 0;
+    return v.energy<=0?Math.max(1,base-1):base;
   }
   function applyDamage(u,hits,source){
     const s=ensure(u,profileKind(u));
@@ -194,23 +208,32 @@
     anim?.fall(u,delay,foe);
     window.ConquerGore?.died(u,delay,foe,anim?.TIMING);
   }
-  function meleePair(a,b,count){
+  // round: the melee round (one per combat second) for the once-a-round energy cost; null = always.
+  function meleePair(a,b,count,round=null){
     ensure(a,profileKind(a));
     ensure(b,profileKind(b));
     let hitA=0,hitB=0;
     const ca=effectiveCombat(a),cb=effectiveCombat(b);
     for(let i=0;i<count;i++){
-      const sa=roll()+ca,sb=roll()+cb;
-      if(sa>sb&&ca>0&&sa-sb>b.stats.armor)hitB++;
-      else if(sb>sa&&cb>0&&sb-sa>a.stats.armor)hitA++;
+      // A natural 6 always lands when its total wins: armour 3 is strong, not immunity.
+      const ra=roll(),rb=roll(),sa=ra+ca,sb=rb+cb;
+      if(sa>sb&&ca>0&&(sa-sb>b.stats.armor||ra===6))hitB++;
+      else if(sb>sa&&cb>0&&(sb-sa>a.stats.armor||rb===6))hitA++;
     }
-    applyDamage(a,hitA,b);applyDamage(b,hitB,a);
-    a.stats.energy=Math.max(0,a.stats.energy-count);
-    b.stats.energy=Math.max(0,b.stats.energy-count);
+    const dmgOf=u=>PROFILES[profileKind(u)]?.dmg||1;
+    applyDamage(a,hitA*dmgOf(b),b);applyDamage(b,hitB*dmgOf(a),a);
+    // Fighting tires once per melee round, however many foes press in: a man
+    // surrounded by five wolves must not tire five times as fast.
+    for(const u of [a,b]){
+      if(round!==null&&u.tiredRound===round)continue;
+      u.tiredRound=round;
+      u.stats.energy=Math.max(0,u.stats.energy-count);
+    }
     return {hitA,hitB};
   }
   function shotHit(shooter,target){
-    const v=ensure(target,target.combatKind||'infantry');
+    // Same profile rule as melee (an outlaw bowman shot first must not get the realm archer's 100 hp).
+    const v=ensure(target,profileKind(target));
     const die=roll(),aim=PROFILES.archer.aim,armor=v.armor;
     return die===6||(die!==1&&die+aim>=6+armor);
   }
@@ -242,6 +265,9 @@
     }
     return hits;
   }
+  const SLIT_COVER=.9,MERLON_COVER=.7,ROOF_COVER=.9;
+  // A tower archer is an unarmoured archer (armour 0) before the slit's cover.
+  const postHit=()=>{const die=roll();return die===6||(die!==1&&die+PROFILES.archer.aim>=6)};
   function shooterRange(shooter,target){
     const targetH=Number.isFinite(target.h)?target.h:target.height??0;
     // +1/-1 range for every relative altitude level. Positive downhill,
@@ -254,18 +280,25 @@
       if(owner&&(!living(owner)||owner.defeated||owner.routing||owner.engaged||owner.climbing))continue;
       let target=null,best=Infinity;
       for(const e of targets){
-        if(!living(e)||e.routing||e.neutral)continue;
+        if(!e.post)if(!living(e)||e.routing||e.neutral)continue;   // tower posts are always valid targets
         const d=Math.hypot(shooter.x-e.x,shooter.y-e.y);
         if(d>shooterRange(shooter,{...e,h:e.h??shooter.terrainAt(e)})||d>=best)continue;
         if(!visibleFn(e,shooter))continue;
         target=e;best=d;
       }
       if(!shooter.clock)shooter.clock=0;
-      if(!target){shooter.clock=0;continue}
+      // idle: seconds without a target (the garrison moves archers with nothing to shoot at).
+      if(!target){shooter.clock=0;shooter.idle=(shooter.idle||0)+dt;continue}
+      shooter.idle=0;
       shooter.clock+=dt;
       if(shooter.clock<2)continue;
       shooter.clock%=2;
-      const hit=shotHit(shooter,target),shot=arrow(shooter,target,hit);
+      // Cover against arrows: a slit stops 90% of the hits, merlons on a wall walk 70%.
+      // A covered ram's shed covers its crew at their posts (90%).
+      const cover=target.post?target.post.cover??SLIT_COVER:target.underRoof?ROOF_COVER:target.wall?MERLON_COVER:0;
+      const hit=(target.post?postHit():shotHit(shooter,target))&&!(cover&&Math.random()<cover),shot=arrow(shooter,target,hit);
+      shooter.onLoose?.(target,hit);
+      if(hit&&target.post){target.post.hit?.();continue}
       if(hit){
         applyDamage(target,1,owner||shooter);
         window.ConquerCombatAnim?.hurt(target,shot.duration);
@@ -273,6 +306,25 @@
         if(target.defeated)fallen(target,shot.duration,owner||shooter);
       }else window.ConquerGore?.miss(shot,target);   // the arrow stays stuck in the ground
     }
+  }
+  // One melee exchange between a defender a and an enemy b (dice, damage, animation).
+  function exchange(a,b){
+    const frontage=Math.min(PROFILES[profileKind(a)].front,PROFILES[profileKind(b)].front);
+    const {hitA,hitB}=meleePair(a,b,Math.max(1,frontage),meleeRound);
+    const anim=window.ConquerCombatAnim,gore=window.ConquerGore;
+    // Damage lands on the thrust, not on the wind-up.
+    const impact=anim?anim.TIMING.IMPACT:0;
+    if(anim){
+      anim.strike(a,b);anim.strike(b,a);
+      if(hitA)anim.hurt(a,impact);
+      if(hitB)anim.hurt(b,impact);
+    }
+    if(hitA)gore?.hit(a,'melee',b,impact);
+    if(hitB)gore?.hit(b,'melee',a,impact);
+    if(a.defeated)fallen(a,impact,b);
+    if(b.defeated)fallen(b,impact,a);
+    if(meleeFlashes.length>50)meleeFlashes.shift();
+    meleeFlashes.push({x:(a.x+b.x)/2,y:(a.y+b.y)/2,at:elapsed});
   }
   function update(dt,friendly,enemy,shooters,visibleFn,canContact=()=>true,enemyShooters=[],enemyVisibleFn=visibleFn){
     if(!Number.isFinite(dt)||dt<=0)return;
@@ -297,28 +349,27 @@
       if(!nearest)continue;
       a.engaged=nearest.engaged=true;
       a.target=null;
-      if(combatClock>=1){
-        const frontage=Math.min(PROFILES[profileKind(a)].front,PROFILES[profileKind(nearest)].front);
-        const {hitA,hitB}=meleePair(a,nearest,Math.max(1,frontage));
-        const anim=window.ConquerCombatAnim,gore=window.ConquerGore;
-        // Damage lands on the thrust, not on the wind-up.
-        const impact=anim?anim.TIMING.IMPACT:0;
-        if(anim){
-          anim.strike(a,nearest);anim.strike(nearest,a);
-          if(hitA)anim.hurt(a,impact);
-          if(hitB)anim.hurt(nearest,impact);
-        }
-        if(hitA)gore?.hit(a,'melee',nearest,impact);
-        if(hitB)gore?.hit(nearest,'melee',a,impact);
-        if(a.defeated)fallen(a,impact,nearest);
-        if(nearest.defeated)fallen(nearest,impact,a);
-        if(meleeFlashes.length>50)meleeFlashes.shift();
-        meleeFlashes.push({x:(a.x+nearest.x)/2,y:(a.y+nearest.y)/2,at:elapsed});
-      }
+      if(combatClock>=1)exchange(a,nearest);
     }
-    if(combatClock>=1)combatClock%=1;
+    // Enemies in contact that no defender picked (a wolf pack round one squad,
+    // a band round a lone patrol) strike too: previously they stood idle and
+    // only one foe at a time fought, so outnumbered fights barely moved.
+    for(const b of enemy){
+      if(!living(b)||b.routing||b.neutral||b.engaged)continue;
+      let nearest=null,gap=1;
+      for(const a of friendly){
+        if(!living(a)||a.routing)continue;
+        const distance=Math.hypot(a.x-b.x,a.y-b.y);
+        if(distance<gap&&canContact(a,b)){nearest=a;gap=distance}
+      }
+      if(!nearest)continue;
+      nearest.engaged=b.engaged=true;
+      if(combatClock>=1)exchange(nearest,b);
+    }
+    if(combatClock>=1){combatClock%=1;meleeRound++}
     shoot(dt,shooters,enemy,visibleFn);
-    shoot(dt,enemyShooters,friendly,enemyVisibleFn);
+    // Staffed tower posts are targets too: the hostiles shoot at the archers behind the slits.
+    shoot(dt,enemyShooters,friendly.concat(shooters.filter(s=>s.post)),enemyVisibleFn);
     for(let i=shots.length-1;i>=0;i--)if(elapsed>shots[i].start+shots[i].duration)shots.splice(i,1);
     for(let i=meleeFlashes.length-1;i>=0;i--)if(elapsed>meleeFlashes[i].at+.65)meleeFlashes.splice(i,1);
     for(let i=stones.length-1;i>=0;i--)if(elapsed>stones[i].start+stones[i].duration+.25)stones.splice(i,1);
