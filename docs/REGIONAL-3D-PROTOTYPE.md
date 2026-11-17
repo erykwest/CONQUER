@@ -40,6 +40,7 @@ The previous 8×/20×/40× synthetic benchmarks measure the **fallback standalon
 
 ## Verification
 
+- `qa/regional-fivefold-deformation-regression.cjs`: checks four 630-territory maps at maximum distortion (5× displacement), exact 20 microcells per square logical center, area ±10%, and geometric equivalence of every ear-clipped terrain triangulation, including seed-specific safety attenuation.
 - `qa/regional-topology-regression.cjs`: **18 integrated maps** spanning different map sizes, seeds and deformations. Checks exactly square macro centers, **20 fine Voronoi cells per territory**, per-cell size parameter 0.5–1.5, predominantly 5–7-sided fine cells, genuinely irregular aggregated macro outlines, exact polygon union, 8 reciprocal directional neighbors, only logical-neighbor physical borders, and every macro area within ±10%. Also builds a real 3D scene from the same fine polygons and checks its area and count.
 - `qa/regional-map3d-regression.cjs`: synthetic fallback geometry, fine-cell area variation, rivers following territory seams, mountains/hills/trees/reeds and 3D territory picking.
 - A direct integration check confirmed that a manual river macro-pair maps to **all and only** its shared fine edges in the new 3D geometry.
