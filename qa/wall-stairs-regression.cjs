@@ -100,7 +100,7 @@ function State0(f){return f.WW.graph().edges[0].wall}
   const html=read('index.html');
   assert.ok(html.includes('src/assets/wall-stair-models.js')&&html.indexOf('settlement-wall-stairs.js')<html.indexOf('settlement-combat.js'),'game loads models and module');
   assert.match(read('src/settlement-castle3d.js'),/ConquerWallStairs\?\.triangles\(s\)/,'3D body mesh carries the stair');
-  assert.match(read('src/settlement-render.js'),/ConquerWallStairs\?\.drawAll\(\)/,'2.5D draws the stair');
+  assert.doesNotMatch(read('src/settlement-render.js'),/ConquerWallStairs\?\.drawAll\(\)/,'the stair is 3D only');
   const cmd=read('src/settlement-structure-commands.js');
   assert.match(cmd,/choice\('wallStair','setWallStair'/,'inspector offers the stair on walls');
   assert.match(read('src/asset-catalog.js'),/ConquerWallStairModels/,'Asset Lab catalogues the models');

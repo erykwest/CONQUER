@@ -703,14 +703,7 @@
     // rectangles separately would bring back the exact overlaps at junctions.
     const moats=State.structures.filter(s=>s.type==='moat');
     drawUnifiedMoats(moats);
-    // Bridges are always painted last, regardless of build order. In the 3D world they
-    // are real decks at their banks' level (bridgeMesh), never painted on the ground.
-    if(window.ConquerWorld3D?.active?.())return;
-    for(const s of State.structures){
-      if(s.type!=='bridge')continue;
-      ctx.save();if(underConstruction(s))ctx.globalAlpha=.55;
-      drawBridge(s);ctx.restore();
-    }
+    // Bridges are real decks at their banks' level (bridgeMesh), never painted on the ground.
   }
   let frameAt=0,rafPending=0;
   function drawDynamic(){
@@ -725,32 +718,7 @@
         if(Math.abs(d.progress-target)<.01)d.progress=target;
         moving=true;
       }
-      const g=deck(gate);
-      // Exterior leaf is hidden by the solid gatehouse when the camera looks
-      // from the opposite (interior) side. Never paint it across the rear wall.
-      if(viewDepthPoint(g.hinge)<viewDepthPoint({x:gate.x,y:gate.y})-.01)continue;
-      const theta=d.progress*Math.PI/2;
-      const far={x:g.hinge.x+g.outward.x*g.length*Math.cos(theta),
-        y:g.hinge.y+g.outward.y*g.length*Math.cos(theta)};
-      const side=g.tangent,w=g.width/2,baseZ=g.z+.08,tipZ=baseZ+g.length*Math.sin(theta);
-      const a={x:g.hinge.x+side.x*w,y:g.hinge.y+side.y*w},
-        b={x:g.hinge.x-side.x*w,y:g.hinge.y-side.y*w},
-        c={x:far.x-side.x*w,y:far.y-side.y*w},
-        e={x:far.x+side.x*w,y:far.y+side.y*w};
-      // In the 3D world the leaf is a depth-tested mesh (drawbridgeMesh): guards on it show.
-      if(window.ConquerWorld3D?.active?.())continue;
-      withStructureGroundPlane(gate,()=>{
-        pathPolygon([w2s(a,baseZ-g.z),w2s(b,baseZ-g.z),
-          w2s(c,tipZ-g.z),w2s(e,tipZ-g.z)],
-          '#9d7044','#412b1a',1.6);
-        for(const shift of [-w*.78,w*.78]){
-          const h={x:g.hinge.x+side.x*shift,y:g.hinge.y+side.y*shift},
-            t={x:far.x+side.x*shift,y:far.y+side.y*shift};
-          const p=w2s(h,2.0),q=w2s(t,tipZ-g.z);
-          ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);
-          ctx.strokeStyle='#b8a98b';ctx.lineWidth=1;ctx.stroke();
-        }
-      });
+      // The leaf is a depth-tested World 3D mesh (drawbridgeMesh): only its animation runs here.
     }
     if(moving&&!rafPending){
       rafPending=requestAnimationFrame(()=>{rafPending=0;draw()});

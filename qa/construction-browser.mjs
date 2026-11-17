@@ -7,7 +7,7 @@ try{
  for(const ui of [1,2]){
   const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];
   page.on('pageerror',e=>errors.push(String(e)));
-  await page.goto(`http://127.0.0.1:4173/index.html?assetlab=1&renderer=canvas2d&ui=${ui}&dev=0`);
+  await page.goto(`http://127.0.0.1:4173/index.html?assetlab=1&ui=${ui}&dev=0`);
   await page.waitForFunction(()=>!!window.ConquerGame?.read&&!!window.ConquerEconomy?.state);
   const placed=await page.evaluate(()=>{
    State.clock.speed=0;State.clock.day=0;State.environment=[];State.relief={hills:[],seed:12345};clearReliefBandCache();

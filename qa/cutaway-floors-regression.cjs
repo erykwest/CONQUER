@@ -131,13 +131,11 @@ const fnSrc=(text,name)=>{const m=text.match(new RegExp('function '+name+'\\([^)
   assert.match(arrows,/StructureCommands\.stepCutawayFloor\(shownFor/,'arrows on the building run the same command');
   assert.match(read('index.html'),/settlement-cutaway-floors\.js/,'arrows loaded');
   // Every renderer honours the cut.
-  assert.match(src('settlement-castle.js'),/height=Math\.min\(full,cutawayCeilingZ\(s\)\)/,'2.5D castle cut');
   assert.match(src('settlement-world3d.js'),/H=Math\.min\(HF,cutawayCeilingZ\(s\)\)/,'WebGL castle cut');
   assert.match(src('settlement-world3d.js'),/cutawayCeilingZ\(s\),s\.x\?\?s\.a\?\.x/,'WebGL cutaway rebuilds on a floor change');
-  // The 2.5D overlay key: castleBodyVisualSignature over structureVisualKey, whose fields list has the floor.
-  assert.match(src('settlement-render.js'),/STRUCTURE_VISUAL_FIELDS=[^;]*'cutawayFloor'/,'2.5D overlay cache key');
+  // The World 3D structure key (structureVisualKey) has the floor in its fields list.
+  assert.match(src('settlement-render.js'),/STRUCTURE_VISUAL_FIELDS=[^;]*'cutawayFloor'/,'structure cache key');
   // The crest (merlons, machicolations, inner roof) goes with the floors above.
-  assert.match(src('settlement-castle-structures.js'),/underConstruction\(s\)\|\|\(typeof cutawayCrestHidden==='function'&&cutawayCrestHidden\(s\)\)\)continue/,'2.5D battlements skip a cut crest');
   assert.match(src('settlement-castle-structures.js'),/function battlementBrazierSources\(\)\{[\s\S]{0,400}cutawayCrestHidden\(s\)/,'the roof brazier goes with the crest');
   assert.match(src('settlement-castle3d.js'),/if\(typeof cutawayCrestHidden==='function'&&cutawayCrestHidden\(s\)\)continue/,'WebGL battlements skip a cut crest');
   assert.match(src('settlement-world3d.js'),/cutawayCrestHidden\(s\)\?'h':''/,'WebGL castle mesh rebuilds when the crest goes');

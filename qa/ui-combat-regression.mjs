@@ -7,7 +7,7 @@ const page=await browser.newPage({viewport:{width:1280,height:900}});
 const errors=[];
 page.on('pageerror',e=>errors.push(String(e.stack||e)));
 try{
-  await page.goto((process.env.CONQUER_QA_URL||'http://127.0.0.1:4173')+'/?renderer=canvas2d',{waitUntil:'domcontentloaded',timeout:60000});
+  await page.goto((process.env.CONQUER_QA_URL||'http://127.0.0.1:4173')+'/',{waitUntil:'domcontentloaded',timeout:60000});
   await page.waitForFunction(()=>!!window.ConquerCombat&&!!document.querySelector('#builder.ux-builder'),{timeout:15000});
   const dom=await page.evaluate(()=>({
     combat:!!document.getElementById('combatControls'),
@@ -69,7 +69,7 @@ try{
   await page.locator('#devToggle').click();
 
 
-  // Exercise actual Canvas house drawing with multiple streetfront modules.
+  // Exercise the actual house rendering (World 3D) with multiple streetfront modules.
   // A standalone geometry VM test cannot detect missing canvas integration.
   const denseBrowser=await page.evaluate(()=>{
     const oldStructures=State.structures,oldCache=urbanLotCache,oldSelected=State.selectedId;
@@ -83,10 +83,10 @@ try{
       State.structures=[...oldStructures,house,road];
       urbanLotCache=[lot];State.selectedId=house.id;
       const l3=urbanDenseParts(house),n3=urbanDenseBuildingCount(house);
-      drawHouse(house); // real roof, chimney, turret/facade canvas routines
+      invalidateSceneCache();draw(); // the real World 3D frame builds the house meshes
       house.houseLevel=4;
       const l4=urbanDenseParts(house),n4=urbanDenseBuildingCount(house);
-      drawHouse(house);
+      invalidateSceneCache();draw();
       return{n3,n4,l3Bodies:l3.filter(x=>x.kind==='body').length,
         l4Turrets:l4.filter(x=>x.kind==='turret').length,
         physicalParts:l4.every(part=>!!part.points?.length)};

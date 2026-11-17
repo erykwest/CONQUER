@@ -80,7 +80,9 @@ assert.match(rules,/gore\?\.hit\(a,'melee'/,'melee hits feed gore');
 assert.match(rules,/ConquerGore\?\.hit\(target,'stone'/,'dropped stones feed gore');
 assert.match(rules,/ConquerGore\?\.died\(u,delay,foe,anim\?\.TIMING\)/,'deaths leave corpses');
 assert.match(anim,/ConquerGore\?\.enabled\?\.\(\)!==false\)drawBlood/,'the fall blood follows the option');
-assert.ok(render.indexOf('window.ConquerGore?.draw();')<render.indexOf("blitSceneCache('base');",render.indexOf('window.ConquerGore?.draw();')),'gore renders under buildings');
+// World 3D only (D-RENDER-3D-261111): gore is painted right after the 3D back pass, before sites and figures.
+{const g=render.indexOf('window.ConquerGore?.draw();');
+assert.ok(g>render.indexOf('window.ConquerWorld3D.drawBack(r)')&&g<render.indexOf('drawBuildArea();'),'gore renders under buildings');}
 assert.match(html,/id="goreToggle"/,'DEV panel switch');
 assert.ok(html.indexOf('settlement-gore.js')<html.indexOf('settlement-render.js'));
 assert.ok(html.indexOf('settlement-gore.js')>html.indexOf('settlement-population-figures.js'));

@@ -4,6 +4,7 @@
 // construction, a damage phase of ConquerSiege, cutaway — and captures what the game draws, with the
 // ground removed (pixels that differ from the same view without the structure). The Asset Lab uses
 // these captures as its audit images: they are the game's own render path, nothing re-drawn.
+// That path is World 3D (WebGL2): the 2.5D Canvas castle was retired, so "Nel gioco" is the 3D frame.
 (function(){
   if(!window.__CONQUER_ASSET_LAB__)return;
   const SP=()=>window.ConquerSiegePreview;
@@ -25,7 +26,7 @@
       // Door side towards the default camera: the thumbnail shows the street front and its sign.
       spec:{type:'house',auto:true,houseLevel:3,w:1.5,h:1,doorSide:1,groundZ:0,shopKind:kind}})):[];
   }
-  // Every variant of the gallery (wood ones too: the 2.5D path draws them) plus a built section.
+  // Every variant of the gallery (wood ones too) plus a built section.
   function variants(){
     const G=SP().GALLERY;
     return[...G.towers.map(r=>['Torri',r]),...G.walls.map(r=>['Mura',r]),
@@ -114,7 +115,6 @@
     if(state.id==='closed')s.shopClosed=true;
     return State.structures.find(x=>x.id===s.id)||State.structures[0]||null;
   }
-  const STRUCTURE_LAYERS=['ground','shadow','base','castleBody','castleFront'];
   // Canvas-pixel coverage of a house: its urban faces plus the workshop's street front.
   function houseSilhouette(s,W,H){
     const c=document.getElementById('c'),k=c.width/document.getElementById('wrap').getBoundingClientRect().width;
@@ -126,8 +126,10 @@
     if(m)for(let t=0;t<m.col.length;t++){const o=t*9;fill([0,3,6].map(j=>w2sRaw({x:m.pos[o+j],y:m.pos[o+j+1]},m.pos[o+j+2])))}
     return g.getImageData(0,0,W,H).data;
   }
+  // The world renders only in World 3D (D-RENDER-3D-261111): a capture without it is an error.
+  function renderer(){return window.ConquerWorld3D?.active?.()?'webgl2':'none'}
   function frame(){
-    invalidateSceneCache(STRUCTURE_LAYERS);window.ConquerWallWalk?.invalidate?.();draw();
+    invalidateSceneCache();window.ConquerWallWalk?.invalidate?.();window.ConquerWorld3D?.invalidate?.();draw();
     const c=document.getElementById('c');
     return c.getContext('2d').getImageData(0,0,c.width,c.height);
   }
@@ -181,7 +183,7 @@
         if(bg[p])continue;
         mask[p]=1;n++;const x=p%W,y=(p/W)|0;if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;
       }
-      const result={id,state:stateId,label:v.label,family:v.family,structure:summary(s),coverage:n/(W*H)};
+      const result={id,state:stateId,label:v.label,family:v.family,structure:summary(s),coverage:n/(W*H),renderer:renderer()};
       if(x1<0)return{...result,dataUrl:null,width:0,height:0};
       const pad=6;x0=Math.max(0,x0-pad);y0=Math.max(0,y0-pad);x1=Math.min(W-1,x1+pad);y1=Math.min(H-1,y1+pad);
       const w=x1-x0+1,h=y1-y0+1,out=document.createElement('canvas');out.width=w;out.height=h;
@@ -200,9 +202,9 @@
     }finally{
       delete performance.now;delete crypto.randomUUID;
       if(keepPitch===undefined)delete policies.roofPitch;else policies.roofPitch=keepPitch;
-      State.structures=keep;window.ConquerSiege?.restore({...(State.siege||{}),ruins:[]});invalidateSceneCache(STRUCTURE_LAYERS);
+      State.structures=keep;window.ConquerSiege?.restore({...(State.siege||{}),ruins:[]});invalidateSceneCache();
       if(v.spec.type==='house')invalidateUrbanGeometry();
     }
   }
-  window.ConquerAssetStage={variants,states,capture};
+  window.ConquerAssetStage={variants,states,capture,renderer};
 })();

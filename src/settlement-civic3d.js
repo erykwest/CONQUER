@@ -731,22 +731,6 @@
   function meshes(s,ground,body=true){
     return body?[bodyMesh(s,ground),...propMeshes(s)]:propMeshes(s);
   }
-  // 2.5D: paint into the current ctx. Civic draws run inside withStructureGroundPlane.
-  function draw(s,preview=false){
-    if(!has(s)||!window.ConquerMesh3D)return false;
-    const ground=typeof structureProjectionGroundZ!=='undefined'&&Number.isFinite(structureProjectionGroundZ)?structureProjectionGroundZ
-      :Number.isFinite(s.groundZ)?s.groundZ:terrainElevation(s);
-    // Lot props are sub-pixel when zoomed far out: the 2.5D painter skips them there.
-    const body=!preview&&cutawayActive(s)?cutawayMesh(s,ground):null;
-    const list=preview?[withClay(s,()=>triangles(modelKey(s),placeOf(s),ground))]
-      :(State.view.scale||1)<PROP_LOD_SCALE?[body||bodyMesh(s,ground)]
-      :body?[body,...meshes(s,ground,false)]:meshes(s,ground);
-    ctx.save();
-    if(preview)ctx.globalAlpha*=.62;
-    window.ConquerMesh3D.drawMeshes(ctx,list,window.ConquerMesh3D.gameView());
-    ctx.restore();
-    return true;
-  }
   // WebGL: add to a world3d meshBuilder with fixed-light shaded colours.
   function addMesh(m,mesh){
     const p=mesh.pos;
@@ -767,6 +751,6 @@
     addMesh(m,cutawayMesh(s,ground));
     return true;
   }
-  window.ConquerCivic3D={modelKey,has,parts,builtParts,triangles,draw,addToBuilder,addCutawayToBuilder,cutawayId,cutawaySig,cutawayActive,
+  window.ConquerCivic3D={modelKey,has,parts,builtParts,triangles,addToBuilder,addCutawayToBuilder,cutawayId,cutawaySig,cutawayActive,
     floorCount,visibleFloor,floorSpan,UPPER_ROOMS,townhallRole,roomSlots,massSlots,prisonBars,prisonCellCount,PRISON_CELL_MAX,lotProps,allLotProps};
 })();

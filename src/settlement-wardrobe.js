@@ -87,7 +87,24 @@
     herald:{label:'Araldo della Sala del trono',pieces:['tabard','feltHat']},
     servant:{label:'Servo della Sala comune',pieces:['clothApron','stockingCap']}
   };
-  const pieceOf=id=>PIECES[id]||ROLE_PIECES[id];
+  // L4 ladies (women and girls of the elite, FIG-HANDS-261117): medieval headdresses over
+  // braided hair instead of the town's hats and hoods; furs instead of cloaks in winter.
+  // A separate catalogue: outfitFor() deals them to ladies only (ladyOutfit).
+  const LADY_PIECES={
+    hennin:{label:'Hennin con velo',slot:'head',lady:'fair',palette:['#d83a2e','#2f6fd6','#f2c12e','#7a2f5a'],dye:1,veil:'rgba(246,241,230,.86)',band:'#c9a24a'},
+    horned:{label:'Acconciatura a corna',slot:'head',lady:'fair',palette:['#d83a2e','#2f6fd6','#f2c12e','#7a2f5a'],dye:.9,band:'#c9a24a'},
+    crespine:{label:'Crespina e coroncina',slot:'head',lady:'fair',palette:['#c9a24a','#b8913c']},
+    balzo:{label:'Balzo',slot:'head',lady:'fair',palette:['#d83a2e','#2f6fd6','#f2c12e','#7a2f5a'],dye:1,band:'#d8b14a'},
+    coronet:{label:'Coroncina',slot:'head',lady:'fair',palette:['#d8b14a'],jewel:'#b0302a'},
+    veil:{label:'Velo e soggolo',slot:'head',lady:'rain',palette:['#f3eee2','#ebe3d0']},
+    furToque:{label:'Cappello di pelliccia',slot:'head',lady:'winter',palette:['#5b4330','#4a3628','#6e5640']},
+    ladyMantle:{label:'Mantello di velluto',slot:'body',lady:'rain',palette:['#d83a2e','#2f6fd6','#f2c12e','#7a2f5a'],dye:.8,clasp:'#d8b14a'},
+    ladyFur:{label:'Pelliccia',slot:'body',lady:'winter',palette:['#f2eee6','#9aa3ad','#5b4330'],spots:'#1d1a19'}
+  };
+  // Headdresses for fair weather; girls wear only the coronet or the bare braids.
+  const LADY_FAIR=['hennin','horned','crespine','balzo','coronet','veil'];
+  const LADY_HAIR=['coils','braid','loose'];
+  const pieceOf=id=>PIECES[id]||ROLE_PIECES[id]||LADY_PIECES[id];
   // Calendar month (0 = January) -> share of residents dressed for the cold / the sun.
   // Shoulder months dress only part of the town, so a season never flips everyone at once.
   const WINTER_BY_MONTH=[1,1,.45,0,0,0,0,0,0,0,.45,1];
@@ -145,8 +162,19 @@
     o.sleeve=o.body?o.colors.body:null;
     return o.head||o.body||o.neck?o:null;
   }
+  const isLady=dot=>dot.kind==='elite'&&dot.sex==='female';
+  // A lady's outfit: velvet mantle and veil in the rain, furs in the cold, a headdress otherwise.
+  function ladyOutfit(dot,c){
+    const id=dot.id,L=levels(c),child=dot.age==='child',pieces=[];
+    if(c.wet)pieces.push('ladyMantle',child?'coronet':'veil');
+    else if(roll(id,'winter')<L.winter)pieces.push('ladyFur',child||roll(id,'toque')<.65?'furToque':'veil');
+    else if(child){if(roll(id,'coronet')<.5)pieces.push('coronet')}
+    else pieces.push(LADY_FAIR[hash(String(id)+':headdress')%LADY_FAIR.length]);
+    return compose(pieces,id,dot.kind,dot.colors?.[0]);
+  }
   function outfitFor(dot,c=conditions()){
     if(dot.outfit!==undefined)return dot.outfit;
+    if(isLady(dot)&&!dot.role)return ladyOutfit(dot,c);
     const id=dot.id,L=levels(c),pieces=[];
     if(c.wet)pieces.push('rainCape','rainHood');
     else if(roll(id,'winter')<L.winter){
@@ -227,6 +255,26 @@
         ctx.quadraticCurveTo(x,top+h*.42,x-w*.12,top+h*.3);ctx.closePath();ctx.fill();
         ctx.fillStyle='#3e2c1d';ctx.fillRect(x-w*.5,bodyY+h*.02,w,Math.max(.6,h*.05));
       }
+    }else if(o.body==='ladyFur'){
+      // Fur mantle over the shoulders down past the waist, scalloped edge, a deeper fur collar;
+      // ermine shows its black tails.
+      const hem=bodyY+h*.14,n=6,c=o.colors.body;
+      ctx.beginPath();ctx.moveTo(x-w*.22,top-h*.02);ctx.lineTo(x-w*.56,top+h*.2);ctx.lineTo(x-w*.62,hem);
+      for(let k=1;k<=n;k++){const x0=x-w*.62+w*1.24*(k-1)/n,x1=x-w*.62+w*1.24*k/n;ctx.quadraticCurveTo((x0+x1)/2,hem+h*.07,x1,hem)}
+      ctx.lineTo(x+w*.56,top+h*.2);ctx.lineTo(x+w*.22,top-h*.02);ctx.closePath();
+      ctx.fillStyle=c;ctx.fill();outline(lw);
+      ctx.fillStyle=darken(c,.86);ctx.beginPath();ctx.ellipse(x,top+h*.05,w*.4,h*.1,0,0,Math.PI*2);ctx.fill();outline(lw*.6);
+      if(fine&&c===LADY_PIECES.ladyFur.palette[0]){
+        ctx.fillStyle=LADY_PIECES.ladyFur.spots;
+        for(const [dx,dy] of [[-.36,.16],[-.12,.3],[.14,.18],[.38,.32],[-.4,.4],[.02,.44]])ctx.fillRect(x+w*dx-w*.025,top+h*dy,w*.05,h*.07);
+      }
+    }else if(o.body==='ladyMantle'){
+      // Velvet mantle closed at the neck by a gold clasp, falling to mid-skirt.
+      const hem=bodyY+h*.3;
+      ctx.beginPath();ctx.moveTo(x-w*.2,top-h*.02);ctx.lineTo(x-w*.54,top+h*.2);ctx.lineTo(x-w*.66,hem);
+      ctx.quadraticCurveTo(x,hem+h*.1,x+w*.66,hem);ctx.lineTo(x+w*.54,top+h*.2);ctx.lineTo(x+w*.2,top-h*.02);ctx.closePath();
+      ctx.fillStyle=o.colors.body;ctx.fill();outline(lw);
+      if(fine){ctx.fillStyle=LADY_PIECES.ladyMantle.clasp;ctx.beginPath();ctx.arc(x,top+h*.08,Math.max(.6,w*.07),0,Math.PI*2);ctx.fill()}
     }else if(o.body){
       const cape=o.body==='rainCape'||!!pieceOf(o.body)?.cape,hem=bodyY+h*(cape?.14:.30);
       ctx.beginPath();
@@ -270,12 +318,91 @@
     }
     ctx.restore();
   }
+  // A lady's hair, painted over the bare head and under the headdress: a parted cap of hair
+  // with coiled braids over the ears, one long braid over the shoulder, or loose long hair.
+  // The veil hides it all. Style and colour are stable per resident.
+  function ladyHairStyle(dot){return dot.age==='child'?(hash(String(dot.id)+':hair')&1?'braid':'loose'):LADY_HAIR[hash(String(dot.id)+':hair')%LADY_HAIR.length]}
+  function drawLadyHair(o,dot,x,headY,r){
+    if(o?.head==='veil')return;
+    const colors=typeof HAIR_COLORS!=='undefined'?HAIR_COLORS:{},hair=dot.hair||(typeof villagerHair==='function'?villagerHair(dot.id):'brown');
+    const hc=colors[hair]||'#65452f',lw=Math.max(.5,r*.16),style=ladyHairStyle(dot);
+    ctx.save();ctx.fillStyle=hc;
+    if(style==='loose'){   // long hair behind the shoulders
+      for(const s of[-1,1]){ctx.beginPath();ctx.ellipse(x+s*r*.82,headY+r*.85,r*.36,r*1.2,s*.12,0,Math.PI*2);ctx.fill();outline(lw*.7)}
+    }
+    ctx.beginPath();ctx.arc(x,headY,r,Math.PI,Math.PI*2);ctx.closePath();ctx.fill();outline(lw*.7);
+    if(r>=1.2){ctx.strokeStyle='rgba(33,24,16,.45)';ctx.lineWidth=Math.max(.4,r*.1);ctx.beginPath();ctx.moveTo(x,headY-r);ctx.lineTo(x,headY-r*.45);ctx.stroke()}
+    ctx.fillStyle=hc;
+    if(style==='coils'){   // ramshorn braids coiled over the ears
+      for(const s of[-1,1]){
+        ctx.beginPath();ctx.arc(x+s*r*.92,headY+r*.12,r*.42,0,Math.PI*2);ctx.fill();outline(lw*.7);
+        if(r>=1.2){ctx.strokeStyle='rgba(33,24,16,.5)';ctx.lineWidth=Math.max(.35,r*.08);ctx.beginPath();ctx.arc(x+s*r*.92,headY+r*.12,r*.2,0,Math.PI*1.6);ctx.stroke()}
+      }
+    }else if(style==='braid'){   // one long braid forward over the shoulder
+      for(let k=0;k<4;k++){ctx.beginPath();ctx.ellipse(x+r*(.86+k*.06),headY+r*(.35+k*.5),r*.26,r*.32,.2,0,Math.PI*2);ctx.fill();outline(lw*.55)}
+    }
+    ctx.restore();
+  }
+  // Medieval headdresses of the L4 ladies (reference sheet of the product owner, 17/11/2026).
+  function drawLadyHeaddress(o,x,headY,r,c,lw){
+    const P=LADY_PIECES[o.head],fine=r>=1.2;
+    if(o.head==='hennin'){
+      // Tall cone tilted back, a sheer veil streaming from the tip, gold band on the brow.
+      const tip={x:x+r*.65,y:headY-r*3.1};
+      ctx.fillStyle=P.veil;ctx.beginPath();ctx.moveTo(tip.x,tip.y);ctx.quadraticCurveTo(x+r*2.3,headY-r*.8,x+r*2.0,headY+r*1.5);
+      ctx.lineTo(x+r*1.05,headY+r*.35);ctx.closePath();ctx.fill();ctx.strokeStyle='rgba(33,24,16,.35)';ctx.lineWidth=lw*.5;ctx.stroke();
+      ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(x-r*.95,headY-r*.3);ctx.lineTo(tip.x,tip.y);ctx.lineTo(x+r*.98,headY-r*.55);ctx.closePath();ctx.fill();outline(lw*.8);
+      ctx.strokeStyle=P.band;ctx.lineWidth=Math.max(.6,r*.24);ctx.beginPath();ctx.moveTo(x-r*.98,headY-r*.33);ctx.lineTo(x+r*1.0,headY-r*.55);ctx.stroke();
+    }else if(o.head==='horned'){
+      // Escoffion: two padded horns over the temples, a gold net over the dyed cloth.
+      ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(x-r*.95,headY-r*.15);
+      ctx.quadraticCurveTo(x-r*1.95,headY-r*.7,x-r*1.6,headY-r*2.0);ctx.quadraticCurveTo(x-r*.85,headY-r*1.1,x,headY-r*1.05);
+      ctx.quadraticCurveTo(x+r*.85,headY-r*1.1,x+r*1.6,headY-r*2.0);ctx.quadraticCurveTo(x+r*1.95,headY-r*.7,x+r*.95,headY-r*.15);
+      ctx.quadraticCurveTo(x,headY-r*.95,x-r*.95,headY-r*.15);ctx.closePath();ctx.fill();outline(lw*.8);
+      if(fine){ctx.fillStyle=P.band;for(const [dx,dy] of [[-1.35,-1.3],[-.75,-.8],[-1.5,-.6],[1.35,-1.3],[.75,-.8],[1.5,-.6]]){ctx.beginPath();ctx.arc(x+r*dx,headY+r*dy,r*.09,0,Math.PI*2);ctx.fill()}}
+      ctx.strokeStyle=P.band;ctx.lineWidth=Math.max(.5,r*.18);ctx.beginPath();ctx.moveTo(x-r*.95,headY-r*.2);ctx.quadraticCurveTo(x,headY-r*.95,x+r*.95,headY-r*.2);ctx.stroke();
+    }else if(o.head==='crespine'){
+      // Gold net cauls over the ears, joined by a thin fillet across the crown.
+      ctx.strokeStyle=c;ctx.lineWidth=Math.max(.5,r*.2);ctx.beginPath();ctx.arc(x,headY+r*.05,r*1.02,Math.PI*1.08,Math.PI*1.92);ctx.stroke();
+      for(const s of[-1,1]){
+        ctx.fillStyle=c;ctx.beginPath();ctx.arc(x+s*r*.92,headY+r*.1,r*.5,0,Math.PI*2);ctx.fill();outline(lw*.7);
+        if(fine){ctx.strokeStyle='rgba(60,40,10,.55)';ctx.lineWidth=Math.max(.3,r*.07);ctx.beginPath();
+          for(const k of[-.25,0,.25]){ctx.moveTo(x+s*r*.92+r*k,headY-r*.38);ctx.lineTo(x+s*r*.92+r*k,headY+r*.58);ctx.moveTo(x+s*r*.92-r*.48,headY+r*.1+r*k);ctx.lineTo(x+s*r*.92+r*.48,headY+r*.1+r*k)}ctx.stroke()}
+      }
+    }else if(o.head==='balzo'){
+      // Balzo: a large padded roll over the hair, crossed by gold bands.
+      ctx.fillStyle=c;ctx.beginPath();ctx.ellipse(x,headY-r*.8,r*1.45,r*.82,0,0,Math.PI*2);ctx.fill();outline(lw*.8);
+      if(fine){ctx.strokeStyle=P.band;ctx.lineWidth=Math.max(.4,r*.12);ctx.beginPath();
+        for(const k of[-.7,0,.7]){ctx.moveTo(x+r*k-r*.35,headY-r*1.55);ctx.lineTo(x+r*k+r*.35,headY-r*.05)}ctx.stroke()}
+    }else if(o.head==='coronet'){
+      // Gold circlet with three points and a red stone over the brow.
+      ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(x-r*.95,headY-r*.45);
+      for(const k of[-.6,0,.6]){ctx.lineTo(x+r*(k-.22),headY-r*.75);ctx.lineTo(x+r*k,headY-r*1.15);ctx.lineTo(x+r*(k+.22),headY-r*.75)}
+      ctx.lineTo(x+r*.95,headY-r*.45);ctx.quadraticCurveTo(x,headY-r*.72,x-r*.95,headY-r*.45);ctx.closePath();ctx.fill();outline(lw*.6);
+      if(fine){ctx.fillStyle=P.jewel;ctx.beginPath();ctx.arc(x,headY-r*.66,r*.13,0,Math.PI*2);ctx.fill()}
+    }else if(o.head==='veil'){
+      // Veil and wimple: white linen round the face and under the chin, falling on the shoulders.
+      ctx.fillStyle=c;ctx.beginPath();
+      ctx.moveTo(x-r*1.35,headY+r*1.6);ctx.quadraticCurveTo(x-r*1.55,headY-r*1.25,x,headY-r*1.35);
+      ctx.quadraticCurveTo(x+r*1.55,headY-r*1.25,x+r*1.35,headY+r*1.6);ctx.quadraticCurveTo(x,headY+r*2.0,x-r*1.35,headY+r*1.6);ctx.closePath();
+      ctx.moveTo(x+r*.7,headY+r*.05);ctx.ellipse(x,headY+r*.05,r*.7,r*.8,0,0,Math.PI*2);
+      ctx.fill('evenodd');outline(lw*.7);
+    }else if(o.head==='furToque'){
+      // Tall round fur hat, its pile brushed in short strokes.
+      ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(x-r*1.02,headY-r*.4);ctx.lineTo(x-r*.95,headY-r*1.45);
+      ctx.quadraticCurveTo(x,headY-r*1.75,x+r*.95,headY-r*1.45);ctx.lineTo(x+r*1.02,headY-r*.4);ctx.quadraticCurveTo(x,headY-r*.6,x-r*1.02,headY-r*.4);ctx.closePath();ctx.fill();outline(lw*.8);
+      if(fine){ctx.strokeStyle=darken(c,.7);ctx.lineWidth=Math.max(.35,r*.08);ctx.beginPath();
+        for(const k of[-.6,-.2,.2,.6])for(const j of[.65,1.05]){ctx.moveTo(x+r*k,headY-r*j);ctx.lineTo(x+r*(k+.1),headY-r*(j+.22))}ctx.stroke()}
+    }
+  }
   // Over the head: x/headY its centre, r its radius; the hood also drapes the shoulders.
   function drawHead(o,x,headY,r){
     if(!o||!o.head)return;
     const lw=Math.max(.6,r*.2),c=o.colors.head,P=pieceOf(o.head);
     ctx.save();
-    if(o.head==='judgeCap'||o.head==='clerkCap'){
+    if(LADY_PIECES[o.head]){
+      drawLadyHeaddress(o,x,headY,r,c,lw);
+    }else if(o.head==='judgeCap'||o.head==='clerkCap'){
       // Round cap of office (the judge's taller, a biretta), sitting low on the brow.
       const tall=o.head==='judgeCap'?.95:.62;
       ctx.fillStyle=c;ctx.beginPath();ctx.moveTo(x-r*1.02,headY-r*.25);ctx.lineTo(x-r*.86,headY-r*(.25+tall));
@@ -339,6 +466,7 @@
     }
     ctx.restore();
   }
-  const api={PIECES,ROLE_PIECES,ROLES,WINTER_BY_MONTH,SUMMER_BY_MONTH,preview:null,conditions,fromKind,levels,classPalette,compose,outfitFor,drawBody,drawHead};
+  const api={PIECES,ROLE_PIECES,LADY_PIECES,ROLES,WINTER_BY_MONTH,SUMMER_BY_MONTH,preview:null,conditions,fromKind,levels,classPalette,compose,outfitFor,
+    isLady,ladyHairStyle,drawLadyHair,drawBody,drawHead};
   window.ConquerWardrobe=api;
 })();
