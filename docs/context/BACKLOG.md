@@ -6,7 +6,8 @@
 - [x] Zona edificabile = poligono Voronoi del territorio; bordo del mondo = offset 50U.
 - [x] Settori dell'anello dai vicini fisici reali (5–7), non dagli 8 slot logici.
 - [x] Ingressi stradali per vicino di terra e uscite marine per tratto di costa sul bordo poligonale.
-- [x] Scala: WORLD = 240 per le mappe esagonali, area edificabile ~10000 U².
+- [x] Area interna sempre 10000 U² (omogeneizzazione verificata alla generazione e salvata); canvas adattato al bordo offset (min 240U), mai bordo quadrato; terreno 3D ritagliato.
+- [ ] Prestazioni del tracciato delle strade principali sul canvas grande (68 s verso la palude di T364).
 - [ ] Fiumi e catene montuose ai punti reali in cui attraversano i lati Voronoi (oggi `riverSides`/`mountainSides` cardinali).
 - [ ] Ingressi stradali concordi fra territori vicini (stesso punto sul lato condiviso) e, quando esisteranno, strade regionali.
 - [ ] Piano del terreno 3D ritagliato sul bordo invece del quadrato scuro; camera e unità limitate al poligono.

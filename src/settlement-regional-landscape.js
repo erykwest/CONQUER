@@ -174,7 +174,8 @@
       const pond=fresh+marsh;
       const threshold=sea>=pond?coastThreshold(p,coast):.5;
       const wet=sea+pond>threshold+(noise(p.x/18,p.y/18,State.seed+23)-.5)*.08;
-      if(wet)(sea>=pond?seaMask:marsh>fresh?marshMask:pondMask)[y*n+x]=1;
+      // Off-map (hex border) only the sea may continue; ponds and marshes stay inside.
+      if(wet&&(sea>=pond||!hex()||hex().inWorld(p,-2)))(sea>=pond?seaMask:marsh>fresh?marshMask:pondMask)[y*n+x]=1;
       samples.push({p,w,c,wet});
     }
     const waters=[...features(seaMask,'sea','regional-sea-'+key),...features(pondMask,'pond','regional-lake-'+key),...features(marshMask,'pond','regional-marsh-'+key).map(f=>{styleMarshWater(f);f.points=roundMarshRing(f.points);f.holes=f.holes.map(roundMarshRing);return f})];
@@ -304,7 +305,7 @@
       const p={x:x*2+1,y:y*2+1},i=y*n+x,zone=inCentre(p)?0:1;
       const weight=regional?(weights(p).swamp||0):1;
       if(weight>.999)groups[zone].total++;
-      if(weight<=0||dist(p,{x:C(),y:C()})<8||onHill(p)||lines.some(f=>environmentContains(f,p,4))||woodlandWet(bodies,p))continue;
+      if(weight<=0||hex()&&!hex().inWorld(p,-2)||dist(p,{x:C(),y:C()})<8||onHill(p)||lines.some(f=>environmentContains(f,p,4))||woodlandWet(bodies,p))continue;
       const value=noise(p.x/12,p.y/12,State.seed+51),item={i,value,weight,zone};items.push(item);
       if(weight>.999)groups[zone].items.push(item);
     }

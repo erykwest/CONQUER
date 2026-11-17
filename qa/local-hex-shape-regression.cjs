@@ -86,13 +86,28 @@ const edge=lattice();edge.neighbors=edge.neighbors.filter(n=>n.id!=='n0');
 const e=S.create(edge);
 assert(e.weights({x:G.bounds(e.outer).maxX-3,y:C},'@c')['@c']>.99,'no neighbour beyond the regional edge -> own biome');
 
-// An elongated cell is shrunk only as much as the 240U canvas requires.
+// Homogenization, verified at generation: ANY regional size or shape gets exactly
+// 10000 U²; an elongated territory grows the canvas instead of shrinking.
+const close=(a,b,eps=1e-6)=>Math.abs(a-b)<=eps*Math.max(1,Math.abs(b));
+for(const k of [.01,1,37]){
+  const t=S.create({polygon:hex(0,0,R*k),neighbors:[]});
+  assert(close(t.buildArea,10000),'area 10000 at regional scale '+k+': '+t.buildArea);
+  assert(close(t.homogenization.scale,s.homogenization.scale/k),'scale saved and inversely proportional');
+  assert.strictEqual(t.homogenization.targetArea,10000);
+}
+assert(close(s.homogenization.sourceArea*s.homogenization.scale**2,10000),'saved homogenization reproduces the area');
 const long=S.create({polygon:[{x:0,y:0},{x:300,y:0},{x:300,y:40},{x:0,y:40}],neighbors:[]});
 const lb=G.bounds(long.outer);
-assert(lb.minX>=0&&lb.maxX<=WMAX&&long.buildArea<10000,'elongated cell fitted to canvas');
-// Legacy 200U canvas still available to callers that ask for it.
-const legacy=S.create(lattice(),{world:200}),gb=G.bounds(legacy.outer);
-assert(gb.maxX<=200&&gb.maxY<=200&&legacy.world===200);
+assert(close(long.buildArea,10000),'elongated cell keeps 10000 U²');
+assert(long.world>240&&long.world%2===0&&lb.minX>=0&&lb.maxX<=long.world&&lb.minY>=0&&lb.maxY<=long.world,'canvas grows to the border: '+long.world);
+// Concave territory (two regional cells): true 50U offset, not a convex hull or a square.
+const twin={polygon:[...hex(500,300,R).slice(0,1),...hex(500+W,300,R).slice(0,4),...hex(500,300,R).slice(2)],neighbors:[]};
+const tw=S.create(twin);
+assert(!G.isConvex(tw.build),'two-cell territory is concave');
+assert(close(tw.buildArea,10000));
+for(let i=0;i<tw.outer.length;i+=7){const d=G.ringDistance(tw.outer[i],tw.build);assert(Math.abs(d-50)<.05,'concave offset at 50U, got '+d.toFixed(3))}
+const corner={x:0,y:0},side=(tw.world);
+for(const q of [{x:1,y:1},{x:side-1,y:1},{x:1,y:side-1},{x:side-1,y:side-1}])assert(!tw.inWorld(q),'no square border: canvas corners are off-map');
 // Invalid payloads fall back to the legacy square map.
 assert.strictEqual(S.create(null),null);
 assert.strictEqual(S.create({polygon:[{x:0,y:0},{x:1,y:NaN},{x:2,y:0}]}),null);
