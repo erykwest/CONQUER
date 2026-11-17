@@ -1,12 +1,15 @@
 'use strict';
 // Local map outline inherited from the regional HEX Voronoi territory.
 //
-// The territory polygon (regional coordinates) is centred on the canvas and
-// uniformly scaled, north up, to the legacy buildable AREA (100x100 = 10000 U²):
-// that polygon IS the buildable zone. The world border is the same polygon
-// offset outwards by OFFSET (50U, rounded corners). Hex maps use a 240U canvas
-// (HEX_WORLD) so the border fits; a very elongated cell is shrunk just enough
-// to stay inside it. Legacy square maps keep 200U. The 50U ring is split
+// The territory outline (regional coordinates; the union of its cells) is
+// uniformly scaled, north up, so that its area is ALWAYS the legacy buildable
+// area (100x100 = 10000 U²), whatever its regional shape: the scale factor is
+// the "homogenization", checked once at generation and saved with the map.
+// That polygon IS the buildable zone. The world border is the same polygon
+// offset outwards by OFFSET (50U, rounded corners; a true offset, concave
+// territories included) - never a square. The square canvas (WORLD) is sized
+// to contain that border: at least 240U (HEX_WORLD), more for an elongated
+// territory. Legacy square maps keep 200U. The 50U ring is split
 // among the territory's PHYSICAL regional neighbours by intersecting it with
 // their own Voronoi cells, carried into the same local frame: a vertex of the
 // centre (where three cells meet) is split along the real Voronoi edge between
@@ -67,6 +70,33 @@
     }
     return out.filter((p,i)=>!i||Math.hypot(p.x-out[i-1].x,p.y-out[i-1].y)>1e-6);
   }
+  function isConvex(r){
+    let sign=0;
+    for(let i=0;i<r.length;i++){
+      const a=r[i],b=r[(i+1)%r.length],c=r[(i+2)%r.length];
+      const z=(b.x-a.x)*(c.y-b.y)-(b.y-a.y)*(c.x-b.x);
+      if(Math.abs(z)<1e-9)continue;
+      if(!sign)sign=Math.sign(z);else if(Math.sign(z)!==sign)return false;
+    }
+    return true;
+  }
+  // Offset of any simple ring by d: exact Minkowski for convex cells; for a
+  // concave territory (several regional cells) the level set {distance = d}
+  // traced along rays from the centroid, bisected to 1e-3 U.
+  function offsetPolygon(r,d){
+    if(isConvex(r))return offsetConvex(r,d);
+    const c=r.reduce((a,p)=>({x:a.x+p.x/r.length,y:a.y+p.y/r.length}),{x:0,y:0});
+    const reach=Math.max(...r.map(p=>Math.hypot(p.x-c.x,p.y-c.y)))+d+4,out=[],RAYS=360;
+    for(let i=0;i<RAYS;i++){
+      const a=i/RAYS*Math.PI*2,ux=Math.cos(a),uy=Math.sin(a),at=t=>({x:c.x+ux*t,y:c.y+uy*t});
+      let hi=reach,lo=hi;
+      while(lo>0&&signedDistance(at(lo),r)>d)lo-=1;
+      lo=Math.max(0,lo);hi=Math.min(reach,lo+1);
+      for(let k=0;k<12;k++){const m=(lo+hi)/2;if(signedDistance(at(m),r)>d)hi=m;else lo=m}
+      out.push(at(lo));
+    }
+    return positive(out);
+  }
   // Sutherland-Hodgman against a convex clip ring.
   function clipConvex(subject,clip){
     clip=positive(clip);let out=subject.slice();
@@ -95,25 +125,29 @@
     return{total,at};
   }
 
+  // world: minimum canvas size; the canvas grows (in 2U steps) when the 50U
+  // border of an elongated territory needs more room. The area never shrinks.
   function create(shape,{world=HEX_WORLD}={}){
     if(!shape||!validRing(shape.polygon))return null;
-    const WORLD=world,CENTER={x:world/2,y:world/2};
-    const source=shape.polygon.map(p=>({x:+p.x,y:+p.y})),b=bounds(source);
-    const span=Math.max(b.maxX-b.minX,b.maxY-b.minY),area0=Math.abs(signedArea(source));
-    if(!(span>0)||!(area0>0))return null;
-    // Same buildable area as the legacy square, unless the border would leave the canvas.
-    const fit=(world-2*OFFSET-2*MARGIN)/span;
-    if(!(fit>0))return null;
-    const scale=Math.min(Math.sqrt(TARGET_AREA/area0),fit),cx=(b.minX+b.maxX)/2,cy=(b.minY+b.maxY)/2;
-    const toLocal=p=>({x:CENTER.x+(+p.x-cx)*scale,y:CENTER.y+(+p.y-cy)*scale});
-    const build=positive(source.map(toLocal));
-    const outer=offsetConvex(hull(build),OFFSET);
+    const source=positive(shape.polygon.map(p=>({x:+p.x,y:+p.y}))),b=bounds(source);
+    const area0=Math.abs(signedArea(source));
+    if(!(area0>0))return null;
+    // Homogenization: every territory gets exactly TARGET_AREA, whatever its regional size/shape.
+    const scale=Math.sqrt(TARGET_AREA/area0),cx=(b.minX+b.maxX)/2,cy=(b.minY+b.maxY)/2;
+    const rel=p=>({x:(+p.x-cx)*scale,y:(+p.y-cy)*scale});
+    const buildRel=source.map(rel),outerRel=offsetPolygon(buildRel,OFFSET),ob=bounds(outerRel);
+    const half=Math.max(-ob.minX,ob.maxX,-ob.minY,ob.maxY)+MARGIN;
+    const WORLD=Math.max(world,2*Math.ceil(half)),CENTER={x:WORLD/2,y:WORLD/2};
+    const shift=p=>({x:p.x+CENTER.x,y:p.y+CENTER.y}),toLocal=p=>shift(rel(p));
+    const build=buildRel.map(shift),outer=outerRel.map(shift);
+    // Generation-time check of the homogenization (the only place it is verified).
+    const buildArea=Math.abs(signedArea(build));
+    if(Math.abs(buildArea-TARGET_AREA)>TARGET_AREA*1e-9)throw Error('Local hex area not homogenized: '+buildArea);
+    const homogenization=Object.freeze({targetArea:TARGET_AREA,sourceArea:area0,scale,buildArea,world:WORLD,offset:OFFSET});
     const sectors=(Array.isArray(shape.neighbors)?shape.neighbors:[])
       .filter(n=>n&&validRing(n.polygon))
-      .map(n=>{
-        const polygon=hull(n.polygon.map(toLocal));
-        return{id:String(n.id),code:n.code??null,terrain:n.terrain??null,biome:n.biome??null,polygon,ring:clipConvex(outer,polygon)};
-      });
+      .map(n=>({id:String(n.id),code:n.code??null,terrain:n.terrain??null,biome:n.biome??null,
+        polygon:positive(n.polygon.map(toLocal))}));
     const per=perimeterOf(outer);
     // Owner of each perimeter sample: the neighbour cell a step inside the border.
     const samples=[];
@@ -185,10 +219,10 @@
     }
     const signature=[build,...sectors.map(s=>s.id+':'+s.biome)].map(x=>Array.isArray(x)?x.map(p=>p.x.toFixed(2)+','+p.y.toFixed(2)).join(';'):x).join('|');
     return Object.freeze({
-      version:2,world,center:CENTER,offset:OFFSET,scale,build,outer,sectors,runs,perimeter:per.total,signature,
+      version:3,world:WORLD,center:CENTER,offset:OFFSET,scale,homogenization,build,outer,sectors,runs,perimeter:per.total,signature,
       contains,inBuild,inWorld,sectorAt,weights,runsFor,runSample,pointAt:per.at,
       distanceOutsideBuild:p=>signedDistance(p,build),distanceOutsideWorld:p=>signedDistance(p,outer),
-      buildArea:Math.abs(signedArea(build)),outerArea:Math.abs(signedArea(outer))
+      buildArea,outerArea:Math.abs(signedArea(outer))
     });
   }
 
@@ -199,9 +233,9 @@
     return cached;
   }
   // Canvas size of the local map: read once by settlement-core.js (WORLD).
-  const worldSize=()=>current()?HEX_WORLD:LEGACY_WORLD;
+  const worldSize=()=>current()?.world||LEGACY_WORLD;
   const api=Object.freeze({OFFSET,BOX,TARGET_AREA,LEGACY_WORLD,HEX_WORLD,create,current,worldSize,active:()=>!!current(),
-    geometry:Object.freeze({contains,signedArea,signedDistance,ringDistance,offsetConvex,clipConvex,hull,bounds})});
+    geometry:Object.freeze({contains,signedArea,signedDistance,ringDistance,offsetConvex,offsetPolygon,isConvex,clipConvex,hull,bounds})});
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   root.ConquerLocalShape=api;
 })(typeof window==='object'?window:globalThis);

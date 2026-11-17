@@ -3962,6 +3962,35 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
       }
 
       document.getElementById('openSelectedLocalDemo').addEventListener('click',()=>document.getElementById('openLocalDemo').click());
+      // Outer boundary of a territory made of one or more Voronoi cells: cell edges used once
+      // (internal edges between its own cells appear twice and drop out), chained into the
+      // longest closed ring. Falls back to the convex hull if the cells do not chain cleanly.
+      function territoryOutline(macroId){
+        const cells=state.macros[macroId].cells,round=p=>({x:+p.x.toFixed(3),y:+p.y.toFixed(3)});
+        const area=r=>r.reduce((s,p,i)=>s+p.x*r[(i+1)%r.length].y-r[(i+1)%r.length].x*p.y,0)/2;
+        const rings=cells.map(c=>{const r=c.polygon.map(round);return area(r)<0?r.reverse():r});
+        if(rings.length===1)return rings[0];
+        const key=p=>p.x.toFixed(2)+','+p.y.toFixed(2),uses=new Map(),segs=[];
+        for(const r of rings)for(let i=0;i<r.length;i++){
+          const a=r[i],b=r[(i+1)%r.length],k=[key(a),key(b)].sort().join('|');
+          uses.set(k,(uses.get(k)||0)+1);segs.push({a,b,k});
+        }
+        const next=new Map();
+        for(const s of segs)if(uses.get(s.k)===1)next.set(key(s.a),s);
+        let best=[];
+        const seen=new Set();
+        for(const start of next.keys()){
+          if(seen.has(start))continue;
+          const ring=[];let k=start,guard=0;
+          while(next.has(k)&&!seen.has(k)&&guard++<4096){seen.add(k);const s=next.get(k);ring.push(s.a);k=key(s.b)}
+          if(k===start&&ring.length>best.length)best=ring;
+        }
+        if(best.length>=3)return best;
+        const pts=rings.flat().sort((a,b)=>a.x-b.x||a.y-b.y),cross=(o,a,b)=>(a.x-o.x)*(b.y-o.y)-(a.y-o.y)*(b.x-o.x),lo=[],up=[];
+        for(const p of pts){while(lo.length>=2&&cross(lo[lo.length-2],lo[lo.length-1],p)<=0)lo.pop();lo.push(p)}
+        for(const p of pts.slice().reverse()){while(up.length>=2&&cross(up[up.length-2],up[up.length-1],p)<=0)up.pop();up.push(p)}
+        return lo.slice(0,-1).concat(up.slice(0,-1));
+      }
       document.getElementById('openLocalDemo').addEventListener('click',()=>{
         if(!state||selectedMacros.size!==1||selectedMacro===null||isWaterTerrain(state.terrain[selectedMacro]))return;
         const macro=state.macros[selectedMacro],ids=conquerNeighbors(selectedMacro);
@@ -3994,10 +4023,9 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         const surroundings=window.ConquerRegionalBiomeRules.sampleSurroundings(regionalCells[selectedMacro],regionalCells,state.configuration.width,state.configuration.height);
         const payload={version:1,seed,biome,terrain,name:territoryName(macro),regionalSeed:state.seed,territoryId:macro.id,
           neighbors:ids.map(id=>({id,code:state.macros[id].code,terrain:state.terrain[id]})),surroundings,hasRiver,riverSides,riverFlow,riverJunctions,tributaryTypes,mountainSides,
-          // Local outline: the real hex Voronoi cell and its physical neighbours (shared edges).
-          shape:{polygon:regionalCells[selectedMacro].polygon.map(p=>({x:+p.x.toFixed(3),y:+p.y.toFixed(3)})),
-            neighbors:ids.map(id=>({id,code:state.macros[id].code,terrain:state.terrain[id],
-              polygon:regionalCells[id].polygon.map(p=>({x:+p.x.toFixed(3),y:+p.y.toFixed(3)}))}))}};
+          // Local outline: the territory (union of its Voronoi cells) and its physical neighbours.
+          shape:{polygon:territoryOutline(selectedMacro),
+            neighbors:ids.map(id=>({id,code:state.macros[id].code,terrain:state.terrain[id],polygon:territoryOutline(id)}))}};
         // Carry the small territory context in the URL too: opening another tab must
         // not lose its biome just because sessionStorage is scoped to the old tab.
         try{sessionStorage.setItem('conquer.regional-demo.world',JSON.stringify({map:mapData(),selected:selectedMacro}));sessionStorage.setItem('conquer.regional-demo.'+key,JSON.stringify(payload));}

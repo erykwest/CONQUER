@@ -242,7 +242,41 @@
     if(idx.length===3)out.push(idx[0],idx[1],idx[2]);
     return out;
   }
-  function buildTerrain(){
+  // Hex territory maps end at the inherited 50U-offset border, never at the square canvas:
+  // ground triangles outside it are dropped, triangles across it are cut to it.
+  function clipTerrainToWorld(arr){
+    const s=typeof localShape==='function'?localShape():null;if(!s)return arr;
+    const ring=s.outer,out=[];
+    const area2=(a,b,c)=>(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
+    for(let i=0;i+8<arr.length;i+=9){
+      let a={x:arr[i],y:arr[i+1],z:arr[i+2]},b={x:arr[i+3],y:arr[i+4],z:arr[i+5]},c={x:arr[i+6],y:arr[i+7],z:arr[i+8]};
+      const big=Math.max(Math.hypot(a.x-b.x,a.y-b.y),Math.hypot(b.x-c.x,b.y-c.y),Math.hypot(c.x-a.x,c.y-a.y))>6;
+      const inside=[a,b,c].filter(p=>s.inWorld(p)).length;
+      if(!big&&inside===3){for(let k=0;k<9;k++)out.push(arr[i+k]);continue}
+      if(!big&&inside===0)continue;
+      const A=area2(a,b,c);if(Math.abs(A)<1e-12)continue;
+      if(A<0)[b,c]=[c,b];
+      // Border ring (any shape) clipped by the convex triangle.
+      let poly=ring.map(p=>({x:p.x,y:p.y}));
+      for(const [p0,p1] of [[a,b],[b,c],[c,a]]){
+        const input=poly;poly=[];
+        const side=p=>(p1.x-p0.x)*(p.y-p0.y)-(p1.y-p0.y)*(p.x-p0.x);
+        for(let j=0;j<input.length;j++){
+          const p=input[j],q=input[(j+1)%input.length],sp=side(p),sq=side(q);
+          if(sp>=0)poly.push(p);
+          if((sp>=0)!==(sq>=0)){const t=sp/(sp-sq);poly.push({x:p.x+(q.x-p.x)*t,y:p.y+(q.y-p.y)*t})}
+        }
+        if(poly.length<3)break;
+      }
+      if(poly.length<3)continue;
+      const T=area2(a,b,c),zAt=p=>(area2(p,b,c)*a.z+area2(a,p,c)*b.z+area2(a,b,p)*c.z)/T;
+      const idx=earcut(poly);
+      for(let k=0;k<idx.length;k++){const p=poly[idx[k]];out.push(p.x,p.y,zAt(p))}
+    }
+    return new Float32Array(out);
+  }
+  function buildTerrain(){return clipTerrainToWorld(buildTerrainRaw())}
+  function buildTerrainRaw(){
     const v=[],push=(x,y,z)=>v.push(x,y,z);
     // Hills crossing the map edge are cut at the world square, like the 2.5D relief
     // (clipTerrainPolygon), instead of spilling past the map.

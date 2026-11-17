@@ -3,7 +3,7 @@
 ### 2026-11-17 — LOCAL-HEX-01: contorno esagonale ereditato dalla mappa regionale
 
 - `feature/local-hex-shape` (da `3dregionmap`): nuovo `src/regional-local-shape.js`, payload `shape` dal World Lab, zona edificabile poligonale, bordo offset 50U, biomi dai vicini fisici, ingressi stradali e uscite marine sul bordo poligonale. Test `qa/local-hex-shape-regression.cjs`; `wiki/catalog.json` rigenerato. Nuova decisione D-LOCAL-HEX-261117 in DECISIONS; ROADMAP invariata.
-- 17/11: WORLD = 240U per le mappe esagonali (area edificabile 10000 U²); letterali 200/100 generalizzati a `WORLD`.
+- 17/11: area interna omogeneizzata a 10000 U² e salvata; bordo = offset 50U (mai quadrato), canvas adattato (min 240U), terreno 3D ritagliato; branch riallineato a `3dregionmap` resettato (`21a79dbd`); letterali 200/100 generalizzati a `WORLD`.
 
 ### 2026-11-15 — Microfix: fedeli alla messa nel cutaway della chiesa
 
