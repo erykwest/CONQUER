@@ -946,8 +946,7 @@
   </main>
 
   <script src="src/regional-biome-rules.js?v=hills-real-zone-1-flow-30-1-water-network-1"></script>
-  <script src="src/regional-topology.js"></script>
-  <script src="src/regional-hex-aggregation.js"></script>
+  <script src="src/regional-hex-capacity.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script>
@@ -961,7 +960,7 @@
       const TERRAIN_SEQUENCE = ['hills', 'forest', 'plain', 'sea'];
       const TERRAIN_SHARES = { sea: 0.20, hills: 0.10, forest: 0.25, plain: 0.45 };
       const TERRITORY_STEP_X = 128;
-      const TERRITORY_STEP_Y = TERRITORY_STEP_X; // Square logical cells.
+      const TERRITORY_STEP_Y = TERRITORY_STEP_X * Math.sqrt(3) / 2;
       const NS = 'http://www.w3.org/2000/svg';
       const BRIDGE_ICON = 'data:image/png;base64,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';
       const BRIDGE_SVG_ICON = 'ICON/Bridge.svg';
@@ -1227,12 +1226,13 @@
         const assignedRegion = new Map();
 
         function neighborKeys(slot) {
-          const candidates=[
-            [slot.row-1,slot.col-1],[slot.row-1,slot.col],[slot.row-1,slot.col+1],
-            [slot.row,slot.col-1],[slot.row,slot.col+1],
-            [slot.row+1,slot.col-1],[slot.row+1,slot.col],[slot.row+1,slot.col+1]
+          const diagonalCols = slot.row % 2 ? [slot.col, slot.col + 1] : [slot.col - 1, slot.col];
+          const candidates = [
+            [slot.row, slot.col - 1], [slot.row, slot.col + 1],
+            [slot.row - 1, diagonalCols[0]], [slot.row - 1, diagonalCols[1]],
+            [slot.row + 1, diagonalCols[0]], [slot.row + 1, diagonalCols[1]]
           ];
-          return candidates.map(([row,col])=>row+','+col).filter(key=>slots.has(key));
+          return candidates.map(([row, col]) => `${row},${col}`).filter((key) => slots.has(key));
         }
 
         function componentKeys(startKey) {
@@ -1265,15 +1265,15 @@
             if (!frontier.size) break;
             const center = groupKeys.reduce((sum, key) => {
               const slot = slots.get(key);
-              return { y: sum.y + slot.row, col: sum.col + slot.col };
+              return { y: sum.y + slot.row * Math.sqrt(3) / 2, col: sum.col + slot.col + (slot.row % 2) * 0.5 };
             }, { y: 0, col: 0 });
             center.y /= groupKeys.length;
             center.col /= groupKeys.length;
             const ranked = [...frontier].map((key) => {
               const slot = slots.get(key);
               const adjacent = neighborKeys(slot).filter((neighbor) => groupSet.has(neighbor)).length;
-              const dx = slot.col - center.col;
-              const dy = slot.row - center.y;
+              const dx = slot.col + (slot.row % 2) * 0.5 - center.col;
+              const dy = slot.row * Math.sqrt(3) / 2 - center.y;
               return { key, score: dx * dx + dy * dy - adjacent * 1.75 + random() * 0.45 };
             }).sort((a, b) => a.score - b.score);
             groupKeys.push(ranked[0].key);
@@ -1291,15 +1291,15 @@
         };
         terrainUnits.plain = totalUnits - terrainUnits.sea - terrainUnits.forest - terrainUnits.hills;
 
-        const pointForSlot = (slot) => ({ x: slot.col, y: slot.row });
+        const pointForSlot = (slot) => ({ x: slot.col + (slot.row % 2) * 0.5, y: slot.row * Math.sqrt(3) / 2 });
         const makeCenters = (count) => Array.from({ length: count }, () => ({
           x: 2 + random() * Math.max(1, finalCols - 4),
-          y: 1.5 + random() * Math.max(1, finalRows - 3)
+          y: 1.5 + random() * Math.max(1, finalRows * Math.sqrt(3) / 2 - 3)
         }));
         const makeSeparatedCenters = (count) => {
           const candidates = Array.from({ length: Math.max(80, count * 24) }, () => ({
             x: 1.5 + random() * Math.max(1, finalCols - 3),
-y: 1.2 + random() * Math.max(1, finalRows - 2.4)
+y: 1.2 + random() * Math.max(1, finalRows * Math.sqrt(3) / 2 - 2.4)
           }));
           const centers = [candidates.splice(Math.floor(random() * candidates.length), 1)[0]];
           while (centers.length < count && candidates.length) {
@@ -1311,8 +1311,8 @@ y: 1.2 + random() * Math.max(1, finalRows - 2.4)
           }
           return centers.slice(0, count);
         };
-        const mapHeight = finalRows - 1;
-        const mapWidth = finalCols - 1;
+        const mapHeight = (finalRows - 1) * Math.sqrt(3) / 2;
+        const mapWidth = finalCols - 0.5;
         const boundaryPoint = (side, position) => {
           if (side === 0) return { x: 0, y: position * mapHeight };
           if (side === 1) return { x: mapWidth, y: position * mapHeight };
@@ -1499,7 +1499,7 @@ y: 1.2 + random() * Math.max(1, finalRows - 2.4)
         const cellsPerTerritory = 1;
         const baseCells = finalCols * finalRows * cellsPerTerritory;
         if (baseCells > 3000) throw new Error('Riduci dimensioni o dettaglio: il limite è 3.000 celle base.');
-        const width = finalCols * TERRITORY_STEP_X;
+        const width = (finalCols + 0.5) * TERRITORY_STEP_X;
         const height = finalRows * TERRITORY_STEP_Y;
         const seaPercent = Math.max(0, Math.min(30, Number(seaPercentInput.value) || 0));
         const forestPercent = Math.max(0, Math.min(30, Number(forestPercentInput.value) || 0));
@@ -1537,41 +1537,68 @@ y: 1.2 + random() * Math.max(1, finalRows - 2.4)
         plainPercentValue.value = 100 - sea - forest - hills;
       }
 
-      function buildSites(seed, deformation, configuration) {
-        // ONLY the center lattice is square. These centers carry exactly eight
-        // stable Moore neighbors for gameplay, with no geometric assumptions.
-        // The visible polygon is constructed independently from twenty
-        // scale-varied hex-Voronoi microcells around each logical center.
-        const sites=[];
-        let id=0;
-        for(let row=0;row<configuration.finalRows;row++)
-          for(let col=0;col<configuration.finalCols;col++){
-            const territory=configuration.territoryPlan.slotAssignments.get(row+','+col);
-            if(!territory)throw Error('Missing logical center '+row+','+col);
-            sites.push({
-              id:id++,localIndex:0,macroRow:row,macroCol:col,macroId:territory.id,
-              x:(col+.5)*TERRITORY_STEP_X,y:(row+.5)*TERRITORY_STEP_Y
-            });
+      function buildClusterOffsets(count) {
+        const columns = Math.ceil(Math.sqrt(count * 1.25));
+        const rows = Math.ceil(count / columns);
+        const spacingX = TERRITORY_STEP_X / (columns + 0.85);
+        const spacingY = spacingX * Math.sqrt(3) / 2;
+        const candidates = [];
+
+        for (let row = 0; row < rows; row += 1) {
+          for (let col = 0; col < columns; col += 1) {
+            const x = (col - (columns - 1) / 2 + (row % 2) * 0.5) * spacingX;
+            const y = (row - (rows - 1) / 2) * spacingY;
+            candidates.push({ x, y, distance: x * x + y * y });
           }
-        configuration.seed=seed;
-        configuration.deformation=deformation;
-        configuration.neighbors8=window.ConquerRegionalTopology.neighbors8(sites);
+        }
+        return candidates.sort((a, b) => a.distance - b.distance).slice(0, count);
+      }
+
+      function buildSites(seed, deformation, configuration) {
+        const random = mulberry32(seed);
+        const offsets = buildClusterOffsets(configuration.cellsPerTerritory);
+        const amplitude = (TERRITORY_STEP_X / (Math.sqrt(configuration.cellsPerTerritory) + 2)) * deformation / 100;
+        const sites = [];
+        let id = 0;
+
+        for (let macroRow = 0; macroRow < configuration.finalRows; macroRow += 1) {
+          for (let macroCol = 0; macroCol < configuration.finalCols; macroCol += 1) {
+            const territory = configuration.territoryPlan.slotAssignments.get(`${macroRow},${macroCol}`);
+            const territoryX = TERRITORY_STEP_X / 2 + macroCol * TERRITORY_STEP_X + (macroRow % 2) * TERRITORY_STEP_X / 2;
+            const territoryY = TERRITORY_STEP_Y / 2 + macroRow * TERRITORY_STEP_Y;
+            const clusterAngle = random() * Math.PI * 2;
+            const clusterScaleX = .8 + random() * .4;
+            const clusterScaleY = .8 + random() * .4;
+            const cosine = Math.cos(clusterAngle);
+            const sine = Math.sin(clusterAngle);
+            for (let localIndex = 0; localIndex < offsets.length; localIndex += 1) {
+              const angle = random() * Math.PI * 2;
+              const radius = amplitude * Math.sqrt(random());
+              const offset = offsets[localIndex];
+              const offsetX = (offset.x * cosine - offset.y * sine) * clusterScaleX;
+              const offsetY = (offset.x * sine + offset.y * cosine) * clusterScaleY;
+              sites.push({
+                id: id++,
+                localIndex: territory.slots.findIndex((slot) => slot.row === macroRow && slot.col === macroCol) * configuration.cellsPerTerritory + localIndex,
+                macroRow,
+                macroCol,
+                macroId: territory.id,
+                x: Math.max(1, Math.min(configuration.width - 1, territoryX + offsetX + Math.cos(angle) * radius)),
+                y: Math.max(1, Math.min(configuration.height - 1, territoryY + offsetY + Math.sin(angle) * radius))
+              });
+            }
+          }
+        }
         return sites;
       }
+
       function buildVoronoi(sites, configuration) {
-        const built=window.ConquerRegionalHexAggregation.generate(
-          configuration.seed,configuration
-        );
-        configuration.fineCells=built.fineCells;
-        configuration.areaBalance=built.stats;
-        // One lightweight SVG path instead of 12,600 DOM nodes. Only drawn
-        // when the user enables the microcell boundary overlay.
-        configuration.microPath=built.fineCells.map(cell=>{
-          const polygon=cell.polygon;
-          return 'M'+polygon.map((p,i)=>(i?'L':'')+
-            p.x.toFixed(2)+','+p.y.toFixed(2)).join('')+'Z';
-        }).join('');
-        return built.cells;
+        // Retained historical staggered/hexagonal source site layout.
+        // Power-weight relaxation ensures each *complete* region has
+        // 90%–110% of the world's average area.
+        const generated=window.ConquerRegionalHexCapacity.generate(sites,configuration);
+        configuration.areaBalance=generated.stats;
+        return generated.cells;
       }
 
       function pointKey(point) {
@@ -1637,14 +1664,14 @@ y: 1.2 + random() * Math.max(1, finalRows - 2.4)
       let conquerSimulationTimer = null;
 
       function conquerMacroAdjacency() {
-        // O(1) eight-slot political adjacency; rivers still use real edges.
-        const adjacency=new Map(state.macros.map(macro=>[macro.id,new Set()]));
-        for(const macro of state.macros){
-          if(!conquerIsLand(macro.id))continue;
-          for(const neighbor of state.configuration.neighbors8?.[macro.id]||[]){
-            if(neighbor!==null&&conquerIsLand(neighbor))
-              adjacency.get(macro.id).add(neighbor);
-          }
+        const adjacency = new Map(state.macros.map((macro) => [macro.id, new Set()]));
+        for (const edge of state.edges) {
+          const ids = [...new Set(edge.cells.map((cell) => cell.macroId))];
+          if (ids.length !== 2) continue;
+          const [a, b] = ids;
+          if (!conquerIsLand(a) || !conquerIsLand(b)) continue;
+          adjacency.get(a)?.add(b);
+          adjacency.get(b)?.add(a);
         }
         return adjacency;
       }
@@ -1935,9 +1962,15 @@ y: 1.2 + random() * Math.max(1, finalRows - 2.4)
       }
 
       function conquerNeighbors(macroId) {
-        if(!state)return [];
-        return (state.configuration.neighbors8?.[macroId]||[])
-          .filter(id=>id!==null);
+        if (!state) return [];
+        const neighbors = new Set();
+        for (const edge of state.edges) {
+          const ids = [...new Set(edge.cells.map((cell) => cell.macroId))];
+          if (ids.length !== 2 || !ids.includes(macroId)) continue;
+          const other = ids[0] === macroId ? ids[1] : ids[0];
+          if (other !== macroId) neighbors.add(other);
+        }
+        return [...neighbors].sort((a, b) => a - b);
       }
 
       function initializeConquerState(targetState) {
@@ -3392,19 +3425,13 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         return entities;
       };
 
-      // Fixed [NW,N,NE,W,E,SW,S,SE] references, with null beyond map bounds.
-      window.ConquerRegion8Neighbors = macroId =>
-        state?.configuration?.neighbors8?.[macroId]?.slice() || Array(8).fill(null);
-
       window.ConquerRegion3DSnapshot = () => !state ? null : ({
         revision: window.ConquerRegion3DRevision || 0,
         seed: state.seed,
         width: state.configuration.width,
         height: state.configuration.height,
         cells: state.cells.map(c => ({ id: c.id, macroId: c.macroId, polygon: c.polygon })),
-        fineCells: (state.configuration.fineCells||[]).map(c => ({ id:c.id, macroId:c.macroId, polygon:c.polygon, scale:c.scale })),
         terrain: { ...state.terrain },
-        neighbors8: state.configuration.neighbors8,
         areaBalance: state.configuration.areaBalance,
         // Pixel-identical source RGB for each territory: same macroFill used by the 2D SVG.
         // Includes the active terrain palette, neutral desaturation and political fills.
@@ -3449,14 +3476,6 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         const adventureLayer = svgElement('g', { id: 'adventureLayer' });
         const topSymbolsLayer = svgElement('g', { id: 'topSymbolsLayer' });
         const coastSegments = [];
-
-        if(state.configuration?.microPath){
-          microLayer.appendChild(svgElement('path',{
-            d:state.configuration.microPath,
-            fill:'none',stroke:'#e3eee3','stroke-opacity':'.36',
-            'stroke-width':'.42','pointer-events':'none',class:'micro-edge'
-          }));
-        }
 
         for (const cell of state.cells) {
           const polygon = svgElement('polygon', {
@@ -3582,7 +3601,15 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
               normal
             });
           }
-
+          if (edge.cells.length === 2) {
+            const micro = svgElement('line', {
+              x1: edge.start.x.toFixed(2), y1: edge.start.y.toFixed(2),
+              x2: edge.end.x.toFixed(2), y2: edge.end.y.toFixed(2),
+              stroke: '#f1ede0', 'stroke-width': 0.75,
+              class: 'micro-edge'
+            });
+            microLayer.appendChild(micro);
+          }
 
           if (edge.cells.length === 1 || groups.length > 1 || isMountainBorder || isForestBorder || isSwampBorder) {
             const boundaryClass = isMountainBorder ? 'macro-edge mountain-border'
@@ -4462,19 +4489,18 @@ const currentOwner = ownerByName.get(key);
         message.textContent = `Strada inserita su ${macroIds.length} territori.`;
       }
 
-      function validateState(cells, macros, configuration) {
-        const invalid=cells.some(cell=>cell.polygon.length<3);
+      function validateState(cells,macros,configuration){
+        const invalidPolygons=cells.some(cell=>cell.polygon.length<3);
         const expected=configuration.territoryPlan.territories.length;
+        const aggregation=macros.some(macro=>macro.cells.length!==1);
         if(cells.length!==configuration.baseCells||macros.length!==expected||
-           invalid||macros.some(macro=>macro.cells.length!==1))
-          throw Error('Ogni territorio deve avere una singola cella Voronoi valida.');
-        const reference=configuration.width*configuration.height/macros.length;
-        for(const macro of macros){
-          const actual=window.ConquerRegionalTopology.area(macro.cells[0].polygon);
-          if(!Number.isFinite(actual)||Math.abs(actual/reference-1)>.100000001)
-            throw Error('Area territorio '+macro.code+' fuori tolleranza ±10%');
-          if(configuration.neighbors8?.[macro.id]?.length!==8)
-            throw Error('Otto riferimenti di vicinato mancanti: '+macro.code);
+            invalidPolygons||aggregation)
+          throw Error('Ogni territorio deve avere una cella Voronoi valida');
+        const mean=configuration.width*configuration.height/macros.length;
+        for(const cell of cells){
+          const a=window.ConquerRegionalHexCapacity.area(cell.polygon);
+          if(!Number.isFinite(a)||Math.abs(a/mean-1)>.100000001)
+            throw Error('Superficie territorio fuori tolleranza ±10%');
         }
       }
 
@@ -4528,7 +4554,7 @@ const currentOwner = ownerByName.get(key);
           finalSummary.textContent = `${configuration.finalCols} × ${configuration.finalRows}`;
           mapTitle.textContent = `Mappa Voronoi ${configuration.finalCols} per ${configuration.finalRows}`;
           const shares = configuration.territoryPlan.shares;
-          mapDesc.textContent = `${configuration.fineCells.length} sottocelle Voronoi esagonali (20 per territorio), aggregate su ${state.macros.length} centri quadrati: mare ${Math.round(shares.sea * 100)}% in ${configuration.territoryPlan.seaBlobCount} masse, montagne ${Math.round(shares.hills * 100)}% lineari, foreste ${Math.round(shares.forest * 100)}% in ${configuration.territoryPlan.forestBlobCount} masse, pianure ${Math.round(shares.plain * 100)}%. Vicinato quadrato a 8 direzioni (accesso O(1)); scostamento massimo delle aree territoriali ${(configuration.areaBalance.maxDeviation*100).toFixed(1)}% (limite ±10%). Contorni Voronoi deformati ×5${configuration.areaBalance.warpFactor<1?' (riduzione di sicurezza '+Math.round(configuration.areaBalance.warpFactor*100)+'%)':''}.`;
+          mapDesc.textContent = `${cells.length} celle Voronoi indipendenti, organizzate in ${state.macros.length} territori: mare ${Math.round(shares.sea * 100)}% in ${configuration.territoryPlan.seaBlobCount} masse, montagne ${Math.round(shares.hills * 100)}% lineari, foreste ${Math.round(shares.forest * 100)}% in ${configuration.territoryPlan.forestBlobCount} masse, pianure ${Math.round(shares.plain * 100)}%.`;
           resetMapViewport(configuration);
           svg.style.aspectRatio = `${configuration.width} / ${configuration.height}`;
           selectedMacro = null;
@@ -4568,7 +4594,6 @@ const currentOwner = ownerByName.get(key);
           configuration: {
             seed: state.seed,
             deformationPercent: state.deformation,
-            topology: 'square-moore-8-hex20-v2',
             baseGrid: { cells: state.cells.length, layout: 'nuclei Voronoi compatti' },
             aggregation: {
               detailPerUnit: state.configuration.cellsPerTerritory,
@@ -4891,36 +4916,21 @@ const currentOwner = ownerByName.get(key);
         deformationValue.value = `${deformationInput.value}%`;
         if (terrainPalettes[config.terrainPalette]) palettePresetInput.value = config.terrainPalette;
         generate();
-        const legacyTopology=!['square-moore-8-balanced-v1','square-moore-8-hex20-v2'].includes(config.topology);
-        const savedSlots=new Map(data.finalCells.map(cell=>[
-          cell.code,{row:cell.row,col:cell.column}
-        ]));
-        const currentBySlot=new Map(state.macros.map(macro=>[
-          macro.row+','+macro.col,macro.id
-        ]));
-        // Old hex-staggered maps have different territory ID ordering. Remap
-        // by preserved row/column slot, never by the old Txxx code alone.
-        const mapSavedCode=code=>{
-          if(!legacyTopology)return macroIdFromCode(code);
-          const saved=savedSlots.get(code);
-          return saved?currentBySlot.get(saved.row+','+saved.col):undefined;
-        };
-        const remapSavedCode=code=>state.macros[mapSavedCode(code)]?.code||code;
         if(data.finalCells.some(saved=>(saved.baseCells||[]).length>1)){message.textContent='Mappa aggregata precedente rigenerata: ora una cella Voronoi per territorio. Le vecchie modifiche aggregate non vengono applicate a territori diversi.';return;}
         for (const saved of data.finalCells) {
-          const macroId = mapSavedCode(saved.code);
+          const macroId = macroIdFromCode(saved.code);
           if (macroId === undefined) continue;
           if (['sea', 'plain', 'forest', 'hills', 'swamp', 'lake'].includes(saved.terrain)) state.terrain[macroId] = saved.terrain;
           if (saved.terrain === 'campaign' || saved.terrain === 'mountain') state.terrain[macroId] = 'plain';
           if (saved.name && saved.name !== saved.code) state.customNames[macroId] = saved.name;
         }
-        const ids = (codes) => codes.map(mapSavedCode).filter((id) => id !== undefined);
+        const ids = (codes) => codes.map(macroIdFromCode).filter((id) => id !== undefined);
         state.lakes = state.macros.filter((macro) => state.terrain[macro.id] === 'lake').map((macro) => macro.id);
         state.campaigns = []; // CONQUER: legacy ARCANA 'campaign/fields' normalized to plain.
-        state.cities = Object.fromEntries((config.cities || []).map((item) => [mapSavedCode(item.territory), item.level]).filter(([id]) => id !== undefined));
+        state.cities = Object.fromEntries((config.cities || []).map((item) => [macroIdFromCode(item.territory), item.level]).filter(([id]) => id !== undefined));
         state.villages = ids(config.villages || []);
-        state.resources = Object.fromEntries((config.resources || []).map((item) => [mapSavedCode(item.territory), item.subCell ?? null]).filter(([id]) => id !== undefined));
-        state.passages = Object.fromEntries((config.passages || []).map((item) => [mapSavedCode(item.territory), item.subCell ?? null]).filter(([id]) => id !== undefined));
+        state.resources = Object.fromEntries((config.resources || []).map((item) => [macroIdFromCode(item.territory), item.subCell ?? null]).filter(([id]) => id !== undefined));
+        state.passages = Object.fromEntries((config.passages || []).map((item) => [macroIdFromCode(item.territory), item.subCell ?? null]).filter(([id]) => id !== undefined));
         state.anchors = (config.anchors || []).map((item, index) => ({ id: item.id || `anchor-${index + 1}`, macroIds: ids(item.territories), point: { x: item.point?.[0], y: item.point?.[1] } })).filter((item) => item.macroIds.length === 2 && Number.isFinite(item.point.x) && Number.isFinite(item.point.y));
         state.rivers = (config.rivers || []).map((item) => ids(item.territories)).filter((items) => items.length === 2).map(borderKey);
         state.riverBridges = (config.riverBridges || []).map((item) => ids(item.territories)).filter((items) => items.length === 2).map(borderKey);
@@ -4953,24 +4963,13 @@ const currentOwner = ownerByName.get(key);
         state.capitalIds = Object.entries(state.cities).filter(([, level]) => level === 3).map(([macroId]) => Number(macroId));
         state.capitalId = state.capitalIds[0] ?? null;
         if (!ARCANA_LEGACY_SETTLEMENTS_ROADS_FROZEN) automaticRoads(state);
-        // Political ownership is saved against territory codes as well.
-        const savedConquer=legacyTopology&&data.conquer?{
-          ...data.conquer,
-          owners:Object.fromEntries(Object.entries(data.conquer.owners||{})
-            .map(([code,owner])=>[remapSavedCode(code),owner])),
-          factions:(data.conquer.factions||[]).map(faction=>({
-            ...faction,capital:remapSavedCode(faction.capital)
-          }))
-        }:data.conquer;
-        restoreConquerState(savedConquer);
+        restoreConquerState(data.conquer);
         selectedMacro = null;
         selectedMacros = new Set();
         setMenuVisible(false);
         render();
         message.classList.remove('error');
-        message.textContent = legacyTopology
-          ? 'Mappa caricata: vecchia griglia migrata ai nuovi 8 vicini per posizione.'
-          : 'Mappa caricata dal JSON.';
+        message.textContent = 'Mappa caricata dal JSON.';
       }
 
       function loadMapFile(file) {
