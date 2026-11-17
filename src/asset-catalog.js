@@ -162,6 +162,13 @@
     items.push({id:'figure:work:'+action,title,category:'Popolazione',family:'Lavori',kind:'figure',subject:'villager',
       action,tool,key:tool,format:'Animazione',source:'src/settlement-work-anim.js'});
   }
+  // GORE-01 battlefield aftermath (settlement-gore.js): corpses and mutilations as the game draws them.
+  const GORE_TITLES={corpse:'Caduto',arrows:'Caduto trafitto da frecce',decap:'Decapitato',cleave:'Squartato',
+    arm:'Braccio mozzato',crushed:'Schiacciato da una pietra',enemy:'Nemico decapitato (ascia)',field:'Campo dopo la battaglia'};
+  for(const key of window.ConquerGore?.LAB_VARIANTS||[]){
+    items.push({id:'gore:'+key,title:GORE_TITLES[key]||key,category:'Truppe',family:'Campo di battaglia',kind:'gore',key,
+      format:'Effetto 2D',note:'Opzione Gore (DEV · VIOLENZA): svanisce in 2 giorni di gioco.',source:'src/settlement-gore.js'});
+  }
   const wardrobe=window.ConquerWardrobe?.PIECES||{};
   for(const key of Object.keys(wardrobe)){
     items.push({id:'wardrobe:'+key,title:wardrobe[key].label,category:'Popolazione',family:'Abbigliamento stagionale',
@@ -561,6 +568,11 @@
     if(item.kind==='model'||item.kind==='animal'||item.kind==='castle')return renderModel(canvas,item,rotationDegrees,occupancyMode,large?artPaint(item):null);
     if(item.kind==='figure')return renderFigure(canvas,item,rotationDegrees);
     if(item.kind==='wardrobe')return renderWardrobe(canvas,item);
+    if(item.kind==='gore'){
+      const g=canvas.getContext('2d');g.fillStyle='#8f9a6a';g.fillRect(0,0,canvas.width,canvas.height);
+      try{window.ConquerGore.drawLabSample(g,canvas.width,canvas.height,item.key)}
+      catch(error){console.warn('Asset Lab gore thumbnail could not render',item.key,error);placeholder(canvas,'ANTEPRIMA NON DISPONIBILE')}
+    }
   }
   let currentCategory='Tutti',currentFamily='',currentFormat='',query='',selectedId='',selectedRotation=0,selectedItem=null,selectedState=null;
   // ARTE commissioning colours: the inspector of a work of art lets you choose the colour of each

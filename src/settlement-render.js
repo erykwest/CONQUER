@@ -153,6 +153,7 @@ function draw(){
   updateRendererReadout(world3d);
   if(!world3d){drawNo3DNotice(r);endPopulationFrame();return}
   window.ConquerSnowTracks?.draw();
+  window.ConquerGore?.draw();   // battlefield blood, arrows and corpses, under the buildings
 
   // Dynamic placement overlay: switching tools must not invalidate or rebuild the 3D scene.
   drawBuildArea();

@@ -36,6 +36,8 @@ on:
       - 'qa/wolves-regression.cjs'
       - 'qa/outlaws-regression.cjs'
       - 'qa/threats-regression.cjs'
+      - 'src/settlement-gore.js'
+      - 'qa/gore-regression.cjs'
       - 'qa/melee-outnumbered-regression.cjs'
       - 'index.html'
       - 'camp/index.html'
@@ -72,6 +74,8 @@ on:
       - 'qa/wolves-regression.cjs'
       - 'qa/outlaws-regression.cjs'
       - 'qa/threats-regression.cjs'
+      - 'src/settlement-gore.js'
+      - 'qa/gore-regression.cjs'
       - 'qa/melee-outnumbered-regression.cjs'
       - 'index.html'
       - 'camp/index.html'
@@ -97,10 +101,12 @@ jobs:
           node --check src/settlement-wolves.js
           node --check src/settlement-outlaws.js
           node --check src/settlement-threats.js
+          node --check src/settlement-gore.js
       - name: Rendering boundaries and combat behavior
         run: |
           node qa/combat-render-regression.cjs
           node qa/combat-anim-regression.cjs
+          node qa/gore-regression.cjs
           node qa/combat-selection-regression.cjs
           node qa/mass-battle-regression.cjs
           node qa/patrol-regression.cjs

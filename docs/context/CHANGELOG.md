@@ -5,6 +5,10 @@
 
 05/11/2026 — `feature/tower-inner-roof`: BC-251105-05, tetto interno dentro i merli delle torri in pietra T2+ (variante `innerRoof`), nel Builder, nel 2.5D, nel 3D e nel Lab. Piramide: STATUS, BACKLOG, feature-backlog. ROADMAP e DECISIONS invariate: nuova variante estetica, nessun contratto cambiato (le stanze sotto il tetto restano legate al tetto a falde).
 09/11/2026 — CI P2.4 (`perf/ci-p24-specialist-test-ownership-20261109`): rimosse 9 invocazioni test duplicate da Codex Wiki, Main fixes e CAMP, mantenendo owner di regressione in Runtime integrity e settlement-qa (always-on PR). Codex Wiki mantiene Playwright e filtri dei suoi check browser, Main fixes mantiene WebGL/render e UI/Combat, CAMP conserva animali e pattuglie. Aggiunta guardia P2.4 in `qa/ci-p1-regression.cjs`; suite completa P0 e tutte le baseline/test immutate.
+### 2026-11-16 — GORE-01: sangue, frecce, cadaveri e mutilazioni sul campo (opzione)
+
+- Nuovo `src/settlement-gore.js` (ConquerGore): macchie di sangue a ogni colpo, frecce mancate conficcate nel terreno, frecce nei corpi, cadaveri, decapitazioni, squartamenti, braccia mozzate, schiacciati dalle pietre. Dissolvenza lineare come le impronte sulla neve ma in 2 giorni di gioco. Interruttore nel pannello DEV (sezione VIOLENZA), salvato in `localStorage` `conquer.gore.v1`; spento toglie anche il sangue delle cadute. Voci nel Lab (famiglia «Campo di battaglia»). Test `qa/gore-regression.cjs`. ROADMAP e DECISIONS invariate: stato visivo transitorio, nessun salvataggio cambiato.
+
 ### 2026-11-16 — ASSET-AUDIT-261116 · Audit del Lab di nuovo verde
 
 `fix/asset-audit-baseline`: il controllo `sagoma-conservata` confronta le aree disegnate invece della densità nel riquadro (falso errore sulla torre tonda con latrina crollata); baseline `qa/asset-audit-baseline.json` rigenerata dal report della CI dopo la revisione dei render cambiati dal 12/11. Segnalato in BACKLOG il cantiere vuoto delle torri in pietra L2+ nel Lab. ROADMAP e DECISIONS invariate: nessun contratto di gioco cambiato.

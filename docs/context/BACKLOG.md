@@ -7,6 +7,18 @@
 - **APERTO (17/11):** rigenerare `qa/asset-audit-baseline.json` dal branch unito (cantieri ora con assemblaggio); tende di accampamento e fuorilegge dipinte con `ConquerMesh3D.drawMeshes` sul Canvas (da passare al front pass 3D); contatori `cache.*` della telemetria ormai sempre a zero; cantieri di industrie/eventi/moli senza assemblaggio mostrano solo il volume dell'impronta.
 - **SU BRANCH `retire-25d-renderer`:** edifici, torri, mura, porte ed esterni delle stanze solo in World 3D; Asset Lab con controllo `renderer-3d`.
 - **APERTO:** stato «danneggiata» senza segni visibili in 3D (23 avvisi `danno-visibile`); drappo del Mastio come decal 3D; eliminare le funzioni di pittura 2.5D non più chiamate (castle, castle-structures, room-exterior, cutaway-furniture, architecture finestre/portali); ritirare o portare in 3D lo strumento DEV «Prerender + test»; workflow browser che usano `?renderer=canvas2d` (webgpu-smoke, clay-browser) da riallineare al contratto «senza WebGL2 nessun edificio».
+### 2026-11-16 — GORE-01: sangue, frecce e cadaveri sul campo
+
+**IMPLEMENTATO SU BRANCH `feature/gore`, NON MERGE.**
+- [x] Macchie di sangue a ogni colpo (frecce, mischia, pietre), orientate dal colpo.
+- [x] Frecce mancate conficcate nel terreno; frecce ricevute conficcate nel cadavere.
+- [x] Cadaveri con livrea e arma a terra; decapitazioni, squartamenti, braccia mozzate, schiacciati.
+- [x] Dissolvenza come le impronte sulla neve, durata doppia (2 giorni di gioco).
+- [x] Opzione spegnibile (DEV › VIOLENZA), salvata nel browser.
+- [ ] Spostare l'interruttore nelle impostazioni giocatore quando esisterà un menu opzioni fuori dal DEV.
+- [ ] Caduti sui cammini di ronda: oggi restano a quota mura e possono essere coperti dalle mura; valutare la caduta ai piedi del muro.
+- [ ] Battaglia navale e civili uccisi: non lasciano ancora tracce.
+
 ### 2026-11-16 — ASSET-AUDIT-261116 · Audit del Lab
 
 - [x] `sagoma-conservata` misura le aree, non la densità nel riquadro: niente falso errore quando le macerie di un elemento esterno cadono lontano.
