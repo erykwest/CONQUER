@@ -947,6 +947,7 @@
 
   <script src="src/regional-biome-rules.js?v=hills-real-zone-1-flow-30-1-water-network-1"></script>
   <script src="src/regional-hex-capacity.js"></script>
+  <script src="src/regional-micro-voronoi.js"></script>
   <script src="src/regional-topology.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
@@ -3436,6 +3437,8 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         width: state.configuration.width,
         height: state.configuration.height,
         cells: state.cells.map(c => ({ id: c.id, macroId: c.macroId, polygon: c.polygon })),
+        fineCells: state.configuration.fineCells || [],
+        microStats: state.configuration.microStats,
         terrain: { ...state.terrain },
         areaBalance: state.configuration.areaBalance,
         neighbors8: state.configuration.neighbors8,
@@ -3483,6 +3486,15 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         const adventureLayer = svgElement('g', { id: 'adventureLayer' });
         const topSymbolsLayer = svgElement('g', { id: 'topSymbolsLayer' });
         const coastSegments = [];
+        // One GPU-friendly SVG path for 12,600 actual interior Voronoi cells;
+        // the microcell toggle owns its visibility. No SVG nodes per cell.
+        if(state.configuration.microPath)
+          microLayer.appendChild(svgElement('path',{
+            d:state.configuration.microPath,
+            fill:'none',stroke:'#e5e8d9','stroke-opacity':'.45',
+            'stroke-width':'.58','pointer-events':'none',
+            class:'micro-edge'
+          }));
 
         for (const cell of state.cells) {
           const polygon = svgElement('polygon', {
@@ -4504,6 +4516,25 @@ const currentOwner = ownerByName.get(key);
             invalidPolygons||aggregation)
           throw Error('Ogni territorio deve avere una cella Voronoi valida');
         const mean=configuration.width*configuration.height/macros.length;
+        if(configuration.fineCells){
+          const fine=configuration.fineCells;
+          if(fine.length!==cells.length*20)
+            throw Error('Ogni territorio deve avere esattamente 20 sottocelle Voronoi');
+          const totals=new Map();
+          const areaOf=window.ConquerRegionalMicroVoronoi.area;
+          for(const micro of fine){
+            const a=areaOf(micro.polygon);
+            if(micro.polygon.length<3||a<=0||
+               micro.scale<.499999||micro.scale>1.500001)
+              throw Error('Area sottocella Voronoi fuori intervallo ±50%');
+            totals.set(micro.macroId,(totals.get(micro.macroId)||0)+a);
+          }
+          for(const macro of cells){
+            const actual=areaOf(macro.polygon);
+            if(Math.abs((totals.get(macro.macroId)||0)-actual)>actual*1e-6)
+              throw Error('Le 20 sottocelle non coprono il territorio '+macro.macroId);
+          }
+        }
         for(const cell of cells){
           const a=window.ConquerRegionalHexCapacity.area(cell.polygon);
           if(!Number.isFinite(a)||Math.abs(a/mean-1)>.100000001)
@@ -4527,6 +4558,16 @@ const currentOwner = ownerByName.get(key);
           let macros = buildMacros(cells, configuration);
           validateState(cells, macros, configuration);
           const edges = buildEdges(cells);
+          // Twenty convex weighted-Voronoi subcells INSIDE each historical
+          // hex macro territory. Macro polygons, ownership, and 8 proximity
+          // slots never change in this detail-generation step.
+          const micro=window.ConquerRegionalMicroVoronoi.generate(cells,seed);
+          configuration.fineCells=micro.fineCells;
+          configuration.microStats=micro.stats;
+          configuration.microPath=micro.fineCells.map(cell=>
+            'M'+cell.polygon.map((p,i)=>
+              (i?'L':'')+p.x.toFixed(2)+','+p.y.toFixed(2)).join('')+'Z'
+          ).join('');
           // Cache physical border neighbors once. Direct O(1) lookup and
           // independent of the eight logical proximity slots.
           const physical=new Map(cells.map(c=>[c.macroId,new Set()]));
@@ -4573,7 +4614,7 @@ const currentOwner = ownerByName.get(key);
           finalSummary.textContent = `${configuration.finalCols} × ${configuration.finalRows}`;
           mapTitle.textContent = `Mappa Voronoi ${configuration.finalCols} per ${configuration.finalRows}`;
           const shares = configuration.territoryPlan.shares;
-          mapDesc.textContent = `${cells.length} celle Voronoi indipendenti, organizzate in ${state.macros.length} territori: mare ${Math.round(shares.sea * 100)}% in ${configuration.territoryPlan.seaBlobCount} masse, montagne ${Math.round(shares.hills * 100)}% lineari, foreste ${Math.round(shares.forest * 100)}% in ${configuration.territoryPlan.forestBlobCount} masse, pianure ${Math.round(shares.plain * 100)}%. Voronoi esagonale · territorio area ±${(configuration.areaBalance.maxDeviation*100).toFixed(1)}% (max ±10%) · 8 riferimenti logici O(1).`;
+          mapDesc.textContent = `${cells.length} territori Voronoi esagonali, ciascuno con 20 sottocelle interne (totale ${configuration.fineCells.length}), size ±50%: mare ${Math.round(shares.sea * 100)}% in ${configuration.territoryPlan.seaBlobCount} masse, montagne ${Math.round(shares.hills * 100)}% lineari, foreste ${Math.round(shares.forest * 100)}% in ${configuration.territoryPlan.forestBlobCount} masse, pianure ${Math.round(shares.plain * 100)}%. Voronoi esagonale · territorio area ±${(configuration.areaBalance.maxDeviation*100).toFixed(1)}% (max ±10%) · 8 riferimenti logici O(1).`;
           resetMapViewport(configuration);
           svg.style.aspectRatio = `${configuration.width} / ${configuration.height}`;
           selectedMacro = null;
