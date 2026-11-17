@@ -105,7 +105,7 @@
     // every shared edge consistently before warping. This prevents geometric
     // foldovers while keeping each subcell and shared border connected.
     const maxSegment=Math.min(
-      config.width/config.finalCols,config.height/config.finalRows)/12;
+      config.width/config.finalCols,config.height/config.finalRows)/10;
     return cells.map(cell=>{
       const polygon=[];
       const original=cell.polygon;
@@ -122,6 +122,25 @@
       }
       return {...cell,polygon};
     });
+  }
+  function simplePolygon(poly){
+    // Large waves can make a straight approximation of a shared curved edge
+    // cross another nonadjacent edge. Reject that amplitude and back off
+    // rather than publishing self-intersecting polygons or visual cracks.
+    const cross=(a,b,c)=>(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
+    for(let i=0;i<poly.length;i++){
+      const a=poly[i],b=poly[(i+1)%poly.length];
+      for(let j=i+2;j<poly.length;j++){
+        if(i===0&&j===poly.length-1)continue;
+        const c=poly[j],d=poly[(j+1)%poly.length];
+        const u=cross(a,b,c),v=cross(a,b,d),
+              w=cross(c,d,a),z=cross(c,d,b);
+        if(((u>1e-7&&v< -1e-7)||(u< -1e-7&&v>1e-7))&&
+           ((w>1e-7&&z< -1e-7)||(w< -1e-7&&z>1e-7)))
+          return false;
+      }
+    }
+    return true;
   }
   function generate(seed,config){
     const n=config.finalCols*config.finalRows;
@@ -159,7 +178,7 @@
         let invalid=false;
         for(const c of warped){
           const a=area(c.polygon);
-          if(c.polygon.length<3||!Number.isFinite(a)||a<=1e-4){
+          if(c.polygon.length<3||!Number.isFinite(a)||a<=1e-4||!simplePolygon(c.polygon)){
             invalid=true;break;
           }
           areas[c.macroId]+=a;
