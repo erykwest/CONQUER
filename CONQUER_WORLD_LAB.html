@@ -798,7 +798,7 @@
       <div class="field">
         <span class="field-label">Visualizzazione</span>
         <div class="switches">
-          <label class="check" for="showMicro"><input id="showMicro" type="checkbox"> bordi sottocelle</label>
+          <label class="check" for="showMicro"><input id="showMicro" type="checkbox" checked> 20 sottocelle Voronoi per territorio</label>
           <label class="check" for="showLabels"><input id="showLabels" type="checkbox" checked> codici finali</label>
         </div>
       </div>
@@ -3785,7 +3785,7 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
             }
           }
         }
-        svg.append(defsLayer, cellsLayer, campaignLayer, selectedLayer, microLayer, macroLayer, politicalLayer, politicalColorLayer, attackLayer, structureLayer, coastlineLayer, labelsLayer, adventureLayer, capitalLayer, topSymbolsLayer);
+        svg.append(defsLayer, cellsLayer, campaignLayer, selectedLayer, macroLayer, politicalLayer, politicalColorLayer, microLayer, attackLayer, structureLayer, coastlineLayer, labelsLayer, adventureLayer, capitalLayer, topSymbolsLayer);
         updateGridBorderVisibility();
         window.ConquerRegion3DRevision = (window.ConquerRegion3DRevision || 0) + 1;
         if (selectedMacro !== null) selectMacro(selectedMacro);
