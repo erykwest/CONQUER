@@ -1538,7 +1538,9 @@ y: 1.2 + random() * Math.max(1, finalRows - 2.4)
 
       function buildSites(seed, deformation, configuration) {
         const random=mulberry32(seed);
-        const jitter=Math.min(.22,Math.max(0,deformation/100)*.065);
+        // Non-square terrain polygons: staggered Voronoi sites with visible
+        // random deviation. Only the 8-neighbor LOOKUP stays square.
+        const jitter=Math.min(.26,.15+Math.max(0,deformation/100)*.045);
         const sites=[];
         let id=0;
         for(let row=0;row<configuration.finalRows;row++){
@@ -1547,7 +1549,9 @@ y: 1.2 + random() * Math.max(1, finalRows - 2.4)
             if(!territory)throw Error('Missing territory slot '+row+','+col);
             sites.push({
               id:id++,localIndex:0,macroRow:row,macroCol:col,macroId:territory.id,
-              x:(col+.5+(random()-.5)*2*jitter)*TERRITORY_STEP_X,
+              anchorX:(col+.5+(row%2?.245:-.245))*TERRITORY_STEP_X,
+              anchorY:(row+.5)*TERRITORY_STEP_Y,
+              x:(col+.5+(row%2?.245:-.245)+(random()-.5)*2*jitter)*TERRITORY_STEP_X,
               y:(row+.5+(random()-.5)*2*jitter)*TERRITORY_STEP_Y
             });
           }
