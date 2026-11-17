@@ -339,8 +339,10 @@ function drawSoldierSpear(base,scale,bodyW,bodyH,bodyY,headY){
 // The regiment's standard, carried by the herald in his right hand (screen left) in place of the
 // spear; the cloth flies outward, away from the body. Same campaign heraldry raster as tower flags,
 // not a separately generated unit emblem. base: the herald's foot on screen; wavePhase: radians.
+// The standard is three times the old squad flag (product owner, 17/11/2026): mast, cloth and wave.
+const HERALD_STANDARD_SIZE=3;
 function drawHeraldStandard(g,base,id,wavePhase=0){
-  const scale=Math.min(1.45,Math.max(.55,State.view.scale));
+  const scale=Math.min(1.45,Math.max(.55,State.view.scale))*HERALD_STANDARD_SIZE;
   const mastX=soldierSpearHandX(base,5.4*militaryScale()),mastTop=base.y-36*scale;
   const width=14*scale,height=19*scale;
   const wave=Math.sin(wavePhase+(peasantHash(id)%1000)*.00628)*1.1*scale;
