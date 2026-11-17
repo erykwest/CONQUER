@@ -68,8 +68,10 @@
     const target=config.width*config.height/input.length;
     const stepX=config.width/config.finalCols,stepY=config.height/config.finalRows;
     let sites,weights,polys,areas,maxDeviation,passes,shrinkApplied=1;
-    // Scale displacement back only as an emergency fallback. In practice
-    // calibrated site weights converge within a handful of iterations.
+    // Target 3.5% rather than the outer ±10% allowance. The remaining margin
+    // permits a small, continuous organic deformation in the 3D atlas while
+    // guaranteeing its visual territory areas also stay within ±10%.
+    // Scale displacement back only as an emergency fallback.
     for(const shrink of [1,.75,.5,.25,0]){
       shrinkApplied=shrink;
       sites=input.map(site=>({
@@ -82,10 +84,10 @@
         polys=polygons(sites,config,weights);
         areas=polys.map(area);
         maxDeviation=Math.max(...areas.map(a=>Math.abs(a/target-1)));
-        if(maxDeviation<=.095)break;
+        if(maxDeviation<=.035)break;
         for(let i=0;i<sites.length;i++)weights[i]-=(areas[i]-target)*.35;
       }
-      if(maxDeviation<=.095)break;
+      if(maxDeviation<=.035)break;
     }
     if(maxDeviation>.10||areas.some(a=>!Number.isFinite(a)||a<=0))
       throw Error('Territory generation failed ±10% area constraint');
