@@ -327,6 +327,43 @@ function drawAxeAndRoundShield(base,scale,bodyW,bodyH,bodyY,top,pose=null){
   ctx.lineTo(tx+.1*scale,ty+2.0*scale);ctx.closePath();ctx.fill();ctx.stroke();
   ctx.restore();
 }
+// Spear in the soldier's right hand: screen left, since the figure faces the viewer.
+function soldierSpearHandX(base,bodyW){return base.x-bodyW*.55}
+function drawSoldierSpear(base,scale,bodyW,bodyH,bodyY,headY){
+  const x=soldierSpearHandX(base,bodyW);
+  ctx.strokeStyle='#7a5937';ctx.lineWidth=Math.max(1,1.05*scale);
+  ctx.beginPath();ctx.moveTo(x,bodyY+bodyH*.43);ctx.lineTo(x+1.0*scale,headY-13*scale);ctx.stroke();
+  ctx.fillStyle='#b8bcc0';ctx.beginPath();
+  ctx.moveTo(x+1.0*scale,headY-16*scale);ctx.lineTo(x+3.0*scale,headY-11.5*scale);ctx.lineTo(x-1.0*scale,headY-12.2*scale);ctx.closePath();ctx.fill();
+}
+// The regiment's standard, carried by the herald in his right hand (screen left) in place of the
+// spear; the cloth flies outward, away from the body. Same campaign heraldry raster as tower flags,
+// not a separately generated unit emblem. base: the herald's foot on screen; wavePhase: radians.
+function drawHeraldStandard(g,base,id,wavePhase=0){
+  const scale=Math.min(1.45,Math.max(.55,State.view.scale));
+  const mastX=soldierSpearHandX(base,5.4*militaryScale()),mastTop=base.y-36*scale;
+  const width=14*scale,height=19*scale;
+  const wave=Math.sin(wavePhase+(peasantHash(id)%1000)*.00628)*1.1*scale;
+  const topRight={x:mastX,y:mastTop+2*scale};
+  const topLeft={x:mastX-width,y:topRight.y+wave};
+  const bottomRight={x:topRight.x,y:topRight.y+height};
+  const bottomLeft={x:topLeft.x,y:topLeft.y+height};
+  const cloth=()=>{g.beginPath();g.moveTo(topLeft.x,topLeft.y);g.lineTo(topRight.x,topRight.y);
+    g.lineTo(bottomRight.x,bottomRight.y);g.lineTo(bottomLeft.x,bottomLeft.y);g.closePath()};
+  g.save();
+  g.strokeStyle='#705038';g.lineWidth=Math.max(1,1.5*scale);
+  g.beginPath();g.moveTo(mastX,base.y-2*scale);g.lineTo(mastX,mastTop);g.stroke();
+  g.save();cloth();g.clip();
+  const herald=State.heraldry||{},clothTop=Math.min(topLeft.y,topRight.y),clothH=height+Math.abs(wave);
+  if(!window.__conquerHeraldryCanvas?.paint(g,topLeft.x,clothTop,width,clothH)){
+    g.fillStyle=herald.c1||REIGN_COLOR_1;g.fillRect(topLeft.x,clothTop,width,clothH);
+    g.fillStyle=herald.c2||REIGN_COLOR_2;g.fillRect(topLeft.x+width/2,clothTop,width/2,clothH);
+  }
+  g.restore();
+  g.strokeStyle='#e0d3b1';g.lineWidth=Math.max(.7,.85*scale);cloth();g.stroke();
+  g.fillStyle='#c6a461';g.beginPath();g.arc(mastX,mastTop,Math.max(1,1.1*scale),0,Math.PI*2);g.fill();
+  g.restore();
+}
 function drawSoldierFigure(p,z,type,id,phase=0,liveryOverride=null){
   return withUrbanFigureOcclusion(p,z,()=>drawSoldierFigureUnmasked(p,z,type,id,phase,liveryOverride));
 }
@@ -360,14 +397,13 @@ function drawSoldierFigureUnmasked(p,z,type,id,phase=0,liveryOverride=null){
   ctx.fillStyle=VILLAGER_SKIN;ctx.beginPath();ctx.arc(base.x,headY,headR,0,Math.PI*2);ctx.fill();
   drawSoldierHelmet(base.x,headY,headR,liveryOverride?'cap':soldierHelmetStyle(),scale);
 
-  if(type==='spearman'||type==='pikeman'){
-    // Pikemen (battle squad) carry the realm shield on the left arm; patrol guards ('spearman') none.
-    if(type==='pikeman')drawQuarteredShield(base.x-bodyW*.62,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery,'#b7aa8f',scale,!liveryOverride,liveryOverride?'oval':soldierShieldStyle());
-    const x=base.x+bodyW*.55;
-    ctx.strokeStyle='#7a5937';ctx.lineWidth=Math.max(1,1.05*scale);
-    ctx.beginPath();ctx.moveTo(x,bodyY+bodyH*.43);ctx.lineTo(x-1.0*scale,headY-13*scale);ctx.stroke();
-    ctx.fillStyle='#b8bcc0';ctx.beginPath();
-    ctx.moveTo(x-1.0*scale,headY-16*scale);ctx.lineTo(x-3.0*scale,headY-11.5*scale);ctx.lineTo(x+1.0*scale,headY-12.2*scale);ctx.closePath();ctx.fill();
+  if(type==='spearman'||type==='pikeman'||type==='herald'){
+    // The figure faces the viewer: its right hand (spear, standard) is on screen left, the left arm
+    // (shield) on screen right. Pikemen and the regiment's herald carry the realm shield; patrol
+    // guards ('spearman') none. The herald holds the standard instead of the spear (drawn by the
+    // combat overlay, drawSquadStandard).
+    if(type!=='spearman')drawQuarteredShield(base.x+bodyW*.62,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery,'#b7aa8f',scale,!liveryOverride,liveryOverride?'oval':soldierShieldStyle());
+    if(type!=='herald')drawSoldierSpear(base,scale,bodyW,bodyH,bodyY,headY);
   }else if(type==='archer'){
     const bx=base.x+bodyW*.62,by=bodyY-bodyH*.04,r=5.3*scale;
     ctx.strokeStyle='#9b7243';ctx.lineWidth=Math.max(.8,.85*scale);

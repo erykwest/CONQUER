@@ -89,8 +89,9 @@
         ctx.translate(base.x,base.y);ctx.rotate((pose.dirX>0?-1:1)*pose.fall*1.45);ctx.translate(-base.x,-base.y);
       }
       drawSoldierFigureUnmasked(p,z,armed?'unarmed':type,id,phase,livery);
-      if(type==='pikeman')drawSpearShield(base,scale,bodyW,bodyH,bodyY,id,livery,pose);
-      if(type==='spearman'||type==='pikeman')drawSpear(base,scale,bodyW,bodyH,bodyY,headY,pose);
+      if(type==='pikeman'||type==='herald')drawSpearShield(base,scale,bodyW,bodyH,bodyY,id,livery,pose);
+      if(type==='herald'){/* standard instead of the spear: drawn by the combat overlay */}
+      else if(type==='spearman'||type==='pikeman')drawSpear(base,scale,bodyW,bodyH,bodyY,headY,pose);
       else if(type==='axeman'&&typeof drawAxeAndRoundShield==='function')drawAxeAndRoundShield(base,scale,bodyW,bodyH,bodyY,top,pose);
       else if(armed)drawSword(base,scale,bodyW,bodyH,bodyY,top,id,phase,livery,pose);
       if(pose.flash>0){
@@ -120,7 +121,8 @@
     }
   }
   function drawSpear(base,scale,bodyW,bodyH,bodyY,headY,pose){
-    const x=base.x+bodyW*.55,gy=bodyY+bodyH*.43;
+    // Right hand of a figure facing the viewer: screen left.
+    const x=soldierSpearHandX(base,bodyW),gy=bodyY+bodyH*.43;
     // Pikes lower toward the foe while engaged and drive home on the thrust.
     const lowered=Math.min(1,pose.ready*.8+Math.max(0,pose.attack)*.2);
     const theta=wrapAngle(Math.atan2(pose.dirY,pose.dirX)+Math.PI/2)*lowered;
@@ -128,15 +130,15 @@
     ctx.save();
     ctx.translate(x,gy);ctx.rotate(theta);ctx.translate(0,-ext);ctx.translate(-x,-gy);
     ctx.strokeStyle='#7a5937';ctx.lineWidth=Math.max(1,1.05*scale);
-    ctx.beginPath();ctx.moveTo(x,gy);ctx.lineTo(x-1.0*scale,headY-13*scale);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x,gy);ctx.lineTo(x+1.0*scale,headY-13*scale);ctx.stroke();
     ctx.fillStyle='#b8bcc0';ctx.beginPath();
-    ctx.moveTo(x-1.0*scale,headY-16*scale);ctx.lineTo(x-3.0*scale,headY-11.5*scale);ctx.lineTo(x+1.0*scale,headY-12.2*scale);ctx.closePath();ctx.fill();
+    ctx.moveTo(x+1.0*scale,headY-16*scale);ctx.lineTo(x+3.0*scale,headY-11.5*scale);ctx.lineTo(x-1.0*scale,headY-12.2*scale);ctx.closePath();ctx.fill();
     ctx.restore();
   }
-  // Pikeman's shield: on the left arm (the spear stays in the right hand), pushed toward the foe on guard.
+  // Pikeman's / herald's shield: on the left arm (screen right), pushed toward the foe on guard.
   function drawSpearShield(base,scale,bodyW,bodyH,bodyY,id,livery,pose){
     const guard=pose.ready*1.2*scale;
-    drawQuarteredShield(base.x-bodyW*.62+pose.dirX*guard,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery||soldierLivery(id),'#b7aa8f',scale,!livery,livery?'oval':soldierShieldStyle());
+    drawQuarteredShield(base.x+bodyW*.62+pose.dirX*guard,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery||soldierLivery(id),'#b7aa8f',scale,!livery,livery?'oval':soldierShieldStyle());
   }
   function drawSword(base,scale,bodyW,bodyH,bodyY,top,id,phase,livery,pose){
     const side=pose.dirX>=0?1:-1,swing=Math.sin(phase*Math.PI*2)*3.2*scale*(1-pose.ready);

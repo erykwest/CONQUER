@@ -4,8 +4,9 @@
 
 **Picchieri con scudo implementati sul branch `fix/squad-pikemen-shield`, non ancora uniti a main.** Richiesta del product owner (17/11/2026): tre figure militari distinte.
 
-- [x] Picchieri (squadra da 5): lancia nella mano destra e scudo del regno sul braccio sinistro (nuovo tipo di figura `pikeman`).
-- [ ] Picchieri: l'alfiere porta lo stendardo **al posto** della lancia (oggi lo ha in più).
+- [x] Picchieri (squadra da 5): scudo del regno sul braccio sinistro (nuovo tipo di figura `pikeman`).
+- [x] Lancia nella mano **destra del soldato**: la figura guarda chi osserva, quindi la lancia è sul lato sinistro dello schermo e lo scudo sul destro. Vale per tutte le figure con lancia (guardie, picchieri, leva, ostili).
+- [x] Lo stendardo lo porta solo l'**araldo del reggimento** (il primo della squadra, figura `herald`), **al posto** della lancia, con lo scudo.
 - [ ] Guardie (pattuglia da 2): lancia senza scudo; di notte il portatorcia tiene **anche** la lancia (oggi la torcia la sostituisce, figura `unarmed`).
 - [ ] Leva (popolani all'allarme o in leva straordinaria): niente livrea piena, solo un cappuccio coi colori della livrea sopra gli abiti di classe; con lancia e scudo, oppure arcieri di leva con l'arco. Oggi `dot.militia` disegna un fante in livrea piena (`settlement-population-figures.js`). Una versione col cappuccio non esiste in nessun branch o commit.
 

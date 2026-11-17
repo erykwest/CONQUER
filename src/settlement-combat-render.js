@@ -149,38 +149,9 @@
     g.drawImage(backdrop,0,0);
     g.restore();
   }
-  // Infantry standards use the same campaign heraldry raster as tower flags,
-  // not a separately generated unit emblem.
+  // The regiment's standard (drawHeraldStandard, settlement-population-figures.js), waving with the day.
   function drawSquadStandard(p,id,z=.08){
-    const base=w2s(p,z),scale=clamp(State.view.scale,.55,1.45);
-    const mastX=base.x+5*scale,mastTop=base.y-36*scale;
-    const width=14*scale,height=19*scale;
-    const wave=Math.sin(visualCycleDay()*18+(peasantHash(id)%1000)*.00628)*1.1*scale;
-    const topLeft={x:mastX,y:mastTop+2*scale};
-    const topRight={x:mastX+width,y:topLeft.y+wave};
-    const bottomRight={x:topRight.x,y:topRight.y+height};
-    const bottomLeft={x:topLeft.x,y:topLeft.y+height};
-    g.save();
-    g.strokeStyle='#705038';g.lineWidth=Math.max(1,1.5*scale);
-    g.beginPath();g.moveTo(mastX,base.y-2*scale);g.lineTo(mastX,mastTop);g.stroke();
-    g.save();
-    g.beginPath();g.moveTo(topLeft.x,topLeft.y);g.lineTo(topRight.x,topRight.y);
-    g.lineTo(bottomRight.x,bottomRight.y);g.lineTo(bottomLeft.x,bottomLeft.y);
-    g.closePath();g.clip();
-    const herald=State.heraldry||{};
-    if(!window.__conquerHeraldryCanvas?.paint(g,topLeft.x,Math.min(topLeft.y,topRight.y),width,height+Math.abs(wave))){
-      g.fillStyle=herald.c1||REIGN_COLOR_1;
-      g.fillRect(topLeft.x,topLeft.y,width,height+Math.abs(wave));
-      g.fillStyle=herald.c2||REIGN_COLOR_2;
-      g.fillRect(topLeft.x+width/2,topLeft.y,width/2,height+Math.abs(wave));
-    }
-    g.restore();
-    g.strokeStyle='#e0d3b1';g.lineWidth=Math.max(.7,.85*scale);
-    g.beginPath();g.moveTo(topLeft.x,topLeft.y);g.lineTo(topRight.x,topRight.y);
-    g.lineTo(bottomRight.x,bottomRight.y);g.lineTo(bottomLeft.x,bottomLeft.y);
-    g.closePath();g.stroke();
-    g.fillStyle='#c6a461';g.beginPath();g.arc(mastX,mastTop,Math.max(1,1.1*scale),0,Math.PI*2);g.fill();
-    g.restore();
+    drawHeraldStandard(g,w2s(p,z),id,visualCycleDay()*18);
   }
   // One torch-bearer per two-man patrol: the light is held above the leading
   // soldier's right hand, rather than being a stationary world fixture.
@@ -300,8 +271,10 @@
             p={x:u.x+offset,y:u.y+(row-.4)*spacing};
           }
           const torch=u.kind==='patrol'&&i===0&&window.ConquerCamp?.isNight();
-          // Battle squad (pikemen) carry shields; patrol guards spear only.
-          characters.push({p,type:torch?'unarmed':u.kind==='squad'?'pikeman':'spearman',id:u.id+':'+i,
+          // Battle squad: pikemen with shields, the first man is the regiment's herald (standard
+          // instead of the spear). Patrol guards: spear only.
+          const squadType=i===0?'herald':'pikeman';
+          characters.push({p,type:torch?'unarmed':u.kind==='squad'?squadType:'spearman',id:u.id+':'+i,
             flag:u.kind==='squad'&&i===0,torch,unit:u,index:i,z});
         }
       }

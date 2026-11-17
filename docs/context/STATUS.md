@@ -1,11 +1,14 @@
 # Livello 2 — Stato tecnico e prove
 
-### 2026-11-17 — MIL-FIG-01: picchieri con scudo (`fix/squad-pikemen-shield`)
+### 2026-11-17 — MIL-FIG-01: picchieri con scudo, araldo con lo stendardo (`fix/squad-pikemen-shield`)
 
-- **Codice sul branch, non ancora unito a main.** Prima, guardie (pattuglia) e picchieri (squadra) erano la stessa figura `spearman`, senza scudo. Nuovo tipo di figura `pikeman`: stessa lancia nella mano destra più lo scudo del regno sul braccio sinistro. Lo scudo usa la forma scelta in Militare › Equipaggiamento (`unitShield`) e in ingaggio avanza verso il nemico come quello del cavaliere a piedi.
-- File: `settlement-population-figures.js` (figura statica), `settlement-combat-anim.js` (`drawSpearShield`, figura in posa), `settlement-combat-render.js` (la squadra usa `pikeman`, la pattuglia resta `spearman`). Asset Lab: pulsante «Picchiere», voce di catalogo «Picchiere (squadra)», picchieri della scaramuccia con scudo.
-- **Verificato nel Lab** (Chromium del pannello): guardia senza scudo, picchiere con scudo in tutte e cinque le forme, ingaggio verso destra e verso sinistra, nessun errore in console.
-- **Prove locali PASS:** combat-anim, combat-render, patrol, camp, combat-engage, night-vision. Audit del Lab (`qa/asset-audit.mjs`) non eseguito in locale (Playwright non installato): lo esegue la CI.
+- **Codice sul branch, non ancora unito a main.** Prima, guardie (pattuglia) e picchieri (squadra) erano la stessa figura `spearman`, senza scudo, e il primo della squadra aveva lo stendardo in più della lancia.
+- **Mano giusta:** la figura guarda chi osserva, quindi la mano destra è sul lato sinistro dello schermo. La lancia (`drawSoldierSpear`, `soldierSpearHandX`) ora è lì, lo scudo sul lato opposto. Vale per tutte le figure con lancia: guardie, picchieri, leva, ostili, equipaggi del Lab.
+- **Picchieri** (`pikeman`): lancia più scudo del regno, nella forma di Militare › Equipaggiamento (`unitShield`); in ingaggio lo scudo avanza verso il nemico.
+- **Araldo del reggimento** (`herald`, il primo della squadra): scudo e stendardo **al posto** della lancia; è l'unico con lo stendardo. Il disegno dello stendardo è passato da `settlement-combat-render.js` a `drawHeraldStandard` in `settlement-population-figures.js`, così lo usa anche il Lab; il drappo sventola verso l'esterno, lontano dal corpo.
+- Asset Lab: pulsanti «Picchiere» e «Araldo», voci di catalogo, picchieri della scaramuccia con scudo. Test adeguati allo spostamento dello stendardo: `qa/camp-regression.cjs`, `qa/combat-render-regression.cjs`.
+- **Verificato nel Lab** (Chromium del pannello): guardia, picchiere, araldo, leva e ostile fermi e in ingaggio verso entrambi i lati; picchiere con tutte e cinque le forme di scudo; nessun errore in console.
+- **Prove locali PASS:** combat-anim, combat-render, patrol, camp, combat-engage, night-vision, asset-catalog, wardrobe, outlaws, mass-battle, wall-patrol, diplomacy, wolves, zones-visual. Non eseguiti in locale (Playwright non installato), li esegue la CI: audit del Lab (`qa/asset-audit.mjs`), `qa/ui-combat-regression.mjs`.
 
 ### 2026-11-16 — ASSET-AUDIT-261116: audit completo del Lab di nuovo verde
 

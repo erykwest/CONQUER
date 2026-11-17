@@ -1,8 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
 
-### 2026-11-17 — MIL-FIG-01 · Picchieri con scudo
+### 2026-11-17 — MIL-FIG-01 · Picchieri con scudo, araldo con lo stendardo
 
-`fix/squad-pikemen-shield`: i picchieri della squadra portano lo scudo del regno sul braccio sinistro, con la lancia a destra (nuova figura `pikeman`); le guardie di pattuglia restano senza scudo. Il Lab ha la voce «Picchiere». In BACKLOG le altre richieste aperte: stendardo al posto della lancia, torcia in più della lancia per le guardie di notte, leva col cappuccio in livrea. ROADMAP e DECISIONS invariate: è un cambio di sola resa.
+`fix/squad-pikemen-shield`: lancia nella mano destra del soldato (lato sinistro dello schermo, la figura guarda chi osserva) per tutte le figure con lancia. I picchieri della squadra hanno lo scudo del regno (figura `pikeman`); il primo è l'araldo del reggimento (figura `herald`), l'unico con lo stendardo, che porta al posto della lancia. Le guardie di pattuglia restano senza scudo. Il Lab ha le voci «Picchiere» e «Araldo». In BACKLOG restano aperte la torcia in più della lancia per le guardie di notte e la leva col cappuccio in livrea. ROADMAP e DECISIONS invariate: è un cambio di sola resa.
 
 ### 2026-11-16 — ASSET-AUDIT-261116 · Audit del Lab di nuovo verde
 

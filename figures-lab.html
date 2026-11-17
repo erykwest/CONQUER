@@ -116,7 +116,7 @@ body.asset-catalog-static #labLegacyControls{display:none}
     <button data-subject="wolf">Lupo</button><button data-subject="bear">Orso</button><button data-subject="boar">Cinghiale</button>
   </div>
   <div class="group" role="group" aria-label="Persone"><span>Persone</span>
-    <button data-subject="villager">Popolano</button><button data-subject="spearman">Guerriero</button><button data-subject="pikeman">Picchiere</button>
+    <button data-subject="villager">Popolano</button><button data-subject="spearman">Guerriero</button><button data-subject="pikeman">Picchiere</button><button data-subject="herald">Araldo</button>
     <button data-subject="archer">Arciere</button><button data-subject="knight">Cavaliere</button>
   </div>
   <div class="group" role="group" aria-label="A cavallo"><span>A cavallo</span>
@@ -263,7 +263,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 (function(){
   const A=window.ConquerAnimals,CA=window.ConquerCombatAnim,WA=window.ConquerWorkAnim,W2=window.ConquerWagons,c=document.getElementById('c'),g=c.getContext('2d');
   const $=id=>document.getElementById(id);
-  const ANIMALS=['sheep','goat','cow','horse','deer','stag','wolf','bear','boar'],DOMESTIC=['sheep','goat','cow','horse'],SOLDIERS=['spearman','pikeman','archer','knight'],RIDERS=['mounted','messenger'];
+  const ANIMALS=['sheep','goat','cow','horse','deer','stag','wolf','bear','boar'],DOMESTIC=['sheep','goat','cow','horse'],SOLDIERS=['spearman','pikeman','herald','archer','knight'],RIDERS=['mounted','messenger'];
   const ACTIONS={ship:[['cycle','Alza e abbassa'],['set','Vele spiegate'],['furl','Vele alzate']],rider:[['idle','Fermo'],['walk','Passo'],['run','Carica'],['attack','Attacco'],['die','Caduta']],siege:[['idle','Fermo'],['move','In marcia'],['fire','Tiro']],animal3d:[['walk','Walking'],['browse','Browse'],['run','Corsa']],vehicle:[['move','In marcia'],['stop','Fermo']],animal:[['walk','Walking'],['browse','Browse']],soldier:[['guard','Guardia'],['attack','Attacco'],['die','Morte']],villager:[['idle','Fermo'],['dig','Pala'],['chop','Ascia'],['pick','Piccone'],['build','Martello'],['plough','Zappa'],['sow','Semina'],['harvest','Falce']]};
   // Siege actions per engine: what 'fire' means, and the trebuchet's set-up.
   function siegeActions(e){
@@ -340,6 +340,8 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     for(const [x,y,s] of sizes){
       const hp={x,y},fp={x:x+(subject==='archer'?16:13)*s,y};
       drawPerson(subject,hp,s*2,hero,fp,null);
+      // The regiment's herald holds the standard in place of the spear.
+      if(subject==='herald'&&!CA.dying(hero)){State.view.scale=s*2;ctx=g;drawHeraldStandard(g,hp,'lab-herald',clock*3)}
       drawPerson('spearman',fp,s*2,foe,hp,HOSTILE);
     }
     drawArrows();
