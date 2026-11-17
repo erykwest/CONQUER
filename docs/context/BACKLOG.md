@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-16 — Braciere 3D
+
+- [x] Corpo del braciere di torri e porte in pietra nella mesh del castello (test di profondità), su branch `fix/brazier-3d`.
+- [x] Braciere della torre a palizzata di legno nel modello Blender (build_wood_fort.py).
+- [x] Bandiere dei tetti a punta e delle bertesche in 3D, come le navi; supporti 3D delle torce delle torri; alone del fuoco non più tagliato dalla facciata.
+- [ ] Fumo dei comignoli: resta un effetto 2D (non struttura).
 ## 2026-11-16 — Assedio: aperti dopo il merge di main
 
 - **APERTO:** fasi di sollevamento della scala e del ponte della torre d'assalto nel combattimento vero (oggi solo nell'anteprima `?siege=`); voce wiki per l'ariete leggero; regola mura/porte verso l'esterno anche al momento della costruzione (oggi al caricamento); assedio lungo con i due arieti e il trabucco; prestazioni delle ricerche di percorso.
@@ -19,6 +25,7 @@
 - **IMPLEMENTATO E TESTATO LOCALMENTE:** integrazione circle con il ledger Siege, cattura/riconquista e salvataggio; agganci di breccia e navigazione; ripresa della campagna dopo ariete/scale/torri; collegamento delle brecce alla porta interna; ripiegamento dalle mura e dalla mischia.
 - **QA BROWSER:** variante TEST con due cinte e mastio interno, 43 assalitori / 5 difensori, prova 60 s conclusa: 0 assalitori e 1 difensore caduti, 0 conquiste, settore esterno conteso, mastio sicuro. Tick massimo 10,7 s; [report](../qa/combat-ai-circle-2026-11-06.md). Il layout originale non chiude una cinta per il raster: trattare distintamente i due scenari.
 - **RESIDUI:** piazzamento autonomo di scale/torri (oggi il piano arma l'ariete; scale e torri già assegnate sono usate), profilazione dei picchi delle ricerche di percorso, riconciliazione generale con main separata. Nessuna chiusura delle milestone strategiche o dell'assedio completo.
+
 ### 2026-11-16 — MOVE-LAG-261116 · Lag sull'ordine di movimento
 
 - [x] L'ordine di movimento con percorso aggirante non blocca più il gioco per secondi (snapshot degli ostacoli nei controlli d'ingombro militari).
