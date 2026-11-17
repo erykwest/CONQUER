@@ -125,7 +125,6 @@ console.log('PASS with a dovecote letters arrive by pigeon 4x faster and the ans
 // ---------- visual wiring: the lantern on the roof, the cutaway room, the Lab
 const lantern=src('settlement-castle-structures.js');
 assert.match(lantern,/function dovecoteTriangles\(s\)\{\n  const data=window\.ConquerDovecoteModels;if\(!data\|\|typeof towerDovecote!=='function'\|\|!towerDovecote\(s\)\)return\[\];/);
-assert.match(lantern,/drawDovecote\(s\);/);
 assert.match(src('settlement-castle3d.js'),/for\(const t of dovecoteTriangles\(s\)\)m\.face/);
 const model=vm.runInNewContext(src('assets/dovecote-models.js')+';window.ConquerDovecoteModels',{window:{}});
 assert.deepEqual(Object.keys(model.models.lantern.parts),['frame','walls','ledges','roof','pigeons']);

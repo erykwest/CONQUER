@@ -33,10 +33,6 @@ function facadeAssetWorldSpan(edge,width,offsetWorld=0){
   const mx=(edge.a.x+edge.b.x)/2+ux*offsetWorld,my=(edge.a.y+edge.b.y)/2+uy*offsetWorld;
   return{a:{x:mx-ux*width/2,y:my-uy*width/2},b:{x:mx+ux*width/2,y:my+uy*width/2}};
 }
-function drawFacadeAssetBackdrop(edge,centerZ,width,height,offsetWorld=0,fill='#211f1d'){
-  const span=facadeAssetWorldSpan(edge,width,offsetWorld),z0=centerZ-height/2,z1=centerZ+height/2;
-  pathPolygon([w2s(span.a,z0),w2s(span.b,z0),w2s(span.b,z1),w2s(span.a,z1)],fill,null);
-}
 function drawArchitectureAssetOnEdge(edge,centerZ,width,height,key,offsetWorld=0,lit=false,nf=1,opacity=1){
   const img=architectureSprite(key);if(!img)return false;
   const span=facadeAssetWorldSpan(edge,width,offsetWorld),z0=centerZ-height/2,z1=centerZ+height/2;
@@ -83,7 +79,6 @@ function interiorFacadeEdgeIndex(s){
   }
   return best;
 }
-function isInteriorFacadeEdge(s,edge){return Number.isFinite(edge?.index)&&edge.index===interiorFacadeEdgeIndex(s)}
 function gothicAssetForLevel(s){return structureLevel(s)>=2?'gothicL2':'gothicL1'}
 function gothicAssetSizeForLevel(s){const l=structureLevel(s);return l>=2?{w:.68,h:.78}:{w:.54,h:.70}}
 function towerGothicAssetForRow(s,row){
@@ -98,36 +93,9 @@ function towerGothicAssetSizeForRow(s,row){
   const t=clamp(towerTier(s),1,3),scale=t===1?.56:t===2?.76:.94;
   return{w:base.w*scale,h:base.h*scale};
 }
-function roundTowerFacadeEdges(s){
-  const iv=structureInteriorVector(s),base=Math.atan2(iv.y,iv.x),r=Math.max(.2,Number(s.r)||.5)+.006,span=Math.min(.54,r*.95);
-  const centerDepth=viewDepthPoint({x:s.x,y:s.y}),out=[];
-  for(let i=0;i<4;i++){const a=base+i*Math.PI/2,ox=Math.cos(a),oy=Math.sin(a),tx=-oy,ty=ox,c={x:s.x+ox*r,y:s.y+oy*r};if(viewDepthPoint(c)<centerDepth-.015)continue;out.push({a:{x:c.x-tx*span/2,y:c.y-ty*span/2},b:{x:c.x+tx*span/2,y:c.y+ty*span/2},index:i,interior:i===0})}
-  return out;
-}
 
-function gateFacadeEdges(s){
-  const fp=footprintPoints(s);if(fp.length<4)return[];
-  const defs=[{a:fp[0],b:fp[1],role:'side',index:0},{a:fp[1],b:fp[2],role:'front',index:1},{a:fp[2],b:fp[3],role:'side',index:2},{a:fp[3],b:fp[0],role:'rear',index:3}];
-  for(const e of defs){const a=w2s(e.a,0),b=w2s(e.b,0);e.depth=(a.y+b.y)/2}defs.sort((a,b)=>b.depth-a.depth);return defs.slice(0,2);
-}
 // Closed portal of a stone gate: .90×1.35 on the gatehouse, smaller on the small gate.
 function gateClosedPortal(s){return window.ConquerGates?.closedPortal?.(s)||{width:.9,height:1.35,centerZ:.705}}
-function drawGatePortalOnEdge(edge,s,key='gatePortal'){
-  const d=gateClosedPortal(s);
-  if(drawArchitectureAssetOnEdge(edge,d.centerZ,d.width,d.height,key))return;
-  const k=d.height/1.35,dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,cx=(edge.a.x+edge.b.x)/2,cy=(edge.a.y+edge.b.y)/2,half=d.width*.433;
-  const l={x:cx-ux*half,y:cy-uy*half},r={x:cx+ux*half,y:cy+uy*half};pathPolygon([w2s(l,.03),w2s(r,.03),w2s(r,1.05*k),w2s({x:cx,y:cy},1.38*k),w2s(l,1.05*k)],'#241a16','#9a7458',1);
-}
-function drawGatePortals(){
-  for(const s of State.structures){
-    if(s.type!=='gate'||isWoodGate(s)||underConstruction(s))continue;
-    withStructureGroundPlane(s,()=>withStructureDetailOcclusion(s,1.38,()=>{
-      for(const edge of gateFacadeEdges(s)){
-        if(edge.role==='front'||edge.role==='rear')drawGatePortalOnEdge(edge,s);
-      }
-    }));
-  }
-}
 // One row per room: the ground floor is the passage (no window), each storey above has one.
 // A timber upper storey has house windows in its frame instead (gateTimberFacade).
 function gateWindowRows(s){
@@ -156,38 +124,6 @@ function gateTimberFacade(s){
 const GATE_FACADE_FRONT=1,GATE_FACADE_REAR=3;
 // Slits along a gate face: two side by side on the field front, one on the flanks.
 function gateSlitOffsets(edge){return edge.index===GATE_FACADE_FRONT?[-.26,.26]:[0]}
-function drawGateWindows(s,lit=false,nf=1){
-  const key=gothicAssetForLevel(s),sz=gothicAssetSizeForLevel(s);
-  for(const z of gateWindowRows(s))withStructureDetailOcclusion(s,z,()=>{
-    for(const edge of gateFacadeEdges(s)){
-      const paint=()=>isInteriorFacadeEdge(s,edge)
-        ?drawArchitectureAssetOnEdge(edge,z,sz.w,sz.h,key,0,lit,nf)
-        :gateSlitOffsets(edge).forEach(o=>drawArchitectureAssetOnEdge(edge,z,.24,.62,'arrowSlit',o));
-      // The nighttime glow pass runs after the drawbridge. Mask only its
-      // exterior-facing facade, preserving windows on the unobstructed sides.
-      if(edge.role==='front'&&window.ConquerCrossings?.withDrawbridgeWindowOcclusion)
-        window.ConquerCrossings.withDrawbridgeWindowOcclusion(s,paint);
-      else paint();
-    }
-  });
-}
-function visibleFacadeEdges(s){
-  const parts=s.type==='house'?urbanHouseDisplayParts(s).filter(p=>p.kind!=='turret'&&p.kind!=='outbuilding'):null;
-  const rings=parts?parts.map(p=>p.points):[towerFacadePoints(s)],edges=[];
-  for(const fp of rings){
-    if(fp.length<4)continue;
-    const faces=[];
-    for(let i=0;i<fp.length;i++){
-      const j=(i+1)%fp.length,a=w2s(fp[i],0),b=w2s(fp[j],0);
-      faces.push({a:fp[i],b:fp[j],index:i,depth:(a.y+b.y)/2});
-    }
-    faces.sort((a,b)=>b.depth-a.depth);
-    edges.push(...(parts?.length>1||(parts?.length>=1&&(s.auto||s.urbanRedeveloped)&&houseLevel(s)>=3)?faces.slice(0,2):faces));
-  }
-  edges.sort((a,b)=>b.depth-a.depth);
-  // Multi-volume houses (L/T plans, townhouse rows) keep the two camera-facing walls of every volume.
-  return parts?.length>1||(parts?.length>=1&&(s.auto||s.urbanRedeveloped)&&houseLevel(s)>=3)?edges:edges.slice(0,s.type==='house'&&houseLevel(s)>=3?4:2);
-}
 function cutawayOpenEdgeIndexes(s){
   if(!structureCutaway(s))return null;
   return cutawayTransparentFaceIndexes(s,cutawayWallGeometry(s));
@@ -195,7 +131,6 @@ function cutawayOpenEdgeIndexes(s){
 function cutawayEdgeIsOpen(s,index){
   return !!cutawayOpenEdgeIndexes(s)?.has(index);
 }
-function cutawayFacadeOpacity(s){return structureCutaway(s)?.20:1}
 function closestFootprintEdge(s,p){
   const fp=footprintPoints(s);if(fp.length<2)return null;
   let best=null,bestD=Infinity;
@@ -351,87 +286,6 @@ function towerDoorVisible(tower,spec){
   // removing them together with the opened shell.
   return viewDepthPoint(spec.contact)>=viewDepthPoint({x:tower.x,y:tower.y})-.015;
 }
-function towerDoorOccluders(tower,spec,apexZ){
-  const ownerDepth=worldDepth(tower);
-  return State.structures.filter(o=>{
-    if(o.id===tower.id||underConstruction(o)||(!isCastlePart(o)&&!isRaisedPlacementCastlePoint(o)))return false;
-    if(structureVisualTopHeight(o)<=spec.baseZ+.025)return false;
-
-    // Connected/overlapping structures always mask the doorway where their
-    // actual volume crosses the tower facade.
-    if(structuresOverlapInPlan(tower,o))return true;
-
-    // Otherwise ordinary camera depth determines foreground masking.
-    return worldDepth(o)>ownerDepth+1e-4;
-  });
-}
-function drawTowerDoorSpec(tower,spec){
-  if(!towerDoorVisible(tower,spec))return;
-  const tier=towerTier(tower),width=clamp(.38+tier*.045,.42,.54)*1.5,fullHeight=Math.max(.18,spec.apexZ-spec.baseZ),height=fullHeight/3*1.5,centerZ=spec.baseZ+height/2,tx=spec.tangent.x,ty=spec.tangent.y,c=spec.contact,half=width/2;
-  const edge={a:{x:c.x-tx*half,y:c.y-ty*half},b:{x:c.x+tx*half,y:c.y+ty*half}},apexZ=spec.baseZ+height,opacity=cutawayFacadeOpacity(tower);
-  const drawDoor=()=>{
-    if(drawArchitectureAssetOnEdge(edge,centerZ,width,height,'towerDoor',0,false,1,opacity))return;
-    ctx.save();ctx.globalAlpha*=opacity;drawFacadeAssetBackdrop(edge,centerZ,width,height,0,'#211713');ctx.restore();
-  };
-  const occ=towerDoorOccluders(tower,spec,apexZ);if(!occ.length){drawDoor();return}
-  const rr=wrap.getBoundingClientRect();ctx.save();
-  clipOutsideHulls(occ.map(structureScreenSilhouette),-48,-48,rr.width+96,rr.height+96);
-  drawDoor();ctx.restore();
-}
-function drawTowerDoors(){
-  for(const tower of State.structures){
-    if(tower.type!=='tower'||isWoodTower(tower)||underConstruction(tower))continue;
-    withStructureGroundPlane(tower,()=>{
-      for(const spec of towerDoorSpecs(tower))drawTowerDoorSpec(tower,spec);
-    });
-  }
-}
-function drawWindowOnEdge(edge,z=.48,lit=false,nf=1,offsetPx=0){
-  const mx=(edge.a.x+edge.b.x)/2,my=(edge.a.y+edge.b.y)/2;
-  const base=w2s({x:mx,y:my},z),a=w2s(edge.a,z),b=w2s(edge.b,z);
-  const dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
-  const ww=2.1*State.view.scale,wh=3.25*State.view.scale;
-  const cx=base.x+ux*offsetPx,cy=base.y+uy*offsetPx;
-  const corners=[
-    {x:cx-ux*ww/2,y:cy-uy*ww/2-wh/2},
-    {x:cx+ux*ww/2,y:cy+uy*ww/2-wh/2},
-    {x:cx+ux*ww/2,y:cy+uy*ww/2+wh/2},
-    {x:cx-ux*ww/2,y:cy-uy*ww/2+wh/2}
-  ];
-  ctx.save();
-  if(lit){
-    ctx.shadowColor='rgba(255,190,80,'+(.72*nf)+')';ctx.shadowBlur=clamp(9*State.view.scale,4,12);
-    pathPolygon(corners,'rgba(255,213,118,'+(.92*nf)+')','rgba(90,58,24,.72)',.8);
-  }else pathPolygon(corners,'rgba(35,29,24,.82)','rgba(170,139,96,.38)',.7);
-  ctx.restore();
-}
-// Mastio heraldry hangs below the sill of the castle-interior-facing window.
-// Paint in the same projected facade plane as the existing architectural art.
-function drawMastioWindowDrape(s,edge,windowZ,windowWidth,windowHeight,opacity=1){
-  if(!s.isMastio||!edge||structureCutaway(s))return;   // no drape on an opened (cutaway) keep
-  const width=Math.max(.30,windowWidth*1.08),height=.64;
-  const topZ=windowZ-windowHeight/2-.055;
-  const span=facadeAssetWorldSpan(edge,width),lt=w2s(span.a,topZ),rt=w2s(span.b,topZ),lb=w2s(span.a,topZ-height);
-  ctx.save();
-  ctx.globalAlpha*=clamp(opacity,0,1);
-  ctx.transform((rt.x-lt.x)/100,(rt.y-lt.y)/100,
-    (lb.x-lt.x)/120,(lb.y-lt.y)/120,lt.x,lt.y);
-  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(100,0);ctx.lineTo(100,120);
-  ctx.lineTo(50,105);ctx.lineTo(0,120);ctx.closePath();
-  ctx.fillStyle='#322218';ctx.fill();ctx.clip();
-  const herald=State.heraldry||{};
-  if(!window.__conquerHeraldryCanvas?.paint(ctx,0,0,100,120)){
-    ctx.fillStyle=herald.c1||REIGN_COLOR_1;ctx.fillRect(0,0,100,120);
-    ctx.fillStyle=herald.c2||REIGN_COLOR_2;ctx.fillRect(50,0,50,120);
-  }
-  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(100,0);ctx.lineTo(100,120);
-  ctx.lineTo(50,105);ctx.lineTo(0,120);ctx.closePath();
-  ctx.strokeStyle='rgba(244,222,179,.84)';ctx.lineWidth=3.3;ctx.stroke();
-  // Rod fixed directly beneath the stone or timber sill.
-  ctx.beginPath();ctx.moveTo(-5,0);ctx.lineTo(105,0);
-  ctx.strokeStyle='#9d8253';ctx.lineWidth=6;ctx.stroke();
-  ctx.restore();
-}
 function towerLevelHeight(s,level){
   const t=towerTier(s);
   return [2.35,3.55,4.75,5.95][clamp(level,1,maxStructureLevel(s))-1]+(t-1)*.12;
@@ -517,26 +371,6 @@ function towerWindowRows(s){
   if(l===1&&s.isMastio)rows.push({floor:1,z:1.53});
   for(let floor=2;floor<=l;floor++)rows.push({floor,z:towerOpeningZ(s,floor)});
   return rows.filter(r=>r.z<structureHeight(s)-.28);
-}
-function drawRoundTowerWindowRow(s,row,lit=false,nf=1){
-  const key=towerGothicAssetForRow(s,row),sz=towerGothicAssetSizeForRow(s,row),opacity=cutawayFacadeOpacity(s);if(!key)return;
-  for(const edge of roundTowerFacadeEdges(s)){
-    if(edge.interior){
-      if(towerEdgeOnDivider(s,edge,row.z))continue;   // window would open onto a dividing wall
-      if(towerWindowGivesWayToDoor(s,edge,row.floor))continue;
-      drawArchitectureAssetOnEdge(edge,row.z,sz.w*.86,sz.h,key,0,lit,nf,opacity);
-      if(!lit)drawMastioWindowDrape(s,edge,row.z,sz.w*.86,sz.h,opacity);
-    }else if(towerSlitFace(s,edge.index,row.floor))drawArchitectureAssetOnEdge(edge,row.z,.22,.60,'arrowSlit',0,false,1,opacity);
-  }
-}
-function linearFrontSide(s){
-  const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L;
-  const mid={x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2},off=(Number(s.width)||1)/2;
-  const plus={x:mid.x+nx*off,y:mid.y+ny*off},minus={x:mid.x-nx*off,y:mid.y-ny*off};
-  const delta=viewDepthPoint(plus)-viewDepthPoint(minus);
-  // At an almost edge-on angle neither long facade should receive windows.
-  if(Math.abs(delta)<1e-4)return 0;
-  return delta>0?1:-1;
 }
 function builtWindowSegment(s){
   const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
@@ -663,87 +497,10 @@ function builtLoggiaStandPoint(s,t){
   const r=g.room,c=g.local.loc(r.center),al=g.span[0]+.2+(g.span[1]-g.span[0]-.4)*Math.max(0,Math.min(1,t));
   return g.local.P(al,c.ac+g.side*(r.h/2-g.walk.width/2));
 }
-function drawBuiltArcade(s){
-  const a=builtArcadeLayout(s);if(!a||a.side!==linearFrontSide(s))return;
-  withStructureDetailOcclusion(s,a.centerZ+a.h/2,()=>{for(const b of a.bays){drawFacadeAssetBackdrop(a.edge,a.centerZ,b.w,a.h*.86,b.off,'#24211f');drawArchitectureAssetOnEdge(a.edge,a.centerZ,b.w,a.h,a.key,b.off)}})
-}
-function drawWallHoarding(s,occlusionFrame=null){
-  if(!s||s.type!=='wall'||wallSkin(s)!=='hoarding'||underConstruction(s))return;
-  const g=wallExteriorLayout(s),h=g.z;
-  const innerOff=Math.max(.02,g.width/2-.02),outerOff=g.width/2+.42;
-  const point=(p,off)=>({x:p.x+g.nx*off*g.side,y:p.y+g.ny*off*g.side});
-
-  // Same longitudinal limits as the battlement crest: the gallery reaches the
-  // wall sockets exactly, never extends through a tower and never pulls back.
-  const seg={a:s.a,b:s.b,length:g.L};
-  const innerA=point(seg.a,innerOff),innerB=point(seg.b,innerOff);
-  const outerA=point(seg.a,outerOff),outerB=point(seg.b,outerOff);
-  const platform=[innerA,innerB,outerB,outerA];
-  const roofInnerA=point(seg.a,Math.max(0,g.width/2-.08)),roofInnerB=point(seg.b,Math.max(0,g.width/2-.08));
-  const roofOuterA=point(seg.a,outerOff+.07),roofOuterB=point(seg.b,outerOff+.07);
-  const exteriorVisible=linearFrontSide(s)===g.side;
-
-  // Reuse the battlement occlusion path itself. This is intentionally a
-  // pseudo-merlon covering the whole gallery footprint so towers/gates mask
-  // hoarding with the exact same owner/depth/overlap rules as wall merlons.
-  const maskPiece={
-    pts:[roofInnerA,roofInnerB,roofOuterB,roofOuterA],
-    z0:Math.max(.02,h-.58),z1:h+.66,
-    depth:worldDepth(s),ownerId:s.id,ownerType:'wall',
-    ownerDepth:worldDepth(s),ownerTop:h
-  };
-
-  withTowerBattlementOcclusion(maskPiece,occlusionFrame||buildBattlementOcclusionFrame(),()=>{
-    extrudePolygonAt(platform,h-.045,h+.055,{
-      top:'#74533a',sideA:'#493423',sideB:'#5d432e',stroke:'#927155'
-    });
-
-    const roof=[w2s(roofInnerA,h+.66),w2s(roofInnerB,h+.66),w2s(roofOuterB,h+.47),w2s(roofOuterA,h+.47)];
-    pathPolygon(roof,'#4b382a','#806047',1);
-
-    if(exteriorVisible){
-      const low=h-.03,high=h+.43;
-      pathPolygon(
-        [w2s(outerA,low),w2s(outerB,low),w2s(outerB,high),w2s(outerA,high)],
-        '#654832','#8d694d',1
-      );
-
-      // Use the same snapped-end padding as the battlements for posts/braces:
-      // continuous roof/face reaches the socket, repeated timber details do not
-      // collide visually with the receiving tower/gate.
-      const bays=Math.max(2,Math.round(g.usable/.75));
-      const start=g.startPad,end=g.L-g.endPad,span=Math.max(.01,end-start);
-      ctx.save();
-      ctx.strokeStyle='#3f2c20';
-      ctx.lineWidth=Math.max(1,1.25*State.view.scale);
-      for(let i=0;i<=bays;i++){
-        const along=start+span*(i/bays);
-        const base={x:s.a.x+g.ux*along,y:s.a.y+g.uy*along};
-        const outer=point(base,outerOff);
-        const a=w2s(outer,low),b=w2s(outer,high);
-        ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
-      }
-
-      for(let i=0;i<=bays;i+=2){
-        const along=start+span*(i/bays);
-        const base={x:s.a.x+g.ux*along,y:s.a.y+g.uy*along};
-        const outer=point(base,outerOff),wall=point(base,innerOff);
-        const a=w2s(outer,h-.02),b=w2s(wall,Math.max(.12,h-.58));
-        ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
-      }
-      ctx.restore();
-    }
-  });
-}
 // A fixed count (wide-hall lancets) drops windows whose bay could not hold them undistorted
 // (drawn width = min(asset width, bay * .82)).
 function builtWindowCount(edge,density,fixed,assetWidth=.24){
   return fixed?clamp(Math.floor(edge.length*.82/assetWidth),1,fixed):Math.max(1,Math.round(edge.length*density));
-}
-function drawBuiltWindowRow(s,side,z,density,lit=false,nf=1,key='arrowSlit',assetWidth=.24,assetHeight=.60,fixed=0){
-  if(side!==linearFrontSide(s))return;
-  const edge=linearFacadeEdge(s,side),count=builtWindowCount(edge,density,fixed,assetWidth),cell=edge.length/count,opacity=cutawayFacadeOpacity(s);
-  for(let i=0;i<count;i++){const off=(i+.5)*cell-edge.length/2;if(window.ConquerRoomExterior?.takesWindow(s,side,z,off))continue;drawArchitectureAssetOnEdge(edge,z,Math.min(assetWidth,cell*.82),assetHeight,key,off,lit,nf,opacity)}
 }
 // Facade rows shared by the 2.5D and 3D renderers: [side,z,density,key,width,height,lit,fixedCount].
 const HALL_LANCET_ASPECT=640/1566;   // hall_lancet.png: keep the Blender render undistorted
@@ -760,142 +517,4 @@ function builtWindowRows(s){
   const rows=[[outside,lowerZ,.72,'arrowSlit',.23,.58,false]];
   if(l>=2)rows.unshift([inside,upperZ,.42,'gothicL3',.92,.78,true]),rows.push([outside,upperZ,.72,'arrowSlit',.23,.58,false]);
   return rows;
-}
-function drawBuiltWindows(s,lit=false,nf=1){
-  const buttresses=visibleHallButtresses(s);
-  withBuiltRoofOcclusionClip(s,()=>{
-    withoutScreenHulls(buttresses.map(b=>convexHull(b.flatMap(p=>[...projectPath(p.bottom,p.z0),...projectPath(p.top,p.z1)]))),()=>{
-      for(const [side,z,density,key,w,h,canLight,fixed] of builtWindowRows(s))drawBuiltWindowRow(s,side,z,density,canLight&&lit,nf,key,w,h,fixed);
-    });
-    // Buttresses stand in front of the lancets: painted in this pass, after them. The night pass
-    // only re-lights the windows (clipped around the buttresses), so the masonry keeps its shade.
-    if(!lit)for(const b of buttresses)for(const p of b)extrudeFrustumAt(p.bottom,p.top,p.z0,p.z1,{
-      top:winterSnowColor('#948779'),sideA:'#4b4540',sideB:'#625a52',stroke:'rgba(159,146,133,.75)'
-    });
-  });
-}
-// The camera-facing lancet facade only (a rear buttress would paint over the hall body), far first.
-function visibleHallButtresses(s){
-  if(!isWideBuilt(s)||structureCutaway(s)||-wallExteriorSide(s)!==linearFrontSide(s))return[];
-  const depth=b=>viewDepthPoint(b[0].bottom[2]);
-  return wideHallButtresses(s).sort((a,b)=>depth(a)-depth(b));
-}
-function withoutScreenHulls(hulls,drawFn){
-  hulls=hulls.filter(h=>h.length>=3);
-  if(!hulls.length){drawFn();return}
-  const r=wrap.getBoundingClientRect();
-  ctx.save();ctx.beginPath();ctx.rect(-48,-48,r.width+96,r.height+96);
-  for(const hull of hulls){hull.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath()}
-  ctx.clip('evenodd');drawFn();ctx.restore();
-}
-function drawHouseFacadeWindows(s,lit=false,nf=1){
-  // At high zoom most homes are offscreen; skip the expensive L/T occlusion
-  // and façade polygon work before it constructs any projection data.
-  if(!worldPointVisible(s,houseBodyHeight(s)+.6,320+180*State.view.scale))return;
-  // An open L3 workshop has no upper floor or facade left (settlement-shop-cutaway.js).
-  if(window.ConquerShopCutaway?.active(s))return;
-  // Visible walls, matched to their geometry part (bodyH/ridge) by coordinates.
-  const key=(a,b)=>a.x.toFixed(4)+','+a.y.toFixed(4)+'|'+b.x.toFixed(4)+','+b.y.toFixed(4);
-  const walls=new Map(),entry=urbanHouseGeometry().find(e=>e.house.id===s.id);
-  for(const part of entry?.parts||[])part.points.forEach((a,i)=>walls.set(key(a,part.points[(i+1)%part.points.length]),{part,edge:{a,b:part.points[(i+1)%part.points.length]}}));
-  // Canvas has no depth buffer: each window and timber beam behind a nearer part of the same
-  // house (townhouse wings, L/T extensions) is dropped on its own, so a partly covered wall keeps
-  // the frame and windows of its visible stretch.
-  const screenFaces=new Map();
-  const hidden=(part,mid,z)=>{
-    const depth=viewDepthPoint(mid),sp=w2s(mid,z);
-    return entry.parts.some(q=>{
-      if(q===part||!q.points.some(p=>viewDepthPoint(p)>depth+.02))return false;
-      // Each neighboring wall's projected silhouettes are reused across all
-      // windows and timber beams in this house, not recomputed per facade.
-      if(!screenFaces.has(q)){
-        const ground=terrainElevation(q.center);
-        screenFaces.set(q,urbanHouseFaces(s,q).map(face=>
-          face.map(v=>w2s(v.p,v.z-ground))));
-      }
-      return screenFaces.get(q).some(poly=>pointInScreenPolygon(sp,poly));
-    });
-  };
-  for(const visible of visibleFacadeEdges(s)){
-    const wall=walls.get(key(visible.a,visible.b));if(!wall)continue;
-    const {part,edge}=wall,plan=houseFacadePlan(s,part,edge),L=dist(edge.a,edge.b)||1;
-    const mx=(edge.a.x+edge.b.x)/2,my=(edge.a.y+edge.b.y)/2,ux=(edge.b.x-edge.a.x)/L,uy=(edge.b.y-edge.a.y)/L;
-    const multi=entry.parts.length>1,at=off=>({x:mx+ux*off,y:my+uy*off});
-    if(!lit&&plan.beams.length){
-      ctx.save();ctx.strokeStyle='#3b2a1e';ctx.lineCap='square';
-      ctx.lineWidth=Math.max(.8,HOUSE_TIMBER_W*U*State.view.scale);
-      ctx.beginPath();
-      for(const [p0,p1] of plan.beams){
-        if(multi&&hidden(part,at((p0.off+p1.off)/2),(p0.z+p1.z)/2))continue;
-        const a=w2s({x:mx+ux*p0.off,y:my+uy*p0.off},p0.z),b=w2s({x:mx+ux*p1.off,y:my+uy*p1.off},p1.z);
-        ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);
-      }
-      ctx.stroke();ctx.restore();
-    }
-    // Ground-floor windows of a jettied side (edges 0 and 2) sit on the recessed stone wall.
-    const index=part.points.indexOf(edge.a),recess=part.basePoints&&(index===0||index===2)?houseJetty(s):0;
-    let nx=-uy,ny=ux;if(nx*(mx-part.center.x)+ny*(my-part.center.y)<0){nx=-nx;ny=-ny}
-    const fb=houseFloorBreak(part.bodyH??houseBodyHeight(s));
-    for(const w of plan.windows){
-      if(multi&&hidden(part,at(w.off),w.z))continue;
-      const k=w.z<fb?recess:0,e=k?{a:{x:edge.a.x-nx*k,y:edge.a.y-ny*k},b:{x:edge.b.x-nx*k,y:edge.b.y-ny*k}}:edge;
-      const a=w2s(e.a,w.z),b=w2s(e.b,w.z),px=w.off*Math.hypot(b.x-a.x,b.y-a.y)/L;
-      drawWindowOnEdge(e,w.z,lit,nf,px);
-    }
-  }
-}
-function drawStaticHouseFacadeDetails(){
-  for(const house of completedSettlement('house')){
-    drawHouseFacadeWindows(house,false,1);
-    drawHouseDoor(house);
-  }
-}
-function drawFacadeWindows(lit=false,nf=1,includeHouses=true){
-  if(State.view.scale<.24)return;
-  for(const s of State.structures){
-    if(underConstruction(s))continue;
-    const center=structureCenter(s);
-    if(center&&!worldPointVisible(center,structureVisualTopHeight(s),110))continue;
-    if(s.type==='house'){
-      if(includeHouses)drawHouseFacadeWindows(s,lit,nf);
-    }else if(s.type==='built'&&!isLonghouse(s))drawBuiltWindows(s,lit,nf);
-    else if(s.type==='gate'){
-      if(!isWoodGate(s))withStructureGroundPlane(s,()=>drawGateWindows(s,lit,nf));
-    }else if(s.type==='tower'){
-      withStructureGroundPlane(s,()=>{
-        if(isWoodTower(s)){
-          // A wooden keep has a timber-framed interior-facing window, too.
-          if(!s.isMastio||woodTowerStyle(s)==='watchtower')return;
-          const edge=visibleFacadeEdges(s).find(e=>isInteriorFacadeEdge(s,e));
-          if(!edge)return;
-          // The frame tower's P1 doorway (raised entrance) takes this window's place.
-          if(towerWindowGivesWayToDoor(s,edge,2))return;
-          const z=Math.min(structureHeight(s)-.53,1.45),w=.40,h=.50;
-          drawArchitectureAssetOnEdge(edge,z,w,h,'gothicL1',0,lit,nf);
-          if(!lit)drawMastioWindowDrape(s,edge,z,w,h);
-          return;
-        }
-        const rows=towerWindowRows(s);
-        if(!rows.length)return;
-        if(s.shape==='round'){
-          for(const row of rows)withStructureDetailOcclusion(s,row.z,()=>drawRoundTowerWindowRow(s,row,lit,nf));
-          return;
-        }
-        const edges=visibleFacadeEdges(s).filter(e=>!(s.shape==='half'&&e.index===ORIENTED_FACADE_REAR)),opacity=cutawayFacadeOpacity(s);
-        for(const row of rows){
-          const key=towerGothicAssetForRow(s,row),sz=towerGothicAssetSizeForRow(s,row);
-          if(!key)continue;
-          withStructureDetailOcclusion(s,row.z,()=>{
-            for(const edge of edges){
-              if(isInteriorFacadeEdge(s,edge)){
-                if(towerWindowGivesWayToDoor(s,edge,row.floor))continue;
-                drawArchitectureAssetOnEdge(edge,row.z,sz.w,sz.h,key,0,lit,nf,opacity);
-                if(!lit)drawMastioWindowDrape(s,edge,row.z,sz.w,sz.h,opacity);
-              }else if(towerSlitFace(s,edge.index,row.floor))drawArchitectureAssetOnEdge(towerSlitEdge(s,edge),row.z,.22,.60,'arrowSlit',0,false,1,opacity);
-            }
-          });
-        }
-      });
-    }
-  }
 }

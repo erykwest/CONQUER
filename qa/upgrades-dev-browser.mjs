@@ -7,7 +7,7 @@ const browser=await chromium.launch({headless:true,executablePath:process.env.QA
 try{
  for(const ui of [1,2]){
   const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(String(e)));page.on('dialog',d=>d.accept());
-  await page.goto(`${base}/index.html?assetlab=1&renderer=canvas2d&ui=${ui}&dev=1`);await page.waitForFunction(()=>!!window.ConquerGame?.read&&!!window.ConquerEconomy?.state);
+  await page.goto(`${base}/index.html?assetlab=1&ui=${ui}&dev=1`);await page.waitForFunction(()=>!!window.ConquerGame?.read&&!!window.ConquerEconomy?.state);
   await page.evaluate(()=>{
    State.devBuild={};State.clock.speed=0;State.clock.day=0;State.environment=[];State.relief={hills:[],seed:12345};clearReliefBandCache();
    const t={id:'tower',type:'tower',material:'stone',shape:'square',size:1,tier:1,level:1,x:105,y:100,angle:0,functions:[]};

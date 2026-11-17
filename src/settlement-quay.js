@@ -310,12 +310,6 @@
     }
     return col.length?{pos,col}:null;
   }
-  function draw(s,preview=false){
-    if(!is(s)||!window.ConquerMesh3D)return false;
-    ctx.save();if(preview)ctx.globalAlpha*=.62;
-    window.ConquerMesh3D.drawMeshes(ctx,meshes(s),window.ConquerMesh3D.gameView());
-    ctx.restore();return true;
-  }
   function addToBuilder(m,s){
     if(!is(s)||!window.ConquerMesh3D)return false;
     for(const mesh of meshes(s)){const p=mesh.pos;for(let t=0;t<mesh.col.length;t++){const o=t*9;
@@ -327,5 +321,5 @@
   const buildDays=s=>Math.max(1,Math.round(SPEC.days*lengthOf(s)*10)/10);
   const label=s=>SPEC.label+' · '+(s?.a&&s?.b?lengthOf(s).toFixed(1)+'U':'2U di larghezza');
   window.ConquerQuay=Object.freeze({SPEC,WIDTH,TOP,is,make,footprint,seaSide,wetSides,validate,edgeHit,
-    snapWallAnchor,snapTower,wallGroundZ,wallRoute,isWallOn,snapQuay,joined,isQuayWall,faceWallOut,berths,BERTH_STEP,BERTH_PIER_GAP,meshes,draw,addToBuilder,cost,buildDays,label});
+    snapWallAnchor,snapTower,wallGroundZ,wallRoute,isWallOn,snapQuay,joined,isQuayWall,faceWallOut,berths,BERTH_STEP,BERTH_PIER_GAP,meshes,addToBuilder,cost,buildDays,label});
 })();

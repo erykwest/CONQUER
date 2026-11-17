@@ -172,15 +172,11 @@ console.log('PASS visual outline on houses and wood towers, not a permanent road
 
 assert.match(population,/const base=w2s\(dot\.p,\.10\),scale=State\.view\.scale\*\.5/);
 assert.match(population,/function militaryScale\(\)\{[\s\S]*?return State\.view\.scale\*\.5;/);
-assert.match(render,/const ww=2\.1\*State\.view\.scale,wh=3\.25\*State\.view\.scale;/);
-assert.match(castle,/for\(const w of plan\.windows\)if\(facing\(w\.p,w\.normal\)\)drawHouseFacadePane\(w\);/);
-console.log('PASS civilians, troops and windows zoom with full world projection');
+console.log('PASS civilians and troops zoom with full world projection');
 
-assert.match(render,/function drawMastioWindowDrape\(/);
-assert.match(render,/if\(!s\.isMastio\|\|!edge\|\|structureCutaway\(s\)\)return/);
+// The 2.5D heraldic window drape is retired with the Canvas renderer (D-RENDER-3D-261111).
+assert.doesNotMatch(render,/function drawMastioWindowDrape\(/);
 assert.match(render,/s\.isMastio\)rows\.push\(\{floor:1,z:1\.53\}\)/);
-assert.match(render,/if\(!lit\)drawMastioWindowDrape\(s,edge/);
-assert.match(render,/if\(!lit\)drawMastioWindowDrape\(s,edge,row\.z/);
 assert.ok(!/strokeText\('â˜…'/.test(siege),'old star marker is removed');
 assert.match(app,/syncAutoMastio\?\.\(\)/);
-console.log('PASS internal heraldic window drapes, T1 keep window, no star');
+console.log('PASS T1 keep window, no star');

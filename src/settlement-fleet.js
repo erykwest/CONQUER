@@ -246,7 +246,6 @@
     for(let j=0;j<src.length;j+=3){const x=src[j],y=src[j+1],z=src[j+2];pos[j]=o.x+a*x+b*y+c*z;pos[j+1]=o.y+d*x+e*y+f*z;pos[j+2]=o.z+g*x+h*y+i*z}
     return{...s.base.mesh,pos};
   }
-  const world3d=()=>!!window.ConquerWorld3D?.active?.();
   function drawAll(){
     frame3d=null;
     restore();
@@ -261,18 +260,10 @@
     window.ConquerFishers?.step(now);
     window.ConquerSeaConvoys?.step();   // merchant ships of the convoys (settlement-sea-convoys.js)
     commands(dt);                        // the player's warships under orders
-    const M3=window.ConquerMesh3D,view=M3.gameView(),meshes=[],sprites=[],NB=window.ConquerNavalBattle,gl=world3d();
+    const M3=window.ConquerMesh3D,view=M3.gameView(),meshes=[],sprites=[],NB=window.ConquerNavalBattle;
     for(const s of ships)C().step(s.crew,dt);
     const fighting=!!NB?.active();
     if(fighting)NB.step(dt);
-    // 2.5D only: with every sail at rest the ships (and their piers) are painted once into a
-    // cached bitmap and only the flags and sailors are drawn live.
-    const still=!gl&&!fighting&&!yards.length&&ships.length&&!ships.some(s=>s.crew.sail.t!==s.crew.sail.target);
-    // 2.5D only: ships are painted over the scene, so the piers they lie at are painted again
-    // in the same depth sort and a pier in front of a hull still covers it.
-    if(!gl)for(const id of new Set(ships.filter(s=>s.berth).map(s=>s.berth.pierId))){
-      const pier=State.structures.find(p=>p.id===id);if(pier)meshes.push(...window.ConquerPier.meshes(pier));
-    }
     meshes.push(...(window.ConquerFishers?.lotMeshes()||[]),...(window.ConquerFishers?.netMeshes(now)||[]),...yards);
     for(const s of ships){
       const view=seaMotion(s,now),row=s.row==null?null:+s.row.toFixed(2);
@@ -288,7 +279,7 @@
         if(w.z<-.05)continue;
         // WebGL: the sailor is a depth-tested card (hidden by the hull and sails in front of him).
         const facing=w2sRaw(a,a.z).x>=w2sRaw(w,w.z).x?1:-1;
-        if(gl&&C().sailorFigure?.(C().dot(sl.id,{x:w.x,y:w.y}),sl.mode,now,facing,w.z))continue;
+        if(C().sailorFigure?.(C().dot(sl.id,{x:w.x,y:w.y}),sl.mode,now,facing,w.z))continue;
         sprites.push({...w,draw:()=>{
           const p=w2sRaw(w,w.z),q=w2sRaw(a,a.z);
           withProjectionGroundZ(w.z-.1,()=>C().drawSailor(C().dot(sl.id,{x:w.x,y:w.y}),sl.mode,now,q.x>=p.x?1:-1));
@@ -296,24 +287,16 @@
       }
     }
     // WebGL: once per crew, the poses of its sailors are painted ahead in idle time.
-    if(gl&&window.ConquerWorld3D?.prewarmFigures&&C().sailorPoses){
+    if(window.ConquerWorld3D?.prewarmFigures&&C().sailorPoses){
       const crewKey=ships.map(s=>s.id).join();
       if(crewKey!==prewarmedFor){prewarmedFor=crewKey;window.ConquerWorld3D.prewarmFigures(ships.flatMap(s=>C().sailors(s.crew).flatMap(sl=>C().sailorPoses(C().dot(sl.id,{x:0,y:0})))))}
     }
     sprites.push(...selectionSprites());
     const flags=ships.map(s=>s.flags).filter(Boolean),plank=fighting&&NB.plankMesh();
     if(plank)flags.push(plank);
-    if(gl){
-      frame3d={meshes:[...meshes,...flags],sprites,view,now,fighting};
-      requestDraw();return;
-    }
-    if(still){
-      M3.drawCached(ctx,'fleet',ships.map(s=>s.cache.key).join(';'),()=>meshes,ships[0].pose);
-      M3.drawMeshes(ctx,flags,view,sprites);
-    }else M3.drawMeshes(ctx,[...meshes,...flags],view,sprites);
-    if(fighting)NB.drawOverlay(now);
     // Sailors are always about (and flags wave): with ships afloat, keep frames coming even
     // when the game is paused.
+    frame3d={meshes:[...meshes,...flags],sprites,view,now,fighting};
     requestDraw();
   }
   // The frame's ship meshes for the WebGL front pass (settlement-world3d.js drawFront).

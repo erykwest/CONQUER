@@ -227,16 +227,11 @@ console.log('PASS street front: bracket sign beside the door, shop window open b
 
 // Wiring: both renderers, facades, occlusion and the population pass use the module.
 const has=(f,re,what)=>assert.ok(re.test(src(f)),f+': '+what);
-has('settlement-buildings.js',/ConquerShopCutaway\.draw2D\(s\)/,'2.5D draws the section in place of the bodies');
-has('settlement-buildings.js',/function drawHouseDoor\(house\)\{\s*if\(window\.ConquerShopCutaway\?\.active\(house\)\)return/,'no door on an open shop');
-has('settlement-architecture.js',/ConquerShopCutaway\?\.active\(s\)\)return/,'no facade windows on an open shop');
 has('settlement-world3d.js',/ConquerShopCutaway\.addToBuilder\(m\)/,'WebGL cutaway buffer');
 has('settlement-world3d.js',/shopCut=window\.ConquerShopCutaway\?\.activeId/,'WebGL rebuilds on selection');
 has('settlement-urban.js',/!openIds\.includes\(q\.houseId\)/,'figures are not masked by an open shop');
-has('settlement-buildings.js',/if\(!shopOpen\)window\.ConquerShopCutaway\?\.drawFront2D\(s\)/,'2.5D street front');
 has('settlement-world3d.js',/ConquerShopCutaway\?\.addFront\(m,house\)/,'WebGL street front');
 has('settlement-world3d.js',/S\.shopFront===shopFront/,'WebGL rebuilds at dawn and dusk');
-has('settlement-render.js',/ConquerShopCutaway\?\.frontSig/,'2.5D cache rebuilds at dawn and dusk');
 has('settlement-urban.js',/ConquerShopCutaway\?\.facadeCut\(house,part,edge,windows\)/,'facade plan drops the window behind the shop');
 has('settlement-population-figures.js',/ConquerShopCutaway\?\.artisanAt\(house,resident,p\)/,'population pass');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');

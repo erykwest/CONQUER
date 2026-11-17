@@ -169,14 +169,6 @@
     return col.length?{pos,col}:null;
   }
 
-  function draw(s,preview=false){
-    if(!is(s)||!window.ConquerMesh3D)return false;
-    ctx.save();
-    if(preview)ctx.globalAlpha*=.62;
-    window.ConquerMesh3D.drawMeshes(ctx,meshes(s),window.ConquerMesh3D.gameView());
-    ctx.restore();
-    return true;
-  }
   function addToBuilder(m,s){
     if(!is(s)||!window.ConquerMesh3D)return false;
     for(const mesh of meshes(s)){
@@ -204,7 +196,7 @@
       '<div class="kv"><span>'+(m.side==='left'?'Sinistra':'Destra')+'</span><b>'+m.x.toFixed(1)+', '+m.y.toFixed(1)+'</b></div>').join('')+
       '</div><div class="legend">Molo in legno su pali, lungo '+reachOf(s)+'U verso il mare'+(s.onQuay?', agganciato alla banchina':'')+'. Va costruito sulla costa o su una banchina, con l\'approdo dentro la whitezone.</div>';
   }
-  window.ConquerPier=Object.freeze({SPEC,SIZES,LAND,HALF,TOP,is,make,reachOf,footprint,landing,coastHit,rootHit,snapToCoast,groundLevel,validate,moorings,meshes,draw,addToBuilder,label,cost,buildDays,panelHtml,bindPanel:(root,s)=>{if(yard(s))return Y().bindPanel(root,s);
+  window.ConquerPier=Object.freeze({SPEC,SIZES,LAND,HALF,TOP,is,make,reachOf,footprint,landing,coastHit,rootHit,snapToCoast,groundLevel,validate,moorings,meshes,addToBuilder,label,cost,buildDays,panelHtml,bindPanel:(root,s)=>{if(yard(s))return Y().bindPanel(root,s);
     const sel=root.querySelector('[data-pier-use]');
     if(sel)sel.onchange=()=>{if(sel.value==='military')s.use='military';else delete s.use;if(typeof saveLocal==='function')saveLocal();if(typeof requestDraw==='function')requestDraw()};
     return window.ConquerFleet?.bindDevPier?.(root,s)}});

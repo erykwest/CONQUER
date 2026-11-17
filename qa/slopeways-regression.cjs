@@ -117,5 +117,4 @@ has('src/settlement-vehicles.js',/s\.type==='road'\|\|s\.type==='ramp'/,'ramps i
 has('src/settlement-castle.js',/ConquerSlopeways\.lift\(p,z\)/,'terrain lift');
 has('src/settlement-app-persistence.js',/ConquerSlopeways\.normalise\(s\)/,'save migration');
 has('src/settlement-world3d.js',/ConquerSlopeways\.addToBuilder\(m,s\)/,'WebGL scene');
-has('src/settlement-render.js',/ConquerSlopeways\.draw\(s,preview\)/,'2.5D renderer');
 console.log('PASS slopeway hooks: builder, placement, navigation, wagons, terrain, save, renderers, Lab');

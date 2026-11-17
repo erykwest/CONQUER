@@ -42,9 +42,9 @@ try{
   assert.ok(hidden.pink<visible.pink*.1,'solid tower depth hides the civilian card behind its masonry');
   assert.equal(hidden.status.failed,null);
   await page.screenshot({path:out+'/behind-tower.png'});
-  await page.evaluate(()=>{ConquerWorld3D._setActiveForTest(false);draw()});
-  assert.equal(await page.evaluate(()=>ConquerWorld3D.active()),false,'Canvas fallback remains available');
+  // No Canvas fallback and no switch to it (D-RENDER-3D-261111).
+  assert.equal(await page.evaluate(()=>typeof ConquerWorld3D._setActiveForTest),'undefined','no 2.5D fallback switch');
   assert.deepEqual(errors,[]);
   fs.writeFileSync(out+'/report.json',JSON.stringify({visible,reused,hidden,errors},null,2));
-  console.log('PASS civilian billboards: real painter, depth occlusion, atlas reuse, military picking and Canvas fallback');
+  console.log('PASS civilian billboards: real painter, depth occlusion, atlas reuse, military picking');
 }finally{await browser.close()}

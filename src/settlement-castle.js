@@ -3,7 +3,6 @@
 function resize(){
   const r=wrap.getBoundingClientRect(),d=devicePixelRatio||1,w=Math.max(1,Math.round(r.width*d)),h=Math.max(1,Math.round(r.height*d));
   canvas.width=w;canvas.height=h;canvas.style.width=r.width+'px';canvas.style.height=r.height+'px';screenCtx.setTransform(d,0,0,d,0,0);
-  window.ConquerWebGPU?.resize?.(r.width,r.height,d);
   if(weatherCanvas&&weatherCtx){weatherCanvas.width=w;weatherCanvas.height=h;weatherCanvas.style.width=r.width+'px';weatherCanvas.style.height=r.height+'px';weatherCtx.setTransform(d,0,0,d,0,0)}
   if(weatherCloudLayer)weatherCloudLayer.setAttribute('viewBox','0 0 '+r.width+' '+r.height);
   invalidateSceneCache();draw();clearWeatherOverlay();
@@ -435,36 +434,6 @@ function isRaisedPlacementCastlePoint(s){
 function withStructureGroundPlane(s,drawFn){
   return withProjectionGroundZ(placementGroundZ(s),drawFn);
 }
-function drawPlacementFoundation(s,preview=false){
-  if(!isPlacementFoundationBuilding(s))return;
-  const baseZ=placementGroundZ(s),rings=unionGroundContactRings(structureGroundContactPolygons(s));
-  if(!Number.isFinite(baseZ)||!rings.length||placementFoundationDepth(s)<=.015)return;
-
-  const faces=[];
-  for(const fp of rings){
-    for(let i=0;i<fp.length;i++){
-      const a=fp[i],b=fp[(i+1)%fp.length],L=dist(a,b),steps=Math.max(1,Math.ceil(L/.24));
-      for(let j=0;j<steps;j++){
-        const t0=j/steps,t1=(j+1)/steps;
-        const p0={x:a.x+(b.x-a.x)*t0,y:a.y+(b.y-a.y)*t0};
-        const p1={x:a.x+(b.x-a.x)*t1,y:a.y+(b.y-a.y)*t1};
-        const z0=Math.min(baseZ,terrainElevation(p0)),z1=Math.min(baseZ,terrainElevation(p1));
-        if(baseZ-Math.min(z0,z1)<=.01)continue;
-        const poly=[w2sRaw(p0,z0),w2sRaw(p1,z1),w2sRaw(p1,baseZ),w2sRaw(p0,baseZ)];
-        const q=rotateViewPoint({x:(p0.x+p1.x)/2,y:(p0.y+p1.y)/2});
-        faces.push({poly,depth:q.x+q.y,shade:castleSideShade(p0,p1)});
-      }
-    }
-  }
-  faces.sort((a,b)=>a.depth-b.depth);
-  ctx.save();
-  if(preview)ctx.globalAlpha*=.62;
-  for(const face of faces){
-    const fill=preview?'rgba(105,96,85,.82)':face.shade;
-    pathPolygon(face.poly,fill,preview?'rgba(244,183,111,.72)':'#83786d',.8);
-  }
-  ctx.restore();
-}
 function structureTerrainSamples(s){
   const polys=structureGroundContactPolygons(s);if(!polys.length)return[];
   const out=[];
@@ -591,18 +560,6 @@ function extrudePolygonAt(worldPts,z0,z1,{top:topColor='#8c7b69',sideA='#554b42'
   for(const f of faces)pathPolygon(f.quad,f.i%2?sideA:sideB,null);
   pathPolygon(topPts,topColor,stroke,1);
 }
-// extrudePolygonAt with a different top ring (same vertex count): splays and sloped caps.
-function extrudeFrustumAt(bottom,top,z0,z1,{top:topColor='#8c7b69',sideA='#554b42',sideB='#66594d',stroke='#d8c8b4'}={}){
-  if(!bottom?.length||bottom.length!==top?.length||z1<=z0)return;
-  const base=projectPath(bottom,z0),topPts=projectPath(top,z1),faces=[];
-  for(let i=0;i<bottom.length;i++){
-    const j=(i+1)%bottom.length;
-    faces.push({quad:[base[i],base[j],topPts[j],topPts[i]],depth:(base[i].y+base[j].y)/2,i});
-  }
-  faces.sort((a,b)=>a.depth-b.depth);
-  for(const f of faces)pathPolygon(f.quad,f.i%2?sideA:sideB,stroke,.6);
-  pathPolygon(topPts,topColor,stroke,.8);
-}
 let castleUnionCache={key:null,bands:null};
 const CUTAWAY_NEAR_ALPHA=.035;
 const CUTAWAY_FAR_ALPHA=1;
@@ -628,7 +585,6 @@ function loadCutawayPropSprites(){
   }
 }
 loadCutawayPropSprites();
-function cutawayPropSprite(key){const img=cutawayPropSprites[key];return img&&img.complete?img:null}
 function cutawayEligible(s){
   if(!s||underConstruction(s))return false;
   if(s.type==='built')return true;
@@ -770,54 +726,6 @@ function cutawayFloorShown(s,i){const z=cutawayFloorLevels(s)[i]?.z;return !Numb
 // and the rear (local x), flush with the flanks the walls meet.
 function gateTimberFloorZ(s){return GATE_TIMBER_FLOOR}
 function gateTimberStoreyPoints(s){const d=rectDims(s);return rectWorldPoints(s.x,s.y,d.w+GATE_JETTY*2,d.h,s.angle||0)}
-function cutawayLocalRect(center,angle,x0,y0,x1,y1){
-  const ca=Math.cos(angle),sa=Math.sin(angle);
-  const p=(x,y)=>({x:center.x+x*ca-y*sa,y:center.y+x*sa+y*ca});
-  return[p(x0,y0),p(x1,y0),p(x1,y1),p(x0,y1)];
-}
-function clipToWorldPolygon(worldPts,z,fn){
-  const screen=projectPath(worldPts,z);if(screen.length<3)return;
-  ctx.save();ctx.beginPath();
-  screen.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
-  ctx.closePath();ctx.clip();fn();ctx.restore();
-}
-function drawStoneTileFloor(s,g,z){
-  const basis=cutawayFloorBasis(s,g),tile=.32,stone=hex=>window.ConquerStoneColor?.shade(hex)||hex;
-  extrudePolygonAt(g.inner,Math.max(.005,z-.045),z,{
-    top:stone('#7f796f'),sideA:stone('#4c4842'),sideB:stone('#5a554d'),stroke:stone('#a59b8d')
-  });
-  clipToWorldPolygon(g.inner,z+.002,()=>{
-    const nx=Math.ceil(basis.w/tile),ny=Math.ceil(basis.h/tile);
-    for(let ix=0;ix<nx;ix++)for(let iy=0;iy<ny;iy++){
-      const x0=-basis.w/2+ix*tile,x1=Math.min(basis.w/2,x0+tile);
-      const y0=-basis.h/2+iy*tile,y1=Math.min(basis.h/2,y0+tile);
-      const quad=cutawayLocalRect(basis.center,basis.angle,x0,y0,x1,y1);
-      pathPolygon(projectPath(quad,z+.004),stone((ix+iy)%2?'#8d877c':'#716c64'),'rgba(61,57,52,.52)',.55);
-    }
-  });
-}
-function drawWoodFloor(s,g,z){
-  const basis=cutawayFloorBasis(s,g),plank=.18;
-  extrudePolygonAt(g.inner,Math.max(.01,z-.065),z,{
-    top:'#795a3a',sideA:'#4b3424',sideB:'#5b402b',stroke:'#a27b50'
-  });
-  clipToWorldPolygon(g.inner,z+.002,()=>{
-    const across=basis.h<=basis.w,span=across?basis.h:basis.w,count=Math.max(1,Math.ceil(span/plank));
-    for(let i=0;i<count;i++){
-      const a=-span/2+i*plank,b=Math.min(span/2,a+plank);
-      const quad=across
-        ?cutawayLocalRect(basis.center,basis.angle,-basis.w/2,a,basis.w/2,b)
-        :cutawayLocalRect(basis.center,basis.angle,a,-basis.h/2,b,basis.h/2);
-      pathPolygon(projectPath(quad,z+.004),i%2?'#84613e':'#6f5034','rgba(54,36,24,.48)',.45);
-    }
-  });
-}
-function drawCutawayFloors(s,g){
-  for(const floor of cutawayFloorLevels(s)){
-    if(floor.material==='stone')drawStoneTileFloor(s,g,floor.z);
-    else drawWoodFloor(s,g,floor.z);
-  }
-}
 function cutawayRoomSlots(s,g=cutawayWallGeometry(s)){
   // slot i is the room on floor i+offset (gates: the ground floor is the passage, no room).
   const floors=cutawayFloorLevels(s),basis=cutawayFloorBasis(s,g),off=functionFloorOffset(s),cap=Math.min(functionCapacity(s),floors.length-off);
@@ -873,65 +781,6 @@ function cutawayRoomPoint(slot,nx=0,ny=0){
   const b=slot.basis,x=nx*b.w*.40,y=ny*b.h*.36,ca=Math.cos(b.angle),sa=Math.sin(b.angle);
   return{x:b.center.x+x*ca-y*sa,y:b.center.y+x*sa+y*ca};
 }
-function drawCutawayInteriorBox(slot,nx,ny,wFrac,dFrac,height,top='#795a3a',sideA='#4b3424',sideB='#5b402b'){
-  const p=cutawayRoomPoint(slot,nx,ny);
-  const w=clamp(slot.basis.w*wFrac,.14,.78),d=clamp(slot.basis.h*dFrac,.10,.48);
-  const pts=rectWorldPoints(p.x,p.y,w,d,slot.basis.angle);
-  extrudePolygonAt(pts,slot.z+.012,slot.z+.012+height,{top,sideA,sideB,stroke:'#3d2a1c'});
-}
-function drawCutawayPropSprite(key,p,z,sizePx=18){
-  const img=cutawayPropSprite(key);if(!img)return;
-  const scale=clamp(State.view.scale,.55,1.45),h=sizePx*scale,w=h*(img.naturalWidth||128)/(img.naturalHeight||128);
-  const q=w2s(p,z);
-  ctx.save();ctx.globalAlpha=.98;ctx.imageSmoothingEnabled=true;
-  ctx.drawImage(img,q.x-w/2,q.y-h,w,h);ctx.restore();
-}
-function drawStorageRoomProps(slot){
-  const large=slot.size==='large';
-  const layout=large
-    ?[['crate',-.72,-.46,18],['barrel',-.30,-.48,19],['crate',.12,-.43,17],['barrel',.53,-.38,18],['crate',-.50,.12,18],['barrel',.28,.15,19],['crate',.66,.20,16]]
-    :[['crate',-.48,-.30,18],['barrel',.05,-.34,19],['crate',.48,.18,17]];
-  for(const [key,x,y,size] of layout)drawCutawayPropSprite(key,cutawayRoomPoint(slot,x,y),slot.z+.035,size);
-}
-function drawBarracksRoomProps(slot){
-  const rows=slot.size==='large'?[-.52,0,.52]:[-.44,0,.44];
-  for(const x of rows)drawCutawayInteriorBox(slot,x,-.34,.22,.34,.055,'#775538','#4b3424','#5b402b');
-  drawCutawayInteriorBox(slot,0,.48,.48,.16,.10,'#6b4a30','#422e20','#533923');
-}
-function drawNobleRoomProps(slot){
-  drawCutawayInteriorBox(slot,-.18,-.24,.48,.44,.12,'#7e3d38','#4a2d27','#5b362e');
-  drawCutawayInteriorBox(slot,.58,-.30,.20,.22,.18,'#805a35','#4b3424','#5c4028');
-  drawCutawayInteriorBox(slot,.42,.42,.22,.22,.16,'#8b633b','#4b3424','#60452d');
-  if(slot.size==='large')drawCutawayInteriorBox(slot,-.62,.42,.26,.18,.13,'#8a6238','#4b3424','#60452d');
-}
-function drawCutawayFloorsAndProps(s,g){
-  const F=window.ConquerCutawayFurniture;
-  if(!F){drawCutawayFloors(s,g);drawCutawayInteriorProps(s,g);return}
-  cutawayFloorLevels(s).forEach((floor,i)=>{
-    if(!cutawayFloorShown(s,i))return;
-    if(floor.material==='stone')drawStoneTileFloor(s,g,floor.z);else drawWoodFloor(s,g,floor.z);
-    F.draw(s,g,i);
-  });
-}
-function drawCutawayInteriorProps(s,g){
-  // Furniture library (settlement-cutaway-furniture.js); the boxes below are the fallback.
-  if(window.ConquerCutawayFurniture?.draw(s,g))return;
-  for(const slot of cutawayRoomSlots(s,g)){
-    if(slot.role==='storage')drawStorageRoomProps(slot);
-    else if(slot.role==='barracks'||slot.role==='quarters')drawBarracksRoomProps(slot);
-    else if(slot.role==='nobleRoom')drawNobleRoomProps(slot);
-  }
-}
-function drawCutawayWallRing(g,z,alpha=.72){
-  const outer=projectPath(g.outer,z),inner=projectPath(g.inner,z);
-  if(outer.length<3||inner.length<3)return;
-  ctx.save();ctx.globalAlpha*=alpha;ctx.beginPath();
-  outer.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();
-  inner.slice().reverse().forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();
-  ctx.fillStyle=visualPaletteColor(State.season==='winter'?WINTER_SNOW_TOP:'#8f857a');ctx.fill('evenodd');
-  ctx.strokeStyle='rgba(211,197,181,.52)';ctx.lineWidth=.75;ctx.stroke();
-  ctx.restore();
-}
 function cutawayTransparentFaceIndexes(s,g){
   const n=g.outer.length;if(!n)return new Set();
   const depths=Array.from({length:n},(_,i)=>{
@@ -981,28 +830,6 @@ function cutawayTransparentFaceIndexes(s,g){
   for(let i=1;i<n;i++)if(depths[i]>depths[peak])peak=i;
   return new Set([peak]);
 }
-function cutawayShellFaces(s,g,height){
-  const outerBase=projectPath(g.outer,0),outerTop=projectPath(g.outer,height);
-  const innerBase=projectPath(g.inner,0),innerTop=projectPath(g.inner,height);
-  const transparent=cutawayTransparentFaceIndexes(s,g),faces=[];
-  const n=Math.min(g.outer.length,g.inner.length);
-  for(let i=0;i<n;i++){
-    const j=(i+1)%n,edgeDepth=(viewDepthPoint(g.outer[i])+viewDepthPoint(g.outer[j]))/2;
-    const near=transparent.has(i);
-    faces.push({
-      index:i,near,
-      // Built short ends (1/3) are actual section removals. Do not paint even
-      // a translucent panel there; only the rear-wall section jamb remains.
-      ghost:!(s.type==='built'&&near&&(i===1||i===3)),
-      depth:edgeDepth,
-      outer:[outerBase[i],outerBase[j],outerTop[j],outerTop[i]],
-      inner:[innerBase[i],innerBase[j],innerTop[j],innerTop[i]],
-      shade:castleSideShade(g.outer[i],g.outer[j])
-    });
-  }
-  faces.sort((a,b)=>a.depth-b.depth);
-  return{faces,transparent};
-}
 function cutawayBoundaryVertices(transparent,count){
   const vertices=[];
   for(let v=0;v<count;v++){
@@ -1011,128 +838,6 @@ function cutawayBoundaryVertices(transparent,count){
     if(transparent.has(prev)!==transparent.has(next))vertices.push(v);
   }
   return vertices;
-}
-function drawCutawaySectionJambs(g,height,transparent){
-  const n=Math.min(g.outer.length,g.inner.length);
-  const boundaries=cutawayBoundaryVertices(transparent,n);
-  for(const i of boundaries){
-    const outer=g.outer[i],inner=g.inner[i];
-    const poly=[
-      w2s(outer,0),w2s(inner,0),
-      w2s(inner,height),w2s(outer,height)
-    ];
-    pathPolygon(poly,'#82776c','rgba(222,207,190,.72)',1.05);
-  }
-}
-function drawCutawayFlatRoofDeck(s,g,height){
-  if(s.type!=='tower'||towerRoofStyle(s)!=='battlement')return;
-  // The old union renderer supplied the tower's solid top. Cutaway towers are
-  // deliberately removed from that union, so restore the full opaque fighting
-  // deck explicitly: wall ring + inner stone slab.
-  extrudePolygonAt(g.inner,Math.max(.01,height-.07),height,{
-    top:winterSnowColor('#8f857a',WINTER_SNOW_TOP),
-    sideA:'#514a44',sideB:'#635951',
-    stroke:State.season==='winter'?WINTER_SNOW_STROKE:'#b8aa99'
-  });
-}
-function drawCutawayShellFaces(faces,near){
-  for(const face of faces){
-    if(face.near!==near||face.ghost===false)continue;
-    ctx.save();ctx.globalAlpha*=near?CUTAWAY_NEAR_ALPHA:CUTAWAY_FAR_ALPHA;
-    pathPolygon(face.outer,face.shade,near?'rgba(216,200,180,.34)':null,near?.8:1);
-    ctx.restore();
-
-    ctx.save();ctx.globalAlpha*=near?CUTAWAY_INNER_NEAR_ALPHA:CUTAWAY_INNER_FAR_ALPHA;
-    pathPolygon(face.inner,near?'#5a514a':'#61574f',near?'rgba(205,188,169,.28)':'rgba(199,181,163,.30)',.65);
-    ctx.restore();
-  }
-}
-function drawBuiltCutawayShell(s,g,height){
-  // Built sections are open longitudinal ranges in cutaway. Do not run the
-  // generic four-sided box renderer at all: it was the source of the stubborn
-  // full-height end panel. Draw exactly one opaque rear wall plus its thickness.
-  const depths=[0,1,2,3].map(i=>{
-    const j=(i+1)%4;
-    return (viewDepthPoint(g.outer[i])+viewDepthPoint(g.outer[j]))/2;
-  });
-  const frontLong=depths[0]>=depths[2]?0:2;
-  const rearLong=frontLong===0?2:0;
-  const j=(rearLong+1)%4;
-
-  const outer=[
-    w2s(g.outer[rearLong],0),w2s(g.outer[j],0),
-    w2s(g.outer[j],height),w2s(g.outer[rearLong],height)
-  ];
-  const inner=[
-    w2s(g.inner[rearLong],0),w2s(g.inner[j],0),
-    w2s(g.inner[j],height),w2s(g.inner[rearLong],height)
-  ];
-
-  pathPolygon(outer,castleSideShade(g.outer[rearLong],g.outer[j]),null);
-  pathPolygon(inner,'#61574f','rgba(199,181,163,.30)',.65);
-
-  // Only the two thin cut surfaces belonging to the rear wall thickness.
-  // These are masonry section edges, NOT short end walls.
-  for(const i of [rearLong,j]){
-    const strip=[
-      w2s(g.outer[i],0),w2s(g.inner[i],0),
-      w2s(g.inner[i],height),w2s(g.outer[i],height)
-    ];
-    pathPolygon(strip,'#82776c','rgba(222,207,190,.72)',1.05);
-  }
-}
-function drawCutawayStructure(s){
-  if(!structureCutaway(s)||underConstruction(s))return;
-  // Timber tower: its model, minus the camera-facing sides, is drawn with the structures
-  // (ConquerWood3D.draw); only the room's furnishings belong here.
-  if(isWoodTower(s)){withStructureGroundPlane(s,()=>window.ConquerCutawayFurniture?.draw(s,cutawayWallGeometry(s)));return}
-  if(isLonghouse(s))return;   // its room is drawn with its model (drawStructure)
-  const render=()=>{
-    // Walls stop at the ceiling of the floor in view (cutawayCeilingZ); the crest and the roof
-    // deck only when every floor is in view.
-    const g=cutawayWallGeometry(s),full=structureHeight(s),height=Math.min(full,cutawayCeilingZ(s)),top=height>=full-1e-6;
-
-    if(s.type==='built'){
-      // Dedicated built-section cutaway: one rear wall, zero short end walls.
-      drawBuiltCutawayShell(s,g,height);
-      drawCutawayFloorsAndProps(s,g);
-      drawCutawayWallRing(g,height,CUTAWAY_TOP_ALPHA);
-      window.ConquerRoomExterior?.draw(s,{only:'far',cutaway:true});   // behind the standing wall
-      window.ConquerRoomExterior?.draw(s,{only:'near',cutFront:true,cutaway:true});   // cut side: without its front facade
-      if(top)drawBuiltDetails(s,false);
-      if(builtSkin(s)==='arcade'){
-        ctx.save();ctx.globalAlpha*=.72;drawBuiltArcade(s);ctx.restore();
-      }
-      return;
-    }
-
-    const shell=cutawayShellFaces(s,g,height);
-    drawCutawayShellFaces(shell.faces,false);
-    // Tower garderobe behind the standing wall: shown over that wall, under the floor and the
-    // furniture, so it reads as the latrine of that room (its triangles carry their own ground).
-    if(s.type==='tower')withProjectionGroundZ(0,()=>window.ConquerRoomExterior?.draw(s,{only:'far',cutaway:true}));
-    drawCutawayFloorsAndProps(s,g);
-    drawCutawaySectionJambs(g,height,shell.transparent);
-    drawCutawayShellFaces(shell.faces,true);
-    drawCutawayWallRing(g,height,CUTAWAY_TOP_ALPHA);
-    if(top)drawCutawayFlatRoofDeck(s,g,height);
-
-    if(s.type==='tower'){
-      ctx.save();ctx.globalAlpha*=.28;drawStoneTowerBase(s,false);ctx.restore();
-    }
-  };
-  if(s.type==='tower'){
-    // A tower's face elements (the garderobe): the far one inside render (over the standing wall);
-    // the one on the cut side loses only its front facade, like the wall it continues (user, 12/11/2026).
-    withStructureGroundPlane(s,render);
-    window.ConquerRoomExterior?.draw(s,{only:'near',cutFront:true,cutaway:true});
-  }else if(s.type==='gate')withStructureGroundPlane(s,render);else render();
-}
-function drawCutawayStructures(){
-  State.structures
-    .filter(s=>structureCutaway(s)&&!underConstruction(s))
-    .slice().sort((a,b)=>worldDepth(a)-worldDepth(b))
-    .forEach(s=>withStructureVisualMaterial(s,()=>drawCutawayStructure(s)));
 }
 function isCastlePart(s){return !s.auto&&['tower','gate','wall','built'].includes(s.type)&&!(s.type==='tower'&&isWoodTower(s))&&!isWoodGate(s)&&!isLonghouse(s)&&!isRaisedPlacementCastlePoint(s)}
 function hasCastleSnap(id){return !!id&&State.structures.some(x=>x.id===id&&['tower','gate'].includes(x.type))}
@@ -1145,48 +850,11 @@ function unionFootprintPoints(s){
   dx=b.x-a.x;dy=b.y-a.y;const LL=Math.hypot(dx,dy)||1,nx=-dy/LL*s.width/2,ny=dx/LL*s.width/2;
   return[{x:a.x+nx,y:a.y+ny},{x:b.x+nx,y:b.y+ny},{x:b.x-nx,y:b.y-ny},{x:a.x-nx,y:a.y-ny}];
 }
-function polygonGeomForStructure(s){
-  if(s.type==='tower'&&s.shape==='half')return towerBodyPrisms(s).map(p=>[p.map(q=>[q.x,q.y])]);
-  const pts=unionFootprintPoints(s);if(!pts||pts.length<3)return null;
-  return [pts.map(p=>[p.x,p.y])];
-}
-function castleUnionBands(){
-  const pc=window.__polygonClipping;if(!pc)return null;
-  const items=State.structures.filter(s=>isCastlePart(s)&&!underConstruction(s)&&!structureCutaway(s));
-  if(!items.length)return[];
-  const descriptors=items.map(s=>({id:s.id,h:+structureHeight(s).toFixed(4),geom:polygonGeomForStructure(s)})).filter(x=>x.geom);
-  const key=JSON.stringify(descriptors);
-  if(castleUnionCache.key===key)return castleUnionCache.bands;
-  const heights=[...new Set(descriptors.map(x=>x.h))].sort((a,b)=>a-b),bands=[];let z0=0;
-  try{
-    for(const z1 of heights){
-      const active=descriptors.filter(x=>x.h>=z1-1e-6).map(x=>x.geom);
-      if(!active.length){z0=z1;continue}
-      const geometry=pc.union(...active);
-      bands.push({z0,z1,geometry});
-      z0=z1;
-    }
-  }catch(err){
-    console.warn('Castle polygon union failed',err);
-    castleUnionCache={key,bands:null};return null;
-  }
-  castleUnionCache={key,bands};return bands;
-}
 function cleanClipRing(ring){
   if(!ring||ring.length<3)return[];
   const pts=ring.map(([x,y])=>({x,y}));
   if(pts.length>1&&Math.abs(pts[0].x-pts.at(-1).x)<1e-8&&Math.abs(pts[0].y-pts.at(-1).y)<1e-8)pts.pop();
   return pts;
-}
-function fillMultiPolygonTop(multi,z,fill,stroke){
-  ctx.save();ctx.beginPath();
-  for(const poly of multi||[])for(const ring of poly||[]){
-    const pts=cleanClipRing(ring).map(p=>w2s(p,z));if(pts.length<3)continue;
-    ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);ctx.closePath();
-  }
-  ctx.fillStyle=visualPaletteColor(fill);ctx.fill('evenodd');
-  if(stroke){ctx.strokeStyle=visualPaletteColor(stroke);ctx.lineWidth=1.15;ctx.stroke()}
-  ctx.restore();
 }
 function castleSideShade(a,b){
   // Use the real edge orientation, not projected screen dx. Opposite faces
@@ -1198,72 +866,11 @@ function castleSideShade(a,b){
   const light=Math.cos(2*(angle-Math.PI/6));
   return light>=0?'#635951':'#514a44';
 }
-function drawMultiPolygonBand(multi,z0,z1){
-  if(!multi?.length)return;
-  const faces=[];
-  // A tiny downward overlap makes adjacent height bands paint over the
-  // antialiased edge of the band below, removing false horizontal rings.
-  const seamOverlap=z0>0?Math.min(.018,(z1-z0)*.08):0;
-  const baseZ=Math.max(0,z0-seamOverlap);
-  for(const poly of multi)for(const ring of poly){
-    const pts=cleanClipRing(ring);if(pts.length<3)continue;
-    for(let i=0;i<pts.length;i++){
-      const j=(i+1)%pts.length,b0=w2s(pts[i],baseZ),b1=w2s(pts[j],baseZ),t1=w2s(pts[j],z1),t0=w2s(pts[i],z1);
-      const shade=castleSideShade(pts[i],pts[j]);
-      faces.push({poly:[b0,b1,t1,t0],depth:(b0.y+b1.y)/2,shade});
-    }
-  }
-  faces.sort((a,b)=>a.depth-b.depth);
-  for(const f of faces)pathPolygon(f.poly,f.shade,null);
-  // Important: do NOT draw a top face for every height band.
-}
 const WINTER_SNOW_TOP='#edf1ed';
 const WINTER_SNOW_A='#e7ece8';
 const WINTER_SNOW_B='#dce3de';
 const WINTER_SNOW_STROKE='rgba(112,124,116,.58)';
 function winterSnowColor(normal,snow=WINTER_SNOW_TOP){return State.season==='winter'?snow:normal}
-function drawExposedTop(multi,z){
-  if(!multi?.length)return;
-  fillMultiPolygonTop(multi,z,winterSnowColor('#9a8e82',WINTER_SNOW_TOP),State.season==='winter'?WINTER_SNOW_STROKE:'#635951');
-}
-function drawCastleUnion(){
-  const bands=castleUnionBands();if(!bands)return false;
-  const pc=window.__polygonClipping;
-  // Correct painter order: finish one vertical band, draw only its exposed
-  // horizontal surface, then continue with the taller band above it.
-  // Drawing all tops at the end makes lower terraces paint over taller walls.
-  for(let i=0;i<bands.length;i++){
-    const band=bands[i],next=bands[i+1];
-    drawMultiPolygonBand(band.geometry,band.z0,band.z1);
-    let exposed=band.geometry;
-    if(next&&pc){
-      try{exposed=pc.difference(band.geometry,next.geometry)}catch(err){exposed=band.geometry}
-    }
-    drawExposedTop(exposed,band.z1);
-  }
-  return true;
-}
-function drawCastleUnionDetails(){
-  const hoardingFrame=State.structures.some(s=>isCastlePart(s)&&!underConstruction(s)&&s.type==='wall'&&wallSkin(s)==='hoarding')
-    ?buildBattlementOcclusionFrame():null;
-  for(const s of State.structures){
-    if(!isCastlePart(s)||underConstruction(s)||structureCutaway(s))continue;
-    withStructureVisualMaterial(s,()=>{
-    if(s.type==='built'){
-      drawBuiltDetails(s,false);
-      drawBuiltArcade(s);
-    }
-    if(s.type==='wall'&&wallSkin(s)==='hoarding')drawWallHoarding(s,hoardingFrame);
-    if(s.type==='tower'&&isStoneTowerStructure(s)){
-      withStructureGroundPlane(s,()=>drawStoneTowerBase(s,false));
-    }
-    if(['tower','gate'].includes(s.type)){
-      const h=structureHeight(s),a=w2s({x:s.x,y:s.y},h+.03),q={x:s.x+Math.cos(s.angle||0)*.55,y:s.y+Math.sin(s.angle||0)*.55},b=w2s(q,h+.03);
-      ctx.save();ctx.strokeStyle='rgba(245,226,202,.48)';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
-    }
-    });
-  }
-}
 function drawCastleSelection(){
   // Selection is a dynamic outline, not a cached material tint: all buildings
   // remain legible after selecting them, including wood, civic, houses and sites.

@@ -167,13 +167,6 @@ check('small (T1) towers open on a spiral stair, subtowers keep it clear of the 
   run("State.structures=State.structures.filter(s=>!['s1','s2','s3','s4','w0'].includes(s.id))");
 });
 
-check('Canvas fallback paints each level and never calls a missing floor function',()=>{
-  assert.equal(run('typeof drawCutawayFloorsAndProps'),'function','Canvas 2.5D cutaway floor painter must be available');
-  const cube=run("State.structures.find(x=>x.id==='t2')");
-  const geometry=run('cutawayWallGeometry')(cube);
-  assert.doesNotThrow(()=>run('drawCutawayFloorsAndProps')(cube,geometry),'cutaway must not throw on the fallback path');
-});
-
 check('real WebGL2 cutaway mesh builds for single/all towers and every camera turn',()=>{
   const src=fs.readFileSync(__dirname+'/../src/settlement-world3d.js','utf8');
   const meshStart=src.indexOf('  const rgbCache=new Map()'),meshEnd=src.indexOf('  // ---------- terrain ----------',meshStart);

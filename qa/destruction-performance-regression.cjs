@@ -4,13 +4,13 @@ const harness=fs.readFileSync(__dirname+'/urban-regression.cjs','utf8').split('l
 new Function('require','__dirname',harness+`
 run(moduleFile('collapse'));run(moduleFile('fire'));
 run('globalThis.qaDraws=0;globalThis.qaRequests=0;function draw(){qaDraws++};function requestSceneDraw(){qaRequests++}');
-function setup(){run("State.clock={day:20,speed:0};State.structures=[];State.fire=null;State.siege=null;State.village={founded:false};qaDraws=0;qaRequests=0;invalidateNavigation();for(const layer of Object.values(sceneCache))layer.dirty=false")}
+function setup(){run("State.clock={day:20,speed:0};State.structures=[];State.fire=null;State.siege=null;State.village={founded:false};qaDraws=0;qaRequests=0;invalidateNavigation();globalThis.qaInv=(window.__conquerPerf||{}).cacheInvalidations||0")}
 let passed=0;function test(name,fn){fn();passed++;console.log('PASS '+name)}
 test('partial damage persists HP without invalidating geometry or navigation',()=>{
  setup();run("State.structures=[{id:'t',type:'tower',shape:'square',size:2,x:100,y:100,level:3,material:'stone'}];globalThis.qaNav=navPerf.navInvalidations;globalThis.qaHp=window.ConquerSiege.integrity(State.structures[0]).core.hp;window.ConquerSiege.attackStructure('t','trebuchet',1)");
  assert.ok(run('window.ConquerSiege.integrity(State.structures[0]).core.hp<qaHp'));
  assert.equal(run('navPerf.navInvalidations'),run('qaNav'));
- assert.equal(run('Object.values(sceneCache).some(layer=>layer.dirty)'),false);
+ assert.equal(run('(window.__conquerPerf||{}).cacheInvalidations||0'),run('qaInv'),'no scene invalidation');
  assert.equal(run('qaDraws'),0);assert.ok(run('qaRequests>0&&State.dirty'));
 });
 test('a large fire damages all targets without drawing inside its tick',()=>{

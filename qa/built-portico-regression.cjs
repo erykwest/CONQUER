@@ -107,16 +107,16 @@ assert.match(w3d0(),/FU\?\.loggiaFaces\?\.\(s\)/);
 console.log('PASS loggia furniture per room, visible through the arches');
 function w3d0(){return src('settlement-world3d.js')}
 
-// World 3D carves it (like the gate passage); 2.5D keeps the arches cut into the facade.
+// World 3D carves it (like the gate passage).
 const c3d=src('settlement-castle3d.js'),w3d=src('settlement-world3d.js');
 assert.match(c3d,/&&!\(worldOut&&addBuiltLoggia\(m,s\)\)\)/);
 assert.match(w3d,/const arcade=!isBuiltPortico\(s\)&&builtArcadeLayout\(s\)/);
 assert.match(w3d,/loggiaEdge\(o0,o1\)/);
 console.log('PASS World 3D body and cutaway use the loggia');
 
-// Every renderer (2.5D, facade polish, World 3D, 3D cutaway) reads the shared layout.
-assert.match(arch,/function drawBuiltArcade\(s\)\{\n  const a=builtArcadeLayout\(s\)/);
-assert.match(src('settlement-facade-polish.js'),/drawBuiltArcade=function\(s\)\{\n  const a=builtArcadeLayout\(s\)/);
+// World 3D (facade and cutaway) reads the shared layout; there is no 2.5D arcade painter.
+assert.doesNotMatch(arch,/function drawBuiltArcade\(/);
+assert.doesNotMatch(src('settlement-facade-polish.js'),/drawBuiltArcade=function/);
 assert.equal((src('settlement-world3d.js').match(/builtArcadeLayout\(s\)/g)||[]).length,2,'World 3D facade and cutaway');
 assert.doesNotMatch(src('settlement-world3d.js'),/Math\.min\(1\.46,structureHeight/);
 console.log('PASS one arcade layout for every renderer');

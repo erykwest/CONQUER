@@ -411,11 +411,6 @@
     }
     return{pos,col};
   }
-  // In the 2.5D view the meshes are painted over the castle: skip a stair on the far side.
-  function facesCamera(t){
-    if(window.ConquerWorld3D?.active?.()||typeof viewDepthPoint!=='function')return true;
-    return viewDepthPoint(frontFrame(t).contact)>=viewDepthPoint({x:t.x,y:t.y})-.015;
-  }
   // The ladder let down: two rails and rungs leaning from the sill to the ground.
   function ladderMesh(t){
     if(!unreachable(t)||!t.keepEntrance.ladder?.down)return null;
@@ -441,7 +436,7 @@
   function dynamicMeshes(){
     const out=[];
     for(const t of State.structures){
-      if(!entrance(t)||!facesCamera(t))continue;
+      if(!entrance(t))continue;
       const m=stairMesh(t);if(m)out.push(m);
       const leaf=leafMesh(t);if(leaf)out.push(leaf);
       const ladder=ladderMesh(t);if(ladder)out.push(ladder);

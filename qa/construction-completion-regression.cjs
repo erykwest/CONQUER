@@ -29,9 +29,9 @@ test('scheduled tower and gate routes match the synchronous geometry',()=>{
  }
 });
 test('completion promotes church parcels and all completed structure render layers',()=>{
- setup();run("State.structures.push({id:'church',type:'church',x:107,y:107,w:3,h:2});globalThis.qaUrban=urbanRevision;for(const e of Object.values(sceneCache))e.dirty=false;runSettlementMaintenance('completion',[State.structures.at(-1)])");
+ setup();run("State.structures.push({id:'church',type:'church',x:107,y:107,w:3,h:2});globalThis.qaUrban=urbanRevision;globalThis.qaInv=(window.__conquerPerf||{}).cacheInvalidations||0;runSettlementMaintenance('completion',[State.structures.at(-1)])");
  assert.ok(run('urbanRevision>qaUrban'));
- assert.ok(run('sceneCache.base.dirty&&sceneCache.shadow.dirty'));
+ assert.ok(run('(window.__conquerPerf||{}).cacheInvalidations>qaInv'),'completion signals a scene change (World 3D rebuilds)');
  flush();
 });
 test('deleted targets and replaced villages cancel pending road work',()=>{

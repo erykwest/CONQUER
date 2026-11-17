@@ -22,14 +22,14 @@ async function main(){
   const browser=await chromium.launch({headless:true,channel:'chrome',args:['--disable-background-timer-throttling','--disable-renderer-backgrounding','--disable-backgrounding-occluded-windows']});
   const report={label,sha:require('node:child_process').execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),browser:browser.version(),viewport:{width:1440,height:900},seed:12345,results:[],checks:[],errors:[]};
   try{
-    for(const mode of (process.env.PERF_MODES||'webgl,canvas').split(',')){
+    for(const mode of (process.env.PERF_MODES||'webgl').split(',')){
       const context=await browser.newContext({viewport:{width:1440,height:900},deviceScaleFactor:1});
       await context.route(/supabase\.co\//,route=>route.abort());
       await context.addInitScript(()=>localStorage.setItem('conquer.seed.0.0','12345'));
       if(process.env.PERF_GL_POLL==='0')await context.addInitScript(()=>{WebGL2RenderingContext.prototype.getError=()=>0});
       const page=await context.newPage();
       page.on('pageerror',e=>report.errors.push({mode,message:e.message}));
-      await page.goto(`http://127.0.0.1:${server.address().port}/index.html?`+(mode==='webgl'?'world3d=1':'renderer=canvas2d'),{waitUntil:'networkidle',timeout:60000});
+      await page.goto(`http://127.0.0.1:${server.address().port}/index.html?`+'world3d=1',{waitUntil:'networkidle',timeout:60000});
       await page.waitForFunction(()=>typeof runSettlementMaintenance==='function'&&typeof draw==='function');
       for(const scenario of (process.env.PERF_SCENARIOS||'tower,gate,castle').split(',')){
         for(let repeat=0;repeat<Number(process.env.PERF_REPEATS||3);repeat++){
@@ -141,11 +141,11 @@ async function main(){
               draw();await new Promise(requestAnimationFrame);
             }
             draw();const c=document.getElementById('c'),g=c.getContext('2d');
-            return{failed:ConquerWorld3D.status().failed,painted:g.getImageData(Math.floor(c.width/2),Math.floor(c.height/2),1,1).data[3]>0};
+            return{failed:ConquerWorld3D.status().failed,notice:g.getImageData(c.width>>1,Math.round(38*devicePixelRatio),1,1).data[3]>0};
           }finally{WebGL2RenderingContext.prototype.getError=original}
         });
         assert.match(fallback.failed||'',/WebGL2 renderer failure/);
-        assert.ok(fallback.painted,'error detection must retain a painted Canvas fallback');
+        assert.ok(fallback.notice,'error detection shows the WebGL2 notice (no Canvas fallback)');
         report.checks.push({mode,fallback});console.log('FALLBACK '+JSON.stringify(fallback));
       }
       await context.close();

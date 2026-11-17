@@ -205,7 +205,8 @@
   // Castle geometry needs the whole game (terrain, footprints, battlements, roofs), so the game runs in
   // a hidden sandbox frame (no saves, no cloud, no telemetry). Each entry is one structure of the
   // destruction gallery's variant list, meshed by ConquerCastle3D.worldMeshes(): the castle the player sees.
-  const ENGINE_URL='./index.html?assetlab=1&renderer=canvas2d';
+  // World 3D only (D-RENDER-3D-261111): the engine frame renders buildings in WebGL2, never 2.5D.
+  const ENGINE_URL='./index.html?assetlab=1&world3d=1';
   const status=text=>{const el=byId('assetEngineStatus');if(el)el.textContent=text};
   let engine=null,stonePaletteId='gray';
   const STONE_ASSETS=new Set(['stonePile','riverStones','riverBoulder','milestone']);
@@ -254,15 +255,15 @@
       let top=0;if(mesh)for(let i=2;i<mesh.pos.length;i+=3)top=Math.max(top,mesh.pos[i]);
       const states=[...(mesh?[{id:'3d',label:'Modello 3D',group:'3d'}]:[]),...w.ConquerAssetStage.states(v.id)];
       items.push({id:'castle:'+v.id,stageId:v.id,title:v.label,category:v.category||'Fortificazioni',family:v.family,kind:'castle',spec:v.spec,
-        key:v.spec.type,mesh,states,format:(mesh?'Modello 3D · h '+top.toFixed(1)+' U':'Solo 2.5D')+' · '+(states.length-(mesh?1:0))+' stati',
-        source:'src/settlement-asset-stage.js · '+(!mesh?'percorso 2.5D':w.ConquerWood3D?.handles?.(v.spec)?'src/settlement-wood3d.js':'src/settlement-castle3d.js')+' (varianti: src/settlement-siege-preview.js)',builder:true});
+        key:v.spec.type,mesh,states,format:(mesh?'Modello 3D · h '+top.toFixed(1)+' U':'Senza modello 3D')+' · '+(states.length-(mesh?1:0))+' stati',
+        source:'src/settlement-asset-stage.js · '+(!mesh?'modello 3D mancante':w.ConquerWood3D?.handles?.(v.spec)?'src/settlement-wood3d.js':'src/settlement-castle3d.js')+' (varianti: src/settlement-siege-preview.js)',builder:true});
       if(mesh)meshes++;
     }
     const total=items.filter(x=>x.kind==='castle').length;
-    status(total+' fortificazioni dal motore · '+meshes+' in 3D · '+(total-meshes)+' solo 2.5D');
+    status(total+' fortificazioni dal motore · '+meshes+' in 3D · '+(total-meshes)+' senza modello 3D');
     refresh();
   }
-  // Engine captures: the game's 2.5D render of one state, ground removed. Cached per view.
+  // Engine captures: the game's World 3D render of one state, ground removed. Cached per view.
   const captureCache=new Map();
   function engineCapture(item,stateId,rotation=0){
     if(!engine||!item.stageId)return null;
@@ -558,7 +559,7 @@
       return d<b?f:best;
     });
   }
-  // stateId: for fortifications, '3d' (the mesh) or an engine state (a 2.5D capture; rotation in 90° views).
+  // stateId: for fortifications, '3d' (the mesh) or an engine state (a World 3D capture; rotation in 90° views).
   function makePreview(item,container,large,rotationDegrees=0,stateId=defaultState(item)){
     container.replaceChildren();
     if(item.kind==='castle'&&stateId&&stateId!=='3d'){
@@ -651,7 +652,7 @@
     if(wasSnapshot!==snapshotMode())selectedRotation=0;
     renderStateBar(selectedItem);updateRotationLabels();
     byId('assetRotationValue').textContent=selectedRotation+'°';
-    byId('assetPreviewNote').textContent=snapshotMode()?'Render 2.5D del gioco (ConquerAssetStage), terreno rimosso.':'Geometria costruita dal motore di gioco (ConquerCastle3D).';
+    byId('assetPreviewNote').textContent=snapshotMode()?'Render World 3D del gioco (ConquerAssetStage), terreno rimosso.':'Geometria costruita dal motore di gioco (ConquerCastle3D).';
     makePreview(selectedItem,byId('assetDetailPreview'),true,selectedRotation,selectedState);
   }
   // 3D meshes turn by 15°, game captures by the camera's four 90° views.
@@ -680,7 +681,7 @@
     byId('assetRotationControls').hidden=!rotatable;
     byId('assetRotationValue').textContent=selectedRotation+'°';
     const label=byId('assetPreviewNote');
-    label.textContent=live?'Anteprima animata dal motore di gioco.':snapshotMode()?'Render 2.5D del gioco (ConquerAssetStage), terreno rimosso.':
+    label.textContent=live?'Anteprima animata dal motore di gioco.':snapshotMode()?'Render World 3D del gioco (ConquerAssetStage), terreno rimosso.':
       item.kind==='castle'?'Geometria costruita dal motore di gioco (ConquerCastle3D).':item.rotations?'Fotogrammi pre-renderizzati ogni 15°.':item.note||'';
     if(live){
       document.querySelector('[data-subject="'+item.subject+'"]').click();

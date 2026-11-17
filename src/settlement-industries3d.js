@@ -70,16 +70,6 @@
     }
     return{pos,col,gi,groups,groupBias};
   }
-  // 2.5D: paint the model with the game's projection into the current ctx.
-  function draw(s,ground,preview=false){
-    if(!has(s)||!window.ConquerMesh3D)return false;
-    ctx.save();
-    if(preview)ctx.globalAlpha*=.62;
-    // A placement ghost shows the whole mill; a built one leaves its sails/wheel to the dynamic layer.
-    window.ConquerMesh3D.drawMeshes(ctx,[triangles(s,ground,preview?{}:{skip:new Set(turning(s))})],window.ConquerMesh3D.gameView());
-    ctx.restore();
-    return true;
-  }
   const turning=s=>Object.keys(MODELS()?.models?.[key(s)]?.pivots||{});
   // WebGL: add the model to a world3d meshBuilder with fixed-light shaded colours.
   // Turning parts stay out of the static scene (see dynamicMeshes).
@@ -104,6 +94,6 @@
     }
     return out;
   }
-  window.ConquerIndustries3D={has,key,variant,triangles,draw,addToBuilder,dynamicMeshes,spinning,
+  window.ConquerIndustries3D={has,key,variant,triangles,addToBuilder,dynamicMeshes,spinning,
     phase:id=>phases.get(id)||0,SPIN,WIND_FACTOR};
 })();
