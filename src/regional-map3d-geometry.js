@@ -207,9 +207,14 @@
   function globalMicrocells(snapshot, detail, deformation) {
     const width=snapshot.width, height=snapshot.height;
     const totalTarget = snapshot.cells.length * detail;
-    // Triangular lattice, jittered for irregular Voronoi cells, not a square grid.
+    // Weighted Voronoi (power diagram): the site count stays constant while
+    // seeded jitter plus a small per-site power lets some microcells occupy
+    // approximately twice the former area and others shrink to compensate.
+    // This changes only visual polygons, never the authoritative macro grid.
     const spacing = Math.sqrt(width * height / (totalTarget * Math.sqrt(3) / 2));
-    const rowStep = spacing * Math.sqrt(3)/2, jitter = spacing * .19;
+    const rowStep = spacing * Math.sqrt(3)/2;
+    const jitter = spacing * .30;
+    const powerSpread = spacing * spacing * .35;
     const rows = Math.ceil(height / rowStep) + 5, cols = Math.ceil(width / spacing) + 5;
     const sites = new Map();
     const seed=snapshot.seed>>>0;
@@ -219,6 +224,7 @@
       sites.set(key(row,col),{
         x:(col+(row&1)*.5)*spacing+(rnd()-.5)*2*jitter,
         y:row*rowStep+(rnd()-.5)*2*jitter,
+        power:(rnd()-.5)*powerSpread,
         row,col
       });
     }
@@ -229,15 +235,16 @@
       if (site.x < -spacing || site.y < -spacing ||
           site.x > width+spacing || site.y > height+spacing) continue;
       let poly=originalRect;
-      // With <19% jitter and a triangular lattice the nearest possible site
-      // is within a two-ring neighbourhood, keeping complexity O(microcells).
+      // With 30% jitter and bounded power weights, a two-ring neighbourhood
+      // still contains every site that can compete for the cell. Complexity
+      // remains O(microcells) and all cells share exact planar boundaries.
       for (let y=site.row-2; y<=site.row+2 && poly.length>=3; y++) {
         for (let x=site.col-2; x<=site.col+2 && poly.length>=3; x++) {
           if (site.row===y && site.col===x) continue;
           const other=sites.get(key(y,x));
           if (!other) continue;
           poly=clip(poly,2*(other.x-site.x),2*(other.y-site.y),
-             other.x**2+other.y**2-site.x**2-site.y**2);
+             other.x**2+other.y**2-site.x**2-site.y**2+site.power-other.power);
         }
       }
       if (poly.length<3 || area(poly)<EPS) continue;
