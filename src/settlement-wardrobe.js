@@ -83,7 +83,8 @@
     dovekeeper:{label:'Colombaro',pieces:['clothApron','feltHat']},
     innkeeper:{label:'Oste',pieces:['leatherApron','feltHat']},
     exactor:{label:'Esattore',pieces:['tabard','flatCap']},
-    bailiff:{label:'Giudice del Balivo',pieces:['bailiffRobe','clerkCap']}
+    bailiff:{label:'Giudice del Balivo',pieces:['bailiffRobe','clerkCap']},
+    herald:{label:'Araldo della Sala del trono',pieces:['tabard','feltHat']}
   };
   const pieceOf=id=>PIECES[id]||ROLE_PIECES[id];
   // Calendar month (0 = January) -> share of residents dressed for the cold / the sun.

@@ -1,5 +1,15 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-17 — ROOM-ANIM · Animazioni per stanze
+
+**Sala del trono IMPLEMENTATA SU BRANCH `feat/throne-hall-court`, NON MERGE.**
+- [x] Sala del trono: signore sul trono, guardie, araldo, postulante (+ cortigiano nella sala grande); di notte solo le guardie.
+- [ ] Sala comune: soldati e servi ai tavoli (gesto `mug`), un servo col cibo (`bowl`).
+- [ ] Gilda L1–L3: funzionari al banco (`quill`), archivista, maestri (`speak`); oggi l'unico edificio civico senza persone.
+- [ ] Posto di guardia del municipio: guardie come al Bargello.
+- [ ] Granaio, deposito materiali, deposito delle decime del Balivo: gesto nuovo per portare i sacchi e le casse.
+- [ ] Cisterna (secchio tirato su) e latrina (facoltativa).
+- [ ] Il gesto del signore è solo 2D (figura nobile senza card World3D, come le camere nobiliari).
 ### 2026-11-16 — GORE-01: sangue, frecce e cadaveri sul campo
 
 **IMPLEMENTATO SU BRANCH `feature/gore`, NON MERGE.**

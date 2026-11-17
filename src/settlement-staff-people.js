@@ -23,7 +23,7 @@
     council:{staff:[['councillor','speak'],['councillor','speak']],more:[['councillor','speak']]}
   };
   // Officials sit a class above the household.
-  const KIND={treasurer:'merchant',councillor:'elite',surgeon:'merchant',priest:'artisan',bailiff:'elite',exactor:'artisan'};
+  const KIND={treasurer:'merchant',councillor:'elite',surgeon:'merchant',priest:'artisan',bailiff:'elite',exactor:'artisan',herald:'merchant'};
   function hash(str){let h=2166136261;for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
   const frac=x=>x-Math.floor(x);
   function onDuty(){
@@ -57,8 +57,60 @@
       else drawVillagerFigureUnmasked(d);
     });
   }
+  // ---------- Throne hall: the lord's court (ROOM-ANIM-THRONE)
+  // Around the throne (settlement-cutaway-furniture.js throneHall): the lord sits on it and now and
+  // then raises a hand, two spearmen flank the dais, the herald speaks for him in front of it and a
+  // petitioner pleads on the runner; a large hall adds a courtier by the table. By day, never during
+  // an alarm; at night only the two guards keep the empty throne. Layout in throne-local U:
+  // fwd = towards the room (the seat is .4 m behind the dais centre), side = to the throne's left.
+  const SEAT_FWD=-.4/3.5,SEAT_Z=.72/3.5;
+  const THRONE_COURT=Object.freeze([
+    {id:'lord',role:'lord',fwd:SEAT_FWD,side:0,seated:true},
+    {id:'guard0',role:'guard',fwd:.22,side:.44,night:true},
+    {id:'guard1',role:'guard',fwd:.22,side:-.44,night:true},
+    {id:'herald',role:'herald',tool:'speak',fwd:.42,side:.24},
+    {id:'petitioner',role:'petitioner',tool:'speak',fwd:.72,side:-.04,toThrone:true},
+    {id:'courtier',role:'councillor',tool:'speak',fwd:.5,side:-.36,large:true}
+  ]);
+  // Who is in the hall now: pure (no canvas), so the scene can be tested.
+  function throneCourt(size,day=onDuty(),alarm=(window.ConquerCombat?.alarmMode?.()||'off')!=='off'){
+    if(alarm)return[];
+    return THRONE_COURT.filter(a=>(day||a.night)&&(!a.large||size==='large'));
+  }
+  // The lord's raised hand: a short gesture every 6 s, out of step between halls.
+  function lordGesture(t,ph){const c=frac(t/6+ph);return c<.25?Math.sin(c/.25*Math.PI):0}
+  function drawLord(p,z,id,t){
+    drawNobleFigure(p,z,id,0);
+    const g=lordGesture(t,hash(id)%1000/1000);if(g<=0)return;
+    const scale=typeof militaryScale==='function'?militaryScale():State.view.scale*.5;if(scale<.16)return;
+    const base=w2s(p,z),bodyW=5.2*scale,bodyH=9*scale,top=base.y-bodyH*.16-bodyH/2;
+    const sh={x:base.x+bodyW*.22,y:top+bodyH*.18},hand={x:sh.x+bodyW*.3,y:sh.y-bodyH*(.1+.3*g)};
+    ctx.save();ctx.strokeStyle='#4a2c46';ctx.lineWidth=Math.max(.8,1.1*scale);ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(sh.x,sh.y);ctx.lineTo(hand.x,hand.y);ctx.stroke();
+    ctx.fillStyle=typeof VILLAGER_SKIN!=='undefined'?VILLAGER_SKIN:'#d9b48f';ctx.beginPath();ctx.arc(hand.x,hand.y,Math.max(.5,.55*scale),0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
+  function drawThroneHall(s,slot){
+    const throne=window.ConquerCutawayFurniture?.roomPieces?.(s,slot,'throne')?.[0];if(!throne)return 0;
+    const list=throneCourt(slot.size);if(!list.length)return 0;
+    const inside=p=>window.ConquerCutawayFurniture.roomContains?.(s,slot,p)??true;
+    const t=window.ConquerWorkAnim?.now?.()??performance.now()/1000,seat=throne.at(SEAT_FWD,0);
+    const items=list.map(a=>({a,p:throne.at(a.fwd,a.side),id:s.id+'-throne-'+slot.index+'-'+a.id}))
+      .filter(it=>it.a.seated||inside(it.p)).map(it=>({...it,depth:viewDepthPoint(it.p)})).sort((x,y)=>x.depth-y.depth);
+    for(const {a,p,id} of items){
+      if(a.role==='lord')drawLord(p,slot.z+.09+SEAT_Z-.12,id,t);
+      else if(a.role==='guard')drawSoldierFigure(p,slot.z+.09,'spearman',id,0);
+      else{
+        // The petitioner turns to the throne, the others face where the hash says.
+        const facing=a.toThrone?(w2s(seat,0).x>=w2s(p,0).x?1:-1):undefined;
+        drawAt(p,slot.z,id,a.role,a.tool,facing);
+      }
+    }
+    return items.length;
+  }
   // Castle rooms in cutaway (called by drawCutawayOccupants for each room slot).
   function drawRoom(s,slot){
+    if(slot.role==='throneHall')return drawThroneHall(s,slot);
     if(!onDuty())return 0;
     const list=roomStaff(slot.role,slot.size);if(!list.length)return 0;
     const spots=window.ConquerCutawayFurniture?.standSpots?.(s,slot,list.length)||[];
@@ -69,5 +121,5 @@
     for(const it of items)drawAt(it.p,slot.z,it.id,it.role,it.tool);
     return items.length;
   }
-  window.ConquerStaffPeople=Object.freeze({ROOM_STAFF,KIND,DAY_START,DAY_END,onDuty,roomStaff,dot,drawAt,drawRoom});
+  window.ConquerStaffPeople=Object.freeze({ROOM_STAFF,KIND,DAY_START,DAY_END,THRONE_COURT,SEAT_FWD,SEAT_Z,onDuty,roomStaff,throneCourt,lordGesture,dot,drawAt,drawRoom,drawThroneHall});
 })();

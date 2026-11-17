@@ -38,6 +38,33 @@ const C3=window.ConquerCivic3D,CP=window.ConquerCourtPeople,W=window.ConquerWard
   console.log('PASS castle household: '+Object.keys(SP.ROOM_STAFF).length+' room functions staffed with dressed trades and gestures');
 }
 
+// ---------- throne hall: the lord's court around the throne (ROOM-ANIM-THRONE)
+{
+  const roles=list=>list.map(a=>a.role).sort().join(',');
+  assert.equal(roles(SP.throneCourt('normal',true,false)),'guard,guard,herald,lord,petitioner','by day: lord, two guards, herald, petitioner');
+  assert.equal(roles(SP.throneCourt('large',true,false)),'councillor,guard,guard,herald,lord,petitioner','a large hall adds a courtier');
+  assert.equal(roles(SP.throneCourt('large',false,false)),'guard,guard','at night the guards keep the empty throne');
+  assert.equal(SP.throneCourt('large',true,true).length,0,'an alarm empties the hall');
+  const lord=SP.THRONE_COURT.find(a=>a.role==='lord');
+  assert.ok(lord.seated&&lord.fwd<0&&lord.side===0,'the lord sits on the seat, behind the dais centre');
+  assert.ok(Math.abs(SP.SEAT_Z-.72/3.5)<1e-9,'seat height of the Blender throne (0.72 m)');
+  for(const a of SP.THRONE_COURT.filter(a=>a.tool)){
+    assert.ok(WA.TOOLS[a.tool],a.role+': '+a.tool+' is a work gesture');
+    assert.ok(a.fwd>0,a.role+' stands in front of the throne');
+  }
+  assert.ok(W.ROLES.herald,'the herald has his clothes');
+  assert.ok(SP.THRONE_COURT.filter(a=>a.role==='guard').every(a=>Math.abs(a.side)>.69/2),'the guards stand beside the dais (2.4 m wide)');
+  assert.ok(SP.THRONE_COURT.find(a=>a.role==='petitioner').toThrone,'the petitioner faces the throne');
+  const g=[0,1,2,3,4,5,6].map(t=>SP.lordGesture(t,0));
+  assert.ok(g.some(x=>x>0)&&g.some(x=>x===0)&&g.every(x=>x>=0&&x<=1),'the lord raises his hand now and then');
+  assert.match(src('settlement-staff-people.js'),/if\(slot\.role==='throneHall'\)return drawThroneHall\(s,slot\)/,'the throne hall is drawn by its court');
+  const cf=src('settlement-cutaway-furniture.js');
+  assert.match(cf,/rooms\.set\(room\.slot\.index,room\)/,'the furniture keeps each room layout');
+  assert.match(cf,/standSpots,roomPieces,roomContains,/,'throne anchor exported');
+  assert.match(cf,/throneHall\(r\)\{r\.wall\(r\.A,0,'throne'\)/,'the throne stands on the main wall');
+  console.log('PASS throne hall: the lord on his throne, guards, herald and petitioner by day, guards at night');
+}
+
 // ---------- hours
 {
   let alarm='off';window.ConquerCombat={alarmMode:()=>alarm};

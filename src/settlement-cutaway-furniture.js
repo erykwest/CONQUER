@@ -558,12 +558,13 @@
     const snaps=State.structures.filter(w=>w.aSnap===s.id||w.bSnap===s.id).map(w=>w.id+':'+structureLevel(w)).join(',');
     const key=[s.id,State.view.rotation||0,State.stonePaletteId,snaps,typeof cutawayBlockers==='function'?JSON.stringify(cutawayBlockers(s)):'',s.shape,s.isMastio?1:0,(typeof isPlanView==='function'&&isPlanView())?1:0,JSON.stringify(s.functions||[]),(s.keepPlans||[]).join(','),structureLevel(s),s.skin,s.wallSide,s.flip,s.x,s.y,s.angle,s.size,s.r,State.heraldry?.c1,State.heraldry?.c2,!!FM(),!!SM()].join('|');
     const hit=cache.get(s.id);if(hit&&hit.key===key)return hit;
-    const faces=[],lights=[],her=heraldry(),spots=new Map(),art=[],ladders=new Map();
+    const faces=[],lights=[],her=heraldry(),spots=new Map(),art=[],ladders=new Map(),rooms=new Map();
     for(const room of layoutStructure(s,g)){
       if(room.ladder&&!ladders.has(room.slot.floor))ladders.set(room.slot.floor,room.F.toWorld(room.ladder.u,room.ladder.v));
       for(const it of room.items)pieceWorld(it,room.F,room.slot.z+.012,faces,lights,her,room.slot.floor);
       if(room.ladder&&Number.isFinite(room.nextZ))ladderWorld(room.ladder,room.F,room.slot.z+.01,room.nextZ,faces,room.slot.floor);
       spots.set(room.slot.index,freeSpots(room));
+      rooms.set(room.slot.index,room);
       for(const a of room.art){const p=room.F.toWorld(a.u,a.v);
         art.push({id:a.key,structureId:s.id,room:room.slot.index,floor:room.slot.floor,role:room.slot.role||null,mount:a.mount,size:a.size,w:a.w,
           side:a.side||null,u:a.u,v:a.v,turn:a.turn,x:p.x,y:p.y,z:room.slot.z+.012,angle:room.F.b.angle+a.turn*Math.PI/2})}
@@ -571,7 +572,29 @@
     partitionsWorld(s,g,faces);
     landingsWorld(s,g,faces,ladders);
     if(spiralTower(s)){const st=spiralStair(s,g);if(st)spiralStairWorld(st,faces)}
-    const res={key,faces,lights,spots,art};cache.set(s.id,res);return res;
+    const res={key,faces,lights,spots,art,rooms};cache.set(s.id,res);return res;
+  }
+  // Where the pieces called `name` stand in a room, for the people who use them (the lord on his
+  // throne): world centre, facing angle (the piece's local +x, towards the room), and at(fwd,side)
+  // giving the world point fwd U in front of the centre and side U to its left.
+  function roomPieces(s,slot,name){
+    const room=FM()?structureFaces(s,cutawayWallGeometry(s)).rooms.get(slot.index):null;
+    if(!room)return[];
+    const half={hu:room.F.hu,hv:room.F.hv};
+    return room.items.filter(i=>i.name===name).map(i=>{
+      const angle=room.F.b.angle+i.turn*Math.PI/2,ca=Math.cos(angle),sa=Math.sin(angle),c=room.F.toWorld(i.u,i.v);
+      return{x:c.x,y:c.y,angle,u:i.u,v:i.v,turn:i.turn,room:half,at:(fwd,side=0)=>({x:c.x+fwd*ca-side*sa,y:c.y+fwd*sa+side*ca})};
+    });
+  }
+  // Local (u,v) of a world point in a room's frame, and whether it lies inside with margin m.
+  function roomContains(s,slot,p,m=.06){
+    const room=FM()?structureFaces(s,cutawayWallGeometry(s)).rooms.get(slot.index):null;
+    if(!room)return false;
+    const b=room.F.b,dx=p.x-b.center.x,dy=p.y-b.center.y,ca=Math.cos(b.angle),sa=Math.sin(b.angle);
+    const u=dx*ca+dy*sa,v=-dx*sa+dy*ca;
+    if(room.F.round)return Math.hypot(u,v)<=room.F.hu-m;
+    if(room.F.dee&&!deeInside(room.F,u,v,m))return false;
+    return Math.abs(u)<=room.F.hu-m&&Math.abs(v)<=room.F.hv-m;
   }
   // Standing spots for room occupants: grid points clear of furniture footprints.
   function freeSpots(room){
@@ -673,5 +696,5 @@
     pieceWorld({name:'a:'+name,u:0,v:0,turn:0,lift:0,paint},F,slot.z,out,[],heraldry(),slot.floor);
     return out;
   }
-  window.ConquerCutawayFurniture={ROOMS,draw,artSlots,artFits,artWorkFaces,lights,drawNightGlow,drawEmissive2D,worldFaces,loggiaFaces,standSpots,layoutStructure,spiralStair,landingSpecs,pieceFaces,clear:()=>cache.clear()};
+  window.ConquerCutawayFurniture={ROOMS,draw,artSlots,artFits,artWorkFaces,lights,drawNightGlow,drawEmissive2D,worldFaces,loggiaFaces,standSpots,roomPieces,roomContains,layoutStructure,spiralStair,landingSpecs,pieceFaces,clear:()=>cache.clear()};
 })();

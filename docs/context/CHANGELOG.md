@@ -1,5 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-17 — ROOM-ANIM-THRONE · La corte nella Sala del trono
+
+`feat/throne-hall-court`: nella Sala del trono in sezione ci sono il signore seduto sul trono, due guardie, l'araldo e un postulante (più un cortigiano nella sala grande); di notte solo le guardie. Nuovi `ConquerCutawayFurniture.roomPieces/roomContains`, nuovo mestiere `herald` nel guardaroba (voce del Lab e baseline). Test in `qa/staff-people-regression.cjs`. ROADMAP e DECISIONS invariate: figure solo visive, nessun contratto di gioco cambiato.
 ### 2026-11-16 — GORE-01: sangue, frecce, cadaveri e mutilazioni sul campo (opzione)
 
 - Nuovo `src/settlement-gore.js` (ConquerGore): macchie di sangue a ogni colpo, frecce mancate conficcate nel terreno, frecce nei corpi, cadaveri, decapitazioni, squartamenti, braccia mozzate, schiacciati dalle pietre. Dissolvenza lineare come le impronte sulla neve ma in 2 giorni di gioco. Interruttore nel pannello DEV (sezione VIOLENZA), salvato in `localStorage` `conquer.gore.v1`; spento toglie anche il sangue delle cadute. Voci nel Lab (famiglia «Campo di battaglia»). Test `qa/gore-regression.cjs`. ROADMAP e DECISIONS invariate: stato visivo transitorio, nessun salvataggio cambiato.
