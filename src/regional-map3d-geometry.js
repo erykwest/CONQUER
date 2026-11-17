@@ -202,6 +202,17 @@
       }
       return best?.id ?? null;
     }
+    owner.candidatesForBox=(minX,minY,maxX,maxY)=>{
+      const found=new Map();
+      for(let y=Math.floor(minY/bucketSize);y<=Math.floor(maxY/bucketSize);y++)
+        for(let x=Math.floor(minX/bucketSize);x<=Math.floor(maxX/bucketSize);x++)
+          for(const entry of bins.get(x+','+y)||[]){
+            const box=entry.box;
+            if(box[0]<=maxX&&box[2]>=minX&&box[1]<=maxY&&box[3]>=minY)
+              found.set(entry.id,entry);
+          }
+      return [...found.values()];
+    };
     return owner;
   }
   function globalMicrocells(snapshot, detail, deformation) {
@@ -228,36 +239,89 @@
         row,col
       });
     }
-    const locate = macroIndex(snapshot), parts=[], ownerParts=new Map();
-    const parent = new Map(snapshot.cells.map(c=>[c.macroId,c.polygon]));
+    const locate=macroIndex(snapshot),fragments=[],ownerParts=new Map();
     const originalRect=[{x:0,y:0},{x:width,y:0},{x:width,y:height},{x:0,y:height}];
-    for (const site of sites.values()) {
-      if (site.x < -spacing || site.y < -spacing ||
-          site.x > width+spacing || site.y > height+spacing) continue;
+    let siteCount=0;
+    for(const site of sites.values()){
+      if(site.x < -spacing||site.y < -spacing||
+         site.x > width+spacing||site.y > height+spacing)continue;
       let poly=originalRect;
-      // With 30% jitter and bounded power weights, a two-ring neighbourhood
-      // still contains every site that can compete for the cell. Complexity
-      // remains O(microcells) and all cells share exact planar boundaries.
-      for (let y=site.row-2; y<=site.row+2 && poly.length>=3; y++) {
-        for (let x=site.col-2; x<=site.col+2 && poly.length>=3; x++) {
-          if (site.row===y && site.col===x) continue;
+      for(let y=site.row-2;y<=site.row+2&&poly.length>=3;y++){
+        for(let x=site.col-2;x<=site.col+2&&poly.length>=3;x++){
+          if(site.row===y&&site.col===x)continue;
           const other=sites.get(key(y,x));
-          if (!other) continue;
+          if(!other)continue;
           poly=clip(poly,2*(other.x-site.x),2*(other.y-site.y),
-             other.x**2+other.y**2-site.x**2-site.y**2+site.power-other.power);
+            other.x**2+other.y**2-site.x**2-site.y**2+site.power-other.power);
         }
       }
-      if (poly.length<3 || area(poly)<EPS) continue;
-      const warped=warpPoint(site,spacing,deformation,seed);
-      let macroId=locate(warped);
-      if (macroId===null) macroId=locate(site);
-      if (!parent.has(macroId)) continue;
-      const part={polygon:poly,macroId};
-      parts.push(part);
-      if (!ownerParts.has(macroId)) ownerParts.set(macroId, []);
-      ownerParts.get(macroId).push(part);
+      if(poly.length<3||area(poly)<EPS)continue;
+      siteCount++;
+      const x0=Math.min(...poly.map(p=>p.x)),x1=Math.max(...poly.map(p=>p.x));
+      const y0=Math.min(...poly.map(p=>p.y)),y1=Math.max(...poly.map(p=>p.y));
+      // Intersect each fine cell with the actual balanced canonical territory
+      // polygons. A site near a macro border can produce several fragments;
+      // their combined areas still add up to the unmodified cell's area.
+      for(const macro of locate.candidatesForBox(x0,y0,x1,y1)){
+        let intersection=poly;
+        const boundary=macro.polygon;
+        const signed=boundary.reduce((sum,p,i)=>{
+          const q=boundary[(i+1)%boundary.length];
+          return sum+p.x*q.y-q.x*p.y;
+        },0);
+        const sense=signed>=0?1:-1;
+        for(let i=0;i<boundary.length&&intersection.length>=3;i++){
+          const a=boundary[i],b=boundary[(i+1)%boundary.length];
+          const dx=b.x-a.x,dy=b.y-a.y;
+          intersection=clip(intersection,sense*dy,-sense*dx,
+            sense*(dy*a.x-dx*a.y));
+        }
+        if(intersection.length<3||area(intersection)<EPS)continue;
+        fragments.push({macroId:macro.id,polygon:intersection});
+      }
     }
-    return {parts,ownerParts,spacing};
+    // Warp every shared fragment vertex using the same deterministic field,
+    // retaining organic borders. Back off displacement until the *visual*
+    // areas of every macro also satisfy the strict ±10% requirement.
+    const allowed=width*height/snapshot.cells.length;
+    let parts=[],maxVisualDeviation=Infinity,appliedWarp=0;
+    for(const multiplier of [1,.75,.5,.25,.125,0]){
+      const amp=deformation*.22*multiplier;
+      const cache=new Map();
+      const deformPoint=p=>{
+        if(!amp)return p;
+        const key=p.x.toFixed(6)+','+p.y.toFixed(6);
+        if(cache.has(key))return cache.get(key);
+        const distance=Math.min(p.x,width-p.x,p.y,height-p.y);
+        const fade=clamp(distance/(spacing*1.8),0,1);
+        const q=warpPoint(p,spacing,amp,seed);
+        const shifted={x:p.x+(q.x-p.x)*fade,y:p.y+(q.y-p.y)*fade};
+        cache.set(key,shifted);
+        return shifted;
+      };
+      parts=fragments.map(p=>({macroId:p.macroId,polygon:p.polygon.map(deformPoint)}));
+      const actual=new Map();
+      let valid=true;
+      for(const p of parts){
+        const value=area(p.polygon);
+        if(!Number.isFinite(value)||value<EPS){valid=false;break;}
+        actual.set(p.macroId,(actual.get(p.macroId)||0)+value);
+      }
+      maxVisualDeviation=Math.max(...snapshot.cells.map(c=>
+        Math.abs((actual.get(c.macroId)||0)/allowed-1)));
+      if(valid&&maxVisualDeviation<=.099){
+        appliedWarp=amp;
+        break;
+      }
+    }
+    if(maxVisualDeviation>.10)
+      throw Error('3D visual territory areas exceed ±10%');
+    for(const part of parts){
+      if(!ownerParts.has(part.macroId))ownerParts.set(part.macroId,[]);
+      ownerParts.get(part.macroId).push(part);
+    }
+    return {parts,ownerParts,spacing,siteCount,visualAreaDeviation:maxVisualDeviation,appliedWarp};
+
   }
   function aggregateEdges(parts, terrain, originalCells) {
     const edges=new Map(), borders=[], coastlines=[];
@@ -443,7 +507,7 @@
     const vertices=[],trees=[],reeds=[],peaks=[],mountainSummits=[],pickRanges=[];
     const pickBucketSize=64, pickBuckets=new Map();
     let pickMaxAbsZ=0;
-    let subcells=0,triangles=0,mountains=0,hills=0;
+    let subcells=0,visualFragments=0,triangles=0,mountains=0,hills=0;
     function face(a,b,c,rgb,variation=0,shaded=true) {
       const u={x:b.x-a.x,y:b.y-a.y,z:b.z-a.z};
       const v={x:c.x-a.x,y:c.y-a.y,z:c.z-a.z};
@@ -457,8 +521,10 @@
     const base = detail===1 ? {
       parts:snapshot.cells.map(c=>({macroId:c.macroId,polygon:c.polygon})),
       ownerParts:new Map(snapshot.cells.map(c=>[c.macroId,[{polygon:c.polygon,macroId:c.macroId}]])),
-      spacing:Math.sqrt(snapshot.width*snapshot.height/snapshot.cells.length)
+      spacing:Math.sqrt(snapshot.width*snapshot.height/snapshot.cells.length),
+      siteCount:snapshot.cells.length,visualAreaDeviation:0,appliedWarp:0
     } : globalMicrocells(snapshot,detail,deformation);
+    subcells=base.siteCount;
     const byMacro=new Map(snapshot.cells.map(c=>[c.macroId,c.polygon]));
     const rgbCache=new Map();
     for(const part of base.parts) {
@@ -488,7 +554,7 @@
         ? (.65*macroNoise+.35*microNoise)*(terrain==='hills'?.18:.13)+microGrain*.09
         : 0;
       const firstVertex=vertices.length/6;
-      subcells++;
+      visualFragments++;
       for(let i=0;i<poly.length;i++){
         const a=poly[i],b=poly[(i+1)%poly.length];
         face(middle,{...a,z:elevation(a,parent,terrain,snapshot.seed)},
@@ -649,7 +715,9 @@
     const {riverEdges,riverStats}=deriveRiverBorders(snapshot,borders);
     return{
       vertices:new Float32Array(vertices),pickRanges,pickIndex:{bucketSize:pickBucketSize,buckets:pickBuckets,maxAbsZ:pickMaxAbsZ},trees,reeds,peaks,mountainSummits,borders,coastlines,riverEdges,riverStats,
-      stats:{territories:snapshot.cells.length,subcells,triangles,mountains,hills,
+      stats:{territories:snapshot.cells.length,subcells,visualFragments,
+             maxVisualAreaDeviation:base.visualAreaDeviation,appliedWarp:base.appliedWarp,
+             triangles,mountains,hills,
              trees:trees.length,reeds:reeds.length,unmatchedEdges:unmatched,
              floats:vertices.length,generationMs:(typeof performance!=='undefined'?performance.now():Date.now())-t0}
     };
