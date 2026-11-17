@@ -23,7 +23,7 @@ async function main(){
   const browser=await chromium.launch({headless:true,channel:'chrome',args:['--disable-background-timer-throttling','--disable-renderer-backgrounding','--disable-backgrounding-occluded-windows']});
   const report={label,browser:browser.version(),base:require('node:child_process').execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),errors:[],results:[]};
   try{
-    for(const mode of (process.env.PERF_MODES||'webgl,canvas').split(','))for(const scenario of (process.env.PERF_SCENARIOS||'fire,damage,collapse,cutaway').split(',')){
+    for(const mode of (process.env.PERF_MODES||'webgl').split(','))for(const scenario of (process.env.PERF_SCENARIOS||'fire,damage,collapse,cutaway').split(',')){
       const context=await browser.newContext({viewport:{width:1440,height:900},deviceScaleFactor:1});
       await context.route(/supabase\.co\//,r=>r.abort());
       await context.addInitScript(()=>{localStorage.setItem('conquer.seed.0.0','12345');let seed=12345;Math.random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296)});
@@ -36,7 +36,7 @@ async function main(){
         };
       });
       const page=await context.newPage();page.on('pageerror',e=>report.errors.push({mode,scenario,error:e.message}));
-      await page.goto(`http://127.0.0.1:${server.address().port}/index.html?`+(mode==='webgl'?'world3d=1':'renderer=canvas2d'),{waitUntil:'networkidle'});
+      await page.goto(`http://127.0.0.1:${server.address().port}/index.html?`+'world3d=1',{waitUntil:'networkidle'});
       await page.waitForFunction(()=>typeof draw==='function'&&!!window.ConquerFire&&!!window.ConquerSiege);
       await page.evaluate(scenario=>{
         State.clock.speed=0;State.clock.day=20;State.season='summer';State.seasonOverride='summer';State.daylightOverride=.5;
@@ -127,29 +127,7 @@ async function main(){
         assert.ok(result.settled.turned>result.settled.after&&result.settled.vertices>0,'rotation must update heap shading');
         console.log('SETTLED '+JSON.stringify(result.settled));
       }
-      if(process.env.PERF_ASSERT==='1'&&mode==='webgl'&&scenario==='cutaway'){
-        result.pixels=await page.evaluate(()=>{
-          const saved={...State.view},palette=State.visualPalette,checks=[];
-          for(const [rotation,material] of [[0,'stone'],[1,'stone'],[1,'clay']]){
-            const direct=document.createElement('canvas'),cached=document.createElement('canvas');direct.width=cached.width=canvas.width;direct.height=cached.height=canvas.height;
-            const a=direct.getContext('2d'),b=cached.getContext('2d');
-            State.view.rotation=rotation;State.visualPalette=material;
-            a.clearRect(0,0,direct.width,direct.height);b.clearRect(0,0,cached.width,cached.height);
-            withRenderContext(a,drawCutawayStructures);withRenderContext(b,drawCutawayStaticOverlay);
-            const p=a.getImageData(0,0,direct.width,direct.height).data,q=b.getImageData(0,0,cached.width,cached.height).data;
-            let pixels=0,diff=0,error=0;
-            for(let i=0;i<p.length;i+=4)if(p[i+3]||q[i+3]){pixels++;let max=0;for(let k=0;k<4;k++){const d=Math.abs(p[i+k]-q[i+k]);error+=d;max=Math.max(max,d)}if(max>16)diff++}
-            checks.push({rotation,material,pixels,differingFraction:diff/Math.max(1,pixels),meanChannelError:error/Math.max(1,pixels*4),...(material==='clay'?{direct:direct.toDataURL(),cached:cached.toDataURL()}:{})});
-          }
-          State.view=saved;State.visualPalette=palette;
-          return checks;
-        });
-        for(const check of result.pixels){
-          for(const key of ['direct','cached'])if(check[key]){fs.writeFileSync(path.join(out,`cutaway-${key}.png`),Buffer.from(check[key].split(',')[1],'base64'));delete check[key]}
-          assert.ok(check.pixels>100);assert.ok(check.differingFraction<.02&&check.meanChannelError<1,JSON.stringify(check));
-        }
-        console.log('CUTAWAY PIXELS '+JSON.stringify(result.pixels));
-      }
+      // The 2.5D cutaway direct-vs-cached pixel check went with the 2.5D castle path (D-RENDER-3D-261111).
       fs.writeFileSync(path.join(out,`${label}.json`),JSON.stringify(report,null,2));
       await page.screenshot({path:path.join(out,`${label}-${mode}-${scenario}.png`)});await context.close();
     }

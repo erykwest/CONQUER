@@ -329,25 +329,6 @@
     }
     // Paused swings/falls share the simulation's visual scheduler with fire,
     // collapses and scene requests, avoiding a second draw in the same RAF.
-    // 2.5D view: assault ladders and towers as simple timber outlines (3D draws the models).
-    if(combat.storms?.length&&!window.ConquerWorld3D?.active?.())withRenderContext(g,()=>{
-      for(const s of combat.storms){
-        if(s.burnt)continue;
-        if(s.kind==='ram'){
-          if(s.done)continue;
-          const a=w2s(s.foot,0),b=w2s(s.origin,.35);g.strokeStyle='#6b4a2c';g.lineWidth=12;g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();continue;
-        }
-        if(s.kind==='keep'){
-          if(s.done)continue;
-          const keep=State.structures.find(x=>x.id===s.towerId),lg=keep&&window.ConquerKeepEntrance?.ladderGeom(keep);if(!lg)continue;
-          const a=w2sRaw(lg.base,lg.zBase),b=w2sRaw(lg.top,lg.zTop+.12);
-          g.strokeStyle='#7a5530';g.lineWidth=3;g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();continue;
-        }
-        const ww=WW(),top=ww?.at({wallId:s.wallId,t:s.t});if(!top)continue;
-        const a=w2s(s.foot,0),b=w2s(top,top.z+.15);
-        g.strokeStyle='#7a5530';g.lineWidth=s.kind==='ladder'?3:9;g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();
-      }
-    });
     drawEffects(g,(p,z)=>w2sRaw(p,z),window.ConquerCombatRules?.visualEffects?.());
     window.ConquerDiplomacy?.draw(g);
     window.ConquerSoldiers?.draw(g);   // outpost relay riders and burning signal fires

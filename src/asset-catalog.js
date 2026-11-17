@@ -162,6 +162,13 @@
     items.push({id:'figure:work:'+action,title,category:'Popolazione',family:'Lavori',kind:'figure',subject:'villager',
       action,tool,key:tool,format:'Animazione',source:'src/settlement-work-anim.js'});
   }
+  // GORE-01 battlefield aftermath (settlement-gore.js): corpses and mutilations as the game draws them.
+  const GORE_TITLES={corpse:'Caduto',arrows:'Caduto trafitto da frecce',decap:'Decapitato',cleave:'Squartato',
+    arm:'Braccio mozzato',crushed:'Schiacciato da una pietra',enemy:'Nemico decapitato (ascia)',field:'Campo dopo la battaglia'};
+  for(const key of window.ConquerGore?.LAB_VARIANTS||[]){
+    items.push({id:'gore:'+key,title:GORE_TITLES[key]||key,category:'Truppe',family:'Campo di battaglia',kind:'gore',key,
+      format:'Effetto 2D',note:'Opzione Gore (DEV · VIOLENZA): svanisce in 2 giorni di gioco.',source:'src/settlement-gore.js'});
+  }
   const wardrobe=window.ConquerWardrobe?.PIECES||{};
   for(const key of Object.keys(wardrobe)){
     items.push({id:'wardrobe:'+key,title:wardrobe[key].label,category:'Popolazione',family:'Abbigliamento stagionale',
@@ -178,6 +185,11 @@
     items.push({id:'wardrobe:trade:'+key,title:role.label,category:'Popolazione',family:'Abiti da mestiere',kind:'wardrobe',key,
       pieces:role.pieces,format:'Overlay',note:'Indossato al lavoro: '+role.pieces.map(p=>window.ConquerWardrobe.ROLE_PIECES[p]?.label||window.ConquerWardrobe.PIECES[p]?.label).join(', ')+'.',
       source:'src/settlement-wardrobe.js'});
+  // L4 ladies: medieval headdresses, velvet mantle and furs, shown on four ladies with different hair.
+  for(const [key,P] of Object.entries(window.ConquerWardrobe?.LADY_PIECES||{}))
+    items.push({id:'wardrobe:lady:'+key,title:P.label,category:'Popolazione',family:'Dame L4',kind:'wardrobe',key,lady:true,
+      format:'Overlay',note:'Dame L4 '+({fair:'col bel tempo',rain:'con la pioggia',winter:"d'inverno"}[P.lady]||'')+'.',
+      source:'src/settlement-wardrobe.js'});
   for(const [key,title,category,family] of SCHEMATICS){
     items.push({id:'procedural:'+key,title,category,family,kind:'schematic',key,format:'Parametrico',
       source:'Builder · asset generato dal motore',builder:true});
@@ -193,7 +205,8 @@
   // Castle geometry needs the whole game (terrain, footprints, battlements, roofs), so the game runs in
   // a hidden sandbox frame (no saves, no cloud, no telemetry). Each entry is one structure of the
   // destruction gallery's variant list, meshed by ConquerCastle3D.worldMeshes(): the castle the player sees.
-  const ENGINE_URL='./index.html?assetlab=1&renderer=canvas2d';
+  // World 3D only (D-RENDER-3D-261111): the engine frame renders buildings in WebGL2, never 2.5D.
+  const ENGINE_URL='./index.html?assetlab=1&world3d=1';
   const status=text=>{const el=byId('assetEngineStatus');if(el)el.textContent=text};
   let engine=null,stonePaletteId='gray';
   const STONE_ASSETS=new Set(['stonePile','riverStones','riverBoulder','milestone']);
@@ -242,15 +255,15 @@
       let top=0;if(mesh)for(let i=2;i<mesh.pos.length;i+=3)top=Math.max(top,mesh.pos[i]);
       const states=[...(mesh?[{id:'3d',label:'Modello 3D',group:'3d'}]:[]),...w.ConquerAssetStage.states(v.id)];
       items.push({id:'castle:'+v.id,stageId:v.id,title:v.label,category:v.category||'Fortificazioni',family:v.family,kind:'castle',spec:v.spec,
-        key:v.spec.type,mesh,states,format:(mesh?'Modello 3D · h '+top.toFixed(1)+' U':'Solo 2.5D')+' · '+(states.length-(mesh?1:0))+' stati',
-        source:'src/settlement-asset-stage.js · '+(!mesh?'percorso 2.5D':w.ConquerWood3D?.handles?.(v.spec)?'src/settlement-wood3d.js':'src/settlement-castle3d.js')+' (varianti: src/settlement-siege-preview.js)',builder:true});
+        key:v.spec.type,mesh,states,format:(mesh?'Modello 3D · h '+top.toFixed(1)+' U':'Senza modello 3D')+' · '+(states.length-(mesh?1:0))+' stati',
+        source:'src/settlement-asset-stage.js · '+(!mesh?'modello 3D mancante':w.ConquerWood3D?.handles?.(v.spec)?'src/settlement-wood3d.js':'src/settlement-castle3d.js')+' (varianti: src/settlement-siege-preview.js)',builder:true});
       if(mesh)meshes++;
     }
     const total=items.filter(x=>x.kind==='castle').length;
-    status(total+' fortificazioni dal motore · '+meshes+' in 3D · '+(total-meshes)+' solo 2.5D');
+    status(total+' fortificazioni dal motore · '+meshes+' in 3D · '+(total-meshes)+' senza modello 3D');
     refresh();
   }
-  // Engine captures: the game's 2.5D render of one state, ground removed. Cached per view.
+  // Engine captures: the game's World 3D render of one state, ground removed. Cached per view.
   const captureCache=new Map();
   function engineCapture(item,stateId,rotation=0){
     if(!engine||!item.stageId)return null;
@@ -519,6 +532,15 @@
     const previous=ctx,oldScale=State.view.scale;
     try{
       ctx=g;State.view.scale=Math.min(w*.045,h*.1);
+      if(item.lady){
+        const pal=W.classPalette('elite')||['#d83a2e','#c3261e','#2f6fd6','#2358b8'];
+        ['red','blonde','black','brown'].forEach((hair,i)=>{
+          const id='lady-'+item.key+'-'+i,colors=[pal[(i*2)%pal.length],pal[(i*2)%pal.length]];
+          drawVillagerFigureUnmasked({id,kind:'elite',sex:'female',age:'adult',hair,colors,
+            outfit:W.compose([item.key],id,'elite',colors[0]),p:{x:w*(.2+i*.2),y:h*.74}});
+        });
+        return;
+      }
       [['peasant','male'],['artisan','female'],['merchant','male'],['elite','female']].forEach(([kind,sex],i)=>{
         const id='wardrobe-'+item.key+'-'+kind,pal=W.classPalette(kind)||['#8c6b3f','#5d4a32'],colors=[pal[0],pal[2]];
         drawVillagerFigureUnmasked({id,kind,sex,age:'adult',hair:'brown',colors,
@@ -537,7 +559,7 @@
       return d<b?f:best;
     });
   }
-  // stateId: for fortifications, '3d' (the mesh) or an engine state (a 2.5D capture; rotation in 90° views).
+  // stateId: for fortifications, '3d' (the mesh) or an engine state (a World 3D capture; rotation in 90° views).
   function makePreview(item,container,large,rotationDegrees=0,stateId=defaultState(item)){
     container.replaceChildren();
     if(item.kind==='castle'&&stateId&&stateId!=='3d'){
@@ -560,6 +582,11 @@
     if(item.kind==='model'||item.kind==='animal'||item.kind==='castle')return renderModel(canvas,item,rotationDegrees,occupancyMode,large?artPaint(item):null);
     if(item.kind==='figure')return renderFigure(canvas,item,rotationDegrees);
     if(item.kind==='wardrobe')return renderWardrobe(canvas,item);
+    if(item.kind==='gore'){
+      const g=canvas.getContext('2d');g.fillStyle='#8f9a6a';g.fillRect(0,0,canvas.width,canvas.height);
+      try{window.ConquerGore.drawLabSample(g,canvas.width,canvas.height,item.key)}
+      catch(error){console.warn('Asset Lab gore thumbnail could not render',item.key,error);placeholder(canvas,'ANTEPRIMA NON DISPONIBILE')}
+    }
   }
   let currentCategory='Tutti',currentFamily='',currentFormat='',query='',selectedId='',selectedRotation=0,selectedItem=null,selectedState=null;
   // ARTE commissioning colours: the inspector of a work of art lets you choose the colour of each
@@ -625,7 +652,7 @@
     if(wasSnapshot!==snapshotMode())selectedRotation=0;
     renderStateBar(selectedItem);updateRotationLabels();
     byId('assetRotationValue').textContent=selectedRotation+'°';
-    byId('assetPreviewNote').textContent=snapshotMode()?'Render 2.5D del gioco (ConquerAssetStage), terreno rimosso.':'Geometria costruita dal motore di gioco (ConquerCastle3D).';
+    byId('assetPreviewNote').textContent=snapshotMode()?'Render World 3D del gioco (ConquerAssetStage), terreno rimosso.':'Geometria costruita dal motore di gioco (ConquerCastle3D).';
     makePreview(selectedItem,byId('assetDetailPreview'),true,selectedRotation,selectedState);
   }
   // 3D meshes turn by 15°, game captures by the camera's four 90° views.
@@ -654,7 +681,7 @@
     byId('assetRotationControls').hidden=!rotatable;
     byId('assetRotationValue').textContent=selectedRotation+'°';
     const label=byId('assetPreviewNote');
-    label.textContent=live?'Anteprima animata dal motore di gioco.':snapshotMode()?'Render 2.5D del gioco (ConquerAssetStage), terreno rimosso.':
+    label.textContent=live?'Anteprima animata dal motore di gioco.':snapshotMode()?'Render World 3D del gioco (ConquerAssetStage), terreno rimosso.':
       item.kind==='castle'?'Geometria costruita dal motore di gioco (ConquerCastle3D).':item.rotations?'Fotogrammi pre-renderizzati ogni 15°.':item.note||'';
     if(live){
       document.querySelector('[data-subject="'+item.subject+'"]').click();

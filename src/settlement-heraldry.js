@@ -90,5 +90,8 @@ window.__conquerHeraldry={reset:()=>{h={...DEFAULT};State.heraldry={...h};draw()
   asset.src=url;
  }
  function paint(ctx,x,y,w,h){update();if(!ready)return false;ctx.drawImage(image,x,y,w,h);return true}
- window.__conquerHeraldryCanvas={paint,invalidate:()=>{cachedKey='';ready=false;image=null}};
+ // signature(): changes when the raster to paint changes (heraldry edited, or its image loaded),
+ // so baked textures (the World 3D Mastio drape) know when to repaint.
+ function signature(){update();return cachedKey+(ready?'#ready':'#pending')}
+ window.__conquerHeraldryCanvas={paint,signature,invalidate:()=>{cachedKey='';ready=false;image=null}};
 })();

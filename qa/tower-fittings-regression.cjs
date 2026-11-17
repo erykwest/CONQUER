@@ -53,7 +53,7 @@ check('World3D owns flags and torches: the 2.5D painters stand down',()=>{
   assert.equal(F().dynamicMeshes().length,0,'no meshes without World3D');
   const cs=fs.readFileSync(__dirname+'/../src/settlement-castle-structures.js','utf8');
   assert.ok(cs.includes('if(window.ConquerTowerFittings?.ownsFlags?.())return;'),'drawTowerFlags stands down');
-  assert.ok(cs.includes('if(!window.ConquerWorld3D?.active?.())for(const src of towerTorchSources())drawTorchFixture(src);'),'2.5D tower torches only without World3D');
+  assert.ok(!/for\(const src of towerTorchSources\(\)\)drawTorchFixture/.test(cs),'no 2.5D tower torch painter');
   const w3=fs.readFileSync(__dirname+'/../src/settlement-world3d.js','utf8');
   assert.ok(w3.includes('window.ConquerTrebuchets,window.ConquerTowerFittings]'),'World3D collects the tower fittings');
   assert.ok(fs.readFileSync(__dirname+'/../index.html','utf8').includes('settlement-tower-fittings.js'),'loaded');

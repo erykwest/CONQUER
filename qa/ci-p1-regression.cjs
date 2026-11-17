@@ -11,7 +11,7 @@ const inventory=['asset-lab-regression.yml','builder-menu-regression.yml','camp-
  'converge-regression.yml','crime-regression.yml','cutaway-floors-regression.yml','earthworks-regression.yml',
  'economy-flows-regression.yml','gate-six-sockets-regression.yml','main-fixes-regression.yml','march-regression.yml',
  'panels-browser-preview.yml','perf.yml','road-magnet-regression.yml','runtime-integrity.yml','sea-regression.yml',
- 'settlement-routing-spawn.yml','tower-variants-regression.yml','wardrobe-regression.yml','webgpu-smoke.yml',
+ 'settlement-routing-spawn.yml','tower-variants-regression.yml','wardrobe-regression.yml',
  'work-anim-regression.yml'];
 for(const name of inventory)assert.ok(workflows.includes(name),'workflow inventory lost '+name);
 const f=name=>read('.github/workflows/'+name);
@@ -38,7 +38,7 @@ for(const name of ['cans-regression.yml','circle-regression.yml','combat-regress
 const action=read('.github/actions/playwright-setup/action.yml');
 for(const item of ['playwright@1.56.1','actions/cache@v4','~/.cache/ms-playwright','~/.npm','npx playwright install chromium','npx playwright install-deps chromium','chromium.launch({headless:true})'])
  assert.ok(action.includes(item),'shared browser setup missing '+item);
-for(const name of ['asset-lab-regression.yml','converge-regression.yml','main-fixes-regression.yml','panels-browser-preview.yml','webgpu-smoke.yml','codex-wiki.yml']){
+for(const name of ['asset-lab-regression.yml','converge-regression.yml','main-fixes-regression.yml','panels-browser-preview.yml','codex-wiki.yml']){
  const s=f(name);
  assert.ok(s.includes('./.github/actions/playwright-setup'),name+' bypasses shared Chromium cache');
  assert.ok(s.includes('.github/actions/playwright-setup/action.yml'),name+' does not rerun when browser action changes');
@@ -54,12 +54,13 @@ assert.ok(asset.includes('workflow_dispatch:')&&asset.includes('schedule:'),'vis
 assert.ok(asset.includes('node qa/asset-audit-scope-regression.cjs'),'asset scope guards must run before browser');
 assert.ok(asset.includes('src/settlement-world3d.js'), 'world3d must be covered by Asset Lab audit');
 assert.ok(asset.includes('node qa/asset-audit.mjs'),'retain exhaustive asset audit');
-const main=f('main-fixes-regression.yml'),gate=f('gate-six-sockets-regression.yml'),gpu=f('webgpu-smoke.yml');
-for(const [name,s] of [['main-fixes',main],['gate',gate],['WebGPU',gpu]])assert.ok(!s.includes('for test in qa/*-regression.cjs'),name+' repeats P0 complete suite');
+const main=f('main-fixes-regression.yml'),gate=f('gate-six-sockets-regression.yml');
+for(const [name,s] of [['main-fixes',main],['gate',gate]])assert.ok(!s.includes('for test in qa/*-regression.cjs'),name+' repeats P0 complete suite');
 assert.ok(!main.includes('node qa/asset-audit.mjs'),'Asset Lab audit must have one CI owner');
 assert.ok(!main.includes('node tools/context-guard.cjs'),'Context pyramid guard must have one CI owner');
 assert.ok(!gate.includes('settlement-all:'),'Gate workflow still repeats full suite');
-assert.ok(gpu.includes('pull_request:')&&gpu.includes('src/settlement-webgpu.js')&&gpu.includes('node qa/occlusion-clip-regression.cjs'),'WebGPU checks need scoped browser and renderer regressions');
+// The WebGPU compositor of the Canvas scene caches was retired with them (D-RENDER-3D-261111).
+assert.ok(!workflows.includes('webgpu-smoke.yml'),'no WebGPU smoke workflow: there is no Canvas scene to composite');
 assert.ok(!f('combat-regression.yml').includes('  pull_request:\npermissions:'),'Combat PR must be path filtered');
 for(const name of ['combat-regression.yml','economy-flows-regression.yml'])assert.ok(!f(name).includes('node qa/save-safety-regression.cjs'),name+' duplicates always-on Runtime integrity');
 assert.ok(f('runtime-integrity.yml').includes('node qa/save-safety-regression.cjs'),'never drop save safety coverage');
@@ -102,7 +103,7 @@ console.log('PASS CI P2.4: six Codex checks retained by all-PR runtime owner, ro
 assert.ok(p24Runtime.includes("find src -type f \\( -name '*.js' -o -name '*.mjs' \\)")&&p24Runtime.includes("find api -maxdepth 1 -type f -name '*.js'"),
  'Runtime integrity must syntax-check src/**/*.js, src/**/*.mjs and api/*.js');
 // Browser workflows run weekly and on demand, so path filters cannot hide breakage forever.
-for(const name of ['main-fixes-regression.yml','panels-browser-preview.yml','converge-regression.yml','codex-wiki.yml','webgpu-smoke.yml','asset-lab-regression.yml']){
+for(const name of ['main-fixes-regression.yml','panels-browser-preview.yml','converge-regression.yml','codex-wiki.yml','asset-lab-regression.yml']){
  const s=f(name);
  assert.match(s,/^  workflow_dispatch:/m,name+' needs manual dispatch');
  assert.match(s,/^  schedule:\n    - cron: '/m,name+' needs a weekly schedule');

@@ -20,6 +20,37 @@
 - [ ] Definire come vengono chiamati in campo uomini d'arme L3 e cavalieri L4 (in attesa del product owner); oggi all'allarme si riparano.
 - [ ] Statistiche dell'uomo d'arme fra fante e cavaliere (proposta: 14 PV, armatura 2, combattimento 3).
 
+### 2026-11-17 — FIG-HANDS-261117 · Mani e piedi delle figure
+
+**IMPLEMENTATO SU BRANCH `feature/figure-hands-feet`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Mani rosa e piedi ovali marroni su civili, lavoratori, soldati (fermi e in combattimento), ostili, nobili.
+- [x] Mani rosa ai cavalieri e messaggeri a cavallo; gambe mantenute (scelta del product owner).
+- [x] Dame L4: gonna a campana unita al busto in un'unica sagoma, mani sul bordo, punte delle scarpe (variante F scelta dal product owner).
+- [x] Dame L4: abito monocromo, copricapi e acconciature medievali, pellicce d'inverno al posto di mantelli e cappucci.
+- [ ] Uomini L4: le mani ai fianchi restano staccate dal disco; valutare la variante «mani sul bordo».
+- [ ] Il portatore di torcia della pattuglia notturna ha le mani ai fianchi: la torcia parte poco sopra la mano destra, non da dentro.
+- [ ] Le figure in cache 3D (`ConquerWorld3D.figure`) si ridisegnano con il nuovo aspetto: verificarlo in partita su una città popolata (non coperto dal Lab).
+
+## 2026-11-11 — D-RENDER-3D-261111 · ritiro del renderer 2.5D
+
+- **FATTO SUL BRANCH (17/11):** rimossi tutti i fallback 2.5D (opt-out del renderer, terreno Canvas, WebGPU, cantieri e ghost 2.5D di ogni edificio, rami `!World3D` dei moduli, funzioni di pittura non più chiamate, strumento «Prerender + test», workflow con `?renderer=canvas2d`).
+- **FATTO (17/11):** drappo del Mastio come decal 3D, finestra e drappo del Mastio di legno in 3D.
+- **APERTO (17/11):** tende di accampamento e fuorilegge dipinte con `ConquerMesh3D.drawMeshes` sul Canvas (da passare al front pass 3D); contatori `cache.*` della telemetria ormai sempre a zero; cantieri di industrie/eventi/moli senza assemblaggio mostrano solo il volume dell'impronta.
+- **SU BRANCH `retire-25d-renderer`:** edifici, torri, mura, porte ed esterni delle stanze solo in World 3D; Asset Lab con controllo `renderer-3d`.
+- **APERTO:** stato «danneggiata» senza segni visibili in 3D (23 avvisi `danno-visibile`); drappo del Mastio come decal 3D; eliminare le funzioni di pittura 2.5D non più chiamate (castle, castle-structures, room-exterior, cutaway-furniture, architecture finestre/portali); ritirare o portare in 3D lo strumento DEV «Prerender + test»; workflow browser che usano `?renderer=canvas2d` (webgpu-smoke, clay-browser) da riallineare al contratto «senza WebGL2 nessun edificio».
+
+### 2026-11-16 — GORE-01: sangue, frecce e cadaveri sul campo
+
+**IMPLEMENTATO SU BRANCH `feature/gore`, NON MERGE.**
+- [x] Macchie di sangue a ogni colpo (frecce, mischia, pietre), orientate dal colpo.
+- [x] Frecce mancate conficcate nel terreno; frecce ricevute conficcate nel cadavere.
+- [x] Cadaveri con livrea e arma a terra; decapitazioni, squartamenti, braccia mozzate, schiacciati.
+- [x] Dissolvenza come le impronte sulla neve, durata doppia (2 giorni di gioco).
+- [x] Opzione spegnibile (DEV › VIOLENZA), salvata nel browser.
+- [ ] Spostare l'interruttore nelle impostazioni giocatore quando esisterà un menu opzioni fuori dal DEV.
+- [ ] Caduti sui cammini di ronda: oggi restano a quota mura e possono essere coperti dalle mura; valutare la caduta ai piedi del muro.
+- [ ] Battaglia navale e civili uccisi: non lasciano ancora tracce.
+
 ### 2026-11-16 — ASSET-AUDIT-261116 · Audit del Lab
 
 - [x] `sagoma-conservata` misura le aree, non la densità nel riquadro: niente falso errore quando le macerie di un elemento esterno cadono lontano.
@@ -42,6 +73,7 @@
 - [x] Braciere della torre a palizzata di legno nel modello Blender (build_wood_fort.py).
 - [x] Bandiere dei tetti a punta e delle bertesche in 3D, come le navi; supporti 3D delle torce delle torri; alone del fuoco non più tagliato dalla facciata.
 - [ ] Fumo dei comignoli: resta un effetto 2D (non struttura).
+
 ## 2026-11-16 — Assedio: aperti dopo il merge di main
 
 - **APERTO:** fasi di sollevamento della scala e del ponte della torre d'assalto nel combattimento vero (oggi solo nell'anteprima `?siege=`); voce wiki per l'ariete leggero; regola mura/porte verso l'esterno anche al momento della costruzione (oggi al caricamento); assedio lungo con i due arieti e il trabucco; prestazioni delle ricerche di percorso.
@@ -85,6 +117,7 @@
 - [ ] Porte delle torri d'angolo per le altre forme (tonde, a D): da definire.
 - [x] Rimuovi foresta rispetta Fast build (istantaneo) e Free build (senza salari) del menu DEV.
 - [x] Cutaway piano per piano: i merli (e caditoie, tetto interno, braciere) spariscono quando il piano in vista non è l'ultimo.
+
 ## 2026-11-16 — UI-ALERTS-01 · Avvisi in gioco e diario degli eventi
 
 **IMPLEMENTATO SU BRANCH `feature/alert-feed`, NON MERGE.** Dettagli in [STATUS](STATUS.md).

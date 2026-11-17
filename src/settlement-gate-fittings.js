@@ -244,13 +244,12 @@
     return mesh;
   }
   function dynamicMeshes(){
-    if(!window.ConquerWorld3D?.active?.())return[];
     const out=[];
     for(const s of State.structures){const m=gateMesh(s);if(m)out.push(m)}
     return out;
   }
-  // Fire sources for the torch glow (settlement-world3d, camera independent) and the flames /
-  // 2.5D brackets (settlement-castle-structures), which skip a facade turned away from the camera.
+  // Fire sources for the torch glow (settlement-world3d, camera independent) and the flames
+  // (settlement-castle-structures), which skip a facade turned away from the camera.
   function torchSources(visibleOnly=true){
     const out=[];
     for(const s of State.structures){
@@ -334,57 +333,6 @@
     if(B.height>=BANNER_MIN)for(const side of [-1,1])out.push({edge:front,key:'gateBanner',centerZ:B.top-B.height/2,width:B.width,height:B.height,offset:B.across*side});
     return out;
   }
-
-  // ---------- 2.5D fallback ----------
-  // The Canvas renderer keeps its solid gatehouse: an open gate shows the dark passage inside the
-  // frame, a lowered portcullis its grid, and the visible outer front its banners.
-  function drawCanvasPortal(s,edge){
-    const o=opening(s),P0=portalOf(s),stage=window.ConquerSiege?.doorStage?.(s)||'intact';
-    const open=(Number.isFinite(s.doorOpen)?s.doorOpen:doorTarget(s))>.5||stage==='broken';
-    const p=portcullis(s),pc=p?p.progress:0;
-    if(!open&&!(pc>.01))return false;
-    const dx=edge.b.x-edge.a.x,dy=edge.b.y-edge.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
-    const m={x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2},P=(c,z)=>w2s({x:m.x+ux*c,y:m.y+uy*c},z);
-    const outline=[P(-o.half,0),...o.arc.map(q=>P(-q.c,q.z)),...o.arc.slice().reverse().map(q=>P(q.c,q.z)),P(o.half,0)];
-    if(open){
-      pathPolygon(outline,'#1b1714',null);
-      drawArchitectureAssetOnEdge(edge,P0.centerZ,P0.width,P0.height,'gatePortalFrame');
-    }else{const d=closedPortal(s);drawArchitectureAssetOnEdge(edge,d.centerZ,d.width,d.height,window.ConquerSiege?.doorAsset?.(s)||'gatePortal')}
-    if(pc>.01&&edge.role==='front'){
-      ctx.save();ctx.beginPath();outline.forEach((q,i)=>i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y));ctx.closePath();ctx.clip();
-      const top=o.apex,lift=(1-pc)*(top+.04);
-      // Lit iron over the dark passage (the 3D vault shows them against the masonry instead).
-      ctx.beginPath();
-      for(let c=-o.half+.02;c<=o.half;c+=.085){const a=P(c,lift+top),b=P(c,lift-.03);ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y)}
-      for(let z=.12;z<top;z+=.17){const a=P(-o.half,lift+z),b=P(o.half,lift+z);ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y)}
-      const w=Math.max(1,.026*U*State.view.scale);           // a .026 U iron bar
-      ctx.strokeStyle='#1f1c1a';ctx.lineWidth=w+1.2;ctx.stroke();
-      ctx.strokeStyle='#7a726a';ctx.lineWidth=w;ctx.stroke();ctx.restore();
-    }
-    return true;
-  }
-  function drawCanvasBanners(s,edge){
-    if(edge.role!=='front')return;
-    const B=bannerOf(s);if(B.height<BANNER_MIN)return;
-    for(const side of [-1,1])drawArchitectureAssetOnEdge(edge,B.top-B.height/2,B.width,B.height,'gateBanner',B.across*side);
-  }
-  window.addEventListener?.('DOMContentLoaded',()=>{
-    if(typeof drawGatePortals!=='function')return;
-    const previous=drawGatePortals;
-    drawGatePortals=function(){
-      ensureSprites();
-      previous();
-      for(const s of State.structures){
-        if(!stoneGate(s)||underConstruction(s))continue;
-        withStructureGroundPlane(s,()=>withStructureDetailOcclusion(s,BANNER.top,()=>{
-          for(const edge of gateFacadeEdges(s)){
-            if(edge.role==='front'||edge.role==='rear')drawCanvasPortal(s,edge);
-            drawCanvasBanners(s,edge);
-          }
-        }));
-      }
-    };
-  });
 
   // ---------- inspector ----------
   function panel(s){

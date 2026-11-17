@@ -122,6 +122,9 @@
     if(item.kind==='castle'&&state!=='3d'){
       const cap=L().engineCapture(item,state,Math.round(rotation/90)%4);
       res.structure=cap?.structure||null;
+      // Fortifications have no 2.5D path (D-RENDER-3D-261111): every engine capture is a World 3D frame.
+      res.renderer=cap?.renderer||null;
+      res.checks.push(check('renderer-3d',cap?.renderer==='webgl2','fail','renderer '+(cap?.renderer||'—')));
       const intact=state==='intact'?res.structure:L().engineCapture(item,'intact',0)?.structure;
       res.checks.push(...stateChecks(item,state,res.structure,intact));
     }

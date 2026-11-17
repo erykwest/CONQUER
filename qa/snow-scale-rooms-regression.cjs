@@ -28,7 +28,6 @@ const capacityExpr=siege.match(/const CAPACITY=Object.freeze\((\{[\s\S]*?\})\);/
 assert.ok(capacityExpr);
 const capacities=vm.runInNewContext('('+capacityExpr+')');
 assert.equal(capacities.barracks.soldiers,capacities.quarters.soldiers,'legacy quarters and barracks support equal garrison size');
-assert.match(castle,/slot\.role==='barracks'\|\|slot\.role==='quarters'/);
 assert.match(population,/slot\.role==='barracks'\|\|slot\.role==='quarters'/);
 console.log('PASS quarters migrate into Barracks with the same function, garrison and cutaway appearance');
 
@@ -43,10 +42,7 @@ assert.deepEqual(Array.from(displayed('gate',3)),[0,1,2],'gate room order intent
 assert.match(app,/data-function-slot="\$\{i\}"/,'selector still targets the original saved floor');
 console.log('PASS towers and built sections list highest floor first with original data indices');
 
-assert.match(render,/const tier=towerTier\(tower\),width=clamp\(\.38\+tier\*\.045,\.42,\.54\)\*1\.5/);
-assert.match(render,/height=fullHeight\/3\*1\.5/);
-assert.match(render,/const ww=2\.1\*State\.view\.scale,wh=3\.25\*State\.view\.scale;/);
-assert.match(castle,/for\(const w of plan\.windows\)if\(facing\(w\.p,w\.normal\)\)drawHouseFacadePane\(w\);/);
+// Door and window sprite sizes belonged to the retired 2.5D facade painters (D-RENDER-3D-261111).
 assert.match(population,/const base=w2s\(dot\.p,\.10\),scale=State\.view\.scale\*\.5/);
 assert.match(population,/function militaryScale\(\)\{[\s\S]*?return State\.view\.scale\*\.5;/);
 console.log('PASS house windows and all unit classes 50%, stone-tower doors 150%');

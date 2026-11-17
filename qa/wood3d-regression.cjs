@@ -150,10 +150,10 @@ console.log('PASS timber longhouse W1 / W2: sizes, roof covers, smoke hole, bays
 // assembled from the same models.
 const world=src('settlement-world3d.js'),assembly=src('settlement-construction-assembly.js');
 assert.match(world,/ConquerWood3D\?\.addToBuilder\(m,s\)/,'buildings pass adds the timber models');
-assert.match(world,/&&!window\.ConquerWood3D\?\.handles\(s\)\)/,'residual 2.5D skips timber drawn in 3D');
+assert.match(world,/&&!window\.ConquerWood3D\?\.handles\(s\)\)/,'missing timber models are reported (no 2.5D residue)');
 assert.match(assembly,/woodSource\(s\)\|\|palisadeSource\(s\)/,'timber sites are assembled from the models');
 // The longhouse is not a castle part: World 3D rebuilds it with the timber buildings (a cutaway
 // toggle must reach it) and the 2.5D draws its room with its model, out of the castle composites.
 assert.match(world,/isWoodTower\(s\)\|\|isWoodGate\(s\)\|\|isLonghouse\(s\)\},/,'World 3D buildings signature covers the longhouse');
-assert.match(src('settlement-render.js'),/isLonghouse\(s\)&&window\.ConquerWood3D\?\.draw\(s,preview\)\)\{if\(!preview&&structureCutaway\(s\)\)window\.ConquerCutawayFurniture\?\.draw/,'2.5D longhouse room drawn with its model');
+assert.doesNotMatch(src('settlement-wood3d.js'),/function draw\(s,preview/,'no 2.5D timber painter (World 3D only)');
 console.log('PASS world3d wiring and timber construction sites');

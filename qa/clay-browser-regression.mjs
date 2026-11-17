@@ -6,11 +6,11 @@ fs.mkdirSync('artifacts',{recursive:true});
 const browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader','--enable-webgl','--enable-unsafe-swiftshader']});
 const results=[];
 try{
-  for(const mode of ['webgl','canvas']){
+  for(const mode of ['webgl']){
     const context=await browser.newContext({viewport:{width:1440,height:900},deviceScaleFactor:1});
     const page=await context.newPage(),exceptions=[];
     page.on('pageerror',e=>exceptions.push(String(e.stack||e)));
-    await page.goto('http://127.0.0.1:4173/index.html?'+(mode==='webgl'?'world3d=1':'renderer=canvas2d'),{waitUntil:'domcontentloaded',timeout:60000});
+    await page.goto('http://127.0.0.1:4173/index.html?'+'world3d=1',{waitUntil:'domcontentloaded',timeout:60000});
     await page.waitForFunction(()=>typeof draw==='function'&&!!window.ConquerWorld3D&&!!window.ConquerCastle3D,{timeout:30000});
     await page.evaluate(()=>{
       window.__clayQaRestore={structures:State.structures,lotCache:urbanLotCache,speed:State.clock.speed,view:{...State.view}};
@@ -86,18 +86,14 @@ try{
         assert.ok(snapshot.world3d.buffers['castleBody#n']>0,'tower geometry disappeared');
         if(!snapshot.mode3d){
           // Software SwiftShader can run out of transient GPU resources after repeated
-          // 4096px renders. Our runtime *intentionally* falls back to Canvas, never blank.
+          // 4096px renders. There is no Canvas fallback (D-RENDER-3D-261111): the frame is the notice.
           assert.match(snapshot.world3d.failed||'',/^world3d-draw:/);
-          const painted=await page.evaluate(()=>{
+          const notice=await page.evaluate(()=>{
             draw();const c=document.getElementById('c'),g=c.getContext('2d');
-            const bounds=[0.25,0.5,0.75].map(x=>[x,c.height*.5/c.width]);
-            return bounds.some(([x,y])=>{
-              const pixel=g.getImageData(Math.max(0,Math.floor(c.width*x)),Math.max(0,Math.min(c.height-1,Math.floor(c.height*y))),1,1).data;
-              return pixel[3]>0;
-            });
+            return g.getImageData(c.width>>1,Math.round(38*devicePixelRatio),1,1).data[3]>0;
           });
-          assert.ok(painted,'Canvas fallback must paint a visible scene');
-          console.log('PASS SwiftShader fallback retained visible Canvas scene');
+          assert.ok(notice,'a renderer failure must show the WebGL2 notice, never a blank frame');
+          console.log('PASS SwiftShader failure shows the WebGL2 notice');
         }else assert.equal(snapshot.world3d.failed,null,'Unexpected WebGL failure');
       }
     }

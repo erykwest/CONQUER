@@ -83,15 +83,18 @@
       ctx.save();
       ctx.globalAlpha*=pose.alpha;
       ctx.translate(pose.dirX*reach,pose.dirY*reach*.6-Math.abs(pose.bob)*.5*scale);
-      if(pose.blood>0)drawBlood(base,scale,bodyH,pose);
+      // The gore option (settlement-gore.js) also governs the blood of the fall itself.
+      if(pose.blood>0&&window.ConquerGore?.enabled?.()!==false)drawBlood(base,scale,bodyH,pose);
       if(pose.fall>0){
         // Fall away from the foe, pivoting on the feet.
         ctx.translate(base.x,base.y);ctx.rotate((pose.dirX>0?-1:1)*pose.fall*1.45);ctx.translate(-base.x,-base.y);
       }
       // The man-at-arms draws whole (gambeson, armour, two-handed weapon): no separate posed weapon.
       if(type==='manAtArms'){drawSoldierFigureUnmasked(p,z,type,id,phase,livery);ctx.restore();return}
-      // Knights keep their cloak and crest on the posed body ('knightUnarmed').
-      drawSoldierFigureUnmasked(p,z,armed?(type==='knight'?'knightUnarmed':'unarmed'):type,id,phase,livery);
+      // Knights keep their cloak and crest on the posed body ('knightUnarmed'); posed=true: the
+      // weapon hands are drawn here, with the weapons (FIG-HANDS-261117).
+      drawSoldierFigureUnmasked(p,z,armed?(type==='knight'?'knightUnarmed':'unarmed'):type,id,phase,livery,true);
+      if(type==='spearman'||type==='herald')drawSoldierFixedHands(type,base,bodyW,bodyH,bodyY,scale);
       if(type==='pikeman'||type==='herald')drawSpearShield(base,scale,bodyW,bodyH,bodyY,id,livery,pose);
       if(type==='herald'){/* standard instead of the spear: drawn by the combat overlay */}
       else if(type==='spearman'||type==='pikeman')drawSpear(base,scale,bodyW,bodyH,bodyY,headY,pose);
@@ -136,6 +139,7 @@
     ctx.beginPath();ctx.moveTo(x,gy);ctx.lineTo(x+1.0*scale,headY-13*scale);ctx.stroke();
     ctx.fillStyle='#b8bcc0';ctx.beginPath();
     ctx.moveTo(x+1.0*scale,headY-16*scale);ctx.lineTo(x+3.0*scale,headY-11.5*scale);ctx.lineTo(x-1.0*scale,headY-12.2*scale);ctx.closePath();ctx.fill();
+    drawSpearHand(x,gy,headY-13*scale,bodyY+bodyH*SPEAR_HAND_Y,scale);   // turns and thrusts with the shaft
     ctx.restore();
   }
   // Pikeman's / herald's shield: on the left arm (screen right), pushed toward the foe on guard.
@@ -157,10 +161,11 @@
     ctx.beginPath();ctx.moveTo(hx,hy);ctx.lineTo(base.x-bodyW*.80-swing,top-7.5*scale);ctx.stroke();
     ctx.strokeStyle='#76563b';ctx.lineWidth=Math.max(1,1.2*scale);
     ctx.beginPath();ctx.moveTo(base.x-bodyW*.23,bodyY+bodyH*.05);ctx.lineTo(base.x-bodyW*.52,bodyY+bodyH*.27);ctx.stroke();
+    drawFigureHand(base.x-bodyW*.40,bodyY+bodyH*.13,scale);   // sword hand (right, screen left) swings with the blade
     ctx.restore();
   }
   function reset(){lastEventEnd=-1e9}
   window.ConquerCombatAnim={strike,hurt,fall,dying,active,pose,foeOf,attackCurve,drawFigure,reset,
     setClock(t){clockOverride=Number.isFinite(t)?t:null},
-    TIMING:Object.freeze({STRIKE,HURT,FALL,GONE,LAST,IMPACT:STRIKE*.55})};
+    TIMING:Object.freeze({STRIKE,HURT,FALL,FADE_FROM,GONE,LAST,IMPACT:STRIKE*.55})};
 })();

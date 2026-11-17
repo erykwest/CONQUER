@@ -84,7 +84,6 @@ for(let i=0;i<64;i++){
 const manual=sandbox.houseTurretInfo({id:'m',type:'house',x:100,y:100,w:1.5,h:1,houseLevel:4});
 assert.equal(+manual.bodyH.toFixed(2),2.27,'manual L4 turret body one floor above its 1.37 U walls');
 assert.equal(+manual.roofH.toFixed(2),3.07,'manual L4 turret roof');
-assert.match(buildings,/breakZ=turret\.floorZ/,'Canvas turret uses the shared floor band');
 assert.match(world,/part\.kind==='turret'\?part\.floorZ/,'WebGL2 turret uses the shared floor band');
 
 // 3. Window rows sit inside their floor on every wall height (L2/L3 1.72 U, auto L4 2.38 U).
@@ -187,7 +186,7 @@ for(const level of [1,2,3,4]){
   }
 }
 assert.match(world,/basePoints/,'WebGL2 builds the recessed ground floor');
-assert.match(buildings,/extrudePolygonAt\(part\.basePoints\|\|part\.points,0,floorBreak/,'Canvas builds the recessed ground floor');
+assert.doesNotMatch(buildings,/function drawHouse\(/,'no 2.5D house painter (World 3D only)');
 
 // 10. No window on or over the door: a ground-floor window keeps clear of the leaf or is dropped.
 {

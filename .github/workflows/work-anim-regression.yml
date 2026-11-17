@@ -13,7 +13,11 @@ on:
       - 'src/settlement-population-figures.js'
       - 'src/settlement-render.js'
       - 'src/settlement-shop-cutaway.js'
+      - 'src/settlement-combat-anim.js'
+      - 'src/settlement-mounted2d.js'
+      - 'src/settlement-wardrobe.js'
       - 'qa/work-anim-regression.cjs'
+      - 'qa/figure-hands-feet-regression.cjs'
       - '.github/workflows/work-anim-regression.yml'
   workflow_dispatch:
 permissions:
@@ -33,5 +37,8 @@ jobs:
           node --check src/settlement-industries.js
           node --check src/settlement-population-figures.js
           node --check qa/work-anim-regression.cjs
+          node --check qa/figure-hands-feet-regression.cjs
       - name: Run work-animation regression
         run: node qa/work-anim-regression.cjs
+      - name: Run figure hands and feet regression
+        run: node qa/figure-hands-feet-regression.cjs

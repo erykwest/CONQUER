@@ -18,14 +18,14 @@ async function main(){
   await new Promise(r=>server.listen(0,'127.0.0.1',r));
   const browser=await chromium.launch({headless:true,channel:'chrome',args:['--disable-background-timer-throttling','--disable-renderer-backgrounding','--disable-backgrounding-occluded-windows']});
   const report={label,browser:browser.version(),errors:[],results:[]};
-  try{for(const scenario of (process.env.PERF_SCENARIOS||'collapse,brigade,walls,assault').split(','))for(const mode of (process.env.PERF_MODES||'canvas,webgl').split(',')){
+  try{for(const scenario of (process.env.PERF_SCENARIOS||'collapse,brigade,walls,assault').split(','))for(const mode of (process.env.PERF_MODES||'webgl').split(',')){
     const context=await browser.newContext({viewport:{width:1440,height:900},deviceScaleFactor:1});
     await context.route(/supabase\.co\//,r=>r.abort());
     await context.addInitScript(()=>{localStorage.setItem('conquer.seed.0.0','12345');let s=12345;Math.random=()=>((s=(Math.imul(s,1664525)+1013904223)>>>0)/4294967296)});
     const page=await context.newPage();page.on('pageerror',e=>report.errors.push({scenario,mode,error:e.message}));
     page.on('console',m=>{if(m.type()==='error'&&/^CONQUER_|Uncaught/.test(m.text()))report.errors.push({scenario,mode,error:m.text()})});
     if(process.env.PERF_LIVE==='1')await page.exposeFunction('__round3Capture',stage=>page.screenshot({path:path.join(out,`${label}-${mode}-${scenario}-${stage}.png`)}));
-    await page.goto(`http://127.0.0.1:${server.address().port}/index.html?`+(mode==='webgl'?'world3d=1':'renderer=canvas2d'),{waitUntil:'networkidle'});
+    await page.goto(`http://127.0.0.1:${server.address().port}/index.html?`+'world3d=1',{waitUntil:'networkidle'});
     await page.evaluate(scenario=>{
       State.clock.speed=0;State.clock.day=20;State.daylightOverride='day';State.seasonOverride='summer';
       State.environment=[];State.relief={hills:[],seed:12345};clearReliefBandCache();State.village={founded:false,nextGrowthDay:1e9};State.structures=[];State.fire=null;
@@ -102,42 +102,6 @@ async function main(){
     },scenario);
     const {profile}=await cdp.send('Profiler.stop');fs.writeFileSync(path.join(out,`${label}-${mode}-${scenario}.cpuprofile`),JSON.stringify(profile));await cdp.detach();
     result.mode=mode;result.runtime=await page.evaluate(()=>({world:ConquerWorld3D.status().failed,combatFaults:window.__conquerCombatFaults||0,suspended:!!window.__conquerCombatSuspended}));report.results.push(result);fs.writeFileSync(path.join(out,label+'.json'),JSON.stringify(report,null,2));
-    if(scenario==='collapse'&&mode==='canvas'&&process.env.PERF_PIXELS==='1'){
-      const current=fs.readFileSync(path.join(root,'src/settlement-siege.js'),'utf8');
-      const old=fs.readFileSync(path.join(out,'before/src/settlement-siege.js'),'utf8');
-      const legacy=old.slice(old.indexOf('  function drawMeshes2D('),old.indexOf('  function drawOverlay('));
-      const compiled=current.slice(current.indexOf('  let rubbleBitmap='),current.indexOf('  function drawOverlay('));
-      result.pixels=await page.evaluate(({legacy,compiled})=>{
-        const oldDraw=eval('('+legacy+')'),modern=eval('(()=>{'+compiled+';return {drawRubble2D,drawMeshes2D}})()'),checks=[];
-        const compare=(drawA,drawB)=>{
-          const ca=document.createElement('canvas'),cb=document.createElement('canvas');ca.width=cb.width=canvas.width;ca.height=cb.height=canvas.height;
-          const a=ca.getContext('2d'),b=cb.getContext('2d');withRenderContext(a,drawA);withRenderContext(b,drawB);
-          const p=a.getImageData(0,0,ca.width,ca.height).data,q=b.getImageData(0,0,cb.width,cb.height).data;let pixels=0,diff=0,error=0;
-          for(let i=0;i<p.length;i+=4)if(p[i+3]||q[i+3]){pixels++;let max=0;for(let k=0;k<4;k++){const d=Math.abs(p[i+k]-q[i+k]);error+=d;max=Math.max(max,d)}if(max>16)diff++}
-          return{pixels,differingFraction:diff/Math.max(1,pixels),meanChannelError:error/Math.max(1,pixels*4)};
-        };
-        const stamp=performance.now;performance.now=()=>1e8;const meshes=ConquerSiege.dynamicMeshes();performance.now=stamp;
-        for(const rotation of [0,1,2,3]){
-          State.view.rotation=rotation;
-          checks.push({rotation,kind:'legacy',...compare(()=>oldDraw(meshes),()=>modern.drawMeshes2D(meshes))});
-          checks.push({rotation,kind:'cache',...compare(()=>modern.drawMeshes2D(meshes),()=>modern.drawRubble2D(meshes))});
-          State.view.x+=31;State.view.y-=17;
-          checks.push({rotation,kind:'pan',...compare(()=>modern.drawMeshes2D(meshes),()=>modern.drawRubble2D(meshes))});
-        }
-        for(const material of ['stone','wood','timber'])for(const time of [.4,1.2,Infinity]){
-          const spec={id:'pixel-'+material,parts:[[{x:96,y:96},{x:98,y:96},{x:98,y:98},{x:96,y:98}]],z0:0,z1:3,ground:0,seed:42,material};
-          const moving=[ConquerCollapse.mesh(spec,time)];
-          if(!Number.isFinite(time))moving[0].static=true;
-          checks.push({material,time:Number.isFinite(time)?time:'settled',kind:'legacy',...compare(()=>oldDraw(moving),()=>modern.drawMeshes2D(moving))});
-        }
-        State.view.scale=1.25;State.view.plan=true;
-        State.view.x=canvas.width/2-100*U*1.25;State.view.y=canvas.height/2-100*U*1.25;
-        checks.push({kind:'cache-plan-zoom',...compare(()=>modern.drawMeshes2D(meshes),()=>modern.drawRubble2D(meshes))});
-        return checks;
-      },{legacy,compiled});
-      console.log('PIXELS '+JSON.stringify(result.pixels));
-      for(const check of result.pixels){assert.ok(check.pixels>100);assert.ok(check.differingFraction<(check.kind==='legacy'?.03:.02)&&check.meanChannelError<(check.kind==='legacy'?2:1),JSON.stringify(check))}
-    }
     console.log(JSON.stringify({...result,samples:undefined,perf:undefined,final:undefined,distance:undefined}));
     await page.screenshot({path:path.join(out,`${label}-${mode}-${scenario}.png`)});
     if(process.env.PERF_ASSERT==='1'){

@@ -11,7 +11,7 @@
 // through drawAnimal's onBody hook, so it follows the gait. The realm arms are
 // painted un-mirrored whatever the facing.
 (function(){
-  const SKIN='#d99a83',STEEL='#9aa3aa',STEEL_DARK='#5d656c',MAIL='#7d858b',LEATHER='#6b4a2e',LEATHER_DARK='#45301f',
+  const SKIN='#d99a83',HAND='#e8a58f',STEEL='#9aa3aa',STEEL_DARK='#5d656c',MAIL='#7d858b',LEATHER='#6b4a2e',LEATHER_DARK='#45301f',
     GOLD='#d2ad4b',WOOD='#8a6a40',CLOTH='#5c4a36',HAT='#70777c',OUTLINE='rgba(25,24,22,.88)';
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   function poly(ctx,pts,fill,stroke,lw){
@@ -130,6 +130,12 @@
     poly(ctx,[a,b,[a[0]+hang[0]*30+d[0]*6,a[1]+hang[1]*30+d[1]*6]],o.livery.main,OUTLINE,lw*.6);
     poly(ctx,[a,[(a[0]+b[0])/2,(a[1]+b[1])/2],[a[0]+hang[0]*30+d[0]*6,a[1]+hang[1]*30+d[1]*6]],o.livery.alt,null,lw);
     limb(ctx,[[126,44],[L.grip[0]-4,L.grip[1]+2]],o.kind==='knight'?MAIL:o.livery.alt,9,lw);              // lance arm (far side)
+    hand(ctx,L.grip[0]-4,L.grip[1]+2,lw);
+  }
+  // Pink outlined hand, as on the foot figures (FIG-HANDS-261117); the legs keep their boots.
+  function hand(ctx,x,y,lw){
+    ctx.fillStyle=HAND;ctx.strokeStyle=OUTLINE;ctx.lineWidth=lw*.8;
+    ctx.beginPath();ctx.arc(x,y,4.5,0,Math.PI*2);ctx.fill();ctx.stroke();
   }
   function torso(ctx,o){
     const {lw,livery}=o,pts=[[103,90],[143,90],[137,34],[109,34]];
@@ -220,7 +226,7 @@
     // To the bit at the corner of the mouth (head at rest: about 20,27 past the throat joint).
     line(ctx,[150,64],[j.x+20,j.y+27],LEATHER_DARK,o.lw*1.3);
     limb(ctx,[[122,44],[138,62],[150,64]],o.livery.main,9,o.lw);
-    ctx.fillStyle=SKIN;ctx.beginPath();ctx.arc(150,64,4.5,0,Math.PI*2);ctx.fill();
+    hand(ctx,150,64,o.lw);
     poly(ctx,[[100,74],[112,74],[112,90],[100,90]],LEATHER,OUTLINE,o.lw);                           // satchel
   }
   // Unhorsed: drawn in ground space (not on the horse's body), the rider tips backwards over the

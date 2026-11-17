@@ -15,7 +15,7 @@ async function main(){
   const browser=await chromium.launch({headless:true,channel:'chrome',args:['--disable-background-timer-throttling','--disable-renderer-backgrounding','--disable-backgrounding-occluded-windows']});
   const git=args=>require('node:child_process').execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim();
   const report={label,startedAt:new Date().toISOString(),head:git(['rev-parse','HEAD']),dirty:!!git(['status','--porcelain']),contextOverrides:{preserveDrawingBuffer:process.env.BATTLE_PRESERVE_BUFFER===undefined?null:process.env.BATTLE_PRESERVE_BUFFER==='1'},sources:Object.fromEntries(['src/settlement-combat.js','src/settlement-combat-rules.js','src/settlement-world3d.js','src/settlement-app-simulation.js','src/settlement-render.js'].map(f=>[f,require('node:crypto').createHash('sha256').update(fs.readFileSync(path.join(root,f))).digest('hex')])),browser:browser.version(),errors:[],results:[]};
-  try{for(const mode of (process.env.PERF_MODES||'webgl,canvas').split(',')){
+  try{for(const mode of (process.env.PERF_MODES||'webgl').split(',')){
     const context=await browser.newContext({viewport:{width:1440,height:900},deviceScaleFactor:1});
     await context.route(/supabase\.co\//,r=>r.abort());
     await context.addInitScript(()=>{localStorage.setItem('conquer.seed.0.0','12345');let s=12345;Math.random=()=>((s=(Math.imul(s,1664525)+1013904223)>>>0)/4294967296)});
@@ -33,7 +33,7 @@ async function main(){
     page.on('console',m=>{if(m.type()==='error'&&/^CONQUER_|Uncaught/.test(m.text()))report.errors.push({mode,error:m.text()})});
     await page.exposeFunction('__massCapture',stage=>page.screenshot({path:path.join(out,`${label}-${mode}-${stage}.png`)}));
     await page.exposeFunction('__massProgress',data=>console.log(JSON.stringify({mode,...data})));
-    await page.goto(`http://127.0.0.1:${server.address().port}/index.html?`+(mode==='webgl'?'world3d=1':'renderer=canvas2d'),{waitUntil:'networkidle'});
+    await page.goto(`http://127.0.0.1:${server.address().port}/index.html?`+'world3d=1',{waitUntil:'networkidle'});
     const initial=await page.evaluate(()=>{
       State.clock.speed=0;State.clock.day=20;State.daylightOverride='day';State.seasonOverride='summer';State.biome='test';
       State.environment=[];State.relief={hills:[],seed:12345};clearReliefBandCache();State.fire=null;State.siege=null;
@@ -127,11 +127,12 @@ async function main(){
         try{
           while(!ConquerWorld3D.status().failed&&performance.now()-started<5000){draw();await new Promise(requestAnimationFrame)}
           draw();const c=document.getElementById('c');
-          return{paused,fallback:{failed:ConquerWorld3D.status().failed,detectedMs:performance.now()-started,painted:c.getContext('2d').getImageData(c.width>>1,c.height>>1,1,1).data[3]>0}};
+          return{paused,failure:{failed:ConquerWorld3D.status().failed,detectedMs:performance.now()-started,notice:c.getContext('2d').getImageData(c.width>>1,Math.round(38*devicePixelRatio),1,1).data[3]>0}};
         }finally{WebGL2RenderingContext.prototype.getError=original}
       },mode);
       assert.ok(checks.paused.draws>0&&checks.paused.changed&&checks.paused.ended,'paused animation must finish without extra scene requests');
-      if(mode==='webgl'){assert.match(checks.fallback.failed||'',/WebGL2 renderer failure/);assert.ok(checks.fallback.painted)}
+      // No Canvas fallback (D-RENDER-3D-261111): a renderer failure leaves the WebGL2 notice.
+      if(mode==='webgl'){assert.match(checks.failure.failed||'',/WebGL2 renderer failure/);assert.ok(checks.failure.notice,'WebGL2 notice painted')}
       report.results.at(-1).checks=checks;fs.writeFileSync(path.join(out,label+'.json'),JSON.stringify(report,null,2));
       console.log(JSON.stringify({mode,checks}));
     }

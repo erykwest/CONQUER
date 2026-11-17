@@ -209,30 +209,6 @@ function shadowCasterGeometry(s){
   shadowCasterGeometryCache.set(s.id,value);
   return value;
 }
-function drawStructureShadow(s,sun){
-  if(!s||underConstruction(s)||!['house','tower','gate','wall','palisade','built','market','tavern','church','civicAnnex'].includes(s.type))return;
-  const {fp,h}=shadowCasterGeometry(s);
-  if(!fp?.length||h<=0)return;
-  const len=h*sun.lengthPerHeight;
-  const ox=sun.dx*len,oy=sun.dy*len;
-  const cloud=[];
-  for(const p of fp){
-    cloud.push(w2s(p,0));
-    cloud.push(w2s({x:p.x+ox,y:p.y+oy},0));
-  }
-  const hull=convexHull(cloud);if(hull.length<3)return;
-
-  // Canvas blur on a full-screen offscreen cache is catastrophically expensive
-  // on software rasterizers and the deferred cost is paid later during blit.
-  // A crisp low-alpha polygon reads as a soft ground shadow at settlement scale
-  // without forcing a filtered full-canvas resolve every shadow refresh.
-  pathPolygon(hull,'rgba(4,5,7,'+(sun.alpha*.82).toFixed(3)+')',null);
-}
-function drawDynamicShadows(){
-  const sun=sunShadowState();if(!sun)return;
-  const casters=State.structures.filter(s=>!underConstruction(s)&&['house','tower','gate','wall','palisade','built','market','tavern','church','civicAnnex'].includes(s.type));
-  for(const s of casters)drawStructureShadow(s,sun);
-}
 let fieldWorkAssignmentCache={key:null,map:new Map()};
 // A house represents one available agricultural worker in its social cohort.
 // Non-farm industries have priority; in particular, an employed L2 miner or

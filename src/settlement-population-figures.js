@@ -8,6 +8,11 @@ function bodyPath(kind,x,y,w,h){
     ctx.rect(x-w/2,y-h/2,w,h);
   }else if(kind==='merchant'){
     ctx.ellipse(x,y,w/2,h/2,0,0,Math.PI*2);
+  }else if(kind==='lady'){
+    // L4 lady (FIG-HANDS-261117): the L4 disc runs on into a bell skirt down to the ground, one shape.
+    const r=Math.min(w,h)/2,a=.35,hem=ladyHemY(y,w,h);
+    ctx.arc(x,y,r,a,Math.PI-a,true);
+    ctx.lineTo(x-r*1.18,hem);ctx.quadraticCurveTo(x,hem+h*.14,x+r*1.18,hem);ctx.closePath();
   }else{
     const r=Math.min(w,h)/2;ctx.arc(x,y,r,0,Math.PI*2);
   }
@@ -49,6 +54,38 @@ function drawVillagerHead(id,x,y,r,sex='male',cachedHair=null){
   ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();
   ctx.restore();
 }
+// Hands and feet (FIG-HANDS-261117): a small pink disc for each hand and a brown horizontal
+// oval for each foot, both outlined like the body. s is the figure unit (State.view.scale*.5);
+// below FIGURE_LIMB_MIN_S they are a pixel or less and are skipped.
+const FIGURE_HAND='#e8a58f',FIGURE_FOOT='#5a3c25',FIGURE_LIMB_EDGE='rgba(25,24,22,.88)',FIGURE_LIMB_MIN_S=.16;
+function drawFigureHand(x,y,s){
+  if(s<FIGURE_LIMB_MIN_S)return;
+  ctx.fillStyle=FIGURE_HAND;ctx.strokeStyle=FIGURE_LIMB_EDGE;ctx.lineWidth=Math.max(.5,.35*s);
+  ctx.beginPath();ctx.arc(x,y,.72*s,0,Math.PI*2);ctx.fill();ctx.stroke();
+}
+// Drawn before the body, which covers their upper half: they peek out under the hem.
+// k scales the feet: 1 for the whole foot, smaller for the shoe tips under a gown.
+function drawFigureFeet(x,bottom,bodyW,s,k=1){
+  if(s<FIGURE_LIMB_MIN_S)return;
+  ctx.fillStyle=FIGURE_FOOT;ctx.strokeStyle=FIGURE_LIMB_EDGE;ctx.lineWidth=Math.max(.5,.35*s);
+  for(const side of[-1,1]){
+    ctx.beginPath();ctx.ellipse(x+side*bodyW*.21*k+.25*s,bottom+.1*s*k,1.05*s*k,.52*s*k,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+  }
+}
+// Hem of the L4 lady's bell skirt (bodyPath 'lady'), below the disc.
+function ladyHemY(y,w,h){return y+Math.min(w,h)/2+h*.19}
+// Body shape of a civilian: L4 women wear the bell gown.
+function villagerShape(dot){return dot.kind==='elite'&&dot.sex==='female'?'lady':dot.kind}
+// Lower edge of a civilian body shape (bodyPath): the L4 disc is narrower than it is tall.
+function villagerBodyBottom(kind,bodyY,bodyW,bodyH){
+  if(kind==='lady')return ladyHemY(bodyY,bodyW,bodyH)+bodyH*.065;   // the curved hem dips below its corners
+  return bodyY+(kind==='peasant'||kind==='artisan'||kind==='merchant'?bodyH/2:Math.min(bodyW,bodyH)/2);
+}
+// Where a civilian's hand rests at its side (side -1 left, 1 right): on the rim of the lady's disc.
+function villagerSideHand(kind,x,bodyY,bodyW,bodyH,s,side){
+  if(kind==='lady'){const r=Math.min(bodyW,bodyH)/2;return{x:x+side*(r+.2*s),y:bodyY+r*.15}}
+  return{x:x+side*(bodyW*.5+.15*s),y:bodyY+bodyH*.2};
+}
 const samePoint=(a,b)=>!!a&&!!b&&Math.abs(a.x-b.x)<1e-6&&Math.abs(a.y-b.y)<1e-6;
 // Everything that changes how a villager looks (not where): the key of its 3D figure tile.
 function villagerLookKey(dot){
@@ -60,16 +97,29 @@ function drawVillagerFigure(dot){
   if(window.ConquerWorld3D?.figure?.(dot.p,.10,'v|'+villagerLookKey(dot),()=>drawVillagerFigureUnmasked({...dot,p:{x:0,y:0}}),dot.id))return true;
   return withUrbanFigureOcclusion(dot.p,.10,()=>drawVillagerFigureUnmasked(dot));
 }
-function drawVillagerFigureUnmasked(dot){
+// hands: 'both' (idle, hands at the sides), 'far' (only the hand away from facing: the
+// near one is drawn by the work animation at the tool), or 'none'.
+function drawVillagerFigureUnmasked(dot,hands='both',facing=1){
   const base=w2s(dot.p,.10),scale=State.view.scale*.5;
-  const kind=dot.kind,sizeFactor=dot.age==='child'?.5:1;
-  const bodyW=6.0*scale*sizeFactor,bodyH=8.0*scale*sizeFactor;
+  const kind=villagerShape(dot),sizeFactor=dot.age==='child'?.5:1;
+  const bodyW=6.0*scale*sizeFactor,bodyH=8.0*scale*sizeFactor,s=scale*sizeFactor;
   const headR=2.35*scale*sizeFactor,bodyY=base.y-bodyH*.16,headY=bodyY-bodyH/2-headR*.68;
   // Seasonal wardrobe overlays (cloak, hood, hat) for cold months and bad weather.
   const outfit=window.ConquerWardrobe?.outfitFor(dot);
-  drawSplitVillagerBody(kind,base.x,bodyY,bodyW,bodyH,dot.colors[0],dot.colors[1]);
+  // Under the gown only the shoe tips show.
+  drawFigureFeet(base.x,villagerBodyBottom(kind,bodyY,bodyW,bodyH),bodyW,s,kind==='lady'?.76:1);
+  // Ladies wear a gown of one colour; the other classes keep the two-tone tunic.
+  const lady=kind==='lady';
+  drawSplitVillagerBody(kind,base.x,bodyY,bodyW,bodyH,dot.colors[0],lady?dot.colors[0]:dot.colors[1]);
   if(outfit)window.ConquerWardrobe.drawBody(outfit,dot,base.x,bodyY,bodyW,bodyH);
-  drawVillagerHead(dot.id,base.x,headY,headR,dot.sex,dot.hair);
+  for(const side of hands==='both'?[-1,1]:hands==='far'?[facing<0?1:-1]:[]){
+    const h=villagerSideHand(kind,base.x,bodyY,bodyW,bodyH,s,side);drawFigureHand(h.x,h.y,s);
+  }
+  // Ladies: a bare head, then braided hair (settlement-wardrobe.js), then the headdress.
+  if(lady&&window.ConquerWardrobe?.drawLadyHair){
+    drawVillagerHead(dot.id,base.x,headY,headR,dot.sex,'bald');
+    window.ConquerWardrobe.drawLadyHair(outfit,dot,base.x,headY,headR);
+  }else drawVillagerHead(dot.id,base.x,headY,headR,dot.sex,dot.hair);
   if(outfit)window.ConquerWardrobe.drawHead(outfit,base.x,headY,headR);
 }
 // The levy (alarm recruits, extraordinary levy): no livery, the villager's own class clothes
@@ -90,17 +140,19 @@ function drawLevyFigure(dot){
 }
 function drawLevyFigureUnmasked(dot){
   if(dot.outfit===undefined)dot={...dot,outfit:levyOutfit(dot)};
-  drawVillagerFigureUnmasked(dot);
+  // Hands only on the weapons (FIG-HANDS-261117): none hanging at the sides.
+  drawVillagerFigureUnmasked(dot,'none');
   const base=w2s(dot.p,.10),scale=State.view.scale*.5;
   const bodyW=6.0*scale,bodyH=8.0*scale,headR=2.35*scale,bodyY=base.y-bodyH*.16,headY=bodyY-bodyH/2-headR*.68;
   ctx.save();
   if(levyArcher(dot)){
-    // Bow on the left arm (screen right), as the realm's archers.
+    // Bow on the left arm (screen right), as the realm's archers, both hands on it.
     const bx=base.x+bodyW*.62,by=bodyY-bodyH*.04,r=5.3*scale;
     ctx.strokeStyle='#9b7243';ctx.lineWidth=Math.max(.8,.85*scale);
     ctx.beginPath();ctx.arc(bx,by,r,-Math.PI*.55,Math.PI*.55);ctx.stroke();
     ctx.beginPath();ctx.moveTo(bx+Math.cos(-Math.PI*.55)*r,by+Math.sin(-Math.PI*.55)*r);
     ctx.lineTo(bx-r*.18,by);ctx.lineTo(bx+Math.cos(Math.PI*.55)*r,by+Math.sin(Math.PI*.55)*r);ctx.stroke();
+    drawFigureHand(bx+r,by,scale);drawFigureHand(bx-r*.18,by,scale);
   }else{
     drawQuarteredShield(base.x+bodyW*.62,bodyY+bodyH*.10,2.7*scale,3.6*scale,soldierLivery(dot.id),'#b7aa8f',scale,true,soldierShieldStyle());
     drawSoldierSpear(base,scale,bodyW,bodyH,bodyY,headY);
@@ -360,6 +412,7 @@ function drawAxeAndRoundShield(base,scale,bodyW,bodyH,bodyY,top,pose=null){
   ctx.moveTo(tx-.3*scale,ty+.4*scale);ctx.lineTo(tx+2.6*scale,ty-1.2*scale);
   ctx.quadraticCurveTo(tx+3.4*scale,ty+1.4*scale,tx+2.5*scale,ty+3.6*scale);
   ctx.lineTo(tx+.1*scale,ty+2.0*scale);ctx.closePath();ctx.fill();ctx.stroke();
+  drawFigureHand(hx,hy+.4*scale,scale);   // the axe hand turns with the haft
   ctx.restore();
 }
 // Spear in the soldier's right hand: screen left, since the figure faces the viewer.
@@ -370,6 +423,7 @@ function drawSoldierSpear(base,scale,bodyW,bodyH,bodyY,headY){
   ctx.beginPath();ctx.moveTo(x,bodyY+bodyH*.43);ctx.lineTo(x+1.0*scale,headY-13*scale);ctx.stroke();
   ctx.fillStyle='#b8bcc0';ctx.beginPath();
   ctx.moveTo(x+1.0*scale,headY-16*scale);ctx.lineTo(x+3.0*scale,headY-11.5*scale);ctx.lineTo(x-1.0*scale,headY-12.2*scale);ctx.closePath();ctx.fill();
+  drawSpearHand(x,bodyY+bodyH*.43,headY-13*scale,bodyY+bodyH*SPEAR_HAND_Y,scale);
 }
 // The regiment's standard, carried by the herald in his right hand (screen left) in place of the
 // spear; the cloth flies outward, away from the body. Same campaign heraldry raster as tower flags,
@@ -600,10 +654,32 @@ function drawKnightMantling(x,headY,headR,helmet,livery,scale){
 function drawKnightCrest(x,headY,headR,helmet,livery,scale,id){
   const c=knightCrestGeometry(x,headY,headR,helmet);drawHeraldicCrest(ctx,c.x,c.top,c.u,knightCrestKind(id),livery,Math.max(.5,.55*scale));
 }
+// Hands that do not move with a weapon swing (FIG-HANDS-261117). The figure faces the viewer,
+// so the right hand is on screen left: the patrol spearman's free (left) hand hangs at his
+// side on screen right; the herald's right hand holds the standard's mast; both archer hands
+// on the bow (grip and nocked string). Pikemen and the herald hold the shield on the left arm,
+// hand hidden behind it. Shared by the still and the combat figure.
+function drawSoldierFixedHands(type,base,bodyW,bodyH,bodyY,scale){
+  if(type==='spearman')drawFigureHand(base.x+bodyW*.52,bodyY+bodyH*.2,scale);
+  else if(type==='herald')drawFigureHand(soldierSpearHandX(base,bodyW),bodyY+bodyH*SPEAR_HAND_Y,scale);
+  else if(type==='archer'){
+    const bx=base.x+bodyW*.62,by=bodyY-bodyH*.04,r=5.3*scale;
+    drawFigureHand(bx+r,by,scale);drawFigureHand(bx-r*.18,by,scale);
+  }
+}
+// The spear hand closes on the shaft at the waist: a point of the shaft drawn from (x,gy) up
+// to (x+scale, tipY) (the shaft leans out from the right hand), at height y in the shaft's own
+// (unrotated) frame. Close to the butt pivot, so a lowered pike keeps the hand by the body.
+const SPEAR_HAND_Y=.22;
+function drawSpearHand(x,gy,tipY,y,scale){
+  drawFigureHand(x+scale*(gy-y)/(gy-tipY),y,scale);
+}
 function drawSoldierFigure(p,z,type,id,phase=0,liveryOverride=null){
   return withUrbanFigureOcclusion(p,z,()=>drawSoldierFigureUnmasked(p,z,type,id,phase,liveryOverride));
 }
-function drawSoldierFigureUnmasked(p,z,type,id,phase=0,liveryOverride=null){
+// posed: the combat animation (settlement-combat-anim.js) draws this body as 'unarmed' and adds
+// the weapon and its hand itself; a really unarmed figure keeps both hands at its sides.
+function drawSoldierFigureUnmasked(p,z,type,id,phase=0,liveryOverride=null,posed=false){
   if(window.ConquerLOD?.militaryTier()==='dot'){
     const foot=w2s(p,z),radius=2.1;
     ctx.save();
@@ -624,6 +700,7 @@ function drawSoldierFigureUnmasked(p,z,type,id,phase=0,liveryOverride=null){
 
   ctx.save();
   if(knightly)drawKnightCloak(base,scale,bodyW,bodyH,top,livery);
+  drawFigureFeet(base.x,bodyY+bodyH/2,bodyW,scale);
 
   // Realm livery: every soldier carries both current reign colours.
   soldierBodyPath(base,bodyW,bodyH,top,bodyY);ctx.save();ctx.clip();
@@ -667,7 +744,10 @@ function drawSoldierFigureUnmasked(p,z,type,id,phase=0,liveryOverride=null){
     ctx.beginPath();ctx.moveTo(base.x-bodyW*.42,bodyY+bodyH*.16);ctx.lineTo(base.x-bodyW*.80-swing,top-7.5*scale);ctx.stroke();
     ctx.strokeStyle='#76563b';ctx.lineWidth=Math.max(1,1.2*scale);
     ctx.beginPath();ctx.moveTo(base.x-bodyW*.23,bodyY+bodyH*.05);ctx.lineTo(base.x-bodyW*.52,bodyY+bodyH*.27);ctx.stroke();
+    drawFigureHand(base.x-bodyW*.40,bodyY+bodyH*.13,scale);   // sword hand on the grip (right hand, screen left)
   }
+  drawSoldierFixedHands(type,base,bodyW,bodyH,bodyY,scale);
+  if(type==='unarmed'&&!posed)for(const side of[-1,1])drawFigureHand(base.x+side*(bodyW*.52+.1*scale),bodyY+bodyH*.2,scale);
 
   ctx.restore();
 }
@@ -678,11 +758,13 @@ function drawNobleFigure(p,z,id,phase=0){
   const flip=(peasantHash(String(id)+'-noble')&1)!==0;
   const main=flip?'#6f355d':'#2f4f75',trim='#c6a457';
   ctx.save();
+  drawFigureFeet(base.x,bodyY+bodyH*.52,bodyW,scale);
   ctx.beginPath();ctx.moveTo(base.x-bodyW*.36,top);ctx.lineTo(base.x+bodyW*.36,top);
   ctx.lineTo(base.x+bodyW*.58,bodyY+bodyH*.52);ctx.lineTo(base.x-bodyW*.58,bodyY+bodyH*.52);ctx.closePath();
   ctx.fillStyle=main;ctx.fill();ctx.strokeStyle='rgba(28,22,24,.9)';ctx.lineWidth=Math.max(.7,.8*scale);ctx.stroke();
   ctx.strokeStyle=trim;ctx.lineWidth=Math.max(1,1.15*scale);
   ctx.beginPath();ctx.moveTo(base.x-bodyW*.42,bodyY+bodyH*.26);ctx.lineTo(base.x+bodyW*.42,bodyY+bodyH*.26);ctx.stroke();
+  for(const side of[-1,1])drawFigureHand(base.x+side*(bodyW*.52+.1*scale),bodyY+bodyH*.2,scale);
   const sex=(peasantHash(String(id)+'-sex')&1)?'female':'male';
   drawVillagerHead(id,base.x,headY,headR,sex,villagerHair(id));
   ctx.fillStyle=trim;ctx.fillRect(base.x-headR*.72,headY-headR*.82,headR*1.44,Math.max(1,1.1*scale));

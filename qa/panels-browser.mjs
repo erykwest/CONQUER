@@ -10,7 +10,7 @@ const page=await browser.newPage({viewport:{width:1600,height:1040},deviceScaleF
 const errors=[];
 page.on('pageerror',err=>errors.push(String(err.stack||err)));
 try{
-  const response=await page.goto(base+'/index.html?assetlab=1&renderer=canvas2d',{waitUntil:'domcontentloaded',timeout:60000});
+  const response=await page.goto(base+'/index.html?assetlab=1',{waitUntil:'domcontentloaded',timeout:60000});
   assert.equal(response?.status(),200);
   await page.waitForFunction(()=>!!window.ConquerPanels&&!!window.ConquerGame?.read&&!!window.ConquerEconomy?.snapshot,{timeout:90000});
   await page.evaluate(()=>{

@@ -47,14 +47,6 @@ function rasterPoly(poly,mask,grid,value) {
     if(hitsCell(poly,left+x*step,top+y*step,step))mask[y*w+x]=value;
   }
 }
-function segmentStrip(a,b,width) {
-  if(!point(a)||!point(b))return null;
-  const len=Math.hypot(b.x-a.x,b.y-a.y);
-  if(len<EPS)return null;
-  const dx=(b.y-a.y)*width/(2*len),dy=(a.x-b.x)*width/(2*len);
-  return [{x:a.x+dx,y:a.y+dy},{x:b.x+dx,y:b.y+dy},
-          {x:b.x-dx,y:b.y-dy},{x:a.x-dx,y:a.y-dy}];
-}
 function leftOf(index,grid){return grid.left+(index%grid.w+.5)*grid.step}
 function topOf(index,grid){return grid.top+(Math.floor(index/grid.w)+.5)*grid.step}
 function signedArea(poly) {

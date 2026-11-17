@@ -181,13 +181,6 @@
     if(s.id&&groundFn===ground)meshCache.set(s.id,{key,list});
     return list;
   }
-  function draw(s,preview=false){
-    if(!is(s)||!window.ConquerMesh3D)return false;
-    if(!Number.isFinite(Number(s.za))){const v=validate(s);if(!v.ok)return false;s={...s,za:v.za,zb:v.zb}}
-    ctx.save();if(preview)ctx.globalAlpha*=.62;
-    window.ConquerMesh3D.drawMeshes(ctx,meshes(s),window.ConquerMesh3D.gameView());
-    ctx.restore();return true;
-  }
   function addToBuilder(m,s){
     if(!is(s)||!window.ConquerMesh3D)return false;
     for(const mesh of meshes(s)){const p=mesh.pos;for(let t=0;t<mesh.col.length;t++){const o=t*9;
@@ -239,5 +232,5 @@
   window.ConquerSlopewayModels=labModels;
 
   window.ConquerSlopeways=Object.freeze({SPEC,MIN_RISE,is,spec,make,footprint,validate,normalise,deckZ,ground,
-    at:at_,blocksPoint,speed,lift,vehicleLinks,ends,meshes,draw,addToBuilder,cost,buildDays,label});
+    at:at_,blocksPoint,speed,lift,vehicleLinks,ends,meshes,addToBuilder,cost,buildDays,label});
 })();

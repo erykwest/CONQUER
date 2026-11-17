@@ -10,6 +10,14 @@
 - **CONTRATTO TECNICO:** `combatRole(house,resident)` e `COMBAT_ROLE_BY_LEVEL` in `settlement-combat.js` (esportati da `ConquerCombat`); `canFight` = ruoli di leva, unica regola per allarme e leva. Figure `spearman` / `pikeman` / `herald` / `manAtArms`, `drawLevyFigure` (arco per gli L2). Protetto da `qa/combat-figures-roles-regression.cjs`.
 - **STATO:** implementato su `fix/squad-pikemen-shield`, non in main.
 
+## D-RENDER-3D-261111 — Edifici e fortificazioni solo in 3D; ritiro del renderer 2.5D (11/11/2026)
+
+- **DECISO (utente, 11/11/2026):** edifici, torri, mura, porte ed elementi esterni delle stanze si disegnano solo nel World 3D (WebGL2: `settlement-world3d.js`, mesh di `settlement-castle3d.js` `worldMeshes()`, legno `settlement-wood3d.js`). Il percorso 2.5D painter-sorted (tetti culled, strisce di ordinamento, esterni visti attraverso i muri, es. latrina W1 della PR #155) non si corregge più: si elimina.
+- **ECCEZIONI:** scatter (oggetti ambientali) e personaggi a capsule mantengono il loro percorso attuale. Edifici CRIME non toccati.
+- **CONTRATTO:** senza WebGL2 il Canvas mostra solo terreno e rete di terra con l'avviso «serve WebGL2»; nessun fallback 2.5D degli edifici. Cantieri: assemblati dalle stesse mesh 3D (`ConquerAssembly`), altrimenti volume dell'impronta; ghost di piazzamento: volume dell'impronta. La geometria condivisa (impronte, merli, tetti, layout stanze/esterni) resta: si eliminano solo le funzioni che dipingono il corpo su Canvas.
+- **ESTESO (utente, 17/11/2026, «rimuovi tutti i fallback 2.5»):** il contratto vale per tutto il mondo. Senza WebGL2, o dopo un errore del renderer, il frame è solo l'avviso «Il gioco richiede WebGL2» (niente terreno Canvas né compositore WebGPU). Nessun opt-out: `?world3d=0`, `?renderer=canvas2d`, `?castle3d=1`, `?nightlight=0` e `ConquerWorld3D.setEnabled` sono rimossi. Tutti gli edifici (case, civici, industrie, eventi, moli, banchine, rampe, depositi, legno) seguono la regola dei cantieri e dei ghost delle fortificazioni. Restano fuori, come deciso l'11/11: scatter e figure (le figure dipinte in 2D quando la card 3D non c'è).
+- **ASSET LAB:** le catture «Nel gioco» sono frame World 3D; ogni cattura registra `renderer` e il controllo `renderer-3d` fallisce se non è `webgl2`. Piano completo: [RETIRE-25D-PLAN](../RETIRE-25D-PLAN.md).
+
 ## D-MELEE-261116 — Mischia contro più nemici (16/11/2026)
 
 - **CONTRATTO TECNICO:** in `ConquerCombatRules.update` ogni nemico a contatto e non impegnato scambia colpi col difensore più vicino; l'energia di mischia si consuma una volta per round per unità; energia 0 vale −1 al combattimento (minimo 1), non 0. Morale (brain) invariato.
