@@ -4613,6 +4613,7 @@ const currentOwner = ownerByName.get(key);
           configuration: {
             seed: state.seed,
             deformationPercent: state.deformation,
+            topology: 'hex-voronoi-balanced-v1',
             baseGrid: { cells: state.cells.length, layout: 'nuclei Voronoi compatti' },
             aggregation: {
               detailPerUnit: state.configuration.cellsPerTerritory,
@@ -4935,21 +4936,33 @@ const currentOwner = ownerByName.get(key);
         deformationValue.value = `${deformationInput.value}%`;
         if (terrainPalettes[config.terrainPalette]) palettePresetInput.value = config.terrainPalette;
         generate();
+        const wasSquare=['square-moore-8-balanced-v1','square-moore-8-hex20-v2']
+          .includes(config.topology);
+        const savedByCode=new Map(data.finalCells.map(c=>[c.code,{row:c.row,col:c.column}]));
+        const liveByPosition=new Map(state.macros.map(m=>[m.row+','+m.col,m.id]));
+        // The former square layout uses a different territory ID ordering.
+        // Preserve each user edit by its stored ROW/COLUMN, never its old code.
+        const mapSavedCode=code=>{
+          if(!wasSquare)return macroIdFromCode(code);
+          const p=savedByCode.get(code);
+          return p?liveByPosition.get(p.row+','+p.col):undefined;
+        };
+        const remapCode=code=>state.macros[mapSavedCode(code)]?.code||code;
         if(data.finalCells.some(saved=>(saved.baseCells||[]).length>1)){message.textContent='Mappa aggregata precedente rigenerata: ora una cella Voronoi per territorio. Le vecchie modifiche aggregate non vengono applicate a territori diversi.';return;}
         for (const saved of data.finalCells) {
-          const macroId = macroIdFromCode(saved.code);
+          const macroId = mapSavedCode(saved.code);
           if (macroId === undefined) continue;
           if (['sea', 'plain', 'forest', 'hills', 'swamp', 'lake'].includes(saved.terrain)) state.terrain[macroId] = saved.terrain;
           if (saved.terrain === 'campaign' || saved.terrain === 'mountain') state.terrain[macroId] = 'plain';
           if (saved.name && saved.name !== saved.code) state.customNames[macroId] = saved.name;
         }
-        const ids = (codes) => codes.map(macroIdFromCode).filter((id) => id !== undefined);
+        const ids = (codes) => codes.map(mapSavedCode).filter((id) => id !== undefined);
         state.lakes = state.macros.filter((macro) => state.terrain[macro.id] === 'lake').map((macro) => macro.id);
         state.campaigns = []; // CONQUER: legacy ARCANA 'campaign/fields' normalized to plain.
-        state.cities = Object.fromEntries((config.cities || []).map((item) => [macroIdFromCode(item.territory), item.level]).filter(([id]) => id !== undefined));
+        state.cities = Object.fromEntries((config.cities || []).map((item) => [mapSavedCode(item.territory), item.level]).filter(([id]) => id !== undefined));
         state.villages = ids(config.villages || []);
-        state.resources = Object.fromEntries((config.resources || []).map((item) => [macroIdFromCode(item.territory), item.subCell ?? null]).filter(([id]) => id !== undefined));
-        state.passages = Object.fromEntries((config.passages || []).map((item) => [macroIdFromCode(item.territory), item.subCell ?? null]).filter(([id]) => id !== undefined));
+        state.resources = Object.fromEntries((config.resources || []).map((item) => [mapSavedCode(item.territory), item.subCell ?? null]).filter(([id]) => id !== undefined));
+        state.passages = Object.fromEntries((config.passages || []).map((item) => [mapSavedCode(item.territory), item.subCell ?? null]).filter(([id]) => id !== undefined));
         state.anchors = (config.anchors || []).map((item, index) => ({ id: item.id || `anchor-${index + 1}`, macroIds: ids(item.territories), point: { x: item.point?.[0], y: item.point?.[1] } })).filter((item) => item.macroIds.length === 2 && Number.isFinite(item.point.x) && Number.isFinite(item.point.y));
         state.rivers = (config.rivers || []).map((item) => ids(item.territories)).filter((items) => items.length === 2).map(borderKey);
         state.riverBridges = (config.riverBridges || []).map((item) => ids(item.territories)).filter((items) => items.length === 2).map(borderKey);
@@ -4982,13 +4995,23 @@ const currentOwner = ownerByName.get(key);
         state.capitalIds = Object.entries(state.cities).filter(([, level]) => level === 3).map(([macroId]) => Number(macroId));
         state.capitalId = state.capitalIds[0] ?? null;
         if (!ARCANA_LEGACY_SETTLEMENTS_ROADS_FROZEN) automaticRoads(state);
-        restoreConquerState(data.conquer);
+        const mappedConquer=wasSquare&&data.conquer?{
+          ...data.conquer,
+          owners:Object.fromEntries(Object.entries(data.conquer.owners||{})
+            .map(([code,owner])=>[remapCode(code),owner])),
+          factions:(data.conquer.factions||[]).map(f=>({
+            ...f,capital:remapCode(f.capital)
+          }))
+        }:data.conquer;
+        restoreConquerState(mappedConquer);
         selectedMacro = null;
         selectedMacros = new Set();
         setMenuVisible(false);
         render();
         message.classList.remove('error');
-        message.textContent = 'Mappa caricata dal JSON.';
+        message.textContent = wasSquare
+          ? 'Mappa importata: territorio riallineato per riga/colonna dalla precedente griglia quadrata.'
+          : 'Mappa caricata dal JSON.';
       }
 
       function loadMapFile(file) {
