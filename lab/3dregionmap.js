@@ -392,8 +392,11 @@
       scene = next;
       exampleMarkers = placeholder?.demo(snapshot,scene)||[];
       refreshMarkerLegend();
-      status.textContent = 'WebGL2 · Voronoi esagonale originale · aree macro entro ±10% · '+
-        quality.value+'× microcelle visive · 8 vicini logici e confini fisici separati';
+      status.textContent = snapshot.fineCells?.length
+        ? 'WebGL2 · 630 macroterritori esagonali · '+
+          snapshot.fineCells.length.toLocaleString('it-IT')+
+          ' sottocelle Voronoi interne (20/territorio, size ±50%) · macro area ±10%'
+        : 'WebGL2 · Voronoi esagonale · aree macro ±10% · dettaglio '+quality.value+'×';
       draw();
     } catch (error) {
       status.textContent = 'Errore anteprima: ' + error.message;
@@ -410,8 +413,10 @@
       const source = w.ConquerRegion3DSnapshot?.();
       if (!source) return;
       snapshot = source;
-      quality.disabled=false;
-      deformation.disabled=false;
+      const canonicalFine=Array.isArray(source.fineCells)&&source.fineCells.length>0;
+      quality.disabled=canonicalFine;
+      deformation.disabled=canonicalFine;
+      if(canonicalFine)quality.value='20';
       seenRevision = revision;
       lastSyncMs = performance.now();
       updateSelection(source.selectedMacros || [], true);
@@ -423,7 +428,7 @@
   }
   function benchmark() {
     if (!snapshot || rebuilding) return;
-    const actual = Number(quality.value), variants = [1,20];
+    const actual = Number(quality.value), variants = snapshot.fineCells?.length?[20]:[1,20];
     const results = [];
     try {
       for (const count of variants) {
@@ -432,7 +437,7 @@
           sceneTest.stats.triangles.toLocaleString('it-IT') + ' triangoli');
       }
       document.getElementById('benchmarkResult').textContent = results.join(' | ') +
-        ' — CPU locale, non FPS né test GPU cross-device.';
+        (snapshot.fineCells?.length?' — 20 sottocelle canoniche per territorio, non una nuova mesh.':' — CPU locale, non FPS né test GPU cross-device.');
     } catch (e) {
       document.getElementById('benchmarkResult').textContent = e.message;
     }
