@@ -393,7 +393,9 @@
       exampleMarkers = placeholder?.demo(snapshot,scene)||[];
       refreshMarkerLegend();
       status.textContent = snapshot.fineCells?.length
-        ? 'WebGL2 · 20 Voronoi esagonali casuali per centro quadrato · territori aggregati · 8 vicini logici fissi · area ±10%'
+        ? 'WebGL2 · 20 Voronoi per centro quadrato · deformazione contorni ×5' +
+          (snapshot.areaBalance?.warpFactor<1?' (attenuata per geometria sicura)':'') +
+          ' · 8 vicini logici · territori entro ±10%'
         : 'WebGL2 attivo · mesh globale ' + quality.value + '× → territori organici (' + deformation.value + '%) · palette 2D originale';
       draw();
     } catch (error) {
