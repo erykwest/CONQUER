@@ -29,18 +29,21 @@ importlib.reload(cq_blender)
 from cq_blender import Part, fresh_collection
 
 COLORS = {
-    # houses (build_houses.py / build_civic.py)
-    'plaster': '#e0ca91', 'plasterDark': '#c4ad78', 'timber': '#6b4a30', 'timberDark': '#553a25',
-    'roofThatch': '#c4a35e', 'roofThatchDark': '#a8884a', 'roofTile': '#a5573a', 'roofTileDark': '#88452e',
+    # houses: the game's own house colours (settlement-house3d.js / build_houses.py)
+    'daub': '#654936', 'daubDark': '#4e392d',                              # L1 cottages
+    'houseStone': '#625e59', 'houseStoneDark': '#4f4b47',                  # L2-L4 ground floor
+    'plaster': '#e0ca91', 'plasterDark': '#c8ae70',                        # L2-L4 upper floor
+    'roofThatch': '#b39250', 'roofThatchDark': '#977a42',
+    'houseSlate': '#3a3d42', 'houseSlateDark': '#2c2e33',
+    'chimney': '#3b302c', 'chimneyDark': '#2f2622',
+    'turretRoof': '#303943', 'turretRoofDark': '#262d35',                  # L4 corner turrets
     # castle (build_civic.py stone + slate)
     'stone': '#b0a794', 'stoneDark': '#958c7a', 'stoneTop': '#cdc3ad',
     'roofSlate': '#535a66', 'roofSlateDark': '#454b56',
     # pier (build_waterside.py)
     'plank': '#9b7044', 'plankDark': '#7d5a36', 'pile': '#4a3322',
     # ship (build_ships.py)
-    'oak': '#8f6439', 'oakDark': '#5f3f22', 'deck': '#b18c60', 'mast': '#9a7448',
-    # troops
-    'iron': '#7b8088', 'ironDark': '#5c6067', 'leather': '#5e4430', 'pole': '#5f4630',
+    'oak': '#8f6439', 'oakDark': '#5f3f22', 'deck': '#b18c60', 'mast': '#9a7448', 'pole': '#5f4630',
     # owner colour (replace at runtime)
     'team': '#b0332a', 'teamDark': '#86241f',
 }
@@ -81,25 +84,53 @@ def cone(p, ring, z0, apex, key, dark=None):
         p.quads([(x0, y0, z0), (x1, y1, z0), apex], [(0, 1, 2)], kk)
 
 
-def cottage(p, cx, cy, w, d, h, a, wall, roof, pitch=60):
-    """Gabled cottage: 2 long walls, 2 pentagonal gables, 2 overhanging roof planes = 14 tris.
-    Ridge along local X (length w), span d."""
-    rise = math.tan(math.radians(pitch)) * d / 2 * .62
+def shade(key, n):
+    """Pre-shaded variant for faces whose outward normal points to -X/-Y."""
+    return key + 'Dark' if (n[0] + n[1]) < 0 and key + 'Dark' in COLORS else key
+
+
+def house(p, cx, cy, w, d, a, h, wall, roof, ground=None, hg=0.0, jetty=0.0, pitch=60, chimney=False):
+    """Gabled house, ridge along local X (length w), span d, eaves at h.
+    One band (L1 cottage): 4 walls with pentagonal gables + 2 roof planes = 14 tris.
+    ground (L2-L4): a stone ground floor up to hg under the upper band (+8 tris); jetty pushes the
+    upper band out on every side, like the game's jettied timber floor. chimney: +10 tris."""
     P = lambda x, y, z: (*rot(x, y, a, cx, cy), z)
+    def band(hw, hd, z0, z1, key, rise=None):
+        ring = [(-hw, -hd), (hw, -hd), (hw, hd), (-hw, hd)]
+        for k in range(4):
+            (x0, y0), (x1, y1) = ring[k], ring[(k + 1) % 4]
+            n = rot(y1 - y0, -(x1 - x0), a)
+            pts = [P(x0, y0, z0), P(x1, y1, z0), P(x1, y1, z1)]
+            if rise and k in (1, 3):                      # gable ends: pentagon up to the ridge
+                pts.append(P(x0, 0, z1 + rise))
+            pts.append(P(x0, y0, z1))
+            p.quads(pts, [tuple(range(len(pts)))], shade(key, n))
     hw, hd = w / 2, d / 2
-    # long walls (y = -hd faces -Y, y = +hd faces +Y)
-    p.quads([P(-hw, -hd, 0), P(hw, -hd, 0), P(hw, -hd, h), P(-hw, -hd, h)], [(0, 1, 2, 3)], wall)
-    p.quads([P(hw, hd, 0), P(-hw, hd, 0), P(-hw, hd, h), P(hw, hd, h)], [(0, 1, 2, 3)], wall)
-    # gables
-    for sx in (-1, 1):
-        p.quads([P(sx * hw, -sx * hd, 0), P(sx * hw, sx * hd, 0), P(sx * hw, sx * hd, h),
-                 P(sx * hw, 0, h + rise), P(sx * hw, -sx * hd, h)], [(0, 1, 2, 3, 4)], wall + 'Dark' if wall + 'Dark' in COLORS else wall)
+    if ground:
+        band(hw, hd, 0, hg, ground)
+    uw, ud = hw + jetty, hd + jetty
+    rise = math.tan(math.radians(pitch)) * ud * .62
+    band(uw, ud, hg if ground else 0, h, wall, rise)
     # roof planes with eaves overhang
     ox, oy = w * .08, d * .14
-    dz = rise * oy / hd
-    for sy, key in ((-1, roof), (1, roof + 'Dark')):
-        p.quads([P(-hw - ox, sy * (hd + oy), h - dz), P(hw + ox, sy * (hd + oy), h - dz),
-                 P(hw + ox, 0, h + rise), P(-hw - ox, 0, h + rise)], [(0, 1, 2, 3)], key)
+    dz = rise * oy / ud
+    for sy in (-1, 1):
+        n = rot(0, sy, a)
+        p.quads([P(-uw - ox, sy * (ud + oy), h - dz), P(uw + ox, sy * (ud + oy), h - dz),
+                 P(uw + ox, 0, h + rise), P(-uw - ox, 0, h + rise)], [(0, 1, 2, 3)], shade(roof, n))
+    if chimney:                                           # stack through the roof near one gable
+        r = .035
+        x = uw * .62
+        ring = [P(x + sx, sy, 0)[:2] for sx, sy in ((-r, -r), (r, -r), (r, r), (-r, r))]
+        prism(p, ring, h, h + rise + .08, 'chimney', top='chimneyDark', dark='chimneyDark')
+    return P
+
+
+def turret(p, P, x, y, r, z1, roof_h):
+    """L4 corner turret: hexagonal plaster shaft from the ground + conical slate roof = 18 tris."""
+    cx, cy, _ = P(x, y, 0)
+    prism(p, ngon(cx, cy, r, 6, math.pi / 6), 0, z1, 'plaster', dark='plasterDark')
+    cone(p, ngon(cx, cy, r * 1.25, 6, math.pi / 6), z1, (cx, cy, z1 + roof_h), 'turretRoof', dark='turretRoofDark')
 
 
 def pole(p, x, y, z0, z1, r, key):
@@ -113,17 +144,51 @@ def flag(p, x, y, z, w, hgt, key='team'):
 
 
 # ------------------------------------------------------------------ tokens
-def village(p):
-    """Five cottages around a small open green: 70 tris."""
-    houses = (  # cx, cy, w, d, h, angle, wall, roof
-        (-.52, .34, .50, .34, .26, .35, 'plaster', 'roofThatch'),
-        (.30, .54, .46, .32, .24, -.25, 'plaster', 'roofTile'),
-        (.60, -.12, .50, .34, .28, 1.30, 'timber', 'roofThatch'),
-        (.04, -.58, .44, .30, .22, -.15, 'plaster', 'roofTile'),
-        (-.52, -.30, .38, .28, .24, .90, 'plaster', 'roofThatch'),
-    )
-    for cx, cy, w, d, h, a, wall, roof in houses:
-        cottage(p, cx, cy, w, d, h, a, wall, roof)
+# Village evolution, following the game's house levels (settlement-house3d.js):
+#   L1 low daub cottages with thatch, scattered;
+#   L2 stone ground floor + plaster upper floor under dark slate (one cottage left);
+#   L3 taller, jettied upper floors, chimneys, closer together;
+#   L4 a tight block of tall townhouses round a square, chimneys and corner turrets.
+def cottage(p, cx, cy, w, d, a, h=.20):
+    return house(p, cx, cy, w, d, a, h, 'daub', 'roofThatch')
+
+
+def townhouse(p, cx, cy, w, d, a, h, hg, jetty=0.0, chimney=False):
+    return house(p, cx, cy, w, d, a, h, 'plaster', 'houseSlate', ground='houseStone', hg=hg, jetty=jetty, chimney=chimney)
+
+
+def village1(p):
+    """Four thatched cottages: 56 tris."""
+    for cx, cy, w, d, a in ((-.50, .30, .46, .30, .35), (.32, .48, .42, .28, -.30),
+                            (.52, -.22, .46, .30, 1.25), (-.12, -.50, .40, .28, -.20)):
+        cottage(p, cx, cy, w, d, a)
+
+
+def village2(p):
+    """Four stone-and-plaster houses under slate and one surviving cottage: 102 tris."""
+    for cx, cy, w, d, a in ((-.52, .36, .48, .32, .30), (.30, .54, .46, .30, -.25),
+                            (.60, -.12, .48, .32, 1.30), (.04, -.58, .44, .30, -.15)):
+        townhouse(p, cx, cy, w, d, a, h=.30, hg=.13)
+    cottage(p, -.52, -.30, .40, .28, .90)
+
+
+def village3(p):
+    """Five taller jettied houses, two chimneys: 130 tris."""
+    for i, (cx, cy, w, d, a) in enumerate(((-.48, .36, .54, .34, .15), (.28, .52, .52, .34, -.10),
+                                           (.60, -.14, .54, .34, 1.45), (.02, -.58, .52, .34, .05),
+                                           (-.56, -.30, .44, .30, 1.20))):
+        townhouse(p, cx, cy, w, d, a, h=.40, hg=.16, jetty=.025, chimney=i in (0, 3))
+
+
+def village4(p):
+    """Six tall townhouses closing a square, two chimneys, two corner turrets: 188 tris."""
+    q = math.pi / 2
+    rows = ((-.50, .42, .56, .34, 0.0), (.22, .58, .56, .34, 0.0), (.66, -.02, .56, .34, q),
+            (.22, -.60, .56, .34, 0.0), (-.50, -.58, .56, .34, 0.0), (-.74, -.08, .46, .30, q))
+    for i, (cx, cy, w, d, a) in enumerate(rows):
+        P = townhouse(p, cx, cy, w, d, a, h=.52, hg=.18, jetty=.03, chimney=i in (1, 4))
+        if i in (0, 3):                                    # turret on the outer corner, toward the viewer
+            turret(p, P, -w / 2 if i == 0 else w / 2, d / 2 if i == 0 else -d / 2, .11, .64, .28)
 
 
 def castle(p):
@@ -197,49 +262,24 @@ def ship(p):
     p.quads(sail, [(1, 2, 3, 4)], 'teamDark')
 
 
-def soldier(p, x, y, a, h=.62):
-    """Tabard frustum + helmeted bipyramid head: 8 + 2 + 8 = 18 tris."""
-    body = [rot(px, py, a, x, y) for px, py in ((-.09, -.10), (.09, -.10), (.09, .10), (-.09, .10))]
-    shoulders = [rot(px, py, a, x, y) for px, py in ((-.065, -.075), (.065, -.075), (.065, .075), (-.065, .075))]
-    hb = h * .68
-    for k in range(4):
-        j = (k + 1) % 4
-        (x0, y0), (x1, y1) = body[k], body[j]
-        nx, ny = y1 - y0, -(x1 - x0)
-        p.quads([(*body[k], 0), (*body[j], 0), (*shoulders[j], hb), (*shoulders[k], hb)], [(0, 1, 2, 3)],
-                'teamDark' if nx + ny < 0 else 'team')
-    p.quads([(*s, hb) for s in shoulders], [(0, 1, 2, 3)], 'leather')
-    # head: square bipyramid (helmet top, face below)
-    hz, hr = hb + .10, .088
-    ring = [rot(px, py, a + math.pi / 4, x, y) for px, py in ngon(0, 0, hr, 4)]
-    cone(p, ring, hz, (x, y, h + .04), 'iron', dark='ironDark')
-    cone(p, ring[::-1], hz, (x, y, hb - .005), 'leather')
-
-
-def troops(p):
-    """Three soldiers in a wedge: two spearmen and a standard-bearer with the owner's banner."""
-    soldier(p, .22, 0, 0)
-    soldier(p, -.14, -.30, 0)
-    soldier(p, -.14, .30, 0)
-    for y in (-.30, .30):          # spears, held upright beside the right hand
-        pole(p, -.10, y - .12, 0, .98, .014, 'pole')
-    pole(p, .24, -.12, 0, 1.18, .016, 'pole')        # standard
-    p.quads([(.24, -.12, 1.16), (.24, -.12, .86), (.24 + .26, -.12, .86), (.24 + .26, -.12, 1.16)], [(0, 1, 2, 3)], 'team')
-
-
+# Troops are not modelled here: the regional map reuses the game's own soldier figures, baked by
+# tools/bake-region-troops.mjs into src/assets/regional/troop-*.png + region-troop-sprites.js.
 TOKENS = (
-    ('village', village, 'Villaggio: cinque casette a capanna'),
+    ('village1', village1, 'Villaggio L1: casupole di terra e paglia'),
+    ('village2', village2, 'Villaggio L2: case in pietra e intonaco, tetti in ardesia'),
+    ('village3', village3, 'Villaggio L3: case alte a sbalzo con camini'),
+    ('village4', village4, 'Villaggio L4: isolato di case alte con torrette'),
     ('castle', castle, 'Castello: cortina, quattro torri, mastio con bandiera'),
     ('pier', pier, 'Molo: pontile a T su pali'),
     ('ship', ship, 'Nave: cocca con vela quadra'),
-    ('troops', troops, 'Truppe: tre soldati con stendardo'),
 )
 
 
 def build(root):
     parts = {}
     for i, (name, fn, _) in enumerate(TOKENS):
-        p = Part(root, name, COLORS, (i * 2.6, 0, 0), prefix='rt_')
+        row, col = (0, i) if i < 4 else (1, i - 4 + .5)   # villages L1-L4 in front, the rest behind
+        p = Part(root, name, COLORS, (col * 2.6, row * 2.8, 0), prefix='rt_')
         fn(p)
         parts[name] = p.finish()
     return parts
@@ -287,16 +327,16 @@ def render(parts, out_dir):
     world = sc.world or bpy.data.worlds.new('w'); sc.world = world
     world.color = (0.36, 0.42, 0.30)
     # ground plane in the regional plain colour
-    bpy.ops.mesh.primitive_plane_add(size=40, location=(5.2, 0, -0.002))
+    bpy.ops.mesh.primitive_plane_add(size=40, location=(3.9, 1.4, -0.002))
     g = bpy.context.active_object
     gm = bpy.data.materials.new('rt_ground'); gm.diffuse_color = (0.30, 0.38, 0.20, 1); g.data.materials.append(gm)
-    cam_data = bpy.data.cameras.new('rt_cam'); cam_data.type = 'ORTHO'; cam_data.ortho_scale = 12.5
+    cam_data = bpy.data.cameras.new('rt_cam'); cam_data.type = 'ORTHO'; cam_data.ortho_scale = 11.2
     cam = bpy.data.objects.new('rt_cam', cam_data); sc.collection.objects.link(cam); sc.camera = cam
-    target = Vector((5.2, 0, .35))
+    target = Vector((3.9, 1.4, .35))
     d = Vector((0.0, -1.0, 1.1)).normalized()    # region3d-like fixed iso pitch
     cam.location = target + d * 20
     cam.rotation_euler = (target - cam.location).to_track_quat('-Z', 'Y').to_euler()
-    sc.render.resolution_x, sc.render.resolution_y = 2000, 460
+    sc.render.resolution_x, sc.render.resolution_y = 1800, 860
     os.makedirs(out_dir, exist_ok=True)
     sc.render.filepath = os.path.join(out_dir, 'region-tokens.png')
     bpy.ops.render.render(write_still=True)
@@ -315,8 +355,7 @@ def render(parts, out_dir):
             bpy.data.objects.remove(ob, do_unlink=True)
     sh.light = 'STUDIO'
     d = Vector((0.3, -1.0, 0.5)).normalized()
-    cam.location = target + d * 20   # (re-aimed below)
-    cam_data.ortho_scale = 13
+    cam_data.ortho_scale = 12
     cam.location = target + d * 20
     cam.rotation_euler = (target - cam.location).to_track_quat('-Z', 'Y').to_euler()
     sc.render.filepath = os.path.join(out_dir, 'region-tokens-low.png')

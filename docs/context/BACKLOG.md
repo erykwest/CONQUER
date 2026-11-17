@@ -3,10 +3,11 @@
 ### 2026-11-17 — REGION3D-TOKENS · Token della mappa regionale 3D
 
 **IMPLEMENTATO SU BRANCH `feature/region3d-tokens`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
-- [x] Kit Blender low-poly: villaggio, castello, molo, nave, truppe (≤ 91 triangoli ciascuno), nell'Asset Lab.
-- [ ] Disegnarli in `lab/3dregionmap.js` (stesso buffer del terreno, ombreggiatura per faccia, tinta `team` dal colore politico).
-- [ ] Regole di posizionamento: villaggio/castello per insediamento, molo e nave sulle coste, truppe per armata.
-- [ ] Varianti di livello (villaggio grande, castello a 2 torri) solo se servono dopo la prova a vista.
+- [x] Kit Blender low-poly: villaggio L1–L4, castello, molo, nave (33–188 triangoli), nell'Asset Lab.
+- [x] Truppe: sprite delle figure del gioco (lanciere, arciere, cavaliere, cavaliere a cavallo) cotte dal Lab, con formazione.
+- [ ] Disegnarli in `lab/3dregionmap.js` (mesh nello stesso buffer del terreno con tinta `team` dal colore politico; truppe come billboard ordinati con alberi e canneti).
+- [ ] Regole di posizionamento: villaggio (livello dalla popolazione) e castello per insediamento, molo e nave sulle coste, truppe per armata.
+- [ ] Sprite delle truppe nella livrea del proprietario (oggi livrea del regno): ricuocere per fazione o colorare a runtime.
 
 ### 2026-11-17 — LOCAL-HEX-01 · Mappa locale ereditata dal territorio esagonale
 

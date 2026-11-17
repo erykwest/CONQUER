@@ -2,7 +2,7 @@
 
 ### 2026-11-17 — REGION3D-TOKENS · Token low-poly della mappa regionale 3D
 
-- Nuovo kit Blender `build_region_tokens.py` → `region-token-models.js`: villaggio, castello, molo, nave e truppe stilizzati (33–91 triangoli), nel catalogo dell'Asset Lab; test `qa/region-tokens-regression.cjs`. Non ancora collegati al renderer region3d. Roadmap e decisioni invariate.
+- Nuovo kit Blender `build_region_tokens.py` → `region-token-models.js`: villaggio in quattro stati L1–L4 come le case del gioco, castello, molo e nave stilizzati (33–188 triangoli), nel catalogo dell'Asset Lab; le truppe riusano le figure del gioco cotte in sprite (`tools/bake-region-troops.mjs`). Test `qa/region-tokens-regression.cjs`, baseline audit estesa alle 11 voci. Non ancora collegati al renderer region3d. Roadmap e decisioni invariate.
 
 ### 2026-11-17 — LOCAL-HEX-01: contorno esagonale ereditato dalla mappa regionale
 
