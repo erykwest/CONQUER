@@ -284,7 +284,7 @@
     // retaining organic borders. Back off displacement until the *visual*
     // areas of every macro also satisfy the strict ±10% requirement.
     const allowed=width*height/snapshot.cells.length;
-    let parts=[],maxVisualDeviation=Infinity,appliedWarp=0;
+    let parts=[],maxVisualDeviation=Infinity,maxMicrocellAreaRatio=Infinity,appliedWarp=0;
     for(const multiplier of [1,.75,.5,.25,.125,0]){
       const amp=deformation*.22*multiplier;
       const cache=new Map();
@@ -300,27 +300,30 @@
         return shifted;
       };
       parts=fragments.map(p=>({macroId:p.macroId,siteKey:p.siteKey,polygon:p.polygon.map(deformPoint)}));
-      const actual=new Map();
+      const actual=new Map(),siteAreas=new Map();
       let valid=true;
       for(const p of parts){
         const value=area(p.polygon);
         if(!Number.isFinite(value)||value<EPS){valid=false;break;}
         actual.set(p.macroId,(actual.get(p.macroId)||0)+value);
+        siteAreas.set(p.siteKey,(siteAreas.get(p.siteKey)||0)+value);
       }
       maxVisualDeviation=Math.max(...snapshot.cells.map(c=>
         Math.abs((actual.get(c.macroId)||0)/allowed-1)));
-      if(valid&&maxVisualDeviation<=.099){
+      maxMicrocellAreaRatio=Math.max(...siteAreas.values())/(width*height/(snapshot.cells.length*detail));
+      if(valid&&maxVisualDeviation<=.099&&maxMicrocellAreaRatio<=2.10){
         appliedWarp=amp;
         break;
       }
     }
-    if(maxVisualDeviation>.10)
-      throw Error('3D visual territory areas exceed ±10%');
+    if(maxVisualDeviation>.10||maxMicrocellAreaRatio>2.10)
+      throw Error('3D terrain area constraints not met (territories ±10%, microcells ~200%)');
     for(const part of parts){
       if(!ownerParts.has(part.macroId))ownerParts.set(part.macroId,[]);
       ownerParts.get(part.macroId).push(part);
     }
-    return {parts,ownerParts,spacing,siteCount,visualAreaDeviation:maxVisualDeviation,appliedWarp};
+    return {parts,ownerParts,spacing,siteCount,visualAreaDeviation:maxVisualDeviation,
+      maxMicrocellAreaRatio,appliedWarp};
 
   }
   function aggregateEdges(parts, terrain, originalCells) {
@@ -522,7 +525,7 @@
       parts:snapshot.cells.map(c=>({macroId:c.macroId,polygon:c.polygon})),
       ownerParts:new Map(snapshot.cells.map(c=>[c.macroId,[{polygon:c.polygon,macroId:c.macroId}]])),
       spacing:Math.sqrt(snapshot.width*snapshot.height/snapshot.cells.length),
-      siteCount:snapshot.cells.length,
+      siteCount:snapshot.cells.length,maxMicrocellAreaRatio:1,
       visualAreaDeviation:Math.max(...snapshot.cells.map(c=>
         Math.abs(area(c.polygon)/(snapshot.width*snapshot.height/snapshot.cells.length)-1))),
       appliedWarp:0
@@ -719,7 +722,8 @@
     return{
       vertices:new Float32Array(vertices),pickRanges,pickIndex:{bucketSize:pickBucketSize,buckets:pickBuckets,maxAbsZ:pickMaxAbsZ},trees,reeds,peaks,mountainSummits,borders,coastlines,riverEdges,riverStats,
       stats:{territories:snapshot.cells.length,subcells,visualFragments,
-             maxVisualAreaDeviation:base.visualAreaDeviation,appliedWarp:base.appliedWarp,
+             maxVisualAreaDeviation:base.visualAreaDeviation,
+             maxMicrocellAreaRatio:base.maxMicrocellAreaRatio,appliedWarp:base.appliedWarp,
              triangles,mountains,hills,
              trees:trees.length,reeds:reeds.length,unmatchedEdges:unmatched,
              floats:vertices.length,generationMs:(typeof performance!=='undefined'?performance.now():Date.now())-t0}
