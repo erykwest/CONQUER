@@ -1,6 +1,7 @@
 'use strict';
-// Logical square lattice ONLY. The geometry does not come from these centers:
-// see regional-hex-aggregation.js for 20 micro-Voronoi polygons per territory.
+// Constant-time eight-slot ROW/COLUMN index for gameplay. Geometry remains
+// the independently generated, staggered HEXAGONAL Voronoi tessellation.
+// Eight logical nearby slots must not be confused with eight shared edges.
 (function(root){
   const directions=Object.freeze(['NW','N','NE','W','E','SW','S','SE']);
   const offsets=Object.freeze([
