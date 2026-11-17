@@ -41,6 +41,24 @@ Global micro Voronoi polygon areas cover the world extent to numerical tolerance
 - Script syntax and simulated renderer execution: model-based reed sprite construction, WebGL draw submission, border draw, regional forest/reed billboards, middle-mouse pan, Shift+middle yaw and wheel zoom.
 - **Not yet established:** real browser screenshots, verified WebGL FPS/GPU profiling, low-end mobile memory/thermal behaviour or full visual art-direction approval. Static server or a Vercel preview is needed for real visual review.
 
+## Regional marker placeholders (visual only)
+
+Five camera-projected 3D primitives are implemented in `src/regional-map3d-placeholders.js`. They use a dedicated upper canvas so ship animation never rebuilds the terrain mesh:
+
+| Live condition | Symbol |
+|---|---|
+| Village present | Orange cuboid |
+| Non-palisade fortification present | Grey cuboid (palisades excluded) |
+| Port present | Narrow brown dock strip |
+| Ship present | Brown rectangular vessel, oriented along its route |
+| Troops with their owner's heraldry present | Two stacked polygonal cylinders, coloured `heraldry.c1` and `heraldry.c2` |
+
+The read-only `ConquerRegion3DMarkerSnapshot()` bridge maps real World Lab `villages`, `fortifications`, `ports`, and optional `regionalShips` / `ships` and `regionalArmies` / `armies`. Troops with unavailable heraldic colours are omitted, not assigned invented player colours. Live ships may supply `{route:[{x,y},...],progress}` and the marker follows their simulation-supplied progress. The `window.ConquerRegion3DLiveMarkers` provider offers a compatible extension point for future integration.
+
+**Current source limitation:** the World Lab deliberately freezes its legacy village/road generation and has no integrated regional ship or army simulation yet. The clearly labelled, default-on checkbox **Esempi visivi (non dati di gioco)** therefore displays one example of each shape, including a boat sailing a looping test route. Demo troops use the actual CONQUER default heraldry field colours from `src/heraldry-shapes.js`, but are not real units. Unchecking that control displays only real source-backed markers. Demo entities never change gameplay, ownership, saves or map data.
+
+Verification: `qa/regional-map3d-placeholders-regression.cjs` covers all five primitives, palisade exclusion, real heraldic colours, route movement and no-fabrication rules. A simulated DOM/WebGL/Canvas integration run validated the independent overlay, live polling and toggle. Full visual/FPS inspection in a real browser remains pending.
+
 ## Visual limitations and future integration
 
 - **This changes the preview's visual borders/coastlines, not simulation ownership.** Left-click selection now picks the exact rendered 3D microcell triangle, maps it back to its original macro territory ID, and delegates selection (including Shift+click multi-selection) to the World Lab. The selected aggregate is highlighted in 3D, and selections from 2D synchronize back to 3D. Do not migrate gameplay ownership, pathfinding, game water barriers, saves or AI to this geometry without explicit gameplay remapping.
