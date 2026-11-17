@@ -3993,7 +3993,11 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         const regionalCells=state.macros.map(m=>({id:m.id,code:m.code,terrain:state.terrain[m.id],centroid:m.centroid,polygon:m.cells[0].polygon}));
         const surroundings=window.ConquerRegionalBiomeRules.sampleSurroundings(regionalCells[selectedMacro],regionalCells,state.configuration.width,state.configuration.height);
         const payload={version:1,seed,biome,terrain,name:territoryName(macro),regionalSeed:state.seed,territoryId:macro.id,
-          neighbors:ids.map(id=>({id,code:state.macros[id].code,terrain:state.terrain[id]})),surroundings,hasRiver,riverSides,riverFlow,riverJunctions,tributaryTypes,mountainSides};
+          neighbors:ids.map(id=>({id,code:state.macros[id].code,terrain:state.terrain[id]})),surroundings,hasRiver,riverSides,riverFlow,riverJunctions,tributaryTypes,mountainSides,
+          // Local outline: the real hex Voronoi cell and its physical neighbours (shared edges).
+          shape:{polygon:regionalCells[selectedMacro].polygon.map(p=>({x:+p.x.toFixed(3),y:+p.y.toFixed(3)})),
+            neighbors:ids.map(id=>({id,code:state.macros[id].code,terrain:state.terrain[id],
+              polygon:regionalCells[id].polygon.map(p=>({x:+p.x.toFixed(3),y:+p.y.toFixed(3)}))}))}};
         // Carry the small territory context in the URL too: opening another tab must
         // not lose its biome just because sessionStorage is scoped to the old tab.
         try{sessionStorage.setItem('conquer.regional-demo.world',JSON.stringify({map:mapData(),selected:selectedMacro}));sessionStorage.setItem('conquer.regional-demo.'+key,JSON.stringify(payload));}

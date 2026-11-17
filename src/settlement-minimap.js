@@ -183,7 +183,13 @@ window.ConquerMinimap=(()=>{
     g.save();
     g.beginPath();g.rect(0,0,drawSize,drawSize);g.clip();
     drawReliefMap();drawEnvironmentMap();
-    const b=[{x:BUILD_MIN,y:BUILD_MIN},{x:BUILD_MAX,y:BUILD_MIN},
+    // Hex territory: darken the canvas beyond the inherited world border.
+    const shape=typeof localShape==='function'?localShape():null;
+    if(shape&&poly(shape.outer)){
+      g.save();g.rect(0,0,drawSize,drawSize);g.fillStyle='#14160f';g.fill('evenodd');g.restore();
+      g.strokeStyle='rgba(222,206,170,.45)';g.lineWidth=.8;g.stroke();
+    }
+    const b=typeof buildZoneOutline==='function'?buildZoneOutline():[{x:BUILD_MIN,y:BUILD_MIN},{x:BUILD_MAX,y:BUILD_MIN},
       {x:BUILD_MAX,y:BUILD_MAX},{x:BUILD_MIN,y:BUILD_MAX}];
     if(poly(b)){
       g.fillStyle='rgba(238,201,137,.05)';g.fill();

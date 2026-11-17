@@ -39,7 +39,7 @@
     if(L>MAX)return{ok:false,reason:'Quay too long (max '+MAX+'U)'};
     // Like piers, a quay must start from the whitezone (an end inside it, or joined to a quay
     // already built) and may run on out over the water beyond it.
-    const inside=p=>p.x>=BUILD_MIN&&p.x<=BUILD_MAX&&p.y>=BUILD_MIN&&p.y<=BUILD_MAX;
+    const inside=p=>typeof inBuildZone==='function'?inBuildZone(p):p.x>=BUILD_MIN&&p.x<=BUILD_MAX&&p.y>=BUILD_MIN&&p.y<=BUILD_MAX;
     const fromQuay=[s.aSnap,s.bSnap].some(id=>id&&(State.structures||[]).some(q=>is(q)&&q.id===id));
     if(!inside(s.a)&&!inside(s.b)&&!fromQuay)
       return{ok:false,reason:'A quay must start inside the whitezone (100×100U) or from another quay'};

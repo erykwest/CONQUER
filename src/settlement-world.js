@@ -423,7 +423,7 @@ function* buildArterialRepairWork(routeId,displaced=[]){
     if((!leg||leg.length<2)&&i===waypoints.length-2){
       const plan=arterialRoutePlan(routeId),edge=plan?.edge,old=plan?.target;
       if(edge&&old){
-        const preferred=edge==='north'||edge==='south'?old.x/WORLD:old.y/WORLD;
+        const preferred=String(edge).startsWith('hex:')?(State.village.borderEntries?.find(e=>e.edge===edge)?.t??.5):edge==='north'||edge==='south'?old.x/WORLD:old.y/WORLD;
         const alternatives=BORDER_ENTRY_BACKUP_FRACTIONS
           .filter(t=>Math.abs(t-preferred)>.001)
           .sort((a,b)=>Math.abs(a-preferred)-Math.abs(b-preferred));
@@ -1987,6 +1987,8 @@ function roadEnvironmentConflict(road){
   return false;
 }
 function edgeSample(edge,t){
+  // Hex territory border: 'hex:<neighbourId>' is that neighbour's run of the world border.
+  if(typeof edge==='string'&&edge.startsWith('hex:')){const p=localShape()?.runSample(edge.slice(4),t);if(p)return p}
   const v=t*WORLD;
   if(edge==='north')return{x:v,y:0};if(edge==='south')return{x:v,y:WORLD};if(edge==='west')return{x:0,y:v};return{x:WORLD,y:v};
 }
@@ -2012,9 +2014,49 @@ const ROAD_PLAN_VERSION=4;
 // of the sea edge and the sea stubs of the two adjacent edges (sea to the west: west, and
 // the sea ends of north and south).
 function mapSeaSide(){return State.environment?.find(f=>f.type==='sea')?.side||null}
-function landBorderSides(){const sea=mapSeaSide();return BORDER_ENTRY_SIDES.filter(e=>e!==sea)}
+// Hex territories: one land border per physical LAND neighbour that reaches the world border,
+// in border order. Sea and lake neighbours get sea exits / no road instead.
+function hexBorderEdges(){
+  const s=localShape();if(!s)return null;
+  const seen=new Set(),out=[];
+  for(const r of s.runs){
+    const sec=s.sectors.find(x=>x.id===r.sectorId);
+    if(!sec||seen.has(sec.id)||['sea','lake'].includes(sec.biome))continue;
+    seen.add(sec.id);out.push('hex:'+sec.id);
+  }
+  return out;
+}
+function landBorderSides(){const hex=hexBorderEdges();if(hex)return hex;const sea=mapSeaSide();return BORDER_ENTRY_SIDES.filter(e=>e!==sea)}
+// Player-facing name of a border: compass bearing of the neighbour sector (+ its regional code).
+function borderEdgeLabel(edge){
+  const it={north:'nord',south:'sud',east:'est',west:'ovest'};
+  if(it[edge])return it[edge];
+  const s=localShape(),id=typeof edge==='string'&&edge.startsWith('hex:')?edge.slice(4):null,sec=id&&s?.sectors.find(x=>x.id===id);
+  if(!sec)return String(edge);
+  const p=s.runSample(id,.5)||{x:100,y:100},a=Math.atan2(p.y-100,p.x-100);
+  const names=['est','sud-est','sud','sud-ovest','ovest','nord-ovest','nord','nord-est'];
+  return names[((Math.round(a/(Math.PI/4))%8)+8)%8]+(sec.code!=null?' ('+sec.code+')':'');
+}
+// Hex sea exits: one per continuous wet stretch of the world border.
+function hexSeaBorderEntries(s){
+  const seas=State.environment.filter(f=>f.type==='sea'),N=480,out=[];
+  const wetAt=i=>{const p=s.pointAt((i+.5)/N*s.perimeter),dx=100-p.x,dy=100-p.y,l=Math.hypot(dx,dy)||1,q={x:p.x+dx/l*1.5,y:p.y+dy/l*1.5};return seas.some(f=>environmentContains(f,q))};
+  const wet=Array.from({length:N},(_,i)=>wetAt(i));
+  if(!wet.some(Boolean))return out;
+  let start=wet.findIndex((w,i)=>w&&!wet[(i+N-1)%N]);
+  if(start<0){const p=s.pointAt(0);return[{id:'sea-hex-ring',edge:'hex:'+(s.sectorAt(p)?.id??'ring'),kind:'sea',x:p.x,y:p.y}]}
+  for(let k=0;k<N;){
+    const i=(start+k)%N;if(!wet[i]){k++;continue}
+    let m=k;while(m<N&&wet[(start+m)%N])m++;
+    if(m-k>=3){const p=s.pointAt(((start+(k+m)/2)%N)/N*s.perimeter),sec=s.sectorAt({x:p.x+(100-p.x)*.02,y:p.y+(100-p.y)*.02});
+      out.push({id:'sea-hex-'+(sec?.id??'x')+'-'+i,edge:'hex:'+(sec?.id??'x'),kind:'sea',x:p.x,y:p.y})}
+    k=m;
+  }
+  return out;
+}
 const edgeCorners=()=>({north:[{x:0,y:0},{x:WORLD,y:0}],south:[{x:0,y:WORLD},{x:WORLD,y:WORLD}],west:[{x:0,y:0},{x:0,y:WORLD}],east:[{x:WORLD,y:0},{x:WORLD,y:WORLD}]});
 function seaBorderEntries(){
+  {const s=localShape();if(s)return hexSeaBorderEntries(s);}
   if(State.environment?.some(f=>f.type==='sea'&&f.regional)){
     const seas=State.environment.filter(f=>f.type==='sea'),out=[];
     for(const edge of BORDER_ENTRY_SIDES){

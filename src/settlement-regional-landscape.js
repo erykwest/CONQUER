@@ -2,17 +2,20 @@
 // Regional composition in the real environment format: rendering and collision share polygons.
 (()=>{
   const rules=window.ConquerRegionalBiomeRules;
+  // Hex territory outline (src/regional-local-shape.js): sectors of the real physical neighbours.
+  const hex=()=>window.ConquerLocalShape?.current?.()||null;
+  const inCentre=p=>{const s=hex();return s?s.inBuild(p):p.x>=50&&p.x<=150&&p.y>=50&&p.y<=150};
   const canonical=b=>b==='valley'?'hills':b;
   const neighbors=()=>{const n=window.__CONQUER_REGIONAL_DEMO__?.surroundingBiomes;for(const d in n)if(n[d]==='valley')return Object.fromEntries(Object.entries(n).map(([d,b])=>[d,canonical(b)]));return n};
   // Uniform mountains still need explicit placement in every surrounding sector.
   // The legacy recipe only occupies a short perimeter arc of the whole map.
-  const active=()=>!!rules&&Object.keys(rules.directions).every(k=>BIOMES[neighbors()?.[k]])&&(State.biome==='mountains'||Object.values(neighbors()).some(b=>b!==canonical(State.biome)));
-  const field=p=>rules.weights(p,'@center',neighbors());
-  const weights=p=>rules.weights(p,canonical(State.biome),neighbors());
+  const active=()=>!!rules&&(!!hex()||Object.keys(rules.directions).every(k=>BIOMES[neighbors()?.[k]])&&(State.biome==='mountains'||Object.values(neighbors()).some(b=>b!==canonical(State.biome))));
+  const field=p=>{const s=hex();return s?s.weights(p,'@center'):rules.weights(p,'@center',neighbors())};
+  const weights=p=>{const s=hex();if(!s)return rules.weights(p,canonical(State.biome),neighbors());const w=s.weights(p,canonical(State.biome)),out={};for(const k in w){const b=canonical(k);out[b]=(out[b]||0)+w[k]}return out};
   const hash=(x,y,s)=>{let h=Math.imul(x,374761393)^Math.imul(y,668265263)^s;h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967295};
   function noise(x,y,s){const ix=Math.floor(x),iy=Math.floor(y),a=x-ix,b=y-iy,u=a*a*(3-2*a),v=b*b*(3-2*b);return(hash(ix,iy,s)*(1-u)+hash(ix+1,iy,s)*u)*(1-v)+(hash(ix,iy+1,s)*(1-u)+hash(ix+1,iy+1,s)*u)*v}
-  const signature=()=>biomeHash(canonical(State.biome)+'|'+JSON.stringify(neighbors()));
-  const seaSides=()=>['north','east','south','west'].filter(side=>neighbors()?.[side]==='sea');
+  const signature=()=>biomeHash(canonical(State.biome)+'|'+JSON.stringify(neighbors())+(hex()?'|hex|'+hex().signature:''));
+  const seaSides=()=>hex()?[]:['north','east','south','west'].filter(side=>neighbors()?.[side]==='sea');
   function coastShape(){
     const sides=seaSides(),count=sides.length;
     const corner=count===2?[
@@ -22,7 +25,8 @@
     return{kind:count===4?'island':count===3?'peninsula':corner?'headland':count?'gulf':'none',sides,corner:corner?{x:corner[2],y:corner[3]}:null};
   }
   function coastThreshold(p,shape=coastShape()){
-    if(!shape.sides.length)return .5;
+    // Hex sectors: the sea weight already follows the real neighbour cells; seed-dependent bays.
+    if(!shape.sides.length)return hex()?.5+.24*(noise(p.x/34,p.y/34,State.seed+7)-.5):.5;
     const phase=hash(7,11,State.seed)*Math.PI*2;
     let total=0,weight=0;
     for(const side of shape.sides){
@@ -123,7 +127,7 @@
     const rnd=seedRand((State.seed^signature()^0x39f71a)>>>0);let index=State.relief.hills.length;
     for(let y=13;y<200;y+=25)for(let x=13;x<200;x+=25){
       const p={x:x+(rnd()-.5)*5,y:y+(rnd()-.5)*5},w=weights(p),biome=Object.keys(w).sort((a,b)=>w[b]-w[a])[0];
-      if(p.x>=50&&p.x<=150&&p.y>=50&&p.y<=150||!['hills','mountains','valley'].includes(biome)||w[biome]<.7)continue;
+      if(inCentre(p)||hex()&&!hex().inWorld(p,-6)||!['hills','mountains','valley'].includes(biome)||w[biome]<.7)continue;
       if(rnd()>.45)continue;
       const hill=makeProceduralHill(rnd,index++,{center:p,rx:7+rnd()*3,ry:6+rnd()*2,maxHeight:1});
       const foot=reliefHillFootprint(hill);
@@ -136,7 +140,7 @@
       const count=biomeHillPlan(biome).count;
       for(let i=0;i<count;i++)for(let attempt=0;attempt<240;attempt++){
         const p={x:5+sparseRnd()*190,y:5+sparseRnd()*190};
-        if(p.x>=50&&p.x<=150&&p.y>=50&&p.y<=150||(weights(p)[biome]||0)<.7)continue;
+        if(inCentre(p)||hex()&&!hex().inWorld(p,-6)||(weights(p)[biome]||0)<.7)continue;
         const hill=makeProceduralHill(sparseRnd,index,{center:p,rx:8+sparseRnd()*4,ry:7+sparseRnd()*2,maxHeight:biome==='forest'?2:1});
         const foot=reliefHillFootprint(hill);
         if(foot.some(q=>q.x<0||q.y<0||q.x>200||q.y>200||(weights(q)[biome]||0)<.08)||!hillSpacingOk(hill,State.relief.hills))continue;
@@ -149,7 +153,7 @@
     woodlandContext=null;
     if(!active())return base;
     const key=State.seed+'-'+signature(),rnd=seedRand((State.seed^signature()^0x18405c)>>>0),coast=coastShape();
-    const lakeSides=['north','east','south','west'].filter(side=>neighbors()?.[side]==='lake');
+    const lakeSides=hex()?[]:['north','east','south','west'].filter(side=>neighbors()?.[side]==='lake');
     const lakeShape=lakeSides.length>=3?{kind:lakeSides.length===4?'island':'peninsula',sides:lakeSides}:null;
     const forests=base.filter(f=>f.type==='forest'),centralSea=base.filter(f=>f.type==='sea'),centralPonds=base.filter(f=>f.type==='pond').map(f=>f.waterBodyKind==='marsh'?{...f,x:50+f.x/2,y:50+f.y/2,rx:f.rx/2,ry:f.ry/2,points:f.points.map(p=>({x:50+p.x/2,y:50+p.y/2}))}:f);
     const lines=base.filter(f=>f.type==='river'||f.type==='stream');
@@ -209,7 +213,7 @@
     const regionalPeaks=[];
     for(let y=12;y<200;y+=22)for(let x=12;x<200;x+=22){
       const p={x:(x<20?6:x>180?194:x)+(rnd()-.5)*5,y:(y<20?6:y>180?194:y)+(rnd()-.5)*5},w=weights(p);
-      if(p.x>=50&&p.x<=150&&p.y>=50&&p.y<=150||(w.mountains||0)<.65||blocked(p))continue;
+      if(inCentre(p)||hex()&&!hex().inWorld(p,-4)||(w.mountains||0)<.65||blocked(p))continue;
       const peak=makeEnvBlob(rnd,'mountain',p.x,p.y,7+rnd()*4,7+rnd()*4,'#56493c','#968470',18,.1);
       peak.unclippedPoints=peak.points;
       peak.points=clipTerrainPolygon(peak.points).map(q=>({x:q.x,y:q.y}));
@@ -224,7 +228,7 @@
       for(let j=0;j<8;j++){
         const angle=a+j*Math.PI/4,distance=6+pairRnd()*9,dx=Math.cos(angle)*distance,dy=Math.sin(angle)*distance;
         const p={x:peak.x+dx,y:peak.y+dy};
-        if(p.x<0||p.x>200||p.y<0||p.y>200||p.x>=50&&p.x<=150&&p.y>=50&&p.y<=150||blocked(p)||(weights(p).mountains||0)<.5)continue;
+        if(p.x<0||p.x>200||p.y<0||p.y>200||inCentre(p)||hex()&&!hex().inWorld(p)||blocked(p)||(weights(p).mountains||0)<.5)continue;
         const size=.78+pairRnd()*.38;
         const outline=makeEnvBlob(pairRnd,'mountain',p.x,p.y,peak.rx*size,peak.ry*(.8+pairRnd()*.35),'#56493c','#968470',18,.1);
         const raw=outline.points;
@@ -292,7 +296,7 @@
     const onHill=p=>hillObstacles.some(({points,b})=>p.x>=b.minX-4&&p.x<=b.maxX+4&&p.y>=b.minY-4&&p.y<=b.maxY+4&&(pointInPolygon(p,points)||points.some((a,i)=>pointSegmentDistance(p,a,points[(i+1)%points.length])<4)));
     const mask=new Uint8Array(10000),groups=[{total:0,items:[]},{total:0,items:[]}],items=[];
     for(let y=0;y<100;y++)for(let x=0;x<100;x++){
-      const p={x:x*2+1,y:y*2+1},i=y*100+x,zone=x>=25&&x<75&&y>=25&&y<75?0:1;
+      const p={x:x*2+1,y:y*2+1},i=y*100+x,zone=inCentre(p)?0:1;
       const weight=regional?(weights(p).swamp||0):1;
       if(weight>.999)groups[zone].total++;
       if(weight<=0||dist(p,{x:100,y:100})<8||onHill(p)||lines.some(f=>environmentContains(f,p,4))||woodlandWet(bodies,p))continue;
@@ -314,7 +318,8 @@
     // Calibrate central and inherited land cover separately for each biome.
     const biomes=['plains','swamp','hills'],groups=Object.fromEntries(biomes.map(b=>[b,[{total:0,candidates:[]},{total:0,candidates:[]}]])),eligible=[];
     for(let i=0;i<samples.length;i++){
-      const {p,w,c,wet}=samples[i],zone=p.x>=50&&p.x<150&&p.y>=50&&p.y<150?0:1;
+      const {p,w,c,wet}=samples[i],zone=inCentre(p)?0:1;
+      if(hex()&&!hex().inWorld(p,1))continue;   // no woodland off-map
       const cover=Object.fromEntries(biomes.map(b=>[b,(w[b]||0)+(canonical(State.biome)===b?c:0)]));
       const pure=biomes.find(b=>cover[b]>.999),calibrated=biomes.some(b=>cover[b]>0);
       if(pure)groups[pure][zone].total++;

@@ -92,7 +92,7 @@
       Math.floor(point.y/HEIGHT_BIN))||NO_EDITS;
   }
   function insideBuild(points){
-    return points.every(p=>p.x>=BUILD_MIN&&p.x<=BUILD_MAX&&p.y>=BUILD_MIN&&p.y<=BUILD_MAX);
+    return points.every(p=>typeof inBuildZone==='function'?inBuildZone(p):p.x>=BUILD_MIN&&p.x<=BUILD_MAX&&p.y>=BUILD_MIN&&p.y<=BUILD_MAX);
   }
   function segmentProjection(p,a,b){
     const dx=b.x-a.x,dy=b.y-a.y,length2=dx*dx+dy*dy;

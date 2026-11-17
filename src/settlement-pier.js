@@ -69,7 +69,7 @@
     // Only the landing must be in the whitezone: the deck reaches out over the sea.
     // No buildable-terrain rules: slopes, woods and uneven shore are fine.
     // (Off a quay the quay has already started from the whitezone: it may run on beyond it.)
-    if(!hit.onQuay&&landing(s).some(v=>v.x<BUILD_MIN||v.x>BUILD_MAX||v.y<BUILD_MIN||v.y>BUILD_MAX))
+    if(!hit.onQuay&&landing(s).some(v=>!(typeof inBuildZone==='function'?inBuildZone(v):v.x>=BUILD_MIN&&v.x<=BUILD_MAX&&v.y>=BUILD_MIN&&v.y<=BUILD_MAX)))
       return{ok:false,reason:'The pier landing must be inside the whitezone (100×100U)'};
     // Off a quay: clear of the shore, and spaced from the other piers on the same side.
     // The shore rule is for piers branching sideways off a mole (running along the shore);

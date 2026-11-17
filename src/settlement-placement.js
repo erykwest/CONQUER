@@ -28,7 +28,7 @@
     return strictInside(center(a),b)||strictInside(center(b),a);
   }
   const within=p=>Number.isFinite(p?.x)&&Number.isFinite(p?.y)
-    &&p.x>=BUILD_MIN-EPS&&p.x<=BUILD_MAX+EPS&&p.y>=BUILD_MIN-EPS&&p.y<=BUILD_MAX+EPS;
+    &&(typeof inBuildZone==='function'?inBuildZone(p,EPS):p.x>=BUILD_MIN-EPS&&p.x<=BUILD_MAX+EPS&&p.y>=BUILD_MIN-EPS&&p.y<=BUILD_MAX+EPS);
   function whitezone(s,polys){
     if(isLine(s))return within(s.a)&&within(s.b)&&(
       s.type==='road'||polys.every(poly=>poly.every(within)));

@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-17 — LOCAL-HEX-01: contorno esagonale ereditato dalla mappa regionale
+
+- `feature/local-hex-shape` (da `3dregionmap`): nuovo `src/regional-local-shape.js`, payload `shape` dal World Lab, zona edificabile poligonale, bordo offset 50U, biomi dai vicini fisici, ingressi stradali e uscite marine sul bordo poligonale. Test `qa/local-hex-shape-regression.cjs`; `wiki/catalog.json` rigenerato. Nuova decisione D-LOCAL-HEX-261117 in DECISIONS; ROADMAP invariata.
+
 ### 2026-11-15 — Microfix: fedeli alla messa nel cutaway della chiesa
 
 - Aggiunti i popolani seduti sui banchi della chiesa durante la messa domenicale (6:00–12:00); test in qa/staff-people-regression.cjs. Roadmap e decisioni invariate.
