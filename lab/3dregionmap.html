@@ -26,10 +26,12 @@ button:hover { background:#415249; }
 #preview3d { position:relative; flex:1; min-height:520px; overflow:hidden; background:radial-gradient(ellipse at 45% 40%,#36514a,#16292d 72%); cursor:default; user-select:none; }
 #preview3d.dragging { cursor:grabbing; }
 #interactionHint { position:absolute; right:12px; bottom:12px; z-index:2; color:#e9e0c7; background:rgba(14,25,24,.78); border:1px solid rgba(219,195,148,.35); padding:8px 11px; font-size:.73rem; line-height:1.6; pointer-events:none; border-radius:4px; }
-#terrain3d, #treeBillboards { position:absolute; inset:0; width:100%; height:100%; display:block; }
-#treeBillboards { pointer-events:none; }
+#terrain3d, #treeBillboards, #markerBillboards { position:absolute; inset:0; width:100%; height:100%; display:block; }
+#treeBillboards, #markerBillboards { pointer-events:none; }
+#markerBillboards { z-index:1; }
 #sceneStatus { position:absolute; top:12px; left:12px; right:12px; z-index:2; font-size:.76rem; color:#f4e6c5; text-shadow:0 1px 5px #000; pointer-events:none; }
 #selectedTerritory { position:absolute; top:37px; left:12px; right:12px; z-index:2; color:#f2cf83; font-size:.8rem; font-weight:600; text-shadow:0 1px 5px #000; pointer-events:none; }
+#markerLegend { position:absolute; top:67px; left:12px; right:12px; z-index:2; color:#f2dfbf; font-size:.74rem; text-shadow:0 1px 4px #000; pointer-events:none; }
 footer { padding:11px 15px; border-top:1px solid #39483f; background:#182421; font-size:.74rem; line-height:1.5; color:#c0c9bc; }
 #perfNotes { color:#e4c991; font-variant-numeric:tabular-nums; min-height:19px; }
 #benchmarkResult { margin-top:5px; color:#acc4b6; font-variant-numeric:tabular-nums; }
@@ -48,7 +50,7 @@ footer { padding:11px 15px; border-top:1px solid #39483f; background:#182421; fo
 <iframe id="regionalSource" title="World Lab originale" src="../CONQUER_WORLD_LAB.html"></iframe>
 </section>
 <section class="panel" aria-label="Anteprima 3D">
-<div class="panel-title">02 · Mappa regionale 3D — confronto e performance</div>
+<div class="panel-title">02 · Mappa regionale 3D — confronto e performance · segnaposti</div>
 <div class="controls">
 <label class="control">Sottocelle / territorio
 <select id="detail"><option value="1">1 · Originale</option><option value="8">8 · Low</option><option value="20" selected>20 · Target</option><option value="40">40 · Stress test</option></select>
@@ -59,13 +61,16 @@ footer { padding:11px 15px; border-top:1px solid #39483f; background:#182421; fo
 <label class="control check"><input id="showTrees" type="checkbox" checked> Alberi ×2,5 / ×10</label>
 <label class="control check"><input id="showReeds" type="checkbox" checked> Canneti paludi ×5 / ×10</label>
 <label class="control check"><input id="showBorders" type="checkbox" checked> Confini territoriali</label>
+<label class="control check"><input id="showExamples" type="checkbox" checked> Esempi visivi (non dati di gioco)</label>
 <div class="actions"><button type="button" id="resetView">Centra vista</button><button type="button" id="refresh">Aggiorna</button><button type="button" id="benchmark">Benchmark 1× / 20×</button></div>
 </div>
 <div id="preview3d">
 <canvas id="terrain3d" aria-label="Mappa regionale 3D WebGL2"></canvas>
 <canvas id="treeBillboards" aria-hidden="true"></canvas>
+<canvas id="markerBillboards" aria-hidden="true"></canvas>
 <div id="sceneStatus" role="status">Inizializzazione preview…</div>
 <div id="selectedTerritory" role="status" aria-live="polite">Clic sinistro: seleziona territorio · Maiusc + clic: selezione multipla</div>
+<div id="markerLegend" role="status">Arancione: villaggio · Grigio: castello · Marrone: molo/nave · Bicolore: truppe</div>
 <div id="interactionHint">Clic sinistro: selezione · Maiusc + clic: selezione multipla · Mouse3: pan · Maiusc + Mouse3: rotazione · Rotella: zoom</div>
 </div>
 <footer>
@@ -76,6 +81,7 @@ footer { padding:11px 15px; border-top:1px solid #39483f; background:#182421; fo
 </section>
 </main>
 <script src="../src/regional-map3d-geometry.js"></script>
+<script src="../src/regional-map3d-placeholders.js"></script>
 <script src="../src/assets/scatter-model.js"></script>
 <script src="./3dregionmap.js"></script>
 </body>
