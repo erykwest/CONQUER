@@ -19,7 +19,7 @@
       const x=(col+.5+(row%2)*.5)*dx+(r()-.5)*dx*.34;
       const y=(row+.5)*dy+(r()-.5)*dy*.34;
       sites.push({id:sites.length,macroId,macroRow,macroCol,row,col,x,y,
-        scale,basePower:(scale-1)*dx*dy*.7});
+        scale,basePower:(scale-1)*dx*dy*.5});
     }
     return sites;
   }
