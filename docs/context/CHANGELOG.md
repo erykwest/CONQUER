@@ -4,6 +4,10 @@
 
 `fix/asset-audit-baseline`: il controllo `sagoma-conservata` confronta le aree disegnate invece della densità nel riquadro (falso errore sulla torre tonda con latrina crollata); baseline `qa/asset-audit-baseline.json` rigenerata dal report della CI dopo la revisione dei render cambiati dal 12/11. Segnalato in BACKLOG il cantiere vuoto delle torri in pietra L2+ nel Lab. ROADMAP e DECISIONS invariate: nessun contratto di gioco cambiato.
 
+## 2026-11-16 — COMBAT-MELEE-01 · Nessuno moriva coi lupi
+
+Regole della mischia corrette: ogni nemico a contatto attacca, l'energia si consuma una volta per round, gli sfiniti continuano a colpire (prima lo scontro si bloccava per sempre). Bilanciamento sulla scala D-060 di #258: lupo 5 PV combattimento 2, orso 14 PV combattimento 2; fuorilegge di #258 invariati. Nuova `qa/melee-outnumbered-regression.cjs` con i tassi di vittoria. STATUS, BACKLOG, DECISIONS aggiornati; ROADMAP invariata.
+
 ### 2026-11-16 — Bandiere, torce e braciere della palizzata in 3D
 
 - Asset Lab: il controllo «sagoma conservata» esclude anche lo stato «elemento esterno crollato» (rosso su main dalla #251).

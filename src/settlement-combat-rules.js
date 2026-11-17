@@ -10,8 +10,10 @@
   const PROFILES=Object.freeze({
     spearman:Object.freeze({hp:12,combat:2,armor:2,aim:null,front:3,dmg:1}),
     patrol:Object.freeze({hp:10,combat:2,armor:2,aim:null,front:2,dmg:1}),
-    wolf:Object.freeze({hp:12,combat:3,armor:0,aim:null,front:1,dmg:1}),
-    bear:Object.freeze({hp:45,combat:4,armor:1,aim:null,front:1,dmg:2}),
+    // Fauna on the D-060 scale (17/11/2026): a wolf is less than a man (a squad beats a pack of six about half the time,
+    // four most times); a bear is the worst beast (a knight kills it, a squad alone seldom, a lone footman never).
+    wolf:Object.freeze({hp:5,combat:2,armor:0,aim:null,front:1,dmg:1}),
+    bear:Object.freeze({hp:14,combat:2,armor:1,aim:null,front:1,dmg:2}),
     // Outlaws: light, unarmoured men; a lair guard is the best of them (D-060 scale: below the 8 hp man-at-arms).
     outlaw:Object.freeze({hp:6,combat:2,armor:0,aim:null,front:1,dmg:1}),
     outlawGuard:Object.freeze({hp:8,combat:2,armor:1,aim:null,front:1,dmg:1}),
@@ -31,7 +33,7 @@
     outlaw:{livery:{main:'#4a5233',alt:'#7a6446',mainDark:'#2c3120',altDark:'#4c3e2b'}}
   };
   const shots=[],meleeFlashes=[],stones=[];
-  let elapsed=0,combatClock=0;
+  let elapsed=0,combatClock=0,meleeRound=0;
   const roll=()=>D12[Math.floor(Math.random()*D12.length)];
   function configureFactions(data){
     for(const [id,entry] of Object.entries(data||{})){
@@ -179,8 +181,12 @@
   function living(u){return !!u&&(!u.stats||u.stats.hp>0)}
   function effectiveCombat(u){
     const v=ensure(u,profileKind(u));
-    if(v.energy<=0||v.brain<=0)return 0;
-    return Math.max(0,v.combat-(v.brain/MAX_B<=.5?1:0));
+    if(v.brain<=0)return 0;
+    // Exhausted (no energy left) fights worse, but still fights: at 0 both
+    // sides of a long melee could no longer hit and stood locked forever.
+    const base=Math.max(0,v.combat-(v.brain/MAX_B<=.5?1:0));
+    if(base===0)return 0;
+    return v.energy<=0?Math.max(1,base-1):base;
   }
   function applyDamage(u,hits,source){
     const s=ensure(u,profileKind(u));
@@ -195,7 +201,8 @@
     if(s.brain<=0&&s.hp>0)u.routing=true;
     if(source&&hits>0){source.damageDealt=(source.damageDealt||0)+hits}
   }
-  function meleePair(a,b,count){
+  // round: the melee round (one per combat second) for the once-a-round energy cost; null = always.
+  function meleePair(a,b,count,round=null){
     ensure(a,profileKind(a));
     ensure(b,profileKind(b));
     let hitA=0,hitB=0;
@@ -208,12 +215,18 @@
     }
     const dmgOf=u=>PROFILES[profileKind(u)]?.dmg||1;
     applyDamage(a,hitA*dmgOf(b),b);applyDamage(b,hitB*dmgOf(a),a);
-    a.stats.energy=Math.max(0,a.stats.energy-count);
-    b.stats.energy=Math.max(0,b.stats.energy-count);
+    // Fighting tires once per melee round, however many foes press in: a man
+    // surrounded by five wolves must not tire five times as fast.
+    for(const u of [a,b]){
+      if(round!==null&&u.tiredRound===round)continue;
+      u.tiredRound=round;
+      u.stats.energy=Math.max(0,u.stats.energy-count);
+    }
     return {hitA,hitB};
   }
   function shotHit(shooter,target){
-    const v=ensure(target,target.combatKind||'infantry');
+    // Same profile rule as melee (an outlaw bowman shot first must not get the realm archer's 100 hp).
+    const v=ensure(target,profileKind(target));
     const die=roll(),aim=PROFILES.archer.aim,armor=v.armor;
     return die===6||(die!==1&&die+aim>=6+armor);
   }
@@ -285,6 +298,23 @@
       }
     }
   }
+  // One melee exchange between a defender a and an enemy b (dice, damage, animation).
+  function exchange(a,b){
+    const frontage=Math.min(PROFILES[profileKind(a)].front,PROFILES[profileKind(b)].front);
+    const {hitA,hitB}=meleePair(a,b,Math.max(1,frontage),meleeRound);
+    const anim=window.ConquerCombatAnim;
+    if(anim){
+      // Damage lands on the thrust, not on the wind-up.
+      const impact=anim.TIMING.IMPACT;
+      anim.strike(a,b);anim.strike(b,a);
+      if(hitA)anim.hurt(a,impact);
+      if(hitB)anim.hurt(b,impact);
+      if(a.defeated)anim.fall(a,impact,b);
+      if(b.defeated)anim.fall(b,impact,a);
+    }
+    if(meleeFlashes.length>50)meleeFlashes.shift();
+    meleeFlashes.push({x:(a.x+b.x)/2,y:(a.y+b.y)/2,at:elapsed});
+  }
   function update(dt,friendly,enemy,shooters,visibleFn,canContact=()=>true,enemyShooters=[],enemyVisibleFn=visibleFn){
     if(!Number.isFinite(dt)||dt<=0)return;
     dt=Math.min(dt,.25);elapsed+=dt;combatClock+=dt;
@@ -308,24 +338,24 @@
       if(!nearest)continue;
       a.engaged=nearest.engaged=true;
       a.target=null;
-      if(combatClock>=1){
-        const frontage=Math.min(PROFILES[profileKind(a)].front,PROFILES[profileKind(nearest)].front);
-        const {hitA,hitB}=meleePair(a,nearest,Math.max(1,frontage));
-        const anim=window.ConquerCombatAnim;
-        if(anim){
-          // Damage lands on the thrust, not on the wind-up.
-          const impact=anim.TIMING.IMPACT;
-          anim.strike(a,nearest);anim.strike(nearest,a);
-          if(hitA)anim.hurt(a,impact);
-          if(hitB)anim.hurt(nearest,impact);
-          if(a.defeated)anim.fall(a,impact,nearest);
-          if(nearest.defeated)anim.fall(nearest,impact,a);
-        }
-        if(meleeFlashes.length>50)meleeFlashes.shift();
-        meleeFlashes.push({x:(a.x+nearest.x)/2,y:(a.y+nearest.y)/2,at:elapsed});
-      }
+      if(combatClock>=1)exchange(a,nearest);
     }
-    if(combatClock>=1)combatClock%=1;
+    // Enemies in contact that no defender picked (a wolf pack round one squad,
+    // a band round a lone patrol) strike too: previously they stood idle and
+    // only one foe at a time fought, so outnumbered fights barely moved.
+    for(const b of enemy){
+      if(!living(b)||b.routing||b.neutral||b.engaged)continue;
+      let nearest=null,gap=1;
+      for(const a of friendly){
+        if(!living(a)||a.routing)continue;
+        const distance=Math.hypot(a.x-b.x,a.y-b.y);
+        if(distance<gap&&canContact(a,b)){nearest=a;gap=distance}
+      }
+      if(!nearest)continue;
+      nearest.engaged=b.engaged=true;
+      if(combatClock>=1)exchange(nearest,b);
+    }
+    if(combatClock>=1){combatClock%=1;meleeRound++}
     shoot(dt,shooters,enemy,visibleFn);
     // Staffed tower posts are targets too: the hostiles shoot at the archers behind the slits.
     shoot(dt,enemyShooters,friendly.concat(shooters.filter(s=>s.post)),enemyVisibleFn);

@@ -7,6 +7,15 @@
 - [ ] BUG: il cantiere 2.5D di molte torri in pietra L2+ nel Lab è vuoto (solo operai) e cambia da una run all'altra; da capire se è il Lab (`ConquerAssetStage.capture`) o il renderer del cantiere in gioco. Causa di gran parte degli avvisi `cantiere-progressivo`.
 - [ ] Le catture 2.5D delle fortificazioni cambiano con la data reale: due run CI dello stesso giorno (17/11) hanno firme identiche, ma contro la baseline del giorno prima (16/11) segnano 678 «cambiati», tutti sotto 0,05 e solo fortificazioni (intatta, cutaway, danni, pendenze); SVG e modelli 3D restano identici. Trovare cosa legge la data (luce, stagione, giorno della settimana) e fissarla nello stage, altrimenti i «cambiati» in CI crescono ogni giorno. Baseline rigenerata dalla run del 17/11.
 
+## 2026-11-16 — COMBAT-MELEE-01 · Mischia contro più nemici
+
+**IMPLEMENTATO SU BRANCH `fix/outlaw-combat-stats`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Tutti i nemici a contatto attaccano; energia una volta per round; niente stallo da sfinimento.
+- [x] Lupi più deboli sulla scala D-060 (5 PV, combattimento 2): una squadra batte 4 lupi ~85%, 6 lupi ~57%.
+- [x] Orso riscalato (14 PV, combattimento 2, danno 2): il cavaliere lo uccide, una squadra da sola raramente.
+- [x] Fuorilegge già alla scala dei soldati con #258 (6/8/5 PV): verificati, invariati.
+- [ ] Verificare il ritmo degli scontri in partite reali (a velocità 1 uno scontro dura 1–2 minuti).
+
 ### 2026-11-16 — Braciere 3D
 
 - [x] Corpo del braciere di torri e porte in pietra nella mesh del castello (test di profondità), su branch `fix/brazier-3d`.
