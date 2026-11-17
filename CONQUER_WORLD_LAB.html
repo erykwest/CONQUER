@@ -1554,6 +1554,7 @@ y: 1.2 + random() * Math.max(1, finalRows - 2.4)
             });
           }
         configuration.seed=seed;
+        configuration.deformation=deformation;
         configuration.neighbors8=window.ConquerRegionalTopology.neighbors8(sites);
         return sites;
       }
@@ -1563,6 +1564,13 @@ y: 1.2 + random() * Math.max(1, finalRows - 2.4)
         );
         configuration.fineCells=built.fineCells;
         configuration.areaBalance=built.stats;
+        // One lightweight SVG path instead of 12,600 DOM nodes. Only drawn
+        // when the user enables the microcell boundary overlay.
+        configuration.microPath=built.fineCells.map(cell=>{
+          const polygon=cell.polygon;
+          return 'M'+polygon.map((p,i)=>(i?'L':'')+
+            p.x.toFixed(2)+','+p.y.toFixed(2)).join('')+'Z';
+        }).join('');
         return built.cells;
       }
 
@@ -3442,6 +3450,14 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         const topSymbolsLayer = svgElement('g', { id: 'topSymbolsLayer' });
         const coastSegments = [];
 
+        if(state.configuration?.microPath){
+          microLayer.appendChild(svgElement('path',{
+            d:state.configuration.microPath,
+            fill:'none',stroke:'#e3eee3','stroke-opacity':'.36',
+            'stroke-width':'.42','pointer-events':'none',class:'micro-edge'
+          }));
+        }
+
         for (const cell of state.cells) {
           const polygon = svgElement('polygon', {
             points: pointsAttribute(cell.polygon),
@@ -3566,15 +3582,7 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
               normal
             });
           }
-          if (edge.cells.length === 2) {
-            const micro = svgElement('line', {
-              x1: edge.start.x.toFixed(2), y1: edge.start.y.toFixed(2),
-              x2: edge.end.x.toFixed(2), y2: edge.end.y.toFixed(2),
-              stroke: '#f1ede0', 'stroke-width': 0.75,
-              class: 'micro-edge'
-            });
-            microLayer.appendChild(micro);
-          }
+
 
           if (edge.cells.length === 1 || groups.length > 1 || isMountainBorder || isForestBorder || isSwampBorder) {
             const boundaryClass = isMountainBorder ? 'macro-edge mountain-border'
@@ -4520,7 +4528,7 @@ const currentOwner = ownerByName.get(key);
           finalSummary.textContent = `${configuration.finalCols} × ${configuration.finalRows}`;
           mapTitle.textContent = `Mappa Voronoi ${configuration.finalCols} per ${configuration.finalRows}`;
           const shares = configuration.territoryPlan.shares;
-          mapDesc.textContent = `${cells.length} celle Voronoi indipendenti, organizzate in ${state.macros.length} territori: mare ${Math.round(shares.sea * 100)}% in ${configuration.territoryPlan.seaBlobCount} masse, montagne ${Math.round(shares.hills * 100)}% lineari, foreste ${Math.round(shares.forest * 100)}% in ${configuration.territoryPlan.forestBlobCount} masse, pianure ${Math.round(shares.plain * 100)}%. Vicinato quadrato a 8 direzioni (accesso O(1)); scostamento massimo delle aree territoriali ${(configuration.areaBalance.maxDeviation*100).toFixed(1)}% (limite ±10%).`;
+          mapDesc.textContent = `${configuration.fineCells.length} sottocelle Voronoi esagonali (20 per territorio), aggregate su ${state.macros.length} centri quadrati: mare ${Math.round(shares.sea * 100)}% in ${configuration.territoryPlan.seaBlobCount} masse, montagne ${Math.round(shares.hills * 100)}% lineari, foreste ${Math.round(shares.forest * 100)}% in ${configuration.territoryPlan.forestBlobCount} masse, pianure ${Math.round(shares.plain * 100)}%. Vicinato quadrato a 8 direzioni (accesso O(1)); scostamento massimo delle aree territoriali ${(configuration.areaBalance.maxDeviation*100).toFixed(1)}% (limite ±10%).`;
           resetMapViewport(configuration);
           svg.style.aspectRatio = `${configuration.width} / ${configuration.height}`;
           selectedMacro = null;
@@ -4560,7 +4568,7 @@ const currentOwner = ownerByName.get(key);
           configuration: {
             seed: state.seed,
             deformationPercent: state.deformation,
-            topology: 'square-moore-8-balanced-v1',
+            topology: 'square-moore-8-hex20-v2',
             baseGrid: { cells: state.cells.length, layout: 'nuclei Voronoi compatti' },
             aggregation: {
               detailPerUnit: state.configuration.cellsPerTerritory,
@@ -4883,7 +4891,7 @@ const currentOwner = ownerByName.get(key);
         deformationValue.value = `${deformationInput.value}%`;
         if (terrainPalettes[config.terrainPalette]) palettePresetInput.value = config.terrainPalette;
         generate();
-        const legacyTopology=config.topology!=='square-moore-8-balanced-v1';
+        const legacyTopology=!['square-moore-8-balanced-v1','square-moore-8-hex20-v2'].includes(config.topology);
         const savedSlots=new Map(data.finalCells.map(cell=>[
           cell.code,{row:cell.row,col:cell.column}
         ]));
