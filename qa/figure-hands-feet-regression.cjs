@@ -10,7 +10,7 @@ const HAND='#e8a58f',FOOT='#5a3c25';
 let fills=[];
 function recorder(){
   const o={fillStyle:'#000',strokeStyle:'#000',lineWidth:1,globalAlpha:1,lineCap:'butt',lineJoin:'miter',globalCompositeOperation:'source-over'};
-  return new Proxy(o,{get:(t,k)=>k==='fill'?()=>fills.push(t.fillStyle):k in t?t[k]:()=>{},set:(t,k,v)=>{t[k]=v;return true}});
+  return new Proxy(o,{get:(t,k)=>k==='fill'?()=>fills.push(t.fillStyle):k==='fillRect'?()=>fills.push('rect:'+t.fillStyle):k in t?t[k]:()=>{},set:(t,k,v)=>{t[k]=v;return true}});
 }
 const State={view:{scale:4},heraldry:{},policies:{}};
 const window={};
@@ -21,7 +21,7 @@ const sandbox={window,State,Math,Number,String,Object,Array,Map,Set,JSON,perform
   withUrbanFigureOcclusion:(p,z,fn)=>fn(),villagerHair:()=>'brown',
   peasantHash:s=>{let h=2166136261;for(const c of String(s)){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}};
 const context=vm.createContext(sandbox);
-for(const f of ['settlement-util.js','settlement-population-figures.js','settlement-combat-anim.js','settlement-work-anim.js'])
+for(const f of ['settlement-util.js','settlement-wardrobe.js','settlement-population-figures.js','settlement-combat-anim.js','settlement-work-anim.js'])
   vm.runInContext(fs.readFileSync(path.join(__dirname,'..','src',f),'utf8'),context,{filename:f});
 const run=src=>vm.runInContext(src,context);
 const count=fn=>{fills=[];fn();return{hands:fills.filter(c=>c===HAND).length,feet:fills.filter(c=>c===FOOT).length}};
@@ -73,6 +73,25 @@ assert.deepEqual(count(()=>run('drawVillagerFigureUnmasked('+dot+')')),{hands:0,
 assert.deepEqual(count(()=>run('drawSoldierFigureUnmasked({x:50,y:50},0,"spearman","s1",0,null)')),{hands:0,feet:0},'skipped when tiny (soldier)');
 State.view.scale=4;
 console.log('PASS far zoom skips sub-pixel hands and feet');
+
+// L4 ladies: medieval headdresses, never the town's hats and hoods; furs in winter; one-colour gown.
+const Wd=run('window.ConquerWardrobe'),LADY=Object.keys(Wd.LADY_PIECES);
+const ladyDot=i=>({id:'lady'+i,kind:'elite',sex:'female',age:'adult',colors:['#d83a2e','#2f6fd6']});
+const seen=new Set();
+for(const [weather,season,expectBody] of [['clear','summer',null],['wind','spring',null],['rain','summer','ladyMantle'],['snow','winter','ladyFur'],['clear','winter','ladyFur']])
+  for(let i=0;i<40;i++){
+    const o=Wd.outfitFor(ladyDot(i),Wd.fromKind(season,weather));
+    for(const slot of ['head','body','neck'])if(o&&o[slot]){assert.ok(LADY.includes(o[slot]),'lady wears '+o[slot]+' ('+weather+')');seen.add(o[slot])}
+    if(expectBody)assert.equal(o.body,expectBody,'lady body in '+weather+'/'+season);
+  }
+for(const k of ['hennin','horned','crespine','balzo','coronet','veil','furToque','ladyFur','ladyMantle'])assert.ok(seen.has(k),k+' is dealt out');
+assert.equal(Wd.outfitFor({id:'m1',kind:'elite',sex:'male',age:'adult',colors:['#d83a2e','#2f6fd6']},Wd.fromKind('winter','snow')).body,'furCloak','L4 men keep the fur cloak');
+// One-colour gown: the body fill uses the first colour only.
+fills=[];run('drawVillagerFigureUnmasked({id:"g1",kind:"elite",sex:"female",age:"adult",hair:"brown",colors:["#111111","#222222"],outfit:null,p:{x:50,y:50}})');
+assert.ok(fills.includes('rect:#111111')&&!fills.includes('rect:#222222'),'lady gown is one colour');
+fills=[];run('drawVillagerFigureUnmasked({id:"g2",kind:"elite",sex:"male",age:"adult",hair:"brown",colors:["#111111","#222222"],outfit:null,p:{x:50,y:50}})');
+assert.ok(fills.includes('rect:#222222'),'L4 men keep the two-tone tunic');
+console.log('PASS L4 ladies: headdresses and furs of their own, one-colour gown');
 
 // Mounted riders keep their legs and boots; their hands are the same pink.
 const mounted=fs.readFileSync(path.join(__dirname,'..','src','settlement-mounted2d.js'),'utf8');

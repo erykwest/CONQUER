@@ -178,6 +178,11 @@
     items.push({id:'wardrobe:trade:'+key,title:role.label,category:'Popolazione',family:'Abiti da mestiere',kind:'wardrobe',key,
       pieces:role.pieces,format:'Overlay',note:'Indossato al lavoro: '+role.pieces.map(p=>window.ConquerWardrobe.ROLE_PIECES[p]?.label||window.ConquerWardrobe.PIECES[p]?.label).join(', ')+'.',
       source:'src/settlement-wardrobe.js'});
+  // L4 ladies: medieval headdresses, velvet mantle and furs, shown on four ladies with different hair.
+  for(const [key,P] of Object.entries(window.ConquerWardrobe?.LADY_PIECES||{}))
+    items.push({id:'wardrobe:lady:'+key,title:P.label,category:'Popolazione',family:'Dame L4',kind:'wardrobe',key,lady:true,
+      format:'Overlay',note:'Dame L4 '+({fair:'col bel tempo',rain:'con la pioggia',winter:"d'inverno"}[P.lady]||'')+'.',
+      source:'src/settlement-wardrobe.js'});
   for(const [key,title,category,family] of SCHEMATICS){
     items.push({id:'procedural:'+key,title,category,family,kind:'schematic',key,format:'Parametrico',
       source:'Builder · asset generato dal motore',builder:true});
@@ -519,6 +524,15 @@
     const previous=ctx,oldScale=State.view.scale;
     try{
       ctx=g;State.view.scale=Math.min(w*.045,h*.1);
+      if(item.lady){
+        const pal=W.classPalette('elite')||['#d83a2e','#c3261e','#2f6fd6','#2358b8'];
+        ['red','blonde','black','brown'].forEach((hair,i)=>{
+          const id='lady-'+item.key+'-'+i,colors=[pal[(i*2)%pal.length],pal[(i*2)%pal.length]];
+          drawVillagerFigureUnmasked({id,kind:'elite',sex:'female',age:'adult',hair,colors,
+            outfit:W.compose([item.key],id,'elite',colors[0]),p:{x:w*(.2+i*.2),y:h*.74}});
+        });
+        return;
+      }
       [['peasant','male'],['artisan','female'],['merchant','male'],['elite','female']].forEach(([kind,sex],i)=>{
         const id='wardrobe-'+item.key+'-'+kind,pal=W.classPalette(kind)||['#8c6b3f','#5d4a32'],colors=[pal[0],pal[2]];
         drawVillagerFigureUnmasked({id,kind,sex,age:'adult',hair:'brown',colors,

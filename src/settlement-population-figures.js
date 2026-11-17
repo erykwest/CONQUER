@@ -108,12 +108,18 @@ function drawVillagerFigureUnmasked(dot,hands='both',facing=1){
   const outfit=window.ConquerWardrobe?.outfitFor(dot);
   // Under the gown only the shoe tips show.
   drawFigureFeet(base.x,villagerBodyBottom(kind,bodyY,bodyW,bodyH),bodyW,s,kind==='lady'?.76:1);
-  drawSplitVillagerBody(kind,base.x,bodyY,bodyW,bodyH,dot.colors[0],dot.colors[1]);
+  // Ladies wear a gown of one colour; the other classes keep the two-tone tunic.
+  const lady=kind==='lady';
+  drawSplitVillagerBody(kind,base.x,bodyY,bodyW,bodyH,dot.colors[0],lady?dot.colors[0]:dot.colors[1]);
   if(outfit)window.ConquerWardrobe.drawBody(outfit,dot,base.x,bodyY,bodyW,bodyH);
   for(const side of hands==='both'?[-1,1]:hands==='far'?[facing<0?1:-1]:[]){
     const h=villagerSideHand(kind,base.x,bodyY,bodyW,bodyH,s,side);drawFigureHand(h.x,h.y,s);
   }
-  drawVillagerHead(dot.id,base.x,headY,headR,dot.sex,dot.hair);
+  // Ladies: a bare head, then braided hair (settlement-wardrobe.js), then the headdress.
+  if(lady&&window.ConquerWardrobe?.drawLadyHair){
+    drawVillagerHead(dot.id,base.x,headY,headR,dot.sex,'bald');
+    window.ConquerWardrobe.drawLadyHair(outfit,dot,base.x,headY,headR);
+  }else drawVillagerHead(dot.id,base.x,headY,headR,dot.sex,dot.hair);
   if(outfit)window.ConquerWardrobe.drawHead(outfit,base.x,headY,headR);
 }
 let populationFrameBounds=null;

@@ -15,6 +15,7 @@ on:
       - 'src/settlement-shop-cutaway.js'
       - 'src/settlement-combat-anim.js'
       - 'src/settlement-mounted2d.js'
+      - 'src/settlement-wardrobe.js'
       - 'qa/work-anim-regression.cjs'
       - 'qa/figure-hands-feet-regression.cjs'
       - '.github/workflows/work-anim-regression.yml'
