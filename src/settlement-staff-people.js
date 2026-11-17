@@ -108,9 +108,58 @@
     }
     return items.length;
   }
+  // ---------- Common hall: the garrison and the household at table (ROOM-ANIM-COMMON)
+  // One diner on every bench of the hall (settlement-cutaway-furniture.js commonHall: a long table
+  // with a bench on each side, a second table in a large hall; a figure is as wide as a third of
+  // the 1.6 m bench, two per bench hid the table): off-duty soldiers and household sit facing the
+  // table, the civilians drinking (gesture `mug`); a servant in an apron carries a bowl at the end
+  // of each table. By day, never during an alarm. Places in bench-local U along its side axis;
+  // the two benches of a table sit staggered so the diners do not hide each other.
+  const BENCH_SEATS=Object.freeze([-.07,.07]),SIT_DROP=.11,TABLE_END=2.2/3.5/2+.09;
+  // Who sits where: pure, so the scene can be tested. benches/tables = how many of each the room holds.
+  function commonHallScene(benches,tables,day=onDuty(),alarm=(window.ConquerCombat?.alarmMode?.()||'off')!=='off',seed='hall'){
+    if(alarm||!day)return[];
+    const out=[];
+    for(let b=0;b<benches;b++){
+      const id=seed+'-b'+b;
+      // Soldiers and household mixed at every table, a fixed draw per place.
+      out.push({id,kind:(hash(id+':diner')%5)<2?'soldier':'diner',bench:b,side:BENCH_SEATS[b%2],tool:'mug'});
+    }
+    for(let t=0;t<tables;t++)out.push({id:seed+'-t'+t,kind:'servant',table:t,tool:'bowl',end:hash(seed+'-t'+t+':end')&1?1:-1});
+    return out;
+  }
+  function drawCommonHall(s,slot){
+    const CF=window.ConquerCutawayFurniture,benches=CF?.roomPieces?.(s,slot,'bench')||[],tables=CF?.roomPieces?.(s,slot,'tableLong')||[];
+    if(!benches.length&&!tables.length)return 0;
+    const list=commonHallScene(benches.length,tables.length,undefined,undefined,s.id+'-'+slot.index);if(!list.length)return 0;
+    const inside=p=>CF.roomContains?.(s,slot,p)??true;
+    // A diner faces the nearest table across the bench.
+    const tableNear=p=>tables.slice().sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0]||p;
+    // The servant takes the end of his table that is in the room and clear of the other table
+    // (in a large hall the two tables may stand end to end), the hashed end first.
+    const servantSpot=(tb,end)=>{
+      const others=tables.filter(o=>o!==tb),free=p=>inside(p)&&others.every(o=>Math.hypot(o.x-p.x,o.y-p.y)>TABLE_END+.05);
+      for(const e of [end,-end]){const p=tb.at(0,e*TABLE_END);if(free(p))return p}
+      // Both ends taken: beside the table, on the side away from the benches' diners.
+      for(const e of [end,-end]){const p=tb.at(e*.24,e*TABLE_END*.6);if(free(p))return p}
+      return null;
+    };
+    const items=list.map(a=>{
+      if(a.kind==='servant'){const tb=tables[a.table],p=servantSpot(tb,a.end);return p?{a,p,look:tb}:null}
+      const p=benches[a.bench].at(0,a.side);return{a,p,look:tableNear(p)};
+    }).filter(it=>it&&inside(it.p)).map(it=>({...it,depth:viewDepthPoint(it.p)})).sort((x,y)=>x.depth-y.depth);
+    for(const {a,p,look} of items){
+      const facing=w2s(look,0).x>=w2s(p,0).x?1:-1;
+      if(a.kind==='soldier')drawSoldierFigure(p,slot.z+.09-SIT_DROP,'unarmed',s.id+'-hall-'+a.id,0);
+      else if(a.kind==='servant')drawAt(p,slot.z,s.id+'-hall-'+a.id,'servant',a.tool,facing);
+      else drawAt(p,slot.z-SIT_DROP,s.id+'-hall-'+a.id,'diner',a.tool,facing);
+    }
+    return items.length;
+  }
   // Castle rooms in cutaway (called by drawCutawayOccupants for each room slot).
   function drawRoom(s,slot){
     if(slot.role==='throneHall')return drawThroneHall(s,slot);
+    if(slot.role==='commonHall')return drawCommonHall(s,slot);
     if(!onDuty())return 0;
     const list=roomStaff(slot.role,slot.size);if(!list.length)return 0;
     const spots=window.ConquerCutawayFurniture?.standSpots?.(s,slot,list.length)||[];
@@ -121,5 +170,5 @@
     for(const it of items)drawAt(it.p,slot.z,it.id,it.role,it.tool);
     return items.length;
   }
-  window.ConquerStaffPeople=Object.freeze({ROOM_STAFF,KIND,DAY_START,DAY_END,THRONE_COURT,SEAT_FWD,SEAT_Z,onDuty,roomStaff,throneCourt,lordGesture,dot,drawAt,drawRoom,drawThroneHall});
+  window.ConquerStaffPeople=Object.freeze({ROOM_STAFF,KIND,DAY_START,DAY_END,THRONE_COURT,SEAT_FWD,SEAT_Z,BENCH_SEATS,TABLE_END,onDuty,roomStaff,throneCourt,lordGesture,commonHallScene,dot,drawAt,drawRoom,drawThroneHall,drawCommonHall});
 })();

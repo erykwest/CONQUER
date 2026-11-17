@@ -65,6 +65,29 @@ const C3=window.ConquerCivic3D,CP=window.ConquerCourtPeople,W=window.ConquerWard
   console.log('PASS throne hall: the lord on his throne, guards, herald and petitioner by day, guards at night');
 }
 
+// ---------- common hall: the garrison and the household at table (ROOM-ANIM-COMMON)
+{
+  const small=SP.commonHallScene(2,1,true,false,'h1'),large=SP.commonHallScene(4,2,true,false,'h2');
+  const kinds=l=>l.reduce((m,a)=>(m[a.kind]=(m[a.kind]||0)+1,m),{});
+  assert.equal(small.filter(a=>a.kind!=='servant').length,2,'one diner on each of the two benches');
+  assert.notEqual(small[0].side,small[1].side,'the two benches of a table staggered');
+  assert.equal(kinds(small).servant,1,'a servant at the table');
+  assert.equal(large.filter(a=>a.kind!=='servant').length,4,'a large hall: two tables, four diners');
+  assert.equal(kinds(large).servant,2,'a servant per table');
+  assert.equal(SP.commonHallScene(4,2,false,false).length,0,'empty at night');
+  assert.equal(SP.commonHallScene(4,2,true,true).length,0,'an alarm empties the hall');
+  const many=Array.from({length:12},(_,i)=>SP.commonHallScene(4,2,true,false,'hall'+i)).flat();
+  assert.ok(many.some(a=>a.kind==='soldier')&&many.some(a=>a.kind==='diner'),'soldiers and household at the tables');
+  assert.equal(JSON.stringify(SP.commonHallScene(2,1,true,false,'h1')),JSON.stringify(small),'a fixed draw per hall');
+  for(const a of large)assert.ok(WA.TOOLS[a.tool],a.kind+': '+a.tool+' is a work gesture');
+  assert.ok(W.ROLES.servant,'the servant has his clothes');
+  assert.ok(SP.BENCH_SEATS.every(x=>Math.abs(x)<1.6/3.5/2),'places within the 1.6 m bench');
+  assert.ok(SP.TABLE_END>2.2/3.5/2,'the servant stands beyond the end of the 2.2 m table');
+  assert.match(src('settlement-staff-people.js'),/if\(slot\.role==='commonHall'\)return drawCommonHall\(s,slot\)/,'the common hall is drawn by its diners');
+  assert.match(src('settlement-cutaway-furniture.js'),/commonHall\(r\)\{tableWithBenches\(r,0,0\)/,'a table with benches in every common hall');
+  console.log('PASS common hall: soldiers and household at the benches, a servant per table, by day');
+}
+
 // ---------- hours
 {
   let alarm='off';window.ConquerCombat={alarmMode:()=>alarm};

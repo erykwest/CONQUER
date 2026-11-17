@@ -1,5 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-17 — ROOM-ANIM-COMMON · Soldati e servitù nella Sala comune
+
+`feat/throne-hall-court`: nella Sala comune in sezione siede un commensale per panca (soldati e civili che bevono) e un servo porta il cibo in capo a ogni tavolo; vuota di notte e durante un allarme. Nuovo mestiere `servant` nel guardaroba (voce del Lab e baseline). Test in `qa/staff-people-regression.cjs`. ROADMAP e DECISIONS invariate.
 ### 2026-11-17 — ROOM-ANIM-THRONE · La corte nella Sala del trono
 
 `feat/throne-hall-court`: nella Sala del trono in sezione ci sono il signore seduto sul trono, due guardie, l'araldo e un postulante (più un cortigiano nella sala grande); di notte solo le guardie. Nuovi `ConquerCutawayFurniture.roomPieces/roomContains`, nuovo mestiere `herald` nel guardaroba (voce del Lab e baseline). Test in `qa/staff-people-regression.cjs`. ROADMAP e DECISIONS invariate: figure solo visive, nessun contratto di gioco cambiato.
