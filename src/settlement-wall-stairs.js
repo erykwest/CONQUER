@@ -74,31 +74,6 @@
     }
     return out;
   }
-  // 2.5D: far to near, back faces skipped (as drawPointHoarding / drawRoomExterior).
-  // A flight on the face turned away from the camera is behind its own wall (its top is the walk,
-  // below the merlons): not painted. One in front is painted over the wall, clipped by the
-  // structures that stand in front of it.
-  function facesCamera(l){
-    return viewDepthPoint({x:l.foot.x+l.nx,y:l.foot.y+l.ny})>viewDepthPoint(l.foot);
-  }
-  function draw(s){
-    const l=layout(s);if(!l||!facesCamera(l))return;
-    const tris=triangles(s);if(!tris.length)return;
-    const depth=t=>t.pts.reduce((a,q)=>a+viewDepthPoint(q.p)+ISO_Z*q.z,0)/3;
-    const paint=()=>{
-      for(const {t} of tris.map(t=>({t,d:depth(t)})).sort((a,b)=>a.d-b.d)){
-        const [a,b,c]=t.pts.map(q=>w2s(q.p,q.z));
-        if((b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x)<0)continue;
-        pathPolygon([a,b,c],t.hex,t.hex,.6);
-      }
-    };
-    if(typeof withStructureDetailOcclusion==='function')withStructureDetailOcclusion(s,l.rise*1.24,paint);else paint();
-  }
-  function drawAll(){
-    const items=State.structures.filter(s=>isLinear(s)&&s.wallStair&&!underConstruction(s))
-      .slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
-    for(const s of items)(typeof withStructureVisualMaterial==='function'?withStructureVisualMaterial(s,()=>draw(s)):draw(s));
-  }
   // Commands (StructureCommands.setWallStair / setWallStairPos).
   function refresh(s){
     WW()?.invalidate();
@@ -144,5 +119,5 @@
     else return null;                                // the flight stood in the bay: it comes down
     return left?.wallStair?left:right;
   }
-  window.ConquerWallStairs={splitOnBreach,KINDS,POSITIONS,COST,eligible,allowedKind,stair,layout,access,triangles,draw,drawAll,setKind,setPos};
+  window.ConquerWallStairs={splitOnBreach,KINDS,POSITIONS,COST,eligible,allowedKind,stair,layout,access,triangles,setKind,setPos};
 })();

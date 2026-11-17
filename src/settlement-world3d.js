@@ -10,16 +10,10 @@
 //     ConquerCastle3D.worldMeshes(); sun shadows from shadowCasterGeometry()/sunShadowState();
 //   - trees as depth-tested billboards using the forest SVG sprites.
 // Dynamic figures, decals and overlays keep drawing in 2D on #c (step 2 moves soldiers into 3D).
-// On by default where WebGL2 works; the 2.5D Canvas path is the fallback.
-// Opt-out: ?world3d=0 (persisted, page reloads on toggle) or ConquerWorld3D.setEnabled(false).
+// The only renderer of the world (D-RENDER-3D-261111): there is no 2.5D Canvas fallback and no
+// opt-out. Without WebGL2, or after a renderer failure, draw() shows a "WebGL2 required" notice.
 (()=>{
-  const STORE_KEY='conquer.world3d.v2';
-  const fromUrl=(()=>{try{const v=new URLSearchParams(location.search).get('world3d');return v===null?null:v!=='0'}catch{return null}})();
-  const forcedCanvas=(()=>{try{return new URLSearchParams(location.search).get('renderer')==='canvas2d'}catch{return false}})();
-  let enabled=!forcedCanvas&&(fromUrl??(()=>{try{return localStorage.getItem(STORE_KEY)!=='0'}catch{return true}})());
-  // Branch-local A/B: ?nightlight=0 keeps the same WebGL2 world, but uses old Canvas lights.
-  let useGpuNightLights=(()=>{try{return new URLSearchParams(location.search).get('nightlight')!=='0'}catch{return true}})();
-  if(fromUrl!==null){try{localStorage.setItem(STORE_KEY,fromUrl?'1':'0')}catch{}}
+  let enabled=true;
 
   const TEX_SIZE=4096;                                   // world texture 200U, detail texture = build area
   const DETAIL={x0:BUILD_MIN,y0:BUILD_MIN,size:BUILD_MAX-BUILD_MIN};
@@ -922,9 +916,25 @@
     }
     g.putImageData(d,0,0);return c;
   }
+  // The Mastio's heraldic drape (the realm's arms, swallowtail hem, gilt edge, iron rod), painted
+  // into one T×T atlas tile as a 100×120 banner: the decal quad stretches it to its world size.
+  function paintMastioDrape(g,x,y,T){
+    g.save();g.translate(x,y);g.scale(T/100,T/120);
+    const shape=()=>{g.beginPath();g.moveTo(0,0);g.lineTo(100,0);g.lineTo(100,120);g.lineTo(50,105);g.lineTo(0,120);g.closePath()};
+    shape();g.fillStyle='#322218';g.fill();g.save();g.clip();
+    const herald=State.heraldry||{};
+    if(!window.__conquerHeraldryCanvas?.paint(g,0,0,100,120)){
+      g.fillStyle=herald.c1||REIGN_COLOR_1;g.fillRect(0,0,100,120);
+      g.fillStyle=herald.c2||REIGN_COLOR_2;g.fillRect(50,0,50,120);
+    }
+    g.restore();
+    shape();g.strokeStyle='rgba(244,222,179,.84)';g.lineWidth=3.3;g.stroke();
+    g.beginPath();g.moveTo(0,3);g.lineTo(100,3);g.strokeStyle='#9d8253';g.lineWidth=6;g.stroke();
+    g.restore();
+  }
   function buildDecalAtlas(){
     window.ConquerGates?.ensureSprites();
-    const tiles=[...DECAL_KEYS,'__white','__glow',...GLASS_KEYS.map(k=>'__glass:'+k)];
+    const tiles=[...DECAL_KEYS,'__white','__glow','__mastioDrape',...GLASS_KEYS.map(k=>'__glass:'+k)];
     const T=256,cols=4,c=document.createElement('canvas');c.width=cols*T;c.height=Math.ceil(tiles.length/cols)*T;
     const g=c.getContext('2d'),map=new Map();
     tiles.forEach((k,i)=>{
@@ -943,6 +953,7 @@
         g.fillStyle=radial;g.fillRect(x+1,y+1,T-2,T-2);
         map.set(k,[(x+1)/c.width,(y+1)/c.height,(x+T-1)/c.width,(y+T-1)/c.height]);return;
       }
+      if(k==='__mastioDrape'){paintMastioDrape(g,x,y,T);map.set(k,[x/c.width,y/c.height,(x+T)/c.width,(y+T)/c.height]);return}
       const img=architectureSprite(k);if(!img)return;
       g.drawImage(img,x,y);map.set(k,[x/c.width,y/c.height,(x+img.width)/c.width,(y+img.height)/c.height]);
     });
@@ -979,6 +990,12 @@
       quad(span.a,span.b,ground+centerZ-height/2,ground+centerZ+height/2,key,out);
       if(key.startsWith('gothic'))lightWindow(edge,centerZ,width,height,offset,ground,out,key);
     };
+    // Mastio heraldry hangs below the sill of its castle-facing window (one per window row).
+    const drape=(s,edge,windowZ,windowW,windowH,ground,out,push=.016)=>{
+      if(!s.isMastio)return;
+      const width=Math.max(.30,windowW*1.08),height=.64,top=windowZ-windowH/2-.055,span=facadeAssetWorldSpan(edge,width,0);
+      quad(span.a,span.b,ground+top-height,ground+top,'__mastioDrape',out,WHITE,push);
+    };
     const edgesOf=fp=>fp.map((a,i)=>({a,b:fp[(i+1)%fp.length],index:i}));
     // A beam from wall point p0 to p1 ({off,z}), `width` thick within the wall plane.
     const strip=(at,ground,p0,p1,width,out,col,push)=>{
@@ -1008,7 +1025,7 @@
             for(let i=0;i<4;i++){
               const a=base+i*Math.PI/2,o={x:Math.cos(a),y:Math.sin(a)},cc={x:s.x+o.x*r,y:s.y+o.y*r},tx=-o.y,ty=o.x;
               const edge={a:{x:cc.x-tx*span/2,y:cc.y-ty*span/2},b:{x:cc.x+tx*span/2,y:cc.y+ty*span/2}};
-              if(i===0){if(!towerEdgeOnDivider(s,edge,row.z)&&!towerWindowGivesWayToDoor(s,edge,row.floor))onEdge(edge,row.z,sz.w*.86,sz.h,key,0,ground,o);}
+              if(i===0){if(!towerEdgeOnDivider(s,edge,row.z)&&!towerWindowGivesWayToDoor(s,edge,row.floor)){onEdge(edge,row.z,sz.w*.86,sz.h,key,0,ground,o);drape(s,edge,row.z,sz.w*.86,sz.h,ground,o)}}
               else if(towerSlitFace(s,i,row.floor))onEdge(edge,row.z,.22,.60,'arrowSlit',0,ground,o);
             }
           }
@@ -1019,10 +1036,22 @@
             for(const edge of edgesOf(towerFacadePoints(s))){
               if(s.shape==='half'&&edge.index===ORIENTED_FACADE_REAR)continue;   // open gorge
               const o=outward(edge,center);
-              if(edge.index===interior){if(!towerWindowGivesWayToDoor(s,edge,row.floor))onEdge(edge,row.z,sz.w,sz.h,key,0,ground,o)}
+              if(edge.index===interior){if(!towerWindowGivesWayToDoor(s,edge,row.floor)){onEdge(edge,row.z,sz.w,sz.h,key,0,ground,o);drape(s,edge,row.z,sz.w,sz.h,ground,o)}}
               else if(towerSlitFace(s,edge.index,row.floor)){const se=towerSlitEdge(s,edge);onEdge(se,row.z,.22,.60,'arrowSlit',0,ground,se===edge?o:outward(se,center))}
             }
           }
+        }
+      }else if(s.type==='tower'&&s.isMastio&&woodTowerStyle(s)!=='watchtower'){
+        // A wooden keep has a timber-framed castle-facing window too, with the drape below it;
+        // the frame tower's raised doorway takes its place.
+        const ground=Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s);
+        const interior=interiorFacadeEdgeIndex(s),edge=edgesOf(towerFacadePoints(s)).find(e=>e.index===interior);
+        if(edge&&!towerWindowGivesWayToDoor(s,edge,2)){
+          const o=outward(edge,center),z=Math.min(structureHeight(s)-.53,1.45);
+          const span=facadeAssetWorldSpan(edge,.40,0);
+          quad(span.a,span.b,ground+z-.25,ground+z+.25,'gothicL1',o,WHITE,.03);
+          lightWindow(edge,z,.40,.50,0,ground,o,'gothicL1');
+          drape(s,edge,z,.40,.50,ground,o,.034);
         }
       }else if(s.type==='gate'&&!isWoodGate(s)){
         const ground=Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s);
@@ -1606,7 +1635,8 @@
       const a=performance.now();
       upload(gl,'trees',buildTrees(S.treeAtlas));S.sig.trees=treeSig;st.treesMs=performance.now()-a;
     }
-    const dSig=[structuresSig('all'),shopCut,shopFront,Object.keys(architectureSprites).length,window.ConquerGates?.ensureSprites()||''].join('|');
+    const dSig=[structuresSig('all'),shopCut,shopFront,Object.keys(architectureSprites).length,window.ConquerGates?.ensureSprites()||'',
+      window.__conquerHeraldryCanvas?.signature?.()||JSON.stringify(State.heraldry||null)].join('|');
     if(S.sig.decals!==dSig){
       const a=performance.now(),atlas=buildDecalAtlas();uploadTexture(gl,'decalAtlas',atlas.canvas);S.decalMap=atlas.map;
       const baked=buildDecals(atlas);
@@ -1993,24 +2023,23 @@
   // ---------- frame hooks used by draw() ----------
   function supported(){return !!ensureGL()}
   function active(){return enabled&&supported()}
-  function residual2D(){
-    // Palisades, wood towers and wood gates are 3D (settlement-wood3d.js); without their models
-    // they keep the 2.5D drawing (per frame).
-    const items=State.structures.filter(s=>!underConstruction(s)&&(s.type==='palisade'||isWoodTower(s)||isWoodGate(s)||isLonghouse(s))&&!window.ConquerWood3D?.handles(s))
-      .sort((a,b)=>worldDepth(a)-worldDepth(b));
-    for(const s of items)drawStructure(s);
+  // Palisades, wood towers, wood gates and longhouses are 3D (settlement-wood3d.js). One whose
+  // model is missing is reported, never painted in 2.5D (D-RENDER-3D-261111).
+  function missingWood3D(){
+    const miss=State.structures.filter(s=>!underConstruction(s)&&(s.type==='palisade'||isWoodTower(s)||isWoodGate(s)||isLonghouse(s))&&!window.ConquerWood3D?.handles(s));
+    perf().world3dMissingWood=miss.length;
+    if(miss.length&&!S.missingWoodReported){S.missingWoodReported=true;console.warn('World 3D: timber structures without a 3D model',miss.map(s=>s.id))}
   }
   function drawBack(r){
     const t0=performance.now(),gl=ensureGL();if(!gl)return false;
     try{
     pollRendererError(gl);
     collecting=[];                           // soldiers drawn this frame go to the 3D front pass
-    const gpu=document.getElementById('gpuCanvas');if(gpu&&gpu.style.visibility!=='hidden')gpu.style.visibility='hidden';
     ensureContent(gl);
     const t1=performance.now();renderBack(r);
     ctx.drawImage(S.canvas,0,0,r.width,r.height);
     if(isPlanView())drawGrid();             // 5U lines + 0.5U snap lattice (plan view editor aid)
-    residual2D();
+    missingWood3D();
     // Village name over the centre well, quarter names over the others (as drawPointStructure).
     if(State.village.founded)for(const s of State.structures){
       if(s.type!=='well'||underConstruction(s))continue;
@@ -2027,16 +2056,12 @@
   }
   function disableRenderer(err){
     S.failed='world3d-draw: '+String(err?.message||err);enabled=false;collecting=null;
-    const gpu=document.getElementById('gpuCanvas');if(gpu)gpu.style.visibility='';
-    window.ConquerWebGPU?.invalidate?.();invalidateSceneCache();
-    console.warn('World 3D disabled; Canvas fallback:',S.failed);
+    console.warn('World 3D disabled (the world needs WebGL2, no Canvas fallback):',S.failed);
   }
   function finishFrame(){
     try{deferRendererError(S.gl);return true}
     catch(err){disableRenderer(err);return false}
   }
-  function nightLightsEnabled(){return useGpuNightLights}
-  function setNightLightsEnabled(on){useGpuNightLights=!!on;draw()}
   function drawNightLights3D(r){
     const nf=nightFactor();if(nf<=.01)return;
     const started=performance.now();
@@ -2053,9 +2078,6 @@
       S.nightLightReported=true;
       window.__conquerAnalytics?.event('NIGHTLIGHT_3D_ACTIVE',{windowQuads,fireSources,mode:'webgl2'},'info');
     }
-  }
-  function drawCastleOverlays(){
-    // Arcades are 3D decals and cutaway rooms render in WebGL2; Canvas owns only the fallback path.
   }
   // Night: open interiors stay in full light. The whole cutaway mesh (and its flames) is redrawn
   // over the night overlay, depth-tested against this frame's scene (depth buffer is preserved),
@@ -2076,12 +2098,6 @@
     }
     gl.depthMask(true);
     ctx.drawImage(S.canvas,0,0,r.width,r.height);
-  }
-  // Mastio heraldic drape stays 2D for now: run the facade pass on the mastio towers only.
-  function drawMastioDrapes(){
-    const all=State.structures,mastio=all.filter(s=>s.isMastio&&!underConstruction(s)&&!structureCutaway(s));
-    if(!mastio.length)return;
-    try{State.structures=mastio;drawFacadeWindows(false,1,false)}finally{State.structures=all}
   }
   // ---------- dynamic meshes: queued during the frame like soldiers ----------
   // mesh: {pos: 9 world coords per triangle, col: one CSS hex per triangle}. Flat colours take the
@@ -2138,20 +2154,7 @@
     const dyn=buildDynamic(moving);dynamicQueue=[];
     renderFront(r,buildSoldiers(list),dyn);S.frameColliders=colliders;ctx.drawImage(S.canvas,0,0,r.width,r.height);
     if(S.debugColliders)drawColliderDebug();
-    // 2.5D front pieces only exist for palisades, wood towers and wood gates without their 3D models
-    // (settlement-wood3d.js); the battlement occlusion frame is expensive, so skip the call entirely
-    // when none of them is present.
-    const all=State.structures,wood3d=s=>!!window.ConquerWood3D?.handles(s);
-    const residual=all.filter(s=>!underConstruction(s)&&(s.type==='palisade'||isWoodTower(s)||isWoodGate(s))&&!wood3d(s));
-    if(residual.length){try{State.structures=all.filter(s=>!window.ConquerCastle3D?.castleVolume?.(s)&&!wood3d(s));drawCastleBattlements()}finally{State.structures=all}}
     perf().world3dFrontMs=performance.now()-t0;
-  }
-  function setEnabled(on){enabled=!!on;try{localStorage.setItem(STORE_KEY,enabled?'1':'0')}catch{}location.reload()}
-  // Benchmark hook: switch modes in place (no reload). Restores the WebGPU canvas when leaving 3D.
-  function _setActiveForTest(on){
-    enabled=!!on;
-    if(!enabled){const gpu=document.getElementById('gpuCanvas');if(gpu)gpu.style.visibility='';window.ConquerWebGPU?.invalidate?.()}
-    invalidateSceneCache();
   }
   // Debug: show capsules; hovering highlights the soldier picked by the camera ray.
   function setColliderDebug(on){
@@ -2166,11 +2169,12 @@
     }
     draw();
   }
-  window.ConquerWorld3D={active,supported,setEnabled,drawBack,drawCastleOverlays,drawFront,
-    drawNightLights3D,nightLightsEnabled,setNightLightsEnabled,drawMastioDrapes,drawEmissive,finishFrame,_setActiveForTest,
+  window.ConquerWorld3D={active,supported,drawBack,drawFront,
+    drawNightLights3D,drawEmissive,finishFrame,
     pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,addHouse,addOutbuilding,figure,screenAxis,prewarmFigures,_setFiguresForTest:on=>{figuresOn=!!on},FIGURE_CARD_U:SOLDIER_SIZE_U,FIGURE_FEET:SOLDIER_FEET,
     atlasCanvas:()=>soldierAtlas.canvas,frameFigures:()=>(S.frameFigures||[]).map(f=>({key:f.key||f.type,p:f.p,z:f.z,mirror:f.mirror,span:f.span||1,ox:f.ox||0,id:f.id,capsule:f.capsule||null})),atlasStats:()=>({tiles:soldierAtlas.next,capacity:FIG_COLS*FIG_COLS,resets:soldierAtlas.resets,painted:soldierAtlas.painted}),
     invalidate:()=>{S.sig={};S.contentDirty=true},
+    decalFloats:()=>S.buf['decals#n']|0,   // QA: size of the baked facade decal buffer
     _debugBake:bakeGround,
     status:()=>({enabled,supported:supported(),failed:S.failed,stats:{...S.stats},sig:{...S.sig},buffers:Object.fromEntries(Object.entries(S.buf).filter(([k])=>k.endsWith('#n')))})};
 })();

@@ -349,17 +349,6 @@
     frontCache.set(house.id,{key,res});
     return res;
   }
-  // The street front is seen only when the street wall faces the camera (2.5D painter).
-  function frontFacing(R){
-    if(typeof isPlanView==='function'&&isPlanView())return true;
-    const m=R.toWorld(0,-R.hb),o=R.toWorld(0,-R.hb-.1);
-    return viewDepthPoint(o)>viewDepthPoint(m);
-  }
-  function drawFront2D(house){
-    const r=buildFront(house);if(!r||!window.ConquerMesh3D||!frontFacing(r.room))return false;
-    window.ConquerMesh3D.drawMeshes(ctx,[r.mesh],window.ConquerMesh3D.gameView());
-    return true;
-  }
   function addFront(m,house){
     const r=buildFront(house);if(!r)return false;
     const mesh=r.mesh,p=mesh.pos;
@@ -393,14 +382,6 @@
     return sig;
   }
 
-  // ---------- renderers
-  // 2.5D: called by drawHouse in place of the house body parts.
-  function draw2D(house){
-    const r=build(house);if(!r||!window.ConquerMesh3D)return false;
-    window.ConquerMesh3D.drawMeshes(ctx,[r.mesh],window.ConquerMesh3D.gameView());
-    if(house.shopCutaway)drawStagedArtisan(house,r);
-    return true;
-  }
   // WebGL: the open house goes in the rotation-dependent cutaway buffer of world3d.
   function addToBuilder(m){
     for(const house of activeHouses()){
@@ -432,15 +413,7 @@
     if(dist(p,houseDoorInfo(house).outside)>.42)return null;
     return spotOf(house);
   }
-  // Asset Lab only: the stage has no population pass, so the open house shows its artisan itself.
-  function drawStagedArtisan(house,r){
-    const p=r.room.toWorld(r.spot.a,r.spot.b),tool=TRADES[r.kind].tool;
-    const dot={p,id:house.id+':m:0',kind:'artisan',role:r.kind,sex:'male',age:'adult',hair:'brown',colors:['#7a6a4f','#5f6e7c']};
-    const W=window.ConquerWorkAnim;
-    if(tool&&W)W.drawWorkerUnmasked(dot,tool,0,facing(r));
-    else if(typeof drawVillagerFigureUnmasked==='function')drawVillagerFigureUnmasked(dot);
-  }
-  window.ConquerShopCutaway=Object.freeze({TRADES,LAYOUTS,EMBLEMS,shopOf,eligible,active,activeId,room,build,draw2D,addToBuilder,artisanAt,spotOf,
-    frontOpen,opening,signPlace,buildFront,drawFront2D,addFront,facadeCut,frontSig,
+  window.ConquerShopCutaway=Object.freeze({TRADES,LAYOUTS,EMBLEMS,shopOf,eligible,active,activeId,room,build,addToBuilder,artisanAt,spotOf,
+    frontOpen,opening,signPlace,buildFront,addFront,facadeCut,frontSig,
     clear:()=>{cache.clear();frontCache.clear()}});
 })();

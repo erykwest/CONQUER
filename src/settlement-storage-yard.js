@@ -132,17 +132,6 @@
     }
     return true;
   }
-  function draw(s){
-    if(!is(s)||typeof ctx==='undefined')return;
-    const g=Number.isFinite(Number(s.groundZ))?Number(s.groundZ):terrainElevation(s),n=size(s);
-    ctx.save();
-    pathPolygon(projectPath(yardRect(s.x,s.y,n,n,s.angle||0),g+.06),'#8b795a','#d1b78d',1.4);
-    for(const p of spots(s)){
-      const r=yardRect(p.x,p.y,.45,.43,s.angle||0);
-      pathPolygon(projectPath(r,g+.1+.13*p.tiers),p.color,'#352b20',1);
-    }
-    ctx.restore();
-  }
   // Asset Lab calls the SAME addToBuilder() geometry, translated to the
   // model registry format rather than offering a misleading schematic.
   function labModel(n){
@@ -166,5 +155,5 @@
   }
   const models={stockyard2:labModel(2),stockyard4:labModel(4),stockyard6:labModel(6)};
   window.ConquerStorageYard=Object.freeze({models,TYPE,SIZES,START_RADIUS,is,list,active,size,stocks,used,free,capacity,capacityOf,make,
-    findNear,ensureForWell,expansionCost,grow,canRemove,piles,visualSignature,refreshVisual,addToBuilder,draw});
+    findNear,ensureForWell,expansionCost,grow,canRemove,piles,visualSignature,refreshVisual,addToBuilder});
 })();

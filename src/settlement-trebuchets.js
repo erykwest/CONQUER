@@ -67,16 +67,12 @@
   const state=t=>t.age<SETUP_S?{mode:'setup',t:1+t.age/SETUP_S*5}:t.crew>0?{mode:'fire',t:t.clock}:{mode:'idle'};
   // World meshes for the 3D front pass (settlement-world3d.js drawFront).
   function dynamicMeshes(){return SE()?list.map(t=>SE().triangles('trebuchet',place(t),state(t))):[]}
-  // The crew at the model's posts (depth-tested soldiers in 3D); 2.5D also gets a timber outline.
+  // The crew at the model's posts (depth-tested soldiers in 3D).
   function draw(){
     if(!list.length)return;
     const se=SE();
     for(const t of list){
       const p=place(t);
-      if(!window.ConquerWorld3D?.active?.()){
-        const a=w2s({x:t.x-Math.cos(t.heading)*1.2,y:t.y-Math.sin(t.heading)*1.2},.2),b=w2s({x:t.x+Math.cos(t.heading)*1.2,y:t.y+Math.sin(t.heading)*1.2},1.6);
-        ctx.save();ctx.strokeStyle='#6b4a2c';ctx.lineWidth=Math.max(3,State.view.scale*5);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();
-      }
       const posts=se?se.crew('trebuchet',p):[];
       for(let i=0;i<Math.min(t.crew,posts.length);i++){
         const q=posts[i];

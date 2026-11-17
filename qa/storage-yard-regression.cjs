@@ -48,7 +48,6 @@ test('stockyard is wired into founding, legacy saves, two renderers and both pal
     ['src/settlement-app-input.js','ConquerStorageYard?.ensureForWell'],
     ['src/settlement-app-persistence.js','ConquerStorageYard?.ensureForWell'],
     ['src/settlement-world3d.js','ConquerStorageYard.addToBuilder'],
-    ['src/settlement-render.js','ConquerStorageYard.draw'],
     ['src/settlement-app-rooms.js','data-stockyard-grow'],
     ['figures-lab.html','settlement-storage-yard.js'],
     ['src/asset-catalog.js','ConquerStorageYard']

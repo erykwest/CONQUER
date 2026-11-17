@@ -44,7 +44,7 @@ async function main(){
     const page=await context.newPage();
     page.on('pageerror',e=>report.errors.push({mode,error:e.message}));
     page.on('console',m=>{if(m.text().startsWith('[SIEGE_PROGRESS]'))console.log(m.text());if(m.type()==='error'&&/^CONQUER_|Uncaught/.test(m.text()))report.errors.push({mode,error:m.text()})});
-    await page.goto(`http://127.0.0.1:${server.address().port}/index.html?`+(mode==='webgl'?'world3d=1':'renderer=canvas2d'),{waitUntil:'networkidle'});
+    await page.goto(`http://127.0.0.1:${server.address().port}/index.html?`+'world3d=1',{waitUntil:'networkidle'});
     await page.waitForFunction(()=>typeof draw==='function'&&!!window.ConquerCombat&&window.ConquerCircle?.getStatus?.().ready&&State.village?.founded&&State.structures.length>50,null,{timeout:60000});
     console.log('Loaded '+mode+' '+label);
     const setup=await page.evaluate(({trebuchets,concentric,seconds,screenshotInterval,speed,focus,zoom})=>{

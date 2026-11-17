@@ -86,17 +86,9 @@ check('the inner roof removes the brazier (no fire on the deck)',()=>{
   assert.ok(meshHasBrazier(),'the castle mesh builds the brazier block');
   run("window.ConquerWorld3D={active:()=>true}");
   assert.equal(C3.ownsBrazier(src),true,'World3D: the mesh owns the brazier, the canvas does not paint it');
-  run("window.ConquerWorld3D={active:()=>false}");
-  assert.equal(C3.ownsBrazier(src),C3.active(),'2.5D: the canvas paints it unless the WebGL castle body is on');
   run("delete window.ConquerWorld3D");
+  assert.equal(C3.ownsBrazier(src),true,'no 2.5D path: the castle mesh always owns a castle volume brazier');
   assert.ok(fs.readFileSync(__dirname+'/../src/settlement-castle-structures.js','utf8').includes('if(!window.ConquerCastle3D?.ownsBrazier?.(src))drawBrazierFixture(src)'),'the canvas skips braziers the mesh owns');
-});
-check('2.5D: one inner-roof piece among the merlons, only when mounted and built',()=>{
-  const on=tower('a',{innerRoof:'on'}),off=tower('b'),site=tower('c',{innerRoof:'on',construction:{progress:.5}});
-  setup([on,off,site]);
-  assert.equal(run('towerInnerRoofPiece')(on)?.kind,'innerRoof');
-  assert.equal(run('towerInnerRoofPiece')(off),null);
-  assert.equal(run('towerBattlementPieces')(on).length,run('towerBattlementPieces')(off).length,'merlons unchanged');
 });
 check('rooms under the roof keep asking for a pitched roof (Colombaia, Falconiera, Campana)',()=>{
   const t=tower('a',{level:2,innerRoof:'on'});setup([t]);

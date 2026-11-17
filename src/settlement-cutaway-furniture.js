@@ -586,72 +586,18 @@
     }
     return out;
   }
-  // ---------- painting
-  function depthOf(x,y,z){return typeof isPlanView==='function'&&isPlanView()?z:viewDepthPoint({x,y})+.9*z}
-  // floor: only that floor's pieces (2.5D draws each floor right after its slab).
-  function draw(s,g,floor=null){
-    if(!FM())return false;
-    const faces=structureFaces(s,g).faces.filter(f=>(floor===null||f.floor===floor)&&shown(s,f)),turns=State.view.rotation||0,W3=window.ConquerWagons3D;
-    const list=faces.map(f=>{let d=0;for(const p of f.pts)d+=depthOf(p[0],p[1],p[2]);return{f,d:d/f.pts.length}}).sort((a,b)=>a.d-b.d);
-    ctx.save();ctx.lineJoin='round';ctx.lineWidth=.5;
-    for(const {f} of list){
-      const k=W3?W3.shadeFactor(f.n[0],f.n[1],f.n[2],turns):1,h=f.hex.replace('#',''),rgb=[0,2,4].map(i=>parseInt(h.slice(i,i+2),16));
-      const lum=(rgb[0]+rgb[1]+rgb[2])/765,kk=lum>.7?1-(1-k)*.55:k;
-      const col='rgb('+(rgb[0]*kk|0)+','+(rgb[1]*kk|0)+','+(rgb[2]*kk|0)+')';
-      ctx.fillStyle=ctx.strokeStyle=col;ctx.beginPath();
-      f.pts.forEach((p,i)=>{const q=w2s({x:p[0],y:p[1]},p[2]);i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)});
-      ctx.closePath();ctx.fill();ctx.stroke();
-    }
-    ctx.restore();
-    return true;
-  }
   // Floor-by-floor cutaway: the floors above the one in view (cutawayFloorShown) are not drawn.
   const shown=(s,f)=>f.floor==null||typeof cutawayFloorShown!=='function'||cutawayFloorShown(s,f.floor);
   const below=(s,L)=>typeof cutawayCeilingZ!=='function'||L.p[2]<cutawayCeilingZ(s)-.01;
   function lights(s,g){return FM()?structureFaces(s,g).lights.filter(L=>below(s,L)):[]}
   // Night cutaway: torches, candles and hearth fires glow after the night overlay.
   const GLOW={torch:{r:20,a:.5},fire:{r:26,a:.55},candle:{r:10,a:.42}};
-  function drawNightGlow(nf){
-    if(nf<=.01||!FM())return;
-    const scale=clamp(State.view.scale,.55,2.4);
-    for(const s of State.structures){
-      if(!structureCutaway(s)||underConstruction(s))continue;
-      const paint=()=>{
-        ctx.save();ctx.globalCompositeOperation='screen';
-        lights(s,cutawayWallGeometry(s)).forEach((L,i)=>{
-          const k=GLOW[L.kind]||GLOW.candle,q=w2s({x:L.p[0],y:L.p[1]},L.p[2]);
-          const fl=typeof fireFlicker==='function'?fireFlicker(s.id+':'+i):1,n=Math.max(.1,nf)*fl,r=k.r*scale;
-          const g=ctx.createRadialGradient(q.x,q.y,0,q.x,q.y,r);
-          g.addColorStop(0,'rgba(255,214,120,'+(k.a*n).toFixed(3)+')');
-          g.addColorStop(.4,'rgba(245,150,52,'+(k.a*.45*n).toFixed(3)+')');
-          g.addColorStop(1,'rgba(245,150,52,0)');
-          ctx.fillStyle=g;ctx.beginPath();ctx.arc(q.x,q.y,r,0,Math.PI*2);ctx.fill();
-        });
-        ctx.restore();
-      };
-      if(s.type==='tower'||s.type==='gate')withStructureGroundPlane(s,paint);else paint();
-    }
-  }
   function standSpots(s,slot,count){
     const all=FM()?structureFaces(s,cutawayWallGeometry(s)).spots.get(slot.index)||[]:[];
     if(!all.length)return null;
     const rnd=seedRand(hashStr(s.id+':spots:'+slot.index)),pool=all.slice(),out=[];
     while(out.length<count&&pool.length)out.push(pool.splice(Math.floor(rnd()*pool.length),1)[0]);
     return out;
-  }
-  // 2.5D only: flames redrawn at full light after the night overlay (the WebGL scene has its
-  // own depth-tested emissive pass).
-  function drawEmissive2D(nf){
-    if(nf<=.01||!FM()||window.ConquerWorld3D?.active?.())return;
-    for(const s of State.structures){
-      if(!structureCutaway(s)||underConstruction(s))continue;
-      const paint=()=>{for(const f of structureFaces(s,cutawayWallGeometry(s)).faces){
-        if(!f.emissive||!shown(s,f))continue;
-        ctx.fillStyle=f.hex;ctx.beginPath();
-        f.pts.forEach((p,i)=>{const q=w2s({x:p[0],y:p[1]},p[2]);i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)});ctx.closePath();ctx.fill();
-      }};
-      if(s.type==='tower'||s.type==='gate')withStructureGroundPlane(s,paint);else paint();
-    }
   }
   function worldFaces(s){return FM()?structureFaces(s,cutawayWallGeometry(s)).faces.filter(f=>shown(s,f)):[]}
   // W1 portico outside the cutaway: the loggia's furniture stays in view through the arches.
@@ -673,5 +619,5 @@
     pieceWorld({name:'a:'+name,u:0,v:0,turn:0,lift:0,paint},F,slot.z,out,[],heraldry(),slot.floor);
     return out;
   }
-  window.ConquerCutawayFurniture={ROOMS,draw,artSlots,artFits,artWorkFaces,lights,drawNightGlow,drawEmissive2D,worldFaces,loggiaFaces,standSpots,layoutStructure,spiralStair,landingSpecs,pieceFaces,clear:()=>cache.clear()};
+  window.ConquerCutawayFurniture={ROOMS,artSlots,artFits,artWorkFaces,lights,worldFaces,loggiaFaces,standSpots,layoutStructure,spiralStair,landingSpecs,pieceFaces,clear:()=>cache.clear()};
 })();

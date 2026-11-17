@@ -67,6 +67,6 @@ assert.match(world,/if\(gl.isContextLost\(\)\)throw new Error/);
 assert.match(world,/gl.getError\(\)!==gl.NO_ERROR/);
 assert.match(world,/const bSig=\[season,State\.visualPalette,/);
 assert.match(world,/const castleContent=\[season,State\.visualPalette,/);
-assert.match(render,/State\.season\|\|'summer',State\.visualPalette/);
+assert.doesNotMatch(render,/blitSceneCache\('castle(Body|Front)'\)/,'no 2.5D castle cache (World 3D only)');
 for(const c of ['#303237','#3a3d42','#303943','#394550','#34363a','#42454a','#303236','#44474c','#3d4145','#484c50','#41454a','#4c5054','#595a60'])assert.ok(swatches[c],'missing slate roof colour: '+c);
 console.log('PASS clay palette: default, both modes, 63 shared swatches, targeted cache invalidation and GL fallback');

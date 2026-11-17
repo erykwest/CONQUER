@@ -7,7 +7,7 @@ const exceptions=[],missing=[];
 page.on('pageerror',err=>exceptions.push(String(err.stack||err)));
 page.on('requestfailed',r=>{if(r.url().startsWith('http://127.0.0.1:4173/'))missing.push(r.url());});
 try{
-  const r=await page.goto('http://127.0.0.1:4173/?renderer=canvas2d',{waitUntil:'domcontentloaded',timeout:60000});
+  const r=await page.goto('http://127.0.0.1:4173/',{waitUntil:'domcontentloaded',timeout:60000});
   assert.equal(r?.status(),200);
   await page.waitForFunction(()=>!!window.ConquerLivestock&&!!window.ConquerAnimals&&!!window.ConquerCombat&&typeof draw==='function',{timeout:30000});
   const result=await page.evaluate(()=>{
