@@ -46,6 +46,21 @@ for(const [cols,rows] of [[30,21],[12,8],[2,2]])for(const seed of [1943,71241]){
     const mean=configuration.width*configuration.height/cells.length;
     const areas=cells.map(c=>topology.area(c.polygon));
     assert.equal(cells.length,cols*rows);
+    if(cols*rows>=600){
+      // A square Moore-neighbor graph MUST NOT force square polygons.
+      // Staggered sites restore recognisably Voronoi/hex-like irregular shapes.
+      const sixSided=cells.filter(cell=>cell.polygon.length===6).length;
+      const quadrilaterals=cells.filter(cell=>cell.polygon.length===4).length;
+      const segments=cells.flatMap(cell=>cell.polygon.map((p,i)=>{
+        const q=cell.polygon[(i+1)%cell.polygon.length];
+        return {dx:Math.abs(p.x-q.x),dy:Math.abs(p.y-q.y)};
+      }));
+      const oblique=segments.filter(e=>e.dx>1e-3&&e.dy>1e-3).length;
+      assert.ok(sixSided>cells.length*.70,'territories must mostly be six-sided Voronoi polygons, not squares');
+      assert.ok(quadrilaterals<cells.length*.10,'square-looking quadrilateral territories must be rare');
+      assert.ok(oblique>segments.length*.48,'organic polygons must have abundant oblique edges');
+      assert.equal(configuration.areaBalance.nonMooreContacts,0,'no geometric neighbor falls outside fixed 8 slots');
+    }
     assert.ok(areas.every(a=>a>=mean*.9&&a<=mean*1.1),
       'Every canonical territory obeys ±10% of mean area');
     assert.ok(Math.abs(areas.reduce((a,b)=>a+b,0)-configuration.width*configuration.height)
@@ -76,4 +91,4 @@ for(const [cols,rows] of [[30,21],[12,8],[2,2]])for(const seed of [1943,71241]){
 assert.ok(html.includes("topology: 'square-moore-8-balanced-v1'"),'Save format is versioned');
 assert.ok(html.includes('const mapSavedCode=code=>'),'Legacy cell IDs remapped by row/column');
 assert.ok(html.includes('window.ConquerRegion8Neighbors = macroId =>'),'Public constant-time neighbor access');
-console.log('PASS square 8-neighbor topology, Voronoi area ±10%, source generation, border consistency, seed reproducibility and save migration on '+checked+' maps.');
+console.log('PASS 8-neighbor square LOGIC, staggered irregular hex-like Voronoi SHAPES, area ±10%, borders, reproducibility and save migration on '+checked+' maps.');
