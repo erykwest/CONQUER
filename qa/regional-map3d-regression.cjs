@@ -94,6 +94,20 @@ for(const detail of [8,20,40]){
   assert.ok(Math.abs(micro.parts.length-630*detail)<630*detail*.07,'approximate density target');
   assert.ok(micro.ownerParts.size>590,'most original territories receive microcells');
   assert.ok(micro.parts.every(p=>p.polygon.length>=3&&terrain[p.macroId]),'valid grouped microcells');
+  // Weighted Voronoi must actually vary the AREA of microcells rather than
+  // just skewing polygons with nearly identical footprints. Verify the
+  // intended ~200% upper end without changing total world area.
+  const referenceArea=expectedArea/(cells.length*detail);
+  const relativeAreas=micro.parts.map(part=>area(part.polygon)/referenceArea).sort((a,b)=>a-b);
+  const percentile=f=>relativeAreas[Math.floor(f*(relativeAreas.length-1))];
+  assert.ok(percentile(.05)<.7,'smaller sites compensate larger weighted-Voronoi cells');
+  assert.ok(percentile(.95)>1.38,'clear large-cell tail beyond old uniform Voronoi');
+  assert.ok(relativeAreas.at(-1)>=1.75 && relativeAreas.at(-1)<=2.15,
+    'largest visual microcell approaches 200% of the prior reference area');
+  const doubled=globalMicrocells({...snapshot,seed:snapshot.seed+113},detail,.65);
+  assert.notDeepEqual(doubled.parts.slice(0,40).map(p=>p.polygon),
+    micro.parts.slice(0,40).map(p=>p.polygon),'microcell weights vary with the map seed');
+
 }
 const results=[];
 for(const detail of [1,8,20,40]){
@@ -196,6 +210,6 @@ for(const detail of [1,8,20,40]){
     );
   }
 }
-console.log('PASS region3d: mountain Z halved, snowlines scaled, river subpaths on organic borders, mesas, vegetation, and picking.');
+console.log('PASS region3d: weighted variable-area microcells up to ~200%, exact area conservation, mountain Z, river seams, vegetation, selection.');
 console.table(results);
 console.log('Synthetic CPU-only baseline. Browser/WebGL visuals and FPS remain separate checks.');
