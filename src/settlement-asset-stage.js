@@ -202,7 +202,7 @@
     }finally{
       delete performance.now;delete crypto.randomUUID;
       if(keepPitch===undefined)delete policies.roofPitch;else policies.roofPitch=keepPitch;
-      State.structures=keep;window.ConquerSiege?.restore({...(State.siege||{}),ruins:[]});invalidateSceneCache(STRUCTURE_LAYERS);
+      State.structures=keep;window.ConquerSiege?.restore({...(State.siege||{}),ruins:[]});invalidateSceneCache();
       if(v.spec.type==='house')invalidateUrbanGeometry();
     }
   }
