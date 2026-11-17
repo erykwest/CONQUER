@@ -242,6 +242,7 @@
     if(idx.length===3)out.push(idx[0],idx[1],idx[2]);
     return out;
   }
+  function buildTerrain(){return clipTerrainToWorld(buildTerrainRaw())}
   // Hex territory maps end at the inherited 50U-offset border, never at the square canvas:
   // ground triangles outside it are dropped, triangles across it are cut to it.
   function clipTerrainToWorld(arr){
@@ -275,7 +276,6 @@
     }
     return new Float32Array(out);
   }
-  function buildTerrain(){return clipTerrainToWorld(buildTerrainRaw())}
   function buildTerrainRaw(){
     const v=[],push=(x,y,z)=>v.push(x,y,z);
     // Hills crossing the map edge are cut at the world square, like the 2.5D relief
