@@ -947,6 +947,7 @@
 
   <script src="src/regional-biome-rules.js?v=hills-real-zone-1-flow-30-1-water-network-1"></script>
   <script src="src/regional-hex-capacity.js"></script>
+  <script src="src/regional-topology.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script>
@@ -1589,6 +1590,9 @@ y: 1.2 + random() * Math.max(1, finalRows * Math.sqrt(3) / 2 - 2.4)
             }
           }
         }
+        // Eight O(1) logical row/column slots per macro. Physical Voronoi
+        // adjacency remains six-ish edges, independent of this index.
+        configuration.neighbors8=window.ConquerRegionalTopology.neighbors8(sites);
         return sites;
       }
 
@@ -1664,14 +1668,14 @@ y: 1.2 + random() * Math.max(1, finalRows * Math.sqrt(3) / 2 - 2.4)
       let conquerSimulationTimer = null;
 
       function conquerMacroAdjacency() {
-        const adjacency = new Map(state.macros.map((macro) => [macro.id, new Set()]));
-        for (const edge of state.edges) {
-          const ids = [...new Set(edge.cells.map((cell) => cell.macroId))];
-          if (ids.length !== 2) continue;
-          const [a, b] = ids;
-          if (!conquerIsLand(a) || !conquerIsLand(b)) continue;
-          adjacency.get(a)?.add(b);
-          adjacency.get(b)?.add(a);
+        // Political/economic proximity: eight fixed logical slots, O(1).
+        // Rivers, roads and coastlines still use real Voronoi edge geometry.
+        const adjacency=new Map(state.macros.map(m=>[m.id,new Set()]));
+        for(const macro of state.macros){
+          if(!conquerIsLand(macro.id))continue;
+          for(const id of state.configuration.neighbors8?.[macro.id]||[]){
+            if(id!==null&&conquerIsLand(id))adjacency.get(macro.id).add(id);
+          }
         }
         return adjacency;
       }
@@ -1962,15 +1966,9 @@ y: 1.2 + random() * Math.max(1, finalRows * Math.sqrt(3) / 2 - 2.4)
       }
 
       function conquerNeighbors(macroId) {
-        if (!state) return [];
-        const neighbors = new Set();
-        for (const edge of state.edges) {
-          const ids = [...new Set(edge.cells.map((cell) => cell.macroId))];
-          if (ids.length !== 2 || !ids.includes(macroId)) continue;
-          const other = ids[0] === macroId ? ids[1] : ids[0];
-          if (other !== macroId) neighbors.add(other);
-        }
-        return [...neighbors].sort((a, b) => a - b);
+        if(!state)return [];
+        return (state.configuration.neighbors8?.[macroId]||[])
+          .filter(id=>id!==null);
       }
 
       function initializeConquerState(targetState) {
@@ -3425,6 +3423,12 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         return entities;
       };
 
+      // Fixed eight nearby logical slots, including nulls on the finite edge.
+      // Hexagonal Voronoi polygons themselves need not share eight borders.
+      window.ConquerRegion8Neighbors = macroId =>
+        state?.configuration?.neighbors8?.[macroId]?.slice() ||
+        Array(8).fill(null);
+
       window.ConquerRegion3DSnapshot = () => !state ? null : ({
         revision: window.ConquerRegion3DRevision || 0,
         seed: state.seed,
@@ -3433,6 +3437,7 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         cells: state.cells.map(c => ({ id: c.id, macroId: c.macroId, polygon: c.polygon })),
         terrain: { ...state.terrain },
         areaBalance: state.configuration.areaBalance,
+        neighbors8: state.configuration.neighbors8,
         // Pixel-identical source RGB for each territory: same macroFill used by the 2D SVG.
         // Includes the active terrain palette, neutral desaturation and political fills.
         fills: Object.fromEntries(state.macros.map(macro => [macro.id, macroFill(macro.id)])),
@@ -4554,7 +4559,7 @@ const currentOwner = ownerByName.get(key);
           finalSummary.textContent = `${configuration.finalCols} × ${configuration.finalRows}`;
           mapTitle.textContent = `Mappa Voronoi ${configuration.finalCols} per ${configuration.finalRows}`;
           const shares = configuration.territoryPlan.shares;
-          mapDesc.textContent = `${cells.length} celle Voronoi indipendenti, organizzate in ${state.macros.length} territori: mare ${Math.round(shares.sea * 100)}% in ${configuration.territoryPlan.seaBlobCount} masse, montagne ${Math.round(shares.hills * 100)}% lineari, foreste ${Math.round(shares.forest * 100)}% in ${configuration.territoryPlan.forestBlobCount} masse, pianure ${Math.round(shares.plain * 100)}%.`;
+          mapDesc.textContent = `${cells.length} celle Voronoi indipendenti, organizzate in ${state.macros.length} territori: mare ${Math.round(shares.sea * 100)}% in ${configuration.territoryPlan.seaBlobCount} masse, montagne ${Math.round(shares.hills * 100)}% lineari, foreste ${Math.round(shares.forest * 100)}% in ${configuration.territoryPlan.forestBlobCount} masse, pianure ${Math.round(shares.plain * 100)}%. Voronoi esagonale · territorio area ±${(configuration.areaBalance.maxDeviation*100).toFixed(1)}% (max ±10%) · 8 riferimenti logici O(1).`;
           resetMapViewport(configuration);
           svg.style.aspectRatio = `${configuration.width} / ${configuration.height}`;
           selectedMacro = null;
