@@ -16,25 +16,39 @@
  function cells(sites,poly,weights){return sites.map((p,i)=>{let result=poly;for(let j=0;j<sites.length;j++){if(i===j)continue;const q=sites[j];result=clip(result,2*(q.x-p.x),2*(q.y-p.y),q.x*q.x+q.y*q.y-p.x*p.x-p.y*p.y+weights[i]-weights[j]);if(result.length<3)break}return result})}
  function generateOne(parent,seed){
    const id=parent.macroId??parent.id,poly=parent.polygon,reference=area(poly)/20;
-   if(!poly||poly.length<3||reference<=0)throw Error('Invalid macro '+id);
-   const random=rng((seed^Math.imul(id+1,0x9e3779b1))>>>0);
-   const points20=points(poly,random),sizeTargets=targets(random),weights=new Float64Array(20);
-   let out,actual,maxError=Infinity,iter=0;
-   for(;iter<75;iter++){
-     out=cells(points20,poly,weights);actual=out.map(p=>p.length>=3?area(p):0);
-     maxError=Math.max(...actual.map((a,i)=>Math.abs(a/reference-sizeTargets[i])));
-     if(maxError<=.025&&actual.every(a=>a>0))break;
-     for(let i=0;i<20;i++)weights[i]-=(actual[i]-sizeTargets[i]*reference)*.12;
+   if(!poly||poly.length<3||reference<=0)throw Error('Invalid hex macro '+id);
+   // Retry ONLY a rare poorly conditioned internal point pattern, keeping
+   // the canonical macro untouched and all results deterministic by seed.
+   for(let attempt=0;attempt<6;attempt++){
+     const random=rng((seed^Math.imul(id+1,0x9e3779b1)^
+       Math.imul(attempt,0x85ebca77))>>>0);
+     const points20=points(poly,random),sizeTargets=targets(random);
+     const weights=new Float64Array(20);
+     let out,actual,maxError=Infinity,iter=0;
+     for(;iter<110;iter++){
+       out=cells(points20,poly,weights);
+       actual=out.map(p=>p.length>=3?area(p):0);
+       maxError=Math.max(...actual.map((a,i)=>
+         Math.abs(a/reference-sizeTargets[i])));
+       if(maxError<=.028&&actual.every(a=>a>0))break;
+       for(let i=0;i<20;i++)
+         weights[i]-=(actual[i]-sizeTargets[i]*reference)*.34;
+     }
+     const valid=maxError<=.035&&actual.every(a=>a>0)&&
+       actual.every(a=>a/reference>=.50&&a/reference<=1.50)&&
+       Math.abs(actual.reduce((a,b)=>a+b,0)-area(poly))<=area(poly)*1e-6;
+     if(!valid)continue;
+     return {cells:out.map((polygon,i)=>({
+       id:id*20+i,macroId:id,polygon,site:points20[i],
+       targetScale:sizeTargets[i],scale:actual[i]/reference
+     })),stats:{maxError,iterations:iter,attempt,
+       minScale:Math.min(...actual)/reference,maxScale:Math.max(...actual)/reference}};
    }
-   if(maxError>.035||actual.some(a=>a<=0))throw Error('Micro-Voronoi nonconvergence macro '+id+' '+maxError.toFixed(3));
-   if(Math.abs(actual.reduce((a,b)=>a+b,0)-area(poly))>area(poly)*1e-6)
-     throw Error('Micro-Voronoi area coverage invalid macro '+id);
-   return {cells:out.map((polygon,i)=>({id:id*20+i,macroId:id,polygon,site:points20[i],targetScale:sizeTargets[i],scale:actual[i]/reference})),
-     stats:{maxError,iterations:iter,minScale:Math.min(...actual)/reference,maxScale:Math.max(...actual)/reference}};
+   throw Error('Unable to balance 20 Voronoi subcells for territory '+id);
  }
- function generate(macros,seed){const fineCells=[],groups={},stats={territories:macros.length,perTerritory:20,maxError:0,maxIterations:0,minScale:Infinity,maxScale:0};
+ function generate(macros,seed){const fineCells=[],groups={},stats={territories:macros.length,perTerritory:20,maxError:0,maxIterations:0,maxAttempts:0,minScale:Infinity,maxScale:0};
    for(const macro of macros){const r=generateOne(macro,seed),id=macro.macroId??macro.id;groups[id]=r.cells;fineCells.push(...r.cells);
-     stats.maxError=Math.max(stats.maxError,r.stats.maxError);stats.maxIterations=Math.max(stats.maxIterations,r.stats.iterations);
+     stats.maxError=Math.max(stats.maxError,r.stats.maxError);stats.maxIterations=Math.max(stats.maxIterations,r.stats.iterations);stats.maxAttempts=Math.max(stats.maxAttempts,r.stats.attempt);
      stats.minScale=Math.min(stats.minScale,r.stats.minScale);stats.maxScale=Math.max(stats.maxScale,r.stats.maxScale)}
    stats.total=fineCells.length;return{fineCells,groups,stats}
  }
