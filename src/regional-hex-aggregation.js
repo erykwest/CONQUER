@@ -77,6 +77,31 @@
     return {polygon:sorted[0]||[],loops:sorted.length,
       totalLoopsArea:sorted.reduce((n,p)=>n+area(p),0)};
   }
+  // Fivefold displacement (vs. former random fine-site offset), applied as
+  // two smooth shears to the ACTUAL Voronoi vertices. The logical centers do
+  // not move. Both shears vanish at the finite map boundary, preserving extent.
+  // A vertex-shared transform keeps every river/border/ownership seam exact.
+  function deformFineCells(cells,config,seed,amplitude){
+    if(!amplitude)return cells;
+    const width=config.width,height=config.height;
+    const periodX=width/config.finalCols*.98;
+    const periodY=height/config.finalRows*.98;
+    const phaseX=(seed%97)*Math.PI*2/97,phaseY=(seed%89)*Math.PI*2/89;
+    const cache=new Map();
+    const transform=p=>{
+      const id=key(p);
+      if(cache.has(id))return cache.get(id);
+      const x=p.x+amplitude*Math.sin(p.y*2*Math.PI/periodY+phaseX)*
+        Math.sin(Math.PI*p.x/width);
+      const y=p.y+amplitude*Math.sin(x*2*Math.PI/periodX+phaseY)*
+        Math.sin(Math.PI*p.y/height);
+      const result={x:Math.max(0,Math.min(width,x)),
+                    y:Math.max(0,Math.min(height,y))};
+      cache.set(id,result);
+      return result;
+    };
+    return cells.map(cell=>({...cell,polygon:cell.polygon.map(transform)}));
+  }
   function generate(seed,config){
     const n=config.finalCols*config.finalRows;
     const target=config.width*config.height/n;
@@ -99,26 +124,49 @@
       }
       if(maxDeviation>.10||fine.some(c=>c.polygon.length<3||area(c.polygon)<=0))
         continue;
-      const groups=Array.from({length:n},()=>[]);
-      for(const c of fine)groups[c.macroId].push(c);
-      if(groups.some(g=>g.length!==20))continue;
-      const macroPolys=groups.map(group=>outerBoundary(group));
-      const boundaryAreaError=Math.max(...macroPolys.map((p,id)=>
-        Math.abs(area(p.polygon)-macroArea[id])/target));
-      if(macroPolys.some(x=>x.loops!==1)||boundaryAreaError>1e-6)
-        continue;
-      const cells=macroPolys.map((entry,id)=>({
-        id,macroId:id,macroRow:groups[id][0].macroRow,
-        macroCol:groups[id][0].macroCol,localIndex:0,
-        polygon:entry.polygon,microCount:20
-      }));
-      return {cells,fineCells:fine,stats:{
-        maxDeviation,iteration,attempt,areaMin:Math.min(...macroArea)/target,
-        areaMax:Math.max(...macroArea)/target,boundaryAreaError,
-        avgFineArea:unit,minScale:.5,maxScale:1.5,
-        macroVerticesMin:Math.min(...cells.map(c=>c.polygon.length)),
-        macroVerticesMax:Math.max(...cells.map(c=>c.polygon.length))
-      }};
+      // Original site jitter radius is 0.5 * jitter * microcell spacing.
+      // A factor of five is deliberately applied to the rendered Voronoi
+      // contour, not to site ordering (which would make polygons overlap).
+      const density=config.deformation??150;
+      const jitter=.26+.20*Math.max(0,Math.min(360,Number(density)))/360;
+      const amp5=5*jitter*(config.width/(config.finalCols*5))*.5;
+      for(const factor of [1,.9,.8,.7,.6,.5,.4,.25,0]){
+        const amplitude=amp5*factor;
+        const warped=deformFineCells(fine,config,microSeed,amplitude);
+        const areas=Array(n).fill(0);
+        const groups=Array.from({length:n},()=>[]);
+        let invalid=false;
+        for(const c of warped){
+          const a=area(c.polygon);
+          if(c.polygon.length<3||!Number.isFinite(a)||a<=1e-4){
+            invalid=true;break;
+          }
+          areas[c.macroId]+=a;
+          groups[c.macroId].push(c);
+        }
+        if(invalid||groups.some(g=>g.length!==20))continue;
+        const visualDeviation=Math.max(...areas.map(a=>Math.abs(a/target-1)));
+        if(visualDeviation>.099)continue;
+        const macroPolys=groups.map(group=>outerBoundary(group));
+        const boundaryAreaError=Math.max(...macroPolys.map((p,id)=>
+          Math.abs(area(p.polygon)-areas[id])/target));
+        if(macroPolys.some(x=>x.loops!==1)||boundaryAreaError>1e-6)
+          continue;
+        const cells=macroPolys.map((entry,id)=>({
+          id,macroId:id,macroRow:groups[id][0].macroRow,
+          macroCol:groups[id][0].macroCol,localIndex:0,
+          polygon:entry.polygon,microCount:20
+        }));
+        return {cells,fineCells:warped,stats:{
+          maxDeviation:visualDeviation,iteration,attempt,
+          areaMin:Math.min(...areas)/target,areaMax:Math.max(...areas)/target,
+          boundaryAreaError,avgFineArea:unit,minScale:.5,maxScale:1.5,
+          macroVerticesMin:Math.min(...cells.map(c=>c.polygon.length)),
+          macroVerticesMax:Math.max(...cells.map(c=>c.polygon.length)),
+          deformationMultiplier:5,warpAmplitude:amplitude,
+          nominalWarpAmplitude:amp5,warpFactor:factor
+        }};
+      }
     }
     throw Error('Could not aggregate twenty Voronoi subcells per territory without invalid edges');
   }
