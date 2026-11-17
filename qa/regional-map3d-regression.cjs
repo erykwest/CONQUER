@@ -91,18 +91,29 @@ for(const detail of [8,20,40]){
   const micro=globalMicrocells(snapshot,detail,.65);
   const resultArea=micro.parts.reduce((sum,part)=>sum+area(part.polygon),0);
   assert.ok(Math.abs(resultArea-expectedArea)<expectedArea*1e-7,'global Voronoi covers world exactly');
-  assert.ok(Math.abs(micro.parts.length-630*detail)<630*detail*.07,'approximate density target');
+  assert.ok(Math.abs(micro.siteCount-630*detail)<630*detail*.07,'approximate density target');
+  assert.ok(micro.parts.length>=micro.siteCount,'boundary fragments preserve originating sites');
   assert.ok(micro.ownerParts.size>590,'most original territories receive microcells');
   assert.ok(micro.parts.every(p=>p.polygon.length>=3&&terrain[p.macroId]),'valid grouped microcells');
   // Weighted Voronoi must actually vary the AREA of microcells rather than
   // just skewing polygons with nearly identical footprints. Verify the
   // intended ~200% upper end without changing total world area.
   const referenceArea=expectedArea/(cells.length*detail);
-  const relativeAreas=micro.parts.map(part=>area(part.polygon)/referenceArea).sort((a,b)=>a-b);
+  const siteAreas=new Map(),territoryAreas=new Map();
+  for(const part of micro.parts){
+    siteAreas.set(part.siteKey,(siteAreas.get(part.siteKey)||0)+area(part.polygon));
+    territoryAreas.set(part.macroId,(territoryAreas.get(part.macroId)||0)+area(part.polygon));
+  }
+  assert.equal(siteAreas.size,micro.siteCount,'all sites retain their original identifiers');
+  assert.equal(territoryAreas.size,cells.length,'no territory is missing from 3D');
+  assert.ok([...territoryAreas.values()].every(a=>Math.abs(a/(expectedArea/cells.length)-1)<=.10),
+    'all rendered territory polygons remain within strict ±10%');
+  assert.ok(micro.visualAreaDeviation<=.10,'area-balanced visual warp');
+  const relativeAreas=[...siteAreas.values()].map(a=>a/referenceArea).sort((a,b)=>a-b);
   const percentile=f=>relativeAreas[Math.floor(f*(relativeAreas.length-1))];
   assert.ok(percentile(.05)<.7,'smaller sites compensate larger weighted-Voronoi cells');
   assert.ok(percentile(.95)>1.38,'clear large-cell tail beyond old uniform Voronoi');
-  assert.ok(relativeAreas.at(-1)>=1.75 && relativeAreas.at(-1)<=2.15,
+  assert.ok(relativeAreas.at(-1)>=1.75 && relativeAreas.at(-1)<=2.10,
     'largest visual microcell approaches 200% of the prior reference area');
   const doubled=globalMicrocells({...snapshot,seed:snapshot.seed+113},detail,.65);
   assert.notDeepEqual(doubled.parts.slice(0,40).map(p=>p.polygon),
@@ -115,6 +126,8 @@ for(const detail of [1,8,20,40]){
   assert.equal(scene.stats.territories,630);
   assert.ok(Math.abs(scene.stats.subcells-630*detail)<630*detail*.07);
   assert.ok(scene.stats.hills>0 && scene.stats.mountains>0 && scene.stats.trees>0 && scene.stats.reeds>0);
+  assert.ok(scene.stats.maxVisualAreaDeviation<=.10,'all 3D territories obey ±10%');
+  assert.ok(scene.stats.maxMicrocellAreaRatio<=2.10,'fine Voronoi cell area near 200%');
   assert.equal(scene.peaks.length,scene.stats.hills,'hills are separate frustum landmarks');
   for(const hill of scene.peaks) {
     assert.equal(hill.type,'hill');
@@ -177,7 +190,7 @@ for(const detail of [1,8,20,40]){
     triangles:scene.stats.triangles,trees:scene.stats.trees,reeds:scene.stats.reeds,
     borders:scene.borders.length,MiB:+(scene.vertices.byteLength/(1024*1024)).toFixed(2)});
   if(detail===20){
-    assert.equal(scene.pickRanges.length,scene.stats.subcells,'every microcell carries canonical owner metadata');
+    assert.equal(scene.pickRanges.length,scene.stats.visualFragments,'every clipped fragment carries owner metadata');
     assert.ok(scene.pickIndex.buckets.size>0,'spatial index built for picking');
     // Test the actual projected triangle, including yaw, zoom and pan.
     // Ground-plane inverse alone would pick the wrong territory on raised hills.
@@ -210,6 +223,6 @@ for(const detail of [1,8,20,40]){
     );
   }
 }
-console.log('PASS region3d: weighted variable-area microcells up to ~200%, exact area conservation, mountain Z, river seams, vegetation, selection.');
+console.log('PASS region3d: ~200% microcell areas, macro areas ±10%, organic river seams, mountains, vegetation and picking.');
 console.table(results);
 console.log('Synthetic CPU-only baseline. Browser/WebGL visuals and FPS remain separate checks.');
