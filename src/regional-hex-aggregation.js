@@ -100,7 +100,28 @@
       cache.set(id,result);
       return result;
     };
-    return cells.map(cell=>({...cell,polygon:cell.polygon.map(transform)}));
+    // A strong warp can curve a long Voronoi edge enough that the chord
+    // between its deformed endpoints would cut across another edge. Sample
+    // every shared edge consistently before warping. This prevents geometric
+    // foldovers while keeping each subcell and shared border connected.
+    const maxSegment=Math.min(
+      config.width/config.finalCols,config.height/config.finalRows)/12;
+    return cells.map(cell=>{
+      const polygon=[];
+      const original=cell.polygon;
+      for(let i=0;i<original.length;i++){
+        const a=original[i],b=original[(i+1)%original.length];
+        const n=Math.max(1,Math.ceil(Math.hypot(b.x-a.x,b.y-a.y)/maxSegment));
+        for(let j=0;j<n;j++){
+          const u=j/n;
+          polygon.push(transform({
+            x:a.x+(b.x-a.x)*u,
+            y:a.y+(b.y-a.y)*u
+          }));
+        }
+      }
+      return {...cell,polygon};
+    });
   }
   function generate(seed,config){
     const n=config.finalCols*config.finalRows;
