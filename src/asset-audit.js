@@ -174,11 +174,13 @@
           'solo '+d.changed+' pixel diversi dalla struttura intatta ('+(d.share*100).toFixed(2)+'%)')});
       }
       // A structure still standing (not collapsed, not destroyed) keeps most of its silhouette.
+      // A fallen exterior element ("elemento esterno crollato") is a collapse too: its rubble widens
+      // the framing, so the standing structure covers less of the picture without losing anything.
       for(const r of rs){
-        if(!/^damage-/.test(r.state)||!s.intact?.coverage||/crollo|distrutt|breccia|brecce/.test(r.state))continue;
+        if(!/^damage-/.test(r.state)||!s.intact?.coverage||/crollo|crollat|distrutt|breccia|brecce/.test(r.state))continue;
         // Compare drawn areas, not densities: captures share one scale and are cropped to what is
-        // drawn, so rubble thrown wide of a fallen latrina or hoarding widens the box and dilutes
-        // the density of a tower that is still whole (ASSET-AUDIT-261116).
+        // drawn, so rubble or debris thrown wide of a structure that is still whole widens the box
+        // and dilutes its density (ASSET-AUDIT-261116).
         const area=x=>x.width&&x.height?x.coverage*x.width*x.height:x.coverage;
         const kept=area(r)/area(s.intact);
         out.push({id,state:r.state,check:check('sagoma-conservata',kept>.6,'fail',

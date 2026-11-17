@@ -83,7 +83,13 @@
       ${CAMERA}
       in vec3 aAnchor;in vec2 aCorner;in float aSize;in vec2 aUV;in float aSeed;
       out vec2 vUV;out float vSeed;
-      void main(){gl_Position=cam(aAnchor,aCorner*aSize*uS);vUV=aUV;vSeed=aSeed;}`,
+      // The glow is a camera-facing disc: depth-tested at its anchor alone, the facade the torch
+      // hangs on (nearer the higher it goes, d = qx+qy+0.9z) cut it flat above the flame. Its depth
+      // rises with the corner like a vertical plane through the flame, plus a quarter of its size.
+      void main(){vec4 p=cam(aAnchor,aCorner*aSize*uS);
+        float bias=(0.25-aCorner.y)*aSize;
+        p.z-=2.0*bias/(uDepth.y-uDepth.x);
+        gl_Position=p;vUV=aUV;vSeed=aSeed;}`,
       `#version 300 es
       precision mediump float;in vec2 vUV;in float vSeed;uniform sampler2D uAtlas;
       uniform float uNight;uniform float uTime;out vec4 o;
@@ -2119,7 +2125,8 @@
     // Mill sails and wheels turn every frame (industries).
     // Gate door leaves, portcullis and torch brackets (gate fittings).
     // The Mastio's raised entrance: stair and drawbridge leaf (keep entrance).
-    for(const source of [window.ConquerSiege,window.ConquerCombat,window.ConquerIndustries3D,window.ConquerGates,window.ConquerKeepEntrance,window.ConquerTrebuchets]){
+    // Tower door torch brackets and the waving tower flags (tower fittings).
+    for(const source of [window.ConquerSiege,window.ConquerCombat,window.ConquerIndustries3D,window.ConquerGates,window.ConquerKeepEntrance,window.ConquerTrebuchets,window.ConquerTowerFittings]){
       try{for(const m of source?.dynamicMeshes?.()||[])dynamicQueue.push(m)}catch(e){console.error(e)}
     }
     // Event flags, bunting and banners wave in the wind (settlement-events3d.js).

@@ -4,6 +4,14 @@
 
 `fix/asset-audit-baseline`: il controllo `sagoma-conservata` confronta le aree disegnate invece della densità nel riquadro (falso errore sulla torre tonda con latrina crollata); baseline `qa/asset-audit-baseline.json` rigenerata dal report della CI dopo la revisione dei render cambiati dal 12/11. Segnalato in BACKLOG il cantiere vuoto delle torri in pietra L2+ nel Lab. ROADMAP e DECISIONS invariate: nessun contratto di gioco cambiato.
 
+### 2026-11-16 — Bandiere, torce e braciere della palizzata in 3D
+
+- Asset Lab: il controllo «sagoma conservata» esclude anche lo stato «elemento esterno crollato» (rosso su main dalla #251).
+- Bandiere delle torri come quelle delle navi, supporti 3D delle torce delle torri, alone del fuoco non più tagliato, braciere della torre a palizzata dal modello Blender. Test in qa/tower-fittings-regression.cjs. Roadmap e decisioni invariate.
+
+### 2026-11-16 — Braciere delle torri in 3D
+
+- Il corpo del braciere su torri e porte in pietra entra nella mesh del castello con test di profondità; il canvas lo dipinge solo dove la mesh non c'è. Test in qa/tower-inner-roof-regression.cjs. Roadmap e decisioni invariate.
 ## 2026-11-16 — combat-ai: fortificazioni verso l'esterno, merge di main, fionda del trabucco
 
 - `faceFortificationsOut` (settlement-castle-structures.js, chiamata da `migrateStructures`): le mura di una cinta guardano fuori dal recinto e le porte tra due tratti hanno il passaggio attraverso il muro verso l'esterno; i muri sul molo restano rivolti all'acqua.
@@ -43,6 +51,7 @@
 - Assedio per settori concentrici (logica simmetrica su /circle). Portati da `main` solo `src/settlement-circle.js`, `src/circle/*.mjs`, 5 test `qa/circle-*.test.mjs` e il workflow (senza merge: 18 conflitti); agganci in `settlement-app-simulation.js` (`updateControl`, `tickOccupation`, `invalidate` a costruzione completata) e invalidazione dal combattimento quando la cinta cambia. **Assalitori** (`campaignThink`): vogliono il mastio e attraversano i settori uno alla volta lungo i portali di circle; combattono i difensori dello stesso settore, passano dalle porte aperte o sfondate, per una porta chiusa armano un ariete con gli armigeri più vicini mentre gli altri aspettano fuori (arcieri a 10U). **Difensori** (`fallbackThink`): tengono il settore più esterno; se cade (invaso, compromesso, preso) o sono due contro uno ripiegano nel settore interno, aprono la porta interna se serve e la richiudono dopo l'ultimo; in ritirata non ingaggiano; il mastio è l'ultimo baluardo.
 - Scala delle unità (D-060, supera D-041 per le unità): HP fante 8, picchieri 12, pattuglia 10, arciere 6, cavaliere 20, capitano 16; il cavaliere colpisce per 2; in mischia un 6 naturale va a segno se il totale vince. Strutture e macchine invariate (crolli molto rari). Salvataggi con la vecchia scala riscalati in proporzione al caricamento (`ConquerCombatRules.ensure`).
 - Combattimento: difensori e assalitori si cercano (`settlement-combat.js`, `defenderThink`/`raidThink`). Prima la mischia scattava solo sotto 1U e nessuno si avvicinava: la guarnigione restava ai suoi posti mentre gli assalitori passavano. Ora un difensore libero a terra va contro l'ostile più vicino nel suo raggio (pattuglie 12U, squadre e capitano 18U, cavalieri 22U), un assalitore senza compito d'assalto va contro il difensore più vicino (arcieri fermi a 10U, gli altri al contatto); un ordine del giocatore non viene mai scavalcato. Raggiungibilità con una mappa ad aree (griglia 0,5U della cinta: mura, torri, porte chiuse) così nessuno cerca un percorso attraverso le mura (una ricerca A* fallita costava secondi); al più 3 ricerche per tick; attraverso una porta aperta o sfondata si passa con tappe nel passaggio, come l'ariete. Valori di HP, armature, dadi invariati (D-041).
+
 ### 2026-11-16 — MOVE-LAG-261116 · Ordine di movimento senza lag
 
 `fix/move-order-lag`: l'A* passa il suo snapshot degli ostacoli ad `allowedAt` e gli ordini militari lo riusano in tutti i controlli d'ingombro; un ordine con aggiramento passa da 6–10 s a 0,2–0,6 s su una scena densa, con percorsi identici. Test in qa/movement-path-performance-regression.cjs. ROADMAP e DECISIONS invariate: nessun contratto di gioco cambiato.

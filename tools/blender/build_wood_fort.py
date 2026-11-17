@@ -40,6 +40,8 @@ COLORS = {
     # longhouse covers (BC-251105-09): thatch and turf, also white in winter
     'roofThatch': '#a08650', 'roofThatchDark': '#8c7343', 'roofThatchRidge': '#76603a',
     'roofTurf': '#6f7d3e', 'roofTurfDark': '#5d6a34',
+    # the open palisade tower's brazier: embers in the iron pan (appended: keeps the indices above)
+    'ember': '#7a2e14',
 }
 KEYS = list(COLORS.keys())
 COLL_NAME = 'CONQUER_WoodFort'
@@ -320,9 +322,29 @@ def palisade_tower(mdl, roofed):
         hip_roof(top, .85, eave, apex, courses=3)
     else:
         ladder(top, -.3, .3, deck1 - .62, deck1 + .25, axis_y=False, w=.14, rungs=3)
+        # The watch fire on the open deck (battlementBrazierSources: local .28, .24, flame at 1.90).
+        brazier(top, .28, .24, deck1)
     mdl.done('top', top)
     if roofed:
         flag(mdl, apex + .1)
+
+
+def brazier(p, cx, cy, z0):
+    """Iron fire basket on the deck: three splayed legs, an octagonal pan widening upward with a
+    rim band, and the embers sunk in it. 0.20 U across like the 2.5D block it replaces; its top
+    sits just under the flame (z0 + 0.11)."""
+    for i in range(3):
+        a = math.pi / 2 + i * 2 * math.pi / 3
+        foot = (cx + math.cos(a) * .085, cy + math.sin(a) * .085, z0)
+        knee = (cx + math.cos(a) * .055, cy + math.sin(a) * .055, z0 + .055)
+        beam(p, foot, knee, .014, .014, 'iron')
+    pan0, pan1 = z0 + .05, z0 + .10
+    lo, hi = oct_pts(cx * S, cy * S, .06 * S), oct_pts(cx * S, cy * S, .10 * S)
+    vs = [(x, y, pan0 * S) for x, y in lo] + [(x, y, pan1 * S) for x, y in hi]
+    p.quads(vs, [(i, (i + 1) % 8, 8 + (i + 1) % 8, 8 + i) for i in range(8)], 'iron')
+    p.quads(vs, [tuple(range(7, -1, -1))], 'iron')
+    prism(p, oct_pts(cx * S, cy * S, .104 * S), pan1 * S, (pan1 + .012) * S, 'iron', top=False)
+    prism(p, oct_pts(cx * S, cy * S, .085 * S), (pan1 - .02) * S, (pan1 - .006) * S, 'dark', top='ember')
 
 
 FRAME_TOWER = {'size': 1.5, 'storey': 1.28, 'deck0': 2.56, 'deck1': 2.66, 'eave': 3.30, 'apex': 3.78}
