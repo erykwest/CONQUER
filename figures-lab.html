@@ -162,9 +162,8 @@ body.asset-catalog-static #labLegacyControls{display:none}
     <label>Scudo <select id="sShield"><option value="">Originale</option><option value="oval">Ovale</option><option value="round">Rotella</option><option value="heater">Triangolare</option><option value="kite">A mandorla</option><option value="pavise">Pavese</option></select></label>
   </div>
   <div class="group" id="maaBox" hidden><span>Uomo d'arme (L3)</span>
-    <label>Livrea <select id="maaSurcoat"><option value="partito">Gonnello partito</option><option value="stemma">Gonnello con lo stemma</option><option value="fascia">Fascia</option></select></label>
-    <label>Arma <select id="maaWeapon"><option value="poleaxe">Scure d'arme</option><option value="greatsword">Spada a due mani</option></select></label>
-    <label>Elmo <select id="maaHelmet"><option value="greathelm">Elmo a staio</option><option value="bascinet">Bacinetto</option></select></label>
+    <label>Arma <select id="maaWeapon"><option value="random">Casuale (per persona)</option><option value="halberd">Alabarda</option><option value="twoHandAxe">Ascia a due mani</option><option value="twoHandHammer">Martello a due mani</option><option value="greatsword">Spada a due mani</option></select></label>
+    <label>Elmo <select id="maaHelmet"><option value="random">Casuale (elmi dei cavalieri)</option><option value="greathelm">Elmo a staio</option><option value="barbuta">Barbuta</option><option value="kettle">Cappello d'arme</option><option value="nasal">Elmo a nasale</option><option value="cap">Cervelliera</option></select></label>
   </div>
   <label id="wardrobeBox">Stagione/meteo <select id="wardrobe">
     <option value="summer|clear">Estate serena</option><option value="spring|wind">Primavera ventosa</option>
@@ -303,8 +302,8 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
   $('wardrobe').onchange=setWardrobe;setWardrobe();
   // Feudal unit equipment (State.policies.unitHelmet/unitShield), as chosen in Militare › Equipaggiamento.
   function setEquip(){const p=State.policies||(State.policies={});p.unitHelmet=$('sHelmet').value;p.unitShield=$('sShield').value;
-    p.manAtArms={surcoat:$('maaSurcoat').value,weapon:$('maaWeapon').value,helmet:$('maaHelmet').value}}
-  $('sHelmet').onchange=$('sShield').onchange=$('maaSurcoat').onchange=$('maaWeapon').onchange=$('maaHelmet').onchange=setEquip;setEquip();
+    p.manAtArms={weapon:$('maaWeapon').value,helmet:$('maaHelmet').value}}
+  $('sHelmet').onchange=$('sShield').onchange=$('maaWeapon').onchange=$('maaHelmet').onchange=setEquip;setEquip();
   document.querySelectorAll('[data-subject]').forEach(b=>b.onclick=()=>{subject=b.dataset.subject;fromAction=action='walk';trans=1;renderButtons()});
   $('actions').onclick=e=>{const k=e.target.dataset?.action;if(k&&k!==action){fromAction=action;action=k;trans=0;renderButtons()}};
 

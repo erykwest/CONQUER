@@ -24,6 +24,22 @@ assert.equal(combatRole({houseLevel:1},{age:'adult',sex:'female'}),null,'women a
 assert.equal(combatRole({houseLevel:1},{age:'child',sex:'male'}),null,'boys are not armed');
 assert.match(figures,/function levyArcher\(dot\)\{return dot\.kind==='artisan'\}/,'L2 artisans are the levy archers');
 assert.match(figures,/if\(type==='manAtArms'\)return drawManAtArmsUnmasked/,"L3 man-at-arms figure");
+// Man-at-arms (variant F): gonnello with the arms; helmet from the knights' set and two-handed
+// weapon, both random per man and stable.
+assert.match(figures,/const KNIGHT_HELMETS=Object\.freeze\(\['greathelm','barbuta','kettle','nasal','cap'\]\)/,"knights' helmets");
+assert.match(figures,/const MAN_AT_ARMS_WEAPONS=Object\.freeze\(\['halberd','twoHandAxe','twoHandHammer','greatsword'\]\)/,'two-handed weapons');
+{
+  const kitSrc=figures.match(/const KNIGHT_HELMETS[\s\S]*?\nfunction manAtArmsKit[\s\S]*?\n\}/)[0].replace(/const MAA_STEEL[^\n]*\n/,'');
+  const peasantHash=s=>{let h=2166136261;for(const ch of String(s)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0};
+  const box={peasantHash,State:{policies:{}}};vm.createContext(box);vm.runInContext(kitSrc+';this.kit=manAtArmsKit;',box);
+  const count={};
+  for(let i=0;i<2000;i++){const k=box.kit('res-'+i);count[k.helmet]=(count[k.helmet]||0)+1;count[k.weapon]=(count[k.weapon]||0)+1}
+  for(const h of ['greathelm','barbuta','kettle','nasal','cap'])assert.ok(count[h]>300,'helmet '+h+' is drawn often enough');
+  for(const w of ['halberd','twoHandAxe','twoHandHammer','greatsword'])assert.ok(count[w]>380,'weapon '+w+' is drawn often enough');
+  assert.equal(JSON.stringify(box.kit('res-7')),JSON.stringify(box.kit('res-7')),'stable per man');
+  box.State.policies={manAtArms:{helmet:'nasal',weapon:'halberd'}};
+  assert.equal(JSON.stringify(box.kit('res-7')),JSON.stringify({helmet:'nasal',weapon:'halberd'}),'the Lab can pin helmet and weapon');
+}
 assert.match(combat,/function leviedResident\(house,resident\)\{[\s\S]{0,200}canFight\(house,resident\)/,'the levy uses canFight');
 assert.match(combat,/canFight\(house,resident\)\?'recruit':alarm/,'the alarm uses canFight; L3/L4 men shelter');
 

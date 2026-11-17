@@ -402,19 +402,34 @@ function drawHeraldStandard(g,base,id,wavePhase=0){
   g.restore();
 }
 // L3 man-at-arms (product owner, 17/11/2026): between the levy and the knight. Fights on foot,
-// quilted leather gambeson, armoured arms and feet, a plain knight's helm (no crest: that marks
-// the knight), no cloak, a two-handed weapon and no shield. The livery is still being chosen,
-// so it is a style: surcoat 'partito' (short gonnello party per pale), 'stemma' (short gonnello
-// with the arms), 'fascia' (no gonnello, a sash in the two colours); weapon 'poleaxe' or
-// 'greatsword'; helmet 'greathelm' or 'bascinet'. State.policies.manAtArms overrides the default.
-const MAN_AT_ARMS_DEFAULT=Object.freeze({surcoat:'partito',weapon:'poleaxe',helmet:'greathelm'});
+// quilted leather gambeson, armoured arms and feet, no cloak, no shield. Livery (chosen: variant F):
+// a short gonnello with the realm's arms, from the shoulders to the hips, the gambeson below.
+// Helmet and two-handed weapon are random per man (stable by id): the helmet is one of the
+// knights' helmets (settlement-mounted2d.js head(): great helm, barbuta, kettle hat, nasal, cap),
+// never the knight's crest; the weapon one of halberd, two-handed axe, two-handed hammer,
+// two-handed sword. State.policies.manAtArms {helmet,weapon} pins one (Asset Lab), 'random' or
+// missing = per man.
+const KNIGHT_HELMETS=Object.freeze(['greathelm','barbuta','kettle','nasal','cap']);
+const MAN_AT_ARMS_WEAPONS=Object.freeze(['halberd','twoHandAxe','twoHandHammer','greatsword']);
 const MAA_STEEL='#8a9196',MAA_STEEL_EDGE='rgba(30,32,34,.85)',MAA_GAMBESON='#7a5a3a';
-function manAtArmsStyle(){return{...MAN_AT_ARMS_DEFAULT,...(State.policies?.manAtArms||{})}}
-function drawManAtArmsUnmasked(base,scale,id,liveryOverride=null,style=manAtArmsStyle()){
+// Independent, well-mixed picks for helmet and weapon (FNV alone clusters on sequential ids).
+function manAtArmsPick(id,salt,list){
+  let h=peasantHash(String(id)+':man-at-arms:'+salt);
+  h=Math.imul(h^(h>>>16),0x45d9f3b);h=Math.imul(h^(h>>>16),0x45d9f3b);h=(h^(h>>>16))>>>0;
+  return list[h%list.length];
+}
+function manAtArmsKit(id){
+  const pin=State.policies?.manAtArms||{};
+  const helmet=KNIGHT_HELMETS.includes(pin.helmet)?pin.helmet:manAtArmsPick(id,'helmet',KNIGHT_HELMETS);
+  const weapon=MAN_AT_ARMS_WEAPONS.includes(pin.weapon)?pin.weapon:manAtArmsPick(id,'weapon',MAN_AT_ARMS_WEAPONS);
+  return{helmet,weapon};
+}
+function drawManAtArmsUnmasked(base,scale,id,liveryOverride=null,kit=manAtArmsKit(id)){
   const bodyW=5.4*scale,bodyH=8.0*scale,headR=2.2*scale;
   const bodyY=base.y-bodyH*.16,top=bodyY-bodyH/2,headY=top-headR*.72,bottom=bodyY+bodyH*.5;
   const livery=liveryOverride||soldierLivery(id),lw=Math.max(.6,.7*scale);
   const steel=(fill=MAA_STEEL)=>{ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle=MAA_STEEL_EDGE;ctx.lineWidth=lw;ctx.stroke()};
+  const iron=()=>{ctx.fillStyle='#a9adb0';ctx.strokeStyle='#3d4144';ctx.lineWidth=Math.max(.6,.6*scale);ctx.fill();ctx.stroke()};
   ctx.save();
   // Armoured legs and feet (greaves, sabatons) below the gambeson's skirt.
   for(const s of [-1,1]){
@@ -428,26 +443,17 @@ function drawManAtArmsUnmasked(base,scale,id,liveryOverride=null,style=manAtArms
   for(let k=1;k<4;k++){const y=top+bodyH*k/4;ctx.moveTo(base.x-bodyW,y);ctx.lineTo(base.x+bodyW,y)}
   for(const k of [-.25,0,.25]){ctx.moveTo(base.x+bodyW*k,top);ctx.lineTo(base.x+bodyW*k*1.15,bottom)}
   ctx.stroke();
-  // Livery over the gambeson.
+  // Short gonnello with the arms (campaign heraldry raster); without it, party per pale with a
+  // small shield of arms on the chest. Foes (livery override) wear their colours party per pale.
   const hem=bodyY+bodyH*.2;
-  if(style.surcoat==='fascia'){
-    // Sash from the right shoulder (screen left) to the left hip, half in each colour.
-    const band=()=>{ctx.beginPath();ctx.moveTo(base.x-bodyW*.5,top);ctx.lineTo(base.x-bodyW*.15,top);
-      ctx.lineTo(base.x+bodyW*.55,bodyY+bodyH*.22);ctx.lineTo(base.x+bodyW*.55,bodyY+bodyH*.42);ctx.closePath()};
-    band();ctx.fillStyle=livery.main;ctx.fill();
-    ctx.save();band();ctx.clip();ctx.fillStyle=livery.alt;ctx.fillRect(base.x,top,bodyW,bodyH);ctx.restore();
-  }else{
-    // Short gonnello: from the shoulders to the hips, the gambeson shows below.
-    const coat=()=>{ctx.beginPath();ctx.moveTo(base.x-bodyW*.4,top);ctx.lineTo(base.x+bodyW*.4,top);
-      ctx.lineTo(base.x+bodyW*.47,hem);ctx.lineTo(base.x-bodyW*.47,hem);ctx.closePath()};
-    ctx.save();coat();ctx.clip();
-    const painted=style.surcoat==='stemma'&&!liveryOverride&&window.__conquerHeraldryCanvas?.paint(ctx,base.x-bodyW*.47,top,bodyW*.94,hem-top);
-    if(!painted){ctx.fillStyle=livery.main;ctx.fillRect(base.x-bodyW,top,bodyW*2,bodyH);ctx.fillStyle=livery.alt;ctx.fillRect(base.x,top,bodyW,bodyH)}
-    ctx.restore();
-    coat();ctx.strokeStyle='rgba(25,24,22,.7)';ctx.lineWidth=lw;ctx.stroke();
-    // Fallback 'stemma' without the heraldry raster: a small shield of arms on the chest.
-    if(style.surcoat==='stemma'&&!painted)drawQuarteredShield(base.x,top+bodyH*.3,1.2*scale,1.5*scale,{main:livery.alt,alt:livery.main},'#d9c38a',scale*.6,false,'heater');
-  }
+  const coat=()=>{ctx.beginPath();ctx.moveTo(base.x-bodyW*.4,top);ctx.lineTo(base.x+bodyW*.4,top);
+    ctx.lineTo(base.x+bodyW*.47,hem);ctx.lineTo(base.x-bodyW*.47,hem);ctx.closePath()};
+  ctx.save();coat();ctx.clip();
+  const painted=!liveryOverride&&window.__conquerHeraldryCanvas?.paint(ctx,base.x-bodyW*.47,top,bodyW*.94,hem-top);
+  if(!painted){ctx.fillStyle=livery.main;ctx.fillRect(base.x-bodyW,top,bodyW*2,bodyH);ctx.fillStyle=livery.alt;ctx.fillRect(base.x,top,bodyW,bodyH)}
+  ctx.restore();
+  coat();ctx.strokeStyle='rgba(25,24,22,.7)';ctx.lineWidth=lw;ctx.stroke();
+  if(!painted&&!liveryOverride)drawQuarteredShield(base.x,top+bodyH*.3,1.2*scale,1.5*scale,{main:livery.alt,alt:livery.main},'#d9c38a',scale*.6,false,'heater');
   ctx.restore();
   soldierBodyPath(base,bodyW,bodyH,top,bodyY);ctx.strokeStyle='rgba(25,24,22,.88)';ctx.lineWidth=Math.max(.7,.8*scale);ctx.stroke();
   // Armoured arms: pauldron and vambrace on each side.
@@ -456,19 +462,13 @@ function drawManAtArmsUnmasked(base,scale,id,liveryOverride=null,style=manAtArms
     ctx.beginPath();ctx.ellipse(ax,top+.8*scale,1.05*scale,.95*scale,0,0,Math.PI*2);steel();
     ctx.beginPath();ctx.rect(ax-.55*scale,top+1.3*scale,1.1*scale,bodyH*.5);steel();
   }
-  // Head and plain knight's helm (no crest, no mantling).
+  // Head and a knight's helmet (no crest).
   ctx.fillStyle=VILLAGER_SKIN;ctx.beginPath();ctx.arc(base.x,headY,headR,0,Math.PI*2);ctx.fill();
-  if(style.helmet==='bascinet'){
-    // Pointed bascinet over a mail aventail on the shoulders.
-    ctx.beginPath();ctx.moveTo(base.x-headR*1.25,headY+headR*1.1);ctx.quadraticCurveTo(base.x,headY+headR*1.8,base.x+headR*1.25,headY+headR*1.1);
-    ctx.lineTo(base.x+headR*1.05,headY+headR*.35);ctx.lineTo(base.x-headR*1.05,headY+headR*.35);ctx.closePath();steel('#6f767a');
-    ctx.beginPath();ctx.moveTo(base.x-headR*1.05,headY+headR*.35);ctx.quadraticCurveTo(base.x-headR*1.1,headY-headR*1.1,base.x,headY-headR*1.85);
-    ctx.quadraticCurveTo(base.x+headR*1.1,headY-headR*1.1,base.x+headR*1.05,headY+headR*.35);ctx.closePath();steel();
-    ctx.fillStyle=VILLAGER_SKIN;ctx.fillRect(base.x-headR*.55,headY-headR*.35,headR*1.1,headR*.75);
-  }else drawSoldierHelmet(base.x,headY,headR,'greathelm',scale);
+  drawSoldierHelmet(base.x,headY,headR,kit.helmet,scale);
   // Two-handed weapon in the right hand (screen left).
   const hx=soldierSpearHandX(base,bodyW),hy=bodyY+bodyH*.43;
-  if(style.weapon==='greatsword'){
+  const haft=(tx,ty)=>{ctx.strokeStyle='#6e4f30';ctx.lineWidth=Math.max(1,1.15*scale);ctx.beginPath();ctx.moveTo(hx,hy+1.2*scale);ctx.lineTo(tx,ty);ctx.stroke()};
+  if(kit.weapon==='greatsword'){
     const tipY=headY-10*scale;
     ctx.strokeStyle='#c4c7c8';ctx.lineWidth=Math.max(1,1.3*scale);
     ctx.beginPath();ctx.moveTo(hx,hy-2.2*scale);ctx.lineTo(hx,tipY);ctx.stroke();
@@ -477,16 +477,26 @@ function drawManAtArmsUnmasked(base,scale,id,liveryOverride=null,style=manAtArms
     ctx.strokeStyle='#5a3f28';ctx.lineWidth=Math.max(1,1.1*scale);
     ctx.beginPath();ctx.moveTo(hx,hy-2.2*scale);ctx.lineTo(hx,hy+1.4*scale);ctx.stroke();
     ctx.fillStyle='#8a7a4a';ctx.beginPath();ctx.arc(hx,hy+1.6*scale,.6*scale,0,Math.PI*2);ctx.fill();
+  }else if(kit.weapon==='halberd'){
+    // Halberd: the longest haft, axe blade facing out, back hook, long top spike.
+    const tx=hx+.9*scale,ty=headY-14*scale;
+    haft(tx,ty-4.5*scale);
+    ctx.beginPath();ctx.moveTo(tx,ty-.6*scale);ctx.lineTo(tx-2.6*scale,ty-1.2*scale);
+    ctx.quadraticCurveTo(tx-3.3*scale,ty+1.0*scale,tx-2.5*scale,ty+3.0*scale);ctx.lineTo(tx,ty+1.8*scale);ctx.closePath();iron();
+    ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(tx+2.2*scale,ty+1.4*scale);ctx.lineTo(tx,ty+1.2*scale);ctx.closePath();iron();
+    ctx.beginPath();ctx.moveTo(tx-.4*scale,ty-1.0*scale);ctx.lineTo(tx+.05*scale,ty-6.5*scale);ctx.lineTo(tx+.5*scale,ty-1.0*scale);ctx.closePath();iron();
+  }else if(kit.weapon==='twoHandAxe'){
+    // Two-handed axe: shorter haft, a broad crescent blade facing out.
+    const tx=hx+.6*scale,ty=headY-7*scale;
+    haft(tx,ty-1.2*scale);
+    ctx.beginPath();ctx.moveTo(tx,ty-1.2*scale);ctx.lineTo(tx-2.4*scale,ty-3.2*scale);
+    ctx.quadraticCurveTo(tx-5.0*scale,ty+1.0*scale,tx-2.4*scale,ty+5.0*scale);ctx.lineTo(tx,ty+2.8*scale);ctx.closePath();iron();
   }else{
-    // Poleaxe: haft, axe blade facing out, hammer at the back, top spike.
-    const tx=hx+.8*scale,ty=headY-11*scale;
-    ctx.strokeStyle='#6e4f30';ctx.lineWidth=Math.max(1,1.15*scale);
-    ctx.beginPath();ctx.moveTo(hx,hy+1.2*scale);ctx.lineTo(tx,ty-1.5*scale);ctx.stroke();
-    ctx.fillStyle='#a9adb0';ctx.strokeStyle='#3d4144';ctx.lineWidth=Math.max(.6,.6*scale);
-    ctx.beginPath();ctx.moveTo(tx,ty-.4*scale);ctx.lineTo(tx-2.8*scale,ty-1.6*scale);
-    ctx.quadraticCurveTo(tx-3.6*scale,ty+1.2*scale,tx-2.7*scale,ty+3.4*scale);ctx.lineTo(tx,ty+2.0*scale);ctx.closePath();ctx.fill();ctx.stroke();
-    ctx.beginPath();ctx.rect(tx,ty+.2*scale,1.4*scale,1.2*scale);ctx.fill();ctx.stroke();
-    ctx.beginPath();ctx.moveTo(tx-.45*scale,ty-1.4*scale);ctx.lineTo(tx+.1*scale,ty-4.2*scale);ctx.lineTo(tx+.55*scale,ty-1.4*scale);ctx.closePath();ctx.fill();ctx.stroke();
+    // Two-handed hammer: a square iron head across the haft, a short spike at the back.
+    const tx=hx+.6*scale,ty=headY-7*scale;
+    haft(tx,ty-1.6*scale);
+    ctx.beginPath();ctx.rect(tx-3.0*scale,ty-1.4*scale,3.4*scale,2.6*scale);iron();
+    ctx.beginPath();ctx.moveTo(tx+.4*scale,ty-.8*scale);ctx.lineTo(tx+2.4*scale,ty-.1*scale);ctx.lineTo(tx+.4*scale,ty+.6*scale);ctx.closePath();iron();
   }
   ctx.restore();
 }
