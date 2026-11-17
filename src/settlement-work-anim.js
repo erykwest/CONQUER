@@ -257,6 +257,11 @@
     }
     ctx.restore();
   }
+  // The figures' pink outlined hand (settlement-population-figures.js); a plain skin dot where it is not loaded.
+  function hand(x,y,s){
+    if(typeof drawFigureHand==='function')return drawFigureHand(x,y,s);
+    ctx.fillStyle=VILLAGER_SKIN;ctx.beginPath();ctx.arc(x,y,Math.max(.5,.55*s),0,Math.PI*2);ctx.fill();
+  }
   const darken=(hex,k)=>{const h=hex.replace('#','');return'#'+[0,2,4].map(i=>Math.round(parseInt(h.slice(i,i+2),16)*k).toString(16).padStart(2,'0')).join('')};
   // A villager dot ({p,id,kind,sex,age,hair,colors}) at work. facing: 1 right, -1 left.
   function drawWorkerUnmasked(dot,tool,t,facing=1){
@@ -274,7 +279,8 @@
       ctx.beginPath();ctx.ellipse(base.x-f*bodyW*.42,bodyY+bodyH*.12,bodyW*.3,bodyH*.26,0,0,Math.PI*2);ctx.fill();ctx.stroke();
       ctx.beginPath();ctx.moveTo(base.x-f*bodyW*.4,top+bodyH*.05);ctx.lineTo(base.x+f*bodyW*.25,bodyY-bodyH*.1);ctx.stroke();
     }
-    drawVillagerFigureUnmasked(dot);
+    // The far hand rests at the side (the seed bag hangs there); the near one is at the tool.
+    drawVillagerFigureUnmasked(dot,sack?'none':'far',f);
     // Hands rise with the tool: high when it points up, at the waist when down.
     const shoulder={x:base.x+f*bodyW*.18,y:top+bodyH*.2};
     // The sower's hand swings on the arm; tool hands rise with the tool.
@@ -289,7 +295,7 @@
     // Arm: shoulder to hand, in the darker tunic tone (or the cloak's, when wearing one).
     ctx.strokeStyle=darken(window.ConquerWardrobe?.outfitFor(dot)?.sleeve||dot.colors?.[0]||'#8c6b3f',.78);ctx.lineWidth=Math.max(.8,1.1*scale);ctx.lineCap='round';
     ctx.beginPath();ctx.moveTo(shoulder.x,shoulder.y);ctx.lineTo(g.x,g.y);ctx.stroke();
-    ctx.fillStyle=VILLAGER_SKIN;ctx.beginPath();ctx.arc(g.x,g.y,Math.max(.5,.55*scale),0,Math.PI*2);ctx.fill();
+    hand(g.x,g.y,scale);
     // Effect origin: where the tool tip strikes (or the casting hand).
     const hitTh=keys(KEYS[tool],T.hit).th,d=dirOf(hitTh,f),L=T.len*scale*.78;
     const gHit={x:base.x+f*bodyW*.48,y:bodyY-bodyH*(.08+.28*Math.cos(hitTh))};
@@ -317,10 +323,12 @@
   // A walking worker carries the tool on the shoulder.
   function drawCarrierUnmasked(dot,tool,facing=1){
     const base=w2s(dot.p,.10),scale=State.view.scale*.5,bodyW=6*scale,bodyH=8*scale,bodyY=base.y-bodyH*.16,f=facing<0?-1:1;
-    drawVillagerFigureUnmasked(dot);
-    if(scale<.16||tool==='seeds')return;
+    const shouldered=scale>=.16&&tool!=='seeds';
+    drawVillagerFigureUnmasked(dot,shouldered?'far':'both',f);
+    if(!shouldered)return;
     const g={x:base.x+f*bodyW*.3,y:bodyY-bodyH*.28};
     ctx.save();drawTool(tool,g,f,tool==='hammer'||tool==='sickle'?.9:-.75,scale);ctx.restore();
+    hand(g.x,g.y,scale);   // the near hand steadies the tool on the shoulder
   }
   function drawCarrier(dot,tool,facing){
     const f=facing<0?-1:1;

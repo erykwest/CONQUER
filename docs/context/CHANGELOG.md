@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-17 — FIG-HANDS-261117 · Mani e piedi delle figure
+
+`feature/figure-hands-feet`: mani rosa (cerchietti con bordo) e piedi marroni (ovali orizzontali) su civili, lavoratori, soldati fermi e in combattimento, ostili e nobili; mani rosa anche ai cavalieri e messaggeri a cavallo, che tengono le gambe. Scelta del product owner dopo le prove A–E e S1/S2 nel Lab (gambette scartate, gambe dei cavalieri mantenute). Nuova `qa/figure-hands-feet-regression.cjs` nel workflow delle animazioni di lavoro; baseline dell'audit aggiornata per 58 render di Popolazione e Truppe. ROADMAP e DECISIONS invariate: è un dettaglio grafico, nessun contratto cambiato.
+
 ### 2026-11-16 — ASSET-AUDIT-261116 · Audit del Lab di nuovo verde
 
 `fix/asset-audit-baseline`: il controllo `sagoma-conservata` confronta le aree disegnate invece della densità nel riquadro (falso errore sulla torre tonda con latrina crollata); baseline `qa/asset-audit-baseline.json` rigenerata dal report della CI dopo la revisione dei render cambiati dal 12/11. Segnalato in BACKLOG il cantiere vuoto delle torri in pietra L2+ nel Lab. ROADMAP e DECISIONS invariate: nessun contratto di gioco cambiato.

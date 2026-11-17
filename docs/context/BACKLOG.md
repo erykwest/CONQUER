@@ -1,5 +1,13 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-17 — FIG-HANDS-261117 · Mani e piedi delle figure
+
+**IMPLEMENTATO SU BRANCH `feature/figure-hands-feet`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Mani rosa e piedi ovali marroni su civili, lavoratori, soldati (fermi e in combattimento), ostili, nobili.
+- [x] Mani rosa ai cavalieri e messaggeri a cavallo; gambe mantenute (scelta del product owner).
+- [ ] Il portatore di torcia della pattuglia notturna ha le mani ai fianchi: la torcia parte poco sopra la mano destra, non da dentro.
+- [ ] Le figure in cache 3D (`ConquerWorld3D.figure`) si ridisegnano con il nuovo aspetto: verificarlo in partita su una città popolata (non coperto dal Lab).
+
 ### 2026-11-16 — ASSET-AUDIT-261116 · Audit del Lab
 
 - [x] `sagoma-conservata` misura le aree, non la densità nel riquadro: niente falso errore quando le macerie di un elemento esterno cadono lontano.

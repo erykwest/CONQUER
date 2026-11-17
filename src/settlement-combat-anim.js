@@ -88,7 +88,8 @@
         // Fall away from the foe, pivoting on the feet.
         ctx.translate(base.x,base.y);ctx.rotate((pose.dirX>0?-1:1)*pose.fall*1.45);ctx.translate(-base.x,-base.y);
       }
-      drawSoldierFigureUnmasked(p,z,armed?'unarmed':type,id,phase,livery);
+      drawSoldierFigureUnmasked(p,z,armed?'unarmed':type,id,phase,livery,true);
+      if(type==='spearman')drawSoldierFixedHands('spearman',base,bodyW,bodyH,bodyY,scale);
       if(type==='spearman')drawSpear(base,scale,bodyW,bodyH,bodyY,headY,pose);
       else if(type==='axeman'&&typeof drawAxeAndRoundShield==='function')drawAxeAndRoundShield(base,scale,bodyW,bodyH,bodyY,top,pose);
       else if(armed)drawSword(base,scale,bodyW,bodyH,bodyY,top,id,phase,livery,pose);
@@ -130,6 +131,7 @@
     ctx.beginPath();ctx.moveTo(x,gy);ctx.lineTo(x-1.0*scale,headY-13*scale);ctx.stroke();
     ctx.fillStyle='#b8bcc0';ctx.beginPath();
     ctx.moveTo(x-1.0*scale,headY-16*scale);ctx.lineTo(x-3.0*scale,headY-11.5*scale);ctx.lineTo(x+1.0*scale,headY-12.2*scale);ctx.closePath();ctx.fill();
+    drawSpearHand(x,gy,headY-13*scale,bodyY+bodyH*SPEAR_HAND_Y,scale);   // turns and thrusts with the shaft
     ctx.restore();
   }
   function drawSword(base,scale,bodyW,bodyH,bodyY,top,id,phase,livery,pose){
@@ -145,6 +147,7 @@
     ctx.beginPath();ctx.moveTo(hx,hy);ctx.lineTo(base.x+bodyW*.80+swing,top-7.5*scale);ctx.stroke();
     ctx.strokeStyle='#76563b';ctx.lineWidth=Math.max(1,1.2*scale);
     ctx.beginPath();ctx.moveTo(base.x+bodyW*.23,bodyY+bodyH*.05);ctx.lineTo(base.x+bodyW*.52,bodyY+bodyH*.27);ctx.stroke();
+    drawFigureHand(base.x+bodyW*.40,bodyY+bodyH*.13,scale);   // sword hand swings with the blade
     ctx.restore();
   }
   function reset(){lastEventEnd=-1e9}
