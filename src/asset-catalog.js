@@ -169,7 +169,7 @@
   }
   // Costumes of office (crime): whole outfits by role, as the tribunal scene dresses them.
   for(const [key,title,pieces] of [['judge','Giudice',['judgeRobe','judgeCap']],['clerk','Cancelliere',['clerkGown','clerkCap']],
-    ['prisoner','Prigioniero',['prisonerShirt']],['executioner','Boia',['executionerHood']]])
+    ['prisoner','Prigioniero',['prisonerShirt']],['executioner','Boia',['executionerHood']],['levy','Leva (cappuccio araldico)',['levyHood']]])
     if(pieces.every(p=>window.ConquerWardrobe?.ROLE_PIECES?.[p]))
       items.push({id:'wardrobe:role:'+key,title,category:'Popolazione',family:'Costumi di ruolo',kind:'wardrobe',key,pieces,
         format:'Overlay',note:'Vestito per ruolo (tribunale), mai per stagione.',source:'src/settlement-wardrobe.js · src/settlement-court-people.js'});

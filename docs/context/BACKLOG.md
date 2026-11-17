@@ -9,7 +9,8 @@
 - [x] Lo stendardo lo porta solo l'**araldo del reggimento** (il primo della squadra, figura `herald`), **al posto** della lancia, con lo scudo. Stendardo 3 volte più grande della vecchia bandierina di squadra (`HERALD_STANDARD_SIZE`).
 - [ ] Lo stendardo segue lo zoom della vista limitato a 0,55–1,45, non la scala della figura: da lontano resta molto più grande del soldato, da vicino più piccolo. Valutare se legarlo a `militaryScale()`.
 - [ ] Guardie (pattuglia da 2): lancia senza scudo; di notte il portatorcia tiene **anche** la lancia (oggi la torcia la sostituisce, figura `unarmed`).
-- [ ] Leva (popolani all'allarme o in leva straordinaria): niente livrea piena, solo un cappuccio coi colori della livrea sopra gli abiti di classe; con lancia e scudo, oppure arcieri di leva con l'arco. Oggi `dot.militia` disegna un fante in livrea piena (`settlement-population-figures.js`). Una versione col cappuccio non esiste in nessun branch o commit.
+- [x] Leva (popolani all'allarme o in leva straordinaria): abiti di classe del popolano (anche quelli di stagione) e cappuccio araldico (`levyHood`, partito nei due colori dello stemma); lancia e scudo del regno, oppure arcieri di leva con l'arco (circa uno su tre, scelto in modo stabile per persona).
+- [ ] Leva: decidere se la quota di arcieri va scelta dal giocatore (oggi fissa, un terzo).
 
 ### 2026-11-16 — ASSET-AUDIT-261116 · Audit del Lab
 

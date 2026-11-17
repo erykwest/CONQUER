@@ -72,6 +72,40 @@ function drawVillagerFigureUnmasked(dot){
   drawVillagerHead(dot.id,base.x,headY,headR,dot.sex,dot.hair);
   if(outfit)window.ConquerWardrobe.drawHead(outfit,base.x,headY,headR);
 }
+// The levy (alarm recruits, extraordinary levy): no livery, the villager's own class clothes
+// (season included) under a hood in the realm's colours. About one in three is a levy archer
+// with a bow; the others carry spear (right hand, screen left) and the realm shield.
+function levyArcher(id){return peasantHash(String(id)+':levy-bow')%3===0}
+function levyOutfit(dot){
+  const W=window.ConquerWardrobe,season=W?.outfitFor({...dot,role:undefined,outfit:undefined});
+  return{head:'levyHood',body:season?.body||null,neck:season?.neck||null,
+    colors:{...(season?.colors||{}),head:null},sleeve:season?.sleeve||null};
+}
+function drawLevyFigure(dot){
+  const look={...dot,outfit:levyOutfit(dot)};
+  const key='levy|'+villagerLookKey(look)+'|'+(levyArcher(dot.id)?'bow':'spear:'+soldierShieldStyle());
+  if(window.ConquerWorld3D?.figure?.(dot.p,.10,key,()=>drawLevyFigureUnmasked({...look,p:{x:0,y:0}}),dot.id))return true;
+  return withUrbanFigureOcclusion(dot.p,.10,()=>drawLevyFigureUnmasked(look));
+}
+function drawLevyFigureUnmasked(dot){
+  if(dot.outfit===undefined)dot={...dot,outfit:levyOutfit(dot)};
+  drawVillagerFigureUnmasked(dot);
+  const base=w2s(dot.p,.10),scale=State.view.scale*.5;
+  const bodyW=6.0*scale,bodyH=8.0*scale,headR=2.35*scale,bodyY=base.y-bodyH*.16,headY=bodyY-bodyH/2-headR*.68;
+  ctx.save();
+  if(levyArcher(dot.id)){
+    // Bow on the left arm (screen right), as the realm's archers.
+    const bx=base.x+bodyW*.62,by=bodyY-bodyH*.04,r=5.3*scale;
+    ctx.strokeStyle='#9b7243';ctx.lineWidth=Math.max(.8,.85*scale);
+    ctx.beginPath();ctx.arc(bx,by,r,-Math.PI*.55,Math.PI*.55);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(bx+Math.cos(-Math.PI*.55)*r,by+Math.sin(-Math.PI*.55)*r);
+    ctx.lineTo(bx-r*.18,by);ctx.lineTo(bx+Math.cos(Math.PI*.55)*r,by+Math.sin(Math.PI*.55)*r);ctx.stroke();
+  }else{
+    drawQuarteredShield(base.x+bodyW*.62,bodyY+bodyH*.10,2.7*scale,3.6*scale,soldierLivery(dot.id),'#b7aa8f',scale,true,soldierShieldStyle());
+    drawSoldierSpear(base,scale,bodyW,bodyH,bodyY,headY);
+  }
+  ctx.restore();
+}
 let populationFrameBounds=null;
 function beginPopulationFrame(r){
   populationFrameBounds=r?{width:r.width,height:r.height}:null;
@@ -191,7 +225,7 @@ function drawPeasants(){
   }
   const workClock=window.ConquerWorkAnim?.now();
   for(const dot of dots){
-    if(dot.militia)drawSoldierFigure(dot.p,.10,'spearman',dot.id,day);
+    if(dot.militia)drawLevyFigure(dot);
     else if(dot.work)window.ConquerWorkAnim.drawWorker(dot,dot.work.tool,workClock,dot.work.facing);
     // On the Mastio's outer stair (p.z absolute): drawn later, over the stair (drawRaisedVillagers).
     else if(Number.isFinite(dot.p.z))raisedVillagers.push(dot);
