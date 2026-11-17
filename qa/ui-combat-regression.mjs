@@ -69,7 +69,7 @@ try{
   await page.locator('#devToggle').click();
 
 
-  // Exercise actual Canvas house drawing with multiple streetfront modules.
+  // Exercise the actual house rendering (World 3D) with multiple streetfront modules.
   // A standalone geometry VM test cannot detect missing canvas integration.
   const denseBrowser=await page.evaluate(()=>{
     const oldStructures=State.structures,oldCache=urbanLotCache,oldSelected=State.selectedId;
@@ -83,10 +83,10 @@ try{
       State.structures=[...oldStructures,house,road];
       urbanLotCache=[lot];State.selectedId=house.id;
       const l3=urbanDenseParts(house),n3=urbanDenseBuildingCount(house);
-      drawHouse(house); // real roof, chimney, turret/facade canvas routines
+      invalidateSceneCache();draw(); // the real World 3D frame builds the house meshes
       house.houseLevel=4;
       const l4=urbanDenseParts(house),n4=urbanDenseBuildingCount(house);
-      drawHouse(house);
+      invalidateSceneCache();draw();
       return{n3,n4,l3Bodies:l3.filter(x=>x.kind==='body').length,
         l4Turrets:l4.filter(x=>x.kind==='turret').length,
         physicalParts:l4.every(part=>!!part.points?.length)};
