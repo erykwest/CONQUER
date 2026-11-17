@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceDigest": "e8ce5922a797d8d1ca93fd0f78a4403cfc1e3c5625b3fe55f59550f95386da23",
+  "sourceDigest": "50cad5abbab06d70f8c90dc86030fe64a40f8a48a17bf5b170ac99b8136adaf2",
   "catalog": {
     "schemaVersion": 1,
     "categories": [
@@ -5770,9 +5770,9 @@
         "properties": {
           "kind": "combat-profile",
           "statistics": {
-            "hp": 40,
+            "hp": 20,
             "combat": 2,
-            "armor": 0,
+            "armor": 1,
             "aim": null,
             "front": 1
           }
@@ -5816,7 +5816,7 @@
         "properties": {
           "kind": "combat-profile",
           "statistics": {
-            "hp": 35,
+            "hp": 16,
             "combat": 1,
             "armor": 0,
             "aim": 2,
@@ -5863,7 +5863,7 @@
         "properties": {
           "kind": "combat-profile",
           "statistics": {
-            "hp": 60,
+            "hp": 26,
             "combat": 2,
             "armor": 1,
             "aim": null,
@@ -6001,7 +6001,7 @@
         "properties": {
           "kind": "animal-profile",
           "statistics": {
-            "hp": 12,
+            "hp": 10,
             "combat": 3,
             "armor": 0,
             "aim": null,

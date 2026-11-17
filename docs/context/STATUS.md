@@ -9,6 +9,7 @@
   - chi è sfinito combatte con −1 (minimo 1) ma continua a colpire; chi è scosso (morale sotto metà) resta come prima;
   - le frecce assegnano le statistiche al bersaglio con la stessa regola della mischia (`profileKind`), coerenza senza effetti visibili.
 - **EFFETTO (regole vere, dadi con seme):** una squadra di 5 lancieri batte un branco di 5 lupi 15+ volte su 20 restando ferita; una pattuglia di 2 contro 5 lupi muore 15+ volte su 20. In partita (Chromium headless, notte, `simulationFrame`): squadra contro branco di 6 → 3 lupi uccisi, squadra caduta.
+- **BILANCIAMENTO (richiesta del product owner, 17/11/2026):** lupo 12→**10 PV**; fuorilegge alla scala dei soldati (~20 PV a uomo): brigante/bandito/predone con ascia **20 PV, armatura 1** (scudo tondo; era 40/0), guardia del covo **26 PV, armatura 1** (era 60), arciere fuorilegge **16 PV** (era 35). Con le regole vere (30 prove per caso): squadra contro 6 lupi vince ~85% con ~40 PV residui; pattuglia contro 3 lupi vince ma ne esce a pezzi, contro 5 muore; squadra contro 6 briganti vince sempre con ~40 PV residui; contro 5 guardie del covo vince con ~38 PV; pattuglia contro 4 briganti ~57%. Bloccato in `qa/melee-outnumbered-regression.cjs`; `wiki/catalog.json` rigenerato.
 - **PROVE LOCALI PASS:** nuova `qa/melee-outnumbered-regression.cjs`; suite Combat completa (22 test, tra cui mass-battle, siege-assault, naval-battle); wolves, outlaws, threats.
 
 ### 2026-11-16 — Microfix: pianerottolo interno per la porta del muro H1

@@ -2,7 +2,7 @@
 
 ## 2026-11-16 — COMBAT-MELEE-01 · Nessuno moriva coi lupi
 
-Regole della mischia corrette: ogni nemico a contatto attacca, l'energia si consuma una volta per round, gli sfiniti continuano a colpire (prima lo scontro si bloccava per sempre). Nuova `qa/melee-outnumbered-regression.cjs`. STATUS, BACKLOG, DECISIONS aggiornati; ROADMAP invariata.
+Regole della mischia corrette: ogni nemico a contatto attacca, l'energia si consuma una volta per round, gli sfiniti continuano a colpire (prima lo scontro si bloccava per sempre). Bilanciamento: lupo 10 PV; fuorilegge 20 PV e armatura 1, guardie 26, arcieri 16. Nuova `qa/melee-outnumbered-regression.cjs` con i tassi di vittoria. STATUS, BACKLOG, DECISIONS aggiornati; ROADMAP invariata.
 
 ### 2026-11-15 — Microfix: fedeli alla messa nel cutaway della chiesa
 

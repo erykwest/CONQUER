@@ -48,6 +48,25 @@ function fight(R,friendly,enemy,seconds){
   assert.ok(squadWins>=15,'a squad usually beats a pack of five ('+squadWins+'/20)');
   assert.ok(patrolLosses>=15,'two men alone against a pack usually die ('+patrolLosses+'/20)');
 }
+// Balance (17/11/2026): wolves weaker, outlaws on the soldiers' scale (~20 hp a man).
+{
+  const ring=(n,mk)=>Array.from({length:n},(_,i)=>({...mk(i),x:.6*Math.cos(i*2*Math.PI/n),y:.6*Math.sin(i*2*Math.PI/n)}));
+  const run=(kind,n,mk,seed)=>{const R=rules(seed),f={id:'f',kind,x:0,y:0},e=ring(n,mk);
+    for(let t=0;t<300&&!f.defeated&&!e.every(x=>x.defeated);t+=.1)R.update(.1,[f],e,[],()=>true);
+    return{won:!f.defeated&&e.every(x=>x.defeated),hp:f.stats.hp}};
+  const wolf=i=>({id:'w'+i,kind:'wolf',combatKind:'wolf',neutral:false});
+  const axe=i=>({id:'o'+i,kind:'outlaw',combatKind:'outlaw',weapon:'axe'});
+  const guard=i=>({id:'g'+i,kind:'outlaw',combatKind:'outlawGuard',weapon:'axe'});
+  const stats=(kind,n,mk)=>{let w=0,hp=0;for(let s=1;s<=30;s++){const r=run(kind,n,mk,s*31+n);if(r.won){w++;hp+=r.hp}}return{rate:w/30,hp:w?hp/w:0}};
+  const pack6=stats('squad',6,wolf);
+  assert.ok(pack6.rate>=.7&&pack6.hp<80,'a squad usually beats a pack of six, wounded ('+JSON.stringify(pack6)+')');
+  const band6=stats('squad',6,axe);
+  assert.ok(band6.rate>=.9&&band6.hp<=75,'a squad beats six brigands but pays for it ('+JSON.stringify(band6)+')');
+  const lair=stats('squad',5,guard);
+  assert.ok(lair.rate>=.8&&lair.hp<=60,'five lair guards cost a squad dearly ('+JSON.stringify(lair)+')');
+  const patrol4=stats('patrol',4,axe);
+  assert.ok(patrol4.rate<=.8,'two men against four brigands is no sure thing ('+JSON.stringify(patrol4)+')');
+}
 // No stalemate: two exhausted fighters still hit each other until one falls.
 {
   const R=rules(7),a={id:'a',kind:'infantry',x:0,y:0},b={id:'b',kind:'infantry',combatKind:'infantry',x:.5,y:0};

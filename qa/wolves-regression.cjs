@@ -124,7 +124,7 @@ assert.match(rulesSrc,/if\(!living\(e\)\|\|e\.routing\|\|e\.neutral/,'archers ig
 const ctx=vm.createContext({window:{},Math});
 vm.runInContext(rulesSrc,ctx,{filename:'settlement-combat-rules.js'});
 const rules=ctx.window.ConquerCombatRules;
-assert.equal(rules.PROFILES.wolf.hp,12,'wolves have their own combat profile');
+assert.equal(rules.PROFILES.wolf.hp,10,'wolves have their own combat profile');
 const trooper={id:'guard',kind:'patrol',x:0,y:0,target:{x:1,y:1}};
 const beast={id:'test-wolf',kind:'wolf',combatKind:'wolf',x:.6,y:0,neutral:true};
 rules.update(.25,[trooper],[beast],[],()=>true);

@@ -4,8 +4,9 @@
 
 **IMPLEMENTATO SU BRANCH `fix/outlaw-combat-stats`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
 - [x] Tutti i nemici a contatto attaccano; energia una volta per round; niente stallo da sfinimento.
-- [ ] Bilanciare lupi contro squadre (oggi un branco da 6 può annientare una squadra di notte).
-- [ ] Riportare i fuorilegge alla scala dei soldati (~20 PV a uomo): oggi 40/60/35 PV a figura.
+- [x] Lupi più deboli (10 PV): una squadra batte un branco di 6 nell'~85% dei casi, ferita.
+- [x] Fuorilegge alla scala dei soldati: 20 PV e armatura 1 (ascia e scudo), guardie 26, arcieri 16.
+- [ ] Verificare il ritmo degli scontri in partite reali (a velocità 1 uno scontro dura 1–2 minuti).
 
 ### 2026-11-15 — Microfix: messa domenicale visibile
 

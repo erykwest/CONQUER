@@ -4,7 +4,8 @@
 
 - **CONTRATTO TECNICO:** in `ConquerCombatRules.update` ogni nemico a contatto e non impegnato scambia colpi col difensore più vicino; l'energia di mischia si consuma una volta per round per unità; energia 0 vale −1 al combattimento (minimo 1), non 0. Morale (brain) invariato.
 - **MOTIVO:** segnalazione del product owner (nessuno moriva contro un branco di lupi): stallo eterno da sfinimento e un solo nemico attivo per difensore.
-- **STATO:** implementato su `fix/outlaw-combat-stats`, non in main. Bilanciamento lupi/squadre e scala dei fuorilegge aperti.
+- **DECISO dal product owner (17/11/2026):** lupi più deboli e fuorilegge alla scala dei soldati. Valori adottati: lupo 10 PV; ascia e scudo 20 PV, armatura 1; guardia del covo 26 PV, armatura 1; arciere fuorilegge 16 PV.
+- **STATO:** implementato su `fix/outlaw-combat-stats`, non in main.
 
 ## D-THREATS-261116 — Generatore di minacce (16/11/2026)
 

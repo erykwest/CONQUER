@@ -7,13 +7,15 @@
   const PROFILES=Object.freeze({
     spearman:Object.freeze({hp:100,combat:2,armor:2,aim:null,front:3}),
     patrol:Object.freeze({hp:40,combat:2,armor:2,aim:null,front:2}),
-    wolf:Object.freeze({hp:12,combat:3,armor:0,aim:null,front:1}),
+    // Wolf: 10 hp (17/11/2026): a squad beats a pack of six most times, wounded; a lone patrol barely holds three.
+    wolf:Object.freeze({hp:10,combat:3,armor:0,aim:null,front:1}),
     bear:Object.freeze({hp:45,combat:4,armor:1,aim:null,front:1}),
-    // Outlaws: light, unarmoured men; a lair guard is the best of them.
-    outlaw:Object.freeze({hp:40,combat:2,armor:0,aim:null,front:1}),
-    outlawGuard:Object.freeze({hp:60,combat:2,armor:1,aim:null,front:1}),
+    // Outlaws on the soldiers' scale (~20 hp a man, 17/11/2026): axe and round shield give armour 1;
+    // a lair guard is the best of them. A squad beats any band but pays for it.
+    outlaw:Object.freeze({hp:20,combat:2,armor:1,aim:null,front:1}),
+    outlawGuard:Object.freeze({hp:26,combat:2,armor:1,aim:null,front:1}),
     // Outlaw bowman: shoots like an archer (kind 'archer'), lighter than a realm archer.
-    outlawArcher:Object.freeze({hp:35,combat:1,armor:0,aim:2,front:1,range:15}),
+    outlawArcher:Object.freeze({hp:16,combat:1,armor:0,aim:2,front:1,range:15}),
     infantry:Object.freeze({hp:100,combat:2,armor:1,aim:null,front:1}),
     knight:Object.freeze({hp:30,combat:3,armor:3,aim:null,front:1}),
     captain:Object.freeze({hp:30,combat:3,armor:3,aim:null,front:1}),
