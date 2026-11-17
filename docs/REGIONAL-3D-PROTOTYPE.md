@@ -11,6 +11,23 @@ The World Lab remains authoritative but this feature branch upgrades its topolog
 
 `src/regional-topology.js` implements balanced power-Voronoi polygons calibrated to ±3.5% canonical area deviation, reserving room for 3D visual warp while meeting the required **±10% territory area limit**. Older hex-staggered JSON maps are remapped to the new grid by stored row/column position, including political ownership.
 
+## Logical grid versus territory shapes
+
+The **square grid is strictly logical**: eight constant-time neighbor IDs per
+territory, with out-of-map directions `null`. It does **not** define the
+polygon footprint. Actual territory polygons come from seeded power-Voronoi
+sites with staggered alternate rows (the classic hexagonal/triangular site
+arrangement), plus random jitter and area-balancing weights. The fallback
+reduces **only the jitter**, never the underlying row stagger, so geometry
+cannot regress to regular squares.
+
+In a canonical 30×21 map with seed 1943 at default generation settings,
+**551 of 630 polygons have six sides and only 21 are quadrilaterals**.
+Different seeds produce irregular edge lengths and angles while keeping
+canonical areas within about ±3.5% and displayed 3D areas within ±10%.
+The fine 3D sites have a separate seeded 200%-area limiter to prevent
+a rare oversized microcell from breaking the entire scene.
+
 ## Updated procedural pipeline
 
 1. **Generate the fine mesh first:** approximately \`630 × detail\` global microcell sites on a triangular, deterministically jittered lattice, for detail 8/20/40. For each site, clip against its two-ring neighbourhood, never against every site in the world. The new **seeded weighted Voronoi/power diagram** uses 30% position jitter and a bounded per-site weight: the distribution has smaller and larger microcells, with the largest approaching **200% of the former mean microcell area** (not twice the linear dimensions). Other cells shrink to conserve total world area, without changing the number of original gameplay territories or the detail target. Generation remains linear in the target site count with a small bounded neighbour set.
