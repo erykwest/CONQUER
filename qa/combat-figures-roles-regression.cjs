@@ -24,6 +24,18 @@ assert.equal(combatRole({houseLevel:1},{age:'adult',sex:'female'}),null,'women a
 assert.equal(combatRole({houseLevel:1},{age:'child',sex:'male'}),null,'boys are not armed');
 assert.match(figures,/function levyArcher\(dot\)\{return dot\.kind==='artisan'\}/,'L2 artisans are the levy archers');
 assert.match(figures,/if\(type==='manAtArms'\)return drawManAtArmsUnmasked/,"L3 man-at-arms figure");
+// Knights (L4): crest on the helmet and cloak, on foot and mounted; sword in the right hand (screen
+// left) and shield; dismounted in the tournament and on the training field.
+const mounted=read('src/settlement-mounted2d.js'),events=read('src/settlement-events-people.js'),garrisons=read('src/settlement-population-garrisons.js');
+assert.match(figures,/if\(knightly\)drawKnightCloak\(/,'knight on foot: cloak');
+assert.match(figures,/if\(knightly\)drawKnightCrest\(/,'knight on foot: crest');
+assert.match(anim,/type==='knight'\?'knightUnarmed':'unarmed'/,'posed knight keeps cloak and crest');
+assert.match(anim,/const hx=base\.x-bodyW\*\.42/,'posed sword in the right hand (screen left)');
+assert.match(mounted,/if\(o\.kind==='knight'\)cloak\(ctx,o\);/,'mounted knight: cloak');
+assert.match(mounted,/if\(o\.kind==='knight'\)crest\(ctx,o,/,'mounted knight: crest on every helmet');
+assert.match(events,/drawSoldierFigureUnmasked\(p,g\+\.1,'knight',a\.id,a\.swing,liv\)/,'tournament fighters are dismounted knights');
+assert.match(garrisons,/drawSoldierFigure\(d\.p,d\.z,'knight',d\.id,d\.phase\)/,'training field: dismounted knights');
+assert.doesNotMatch(events,/'swordsman'/,'no generic swordsman left in the tournament');
 // Man-at-arms (variant F): gonnello with the arms; helmet from the knights' set and two-handed
 // weapon, both random per man and stable.
 assert.match(figures,/const KNIGHT_HELMETS=Object\.freeze\(\['greathelm','barbuta','kettle','nasal','cap'\]\)/,"knights' helmets");

@@ -173,13 +173,35 @@
     }else if(o.kind==='knight'){
       poly(ctx,[[112,34],[134,34],[136,10],[130,4],[116,4],[110,10]],STEEL,OUTLINE,lw);           // great helm
       line(ctx,[122,18],[136,18],'#16181a',lw*1.6,'butt');                                         // visor slit
-      poly(ctx,[[116,4],[130,4],[128,-8],[118,-8]],o.livery.main,OUTLINE,lw*.8);                  // crest
     }else{
       ctx.fillStyle=SKIN;ctx.beginPath();ctx.arc(123,20,12,0,Math.PI*2);ctx.fill();
       ctx.strokeStyle=OUTLINE;ctx.lineWidth=lw;ctx.stroke();
       ctx.fillStyle=HAT;ctx.beginPath();ctx.arc(123,18,12,Math.PI,Math.PI*2);ctx.lineTo(135,18);ctx.closePath();ctx.fill();
       line(ctx,[105,19],[141,19],HAT,lw*2.6);                                                      // kettle-hat brim
     }
+    if(o.kind==='knight')crest(ctx,o,HELMET_TOP[style&&style!=='greathelm'?style:'greathelm']);
+  }
+  // Knight's crest (product owner, 17/11/2026): a fan in the two tinctures on a short stalk, above
+  // any helmet; the same emblem the knight wears on foot (settlement-population-figures.js).
+  const HELMET_TOP={greathelm:4,barbuta:6,kettle:2,nasal:-4,cap:5};
+  function crest(ctx,o,top){
+    const x=123,base=top-7,r=16;
+    poly(ctx,[[121,top+1],[125,top+1],[125,base],[121,base]],STEEL,OUTLINE,o.lw*.6);
+    ctx.beginPath();ctx.moveTo(x-r,base);ctx.ellipse(x,base,r,r*.85,0,Math.PI,Math.PI*2);ctx.closePath();
+    ctx.fillStyle=o.livery.main;ctx.fill();
+    ctx.save();ctx.clip();ctx.fillStyle=o.livery.alt;ctx.fillRect(x,base-r,r,r);ctx.restore();
+    ctx.strokeStyle=OUTLINE;ctx.lineWidth=o.lw*.8;ctx.stroke();
+    ctx.fillStyle=GOLD;ctx.beginPath();ctx.arc(x,base-r*.42,r*.2,0,Math.PI*2);ctx.fill();
+  }
+  // Knight's cloak: from the shoulders, flying back over the horse's rump; lining in the second tincture.
+  function cloak(ctx,o){
+    // Above the caparison's top line, so it reads against the horse and not only against the drape.
+    const pts=[[108,34],[130,34],[116,52],[96,68],[70,78],[50,76],[62,64],[84,50]];
+    poly(ctx,pts,o.livery.main,null,o.lw);
+    ctx.save();ctx.beginPath();pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.clip();
+    poly(ctx,[[44,70],[70,64],[80,82],[48,84]],o.livery.alt,null,o.lw);ctx.restore();             // lining at the flying hem
+    poly(ctx,pts,null,OUTLINE,o.lw);
+    line(ctx,[100,46],[74,68],'rgba(25,24,22,.35)',o.lw*.8);                                     // fold
   }
   function shield(ctx,o){
     // At the rider's near side, low over the thigh so the surcoat still shows.
@@ -221,6 +243,7 @@
     ctx.restore();
   }
   function body(ctx,o,withLance=true){
+    if(o.kind==='knight')cloak(ctx,o);
     if(withLance&&o.kind==='knight')lance(ctx,o);
     torso(ctx,o);legs(ctx,o);
     if(o.kind==='knight')shield(ctx,o);else reins(ctx,o);

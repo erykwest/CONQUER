@@ -500,6 +500,32 @@ function drawManAtArmsUnmasked(base,scale,id,liveryOverride=null,kit=manAtArmsKi
   }
   ctx.restore();
 }
+// Knight's cloak: hangs from the shoulders behind the body to the ankles, wider than the body so
+// its edges show at the sides; the lining in the second tincture shows at the hem.
+function drawKnightCloak(base,scale,bodyW,bodyH,top,livery){
+  const hem=base.y+bodyH*.36,lw=Math.max(.6,.7*scale);
+  const cloak=()=>{ctx.beginPath();ctx.moveTo(base.x-bodyW*.36,top-.2*scale);ctx.lineTo(base.x+bodyW*.36,top-.2*scale);
+    ctx.quadraticCurveTo(base.x+bodyW*.9,top+bodyH*.5,base.x+bodyW*.98,hem);
+    ctx.quadraticCurveTo(base.x,hem+bodyH*.1,base.x-bodyW*.98,hem);
+    ctx.quadraticCurveTo(base.x-bodyW*.9,top+bodyH*.5,base.x-bodyW*.36,top-.2*scale);ctx.closePath()};
+  cloak();ctx.fillStyle=livery.mainDark||livery.main;ctx.fill();
+  ctx.save();cloak();ctx.clip();ctx.fillStyle=livery.alt;ctx.fillRect(base.x-bodyW,hem-1.1*scale,bodyW*2,2*scale);ctx.restore();
+  cloak();ctx.strokeStyle='rgba(25,24,22,.85)';ctx.lineWidth=lw;ctx.stroke();
+}
+// Knight's crest: a fan in the two tinctures on a short stalk, above any helmet (the man-at-arms
+// wears the same helmets without it).
+const KNIGHT_CREST_TOP={greathelm:1.2,nasal:1.7,kettle:1.07,barbuta:1.06,cap:1.0};
+function drawKnightCrest(x,headY,headR,helmet,livery,scale){
+  const top=headY-headR*(KNIGHT_CREST_TOP[helmet]||1.05),r=headR*1.05,base=top-headR*.35,lw=Math.max(.5,.6*scale);
+  ctx.save();
+  ctx.fillStyle='#8a9196';ctx.fillRect(x-headR*.12,base,headR*.24,top-base+.1*scale);
+  const fan=()=>{ctx.beginPath();ctx.moveTo(x-r,base);ctx.ellipse(x,base,r,r*.85,0,Math.PI,Math.PI*2);ctx.closePath()};
+  fan();ctx.fillStyle=livery.main;ctx.fill();
+  ctx.save();fan();ctx.clip();ctx.fillStyle=livery.alt;ctx.fillRect(x,base-r,r,r);ctx.restore();
+  fan();ctx.strokeStyle='rgba(25,24,22,.85)';ctx.lineWidth=lw;ctx.stroke();
+  ctx.fillStyle='#d2ad4b';ctx.beginPath();ctx.arc(x,base-r*.42,Math.max(.5,r*.2),0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
 function drawSoldierFigure(p,z,type,id,phase=0,liveryOverride=null){
   return withUrbanFigureOcclusion(p,z,()=>drawSoldierFigureUnmasked(p,z,type,id,phase,liveryOverride));
 }
@@ -517,8 +543,13 @@ function drawSoldierFigureUnmasked(p,z,type,id,phase=0,liveryOverride=null){
   const base=w2s(p,z),scale=militaryScale(),bodyW=5.4*scale,bodyH=8.0*scale,headR=2.2*scale;
   if(type==='manAtArms')return drawManAtArmsUnmasked(base,scale,id,liveryOverride);
   const bodyY=base.y-bodyH*.16,top=bodyY-bodyH/2,headY=top-headR*.72,livery=liveryOverride||soldierLivery(id);
+  // Knights on foot ('knight'; 'knightUnarmed' is the posed body, weapons drawn by the combat
+  // animation): cloak on the back and the crest on the helmet (product owner, 17/11/2026).
+  const knightly=type==='knight'||type==='knightUnarmed';
+  if(type==='knightUnarmed')type='unarmed';
 
   ctx.save();
+  if(knightly)drawKnightCloak(base,scale,bodyW,bodyH,top,livery);
 
   // Realm livery: every soldier carries both current reign colours.
   soldierBodyPath(base,bodyW,bodyH,top,bodyY);ctx.save();ctx.clip();
@@ -530,9 +561,12 @@ function drawSoldierFigureUnmasked(p,z,type,id,phase=0,liveryOverride=null){
   soldierBodyPath(base,bodyW,bodyH,top,bodyY);
   ctx.strokeStyle='rgba(25,24,22,.88)';ctx.lineWidth=Math.max(.7,.8*scale);ctx.stroke();
 
-  // Head + helmet: the realm's own soldiers wear the feudal helmet, foes (livery override) the cap.
+  // Head + helmet: the realm's own soldiers wear the feudal helmet, foes (livery override) the cap;
+  // a knight with a livery override (foe, tournament) wears the great helm.
   ctx.fillStyle=VILLAGER_SKIN;ctx.beginPath();ctx.arc(base.x,headY,headR,0,Math.PI*2);ctx.fill();
-  drawSoldierHelmet(base.x,headY,headR,liveryOverride?'cap':soldierHelmetStyle(),scale);
+  const helmet=liveryOverride?(knightly?'greathelm':'cap'):soldierHelmetStyle();
+  drawSoldierHelmet(base.x,headY,headR,helmet,scale);
+  if(knightly)drawKnightCrest(base.x,headY,headR,helmet,livery,scale);
 
   if(type==='spearman'||type==='pikeman'||type==='herald'){
     // The figure faces the viewer: its right hand (spear, standard) is on screen left, the left arm
@@ -551,13 +585,13 @@ function drawSoldierFigureUnmasked(p,z,type,id,phase=0,liveryOverride=null){
   }else if(type==='axeman'){
     drawAxeAndRoundShield(base,scale,bodyW,bodyH,bodyY,top,null);
   }else if(type!=='unarmed'){
+    // Sword in the right hand (screen left), shield on the left arm (screen right).
     const swing=Math.sin(phase*Math.PI*2)*3.2*scale;
-    drawQuarteredShield(base.x-bodyW*.62,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery,'#b7aa8f',scale,!liveryOverride,liveryOverride?'oval':soldierShieldStyle());
-    // Sword.
+    drawQuarteredShield(base.x+bodyW*.62,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery,'#b7aa8f',scale,!liveryOverride,liveryOverride?'oval':soldierShieldStyle());
     ctx.strokeStyle='#c4c7c8';ctx.lineWidth=Math.max(1,1.15*scale);
-    ctx.beginPath();ctx.moveTo(base.x+bodyW*.42,bodyY+bodyH*.16);ctx.lineTo(base.x+bodyW*.80+swing,top-7.5*scale);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(base.x-bodyW*.42,bodyY+bodyH*.16);ctx.lineTo(base.x-bodyW*.80-swing,top-7.5*scale);ctx.stroke();
     ctx.strokeStyle='#76563b';ctx.lineWidth=Math.max(1,1.2*scale);
-    ctx.beginPath();ctx.moveTo(base.x+bodyW*.23,bodyY+bodyH*.05);ctx.lineTo(base.x+bodyW*.52,bodyY+bodyH*.27);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(base.x-bodyW*.23,bodyY+bodyH*.05);ctx.lineTo(base.x-bodyW*.52,bodyY+bodyH*.27);ctx.stroke();
   }
 
   ctx.restore();

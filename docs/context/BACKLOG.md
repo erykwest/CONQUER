@@ -13,6 +13,8 @@
 - [x] Ruolo per classe ([D-MIL-FIG-261117](DECISIONS.md#d-mil-fig-261117--chi-combatte-e-come-si-riconosce-17112026)): L1 fanti di leva, L2 arcieri di leva (arco per gli artigiani, non più uno su tre a caso), L3 uomini d'arme, L4 cavalieri (`combatRole`).
 - [x] Uomo d'arme L3 nel Lab (pulsante «Uomo d'arme»): gonnello con lo stemma (variante F); elmo dei cavalieri e arma a due mani (alabarda, ascia, martello, spada) casuali per persona; il gruppo «Uomo d'arme (L3)» del Lab può fissarli.
 - [ ] L'uomo d'arme non ha ancora animazioni di attacco proprie (in combattimento resta in guardia).
+- [x] Cavalieri: emblema (cimiero) sull'elmo e mantello, a cavallo e a piedi; a piedi spada nella mano destra e scudo.
+- [x] Cavalieri smontati nel torneo (prima figura generica `swordsman`) e nel campo di addestramento.
 - [ ] Definire come vengono chiamati in campo uomini d'arme L3 e cavalieri L4 (in attesa del product owner); oggi all'allarme si riparano.
 - [ ] Statistiche dell'uomo d'arme fra fante e cavaliere (proposta: 14 PV, armatura 2, combattimento 3).
 

@@ -90,7 +90,8 @@
       }
       // The man-at-arms draws whole (gambeson, armour, two-handed weapon): no separate posed weapon.
       if(type==='manAtArms'){drawSoldierFigureUnmasked(p,z,type,id,phase,livery);ctx.restore();return}
-      drawSoldierFigureUnmasked(p,z,armed?'unarmed':type,id,phase,livery);
+      // Knights keep their cloak and crest on the posed body ('knightUnarmed').
+      drawSoldierFigureUnmasked(p,z,armed?(type==='knight'?'knightUnarmed':'unarmed'):type,id,phase,livery);
       if(type==='pikeman'||type==='herald')drawSpearShield(base,scale,bodyW,bodyH,bodyY,id,livery,pose);
       if(type==='herald'){/* standard instead of the spear: drawn by the combat overlay */}
       else if(type==='spearman'||type==='pikeman')drawSpear(base,scale,bodyW,bodyH,bodyY,headY,pose);
@@ -145,16 +146,17 @@
   function drawSword(base,scale,bodyW,bodyH,bodyY,top,id,phase,livery,pose){
     const side=pose.dirX>=0?1:-1,swing=Math.sin(phase*Math.PI*2)*3.2*scale*(1-pose.ready);
     const guard=pose.ready*1.2*scale;
-    drawQuarteredShield(base.x-bodyW*.62+pose.dirX*guard,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery||soldierLivery(id),'#b7aa8f',scale,!livery,livery?'oval':soldierShieldStyle());
-    const hx=base.x+bodyW*.42,hy=bodyY+bodyH*.16;
+    // Shield on the left arm (screen right), sword in the right hand (screen left): the figure faces the viewer.
+    drawQuarteredShield(base.x+bodyW*.62+pose.dirX*guard,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery||soldierLivery(id),'#b7aa8f',scale,!livery,livery?'oval':soldierShieldStyle());
+    const hx=base.x-bodyW*.42,hy=bodyY+bodyH*.16;
     // Wind-up raises the blade back, the cut sweeps it down toward the foe.
     const theta=side*(pose.attack<0?pose.attack*.9:pose.attack*1.6)+side*pose.ready*.15;
     ctx.save();
     ctx.translate(hx,hy);ctx.rotate(theta);ctx.translate(-hx,-hy);
     ctx.strokeStyle='#c4c7c8';ctx.lineWidth=Math.max(1,1.15*scale);
-    ctx.beginPath();ctx.moveTo(hx,hy);ctx.lineTo(base.x+bodyW*.80+swing,top-7.5*scale);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(hx,hy);ctx.lineTo(base.x-bodyW*.80-swing,top-7.5*scale);ctx.stroke();
     ctx.strokeStyle='#76563b';ctx.lineWidth=Math.max(1,1.2*scale);
-    ctx.beginPath();ctx.moveTo(base.x+bodyW*.23,bodyY+bodyH*.05);ctx.lineTo(base.x+bodyW*.52,bodyY+bodyH*.27);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(base.x-bodyW*.23,bodyY+bodyH*.05);ctx.lineTo(base.x-bodyW*.52,bodyY+bodyH*.27);ctx.stroke();
     ctx.restore();
   }
   function reset(){lastEventEnd=-1e9}
