@@ -1,17 +1,19 @@
 'use strict';
 // Local map outline inherited from the regional HEX Voronoi territory.
 //
-// The territory polygon (regional coordinates) is centred and uniformly scaled
-// into the legacy 100U buildable box, north up: that polygon IS the buildable
-// zone. The world border is the same polygon offset outwards by OFFSET (50U,
-// rounded corners), so it always fits the 200U canvas. The 50U ring is split
+// The territory polygon (regional coordinates) is centred on the canvas and
+// uniformly scaled, north up, to the legacy buildable AREA (100x100 = 10000 U²):
+// that polygon IS the buildable zone. The world border is the same polygon
+// offset outwards by OFFSET (50U, rounded corners). Hex maps use a 240U canvas
+// (HEX_WORLD) so the border fits; a very elongated cell is shrunk just enough
+// to stay inside it. Legacy square maps keep 200U. The 50U ring is split
 // among the territory's PHYSICAL regional neighbours by intersecting it with
 // their own Voronoi cells, carried into the same local frame: a vertex of the
 // centre (where three cells meet) is split along the real Voronoi edge between
 // the two neighbours. Neighbour counts follow the regional geometry (often 6,
 // 5 or 7 after jitter), never a fixed 8-slot compass.
 (function(root){
-  const OFFSET=50,BOX=100,MARGIN=1,CENTER=Object.freeze({x:100,y:100}),WORLD=200;
+  const OFFSET=50,BOX=100,TARGET_AREA=BOX*BOX,MARGIN=1,LEGACY_WORLD=200,HEX_WORLD=240;
   const FEATHER=25,SECTOR_FEATHER=10,ARC_STEP=Math.PI/18,PERIMETER_SAMPLES=720;
 
   const finitePoint=p=>p&&Number.isFinite(+p.x)&&Number.isFinite(+p.y);
@@ -93,12 +95,16 @@
     return{total,at};
   }
 
-  function create(shape){
+  function create(shape,{world=HEX_WORLD}={}){
     if(!shape||!validRing(shape.polygon))return null;
+    const WORLD=world,CENTER={x:world/2,y:world/2};
     const source=shape.polygon.map(p=>({x:+p.x,y:+p.y})),b=bounds(source);
-    const span=Math.max(b.maxX-b.minX,b.maxY-b.minY);
-    if(!(span>0))return null;
-    const scale=(BOX-2*MARGIN)/span,cx=(b.minX+b.maxX)/2,cy=(b.minY+b.maxY)/2;
+    const span=Math.max(b.maxX-b.minX,b.maxY-b.minY),area0=Math.abs(signedArea(source));
+    if(!(span>0)||!(area0>0))return null;
+    // Same buildable area as the legacy square, unless the border would leave the canvas.
+    const fit=(world-2*OFFSET-2*MARGIN)/span;
+    if(!(fit>0))return null;
+    const scale=Math.min(Math.sqrt(TARGET_AREA/area0),fit),cx=(b.minX+b.maxX)/2,cy=(b.minY+b.maxY)/2;
     const toLocal=p=>({x:CENTER.x+(+p.x-cx)*scale,y:CENTER.y+(+p.y-cy)*scale});
     const build=positive(source.map(toLocal));
     const outer=offsetConvex(hull(build),OFFSET);
@@ -179,7 +185,7 @@
     }
     const signature=[build,...sectors.map(s=>s.id+':'+s.biome)].map(x=>Array.isArray(x)?x.map(p=>p.x.toFixed(2)+','+p.y.toFixed(2)).join(';'):x).join('|');
     return Object.freeze({
-      version:1,offset:OFFSET,scale,build,outer,sectors,runs,perimeter:per.total,signature,
+      version:2,world,center:CENTER,offset:OFFSET,scale,build,outer,sectors,runs,perimeter:per.total,signature,
       contains,inBuild,inWorld,sectorAt,weights,runsFor,runSample,pointAt:per.at,
       distanceOutsideBuild:p=>signedDistance(p,build),distanceOutsideWorld:p=>signedDistance(p,outer),
       buildArea:Math.abs(signedArea(build)),outerArea:Math.abs(signedArea(outer))
@@ -189,10 +195,12 @@
   let cached=null,cachedFor=null;
   function current(){
     const shape=root.__CONQUER_REGIONAL_DEMO__?.shape||null;
-    if(shape!==cachedFor){cachedFor=shape;try{cached=create(shape)}catch(error){console.warn('CONQUER_LOCAL_SHAPE_INVALID',error);cached=null}}
+    if(shape!==cachedFor){cachedFor=shape;try{cached=create(shape,{world:HEX_WORLD})}catch(error){console.warn('CONQUER_LOCAL_SHAPE_INVALID',error);cached=null}}
     return cached;
   }
-  const api=Object.freeze({OFFSET,BOX,create,current,active:()=>!!current(),
+  // Canvas size of the local map: read once by settlement-core.js (WORLD).
+  const worldSize=()=>current()?HEX_WORLD:LEGACY_WORLD;
+  const api=Object.freeze({OFFSET,BOX,TARGET_AREA,LEGACY_WORLD,HEX_WORLD,create,current,worldSize,active:()=>!!current(),
     geometry:Object.freeze({contains,signedArea,signedDistance,ringDistance,offsetConvex,clipConvex,hull,bounds})});
   if(typeof module!=='undefined'&&module.exports)module.exports=api;
   root.ConquerLocalShape=api;

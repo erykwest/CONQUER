@@ -22,13 +22,15 @@ function lattice(jitter=0){
 
 const s=S.create(lattice());
 assert(s,'shape created');
+const C=S.HEX_WORLD/2,WMAX=S.HEX_WORLD;
 const bb=G.bounds(s.build),ob=G.bounds(s.outer);
-// Buildable polygon fits the legacy 100U box, centred, north up.
-assert(bb.minX>=50-1e-6&&bb.maxX<=150+1e-6&&bb.minY>=50-1e-6&&bb.maxY<=150+1e-6,'build fits 100U box '+JSON.stringify(bb));
-assert(Math.abs((bb.minY+bb.maxY)/2-100)<1e-6&&Math.abs((bb.minX+bb.maxX)/2-100)<1e-6,'build centred');
+assert.strictEqual(s.world,240,'hex maps use a 240U canvas');
+// Buildable polygon keeps the legacy 100x100 area, centred, north up.
+assert(Math.abs(s.buildArea-10000)<1,'build area 10000, got '+s.buildArea);
+assert(Math.abs((bb.minY+bb.maxY)/2-C)<1e-6&&Math.abs((bb.minX+bb.maxX)/2-C)<1e-6,'build centred');
 assert(bb.maxY-bb.minY>bb.maxX-bb.minX,'pointy-top hex stays north-up');
 // World border = 50U offset, inside the 200U canvas.
-assert(ob.minX>=0&&ob.minY>=0&&ob.maxX<=200&&ob.maxY<=200,'outer fits canvas '+JSON.stringify(ob));
+assert(ob.minX>=0&&ob.minY>=0&&ob.maxX<=WMAX&&ob.maxY<=WMAX,'outer fits canvas '+JSON.stringify(ob));
 for(let i=0;i<s.outer.length;i+=3){
   const d=G.ringDistance(s.outer[i],s.build);
   assert(Math.abs(d-50)<.05,'outer vertex at 50U from build, got '+d.toFixed(3));
@@ -45,12 +47,12 @@ assert(Math.abs(total-s.perimeter)<1e-6,'runs cover the whole perimeter');
 for(const id of owners)assert(s.runsFor(id)[0].length>s.perimeter/12,'sector '+id+' gets a fair share of the border');
 
 // Weights: pure centre inside the buildable polygon, pure neighbour deep in its sector.
-assert.deepStrictEqual(s.weights({x:100,y:100},'@c'),{'@c':1});
-const east={x:190,y:100};
+assert.deepStrictEqual(s.weights({x:C,y:C},'@c'),{'@c':1});
+const east={x:ob.maxX-4,y:C};
 assert.strictEqual(s.sectorAt(east).id,'n0');
 assert(Math.abs((s.weights(east,'@c').forest||0)-1)<1e-6,'east sector is the east neighbour biome');
 const sum=w=>Object.values(w).reduce((a,b)=>a+b,0);
-for(let y=1;y<200;y+=7)for(let x=1;x<200;x+=7){
+for(let y=1;y<WMAX;y+=7)for(let x=1;x<WMAX;x+=7){
   const w=s.weights({x,y},'@c');
   assert(Math.abs(sum(w)-1)<1e-9,'weights normalised at '+x+','+y);
 }
@@ -60,15 +62,15 @@ const probe={x:north.x,y:north.y-40},w=s.weights(probe,'@c');
 assert(w.swamp>.3&&w.sea>.3,'north vertex blends the two neighbours meeting there: '+JSON.stringify(w));
 
 // World mask.
-assert(s.inWorld({x:100,y:100})&&s.inWorld({x:100,y:ob.minY+1}));
+assert(s.inWorld({x:C,y:C})&&s.inWorld({x:C,y:ob.minY+1}));
 assert(!s.inWorld({x:1,y:1}),'canvas corner is off-map');
-assert(s.inBuild({x:100,y:100})&&!s.inBuild({x:100,y:bb.minY-1}));
+assert(s.inBuild({x:C,y:C})&&!s.inBuild({x:C,y:bb.minY-1}));
 
 // Run samples sit on the border, inside their own sector.
 for(const id of owners){
   const p=s.runSample(id,.5);
   assert(Math.abs(G.ringDistance(p,s.outer))<1e-6,'sample on border');
-  const q={x:p.x+(100-p.x)*.01,y:p.y+(100-p.y)*.01};
+  const q={x:p.x+(C-p.x)*.01,y:p.y+(C-p.y)*.01};
   assert.strictEqual(s.sectorAt(q).id,id,'midpoint of run belongs to its sector');
 }
 
@@ -76,14 +78,21 @@ for(const id of owners){
 for(const jitter of [.08,.15]){
   const j=S.create(lattice(jitter));
   const jb=G.bounds(j.outer);
-  assert(jb.minX>=0&&jb.maxX<=200&&jb.minY>=0&&jb.maxY<=200);
+  assert(jb.minX>=0&&jb.maxX<=WMAX&&jb.minY>=0&&jb.maxY<=WMAX);
   assert(Math.abs(j.runs.reduce((a,r)=>a+r.length,0)-j.perimeter)<1e-6);
 }
 // Territory on the finite regional edge: missing neighbours continue the territory itself.
 const edge=lattice();edge.neighbors=edge.neighbors.filter(n=>n.id!=='n0');
 const e=S.create(edge);
-assert(e.weights({x:195,y:100},'@c')['@c']>.99,'no neighbour beyond the regional edge -> own biome');
+assert(e.weights({x:G.bounds(e.outer).maxX-3,y:C},'@c')['@c']>.99,'no neighbour beyond the regional edge -> own biome');
 
+// An elongated cell is shrunk only as much as the 240U canvas requires.
+const long=S.create({polygon:[{x:0,y:0},{x:300,y:0},{x:300,y:40},{x:0,y:40}],neighbors:[]});
+const lb=G.bounds(long.outer);
+assert(lb.minX>=0&&lb.maxX<=WMAX&&long.buildArea<10000,'elongated cell fitted to canvas');
+// Legacy 200U canvas still available to callers that ask for it.
+const legacy=S.create(lattice(),{world:200}),gb=G.bounds(legacy.outer);
+assert(gb.maxX<=200&&gb.maxY<=200&&legacy.world===200);
 // Invalid payloads fall back to the legacy square map.
 assert.strictEqual(S.create(null),null);
 assert.strictEqual(S.create({polygon:[{x:0,y:0},{x:1,y:NaN},{x:2,y:0}]}),null);

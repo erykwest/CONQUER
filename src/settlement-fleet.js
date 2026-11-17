@@ -18,7 +18,7 @@
   // Off the coast at anchor: in deep water, spread out so ships don't overlap.
   function anchorPose(key,n){
     const sea=(State.environment||[]).find(f=>f.type==='sea'&&f.coastline?.length>1);if(!sea)return null;
-    const mid={x:100,y:100},hit=window.ConquerPier.coastHit(mid);if(!hit)return null;
+    const mid={x:WORLD/2,y:WORLD/2},hit=window.ConquerPier.coastHit(mid);if(!hit)return null;
     const t={x:-hit.normal.y,y:hit.normal.x},d=7+S().model(key).B,along=(n%5-2)*9;
     return{x:hit.point.x+hit.normal.x*d+t.x*along,y:hit.point.y+hit.normal.y*d+t.y*along,heading:Math.atan2(t.y,t.x),z:0};
   }

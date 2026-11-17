@@ -28,12 +28,12 @@
   };
   const existing=trim();if(existing!==false)return existing;
   let best=null;
-  for(let y=2;y<200;y+=4)for(let x=2;x<200;x+=4){const p={x,y},body=wet(p);if(!body)continue;for(const end of [0,pts.length-1]){const distance=Math.hypot(p.x-pts[end].x,p.y-pts[end].y);if(!best||distance<best.distance)best={p,end,distance};}}
+  for(let y=2;y<WORLD;y+=4)for(let x=2;x<WORLD;x+=4){const p={x,y},body=wet(p);if(!body)continue;for(const end of [0,pts.length-1]){const distance=Math.hypot(p.x-pts[end].x,p.y-pts[end].y);if(!best||distance<best.distance)best={p,end,distance};}}
   if(!best)return line;
   if(best.end===0)pts.reverse();
   const a=pts.at(-1),prev=pts.at(-2),b=best.p,L=Math.hypot(a.x-prev.x,a.y-prev.y)||1,reach=Math.min(12,best.distance/3);
   const c={x:a.x+(a.x-prev.x)/L*reach,y:a.y+(a.y-prev.y)/L*reach},d=lerp(a,b,.7);
-  for(let i=1;i<=32;i++){const t=i/32,u=1-t;pts.push({x:clamp(u*u*u*a.x+3*u*u*t*c.x+3*u*t*t*d.x+t*t*t*b.x,0,200),y:clamp(u*u*u*a.y+3*u*u*t*c.y+3*u*t*t*d.y+t*t*t*b.y,0,200)})}
+  for(let i=1;i<=32;i++){const t=i/32,u=1-t;pts.push({x:clamp(u*u*u*a.x+3*u*u*t*c.x+3*u*t*t*d.x+t*t*t*b.x,0,WORLD),y:clamp(u*u*u*a.y+3*u*u*t*c.y+3*u*t*t*d.y+t*t*t*b.y,0,WORLD)})}
   pts=dense(pts);return trim()||line;
  }
  function join(branch,trunks,bodies,obstacles){
@@ -68,7 +68,7 @@
   for(let branch=0;branch<2;branch++){
    const sign=branch?1:-1,fraction=.70+branch*.065+rnd()*.02,reach=Math.min(24,Math.max(8,length*.075));
    const desired={x:end.x+nx*sign*reach,y:end.y+ny*sign*reach};let target=null,score=Infinity;
-   for(let y=Math.max(1,end.y-reach-5);y<Math.min(200,end.y+reach+5);y+=1.5)for(let x=Math.max(1,end.x-reach-5);x<Math.min(200,end.x+reach+5);x+=1.5){
+   for(let y=Math.max(1,end.y-reach-5);y<Math.min(WORLD,end.y+reach+5);y+=1.5)for(let x=Math.max(1,end.x-reach-5);x<Math.min(WORLD,end.x+reach+5);x+=1.5){
     const p={x,y};if(!environmentContains(receiver,p)||(x-end.x)*nx*sign+(y-end.y)*ny*sign<3)continue;
     if(![[3,0],[-3,0],[0,3],[0,-3]].some(([dx,dy])=>!environmentContains(receiver,{x:x+dx,y:y+dy})))continue;
     const distance=Math.hypot(x-desired.x,y-desired.y);if(distance<score){score=distance;target=p;}
@@ -77,7 +77,7 @@
    const root=length*fraction,n=Math.max(16,Math.ceil(length-root)),path=[];
    for(let i=0;i<=n;i++){
     const t=i/n,ease=t*t*(3-2*t),p=at(root+(length-root)*t),q={x:p.x+(target.x-end.x)*ease,y:p.y+(target.y-end.y)*ease};
-    if(q.x<0||q.x>200||q.y<0||q.y>200)break;
+    if(q.x<0||q.x>WORLD||q.y<0||q.y>WORLD)break;
     path.push(q);if(i>1&&environmentContains(receiver,q))break;
    }
    if(path.length<3||!environmentContains(receiver,path.at(-1)))continue;
@@ -120,7 +120,7 @@
    // follow its meanders alongside it. Two tributaries cannot share a heading.
    if(Math.abs((axis.x*nx+axis.y*ny)/axisLength)>.75)continue;
    if(used.some(f=>{const start=f.points[0],end=f.points.at(-1),dx=start.x-end.x,dy=start.y-end.y;return(dx*nx+dy*ny)/(Math.hypot(dx,dy)||1)>.86}))continue;
-   const reach=Math.min(...[[nx,200-target.x,target.x],[ny,200-target.y,target.y]].map(([v,pos,neg])=>Math.abs(v)<1e-9?Infinity:(v>0?pos:neg)/Math.abs(v)));
+   const reach=Math.min(...[[nx,WORLD-target.x,target.x],[ny,WORLD-target.y,target.y]].map(([v,pos,neg])=>Math.abs(v)<1e-9?Infinity:(v>0?pos:neg)/Math.abs(v)));
    if(reach<28)continue;
    const phase=rnd()*Math.PI*2,amplitude=5+rnd()*8,frequency=1+rnd(),n=Math.ceil(reach/1.5),points=[];
    const angle=TRIBUTARY_ANGLE_DEG*Math.PI/180,ox=nx*Math.sin(angle)-tx*Math.cos(angle),oy=ny*Math.sin(angle)-ty*Math.cos(angle);
@@ -135,7 +135,7 @@
    // Tangent-continuous approach: the last 9U retain exactly the downstream angle.
    for(let i=1;i<=6;i++)points.push(lerp(stem,target,i/6));
    points[points.length-1]=target;
-   if(points.some(p=>p.x<-.001||p.y<-.001||p.x>200.001||p.y>200.001||bodies.some(f=>environmentContains(f,p))||blocked(p)))continue;
+   if(points.some(p=>p.x<-.001||p.y<-.001||p.x>WORLD+.001||p.y>WORLD+.001||bodies.some(f=>environmentContains(f,p))||blocked(p)))continue;
    let crossing=false;
    for(let i=1;i<points.length&&!crossing;i++)for(const line of lines){
     for(let j=1;j<line.points.length;j++){
@@ -162,10 +162,10 @@
   if(!pts.some(blocked))return line;
   const clear=(a,b)=>{const n=Math.ceil(Math.hypot(b.x-a.x,b.y-a.y)*2);for(let j=0;j<=n;j++)if(blocked(lerp(a,b,n?j/n:0)))return false;return true};
   function detour(a,b){
-   const n=101,key=(x,y)=>y*n+x,point=i=>({x:(i%n)*2,y:Math.floor(i/n)*2}),cache=new Map();
+   const n=Math.round(WORLD/2)+1,key=(x,y)=>y*n+x,point=i=>({x:(i%n)*2,y:Math.floor(i/n)*2}),cache=new Map();
    const free=i=>{if(!cache.has(i))cache.set(i,!blocked(point(i)));return cache.get(i)};
    const snap=p=>{let best=null;for(let dy=-3;dy<=3;dy++)for(let dx=-3;dx<=3;dx++){
-    const x=clamp(Math.round(p.x/2)+dx,0,100),y=clamp(Math.round(p.y/2)+dy,0,100),i=key(x,y),q=point(i),d=Math.hypot(q.x-p.x,q.y-p.y);
+    const x=clamp(Math.round(p.x/2)+dx,0,n-1),y=clamp(Math.round(p.y/2)+dy,0,n-1),i=key(x,y),q=point(i),d=Math.hypot(q.x-p.x,q.y-p.y);
     if((!best||d<best.d)&&free(i)&&clear(p,q))best={i,d};
    }return best?.i};
    const start=snap(a),goal=snap(b);if(start===undefined||goal===undefined)return null;
