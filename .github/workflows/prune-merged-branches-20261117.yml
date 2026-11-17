@@ -1,0 +1,71 @@
+name: One-shot cleanup of merged branches (2026-11-17)
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/prune-merged-branches-20261117.yml
+permissions:
+  contents: write
+  pull-requests: read
+jobs:
+  prune:
+    if: github.event.head_commit.message == 'chore: prune verified merged branches 2026-11-17'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Delete only reviewed merged branch refs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          deleted=0
+          skipped=0
+          while IFS='|' read -r branch expected pr; do
+            actual="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/${branch}" --jq '.object.sha' 2>/dev/null || true)"
+            if [[ "$actual" != "$expected" ]]; then
+              echo "SKIP ${branch}: head moved or missing"
+              skipped=$((skipped+1))
+              continue
+            fi
+            merged="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${pr}" --jq '.merged')"
+            prhead="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${pr}" --jq '.head.sha')"
+            base="$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${pr}" --jq '.base.ref')"
+            if [[ "$merged" != "true" || "$prhead" != "$expected" || "$base" != "main" ]]; then
+              echo "SKIP ${branch}: PR not verified"
+              skipped=$((skipped+1))
+              continue
+            fi
+            gh api -X DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${branch}" --silent
+            echo "DELETED ${branch} (PR #${pr})"
+            deleted=$((deleted+1))
+          done <<'MERGED_BRANCHES'
+          combat-ai|3bd217def2b264ee520dc0dc15d9fa79d701a7a0|258
+          docs/foot-messenger-after-lobby-20261115|f89cc155f2961887739516be2701ecb211dd6cf7|242
+          docs/public-server-stats-only-20261115|5046dea4cfed345da6d248d7a19947f992e67f2e|240
+          docs/strategic-movement-speed-ratios-20261115|e08041f09fdfb5f5fea10f4c921e278df66fe69e|244
+          experiment/regional-biome-sectors|7922f6d73305a29a3366ebf4a2d273ca794339ef|162
+          feature/alert-feed|35edd9e61b99760b2d1614cc3e595d12461bf9d5|256
+          feature/figure-capsules-events|0f8519b1ada0afe108162e5fb5acc4363ae417f1|243
+          feature/figure-hands-feet|8725517aa0d5eab2a6438a5049adc154c3f9480e|264
+          feature/gore|8041c2fe8e9572f340b63f7bcddca558d2a0b075|263
+          feature/wall-road-gates|db9110ce892ac771772a1daab5f85bb7d144ddc7|246
+          feature/wildlife-outlaws|db543e1f7d9bfef0fa482de1ebf107a2c6d06ac1|253
+          fix/asset-audit-baseline|bcaa1e5127fcc61256a4272497eddc8032e95904|262
+          fix/audit-hardening-20261113|0eeb2a315c822e5669c40728540f3dc5edec7575|239
+          fix/brazier-3d|711d428a25ef5eb8c9da131c61c3ff66f5b5716b|257
+          fix/coastal-cliff-beach-20261115|c8dfa8d67829fc2aba5093ef273c3edc07b804fe|252
+          fix/idle-peasants|8a4625c146874843f1e2e6f0266e980ff6a14b74|212
+          fix/inspector-quickfixes|9965aef3db925acd0961a0dd5faeb632bc92ef62|245
+          fix/mastio-h4-load-20261116|50a26968beb355a6fda7743a858a394610aecf29|254
+          fix/microfix|d314b2a0a81728f28caa153b6ac7120d4ed565a3|251
+          fix/move-order-lag|295487d7a3b364fb4b4620d0c5d870becdc44d07|259
+          fix/outlaw-combat-stats|8562f4a3e92c6cdcd9908fe95778ec9a65682cc9|261
+          fix/regional-postmerge-20261115|01cacd4bb49ea0a721f5407bfaa88b5a7f06f8e3|250
+          fix/sheep-fields|db61181d530fc8fd0a5eb6bd17e7d1743cc3dba5|260
+          fix/ui-v2-quickfixes|fd86c9394f679f5420a0089535eac43af8ec2e73|199
+          fix/wall-free-angle|042dfcfd5e4640fcff8bef5ea15ae198265b7e95|238
+          fix/wall-patrol-rings|353174551296989cdde015d16da2c114c4ea5e77|248
+          perf/regional-roads-20261116|0f976ba73af904f90e66ee59bd58aa69606eb627|255
+          retire-25d-renderer|3825305e38dfaabfeb9796f3c401e9e38178b7b6|204
+          MERGED_BRANCHES
+          echo "SUMMARY: deleted=${deleted}, skipped=${skipped}"
