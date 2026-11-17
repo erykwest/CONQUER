@@ -300,7 +300,8 @@
             p={x:u.x+offset,y:u.y+(row-.4)*spacing};
           }
           const torch=u.kind==='patrol'&&i===0&&window.ConquerCamp?.isNight();
-          characters.push({p,type:torch?'unarmed':'spearman',id:u.id+':'+i,
+          // Battle squad (pikemen) carry shields; patrol guards spear only.
+          characters.push({p,type:torch?'unarmed':u.kind==='squad'?'pikeman':'spearman',id:u.id+':'+i,
             flag:u.kind==='squad'&&i===0,torch,unit:u,index:i,z});
         }
       }
@@ -312,7 +313,7 @@
         drawPosedFigure(soldier.p,soldier.type,soldier.id,null,soldier.unit,soldier.index,soldier.z);
         if(soldier.unit.defeated)continue;
         // Without the combat animations, a spear thrust line still shows engagement.
-        if(!anim&&soldier.type==='spearman'&&soldier.unit.engaged){
+        if(!anim&&(soldier.type==='spearman'||soldier.type==='pikeman')&&soldier.unit.engaged){
           const target=combat.enemy.filter(e=>!e.neutral&&!e.defeated&&e.stats?.hp>0)
             .sort((a,b)=>dist(a,soldier.unit)-dist(b,soldier.unit))[0];
           if(target&&dist(target,soldier.unit)<1){

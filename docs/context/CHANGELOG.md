@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-17 — MIL-FIG-01 · Picchieri con scudo
+
+`fix/squad-pikemen-shield`: i picchieri della squadra portano lo scudo del regno sul braccio sinistro, con la lancia a destra (nuova figura `pikeman`); le guardie di pattuglia restano senza scudo. Il Lab ha la voce «Picchiere». In BACKLOG le altre richieste aperte: stendardo al posto della lancia, torcia in più della lancia per le guardie di notte, leva col cappuccio in livrea. ROADMAP e DECISIONS invariate: è un cambio di sola resa.
+
 ### 2026-11-16 — ASSET-AUDIT-261116 · Audit del Lab di nuovo verde
 
 `fix/asset-audit-baseline`: il controllo `sagoma-conservata` confronta le aree disegnate invece della densità nel riquadro (falso errore sulla torre tonda con latrina crollata); baseline `qa/asset-audit-baseline.json` rigenerata dal report della CI dopo la revisione dei render cambiati dal 12/11. Segnalato in BACKLOG il cantiere vuoto delle torri in pietra L2+ nel Lab. ROADMAP e DECISIONS invariate: nessun contratto di gioco cambiato.

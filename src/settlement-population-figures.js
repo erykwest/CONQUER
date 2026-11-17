@@ -360,7 +360,9 @@ function drawSoldierFigureUnmasked(p,z,type,id,phase=0,liveryOverride=null){
   ctx.fillStyle=VILLAGER_SKIN;ctx.beginPath();ctx.arc(base.x,headY,headR,0,Math.PI*2);ctx.fill();
   drawSoldierHelmet(base.x,headY,headR,liveryOverride?'cap':soldierHelmetStyle(),scale);
 
-  if(type==='spearman'){
+  if(type==='spearman'||type==='pikeman'){
+    // Pikemen (battle squad) carry the realm shield on the left arm; patrol guards ('spearman') none.
+    if(type==='pikeman')drawQuarteredShield(base.x-bodyW*.62,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery,'#b7aa8f',scale,!liveryOverride,liveryOverride?'oval':soldierShieldStyle());
     const x=base.x+bodyW*.55;
     ctx.strokeStyle='#7a5937';ctx.lineWidth=Math.max(1,1.05*scale);
     ctx.beginPath();ctx.moveTo(x,bodyY+bodyH*.43);ctx.lineTo(x-1.0*scale,headY-13*scale);ctx.stroke();

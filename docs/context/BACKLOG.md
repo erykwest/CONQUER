@@ -1,5 +1,14 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-17 — MIL-FIG-01 · Guardie, picchieri e leva distinguibili
+
+**Picchieri con scudo implementati sul branch `fix/squad-pikemen-shield`, non ancora uniti a main.** Richiesta del product owner (17/11/2026): tre figure militari distinte.
+
+- [x] Picchieri (squadra da 5): lancia nella mano destra e scudo del regno sul braccio sinistro (nuovo tipo di figura `pikeman`).
+- [ ] Picchieri: l'alfiere porta lo stendardo **al posto** della lancia (oggi lo ha in più).
+- [ ] Guardie (pattuglia da 2): lancia senza scudo; di notte il portatorcia tiene **anche** la lancia (oggi la torcia la sostituisce, figura `unarmed`).
+- [ ] Leva (popolani all'allarme o in leva straordinaria): niente livrea piena, solo un cappuccio coi colori della livrea sopra gli abiti di classe; con lancia e scudo, oppure arcieri di leva con l'arco. Oggi `dot.militia` disegna un fante in livrea piena (`settlement-population-figures.js`). Una versione col cappuccio non esiste in nessun branch o commit.
+
 ### 2026-11-16 — ASSET-AUDIT-261116 · Audit del Lab
 
 - [x] `sagoma-conservata` misura le aree, non la densità nel riquadro: niente falso errore quando le macerie di un elemento esterno cadono lontano.

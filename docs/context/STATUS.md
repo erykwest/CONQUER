@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-17 — MIL-FIG-01: picchieri con scudo (`fix/squad-pikemen-shield`)
+
+- **Codice sul branch, non ancora unito a main.** Prima, guardie (pattuglia) e picchieri (squadra) erano la stessa figura `spearman`, senza scudo. Nuovo tipo di figura `pikeman`: stessa lancia nella mano destra più lo scudo del regno sul braccio sinistro. Lo scudo usa la forma scelta in Militare › Equipaggiamento (`unitShield`) e in ingaggio avanza verso il nemico come quello del cavaliere a piedi.
+- File: `settlement-population-figures.js` (figura statica), `settlement-combat-anim.js` (`drawSpearShield`, figura in posa), `settlement-combat-render.js` (la squadra usa `pikeman`, la pattuglia resta `spearman`). Asset Lab: pulsante «Picchiere», voce di catalogo «Picchiere (squadra)», picchieri della scaramuccia con scudo.
+- **Verificato nel Lab** (Chromium del pannello): guardia senza scudo, picchiere con scudo in tutte e cinque le forme, ingaggio verso destra e verso sinistra, nessun errore in console.
+- **Prove locali PASS:** combat-anim, combat-render, patrol, camp, combat-engage, night-vision. Audit del Lab (`qa/asset-audit.mjs`) non eseguito in locale (Playwright non installato): lo esegue la CI.
+
 ### 2026-11-16 — ASSET-AUDIT-261116: audit completo del Lab di nuovo verde
 
 - Branch fix/asset-audit-baseline. Il job `browser` di «Asset Lab regression» falliva su ogni PR da quando la #251 è entrata in main: un errore (`sagoma-conservata` su «Pietra rotonda piccola L2 + latrina», stato elemento esterno crollato: copertura 56%) e 197 render cambiati rispetto a una baseline del 12/11.
