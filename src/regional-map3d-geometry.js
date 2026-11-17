@@ -587,10 +587,9 @@
       for(const p of [a,b,c])vertices.push(p.x,p.y,p.z,cr,cg,cb);
       triangles++;
     }
-    // The World Lab now generates EXACTLY twenty Voronoi cells per square
-    // logical territory. Use those real cells as the visual mesh: never fan-
-    // triangulate their concave aggregated territory outlines or invent a
-    // second incompatible Voronoi grid over the authoritative geometry.
+    // World Lab provides exactly 20 clipped interior Voronoi polygons for
+    // each HEXAGONAL authoritative macro territory. Render those same polygons
+    // without regenerating a second independent visual tessellation.
     const actualFine=Array.isArray(snapshot.fineCells)&&snapshot.fineCells.length>0;
     const sourceBase=actualFine?(()=>{
       const parts=snapshot.fineCells.map(c=>({
@@ -806,7 +805,23 @@
         mountains++;
       }
     }
-    const {borders,coastlines,unmatched}=aggregateEdges(base.parts,snapshot.terrain,snapshot.cells);
+    // Separately clipped fine tessellations on two sides of a macro edge
+    // may use different subdivision points (T-junctions). Therefore the
+    // canonical macro edges — not coincident microcell-edge pairs — define
+    // physical borders, coastlines and river placement. All are the EXACT
+    // boundaries drawn by the 2D source, with no visual ownership drift.
+    const realBorders=actualFine&&Array.isArray(snapshot.edges)&&snapshot.edges.length
+      ?snapshot.edges.map(e=>({
+        start:e.start,end:e.end,macroIds:[...new Set(e.macroIds||[])]
+      })).filter(e=>e.macroIds.length>0):null;
+    const borderData=realBorders?{
+      borders:realBorders,
+      coastlines:realBorders.filter(e=>e.macroIds.length===2&&
+        (['sea','lake'].includes(snapshot.terrain[e.macroIds[0]])!==
+         ['sea','lake'].includes(snapshot.terrain[e.macroIds[1]]))),
+      unmatched:realBorders.filter(e=>e.macroIds.length===1).length
+    }:aggregateEdges(base.parts,snapshot.terrain,snapshot.cells);
+    const {borders,coastlines,unmatched}=borderData;
     const {riverEdges,riverStats}=deriveRiverBorders(snapshot,borders);
     return{
       vertices:new Float32Array(vertices),pickRanges,pickIndex:{bucketSize:pickBucketSize,buckets:pickBuckets,maxAbsZ:pickMaxAbsZ},trees,reeds,peaks,mountainSummits,borders,coastlines,riverEdges,riverStats,
