@@ -151,6 +151,7 @@
   function head(ctx,o){
     const {lw}=o;
     const style=o.kind==='knight'?o.helmet:null;
+    if(o.kind==='knight')mantling(ctx,o,HELMET_TOP[style&&style!=='greathelm'?style:'greathelm']);
     if(style&&style!=='greathelm'){
       // Feudal helmet (State.policies.unitHelmet): open helmets show the face under a mail coif.
       const face=()=>{ctx.fillStyle=MAIL;ctx.beginPath();ctx.arc(123,22,13,0,Math.PI*2);ctx.fill();ctx.strokeStyle=OUTLINE;ctx.lineWidth=lw;ctx.stroke();
@@ -181,17 +182,17 @@
     }
     if(o.kind==='knight')crest(ctx,o,HELMET_TOP[style&&style!=='greathelm'?style:'greathelm']);
   }
-  // Knight's crest (product owner, 17/11/2026): a fan in the two tinctures on a short stalk, above
-  // any helmet; the same emblem the knight wears on foot (settlement-population-figures.js).
-  const HELMET_TOP={greathelm:4,barbuta:6,kettle:2,nasal:-4,cap:5};
+  // Knight's heraldic crest (product owner, 17/11/2026): mantling behind the helmet, torse and
+  // crest figure on top, the same drawing the knight wears on foot (drawHeraldicMantling /
+  // drawHeraldicCrest in settlement-population-figures.js, loaded before this file). The figure
+  // comes from opts.crest, else from the seed.
+  const HELMET_TOP={greathelm:4,barbuta:6,kettle:2,nasal:-4,cap:5},HELM_HALF=13;
+  const crestKind=o=>{const list=typeof KNIGHT_CRESTS!=='undefined'?KNIGHT_CRESTS:['wings'];return list.includes(o.crest)?o.crest:list[(o.seed||0)%list.length]};
+  function mantling(ctx,o,top){
+    if(typeof drawHeraldicMantling==='function')drawHeraldicMantling(ctx,123,top,HELM_HALF,o.livery,o.lw*.8);
+  }
   function crest(ctx,o,top){
-    const x=123,base=top-7,r=16;
-    poly(ctx,[[121,top+1],[125,top+1],[125,base],[121,base]],STEEL,OUTLINE,o.lw*.6);
-    ctx.beginPath();ctx.moveTo(x-r,base);ctx.ellipse(x,base,r,r*.85,0,Math.PI,Math.PI*2);ctx.closePath();
-    ctx.fillStyle=o.livery.main;ctx.fill();
-    ctx.save();ctx.clip();ctx.fillStyle=o.livery.alt;ctx.fillRect(x,base-r,r,r);ctx.restore();
-    ctx.strokeStyle=OUTLINE;ctx.lineWidth=o.lw*.8;ctx.stroke();
-    ctx.fillStyle=GOLD;ctx.beginPath();ctx.arc(x,base-r*.42,r*.2,0,Math.PI*2);ctx.fill();
+    if(typeof drawHeraldicCrest==='function')drawHeraldicCrest(ctx,123,top,HELM_HALF,crestKind(o),o.livery,o.lw*.8);
   }
   // Knight's cloak: from the shoulders, flying back over the horse's rump; lining in the second tincture.
   function cloak(ctx,o){
@@ -262,7 +263,7 @@
     const p=opts.pose||{},kind=opts.kind==='messenger'?'messenger':'knight';
     const alpha=p.alpha??1;if(alpha<=0)return;
     const state={kind,livery:opts.livery,paint:opts.paint,ready:p.ready||0,attack:p.attack||0,flash:p.flash||0,
-      fall:p.fall||0,charge:opts.mode==='run',helmet:opts.helmet||null,shield:opts.shield||null};
+      fall:p.fall||0,charge:opts.mode==='run',helmet:opts.helmet||null,shield:opts.shield||null,crest:opts.crest||null,seed:opts.seed||0};
     ctx.save();ctx.globalAlpha*=alpha;
     let unhorsed=null;
     window.ConquerAnimals.drawAnimal('horse',ctx,x,y,size,{t:opts.t||0,seed:opts.seed||0,coat:opts.coat,

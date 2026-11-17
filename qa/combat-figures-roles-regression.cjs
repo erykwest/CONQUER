@@ -33,6 +33,13 @@ assert.match(anim,/type==='knight'\?'knightUnarmed':'unarmed'/,'posed knight kee
 assert.match(anim,/const hx=base\.x-bodyW\*\.42/,'posed sword in the right hand (screen left)');
 assert.match(mounted,/if\(o\.kind==='knight'\)cloak\(ctx,o\);/,'mounted knight: cloak');
 assert.match(mounted,/if\(o\.kind==='knight'\)crest\(ctx,o,/,'mounted knight: crest on every helmet');
+// Heraldic crest: torse + figure (wings, antlers, horns, eagle, crown) + mantling behind the helmet,
+// one drawing shared by the knight on foot and on horseback, figure stable per knight.
+assert.match(figures,/const KNIGHT_CRESTS=Object\.freeze\(\['wings','antlers','horns','eagle','crown'\]\)/,'crest figures');
+assert.match(figures,/if\(knightly\)drawKnightMantling\([\s\S]{0,200}drawSoldierHelmet\([\s\S]{0,120}if\(knightly\)drawKnightCrest\(/,'mantling behind the helmet, crest above it');
+assert.match(mounted,/drawHeraldicMantling\(ctx,/,'mounted knight: same mantling');
+assert.match(mounted,/drawHeraldicCrest\(ctx,/,'mounted knight: same crest');
+assert.match(render,/crest:typeof knightCrestKind==='function'\?knightCrestKind\(id\):null/,'mounted knight keeps his own crest figure');
 assert.match(events,/drawSoldierFigureUnmasked\(p,g\+\.1,'knight',a\.id,a\.swing,liv\)/,'tournament fighters are dismounted knights');
 assert.match(garrisons,/drawSoldierFigure\(d\.p,d\.z,'knight',d\.id,d\.phase\)/,'training field: dismounted knights');
 assert.doesNotMatch(events,/'swordsman'/,'no generic swordsman left in the tournament');

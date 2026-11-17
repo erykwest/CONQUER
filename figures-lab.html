@@ -159,6 +159,7 @@ body.asset-catalog-static #labLegacyControls{display:none}
   </div>
   <div class="group" id="equipBox"><span>Equipaggiamento</span>
     <label>Elmo <select id="sHelmet"><option value="">Originale</option><option value="cap">Cervelliera</option><option value="kettle">Cappello d'arme</option><option value="nasal">Elmo a nasale</option><option value="barbuta">Barbuta</option><option value="greathelm">Elmo a staio</option></select></label>
+    <label>Cimiero <select id="sCrest"><option value="">Casuale (per cavaliere)</option><option value="wings">Ali</option><option value="antlers">Corna di cervo</option><option value="horns">Corna</option><option value="eagle">Aquila</option><option value="crown">Corona</option></select></label>
     <label>Scudo <select id="sShield"><option value="">Originale</option><option value="oval">Ovale</option><option value="round">Rotella</option><option value="heater">Triangolare</option><option value="kite">A mandorla</option><option value="pavise">Pavese</option></select></label>
   </div>
   <div class="group" id="maaBox" hidden><span>Uomo d'arme (L3)</span>
@@ -301,9 +302,9 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
   function setWardrobe(){const [season,weather]=$('wardrobe').value.split('|');window.ConquerWardrobe.preview={season,weather}}
   $('wardrobe').onchange=setWardrobe;setWardrobe();
   // Feudal unit equipment (State.policies.unitHelmet/unitShield), as chosen in Militare › Equipaggiamento.
-  function setEquip(){const p=State.policies||(State.policies={});p.unitHelmet=$('sHelmet').value;p.unitShield=$('sShield').value;
+  function setEquip(){const p=State.policies||(State.policies={});p.unitHelmet=$('sHelmet').value;p.unitShield=$('sShield').value;p.knightCrest=$('sCrest').value;
     p.manAtArms={weapon:$('maaWeapon').value,helmet:$('maaHelmet').value}}
-  $('sHelmet').onchange=$('sShield').onchange=$('maaWeapon').onchange=$('maaHelmet').onchange=setEquip;setEquip();
+  $('sHelmet').onchange=$('sShield').onchange=$('sCrest').onchange=$('maaWeapon').onchange=$('maaHelmet').onchange=setEquip;setEquip();
   document.querySelectorAll('[data-subject]').forEach(b=>b.onclick=()=>{subject=b.dataset.subject;fromAction=action='walk';trans=1;renderButtons()});
   $('actions').onclick=e=>{const k=e.target.dataset?.action;if(k&&k!==action){fromAction=action;action=k;trans=0;renderButtons()}};
 

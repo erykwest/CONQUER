@@ -14,6 +14,8 @@
 - [x] Uomo d'arme L3 nel Lab (pulsante «Uomo d'arme»): gonnello con lo stemma (variante F); elmo dei cavalieri e arma a due mani (alabarda, ascia, martello, spada) casuali per persona; il gruppo «Uomo d'arme (L3)» del Lab può fissarli.
 - [ ] L'uomo d'arme non ha ancora animazioni di attacco proprie (in combattimento resta in guardia).
 - [x] Cavalieri: emblema (cimiero) sull'elmo e mantello, a cavallo e a piedi; a piedi spada nella mano destra e scudo.
+- [x] Cimiero araldico: torciglio, mantellino e figura (ali, corna di cervo, corna, aquila, corona) casuale per cavaliere; il Lab può fissarla (tendina «Cimiero»).
+- [ ] Valutare se legare la figura del cimiero allo stemma della casata invece che al caso.
 - [x] Cavalieri smontati nel torneo (prima figura generica `swordsman`) e nel campo di addestramento.
 - [ ] Definire come vengono chiamati in campo uomini d'arme L3 e cavalieri L4 (in attesa del product owner); oggi all'allarme si riparano.
 - [ ] Statistiche dell'uomo d'arme fra fante e cavaliere (proposta: 14 PV, armatura 2, combattimento 3).

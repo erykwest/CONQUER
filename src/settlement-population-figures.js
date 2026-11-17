@@ -512,19 +512,93 @@ function drawKnightCloak(base,scale,bodyW,bodyH,top,livery){
   ctx.save();cloak();ctx.clip();ctx.fillStyle=livery.alt;ctx.fillRect(base.x-bodyW,hem-1.1*scale,bodyW*2,2*scale);ctx.restore();
   cloak();ctx.strokeStyle='rgba(25,24,22,.85)';ctx.lineWidth=lw;ctx.stroke();
 }
-// Knight's crest: a fan in the two tinctures on a short stalk, above any helmet (the man-at-arms
-// wears the same helmets without it).
+// Knight's heraldic crest (cimiero; product owner, 17/11/2026, from reference crests): a figure
+// standing on a torse (the twisted wreath in the two tinctures) with mantling (lambrequin)
+// hanging behind the helmet. The figure is one per knight, stable by id: wings, stag antlers,
+// curved horns, eagle, crown. Shared by the knight on foot and the mounted knight
+// (settlement-mounted2d.js): g the canvas, x the helmet's centre, top the helmet's top, u the
+// helmet's half width, lw the outline width. The man-at-arms wears the same helmets without it.
+const KNIGHT_CRESTS=Object.freeze(['wings','antlers','horns','eagle','crown']);
 const KNIGHT_CREST_TOP={greathelm:1.2,nasal:1.7,kettle:1.07,barbuta:1.06,cap:1.0};
-function drawKnightCrest(x,headY,headR,helmet,livery,scale){
-  const top=headY-headR*(KNIGHT_CREST_TOP[helmet]||1.05),r=headR*1.05,base=top-headR*.35,lw=Math.max(.5,.6*scale);
-  ctx.save();
-  ctx.fillStyle='#8a9196';ctx.fillRect(x-headR*.12,base,headR*.24,top-base+.1*scale);
-  const fan=()=>{ctx.beginPath();ctx.moveTo(x-r,base);ctx.ellipse(x,base,r,r*.85,0,Math.PI,Math.PI*2);ctx.closePath()};
-  fan();ctx.fillStyle=livery.main;ctx.fill();
-  ctx.save();fan();ctx.clip();ctx.fillStyle=livery.alt;ctx.fillRect(x,base-r,r,r);ctx.restore();
-  fan();ctx.strokeStyle='rgba(25,24,22,.85)';ctx.lineWidth=lw;ctx.stroke();
-  ctx.fillStyle='#d2ad4b';ctx.beginPath();ctx.arc(x,base-r*.42,Math.max(.5,r*.2),0,Math.PI*2);ctx.fill();
-  ctx.restore();
+const CREST_OUTLINE='rgba(25,24,22,.85)',CREST_GOLD='#d2ad4b',CREST_BONE='#e8dcc0';
+function knightCrestKind(id){
+  const pin=State.policies?.knightCrest;
+  if(KNIGHT_CRESTS.includes(pin))return pin;
+  let h=peasantHash(String(id)+':crest');h=Math.imul(h^(h>>>16),0x45d9f3b);h=(h^(h>>>16))>>>0;
+  return KNIGHT_CRESTS[h%KNIGHT_CRESTS.length];
+}
+// Mantling: two dagged strips of cloth from the top of the helmet down both sides, behind it.
+// Drawn BEFORE the helmet. Outside in the first tincture, the lining in the second.
+function drawHeraldicMantling(g,x,top,u,livery,lw){
+  g.save();
+  for(const s of [-1,1]){
+    const strip=()=>{g.beginPath();g.moveTo(x+s*u*.2,top+u*.1);
+      g.quadraticCurveTo(x+s*u*1.7,top+u*.3,x+s*u*1.75,top+u*1.6);
+      g.lineTo(x+s*u*1.45,top+u*1.35);g.lineTo(x+s*u*1.5,top+u*2.1);g.lineTo(x+s*u*1.15,top+u*1.7);
+      g.lineTo(x+s*u*1.1,top+u*2.4);g.quadraticCurveTo(x+s*u*.9,top+u*1.0,x+s*u*.2,top+u*.6);g.closePath()};
+    strip();g.fillStyle=livery.main;g.fill();
+    g.save();strip();g.clip();g.fillStyle=livery.alt;
+    g.beginPath();g.moveTo(x+s*u*1.75,top+u*1.2);g.lineTo(x+s*u*1.0,top+u*2.5);g.lineTo(x+s*u*1.9,top+u*2.5);g.closePath();g.fill();g.restore();
+    strip();g.strokeStyle=CREST_OUTLINE;g.lineWidth=lw;g.lineJoin='round';g.stroke();
+  }
+  g.restore();
+}
+// Torse and figure: drawn AFTER the helmet.
+function drawHeraldicCrest(g,x,top,u,kind,livery,lw){
+  const shape=(pts,fill)=>{g.beginPath();pts.forEach(([px,py],i)=>i?g.lineTo(x+px*u,top+py*u):g.moveTo(x+px*u,top+py*u));g.closePath();
+    g.fillStyle=fill;g.fill();g.strokeStyle=CREST_OUTLINE;g.lineWidth=lw;g.lineJoin='round';g.stroke()};
+  const branch=(pts,w,color=CREST_BONE)=>{for(const [c,ww] of [[CREST_OUTLINE,w+lw*1.6],[color,w]]){
+    g.strokeStyle=c;g.lineWidth=ww;g.lineCap='round';g.lineJoin='round';g.beginPath();
+    pts.forEach(([px,py],i)=>i?g.lineTo(x+px*u,top+py*u):g.moveTo(x+px*u,top+py*u));g.stroke()}};
+  const wreath=-.28;   // top of the torse; the figure stands on it
+  g.save();
+  if(kind==='wings'){
+    // A pair of tall wings, scalloped on the inside, in the two tinctures.
+    for(const [s,col] of [[-1,livery.main],[1,livery.alt]])
+      shape([[s*.25,wreath],[s*1.0,wreath-.2],[s*1.15,wreath-1.4],[s*.95,wreath-3.1],[s*.62,wreath-2.6],[s*.6,wreath-1.9],[s*.35,wreath-1.6],[s*.38,wreath-.9]],col);
+  }else if(kind==='antlers'){
+    for(const s of [-1,1]){
+      branch([[s*.3,wreath],[s*.75,wreath-.9],[s*.95,wreath-2.0],[s*1.35,wreath-2.9]],Math.max(.8,u*.2));
+      branch([[s*.8,wreath-1.1],[s*1.45,wreath-1.5]],Math.max(.7,u*.16));
+      branch([[s*.92,wreath-1.8],[s*.55,wreath-2.6]],Math.max(.7,u*.16));
+      branch([[s*1.15,wreath-2.45],[s*1.7,wreath-2.6]],Math.max(.6,u*.14));
+    }
+  }else if(kind==='horns'){
+    // Two horns curving out and up, in the first tincture with a gold tip.
+    for(const s of [-1,1]){
+      g.beginPath();g.moveTo(x+s*u*.25,top+u*wreath);
+      g.quadraticCurveTo(x+s*u*1.9,top+u*(wreath-.2),x+s*u*1.35,top+u*(wreath-2.5));
+      g.quadraticCurveTo(x+s*u*1.45,top+u*(wreath-.75),x+s*u*.3,top+u*(wreath-.55));g.closePath();
+      g.fillStyle=livery.main;g.fill();g.strokeStyle=CREST_OUTLINE;g.lineWidth=lw;g.stroke();
+      g.fillStyle=CREST_GOLD;g.beginPath();g.arc(x+s*u*1.35,top+u*(wreath-2.45),Math.max(.5,u*.14),0,Math.PI*2);g.fill();
+    }
+  }else if(kind==='eagle'){
+    // Eagle rising: a wing behind, neck and hooked head with a gold beak.
+    shape([[-.2,wreath],[-1.25,wreath-.6],[-1.5,wreath-2.4],[-.95,wreath-1.9],[-.75,wreath-2.5],[-.45,wreath-1.7],[-.05,wreath-.5]],livery.alt);
+    shape([[-.35,wreath],[.35,wreath],[.45,wreath-1.2],[.7,wreath-1.9],[.3,wreath-2.25],[-.15,wreath-1.9],[-.2,wreath-1.0]],livery.main);
+    shape([[.62,wreath-2.0],[1.15,wreath-1.85],[.95,wreath-1.55],[.6,wreath-1.65]],CREST_GOLD);
+    g.fillStyle='#16181a';g.beginPath();g.arc(x+u*.35,top+u*(wreath-1.95),Math.max(.4,u*.08),0,Math.PI*2);g.fill();
+  }else{
+    // Crown of gold with three points, a ball of the second tincture on each.
+    shape([[-.8,wreath],[.8,wreath],[.9,wreath-1.0],[.45,wreath-.55],[0,wreath-1.2],[-.45,wreath-.55],[-.9,wreath-1.0]],CREST_GOLD);
+    for(const [px,py] of [[-.9,-1.05],[0,-1.25],[.9,-1.05]]){g.fillStyle=livery.alt;g.beginPath();g.arc(x+px*u,top+u*(wreath+py),Math.max(.5,u*.17),0,Math.PI*2);g.fill();g.strokeStyle=CREST_OUTLINE;g.lineWidth=lw*.7;g.stroke()}
+  }
+  // Torse: a twisted band of the two tinctures across the top of the helmet.
+  const band=()=>{g.beginPath();g.moveTo(x-u*1.0,top+u*.05);g.quadraticCurveTo(x,top-u*.12,x+u*1.0,top+u*.05);
+    g.lineTo(x+u*.95,top+u*wreath);g.quadraticCurveTo(x,top+u*(wreath-.18),x-u*.95,top+u*wreath);g.closePath()};
+  band();g.fillStyle=livery.main;g.fill();
+  g.save();band();g.clip();g.fillStyle=livery.alt;
+  for(let k=-3;k<3;k+=2){g.beginPath();g.moveTo(x+u*k*.33,top+u*.1);g.lineTo(x+u*(k+1)*.33,top+u*.1);g.lineTo(x+u*(k+1.6)*.33,top+u*(wreath-.2));g.lineTo(x+u*(k+.6)*.33,top+u*(wreath-.2));g.closePath();g.fill()}
+  g.restore();band();g.strokeStyle=CREST_OUTLINE;g.lineWidth=lw;g.stroke();
+  g.restore();
+}
+// Knight on foot: helmet top from the style; mantling before the helmet, crest after it.
+function knightCrestGeometry(x,headY,headR,helmet){return{x,top:headY-headR*(KNIGHT_CREST_TOP[helmet]||1.05),u:headR}}
+function drawKnightMantling(x,headY,headR,helmet,livery,scale){
+  const c=knightCrestGeometry(x,headY,headR,helmet);drawHeraldicMantling(ctx,c.x,c.top,c.u,livery,Math.max(.5,.55*scale));
+}
+function drawKnightCrest(x,headY,headR,helmet,livery,scale,id){
+  const c=knightCrestGeometry(x,headY,headR,helmet);drawHeraldicCrest(ctx,c.x,c.top,c.u,knightCrestKind(id),livery,Math.max(.5,.55*scale));
 }
 function drawSoldierFigure(p,z,type,id,phase=0,liveryOverride=null){
   return withUrbanFigureOcclusion(p,z,()=>drawSoldierFigureUnmasked(p,z,type,id,phase,liveryOverride));
@@ -563,10 +637,11 @@ function drawSoldierFigureUnmasked(p,z,type,id,phase=0,liveryOverride=null){
 
   // Head + helmet: the realm's own soldiers wear the feudal helmet, foes (livery override) the cap;
   // a knight with a livery override (foe, tournament) wears the great helm.
-  ctx.fillStyle=VILLAGER_SKIN;ctx.beginPath();ctx.arc(base.x,headY,headR,0,Math.PI*2);ctx.fill();
   const helmet=liveryOverride?(knightly?'greathelm':'cap'):soldierHelmetStyle();
+  if(knightly)drawKnightMantling(base.x,headY,headR,helmet,livery,scale);
+  ctx.fillStyle=VILLAGER_SKIN;ctx.beginPath();ctx.arc(base.x,headY,headR,0,Math.PI*2);ctx.fill();
   drawSoldierHelmet(base.x,headY,headR,helmet,scale);
-  if(knightly)drawKnightCrest(base.x,headY,headR,helmet,livery,scale);
+  if(knightly)drawKnightCrest(base.x,headY,headR,helmet,livery,scale,id);
 
   if(type==='spearman'||type==='pikeman'||type==='herald'){
     // The figure faces the viewer: its right hand (spear, standard) is on screen left, the left arm

@@ -211,7 +211,7 @@
       const s=w2s(p,z);
       M2.draw(ctx,s.x,s.y,Math.max(1.5,State.view.scale*5.75),{kind:'knight',facing:b.x>=a.x?1:-1,
         mode:r.mode,from:r.from,blend:r.blend,t:r.t,seed:peasantHash(id)%7,coat:HORSE_COATS[peasantHash(id)%7%4],
-        pose,livery:livery||soldierLivery(id),paint,
+        pose,livery:livery||soldierLivery(id),paint,crest:typeof knightCrestKind==='function'?knightCrestKind(id):null,
         // The realm's own knights wear the feudal equipment once one is chosen (until then, and for
         // foes with a livery override, the original great helm and pointed shield).
         helmet:livery?null:State.policies?.unitHelmet||null,shield:livery?null:State.policies?.unitShield||null});
