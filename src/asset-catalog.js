@@ -44,7 +44,7 @@
   ];
   const SUBJECTS=[
     ['villager','Popolano','Popolazione','Civili'],
-    ['spearman','Fanteria / guardia','Truppe','Militari'],['pikeman','Picchiere (squadra)','Truppe','Militari'],['herald','Araldo del reggimento (stendardo)','Truppe','Militari'],['archer','Arciere','Truppe','Militari'],
+    ['spearman','Fanteria / guardia','Truppe','Militari'],['pikeman','Picchiere (squadra)','Truppe','Militari'],['herald','Araldo del reggimento (stendardo)','Truppe','Militari'],['manAtArms',"Uomo d'arme (L3)",'Truppe','Militari'],['archer','Arciere','Truppe','Militari'],
     ['knight','Cavaliere','Truppe','Militari'],['wagon','Carro animato 2D','Veicoli','Carri'],
     ['wagon3d','Carro animato 3D','Veicoli','Carri'],
     // The in-game 2D horse (settlement-animals.js) and everything that rides or pulls with it.

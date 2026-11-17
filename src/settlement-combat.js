@@ -314,17 +314,28 @@
     changed();draw();requestCivilianAnimation();
     const pealing=(alarmRing?.plan?.nodes||[]).filter(n=>n.r>0).length;
     const heardBy=mode==='off'?'':pealing?' · '+pealing+' bell(s) ringing':' · no bell: the alarm spreads by word of mouth';
-    status((mode==='green'?'🔔 Green alarm: women, children and L3/L4 men → safe zones; L1/L2 adult men → closest armory':
-      mode==='hall'?'🔔 Red alarm: women, children and L3/L4 men → Mastio Common Hall; L1/L2 adult men → closest armory':
+    status((mode==='green'?'🔔 Green alarm: women, children and L3/L4 men → safe zones; L1/L2 levy → closest armory':
+      mode==='hall'?'🔔 Red alarm: women, children and L3/L4 men → Mastio Common Hall; L1/L2 levy → closest armory':
       '🔕 Release: civilians and recalled recruits return to normal routines')+heardBy);
     return true;
   }
-  // Who can be armed: only adult men of L1 (peasant) and L2 (artisan) houses. MEN OF L3
-  // (MERCHANT) AND L4 (NOBLE) HOUSES NEVER FIGHT: neither the alarm nor the levy calls them to
-  // the armory; at the alarm they take shelter with the women and children (product owner, 17/11/2026).
+  // WHO FIGHTS, BY HOUSE CLASS (product owner, 17/11/2026), adult men only:
+  //   L1 (peasant)  -> levy infantry: own clothes, heraldic hood, spear and shield;
+  //   L2 (artisan)  -> levy archers: own clothes, heraldic hood, bow;
+  //   L3 (merchant) -> men-at-arms: leather gambeson, armoured arms and feet, plain knight's helm;
+  //   L4 (noble)    -> knights.
+  // Only the levy (L1/L2) answers the alarm and the extraordinary levy at the armory. How L3
+  // men-at-arms and L4 knights are raised is still to be defined by the product owner: until
+  // then they shelter with the women and children at the alarm.
+  const COMBAT_ROLE_BY_LEVEL=Object.freeze({1:'levySpear',2:'levyArcher',3:'manAtArms',4:'knight'});
+  function combatRole(house,resident){
+    if(resident?.age!=='adult'||resident?.sex!=='male')return null;
+    return COMBAT_ROLE_BY_LEVEL[Math.min(4,Math.max(1,Math.round(Number(house?.houseLevel)||1)))];
+  }
+  // Called to the armory by the alarm and the levy: the levy roles only.
   function canFight(house,resident){
-    if(resident?.age!=='adult'||resident?.sex!=='male')return false;
-    return Math.max(1,Math.round(Number(house?.houseLevel)||1))<=2;
+    const role=combatRole(house,resident);
+    return role==='levySpear'||role==='levyArcher';
   }
   // Leva straordinaria (decree, FISCO-01): a stable, seeded share of the men who can fight (L1/L2).
   function leviedResident(house,resident){
@@ -410,8 +421,8 @@
     if(!activeWell())return p;
     const desired=civilianLegalPosition(p,house);
     const id=resident.id,now=performance.now(),alarm=heardAlarm(house,now);
-    // Age takes precedence over sex: boys are children, never conscripted. L3/L4 men never fight
-    // (canFight): at the alarm they shelter like the women and children.
+    // Age takes precedence over sex: boys are children, never conscripted. Only L1/L2 men are the
+    // levy (canFight); L3 men-at-arms and L4 knights shelter for now (see combatRole).
     // FISCO-01: the Leva straordinaria keeps its share of L1/L2 men at the armory without an alarm.
     const mode=alarm==='off'?(leviedResident(house,resident)?'recruit':'release'):
       (canFight(house,resident)?'recruit':alarm);
@@ -2455,7 +2466,7 @@
     // A ground walk for AI that never uses walls (outlaws): same router as the assault AI.
     groundLegs:(u,goal)=>[groundLeg({x:u.x,y:u.y},goal,u)],
     recallCampUnit,clearCampSelection:clearCombatSelection,changedCamp:changed,
-    alarmMode,setAlarmMode,recruitedResident,leviedResident,refreshLevy,heardAlarm,alarmRing:()=>alarmRing,
+    alarmMode,setAlarmMode,recruitedResident,leviedResident,combatRole,COMBAT_ROLE_BY_LEVEL,refreshLevy,heardAlarm,alarmRing:()=>alarmRing,
     // Read-only summary for UI shells (UI v2 Difendi): no side effects.
     uiState:()=>{
       const allies=combat?.units.filter(u=>!u.defeated)||[],hostiles=combat?.enemy.filter(e=>!e.defeated&&!e.neutral)||[];

@@ -88,6 +88,8 @@
         // Fall away from the foe, pivoting on the feet.
         ctx.translate(base.x,base.y);ctx.rotate((pose.dirX>0?-1:1)*pose.fall*1.45);ctx.translate(-base.x,-base.y);
       }
+      // The man-at-arms draws whole (gambeson, armour, two-handed weapon): no separate posed weapon.
+      if(type==='manAtArms'){drawSoldierFigureUnmasked(p,z,type,id,phase,livery);ctx.restore();return}
       drawSoldierFigureUnmasked(p,z,armed?'unarmed':type,id,phase,livery);
       if(type==='pikeman'||type==='herald')drawSpearShield(base,scale,bodyW,bodyH,bodyY,id,livery,pose);
       if(type==='herald'){/* standard instead of the spear: drawn by the combat overlay */}

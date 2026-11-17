@@ -9,9 +9,12 @@
 - [x] Lo stendardo lo porta solo l'**araldo del reggimento** (il primo della squadra, figura `herald`), **al posto** della lancia, con lo scudo. Stendardo 3 volte più grande della vecchia bandierina di squadra (`HERALD_STANDARD_SIZE`).
 - [ ] Lo stendardo segue lo zoom della vista limitato a 0,55–1,45, non la scala della figura: da lontano resta molto più grande del soldato, da vicino più piccolo. Valutare se legarlo a `militaryScale()`.
 - [ ] Guardie (pattuglia da 2): lancia senza scudo; di notte il portatorcia tiene **anche** la lancia (oggi la torcia la sostituisce, figura `unarmed`).
-- [x] Leva (popolani all'allarme o in leva straordinaria): abiti di classe del popolano (anche quelli di stagione) e cappuccio araldico (`levyHood`, partito nei due colori dello stemma); lancia e scudo del regno, oppure arcieri di leva con l'arco (circa uno su tre, scelto in modo stabile per persona).
-- [ ] Leva: decidere se la quota di arcieri va scelta dal giocatore (oggi fissa, un terzo).
-- [x] I maschi L3/L4 non combattono mai: `canFight` esclude le case di livello 3 e 4 sia dall'allarme sia dalla leva; all'allarme si riparano con donne e bambini. [D-MIL-FIG-261117](DECISIONS.md#d-mil-fig-261117--chi-combatte-e-come-si-riconosce-17112026).
+- [x] Leva (popolani all'allarme o in leva straordinaria): abiti di classe del popolano (anche quelli di stagione) e cappuccio araldico (`levyHood`, partito nei due colori dello stemma); lancia e scudo del regno (L1), oppure arco (L2, arcieri di leva).
+- [x] Ruolo per classe ([D-MIL-FIG-261117](DECISIONS.md#d-mil-fig-261117--chi-combatte-e-come-si-riconosce-17112026)): L1 fanti di leva, L2 arcieri di leva (arco per gli artigiani, non più uno su tre a caso), L3 uomini d'arme, L4 cavalieri (`combatRole`).
+- [x] Uomo d'arme L3 nel Lab, con le varianti di livrea, arma ed elmo da scegliere (pulsante «Uomo d'arme», gruppo «Uomo d'arme (L3)»).
+- [ ] Scegliere livrea, arma ed elmo dell'uomo d'arme (gonnello partito / con lo stemma / fascia; scure d'arme / spada a due mani; elmo a staio / bacinetto).
+- [ ] Definire come vengono chiamati in campo uomini d'arme L3 e cavalieri L4 (in attesa del product owner); oggi all'allarme si riparano.
+- [ ] Statistiche dell'uomo d'arme fra fante e cavaliere (proposta: 14 PV, armatura 2, combattimento 3).
 
 ### 2026-11-16 — ASSET-AUDIT-261116 · Audit del Lab
 

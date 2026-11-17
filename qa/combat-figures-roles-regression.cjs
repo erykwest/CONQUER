@@ -1,6 +1,6 @@
 'use strict';
 // MIL-FIG-01 (17/11/2026): guards, pikemen, the regiment's herald and the levy look different,
-// and men of L3/L4 houses never fight.
+// and each house class has its combat role.
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
@@ -11,15 +11,19 @@ const combat=read('src/settlement-combat.js'),render=read('src/settlement-combat
 const figures=read('src/settlement-population-figures.js'),anim=read('src/settlement-combat-anim.js');
 const wardrobe=read('src/settlement-wardrobe.js');
 
-// L3/L4 men never fight: one rule for the alarm and the levy.
-const canFightSrc=combat.match(/function canFight\(house,resident\)\{[\s\S]*?\n  \}/);
-assert.ok(canFightSrc,'canFight is defined in settlement-combat.js');
-const canFight=vm.runInNewContext('('+canFightSrc[0]+')');
+// Who fights, by class: L1 levy infantry, L2 levy archers, L3 men-at-arms, L4 knights.
+// Only the levy (L1/L2) answers the alarm and the levy; how L3/L4 are raised is still open.
+const rulesSrc=combat.match(/const COMBAT_ROLE_BY_LEVEL=[\s\S]*?function canFight\(house,resident\)\{[\s\S]*?\n  \}/);
+assert.ok(rulesSrc,'combatRole and canFight are defined in settlement-combat.js');
+const {combatRole,canFight}=vm.runInNewContext(rulesSrc[0]+';({combatRole,canFight})');
 const man={age:'adult',sex:'male'};
-for(const level of [1,2])assert.equal(canFight({houseLevel:level},man),true,'L'+level+' men can fight');
-for(const level of [3,4])assert.equal(canFight({houseLevel:level},man),false,'L'+level+' men never fight');
-assert.equal(canFight({houseLevel:1},{age:'adult',sex:'female'}),false,'women are not armed');
-assert.equal(canFight({houseLevel:1},{age:'child',sex:'male'}),false,'boys are not armed');
+assert.deepEqual([1,2,3,4].map(l=>combatRole({houseLevel:l},man)),['levySpear','levyArcher','manAtArms','knight'],'role by house class');
+for(const level of [1,2])assert.equal(canFight({houseLevel:level},man),true,'L'+level+' men are the levy');
+for(const level of [3,4])assert.equal(canFight({houseLevel:level},man),false,'L'+level+' men are not called to the armory as levy');
+assert.equal(combatRole({houseLevel:1},{age:'adult',sex:'female'}),null,'women are not armed');
+assert.equal(combatRole({houseLevel:1},{age:'child',sex:'male'}),null,'boys are not armed');
+assert.match(figures,/function levyArcher\(dot\)\{return dot\.kind==='artisan'\}/,'L2 artisans are the levy archers');
+assert.match(figures,/if\(type==='manAtArms'\)return drawManAtArmsUnmasked/,"L3 man-at-arms figure");
 assert.match(combat,/function leviedResident\(house,resident\)\{[\s\S]{0,200}canFight\(house,resident\)/,'the levy uses canFight');
 assert.match(combat,/canFight\(house,resident\)\?'recruit':alarm/,'the alarm uses canFight; L3/L4 men shelter');
 
@@ -35,4 +39,4 @@ assert.match(figures,/const HERALD_STANDARD_SIZE=3;/,'standard three times the o
 assert.match(figures,/if\(dot\.militia\)drawLevyFigure\(dot\)/,'recruits are drawn as levy, not as livery soldiers');
 assert.match(figures,/head:'levyHood'/,'the levy wears the heraldic hood');
 assert.match(wardrobe,/levyHood:\{[^}]*heraldic:true/,'levyHood is heraldic');
-console.log('PASS combat figure roles: L3/L4 men never fight; guards, pikemen, herald and levy distinct');
+console.log('PASS combat figure roles: L1 levy infantry, L2 levy archers, L3 men-at-arms, L4 knights; guards, pikemen, herald distinct');

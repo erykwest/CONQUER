@@ -73,9 +73,10 @@ function drawVillagerFigureUnmasked(dot){
   if(outfit)window.ConquerWardrobe.drawHead(outfit,base.x,headY,headR);
 }
 // The levy (alarm recruits, extraordinary levy): no livery, the villager's own class clothes
-// (season included) under a hood in the realm's colours. About one in three is a levy archer
-// with a bow; the others carry spear (right hand, screen left) and the realm shield.
-function levyArcher(id){return peasantHash(String(id)+':levy-bow')%3===0}
+// (season included) under a hood in the realm's colours. By class (combatRole, settlement-combat.js):
+// L1 peasants are levy infantry with spear (right hand, screen left) and the realm shield,
+// L2 artisans are levy archers with a bow.
+function levyArcher(dot){return dot.kind==='artisan'}
 function levyOutfit(dot){
   const W=window.ConquerWardrobe,season=W?.outfitFor({...dot,role:undefined,outfit:undefined});
   return{head:'levyHood',body:season?.body||null,neck:season?.neck||null,
@@ -83,7 +84,7 @@ function levyOutfit(dot){
 }
 function drawLevyFigure(dot){
   const look={...dot,outfit:levyOutfit(dot)};
-  const key='levy|'+villagerLookKey(look)+'|'+(levyArcher(dot.id)?'bow':'spear:'+soldierShieldStyle());
+  const key='levy|'+villagerLookKey(look)+'|'+(levyArcher(dot)?'bow':'spear:'+soldierShieldStyle());
   if(window.ConquerWorld3D?.figure?.(dot.p,.10,key,()=>drawLevyFigureUnmasked({...look,p:{x:0,y:0}}),dot.id))return true;
   return withUrbanFigureOcclusion(dot.p,.10,()=>drawLevyFigureUnmasked(look));
 }
@@ -93,7 +94,7 @@ function drawLevyFigureUnmasked(dot){
   const base=w2s(dot.p,.10),scale=State.view.scale*.5;
   const bodyW=6.0*scale,bodyH=8.0*scale,headR=2.35*scale,bodyY=base.y-bodyH*.16,headY=bodyY-bodyH/2-headR*.68;
   ctx.save();
-  if(levyArcher(dot.id)){
+  if(levyArcher(dot)){
     // Bow on the left arm (screen right), as the realm's archers.
     const bx=base.x+bodyW*.62,by=bodyY-bodyH*.04,r=5.3*scale;
     ctx.strokeStyle='#9b7243';ctx.lineWidth=Math.max(.8,.85*scale);
@@ -400,6 +401,95 @@ function drawHeraldStandard(g,base,id,wavePhase=0){
   g.fillStyle='#c6a461';g.beginPath();g.arc(mastX,mastTop,Math.max(1,1.1*scale),0,Math.PI*2);g.fill();
   g.restore();
 }
+// L3 man-at-arms (product owner, 17/11/2026): between the levy and the knight. Fights on foot,
+// quilted leather gambeson, armoured arms and feet, a plain knight's helm (no crest: that marks
+// the knight), no cloak, a two-handed weapon and no shield. The livery is still being chosen,
+// so it is a style: surcoat 'partito' (short gonnello party per pale), 'stemma' (short gonnello
+// with the arms), 'fascia' (no gonnello, a sash in the two colours); weapon 'poleaxe' or
+// 'greatsword'; helmet 'greathelm' or 'bascinet'. State.policies.manAtArms overrides the default.
+const MAN_AT_ARMS_DEFAULT=Object.freeze({surcoat:'partito',weapon:'poleaxe',helmet:'greathelm'});
+const MAA_STEEL='#8a9196',MAA_STEEL_EDGE='rgba(30,32,34,.85)',MAA_GAMBESON='#7a5a3a';
+function manAtArmsStyle(){return{...MAN_AT_ARMS_DEFAULT,...(State.policies?.manAtArms||{})}}
+function drawManAtArmsUnmasked(base,scale,id,liveryOverride=null,style=manAtArmsStyle()){
+  const bodyW=5.4*scale,bodyH=8.0*scale,headR=2.2*scale;
+  const bodyY=base.y-bodyH*.16,top=bodyY-bodyH/2,headY=top-headR*.72,bottom=bodyY+bodyH*.5;
+  const livery=liveryOverride||soldierLivery(id),lw=Math.max(.6,.7*scale);
+  const steel=(fill=MAA_STEEL)=>{ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle=MAA_STEEL_EDGE;ctx.lineWidth=lw;ctx.stroke()};
+  ctx.save();
+  // Armoured legs and feet (greaves, sabatons) below the gambeson's skirt.
+  for(const s of [-1,1]){
+    ctx.beginPath();ctx.rect(base.x+s*bodyW*.22-bodyW*.09,bottom-.2*scale,bodyW*.18,1.5*scale);steel();
+    ctx.beginPath();ctx.ellipse(base.x+s*bodyW*.24,bottom+1.4*scale,bodyW*.16,.55*scale,0,0,Math.PI*2);steel('#7b8287');
+  }
+  // Quilted leather gambeson.
+  soldierBodyPath(base,bodyW,bodyH,top,bodyY);ctx.fillStyle=MAA_GAMBESON;ctx.fill();
+  ctx.save();soldierBodyPath(base,bodyW,bodyH,top,bodyY);ctx.clip();
+  ctx.strokeStyle='rgba(40,26,14,.45)';ctx.lineWidth=Math.max(.4,.35*scale);ctx.beginPath();
+  for(let k=1;k<4;k++){const y=top+bodyH*k/4;ctx.moveTo(base.x-bodyW,y);ctx.lineTo(base.x+bodyW,y)}
+  for(const k of [-.25,0,.25]){ctx.moveTo(base.x+bodyW*k,top);ctx.lineTo(base.x+bodyW*k*1.15,bottom)}
+  ctx.stroke();
+  // Livery over the gambeson.
+  const hem=bodyY+bodyH*.2;
+  if(style.surcoat==='fascia'){
+    // Sash from the right shoulder (screen left) to the left hip, half in each colour.
+    const band=()=>{ctx.beginPath();ctx.moveTo(base.x-bodyW*.5,top);ctx.lineTo(base.x-bodyW*.15,top);
+      ctx.lineTo(base.x+bodyW*.55,bodyY+bodyH*.22);ctx.lineTo(base.x+bodyW*.55,bodyY+bodyH*.42);ctx.closePath()};
+    band();ctx.fillStyle=livery.main;ctx.fill();
+    ctx.save();band();ctx.clip();ctx.fillStyle=livery.alt;ctx.fillRect(base.x,top,bodyW,bodyH);ctx.restore();
+  }else{
+    // Short gonnello: from the shoulders to the hips, the gambeson shows below.
+    const coat=()=>{ctx.beginPath();ctx.moveTo(base.x-bodyW*.4,top);ctx.lineTo(base.x+bodyW*.4,top);
+      ctx.lineTo(base.x+bodyW*.47,hem);ctx.lineTo(base.x-bodyW*.47,hem);ctx.closePath()};
+    ctx.save();coat();ctx.clip();
+    const painted=style.surcoat==='stemma'&&!liveryOverride&&window.__conquerHeraldryCanvas?.paint(ctx,base.x-bodyW*.47,top,bodyW*.94,hem-top);
+    if(!painted){ctx.fillStyle=livery.main;ctx.fillRect(base.x-bodyW,top,bodyW*2,bodyH);ctx.fillStyle=livery.alt;ctx.fillRect(base.x,top,bodyW,bodyH)}
+    ctx.restore();
+    coat();ctx.strokeStyle='rgba(25,24,22,.7)';ctx.lineWidth=lw;ctx.stroke();
+    // Fallback 'stemma' without the heraldry raster: a small shield of arms on the chest.
+    if(style.surcoat==='stemma'&&!painted)drawQuarteredShield(base.x,top+bodyH*.3,1.2*scale,1.5*scale,{main:livery.alt,alt:livery.main},'#d9c38a',scale*.6,false,'heater');
+  }
+  ctx.restore();
+  soldierBodyPath(base,bodyW,bodyH,top,bodyY);ctx.strokeStyle='rgba(25,24,22,.88)';ctx.lineWidth=Math.max(.7,.8*scale);ctx.stroke();
+  // Armoured arms: pauldron and vambrace on each side.
+  for(const s of [-1,1]){
+    const ax=base.x+s*bodyW*.5;
+    ctx.beginPath();ctx.ellipse(ax,top+.8*scale,1.05*scale,.95*scale,0,0,Math.PI*2);steel();
+    ctx.beginPath();ctx.rect(ax-.55*scale,top+1.3*scale,1.1*scale,bodyH*.5);steel();
+  }
+  // Head and plain knight's helm (no crest, no mantling).
+  ctx.fillStyle=VILLAGER_SKIN;ctx.beginPath();ctx.arc(base.x,headY,headR,0,Math.PI*2);ctx.fill();
+  if(style.helmet==='bascinet'){
+    // Pointed bascinet over a mail aventail on the shoulders.
+    ctx.beginPath();ctx.moveTo(base.x-headR*1.25,headY+headR*1.1);ctx.quadraticCurveTo(base.x,headY+headR*1.8,base.x+headR*1.25,headY+headR*1.1);
+    ctx.lineTo(base.x+headR*1.05,headY+headR*.35);ctx.lineTo(base.x-headR*1.05,headY+headR*.35);ctx.closePath();steel('#6f767a');
+    ctx.beginPath();ctx.moveTo(base.x-headR*1.05,headY+headR*.35);ctx.quadraticCurveTo(base.x-headR*1.1,headY-headR*1.1,base.x,headY-headR*1.85);
+    ctx.quadraticCurveTo(base.x+headR*1.1,headY-headR*1.1,base.x+headR*1.05,headY+headR*.35);ctx.closePath();steel();
+    ctx.fillStyle=VILLAGER_SKIN;ctx.fillRect(base.x-headR*.55,headY-headR*.35,headR*1.1,headR*.75);
+  }else drawSoldierHelmet(base.x,headY,headR,'greathelm',scale);
+  // Two-handed weapon in the right hand (screen left).
+  const hx=soldierSpearHandX(base,bodyW),hy=bodyY+bodyH*.43;
+  if(style.weapon==='greatsword'){
+    const tipY=headY-10*scale;
+    ctx.strokeStyle='#c4c7c8';ctx.lineWidth=Math.max(1,1.3*scale);
+    ctx.beginPath();ctx.moveTo(hx,hy-2.2*scale);ctx.lineTo(hx,tipY);ctx.stroke();
+    ctx.strokeStyle='#5d6468';ctx.lineWidth=Math.max(1,.9*scale);
+    ctx.beginPath();ctx.moveTo(hx-1.8*scale,hy-2.2*scale);ctx.lineTo(hx+1.8*scale,hy-2.2*scale);ctx.stroke();
+    ctx.strokeStyle='#5a3f28';ctx.lineWidth=Math.max(1,1.1*scale);
+    ctx.beginPath();ctx.moveTo(hx,hy-2.2*scale);ctx.lineTo(hx,hy+1.4*scale);ctx.stroke();
+    ctx.fillStyle='#8a7a4a';ctx.beginPath();ctx.arc(hx,hy+1.6*scale,.6*scale,0,Math.PI*2);ctx.fill();
+  }else{
+    // Poleaxe: haft, axe blade facing out, hammer at the back, top spike.
+    const tx=hx+.8*scale,ty=headY-11*scale;
+    ctx.strokeStyle='#6e4f30';ctx.lineWidth=Math.max(1,1.15*scale);
+    ctx.beginPath();ctx.moveTo(hx,hy+1.2*scale);ctx.lineTo(tx,ty-1.5*scale);ctx.stroke();
+    ctx.fillStyle='#a9adb0';ctx.strokeStyle='#3d4144';ctx.lineWidth=Math.max(.6,.6*scale);
+    ctx.beginPath();ctx.moveTo(tx,ty-.4*scale);ctx.lineTo(tx-2.8*scale,ty-1.6*scale);
+    ctx.quadraticCurveTo(tx-3.6*scale,ty+1.2*scale,tx-2.7*scale,ty+3.4*scale);ctx.lineTo(tx,ty+2.0*scale);ctx.closePath();ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.rect(tx,ty+.2*scale,1.4*scale,1.2*scale);ctx.fill();ctx.stroke();
+    ctx.beginPath();ctx.moveTo(tx-.45*scale,ty-1.4*scale);ctx.lineTo(tx+.1*scale,ty-4.2*scale);ctx.lineTo(tx+.55*scale,ty-1.4*scale);ctx.closePath();ctx.fill();ctx.stroke();
+  }
+  ctx.restore();
+}
 function drawSoldierFigure(p,z,type,id,phase=0,liveryOverride=null){
   return withUrbanFigureOcclusion(p,z,()=>drawSoldierFigureUnmasked(p,z,type,id,phase,liveryOverride));
 }
@@ -415,6 +505,7 @@ function drawSoldierFigureUnmasked(p,z,type,id,phase=0,liveryOverride=null){
     return;
   }
   const base=w2s(p,z),scale=militaryScale(),bodyW=5.4*scale,bodyH=8.0*scale,headR=2.2*scale;
+  if(type==='manAtArms')return drawManAtArmsUnmasked(base,scale,id,liveryOverride);
   const bodyY=base.y-bodyH*.16,top=bodyY-bodyH/2,headY=top-headR*.72,livery=liveryOverride||soldierLivery(id);
 
   ctx.save();
