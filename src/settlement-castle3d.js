@@ -25,6 +25,7 @@
     plaster:()=>['#e8dcc2','#d2c4a6','#bcae91'],                     // timber-framed storey (house plaster)
     ladderRail:()=>['#8b6a45','#73573a','#5e472f'],                 // cutaway ladder colours
     ladderRung:()=>['#b98652','#9a6f44','#7f5b37'],
+    brazier:()=>['#5d4b3d','#493d34','#39312b','#7b654f'],      // drawBrazierFixture (BRAZIER_COLORS)
   };
   const rgbCache=new Map();
   function rgb(hex){
@@ -306,6 +307,7 @@
   // One battlement piece: corbel or merlon body, plus the crenel-style crown prisms (merlonStyleParts).
   function prismPiece(m,p){
     if(p.kind==='machicolationArch'){for(const f of p.faces)m.face(f.pts,PAL.corbel());return}
+    if(p.kind==='brazier'){m.prism(p.pts,p.z0,p.z1,PAL.brazier());return}
     m.prism(p.pts,p.z0,p.z1,p.kind==='machicolationCorbel'?PAL.corbel():PAL.merlon());
     for(const q of p.styleParts||[])if(q.faces)for(const f of q.faces)m.face(f.pts,merlonFaceColor(f.tone));
     else m.prism(q.pts,q.z0,q.z1,q.tone==='slit'?PAL.slit():PAL.merlon());
@@ -316,7 +318,10 @@
     for(const s of worldOut?State.structures.filter(castleVolume):castleParts()){
       if(typeof cutawayCrestHidden==='function'&&cutawayCrestHidden(s))continue;   // floor-by-floor cutaway below the top: no crest
       withStructureVisualMaterial(s,()=>{
-      const pieces=s.type==='tower'?towerCrownPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[];
+      const pieces=[...(s.type==='tower'?towerCrownPieces(s):s.type==='gate'?gateBattlementPieces(s):s.type==='wall'?wallBattlementPieces(s):[])];
+      // The roof brazier is a crest piece too: depth-tested with the merlons, split near/far like them.
+      if((s.type==='tower'||s.type==='gate')&&typeof structureBrazierBoxes==='function')
+        for(const b of structureBrazierBoxes(s))pieces.push({kind:'brazier',...b});
       for(const p of pieces){
         const c={x:p.pts.reduce((a,q)=>a+q.x,0)/p.pts.length,y:p.pts.reduce((a,q)=>a+q.y,0)/p.pts.length};
         const near=viewDepthOf(c)>viewDepthOf(ownerRef(s,c))+1e-6;
@@ -355,6 +360,14 @@
       });
     }finally{worldOut=false}
   }
-  window.ConquerCastle3D={worldMeshes,structureWorld,castleParts:()=>castleParts(),
+  // Is this roof brazier built into the castle mesh? World3D builds every castle volume
+  // (cutaways included, their crest permitting).
+  function ownsBrazier(src){
+    const s=src?.structureId&&State.structures.find(o=>o.id===src.structureId);
+    // The open palisade tower carries its brazier in its Blender model (settlement-wood3d.js).
+    if(s&&isWoodTower(s))return !!window.ConquerWood3D?.handles?.(s);
+    return !!(s&&castleVolume(s));
+  }
+  window.ConquerCastle3D={worldMeshes,structureWorld,ownsBrazier,castleParts:()=>castleParts(),
     castleVolume:s=>castleVolume(s),PAL};
 })();

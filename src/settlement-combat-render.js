@@ -339,7 +339,8 @@
         }
         if(!spotted(e,sightSources))continue;
         const livery=window.ConquerCombatRules?.liveryOf(e.faction||'dev_hostile');
-        const figure=e.kind==='knight'||e.combatKind==='knight'?'knight':e.kind==='archer'||e.combatKind==='archer'?'archer':e.weapon==='axe'?'axeman':'spearman';
+        // Men working a ram have both hands on it: no spear, weapon or shield (e.atRam, ramStep).
+        const figure=e.atRam?'unarmed':e.kind==='knight'||e.combatKind==='knight'?'knight':e.kind==='archer'||e.combatKind==='archer'?'archer':e.weapon==='axe'?'axeman':'spearman';
         drawPosedFigure(e,figure,e.id,livery,e,0,.08+(e.z||0));
         if(down)continue;
         if(e.torch)window.ConquerFire?.drawTorch(g,w2s(e,.08+(e.z||0)),State.view.scale,e.id);
@@ -347,6 +348,11 @@
         g.beginPath();g.arc(p.x,p.y-8,11,0,Math.PI*2);g.stroke();
       }
     });
+    // Burning siege engines: flames on the timber, bigger as the fire grows.
+    if(typeof drawScreenFlame==='function')for(const s of combat.storms||[]){
+      if(!s.fire||!s.origin)continue;
+      drawScreenFlame(w2s(s.origin,.6),State.view.scale,s.id+':engine-fire',s.fire.heat>.4);
+    }
     // Paused swings/falls share the simulation's visual scheduler with fire,
     // collapses and scene requests, avoiding a second draw in the same RAF.
     drawEffects(g,(p,z)=>w2sRaw(p,z),window.ConquerCombatRules?.visualEffects?.());

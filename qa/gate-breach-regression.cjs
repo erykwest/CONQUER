@@ -44,7 +44,7 @@ function fixture(){
   const nav=fs.readFileSync(root+'settlement-population-navigation.js','utf8');
   assert.match(nav,/if\(gatePointInPassage\(s,p,\.08\)\)\{if\(window\.ConquerSiege\?\.gateClosed\?\.\(s\)(\|\|[^)]*\))?\)return true;continue\}/,'a closed gate blocks its passage');
   const combat=fs.readFileSync(root+'settlement-combat.js','utf8');
-  assert.match(combat,/attackStructure\(gate\.id,'ram',manned\.length\*\.5,'door'\)/,'every blow of a manned ram hits the door');
+  assert.match(combat,/attackStructure\(gate\.id,'ram',manned\.length\*RAM_FORCE_PER_MAN,'door'\)/,'every blow of a manned ram hits the door');
   assert.match(combat,/e\.gateway=storm\.gateId/,'after the breach they go in through the passage');
   assert.match(combat,/if\(d<1\.5\)path=\[from,to\];/,'no walking through masonry when a route fails');
   const w3=fs.readFileSync(root+'settlement-world3d.js','utf8');

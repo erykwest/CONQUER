@@ -123,7 +123,7 @@ body.asset-catalog-static #labLegacyControls{display:none}
     <button data-subject="mounted">Cavaliere a cavallo</button><button data-subject="messenger">Messaggero</button>
   </div>
   <div class="group" role="group" aria-label="Assedio"><span>Assedio</span>
-    <button data-subject="siege:ram">Ariete</button><button data-subject="siege:catapult">Mangano</button><button data-subject="siege:trebuchet">Trabucco</button><button data-subject="siege:tower">Torre</button><button data-subject="siege:ladder">Scala</button><button data-subject="siege:mantlet">Mantelletto</button><button data-subject="siege:ballista">Balista</button>
+    <button data-subject="siege:ram">Ariete coperto</button><button data-subject="siege:ramLight">Ariete leggero</button><button data-subject="siege:catapult">Mangano</button><button data-subject="siege:trebuchet">Trabucco</button><button data-subject="siege:tower">Torre</button><button data-subject="siege:ladder">Scala</button><button data-subject="siege:mantlet">Mantelletto</button><button data-subject="siege:ballista">Balista</button>
   </div>
   <div class="group" role="group" aria-label="Assalto"><span>Assalto nel gioco (muro H1 vero)</span>
     <a class="btnlink" target="_blank" href="./index.html?world3d=1&siege=ram">Ariete</a><a class="btnlink" target="_blank" href="./index.html?world3d=1&siege=mantlet">Mantelletto</a><a class="btnlink" target="_blank" href="./index.html?world3d=1&siege=ladder">Scala</a><a class="btnlink" target="_blank" href="./index.html?world3d=1&siege=tower">Torre</a><a class="btnlink" target="_blank" href="./index.html?world3d=1&siege=moat">Fossato</a>
@@ -267,7 +267,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
   const ACTIONS={ship:[['cycle','Alza e abbassa'],['set','Vele spiegate'],['furl','Vele alzate']],rider:[['idle','Fermo'],['walk','Passo'],['run','Carica'],['attack','Attacco'],['die','Caduta']],siege:[['idle','Fermo'],['move','In marcia'],['fire','Tiro']],animal3d:[['walk','Walking'],['browse','Browse'],['run','Corsa']],vehicle:[['move','In marcia'],['stop','Fermo']],animal:[['walk','Walking'],['browse','Browse']],soldier:[['guard','Guardia'],['attack','Attacco'],['die','Morte']],villager:[['idle','Fermo'],['dig','Pala'],['chop','Ascia'],['pick','Piccone'],['build','Martello'],['plough','Zappa'],['sow','Semina'],['harvest','Falce']]};
   // Siege actions per engine: what 'fire' means, and the trebuchet's set-up.
   function siegeActions(e){
-    const fire={ram:'Colpo',catapult:'Tiro',trebuchet:'Tiro',tower:'Ponte',ladder:'Scalata',mantlet:'Tiro balista',ballista:'Tiro'}[e];
+    const fire={ram:'Colpo',ramLight:'Colpo',catapult:'Tiro',trebuchet:'Tiro',tower:'Ponte',ladder:'Scalata',mantlet:'Tiro balista',ballista:'Tiro'}[e];
     return[['idle',e==='ladder'?'Trasporto':'Fermo'],['move','In marcia']].concat(fire?[['fire',fire]]:[],e==='trebuchet'?[['setup','Allestimento']]:[]);
   }
   // Upgrades: incendiary shots for the trebuchet, scatter shot for the mangonel,
@@ -457,7 +457,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     const place={x:0,y:0,heading},sprites=[];
     SE.crew(engine,place,state).forEach((p,i)=>sprites.push({...p,draw:()=>{
       const s=view.project(p.x,p.y,p.z),lean=action==='move'?Math.sin(clock*6+i)*.6:0;
-      State.view.scale=zoom;ctx=g;CA.drawFigure({x:s.x+lean,y:s.y},0,'spearman','crew'+i,0,null,CA.pose({engaged:false},i));
+      State.view.scale=zoom;ctx=g;CA.drawFigure({x:s.x+lean,y:s.y},0,engine==='ram'||engine==='ramLight'?'unarmed':'spearman','crew'+i,0,null,CA.pose({engaged:false},i));
     }}));
     // A 0.4 m stone: sizes follow the world scale, not the figure zoom.
     const r=Math.max(2,pxPerU*.06);
@@ -666,6 +666,6 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 <script src="./src/heraldry-shapes.js?v=ships-1"></script>
 <script src="./src/asset-manifest.js?v=asset-lab-3"></script>
 <script src="./src/asset-catalog.js?v=asset-lab-13-stonecolor-milres1-arte2-barg1"></script>
-<script src="./src/asset-audit.js?v=asset-lab-8-stonecolor"></script>
+<script src="./src/asset-audit.js?v=asset-lab-8-stonecolor-crollat1"></script>
 </body>
 </html>

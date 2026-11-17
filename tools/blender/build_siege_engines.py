@@ -104,6 +104,30 @@ def build_ram(root, off):
     return parts, pivots, meta
 
 
+def build_ram_light(root, off):
+    """Light ram: a short iron-headed log carried at hand height by four men on two
+    cross bars through it (no frame, roof or wheels). Swings about a point high
+    above, so the thrust draws back and drives forward like the hung ram."""
+    parts, pivots = {}, {}
+    Z = .95                                     # log axis at the carriers' hands
+    p = part(root, 'ram', 'ramLight', off)
+    p.cylinder(.16, 0, 'woodDark', n=8, axis='x', center=(0, 0, Z),
+               radii=[.14, .17, .17, .15], along=[-1.6, -1.2, 1.3, 1.8], cap_key='wood')
+    p.cylinder(.18, 0, 'iron', n=8, axis='x', center=(0, 0, Z),
+               radii=[.19, .19, .13, .03], along=[1.75, 2.0, 2.2, 2.3], cap_key='ironLight')
+    for x in (-1.3, 1.1):
+        p.cylinder(.18, 0, 'iron', n=8, axis='x', center=(0, 0, Z), radii=[.18, .18], along=[x, x + .08])
+    for x in (-.9, .5):                         # the two cross bars, a hand grip on each side
+        p.box((x, 0, Z), (.09, 1.3, .09), 'woodLight')
+        for s in (-1, 1):
+            p.box((x, s * .62, Z), (.1, .08, .1), 'leather')
+    parts['ram'] = p.finish()
+    pivots['ram'] = u(0, 0, 3.0)
+    meta = {'wheels': {'part': None, 'r': 0, 'at': []},
+            'crew': [u(x, s * .62, 0) for x in (-.9, .5) for s in (-1, 1)], 'length': u(3.9)[0]}
+    return parts, pivots, meta
+
+
 # ------------------------------------------------------------------ catapult
 def build_catapult(root, off):
     parts, pivots = {}, {}
@@ -618,7 +642,7 @@ def build_ladder(root, off):
             'crew': [u(-1.5, .45, 0), u(1.3, -.45, 0)], 'length': u(4.8)[0], 'rig': {'len': u(L)[0]}}
     return parts, pivots, meta
 
-ENGINES = [('ram', build_ram, (0, 0, 0)), ('catapult', build_catapult, (0, 6, 0)), ('trebuchet', build_trebuchet, (0, 13, 0)),
+ENGINES = [('ram', build_ram, (0, 0, 0)), ('ramLight', build_ram_light, (0, 43, 0)),('catapult', build_catapult, (0, 6, 0)), ('trebuchet', build_trebuchet, (0, 13, 0)),
            ('tower', build_tower, (0, 21, 0)), ('tower2', build_tower2, (0, 39, 0)), ('ladder', build_ladder, (0, 27, 0)),
            ('mantlet', build_mantlet, (0, 31, 0)), ('ballista', build_ballista, (0, 35, 0))]
 

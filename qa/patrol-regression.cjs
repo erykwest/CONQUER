@@ -11,7 +11,8 @@ const context=vm.createContext({window:{},Math});
 vm.runInContext(rulesSource,context,{filename:'settlement-combat-rules.js'});
 const rules=context.window.ConquerCombatRules;
 assert.ok(rules,'combat rules must load');
-assert.equal(rules.ensure({kind:'patrol'},'patrol').maxHp,40,'patrol is a two-pikeman unit, not a 5-pikeman squad');
+assert.equal(rules.ensure({kind:'patrol'},'patrol').maxHp,10,'patrol is a two-pikeman unit, not a 5-pikeman squad');
+assert.ok(rules.ensure({kind:'patrol'},'patrol').maxHp<rules.ensure({kind:'squad'},'spearman').maxHp,'a patrol is weaker than a squad');
 
 const allowed=p=>(p.x-100)**2+(p.y-100)**2<=400;
 function verifyOrderedRing(label,region,focus={x:100,y:100}){
