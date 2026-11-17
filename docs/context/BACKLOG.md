@@ -1,5 +1,17 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-17 — LOCAL-HEX-01 · Mappa locale ereditata dal territorio esagonale
+
+**IMPLEMENTATO SU BRANCH `feature/local-hex-shape` (base `3dregionmap`), NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Zona edificabile = poligono Voronoi del territorio; bordo del mondo = offset 50U.
+- [x] Settori dell'anello dai vicini fisici reali (5–7), non dagli 8 slot logici.
+- [x] Ingressi stradali per vicino di terra e uscite marine per tratto di costa sul bordo poligonale.
+- [ ] Decidere la scala: canvas più grande (WORLD ≈ 240) per tenere ~10000 U² edificabili, oppure area ridotta come ora.
+- [ ] Fiumi e catene montuose ai punti reali in cui attraversano i lati Voronoi (oggi `riverSides`/`mountainSides` cardinali).
+- [ ] Ingressi stradali concordi fra territori vicini (stesso punto sul lato condiviso) e, quando esisteranno, strade regionali.
+- [ ] Piano del terreno 3D ritagliato sul bordo invece del quadrato scuro; camera e unità limitate al poligono.
+- [ ] Salvataggi: versionare la forma locale e migrare le partite quadrate.
+
 ### 2026-11-15 — Microfix: messa domenicale visibile
 
 - [x] Cutaway della chiesa: fedeli seduti sui banchi la domenica 6:00–12:00 (ConquerCivic3D.massSlots, ConquerCourtPeople.massInSession).

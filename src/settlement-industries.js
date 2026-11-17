@@ -151,7 +151,7 @@
     const placement=s.type==='watermill'?orientToWater({...s}):s;
     const fp=footprint(placement);
     // The WHOLE footprint remains in the whitezone, even on cliffs.
-    if(fp.some(v=>v.x<BUILD_MIN||v.x>BUILD_MAX||v.y<BUILD_MIN||v.y>BUILD_MAX))
+    if(fp.some(v=>!(typeof inBuildZone==='function'?inBuildZone(v):v.x>=BUILD_MIN&&v.x<=BUILD_MAX&&v.y>=BUILD_MIN&&v.y<=BUILD_MAX)))
       return{ok:false,reason:'The entire '+type.w+'×'+type.h+'U footprint must remain in the whitezone (100×100U)'};
     // Rock is allowed for extraction, but never water, trees or other obstacles.
     const points=footprintSamples(placement);

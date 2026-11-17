@@ -129,7 +129,7 @@ function urbanParcelTerrainAllowed(points){
 }
 function urbanFieldParcelAllowed(points,fieldId){
   if(!points?.length||!urbanParcelTerrainAllowed(points))return false;
-  if(points.some(p=>p.x<BUILD_MIN||p.x>BUILD_MAX||p.y<BUILD_MIN||p.y>BUILD_MAX))return false;
+  if(points.some(p=>!(typeof inBuildZone==='function'?inBuildZone(p):p.x>=BUILD_MIN&&p.x<=BUILD_MAX&&p.y>=BUILD_MIN&&p.y<=BUILD_MAX)))return false;
   // Fields belong in the white rural belt, not the settlement's yellow/green
   // housing area. H0 must hold over the whole parcel, not only its centroid.
   const minX=Math.min(...points.map(p=>p.x)),maxX=Math.max(...points.map(p=>p.x));

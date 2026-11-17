@@ -53,6 +53,7 @@
     return(State.environment||[]).some(f=>f.type==='forest'&&environmentContains(f,p));
   }
   function landEdges(){
+    if(typeof localShape==='function'&&localShape()&&typeof landBorderSides==='function')return landBorderSides();
     const sea=State.environment?.find(f=>f.type==='sea')?.side;
     return['north','east','south','west'].filter(e=>e!==sea);
   }
@@ -200,7 +201,7 @@
     if(!quiet)status('Predoni dal confine '+edgeName(pick)+': puntano agli edifici isolati');
     return band;
   }
-  const edgeName=e=>({north:'nord',south:'sud',east:'est',west:'ovest'})[e]||e;
+  const edgeName=e=>typeof borderEdgeLabel==='function'?borderEdgeLabel(e):({north:'nord',south:'sud',east:'est',west:'ovest'})[e]||e;
 
   function endBand(band,outcome){
     const st=state();

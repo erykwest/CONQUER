@@ -32,6 +32,16 @@
     }
     if(Object.keys(biomes).length===8)demo.surroundingBiomes=biomes;
   }
+  // Hex territory outline (regional coordinates) and its PHYSICAL neighbours.
+  // Invalid or missing data keeps the legacy square map.
+  if(demo?.shape){
+    const ring=r=>Array.isArray(r)&&r.length>=3&&r.length<=64&&r.every(p=>Number.isFinite(+p?.x)&&Number.isFinite(+p?.y));
+    const rules=window.ConquerRegionalBiomeRules;
+    const neighbors=(Array.isArray(demo.shape.neighbors)?demo.shape.neighbors:[]).filter(n=>ring(n?.polygon)).slice(0,12)
+      .map(n=>({id:String(n.id),code:n.code??null,terrain:n.terrain??null,biome:rules?.biomeForTerrain(n.terrain)||null,polygon:n.polygon}));
+    demo.shape=ring(demo.shape.polygon)&&window.ConquerLocalShape?.create({polygon:demo.shape.polygon,neighbors})?{polygon:demo.shape.polygon,neighbors}:null;
+    if(!demo.shape)delete demo.shape;
+  }
   if((params.has('regionalDemo')||params.has('demo'))&&!(demo?.version===1&&allowed.includes(demo.biome)&&Number.isInteger(demo.seed)&&demo.seed>=0&&demo.seed<=2147483647)){
     demo={version:1,seed:4242,biome:'test',error:'Dati del territorio mancanti o non validi. Riapri la cella dalla mappa regionale.',neighbors:[]};
   }

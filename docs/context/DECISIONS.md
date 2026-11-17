@@ -1,5 +1,12 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-LOCAL-HEX-261117 — Mappa locale ereditata dal territorio esagonale (17/11/2026)
+
+- **DECISO dal product owner:** la mappa locale eredita il contorno del territorio regionale; la zona edificabile ha la forma della cella e il bordo esterno è un offset di 50U. La griglia regionale è esagonale: i biomi dell'anello vengono dai vicini **fisici** (di norma 6), e strade e rotte marine vanno ripensate su questa base.
+- **CONTRATTO TECNICO:** `ConquerLocalShape.create(shape)` → `build`, `outer`, `sectors`, `runs`, `weights(p,centro)`, `inBuild`, `inWorld`, `runSample(id,t)`. I bordi stradali esagonali si chiamano `hex:<macroId>`; `edgeSample` li risolve. Senza `shape` vale il modello quadrato.
+- **PROPOSTO (provvisorio):** scala adattata al lato più lungo della cella dentro il riquadro 100U, per non toccare `WORLD=200` e le coordinate fisse; da rivedere se l'area edificabile ridotta non va bene.
+- **STATO:** implementato su `feature/local-hex-shape`, non in main.
+
 ## D-THREATS-261116 — Generatore di minacce (16/11/2026)
 
 - **DECISO dal product owner:** lupi, orso, briganti, banditi e predoni compaiono tramite un **generatore di eventi** a **probabilità + condizioni** (tiro giornaliero, probabilità dipendente dallo stato dell'insediamento, tempi di quiete); **difficoltà a 3 livelli** (Tranquilla / Normale / Dura) che cambia frequenza e dimensione delle bande, scelta e salvata nella partita; il giocatore è avvisato con **avviso + registro** (pulsante «Vai» sul posto).

@@ -72,3 +72,7 @@ Verification: `qa/regional-map3d-placeholders-regression.cjs` covers all five pr
 Serve the repository root over HTTP and open \`/lab/3dregionmap.html\` (do not use \`file://\`). In the left iframe, generate/edit the authoritative 2D map. The right pane detects the 2D revision, then builds its own global microcell mesh. Choose 8/20/40 detail, vary the deformation slider, and toggle tree/reed populations. The benchmark button reports CPU construction time (not GPU FPS).
 
 **Conclusion:** the dense-microcell-first model allows much more organic cartographic contours without changing the canonical game grid. It is a promising experimental direction, but visual and GPU-level assessment is still required.
+
+## Mappa locale ereditata (branch `feature/local-hex-shape`)
+
+Il pulsante «Apri demo locale» passa anche `shape`: contorno del territorio e contorni dei vicini fisici. La mappa locale usa quel poligono come zona edificabile e lo offset di 50U come bordo del mondo; l'anello è diviso fra i vicini con le loro celle Voronoi reali. Codice in `src/regional-local-shape.js`, test in `qa/local-hex-shape-regression.cjs`. Stato e limiti in `docs/context/STATUS.md` (LOCAL-HEX-01).
