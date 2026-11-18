@@ -834,14 +834,23 @@ function settlementRoadAccessPoint(s,target){
   if(s.type==='market')return marketRoadAccessPoint(s,target);
   if(s.type==='training')return fieldRoadAccessPoint({...s,w:5,h:4},target);
   if(s.type==='tavern'||s.type==='church')return civicEntranceInfo(s)?.outside||structureCenter(s);
+  // Industries and storage yards: the footprint edge facing the road, just outside it.
+  if(s.type==='storageYard'||window.ConquerIndustries?.is(s)){
+    const spec=window.ConquerIndustries?.definition?.(s);
+    return fieldRoadAccessPoint({...s,w:Number(s.w)||spec?.w||2,h:Number(s.h)||spec?.h||2},target);
+  }
   return structureCenter(s);
 }
+// Every building people enter or work at is linked to the main network by a secondary
+// (access) road. Towers get their own service branch, gates and wells their own main roads,
+// civic annexes share their parent's road; walls, bridges and open venues have no entrance.
+// qa/access-roads-regression.cjs audits every placeable type against this rule.
+function structureNeedsAccessRoad(s){
+  if(!s||s.type==='road')return false;
+  return s.type==='house'||s.type==='field'||isCivic(s)||s.type==='storageYard'||!!window.ConquerIndustries?.is(s);
+}
 function settlementAccessTargets(){
-  return State.structures.filter(s=>
-    !underConstruction(s)&&(
-      s.type==='house'||s.type==='field'||isCivic(s)
-    )
-  );
+  return State.structures.filter(s=>!underConstruction(s)&&structureNeedsAccessRoad(s));
 }
 function towerSecondaryBranchAccessPoint(tower,target){
   if(!tower||tower.type!=='tower'||tower.parentTowerId)return null;

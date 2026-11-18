@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-18 — ROAD-ACCESS-261118 · Strade secondarie per ogni edificio con ingresso
+
+**IMPLEMENTATO SU BRANCH `fix/secondary-roads`.** Dettagli in [STATUS](STATUS.md).
+- [x] Taglialegna, cava, cava d'argilla, miniera, mulini e deposito ricevono la strada secondaria al completamento, alla ricarica e nella riconciliazione.
+- [x] Regola unica `structureNeedsAccessRoad` con audit dei tipi piazzabili in `qa/access-roads-regression.cjs`: un nuovo tipo di edificio deve essere collegato o dichiarato esente.
+- [ ] Miniere e cave su pendio: se il bordo dell'impronta e i 3U attorno sono pendio o montagna (vietati alle strade) la ricerca del percorso fallisce e la strada non nasce; verificarlo in partita su mappe montuose.
+
 ### 2026-11-17 — FIG-HANDS-261117 · Mani e piedi delle figure
 
 **IMPLEMENTATO SU BRANCH `feature/figure-hands-feet`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
