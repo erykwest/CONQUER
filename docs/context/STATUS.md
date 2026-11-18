@@ -142,6 +142,11 @@ Su richiesta utente, avviata la variante concentrica TEST per 300 s simulati, co
 
 - Branch fix/microfix. Con il cutaway piano per piano su un piano sotto l'ultimo, torri, porte e sottotorri non disegnano più merli, caditoie, tetto interno e braciere del tetto (cutawayCrestHidden in settlement-castle.js), sia nel percorso 2.5D (drawCastleBattlements) sia in quello WebGL (ConquerCastle3D.addPieces); la chiave della mesh castello di World3D cambia quando la cresta sparisce, così la mesh si ricostruisce.
 - PASS cutaway-floors (nuove asserzioni) e 49 regressioni castello/cutaway; verificato a vista nel browser su una torre quadra W2 a 3 piani: in P2 merli e braciere, in P1 e P0 nessuno dei due. Le due suite Playwright non sono eseguibili in locale. CI da eseguire.
+## 2026-11-18 — MSG-FEED-261118 · Messaggi e notifiche nella UI classica (branch `fix/messages-notifications`)
+- **Causa:** UI-ALERTS-01 (#256) montava avvisi e diario solo nella UI v2 opt-in (`?ui=2`); con la UI classica, che resta il default, nessuna notifica compariva (solo la busta ✉️ sulla mappa). In più «Mostra sulla mappa» selezionava soltanto la struttura senza spostare la camera, e i messaggi non avevano un punto da mostrare.
+- **Fix:** `src/ui/shell.js` monta nella UI classica un overlay `#ui2.u2-legacy` con la sola pila di avvisi e il diario in una scheda flottante (watcher condivisi, `useAlertWatchers`); CSS in `theme.css` lo tiene a sinistra della sidebar. Nuovo `ConquerGame.commands.focus(id, at)` (`game-api.js`) centra la camera su una struttura o su un punto della mappa. Gli avvisi accettano `at: {x, y}`; messaggero e colombo lo valorizzano con la porta del Mastio / la colombaia. Dopo un ricarico, una condizione già «iniziata» e mai risolta nel diario non viene registrata di nuovo.
+- **PROVE LOCALI PASS:** `node qa/ui-alerts-regression.mjs` (nuovo blocco end-to-end watcher → feed: messaggero in arrivo, in attesa, cantiere completato, ricarico senza doppioni, risoluzione). Browser locale: UI classica e UI v2 con villaggio fondato, Mastio e messaggero; avviso, «Leggi il messaggio», «Mostra sulla mappa» (camera centrata sul punto), diario; nessun errore in console. CI da eseguire.
+
 ## 2026-11-16 — Avvisi in gioco e diario degli eventi (branch `feature/alert-feed`)
 
 - **CODICE SUL BRANCH, NON MERGE:**

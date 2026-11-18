@@ -116,4 +116,53 @@ assert.deepEqual(small.journal().map(e => e.title), ['E4', 'E3']);
   assert.equal(box.visible().items.find(a => a.key === 'c').action.arg, 'caravan-1');
 }
 
+// End to end without a browser: game events read by the watchers reach the feed (MSG-FEED-261118).
+{
+  const { createWatchers } = await import('../src/ui/alert-watchers.js');
+  let u = 0;
+  const box = createAlertCenter({ now: () => u, resolveGrace: 0 });
+  const goal = { x: 41, y: 57 };
+  const State = globalThis.State = { seed: 9, village: { name: 'Prova', founded: false }, clock: { day: 3 }, diplomacy: { version: 1, incoming: null, history: [] },
+    structures: [{ id: 'site-1', type: 'tower', construction: { version: 1 } }] };
+  globalThis.underConstruction = s => !!s.construction;
+  const game = { read: { defense: () => ({ alert: 'clear' }), logistics: () => null }, snapshot: () => ({ saveStatus: 'saved' }) };
+  const w = createWatchers(game, box, { now: () => u, structureNames: { tower: 'Torre' } });
+  w.poll(); // first poll only seeds
+  assert.equal(box.visible().items.length, 0, 'nothing announced at load');
+
+  State.diplomacy.incoming = { id: 'courier-0', edge: 'west', phase: 'arriving', by: 'courier', request: 100, goal };
+  u = 1000; w.poll();
+  const arrive = box.visible().items.find(a => a.key === 'msg-arrive-courier-0');
+  assert.ok(arrive, 'a messenger setting out shows up in the feed');
+  assert.equal(arrive.title, 'Messaggero in arrivo');
+  assert.deepEqual(arrive.at, goal, 'and can be shown on the map at the keep door');
+
+  State.diplomacy.incoming.phase = 'waiting';
+  u = 2000; w.poll();
+  const wait = box.visible().items.find(a => a.key === 'message-courier-0');
+  assert.ok(wait && wait.action.id === 'readLetter', 'a waiting messenger is a condition with "Leggi il messaggio"');
+  assert.deepEqual(wait.at, goal);
+
+  delete State.structures[0].construction;
+  u = 3000; w.poll();
+  const done = box.visible().items.find(a => a.key === 'done-site-1');
+  assert.ok(done && done.title === 'Costruzione completata' && done.focusId === 'site-1', 'a finished site shows up with its structure');
+  assert.equal(done.detail, 'Torre');
+
+  // Reload: the journal comes back from storage and the same waiting messenger is not logged twice.
+  const saved = box.exportJournal();
+  const again = createAlertCenter({ now: () => u, resolveGrace: 0 });
+  again.importJournal(saved);
+  const w2 = createWatchers(game, again, { now: () => u });
+  w2.poll();
+  assert.equal(again.visible().items.find(a => a.key === 'message-courier-0')?.title, 'Messaggero alla porta del Mastio', 'still on screen after a reload');
+  assert.equal(again.journal().filter(e => e.key === 'message-courier-0' && e.phase === 'raised').length, 1, 'not logged twice after a reload');
+
+  State.diplomacy.incoming = null;
+  u = 4000; w.poll();
+  assert.equal(box.journal()[0].title, 'Messaggio evaso', 'answering resolves it');
+  assert.equal(box.journal()[0].at, null, 'a resolved entry has nothing to show');
+  delete globalThis.State; delete globalThis.underConstruction;
+}
+
 console.log('ui-alerts-regression: ok');

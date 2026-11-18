@@ -154,6 +154,22 @@
     },
     demolish: id => { deleteStructure(id); emit(); },
     select: id => { selectStructure(State.structures.find(s => s.id === id) || null); emit(); },
+    // "Mostra sulla mappa": centre the camera on a structure (and select it) or on a bare map point.
+    focus: (id, at) => {
+      const s = id != null ? State.structures.find(x => x.id === id) : null;
+      const p = s || (at && Number.isFinite(+at.x) && Number.isFinite(+at.y) ? { x: +at.x, y: +at.y } : null);
+      if (!p) return false;
+      const z = typeof terrainElevation === 'function' ? terrainElevation(p) || 0 : 0;
+      const q = w2sRaw(p, z), r = wrap.getBoundingClientRect();
+      if (Number.isFinite(q.x) && Number.isFinite(q.y)) {
+        State.view.x += r.width / 2 - q.x;
+        State.view.y += r.height / 2 - q.y;
+        invalidateSceneCache();
+      }
+      if (s) selectStructure(s);
+      draw(); emit();
+      return true;
+    },
     openProfile: () => press('#profileBtn'),
     toggleDev: () => press('#devToggle'),
 

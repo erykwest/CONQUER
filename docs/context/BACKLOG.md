@@ -95,6 +95,15 @@
 - [ ] Porte delle torri d'angolo per le altre forme (tonde, a D): da definire.
 - [x] Rimuovi foresta rispetta Fast build (istantaneo) e Free build (senza salari) del menu DEV.
 - [x] Cutaway piano per piano: i merli (e caditoie, tetto interno, braciere) spariscono quando il piano in vista non è l'ultimo.
+## 2026-11-18 — MSG-FEED-261118 · Messaggi e notifiche funzionanti anche nella UI classica
+
+Branch `fix/messages-notifications`. Dettagli in [STATUS](STATUS.md).
+- [x] Avvisi e diario degli eventi anche nella UI classica (default), non solo con `?ui=2`.
+- [x] «Mostra sulla mappa» centra la camera (struttura o porta del Mastio dove aspetta il messaggero).
+- [x] Dopo un ricarico, un messaggio ancora in attesa non viene scritto due volte nel diario.
+- [x] Test: un evento di gioco letto dai watcher arriva nel feed (`qa/ui-alerts-regression.mjs`).
+- [ ] Nella UI classica su finestre strette la pila di avvisi può toccare la scheda del diario aperta.
+
 ## 2026-11-16 — UI-ALERTS-01 · Avvisi in gioco e diario degli eventi
 
 **IMPLEMENTATO SU BRANCH `feature/alert-feed`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
@@ -104,7 +113,7 @@
 - [x] Fix: il messaggero a cavallo si ferma davanti alla porta del Mastio, non dentro la sala comune.
 - [ ] Verificare nel gioco la posizione del messaggero con Mastio a ingresso rialzato e a piano terra.
 - [ ] Salvare il diario nel salvataggio di partita (oggi solo `localStorage` del browser).
-- [ ] Centrare la camera sulla struttura con «Mostra sulla mappa» (oggi la seleziona e apre l'ispettore).
+- [x] Centrare la camera sulla struttura con «Mostra sulla mappa» (MSG-FEED-261118: `commands.focus`, anche sul punto del messaggero).
 - [ ] Portare i messaggi di stato inglesi dei moduli legacy (`status()`) a chiavi tradotte e farli passare dal centro avvisi.
 ## 2026-11-16 — THREAT-GEN-01 · Generatore di minacce
 
