@@ -1336,6 +1336,9 @@ function biomeHillPlan(biome=State.biome){
 }
 function biomeRand(rnd,lo,hi){return lo+rnd()*(hi-lo)}
 // randomCenter(marginU) inside the COFFEE BATTLES map zone (battlefield inset by 2U).
+// Hex territory maps: features placed after the regional composition (ponds, woods,
+// clearings, the continuous forest) must stay inside the inherited 50U-offset border.
+function biomeOffMap(points){const s=typeof localShape==='function'?localShape():null;return !!s&&Array.isArray(points)&&points.some(p=>!s.inWorld(p,-1))}
 function biomeCenter(rnd,marginU=0){
   const m=BIOME_ZONE_INSET+marginU*BIOME_SCALE;
   return{x:m+rnd()*(WORLD-2*m),y:m+rnd()*(WORLD-2*m)};
@@ -1711,7 +1714,7 @@ function makeForestCandidate(rnd,small=false){
 function addForestBlob(env,rnd,small=false,minGap=3,maxAttempts=120){
   for(let attempt=0;attempt<maxAttempts;attempt++){
     const candidate=makeForestCandidate(rnd,small);
-    if(!forestBlobCanPlace(candidate,env,minGap))continue;
+    if(!forestBlobCanPlace(candidate,env,minGap)||biomeOffMap(candidate.points))continue;
     env.push(candidate);
     return candidate;
   }
@@ -1790,7 +1793,7 @@ function addBiomeForest(env,rnd,small){
   for(let attempt=0;attempt<420;attempt++){
     const size=biomeFeatureSize(rnd,small),p=biomeCenter(rnd,size.margin);
     const candidate=makeOrganicForestBlob(rnd,p.x,p.y,size.rx,size.ry,small);
-    if(!forestBlobCanPlace(candidate,env,3)||!biomeFeatureClear(candidate.points,others(),1))continue;
+    if(!forestBlobCanPlace(candidate,env,3)||!biomeFeatureClear(candidate.points,others(),1)||biomeOffMap(candidate.points))continue;
     env.push(candidate);return candidate;
   }
   return null;
@@ -1801,7 +1804,7 @@ function addBiomePond(env,rnd){
   for(let attempt=0;attempt<420;attempt++){
     // makePond: rx 4-5, ry 2.5-3.3, centre margin 4.
     const p=biomeCenter(rnd,4),pond=makeEnvBlob(rnd,'pond',p.x,p.y,biomeRand(rnd,4,5)*BIOME_SCALE,biomeRand(rnd,2.5,3.3)*BIOME_SCALE,'#3f7f8a','#8ab9bd',20,.20);
-    if(!biomeTownClear(pond.points)||!biomeFeatureClear(pond.points,others,1))continue;
+    if(!biomeTownClear(pond.points)||!biomeFeatureClear(pond.points,others,1)||biomeOffMap(pond.points))continue;
     if(State.biome==='swamp')styleMarshWater(pond);
     env.push(pond);return pond;
   }
@@ -1824,7 +1827,7 @@ function makeContinuousForest(env,rnd,ratio){
   for(let attempt=0;attempt<60&&clearingCoverage(clearings,40)<ratio;attempt++){
     const p=biomeCenter(rnd,0),hole=clearing(p.x,p.y,biomeRand(rnd,9,20),biomeRand(rnd,7,15));
     // Clearings stay distinct glades: no merging into the hub or into each other.
-    if(clearings.some(h=>polygonGap(hole,h)<4))continue;
+    if(clearings.some(h=>polygonGap(hole,h)<4)||biomeOffMap(hole))continue;
     clearings.push(hole);
   }
   const holes=[...clearings];
@@ -1832,7 +1835,8 @@ function makeContinuousForest(env,rnd,ratio){
   const naturalHoleCount=holes.length;
   for(const w of env.filter(f=>f.type==='stream'||f.type==='river'))holes.push(...(window.ConquerHydrology?.bank?[window.ConquerHydrology.bank(w.points,w.width/2+2)]:corridorHolePolygons(w.points,w.width/2+2)));
   return{id:'env-forest-continuous',type:'forest',continuous:true,
-    points:[{x:0,y:0},{x:WORLD,y:0},{x:WORLD,y:WORLD},{x:0,y:WORLD}],
+    // The whole map: the hex territory's border, or the legacy square canvas.
+    points:(typeof localShape==='function'&&localShape()?.outer?.map(p=>({x:p.x,y:p.y})))||[{x:0,y:0},{x:WORLD,y:0},{x:WORLD,y:WORLD},{x:0,y:WORLD}],
     holes,naturalHoleCount,clearings:clearings.length,clearingRatio:clearingCoverage(clearings),
     fill:'#2e3c1d',edge:'#5c7438',x:WORLD/2,y:WORLD/2,rx:WORLD/2,ry:WORLD/2};
 }
