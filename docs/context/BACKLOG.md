@@ -1,5 +1,13 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-18 — UI-UPG-01 · Ampliamenti dall'ispettore
+
+**Implementato sul branch `feature/upgrades-in-inspector`, non ancora unito a main.**
+
+- [x] Municipio, Gilda e Bargello fuori dal pannello Costruisci; si avviano dall'ispettore del pozzo.
+- [x] Annessi civici (chiesa, taverna, mercato, orto di corte) nell'ispettore UI v2 (prima solo nel pannello legacy).
+- [ ] I futuri ampliamenti (Lavatoio, Presidio antincendio) vanno aggiunti a `structureUpgrades`, non al Builder.
+
 ## 2026-11-17 — MIL-FIG-01 · Guardie, picchieri e leva distinguibili
 
 **Picchieri con scudo implementati sul branch `fix/squad-pikemen-shield`, non ancora uniti a main.** Richiesta del product owner (17/11/2026): tre figure militari distinte.

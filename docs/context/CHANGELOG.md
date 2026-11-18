@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-18 — UI-UPG-01 · Ampliamenti nell'ispettore, non nel Builder
+
+`feature/upgrades-in-inspector`: Municipio, Gilda e Bargello (edifici del pozzo) escono dal pannello Costruisci (UI v2 e palette legacy) e si avviano dall'ispettore del pozzo, blocco «Ampliamenti»; nell'ispettore UI v2 lo stesso blocco elenca anche gli annessi di chiesa, taverna, mercato e municipio. ROADMAP e DECISIONS invariate: le regole di piazzamento non cambiano.
+
 ### 2026-11-17 — MIL-FIG-01 · Picchieri con scudo, araldo con lo stendardo
 
 `fix/squad-pikemen-shield`: lancia nella mano destra del soldato (lato sinistro dello schermo, la figura guarda chi osserva) per tutte le figure con lancia. I picchieri della squadra hanno lo scudo del regno (figura `pikeman`); il primo è l'araldo del reggimento (figura `herald`), l'unico con lo stendardo, che porta al posto della lancia; lo stendardo è 3 volte la vecchia bandierina di squadra. Le guardie di pattuglia restano senza scudo. Il Lab ha le voci «Picchiere» e «Araldo». La leva non veste più la livrea: abiti di classe del popolano più un cappuccio coi colori dello stemma, con lancia e scudo (L1) oppure con l'arco (L2). Ruolo dei maschi per classe: L1 fanti di leva, L2 arcieri di leva, L3 uomini d'arme, L4 cavalieri (`combatRole`, decisione D-MIL-FIG-261117 in DECISIONS); come si chiamano in campo L3 e L4 è ancora da definire. Uomo d'arme (L3) con gonnello con lo stemma, elmo dei cavalieri e arma a due mani casuali per persona. Cavalieri (L4) con mantello e cimiero araldico (torciglio, mantellino e figura fra ali, corna di cervo, corna, aquila, corona), a cavallo e a piedi; smontati con spada e scudo nel torneo e nel campo di addestramento. In BACKLOG resta aperta la torcia in più della lancia per le guardie di notte. ROADMAP invariata. DECISIONS: nuova D-MIL-FIG-261117.

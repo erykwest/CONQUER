@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-18 — UI-UPG-01: ampliamenti di pozzo ed edifici civici nell'ispettore (`feature/upgrades-in-inspector`)
+
+- **Codice sul branch, non ancora unito a main.** Richiesta del product owner: gli edifici che sono un ampliamento del pozzo o di altro si avviano dall'ispettore e non stanno nel pannello di costruzione principale.
+- `StructureCommands.describeStructure` espone `upgrades` (pozzo: `townhall`/`guild`/`bargello` con motivo di blocco `notFounded`/`taken`/`guildOne`; edifici con `CIVIC_ANNEX_CATALOG`: annessi non intrinseci con `level`/`full`). Nuovo comando `startUpgrade(id,key)`: per il pozzo apre il piazzamento civico con `placementSpec.wellId` (il controllo esistente preferisce quel pozzo), per gli annessi chiama `startCivicAnnexPlacement`; chiude l'ispettore.
+- UI v2 (`shell.js`): blocco «Ampliamenti» (Costruisci / ↳ Seleziona) nell'ispettore; la riga Edificio della scheda Edifici civici non elenca più i tre edifici del pozzo. Legacy: pannello del pozzo con «Ampliamenti del pozzo»; voci tolte da `settlement-builder-ux.js`; i pulsanti `[data-civic]` di `index.html` restano nascosti come gestori dello strumento.
+- **Prove:** PASS well-civics, multi-wells, guild, church, crime-buildings, cutaway-floors, panels. Verificato in Chromium headless (UI legacy e `?ui=2`): blocco nel pozzo e nella chiesa L2, Costruisci avvia lo strumento col pozzo giusto, nessun errore di pagina.
+
 ### 2026-11-17 — MIL-FIG-01: picchieri con scudo, araldo con lo stendardo (`fix/squad-pikemen-shield`)
 
 - **Codice sul branch, non ancora unito a main.** Prima, guardie (pattuglia) e picchieri (squadra) erano la stessa figura `spearman`, senza scudo, e il primo della squadra aveva lo stendardo in più della lancia.
