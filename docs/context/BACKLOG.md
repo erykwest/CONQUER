@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-18 — TORCH-STREAK-261118 · Fasci verticali delle torce
+
+**FIX SU BRANCH `fix/torch-artifact`.** Dettagli in [STATUS](STATUS.md).
+- [x] Alone di torce e bracieri procedurale nello shader: nessuna riga verticale a nessuna distanza.
+- [x] Margine trasparente attorno alla tessera `__glow` degli aloni delle finestre.
+
 ### 2026-11-17 — FIG-HANDS-261117 · Mani e piedi delle figure
 
 **IMPLEMENTATO SU BRANCH `feature/figure-hands-feet`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
