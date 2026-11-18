@@ -1821,6 +1821,10 @@
     seekBudget--;u.nextAutoAt=now+THINK_S*1000;
     const goal={x:foe.x,y:foe.y},route=u.kind==='patrol'?patrolRoute(u,goal,u.id):infantryRoute(u,goal,u.id,u.kind);
     if(!route){
+      // A patrol that cannot reach the foe keeps walking its round: its own loop target is not
+      // an order to drop. Clearing it here made updatePatrols skip to the next waypoint at
+      // every think while an unreachable hostile stood within reach (PATROL-ROUTE-261118).
+      if(u.kind==='patrol'&&!u.autoFoe)return;
       const legs=u.kind==='patrol'?null:legsViaGate(u,goal);
       u.target=null;u.path=null;
       if(legs){u.legs=legs;u.autoFoe=foe.id}else u.autoFoe=null;
