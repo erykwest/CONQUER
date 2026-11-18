@@ -106,6 +106,7 @@ jobs:
         run: |
           node qa/combat-render-regression.cjs
           node qa/combat-anim-regression.cjs
+          node qa/combat-figures-roles-regression.cjs
           node qa/gore-regression.cjs
           node qa/combat-selection-regression.cjs
           node qa/mass-battle-regression.cjs

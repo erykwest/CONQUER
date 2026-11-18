@@ -44,7 +44,7 @@
   ];
   const SUBJECTS=[
     ['villager','Popolano','Popolazione','Civili'],
-    ['spearman','Fanteria','Truppe','Militari'],['archer','Arciere','Truppe','Militari'],
+    ['spearman','Fanteria / guardia','Truppe','Militari'],['pikeman','Picchiere (squadra)','Truppe','Militari'],['herald','Araldo del reggimento (stendardo)','Truppe','Militari'],['manAtArms',"Uomo d'arme (L3)",'Truppe','Militari'],['archer','Arciere','Truppe','Militari'],
     ['knight','Cavaliere','Truppe','Militari'],['wagon','Carro animato 2D','Veicoli','Carri'],
     ['wagon3d','Carro animato 3D','Veicoli','Carri'],
     // The in-game 2D horse (settlement-animals.js) and everything that rides or pulls with it.
@@ -176,7 +176,7 @@
   }
   // Costumes of office (crime): whole outfits by role, as the tribunal scene dresses them.
   for(const [key,title,pieces] of [['judge','Giudice',['judgeRobe','judgeCap']],['clerk','Cancelliere',['clerkGown','clerkCap']],
-    ['prisoner','Prigioniero',['prisonerShirt']],['executioner','Boia',['executionerHood']]])
+    ['prisoner','Prigioniero',['prisonerShirt']],['executioner','Boia',['executionerHood']],['levy','Leva (cappuccio araldico)',['levyHood']]])
     if(pieces.every(p=>window.ConquerWardrobe?.ROLE_PIECES?.[p]))
       items.push({id:'wardrobe:role:'+key,title,category:'Popolazione',family:'Costumi di ruolo',kind:'wardrobe',key,pieces,
         format:'Overlay',note:'Vestito per ruolo (tribunale), mai per stagione.',source:'src/settlement-wardrobe.js · src/settlement-court-people.js'});
