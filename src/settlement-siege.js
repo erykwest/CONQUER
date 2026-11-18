@@ -479,6 +479,7 @@
   // structures several times per face and floor: keep the result per tower while the tower and
   // the walls/towers attached to it are unchanged (one pass over the structures per call).
   const slotCache=new WeakMap();
+  const WATCHTOWER_DECK_Z=1.46,WATCHTOWER_DECK_SPOTS=Object.freeze([[0,.03],[.2,-.2]]);
   function slotKey(tower){
     const own=JSON.stringify(tower,(k,v)=>k==='siegeIntegrity'||k==='archerCount'?undefined:v);
     let near='';
@@ -504,6 +505,16 @@
       :['battlement','machicolation'].includes(towerRoofStyle(tower));
     const top=wood?1:structureLevel(tower);
     const ground=placementGroundZ(tower);
+    if(wood&&woodTowerStyle(tower)==='watchtower'){
+      // The watchtower is a guard deck (build_wood_fort.py: planks to 1.46 U, rail to 1.72,
+      // open sides under the hip roof): two archers, the first mid-deck (the lookout's spot),
+      // the second in a free corner: clear of the ladder hatch (-.22,-.22) and of the lookout's
+      // corner (+,+, settlement-soldiers.js lookoutPose).
+      const z=WATCHTOWER_DECK_Z;
+      WATCHTOWER_DECK_SPOTS.forEach(([x,y],i)=>result.push({id:tower.id+':roof'+(i?':'+i:''),kind:'roof',floor:top,
+        p:woodTowerLocal(tower,x,y),z,h:ground+top,visualZ:ground+z}));
+      return result;
+    }
     if(openDeck){
       const p=wood?woodTowerLocal(tower,0,.03):{...center};
       const z=wood?1.82:structureHeight(tower)+.08;

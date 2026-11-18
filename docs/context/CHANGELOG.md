@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-18 — Microfix: posti per arcieri sulla torre di vedetta
+
+`fix/watchtower-slots`: la torre di vedetta lignea aveva 0 posti per arcieri; ora ne ha 2 sul ballatoio (1,46 U), assegnabili dal pannello e usati dal combattimento. Nuova `qa/watchtower-slots-regression.cjs` nel workflow `tower-variants-regression`. ROADMAP e DECISIONS invariate: correzione di un contratto esistente (ogni torre finita con un piano di tiro ha posti), nessuna decisione nuova.
+
 ### 2026-11-17 — FIG-HANDS-261117 · Mani e piedi delle figure
 
 `feature/figure-hands-feet`: mani rosa (cerchietti con bordo) e piedi marroni (ovali orizzontali) su civili, lavoratori, soldati fermi e in combattimento, ostili e nobili; mani rosa anche ai cavalieri e messaggeri a cavallo, che tengono le gambe. Le dame L4 hanno una gonna a campana unita al busto, con le punte delle scarpe sotto l'orlo, abito monocromo, copricapi e acconciature medievali (tavola di riferimento del product owner) e pellicce d'inverno. Scelta del product owner dopo le prove A–E e S1/S2 nel Lab (gambette scartate, gambe dei cavalieri mantenute). Nuova `qa/figure-hands-feet-regression.cjs` nel workflow delle animazioni di lavoro; baseline dell'audit aggiornata per 58 render di Popolazione e Truppe. ROADMAP e DECISIONS invariate: è un dettaglio grafico, nessun contratto cambiato.

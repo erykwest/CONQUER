@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-18 — Microfix: posti per arcieri sulla torre di vedetta lignea
+
+**IMPLEMENTATO SU BRANCH `fix/watchtower-slots`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] La vedetta ha 2 posti per arcieri sul ballatoio (prima 0): pannello, assegnazione, tiratori in combattimento e figure.
+- [ ] Anche la torre lignea a telaio H2 (`frameTower`, ballatoio aperto a 2,66 U) e la torre a palizzata coperta hanno 0 posti: decidere se ne servono.
+
 ### 2026-11-17 — FIG-HANDS-261117 · Mani e piedi delle figure
 
 **IMPLEMENTATO SU BRANCH `feature/figure-hands-feet`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
