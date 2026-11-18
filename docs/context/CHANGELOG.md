@@ -3,6 +3,13 @@
 ### 2026-11-18 — PAL-W1-SLOPE · Palizzate W1 sui fianchi delle colline
 
 `fix/palisade-w1-slopes`: le palizzate W1 si costruiscono su pendii dolci e scoscesi (prima ogni palizzata voleva un terrazzo piano); W2-W3 restano solo in piano, anche come upgrade. Paletti 3D e di cantiere poggiati sul terreno più basso sotto ciascuno. Nuova `qa/palisade-slope-regression.cjs`. ROADMAP e DECISIONS invariate.
+### 2026-11-17 — ROOM-ANIM-COMMON · Soldati e servitù nella Sala comune
+
+`feat/throne-hall-court`: nella Sala comune in sezione siede un commensale per panca (soldati e civili che bevono) e un servo porta il cibo in capo a ogni tavolo; vuota di notte e durante un allarme. Nuovo mestiere `servant` nel guardaroba (voce del Lab e baseline). Test in `qa/staff-people-regression.cjs`. ROADMAP e DECISIONS invariate.
+
+### 2026-11-17 — ROOM-ANIM-THRONE · La corte nella Sala del trono
+
+`feat/throne-hall-court`: nella Sala del trono in sezione ci sono il signore seduto sul trono, due guardie, l'araldo e un postulante (più un cortigiano nella sala grande); di notte solo le guardie. Nuovi `ConquerCutawayFurniture.roomPieces/roomContains`, nuovo mestiere `herald` nel guardaroba (voce del Lab e baseline). Test in `qa/staff-people-regression.cjs`. ROADMAP e DECISIONS invariate: figure solo visive, nessun contratto di gioco cambiato.
 
 ### 2026-11-17 — FIG-HANDS-261117 · Mani e piedi delle figure
 
@@ -13,6 +20,7 @@
 
 05/11/2026 — `feature/tower-inner-roof`: BC-251105-05, tetto interno dentro i merli delle torri in pietra T2+ (variante `innerRoof`), nel Builder, nel 2.5D, nel 3D e nel Lab. Piramide: STATUS, BACKLOG, feature-backlog. ROADMAP e DECISIONS invariate: nuova variante estetica, nessun contratto cambiato (le stanze sotto il tetto restano legate al tetto a falde).
 09/11/2026 — CI P2.4 (`perf/ci-p24-specialist-test-ownership-20261109`): rimosse 9 invocazioni test duplicate da Codex Wiki, Main fixes e CAMP, mantenendo owner di regressione in Runtime integrity e settlement-qa (always-on PR). Codex Wiki mantiene Playwright e filtri dei suoi check browser, Main fixes mantiene WebGL/render e UI/Combat, CAMP conserva animali e pattuglie. Aggiunta guardia P2.4 in `qa/ci-p1-regression.cjs`; suite completa P0 e tutte le baseline/test immutate.
+
 ### 2026-11-16 — GORE-01: sangue, frecce, cadaveri e mutilazioni sul campo (opzione)
 
 - Nuovo `src/settlement-gore.js` (ConquerGore): macchie di sangue a ogni colpo, frecce mancate conficcate nel terreno, frecce nei corpi, cadaveri, decapitazioni, squartamenti, braccia mozzate, schiacciati dalle pietre. Dissolvenza lineare come le impronte sulla neve ma in 2 giorni di gioco. Interruttore nel pannello DEV (sezione VIOLENZA), salvato in `localStorage` `conquer.gore.v1`; spento toglie anche il sangue delle cadute. Voci nel Lab (famiglia «Campo di battaglia»). Test `qa/gore-regression.cjs`. ROADMAP e DECISIONS invariate: stato visivo transitorio, nessun salvataggio cambiato.
@@ -33,6 +41,7 @@ Regole della mischia corrette: ogni nemico a contatto attacca, l'energia si cons
 ### 2026-11-16 — Braciere delle torri in 3D
 
 - Il corpo del braciere su torri e porte in pietra entra nella mesh del castello con test di profondità; il canvas lo dipinge solo dove la mesh non c'è. Test in qa/tower-inner-roof-regression.cjs. Roadmap e decisioni invariate.
+
 ## 2026-11-16 — combat-ai: fortificazioni verso l'esterno, merge di main, fionda del trabucco
 
 - `faceFortificationsOut` (settlement-castle-structures.js, chiamata da `migrateStructures`): le mura di una cinta guardano fuori dal recinto e le porte tra due tratti hanno il passaggio attraverso il muro verso l'esterno; i muri sul molo restano rivolti all'acqua.
