@@ -97,7 +97,10 @@
     const z=ground+a.z+a.bob-(typeof terrainElevation==='function'?terrainElevation(p):0);
     // Staff at work: the trade's stroke in 16 steps of a quarter second (a 4 s loop).
     const step=a.tool?Math.floor(((a.t||0)*4)%16):0;
-    const key='court|'+s.id+'|'+a.id+'|'+a.role+'|'+a.action+'|'+g+'|'+step+'|'+(a.facing||1);
+    // The outfit is part of the picture: staff in a trade dress their free slots for the season,
+    // so a change of month or weather must repaint the cached card.
+    const look=a.role==='guard'?'':JSON.stringify(window.ConquerWardrobe?.outfitFor?.(dotOf(s,a,p))??null);
+    const key='court|'+s.id+'|'+a.id+'|'+a.role+'|'+a.action+'|'+g+'|'+step+'|'+(a.facing||1)+'|'+look;
     const b={...a,sway:0,bob:0,gesture:g,t:a.tool?step/4:a.t};
     return W.figure(p,z,key,()=>paintActorAt(s,b,p),s.id+':court:'+a.id);
   }
