@@ -660,7 +660,7 @@
   // house piece by piece; the WebGL builder has no tag and ignores it.
   function addHouse(m,entry,winter){
     const house=entry.house,lvl=houseLevel(house);
-    // An open L3 workshop: its bodies live in the cutaway buffer (settlement-shop-cutaway.js).
+    // An open workshop: its bodies live in the cutaway buffer (settlement-shop-cutaway.js).
     const shopOpen=!m.tag&&!!window.ConquerShopCutaway?.active(house);
     // Kit houses (settlement-house3d.js): bodies, roofs, frame, windows, door and chimneys come from
     // the Blender kit; the yard outbuildings and a workshop's street front stay here. The
@@ -711,7 +711,7 @@
       const g=terrainElevation(c.center);
       m.prism(rectWorldPoints(c.center.x,c.center.y,.22,.20,c.angle||0),g+c.z0,g+c.z1,'#3b302c','#332824','#493732');
     }
-    // L3 workshop street front: shop window and bracket sign (settlement-shop-cutaway.js).
+    // Workshop street front: shop window and bracket sign (settlement-shop-cutaway.js).
     if(!m.tag)window.ConquerShopCutaway?.addFront(m,house);
   }
   // L3/L4 yard outbuildings (urbanLotOutbuildings), same palette as drawUrbanOutbuilding.
@@ -1555,7 +1555,7 @@
   }
   function ensureContent(gl){
     // Deselecting with Escape does not invalidate the scene: the civic cutaway is checked here too.
-    // An open L3 workshop (settlement-shop-cutaway.js) follows the selection the same way.
+    // An open workshop (settlement-shop-cutaway.js) follows the selection the same way.
     // Shop fronts open at dawn and shut at dusk: their signature rebuilds the buildings too.
     // civicCut: '<id>@<storey in view>' (cutawaySig), so a floor change rebuilds the cutaway.
     const civicCut=(window.ConquerCivic3D?.cutawaySig||window.ConquerCivic3D?.cutawayId)?.()||null,shopCut=window.ConquerShopCutaway?.activeId?.()||null;

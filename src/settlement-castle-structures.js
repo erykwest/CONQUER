@@ -1095,7 +1095,7 @@ function drawChimneysAndSmoke(){
   if(State.view.scale<.32)return;
   const now=performance.now()/1000;
   for(const s of State.structures)for(const spec of longhouseSmokeSpecs(s))drawSmoke(spec,s.id+':hole',now);
-  // An open L3 workshop has no chimney left (settlement-shop-cutaway.js).
+  // An open workshop has no chimney left (settlement-shop-cutaway.js).
   const sources=State.structures.filter(s=>!underConstruction(s)&&(s.type==='house'||s.type==='built')&&!window.ConquerShopCutaway?.active(s));
   for(const s of sources){
     const specs=chimneySpecs(s);if(!specs.length)continue;
