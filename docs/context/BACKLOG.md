@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-18 — FIX-MILL-HILLS-261118 · Mulino a vento sulle colline
+
+**CORRETTO SU BRANCH `fix/mill-hills`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Il mulino a vento si posa e si costruisce su ogni terrazza piana di collina (H+1, H+2, H+3), posato alla quota della terrazza.
+- [x] Resta escluso da H0 e dai pendii; mulino ad acqua invariato (riva di fiume o torrente).
+- [ ] Mulino a vento su pendio dolce con fondazione (come torri e civici): non richiesto, da valutare se le cime piccole restano scarse.
+
 ### 2026-11-17 — FIG-HANDS-261117 · Mani e piedi delle figure
 
 **IMPLEMENTATO SU BRANCH `feature/figure-hands-feet`, NON MERGE.** Dettagli in [STATUS](STATUS.md).

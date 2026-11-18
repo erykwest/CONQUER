@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-18 — FIX-MILL-HILLS-261118 · Il mulino a vento si costruisce sulle colline
+
+`fix/mill-hills`: il mulino a vento accetta ogni terrazza piana di collina (H+1, H+2, H+3 in cima), non più solo H+1, ed è posato all'altezza della terrazza; resta escluso dalla pianura H0 e dai pendii. Mulino ad acqua invariato (riva di fiume o torrente). Nuova `qa/windmill-hills-regression.cjs` su colline procedurali reali. ROADMAP e DECISIONS invariate: correzione di una regola di posa, nessun contratto cambiato.
+
 ### 2026-11-17 — FIG-HANDS-261117 · Mani e piedi delle figure
 
 `feature/figure-hands-feet`: mani rosa (cerchietti con bordo) e piedi marroni (ovali orizzontali) su civili, lavoratori, soldati fermi e in combattimento, ostili e nobili; mani rosa anche ai cavalieri e messaggeri a cavallo, che tengono le gambe. Le dame L4 hanno una gonna a campana unita al busto, con le punte delle scarpe sotto l'orlo, abito monocromo, copricapi e acconciature medievali (tavola di riferimento del product owner) e pellicce d'inverno. Scelta del product owner dopo le prove A–E e S1/S2 nel Lab (gambette scartate, gambe dei cavalieri mantenute). Nuova `qa/figure-hands-feet-regression.cjs` nel workflow delle animazioni di lavoro; baseline dell'audit aggiornata per 58 render di Popolazione e Truppe. ROADMAP e DECISIONS invariate: è un dettaglio grafico, nessun contratto cambiato.
