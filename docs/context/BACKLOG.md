@@ -171,6 +171,7 @@
 - [x] Assegnazione +/− per giro da Militare › Pattuglie e guarnigioni e dall'ispettore del muro (legacy e UI v2); motivo e arruolamento in linea se mancano soldati.
 - [x] Salvataggio robusto a brecce e unioni di giri.
 - [x] Cache dei posti arcieri per torre (`drawCastleSoldiers` ~9× più veloce).
+- [x] Palizzate W2 (camminamento): pattuglie sul camminamento anche negli angoli senza torre — le corsie spostate dietro i pali si uniscono a spigolo (branch `fix/palisade-w2-patrol`, PR verso main).
 - [ ] Combattimento: le pattuglie delle mura sono figure disegnate, non unità di `ConquerCombat`; non avvistano né combattono (le vedette e le pattuglie White Zone sì).
 - [ ] Torce notturne per le pattuglie delle mura, come per le pattuglie White Zone.
 
