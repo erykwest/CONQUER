@@ -165,4 +165,43 @@ assert.deepEqual(small.journal().map(e => e.title), ['E4', 'E3']);
   delete globalThis.State; delete globalThis.underConstruction;
 }
 
+// "Mostra sulla mappa": the genuine ConquerGame.commands.focus centres the camera on a structure or a map point.
+{
+  const { readFileSync } = await import('node:fs');
+  const vm = await import('node:vm');
+  const api = readFileSync(new URL('../src/ui/game-api.js', import.meta.url), 'utf8');
+  const start = api.indexOf('focus: (id, at) => {');
+  assert.ok(start > 0, 'game-api exposes commands.focus');
+  const end = api.indexOf('\n    },', start);
+  const src = api.slice(start + 'focus: '.length, end + '\n    }'.length);
+  let selected = null, drawn = 0;
+  const ctx = vm.createContext({
+    State: { view: { x: 0, y: 0, scale: 1 }, structures: [{ id: 'keep', x: 30, y: 20 }] },
+    terrainElevation: () => 0, wrap: { getBoundingClientRect: () => ({ width: 800, height: 600 }) },
+    // Screen = world * 10 + view offset.
+    w2sRaw: p => ({ x: p.x * 10 + ctx.State.view.x, y: p.y * 10 + ctx.State.view.y }),
+    invalidateSceneCache() {}, selectStructure: s => { selected = s; }, draw: () => { drawn++; }, emit() {}
+  });
+  const focus = vm.runInContext('(' + src + ')', ctx);
+  const centred = p => { const q = ctx.w2sRaw(p); return Math.abs(q.x - 400) < 1e-9 && Math.abs(q.y - 300) < 1e-9; };
+  assert.ok(focus('keep'), 'focus on a structure');
+  assert.ok(centred({ x: 30, y: 20 }), 'the structure is in the centre of the view');
+  assert.equal(selected?.id, 'keep', 'and it is selected');
+  selected = null;
+  assert.ok(focus(null, { x: 5, y: 70 }), 'focus on a bare map point (messenger at the door)');
+  assert.ok(centred({ x: 5, y: 70 }), 'the point is in the centre of the view');
+  assert.equal(selected, null, 'a bare point selects nothing');
+  assert.equal(focus('missing', null), false, 'nothing to show: the camera does not move');
+  assert.equal(drawn, 2);
+}
+
+// The classic (default) interface mounts the same alert feed: notifications are not reserved to ?ui=2.
+{
+  const { readFileSync } = await import('node:fs');
+  const shell = readFileSync(new URL('../src/ui/shell.js', import.meta.url), 'utf8');
+  assert.match(shell, /\} else if \(window\.ConquerGame && !window\.__CONQUER_ASSET_LAB__ && document\.getElementById\('wrap'\)\) \{[\s\S]*?render\(html`<\$\{LegacyAlerts\} \/>`/, 'legacy UI renders the alert overlay');
+  assert.match(shell, /function LegacyAlerts\(\)[\s\S]*?useAlertWatchers\(game\)[\s\S]*?<\$\{Alerts\}/, 'with the shared watchers and the notice stack');
+  assert.match(shell, /cmd\.focus\(a\.focusId, a\.at\)/, 'the notice button moves the camera');
+}
+
 console.log('ui-alerts-regression: ok');
