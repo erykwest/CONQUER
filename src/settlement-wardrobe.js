@@ -85,7 +85,9 @@
     dovekeeper:{label:'Colombaro',pieces:['clothApron','feltHat']},
     innkeeper:{label:'Oste',pieces:['leatherApron','feltHat']},
     exactor:{label:'Esattore',pieces:['tabard','flatCap']},
-    bailiff:{label:'Giudice del Balivo',pieces:['bailiffRobe','clerkCap']}
+    bailiff:{label:'Giudice del Balivo',pieces:['bailiffRobe','clerkCap']},
+    herald:{label:'Araldo della Sala del trono',pieces:['tabard','feltHat']},
+    servant:{label:'Servo della Sala comune',pieces:['clothApron','stockingCap']}
   };
   // L4 ladies (women and girls of the elite, FIG-HANDS-261117): medieval headdresses over
   // braided hair instead of the town's hats and hoods; furs instead of cloaks in winter.

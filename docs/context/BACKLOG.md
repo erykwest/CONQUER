@@ -20,6 +20,17 @@
 - [ ] Definire come vengono chiamati in campo uomini d'arme L3 e cavalieri L4 (in attesa del product owner); oggi all'allarme si riparano.
 - [ ] Statistiche dell'uomo d'arme fra fante e cavaliere (proposta: 14 PV, armatura 2, combattimento 3).
 
+### 2026-11-17 — ROOM-ANIM · Animazioni per stanze
+
+**Sala del trono e Sala comune IMPLEMENTATE SU BRANCH `feat/throne-hall-court`, NON MERGE.**
+- [x] Sala del trono: signore sul trono, guardie, araldo, postulante (+ cortigiano nella sala grande); di notte solo le guardie.
+- [x] Sala comune: un commensale per panca (soldati e civili che bevono), un servo col cibo in capo a ogni tavolo; vuota di notte.
+- [ ] Gilda L1–L3: funzionari al banco (`quill`), archivista, maestri (`speak`); oggi l'unico edificio civico senza persone.
+- [ ] Posto di guardia del municipio: guardie come al Bargello.
+- [ ] Granaio, deposito materiali, deposito delle decime del Balivo: gesto nuovo per portare i sacchi e le casse.
+- [ ] Cisterna (secchio tirato su) e latrina (facoltativa).
+- [ ] Il gesto del signore è solo 2D (figura nobile senza card World3D, come le camere nobiliari).
+
 ### 2026-11-17 — FIG-HANDS-261117 · Mani e piedi delle figure
 
 **IMPLEMENTATO SU BRANCH `feature/figure-hands-feet`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
