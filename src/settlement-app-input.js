@@ -646,7 +646,7 @@ document.getElementById('confirmVillageBtn').onclick=()=>{
     markDirty(true,['ground','base']);
     renderUI();
     const connected=ensureRoadPlan().filter(r=>arterialRouteContinuous(r.id)).length;
-    status(`${name} founded — ${connected}/4 border main roads connected${mainSegments?` · ${mainSegments} segments`:''}${yard?' · Piazzale 2×2U':' · ⚠ PIAZZALE NON POSIZIONATO (7U occupate)'}`);
+    status(`${name} founded — ${connected}/${ensureRoadPlan().length} border main roads connected${mainSegments?` · ${mainSegments} segments`:''}${yard?' · Piazzale 2×2U':' · ⚠ PIAZZALE NON POSIZIONATO (7U occupate)'}`);
     processVillageGrowth();draw();
   });
   markDirty(true,['ground','base']);
