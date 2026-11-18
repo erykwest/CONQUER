@@ -325,7 +325,7 @@
     const biomes=['plains','swamp','hills'],groups=Object.fromEntries(biomes.map(b=>[b,[{total:0,candidates:[]},{total:0,candidates:[]}]])),eligible=[];
     for(let i=0;i<samples.length;i++){
       const {p,w,c,wet}=samples[i],zone=inCentre(p)?0:1;
-      if(hex()&&!hex().inWorld(p,1))continue;   // no woodland off-map
+      if(hex()&&!hex().inWorld(p,-1.5))continue;   // no woodland off-map (2U contour step)
       const cover=Object.fromEntries(biomes.map(b=>[b,(w[b]||0)+(canonical(State.biome)===b?c:0)]));
       const pure=biomes.find(b=>cover[b]>.999),calibrated=biomes.some(b=>cover[b]>0);
       if(pure)groups[pure][zone].total++;
