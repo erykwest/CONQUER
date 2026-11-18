@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-18 — PATROL-ROUTE-261118: le pattuglie non lasciano il giro per un nemico irraggiungibile (branch `fix/patrol-pathfinding`)
+
+- **Regressione e causa:** dalla #258 (`c32408d1`, ricerca reciproca difensori/assalitori) `defenderThink` gira anche sulle pattuglie e la meta del loro giro non conta come ordine. Con un ostile entro 12 U ma senza percorso (per esempio un predone addossato a una casa: il suo punto è bloccato e `patrolRoute` restituisce null) a ogni pensata azzerava `u.target`, e `updatePatrols` passava al waypoint successivo: la pattuglia saltava i punti del giro e tagliava il percorso. Ultimo commit buono: `6d60a9f9` (#259).
+- **Correzione:** in `defenderThink`, se la pattuglia non sta già inseguendo (`autoFoe`) e il nemico è irraggiungibile, il giro resta com'è; chi insegue un nemico che diventa irraggiungibile lascia l'inseguimento come prima. Un nemico raggiungibile entro la portata è ancora inseguito.
+- **Prove:** nuova `qa/patrol-route-regression.cjs` (nel workflow combat): con il predone irraggiungibile la pattuglia rifà lo stesso giro di quando non ci sono ostili (0 waypoint abbandonati; su `c32408d1` 12 abbandonati), e insegue un nemico raggiungibile. Le altre suite di pattuglia e combattimento sono in PR.
+
 ### 2026-11-17 — ROOM-ANIM-COMMON: soldati e servitù a tavola nella Sala comune
 
 - Stesso branch `feat/throne-hall-court`. `drawCommonHall` (da `drawRoom` per il ruolo `commonHall`): un commensale su ogni panca della sala (`roomPieces(…,'bench')`), seduto (abbassato di 0,11 U) e rivolto al tavolo più vicino; circa due su cinque sono soldati senza armi, gli altri civili che bevono (gesto `mug`); le due panche di un tavolo sono sfalsate perché i commensali non si coprano. Un servo (nuovo mestiere `servant`: grembiule e berretto a calza, gesto `bowl`) in capo a ogni tavolo, al capo libero: dentro la stanza e lontano dall'altro tavolo (nel mastio W4 i due tavoli della sala grande stanno uno dopo l'altro). Di giorno, mai durante un allarme; di notte la sala è vuota. Scelta per posto fissa (hash), funzione pura `commonHallScene` testata.

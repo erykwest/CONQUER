@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-18 — PATROL-ROUTE-261118 · Pattuglie fedeli al giro
+
+`fix/patrol-pathfinding`: un ostile entro portata ma irraggiungibile non fa più saltare i waypoint del giro alle pattuglie della White Zone (regressione della #258 in `defenderThink`). Nuova `qa/patrol-route-regression.cjs` nel workflow combat. ROADMAP e DECISIONS invariate: si ripristina il comportamento previsto, nessun contratto cambiato.
+
 ### 2026-11-17 — ROOM-ANIM-COMMON · Soldati e servitù nella Sala comune
 
 `feat/throne-hall-court`: nella Sala comune in sezione siede un commensale per panca (soldati e civili che bevono) e un servo porta il cibo in capo a ogni tavolo; vuota di notte e durante un allarme. Nuovo mestiere `servant` nel guardaroba (voce del Lab e baseline). Test in `qa/staff-people-regression.cjs`. ROADMAP e DECISIONS invariate.
