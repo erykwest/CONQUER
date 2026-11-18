@@ -1,5 +1,13 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-18 — CARTS-ROADS-261118 · Carri e messaggeri nel verso giusto, sulle strade
+
+**IMPLEMENTATO SU BRANCH `fix/carts-roads`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Convogli signorili di ritorno orientati verso casa, carro di testa davanti.
+- [x] Messaggero di ritorno orientato nel verso di marcia.
+- [x] Messaggero sulle strade anche quando il grafo pedonale rifiuta il percorso.
+- [ ] Salvataggi con un messaggero già in viaggio su un percorso in linea retta: lo tiene fino all'arrivo (non ricalcolato).
+
 ### 2026-11-17 — FIG-HANDS-261117 · Mani e piedi delle figure
 
 **IMPLEMENTATO SU BRANCH `feature/figure-hands-feet`, NON MERGE.** Dettagli in [STATUS](STATUS.md).

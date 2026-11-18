@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-18 — CARTS-ROADS-261118 · Carri e messaggeri nel verso giusto, sulle strade
+
+`fix/carts-roads`: i convogli signorili di ritorno e il messaggero che riparte scorrevano all'indietro sul percorso d'andata con l'orientamento dell'andata (modello girato al contrario, carro di testa in coda); ora percorrono la strada invertita e guardano dove vanno. Il messaggero, quando il grafo pedonale rifiuta il percorso, usa il grafo stradale dei carri invece della linea retta fino al pozzo. Test in `qa/diplomacy-regression.cjs` e `qa/road-sign-convoy-regression.cjs`. ROADMAP e DECISIONS invariate: correzione di comportamento, nessun contratto cambiato.
+
 ### 2026-11-17 — FIG-HANDS-261117 · Mani e piedi delle figure
 
 `feature/figure-hands-feet`: mani rosa (cerchietti con bordo) e piedi marroni (ovali orizzontali) su civili, lavoratori, soldati fermi e in combattimento, ostili e nobili; mani rosa anche ai cavalieri e messaggeri a cavallo, che tengono le gambe. Le dame L4 hanno una gonna a campana unita al busto, con le punte delle scarpe sotto l'orlo, abito monocromo, copricapi e acconciature medievali (tavola di riferimento del product owner) e pellicce d'inverno. Scelta del product owner dopo le prove A–E e S1/S2 nel Lab (gambette scartate, gambe dei cavalieri mantenute). Nuova `qa/figure-hands-feet-regression.cjs` nel workflow delle animazioni di lavoro; baseline dell'audit aggiornata per 58 render di Popolazione e Truppe. ROADMAP e DECISIONS invariate: è un dettaglio grafico, nessun contratto cambiato.
