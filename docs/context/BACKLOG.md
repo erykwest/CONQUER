@@ -7,6 +7,17 @@
 - [x] Resta escluso da H0 e dai pendii; mulino ad acqua invariato (riva di fiume o torrente).
 - [ ] Mulino a vento su pendio dolce con fondazione (come torri e civici): non richiesto, da valutare se le cime piccole restano scarse.
 
+### 2026-11-17 — ROOM-ANIM · Animazioni per stanze
+
+**Sala del trono e Sala comune IMPLEMENTATE SU BRANCH `feat/throne-hall-court`, NON MERGE.**
+- [x] Sala del trono: signore sul trono, guardie, araldo, postulante (+ cortigiano nella sala grande); di notte solo le guardie.
+- [x] Sala comune: un commensale per panca (soldati e civili che bevono), un servo col cibo in capo a ogni tavolo; vuota di notte.
+- [ ] Gilda L1–L3: funzionari al banco (`quill`), archivista, maestri (`speak`); oggi l'unico edificio civico senza persone.
+- [ ] Posto di guardia del municipio: guardie come al Bargello.
+- [ ] Granaio, deposito materiali, deposito delle decime del Balivo: gesto nuovo per portare i sacchi e le casse.
+- [ ] Cisterna (secchio tirato su) e latrina (facoltativa).
+- [ ] Il gesto del signore è solo 2D (figura nobile senza card World3D, come le camere nobiliari).
+
 ### 2026-11-17 — FIG-HANDS-261117 · Mani e piedi delle figure
 
 **IMPLEMENTATO SU BRANCH `feature/figure-hands-feet`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
@@ -25,6 +36,7 @@
 - **APERTO (17/11):** tende di accampamento e fuorilegge dipinte con `ConquerMesh3D.drawMeshes` sul Canvas (da passare al front pass 3D); contatori `cache.*` della telemetria ormai sempre a zero; cantieri di industrie/eventi/moli senza assemblaggio mostrano solo il volume dell'impronta.
 - **SU BRANCH `retire-25d-renderer`:** edifici, torri, mura, porte ed esterni delle stanze solo in World 3D; Asset Lab con controllo `renderer-3d`.
 - **APERTO:** stato «danneggiata» senza segni visibili in 3D (23 avvisi `danno-visibile`); drappo del Mastio come decal 3D; eliminare le funzioni di pittura 2.5D non più chiamate (castle, castle-structures, room-exterior, cutaway-furniture, architecture finestre/portali); ritirare o portare in 3D lo strumento DEV «Prerender + test»; workflow browser che usano `?renderer=canvas2d` (webgpu-smoke, clay-browser) da riallineare al contratto «senza WebGL2 nessun edificio».
+
 ### 2026-11-16 — GORE-01: sangue, frecce e cadaveri sul campo
 
 **IMPLEMENTATO SU BRANCH `feature/gore`, NON MERGE.**
@@ -59,6 +71,7 @@
 - [x] Braciere della torre a palizzata di legno nel modello Blender (build_wood_fort.py).
 - [x] Bandiere dei tetti a punta e delle bertesche in 3D, come le navi; supporti 3D delle torce delle torri; alone del fuoco non più tagliato dalla facciata.
 - [ ] Fumo dei comignoli: resta un effetto 2D (non struttura).
+
 ## 2026-11-16 — Assedio: aperti dopo il merge di main
 
 - **APERTO:** fasi di sollevamento della scala e del ponte della torre d'assalto nel combattimento vero (oggi solo nell'anteprima `?siege=`); voce wiki per l'ariete leggero; regola mura/porte verso l'esterno anche al momento della costruzione (oggi al caricamento); assedio lungo con i due arieti e il trabucco; prestazioni delle ricerche di percorso.
