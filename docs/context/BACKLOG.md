@@ -7,6 +7,26 @@
 - [ ] Da valutare: il nemico addossato a un edificio è irraggiungibile perché `nearestFree` parte da un punto bloccato; avvicinarsi alla cella libera più vicina permetterebbe di ingaggiarlo.
 - [ ] Osservato nel banco di prova, uguale prima e dopo la #258: una pattuglia che parte nello stretto corridoio fra due cinte (pozzo nel mezzo) non arriva al bordo della White Zone.
 
+## 2026-11-17 — MIL-FIG-01 · Guardie, picchieri e leva distinguibili
+
+**Picchieri con scudo implementati sul branch `fix/squad-pikemen-shield`, non ancora uniti a main.** Richiesta del product owner (17/11/2026): tre figure militari distinte.
+
+- [x] Picchieri (squadra da 5): scudo del regno sul braccio sinistro (nuovo tipo di figura `pikeman`).
+- [x] Lancia nella mano **destra del soldato**: la figura guarda chi osserva, quindi la lancia è sul lato sinistro dello schermo e lo scudo sul destro. Vale per tutte le figure con lancia (guardie, picchieri, leva, ostili).
+- [x] Lo stendardo lo porta solo l'**araldo del reggimento** (il primo della squadra, figura `herald`), **al posto** della lancia, con lo scudo. Stendardo 3 volte più grande della vecchia bandierina di squadra (`HERALD_STANDARD_SIZE`).
+- [ ] Lo stendardo segue lo zoom della vista limitato a 0,55–1,45, non la scala della figura: da lontano resta molto più grande del soldato, da vicino più piccolo. Valutare se legarlo a `militaryScale()`.
+- [ ] Guardie (pattuglia da 2): lancia senza scudo; di notte il portatorcia tiene **anche** la lancia (oggi la torcia la sostituisce, figura `unarmed`).
+- [x] Leva (popolani all'allarme o in leva straordinaria): abiti di classe del popolano (anche quelli di stagione) e cappuccio araldico (`levyHood`, partito nei due colori dello stemma); lancia e scudo del regno (L1), oppure arco (L2, arcieri di leva).
+- [x] Ruolo per classe ([D-MIL-FIG-261117](DECISIONS.md#d-mil-fig-261117--chi-combatte-e-come-si-riconosce-17112026)): L1 fanti di leva, L2 arcieri di leva (arco per gli artigiani, non più uno su tre a caso), L3 uomini d'arme, L4 cavalieri (`combatRole`).
+- [x] Uomo d'arme L3 nel Lab (pulsante «Uomo d'arme»): gonnello con lo stemma (variante F); elmo dei cavalieri e arma a due mani (alabarda, ascia, martello, spada) casuali per persona; il gruppo «Uomo d'arme (L3)» del Lab può fissarli.
+- [ ] L'uomo d'arme non ha ancora animazioni di attacco proprie (in combattimento resta in guardia).
+- [x] Cavalieri: emblema (cimiero) sull'elmo e mantello, a cavallo e a piedi; a piedi spada nella mano destra e scudo.
+- [x] Cimiero araldico: torciglio, mantellino e figura (ali, corna di cervo, corna, aquila, corona) casuale per cavaliere; il Lab può fissarla (tendina «Cimiero»).
+- [ ] Valutare se legare la figura del cimiero allo stemma della casata invece che al caso.
+- [x] Cavalieri smontati nel torneo (prima figura generica `swordsman`) e nel campo di addestramento.
+- [ ] Definire come vengono chiamati in campo uomini d'arme L3 e cavalieri L4 (in attesa del product owner); oggi all'allarme si riparano.
+- [ ] Statistiche dell'uomo d'arme fra fante e cavaliere (proposta: 14 PV, armatura 2, combattimento 3).
+
 ### 2026-11-17 — ROOM-ANIM · Animazioni per stanze
 
 **Sala del trono e Sala comune IMPLEMENTATE SU BRANCH `feat/throne-hall-court`, NON MERGE.**
@@ -115,6 +135,7 @@
 - [ ] Porte delle torri d'angolo per le altre forme (tonde, a D): da definire.
 - [x] Rimuovi foresta rispetta Fast build (istantaneo) e Free build (senza salari) del menu DEV.
 - [x] Cutaway piano per piano: i merli (e caditoie, tetto interno, braciere) spariscono quando il piano in vista non è l'ultimo.
+
 ## 2026-11-16 — UI-ALERTS-01 · Avvisi in gioco e diario degli eventi
 
 **IMPLEMENTATO SU BRANCH `feature/alert-feed`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
