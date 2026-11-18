@@ -739,7 +739,10 @@ function functionSlotUnits(s,index=0){return functionSlotSize(s,index)==='large'
 function functionFloorOffset(s){return s?.type==='gate'?1:0}
 function functionCapacity(s){
   if(!s)return 0;
-  if(s.type==='gate')return Math.max(0,structureLevel(s)-1);
+  // Stone gates: one room per storey above the passage. The wood gate is fixed at H1 but its
+  // fighting deck over the passage holds one room (one fewer than a tall stone gate).
+  // (material test inlined, as isWoodGate: QA harnesses extract this function alone.)
+  if(s.type==='gate')return s.material==='wood'?1:Math.max(0,structureLevel(s)-1);
   if(typeof isKeepW4==='function'&&isKeepW4(s)){let n=0;for(let f=0;f<structureLevel(s);f++)n+=keepFloorRooms(s,f).length;return n}
   // One room per floor. W1 towers keep their spiral stair and take only dovecote, latrine, prison,
   // treasury and armory (settlement-siege.js allowed), except the first T1 keep (its Common Hall).
