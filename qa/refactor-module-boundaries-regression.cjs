@@ -34,9 +34,9 @@ const renderSource=read('render'),weather=segment('weather');
 // entry points other modules call by name.
 const arch=segment('architecture',true);
 const render=arch+weather+renderSource;
-for(const fn of ['drawDayNightOverlay','drawNo3DNotice','drawConstructionProgress','towerWindowRows','drawArchitectureAssetOnEdge','drawFogLayer'])
+for(const fn of ['drawDayNightOverlay','drawNo3DNotice','drawConstructionProgress','towerWindowRows','facadeAssetWorldSpan','architectureSprite','gothicAssetSizeForLevel','drawFogLayer'])
   assert.match(render,new RegExp('function '+fn+'\\('),'Render, weather and architecture keep '+fn);
-for(const fn of ['drawFacadeWindows','drawGatePortals','drawTowerDoors'])
+for(const fn of ['drawFacadeWindows','drawGatePortals','drawTowerDoors','drawArchitectureAssetOnEdge','facadeEmissiveMask'])
   assert.doesNotMatch(render,new RegExp('function '+fn+'\\('),'2.5D painter retired: '+fn);console.log('PASS architecture, weather and render modules keep their extracted entry points');
 
 const html=fs.readFileSync(root+'index.html','utf8');

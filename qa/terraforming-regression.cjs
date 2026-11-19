@@ -34,8 +34,8 @@ test('square/round shape switch exists in both the Builder HTML and compact pale
   const palette=fs.readFileSync(path.join(__dirname,'..','src','settlement-builder-ux.js'),'utf8');
   assert.match(html,/data-terraform-shape="square"/);
   assert.match(html,/data-terraform-shape="round"/);
-  assert.match(input,/querySelectorAll\('\[data-terraform-shape\]'\)/);
-  assert.match(input,/State\.tool\.shape=shape/);
+  assert.match(input,/ConquerBuilderControls\.bind\(document\)/);
+  assert.match(fs.readFileSync(path.join(__dirname,'..','src','settlement-builder-commands.js'),'utf8'),/State\.tool\.shape=shape/);
   assert.match(palette,/selectors:\['\[data-terraform-shape\]'\]/);
 });
 test('ghost previews the final terrain without mutating relief',()=>{

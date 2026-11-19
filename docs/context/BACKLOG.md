@@ -1,5 +1,16 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-19 — ARCH-261119 · Architettura e duplicati
+
+**IMPLEMENTATO SU `refactor/architecture-20261119`, NON MERGE.** [Revisione e prove](../ARCHITECTURE-REVIEW-2026-11-19.md).
+- [x] Separare scelte/preset Builder dagli handler HTML e dai click simulati della UI v2.
+- [x] Unificare espansione/cache dei modelli civic/house/wood con identità dei record.
+- [x] Rimuovere override façade e painter senza chiamanti, conservando span e sprite World3D.
+- [ ] Unificare snapshot/restore locale-cloud dopo coordinamento con PR #285.
+- [ ] Valutare primitive comuni dei percorsi senza unificare i planner specializzati.
+- [ ] Manifest verificato dei classic script index/CAMP e migrazione graduale degli altri comandi legacy.
+
+
 ### 2026-11-18 — TORCH-STREAK-261118 · Fasci verticali delle torce
 
 **FIX SU BRANCH `fix/torch-artifact`.** Dettagli in [STATUS](STATUS.md).
