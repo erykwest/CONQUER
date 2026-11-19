@@ -1,5 +1,13 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-19 — ARCH-261119 · Revisione e semplificazione architetturale
+
+- **Implementato su `refactor/architecture-20261119`, non su main**, base `168b993b`; #285 hardening separata.
+- Module comandi Builder condiviso da Adapter DOM e UI v2: preset letti dallo stato, catalogo v2 a dati, nessun click su pulsanti nascosti per i comandi migrati. Il modulo input conserva gli eventi pointer/keyboard e il collocamento.
+- Espansione indicizzata condivisa in Mesh3D (77 modelli / 265 parti / 227.073 vertici identici); eliminati tre cache/algoritmi locali. Consolidato sizing facciate attivo, eliminati override e painter Canvas morto.
+- PASS test dei comandi e 94 scelte catalogo; Chromium classico/UI v2/CAMP senza errori di pagina. Suite generale, audit completo Asset Lab e CI riportati nel [rapporto](../ARCHITECTURE-REVIEW-2026-11-19.md).
+
+
 ### 2026-11-18 — TORCH-STREAK-261118: niente fasci verticali dalle torce (branch `fix/torch-artifact`)
 
 - Causa: l'alone delle torce e dei bracieri (programma `fireLight` di settlement-world3d.js) campionava la tessera `__glow` dell'atlante delle decal, con mipmap e UV a 1 px dalle tessere vicine (drappo del Mastio, vetri). Il bordo del quadrato si colorava della tessera accanto: una riga verticale arancione, alta quanto l'alone, a lato di ogni fuoco, tanto più lunga quanto più vicina la camera.

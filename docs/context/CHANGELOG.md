@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-19 — ARCH-261119 (branch `refactor/architecture-20261119`, non merge)
+
+Revisione strutturale su main `168b993b`: Module comandi Builder condiviso dalle due UI, espansione indicizzata e cache Mesh3D comuni, eliminazione override facciate e painter morto. Nuovi test comportamentali e browser; aggiornati i check testuali che imponevano la vecchia collocazione del codice. [Rapporto con ambito, opportunità residue e QA](../ARCHITECTURE-REVIEW-2026-11-19.md). Roadmap prodotto invariata; nessun merge/deploy.
+
+
 ### 2026-11-18 — TORCH-STREAK-261118 · Niente fasci verticali dalle torce
 
 `fix/torch-artifact`: l'alone notturno di torce e bracieri non campiona più l'atlante delle decal (che a mipmap faceva entrare le tessere vicine come righe verticali) ma è calcolato nello shader dall'angolo del quadrato; margine trasparente sulla tessera `__glow` delle finestre. Controllo nuovo in `qa/tower-fittings-regression.cjs`. ROADMAP e DECISIONS invariate: correzione grafica, nessun contratto cambiato.

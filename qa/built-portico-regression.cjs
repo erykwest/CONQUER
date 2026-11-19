@@ -116,7 +116,7 @@ console.log('PASS World 3D body and cutaway use the loggia');
 
 // World 3D (facade and cutaway) reads the shared layout; there is no 2.5D arcade painter.
 assert.doesNotMatch(arch,/function drawBuiltArcade\(/);
-assert.doesNotMatch(src('settlement-facade-polish.js'),/drawBuiltArcade=function/);
+assert.doesNotMatch(arch,/function drawArchitectureAssetOnEdge\(/,'retired Canvas facade painter stays removed');
 assert.equal((src('settlement-world3d.js').match(/builtArcadeLayout\(s\)/g)||[]).length,2,'World 3D facade and cutaway');
 assert.doesNotMatch(src('settlement-world3d.js'),/Math\.min\(1\.46,structureHeight/);
 console.log('PASS one arcade layout for every renderer');

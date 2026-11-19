@@ -7,6 +7,15 @@
 - **PROPOSTO (non deciso):** sito statico, deploy separato dal runtime, Astro/Vercel e newsletter gestita; repo dedicato o monorepo da scegliere dopo audit W-M0.
 - **STATO:** solo specifica/documentazione, nessun sito nuovo ne build giocabile pubblicata da questa decisione. Specifica completa: [WEBSITE-SRS.md](../WEBSITE-SRS.md), versione 0.2.
 
+## D-ARCH-261119 — Module condivisi e Adapter delle interfacce (19/11/2026)
+
+- **AUTORIZZATO:** revisione architetturale, semplificazione, deduplicazione e modularizzazione del codice, richiesta del product owner.
+- **CONTRATTO TECNICO sul branch `refactor/architecture-20261119`:** le scelte Builder e i preset hanno un unico owner `ConquerBuilderCommands` (`execute`, `options`, `subscribe`); Adapter DOM e UI v2 usano la stessa Interface. Le regole dei provider gameplay restano autorevoli. I classic script mantengono caricamento sincrono e ordine verificato.
+- L'espansione dei modelli indicizzati vive in `ConquerMesh3D.modelParts(model)`; il record modello è uno snapshot immutabile e la cache segue l'identità del record. Formati con dati aggiuntivi (vento Events3D) restano specializzati.
+- **MOTIVAZIONE:** eliminare dipendenze da pulsanti nascosti, algoritmi/cache copiati e override globali senza creare motori di simulazione duplicati. Coerente con D-017.
+- **ALTERNATIVE SCARTATE:** migrazione indiscriminata a ES modules, loader asincrono, nuovo ledger o planner generale; deduplicazione dei painter con semantiche diverse.
+- Nessuna nuova regola di gameplay, formato salvataggio o priorità di prodotto. Il lavoro di persistenza della PR #285 resta separato.
+
 
 ## D-MIL-FIG-261117 — Chi combatte e come si riconosce (17/11/2026)
 

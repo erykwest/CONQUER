@@ -18,7 +18,7 @@ for(const v of VENUES){
 }
 const group=ux.slice(ux.indexOf("{id:'events'"),ux.indexOf("{id:'combat'"));
 assert.ok(VENUES.every(v=>group.includes(v)),'the four venues share the "Eventi e svago" group');
-assert.match(input,/document\.querySelectorAll\('\[data-event-venue\]'\)/,'the buttons pick the event tool');
+assert.match(input,/ConquerBuilderControls\.bind\(document\)/,'the DOM adapter binds the shared Builder commands');
 assert.match(input,/State\.tool\.kind==='industry'\|\|State\.tool\.kind==='event'/,'two-click oriented placement for venues');
 assert.match(read('src/settlement-castle.js'),/ConquerEvents3D\?\.is\(s\)\)return window\.ConquerEvents3D\.footprint\(s\)/,'footprint hook');
 assert.match(read('src/settlement-castle-placement.js'),/ConquerEvents3D\?\.is\(s\)\)return window\.ConquerEvents3D\.label\(s\)/,'label hook');

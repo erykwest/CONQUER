@@ -122,7 +122,7 @@ const line=(text,re)=>{const m=text.match(re);assert.ok(m,String(re));return m[0
   for(const v of ['pillory','gallows','scaffold']){
     assert.match(html,new RegExp('<button data-event-venue="'+v+'">'),'legacy Builder button for '+v);
     assert.ok(ux.includes('[data-event-venue="'+v+'"]'),v+' in the Builder palette');
-    assert.ok(shell.includes('[data-event-venue="${k}"]')&&shell.includes("'pillory', 'gallows'"),'new Builder: justice tool');
+    assert.ok(shell.includes('eventVenue:k')&&shell.includes("'pillory', 'gallows'"),'new Builder: justice tool');
   }
   assert.match(it,/justice: 'Giustizia/);assert.match(it,/pillory: 'Gogna', gallows: 'Forca'/);
   assert.match(it,/tribunal: 'Tribunale'/);
