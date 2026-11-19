@@ -1,5 +1,15 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-19 — UI-BUILDERICON-01 · Iconografia architettonica del Builder
+
+**FATTO sul branch `buildericon`, NON MERGE.**
+
+- [x] 52 voci del Builder con SVG dedicati; categorie, opzioni e comandi nella stessa famiglia.
+- [x] Asset Lab, manifest e baseline delle 72 nuove voci; revisione del foglio e audit senza errori.
+- [x] QA del vero Builder in Chromium: categorie, caricamento SVG, gestori originali, selezione e viewport mobile.
+- [ ] CI remota e revisione della PR prima dell'integrazione in main.
+- Owner e dettaglio: [feature-backlog](../feature-backlog.md), [BUILDER-ICONS](../BUILDER-ICONS.md).
+
 ### 2026-11-18 — CARTS-ROADS-261118 · Carri e messaggeri nel verso giusto, sulle strade
 
 **IMPLEMENTATO SU BRANCH `fix/carts-roads`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
