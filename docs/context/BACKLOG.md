@@ -1,5 +1,26 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### GameSite — P0 del sito pubblico (branch `gamesite`, 19/11/2026)
+
+Owner: [Website SRS v0.3](../WEBSITE-SRS.md). Questa tabella e uno **stato branch**, non completamento su `main`.
+
+| ID | Stato branch / residuo |
+|---|---|
+| WEB-001/002/010/012 | Homepage, The Game, lingua inglese e pagine statiche isolate in `gamesite/` implementate; QA responsive/SEO da verificare |
+| WEB-003 | Asset autentici e live Builder on-demand; **mancano screenshot reali approvati** e trailer |
+| WEB-004 | Devlog index e primo articolo statici; **manca workflow Markdown/bozze automatizzato** |
+| WEB-005/029 | UI Follow e API double opt-in/unsubscribe implementate; blocco: provider email, migrazione schema, privacy approvata e test end-to-end |
+| WEB-006/007/008 | Link `Play`, launcher e controllo WebGL2 presenti; test visuale browser/loader/error handling ancora necessari |
+| WEB-009/022/023/024/025/026 | Guest singleplayer con seed casuale, scelta bioma reale e slot isolati presente sul branch; QA save/load e compatibilita browser necessaria |
+| WEB-011 | Privacy draft e Contact; identita del titolare e finalizzazione obbligatorie prima della pubblicazione |
+| WEB-013/015 | Metadata e endpoint sitemap dinamico, analytics aggregate senza cookie; dominio/ambiente e misurazione QA mancanti |
+| WEB-014 | Source website sotto `gamesite/` e runtime game in root, ma ancora nello stesso deploy di prova; release separabili da progettare/testare |
+| WEB-021/027/028 | Auth Supabase email magic-link riusato; login facoltativo e Guest locale; config redirect e flussi account browser da verificare, cross-origin non risolto |
+
+**Next:** test automatici, smoke browser, immagini autentiche, deployment/staging isolato; privacy+email provider prima di Follow; niente promozione in `main` finche' i gate non passano.
+
+
+
 ### 2026-11-18 — PATROL-ROUTE-261118 · Regressione del pathfinding delle pattuglie
 
 **CORRETTO SU BRANCH `fix/patrol-pathfinding`, NON MERGE.**
