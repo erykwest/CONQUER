@@ -1,6 +1,6 @@
 # CONQUER — Piramide di contesto
 
-**Website SRS v0.2 (19/11/2026, solo design):** [Sito pubblico CONQUER](../WEBSITE-SRS.md) — identita medievale sobria e moderna, inglese, prototipo giocabile nel browser; milestone UX/feasibility W-M0 prima di ogni implementazione. Decisione D-WEB-261119.
+**Website SRS v0.3 (19/11/2026, solo design):** [Sito pubblico CONQUER](../WEBSITE-SRS.md) — identita medievale sobria e moderna, inglese, prototipo giocabile nel browser, login facoltativo con account unico sito/gioco e Guest solo Builder singleplayer con splash screen e seed casuale; milestone W-M0 UX/feasibility prima dell'implementazione. Decisioni D-WEB-261119 e D-WEB-GUEST-261119.
 
 **Remote control multi-campagna (13/11/2026, solo design):** [Main page, lobby, KPI e comando remoto](../REMOTE-CONTROL-SCOPE.md) — futura UI web/mobile per posta, diplomazia, spedizioni, tributi, mappa regionale e gestione senza Builder. Non implementato su `main`. Decisione D-RC-261113.
 
