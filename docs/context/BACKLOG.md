@@ -1,5 +1,21 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-17 — LOCAL-HEX-01 · Mappa locale ereditata dal territorio esagonale
+
+**IMPLEMENTATO SU BRANCH `feature/local-hex-shape` (base `3dregionmap`), NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Zona edificabile = poligono Voronoi del territorio; bordo del mondo = offset 50U.
+- [x] Settori dell'anello dai vicini fisici reali (5–7), non dagli 8 slot logici.
+- [x] Ingressi stradali per vicino di terra e uscite marine per tratto di costa sul bordo poligonale.
+- [x] Area interna sempre 10000 U² (omogeneizzazione verificata alla generazione e salvata); canvas adattato al bordo offset (min 240U), mai bordo quadrato; terreno 3D ritagliato.
+- [ ] Prestazioni del tracciato delle strade principali sul canvas grande (68 s verso la palude di T364).
+- [x] Costa sul confine regionale: passaggio di bioma centrato sul bordo edificabile (50/50), baie che entrano nella zona edificabile (19/11).
+- [x] Fiumi sul confine: il fiume locale segue il tratto di bordo condiviso con i vicini oltre il lato-fiume regionale (`shape.riverNeighbors`, `borderPath`) (19/11).
+- [x] Strade maestre: un solo ponte perpendicolare per attraversamento; tracciato col minimo numero di attraversamenti (19/11).
+- [ ] Catene montuose ai lati Voronoi reali (oggi `mountainSides` cardinali); affluenti e direzione di flusso sul bordo organico.
+- [ ] Ingressi stradali concordi fra territori vicini (stesso punto sul lato condiviso) e, quando esisteranno, strade regionali.
+- [ ] Piano del terreno 3D ritagliato sul bordo invece del quadrato scuro; camera e unità limitate al poligono.
+- [ ] Salvataggi: versionare la forma locale e migrare le partite quadrate.
+
 ### 2026-11-15 — Microfix: messa domenicale visibile
 
 - [x] Cutaway della chiesa: fedeli seduti sui banchi la domenica 6:00–12:00 (ConquerCivic3D.massSlots, ConquerCourtPeople.massInSession).

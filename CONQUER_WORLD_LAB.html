@@ -946,6 +946,7 @@
   </main>
 
   <script src="src/regional-biome-rules.js?v=hills-real-zone-1-flow-30-1-water-network-1"></script>
+  <script src="src/regional-map3d-geometry.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script>
@@ -3962,6 +3963,90 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
       }
 
       document.getElementById('openSelectedLocalDemo').addEventListener('click',()=>document.getElementById('openLocalDemo').click());
+      // Outer boundary of a territory made of one or more Voronoi cells: cell edges used once
+      // (internal edges between its own cells appear twice and drop out), chained into the
+      // longest closed ring. Falls back to the convex hull if the cells do not chain cleanly.
+      function territoryOutline(macroId){
+        const cells=state.macros[macroId].cells,round=p=>({x:+p.x.toFixed(3),y:+p.y.toFixed(3)});
+        const area=r=>r.reduce((s,p,i)=>s+p.x*r[(i+1)%r.length].y-r[(i+1)%r.length].x*p.y,0)/2;
+        const rings=cells.map(c=>{const r=c.polygon.map(round);return area(r)<0?r.reverse():r});
+        if(rings.length===1)return rings[0];
+        const key=p=>p.x.toFixed(2)+','+p.y.toFixed(2),uses=new Map(),segs=[];
+        for(const r of rings)for(let i=0;i<r.length;i++){
+          const a=r[i],b=r[(i+1)%r.length],k=[key(a),key(b)].sort().join('|');
+          uses.set(k,(uses.get(k)||0)+1);segs.push({a,b,k});
+        }
+        const next=new Map();
+        for(const s of segs)if(uses.get(s.k)===1)next.set(key(s.a),s);
+        let best=[];
+        const seen=new Set();
+        for(const start of next.keys()){
+          if(seen.has(start))continue;
+          const ring=[];let k=start,guard=0;
+          while(next.has(k)&&!seen.has(k)&&guard++<4096){seen.add(k);const s=next.get(k);ring.push(s.a);k=key(s.b)}
+          if(k===start&&ring.length>best.length)best=ring;
+        }
+        if(best.length>=3)return best;
+        const pts=rings.flat().sort((a,b)=>a.x-b.x||a.y-b.y),cross=(o,a,b)=>(a.x-o.x)*(b.y-o.y)-(a.y-o.y)*(b.x-o.x),lo=[],up=[];
+        for(const p of pts){while(lo.length>=2&&cross(lo[lo.length-2],lo[lo.length-1],p)<=0)lo.pop();lo.push(p)}
+        for(const p of pts.slice().reverse()){while(up.length>=2&&cross(up[up.length-2],up[up.length-1],p)<=0)up.pop();up.push(p)}
+        return lo.slice(0,-1).concat(up.slice(0,-1));
+      }
+      // PR #281 organic territories: the same warped microcell aggregation the 3D atlas renders
+      // (ConquerRegion3DGeometry.globalMicrocells at its default detail 20 / deformation 65%).
+      // A territory is the union of the microcells whose warped site falls in it; neighbours
+      // are the territories it actually shares an organic border with.
+      const ORGANIC_DETAIL=20,ORGANIC_DEFORMATION=.65;
+      let organicCache=null;
+      function organicTerritories(){
+        const snap=window.ConquerRegion3DSnapshot?.(),G=window.ConquerRegion3DGeometry;
+        if(!snap||!G?.globalMicrocells||!G?.aggregateEdges)return null;
+        const key=snap.seed+'|'+(snap.revision??'')+'|'+snap.cells.length+'|'+JSON.stringify(snap.terrain).length;
+        if(organicCache?.key===key)return organicCache;
+        const micro=G.globalMicrocells(snap,ORGANIC_DETAIL,ORGANIC_DEFORMATION);
+        const {borders}=G.aggregateEdges(micro.parts,snap.terrain,snap.cells);
+        const adjacency=new Map();
+        for(const b of borders){
+          if(b.macroIds.length!==2||b.macroIds[0]===b.macroIds[1])continue;
+          for(const [a,c] of [b.macroIds,[b.macroIds[1],b.macroIds[0]]]){if(!adjacency.has(a))adjacency.set(a,new Set());adjacency.get(a).add(c)}
+        }
+        organicCache={key,micro,adjacency};
+        return organicCache;
+      }
+      // Largest closed ring of the union of polygons (shared edges cancel), lightly simplified.
+      function unionRing(polys,tolerance){
+        const k=p=>Math.round(p.x*100)/100+','+Math.round(p.y*100)/100;
+        const area=r=>r.reduce((s,p,i)=>s+p.x*r[(i+1)%r.length].y-r[(i+1)%r.length].x*p.y,0)/2;
+        const uses=new Map(),segs=[];
+        for(let r of polys){
+          if(area(r)<0)r=r.slice().reverse();
+          for(let i=0;i<r.length;i++){const a=r[i],b=r[(i+1)%r.length];if(k(a)===k(b))continue;const kk=[k(a),k(b)].sort().join('|');uses.set(kk,(uses.get(kk)||0)+1);segs.push({a,b,kk})}
+        }
+        const next=new Map();
+        for(const s of segs)if(uses.get(s.kk)===1){if(!next.has(k(s.a)))next.set(k(s.a),[]);next.get(k(s.a)).push(s)}
+        let best=[];const used=new Set();
+        for(const [start,list] of next)for(const first of list){
+          if(used.has(first))continue;
+          const ring=[];let s=first,guard=0;
+          while(s&&!used.has(s)&&guard++<20000){used.add(s);ring.push({x:s.a.x,y:s.a.y});s=(next.get(k(s.b))||[]).find(x=>!used.has(x))}
+          if(ring.length>=3&&Math.abs(area(ring))>Math.abs(area(best)||0))best=ring;
+        }
+        if(best.length<3)return null;
+        // Douglas-Peucker on the closed ring: drop near-collinear microcell vertices.
+        const dp=(pts,lo,hi,keep)=>{let idx=-1,dmax=0;const a=pts[lo],b=pts[hi],dx=b.x-a.x,dy=b.y-a.y,l=Math.hypot(dx,dy)||1;
+          for(let i=lo+1;i<hi;i++){const d=Math.abs(dy*pts[i].x-dx*pts[i].y+b.x*a.y-b.y*a.x)/l;if(d>dmax){dmax=d;idx=i}}
+          if(dmax>tolerance){keep[idx]=1;dp(pts,lo,idx,keep);dp(pts,idx,hi,keep)}};
+        const far=best.reduce((m,p,i)=>Math.hypot(p.x-best[0].x,p.y-best[0].y)>Math.hypot(best[m].x-best[0].x,best[m].y-best[0].y)?i:m,0);
+        const keep=new Uint8Array(best.length);keep[0]=keep[far]=1;
+        const closed=[...best,best[0]];dp(closed,0,far,keep);dp(closed,far,best.length,keep);
+        const out=best.filter((_,i)=>keep[i]).map(p=>({x:+p.x.toFixed(3),y:+p.y.toFixed(3)}));
+        return out.length>=3?out:best;
+      }
+      function organicOutline(macroId){
+        const o=organicTerritories(),parts=o?.micro.ownerParts.get(macroId);
+        if(!parts?.length)return null;
+        return unionRing(parts.map(p=>p.polygon),o.micro.spacing*.06);
+      }
       document.getElementById('openLocalDemo').addEventListener('click',()=>{
         if(!state||selectedMacros.size!==1||selectedMacro===null||isWaterTerrain(state.terrain[selectedMacro]))return;
         const macro=state.macros[selectedMacro],ids=conquerNeighbors(selectedMacro);
@@ -3993,7 +4078,19 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         const regionalCells=state.macros.map(m=>({id:m.id,code:m.code,terrain:state.terrain[m.id],centroid:m.centroid,polygon:m.cells[0].polygon}));
         const surroundings=window.ConquerRegionalBiomeRules.sampleSurroundings(regionalCells[selectedMacro],regionalCells,state.configuration.width,state.configuration.height);
         const payload={version:1,seed,biome,terrain,name:territoryName(macro),regionalSeed:state.seed,territoryId:macro.id,
-          neighbors:ids.map(id=>({id,code:state.macros[id].code,terrain:state.terrain[id]})),surroundings,hasRiver,riverSides,riverFlow,riverJunctions,tributaryTypes,mountainSides};
+          neighbors:ids.map(id=>({id,code:state.macros[id].code,terrain:state.terrain[id]})),surroundings,hasRiver,riverSides,riverFlow,riverJunctions,tributaryTypes,mountainSides,
+          // Local outline: the territory (union of its Voronoi cells) and its physical neighbours.
+          // Organic (PR #281 warped) outlines and organic neighbours; plain hex cells only as fallback.
+          shape:(()=>{
+            const own=organicOutline(selectedMacro);
+            if(!own)return{polygon:territoryOutline(selectedMacro),
+              neighbors:ids.map(id=>({id,code:state.macros[id].code,terrain:state.terrain[id],polygon:territoryOutline(id)}))};
+            const near=[...(organicTerritories().adjacency.get(selectedMacro)||[])];
+            // Rivers run on territory borders: name the neighbour across each touching river edge.
+            const riverNeighbors=[...new Set(touchingRivers.flatMap(edge=>edge.cells.map(cell=>cell.macroId)).filter(id=>id!==selectedMacro&&near.includes(id)))];
+            return{polygon:own,source:'organic-microcells-20-65',riverNeighbors,
+              neighbors:near.map(id=>({id,code:state.macros[id].code,terrain:state.terrain[id],polygon:organicOutline(id)||territoryOutline(id)}))};
+          })()};
         // Carry the small territory context in the URL too: opening another tab must
         // not lose its biome just because sessionStorage is scoped to the old tab.
         try{sessionStorage.setItem('conquer.regional-demo.world',JSON.stringify({map:mapData(),selected:selectedMacro}));sessionStorage.setItem('conquer.regional-demo.'+key,JSON.stringify(payload));}

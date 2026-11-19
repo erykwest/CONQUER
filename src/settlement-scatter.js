@@ -62,6 +62,7 @@
   }
   function blockedByTerrain(p,r){
     if(p.x<EDGE+r||p.y<EDGE+r||p.x>WORLD-EDGE-r||p.y>WORLD-EDGE-r)return true;
+    if(typeof inWorldZone==='function'&&!inWorldZone(p,-(EDGE+r)))return true;   // hex map border
     for(const q of [p,{x:p.x+r,y:p.y},{x:p.x-r,y:p.y},{x:p.x,y:p.y+r},{x:p.x,y:p.y-r}]){
       if(terrainSlopeKind(q)==='steep')return true;
     }
@@ -211,6 +212,7 @@
   ];
   function bankFree(p,r,obs,placed,ownWater=null){
     if(p.x<EDGE+r||p.y<EDGE+r||p.x>WORLD-EDGE-r||p.y>WORLD-EDGE-r)return false;
+    if(typeof inWorldZone==='function'&&!inWorldZone(p,-(EDGE+r)))return false;   // hex map border
     for(const f of State.environment||[])if(f!==ownWater&&['sea','pond','mountain'].includes(f.type)&&environmentContains(f,p,r))return false;
     if(terrainSlopeKind(p)==='steep')return false;
     for(const rd of obs.roads)if(pointSegmentDistance(p,rd.a,rd.b)<rd.half+r)return false;

@@ -22,6 +22,8 @@ assert.ok(run("State.environment.find(f=>f.id==='forest').holes.length>0"));
 console.log('PASS cooperative road finalization retains bridges, forest grooves and connectivity');
 
 prepare();
+// Bridges are found on the river centreline crossings: count that geometry too.
+run("globalThis.originalCross=riverCenterlineCross;riverCenterlineCross=function(...a){checks++;return originalCross(...a)}");
 run("State.structures.push({id:'old-road',type:'road',auto:true,roadClass:'arterial',routeId:route.id,a:{x:50,y:100},b:{x:80,y:100},width:.62},{id:'old-bridge',type:'bridge',primaryBridgeFor:'old-road',a:{x:70,y:99},b:{x:70,y:101}});invalidateNavigation();globalThis.revision=navPerf.navInvalidations||0;globalThis.work=rebuildArterialWork(route.id,[],()=>revision===(navPerf.navInvalidations||0))");
 let paused=false;
 for(let i=0;i<50000;i++){

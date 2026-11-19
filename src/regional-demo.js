@@ -32,6 +32,30 @@
     }
     if(Object.keys(biomes).length===8)demo.surroundingBiomes=biomes;
   }
+  // Hex territory outline (regional coordinates) and its PHYSICAL neighbours.
+  // Invalid or missing data keeps the legacy square map.
+  if(demo?.shape){
+    const ring=r=>Array.isArray(r)&&r.length>=3&&r.length<=512&&r.every(p=>Number.isFinite(+p?.x)&&Number.isFinite(+p?.y));
+    const rules=window.ConquerRegionalBiomeRules;
+    const neighbors=(Array.isArray(demo.shape.neighbors)?demo.shape.neighbors:[]).filter(n=>ring(n?.polygon)).slice(0,12)
+      .map(n=>({id:String(n.id),code:n.code??null,terrain:n.terrain??null,biome:rules?.biomeForTerrain(n.terrain)||null,polygon:n.polygon}));
+    let built=null;
+    try{built=ring(demo.shape.polygon)?window.ConquerLocalShape?.create({polygon:demo.shape.polygon,neighbors}):null}
+    catch(error){console.warn('CONQUER_LOCAL_SHAPE_REJECTED',error)}
+    // Homogenization is checked here, once, at generation (create() throws if the
+    // buildable area is not 10000 U²) and saved with the territory's local map.
+    // Neighbours across a regional river edge: the local river runs on that shared border.
+    const riverNeighbors=(Array.isArray(demo.shape.riverNeighbors)?demo.shape.riverNeighbors:[]).map(String)
+      .filter(id=>neighbors.some(n=>n.id===id)).slice(0,6);
+    demo.shape=built?{polygon:demo.shape.polygon,neighbors,riverNeighbors,homogenization:{...built.homogenization}}:null;
+    if(!demo.shape)delete demo.shape;
+    else{
+      try{
+        const key='conquer.local-shape.'+(demo.regionalSeed??'x')+'-'+(demo.territoryId??'x');
+        sessionStorage.setItem(key,JSON.stringify({version:1,territoryId:demo.territoryId??null,regionalSeed:demo.regionalSeed??null,...demo.shape.homogenization}));
+      }catch{}
+    }
+  }
   if((params.has('regionalDemo')||params.has('demo'))&&!(demo?.version===1&&allowed.includes(demo.biome)&&Number.isInteger(demo.seed)&&demo.seed>=0&&demo.seed<=2147483647)){
     demo={version:1,seed:4242,biome:'test',error:'Dati del territorio mancanti o non validi. Riapri la cella dalla mappa regionale.',neighbors:[]};
   }

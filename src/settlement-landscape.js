@@ -854,6 +854,21 @@ function drawEnvironment(){
   drawWaterLayer(State.environment.filter(f=>['river','stream','sea','pond'].includes(f.type)));
   if(forestTreeSpritesReady)for(const f of State.environment.filter(f=>f.type==='forest'))drawForestMask(f,occluders||=forestTreeOccluders());
   for(const f of mountains){pathPolygon(projectPath(f.points),f.fill,f.edge,1.2);drawRaisedFan(f,f.height||3.6);}
+  drawWorldBorderMask();
+}
+// Hex territory maps: the 200U canvas beyond the inherited 50U-offset border is off-map.
+// Painted into the ground (2D and the baked 3D ground texture) as dark, unexplored land.
+function drawWorldBorderMask(){
+  const shape=typeof localShape==='function'?localShape():null;if(!shape)return;
+  const frame=projectPath([{x:-WORLD,y:-WORLD},{x:2*WORLD,y:-WORLD},{x:2*WORLD,y:2*WORLD},{x:-WORLD,y:2*WORLD}],0);
+  const border=projectPath(shape.outer,0);
+  ctx.save();ctx.beginPath();
+  frame.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();
+  border.slice().reverse().forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();
+  ctx.fillStyle='#14160f';ctx.fill('evenodd');
+  ctx.strokeStyle='rgba(222,206,170,.38)';ctx.lineWidth=Math.max(1,1.6*Math.min(2,State.view.scale||1));
+  ctx.beginPath();border.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.stroke();
+  ctx.restore();
 }
 function drawGrid(){
   if(State.view.scale<.34)return;ctx.save();ctx.strokeStyle='rgba(255,255,255,.045)';ctx.lineWidth=1;
@@ -868,6 +883,8 @@ function drawGrid(){
 function drawPlanSnapGrid(){
   const px=U*State.view.scale*GRID;if(px<6)return;
   ctx.save();ctx.lineWidth=1;
+  const shape=localShape();
+  if(shape){const pts=projectPath(shape.build);ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.clip()}
   for(let v=BUILD_MIN;v<=BUILD_MAX+1e-6;v+=GRID){
     const major=Math.abs(v-Math.round(v))<1e-6;
     if(!major&&px<10)continue;
@@ -882,7 +899,9 @@ function drawBuildArea(){
   // Include every construction tool used by the current Builder (including
   // industry sites and the bridge/moat crossing palette).
   if(!['well','tower','gate','civic','linear','industry','crossing','terraform'].includes(State.tool?.kind))return;
-  const pts=projectPath([{x:BUILD_MIN,y:BUILD_MIN},{x:BUILD_MAX,y:BUILD_MIN},{x:BUILD_MAX,y:BUILD_MAX},{x:BUILD_MIN,y:BUILD_MAX}]);
+  const pts=projectPath(buildZoneOutline());
   ctx.save();ctx.fillStyle='rgba(224,138,60,.028)';pathPolygon(pts,'rgba(224,138,60,.028)',null);ctx.strokeStyle='rgba(224,138,60,.9)';ctx.lineWidth=2;ctx.setLineDash([8,7]);ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.stroke();ctx.setLineDash([]);
-  const label=w2s({x:BUILD_MIN,y:BUILD_MIN});ctx.fillStyle='rgba(242,230,211,.72)';ctx.font='11px system-ui';ctx.fillText('BUILDABLE 100×100U',label.x+8,label.y+15);ctx.restore();
+  const shape=localShape(),top=shape?shape.build.reduce((a,p)=>p.y<a.y?p:a):{x:BUILD_MIN,y:BUILD_MIN};
+  const label=w2s(top);ctx.fillStyle='rgba(242,230,211,.72)';ctx.font='11px system-ui';
+  ctx.fillText(shape?'BUILDABLE '+Math.round(shape.buildArea)+' U² · territorio esagonale':'BUILDABLE 100×100U',label.x+8,label.y+15);ctx.restore();
 }
