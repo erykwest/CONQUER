@@ -3,6 +3,9 @@
 ### 2026-11-19 — UI-PROFILE-01 · Pannello Settlement nel PROFILE
 
 `feature/settlement-panel-into-profile`: rimosso il pannello destro `#policy`; dati partita, bioma, parametri mappa e salvataggio in PROFILE › GENERALE, politiche, case private, forze nobiliari ed economia nella nuova tab GOVERNO. ROADMAP e DECISIONS invariate: nessun contratto di gioco cambiato.
+### 2026-11-18 — CARTS-ROADS-261118 · Carri e messaggeri nel verso giusto, sulle strade
+
+`fix/carts-roads`: i convogli signorili di ritorno e il messaggero che riparte scorrevano all'indietro sul percorso d'andata con l'orientamento dell'andata (modello girato al contrario, carro di testa in coda); ora percorrono la strada invertita e guardano dove vanno. Il messaggero, quando il grafo pedonale rifiuta il percorso, usa il grafo stradale dei carri invece della linea retta fino al pozzo. Test in `qa/diplomacy-regression.cjs` e `qa/road-sign-convoy-regression.cjs`. ROADMAP e DECISIONS invariate: correzione di comportamento, nessun contratto cambiato.
 
 ### 2026-11-18 — UI-UPG-01 · Ampliamenti nell'ispettore, non nel Builder
 

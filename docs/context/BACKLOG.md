@@ -4,6 +4,13 @@
 
 - [x] Pannello destro «Settlement» rimosso; contenuti in PROFILE › GENERALE e nuova tab GOVERNO.
 - [ ] Tradurre in italiano «Save settlement» e la nota di autosave.
+### 2026-11-18 — CARTS-ROADS-261118 · Carri e messaggeri nel verso giusto, sulle strade
+
+**IMPLEMENTATO SU BRANCH `fix/carts-roads`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Convogli signorili di ritorno orientati verso casa, carro di testa davanti.
+- [x] Messaggero di ritorno orientato nel verso di marcia.
+- [x] Messaggero sulle strade anche quando il grafo pedonale rifiuta il percorso.
+- [ ] Salvataggi con un messaggero già in viaggio su un percorso in linea retta: lo tiene fino all'arrivo (non ricalcolato).
 
 ## 2026-11-18 — UI-UPG-01 · Ampliamenti dall'ispettore
 
