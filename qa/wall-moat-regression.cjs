@@ -95,4 +95,29 @@ const near=(p,x,y,msg)=>assert.ok(Math.hypot(p.x-x,p.y-y)<1e-9,msg+' (got '+p.x+
   assert.equal(low.C.wallMoatOf(v).variant,'water');
   console.log('PASS water moats only at level 0');
 }
+{
+  // MOAT-WIDEN: against a wall the bank on the wall's face stays put and the moat grows outward;
+  // the joined neighbour still meets it where the centrelines cross; a free moat grows both ways.
+  const {State,C}=fixture();
+  const w1={id:'w1',type:'wall',width:1,a:{x:-8,y:0},b:{x:0,y:0}},w2={id:'w2',type:'wall',width:1,a:{x:0,y:0},b:{x:0,y:8}};
+  State.structures.push(w1,w2);
+  C.digAlongWall(w1,'dry');C.digAlongWall(w2,'dry');
+  const m1=C.wallMoatOf(w1),m2=C.wallMoatOf(w2);
+  assert.ok(C.moatWallSide(m1)!==0,'m1 knows its wall side');
+  assert.equal(C.widenMoat(m1,3),true);
+  assert.equal(m1.width,3);
+  for(const p of [m1.a,m1.b])assert.ok(Math.abs(Math.abs(p.y)-(.5+1.5))<1e-9,'inner bank on the wall face, centre 0.5+1.5 out (got '+p.y+')');
+  assert.ok([m1.a,m1.b].some(p=>[m2.a,m2.b].some(q=>Math.hypot(p.x-q.x,p.y-q.y)<1e-9)),'still joined to the neighbour');
+  assert.ok(Math.abs(Math.abs(m2.a.x)-1.25)<1e-9&&Math.abs(Math.abs(m2.b.x)-1.25)<1e-9,'neighbour keeps its own line');
+  assert.equal(C.planWidenMoat(m1,2).ok,false,'never narrower');
+  const free={id:'f',type:'moat',variant:'dry',a:{x:0,y:20},b:{x:6,y:20},width:1.5,fills:[]};
+  State.structures.push(free);
+  assert.equal(C.moatWallSide(free),0);
+  assert.equal(C.widenMoat(free,2),true);
+  near(free.a,0,20,'a free moat widens on both sides');
+  const site={id:'s',type:'moat',variant:'dry',a:{x:0,y:30},b:{x:6,y:30},width:1.5,fills:[],construction:{progress:.1}};
+  State.structures.push(site);
+  assert.equal(C.planWidenMoat(site,2).ok,false,'not while being dug');
+  console.log('PASS widening keeps the bank on the wall');
+}
 console.log('wall-moat-regression: all passed');

@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-19 — MOAT-WIDEN: allargamento del fossato (`feature/moat-from-wall`)
+
+- **Codice sul branch, non ancora unito a main.** Prima un fossato non si poteva allargare dopo lo scavo (la larghezza 1/2/3U si sceglieva solo con lo strumento).
+- `settlement-crossings.js`: `moatWallSide(s)` (lato del muro: `wallId`, oppure muro/palizzata/tratto costruito parallelo la cui faccia tocca la sponda entro 0,15U), `planWidenMoat(s,width)` (sposta la linea centrale di metà incremento lontano dal muro; i fossati con un estremo in comune si ricongiungono all'incrocio delle linee centrali, così le sponde, ciascuna a metà della propria larghezza, si incontrano ancora sulla faccia del muro; valida il fossato e i vicini), `widenMoat` (`beginStructureUpgrade` con la differenza di costo). Pannello: pulsanti `data-moat-widen` 2/3/4U con costo o motivo; vale per UI v2 (CrossingPanel) e pannello classico.
+- **Prove:** `qa/wall-moat-regression.cjs` nuovo blocco (angolo a L: sponda interna ferma a 0,5U dall'asse del muro, vicino unito e invariato, mai più stretto, fossato libero centrato, fossato in cantiere rifiutato); PASS drawbridge, wall-road-gate 13, terrace-bridge. Gioco locale: ampliamento a 3U con sponda sul muro e angolo unito, pulsanti nell'ispettore. Resa visiva non controllata a schermo.
+
 ### 2026-11-19 — ROAD-MOAT-DRAWBRIDGE e ROAD-MAGNET-ROAD (`feature/moat-from-wall`)
 
 - **Codice sul branch, non ancora unito a main.** Prima una strada attraverso muro + fossato era rifiutata (la porta e la strada si sovrapponevano al fossato).

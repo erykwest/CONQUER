@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-19 — MOAT-WIDEN · Allargare il fossato tenendo la sponda sul muro
+
+`feature/moat-from-wall`: il pannello del fossato finito offre «Widen» a 2 / 3 / 4U (si paga solo la differenza, come lavoro di ampliamento). Un fossato contro un muro, una palizzata o un tratto costruito (il suo `wallId`, o un tratto parallelo a filo della sponda) tiene la sponda sulla faccia esterna e cresce verso fuori; un fossato libero cresce sui due lati. Il fossato unito all'angolo resta unito (incrocio delle linee centrali). Test in `qa/wall-moat-regression.cjs`. ROADMAP e DECISIONS invariate.
+
 ### 2026-11-19 — ROAD-MOAT-DRAWBRIDGE, ROAD-MAGNET-ROAD · Ponte levatoio sulla strada, magnete strada su strada
 
 `feature/moat-from-wall`: una strada maestra che attraversa un muro e il fossato davanti apre la porta con il ponte levatoio già installato (costo del ponte nel cantiere della porta); attraverso una porta esistente finita senza ponte levatoio, lo installa. La strada passa sul fossato solo sul ponte levatoio della porta che attraversa (`manualRoadConflict`); un fossato senza porta resta un ostacolo. Il magnete della strada maestra prende estremi e lati di tutte le strade (anche secondarie e automatiche) con raggio più ampio (≥1,5U, segue lo zoom); un estremo vicino vince sul lato; il punto agganciato si illumina. Test in `qa/wall-road-gate-regression.cjs` (13). ROADMAP e DECISIONS invariate.

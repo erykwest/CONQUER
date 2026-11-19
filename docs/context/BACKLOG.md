@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-19 — MOAT-WIDEN · Allargare il fossato
+
+**Implementato sul branch `feature/moat-from-wall`, non ancora unito a main.** Richiesta del product owner (19/11/2026): «se fai upgrade del fossato in larghezza mantieni il lato adiacente al muro/palizzata».
+
+- [x] Allargamento 2/3/4U dal pannello del fossato; contro muro/palizzata/tratto costruito la sponda sul muro resta ferma.
+- [ ] Aperti: allargare tutto l'anello in un colpo; un vicino collineare (stesso rettilineo) non segue l'allargamento e resta un gradino; il ponte levatoio su un fossato allargato oltre 1,65U chiede il mezzo ponte a mano.
+
 ## 2026-11-19 — ROAD-MOAT-DRAWBRIDGE, ROAD-MAGNET-ROAD · Ponte levatoio e magnete strade
 
 **Implementato sul branch `feature/moat-from-wall`, non ancora unito a main.** Richiesta del product owner (19/11/2026): «magnet per le strade» (scelto: strada su strada) e «se attraverso fossato con strada metti porta con ponte levatoio già installato».
