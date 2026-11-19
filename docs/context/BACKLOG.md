@@ -29,6 +29,11 @@
 - [x] Raccordo all'angolo col fossato del tratto vicino; varco libero davanti alle porte.
 - [ ] Da decidere: fossato anche durante il cantiere del muro (oggi solo a tratto completato); larghezza diversa da 1,5U; scavo dell'intero giro di mura in un clic.
 - [ ] Le torri sporgono oltre la faccia del muro: il fossato passa sotto il loro piede agli angoli; valutare se girarci intorno.
+## 2026-11-19 — CI-AUDIT-01 · CI più veloce per l'audit del Lab
+
+- [x] Modifiche solo di interfaccia: smoke della galleria al posto dell'audit completo.
+- [x] Audit completo in 4 job paralleli per famiglie.
+- [ ] Valutare l'audit completo solo dopo il merge o di notte, con l'incrementale/smoke sulle PR.
 ### 2026-11-18 — PATROL-ROUTE-261118 · Regressione del pathfinding delle pattuglie
 
 **CORRETTO SU BRANCH `fix/patrol-pathfinding`, NON MERGE.**
