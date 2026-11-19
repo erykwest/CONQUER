@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-19 — HARDEN-261119 (branch `fix/main-hardening-20261119`, non merge)
+
+Hardening su base main `168b993b`: blocco scritture cloud senza lettura riuscita, errori di salvataggio locali/CAMP non mascherati, gestione rejection cloud, esclusione Asset Lab, barra risorse con nodi di testo. 11 nuovi test comportamentali nel workflow Runtime integrity; 5 test runtime e 15 suite locali PASS. [Rapporto e limiti](../HARDENING-2026-11-19.md). ROADMAP e DECISIONS invariate: nessun nuovo contratto di gameplay o priorità.
+
+
 ### 2026-11-18 — TORCH-STREAK-261118 · Niente fasci verticali dalle torce
 
 `fix/torch-artifact`: l'alone notturno di torce e bracieri non campiona più l'atlante delle decal (che a mipmap faceva entrare le tessere vicine come righe verticali) ma è calcolato nello shader dall'angolo del quadrato; margine trasparente sulla tessera `__glow` delle finestre. Controllo nuovo in `qa/tower-fittings-regression.cjs`. ROADMAP e DECISIONS invariate: correzione grafica, nessun contratto cambiato.
