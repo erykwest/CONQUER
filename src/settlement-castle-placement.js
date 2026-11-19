@@ -106,23 +106,90 @@ function wallRoadGatePlan(structures){
       if(!gate)return{blocked:'Gate on the main road: '+reason};
       placed.push(gate);
     }
-    // Pieces shorter than a wall break vanish into the gate; only the piece that still starts at
-    // wall.a (ends at wall.b) keeps that end's magnet and dogleg joint.
-    let start=null;
-    const piece=(fromGate,toGate)=>{
-      const a=fromGate?boundaryPoint(fromGate,wall.b):wall.a,b=toGate?boundaryPoint(toGate,wall.a):wall.b;
-      if(dist(a,b)<WALL_BREAK_MIN)return;
-      const s={...wall,id:walls.some(w=>w.id===wall.id)?uid():wall.id,a:{...a},b:{...b},length:dist(a,b),
-        aSnap:fromGate?fromGate.id:wall.aSnap||null,bSnap:toGate?toGate.id:wall.bSnap||null};
-      if(fromGate)delete s.aJoint;
-      if(toGate)delete s.bJoint;
-      walls.push(s);
-    };
-    for(const gate of placed){piece(start,gate);start=gate}
-    piece(start,null);
+    walls.push(...wallPiecesAroundGates(wall,placed));
     gates.push(...placed);
   }
   return{gates,walls,blocked:null};
+}
+// The pieces of a wall cut by gates (ordered from a to b), each seated on the gate flanks
+// (aSnap/bSnap). Pieces shorter than a wall break vanish into the gate; only the piece that
+// still starts at wall.a (ends at wall.b) keeps that end's magnet and dogleg joint. The first
+// piece keeps the wall's id.
+function wallPiecesAroundGates(wall,placed){
+  const out=[];let start=null;
+  const piece=(fromGate,toGate)=>{
+    const a=fromGate?boundaryPoint(fromGate,wall.b):wall.a,b=toGate?boundaryPoint(toGate,wall.a):wall.b;
+    if(dist(a,b)<WALL_BREAK_MIN)return;
+    const s={...wall,id:out.length?uid():wall.id,a:{...a},b:{...b},length:dist(a,b),
+      aSnap:fromGate?fromGate.id:wall.aSnap||null,bSnap:toGate?toGate.id:wall.bSnap||null};
+    if(fromGate)delete s.aJoint;
+    if(toGate)delete s.bJoint;
+    out.push(s);
+  };
+  for(const gate of placed){piece(start,gate);start=gate}
+  piece(start,null);
+  return out;
+}
+// Main roads across existing walls (ROAD-WALL-GATE, the reverse of WALL-ROAD-GATE): where a new
+// main road crosses a completed wall or palisade a gate of the matching type straddles the
+// crossing and the wall is cut on its two flanks; the road then runs through the passage.
+// Returns {gates, cuts:[{wall, pieces}], blocked}. Non-mutating.
+function roadWallGatePlan(road){
+  const gates=[],cuts=[];
+  if(!road?.a||!road?.b)return{gates,cuts,blocked:null};
+  for(const wall of State.structures){
+    if(!['wall','palisade'].includes(wall.type)||!wall.a||!wall.b||wall.auto)continue;
+    const x=segmentCrossing(wall.a,wall.b,road.a,road.b);if(!x)continue;
+    const point=x.point;
+    // A crossing at a gate that already stands there is the existing passage.
+    if(State.structures.some(g=>g.type==='gate'&&dist(g,point)<=Math.max(rectDims(g).w,rectDims(g).h)/2+.2))continue;
+    if(underConstruction(wall))return{gates,cuts,blocked:'the wall is still under construction: finish it before opening a gate'};
+    const spec=wallRoadGateSpec(wall);if(!spec)continue;
+    const {gate,reason}=wallRoadGateAt(wall,{point,road},spec);
+    if(!gate)return{gates,cuts,blocked:'Gate on the wall: '+reason};
+    gates.push(gate);
+    cuts.push({wall,pieces:wallPiecesAroundGates(wall,[gate])});
+  }
+  return{gates,cuts,blocked:null};
+}
+// Main road legs committed through the walls they cross: per leg, the gates first, then the road.
+// Returns the number of gates opened, or false when a leg is blocked (nothing of it is built).
+function addMainRoadThroughWalls(legs,width=TYPES.road.width){
+  let opened=0;
+  for(const leg of legs){
+    const road={type:'road',manualMain:true,roadClass:'arterial-manual',width,a:{...leg.a},b:{...leg.b}};
+    const plan=roadWallGatePlan(road);
+    if(plan.blocked){status('Road blocked: '+plan.blocked);return false}
+    if(plan.gates.length){
+      const verdict=window.ConquerPlacement?.check(road,{ignoreIds:plan.cuts.map(c=>c.wall.id)});
+      if(verdict&&!verdict.ok){status('Road blocked: '+verdict.reason);return false}
+      if(!applyRoadWallGatePlan(plan))return false;
+      opened+=plan.gates.length;
+    }
+    if(!addManualMainRoad(leg.a,leg.b))return false;
+  }
+  return opened;
+}
+// Applies a roadWallGatePlan: gates as new building sites (cost and construction, as for a
+// wall drawn over a road), the cut wall keeps its id and state on the first piece, the other
+// piece is the same finished wall.
+function applyRoadWallGatePlan(plan){
+  for(const g of plan.gates)if(!addStructure(g))return false;
+  for(const {wall,pieces} of plan.cuts){
+    if(!pieces.length){State.structures=State.structures.filter(s=>s!==wall);continue}
+    const [first,...rest]=pieces;
+    Object.assign(wall,{a:first.a,b:first.b,length:first.length,aSnap:first.aSnap,bSnap:first.bSnap});
+    if(!('aJoint' in first))delete wall.aJoint;
+    if(!('bJoint' in first))delete wall.bJoint;
+    delete wall.siegeIntegrity;delete wall.wallColliderSyncSignature;
+    for(const piece of rest){
+      const s=JSON.parse(JSON.stringify(piece));
+      delete s.siegeIntegrity;delete s.wallStair;delete s.wallColliderSyncSignature;
+      State.structures.push(s);markStructureDirty(s);
+    }
+    markStructureDirty(wall);
+  }
+  return true;
 }
 // Orientation while the second click is pending: a locked angle wins; a road-snapped gate
 // keeps its passage on the road and only chooses which mouth faces out.

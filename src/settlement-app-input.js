@@ -207,16 +207,21 @@ canvas.addEventListener('pointerdown',e=>{
         // A gate mouth is reached exactly: a free leg, then a straight approach into the passage.
         const legs=manualRoadLegs(State.draft.a,e2.point,State.draft.aGatePort,e2.gatePort);
         const bad=legs.find(l=>dist(l.a,l.b)<spec.min-.001||dist(l.a,l.b)>spec.max+.001);
-        const blocked=legs.map(l=>window.ConquerPlacement?.check({type:'road',manualMain:true,width:spec.width,...l})).find(v=>v&&!v.ok);
+        // A leg across a wall opens a gate in it (ROAD-WALL-GATE): only other obstacles block it.
+        const blocked=legs.map(l=>{const r={type:'road',manualMain:true,width:spec.width,...l},plan=roadWallGatePlan(r);
+          return plan.blocked?{ok:false,reason:plan.blocked}:window.ConquerPlacement?.check(r,{ignoreIds:plan.cuts.map(c=>c.wall.id)})}).find(v=>v&&!v.ok);
         if(bad)status('Road to the gate: each leg must be '+spec.min+'–'+spec.max+'U');
         else if(blocked)status('Road blocked: '+blocked.reason);
-        else if(legs.every(l=>addManualMainRoad(l.a,l.b))){State.draft=null;status('Main road joined to the gate — choose next segment')}
+        else{const opened=addMainRoadThroughWalls(legs,spec.width);
+          if(opened!==false){State.draft=null;status('Main road joined to the gate'+(opened?' · '+(opened===1?'gate':opened+' gates')+' opened in the wall':'')+' — choose next segment')}}
       }else if(mainRoad){
         const n=normalizeLinear(State.draft.a,e2.point,spec,false);
         if(n&&n.length>=spec.min-.001){
-          if(addManualMainRoad(n.a,n.b)){
+          const opened=addMainRoadThroughWalls([{a:n.a,b:n.b}],spec.width);
+          if(opened!==false){
             State.draft=null;
-            status(e2.bridgeEnd?'Main road joined to the bridge — choose next segment':'Main road added — choose next segment');
+            const gates=opened?' · '+(opened===1?'gate':opened+' gates')+' opened in the wall':'';
+            status((e2.bridgeEnd?'Main road joined to the bridge':'Main road added')+gates+' — choose next segment');
           }
         }else status('Segment too short');
       }else{
@@ -337,8 +342,12 @@ canvas.addEventListener('pointermove',e=>{
       if(n){
         State.draft.preview={type:State.tool.linear,width:spec.width,a:n.a,b:n.b,length:n.length,manualMain:true};
         State.draft.previewSegments=null;State.draft.invalidPreview=null;
-        const verdict=window.ConquerPlacement?.check(State.draft.preview);
-        status(verdict&&!verdict.ok?'Road blocked: '+verdict.reason:`${snap.bridgeEnd?'⛓ Bridge magnet · ':''}Main road: ${n.length.toFixed(2)}U — click to confirm`);
+        // Across a wall: the ghost shows the gate the road will open (ROAD-WALL-GATE).
+        const gatePlan=roadWallGatePlan(State.draft.preview);
+        const verdict=gatePlan.blocked?{ok:false,reason:gatePlan.blocked}:window.ConquerPlacement?.check(State.draft.preview,{ignoreIds:gatePlan.cuts.map(c=>c.wall.id)});
+        if(!gatePlan.blocked&&gatePlan.gates.length){State.draft.previewSegments=[State.draft.preview,...gatePlan.gates.map(g=>({...g,previewOnly:true}))];State.draft.preview=null}
+        const gateNote=gatePlan.gates.length&&!gatePlan.blocked?' · '+(gatePlan.gates.length===1?'gate':gatePlan.gates.length+' gates')+' in the wall · '+costText(aggregateConstructionCost(gatePlan.gates)):'';
+        status(verdict&&!verdict.ok?'Road blocked: '+verdict.reason:`${snap.bridgeEnd?'⛓ Bridge magnet · ':''}Main road: ${n.length.toFixed(2)}U${gateNote} — click to confirm`);
         draw();
       }else{
         State.draft.preview=null;State.draft.invalidPreview={type:'road',a:State.draft.a,b:snap.point,width:spec.width};draw();

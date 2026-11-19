@@ -82,5 +82,33 @@ check('a wall reaching an existing gate on the road adds no second gate',()=>{
   commit('wall',2,{x:95,y:100},{x:100,y:100});
   assert.equal(gates().length,1,'existing gate reused');
 });
+// ROAD-WALL-GATE: the reverse. A main road drawn across an existing finished wall opens a gate
+// of the matching type in it, cuts the wall on the gate flanks and runs through the passage.
+const built=(id,type,tier,a,b,extra={})=>({id,type,tier,width:run('wallWidthForTier')(tier),level:1,functions:[],a,b,length:Math.hypot(b.x-a.x,b.y-a.y),...extra});
+const road=(a,b)=>run('addMainRoadThroughWalls')([{a,b}]);
+check('main road across a finished wall, palisade: gate of the matching type, wall cut on its flanks',()=>{
+  for(const [type,tier,material,size,masonry] of [['wall',1,'stone',1,'brick'],['wall',3,'stone',1.5,'stone'],['palisade',2,'wood',1.5,null]]){
+    reset([built('w',type,tier,{x:95,y:100},{x:105,y:100},masonry?{masonryMaterial:masonry}:{})]);
+    assert.equal(road({x:100,y:94},{x:100,y:106}),1,type+' T'+tier+': one gate opened');
+    const [g]=gates(),r=run('State').structures.find(s=>s.type==='road');
+    assert.ok(g&&g.material===material&&g.size===size,type+' T'+tier+' gate type');
+    if(masonry)assert.equal(g.masonryMaterial,masonry,'gate in the wall masonry');
+    assert.ok(Math.hypot(g.x-100,g.y-100)<1e-6,'centred on the crossing');
+    assert.ok(r&&run('roadUsesGatePassage')(r,g),'road built through the passage');
+    const p=walls(type);
+    assert.equal(p.length,2,'two pieces');
+    assert.ok(p.some(w=>w.id==='w'&&w.bSnap===g.id)&&p.some(w=>w.aSnap===g.id),'the wall keeps its id, both pieces seated on the gate');
+    for(const w of p)assert.ok(!w.construction,'the cut wall stays finished');
+  }
+});
+check('a road across a wall still under construction is refused; a road through an existing gate adds none',()=>{
+  reset([built('w','wall',2,{x:95,y:100},{x:105,y:100},{construction:{version:2,progress:.2}})]);
+  assert.equal(road({x:100,y:94},{x:100,y:106}),false,'refused');
+  assert.equal(gates().length,0);assert.equal(run('State').structures.filter(s=>s.type==='road').length,0,'no road');
+  reset([{id:'g0',type:'gate',shape:'square',material:'stone',size:1.5,level:1,x:100,y:100,angle:Math.PI/2,functions:[]},
+    built('w1','wall',2,{x:95,y:100},{x:99.25,y:100},{bSnap:'g0'}),built('w2','wall',2,{x:100.75,y:100},{x:105,y:100},{aSnap:'g0'})]);
+  assert.equal(road({x:100,y:94},{x:100,y:106}),0,'no new gate');
+  assert.equal(gates().length,1);
+});
 console.log('wall road gate regression: '+passed+' checks');
 `);

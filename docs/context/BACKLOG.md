@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-19 — ROAD-WALL-GATE · Strada che attraversa un muro → porta
+
+**Implementato sul branch `feature/moat-from-wall`, non ancora unito a main.** Richiesta del product owner (19/11/2026): costruendo una strada che attraversa un muro si aggiunge una porta del tipo corrispondente, come quando si costruisce un muro su una strada.
+
+- [x] Strada maestra attraverso muro o palizzata finiti: porta del tipo corrispondente, muro tagliato sui fianchi, strada nel varco; fantasma con la porta.
+- [ ] Da decidere: muro ancora in cantiere (oggi la strada è rifiutata); un fossato già scavato davanti al muro non riceve ponte levatoio automatico.
 ## 2026-11-18 — FOSSATO-MURO · Fossato costruibile dal muro selezionato
 
 **Implementato sul branch `feature/moat-from-wall`, non ancora unito a main.** Richiesta del product owner (18/11/2026): fossati costruibili anche selezionando muro, palizzata o tratto costruito, attaccati direttamente sul lato esterno.

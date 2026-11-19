@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-19 — ROAD-WALL-GATE: strada maestra attraverso un muro (`feature/moat-from-wall`)
+
+- **Codice sul branch, non ancora unito a main.** Prima una strada maestra tracciata attraverso un muro era rifiutata («Footprint overlaps…»); solo il contrario (muro sopra la strada, WALL-ROAD-GATE) metteva la porta.
+- `settlement-castle-placement.js`: `roadWallGatePlan(road)` (senza effetti) trova i muri e le palizzate finiti attraversati, salta gli incroci già coperti da una porta, usa le stesse regole di WALL-ROAD-GATE (`wallRoadGateSpec`, `wallRoadGateAt`: fronte verso l'esterno, oppure lungo la strada se obliqua) e taglia il muro con il nuovo `wallPiecesAroundGates` (ora condiviso con `wallRoadGatePlan`). `applyRoadWallGatePlan` aggiunge le porte come cantieri (`addStructure`, costo come per un muro sopra la strada), il primo pezzo tiene id e stato del muro (fossato, scala, pattuglie), l'altro è lo stesso muro finito; l'integrità d'assedio dei pezzi si ricalcola. `addMainRoadThroughWalls(legs)` per ogni tratto: porte, poi `addManualMainRoad`. Un muro in cantiere blocca la strada con il motivo.
+- `settlement-app-input.js`: click e anteprima della strada maestra (tratto libero e tratti verso la bocca di una porta) usano questo piano; il fantasma mostra la porta e il costo nello stato.
+- **Prove:** `qa/wall-road-gate-regression.cjs` 9/9 (2 nuovi: tipi di porta per palizzata, W1 in mattoni, W3; muro in cantiere rifiutato; incrocio su una porta esistente senza seconda porta); PASS bridge-road-magnet, linear-magnet, builder-placement, urban, wall-moat, lean-to. Smoke in Chromium headless sul gioco vero: strada respinta prima, dopo tre porte (grande pietra, piccola mattoni, legno), muri tagliati e agganciati, strada nel varco, nessun errore. Fantasma col mouse non provato a mano.
 ### 2026-11-18 — FOSSATO-MURO: fossato dal muro selezionato (`feature/moat-from-wall`)
 
 - **Codice sul branch, non ancora unito a main.** Prima il fossato si tracciava solo a mano con lo strumento Attraversamenti (due clic per tratto).
