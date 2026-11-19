@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-19 — UI-PROFILE-01 · Pannello Settlement nel PROFILE
+
+`feature/settlement-panel-into-profile`: rimosso il pannello destro `#policy`; dati partita, bioma, parametri mappa e salvataggio in PROFILE › GENERALE, politiche, case private, forze nobiliari ed economia nella nuova tab GOVERNO. ROADMAP e DECISIONS invariate: nessun contratto di gioco cambiato.
+
 ### 2026-11-18 — UI-UPG-01 · Ampliamenti nell'ispettore, non nel Builder
 
 `feature/upgrades-in-inspector`: Municipio, Gilda e Bargello (edifici del pozzo) escono dal pannello Costruisci (UI v2 e palette legacy) e si avviano dall'ispettore del pozzo, blocco «Ampliamenti»; nell'ispettore UI v2 lo stesso blocco elenca anche gli annessi di chiesa, taverna, mercato e municipio. ROADMAP e DECISIONS invariate: le regole di piazzamento non cambiano.

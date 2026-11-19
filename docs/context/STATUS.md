@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-19 — UI-PROFILE-01: pannello «Settlement» di destra assorbito dal PROFILE (`feature/settlement-panel-into-profile`)
+
+- Richiesta del product owner: smantellare il pannello destro `#policy` e riorganizzarne le informazioni nel menu principale (PROFILE).
+- GENERALE: dati della partita (insediamento, seed, bioma, giorno, cella), selettore bioma di test, parametri della mappa, salvataggio. Nuova tab GOVERNO: tasse, razioni, muratura delle nuove case private, forze nobiliari (recluta cavaliere, carovane), riepilogo economia. Gli id DOM restano invariati, quindi `renderUI()`, economia e persistenza non cambiano; tolte le regole CSS `#policy`.
+- **Prove:** PASS biome-selector; verificato in Chromium headless: pannello assente, GENERALE e GOVERNO popolati, nessun errore di pagina.
+
 ### 2026-11-18 — UI-UPG-01: ampliamenti di pozzo ed edifici civici nell'ispettore (`feature/upgrades-in-inspector`)
 
 - **Codice sul branch, non ancora unito a main.** Richiesta del product owner: gli edifici che sono un ampliamento del pozzo o di altro si avviano dall'ispettore e non stanno nel pannello di costruzione principale.

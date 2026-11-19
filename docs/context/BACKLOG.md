@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-19 — UI-PROFILE-01 · Pannello Settlement nel PROFILE
+
+- [x] Pannello destro «Settlement» rimosso; contenuti in PROFILE › GENERALE e nuova tab GOVERNO.
+- [ ] Tradurre in italiano «Save settlement» e la nota di autosave.
+
 ## 2026-11-18 — UI-UPG-01 · Ampliamenti dall'ispettore
 
 **Implementato sul branch `feature/upgrades-in-inspector`, non ancora unito a main.**
