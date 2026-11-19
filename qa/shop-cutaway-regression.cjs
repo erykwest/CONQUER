@@ -52,7 +52,7 @@ assert.equal(SC.active(State.structures[0]),false,'not open until selected');
 State.selectedId='h';SC.clear();
 assert.equal(SC.active(State.structures[0]),true,'the selected L2 workshop opens');
 assert.equal(SC.activeId(),'h');
-assert.equal(SC.active(house({houseLevel:3})),false,'L3 (educated) houses have no workshop');
+assert.equal(SC.shopOf(house({houseLevel:3})).grade,'advanced','an L3 stand-in stages the advanced workshop (D-SHOP-L3-261119, qa/shops-l3-advanced-regression.cjs)');
 assert.equal(SC.active(house({houseLevel:1})),false,'L1 houses have no workshop');
 assert.equal(SC.SHOP_TIER,2,'workshops belong to the artisan tier');
 assert.equal(SC.active(house({shopKind:null})),false,'an L2 house without a workshop stays closed');
@@ -254,10 +254,11 @@ console.log('PASS street front: bracket sign beside the door, shop window open b
 }
 // The inspector reports the workshop on the house that runs it (L2), not on L3 houses.
 {
-  const rooms=src('settlement-app-rooms.js'),i=rooms.indexOf('commerce?.state?.()?.shops?.[s.id]');
+  const rooms=src('settlement-app-rooms.js'),i=rooms.indexOf('Bottega L2 · ');
   assert.ok(i>0,'inspector reads the commerce shop');
-  const guard=rooms.slice(rooms.lastIndexOf('if(',i),i);
-  assert.match(guard,/tierOfHouse\?\.\(s\)\?\?houseLevel\(s\)\)===2/,'inspector shows the workshop on L2 houses');
+  const guard=rooms.slice(rooms.lastIndexOf('if(houseTier===2)',i),i);
+  assert.ok(guard.startsWith('if(houseTier===2)'),'inspector shows the workshop on L2 houses');
+  assert.match(rooms,/const houseTier=s\.type==='house'\?\(window\.ConquerSocialClasses\?\.tierOfHouse\?\.\(s\)\?\?houseLevel\(s\)\):0/,'by social tier');
 }
 console.log('PASS end to end: ConquerCommerce L2 workshops open in the cutaway; inspector on L2');
 
@@ -272,5 +273,5 @@ has('settlement-urban.js',/ConquerShopCutaway\?\.facadeCut\(house,part,edge,wind
 has('settlement-population-figures.js',/ConquerShopCutaway\?\.artisanAt\(house,resident,p\)/,'population pass');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
 assert.ok(html.indexOf('settlement-commerce.js')<html.indexOf('settlement-shop-cutaway.js')&&html.indexOf('settlement-shop-cutaway.js')<html.indexOf('settlement-asset-stage.js'),'script order');
-has('settlement-asset-stage.js',/bottega-l2-/,'Asset Lab entries');
+has('settlement-asset-stage.js',/\['l2','Bottega L2','Botteghe L2',2\]/,'Asset Lab entries (bottega-l2-*)');
 console.log('PASS renderer, population and Asset Lab wiring');
