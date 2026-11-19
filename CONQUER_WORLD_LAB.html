@@ -743,6 +743,10 @@
       </div>
 
       <div class="field">
+        <a href="lab/3dregionmap.html" target="_blank" rel="noopener" style="display:block;padding:9px 11px;text-align:center;border:1px solid #9a8354;color:#f1d9a5;text-decoration:none;background:#25322d;font-size:.78rem">↗ Anteprima regionale 3D · sperimentale</a>
+      </div>
+
+      <div class="field">
         <label for="seed">Seed numerico</label>
         <input id="seed" type="number" min="1" max="2147483646" step="1" value="1943">
       </div>
@@ -3353,6 +3357,107 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         }
       }
 
+      // Read-only data plus delegated territory selection for the isolated 3D experiment.
+      // Only the authoritative World Lab updates its selection state and menu.
+      window.ConquerRegion3DSelection = () => [...selectedMacros];
+      window.ConquerRegion3DSelectTerritory = (macroId, extendSelection = false) => {
+        const id = Number(macroId);
+        if (!Number.isInteger(id) || !state?.macros[id] || isWaterTerrain(state.terrain[id])) return false;
+        selectMacro(id, !!extendSelection);
+        return true;
+      };
+      // Live, read-only 3D marker bridge. World Lab still owns all simulation
+      // data; missing entity collections simply produce no marker. The isolated
+      // 3D preview can additionally demonstrate the shapes without creating units.
+      window.ConquerRegion3DMarkerSnapshot = () => {
+        if(!state)return [];
+        const validHex=c=>typeof c==='string'&&/^#[\da-f]{6}$/i.test(c);
+        const entities=[];
+        const macroPoint=id=>state.macros[Number(id)]?.centroid||null;
+        const where=(item,macroId)=>{
+          const pos=item?.point||item?.position||item;
+          return pos&&Number.isFinite(Number(pos.x))&&Number.isFinite(Number(pos.y))
+            ?{x:Number(pos.x),y:Number(pos.y)}
+            :macroPoint(macroId);
+        };
+        const add=(kind,source,macroId,props={})=>{
+          const pos=where(source,macroId);
+          if(!pos)return;
+          entities.push({kind,...pos,macroId:Number(macroId),...props});
+        };
+        // Settlement icons are tied to actual village flags, not inferred from
+        // political ownership of territory (LOCAL_VILLAGE is not a building).
+        for(const id of state.villages||[]){
+          const center=state.villageCellIds?.[id]!==undefined
+            ?polygonCentroid(state.cells[state.villageCellIds[id]]?.polygon||[])
+            :macroPoint(id);
+          if(center)add('village',{point:center},id);
+        }
+        for(const fort of state.fortifications||[]){
+          const type=String(fort?.type||fort?.kind||'').toLowerCase();
+          if(fort?.palisade||fort?.isPalisade||/palisad/.test(
+            type+' '+String(fort?.material||'')+' '+String(fort?.wallType||'')))continue;
+          const id=fort.macroId??fort.territoryId;
+          if(id!==undefined)add('castle',fort,id,{id:String(fort.id||'')});
+        }
+        for(const port of state.ports||[]){
+          const id=port.macroId??port.territoryId;
+          add('port',port,id,{id:String(port.id||'')});
+        }
+        // These collections are optional: the current 2D World Lab has not yet
+        // integrated regional fleet or army simulation.
+        for(const ship of state.regionalShips||state.ships||[]){
+          const id=ship.macroId??ship.territoryId;
+          add('ship',ship,id,{
+            id:String(ship.id||''),route:ship.route||[],
+            progress:Number.isFinite(ship.progress)?ship.progress:null,
+            heading:Number.isFinite(ship.heading)?ship.heading:0
+          });
+        }
+        for(const army of state.regionalArmies||state.armies||[]){
+          const id=army.macroId??army.territoryId;
+          const ownerId=army.ownerId||army.playerId||null;
+          const faction=state.conquer?.factions?.[ownerId]||null;
+          const heraldry=army.heraldry||faction?.heraldry||
+            (ownerId&&ownerId===state.conquer?.playerId?state.heraldry:null);
+          const colors=Array.isArray(army.colors)?army.colors:[heraldry?.c1,heraldry?.c2];
+          if(!colors.every(validHex))continue;
+          add('troops',army,id,{id:String(army.id||''),ownerId,colors});
+        }
+        // Optional future regional simulation adapter: pure marker data only.
+        try {
+          const external=typeof window.ConquerRegion3DLiveMarkers==='function'
+            ?window.ConquerRegion3DLiveMarkers()
+            :window.ConquerRegion3DLiveMarkers;
+          if(Array.isArray(external))entities.push(...external);
+        } catch(e) {
+          console.warn('Regional marker adapter failed:',e);
+        }
+        return entities;
+      };
+
+      window.ConquerRegion3DSnapshot = () => !state ? null : ({
+        revision: window.ConquerRegion3DRevision || 0,
+        seed: state.seed,
+        width: state.configuration.width,
+        height: state.configuration.height,
+        cells: state.cells.map(c => ({ id: c.id, macroId: c.macroId, polygon: c.polygon })),
+        terrain: { ...state.terrain },
+        // Pixel-identical source RGB for each territory: same macroFill used by the 2D SVG.
+        // Includes the active terrain palette, neutral desaturation and political fills.
+        fills: Object.fromEntries(state.macros.map(macro => [macro.id, macroFill(macro.id)])),
+        names: Object.fromEntries(state.macros.map(macro => [macro.id, territoryName(macro)])),
+        edges: state.edges.map(e => ({
+          start: e.start, end: e.end,
+          macroIds: [...new Set(e.cells.map(c => c.macroId))]
+        })),
+        rivers: [...state.rivers],
+        generatedRiverEdges: [...state.generatedRiverEdges],
+        mountainRanges: [...state.mountainRanges],
+        automaticMountainEdges: [...state.automaticMountainEdges],
+        selectedMacros: [...selectedMacros]
+      });
+
       function render() {
         selectedMacros = new Set([...selectedMacros].filter(id => !isWaterTerrain(state.terrain[id])));
         if (selectedMacro !== null && isWaterTerrain(state.terrain[selectedMacro])) {
@@ -3673,6 +3778,7 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
         }
         svg.append(defsLayer, cellsLayer, campaignLayer, selectedLayer, microLayer, macroLayer, politicalLayer, politicalColorLayer, attackLayer, structureLayer, coastlineLayer, labelsLayer, adventureLayer, capitalLayer, topSymbolsLayer);
         updateGridBorderVisibility();
+        window.ConquerRegion3DRevision = (window.ConquerRegion3DRevision || 0) + 1;
         if (selectedMacro !== null) selectMacro(selectedMacro);
       }
 

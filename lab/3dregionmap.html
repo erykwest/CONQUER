@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CONQUER — Mappa regionale 3D / Esperimento</title>
+<style>
+:root { color-scheme: dark; font-family: system-ui, -apple-system, Segoe UI, sans-serif; background: #111b1b; color: #e4e2d6; }
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; }
+header { display:flex; align-items:center; gap: 24px; padding: 15px 21px; background: #172322; border-bottom: 1px solid #44534a; }
+header strong { font-family: Georgia,serif; font-size: 1.35rem; color: #e5c38c; white-space: nowrap; }
+header p { font-size: .83rem; line-height: 1.4; max-width: 900px; color:#b5bcb4; margin:0; }
+main { display: grid; grid-template-columns: minmax(360px,42%) minmax(400px,58%); min-height: calc(100vh - 78px); }
+.panel { display: flex; flex-direction: column; min-width: 0; border-right: 1px solid #384941; }
+.panel-title { padding: 11px 16px; background:#25322d; color: #d1b990; font-size: .78rem; font-weight:700; letter-spacing: .07em; text-transform: uppercase; }
+#regionalSource { border:0; background:#101413; flex:1; min-height:610px; width:100%; }
+.controls { display:flex; flex-wrap:wrap; gap:10px 15px; padding:11px 15px; background: #1b2928; border-bottom: 1px solid #405048; }
+.control { display: flex; flex-direction: column; gap: 4px; min-width: 92px; font-size: .73rem; color: #b4c2b7; }
+.control input[type=range] { width: 125px; accent-color: #c69e58; }
+.control select { padding: 6px; background:#233330; color:#f1e3cb; border:1px solid #5a695e; }
+.control.check { flex-direction:row; align-items:center; min-width:auto; }
+button { border:1px solid #84704c; color: #f0d9a5; background:#293a35; font:inherit; padding:7px 11px; cursor:pointer; }
+button:hover { background:#415249; }
+.actions { display:flex; gap:7px; align-items:end; }
+#preview3d { position:relative; flex:1; min-height:520px; overflow:hidden; background:radial-gradient(ellipse at 45% 40%,#36514a,#16292d 72%); cursor:default; user-select:none; }
+#preview3d.dragging { cursor:grabbing; }
+#interactionHint { position:absolute; right:12px; bottom:12px; z-index:2; color:#e9e0c7; background:rgba(14,25,24,.78); border:1px solid rgba(219,195,148,.35); padding:8px 11px; font-size:.73rem; line-height:1.6; pointer-events:none; border-radius:4px; }
+#terrain3d, #treeBillboards, #markerBillboards { position:absolute; inset:0; width:100%; height:100%; display:block; }
+#treeBillboards, #markerBillboards { pointer-events:none; }
+#markerBillboards { z-index:1; }
+#sceneStatus { position:absolute; top:12px; left:12px; right:12px; z-index:2; font-size:.76rem; color:#f4e6c5; text-shadow:0 1px 5px #000; pointer-events:none; }
+#selectedTerritory { position:absolute; top:37px; left:12px; right:12px; z-index:2; color:#f2cf83; font-size:.8rem; font-weight:600; text-shadow:0 1px 5px #000; pointer-events:none; }
+#markerLegend { position:absolute; top:67px; left:12px; right:12px; z-index:2; color:#f2dfbf; font-size:.74rem; text-shadow:0 1px 4px #000; pointer-events:none; }
+footer { padding:11px 15px; border-top:1px solid #39483f; background:#182421; font-size:.74rem; line-height:1.5; color:#c0c9bc; }
+#perfNotes { color:#e4c991; font-variant-numeric:tabular-nums; min-height:19px; }
+#benchmarkResult { margin-top:5px; color:#acc4b6; font-variant-numeric:tabular-nums; }
+.small { color:#9baaa1; }
+@media (max-width:1050px) { header { align-items:start; flex-direction:column; gap:6px; } main { grid-template-columns:1fr; } #regionalSource { min-height:480px; } #preview3d { min-height:540px; } }
+</style>
+</head>
+<body>
+<header>
+<strong>CONQUER · WORLD ATLAS 3D</strong>
+<p>Prototipo isolato: mesh globale Voronoi pesata con sottocelle casuali fino a circa 200% dell'area media originaria, poi aggregazione in territori organici. Colori originali del World Lab, con variazione cromatica su acqua e colline; foreste con alberi SVG ridimensionati e paludi con canneti del Builder. Gameplay, adiacenze e salvataggi invariati.</p>
+</header>
+<main>
+<section class="panel" aria-label="Mappa 2D originale">
+<div class="panel-title">01 · World Lab 2D originale — dati e interazioni reali</div>
+<iframe id="regionalSource" title="World Lab originale" src="../CONQUER_WORLD_LAB.html"></iframe>
+</section>
+<section class="panel" aria-label="Anteprima 3D">
+<div class="panel-title">02 · Mappa regionale 3D — confronto e performance · segnaposti</div>
+<div class="controls">
+<label class="control">Sottocelle / territorio
+<select id="detail"><option value="1">1 · Originale</option><option value="8">8 · Low</option><option value="20" selected>20 · Target</option><option value="40">40 · Stress test</option></select>
+</label>
+<label class="control">Deformazione contorni
+<input id="deformation" type="range" min="0" max="100" step="5" value="65" aria-label="Deformazione confini microcellulari">
+</label>
+<label class="control check"><input id="showTrees" type="checkbox" checked> Alberi ×2,5 / ×10</label>
+<label class="control check"><input id="showReeds" type="checkbox" checked> Canneti paludi ×5 / ×10</label>
+<label class="control check"><input id="showBorders" type="checkbox" checked> Confini territoriali</label>
+<label class="control check"><input id="showExamples" type="checkbox" checked> Esempi visivi (non dati di gioco)</label>
+<div class="actions"><button type="button" id="resetView">Centra vista</button><button type="button" id="refresh">Aggiorna</button><button type="button" id="benchmark">Benchmark 1× / 20×</button></div>
+</div>
+<div id="preview3d">
+<canvas id="terrain3d" aria-label="Mappa regionale 3D WebGL2"></canvas>
+<canvas id="treeBillboards" aria-hidden="true"></canvas>
+<canvas id="markerBillboards" aria-hidden="true"></canvas>
+<div id="sceneStatus" role="status">Inizializzazione preview…</div>
+<div id="selectedTerritory" role="status" aria-live="polite">Clic sinistro: seleziona territorio · Maiusc + clic: selezione multipla</div>
+<div id="markerLegend" role="status">Arancione: villaggio · Grigio: castello · Marrone: molo/nave · Bicolore: truppe</div>
+<div id="interactionHint">Clic sinistro: selezione · Maiusc + clic: selezione multipla · Mouse3: pan · Maiusc + Mouse3: rotazione · Rotella: zoom</div>
+</div>
+<footer>
+<div id="perfNotes" aria-live="polite"></div>
+<div id="benchmarkResult" aria-live="polite"></div>
+<div class="small">Mesh globale di microcelle Voronoi, aggregazione visiva tramite campo di deformazione; colori del World Lab 2D, leggermente modulati solo su acqua e colline. Alberi SVG originali e canneti derivati dai modelli Blender del Builder, come billboard; la mappa di gameplay resta invariata. Tempi dipendenti dal dispositivo.</div>
+</footer>
+</section>
+</main>
+<script src="../src/regional-map3d-geometry.js"></script>
+<script src="../src/regional-map3d-placeholders.js"></script>
+<script src="../src/assets/scatter-model.js"></script>
+<script src="./3dregionmap.js"></script>
+</body>
+</html>
