@@ -9,7 +9,8 @@
 // armour) take a random pair of primary colours per instance instead.
 //
 // Venue contract (data only; placement and scheduling are later modules):
-//   {type:'eventVenue', venue:'streetSpot'|'stage'|'festivalGround'|'pillory'|'gallows'|'scaffold', x, y, angle,
+//   {type:'eventVenue', venue:'streetSpot'|'stage'|'festivalGround'|'pillory'|'gallows'|'scaffold'|'armyCamp'|
+//    'stakeRow'|'chevalFrise', x, y, angle, segments? (stakeRow, 1-8),
 //    dressing?:'players'|'herald', w?, h?, event?:{setup, phase, progress?}}
 // The festival ground shows its setup only while the event is preparing (props
 // appear with progress), active, or clearing (props leave with progress).
@@ -27,8 +28,14 @@
     // Public justice (docs/crime.md): small piazza works, shown sober and empty.
     pillory:{w:1,h:1},
     gallows:{w:2,h:1.5},
-    scaffold:{w:2.5,h:2}
+    scaffold:{w:2.5,h:2},
+    // Field works against a charge, anywhere in the settlement: a row of slanted stakes
+    // (s.segments x 1.4 U, points toward the front, -y) and a single cheval de frise.
+    stakeRow:{w:1.4,h:.6},
+    chevalFrise:{w:1.4,h:.6}
   };
+  const STAKE_SEGMENT=1.4,STAKE_LIMITS=[1,8];
+  const stakeSegments=s=>{const n=Math.floor(Number(s.segments));return Number.isFinite(n)?Math.max(STAKE_LIMITS[0],Math.min(STAKE_LIMITS[1],n)):3};
   const JUSTICE_MODELS={pillory:'justicePillory',gallows:'justiceGallows',scaffold:'justiceScaffold'};
   // Setups of the 14 x 10 festival ground (x along the long side, front at -y),
   // local U, biggest items first (they arrive first). {m: event model or
@@ -118,7 +125,7 @@
   const GROUND='#8a7656';   // border of trodden earth round the festival ground
 
   const is=s=>s?.type==='eventVenue'&&!!VENUES[s.venue];
-  const sizeOf=s=>s.venue==='armyCamp'?{w:Number(s.w)||VENUES.armyCamp.w,h:Number(s.h)||VENUES.armyCamp.h}:s.venue==='festivalGround'?{w:Number(s.w)||VENUES.festivalGround.w,h:Number(s.h)||VENUES.festivalGround.h}:{w:VENUES[s.venue].w,h:VENUES[s.venue].h};
+  const sizeOf=s=>s.venue==='stakeRow'?{w:Math.round(stakeSegments(s)*STAKE_SEGMENT*100)/100,h:VENUES.stakeRow.h}:s.venue==='armyCamp'?{w:Number(s.w)||VENUES.armyCamp.w,h:Number(s.h)||VENUES.armyCamp.h}:s.venue==='festivalGround'?{w:Number(s.w)||VENUES.festivalGround.w,h:Number(s.h)||VENUES.festivalGround.h}:{w:VENUES[s.venue].w,h:VENUES[s.venue].h};
   const fits=(setup,size)=>!!SETUPS[setup]&&size.w>=SETUPS[setup].min.w-1e-9&&size.h>=SETUPS[setup].min.h-1e-9;
   // Setups a festival ground of this size can host.
   function setupsFor(s){const size=sizeOf(s);return Object.keys(SETUPS).filter(k=>!SETUPS[k].fixed&&fits(k,size))}
@@ -127,6 +134,7 @@
     if(!is(s))return null;
     if(s.venue==='streetSpot')return 'podiumStreet';
     if(JUSTICE_MODELS[s.venue])return JUSTICE_MODELS[s.venue];
+    if(s.venue==='chevalFrise')return 'campCheval';
     if(s.venue==='stage'){const v=VENUES.stage;return v.dressings[s.dressing]||v.dressings[v.dressing]}
     return null;
   }
@@ -135,6 +143,7 @@
   function setupItems(s){
     if(is(s)&&VENUES[s.venue].setup)return SETUPS[VENUES[s.venue].setup].items;   // permanent lot
     if(is(s)&&s.venue==='armyCamp')return campLayout(s).items;
+    if(is(s)&&s.venue==='stakeRow'){const n=stakeSegments(s);return Array.from({length:n},(_,k)=>({m:'campStakes',x:(k+.5-n/2)*STAKE_SEGMENT,y:.1,a:0}))}
     if(!is(s)||s.venue!=='festivalGround'||!s.event)return[];
     const {setup,phase}=s.event;
     if(!SHOWN_PHASES.has(phase)||!fits(setup,sizeOf(s)))return[];
@@ -443,7 +452,9 @@
     armyCamp:{name:'Accampamento militare',cost:{wood:30,gold:10},days:1},
     pillory:{name:'Gogna',cost:{wood:8,metal:2},days:.5},
     gallows:{name:'Forca',cost:{wood:24,metal:2},days:1},
-    scaffold:{name:'Patibolo',cost:{wood:40,stone:10,metal:2},days:2}
+    scaffold:{name:'Patibolo',cost:{wood:40,stone:10,metal:2},days:2},
+    stakeRow:{name:'Pali anti-carica',cost:{wood:14},days:.3},      // per 1.4 U segment
+    chevalFrise:{name:'Cavallo di Frisia',cost:{wood:16},days:.4}
   };
   // Camp works, one level after the other: open ground, a fence marking the boundary,
   // a stake palisade with a gate, then anti-charge stakes outside it and chevaux de frise
@@ -507,6 +518,7 @@
       s.camp={leaders:opts.leaders||1,squads:opts.squads||6,works:0,seed:opts.seed??(((typeof State!=='undefined'&&State.structures?.length)||0)*97+campSerial)};
       fitCamp(s);
     }
+    if(venue==='stakeRow'){s.segments=stakeSegments({segments:opts.segments??3});s.w=sizeOf(s).w}
     return s;
   }
   function label(s){
@@ -514,15 +526,18 @@
     if(s.venue==='stage')t+=' · '+(s.dressing==='herald'?'annunci':'artisti di strada');
     if(s.venue==='festivalGround'&&s.event)t+=' · '+SETUP_NAMES[s.event.setup]+' · '+PHASE_NAMES[s.event.phase];
     if(s.venue==='armyCamp'){const c=campOf(s);t+=' · '+c.leaders+(c.leaders>1?' capi, ':' capo, ')+c.squads+' squadre · '+CAMP_WORKS[c.works].name}
+    if(s.venue==='stakeRow')t+=' · '+stakeSegments(s)+(stakeSegments(s)>1?' tratti':' tratto');
     return t;
   }
-  // A camp built with works already chosen pays for every level up to it.
+  // A camp built with works already chosen pays for every level up to it; a row of
+  // stakes pays per segment.
   const cost=s=>{
     const out={...(BUILD[s.venue]?.cost||{})};
     if(s.venue==='armyCamp')for(let k=1;k<=campOf(s).works;k++)for(const [r,v] of Object.entries(CAMP_WORKS[k].cost))out[r]=(out[r]||0)+v;
+    if(s.venue==='stakeRow')for(const r in out)out[r]*=stakeSegments(s);
     return out;
   };
-  const buildDays=s=>(BUILD[s.venue]?.days||0)+(s.venue==='armyCamp'?CAMP_WORKS.slice(1,campOf(s).works+1).reduce((d,w)=>d+(w.days||0),0):0);
+  const buildDays=s=>Math.round((BUILD[s.venue]?.days||0)*(s.venue==='stakeRow'?stakeSegments(s):1)*100)/100+(s.venue==='armyCamp'?CAMP_WORKS.slice(1,campOf(s).works+1).reduce((d,w)=>d+(w.days||0),0):0);
   // Lifecycle of the festival grounds on the game clock: preparing -> active, clearing -> idle;
   // the static scene is refreshed only when the number of props on the ground changes.
   function tickEvents(){
@@ -574,7 +589,13 @@
         '<div class="legend">'+c.leaders+' capi · '+c.squads+' squadre ('+Math.ceil(c.squads/3)+' compagnie) · lotto '+s.w+'×'+s.h+'U</div></div>'+
         '<div class="slot"><div class="slot-label">Fortificazione · '+CAMP_WORKS[c.works].name+'</div>'+
         (next?'<div class="grid"><button data-camp-works="'+(c.works+1)+'">Costruisci '+next.name+' · '+ct(next.cost)+'</button></div>':'<div class="legend">Fortificazione leggera completa.</div>')+
-        '<div class="legend">Aperto → steccato → palizzata con porta.</div></div>';
+        '<div class="legend">Aperto → steccato → palizzata con porta → pali anti-carica.</div></div>';
+    }
+    if(s.venue==='stakeRow'){
+      const n=stakeSegments(s),[lo,hi]=STAKE_LIMITS;
+      html+='<div class="slot"><div class="slot-label">Lunghezza · '+n+(n>1?' tratti':' tratto')+' · '+(n*STAKE_SEGMENT).toFixed(1)+'U</div><div class="grid">'+
+        '<button data-stake-segments="-1" '+(n<=lo?'disabled':'')+'>− Tratto</button><button data-stake-segments="1" '+(n>=hi?'disabled':'')+'>+ Tratto</button></div>'+
+        '<div class="legend">Le punte guardano il fronte del lotto: ruota di 180° per girarle.</div></div>';
     }
     const deg=Math.round((Number(s.angle)||0)*180/Math.PI+360)%360;
     html+='<div class="slot"><div class="slot-label">Rotazione · '+deg+'°</div><div class="grid3"><button data-point-rotate="-1">↺ 15°</button><button data-point-rotate="12">⇄ 180°</button><button data-point-rotate="1">↻ 15°</button></div></div>';
@@ -596,6 +617,15 @@
       if(typeof canAfford==='function'&&!canAfford(w.cost)){if(typeof status==='function')status('Risorse insufficienti per '+w.name);return}
       if(typeof spendCost==='function'&&!spendCost(w.cost))return;
       c.works=lv;fitCamp(s);refresh();done();
+    });
+    root.querySelectorAll('[data-stake-segments]').forEach(b=>b.onclick=()=>{
+      const n=stakeSegments(s),next=stakeSegments({segments:n+Number(b.dataset.stakeSegments)});
+      if(next===n)return;
+      // Lengthening a built row pays for the new segment.
+      if(next>n){const c=BUILD.stakeRow.cost;
+        if(typeof canAfford==='function'&&!canAfford(c)){if(typeof status==='function')status('Risorse insufficienti per un tratto di pali');return}
+        if(typeof spendCost==='function'&&!spendCost(c))return;}
+      s.segments=next;s.w=sizeOf(s).w;refresh();done();
     });
     root.querySelectorAll('[data-point-rotate]').forEach(b=>b.onclick=()=>{if(typeof rotatePointStructure==='function')rotatePointStructure(s,Number(b.dataset.pointRotate)||1);refresh();done()});
   }
@@ -891,6 +921,9 @@
       banditLair3:bivouacModel(banditLair({x:0,y:0},{seed:7,key:'lab3',tents:3}),pal),
       banditLair4:bivouacModel(banditLair({x:0,y:0},{seed:11,key:'lab4',tents:4}),pal),
       brigandRoadblock:bivouacModel(brigandRoadblock({x:0,y:0},0,{key:'lab'}),pal),
+      // Builder field works: a three-segment row of anti-charge stakes with a cheval de frise before its end.
+      fieldStakeRow:bivouacModel({x:0,y:0,items:setupItems({type:'eventVenue',venue:'stakeRow',segments:3})
+        .concat([{m:'campCheval',x:2.9,y:-.9,a:.35}])},pal),
       ...Object.fromEntries([['encampmentSmall',2,7,'fence'],['encampmentArmy',4,16,'palisade'],['encampmentSpiked',3,12,'palisade',true]].map(([name,nl,ns,works,spikes])=>{
         const camp=encampment({leaders:Array.from({length:nl},(_,k)=>({id:'l'+k,kind:k?'knight':'captain'})),squads:sq(ns)},{seed:7,key:name});
         return[name,bivouacModel({x:0,y:0,items:camp.items.concat(encampmentFence(camp,works),spikes?encampmentSpikes(camp):[])},pal)];

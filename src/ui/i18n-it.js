@@ -69,6 +69,7 @@ export const T = {
     terrain: 'Terreno',
     well: 'Pozzo · fonda il villaggio, poi nuovi quartieri',
     justice: 'Giustizia · gogna, forca e patibolo',
+    fieldworks: 'Opere campali · pali anti-carica, cavalli di Frisia, accampamento',
     delete: 'Demolisci'
   },
   options: {
@@ -94,6 +95,7 @@ export const T = {
     market: 'Mercato', tavern: 'Taverna', church: 'Chiesa', training: 'Addestramento',
     loggingCamp: 'Taglialegna', quarry: 'Cava', mine: 'Miniera', clayPit: 'Argilla', windmill: 'Mulino a vento', watermill: 'Mulino ad acqua',
     pillory: 'Gogna', gallows: 'Forca', scaffold: 'Patibolo',
+    stakeRow: 'Pali anti-carica', chevalFrise: 'Cavallo di Frisia', armyCamp: 'Accampamento',
     plaza: 'Piazza', townhall: 'Municipio', guild: 'Gilda', bargello: 'Bargello', balivo: 'Palazzo del Balivo', brick: 'Mattoni', sloped: 'Pendio', walled: 'Terrazza murata', flat: 'Piano H0', dig: 'Scava 1U', raise: 'Alza 1U'
   },
   hints: {

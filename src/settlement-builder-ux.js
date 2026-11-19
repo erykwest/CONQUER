@@ -90,7 +90,9 @@
       ['[data-event-venue="festivalGround"]','Spiazzo eventi · 14×10U · giostra, torneo, circo, sagra','festival'],
       ['[data-event-venue="arenaLot"]','Arena · 18×14U · lotto dedicato','arena']]},
     {id:'combat',label:'Combattimento e allarmi',icon:'castle',items:[
-      ['[data-event-venue="armyCamp"]','Accampamento militare · capi, compagnie, logistica · steccato → palizzata','castle']]},
+      ['[data-event-venue="armyCamp"]','Accampamento militare · capi, compagnie, logistica · steccato → palizzata → pali','castle'],
+      ['[data-event-venue="stakeRow"]','Pali anti-carica · tratti da 1.4U · punte verso il fronte','castle'],
+      ['[data-event-venue="chevalFrise"]','Cavallo di Frisia · 1.4U · sbarra un varco','castle']]},
     {id:'terrain',label:'Terraforming',icon:'terrain',items:[
       ['[data-terraform="terrain"]','Terreno','terrain'],
       ['[data-terraform="walled"]','Terrazzamento murato','terrace'],

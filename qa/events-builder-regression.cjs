@@ -108,3 +108,31 @@ assert.ok(ux.slice(ux.indexOf("{id:'combat'")).includes('[data-event-venue="army
   assert.ok(E.meshes(s,0).length>items.length/2,'camp meshes built');
 }
 console.log('PASS army camp: builder, army-sized lot, works levels, cost, own camp per structure');
+
+// Field works anywhere in the settlement: a row of anti-charge stakes (length in segments,
+// points to the front) and a single cheval de frise.
+for(const v of ['stakeRow','chevalFrise']){
+  assert.match(html,new RegExp('<button data-event-venue="'+v+'">'),'Builder button for '+v);
+  assert.ok(ux.slice(ux.indexOf("{id:'combat'")).includes('[data-event-venue="'+v+'"]'),v+' in the combat group');
+}
+{
+  const s={...E.make('stakeRow'),id:'sr',x:40,y:40,angle:0};
+  assert.equal(s.segments,3,'a new row has three segments');
+  assert.ok(Math.abs(E.sizeOf(s).w-4.2)<1e-9,'1.4 U per segment');
+  let items=E.setupItems(s);
+  assert.ok(items.length===3&&items.every(it=>it.m==='campStakes'&&it.a===0),'one stake segment each, points at -y');
+  for(const it of items)assert.ok(Math.abs(it.x)+.7<=E.sizeOf(s).w/2+1e-9,'segments on the lot');
+  const c3=E.cost(s).wood,d3=E.buildDays(s);
+  s.segments=8;s.w=E.sizeOf(s).w;
+  assert.equal(E.setupItems(s).length,8,'longer row, more segments');
+  assert.ok(E.cost(s).wood>c3&&E.buildDays(s)>d3,'cost and time per segment');
+  s.segments=99;assert.ok(Math.abs(E.sizeOf(s).w-8*1.4)<1e-9,'length clamped');
+  s.segments=3;
+  assert.ok(E.panelHtml(s).includes('data-stake-segments="1"'),'panel lengthens the row');
+  assert.ok(E.label(s).includes('Pali anti-carica')&&E.label(s).includes('3 tratti'),'label');
+  assert.ok(E.meshes(s,0).length>=3,'row meshes built');
+  const f={...E.make('chevalFrise'),id:'cf',x:50,y:40,angle:0};
+  assert.equal(E.venueModel(f),'campCheval','cheval de frise model');
+  assert.ok(E.meshes(f,0).length>=1&&E.cost(f).wood>0,'cheval meshes and cost');
+}
+console.log('PASS field works: anti-charge stake rows and chevaux de frise in the Builder');
