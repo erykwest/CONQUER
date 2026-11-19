@@ -12,6 +12,8 @@ on:
       - 'src/settlement-core.js'
       - 'src/settlement-app-persistence.js'
       - 'tests/runtime-integrity.test.mjs'
+      - 'tests/hardening.test.mjs'
+      - 'src/settlement-app-calendar-ui.js'
       - 'src/codex-catalog.js'
       - 'src/settlement-codex.js'
       - 'qa/codex-catalog-regression.cjs'
@@ -52,7 +54,7 @@ jobs:
           test "$count" -gt 0
           exit "$failed"
       - name: Local diagnostics and disabled remote telemetry
-        run: node --test tests/runtime-integrity.test.mjs
+        run: node --test tests/runtime-integrity.test.mjs tests/hardening.test.mjs
       - name: Autumn foliage calendar and renderer regression
         run: node qa/autumn-foliage-regression.cjs
       - name: Tree and bush bark colour regression

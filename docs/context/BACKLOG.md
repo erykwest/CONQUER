@@ -1,5 +1,16 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-19 — HARDEN-261119 · Hardening della base main
+
+**IMPLEMENTATO SU `fix/main-hardening-20261119`, NON MERGE.** [Rapporto](../HARDENING-2026-11-19.md).
+- [x] Impedire l'upsert cloud prima della lettura iniziale e dopo errori di lettura/migrazione.
+- [x] Conservare errore e stato dirty quando il salvataggio locale fallisce; gestire le rejection cloud.
+- [x] Trattare nomi/valori delle risorse come testo nella UI legacy; nessuna esecuzione di HTML dal save.
+- [x] Regressioni deterministiche per attesa, errori, recupero, CAMP, Lab e payload HTML; incluse nel workflow Runtime integrity.
+- [ ] Verifica separata delle policy RLS effettivamente applicate in produzione: in questa passata letto soltanto lo schema versionato.
+- [ ] CSP completa e rimozione dipendenze CDN: richiedono inventario e QA browser delle pagine/iframe; non applicate in questa passata.
+
+
 ### 2026-11-18 — TORCH-STREAK-261118 · Fasci verticali delle torce
 
 **FIX SU BRANCH `fix/torch-artifact`.** Dettagli in [STATUS](STATUS.md).

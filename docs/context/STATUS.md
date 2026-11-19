@@ -1,5 +1,14 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-19 — HARDEN-261119 · Integrità salvataggi e DOM risorse
+
+- **Implementato su `fix/main-hardening-20261119`, non ancora su main**, base verificata `168b993b`.
+- Cloud: scrittura permessa solo dopo lettura riuscita (anche slot vuoto); attesa, errori SDK/rete e migrazioni fallite bloccano l'upsert. Retry riuscito riabilita la scrittura; Lab escluso anche con sessione presente.
+- Locale/CAMP: un errore di scrittura mantiene l'indicatore di errore e `dirty`; nessun falso «saved». Errori cloud restituiti o lanciati restano gestiti.
+- Barra risorse: chiavi e valori dei salvataggi costruiti come nodi di testo, senza interpretazione HTML.
+- QA locale: 16 test Node (11 nuovi + 5 runtime); 15 suite di regressione PASS. Rapporto e limiti in [HARDENING-2026-11-19](../HARDENING-2026-11-19.md). CI remota da verificare nella PR; browser e database live non verificati.
+
+
 ### 2026-11-18 — TORCH-STREAK-261118: niente fasci verticali dalle torce (branch `fix/torch-artifact`)
 
 - Causa: l'alone delle torce e dei bracieri (programma `fireLight` di settlement-world3d.js) campionava la tessera `__glow` dell'atlante delle decal, con mipmap e UV a 1 px dalle tessere vicine (drappo del Mastio, vetri). Il bordo del quadrato si colorava della tessera accanto: una riga verticale arancione, alta quanto l'alone, a lato di ogni fuoco, tanto più lunga quanto più vicina la camera.
