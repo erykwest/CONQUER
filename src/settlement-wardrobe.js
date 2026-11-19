@@ -50,7 +50,9 @@
     bailiffRobe:{label:'Toga del Balivo',slot:'body',role:'Giudice del Balivo',palette:['#2f4560'],trim:'#efe9dc',robe:true},
     tabard:{label:'Tabarro del Comune',slot:'body',role:'Esattore',palette:['#b8902f'],tabard:true,emblem:'#8e2a26'},
     chainOfOffice:{label:"Catena d'ufficio",slot:'neck',role:'Consigliere',palette:['#d8b14a']},
-    cookCap:{label:'Berretto da cuoco',slot:'head',role:'Cuoco',palette:['#f1ece0']}
+    cookCap:{label:'Berretto da cuoco',slot:'head',role:'Cuoco',palette:['#f1ece0']},
+    // The levy (alarm recruits, extraordinary levy): own class clothes, a hood in the realm's colours.
+    levyHood:{label:'Cappuccio della leva',slot:'head',role:'Leva',palette:['#b53636'],heraldic:true}
   };
   // Trade -> work clothes (role pieces; the free slots still take the season's pieces).
   // `role` on a figure dot names one of these: the shop trades are the keys of TRADES
@@ -455,11 +457,22 @@
       ctx.fillStyle=P.trim;ctx.beginPath();ctx.ellipse(x,headY-r*.5,r*1.12,r*.30,0,0,Math.PI*2);ctx.fill();outline(lw*.6);
     }else{
       // Hood: a ring around the face, then a short cape over the shoulders.
-      ctx.fillStyle=c;
-      ctx.beginPath();ctx.moveTo(x-r*1.0,headY+r*.6);ctx.lineTo(x-r*1.5,headY+r*1.55);
-      ctx.quadraticCurveTo(x,headY+r*2.0,x+r*1.5,headY+r*1.55);ctx.lineTo(x+r*1.0,headY+r*.6);ctx.closePath();ctx.fill();outline(lw*.8);
-      ctx.beginPath();ctx.ellipse(x,headY-r*.02,r*1.28,r*1.32,0,0,Math.PI*2);
-      ctx.moveTo(x+r*.9,headY+r*.18);ctx.ellipse(x,headY+r*.18,r*.9,r*.94,0,0,Math.PI*2);ctx.fill('evenodd');
+      const shoulders=()=>{ctx.beginPath();ctx.moveTo(x-r*1.0,headY+r*.6);ctx.lineTo(x-r*1.5,headY+r*1.55);
+        ctx.quadraticCurveTo(x,headY+r*2.0,x+r*1.5,headY+r*1.55);ctx.lineTo(x+r*1.0,headY+r*.6);ctx.closePath()};
+      const ring=()=>{ctx.beginPath();ctx.ellipse(x,headY-r*.02,r*1.28,r*1.32,0,0,Math.PI*2);
+        ctx.moveTo(x+r*.9,headY+r*.18);ctx.ellipse(x,headY+r*.18,r*.9,r*.94,0,0,Math.PI*2)};
+      if(P?.heraldic){
+        // Levy hood: party per pale in the realm's two colours, like the soldiers' livery.
+        const H=typeof State!=='undefined'&&State.heraldry||{};
+        const c1=H.c1||(typeof REIGN_COLOR_1!=='undefined'?REIGN_COLOR_1:c),c2=H.c2||(typeof REIGN_COLOR_2!=='undefined'?REIGN_COLOR_2:c);
+        for(const [side,col] of [[-1,c1],[1,c2]]){
+          ctx.save();ctx.beginPath();ctx.rect(side<0?x-r*2:x,headY-r*2,r*2,r*4.2);ctx.clip();
+          ctx.fillStyle=col;shoulders();ctx.fill();ring();ctx.fill('evenodd');ctx.restore();
+        }
+        shoulders();outline(lw*.8);
+      }else{
+        ctx.fillStyle=c;shoulders();ctx.fill();outline(lw*.8);ring();ctx.fill('evenodd');
+      }
       ctx.beginPath();ctx.ellipse(x,headY-r*.02,r*1.28,r*1.32,0,0,Math.PI*2);outline(lw*.8);
       // The liripipe tail of the wool hood falls on one side.
       if(o.head==='woolHood'&&r>=1.2){ctx.beginPath();ctx.moveTo(x+r*.9,headY-r*.9);ctx.quadraticCurveTo(x+r*2.0,headY-r*.4,x+r*1.7,headY+r*1.2);ctx.lineTo(x+r*1.35,headY+r*1.0);ctx.closePath();ctx.fill();outline(lw*.6)}

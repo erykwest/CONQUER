@@ -24,7 +24,7 @@ function fixture(rendererSource=source){
  const sandbox={window,document,State,wrap:{appendChild(){},getBoundingClientRect:()=>({width:800,height:600})},performance:{now:()=>1000},devicePixelRatio:1,
   w2sRaw:(p,z=0)=>({x:p.x,y:p.y-z*10}),w2s:(p,z=0)=>({x:p.x,y:p.y-z*10}),viewDepthPoint:p=>p.y,terrainElevation:()=>0,
   withRenderContext:(_g,fn)=>fn(),withUrbanFigureOcclusion:(_p,_z,fn)=>fn(),ctx:g,clamp:(v,a,b)=>Math.min(b,Math.max(a,v)),
-  visualCycleDay:()=>.2,peasantHash:()=>7,militaryScale:()=>1,drawScreenFlame:()=>{},soldierLivery:()=>null,drawSoldierFigure:()=>{},
+  visualCycleDay:()=>.2,peasantHash:()=>7,militaryScale:()=>1,drawScreenFlame:()=>{},soldierLivery:()=>null,drawSoldierFigure:()=>{},drawHeraldStandard:()=>{},
   dist:(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),REIGN_COLOR_1:'#fff',REIGN_COLOR_2:'#000'};
  vm.createContext(sandbox);vm.runInContext(rendererSource,sandbox);
  const renderer=window.ConquerCombatRenderer.create({worldSize:20,visionSize:10,readState:()=>state,activeWell:()=>true,refreshFog:()=>{},circles:()=>[],observers:()=>[],spotted:u=>!u.hidden,wallWalk:()=>null});

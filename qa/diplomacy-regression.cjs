@@ -53,7 +53,7 @@ function fixture(){
     vm.runInContext(fs.readFileSync(path.join(base,f),'utf8'),ctx,{filename:f});
   const e=window.ConquerEconomy.state();
   e.castleGold=1000;Object.assign(e.castle,{food:1000,stone:100,wood:100,metal:100,equipment:100});
-  return {State,window,api:window.ConquerDiplomacy,el,econ:e,convoys:window.ConquerConvoys};
+  return {State,window,ctx,api:window.ConquerDiplomacy,el,econ:e,convoys:window.ConquerConvoys};
 }
 {
   const {State,api,el,econ,convoys}=fixture();
@@ -138,5 +138,44 @@ function fixture(){
   assert.equal(calls.length,1,'courier drawn once as a 2D rider');
   assert.equal(calls[0].kind,'messenger');
   assert.ok([1,-1].includes(calls[0].facing));
+}
+{
+  // The messenger faces the way he rides: towards the keep arriving, towards the border going home.
+  const {State,window,ctx,api,el}=fixture();
+  const calls=[];
+  window.ConquerLOD.militaryTier=()=>'full';window.ConquerAnimals={};
+  window.ConquerMounted2D={draw:(g,x,y,size,opts)=>calls.push(opts)};
+  ctx.w2sRaw=p=>({x:p.x-p.y,y:(p.x+p.y)/2});      // isometric: south (+y) is screen-left
+  api.spawn(0);
+  const m=api.state().incoming,toKeep={x:m.goal.x-m.entry.x,y:m.goal.y-m.entry.y};
+  State.clock.day=m.arrivalDay*.5;
+  const a=api.courierPose(m);
+  assert.ok(Math.cos(a.heading)*toKeep.x+Math.sin(a.heading)*toKeep.y>0,'arriving: heading towards the keep');
+  api.draw({});assert.equal(calls.at(-1).facing,-1,'arriving southwards: faces screen-left');
+  State.clock.day=10;api.tick(0,10);el('courierRefuse').onclick();
+  assert.equal(m.phase,'returning');
+  State.clock.day=m.departDay+(m.returnDay-m.departDay)*.5;
+  const b=api.courierPose(m),later=api.courierPose(m,m.departDay+(m.returnDay-m.departDay)*.6);
+  const moved={x:later.x-b.x,y:later.y-b.y};
+  assert.ok(Math.cos(b.heading)*moved.x+Math.sin(b.heading)*moved.y>0,'returning: heading along the way he moves');
+  api.draw({});assert.equal(calls.at(-1).facing,1,'returning northwards: faces screen-right');
+}
+{
+  // When the walker graph refuses (roadNetworkPath null) the messenger still rides the roads,
+  // never a straight line across the map to the well.
+  const {State,ctx,api}=fixture();
+  ctx.roadNetworkPath=()=>null;
+  const road=(id,a,b)=>({id,type:'road',a,b,width:.62});
+  State.structures.push(road('r1',{x:100,y:1},{x:130,y:50}),road('r2',{x:130,y:50},{x:100,y:100}));
+  vm.runInContext(fs.readFileSync(path.join(base,'settlement-vehicles.js'),'utf8'),ctx,{filename:'settlement-vehicles.js'});
+  api.spawn(0);
+  const r=api.state().incoming.route,roads=State.structures.filter(s=>s.type==='road');
+  const onRoad=p=>roads.some(s=>{const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=dx*dx+dy*dy,
+    t=Math.max(0,Math.min(1,((p.x-s.a.x)*dx+(p.y-s.a.y)*dy)/L));return Math.hypot(s.a.x+dx*t-p.x,s.a.y+dy*t-p.y)<.15});
+  assert.ok(r.some(p=>Math.hypot(p.x-130,p.y-50)<.05),'rides through the road bend, not straight to the well');
+  assert.ok(r.slice(1,-1).every(onRoad),'every inner waypoint lies on a road');
+  // Halfway through the ride he is on a road.
+  State.clock.day=api.state().incoming.arrivalDay*.5;
+  assert.ok(onRoad(api.courierPose(api.state().incoming)),'mid-ride pose on the road');
 }
 console.log('Diplomacy/captain/knight regression: PASS');

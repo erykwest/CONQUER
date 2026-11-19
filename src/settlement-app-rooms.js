@@ -133,7 +133,7 @@ function renderFunctionPanel(){
   }
   if(s?.type==='well'){
     // Village well: centre designation (like the Mastio) and the quarter name of a non-centre well.
-    const w=StructureCommands.describeStructure(s.id).well;
+    const d=StructureCommands.describeStructure(s.id),w=d.well;
     panel.classList.add('open');
     info.innerHTML='<div class="kv"><span>Selected</span><b>Pozzo · '+roomEsc(w.center?(w.villageName||'Centro villaggio'):(w.name||'Quartiere senza nome'))+'</b></div>'+
       '<div class="kv"><span>Ruolo</span><b>'+(w.center?'Centro villaggio':'Quartiere')+'</b></div>'+
@@ -141,6 +141,16 @@ function renderFunctionPanel(){
     slots.innerHTML=(w.founded?'<div class="slot"><button data-well-center'+(w.canCenter?'':' disabled')+(w.center?' class="active"':'')+'>'+(w.center?'Centro villaggio · rimuovi':'Designa come centro villaggio')+'</button></div>':'')+
       (w.center?'<div class="legend">Il centro porta il nome del villaggio.</div>':
         '<div class="slot"><label class="slot-label" for="wellNameInput">Nome quartiere / borgata</label><input id="wellNameInput" type="text" maxlength="32" placeholder="Quartiere o borgata" value="'+roomEsc(w.name)+'"></div>');
+    // Well upgrades (town hall, guild hall, bargello) start here, not from the Builder palette.
+    const WELL_UPGRADE_NAMES={townhall:'Municipio',guild:'Gilda',bargello:'Bargello'};
+    const WELL_UPGRADE_WHY={notFounded:'Serve un villaggio fondato',taken:'Già presente',guildOne:'Una sola gilda per villaggio'};
+    if(d.upgrades?.length)slots.innerHTML+='<div class="slot"><div class="slot-label">Ampliamenti del pozzo</div>'+
+      d.upgrades.map(u=>'<button data-well-upgrade="'+u.key+'"'+(u.reason?' disabled':'')+'>'+WELL_UPGRADE_NAMES[u.key]+
+        (u.reason?' · '+WELL_UPGRADE_WHY[u.reason]:' · costruisci')+'</button>'+
+        u.children.map(id=>'<button data-well-upgrade-child="'+id+'">↳ Seleziona '+WELL_UPGRADE_NAMES[u.key]+'</button>').join('')).join('')+
+      '<div class="legend">Uno per tipo, entro '+WELL_CIVIC_RANGE+'U da questo pozzo.</div></div>';
+    slots.querySelectorAll('[data-well-upgrade]').forEach(btn=>btn.onclick=()=>StructureCommands.startUpgrade(s.id,btn.dataset.wellUpgrade));
+    slots.querySelectorAll('[data-well-upgrade-child]').forEach(btn=>btn.onclick=()=>selectStructure(State.structures.find(x=>x.id===btn.dataset.wellUpgradeChild)));
     const center=slots.querySelector('[data-well-center]');if(center)center.onclick=()=>StructureCommands.toggleVillageCenter(s.id);
     const name=slots.querySelector('#wellNameInput');if(name)name.onchange=()=>StructureCommands.setWellName(s.id,name.value);
     return;
