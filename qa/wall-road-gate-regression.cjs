@@ -6,6 +6,7 @@ const fs=require('node:fs');
 const harness=fs.readFileSync(__dirname+'/urban-regression.cjs','utf8').split('let passed=0;')[0];
 eval(harness+`
 run(fs.readFileSync(__dirname+'/../src/settlement-placement.js','utf8'));
+run(fs.readFileSync(__dirname+'/../src/settlement-crossings.js','utf8'));
 let passed=0;
 function check(name,body){body();passed++;console.log('PASS '+name)}
 const reset=(roads)=>run('State').structures=roads;
@@ -86,10 +87,11 @@ check('a wall reaching an existing gate on the road adds no second gate',()=>{
 // of the matching type in it, cuts the wall on the gate flanks and runs through the passage.
 const built=(id,type,tier,a,b,extra={})=>({id,type,tier,width:run('wallWidthForTier')(tier),level:1,functions:[],a,b,length:Math.hypot(b.x-a.x,b.y-a.y),...extra});
 const road=(a,b)=>run('addMainRoadThroughWalls')([{a,b}]);
+const same=(actual,expected,msg)=>assert.equal(JSON.stringify(actual),JSON.stringify(expected),msg);   // VM-realm objects
 check('main road across a finished wall, palisade: gate of the matching type, wall cut on its flanks',()=>{
   for(const [type,tier,material,size,masonry] of [['wall',1,'stone',1,'brick'],['wall',3,'stone',1.5,'stone'],['palisade',2,'wood',1.5,null]]){
     reset([built('w',type,tier,{x:95,y:100},{x:105,y:100},masonry?{masonryMaterial:masonry}:{})]);
-    assert.equal(road({x:100,y:94},{x:100,y:106}),1,type+' T'+tier+': one gate opened');
+    same(road({x:100,y:94},{x:100,y:106}),{gates:1,drawbridges:0},type+' T'+tier+': one gate opened');
     const [g]=gates(),r=run('State').structures.find(s=>s.type==='road');
     assert.ok(g&&g.material===material&&g.size===size,type+' T'+tier+' gate type');
     if(masonry)assert.equal(g.masonryMaterial,masonry,'gate in the wall masonry');
@@ -107,8 +109,49 @@ check('a road across a wall still under construction is refused; a road through 
   assert.equal(gates().length,0);assert.equal(run('State').structures.filter(s=>s.type==='road').length,0,'no road');
   reset([{id:'g0',type:'gate',shape:'square',material:'stone',size:1.5,level:1,x:100,y:100,angle:Math.PI/2,functions:[]},
     built('w1','wall',2,{x:95,y:100},{x:99.25,y:100},{bSnap:'g0'}),built('w2','wall',2,{x:100.75,y:100},{x:105,y:100},{aSnap:'g0'})]);
-  assert.equal(road({x:100,y:94},{x:100,y:106}),0,'no new gate');
+  same(road({x:100,y:94},{x:100,y:106}),{gates:0,drawbridges:0},'no new gate');
   assert.equal(gates().length,1);
+});
+// ROAD-MOAT-DRAWBRIDGE: across the wall and the moat in front of it, the new gate comes with its
+// drawbridge already installed (cost in the gate site); an existing gate gets the missing one.
+const moat=(id,y,extra={})=>({id,type:'moat',variant:'dry',a:{x:95,y},b:{x:105,y},width:1.5,length:10,groundZ:0,fills:[],...extra});
+const DB=()=>run('window.ConquerCrossings.DRAWBRIDGE_COST');
+check('main road across a wall and its moat: gate with the drawbridge installed, road over the leaf',()=>{
+  for(const [type,tier,w] of [['wall',3,1],['wall',1,.2],['palisade',2,.5]]){
+    for(const site of [false,true]){
+      reset([built('w',type,tier,{x:95,y:100},{x:105,y:100}),moat('m',100+w/2+.75,site?{construction:{version:2,progress:.1}}:{})]);
+      same(road({x:100,y:94},{x:100,y:106}),{gates:1,drawbridges:1},type+' T'+tier+(site?' (moat being dug)':'')+': gate + drawbridge');
+      const [g]=gates(),r=run('State').structures.find(s=>s.type==='road');
+      assert.ok(g.drawbridge?.installed&&g.drawbridge.withGate&&!g.drawbridge.raised,'drawbridge installed, lowered');
+      assert.ok(Math.sin(g.angle)>.99,'gate front (and leaf) towards the moat');
+      const bare=run('constructionCost')({...g,drawbridge:undefined}),cost=run('constructionCost')(g);
+      for(const [k,v] of Object.entries(DB()))assert.equal(cost[k]||0,(bare[k]||0)+v,'drawbridge '+k+' in the gate site');
+      assert.equal(run('window.ConquerCrossings').deck(g,true).ahead?.moat.id,'m','leaf spans the moat');
+      assert.ok(r&&!run('manualRoadConflict')(r,run('State').structures.find(s=>s.id==='m')),'road crosses the moat on the leaf');
+    }
+  }
+});
+check('a road through an existing gate across its moat installs the missing drawbridge',()=>{
+  reset([{id:'g0',type:'gate',shape:'square',material:'stone',size:1.5,level:1,x:100,y:100,angle:Math.PI/2,functions:[]},
+    built('w1','wall',2,{x:95,y:100},{x:99.25,y:100},{bSnap:'g0'}),built('w2','wall',2,{x:100.75,y:100},{x:105,y:100},{aSnap:'g0'}),moat('m',101)]);
+  same(road({x:100,y:94},{x:100,y:106}),{gates:0,drawbridges:1});
+  const g=gates()[0];
+  assert.ok(g.drawbridge?.installed&&!g.drawbridge.withGate,'installed as an upgrade of the gate');
+  assert.equal(run('State').structures.filter(s=>s.type==='road').length,1,'road built');
+});
+check('a road across a moat with no gate is still blocked',()=>{
+  reset([moat('m',101)]);
+  assert.equal(road({x:100,y:94},{x:100,y:106}),false);
+});
+// ROAD-MAGNET-ROAD: road ends and sides of every road (also secondary, automatic) attract the main road.
+check('road magnet: a road end wins over the side, the side snaps square from further away',()=>{
+  reset([{id:'s',type:'road',roadClass:'reactive',auto:true,width:.3,a:{x:100,y:100},b:{x:110,y:100}}]);
+  const snap=p=>run('mainRoadSnapAnchor')(p);
+  let s=snap({x:109.3,y:100.5});
+  same([s.point,s.roadSnap],[{x:110,y:100},{roadId:'s',end:'b'}],'end');
+  s=snap({x:105,y:101.4});
+  same([s.point,s.roadSnap],[{x:105,y:100},{roadId:'s',end:null}],'side, 1.4 U away');
+  assert.ok(!snap({x:105,y:103}).roadSnap,'out of reach');
 });
 console.log('wall road gate regression: '+passed+' checks');
 `);

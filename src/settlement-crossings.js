@@ -343,23 +343,24 @@
     const d=drawbridge(gate);
     return !d?'none':d.progress>=.99?'raised':d.progress<=.01?'lowered':'moving';
   }
-  function deck(gate){
+  // withSites: also moats still being dug (a road planned across them, ROAD-MOAT-DRAWBRIDGE).
+  function deck(gate,withSites=false){
     const d=rectDims(gate),a=Number(gate.angle)||0;
     const outward={x:Math.cos(a),y:Math.sin(a)};
     const tangent={x:-outward.y,y:outward.x};
     const hinge={x:gate.x+outward.x*d.w/2,y:gate.y+outward.y*d.w/2};
     // The leaf spans the moat in front of the gate, never longer than the small moat
     // (WIDTHS.moat, 1.5 U). A wider moat, or one further out, needs a fixed half-bridge.
-    const ahead=moatAhead({hinge,outward}),width=Math.min(1.2,d.h*.80);
+    const ahead=moatAhead({hinge,outward},12,withSites),width=Math.min(1.2,d.h*.80);
     const length=ahead?Math.max(.6,Math.min(ahead.far+.15,WIDTHS.moat+.15)):WIDTHS.moat;
     return{hinge,outward,tangent,length,width,z:placementGroundZ(gate),ahead};
   }
   // The first finished moat crossed by the line out of a gate: where its near and far
   // banks are along that line (distance from the hinge) and how wide it is.
-  function moatAhead({hinge,outward},reach=12){
+  function moatAhead({hinge,outward},reach=12,withSites=false){
     let best=null;
     for(const s of State.structures){
-      if(s.type!=='moat'||underConstruction(s)||!xy(s))continue;
+      if(s.type!=='moat'||(!withSites&&underConstruction(s))||!xy(s))continue;
       const f=frame(s),on=outward.x*f.nx+outward.y*f.ny;if(Math.abs(on)<.2)continue;
       const across0=(hinge.x-s.a.x)*f.nx+(hinge.y-s.a.y)*f.ny;
       const t1=(-f.width/2-across0)/on,t2=(f.width/2-across0)/on,near=Math.min(t1,t2),far=Math.max(t1,t2);

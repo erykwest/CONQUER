@@ -1,11 +1,19 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-19 — ROAD-MOAT-DRAWBRIDGE, ROAD-MAGNET-ROAD · Ponte levatoio e magnete strade
+
+**Implementato sul branch `feature/moat-from-wall`, non ancora unito a main.** Richiesta del product owner (19/11/2026): «magnet per le strade» (scelto: strada su strada) e «se attraverso fossato con strada metti porta con ponte levatoio già installato».
+
+- [x] Strada attraverso muro + fossato: porta con ponte levatoio installato; porta esistente senza ponte: installato.
+- [x] Magnete strada su strada: estremi e lati di tutte le strade, raggio più ampio, estremo prioritario, punto illuminato.
+- [ ] Aperti: fossato largo o lontano oltre la portata del ponte (oggi nessun mezzo ponte automatico); il secondo pezzo del muro tagliato non risulta legato al fossato (`wallId` resta al primo); muro disegnato sopra una strada che già attraversa un fossato non mette il ponte.
+
 ## 2026-11-19 — ROAD-WALL-GATE · Strada che attraversa un muro → porta
 
 **Implementato sul branch `feature/moat-from-wall`, non ancora unito a main.** Richiesta del product owner (19/11/2026): costruendo una strada che attraversa un muro si aggiunge una porta del tipo corrispondente, come quando si costruisce un muro su una strada.
 
 - [x] Strada maestra attraverso muro o palizzata finiti: porta del tipo corrispondente, muro tagliato sui fianchi, strada nel varco; fantasma con la porta.
-- [ ] Da decidere: muro ancora in cantiere (oggi la strada è rifiutata); un fossato già scavato davanti al muro non riceve ponte levatoio automatico.
+- [ ] Da decidere: muro ancora in cantiere (oggi la strada è rifiutata). Ponte levatoio sul fossato davanti: fatto in ROAD-MOAT-DRAWBRIDGE.
 ## 2026-11-18 — FOSSATO-MURO · Fossato costruibile dal muro selezionato
 
 **Implementato sul branch `feature/moat-from-wall`, non ancora unito a main.** Richiesta del product owner (18/11/2026): fossati costruibili anche selezionando muro, palizzata o tratto costruito, attaccati direttamente sul lato esterno.

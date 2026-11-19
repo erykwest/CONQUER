@@ -1,5 +1,13 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-19 — ROAD-MOAT-DRAWBRIDGE e ROAD-MAGNET-ROAD (`feature/moat-from-wall`)
+
+- **Codice sul branch, non ancora unito a main.** Prima una strada attraverso muro + fossato era rifiutata (la porta e la strada si sovrapponevano al fossato).
+- `roadWallGatePlan` (`settlement-castle-placement.js`): se la strada attraversa anche un fossato (finito o in cantiere) entro 4U dall'incrocio col muro, la porta nasce con `drawbridge={installed,raised:false,progress:0,withGate:true}` e deve avere il fossato davanti (`ConquerCrossings.deck(gate,true).ahead`), altrimenti la strada è rifiutata; una porta esistente finita senza ponte levatoio attraversata dalla strada sul suo fossato riceve `installDrawbridge` (porta in cantiere: rifiutata). Il piano espone `drawbridges`, `moats` e `ignoreIds` (muri tagliati + fossati); `addMainRoadThroughWalls` ora ritorna `{gates,drawbridges}` e `roadWallGateNote` scrive lo stato.
+- `settlement-placement.js`: una porta con ponte levatoio e il fossato non collidono. `manualRoadConflict` (`settlement-world.js`): una strada non collide con un fossato quando passa nel varco di una porta il cui ponte levatoio lo attraversa. `baseConstructionCost` (`settlement-core.js`): porta con `drawbridge.withGate` = porta + `DRAWBRIDGE_COST`. `deck`/`moatAhead` accettano `withSites` per i fossati in cantiere (rendering invariato).
+- `roadRoadSnap` (`settlement-world.js`) in `mainRoadSnapAnchor`: estremi (entro max(1, 0,6·raggio)) e lati di ogni strada, raggio max(1,5, `linearMagnetRadius()`); il ponte vince solo se più vicino della strada. `drawLinearMagnets` illumina il punto (`roadSnap`).
+- **Prove:** `qa/wall-road-gate-regression.cjs` 13/13 (4 nuovi: muro W3/W1/palizzata con fossato finito e in cantiere, costo, ponte sopra il fossato, strada sul ponte; porta esistente; fossato senza porta bloccato; magnete estremo/lato/fuori portata); PASS bridge-road-magnet e gate-fittings (estratte anche `roadRoadSnap`), gate-roads, linear-magnet, drawbridge, builder-placement, urban, wall-moat, small-gate, main-road-finalization e altre 10 suite. Prova nel gioco locale: tre porte con ponte, cantiere completato → ponte abbassato, passaggio a velocità piena, mesh presente, nessun errore in console. Anteprima col mouse non provata a mano.
+
 ### 2026-11-19 — ROAD-WALL-GATE: strada maestra attraverso un muro (`feature/moat-from-wall`)
 
 - **Codice sul branch, non ancora unito a main.** Prima una strada maestra tracciata attraverso un muro era rifiutata («Footprint overlaps…»); solo il contrario (muro sopra la strada, WALL-ROAD-GATE) metteva la porta.

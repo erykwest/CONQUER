@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-19 — ROAD-MOAT-DRAWBRIDGE, ROAD-MAGNET-ROAD · Ponte levatoio sulla strada, magnete strada su strada
+
+`feature/moat-from-wall`: una strada maestra che attraversa un muro e il fossato davanti apre la porta con il ponte levatoio già installato (costo del ponte nel cantiere della porta); attraverso una porta esistente finita senza ponte levatoio, lo installa. La strada passa sul fossato solo sul ponte levatoio della porta che attraversa (`manualRoadConflict`); un fossato senza porta resta un ostacolo. Il magnete della strada maestra prende estremi e lati di tutte le strade (anche secondarie e automatiche) con raggio più ampio (≥1,5U, segue lo zoom); un estremo vicino vince sul lato; il punto agganciato si illumina. Test in `qa/wall-road-gate-regression.cjs` (13). ROADMAP e DECISIONS invariate.
+
 ### 2026-11-19 — ROAD-WALL-GATE · La strada maestra che attraversa un muro apre una porta
 
 `feature/moat-from-wall`: il contrario di WALL-ROAD-GATE. Una strada maestra tracciata attraverso un muro o una palizzata finiti apre una porta del tipo corrispondente (palizzata → porta di legno, muro W1 → porta piccola, W2-W3 → porta grande, nella muratura del muro), taglia il muro sui fianchi della porta e passa nel varco; il fantasma mostra la porta e il suo costo. Un muro ancora in cantiere rifiuta la strada. Test in `qa/wall-road-gate-regression.cjs`. ROADMAP e DECISIONS invariate.
