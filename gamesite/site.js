@@ -13,6 +13,19 @@
     return mod.createClient('https://fwpmcyxggvdtsuatovzo.supabase.co',
       'sb_publishable_-nHMiLTkFCVTMwBFOmFqfQ_oZUUybfv');
   };
+  // Cookie-free aggregate metrics; the endpoint accepts only whitelisted event names.
+  const metric = event => fetch('/api/gamesite-metric', {
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({event}),keepalive:true
+  }).catch(() => {});
+  const path = location.pathname;
+  const metricForPage = path.endsWith('/gamesite/') || path.endsWith('/gamesite/index.html') ? 'home_view' :
+    path.endsWith('/gamesite/game.html') ? 'game_view' :
+    path.endsWith('/gamesite/play.html') ? 'play_view' :
+    path.endsWith('/gamesite/media.html') ? 'media_view' :
+    path.endsWith('/gamesite/follow.html') ? 'follow_view' :
+    path.includes('/gamesite/devlog/') ? 'devlog_view' : null;
+  if (metricForPage) metric(metricForPage);
   const account = $('accountForm');
   if (account) {
     let client;
@@ -74,6 +87,7 @@
     catch { return false; }
   };
   const start = $('gameStartLink');
+  if (start) start.addEventListener('click', () => { if (detectWebGL2()) metric('play_click'); });
   if (start) {
     if (!detectWebGL2()) {
       start.setAttribute('aria-disabled','true');
@@ -85,6 +99,7 @@
     const frame = $('livePreview'), button = $('loadPreview');
     if (!detectWebGL2()) return status('previewStatus','WebGL2 is required for the live Builder preview.');
     if (!frame) return;
+    frame.parentElement.querySelectorAll('h2,p').forEach(element => element.hidden = true);
     frame.src = '../index.html?launch=1';
     frame.hidden = false;
     button.hidden = true;
