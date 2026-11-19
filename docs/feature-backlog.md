@@ -1,5 +1,9 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+## UI-BUILDERICON-01 — Icone medievali del Builder (19/11/2026)
+
+**FATTO sul branch `buildericon`, NON MERGE.** Sostituzione dei glifi con 52 SVG individuali, più 20 icone complementari. Monocromo nero, trasparenza, prospettiva 3/4 per le architetture; comandi conservati come pittogrammi. Lab con manifest e baseline; audit mirato 72 render senza errori; QA caricamento, categorie, identità dei pulsanti, gestore del mulino e viewport mobile PASS. CI remota e integrazione ancora da verificare. Vedi [BUILDER-ICONS](BUILDER-ICONS.md).
+
 10/11/2026 — REG-SEA-DELTA-30: correzione richiesta: foce lacustre diretta, senza distributari; diramazioni solo se il ricevente e mare. Due innesti nel tratto finale del 30% misurato per lunghezza d’arco (70–79% del percorso). Canale principale dominante, rami piu stretti; sponde e bordi continui preservati. Dodici fixture mare/lago e hydrology-network PASS. Riferimento morfologico Seybold/Andrade/Herrmann, Modeling river delta formation, DOI 10.1073/pnas.0705265104; versione autori https://arxiv.org/html/0711.3283v1. Non introdotta una simulazione dinamica di erosione/sedimentazione.
 
 10/11/2026 — REG-WATER-SURFACE: eliminati i bordi chiari interni a confluenze e foci con contorni acqua disegnati prima di tutti i riempimenti. Alberi e montagne mantengono la propria occlusione. Aggiunte sponde ai laghi (anche isole interne), ritagliate al mondo senza spiagge sul bordo artificiale della mappa. Foce fluviale con due rami distributari piu stretti, innestati dall’80–86% della lunghezza reale, ciascuno termina nel ricevente; caricamento preserva le larghezze ridotte. Schiuma marina interrotta agli sbocchi. PASS dodici fixture delta mare/lago, idrografia, test pixel contorni e sponda e cinque scenari browser. Audit Territorio: 16 render invariati, zero errori, cinque avvisi di schemi illustrativi.

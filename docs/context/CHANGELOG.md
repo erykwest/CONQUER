@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-19 — UI-BUILDERICON-01 · Icone medievali geometriche nel Builder
+
+`buildericon` da `67a1b1e8`: sostituiti i glifi outline del Builder con 52 SVG specifici e icone complementari nere su trasparenza; superfici chiare e selezione arancione. Aggiunti al Lab 72 SVG in Interfaccia / Icone Builder; audit mirato 72/72 senza errori o avvisi e baseline aggiornata dopo revisione. Regressioni del Builder e QA Chromium desktop/mobile PASS in locale; CI remota da eseguire. Nessun merge/deploy; roadmap, contratti di gameplay e decisioni esistenti invariati.
+
 ### 2026-11-18 — CARTS-ROADS-261118 · Carri e messaggeri nel verso giusto, sulle strade
 
 `fix/carts-roads`: i convogli signorili di ritorno e il messaggero che riparte scorrevano all'indietro sul percorso d'andata con l'orientamento dell'andata (modello girato al contrario, carro di testa in coda); ora percorrono la strada invertita e guardano dove vanno. Il messaggero, quando il grafo pedonale rifiuta il percorso, usa il grafo stradale dei carri invece della linea retta fino al pozzo. Test in `qa/diplomacy-regression.cjs` e `qa/road-sign-convoy-regression.cjs`. ROADMAP e DECISIONS invariate: correzione di comportamento, nessun contratto cambiato.
