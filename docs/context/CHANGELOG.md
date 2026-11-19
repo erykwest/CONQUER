@@ -3,6 +3,17 @@
 ### 2026-11-19 — CI-AUDIT-01 · Audit del Lab: smoke per l'interfaccia, completo in 4 shard
 
 `ci/asset-audit-ui-scope-shards`: `asset-audit-scope.cjs` riconosce le modifiche di sola interfaccia (modalità `smoke`: solo test della galleria); `asset-audit.mjs --shard=N/4` divide l'audit completo per famiglie in 4 job paralleli. Aggiornati `docs/ASSET-LAB-AUDIT.md` e `docs/CI.md`. ROADMAP e DECISIONS invariate.
+### 2026-11-18 — MIL-WALL-01 · pattuglie sulle palizzate W2
+
+`fix/palisade-w2-patrol`: un recinto di palizzate W2 è un giro di pattuglia anche negli angoli senza torre (corsie del camminamento unite a spigolo); le guardie stanno all'altezza del camminamento. Nuova `qa/palisade-patrol-regression.cjs`. ROADMAP e DECISIONS invariate: si applica D-MIL-WALL-261115 così com'è.
+
+### 2026-11-18 — PATROL-ROUTE-261118 · Pattuglie fedeli al giro
+
+`fix/patrol-pathfinding`: un ostile entro portata ma irraggiungibile non fa più saltare i waypoint del giro alle pattuglie della White Zone (regressione della #258 in `defenderThink`). Nuova `qa/patrol-route-regression.cjs` nel workflow combat. ROADMAP e DECISIONS invariate: si ripristina il comportamento previsto, nessun contratto cambiato.
+
+### 2026-11-18 — Ghost dei cantieri non più vuoti
+
+`fix/construction-ghost`: i cantieri senza assemblaggio pezzo per pezzo (industrie, depositi, pozzi, moli, banchine, rampe, annessi civici, luoghi degli eventi) mostrano di nuovo l'edificio finito in trasparenza (World 3D, alpha 0,42) invece del solo contorno dell'impronta lasciato da D-RENDER-3D-261111. Nuova `qa/construction-ghost-regression.cjs` nel workflow Construction props. Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: ripristino visivo, nessun contratto cambiato.
 
 ### 2026-11-19 — UI-PROFILE-01 · Pannello Settlement nel PROFILE
 
