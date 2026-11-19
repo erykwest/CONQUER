@@ -6,8 +6,9 @@
 - Newsletter double-opt-in/unsubscribe serverless e schema privato; metriche anonime aggregate, sitemap con dominio configurabile; primi test `qa/gamesite-regression.mjs` e GitHub Actions dedicata.
 - **Stato:** IMPLEMENTATO SU BRANCH, QA in corso; nessun deploy o migrazione DB. La PR resta draft finche' dipendenze esterne, compliance, screenshot reali e browser tests non sono chiusi. Riferimenti: [Website SRS](../WEBSITE-SRS.md) e [STATUS](STATUS.md#2026-11-19--gamesite-p0-sito-pubblico-e-guest-builder-branch-gamesite-non-merge).
 
+### 2026-11-19 — CI-AUDIT-01 · Audit del Lab: smoke per l'interfaccia, completo in 4 shard
 
-
+`ci/asset-audit-ui-scope-shards`: `asset-audit-scope.cjs` riconosce le modifiche di sola interfaccia (modalità `smoke`: solo test della galleria); `asset-audit.mjs --shard=N/4` divide l'audit completo per famiglie in 4 job paralleli. Aggiornati `docs/ASSET-LAB-AUDIT.md` e `docs/CI.md`. ROADMAP e DECISIONS invariate.
 ### 2026-11-18 — MIL-WALL-01 · pattuglie sulle palizzate W2
 
 `fix/palisade-w2-patrol`: un recinto di palizzate W2 è un giro di pattuglia anche negli angoli senza torre (corsie del camminamento unite a spigolo); le guardie stanno all'altezza del camminamento. Nuova `qa/palisade-patrol-regression.cjs`. ROADMAP e DECISIONS invariate: si applica D-MIL-WALL-261115 così com'è.

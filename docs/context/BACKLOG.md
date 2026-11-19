@@ -19,8 +19,11 @@ Owner: [Website SRS v0.3](../WEBSITE-SRS.md). Questa tabella e uno **stato branc
 
 **Next:** test automatici, smoke browser, immagini autentiche, deployment/staging isolato; privacy+email provider prima di Follow; niente promozione in `main` finche' i gate non passano.
 
+## 2026-11-19 — CI-AUDIT-01 · CI più veloce per l'audit del Lab
 
-
+- [x] Modifiche solo di interfaccia: smoke della galleria al posto dell'audit completo.
+- [x] Audit completo in 4 job paralleli per famiglie.
+- [ ] Valutare l'audit completo solo dopo il merge o di notte, con l'incrementale/smoke sulle PR.
 ### 2026-11-18 — PATROL-ROUTE-261118 · Regressione del pathfinding delle pattuglie
 
 **CORRETTO SU BRANCH `fix/patrol-pathfinding`, NON MERGE.**
