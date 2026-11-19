@@ -1,5 +1,13 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-WEB-261119 — Sito pubblico CONQUER: direzione confermata (19/11/2026)
+
+- **DECISO dal product owner:** identita visuale del sito medievale sobria e moderna; contenuti pubblici della prima release solo in inglese; accesso al prototipo **giocabile direttamente nel browser** come CTA principale.
+- **CONTRATTO DI PRODOTTO:** il sito marketing e il runtime del gioco restano componenti distinti; niente riscrittura del motore, nessuna build interna presentata come giocabile al pubblico. Il gioco attuale richiede WebGL2 (D-RENDER-3D-261111), quindi sono obbligatori gate di compatibilita e QA prima della pubblicazione.
+- **PROPOSTO (non deciso):** sito statico, deploy separato dal runtime, Astro/Vercel e newsletter gestita; repo dedicato o monorepo da scegliere dopo audit W-M0.
+- **STATO:** solo specifica/documentazione, nessun sito nuovo ne build giocabile pubblicata da questa decisione. Specifica completa: [WEBSITE-SRS.md](../WEBSITE-SRS.md), versione 0.2.
+
+
 ## D-MIL-FIG-261117 — Chi combatte e come si riconosce (17/11/2026)
 
 - **DECISO dal product owner (17/11/2026), sostituisce «L3/L4 non combattono mai» dello stesso giorno:** ruolo di combattimento dei maschi adulti per classe della casa: **L1 fanti di leva** (lancia e scudo), **L2 arcieri di leva** (arco), **L3 uomini d'arme**, **L4 cavalieri**. Solo la leva (L1/L2) risponde all'allarme e alla leva straordinaria.
