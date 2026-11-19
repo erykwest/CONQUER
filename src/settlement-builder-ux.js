@@ -52,9 +52,7 @@
       ['[data-civic="market"]','Mercato','market'],
       ['[data-civic="tavern"]','Taverna','tavern'],
       ['[data-civic="church"]','Chiesa','church'],
-      ['[data-civic="townhall"]','Municipio · presso un pozzo','townhall'],
-      ['[data-civic="guild"]','Gilda · presso un pozzo','guild'],
-      ['[data-civic="bargello"]','Bargello · esattori e guardie di quartiere','bargello'],
+      // Municipio, Gilda e Bargello sono ampliamenti del pozzo: si avviano dal suo inspector.
       ['[data-civic="balivo"]','Palazzo del Balivo · nel contado','balivo'],
       ['[data-civic="training"]','Campo di addestramento','training'],
       ['[data-event-venue="pillory"]','Gogna · 1×1U · piazza','civic'],
