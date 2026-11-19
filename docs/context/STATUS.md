@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-18 — CARTS-ROADS-261118: carri e messaggeri nel verso giusto, sulle strade (branch `fix/carts-roads`, NON MERGE)
+
+- **CAUSA:** `settlement-road-sign-tests.js` disegnava i convogli signorili `returning` con la distanza che decresce sul `drivePath` d'andata: `ConquerVehicles.layout` calcola heading e ordine dei carri nel verso del percorso, quindi al ritorno carri e scorte guardavano il confine e il carro di testa era in coda. Lo stesso in `settlement-diplomacy.js` `courierPose`: al ritorno la posizione va da 1 a 0 ma l'heading era quello del segmento d'andata. Il messaggero, quando `roadNetworkPath` restituiva `null` (ingresso a più di 4,5U da una strada, raccordo dell'uscio bloccato), cavalcava in linea retta ingresso → pozzo → Mastio.
+- **CODICE:** nuovo `ConquerRoadSignTests.liveConvoyLeg(j, day)` (strada invertita in cache `WeakMap`, distanza speculare al ritorno); `courierPose` gira l'heading di π in fase `returning`; `routeFrom` prova `ConquerVehicles.route` (Dijkstra sulle strade completate, estremi agganciati alla rete) prima del ripiego sul pozzo. `ConquerDiplomacy` espone `courierPose` e `routeFrom`. I messaggeri già in viaggio nei salvataggi vecchi tengono il percorso salvato.
+- **PROVE LOCALI PASS:** `diplomacy` (2 nuovi casi: verso del messaggero all'andata e al ritorno con proiezione isometrica, percorso sulle strade col grafo pedonale assente), `road-sign-convoy` (nuovo caso: convoglio di ritorno verso ovest, testa verso casa, ogni punto sulla carreggiata), `vehicles`, `dovecote`, `military-stables`, `haulage`, `l1-carter-market`, `multi-wells`, `slopeways`, `wardrobe`. Nessun asset cambiato: niente audit del Lab. Non verificato in CI né in partita.
+
 ### 2026-11-18 — UI-UPG-01: ampliamenti di pozzo ed edifici civici nell'ispettore (`feature/upgrades-in-inspector`)
 
 - **Codice sul branch, non ancora unito a main.** Richiesta del product owner: gli edifici che sono un ampliamento del pozzo o di altro si avviano dall'ispettore e non stanno nel pannello di costruzione principale.
