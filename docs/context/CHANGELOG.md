@@ -1,5 +1,13 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-19 — GameSite P0 branch implementation (non merged)
+
+- Branch `gamesite` da `main`: pagina web marketing medievale in inglese e routing browser al Builder; Entry Gate Guest/account con seed, biomi e salvataggi locali per slot; Supabase Auth condivisa su stessa origine, senza multiplayer Guest.
+- Newsletter double-opt-in/unsubscribe serverless e schema privato; metriche anonime aggregate, sitemap con dominio configurabile; primi test `qa/gamesite-regression.mjs` e GitHub Actions dedicata.
+- **Stato:** IMPLEMENTATO SU BRANCH, QA in corso; nessun deploy o migrazione DB. La PR resta draft finche' dipendenze esterne, compliance, screenshot reali e browser tests non sono chiusi. Riferimenti: [Website SRS](../WEBSITE-SRS.md) e [STATUS](STATUS.md#2026-11-19--gamesite-p0-sito-pubblico-e-guest-builder-branch-gamesite-non-merge).
+
+
+
 ### 2026-11-18 — MIL-WALL-01 · pattuglie sulle palizzate W2
 
 `fix/palisade-w2-patrol`: un recinto di palizzate W2 è un giro di pattuglia anche negli angoli senza torre (corsie del camminamento unite a spigolo); le guardie stanno all'altezza del camminamento. Nuova `qa/palisade-patrol-regression.cjs`. ROADMAP e DECISIONS invariate: si applica D-MIL-WALL-261115 così com'è.
