@@ -5,6 +5,12 @@
 - Richiesta del product owner: smantellare il pannello destro `#policy` e riorganizzarne le informazioni nel menu principale (PROFILE).
 - GENERALE: dati della partita (insediamento, seed, bioma, giorno, cella), selettore bioma di test, parametri della mappa, salvataggio. Nuova tab GOVERNO: tasse, razioni, muratura delle nuove case private, forze nobiliari (recluta cavaliere, carovane), riepilogo economia. Gli id DOM restano invariati, quindi `renderUI()`, economia e persistenza non cambiano; tolte le regole CSS `#policy`.
 - **Prove:** PASS biome-selector; verificato in Chromium headless: pannello assente, GENERALE e GOVERNO popolati, nessun errore di pagina.
+### 2026-11-18 — TORCH-STREAK-261118: niente fasci verticali dalle torce (branch `fix/torch-artifact`)
+
+- Causa: l'alone delle torce e dei bracieri (programma `fireLight` di settlement-world3d.js) campionava la tessera `__glow` dell'atlante delle decal, con mipmap e UV a 1 px dalle tessere vicine (drappo del Mastio, vetri). Il bordo del quadrato si colorava della tessera accanto: una riga verticale arancione, alta quanto l'alone, a lato di ogni fuoco, tanto più lunga quanto più vicina la camera.
+- Fix: l'alone è calcolato nello shader dall'angolo del quadrato (stessi colori del gradiente di prima, nullo oltre il bordo del disco); il buffer `fireLights` non ha più UV (7 float per vertice). La tessera `__glow`, usata ancora dagli aloni delle finestre, ha ora un margine trasparente di 12 px.
+- Prove: catture prima/dopo di notte su porta e torre a scala 6–40 (nessuna riga, alone invariato); `qa/tower-fittings-regression.cjs` con un controllo nuovo; 27 regressioni che leggono settlement-world3d.js verdi.
+
 ### 2026-11-18 — CARTS-ROADS-261118: carri e messaggeri nel verso giusto, sulle strade (branch `fix/carts-roads`, NON MERGE)
 
 - **CAUSA:** `settlement-road-sign-tests.js` disegnava i convogli signorili `returning` con la distanza che decresce sul `drivePath` d'andata: `ConquerVehicles.layout` calcola heading e ordine dei carri nel verso del percorso, quindi al ritorno carri e scorte guardavano il confine e il carro di testa era in coda. Lo stesso in `settlement-diplomacy.js` `courierPose`: al ritorno la posizione va da 1 a 0 ma l'heading era quello del segmento d'andata. Il messaggero, quando `roadNetworkPath` restituiva `null` (ingresso a più di 4,5U da una strada, raccordo dell'uscio bloccato), cavalcava in linea retta ingresso → pozzo → Mastio.

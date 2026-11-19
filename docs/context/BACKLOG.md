@@ -4,6 +4,12 @@
 
 - [x] Pannello destro «Settlement» rimosso; contenuti in PROFILE › GENERALE e nuova tab GOVERNO.
 - [ ] Tradurre in italiano «Save settlement» e la nota di autosave.
+### 2026-11-18 — TORCH-STREAK-261118 · Fasci verticali delle torce
+
+**FIX SU BRANCH `fix/torch-artifact`.** Dettagli in [STATUS](STATUS.md).
+- [x] Alone di torce e bracieri procedurale nello shader: nessuna riga verticale a nessuna distanza.
+- [x] Margine trasparente attorno alla tessera `__glow` degli aloni delle finestre.
+
 ### 2026-11-18 — CARTS-ROADS-261118 · Carri e messaggeri nel verso giusto, sulle strade
 
 **IMPLEMENTATO SU BRANCH `fix/carts-roads`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
