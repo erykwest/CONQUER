@@ -1,7 +1,7 @@
 // CONQUER interface v2 ("Isole"): floating wood-and-gold tablets over a full-bleed map.
 // Opt-in with ?ui=2 (persisted; ?ui=1 goes back). Reads the game only through window.ConquerGame.
 import { html, render, useState, useEffect, useRef } from '../vendor/htm-preact-3.1.1.js';
-import { T } from './i18n-it.js?v=ui2-insp-2-wallpatrol2-alerts3-wallmoat1';
+import { T } from './i18n-it.js?v=ui2-insp-2-wallpatrol2-alerts3-upg2-wallmoat1';
 import { createAlertCenter } from './alerts.js?v=alerts3';
 import { createWatchers } from './alert-watchers.js?v=alerts3';
 
@@ -68,6 +68,7 @@ const INDUSTRIES = [
   ['windmill', '[data-industry="windmill"]', t => t.industry === 'windmill'],
   ['watermill', '[data-industry="watermill"]', t => t.industry === 'watermill']
 ];
+const WELL_UPGRADES = ['townhall', 'guild', 'bargello'];
 const CATALOG = [
   { id: 'select', hint: T.hints.select, press: '[data-tool="select"]', is: s => s.tool.kind === 'select' },
   { id: 'towers', hint: T.hints.point, press: '[data-tower="square"][data-size="1.5"]', is: s => s.tool.kind === 'tower',
@@ -153,7 +154,8 @@ const CATALOG = [
       return rows;
     } },
   { id: 'civic', hint: T.hints.point, press: '[data-civic="market"]', is: s => s.tool.kind === 'civic',
-    rows: s => [{ label: O.building, options: ['market', 'tavern', 'church', 'training', 'plaza', 'townhall', 'guild', 'bargello', 'balivo'].map(k =>
+    // Town hall, guild hall and bargello are well upgrades: they start from the well's inspector.
+    rows: s => WELL_UPGRADES.includes(s.tool.civic) ? [masonryRow(s)] : [{ label: O.building, options: ['market', 'tavern', 'church', 'training', 'plaza', 'balivo'].map(k =>
       opt(V[k], `[data-civic="${k}"]`, s.tool.civic === k)) }, masonryRow(s)] },
   { id: 'production', hint: T.hints.point, press: '[data-industry="loggingCamp"]', is: s => s.tool.kind === 'industry',
     rows: s => [{ label: O.building, wrap: true, options: INDUSTRIES.map(([k, selector, on]) => opt(V[k], selector, on(s.tool))) }, masonryRow(s)] },
@@ -367,6 +369,22 @@ function WellPanel({ d, run }) {
       <input type="text" class="u2-name" key=${d.id + '|' + w.name} defaultValue=${w.name} maxlength="32" placeholder=${I.wellNamePlaceholder}
         aria-label=${I.wellName} onChange=${e => run('setWellName', e.currentTarget.value)} /></${Row}>`}`;
 }
+// Buildings that grow out of the selected one (well civics, civic annexes): started here,
+// not from the build palette. Each row: build button plus one button per standing child.
+function UpgradesPanel({ d, run, cmd }) {
+  const U = I.upgrades;
+  return html`<div class="u2-group"><span class="u2-label" data-tip=${U.title} data-tip-body=${d.type === 'well' ? U.wellHelp : U.annexHelp} tabindex="0">${U.title}<i aria-hidden="true">?</i></span>
+    ${d.upgrades.map(u => {
+      const name = u.kind === 'wellCivic' ? T.structures[u.key] : U.names[u.key] || u.key;
+      const label = name + (u.max > 1 ? ' ' + u.count + '/' + u.max : '');
+      const why = u.reason ? (u.reason === 'level' ? U.reasons.level(u.level) : U.reasons[u.reason]) : null;
+      const detail = [u.size, u.level ? 'L' + u.level : null].filter(Boolean).join(' · ');
+      const options = [{ label: U.build, disabled: !!u.reason, tip: name, tipBody: why || detail || null, v: 'build' },
+        ...u.children.map((id, i) => ({ label: u.children.length > 1 ? U.select + ' ' + (i + 1) : U.select, tip: name, v: id }))];
+      return html`<${Row} label=${label}>
+        <${Seg} options=${options} nowrap onPick=${o => o.v === 'build' ? run('startUpgrade', u.key) : cmd.select(o.v)} /></${Row}>`;
+    })}</div>`;
+}
 function Inspector({ snap, cmd }) {
   const d = snap.selection?.detail;
   if (!d) return null;
@@ -486,6 +504,7 @@ function Inspector({ snap, cmd }) {
             <option value="">${I.roomEmpty}</option>
             ${r.options.map(o => html`<option value=${o.value} disabled=${!o.allowed}>${T.functions[o.value] || o.value}</option>`)}
           </select></label>`)}</div>`}</div>`}
+    ${d.upgrades?.length > 0 && html`<${UpgradesPanel} d=${d} run=${run} cmd=${cmd} />`}
     ${d.legacy === 'crossing' && html`<${CrossingPanel} id=${d.id} />`}
     ${d.type === 'church' && html`<${InstitutionPanel} id=${d.id} api="ConquerChurch" />`}
     ${d.type === 'guild' && html`<${InstitutionPanel} id=${d.id} api="ConquerGuild" />`}

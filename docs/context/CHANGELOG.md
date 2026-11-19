@@ -14,6 +14,33 @@
 ### 2026-11-18 — FOSSATO-MURO · Fossato dal muro selezionato
 
 `feature/moat-from-wall`: selezionando un muro, una palizzata o un tratto costruito l'inspector offre «Fossato» (secco / d'acqua): il fossato da 1,5U si scava attaccato al lato esterno (quello di «Lato esterno»), si unisce all'angolo al fossato del tratto vicino e lascia libero il varco delle porte; d'acqua solo a quota 0, e un fossato secco già scavato si allaga dallo stesso comando. Nuovo `qa/wall-moat-regression.cjs` (workflow «Wall moat regression»). ROADMAP e DECISIONS invariate.
+### 2026-11-18 — MIL-WALL-01 · pattuglie sulle palizzate W2
+
+`fix/palisade-w2-patrol`: un recinto di palizzate W2 è un giro di pattuglia anche negli angoli senza torre (corsie del camminamento unite a spigolo); le guardie stanno all'altezza del camminamento. Nuova `qa/palisade-patrol-regression.cjs`. ROADMAP e DECISIONS invariate: si applica D-MIL-WALL-261115 così com'è.
+
+### 2026-11-18 — PATROL-ROUTE-261118 · Pattuglie fedeli al giro
+
+`fix/patrol-pathfinding`: un ostile entro portata ma irraggiungibile non fa più saltare i waypoint del giro alle pattuglie della White Zone (regressione della #258 in `defenderThink`). Nuova `qa/patrol-route-regression.cjs` nel workflow combat. ROADMAP e DECISIONS invariate: si ripristina il comportamento previsto, nessun contratto cambiato.
+
+### 2026-11-18 — Ghost dei cantieri non più vuoti
+
+`fix/construction-ghost`: i cantieri senza assemblaggio pezzo per pezzo (industrie, depositi, pozzi, moli, banchine, rampe, annessi civici, luoghi degli eventi) mostrano di nuovo l'edificio finito in trasparenza (World 3D, alpha 0,42) invece del solo contorno dell'impronta lasciato da D-RENDER-3D-261111. Nuova `qa/construction-ghost-regression.cjs` nel workflow Construction props. Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: ripristino visivo, nessun contratto cambiato.
+
+### 2026-11-19 — UI-PROFILE-01 · Pannello Settlement nel PROFILE
+
+`feature/settlement-panel-into-profile`: rimosso il pannello destro `#policy`; dati partita, bioma, parametri mappa e salvataggio in PROFILE › GENERALE, politiche, case private, forze nobiliari ed economia nella nuova tab GOVERNO. ROADMAP e DECISIONS invariate: nessun contratto di gioco cambiato.
+### 2026-11-18 — TORCH-STREAK-261118 · Niente fasci verticali dalle torce
+
+`fix/torch-artifact`: l'alone notturno di torce e bracieri non campiona più l'atlante delle decal (che a mipmap faceva entrare le tessere vicine come righe verticali) ma è calcolato nello shader dall'angolo del quadrato; margine trasparente sulla tessera `__glow` delle finestre. Controllo nuovo in `qa/tower-fittings-regression.cjs`. ROADMAP e DECISIONS invariate: correzione grafica, nessun contratto cambiato.
+
+### 2026-11-18 — CARTS-ROADS-261118 · Carri e messaggeri nel verso giusto, sulle strade
+
+`fix/carts-roads`: i convogli signorili di ritorno e il messaggero che riparte scorrevano all'indietro sul percorso d'andata con l'orientamento dell'andata (modello girato al contrario, carro di testa in coda); ora percorrono la strada invertita e guardano dove vanno. Il messaggero, quando il grafo pedonale rifiuta il percorso, usa il grafo stradale dei carri invece della linea retta fino al pozzo. Test in `qa/diplomacy-regression.cjs` e `qa/road-sign-convoy-regression.cjs`. ROADMAP e DECISIONS invariate: correzione di comportamento, nessun contratto cambiato.
+
+### 2026-11-18 — UI-UPG-01 · Ampliamenti nell'ispettore, non nel Builder
+
+`feature/upgrades-in-inspector`: Municipio, Gilda e Bargello (edifici del pozzo) escono dal pannello Costruisci (UI v2 e palette legacy) e si avviano dall'ispettore del pozzo, blocco «Ampliamenti»; nell'ispettore UI v2 lo stesso blocco elenca anche gli annessi di chiesa, taverna, mercato e municipio. ROADMAP e DECISIONS invariate: le regole di piazzamento non cambiano.
+
 ### 2026-11-17 — MIL-FIG-01 · Picchieri con scudo, araldo con lo stendardo
 
 `fix/squad-pikemen-shield`: lancia nella mano destra del soldato (lato sinistro dello schermo, la figura guarda chi osserva) per tutte le figure con lancia. I picchieri della squadra hanno lo scudo del regno (figura `pikeman`); il primo è l'araldo del reggimento (figura `herald`), l'unico con lo stendardo, che porta al posto della lancia; lo stendardo è 3 volte la vecchia bandierina di squadra. Le guardie di pattuglia restano senza scudo. Il Lab ha le voci «Picchiere» e «Araldo». La leva non veste più la livrea: abiti di classe del popolano più un cappuccio coi colori dello stemma, con lancia e scudo (L1) oppure con l'arco (L2). Ruolo dei maschi per classe: L1 fanti di leva, L2 arcieri di leva, L3 uomini d'arme, L4 cavalieri (`combatRole`, decisione D-MIL-FIG-261117 in DECISIONS); come si chiamano in campo L3 e L4 è ancora da definire. Uomo d'arme (L3) con gonnello con lo stemma, elmo dei cavalieri e arma a due mani casuali per persona. Cavalieri (L4) con mantello e cimiero araldico (torciglio, mantellino e figura fra ali, corna di cervo, corna, aquila, corona), a cavallo e a piedi; smontati con spada e scudo nel torneo e nel campo di addestramento. In BACKLOG resta aperta la torcia in più della lancia per le guardie di notte. ROADMAP invariata. DECISIONS: nuova D-MIL-FIG-261117.

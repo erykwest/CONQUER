@@ -16,6 +16,8 @@ on:
       - 'src/assets/construction-models.js'
       - 'src/settlement-mesh3d.js'
       - 'src/settlement-render.js'
+      - 'src/settlement-world3d.js'
+      - 'qa/construction-ghost-regression.cjs'
       - 'qa/construction-props-regression.cjs'
       - '.github/workflows/construction-props-regression.yml'
   workflow_dispatch:
@@ -41,3 +43,5 @@ jobs:
         run: node qa/construction-props-regression.cjs
       - name: Run construction-assembly regression
         run: node qa/construction-assembly-regression.cjs
+      - name: Run construction-ghost regression
+        run: node qa/construction-ghost-regression.cjs

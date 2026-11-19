@@ -138,20 +138,30 @@
       livery:j.kind==='merchant'?{main:'#79553b',alt:'#b08a65'}:null},j.path);
     drawConvoyStrip(j);
   }
+  const reversedCache=new WeakMap();
+  function reversed(path){let r=reversedCache.get(path);if(!r){r=path.slice().reverse();reversedCache.set(path,r)}return r}
   // Real lord convoys: on the road while the outward or return leg is still
   // inside the map (road length out of road + 40U beyond the border).
+  // Where a live lord convoy is on the map this moment: {path, distance} along the road in
+  // its travel direction, or null while it is beyond the border (or has no drivable road).
+  function liveConvoyLeg(j,day=State.clock.day){
+    if(!['outbound','returning'].includes(j?.status)||!j.edge)return null;
+    const route=routeFor(j.edge);if(!route)return null;
+    // From the keep through the streets to the border, then 40U beyond the map.
+    const path=j.drivePath||(j.drivePath=drivePath(j.kind,route)),length=pathLength(path);
+    const leg=Math.max(.001,(j.arrivalDay-j.actualDepartDay)),total=length+40;
+    const f=j.status==='outbound'?(day-j.actualDepartDay)/leg:(j.returnDay-day)/leg;
+    const distance=Math.max(0,Math.min(1,f))*total;
+    if(distance>length)return null;
+    // Coming home the convoy drives the outbound road backwards: give it the reversed road,
+    // so heading, lead wagon and escort order follow the travel direction (not the way out).
+    return j.status==='returning'?{path:reversed(path),distance:length-distance}:{path,distance};
+  }
   function drawLiveConvoys(){
     const c=convoys()?.state?.();if(!c)return;
     for(const j of Object.values(c.lordConvoys||{})){
-      if(!['outbound','returning'].includes(j.status)||!j.edge)continue;
-      const route=routeFor(j.edge);if(!route)continue;
-      // From the keep through the streets to the border, then 40U beyond the map.
-      const path=j.drivePath||(j.drivePath=drivePath(j.kind,route)),length=pathLength(path);
-      const leg=Math.max(.001,(j.arrivalDay-j.actualDepartDay)),total=length+40;
-      const f=j.status==='outbound'?(State.clock.day-j.actualDepartDay)/leg:(j.returnDay-State.clock.day)/leg;
-      const distance=Math.max(0,Math.min(1,f))*total;
-      if(distance>length)continue;
-      drawConvoyAt({id:j.id,kind:j.kind,path,distance,speed:1,qty:j.cargo?.[0]?.qty||0,vehicle:j.transport?.mode||'wagon',
+      const at=liveConvoyLeg(j);if(!at)continue;
+      drawConvoyAt({id:j.id,kind:j.kind,path:at.path,distance:at.distance,speed:1,qty:j.cargo?.[0]?.qty||0,vehicle:j.transport?.mode||'wagon',
         vehicles:j.transport?.wagons||1,guards:j.escorts?.requested||0,good:j.cargo?.[0]?.good||''});
     }
   }
@@ -412,5 +422,5 @@
     };
   }
   window.ConquerRoadSignTests=Object.freeze({signs,hit,open,draw,drawVehicles,tick,
-    routeFor,drivePath,launch,launchCoach,restore,active:testRecord,refreshPanel});
+    routeFor,drivePath,liveConvoyLeg,launch,launchCoach,restore,active:testRecord,refreshPanel});
 })();

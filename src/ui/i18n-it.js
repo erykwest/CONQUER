@@ -189,7 +189,17 @@ export const T = {
     gateOpen: 'Aperto', gateClosed: 'Chiuso', nightClose: 'Chiusura notturna',
     gateHelp: 'Chiuso e integro blocca il passaggio; l\'ariete lo sfonda. Di notte si chiude da solo se la chiusura notturna è attiva.',
     portcullis: 'Grata', bays: n => 'Campate · ' + n, bay: i => 'Campata ' + i,
-    annex: 'Annesso', annexParent: '← Edificio principale', annexHelp: 'Struttura in abbozzo: nessun lavoratore, posto letto o effetto economico.'
+    annex: 'Annesso', annexParent: '← Edificio principale', annexHelp: 'Struttura in abbozzo: nessun lavoratore, posto letto o effetto economico.',
+    upgrades: {
+      title: 'Ampliamenti', build: 'Costruisci', select: '↳ Seleziona',
+      wellHelp: 'Edifici della piazza di questo pozzo: uno per tipo, entro 9U dal pozzo.',
+      annexHelp: 'Annessi dell\'edificio: si piazzano accanto al suo lotto.',
+      names: { herbGarden: 'Orto dei semplici', scriptorium: 'Scriptorium', almshouse: 'Ospizio', monastery: 'Monastero', cloister: 'Chiostro',
+        square: 'Sagrato', storage: 'Deposito', courtyard: 'Cortile di servizio', stables: 'Stalle', brewery: 'Birrificio', inn: 'Locanda',
+        stall: 'Bancarella', loggia: 'Loggia coperta', warehouse: 'Magazzino', shop: 'Bottega', kitchenGarden: 'Orto di corte' },
+      reasons: { notFounded: 'Serve un villaggio fondato.', taken: 'Questo pozzo ne ha già uno.', guildOne: 'Una sola gilda per villaggio.',
+        full: 'Numero massimo raggiunto.', level: n => 'Richiede l\'edificio a L' + n + '.' }
+    }
   },
   functions: {
     guard: 'Corpo di guardia', barracks: 'Caserma', armory: 'Armeria', storage: 'Magazzino materiali', granary: 'Granaio',

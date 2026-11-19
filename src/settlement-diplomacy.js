@@ -65,6 +65,13 @@
     // Use the real road graph when its external link has been built; only fall back to a waypoint proxy.
     let route=null;
     try{route=typeof roadNetworkPath==='function'?roadNetworkPath(entry,goal,'courier-'+id):null}catch(err){console.warn('Courier road navigation fallback',err)}
+    // Still on the streets when the walker graph refuses (entry far from a road, a blocked doorstep
+    // connector): the cart-road Dijkstra of ConquerVehicles snaps both ends onto the network.
+    if(!Array.isArray(route)||route.length<2){
+      let road=null;
+      try{road=window.ConquerVehicles?.route?.(point(entry),point(goal))||null}catch(err){console.warn('Courier road graph fallback',err)}
+      if(Array.isArray(road)&&road.length>=2)route=[point(entry),...road,point(goal)];
+    }
     if(!Array.isArray(route)||route.length<2){
       const well=State.structures.find(s=>s.type==='well'&&!underConstruction(s));
       route=[point(entry),...(well?[point(well)]:[]),point(goal)];
@@ -96,7 +103,10 @@
     if(!x)return null;
     const progress=x.phase==='arriving'?(at-x.spawnDay)/Math.max(.001,x.arrivalDay-x.spawnDay):
       x.phase==='returning'?1-(at-x.departDay)/Math.max(.001,x.returnDay-x.departDay):1;
-    return position(x.route||[point(x.entry),point(x.goal)],progress);
+    const p=position(x.route||[point(x.entry),point(x.goal)],progress);
+    // Riding home he runs the route backwards: face the way he travels, not the way he came.
+    if(x.phase==='returning')p.heading+=Math.PI;
+    return p;
   }
   function scheduleNext(x,start){
     x.nextEventDay=Math.floor(start)+25+choice(State.seed+'|diplomacy|next|'+x.sequence,12);
@@ -293,7 +303,7 @@
     });
     refreshUI();
   }
-  window.ConquerDiplomacy={tick,reset,state,caravans,draw,positionLetter,refreshUI,travel,spawn,openLetter,openCaravans,finishResponse};
+  window.ConquerDiplomacy={tick,reset,state,caravans,draw,courierPose,routeFrom,positionLetter,refreshUI,travel,spawn,openLetter,openCaravans,finishResponse};
   // Hook for the outpost / guard-room work: quick alerts between towers will use the same post.
   window.ConquerDovecote={towers:dovecotes,active:()=>dovecotes().length>0,PIGEON_SPEEDUP,MIN_PIGEON_DAYS};
   initUI();
