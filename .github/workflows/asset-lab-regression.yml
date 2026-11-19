@@ -49,6 +49,7 @@ jobs:
       visual_needed: ${{ steps.scope.outputs.visual_needed }}
       audit_mode: ${{ steps.scope.outputs.audit_mode }}
       audit_sources: ${{ steps.scope.outputs.audit_sources }}
+      shards: ${{ steps.shards.outputs.list }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -81,7 +82,18 @@ jobs:
             } >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          node qa/asset-audit-scope.cjs --diff "$RUNNER_TEMP/assetlab-changes.txt" --github-output "$GITHUB_OUTPUT"
+          # index.html is interface-only when its changed lines load no script, style or canvas.
+          git diff "$PR_BASE...$PR_HEAD" -- index.html > "$RUNNER_TEMP/assetlab-index.patch" || true
+          node qa/asset-audit-scope.cjs --diff "$RUNNER_TEMP/assetlab-changes.txt" \
+            --index-patch "$RUNNER_TEMP/assetlab-index.patch" --github-output "$GITHUB_OUTPUT"
+      - name: Parallel shards for a full audit
+        id: shards
+        shell: bash
+        env:
+          AUDIT_MODE: ${{ steps.scope.outputs.audit_mode }}
+        run: |
+          # A full audit is split into 4 parallel jobs by whole families; anything else is one job.
+          if [[ "$AUDIT_MODE" == "full" ]]; then echo 'list=["1/4","2/4","3/4","4/4"]'; else echo 'list=["all"]'; fi >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
@@ -98,8 +110,13 @@ jobs:
     needs: asset-lab
     if: needs.asset-lab.outputs.visual_needed == 'true'
     runs-on: ubuntu-24.04
-    # A full audit renders every engine capture in World 3D (SwiftShader on CI): 15 min is not enough.
-    timeout-minutes: 45
+    name: browser (${{ matrix.shard }})
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.asset-lab.outputs.shards) }}
+    # One shard of the full audit renders a quarter of the engine captures (SwiftShader on CI).
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -116,16 +133,21 @@ jobs:
           exit 1
       - name: Install cached Chromium and pinned Playwright
         uses: ./.github/actions/playwright-setup
-      - name: Run gallery browser QA
+      - name: Run gallery browser QA (boots the engine sandbox from index.html)
+        if: matrix.shard == 'all' || matrix.shard == '1/4'
         run: node qa/asset-catalog-browser.mjs
-      - name: Visual audit (incremental or complete)
+      - name: Visual audit (incremental, complete shard; skipped for interface-only changes)
+        if: needs.asset-lab.outputs.audit_mode != 'smoke'
         env:
           AUDIT_MODE: ${{ needs.asset-lab.outputs.audit_mode }}
           AUDIT_SOURCES: ${{ needs.asset-lab.outputs.audit_sources }}
+          SHARD: ${{ matrix.shard }}
         shell: bash
         run: |
           if [[ "$AUDIT_MODE" == "incremental" && -n "$AUDIT_SOURCES" ]]; then
             node qa/asset-audit.mjs --sources="$AUDIT_SOURCES"
+          elif [[ "$SHARD" != "all" ]]; then
+            node qa/asset-audit.mjs --shard="$SHARD"
           else
             node qa/asset-audit.mjs
           fi
@@ -136,7 +158,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: asset-lab-visual-qa
+          name: asset-lab-visual-qa-${{ strategy.job-index }}
+          if-no-files-found: ignore
           path: |
             artifacts/asset-lab-browser.png
             artifacts/asset-audit/

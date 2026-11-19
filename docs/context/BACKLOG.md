@@ -7,6 +7,11 @@
 - [x] Regola unica `structureNeedsAccessRoad` con audit dei tipi piazzabili in `qa/access-roads-regression.cjs`: un nuovo tipo di edificio deve essere collegato o dichiarato esente.
 - [ ] Miniere e cave su pendio: se il bordo dell'impronta e i 3U attorno sono pendio o montagna (vietati alle strade) la ricerca del percorso fallisce e la strada non nasce; verificarlo in partita su mappe montuose.
 
+## 2026-11-19 — CI-AUDIT-01 · CI più veloce per l'audit del Lab
+
+- [x] Modifiche solo di interfaccia: smoke della galleria al posto dell'audit completo.
+- [x] Audit completo in 4 job paralleli per famiglie.
+- [ ] Valutare l'audit completo solo dopo il merge o di notte, con l'incrementale/smoke sulle PR.
 ### 2026-11-18 — PATROL-ROUTE-261118 · Regressione del pathfinding delle pattuglie
 
 **CORRETTO SU BRANCH `fix/patrol-pathfinding`, NON MERGE.**
