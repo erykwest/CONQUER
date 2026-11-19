@@ -75,23 +75,30 @@
     // A radial light halo is a camera-facing billboard with a world-space anchor and real depth.
     fireLight:[`#version 300 es
       ${CAMERA}
-      in vec3 aAnchor;in vec2 aCorner;in float aSize;in vec2 aUV;in float aSeed;
-      out vec2 vUV;out float vSeed;
+      in vec3 aAnchor;in vec2 aCorner;in float aSize;in float aSeed;
+      out vec2 vCorner;out float vSeed;
       // The glow is a camera-facing disc: depth-tested at its anchor alone, the facade the torch
       // hangs on (nearer the higher it goes, d = qx+qy+0.9z) cut it flat above the flame. Its depth
       // rises with the corner like a vertical plane through the flame, plus a quarter of its size.
       void main(){vec4 p=cam(aAnchor,aCorner*aSize*uS);
         float bias=(0.25-aCorner.y)*aSize;
         p.z-=2.0*bias/(uDepth.y-uDepth.x);
-        gl_Position=p;vUV=aUV;vSeed=aSeed;}`,
+        gl_Position=p;vCorner=aCorner;vSeed=aSeed;}`,
+      // The halo is computed from the quad's own corner, not sampled from the mipmapped decal
+      // atlas: an atlas tile bleeds its neighbours (the Mastio drape, window glass) into the
+      // quad's edges, which drew a full-height vertical streak beside every torch up close.
       `#version 300 es
-      precision mediump float;in vec2 vUV;in float vSeed;uniform sampler2D uAtlas;
+      precision mediump float;in vec2 vCorner;in float vSeed;
       uniform float uNight;uniform float uTime;out vec4 o;
-      void main(){vec4 tex=texture(uAtlas,vUV);
+      void main(){float r=length(vCorner)*2.0;if(r>=1.0)discard;
+        // Same stops as the old __glow tile: warm white core, amber, orange rim fading to nothing.
+        vec4 g=r<0.22?mix(vec4(1.0,0.937,0.745,0.90),vec4(1.0,0.761,0.404,0.56),r/0.22)
+          :r<0.58?mix(vec4(1.0,0.761,0.404,0.56),vec4(1.0,0.553,0.216,0.15),(r-0.22)/0.36)
+          :mix(vec4(1.0,0.553,0.216,0.15),vec4(1.0,0.553,0.216,0.0),(r-0.58)/0.42);
         float flicker=clamp(0.86+0.09*sin(uTime*31.0+vSeed*6.283185)
           +0.04*sin(uTime*53.0+vSeed*9.0),0.6,1.0);
-        float a=tex.a*uNight*flicker*0.8;
-        if(a<0.003)discard;o=vec4(tex.rgb*vec3(1.0,0.54,0.22)*uNight*flicker*0.8,a);}`],
+        float a=g.a*uNight*flicker*0.8;
+        if(a<0.003)discard;o=vec4(g.rgb*g.a*vec3(1.0,0.54,0.22)*uNight*flicker*0.8,a);}`],
     sprite:[`#version 300 es
       ${CAMERA}
       in vec3 aAnchor;in vec2 aCorner;in float aSize;in vec2 aUV;out vec2 vUV;
@@ -967,13 +974,15 @@
         g.drawImage(glassMask(img),x,y);map.set(k,[x/c.width,y/c.height,(x+img.width)/c.width,(y+img.height)/c.height]);return;
       }
       if(k==='__glow'){
-        const radial=g.createRadialGradient(x+T/2,y+T/2,0,x+T/2,y+T/2,T/2-2);
+        // Window halos: the gradient ends inside the sampled square and a transparent gutter
+        // keeps the neighbouring tiles (Mastio drape, glass masks) out of its edges.
+        const G=12,radial=g.createRadialGradient(x+T/2,y+T/2,0,x+T/2,y+T/2,T/2-G-2);
         radial.addColorStop(0,'rgba(255,239,190,0.90)');
         radial.addColorStop(.22,'rgba(255,194,103,0.56)');
         radial.addColorStop(.58,'rgba(255,141,55,0.15)');
         radial.addColorStop(1,'rgba(255,141,55,0)');
-        g.fillStyle=radial;g.fillRect(x+1,y+1,T-2,T-2);
-        map.set(k,[(x+1)/c.width,(y+1)/c.height,(x+T-1)/c.width,(y+T-1)/c.height]);return;
+        g.fillStyle=radial;g.fillRect(x+G,y+G,T-2*G,T-2*G);
+        map.set(k,[(x+G)/c.width,(y+G)/c.height,(x+T-G)/c.width,(y+T-G)/c.height]);return;
       }
       if(k==='__mastioDrape'){paintMastioDrape(g,x,y,T);map.set(k,[x/c.width,y/c.height,(x+T)/c.width,(y+T)/c.height]);return}
       const img=architectureSprite(k);if(!img)return;
@@ -1196,17 +1205,18 @@
     }
     return sources;
   }
-  function buildFireLights(atlas){
-    const uv=atlas.map.get('__glow'),v=[];if(!uv)return new Float32Array(v);
-    const [u0,v0,u1,v1]=uv;
+  // 7 floats a vertex: anchor xyz, corner xy, size, flicker seed (the halo is procedural).
+  const FIRE_LIGHT_FLOATS=7;
+  function buildFireLights(){
+    const v=[];
     for(const src of allWorldFireSources()){
       const ground=Number.isFinite(src.groundZ)?src.groundZ:terrainElevation(src.p);
       const z=ground+src.z+(src.kind==='brazier'?.08:0);
       const size=src.kind==='brazier'?2:1.5;
       const seed=(peasantHash(String(src.id)+'-fire')%1000)/1000;
-      const corners=[[-.5,-.5,u0,v0],[.5,-.5,u1,v0],[.5,.5,u1,v1],[-.5,.5,u0,v1]];
+      const corners=[[-.5,-.5],[.5,-.5],[.5,.5],[-.5,.5]];
       for(const i of [0,1,2,0,2,3]){
-        const q=corners[i];v.push(src.p.x,src.p.y,z,q[0],q[1],size,q[2],q[3],seed);
+        const q=corners[i];v.push(src.p.x,src.p.y,z,q[0],q[1],size,seed);
       }
     }
     return new Float32Array(v);
@@ -1664,7 +1674,7 @@
       const baked=buildDecals(atlas);
       upload(gl,'decals',baked.decals);
       upload(gl,'nightWindows',baked.lights);
-      upload(gl,'fireLights',buildFireLights(atlas));
+      upload(gl,'fireLights',buildFireLights());
       S.sig.decals=dSig;st.decalsMs=performance.now()-a;
     }
     // Environmental scatter (settlement-scatter.js): the layout follows content, the two-tone
@@ -1795,16 +1805,14 @@
       bindAttrib(gl,pr,'aCol',S.buf.nightWindows,4,36,20);
       gl.drawArrays(gl.TRIANGLES,0,S.buf['nightWindows#n']/9);
     }
-    if(S.buf['fireLights#n']&&S.tex.decalAtlas){
-      const pr=S.prog.fireLight;useProgram(gl,pr);setCamera(gl,pr,r);
+    if(S.buf['fireLights#n']){
+      const pr=S.prog.fireLight,stride=FIRE_LIGHT_FLOATS*4;useProgram(gl,pr);setCamera(gl,pr,r);
       gl.uniform1f(pr.loc.uNight,nf);gl.uniform1f(pr.loc.uTime,visualCycleDay());
-      gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,S.tex.decalAtlas);gl.uniform1i(pr.loc.uAtlas,0);
-      bindAttrib(gl,pr,'aAnchor',S.buf.fireLights,3,36,0);
-      bindAttrib(gl,pr,'aCorner',S.buf.fireLights,2,36,12);
-      bindAttrib(gl,pr,'aSize',S.buf.fireLights,1,36,20);
-      bindAttrib(gl,pr,'aUV',S.buf.fireLights,2,36,24);
-      bindAttrib(gl,pr,'aSeed',S.buf.fireLights,1,36,32);
-      gl.drawArrays(gl.TRIANGLES,0,S.buf['fireLights#n']/9);
+      bindAttrib(gl,pr,'aAnchor',S.buf.fireLights,3,stride,0);
+      bindAttrib(gl,pr,'aCorner',S.buf.fireLights,2,stride,12);
+      bindAttrib(gl,pr,'aSize',S.buf.fireLights,1,stride,20);
+      bindAttrib(gl,pr,'aSeed',S.buf.fireLights,1,stride,24);
+      gl.drawArrays(gl.TRIANGLES,0,S.buf['fireLights#n']/FIRE_LIGHT_FLOATS);
     }
     gl.disable(gl.BLEND);gl.depthMask(true);
   }
@@ -2094,7 +2102,7 @@
     const p=perf(),ms=performance.now()-started;
     p.world3dNightLightMs=ms;
     const windowQuads=(S.buf['nightWindows#n']||0)/54;
-    const fireSources=(S.buf['fireLights#n']||0)/54;
+    const fireSources=(S.buf['fireLights#n']||0)/(6*FIRE_LIGHT_FLOATS);
     window.__conquerAnalytics?.measure('NIGHTLIGHT_3D',ms,{windowQuads,fireSources});
     if(!S.nightLightReported){
       S.nightLightReported=true;
