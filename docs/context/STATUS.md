@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-18 — FOSSATO-MURO: fossato dal muro selezionato (`feature/moat-from-wall`)
+
+- **Codice sul branch, non ancora unito a main.** Prima il fossato si tracciava solo a mano con lo strumento Attraversamenti (due clic per tratto).
+- `ConquerCrossings.digAlongWall(w,variant)` / `planWallMoat` (`settlement-crossings.js`): per un muro, una palizzata o un tratto costruito completato (non le tettoie) crea un fossato da 1,5U (`WIDTHS.moat`) parallelo al tratto, spostato verso l'esterno (`wallExteriorSide`) di metà spessore del tratto più metà fossato, quindi a filo della faccia esterna; `s.wallId` lega il fossato al tratto (uno per tratto). Se il tratto vicino (stesso estremo o stessa torre, mai attraverso una porta) ha già un fossato della stessa variante, i due si incontrano nel punto d'angolo delle due sponde e si concatenano (`moatChains`); angoli troppo acuti o un vicino che non resterebbe valido lasciano l'estremo libero. Stesse regole del fossato a mano: un solo terrazzo piano, acqua solo a quota 0, cantiere e costo di `add`.
+- Inspector: comando `StructureCommands.digMoat` e controllo «Fossato» (Secco / Acqua; attivo quello scavato, «Acqua» su un fossato secco lo allaga con `floodMoat`), fatto «Fossato» con variante e lunghezza; anche nel pannello legacy (`data-wall-moat`). Il tratto resta selezionato dopo lo scavo.
+- **Prove:** nuovo `qa/wall-moat-regression.cjs` PASS (faccia esterna, palizzata, raccordo all'angolo, varco della porta, tratto costruito, tettoia e cantiere rifiutati, acqua solo a quota 0); PASS drawbridge, earthworks, caserma-avamposto, cutaway-floors, multi-wells, tower-italian-machicolation, upgrades-dev, wall-patrol, wall-stairs, well-civics. Smoke in Chromium headless sul gioco vero: anello di 4 mura, tre fossati scavati (due dall'API, uno col pulsante del pannello) a 1U dalle mura e uniti negli angoli, nessun errore di pagina. Resa a schermo del fossato non controllata a vista (stesso disegno dei fossati a mano).
 ### 2026-11-17 — MIL-FIG-01: picchieri con scudo, araldo con lo stendardo (`fix/squad-pikemen-shield`)
 
 - **Codice sul branch, non ancora unito a main.** Prima, guardie (pattuglia) e picchieri (squadra) erano la stessa figura `spearman`, senza scudo, e il primo della squadra aveva lo stendardo in più della lancia.

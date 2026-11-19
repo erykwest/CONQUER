@@ -1,5 +1,13 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-18 — FOSSATO-MURO · Fossato costruibile dal muro selezionato
+
+**Implementato sul branch `feature/moat-from-wall`, non ancora unito a main.** Richiesta del product owner (18/11/2026): fossati costruibili anche selezionando muro, palizzata o tratto costruito, attaccati direttamente sul lato esterno.
+
+- [x] Comando «Fossato» (secco / d'acqua) nell'inspector di muro, palizzata e tratto costruito; fossato da 1,5U a filo del lato esterno.
+- [x] Raccordo all'angolo col fossato del tratto vicino; varco libero davanti alle porte.
+- [ ] Da decidere: fossato anche durante il cantiere del muro (oggi solo a tratto completato); larghezza diversa da 1,5U; scavo dell'intero giro di mura in un clic.
+- [ ] Le torri sporgono oltre la faccia del muro: il fossato passa sotto il loro piede agli angoli; valutare se girarci intorno.
 ## 2026-11-17 — MIL-FIG-01 · Guardie, picchieri e leva distinguibili
 
 **Picchieri con scudo implementati sul branch `fix/squad-pikemen-shield`, non ancora uniti a main.** Richiesta del product owner (17/11/2026): tre figure militari distinte.

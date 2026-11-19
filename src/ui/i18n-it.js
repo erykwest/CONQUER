@@ -119,7 +119,7 @@ export const T = {
       tier: 'Impronta', height: 'Livelli', rotation: 'Angolo', roof: 'Tetto', woodRoof: 'Tetto', roofCover: 'Copertura',
       base: 'Base', skin: 'Rivestimento', side: 'Lato esterno', cutaway: 'Spaccato',
       weapon: 'Arma', bartizan: 'Garitte', roofShape: 'Falde', civicLevel: 'Sviluppo', plaza: 'Variante', upper: 'Piano alto', hoarding: 'Ballatoio', bell: 'Campana', lookout: 'Vedetta', outpost: 'Avamposto', signalFire: 'Fuoco di segnalazione', innerRoof: 'Tetto interno',
-      wallStair: 'Scala al camminamento', wallStairPos: 'Posizione scala', wallPatrols: 'Pattuglie del giro'
+      wallStair: 'Scala al camminamento', wallStairPos: 'Posizione scala', wallPatrols: 'Pattuglie del giro', moat: 'Fossato'
     },
     words: {
       battlement: 'Merlato', machicolation: 'Caditoie', machicolationItalian: 'Caditoie all\'italiana', pitched: 'Falde', open: 'Piattaforma', pitched4: 'Falde · 4 pali', cover_shingle: 'Scandole', cover_thatch: 'Paglia', cover_turf: 'Zolle erbose',
@@ -127,16 +127,17 @@ export const T = {
       standard: 'Standard', buttress: 'Contrafforti', splayed: 'A scarpa', arcade: 'Porticato', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', innerRoofOff: 'Nessuno', innerRoofOn: 'Dentro i merli',
       none: 'Nessuna', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide · 4 falde', gable: '2 falde', hip: '4 falde con colmo', paved: 'Lastricata', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana d\'allarme',
       lookoutOff: 'Nessuna vedetta', lookoutOn: 'Vedetta · 1 soldato', outpost: 'Avamposto · 60 oro, 40 pietra, 20 legno · 4 giorni', pyre: 'Pira · 30 legno', pyreRebuild: 'Ricostruisci la pira · 30 legno',
-      stairWood: 'Scala lignea · 4 oro, 14 legno', stairStone: 'Scala lapidea · 8 oro, 22 pietra', stairPos_start: 'Inizio muro', stairPos_middle: 'Centro', stairPos_end: 'Fine muro'
+      stairWood: 'Scala lignea · 4 oro, 14 legno', stairStone: 'Scala lapidea · 8 oro, 22 pietra', stairPos_start: 'Inizio muro', stairPos_middle: 'Centro', stairPos_end: 'Fine muro',
+      moatDry: 'Fossato secco sul lato esterno', moatWater: 'Fossato d\'acqua sul lato esterno · solo a quota 0'
     },
     // Short labels shown on option buttons; the full word goes to the tooltip.
-    short: { masonry: 'Pietra', timber: 'Graticcio', battlement: 'Merli', machicolation: 'Caditoie', machicolationItalian: 'Italiane', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', innerRoofOff: '—', innerRoofOn: 'Interno', none: '—', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide', gable: '2 falde', hip: 'Colmo', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana', lookoutOff: '—', lookoutOn: 'Vedetta', outpost: 'Avamposto', pyre: 'Pira', pyreRebuild: 'Ricostruisci', stairWood: 'Lignea', stairStone: 'Lapidea', stairPos_start: 'Inizio', stairPos_middle: 'Centro', stairPos_end: 'Fine' },
+    short: { masonry: 'Pietra', timber: 'Graticcio', battlement: 'Merli', machicolation: 'Caditoie', machicolationItalian: 'Italiane', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', innerRoofOff: '—', innerRoofOn: 'Interno', none: '—', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide', gable: '2 falde', hip: 'Colmo', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana', lookoutOff: '—', lookoutOn: 'Vedetta', outpost: 'Avamposto', pyre: 'Pira', pyreRebuild: 'Ricostruisci', stairWood: 'Lignea', stairStone: 'Lapidea', stairPos_start: 'Inizio', stairPos_middle: 'Centro', stairPos_end: 'Fine', moatDry: 'Secco', moatWater: 'Acqua' },
     flip: 'Inverti', on: 'Attivo', off: 'Spento', toggles: 'Opzioni',
     rotateLeft: 'Ruota −15°', rotateRight: 'Ruota +15°', rotateFlip: 'Gira di 180°',
     facts: {
       household: 'Capienza', residents: 'Uomini · donne · bambini', rooms: 'Stanze · capacità',
       variant: 'Variante', length: 'Lunghezza', subtower: 'Agganciata a', masonry: 'Muratura', square: 'Piazza del pozzo', bellRange: 'Campana · udito',
-      lookout: 'Vedetta', outpost: 'Avamposto', signalFire: 'Fuoco di segnalazione', wallRing: 'Giro di mura', wallPatrolNeed: 'Pattuglie',
+      lookout: 'Vedetta', outpost: 'Avamposto', signalFire: 'Fuoco di segnalazione', wallRing: 'Giro di mura', moat: 'Fossato', wallPatrolNeed: 'Pattuglie',
       size: 'Dimensione', storageCapacity: 'Capienza', storedGoods: 'In deposito',
       food: 'Cibo', wood: 'Legno', stone: 'Pietra', clay: 'Argilla', metal: 'Metallo', equipment: 'Equipaggiamento', luxury: 'Lusso'
     },
@@ -146,7 +147,11 @@ export const T = {
     reasons: {
       'under construction': 'Non disponibile durante il cantiere.',
       'needs an isolated tower (no walls, gates or attached towers)': 'Serve una torre isolata: senza mura, porte o torri agganciate.',
-      'must stand outside the White Zone': 'La torre deve trovarsi fuori dalla White Zone.'
+      'must stand outside the White Zone': 'La torre deve trovarsi fuori dalla White Zone.',
+      'Water-filled moats require ground level 0': 'Il fossato d\'acqua si scava solo a quota 0.',
+      'Moat must follow one flat terrace': 'Il fossato deve correre su un unico terrazzo piano, senza pendii.',
+      'Both endpoints must be inside the build area': 'Il fossato uscirebbe dall\'area edificabile.',
+      'A lean-to stands inside the walls: dig the moat along its curtain wall': 'La tettoia sta dentro le mura: scava il fossato lungo il muro.'
     },
     disabledHint: 'Non disponibile ora',
     demolishConfirm: name => 'Demolire «' + name + '»? L\'operazione non si può annullare.',
@@ -243,6 +248,7 @@ export const T = {
     roofCover: 'Manto della long house: scandole, paglia o zolle erbose; il fumo del focolare esce dallo sfiatatoio nel colmo.',
     base: 'A scarpa: alta 0,5. Contrafforti: da quota 0 a H1. Le fondamenta seguono l\'impronta.',
     skin: { wall: 'Caditoie non disponibili sui muri T1. Ballatoio: galleria lignea al posto del coronamento.', built: 'Porticato: il piano terra interno si apre sotto gli archi e il piano alto resta sopraelevato. Sotto il portico solo stalle, officina degli armaioli e magazzino.' },
+    moat: 'Scava un fossato largo 1,5U attaccato al lato esterno del tratto (quello scelto con «Lato esterno»). Se il tratto vicino ha già un fossato, i due si uniscono all\'angolo; davanti alle porte resta il varco. Secco su qualsiasi terrazzo piano, d\'acqua solo a quota 0; un fossato secco già scavato si allaga da qui.',
     side: { wall: 'Decide da che parte stanno merlatura o ballatoio.', palisade: 'Camminamento e terrapieno vengono generati verso l\'interno.', built: 'Finestre esterne solo al piano alto; il portico segue il lato opposto.' },
     cutaway: 'Apre la facciata verso la camera e mostra le stanze.',
     weapon: 'Solo su torri T2 senza tetto a falde né ballatoio.',
