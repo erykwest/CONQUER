@@ -1,5 +1,9 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-19 — UI-PROFILE-01 · Pannello Settlement nel PROFILE
+
+- [x] Pannello destro «Settlement» rimosso; contenuti in PROFILE › GENERALE e nuova tab GOVERNO.
+- [ ] Tradurre in italiano «Save settlement» e la nota di autosave.
 ### 2026-11-18 — TORCH-STREAK-261118 · Fasci verticali delle torce
 
 **FIX SU BRANCH `fix/torch-artifact`.** Dettagli in [STATUS](STATUS.md).

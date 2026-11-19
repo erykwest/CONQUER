@@ -1,5 +1,10 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-19 — UI-PROFILE-01: pannello «Settlement» di destra assorbito dal PROFILE (`feature/settlement-panel-into-profile`)
+
+- Richiesta del product owner: smantellare il pannello destro `#policy` e riorganizzarne le informazioni nel menu principale (PROFILE).
+- GENERALE: dati della partita (insediamento, seed, bioma, giorno, cella), selettore bioma di test, parametri della mappa, salvataggio. Nuova tab GOVERNO: tasse, razioni, muratura delle nuove case private, forze nobiliari (recluta cavaliere, carovane), riepilogo economia. Gli id DOM restano invariati, quindi `renderUI()`, economia e persistenza non cambiano; tolte le regole CSS `#policy`.
+- **Prove:** PASS biome-selector; verificato in Chromium headless: pannello assente, GENERALE e GOVERNO popolati, nessun errore di pagina.
 ### 2026-11-18 — TORCH-STREAK-261118: niente fasci verticali dalle torce (branch `fix/torch-artifact`)
 
 - Causa: l'alone delle torce e dei bracieri (programma `fireLight` di settlement-world3d.js) campionava la tessera `__glow` dell'atlante delle decal, con mipmap e UV a 1 px dalle tessere vicine (drappo del Mastio, vetri). Il bordo del quadrato si colorava della tessera accanto: una riga verticale arancione, alta quanto l'alone, a lato di ogni fuoco, tanto più lunga quanto più vicina la camera.
