@@ -1,5 +1,18 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-19 — GAMESITE-P0: sito pubblico e Guest Builder (branch `gamesite`, NON MERGE)
+
+- **Implementazione sul branch, non su main e non pubblicata:** nuove pagine statiche inglesi sotto `gamesite/` (Home, The Game, Media, Devlog, Follow, Account, Play, About, Privacy, Contact, 404), design system responsive e CTA verso `index.html?launch=1`.
+- **Guest singleplayer:** `src/settlement-game-entry.js/css` aggiunge ingresso Guest/account, scelta seed e bioma, lista salvataggi per slot e controllo WebGL2; `src/settlement-app-bootstrap.js` avvia il Builder solo dopo la scelta. `src/settlement-app-persistence.js` usa una chiave locale distinta per slot Guest e salta `initSupabase`; `src/settlement-app-calendar-ui.js` richiede conferma prima di sostituire una mappa Guest.
+- **Identita unica (implementazione iniziale same-origin):** sito e game impiegano lo stesso Supabase Auth/progetto/publishable key per email magic-link; nessun account Guest. Questa soluzione e verificabile solo quando sito e Builder condividono origine; il SSO fra domini separati richiede un contratto aggiuntivo e non e dichiarato completato.
+- **Follow:** endpoint serverless `api/gamesite-follow.js`, `api/gamesite-confirm.js`, `api/gamesite-unsubscribe.js` con token random hash, conferma/withdraw a doppio passaggio e mailing Resend; schema SQL privato `supabase/gamesite-follow-schema.sql`. Richiede migrazione manuale, chiavi server e mittente verificato, non ancora configurati.
+- **Misure / SEO:** `api/gamesite-metric.js` conteggia solo eventi aggregati, senza cookie/ID; `api/gamesite-sitemap.js` richiede `PUBLIC_SITE_URL`. Nessun dominio definitivo o sitemap in produzione confermati.
+- **Media:** asset SVG originali del repository e preview runtime caricata a richiesta. Screenshot/trailer del gioco non ancora verificati; non vengono spacciati asset di sviluppo per screenshot.
+- **Limitazioni P0 / gate release:** mancano credenziali Follow e Auth redirect allowlist, titolare/informativa GDPR conclusiva, screenshot approvati, smoke test WebGL2 e save/load in un browser vero, validazione runtime account e deployment indipendenti, verifiche performance e accessibilita. La branch e **work in progress**, NON production-ready.
+- **QA:** aggiunti `qa/gamesite-regression.mjs` e `.github/workflows/gamesite.yml` per sintassi, documenti, sicurezza basica e invariante guest. CI da osservare; test browser e invio email reali NON ESEGUITI.
+
+
+
 ### 2026-11-18 — MIL-WALL-01 · pattuglie sul camminamento delle palizzate W2 (branch `fix/palisade-w2-patrol`, NON MERGE)
 
 - **CAUSA:** il cammino di ronda (`settlement-wallwalk.js`) include già le palizzate T2+, ma la loro corsia è sul camminamento dietro i pali (`palisadePatrolSurface().offset`), non sulla linea di mezzo. Dove due palizzate si incontrano testa a testa senza torre (un angolo) le due corsie finivano a ~0,2U l'una dall'altra e non si univano: un recinto W2 diventava tanti tratti aperti invece di un giro, e le pattuglie per giro non lo percorrevano. Le mura di pietra (corsia sulla linea di mezzo) e le palizzate tra torri/porte non avevano il problema.
