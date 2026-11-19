@@ -306,6 +306,44 @@ const StructureCommands=(()=>{
     return true;
   }
 
+  // ---------- upgrades: buildings that grow out of another one ----------
+  // Town hall, guild hall and bargello belong to a well; civic annexes belong to their parent.
+  // They are started from the parent's inspector, not from the main build palette.
+  function structureUpgrades(s){
+    if(s.type==='well'&&typeof WELL_CIVIC_TYPES!=='undefined'){
+      const founded=!!State.village?.founded;
+      return WELL_CIVIC_TYPES.map(type=>{
+        const owned=State.structures.filter(o=>o.type===type&&o.wellId===s.id&&!o.destroyed);
+        const otherGuild=type==='guild'&&State.structures.some(o=>o.type==='guild'&&!o.destroyed);
+        const reason=!founded?'notFounded':owned.length?'taken':otherGuild?'guildOne':null;
+        return{key:type,kind:'wellCivic',count:owned.length,max:1,reason,children:owned.map(o=>o.id)};
+      });
+    }
+    const catalog=typeof CIVIC_ANNEX_CATALOG!=='undefined'&&CIVIC_ANNEX_CATALOG[s.type];
+    if(!catalog||s.auto)return null;
+    const children=civicAnnexChildren(s.id);
+    return Object.entries(catalog).filter(([,spec])=>!spec.intrinsic).map(([key,spec])=>{
+      const owned=children.filter(c=>c.annexType===key);
+      const reason=civicLevel(s)<spec.level?'level':owned.length>=spec.max?'full':null;
+      return{key,kind:'annex',level:spec.level,size:spec.w+'×'+spec.h+'U',count:owned.length,max:spec.max,reason,children:owned.map(o=>o.id)};
+    });
+  }
+  function startUpgrade(id,key){
+    const target=find(id);if(!target||underConstruction(target))return false;
+    const entry=(structureUpgrades(target)||[]).find(u=>u.key===key);
+    if(!entry||entry.reason)return false;
+    let ok=false;
+    if(entry.kind==='wellCivic'){
+      const spec={type:key,shape:'civic',wellId:target.id};
+      setTool({kind:'civic',placementSpec:spec,label:structureLabel(spec)+' · '+BUILD_DAYS[key]+'d · '+
+        costText(constructionCost({...spec,masonryMaterial:State.buildMasonryMaterial}))});
+      ok=true;
+    }else ok=!!startCivicAnnexPlacement(target,key);
+    // Placement takes over: close the inspector so the build card shows.
+    if(ok){State.selectedId=null;renderFunctionPanel();draw()}
+    return ok;
+  }
+
   // ---------- inspector descriptor ----------
   const choice=(key,cmd,options,current,extra={})=>({key,cmd,options:options.map(o=>({...o,active:o.value===current})),...extra});
   function describeStructure(id){
@@ -356,6 +394,7 @@ const StructureCommands=(()=>{
       const founding=s.id===State.village.wellId,center=isVillageCenterWell(s);
       d.well={founding,center,founded:!!State.village.founded,name:s.wellName||'',villageName:State.village.name||'',
         canCenter:!!State.village.founded&&!(center&&founding),mainRoad:founding||wellMainRoads(s).length>0};
+      d.upgrades=structureUpgrades(s);
       return d;
     }
     if(['moat','bridge'].includes(s.type)){
@@ -499,11 +538,12 @@ const StructureCommands=(()=>{
       const bays=window.ConquerSiege?.bays?.(s);
       if(bays)d.bays=bays.map(b=>({hp:Math.ceil(b.hp),max:Math.round(b.max)}));
     }
+    d.upgrades=structureUpgrades(s);
     return d;
   }
 
   const commands={setConstructionPriority,setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setLonghouseCover,setGateRoof,setGateUpper,setSkin,setWallStair,setWallStairPos,toggleCutaway,stepCutawayFloor,flipSide,
-    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerInnerRoof,setTowerLookout,setTowerOutpost,setTowerSignalFire,setWallPatrols,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,
+    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerInnerRoof,setTowerLookout,setTowerOutpost,setTowerSignalFire,setWallPatrols,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,startUpgrade,
     describeStructure};
   for(const name of ['setTier','setHeight','setKeepFloorPlan','setTowerBase','setTowerRoof','setHoarding','setWoodRoof','setGateRoof','setGateUpper','setSkin','setTowerWeapon','setTowerRoofShape','setTowerBartizan','setTowerBell','setTowerInnerRoof','setCivicLevel','setPlazaVariant']){
     const execute=commands[name];

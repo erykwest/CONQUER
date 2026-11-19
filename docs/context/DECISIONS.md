@@ -1,5 +1,23 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-WEB-GUEST-261119 — Guest singleplayer, splash seed e login unico opzionale (19/11/2026)
+
+- **DECISO dal product owner:** il login al sito/gioco e **facoltativo**; esiste una sola identita persistente CONQUER per l'utente registrato, usata su entrambi i client.
+- **DECISO:** `Play as Guest` NON e un ingresso anonimo nel multiplayer. E una nuova sessione **singleplayer del Builder**, che genera un territorio tramite **random seed**. Va sviluppato un **nuovo splash screen** per impostare i parametri di partita prima della generazione.
+- **CONTRATTO:** `Play in Browser` distingue `Guest` da `Sign in`. Un account autenticato non implica partecipazione a una campagna: permessi multiplayer separati per campagna/feudo secondo `MULTIPLAYER-SERVER-SCOPE.md` e `REMOTE-CONTROL-SCOPE.md`. Lobby pubblica futura: solo statistiche aggregate, senza dati privati.
+- **PROPOSTO/DA VALIDARE:** seed manuale, pulsante `Reroll`, bioma selezionabile, difficolta soltanto se supportata, slot locali distinti, importazione Guest→Account consensuale, Auth centralizzata con Supabase gia presente nel runtime, strategia sessione cross-origin e cloud saves. Nessuna di queste modalita e dichiarata implementata.
+- **STATO TECNICO:** `src/settlement-app-bootstrap.js` avvia direttamente `loadLocal()` e `initSupabase()`; `index.html` espone `newMapBtn`; `src/settlement-app-persistence.js` contiene salvataggi locali e un'integrazione Supabase session/cloud. Il nuovo splash va sviluppato e verificato; nessuna modifica a runtime o database in questa PR.
+- **SRS aggiornata:** [WEBSITE-SRS.md](../WEBSITE-SRS.md) v0.3. Questa decisione integra D-WEB-261119 senza modificare i contratti del multiplayer.
+
+
+## D-WEB-261119 — Sito pubblico CONQUER: direzione confermata (19/11/2026)
+
+- **DECISO dal product owner:** identita visuale del sito medievale sobria e moderna; contenuti pubblici della prima release solo in inglese; accesso al prototipo **giocabile direttamente nel browser** come CTA principale.
+- **CONTRATTO DI PRODOTTO:** il sito marketing e il runtime del gioco restano componenti distinti; niente riscrittura del motore, nessuna build interna presentata come giocabile al pubblico. Il gioco attuale richiede WebGL2 (D-RENDER-3D-261111), quindi sono obbligatori gate di compatibilita e QA prima della pubblicazione.
+- **PROPOSTO (non deciso):** sito statico, deploy separato dal runtime, Astro/Vercel e newsletter gestita; repo dedicato o monorepo da scegliere dopo audit W-M0.
+- **STATO:** solo specifica/documentazione, nessun sito nuovo ne build giocabile pubblicata da questa decisione. Specifica completa: [WEBSITE-SRS.md](../WEBSITE-SRS.md), versione 0.3.
+
+
 ## D-MIL-FIG-261117 — Chi combatte e come si riconosce (17/11/2026)
 
 - **DECISO dal product owner (17/11/2026), sostituisce «L3/L4 non combattono mai» dello stesso giorno:** ruolo di combattimento dei maschi adulti per classe della casa: **L1 fanti di leva** (lancia e scudo), **L2 arcieri di leva** (arco), **L3 uomini d'arme**, **L4 cavalieri**. Solo la leva (L1/L2) risponde all'allarme e alla leva straordinaria.
