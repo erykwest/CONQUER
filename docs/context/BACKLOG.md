@@ -7,6 +7,59 @@
 - [x] Regola unica `structureNeedsAccessRoad` con audit dei tipi piazzabili in `qa/access-roads-regression.cjs`: un nuovo tipo di edificio deve essere collegato o dichiarato esente.
 - [ ] Miniere e cave su pendio: se il bordo dell'impronta e i 3U attorno sono pendio o montagna (vietati alle strade) la ricerca del percorso fallisce e la strada non nasce; verificarlo in partita su mappe montuose.
 
+### 2026-11-18 — PATROL-ROUTE-261118 · Regressione del pathfinding delle pattuglie
+
+**CORRETTO SU BRANCH `fix/patrol-pathfinding`, NON MERGE.**
+- [x] Un ostile entro 12 U ma irraggiungibile non azzera più la meta del giro: la pattuglia non salta i waypoint.
+- [ ] Da valutare: il nemico addossato a un edificio è irraggiungibile perché `nearestFree` parte da un punto bloccato; avvicinarsi alla cella libera più vicina permetterebbe di ingaggiarlo.
+- [ ] Osservato nel banco di prova, uguale prima e dopo la #258: una pattuglia che parte nello stretto corridoio fra due cinte (pozzo nel mezzo) non arriva al bordo della White Zone.
+
+## 2026-11-19 — UI-PROFILE-01 · Pannello Settlement nel PROFILE
+
+- [x] Pannello destro «Settlement» rimosso; contenuti in PROFILE › GENERALE e nuova tab GOVERNO.
+- [ ] Tradurre in italiano «Save settlement» e la nota di autosave.
+### 2026-11-18 — TORCH-STREAK-261118 · Fasci verticali delle torce
+
+**FIX SU BRANCH `fix/torch-artifact`.** Dettagli in [STATUS](STATUS.md).
+- [x] Alone di torce e bracieri procedurale nello shader: nessuna riga verticale a nessuna distanza.
+- [x] Margine trasparente attorno alla tessera `__glow` degli aloni delle finestre.
+
+### 2026-11-18 — CARTS-ROADS-261118 · Carri e messaggeri nel verso giusto, sulle strade
+
+**IMPLEMENTATO SU BRANCH `fix/carts-roads`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Convogli signorili di ritorno orientati verso casa, carro di testa davanti.
+- [x] Messaggero di ritorno orientato nel verso di marcia.
+- [x] Messaggero sulle strade anche quando il grafo pedonale rifiuta il percorso.
+- [ ] Salvataggi con un messaggero già in viaggio su un percorso in linea retta: lo tiene fino all'arrivo (non ricalcolato).
+
+## 2026-11-18 — UI-UPG-01 · Ampliamenti dall'ispettore
+
+**Implementato sul branch `feature/upgrades-in-inspector`, non ancora unito a main.**
+
+- [x] Municipio, Gilda e Bargello fuori dal pannello Costruisci; si avviano dall'ispettore del pozzo.
+- [x] Annessi civici (chiesa, taverna, mercato, orto di corte) nell'ispettore UI v2 (prima solo nel pannello legacy).
+- [ ] I futuri ampliamenti (Lavatoio, Presidio antincendio) vanno aggiunti a `structureUpgrades`, non al Builder.
+
+## 2026-11-17 — MIL-FIG-01 · Guardie, picchieri e leva distinguibili
+
+**Picchieri con scudo implementati sul branch `fix/squad-pikemen-shield`, non ancora uniti a main.** Richiesta del product owner (17/11/2026): tre figure militari distinte.
+
+- [x] Picchieri (squadra da 5): scudo del regno sul braccio sinistro (nuovo tipo di figura `pikeman`).
+- [x] Lancia nella mano **destra del soldato**: la figura guarda chi osserva, quindi la lancia è sul lato sinistro dello schermo e lo scudo sul destro. Vale per tutte le figure con lancia (guardie, picchieri, leva, ostili).
+- [x] Lo stendardo lo porta solo l'**araldo del reggimento** (il primo della squadra, figura `herald`), **al posto** della lancia, con lo scudo. Stendardo 3 volte più grande della vecchia bandierina di squadra (`HERALD_STANDARD_SIZE`).
+- [ ] Lo stendardo segue lo zoom della vista limitato a 0,55–1,45, non la scala della figura: da lontano resta molto più grande del soldato, da vicino più piccolo. Valutare se legarlo a `militaryScale()`.
+- [ ] Guardie (pattuglia da 2): lancia senza scudo; di notte il portatorcia tiene **anche** la lancia (oggi la torcia la sostituisce, figura `unarmed`).
+- [x] Leva (popolani all'allarme o in leva straordinaria): abiti di classe del popolano (anche quelli di stagione) e cappuccio araldico (`levyHood`, partito nei due colori dello stemma); lancia e scudo del regno (L1), oppure arco (L2, arcieri di leva).
+- [x] Ruolo per classe ([D-MIL-FIG-261117](DECISIONS.md#d-mil-fig-261117--chi-combatte-e-come-si-riconosce-17112026)): L1 fanti di leva, L2 arcieri di leva (arco per gli artigiani, non più uno su tre a caso), L3 uomini d'arme, L4 cavalieri (`combatRole`).
+- [x] Uomo d'arme L3 nel Lab (pulsante «Uomo d'arme»): gonnello con lo stemma (variante F); elmo dei cavalieri e arma a due mani (alabarda, ascia, martello, spada) casuali per persona; il gruppo «Uomo d'arme (L3)» del Lab può fissarli.
+- [ ] L'uomo d'arme non ha ancora animazioni di attacco proprie (in combattimento resta in guardia).
+- [x] Cavalieri: emblema (cimiero) sull'elmo e mantello, a cavallo e a piedi; a piedi spada nella mano destra e scudo.
+- [x] Cimiero araldico: torciglio, mantellino e figura (ali, corna di cervo, corna, aquila, corona) casuale per cavaliere; il Lab può fissarla (tendina «Cimiero»).
+- [ ] Valutare se legare la figura del cimiero allo stemma della casata invece che al caso.
+- [x] Cavalieri smontati nel torneo (prima figura generica `swordsman`) e nel campo di addestramento.
+- [ ] Definire come vengono chiamati in campo uomini d'arme L3 e cavalieri L4 (in attesa del product owner); oggi all'allarme si riparano.
+- [ ] Statistiche dell'uomo d'arme fra fante e cavaliere (proposta: 14 PV, armatura 2, combattimento 3).
+
 ### 2026-11-17 — ROOM-ANIM · Animazioni per stanze
 
 **Sala del trono e Sala comune IMPLEMENTATE SU BRANCH `feat/throne-hall-court`, NON MERGE.**
@@ -33,7 +86,8 @@
 
 - **FATTO SUL BRANCH (17/11):** rimossi tutti i fallback 2.5D (opt-out del renderer, terreno Canvas, WebGPU, cantieri e ghost 2.5D di ogni edificio, rami `!World3D` dei moduli, funzioni di pittura non più chiamate, strumento «Prerender + test», workflow con `?renderer=canvas2d`).
 - **FATTO (17/11):** drappo del Mastio come decal 3D, finestra e drappo del Mastio di legno in 3D.
-- **APERTO (17/11):** tende di accampamento e fuorilegge dipinte con `ConquerMesh3D.drawMeshes` sul Canvas (da passare al front pass 3D); contatori `cache.*` della telemetria ormai sempre a zero; cantieri di industrie/eventi/moli senza assemblaggio mostrano solo il volume dell'impronta.
+- **APERTO (17/11):** tende di accampamento e fuorilegge dipinte con `ConquerMesh3D.drawMeshes` sul Canvas (da passare al front pass 3D); contatori `cache.*` della telemetria ormai sempre a zero.
+- **FATTO SU BRANCH `fix/construction-ghost` (18/11):** cantieri di industrie/eventi/moli/depositi/pozzi/rampe senza assemblaggio mostrano l'edificio finito in trasparenza invece del solo volume dell'impronta.
 - **SU BRANCH `retire-25d-renderer`:** edifici, torri, mura, porte ed esterni delle stanze solo in World 3D; Asset Lab con controllo `renderer-3d`.
 - **APERTO:** stato «danneggiata» senza segni visibili in 3D (23 avvisi `danno-visibile`); drappo del Mastio come decal 3D; eliminare le funzioni di pittura 2.5D non più chiamate (castle, castle-structures, room-exterior, cutaway-furniture, architecture finestre/portali); ritirare o portare in 3D lo strumento DEV «Prerender + test»; workflow browser che usano `?renderer=canvas2d` (webgpu-smoke, clay-browser) da riallineare al contratto «senza WebGL2 nessun edificio».
 
@@ -115,6 +169,7 @@
 - [ ] Porte delle torri d'angolo per le altre forme (tonde, a D): da definire.
 - [x] Rimuovi foresta rispetta Fast build (istantaneo) e Free build (senza salari) del menu DEV.
 - [x] Cutaway piano per piano: i merli (e caditoie, tetto interno, braciere) spariscono quando il piano in vista non è l'ultimo.
+
 ## 2026-11-16 — UI-ALERTS-01 · Avvisi in gioco e diario degli eventi
 
 **IMPLEMENTATO SU BRANCH `feature/alert-feed`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
@@ -191,6 +246,7 @@
 - [x] Assegnazione +/− per giro da Militare › Pattuglie e guarnigioni e dall'ispettore del muro (legacy e UI v2); motivo e arruolamento in linea se mancano soldati.
 - [x] Salvataggio robusto a brecce e unioni di giri.
 - [x] Cache dei posti arcieri per torre (`drawCastleSoldiers` ~9× più veloce).
+- [x] Palizzate W2 (camminamento): pattuglie sul camminamento anche negli angoli senza torre — le corsie spostate dietro i pali si uniscono a spigolo (branch `fix/palisade-w2-patrol`, PR verso main).
 - [ ] Combattimento: le pattuglie delle mura sono figure disegnate, non unità di `ConquerCombat`; non avvistano né combattono (le vedette e le pattuglie White Zone sì).
 - [ ] Torce notturne per le pattuglie delle mura, come per le pattuglie White Zone.
 
