@@ -72,7 +72,8 @@
 
 - **FATTO SUL BRANCH (17/11):** rimossi tutti i fallback 2.5D (opt-out del renderer, terreno Canvas, WebGPU, cantieri e ghost 2.5D di ogni edificio, rami `!World3D` dei moduli, funzioni di pittura non più chiamate, strumento «Prerender + test», workflow con `?renderer=canvas2d`).
 - **FATTO (17/11):** drappo del Mastio come decal 3D, finestra e drappo del Mastio di legno in 3D.
-- **APERTO (17/11):** tende di accampamento e fuorilegge dipinte con `ConquerMesh3D.drawMeshes` sul Canvas (da passare al front pass 3D); contatori `cache.*` della telemetria ormai sempre a zero; cantieri di industrie/eventi/moli senza assemblaggio mostrano solo il volume dell'impronta.
+- **APERTO (17/11):** tende di accampamento e fuorilegge dipinte con `ConquerMesh3D.drawMeshes` sul Canvas (da passare al front pass 3D); contatori `cache.*` della telemetria ormai sempre a zero.
+- **FATTO SU BRANCH `fix/construction-ghost` (18/11):** cantieri di industrie/eventi/moli/depositi/pozzi/rampe senza assemblaggio mostrano l'edificio finito in trasparenza invece del solo volume dell'impronta.
 - **SU BRANCH `retire-25d-renderer`:** edifici, torri, mura, porte ed esterni delle stanze solo in World 3D; Asset Lab con controllo `renderer-3d`.
 - **APERTO:** stato «danneggiata» senza segni visibili in 3D (23 avvisi `danno-visibile`); drappo del Mastio come decal 3D; eliminare le funzioni di pittura 2.5D non più chiamate (castle, castle-structures, room-exterior, cutaway-furniture, architecture finestre/portali); ritirare o portare in 3D lo strumento DEV «Prerender + test»; workflow browser che usano `?renderer=canvas2d` (webgpu-smoke, clay-browser) da riallineare al contratto «senza WebGL2 nessun edificio».
 

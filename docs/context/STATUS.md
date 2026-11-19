@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-18 — Ghost dei cantieri (branch `fix/construction-ghost`, NON MERGE)
+
+- **CAUSA:** con D-RENDER-3D-261111 i corpi 2.5D in trasparenza dei cantieri sono stati tolti; `drawStructure` disegnava `ConquerAssembly` o, per i tipi senza assemblaggio, solo `drawPlacementVolume` (anelli di contatto, base e cima): un ghost vuoto. World 3D salta gli edifici in cantiere, quindi nessuna geometria.
+- **CODICE:** `settlement-world3d.js` estrae il corpo del ciclo di `buildBuildings` in `addStructure(m,s,winter)` e esporta `finishedMesh(s)` (stesso builder, record del cantiere messo da parte, colori come nel buffer degli edifici). `settlement-render.js`: `drawSiteGhost` disegna quella mesh con `ConquerMesh3D.drawCached` ad alpha `SITE_GHOST_ALPHA` 0,42 (mesh in cache per `structureVisualKey`, stagione e palette); il volume dell'impronta resta solo se non c'è mesh. Cantieri assemblati, ghost di piazzamento ed edifici finiti invariati.
+- **VERIFICA VISIVA:** stage `index.html?assetlab=1` headless (Chromium 1228, WebGL2) prima/dopo/finito/inizio su mulino a vento, cava, campo dei boscaioli, miniera, deposito, pozzo, palco degli eventi, rampa: prima solo il contorno, dopo l'edificio in trasparenza; chiesa (assemblata) invariata. Lo stage del Lab copre solo le varianti di fortificazione (tutte assemblate): l'audit non cambia.
+- **PROVE LOCALI PASS:** nuova `qa/construction-ghost-regression.cjs`; `construction-assembly`, `construction-props`, `render-cache-keys`, `builder-placement`, `paused-render`, `combat-render`, `construction-completion`, `mills3d`.
+
 ### 2026-11-19 — UI-PROFILE-01: pannello «Settlement» di destra assorbito dal PROFILE (`feature/settlement-panel-into-profile`)
 
 - Richiesta del product owner: smantellare il pannello destro `#policy` e riorganizzarne le informazioni nel menu principale (PROFILE).

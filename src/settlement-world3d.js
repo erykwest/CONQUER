@@ -639,27 +639,49 @@
     window.ConquerCoast?.addToBuilder(m);
     for(const s of State.structures){
       if(underConstruction(s))continue;
-      // Palisades, timber towers and timber gates: Blender models and stakes (settlement-wood3d.js).
-      if(window.ConquerWood3D?.addToBuilder(m,s))continue;
-      if(window.ConquerEvents3D?.is(s))window.ConquerEvents3D.addToBuilder(m,s);   // event venues and their setups
-      else if(window.ConquerPier?.is(s))window.ConquerPier.addToBuilder(m,s);      // timber pier over the sea
-      else if(window.ConquerQuay?.is(s))window.ConquerQuay.addToBuilder(m,s);      // stone quay
-      else if(window.ConquerStorageYard?.is(s))window.ConquerStorageYard.addToBuilder(m,s);
-      else if(window.ConquerSlopeways?.is(s))window.ConquerSlopeways.addToBuilder(m,s);  // ramp / stairway
-      else if(isCivic(s))withStructureVisualMaterial(s,()=>addCivic(m,s,winter));
-      else if(isCivicAnnex(s))withStructureVisualMaterial(s,()=>addCivicAnnex(m,s,winter));
-      else if(window.ConquerIndustries?.is(s)){
-        const def=ConquerIndustries.definition(s),g=Number.isFinite(s.groundZ)?s.groundZ:ConquerIndustries.groundLevel(s);
-        if(!window.ConquerIndustries3D?.addToBuilder(m,s,g))m.prism(ConquerIndustries.footprint(s),g,g+.35,def.color,def.edge,def.edge);
-      }else if(s.type==='well')withStructureVisualMaterial(s,()=>{
-        const g=terrainElevation(s);
-        const stone=hex=>window.ConquerStoneColor?.shade(hex)||hex;
-         m.prism(rectWorldPoints(s.x,s.y,WELL_PLAZA_SIZE,WELL_PLAZA_SIZE,0),g,g+.055,stone('#8d816e'),stone('#655b4f'),stone('#74695a'));
-        m.prism(circleWorldPoints(s.x,s.y,.62,20),g+.055,g+.42,stone('#84796d'),stone('#4e4740'),stone('#5d554d'));
-        m.face(circleWorldPoints(s.x,s.y,.36,16).map(p=>({x:p.x,y:p.y,z:g+.425})),'#172023');
-      });
+      addStructure(m,s,winter);
     }
     return new Float32Array(m.tris);
+  }
+  // One finished structure of the buildings buffer (everything but houses, castle volumes and roads).
+  function addStructure(m,s,winter){
+    // Palisades, timber towers and timber gates: Blender models and stakes (settlement-wood3d.js).
+    if(window.ConquerWood3D?.addToBuilder(m,s))return;
+    if(window.ConquerEvents3D?.is(s))window.ConquerEvents3D.addToBuilder(m,s);   // event venues and their setups
+    else if(window.ConquerPier?.is(s))window.ConquerPier.addToBuilder(m,s);      // timber pier over the sea
+    else if(window.ConquerQuay?.is(s))window.ConquerQuay.addToBuilder(m,s);      // stone quay
+    else if(window.ConquerStorageYard?.is(s))window.ConquerStorageYard.addToBuilder(m,s);
+    else if(window.ConquerSlopeways?.is(s))window.ConquerSlopeways.addToBuilder(m,s);  // ramp / stairway
+    else if(isCivic(s))withStructureVisualMaterial(s,()=>addCivic(m,s,winter));
+    else if(isCivicAnnex(s))withStructureVisualMaterial(s,()=>addCivicAnnex(m,s,winter));
+    else if(window.ConquerIndustries?.is(s)){
+      const def=ConquerIndustries.definition(s),g=Number.isFinite(s.groundZ)?s.groundZ:ConquerIndustries.groundLevel(s);
+      if(!window.ConquerIndustries3D?.addToBuilder(m,s,g))m.prism(ConquerIndustries.footprint(s),g,g+.35,def.color,def.edge,def.edge);
+    }else if(s.type==='well')withStructureVisualMaterial(s,()=>{
+      const g=terrainElevation(s);
+      const stone=hex=>window.ConquerStoneColor?.shade(hex)||hex;
+       m.prism(rectWorldPoints(s.x,s.y,WELL_PLAZA_SIZE,WELL_PLAZA_SIZE,0),g,g+.055,stone('#8d816e'),stone('#655b4f'),stone('#74695a'));
+      m.prism(circleWorldPoints(s.x,s.y,.62,20),g+.055,g+.42,stone('#84796d'),stone('#4e4740'),stone('#5d554d'));
+      m.face(circleWorldPoints(s.x,s.y,.36,16).map(p=>({x:p.x,y:p.y,z:g+.425})),'#172023');
+    });
+  }
+  // The finished building of a site that has no piece-by-piece assembly, as a painter mesh
+  // {pos, col (CSS hex, already shaded like the buildings buffer), flat}: the site draws it as
+  // its translucent ghost (drawStructure). The site record is set aside meanwhile, as for the
+  // assembly sources: the builders describe the finished building. null: nothing to show.
+  function finishedMesh(s){
+    if(!s)return null;
+    const m=meshBuilder(true),site=s.construction;
+    if(site)delete s.construction;
+    try{addStructure(m,s,State.season==='winter')}
+    finally{if(site)s.construction=site}
+    const t=m.tris,n=t.length/18;if(!n)return null;
+    const pos=new Array(n*9),col=new Array(n),hex=c=>Math.max(0,Math.min(255,Math.round(c*255))).toString(16).padStart(2,'0');
+    for(let i=0;i<n;i++){
+      for(let k=0;k<3;k++){const o=i*18+k*6;pos[i*9+k*3]=t[o];pos[i*9+k*3+1]=t[o+1];pos[i*9+k*3+2]=t[o+2]}
+      col[i]='#'+hex(t[i*18+3])+hex(t[i*18+4])+hex(t[i*18+5]);
+    }
+    return{pos,col,flat:true};
   }
   // One urban house (an urbanHouseGeometry entry) into a mesh builder. Builders may offer
   // tag(kind) to learn what the next faces are (body / upper / beam / gable / roof): the
@@ -2179,7 +2201,7 @@
   }
   window.ConquerWorld3D={active,supported,drawBack,drawFront,
     drawNightLights3D,drawEmissive,finishFrame,
-    pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,addHouse,addOutbuilding,figure,screenAxis,prewarmFigures,_setFiguresForTest:on=>{figuresOn=!!on},FIGURE_CARD_U:SOLDIER_SIZE_U,FIGURE_FEET:SOLDIER_FEET,
+    pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,addHouse,addOutbuilding,finishedMesh,figure,screenAxis,prewarmFigures,_setFiguresForTest:on=>{figuresOn=!!on},FIGURE_CARD_U:SOLDIER_SIZE_U,FIGURE_FEET:SOLDIER_FEET,
     atlasCanvas:()=>soldierAtlas.canvas,frameFigures:()=>(S.frameFigures||[]).map(f=>({key:f.key||f.type,p:f.p,z:f.z,mirror:f.mirror,span:f.span||1,ox:f.ox||0,id:f.id,capsule:f.capsule||null})),atlasStats:()=>({tiles:soldierAtlas.next,capacity:FIG_COLS*FIG_COLS,resets:soldierAtlas.resets,painted:soldierAtlas.painted}),
     invalidate:()=>{S.sig={};S.contentDirty=true},
     decalFloats:()=>S.buf['decals#n']|0,   // QA: size of the baked facade decal buffer
