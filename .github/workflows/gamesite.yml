@@ -1,0 +1,39 @@
+name: GameSite P0 checks
+on:
+  pull_request:
+    paths:
+      - "gamesite/**"
+      - "api/gamesite-*.js"
+      - "api/_gamesite-follow-core.js"
+      - "src/settlement-game-entry.*"
+      - "src/settlement-app-bootstrap.js"
+      - "src/settlement-app-persistence.js"
+      - "index.html"
+      - "qa/gamesite-regression.mjs"
+      - ".github/workflows/gamesite.yml"
+  push:
+    branches: [gamesite]
+    paths:
+      - "gamesite/**"
+      - "api/gamesite-*.js"
+      - "api/_gamesite-follow-core.js"
+      - "src/settlement-game-entry.*"
+      - "qa/gamesite-regression.mjs"
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check JavaScript syntax
+        run: |
+          node --check gamesite/site.js
+          node --check src/settlement-game-entry.js
+          node --check src/settlement-app-bootstrap.js
+          node --check src/settlement-app-persistence.js
+          for file in api/gamesite-*.js api/_gamesite-follow-core.js; do node --check "$file"; done
+      - name: Run GameSite P0 regression
+        run: node --test qa/gamesite-regression.mjs
