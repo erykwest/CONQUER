@@ -245,6 +245,13 @@ function* findRoadRepairWork(start,goal,width=.30,pad=8,ignoreIds=[],maxGuard=24
     segmentMemo.set(k,ok);return ok;
   };
 
+  // Main roads may ford watercourses on bridges, but each crossing costs a
+  // detour's worth of length: fewest crossings first, then the shortest route.
+  // The heuristic adds one penalty per edge-to-edge river still separating a
+  // node from the goal (parity mask, updated per step): admissible, and it
+  // stops the search from flooding the whole box before an unavoidable bridge.
+  const crossingIndex=allowPrimaryNature?riverCrossingIndex():null;
+  const crossings=!!crossingIndex?.count,masks=new Map();
   const step=.5;
   const minX=Math.floor((Math.min(start.x,goal.x)-pad)/step),maxX=Math.ceil((Math.max(start.x,goal.x)+pad)/step);
   const minY=Math.floor((Math.min(start.y,goal.y)-pad)/step),maxY=Math.ceil((Math.max(start.y,goal.y)+pad)/step);
@@ -270,7 +277,8 @@ function* findRoadRepairWork(start,goal,width=.30,pad=8,ignoreIds=[],maxGuard=24
   }
 
   const open=new PeasantMinHeap(),gScore=new Map([[key(s.x,s.y),0]]),came=new Map(),closed=new Set();
-  open.push({x:s.x,y:s.y,f:dist(s.q,g.q)});
+  const startMask=crossings?riverSeparationMask(s.q,g.q):0;masks.set(key(s.x,s.y),startMask);
+  open.push({x:s.x,y:s.y,f:dist(s.q,g.q)+bitCount(startMask)*RIVER_CROSSING_PENALTY});
   const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
   let found=null,guard=0;
   while(open.length&&guard++<maxGuard){
@@ -283,10 +291,12 @@ function* findRoadRepairWork(start,goal,width=.30,pad=8,ignoreIds=[],maxGuard=24
       const nk=key(nx,ny),np=pos(nx,ny);
       if(closed.has(nk)||!pointClear(np))continue;
       if(!segmentClear(cp,np))continue;
-      const tentative=(gScore.get(ck)??Infinity)+Math.hypot(dx,dy)*step;
+      const cross=crossings?riverCrossingStep(cp,np,crossingIndex):null;
+      const tentative=(gScore.get(ck)??Infinity)+Math.hypot(dx,dy)*step+(cross?cross.n*RIVER_CROSSING_PENALTY:0);
       if(tentative>=(gScore.get(nk)??Infinity))continue;
       gScore.set(nk,tentative);came.set(nk,ck);
-      open.push({x:nx,y:ny,f:tentative+dist(np,g.q)});
+      const mask=cross?(masks.get(ck)||0)^cross.flip:0;if(cross)masks.set(nk,mask);
+      open.push({x:nx,y:ny,f:tentative+dist(np,g.q)+bitCount(mask)*RIVER_CROSSING_PENALTY});
     }
   }
 
@@ -310,10 +320,18 @@ function* findRoadRepairWork(start,goal,width=.30,pad=8,ignoreIds=[],maxGuard=24
 function simplifyRoadRepairPath(...args){return finishRoadWork(simplifyRoadRepairWork(...args))}
 function* simplifyRoadRepairWork(points,width=.30,ignoreIds=[],allowPrimaryNature=false){
   if(!points||points.length<=2)return points||[];
+  // A main-road shortcut must never add river crossings to the routed path
+  // (a straight chord across a meander would cross the same river twice).
+  const index=allowPrimaryNature?riverCrossingIndex():null,prefix=[0];
+  for(let k=1;k<points.length;k++){
+    if(k%4===0)yield;
+    prefix.push(prefix[k-1]+(index?.count?riverCrossingCount(points[k-1],points[k],index):0));
+  }
   const out=[points[0]];let i=0;
   while(i<points.length-1){
     let chosen=i+1;
     for(let j=points.length-1;j>i+1;j--){
+      if(index?.count&&riverCrossingCount(points[i],points[j],index)>prefix[j]-prefix[i])continue;
       if(yield* roadRepairSegmentWork(points[i],points[j],width,ignoreIds,null,allowPrimaryNature)){chosen=j;break}
     }
     out.push(points[chosen]);i=chosen;
@@ -380,8 +398,11 @@ function arterialSafeWaypoints(routeId,displaced=[]){
   const source=arterialSourceSegments(routeId,displaced),width=.62,ignore=[well.id];
   const pts=[{x:well.x,y:well.y}];
 
-  // Preserve the established arterial geometry wherever it is still valid.
-  for(const r of source){
+  // Preserve the established arterial geometry wherever it is still valid,
+  // unless it bridges rivers more often than the map forces: then reroute.
+  const sourcePoints=source.length?[{x:well.x,y:well.y},...source.map(r=>r.b)]:[];
+  const extraBridges=source.length&&finishRoadWork(polylineRiverCrossingsWork(sourcePoints))>minimumRiverCrossings(sourcePoints[0],sourcePoints.at(-1));
+  for(const r of extraBridges?[]:source){
     const p={...r.b};
     if(dist(p,pts.at(-1))<.45)continue;
     if(roadRepairPointClear(p,width,ignore))pts.push(p);
@@ -403,20 +424,12 @@ function* buildArterialRepairWork(routeId,displaced=[]){
   if(!well||waypoints.length<2)return null;
   const width=.62,ignore=[well.id],full=[waypoints[0]];
   for(let i=0;i<waypoints.length-1;i++){
-    const a=full.at(-1),b=waypoints[i+1];let leg=null;
-    if(yield* roadRepairSegmentWork(a,b,width,ignore,null,true))leg=[a,b];
-    else{
-      // Forest belts and hill contours can require detours beyond the local
-      // 12U corridor. Widen only after a failed bounded search; each search
-      // still yields cooperatively to keep village founding responsive.
-      for(const [pad,maxGuard] of [[12,60000],[24,85000],[42,130000]]){
-        leg=yield* findRoadRepairWork(a,b,width,pad,ignore,maxGuard,true);
-        if(leg?.length>1)break;
-        window.__conquerAnalytics?.event('ARTERIAL_DETOUR_RETRY',{
-          routeId,pad,from:a,to:b
-        },'warn',5000);
-      }
-    }
+    const a=full.at(-1),b=waypoints[i+1];
+    // Forest belts, hill contours and river meanders can require detours beyond
+    // the local 12U corridor. Widen only while the leg is missing or still
+    // crosses a river; each search yields cooperatively to keep founding responsive.
+    let leg=yield* minimalCrossingRoadLeg(a,b,width,ignore,[[12,60000],[24,85000],[42,130000]],pad=>
+      window.__conquerAnalytics?.event('ARTERIAL_DETOUR_RETRY',{routeId,pad,from:a,to:b},'warn',5000));
     // If a broad woodland makes the original gate on the border unreachable,
     // choose another *clear* entrance on the SAME map edge instead of cutting
     // down trees or leaving one of the four master roads disconnected.
@@ -477,7 +490,11 @@ function refreshStaleHouseRoadRefs(){
 }
 function rebuildArterialRoute(...args){return finishRoadWork(rebuildArterialWork(...args))}
 function* rebuildArterialWork(routeId,displaced=[],stillValid=()=>true){
-  const plan=arterialRoutePlan(routeId),path=yield* buildArterialRepairWork(routeId,displaced);
+  const plan=arterialRoutePlan(routeId),pathWork=buildArterialRepairWork(routeId,displaced);
+  // The (river-aware) path search is cancellable at every cooperative step too.
+  let pathStep;
+  while(!(pathStep=pathWork.next()).done){if(!stillValid()||mainRoadRouteDeleted(routeId))return 0;yield}
+  const path=pathStep.value;
   if(!stillValid()||mainRoadRouteDeleted(routeId))return 0;
   if(!plan||!path||path.length<2)return 0;
 
@@ -752,13 +769,7 @@ function* buildWellMainConnectionWork(well,force=false,stillValid=()=>true){
   if(!force&&wellMainRouteContinuous(well)){well.wellMainAttemptKey=attemptKey;well.wellMainBlocked=false;return 0}
   if(!force&&well.wellMainBlocked&&well.wellMainAttemptKey===attemptKey)return 0;
   const width=.62,ignore=[well.id,founding.id],start={x:well.x,y:well.y},goal={x:founding.x,y:founding.y};
-  let path=null;
-  if(yield* roadRepairSegmentWork(start,goal,width,ignore,null,true))path=[start,goal];
-  else for(const [pad,guard] of [[10,70000],[22,140000]]){
-    path=yield* findRoadRepairWork(start,goal,width,pad,ignore,guard,true);
-    if(!stillValid())return 0;
-    if(path?.length>1)break;
-  }
+  const path=yield* minimalCrossingRoadLeg(start,goal,width,ignore,[[10,70000],[22,140000]]);
   if(!stillValid())return 0;
   if(!path||path.length<2){well.wellMainAttemptKey=attemptKey;well.wellMainBlocked=true;return 0}
   const clean=yield* simplifyRoadRepairWork(path,width,ignore,true);
@@ -2338,30 +2349,25 @@ function autoPrimaryRoadBridges(road){
 function* primaryRoadBridgesWork(road,stillValid=()=>true){
   const water=State.environment.filter(f=>['river','stream'].includes(f.type));
   const bridges=[];if(!water.length)return bridges;
-  const length=dist(road.a,road.b),steps=Math.max(3,Math.ceil(length/.20));
-  function* waterAt(p){
-    let checks=0;
-    for(const f of water)for(let i=1;i<f.points.length;i++){
-      if(++checks%16===0){yield;if(!stillValid())return false}
-      if(pointSegmentDistance(p,f.points[i-1],f.points[i])<=(Number(f.width)||1.25)/2+.07)return true;
-    }
-    return false;
+  let index=0;
+  // One bridge per crossing of the watercourse CENTRELINE. A road route is cut
+  // into several segments; a wet span that straddles two segments must not
+  // produce two half bridges: only the segment that crosses the centreline
+  // owns the deck, which is centred there and laid on the river normal.
+  const crossings=[];let checks=0;
+  for(const river of water)for(let i=1;i<river.points.length;i++){
+    if(++checks%16===0){yield;if(!stillValid())return[]}
+    const p=river.points[i-1],q=river.points[i],cross=riverCenterlineCross(road.a,road.b,p,q);
+    if(cross)crossings.push({intersection:cross,closest:{river,p,q}});
   }
-  let start=-1,index=0;
-  function* addSpan(from,to){
-    if(to-from<.001)return;
-    // Build over the local river normal, not along an oblique road segment.
-    const midT=(from+to)/2,intersection={
-      x:road.a.x+(road.b.x-road.a.x)*midT,
-      y:road.a.y+(road.b.y-road.a.y)*midT
-    };
-    let closest=null,best=Infinity,checks=0;
-    for(const river of water)for(let i=1;i<river.points.length;i++){
-      if(++checks%16===0){yield;if(!stillValid())return}
-      const p=river.points[i-1],q=river.points[i],distance=pointSegmentDistance(intersection,p,q);
-      if(distance<best){best=distance;closest={river,p,q}}
-    }
-    if(!closest)return;
+  // A crossing already spanned by another deck (an adjacent route) is not rebuilt.
+  const decks=()=>State.structures.filter(s=>s.type==='bridge'&&s.a&&s.b).concat(bridges);
+  for(const crossing of crossings){
+    if(decks().some(d=>pointSegmentDistance(crossing.intersection,d.a,d.b)<=Math.max(.6,(Number(d.width)||1.2)/2)))continue;
+    yield* addSpan(crossing);
+  }
+  return bridges;
+  function* addSpan({intersection,closest}){
     const tx=closest.q.x-closest.p.x,ty=closest.q.y-closest.p.y,tLen=Math.hypot(tx,ty)||1;
     const nx=-ty/tLen,ny=tx/tLen;
     const riverHalf=(closest.river.width||1.25)/2+.48;
@@ -2380,17 +2386,7 @@ function* primaryRoadBridgesWork(road,stillValid=()=>true){
         return;
       }
     }
-
   }
-  for(let i=0;i<=steps;i++){
-    if(i%8===0)yield;
-    if(!stillValid())return[];
-    const t=i/steps,p={x:road.a.x+(road.b.x-road.a.x)*t,y:road.a.y+(road.b.y-road.a.y)*t};
-    if(yield* waterAt(p)){if(start<0)start=t}
-    else if(start>=0){yield* addSpan(start,(i-1)/steps);start=-1}
-  }
-  if(start>=0)yield* addSpan(start,1);
-  return bridges;
 }
 function syncPrimaryRoadBridges(){
   const activeRoads=new Set(State.structures.filter(isPrimaryRoad).map(r=>r.id));
@@ -2406,7 +2402,7 @@ function perpendicularRiverRoadPath(a,b){
   const water=State.environment.filter(f=>f.type==='river'||f.type==='stream');
   let best=null;
   for(const river of water)for(let i=1;i<river.points.length;i++){
-    const u=river.points[i-1],v=river.points[i],cross=segmentIntersectionPoint(a,b,u,v);
+    const u=river.points[i-1],v=river.points[i],cross=riverCenterlineCross(a,b,u,v);
     if(!cross)continue;
     const t=dist(a,cross)/Math.max(.001,dist(a,b));
     if(t>.98||t<.02)continue;
@@ -2424,26 +2420,137 @@ function perpendicularRiverRoadPath(a,b){
   // A perpendicular bridge is only valid when BOTH new approach bends also
   // avoid forest, hills and steep relief. Do not introduce forbidden slope
   // shortcuts into an otherwise valid pathfinding result.
-  const clear=(u,v)=>{
-    const steps=Math.max(2,Math.ceil(dist(u,v)/.09));
-    for(let i=0;i<=steps;i++){
-      const t=i/steps,p={x:u.x+(v.x-u.x)*t,y:u.y+(v.y-u.y)*t};
-      if(environmentBlocksPoint(p,'road'))return false;
-    }
-    return true;
-  };
-  if(!clear(a,near)||!clear(near,far)||!clear(far,b))return[a,b];
+  // Main roads use their own terrain rule (they carve continuous woodland).
+  if(!primaryRoadSegmentClear(a,near)||!primaryRoadSegmentClear(near,far)||!primaryRoadSegmentClear(far,b))return[a,b];
   return[a,near,far,b];
 }
+// Road a→b crossing the river centreline piece u→v. Half-open on the river
+// piece so a crossing exactly through a centreline vertex counts once.
+function riverCenterlineCross(a,b,u,v){
+  const r={x:b.x-a.x,y:b.y-a.y},s={x:v.x-u.x,y:v.y-u.y},den=r.x*s.y-r.y*s.x;
+  if(Math.abs(den)<1e-8)return null;
+  const q={x:u.x-a.x,y:u.y-a.y},t=(q.x*s.y-q.y*s.x)/den,w=(q.x*r.y-q.y*r.x)/den;
+  if(t>1e-5&&t<.99999&&w>=0&&w<1)return{x:a.x+t*r.x,y:a.y+t*r.y};
+  return null;
+}
+function primaryRoadSegmentClear(u,v){
+  const steps=Math.max(2,Math.ceil(dist(u,v)/.09));
+  for(let i=0;i<=steps;i++){
+    const t=i/steps,p={x:u.x+(v.x-u.x)*t,y:u.y+(v.y-u.y)*t};
+    if(environmentBlocksPoint(p,'primary'))return false;
+  }
+  return true;
+}
+// Every river crossing of a main road is ONE deck laid on the river normal:
+// interior vertices standing in the wet band (which would split the crossing
+// over two road segments) are dropped, then each crossing is bent onto the
+// shortest bank-to-bank line, including several crossings on one long span.
 function alignedRiverRoadPolyline(points){
   if(!points||points.length<2)return points||[];
-  const route=[{...points[0]}];
-  for(let i=1;i<points.length;i++){
-    const segment=perpendicularRiverRoadPath(route.at(-1),points[i]);
-    for(let j=1;j<segment.length;j++)
-      if(dist(route.at(-1),segment[j])>.001)route.push({...segment[j]});
+  const water=State.environment.filter(f=>(f.type==='river'||f.type==='stream')&&f.points?.length>1);
+  const wet=p=>water.some(f=>{
+    for(let i=1;i<f.points.length;i++)if(pointSegmentDistance(p,f.points[i-1],f.points[i])<=(f.width||1.25)/2+.48)return true;
+    return false;
+  });
+  const index=riverCrossingIndex(),crossings=pts=>{
+    let n=0;for(let i=1;i<pts.length;i++)n+=riverCrossingCount(pts[i-1],pts[i],index);return n;
+  };
+  const dry=[points[0]];
+  for(let i=1;i<points.length-1;i++){
+    if(wet(points[i])&&primaryRoadSegmentClear(dry.at(-1),points[i+1])&&
+      crossings([dry.at(-1),points[i+1]])<=crossings([dry.at(-1),points[i],points[i+1]]))continue;
+    dry.push(points[i]);
+  }
+  dry.push(points.at(-1));
+  const route=[{...dry[0]}];
+  for(let i=1;i<dry.length;i++){
+    for(let guard=0;guard<12;guard++){
+      const segment=perpendicularRiverRoadPath(route.at(-1),dry[i]);
+      if(segment.length<=2)break;
+      // The bank bends must not add crossings (e.g. clipping a nearby meander).
+      if(crossings(segment)>crossings([route.at(-1),dry[i]]))break;
+      for(let j=1;j<segment.length-1;j++)
+        if(dist(route.at(-1),segment[j])>.001)route.push({...segment[j]});
+    }
+    if(dist(route.at(-1),dry[i])>.001)route.push({...dry[i]});
   }
   return route;
+}
+// River-crossing count of a road polyline against the watercourse centrelines.
+// Main-road routing minimises it: a longer dry detour beats an extra bridge.
+const RIVER_CROSSING_PENALTY=60;
+function riverReachesMapEdge(f){
+  const onEdge=p=>!inWorldZone(p)||!inWorldZone(p,-2);
+  return f.points?.length>1&&onEdge(f.points[0])&&onEdge(f.points.at(-1));
+}
+function riverCrossingIndex(){
+  const cell=1.5,cells=new Map();let count=0,boundary=0;
+  for(const f of State.environment)if((f.type==='river'||f.type==='stream')&&f.points?.length>1){
+    // Edge-to-edge watercourses get a parity bit (see minimumRiverCrossings).
+    const bit=boundary<30&&riverReachesMapEdge(f)?1<<boundary++:0;
+    for(let i=1;i<f.points.length;i++){
+      const u=f.points[i-1],v=f.points[i],seg={u,v,bit};count++;
+      for(let cx=Math.floor(Math.min(u.x,v.x)/cell);cx<=Math.floor(Math.max(u.x,v.x)/cell);cx++)
+        for(let cy=Math.floor(Math.min(u.y,v.y)/cell);cy<=Math.floor(Math.max(u.y,v.y)/cell);cy++){
+          const k=cx+','+cy,list=cells.get(k);if(list)list.push(seg);else cells.set(k,[seg]);
+        }
+    }
+  }
+  return{cell,cells,count};
+}
+function riverCrossingStep(a,b,index=riverCrossingIndex()){
+  if(!index.count)return{n:0,flip:0};
+  const seen=new Set();let n=0,flip=0;
+  for(let cx=Math.floor(Math.min(a.x,b.x)/index.cell);cx<=Math.floor(Math.max(a.x,b.x)/index.cell);cx++)
+    for(let cy=Math.floor(Math.min(a.y,b.y)/index.cell);cy<=Math.floor(Math.max(a.y,b.y)/index.cell);cy++)
+      for(const seg of index.cells.get(cx+','+cy)||[]){
+        if(seen.has(seg))continue;seen.add(seg);
+        if(riverCenterlineCross(a,b,seg.u,seg.v)){n++;flip^=seg.bit}
+      }
+  return{n,flip};
+}
+function riverCrossingCount(a,b,index=riverCrossingIndex()){return riverCrossingStep(a,b,index).n}
+// Bitmask of the edge-to-edge watercourses separating a from b (one bit each).
+function riverSeparationMask(a,b){
+  let mask=0,boundary=0;
+  for(const f of State.environment){
+    if((f.type!=='river'&&f.type!=='stream')||!(f.points?.length>1))continue;
+    if(boundary>=30||!riverReachesMapEdge(f))continue;
+    const bit=1<<boundary++;
+    let n=0;for(let i=1;i<f.points.length;i++)if(riverCenterlineCross(a,b,f.points[i-1],f.points[i]))n++;
+    if(n%2)mask|=bit;
+  }
+  return mask;
+}
+function bitCount(mask){let n=0;while(mask){mask&=mask-1;n++}return n}
+function* polylineRiverCrossingsWork(points,index=riverCrossingIndex()){
+  let n=0;for(let i=1;i<(points?.length||0);i++){if(i%4===0)yield;n+=riverCrossingCount(points[i-1],points[i],index)}
+  return n;
+}
+// Lower bound on the crossings of ANY route a→b: a watercourse running from
+// map edge to map edge separates the map, so the parity of the straight
+// chord's crossings is forced. Streams ending inland give no bound.
+function minimumRiverCrossings(a,b){return bitCount(riverSeparationMask(a,b))}
+function polylineLength(points){let L=0;for(let i=1;i<(points?.length||0);i++)L+=dist(points[i-1],points[i]);return L}
+// Main-road leg with the fewest river crossings: the straight line is kept only
+// when no bounded search finds a route with fewer bridges.
+function* minimalCrossingRoadLeg(a,b,width,ignore,searches,onRetry=null){
+  const index=riverCrossingIndex();let best=null;
+  function* consider(leg){
+    if(!leg||leg.length<2)return;
+    const c=yield* polylineRiverCrossingsWork(leg,index),L=polylineLength(leg);
+    if(!best||c<best.c||(c===best.c&&L<best.L-1e-6))best={leg,c,L};
+  }
+  const floor=minimumRiverCrossings(a,b);
+  if(yield* roadRepairSegmentWork(a,b,width,ignore,null,true))yield* consider([a,b]);
+  if(best&&best.c<=floor)return best.leg;
+  for(const [pad,guard] of searches){
+    const leg=yield* findRoadRepairWork(a,b,width,pad,ignore,guard,true);
+    yield* consider(leg);
+    if(best&&best.c<=floor)break;
+    if(!leg||leg.length<2)onRetry?.(pad);
+  }
+  return best?.leg||null;
 }
 function addManualMainRoad(a,b){
   if(!a||!b)return false;

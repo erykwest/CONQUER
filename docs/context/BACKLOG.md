@@ -10,6 +10,7 @@
 - [ ] Prestazioni del tracciato delle strade principali sul canvas grande (68 s verso la palude di T364).
 - [x] Costa sul confine regionale: passaggio di bioma centrato sul bordo edificabile (50/50), baie che entrano nella zona edificabile (19/11).
 - [x] Fiumi sul confine: il fiume locale segue il tratto di bordo condiviso con i vicini oltre il lato-fiume regionale (`shape.riverNeighbors`, `borderPath`) (19/11).
+- [x] Strade maestre: un solo ponte perpendicolare per attraversamento; tracciato col minimo numero di attraversamenti (19/11).
 - [ ] Catene montuose ai lati Voronoi reali (oggi `mountainSides` cardinali); affluenti e direzione di flusso sul bordo organico.
 - [ ] Ingressi stradali concordi fra territori vicini (stesso punto sul lato condiviso) e, quando esisteranno, strade regionali.
 - [ ] Piano del terreno 3D ritagliato sul bordo invece del quadrato scuro; camera e unità limitate al poligono.
