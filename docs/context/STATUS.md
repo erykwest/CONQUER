@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-18 — MIL-WALL-01 · pattuglie sul camminamento delle palizzate W2 (branch `fix/palisade-w2-patrol`, NON MERGE)
+
+- **CAUSA:** il cammino di ronda (`settlement-wallwalk.js`) include già le palizzate T2+, ma la loro corsia è sul camminamento dietro i pali (`palisadePatrolSurface().offset`), non sulla linea di mezzo. Dove due palizzate si incontrano testa a testa senza torre (un angolo) le due corsie finivano a ~0,2U l'una dall'altra e non si univano: un recinto W2 diventava tanti tratti aperti invece di un giro, e le pattuglie per giro non lo percorrevano. Le mura di pietra (corsia sulla linea di mezzo) e le palizzate tra torri/porte non avevano il problema.
+- **CODICE:** `mitreJoints` nel grafo del cammino di ronda: a ogni giunto libero (senza `aSnap`/`bSnap`) tra esattamente due tratti percorribili, le estremità delle corsie si portano nel punto in cui le corsie si incrociano (a metà se in linea). Le corsie delle mura di pietra restano identiche; router (`route`) e pattuglie invariati.
+- **PROVE LOCALI PASS:** nuova `qa/palisade-patrol-regression.cjs` (geometria reale delle palizzate: recinto W2 con angoli liberi = un giro chiuso, uomini all'altezza del camminamento e dietro i pali; recinto con torri a palizzata, vedetta e porta di legno = un giro con 4 accessi; W1 senza camminamento; corsie di pietra invariate), fallisce senza la correzione; nel workflow `combat-regression`. `wallwalk`, `wall-patrol`, `wall-stairs`, `combat-sectors`, `siege-assault`, `keep-entrance`, `patrol`.
+
 ### 2026-11-18 — PATROL-ROUTE-261118: le pattuglie non lasciano il giro per un nemico irraggiungibile (branch `fix/patrol-pathfinding`)
 
 - **Regressione e causa:** dalla #258 (`c32408d1`, ricerca reciproca difensori/assalitori) `defenderThink` gira anche sulle pattuglie e la meta del loro giro non conta come ordine. Con un ostile entro 12 U ma senza percorso (per esempio un predone addossato a una casa: il suo punto è bloccato e `patrolRoute` restituisce null) a ogni pensata azzerava `u.target`, e `updatePatrols` passava al waypoint successivo: la pattuglia saltava i punti del giro e tagliava il percorso. Ultimo commit buono: `6d60a9f9` (#259).

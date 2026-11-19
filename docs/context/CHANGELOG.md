@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-18 — MIL-WALL-01 · pattuglie sulle palizzate W2
+
+`fix/palisade-w2-patrol`: un recinto di palizzate W2 è un giro di pattuglia anche negli angoli senza torre (corsie del camminamento unite a spigolo); le guardie stanno all'altezza del camminamento. Nuova `qa/palisade-patrol-regression.cjs`. ROADMAP e DECISIONS invariate: si applica D-MIL-WALL-261115 così com'è.
+
 ### 2026-11-18 — PATROL-ROUTE-261118 · Pattuglie fedeli al giro
 
 `fix/patrol-pathfinding`: un ostile entro portata ma irraggiungibile non fa più saltare i waypoint del giro alle pattuglie della White Zone (regressione della #258 in `defenderThink`). Nuova `qa/patrol-route-regression.cjs` nel workflow combat. ROADMAP e DECISIONS invariate: si ripristina il comportamento previsto, nessun contratto cambiato.
