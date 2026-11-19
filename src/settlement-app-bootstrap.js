@@ -17,5 +17,34 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&k==='s'){e.preventDefault();saveCloud()}
 });
 window.addEventListener('polygon-clipping-ready',()=>{invalidateSceneCache(['ground','castleBody']);draw()});
-window.addEventListener('resize',resize);loadLocal();window.ConquerEconomy?.bind();if(ensureStaticLandscape())saveLocal();ensureBorderEntrySelection();renderUI();resize();fit();initSupabase();
+function bootConquer(selection=null){
+  const guest=selection?.guest===true;
+  if(guest){
+    const id=String(selection.slot||'');
+    if(!/^[a-z0-9-]{12,60}$/i.test(id))throw new Error('Invalid guest save slot');
+    window.__CONQUER_GUEST_SLOT__=id;
+    State.user=null;
+    if(selection.mode==='resume')loadLocal();
+    else if(selection.mode==='new'){
+      const seed=Number(selection.seed);
+      if(!Number.isInteger(seed)||seed<1||seed>2147483647)throw new Error('Invalid world seed');
+      if(!['plains','hills','forest','swamp'].includes(selection.biome))throw new Error('Unsupported biome');
+      State.seed=seed;
+      State.biome=selection.biome;
+      State.neighborBiomes={};
+      State.structures=[];State.environment=[];State.relief=null;
+      State.village={...State.village,name:null,founded:false,wellId:null,growthStep:0,nextGrowthDay:null,roadPlan:null};
+      State.resources={...PROVISIONAL_RESOURCES};
+      State.clock.day=0;State.clock.speed=0;
+    }else throw new Error('Invalid guest start mode');
+  }else loadLocal();
+  window.ConquerEconomy?.bind();
+  if(ensureStaticLandscape()||guest&&selection.mode==='new')saveLocal();
+  ensureBorderEntrySelection();renderUI();resize();fit();
+  if(!guest)initSupabase(); // Guest is always local singleplayer, never cloud or multiplayer.
+}
+window.addEventListener('resize',resize);
+if(window.ConquerGameEntry?.requested)window.ConquerGameEntry.mount(bootConquer);
+else bootConquer();
+
 
