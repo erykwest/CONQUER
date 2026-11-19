@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-19 — CI-AUDIT-01 · CI più veloce per l'audit del Lab
+
+- [x] Modifiche solo di interfaccia: smoke della galleria al posto dell'audit completo.
+- [x] Audit completo in 4 job paralleli per famiglie.
+- [ ] Valutare l'audit completo solo dopo il merge o di notte, con l'incrementale/smoke sulle PR.
+
 ### 2026-11-18 — TORCH-STREAK-261118 · Fasci verticali delle torce
 
 **FIX SU BRANCH `fix/torch-artifact`.** Dettagli in [STATUS](STATUS.md).

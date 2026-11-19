@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-19 — CI-AUDIT-01: audit del Lab in 4 job paralleli, niente audit per le modifiche di sola interfaccia (`ci/asset-audit-ui-scope-shards`)
+
+- Problema: ogni PR che toccava `index.html` (anche solo un menu) rifaceva l'audit visivo completo in un unico job da 35–45 minuti.
+- `qa/asset-audit-scope.cjs`: nuova modalità `smoke` per CSS in `src/`, `src/ui/**`, `settlement-heraldry.js`, `settlement-panels.js` e `index.html` senza righe cambiate con `<script>`/`<link>`/`<canvas>`/`<svg>`/`src=` (il workflow passa la patch di `index.html`). In `smoke` gira solo `qa/asset-catalog-browser.mjs`, che avvia comunque il sandbox del motore da `index.html`.
+- Audit completo diviso: `qa/asset-audit.mjs --shard=N/4` (`shardIds`, famiglie intere, bilanciato per numero di stati); matrice di 4 job `browser (N/4)`, timeout 30 min ciascuno, artifact `asset-lab-visual-qa-N`. Il controllo «spariti dalla baseline» è fatto dallo shard per i propri asset, e dallo shard 1 per gli asset usciti dal catalogo.
+- **Prove:** PASS asset-audit-scope (nuovi casi smoke/full/incremental e shard), ci-p1, stonecolor, asset-catalog; diff reale della PR #283 classificato `smoke`. Lo sharding nel browser è provato dalla CI di questa PR (il workflow cambiato forza l'audit completo).
+
 ### 2026-11-18 — TORCH-STREAK-261118: niente fasci verticali dalle torce (branch `fix/torch-artifact`)
 
 - Causa: l'alone delle torce e dei bracieri (programma `fireLight` di settlement-world3d.js) campionava la tessera `__glow` dell'atlante delle decal, con mipmap e UV a 1 px dalle tessere vicine (drappo del Mastio, vetri). Il bordo del quadrato si colorava della tessera accanto: una riga verticale arancione, alta quanto l'alone, a lato di ogni fuoco, tanto più lunga quanto più vicina la camera.

@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-19 — CI-AUDIT-01 · Audit del Lab: smoke per l'interfaccia, completo in 4 shard
+
+`ci/asset-audit-ui-scope-shards`: `asset-audit-scope.cjs` riconosce le modifiche di sola interfaccia (modalità `smoke`: solo test della galleria); `asset-audit.mjs --shard=N/4` divide l'audit completo per famiglie in 4 job paralleli. Aggiornati `docs/ASSET-LAB-AUDIT.md` e `docs/CI.md`. ROADMAP e DECISIONS invariate.
+
 ### 2026-11-18 — TORCH-STREAK-261118 · Niente fasci verticali dalle torce
 
 `fix/torch-artifact`: l'alone notturno di torce e bracieri non campiona più l'atlante delle decal (che a mipmap faceva entrare le tessere vicine come righe verticali) ma è calcolato nello shader dall'angolo del quadrato; margine trasparente sulla tessera `__glow` delle finestre. Controllo nuovo in `qa/tower-fittings-regression.cjs`. ROADMAP e DECISIONS invariate: correzione grafica, nessun contratto cambiato.
