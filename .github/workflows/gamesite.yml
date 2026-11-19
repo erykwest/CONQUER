@@ -19,6 +19,11 @@ on:
       - "api/_gamesite-follow-core.js"
       - "src/settlement-game-entry.*"
       - "qa/gamesite-regression.mjs"
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+permissions:
+  contents: read
 jobs:
   validate:
     runs-on: ubuntu-latest
