@@ -30,7 +30,9 @@
   }
   function coastThreshold(p,shape=coastShape()){
     // Hex sectors: the sea weight already follows the real neighbour cells; seed-dependent bays.
-    if(!shape.sides.length)return hex()?.5+.24*(noise(p.x/34,p.y/34,State.seed+7)-.5):.5;
+    // The sea weight is 50% on the build border: ±.4 of threshold moves the shore ~±8U,
+    // so bays cut into the buildable zone and headlands push out of it.
+    if(!shape.sides.length)return hex()?.5+.8*(noise(p.x/30,p.y/30,State.seed+7)-.5):.5;
     const phase=hash(7,11,State.seed)*Math.PI*2;
     let total=0,weight=0;
     for(const side of shape.sides){

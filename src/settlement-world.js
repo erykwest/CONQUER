@@ -1078,7 +1078,28 @@ function makeEnvWater(rnd,type){
 }
 // Real terrain water, shared by collision, navigation, banks and both renderers.
 // Keep existing saved landscapes intact: this policy applies when generating a river.
+// Hex/organic local map: the regional river is the border with the neighbours across it,
+// so the course follows that stretch of the build outline, meandering a few U either side.
+function makeRegionalBorderRiver(rnd){
+  const demo=window.__CONQUER_REGIONAL_DEMO__,shape=window.ConquerLocalShape?.current?.();
+  const ids=demo?.shape?.riverNeighbors;
+  if(!shape||!Array.isArray(ids)||!ids.length)return null;
+  const path=shape.borderPath(ids);
+  if(!path)return null;
+  const width=WATER_WIDTH.river,phase=rnd()*Math.PI*2,phase2=rnd()*Math.PI*2,wave=biomeRand(rnd,38,60),amp=biomeRand(rnd,2,3.5);
+  let s=0;const points=[];
+  for(let i=0;i<path.length;i++){
+    if(i)s+=Math.hypot(path[i].x-path[i-1].x,path[i].y-path[i-1].y);
+    const a=path[Math.max(0,i-2)],b=path[Math.min(path.length-1,i+2)],dx=b.x-a.x,dy=b.y-a.y,l=Math.hypot(dx,dy)||1;
+    const off=amp*Math.sin(s/wave*Math.PI*2+phase)+amp*.4*Math.sin(s/wave*Math.PI*5.3+phase2);
+    points.push({x:path[i].x-dy/l*off,y:path[i].y+dx/l*off});
+  }
+  return{id:'env-river',type:'river',points,width,fill:'#3a7684',edge:'#88b4b8',
+    boundaryPolicy:4,boundarySide:'hex:'+ids.join(','),regionalBorderRiver:true,riverNeighbors:[...ids],meanderModel:'regional-border'};
+}
 function makeBoundaryRiver(rnd,preferredSide){
+  const regional=preferredSide?null:makeRegionalBorderRiver(rnd);
+  if(regional)return regional;
   const requested=window.__CONQUER_REGIONAL_DEMO__?.riverSides;
   const accepted=Array.isArray(requested)?requested.filter(s=>['west','north','east','south'].includes(s)):[];
   const sides=['west','north','east','south'].includes(preferredSide)?[preferredSide]:accepted.length?accepted:['west','north','east','south'];

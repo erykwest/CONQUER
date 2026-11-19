@@ -44,7 +44,10 @@
     catch(error){console.warn('CONQUER_LOCAL_SHAPE_REJECTED',error)}
     // Homogenization is checked here, once, at generation (create() throws if the
     // buildable area is not 10000 U²) and saved with the territory's local map.
-    demo.shape=built?{polygon:demo.shape.polygon,neighbors,homogenization:{...built.homogenization}}:null;
+    // Neighbours across a regional river edge: the local river runs on that shared border.
+    const riverNeighbors=(Array.isArray(demo.shape.riverNeighbors)?demo.shape.riverNeighbors:[]).map(String)
+      .filter(id=>neighbors.some(n=>n.id===id)).slice(0,6);
+    demo.shape=built?{polygon:demo.shape.polygon,neighbors,riverNeighbors,homogenization:{...built.homogenization}}:null;
     if(!demo.shape)delete demo.shape;
     else{
       try{

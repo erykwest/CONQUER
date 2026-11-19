@@ -61,6 +61,21 @@ const north=s.build.reduce((a,p)=>p.y<a.y?p:a);
 const probe={x:north.x,y:north.y-40},w=s.weights(probe,'@c');
 assert(w.swamp>.3&&w.sea>.3,'north vertex blends the two neighbours meeting there: '+JSON.stringify(w));
 
+// The regional border is the biome border: 50/50 on the build outline, so a sea
+// neighbour's coast follows it (and its bays can enter the buildable zone).
+const eastMid=s.build.reduce((a,p)=>p.x>a.x?p:a);
+const onBorder=s.weights({x:eastMid.x-.01,y:eastMid.y},'@c');
+assert(Math.abs((onBorder['@c']||0)-.5)<.05,'50/50 hand-over on the build border: '+JSON.stringify(onBorder));
+assert((s.weights({x:eastMid.x-6,y:eastMid.y},'@c')['@c']||0)<.85,'neighbour biome reaches into the buildable zone');
+// Rivers run on the border shared with the neighbour across the regional river edge.
+const bp=s.borderPath(['n0']);
+assert(bp&&bp.length>10,'border path for the river neighbour');
+const onShared=bp.filter(p=>Math.abs(G.ringDistance(p,s.build))<.01);
+assert(onShared.length>5&&onShared.every(p=>G.ringDistance(p,s.sectors.find(x=>x.id==='n0').polygon)<=3.01),'path follows the shared border');
+assert(!s.inWorld(bp[0],-1)||G.ringDistance(bp[0],s.outer)<3,'river enters from the outer border');
+assert(!s.inWorld(bp[bp.length-1],-1)||G.ringDistance(bp[bp.length-1],s.outer)<3,'river leaves through the outer border');
+assert.strictEqual(s.borderPath(['nope']),null);
+
 // World mask.
 assert(s.inWorld({x:C,y:C})&&s.inWorld({x:C,y:ob.minY+1}));
 assert(!s.inWorld({x:1,y:1}),'canvas corner is off-map');

@@ -4,6 +4,7 @@
 
 - `feature/local-hex-shape` (da `3dregionmap`): nuovo `src/regional-local-shape.js`, payload `shape` dal World Lab, zona edificabile poligonale, bordo offset 50U, biomi dai vicini fisici, ingressi stradali e uscite marine sul bordo poligonale. Test `qa/local-hex-shape-regression.cjs`; `wiki/catalog.json` rigenerato. Nuova decisione D-LOCAL-HEX-261117 in DECISIONS; ROADMAP invariata.
 - 17/11: area interna omogeneizzata a 10000 U² e salvata; bordo = offset 50U (mai quadrato), canvas adattato (min 240U), terreno 3D ritagliato; branch riallineato a `3dregionmap` resettato (`21a79dbd`); letterali 200/100 generalizzati a `WORLD`.
+- 19/11: costa sul confine regionale (pesi di bioma centrati sul bordo edificabile) e fiumi lungo il tratto di bordo condiviso col vicino oltre il lato-fiume (`riverNeighbors`, `borderPath`); test estesi.
 
 ### 2026-11-15 — Microfix: fedeli alla messa nel cutaway della chiesa
 

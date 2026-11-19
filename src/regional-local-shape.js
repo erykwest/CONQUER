@@ -181,14 +181,16 @@
       return bestD<=SECTOR_FEATHER*2?best:null;
     }
     function biomeOf(s,centerKey){return s?.biome||centerKey}
-    // Biome weights: the centre polygon is pure; across FEATHER U outside it the
-    // neighbour sectors take over, feathered across SECTOR_FEATHER U at their
-    // mutual (real Voronoi) borders.
+    // Biome weights: the regional border IS the biome border, so the hand-over is
+    // centred on the build outline (50/50 at d=0) across FEATHER U (−12.5..+12.5):
+    // a sea neighbour's coastline runs along the build border and its bays reach
+    // into the buildable zone, as on the regional map. Deep inside stays pure.
+    // Neighbour sectors are feathered across SECTOR_FEATHER U at their mutual borders.
     function weights(p,centerKey){
       const out={},add=(k,w)=>{if(w>1e-9)out[k]=(out[k]||0)+w};
       const d=signedDistance(p,build);
-      if(d<=0){out[centerKey]=1;return out}
-      const h=smooth(d/FEATHER);
+      if(d<=-FEATHER/2){out[centerKey]=1;return out}
+      const h=smooth(.5+d/FEATHER);
       add(centerKey,1-h);
       if(h<=0)return out;
       const raw=[];let sum=0;
@@ -218,8 +220,39 @@
       return per.at(r.from+clamp01(t)*r.length);
     }
     const signature=[build,...sectors.map(s=>s.id+':'+s.biome)].map(x=>Array.isArray(x)?x.map(p=>p.x.toFixed(2)+','+p.y.toFixed(2)).join(';'):x).join('|');
+    // Regional rivers run ON territory borders. borderPath(ids) is the longest stretch of
+    // the build outline shared with those neighbour sectors, extended at both ends along
+    // its tangent until it leaves the outer border: the local river follows it.
+    function borderPath(ids,tol=3){
+      const want=sectors.filter(s=>ids.map(String).includes(s.id));
+      if(!want.length)return null;
+      const dense=[];
+      for(let i=0;i<build.length;i++){
+        const a=build[i],b=build[(i+1)%build.length],k=Math.max(1,Math.ceil(Math.hypot(b.x-a.x,b.y-a.y)/1.5));
+        for(let j=0;j<k;j++)dense.push({x:a.x+(b.x-a.x)*j/k,y:a.y+(b.y-a.y)*j/k});
+      }
+      const on=dense.map(p=>want.some(s=>contains(p,s.polygon)||ringDistance(p,s.polygon)<=tol));
+      const n=dense.length;
+      if(on.every(Boolean)||!on.some(Boolean))return null;
+      let start=on.findIndex((v,i)=>!v&&on[(i+1)%n]),best=null;
+      for(let k=1;k<=n;){
+        const i=(start+k)%n;
+        if(!on[i]){k++;continue}
+        const run=[];while(k<=n&&on[(start+k)%n]){run.push(dense[(start+k)%n]);k++}
+        if(!best||run.length>best.length)best=run;
+      }
+      if(!best||best.length<4)return null;
+      const extend=(end,prev)=>{
+        const dx=end.x-prev.x,dy=end.y-prev.y,l=Math.hypot(dx,dy)||1,out=[];
+        for(let s=2;s<=OFFSET*2;s+=2){const p={x:end.x+dx/l*s,y:end.y+dy/l*s};out.push(p);if(signedDistance(p,outer)>2)break}
+        return out;
+      };
+      const head=extend(best[0],best[Math.min(3,best.length-1)]).reverse();
+      const tail=extend(best[best.length-1],best[Math.max(0,best.length-4)]);
+      return[...head,...best,...tail];
+    }
     return Object.freeze({
-      version:3,world:WORLD,center:CENTER,offset:OFFSET,scale,homogenization,build,outer,sectors,runs,perimeter:per.total,signature,
+      version:3,borderPath,world:WORLD,center:CENTER,offset:OFFSET,scale,homogenization,build,outer,sectors,runs,perimeter:per.total,signature,
       contains,inBuild,inWorld,sectorAt,weights,runsFor,runSample,pointAt:per.at,
       distanceOutsideBuild:p=>signedDistance(p,build),distanceOutsideWorld:p=>signedDistance(p,outer),
       buildArea,outerArea:Math.abs(signedArea(outer))

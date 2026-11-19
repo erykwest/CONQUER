@@ -4086,7 +4086,9 @@ point: { x: (edge.start.x + edge.end.x) / 2, y: (edge.start.y + edge.end.y) / 2 
             if(!own)return{polygon:territoryOutline(selectedMacro),
               neighbors:ids.map(id=>({id,code:state.macros[id].code,terrain:state.terrain[id],polygon:territoryOutline(id)}))};
             const near=[...(organicTerritories().adjacency.get(selectedMacro)||[])];
-            return{polygon:own,source:'organic-microcells-20-65',
+            // Rivers run on territory borders: name the neighbour across each touching river edge.
+            const riverNeighbors=[...new Set(touchingRivers.flatMap(edge=>edge.cells.map(cell=>cell.macroId)).filter(id=>id!==selectedMacro&&near.includes(id)))];
+            return{polygon:own,source:'organic-microcells-20-65',riverNeighbors,
               neighbors:near.map(id=>({id,code:state.macros[id].code,terrain:state.terrain[id],polygon:organicOutline(id)||territoryOutline(id)}))};
           })()};
         // Carry the small territory context in the URL too: opening another tab must
