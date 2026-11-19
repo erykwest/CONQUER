@@ -83,6 +83,25 @@ assert.ok(ux.slice(ux.indexOf("{id:'combat'")).includes('[data-event-venue="army
   assert.ok(E.cost(s).wood>E.cost(E.make('armyCamp')).wood,'works add to the cost');
   assert.ok(E.buildDays(s)>E.buildDays(E.make('armyCamp')),'and to the building time');
   assert.ok(E.label(s).includes('palizzata'),'label names the works');
+  assert.ok(!items.some(it=>/campStakes|campCheval/.test(it.m)),'no outer works before level 3');
+  assert.ok(E.panelHtml(s).includes('data-camp-works="3"'),'panel offers the anti-charge stakes next');
+  const lot2={w:s.w,h:s.h};
+  s.camp.works=3;E.fitCamp(s);
+  const spiked=E.setupItems(s),stakes=spiked.filter(it=>it.m==='campStakes'),chev=spiked.filter(it=>it.m==='campCheval');
+  assert.ok(stakes.length>=8&&chev.length===2,'level 3: a ring of stakes and two chevaux de frise');
+  assert.ok(spiked.some(it=>it.m==='campPalisade')&&spiked.filter(it=>it.m==='campGate').length===1,'level 3 keeps the palisade and gate');
+  assert.ok(s.w>=lot2.w&&s.h>=lot2.h,'the lot holds the outer works');
+  {const {w,h}=E.sizeOf(s);for(const it of stakes.concat(chev))assert.ok(Math.abs(it.x)<=w/2&&Math.abs(it.y)<=h/2,it.m+' on the lot')}
+  // Every stake segment stands outside the boundary and its points (model -y) face away from the camp.
+  {const camp=E.campLayout(s).camp,P=camp.perimeter,cx=P.reduce((a,p)=>a+p.x,0)/P.length,cy=P.reduce((a,p)=>a+p.y,0)/P.length;
+    for(const it of E.encampmentSpikes(camp).filter(it=>it.m==='campStakes')){
+      const ox=Math.sin(it.a),oy=-Math.cos(it.a);
+      assert.ok((it.x-cx)*ox+(it.y-cy)*oy>0,'stakes point outwards');
+    }
+    const g=camp.gate;
+    assert.ok(!E.encampmentSpikes(camp).some(it=>it.m==='campStakes'&&Math.hypot(it.x-g.x,it.y-g.y)<1.2),'the way in stays open');}
+  assert.ok(E.cost(s).wood>E.cost({...s,camp:{...s.camp,works:2}}).wood,'stakes add to the cost');
+  s.camp.works=2;E.fitCamp(s);
   const spec=E.make('armyCamp',{seed:9}),a={...spec,id:'a'},b={...spec,id:'b'};
   E.label(a);E.label(b);a.camp.squads=12;
   assert.notEqual(b.camp.squads,12,'placed copies do not share their camp');
