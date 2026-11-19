@@ -7,13 +7,13 @@
   const BIOMES = ['plains', 'hills', 'forest', 'swamp'];
   const GUEST_SCHEMA = 2;
   const params = new URLSearchParams(location.search);
-  const requested = params.get('launch') === '1';
+  const requested = params.get('launch') === '1' && !window.__CONQUER_ASSET_LAB__ && !window.__CONQUER_REGIONAL_DEMO__ && !window.__CONQUER_CAMP_MODE__;
   const safe = value => String(value == null ? '' : value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   const readIndex = () => {
-    try { const data = JSON.parse(localStorage.getItem(SLOT_INDEX) || '[]'); return Array.isArray(data) ? data.filter(x => x && SLOT_PATTERN.test(x.id)).slice(0, 30) : []; }
+    try { const data = JSON.parse(localStorage.getItem(SLOT_INDEX) || '[]'); return Array.isArray(data) ? data.filter(x => x && SLOT_PATTERN.test(x.id)) : []; }
     catch { return []; }
   };
-  const storeIndex = slots => localStorage.setItem(SLOT_INDEX, JSON.stringify(slots.slice(0, 30)));
+  const storeIndex = slots => localStorage.setItem(SLOT_INDEX, JSON.stringify(slots));
   const saveKey = slot => 'conquer.guest.' + slot + '.schema' + GUEST_SCHEMA + '.settlement.0.0';
   const existingSlots = () => readIndex().filter(s => { try { return !!localStorage.getItem(saveKey(s.id)); } catch { return false; } });
   const newSeed = () => { const a = new Uint32Array(1); crypto.getRandomValues(a); return (a[0] & 0x7fffffff) || 1; };
