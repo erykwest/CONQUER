@@ -1,7 +1,7 @@
 // Generated from content/codex/*.md. Do not edit; run node tools/export-codex-content.cjs.
 (function(root){root.ConquerWikiEditorial={
   "schemaVersion": 1,
-  "sourceDigest": "75738a27fdc0f86709b2c12807ae0f53ae5c199242d3491a7838315c7706b972",
+  "sourceDigest": "97584af0ba090c25483268daa1e40cd803573eed46d6ae68f5e8126812465189",
   "pages": [
     {
       "id": "building:balivo",
@@ -1429,6 +1429,47 @@
       "members": []
     },
     {
+      "id": "building:venue.chevalFrise",
+      "kind": "entry",
+      "title": "Cavallo di Frisia",
+      "aliases": [
+        "Cavallo di Frisia"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "Cavallo di Frisia appartiene agli [[Edifici|edifici]] e alle opere dell’insediamento: una trave squadrata attraversata da punte incrociate, appuntite alle due estremità, che sta in piedi su qualunque lato la si rotoli. Sbarra un varco, una porta o una strada. Le [[Costruzioni|costruzioni]] dipendono dai materiali, dal territorio e dalle condizioni funzionali effettive del gioco.",
+          "tokens": [
+            {
+              "text": "Cavallo di Frisia appartiene agli "
+            },
+            {
+              "text": "edifici",
+              "id": "category:building"
+            },
+            {
+              "text": " e alle opere dell’insediamento: una trave squadrata attraversata da punte incrociate, appuntite alle due estremità, che sta in piedi su qualunque lato la si rotoli. Sbarra un varco, una porta o una strada. Le "
+            },
+            {
+              "text": "costruzioni",
+              "id": "topic:construction"
+            },
+            {
+              "text": " dipendono dai materiali, dal territorio e dalle condizioni funzionali effettive del gioco."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Cavallo di Frisia appartiene agli edifici e alle opere dell’insediamento: una trave squadrata attraversata da punte incrociate, appuntite alle due estremità, che sta in piedi su qualunque lato la si rotoli. Sbarra un varco, una porta o una strada. Le costruzioni dipendono dai materiali, dal territorio e dalle condizioni funzionali effettive del gioco."
+      ],
+      "related": [
+        "category:building",
+        "topic:construction"
+      ],
+      "members": []
+    },
+    {
       "id": "building:venue.festivalGround",
       "kind": "entry",
       "title": "Spiazzo per eventi",
@@ -1626,6 +1667,47 @@
       ],
       "text": [
         "Palco appartiene agli edifici e alle opere dell’insediamento. Le costruzioni dipendono dai materiali, dal territorio e dalle condizioni funzionali effettive del gioco."
+      ],
+      "related": [
+        "category:building",
+        "topic:construction"
+      ],
+      "members": []
+    },
+    {
+      "id": "building:venue.stakeRow",
+      "kind": "entry",
+      "title": "Pali anti-carica",
+      "aliases": [
+        "Pali anti-carica"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "Pali anti-carica appartiene agli [[Edifici|edifici]] e alle opere dell’insediamento: una fila di pali appuntiti piantati di sbieco in un basso argine, con le punte all’altezza del petto di un cavallo, rivolte verso il fronte. Si costruisce a tratti da 1,4 U, da uno a otto. Le [[Costruzioni|costruzioni]] dipendono dai materiali, dal territorio e dalle condizioni funzionali effettive del gioco.",
+          "tokens": [
+            {
+              "text": "Pali anti-carica appartiene agli "
+            },
+            {
+              "text": "edifici",
+              "id": "category:building"
+            },
+            {
+              "text": " e alle opere dell’insediamento: una fila di pali appuntiti piantati di sbieco in un basso argine, con le punte all’altezza del petto di un cavallo, rivolte verso il fronte. Si costruisce a tratti da 1,4 U, da uno a otto. Le "
+            },
+            {
+              "text": "costruzioni",
+              "id": "topic:construction"
+            },
+            {
+              "text": " dipendono dai materiali, dal territorio e dalle condizioni funzionali effettive del gioco."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Pali anti-carica appartiene agli edifici e alle opere dell’insediamento: una fila di pali appuntiti piantati di sbieco in un basso argine, con le punte all’altezza del petto di un cavallo, rivolte verso il fronte. Si costruisce a tratti da 1,4 U, da uno a otto. Le costruzioni dipendono dai materiali, dal territorio e dalle condizioni funzionali effettive del gioco."
       ],
       "related": [
         "category:building",

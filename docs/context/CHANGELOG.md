@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-18 — CAMP-SPIKES · Palizzate del campo e pali anti-carica
+
+`feature/camp-spikes`: palizzata dell'accampamento rifatta in Blender (pali grezzi sbozzati, traverse legate, puntelli, terra di scavo); nuovi modelli `campStakes` (file di pali anti-carica inclinati verso l'esterno) e `campCheval` (cavallo di Frisia). Nuovo livello di fortificazione del campo «palizzata e pali anti-carica»: anello di pali fuori dalla palizzata e due cavalli di Frisia sfalsati davanti alla porta. Tutto nel Lab (composizione `encampmentSpiked`). Il 19/11 pali e cavallo di Frisia diventano anche strutture costruibili ovunque nell'insediamento (`stakeRow` a tratti da 1,4 U, `chevalFrise`), con la voce «Opere campali» nella nuova interfaccia (che ora raggiunge anche l'accampamento militare) e le note del Codex. In BACKLOG restano aperti gli effetti di gioco contro la carica. ROADMAP e DECISIONS invariate.
+
 ### 2026-11-19 — CI-AUDIT-01 · Audit del Lab: smoke per l'interfaccia, completo in 4 shard
 
 `ci/asset-audit-ui-scope-shards`: `asset-audit-scope.cjs` riconosce le modifiche di sola interfaccia (modalità `smoke`: solo test della galleria); `asset-audit.mjs --shard=N/4` divide l'audit completo per famiglie in 4 job paralleli. Aggiornati `docs/ASSET-LAB-AUDIT.md` e `docs/CI.md`. ROADMAP e DECISIONS invariate.
