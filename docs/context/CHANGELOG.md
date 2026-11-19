@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-18 — PATROL-ROUTE-261118 · Pattuglie fedeli al giro
+
+`fix/patrol-pathfinding`: un ostile entro portata ma irraggiungibile non fa più saltare i waypoint del giro alle pattuglie della White Zone (regressione della #258 in `defenderThink`). Nuova `qa/patrol-route-regression.cjs` nel workflow combat. ROADMAP e DECISIONS invariate: si ripristina il comportamento previsto, nessun contratto cambiato.
+
 ### 2026-11-18 — Ghost dei cantieri non più vuoti
 
 `fix/construction-ghost`: i cantieri senza assemblaggio pezzo per pezzo (industrie, depositi, pozzi, moli, banchine, rampe, annessi civici, luoghi degli eventi) mostrano di nuovo l'edificio finito in trasparenza (World 3D, alpha 0,42) invece del solo contorno dell'impronta lasciato da D-RENDER-3D-261111. Nuova `qa/construction-ghost-regression.cjs` nel workflow Construction props. Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: ripristino visivo, nessun contratto cambiato.

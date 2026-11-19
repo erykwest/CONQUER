@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-18 — PATROL-ROUTE-261118: le pattuglie non lasciano il giro per un nemico irraggiungibile (branch `fix/patrol-pathfinding`)
+
+- **Regressione e causa:** dalla #258 (`c32408d1`, ricerca reciproca difensori/assalitori) `defenderThink` gira anche sulle pattuglie e la meta del loro giro non conta come ordine. Con un ostile entro 12 U ma senza percorso (per esempio un predone addossato a una casa: il suo punto è bloccato e `patrolRoute` restituisce null) a ogni pensata azzerava `u.target`, e `updatePatrols` passava al waypoint successivo: la pattuglia saltava i punti del giro e tagliava il percorso. Ultimo commit buono: `6d60a9f9` (#259).
+- **Correzione:** in `defenderThink`, se la pattuglia non sta già inseguendo (`autoFoe`) e il nemico è irraggiungibile, il giro resta com'è; chi insegue un nemico che diventa irraggiungibile lascia l'inseguimento come prima. Un nemico raggiungibile entro la portata è ancora inseguito.
+- **Prove:** nuova `qa/patrol-route-regression.cjs` (nel workflow combat): con il predone irraggiungibile la pattuglia rifà lo stesso giro di quando non ci sono ostili (0 waypoint abbandonati; su `c32408d1` 12 abbandonati), e insegue un nemico raggiungibile. Le altre suite di pattuglia e combattimento sono in PR.
+
 ### 2026-11-18 — Ghost dei cantieri (branch `fix/construction-ghost`, NON MERGE)
 
 - **CAUSA:** con D-RENDER-3D-261111 i corpi 2.5D in trasparenza dei cantieri sono stati tolti; `drawStructure` disegnava `ConquerAssembly` o, per i tipi senza assemblaggio, solo `drawPlacementVolume` (anelli di contatto, base e cima): un ghost vuoto. World 3D salta gli edifici in cantiere, quindi nessuna geometria.

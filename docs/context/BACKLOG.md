@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-18 — PATROL-ROUTE-261118 · Regressione del pathfinding delle pattuglie
+
+**CORRETTO SU BRANCH `fix/patrol-pathfinding`, NON MERGE.**
+- [x] Un ostile entro 12 U ma irraggiungibile non azzera più la meta del giro: la pattuglia non salta i waypoint.
+- [ ] Da valutare: il nemico addossato a un edificio è irraggiungibile perché `nearestFree` parte da un punto bloccato; avvicinarsi alla cella libera più vicina permetterebbe di ingaggiarlo.
+- [ ] Osservato nel banco di prova, uguale prima e dopo la #258: una pattuglia che parte nello stretto corridoio fra due cinte (pozzo nel mezzo) non arriva al bordo della White Zone.
+
 ## 2026-11-19 — UI-PROFILE-01 · Pannello Settlement nel PROFILE
 
 - [x] Pannello destro «Settlement» rimosso; contenuti in PROFILE › GENERALE e nuova tab GOVERNO.
