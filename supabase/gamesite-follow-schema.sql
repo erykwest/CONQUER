@@ -47,3 +47,43 @@ end;
 $$;
 revoke all on function public.gamesite_record_metric(text) from public, anon, authenticated;
 grant execute on function public.gamesite_record_metric(text) to service_role;
+
+
+-- Abuse prevention: a server-side HMAC of the proxy source IP + 15-minute window.
+-- No raw IP, cookie, account ID or user-agent is recorded in this table.
+create table if not exists public.gamesite_follow_budget (
+  bucket text primary key check (bucket ~ '^[0-9a-f]{64}$'),
+  attempts integer not null check (attempts >= 0),
+  expires_at timestamptz not null
+);
+create index if not exists gamesite_follow_budget_expiry_idx
+  on public.gamesite_follow_budget(expires_at);
+alter table public.gamesite_follow_budget enable row level security;
+revoke all on table public.gamesite_follow_budget from anon, authenticated;
+
+-- Atomic limit: at most five subscription requests per proxy source every 15 minutes.
+-- This is a server-only RPC; it must never be granted to anon or authenticated clients.
+create or replace function public.gamesite_consume_follow_budget(p_bucket text)
+returns boolean
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare accepted integer;
+begin
+  if p_bucket !~ '^[0-9a-f]{64}$' then return false; end if;
+  insert into public.gamesite_follow_budget as b (bucket,attempts,expires_at)
+  values (p_bucket,1,now() + interval '15 minutes')
+  on conflict (bucket) do update
+    set attempts = case when b.expires_at <= now() then 1 else b.attempts + 1 end,
+        expires_at = case when b.expires_at <= now() then now() + interval '15 minutes' else b.expires_at end
+    where b.expires_at <= now() or b.attempts < 5
+  returning attempts into accepted;
+  return accepted is not null and accepted <= 5;
+end;
+$$;
+revoke all on function public.gamesite_consume_follow_budget(text) from public, anon, authenticated;
+grant execute on function public.gamesite_consume_follow_budget(text) to service_role;
+
+-- Requires an explicit daily cleanup job when the mailing service goes live:
+-- delete from public.gamesite_follow_budget where expires_at < now();
