@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2
+
+**IMPLEMENTATO SU BRANCH `feature/shops-l2-rooms`, NON MERGE.**
+- [x] Casa-bottega L2: bancone, focolare e tavolo, postazione compatta, passaggio libero.
+- [ ] Verificare in partita le stanze sulle case a schiera (`urbanDenseParts`).
 ## 2026-11-20 — WINTER-PHASES · Inverno in quattro fasi
 
 **Implementato sul branch `feature/winter-phases`, non ancora unito a main.** Richiesta del product owner (20/11/2026): primo quarto spoglio con sottobosco marrone, secondo blizzard (neve sui rami) se il meteo è neve, terzo con neve a terra, ultimo spoglio con sottobosco verde e senza neve; «blizard vale sempre in caso di meteo neve».

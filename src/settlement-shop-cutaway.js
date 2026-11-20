@@ -260,10 +260,82 @@
     }
   };
   // Station on the door half of the room: the counter takes the other half.
-  function layout(R,out,kind){
+  // ---------- L2 home workshop: the artisan's ground floor is shop and home at once (beds are
+  // upstairs). Street half: the counter (away from the door) and a clear path from the door.
+  // Back of the counter half: the family's hearth and table. Back of the door half: the trade's
+  // station, compact. Coordinates as LAYOUTS: d is the door side, s the room scale.
+  function domestic(R,out,d,s){
+    onWall(R,out,'hearth','back',-d*.75,{scale:s*.9});
+    const t={a:-d*R.ha*.36,b:-R.hb*.02};piece(R,out,'tableSmall',t.a,t.b,0,-1,{scale:s});
+    piece(R,out,'stool',t.a+d*.17,t.b,-d,0,{scale:s});
+    piece(R,out,'stool',t.a-d*.17,t.b,d,0,{scale:s});
+  }
+  const sideWall=d=>d>0?'right':'left';
+  const LAYOUTS_L2={
+    blacksmith(R,out,d,s){
+      onWall(R,out,'forge','back',d*.6,{scale:s*.7});
+      const a={a:d*R.ha*.72,b:R.hb*.12};piece(R,out,'anvil',a.a,a.b,1,0,{scale:s*.9});
+      onWall(R,out,'toolRack',sideWall(d),-.1,{scale:s*.8});
+      return{a:a.a-d*.17,b:a.b,at:a};
+    },
+    carpenter(R,out,d,s){
+      const b={a:d*R.ha*.5,b:R.hb-.19};piece(R,out,'s:workbench',b.a,b.b,1,0,{scale:s*.9});
+      piece(R,out,'s:plankStack',d*(R.ha-.12),-R.hb*.05,0,1,{scale:s*.5});
+      onWall(R,out,'toolRack',sideWall(d),.35,{scale:s*.7});
+      return{a:b.a,b:b.b-.22,at:b};
+    },
+    leatherworker(R,out,d,s){
+      // Hide on a frame against the back wall, a trestle bench in front of it.
+      const a=d*R.ha*.5,b=R.hb-.06,g=group(out),w=.16*s,h=.42*s;
+      for(const k of [-1,1])box(R,g,a+k*w-.015,b-.015,a+k*w+.015,b+.015,0,h,WOOD_DARK);
+      box(R,g,a-w-.02,b-.015,a+w+.02,b+.015,h-.03,h,WOOD_DARK);
+      box(R,group(out),a-w+.02,b-.035,a+w-.02,b-.02,.1,h-.05,'#e0b98a','#d9ac78');
+      const t={a,b:R.hb*.15};piece(R,out,'bench',t.a,t.b,0,-1,{scale:s*.6});
+      return{a:t.a-d*.2,b:t.b-.05,at:t};
+    },
+    potter(R,out,d,s){
+      // Small kiln in the back corner of the door half, the wheel before it, a shelf of pots.
+      const k={a:d*(R.ha-.15),b:R.hb-.15},g=group(out),q=s*.75;
+      box(R,g,k.a-.13*q,k.b-.13*q,k.a+.13*q,k.b+.13*q,0,.34*q,'#8f7a66','#7a6553');
+      box(R,g,k.a-.15*q,k.b-.15*q,k.a+.15*q,k.b+.15*q,.34*q,.38*q,'#9b8774','#857160');
+      box(R,group(out),k.a-.06,k.b-.14*q,k.a+.06,k.b-.13*q,.03,.13,'#2a211c');
+      const w={a:d*R.ha*.42,b:R.hb*.12},gw=group(out);
+      box(R,gw,w.a-.045,w.b-.045,w.a+.045,w.b+.045,0,.12,WOOD_DARK,WOOD);
+      box(R,gw,w.a-.09,w.b-.09,w.a+.09,w.b+.09,.12,.14,'#a5653f','#8c5233');
+      box(R,gw,w.a-.035,w.b-.035,w.a+.035,w.b+.035,.14,.19,'#b9764d','#a5653f');
+      onWall(R,out,'shelf','back',d*.15,{scale:s*.8});
+      return{a:w.a-d*.17,b:w.b,at:w};
+    },
+    weaver(R,out,d,s){
+      const l={a:d*R.ha*.52,b:R.hb-.16},hw=.18*s,hd=.1*s,h=.4*s,g=group(out);
+      for(const ka of [-1,1])for(const kb of [-1,1])box(R,g,l.a+ka*hw-.015,l.b+kb*hd-.015,l.a+ka*hw+.015,l.b+kb*hd+.015,0,h,WOOD_DARK);
+      for(const kb of [-1,1])box(R,g,l.a-hw,l.b+kb*hd-.015,l.a+hw,l.b+kb*hd+.015,h-.03,h,WOOD);
+      const z=R.ground+FLOOR_Z,P=(a,b,zz)=>{const p=R.toWorld(a,b);return[p.x,p.y,z+zz]};
+      quad(group(out),[P(l.a-hw+.03,l.b+hd,h*.8),P(l.a+hw-.03,l.b+hd,h*.8),P(l.a+hw-.03,l.b-hd,h*.55),P(l.a-hw+.03,l.b-hd,h*.55)],'#d8cfae');
+      piece(R,out,'stool',l.a,l.b-hd-.1,0,1,{scale:s});
+      return{a:l.a,b:l.b-hd-.1,at:l};
+    },
+    tailor(R,out,d,s){
+      const t={a:d*R.ha*.48,b:R.hb-.16};piece(R,out,'tableSmall',t.a,t.b,0,-1,{scale:s*1.3});
+      box(R,group(out),t.a-.1,t.b-.08,t.a+.08,t.b+.06,.27*s,.28*s,'#4f6d8a','#3f5970');
+      onWall(R,out,'chest',sideWall(d),-.15,{scale:s*.85});
+      return{a:t.a,b:t.b-.24,at:t};
+    },
+    goldsmith(R,out,d,s){
+      const t={a:d*R.ha*.42,b:R.hb-.09};
+      onWall(R,out,'writingDesk','back',d*.55,{scale:s*.9});
+      onWall(R,out,'strongChest',sideWall(d),-.1,{scale:s*.8});
+      return{a:t.a,b:t.b-.22,at:t};
+    }
+  };
+  // Station on the door half of the room: the counter takes the other half. An L2 house is a home
+  // workshop (LAYOUTS_L2 + the family's corner); an L3 house the full advanced workshop.
+  function layout(R,out,kind,home=false){
     const d=R.doorA>=0?1:-1,s=Math.max(.7,Math.min(1,R.hb/.5));
     counter(R,out,TRADES[kind].goods);
-    return LAYOUTS[kind](R,out,d,s);
+    if(!home)return LAYOUTS[kind](R,out,d,s);
+    domestic(R,out,d,s);
+    return LAYOUTS_L2[kind](R,out,d,s);
   }
   // The second hand of an advanced workshop serves at the street counter, facing the street.
   function counterSpot(R){
@@ -288,11 +360,11 @@
   function build(house){
     const shop=shopOf(house),plan=typeof isPlanView==='function'&&isPlanView();
     const urban=typeof urbanRevision!=='undefined'?urbanRevision:0;
-    const key=[house.id,house.x,house.y,house.angle||0,house.doorSide,shop?.kind,urban,State.view?.rotation||0,plan?1:0,State.stonePaletteId,State.visualPalette,!!CF()].join('|');
+    const key=[house.id,house.x,house.y,house.angle||0,house.doorSide,shop?.kind,shop?.grade,urban,State.view?.rotation||0,plan?1:0,State.stonePaletteId,State.visualPalette,!!CF()].join('|');
     const hit=cache.get(house.id);if(hit&&hit.key===key)return hit.res;
     const R=room(house);if(!R)return null;
     const out=[];shell(R,out);
-    const spot=layout(R,out,shop.kind);
+    const spot=layout(R,out,shop.kind,shop.grade!=='advanced');
     const res={mesh:emit(out),room:R,spot,spots:[spot,counterSpot(R)],kind:shop.kind};
     cache.set(house.id,{key,res});
     return res;
@@ -449,7 +521,7 @@
     if(dist(p,houseDoorInfo(site).outside)>.42)return null;
     return spotOf(site,hire?hire.index:0);
   }
-  window.ConquerShopCutaway=Object.freeze({TRADES,LAYOUTS,EMBLEMS,SHOP_TIER,ADVANCED_TIER,shopOf,hireOf,eligible,active,activeId,room,build,addToBuilder,artisanAt,spotOf,
+  window.ConquerShopCutaway=Object.freeze({TRADES,LAYOUTS,LAYOUTS_L2,EMBLEMS,SHOP_TIER,ADVANCED_TIER,shopOf,hireOf,eligible,active,activeId,room,build,addToBuilder,artisanAt,spotOf,
     frontOpen,opening,signPlace,buildFront,addFront,facadeCut,frontSig,
     clear:()=>{cache.clear();frontCache.clear()}});
 })();

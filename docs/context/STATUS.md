@@ -1,5 +1,9 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-20 — SHOP-L2-ROOMS: stanze del piano terra L2 (branch `feature/shops-l2-rooms`, NON MERGE)
+
+- **CODICE:** `settlement-shop-cutaway.js` `LAYOUTS_L2` (sette mestieri) e `domestic()`; `layout(R,out,kind,home)` sceglie le stanze L2 per le botteghe di casa e `LAYOUTS` per le avanzate L3; `grade` nella chiave della cache del cutaway.
+- **PROVE LOCALI PASS:** `qa/shop-cutaway-regression.cjs` con nuovo controllo (layout L2 per ogni mestiere, focolare, passaggio dalla porta libero in entrambi i versi della porta) e i 112 cutaway esistenti; `qa/shops-l3-advanced-regression.cjs`. Audit Lab «Botteghe L2»: 21 render, 0 falliti, fogli rivisti, baseline aggiornata.
 ### 2026-11-20 — WINTER-PHASES: quattro fasi dell'inverno (`feature/winter-phases`)
 
 - **Codice sul branch, non ancora unito a main.** Prima l'inverno era un solo aspetto: neve a terra dal primo giorno, alberi spogli.

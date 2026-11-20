@@ -136,6 +136,25 @@ for(const doorLeft of [false,true]){
   assert.ok(street.length&&street.every(q=>Math.sign(q.a)===-Math.sign(R.doorA)),'counter on the half away from the door ('+(doorLeft?'left':'right')+' door)');
 }
 console.log('PASS the counter leaves the door clear');
+// L2 home workshop (LAYOUTS_L2): the family's hearth and table share the ground floor, and nothing
+// stands in the path from the door into the room; L3 keeps the full workshop (LAYOUTS).
+assert.deepEqual(Object.keys(SC.LAYOUTS_L2).sort(),trades.slice().sort(),'an L2 home layout for every trade');
+assert.match(src('settlement-shop-cutaway.js'),/function domestic\(R,out,d,s\)\{\s*onWall\(R,out,'hearth','back'/,'the L2 ground floor has the family hearth');
+for(const doorLeft of [false,true])for(const kind of trades){
+  turn=0;State.view.rotation=0;const h=house({shopKind:kind,doorLeft});State.structures=[h];SC.clear();
+  const r=SC.build(h),R=r.room,label=kind+(doorLeft?' door-left':'');
+  const loc=v=>({a:(v.x-R.c.x)*R.T.x+(v.y-R.c.y)*R.T.y,b:(v.x-R.c.x)*R.N.x+(v.y-R.c.y)*R.N.y});
+  const edges=R.bodies.flatMap(p=>p.basePoints.map((a,i,P)=>[a,P[(i+1)%P.length]]));
+  const onOutline=v=>edges.some(([a,b])=>Math.abs((b.x-a.x)*(v.y-a.y)-(b.y-a.y)*(v.x-a.x))<1e-6);
+  for(let t=0;t<r.mesh.col.length;t++){
+    const g=r.mesh.gi[t];if(r.mesh.groupBias[g]!==0)continue;
+    const o=t*9,vs=[0,3,6].map(k=>({x:r.mesh.pos[o+k],y:r.mesh.pos[o+k+1],z:r.mesh.pos[o+k+2]}));
+    if(vs.every(onOutline))continue;   // walls
+    for(const v of vs){const q=loc(v);
+      assert.ok(!(Math.abs(q.a-R.doorA)<.1&&q.b<-R.hb+.3&&v.z>.06),label+': the door path stays clear ('+q.a.toFixed(2)+','+q.b.toFixed(2)+')')}
+  }
+}
+console.log('PASS L2 home workshop: hearth and table, door path clear');
 
 // The artisan: only the shop's artisan, only from his door, only while open and working.
 turn=0;State.view.rotation=0;
