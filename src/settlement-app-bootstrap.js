@@ -29,6 +29,7 @@ function bootConquer(selection=null){
       const seed=Number(selection.seed);
       if(!Number.isInteger(seed)||seed<1||seed>2147483647)throw new Error('Invalid world seed');
       if(!['plains','hills','forest','swamp'].includes(selection.biome))throw new Error('Unsupported biome');
+      State.loadFailed=false;
       State.seed=seed;
       State.biome=selection.biome;
       State.stonePaletteId=window.ConquerStoneColor?.randomForSeed(seed)||'gray';
@@ -47,6 +48,28 @@ function bootConquer(selection=null){
   if(guest&&persisted===false)return false; // Do not dismiss the splash when browser storage is full.
   ensureBorderEntrySelection();renderUI();resize();fit();
   if(!guest)initSupabase(); // Guest is always local singleplayer, never cloud or multiplayer.
+  if(window.ConquerGameEntry?.requested){
+    let exit=document.getElementById('conquerExitToSite');
+    if(!exit){
+      exit=document.createElement('button');
+      exit.type='button';
+      exit.id='conquerExitToSite';
+      exit.textContent='Back to website';
+      exit.setAttribute('aria-label','Save progress and return to the CONQUER website');
+      document.body.appendChild(exit);
+    }
+    exit.onclick=async()=>{
+      if(saveLocal()===false){alert('Your world could not be saved. Check storage and try again before leaving.');return;}
+      if(!guest&&State.user){
+        try{await saveCloud()}catch(error){console.warn('Exit cloud save failed',error)}
+        if(document.getElementById('saveState')?.textContent==='cloud error'){
+          alert('Cloud save is unavailable. A local copy was saved, but please retry syncing before leaving.');
+          return;
+        }
+      }
+      location.assign('./gamesite/play.html');
+    };
+  }
   return true;
 }
 window.addEventListener('resize',resize);
