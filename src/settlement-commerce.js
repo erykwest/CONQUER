@@ -1,5 +1,5 @@
 'use strict';
-// CONQUER Commerce: autonomous L3 street workshops producing "Beni L3" priced
+// CONQUER Commerce: autonomous L2 (artisan) street workshops producing "Beni L3" priced
 // weekly with a one-week lag, L3 services, L4 productive-site capital and L4+
 // intercity traveler manifests. Workshop rules come from ConquerUrbanEconomy,
 // goods and prices from ConquerMarketEconomy. Sales move real household coins.
@@ -235,7 +235,7 @@
     const alarm=(window.ConquerCombat?.alarmMode?.()||'off')!=='off';
     if(dow<5&&!alarm)spawnWorkshops(c,day);
     const demand=sectorDemand(residents());
-    // GILDA-01: the active guild multiplies every L3 workshop's daily output.
+    // GILDA-01: the active guild multiplies every workshop's daily output.
     const out=roundGold(SHOP_OUTPUT_PER_DAY*(1+Math.max(0,finite(window.ConquerGuild?.bonus?.()))));
     for(const shop of Object.values(c.shops)){
       const good=Market.WORKSHOP_OUTPUT[shop.kind],kind=WORKSHOP_KINDS[shop.kind];
