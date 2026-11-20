@@ -14,6 +14,9 @@ on:
       - 'src/settlement-castle-placement.js'
       - 'src/settlement-app-input.js'
       - 'src/settlement-app.js'
+      - 'src/settlement-app-simulation.js'
+      - 'src/settlement-industries.js'
+      - 'qa/access-roads-regression.cjs'
       - 'qa/bridge-road-magnet-regression.cjs'
       - 'qa/wall-road-gate-regression.cjs'
       - 'qa/linear-magnet-regression.cjs'
@@ -41,3 +44,5 @@ jobs:
           node qa/linear-magnet-regression.cjs
           node qa/builder-placement-regression.cjs
           node qa/wall-road-gate-regression.cjs
+      - name: Secondary access roads for every building
+        run: node qa/access-roads-regression.cjs

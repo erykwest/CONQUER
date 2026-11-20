@@ -4,6 +4,10 @@
 
 `feature/winter-phases`: l'inverno (1 dic – 28 feb) ha quattro quarti: alberi e cespugli spogli con sottobosco marrone, due quarti di neve a terra, poi spogli con sottobosco verde e senza neve; con meteo neve, in qualunque giorno d'inverno, è blizzard (neve a terra e retino di neve sui rami). Alberi spogli con rami secondari; neve a retino su rami, cespugli, pini e cenge; versante della montagna bianco con neve a terra; scarpate ripide in roccia nuda; neve sui sassi di riva e costa. Pini 75% e 1,5x, boschi 1,3x, sottobosco 2x; cespugli di riva 2D legacy al posto dei modelli 3D; billboard 3D con profondità verticale. Test in `qa/winter-phases-regression.cjs`. ROADMAP e DECISIONS invariate.
 
+### 2026-11-18 — ROAD-ACCESS-261118 · Strade secondarie per ogni edificio
+
+`fix/secondary-roads`: le strade secondarie di accesso erano limitate a case, campi e civici; ora ogni edificio con ingresso (anche taglialegna, cave, miniere, mulini, depositi) è collegato alla rete principale tramite la regola unica `structureNeedsAccessRoad`. Nuova `qa/access-roads-regression.cjs` nel workflow `road-magnet-regression`. ROADMAP e DECISIONS invariate: correzione della regola esistente, nessun contratto nuovo.
+
 ### 2026-11-18 — FIX-MILL-HILLS-261118 · Il mulino a vento si costruisce sulle colline
 
 `fix/mill-hills`: il mulino a vento accetta ogni terrazza piana di collina (H+1, H+2, H+3 in cima), non più solo H+1, ed è posato all'altezza della terrazza; resta escluso dalla pianura H0 e dai pendii. Mulino ad acqua invariato (riva di fiume o torrente). Nuova `qa/windmill-hills-regression.cjs` su colline procedurali reali. ROADMAP e DECISIONS invariate: correzione di una regola di posa, nessun contratto cambiato.

@@ -8,6 +8,13 @@
 - [x] Pini 75% e 1,5x; boschi 1,3x; sottobosco 2x; cespugli di riva 2D legacy.
 - [ ] Aperti: la neve sui rami si legge poco a distanza su terreno bianco; i 7 alberi spogli condividono il tronco; asset audit del Lab non eseguito; prestazioni con la nuova densità da misurare.
 
+### 2026-11-18 — ROAD-ACCESS-261118 · Strade secondarie per ogni edificio con ingresso
+
+**IMPLEMENTATO SU BRANCH `fix/secondary-roads`.** Dettagli in [STATUS](STATUS.md).
+- [x] Taglialegna, cava, cava d'argilla, miniera, mulini e deposito ricevono la strada secondaria al completamento, alla ricarica e nella riconciliazione.
+- [x] Regola unica `structureNeedsAccessRoad` con audit dei tipi piazzabili in `qa/access-roads-regression.cjs`: un nuovo tipo di edificio deve essere collegato o dichiarato esente.
+- [ ] Miniere e cave su pendio: se il bordo dell'impronta e i 3U attorno sono pendio o montagna (vietati alle strade) la ricerca del percorso fallisce e la strada non nasce; verificarlo in partita su mappe montuose.
+
 ### 2026-11-18 — FIX-MILL-HILLS-261118 · Mulino a vento sulle colline
 
 **CORRETTO SU BRANCH `fix/mill-hills`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
