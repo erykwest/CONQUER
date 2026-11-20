@@ -133,7 +133,7 @@ function renderFunctionPanel(){
   }
   if(s?.type==='well'){
     // Village well: centre designation (like the Mastio) and the quarter name of a non-centre well.
-    const w=StructureCommands.describeStructure(s.id).well;
+    const d=StructureCommands.describeStructure(s.id),w=d.well;
     panel.classList.add('open');
     info.innerHTML='<div class="kv"><span>Selected</span><b>Pozzo · '+roomEsc(w.center?(w.villageName||'Centro villaggio'):(w.name||'Quartiere senza nome'))+'</b></div>'+
       '<div class="kv"><span>Ruolo</span><b>'+(w.center?'Centro villaggio':'Quartiere')+'</b></div>'+
@@ -141,6 +141,16 @@ function renderFunctionPanel(){
     slots.innerHTML=(w.founded?'<div class="slot"><button data-well-center'+(w.canCenter?'':' disabled')+(w.center?' class="active"':'')+'>'+(w.center?'Centro villaggio · rimuovi':'Designa come centro villaggio')+'</button></div>':'')+
       (w.center?'<div class="legend">Il centro porta il nome del villaggio.</div>':
         '<div class="slot"><label class="slot-label" for="wellNameInput">Nome quartiere / borgata</label><input id="wellNameInput" type="text" maxlength="32" placeholder="Quartiere o borgata" value="'+roomEsc(w.name)+'"></div>');
+    // Well upgrades (town hall, guild hall, bargello) start here, not from the Builder palette.
+    const WELL_UPGRADE_NAMES={townhall:'Municipio',guild:'Gilda',bargello:'Bargello'};
+    const WELL_UPGRADE_WHY={notFounded:'Serve un villaggio fondato',taken:'Già presente',guildOne:'Una sola gilda per villaggio'};
+    if(d.upgrades?.length)slots.innerHTML+='<div class="slot"><div class="slot-label">Ampliamenti del pozzo</div>'+
+      d.upgrades.map(u=>'<button data-well-upgrade="'+u.key+'"'+(u.reason?' disabled':'')+'>'+WELL_UPGRADE_NAMES[u.key]+
+        (u.reason?' · '+WELL_UPGRADE_WHY[u.reason]:' · costruisci')+'</button>'+
+        u.children.map(id=>'<button data-well-upgrade-child="'+id+'">↳ Seleziona '+WELL_UPGRADE_NAMES[u.key]+'</button>').join('')).join('')+
+      '<div class="legend">Uno per tipo, entro '+WELL_CIVIC_RANGE+'U da questo pozzo.</div></div>';
+    slots.querySelectorAll('[data-well-upgrade]').forEach(btn=>btn.onclick=()=>StructureCommands.startUpgrade(s.id,btn.dataset.wellUpgrade));
+    slots.querySelectorAll('[data-well-upgrade-child]').forEach(btn=>btn.onclick=()=>selectStructure(State.structures.find(x=>x.id===btn.dataset.wellUpgradeChild)));
     const center=slots.querySelector('[data-well-center]');if(center)center.onclick=()=>StructureCommands.toggleVillageCenter(s.id);
     const name=slots.querySelector('#wellNameInput');if(name)name.onchange=()=>StructureCommands.setWellName(s.id,name.value);
     return;
@@ -315,6 +325,12 @@ function renderFunctionPanel(){
     const flipLabel=s.type==='built'?'Exterior side / windows':'Exterior side';
     const flipLegend=s.type==='wall'?'Defines the exterior side for battlements or hoarding.':s.type==='palisade'?'Defines which side is exterior; walkway and earthwork are generated inward.':isWideBuilt(s)?'Exterior: arrow slits. Interior: tall hall windows (clerestory with portico).':'Exterior windows: upper level only. Interior windows/portico follow the opposite side.';
     html+=`<div class="slot"><div class="slot-label">${flipLabel}</div><button data-linear-flip class="active">⇄ Flip</button><div class="legend">${flipLegend}</div></div>`;
+    // Moat on the exterior face (StructureCommands.digMoat, settlement-crossings.js digAlongWall).
+    const moatCtl=!building&&StructureCommands.describeStructure(s.id)?.controls.find(c=>c.key==='moat');
+    if(moatCtl){
+      const label={dry:'Dry moat',water:'Water moat'},why=moatCtl.options.map(o=>o.reason).find(Boolean);
+      html+=`<div class="slot"><div class="slot-label">Moat · exterior side</div><div class="grid">${moatCtl.options.map(o=>`<button data-wall-moat="${o.value}" class="${o.active?'active':''}" ${o.disabled?'disabled':''}>${label[o.value]}</button>`).join('')}</div><div class="legend">${why?why+' · ':''}1.5U moat against the exterior face; joins the moat of the next wall at the corner, leaves gates open. Water only at level 0.</div></div>`;
+    }
   }
   if(s.type==='townhall'&&!building){
     normalizeFunctions(s);
@@ -386,6 +402,7 @@ function renderFunctionPanel(){
   on('[data-cutaway-toggle]',id=>StructureCommands.toggleCutaway(id));
   on('[data-cutaway-floor]',(id,el)=>StructureCommands.stepCutawayFloor(id,Number(el.dataset.cutawayFloor)));
   on('[data-linear-flip]',id=>StructureCommands.flipSide(id));
+  on('[data-wall-moat]',(id,el)=>StructureCommands.digMoat(id,el.dataset.wallMoat));
   on('[data-keep-plan]',(id,el)=>{const [f,k]=el.dataset.keepPlan.split(':');StructureCommands.setKeepFloorPlan(id,Number(f),k)});
   on('[data-function-slot]',(id,el)=>StructureCommands.setRoom(id,Number(el.dataset.functionSlot),el.value),'onchange');
   window.ConquerGates?.bindPanel(slots);

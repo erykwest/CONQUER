@@ -845,10 +845,13 @@ function baseConstructionCost(s){
     return scaleCost(COSTS.tower[towerTier(s)-1],levelCostFactor(s)*(TOWER_SHAPE_COST[s.shape]??1));
   }
   if(s.type==='gate'){
-    if(isWoodGate(s))return{...COSTS.woodGate};
-    // Timber upper storey: the stone L1 small gate plus a little timber.
-    if(gateTimberUpper(s)){const c=scaleCost(COSTS.gate,SMALL_GATE_COST);for(const [k,v] of Object.entries(GATE_TIMBER_COST))c[k]=(c[k]||0)+v;return c}
-    return scaleCost(COSTS.gate,levelCostFactor(s)*(isSmallGate(s)?SMALL_GATE_COST:1));
+    const c=isWoodGate(s)?{...COSTS.woodGate}:
+      // Timber upper storey: the stone L1 small gate plus a little timber.
+      gateTimberUpper(s)?(()=>{const c=scaleCost(COSTS.gate,SMALL_GATE_COST);for(const [k,v] of Object.entries(GATE_TIMBER_COST))c[k]=(c[k]||0)+v;return c})():
+      scaleCost(COSTS.gate,levelCostFactor(s)*(isSmallGate(s)?SMALL_GATE_COST:1));
+    // A drawbridge built together with the gate (a road across the moat) is part of the site.
+    if(s.drawbridge?.withGate)for(const [k,v] of Object.entries(window.ConquerCrossings?.DRAWBRIDGE_COST||{}))c[k]=(c[k]||0)+v;
+    return c;
   }
   if(s.type==='moat')return roundCost({gold:(s.variant==='water'?12:7)*(s.length||1)*(s.width||1.5)});
   if(s.type==='bridge'){

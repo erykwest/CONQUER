@@ -163,6 +163,88 @@
     status((s.type==='moat'?'Moat':'Bridge')+' placed · '+s.length.toFixed(1)+'U · level '+s.groundZ);
     draw();return true;
   }
+  // Moat dug along a selected wall, palisade or built section: a strip of the small moat width
+  // whose inner bank touches the exterior face (wallExteriorSide), a->b as the wall's own a->b.
+  // s.wallId names the wall. Its ends join the moat of a neighbouring wall (same end point or
+  // same tower; never across a gate, so the passage stays open) at the mitre of the two banks.
+  const WALL_MOAT_TYPES=['wall','palisade','built'];
+  function wallMoatOf(w){return w?State.structures.find(o=>o.type==='moat'&&o.wallId===w.id)||null:null}
+  function wallMoatBlocker(w){
+    if(!w||!WALL_MOAT_TYPES.includes(w.type)||!xy(w))return'Select a wall, palisade or built section';
+    if(w.leanTo)return'A lean-to stands inside the walls: dig the moat along its curtain wall';
+    if(underConstruction(w))return'The wall is still under construction';
+    return null;
+  }
+  function wallMoatLine(w,width){
+    const L=length(w)||1,ux=(w.b.x-w.a.x)/L,uy=(w.b.y-w.a.y)/L,side=wallExteriorSide(w);
+    const wallWidth=Number(w.width)||(w.type==='built'?TYPES.built.width:.5);
+    const off=wallWidth/2+width/2,ox=-uy*side*off,oy=ux*side*off;
+    return{a:{x:w.a.x+ox,y:w.a.y+oy},b:{x:w.b.x+ox,y:w.b.y+oy},ux,uy};
+  }
+  // The neighbouring wall meeting w at its end `end`, with that wall's own end there.
+  function wallNeighbours(w,end){
+    const p=w[end],snap=w[end+'Snap'],snapped=snap&&State.structures.find(o=>o.id===snap);
+    if(snapped?.type==='gate')return[];
+    const out=[];
+    for(const o of State.structures){
+      if(o===w||!WALL_MOAT_TYPES.includes(o.type)||o.leanTo||!xy(o))continue;
+      for(const e of ['a','b']){
+        if(o[e+'Snap']===snapped?.id&&snapped?.type==='tower'||Math.hypot(o[e].x-p.x,o[e].y-p.y)<.05)out.push({wall:o,end:e});
+      }
+    }
+    return out;
+  }
+  // Where two bank lines meet (point p0 + t·d0, p1 + t·d1); null when nearly parallel.
+  function lineMeet(p0,d0,p1,d1){
+    const den=d0.x*d1.y-d0.y*d1.x;if(Math.abs(den)<1e-4)return null;
+    const t=((p1.x-p0.x)*d1.y-(p1.y-p0.y)*d1.x)/den;
+    return{x:p0.x+d0.x*t,y:p0.y+d0.y*t};
+  }
+  function planWallMoat(w,variant='dry'){
+    const blocker=wallMoatBlocker(w);if(blocker)return{ok:false,reason:blocker};
+    if(wallMoatOf(w))return{ok:false,reason:'This wall already has a moat'};
+    const width=WIDTHS.moat,line=wallMoatLine(w,width);
+    const moat={id:uid(),type:'moat',variant:variant==='water'?'water':'dry',width,wallId:w.id,
+      masonryMaterial:State.buildMasonryMaterial,a:{...line.a},b:{...line.b},aSnap:null,bSnap:null};
+    const joins=[];
+    for(const end of ['a','b']){
+      for(const n of wallNeighbours(w,end)){
+        const other=wallMoatOf(n.wall);if(!other||other.variant!==moat.variant)continue;
+        const o=wallMoatLine(n.wall,Number(other.width)||width);
+        const meet=lineMeet(line.a,{x:line.ux,y:line.uy},o.a,{x:o.ux,y:o.uy})
+          ||{x:(moat[end].x+other[n.end].x)/2,y:(moat[end].y+other[n.end].y)/2};
+        // A very acute corner would throw the mitre far out: leave those ends apart.
+        if(Math.hypot(meet.x-w[end].x,meet.y-w[end].y)>width*3)continue;
+        moat[end]={...meet};moat[end+'Snap']=other.id;
+        joins.push({moat:other,end:n.end,own:end,point:meet});
+        break;
+      }
+    }
+    // A neighbour is moved to the mitre only if it stays valid; otherwise this end stays free.
+    const kept=[];
+    for(const j of joins){
+      const trial=normalise({...j.moat,[j.end]:{...j.point},fills:[]});
+      if(!validate(trial)){kept.push(j);continue}
+      moat[j.own]={...line[j.own]};moat[j.own+'Snap']=null;
+    }
+    normalise(moat);
+    const err=validate(moat);
+    if(err)return{ok:false,reason:err};
+    return{ok:true,moat,joins:kept};
+  }
+  function digAlongWall(w,variant='dry'){
+    const existing=wallMoatOf(w);
+    if(existing&&variant==='water'&&existing.variant==='dry')return floodMoat(existing);
+    const plan=planWallMoat(w,variant);
+    if(!plan.ok){status('Moat: '+plan.reason);return false}
+    for(const j of plan.joins){
+      j.moat[j.end]={...j.point};j.moat[j.end+'Snap']=plan.moat.id;normalise(j.moat);validate(j.moat);
+    }
+    if(!add(plan.moat))return false;
+    selectStructure(w);   // stay on the wall the moat was dug from
+    status('Moat dug along the exterior face · '+plan.moat.length.toFixed(1)+'U'+(plan.joins.length?' · joined to '+plan.joins.length+' neighbouring moat'+(plan.joins.length>1?'s':''):''));
+    return true;
+  }
   const HEAVY_WIDTHS={ram:1.4,siegeTower:2.4,mantlet:1};
   function heavyWidth(kind){return typeof kind==='string'?(HEAVY_WIDTHS[kind]||1.4):kind?1.4:0}
   function filled(s,l,width=0){
@@ -261,23 +343,24 @@
     const d=drawbridge(gate);
     return !d?'none':d.progress>=.99?'raised':d.progress<=.01?'lowered':'moving';
   }
-  function deck(gate){
+  // withSites: also moats still being dug (a road planned across them, ROAD-MOAT-DRAWBRIDGE).
+  function deck(gate,withSites=false){
     const d=rectDims(gate),a=Number(gate.angle)||0;
     const outward={x:Math.cos(a),y:Math.sin(a)};
     const tangent={x:-outward.y,y:outward.x};
     const hinge={x:gate.x+outward.x*d.w/2,y:gate.y+outward.y*d.w/2};
     // The leaf spans the moat in front of the gate, never longer than the small moat
     // (WIDTHS.moat, 1.5 U). A wider moat, or one further out, needs a fixed half-bridge.
-    const ahead=moatAhead({hinge,outward}),width=Math.min(1.2,d.h*.80);
+    const ahead=moatAhead({hinge,outward},12,withSites),width=Math.min(1.2,d.h*.80);
     const length=ahead?Math.max(.6,Math.min(ahead.far+.15,WIDTHS.moat+.15)):WIDTHS.moat;
     return{hinge,outward,tangent,length,width,z:placementGroundZ(gate),ahead};
   }
   // The first finished moat crossed by the line out of a gate: where its near and far
   // banks are along that line (distance from the hinge) and how wide it is.
-  function moatAhead({hinge,outward},reach=12){
+  function moatAhead({hinge,outward},reach=12,withSites=false){
     let best=null;
     for(const s of State.structures){
-      if(s.type!=='moat'||underConstruction(s)||!xy(s))continue;
+      if(s.type!=='moat'||(!withSites&&underConstruction(s))||!xy(s))continue;
       const f=frame(s),on=outward.x*f.nx+outward.y*f.ny;if(Math.abs(on)<.2)continue;
       const across0=(hinge.x-s.a.x)*f.nx+(hinge.y-s.a.y)*f.ny;
       const t1=(-f.width/2-across0)/on,t2=(f.width/2-across0)/on,near=Math.min(t1,t2),far=Math.max(t1,t2);
@@ -753,12 +836,79 @@
     markDirty(true,['ground','base']);renderFunctionPanel();draw();
     status('Moat flooded · water level 0');return true;
   }
+  // MOAT-WIDEN: a finished moat widens in steps. A moat against a wall, palisade or built
+  // section keeps the bank on the wall's exterior face and grows outward; a free moat grows on
+  // both sides. A joined neighbour keeps meeting it where the two centrelines cross, so the
+  // banks (each offset by its own half width, moatOffsetOutline) still meet on the wall corner.
+  const WIDEN_STEPS=[2,3,4];
+  // +1 / -1: the side (along the moat's normal) where its wall stands; 0 for a free moat.
+  function moatWallSide(s){
+    const f=frame(s);
+    const sideOf=w=>{const mid={x:(w.a.x+w.b.x)/2,y:(w.a.y+w.b.y)/2},l=location(s,mid);return l?Math.sign(l.across):0};
+    const own=s.wallId&&State.structures.find(w=>w.id===s.wallId&&xy(w));
+    if(own)return sideOf(own)||0;
+    for(const w of State.structures){
+      if(!WALL_MOAT_TYPES.includes(w.type)||w.leanTo||!xy(w))continue;
+      const L=length(w)||1,dot=((w.b.x-w.a.x)*f.ux+(w.b.y-w.a.y)*f.uy)/L;if(Math.abs(dot)<.98)continue;
+      const la=location(s,w.a),lb=location(s,w.b),half=(Number(w.width)||.5)/2;
+      if(Math.max(la.along,lb.along)<.2||Math.min(la.along,lb.along)>f.L-.2)continue;   // must run along it
+      const across=(la.across+lb.across)/2;
+      if(Math.abs(Math.abs(across)-(f.width/2+half))<=.15)return Math.sign(across);
+    }
+    return 0;
+  }
+  // Other moats with an end on this end: [{moat, end}].
+  function moatNeighbours(s,end){
+    const out=[];
+    for(const o of State.structures){
+      if(o===s||o.type!=='moat'||!xy(o))continue;
+      for(const e of ['a','b'])if(Math.hypot(o[e].x-s[end].x,o[e].y-s[end].y)<.05)out.push({moat:o,end:e});
+    }
+    return out;
+  }
+  function planWidenMoat(s,width){
+    if(s?.type!=='moat'||!xy(s))return{ok:false,reason:'Select a moat'};
+    if(underConstruction(s))return{ok:false,reason:'The moat is still being dug'};
+    const from=frame(s).width;
+    if(!(width>from+1e-6))return{ok:false,reason:'Already this wide'};
+    const side=moatWallSide(s),shift=-side*(width-from)/2,f=frame(s);
+    const moved=p=>({x:p.x+f.nx*shift,y:p.y+f.ny*shift});
+    const moat=normalise({...s,width,a:moved(s.a),b:moved(s.b),fills:(s.fills||[]).map(x=>({...x}))});
+    const joins=[];
+    for(const end of ['a','b'])for(const n of moatNeighbours(s,end)){
+      const o=n.moat,of=frame(o),meet=lineMeet(moat.a,{x:f.ux,y:f.uy},o.a,{x:of.ux,y:of.uy});
+      if(!meet)continue;   // collinear neighbour: the shifted end stays where it is
+      moat[end]={...meet};joins.push({moat:o,end:n.end,point:meet});
+    }
+    normalise(moat);
+    const err=validate(moat);if(err)return{ok:false,reason:err};
+    for(const j of joins){
+      const e=validate(normalise({...j.moat,[j.end]:{...j.point},fills:[]}));
+      if(e)return{ok:false,reason:'The joined moat would not stay valid: '+e};
+    }
+    const price=Object.fromEntries(Object.entries(constructionCost({...moat,auto:false})).map(([k,v])=>[k,Math.max(0,v-(constructionCost({...s,auto:false})[k]||0))]).filter(([,v])=>v>0));
+    return{ok:true,moat,joins,price,side};
+  }
+  function widenMoat(s,width){
+    const plan=planWidenMoat(s,Number(width));
+    if(!plan.ok){status('Moat: '+plan.reason);return false}
+    const before=structureUpgradeSnapshot(s);
+    Object.assign(s,{width:plan.moat.width,a:plan.moat.a,b:plan.moat.b,length:plan.moat.length,groundZ:plan.moat.groundZ,fills:plan.moat.fills,upgradeCost:plan.price});
+    for(const j of plan.joins){j.moat[j.end]={...j.point};normalise(j.moat);validate(j.moat)}
+    beginStructureUpgrade(s,before,plan.price);
+    markDirty(true,['ground','base','castleBody']);renderFunctionPanel();draw();
+    status('Moat widened to '+plan.moat.width+'U'+(plan.side?' · the bank on the wall stays put':''));
+    return true;
+  }
   function panel(s){
     if(s.type==='moat'){
-      const fills=(s.fills||[]).filter(f=>f.progress>=1).length;
-      return '<div class="slot"><div class="slot-label">Moat · '+(s.variant==='water'?'Water':'Dry')+'</div>'+
+      const fills=(s.fills||[]).filter(f=>f.progress>=1).length,w=frame(s).width;
+      const steps=WIDEN_STEPS.filter(n=>n>w+1e-6).map(n=>{const p=planWidenMoat(s,n);
+        return '<button data-moat-widen="'+n+'" '+(p.ok?'':'disabled title="'+String(p.reason).replace(/"/g,'&quot;')+'"')+'>'+n+'U'+(p.ok?' · '+costText(p.price):'')+'</button>'}).join('');
+      return '<div class="slot"><div class="slot-label">Moat · '+(s.variant==='water'?'Water':'Dry')+' · '+w.toFixed(1)+'U</div>'+
         '<div class="legend">Depth .3U · infantry '+(s.variant==='water'?'25%':'50%')+
         ' speed · heavy equipment requires filling · crossings ready '+fills+'</div>'+
+        (steps?'<div class="slot-label">Widen</div><div class="grid">'+steps+'</div><div class="legend">Against a wall the bank on the wall stays put: the moat grows outward.</div>':'')+
         (s.variant==='dry'?'<button data-crossing-flood '+(underConstruction(s)||Math.abs(Number(s.groundZ)||0)>.01?'disabled':'')+'>Flood moat · '+costText(crossingUpgradeCost(s,'water'))+'</button>'+
           '<div class="legend">Requires a fully completed moat entirely on level 0.</div>':'')+'</div>';
     }
@@ -787,6 +937,7 @@
     const s=selectedStructure();if(!s)return;
     slots.querySelector('[data-crossing-upgrade]')?.addEventListener('click',()=>upgradeBridge(s));
     slots.querySelector('[data-crossing-flood]')?.addEventListener('click',()=>floodMoat(s));
+    slots.querySelectorAll('[data-moat-widen]').forEach(b=>b.addEventListener('click',()=>widenMoat(s,b.dataset.moatWiden)));
     slots.querySelector('[data-crossing-demolish]')?.addEventListener('click',()=>{
       if(confirm('Demolish the wooden bridge permanently?'))demolishBridge(s);
     });
@@ -812,7 +963,7 @@
   }
   window.ConquerCrossings={validate,normalise,add,panel,bindPanel,drawGround,drawPreview,drawDynamic,
     deck,moatAhead,drawbridgeGuards,drawbridgeMesh,bridgeMesh,halfBridgeNeed,halfBridgeOf,buildHalfBridge,demolishBridge,
-    snapMoatEndpoint,drawMoatMagnets,drawUnifiedMoats,moatChains,moatOffsetOutline,
+    snapMoatEndpoint,drawMoatMagnets,wallMoatOf,moatWallSide,planWidenMoat,widenMoat,wallMoatBlocker,planWallMoat,digAlongWall,drawUnifiedMoats,moatChains,moatOffsetOutline,
     movementMultiplier,routeMultiplier,onBridge,segmentCanCrossCliff,moatAt,onOpenBridge,
     heavyApproach,progressFilling,upgradeBridge,floodMoat,crossingUpgradeCost,installDrawbridge,toggleDrawbridge,removeDrawbridge,
     drawbridgeBlocks,drawbridgePassage,withDrawbridgeWindowOcclusion,stateOfGate,DRAWBRIDGE_COST};

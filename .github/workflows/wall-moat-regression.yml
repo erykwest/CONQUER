@@ -1,0 +1,39 @@
+name: Wall moat regression
+
+# Abort superseded PR runs of this workflow (never cancel scheduled/main runs).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/settlement-crossings.js'
+      - 'src/settlement-structure-commands.js'
+      - 'qa/wall-moat-regression.cjs'
+      - 'qa/drawbridge-regression.cjs'
+      - '.github/workflows/wall-moat-regression.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  wall-moat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Check affected scripts
+        run: |
+          node --check src/settlement-crossings.js
+          node --check src/settlement-structure-commands.js
+          node --check qa/wall-moat-regression.cjs
+      - name: Moat from a selected wall, palisade or built section
+        run: node qa/wall-moat-regression.cjs
+      - name: Drawbridges and half-bridges over moats
+        run: node qa/drawbridge-regression.cjs

@@ -52,9 +52,7 @@
       ['[data-civic="market"]','Mercato','market'],
       ['[data-civic="tavern"]','Taverna','tavern'],
       ['[data-civic="church"]','Chiesa','church'],
-      ['[data-civic="townhall"]','Municipio · presso un pozzo','townhall'],
-      ['[data-civic="guild"]','Gilda · presso un pozzo','guild'],
-      ['[data-civic="bargello"]','Bargello · esattori e guardie di quartiere','bargello'],
+      // Municipio, Gilda e Bargello sono ampliamenti del pozzo: si avviano dal suo inspector.
       ['[data-civic="balivo"]','Palazzo del Balivo · nel contado','balivo'],
       ['[data-civic="training"]','Campo di addestramento','training'],
       ['[data-event-venue="pillory"]','Gogna · 1×1U · piazza','civic'],
@@ -90,7 +88,9 @@
       ['[data-event-venue="festivalGround"]','Spiazzo eventi · 14×10U · giostra, torneo, circo, sagra','festival'],
       ['[data-event-venue="arenaLot"]','Arena · 18×14U · lotto dedicato','arena']]},
     {id:'combat',label:'Combattimento e allarmi',icon:'castle',items:[
-      ['[data-event-venue="armyCamp"]','Accampamento militare · capi, compagnie, logistica · steccato → palizzata','castle']]},
+      ['[data-event-venue="armyCamp"]','Accampamento militare · capi, compagnie, logistica · steccato → palizzata → pali','castle'],
+      ['[data-event-venue="stakeRow"]','Pali anti-carica · tratti da 1.4U · punte verso il fronte','castle'],
+      ['[data-event-venue="chevalFrise"]','Cavallo di Frisia · 1.4U · sbarra un varco','castle']]},
     {id:'terrain',label:'Terraforming',icon:'terrain',items:[
       ['[data-terraform="terrain"]','Terreno','terrain'],
       ['[data-terraform="walled"]','Terrazzamento murato','terrace'],
