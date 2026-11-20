@@ -55,7 +55,10 @@ Le catture sono ripetibili: mondo con seed fisso, luce di giorno, sole, orologio
    ```
    e committa `qa/asset-audit-baseline.json` insieme all'asset.
 
-La CI (`Asset Lab regression` → `browser`) esegue l'audit su ogni PR che tocca asset, Lab o renderer delle fortificazioni, scrive il report nel riepilogo del job e carica report e fogli provini come artifact `asset-lab-visual-qa`. Fallisce sugli errori, non su nuovi/cambiati (quelli si rivedono).
+La CI (`Asset Lab regression` → `browser`) esegue l'audit su ogni PR che tocca asset, Lab o renderer delle fortificazioni, scrive il report nel riepilogo del job e carica report e fogli provini come artifact `asset-lab-visual-qa-N` (uno per job). Fallisce sugli errori, non su nuovi/cambiati (quelli si rivedono).
+
+- **Audit completo in 4 job paralleli:** `node qa/asset-audit.mjs --shard=2/4` esegue un quarto del catalogo; le famiglie (categoria|famiglia) restano intere perché i controlli incrociati confrontano stati e livelli della stessa famiglia. Ogni shard controlla le voci della baseline sparite per i propri asset; lo shard 1 anche quelle di asset usciti dal catalogo. La baseline si aggiorna solo con l'audit completo non suddiviso.
+- **Modifiche solo di interfaccia (modalità `smoke`):** CSS in `src/`, `src/ui/**`, `settlement-heraldry.js`, `settlement-panels.js` e un `index.html` le cui righe cambiate non aggiungono né tolgono `<script>`, `<link>`, `<canvas>`, `<svg>`, `src=`. Il Lab non carica questi file, salvo `index.html` nel sandbox del motore: si esegue quindi solo il test della galleria (avvia il sandbox e renderizza due asset), senza audit visivo.
 
 ## Avvertenze
 

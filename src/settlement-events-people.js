@@ -397,11 +397,11 @@
       const c=perf?PLAYERS[hash(a.id)%PLAYERS.length]:TUNICS[hash(a.id)%TUNICS.length],kind=KINDS[hash(a.id+'k')%KINDS.length];
       const walk=a.action==='walk'?.015*Math.abs(Math.sin(t*6+hash(a.id)%7)):0;
       if(a.fighter){
-        // A combatant: the soldier figure with shield and sword, in a pair of primaries.
+        // A combatant: a dismounted knight (cloak, crest, sword and shield) in a pair of primaries.
         const P=E().PAIRS,[m1,m2]=P[hash(seedOf(s)+'|'+a.id)%P.length],liv={main:m1,alt:m2,mainDark:m1,altDark:m2};
         const swing=Math.floor(((a.swing%1)+1)%1*8)/8;
-        if(card(p,g+.1,'ev|fight|'+m1+m2+'|'+swing,()=>drawSoldierFigureUnmasked(p,0,'swordsman',a.id,swing,liv),a.id))continue;
-        list.push({p,draw:()=>drawSoldierFigureUnmasked(p,g+.1,'swordsman',a.id,a.swing,liv)});
+        if(card(p,g+.1,'ev|fight-knight|'+m1+m2+'|'+swing,()=>drawSoldierFigureUnmasked(p,0,'knight',a.id,swing,liv),a.id))continue;
+        list.push({p,draw:()=>drawSoldierFigureUnmasked(p,g+.1,'knight',a.id,a.swing,liv)});
         continue;
       }
       // Card: the hop lifts the card (not the picture); arms and juggling are bucketed poses.

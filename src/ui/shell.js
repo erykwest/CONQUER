@@ -1,7 +1,7 @@
 // CONQUER interface v2 ("Isole"): floating wood-and-gold tablets over a full-bleed map.
 // Opt-in with ?ui=2 (persisted; ?ui=1 goes back). Reads the game only through window.ConquerGame.
 import { html, render, useState, useEffect, useRef } from '../vendor/htm-preact-3.1.1.js';
-import { T } from './i18n-it.js?v=ui2-insp-2-wallpatrol2-alerts3';
+import { T } from './i18n-it.js?v=ui2-insp-2-wallpatrol2-alerts3-upg2-fieldworks1';
 import { createAlertCenter } from './alerts.js?v=alerts3';
 import { createWatchers } from './alert-watchers.js?v=alerts3';
 
@@ -26,6 +26,7 @@ const ICON = {
   production: 'M12 21V9M12 9c-3 0-5-2-5-5 3 0 5 2 5 5zM12 14c3 0 5-2 5-5-3 0-5 2-5 5z',
   well: 'M5 10h14M7 10v10h10V10M8 10V5h8v5',
   justice: 'M12 3v18M7 21h10M5 7h14M5 7l-2 6h4zM19 7l-2 6h4z',
+  fieldworks: 'M3 20h18M5 20l3-12M10 20l3-14M15 20l3-12M6.5 13l-2 1M11.5 12l-2 1M16.5 13l-2 1',
   terrain: 'M2 19l6-8 4 5 3-4 7 7zM14 6h6M17 3v6',
   delete: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13',
   undo: 'M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3',
@@ -68,6 +69,7 @@ const INDUSTRIES = [
   ['windmill', '[data-industry="windmill"]', t => t.industry === 'windmill'],
   ['watermill', '[data-industry="watermill"]', t => t.industry === 'watermill']
 ];
+const WELL_UPGRADES = ['townhall', 'guild', 'bargello'];
 const CATALOG = [
   { id: 'select', hint: T.hints.select, press: '[data-tool="select"]', is: s => s.tool.kind === 'select' },
   { id: 'towers', hint: T.hints.point, press: '[data-tower="square"][data-size="1.5"]', is: s => s.tool.kind === 'tower',
@@ -153,13 +155,17 @@ const CATALOG = [
       return rows;
     } },
   { id: 'civic', hint: T.hints.point, press: '[data-civic="market"]', is: s => s.tool.kind === 'civic',
-    rows: s => [{ label: O.building, options: ['market', 'tavern', 'church', 'training', 'plaza', 'townhall', 'guild', 'bargello', 'balivo'].map(k =>
+    // Town hall, guild hall and bargello are well upgrades: they start from the well's inspector.
+    rows: s => WELL_UPGRADES.includes(s.tool.civic) ? [masonryRow(s)] : [{ label: O.building, options: ['market', 'tavern', 'church', 'training', 'plaza', 'balivo'].map(k =>
       opt(V[k], `[data-civic="${k}"]`, s.tool.civic === k)) }, masonryRow(s)] },
   { id: 'production', hint: T.hints.point, press: '[data-industry="loggingCamp"]', is: s => s.tool.kind === 'industry',
     rows: s => [{ label: O.building, wrap: true, options: INDUSTRIES.map(([k, selector, on]) => opt(V[k], selector, on(s.tool))) }, masonryRow(s)] },
   { id: 'well', hint: T.hints.point, press: '[data-well]', is: s => s.tool.kind === 'well', rows: s => [masonryRow(s)] },
   { id: 'justice', hint: T.hints.point, press: '[data-event-venue="pillory"]', is: s => s.tool.kind === 'event' && ['pillory', 'gallows', 'scaffold'].includes(s.tool.venue),
     rows: s => [{ label: O.building, options: ['pillory', 'gallows', 'scaffold'].map(k => opt(V[k], `[data-event-venue="${k}"]`, s.tool.venue === k)) }] },
+  // Field works against a charge (settlement-events3d.js): stake rows, chevaux de frise, the army camp.
+  { id: 'fieldworks', hint: T.hints.point, press: '[data-event-venue="stakeRow"]', is: s => s.tool.kind === 'event' && ['stakeRow', 'chevalFrise', 'armyCamp'].includes(s.tool.venue),
+    rows: s => [{ label: O.building, options: ['stakeRow', 'chevalFrise', 'armyCamp'].map(k => opt(V[k], `[data-event-venue="${k}"]`, s.tool.venue === k)) }] },
   { id: 'delete', hint: T.hints.delete, press: '[data-tool="delete"]', is: s => s.tool.kind === 'delete' }
 ];
 const activeEntry = snap => CATALOG.find(e => e.is(snap)) || CATALOG[0];
@@ -367,6 +373,22 @@ function WellPanel({ d, run }) {
       <input type="text" class="u2-name" key=${d.id + '|' + w.name} defaultValue=${w.name} maxlength="32" placeholder=${I.wellNamePlaceholder}
         aria-label=${I.wellName} onChange=${e => run('setWellName', e.currentTarget.value)} /></${Row}>`}`;
 }
+// Buildings that grow out of the selected one (well civics, civic annexes): started here,
+// not from the build palette. Each row: build button plus one button per standing child.
+function UpgradesPanel({ d, run, cmd }) {
+  const U = I.upgrades;
+  return html`<div class="u2-group"><span class="u2-label" data-tip=${U.title} data-tip-body=${d.type === 'well' ? U.wellHelp : U.annexHelp} tabindex="0">${U.title}<i aria-hidden="true">?</i></span>
+    ${d.upgrades.map(u => {
+      const name = u.kind === 'wellCivic' ? T.structures[u.key] : U.names[u.key] || u.key;
+      const label = name + (u.max > 1 ? ' ' + u.count + '/' + u.max : '');
+      const why = u.reason ? (u.reason === 'level' ? U.reasons.level(u.level) : U.reasons[u.reason]) : null;
+      const detail = [u.size, u.level ? 'L' + u.level : null].filter(Boolean).join(' · ');
+      const options = [{ label: U.build, disabled: !!u.reason, tip: name, tipBody: why || detail || null, v: 'build' },
+        ...u.children.map((id, i) => ({ label: u.children.length > 1 ? U.select + ' ' + (i + 1) : U.select, tip: name, v: id }))];
+      return html`<${Row} label=${label}>
+        <${Seg} options=${options} nowrap onPick=${o => o.v === 'build' ? run('startUpgrade', u.key) : cmd.select(o.v)} /></${Row}>`;
+    })}</div>`;
+}
 function Inspector({ snap, cmd }) {
   const d = snap.selection?.detail;
   if (!d) return null;
@@ -486,6 +508,7 @@ function Inspector({ snap, cmd }) {
             <option value="">${I.roomEmpty}</option>
             ${r.options.map(o => html`<option value=${o.value} disabled=${!o.allowed}>${T.functions[o.value] || o.value}</option>`)}
           </select></label>`)}</div>`}</div>`}
+    ${d.upgrades?.length > 0 && html`<${UpgradesPanel} d=${d} run=${run} cmd=${cmd} />`}
     ${d.legacy === 'crossing' && html`<${CrossingPanel} id=${d.id} />`}
     ${d.type === 'church' && html`<${InstitutionPanel} id=${d.id} api="ConquerChurch" />`}
     ${d.type === 'guild' && html`<${InstitutionPanel} id=${d.id} api="ConquerGuild" />`}

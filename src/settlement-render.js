@@ -37,14 +37,41 @@ function drawStructure(s,preview=false){
   if(s?.type==='ruin')return;          // ruined stumps are drawn with their rubble (ConquerSiege)
   // No building has a 2.5D Canvas body (D-RENDER-3D-261111): finished ones are World 3D meshes.
   // Here only the overlays: a site is assembled from the same meshes (ConquerAssembly) or shown as
-  // its footprint volume, with its progress bar; a placement ghost is its footprint volume.
+  // the translucent ghost of its finished World 3D building (footprint volume when it has no mesh),
+  // with its progress bar; a placement ghost is its footprint volume.
   if(!preview&&!underConstruction(s))return;
   const assembled=!preview&&window.ConquerAssembly?.has(s)&&window.ConquerAssembly.draw(s);
-  if(!assembled)drawPlacementVolume(s,'rgba(244,214,160,.22)','rgba(244,214,160,.92)');
+  if(!assembled&&(preview||!drawSiteGhost(s)))drawPlacementVolume(s,'rgba(244,214,160,.22)','rgba(244,214,160,.92)');
   if(preview)return;
   if(isPlacementFoundationBuilding(s))withStructureGroundPlane(s,()=>drawConstructionProgress(s));
   else if(window.ConquerIndustries?.is(s))withProjectionGroundZ(s.groundZ,()=>drawConstructionProgress(s));
   else drawConstructionProgress(s);
+}
+// Ghost of a site without an assembly (industries, storage yards, wells, piers, quays, ramps,
+// civic annexes, event venues...): its finished World 3D building at SITE_GHOST_ALPHA, cached as a
+// bitmap like the assembled sites. false: no finished mesh (the caller draws the footprint volume).
+const SITE_GHOST_ALPHA=.42,siteGhostCache=new Map();
+function siteGhostMesh(s){
+  const W=window.ConquerWorld3D;if(!W?.finishedMesh)return null;
+  const key=structureVisualKey(s)+'#'+[State.season,State.visualPalette,State.stonePaletteId].join('|');
+  let e=siteGhostCache.get(s.id);
+  if(!e||e.key!==key){
+    if(siteGhostCache.size>64){const live=new Set((State.structures||[]).map(o=>o.id));for(const id of siteGhostCache.keys())if(!live.has(id))siteGhostCache.delete(id)}
+    let mesh=null;try{mesh=W.finishedMesh(s)}catch(err){console.warn('site ghost',s.id,err)}
+    e={key,mesh,uid:(e?.uid||0)+1};siteGhostCache.set(s.id,e);
+  }
+  return e;
+}
+function drawSiteGhost(s){
+  if(!window.ConquerMesh3D)return false;
+  const e=siteGhostMesh(s);if(!e?.mesh)return false;
+  const c=structureCenter(s)||{x:s.x,y:s.y};
+  if(typeof worldPointVisible==='function'&&!worldPointVisible(c,0,320))return true;
+  const z=Number.isFinite(s.groundZ)?s.groundZ:terrainElevation(c);
+  ctx.save();ctx.globalAlpha=SITE_GHOST_ALPHA;
+  window.ConquerMesh3D.drawCached(ctx,'ghost:'+s.id,String(e.uid),()=>[e.mesh],{x:c.x,y:c.y,z});
+  ctx.restore();
+  return true;
 }
 // Preserve the normal translucent preview; tint its actual footprint red
 // only when the same nonmutating preflight used by the commit would reject it.
