@@ -70,9 +70,11 @@
       const t=i/count,along=g.L*t,p={x:g.a.x+g.dx*t,y:g.a.y+g.dy*t};
       const off=fn('palisadePostOffsetAt')?palisadePostOffsetAt(g,along):g.postOffset;
       const c=g.point(p,off),z0=call('terrainElevation',c)||0,ring=call('palisadeOctagon',c,g.postR,ang)||[];
+      // Each foot vertex on its own ground (a post on a hill flank neither floats nor hides).
+      const foot=q=>Math.min(z0,call('terrainElevation',q)??z0)-.04;
       for(let k=0;k<ring.length;k++){
         const a=ring[k],b=ring[(k+1)%ring.length];
-        face([{...a,z:z0},{...b,z:z0},{...b,z:z0+bodyZ},{...a,z:z0+bodyZ}],k%2?'#51341f':'#65452b');
+        face([{...a,z:foot(a)},{...b,z:foot(b)},{...b,z:z0+bodyZ},{...a,z:z0+bodyZ}],k%2?'#51341f':'#65452b');
         face([{...a,z:z0+bodyZ},{...b,z:z0+bodyZ},{x:c.x,y:c.y,z:z0+tipZ}],k%2?'#c29a6b':'#b68a5e');
       }
     }

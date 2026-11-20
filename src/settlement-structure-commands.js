@@ -27,6 +27,11 @@ const StructureCommands=(()=>{
       if(requested===KEEP_W4_TIER&&(isWoodTower(target)||(target.shape||'square')!=='square'||target.parentTowerId)){status('W4 is a square stone keep');return false}
       if(requested===KEEP_W4_TIER&&!keepW4Available(target)){status('Only one W4 keep per settlement');return false}
     }
+    if(target.type==='palisade'){
+      // A W1 palisade on a hill flank cannot grow a walkway or earthwork there (flat ground only).
+      const verdict=wallTerrainVerdict({...target,tier:requested,width:wallWidthForTier(requested)});
+      if(!verdict.ok){status(verdict.reason);return false}
+    }
     const byFloor=target.type==='tower'?functionsByFloor(target):null;
     applyStructureTier(target,requested);
     if(byFloor)restoreFunctionsByFloor(target,byFloor);
@@ -157,6 +162,12 @@ const StructureCommands=(()=>{
     refresh(target);
     status((target.type==='wall'?'Wall':target.type==='palisade'?'Palisade':'Built section')+' exterior flipped');
     return true;
+  }
+  // Moat along the exterior face of a wall, palisade or built section (settlement-crossings.js).
+  function digMoat(id,variant){
+    const target=find(id),C=window.ConquerCrossings;if(!target||!C?.digAlongWall)return false;
+    const ok=C.digAlongWall(target,variant==='water'?'water':'dry');
+    renderFunctionPanel();draw();return ok;
   }
   function setRoom(id,index,fn){
     const target=find(id);if(!target)return false;
@@ -516,6 +527,17 @@ const StructureCommands=(()=>{
       }
     }
     if(['wall','palisade','built'].includes(s.type))d.controls.push({key:'side',cmd:'flipSide',toggle:true});
+    // Moat on the exterior face: dry anywhere flat, water only at ground level 0.
+    const C=window.ConquerCrossings;
+    if(C?.wallMoatOf&&['wall','palisade','built'].includes(s.type)&&!s.leanTo){
+      const moat=C.wallMoatOf(s),plan=moat?null:C.planWallMoat(s,'dry');
+      const level0=Math.abs(moat?Number(moat.groundZ)||0:terrainElevation({x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2}))<.01;
+      d.controls.push(choice('moat','digMoat',[
+        {value:'dry',word:'moatDry',disabled:!!moat||!plan?.ok,reason:moat?null:plan?.reason||null},
+        {value:'water',word:'moatWater',disabled:moat?moat.variant==='water'||!level0:!level0||!plan?.ok,reason:!level0?'Water-filled moats require ground level 0':moat?null:plan?.reason||null}
+      ],moat?moat.variant:null));
+      if(moat)d.facts.push({key:'moat',value:(moat.variant==='water'?'Ad acqua':'Secco')+' · '+(Number(moat.length)||0).toFixed(1)+'U'+(underConstruction(moat)?' · cantiere':'')});
+    }
     if(cutawayEligible(s))d.controls.push({key:'cutaway',cmd:'toggleCutaway',toggle:true,active:structureCutaway(s),disabled:building});
     // Floor in view of an open cutaway (castle toggle or selected civic building), stepped with ▲ ▼.
     if(!building&&(structureCutaway(s)||civicFloorCutaway(s))&&cutawayFloorCount(s)>1)
@@ -542,7 +564,7 @@ const StructureCommands=(()=>{
     return d;
   }
 
-  const commands={setConstructionPriority,setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setLonghouseCover,setGateRoof,setGateUpper,setSkin,setWallStair,setWallStairPos,toggleCutaway,stepCutawayFloor,flipSide,
+  const commands={setConstructionPriority,setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setLonghouseCover,setGateRoof,setGateUpper,setSkin,setWallStair,setWallStairPos,toggleCutaway,stepCutawayFloor,flipSide,digMoat,
     setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerInnerRoof,setTowerLookout,setTowerOutpost,setTowerSignalFire,setWallPatrols,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,startUpgrade,
     describeStructure};
   for(const name of ['setTier','setHeight','setKeepFloorPlan','setTowerBase','setTowerRoof','setHoarding','setWoodRoof','setGateRoof','setGateUpper','setSkin','setTowerWeapon','setTowerRoofShape','setTowerBartizan','setTowerBell','setTowerInnerRoof','setCivicLevel','setPlazaVariant']){
