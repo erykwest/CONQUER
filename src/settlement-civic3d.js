@@ -46,7 +46,7 @@
   // Palette with the roofs whitened in winter (light and dark tones kept apart).
   const palCache=new Map();
   function palette(){
-    const data=DATA(),winter=typeof State!=='undefined'&&isSnowGround(),clay=clayFor||isClay(null),ck=(winter?'w':'s')+(clay?'c':'')+'|'+(State.stonePaletteId||'gray');
+    const data=DATA(),winter=typeof State!=='undefined'&&(typeof isSnowGround==='function'?isSnowGround():State.season==='winter'),clay=clayFor||isClay(null),ck=(winter?'w':'s')+(clay?'c':'')+'|'+(State.stonePaletteId||'gray');
     const hit=palCache.get(ck);if(hit&&hit.data===data)return hit.pal;
     const pal=data.palette.map((hex,i)=>{const k=data.paletteKeys[i];
       if(winter&&k.startsWith('roof'))return WINTER[/Dark$/.test(k)?1:0];

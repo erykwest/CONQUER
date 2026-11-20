@@ -662,7 +662,7 @@
   }
   function drawEdit(edit,{ghost=false}={}){
     if(!edit?.top?.length||typeof ctx==='undefined')return;
-    const winter=isSnowGround(),valid=edit.ok!==false;
+    const winter=(typeof isSnowGround==='function'?isSnowGround():State.season==='winter'),valid=edit.ok!==false;
     const faces=facePolygons(edit);
     ctx.save();
     if(ghost)ctx.globalAlpha=.72;

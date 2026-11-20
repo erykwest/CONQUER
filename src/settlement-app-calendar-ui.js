@@ -35,7 +35,7 @@ function syncAutumnFoliage(){
 // The winter look (bare / snow / thaw, blizzard on snow days) moves with the day and the weather.
 let lastWinterLook=null;
 function syncWinterLook(){
-  const look=winterPhase();
+  const look=(typeof winterPhase==='function'?winterPhase():null);
   if(look===lastWinterLook)return false;
   lastWinterLook=look;invalidateSceneCache();return true;
 }

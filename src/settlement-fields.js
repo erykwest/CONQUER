@@ -292,7 +292,7 @@ function fieldDoneIntervals(field,segment){
   return out;
 }
 function drawFieldGround(field){
-  pathPolygon(projectPath(fieldPoints(field)),isSnowGround()?'#edf1ed':'#76603e','rgba(160,139,91,.65)',.8);
+  pathPolygon(projectPath(fieldPoints(field)),(typeof isSnowGround==='function'?isSnowGround():State.season==='winter')?'#edf1ed':'#76603e','rgba(160,139,91,.65)',.8);
 }
 function fieldStrip(layout,row,t0,t1){
   let poly=urbanClip(layout.poly,layout.vx,layout.vy,row===layout.rows.at(-1)?layout.maxV:Math.min(layout.maxV,row.v+.25));

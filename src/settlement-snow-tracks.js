@@ -8,7 +8,7 @@
 
   function reset(){trails.length=0;actors.clear();sequence=0;}
   function winter(){
-    const active=isSnowGround();
+    const active=(typeof isSnowGround==='function'?isSnowGround():State.season==='winter');
     if(lastSeason!==State.season){
       reset();lastSeason=State.season;
     }

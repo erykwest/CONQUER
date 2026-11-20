@@ -620,7 +620,7 @@
   // ---------- buildings (non-castle) ----------
   const WINTER_ROOF=['#e7ece8','#dce3de'];
   function buildBuildings(){
-    const m=meshBuilder(true),winter=isSnowGround();
+    const m=meshBuilder(true),winter=(typeof isSnowGround==='function'?isSnowGround():State.season==='winter');
     // Houses: urbanHouseFaces gives walls, then either 2 slopes + 2 gables or a turret cone.
     for(const entry of urbanHouseGeometry()){
       const house=entry.house;if(underConstruction(house))continue;
@@ -677,7 +677,7 @@
     if(!s)return null;
     const m=meshBuilder(true),site=s.construction;
     if(site)delete s.construction;
-    try{addStructure(m,s,isSnowGround())}
+    try{addStructure(m,s,(typeof isSnowGround==='function'?isSnowGround():State.season==='winter'))}
     finally{if(site)s.construction=site}
     const t=m.tris,n=t.length/18;if(!n)return null;
     const pos=new Array(n*9),col=new Array(n),hex=c=>Math.max(0,Math.min(255,Math.round(c*255))).toString(16).padStart(2,'0');
@@ -858,7 +858,7 @@
   const ATLAS_TILE=128,ATLAS_COLS=8;
   function buildTreeAtlas(){
     if(!forestTreeSpritesReady)return null;
-    const season=foliageLook();
+    const season=(typeof foliageLook==='function'?foliageLook():State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer');
     const tiles=[];
     // Autumn reuses the summer greens for stage zero; later stages use six warm tones.
     // Atlas pixels remain static throughout the season: only per-tree UVs advance.
@@ -925,7 +925,7 @@
       for(const t of mountainPineLayout(f)){
         const uv=atlas.map.get('pine:'+t.shade);if(!uv)continue;
         let [u0,v0,u1,v1]=uv;if(t.flip)[u0,u1]=[u1,u0];
-        const size=MOUNTAIN_PINE_SIZE*t.scale,C=[[-.5,-.97,u0,v0],[.5,-.97,u1,v0],[.5,.03,u1,v1],[-.5,.03,u0,v1]];
+        const size=(typeof MOUNTAIN_PINE_SIZE!=='undefined'?MOUNTAIN_PINE_SIZE:1.8)*t.scale,C=[[-.5,-.97,u0,v0],[.5,-.97,u1,v0],[.5,.03,u1,v1],[-.5,.03,u0,v1]];
         for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(t.p.x,t.p.y,t.z,cx,cy,size,u,w)}
       }
     }
@@ -1327,7 +1327,7 @@
   function buildCutaway(){
     // m: interior (inner walls, cut jambs, floors, openings, furniture) - kept in full light at night;
     // sh: exterior shell (outer faces, crest ring, roof deck) - lit like the rest of the castle.
-    const m=meshBuilder(),sh=meshBuilder(),em=meshBuilder(),winter=isSnowGround(),turns=State.view.rotation||0;
+    const m=meshBuilder(),sh=meshBuilder(),em=meshBuilder(),winter=(typeof isSnowGround==='function'?isSnowGround():State.season==='winter'),turns=State.view.rotation||0;
     // Windows and slits seen from inside: the same sprites as outside (decal atlas), facing the
     // room; a flat pane only while the atlas is not built yet.
     const dv=[],atlasMap=typeof S!=='undefined'?S.decalMap:null;
@@ -1610,7 +1610,7 @@
     S.contentDirty=false;S.lastUrbanRev=urbanRev();computeSigPass();
     const t0=performance.now(),st=S.stats;
     // Winter phases (bare / snow / thaw / blizzard) change snow cover and foliage: key them too.
-    const season=(State.season||'summer')+(State.season==='winter'?':'+foliageLook():''),rot=State.view.rotation||0,plan=isPlanView();
+    const season=(State.season||'summer')+(State.season==='winter'?':'+(typeof foliageLook==='function'?foliageLook():State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer'):''),rot=State.view.rotation||0,plan=isPlanView();
     // envRev: main roads cut grooves into a continuous woodland in place.
     const envRev=typeof environmentRevision!=='undefined'?environmentRevision:0;
     const terraformEdits=window.ConquerTerraforming?.edits?.()||State.relief?.terraforming||[];
@@ -1688,7 +1688,7 @@
       S.buf.scatter=v.b;S.buf['scatter#n']=v.n;
     }
     const atlasSig=[season,forestTreeSpritesReady,
-      Object.keys((typeof boundaryBushSprites!=='undefined'&&boundaryBushSprites[foliageLook()])||{}).length].join('|');
+      Object.keys((typeof boundaryBushSprites!=='undefined'&&boundaryBushSprites[(typeof foliageLook==='function'?foliageLook():State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer')])||{}).length].join('|');
     if(S.sig.treeAtlas!==atlasSig){
       S.treeAtlas=buildTreeAtlas();
       if(S.treeAtlas)uploadTexture(gl,'atlas',S.treeAtlas.canvas);

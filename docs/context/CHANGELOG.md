@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-20 — WINTER-PHASES · Inverno in quattro fasi, blizzard, neve a retino
+
+`feature/winter-phases`: l'inverno (1 dic – 28 feb) ha quattro quarti: alberi e cespugli spogli con sottobosco marrone, due quarti di neve a terra, poi spogli con sottobosco verde e senza neve; con meteo neve, in qualunque giorno d'inverno, è blizzard (neve a terra e retino di neve sui rami). Alberi spogli con rami secondari; neve a retino su rami, cespugli, pini e cenge; versante della montagna bianco con neve a terra; scarpate ripide in roccia nuda; neve sui sassi di riva e costa. Pini 75% e 1,5x, boschi 1,3x, sottobosco 2x; cespugli di riva 2D legacy al posto dei modelli 3D; billboard 3D con profondità verticale. Test in `qa/winter-phases-regression.cjs`. ROADMAP e DECISIONS invariate.
+
 ### 2026-11-19 — MOAT-WIDEN · Allargare il fossato tenendo la sponda sul muro
 
 `feature/moat-from-wall`: il pannello del fossato finito offre «Widen» a 2 / 3 / 4U (si paga solo la differenza, come lavoro di ampliamento). Un fossato contro un muro, una palizzata o un tratto costruito (il suo `wallId`, o un tratto parallelo a filo della sponda) tiene la sponda sulla faccia esterna e cresce verso fuori; un fossato libero cresce sui due lati. Il fossato unito all'angolo resta unito (incrocio delle linee centrali). Test in `qa/wall-moat-regression.cjs`. ROADMAP e DECISIONS invariate.

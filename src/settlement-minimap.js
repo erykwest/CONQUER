@@ -72,7 +72,7 @@ window.ConquerMinimap=(()=>{
     const layers=State.relief?.hills||[];
     for(const hill of layers){
       for(const level of hill.levels||[]){
-        if(level.top?.length>2)fillPoly(level.top,isSnowGround()?'#cbd5cb':'#707d53');
+        if(level.top?.length>2)fillPoly(level.top,(typeof isSnowGround==='function'?isSnowGround():State.season==='winter')?'#cbd5cb':'#707d53');
       }
     }
   }
@@ -86,9 +86,9 @@ window.ConquerMinimap=(()=>{
       }else if(f.type==='sea'||f.type==='pond'){
         fillPoly(f.points?.length>2?f.points:oval(f),f.waterBodyKind==='marsh'?f.fill:'#476b77',f.waterBodyKind==='marsh'?f.edge:'#8eafb2',f.holes||[]);
       }else if(f.type==='forest'){
-        fillPoly(f.points?.length>2?f.points:oval(f),isSnowGround()?'#8b9c89':'#355e39',null,f.holes||[]);
+        fillPoly(f.points?.length>2?f.points:oval(f),(typeof isSnowGround==='function'?isSnowGround():State.season==='winter')?'#8b9c89':'#355e39',null,f.holes||[]);
       }else if(f.type==='mountain'){
-        fillPoly(f.points?.length>2?f.points:oval(f),isSnowGround()?'#a8afa6':'#726d5d');
+        fillPoly(f.points?.length>2?f.points:oval(f),(typeof isSnowGround==='function'?isSnowGround():State.season==='winter')?'#a8afa6':'#726d5d');
       }else if(f.type==='hill'||f.type==='rough'){
         fillPoly(f.points?.length>2?f.points:oval(f),'#75825c');
       }
@@ -126,7 +126,7 @@ window.ConquerMinimap=(()=>{
     // Agricultural land below roads and buildings.
     for(const s of structures)if(s.type==='field'){
       g.globalAlpha=underConstruction(s)?.48:1;
-      fillPoly(footprint(s),isSnowGround()?'#b6c29f':'#9c9955');
+      fillPoly(footprint(s),(typeof isSnowGround==='function'?isSnowGround():State.season==='winter')?'#b6c29f':'#9c9955');
     }
     g.globalAlpha=1;
     for(const s of structures)if(s.type==='road'&&valid(s.a)&&valid(s.b)){
@@ -177,7 +177,7 @@ window.ConquerMinimap=(()=>{
     if(root.classList.contains('collapsed'))return;
     resizeMap();
     g.clearRect(0,0,drawSize,drawSize);
-    g.fillStyle=isSnowGround()?'#dce2dc':
+    g.fillStyle=(typeof isSnowGround==='function'?isSnowGround():State.season==='winter')?'#dce2dc':
       ({forest:'#33482e',mountains:'#646550',sea:'#536f75',hills:'#6c7950',valley:'#6c7950',river:'#59744f'}[State.biome]||'#607448');
     g.fillRect(0,0,drawSize,drawSize);
     g.save();

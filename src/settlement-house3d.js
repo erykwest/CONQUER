@@ -43,7 +43,7 @@
   const CLAY_ALIAS={stoneTrim:'#9a8e82',step:'#887d72',roofCourse:'#303236',roofRidge:'#303236'};
   function kitPalette(){
     // Stone recoloring must not be mistaken for a clay/brick material change.
-    const data=DATA(),winter=isSnowGround(),clay=State.visualPalette==='clay'||(typeof structureVisualMaterial!=='undefined'&&structureVisualMaterial==='brick');
+    const data=DATA(),winter=(typeof isSnowGround==='function'?isSnowGround():State.season==='winter'),clay=State.visualPalette==='clay'||(typeof structureVisualMaterial!=='undefined'&&structureVisualMaterial==='brick');
     return data.palette.map((hex,i)=>{
       const k=data.paletteKeys[i];
       if(winter&&k.startsWith('roof'))return tint(WINTER[/Dark$|Ridge$|Course$/.test(k)?1:0]);

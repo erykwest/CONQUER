@@ -25,7 +25,7 @@ async function loadBoundaryBushSprites(){
     for(const season of BOUNDARY_BUSH_LOOKS)jobs.push(new Promise(resolve=>{
       const img=new Image();
       // Blizzard bushes: bare twigs plus the snow retino on their top band.
-      img.onload=()=>{boundaryBushSprites[season][shape]=season==='blizzard'?snowCapSprite(img,.3):img;resolve()};img.onerror=()=>resolve();
+      img.onload=()=>{boundaryBushSprites[season][shape]=season==='blizzard'&&typeof snowCapSprite==='function'?snowCapSprite(img,.3):img;resolve()};img.onerror=()=>resolve();
       img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(buildBoundaryBushSvg(sources[shape].value,season));
     }));
   }
@@ -42,7 +42,7 @@ function urbanHedgeBushes({a,b}){
   }).sort((a,b)=>viewDepthPoint(a.p)-viewDepthPoint(b.p));
 }
 function drawUrbanHedge(edge){
-  const season=foliageLook();
+  const season=(typeof foliageLook==='function'?foliageLook():State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer');
   for(const bush of urbanHedgeBushes(edge)){
     const img=boundaryBushSprites[season][bush.shape],base=w2s(bush.p,.01);
     const width=bush.width*U*State.view.scale,height=width*580/920*bush.scale;
