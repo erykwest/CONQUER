@@ -1399,3 +1399,52 @@ function pointRadius(s){
   window.__conquerAnalytics={frame,measure,event,sample,diagnose,snapshot,exportJson,clear,samples,events,sessionId};
   event('ANALYTICS_READY',{sampleMs:SAMPLE_MS,maxSamples:MAX_SAMPLES});
 })();
+
+// ---------- Winter look ----------
+// Winter (1 Dec - 28 Feb) is split in quarters: bare woods with brown undergrowth, then snow on the
+// ground for two quarters, then bare woods with green undergrowth and no snow. Snow weather on any
+// winter day is a blizzard: snow on the ground and snow-laden branches.
+const WINTER_PHASES=['bare','snow','snow','thaw'];
+function winterPhase(){
+  if(typeof State==='undefined'||State.season!=='winter')return null;
+  if(State.winterPhaseOverride)return State.winterPhaseOverride;
+  if(typeof currentWeather==='function'&&currentWeather().kind==='snow')return'blizzard';
+  if(typeof calendarDateFromDay!=='function')return'snow';
+  const d=calendarDateFromDay(),m=d.month;
+  if(m!==11&&m>1)return'snow'; // DEV-forced winter outside Dec-Feb keeps the classic look.
+  const day=(m===11?0:m===0?31:62)+d.day-1;
+  return WINTER_PHASES[Math.min(3,Math.floor(day/22.5))];
+}
+function isSnowGround(){const p=winterPhase();return p==='snow'||p==='blizzard'}
+// Foliage sprite set: summer | autumn | winter (snowy bushes) | bare (winter without snow) | blizzard.
+function foliageLook(){
+  const s=typeof State!=='undefined'?State.season:'summer';
+  if(s==='autumn')return'autumn';if(s!=='winter')return'summer';
+  const p=winterPhase();return p==='blizzard'?'blizzard':p==='snow'?'winter':'bare';
+}
+// Undergrowth of the woods: snowy, brown (early winter) or green.
+function undergrowthLook(){return isSnowGround()?'winter':winterPhase()==='bare'?'brown':'green'}
+// Blizzard sprites: a hatched snow screen-tone (retino) laid only on the upward-facing (zenithal) band
+// of every branch/twig shape; the shapes keep their own colour elsewhere. Returns a canvas.
+function snowCapSprite(img,band=.12){
+  const w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;
+  const c=document.createElement('canvas');c.width=w;c.height=h;
+  const g=c.getContext('2d');g.drawImage(img,0,0,w,h);
+  // The hatch period scales with the sprite, so it still reads once the sprite is drawn small.
+  const id=g.getImageData(0,0,w,h),d=id.data,depth=Math.max(3,Math.round(h*band)),period=Math.max(5,Math.round(h/40));
+  // Each vertical run of a shape (a branch seen in section) gets snow on its upper ~45%; the cap
+  // keeps an upright trunk from turning white along its whole length.
+  const paint=(x,y)=>{const i=(y*w+x)*4,on=((x+y)%period)<period*.6;
+    d[i]=on?248:196;d[i+1]=on?251:208;d[i+2]=on?252:216;d[i+3]=255};
+  for(let x=0;x<w;x++){
+    let y=0;
+    while(y<h){
+      if(d[(y*w+x)*4+3]<96){y++;continue}
+      let end=y;while(end<h&&d[(end*w+x)*4+3]>=96)end++;
+      const snow=Math.min(depth,Math.ceil((end-y)*.45));
+      for(let k=y;k<y+snow;k++)paint(x,k);
+      y=end;
+    }
+  }
+  g.putImageData(id,0,0);return c;
+}

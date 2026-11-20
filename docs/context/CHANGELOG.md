@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-20 — WINTER-PHASES · Inverno in quattro fasi, blizzard, neve a retino
+
+`feature/winter-phases`: l'inverno (1 dic – 28 feb) ha quattro quarti: alberi e cespugli spogli con sottobosco marrone, due quarti di neve a terra, poi spogli con sottobosco verde e senza neve; con meteo neve, in qualunque giorno d'inverno, è blizzard (neve a terra e retino di neve sui rami). Alberi spogli con rami secondari; neve a retino su rami, cespugli, pini e cenge; versante della montagna bianco con neve a terra; scarpate ripide in roccia nuda; neve sui sassi di riva e costa. Pini 75% e 1,5x, boschi 1,3x, sottobosco 2x; cespugli di riva 2D legacy al posto dei modelli 3D; billboard 3D con profondità verticale. Test in `qa/winter-phases-regression.cjs`. ROADMAP e DECISIONS invariate.
+
 ### 2026-11-18 — MSG-FEED-261118 · Messaggi e notifiche anche nella UI classica
 
 `fix/messages-notifications`: gli avvisi di UI-ALERTS-01 (#256) comparivano solo con `?ui=2`; ora pila di avvisi e diario degli eventi sono montati anche nella UI classica (default). «Mostra sulla mappa» centra la camera (`ConquerGame.commands.focus`), anche sul punto dove aspetta il messaggero; nessun doppione nel diario dopo un ricarico. Test end-to-end watcher → feed in `qa/ui-alerts-regression.mjs`. ROADMAP e DECISIONS invariate: correzione della consegna di UI-ALERTS-01, nessun contratto nuovo.

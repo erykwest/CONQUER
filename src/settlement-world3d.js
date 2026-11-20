@@ -102,7 +102,11 @@
     sprite:[`#version 300 es
       ${CAMERA}
       in vec3 aAnchor;in vec2 aCorner;in float aSize;in vec2 aUV;out vec2 vUV;
-      void main(){gl_Position=cam(aAnchor,aCorner*aSize*uS);vUV=aUV;}`,
+      // Billboards are depth-tested as an upright plane through the anchor (as the flames): on a
+      // sloping mountain facet a flat screen-depth quad sank half of each pine into the slope.
+      void main(){vec4 p=cam(aAnchor,aCorner*aSize*uS);
+        p.z-=2.0*(0.03-aCorner.y)*aSize/(uDepth.y-uDepth.x);
+        gl_Position=p;vUV=aUV;}`,
       `#version 300 es
       precision mediump float;in vec2 vUV;uniform sampler2D uAtlas;out vec4 o;
       void main(){vec4 c=texture(uAtlas,vUV);if(c.a<0.45)discard;o=vec4(c.rgb/max(c.a,1e-3),1.0);}`],
@@ -616,7 +620,7 @@
   // ---------- buildings (non-castle) ----------
   const WINTER_ROOF=['#e7ece8','#dce3de'];
   function buildBuildings(){
-    const m=meshBuilder(true),winter=State.season==='winter';
+    const m=meshBuilder(true),winter=(typeof isSnowGround==='function'?isSnowGround():State.season==='winter');
     // Houses: urbanHouseFaces gives walls, then either 2 slopes + 2 gables or a turret cone.
     for(const entry of urbanHouseGeometry()){
       const house=entry.house;if(underConstruction(house))continue;
@@ -673,7 +677,7 @@
     if(!s)return null;
     const m=meshBuilder(true),site=s.construction;
     if(site)delete s.construction;
-    try{addStructure(m,s,State.season==='winter')}
+    try{addStructure(m,s,(typeof isSnowGround==='function'?isSnowGround():State.season==='winter'))}
     finally{if(site)s.construction=site}
     const t=m.tris,n=t.length/18;if(!n)return null;
     const pos=new Array(n*9),col=new Array(n),hex=c=>Math.max(0,Math.min(255,Math.round(c*255))).toString(16).padStart(2,'0');
@@ -854,7 +858,7 @@
   const ATLAS_TILE=128,ATLAS_COLS=8;
   function buildTreeAtlas(){
     if(!forestTreeSpritesReady)return null;
-    const season=State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer';
+    const season=(typeof foliageLook==='function'?foliageLook():State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer');
     const tiles=[];
     // Autumn reuses the summer greens for stage zero; later stages use six warm tones.
     // Atlas pixels remain static throughout the season: only per-tree UVs advance.
@@ -863,12 +867,12 @@
     if(season==='autumn'){
       add(forestTreeSprites.summer);
       add(forestTreeSprites.autumn,FOREST_CANOPY_PALETTES.summer.length);
-    }else add(forestTreeSprites[season]);
+    }else add(forestTreeSprites[season==='bare'?'winter':season]);
     // Hedge bushes (drawUrbanHedge): 920x580 sprites.
     (window.boundaryBushSprites?.[season]||(typeof boundaryBushSprites!=='undefined'?boundaryBushSprites[season]:[])||[])
       .forEach((img,shape)=>img&&tiles.push({key:'bush:'+shape,img,aspect:580/920}));
     // Mountain pines (96x128 canvases), two tones.
-    if(typeof mountainPineSprite==='function')for(const v of [0,1])tiles.push({key:'pine:'+v,img:mountainPineSprite(v,season==='winter'),aspect:1,pine:true});
+    if(typeof mountainPineSprite==='function')for(const v of [0,1])tiles.push({key:'pine:'+v,img:mountainPineSprite(v,season==='winter'||season==='blizzard'),aspect:1,pine:true});
     const rows=Math.ceil(tiles.length/ATLAS_COLS)||1,c=document.createElement('canvas');
     c.width=ATLAS_COLS*ATLAS_TILE;c.height=rows*ATLAS_TILE;const g=c.getContext('2d'),map=new Map();
     tiles.forEach((t,i)=>{const x=(i%ATLAS_COLS)*ATLAS_TILE,y=Math.floor(i/ATLAS_COLS)*ATLAS_TILE,h=Math.round(ATLAS_TILE*t.aspect);
@@ -884,7 +888,7 @@
     for(const trees of groves){
       for(const t of trees){
         const stage=atlas.season==='autumn'?autumnFoliageStage(t):0;
-        const canopyIndex=atlas.season==='winter'?0:
+        const canopyIndex=['winter','bare','blizzard'].includes(atlas.season)?0:
           atlas.season==='autumn'&&stage>0?FOREST_CANOPY_PALETTES.summer.length+stage-1:t.colorIndex;
         const uv=atlas.map.get(t.shapeIndex+':'+canopyIndex);if(!uv)continue;
         let [u0,v0,u1,v1]=uv;if(t.flip)[u0,u1]=[u1,u0];
@@ -906,13 +910,22 @@
       }
     }
     S.stats.forestBushes=forestBushes;
+    // River, stream and marsh bank bushes: the legacy 2D bush sprites, not the 3D scatter models.
+    for(const p of S.scatterProps||[]){
+      if(!window.ConquerScatter?.isBankBush?.(p))continue;
+      const shape=(window.ConquerUtil.hash(p.x.toFixed(2)+','+p.y.toFixed(2))>>>0)%7,uv=atlas.map.get('bush:'+shape);if(!uv)continue;
+      let [u0,v0,u1,v1]=uv;if(shape&1)[u0,u1]=[u1,u0];
+      const width=p.r*2.4,hr=580/920,C=[[-.5,-.97*hr,u0,v0],[.5,-.97*hr,u1,v0],[.5,.03*hr,u1,v1],[-.5,.03*hr,u0,v1]];
+      const z=terrainElevation(p)+.01;
+      for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(p.x,p.y,z,cx,cy,width,u,w)}
+    }
     // Pines on the lower half of the mountains, standing on the cone surface.
     for(const f of State.environment||[]){
       if(f.type!=='mountain'||!f.height||typeof mountainPineLayout!=='function')continue;
       for(const t of mountainPineLayout(f)){
         const uv=atlas.map.get('pine:'+t.shade);if(!uv)continue;
         let [u0,v0,u1,v1]=uv;if(t.flip)[u0,u1]=[u1,u0];
-        const size=2.4*t.scale,C=[[-.5,-.97,u0,v0],[.5,-.97,u1,v0],[.5,.03,u1,v1],[-.5,.03,u0,v1]];
+        const size=(typeof MOUNTAIN_PINE_SIZE!=='undefined'?MOUNTAIN_PINE_SIZE:1.8)*t.scale,C=[[-.5,-.97,u0,v0],[.5,-.97,u1,v0],[.5,.03,u1,v1],[-.5,.03,u0,v1]];
         for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(t.p.x,t.p.y,t.z,cx,cy,size,u,w)}
       }
     }
@@ -1314,7 +1327,7 @@
   function buildCutaway(){
     // m: interior (inner walls, cut jambs, floors, openings, furniture) - kept in full light at night;
     // sh: exterior shell (outer faces, crest ring, roof deck) - lit like the rest of the castle.
-    const m=meshBuilder(),sh=meshBuilder(),em=meshBuilder(),winter=State.season==='winter',turns=State.view.rotation||0;
+    const m=meshBuilder(),sh=meshBuilder(),em=meshBuilder(),winter=(typeof isSnowGround==='function'?isSnowGround():State.season==='winter'),turns=State.view.rotation||0;
     // Windows and slits seen from inside: the same sprites as outside (decal atlas), facing the
     // room; a flat pane only while the atlas is not built yet.
     const dv=[],atlasMap=typeof S!=='undefined'?S.decalMap:null;
@@ -1596,7 +1609,8 @@
     S.civicCut=civicCut;S.shopCut=shopCut;S.shopFront=shopFront;
     S.contentDirty=false;S.lastUrbanRev=urbanRev();computeSigPass();
     const t0=performance.now(),st=S.stats;
-    const season=State.season||'summer',rot=State.view.rotation||0,plan=isPlanView();
+    // Winter phases (bare / snow / thaw / blizzard) change snow cover and foliage: key them too.
+    const season=(State.season||'summer')+(State.season==='winter'?':'+(typeof foliageLook==='function'?foliageLook():State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer'):''),rot=State.view.rotation||0,plan=isPlanView();
     // envRev: main roads cut grooves into a continuous woodland in place.
     const envRev=typeof environmentRevision!=='undefined'?environmentRevision:0;
     const terraformEdits=window.ConquerTerraforming?.edits?.()||State.relief?.terraforming||[];
@@ -1654,31 +1668,9 @@
       for(const [name,part] of [['castleBody','body'],['castleLines','lines'],['castleFront','front'],['castleFrontLines','frontLines']]){S.buf[name]=v[part].b;S.buf[name+'#n']=v[part].n}
       S.sig.castle=cSig;st.castleMs=performance.now()-a;
     }
-    const atlasSig=[season,forestTreeSpritesReady,
-      Object.keys((typeof boundaryBushSprites!=='undefined'&&boundaryBushSprites[season])||{}).length].join('|');
-    if(S.sig.treeAtlas!==atlasSig){
-      S.treeAtlas=buildTreeAtlas();
-      if(S.treeAtlas)uploadTexture(gl,'atlas',S.treeAtlas.canvas);
-      S.sig.treeAtlas=atlasSig;
-    }
-    const treeSig=[atlasSig,season==='autumn'?autumnFoliageStep():-1,
-      (State.environment||[]).length,envRev,State.seed,urbanRev(),structuresSig('hedges')].join('|');
-    if(S.sig.trees!==treeSig){
-      const a=performance.now();
-      upload(gl,'trees',buildTrees(S.treeAtlas));S.sig.trees=treeSig;st.treesMs=performance.now()-a;
-    }
-    const dSig=[structuresSig('all'),shopCut,shopFront,Object.keys(architectureSprites).length,window.ConquerGates?.ensureSprites()||'',
-      window.__conquerHeraldryCanvas?.signature?.()||JSON.stringify(State.heraldry||null)].join('|');
-    if(S.sig.decals!==dSig){
-      const a=performance.now(),atlas=buildDecalAtlas();uploadTexture(gl,'decalAtlas',atlas.canvas);S.decalMap=atlas.map;
-      const baked=buildDecals(atlas);
-      upload(gl,'decals',baked.decals);
-      upload(gl,'nightWindows',baked.lights);
-      upload(gl,'fireLights',buildFireLights());
-      S.sig.decals=dSig;st.decalsMs=performance.now()-a;
-    }
     // Environmental scatter (settlement-scatter.js): the layout follows content, the two-tone
-    // side shading follows the camera quarter-turn, so keep one buffer per rotation.
+    // side shading follows the camera quarter-turn, so keep one buffer per rotation. Laid out
+    // before the trees: bank bushes are drawn as 2D bush billboards with them.
     if(window.ConquerScatter&&window.ConquerScatterModel){
       const scContent=[season,State.stonePaletteId,State.seed,State.relief?.seed,(State.environment||[]).length,urbanRev(),structuresSig('all')].join('|');
       if(S.scatterContent!==scContent){
@@ -1694,6 +1686,29 @@
         v={b,n:d.length};S.scatterVariants.set(rot,v);st.scatterMeshMs=performance.now()-a;
       }
       S.buf.scatter=v.b;S.buf['scatter#n']=v.n;
+    }
+    const atlasSig=[season,forestTreeSpritesReady,
+      Object.keys((typeof boundaryBushSprites!=='undefined'&&boundaryBushSprites[(typeof foliageLook==='function'?foliageLook():State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer')])||{}).length].join('|');
+    if(S.sig.treeAtlas!==atlasSig){
+      S.treeAtlas=buildTreeAtlas();
+      if(S.treeAtlas)uploadTexture(gl,'atlas',S.treeAtlas.canvas);
+      S.sig.treeAtlas=atlasSig;
+    }
+    const treeSig=[atlasSig,season==='autumn'?autumnFoliageStep():-1,
+      (State.environment||[]).length,envRev,State.seed,urbanRev(),structuresSig('hedges'),S.scatterContent||''].join('|');
+    if(S.sig.trees!==treeSig){
+      const a=performance.now();
+      upload(gl,'trees',buildTrees(S.treeAtlas));S.sig.trees=treeSig;st.treesMs=performance.now()-a;
+    }
+    const dSig=[structuresSig('all'),shopCut,shopFront,Object.keys(architectureSprites).length,window.ConquerGates?.ensureSprites()||'',
+      window.__conquerHeraldryCanvas?.signature?.()||JSON.stringify(State.heraldry||null)].join('|');
+    if(S.sig.decals!==dSig){
+      const a=performance.now(),atlas=buildDecalAtlas();uploadTexture(gl,'decalAtlas',atlas.canvas);S.decalMap=atlas.map;
+      const baked=buildDecals(atlas);
+      upload(gl,'decals',baked.decals);
+      upload(gl,'nightWindows',baked.lights);
+      upload(gl,'fireLights',buildFireLights());
+      S.sig.decals=dSig;st.decalsMs=performance.now()-a;
     }
     // Cutaway interiors: rebuilt on content change, one buffer pair per camera quarter-turn.
     // W1 porticos join even when closed: their loggia furniture shows through the arches.

@@ -42,7 +42,7 @@
     return{heraldA:h.c1||(typeof REIGN_COLOR_1==='string'?REIGN_COLOR_1:'#b53636'),heraldB:h.c2||(typeof REIGN_COLOR_2==='string'?REIGN_COLOR_2:'#355fb8')}};
   let palCache=null;
   function palette(){
-    const data=DATA(),winter=State.season==='winter',her=heraldry(),herKey=her.heraldA+her.heraldB;
+    const data=DATA(),winter=(typeof isSnowGround==='function'?isSnowGround():State.season==='winter'),her=heraldry(),herKey=her.heraldA+her.heraldB;
     if(palCache&&palCache.data===data&&palCache.winter===winter&&palCache.herKey===herKey)return palCache.pal;
     const pal=data.palette.map((hex,i)=>{const k=data.paletteKeys[i];
       return her[k]||(winter&&k.startsWith('roof')?WINTER[/Dark$|Ridge$/.test(k)?1:0]:hex)});
@@ -83,7 +83,7 @@
   const at=(p,z)=>({x:p.x,y:p.y,z:terrainElevation(p)+z});
   function palisade(s){
     const g=palisadeLayout(s),mesh={pos:[],col:[]},faces=[];
-    const angle=Math.atan2(g.dy,g.dx),winter=State.season==='winter';
+    const angle=Math.atan2(g.dy,g.dx),winter=(typeof isSnowGround==='function'?isSnowGround():State.season==='winter');
     if(g.tier===2){
       // drawPalisadeWalkway: plank deck at .66-.74 on the inner side, posts under its inner edge.
       const outer=g.postOffset-.05,inner=-g.width/2+.035,z0=.66,z1=.74,bays=Math.max(1,Math.floor(g.L/.72));
