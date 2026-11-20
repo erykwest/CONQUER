@@ -8,6 +8,19 @@
 - [x] Pini 75% e 1,5x; boschi 1,3x; sottobosco 2x; cespugli di riva 2D legacy.
 - [ ] Aperti: la neve sui rami si legge poco a distanza su terreno bianco; i 7 alberi spogli condividono il tronco; asset audit del Lab non eseguito; prestazioni con la nuova densità da misurare.
 
+### 2026-11-18 — FIX-MILL-HILLS-261118 · Mulino a vento sulle colline
+
+**CORRETTO SU BRANCH `fix/mill-hills`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Il mulino a vento si posa e si costruisce su ogni terrazza piana di collina (H+1, H+2, H+3), posato alla quota della terrazza.
+- [x] Resta escluso da H0 e dai pendii; mulino ad acqua invariato (riva di fiume o torrente).
+- [ ] Mulino a vento su pendio dolce con fondazione (come torri e civici): non richiesto, da valutare se le cime piccole restano scarse.
+
+### 2026-11-18 — WARDROBE-CAL-261118 · Guardaroba stagionale e calendario
+
+- [x] Verificato l'aggancio del guardaroba dei popolani al calendario (mese, stagione, meteo, cambio a runtime).
+- [x] Folle delle feste e della giostra vestite per stagione; chiavi delle carte 3D di feste, giostra e interni civici con l'abito.
+- [ ] Decisione di prodotto: il pubblico del tribunale e della messa resta senza abiti stagionali (scelta attuale); i mestieri a slot pieni (fabbro, muratore…) non mettono il mantello d'inverno nemmeno all'aperto.
+
 ## 2026-11-19 — MOAT-WIDEN · Allargare il fossato
 
 **Implementato sul branch `feature/moat-from-wall`, non ancora unito a main.** Richiesta del product owner (19/11/2026): «se fai upgrade del fossato in larghezza mantieni il lato adiacente al muro/palizzata».
