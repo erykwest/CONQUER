@@ -1,5 +1,14 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-19 — SHOP-L3-ADV · Botteghe avanzate L3
+
+**IMPLEMENTATO SU BRANCH `feature/shops-l3-advanced`, NON MERGE.** Dettagli in [STATUS](STATUS.md), decisione D-SHOP-L3-261119.
+- [x] Bottega avanzata sulle case L3 mercanti con due artigiani L2, ×2,5 (×1 con uno, ferma senza).
+- [x] Salari agli L2, margine al mercante L3; vendite divise per produzione.
+- [x] Cutaway, tragitto dei lavoranti, banco e bancone, ispettore, Lab.
+- [ ] Stanze del piano terra L2 da ridisegnare (PR successiva).
+- [ ] Bilanciamento: con la Gilda il ×2,5 si moltiplica; verificare prezzi e scorte dei Beni L3 su una partita lunga.
+
 ### 2026-11-18 — SHOP-CUT-261118 · Botteghe del cutaway
 
 **IMPLEMENTATO SU BRANCH `fix/cutaway-shops`, NON MERGE.** Dettagli in [STATUS](STATUS.md).

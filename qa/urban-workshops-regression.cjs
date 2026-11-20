@@ -36,11 +36,13 @@ check('week N prices use only week N-1 observations, one commodity per step',()=
   const next=M.stepMarket(m,{week:5});assert.ok(next.prices.textiles>11);
   assert.equal(M.stepMarket({...next,cursor:3},{week:5}).prices.textiles,next.prices.textiles,'once per week');
 });
-check('every completed L2 artisan house opens one workshop on a workday; others never do',()=>{
+check('every completed L2 artisan house opens one workshop on a workday; a merchant L3 house an advanced one; L4 never',()=>{
   const h=harness([2,2,3,4]);
   h.e.tick(-1,0);
   const shops=h.c.state().shops;
-  assert.deepEqual(Object.keys(shops).sort(),['h0','h1']);
+  assert.deepEqual(Object.keys(shops).sort(),['h0','h1','h2']);
+  assert.equal(shops.h2.grade,'advanced','the L3 merchant runs an advanced workshop (D-SHOP-L3-261119)');
+  assert.deepEqual([shops.h0.grade,shops.h1.grade],['basic','basic']);
   for(const s of Object.values(shops)){assert.ok(h.c.WORKSHOP_KINDS[s.kind]);assert.equal(s.source,'autonomous')}
 });
 check('trades are deterministic per seed and survive save/reload',()=>{

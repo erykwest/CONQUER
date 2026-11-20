@@ -4,6 +4,10 @@
 
 `fix/messages-notifications`: gli avvisi di UI-ALERTS-01 (#256) comparivano solo con `?ui=2`; ora pila di avvisi e diario degli eventi sono montati anche nella UI classica (default). «Mostra sulla mappa» centra la camera (`ConquerGame.commands.focus`), anche sul punto dove aspetta il messaggero; nessun doppione nel diario dopo un ricarico. Test end-to-end watcher → feed in `qa/ui-alerts-regression.mjs`. ROADMAP e DECISIONS invariate: correzione della consegna di UI-ALERTS-01, nessun contratto nuovo.
 
+### 2026-11-19 — SHOP-L3-ADV · Botteghe avanzate L3 (D-SHOP-L3-261119)
+
+`feature/shops-l3-advanced` (base `fix/cutaway-shops`, #277): le case L3 dei mercanti aprono botteghe avanzate con due artigiani L2 assunti (secondo adulto delle case L2 più vicine), produzione ×2,5 (×1 con un solo artigiano, ferma senza), salari agli L2 e margine al mercante L3. Cutaway, fronte su strada, tragitto degli artigiani verso la bottega (banco e bancone), ispettore su L3 e L2, Lab (famiglia «Botteghe avanzate L3», 21 render in baseline). Nuova `qa/shops-l3-advanced-regression.cjs`. DECISIONS: nuova D-SHOP-L3-261119. ROADMAP invariata.
+
 ### 2026-11-18 — SHOP-CUT-261118 · Botteghe del cutaway di nuovo funzionanti
 
 `fix/cutaway-shops`: dopo SOC-CLASS-02 (#206) le botteghe stanno sulle case L2 (artigiani), ma il cutaway, il fronte su strada (vetrina, insegna) e l'artigiano al banco chiedevano ancora una casa L3, e l'ispettore mostrava la bottega solo sulle L3 («no workshop yet» per sempre). Ora seguono la classe L2 di ConquerCommerce; voci del Lab rinominate `bottega-l2-*` (famiglia «Botteghe L2») e baseline dell'audit aggiornata per i 21 render. ROADMAP e DECISIONS invariate: si applica la decisione esistente di SOC-CLASS-02.
