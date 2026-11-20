@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-18 — ROAD-ACCESS-261118: strade secondarie per ogni edificio (branch `fix/secondary-roads`)
+
+- **CAUSA:** la strada secondaria di accesso (`ensureSettlementRoadAccessWork`, `roadClass:'access-primary'`) era generata solo per una lista fissa casa/campo/civico, ripetuta in `settlementAccessTargets` (ricarica e riconciliazione), nel job di completamento cantieri (`settlement-app-simulation.js`) e al piazzamento (`settlement-app.js`). Taglialegna, cava, cava d'argilla, miniera, mulini e deposito (`storageYard`) non ricevevano mai la strada.
+- **CODICE:** nuova regola unica `structureNeedsAccessRoad(s)` in `settlement-world.js` usata dai tre punti; per industrie e depositi `settlementRoadAccessPoint` parte dal bordo dell'impronta rivolto alla strada (+0,28U). Esenti: torri (ramo di servizio proprio), porte e pozzi (strade principali proprie), annessi civici (serviti dal civico padre).
+- **PROVE LOCALI PASS:** nuova `qa/access-roads-regression.cjs` (audit di tutti i tipi piazzabili, strada generata per 18 tipi, ingresso sul bordo, job di completamento), fallisce senza la correzione; aggiunta al workflow `road-magnet-regression`. PASS anche `urban`, `gate-roads`, `haulage`, `economy-industries`, `multi-wells`, `builder-placement`, `construction-completion`, `wall-road-gate`. CI da verificare.
+
 ### 2026-11-18 — FIX-MILL-HILLS-261118: mulino a vento sulle colline (branch `fix/mill-hills`, NON MERGE)
 
 - **CAUSA:** `ConquerIndustries.validate` (`src/settlement-industries.js`) accettava il mulino a vento solo con terrazza a quota esattamente H+1. Le colline procedurali sono alte 2-3 livelli e il loro anello piano H+1 (tra il bordo del livello 1 e il pendio di 2U del livello 2, rientro 0,9-5,4U) è spesso più stretto dei 2U del mulino: sulla cima (H+2/H+3) il mulino era sempre rifiutato, quindi su quasi tutte le colline non si poteva né posare né avviare il cantiere.
