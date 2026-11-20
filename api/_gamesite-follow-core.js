@@ -76,4 +76,13 @@ export async function sendEmail(email,subject,html){
   });
   if (!response.ok) throw Error('Mailer returned status '+response.status);
 }
-export function noStore(res) {res.setHeader('Cache-Control','no-store, max-age=0');res.setHeader('X-Content-Type-Options','nosniff');}
+export function noStore(res) {
+  // Confirmation and unsubscribe URLs carry user-specific one-time or signed codes.
+  // Do not leak them via Referrer, browser caches, indexing or third-party resources.
+  res.setHeader('Cache-Control','no-store, max-age=0');
+  res.setHeader('Referrer-Policy','no-referrer');
+  res.setHeader('X-Robots-Tag','noindex, nofollow, noarchive');
+  res.setHeader('X-Content-Type-Options','nosniff');
+  res.setHeader('X-Frame-Options','DENY');
+  res.setHeader('Content-Security-Policy',"default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+}
