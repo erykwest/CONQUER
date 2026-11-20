@@ -91,6 +91,10 @@ test('Follow P0: double opt-in, explicit confirmation, signed unsubscribe and no
   await confirm(request('GET',{}, {token}),preview);
   assert.equal(preview.statusCode,200);
   assert.match(preview.body,/Confirm email/);
+  assert.equal(preview.headers['referrer-policy'],'no-referrer');
+  assert.equal(preview.headers['x-robots-tag'],'noindex, nofollow, noarchive');
+  assert.equal(preview.headers['x-frame-options'],'DENY');
+  assert.match(preview.headers['content-security-policy'],/form-action 'self'/);
   assert.equal(server.saved?.status,'pending','GET must not subscribe anyone');
   const approved=response();
   await confirm(request('POST',{token}),approved);
