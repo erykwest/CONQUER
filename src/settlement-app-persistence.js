@@ -167,6 +167,22 @@ function saveBlocked(){
   return !!State.loadFailed;
 }
 let localSaveTimer=null;
+// Guest slots are local identities for singleplayer worlds, not auth users.
+function updateGuestSaveIndex(){
+  const id=window.__CONQUER_GUEST_SLOT__;
+  if(!id)return;
+  const key='conquer.guest.slots.v1';
+  try{
+    const entries=JSON.parse(localStorage.getItem(key)||'[]');
+    if(!Array.isArray(entries))return;
+    const entry=entries.find(x=>x&&x.id===id);
+    if(!entry)return;
+    const name=State.village?.name||'New settlement';
+    if(entry.seed===State.seed&&entry.biome===State.biome&&entry.title===name)return;
+    entry.seed=State.seed;entry.biome=State.biome;entry.title=name;
+    localStorage.setItem(key,JSON.stringify(entries));
+  }catch(error){console.warn('Guest save slot metadata unavailable',error)}
+}
 function saveLocal(){
   if(window.__CONQUER_ASSET_LAB__)return;
   if(window.__CONQUER_REGIONAL_DEMO__)return;
@@ -179,6 +195,7 @@ function saveLocal(){
     window.__conquerAnalytics?.event?.('LOCAL_SAVE_ERROR',{message:String(error)},'error',30000);
     return false;
   }
+  updateGuestSaveIndex();
   if(window.__conquerPerf)window.__conquerPerf.lastSaveMs=performance.now()-t0;
   window.__conquerAnalytics?.measure('SAVE',performance.now()-t0);
   return true;
