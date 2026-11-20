@@ -80,7 +80,7 @@
       ['[data-industry="quarry"]:not([data-extraction-mode])','Cava pietra','work'],
       ['[data-industry="quarry"][data-extraction-mode="clay"]','Cava argilla · H0 · entro 6U da acqua interna','work'],
       ['[data-industry="mine"]','Miniera','work'],
-      ['[data-industry="windmill"]','Mulino a vento · 2×2U · H+1','windmill'],
+      ['[data-industry="windmill"]','Mulino a vento · 2×2U · collina H+1 o più','windmill'],
       ['[data-industry="watermill"]','Mulino ad acqua · 2×2U · riva del fiume','watermill']]},
     {id:'events',label:'Eventi e svago',icon:'events',items:[
       ['[data-event-venue="streetSpot"]','Pulpito · 1.6×1.6U · artisti di strada','podium'],
@@ -88,7 +88,9 @@
       ['[data-event-venue="festivalGround"]','Spiazzo eventi · 14×10U · giostra, torneo, circo, sagra','festival'],
       ['[data-event-venue="arenaLot"]','Arena · 18×14U · lotto dedicato','arena']]},
     {id:'combat',label:'Combattimento e allarmi',icon:'castle',items:[
-      ['[data-event-venue="armyCamp"]','Accampamento militare · capi, compagnie, logistica · steccato → palizzata','castle']]},
+      ['[data-event-venue="armyCamp"]','Accampamento militare · capi, compagnie, logistica · steccato → palizzata → pali','castle'],
+      ['[data-event-venue="stakeRow"]','Pali anti-carica · tratti da 1.4U · punte verso il fronte','castle'],
+      ['[data-event-venue="chevalFrise"]','Cavallo di Frisia · 1.4U · sbarra un varco','castle']]},
     {id:'terrain',label:'Terraforming',icon:'terrain',items:[
       ['[data-terraform="terrain"]','Terreno','terrain'],
       ['[data-terraform="walled"]','Terrazzamento murato','terrace'],
