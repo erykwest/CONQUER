@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-18 — PAL-W1-SLOPE · Palizzate W1 sui fianchi delle colline
+
+**IMPLEMENTATO SU BRANCH `fix/palisade-w1-slopes`, NON MERGE.**
+- [x] Palizzata W1 costruibile su pendio, paletti seduti sul terreno.
+- [ ] Le mura in pietra non controllano il pendio quando si cambia tier (T1 su scosceso → T3): stessa guardia da valutare.
+
 ### 2026-11-18 — ROAD-ACCESS-261118 · Strade secondarie per ogni edificio con ingresso
 
 **IMPLEMENTATO SU BRANCH `fix/secondary-roads`.** Dettagli in [STATUS](STATUS.md).

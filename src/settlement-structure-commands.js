@@ -27,6 +27,11 @@ const StructureCommands=(()=>{
       if(requested===KEEP_W4_TIER&&(isWoodTower(target)||(target.shape||'square')!=='square'||target.parentTowerId)){status('W4 is a square stone keep');return false}
       if(requested===KEEP_W4_TIER&&!keepW4Available(target)){status('Only one W4 keep per settlement');return false}
     }
+    if(target.type==='palisade'){
+      // A W1 palisade on a hill flank cannot grow a walkway or earthwork there (flat ground only).
+      const verdict=wallTerrainVerdict({...target,tier:requested,width:wallWidthForTier(requested)});
+      if(!verdict.ok){status(verdict.reason);return false}
+    }
     const byFloor=target.type==='tower'?functionsByFloor(target):null;
     applyStructureTier(target,requested);
     if(byFloor)restoreFunctionsByFloor(target,byFloor);

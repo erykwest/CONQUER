@@ -1,5 +1,10 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-18 — PAL-W1-SLOPE: palizzate W1 su pendio (branch `fix/palisade-w1-slopes`, NON MERGE)
+
+- **CODICE:** `wallTerrainVerdict` ammette la palizzata W1 su qualsiasi pendio (W2-W3: «need flat ground»); `linearBuildGroundZ` dà al cantiere la quota più bassa sotto la palizzata; `setTier` rifiuta l'upgrade W2-W3 fuori piano; `addStake` (wood3d) e il cantiere (construction-assembly) poggiano il piede di ogni paletto sul terreno più basso sotto di esso. Mura in pietra invariate.
+- **PROVE:** `qa/palisade-slope-regression.cjs` PASS, `wall-slope`, `wood3d`, `construction-assembly`, `house3d`, `builder-placement` PASS. Lab: mesh reale della palizzata T1 su terreno inclinato 0,2/0,45/0,8: nessun piede sollevato dopo la correzione. **Non verificato:** posa in partita su una collina vera, audit completo del Lab (lo fa la CI).
+
 ### 2026-11-18 — ROAD-ACCESS-261118: strade secondarie per ogni edificio (branch `fix/secondary-roads`)
 
 - **CAUSA:** la strada secondaria di accesso (`ensureSettlementRoadAccessWork`, `roadClass:'access-primary'`) era generata solo per una lista fissa casa/campo/civico, ripetuta in `settlementAccessTargets` (ricarica e riconciliazione), nel job di completamento cantieri (`settlement-app-simulation.js`) e al piazzamento (`settlement-app.js`). Taglialegna, cava, cava d'argilla, miniera, mulini e deposito (`storageYard`) non ricevevano mai la strada.
