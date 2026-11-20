@@ -1,5 +1,12 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-20 — GameSite P0 browser negative-path QA and newsletter token hardening (branch `gamesite`, not merged)
+
+- Added `qa/gamesite-edge-browser.mjs` to GameSite CI: fake account shared across site and Builder, sign-out, WebGL2-incompatible browser, denied quota/storage, without invoking real email/auth providers.
+- Follow confirmation and unsubscribe pages now send no-referrer/noindex/no-cache/CSP and anti-framing response headers; regression coverage added to `qa/gamesite-follow-integration.mjs`.
+- **PROVE:** [GameSite P0 run #44755769718](https://github.com/erykwest/CONQUER/actions/runs/44755769718) passed both browser and static validation. External configuration/SSO/deployment blockers remain.
+- **Stato:** branch Draft, no main merge, no public deployment.
+
 ### 2026-11-20 — GameSite P0: browser QA e hardening (PR #292 Draft, non merge)
 
 - Test Chromium di creazione Guest, salvataggi multipli e ripresa, snapshot desktop/mobile; primo run superato #44748638817. Successiva aggiunta di controlli su daylight/DEV/exit e nuovi test API da verificare in CI finale.

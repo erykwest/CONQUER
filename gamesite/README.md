@@ -52,6 +52,6 @@ Apply `supabase/gamesite-follow-schema.sql` to the correct **staging** database 
 
 ## Verification
 
-`node --test qa/gamesite-regression.mjs` and syntax checks under `.github/workflows/gamesite.yml` run on the branch and draft PR. The repository's broader CI is still required before a release. Browser screenshot/performance and email delivery tests have **not** been performed in this task.
+The branch runs `node --test qa/gamesite-regression.mjs qa/gamesite-follow-integration.mjs`, syntax checks, Devlog validation and **two actual Chromium browser E2E scripts** under `.github/workflows/gamesite.yml`. [GameSite P0 run #44755769718](https://github.com/erykwest/CONQUER/actions/runs/44755769718) passed: Guest seeded worlds with two independent saves and resume, real WebGL2 viewport, responsive screenshots, simulated same-origin account identity, no-WebGL2 fallback and denied local storage. Mailing endpoint tests use mocked services; no live provider, redirect, separate-deployment, performance/WCAG or delivery verification has been performed.
 
 Never merge this branch to `main` or switch Vercel production routing merely to preview the website. Review the draft PR and deploy staging intentionally.

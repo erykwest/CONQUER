@@ -1,5 +1,14 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-20 — GameSite P0: nuovi gate verificati
+
+- [x] Guest browser E2E Chromium: seed, territorio, 2 slot, resume, salvataggio e uscita; screenshot tecnici in CI.
+- [x] Controllo avvio con WebGL2 non disponibile, slot non creato quando localStorage e' inaccessibile/quota, niente ingresso accidentale nel gioco.
+- [x] Flusso account unitario **con Supabase SDK mock** da sito a gioco e logout; non equivale a confermare i redirect/Auth reali.
+- [x] HTTP response hardening per token newsletter: referrer no-leak, no-cache, noindex, frame denied, form same-origin; integrazione mock pass.
+- [ ] **Release blockers veri**: media autentici approvati, newsletter reale con segreti e migrazione controllata, privacy titolare, verifica account su Supabase e host definitivo, staging separabile con rollback e QA Lighthouse/WCAG.
+- [ ] Verifica funzionale su Safari e Firefox supportati, comportamento IndexedDB/localStorage in private mode e quota insufficiente, compatibilita tra versioni del generatore.
+
 ### 2026-11-20 — GameSite P0 closure pass (branch `gamesite`, PR #292 Draft)
 
 - [x] Test Chromium reale per Guest: seed determinato, bioma, persist/resume e isolamento due slot, con screenshot artefatto di CI (run #44748638817).

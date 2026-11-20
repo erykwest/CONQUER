@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-20 — GAMESITE-P0: browser edge cases e protezione token newsletter (branch `gamesite`, PR #292 Draft)
+
+- **CI PASS:** [GameSite P0 run #44755769718](https://github.com/erykwest/CONQUER/actions/runs/44755769718) ha superato sintassi/test unit e i test browser in Chromium. La prova Guest completa copre seed e biomi, due slot isolati, resume, ritorno al sito, desktop/mobile e salvataggio.
+- **NUOVA COPERTURA:** `qa/gamesite-edge-browser.mjs` verifica account condiviso sito/Builder tramite SDK Supabase **simulato** (richiesta magic-link, sessione, accesso runtime e logout), blocco con WebGL2 non disponibile e fallimento storage/quota senza chiudere lo splash. **NON** certifica il provider reale o login su due origini differenti.
+- **SICUREZZA:** `api/_gamesite-follow-core.js` aggiunge `Referrer-Policy: no-referrer`, `X-Robots-Tag: noindex,nofollow,noarchive`, CSP anti-frame/form e `Cache-Control: no-store` sulle pagine con token di conferma/disiscrizione; testati in `qa/gamesite-follow-integration.mjs`.
+- **APERTI PER P0 LIVE:** screenshot marketing reali approvati (esistono catture reali della QA ma non sono asset promozionali verificati), servizio email/DB e privacy titolare, magic-link Supabase in ambiente reale, QA browser e accessibilita completa, separazione hosting sito/gioco e rollback con dominio reale. Nessun deploy, nessuna migrazione, nessun merge.
+
 ### 2026-11-20 — GAMESITE-P0: hardening, browser QA e release gates (branch `gamesite`, PR #292 Draft)
 
 - **FATTO SOLO SULLA BRANCH:** Playwright browser E2E e screenshots su Home desktop/mobile, splash Guest, creazione seed + bioma, salvataggio locale, riapertura e secondo slot isolato. Prima run verde: [GameSite checks](https://github.com/erykwest/CONQUER/actions/runs/44748638817). Modifiche successive a daylight, uscita salvata, visibilita DEV e auth lazy-load richiedono il **nuovo run verde**.
