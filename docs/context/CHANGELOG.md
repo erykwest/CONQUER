@@ -3,6 +3,13 @@
 ### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2 come casa-bottega
 
 `feature/shops-l2-rooms` (base `feature/shops-l3-advanced`, #293): il cutaway delle botteghe L2 ha stanze proprie (`LAYOUTS_L2`): bancone su strada lontano dalla porta, angolo della famiglia (focolare con paiolo, tavolino, due sgabelli) sul fondo del lato bancone, postazione compatta del mestiere sul fondo del lato porta; passaggio dalla porta libero. Le case L3 tengono la bottega completa. Baseline del Lab aggiornata per i 21 render «Botteghe L2». ROADMAP invariata; DECISIONS: completa D-SHOP-L3-261119 (stanze L2).
+### 2026-11-20 — WINTER-PHASES · Inverno in quattro fasi, blizzard, neve a retino
+
+`feature/winter-phases`: l'inverno (1 dic – 28 feb) ha quattro quarti: alberi e cespugli spogli con sottobosco marrone, due quarti di neve a terra, poi spogli con sottobosco verde e senza neve; con meteo neve, in qualunque giorno d'inverno, è blizzard (neve a terra e retino di neve sui rami). Alberi spogli con rami secondari; neve a retino su rami, cespugli, pini e cenge; versante della montagna bianco con neve a terra; scarpate ripide in roccia nuda; neve sui sassi di riva e costa. Pini 75% e 1,5x, boschi 1,3x, sottobosco 2x; cespugli di riva 2D legacy al posto dei modelli 3D; billboard 3D con profondità verticale. Test in `qa/winter-phases-regression.cjs`. ROADMAP e DECISIONS invariate.
+
+### 2026-11-18 — MSG-FEED-261118 · Messaggi e notifiche anche nella UI classica
+
+`fix/messages-notifications`: gli avvisi di UI-ALERTS-01 (#256) comparivano solo con `?ui=2`; ora pila di avvisi e diario degli eventi sono montati anche nella UI classica (default). «Mostra sulla mappa» centra la camera (`ConquerGame.commands.focus`), anche sul punto dove aspetta il messaggero; nessun doppione nel diario dopo un ricarico. Test end-to-end watcher → feed in `qa/ui-alerts-regression.mjs`. ROADMAP e DECISIONS invariate: correzione della consegna di UI-ALERTS-01, nessun contratto nuovo.
 
 ### 2026-11-19 — SHOP-L3-ADV · Botteghe avanzate L3 (D-SHOP-L3-261119)
 

@@ -879,7 +879,7 @@ const WINTER_SNOW_TOP='#edf1ed';
 const WINTER_SNOW_A='#e7ece8';
 const WINTER_SNOW_B='#dce3de';
 const WINTER_SNOW_STROKE='rgba(112,124,116,.58)';
-function winterSnowColor(normal,snow=WINTER_SNOW_TOP){return State.season==='winter'?snow:normal}
+function winterSnowColor(normal,snow=WINTER_SNOW_TOP){return (typeof isSnowGround==='function'?isSnowGround():State.season==='winter')?snow:normal}
 function drawCastleSelection(){
   // Selection is a dynamic outline, not a cached material tint: all buildings
   // remain legible after selecting them, including wood, civic, houses and sites.

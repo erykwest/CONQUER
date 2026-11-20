@@ -4,6 +4,13 @@
 
 - **CODICE:** `settlement-shop-cutaway.js` `LAYOUTS_L2` (sette mestieri) e `domestic()`; `layout(R,out,kind,home)` sceglie le stanze L2 per le botteghe di casa e `LAYOUTS` per le avanzate L3; `grade` nella chiave della cache del cutaway.
 - **PROVE LOCALI PASS:** `qa/shop-cutaway-regression.cjs` con nuovo controllo (layout L2 per ogni mestiere, focolare, passaggio dalla porta libero in entrambi i versi della porta) e i 112 cutaway esistenti; `qa/shops-l3-advanced-regression.cjs`. Audit Lab «Botteghe L2»: 21 render, 0 falliti, fogli rivisti, baseline aggiornata.
+### 2026-11-20 — WINTER-PHASES: quattro fasi dell'inverno (`feature/winter-phases`)
+
+- **Codice sul branch, non ancora unito a main.** Prima l'inverno era un solo aspetto: neve a terra dal primo giorno, alberi spogli.
+- `settlement-core.js`: `winterPhase()` ('bare' | 'snow' | 'thaw' | 'blizzard'; quarti di 22,5 giorni da 1 dic; meteo 'snow' ⇒ 'blizzard'; `State.winterPhaseOverride` per DEV/screenshot; inverno forzato fuori stagione ⇒ 'snow'), `isSnowGround()`, `foliageLook()`, `undergrowthLook()`, `snowCapSprite()` (retino sulla metà alta di ogni ramo). I controlli «inverno = neve» dei renderer usano `isSnowGround()` (con ripiego su `State.season` per gli harness senza core). `syncWinterLook` (calendario) invalida la scena quando la fase cambia; firme world3d chiavate sulla fase.
+- Alberi spogli con rami secondari generati nella sagoma della chioma (`forestWinterBranchesSvg`); cespugli 'bare'/'blizzard' senza chioma; pini con retino sui palchi; `mountainFaceColor` bianco con neve a terra; scarpate ripide in roccia nuda con neve su cenge, ciglio e cima dei massi; sassi di riva (scatter) e scogli della costa con la neve sulle facce rivolte in alto.
+- Densità: pini 75% e 1,5x, boschi 1,3x (`CONTINUOUS_FOREST_SPACING`), sottobosco 2x (`FOREST_SHRUB_SPACING`). Cespugli di fiume/torrente/palude: `ConquerScatter.isBankBush` li toglie dalla mesh 3D, world3d li disegna come billboard dei cespugli 2D. Shader `sprite`: profondità come piano verticale (i pini non affondano più a metà nel versante).
+- **Prove:** `qa/winter-phases-regression.cjs` nuovo; 83 suite che caricano i file toccati PASS (aggiornata `autumn-foliage` per lo sprite invernale). Verifica a schermo nel gioco locale, di giorno: fasi bare/snow/thaw/blizzard su bosco, montagna, torrente, scarpate; nessun errore in console. Non controllati: billboard vicino a mura/edifici dopo la nuova profondità, palude e costa a schermo, prestazioni con la nuova densità.
 
 ### 2026-11-19 — SHOP-L3-ADV: botteghe avanzate L3 (branch `feature/shops-l3-advanced`, NON MERGE)
 
@@ -307,6 +314,11 @@ Su richiesta utente, avviata la variante concentrica TEST per 300 s simulati, co
 
 - Branch fix/microfix. Con il cutaway piano per piano su un piano sotto l'ultimo, torri, porte e sottotorri non disegnano più merli, caditoie, tetto interno e braciere del tetto (cutawayCrestHidden in settlement-castle.js), sia nel percorso 2.5D (drawCastleBattlements) sia in quello WebGL (ConquerCastle3D.addPieces); la chiave della mesh castello di World3D cambia quando la cresta sparisce, così la mesh si ricostruisce.
 - PASS cutaway-floors (nuove asserzioni) e 49 regressioni castello/cutaway; verificato a vista nel browser su una torre quadra W2 a 3 piani: in P2 merli e braciere, in P1 e P0 nessuno dei due. Le due suite Playwright non sono eseguibili in locale. CI da eseguire.
+## 2026-11-18 — MSG-FEED-261118 · Messaggi e notifiche nella UI classica (branch `fix/messages-notifications`)
+- **Causa:** UI-ALERTS-01 (#256) montava avvisi e diario solo nella UI v2 opt-in (`?ui=2`); con la UI classica, che resta il default, nessuna notifica compariva (solo la busta ✉️ sulla mappa). In più «Mostra sulla mappa» selezionava soltanto la struttura senza spostare la camera, e i messaggi non avevano un punto da mostrare.
+- **Fix:** `src/ui/shell.js` monta nella UI classica un overlay `#ui2.u2-legacy` con la sola pila di avvisi e il diario in una scheda flottante (watcher condivisi, `useAlertWatchers`); CSS in `theme.css` lo tiene a sinistra della sidebar. Nuovo `ConquerGame.commands.focus(id, at)` (`game-api.js`) centra la camera su una struttura o su un punto della mappa. Gli avvisi accettano `at: {x, y}`; messaggero e colombo lo valorizzano con la porta del Mastio / la colombaia. Dopo un ricarico, una condizione già «iniziata» e mai risolta nel diario non viene registrata di nuovo.
+- **PROVE LOCALI PASS:** `node qa/ui-alerts-regression.mjs` (nuovo blocco end-to-end watcher → feed: messaggero in arrivo, in attesa, cantiere completato, ricarico senza doppioni, risoluzione). Browser locale: UI classica e UI v2 con villaggio fondato, Mastio e messaggero; avviso, «Leggi il messaggio», «Mostra sulla mappa» (camera centrata sul punto), diario; nessun errore in console. CI da eseguire.
+
 ## 2026-11-16 — Avvisi in gioco e diario degli eventi (branch `feature/alert-feed`)
 
 - **CODICE SUL BRANCH, NON MERGE:**
