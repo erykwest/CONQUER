@@ -85,6 +85,27 @@ function drawSteepSlopeSurface(poly,winter=false){
   ctx.fillStyle=pattern;ctx.fillRect(minX-2,minY-2,maxX-minX+4,maxY-minY+4);
   ctx.restore();
 }
+// Snow retino (white hatch on pale blue-grey), the same tone as the snow on branches and pines.
+const snowRetinoPatterns=new WeakMap();
+function snowRetinoPattern(){
+  let p=snowRetinoPatterns.get(ctx);if(p)return p;
+  const t=document.createElement('canvas');t.width=t.height=6;const g=t.getContext('2d');
+  g.fillStyle='#c4d0d8';g.fillRect(0,0,6,6);g.fillStyle='#f8fbfc';
+  for(let y=0;y<6;y++)for(let x=0;x<6;x++)if((x+y)%6<4)g.fillRect(x,y,1,1);
+  p=ctx.createPattern(t,'repeat');snowRetinoPatterns.set(ctx,p);return p;
+}
+// Snow on a winter cliff: a white crest along the top edge, retino strips on two ledges.
+function drawSteepSlopeSnowLedges(band){
+  const strip=(v0,v1,fill)=>{
+    const a0=slopePoint(band,0,v0),b0=slopePoint(band,1,v0),b1=slopePoint(band,1,v1),a1=slopePoint(band,0,v1);
+    const z0=band.z0+(band.z1-band.z0)*v0,z1=band.z0+(band.z1-band.z0)*v1;
+    const poly=projectClippedTerrain([{...a0,z:z0},{...b0,z:z0},{...b1,z:z1},{...a1,z:z1}]);
+    if(poly.length>=3)pathPolygon(poly,fill,null);
+  };
+  const retino=snowRetinoPattern();
+  strip(.30,.36,retino);strip(.60,.67,retino);
+  strip(.90,1,'#eef2f1');
+}
 function ensureLandscapeRenderCaches(){
   if(landscapeRenderCacheSeed===State.seed)return;
   landscapeRenderCacheSeed=State.seed;
@@ -143,8 +164,9 @@ function drawLowPolyRock(p,z,size,height,seed,winter=false){
   if(!screenPointVisibleRaw(p,z,36))return;
   const tier=landscapeDetailTier(),rnd=seedRand(seed>>>0);
   const palette=colors=>colors.map(hex=>window.ConquerStoneColor?.shade(hex)||hex);
-  const sidePalette=palette(winter?['#8b9092','#9ca1a2','#777d80','#a8acad']:['#5e6263','#727677','#505455','#838787']);
-  const topPalette=palette(winter?['#b4b8b9','#a8adae','#c0c3c4']:['#8a8e8d','#989b99','#777b7a']);
+  // Winter: bare rock sides, snow (retino) only on the top face.
+  const sidePalette=palette(['#5e6263','#727677','#505455','#838787']);
+  const topPalette=winter?[snowRetinoPattern()]:palette(['#8a8e8d','#989b99','#777b7a']);
 
   if(tier===0){
     const base=w2sRaw(p,z+.01),top=w2sRaw(p,z+height*.75),px=Math.max(1.25,size*U*State.view.scale*.78);
@@ -275,7 +297,9 @@ function drawRelief(){
         const poly=projectClippedTerrain([
           {...band.oa,z:band.z0},{...band.ob,z:band.z0},{...band.b,z:band.z1},{...band.a,z:band.z1}
         ]);
-        if(poly.length>=3)drawSteepSlopeSurface(poly,winter);
+        // Snow does not cling to a cliff: the face stays bare rock, snow only on its ledges and crest.
+        if(poly.length>=3)drawSteepSlopeSurface(poly,false);
+        if(winter)drawSteepSlopeSnowLedges(band);
         drawSteepSlopeRocks(level,band,winter);
       }
     }
