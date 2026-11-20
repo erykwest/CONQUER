@@ -9,8 +9,11 @@
 <script>
 // ?assetlab=1: geometry sandbox for the Asset Lab (figures-lab.html) — no saves, no cloud, no telemetry.
 window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetlab') === '1';
+// Public website launch hides the developer-only controls.
+if(new URLSearchParams(location.search).get('launch')==='1'&&!window.__CONQUER_ASSET_LAB__&&!window.__CONQUER_REGIONAL_DEMO__)
+  document.documentElement.classList.add('conquer-public-launch');
 (() => {
-  if (!window.__CONQUER_ASSET_LAB__&&!window.__CONQUER_REGIONAL_DEMO__) import('https://esm.sh/@supabase/supabase-js@2.117.1')
+  if (!window.__CONQUER_ASSET_LAB__&&!window.__CONQUER_REGIONAL_DEMO__&&new URLSearchParams(location.search).get('launch')!=='1') import('https://esm.sh/@supabase/supabase-js@2.117.1')
     .then(mod => { window.__createSupabaseClient = mod.createClient; })
     .catch(err => console.warn('Supabase unavailable; local persistence remains active.', err));
 
@@ -25,6 +28,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 })();
 </script>
 <link rel="stylesheet" href="./src/settlement.css?v=dev-scroll-mills-1-profile-codex-1-sites2">
+<link rel="stylesheet" href="./src/settlement-game-entry.css?v=gamesite-1">
 <link rel="stylesheet" href="./src/settlement-minimap.css?v=minimap-1">
 <link rel="stylesheet" href="./src/settlement-diplomacy.css?v=knights2d-1-floors1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -487,6 +491,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/settlement-circle.js?v=circle-2"></script>
 <script src="./src/settlement-lod.js?v=lod-1"></script>
 <script src="./src/settlement-minimap.js?v=hill-quantities-2-marsh-1-knights2d-1-coast-holes-1"></script>
+<script src="./src/settlement-game-entry.js?v=gamesite-1"></script>
 <script src="./src/settlement-app-bootstrap.js?v=refactor-2"></script>
 <script src="./src/settlement-music-dev.js?v=music-1"></script>
 <script src="./src/settlement-sound-dev.js?v=sound-2"></script>

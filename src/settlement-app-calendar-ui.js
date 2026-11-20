@@ -301,7 +301,11 @@ function generateNewMap(){
   const l1Gap=stats.minL1Gap==null?'—':Number(stats.minL1Gap).toFixed(1)+'U';
   status(`Nuova mappa · seed ${State.seed} · colline ${pct(stats.coverage)}% · ${steepLevels} · multi ${pct(stats.multiRatio)}% · edge max ${Number(stats.maxEdge||0).toFixed(1)}U · L1 gap ${l1Gap}`);
 }
-document.getElementById('newMapBtn').onclick=generateNewMap;
+document.getElementById('newMapBtn').onclick=()=>{
+  // A Guest world is stored in its own named slot. Never replace that world silently.
+  if(window.__CONQUER_GUEST_SLOT__&&!confirm('Replace your current Guest world with a new random map? This will overwrite its local save slot.'))return;
+  generateNewMap();
+};
 document.getElementById('rotateLeft').onclick=()=>rotateCamera(-1);
 document.getElementById('rotateRight').onclick=()=>rotateCamera(1);
 document.getElementById('planToggle').onclick=togglePlanView;

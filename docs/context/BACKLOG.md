@@ -1,5 +1,109 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-20 — GameSite P0: nuovi gate verificati
+
+- [x] Guest browser E2E Chromium: seed, territorio, 2 slot, resume, salvataggio e uscita; screenshot tecnici in CI.
+- [x] Controllo avvio con WebGL2 non disponibile, slot non creato quando localStorage e' inaccessibile/quota, niente ingresso accidentale nel gioco.
+- [x] Flusso account unitario **con Supabase SDK mock** da sito a gioco e logout; non equivale a confermare i redirect/Auth reali.
+- [x] HTTP response hardening per token newsletter: referrer no-leak, no-cache, noindex, frame denied, form same-origin; integrazione mock pass.
+- [ ] **Release blockers veri**: media autentici approvati, newsletter reale con segreti e migrazione controllata, privacy titolare, verifica account su Supabase e host definitivo, staging separabile con rollback e QA Lighthouse/WCAG.
+- [ ] Verifica funzionale su Safari e Firefox supportati, comportamento IndexedDB/localStorage in private mode e quota insufficiente, compatibilita tra versioni del generatore.
+
+### 2026-11-20 — GameSite P0 closure pass (branch `gamesite`, PR #292 Draft)
+
+- [x] Test Chromium reale per Guest: seed determinato, bioma, persist/resume e isolamento due slot, con screenshot artefatto di CI (run #44748638817).
+- [x] Guard tecnici: seed Guest non altera quello dev, metadata slot coerenti, salvataggi corrotti protetti, mancato salvataggio non chiude splash, exit verso sito; nuova QA su daylight e DEV non ancora confermata da run finale.
+- [x] Follow backend fail-closed, rollback su email non inviata e anti-abuso con limiti atomici e dati pseudonimizzati; prove mock, **non live**.
+- [x] Canonical per pagine editoriali, noindex 404, headers di sicurezza, route sitemap.
+- [ ] WEB-003 screenshot reali e trailer promozionale approvati, non solo SVG/stage Lab.
+- [x] WEB-004 Devlog versionato in Markdown: publisher deterministico `gamesite/tools/build-devlog.cjs`, solo articoli `status: published` nel sito, bozze private in source; check CI `--check` passato (GameSite validate).
+- [ ] WEB-005/011/029 SMTP/provider, migration SQL, limitazioni WAF, pulizia rate bucket, prove double opt-in reali e privacy completa.
+- [ ] WEB-006/008/009/022-026 completare smoke finale dopo tutte le modifiche, check browser matrix e comportamento salvataggio in quota bassa.
+- [ ] WEB-014 e 021/027/028 release game/site isolabile con stessa identita utente; test account/logout/redirect e permessi reali, staging e rollback.
+- [ ] NFR Lighthouse/Web Vitals, WCAG AA, security review e config dominio prima di promozione su main.
+
+
+### GameSite — P0 del sito pubblico (branch `gamesite`, 19/11/2026)
+
+Owner: [Website SRS v0.3](../WEBSITE-SRS.md). Questa tabella e uno **stato branch**, non completamento su `main`.
+
+| ID | Stato branch / residuo |
+|---|---|
+| WEB-001/002/010/012 | Homepage, The Game, lingua inglese e pagine statiche isolate in `gamesite/` implementate; QA responsive/SEO da verificare |
+| WEB-003 | Asset autentici e live Builder on-demand; **mancano screenshot reali approvati** e trailer |
+| WEB-004 | Devlog index e primo articolo statici; **manca workflow Markdown/bozze automatizzato** |
+| WEB-005/029 | UI Follow e API double opt-in/unsubscribe implementate; blocco: provider email, migrazione schema, privacy approvata e test end-to-end |
+| WEB-006/007/008 | Link `Play`, launcher e controllo WebGL2 presenti; test visuale browser/loader/error handling ancora necessari |
+| WEB-009/022/023/024/025/026 | Guest singleplayer con seed casuale, scelta bioma reale e slot isolati presente sul branch; QA save/load e compatibilita browser necessaria |
+| WEB-011 | Privacy draft e Contact; identita del titolare e finalizzazione obbligatorie prima della pubblicazione |
+| WEB-013/015 | Metadata e endpoint sitemap dinamico, analytics aggregate senza cookie; dominio/ambiente e misurazione QA mancanti |
+| WEB-014 | Source website sotto `gamesite/` e runtime game in root, ma ancora nello stesso deploy di prova; release separabili da progettare/testare |
+| WEB-021/027/028 | Auth Supabase email magic-link riusato; login facoltativo e Guest locale; config redirect e flussi account browser da verificare, cross-origin non risolto |
+
+**Next:** test automatici, smoke browser, immagini autentiche, deployment/staging isolato; privacy+email provider prima di Follow; niente promozione in `main` finche' i gate non passano.
+
+### 2026-11-18 — WOOD-GATE-SLOTS-261118 · Spazi della porta in legno
+
+**IMPLEMENTATO SU BRANCH `fix/wood-gate-slots`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] «Gate di legno deve avere slot, ora ne ha 0»: 1 spazio stanza sul ponte sopra il passaggio (porta in pietra L3: 2).
+- [ ] La porta in legno non ha cutaway: la stanza assegnata non si vede (già aperto in «APERTO (legno)»).
+
+### 2026-11-18 — PAL-W1-SLOPE · Palizzate W1 sui fianchi delle colline
+
+**IMPLEMENTATO SU BRANCH `fix/palisade-w1-slopes`, NON MERGE.**
+- [x] Palizzata W1 costruibile su pendio, paletti seduti sul terreno.
+- [ ] Le mura in pietra non controllano il pendio quando si cambia tier (T1 su scosceso → T3): stessa guardia da valutare.
+
+### 2026-11-18 — ROAD-ACCESS-261118 · Strade secondarie per ogni edificio con ingresso
+
+**IMPLEMENTATO SU BRANCH `fix/secondary-roads`.** Dettagli in [STATUS](STATUS.md).
+- [x] Taglialegna, cava, cava d'argilla, miniera, mulini e deposito ricevono la strada secondaria al completamento, alla ricarica e nella riconciliazione.
+- [x] Regola unica `structureNeedsAccessRoad` con audit dei tipi piazzabili in `qa/access-roads-regression.cjs`: un nuovo tipo di edificio deve essere collegato o dichiarato esente.
+- [ ] Miniere e cave su pendio: se il bordo dell'impronta e i 3U attorno sono pendio o montagna (vietati alle strade) la ricerca del percorso fallisce e la strada non nasce; verificarlo in partita su mappe montuose.
+
+### 2026-11-18 — FIX-MILL-HILLS-261118 · Mulino a vento sulle colline
+
+**CORRETTO SU BRANCH `fix/mill-hills`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Il mulino a vento si posa e si costruisce su ogni terrazza piana di collina (H+1, H+2, H+3), posato alla quota della terrazza.
+- [x] Resta escluso da H0 e dai pendii; mulino ad acqua invariato (riva di fiume o torrente).
+- [ ] Mulino a vento su pendio dolce con fondazione (come torri e civici): non richiesto, da valutare se le cime piccole restano scarse.
+
+### 2026-11-18 — WARDROBE-CAL-261118 · Guardaroba stagionale e calendario
+
+- [x] Verificato l'aggancio del guardaroba dei popolani al calendario (mese, stagione, meteo, cambio a runtime).
+- [x] Folle delle feste e della giostra vestite per stagione; chiavi delle carte 3D di feste, giostra e interni civici con l'abito.
+- [ ] Decisione di prodotto: il pubblico del tribunale e della messa resta senza abiti stagionali (scelta attuale); i mestieri a slot pieni (fabbro, muratore…) non mettono il mantello d'inverno nemmeno all'aperto.
+
+## 2026-11-19 — MOAT-WIDEN · Allargare il fossato
+
+**Implementato sul branch `feature/moat-from-wall`, non ancora unito a main.** Richiesta del product owner (19/11/2026): «se fai upgrade del fossato in larghezza mantieni il lato adiacente al muro/palizzata».
+
+- [x] Allargamento 2/3/4U dal pannello del fossato; contro muro/palizzata/tratto costruito la sponda sul muro resta ferma.
+- [ ] Aperti: allargare tutto l'anello in un colpo; un vicino collineare (stesso rettilineo) non segue l'allargamento e resta un gradino; il ponte levatoio su un fossato allargato oltre 1,65U chiede il mezzo ponte a mano.
+
+## 2026-11-19 — ROAD-MOAT-DRAWBRIDGE, ROAD-MAGNET-ROAD · Ponte levatoio e magnete strade
+
+**Implementato sul branch `feature/moat-from-wall`, non ancora unito a main.** Richiesta del product owner (19/11/2026): «magnet per le strade» (scelto: strada su strada) e «se attraverso fossato con strada metti porta con ponte levatoio già installato».
+
+- [x] Strada attraverso muro + fossato: porta con ponte levatoio installato; porta esistente senza ponte: installato.
+- [x] Magnete strada su strada: estremi e lati di tutte le strade, raggio più ampio, estremo prioritario, punto illuminato.
+- [ ] Aperti: fossato largo o lontano oltre la portata del ponte (oggi nessun mezzo ponte automatico); il secondo pezzo del muro tagliato non risulta legato al fossato (`wallId` resta al primo); muro disegnato sopra una strada che già attraversa un fossato non mette il ponte.
+
+## 2026-11-19 — ROAD-WALL-GATE · Strada che attraversa un muro → porta
+
+**Implementato sul branch `feature/moat-from-wall`, non ancora unito a main.** Richiesta del product owner (19/11/2026): costruendo una strada che attraversa un muro si aggiunge una porta del tipo corrispondente, come quando si costruisce un muro su una strada.
+
+- [x] Strada maestra attraverso muro o palizzata finiti: porta del tipo corrispondente, muro tagliato sui fianchi, strada nel varco; fantasma con la porta.
+- [ ] Da decidere: muro ancora in cantiere (oggi la strada è rifiutata). Ponte levatoio sul fossato davanti: fatto in ROAD-MOAT-DRAWBRIDGE.
+## 2026-11-18 — FOSSATO-MURO · Fossato costruibile dal muro selezionato
+
+**Implementato sul branch `feature/moat-from-wall`, non ancora unito a main.** Richiesta del product owner (18/11/2026): fossati costruibili anche selezionando muro, palizzata o tratto costruito, attaccati direttamente sul lato esterno.
+
+- [x] Comando «Fossato» (secco / d'acqua) nell'inspector di muro, palizzata e tratto costruito; fossato da 1,5U a filo del lato esterno.
+- [x] Raccordo all'angolo col fossato del tratto vicino; varco libero davanti alle porte.
+- [ ] Da decidere: fossato anche durante il cantiere del muro (oggi solo a tratto completato); larghezza diversa da 1,5U; scavo dell'intero giro di mura in un clic.
+- [ ] Le torri sporgono oltre la faccia del muro: il fossato passa sotto il loro piede agli angoli; valutare se girarci intorno.
+
 ### 2026-11-18 — Microfix: posti per arcieri sulla torre di vedetta lignea
 
 **IMPLEMENTATO SU BRANCH `fix/watchtower-slots`, NON MERGE.** Dettagli in [STATUS](STATUS.md).

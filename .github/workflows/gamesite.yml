@@ -1,0 +1,88 @@
+name: GameSite P0 checks
+on:
+  pull_request:
+    paths:
+      - "gamesite/**"
+      - "api/gamesite-*.js"
+      - "api/_gamesite-follow-core.js"
+      - "src/settlement-game-entry.*"
+      - "src/settlement-app-bootstrap.js"
+      - "src/settlement-app-persistence.js"
+      - "index.html"
+      - "qa/gamesite-regression.mjs"
+      - "qa/gamesite-follow-integration.mjs"
+      - "qa/gamesite-browser.mjs"
+      - "qa/gamesite-edge-browser.mjs"
+      - "src/settlement-app-bootstrap.js"
+      - "src/settlement-app-persistence.js"
+      - "src/settlement-app-calendar-ui.js"
+      - "qa/gamesite-browser.mjs"
+      - "src/settlement-app-calendar-ui.js"
+      - "supabase/gamesite-follow-schema.sql"
+      - ".github/workflows/gamesite.yml"
+  push:
+    branches: [gamesite]
+    paths:
+      - "gamesite/**"
+      - "api/gamesite-*.js"
+      - "api/_gamesite-follow-core.js"
+      - "src/settlement-game-entry.*"
+      - "qa/gamesite-regression.mjs"
+      - "qa/gamesite-follow-integration.mjs"
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check JavaScript syntax
+        run: |
+          node --check gamesite/site.js
+          node --check src/settlement-game-entry.js
+          node --check src/settlement-app-bootstrap.js
+          node --check src/settlement-app-persistence.js
+          for file in api/gamesite-*.js api/_gamesite-follow-core.js; do node --check "$file"; done
+      - name: Run GameSite P0 regression
+        run: node --test qa/gamesite-regression.mjs qa/gamesite-follow-integration.mjs
+      - name: Validate published Devlog and exclude drafts
+        run: node gamesite/tools/build-devlog.cjs --check
+
+  browser:
+    needs: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Start local website and Builder
+        run: |
+          python3 -m http.server 4173 --bind 127.0.0.1 > /tmp/conquer-gamesite.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:4173/gamesite/index.html >/dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/conquer-gamesite.log
+          exit 1
+      - name: Install cached Chromium
+        uses: ./.github/actions/playwright-setup
+      - name: Verify Guest seed, local saves, resume and mobile layout
+        run: node qa/gamesite-browser.mjs
+      - name: Verify account mock, WebGL2 fallback and storage errors
+        run: node qa/gamesite-edge-browser.mjs
+      - name: Upload real browser screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gamesite-p0-browser-screenshots
+          path: output/playwright/gamesite/
+          retention-days: 21

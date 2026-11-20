@@ -1,0 +1,34 @@
+/* Public game launcher; isolated from Builder panels and unaffected in normal dev mode. */
+.conquer-game-entry{position:fixed;inset:0;z-index:999999;display:flex;align-items:center;justify-content:center;overflow:auto;padding:28px;background:radial-gradient(ellipse at 40% 8%,#303b40 0%,#151c20 45%,#0c1114 100%);color:#ece2ce;font:16px/1.55 'Alegreya Sans',Arial,sans-serif}
+.conquer-game-entry[hidden],.conquer-game-entry [hidden]{display:none!important}
+.conquer-entry-shell{width:min(840px,100%);margin:auto;border:1px solid #625c4e;background:linear-gradient(145deg,#252b2b,#171d1d);box-shadow:0 25px 100px #000a;padding:clamp(22px,5vw,50px);border-radius:4px}
+.conquer-entry-top{display:flex;justify-content:space-between;align-items:center;gap:12px}.conquer-entry-mark{font:700 27px/1.1 'Cormorant SC',Georgia,serif;letter-spacing:.17em;color:#d1b583}.conquer-entry-link{color:#b7b9b4;text-decoration:none;border-bottom:1px solid #888}
+.conquer-entry-eyebrow{font-size:11px;letter-spacing:.19em;color:#d1b583;margin:40px 0 10px}.conquer-entry-shell h1{font:500 clamp(35px,5vw,58px)/1.05 'Cormorant SC',Georgia,serif;margin:0 0 15px}.conquer-entry-intro{color:#c9c6b9;max-width:560px}
+.conquer-entry-choices{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:34px 0 24px}
+.conquer-entry-choices button{background:#242c2d;border:1px solid #555e59;text-align:left;color:#fff;font:600 19px 'Alegreya Sans',Arial,sans-serif;padding:18px;cursor:pointer;border-radius:3px}.conquer-entry-choices button span{display:block;color:#b8beb7;font-size:13px;font-weight:400;margin-top:4px}.conquer-entry-choices button[aria-pressed=true]{border-color:#d5b987;background:#37413e}
+.conquer-entry-shell button:focus-visible,.conquer-entry-shell a:focus-visible,.conquer-entry-shell input:focus-visible,.conquer-entry-shell select:focus-visible{outline:3px solid #e0b75f;outline-offset:3px}
+.conquer-entry-panel{border-top:1px solid #4a514e;padding-top:16px}.conquer-entry-panel h2{font:500 29px 'Cormorant SC',Georgia,serif;margin:0 0 15px}.conquer-entry-panel h3{font-size:16px;color:#dccba9;margin:24px 0 12px}
+.conquer-entry-panel label{display:flex;flex-direction:column;gap:6px;color:#d7d5cc;font-size:13px;letter-spacing:.03em}
+.conquer-entry-panel input,.conquer-entry-panel select{width:100%;min-width:0;border:1px solid #758077;background:#101719;color:#eee6d7;padding:12px;font:16px 'Alegreya Sans',Arial,sans-serif;border-radius:2px}
+.conquer-entry-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.conquer-entry-detail{color:#acb6b3;font-size:13px;line-height:1.5}
+.conquer-entry-actions{display:flex;justify-content:flex-end;gap:10px;margin:20px 0;flex-wrap:wrap}.conquer-entry-shell button.entry-primary,.conquer-entry-shell button.entry-secondary{border-radius:2px;padding:12px 20px;cursor:pointer;font:600 15px 'Alegreya Sans',Arial,sans-serif}.conquer-entry-shell button.entry-primary{color:#151e1d;background:#dbc398;border:1px solid #dbc398}.conquer-entry-shell button.entry-secondary{background:transparent;color:#e0dac9;border:1px solid #757b72}.conquer-entry-shell button:disabled{opacity:.6;cursor:wait}
+.conquer-entry-saves{display:grid;gap:8px}.conquer-entry-saves button{text-align:left;display:flex;justify-content:space-between;gap:12px}.conquer-entry-saves span{font-size:12px;color:#bec4bc}
+.conquer-entry-message{min-height:1.8em;color:#e8c27e;font-size:14px}.conquer-entry-footer{border-top:1px solid #505853;padding-top:18px;margin-top:24px;color:#9fa9a3;font-size:12px}
+@media(max-width:620px){.conquer-game-entry{padding:12px}.conquer-entry-choices,.conquer-entry-grid{grid-template-columns:1fr}.conquer-entry-choices{gap:7px}.conquer-entry-eyebrow{margin-top:26px}.conquer-entry-actions{flex-direction:column}.conquer-entry-saves button{flex-direction:column}}
+
+
+#conquerExitToSite{
+  position:fixed;right:16px;bottom:16px;z-index:25000;
+  border:1px solid #b9a078;border-radius:3px;background:#182427ef;color:#eee2c9;
+  padding:10px 15px;font:600 13px/1.4 system-ui,sans-serif;cursor:pointer;
+  box-shadow:0 4px 18px #0008;
+}
+#conquerExitToSite:hover{background:#2d3b39}
+#conquerExitToSite:focus-visible{outline:3px solid #f0c879;outline-offset:3px}
+@media(max-width:620px){#conquerExitToSite{bottom:8px;right:8px;padding:9px;font-size:12px}}
+
+/* Public Guest entry must not advertise internal Lab pages or developer controls. */
+html.conquer-public-launch #devToggle,
+html.conquer-public-launch #devPanel,
+html.conquer-public-launch .dev-section,
+html.conquer-public-launch header a[href$="CONQUER_WORLD_LAB.html"]{display:none!important}

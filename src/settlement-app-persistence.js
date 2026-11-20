@@ -127,6 +127,7 @@ function localStorageBranch(){
   return repoIndex>=0&&parts[repoIndex+1]?parts[repoIndex+1]:'main';
 }
 function localStorageKey(){
+  if(window.__CONQUER_GUEST_SLOT__&&/^[a-z0-9-]{12,60}$/i.test(window.__CONQUER_GUEST_SLOT__))return 'conquer.guest.'+window.__CONQUER_GUEST_SLOT__+'.schema'+LOCAL_STORAGE_SCHEMA+'.settlement.0.0';
   if(window.__CONQUER_REGIONAL_DEMO__)return 'conquer.regional-demo.sandbox';
   // Asset Lab sandbox: reads an empty slot, so the player's own settlement is never loaded or touched.
   if(window.__CONQUER_ASSET_LAB__)return 'conquer.assetlab.sandbox';
@@ -166,6 +167,22 @@ function saveBlocked(){
   return !!State.loadFailed;
 }
 let localSaveTimer=null;
+// Guest slots are local identities for singleplayer worlds, not auth users.
+function updateGuestSaveIndex(){
+  const id=window.__CONQUER_GUEST_SLOT__;
+  if(!id)return;
+  const key='conquer.guest.slots.v1';
+  try{
+    const entries=JSON.parse(localStorage.getItem(key)||'[]');
+    if(!Array.isArray(entries))return;
+    const entry=entries.find(x=>x&&x.id===id);
+    if(!entry)return;
+    const name=State.village?.name||'New settlement';
+    if(entry.seed===State.seed&&entry.biome===State.biome&&entry.title===name)return;
+    entry.seed=State.seed;entry.biome=State.biome;entry.title=name;
+    localStorage.setItem(key,JSON.stringify(entries));
+  }catch(error){console.warn('Guest save slot metadata unavailable',error)}
+}
 function saveLocal(){
   if(window.__CONQUER_ASSET_LAB__)return;
   if(window.__CONQUER_REGIONAL_DEMO__)return;
@@ -178,6 +195,7 @@ function saveLocal(){
     window.__conquerAnalytics?.event?.('LOCAL_SAVE_ERROR',{message:String(error)},'error',30000);
     return false;
   }
+  if(window.__CONQUER_GUEST_SLOT__)updateGuestSaveIndex();
   if(window.__conquerPerf)window.__conquerPerf.lastSaveMs=performance.now()-t0;
   window.__conquerAnalytics?.measure('SAVE',performance.now()-t0);
   return true;
@@ -192,7 +210,7 @@ function loadLocal(){if(window.__CONQUER_REGIONAL_DEMO__)return;let raw=null;try
     window.ConquerEconomy?.syncBuilderResources?.();
   }else State.resources={...PROVISIONAL_RESOURCES};
   window.ConquerSiege?.syncAutoMastio?.();const savedLandscape=x.landscape;if(savedLandscape?.version===LANDSCAPE_GENERATION_VERSION&&Array.isArray(savedLandscape.relief?.hills)&&Array.isArray(savedLandscape.environment)){State.relief=savedLandscape.relief;State.environment=savedLandscape.environment;widenWatercourses();clearReliefBandCache()}else{State.relief=null;State.environment=[];ensureStaticLandscape();saveLocal()}window.ConquerStorageYard?.ensureForWell?.();ensureBorderEntrySelection();syncPrimaryRoadBridges();for(const structure of State.structures)if(window.ConquerIndustries?.is(structure))window.ConquerIndustries.normalizeFootprint(structure);if(State.village.founded)connectBorderMainRoadsInFrames(()=>{markDirty(true,['ground','base']);renderUI();draw()});rebuildSecondaryRoadsOnLoad();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);reconcileGateMainConnections(true);reconcileSettlementAccessRoads(Infinity,true);invalidateSceneCache();['tax','rations'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch(err){console.warn('Local state ignored',err);if(raw)markLoadFailed(raw,err)}}
-async function initSupabase(){if(window.__CONQUER_ASSET_LAB__)return;if(window.__CONQUER_REGIONAL_DEMO__)return;if(window.__CONQUER_CAMP_MODE__){document.getElementById('dbNote').textContent='CAMP · Salvataggio locale separato';return;}for(let i=0;i<30&&!window.__createSupabaseClient;i++)await new Promise(r=>setTimeout(r,50));if(!window.__createSupabaseClient)return;State.supabase=window.__createSupabaseClient(SUPABASE_URL,SUPABASE_KEY);const {data}=await State.supabase.auth.getSession();State.user=data?.session?.user||null;if(State.user){document.getElementById('dbNote').textContent='Supabase authenticated — cloud save enabled.';document.getElementById('saveState').textContent='cloud ready';await loadCloud()}else document.getElementById('dbNote').textContent='Local autosave active. Sign-in can be added next; RLS already protects cloud rows.'}
+async function initSupabase(){if(window.__CONQUER_ASSET_LAB__)return;if(window.__CONQUER_GUEST_SLOT__)return;if(window.__CONQUER_REGIONAL_DEMO__)return;if(window.__CONQUER_CAMP_MODE__){document.getElementById('dbNote').textContent='CAMP · Salvataggio locale separato';return;}for(let i=0;i<30&&!window.__createSupabaseClient;i++)await new Promise(r=>setTimeout(r,50));if(!window.__createSupabaseClient)return;State.supabase=window.__createSupabaseClient(SUPABASE_URL,SUPABASE_KEY);const {data}=await State.supabase.auth.getSession();State.user=data?.session?.user||null;if(State.user){document.getElementById('dbNote').textContent='Supabase authenticated — cloud save enabled.';document.getElementById('saveState').textContent='cloud ready';await loadCloud()}else document.getElementById('dbNote').textContent='Local autosave active. Sign-in can be added next; RLS already protects cloud rows.'}
 async function loadCloud(){if(window.__CONQUER_REGIONAL_DEMO__)return;if(!State.user)return;const {data,error}=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle();if(error){console.warn(error);return}if(data){let repairedLandscape=false;try{window.ConquerHaulage?.reset?.();State.seed=data.terrain_seed;State.stonePaletteId=window.ConquerStoneColor?.normalized(data.policies?.stonePaletteId)||'gray';State.buildMasonryMaterial=data.policies?.buildMasonryMaterial==='brick'?'brick':'stone';State.biome=BIOMES[data.biome]?data.biome:State.biome;State.neighborBiomes=data.neighbor_biomes||{};State.structures=data.structures||[];window.ConquerSiege?.restore(data.policies?.siege);State.resources={...State.resources,...data.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(loadResourceFloor(),Number(State.resources[k])||0);if(data.camera&&Number.isFinite(data.camera.rotation))State.view.rotation=((data.camera.rotation%4)+4)%4;const cloudPolicies=data.policies||{};State.economy=cloudPolicies.economy||null;const socialMigration=window.ConquerSocialClasses?.migrateSave?.(State.structures,State.economy,{alreadyV2:cloudPolicies.village?.socialSchemaVersion===2});if(socialMigration)State.economy=socialMigration.economy;State.structures=migrateStructures(socialMigration?.structures||State.structures);State.diplomacy=cloudPolicies.diplomacy||null;State.combat=cloudPolicies.combat||null;State.heraldry=cloudPolicies.heraldry||State.heraldry||null;window.ConquerCombat?.restore(State.combat);State.policies={...State.policies,tax:cloudPolicies.tax??State.policies.tax,rations:cloudPolicies.rations??State.policies.rations,levy:cloudPolicies.levy??State.policies.levy,crenelStyle:cloudPolicies.crenelStyle??State.policies.crenelStyle,roofPitch:cloudPolicies.roofPitch??State.policies.roofPitch,unitHelmet:cloudPolicies.unitHelmet??State.policies.unitHelmet,unitShield:cloudPolicies.unitShield??State.policies.unitShield};State.season=['summer','autumn','winter','spring'].includes(cloudPolicies.season)?cloudPolicies.season:'summer';State.seasonOverride=['summer','autumn','winter','spring'].includes(cloudPolicies.seasonOverride)&&(cloudPolicies.ambientAutoV1===true||cloudPolicies.seasonOverride!=='summer')?cloudPolicies.seasonOverride:null;const legacyGrowth=cloudPolicies.village?.growthVersion!==3;State.village={...State.village,...(cloudPolicies.village||{}),socialSchemaVersion:2};if(legacyGrowth)State.village.growthVersion=1;State.village.privateMasonryMaterial=State.village.privateMasonryMaterial==='brick'?'brick':'stone';State.clock.day=Math.max(0,Number(cloudPolicies.clock?.day)||State.clock.day);
   State.daylightOverride=null;State.weatherOverride=null;
   resetLegacyVillageGrowth();if(State.village.founded){
