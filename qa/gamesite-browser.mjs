@@ -14,7 +14,7 @@ page.on('requestfailed',req=>{
   if(req.url().startsWith(origin))missing.push(req.url()+' '+(req.failure()?.errorText||'unknown'));
 });
 const gameReady=async()=>{
-  await page.waitForFunction(()=>typeof window.State==='object'&&!!document.getElementById('guestSeed'),{timeout:60000});
+  await page.waitForFunction(()=>typeof State==='object'&&!!document.getElementById('guestSeed'),{timeout:60000});
 };
 try{
   let response=await page.goto(origin+'/gamesite/',{waitUntil:'domcontentloaded',timeout:60000});
@@ -55,7 +55,7 @@ try{
   await page.locator('#guestSeed').fill('424242');
   await page.locator('#guestBiome').selectOption('plains');
   await page.locator('#guestStart').click();
-  await page.waitForFunction(()=>window.__CONQUER_GUEST_SLOT__&&window.State?.seed===424242&&!!window.State?.relief,{timeout:120000});
+  await page.waitForFunction(()=>window.__CONQUER_GUEST_SLOT__&&State?.seed===424242&&!!State?.relief,{timeout:120000});
   assert.equal(await page.locator('#conquerGameEntry').count(),0);
   await page.waitForFunction(()=>{
     const key='conquer.guest.'+window.__CONQUER_GUEST_SLOT__+'.schema2.settlement.0.0';
@@ -65,8 +65,8 @@ try{
     const slot=window.__CONQUER_GUEST_SLOT__;
     const key='conquer.guest.'+slot+'.schema2.settlement.0.0';
     const saved=JSON.parse(localStorage.getItem(key));
-    return {slot,seed:window.State.seed,biome:window.State.biome,savedSeed:saved.seed,savedBiome:saved.biome,
-      count:JSON.parse(localStorage.getItem('conquer.guest.slots.v1')).length,user:window.State.user};
+    return {slot,seed:State.seed,biome:State.biome,savedSeed:saved.seed,savedBiome:saved.biome,
+      count:JSON.parse(localStorage.getItem('conquer.guest.slots.v1')).length,user:State.user};
   });
   assert.equal(first.seed,424242);
   assert.equal(first.savedSeed,424242);
@@ -85,10 +85,10 @@ try{
   await resumeBtn.waitFor({state:'visible',timeout:15000});
   assert.match(await resumeBtn.textContent(),/424242/);
   await resumeBtn.click();
-  await page.waitForFunction(()=>window.State?.seed===424242&&!!window.__CONQUER_GUEST_SLOT__&&!!window.State?.relief,{timeout:90000});
+  await page.waitForFunction(()=>State?.seed===424242&&!!window.__CONQUER_GUEST_SLOT__&&!!State?.relief,{timeout:90000});
   assert.equal(await page.evaluate(()=>window.__CONQUER_GUEST_SLOT__),first.slot);
-  assert.equal(await page.evaluate(()=>window.State.biome),'plains');
-  assert.equal(await page.evaluate(()=>window.State.user),null);
+  assert.equal(await page.evaluate(()=>State.biome),'plains');
+  assert.equal(await page.evaluate(()=>State.user),null);
 
   // A new slot must not destroy or replace the previously saved world.
   await page.reload({waitUntil:'domcontentloaded',timeout:60000});
@@ -96,7 +96,7 @@ try{
   await page.locator('#guestSeed').fill('777777');
   await page.locator('#guestBiome').selectOption('forest');
   await page.locator('#guestStart').click();
-  await page.waitForFunction(()=>window.State?.seed===777777&&!!window.__CONQUER_GUEST_SLOT__&&!!window.State?.relief,{timeout:90000});
+  await page.waitForFunction(()=>State?.seed===777777&&!!window.__CONQUER_GUEST_SLOT__&&!!State?.relief,{timeout:90000});
   const second=await page.evaluate(()=>{
     const slot=window.__CONQUER_GUEST_SLOT__;
     const slots=JSON.parse(localStorage.getItem('conquer.guest.slots.v1'));
@@ -111,8 +111,8 @@ try{
   assert.equal(second.biome,'forest');
 
   // Account remains optional; guest play never authenticates or exposes multiplayer state.
-  assert.equal(await page.evaluate(()=>window.State.user),null);
-  assert.equal(await page.evaluate(()=>window.State.supabase),null);
+  assert.equal(await page.evaluate(()=>State.user),null);
+  assert.equal(await page.evaluate(()=>State.supabase),null);
   const fatal=errors.filter(x=>!(/Failed to fetch|network|supabase|CORS/i.test(x)));
   assert.deepEqual(fatal,[],'Unexpected runtime page errors: '+fatal.slice(0,6).join(' | '));
   console.log(JSON.stringify({ok:true,firstSlot:first.slot,secondSlot:second.slot,seed1:first.seed,seed2:second.secondSeed,webgl2:checks.webgl2,screenshots:4}));
