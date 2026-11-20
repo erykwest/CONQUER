@@ -1,5 +1,15 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-20 — GAMESITE-P0: hardening, browser QA e release gates (branch `gamesite`, PR #292 Draft)
+
+- **FATTO SOLO SULLA BRANCH:** Playwright browser E2E e screenshots su Home desktop/mobile, splash Guest, creazione seed + bioma, salvataggio locale, riapertura e secondo slot isolato. Prima run verde: [GameSite checks](https://github.com/erykwest/CONQUER/actions/runs/44748638817). Modifiche successive a daylight, uscita salvata, visibilita DEV e auth lazy-load richiedono il **nuovo run verde**.
+- **RIFINITO:** generazione Guest indipendente dal seed sviluppo, metadata dello slot aggiornati dopo save, errore di salvataggio non chiude splash, save corrotto non viene cancellato; esperienza Guest parte alle 12:00, non a mezzanotte; pannelli e link Lab nascosti nella UI pubblica, ma percorso tecnico isolato in deployment ancora DA VERIFICARE.
+- **FOLLOW (mocked-only):** test unit/integration HTTP per conferma volontaria, disiscrizione, rollback invio fallito, honeypot, origine e rate limiter HMAC/SQL; non e un test con mail e database reali. Config server e migrazione DB di staging necessarie.
+- **WEB SECURITY/SEO:** canonical su pagine editoriali, noindex 404, CSP/referrer/permissions headers solo su /gamesite, route sitemap; configurazione Vercel non pubblicata.
+- **BLOCCHI DI RELEASE P0:** schermate marketing con screenshot reali approvati, Devlog publishing/bozze, informativa privacy del titolare, provider email e DB funzionanti con cleanup dei bucket anti-abuso, login reale magic link e SSO coerente con topologia di deployment, versione build pubblica e rollback indipendente, browser QA prestazioni/accessibilita, revisione appoggiata a main aggiornato.
+- **STATO:** PR Draft, nessun merge o deploy/migrazione. Le prove automatiche in CI non equivalgono ad approvazione commerciale del P0.
+
+
 ### 2026-11-19 — GAMESITE-P0: sito pubblico e Guest Builder (branch `gamesite`, NON MERGE)
 
 - **Implementazione sul branch, non su main e non pubblicata:** nuove pagine statiche inglesi sotto `gamesite/` (Home, The Game, Media, Devlog, Follow, Account, Play, About, Privacy, Contact, 404), design system responsive e CTA verso `index.html?launch=1`.
