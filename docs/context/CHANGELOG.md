@@ -4,6 +4,14 @@
 
 `fix/messages-notifications`: gli avvisi di UI-ALERTS-01 (#256) comparivano solo con `?ui=2`; ora pila di avvisi e diario degli eventi sono montati anche nella UI classica (default). «Mostra sulla mappa» centra la camera (`ConquerGame.commands.focus`), anche sul punto dove aspetta il messaggero; nessun doppione nel diario dopo un ricarico. Test end-to-end watcher → feed in `qa/ui-alerts-regression.mjs`. ROADMAP e DECISIONS invariate: correzione della consegna di UI-ALERTS-01, nessun contratto nuovo.
 
+### 2026-11-18 — Microfix: posti per arcieri sulla torre di vedetta
+
+`fix/watchtower-slots`: la torre di vedetta lignea aveva 0 posti per arcieri; ora ne ha 2 sul ballatoio (1,46 U), assegnabili dal pannello e usati dal combattimento. Nuova `qa/watchtower-slots-regression.cjs` nel workflow `tower-variants-regression`. ROADMAP e DECISIONS invariate: correzione di un contratto esistente (ogni torre finita con un piano di tiro ha posti), nessuna decisione nuova.
+
+### 2026-11-18 — WOOD-GATE-SLOTS-261118 · La porta in legno ha uno spazio stanza
+
+`fix/wood-gate-slots`: la porta in legno (fissa H1) aveva 0 spazi stanza perché `functionCapacity` dava alle porte `livello − 1`. Ora ha 1 spazio sul ponte di combattimento sopra il passaggio (la porta in pietra L3 ne ha 2), con le regole delle porte in pietra (caserma, armeria sì; prigione, stalle, bottega no). Nuova `qa/wood-gate-slots-regression.cjs` nel workflow `gate-six-sockets-regression`. ROADMAP e DECISIONS invariate: correzione di una regola, nessun contratto nuovo.
+
 ### 2026-11-18 — PAL-W1-SLOPE · Palizzate W1 sui fianchi delle colline
 
 `fix/palisade-w1-slopes`: le palizzate W1 si costruiscono su pendii dolci e scoscesi (prima ogni palizzata voleva un terrazzo piano); W2-W3 restano solo in piano, anche come upgrade. Paletti 3D e di cantiere poggiati sul terreno più basso sotto ciascuno. Nuova `qa/palisade-slope-regression.cjs`. ROADMAP e DECISIONS invariate.
