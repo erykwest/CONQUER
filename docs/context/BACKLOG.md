@@ -7,7 +7,7 @@
 - [x] Follow backend fail-closed, rollback su email non inviata e anti-abuso con limiti atomici e dati pseudonimizzati; prove mock, **non live**.
 - [x] Canonical per pagine editoriali, noindex 404, headers di sicurezza, route sitemap.
 - [ ] WEB-003 screenshot reali e trailer promozionale approvati, non solo SVG/stage Lab.
-- [ ] WEB-004 workflow editoriale Markdown/bozze verificato; oggi Devlog e una pagina statica pubblicata manualmente.
+- [x] WEB-004 Devlog versionato in Markdown: publisher deterministico `gamesite/tools/build-devlog.cjs`, solo articoli `status: published` nel sito, bozze private in source; check CI `--check` passato (GameSite validate).
 - [ ] WEB-005/011/029 SMTP/provider, migration SQL, limitazioni WAF, pulizia rate bucket, prove double opt-in reali e privacy completa.
 - [ ] WEB-006/008/009/022-026 completare smoke finale dopo tutte le modifiche, check browser matrix e comportamento salvataggio in quota bassa.
 - [ ] WEB-014 e 021/027/028 release game/site isolabile con stessa identita utente; test account/logout/redirect e permessi reali, staging e rollback.
