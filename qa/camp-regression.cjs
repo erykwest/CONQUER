@@ -13,7 +13,10 @@ assert.match(page,/__CONQUER_CAMP_MODE__=true/);
 assert.match(page,/settlement-camp.js/);
 assert.match(combat,/campState==='camped'/);
 assert.match(combat,/camp-guard/);
-assert.match(combat,/__conquerHeraldryCanvas\?\.paint\(g,/,'unit standard uses campaign heraldry');
+// The herald's standard is drawn by drawHeraldStandard (settlement-population-figures.js, shared with the Lab).
+const figures=fs.readFileSync(path.join(root,'src/settlement-population-figures.js'),'utf8');
+assert.match(combat,/drawHeraldStandard\(g,/,'squad standard goes through the shared herald standard');
+assert.match(figures,/function drawHeraldStandard[\s\S]{0,1600}__conquerHeraldryCanvas\?\.paint\(g,/,'unit standard uses campaign heraldry');
 assert.match(combat,/drawSquadStandard\(soldier\.p,soldier\.unit\.id(,soldier\.z)?\)/,'squad standard is rendered with each unit');
 assert.match(combat,/drawPatrolTorch\(soldier\.p,soldier\.id(,soldier\.z)?\)/,'patrol torch is bound to moving soldiers');
 assert.match(combat,/u\.kind==='patrol'&&i===0&&window\.ConquerCamp\?\.isNight\(\)/,'patrol carries a light only after dusk');

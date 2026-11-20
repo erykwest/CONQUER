@@ -108,7 +108,11 @@
   const TUNICS=[['#8a5a3b','#5f4b3a'],['#6f7f4a','#4e5a35'],['#9b8a63','#6d5f44'],['#5d6f86','#3f4b5d'],
     ['#8e4d4d','#5e3434'],['#a58b5b','#6f5c3c'],['#6b5a7d','#483c57'],['#c2b49a','#8a7d66']];
   const KINDS=['peasant','artisan','merchant','peasant'];
+  // Spectators and squires dress for the season like the festival crowd (settlement-events-people.js).
+  const outfitKey=(id,kind,colors)=>window.ConquerEventPeople?.helpers?.outfitKey?.(id,kind,colors)||'';
   function figureAt(p,z,id,kind,colors,hop){
+    const H=window.ConquerEventPeople?.helpers;
+    if(H?.figureAt)return H.figureAt(p,z,id,kind,colors,hop);
     const base=w2s(p,z+hop),scale=State.view.scale*.5;
     const bodyW=6.0*scale,bodyH=8.0*scale,headR=2.35*scale,bodyY=base.y-bodyH*.16;
     drawSplitVillagerBody(kind,base.x,bodyY,bodyW,bodyH,colors[0],colors[1]);
@@ -185,7 +189,7 @@
       const excite=sc.cheer*(.6+.4*((hash(q.id+'e')%100)/100));
       const hop=.012*Math.sin(clock*1.6+ph)+excite*.07*Math.abs(Math.sin(clock*11+ph));
       if(cards){const arms=bucket(excite,4);
-        if(H.card(p,q.z+g-.12+hop,'jo|sp|'+kind+'|'+c.join(',')+'|'+q.id+'|'+arms,()=>{const f=figureAt(p,0,q.id,kind,c,0);armsUp(f,arms/4)},q.id))continue}
+        if(H.card(p,q.z+g-.12+hop,'jo|sp|'+kind+'|'+c.join(',')+'|'+q.id+'|'+arms+'|'+outfitKey(q.id,kind,c),()=>{const f=figureAt(p,0,q.id,kind,c,0);armsUp(f,arms/4)},q.id))continue}
       list.push({p,draw:()=>{const f=figureAt(p,q.z+g-.12,q.id,kind,c,hop);armsUp(f,excite)}});
     }
     // Knights, riderless horses, unhorsed knights.
@@ -240,7 +244,7 @@
         list.push({p,draw:()=>horse(p,q.mode,h,hash(q.id)%900,clock)});continue}
       const c=TUNICS[hash(q.id)%TUNICS.length],bob=q.walking?.015*Math.abs(Math.sin(clock*6+hash(q.id)%7)):0;
       if(cards){const liv=q.carry==='shield'?liveryOf(s,hash(q.id)&1?'A':'B'):null;
-        if(H.card(p,g+.1+bob,'jo|sq|'+c.join(',')+'|'+q.id+'|'+(q.carry||''),()=>{
+        if(H.card(p,g+.1+bob,'jo|sq|'+c.join(',')+'|'+q.id+'|'+(q.carry||'')+'|'+outfitKey(q.id,'peasant',c),()=>{
           const f=figureAt(p,0,q.id,'peasant',c,0);
           if(q.carry==='lance'){ctx.save();ctx.strokeStyle='#5a3d22';ctx.lineWidth=Math.max(1,f.scale*1.1);
             ctx.beginPath();ctx.moveTo(f.base.x-f.bodyH*.35,f.bodyY+f.bodyH*.3);ctx.lineTo(f.base.x+f.bodyH*.9,f.bodyY-f.bodyH*2.2);ctx.stroke();ctx.restore()}

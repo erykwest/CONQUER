@@ -83,9 +83,56 @@ assert.ok(ux.slice(ux.indexOf("{id:'combat'")).includes('[data-event-venue="army
   assert.ok(E.cost(s).wood>E.cost(E.make('armyCamp')).wood,'works add to the cost');
   assert.ok(E.buildDays(s)>E.buildDays(E.make('armyCamp')),'and to the building time');
   assert.ok(E.label(s).includes('palizzata'),'label names the works');
+  assert.ok(!items.some(it=>/campStakes|campCheval/.test(it.m)),'no outer works before level 3');
+  assert.ok(E.panelHtml(s).includes('data-camp-works="3"'),'panel offers the anti-charge stakes next');
+  const lot2={w:s.w,h:s.h};
+  s.camp.works=3;E.fitCamp(s);
+  const spiked=E.setupItems(s),stakes=spiked.filter(it=>it.m==='campStakes'),chev=spiked.filter(it=>it.m==='campCheval');
+  assert.ok(stakes.length>=8&&chev.length===2,'level 3: a ring of stakes and two chevaux de frise');
+  assert.ok(spiked.some(it=>it.m==='campPalisade')&&spiked.filter(it=>it.m==='campGate').length===1,'level 3 keeps the palisade and gate');
+  assert.ok(s.w>=lot2.w&&s.h>=lot2.h,'the lot holds the outer works');
+  {const {w,h}=E.sizeOf(s);for(const it of stakes.concat(chev))assert.ok(Math.abs(it.x)<=w/2&&Math.abs(it.y)<=h/2,it.m+' on the lot')}
+  // Every stake segment stands outside the boundary and its points (model -y) face away from the camp.
+  {const camp=E.campLayout(s).camp,P=camp.perimeter,cx=P.reduce((a,p)=>a+p.x,0)/P.length,cy=P.reduce((a,p)=>a+p.y,0)/P.length;
+    for(const it of E.encampmentSpikes(camp).filter(it=>it.m==='campStakes')){
+      const ox=Math.sin(it.a),oy=-Math.cos(it.a);
+      assert.ok((it.x-cx)*ox+(it.y-cy)*oy>0,'stakes point outwards');
+    }
+    const g=camp.gate;
+    assert.ok(!E.encampmentSpikes(camp).some(it=>it.m==='campStakes'&&Math.hypot(it.x-g.x,it.y-g.y)<1.2),'the way in stays open');}
+  assert.ok(E.cost(s).wood>E.cost({...s,camp:{...s.camp,works:2}}).wood,'stakes add to the cost');
+  s.camp.works=2;E.fitCamp(s);
   const spec=E.make('armyCamp',{seed:9}),a={...spec,id:'a'},b={...spec,id:'b'};
   E.label(a);E.label(b);a.camp.squads=12;
   assert.notEqual(b.camp.squads,12,'placed copies do not share their camp');
   assert.ok(E.meshes(s,0).length>items.length/2,'camp meshes built');
 }
 console.log('PASS army camp: builder, army-sized lot, works levels, cost, own camp per structure');
+
+// Field works anywhere in the settlement: a row of anti-charge stakes (length in segments,
+// points to the front) and a single cheval de frise.
+for(const v of ['stakeRow','chevalFrise']){
+  assert.match(html,new RegExp('<button data-event-venue="'+v+'">'),'Builder button for '+v);
+  assert.ok(ux.slice(ux.indexOf("{id:'combat'")).includes('[data-event-venue="'+v+'"]'),v+' in the combat group');
+}
+{
+  const s={...E.make('stakeRow'),id:'sr',x:40,y:40,angle:0};
+  assert.equal(s.segments,3,'a new row has three segments');
+  assert.ok(Math.abs(E.sizeOf(s).w-4.2)<1e-9,'1.4 U per segment');
+  let items=E.setupItems(s);
+  assert.ok(items.length===3&&items.every(it=>it.m==='campStakes'&&it.a===0),'one stake segment each, points at -y');
+  for(const it of items)assert.ok(Math.abs(it.x)+.7<=E.sizeOf(s).w/2+1e-9,'segments on the lot');
+  const c3=E.cost(s).wood,d3=E.buildDays(s);
+  s.segments=8;s.w=E.sizeOf(s).w;
+  assert.equal(E.setupItems(s).length,8,'longer row, more segments');
+  assert.ok(E.cost(s).wood>c3&&E.buildDays(s)>d3,'cost and time per segment');
+  s.segments=99;assert.ok(Math.abs(E.sizeOf(s).w-8*1.4)<1e-9,'length clamped');
+  s.segments=3;
+  assert.ok(E.panelHtml(s).includes('data-stake-segments="1"'),'panel lengthens the row');
+  assert.ok(E.label(s).includes('Pali anti-carica')&&E.label(s).includes('3 tratti'),'label');
+  assert.ok(E.meshes(s,0).length>=3,'row meshes built');
+  const f={...E.make('chevalFrise'),id:'cf',x:50,y:40,angle:0};
+  assert.equal(E.venueModel(f),'campCheval','cheval de frise model');
+  assert.ok(E.meshes(f,0).length>=1&&E.cost(f).wood>0,'cheval meshes and cost');
+}
+console.log('PASS field works: anti-charge stake rows and chevaux de frise in the Builder');

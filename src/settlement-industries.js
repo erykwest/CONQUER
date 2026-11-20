@@ -161,8 +161,12 @@
     if(isMill(s)){
       const ground=buildableTerrainElevationForStructure(placement);
       if(ground==null)return{ok:false,reason:'Mill requires one level terrace (2×2U)'};
-      if(s.type!=='watermill'&&Math.abs(ground-1)>.001)
-        return{ok:false,reason:'Windmills can only be built at H+1'};
+      // Hills are the windmill's natural site: any flat hill terrace (H+1, H+2,
+      // H+3 summit…) takes it. Procedural hills are 2-3 levels high and their
+      // H+1 ring is often narrower than 2U, so an exact-H+1 rule left most hills
+      // unbuildable. Lowland H0 stays reserved for the watermill.
+      if(s.type!=='watermill'&&ground<1-.001)
+        return{ok:false,reason:'Windmills must stand on a hill terrace (H+1 or higher)'};
       if(s.type==='watermill'){
         // With a 2U square the wheel-facing edge sits 1U away from the centre.
         if(!water||Math.abs(water.bankDistance-1)>.28)

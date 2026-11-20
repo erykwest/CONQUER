@@ -21,7 +21,11 @@ on:
       - 'src/settlement-ship-crew.js'
       - 'src/settlement-vehicles.js'
       - 'src/settlement-court-people.js'
+      - 'src/settlement-events-people.js'
+      - 'src/settlement-events-joust.js'
+      - 'src/settlement-app-calendar-ui.js'
       - 'qa/wardrobe-regression.cjs'
+      - 'qa/seasonal-wardrobe-regression.cjs'
       - 'qa/staff-people-regression.cjs'
       - '.github/workflows/wardrobe-regression.yml'
   workflow_dispatch:
@@ -45,5 +49,9 @@ jobs:
           node --check qa/staff-people-regression.cjs
       - name: Run wardrobe regression
         run: node qa/wardrobe-regression.cjs
+      - name: Run seasonal wardrobe regression (calendar through a year)
+        run: |
+          node --check qa/seasonal-wardrobe-regression.cjs
+          node qa/seasonal-wardrobe-regression.cjs
       - name: Run staff people regression (castle household, civic interiors, clearings)
         run: node qa/staff-people-regression.cjs
