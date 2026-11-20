@@ -11,6 +11,8 @@ function buildBoundaryBushSvg(source,season){
   const colors={summer:'#527641',autumn:'#827044',winter:'#c7d1b9',bare:'#6e5a44',blizzard:'#6e5a44'};
   return source.replace('viewBox="0 0 1024 1024"','viewBox="64 260 920 580"')
     .replace('width="1024"','width="920"').replace('height="1024"','height="580"')
+    // Leafless winter (bare / blizzard): no crown at all, only the twigs.
+    .replace(/fill="#3B5174"/gi,season==='bare'||season==='blizzard'?'fill="#3B5174" fill-opacity="0"':'fill="#3B5174"')
     .replace(/#3B5174/gi,colors[season]||colors.summer).replace(/#9BBACE/gi,'#2B1D16');
 }
 async function loadBoundaryBushSprites(){
@@ -23,7 +25,7 @@ async function loadBoundaryBushSprites(){
     for(const season of BOUNDARY_BUSH_LOOKS)jobs.push(new Promise(resolve=>{
       const img=new Image();
       // Blizzard bushes: bare twigs plus the snow retino on their top band.
-      img.onload=()=>{boundaryBushSprites[season][shape]=season==='blizzard'?snowCapSprite(img,.12):img;resolve()};img.onerror=()=>resolve();
+      img.onload=()=>{boundaryBushSprites[season][shape]=season==='blizzard'?snowCapSprite(img,.3):img;resolve()};img.onerror=()=>resolve();
       img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(buildBoundaryBushSvg(sources[shape].value,season));
     }));
   }
