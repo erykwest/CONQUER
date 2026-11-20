@@ -14,6 +14,10 @@
 ### 2026-11-18 — FOSSATO-MURO · Fossato dal muro selezionato
 
 `feature/moat-from-wall`: selezionando un muro, una palizzata o un tratto costruito l'inspector offre «Fossato» (secco / d'acqua): il fossato da 1,5U si scava attaccato al lato esterno (quello di «Lato esterno»), si unisce all'angolo al fossato del tratto vicino e lascia libero il varco delle porte; d'acqua solo a quota 0, e un fossato secco già scavato si allaga dallo stesso comando. Nuovo `qa/wall-moat-regression.cjs` (workflow «Wall moat regression»). ROADMAP e DECISIONS invariate.
+### 2026-11-18 — CAMP-SPIKES · Palizzate del campo e pali anti-carica
+
+`feature/camp-spikes`: palizzata dell'accampamento rifatta in Blender (pali grezzi sbozzati, traverse legate, puntelli, terra di scavo); nuovi modelli `campStakes` (file di pali anti-carica inclinati verso l'esterno) e `campCheval` (cavallo di Frisia). Nuovo livello di fortificazione del campo «palizzata e pali anti-carica»: anello di pali fuori dalla palizzata e due cavalli di Frisia sfalsati davanti alla porta. Tutto nel Lab (composizione `encampmentSpiked`). Il 19/11 pali e cavallo di Frisia diventano anche strutture costruibili ovunque nell'insediamento (`stakeRow` a tratti da 1,4 U, `chevalFrise`), con la voce «Opere campali» nella nuova interfaccia (che ora raggiunge anche l'accampamento militare) e le note del Codex. In BACKLOG restano aperti gli effetti di gioco contro la carica. ROADMAP e DECISIONS invariate.
+
 ### 2026-11-19 — CI-AUDIT-01 · Audit del Lab: smoke per l'interfaccia, completo in 4 shard
 
 `ci/asset-audit-ui-scope-shards`: `asset-audit-scope.cjs` riconosce le modifiche di sola interfaccia (modalità `smoke`: solo test della galleria); `asset-audit.mjs --shard=N/4` divide l'audit completo per famiglie in 4 job paralleli. Aggiornati `docs/ASSET-LAB-AUDIT.md` e `docs/CI.md`. ROADMAP e DECISIONS invariate.
