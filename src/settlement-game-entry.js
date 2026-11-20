@@ -15,7 +15,15 @@
   };
   const storeIndex = slots => localStorage.setItem(SLOT_INDEX, JSON.stringify(slots));
   const saveKey = slot => 'conquer.guest.' + slot + '.schema' + GUEST_SCHEMA + '.settlement.0.0';
-  const existingSlots = () => readIndex().filter(s => { try { return !!localStorage.getItem(saveKey(s.id)); } catch { return false; } });
+  const existingSlots = () => readIndex().filter(s => {
+    try {
+      const raw=localStorage.getItem(saveKey(s.id));
+      if(!raw)return false;
+      const save=JSON.parse(raw);
+      return save?.schema===GUEST_SCHEMA&&Number.isInteger(save.seed)&&save.seed>0&&
+        Array.isArray(save.structures)&&BIOMES.includes(save.biome);
+    } catch { return false; }
+  });
   const newSeed = () => { const a = new Uint32Array(1); crypto.getRandomValues(a); return (a[0] & 0x7fffffff) || 1; };
   const validSeed = text => /^\d{1,10}$/.test(text) && Number(text) >= 1 && Number(text) <= 2147483647;
   const available = () => {
@@ -73,8 +81,11 @@
       area.querySelectorAll('[data-guest-resume]').forEach(btn => btn.addEventListener('click', () => {
         const slot = slots.find(s => s.id === btn.dataset.guestResume);
         if (!slot || !available()) return message('WebGL2 is not available. Try an up-to-date desktop browser with hardware acceleration.');
-        start({mode:'resume',guest:true,slot:slot.id});
-        overlay.remove();
+        try{
+          if(start({mode:'resume',guest:true,slot:slot.id})===false)
+            return message('The saved world could not be loaded safely. Your original save has not been deleted.');
+          overlay.remove();
+        }catch(error){message('Unable to resume this world. Your saved data is preserved.');}
       }));
     };
     resume();
@@ -97,8 +108,14 @@
       const record = {id,seed:Number(seedString),biome,title:'New settlement',createdAt:new Date().toISOString()};
       try { storeIndex([record, ...slots]); }
       catch { return message('Could not reserve a local save slot. Check available browser storage.'); }
-      start({mode:'new',guest:true,slot:id,seed:record.seed,biome:record.biome});
-      overlay.remove();
+      try{
+        if(start({mode:'new',guest:true,slot:id,seed:record.seed,biome:record.biome})===false)
+          throw Error('The initial world could not be saved. Free browser storage and try again.');
+        overlay.remove();
+      }catch(error){
+        try{storeIndex(slots)}catch{}
+        message(error?.message||'Could not create this world; the previous Guest saves remain untouched.');
+      }
     };
     $('#entrySendLink').onclick = async () => {
       const email = $('#entryAccountEmail').value.trim();
