@@ -26,3 +26,9 @@
 #conquerExitToSite:hover{background:#2d3b39}
 #conquerExitToSite:focus-visible{outline:3px solid #f0c879;outline-offset:3px}
 @media(max-width:620px){#conquerExitToSite{bottom:8px;right:8px;padding:9px;font-size:12px}}
+
+/* Public Guest entry must not advertise internal Lab pages or developer controls. */
+html.conquer-public-launch #devToggle,
+html.conquer-public-launch #devPanel,
+html.conquer-public-launch .dev-section,
+html.conquer-public-launch header a[href$="CONQUER_WORLD_LAB.html"]{display:none!important}
