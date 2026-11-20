@@ -31,7 +31,9 @@ function bootConquer(selection=null){
       if(!['plains','hills','forest','swamp'].includes(selection.biome))throw new Error('Unsupported biome');
       State.seed=seed;
       State.biome=selection.biome;
+      State.stonePaletteId=window.ConquerStoneColor?.randomForSeed(seed)||'gray';
       State.neighborBiomes={};
+      State.heraldry=null;State.economy=null;State.diplomacy=null;State.combat=null;
       State.structures=[];State.environment=[];State.relief=null;
       State.village={...State.village,name:null,founded:false,wellId:null,growthStep:0,nextGrowthDay:null,roadPlan:null};
       State.resources={...PROVISIONAL_RESOURCES};
@@ -39,9 +41,13 @@ function bootConquer(selection=null){
     }else throw new Error('Invalid guest start mode');
   }else loadLocal();
   window.ConquerEconomy?.bind();
-  if(ensureStaticLandscape()||guest&&selection.mode==='new')saveLocal();
+  if(guest&&selection.mode==='resume'&&State.loadFailed)return false;
+  const landscapeBuilt=ensureStaticLandscape();
+  const persisted=landscapeBuilt||guest&&selection.mode==='new'?saveLocal():true;
+  if(guest&&persisted===false)return false; // Do not dismiss the splash when browser storage is full.
   ensureBorderEntrySelection();renderUI();resize();fit();
   if(!guest)initSupabase(); // Guest is always local singleplayer, never cloud or multiplayer.
+  return true;
 }
 window.addEventListener('resize',resize);
 if(window.ConquerGameEntry?.requested)window.ConquerGameEntry.mount(bootConquer);
