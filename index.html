@@ -9,6 +9,9 @@
 <script>
 // ?assetlab=1: geometry sandbox for the Asset Lab (figures-lab.html) — no saves, no cloud, no telemetry.
 window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetlab') === '1';
+// Public website launch is a separate product flow; hide developer-only controls.
+if(new URLSearchParams(location.search).get('launch')==='1'&&!window.__CONQUER_ASSET_LAB__&&!window.__CONQUER_REGIONAL_DEMO__)
+  document.documentElement.classList.add('conquer-public-launch');
 (() => {
   if (!window.__CONQUER_ASSET_LAB__&&!window.__CONQUER_REGIONAL_DEMO__) import('https://esm.sh/@supabase/supabase-js@2.117.1')
     .then(mod => { window.__createSupabaseClient = mod.createClient; })
