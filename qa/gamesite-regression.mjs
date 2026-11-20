@@ -74,3 +74,39 @@ test('P0 release documentation and integration artifacts exist',()=>{
    'api/gamesite-confirm.js','api/gamesite-unsubscribe.js','api/gamesite-metric.js',
    'api/gamesite-sitemap.js','src/settlement-game-entry.css'].forEach(path=>assert.ok(existsSync(resolve(root,path))));
 });
+
+test('P0 hardening: same Auth project, metadata, secure public headers and safe Guest exit',()=>{
+  const core=read('src/settlement-core.js');
+  const site=read('gamesite/site.js');
+  const bootstrap=read('src/settlement-app-bootstrap.js');
+  const persistence=read('src/settlement-app-persistence.js');
+  const launcher=read('src/settlement-game-entry.js');
+  const url=core.match(/const SUPABASE_URL='([^']+)'/)?.[1];
+  const key=core.match(/const SUPABASE_KEY='([^']+)'/)?.[1];
+  assert.ok(url&&key,'must use an existing public Supabase identity project');
+  assert.ok(site.includes(url)&&site.includes(key),'website and Builder must reference the same Auth authority');
+  assert.match(bootstrap,/conquerExitToSite/);
+  assert.match(bootstrap,/persisted===false/);
+  assert.match(launcher,/saved world could not be loaded safely/);
+  assert.match(persistence,/updateGuestSaveIndex/);
+  assert.match(core,/get\('launch'\)==='1'/,'public Guest launch must not write to legacy developer seed');
+  const vercel=JSON.parse(read('vercel.json'));
+  assert.equal(vercel.git.deploymentEnabled['**'],false,'no Vercel branch auto-deploy');
+  assert.equal(vercel.git.deploymentEnabled.main,true,'retain main-only deployment');
+  const header=vercel.headers.find(x=>x.source==='/gamesite/(.*)');
+  assert.ok(header,'marketing pages need dedicated security headers');
+  assert.ok(header.headers.some(x=>x.key==='Content-Security-Policy'&&x.value.includes("object-src 'none'")));
+  assert.ok(vercel.rewrites.some(x=>x.source==='/gamesite/sitemap.xml'));
+  for(const name of ['index.html','game.html','media.html','follow.html','account.html','about.html','privacy.html','contact.html','play.html','devlog/index.html','devlog/introducing-conquer.html'])
+    assert.match(read('gamesite/'+name),/rel="canonical"/,'canonical missing: '+name);
+  assert.match(read('gamesite/404.html'),/name="robots" content="noindex,follow"/);
+});
+test('P0 hardening: Follow is throttled and pending rows are rolled back on delivery failure',()=>{
+  const core=read('api/_gamesite-follow-core.js'),follow=read('api/gamesite-follow.js'),sql=read('supabase/gamesite-follow-schema.sql');
+  assert.match(core,/requireFollowConfig/);
+  assert.match(core,/consumeFollowBudget/);
+  assert.match(follow,/rate_limited/);
+  assert.match(follow,/last_sent_at:null,token_hash:null/);
+  assert.match(sql,/gamesite_consume_follow_budget/);
+  assert.match(sql,/revoke all on table public\.gamesite_follow_budget from anon, authenticated/);
+});
