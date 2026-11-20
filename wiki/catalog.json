@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceDigest": "f14d0624c46f967a044fc6519aeae7afddb948e0ec2b8d19ad884f76f4cad761",
+  "sourceDigest": "6bc6cecb9a00b25c90153d2efa394c12990a90b2a9347de644fac854ab0d1336",
   "catalog": {
     "schemaVersion": 1,
     "categories": [
@@ -1882,6 +1882,54 @@
         }
       },
       {
+        "id": "building:venue.chevalFrise",
+        "key": "chevalFrise",
+        "label": "chevalFrise",
+        "category": "building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-events3d.js",
+          "symbol": "VENUES.chevalFrise"
+        },
+        "properties": {
+          "w": 1.4,
+          "h": 0.6
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
         "id": "building:venue.festivalGround",
         "key": "festivalGround",
         "label": "festivalGround",
@@ -2091,6 +2139,54 @@
             "herald": "stageHerald"
           },
           "dressing": "players"
+        },
+        "relations": [],
+        "assets": [],
+        "requirements": {
+          "physical": [
+            {
+              "kind": "provider",
+              "source": {
+                "file": "src/settlement-placement.js",
+                "symbol": "placement validation"
+              }
+            }
+          ],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": "constructionCost",
+          "time": "buildDuration",
+          "compatibility": null
+        },
+        "quotes": {
+          "cost": {
+            "status": "context-required",
+            "value": null
+          },
+          "time": {
+            "status": "context-required",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "building:venue.stakeRow",
+        "key": "stakeRow",
+        "label": "stakeRow",
+        "category": "building",
+        "status": "partial",
+        "source": {
+          "file": "src/settlement-events3d.js",
+          "symbol": "VENUES.stakeRow"
+        },
+        "properties": {
+          "w": 1.4,
+          "h": 0.6
         },
         "relations": [],
         "assets": [],
