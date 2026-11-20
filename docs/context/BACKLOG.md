@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-18 — WOOD-GATE-SLOTS-261118 · Spazi della porta in legno
+
+**IMPLEMENTATO SU BRANCH `fix/wood-gate-slots`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] «Gate di legno deve avere slot, ora ne ha 0»: 1 spazio stanza sul ponte sopra il passaggio (porta in pietra L3: 2).
+- [ ] La porta in legno non ha cutaway: la stanza assegnata non si vede (già aperto in «APERTO (legno)»).
+
 ### 2026-11-18 — PAL-W1-SLOPE · Palizzate W1 sui fianchi delle colline
 
 **IMPLEMENTATO SU BRANCH `fix/palisade-w1-slopes`, NON MERGE.**

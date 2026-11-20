@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-18 — WOOD-GATE-SLOTS-261118 · La porta in legno ha uno spazio stanza
+
+`fix/wood-gate-slots`: la porta in legno (fissa H1) aveva 0 spazi stanza perché `functionCapacity` dava alle porte `livello − 1`. Ora ha 1 spazio sul ponte di combattimento sopra il passaggio (la porta in pietra L3 ne ha 2), con le regole delle porte in pietra (caserma, armeria sì; prigione, stalle, bottega no). Nuova `qa/wood-gate-slots-regression.cjs` nel workflow `gate-six-sockets-regression`. ROADMAP e DECISIONS invariate: correzione di una regola, nessun contratto nuovo.
+
 ### 2026-11-18 — PAL-W1-SLOPE · Palizzate W1 sui fianchi delle colline
 
 `fix/palisade-w1-slopes`: le palizzate W1 si costruiscono su pendii dolci e scoscesi (prima ogni palizzata voleva un terrazzo piano); W2-W3 restano solo in piano, anche come upgrade. Paletti 3D e di cantiere poggiati sul terreno più basso sotto ciascuno. Nuova `qa/palisade-slope-regression.cjs`. ROADMAP e DECISIONS invariate.

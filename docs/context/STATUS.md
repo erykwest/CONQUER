@@ -1,5 +1,10 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-18 — WOOD-GATE-SLOTS-261118: spazio stanza della porta in legno (branch `fix/wood-gate-slots`, NON MERGE)
+
+- **CODICE:** `functionCapacity` (`settlement-castle-placement.js`) restituisce 1 per la porta in legno (`material==='wood'`, test in linea come `isWoodGate` perché i test estraggono la funzione da sola); le porte in pietra restano a `livello − 1` (L1 0, L2 1, L3 2). Lo spazio è al piano 1 (sopra il passaggio, `functionFloorOffset`) e segue `allowed()` di `settlement-siege.js` come le porte in pietra. Pannello stanze e `describeStructure` lo mostrano senza modifiche (usano `functionCapacity`); i salvataggi con `functions:[]` ricevono lo spazio vuoto da `normalizeFunctions`.
+- **PROVE LOCALI PASS:** nuova `qa/wood-gate-slots-regression.cjs`; `gate-roads`, `cutaway-furniture`, `infirmary`, `kitchen-rooms`, `lean-to`, `keep-w4`, `dovecote`, `falconry`, `built-portico`, `crime-buildings`, `mastio-selection-zoom`, `cistern`, `small-gate`, `wood3d`, `gate-fittings`. Nessuna verifica visiva: la porta in legno non ha cutaway (stanza senza arredi visibili).
+
 ### 2026-11-18 — PAL-W1-SLOPE: palizzate W1 su pendio (branch `fix/palisade-w1-slopes`, NON MERGE)
 
 - **CODICE:** `wallTerrainVerdict` ammette la palizzata W1 su qualsiasi pendio (W2-W3: «need flat ground»); `linearBuildGroundZ` dà al cantiere la quota più bassa sotto la palizzata; `setTier` rifiuta l'upgrade W2-W3 fuori piano; `addStake` (wood3d) e il cantiere (construction-assembly) poggiano il piede di ogni paletto sul terreno più basso sotto di esso. Mura in pietra invariate.
