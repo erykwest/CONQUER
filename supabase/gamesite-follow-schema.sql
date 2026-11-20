@@ -15,6 +15,7 @@ create table if not exists public.gamesite_followers (
 create index if not exists gamesite_followers_status_idx on public.gamesite_followers(status);
 alter table public.gamesite_followers enable row level security;
 revoke all on table public.gamesite_followers from anon, authenticated;
+grant select, insert, update, delete on table public.gamesite_followers to service_role;
 -- service_role bypasses RLS; public API handlers do not expose its key.
 -- Backend enforces double opt-in before marking confirmed.
 
@@ -26,6 +27,7 @@ create table if not exists public.gamesite_daily_metrics (
 );
 alter table public.gamesite_daily_metrics enable row level security;
 revoke all on table public.gamesite_daily_metrics from anon, authenticated;
+grant select, insert, update, delete on table public.gamesite_daily_metrics to service_role;
 
 -- This RPC accepts only a finite enum and stores aggregate counts with no visitor identifier.
 -- Restrict EXECUTE: server-side service_role only.
@@ -60,6 +62,7 @@ create index if not exists gamesite_follow_budget_expiry_idx
   on public.gamesite_follow_budget(expires_at);
 alter table public.gamesite_follow_budget enable row level security;
 revoke all on table public.gamesite_follow_budget from anon, authenticated;
+grant select, insert, update, delete on table public.gamesite_follow_budget to service_role;
 
 -- Atomic limit: at most five subscription requests per proxy source every 15 minutes.
 -- This is a server-only RPC; it must never be granted to anon or authenticated clients.
