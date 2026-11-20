@@ -6,7 +6,8 @@ run('State.seed=4242;State.biome="plains";State.structures=[];State.relief={hill
 const nearby=run('JSON.stringify(forestTreeLayout(State.environment[0],{minX:90,maxX:110,minY:90,maxY:110}))');
 assert.equal(nearby,run('JSON.stringify(forestTreeLayout(State.environment[0]).filter(t=>t.p.x>=90&&t.p.x<=110&&t.p.y>=90&&t.p.y<=110))'),'bounded canopy query preserves exact tree positions and attributes');
 const count=run('forestTreeLayout(State.environment[0]).length'),oldExpected=120*120/(4.4*4.4);
-assert.ok(count/oldExpected>=2.4&&count/oldExpected<=2.6,'tree multiplier '+count/oldExpected);
+// 2.5x the old grid, then 1.3x more (WINTER-PHASES, 20/11/2026): ~3.25x.
+assert.ok(count/oldExpected>=3.1&&count/oldExpected<=3.4,'tree multiplier '+count/oldExpected);
 for(const seed of [1,3,7]){
  run('State.seed='+seed+';State.biome="hills";State.relief=null;State.environment=[];generateRelief();State.environment=[{id:"cliff-density",type:"forest",x:100,y:100,rx:100,ry:100,points:[{x:0,y:0},{x:200,y:0},{x:200,y:200},{x:0,y:200}],holes:[]}];clearForestLayoutCache()');
  assert.ok(run('forestTreeLayout(State.environment[0]).every(t=>[-1.1,0,1.1].every(dx=>[-1.1,0,1.1].every(dy=>terrainSlopeKind({x:t.p.x+dx,y:t.p.y+dy})!=="steep")))'),'cliff buffer stays free');

@@ -767,7 +767,8 @@ const CONTINUOUS_FOREST_SPACING=4.4/Math.sqrt(2.5*1.3); // 1.3x the trees of the
 function continuousForestTrees(f,bounds=null){
   const rnd=seedRand((State.seed^biomeHash(f.id))>>>0),n=Math.ceil(WORLD/CONTINUOUS_FOREST_SPACING),trees=[];
   for(let iy=0;iy<n;iy++)for(let ix=0;ix<n;ix++){
-    const p={x:(ix+.2+rnd()*.6)*CONTINUOUS_FOREST_SPACING,y:(iy+.2+rnd()*.6)*CONTINUOUS_FOREST_SPACING};
+    // Jitter inside the cell keeps neighbours at least 0.44 cells (>1U) apart.
+    const p={x:(ix+.22+rnd()*.56)*CONTINUOUS_FOREST_SPACING,y:(iy+.22+rnd()*.56)*CONTINUOUS_FOREST_SPACING};
     const tree={p,shapeIndex:Math.floor(rnd()*FOREST_TREE_ASSETS.length),colorIndex:Math.floor(rnd()*FOREST_CANOPY_PALETTES.summer.length),flip:rnd()<.5,scale:.8+rnd()*.4};
     if(bounds&&(p.x<bounds.minX||p.x>bounds.maxX||p.y<bounds.minY||p.y>bounds.maxY))continue;
     if(p.x<0||p.x>WORLD||p.y<0||p.y>WORLD||!environmentContains(f,p))continue;
