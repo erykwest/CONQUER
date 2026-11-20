@@ -381,6 +381,8 @@ function drawTerrain(){
 // slopes stay lit consistently as the camera turns), with a slight alternation between facets.
 const MOUNTAIN_LIGHT={x:-.6,y:-.8},MOUNTAIN_DARK=[0x46,0x3c,0x33],MOUNTAIN_LIT=[0x86,0x75,0x62];
 function mountainFaceColor(f,a,b,i){
+  // Snow on the ground whitens the whole slope like the plain, not only above the snow line.
+  if(typeof isSnowGround==='function'&&isSnowGround())return mountainSnowColor(f,a,b,i);
   const mx=(a.x+b.x)/2-f.x,my=(a.y+b.y)/2-f.y,L=Math.hypot(mx,my)||1;
   const t=clamp((mx/L*MOUNTAIN_LIGHT.x+my/L*MOUNTAIN_LIGHT.y+1)/2+(i%2?.035:-.035),0,1);
   const c=MOUNTAIN_DARK.map((d,k)=>Math.round(d+(MOUNTAIN_LIT[k]-d)*t));
@@ -444,7 +446,7 @@ function mountainPineSprite(variant,winter=false){
   const key=variant+(winter?'w':'');
   if(mountainPineSprites[key])return mountainPineSprites[key];
   const W=96,H=128,c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
-  const crown=winter?(variant?'#6f8a72':'#7f9a80'):(variant?'#4f7a45':'#5d9140'),trunk='#2B1D16';
+  const crown=variant?'#4f7a45':'#5d9140',trunk='#2B1D16';
   g.fillStyle=trunk;g.fillRect(W*.44,H*.80,W*.12,H*.17);
   g.fillStyle=crown;g.beginPath();
   const tiers=5,top=H*.04,bottom=H*.83;g.moveTo(W/2,top);
@@ -460,7 +462,20 @@ function mountainPineSprite(variant,winter=false){
     g.quadraticCurveTo(W/2-half*.55,y-(bottom-top)/tiers*.35,k===1?W/2:W/2-W*(.10+.36*(k-1)/tiers),k===1?top:top+(bottom-top)*(k-1)/tiers);
   }
   g.closePath();g.fill();
-  if(winter){g.fillStyle='rgba(245,248,248,.55)';for(let k=1;k<=tiers;k++){const y=top+(bottom-top)*k/tiers,half=W*(.10+.36*k/tiers);g.fillRect(W/2-half*.6,y-H*.03,half*1.2,H*.02)}}
+  if(winter){
+    // Snow retino on the upper half of every tier, the same hatch as the blizzard branches.
+    const tile=document.createElement('canvas');tile.width=tile.height=6;const tg=tile.getContext('2d');
+    tg.fillStyle='#c4d0d8';tg.fillRect(0,0,6,6);tg.fillStyle='#f8fbfc';
+    for(let y=0;y<6;y++)for(let x=0;x<6;x++)if((x+y)%6<4)tg.fillRect(x,y,1,1);
+    g.save();g.globalCompositeOperation='source-atop';g.fillStyle=g.createPattern(tile,'repeat');
+    const step=(bottom-top)/tiers;
+    for(let k=1;k<=tiers;k++){
+      const y0=top+step*(k-1),y1=y0+step*.55,half=W*(.10+.36*k/tiers)*.8;
+      g.beginPath();g.moveTo(W/2,y0-1);g.quadraticCurveTo(W/2+half*.5,y0+step*.1,W/2+half,y1);
+      g.quadraticCurveTo(W/2,y1-step*.18,W/2-half,y1);g.quadraticCurveTo(W/2-half*.5,y0+step*.1,W/2,y0-1);g.fill();
+    }
+    g.restore();
+  }
   mountainPineSprites[key]=c;return c;
 }
 function drawMountainPine(t){
