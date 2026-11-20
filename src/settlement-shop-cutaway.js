@@ -1,5 +1,5 @@
 'use strict';
-// CONQUER L3 workshop cutaway: a selected L3 house that runs an autonomous workshop
+// CONQUER workshop cutaway: a selected L2 (artisan) house that runs an autonomous workshop
 // (ConquerCommerce) opens its ground floor, like the church and inn (settlement-civic3d.js).
 // The timbered upper floor, roofs and chimneys go; walls whose outside faces the camera, or that
 // stand in front of the section plane through the room centre, are cut down to a low sill; the
@@ -8,7 +8,7 @@
 // ConquerCutawayFurniture.pieceFaces, plus a few procedural boxes) with a street counter on the
 // half of the facade away from the door. While the artisan's routine keeps him at his own
 // door during working hours, he is drawn inside at his bench instead.
-// Every closed L3 workshop also shows its street front: a shop window on the counter half of the
+// Every closed workshop house also shows its street front: a shop window on the counter half of the
 // facade (shutters let down as counter and awning by day, shut at night) and a medieval bracket
 // sign beside the door, its board perpendicular to the facade with the trade's emblem.
 // Nothing is saved: the state follows the selection, the clock and the shop's day. The Asset Lab
@@ -44,8 +44,12 @@
     if(house?.shopKind)return{kind:house.shopKind,artisanId:house.id+':m:0',state:house.shopClosed?'closed':'working'};
     return shopsRecord()?.[house?.id]||null;
   }
+  // Workshops belong to the artisan class (SOC-CLASS-02: L2 Artigiani), the tier ConquerCommerce
+  // opens and keeps shops on.
+  const SHOP_TIER=2;
+  const tierOf=house=>window.ConquerSocialClasses?.tierOfHouse?.(house)??houseLevel(house);
   function eligible(house){
-    return !!house&&house.type==='house'&&houseLevel(house)===3&&
+    return !!house&&house.type==='house'&&tierOf(house)===SHOP_TIER&&
       !(typeof underConstruction==='function'&&underConstruction(house))&&!!TRADES[shopOf(house)?.kind];
   }
   function active(house){return eligible(house)&&(house.id===State.selectedId||!!house.shopCutaway)}
@@ -404,7 +408,7 @@
     const r=build(house);if(!r)return null;
     return{p:r.room.toWorld(r.spot.a,r.spot.b),tool:TRADES[r.kind].tool,facing:facing(r),kind:r.kind};
   }
-  // The shop's artisan waiting at his own door (artisanPosition: an L3 shop operates at home)
+  // The shop's artisan waiting at his own door (artisanPosition: an L2 shop operates at home)
   // stands at his bench while the house is open. Elsewhere (market, leisure) he stays where he is.
   function artisanAt(house,resident,p){
     if(!p||!active(house))return null;
@@ -413,7 +417,7 @@
     if(dist(p,houseDoorInfo(house).outside)>.42)return null;
     return spotOf(house);
   }
-  window.ConquerShopCutaway=Object.freeze({TRADES,LAYOUTS,EMBLEMS,shopOf,eligible,active,activeId,room,build,addToBuilder,artisanAt,spotOf,
+  window.ConquerShopCutaway=Object.freeze({TRADES,LAYOUTS,EMBLEMS,SHOP_TIER,shopOf,eligible,active,activeId,room,build,addToBuilder,artisanAt,spotOf,
     frontOpen,opening,signPlace,buildFront,addFront,facadeCut,frontSig,
     clear:()=>{cache.clear();frontCache.clear()}});
 })();

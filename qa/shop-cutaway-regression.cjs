@@ -1,6 +1,6 @@
 'use strict';
-// L3 workshop cutaway (src/settlement-shop-cutaway.js): a selected L3 house with a workshop
-// opens its ground floor. Checked for every trade and camera quarter-turn: nothing stands
+// Workshop cutaway (src/settlement-shop-cutaway.js): a selected L2 (artisan) house with a workshop
+// opens its ground floor (SOC-CLASS-02: ConquerCommerce keeps workshops on L2 houses). Checked for every trade and camera quarter-turn: nothing stands
 // above the floor break (no upper floor, roof or slab), the walls facing the camera are cut to
 // the sill, the furniture stays inside the room, the counter takes the half of the facade away
 // from the door, walls shared by two bodies of the house are dropped, and the artisan is moved
@@ -43,23 +43,25 @@ const urban=src('settlement-urban-economy.js');
 for(const t of trades)assert.ok(new RegExp('\\b'+t+'\\s*:').test(urban),t+' is an urban workshop trade');
 
 const SILL=.14,TOP=1.37*.475;
-const house=o=>({id:'h',type:'house',houseLevel:3,x:50,y:40,angle:.3,doorSide:-1,shopKind:'blacksmith',...o});
+const house=o=>({id:'h',type:'house',houseLevel:2,x:50,y:40,angle:.3,doorSide:-1,shopKind:'blacksmith',...o});
 const tris=mesh=>{const out=[];for(let t=0;t<mesh.col.length;t++){const o=t*9;out.push({g:mesh.gi[t],v:[0,3,6].map(k=>({x:mesh.pos[o+k],y:mesh.pos[o+k+1],z:mesh.pos[o+k+2]}))})}return out};
 
-// Eligibility: L3, completed, with a workshop; open when selected (or forced by the Asset Lab).
+// Eligibility: L2 (artisans), completed, with a workshop; open when selected (or forced by the Asset Lab).
 State.structures=[house()];
 assert.equal(SC.active(State.structures[0]),false,'not open until selected');
 State.selectedId='h';SC.clear();
-assert.equal(SC.active(State.structures[0]),true,'the selected L3 workshop opens');
+assert.equal(SC.active(State.structures[0]),true,'the selected L2 workshop opens');
 assert.equal(SC.activeId(),'h');
-assert.equal(SC.active(house({houseLevel:2})),false,'L2 houses have no workshop');
-assert.equal(SC.active(house({shopKind:null})),false,'an L3 house without a workshop stays closed');
+assert.equal(SC.active(house({houseLevel:3})),false,'L3 (educated) houses have no workshop');
+assert.equal(SC.active(house({houseLevel:1})),false,'L1 houses have no workshop');
+assert.equal(SC.SHOP_TIER,2,'workshops belong to the artisan tier');
+assert.equal(SC.active(house({shopKind:null})),false,'an L2 house without a workshop stays closed');
 assert.equal(SC.active(house({building:true})),false,'not while under construction');
 // Without the Lab stand-in the record comes from the economy save (State.economy.commerce).
 window.ConquerEconomy={state:()=>({commerce:{shops:{h:{kind:'potter',artisanId:'h:m:0',state:'working'}}}})};
 assert.equal(SC.shopOf(house({shopKind:undefined})).kind,'potter','the commerce record names the trade');
 delete window.ConquerEconomy;
-console.log('PASS eligibility: L3 + workshop + selection');
+console.log('PASS eligibility: L2 + workshop + selection');
 
 let furnished=0;
 for(const plan of ['T','L'])for(const doorLeft of [false,true])for(const kind of trades)for(turn=0;turn<4;turn++){
@@ -225,6 +227,40 @@ delete window.ConquerEconomy;
 }
 console.log('PASS street front: bracket sign beside the door, shop window open by day, windows cut, cache signature');
 
+// End to end with the real economy: the houses ConquerCommerce gives a workshop are the ones the
+// cutaway opens (bug: after SOC-CLASS-02 moved workshops to L2, the cutaway still asked for L3 and
+// never opened, nor showed a shop front or the artisan at his bench).
+{
+  for(const f of ['settlement-social-classes.js','settlement-urban-economy.js','settlement-market-economy.js','settlement-commerce.js'])
+    vm.runInContext(src(f),ctx,{filename:f});
+  const econ={};window.ConquerEconomy={state:()=>econ,population:()=>({L1:6,L2:6,L3:0,L4:0})};
+  State.village={founded:true,wellId:'well'};State.clock={day:22};State.selectedId=null;turn=0;State.view.rotation=0;
+  const l2=house({id:'a',shopKind:undefined,socialTier:2}),l3=house({id:'b',x:60,shopKind:undefined,houseLevel:3,socialTier:3});
+  State.structures=[l2,l3];SC.clear();
+  const C=window.ConquerCommerce;
+  assert.equal(C.registerShop('a','blacksmith'),true,'commerce opens a workshop on an L2 house');
+  assert.equal(C.registerShop('b','potter'),false,'and none on an L3 house');
+  C.daily(22);   // a workday: the shop works
+  assert.equal(econ.commerce.shops.a.state,'working','the L2 workshop works on a workday');
+  assert.equal(SC.eligible(l2),true,'the commerce workshop house is a cutaway workshop');
+  assert.ok(SC.buildFront(l2)?.open,'its street front opens by day');
+  State.selectedId='a';SC.clear();
+  assert.equal(SC.activeId(),'a','selecting it opens the cutaway');
+  const door=ctx.houseDoorInfo(l2).outside,at=SC.artisanAt(l2,{id:'a:m:0'},door);
+  assert.ok(at&&at.tool==='hammer','the artisan works at his bench');
+  // Every trade the economy can spawn has a furnished room.
+  for(const kind of Object.keys(C.WORKSHOP_KINDS))assert.ok(SC.TRADES[kind]&&SC.LAYOUTS[kind],kind+': cutaway layout');
+  delete window.ConquerEconomy;State.selectedId=null;SC.clear();
+}
+// The inspector reports the workshop on the house that runs it (L2), not on L3 houses.
+{
+  const rooms=src('settlement-app-rooms.js'),i=rooms.indexOf('commerce?.state?.()?.shops?.[s.id]');
+  assert.ok(i>0,'inspector reads the commerce shop');
+  const guard=rooms.slice(rooms.lastIndexOf('if(',i),i);
+  assert.match(guard,/tierOfHouse\?\.\(s\)\?\?houseLevel\(s\)\)===2/,'inspector shows the workshop on L2 houses');
+}
+console.log('PASS end to end: ConquerCommerce L2 workshops open in the cutaway; inspector on L2');
+
 // Wiring: both renderers, facades, occlusion and the population pass use the module.
 const has=(f,re,what)=>assert.ok(re.test(src(f)),f+': '+what);
 has('settlement-world3d.js',/ConquerShopCutaway\.addToBuilder\(m\)/,'WebGL cutaway buffer');
@@ -236,5 +272,5 @@ has('settlement-urban.js',/ConquerShopCutaway\?\.facadeCut\(house,part,edge,wind
 has('settlement-population-figures.js',/ConquerShopCutaway\?\.artisanAt\(house,resident,p\)/,'population pass');
 const html=fs.readFileSync(path.join(__dirname,'..','index.html'),'utf8');
 assert.ok(html.indexOf('settlement-commerce.js')<html.indexOf('settlement-shop-cutaway.js')&&html.indexOf('settlement-shop-cutaway.js')<html.indexOf('settlement-asset-stage.js'),'script order');
-has('settlement-asset-stage.js',/bottega-l3-/,'Asset Lab entries');
+has('settlement-asset-stage.js',/bottega-l2-/,'Asset Lab entries');
 console.log('PASS renderer, population and Asset Lab wiring');

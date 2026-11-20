@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-18 — SHOP-CUT-261118: botteghe del cutaway sulle case L2 (branch `fix/cutaway-shops`, NON MERGE)
+
+- **CAUSA:** SOC-CLASS-02 (#206) ha spostato le botteghe di ConquerCommerce sulle case L2 (`l2House` in apertura, `sync` e `registerShop`), ma `settlement-shop-cutaway.js` `eligible()` chiedeva `houseLevel===3`: in partita nessuna bottega apriva il cutaway, il fronte su strada (vetrina, banco, insegna a bandiera) non c'era e l'artigiano restava alla porta. L'ispettore (`settlement-app-rooms.js`) mostrava la riga della bottega solo sulle case L3, dove non ne nasce mai una.
+- **CODICE:** `eligible()` usa `ConquerSocialClasses.tierOfHouse` (ripiego `houseLevel`) e `SHOP_TIER=2`; ispettore «Bottega L2 · mestiere · stato · prodotti · incassi» sulle case L2; Asset Lab con la casa L2 (`bottega-l2-*`, famiglia «Botteghe L2»); etichette i18n «Botteghe L2».
+- **PROVE LOCALI PASS:** `qa/shop-cutaway-regression.cjs` con nuovo controllo end-to-end che carica il vero ConquerCommerce (bottega aperta su L2, rifiutata su L3, cutaway, fronte e artigiano al banco); il test fallisce col codice di `main`. Verifica in partita (ispettore) e audit del Lab per la famiglia «Botteghe L2»: 21 render, 0 falliti, fogli rivisti, baseline aggiornata.
+
 ### 2026-11-18 — Microfix: la torre di vedetta lignea ha due posti per arcieri (`fix/watchtower-slots`)
 
 - **CAUSA:** `computeArcherSlots` (`settlement-siege.js`) dava alle torri in legno solo il posto sul terrazzo aperto della torre a palizzata; la vedetta (`woodStyle:'watchtower'`) restava a 0 posti, quindi pannello «Arcieri 0/0», nessun arciere assegnabile né disegnato e nessuna vedetta visibile.

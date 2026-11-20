@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-18 — SHOP-CUT-261118 · Botteghe del cutaway
+
+**IMPLEMENTATO SU BRANCH `fix/cutaway-shops`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Cutaway, fronte su strada e artigiano al banco sulle case L2 che hanno una bottega.
+- [x] Ispettore con la bottega sulla casa L2 che la gestisce.
+- [ ] La casa L2 è più piccola della L3: valutare in partita se il banco su strada e la stanza restano leggibili sulle case a schiera (`urbanDenseParts`).
+
 ### 2026-11-18 — Microfix: posti per arcieri sulla torre di vedetta lignea
 
 **IMPLEMENTATO SU BRANCH `fix/watchtower-slots`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
