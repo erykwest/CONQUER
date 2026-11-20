@@ -339,6 +339,12 @@ function renderFunctionPanel(){
     const flipLabel=s.type==='built'?'Exterior side / windows':'Exterior side';
     const flipLegend=s.type==='wall'?'Defines the exterior side for battlements or hoarding.':s.type==='palisade'?'Defines which side is exterior; walkway and earthwork are generated inward.':isWideBuilt(s)?'Exterior: arrow slits. Interior: tall hall windows (clerestory with portico).':'Exterior windows: upper level only. Interior windows/portico follow the opposite side.';
     html+=`<div class="slot"><div class="slot-label">${flipLabel}</div><button data-linear-flip class="active">⇄ Flip</button><div class="legend">${flipLegend}</div></div>`;
+    // Moat on the exterior face (StructureCommands.digMoat, settlement-crossings.js digAlongWall).
+    const moatCtl=!building&&StructureCommands.describeStructure(s.id)?.controls.find(c=>c.key==='moat');
+    if(moatCtl){
+      const label={dry:'Dry moat',water:'Water moat'},why=moatCtl.options.map(o=>o.reason).find(Boolean);
+      html+=`<div class="slot"><div class="slot-label">Moat · exterior side</div><div class="grid">${moatCtl.options.map(o=>`<button data-wall-moat="${o.value}" class="${o.active?'active':''}" ${o.disabled?'disabled':''}>${label[o.value]}</button>`).join('')}</div><div class="legend">${why?why+' · ':''}1.5U moat against the exterior face; joins the moat of the next wall at the corner, leaves gates open. Water only at level 0.</div></div>`;
+    }
   }
   if(s.type==='townhall'&&!building){
     normalizeFunctions(s);
@@ -410,6 +416,7 @@ function renderFunctionPanel(){
   on('[data-cutaway-toggle]',id=>StructureCommands.toggleCutaway(id));
   on('[data-cutaway-floor]',(id,el)=>StructureCommands.stepCutawayFloor(id,Number(el.dataset.cutawayFloor)));
   on('[data-linear-flip]',id=>StructureCommands.flipSide(id));
+  on('[data-wall-moat]',(id,el)=>StructureCommands.digMoat(id,el.dataset.wallMoat));
   on('[data-keep-plan]',(id,el)=>{const [f,k]=el.dataset.keepPlan.split(':');StructureCommands.setKeepFloorPlan(id,Number(f),k)});
   on('[data-function-slot]',(id,el)=>StructureCommands.setRoom(id,Number(el.dataset.functionSlot),el.value),'onchange');
   window.ConquerGates?.bindPanel(slots);

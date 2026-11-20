@@ -243,15 +243,21 @@ test('the industry catalogue and UI contain exactly two distinct mills',()=>{
   const buttons=[...html.matchAll(/data-industry="([^"]*mill[^"]*)"/g)].map(match=>match[1]);
   assert.deepEqual(buttons,['windmill','watermill']);
 });
-test('yellow windmill stays 2x2U and requires a flat H+1 terrace',()=>{
+test('yellow windmill stays 2x2U and requires a flat hill terrace (H+1 or higher)',()=>{
   const h=harness();
   h.ctx.buildableTerrainElevationForStructure=()=>0;
   const mill=h.industry.make('windmill',{x:100,y:100});
   assert.equal(mill.w,2);assert.equal(mill.h,2);
   assert.equal(h.industry.validate(mill).ok,false,'H0 must reject windmills');
-  h.ctx.buildableTerrainElevationForStructure=()=>1;
-  assert.equal(h.industry.validate(mill).ok,true,'H+1 must allow the whole windmill');
-  assert.equal(h.placement.check(mill).ok,true);
+  for(const z of [1,2,3]){
+    h.ctx.buildableTerrainElevationForStructure=()=>z;
+    const v=h.industry.validate(mill);
+    assert.equal(v.ok,true,'H+'+z+' hill terrace must allow the whole windmill');
+    assert.equal(v.ground,z,'windmill seated on its terrace');
+    assert.equal(h.placement.check(mill).ok,true);
+  }
+  h.ctx.buildableTerrainElevationForStructure=()=>null;
+  assert.equal(h.industry.validate(mill).ok,false,'slopes still need a level terrace');
 });
 test('saved legacy windmill A/B structures migrate to one windmill type',()=>{
   const h=harness();

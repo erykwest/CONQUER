@@ -67,6 +67,9 @@ function manualRoadConflict(road,manual){
   if(manual.type==='market')return false;
   if(manual.type==='gate'&&roadUsesGatePassage(road,manual))return false;
   if(['bridge','ramp','stairway'].includes(manual.type)&&roadMeetsBridgeEnd(road,manual))return false;
+  // Across a moat on the drawbridge of the gate it runs through (ROAD-MOAT-DRAWBRIDGE).
+  if(manual.type==='moat'&&State.structures.some(g=>g.type==='gate'&&g.drawbridge?.installed&&
+    roadUsesGatePassage(road,g)&&window.ConquerCrossings?.deck?.(g,true)?.ahead?.moat===manual))return false;
   if(['wall','palisade','built'].includes(manual.type)){
     // A wall end seated on a gate flank does not cut the road running through that gate's passage.
     const nearEnd=end=>{
@@ -834,14 +837,23 @@ function settlementRoadAccessPoint(s,target){
   if(s.type==='market')return marketRoadAccessPoint(s,target);
   if(s.type==='training')return fieldRoadAccessPoint({...s,w:5,h:4},target);
   if(s.type==='tavern'||s.type==='church')return civicEntranceInfo(s)?.outside||structureCenter(s);
+  // Industries and storage yards: the footprint edge facing the road, just outside it.
+  if(s.type==='storageYard'||window.ConquerIndustries?.is(s)){
+    const spec=window.ConquerIndustries?.definition?.(s);
+    return fieldRoadAccessPoint({...s,w:Number(s.w)||spec?.w||2,h:Number(s.h)||spec?.h||2},target);
+  }
   return structureCenter(s);
 }
+// Every building people enter or work at is linked to the main network by a secondary
+// (access) road. Towers get their own service branch, gates and wells their own main roads,
+// civic annexes share their parent's road; walls, bridges and open venues have no entrance.
+// qa/access-roads-regression.cjs audits every placeable type against this rule.
+function structureNeedsAccessRoad(s){
+  if(!s||s.type==='road')return false;
+  return s.type==='house'||s.type==='field'||isCivic(s)||s.type==='storageYard'||!!window.ConquerIndustries?.is(s);
+}
 function settlementAccessTargets(){
-  return State.structures.filter(s=>
-    !underConstruction(s)&&(
-      s.type==='house'||s.type==='field'||isCivic(s)
-    )
-  );
+  return State.structures.filter(s=>!underConstruction(s)&&structureNeedsAccessRoad(s));
 }
 function towerSecondaryBranchAccessPoint(tower,target){
   if(!tower||tower.type!=='tower'||tower.parentTowerId)return null;
@@ -2233,6 +2245,23 @@ function bridgeRoadEnd(p){
   }
   return best;
 }
+// Road magnet on other roads (ROAD-MAGNET-ROAD): main, secondary and automatic roads, also still
+// under construction. Reach follows the zoom (at least 1.5 U); a road end within the end pull
+// wins over the side of the road, otherwise the nearest point of the side (a T junction).
+function roadRoadSnap(p){
+  const radius=Math.max(1.5,typeof linearMagnetRadius==='function'?linearMagnetRadius():0),endPull=Math.max(1,radius*.6);
+  let end=null,side=null;
+  for(const road of roadList()){
+    if(!road.a||!road.b)continue;
+    for(const k of ['a','b']){
+      const d=dist(p,road[k]);
+      if(d<=endPull&&(!end||d<end.distance))end={roadId:road.id,end:k,distance:d,point:{x:road[k].x,y:road[k].y}};
+    }
+    const q=closestPointOnSegment(p,road.a,road.b),d=dist(p,q);
+    if(d<=radius&&(!side||d<side.distance))side={roadId:road.id,end:null,distance:d,point:{x:q.x,y:q.y}};
+  }
+  return end||side;
+}
 function mainRoadSnapAnchor(p){
   const port=gateRoadPort(p);
   if(port)return{point:{...port.center},magnet:true,gatePort:port};
@@ -2248,12 +2277,9 @@ function mainRoadSnapAnchor(p){
   for(const entry of ensureBorderEntrySelection())consider(entry);
   for(const well of State.structures)if(well.type==='well')consider(well);
 
-  for(const road of roadList()){
-    consider(road.a);consider(road.b);
-    const q=closestPointOnSegment(p,road.a,road.b),d=dist(p,q);
-    if(d<=ROAD_RULES.snapNodeDistance&&d<best.distance)best={point:q,distance:d};
-  }
-  if(bridge&&bridge.distance<=best.distance)return{point:bridge.point,magnet:true,bridgeEnd:bridge};
+  const road=roadRoadSnap(p),roadDistance=road?road.distance:Infinity;
+  if(bridge&&bridge.distance<=Math.min(best.distance,roadDistance))return{point:bridge.point,magnet:true,bridgeEnd:bridge};
+  if(road&&(road.end||roadDistance<best.distance))return{point:road.point,magnet:true,roadSnap:{roadId:road.roadId,end:road.end}};
   return{point:best.point,magnet:Number.isFinite(best.distance)};
 }
 // Major roads cut through riverbeds on existing, selectable wooden decks.

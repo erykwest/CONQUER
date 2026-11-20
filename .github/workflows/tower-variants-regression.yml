@@ -17,6 +17,7 @@ on:
       - 'src/settlement-combat.js'
       - 'src/settlement-structure-commands.js'
       - 'qa/bartizan-regression.cjs'
+      - 'qa/watchtower-slots-regression.cjs'
       - 'qa/tower-roof-shape-regression.cjs'
       - 'qa/tower-inner-roof-regression.cjs'
       - 'qa/tower-italian-machicolation-regression.cjs'
@@ -50,6 +51,8 @@ jobs:
           node --check src/settlement-siege.js
       - name: Bartizans (geometry, crown, archer slots with the 0-1U foot strike)
         run: node qa/bartizan-regression.cjs
+      - name: Timber watchtower archer slots on the deck
+        run: node qa/watchtower-slots-regression.cjs
       - name: Square tower roof shapes (pyramid, gable, hip with L/2 ridge)
         run: node qa/tower-roof-shape-regression.cjs
       - name: Inner roof inside the merlons (BC-251105-05)

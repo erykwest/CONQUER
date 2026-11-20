@@ -62,6 +62,8 @@ COLORS = {
     'circusRed': '#b8322c', 'hay': '#d4b35b', 'barrel': '#8b5e35', 'iron': '#4f5357', 'sand': '#cdb98a',
     # appended last: earlier palette indices stay put
     'stone': '#b0a794', 'stoneTrim': '#958c7a',
+    # camp works (palisade, anti-charge stakes, cheval de frise): bark, hewn faces, dug earth
+    'stakeDark': '#6f4f33', 'stakeCut': '#b38f63', 'earth': '#7a6442', 'earthDark': '#66543a',
 }
 KEYS = list(COLORS.keys())
 COLL_NAME = 'CONQUER_Events'
@@ -447,19 +449,121 @@ def camp_picket(m):
     m.meta = {'radius': u(2.6)[0], 'horses': [u(x, -.7, 0) for x in (-1.5, -.5, .5, 1.5)]}
 
 
+def sharp_stake(p, a, b, r, tip, n=6, key='stake', both=False, twist=0.0):
+    """Hewn stake from a (foot) to b (point), any direction: an n-sided shaft of radius r,
+    then a point `tip` long cut in facets of two tones (stakeCut / stakeTip). both=True
+    sharpens the foot as well (cheval de frise spikes)."""
+    A, B = Vector(a), Vector(b)
+    d = B - A
+    L = d.length
+    x = d.normalized()
+    y = Vector((0, 0, 1)).cross(x)
+    if y.length < 1e-3:
+        y = Vector((1, 0, 0)).cross(x)
+    y.normalize()
+    z = x.cross(y)
+    ring = lambda c, rr: [c + (y * math.cos(twist + 2 * math.pi * i / n) + z * math.sin(twist + 2 * math.pi * i / n)) * rr
+                          for i in range(n)]
+    s0 = A + x * (tip if both else 0)
+    s1 = A + x * (L - tip)
+    r0, r1 = ring(s0, r), ring(s1, r * .96)
+    vs = r0 + r1
+    p.quads(vs, [(i, (i + 1) % n, n + (i + 1) % n, n + i) for i in range(n)], key)
+    for ends, apex in ((r1, B), (r0[::-1], A) if both else (None, None)):
+        if ends is None:
+            p.quads(r0[::-1], [tuple(range(n))], 'stakeCut')   # sawn foot
+            continue
+        for i in range(n):
+            q0, q1 = ends[i], ends[(i + 1) % n]
+            p.quads([q0, q1, apex], [(0, 1, 2)], 'stakeCut' if i % 2 else 'stakeTip')
+
+
+def bank(p, L, y0, y1, h0, h1):
+    """Earth bank along x (length L): a closed wedge from height h0 at y0 to h1 at y1,
+    top in 'earth', sides and ends in 'earthDark'."""
+    prof = [(y0, 0), (y1, 0), (y1, h1), (y0, h0)]
+    vs = [(-L / 2, y, z) for y, z in prof] + [(L / 2, y, z) for y, z in prof]
+    mesh(p, vs, [((3, 2, 6, 7), 'earth'), ((1, 2, 6, 5), 'earthDark'), ((0, 3, 7, 4), 'earthDark'),
+                 ((0, 1, 2, 3), 'earthDark'), ((4, 7, 6, 5), 'earthDark')])
+
+
+def lashing(p, c, r, axis, key='rope'):
+    """A rope band round a joint (thin box ring as an octagonal cylinder)."""
+    p.cylinder(r, .035, key, n=6, axis=axis, center=c)
+
+
 def camp_palisade(m):
-    """1.4 U (4.9 m) of light camp palisade along x: sharpened stakes on a back rail,
-    lower than the fort's. Tiled round the camp boundary."""
+    """1.4 U (4.9 m) of light camp palisade along x, outside at -y: unbarked stakes of
+    mixed girth driven side by side and sharpened with hewn facets, two walers on the
+    inside lashed to them, two raking props and the spoil of the trench banked at the foot.
+    Lower than the fort's. Tiled round the camp boundary."""
     p = m.part('palisade')
-    L, n = 4.9, 20
+    L, n = 4.9, 19
+    xs = []
     for i in range(n):
         x = -L / 2 + L * (i + .5) / n
-        h = 1.9 + .18 * math.sin(i * 2.3)
-        p.cylinder(.11, 0, 'stake', n=6, axis='z', center=(x, 0, 0), radii=[.11, .11], along=[0, h])
-        p.cylinder(.11, 0, 'stakeTip', n=6, axis='z', center=(x, 0, 0), radii=[.11, .01], along=[h, h + .3])
-    for z in (.5, 1.4):
-        p.beam((-L / 2, .14, z), (L / 2, .14, z), .08, .12, 'woodDark')
+        r = .115 + .025 * math.sin(i * 1.7 + .4)
+        h = 1.95 + .16 * math.sin(i * 2.3) + .06 * math.cos(i * 5.1)
+        lean = .04 * math.sin(i * 3.7)
+        sharp_stake(p, (x, 0, -.05), (x + lean * .3, lean * .2, h + .34), r, .34,
+                    key='stake' if i % 3 else 'stakeDark', twist=i * .5)
+        xs.append(x)
+    for z in (.55, 1.45):
+        p.beam((-L / 2, .19, z), (L / 2, .19, z), .1, .13, 'woodDark')
+        for x in xs[1::4]:
+            lashing(p, (x, .1, z), .14, 'y')
+    # Raking props on the inside, footed on a short sill.
+    for x in (-L / 4, L / 4):
+        p.beam((x, .25, 1.45), (x, 1.15, -.02), .1, .1, 'woodDark')
+        p.box((x, 1.15, .03), (.4, .16, .08), 'beam')
+    # Spoil bank along the outer foot (the trench the stakes were set in).
+    bank(p, L, -.8, -.08, .04, .32)
     m.done('palisade', p)
+    m.meta = {'length': u(L)[0], 'outside': [0, -1]}
+
+
+def camp_stakes(m):
+    """Anti-charge stakes (pali anti-carica), 1.4 U along x, enemy at -y: two staggered rows
+    of sharpened poles driven slantwise into a low bank, their points at a horse's breast
+    (1.1-1.3 m) and leaning out ~40 degrees. Tiled outside the palisade."""
+    p = m.part('stakes')
+    L = 4.9
+    bank(p, L, -.4, .6, .03, .24)
+    k = 0
+    for row, (y0, n) in enumerate(((.42, 9), (.08, 8))):
+        for i in range(n):
+            # back row centred in its bays; front row in the gaps between them
+            x = -L / 2 + L * ((i + .5) / n if row == 0 else (i + 1) / (n + 1)) + .06 * math.sin(k * 3.3)
+            ln = 1.85 - row * .2 + .12 * math.sin(k * 2.1)
+            ang = math.radians(40 + 6 * math.sin(k * 1.3))
+            yaw = .14 * math.sin(k * 2.9)
+            foot = (x, y0, .03)                                   # set in the bank, below its top
+            tip = (x + math.sin(yaw) * ln * math.cos(ang), y0 - math.cos(yaw) * ln * math.cos(ang), .03 + ln * math.sin(ang))
+            sharp_stake(p, foot, tip, .08 + .015 * math.sin(k * 1.9), .32,
+                        key='stake' if k % 3 else 'stakeDark', twist=k * .7)
+            k += 1
+    m.done('stakes', p)
+    m.meta = {'length': u(L)[0], 'outside': [0, -1]}
+
+
+def camp_cheval(m):
+    """Cheval de frise (cavallo di Frisia), 4.2 m along x: a squared log bored through by
+    pairs of crossed spikes sharpened at both ends, alternating at 90 degrees, so it stands
+    on its points whichever way it is rolled. Closes a gap or the camp's way in."""
+    p = m.part('cheval')
+    L, hz, arm = 4.2, .78, 1.12
+    p.beam((-L / 2, 0, hz), (L / 2, 0, hz), .24, .24, 'woodDark')
+    for sx in (-1, 1):
+        p.box((sx * L / 2, 0, hz), (.03, .25, .25), 'stakeCut')        # sawn ends
+    n = 8
+    for i in range(n):
+        x = -L / 2 + .25 + (L - .5) * i / (n - 1)
+        a = math.radians(45 if i % 2 == 0 else 135) + .05 * math.sin(i * 2.2)
+        dy, dz = math.cos(a) * arm, math.sin(a) * arm
+        sharp_stake(p, (x, -dy, hz - dz), (x, dy, hz + dz), .055, .26, n=6,
+                    key='stake' if i % 3 else 'stakeDark', both=True, twist=i * .4)
+        lashing(p, (x, 0, hz), .15, 'x', key='beam')                   # bore collar
+    m.done('cheval', p)
     m.meta = {'length': u(L)[0]}
 
 
@@ -484,8 +588,8 @@ def camp_gate(m):
         # Wing of palisade from the post to the segment end.
         for i in range(4):
             x = sx * (W + .45 + i * .22)
-            p.cylinder(.11, 0, 'stake', n=6, axis='z', center=(x, 0, 0), radii=[.11, .11], along=[0, 1.95])
-            p.cylinder(.11, 0, 'stakeTip', n=6, axis='z', center=(x, 0, 0), radii=[.11, .01], along=[1.95, 2.25])
+            sharp_stake(p, (x, 0, -.05), (x, 0, 2.0 + .1 * math.sin(i * 2.3 + sx) + .34), .11 + .02 * math.sin(i * 1.7), .34,
+                        key='stake' if i % 3 else 'stakeDark', twist=i * .5)
     p.beam((-W - .3, 0, 2.85), (W + .3, 0, 2.85), .18, .22, 'woodDark')
     plate(p, (0, -.13), (0, -1), [(-.55, 2.75), (.55, 2.75), (.55, 1.95), (0, 1.75), (-.55, 1.95)], 'heraldA', 0, .02)
     plate(p, (0, -.15), (0, -1), [(-.2, 2.6), (.2, 2.6), (.2, 2.05), (-.2, 2.05)], 'heraldB', .02, .03)
@@ -1386,6 +1490,7 @@ MODELS = [('tentOctagon', tent_octagon), ('tentSquare', tent_square), ('standOpe
           ('tentRidge', tent_ridge), ('tentRidgePlain', tent_ridge_plain), ('tentCompany', tent_company),
           ('campAwning', camp_awning), ('campBarrels', camp_barrels), ('campSacks', camp_sacks),
           ('campPicket', camp_picket), ('campPalisade', camp_palisade), ('campGate', camp_gate),
+          ('campStakes', camp_stakes), ('campCheval', camp_cheval),
           ('justicePillory', justice_pillory), ('justiceGallows', justice_gallows), ('justiceScaffold', justice_scaffold)]
 LAYOUT = {'tentOctagon': (0, 0), 'tentSquare': (12, 0), 'standOpen': (0, 16), 'standCovered': (20, 16),
           'arenaU': (10, 52), 'propTilt': (0, -10), 'propLanceRack': (12, -10),
@@ -1396,7 +1501,7 @@ LAYOUT = {'tentOctagon': (0, 0), 'tentSquare': (12, 0), 'standOpen': (0, 16), 's
           'circusBooth': (-30, -20), 'propBunting': (-25, -20), 'propFence': (-18, -20),
           'tentRidge': (-10, 0), 'tentRidgePlain': (-10, 5), 'tentCompany': (-10, 12),
           'campAwning': (-40, 0), 'campBarrels': (-40, 6), 'campSacks': (-40, 10), 'campPicket': (-40, 15),
-          'campPalisade': (-50, 0), 'campGate': (-50, 6), 'justicePillory': (-60, 0), 'justiceGallows': (-60, 8), 'justiceScaffold': (-60, 16)}
+          'campPalisade': (-50, 0), 'campGate': (-50, 6), 'campStakes': (-50, 12), 'campCheval': (-50, 17), 'justicePillory': (-60, 0), 'justiceGallows': (-60, 8), 'justiceScaffold': (-60, 16)}
 
 
 def main(out_path):

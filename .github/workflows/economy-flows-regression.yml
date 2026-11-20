@@ -46,6 +46,10 @@ on:
       - 'src/settlement-world3d.js'
       - 'src/settlement-forestry.js'
       - 'src/settlement-industries.js'
+      - 'src/settlement-placement.js'
+      - 'src/settlement-world.js'
+      - 'src/settlement-buildings.js'
+      - 'qa/windmill-hills-regression.cjs'
       - 'src/settlement-app-input.js'
       - 'src/settlement-app-simulation.js'
       - 'src/settlement-render.js'
@@ -86,6 +90,7 @@ jobs:
           node qa/economy-panel-history-regression.cjs
           node qa/economy-regression.cjs
           node qa/economy-industries-regression.cjs
+          node qa/windmill-hills-regression.cjs
           node --check src/settlement-forestry.js
           node qa/forestry-regression.cjs
           node --check src/settlement-storage-yard.js
