@@ -1,5 +1,12 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-18 — WARDROBE-CAL-261118: guardaroba stagionale e calendario (branch `fix/seasonal-wardrobe`)
+
+- Verifica: il guardaroba dei popolani è agganciato al calendario. `ConquerWardrobe.conditions()` legge mese (`calendarDateFromDay`), stagione (`State.season`, sincronizzata da `syncSeasonToCalendar`) e meteo a ogni disegno, con cache per giorno; residenti, lavoratori, carrettieri, marinai, staff e fuggiaschi dell'incendio passano da `outfitFor` e la chiave della carta 3D (`villagerLookKey`) contiene l'abito, quindi il cambio avviene a runtime e non solo alla nascita.
+- Corretto: le folle delle feste (palco, arena, banchetto, circo) e gli spettatori e scudieri della giostra avevano un pittore proprio senza guardaroba: ora vestono per mese e meteo (gli attori in scena tengono il costume) e la chiave della carta contiene l'abito. Le carte di tribunale/chiesa/osteria non avevano l'abito nella chiave: il personale di mestiere (posti liberi vestiti per stagione) restava col vestito del primo disegno; ora la chiave lo contiene.
+- Invariato per scelta esistente: il pubblico del tribunale e della messa resta nei propri abiti (`outfit:null`, test in `court-people-regression`); i mestieri con corpo e testa occupati non prendono mantelli (l'abito di mestiere vince sulla stagione).
+- Test: nuova `qa/seasonal-wardrobe-regression.cjs` (calendario reale giorno per giorno su un anno, stesse figure, quattro stagioni, quote per mese, ogni residente cambia abito tra gennaio e luglio, mestieri, dame, override DEV e meteo, folle delle feste, chiavi delle carte); fallisce su `main`. Verdi `wardrobe`, `court-people`, `event-people`, `joust`, `events3d`, `staff-people`, `ci-p1`; `event-figure-cards-browser` verde anche con inverno forzato (pubblico del palco con mantelli e cappucci).
+
 ### 2026-11-19 — MOAT-WIDEN: allargamento del fossato (`feature/moat-from-wall`)
 
 - **Codice sul branch, non ancora unito a main.** Prima un fossato non si poteva allargare dopo lo scavo (la larghezza 1/2/3U si sceglieva solo con lo strumento).

@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-18 — WARDROBE-CAL-261118 · Guardaroba stagionale e calendario
+
+- [x] Verificato l'aggancio del guardaroba dei popolani al calendario (mese, stagione, meteo, cambio a runtime).
+- [x] Folle delle feste e della giostra vestite per stagione; chiavi delle carte 3D di feste, giostra e interni civici con l'abito.
+- [ ] Decisione di prodotto: il pubblico del tribunale e della messa resta senza abiti stagionali (scelta attuale); i mestieri a slot pieni (fabbro, muratore…) non mettono il mantello d'inverno nemmeno all'aperto.
+
 ## 2026-11-19 — MOAT-WIDEN · Allargare il fossato
 
 **Implementato sul branch `feature/moat-from-wall`, non ancora unito a main.** Richiesta del product owner (19/11/2026): «se fai upgrade del fossato in larghezza mantieni il lato adiacente al muro/palizzata».

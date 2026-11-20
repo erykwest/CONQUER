@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-18 — WARDROBE-CAL-261118 · Guardaroba stagionale e calendario
+
+`fix/seasonal-wardrobe`: verificato che il guardaroba dei popolani segue il calendario a runtime; corrette le folle delle feste e della giostra (pittore senza guardaroba) e le chiavi delle carte 3D senza abito (feste, giostra, tribunale/chiesa/osteria). Nuova `qa/seasonal-wardrobe-regression.cjs` nel workflow del guardaroba. ROADMAP e DECISIONS invariate: nessun contratto cambiato.
+
 ### 2026-11-19 — MOAT-WIDEN · Allargare il fossato tenendo la sponda sul muro
 
 `feature/moat-from-wall`: il pannello del fossato finito offre «Widen» a 2 / 3 / 4U (si paga solo la differenza, come lavoro di ampliamento). Un fossato contro un muro, una palizzata o un tratto costruito (il suo `wallId`, o un tratto parallelo a filo della sponda) tiene la sponda sulla faccia esterna e cresce verso fuori; un fossato libero cresce sui due lati. Il fossato unito all'angolo resta unito (incrocio delle linee centrali). Test in `qa/wall-moat-regression.cjs`. ROADMAP e DECISIONS invariate.
