@@ -51,6 +51,8 @@ jobs:
           for file in api/gamesite-*.js api/_gamesite-follow-core.js; do node --check "$file"; done
       - name: Run GameSite P0 regression
         run: node --test qa/gamesite-regression.mjs qa/gamesite-follow-integration.mjs
+      - name: Validate published Devlog and exclude drafts
+        run: node gamesite/tools/build-devlog.cjs --check
 
   browser:
     needs: validate
