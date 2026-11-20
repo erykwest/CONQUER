@@ -1,5 +1,13 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-20 — GameSite P0: browser QA e hardening (PR #292 Draft, non merge)
+
+- Test Chromium di creazione Guest, salvataggi multipli e ripresa, snapshot desktop/mobile; primo run superato #44748638817. Successiva aggiunta di controlli su daylight/DEV/exit e nuovi test API da verificare in CI finale.
+- P0 Guest: seed non scrive slot dev, splash conserva progressi su errore, metadati sincronizzati, exit salvata, avvio a mezzogiorno, UI dev nascosta, caricamento SDK Auth solo quando richiesto.
+- Follow: controlli preflight su configurazione, rate-limit HMAC atomico lato DB e rollback su invio fallito, test di integrazione con provider mock.
+- Sito: canonical SEO, noindex 404, security headers CSP e route sitemap in Vercel. Nessun database, invio reale, deployment o main modificato.
+
+
 ### 2026-11-19 — GameSite P0 branch implementation (non merged)
 
 - Branch `gamesite` da `main`: pagina web marketing medievale in inglese e routing browser al Builder; Entry Gate Guest/account con seed, biomi e salvataggi locali per slot; Supabase Auth condivisa su stessa origine, senza multiplayer Guest.
