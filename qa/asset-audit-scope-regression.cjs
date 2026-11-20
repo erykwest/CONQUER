@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 const assert=require('node:assert/strict');
-const {planChanges,resolveTargets,formatOutput,REGISTRY_SOURCES}=require('./asset-audit-scope.cjs');
+const {planChanges,resolveTargets,formatOutput,REGISTRY_SOURCES,shardIds}=require('./asset-audit-scope.cjs');
 const mode=diff=>planChanges(diff).mode;
 assert.equal(mode('M\tsrc/assets/forest/tree_01_tonda.svg\n'),'incremental');
 assert.deepEqual(planChanges('M\tsrc/assets/forest/tree_01_tonda.svg\n').sources,
@@ -14,6 +14,29 @@ assert.equal(mode('M\tdocs/CI.md\n'),'skip');
 assert.equal(mode('M\tsrc/assets/architecture/gate_portal.png\n'),'full');
 assert.equal(mode('M\tsrc/assets/wood-fort-models.js\n'),'full');
 assert.equal(mode('M\tindex.html\n'),'full');
+// Interface-only changes: gallery smoke, no visual audit.
+const uiPatch='--- a/index.html\n+++ b/index.html\n@@ -1 +1 @@\n-<aside id="policy" class="panel"><h2>Settlement</h2>\n+<section class="profile-section" id="profileGovernance" hidden>\n';
+const plan=(d,p)=>planChanges(d,{indexHtmlPatch:p}).mode;
+assert.equal(plan('M\tindex.html\nM\tsrc/settlement-heraldry.js\nM\tsrc/settlement.css\nM\tsrc/ui/theme.css\nM\tdocs/context/STATUS.md\n',uiPatch),'smoke');
+assert.equal(plan('M\tsrc/ui/shell.js\n'),'smoke');
+assert.equal(plan('M\tindex.html\n',uiPatch+'+<script src="./src/new.js"></script>\n'),'full');
+assert.equal(plan('M\tindex.html\n',uiPatch+'-<link rel="stylesheet" href="./src/x.css">\n'),'full');
+assert.equal(plan('M\tindex.html\n',uiPatch+'+<canvas id="x"></canvas>\n'),'full');
+assert.equal(plan('M\tindex.html\n',''),'full');
+assert.equal(plan('A\tsrc/ui/new.js\n'),'full');
+assert.equal(plan('M\tsrc/ui/theme.css\nM\tsrc/settlement-world3d.js\n'),'full');
+assert.equal(plan('M\tsrc/ui/theme.css\nM\tsrc/assets/industry-models.js\n'),'incremental');
+assert.match(formatOutput(planChanges('M\tsrc/ui/theme.css\n')),/visual_needed=true\naudit_mode=smoke/);
+// Shards: whole families, every entry exactly once, balanced by rendered states.
+const big=[];
+for(let f=0;f<9;f++)for(let i=0;i<5;i++)big.push({id:'castle:f'+f+'-'+i,category:'Fortificazioni',family:'F'+f,states:Array(f%3+1).fill(0)});
+for(let i=0;i<40;i++)big.push({id:'model:m'+i,category:'C'+(i%6),family:'',states:null});
+const shards=[0,1,2,3].map(i=>shardIds(big,i,4));
+assert.deepEqual(shards.flat().sort(),big.map(x=>x.id).sort());
+for(const s of shards)for(let f=0;f<9;f++){const n=s.filter(id=>id.startsWith('castle:f'+f+'-')).length;assert.ok(n===0||n===5,'family split across shards')}
+const cost=s=>s.reduce((a,id)=>{const x=big.find(y=>y.id===id);return a+(x.states?x.states.length:1)},0);
+const costs=shards.map(cost);assert.ok(Math.max(...costs)-Math.min(...costs)<=15,JSON.stringify(costs));
+assert.throws(()=>shardIds(big,4,4));
 assert.equal(mode('M\tsrc/settlement-castle3d.js\n'),'full');
 assert.equal(mode('M\tqa/asset-audit.mjs\n'),'full');
 assert.equal(mode('M\t.github/workflows/asset-lab-regression.yml\n'),'full');

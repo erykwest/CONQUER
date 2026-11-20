@@ -19,12 +19,15 @@ on:
       - 'qa/*combat*'
       - 'qa/*battle*'
       - 'qa/patrol-regression.cjs'
+      - 'qa/patrol-route-regression.cjs'
       - 'qa/military-circle-roster-regression.cjs'
       - 'src/ui/game-api.js'
       - 'src/settlement-alarm-bells.js'
       - 'src/settlement-soldiers.js'
       - 'qa/caserma-avamposto-regression.cjs'
       - 'qa/wall-patrol-regression.cjs'
+      - 'qa/palisade-patrol-regression.cjs'
+      - 'src/settlement-castle-structures.js'
       - 'src/settlement-population-garrisons.js'
       - 'src/settlement-panels.js'
       - 'src/settlement-structure-commands.js'
@@ -56,6 +59,8 @@ on:
       - 'src/settlement-soldiers.js'
       - 'qa/caserma-avamposto-regression.cjs'
       - 'qa/wall-patrol-regression.cjs'
+      - 'qa/palisade-patrol-regression.cjs'
+      - 'src/settlement-castle-structures.js'
       - 'src/settlement-population-garrisons.js'
       - 'src/settlement-panels.js'
       - 'src/settlement-structure-commands.js'
@@ -65,6 +70,7 @@ on:
       - 'qa/*combat*'
       - 'qa/*battle*'
       - 'qa/patrol-regression.cjs'
+      - 'qa/patrol-route-regression.cjs'
       - 'qa/military-circle-roster-regression.cjs'
       - 'src/ui/game-api.js'
       - 'qa/alarm-bell-regression.cjs'
@@ -106,10 +112,12 @@ jobs:
         run: |
           node qa/combat-render-regression.cjs
           node qa/combat-anim-regression.cjs
+          node qa/combat-figures-roles-regression.cjs
           node qa/gore-regression.cjs
           node qa/combat-selection-regression.cjs
           node qa/mass-battle-regression.cjs
           node qa/patrol-regression.cjs
+          node qa/patrol-route-regression.cjs
           node qa/military-circle-roster-regression.cjs
           node qa/night-vision-regression.cjs
           node qa/zones-visual-regression.cjs
@@ -128,3 +136,4 @@ jobs:
           node qa/alarm-bell-regression.cjs
           node qa/caserma-avamposto-regression.cjs
           node qa/wall-patrol-regression.cjs
+          node qa/palisade-patrol-regression.cjs

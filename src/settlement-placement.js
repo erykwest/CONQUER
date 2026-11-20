@@ -93,6 +93,8 @@
       if(['wall','built','palisade'].includes(other.type))return false;
     }
     if(['wall','built','palisade'].includes(s.type)&&['tower','gate','wall','built','palisade'].includes(other.type))return false;
+    // A gate with its drawbridge stands on the edge of the moat the leaf spans (ROAD-MOAT-DRAWBRIDGE).
+    if((s.type==='gate'&&other.type==='moat'&&s.drawbridge?.installed)||(s.type==='moat'&&other.type==='gate'&&other.drawbridge?.installed))return false;
     if(other.type==='road'){
       if(s.type==='market'||s.type==='plaza')return false; // public squares allow crossing roads.
       if(s.type==='gate'&&roadUsesGatePassage(other,s))return false; // the road runs through the passage.

@@ -3,6 +3,71 @@
 ### 2026-11-18 — PAL-W1-SLOPE · Palizzate W1 sui fianchi delle colline
 
 `fix/palisade-w1-slopes`: le palizzate W1 si costruiscono su pendii dolci e scoscesi (prima ogni palizzata voleva un terrazzo piano); W2-W3 restano solo in piano, anche come upgrade. Paletti 3D e di cantiere poggiati sul terreno più basso sotto ciascuno. Nuova `qa/palisade-slope-regression.cjs`. ROADMAP e DECISIONS invariate.
+
+### 2026-11-18 — ROAD-ACCESS-261118 · Strade secondarie per ogni edificio
+
+`fix/secondary-roads`: le strade secondarie di accesso erano limitate a case, campi e civici; ora ogni edificio con ingresso (anche taglialegna, cave, miniere, mulini, depositi) è collegato alla rete principale tramite la regola unica `structureNeedsAccessRoad`. Nuova `qa/access-roads-regression.cjs` nel workflow `road-magnet-regression`. ROADMAP e DECISIONS invariate: correzione della regola esistente, nessun contratto nuovo.
+
+### 2026-11-18 — FIX-MILL-HILLS-261118 · Il mulino a vento si costruisce sulle colline
+
+`fix/mill-hills`: il mulino a vento accetta ogni terrazza piana di collina (H+1, H+2, H+3 in cima), non più solo H+1, ed è posato all'altezza della terrazza; resta escluso dalla pianura H0 e dai pendii. Mulino ad acqua invariato (riva di fiume o torrente). Nuova `qa/windmill-hills-regression.cjs` su colline procedurali reali. ROADMAP e DECISIONS invariate: correzione di una regola di posa, nessun contratto cambiato.
+
+### 2026-11-18 — WARDROBE-CAL-261118 · Guardaroba stagionale e calendario
+
+`fix/seasonal-wardrobe`: verificato che il guardaroba dei popolani segue il calendario a runtime; corrette le folle delle feste e della giostra (pittore senza guardaroba) e le chiavi delle carte 3D senza abito (feste, giostra, tribunale/chiesa/osteria). Nuova `qa/seasonal-wardrobe-regression.cjs` nel workflow del guardaroba. ROADMAP e DECISIONS invariate: nessun contratto cambiato.
+
+### 2026-11-19 — MOAT-WIDEN · Allargare il fossato tenendo la sponda sul muro
+
+`feature/moat-from-wall`: il pannello del fossato finito offre «Widen» a 2 / 3 / 4U (si paga solo la differenza, come lavoro di ampliamento). Un fossato contro un muro, una palizzata o un tratto costruito (il suo `wallId`, o un tratto parallelo a filo della sponda) tiene la sponda sulla faccia esterna e cresce verso fuori; un fossato libero cresce sui due lati. Il fossato unito all'angolo resta unito (incrocio delle linee centrali). Test in `qa/wall-moat-regression.cjs`. ROADMAP e DECISIONS invariate.
+
+### 2026-11-19 — ROAD-MOAT-DRAWBRIDGE, ROAD-MAGNET-ROAD · Ponte levatoio sulla strada, magnete strada su strada
+
+`feature/moat-from-wall`: una strada maestra che attraversa un muro e il fossato davanti apre la porta con il ponte levatoio già installato (costo del ponte nel cantiere della porta); attraverso una porta esistente finita senza ponte levatoio, lo installa. La strada passa sul fossato solo sul ponte levatoio della porta che attraversa (`manualRoadConflict`); un fossato senza porta resta un ostacolo. Il magnete della strada maestra prende estremi e lati di tutte le strade (anche secondarie e automatiche) con raggio più ampio (≥1,5U, segue lo zoom); un estremo vicino vince sul lato; il punto agganciato si illumina. Test in `qa/wall-road-gate-regression.cjs` (13). ROADMAP e DECISIONS invariate.
+
+### 2026-11-19 — ROAD-WALL-GATE · La strada maestra che attraversa un muro apre una porta
+
+`feature/moat-from-wall`: il contrario di WALL-ROAD-GATE. Una strada maestra tracciata attraverso un muro o una palizzata finiti apre una porta del tipo corrispondente (palizzata → porta di legno, muro W1 → porta piccola, W2-W3 → porta grande, nella muratura del muro), taglia il muro sui fianchi della porta e passa nel varco; il fantasma mostra la porta e il suo costo. Un muro ancora in cantiere rifiuta la strada. Test in `qa/wall-road-gate-regression.cjs`. ROADMAP e DECISIONS invariate.
+### 2026-11-18 — FOSSATO-MURO · Fossato dal muro selezionato
+
+`feature/moat-from-wall`: selezionando un muro, una palizzata o un tratto costruito l'inspector offre «Fossato» (secco / d'acqua): il fossato da 1,5U si scava attaccato al lato esterno (quello di «Lato esterno»), si unisce all'angolo al fossato del tratto vicino e lascia libero il varco delle porte; d'acqua solo a quota 0, e un fossato secco già scavato si allaga dallo stesso comando. Nuovo `qa/wall-moat-regression.cjs` (workflow «Wall moat regression»). ROADMAP e DECISIONS invariate.
+### 2026-11-18 — CAMP-SPIKES · Palizzate del campo e pali anti-carica
+
+`feature/camp-spikes`: palizzata dell'accampamento rifatta in Blender (pali grezzi sbozzati, traverse legate, puntelli, terra di scavo); nuovi modelli `campStakes` (file di pali anti-carica inclinati verso l'esterno) e `campCheval` (cavallo di Frisia). Nuovo livello di fortificazione del campo «palizzata e pali anti-carica»: anello di pali fuori dalla palizzata e due cavalli di Frisia sfalsati davanti alla porta. Tutto nel Lab (composizione `encampmentSpiked`). Il 19/11 pali e cavallo di Frisia diventano anche strutture costruibili ovunque nell'insediamento (`stakeRow` a tratti da 1,4 U, `chevalFrise`), con la voce «Opere campali» nella nuova interfaccia (che ora raggiunge anche l'accampamento militare) e le note del Codex. In BACKLOG restano aperti gli effetti di gioco contro la carica. ROADMAP e DECISIONS invariate.
+
+### 2026-11-19 — CI-AUDIT-01 · Audit del Lab: smoke per l'interfaccia, completo in 4 shard
+
+`ci/asset-audit-ui-scope-shards`: `asset-audit-scope.cjs` riconosce le modifiche di sola interfaccia (modalità `smoke`: solo test della galleria); `asset-audit.mjs --shard=N/4` divide l'audit completo per famiglie in 4 job paralleli. Aggiornati `docs/ASSET-LAB-AUDIT.md` e `docs/CI.md`. ROADMAP e DECISIONS invariate.
+### 2026-11-18 — MIL-WALL-01 · pattuglie sulle palizzate W2
+
+`fix/palisade-w2-patrol`: un recinto di palizzate W2 è un giro di pattuglia anche negli angoli senza torre (corsie del camminamento unite a spigolo); le guardie stanno all'altezza del camminamento. Nuova `qa/palisade-patrol-regression.cjs`. ROADMAP e DECISIONS invariate: si applica D-MIL-WALL-261115 così com'è.
+
+### 2026-11-18 — PATROL-ROUTE-261118 · Pattuglie fedeli al giro
+
+`fix/patrol-pathfinding`: un ostile entro portata ma irraggiungibile non fa più saltare i waypoint del giro alle pattuglie della White Zone (regressione della #258 in `defenderThink`). Nuova `qa/patrol-route-regression.cjs` nel workflow combat. ROADMAP e DECISIONS invariate: si ripristina il comportamento previsto, nessun contratto cambiato.
+
+### 2026-11-18 — Ghost dei cantieri non più vuoti
+
+`fix/construction-ghost`: i cantieri senza assemblaggio pezzo per pezzo (industrie, depositi, pozzi, moli, banchine, rampe, annessi civici, luoghi degli eventi) mostrano di nuovo l'edificio finito in trasparenza (World 3D, alpha 0,42) invece del solo contorno dell'impronta lasciato da D-RENDER-3D-261111. Nuova `qa/construction-ghost-regression.cjs` nel workflow Construction props. Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: ripristino visivo, nessun contratto cambiato.
+
+### 2026-11-19 — UI-PROFILE-01 · Pannello Settlement nel PROFILE
+
+`feature/settlement-panel-into-profile`: rimosso il pannello destro `#policy`; dati partita, bioma, parametri mappa e salvataggio in PROFILE › GENERALE, politiche, case private, forze nobiliari ed economia nella nuova tab GOVERNO. ROADMAP e DECISIONS invariate: nessun contratto di gioco cambiato.
+### 2026-11-18 — TORCH-STREAK-261118 · Niente fasci verticali dalle torce
+
+`fix/torch-artifact`: l'alone notturno di torce e bracieri non campiona più l'atlante delle decal (che a mipmap faceva entrare le tessere vicine come righe verticali) ma è calcolato nello shader dall'angolo del quadrato; margine trasparente sulla tessera `__glow` delle finestre. Controllo nuovo in `qa/tower-fittings-regression.cjs`. ROADMAP e DECISIONS invariate: correzione grafica, nessun contratto cambiato.
+
+### 2026-11-18 — CARTS-ROADS-261118 · Carri e messaggeri nel verso giusto, sulle strade
+
+`fix/carts-roads`: i convogli signorili di ritorno e il messaggero che riparte scorrevano all'indietro sul percorso d'andata con l'orientamento dell'andata (modello girato al contrario, carro di testa in coda); ora percorrono la strada invertita e guardano dove vanno. Il messaggero, quando il grafo pedonale rifiuta il percorso, usa il grafo stradale dei carri invece della linea retta fino al pozzo. Test in `qa/diplomacy-regression.cjs` e `qa/road-sign-convoy-regression.cjs`. ROADMAP e DECISIONS invariate: correzione di comportamento, nessun contratto cambiato.
+
+### 2026-11-18 — UI-UPG-01 · Ampliamenti nell'ispettore, non nel Builder
+
+`feature/upgrades-in-inspector`: Municipio, Gilda e Bargello (edifici del pozzo) escono dal pannello Costruisci (UI v2 e palette legacy) e si avviano dall'ispettore del pozzo, blocco «Ampliamenti»; nell'ispettore UI v2 lo stesso blocco elenca anche gli annessi di chiesa, taverna, mercato e municipio. ROADMAP e DECISIONS invariate: le regole di piazzamento non cambiano.
+
+### 2026-11-17 — MIL-FIG-01 · Picchieri con scudo, araldo con lo stendardo
+
+`fix/squad-pikemen-shield`: lancia nella mano destra del soldato (lato sinistro dello schermo, la figura guarda chi osserva) per tutte le figure con lancia. I picchieri della squadra hanno lo scudo del regno (figura `pikeman`); il primo è l'araldo del reggimento (figura `herald`), l'unico con lo stendardo, che porta al posto della lancia; lo stendardo è 3 volte la vecchia bandierina di squadra. Le guardie di pattuglia restano senza scudo. Il Lab ha le voci «Picchiere» e «Araldo». La leva non veste più la livrea: abiti di classe del popolano più un cappuccio coi colori dello stemma, con lancia e scudo (L1) oppure con l'arco (L2). Ruolo dei maschi per classe: L1 fanti di leva, L2 arcieri di leva, L3 uomini d'arme, L4 cavalieri (`combatRole`, decisione D-MIL-FIG-261117 in DECISIONS); come si chiamano in campo L3 e L4 è ancora da definire. Uomo d'arme (L3) con gonnello con lo stemma, elmo dei cavalieri e arma a due mani casuali per persona. Cavalieri (L4) con mantello e cimiero araldico (torciglio, mantellino e figura fra ali, corna di cervo, corna, aquila, corona), a cavallo e a piedi; smontati con spada e scudo nel torneo e nel campo di addestramento. In BACKLOG resta aperta la torcia in più della lancia per le guardie di notte. ROADMAP invariata. DECISIONS: nuova D-MIL-FIG-261117.
+
 ### 2026-11-17 — ROOM-ANIM-COMMON · Soldati e servitù nella Sala comune
 
 `feat/throne-hall-court`: nella Sala comune in sezione siede un commensale per panca (soldati e civili che bevono) e un servo porta il cibo in capo a ogni tavolo; vuota di notte e durante un allarme. Nuovo mestiere `servant` nel guardaroba (voce del Lab e baseline). Test in `qa/staff-people-regression.cjs`. ROADMAP e DECISIONS invariate.
@@ -99,9 +164,11 @@ Regole della mischia corrette: ogni nemico a contatto attacca, l'energia si cons
 - 16/11: torre quadra d'angolo senza porta al P0 (salvo rotazione a 45° verso l'interno); test in qa/gate-tower-entrance-regression.cjs.
 - Rimuovi foresta usa i bypass DEV Fast build e Free build; versioni cache degli script toccati aggiornate. Test in qa/forestry-regression.cjs.
 - Il selettore ▲/▼ del cutaway ora toglie anche la cresta merlata e il braciere del tetto quando si scende sotto l'ultimo piano; test in qa/cutaway-floors-regression.cjs.
+
 ## 2026-11-16 — UI-ALERTS-01 · Avvisi in gioco e diario degli eventi
 
 `feature/alert-feed`: pila di avvisi in alto al centro (UI v2) con titolo, dettagli espandibili, chiusura manuale e chiusura automatica (eventi dopo 9 s, 20 s se gravi; condizioni solo dopo la risoluzione, con 4 s di tolleranza contro lo sfarfallio). Nuova sezione Gestisci › Diario degli eventi con filtri per gravità e categoria, persistita per seme nel browser. Moduli `src/ui/alerts.js` (logica pura) e `src/ui/alert-watchers.js`; test `qa/ui-alerts-regression.mjs` e workflow `UI alerts regression`. Gli avvisi sono collegati ai messaggi (messaggero/colombo in arrivo, lettera in attesa con «Leggi il messaggio», risposta accettata/rifiutata, stati delle carovane). Fix: il messaggero a cavallo si ferma fuori, davanti alla porta del Mastio (o ai piedi della scala dell'ingresso rialzato), invece di entrare nella sala comune; i salvataggi vecchi vengono spostati sulla soglia. ROADMAP e DECISIONS invariate: nessun contratto di gioco cambiato, la UI legge solo lo stato.
+
 ## 2026-11-16 — THREAT-GEN-01 · Minacce rare
 
 Probabilità del generatore ridotte di circa 8 volte, grazia e quiete allungate: a Normale ~5 eventi l'anno invece di ~42 (orso uno ogni ~3 anni, ~1 razzia l'anno). Tassi bloccati in `qa/threats-regression.cjs`. STATUS, BACKLOG, DECISIONS aggiornati; ROADMAP invariata.

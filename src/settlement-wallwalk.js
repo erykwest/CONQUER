@@ -23,6 +23,35 @@
     }
     return{a:s.a,b:s.b};
   }
+  // W2+ palisades walk behind the stakes, off the centre line: where two of them meet end to end
+  // (a corner with no tower) their lanes would stop short of each other and the ring would break.
+  // Each such pair of lane ends is mitred to the point where the two lanes cross, so the walk is
+  // continuous; centre-line lanes (stone walls) already meet there and are unchanged.
+  function mitreJoints(list){
+    const ends=[];
+    for(const it of list)for(const end of ['a','b'])
+      if(!it.wall[end+'Snap'])ends.push({it,end,p:it.wall[end]});
+    const used=new Set();
+    for(const e of ends){
+      if(used.has(e))continue;
+      const at=ends.filter(o=>o!==e&&!used.has(o)&&o.it!==e.it&&Math.hypot(o.p.x-e.p.x,o.p.y-e.p.y)<JOIN);
+      if(at.length!==1)continue;                 // a lone end, or a crossing of three or more
+      const o=at[0];used.add(e);used.add(o);
+      const q=e.it.lane[e.end],r=o.it.lane[o.end];
+      if(Math.hypot(q.x-r.x,q.y-r.y)<1e-6)continue;
+      const L1=e.it.lane,L2=o.it.lane;
+      const d1={x:L1.b.x-L1.a.x,y:L1.b.y-L1.a.y},d2={x:L2.b.x-L2.a.x,y:L2.b.y-L2.a.y};
+      const den=d1.x*d2.y-d1.y*d2.x;
+      let x;
+      if(Math.abs(den)<1e-9)x={x:(q.x+r.x)/2,y:(q.y+r.y)/2};   // in line: meet half way
+      else{
+        const k=((r.x-q.x)*d2.y-(r.y-q.y)*d2.x)/den;
+        x={x:q.x+d1.x*k,y:q.y+d1.y*k};
+        if(Math.hypot(x.x-e.p.x,x.y-e.p.y)>1)x={x:(q.x+r.x)/2,y:(q.y+r.y)/2}; // very sharp angle
+      }
+      L1[e.end]={...x};L2[o.end]={...x};
+    }
+  }
   // Interior side of a tower/gate: where its stair comes down.
   function interiorOf(h){
     if(h.type==='gate'){const a=Number(h.angle)||0;return{x:-Math.cos(a),y:-Math.sin(a)}}
@@ -54,9 +83,10 @@
       return n;
     };
     const link=(a,b,len,edge=null)=>{a.adj.push({to:b,len,edge});b.adj.push({to:a,len,edge})};
-    for(const s of State.structures){
-      if(!walkable(s))continue;
-      const z=walkZ(s),l=lane(s),A=node(l.a,z),B=node(l.b,z);
+    const walks=State.structures.filter(walkable).map(s=>({wall:s,lane:lane(s)}));
+    mitreJoints(walks);
+    for(const {wall:s,lane:l} of walks){
+      const z=walkZ(s),A=node(l.a,z),B=node(l.b,z);
       const e={id:edges.length,wall:s,a:l.a,b:l.b,len:Math.hypot(l.b.x-l.a.x,l.b.y-l.a.y),z,A,B};
       edges.push(e);link(A,B,e.len,e);
       // Ends seated on a tower/gate join through it; the tower/gate is a stair.

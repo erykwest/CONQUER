@@ -335,13 +335,23 @@
     ['#8e4d4d','#5e3434'],['#a58b5b','#6f5c3c'],['#6b5a7d','#483c57'],['#c2b49a','#8a7d66']];
   const PLAYERS=[['#c9452f','#d9b13b'],['#3f7d3a','#d9b13b'],['#2f56a6','#ece6d6'],['#7c2a33','#d9b13b']];
   const KINDS=['peasant','artisan','merchant','peasant'];
-  function figureAt(p,z,id,kind,colors,hop){
+  // The crowd dresses for the calendar month and the weather like the residents (settlement-wardrobe.js):
+  // cloaks and hoods in winter, rain capes in the rain, straw hats in summer. Players keep their motley.
+  const sexOf=id=>hash(id+'sex')&1?'female':'male';
+  function crowdOutfit(id,kind,colors){
+    return window.ConquerWardrobe?.outfitFor?.({id,kind,colors,sex:sexOf(id),age:'adult'})||null;
+  }
+  // Card keys carry the outfit, so a change of month or weather repaints the cached card.
+  function outfitKey(id,kind,colors){const o=crowdOutfit(id,kind,colors);return o?JSON.stringify(o):''}
+  function figureAt(p,z,id,kind,colors,hop,dressed=true){
     const base=w2s(p,z+(hop||0)),scale=State.view.scale*.5;
-    const bodyW=6.0*scale,bodyH=8.0*scale,headR=2.35*scale,bodyY=base.y-bodyH*.16;
+    const bodyW=6.0*scale,bodyH=8.0*scale,headR=2.35*scale,bodyY=base.y-bodyH*.16,headY=bodyY-bodyH/2-headR*.68;
+    const outfit=dressed?crowdOutfit(id,kind,colors):null,W=window.ConquerWardrobe;
     drawSplitVillagerBody(kind,base.x,bodyY,bodyW,bodyH,colors[0],colors[1]);
-    const sex=hash(id+'sex')&1?'female':'male';
-    drawVillagerHead(id,base.x,bodyY-bodyH/2-headR*.68,headR,sex,villagerHair(id));
-    return{base,bodyY,bodyH,scale,headY:bodyY-bodyH/2-headR*.68,headR};
+    if(outfit)W.drawBody(outfit,{id,colors},base.x,bodyY,bodyW,bodyH);
+    drawVillagerHead(id,base.x,headY,headR,sexOf(id),villagerHair(id));
+    if(outfit)W.drawHead(outfit,base.x,headY,headR);
+    return{base,bodyY,bodyH,scale,headY,headR};
   }
   function armsUp(f,amount){
     if(!(amount>.15))return;
@@ -387,19 +397,19 @@
       const c=perf?PLAYERS[hash(a.id)%PLAYERS.length]:TUNICS[hash(a.id)%TUNICS.length],kind=KINDS[hash(a.id+'k')%KINDS.length];
       const walk=a.action==='walk'?.015*Math.abs(Math.sin(t*6+hash(a.id)%7)):0;
       if(a.fighter){
-        // A combatant: the soldier figure with shield and sword, in a pair of primaries.
+        // A combatant: a dismounted knight (cloak, crest, sword and shield) in a pair of primaries.
         const P=E().PAIRS,[m1,m2]=P[hash(seedOf(s)+'|'+a.id)%P.length],liv={main:m1,alt:m2,mainDark:m1,altDark:m2};
         const swing=Math.floor(((a.swing%1)+1)%1*8)/8;
-        if(card(p,g+.1,'ev|fight|'+m1+m2+'|'+swing,()=>drawSoldierFigureUnmasked(p,0,'swordsman',a.id,swing,liv),a.id))continue;
-        list.push({p,draw:()=>drawSoldierFigureUnmasked(p,g+.1,'swordsman',a.id,a.swing,liv)});
+        if(card(p,g+.1,'ev|fight-knight|'+m1+m2+'|'+swing,()=>drawSoldierFigureUnmasked(p,0,'knight',a.id,swing,liv),a.id))continue;
+        list.push({p,draw:()=>drawSoldierFigureUnmasked(p,g+.1,'knight',a.id,a.swing,liv)});
         continue;
       }
       // Card: the hop lifts the card (not the picture); arms and juggling are bucketed poses.
       if(!(a.fade<.5)){
         const arms=bucket(a.arms,4),jug=a.juggle?Math.floor(((t*1.4)%1)*8):-1;
-        const key='ev|'+kind+'|'+c.join(',')+'|'+a.id+'|'+arms+'|'+jug+'|'+(a.carry||'');
+        const key='ev|'+kind+'|'+c.join(',')+'|'+a.id+'|'+arms+'|'+jug+'|'+(a.carry||'')+'|'+(perf?'':outfitKey(a.id,kind,c));
         if(card(p,z+(a.hop||0)+walk,key,()=>{
-          const f=figureAt(p,0,a.id,kind,c,0);armsUp(f,arms/4);if(a.juggle)juggle(f,(jug+.5)/8/1.4);
+          const f=figureAt(p,0,a.id,kind,c,0,!perf);armsUp(f,arms/4);if(a.juggle)juggle(f,(jug+.5)/8/1.4);
           if(a.carry==='lance'){
             ctx.strokeStyle='#5a3d22';ctx.lineWidth=Math.max(1,f.scale*1.1);
             ctx.beginPath();ctx.moveTo(f.base.x-f.bodyH*.35,f.bodyY+f.bodyH*.3);ctx.lineTo(f.base.x+f.bodyH*.9,f.bodyY-f.bodyH*2.2);ctx.stroke();
@@ -407,7 +417,7 @@
       }else if(cards())continue;   // fading out at the big top's door: gone in the card renderer
       list.push({p,draw:()=>{
         ctx.save();if(a.fade!==undefined&&a.fade<1)ctx.globalAlpha*=Math.max(0,a.fade);
-        const f=figureAt(p,z,a.id,kind,c,(a.hop||0)+walk);armsUp(f,a.arms||0);if(a.juggle)juggle(f,t);
+        const f=figureAt(p,z,a.id,kind,c,(a.hop||0)+walk,!perf);armsUp(f,a.arms||0);if(a.juggle)juggle(f,t);
         if(a.carry==='lance'){
           ctx.strokeStyle='#5a3d22';ctx.lineWidth=Math.max(1,f.scale*1.1);
           ctx.beginPath();ctx.moveTo(f.base.x-f.bodyH*.35,f.bodyY+f.bodyH*.3);ctx.lineTo(f.base.x+f.bodyH*.9,f.bodyY-f.bodyH*2.2);ctx.stroke();
@@ -438,5 +448,5 @@
     }
   }
   window.ConquerEventPeople={slots,occupants,setOccupancySource,provisional,feastScene,circusScene,venueScene,DUEL,draw,occluders,occluderItems,paintList,
-    helpers:{hash,figureAt,armsUp,horse,screenFacing,TUNICS,KINDS,groundOf,card,cards,bucket,tick:()=>tick(),clock:()=>clock}};
+    helpers:{hash,figureAt,crowdOutfit,outfitKey,armsUp,horse,screenFacing,TUNICS,KINDS,groundOf,card,cards,bucket,tick:()=>tick(),clock:()=>clock}};
 })();

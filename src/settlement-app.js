@@ -123,7 +123,7 @@ function addStructure(s){
   let reactive=0;
   if(!s.auto){
     reactive+=repairDisplacedRoads(displaced.roads,s);
-    if(isCivic(s))reactive+=ensureSettlementRoadAccess(s);
+    if(structureNeedsAccessRoad(s))reactive+=ensureSettlementRoadAccess(s);
     // A later well joins the founding well's network with one main road (no border roads).
     if(s.type==='well'&&State.village.founded){reactive+=buildWellMainConnection(s);window.ConquerCombat?.invalidateRoutes?.()}
     if(s.type==='well')reactive+=reconcileTowerSecondaryBranches(Infinity,true);

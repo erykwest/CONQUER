@@ -89,9 +89,15 @@
         // Fall away from the foe, pivoting on the feet.
         ctx.translate(base.x,base.y);ctx.rotate((pose.dirX>0?-1:1)*pose.fall*1.45);ctx.translate(-base.x,-base.y);
       }
-      drawSoldierFigureUnmasked(p,z,armed?'unarmed':type,id,phase,livery,true);
-      if(type==='spearman')drawSoldierFixedHands('spearman',base,bodyW,bodyH,bodyY,scale);
-      if(type==='spearman')drawSpear(base,scale,bodyW,bodyH,bodyY,headY,pose);
+      // The man-at-arms draws whole (gambeson, armour, two-handed weapon): no separate posed weapon.
+      if(type==='manAtArms'){drawSoldierFigureUnmasked(p,z,type,id,phase,livery);ctx.restore();return}
+      // Knights keep their cloak and crest on the posed body ('knightUnarmed'); posed=true: the
+      // weapon hands are drawn here, with the weapons (FIG-HANDS-261117).
+      drawSoldierFigureUnmasked(p,z,armed?(type==='knight'?'knightUnarmed':'unarmed'):type,id,phase,livery,true);
+      if(type==='spearman'||type==='herald')drawSoldierFixedHands(type,base,bodyW,bodyH,bodyY,scale);
+      if(type==='pikeman'||type==='herald')drawSpearShield(base,scale,bodyW,bodyH,bodyY,id,livery,pose);
+      if(type==='herald'){/* standard instead of the spear: drawn by the combat overlay */}
+      else if(type==='spearman'||type==='pikeman')drawSpear(base,scale,bodyW,bodyH,bodyY,headY,pose);
       else if(type==='axeman'&&typeof drawAxeAndRoundShield==='function')drawAxeAndRoundShield(base,scale,bodyW,bodyH,bodyY,top,pose);
       else if(armed)drawSword(base,scale,bodyW,bodyH,bodyY,top,id,phase,livery,pose);
       if(pose.flash>0){
@@ -121,7 +127,8 @@
     }
   }
   function drawSpear(base,scale,bodyW,bodyH,bodyY,headY,pose){
-    const x=base.x+bodyW*.55,gy=bodyY+bodyH*.43;
+    // Right hand of a figure facing the viewer: screen left.
+    const x=soldierSpearHandX(base,bodyW),gy=bodyY+bodyH*.43;
     // Pikes lower toward the foe while engaged and drive home on the thrust.
     const lowered=Math.min(1,pose.ready*.8+Math.max(0,pose.attack)*.2);
     const theta=wrapAngle(Math.atan2(pose.dirY,pose.dirX)+Math.PI/2)*lowered;
@@ -129,26 +136,32 @@
     ctx.save();
     ctx.translate(x,gy);ctx.rotate(theta);ctx.translate(0,-ext);ctx.translate(-x,-gy);
     ctx.strokeStyle='#7a5937';ctx.lineWidth=Math.max(1,1.05*scale);
-    ctx.beginPath();ctx.moveTo(x,gy);ctx.lineTo(x-1.0*scale,headY-13*scale);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x,gy);ctx.lineTo(x+1.0*scale,headY-13*scale);ctx.stroke();
     ctx.fillStyle='#b8bcc0';ctx.beginPath();
-    ctx.moveTo(x-1.0*scale,headY-16*scale);ctx.lineTo(x-3.0*scale,headY-11.5*scale);ctx.lineTo(x+1.0*scale,headY-12.2*scale);ctx.closePath();ctx.fill();
+    ctx.moveTo(x+1.0*scale,headY-16*scale);ctx.lineTo(x+3.0*scale,headY-11.5*scale);ctx.lineTo(x-1.0*scale,headY-12.2*scale);ctx.closePath();ctx.fill();
     drawSpearHand(x,gy,headY-13*scale,bodyY+bodyH*SPEAR_HAND_Y,scale);   // turns and thrusts with the shaft
     ctx.restore();
+  }
+  // Pikeman's / herald's shield: on the left arm (screen right), pushed toward the foe on guard.
+  function drawSpearShield(base,scale,bodyW,bodyH,bodyY,id,livery,pose){
+    const guard=pose.ready*1.2*scale;
+    drawQuarteredShield(base.x+bodyW*.62+pose.dirX*guard,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery||soldierLivery(id),'#b7aa8f',scale,!livery,livery?'oval':soldierShieldStyle());
   }
   function drawSword(base,scale,bodyW,bodyH,bodyY,top,id,phase,livery,pose){
     const side=pose.dirX>=0?1:-1,swing=Math.sin(phase*Math.PI*2)*3.2*scale*(1-pose.ready);
     const guard=pose.ready*1.2*scale;
-    drawQuarteredShield(base.x-bodyW*.62+pose.dirX*guard,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery||soldierLivery(id),'#b7aa8f',scale,!livery,livery?'oval':soldierShieldStyle());
-    const hx=base.x+bodyW*.42,hy=bodyY+bodyH*.16;
+    // Shield on the left arm (screen right), sword in the right hand (screen left): the figure faces the viewer.
+    drawQuarteredShield(base.x+bodyW*.62+pose.dirX*guard,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery||soldierLivery(id),'#b7aa8f',scale,!livery,livery?'oval':soldierShieldStyle());
+    const hx=base.x-bodyW*.42,hy=bodyY+bodyH*.16;
     // Wind-up raises the blade back, the cut sweeps it down toward the foe.
     const theta=side*(pose.attack<0?pose.attack*.9:pose.attack*1.6)+side*pose.ready*.15;
     ctx.save();
     ctx.translate(hx,hy);ctx.rotate(theta);ctx.translate(-hx,-hy);
     ctx.strokeStyle='#c4c7c8';ctx.lineWidth=Math.max(1,1.15*scale);
-    ctx.beginPath();ctx.moveTo(hx,hy);ctx.lineTo(base.x+bodyW*.80+swing,top-7.5*scale);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(hx,hy);ctx.lineTo(base.x-bodyW*.80-swing,top-7.5*scale);ctx.stroke();
     ctx.strokeStyle='#76563b';ctx.lineWidth=Math.max(1,1.2*scale);
-    ctx.beginPath();ctx.moveTo(base.x+bodyW*.23,bodyY+bodyH*.05);ctx.lineTo(base.x+bodyW*.52,bodyY+bodyH*.27);ctx.stroke();
-    drawFigureHand(base.x+bodyW*.40,bodyY+bodyH*.13,scale);   // sword hand swings with the blade
+    ctx.beginPath();ctx.moveTo(base.x-bodyW*.23,bodyY+bodyH*.05);ctx.lineTo(base.x-bodyW*.52,bodyY+bodyH*.27);ctx.stroke();
+    drawFigureHand(base.x-bodyW*.40,bodyY+bodyH*.13,scale);   // sword hand (right, screen left) swings with the blade
     ctx.restore();
   }
   function reset(){lastEventEnd=-1e9}
