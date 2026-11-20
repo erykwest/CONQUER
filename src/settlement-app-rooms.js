@@ -169,13 +169,27 @@ function renderFunctionPanel(){
   const building=underConstruction(s),pr=Math.round(constructionProgress(s)*100),woodTower=isWoodTower(s),woodGate=isWoodGate(s),canHeight=['tower','gate','wall','built'].includes(s.type)&&!woodTower&&!woodGate&&!isLonghouse(s),maxLevel=maxStructureLevel(s),canTier=['tower','wall','palisade'].includes(s.type)&&!woodTower;
   info.innerHTML=`<div class="kv"><span>Selected</span><b>${roomEsc(structureLabel(s))}</b></div>${masonryMaterial(s)?`<div class="kv"><span>Muratura</span><b>${masonryMaterial(s)==='brick'?'Mattoni / Argilla':'Pietra'}</b></div>`:''}${s.type==='house'?(()=>{const pop=housePopulationCapacity(s);return `<div class="kv"><span>Household capacity</span><b>${pop.total}</b></div><div class="cost-line">${pop.male} male · ${pop.female} female · ${pop.children} children</div>`})():simpleCivic?`<div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div><div class="legend">Prototype civic building · functions/routines pending.</div>`:`<div class="kv"><span>Rooms</span><b>${cap} · ${capUnits} capacity</b></div><div class="cost-line">Construction: ${costText(s.buildCost||constructionCost(s))}</div>`}${building?`<div class="slot"><div class="site-label" data-construction-status="true">Under construction · ${s.construction?.version===2?constructionWorkStatus(s)+' · '+remainingDays(s).toFixed(1)+' worker-days left':remainingDays(s).toFixed(1)+' calendar days'}</div><div class="progress"><i style="width:${pr}%"></i></div></div>`:''}${isWideBuilt(s)?`<div class="legend" style="margin-top:7px">Wide hall: one LARGE ground-floor room with free double height (≥2U) — common hall, chapel, throne hall.</div>`:s.type==='built'?`<div class="legend" style="margin-top:7px">One room per level: &lt;2U = none · 2–&lt;3U = NORMAL · ≥3U = LARGE (2× capacity).</div>`:s.type==='tower'&&!woodTower?`<div class="legend" style="margin-top:7px">One room per level: T1 = none · T2 = NORMAL · T3 = LARGE (2× capacity).</div>`:''}`;
   info.innerHTML+=siteLaborLine(s);
-  // L3 commerce: autonomous workshop at home, or the service it operates.
+  // Artisan (L2) commerce: the autonomous workshop at home (ConquerCommerce keeps shops on L2 houses);
+  // a merchant L3 house runs an advanced workshop with two hired L2 hands (D-SHOP-L3-261119).
   const commerce=window.ConquerCommerce;
-  if(s.type==='house'&&houseLevel(s)===3){
-    const shop=commerce?.state?.()?.shops?.[s.id];
+  const houseTier=s.type==='house'?(window.ConquerSocialClasses?.tierOfHouse?.(s)??houseLevel(s)):0;
+  const shopState=shop=>commerce.WORKSHOP_STATES?.includes(shop.state)?shop.state:'closed';
+  if(houseTier===2){
+    const c=commerce?.state?.(),shop=c?.shops?.[s.id];
     const kind=shop&&commerce.WORKSHOP_KINDS[shop.kind];
-    info.innerHTML+='<div class="legend">L3 · '+(kind?kind.label+' · '+(commerce.WORKSHOP_STATES?.includes(shop.state)?shop.state:'closed')+
+    info.innerHTML+='<div class="legend" data-workshop="'+roomEsc(shop?.kind||'')+'">Bottega L2 · '+(kind?roomEsc(kind.label)+' · '+shopState(shop)+
       ' · '+shop.produced+' goods made · '+shop.revenue+' gold taken':'no workshop yet (opens on a workday)')+'</div>';
+    // The household's second artisan hired by a merchant's workshop.
+    const hand=window.ConquerSocialClasses?.householdHeadIds?.(s)?.[1],hire=hand&&commerce?.hireOf?.(hand);
+    if(hire)info.innerHTML+='<div class="legend" data-hired-at="'+roomEsc(hire.structure.id)+'">Lavorante · bottega avanzata '+
+      roomEsc(commerce.WORKSHOP_KINDS[hire.shop.kind]?.label||hire.shop.kind)+' (casa L3)</div>';
+  }else if(houseTier===3){
+    const shop=commerce?.state?.()?.shops?.[s.id];
+    const kind=shop?.grade==='advanced'&&commerce.WORKSHOP_KINDS[shop.kind];
+    if(kind)info.innerHTML+='<div class="legend" data-workshop="'+roomEsc(shop.kind)+'" data-grade="advanced">Bottega avanzata L3 · '+
+      roomEsc(kind.label)+' · '+shopState(shop)+' · artigiani '+shop.workers.length+'/'+commerce.ADVANCED.workers+
+      ' · ×'+commerce.outputFactor(shop)+' · '+shop.produced+' goods made · '+shop.revenue+' gold taken · salari '+
+      shop.wagesPaid+' · margine '+shop.margin+'</div>';
   }
   if(s.type==='tavern'){
     const inn=commerce?.occupancy?.(s.id);

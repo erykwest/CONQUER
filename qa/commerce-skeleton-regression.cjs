@@ -45,7 +45,7 @@ function asObject(o){return JSON.parse(JSON.stringify(o))}
 test('commerce boots empty without L4+ resident inflation or phantom transactions',()=>{
   const h=harness(),before=h.e.snapshot();
   const c=h.c.snapshot(),after=h.e.snapshot();
-  assert.deepEqual(asObject(c),{l3Shops:0,l3Goods:0,l3GoodsValue:0,l3Revenue:0,l3Services:2,l3OperatedServices:0,
+  assert.deepEqual(asObject(c),{l3Shops:0,l3AdvancedShops:0,l3AdvancedHands:0,l3Goods:0,l3GoodsValue:0,l3Revenue:0,l3Services:2,l3OperatedServices:0,
     l4PrimarySites:1,l4PlusPlanned:0,l4PlusPresent:0,
     l4PlusDeclaredGold:0,l4PlusHeldGold:0,l4PlusWagons:0,
     innBeds:0,innOccupied:0});

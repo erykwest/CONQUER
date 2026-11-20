@@ -103,7 +103,12 @@ function residentClassPosition(house,resident,day,assignment){
   if(resident.sex==='male'&&assignment&&level===1)
     return peasantPosition(house,assignment,State.clock.day);
   if(level===1)return null;
-  if(level===2)return artisanPosition(house,shiftedDay);
+  if(level===2){
+    // The second adult may be hired by a merchant's advanced workshop (D-SHOP-L3-261119).
+    const hire=resident.sex==='male'&&resident.age==='adult'?window.ConquerShopCutaway?.hireOf?.(resident.id):null;
+    const site=hire?State.structures.find(s=>String(s.id)===hire.houseId):null;
+    return artisanPosition(house,shiftedDay,site||null);
+  }
   // L2 artisans own the workshops; L3 educated residents trade/administer.
   // No travelling manifest is created by a resident animation.
   if(level===3)return educatedPosition(house,shiftedDay);

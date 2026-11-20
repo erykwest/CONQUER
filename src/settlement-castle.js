@@ -465,9 +465,13 @@ function buildableTerrainElevationForStructure(s){
 // Walls on slopes: a thin T1 wall (no wall-walk: its merlons are only a crest) follows any slope,
 // a medium T2 wall gentle slopes only, a thick T3 wall needs one flat terrace (like every other
 // linear piece). A wall on a slope is built in steps (wallSlopeSections).
+// Palisades: a plain W1 stake line climbs hill flanks (gentle or steep), every stake driven into
+// the ground under it; W2 (walkway) and W3 (earthwork) keep needing one flat terrace.
 const WALL_SLOPE_LIMIT=Object.freeze({1:'steep',2:'gentle',3:null});
 function wallTerrainVerdict(s){
   if(buildableTerrainElevationForStructure(s)!=null)return{ok:true,slope:false};
+  if(s?.type==='palisade')return wallTier(s)===1?{ok:true,slope:true}
+    :{ok:false,reason:'W2-W3 palisades (walkway, earthwork) need flat ground'};
   if(s?.type!=='wall')return{ok:false,reason:'Wall segment crosses incompatible terrain'};
   const limit=WALL_SLOPE_LIMIT[wallTier(s)];
   if(!limit)return{ok:false,reason:'Thick (T3) walls need flat ground'};
@@ -521,6 +525,11 @@ function wallSlopeSections(s){
 function linearBuildGroundZ(s){
   const flat=buildableTerrainElevationForStructure(s);if(flat!=null)return flat;
   if(!wallTerrainVerdict(s).ok)return null;
+  // W1 palisade on a slope: no steps, each stake stands on its own ground; the site starts lowest.
+  if(s.type==='palisade'){
+    const samples=structureTerrainSamples(s);
+    return samples.length?Math.min(...samples.map(terrainElevation)):terrainElevation(s.a);
+  }
   const secs=wallSlopeSections(s);
   return secs?Math.min(...secs.map(q=>q.ground+q.low)):null;
 }

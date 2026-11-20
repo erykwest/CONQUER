@@ -1,5 +1,12 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-SHOP-L3-261119 — Botteghe avanzate L3 con artigiani L2 (19/11/2026)
+
+- **DECISO dal product owner:** le botteghe restano degli artigiani L2 (SOC-CLASS-02), ma anche il piano terra delle case L3 può ospitare una bottega: una **bottega avanzata** con **due artigiani L2** e produzione **×2,5**. Gli artigiani continuano ad abitare nelle case L2.
+- **DECISO (proposte accettate):** (1) sui ricavi si pagano prima i **salari** agli artigiani L2 (salario mensile L2 diviso 20 turni, per giorno lavorato, borsa L2); il resto è il **margine** del proprietario L3 (borsa L3). (2) Solo le case L3 con professione **mercante** (`educatedProfession`) aprono una bottega avanzata; scrivani, magistrati e amministratori no, e nemmeno chi gestisce già locanda o chiesa. (3) Con **un solo** artigiano la bottega produce ×1, senza artigiani resta **vacant** e non produce.
+- **CONTRATTO:** il lavorante è il **secondo adulto** di una casa L2 (`householdHeadIds[1]`), preso dalle case L2 più vicine; il primo adulto tiene la bottega di casa. Una casa promossa da L2 a L3 mercante trasforma la sua bottega in avanzata e mantiene il mestiere. I ricavi del sabato si dividono fra le botteghe dello stesso bene in proporzione alla produzione. Nessuna moneta creata.
+- **RESTA DA FARE:** le stanze del piano terra L2 vanno ridisegnate (seconda PR di questo filone).
+
 ## D-WEB-GUEST-261119 — Guest singleplayer, splash seed e login unico opzionale (19/11/2026)
 
 - **DECISO dal product owner:** il login al sito/gioco e **facoltativo**; esiste una sola identita persistente CONQUER per l'utente registrato, usata su entrambi i client.

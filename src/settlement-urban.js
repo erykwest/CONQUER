@@ -942,7 +942,7 @@ function houseFacadePlan(house,part,edge){
     seg(0,top,0,ridge-t*2);seg(-hc,zc,hc,zc);
     seg(-half*.62,top+t,-t,top+(ridge-top)*.72);seg(half*.62,top+t,t,top+(ridge-top)*.72);
   }
-  // An L3 workshop's shop window replaces the ground-floor window it falls on.
+  // A workshop's shop window replaces the ground-floor window it falls on.
   const shopWindows=(typeof window!=='undefined'&&window.ConquerShopCutaway?.facadeCut(house,part,edge,windows))||windows;
   return houseFacadeTurretCut(part,edge,{windows:shopWindows,beams});
 }
@@ -1195,7 +1195,7 @@ function withUrbanFigureOcclusion(p,z,drawFn,ignoreBuildingKey=null){
   // of architectural faces costs far more than it contributes visually.
   if(State.view.scale<.48)return drawFn();
   const screen=w2s(p,z),depth=viewDepthPoint(p),r=wrap.getBoundingClientRect();
-  // An open L3 workshop no longer hides anyone (its walls are cut to the sill).
+  // An open workshop no longer hides anyone (its walls are cut to the sill).
   const open=window.ConquerShopCutaway?.activeId?.()||'',openIds=open?open.split(','):[];
   const pieces=urbanOcclusionPieces().filter(q=>(ignoreBuildingKey==null||q.buildingKey!==ignoreBuildingKey)&&!openIds.includes(q.houseId)&&q.maxDepth>depth&&
     q.minX<screen.x+28&&q.maxX>screen.x-28&&q.minY<screen.y+12&&q.maxY>screen.y-44);

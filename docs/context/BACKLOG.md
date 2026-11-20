@@ -8,6 +8,40 @@
 - [x] Pini 75% e 1,5x; boschi 1,3x; sottobosco 2x; cespugli di riva 2D legacy.
 - [ ] Aperti: la neve sui rami si legge poco a distanza su terreno bianco; i 7 alberi spogli condividono il tronco; asset audit del Lab non eseguito; prestazioni con la nuova densità da misurare.
 
+### 2026-11-19 — SHOP-L3-ADV · Botteghe avanzate L3
+
+**IMPLEMENTATO SU BRANCH `feature/shops-l3-advanced`, NON MERGE.** Dettagli in [STATUS](STATUS.md), decisione D-SHOP-L3-261119.
+- [x] Bottega avanzata sulle case L3 mercanti con due artigiani L2, ×2,5 (×1 con uno, ferma senza).
+- [x] Salari agli L2, margine al mercante L3; vendite divise per produzione.
+- [x] Cutaway, tragitto dei lavoranti, banco e bancone, ispettore, Lab.
+- [ ] Stanze del piano terra L2 da ridisegnare (PR successiva).
+- [ ] Bilanciamento: con la Gilda il ×2,5 si moltiplica; verificare prezzi e scorte dei Beni L3 su una partita lunga.
+
+### 2026-11-18 — SHOP-CUT-261118 · Botteghe del cutaway
+
+**IMPLEMENTATO SU BRANCH `fix/cutaway-shops`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Cutaway, fronte su strada e artigiano al banco sulle case L2 che hanno una bottega.
+- [x] Ispettore con la bottega sulla casa L2 che la gestisce.
+- [ ] La casa L2 è più piccola della L3: valutare in partita se il banco su strada e la stanza restano leggibili sulle case a schiera (`urbanDenseParts`).
+
+### 2026-11-18 — Microfix: posti per arcieri sulla torre di vedetta lignea
+
+**IMPLEMENTATO SU BRANCH `fix/watchtower-slots`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] La vedetta ha 2 posti per arcieri sul ballatoio (prima 0): pannello, assegnazione, tiratori in combattimento e figure.
+- [ ] Anche la torre lignea a telaio H2 (`frameTower`, ballatoio aperto a 2,66 U) e la torre a palizzata coperta hanno 0 posti: decidere se ne servono.
+
+### 2026-11-18 — WOOD-GATE-SLOTS-261118 · Spazi della porta in legno
+
+**IMPLEMENTATO SU BRANCH `fix/wood-gate-slots`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] «Gate di legno deve avere slot, ora ne ha 0»: 1 spazio stanza sul ponte sopra il passaggio (porta in pietra L3: 2).
+- [ ] La porta in legno non ha cutaway: la stanza assegnata non si vede (già aperto in «APERTO (legno)»).
+
+### 2026-11-18 — PAL-W1-SLOPE · Palizzate W1 sui fianchi delle colline
+
+**IMPLEMENTATO SU BRANCH `fix/palisade-w1-slopes`, NON MERGE.**
+- [x] Palizzata W1 costruibile su pendio, paletti seduti sul terreno.
+- [ ] Le mura in pietra non controllano il pendio quando si cambia tier (T1 su scosceso → T3): stessa guardia da valutare.
+
 ### 2026-11-18 — ROAD-ACCESS-261118 · Strade secondarie per ogni edificio con ingresso
 
 **IMPLEMENTATO SU BRANCH `fix/secondary-roads`.** Dettagli in [STATUS](STATUS.md).
@@ -224,6 +258,15 @@
 - [ ] Porte delle torri d'angolo per le altre forme (tonde, a D): da definire.
 - [x] Rimuovi foresta rispetta Fast build (istantaneo) e Free build (senza salari) del menu DEV.
 - [x] Cutaway piano per piano: i merli (e caditoie, tetto interno, braciere) spariscono quando il piano in vista non è l'ultimo.
+## 2026-11-18 — MSG-FEED-261118 · Messaggi e notifiche funzionanti anche nella UI classica
+
+Branch `fix/messages-notifications`. Dettagli in [STATUS](STATUS.md).
+- [x] Avvisi e diario degli eventi anche nella UI classica (default), non solo con `?ui=2`.
+- [x] «Mostra sulla mappa» centra la camera (struttura o porta del Mastio dove aspetta il messaggero).
+- [x] Dopo un ricarico, un messaggio ancora in attesa non viene scritto due volte nel diario.
+- [x] Test: un evento di gioco letto dai watcher arriva nel feed (`qa/ui-alerts-regression.mjs`).
+- [ ] Nella UI classica su finestre strette la pila di avvisi può toccare la scheda del diario aperta.
+
 
 ## 2026-11-16 — UI-ALERTS-01 · Avvisi in gioco e diario degli eventi
 
@@ -234,7 +277,7 @@
 - [x] Fix: il messaggero a cavallo si ferma davanti alla porta del Mastio, non dentro la sala comune.
 - [ ] Verificare nel gioco la posizione del messaggero con Mastio a ingresso rialzato e a piano terra.
 - [ ] Salvare il diario nel salvataggio di partita (oggi solo `localStorage` del browser).
-- [ ] Centrare la camera sulla struttura con «Mostra sulla mappa» (oggi la seleziona e apre l'ispettore).
+- [x] Centrare la camera sulla struttura con «Mostra sulla mappa» (MSG-FEED-261118: `commands.focus`, anche sul punto del messaggero).
 - [ ] Portare i messaggi di stato inglesi dei moduli legacy (`status()`) a chiavi tradotte e farli passare dal centro avvisi.
 ## 2026-11-16 — THREAT-GEN-01 · Generatore di minacce
 

@@ -4,6 +4,30 @@
 
 `feature/winter-phases`: l'inverno (1 dic – 28 feb) ha quattro quarti: alberi e cespugli spogli con sottobosco marrone, due quarti di neve a terra, poi spogli con sottobosco verde e senza neve; con meteo neve, in qualunque giorno d'inverno, è blizzard (neve a terra e retino di neve sui rami). Alberi spogli con rami secondari; neve a retino su rami, cespugli, pini e cenge; versante della montagna bianco con neve a terra; scarpate ripide in roccia nuda; neve sui sassi di riva e costa. Pini 75% e 1,5x, boschi 1,3x, sottobosco 2x; cespugli di riva 2D legacy al posto dei modelli 3D; billboard 3D con profondità verticale. Test in `qa/winter-phases-regression.cjs`. ROADMAP e DECISIONS invariate.
 
+### 2026-11-18 — MSG-FEED-261118 · Messaggi e notifiche anche nella UI classica
+
+`fix/messages-notifications`: gli avvisi di UI-ALERTS-01 (#256) comparivano solo con `?ui=2`; ora pila di avvisi e diario degli eventi sono montati anche nella UI classica (default). «Mostra sulla mappa» centra la camera (`ConquerGame.commands.focus`), anche sul punto dove aspetta il messaggero; nessun doppione nel diario dopo un ricarico. Test end-to-end watcher → feed in `qa/ui-alerts-regression.mjs`. ROADMAP e DECISIONS invariate: correzione della consegna di UI-ALERTS-01, nessun contratto nuovo.
+
+### 2026-11-19 — SHOP-L3-ADV · Botteghe avanzate L3 (D-SHOP-L3-261119)
+
+`feature/shops-l3-advanced` (base `fix/cutaway-shops`, #277): le case L3 dei mercanti aprono botteghe avanzate con due artigiani L2 assunti (secondo adulto delle case L2 più vicine), produzione ×2,5 (×1 con un solo artigiano, ferma senza), salari agli L2 e margine al mercante L3. Cutaway, fronte su strada, tragitto degli artigiani verso la bottega (banco e bancone), ispettore su L3 e L2, Lab (famiglia «Botteghe avanzate L3», 21 render in baseline). Nuova `qa/shops-l3-advanced-regression.cjs`. DECISIONS: nuova D-SHOP-L3-261119. ROADMAP invariata.
+
+### 2026-11-18 — SHOP-CUT-261118 · Botteghe del cutaway di nuovo funzionanti
+
+`fix/cutaway-shops`: dopo SOC-CLASS-02 (#206) le botteghe stanno sulle case L2 (artigiani), ma il cutaway, il fronte su strada (vetrina, insegna) e l'artigiano al banco chiedevano ancora una casa L3, e l'ispettore mostrava la bottega solo sulle L3 («no workshop yet» per sempre). Ora seguono la classe L2 di ConquerCommerce; voci del Lab rinominate `bottega-l2-*` (famiglia «Botteghe L2») e baseline dell'audit aggiornata per i 21 render. ROADMAP e DECISIONS invariate: si applica la decisione esistente di SOC-CLASS-02.
+
+### 2026-11-18 — Microfix: posti per arcieri sulla torre di vedetta
+
+`fix/watchtower-slots`: la torre di vedetta lignea aveva 0 posti per arcieri; ora ne ha 2 sul ballatoio (1,46 U), assegnabili dal pannello e usati dal combattimento. Nuova `qa/watchtower-slots-regression.cjs` nel workflow `tower-variants-regression`. ROADMAP e DECISIONS invariate: correzione di un contratto esistente (ogni torre finita con un piano di tiro ha posti), nessuna decisione nuova.
+
+### 2026-11-18 — WOOD-GATE-SLOTS-261118 · La porta in legno ha uno spazio stanza
+
+`fix/wood-gate-slots`: la porta in legno (fissa H1) aveva 0 spazi stanza perché `functionCapacity` dava alle porte `livello − 1`. Ora ha 1 spazio sul ponte di combattimento sopra il passaggio (la porta in pietra L3 ne ha 2), con le regole delle porte in pietra (caserma, armeria sì; prigione, stalle, bottega no). Nuova `qa/wood-gate-slots-regression.cjs` nel workflow `gate-six-sockets-regression`. ROADMAP e DECISIONS invariate: correzione di una regola, nessun contratto nuovo.
+
+### 2026-11-18 — PAL-W1-SLOPE · Palizzate W1 sui fianchi delle colline
+
+`fix/palisade-w1-slopes`: le palizzate W1 si costruiscono su pendii dolci e scoscesi (prima ogni palizzata voleva un terrazzo piano); W2-W3 restano solo in piano, anche come upgrade. Paletti 3D e di cantiere poggiati sul terreno più basso sotto ciascuno. Nuova `qa/palisade-slope-regression.cjs`. ROADMAP e DECISIONS invariate.
+
 ### 2026-11-18 — ROAD-ACCESS-261118 · Strade secondarie per ogni edificio
 
 `fix/secondary-roads`: le strade secondarie di accesso erano limitate a case, campi e civici; ora ogni edificio con ingresso (anche taglialegna, cave, miniere, mulini, depositi) è collegato alla rete principale tramite la regola unica `structureNeedsAccessRoad`. Nuova `qa/access-roads-regression.cjs` nel workflow `road-magnet-regression`. ROADMAP e DECISIONS invariate: correzione della regola esistente, nessun contratto nuovo.

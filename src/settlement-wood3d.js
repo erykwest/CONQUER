@@ -68,8 +68,12 @@
   }
   const hash=window.ConquerUtil.hash;
   // One stake: unit body scaled to r x (bodyZ - z0), then a tip to tipZ (or a flat cap).
+  // On a hill flank the foot goes down to the lowest ground under the stake, so its downhill
+  // side never floats; the body height is still measured from the ground at its centre.
   function addStake(mesh,center,r,z0,bodyZ,tipZ,angle,seed){
-    const ground=terrainElevation(center),base=ground+z0-(z0<=0?.06:0);
+    const ground=terrainElevation(center);
+    const low=Math.min(ground,...[[r,0],[-r,0],[0,r],[0,-r]].map(([dx,dy])=>terrainElevation({x:center.x+dx,y:center.y+dy})));
+    const base=z0>0?ground+z0:low+z0-.06;
     addModel(mesh,'stake',{x:center.x,y:center.y,angle,sx:r,sy:r,sz:ground+bodyZ-base},base,['body']);
     if(tipZ>bodyZ)addModel(mesh,'stake',{x:center.x,y:center.y,angle:angle+(seed&3)*Math.PI/2,sx:r,sy:r,sz:tipZ-bodyZ},ground+bodyZ,[seed&4?'tipB':'tipA']);
     else addModel(mesh,'stake',{x:center.x,y:center.y,angle,sx:r,sy:r,sz:ground+bodyZ-base},base,['cap']);

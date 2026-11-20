@@ -1,5 +1,5 @@
 'use strict';
-// CONQUER Commerce: autonomous L3 street workshops producing "Beni L3" priced
+// CONQUER Commerce: autonomous L2 (artisan) street workshops producing "Beni L3" priced
 // weekly with a one-week lag, L3 services, L4 productive-site capital and L4+
 // intercity traveler manifests. Workshop rules come from ConquerUrbanEconomy,
 // goods and prices from ConquerMarketEconomy. Sales move real household coins.
@@ -13,6 +13,11 @@
   // Weekly L3 goods wanted per resident, by class (before tradeWeight).
   const L3_GOODS_NEED=Object.freeze({L1:0,L2:.04,L3:.08,L4:.2});
   const SHOP_OUTPUT_PER_DAY=1;
+  // SHOP-L3-ADV (D-SHOP-L3-261119): a merchant L3 house runs an advanced workshop staffed by two
+  // L2 artisans (the second adult of an L2 household; the first keeps his own shop at home).
+  // Two hands: 2.5x a home shop; one: 1x; none: shut. Takings pay the artisans' wage first
+  // (monthly L2 wage over 20 shifts, per worker-day), the rest is the L3 owner's margin.
+  const ADVANCED=Object.freeze({workers:2,output:2.5,outputShort:1,shiftsPerMonth:20});
   const SERVICE_KINDS=Object.freeze({
     tavern:Object.freeze({operatorTier:3,kind:'lodging',income:'not-simulated'}),
     church:Object.freeze({operatorTier:3,kind:'worship',income:'not-simulated'})
@@ -68,6 +73,21 @@
   };
   const l2House=id=>houseOfTier(id,2);
   const l3House=id=>houseOfTier(id,3);
+  // Only merchant households (not scribes or magistrates) run an advanced workshop.
+  const merchantHouse=id=>{
+    const h=l3House(id),SC=window.ConquerSocialClasses;
+    if(!h)return null;
+    return (SC?.educatedProfession?SC.educatedProfession(h,State.structures||[]):'merchant')==='merchant'?h:null;
+  };
+  const advanced=shop=>shop?.grade==='advanced';
+  // The shop's house still fits its grade: home shops on L2, advanced shops on merchant L3.
+  const shopHouse=(id,shop)=>advanced(shop)?merchantHouse(id):l2House(id);
+  // The L2 household member an advanced workshop can hire: the second adult man.
+  function hireableId(h){
+    const SC=window.ConquerSocialClasses;
+    const heads=SC?.householdHeadIds?SC.householdHeadIds(h):[String(h.id)+':m:0',String(h.id)+':m:1'];
+    return heads.length>=2?heads[1]:null;
+  }
   const l4House=id=>{
     const h=structure(id);
     return h?.type==='house'&&completed(h)&&
@@ -85,6 +105,11 @@
       if(LEGACY_KINDS[shop.kind])shop.kind=LEGACY_KINDS[shop.kind];
       if(shop.status==='blueprint')shop.status='active';
       shop.state??='closed';shop.revenue=finite(shop.revenue);shop.produced=finite(shop.produced);
+      if(shop.grade!=='advanced')shop.grade='basic';
+      if(advanced(shop)){
+        if(!Array.isArray(shop.workers))shop.workers=[];
+        shop.wagesDue=finite(shop.wagesDue);shop.wagesPaid=finite(shop.wagesPaid);shop.margin=finite(shop.margin);
+      }
     }
     if(!c.goods||typeof c.goods!=='object')c.goods={};
     for(const id of Object.keys(Market.COMMODITIES))c.goods[id]=Math.max(0,finite(c.goods[id]));
@@ -113,7 +138,15 @@
     const c=state();
     if(!c)return null;
     for(const [id,shop] of Object.entries(c.shops)){
-      if(!l2House(id)||!WORKSHOP_KINDS[shop.kind])delete c.shops[id];
+      if(!WORKSHOP_KINDS[shop.kind]){delete c.shops[id];continue}
+      // A home shop whose house became a merchant L3 house grows into an advanced workshop.
+      if(!advanced(shop)&&!l2House(id)&&merchantHouse(id))makeAdvanced(shop,id);
+      if(!shopHouse(id,shop)){delete c.shops[id];continue}
+      // Hands whose household is gone, or no longer L2, leave the workshop.
+      if(advanced(shop)){
+        const hands=new Set((State.structures||[]).filter(h=>h.type==='house'&&l2House(h.id)).map(hireableId));
+        shop.workers=shop.workers.filter(w=>hands.has(w));shop.artisanId=shop.workers[0]||null;
+      }
     }
     for(const [id,entry] of Object.entries(c.services)){
       const s=structure(id);
@@ -142,9 +175,42 @@
     }
     return c;
   }
-  function openShop(c,id,kind,source,day){
-    c.shops[id]={houseId:id,kind,ownerTier:2,channel:'local',status:'active',source,
+  function openShop(c,id,kind,source,day,grade='basic'){
+    c.shops[id]={houseId:id,kind,ownerTier:2,channel:'local',status:'active',source,grade:'basic',
       artisanId:id+':m:0',state:'closed',createdDay:Math.floor(finite(day)),revenue:0,produced:0};
+    if(grade==='advanced')makeAdvanced(c.shops[id],id);
+  }
+  function makeAdvanced(shop,id){
+    Object.assign(shop,{grade:'advanced',ownerTier:3,ownerHouseId:String(id),
+      workers:Array.isArray(shop.workers)?shop.workers:[],artisanId:null,
+      wagesDue:finite(shop.wagesDue),wagesPaid:finite(shop.wagesPaid),margin:finite(shop.margin)});
+  }
+  // Every hired hand, by resident id.
+  function hires(c){
+    const out=new Map();
+    for(const shop of Object.values(c.shops))if(advanced(shop))for(const w of shop.workers)out.set(w,shop);
+    return out;
+  }
+  // Fill the advanced workshops' benches from the nearest L2 households (id order breaks ties).
+  function staffAdvanced(c){
+    const taken=hires(c);
+    const pool=(State.structures||[]).filter(h=>h.type==='house'&&l2House(h.id)).map(h=>({h,id:hireableId(h)}))
+      .filter(x=>x.id&&!taken.has(x.id));
+    for(const [houseId,shop] of Object.entries(c.shops).sort(([a],[b])=>a.localeCompare(b))){
+      if(!advanced(shop)||shop.workers.length>=ADVANCED.workers)continue;
+      const home=structure(houseId);if(!home)continue;
+      pool.sort((a,b)=>Math.hypot(a.h.x-home.x,a.h.y-home.y)-Math.hypot(b.h.x-home.x,b.h.y-home.y)||String(a.h.id).localeCompare(String(b.h.id)));
+      while(shop.workers.length<ADVANCED.workers&&pool.length){
+        const x=pool.shift();shop.workers.push(x.id);taken.set(x.id,shop);
+      }
+      shop.artisanId=shop.workers[0]||null;
+    }
+  }
+  // Workshop output per workday relative to a home shop (before the guild bonus).
+  function outputFactor(shop){
+    if(!advanced(shop))return 1;
+    const n=shop.workers?.length||0;
+    return n>=ADVANCED.workers?ADVANCED.output:n>0?ADVANCED.outputShort:0;
   }
   // Explicit registration (tests, future UI); the simulation spawns autonomously.
   function registerShop(houseId,kind){
@@ -153,6 +219,25 @@
     if(Object.values(c.services).some(s=>s.operatorHouseId===id))return false;
     openShop(c,id,kind,'registered',State.clock?.day);
     State.dirty=true;return true;
+  }
+  // Explicit advanced workshop on a merchant L3 house (tests, future UI); staffed on the next day.
+  function registerAdvancedShop(houseId,kind){
+    const c=sync(),id=String(houseId);
+    if(!c||!validId(id)||!merchantHouse(id)||!WORKSHOP_KINDS[kind]||c.shops[id])return false;
+    if(Object.values(c.services).some(s=>s.operatorHouseId===id))return false;
+    openShop(c,id,kind,'registered',State.clock?.day,'advanced');
+    staffAdvanced(c);
+    State.dirty=true;return true;
+  }
+  // The advanced workshop an L2 resident is hired at: {shop, structure, index} or null.
+  function hireOf(residentId){
+    const c=state();if(!c)return null;
+    for(const [id,shop] of Object.entries(c.shops)){
+      if(!advanced(shop))continue;
+      const index=shop.workers.indexOf(String(residentId));
+      if(index>=0){const s=structure(id);return s?{shop,structure:s,index}:null}
+    }
+    return null;
   }
   // Deterministic per seed, house and day: reloading never reshuffles trades.
   function seededRandom(key){
@@ -179,10 +264,22 @@
     const busy=new Set([...Object.keys(c.shops),...Object.values(c.services).map(s=>s.operatorHouseId).filter(Boolean)]);
     const houses=(State.structures||[]).filter(h=>h.type==='house'&&l2House(h.id)&&!busy.has(String(h.id)))
       .sort((a,b)=>String(a.id).localeCompare(String(b.id)));
-    if(!houses.length)return 0;
     const pop=residents(),welfare=finite(window.ConquerEconomy?.state?.()?.welfare)/100;
     const existing=Object.values(c.shops).map(s=>({houseId:s.houseId,artisanId:s.artisanId,type:s.kind}));
     let opened=0;
+    // Merchant L3 houses open an advanced workshop when an L2 hand can be hired for it.
+    const free=(State.structures||[]).filter(h=>h.type==='house'&&l2House(h.id)).map(hireableId)
+      .filter(id=>id&&!hires(c).has(id)).length;
+    const merchants=(State.structures||[]).filter(h=>h.type==='house'&&merchantHouse(h.id)&&!busy.has(String(h.id)))
+      .sort((a,b)=>String(a.id).localeCompare(String(b.id))).slice(0,free);
+    for(const h of merchants){
+      const type=Urban.chooseWorkshopType({demand:sectorDemand(pop),resources:tradeResources(),prosperity:welfare,
+        registry:Urban.workshopRegistry(existing),random:()=>seededRandom(h.id+'|adv|'+Math.floor(day))});
+      if(!type)continue;
+      openShop(c,String(h.id),type,'autonomous',day,'advanced');
+      existing.push({houseId:String(h.id),artisanId:null,type});
+      opened++;
+    }
     for(const h of houses){
       const proposal=Urban.proposeWorkshops({
         houses:[{id:String(h.id),level:2}],artisans:[{id:String(h.id)+':m:0',tier:2}],existing,
@@ -212,13 +309,26 @@
         if(!(qty>1e-6))continue;
         const paid=roundGold(qty*price);
         e.wallet[group]=roundGold(Math.max(0,finite(e.wallet[group])-paid));
-        e.wallet.L2=roundGold(finite(e.wallet.L2)+paid);
         c.goods[id]=roundGold(c.goods[id]-qty);sold[id]+=qty;
         const makers=Object.values(c.shops).filter(s=>Market.WORKSHOP_OUTPUT[s.kind]===id);
+        // Takings follow each shop's output (an advanced workshop makes 2.5x); goods left by a
+        // closed shop are sold for the artisans at large.
+        const weight=s=>outputFactor(s)||0,total=makers.reduce((n,s)=>n+weight(s),0);
+        if(!total)e.wallet.L2=roundGold(finite(e.wallet.L2)+paid);
         for(const s of makers){
-          s.revenue=roundGold(s.revenue+paid/makers.length);
+          if(!total)break;
+          const share=paid*weight(s)/total;
+          s.revenue=roundGold(s.revenue+share);
+          if(advanced(s)){
+            // Wages owed to the hired L2 hands first, the rest is the L3 owner's margin.
+            const wages=Math.min(share,finite(s.wagesDue)),margin=share-wages;
+            s.wagesDue=roundGold(finite(s.wagesDue)-wages);s.wagesPaid=roundGold(finite(s.wagesPaid)+wages);
+            s.margin=roundGold(finite(s.margin)+margin);
+            e.wallet.L2=roundGold(finite(e.wallet.L2)+wages);
+            e.wallet.L3=roundGold(finite(e.wallet.L3)+margin);
+          }else e.wallet.L2=roundGold(finite(e.wallet.L2)+share);
           // FISCO-01: workshop dues accrue on the takings, where the shop stands.
-          window.ConquerTreasury?.accrueDues?.(paid/makers.length,State.structures?.find(x=>x.id===s.houseId)||null);
+          if(share>0)window.ConquerTreasury?.accrueDues?.(share,State.structures?.find(x=>x.id===s.houseId)||null);
         }
       }
       demand[id]=roundGold(demand[id]);sold[id]=roundGold(sold[id]);
@@ -234,17 +344,21 @@
     if(c.week.index!==week)c.week={index:week,supply:{},demand:{},sold:{}};
     const alarm=(window.ConquerCombat?.alarmMode?.()||'off')!=='off';
     if(dow<5&&!alarm)spawnWorkshops(c,day);
+    staffAdvanced(c);
     const demand=sectorDemand(residents());
-    // GILDA-01: the active guild multiplies every L3 workshop's daily output.
-    const out=roundGold(SHOP_OUTPUT_PER_DAY*(1+Math.max(0,finite(window.ConquerGuild?.bonus?.()))));
+    // GILDA-01: the active guild multiplies every workshop's daily output.
+    const base=SHOP_OUTPUT_PER_DAY*(1+Math.max(0,finite(window.ConquerGuild?.bonus?.())));
+    const wageDay=Math.max(0,finite(e.wage?.L2,2))/ADVANCED.shiftsPerMonth;
     for(const shop of Object.values(c.shops)){
       const good=Market.WORKSHOP_OUTPUT[shop.kind],kind=WORKSHOP_KINDS[shop.kind];
       if(!good||!kind)continue;
-      const working=dow<5&&!alarm;
-      // Sunday rest: shops stay shut; Saturday they sell at the market.
+      const working=dow<5&&!alarm,factor=outputFactor(shop),out=roundGold(base*factor);
+      // Sunday rest: shops stay shut; Saturday they sell at the market. An advanced
+      // workshop without hands stands vacant.
       Object.assign(shop,Urban.updateWorkshop(shop,{hour:dow===6?0:12,demand:demand[kind.demand]??.5,
-        visitors:dow===5?1:0,artisanAvailable:!alarm}));
-      if(!working)continue;
+        visitors:dow===5?1:0,artisanAvailable:!alarm&&factor>0}));
+      if(!working||!(out>0))continue;
+      if(advanced(shop))shop.wagesDue=roundGold(finite(shop.wagesDue)+wageDay*shop.workers.length);
       c.goods[good]=roundGold(c.goods[good]+out);
       c.week.supply[good]=roundGold(finite(c.week.supply[good])+out);
       shop.produced=roundGold(shop.produced+out);
@@ -387,7 +501,9 @@
     const journeys=Object.values(c.journeys);
     const lodging=Object.values(c.services).filter(s=>s.type==='tavern');
     return{
-      l3Shops:Object.keys(c.shops).length, // legacy field name, now L2 artisan shops
+      l3Shops:Object.keys(c.shops).length, // legacy field name: every workshop (L2 home + L3 advanced)
+      l3AdvancedShops:Object.values(c.shops).filter(advanced).length,
+      l3AdvancedHands:Object.values(c.shops).filter(advanced).reduce((n,s)=>n+s.workers.length,0),
       l3Goods:roundGold(Market.aggregateGoods(c.goods).quantity),
       l3GoodsValue:roundGold(Market.aggregateGoods(c.goods).referenceValue),
       l3Revenue:roundGold(Object.values(c.shops).reduce((n,s)=>n+finite(s.revenue),0)),
@@ -406,6 +522,7 @@
   window.ConquerCommerce=Object.freeze({
     WORKSHOP_KINDS,WORKSHOP_STATES:Urban.WORKSHOP_STATES,LEGACY_KINDS,L3_GOODS_NEED,SERVICE_KINDS,PRIMARY_KINDS,daily,
     WAGON_CAPACITY,WAGON_DAY_COST,VEHICLES,CARGO_WEIGHTS,caravanQuote,
+    ADVANCED,outputFactor,registerAdvancedShop,hireOf,
     state,sync,registerShop,assignService,configureInnCapacity,occupancy,worksiteForHouse,
     planJourney,reserveJourneyCoins,cancelPlannedJourney,
     confirmArrival,checkIn,depart,primaryPortfolio,snapshot

@@ -1,5 +1,5 @@
 'use strict';
-// CONQUER L3 workshop cutaway: a selected L3 house that runs an autonomous workshop
+// CONQUER workshop cutaway: a selected L2 (artisan) house that runs an autonomous workshop
 // (ConquerCommerce) opens its ground floor, like the church and inn (settlement-civic3d.js).
 // The timbered upper floor, roofs and chimneys go; walls whose outside faces the camera, or that
 // stand in front of the section plane through the room centre, are cut down to a low sill; the
@@ -8,7 +8,7 @@
 // ConquerCutawayFurniture.pieceFaces, plus a few procedural boxes) with a street counter on the
 // half of the facade away from the door. While the artisan's routine keeps him at his own
 // door during working hours, he is drawn inside at his bench instead.
-// Every closed L3 workshop also shows its street front: a shop window on the counter half of the
+// Every closed workshop house also shows its street front: a shop window on the counter half of the
 // facade (shutters let down as counter and awning by day, shut at night) and a medieval bracket
 // sign beside the door, its board perpendicular to the facade with the trade's emblem.
 // Nothing is saved: the state follows the selection, the clock and the shop's day. The Asset Lab
@@ -40,13 +40,37 @@
     shopsMemo={epoch,economy:State.economy,shops};
     return shops;
   }
+  // Workshops belong to the artisan class (SOC-CLASS-02: L2 Artigiani): a home shop on an L2 house,
+  // or an advanced workshop on a merchant L3 house staffed by two L2 hands (D-SHOP-L3-261119).
+  const SHOP_TIER=2,ADVANCED_TIER=3;
+  const tierOf=house=>window.ConquerSocialClasses?.tierOfHouse?.(house)??houseLevel(house);
   function shopOf(house){
-    if(house?.shopKind)return{kind:house.shopKind,artisanId:house.id+':m:0',state:house.shopClosed?'closed':'working'};
+    // Asset Lab stand-in: an L3 house stages the advanced workshop with both hands.
+    if(house?.shopKind){
+      const adv=tierOf(house)===ADVANCED_TIER;
+      return{kind:house.shopKind,grade:adv?'advanced':'basic',state:house.shopClosed?'closed':'working',
+        artisanId:adv?house.id+':w:0':house.id+':m:0',workers:adv?[house.id+':w:0',house.id+':w:1']:undefined};
+    }
     return shopsRecord()?.[house?.id]||null;
   }
+  // Hired hand -> {houseId, index}, rebuilt whenever the shops record is looked up again (asked per
+  // figure; the record is mutated in place by the daily tick, so key on the lookup, not the object).
+  let hireMemo={src:null,map:new Map()};
+  function hireOf(residentId){
+    const shops=shopsRecord();
+    if(hireMemo.src!==shopsMemo||!shopsMemo.epoch){
+      const map=new Map();
+      if(shops)for(const [id,s] of Object.entries(shops))if(s.grade==='advanced')
+        (s.workers||[]).forEach((w,index)=>map.set(w,{houseId:id,index}));
+      hireMemo={src:shopsMemo,map};
+    }
+    return hireMemo.map.get(String(residentId))||null;
+  }
   function eligible(house){
-    return !!house&&house.type==='house'&&houseLevel(house)===3&&
-      !(typeof underConstruction==='function'&&underConstruction(house))&&!!TRADES[shopOf(house)?.kind];
+    if(!house||house.type!=='house'||(typeof underConstruction==='function'&&underConstruction(house)))return false;
+    const shop=shopOf(house),tier=tierOf(house);
+    if(!TRADES[shop?.kind])return false;
+    return shop.grade==='advanced'?tier===ADVANCED_TIER:tier===SHOP_TIER;
   }
   function active(house){return eligible(house)&&(house.id===State.selectedId||!!house.shopCutaway)}
   // Asked per figure by the occlusion test: one scan per selection / structure list, kept 250 ms
@@ -241,6 +265,11 @@
     counter(R,out,TRADES[kind].goods);
     return LAYOUTS[kind](R,out,d,s);
   }
+  // The second hand of an advanced workshop serves at the street counter, facing the street.
+  function counterSpot(R){
+    const side=R.doorA>=0?-1:1,len=Math.min(.6,R.ha-.12),a=side*(R.ha-.06)-side*len/2;
+    return{a,b:-R.hb+.32,at:{a,b:-R.hb+.12}};
+  }
 
   // ---------- mesh (settlement-civic3d.js layout {pos,col,gi,groups,groupBias})
   function emit(groups){
@@ -264,7 +293,7 @@
     const R=room(house);if(!R)return null;
     const out=[];shell(R,out);
     const spot=layout(R,out,shop.kind);
-    const res={mesh:emit(out),room:R,spot,kind:shop.kind};
+    const res={mesh:emit(out),room:R,spot,spots:[spot,counterSpot(R)],kind:shop.kind};
     cache.set(house.id,{key,res});
     return res;
   }
@@ -396,24 +425,31 @@
 
   // ---------- the artisan
   // Screen facing (1 right, -1 left) from the artisan's spot towards his station.
-  function facing(r){
-    const a=r.room.toWorld(r.spot.a,r.spot.b),b=r.room.toWorld(r.spot.at.a,r.spot.at.b);
+  function facing(r,spot=r.spot){
+    const a=r.room.toWorld(spot.a,spot.b),b=r.room.toWorld(spot.at.a,spot.at.b);
     return w2s(b,0).x>=w2s(a,0).x?1:-1;
   }
-  function spotOf(house){
+  // index 0: the bench (the trade's tool); 1: the street counter of an advanced workshop (no tool).
+  function spotOf(house,index=0){
     const r=build(house);if(!r)return null;
-    return{p:r.room.toWorld(r.spot.a,r.spot.b),tool:TRADES[r.kind].tool,facing:facing(r),kind:r.kind};
+    const spot=r.spots[index?1:0];
+    return{p:r.room.toWorld(spot.a,spot.b),tool:index?null:TRADES[r.kind].tool,facing:facing(r,spot),kind:r.kind};
   }
-  // The shop's artisan waiting at his own door (artisanPosition: an L3 shop operates at home)
-  // stands at his bench while the house is open. Elsewhere (market, leisure) he stays where he is.
+  // The shop's artisan waiting at the workshop door (artisanPosition: an L2 shop operates at home,
+  // a hired hand walks to the advanced workshop) stands at his station while the house is open.
+  // Elsewhere (market, leisure) he stays where he is.
   function artisanAt(house,resident,p){
-    if(!p||!active(house))return null;
-    const shop=shopOf(house);
-    if(shop.artisanId!==resident.id||shop.state==='vacant'||shop.state==='closed')return null;
-    if(dist(p,houseDoorInfo(house).outside)>.42)return null;
-    return spotOf(house);
+    if(!p)return null;
+    const hire=hireOf(resident.id);
+    const site=hire?(State.structures||[]).find(s=>String(s.id)===hire.houseId):house;
+    if(!site||!active(site))return null;
+    const shop=shopOf(site);
+    if(!hire&&shop.artisanId!==resident.id)return null;
+    if(shop.state==='vacant'||shop.state==='closed')return null;
+    if(dist(p,houseDoorInfo(site).outside)>.42)return null;
+    return spotOf(site,hire?hire.index:0);
   }
-  window.ConquerShopCutaway=Object.freeze({TRADES,LAYOUTS,EMBLEMS,shopOf,eligible,active,activeId,room,build,addToBuilder,artisanAt,spotOf,
+  window.ConquerShopCutaway=Object.freeze({TRADES,LAYOUTS,EMBLEMS,SHOP_TIER,ADVANCED_TIER,shopOf,hireOf,eligible,active,activeId,room,build,addToBuilder,artisanAt,spotOf,
     frontOpen,opening,signPlace,buildFront,addFront,facadeCut,frontSig,
     clear:()=>{cache.clear();frontCache.clear()}});
 })();

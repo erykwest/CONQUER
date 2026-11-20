@@ -116,4 +116,92 @@ assert.deepEqual(small.journal().map(e => e.title), ['E4', 'E3']);
   assert.equal(box.visible().items.find(a => a.key === 'c').action.arg, 'caravan-1');
 }
 
+// End to end without a browser: game events read by the watchers reach the feed (MSG-FEED-261118).
+{
+  const { createWatchers } = await import('../src/ui/alert-watchers.js');
+  let u = 0;
+  const box = createAlertCenter({ now: () => u, resolveGrace: 0 });
+  const goal = { x: 41, y: 57 };
+  const State = globalThis.State = { seed: 9, village: { name: 'Prova', founded: false }, clock: { day: 3 }, diplomacy: { version: 1, incoming: null, history: [] },
+    structures: [{ id: 'site-1', type: 'tower', construction: { version: 1 } }] };
+  globalThis.underConstruction = s => !!s.construction;
+  const game = { read: { defense: () => ({ alert: 'clear' }), logistics: () => null }, snapshot: () => ({ saveStatus: 'saved' }) };
+  const w = createWatchers(game, box, { now: () => u, structureNames: { tower: 'Torre' } });
+  w.poll(); // first poll only seeds
+  assert.equal(box.visible().items.length, 0, 'nothing announced at load');
+
+  State.diplomacy.incoming = { id: 'courier-0', edge: 'west', phase: 'arriving', by: 'courier', request: 100, goal };
+  u = 1000; w.poll();
+  const arrive = box.visible().items.find(a => a.key === 'msg-arrive-courier-0');
+  assert.ok(arrive, 'a messenger setting out shows up in the feed');
+  assert.equal(arrive.title, 'Messaggero in arrivo');
+  assert.deepEqual(arrive.at, goal, 'and can be shown on the map at the keep door');
+
+  State.diplomacy.incoming.phase = 'waiting';
+  u = 2000; w.poll();
+  const wait = box.visible().items.find(a => a.key === 'message-courier-0');
+  assert.ok(wait && wait.action.id === 'readLetter', 'a waiting messenger is a condition with "Leggi il messaggio"');
+  assert.deepEqual(wait.at, goal);
+
+  delete State.structures[0].construction;
+  u = 3000; w.poll();
+  const done = box.visible().items.find(a => a.key === 'done-site-1');
+  assert.ok(done && done.title === 'Costruzione completata' && done.focusId === 'site-1', 'a finished site shows up with its structure');
+  assert.equal(done.detail, 'Torre');
+
+  // Reload: the journal comes back from storage and the same waiting messenger is not logged twice.
+  const saved = box.exportJournal();
+  const again = createAlertCenter({ now: () => u, resolveGrace: 0 });
+  again.importJournal(saved);
+  const w2 = createWatchers(game, again, { now: () => u });
+  w2.poll();
+  assert.equal(again.visible().items.find(a => a.key === 'message-courier-0')?.title, 'Messaggero alla porta del Mastio', 'still on screen after a reload');
+  assert.equal(again.journal().filter(e => e.key === 'message-courier-0' && e.phase === 'raised').length, 1, 'not logged twice after a reload');
+
+  State.diplomacy.incoming = null;
+  u = 4000; w.poll();
+  assert.equal(box.journal()[0].title, 'Messaggio evaso', 'answering resolves it');
+  assert.equal(box.journal()[0].at, null, 'a resolved entry has nothing to show');
+  delete globalThis.State; delete globalThis.underConstruction;
+}
+
+// "Mostra sulla mappa": the genuine ConquerGame.commands.focus centres the camera on a structure or a map point.
+{
+  const { readFileSync } = await import('node:fs');
+  const vm = await import('node:vm');
+  const api = readFileSync(new URL('../src/ui/game-api.js', import.meta.url), 'utf8');
+  const start = api.indexOf('focus: (id, at) => {');
+  assert.ok(start > 0, 'game-api exposes commands.focus');
+  const end = api.indexOf('\n    },', start);
+  const src = api.slice(start + 'focus: '.length, end + '\n    }'.length);
+  let selected = null, drawn = 0;
+  const ctx = vm.createContext({
+    State: { view: { x: 0, y: 0, scale: 1 }, structures: [{ id: 'keep', x: 30, y: 20 }] },
+    terrainElevation: () => 0, wrap: { getBoundingClientRect: () => ({ width: 800, height: 600 }) },
+    // Screen = world * 10 + view offset.
+    w2sRaw: p => ({ x: p.x * 10 + ctx.State.view.x, y: p.y * 10 + ctx.State.view.y }),
+    invalidateSceneCache() {}, selectStructure: s => { selected = s; }, draw: () => { drawn++; }, emit() {}
+  });
+  const focus = vm.runInContext('(' + src + ')', ctx);
+  const centred = p => { const q = ctx.w2sRaw(p); return Math.abs(q.x - 400) < 1e-9 && Math.abs(q.y - 300) < 1e-9; };
+  assert.ok(focus('keep'), 'focus on a structure');
+  assert.ok(centred({ x: 30, y: 20 }), 'the structure is in the centre of the view');
+  assert.equal(selected?.id, 'keep', 'and it is selected');
+  selected = null;
+  assert.ok(focus(null, { x: 5, y: 70 }), 'focus on a bare map point (messenger at the door)');
+  assert.ok(centred({ x: 5, y: 70 }), 'the point is in the centre of the view');
+  assert.equal(selected, null, 'a bare point selects nothing');
+  assert.equal(focus('missing', null), false, 'nothing to show: the camera does not move');
+  assert.equal(drawn, 2);
+}
+
+// The classic (default) interface mounts the same alert feed: notifications are not reserved to ?ui=2.
+{
+  const { readFileSync } = await import('node:fs');
+  const shell = readFileSync(new URL('../src/ui/shell.js', import.meta.url), 'utf8');
+  assert.match(shell, /\} else if \(window\.ConquerGame && !window\.__CONQUER_ASSET_LAB__ && document\.getElementById\('wrap'\)\) \{[\s\S]*?render\(html`<\$\{LegacyAlerts\} \/>`/, 'legacy UI renders the alert overlay');
+  assert.match(shell, /function LegacyAlerts\(\)[\s\S]*?useAlertWatchers\(game\)[\s\S]*?<\$\{Alerts\}/, 'with the shared watchers and the notice stack');
+  assert.match(shell, /cmd\.focus\(a\.focusId, a\.at\)/, 'the notice button moves the camera');
+}
+
 console.log('ui-alerts-regression: ok');
