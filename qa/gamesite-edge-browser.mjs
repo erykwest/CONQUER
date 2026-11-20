@@ -5,10 +5,11 @@ import {chromium} from 'playwright';
 // A minimal mocked Supabase module tests the same-origin identity contract,
 // while the actual provider redirect and credentials remain a release gate.
 const origin='http://127.0.0.1:4173';
-const fakeSdk=String.raw\`
+const fakeSdk=String.raw`
 export function createClient(){
   const email = () => localStorage.getItem('qa-auth-email');
   const user = () => email() ? {id:'qa-account-0001',email:email()} : null;
+  const chain={eq(){return chain},async maybeSingle(){return {data:null,error:null}}};
   return {
     auth:{
       async getUser(){return {data:{user:user()},error:null}},
@@ -16,9 +17,9 @@ export function createClient(){
       async signInWithOtp({email,options}){localStorage.setItem('qa-requested-link',JSON.stringify({email,redirect:options.emailRedirectTo}));return {error:null}},
       async signOut(){localStorage.removeItem('qa-auth-email');return {error:null}}
     },
-    from(){return {select(){return {eq(){return {eq(){return {async maybeSingle(){return {data:null,error:null}}}}}}}}}}
+    from(){return {select(){return chain}}}
   };
-}\`;
+}`;
 const browser=await chromium.launch({headless:true,args:['--no-sandbox','--use-angle=swiftshader','--enable-webgl','--enable-unsafe-swiftshader']});
 try{
   const context=await browser.newContext({viewport:{width:1280,height:820}});
