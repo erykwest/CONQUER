@@ -1,5 +1,19 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-19 — MOAT-WIDEN · Allargare il fossato tenendo la sponda sul muro
+
+`feature/moat-from-wall`: il pannello del fossato finito offre «Widen» a 2 / 3 / 4U (si paga solo la differenza, come lavoro di ampliamento). Un fossato contro un muro, una palizzata o un tratto costruito (il suo `wallId`, o un tratto parallelo a filo della sponda) tiene la sponda sulla faccia esterna e cresce verso fuori; un fossato libero cresce sui due lati. Il fossato unito all'angolo resta unito (incrocio delle linee centrali). Test in `qa/wall-moat-regression.cjs`. ROADMAP e DECISIONS invariate.
+
+### 2026-11-19 — ROAD-MOAT-DRAWBRIDGE, ROAD-MAGNET-ROAD · Ponte levatoio sulla strada, magnete strada su strada
+
+`feature/moat-from-wall`: una strada maestra che attraversa un muro e il fossato davanti apre la porta con il ponte levatoio già installato (costo del ponte nel cantiere della porta); attraverso una porta esistente finita senza ponte levatoio, lo installa. La strada passa sul fossato solo sul ponte levatoio della porta che attraversa (`manualRoadConflict`); un fossato senza porta resta un ostacolo. Il magnete della strada maestra prende estremi e lati di tutte le strade (anche secondarie e automatiche) con raggio più ampio (≥1,5U, segue lo zoom); un estremo vicino vince sul lato; il punto agganciato si illumina. Test in `qa/wall-road-gate-regression.cjs` (13). ROADMAP e DECISIONS invariate.
+
+### 2026-11-19 — ROAD-WALL-GATE · La strada maestra che attraversa un muro apre una porta
+
+`feature/moat-from-wall`: il contrario di WALL-ROAD-GATE. Una strada maestra tracciata attraverso un muro o una palizzata finiti apre una porta del tipo corrispondente (palizzata → porta di legno, muro W1 → porta piccola, W2-W3 → porta grande, nella muratura del muro), taglia il muro sui fianchi della porta e passa nel varco; il fantasma mostra la porta e il suo costo. Un muro ancora in cantiere rifiuta la strada. Test in `qa/wall-road-gate-regression.cjs`. ROADMAP e DECISIONS invariate.
+### 2026-11-18 — FOSSATO-MURO · Fossato dal muro selezionato
+
+`feature/moat-from-wall`: selezionando un muro, una palizzata o un tratto costruito l'inspector offre «Fossato» (secco / d'acqua): il fossato da 1,5U si scava attaccato al lato esterno (quello di «Lato esterno»), si unisce all'angolo al fossato del tratto vicino e lascia libero il varco delle porte; d'acqua solo a quota 0, e un fossato secco già scavato si allaga dallo stesso comando. Nuovo `qa/wall-moat-regression.cjs` (workflow «Wall moat regression»). ROADMAP e DECISIONS invariate.
 ### 2026-11-18 — CAMP-SPIKES · Palizzate del campo e pali anti-carica
 
 `feature/camp-spikes`: palizzata dell'accampamento rifatta in Blender (pali grezzi sbozzati, traverse legate, puntelli, terra di scavo); nuovi modelli `campStakes` (file di pali anti-carica inclinati verso l'esterno) e `campCheval` (cavallo di Frisia). Nuovo livello di fortificazione del campo «palizzata e pali anti-carica»: anello di pali fuori dalla palizzata e due cavalli di Frisia sfalsati davanti alla porta. Tutto nel Lab (composizione `encampmentSpiked`). Il 19/11 pali e cavallo di Frisia diventano anche strutture costruibili ovunque nell'insediamento (`stakeRow` a tratti da 1,4 U, `chevalFrise`), con la voce «Opere campali» nella nuova interfaccia (che ora raggiunge anche l'accampamento militare) e le note del Codex. In BACKLOG restano aperti gli effetti di gioco contro la carica. ROADMAP e DECISIONS invariate.
