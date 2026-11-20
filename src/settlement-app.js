@@ -110,7 +110,7 @@ function addStructure(s){
       s.za=way.za;s.zb=way.zb;s.length=way.length;s.groundZ=Math.min(way.za,way.zb);
     }else{
       const groundZ=linearBuildGroundZ(s);
-      if(groundZ==null){status(s.type==='wall'?wallTerrainVerdict(s).reason:'Build only on a single flat terrace — slopes and mixed elevations are not buildable for this structure');return false}
+      if(groundZ==null){status(['wall','palisade'].includes(s.type)?wallTerrainVerdict(s).reason:'Build only on a single flat terrace — slopes and mixed elevations are not buildable for this structure');return false}
       s.groundZ=groundZ;
     }
     const cost=constructionCost(s);
@@ -123,7 +123,7 @@ function addStructure(s){
   let reactive=0;
   if(!s.auto){
     reactive+=repairDisplacedRoads(displaced.roads,s);
-    if(isCivic(s))reactive+=ensureSettlementRoadAccess(s);
+    if(structureNeedsAccessRoad(s))reactive+=ensureSettlementRoadAccess(s);
     // A later well joins the founding well's network with one main road (no border roads).
     if(s.type==='well'&&State.village.founded){reactive+=buildWellMainConnection(s);window.ConquerCombat?.invalidateRoutes?.()}
     if(s.type==='well')reactive+=reconcileTowerSecondaryBranches(Infinity,true);
@@ -181,7 +181,7 @@ function commitStructuralLinearRoute(route,endSnapId,spec){
     const verdict=window.ConquerPlacement?.check(s);
     if(verdict&&!verdict.ok){status('Route blocked: '+verdict.reason);return false}
     if(linearBuildGroundZ(s)==null){
-      status(s.type==='wall'?'Route blocked: '+wallTerrainVerdict(s).reason:'Route crosses incompatible terrain — choose another joint or endpoint');
+      status(['wall','palisade'].includes(s.type)?'Route blocked: '+wallTerrainVerdict(s).reason:'Route crosses incompatible terrain — choose another joint or endpoint');
       return false;
     }
   }

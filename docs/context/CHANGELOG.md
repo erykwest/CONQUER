@@ -14,6 +14,44 @@
 - Newsletter double-opt-in/unsubscribe serverless e schema privato; metriche anonime aggregate, sitemap con dominio configurabile; primi test `qa/gamesite-regression.mjs` e GitHub Actions dedicata.
 - **Stato:** IMPLEMENTATO SU BRANCH, QA in corso; nessun deploy o migrazione DB. La PR resta draft finche' dipendenze esterne, compliance, screenshot reali e browser tests non sono chiusi. Riferimenti: [Website SRS](../WEBSITE-SRS.md) e [STATUS](STATUS.md#2026-11-19--gamesite-p0-sito-pubblico-e-guest-builder-branch-gamesite-non-merge).
 
+### 2026-11-18 — WOOD-GATE-SLOTS-261118 · La porta in legno ha uno spazio stanza
+
+`fix/wood-gate-slots`: la porta in legno (fissa H1) aveva 0 spazi stanza perché `functionCapacity` dava alle porte `livello − 1`. Ora ha 1 spazio sul ponte di combattimento sopra il passaggio (la porta in pietra L3 ne ha 2), con le regole delle porte in pietra (caserma, armeria sì; prigione, stalle, bottega no). Nuova `qa/wood-gate-slots-regression.cjs` nel workflow `gate-six-sockets-regression`. ROADMAP e DECISIONS invariate: correzione di una regola, nessun contratto nuovo.
+
+### 2026-11-18 — PAL-W1-SLOPE · Palizzate W1 sui fianchi delle colline
+
+`fix/palisade-w1-slopes`: le palizzate W1 si costruiscono su pendii dolci e scoscesi (prima ogni palizzata voleva un terrazzo piano); W2-W3 restano solo in piano, anche come upgrade. Paletti 3D e di cantiere poggiati sul terreno più basso sotto ciascuno. Nuova `qa/palisade-slope-regression.cjs`. ROADMAP e DECISIONS invariate.
+
+### 2026-11-18 — ROAD-ACCESS-261118 · Strade secondarie per ogni edificio
+
+`fix/secondary-roads`: le strade secondarie di accesso erano limitate a case, campi e civici; ora ogni edificio con ingresso (anche taglialegna, cave, miniere, mulini, depositi) è collegato alla rete principale tramite la regola unica `structureNeedsAccessRoad`. Nuova `qa/access-roads-regression.cjs` nel workflow `road-magnet-regression`. ROADMAP e DECISIONS invariate: correzione della regola esistente, nessun contratto nuovo.
+
+### 2026-11-18 — FIX-MILL-HILLS-261118 · Il mulino a vento si costruisce sulle colline
+
+`fix/mill-hills`: il mulino a vento accetta ogni terrazza piana di collina (H+1, H+2, H+3 in cima), non più solo H+1, ed è posato all'altezza della terrazza; resta escluso dalla pianura H0 e dai pendii. Mulino ad acqua invariato (riva di fiume o torrente). Nuova `qa/windmill-hills-regression.cjs` su colline procedurali reali. ROADMAP e DECISIONS invariate: correzione di una regola di posa, nessun contratto cambiato.
+
+### 2026-11-18 — WARDROBE-CAL-261118 · Guardaroba stagionale e calendario
+
+`fix/seasonal-wardrobe`: verificato che il guardaroba dei popolani segue il calendario a runtime; corrette le folle delle feste e della giostra (pittore senza guardaroba) e le chiavi delle carte 3D senza abito (feste, giostra, tribunale/chiesa/osteria). Nuova `qa/seasonal-wardrobe-regression.cjs` nel workflow del guardaroba. ROADMAP e DECISIONS invariate: nessun contratto cambiato.
+
+### 2026-11-19 — MOAT-WIDEN · Allargare il fossato tenendo la sponda sul muro
+
+`feature/moat-from-wall`: il pannello del fossato finito offre «Widen» a 2 / 3 / 4U (si paga solo la differenza, come lavoro di ampliamento). Un fossato contro un muro, una palizzata o un tratto costruito (il suo `wallId`, o un tratto parallelo a filo della sponda) tiene la sponda sulla faccia esterna e cresce verso fuori; un fossato libero cresce sui due lati. Il fossato unito all'angolo resta unito (incrocio delle linee centrali). Test in `qa/wall-moat-regression.cjs`. ROADMAP e DECISIONS invariate.
+
+### 2026-11-19 — ROAD-MOAT-DRAWBRIDGE, ROAD-MAGNET-ROAD · Ponte levatoio sulla strada, magnete strada su strada
+
+`feature/moat-from-wall`: una strada maestra che attraversa un muro e il fossato davanti apre la porta con il ponte levatoio già installato (costo del ponte nel cantiere della porta); attraverso una porta esistente finita senza ponte levatoio, lo installa. La strada passa sul fossato solo sul ponte levatoio della porta che attraversa (`manualRoadConflict`); un fossato senza porta resta un ostacolo. Il magnete della strada maestra prende estremi e lati di tutte le strade (anche secondarie e automatiche) con raggio più ampio (≥1,5U, segue lo zoom); un estremo vicino vince sul lato; il punto agganciato si illumina. Test in `qa/wall-road-gate-regression.cjs` (13). ROADMAP e DECISIONS invariate.
+
+### 2026-11-19 — ROAD-WALL-GATE · La strada maestra che attraversa un muro apre una porta
+
+`feature/moat-from-wall`: il contrario di WALL-ROAD-GATE. Una strada maestra tracciata attraverso un muro o una palizzata finiti apre una porta del tipo corrispondente (palizzata → porta di legno, muro W1 → porta piccola, W2-W3 → porta grande, nella muratura del muro), taglia il muro sui fianchi della porta e passa nel varco; il fantasma mostra la porta e il suo costo. Un muro ancora in cantiere rifiuta la strada. Test in `qa/wall-road-gate-regression.cjs`. ROADMAP e DECISIONS invariate.
+### 2026-11-18 — FOSSATO-MURO · Fossato dal muro selezionato
+
+`feature/moat-from-wall`: selezionando un muro, una palizzata o un tratto costruito l'inspector offre «Fossato» (secco / d'acqua): il fossato da 1,5U si scava attaccato al lato esterno (quello di «Lato esterno»), si unisce all'angolo al fossato del tratto vicino e lascia libero il varco delle porte; d'acqua solo a quota 0, e un fossato secco già scavato si allaga dallo stesso comando. Nuovo `qa/wall-moat-regression.cjs` (workflow «Wall moat regression»). ROADMAP e DECISIONS invariate.
+### 2026-11-18 — CAMP-SPIKES · Palizzate del campo e pali anti-carica
+
+`feature/camp-spikes`: palizzata dell'accampamento rifatta in Blender (pali grezzi sbozzati, traverse legate, puntelli, terra di scavo); nuovi modelli `campStakes` (file di pali anti-carica inclinati verso l'esterno) e `campCheval` (cavallo di Frisia). Nuovo livello di fortificazione del campo «palizzata e pali anti-carica»: anello di pali fuori dalla palizzata e due cavalli di Frisia sfalsati davanti alla porta. Tutto nel Lab (composizione `encampmentSpiked`). Il 19/11 pali e cavallo di Frisia diventano anche strutture costruibili ovunque nell'insediamento (`stakeRow` a tratti da 1,4 U, `chevalFrise`), con la voce «Opere campali» nella nuova interfaccia (che ora raggiunge anche l'accampamento militare) e le note del Codex. In BACKLOG restano aperti gli effetti di gioco contro la carica. ROADMAP e DECISIONS invariate.
+
 ### 2026-11-19 — CI-AUDIT-01 · Audit del Lab: smoke per l'interfaccia, completo in 4 shard
 
 `ci/asset-audit-ui-scope-shards`: `asset-audit-scope.cjs` riconosce le modifiche di sola interfaccia (modalità `smoke`: solo test della galleria); `asset-audit.mjs --shard=N/4` divide l'audit completo per famiglie in 4 job paralleli. Aggiornati `docs/ASSET-LAB-AUDIT.md` e `docs/CI.md`. ROADMAP e DECISIONS invariate.
