@@ -1399,3 +1399,28 @@ function pointRadius(s){
   window.__conquerAnalytics={frame,measure,event,sample,diagnose,snapshot,exportJson,clear,samples,events,sessionId};
   event('ANALYTICS_READY',{sampleMs:SAMPLE_MS,maxSamples:MAX_SAMPLES});
 })();
+
+// ---------- Winter look ----------
+// Winter (1 Dec - 28 Feb) is split in quarters: bare woods with brown undergrowth, then snow on the
+// ground for two quarters, then bare woods with green undergrowth and no snow. Snow weather on any
+// winter day is a blizzard: snow on the ground and snow-laden branches.
+const WINTER_PHASES=['bare','snow','snow','thaw'];
+function winterPhase(){
+  if(typeof State==='undefined'||State.season!=='winter')return null;
+  if(State.winterPhaseOverride)return State.winterPhaseOverride;
+  if(typeof currentWeather==='function'&&currentWeather().kind==='snow')return'blizzard';
+  if(typeof calendarDateFromDay!=='function')return'snow';
+  const d=calendarDateFromDay(),m=d.month;
+  if(m!==11&&m>1)return'snow'; // DEV-forced winter outside Dec-Feb keeps the classic look.
+  const day=(m===11?0:m===0?31:62)+d.day-1;
+  return WINTER_PHASES[Math.min(3,Math.floor(day/22.5))];
+}
+function isSnowGround(){const p=winterPhase();return p==='snow'||p==='blizzard'}
+// Foliage sprite set: summer | autumn | winter (snowy bushes) | bare (winter without snow) | blizzard.
+function foliageLook(){
+  const s=typeof State!=='undefined'?State.season:'summer';
+  if(s==='autumn')return'autumn';if(s!=='winter')return'summer';
+  const p=winterPhase();return p==='blizzard'?'blizzard':p==='snow'?'winter':'bare';
+}
+// Undergrowth of the woods: snowy, brown (early winter) or green.
+function undergrowthLook(){return isSnowGround()?'winter':winterPhase()==='bare'?'brown':'green'}

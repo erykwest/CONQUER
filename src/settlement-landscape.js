@@ -216,7 +216,7 @@ function woodedSurfaceFace(vertices,forests){
   const dx=((b.z-a.z)*vy-(c.z-a.z)*uy)/det,dy=(ux*(c.z-a.z)-vx*(b.z-a.z))/det;
   const z=p=>a.z+dx*(p.x-a.x)+dy*(p.y-a.y),poly=projectClippedTerrain(vertices);
   if(poly.length<3||!screenPolygonVisible(poly,8))return;
-  const bounds=environmentPolygonBounds(vertices),winter=State.season==='winter';
+  const bounds=environmentPolygonBounds(vertices),winter=isSnowGround();
   const light=clamp((1-dx*.48-dy*.72)/Math.sqrt(1+dx*dx+dy*dy),.42,1.28);
   for(const f of forests){
     const box=environmentPolygonBounds(f.points);
@@ -257,7 +257,7 @@ function forestTreeOccluders(){
 }
 function drawRelief(){
   ensureLandscapeRenderCaches();
-  const winter=State.season==='winter',baseFill=winter?'#edf1ed':(BIOMES[State.biome]?.field||'#24291b');
+  const winter=isSnowGround(),baseFill=winter?'#edf1ed':(BIOMES[State.biome]?.field||'#24291b');
   const levels=reliefLevels().slice().sort((a,b)=>a.z1-b.z1),woods=State.environment.filter(f=>f.type==='forest');
   let bandsDrawn=0;
   if(window.__conquerPerf)window.__conquerPerf.landscapeRocks=0;
@@ -358,7 +358,7 @@ function drawSpringFlowerClusters(){
 }
 function drawTerrain(){
   const corners=projectPath([{x:0,y:0},{x:WORLD,y:0},{x:WORLD,y:WORLD},{x:0,y:WORLD}],0);
-  const winter=State.season==='winter';
+  const winter=isSnowGround();
   const terrainFill=winter?'#edf1ed':(BIOMES[State.biome]?.field||'#24291b');
   const terrainEdge=winter?'rgba(101,112,105,.34)':'rgba(225,214,190,.12)';
   pathPolygon(corners,terrainFill,terrainEdge,1);
@@ -465,7 +465,7 @@ function mountainPineSprite(variant,winter=false){
 }
 function drawMountainPine(t){
   if(!screenPointVisibleRaw(t.p,t.z,30))return;
-  const img=mountainPineSprite(t.shade,State.season==='winter'),base=w2sRaw(t.p,t.z);
+  const img=mountainPineSprite(t.shade,isSnowGround()),base=w2sRaw(t.p,t.z);
   const h=Math.max(8,U*State.view.scale*2.4*t.scale),w=h*.75;
   ctx.drawImage(img,base.x-w/2,base.y-h*.97,w,h);
 }
@@ -519,7 +519,7 @@ const FOREST_CANOPY_PALETTES={
   // Six successive autumn tones; summer's five greens remain unchanged at day 1.
   autumn:['#98ac43','#d3c84a','#edbc3d','#df8a32','#bb4834','#76513a']
 };
-const forestTreeSprites={summer:[],autumn:[],winter:[]};
+const forestTreeSprites={summer:[],autumn:[],winter:[],blizzard:[]};
 let forestTreeSpritesReady=false;
 // Calendar-driven, deterministic foliage: September 1 = 0, November 30 = 90.
 // Outside that range, a forced DEV autumn shows a mid-season preview.
@@ -567,6 +567,8 @@ async function loadForestTreeSprites(){
         }
       }
       makeSprite('winter',shape,0,buildForestSvg(sources[shape],null,false));
+      // Blizzard: bare branches carrying snow, drawn as a pale, half-transparent crown.
+      makeSprite('blizzard',shape,0,sources[shape].replace(/fill="#3B5174"/gi,'fill="#f2f6f7" fill-opacity="0.62"'));
     }
     await Promise.all(jobs);
     forestTreeSpritesReady=true;
@@ -580,11 +582,11 @@ loadForestTreeSprites();
 
 function drawTree(tree){
   if(!forestTreeSpritesReady||!screenPointVisibleRaw(tree.p,tree.z||0,44))return false;
-  const season=State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer';
+  const look=foliageLook(),season=look==='bare'?'winter':look;
   const stage=season==='autumn'?autumnFoliageStage(tree):0;
   const img=season==='autumn'&&stage>0
     ? forestTreeSprites.autumn?.[tree.shapeIndex]?.[stage-1]
-    : forestTreeSprites[season==='autumn'?'summer':season]?.[tree.shapeIndex]?.[season==='winter'?0:tree.colorIndex];
+    : forestTreeSprites[season==='autumn'?'summer':season]?.[tree.shapeIndex]?.[season==='winter'||season==='blizzard'?0:tree.colorIndex];
   if(!img)return false;
   const base=w2sRaw(tree.p,tree.z||0);
   const size=Math.max(10,U*State.view.scale*2.25*tree.scale);
@@ -601,19 +603,20 @@ function drawTree(tree){
 const forestGroundPatternCanvases={};
 const forestGroundPatternsByContext=new WeakMap();
 function getForestGroundPattern(){
-  const key=State.season==='winter'?'winter':'green';
+  const key=undergrowthLook();
   if(!forestGroundPatternCanvases[key]){
     const off=document.createElement('canvas');
     off.width=72;off.height=72;
     const p=off.getContext('2d');
-    const winter=key==='winter';
-    p.fillStyle=winter?'#dfe5e0':'#1d3218';
+    const winter=key==='winter',brown=key==='brown';
+    p.fillStyle=winter?'#dfe5e0':brown?'#3d2f20':'#1d3218';
     p.fillRect(0,0,72,72);
-    const rnd=seedRand(winter?0x72a4c8e1:0x4f6a3b21);
+    const rnd=seedRand(winter?0x72a4c8e1:brown?0x5b3e2a17:0x4f6a3b21);
     for(let i=0;i<110;i++){
       const x=rnd()*72,y=rnd()*72,rx=1.5+rnd()*5.5,ry=.8+rnd()*3.2;
       p.fillStyle=winter
         ?(rnd()>.52?'rgba(255,255,255,.25)':'rgba(153,164,157,.16)')
+        :brown?(rnd()>.52?'rgba(112,82,50,.32)':'rgba(30,20,12,.26)')
         :(rnd()>.52?'rgba(53,88,39,.30)':'rgba(10,25,10,.24)');
       p.beginPath();p.ellipse(x,y,rx,ry,rnd()*Math.PI,0,Math.PI*2);p.fill();
     }
@@ -621,6 +624,7 @@ function getForestGroundPattern(){
       const x=rnd()*72,y=rnd()*72,r=.35+rnd()*.85;
       p.fillStyle=winter
         ?(rnd()>.5?'rgba(255,255,255,.28)':'rgba(125,138,130,.14)')
+        :brown?(rnd()>.5?'rgba(150,112,64,.16)':'rgba(20,13,8,.22)')
         :(rnd()>.5?'rgba(98,124,69,.13)':'rgba(6,17,7,.20)');
       p.beginPath();p.arc(x,y,r,0,Math.PI*2);p.fill();
     }
@@ -665,9 +669,9 @@ function drawForestGround(f,hulls=null){
   ctx.beginPath();
   pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
   ctx.closePath();
-  ctx.fillStyle=getForestGroundPattern()||(State.season==='winter'?'#dfe5e0':'#1d3218');
+  ctx.fillStyle=getForestGroundPattern()||(isSnowGround()?'#dfe5e0':'#1d3218');
   ctx.fill();
-  ctx.strokeStyle=State.season==='winter'?'rgba(126,139,130,.45)':'rgba(82,116,59,.58)';
+  ctx.strokeStyle=isSnowGround()?'rgba(126,139,130,.45)':'rgba(82,116,59,.58)';
   ctx.lineWidth=1.15;
   ctx.stroke();
   // Clearing outlines (not grooves or banks) read as the woodland edge.
@@ -729,7 +733,7 @@ function forestShrubLayout(f){
 }
 function drawForestShrub(shrub){
   if(!forestTreeSpritesReady)return false; // 3D ground bake uses upright billboards instead.
-  const season=State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer';
+  const season=foliageLook();
   const img=typeof boundaryBushSprites!=='undefined'?boundaryBushSprites[season]?.[shrub.shape]:null;
   if(!img)return false;
   const base=w2sRaw(shrub.p,shrub.z),width=shrub.width*(shrub.visualScale??1)*U*State.view.scale,height=width*580/920*shrub.scale;

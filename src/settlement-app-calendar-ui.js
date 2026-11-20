@@ -32,9 +32,16 @@ function syncAutumnFoliage(){
   if(step>=0)invalidateSceneCache(['landscape','base']);
   return true;
 }
+// The winter look (bare / snow / thaw, blizzard on snow days) moves with the day and the weather.
+let lastWinterLook=null;
+function syncWinterLook(){
+  const look=winterPhase();
+  if(look===lastWinterLook)return false;
+  lastWinterLook=look;invalidateSceneCache();return true;
+}
 function syncSeasonToCalendar(){
   const next=State.seasonOverride||seasonForMonth(calendarDateFromDay().month);
-  if(State.season===next){syncAutumnFoliage();return false}
+  if(State.season===next){syncAutumnFoliage();syncWinterLook();return false}
   State.season=next;
   syncAutumnFoliage();
   document.querySelectorAll('[data-season]').forEach(b=>b.classList.toggle('active',b.dataset.season===State.seasonOverride));

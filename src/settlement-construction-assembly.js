@@ -94,7 +94,7 @@
       for(let t=0;t<mesh.col.length;t++){
         const hex=mesh.col[t],key=keyOf.get(hex)||'';
         if(kind==='flat'){add(mesh,t,hex,'body');continue}
-        add(mesh,t,M.shadedHex(mesh,t),kind==='ground'?'ground':/^roof(Shingle|Ridge)/.test(key)||(!key&&State.season==='winter')?'roof':'body');
+        add(mesh,t,M.shadedHex(mesh,t),kind==='ground'?'ground':/^roof(Shingle|Ridge)/.test(key)||(!key&&isSnowGround())?'roof':'body');
       }
     }
     let ground=groundOf(s),run=null;
@@ -139,7 +139,7 @@
     if(s.type!=='house'||!K?.handles?.(s)||!M||!W3?.active?.())return null;
     const mesh=K.geometry(s);if(!mesh)return null;
     const pos=mesh.pos.slice(),col=mesh.col.map((_,t)=>M.shadedHex(mesh,t)),tag=mesh.tag.slice();
-    const entry=urbanHouseGeometry().find(e=>e.house===s||e.house.id===s.id),winter=typeof State!=='undefined'&&State.season==='winter';
+    const entry=urbanHouseGeometry().find(e=>e.house===s||e.house.id===s.id),winter=typeof State!=='undefined'&&isSnowGround();
     let cur='body';
     const m={tag(t){cur=t==='roof'?'roof':'body'},
       face(vs,hex){for(let i=1;i<vs.length-1;i++){for(const p of [vs[0],vs[i],vs[i+1]])pos.push(p.x,p.y,p.z);col.push(hex);tag.push(cur)}},
@@ -167,7 +167,7 @@
     // an adapter that records its tags; the plastered upper floor also gets its timber
     // frame (corner and middle posts, sill and wall plate) which rises ahead of the infill.
     const W3=window.ConquerWorld3D;if(!W3?.addHouse)return null;
-    const winter=typeof State!=='undefined'&&State.season==='winter';
+    const winter=typeof State!=='undefined'&&isSnowGround();
     const mid=(p,q)=>({x:(p.x+q.x)/2,y:(p.y+q.y)/2,z:(p.z+q.z)/2});
     let cur='body';
     const m={

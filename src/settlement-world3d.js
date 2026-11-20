@@ -616,7 +616,7 @@
   // ---------- buildings (non-castle) ----------
   const WINTER_ROOF=['#e7ece8','#dce3de'];
   function buildBuildings(){
-    const m=meshBuilder(true),winter=State.season==='winter';
+    const m=meshBuilder(true),winter=isSnowGround();
     // Houses: urbanHouseFaces gives walls, then either 2 slopes + 2 gables or a turret cone.
     for(const entry of urbanHouseGeometry()){
       const house=entry.house;if(underConstruction(house))continue;
@@ -673,7 +673,7 @@
     if(!s)return null;
     const m=meshBuilder(true),site=s.construction;
     if(site)delete s.construction;
-    try{addStructure(m,s,State.season==='winter')}
+    try{addStructure(m,s,isSnowGround())}
     finally{if(site)s.construction=site}
     const t=m.tris,n=t.length/18;if(!n)return null;
     const pos=new Array(n*9),col=new Array(n),hex=c=>Math.max(0,Math.min(255,Math.round(c*255))).toString(16).padStart(2,'0');
@@ -854,7 +854,7 @@
   const ATLAS_TILE=128,ATLAS_COLS=8;
   function buildTreeAtlas(){
     if(!forestTreeSpritesReady)return null;
-    const season=State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer';
+    const season=foliageLook();
     const tiles=[];
     // Autumn reuses the summer greens for stage zero; later stages use six warm tones.
     // Atlas pixels remain static throughout the season: only per-tree UVs advance.
@@ -863,12 +863,12 @@
     if(season==='autumn'){
       add(forestTreeSprites.summer);
       add(forestTreeSprites.autumn,FOREST_CANOPY_PALETTES.summer.length);
-    }else add(forestTreeSprites[season]);
+    }else add(forestTreeSprites[season==='bare'?'winter':season]);
     // Hedge bushes (drawUrbanHedge): 920x580 sprites.
     (window.boundaryBushSprites?.[season]||(typeof boundaryBushSprites!=='undefined'?boundaryBushSprites[season]:[])||[])
       .forEach((img,shape)=>img&&tiles.push({key:'bush:'+shape,img,aspect:580/920}));
     // Mountain pines (96x128 canvases), two tones.
-    if(typeof mountainPineSprite==='function')for(const v of [0,1])tiles.push({key:'pine:'+v,img:mountainPineSprite(v,season==='winter'),aspect:1,pine:true});
+    if(typeof mountainPineSprite==='function')for(const v of [0,1])tiles.push({key:'pine:'+v,img:mountainPineSprite(v,season==='winter'||season==='blizzard'),aspect:1,pine:true});
     const rows=Math.ceil(tiles.length/ATLAS_COLS)||1,c=document.createElement('canvas');
     c.width=ATLAS_COLS*ATLAS_TILE;c.height=rows*ATLAS_TILE;const g=c.getContext('2d'),map=new Map();
     tiles.forEach((t,i)=>{const x=(i%ATLAS_COLS)*ATLAS_TILE,y=Math.floor(i/ATLAS_COLS)*ATLAS_TILE,h=Math.round(ATLAS_TILE*t.aspect);
@@ -884,7 +884,7 @@
     for(const trees of groves){
       for(const t of trees){
         const stage=atlas.season==='autumn'?autumnFoliageStage(t):0;
-        const canopyIndex=atlas.season==='winter'?0:
+        const canopyIndex=['winter','bare','blizzard'].includes(atlas.season)?0:
           atlas.season==='autumn'&&stage>0?FOREST_CANOPY_PALETTES.summer.length+stage-1:t.colorIndex;
         const uv=atlas.map.get(t.shapeIndex+':'+canopyIndex);if(!uv)continue;
         let [u0,v0,u1,v1]=uv;if(t.flip)[u0,u1]=[u1,u0];
@@ -1314,7 +1314,7 @@
   function buildCutaway(){
     // m: interior (inner walls, cut jambs, floors, openings, furniture) - kept in full light at night;
     // sh: exterior shell (outer faces, crest ring, roof deck) - lit like the rest of the castle.
-    const m=meshBuilder(),sh=meshBuilder(),em=meshBuilder(),winter=State.season==='winter',turns=State.view.rotation||0;
+    const m=meshBuilder(),sh=meshBuilder(),em=meshBuilder(),winter=isSnowGround(),turns=State.view.rotation||0;
     // Windows and slits seen from inside: the same sprites as outside (decal atlas), facing the
     // room; a flat pane only while the atlas is not built yet.
     const dv=[],atlasMap=typeof S!=='undefined'?S.decalMap:null;
@@ -1596,7 +1596,8 @@
     S.civicCut=civicCut;S.shopCut=shopCut;S.shopFront=shopFront;
     S.contentDirty=false;S.lastUrbanRev=urbanRev();computeSigPass();
     const t0=performance.now(),st=S.stats;
-    const season=State.season||'summer',rot=State.view.rotation||0,plan=isPlanView();
+    // Winter phases (bare / snow / thaw / blizzard) change snow cover and foliage: key them too.
+    const season=(State.season||'summer')+(State.season==='winter'?':'+foliageLook():''),rot=State.view.rotation||0,plan=isPlanView();
     // envRev: main roads cut grooves into a continuous woodland in place.
     const envRev=typeof environmentRevision!=='undefined'?environmentRevision:0;
     const terraformEdits=window.ConquerTerraforming?.edits?.()||State.relief?.terraforming||[];
@@ -1655,7 +1656,7 @@
       S.sig.castle=cSig;st.castleMs=performance.now()-a;
     }
     const atlasSig=[season,forestTreeSpritesReady,
-      Object.keys((typeof boundaryBushSprites!=='undefined'&&boundaryBushSprites[season])||{}).length].join('|');
+      Object.keys((typeof boundaryBushSprites!=='undefined'&&boundaryBushSprites[foliageLook()])||{}).length].join('|');
     if(S.sig.treeAtlas!==atlasSig){
       S.treeAtlas=buildTreeAtlas();
       if(S.treeAtlas)uploadTexture(gl,'atlas',S.treeAtlas.canvas);

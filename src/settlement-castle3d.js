@@ -116,7 +116,7 @@
   function castleVolume(s){return(isCastlePart(s)||isRaisedPlacementCastlePoint(s))&&!underConstruction(s)}
   function castleParts(){return State.structures.filter(s=>castleVolume(s)&&!structureCutaway(s))}
   function cutawayParts(){return State.structures.filter(s=>castleVolume(s)&&structureCutaway(s))}
-  const winter=()=>State.season==='winter';
+  const winter=()=>isSnowGround();
 
   function addButtress(m,pieces){
     for(const p of pieces){
