@@ -1,5 +1,19 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-20 — GameSite P0 closure pass (branch `gamesite`, PR #292 Draft)
+
+- [x] Test Chromium reale per Guest: seed determinato, bioma, persist/resume e isolamento due slot, con screenshot artefatto di CI (run #44748638817).
+- [x] Guard tecnici: seed Guest non altera quello dev, metadata slot coerenti, salvataggi corrotti protetti, mancato salvataggio non chiude splash, exit verso sito; nuova QA su daylight e DEV non ancora confermata da run finale.
+- [x] Follow backend fail-closed, rollback su email non inviata e anti-abuso con limiti atomici e dati pseudonimizzati; prove mock, **non live**.
+- [x] Canonical per pagine editoriali, noindex 404, headers di sicurezza, route sitemap.
+- [ ] WEB-003 screenshot reali e trailer promozionale approvati, non solo SVG/stage Lab.
+- [ ] WEB-004 workflow editoriale Markdown/bozze verificato; oggi Devlog e una pagina statica pubblicata manualmente.
+- [ ] WEB-005/011/029 SMTP/provider, migration SQL, limitazioni WAF, pulizia rate bucket, prove double opt-in reali e privacy completa.
+- [ ] WEB-006/008/009/022-026 completare smoke finale dopo tutte le modifiche, check browser matrix e comportamento salvataggio in quota bassa.
+- [ ] WEB-014 e 021/027/028 release game/site isolabile con stessa identita utente; test account/logout/redirect e permessi reali, staging e rollback.
+- [ ] NFR Lighthouse/Web Vitals, WCAG AA, security review e config dominio prima di promozione su main.
+
+
 ### GameSite — P0 del sito pubblico (branch `gamesite`, 19/11/2026)
 
 Owner: [Website SRS v0.3](../WEBSITE-SRS.md). Questa tabella e uno **stato branch**, non completamento su `main`.
