@@ -102,7 +102,11 @@
     sprite:[`#version 300 es
       ${CAMERA}
       in vec3 aAnchor;in vec2 aCorner;in float aSize;in vec2 aUV;out vec2 vUV;
-      void main(){gl_Position=cam(aAnchor,aCorner*aSize*uS);vUV=aUV;}`,
+      // Billboards are depth-tested as an upright plane through the anchor (as the flames): on a
+      // sloping mountain facet a flat screen-depth quad sank half of each pine into the slope.
+      void main(){vec4 p=cam(aAnchor,aCorner*aSize*uS);
+        p.z-=2.0*(0.03-aCorner.y)*aSize/(uDepth.y-uDepth.x);
+        gl_Position=p;vUV=aUV;}`,
       `#version 300 es
       precision mediump float;in vec2 vUV;uniform sampler2D uAtlas;out vec4 o;
       void main(){vec4 c=texture(uAtlas,vUV);if(c.a<0.45)discard;o=vec4(c.rgb/max(c.a,1e-3),1.0);}`],
