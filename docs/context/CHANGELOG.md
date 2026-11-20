@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-18 — MSG-FEED-261118 · Messaggi e notifiche anche nella UI classica
+
+`fix/messages-notifications`: gli avvisi di UI-ALERTS-01 (#256) comparivano solo con `?ui=2`; ora pila di avvisi e diario degli eventi sono montati anche nella UI classica (default). «Mostra sulla mappa» centra la camera (`ConquerGame.commands.focus`), anche sul punto dove aspetta il messaggero; nessun doppione nel diario dopo un ricarico. Test end-to-end watcher → feed in `qa/ui-alerts-regression.mjs`. ROADMAP e DECISIONS invariate: correzione della consegna di UI-ALERTS-01, nessun contratto nuovo.
+
 ### 2026-11-19 — SHOP-L3-ADV · Botteghe avanzate L3 (D-SHOP-L3-261119)
 
 `feature/shops-l3-advanced` (base `fix/cutaway-shops`, #277): le case L3 dei mercanti aprono botteghe avanzate con due artigiani L2 assunti (secondo adulto delle case L2 più vicine), produzione ×2,5 (×1 con un solo artigiano, ferma senza), salari agli L2 e margine al mercante L3. Cutaway, fronte su strada, tragitto degli artigiani verso la bottega (banco e bancone), ispettore su L3 e L2, Lab (famiglia «Botteghe avanzate L3», 21 render in baseline). Nuova `qa/shops-l3-advanced-regression.cjs`. DECISIONS: nuova D-SHOP-L3-261119. ROADMAP invariata.
