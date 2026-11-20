@@ -110,9 +110,26 @@ try{
   assert.equal(second.secondSeed,777777);
   assert.equal(second.biome,'forest');
 
+  // Public Guest starts must not modify the legacy development save namespace.
+  const legacy=await page.evaluate(()=>({
+    seed:localStorage.getItem('conquer.seed.0.0'),
+    settlement:localStorage.getItem('conquer.settlement.0.0')
+  }));
+  assert.equal(legacy.seed,null);
+  assert.equal(legacy.settlement,null);
+
+  // Explicit exit returns to the website and preserves both Guest slots.
+  await page.locator('#conquerExitToSite').click();
+  await page.waitForURL(/\/gamesite\/play\.html$/,{timeout:30000});
+  const afterExit=await page.evaluate(()=>JSON.parse(localStorage.getItem('conquer.guest.slots.v1')));
+  assert.equal(afterExit.length,2);
+  assert.equal(afterExit.find(x=>x.id===first.slot)?.seed,424242);
+
   // Account remains optional; guest play never authenticates or exposes multiplayer state.
-  assert.equal(await page.evaluate(()=>State.user),null);
-  assert.equal(await page.evaluate(()=>State.supabase),null);
+  await page.goto(origin+'/index.html?launch=1',{waitUntil:'domcontentloaded',timeout:60000});
+  await gameReady();
+  assert.equal(await page.locator('#guestContinueArea button').count(),2);
+  assert.equal(await page.locator('[data-entry-tab="account"]').getAttribute('aria-pressed'),'false');
   const fatal=errors.filter(x=>!(/Failed to fetch|network|supabase|CORS/i.test(x)));
   assert.deepEqual(fatal,[],'Unexpected runtime page errors: '+fatal.slice(0,6).join(' | '));
   console.log(JSON.stringify({ok:true,firstSlot:first.slot,secondSlot:second.slot,seed1:first.seed,seed2:second.secondSeed,webgl2:checks.webgl2,screenshots:4}));
