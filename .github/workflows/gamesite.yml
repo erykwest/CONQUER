@@ -10,6 +10,7 @@ on:
       - "src/settlement-app-persistence.js"
       - "index.html"
       - "qa/gamesite-regression.mjs"
+      - "qa/gamesite-follow-integration.mjs"
       - "qa/gamesite-browser.mjs"
       - "src/settlement-app-bootstrap.js"
       - "src/settlement-app-persistence.js"
@@ -26,6 +27,7 @@ on:
       - "api/_gamesite-follow-core.js"
       - "src/settlement-game-entry.*"
       - "qa/gamesite-regression.mjs"
+      - "qa/gamesite-follow-integration.mjs"
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -48,7 +50,7 @@ jobs:
           node --check src/settlement-app-persistence.js
           for file in api/gamesite-*.js api/_gamesite-follow-core.js; do node --check "$file"; done
       - name: Run GameSite P0 regression
-        run: node --test qa/gamesite-regression.mjs
+        run: node --test qa/gamesite-regression.mjs qa/gamesite-follow-integration.mjs
 
   browser:
     needs: validate
