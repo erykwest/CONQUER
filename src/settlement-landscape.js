@@ -567,10 +567,11 @@ async function loadForestTreeSprites(){
         }
       }
       makeSprite('winter',shape,0,buildForestSvg(sources[shape],null,false));
-      // Blizzard: bare branches carrying snow, drawn as a pale, half-transparent crown.
-      makeSprite('blizzard',shape,0,sources[shape].replace(/fill="#3B5174"/gi,'fill="#f2f6f7" fill-opacity="0.62"'));
+      // Blizzard: the bare branches with a snow retino on their upward-facing band.
+      makeSprite('blizzard',shape,0,buildForestSvg(sources[shape],null,false));
     }
     await Promise.all(jobs);
+    forestTreeSprites.blizzard.forEach(set=>{if(set?.[0])set[0]=snowCapSprite(set[0])});
     forestTreeSpritesReady=true;
     invalidateSceneCache('landscape');
     if(typeof draw==='function')draw();

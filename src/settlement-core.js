@@ -1424,3 +1424,24 @@ function foliageLook(){
 }
 // Undergrowth of the woods: snowy, brown (early winter) or green.
 function undergrowthLook(){return isSnowGround()?'winter':winterPhase()==='bare'?'brown':'green'}
+// Blizzard sprites: a hatched snow screen-tone (retino) laid only on the upward-facing (zenithal) band
+// of every branch/twig shape; the shapes keep their own colour elsewhere. Returns a canvas.
+function snowCapSprite(img,band=.06){
+  const w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;
+  const c=document.createElement('canvas');c.width=w;c.height=h;
+  const g=c.getContext('2d');g.drawImage(img,0,0,w,h);
+  // The hatch period scales with the sprite, so it still reads once the sprite is drawn small.
+  const id=g.getImageData(0,0,w,h),d=id.data,depth=Math.max(3,Math.round(h*band)),period=Math.max(5,Math.round(h/40));
+  for(let x=0;x<w;x++){
+    let run=0;
+    for(let y=0;y<h;y++){
+      const i=(y*w+x)*4;
+      if(d[i+3]<96){run=0;continue}
+      if(run++>=depth)continue;
+      // Diagonal hatch: white strokes over a pale blue-grey ground.
+      const on=((x+y)%period)<period*.6;
+      d[i]=on?248:196;d[i+1]=on?251:208;d[i+2]=on?252:216;d[i+3]=255;
+    }
+  }
+  g.putImageData(id,0,0);return c;
+}

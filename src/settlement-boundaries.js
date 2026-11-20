@@ -8,7 +8,7 @@ const BOUNDARY_BUSH_ASSETS=Object.freeze([
 const BOUNDARY_BUSH_LOOKS=['summer','autumn','winter','bare','blizzard'];
 const boundaryBushSprites={summer:[],autumn:[],winter:[],bare:[],blizzard:[]};
 function buildBoundaryBushSvg(source,season){
-  const colors={summer:'#527641',autumn:'#827044',winter:'#c7d1b9',bare:'#6e5a44',blizzard:'#f1f5f6'};
+  const colors={summer:'#527641',autumn:'#827044',winter:'#c7d1b9',bare:'#6e5a44',blizzard:'#6e5a44'};
   return source.replace('viewBox="0 0 1024 1024"','viewBox="64 260 920 580"')
     .replace('width="1024"','width="920"').replace('height="1024"','height="580"')
     .replace(/#3B5174/gi,colors[season]||colors.summer).replace(/#9BBACE/gi,'#2B1D16');
@@ -22,7 +22,8 @@ async function loadBoundaryBushSprites(){
     if(sources[shape].status!=='fulfilled'){console.warn('Bush SVG load failed',BOUNDARY_BUSH_ASSETS[shape]);continue}
     for(const season of BOUNDARY_BUSH_LOOKS)jobs.push(new Promise(resolve=>{
       const img=new Image();
-      img.onload=()=>{boundaryBushSprites[season][shape]=img;resolve()};img.onerror=()=>resolve();
+      // Blizzard bushes: bare twigs plus the snow retino on their top band.
+      img.onload=()=>{boundaryBushSprites[season][shape]=season==='blizzard'?snowCapSprite(img,.12):img;resolve()};img.onerror=()=>resolve();
       img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(buildBoundaryBushSvg(sources[shape].value,season));
     }));
   }
