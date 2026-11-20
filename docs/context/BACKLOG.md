@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-18 — Microfix: posti per arcieri sulla torre di vedetta lignea
+
+**IMPLEMENTATO SU BRANCH `fix/watchtower-slots`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] La vedetta ha 2 posti per arcieri sul ballatoio (prima 0): pannello, assegnazione, tiratori in combattimento e figure.
+- [ ] Anche la torre lignea a telaio H2 (`frameTower`, ballatoio aperto a 2,66 U) e la torre a palizzata coperta hanno 0 posti: decidere se ne servono.
+
 ### 2026-11-18 — WOOD-GATE-SLOTS-261118 · Spazi della porta in legno
 
 **IMPLEMENTATO SU BRANCH `fix/wood-gate-slots`, NON MERGE.** Dettagli in [STATUS](STATUS.md).

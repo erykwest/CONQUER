@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-18 — Microfix: la torre di vedetta lignea ha due posti per arcieri (`fix/watchtower-slots`)
+
+- **CAUSA:** `computeArcherSlots` (`settlement-siege.js`) dava alle torri in legno solo il posto sul terrazzo aperto della torre a palizzata; la vedetta (`woodStyle:'watchtower'`) restava a 0 posti, quindi pannello «Arcieri 0/0», nessun arciere assegnabile né disegnato e nessuna vedetta visibile.
+- **CODICE:** la vedetta ha due posti `roof` sul ballatoio del modello Blender (tavolato a 1,46 U, parapetto a 1,72 U, lati aperti sotto il tetto a padiglione): uno al centro (dove `lookoutPose` mette anche la vedetta della Caserma), uno nell'angolo libero (0,2, −0,2) lontano dalla botola della scala. Ruotano con la torre; la torre a palizzata aperta resta a 1 posto, le altre torri lignee invariate.
+- **PROVE LOCALI PASS:** nuova `qa/watchtower-slots-regression.cjs` (posti > 0 sul ballatoio, rotazione, assegnazione fino a 2 e tiratori occupati, cantiere senza posti, torre a palizzata invariata), aggiunta al workflow `tower-variants-regression`; `bartizan`, `caserma-avamposto`, `military-circle-roster`, `wall-patrol`, `wood3d`, `alarm-bell`, `cutaway-furniture`, `tower-weapons`, `dovecote`, `falconry`, `keep-entrance`, `combat-sectors`, `collapse`. Figure sul ballatoio non controllate a vista in partita (stesso percorso di disegno dei posti `roof` della torre a palizzata).
+
 ### 2026-11-18 — WOOD-GATE-SLOTS-261118: spazio stanza della porta in legno (branch `fix/wood-gate-slots`, NON MERGE)
 
 - **CODICE:** `functionCapacity` (`settlement-castle-placement.js`) restituisce 1 per la porta in legno (`material==='wood'`, test in linea come `isWoodGate` perché i test estraggono la funzione da sola); le porte in pietra restano a `livello − 1` (L1 0, L2 1, L3 2). Lo spazio è al piano 1 (sopra il passaggio, `functionFloorOffset`) e segue `allowed()` di `settlement-siege.js` come le porte in pietra. Pannello stanze e `describeStructure` lo mostrano senza modifiche (usano `functionCapacity`); i salvataggi con `functions:[]` ricevono lo spazio vuoto da `normalizeFunctions`.
