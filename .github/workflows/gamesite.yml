@@ -12,6 +12,7 @@ on:
       - "qa/gamesite-regression.mjs"
       - "qa/gamesite-follow-integration.mjs"
       - "qa/gamesite-browser.mjs"
+      - "qa/gamesite-edge-browser.mjs"
       - "src/settlement-app-bootstrap.js"
       - "src/settlement-app-persistence.js"
       - "src/settlement-app-calendar-ui.js"
@@ -76,6 +77,8 @@ jobs:
         uses: ./.github/actions/playwright-setup
       - name: Verify Guest seed, local saves, resume and mobile layout
         run: node qa/gamesite-browser.mjs
+      - name: Verify account mock, WebGL2 fallback and storage errors
+        run: node qa/gamesite-edge-browser.mjs
       - name: Upload real browser screenshots
         if: always()
         uses: actions/upload-artifact@v4
