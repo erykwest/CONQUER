@@ -6,6 +6,35 @@
 - [x] Folle delle feste e della giostra vestite per stagione; chiavi delle carte 3D di feste, giostra e interni civici con l'abito.
 - [ ] Decisione di prodotto: il pubblico del tribunale e della messa resta senza abiti stagionali (scelta attuale); i mestieri a slot pieni (fabbro, muratore…) non mettono il mantello d'inverno nemmeno all'aperto.
 
+## 2026-11-19 — MOAT-WIDEN · Allargare il fossato
+
+**Implementato sul branch `feature/moat-from-wall`, non ancora unito a main.** Richiesta del product owner (19/11/2026): «se fai upgrade del fossato in larghezza mantieni il lato adiacente al muro/palizzata».
+
+- [x] Allargamento 2/3/4U dal pannello del fossato; contro muro/palizzata/tratto costruito la sponda sul muro resta ferma.
+- [ ] Aperti: allargare tutto l'anello in un colpo; un vicino collineare (stesso rettilineo) non segue l'allargamento e resta un gradino; il ponte levatoio su un fossato allargato oltre 1,65U chiede il mezzo ponte a mano.
+
+## 2026-11-19 — ROAD-MOAT-DRAWBRIDGE, ROAD-MAGNET-ROAD · Ponte levatoio e magnete strade
+
+**Implementato sul branch `feature/moat-from-wall`, non ancora unito a main.** Richiesta del product owner (19/11/2026): «magnet per le strade» (scelto: strada su strada) e «se attraverso fossato con strada metti porta con ponte levatoio già installato».
+
+- [x] Strada attraverso muro + fossato: porta con ponte levatoio installato; porta esistente senza ponte: installato.
+- [x] Magnete strada su strada: estremi e lati di tutte le strade, raggio più ampio, estremo prioritario, punto illuminato.
+- [ ] Aperti: fossato largo o lontano oltre la portata del ponte (oggi nessun mezzo ponte automatico); il secondo pezzo del muro tagliato non risulta legato al fossato (`wallId` resta al primo); muro disegnato sopra una strada che già attraversa un fossato non mette il ponte.
+
+## 2026-11-19 — ROAD-WALL-GATE · Strada che attraversa un muro → porta
+
+**Implementato sul branch `feature/moat-from-wall`, non ancora unito a main.** Richiesta del product owner (19/11/2026): costruendo una strada che attraversa un muro si aggiunge una porta del tipo corrispondente, come quando si costruisce un muro su una strada.
+
+- [x] Strada maestra attraverso muro o palizzata finiti: porta del tipo corrispondente, muro tagliato sui fianchi, strada nel varco; fantasma con la porta.
+- [ ] Da decidere: muro ancora in cantiere (oggi la strada è rifiutata). Ponte levatoio sul fossato davanti: fatto in ROAD-MOAT-DRAWBRIDGE.
+## 2026-11-18 — FOSSATO-MURO · Fossato costruibile dal muro selezionato
+
+**Implementato sul branch `feature/moat-from-wall`, non ancora unito a main.** Richiesta del product owner (18/11/2026): fossati costruibili anche selezionando muro, palizzata o tratto costruito, attaccati direttamente sul lato esterno.
+
+- [x] Comando «Fossato» (secco / d'acqua) nell'inspector di muro, palizzata e tratto costruito; fossato da 1,5U a filo del lato esterno.
+- [x] Raccordo all'angolo col fossato del tratto vicino; varco libero davanti alle porte.
+- [ ] Da decidere: fossato anche durante il cantiere del muro (oggi solo a tratto completato); larghezza diversa da 1,5U; scavo dell'intero giro di mura in un clic.
+- [ ] Le torri sporgono oltre la faccia del muro: il fossato passa sotto il loro piede agli angoli; valutare se girarci intorno.
 ## 2026-11-19 — CI-AUDIT-01 · CI più veloce per l'audit del Lab
 
 - [x] Modifiche solo di interfaccia: smoke della galleria al posto dell'audit completo.
