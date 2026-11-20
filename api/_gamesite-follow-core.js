@@ -27,6 +27,31 @@ export function publicSite() {
   if (u.protocol !== 'https:') throw Error('PUBLIC_SITE_URL must use HTTPS');
   return u.origin;
 }
+// Fail closed before writing a pending subscription if email delivery cannot work.
+export function requireFollowConfig(){
+  publicSite();
+  for(const key of ['SUPABASE_SERVICE_ROLE_KEY','RESEND_API_KEY','FOLLOW_FROM','FOLLOW_SIGNING_SECRET']){
+    if(!process.env[key])throw Error('Missing '+key);
+  }
+}
+export async function consumeFollowBudget(req){
+  if(!secret()||!process.env.FOLLOW_SIGNING_SECRET)throw Error('Rate limiter not configured');
+  // A 15-minute HMAC bucket is stored, not the source IP or any browser identifier.
+  // The deployment's proxy must populate x-vercel-forwarded-for or x-forwarded-for.
+  const raw=String(req.headers?.['x-vercel-forwarded-for']||
+    req.headers?.['x-forwarded-for']||req.socket?.remoteAddress||'unknown')
+    .split(',')[0].trim().slice(0,100);
+  const windowId=Math.floor(Date.now()/(15*60*1000));
+  const digest=createHmac('sha256',process.env.FOLLOW_SIGNING_SECRET)
+    .update('gamesite-follow:v1:'+raw+':'+windowId).digest('hex');
+  const response=await fetch(new URL('/rest/v1/rpc/gamesite_consume_follow_budget',supabase()),{
+    method:'POST',
+    headers:{apikey:secret(),Authorization:'Bearer '+secret(),'Content-Type':'application/json'},
+    body:JSON.stringify({p_bucket:digest})
+  });
+  if(!response.ok)throw Error('Follow throttling backend unavailable: '+response.status);
+  return await response.json()===true;
+}
 export async function db(path, options={}) {
   if (!secret()) throw Error('Missing SUPABASE_SERVICE_ROLE_KEY');
   const url = new URL('/rest/v1/gamesite_followers'+path,supabase());
