@@ -9,7 +9,7 @@ This is a **development implementation** of the P0 website and optional Guest si
 - `/gamesite/` — English public website, responsive medieval-modern visual system.
 - `/gamesite/game.html` — game pillars with honest development-state messaging.
 - `/gamesite/media.html` — original CONQUER asset samples and on-demand real Builder preview, **not yet a promotional screenshot gallery**.
-- `/gamesite/devlog/` — editorial article index, initial published article.
+- `/gamesite/devlog/` — editorial index and permalink pages generated from `gamesite/content/devlog/*.md`. `status: draft` is never emitted.
 - `/gamesite/follow.html` — double-opt-in subscriber form.
 - `/gamesite/account.html` — email magic-link sign-in using the same existing Supabase Auth project as the game.
 - `/gamesite/play.html` — WebGL2 check, link to `/index.html?launch=1`.
