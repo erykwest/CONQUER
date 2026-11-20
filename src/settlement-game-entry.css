@@ -15,3 +15,14 @@
 .conquer-entry-saves{display:grid;gap:8px}.conquer-entry-saves button{text-align:left;display:flex;justify-content:space-between;gap:12px}.conquer-entry-saves span{font-size:12px;color:#bec4bc}
 .conquer-entry-message{min-height:1.8em;color:#e8c27e;font-size:14px}.conquer-entry-footer{border-top:1px solid #505853;padding-top:18px;margin-top:24px;color:#9fa9a3;font-size:12px}
 @media(max-width:620px){.conquer-game-entry{padding:12px}.conquer-entry-choices,.conquer-entry-grid{grid-template-columns:1fr}.conquer-entry-choices{gap:7px}.conquer-entry-eyebrow{margin-top:26px}.conquer-entry-actions{flex-direction:column}.conquer-entry-saves button{flex-direction:column}}
+
+
+#conquerExitToSite{
+  position:fixed;right:16px;bottom:16px;z-index:25000;
+  border:1px solid #b9a078;border-radius:3px;background:#182427ef;color:#eee2c9;
+  padding:10px 15px;font:600 13px/1.4 system-ui,sans-serif;cursor:pointer;
+  box-shadow:0 4px 18px #0008;
+}
+#conquerExitToSite:hover{background:#2d3b39}
+#conquerExitToSite:focus-visible{outline:3px solid #f0c879;outline-offset:3px}
+@media(max-width:620px){#conquerExitToSite{bottom:8px;right:8px;padding:9px;font-size:12px}}
