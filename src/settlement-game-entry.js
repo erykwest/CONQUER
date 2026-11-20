@@ -31,8 +31,13 @@
     catch { return false; }
   };
   const authClient = async () => {
-    for (let n=0; n<60 && !window.__createSupabaseClient; n++) await new Promise(resolve => setTimeout(resolve, 60));
-    if (!window.__createSupabaseClient) throw new Error('Sign-in service is unavailable. Guest play remains available.');
+    // Do not load authentication software or create a remote session in Guest mode.
+    if(!window.__createSupabaseClient){
+      try{
+        const module=await import('https://esm.sh/@supabase/supabase-js@2.117.1');
+        window.__createSupabaseClient=module.createClient;
+      }catch(error){throw Error('Sign-in service is unavailable. Guest play remains available.')}
+    }
     // Shared with the existing Builder client; only a public publishable key is used.
     return window.__createSupabaseClient(SUPABASE_URL, SUPABASE_KEY);
   };
