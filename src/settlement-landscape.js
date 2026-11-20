@@ -542,6 +542,42 @@ function buildForestSvg(source,canopyColor=null,canopyVisible=true){
   if(!canopyVisible)return source.replace(/fill="#3B5174"/gi,'fill="#3B5174" fill-opacity="0"');
   return source.replace(/fill="#3B5174"/gi,`fill="${canopyColor}" fill-opacity="0.8"`);
 }
+// Secondary branches, shown only while the crown is off (leafless winter): a seeded fan of tapered
+// limbs grown from the trunk top inside the crown silhouette, so snow can settle across the whole
+// tree and not only on the trunk forks.
+function forestWinterBranchesSvg(source,shape){
+  const m=source.match(/<path d="([^"]+)"[^>]*fill="#3B5174"/i);if(!m)return'';
+  const crown=new Path2D(m[1]),g=document.createElement('canvas').getContext('2d');
+  let x0=1024,x1=0,y0=1024,y1=0;
+  for(let y=0;y<1024;y+=16)for(let x=0;x<1024;x+=16)if(g.isPointInPath(crown,x,y)){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y)}
+  if(x1<=x0)return'';
+  const rnd=seedRand(0x2b1d16+shape*7919),H=y1-y0,W=x1-x0,inside=(x,y)=>g.isPointInPath(crown,x,y);
+  const parts=[];
+  const grow=(x,y,ang,len,wd,depth)=>{
+    // Shorten the limb until its tip stays inside the crown.
+    let ex,ey;for(let k=0;k<6;k++){ex=x+Math.cos(ang)*len;ey=y+Math.sin(ang)*len;if(inside(ex,ey))break;len*=.75}
+    const mx=(x+ex)/2+Math.cos(ang+Math.PI/2)*len*(rnd()-.5)*.25,my=(y+ey)/2+Math.sin(ang+Math.PI/2)*len*(rnd()-.5)*.25;
+    parts.push(`<path d="M${x.toFixed(1)} ${y.toFixed(1)} Q${mx.toFixed(1)} ${my.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}" stroke="#2B1D16" stroke-width="${wd.toFixed(1)}" stroke-linecap="round" fill="none"/>`);
+    if(depth<=0||wd<4)return;
+    const n=depth>1?2:2+(rnd()<.4?1:0);
+    for(let i=0;i<n;i++){
+      const spread=(i/(n-1||1)-.5)*1.1+(rnd()-.5)*.35;
+      // Children lean back towards the vertical: limbs reach up, not sideways.
+      const a=ang+spread,up=-Math.PI/2,next=a+(up-a)*.18;
+      const t=.55+rnd()*.4;
+      grow(x+(ex-x)*t,y+(ey-y)*t,next,len*(.55+rnd()*.15),wd*.62,depth-1);
+    }
+  };
+  const sx=(x0+x1)/2,sy=y0+H*.78,limbs=Math.max(4,Math.round(W/150));
+  for(let i=0;i<limbs;i++){
+    const a=-Math.PI/2+((i/(limbs-1))-.5)*2.2+(rnd()-.5)*.2;
+    grow(sx+(rnd()-.5)*W*.06,sy,a,H*(.34+rnd()*.1),20+rnd()*6,3);
+  }
+  return parts.join('');
+}
+function buildForestWinterSvg(source,shape){
+  return buildForestSvg(source,null,false).replace('</svg>',forestWinterBranchesSvg(source,shape)+'</svg>');
+}
 async function loadForestTreeSprites(){
   try{
     const sources=await Promise.all(FOREST_TREE_ASSETS.map(path=>fetch(path+'?v=bark1').then(r=>{
@@ -566,9 +602,10 @@ async function loadForestTreeSprites(){
           makeSprite(season,shape,color,buildForestSvg(sources[shape],palette[color],true));
         }
       }
-      makeSprite('winter',shape,0,buildForestSvg(sources[shape],null,false));
-      // Blizzard: the bare branches with a snow retino on their upward-facing band.
-      makeSprite('blizzard',shape,0,buildForestSvg(sources[shape],null,false));
+      // Leafless winter trees carry the secondary branches; blizzard adds the snow retino on them.
+      const bare=buildForestWinterSvg(sources[shape],shape);
+      makeSprite('winter',shape,0,bare);
+      makeSprite('blizzard',shape,0,bare);
     }
     await Promise.all(jobs);
     forestTreeSprites.blizzard.forEach(set=>{if(set?.[0])set[0]=snowCapSprite(set[0])});
