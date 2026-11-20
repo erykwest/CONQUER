@@ -5,7 +5,7 @@
 - Test Chromium di creazione Guest, salvataggi multipli e ripresa, snapshot desktop/mobile; primo run superato #44748638817. Successiva aggiunta di controlli su daylight/DEV/exit e nuovi test API da verificare in CI finale.
 - P0 Guest: seed non scrive slot dev, splash conserva progressi su errore, metadati sincronizzati, exit salvata, avvio a mezzogiorno, UI dev nascosta, caricamento SDK Auth solo quando richiesto.
 - Follow: controlli preflight su configurazione, rate-limit HMAC atomico lato DB e rollback su invio fallito, test di integrazione con provider mock.
-- Sito: canonical SEO, noindex 404, security headers CSP e route sitemap in Vercel. Nessun database, invio reale, deployment o main modificato.
+- Sito: canonical SEO, noindex 404, security headers CSP e route sitemap in Vercel. Devlog adesso usa sorgenti Markdown versionate, generatore e controllo CI con bozze escluse. Nessun database, invio reale, deployment o main modificato.
 
 
 ### 2026-11-19 — GameSite P0 branch implementation (non merged)
