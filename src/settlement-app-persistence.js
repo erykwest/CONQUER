@@ -195,7 +195,7 @@ function saveLocal(){
     window.__conquerAnalytics?.event?.('LOCAL_SAVE_ERROR',{message:String(error)},'error',30000);
     return false;
   }
-  updateGuestSaveIndex();
+  if(window.__CONQUER_GUEST_SLOT__)updateGuestSaveIndex();
   if(window.__conquerPerf)window.__conquerPerf.lastSaveMs=performance.now()-t0;
   window.__conquerAnalytics?.measure('SAVE',performance.now()-t0);
   return true;
