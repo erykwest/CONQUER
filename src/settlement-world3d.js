@@ -910,13 +910,22 @@
       }
     }
     S.stats.forestBushes=forestBushes;
+    // River, stream and marsh bank bushes: the legacy 2D bush sprites, not the 3D scatter models.
+    for(const p of S.scatterProps||[]){
+      if(!window.ConquerScatter?.isBankBush?.(p))continue;
+      const shape=(window.ConquerUtil.hash(p.x.toFixed(2)+','+p.y.toFixed(2))>>>0)%7,uv=atlas.map.get('bush:'+shape);if(!uv)continue;
+      let [u0,v0,u1,v1]=uv;if(shape&1)[u0,u1]=[u1,u0];
+      const width=p.r*2.4,hr=580/920,C=[[-.5,-.97*hr,u0,v0],[.5,-.97*hr,u1,v0],[.5,.03*hr,u1,v1],[-.5,.03*hr,u0,v1]];
+      const z=terrainElevation(p)+.01;
+      for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(p.x,p.y,z,cx,cy,width,u,w)}
+    }
     // Pines on the lower half of the mountains, standing on the cone surface.
     for(const f of State.environment||[]){
       if(f.type!=='mountain'||!f.height||typeof mountainPineLayout!=='function')continue;
       for(const t of mountainPineLayout(f)){
         const uv=atlas.map.get('pine:'+t.shade);if(!uv)continue;
         let [u0,v0,u1,v1]=uv;if(t.flip)[u0,u1]=[u1,u0];
-        const size=2.4*t.scale,C=[[-.5,-.97,u0,v0],[.5,-.97,u1,v0],[.5,.03,u1,v1],[-.5,.03,u0,v1]];
+        const size=MOUNTAIN_PINE_SIZE*t.scale,C=[[-.5,-.97,u0,v0],[.5,-.97,u1,v0],[.5,.03,u1,v1],[-.5,.03,u0,v1]];
         for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(t.p.x,t.p.y,t.z,cx,cy,size,u,w)}
       }
     }
@@ -1659,31 +1668,9 @@
       for(const [name,part] of [['castleBody','body'],['castleLines','lines'],['castleFront','front'],['castleFrontLines','frontLines']]){S.buf[name]=v[part].b;S.buf[name+'#n']=v[part].n}
       S.sig.castle=cSig;st.castleMs=performance.now()-a;
     }
-    const atlasSig=[season,forestTreeSpritesReady,
-      Object.keys((typeof boundaryBushSprites!=='undefined'&&boundaryBushSprites[foliageLook()])||{}).length].join('|');
-    if(S.sig.treeAtlas!==atlasSig){
-      S.treeAtlas=buildTreeAtlas();
-      if(S.treeAtlas)uploadTexture(gl,'atlas',S.treeAtlas.canvas);
-      S.sig.treeAtlas=atlasSig;
-    }
-    const treeSig=[atlasSig,season==='autumn'?autumnFoliageStep():-1,
-      (State.environment||[]).length,envRev,State.seed,urbanRev(),structuresSig('hedges')].join('|');
-    if(S.sig.trees!==treeSig){
-      const a=performance.now();
-      upload(gl,'trees',buildTrees(S.treeAtlas));S.sig.trees=treeSig;st.treesMs=performance.now()-a;
-    }
-    const dSig=[structuresSig('all'),shopCut,shopFront,Object.keys(architectureSprites).length,window.ConquerGates?.ensureSprites()||'',
-      window.__conquerHeraldryCanvas?.signature?.()||JSON.stringify(State.heraldry||null)].join('|');
-    if(S.sig.decals!==dSig){
-      const a=performance.now(),atlas=buildDecalAtlas();uploadTexture(gl,'decalAtlas',atlas.canvas);S.decalMap=atlas.map;
-      const baked=buildDecals(atlas);
-      upload(gl,'decals',baked.decals);
-      upload(gl,'nightWindows',baked.lights);
-      upload(gl,'fireLights',buildFireLights());
-      S.sig.decals=dSig;st.decalsMs=performance.now()-a;
-    }
     // Environmental scatter (settlement-scatter.js): the layout follows content, the two-tone
-    // side shading follows the camera quarter-turn, so keep one buffer per rotation.
+    // side shading follows the camera quarter-turn, so keep one buffer per rotation. Laid out
+    // before the trees: bank bushes are drawn as 2D bush billboards with them.
     if(window.ConquerScatter&&window.ConquerScatterModel){
       const scContent=[season,State.stonePaletteId,State.seed,State.relief?.seed,(State.environment||[]).length,urbanRev(),structuresSig('all')].join('|');
       if(S.scatterContent!==scContent){
@@ -1699,6 +1686,29 @@
         v={b,n:d.length};S.scatterVariants.set(rot,v);st.scatterMeshMs=performance.now()-a;
       }
       S.buf.scatter=v.b;S.buf['scatter#n']=v.n;
+    }
+    const atlasSig=[season,forestTreeSpritesReady,
+      Object.keys((typeof boundaryBushSprites!=='undefined'&&boundaryBushSprites[foliageLook()])||{}).length].join('|');
+    if(S.sig.treeAtlas!==atlasSig){
+      S.treeAtlas=buildTreeAtlas();
+      if(S.treeAtlas)uploadTexture(gl,'atlas',S.treeAtlas.canvas);
+      S.sig.treeAtlas=atlasSig;
+    }
+    const treeSig=[atlasSig,season==='autumn'?autumnFoliageStep():-1,
+      (State.environment||[]).length,envRev,State.seed,urbanRev(),structuresSig('hedges'),S.scatterContent||''].join('|');
+    if(S.sig.trees!==treeSig){
+      const a=performance.now();
+      upload(gl,'trees',buildTrees(S.treeAtlas));S.sig.trees=treeSig;st.treesMs=performance.now()-a;
+    }
+    const dSig=[structuresSig('all'),shopCut,shopFront,Object.keys(architectureSprites).length,window.ConquerGates?.ensureSprites()||'',
+      window.__conquerHeraldryCanvas?.signature?.()||JSON.stringify(State.heraldry||null)].join('|');
+    if(S.sig.decals!==dSig){
+      const a=performance.now(),atlas=buildDecalAtlas();uploadTexture(gl,'decalAtlas',atlas.canvas);S.decalMap=atlas.map;
+      const baked=buildDecals(atlas);
+      upload(gl,'decals',baked.decals);
+      upload(gl,'nightWindows',baked.lights);
+      upload(gl,'fireLights',buildFireLights());
+      S.sig.decals=dSig;st.decalsMs=performance.now()-a;
     }
     // Cutaway interiors: rebuilt on content change, one buffer pair per camera quarter-turn.
     // W1 porticos join even when closed: their loggia furniture shows through the arches.

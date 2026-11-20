@@ -95,16 +95,24 @@
     const harbour=(State.structures||[]).filter(q=>q.type==='quay'||q.type==='pier');
     const works=harbour.map(q=>q.type==='quay'?window.ConquerQuay?.footprint(q):window.ConquerPier?.footprint(q)).filter(Boolean);
     const quays=harbour.map(q=>q.id+':'+(q.a?q.a.x+','+q.a.y+','+q.b.x+','+q.b.y:q.x+','+q.y+','+(q.angle||0))).join(';');
-    const key=cache.key+'|'+(State.seed||0)+'|'+State.stonePaletteId+'|'+quays;if(rockCache.key===key)return rockCache.meshes;
+    // Snow on the ground whitens the upward faces of the rocks (not the reef awash).
+    const snow=typeof isSnowGround==='function'&&isSnowGround();
+    const key=cache.key+'|'+(State.seed||0)+'|'+State.stonePaletteId+'|'+quays+'|'+snow;if(rockCache.key===key)return rockCache.meshes;
     const rnd=typeof seedRand==='function'?seedRand(((Number(State.seed)||1)^0x5c0a57)>>>0):Math.random;
     const pos=[],col=[],seaYaw=Math.atan2(d.D.y,d.D.x);
     const put=(name,o,yaw,sc)=>{
       const m=K.models[name];if(!m||works.some(poly=>pip(o,poly)))return;
       const z0=Math.max(-.3,typeof terrainElevation==='function'?terrainElevation(o):0),cs=Math.cos(yaw)*sc,sn=Math.sin(yaw)*sc;
       for(const part of Object.values(m.parts))for(let t=0;t<part.c.length;t++){
+        const v0=pos.length;
         for(let q=0;q<3;q++){const j=part.i[t*3+q]*3,x=part.p[j],y=part.p[j+1];pos.push(o.x+x*cs-y*sn,o.y+x*sn+y*cs,z0+part.p[j+2]*sc)}
         const hex=K.palette[part.c[t]];
         const role=K.paletteKeys[part.c[t]];
+        if(snow&&name!=='reef'&&role?.startsWith('rock')){
+          const P=pos,ux=P[v0+3]-P[v0],uy=P[v0+4]-P[v0+1],uz=P[v0+5]-P[v0+2],vx=P[v0+6]-P[v0],vy=P[v0+7]-P[v0+1],vz=P[v0+8]-P[v0+2];
+          const nx=uy*vz-uz*vy,ny=uz*vx-ux*vz,nz=ux*vy-uy*vx;
+          if(Math.abs(nz)/(Math.hypot(nx,ny,nz)||1)>.45){col.push('#eef2f4');continue}
+        }
         col.push(['rocksA','rocksB','rocksC','reef'].includes(name)&&role?.startsWith('rock')?(window.ConquerStoneColor?.shade(hex)||hex):hex);
       }
     };

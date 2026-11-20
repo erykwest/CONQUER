@@ -428,7 +428,7 @@ const mountainPineCache=new Map();
 function mountainPineLayout(f){
   const pineZ=mountainPineZ(),key=f.id+':'+State.seed+':'+(f.height||0)+':'+pineZ.toFixed(3);
   if(mountainPineCache.has(key))return mountainPineCache.get(key);
-  const rnd=seedRand((State.seed^biomeHash(f.id+':pines'))>>>0),b=environmentPolygonBounds(f.points),step=2.6,out=[];
+  const rnd=seedRand((State.seed^biomeHash(f.id+':pines'))>>>0),b=environmentPolygonBounds(f.points),step=2.6/Math.sqrt(1.5),out=[]; // 1.5x the pines, at 75% size
   const others=State.environment.filter(o=>o.type==='mountain'&&o!==f);
   for(let y=b.minY;y<=b.maxY;y+=step)for(let x=b.minX;x<=b.maxX;x+=step){
     const p={x:x+(rnd()-.5)*step*.8,y:y+(rnd()-.5)*step*.8},shade=rnd(),scale=.9+rnd()*.45,flip=rnd()<.5;
@@ -442,6 +442,7 @@ function mountainPineLayout(f){
 }
 // Two-tone pine like the reference: tiered drooping crown and a short trunk.
 const mountainPineSprites={};
+const MOUNTAIN_PINE_SIZE=2.4*.75;
 function mountainPineSprite(variant,winter=false){
   const key=variant+(winter?'w':'');
   if(mountainPineSprites[key])return mountainPineSprites[key];
@@ -481,7 +482,7 @@ function mountainPineSprite(variant,winter=false){
 function drawMountainPine(t){
   if(!screenPointVisibleRaw(t.p,t.z,30))return;
   const img=mountainPineSprite(t.shade,isSnowGround()),base=w2sRaw(t.p,t.z);
-  const h=Math.max(8,U*State.view.scale*2.4*t.scale),w=h*.75;
+  const h=Math.max(8,U*State.view.scale*MOUNTAIN_PINE_SIZE*t.scale),w=h*.75;
   ctx.drawImage(img,base.x-w/2,base.y-h*.97,w,h);
 }
 function mountainFacetPolygons(f,height=f.height||3.6){
@@ -738,7 +739,7 @@ function forestLayoutKey(f){return f.id+':'+(f.holes?.length||0)}
 function clearForestLayoutCache(){forestTreeLayoutCache.clear();forestGroundLayoutCache.clear();forestShrubLayoutCache.clear()}
 // Continuous woodland: a jittered grid over the map with fixed per-cell attributes, filtered by
 // containment, so carving a groove removes only the trees inside it instead of reshuffling all.
-const CONTINUOUS_FOREST_SPACING=4.4/Math.sqrt(2.5);
+const CONTINUOUS_FOREST_SPACING=4.4/Math.sqrt(2.5*1.3); // 1.3x the trees of the previous grid
 function continuousForestTrees(f,bounds=null){
   const rnd=seedRand((State.seed^biomeHash(f.id))>>>0),n=Math.ceil(WORLD/CONTINUOUS_FOREST_SPACING),trees=[];
   for(let iy=0;iy<n;iy++)for(let ix=0;ix<n;ix++){
@@ -768,7 +769,7 @@ function forestTreeLayout(f,bounds=null){
   forestTreeLayoutCache.set(cacheKey,trees);return trees;
 }
 // Real bush sprites, independently seeded and counted from the tree grid.
-const FOREST_SHRUB_SPACING=7.5;
+const FOREST_SHRUB_SPACING=7.5/Math.SQRT2; // twice the undergrowth bushes
 function forestShrubLayout(f){
   ensureLandscapeRenderCaches();const key=forestLayoutKey(f);
   if(forestShrubLayoutCache.has(key))return forestShrubLayoutCache.get(key);
