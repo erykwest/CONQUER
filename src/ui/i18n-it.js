@@ -293,7 +293,7 @@ export const T = {
     sloped: 'Pendio graduale.', walled: 'Terrazza con muro di contenimento.', flat: 'Sottrae terreno fino a quota 0.',
     crossingWidth: 'Larghezza di fossati e ponti.',
     welfare: 'Media della felicità delle quattro classi, pesata sugli abitanti.',
-    workshops: 'Botteghe che le case L2 (artigiani) aprono da sole nei giorni feriali (una per casa). Producono Beni L3 venduti il sabato alle famiglie, con i prezzi della settimana precedente.',
+    workshops: 'Botteghe che le case L2 (artigiani) aprono da sole nei giorni feriali (una per casa); le case L3 dei mercanti aprono botteghe avanzate con due artigiani L2 assunti (produzione ×2,5, salari agli artigiani, margine al mercante). Producono Beni L3 venduti il sabato alle famiglie, con i prezzi della settimana precedente.',
     happiness: 'Ogni classe ha la sua felicità: sale se mangia, scende con la fame e con le mezze razioni; le razioni piene la alzano.',
     jobs: 'Un solo allocatore L1: industrie, poi pastori a guardia del cibo (copertura 14 giorni), cantieri pagati dal signore, taglio legna, il resto libero.',
     capital: 'Denaro del settore privato (case L4): paga salari e materiali delle attività private.',
