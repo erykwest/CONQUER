@@ -40,13 +40,13 @@ function persist(){sanitize();State.heraldry={...h};window.__conquerHeraldryCanv
 function open(tab='general'){
  h={...DEFAULT,...(State.heraldry||{})};sanitize();
  $('profileOverlay').hidden=false;
- $('profileVillage').textContent=State.village?.name||'Insediamento non fondato';
- $('profileSeed').textContent=String(State.seed);
- $('profileBiome').textContent=(typeof BIOMES!=='undefined'&&BIOMES[State.biome]?.label)||State.biome;
+ // Village/seed/biome facts share the ids renderUI() keeps live (former right "Settlement" panel).
+ const facts={villageLabel:State.village?.name||'Insediamento non fondato',seedLabel:String(State.seed),biomeLabel:(typeof BIOMES!=='undefined'&&BIOMES[State.biome]?.label)||State.biome};
+ for(const id in facts){const el=$(id);if(el)el.textContent=facts[id]}
  $('profileDay').textContent=(Number(State.clock?.day)||0).toFixed(1);
  setTab(tab);
 }
-function setTab(tab){document.querySelectorAll('[data-profile-tab]').forEach(b=>b.classList.toggle('active',b.dataset.profileTab===tab));$('profileGeneral').hidden=tab!=='general';$('profileHeraldry').hidden=tab!=='heraldry';const environment=$('profileEnvironment');if(environment)environment.hidden=tab!=='environment';const control=$('profileControl');if(control)control.hidden=!['control','jobs','trade','erario'].includes(tab);if(tab==='heraldry')draw();if(tab==='environment')renderEnvironment();if(['control','jobs','trade','erario'].includes(tab))window.ConquerPanels?.open(tab)}
+function setTab(tab){document.querySelectorAll('[data-profile-tab]').forEach(b=>b.classList.toggle('active',b.dataset.profileTab===tab));$('profileGeneral').hidden=tab!=='general';$('profileHeraldry').hidden=tab!=='heraldry';const governance=$('profileGovernance');if(governance)governance.hidden=tab!=='governance';const environment=$('profileEnvironment');if(environment)environment.hidden=tab!=='environment';const control=$('profileControl');if(control)control.hidden=!['control','jobs','trade','erario'].includes(tab);if(tab==='heraldry')draw();if(tab==='environment')renderEnvironment();if(['control','jobs','trade','erario'].includes(tab))window.ConquerPanels?.open(tab)}
 function renderEnvironment(){
  const host=$('stonecolorChoices'),api=window.ConquerStoneColor;if(!host||!api)return;
  host.innerHTML=api.IDS.map(id=>{

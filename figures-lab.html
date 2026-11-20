@@ -116,7 +116,7 @@ body.asset-catalog-static #labLegacyControls{display:none}
     <button data-subject="wolf">Lupo</button><button data-subject="bear">Orso</button><button data-subject="boar">Cinghiale</button>
   </div>
   <div class="group" role="group" aria-label="Persone"><span>Persone</span>
-    <button data-subject="villager">Popolano</button><button data-subject="spearman">Guerriero</button>
+    <button data-subject="villager">Popolano</button><button data-subject="spearman">Guerriero</button><button data-subject="pikeman">Picchiere</button><button data-subject="herald">Araldo</button><button data-subject="manAtArms">Uomo d'arme</button>
     <button data-subject="archer">Arciere</button><button data-subject="knight">Cavaliere</button>
   </div>
   <div class="group" role="group" aria-label="A cavallo"><span>A cavallo</span>
@@ -159,7 +159,12 @@ body.asset-catalog-static #labLegacyControls{display:none}
   </div>
   <div class="group" id="equipBox"><span>Equipaggiamento</span>
     <label>Elmo <select id="sHelmet"><option value="">Originale</option><option value="cap">Cervelliera</option><option value="kettle">Cappello d'arme</option><option value="nasal">Elmo a nasale</option><option value="barbuta">Barbuta</option><option value="greathelm">Elmo a staio</option></select></label>
+    <label>Cimiero <select id="sCrest"><option value="">Casuale (per cavaliere)</option><option value="wings">Ali</option><option value="antlers">Corna di cervo</option><option value="horns">Corna</option><option value="eagle">Aquila</option><option value="crown">Corona</option></select></label>
     <label>Scudo <select id="sShield"><option value="">Originale</option><option value="oval">Ovale</option><option value="round">Rotella</option><option value="heater">Triangolare</option><option value="kite">A mandorla</option><option value="pavise">Pavese</option></select></label>
+  </div>
+  <div class="group" id="maaBox" hidden><span>Uomo d'arme (L3)</span>
+    <label>Arma <select id="maaWeapon"><option value="random">Casuale (per persona)</option><option value="halberd">Alabarda</option><option value="twoHandAxe">Ascia a due mani</option><option value="twoHandHammer">Martello a due mani</option><option value="greatsword">Spada a due mani</option></select></label>
+    <label>Elmo <select id="maaHelmet"><option value="random">Casuale (elmi dei cavalieri)</option><option value="greathelm">Elmo a staio</option><option value="barbuta">Barbuta</option><option value="kettle">Cappello d'arme</option><option value="nasal">Elmo a nasale</option><option value="cap">Cervelliera</option></select></label>
   </div>
   <label id="wardrobeBox">Stagione/meteo <select id="wardrobe">
     <option value="summer|clear">Estate serena</option><option value="spring|wind">Primavera ventosa</option>
@@ -264,7 +269,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 (function(){
   const A=window.ConquerAnimals,CA=window.ConquerCombatAnim,WA=window.ConquerWorkAnim,W2=window.ConquerWagons,c=document.getElementById('c'),g=c.getContext('2d');
   const $=id=>document.getElementById(id);
-  const ANIMALS=['sheep','goat','cow','horse','deer','stag','wolf','bear','boar'],DOMESTIC=['sheep','goat','cow','horse'],SOLDIERS=['spearman','archer','knight'],RIDERS=['mounted','messenger'];
+  const ANIMALS=['sheep','goat','cow','horse','deer','stag','wolf','bear','boar'],DOMESTIC=['sheep','goat','cow','horse'],SOLDIERS=['spearman','pikeman','herald','manAtArms','archer','knight'],RIDERS=['mounted','messenger'];
   const ACTIONS={ship:[['cycle','Alza e abbassa'],['set','Vele spiegate'],['furl','Vele alzate']],rider:[['idle','Fermo'],['walk','Passo'],['run','Carica'],['attack','Attacco'],['die','Caduta']],siege:[['idle','Fermo'],['move','In marcia'],['fire','Tiro']],animal3d:[['walk','Walking'],['browse','Browse'],['run','Corsa']],vehicle:[['move','In marcia'],['stop','Fermo']],animal:[['walk','Walking'],['browse','Browse']],soldier:[['guard','Guardia'],['attack','Attacco'],['die','Morte']],villager:[['idle','Fermo'],['dig','Pala'],['chop','Ascia'],['pick','Piccone'],['build','Martello'],['plough','Zappa'],['sow','Semina'],['harvest','Falce']]};
   // Siege actions per engine: what 'fire' means, and the trebuchet's set-up.
   function siegeActions(e){
@@ -287,7 +292,8 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     $('wagonBox').hidden=!['wagon','wagon3d'].includes(subject);
     $('wagon3dBox').hidden=!(subject==='wagon3d'||['animal','siege','ship'].includes(kindOf(subject)));
     $('flipBox').hidden=subject!=='wagon';
-    $('equipBox').hidden=kindOf(subject)!=='soldier'&&subject!=='mounted';
+    $('equipBox').hidden=kindOf(subject)!=='soldier'&&subject!=='mounted'||subject==='manAtArms';
+    $('maaBox').hidden=subject!=='manAtArms';
     const eng=kindOf(subject)==='siege'?subject.split(':')[1]:'',ammo=AMMO[eng];
     $('siegeUpBox').hidden=!ammo&&eng!=='mantlet';$('ammoBox').hidden=!ammo;$('balBox').hidden=eng!=='mantlet';
     if(ammo){const was=$('sAmmo').value;$('sAmmo').innerHTML=ammo.map(([k,l])=>'<option value="'+k+'">'+l+'</option>').join('');if(ammo.some(([k])=>k===was))$('sAmmo').value=was}
@@ -297,8 +303,9 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
   function setWardrobe(){const [season,weather]=$('wardrobe').value.split('|');window.ConquerWardrobe.preview={season,weather}}
   $('wardrobe').onchange=setWardrobe;setWardrobe();
   // Feudal unit equipment (State.policies.unitHelmet/unitShield), as chosen in Militare › Equipaggiamento.
-  function setEquip(){const p=State.policies||(State.policies={});p.unitHelmet=$('sHelmet').value;p.unitShield=$('sShield').value}
-  $('sHelmet').onchange=$('sShield').onchange=setEquip;setEquip();
+  function setEquip(){const p=State.policies||(State.policies={});p.unitHelmet=$('sHelmet').value;p.unitShield=$('sShield').value;p.knightCrest=$('sCrest').value;
+    p.manAtArms={weapon:$('maaWeapon').value,helmet:$('maaHelmet').value}}
+  $('sHelmet').onchange=$('sShield').onchange=$('sCrest').onchange=$('maaWeapon').onchange=$('maaHelmet').onchange=setEquip;setEquip();
   document.querySelectorAll('[data-subject]').forEach(b=>b.onclick=()=>{subject=b.dataset.subject;fromAction=action='walk';trans=1;renderButtons()});
   $('actions').onclick=e=>{const k=e.target.dataset?.action;if(k&&k!==action){fromAction=action;action=k;trans=0;renderButtons()}};
 
@@ -341,6 +348,8 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     for(const [x,y,s] of sizes){
       const hp={x,y},fp={x:x+(subject==='archer'?16:13)*s,y};
       drawPerson(subject,hp,s*2,hero,fp,null);
+      // The regiment's herald holds the standard in place of the spear.
+      if(subject==='herald'&&!CA.dying(hero)){State.view.scale=s*2;ctx=g;drawHeraldStandard(g,hp,'lab-herald',clock*3)}
       drawPerson('spearman',fp,s*2,foe,hp,HOSTILE);
     }
     drawArrows();
@@ -589,7 +598,7 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
     fighters.forEach((f,i)=>{
       const ap={x:(860+i*30)*k,y:(730+i*8)*k},ep={x:ap.x+2.6*z,y:ap.y+.6*z};
       if(clock>=f.next){CA.strike(f.ally,f.enemy);CA.strike(f.enemy,f.ally);if(Math.random()<.5)CA.hurt(Math.random()<.5?f.ally:f.enemy,CA.TIMING.IMPACT);f.next=clock+1+Math.random()*.3}
-      drawPerson('spearman',ap,z,f.ally,ep,null,i);
+      drawPerson('pikeman',ap,z,f.ally,ep,null,i);
       drawPerson('spearman',ep,z,f.enemy,ap,HOSTILE,i);
     });
     const arP={x:830*k,y:770*k},target={x:964*k,y:748*k};
@@ -649,8 +658,8 @@ function villagerHair(id){return['blonde','brown','black','gray','red'][peasantH
 <script src="./src/assets/waterside-models.js?v=waterside2"></script>
 <script src="./src/settlement-ships.js?v=boats1-a261113"></script>
 <script src="./src/settlement-ship-crew.js?v=crew-1-a261113"></script>
-<script src="./src/assets/event-models.js?v=asset-lab-6"></script>
-<script src="./src/settlement-events3d.js?v=asset-lab-8-a261113-outlaws2"></script>
+<script src="./src/assets/event-models.js?v=asset-lab-6-spikes1"></script>
+<script src="./src/settlement-events3d.js?v=asset-lab-8-a261113-outlaws2-spikes1"></script>
 <script src="./src/assets/house-models.js?v=house3d-4"></script>
 <script src="./src/assets/belfry-models.js?v=bell1"></script>
 <script src="./src/assets/mews-models.js?v=mews1"></script>

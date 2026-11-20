@@ -19,7 +19,7 @@ const ctx=vm.createContext({Math,Number,State,ROAD_RULES:{snapNodeDistance:1.15}
   ensureBorderEntrySelection:()=>[],roadList:()=>State.structures.filter(s=>s.type==='road'),
   closestPointOnSegment:(p,a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,L2=dx*dx+dy*dy||1,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/L2));return{x:a.x+dx*t,y:a.y+dy*t}}});
 vm.runInContext(['rotateVec','toLocalPoint'].map(n=>fn(placement,n)).join('\n')+'\n'+
-  ['gatePassageInfo','roadMeetsBridgeEnd','gateRoadPort','bridgeRoadEnd','mainRoadSnapAnchor'].map(n=>fn(world,n)).join('\n'),ctx);
+  ['gatePassageInfo','roadMeetsBridgeEnd','gateRoadPort','bridgeRoadEnd','roadRoadSnap','mainRoadSnapAnchor'].map(n=>fn(world,n)).join('\n'),ctx);
 
 {
   const east=ctx.mainRoadSnapAnchor({x:4.6,y:.4}),west=ctx.mainRoadSnapAnchor({x:-.7,y:-.5});
