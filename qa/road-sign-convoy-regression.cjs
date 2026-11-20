@@ -140,4 +140,33 @@ test('scatter model draws four signs and wagon renderer animates the convoy',()=
   assert.ok(drawn>=1,'an animated wagon uses the imported wagon renderer');
   assert.equal(h.road.restore(),true);
 });
+test('a returning lord convoy drives back along the road facing home, lead wagon first',()=>{
+  const h=harness(),V=h.window.ConquerVehicles;
+  const j={id:'lord-1',kind:'tribute',edge:'east',status:'outbound',actualDepartDay:10,arrivalDay:20,returnDay:30,
+    transport:{mode:'wagon',wagons:2},escorts:{requested:0},cargo:[]};
+  h.State.clock.day=11;
+  const out=h.road.liveConvoyLeg(j);
+  assert.ok(out,'outbound convoy on the map');
+  const keepToEdge=out.path.at(-1).x-out.path[0].x;
+  assert.ok(keepToEdge>0,'east road runs keep -> border');
+  const outLay=V.layout({vehicle:'wagon',vehicles:2,distance:out.distance,speed:1},out.path);
+  assert.ok(Math.cos(outLay.vehicles[0].heading)>.9,'outbound: wagons face east, towards the border');
+  // Coming home, at the same spot of the road: the wagons must face west (travel direction).
+  j.status='returning';h.State.clock.day=29;
+  const back=h.road.liveConvoyLeg(j);
+  assert.ok(back,'returning convoy on the map');
+  const p=V.at(V.makePath(back.path),back.distance),q=V.at(V.makePath(out.path),out.distance);
+  assert.ok(Math.hypot(p.x-q.x,p.y-q.y)<1e-6,'same point of the road at the mirrored moment');
+  const lay=V.layout({vehicle:'wagon',vehicles:2,distance:back.distance,speed:1},back.path);
+  assert.ok(Math.cos(lay.vehicles[0].heading)<-.9,'returning: wagons face west, towards the keep');
+  assert.ok(lay.vehicles[0].x<lay.vehicles[1].x,'the lead wagon is the one nearer home');
+  // Later on the way home it is nearer the keep: it moves the way it faces.
+  h.State.clock.day=29.5;const later=h.road.liveConvoyLeg(j);
+  const r=V.at(V.makePath(later.path),later.distance);assert.ok(r.x<p.x,'moves west over time');
+  // Every point of the drive lies on the carriageway (smoothed bends stay inside the road width).
+  const roads=h.State.structures.filter(s=>s.type==='road');
+  const onRoad=pt=>roads.some(s=>{const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=dx*dx+dy*dy,
+    t=Math.max(0,Math.min(1,((pt.x-s.a.x)*dx+(pt.y-s.a.y)*dy)/L));return Math.hypot(s.a.x+dx*t-pt.x,s.a.y+dy*t-pt.y)<=s.width/2});
+  assert.ok(back.path.every(onRoad),'the convoy keeps to the roads');
+});
 console.log('Road sign convoys regression: all checks passed.');

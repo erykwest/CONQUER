@@ -157,6 +157,7 @@
   function head(ctx,o){
     const {lw}=o;
     const style=o.kind==='knight'?o.helmet:null;
+    if(o.kind==='knight')mantling(ctx,o,HELMET_TOP[style&&style!=='greathelm'?style:'greathelm']);
     if(style&&style!=='greathelm'){
       // Feudal helmet (State.policies.unitHelmet): open helmets show the face under a mail coif.
       const face=()=>{ctx.fillStyle=MAIL;ctx.beginPath();ctx.arc(123,22,13,0,Math.PI*2);ctx.fill();ctx.strokeStyle=OUTLINE;ctx.lineWidth=lw;ctx.stroke();
@@ -179,13 +180,35 @@
     }else if(o.kind==='knight'){
       poly(ctx,[[112,34],[134,34],[136,10],[130,4],[116,4],[110,10]],STEEL,OUTLINE,lw);           // great helm
       line(ctx,[122,18],[136,18],'#16181a',lw*1.6,'butt');                                         // visor slit
-      poly(ctx,[[116,4],[130,4],[128,-8],[118,-8]],o.livery.main,OUTLINE,lw*.8);                  // crest
     }else{
       ctx.fillStyle=SKIN;ctx.beginPath();ctx.arc(123,20,12,0,Math.PI*2);ctx.fill();
       ctx.strokeStyle=OUTLINE;ctx.lineWidth=lw;ctx.stroke();
       ctx.fillStyle=HAT;ctx.beginPath();ctx.arc(123,18,12,Math.PI,Math.PI*2);ctx.lineTo(135,18);ctx.closePath();ctx.fill();
       line(ctx,[105,19],[141,19],HAT,lw*2.6);                                                      // kettle-hat brim
     }
+    if(o.kind==='knight')crest(ctx,o,HELMET_TOP[style&&style!=='greathelm'?style:'greathelm']);
+  }
+  // Knight's heraldic crest (product owner, 17/11/2026): mantling behind the helmet, torse and
+  // crest figure on top, the same drawing the knight wears on foot (drawHeraldicMantling /
+  // drawHeraldicCrest in settlement-population-figures.js, loaded before this file). The figure
+  // comes from opts.crest, else from the seed.
+  const HELMET_TOP={greathelm:4,barbuta:6,kettle:2,nasal:-4,cap:5},HELM_HALF=13;
+  const crestKind=o=>{const list=typeof KNIGHT_CRESTS!=='undefined'?KNIGHT_CRESTS:['wings'];return list.includes(o.crest)?o.crest:list[(o.seed||0)%list.length]};
+  function mantling(ctx,o,top){
+    if(typeof drawHeraldicMantling==='function')drawHeraldicMantling(ctx,123,top,HELM_HALF,o.livery,o.lw*.8);
+  }
+  function crest(ctx,o,top){
+    if(typeof drawHeraldicCrest==='function')drawHeraldicCrest(ctx,123,top,HELM_HALF,crestKind(o),o.livery,o.lw*.8);
+  }
+  // Knight's cloak: from the shoulders, flying back over the horse's rump; lining in the second tincture.
+  function cloak(ctx,o){
+    // Above the caparison's top line, so it reads against the horse and not only against the drape.
+    const pts=[[108,34],[130,34],[116,52],[96,68],[70,78],[50,76],[62,64],[84,50]];
+    poly(ctx,pts,o.livery.main,null,o.lw);
+    ctx.save();ctx.beginPath();pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.clip();
+    poly(ctx,[[44,70],[70,64],[80,82],[48,84]],o.livery.alt,null,o.lw);ctx.restore();             // lining at the flying hem
+    poly(ctx,pts,null,OUTLINE,o.lw);
+    line(ctx,[100,46],[74,68],'rgba(25,24,22,.35)',o.lw*.8);                                     // fold
   }
   function shield(ctx,o){
     // At the rider's near side, low over the thigh so the surcoat still shows.
@@ -227,6 +250,7 @@
     ctx.restore();
   }
   function body(ctx,o,withLance=true){
+    if(o.kind==='knight')cloak(ctx,o);
     if(withLance&&o.kind==='knight')lance(ctx,o);
     torso(ctx,o);legs(ctx,o);
     if(o.kind==='knight')shield(ctx,o);else reins(ctx,o);
@@ -245,7 +269,7 @@
     const p=opts.pose||{},kind=opts.kind==='messenger'?'messenger':'knight';
     const alpha=p.alpha??1;if(alpha<=0)return;
     const state={kind,livery:opts.livery,paint:opts.paint,ready:p.ready||0,attack:p.attack||0,flash:p.flash||0,
-      fall:p.fall||0,charge:opts.mode==='run',helmet:opts.helmet||null,shield:opts.shield||null};
+      fall:p.fall||0,charge:opts.mode==='run',helmet:opts.helmet||null,shield:opts.shield||null,crest:opts.crest||null,seed:opts.seed||0};
     ctx.save();ctx.globalAlpha*=alpha;
     let unhorsed=null;
     window.ConquerAnimals.drawAnimal('horse',ctx,x,y,size,{t:opts.t||0,seed:opts.seed||0,coat:opts.coat,
