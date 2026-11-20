@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-18 — FIX-MILL-HILLS-261118: mulino a vento sulle colline (branch `fix/mill-hills`, NON MERGE)
+
+- **CAUSA:** `ConquerIndustries.validate` (`src/settlement-industries.js`) accettava il mulino a vento solo con terrazza a quota esattamente H+1. Le colline procedurali sono alte 2-3 livelli e il loro anello piano H+1 (tra il bordo del livello 1 e il pendio di 2U del livello 2, rientro 0,9-5,4U) è spesso più stretto dei 2U del mulino: sulla cima (H+2/H+3) il mulino era sempre rifiutato, quindi su quasi tutte le colline non si poteva né posare né avviare il cantiere.
+- **CODICE:** il mulino a vento vuole una terrazza piana a H+1 **o più** (`ground>=1`); `groundZ` = quota della terrazza (già usato da `addStructure` e da `settlement-industries3d.js`). Restano: rifiuto su H0, impronta 2×2U tutta su un'unica terrazza (nessun pendio), bosco/acqua/edifici. Mulino ad acqua invariato. Etichette del Builder: «2×2U · hill H+1+» / «collina H+1 o più».
+- **PROVE LOCALI PASS:** nuova `qa/windmill-hills-regression.cjs` (terreno vero di `settlement-castle.js` su colline di `makeProceduralHill`, 4 semi × altezze 2 e 3: posa sulla cima, posa su ogni livello con i quattro angoli alla quota di `groundZ`, rifiuto su H0 e sui pendii, mulino ad acqua senza fiume rifiutato), aggiunta a «Economy flows regression»; fallisce sul codice precedente. `economy-industries-regression` (test aggiornato H+1/H+2/H+3), `builder-menu-regression`, `mills3d-regression`, `economy-regression`. Non verificato in CI.
+
 ### 2026-11-18 — WARDROBE-CAL-261118: guardaroba stagionale e calendario (branch `fix/seasonal-wardrobe`)
 
 - Verifica: il guardaroba dei popolani è agganciato al calendario. `ConquerWardrobe.conditions()` legge mese (`calendarDateFromDay`), stagione (`State.season`, sincronizzata da `syncSeasonToCalendar`) e meteo a ogni disegno, con cache per giorno; residenti, lavoratori, carrettieri, marinai, staff e fuggiaschi dell'incendio passano da `outfitFor` e la chiave della carta 3D (`villagerLookKey`) contiene l'abito, quindi il cambio avviene a runtime e non solo alla nascita.
