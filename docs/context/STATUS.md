@@ -1,5 +1,10 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-20 — SHOP-L2-ROOMS: stanze del piano terra L2 (branch `feature/shops-l2-rooms`, NON MERGE)
+
+- **CODICE:** `settlement-shop-cutaway.js` `LAYOUTS_L2` (sette mestieri) e `domestic()`; `layout(R,out,kind,home)` sceglie le stanze L2 per le botteghe di casa e `LAYOUTS` per le avanzate L3; `grade` nella chiave della cache del cutaway.
+- **PROVE LOCALI PASS:** `qa/shop-cutaway-regression.cjs` con nuovo controllo (layout L2 per ogni mestiere, focolare, passaggio dalla porta libero in entrambi i versi della porta) e i 112 cutaway esistenti; `qa/shops-l3-advanced-regression.cjs`. Audit Lab «Botteghe L2»: 21 render, 0 falliti, fogli rivisti, baseline aggiornata.
+
 ### 2026-11-19 — SHOP-L3-ADV: botteghe avanzate L3 (branch `feature/shops-l3-advanced`, NON MERGE)
 
 - **CODICE:** `settlement-commerce.js`: `grade` 'basic'/'advanced' sulle botteghe, `ADVANCED` (2 artigiani, ×2,5, ×1 con uno), `registerAdvancedShop`, `hireOf`, `outputFactor`; apertura autonoma sulle case L3 mercanti nei giorni feriali se c'è almeno un artigiano L2 libero; `staffAdvanced` ogni giorno (case L2 più vicine, secondo adulto); salari maturati per giorno lavorato e pagati il sabato prima del margine L3; vendite divise per produzione; promozione L2→L3 mercante converte la bottega. `settlement-shop-cutaway.js`: eleggibile anche L3 con bottega avanzata, `hireOf` con memo, secondo posto al bancone su strada (senza attrezzo). `artisanPosition(house,day,hiredAt)`: il lavorante va alla porta della bottega L3. Ispettore: riga «Bottega avanzata L3» (artigiani, ×, salari, margine) e «Lavorante» sulla casa L2. Lab: `bottega-l3-*`.

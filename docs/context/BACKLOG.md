@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2
+
+**IMPLEMENTATO SU BRANCH `feature/shops-l2-rooms`, NON MERGE.**
+- [x] Casa-bottega L2: bancone, focolare e tavolo, postazione compatta, passaggio libero.
+- [ ] Verificare in partita le stanze sulle case a schiera (`urbanDenseParts`).
+
 ### 2026-11-19 — SHOP-L3-ADV · Botteghe avanzate L3
 
 **IMPLEMENTATO SU BRANCH `feature/shops-l3-advanced`, NON MERGE.** Dettagli in [STATUS](STATUS.md), decisione D-SHOP-L3-261119.

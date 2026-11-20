@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2 come casa-bottega
+
+`feature/shops-l2-rooms` (base `feature/shops-l3-advanced`, #293): il cutaway delle botteghe L2 ha stanze proprie (`LAYOUTS_L2`): bancone su strada lontano dalla porta, angolo della famiglia (focolare con paiolo, tavolino, due sgabelli) sul fondo del lato bancone, postazione compatta del mestiere sul fondo del lato porta; passaggio dalla porta libero. Le case L3 tengono la bottega completa. Baseline del Lab aggiornata per i 21 render «Botteghe L2». ROADMAP invariata; DECISIONS: completa D-SHOP-L3-261119 (stanze L2).
+
 ### 2026-11-19 — SHOP-L3-ADV · Botteghe avanzate L3 (D-SHOP-L3-261119)
 
 `feature/shops-l3-advanced` (base `fix/cutaway-shops`, #277): le case L3 dei mercanti aprono botteghe avanzate con due artigiani L2 assunti (secondo adulto delle case L2 più vicine), produzione ×2,5 (×1 con un solo artigiano, ferma senza), salari agli L2 e margine al mercante L3. Cutaway, fronte su strada, tragitto degli artigiani verso la bottega (banco e bancone), ispettore su L3 e L2, Lab (famiglia «Botteghe avanzate L3», 21 render in baseline). Nuova `qa/shops-l3-advanced-regression.cjs`. DECISIONS: nuova D-SHOP-L3-261119. ROADMAP invariata.
