@@ -74,6 +74,9 @@ try{
   assert.equal(first.savedBiome,'plains');
   assert.equal(first.count,1);
   assert.equal(first.user,null);
+  assert.equal(await page.evaluate(()=>State.clock.day),.5,'Guest should start in visible midday conditions');
+  assert.equal(await page.locator('#devToggle').isVisible(),false,'Public launch must not show the developer toolbar');
+  assert.equal(await page.locator('header a[href$="CONQUER_WORLD_LAB.html"]').isVisible(),false,'Public launch must not advertise the regional Lab');
   await page.screenshot({path:dir+'/04-guest-world.png',fullPage:false,timeout:30000});
   assert.ok(!missing.length,'Local resources failed: '+missing.slice(0,8).join(' | '));
 
