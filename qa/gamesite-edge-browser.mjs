@@ -62,7 +62,9 @@ try{
   await noGl.goto(origin+'/gamesite/play.html',{waitUntil:'domcontentloaded'});
   await noGl.waitForFunction(()=>document.getElementById('gameStartLink')?.getAttribute('aria-disabled')==='true');
   assert.match(await noGl.locator('#compatibility').textContent(),/WebGL2 was not detected/);
-  await noGl.locator('#gameStartLink').click();
+  // Playwright correctly refuses clicking an aria-disabled control; dispatch a DOM click
+  // to exercise the handler's defense rather than waiting for an enabled element.
+  await noGl.locator('#gameStartLink').evaluate(element=>element.click());
   assert.match(noGl.url(),/\/gamesite\/play\.html$/);
   await noGl.goto(origin+'/index.html?launch=1',{waitUntil:'domcontentloaded',timeout:60000});
   await noGl.waitForSelector('#guestStart');
