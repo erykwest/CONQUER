@@ -1,7 +1,7 @@
 // CONQUER interface v2 ("Isole"): floating wood-and-gold tablets over a full-bleed map.
 // Opt-in with ?ui=2 (persisted; ?ui=1 goes back). Reads the game only through window.ConquerGame.
 import { html, render, useState, useEffect, useRef } from '../vendor/htm-preact-3.1.1.js';
-import { T } from './i18n-it.js?v=ui2-insp-2-wallpatrol2-alerts3-upg2';
+import { T } from './i18n-it.js?v=ui2-insp-2-wallpatrol2-alerts3-upg2-fieldworks1';
 import { createAlertCenter } from './alerts.js?v=alerts3';
 import { createWatchers } from './alert-watchers.js?v=alerts3';
 
@@ -26,6 +26,7 @@ const ICON = {
   production: 'M12 21V9M12 9c-3 0-5-2-5-5 3 0 5 2 5 5zM12 14c3 0 5-2 5-5-3 0-5 2-5 5z',
   well: 'M5 10h14M7 10v10h10V10M8 10V5h8v5',
   justice: 'M12 3v18M7 21h10M5 7h14M5 7l-2 6h4zM19 7l-2 6h4z',
+  fieldworks: 'M3 20h18M5 20l3-12M10 20l3-14M15 20l3-12M6.5 13l-2 1M11.5 12l-2 1M16.5 13l-2 1',
   terrain: 'M2 19l6-8 4 5 3-4 7 7zM14 6h6M17 3v6',
   delete: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13',
   undo: 'M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3',
@@ -162,6 +163,9 @@ const CATALOG = [
   { id: 'well', hint: T.hints.point, press: '[data-well]', is: s => s.tool.kind === 'well', rows: s => [masonryRow(s)] },
   { id: 'justice', hint: T.hints.point, press: '[data-event-venue="pillory"]', is: s => s.tool.kind === 'event' && ['pillory', 'gallows', 'scaffold'].includes(s.tool.venue),
     rows: s => [{ label: O.building, options: ['pillory', 'gallows', 'scaffold'].map(k => opt(V[k], `[data-event-venue="${k}"]`, s.tool.venue === k)) }] },
+  // Field works against a charge (settlement-events3d.js): stake rows, chevaux de frise, the army camp.
+  { id: 'fieldworks', hint: T.hints.point, press: '[data-event-venue="stakeRow"]', is: s => s.tool.kind === 'event' && ['stakeRow', 'chevalFrise', 'armyCamp'].includes(s.tool.venue),
+    rows: s => [{ label: O.building, options: ['stakeRow', 'chevalFrise', 'armyCamp'].map(k => opt(V[k], `[data-event-venue="${k}"]`, s.tool.venue === k)) }] },
   { id: 'delete', hint: T.hints.delete, press: '[data-tool="delete"]', is: s => s.tool.kind === 'delete' }
 ];
 const activeEntry = snap => CATALOG.find(e => e.is(snap)) || CATALOG[0];
