@@ -38,7 +38,7 @@ function bootConquer(selection=null){
       State.structures=[];State.environment=[];State.relief=null;
       State.village={...State.village,name:null,founded:false,wellId:null,growthStep:0,nextGrowthDay:null,roadPlan:null};
       State.resources={...PROVISIONAL_RESOURCES};
-      State.clock.day=0;State.clock.speed=0;
+      State.clock.day=.5;State.clock.speed=0; // Start the public Builder in daylight (12:00) rather than midnight.
     }else throw new Error('Invalid guest start mode');
   }else loadLocal();
   window.ConquerEconomy?.bind();
