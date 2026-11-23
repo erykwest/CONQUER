@@ -59,7 +59,7 @@ try{
   await page.goto(labUrl,{waitUntil:'load',timeout:60000});
   await page.waitForFunction(()=>window.ConquerAssetCatalog?.items?.length>100);
   await page.getByRole('button',{name:'Interfaccia',exact:true}).click();
-  assert.equal(await page.locator('.asset-card').count(),72);
+  assert.equal(await page.locator('.asset-card').count(),74);
   await page.evaluate(()=>window.ConquerAssetCatalog.select('file:src/assets/builder-icons/mulino-vento.svg'));
   await page.locator('#assetDetailPreview img').evaluate(image=>image.decode());
   assert.equal(await page.locator('#assetDetailPreview').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(232, 221, 198)');
