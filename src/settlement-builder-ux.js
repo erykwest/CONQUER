@@ -4,7 +4,7 @@
   const root=document.getElementById('builder');
   if(!root)return;
   const ICON_ROOT='./src/assets/builder-icons/';
-  const SVG_FILES=new Set(["accampamento-militare","arena","banchina","bargello","campo-addestramento","campo-taglialegna","cantiere-navale-l1","cantiere-navale-l2","catalog.json","category-civic","category-combat","category-defense","category-economy","category-events","category-infrastructure","category-terrain","cava-argilla","cava-pietra","chiesa","forca","fossato-allagato","fossato-asciutto","gilda","gogna","longhouse-w1","longhouse-w2","magazzino","mercato","miniera","molo-grande","molo-piccolo","mulino-acqua","mulino-vento","municipio","mura","palazzo-balivo","palco","palizzata","patibolo","ponte-legno","ponte-pietra","porta-lignea","porta-muraria","porta-piccola","pozzo","pulpito","rampa","rimuovi-foresta","sala-larga","scalinata","semitorre","sezione-costruita","spianamento","spiazzo-eventi","strada","taverna","terrazzamento-murato","terreno","torre-d","torre-guardia-lignea","torre-lignea","torre-quadrata","torre-rotonda","ui-demolish","ui-depth","ui-height","ui-material","ui-radius","ui-rotate","ui-save","ui-select","ui-shape","ui-undo"]);
+  const SVG_FILES=new Set(["accampamento-militare","arena","banchina","bargello","campo-addestramento","campo-taglialegna","cantiere-navale-l1","cantiere-navale-l2","catalog.json","category-civic","category-combat","category-defense","category-economy","category-events","category-infrastructure","category-terrain","cava-argilla","cava-pietra","chiesa","forca","fossato-allagato","fossato-asciutto","gilda","gogna","longhouse-w1","longhouse-w2","magazzino","mercato","miniera","molo-grande","molo-piccolo","mulino-acqua","mulino-vento","municipio","mura","palazzo-balivo","palco","palizzata","patibolo","ponte-legno","ponte-pietra","porta-lignea","porta-muraria","porta-piccola","pozzo","pulpito","rampa","rimuovi-foresta","sala-larga","scalinata","semitorre","sezione-costruita","spianamento","spiazzo-eventi","strada","taverna","terrazzamento-murato","terreno","torre-d","torre-guardia-lignea","torre-lignea","torre-quadrata","torre-rotonda","ui-demolish","ui-depth","ui-height","ui-material","ui-radius","ui-rotate","ui-save","ui-select","ui-shape","ui-undo","fila-pali","cavallo-frisia"]);
   const path={
     cursor:'M5 3l14 10-7 1-3 7z',
     civic:'M3 11 12 4l9 7M5 10v11h14V10M10 21v-7h4v7',
@@ -95,8 +95,8 @@
       ['[data-event-venue="arenaLot"]','Arena · 18×14U · lotto dedicato','arena']]},
     {id:'combat',label:'Combattimento e allarmi',icon:'category-combat',items:[
       ['[data-event-venue="armyCamp"]','Accampamento militare · capi, compagnie, logistica · steccato → palizzata','accampamento-militare'],
-      ['[data-event-venue="stakeRow"]','Pali anti-carica · tratti da 1.4U · punte verso il fronte','castle'],
-      ['[data-event-venue="chevalFrise"]','Cavallo di Frisia · 1.4U · sbarra un varco','castle']]},
+      ['[data-event-venue="stakeRow"]','Pali anti-carica · tratti da 1.4U · punte verso il fronte','fila-pali'],
+      ['[data-event-venue="chevalFrise"]','Cavallo di Frisia · 1.4U · sbarra un varco','cavallo-frisia']]},
     {id:'terrain',label:'Terraforming',icon:'category-terrain',items:[
       ['[data-terraform="terrain"]','Terreno','terreno'],
       ['[data-terraform="walled"]','Terrazzamento murato','terrazzamento-murato'],

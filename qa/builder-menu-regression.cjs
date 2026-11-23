@@ -14,8 +14,8 @@ const ux=read('src/settlement-builder-ux.js');
 const vm=require('node:vm');
 const catalog=JSON.parse(read('src/assets/builder-icons/catalog.json'));
 const groups=vm.runInNewContext(ux.slice(ux.indexOf('  const groups=[')+2,ux.indexOf('  // The combat module'))+';groups');
-assert.equal(groups.flatMap(g=>g.items).length,52);
-assert.equal(catalog.entries.length,72);
+assert.equal(groups.flatMap(g=>g.items).length,54);
+assert.equal(catalog.entries.length,74);
 for(const entry of catalog.entries){
   const asset=read('src/assets/builder-icons/'+entry.id+'.svg');
   assert.match(asset,/viewBox="0 0 64 64"/);

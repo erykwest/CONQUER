@@ -7,8 +7,8 @@
     "#000000",
     "transparent"
   ],
-  "builderCount": 52,
-  "totalCount": 72,
+  "builderCount": 54,
+  "totalCount": 74,
   "entries": [
     {
       "id": "pozzo",
@@ -617,6 +617,24 @@
       "category": "controls",
       "file": "ui-material.svg",
       "role": "supplement"
+    },
+    {
+      "id": "fila-pali",
+      "label": "Pali anti-carica · tratti da 1.4U · punte verso il fronte",
+      "category": "combat",
+      "selector": "[data-event-venue=\"stakeRow\"]",
+      "previousGlyph": "castle",
+      "file": "fila-pali.svg",
+      "role": "builder"
+    },
+    {
+      "id": "cavallo-frisia",
+      "label": "Cavallo di Frisia · 1.4U · sbarra un varco",
+      "category": "combat",
+      "selector": "[data-event-venue=\"chevalFrise\"]",
+      "previousGlyph": "castle",
+      "file": "cavallo-frisia.svg",
+      "role": "builder"
     }
   ],
   "options": [
