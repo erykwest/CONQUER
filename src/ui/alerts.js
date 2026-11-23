@@ -14,6 +14,8 @@
 
 export const SEVERITY = { info: 0, good: 0, warn: 1, danger: 2 };
 const rank = s => SEVERITY[s] ?? 0;
+// Optional map point of an entry without a structure (a messenger at the keep door): { x, y } or null.
+const point = p => p && Number.isFinite(+p.x) && Number.isFinite(+p.y) ? { x: +p.x, y: +p.y } : null;
 
 export function createAlertCenter({
   now = () => Date.now(),
@@ -37,14 +39,14 @@ export function createAlertCenter({
       key: entry.key, phase, day: Number.isFinite(day) ? day : null, at: now(),
       severity: phase === 'resolved' ? 'good' : entry.severity,
       category: entry.category || 'general', title: entry.title, detail: entry.detail || '',
-      focusId: entry.focusId ?? null, action: phase === 'resolved' ? null : entry.action || null
+      focusId: entry.focusId ?? null, at: phase === 'resolved' ? null : point(entry.at), action: phase === 'resolved' ? null : entry.action || null
     });
     if (journal.length > journalMax) journal.length = journalMax;
   }
   const clean = c => ({
     key: String(c.key), severity: SEVERITY[c.severity] != null ? c.severity : 'info',
     category: c.category || 'general', title: String(c.title || ''), detail: String(c.detail || ''),
-    resolvedTitle: c.resolvedTitle ? String(c.resolvedTitle) : null, focusId: c.focusId ?? null,
+    resolvedTitle: c.resolvedTitle ? String(c.resolvedTitle) : null, focusId: c.focusId ?? null, at: point(c.at),
     // Optional button: { id, label, arg } — the shell maps `id` to a game command.
     action: c.action && c.action.id ? { id: String(c.action.id), label: String(c.action.label || c.action.id), arg: c.action.arg ?? null } : null
   });
@@ -62,14 +64,15 @@ export function createAlertCenter({
       if (!a || a.kind !== 'condition' || a.resolvedAt != null) {
         const entry = { ...c, kind: 'condition', raisedAt: t, resolvedAt: null, missingSince: null, dismissed: false, count: (a?.count || 0) + 1 };
         alerts.set(c.key, entry);
-        log(entry, 'raised', day);
+        // After a reload the journal already holds this condition, raised and never resolved: don't log it twice.
+        if (a || journal.find(e => e.key === c.key)?.phase !== 'raised') log(entry, 'raised', day);
         dirty = true;
         continue;
       }
       const worse = rank(c.severity) > rank(a.severity);
       if (worse) { log({ ...a, ...c }, 'raised', day); a.dismissed = false; a.raisedAt = t; }
-      if (worse || a.title !== c.title || a.detail !== c.detail || a.severity !== c.severity || a.focusId !== c.focusId || a.action?.arg !== c.action?.arg) {
-        Object.assign(a, { severity: c.severity, title: c.title, detail: c.detail, focusId: c.focusId, resolvedTitle: c.resolvedTitle, category: c.category, action: c.action });
+      if (worse || a.title !== c.title || a.detail !== c.detail || a.severity !== c.severity || a.focusId !== c.focusId || a.action?.arg !== c.action?.arg || a.at?.x !== c.at?.x || a.at?.y !== c.at?.y) {
+        Object.assign(a, { severity: c.severity, title: c.title, detail: c.detail, focusId: c.focusId, at: c.at, resolvedTitle: c.resolvedTitle, category: c.category, action: c.action });
         dirty = true;
       }
     }
@@ -129,7 +132,7 @@ export function createAlertCenter({
       .map(a => ({
         key: a.key, kind: a.kind, severity: a.resolvedAt != null ? 'good' : a.severity, category: a.category,
         title: a.resolvedAt != null && a.resolvedTitle ? a.resolvedTitle : a.title, detail: a.detail,
-        resolved: a.resolvedAt != null, focusId: a.focusId, count: a.count,
+        resolved: a.resolvedAt != null, focusId: a.focusId, at: a.at, count: a.count,
         // A resolved condition has nothing left to act on.
         action: a.resolvedAt != null ? null : a.action,
         // 0..1 of the time left before it leaves by itself (null: stays until resolved or dismissed).

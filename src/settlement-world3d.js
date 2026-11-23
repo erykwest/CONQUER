@@ -75,27 +75,38 @@
     // A radial light halo is a camera-facing billboard with a world-space anchor and real depth.
     fireLight:[`#version 300 es
       ${CAMERA}
-      in vec3 aAnchor;in vec2 aCorner;in float aSize;in vec2 aUV;in float aSeed;
-      out vec2 vUV;out float vSeed;
+      in vec3 aAnchor;in vec2 aCorner;in float aSize;in float aSeed;
+      out vec2 vCorner;out float vSeed;
       // The glow is a camera-facing disc: depth-tested at its anchor alone, the facade the torch
       // hangs on (nearer the higher it goes, d = qx+qy+0.9z) cut it flat above the flame. Its depth
       // rises with the corner like a vertical plane through the flame, plus a quarter of its size.
       void main(){vec4 p=cam(aAnchor,aCorner*aSize*uS);
         float bias=(0.25-aCorner.y)*aSize;
         p.z-=2.0*bias/(uDepth.y-uDepth.x);
-        gl_Position=p;vUV=aUV;vSeed=aSeed;}`,
+        gl_Position=p;vCorner=aCorner;vSeed=aSeed;}`,
+      // The halo is computed from the quad's own corner, not sampled from the mipmapped decal
+      // atlas: an atlas tile bleeds its neighbours (the Mastio drape, window glass) into the
+      // quad's edges, which drew a full-height vertical streak beside every torch up close.
       `#version 300 es
-      precision mediump float;in vec2 vUV;in float vSeed;uniform sampler2D uAtlas;
+      precision mediump float;in vec2 vCorner;in float vSeed;
       uniform float uNight;uniform float uTime;out vec4 o;
-      void main(){vec4 tex=texture(uAtlas,vUV);
+      void main(){float r=length(vCorner)*2.0;if(r>=1.0)discard;
+        // Same stops as the old __glow tile: warm white core, amber, orange rim fading to nothing.
+        vec4 g=r<0.22?mix(vec4(1.0,0.937,0.745,0.90),vec4(1.0,0.761,0.404,0.56),r/0.22)
+          :r<0.58?mix(vec4(1.0,0.761,0.404,0.56),vec4(1.0,0.553,0.216,0.15),(r-0.22)/0.36)
+          :mix(vec4(1.0,0.553,0.216,0.15),vec4(1.0,0.553,0.216,0.0),(r-0.58)/0.42);
         float flicker=clamp(0.86+0.09*sin(uTime*31.0+vSeed*6.283185)
           +0.04*sin(uTime*53.0+vSeed*9.0),0.6,1.0);
-        float a=tex.a*uNight*flicker*0.8;
-        if(a<0.003)discard;o=vec4(tex.rgb*vec3(1.0,0.54,0.22)*uNight*flicker*0.8,a);}`],
+        float a=g.a*uNight*flicker*0.8;
+        if(a<0.003)discard;o=vec4(g.rgb*g.a*vec3(1.0,0.54,0.22)*uNight*flicker*0.8,a);}`],
     sprite:[`#version 300 es
       ${CAMERA}
       in vec3 aAnchor;in vec2 aCorner;in float aSize;in vec2 aUV;out vec2 vUV;
-      void main(){gl_Position=cam(aAnchor,aCorner*aSize*uS);vUV=aUV;}`,
+      // Billboards are depth-tested as an upright plane through the anchor (as the flames): on a
+      // sloping mountain facet a flat screen-depth quad sank half of each pine into the slope.
+      void main(){vec4 p=cam(aAnchor,aCorner*aSize*uS);
+        p.z-=2.0*(0.03-aCorner.y)*aSize/(uDepth.y-uDepth.x);
+        gl_Position=p;vUV=aUV;}`,
       `#version 300 es
       precision mediump float;in vec2 vUV;uniform sampler2D uAtlas;out vec4 o;
       void main(){vec4 c=texture(uAtlas,vUV);if(c.a<0.45)discard;o=vec4(c.rgb/max(c.a,1e-3),1.0);}`],
@@ -609,7 +620,7 @@
   // ---------- buildings (non-castle) ----------
   const WINTER_ROOF=['#e7ece8','#dce3de'];
   function buildBuildings(){
-    const m=meshBuilder(true),winter=State.season==='winter';
+    const m=meshBuilder(true),winter=(typeof isSnowGround==='function'?isSnowGround():State.season==='winter');
     // Houses: urbanHouseFaces gives walls, then either 2 slopes + 2 gables or a turret cone.
     for(const entry of urbanHouseGeometry()){
       const house=entry.house;if(underConstruction(house))continue;
@@ -632,27 +643,49 @@
     window.ConquerCoast?.addToBuilder(m);
     for(const s of State.structures){
       if(underConstruction(s))continue;
-      // Palisades, timber towers and timber gates: Blender models and stakes (settlement-wood3d.js).
-      if(window.ConquerWood3D?.addToBuilder(m,s))continue;
-      if(window.ConquerEvents3D?.is(s))window.ConquerEvents3D.addToBuilder(m,s);   // event venues and their setups
-      else if(window.ConquerPier?.is(s))window.ConquerPier.addToBuilder(m,s);      // timber pier over the sea
-      else if(window.ConquerQuay?.is(s))window.ConquerQuay.addToBuilder(m,s);      // stone quay
-      else if(window.ConquerStorageYard?.is(s))window.ConquerStorageYard.addToBuilder(m,s);
-      else if(window.ConquerSlopeways?.is(s))window.ConquerSlopeways.addToBuilder(m,s);  // ramp / stairway
-      else if(isCivic(s))withStructureVisualMaterial(s,()=>addCivic(m,s,winter));
-      else if(isCivicAnnex(s))withStructureVisualMaterial(s,()=>addCivicAnnex(m,s,winter));
-      else if(window.ConquerIndustries?.is(s)){
-        const def=ConquerIndustries.definition(s),g=Number.isFinite(s.groundZ)?s.groundZ:ConquerIndustries.groundLevel(s);
-        if(!window.ConquerIndustries3D?.addToBuilder(m,s,g))m.prism(ConquerIndustries.footprint(s),g,g+.35,def.color,def.edge,def.edge);
-      }else if(s.type==='well')withStructureVisualMaterial(s,()=>{
-        const g=terrainElevation(s);
-        const stone=hex=>window.ConquerStoneColor?.shade(hex)||hex;
-         m.prism(rectWorldPoints(s.x,s.y,WELL_PLAZA_SIZE,WELL_PLAZA_SIZE,0),g,g+.055,stone('#8d816e'),stone('#655b4f'),stone('#74695a'));
-        m.prism(circleWorldPoints(s.x,s.y,.62,20),g+.055,g+.42,stone('#84796d'),stone('#4e4740'),stone('#5d554d'));
-        m.face(circleWorldPoints(s.x,s.y,.36,16).map(p=>({x:p.x,y:p.y,z:g+.425})),'#172023');
-      });
+      addStructure(m,s,winter);
     }
     return new Float32Array(m.tris);
+  }
+  // One finished structure of the buildings buffer (everything but houses, castle volumes and roads).
+  function addStructure(m,s,winter){
+    // Palisades, timber towers and timber gates: Blender models and stakes (settlement-wood3d.js).
+    if(window.ConquerWood3D?.addToBuilder(m,s))return;
+    if(window.ConquerEvents3D?.is(s))window.ConquerEvents3D.addToBuilder(m,s);   // event venues and their setups
+    else if(window.ConquerPier?.is(s))window.ConquerPier.addToBuilder(m,s);      // timber pier over the sea
+    else if(window.ConquerQuay?.is(s))window.ConquerQuay.addToBuilder(m,s);      // stone quay
+    else if(window.ConquerStorageYard?.is(s))window.ConquerStorageYard.addToBuilder(m,s);
+    else if(window.ConquerSlopeways?.is(s))window.ConquerSlopeways.addToBuilder(m,s);  // ramp / stairway
+    else if(isCivic(s))withStructureVisualMaterial(s,()=>addCivic(m,s,winter));
+    else if(isCivicAnnex(s))withStructureVisualMaterial(s,()=>addCivicAnnex(m,s,winter));
+    else if(window.ConquerIndustries?.is(s)){
+      const def=ConquerIndustries.definition(s),g=Number.isFinite(s.groundZ)?s.groundZ:ConquerIndustries.groundLevel(s);
+      if(!window.ConquerIndustries3D?.addToBuilder(m,s,g))m.prism(ConquerIndustries.footprint(s),g,g+.35,def.color,def.edge,def.edge);
+    }else if(s.type==='well')withStructureVisualMaterial(s,()=>{
+      const g=terrainElevation(s);
+      const stone=hex=>window.ConquerStoneColor?.shade(hex)||hex;
+       m.prism(rectWorldPoints(s.x,s.y,WELL_PLAZA_SIZE,WELL_PLAZA_SIZE,0),g,g+.055,stone('#8d816e'),stone('#655b4f'),stone('#74695a'));
+      m.prism(circleWorldPoints(s.x,s.y,.62,20),g+.055,g+.42,stone('#84796d'),stone('#4e4740'),stone('#5d554d'));
+      m.face(circleWorldPoints(s.x,s.y,.36,16).map(p=>({x:p.x,y:p.y,z:g+.425})),'#172023');
+    });
+  }
+  // The finished building of a site that has no piece-by-piece assembly, as a painter mesh
+  // {pos, col (CSS hex, already shaded like the buildings buffer), flat}: the site draws it as
+  // its translucent ghost (drawStructure). The site record is set aside meanwhile, as for the
+  // assembly sources: the builders describe the finished building. null: nothing to show.
+  function finishedMesh(s){
+    if(!s)return null;
+    const m=meshBuilder(true),site=s.construction;
+    if(site)delete s.construction;
+    try{addStructure(m,s,(typeof isSnowGround==='function'?isSnowGround():State.season==='winter'))}
+    finally{if(site)s.construction=site}
+    const t=m.tris,n=t.length/18;if(!n)return null;
+    const pos=new Array(n*9),col=new Array(n),hex=c=>Math.max(0,Math.min(255,Math.round(c*255))).toString(16).padStart(2,'0');
+    for(let i=0;i<n;i++){
+      for(let k=0;k<3;k++){const o=i*18+k*6;pos[i*9+k*3]=t[o];pos[i*9+k*3+1]=t[o+1];pos[i*9+k*3+2]=t[o+2]}
+      col[i]='#'+hex(t[i*18+3])+hex(t[i*18+4])+hex(t[i*18+5]);
+    }
+    return{pos,col,flat:true};
   }
   // One urban house (an urbanHouseGeometry entry) into a mesh builder. Builders may offer
   // tag(kind) to learn what the next faces are (body / upper / beam / gable / roof): the
@@ -660,7 +693,7 @@
   // house piece by piece; the WebGL builder has no tag and ignores it.
   function addHouse(m,entry,winter){
     const house=entry.house,lvl=houseLevel(house);
-    // An open L3 workshop: its bodies live in the cutaway buffer (settlement-shop-cutaway.js).
+    // An open workshop: its bodies live in the cutaway buffer (settlement-shop-cutaway.js).
     const shopOpen=!m.tag&&!!window.ConquerShopCutaway?.active(house);
     // Kit houses (settlement-house3d.js): bodies, roofs, frame, windows, door and chimneys come from
     // the Blender kit; the yard outbuildings and a workshop's street front stay here. The
@@ -711,7 +744,7 @@
       const g=terrainElevation(c.center);
       m.prism(rectWorldPoints(c.center.x,c.center.y,.22,.20,c.angle||0),g+c.z0,g+c.z1,'#3b302c','#332824','#493732');
     }
-    // L3 workshop street front: shop window and bracket sign (settlement-shop-cutaway.js).
+    // Workshop street front: shop window and bracket sign (settlement-shop-cutaway.js).
     if(!m.tag)window.ConquerShopCutaway?.addFront(m,house);
   }
   // L3/L4 yard outbuildings (urbanLotOutbuildings), same palette as drawUrbanOutbuilding.
@@ -825,7 +858,7 @@
   const ATLAS_TILE=128,ATLAS_COLS=8;
   function buildTreeAtlas(){
     if(!forestTreeSpritesReady)return null;
-    const season=State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer';
+    const season=(typeof foliageLook==='function'?foliageLook():State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer');
     const tiles=[];
     // Autumn reuses the summer greens for stage zero; later stages use six warm tones.
     // Atlas pixels remain static throughout the season: only per-tree UVs advance.
@@ -834,12 +867,12 @@
     if(season==='autumn'){
       add(forestTreeSprites.summer);
       add(forestTreeSprites.autumn,FOREST_CANOPY_PALETTES.summer.length);
-    }else add(forestTreeSprites[season]);
+    }else add(forestTreeSprites[season==='bare'?'winter':season]);
     // Hedge bushes (drawUrbanHedge): 920x580 sprites.
     (window.boundaryBushSprites?.[season]||(typeof boundaryBushSprites!=='undefined'?boundaryBushSprites[season]:[])||[])
       .forEach((img,shape)=>img&&tiles.push({key:'bush:'+shape,img,aspect:580/920}));
     // Mountain pines (96x128 canvases), two tones.
-    if(typeof mountainPineSprite==='function')for(const v of [0,1])tiles.push({key:'pine:'+v,img:mountainPineSprite(v,season==='winter'),aspect:1,pine:true});
+    if(typeof mountainPineSprite==='function')for(const v of [0,1])tiles.push({key:'pine:'+v,img:mountainPineSprite(v,season==='winter'||season==='blizzard'),aspect:1,pine:true});
     const rows=Math.ceil(tiles.length/ATLAS_COLS)||1,c=document.createElement('canvas');
     c.width=ATLAS_COLS*ATLAS_TILE;c.height=rows*ATLAS_TILE;const g=c.getContext('2d'),map=new Map();
     tiles.forEach((t,i)=>{const x=(i%ATLAS_COLS)*ATLAS_TILE,y=Math.floor(i/ATLAS_COLS)*ATLAS_TILE,h=Math.round(ATLAS_TILE*t.aspect);
@@ -855,7 +888,7 @@
     for(const trees of groves){
       for(const t of trees){
         const stage=atlas.season==='autumn'?autumnFoliageStage(t):0;
-        const canopyIndex=atlas.season==='winter'?0:
+        const canopyIndex=['winter','bare','blizzard'].includes(atlas.season)?0:
           atlas.season==='autumn'&&stage>0?FOREST_CANOPY_PALETTES.summer.length+stage-1:t.colorIndex;
         const uv=atlas.map.get(t.shapeIndex+':'+canopyIndex);if(!uv)continue;
         let [u0,v0,u1,v1]=uv;if(t.flip)[u0,u1]=[u1,u0];
@@ -877,13 +910,22 @@
       }
     }
     S.stats.forestBushes=forestBushes;
+    // River, stream and marsh bank bushes: the legacy 2D bush sprites, not the 3D scatter models.
+    for(const p of S.scatterProps||[]){
+      if(!window.ConquerScatter?.isBankBush?.(p))continue;
+      const shape=(window.ConquerUtil.hash(p.x.toFixed(2)+','+p.y.toFixed(2))>>>0)%7,uv=atlas.map.get('bush:'+shape);if(!uv)continue;
+      let [u0,v0,u1,v1]=uv;if(shape&1)[u0,u1]=[u1,u0];
+      const width=p.r*2.4,hr=580/920,C=[[-.5,-.97*hr,u0,v0],[.5,-.97*hr,u1,v0],[.5,.03*hr,u1,v1],[-.5,.03*hr,u0,v1]];
+      const z=terrainElevation(p)+.01;
+      for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(p.x,p.y,z,cx,cy,width,u,w)}
+    }
     // Pines on the lower half of the mountains, standing on the cone surface.
     for(const f of State.environment||[]){
       if(f.type!=='mountain'||!f.height||typeof mountainPineLayout!=='function')continue;
       for(const t of mountainPineLayout(f)){
         const uv=atlas.map.get('pine:'+t.shade);if(!uv)continue;
         let [u0,v0,u1,v1]=uv;if(t.flip)[u0,u1]=[u1,u0];
-        const size=2.4*t.scale,C=[[-.5,-.97,u0,v0],[.5,-.97,u1,v0],[.5,.03,u1,v1],[-.5,.03,u0,v1]];
+        const size=(typeof MOUNTAIN_PINE_SIZE!=='undefined'?MOUNTAIN_PINE_SIZE:1.8)*t.scale,C=[[-.5,-.97,u0,v0],[.5,-.97,u1,v0],[.5,.03,u1,v1],[-.5,.03,u0,v1]];
         for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(t.p.x,t.p.y,t.z,cx,cy,size,u,w)}
       }
     }
@@ -945,13 +987,15 @@
         g.drawImage(glassMask(img),x,y);map.set(k,[x/c.width,y/c.height,(x+img.width)/c.width,(y+img.height)/c.height]);return;
       }
       if(k==='__glow'){
-        const radial=g.createRadialGradient(x+T/2,y+T/2,0,x+T/2,y+T/2,T/2-2);
+        // Window halos: the gradient ends inside the sampled square and a transparent gutter
+        // keeps the neighbouring tiles (Mastio drape, glass masks) out of its edges.
+        const G=12,radial=g.createRadialGradient(x+T/2,y+T/2,0,x+T/2,y+T/2,T/2-G-2);
         radial.addColorStop(0,'rgba(255,239,190,0.90)');
         radial.addColorStop(.22,'rgba(255,194,103,0.56)');
         radial.addColorStop(.58,'rgba(255,141,55,0.15)');
         radial.addColorStop(1,'rgba(255,141,55,0)');
-        g.fillStyle=radial;g.fillRect(x+1,y+1,T-2,T-2);
-        map.set(k,[(x+1)/c.width,(y+1)/c.height,(x+T-1)/c.width,(y+T-1)/c.height]);return;
+        g.fillStyle=radial;g.fillRect(x+G,y+G,T-2*G,T-2*G);
+        map.set(k,[(x+G)/c.width,(y+G)/c.height,(x+T-G)/c.width,(y+T-G)/c.height]);return;
       }
       if(k==='__mastioDrape'){paintMastioDrape(g,x,y,T);map.set(k,[x/c.width,y/c.height,(x+T)/c.width,(y+T)/c.height]);return}
       const img=architectureSprite(k);if(!img)return;
@@ -1174,17 +1218,18 @@
     }
     return sources;
   }
-  function buildFireLights(atlas){
-    const uv=atlas.map.get('__glow'),v=[];if(!uv)return new Float32Array(v);
-    const [u0,v0,u1,v1]=uv;
+  // 7 floats a vertex: anchor xyz, corner xy, size, flicker seed (the halo is procedural).
+  const FIRE_LIGHT_FLOATS=7;
+  function buildFireLights(){
+    const v=[];
     for(const src of allWorldFireSources()){
       const ground=Number.isFinite(src.groundZ)?src.groundZ:terrainElevation(src.p);
       const z=ground+src.z+(src.kind==='brazier'?.08:0);
       const size=src.kind==='brazier'?2:1.5;
       const seed=(peasantHash(String(src.id)+'-fire')%1000)/1000;
-      const corners=[[-.5,-.5,u0,v0],[.5,-.5,u1,v0],[.5,.5,u1,v1],[-.5,.5,u0,v1]];
+      const corners=[[-.5,-.5],[.5,-.5],[.5,.5],[-.5,.5]];
       for(const i of [0,1,2,0,2,3]){
-        const q=corners[i];v.push(src.p.x,src.p.y,z,q[0],q[1],size,q[2],q[3],seed);
+        const q=corners[i];v.push(src.p.x,src.p.y,z,q[0],q[1],size,seed);
       }
     }
     return new Float32Array(v);
@@ -1282,7 +1327,7 @@
   function buildCutaway(){
     // m: interior (inner walls, cut jambs, floors, openings, furniture) - kept in full light at night;
     // sh: exterior shell (outer faces, crest ring, roof deck) - lit like the rest of the castle.
-    const m=meshBuilder(),sh=meshBuilder(),em=meshBuilder(),winter=State.season==='winter',turns=State.view.rotation||0;
+    const m=meshBuilder(),sh=meshBuilder(),em=meshBuilder(),winter=(typeof isSnowGround==='function'?isSnowGround():State.season==='winter'),turns=State.view.rotation||0;
     // Windows and slits seen from inside: the same sprites as outside (decal atlas), facing the
     // room; a flat pane only while the atlas is not built yet.
     const dv=[],atlasMap=typeof S!=='undefined'?S.decalMap:null;
@@ -1555,7 +1600,7 @@
   }
   function ensureContent(gl){
     // Deselecting with Escape does not invalidate the scene: the civic cutaway is checked here too.
-    // An open L3 workshop (settlement-shop-cutaway.js) follows the selection the same way.
+    // An open workshop (settlement-shop-cutaway.js) follows the selection the same way.
     // Shop fronts open at dawn and shut at dusk: their signature rebuilds the buildings too.
     // civicCut: '<id>@<storey in view>' (cutawaySig), so a floor change rebuilds the cutaway.
     const civicCut=(window.ConquerCivic3D?.cutawaySig||window.ConquerCivic3D?.cutawayId)?.()||null,shopCut=window.ConquerShopCutaway?.activeId?.()||null;
@@ -1564,7 +1609,8 @@
     S.civicCut=civicCut;S.shopCut=shopCut;S.shopFront=shopFront;
     S.contentDirty=false;S.lastUrbanRev=urbanRev();computeSigPass();
     const t0=performance.now(),st=S.stats;
-    const season=State.season||'summer',rot=State.view.rotation||0,plan=isPlanView();
+    // Winter phases (bare / snow / thaw / blizzard) change snow cover and foliage: key them too.
+    const season=(State.season||'summer')+(State.season==='winter'?':'+(typeof foliageLook==='function'?foliageLook():State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer'):''),rot=State.view.rotation||0,plan=isPlanView();
     // envRev: main roads cut grooves into a continuous woodland in place.
     const envRev=typeof environmentRevision!=='undefined'?environmentRevision:0;
     const terraformEdits=window.ConquerTerraforming?.edits?.()||State.relief?.terraforming||[];
@@ -1622,31 +1668,9 @@
       for(const [name,part] of [['castleBody','body'],['castleLines','lines'],['castleFront','front'],['castleFrontLines','frontLines']]){S.buf[name]=v[part].b;S.buf[name+'#n']=v[part].n}
       S.sig.castle=cSig;st.castleMs=performance.now()-a;
     }
-    const atlasSig=[season,forestTreeSpritesReady,
-      Object.keys((typeof boundaryBushSprites!=='undefined'&&boundaryBushSprites[season])||{}).length].join('|');
-    if(S.sig.treeAtlas!==atlasSig){
-      S.treeAtlas=buildTreeAtlas();
-      if(S.treeAtlas)uploadTexture(gl,'atlas',S.treeAtlas.canvas);
-      S.sig.treeAtlas=atlasSig;
-    }
-    const treeSig=[atlasSig,season==='autumn'?autumnFoliageStep():-1,
-      (State.environment||[]).length,envRev,State.seed,urbanRev(),structuresSig('hedges')].join('|');
-    if(S.sig.trees!==treeSig){
-      const a=performance.now();
-      upload(gl,'trees',buildTrees(S.treeAtlas));S.sig.trees=treeSig;st.treesMs=performance.now()-a;
-    }
-    const dSig=[structuresSig('all'),shopCut,shopFront,Object.keys(architectureSprites).length,window.ConquerGates?.ensureSprites()||'',
-      window.__conquerHeraldryCanvas?.signature?.()||JSON.stringify(State.heraldry||null)].join('|');
-    if(S.sig.decals!==dSig){
-      const a=performance.now(),atlas=buildDecalAtlas();uploadTexture(gl,'decalAtlas',atlas.canvas);S.decalMap=atlas.map;
-      const baked=buildDecals(atlas);
-      upload(gl,'decals',baked.decals);
-      upload(gl,'nightWindows',baked.lights);
-      upload(gl,'fireLights',buildFireLights(atlas));
-      S.sig.decals=dSig;st.decalsMs=performance.now()-a;
-    }
     // Environmental scatter (settlement-scatter.js): the layout follows content, the two-tone
-    // side shading follows the camera quarter-turn, so keep one buffer per rotation.
+    // side shading follows the camera quarter-turn, so keep one buffer per rotation. Laid out
+    // before the trees: bank bushes are drawn as 2D bush billboards with them.
     if(window.ConquerScatter&&window.ConquerScatterModel){
       const scContent=[season,State.stonePaletteId,State.seed,State.relief?.seed,(State.environment||[]).length,urbanRev(),structuresSig('all')].join('|');
       if(S.scatterContent!==scContent){
@@ -1662,6 +1686,29 @@
         v={b,n:d.length};S.scatterVariants.set(rot,v);st.scatterMeshMs=performance.now()-a;
       }
       S.buf.scatter=v.b;S.buf['scatter#n']=v.n;
+    }
+    const atlasSig=[season,forestTreeSpritesReady,
+      Object.keys((typeof boundaryBushSprites!=='undefined'&&boundaryBushSprites[(typeof foliageLook==='function'?foliageLook():State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer')])||{}).length].join('|');
+    if(S.sig.treeAtlas!==atlasSig){
+      S.treeAtlas=buildTreeAtlas();
+      if(S.treeAtlas)uploadTexture(gl,'atlas',S.treeAtlas.canvas);
+      S.sig.treeAtlas=atlasSig;
+    }
+    const treeSig=[atlasSig,season==='autumn'?autumnFoliageStep():-1,
+      (State.environment||[]).length,envRev,State.seed,urbanRev(),structuresSig('hedges'),S.scatterContent||''].join('|');
+    if(S.sig.trees!==treeSig){
+      const a=performance.now();
+      upload(gl,'trees',buildTrees(S.treeAtlas));S.sig.trees=treeSig;st.treesMs=performance.now()-a;
+    }
+    const dSig=[structuresSig('all'),shopCut,shopFront,Object.keys(architectureSprites).length,window.ConquerGates?.ensureSprites()||'',
+      window.__conquerHeraldryCanvas?.signature?.()||JSON.stringify(State.heraldry||null)].join('|');
+    if(S.sig.decals!==dSig){
+      const a=performance.now(),atlas=buildDecalAtlas();uploadTexture(gl,'decalAtlas',atlas.canvas);S.decalMap=atlas.map;
+      const baked=buildDecals(atlas);
+      upload(gl,'decals',baked.decals);
+      upload(gl,'nightWindows',baked.lights);
+      upload(gl,'fireLights',buildFireLights());
+      S.sig.decals=dSig;st.decalsMs=performance.now()-a;
     }
     // Cutaway interiors: rebuilt on content change, one buffer pair per camera quarter-turn.
     // W1 porticos join even when closed: their loggia furniture shows through the arches.
@@ -1773,16 +1820,14 @@
       bindAttrib(gl,pr,'aCol',S.buf.nightWindows,4,36,20);
       gl.drawArrays(gl.TRIANGLES,0,S.buf['nightWindows#n']/9);
     }
-    if(S.buf['fireLights#n']&&S.tex.decalAtlas){
-      const pr=S.prog.fireLight;useProgram(gl,pr);setCamera(gl,pr,r);
+    if(S.buf['fireLights#n']){
+      const pr=S.prog.fireLight,stride=FIRE_LIGHT_FLOATS*4;useProgram(gl,pr);setCamera(gl,pr,r);
       gl.uniform1f(pr.loc.uNight,nf);gl.uniform1f(pr.loc.uTime,visualCycleDay());
-      gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,S.tex.decalAtlas);gl.uniform1i(pr.loc.uAtlas,0);
-      bindAttrib(gl,pr,'aAnchor',S.buf.fireLights,3,36,0);
-      bindAttrib(gl,pr,'aCorner',S.buf.fireLights,2,36,12);
-      bindAttrib(gl,pr,'aSize',S.buf.fireLights,1,36,20);
-      bindAttrib(gl,pr,'aUV',S.buf.fireLights,2,36,24);
-      bindAttrib(gl,pr,'aSeed',S.buf.fireLights,1,36,32);
-      gl.drawArrays(gl.TRIANGLES,0,S.buf['fireLights#n']/9);
+      bindAttrib(gl,pr,'aAnchor',S.buf.fireLights,3,stride,0);
+      bindAttrib(gl,pr,'aCorner',S.buf.fireLights,2,stride,12);
+      bindAttrib(gl,pr,'aSize',S.buf.fireLights,1,stride,20);
+      bindAttrib(gl,pr,'aSeed',S.buf.fireLights,1,stride,24);
+      gl.drawArrays(gl.TRIANGLES,0,S.buf['fireLights#n']/FIRE_LIGHT_FLOATS);
     }
     gl.disable(gl.BLEND);gl.depthMask(true);
   }
@@ -2072,7 +2117,7 @@
     const p=perf(),ms=performance.now()-started;
     p.world3dNightLightMs=ms;
     const windowQuads=(S.buf['nightWindows#n']||0)/54;
-    const fireSources=(S.buf['fireLights#n']||0)/54;
+    const fireSources=(S.buf['fireLights#n']||0)/(6*FIRE_LIGHT_FLOATS);
     window.__conquerAnalytics?.measure('NIGHTLIGHT_3D',ms,{windowQuads,fireSources});
     if(!S.nightLightReported){
       S.nightLightReported=true;
@@ -2171,7 +2216,7 @@
   }
   window.ConquerWorld3D={active,supported,drawBack,drawFront,
     drawNightLights3D,drawEmissive,finishFrame,
-    pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,addHouse,addOutbuilding,figure,screenAxis,prewarmFigures,_setFiguresForTest:on=>{figuresOn=!!on},FIGURE_CARD_U:SOLDIER_SIZE_U,FIGURE_FEET:SOLDIER_FEET,
+    pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,addHouse,addOutbuilding,finishedMesh,figure,screenAxis,prewarmFigures,_setFiguresForTest:on=>{figuresOn=!!on},FIGURE_CARD_U:SOLDIER_SIZE_U,FIGURE_FEET:SOLDIER_FEET,
     atlasCanvas:()=>soldierAtlas.canvas,frameFigures:()=>(S.frameFigures||[]).map(f=>({key:f.key||f.type,p:f.p,z:f.z,mirror:f.mirror,span:f.span||1,ox:f.ox||0,id:f.id,capsule:f.capsule||null})),atlasStats:()=>({tiles:soldierAtlas.next,capacity:FIG_COLS*FIG_COLS,resets:soldierAtlas.resets,painted:soldierAtlas.painted}),
     invalidate:()=>{S.sig={};S.contentDirty=true},
     decalFloats:()=>S.buf['decals#n']|0,   // QA: size of the baked facade decal buffer

@@ -9,6 +9,123 @@
 - [x] QA del vero Builder in Chromium: categorie, caricamento SVG, gestori originali, selezione e viewport mobile.
 - [ ] CI remota e revisione della PR prima dell'integrazione in main.
 - Owner e dettaglio: [feature-backlog](../feature-backlog.md), [BUILDER-ICONS](../BUILDER-ICONS.md).
+### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2
+
+**IMPLEMENTATO SU BRANCH `feature/shops-l2-rooms`, NON MERGE.**
+- [x] Casa-bottega L2: bancone, focolare e tavolo, postazione compatta, passaggio libero.
+- [ ] Verificare in partita le stanze sulle case a schiera (`urbanDenseParts`).
+## 2026-11-20 — WINTER-PHASES · Inverno in quattro fasi
+
+**Implementato sul branch `feature/winter-phases`, non ancora unito a main.** Richiesta del product owner (20/11/2026): primo quarto spoglio con sottobosco marrone, secondo blizzard (neve sui rami) se il meteo è neve, terzo con neve a terra, ultimo spoglio con sottobosco verde e senza neve; «blizard vale sempre in caso di meteo neve».
+
+- [x] Quattro fasi e blizzard; rami secondari degli alberi spogli; retino di neve su rami, cespugli, pini, cenge; versante bianco; scarpate in roccia nuda; neve sui sassi.
+- [x] Pini 75% e 1,5x; boschi 1,3x; sottobosco 2x; cespugli di riva 2D legacy.
+- [ ] Aperti: la neve sui rami si legge poco a distanza su terreno bianco; i 7 alberi spogli condividono il tronco; asset audit del Lab non eseguito; prestazioni con la nuova densità da misurare.
+
+### 2026-11-19 — SHOP-L3-ADV · Botteghe avanzate L3
+
+**IMPLEMENTATO SU BRANCH `feature/shops-l3-advanced`, NON MERGE.** Dettagli in [STATUS](STATUS.md), decisione D-SHOP-L3-261119.
+- [x] Bottega avanzata sulle case L3 mercanti con due artigiani L2, ×2,5 (×1 con uno, ferma senza).
+- [x] Salari agli L2, margine al mercante L3; vendite divise per produzione.
+- [x] Cutaway, tragitto dei lavoranti, banco e bancone, ispettore, Lab.
+- [ ] Stanze del piano terra L2 da ridisegnare (PR successiva).
+- [ ] Bilanciamento: con la Gilda il ×2,5 si moltiplica; verificare prezzi e scorte dei Beni L3 su una partita lunga.
+
+### 2026-11-18 — SHOP-CUT-261118 · Botteghe del cutaway
+
+**IMPLEMENTATO SU BRANCH `fix/cutaway-shops`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Cutaway, fronte su strada e artigiano al banco sulle case L2 che hanno una bottega.
+- [x] Ispettore con la bottega sulla casa L2 che la gestisce.
+- [ ] La casa L2 è più piccola della L3: valutare in partita se il banco su strada e la stanza restano leggibili sulle case a schiera (`urbanDenseParts`).
+
+### 2026-11-18 — Microfix: posti per arcieri sulla torre di vedetta lignea
+
+**IMPLEMENTATO SU BRANCH `fix/watchtower-slots`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] La vedetta ha 2 posti per arcieri sul ballatoio (prima 0): pannello, assegnazione, tiratori in combattimento e figure.
+- [ ] Anche la torre lignea a telaio H2 (`frameTower`, ballatoio aperto a 2,66 U) e la torre a palizzata coperta hanno 0 posti: decidere se ne servono.
+
+### 2026-11-18 — WOOD-GATE-SLOTS-261118 · Spazi della porta in legno
+
+**IMPLEMENTATO SU BRANCH `fix/wood-gate-slots`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] «Gate di legno deve avere slot, ora ne ha 0»: 1 spazio stanza sul ponte sopra il passaggio (porta in pietra L3: 2).
+- [ ] La porta in legno non ha cutaway: la stanza assegnata non si vede (già aperto in «APERTO (legno)»).
+
+### 2026-11-18 — PAL-W1-SLOPE · Palizzate W1 sui fianchi delle colline
+
+**IMPLEMENTATO SU BRANCH `fix/palisade-w1-slopes`, NON MERGE.**
+- [x] Palizzata W1 costruibile su pendio, paletti seduti sul terreno.
+- [ ] Le mura in pietra non controllano il pendio quando si cambia tier (T1 su scosceso → T3): stessa guardia da valutare.
+
+### 2026-11-18 — ROAD-ACCESS-261118 · Strade secondarie per ogni edificio con ingresso
+
+**IMPLEMENTATO SU BRANCH `fix/secondary-roads`.** Dettagli in [STATUS](STATUS.md).
+- [x] Taglialegna, cava, cava d'argilla, miniera, mulini e deposito ricevono la strada secondaria al completamento, alla ricarica e nella riconciliazione.
+- [x] Regola unica `structureNeedsAccessRoad` con audit dei tipi piazzabili in `qa/access-roads-regression.cjs`: un nuovo tipo di edificio deve essere collegato o dichiarato esente.
+- [ ] Miniere e cave su pendio: se il bordo dell'impronta e i 3U attorno sono pendio o montagna (vietati alle strade) la ricerca del percorso fallisce e la strada non nasce; verificarlo in partita su mappe montuose.
+
+### 2026-11-18 — FIX-MILL-HILLS-261118 · Mulino a vento sulle colline
+
+**CORRETTO SU BRANCH `fix/mill-hills`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Il mulino a vento si posa e si costruisce su ogni terrazza piana di collina (H+1, H+2, H+3), posato alla quota della terrazza.
+- [x] Resta escluso da H0 e dai pendii; mulino ad acqua invariato (riva di fiume o torrente).
+- [ ] Mulino a vento su pendio dolce con fondazione (come torri e civici): non richiesto, da valutare se le cime piccole restano scarse.
+
+### 2026-11-18 — WARDROBE-CAL-261118 · Guardaroba stagionale e calendario
+
+- [x] Verificato l'aggancio del guardaroba dei popolani al calendario (mese, stagione, meteo, cambio a runtime).
+- [x] Folle delle feste e della giostra vestite per stagione; chiavi delle carte 3D di feste, giostra e interni civici con l'abito.
+- [ ] Decisione di prodotto: il pubblico del tribunale e della messa resta senza abiti stagionali (scelta attuale); i mestieri a slot pieni (fabbro, muratore…) non mettono il mantello d'inverno nemmeno all'aperto.
+
+## 2026-11-19 — MOAT-WIDEN · Allargare il fossato
+
+**Implementato sul branch `feature/moat-from-wall`, non ancora unito a main.** Richiesta del product owner (19/11/2026): «se fai upgrade del fossato in larghezza mantieni il lato adiacente al muro/palizzata».
+
+- [x] Allargamento 2/3/4U dal pannello del fossato; contro muro/palizzata/tratto costruito la sponda sul muro resta ferma.
+- [ ] Aperti: allargare tutto l'anello in un colpo; un vicino collineare (stesso rettilineo) non segue l'allargamento e resta un gradino; il ponte levatoio su un fossato allargato oltre 1,65U chiede il mezzo ponte a mano.
+
+## 2026-11-19 — ROAD-MOAT-DRAWBRIDGE, ROAD-MAGNET-ROAD · Ponte levatoio e magnete strade
+
+**Implementato sul branch `feature/moat-from-wall`, non ancora unito a main.** Richiesta del product owner (19/11/2026): «magnet per le strade» (scelto: strada su strada) e «se attraverso fossato con strada metti porta con ponte levatoio già installato».
+
+- [x] Strada attraverso muro + fossato: porta con ponte levatoio installato; porta esistente senza ponte: installato.
+- [x] Magnete strada su strada: estremi e lati di tutte le strade, raggio più ampio, estremo prioritario, punto illuminato.
+- [ ] Aperti: fossato largo o lontano oltre la portata del ponte (oggi nessun mezzo ponte automatico); il secondo pezzo del muro tagliato non risulta legato al fossato (`wallId` resta al primo); muro disegnato sopra una strada che già attraversa un fossato non mette il ponte.
+
+## 2026-11-19 — ROAD-WALL-GATE · Strada che attraversa un muro → porta
+
+**Implementato sul branch `feature/moat-from-wall`, non ancora unito a main.** Richiesta del product owner (19/11/2026): costruendo una strada che attraversa un muro si aggiunge una porta del tipo corrispondente, come quando si costruisce un muro su una strada.
+
+- [x] Strada maestra attraverso muro o palizzata finiti: porta del tipo corrispondente, muro tagliato sui fianchi, strada nel varco; fantasma con la porta.
+- [ ] Da decidere: muro ancora in cantiere (oggi la strada è rifiutata). Ponte levatoio sul fossato davanti: fatto in ROAD-MOAT-DRAWBRIDGE.
+## 2026-11-18 — FOSSATO-MURO · Fossato costruibile dal muro selezionato
+
+**Implementato sul branch `feature/moat-from-wall`, non ancora unito a main.** Richiesta del product owner (18/11/2026): fossati costruibili anche selezionando muro, palizzata o tratto costruito, attaccati direttamente sul lato esterno.
+
+- [x] Comando «Fossato» (secco / d'acqua) nell'inspector di muro, palizzata e tratto costruito; fossato da 1,5U a filo del lato esterno.
+- [x] Raccordo all'angolo col fossato del tratto vicino; varco libero davanti alle porte.
+- [ ] Da decidere: fossato anche durante il cantiere del muro (oggi solo a tratto completato); larghezza diversa da 1,5U; scavo dell'intero giro di mura in un clic.
+- [ ] Le torri sporgono oltre la faccia del muro: il fossato passa sotto il loro piede agli angoli; valutare se girarci intorno.
+## 2026-11-19 — CI-AUDIT-01 · CI più veloce per l'audit del Lab
+
+- [x] Modifiche solo di interfaccia: smoke della galleria al posto dell'audit completo.
+- [x] Audit completo in 4 job paralleli per famiglie.
+- [ ] Valutare l'audit completo solo dopo il merge o di notte, con l'incrementale/smoke sulle PR.
+### 2026-11-18 — PATROL-ROUTE-261118 · Regressione del pathfinding delle pattuglie
+
+**CORRETTO SU BRANCH `fix/patrol-pathfinding`, NON MERGE.**
+- [x] Un ostile entro 12 U ma irraggiungibile non azzera più la meta del giro: la pattuglia non salta i waypoint.
+- [ ] Da valutare: il nemico addossato a un edificio è irraggiungibile perché `nearestFree` parte da un punto bloccato; avvicinarsi alla cella libera più vicina permetterebbe di ingaggiarlo.
+- [ ] Osservato nel banco di prova, uguale prima e dopo la #258: una pattuglia che parte nello stretto corridoio fra due cinte (pozzo nel mezzo) non arriva al bordo della White Zone.
+
+## 2026-11-19 — UI-PROFILE-01 · Pannello Settlement nel PROFILE
+
+- [x] Pannello destro «Settlement» rimosso; contenuti in PROFILE › GENERALE e nuova tab GOVERNO.
+- [ ] Tradurre in italiano «Save settlement» e la nota di autosave.
+### 2026-11-18 — TORCH-STREAK-261118 · Fasci verticali delle torce
+
+**FIX SU BRANCH `fix/torch-artifact`.** Dettagli in [STATUS](STATUS.md).
+- [x] Alone di torce e bracieri procedurale nello shader: nessuna riga verticale a nessuna distanza.
+- [x] Margine trasparente attorno alla tessera `__glow` degli aloni delle finestre.
 
 ### 2026-11-18 — CARTS-ROADS-261118 · Carri e messaggeri nel verso giusto, sulle strade
 
@@ -72,7 +189,8 @@
 
 - **FATTO SUL BRANCH (17/11):** rimossi tutti i fallback 2.5D (opt-out del renderer, terreno Canvas, WebGPU, cantieri e ghost 2.5D di ogni edificio, rami `!World3D` dei moduli, funzioni di pittura non più chiamate, strumento «Prerender + test», workflow con `?renderer=canvas2d`).
 - **FATTO (17/11):** drappo del Mastio come decal 3D, finestra e drappo del Mastio di legno in 3D.
-- **APERTO (17/11):** tende di accampamento e fuorilegge dipinte con `ConquerMesh3D.drawMeshes` sul Canvas (da passare al front pass 3D); contatori `cache.*` della telemetria ormai sempre a zero; cantieri di industrie/eventi/moli senza assemblaggio mostrano solo il volume dell'impronta.
+- **APERTO (17/11):** tende di accampamento e fuorilegge dipinte con `ConquerMesh3D.drawMeshes` sul Canvas (da passare al front pass 3D); contatori `cache.*` della telemetria ormai sempre a zero.
+- **FATTO SU BRANCH `fix/construction-ghost` (18/11):** cantieri di industrie/eventi/moli/depositi/pozzi/rampe senza assemblaggio mostrano l'edificio finito in trasparenza invece del solo volume dell'impronta.
 - **SU BRANCH `retire-25d-renderer`:** edifici, torri, mura, porte ed esterni delle stanze solo in World 3D; Asset Lab con controllo `renderer-3d`.
 - **APERTO:** stato «danneggiata» senza segni visibili in 3D (23 avvisi `danno-visibile`); drappo del Mastio come decal 3D; eliminare le funzioni di pittura 2.5D non più chiamate (castle, castle-structures, room-exterior, cutaway-furniture, architecture finestre/portali); ritirare o portare in 3D lo strumento DEV «Prerender + test»; workflow browser che usano `?renderer=canvas2d` (webgpu-smoke, clay-browser) da riallineare al contratto «senza WebGL2 nessun edificio».
 
@@ -154,6 +272,15 @@
 - [ ] Porte delle torri d'angolo per le altre forme (tonde, a D): da definire.
 - [x] Rimuovi foresta rispetta Fast build (istantaneo) e Free build (senza salari) del menu DEV.
 - [x] Cutaway piano per piano: i merli (e caditoie, tetto interno, braciere) spariscono quando il piano in vista non è l'ultimo.
+## 2026-11-18 — MSG-FEED-261118 · Messaggi e notifiche funzionanti anche nella UI classica
+
+Branch `fix/messages-notifications`. Dettagli in [STATUS](STATUS.md).
+- [x] Avvisi e diario degli eventi anche nella UI classica (default), non solo con `?ui=2`.
+- [x] «Mostra sulla mappa» centra la camera (struttura o porta del Mastio dove aspetta il messaggero).
+- [x] Dopo un ricarico, un messaggio ancora in attesa non viene scritto due volte nel diario.
+- [x] Test: un evento di gioco letto dai watcher arriva nel feed (`qa/ui-alerts-regression.mjs`).
+- [ ] Nella UI classica su finestre strette la pila di avvisi può toccare la scheda del diario aperta.
+
 
 ## 2026-11-16 — UI-ALERTS-01 · Avvisi in gioco e diario degli eventi
 
@@ -164,7 +291,7 @@
 - [x] Fix: il messaggero a cavallo si ferma davanti alla porta del Mastio, non dentro la sala comune.
 - [ ] Verificare nel gioco la posizione del messaggero con Mastio a ingresso rialzato e a piano terra.
 - [ ] Salvare il diario nel salvataggio di partita (oggi solo `localStorage` del browser).
-- [ ] Centrare la camera sulla struttura con «Mostra sulla mappa» (oggi la seleziona e apre l'ispettore).
+- [x] Centrare la camera sulla struttura con «Mostra sulla mappa» (MSG-FEED-261118: `commands.focus`, anche sul punto del messaggero).
 - [ ] Portare i messaggi di stato inglesi dei moduli legacy (`status()`) a chiavi tradotte e farli passare dal centro avvisi.
 ## 2026-11-16 — THREAT-GEN-01 · Generatore di minacce
 
@@ -231,6 +358,7 @@
 - [x] Assegnazione +/− per giro da Militare › Pattuglie e guarnigioni e dall'ispettore del muro (legacy e UI v2); motivo e arruolamento in linea se mancano soldati.
 - [x] Salvataggio robusto a brecce e unioni di giri.
 - [x] Cache dei posti arcieri per torre (`drawCastleSoldiers` ~9× più veloce).
+- [x] Palizzate W2 (camminamento): pattuglie sul camminamento anche negli angoli senza torre — le corsie spostate dietro i pali si uniscono a spigolo (branch `fix/palisade-w2-patrol`, PR verso main).
 - [ ] Combattimento: le pattuglie delle mura sono figure disegnate, non unità di `ConquerCombat`; non avvistano né combattono (le vedette e le pattuglie White Zone sì).
 - [ ] Torce notturne per le pattuglie delle mura, come per le pattuglie White Zone.
 
@@ -1605,6 +1733,7 @@ Circle: niente resa automatica del feudo; conquista di settore solo con presenza
 ## Militare — accampamenti (branch `feature/tent-livery`, 30/10/2026)
 
 - **IMPLEMENTATO SU BRANCH, NON MERGE:** livree a schema dei padiglioni; kit Blender del campo (canadese, tenda di compagnia, tettoia, botti, sacchi, linea dei cavalli, palizzata e porta); bivacco notturno organizzato in `/camp`; accampamento militare come struttura del Builder, dimensionato dall'esercito e fortificabile (steccato → palizzata con porta); tutto nel Lab.
+- **IMPLEMENTATO SU BRANCH `feature/camp-spikes` (18/11), NON MERGE:** palizzata del campo rifatta (pali sbozzati, traverse legate, puntelli, terra di scavo); pali anti-carica (`campStakes`) e cavalli di Frisia (`campCheval`) come quarto livello di fortificazione (anello esterno + ingresso a gomito); dal 19/11 anche come strutture del Builder in tutto l'insediamento (`stakeRow`, `chevalFrise`, voce «Opere campali» della nuova interfaccia); nel Lab. **Aperto:** ostacolo per il pathfinding e le collisioni delle unità, effetto sulla cavalleria in carica (stop/danno), passaggio delle truppe dal varco a gomito, usarli anche nel campo d'assedio e nei fortini dei fuorilegge.
 - **ANCORA APERTO:** collegare l'accampamento alle truppe reali (oggi l'esercito è impostato a mano nel pannello); controllo collisioni quando il lotto cresce; sentieri disegnati; cavalli 2D alla linea; fossato, terrapieno e torrette di legno come livelli successivi; effetti di gioco (riposo, morale, difesa, assedio dell'accampamento); palette tessile dei colori (garanza, guado, panna, ocra, carbone) al posto delle tinte primarie.
 
 ## Castello — ingresso rialzato del mastio (02/11/2026, S-08)

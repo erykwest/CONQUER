@@ -140,7 +140,7 @@ export function createWatchers(game, center, { econEveryMs = 10000, now = () => 
     if (m?.phase === 'waiting') out.push({ key: 'message-' + m.id, severity: 'warn', category: 'messages',
       title: m.by === 'pigeon' ? 'Lettera alla colombaia' : 'Messaggero alla porta del Mastio',
       detail: 'La provincia a ' + (EDGES[m.edge] || m.edge) + ' chiede ' + fmt(m.request) + ' monete e attende una risposta.',
-      resolvedTitle: 'Messaggio evaso', action: READ });
+      resolvedTitle: 'Messaggio evaso', action: READ, focusId: m.by === 'pigeon' ? m.loftId ?? null : null, at: m.goal || null });
     for (const c of caravanList()) if (c.status === 'blocked') out.push({ key: 'caravan-blocked-' + c.id, severity: 'warn', category: 'messages',
       title: 'Carovana bloccata', detail: 'Risorse insufficienti per la partenza verso la provincia a ' + (EDGES[c.edge] || c.edge || '?') + '.',
       resolvedTitle: 'Carovana sbloccata', action: caravansAction(c.id) });
@@ -167,7 +167,8 @@ export function createWatchers(game, center, { econEveryMs = 10000, now = () => 
       center.push({ key: 'msg-arrive-' + m.id, severity: 'info', category: 'messages',
         title: m.by === 'pigeon' ? 'Colombo viaggiatore in arrivo' : 'Messaggero in arrivo',
         detail: m.by === 'pigeon' ? 'Una lettera dalla provincia a ' + (EDGES[m.edge] || m.edge) + ' vola verso la colombaia.'
-          : 'Un cavaliere dalla provincia a ' + (EDGES[m.edge] || m.edge) + ' cavalca verso il Mastio.' }, today);
+          : 'Un cavaliere dalla provincia a ' + (EDGES[m.edge] || m.edge) + ' cavalca verso il Mastio.',
+        focusId: m.by === 'pigeon' ? m.loftId ?? null : null, at: m.goal || null }, today);
     }
     // The history keeps only the last 40 answers: find the last one already announced.
     const seenAt = answers == null ? -1 : history.map(sig).lastIndexOf(answers);

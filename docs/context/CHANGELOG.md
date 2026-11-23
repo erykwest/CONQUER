@@ -3,6 +3,88 @@
 ### 2026-11-19 — UI-BUILDERICON-01 · Icone medievali geometriche nel Builder
 
 `buildericon` da `67a1b1e8`: sostituiti i glifi outline del Builder con 52 SVG specifici e icone complementari nere su trasparenza; superfici chiare e selezione arancione. Aggiunti al Lab 72 SVG in Interfaccia / Icone Builder; audit mirato 72/72 senza errori o avvisi e baseline aggiornata dopo revisione. Regressioni del Builder e QA Chromium desktop/mobile PASS in locale; CI remota da eseguire. Nessun merge/deploy; roadmap, contratti di gameplay e decisioni esistenti invariati.
+### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2 come casa-bottega
+
+`feature/shops-l2-rooms` (base `feature/shops-l3-advanced`, #293): il cutaway delle botteghe L2 ha stanze proprie (`LAYOUTS_L2`): bancone su strada lontano dalla porta, angolo della famiglia (focolare con paiolo, tavolino, due sgabelli) sul fondo del lato bancone, postazione compatta del mestiere sul fondo del lato porta; passaggio dalla porta libero. Le case L3 tengono la bottega completa. Baseline del Lab aggiornata per i 21 render «Botteghe L2». ROADMAP invariata; DECISIONS: completa D-SHOP-L3-261119 (stanze L2).
+### 2026-11-20 — WINTER-PHASES · Inverno in quattro fasi, blizzard, neve a retino
+
+`feature/winter-phases`: l'inverno (1 dic – 28 feb) ha quattro quarti: alberi e cespugli spogli con sottobosco marrone, due quarti di neve a terra, poi spogli con sottobosco verde e senza neve; con meteo neve, in qualunque giorno d'inverno, è blizzard (neve a terra e retino di neve sui rami). Alberi spogli con rami secondari; neve a retino su rami, cespugli, pini e cenge; versante della montagna bianco con neve a terra; scarpate ripide in roccia nuda; neve sui sassi di riva e costa. Pini 75% e 1,5x, boschi 1,3x, sottobosco 2x; cespugli di riva 2D legacy al posto dei modelli 3D; billboard 3D con profondità verticale. Test in `qa/winter-phases-regression.cjs`. ROADMAP e DECISIONS invariate.
+
+### 2026-11-18 — MSG-FEED-261118 · Messaggi e notifiche anche nella UI classica
+
+`fix/messages-notifications`: gli avvisi di UI-ALERTS-01 (#256) comparivano solo con `?ui=2`; ora pila di avvisi e diario degli eventi sono montati anche nella UI classica (default). «Mostra sulla mappa» centra la camera (`ConquerGame.commands.focus`), anche sul punto dove aspetta il messaggero; nessun doppione nel diario dopo un ricarico. Test end-to-end watcher → feed in `qa/ui-alerts-regression.mjs`. ROADMAP e DECISIONS invariate: correzione della consegna di UI-ALERTS-01, nessun contratto nuovo.
+
+### 2026-11-19 — SHOP-L3-ADV · Botteghe avanzate L3 (D-SHOP-L3-261119)
+
+`feature/shops-l3-advanced` (base `fix/cutaway-shops`, #277): le case L3 dei mercanti aprono botteghe avanzate con due artigiani L2 assunti (secondo adulto delle case L2 più vicine), produzione ×2,5 (×1 con un solo artigiano, ferma senza), salari agli L2 e margine al mercante L3. Cutaway, fronte su strada, tragitto degli artigiani verso la bottega (banco e bancone), ispettore su L3 e L2, Lab (famiglia «Botteghe avanzate L3», 21 render in baseline). Nuova `qa/shops-l3-advanced-regression.cjs`. DECISIONS: nuova D-SHOP-L3-261119. ROADMAP invariata.
+
+### 2026-11-18 — SHOP-CUT-261118 · Botteghe del cutaway di nuovo funzionanti
+
+`fix/cutaway-shops`: dopo SOC-CLASS-02 (#206) le botteghe stanno sulle case L2 (artigiani), ma il cutaway, il fronte su strada (vetrina, insegna) e l'artigiano al banco chiedevano ancora una casa L3, e l'ispettore mostrava la bottega solo sulle L3 («no workshop yet» per sempre). Ora seguono la classe L2 di ConquerCommerce; voci del Lab rinominate `bottega-l2-*` (famiglia «Botteghe L2») e baseline dell'audit aggiornata per i 21 render. ROADMAP e DECISIONS invariate: si applica la decisione esistente di SOC-CLASS-02.
+
+### 2026-11-18 — Microfix: posti per arcieri sulla torre di vedetta
+
+`fix/watchtower-slots`: la torre di vedetta lignea aveva 0 posti per arcieri; ora ne ha 2 sul ballatoio (1,46 U), assegnabili dal pannello e usati dal combattimento. Nuova `qa/watchtower-slots-regression.cjs` nel workflow `tower-variants-regression`. ROADMAP e DECISIONS invariate: correzione di un contratto esistente (ogni torre finita con un piano di tiro ha posti), nessuna decisione nuova.
+
+### 2026-11-18 — WOOD-GATE-SLOTS-261118 · La porta in legno ha uno spazio stanza
+
+`fix/wood-gate-slots`: la porta in legno (fissa H1) aveva 0 spazi stanza perché `functionCapacity` dava alle porte `livello − 1`. Ora ha 1 spazio sul ponte di combattimento sopra il passaggio (la porta in pietra L3 ne ha 2), con le regole delle porte in pietra (caserma, armeria sì; prigione, stalle, bottega no). Nuova `qa/wood-gate-slots-regression.cjs` nel workflow `gate-six-sockets-regression`. ROADMAP e DECISIONS invariate: correzione di una regola, nessun contratto nuovo.
+
+### 2026-11-18 — PAL-W1-SLOPE · Palizzate W1 sui fianchi delle colline
+
+`fix/palisade-w1-slopes`: le palizzate W1 si costruiscono su pendii dolci e scoscesi (prima ogni palizzata voleva un terrazzo piano); W2-W3 restano solo in piano, anche come upgrade. Paletti 3D e di cantiere poggiati sul terreno più basso sotto ciascuno. Nuova `qa/palisade-slope-regression.cjs`. ROADMAP e DECISIONS invariate.
+
+### 2026-11-18 — ROAD-ACCESS-261118 · Strade secondarie per ogni edificio
+
+`fix/secondary-roads`: le strade secondarie di accesso erano limitate a case, campi e civici; ora ogni edificio con ingresso (anche taglialegna, cave, miniere, mulini, depositi) è collegato alla rete principale tramite la regola unica `structureNeedsAccessRoad`. Nuova `qa/access-roads-regression.cjs` nel workflow `road-magnet-regression`. ROADMAP e DECISIONS invariate: correzione della regola esistente, nessun contratto nuovo.
+
+### 2026-11-18 — FIX-MILL-HILLS-261118 · Il mulino a vento si costruisce sulle colline
+
+`fix/mill-hills`: il mulino a vento accetta ogni terrazza piana di collina (H+1, H+2, H+3 in cima), non più solo H+1, ed è posato all'altezza della terrazza; resta escluso dalla pianura H0 e dai pendii. Mulino ad acqua invariato (riva di fiume o torrente). Nuova `qa/windmill-hills-regression.cjs` su colline procedurali reali. ROADMAP e DECISIONS invariate: correzione di una regola di posa, nessun contratto cambiato.
+
+### 2026-11-18 — WARDROBE-CAL-261118 · Guardaroba stagionale e calendario
+
+`fix/seasonal-wardrobe`: verificato che il guardaroba dei popolani segue il calendario a runtime; corrette le folle delle feste e della giostra (pittore senza guardaroba) e le chiavi delle carte 3D senza abito (feste, giostra, tribunale/chiesa/osteria). Nuova `qa/seasonal-wardrobe-regression.cjs` nel workflow del guardaroba. ROADMAP e DECISIONS invariate: nessun contratto cambiato.
+
+### 2026-11-19 — MOAT-WIDEN · Allargare il fossato tenendo la sponda sul muro
+
+`feature/moat-from-wall`: il pannello del fossato finito offre «Widen» a 2 / 3 / 4U (si paga solo la differenza, come lavoro di ampliamento). Un fossato contro un muro, una palizzata o un tratto costruito (il suo `wallId`, o un tratto parallelo a filo della sponda) tiene la sponda sulla faccia esterna e cresce verso fuori; un fossato libero cresce sui due lati. Il fossato unito all'angolo resta unito (incrocio delle linee centrali). Test in `qa/wall-moat-regression.cjs`. ROADMAP e DECISIONS invariate.
+
+### 2026-11-19 — ROAD-MOAT-DRAWBRIDGE, ROAD-MAGNET-ROAD · Ponte levatoio sulla strada, magnete strada su strada
+
+`feature/moat-from-wall`: una strada maestra che attraversa un muro e il fossato davanti apre la porta con il ponte levatoio già installato (costo del ponte nel cantiere della porta); attraverso una porta esistente finita senza ponte levatoio, lo installa. La strada passa sul fossato solo sul ponte levatoio della porta che attraversa (`manualRoadConflict`); un fossato senza porta resta un ostacolo. Il magnete della strada maestra prende estremi e lati di tutte le strade (anche secondarie e automatiche) con raggio più ampio (≥1,5U, segue lo zoom); un estremo vicino vince sul lato; il punto agganciato si illumina. Test in `qa/wall-road-gate-regression.cjs` (13). ROADMAP e DECISIONS invariate.
+
+### 2026-11-19 — ROAD-WALL-GATE · La strada maestra che attraversa un muro apre una porta
+
+`feature/moat-from-wall`: il contrario di WALL-ROAD-GATE. Una strada maestra tracciata attraverso un muro o una palizzata finiti apre una porta del tipo corrispondente (palizzata → porta di legno, muro W1 → porta piccola, W2-W3 → porta grande, nella muratura del muro), taglia il muro sui fianchi della porta e passa nel varco; il fantasma mostra la porta e il suo costo. Un muro ancora in cantiere rifiuta la strada. Test in `qa/wall-road-gate-regression.cjs`. ROADMAP e DECISIONS invariate.
+### 2026-11-18 — FOSSATO-MURO · Fossato dal muro selezionato
+
+`feature/moat-from-wall`: selezionando un muro, una palizzata o un tratto costruito l'inspector offre «Fossato» (secco / d'acqua): il fossato da 1,5U si scava attaccato al lato esterno (quello di «Lato esterno»), si unisce all'angolo al fossato del tratto vicino e lascia libero il varco delle porte; d'acqua solo a quota 0, e un fossato secco già scavato si allaga dallo stesso comando. Nuovo `qa/wall-moat-regression.cjs` (workflow «Wall moat regression»). ROADMAP e DECISIONS invariate.
+### 2026-11-18 — CAMP-SPIKES · Palizzate del campo e pali anti-carica
+
+`feature/camp-spikes`: palizzata dell'accampamento rifatta in Blender (pali grezzi sbozzati, traverse legate, puntelli, terra di scavo); nuovi modelli `campStakes` (file di pali anti-carica inclinati verso l'esterno) e `campCheval` (cavallo di Frisia). Nuovo livello di fortificazione del campo «palizzata e pali anti-carica»: anello di pali fuori dalla palizzata e due cavalli di Frisia sfalsati davanti alla porta. Tutto nel Lab (composizione `encampmentSpiked`). Il 19/11 pali e cavallo di Frisia diventano anche strutture costruibili ovunque nell'insediamento (`stakeRow` a tratti da 1,4 U, `chevalFrise`), con la voce «Opere campali» nella nuova interfaccia (che ora raggiunge anche l'accampamento militare) e le note del Codex. In BACKLOG restano aperti gli effetti di gioco contro la carica. ROADMAP e DECISIONS invariate.
+
+### 2026-11-19 — CI-AUDIT-01 · Audit del Lab: smoke per l'interfaccia, completo in 4 shard
+
+`ci/asset-audit-ui-scope-shards`: `asset-audit-scope.cjs` riconosce le modifiche di sola interfaccia (modalità `smoke`: solo test della galleria); `asset-audit.mjs --shard=N/4` divide l'audit completo per famiglie in 4 job paralleli. Aggiornati `docs/ASSET-LAB-AUDIT.md` e `docs/CI.md`. ROADMAP e DECISIONS invariate.
+### 2026-11-18 — MIL-WALL-01 · pattuglie sulle palizzate W2
+
+`fix/palisade-w2-patrol`: un recinto di palizzate W2 è un giro di pattuglia anche negli angoli senza torre (corsie del camminamento unite a spigolo); le guardie stanno all'altezza del camminamento. Nuova `qa/palisade-patrol-regression.cjs`. ROADMAP e DECISIONS invariate: si applica D-MIL-WALL-261115 così com'è.
+
+### 2026-11-18 — PATROL-ROUTE-261118 · Pattuglie fedeli al giro
+
+`fix/patrol-pathfinding`: un ostile entro portata ma irraggiungibile non fa più saltare i waypoint del giro alle pattuglie della White Zone (regressione della #258 in `defenderThink`). Nuova `qa/patrol-route-regression.cjs` nel workflow combat. ROADMAP e DECISIONS invariate: si ripristina il comportamento previsto, nessun contratto cambiato.
+
+### 2026-11-18 — Ghost dei cantieri non più vuoti
+
+`fix/construction-ghost`: i cantieri senza assemblaggio pezzo per pezzo (industrie, depositi, pozzi, moli, banchine, rampe, annessi civici, luoghi degli eventi) mostrano di nuovo l'edificio finito in trasparenza (World 3D, alpha 0,42) invece del solo contorno dell'impronta lasciato da D-RENDER-3D-261111. Nuova `qa/construction-ghost-regression.cjs` nel workflow Construction props. Piramide: STATUS, BACKLOG. ROADMAP e DECISIONS invariate: ripristino visivo, nessun contratto cambiato.
+
+### 2026-11-19 — UI-PROFILE-01 · Pannello Settlement nel PROFILE
+
+`feature/settlement-panel-into-profile`: rimosso il pannello destro `#policy`; dati partita, bioma, parametri mappa e salvataggio in PROFILE › GENERALE, politiche, case private, forze nobiliari ed economia nella nuova tab GOVERNO. ROADMAP e DECISIONS invariate: nessun contratto di gioco cambiato.
+### 2026-11-18 — TORCH-STREAK-261118 · Niente fasci verticali dalle torce
+
+`fix/torch-artifact`: l'alone notturno di torce e bracieri non campiona più l'atlante delle decal (che a mipmap faceva entrare le tessere vicine come righe verticali) ma è calcolato nello shader dall'angolo del quadrato; margine trasparente sulla tessera `__glow` delle finestre. Controllo nuovo in `qa/tower-fittings-regression.cjs`. ROADMAP e DECISIONS invariate: correzione grafica, nessun contratto cambiato.
 
 ### 2026-11-18 — CARTS-ROADS-261118 · Carri e messaggeri nel verso giusto, sulle strade
 

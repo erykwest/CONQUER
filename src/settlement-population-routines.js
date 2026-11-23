@@ -275,16 +275,19 @@ function fallbackSocialTarget(house,from,visitorId){
   if(well)return{structure:well,point:structureAccessPoint(well,from,visitorId)};
   return null;
 }
-function artisanPosition(house,day){
+// hiredAt: the merchant L3 house whose advanced workshop employs this L2 hand (D-SHOP-L3-261119).
+function artisanPosition(house,day,hiredAt=null){
   const frac=day-Math.floor(day),hash=peasantHash(house.id),stagger=(((hash>>>8)%1000)/1000-.5)*.024;
   const home=houseDoorInfo(house).outside;
-  const worksite=(window.ConquerSocialClasses?.tierOfHouse?.(house)??houseLevel(house))===2?
+  const worksite=!hiredAt&&(window.ConquerSocialClasses?.tierOfHouse?.(house)??houseLevel(house))===2?
     window.ConquerCommerce?.worksiteForHouse?.(house.id):null;
   const workshop=worksite?.structure||nearestWorkshop(home);
   const market=nearestCompletedStructure('market',home);
-  // An L2 workshop operates at home. An L3 service operator travels to their
-  // actual inn/church rather than behaving like a generic market merchant.
-  let primary=worksite?.kind==='shop'?{structure:house,point:home}:
+  // An L2 workshop operates at home; a hired hand works at the advanced workshop's door.
+  // An L3 service operator travels to their actual inn/church rather than behaving like a
+  // generic market merchant.
+  let primary=hiredAt?{structure:hiredAt,point:houseDoorInfo(hiredAt).outside}:
+    worksite?.kind==='shop'?{structure:house,point:home}:
     workshop?{structure:workshop,point:structureAccessPoint(workshop,home,house.id+'-work')}:null;
   if(!primary&&market)primary={structure:market,point:structureAccessPoint(market,home,house.id+'-work')};
   if(!primary)primary=fallbackSocialTarget(house,home,house.id+'-work');

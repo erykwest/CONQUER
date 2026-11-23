@@ -10,7 +10,6 @@
 
 /* Legacy chrome replaced by the tablets (kept in the DOM: handlers stay bound). */
 body.ui2>header,body.ui2 #builder,body.ui2 #timePanel,body.ui2 #status,body.ui2 #saveState,body.ui2 #functionPanel{display:none!important}
-body.ui2 #policy:not(.u2-hosted){display:none!important}
 body.ui2:not(.ui2-dev) #devTools{display:none!important}
 body.ui2.ui2-dev #devTools{top:var(--u2-top);right:var(--u2-gap);z-index:12}
 
@@ -168,6 +167,11 @@ body.ui2.ui2-dev #devTools{top:var(--u2-top);right:var(--u2-gap);z-index:12}
 #ui2 .u2-link:hover{color:var(--u2-strong);background:var(--u2-chip)}
 /* Narrow windows: centre the stack in the gap between the left rail and the right card. */
 @media (max-width:1240px){#ui2 .u2-alerts{left:calc(70px + (100% - 70px - 400px) / 2);width:max(240px,min(380px,calc(100% - 70px - 400px - 2 * var(--u2-gap))))}}
+/* Classic UI (no body.ui2): only the notices and the journal card, clear of the left builder panel
+   (the right Settlement panel moved into PROFILE, UI-PROFILE-01). */
+#ui2.u2-legacy{z-index:9}
+#ui2.u2-legacy .u2-alerts{left:calc(80px + (100% - 80px) / 2);width:min(380px,calc(100% - 80px - 2 * var(--u2-gap)))}
+#ui2.u2-legacy .u2-card{right:var(--u2-gap);max-height:calc(100% - var(--u2-top) - var(--u2-gap))}
 @keyframes u2-alert-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){#ui2 .u2-alert{animation:none}#ui2 .u2-alert-timer i{transition:none}}
 #ui2 .u2-journal{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px}

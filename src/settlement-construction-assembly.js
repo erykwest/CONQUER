@@ -70,9 +70,11 @@
       const t=i/count,along=g.L*t,p={x:g.a.x+g.dx*t,y:g.a.y+g.dy*t};
       const off=fn('palisadePostOffsetAt')?palisadePostOffsetAt(g,along):g.postOffset;
       const c=g.point(p,off),z0=call('terrainElevation',c)||0,ring=call('palisadeOctagon',c,g.postR,ang)||[];
+      // Each foot vertex on its own ground (a post on a hill flank neither floats nor hides).
+      const foot=q=>Math.min(z0,call('terrainElevation',q)??z0)-.04;
       for(let k=0;k<ring.length;k++){
         const a=ring[k],b=ring[(k+1)%ring.length];
-        face([{...a,z:z0},{...b,z:z0},{...b,z:z0+bodyZ},{...a,z:z0+bodyZ}],k%2?'#51341f':'#65452b');
+        face([{...a,z:foot(a)},{...b,z:foot(b)},{...b,z:z0+bodyZ},{...a,z:z0+bodyZ}],k%2?'#51341f':'#65452b');
         face([{...a,z:z0+bodyZ},{...b,z:z0+bodyZ},{x:c.x,y:c.y,z:z0+tipZ}],k%2?'#c29a6b':'#b68a5e');
       }
     }
@@ -94,7 +96,7 @@
       for(let t=0;t<mesh.col.length;t++){
         const hex=mesh.col[t],key=keyOf.get(hex)||'';
         if(kind==='flat'){add(mesh,t,hex,'body');continue}
-        add(mesh,t,M.shadedHex(mesh,t),kind==='ground'?'ground':/^roof(Shingle|Ridge)/.test(key)||(!key&&State.season==='winter')?'roof':'body');
+        add(mesh,t,M.shadedHex(mesh,t),kind==='ground'?'ground':/^roof(Shingle|Ridge)/.test(key)||(!key&&(typeof isSnowGround==='function'?isSnowGround():State.season==='winter'))?'roof':'body');
       }
     }
     let ground=groundOf(s),run=null;
@@ -139,7 +141,7 @@
     if(s.type!=='house'||!K?.handles?.(s)||!M||!W3?.active?.())return null;
     const mesh=K.geometry(s);if(!mesh)return null;
     const pos=mesh.pos.slice(),col=mesh.col.map((_,t)=>M.shadedHex(mesh,t)),tag=mesh.tag.slice();
-    const entry=urbanHouseGeometry().find(e=>e.house===s||e.house.id===s.id),winter=typeof State!=='undefined'&&State.season==='winter';
+    const entry=urbanHouseGeometry().find(e=>e.house===s||e.house.id===s.id),winter=typeof State!=='undefined'&&(typeof isSnowGround==='function'?isSnowGround():State.season==='winter');
     let cur='body';
     const m={tag(t){cur=t==='roof'?'roof':'body'},
       face(vs,hex){for(let i=1;i<vs.length-1;i++){for(const p of [vs[0],vs[i],vs[i+1]])pos.push(p.x,p.y,p.z);col.push(hex);tag.push(cur)}},
@@ -167,7 +169,7 @@
     // an adapter that records its tags; the plastered upper floor also gets its timber
     // frame (corner and middle posts, sill and wall plate) which rises ahead of the infill.
     const W3=window.ConquerWorld3D;if(!W3?.addHouse)return null;
-    const winter=typeof State!=='undefined'&&State.season==='winter';
+    const winter=typeof State!=='undefined'&&(typeof isSnowGround==='function'?isSnowGround():State.season==='winter');
     const mid=(p,q)=>({x:(p.x+q.x)/2,y:(p.y+q.y)/2,z:(p.z+q.z)/2});
     let cur='body';
     const m={

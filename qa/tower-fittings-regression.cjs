@@ -64,6 +64,16 @@ check('the fire glow rises with its facade (no flat cut above the flame)',()=>{
   assert.ok(w3.includes('float bias=(0.25-aCorner.y)*aSize;'),'glow depth bias in the fireLight shader');
 });
 
+check('the torch glow is a procedural disc: no atlas bleeding into vertical streaks up close',()=>{
+  const w3=fs.readFileSync(__dirname+'/../src/settlement-world3d.js','utf8');
+  const fl=w3.slice(w3.indexOf('fireLight:['),w3.indexOf('sprite:['));
+  assert.ok(fl.includes('float r=length(vCorner)*2.0;if(r>=1.0)discard;'),'halo falls off with the quad corner, nothing past its rim');
+  assert.ok(!/texture\\(|uAtlas|aUV/.test(fl),'the fireLight shader samples no atlas tile');
+  const build=w3.slice(w3.indexOf('function buildFireLights('),w3.indexOf('// ---------- shadows'));
+  assert.ok(!build.includes('__glow'),'fire lights do not depend on the __glow atlas tile');
+  assert.ok(w3.includes("map.set(k,[(x+G)/c.width,(y+G)/c.height,(x+T-G)/c.width,(y+T-G)/c.height])"),'window halo tile keeps a transparent gutter');
+});
+
 check('the open palisade tower brazier comes from its Blender model',()=>{
   const src=fs.readFileSync(__dirname+'/../src/assets/wood-fort-models.js','utf8'),w={};
   new Function('window',src)(w);
