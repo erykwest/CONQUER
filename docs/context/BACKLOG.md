@@ -1,5 +1,15 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-24 — SPRING-FLORA · Primavera e disgelo
+
+**FATTO sul branch `feature/spring-flora-thaw`, NON MERGE.**
+
+- [x] Alberi: un terzo fiorito; cespugli tutti fioriti; sprite con pallini, 12 varianti per tipo.
+- [x] Sottobosco marrone a marzo, verde da aprile; fiori nei prati dal 1 marzo.
+- [x] Febbraio: neve fino al 21, disgelo dal 22; chiome spente dall'1 al 7 marzo.
+- [ ] Verifica visiva a colori della transizione e della primavera (screenshot nel gioco).
+- [ ] CI remota e revisione della PR prima dell'integrazione in main.
+
 ## 2026-11-19 — UI-BUILDERICON-01 · Iconografia architettonica del Builder
 
 **FATTO sul branch `buildericon`, NON MERGE.**
