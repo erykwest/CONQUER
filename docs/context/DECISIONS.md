@@ -1000,3 +1000,10 @@ Aggiungere un ID, classe, data di registrazione, **motivazione**, alternative sc
 - Il settore conquistato rimane `captured` finché non è ricontrollato dai difensori per almeno 0,5 giorni di gioco senza ostili. La riconquista riattiva la capacità fisica del deposito ma NON rigenera le merci sottratte.
 - Il record di cattura sopravvive a save/load, incluse brecce che eliminano la chiusura topologica; una successiva compartimentazione non può propagare una sola cattura a più settori. Il bottino lato attaccante e la simulazione di trasporti di risorse sono rinviati.
 
+
+
+### D-TOWER-SUMMIT-261124 — Porta delle torri su pendio — 2026-11-24
+- Su un pendio la porta a terra di una torre indipendente è **rivolta verso la cima ed è sulla cima**: la soglia sta sul pianoro alla quota del pavimento della torre. Il piazzamento ruota la torre (quadrata per quarti di giro, rotonda liberamente, torre a D isolata con il fronte curvo a valle) e rifiuta il sito se la soglia cade sul pendio.
+- Esclusi: sottotorri (nessuna porta a terra), torri di porta (porta verso il retro della porta), torri su banchina, torri a D sedute su un muro, ingressi sopraelevati del mastio. In piano nessun vincolo.
+- Il pavimento di una torre su pendio è la quota più alta sotto il **corpo** della torre; contrafforti e scarpa scendono fino al terreno e non lo alzano.
+- Mura e sezioni costruite possono avere un basamento (scarpa 10° o contrafforti) **solo sul lato esterno**; per ora è estetico e non cambia l'ingombro.
