@@ -734,6 +734,15 @@ function cutawayFloorShown(s,i){const z=cutawayFloorLevels(s)[i]?.z;return !Numb
 // Timber upper storey of a small gate: from the room floor to the eaves, jettied over the front
 // and the rear (local x), flush with the flanks the walls meet.
 function gateTimberFloorZ(s){return GATE_TIMBER_FLOOR}
+// Framed top of a W3 tower: from its top floor to the eaves, jettied TOWER_JETTY on all faces.
+function towerTimberFloorZ(s){return towerUpperFloorZ(s,structureLevel(s)-1)}
+function towerTimberStoreyPoints(s){const d=rectDims(s);return rectWorldPoints(s.x,s.y,d.w+TOWER_JETTY*2,d.h+TOWER_JETTY*2,s.angle||0)}
+// Either timber storey (gate or tower): floor height and jettied outline, or null.
+function timberStorey(s){
+  if(s?.type==='gate'&&gateTimberUpper(s))return{z:gateTimberFloorZ(s),pts:gateTimberStoreyPoints(s)};
+  if(s?.type==='tower'&&towerTimberUpper(s))return{z:towerTimberFloorZ(s),pts:towerTimberStoreyPoints(s)};
+  return null;
+}
 function gateTimberStoreyPoints(s){const d=rectDims(s);return rectWorldPoints(s.x,s.y,d.w+GATE_JETTY*2,d.h,s.angle||0)}
 function cutawayRoomSlots(s,g=cutawayWallGeometry(s)){
   // slot i is the room on floor i+offset (gates: the ground floor is the passage, no room).

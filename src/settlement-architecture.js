@@ -105,17 +105,35 @@ function gateWindowRows(s){
 // Timber frame of a small gate's upper storey, per face of the jettied storey: sill and head
 // plates, corner posts; two windows between posts on the front and the rear, a post and two
 // braces on the flanks. Offsets along the edge from its middle, z above the gate's ground.
-function gateTimberFacade(s){
-  const pts=gateTimberStoreyPoints(s),z0=gateTimberFloorZ(s),z1=structureHeight(s),t=HOUSE_TIMBER_W/2,out=[];
+function gateTimberFacade(s){return timberStoreyFacade(gateTimberStoreyPoints(s),gateTimberFloorZ(s),structureHeight(s),i=>i===GATE_FACADE_FRONT||i===GATE_FACADE_REAR)}
+// Framed top of a W3 tower: the same frame, two windows on every face (it is the watch room).
+function towerTimberFacade(s){return timberStoreyFacade(towerTimberStoreyPoints(s),towerTimberFloorZ(s),structureHeight(s),()=>true,true)}
+function timberStoreyFacade(pts,z0,z1,windowed,dense=false){
+  const t=HOUSE_TIMBER_W/2,out=[];
   for(let i=0;i<4;i++){
     const a=pts[i],b=pts[(i+1)%4],L=Math.hypot(b.x-a.x,b.y-a.y),h=L/2-t,beams=[],windows=[];
     beams.push([{off:-L/2,z:z0+t},{off:L/2,z:z0+t}],[{off:-L/2,z:z1-t},{off:L/2,z:z1-t}]);
     for(const e of [-h,h])beams.push([{off:e,z:z0+t},{off:e,z:z1-t}]);
-    if(i===GATE_FACADE_FRONT||i===GATE_FACADE_REAR){
+    if(windowed(i)){
       const wz=(z0+z1)/2,f=HOUSE_WINDOW_HALF_W+HOUSE_TIMBER_W*.9;
       for(const c of [-L*.24,L*.24]){windows.push({off:c,z:wz});beams.push([{off:c-f,z:z0+t},{off:c-f,z:z1-t}],[{off:c+f,z:z0+t},{off:c+f,z:z1-t}])}
     }else{
       beams.push([{off:0,z:z0+t},{off:0,z:z1-t}],[{off:-h,z:z0+t},{off:0,z:z1-t}],[{off:h,z:z0+t},{off:0,z:z1-t}]);
+    }
+    // Dense frame (tower framed top): a mid rail beside the windows, close studs between them,
+    // and a K brace in each corner bay.
+    if(dense){
+      const f=HOUSE_WINDOW_HALF_W+HOUSE_TIMBER_W*.9,wl=(z0+z1)/2-HOUSE_WINDOW_HALF_H-t,wh=(z0+z1)/2+HOUSE_WINDOW_HALF_H+t,mid=(z0+z1)/2;
+      const c=L*.24,inner=c-f,outer=c+f;
+      // sill and head rails under/over the windows, mid rail in the corner bays and the centre
+      for(const sg of [-1,1]){
+        beams.push([{off:sg*inner,z:wl},{off:sg*outer,z:wl}],[{off:sg*inner,z:wh},{off:sg*outer,z:wh}]);
+        beams.push([{off:sg*outer,z:mid},{off:sg*h,z:mid}]);
+        // K braces in the corner bay
+        beams.push([{off:sg*h,z:z0+t},{off:sg*outer,z:mid}],[{off:sg*h,z:z1-t},{off:sg*outer,z:mid}]);
+      }
+      // close studs and a St Andrew's cross in the centre bay
+      beams.push([{off:0,z:z0+t},{off:0,z:z1-t}],[{off:-inner,z:z0+t},{off:inner,z:z1-t}],[{off:inner,z:z0+t},{off:-inner,z:z1-t}]);
     }
     out.push({edge:{a,b,index:i},beams,windows});
   }

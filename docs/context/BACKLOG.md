@@ -1,5 +1,13 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-24 — TOWER-FRAMED-TOP · Piano alto a graticcio delle torri W3
+
+**IMPLEMENTATO SU BRANCH `feature/framed-top-towers`, NON MERGE.**
+- [x] Variante piano alto pietra/graticcio su torri quadrate W3 L2+, solo tetto a falde, a sbalzo.
+- [x] Costo: piani bassi in pietra/argilla, piano alto solo legno; resistenza della pietra, vulnerabile al fuoco.
+- [ ] Bilanciamento del costo in legno (45) e del tempo di costruzione; voce wiki/codex da aggiungere.
+
+
 ### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2
 
 **IMPLEMENTATO SU BRANCH `feature/shops-l2-rooms`, NON MERGE.**

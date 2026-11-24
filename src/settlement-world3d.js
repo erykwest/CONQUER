@@ -1049,6 +1049,17 @@
       const P=[corner(p0,1),corner(p1,1),corner(p1,-1),corner(p0,-1)],[u0,v0,u1,v1]=uv;
       for(const k of [0,1,2,0,2,3]){const q=P[k];v.push(q.x,q.y,q.z,k===1||k===2?u1:u0,k<2?v0:v1,col[0],col[1],col[2],col[3])}
     };
+    // Timber storey frame strips and house windows (with their night glow): small gate, framed tower top.
+    const timberFacadeDecals=(facade,ground,center)=>{for(const f of facade){
+          const e=f.edge,o=outward(e,center),L=Math.hypot(e.b.x-e.a.x,e.b.y-e.a.y)||1,ux=(e.b.x-e.a.x)/L,uy=(e.b.y-e.a.y)/L;
+          const m={x:(e.a.x+e.b.x)/2,y:(e.a.y+e.b.y)/2},at=off=>({x:m.x+ux*off,y:m.y+uy*off}),hw=HOUSE_WINDOW_HALF_W,hh=HOUSE_WINDOW_HALF_H;
+          for(const [p0,p1] of f.beams)strip(at,ground,p0,p1,HOUSE_TIMBER_W,o,[59/255,42/255,30/255,1],.009);
+          for(const w of f.windows){
+            const c=at(w.off);
+            quad({x:c.x-ux*hw,y:c.y-uy*hw},{x:c.x+ux*hw,y:c.y+uy*hw},ground+w.z-hh,ground+w.z+hh,'__white',o,[35/255*.82,29/255*.82,24/255*.82,.82]);
+            lightWindow(e,w.z,hw*2,hh*2,w.off,ground,o);
+          }
+        }};
     const houseGeometry=new Map(urbanHouseGeometry().map(e=>[e.house.id,e]));
     for(const s of State.structures){
       if(underConstruction(s))continue;
@@ -1061,7 +1072,9 @@
           const c=spec.contact,t=spec.tangent,half=width/2;
           quad({x:c.x-t.x*half,y:c.y-t.y*half},{x:c.x+t.x*half,y:c.y+t.y*half},ground+spec.baseZ,ground+spec.baseZ+height,'towerDoor',spec.outward);
         }
-        const rows=towerWindowRows(s);
+        // Framed top: no masonry openings in the timber storey, its frame and windows instead.
+        const framed=towerTimberUpper(s),rows=framed?towerWindowRows(s).filter(r=>r.z<towerTimberFloorZ(s)):towerWindowRows(s);
+        if(framed)timberFacadeDecals(towerTimberFacade(s),ground,center);
         if(s.shape==='round'){                                                   // roundTowerFacadeEdges, all four
           const iv=structureInteriorVector(s),base=Math.atan2(iv.y,iv.x),r=Math.max(.2,Number(s.r)||.5)+.006,span=Math.min(.54,r*.95);
           for(const row of rows){
@@ -1105,16 +1118,7 @@
         const fittings=window.ConquerGates?.decalSpecs(s)||[];
         for(const d of fittings)onEdge(d.edge,d.centerZ,d.width,d.height,d.key,d.offset,ground,d.edge.normal);
         // Timber upper storey: frame strips and house windows (with their night glow).
-        if(gateTimberUpper(s))for(const f of gateTimberFacade(s)){
-          const e=f.edge,o=outward(e,center),L=Math.hypot(e.b.x-e.a.x,e.b.y-e.a.y)||1,ux=(e.b.x-e.a.x)/L,uy=(e.b.y-e.a.y)/L;
-          const m={x:(e.a.x+e.b.x)/2,y:(e.a.y+e.b.y)/2},at=off=>({x:m.x+ux*off,y:m.y+uy*off}),hw=HOUSE_WINDOW_HALF_W,hh=HOUSE_WINDOW_HALF_H;
-          for(const [p0,p1] of f.beams)strip(at,ground,p0,p1,HOUSE_TIMBER_W,o,[59/255,42/255,30/255,1],.009);
-          for(const w of f.windows){
-            const c=at(w.off);
-            quad({x:c.x-ux*hw,y:c.y-uy*hw},{x:c.x+ux*hw,y:c.y+uy*hw},ground+w.z-hh,ground+w.z+hh,'__white',o,[35/255*.82,29/255*.82,24/255*.82,.82]);
-            lightWindow(e,w.z,hw*2,hh*2,w.off,ground,o);
-          }
-        }
+        if(gateTimberUpper(s))timberFacadeDecals(gateTimberFacade(s),ground,center);
         for(const edge of edgesOf(footprintPoints(s))){
           const o=outward(edge,center);
           // front / rear; the door shows its state (cracked, broken in: settlement-siege.js)
@@ -1388,7 +1392,7 @@
         keep=new Set([...Array(n).keys()].filter(i=>!open.has(i)));jambs=cutawayBoundaryVertices(open,n);
       }
       // Timber-framed small gate: masonry up to the frame's floor, plaster above (outside and in).
-      const timber=s.type==='gate'&&gateTimberUpper(s),zf=timber?Math.min(gateTimberFloorZ(s),H):H;
+      const ts=timberStorey(s),timber=!!ts,zf=timber?Math.min(ts.z,H):H;
       const band=(mesh,p,q,z0,z1,hex)=>mesh.face([Z(p,z0),Z(q,z0),Z(q,z1),Z(p,z1)],hex);
       const loggia=isBuiltPortico(s)?builtLoggia(s):null,lc=structureCenter(s),ln=s.b?{x:-(s.b.y-s.a.y),y:s.b.x-s.a.x}:null;
       const loggiaEdge=(p,q)=>!!loggia&&loggia.cap<H&&Math.sign(((p.x+q.x)/2-lc.x)*ln.x+((p.y+q.y)/2-lc.y)*ln.y)===loggia.side;

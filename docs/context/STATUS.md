@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-24 — TOWER-FRAMED-TOP: piano alto a graticcio delle torri W3 (branch `feature/framed-top-towers`, NON MERGE)
+
+- **CODICE:** variante torre `upper` 'stone'/'timber' (`settlement-core.js` `towerTimberUpperAllowed`/`towerTimberUpper`, `TOWER_TIMBER_COST` {wood:45}, `TOWER_JETTY` .1): solo torri quadrate in pietra W3, L2+, cima integra; tetto sempre a falde (niente merli, caditoie, ballatoio, garitte). Costo: torre un livello più bassa + solo legno. Fuoco (`settlement-fire.js`): parte 'upper' (flam .85, 50 s); bruciata, la torre perde il piano (brokenTop), muratura integra. Render: piano in intonaco a sbalzo, gronda allargata, intelaiatura fitta (`timberStoreyFacade` dense), niente aperture in pietra sopra il piano. Ispettore (UI classica e profilo) «Piano alto: Pietra / Graticcio». Lab: due varianti «framed top».
+- **PROVE LOCALI PASS:** nuova `qa/tower-framed-top-regression.cjs`; caso nuovo in `qa/fire-regression.cjs`; tower-weapons, clay-material, tower-roof-shape, bartizan, biome-recipes. Falliscono anche su main: codex-obsidian, codex-vault-import, codex-wiki, hills-zone, stream-count. Verifica visiva nell'Asset Lab (intatta, cutaway).
+
+
 ### 2026-11-20 — SHOP-L2-ROOMS: stanze del piano terra L2 (branch `feature/shops-l2-rooms`, NON MERGE)
 
 - **CODICE:** `settlement-shop-cutaway.js` `LAYOUTS_L2` (sette mestieri) e `domestic()`; `layout(R,out,kind,home)` sceglie le stanze L2 per le botteghe di casa e `LAYOUTS` per le avanzate L3; `grade` nella chiave della cache del cutaway.

@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-24 — TOWER-FRAMED-TOP · Framed top per le torri quadrate W3
+
+`feature/framed-top-towers`: le torri quadrate in pietra W3 (L2+) possono avere l'ultimo piano a graticcio, leggermente a sbalzo e sempre con tetto a falde; costa la torre un livello più bassa più 45 legno; resiste come la pietra ma il piano in legno brucia e, consumato, la torre perde quel piano. Nuova `qa/tower-framed-top-regression.cjs`.
+
+
 ### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2 come casa-bottega
 
 `feature/shops-l2-rooms` (base `feature/shops-l3-advanced`, #293): il cutaway delle botteghe L2 ha stanze proprie (`LAYOUTS_L2`): bancone su strada lontano dalla porta, angolo della famiglia (focolare con paiolo, tavolino, due sgabelli) sul fondo del lato bancone, postazione compatta del mestiere sul fondo del lato porta; passaggio dalla porta libero. Le case L3 tengono la bottega completa. Baseline del Lab aggiornata per i 21 render «Botteghe L2». ROADMAP invariata; DECISIONS: completa D-SHOP-L3-261119 (stanze L2).

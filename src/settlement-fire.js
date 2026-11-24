@@ -18,7 +18,7 @@
   // Timber buildings that a fire left to burn out brings down (mills stand gutted instead).
   const BURNS_DOWN=new Set(['house','tavern','market']);
   // Seconds of full fire each fuel lasts.
-  const BURN={whole:55,roof:30,hoarding:26,door:22,stair:28,leaf:18};
+  const BURN={whole:55,upper:50,roof:30,hoarding:26,door:22,stair:28,leaf:18};
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   function store(){
     if(!State.fire||typeof State.fire!=='object')State.fire={burning:[],embers:[]};
@@ -42,7 +42,10 @@
     if(['windmill','watermill'].includes(s.type))return s.burnt?[]:[{part:'whole',flam:.85}];
     // The Mastio's wooden stair and drawbridge leaf come first: torches at its foot take them.
     const out=s.type==='tower'?[...(window.ConquerKeepEntrance?.fireParts?.(s)||[])]:[];
-    if(s.type==='tower'&&typeof towerRoofStyle==='function'&&towerRoofStyle(s)==='pitched'&&!s.roofBurnt)out.push({part:'roof',flam:.6});
+    // Framed top of a W3 stone tower: the whole timber storey and its roof burn as one.
+    const framed=s.type==='tower'&&typeof towerTimberUpper==='function'&&towerTimberUpper(s);
+    if(framed)out.push({part:'upper',flam:.85});
+    else if(s.type==='tower'&&typeof towerRoofStyle==='function'&&towerRoofStyle(s)==='pitched'&&!s.roofBurnt)out.push({part:'roof',flam:.6});
     if(s.type==='gate'&&typeof gateRoofStyle==='function'&&gateRoofStyle(s)==='pitched'&&!s.roofBurnt)out.push({part:'roof',flam:.6});
     if(s.type==='church'&&!s.roofBurnt)out.push({part:'roof',flam:.4});
     if(s.type==='wall'&&typeof wallSkin==='function'&&wallSkin(s)==='hoarding')out.push({part:'hoarding',flam:.8});
@@ -101,7 +104,11 @@
   }
   // A wooden part burnt out on a stone structure: the roof or gallery is gone, charred.
   function burnout(s,f){
-    if(f.part==='roof'){
+    if(f.part==='upper'){
+      // The frame is gone: the stone storeys below stand with a broken, charred crown.
+      s.level=Math.max(1,structureLevel(s)-1);s.brokenTop=true;s.upper='stone';s.roofBurnt=true;
+      if(typeof normalizeFunctions==='function')normalizeFunctions(s);
+    }else if(f.part==='roof'){
       s.roofBurnt=true;
       if(s.type==='tower'||s.type==='gate')s.roofStyle='battlement';
     }else if(f.part==='hoarding'){

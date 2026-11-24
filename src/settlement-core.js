@@ -318,6 +318,7 @@ const STRUCTURE_VARIANTS=Object.freeze({
     topWeapon:Object.freeze(['none','mangonel','ballista']),
     bartizan:Object.freeze(['none','battlement','pitched']),
     roofShape:Object.freeze(['pyramid','gable','hip']),
+    upper:Object.freeze(['stone','timber']),
     // Timber gallery mounted round the top in wartime and taken down after: the roof stays as built.
     hoarding:Object.freeze(['off','on']),
     // Alarm bell under a small belfry on the roof apex (rules: settlement-alarm-bells.js).
@@ -344,7 +345,7 @@ const STRUCTURE_VARIANTS=Object.freeze({
   })
 });
 const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
-  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid',hoarding:'off',bell:'none',signalFire:'none',innerRoof:'off',machicolationStyle:'standard'}),
+  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid',hoarding:'off',bell:'none',signalFire:'none',innerRoof:'off',machicolationStyle:'standard',upper:'stone'}),
   gate:Object.freeze({roofStyle:'battlement',upper:'stone',hoarding:'off'}),
   wall:Object.freeze({skin:'standard'}),
   built:Object.freeze({skin:'standard'})
@@ -430,6 +431,7 @@ function setStructureVariant(s,key,value){
 // A storey brought down from the top leaves a broken crown: no roof, merlons or deck.
 function towerRoofStyle(s){
   if(s?.type==='tower'&&s.brokenTop&&!isWoodTower(s))return'broken';
+  if((typeof towerTimberUpper==='function'&&towerTimberUpper(s)))return'pitched';         // the framed top always carries the pitched roof
   return s?.type==='tower'?structureVariant(s,'roofStyle'):undefined;
 }
 // Upgrade: a mangonel or a ballista on the deck of a medium (T2) stone tower without a roof,
@@ -447,7 +449,7 @@ function towerInnerRoofAllowed(s){
 function towerInnerRoofMounted(s){return towerInnerRoofAllowed(s)&&structureVariant(s,'innerRoof')==='on'}
 // Hoarding (ballatoio): not with machicolations (they do its job in stone) nor on a broken crown.
 // Nor with bartizans: their corbelled corners take the perimeter the gallery runs round.
-function towerHoardingAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&s.shape!=='half'&&['battlement','pitched'].includes(towerRoofStyle(s))&&towerBartizan(s)==='none'}
+function towerHoardingAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&s.shape!=='half'&&!(typeof towerTimberUpper==='function'&&towerTimberUpper(s))&&['battlement','pitched'].includes(towerRoofStyle(s))&&towerBartizan(s)==='none'}
 function towerHoardingMounted(s){return towerHoardingAllowed(s)&&structureVariant(s,'hoarding')==='on'}
 // Stone gates (large and small) take it too, not over a timber-framed storey.
 function gateHoardingAllowed(s){return !!s&&s.type==='gate'&&!isWoodGate(s)&&!gateTimberUpper(s)&&['battlement','pitched'].includes(gateRoofStyle(s))}
@@ -457,7 +459,7 @@ function hoardingMounted(s){return s?.type==='gate'?gateHoardingMounted(s):tower
 function towerTopWeapon(s){const w=s?.type==='tower'?structureVariant(s,'topWeapon'):'none';return towerTopWeaponAllowed(s)&&w?w:'none'}
 // Bartizans: four corbelled corner turrets on a large (T3) square or round stone tower, crowned
 // with merlons or with a pitched (conical) roof (geometry: towerBartizans in settlement-castle-structures.js).
-function towerBartizanAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)>=3&&['square','round'].includes(s.shape||'square')&&towerRoofStyle(s)!=='broken'}
+function towerBartizanAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&!(typeof towerTimberUpper==='function'&&towerTimberUpper(s))&&towerTier(s)>=3&&['square','round'].includes(s.shape||'square')&&towerRoofStyle(s)!=='broken'}
 function towerBartizan(s){const b=s?.type==='tower'?structureVariant(s,'bartizan'):'none';return towerBartizanAllowed(s)&&b?b:'none'}
 // Dovecote (Colombaia): the room under the pitched roof of a medium or large (T2/T3) stone tower,
 // on its top floor at L2+. It takes the one room under the roof, so the falconry and the alarm bell
@@ -595,6 +597,13 @@ const GATE_TIMBER_COST=Object.freeze({gold:8,wood:18}),GATE_JETTY=.07;
 // slopes over the front and the rear (gables on the flanks), so the whole gate stays low.
 const GATE_TIMBER_FLOOR=1.4,GATE_TIMBER_EAVES=2.6,GATE_TIMBER_RIDGE=GATE_TIMBER_EAVES+.84;
 function gateTimberUpper(s){return isSmallGate(s)&&!s.brokenTop&&structureLevel(s)===2&&structureVariant(s,'upper')==='timber'}
+// Framed top (BC-261124): the top storey of a large (W3) square stone tower, L2+, built as a
+// timber frame with plaster, slightly jettied on all four faces and always under a pitched roof.
+// The masonry storeys below keep the stone strength; the frame burns (settlement-fire.js 'upper').
+// It costs the stone tower one level lower plus TOWER_TIMBER_COST in wood for the top storey.
+const TOWER_TIMBER_COST=Object.freeze({wood:45}),TOWER_JETTY=.1;
+function towerTimberUpperAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&(s.shape||'square')==='square'&&towerTier(s)===3&&structureLevel(s)>=2&&!s.brokenTop}
+function towerTimberUpper(s){return towerTimberUpperAllowed(s)&&s.upper==='timber'}
 // BC-251105-07: only the free-standing square stone W2 tower may rise to a fourth storey (H4),
 // a slender watch tower; wider towers stop at H3 and the W4 keep stays the only great tower.
 const TOWER_H4_LEVEL=4;
@@ -842,6 +851,11 @@ function baseConstructionCost(s){
   if(s.type==='tower'){
     if(isWoodTower(s)&&s.woodStyle==='frameTower')return {...COSTS.frameTower};
     if(isWoodTower(s))return {...COSTS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))]};
+    if((typeof towerTimberUpper==='function'&&towerTimberUpper(s))){
+      const c=scaleCost(COSTS.tower[towerTier(s)-1],levelCostFactor({...s,level:structureLevel(s)-1})*(TOWER_SHAPE_COST[s.shape]??1));
+      for(const [k,v] of Object.entries(TOWER_TIMBER_COST))c[k]=(c[k]||0)+v;
+      return c;
+    }
     return scaleCost(COSTS.tower[towerTier(s)-1],levelCostFactor(s)*(TOWER_SHAPE_COST[s.shape]??1));
   }
   if(s.type==='gate'){
