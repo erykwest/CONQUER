@@ -1425,7 +1425,7 @@ function foliageLook(){
   const p=winterPhase();return p==='blizzard'?'blizzard':p==='snow'?'winter':'bare';
 }
 // Undergrowth of the woods: snowy, brown (early winter) or green.
-function undergrowthLook(){return isSnowGround()?'winter':winterPhase()==='bare'?'brown':'green'}
+function undergrowthLook(){return isSnowGround()?'winter':(winterPhase()==='bare'||winterPhase()==='thaw')?'brown':'green'}
 // Blizzard sprites: a hatched snow screen-tone (retino) laid only on the upward-facing (zenithal) band
 // of every branch/twig shape; the shapes keep their own colour elsewhere. Returns a canvas.
 function snowCapSprite(img,band=.12){
