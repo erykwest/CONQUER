@@ -853,7 +853,7 @@ function scaleCost(cost,factor){return roundCost(Object.fromEntries(Object.entri
 function baseConstructionCost(s){
   if(!s||s.auto)return{};
   if(s.type==='tower'){
-    if(isFrameTower(s))return {...COSTS[s.woodStyle]};
+    if(isWoodTower(s)&&['frameTower','frameTower3'].includes(s.woodStyle))return {...COSTS[s.woodStyle]};
     if(isWoodTower(s))return {...COSTS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))]};
     if((typeof towerTimberUpper==='function'&&towerTimberUpper(s))){
       const c=scaleCost(COSTS.tower[towerTier(s)-1],levelCostFactor({...s,level:structureLevel(s)-1})*(TOWER_SHAPE_COST[s.shape]??1));
@@ -925,7 +925,7 @@ function refundCost(cost){
 }
 function buildDuration(s){
   if(s.type==='tower'){
-    if(isFrameTower(s))return BUILD_DAYS[s.woodStyle];
+    if(isWoodTower(s)&&['frameTower','frameTower3'].includes(s.woodStyle))return BUILD_DAYS[s.woodStyle];
     if(isWoodTower(s))return BUILD_DAYS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))];
     return BUILD_DAYS.tower[towerTier(s)-1]*(.7+.3*structureLevel(s));
   }
