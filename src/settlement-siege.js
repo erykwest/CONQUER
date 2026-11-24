@@ -942,13 +942,14 @@
   // the rim, rubble filling the top (towerRoofStyle/gateRoofStyle report 'broken').
   const crownCache=new Map();
   function crownMesh(s){
-    const g=groundOf(s),H=structureHeight(s),key=s.id+':'+H.toFixed(3)+':'+g.toFixed(3);
+    const g=groundOf(s),H=structureHeight(s),key=s.id+':'+H.toFixed(3)+':'+g.toFixed(3)+':'+(stumpClay(s)?'c':'s');
     let m=crownCache.get(key);if(m)return m;
     const pos=[],col=[];
-    masonryPieces(s).forEach((base,i)=>crownPiece(i?key+':'+i:key,base,g,H,pos,col));
+    masonryPieces(s).forEach((base,i)=>crownPiece(i?key+':'+i:key,base,g,H,pos,col,stumpClay(s)));
     m={pos,col,static:true};crownCache.set(key,m);return m;
   }
-  function crownPiece(key,base,g,H,pos,col){
+  function crownPiece(key,base,g,H,pos,col,clay=false){
+    const sideA=clay?'#8a4e36':'#6f665d',sideB=clay?'#a25d40':'#7d736b',topC=clay?'#a25d40':'#8a7f74';
     let seed=0;for(const ch of key)seed=(Math.imul(seed,31)+ch.charCodeAt(0))>>>0;
     const rnd=()=>(seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296;
     const ring=[];
@@ -962,11 +963,11 @@
     const tri=(a,b,c,colr)=>{pos.push(...a,...b,...c);col.push(colr)};
     for(let i=0;i<ring.length;i++){
       const j=(i+1)%ring.length,a=ring[i],b=ring[j],z0=g+H-.02,ha=g+H+tops[i],hb=g+H+tops[j];
-      const sideCol=i%3===0?'#6f665d':'#7d736b';
+      const sideCol=i%3===0?sideA:sideB;
       tri([a.x,a.y,z0],[b.x,b.y,z0],[b.x,b.y,hb],sideCol);tri([a.x,a.y,z0],[b.x,b.y,hb],[a.x,a.y,ha],sideCol);
       const c=[cx,cy,g+H+.1],p=[a.x,a.y,ha],q=[b.x,b.y,hb];
       const up=(q[0]-c[0])*(p[1]-c[1])-(q[1]-c[1])*(p[0]-c[0]);
-      if(up>0)tri(c,q,p,'#8a7f74');else tri(c,p,q,'#8a7f74');
+      if(up>0)tri(c,q,p,topC);else tri(c,p,q,topC);
     }
   }
   function dynamicMeshes(){
