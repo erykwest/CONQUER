@@ -1,5 +1,9 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+## ECC-REFACTOR-02 — Comandi e catalogo Builder (24/11/2026)
+
+**IMPLEMENTATO SUL BRANCH `refactor/extended-ecc-20261124`, NON MERGE.** Comandi e preset indipendenti dal DOM, adapter per i controlli legacy, catalogo UI2 separato dalla shell; il materiale della tettoia viene applicato e ricordato. Conservati icone e opere campali di main. Regressione delle 85 scelte, browser legacy/UI2/CAMP e indicatore salvataggi nel [rapporto](EXTENDED-REFACTOR-2026-11-24.md). Non cambia la roadmap Builder/Manager.
+
 ## UI-BUILDERICON-01 — Icone medievali del Builder (19/11/2026)
 
 **FATTO sul branch `buildericon`, NON MERGE.** Sostituzione dei glifi con 52 SVG individuali, più 20 icone complementari. Monocromo nero, trasparenza, prospettiva 3/4 per le architetture; comandi conservati come pittogrammi. Lab con manifest e baseline; audit mirato 72 render senza errori; QA caricamento, categorie, identità dei pulsanti, gestore del mulino e viewport mobile PASS. CI remota e integrazione ancora da verificare. Vedi [BUILDER-ICONS](BUILDER-ICONS.md).

@@ -78,7 +78,7 @@
     }
     return route.filter((p,i,a)=>i===0||dist(p,a[i-1])>.05).map(point);
   }
-  function routeLength(path){let total=0;for(let i=1;i<path.length;i++)total+=dist(path[i-1],path[i]);return total}
+  const routeLength=path=>window.ConquerPath.measure(path).total;
   function dovecotes(){return typeof towerDovecote==='function'?(State.structures||[]).filter(s=>towerDovecote(s)):[]}
   // The dovecote nearest to where the letter comes from.
   function loftFor(entry){return dovecotes().sort((a,b)=>dist(point(a),entry)-dist(point(b),entry))[0]||null}
@@ -90,14 +90,8 @@
   }
   function position(path,fraction){
     const total=routeLength(path),target=Math.min(1,Math.max(0,fraction))*total;
-    let used=0;
-    for(let i=1;i<path.length;i++){
-      const span=dist(path[i-1],path[i]);
-      if(used+span>=target)return{x:path[i-1].x+(path[i].x-path[i-1].x)*(target-used)/Math.max(.0001,span),y:path[i-1].y+(path[i].y-path[i-1].y)*(target-used)/Math.max(.0001,span),heading:Math.atan2(path[i].y-path[i-1].y,path[i].x-path[i-1].x)};
-      used+=span;
-    }
-    const a=path.at(-2)||path[0],b=path.at(-1)||a;
-    return {...b,heading:Math.atan2(b.y-a.y,b.x-a.x)};
+    const {segment,...pose}=window.ConquerPath.sample(path,target,{minimumSpan:.0001});
+    return pose;
   }
   function courierPose(x,at=day()){
     if(!x)return null;

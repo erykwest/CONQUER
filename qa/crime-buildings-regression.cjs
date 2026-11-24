@@ -118,11 +118,11 @@ const line=(text,re)=>{const m=text.match(re);assert.ok(m,String(re));return m[0
     assert.ok(Object.keys(E.cost(s)).length&&E.buildDays(s)>0,v+' has a cost and a building site');
     assert.ok(E.setupItems(s).length===0,v+' has no event setup');
   }
-  const html=read('index.html'),ux=src('settlement-builder-ux.js'),shell=src('ui/shell.js'),it=src('ui/i18n-it.js');
+  const html=read('index.html'),ux=src('settlement-builder-ux.js'),shell=src('ui/builder-catalog.js'),it=src('ui/i18n-it.js');
   for(const v of ['pillory','gallows','scaffold']){
     assert.match(html,new RegExp('<button data-event-venue="'+v+'">'),'legacy Builder button for '+v);
     assert.ok(ux.includes('[data-event-venue="'+v+'"]'),v+' in the Builder palette');
-    assert.ok(shell.includes('[data-event-venue="${k}"]')&&shell.includes("'pillory', 'gallows'"),'new Builder: justice tool');
+    assert.ok(shell.includes('eventVenue:k')&&shell.includes("'pillory', 'gallows'"),'new Builder: justice tool');
   }
   assert.match(it,/justice: 'Giustizia/);assert.match(it,/pillory: 'Gogna', gallows: 'Forca'/);
   assert.match(it,/tribunal: 'Tribunale'/);

@@ -29,7 +29,7 @@ assert.equal(cost({type:'built',length:3,span:'wide'}).stone,2*cost({type:'built
 assert.deepEqual(JSON.parse(JSON.stringify(cost({type:'tower',material:'wood'}))),{wood:42},'wood tower remains wood');
 assert.ok(/masonryMaterial:State.village.privateMasonryMaterial==='brick'\?'brick':'stone'/.test(read('src/settlement-world.js')));
 assert.ok(/State.village.privateMasonryMaterial=next/.test(read('src/settlement-app-calendar-ui.js')));
-assert.ok(/buildMasonryMaterial:State.buildMasonryMaterial/.test(read('src/settlement-app-persistence.js')));
+assert.ok(/buildMasonryMaterial:state.buildMasonryMaterial/.test(read('src/settlement-save-snapshot.js')));
 assert.ok(/s.masonryMaterial=s.masonryMaterial==='brick'\?'brick':'stone'/.test(read('src/settlement-app-persistence.js')));
 assert.ok(/s.masonryMaterial==='brick'\?\.80:1/.test(read('src/settlement-siege.js')));
 assert.ok(/withStructureVisualMaterial\(s/.test(read('src/settlement-castle3d.js')));

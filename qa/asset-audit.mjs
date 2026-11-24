@@ -35,7 +35,7 @@ try{
   const page=await browser.newPage({viewport:{width:1460,height:900},deviceScaleFactor:1});
   page.on('pageerror',e=>errors.push(String(e.stack||e)));
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
-  await page.waitForFunction(()=>window.ConquerAssetAudit&&window.ConquerAssetCatalog?.engineReady,{timeout:120000});
+  await page.waitForFunction(()=>window.ConquerAssetAudit&&window.ConquerAssetCatalog?.engineReady,null,{timeout:120000});
   // Catalogue metadata is authoritative: source -> every affected entry (also across families).
   // If any source cannot be mapped, or a registry entry disappeared from the reviewed
   // baseline, run the complete audit rather than silently shrinking coverage.

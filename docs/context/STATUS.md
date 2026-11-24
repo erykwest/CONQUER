@@ -7,6 +7,12 @@
 - Locale/CAMP: un errore di scrittura mantiene l'indicatore di errore e `dirty`; nessun falso «saved». Errori cloud restituiti o lanciati restano gestiti.
 - Barra risorse: chiavi e valori dei salvataggi costruiti come nodi di testo, senza interpretazione HTML.
 - QA locale: 16 test Node (11 nuovi + 5 runtime); 15 suite di regressione PASS. Rapporto e limiti in [HARDENING-2026-11-19](../HARDENING-2026-11-19.md). CI remota da verificare nella PR; browser e database live non verificati.
+### 2026-11-24 — ECC-REFACTOR-02 · Refactor trasversale
+
+Implementato su `refactor/extended-ecc-20261124`, non ancora integrato. Snapshot di salvataggio condiviso e upload ordinati, restore comune, comandi Builder separati dai controlli e dal catalogo UI2, geometria percorsi comune, espansione mesh unica e rimozione del painter facciate senza chiamanti. Contratto di caricamento e runner QA portabile con report JSON. Conservate le feature correnti di main.
+
+25 test su salvataggi e risorse PASS; caratterizzazione percorsi e confronto byte di 77 modelli PASS. Suite completa, browser e Lab in verifica; CI da consultare nella PR. Dettagli, evidenze e limiti in [rapporto](../EXTENDED-REFACTOR-2026-11-24.md) e [ledger](../REGRESSION.md). Nessun merge o deploy implicito.
+
 ### 2026-11-24 — CLAY-WATER-ACCESS · Acqua dolce e cava in palude
 
 Branch `fix/territory-clay-stone-access`, base main `fe665fe`. Il generatore cerca una sponda interna utilizzabile nella whitezone e aggiunge un piccolo stagno quando serve, preservando spazio asciutto per una cava 4×4U. In foresta può aprire una radura locale se manca spazio. La cava argilla può sorgere su qualsiasi terrazza asciutta edificabile del territorio Palude, anche lontano dalle rive. Acquitrini, boschi, strade ed edifici mantengono le collisioni.

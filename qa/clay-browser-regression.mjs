@@ -46,7 +46,7 @@ try{
       assert.ok(snapshot.structures>=2,'sample structures must exist');
       const materials=await page.evaluate(()=>{
         // The UI selections apply to future work only, never recolour existing IDs.
-        setBuildMasonryMaterial('brick');
+        window.ConquerBuilderCommands.execute({buildMasonry:'brick'});
         setPrivateMasonryMaterial('brick');
         const before=State.structures.map(s=>[s.id,s.masonryMaterial]);
         setPrivateMasonryMaterial('stone');

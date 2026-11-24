@@ -32,16 +32,9 @@
     return out;
   }
   function atDistance(path,requested){
-    let left=requested;
-    for(let i=1;i<path.length;i++){
-      const a=path[i-1],b=path[i],d=Math.hypot(b.x-a.x,b.y-a.y);
-      if(left<=d||i===path.length-1){
-        const t=Math.max(0,Math.min(1,left/Math.max(.001,d)));
-        return{p:{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t},segment:i-1};
-      }
-      left-=d;
-    }
-    return{p:path[0],segment:0};
+    if(path.length<2)return{p:path[0],segment:0};
+    const {x,y,segment}=window.ConquerPath.sample(path,requested,{minimumSpan:.001,residual:true});
+    return{p:{x,y},segment};
   }
   function signs(){
     if(!State.village?.founded||!well())return[];
@@ -123,10 +116,7 @@
   function pointAlong(path,distance){
     return atDistance(path,distance).p;
   }
-  function totalLength(points){
-    let d=0;for(let i=1;i<points.length;i++)d+=Math.hypot(points[i].x-points[i-1].x,points[i].y-points[i-1].y);
-    return d;
-  }
+  const pathLength=points=>window.ConquerPath.measure(points).total;
   function drawConvoy(){
     const j=active();if(!j||j.status!=='moving'||!j.path?.length)return;
     drawConvoyAt(j);
@@ -138,8 +128,6 @@
       livery:j.kind==='merchant'?{main:'#79553b',alt:'#b08a65'}:null},j.path);
     drawConvoyStrip(j);
   }
-  const reversedCache=new WeakMap();
-  function reversed(path){let r=reversedCache.get(path);if(!r){r=path.slice().reverse();reversedCache.set(path,r)}return r}
   // Real lord convoys: on the road while the outward or return leg is still
   // inside the map (road length out of road + 40U beyond the border).
   // Where a live lord convoy is on the map this moment: {path, distance} along the road in
@@ -155,7 +143,7 @@
     if(distance>length)return null;
     // Coming home the convoy drives the outbound road backwards: give it the reversed road,
     // so heading, lead wagon and escort order follow the travel direction (not the way out).
-    return j.status==='returning'?{path:reversed(path),distance:length-distance}:{path,distance};
+    return j.status==='returning'?{path:window.ConquerPath.reverse(path),distance:length-distance}:{path,distance};
   }
   function drawLiveConvoys(){
     const c=convoys()?.state?.();if(!c)return;
@@ -212,18 +200,13 @@
   // arterial branches, or charge anything before route can be followed.
   function routeFor(edge){
     const s=signs().find(s=>s.edge===edge);
-    if(!s?.connected||!s.path||totalLength(s.path)<4.5)return null;
-    let d=0,first=0;
-    for(let i=1;i<s.path.length;i++){
-      const len=Math.hypot(s.path[i].x-s.path[i-1].x,s.path[i].y-s.path[i-1].y);
-      if(d+len>=3.5){first=i-1;break}d+=len;
-    }
+    if(!s?.connected||!s.path||pathLength(s.path)<4.5)return null;
+    const first=window.ConquerPath.sample(s.path,3.5).segment;
     const start=atDistance(s.path,3.5).p;
     const path=[start,...s.path.slice(first+1)];
     // Sign-stage tests animate over the VERIFIED outbound main road only.
-    return{sign:s,points:path,distance:totalLength(path)};
+    return{sign:s,points:path,distance:pathLength(path)};
   }
-  const pathLength=points=>window.ConquerVehicles?window.ConquerVehicles.makePath(points).total:totalLength(points);
   // The merchant starts at the market or an educated L3 residence;
   // the noble coach still belongs to an L4 residence.
   function originFor(kind){

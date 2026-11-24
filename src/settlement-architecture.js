@@ -33,18 +33,6 @@ function facadeAssetWorldSpan(edge,width,offsetWorld=0){
   const mx=(edge.a.x+edge.b.x)/2+ux*offsetWorld,my=(edge.a.y+edge.b.y)/2+uy*offsetWorld;
   return{a:{x:mx-ux*width/2,y:my-uy*width/2},b:{x:mx+ux*width/2,y:my+uy*width/2}};
 }
-function drawArchitectureAssetOnEdge(edge,centerZ,width,height,key,offsetWorld=0,lit=false,nf=1,opacity=1){
-  const img=architectureSprite(key);if(!img)return false;
-  const span=facadeAssetWorldSpan(edge,width,offsetWorld),z0=centerZ-height/2,z1=centerZ+height/2;
-  const lt=w2s(span.a,z1),rt=w2s(span.b,z1),lb=w2s(span.a,z0),iw=img.width,ih=img.height;
-  ctx.save();
-  const baseAlpha=ctx.globalAlpha*clamp(Number(opacity)||0,0,1);
-  ctx.globalAlpha=baseAlpha;
-  ctx.transform((rt.x-lt.x)/iw,(rt.y-lt.y)/iw,(lb.x-lt.x)/ih,(lb.y-lt.y)/ih,lt.x,lt.y);
-  ctx.imageSmoothingEnabled=true;ctx.drawImage(img,0,0);
-  if(lit){ctx.globalCompositeOperation='screen';ctx.globalAlpha=baseAlpha*Math.min(.50,.20+.28*nf);ctx.filter='sepia(1) saturate(2) hue-rotate(330deg) brightness(1.45)';ctx.drawImage(img,0,0)}
-  ctx.restore();return true;
-}
 // Rule: a tower hooked to a gate (any gate socket) always has its entrance and its interior side
 // on the gate's rear, the inner side of the gatehouse, whatever its own angle or the walls.
 function towerGateParent(s){
@@ -80,7 +68,13 @@ function interiorFacadeEdgeIndex(s){
   return best;
 }
 function gothicAssetForLevel(s){return structureLevel(s)>=2?'gothicL2':'gothicL1'}
-function gothicAssetSizeForLevel(s){const l=structureLevel(s);return l>=2?{w:.68,h:.78}:{w:.54,h:.70}}
+// One sizing rule for the World 3D facade and cutaway; formerly a later script override.
+function gothicAssetSizeForLevel(s){
+  const l=structureLevel(s),base=l>=2?{w:.68,h:.78}:{w:.54,h:.70};
+  if(s?.type!=='tower')return base;
+  const t=clamp(towerTier(s),1,3),scale=t===1?.56:t===2?.76:.94;
+  return{w:base.w*scale,h:base.h*scale};
+}
 function towerGothicAssetForRow(s,row){
   if(!row||row.floor<2)return s.isMastio&&row?.floor===1?'gothicL1':null;
   if(row.floor===2)return'gothicL1';

@@ -11,10 +11,16 @@ on:
       - 'src/settlement-panels.css'
       - 'src/settlement-economy.js'
       - 'src/settlement-heraldry.js'
+      - 'src/settlement-builder-commands.js'
+      - 'src/settlement-builder-controls.js'
+      - 'src/settlement-app-input.js'
+      - 'src/ui/**'
+      - 'qa/builder-commands-browser.mjs'
       - 'qa/panels-browser.mjs'
       - 'qa/panels-regression.cjs'
       - 'qa/economy-panel-history-regression.cjs'
       - 'index.html'
+      - 'camp/index.html'
       - '.github/workflows/panels-browser-preview.yml'
       - '.github/actions/playwright-setup/action.yml'
   workflow_dispatch:
@@ -52,6 +58,8 @@ jobs:
         run: |
           node qa/construction-browser.mjs
           node qa/upgrades-dev-browser.mjs
+      - name: Verify shared Builder commands and state
+        run: node qa/builder-commands-browser.mjs
       - name: Upload construction screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -60,6 +68,7 @@ jobs:
           path: |
             output/playwright/construction/
             output/playwright/upgrades-dev/
+            output/playwright/architecture/
           retention-days: 21
       - name: Upload six screenshots
         if: always()

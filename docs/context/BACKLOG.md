@@ -9,6 +9,15 @@
 - [x] Regressioni deterministiche per attesa, errori, recupero, CAMP, Lab e payload HTML; incluse nel workflow Runtime integrity.
 - [ ] Verifica separata delle policy RLS effettivamente applicate in produzione: in questa passata letto soltanto lo schema versionato.
 - [ ] CSP completa e rimozione dipendenze CDN: richiedono inventario e QA browser delle pagine/iframe; non applicate in questa passata.
+### 2026-11-24 — ECC-REFACTOR-02 · Semplificazione architetturale
+
+**IMPLEMENTATO SU BRANCH `refactor/extended-ecc-20261124`, NON MERGE.**
+- [x] Un owner per snapshot/restore condiviso, comandi e preset Builder, geometria percorsi, espansione mesh e stato salvataggio UI.
+- [x] Caricamento verificabile nei due entry point, dipendenze e accettazione nel [ledger](../REGRESSION.md), runner unico senza perdita dei fallimenti.
+- [x] Casi di rete, concorrenza, quota e compatibilità del salvataggio verificati localmente.
+- [ ] Completare suite generale, browser, audit Lab e CI della PR prima dell'integrazione.
+- Owner Builder: [feature-backlog](../feature-backlog.md). Non cambia priorità di gameplay o roadmap.
+
 ### 2026-11-24 — CLAY-WATER-ACCESS
 
 Implementato nel branch `fix/territory-clay-stone-access`. Nuove mappe con acqua dolce e sponda utilizzabile per l'argilla nella whitezone. Aggiunta deterministica di un piccolo stagno quando manca un sito accessibile. Cava argilla consentita sui terreni asciutti e pianeggianti del territorio Palude. QA dedicata con piazzamento condiviso, ripetibilità, acqua lontana e bosco fitto. Integrazione su main in attesa.

@@ -1,5 +1,11 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-ECC-REFACTOR-261124 — Owner dei contratti condivisi
+
+Su branch `refactor/extended-ecc-20261124`: i comandi Builder ricevono dati e non cercano pulsanti; i controlli DOM sono adapter e il catalogo UI2 è puro. Il formato locale resta schema 2, una fotografia JSON immutabile alimenta locale e cloud. Upload seriali con identità di account/mondo/generazione: un acknowledgement vecchio non certifica le modifiche successive. Il caricamento conserva l'ordine storico delle migrazioni dei due trasporti.
+
+`ConquerPath` condivide la geometria, mentre ciascun consumer sceglie orientamento e soglie compatibili con il comportamento precedente. `ConquerMesh3D.modelParts` usa identità del record: i registri modello sono immutabili e una modifica richiede un nuovo record. Ordine script in gioco/CAMP verificato da `tools/runtime-contract.cjs`; consumer e accettazione in [REGRESSION](../REGRESSION.md). Nessuna nuova regola economica o decisione di prodotto.
+
 ## D-CLAY-WATER-261124 — Accesso all'argilla (24/11/2026)
 
 Richiesta del product owner: garantire un torrente o un laghetto e consentire la cava argilla in tutto il territorio paludoso. Il generatore riutilizza una sponda interna accessibile, oppure aggiunge un piccolo stagno con spazio per la cava 4×4U nella whitezone. L'implementazione usa lo stagno come ripiego deterministico. Se serve, apre una piccola radura nel bosco. La cava argilla in Palude richiede una terrazza asciutta edificabile e può trovarsi anche oltre 6U dall'acqua, comprese terrazze rialzate. Negli altri biomi resta il centro H0 entro 6U dalla riva interna. Questa estensione completa D-CLAY-02. La garanzia idrica riguarda le nuove generazioni. I paesaggi salvati conservano la propria geometria.

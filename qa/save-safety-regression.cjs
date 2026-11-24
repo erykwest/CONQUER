@@ -6,10 +6,10 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const src=fs.readFileSync(__dirname+'/../src/settlement-app-persistence.js','utf8');
 
-assert.match(src,/function saveLocal\(\)\{[\s\S]*?try\{localStorage\.setItem/,'saveLocal must trap setItem failures');
+assert.match(src,/function saveLocal\(snapshot=null\)\{[\s\S]*?try\{localStorage\.setItem/,'saveLocal must trap setItem failures');
 assert.match(src,/CONQUER local save failed/);
 assert.doesNotMatch(src,/Math\.max\(10000,/,'no unconditional 10000 resource floor on load');
-assert.equal((src.match(/Math\.max\(loadResourceFloor\(\),Number\(State\.resources\[k\]\)\|\|0\)/g)||[]).length,2,'local and cloud loads use the DEV-only floor');
+assert.equal((src.match(/restoreSavedResources\((?:x|saved)\.resources\)/g)||[]).length,2,'local and cloud loads use the shared DEV-only normalization');
 
 // loadResourceFloor: 10000 only with ?dev=1 or the remembered conquer.dev flag.
 const fnSrc=src.match(/function loadResourceFloor\(\)\{[\s\S]*?\n\}/)[0];
@@ -24,13 +24,16 @@ assert.equal(floor('','1'),10000);
 assert.equal(floor('',null,true),0);
 
 // saveLocal returns false (and does not throw) when storage is full.
-const saveSrc=src.match(/function saveLocal\(\)\{[\s\S]*?\n\}/)[0];
+const saveSrc=src.match(/function saveLocal\(snapshot=null\)\{[\s\S]*?\n\}/)[0];
+const captureSrc=src.match(/function captureSettlementSave\(\)\{[\s\S]*?\n\}/)[0];
+const reportSrc=src.match(/function reportLocalSaveFailure\(error\)\{[\s\S]*?\n\}/)[0];
+const snapshotSrc=fs.readFileSync(__dirname+'/../src/settlement-save-snapshot.js','utf8');
 const guardSrc=src.slice(src.indexOf('function markLoadFailed('),src.indexOf('let localSaveTimer='));
 const indicator={textContent:''};
 const ctx={window:{},performance,console:{warn(){}},document:{getElementById:()=>indicator},
   localStorage:{setItem(){throw new Error('QuotaExceededError')}},localStorageKey:()=>'k',LOCAL_STORAGE_SCHEMA:1,
   LANDSCAPE_GENERATION_VERSION:1,State:new Proxy({},{get:(t,k)=>k==='clock'?{day:0}:k==='view'?{}:undefined})};
-assert.equal(vm.runInNewContext(guardSrc+saveSrc+';saveLocal()',ctx),false);
+assert.equal(vm.runInNewContext(snapshotSrc+captureSrc+reportSrc+guardSrc+saveSrc+';saveLocal()',ctx),false);
 assert.equal(indicator.textContent,'local save failed');
 
 // A load that throws half-way keeps the stored save: it is backed up once, autosave refuses to write
@@ -45,7 +48,7 @@ const lctx=vm.createContext({window:{},performance,console:{warn(){}},document:{
   migrateStructures:()=>{throw new Error('broken record')},
   State:{seed:1,clock:{day:0},view:{},resources:{},policies:{},village:{},structures:[]}});
 const loadSrc=src.slice(src.indexOf('function loadLocal(){'),src.indexOf('async function initSupabase('));
-vm.runInContext(guardSrc+saveSrc+'\n'+loadSrc,lctx);
+vm.runInContext(snapshotSrc+captureSrc+reportSrc+guardSrc+saveSrc+'\n'+src.slice(src.indexOf('function restoreSavedSeason('),src.indexOf('function loadLocal(){'))+loadSrc,lctx);
 const backups=()=>[...store.keys()].filter(k=>k.startsWith('k.corrupt.'));
 vm.runInContext('loadLocal()',lctx);
 assert.ok(lctx.State.loadFailed,'the failed load is flagged');
@@ -56,9 +59,8 @@ assert.match(msgs.join('\n'),/Salvataggio non caricato/,'the player is told');
 vm.runInContext('loadLocal()',lctx);assert.equal(backups().length,1,'the same broken save is not copied twice');
 store.set('k.corrupt.1','old1');store.set('k.corrupt.2','old2');vm.runInContext('loadLocal()',lctx);
 assert.equal(backups().length,2,'at most the latest 2 copies');assert.ok(backups().every(k=>k!=='k.corrupt.1'));
-assert.match(src,/catch\(err\)\{cloudLoadState='error';markLoadFailed\(JSON\.stringify\(data\),err\);return false\}State\.loadFailed=false;/,'cloud load: same guard, a good load clears it');
-// The regional demo (#162) returns before any save; otherwise the guard is the first check.
-assert.match(src,/async function saveCloud\(\)\{(?:if\(window\.__CONQUER_ASSET_LAB__\)return;)?(?:if\(window\.__CONQUER_REGIONAL_DEMO__\)\{[^}]*\})?if\(saveBlocked\(\)\)/,'cloud save refuses too');
+// Cloud read/write state, rejected migrations and acknowledgements are exercised
+// end-to-end by tests/extended-save.test.mjs, using the actual adapters.
 lctx.State.seed=99;   // generateNewMap draws a fresh seed
 assert.equal(vm.runInContext('saveLocal()',lctx),true,'a new map saves again');
 assert.equal(lctx.State.loadFailed,false);assert.notEqual(store.get('k'),good);

@@ -14,6 +14,7 @@ function harness(structures){
     drawSoldierFigure:()=>{calls.sprites++},drawVillagerFigureUnmasked:()=>{calls.sprites++},
     withProjectionGroundZ:(z,f)=>f(),
     ctx:{save(){},restore(){},beginPath(){},moveTo(){},lineTo(){},closePath(){},fill(){},stroke(){}}});
+  vm.runInContext(read('src/settlement-path.js'),c,{filename:'settlement-path.js'});
   vm.runInContext(read('src/settlement-vehicles.js'),c,{filename:'settlement-vehicles.js'});
   window.ConquerWagons={drawWagon:(g,x,y,size,o)=>{calls.wagon2d++;calls.last={size,...o}}};
   return{V:window.ConquerVehicles,State,calls,window,c};

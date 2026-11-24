@@ -56,6 +56,7 @@ const line=(type,tier,a=2,b=8)=>({type,tier,width:[0,.2,.5,1][tier],a:{x:a,y:0},
         point:(p,o)=>({x:p.x-dy/L*o,y:p.y+dx/L*o})}},
     palisadePostOffsetAt:g=>g.postOffset});
   terrain.kind='steep';
+  vm.runInContext(src('settlement-mesh3d.js'),ctx);
   vm.runInContext(src('settlement-wood3d.js'),ctx);
   const mesh=ctx.ConquerWood3D.geometry(s).mesh;
   // Body triangles: vertex 0 is the stake foot, vertex 1 the body top (model z 0..1).

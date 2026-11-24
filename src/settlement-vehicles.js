@@ -95,19 +95,7 @@
     return pts;
   }
   // ---------- paths
-  function makePath(points){
-    const cum=[0];for(let i=1;i<points.length;i++)cum.push(cum[i-1]+Math.hypot(points[i].x-points[i-1].x,points[i].y-points[i-1].y));
-    return{pts:points,cum,total:cum[cum.length-1]||0};
-  }
-  const pathCache=new WeakMap();
-  function pathOf(points){let p=pathCache.get(points);if(!p){p=makePath(points);pathCache.set(points,p)}return p}
-  function at(path,s){
-    const {pts,cum}=path;s=Math.max(0,Math.min(path.total,s));
-    let lo=0,hi=cum.length-1;while(hi-lo>1){const m=(lo+hi)>>1;if(cum[m]<=s)lo=m;else hi=m}
-    const a=pts[lo],b=pts[Math.min(lo+1,pts.length-1)],L=cum[Math.min(lo+1,cum.length-1)]-cum[lo];
-    const t=L>1e-9?(s-cum[lo])/L:0;
-    return{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t};
-  }
+  const makePath=window.ConquerPath.measure,at=window.ConquerPath.at;
   function headingAt(path,s){
     const a=at(path,s-.3),b=at(path,s+.3);
     return Math.atan2(b.y-a.y,b.x-a.x);
@@ -120,7 +108,7 @@
   // One motion step for a convoy record {distance,speed,vehicle} along points.
   // Eases in from standstill, slows for bends, brakes to stop exactly at the end.
   function advance(rec,points,dt){
-    const path=pathOf(points),k=kindOf(rec.vehicle),s=Math.min(path.total,rec.distance||0);
+    const path=makePath(points),k=kindOf(rec.vehicle),s=Math.min(path.total,rec.distance||0);
     const bend=Math.max(.45,1-bendAhead(path,s)/1.7);
     const brake=Math.sqrt(Math.max(0,2*ACCEL*(path.total-s)));
     const target=Math.min(k.speed*bend,brake+.35);
@@ -145,7 +133,7 @@
   // Everything one convoy shows this frame: vehicles, drivers and escorts.
   // c: {id, vehicle, vehicles, good, qty, guards, livery, distance, speed, seed}
   function layout(c,points){
-    const path=pathOf(points),k=kindOf(c.vehicle),out={vehicles:[],escorts:[]};
+    const path=makePath(points),k=kindOf(c.vehicle),out={vehicles:[],escorts:[]};
     const count=Math.max(1,Math.min(6,c.vehicles||1)),moving=(c.speed??1)>.05;
     for(let i=0;i<count;i++){
       const s=(c.distance||0)-i*k.gap;if(s<0)continue;          // still waiting at the start

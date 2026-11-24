@@ -24,9 +24,11 @@ assert.match(workflow,/if: steps\.tier\.outputs\.full == 'true'/);
 // only documentation-only PRs fall back to the fast smoke.
 assert.ok(workflow.includes(`grep -Evq '^(docs/|.*\\.md$)' "$RUNNER_TEMP/ci-pr-changed.txt"`),'full tier must cover every non-docs PR');
 assert.doesNotMatch(workflow,/src\/settlement-\(core\|app/,'risk-gated module list must not return');
-// The complete loop must report every failing test, not stop at the first.
-assert.match(workflow,/failed\+=\("\$test"\)/);
-assert.match(workflow,/::error file=\$test::/);
+// The portable runner owns complete discovery and failure aggregation; its behavioural
+// regression covers nonzero exit, launch failures, signals and continued downstream runs.
+assert.match(workflow,/node tools\/run-regressions\.cjs --report output\/qa\/regressions\.json/);
+const {discover}=require('../tools/run-regressions.cjs');
+assert.ok(discover(root).includes('qa/regression-runner-regression.cjs'));
 const count=fs.readdirSync(path.join(root,'qa')).filter(f=>f.endsWith('-regression.cjs')).length;
 assert.ok(count>100,'the full suite must still include all original deterministic regressions');
 console.log('PASS CI P0: 11 obsolete workflows retired; core checks retained; docs-only fast tier and complete non-docs PR/scheduled suite present ('+count+' deterministic tests).');

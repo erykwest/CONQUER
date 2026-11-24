@@ -24,18 +24,8 @@
   const has=s=>{const k=modelKey(s);return !!(k&&DATA()?.models?.[k])};
   // Placement of the model: the church square shrinks the 5 U piazza to its 4 U annex.
   const placeOf=s=>s.type==='civicAnnex'&&s.annexType==='square'?{x:s.x,y:s.y,angle:s.angle,scale:.8}:s;
-  // Indexed parts expanded once into flat triangle lists.
-  const expanded=new Map();
-  function parts(key){
-    let out=expanded.get(key);if(out)return out;
-    out=[];
-    for(const [name,part] of Object.entries(DATA().models[key].parts)){
-      const v=new Float32Array(part.i.length*3);
-      for(let k=0;k<part.i.length;k++){const j=part.i[k]*3;v[k*3]=part.p[j];v[k*3+1]=part.p[j+1];v[k*3+2]=part.p[j+2]}
-      out.push({name,v,c:part.c});
-    }
-    expanded.set(key,out);return out;
-  }
+  // The shared mesh module owns indexed expansion and model-identity caching.
+  const parts=key=>window.ConquerMesh3D.modelParts(DATA()?.models?.[key]);
   // Brick masonry (masonryMaterial 'brick') and the DEV clay palette: brick walls with
   // light stone dressings, slate roofs turned to tile. The structure being meshed sets it.
   const CLAY={stoneRough:'#9a5a3e',stoneRoughDark:'#7a4430',stone:'#a8603f',stoneLight:'#b56d4a',
