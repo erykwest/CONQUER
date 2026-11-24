@@ -109,7 +109,7 @@ function gateTimberFacade(s){return timberStoreyFacade(gateTimberStoreyPoints(s)
 // Framed top of a W3 tower: the same frame, two windows on every face (it is the watch room).
 function towerTimberFacade(s){return timberStoreyFacade(towerTimberStoreyPoints(s),towerTimberFloorZ(s),structureHeight(s),()=>true,true)}
 // Timber P1 of a built section: the two long faces in bays of about 1.25 U, each bay framed
-// densely with its two windows; the ends meet towers and gates and stay plain.
+// densely with its two windows; the short ends get the frame too (post and two braces, no window).
 function builtTimberFacade(s){
   const pts=builtTimberStoreyPoints(s),z0=builtTimberFloorZ(s),z1=structureHeight(s),out=[];
   for(const i of [0,2]){
@@ -119,6 +119,10 @@ function builtTimberFacade(s){
       const f=timberStoreyFacade([qa,qb,qb,qa],z0,z1,j=>j===0,true)[0];
       f.edge.index=i;out.push(f);
     }
+  }
+  for(const i of [1,3]){
+    const a=pts[i],b=pts[(i+1)%4],f=timberStoreyFacade([a,b,b,a],z0,z1,()=>false,false)[0];
+    f.edge.index=i;out.push(f);
   }
   return out;
 }

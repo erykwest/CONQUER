@@ -306,8 +306,11 @@
   // A complete structure for a gallery spec, centred on (x, y); walls run along +x.
   // The Asset Lab builds its fortification entries with this too.
   function galleryStructure(spec,x,y){
+    // Lengths stay within the game's own placement limits (TYPES): a W1 section is at most 4 U.
+    const lim=typeof TYPES==='object'&&TYPES?(spec.type==='built'&&spec.span==='wide'?TYPES.builtWide:TYPES[spec.type]):null;
+    const L=lim?Math.min(Math.max(WALL_L,lim.min||0),lim.max||WALL_L):WALL_L;
     return['wall','palisade','built'].includes(spec.type)
-      ?{id:uid(),functions:[],flip:false,...spec,width:spec.type==='built'?builtWidth(spec):wallWidthForTier(spec.tier),a:{x:x-WALL_L/2,y},b:{x:x+WALL_L/2,y},length:WALL_L,rotationStep:0}
+      ?{id:uid(),functions:[],flip:false,...spec,width:spec.type==='built'?builtWidth(spec):wallWidthForTier(spec.tier),a:{x:x-L/2,y},b:{x:x+L/2,y},length:L,rotationStep:0}
       :{id:uid(),functions:[],angle:0,rotationStep:0,...spec,x,y};
   }
   // Asset Lab (index.html?assetlab=1 in a hidden frame): world-space castle meshes of one gallery spec,
