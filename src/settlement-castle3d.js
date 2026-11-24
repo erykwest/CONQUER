@@ -140,7 +140,7 @@
           addButtress(m,b);
         }
       }else if(base==='splayed'){
-        m.frustum(stoneTowerSplayedFootprint(s),footprintPoints(s),0,STONE_TOWER_BASE_HEIGHT);
+        addSplayedBase(m,s);
       }
     }
     for(const d of halfTowerFloorDecks(s))m.prism(d.pts,d.z0,d.z1,PAL.hoardDeck());
@@ -190,6 +190,34 @@
       m.tag=tag;
     }
     for(const b of towerBartizans(s))addBartizan(m,b);
+  }
+  // The 10° talus of a splayed tower, cut open in front of each ground-level door: the doorway is
+  // in the wall face behind the talus, so the batter stops at its jambs with two triangular cheeks
+  // (a whole frustum buried the door up to its arch).
+  function addSplayedBase(m,s){
+    const bottom=stoneTowerSplayedFootprint(s),top=stoneTowerSplayRing(s,0),H=STONE_TOWER_BASE_HEIGHT;
+    if(bottom.length!==top.length){m.frustum(bottom,footprintPoints(s),0,H);return}
+    const half=clamp(.38+towerTier(s)*.045,.42,.54)*.75+.04;
+    const doors=towerDoorSpecs(s).filter(d=>d.baseZ<H);
+    const inDoor=p=>doors.some(d=>{
+      const rx=p.x-d.contact.x,ry=p.y-d.contact.y;
+      return Math.abs(rx*d.tangent.x+ry*d.tangent.y)<half&&Math.abs(rx*d.outward.x+ry*d.outward.y)<.2;
+    });
+    const lerp=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
+    const cheek=(b,t)=>m.face([{p:b,z:0},{p:t,z:0},{p:t,z:H}],castleSideShade(b,t));
+    let open=false;   // carried across vertices: a round tower's door spans several edges
+    for(let i=0;i<bottom.length;i++){
+      const j=(i+1)%bottom.length,shade=castleSideShade(bottom[i],bottom[j]);
+      const steps=doors.length?Math.max(1,Math.ceil(dist(top[i],top[j])/.08)):1;
+      for(let k=0;k<steps;k++){
+        const t0=k/steps,t1=(k+1)/steps,b0=lerp(bottom[i],bottom[j],t0),b1=lerp(bottom[i],bottom[j],t1),q0=lerp(top[i],top[j],t0),q1=lerp(top[i],top[j],t1);
+        const gap=doors.length&&inDoor(lerp(q0,q1,.5));
+        if(gap&&!open)cheek(b0,q0);
+        if(!gap&&open)cheek(q0,b0);
+        open=gap;
+        if(!gap)m.face([{p:b0,z:0},{p:b1,z:0},{p:q1,z:H},{p:q0,z:H}],shade);
+      }
+    }
   }
   // Corbelled cone, moulding band and drum; the pitched kind adds a conical roof (merlons: addPieces).
   function addBartizan(m,b){
