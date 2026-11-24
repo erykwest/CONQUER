@@ -557,13 +557,13 @@ function builtLoggiaStandPoint(s,t){
 // A fixed count (wide-hall lancets) drops windows whose bay could not hold them undistorted
 // (drawn width = min(asset width, bay * .82)).
 // P0 of a standard W1 section (stone or with the timber P1): on the courtyard face, bays of about
-// 1.25 U, a door in the middle bay and a pair of windows side by side in each of the others.
+// 1.25 U, a door in the middle bay and a gothic double window (gothicL2) in each of the others.
 function builtGroundFront(s){
   if(!s||s.type!=='built'||isLonghouse(s)||isWideBuilt(s)||isBuiltPortico(s)||(typeof isLeanTo==='function'&&isLeanTo(s)))return null;
   const side=-wallExteriorSide(s),edge=linearFacadeEdge(s,side),n=Math.max(1,Math.round(edge.length/1.25)),cell=edge.length/n,door=Math.floor(n/2);
   return{side,edge,bays:Array.from({length:n},(_,k)=>({off:(k+.5)*cell-edge.length/2,door:k===door}))};
 }
-const BUILT_PAIR_GAP=.13,BUILT_PAIR_W=.22,BUILT_PAIR_H=.46,BUILT_PAIR_Z=.95,BUILT_DOOR_W=.46,BUILT_DOOR_H=.84;
+const BUILT_PAIR_W=.52,BUILT_PAIR_H=.6,BUILT_PAIR_Z=.98,BUILT_DOOR_W=.46,BUILT_DOOR_H=.84;
 function builtWindowCount(edge,density,fixed,assetWidth=.24){
   return fixed?clamp(Math.floor(edge.length*.82/assetWidth),1,fixed):Math.max(1,Math.round(edge.length*density));
 }

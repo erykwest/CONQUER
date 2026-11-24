@@ -1152,11 +1152,8 @@
           const ground=terrainElevation({x:(gf.edge.a.x+gf.edge.b.x)/2,y:(gf.edge.a.y+gf.edge.b.y)/2}),o=outward(gf.edge,center);
           for(const bay of gf.bays){
             if(bay.door){onEdge(gf.edge,BUILT_DOOR_H/2+.02,BUILT_DOOR_W,BUILT_DOOR_H,'towerDoor',bay.off,ground,o);continue}
-            for(const sg of [-1,1]){
-              const off=bay.off+sg*BUILT_PAIR_GAP;
-              onEdge(gf.edge,BUILT_PAIR_Z,BUILT_PAIR_W,BUILT_PAIR_H,'gothicL1',off,ground,o);
-              lightWindow(gf.edge,BUILT_PAIR_Z,BUILT_PAIR_W,BUILT_PAIR_H,off,ground,o,'gothicL1');
-            }
+            onEdge(gf.edge,BUILT_PAIR_Z,BUILT_PAIR_W,BUILT_PAIR_H,'gothicL2',bay.off,ground,o);
+            lightWindow(gf.edge,BUILT_PAIR_Z,BUILT_PAIR_W,BUILT_PAIR_H,bay.off,ground,o,'gothicL2');
           }
         }
         // W1 portico: carved loggia in the castle body (builtLoggia). The W2 hall keeps the arcade decal.
