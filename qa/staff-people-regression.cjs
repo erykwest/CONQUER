@@ -61,8 +61,27 @@ const C3=window.ConquerCivic3D,CP=window.ConquerCourtPeople,W=window.ConquerWard
   const cf=src('settlement-cutaway-furniture.js');
   assert.match(cf,/rooms\.set\(room\.slot\.index,room\)/,'the furniture keeps each room layout');
   assert.match(cf,/standSpots,roomPieces,roomContains,/,'throne anchor exported');
-  assert.match(cf,/throneHall\(r\)\{r\.wall\(r\.A,0,'throne'\)/,'the throne stands on the main wall');
-  console.log('PASS throne hall: the lord on his throne, guards, herald and petitioner by day, guards at night');
+  assert.ok(cf.includes("T=len(r.A)>=1.3*len(r.B)?r.B:r.A")&&cf.includes("r.wall(T,0,'throne');throneRunner(r,T);"),'the throne stands at the far end: short wall in a long hall');
+  assert.ok(cf.includes('function throneRunner(r,T)'),'the runner crosses the hall from the throne');
+  // The audience: a queue on the runner, one walks up, kneels, the lord answers, then he leaves.
+  // Each hall starts the audience at its own phase: find the moments by the scene's own clock (u).
+  const T=SP.AUDIENCE_TURN,samples=Array.from({length:400},(_,i)=>SP.audienceScene(i*T/100,3,'normal','aud'));
+  const at=w=>samples.find(x=>Math.abs(x.u-w)<.02);
+  const q0=at(.05),k=at(.45),l=at(.9);
+  assert.equal(q0.people.length,4,'one in front and three in the queue');
+  assert.ok(q0.people[0].pose==='walk'&&k.people[0].pose==='kneel','the front one walks up, then kneels');
+  assert.ok(k.gesture>0&&q0.gesture===0,'the lord answers the kneeling petitioner');
+  assert.ok(l.people[0].look==='away'&&l.people[0].side<0&&l.people[0].fwd>.56,'then he leaves down the side lane');
+  assert.ok(k.people.slice(1).every(p=>p.side===0&&p.pose==='wait'),'the queue waits on the runner');
+  assert.ok(k.people.slice(1).every((p,i,a)=>!i||p.fwd>a[i-1].fwd),'one behind the other');
+  assert.ok(samples.every(x=>Math.max(...x.people.map(p=>p.fwd))<=3-.05+1e-9),'nobody beyond the far end');
+  { const c=src('settlement-cutaway-furniture.js'),th=c.slice(c.indexOf('throneHall(r){'),c.indexOf('treasury(r){'));
+    assert.ok(th.length>0&&!th.includes('tableLong')&&!th.includes("'bench'"),'no tables in the throne hall'); }
+  assert.equal(SP.audienceScene(0,3,'large','x').people.length,5,'a large hall queues four');
+  assert.ok(new Set(samples.filter(x=>Math.abs(x.u-.45)<.02).map(x=>x.people[0].id)).size>1,'a new petitioner each turn');
+  const spsrc=src('settlement-staff-people.js');
+  assert.ok(spsrc.includes("const list=aud?court.filter(a=>a.role!=='petitioner'):court;"),'by day the audience replaces the static petitioner');
+  console.log('PASS throne hall: the lord on his throne, guards, herald and the audience by day, guards at night');
 }
 
 // ---------- common hall: the garrison and the household at table (ROOM-ANIM-COMMON)

@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-24 — ROOM-ANIM-AUDIENCE: udienza nella Sala del trono (branch `feature/cutaway-night-banquet`, NON MERGE)
+
+- Trono sulla parete corta in fondo delle sale lunghe (lato lungo ≥ 1,3× il corto; sale quadrate invariate), passatoia dal trono al fondo della sala riservata al passaggio (`throneRunner`), niente tavoli nella sala del trono.
+- Di giorno l'udienza (`ConquerStaffPeople.audienceScene`, turno 14 s): fila di 3 postulanti (4 nella sala grande) sul tappeto; uno alla volta avanza, si inginocchia e supplica, il signore risponde alzando la mano, poi se ne va lungo il lato; la fila avanza e un nuovo postulante entra in coda.
+- **PASS LOCALI:** staff-people, cutaway-furniture. Verifica nel Lab (mastio W4, sala W2). Audit del Lab non ancora aggiornato.
+
 ### 2026-11-24 — ROOM-ANIM-NIGHT/BANQUET/SHELTER: notte, banchetto e rifugio nelle sale comuni (branch `feature/cutaway-night-banquet`, NON MERGE)
 
 - **IMPLEMENTATO SUL BRANCH, NON MERGE.** Base `origin/main` `992d1c36`.

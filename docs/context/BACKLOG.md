@@ -172,6 +172,8 @@
 - [ ] Audit del Lab e baseline per le sezioni a 4U/6U e i nuovi arredi.
 - [ ] Verifica del pannello Castello (Rifugio) in partita.
 - [ ] Passo di camminata vero per chi gira nella sala (oggi scivola).
+- [x] Sala del trono: trono in fondo alle sale lunghe, passatoia, niente tavoli, udienza animata.
+- [ ] Opere d'arte negli ancoraggi ARTE: i modelli ci sono ma il gioco non le disegna ancora (test nel Lab fatto).
 
 **Sala del trono e Sala comune IMPLEMENTATE SU BRANCH `feat/throne-hall-court`, NON MERGE.**
 - [x] Sala del trono: signore sul trono, guardie, araldo, postulante (+ cortigiano nella sala grande); di notte solo le guardie.

@@ -93,9 +93,9 @@
   }
   // The lord's raised hand: a short gesture every 6 s, out of step between halls.
   function lordGesture(t,ph){const c=frac(t/6+ph);return c<.25?Math.sin(c/.25*Math.PI):0}
-  function drawLord(p,z,id,t){
+  function drawLord(p,z,id,t,gesture){
     drawNobleFigure(p,z,id,0);
-    const g=lordGesture(t,hash(id)%1000/1000);if(g<=0)return;
+    const g=gesture??lordGesture(t,hash(id)%1000/1000);if(g<=0)return;
     const scale=typeof militaryScale==='function'?militaryScale():State.view.scale*.5;if(scale<.16)return;
     const base=w2s(p,z),bodyW=5.2*scale,bodyH=9*scale,top=base.y-bodyH*.16-bodyH/2;
     const sh={x:base.x+bodyW*.22,y:top+bodyH*.18},hand={x:sh.x+bodyW*.3,y:sh.y-bodyH*(.1+.3*g)};
@@ -104,15 +104,55 @@
     ctx.fillStyle=typeof VILLAGER_SKIN!=='undefined'?VILLAGER_SKIN:'#d9b48f';ctx.beginPath();ctx.arc(hand.x,hand.y,Math.max(.5,.55*scale),0,Math.PI*2);ctx.fill();
     ctx.restore();
   }
+  // ---------- The audience (ROOM-ANIM-AUDIENCE): petitioners queue down the runner, one at a time
+  // walks up, kneels and pleads while the lord answers with a raised hand, then leaves down the side
+  // of the hall; the queue steps forward and a newcomer joins at the back. One turn every
+  // AUDIENCE_TURN s. Pure: positions in throne-local U (fwd towards the hall, side to the throne's
+  // left), limit = the farthest fwd inside the hall. By day, never during an alarm.
+  const AUDIENCE_TURN=14,KNEEL_FWD=.56,QUEUE_FWD=.9,QUEUE_GAP=.26,LANE_SIDE=-.42;
+  function audienceScene(t,limit,size='normal',seed='aud'){
+    const N=size==='large'?4:3,end=Math.max(QUEUE_FWD+.1,limit-.05);
+    const slotFwd=k=>Math.min(end,QUEUE_FWD+k*QUEUE_GAP);
+    const ph=(hash(seed)%1000)/1000,c=t/AUDIENCE_TURN+ph,j=Math.floor(c),u=c-j;
+    const ease=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x)},seg=(a,b)=>ease((u-a)/(b-a));
+    const out=[],idOf=n=>seed+'-pet'+(((n%9)+9)%9);
+    // The one in front: up to the kneeling spot, kneel and plead, then away down the side lane.
+    let f,side=0,pose='walk',look='throne';
+    if(u<.18)f=slotFwd(0)+(KNEEL_FWD-slotFwd(0))*seg(0,.18);
+    else if(u<.72){f=KNEEL_FWD;pose='kneel'}
+    else if(u<.8){f=KNEEL_FWD;side=LANE_SIDE*seg(.72,.8);look='away'}
+    else{f=KNEEL_FWD+(end-KNEEL_FWD)*seg(.8,1);side=LANE_SIDE;look='away'}
+    out.push({id:idOf(j),fwd:f,side,pose,look,front:true});
+    // The queue steps forward at the start of the turn; a newcomer walks in to the back.
+    for(let k=1;k<=N;k++){
+      const from=k<N?slotFwd(k):end,to=slotFwd(k-1),moving=u<.18;
+      out.push({id:idOf(j+k),fwd:from+(to-from)*seg(0,.18),side:0,pose:moving?'walk':'wait',look:'throne'});
+    }
+    // The lord answers the kneeling petitioner with a raised hand.
+    const gesture=u>=.32&&u<.62?Math.sin((u-.32)/.3*Math.PI):0;
+    return{people:out,gesture,u};
+  }
   function drawThroneHall(s,slot){
     const throne=window.ConquerCutawayFurniture?.roomPieces?.(s,slot,'throne')?.[0];if(!throne)return 0;
-    const list=throneCourt(slot.size);if(!list.length)return 0;
+    const court=throneCourt(slot.size);if(!court.length)return 0;
     const inside=p=>window.ConquerCutawayFurniture.roomContains?.(s,slot,p)??true;
     const t=window.ConquerWorkAnim?.now?.()??performance.now()/1000,seat=throne.at(SEAT_FWD,0);
+    // By day the single static petitioner gives way to the audience walking the runner.
+    const day=court.some(a=>a.role==='lord');
+    const depth=2*(throne.turn%2?throne.room.hv:throne.room.hu),limit=depth-.35;
+    const aud=day?audienceScene(t,limit,slot.size,s.id+'-'+slot.index):null;
+    const list=aud?court.filter(a=>a.role!=='petitioner'):court;
     const items=list.map(a=>({a,p:throne.at(a.fwd,a.side),id:s.id+'-throne-'+slot.index+'-'+a.id}))
+      .concat(aud?aud.people.map(q=>({a:{...q,role:'petitioner',aud:true},p:throne.at(q.fwd,q.side),id:q.id})):[])
       .filter(it=>it.a.seated||inside(it.p)).map(it=>({...it,depth:viewDepthPoint(it.p)})).sort((x,y)=>x.depth-y.depth);
     for(const {a,p,id} of items){
-      if(a.role==='lord')drawLord(p,slot.z+.09+SEAT_Z-.12,id,t);
+      if(a.aud){
+        // Facing the throne, or the far end when leaving; kneeling = the seated pose, pleading.
+        const back=throne.at(limit+1,a.side),toward=a.look==='away'?back:seat,facing=w2s(toward,0).x>=w2s(p,0).x?1:-1;
+        drawAt(p,slot.z,id,'petitioner',a.pose==='kneel'?'speak':undefined,facing,a.pose==='kneel');
+        continue;
+      }
+      if(a.role==='lord')drawLord(p,slot.z+.09+SEAT_Z-.12,id,t,aud?aud.gesture:undefined);
       else if(a.role==='guard')drawSoldierFigure(p,slot.z+.09,'spearman',id,0);
       else{
         // The petitioner turns to the throne, the others face where the hash says.
@@ -286,5 +326,5 @@
     for(const it of items)drawAt(it.p,slot.z,it.id,it.role,it.tool);
     return items.length;
   }
-  window.ConquerStaffPeople=Object.freeze({ROOM_STAFF,KIND,DAY_START,DAY_END,THRONE_COURT,SEAT_FWD,SEAT_Z,BENCH_SEATS,TABLE_END,LONG_SEAT,FEAST,isNight,onDuty,roomStaff,throneCourt,lordGesture,commonHallScene,shelterScene,shelterIn,drawShelter,roamAt,dot,drawAt,drawRoom,drawThroneHall,drawCommonHall});
+  window.ConquerStaffPeople=Object.freeze({ROOM_STAFF,KIND,DAY_START,DAY_END,THRONE_COURT,SEAT_FWD,SEAT_Z,BENCH_SEATS,TABLE_END,LONG_SEAT,FEAST,isNight,onDuty,roomStaff,throneCourt,lordGesture,audienceScene,AUDIENCE_TURN,commonHallScene,shelterScene,shelterIn,drawShelter,roamAt,dot,drawAt,drawRoom,drawThroneHall,drawCommonHall});
 })();

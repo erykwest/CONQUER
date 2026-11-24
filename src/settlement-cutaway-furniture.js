@@ -285,6 +285,17 @@
     if(!placed)tableWithBenches(r,0,0);
     return placed;
   }
+  // The red runner from the foot of the throne to the far end of the hall, piece after piece (deco).
+  function throneRunner(r,T){
+    const th=r.items.find(i=>i.name==='throne');if(!th)return 0;
+    const [du,dv]=SIDES[T],R=size('runner'),S=size('throne'),depth=2*(du?r.F.hu:r.F.hv),turn=r.toward(T);
+    let n=0;
+    for(let d=S.d/2+R.d/2+.05;d+R.d/2<=depth-.08;d+=R.d){
+      // The runner is the audience's way: kept clear of the pieces placed after it.
+      if(r.place('runner',th.u-du*d,th.v-dv*d,turn,{deco:true})){n++;r.reserve.push(r.rectFor(R,th.u-du*d,th.v-dv*d,((turn%4)+4)%4))}
+    }
+    return n;
+  }
   // Up to n ward cots against one wall, spread along it with an aisle between beds (at least a
   // hand apart when the wall is short, at most two bed widths of aisle); returns how many stand.
   function wardRow(r,side,n){
@@ -339,9 +350,14 @@
       banquetTables(r);
       // The banquet laid on every long table: cloth, roast, bread, trenchers, tankards, a candle.
       for(const it of r.items.filter(x=>x.name==='tableLong'||x.name==='tableFeast'))r.place(it.name==='tableFeast'?'feastSpreadLong':'feastSpread',it.u,it.v,it.turn,{deco:true})},
-    throneHall(r){r.wall(r.A,0,'throne');const [fu,fv]=r.front(r.A,0,1.05);r.at(fu*.55,fv*.55,'runner',r.toward(r.A),{deco:true});
-      r.wall(r.A,-.85,'banner');r.wall(r.A,.85,'banner');r.wall(r.B,.0,'shieldWall',{deco:true});
-      r.near(.55,-.5,'brazier');r.near(-.55,.5,'brazier');if(r.large){r.near(.4,.45,'tableLong');r.wall(r.B,-.7,'candleStand')}},
+    // The throne stands at the far end of the hall: on the short standing wall when the hall is
+    // long (the long side at least 1.3x the short one), so the runner crosses the whole hall from
+    // the throne to the opposite end (the audience walks it); square halls keep the long wall.
+    throneHall(r){
+      const len=k=>k[0]==='u'?2*r.F.hv:2*r.F.hu,T=len(r.A)>=1.3*len(r.B)?r.B:r.A,O=T===r.A?r.B:r.A;
+      r.wall(T,0,'throne');throneRunner(r,T);
+      r.wall(T,-.85,'banner');r.wall(T,.85,'banner');r.wall(O,.0,'shieldWall',{deco:true});
+      r.near(.55,-.5,'brazier');r.near(-.55,.5,'brazier');if(r.large)r.wall(O,-.7,'candleStand')},   // no tables: the floor is the audience's
     treasury(r){r.row(r.A,'strongChest',r.large?3:2);r.wall(r.B,-.5,'goldChest');r.near(.2,.2,'coinSacks');
       if(r.large){r.wall(r.B,.4,'ingotRack');r.near(-.4,.4,'writingDesk');r.near(.5,-.3,'coinSacks')}},
     // Ward: one cot per bed of the simulation (6 normal, 12 large), heads to the wall. A room deep
