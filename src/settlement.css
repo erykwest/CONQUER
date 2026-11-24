@@ -22,7 +22,7 @@ header{height:58px;display:flex;align-items:center;gap:18px;padding:0 16px;backg
 #functionPanel.open{display:block}
 .panel-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}.panel-head h2{margin:0;flex:1}.icon-btn{width:30px;height:30px;padding:0;flex:0 0 auto}
 h2{margin:0 0 10px;font-size:15px}h3{font-size:12px;margin:14px 0 7px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 button,select,input{font:inherit}button{border:1px solid var(--line-strong);background:var(--btn);color:var(--text);padding:8px;border-radius:8px;cursor:pointer}button:hover{background:var(--btn-hover)}button.active{background:var(--accent);color:#1b130f;border-color:var(--accent)}
 select{width:100%;border:1px solid var(--line-strong);background:var(--sunken);color:var(--text);padding:8px;border-radius:8px}
 .small{font-size:11px}.full{width:100%}.row{display:flex;gap:6px;align-items:center}.row>*{flex:1}

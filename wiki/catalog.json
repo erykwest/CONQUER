@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceDigest": "c6924f24cda3ff76eb8962d0f99f94afd67fca595bf33f3359bfbdf34154dac7",
+  "sourceDigest": "f18ffaa9ffc28b09665ae99a9be383f4f0d4758b105f2b698992f2cdcb756911",
   "catalog": {
     "schemaVersion": 1,
     "categories": [
@@ -1509,6 +1509,12 @@
               "none",
               "battlement",
               "pitched"
+            ],
+            "bartizanCount": [
+              "1",
+              "2",
+              "3",
+              "4"
             ],
             "roofShape": [
               "pyramid",
@@ -6900,6 +6906,194 @@
           "variant": "bartizan",
           "value": "pitched",
           "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.bartizanCount.1",
+        "key": "1",
+        "label": "tower · bartizanCount · 1",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.bartizanCount"
+        },
+        "properties": {
+          "variant": "bartizanCount",
+          "value": "1",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.bartizanCount.2",
+        "key": "2",
+        "label": "tower · bartizanCount · 2",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.bartizanCount"
+        },
+        "properties": {
+          "variant": "bartizanCount",
+          "value": "2",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.bartizanCount.3",
+        "key": "3",
+        "label": "tower · bartizanCount · 3",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.bartizanCount"
+        },
+        "properties": {
+          "variant": "bartizanCount",
+          "value": "3",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.bartizanCount.4",
+        "key": "4",
+        "label": "tower · bartizanCount · 4",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.bartizanCount"
+        },
+        "properties": {
+          "variant": "bartizanCount",
+          "value": "4",
+          "default": true,
           "kind": "configuration"
         },
         "relations": [

@@ -6,6 +6,9 @@
 - **CONTRATTO:** la capienza di una Sala comune è **3× i posti del suo banchetto** (un commensale per panca da 1,6 m, due per panca lunga da 3,2 m). Ognuno va alla sala più vicina con posto, il mastio per primo; se tutte sono piene, alla più vicina. La campana rossa richiede almeno una Sala comune.
 - **PARAMETRO:** posti totali e persone da proteggere sono un parametro del castello (pannello Castello, voce Rifugio); se mancano posti l'utente è avvisato che serve nuovo spazio.
 - **Di notte** il personale e gli abitanti delle stanze non si animano (anche col tramonto invernale). **Tavoli lunghi (4,4 m) solo nelle sale W2.** Long house e sezioni costruite restano a 4U (W2 6U), come nel Builder.
+## D-CLAY-WATER-261124 — Accesso all'argilla (24/11/2026)
+
+Richiesta del product owner: garantire un torrente o un laghetto e consentire la cava argilla in tutto il territorio paludoso. Il generatore riutilizza una sponda interna accessibile, oppure aggiunge un piccolo stagno con spazio per la cava 4×4U nella whitezone. L'implementazione usa lo stagno come ripiego deterministico. Se serve, apre una piccola radura nel bosco. La cava argilla in Palude richiede una terrazza asciutta edificabile e può trovarsi anche oltre 6U dall'acqua, comprese terrazze rialzate. Negli altri biomi resta il centro H0 entro 6U dalla riva interna. Questa estensione completa D-CLAY-02. La garanzia idrica riguarda le nuove generazioni. I paesaggi salvati conservano la propria geometria.
 
 ## D-SHOP-L3-261119 — Botteghe avanzate L3 con artigiani L2 (19/11/2026)
 

@@ -34,6 +34,13 @@ check('one turret per corner, standing out of the tower',()=>{
     }
   }
 });
+check('bartizanCount picks 1-4 turrets, opposite corners first',()=>{
+  for(const n of [1,2,3,4]){
+    const t=tower('s',{bartizan:'battlement',bartizanCount:String(n)});setup([t]);
+    const b=run('towerBartizans')(t);assert.equal(b.length,n);
+    if(n===2)assert.ok(Math.abs(b[0].nx+b[1].nx)<1e-6&&Math.abs(b[0].ny+b[1].ny)<1e-6,'two turrets on a diagonal');
+  }
+});
 check('tower merlons under a turret go; crenellated turrets bring their own ring',()=>{
   const plain=tower('p'),withB=tower('q',{bartizan:'battlement'}),spire=tower('t',{bartizan:'pitched'});
   setup([plain,withB,spire]);

@@ -7,6 +7,23 @@
 ### 2026-11-24 — ROOM-ANIM-NIGHT/BANQUET/SHELTER · Notte, banchetto e rifugio nelle sale comuni
 
 `feature/cutaway-night-banquet`: di notte (anche col tramonto invernale) personale e abitanti delle stanze del castello non si animano; banchetto nella Sala comune con commensali seduti, cibo in tavola (modelli Blender), dame, giullare e musico, camino acceso; numero di tavoli in funzione della superficie, tavoli da 4,4 m nelle sale W2. Allarme rosso: rifugio in ogni Sala comune (mastio per primo) con capienza 3× il banchetto, parametro Rifugio nel pannello Castello e avviso quando serve nuovo spazio. Lab: sezioni costruite e long house a 4U/6U. DECISIONS: nuova D-SHELTER-261124 (rifugio in ogni Sala comune, capienza 3× il banchetto, notte, tavoli lunghi W2); ROADMAP invariata.
+### 2026-11-19 — HARDEN-261119 (branch `fix/main-hardening-20261119`, non merge)
+
+Hardening su base main `168b993b`: blocco scritture cloud senza lettura riuscita, errori di salvataggio locali/CAMP non mascherati, gestione rejection cloud, esclusione Asset Lab, barra risorse con nodi di testo. 11 nuovi test comportamentali nel workflow Runtime integrity; 5 test runtime e 15 suite locali PASS. [Rapporto e limiti](../HARDENING-2026-11-19.md). ROADMAP e DECISIONS invariate: nessun nuovo contratto di gameplay o priorità.
+### 2026-11-24 — Acqua dolce garantita e argilla in Palude
+
+Allineamento a main `aca8c3bd` con icone Builder e aggiornamento della relativa etichetta accessibile nel catalogo. Ripetuti freshwater, industrie, menu Builder e Wiki dopo la risoluzione dei conflitti.
+
+Branch `fix/territory-clay-stone-access`, base main `fe665fe`. Le nuove mappe ricevono un piccolo stagno quando manca una sponda interna utilizzabile per una cava nella whitezone. La Palude consente cave argilla su qualsiasi terrazza asciutta edificabile. Aggiornati aiuti Builder, scheda cava e catalogo Wiki. Aggiunta regressione su generazione e piazzamento reale alla CI. Decisione D-CLAY-WATER-261124. Roadmap invariata.
+
+### 2026-11-24 — BARTIZAN-COUNT · Numero di garitte selezionabile
+
+`feature/bartizan-count`: le torri T3 con garitte scelgono quante metterne (1–4, default 4 come prima); con 2 stanno sulla diagonale, con 3 resta libero un angolo. Tiratori di conseguenza.
+
+
+### 2026-11-24 — SPRING-FLORA · Primavera: fiori, sottobosco e disgelo (`feature/spring-flora-thaw`)
+
+Primavera più distinta dall'estate: un albero su tre ha la chioma fiorita (pallini di un colore per albero, dodici disposizioni per tipo, scelte per pianta); tutti i cespugli fioriscono con sprite dedicati. Sottobosco marrone a marzo, verde da aprile; fiori nei prati dal 1 marzo. Disgelo: da 22 febbraio sottobosco marrone e niente neve (fase `thaw` di `winterPhase`), neve fino al 21 febbraio; chiome spente dall'1 all'7 marzo. DEV: selettore del mese. ROADMAP e DECISIONS invariate: aggiustamento visivo e del calendario invernale, nessuna regola di gameplay nuova. QA: controlli sintattici e timeline verificata in locale; CI remota non ancora eseguita.
 
 ### 2026-11-19 — UI-BUILDERICON-01 · Icone medievali geometriche nel Builder
 
