@@ -1376,7 +1376,12 @@
         if(blk.length&&top<H)mesh.face([Z(p,top),Z(q,top),Z(q,H),Z(p,H)],hex);
       };
       const plane=s.type==='tower'||s.type==='gate',G0=plane?(Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s)):null;
-      const stoneTone=hex=>State.visualPalette==='clay'||(typeof masonryMaterial==='function'&&masonryMaterial(s)==='brick')?hex:(window.ConquerStoneColor?.shade(hex)||hex);
+      // Brick / clay: the cut shell takes the clay swatches (CLAY_VISUAL_SWATCHES), a terracotta tint of
+      // the same lightness for any tone missing from the table; stone takes the realm's stone shade.
+      const clayCut=State.visualPalette==='clay'||(typeof masonryMaterial==='function'&&masonryMaterial(s)==='brick');
+      const clayTone=hex=>{const k=String(hex).toLowerCase(),t=typeof CLAY_VISUAL_SWATCHES!=='undefined'&&CLAY_VISUAL_SWATCHES[k];if(t)return t;
+        const c=rgb(hex),l=(c[0]+c[1]+c[2])/3;return'#'+[1.3,.74,.56].map(f=>Math.round(clamp(l*f,0,1)*255).toString(16).padStart(2,'0')).join('')};
+      const stoneTone=hex=>clayCut?clayTone(hex):(window.ConquerStoneColor?.shade(hex)||hex);
       const floorTone=hex=>State.visualPalette==='clay'?hex:(window.ConquerStoneColor?.shade(hex)||hex);
       const Z=(p,z)=>({x:p.x,y:p.y,z:(plane?G0:terrainElevation(p))+z});
       let keep,jambs;
@@ -1443,7 +1448,7 @@
         const r=up.ring,e=up.eave,n2=r.length,round=up.shape==='round',cols=winter?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP]:['#303236','#3a3d42','#44474c'];
         for(let i=0;i<n2;i++){const a=r[i],b=r[(i+1)%n2];sh.face([Z(a,up.h),Z(b,up.h),Z(b,up.topZ),Z(a,up.topZ)],stoneTone(i%2?'#61574f':'#82776c'))}
         sh.face(r.map(p=>Z(p,up.topZ)),stoneTone('#8f857a'));
-        for(let i=0;i<e.length;i++)sh.face([Z(e[i],up.eaveZ),Z(e[(i+1)%e.length],up.eaveZ),Z(up.apex,up.apexZ)],round?cols[i%3]:winter?(i%2?WINTER_SNOW_A:WINTER_SNOW_B):(i%2?'#34363a':'#42454a'));
+        for(let i=0;i<e.length;i++)sh.face([Z(e[i],up.eaveZ),Z(e[(i+1)%e.length],up.eaveZ),Z(up.apex,up.apexZ)],(c=>clayCut&&!winter?clayTone(c):c)(round?cols[i%3]:winter?(i%2?WINTER_SNOW_A:WINTER_SNOW_B):(i%2?'#34363a':'#42454a')));
       }
       // Floors: slab, then tiles (stone ground floor) or planks (wooden upper floors) clipped to the room.
       const basis=cutawayFloorBasis(s,g),ca=Math.cos(basis.angle),sa=Math.sin(basis.angle);
