@@ -1,7 +1,7 @@
 // Generated from content/codex/*.md. Do not edit; run node tools/export-codex-content.cjs.
 (function(root){root.ConquerWikiEditorial={
   "schemaVersion": 1,
-  "sourceDigest": "dd84d1fd3942df462ea4492843a9e4c41867a07cbe8fd55e88b75528a617320a",
+  "sourceDigest": "80fc7cc37cd428ae1802d27b60bd869a4ae2252b38247d57200f641298a1e76c",
   "pages": [
     {
       "id": "building:balivo",
@@ -7159,6 +7159,194 @@
       ],
       "text": [
         "Torre · Garitta a falde appartiene ai miglioramenti delle fortificazioni. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:tower"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:tower.bartizanCount.1",
+      "kind": "entry",
+      "title": "Torre · Garitte: 1",
+      "aliases": [
+        "Torre · Garitte: 1"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Torre|Torre]] · Garitte: 1 appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: una sola garitta, su un angolo della torre: 3 tiratori in più sulla cima. Si sceglie nel pannello della torre, sotto lo stile delle garitte, e vale solo per le torri grandi (T3) quadrate o rotonde in pietra che hanno le garitte. Ogni garitta ospita 3 tiratori che colpiscono anche il piede della torre.",
+          "tokens": [
+            {
+              "text": "Torre",
+              "id": "building:tower"
+            },
+            {
+              "text": " · Garitte: 1 appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": una sola garitta, su un angolo della torre: 3 tiratori in più sulla cima. Si sceglie nel pannello della torre, sotto lo stile delle garitte, e vale solo per le torri grandi (T3) quadrate o rotonde in pietra che hanno le garitte. Ogni garitta ospita 3 tiratori che colpiscono anche il piede della torre."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Torre · Garitte: 1 appartiene ai miglioramenti delle fortificazioni: una sola garitta, su un angolo della torre: 3 tiratori in più sulla cima. Si sceglie nel pannello della torre, sotto lo stile delle garitte, e vale solo per le torri grandi (T3) quadrate o rotonde in pietra che hanno le garitte. Ogni garitta ospita 3 tiratori che colpiscono anche il piede della torre."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:tower"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:tower.bartizanCount.2",
+      "kind": "entry",
+      "title": "Torre · Garitte: 2",
+      "aliases": [
+        "Torre · Garitte: 2"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Torre|Torre]] · Garitte: 2 appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: due garitte su angoli opposti, sulla diagonale della torre: 6 tiratori in più. Si sceglie nel pannello della torre, sotto lo stile delle garitte, e vale solo per le torri grandi (T3) quadrate o rotonde in pietra che hanno le garitte. Ogni garitta ospita 3 tiratori che colpiscono anche il piede della torre.",
+          "tokens": [
+            {
+              "text": "Torre",
+              "id": "building:tower"
+            },
+            {
+              "text": " · Garitte: 2 appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": due garitte su angoli opposti, sulla diagonale della torre: 6 tiratori in più. Si sceglie nel pannello della torre, sotto lo stile delle garitte, e vale solo per le torri grandi (T3) quadrate o rotonde in pietra che hanno le garitte. Ogni garitta ospita 3 tiratori che colpiscono anche il piede della torre."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Torre · Garitte: 2 appartiene ai miglioramenti delle fortificazioni: due garitte su angoli opposti, sulla diagonale della torre: 6 tiratori in più. Si sceglie nel pannello della torre, sotto lo stile delle garitte, e vale solo per le torri grandi (T3) quadrate o rotonde in pietra che hanno le garitte. Ogni garitta ospita 3 tiratori che colpiscono anche il piede della torre."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:tower"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:tower.bartizanCount.3",
+      "kind": "entry",
+      "title": "Torre · Garitte: 3",
+      "aliases": [
+        "Torre · Garitte: 3"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Torre|Torre]] · Garitte: 3 appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: tre garitte, con un angolo lasciato libero: 9 tiratori in più. Si sceglie nel pannello della torre, sotto lo stile delle garitte, e vale solo per le torri grandi (T3) quadrate o rotonde in pietra che hanno le garitte. Ogni garitta ospita 3 tiratori che colpiscono anche il piede della torre.",
+          "tokens": [
+            {
+              "text": "Torre",
+              "id": "building:tower"
+            },
+            {
+              "text": " · Garitte: 3 appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": tre garitte, con un angolo lasciato libero: 9 tiratori in più. Si sceglie nel pannello della torre, sotto lo stile delle garitte, e vale solo per le torri grandi (T3) quadrate o rotonde in pietra che hanno le garitte. Ogni garitta ospita 3 tiratori che colpiscono anche il piede della torre."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Torre · Garitte: 3 appartiene ai miglioramenti delle fortificazioni: tre garitte, con un angolo lasciato libero: 9 tiratori in più. Si sceglie nel pannello della torre, sotto lo stile delle garitte, e vale solo per le torri grandi (T3) quadrate o rotonde in pietra che hanno le garitte. Ogni garitta ospita 3 tiratori che colpiscono anche il piede della torre."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:tower"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:tower.bartizanCount.4",
+      "kind": "entry",
+      "title": "Torre · Garitte: 4",
+      "aliases": [
+        "Torre · Garitte: 4"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Torre|Torre]] · Garitte: 4 appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: una garitta per ogni angolo, come nelle torri costruite prima di questa scelta: 12 tiratori in più. È il valore predefinito. Si sceglie nel pannello della torre, sotto lo stile delle garitte, e vale solo per le torri grandi (T3) quadrate o rotonde in pietra che hanno le garitte. Ogni garitta ospita 3 tiratori che colpiscono anche il piede della torre.",
+          "tokens": [
+            {
+              "text": "Torre",
+              "id": "building:tower"
+            },
+            {
+              "text": " · Garitte: 4 appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": una garitta per ogni angolo, come nelle torri costruite prima di questa scelta: 12 tiratori in più. È il valore predefinito. Si sceglie nel pannello della torre, sotto lo stile delle garitte, e vale solo per le torri grandi (T3) quadrate o rotonde in pietra che hanno le garitte. Ogni garitta ospita 3 tiratori che colpiscono anche il piede della torre."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Torre · Garitte: 4 appartiene ai miglioramenti delle fortificazioni: una garitta per ogni angolo, come nelle torri costruite prima di questa scelta: 12 tiratori in più. È il valore predefinito. Si sceglie nel pannello della torre, sotto lo stile delle garitte, e vale solo per le torri grandi (T3) quadrate o rotonde in pietra che hanno le garitte. Ogni garitta ospita 3 tiratori che colpiscono anche il piede della torre."
       ],
       "related": [
         "category:upgrade",

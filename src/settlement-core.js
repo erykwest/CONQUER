@@ -317,6 +317,8 @@ const STRUCTURE_VARIANTS=Object.freeze({
     baseStyle:Object.freeze(['standard','buttress','splayed']),
     topWeapon:Object.freeze(['none','mangonel','ballista']),
     bartizan:Object.freeze(['none','battlement','pitched']),
+    // How many corner turrets the bartizan crown carries (corners filled opposite-first).
+    bartizanCount:Object.freeze(['1','2','3','4']),
     roofShape:Object.freeze(['pyramid','gable','hip']),
     // Timber gallery mounted round the top in wartime and taken down after: the roof stays as built.
     hoarding:Object.freeze(['off','on']),
@@ -347,7 +349,7 @@ const STRUCTURE_VARIANTS=Object.freeze({
   })
 });
 const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
-  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid',hoarding:'off',bell:'none',signalFire:'none',innerRoof:'off',upInnerTower:'off',machicolationStyle:'standard'}),
+  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',bartizanCount:'4',roofShape:'pyramid',hoarding:'off',bell:'none',signalFire:'none',innerRoof:'off',upInnerTower:'off',machicolationStyle:'standard'}),
   gate:Object.freeze({roofStyle:'battlement',upper:'stone',hoarding:'off'}),
   wall:Object.freeze({skin:'standard'}),
   built:Object.freeze({skin:'standard'})
@@ -475,6 +477,7 @@ function towerTopWeapon(s){const w=s?.type==='tower'?structureVariant(s,'topWeap
 // Bartizans: four corbelled corner turrets on a large (T3) square or round stone tower, crowned
 // with merlons or with a pitched (conical) roof (geometry: towerBartizans in settlement-castle-structures.js).
 function towerBartizanAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)>=3&&['square','round'].includes(s.shape||'square')&&towerRoofStyle(s)!=='broken'}
+function towerBartizanCount(s){return Number(structureVariant(s,'bartizanCount'))||4}
 function towerBartizan(s){const b=s?.type==='tower'?structureVariant(s,'bartizan'):'none';return towerBartizanAllowed(s)&&b?b:'none'}
 // Dovecote (Colombaia): the room under the pitched roof of a medium or large (T2/T3) stone tower,
 // on its top floor at L2+. It takes the one room under the roof, so the falconry and the alarm bell
@@ -1429,6 +1432,8 @@ function winterPhase(){
   if(typeof calendarDateFromDay!=='function')return'snow';
   const d=calendarDateFromDay(),m=d.month;
   if(m!==11&&m>1)return'snow'; // DEV-forced winter outside Dec-Feb keeps the classic look.
+  // February: snow until the 21st, then the bare thaw for the last week of the month.
+  if(m===1)return d.day>=22?'thaw':'snow';
   const day=(m===11?0:m===0?31:62)+d.day-1;
   return WINTER_PHASES[Math.min(3,Math.floor(day/22.5))];
 }
@@ -1440,7 +1445,7 @@ function foliageLook(){
   const p=winterPhase();return p==='blizzard'?'blizzard':p==='snow'?'winter':'bare';
 }
 // Undergrowth of the woods: snowy, brown (early winter) or green.
-function undergrowthLook(){return isSnowGround()?'winter':winterPhase()==='bare'?'brown':'green'}
+function undergrowthLook(){return isSnowGround()?'winter':(winterPhase()==='bare'||winterPhase()==='thaw')?'brown':'green'}
 // Blizzard sprites: a hatched snow screen-tone (retino) laid only on the upward-facing (zenithal) band
 // of every branch/twig shape; the shapes keep their own colour elsewhere. Returns a canvas.
 function snowCapSprite(img,band=.12){

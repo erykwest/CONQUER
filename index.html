@@ -24,7 +24,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
     .catch(err => console.warn('polygon-clipping unavailable; viewer fallback remains active.', err));
 })();
 </script>
-<link rel="stylesheet" href="./src/settlement.css?v=dev-scroll-mills-1-profile-codex-1-sites2">
+<link rel="stylesheet" href="./src/settlement.css?v=buildericon-1">
 <link rel="stylesheet" href="./src/settlement-minimap.css?v=minimap-1">
 <link rel="stylesheet" href="./src/settlement-diplomacy.css?v=knights2d-1-floors1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -247,6 +247,14 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
           <button data-season="winter" title="Inverno">❄️</button>
           <button data-season="spring" title="Primavera">🌸</button>
         </div>
+        <label class="dev-hint" style="display:flex;gap:6px;align-items:center;margin-top:6px">Mese
+          <select id="devMonth" title="Vai al primo giorno del mese">
+            <option value="0">Gennaio</option><option value="1">Febbraio</option><option value="2">Marzo</option>
+            <option value="3">Aprile</option><option value="4">Maggio</option><option value="5">Giugno</option>
+            <option value="6">Luglio</option><option value="7">Agosto</option><option value="8">Settembre</option>
+            <option value="9">Ottobre</option><option value="10">Novembre</option><option value="11">Dicembre</option>
+          </select>
+        </label>
       </div>
       <div class="dev-section">
         <span class="dev-label">DIAGNOSTICA</span>
@@ -482,7 +490,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/settlement-cutaway-floors.js?v=floors1"></script>
 <script src="./src/settlement-app-input.js?v=small-gate-1-wc1-longhouse1-mare-sites2-fisco1-wall-road-gate-1-mfix1-roadgate1-moatroad1"></script>
 <script src="./src/settlement-app-persistence.js?v=keep-entrance-1-wc1-longhouse1-mare-stonecolor1-sites2-fig3d-26111-fig3d-2611111-lhroof1-fisco1-a261113-combatai1"></script>
-<script src="./src/settlement-app-calendar-ui.js?v=economy-labour-1-autumn1-stonecolor1-upgrades1-a261113-mfix1-gore1"></script>
+<script src="./src/settlement-app-calendar-ui.js?v=economy-labour-1-autumn1-stonecolor1-upgrades1-a261113-mfix1-gore1-devmonth1"></script>
 <script src="./src/settlement-app-simulation.js?v=economy-convoys-1-wc1-circle3-sites2-milres1-fig3d-261111"></script>
 <script src="./src/settlement-circle.js?v=circle-2"></script>
 <script src="./src/settlement-lod.js?v=lod-1"></script>
@@ -507,7 +515,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/heraldry-shapes.js"></script>
 <script src="./src/settlement-heraldry.js?v=profile-jobs-trade-stonecolor2-fisco1"></script>
 <script src="./src/ui/game-api.js?v=ui2-quickfix-3-scol1-wallpatrol2-a261113-alerts4"></script>
-<script src="./src/settlement-builder-ux.js?v=army-camp-2-longhouse1-barg1-upg2-spikes1"></script>
+<script src="./src/settlement-builder-ux.js?v=buildericon-1"></script>
 <script src="./src/assets/siege-engines-model.js?v=siege-2-combatai1"></script>
 <script src="./src/settlement-siege-engines3d.js?v=siege-2-a261113-combatai1"></script>
 <script src="./src/settlement-siege-assault.js?v=siege-1-a261113"></script>

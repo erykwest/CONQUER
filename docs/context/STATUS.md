@@ -1,5 +1,28 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-24 — BARTIZAN-COUNT: numero di garitte selezionabile (branch `feature/bartizan-count`, NON MERGE)
+
+- **CODICE:** nuova variante torre `bartizanCount` ('1'–'4', default '4') in `settlement-core.js` (`towerBartizanCount`); `towerBartizans` riempie gli angoli opposti per primi (2 = diagonale, 3 = un angolo libero); comando `setTowerBartizanCount`, riga «Numero garitte» nel pannello e nell'ispettore; chiavi di cache/salvataggio aggiornate. I tiratori seguono (3 per garitta).
+- **PROVE LOCALI PASS:** `qa/bartizan-regression.cjs` (nuovo controllo 1–4 garitte e coppia sulla diagonale). Asset audit del Lab non eseguito, verifica a vista non fatta.
+
+
+### 2026-11-24 — SPRING-FLORA: primavera e disgelo (`feature/spring-flora-thaw`)
+
+- **IMPLEMENTATO SUL BRANCH, NON MERGE.** Base `origin/main` `992d1c36`.
+- Alberi: un terzo con chioma fiorita (sprite primaverile con pallini, 12 varianti per tipo). Cespugli: tutti fioriti (12 varianti per tipo). Pini di montagna esclusi.
+- Sottobosco: marrone a marzo, verde da aprile (`forestGroundKey`). Fiori nei prati dal 1 marzo (`springFlowersOn`).
+- Inverno: `winterPhase` di `main` con febbraio riarticolato: neve fino al 21, disgelo (`thaw`, sottobosco marrone, alberi spogli) dal 22. Chiome spente dall'1 al 7 marzo (`treesBare`).
+- **PROVE LOCALI:** controlli di sintassi su tutti i file toccati; timeline verificata in locale (15 gen → 20 mar). Errori di console preesistenti in `settlement-codex.js`/`codex-catalog.js` (`CYCLE`), non legati a questa modifica.
+- **CI remota non ancora eseguita**; nessun merge o deploy.
+
+### 2026-11-19 — UI-BUILDERICON-01: icone medievali del Builder (`buildericon`)
+
+- **IMPLEMENTATO SUL BRANCH, NON MERGE.** Base `origin/main` aggiornata `67a1b1e8`.
+- 72 SVG neri su trasparenza: un file dedicato per ognuna delle 52 voci del catalogo, 7 categorie, 10 comandi/parametri e 3 ampliamenti da inspector. Il Builder carica SVG isolati tramite immagini decorative: le maschere non condividono ID nel DOM. Etichette accessibili, selettori e pulsanti con i gestori originali restano gli stessi.
+- Fondo chiaro sui pulsanti per il contrasto del nero; selezione arancione, focus da tastiera, icone a 32px e opzioni a 28px. Registro completo in `src/assets/builder-icons/catalog.json`.
+- Asset Lab: nuova categoria Interfaccia / famiglia Icone Builder, sfondo di consultazione chiaro, manifest rigenerato. Audit della categoria: **72 render, 0 errori, 0 avvisi**; foglio provini rivisto; aggiunte alla baseline solo le 72 voci nuove.
+- **PASS LOCALI:** builder-menu (52 associazioni e SVG nel Lab), builder-placement, events-builder, mills3d, lean-to, asset-catalog, context-guard. Chromium 1228: tutte le 7 categorie e i 52 file, identità dei pulsanti dopo cambi categoria, click mulino con gestore di gioco e selezione attiva, 12 opzioni, 72 voci nel Lab, flyout entro il viewport a 390px, nessun errore di pagina.
+- CI browser aggiunta al workflow Builder menu. **CI remota non ancora eseguita** al momento di questa nota; nessun merge o deploy. ROADMAP e DECISIONS invariati: sostituzione iconografica, nessuna regola di gameplay cambiata. Dettagli in [BUILDER-ICONS](../BUILDER-ICONS.md).
 ### 2026-11-24 — UP-INNER-TOWER: torretta centrale sulle torri W2/W3 (branch `feature/upinnertower`, NON MERGE)
 
 - **CODICE:** variante torre `upInnerTower` ('off' | 'round' | 'square') in `settlement-core.js` con `towerUpInnerTowerAllowed` / `towerUpInnerTower` (pietra, W2/W3, non semitorre, merli o caditoie; esclusiva con tetto interno, arma sulla piazza e pira; toglie il bracere). `upInnerTowerGeometry` in `settlement-population.js`: impronta della torre di un taglio più piccola (W3→W2, W2→W1), un piano (1,2 U), tetto a cono/piramide con piccola gronda; forma indipendente da quella della torre. Mesh in `ConquerCastle3D.addTower` (quindi cantiere, danno, crolli e clay per costruzione), shell del cutaway in `settlement-world3d.js` quando è in vista l'ultimo piano. Upgrade dall'ispettore e dal pannello torre, non dal menu di costruzione. Chiavi di cache (render, assembly, ombre) aggiornate.

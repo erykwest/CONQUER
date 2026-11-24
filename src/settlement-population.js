@@ -227,7 +227,7 @@ const shadowCasterGeometryCache=new Map();
 function shadowCasterSignature(s){
   return[
     s.id,s.type,s.x,s.y,s.angle,s.w,s.h,s.r,s.size,s.level,s.tier,s.houseLevel,s.width,
-    s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.roofStyle,s.machicolationStyle,s.bartizan,s.bell,s.innerRoof,s.upInnerTower,s.signalFire,s.signalFireSpent,s.lookout,s.outpost?.readyDay,s.roofShape,s.baseStyle,s.material,s.woodStyle,s.woodRoof,
+    s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.roofStyle,s.machicolationStyle,s.bartizan,s.bartizanCount,s.bell,s.innerRoof,s.upInnerTower,s.signalFire,s.signalFireSpent,s.lookout,s.outpost?.readyDay,s.roofShape,s.baseStyle,s.material,s.woodStyle,s.woodRoof,
     s.type==='house'&&(s.auto||s.urbanRedeveloped)&&houseLevel(s)>=3?urbanRevision:0
   ].join('|');
 }

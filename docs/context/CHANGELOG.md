@@ -1,5 +1,17 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-24 — BARTIZAN-COUNT · Numero di garitte selezionabile
+
+`feature/bartizan-count`: le torri T3 con garitte scelgono quante metterne (1–4, default 4 come prima); con 2 stanno sulla diagonale, con 3 resta libero un angolo. Tiratori di conseguenza.
+
+
+### 2026-11-24 — SPRING-FLORA · Primavera: fiori, sottobosco e disgelo (`feature/spring-flora-thaw`)
+
+Primavera più distinta dall'estate: un albero su tre ha la chioma fiorita (pallini di un colore per albero, dodici disposizioni per tipo, scelte per pianta); tutti i cespugli fioriscono con sprite dedicati. Sottobosco marrone a marzo, verde da aprile; fiori nei prati dal 1 marzo. Disgelo: da 22 febbraio sottobosco marrone e niente neve (fase `thaw` di `winterPhase`), neve fino al 21 febbraio; chiome spente dall'1 all'7 marzo. DEV: selettore del mese. ROADMAP e DECISIONS invariate: aggiustamento visivo e del calendario invernale, nessuna regola di gameplay nuova. QA: controlli sintattici e timeline verificata in locale; CI remota non ancora eseguita.
+
+### 2026-11-19 — UI-BUILDERICON-01 · Icone medievali geometriche nel Builder
+
+`buildericon` da `67a1b1e8`: sostituiti i glifi outline del Builder con 52 SVG specifici e icone complementari nere su trasparenza; superfici chiare e selezione arancione. Aggiunti al Lab 72 SVG in Interfaccia / Icone Builder; audit mirato 72/72 senza errori o avvisi e baseline aggiornata dopo revisione. Regressioni del Builder e QA Chromium desktop/mobile PASS in locale; CI remota da eseguire. Nessun merge/deploy; roadmap, contratti di gameplay e decisioni esistenti invariati.
 ### 2026-11-24 — UP-INNER-TOWER · Torretta centrale sulle torri W2/W3
 
 `feature/upinnertower`: nuovo upgrade delle torri in pietra W2/W3 con merli o caditoie, «Torretta centrale» rotonda o quadrata (indipendente dalla forma della torre), un piano, larga quanto la torre del taglio inferiore, con tetto a punta. Esclude tetto interno, arma e pira; toglie il bracere. Non è nel menu di costruzione. La torretta è un piano in più con una stanza assegnabile, che si apre nel cutaway piano per piano. Ammessa anche sulle torri a falde (piramide/cono): il tetto si tronca intorno alla torretta. 6 voci nel Lab, test in `qa/tower-up-inner-tower-regression.cjs`. ROADMAP e DECISIONS invariate.

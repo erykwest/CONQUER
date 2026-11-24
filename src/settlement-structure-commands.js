@@ -205,6 +205,14 @@ const StructureCommands=(()=>{
     status('Bartizans: '+({none:'none',battlement:'crenellated',pitched:'spire'}[target.bartizan])+(towerBartizanAllowed(target)?'':' (needs a large T3 square or round stone tower)'));
     return true;
   }
+  function setTowerBartizanCount(id,count){
+    const target=find(id);if(!target||target.type!=='tower')return false;
+    if(!setStructureVariant(target,'bartizanCount',String(count)))return false;
+    window.ConquerCombat?.invalidateArchers?.();
+    refresh(target);
+    status('Bartizans: '+target.bartizanCount+(towerBartizan(target)==='none'?' (choose a bartizan style first)':''));
+    return true;
+  }
   // Inner roof inside the merlons (BC-251105-05): cosmetic cover of the deck, no room under it.
   function setTowerInnerRoof(id,value){
     const target=find(id);if(!target||target.type!=='tower')return false;
@@ -492,7 +500,9 @@ const StructureCommands=(()=>{
         }
         if(variantSchema(s)?.bartizan){
           const off=!towerBartizanAllowed(s);
-          d.controls.push(choice('bartizan','setTowerBartizan',[{value:'none',word:'none'},{value:'battlement',word:'battlement',disabled:off},{value:'pitched',word:'spire',disabled:off}],structureVariant(s,'bartizan')));
+          d.controls.push(choice('bartizan','setTowerBartizan','setTowerBartizanCount',[{value:'none',word:'none'},{value:'battlement',word:'battlement',disabled:off},{value:'pitched',word:'spire',disabled:off}],structureVariant(s,'bartizan')));
+          const noBz=towerBartizan(s)==='none';
+          d.controls.push(choice('bartizanCount','setTowerBartizanCount',['1','2','3','4'].map(v=>({value:v,label:v,disabled:noBz})),structureVariant(s,'bartizanCount')));
         }
         d.controls.push(choice('base','setTowerBase',[{value:'standard',word:'standard'},{value:'buttress',word:'buttress'},{value:'splayed',word:'splayed'}],towerBaseStyle(s)));
         if(s.parentTowerId)d.facts.push({key:'subtower',value:structureLabel(State.structures.find(x=>x.id===s.parentTowerId)||s)});
@@ -576,9 +586,9 @@ const StructureCommands=(()=>{
   }
 
   const commands={setConstructionPriority,setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setLonghouseCover,setGateRoof,setGateUpper,setSkin,setWallStair,setWallStairPos,toggleCutaway,stepCutawayFloor,flipSide,digMoat,
-    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerInnerRoof,setTowerUpInnerTower,setTowerLookout,setTowerOutpost,setTowerSignalFire,setWallPatrols,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,startUpgrade,
+    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBartizanCount,setTowerBell,setTowerInnerRoof,setTowerUpInnerTower,setTowerLookout,setTowerOutpost,setTowerSignalFire,setWallPatrols,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,startUpgrade,
     describeStructure};
-  for(const name of ['setTier','setHeight','setKeepFloorPlan','setTowerBase','setTowerRoof','setHoarding','setWoodRoof','setGateRoof','setGateUpper','setSkin','setTowerWeapon','setTowerRoofShape','setTowerBartizan','setTowerBell','setTowerInnerRoof','setTowerUpInnerTower','setCivicLevel','setPlazaVariant']){
+  for(const name of ['setTier','setHeight','setKeepFloorPlan','setTowerBase','setTowerRoof','setHoarding','setWoodRoof','setGateRoof','setGateUpper','setSkin','setTowerWeapon','setTowerRoofShape','setTowerBartizan','setTowerBartizanCount','setTowerBell','setTowerInnerRoof','setTowerUpInnerTower','setCivicLevel','setPlazaVariant']){
     const execute=commands[name];
     commands[name]=(id,...args)=>{
       const target=find(id);if(!target||underConstruction(target))return false;

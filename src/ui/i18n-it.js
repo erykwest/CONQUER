@@ -120,7 +120,7 @@ export const T = {
     controls: {
       tier: 'Impronta', height: 'Livelli', rotation: 'Angolo', roof: 'Tetto', woodRoof: 'Tetto', roofCover: 'Copertura',
       base: 'Base', skin: 'Rivestimento', side: 'Lato esterno', cutaway: 'Spaccato',
-      weapon: 'Arma', bartizan: 'Garitte', roofShape: 'Falde', civicLevel: 'Sviluppo', plaza: 'Variante', upper: 'Piano alto', hoarding: 'Ballatoio', bell: 'Campana', lookout: 'Vedetta', outpost: 'Avamposto', signalFire: 'Fuoco di segnalazione', innerRoof: 'Tetto interno', upInnerTower: 'Torretta centrale',
+      weapon: 'Arma', bartizan: 'Garitte', bartizanCount: 'N. garitte', roofShape: 'Falde', civicLevel: 'Sviluppo', plaza: 'Variante', upper: 'Piano alto', hoarding: 'Ballatoio', bell: 'Campana', lookout: 'Vedetta', outpost: 'Avamposto', signalFire: 'Fuoco di segnalazione', innerRoof: 'Tetto interno', upInnerTower: 'Torretta centrale',
       wallStair: 'Scala al camminamento', wallStairPos: 'Posizione scala', wallPatrols: 'Pattuglie del giro', moat: 'Fossato'
     },
     words: {
