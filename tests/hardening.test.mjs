@@ -2,23 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInContext,createContext} from 'node:vm';
+import {fixture as persistenceFixture} from './helpers/persistence-fixture.mjs';
 
 const read=f=>readFileSync(new URL('../'+f,import.meta.url),'utf8');
-const persistence=read('src/settlement-app-persistence.js');
-const cloud=persistence.slice(persistence.indexOf('// Cloud writes require'),persistence.indexOf("document.getElementById('saveBtn')"));
 function fixture({read=async()=>({data:null}),write=async()=>({}),localSaved=true,user=true}={}){
-  const indicator={textContent:''},calls={local:0,writes:0},messages=[];
-  const query={select(){return this},eq(){return this},maybeSingle:read,
-    upsert:async()=>{calls.writes++;return write()}};
-  const ctx=createContext({window:{},console:{warn(){},error(){}},
-    document:{getElementById:()=>indicator},status:m=>messages.push(m),
-    saveBlocked:()=>false,saveLocal:()=>{calls.local++;return localSaved},
-    LANDSCAPE_GENERATION_VERSION:1,
-    State:{user:user?{id:'owner'}:null,supabase:{from:()=>query},seed:7,dirty:true,
-      resources:{gold:5},clock:{day:0}},
-  });
-  runInContext(cloud,ctx);
-  return {ctx,calls,indicator,messages,load:()=>runInContext('loadCloud()',ctx),save:()=>runInContext('saveCloud()',ctx)};
+  const h=persistenceFixture({readCloud:read,writeCloud:write,quota:!localSaved});
+  if(!user)h.State.user=null;
+  const calls={get local(){return h.storage.size},get writes(){return h.writes.length}};
+  return{ctx:h.ctx,calls,indicator:h.element('saveState'),messages:h.messages,
+    load:()=>h.run('loadCloud()'),save:()=>h.run('saveCloud()')};
 }
 
 test('cloud writes are blocked before and during the initial read',async()=>{

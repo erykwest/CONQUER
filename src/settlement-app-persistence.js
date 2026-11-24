@@ -157,7 +157,7 @@ function markLoadFailed(raw,err){
   }catch(e){console.warn('CONQUER corrupt save backup failed',e)}
   try{
     const indicator=document.getElementById('saveState');if(indicator)indicator.textContent='salvataggio non caricato';
-    status('Salvataggio non caricato: la partita salvata è conservata intatta e non verrà sovrascritta. Avvia una nuova mappa per ricominciare a salvare.');
+    status('Salvataggio non caricato: la partita salvata Ã¨ conservata intatta e non verrÃ  sovrascritta. Avvia una nuova mappa per ricominciare a salvare.');
   }catch{}
   window.__conquerAnalytics?.event?.('LOAD_ERROR',{message:String(err)},'error',30000);
 }
@@ -223,7 +223,7 @@ function loadLocal(){if(window.__CONQUER_REGIONAL_DEMO__)return;let raw=null;try
     window.ConquerEconomy?.syncBuilderResources?.();
   }else State.resources={...PROVISIONAL_RESOURCES};
   window.ConquerSiege?.syncAutoMastio?.();const landscapeResult=restoreSavedLandscape(x.landscape);if(landscapeResult.missing)saveLocal();reconcileLoadedSettlement();['tax','rations'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch(err){console.warn('Local state ignored',err);if(raw)markLoadFailed(raw,err)}}
-async function initSupabase(){if(window.__CONQUER_ASSET_LAB__)return;if(window.__CONQUER_REGIONAL_DEMO__)return;if(window.__CONQUER_CAMP_MODE__){document.getElementById('dbNote').textContent='CAMP · Salvataggio locale separato';return;}for(let i=0;i<30&&!window.__createSupabaseClient;i++)await new Promise(r=>setTimeout(r,50));if(!window.__createSupabaseClient)return;State.supabase=window.__createSupabaseClient(SUPABASE_URL,SUPABASE_KEY);const {data}=await State.supabase.auth.getSession();State.user=data?.session?.user||null;if(State.user){document.getElementById('dbNote').textContent='Supabase authenticated — loading cloud save.';document.getElementById('saveState').textContent='cloud loading';if(await loadCloud())document.getElementById('dbNote').textContent='Supabase authenticated — cloud save enabled.'}else document.getElementById('dbNote').textContent='Local autosave active. Sign-in can be added next; RLS already protects cloud rows.'}
+async function initSupabase(){if(window.__CONQUER_ASSET_LAB__)return;if(window.__CONQUER_REGIONAL_DEMO__)return;if(window.__CONQUER_CAMP_MODE__){document.getElementById('dbNote').textContent='CAMP Â· Salvataggio locale separato';return;}for(let i=0;i<30&&!window.__createSupabaseClient;i++)await new Promise(r=>setTimeout(r,50));if(!window.__createSupabaseClient)return;State.supabase=window.__createSupabaseClient(SUPABASE_URL,SUPABASE_KEY);const {data}=await State.supabase.auth.getSession();State.user=data?.session?.user||null;if(State.user){document.getElementById('dbNote').textContent='Supabase authenticated â€” loading cloud save.';document.getElementById('saveState').textContent='cloud loading';if(await loadCloud())document.getElementById('dbNote').textContent='Supabase authenticated â€” cloud save enabled.'}else document.getElementById('dbNote').textContent='Local autosave active. Sign-in can be added next; RLS already protects cloud rows.'}
 // A write needs a successful read for this account and this read generation.
 let cloudRead={status:'idle',userId:null,generation:0};
 function cloudReadFailed(error){
@@ -263,7 +263,7 @@ function sameSaveWorld(job){
 async function saveCloud(){
   if(window.__CONQUER_ASSET_LAB__)return false;
   if(window.__CONQUER_REGIONAL_DEMO__){State.dirty=false;return false}
-  if(saveBlocked()){status('Salvataggio bloccato: la partita salvata non è stata caricata ed è conservata. Avvia una nuova mappa per salvare di nuovo.');return}
+  if(saveBlocked()){status('Salvataggio bloccato: la partita salvata non Ã¨ stata caricata ed Ã¨ conservata. Avvia una nuova mappa per salvare di nuovo.');return false}
   let snapshot;
   try{snapshot=captureSettlementSave()}catch(error){reportLocalSaveFailure(error);return false}
   const localSaved=saveLocal(snapshot);

@@ -16,6 +16,8 @@ on:
       - 'tools/runtime-contract.cjs'
       - 'tests/extended-save.test.mjs'
       - 'tests/resource-ui.test.mjs'
+      - 'tests/hardening.test.mjs'
+      - 'tests/helpers/**'
       - 'tests/runtime-integrity.test.mjs'
       - 'src/codex-catalog.js'
       - 'src/settlement-codex.js'

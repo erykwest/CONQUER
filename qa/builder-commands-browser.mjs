@@ -63,7 +63,7 @@ try{
         await page.waitForFunction(label=>document.querySelector('#ui2 .u2-saved')?.textContent.includes(label),label);
       }
     }
-    assert.equal(await page.locator('.ux-rail [data-icon="category-defense"]').count(),mode==='camp'?0:1,'main fortifications icon remains present');
+    assert.equal(await page.locator('.ux-rail [data-icon="category-defense"]').count(),1,'main fortifications icon remains present');
     await page.screenshot({path:`${out}/builder-${mode}.png`});
     assert.deepEqual(errors,[]);console.log('PASS Builder '+mode+': shared commands, presets, gate caps, clay quarry and no page errors');
     await page.close();
