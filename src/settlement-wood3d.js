@@ -197,6 +197,48 @@
     }
     return mesh;
   }
+  // Frame tower P2 (framed top): the upper storey plastered and jettied FRAME_P2_JETTY past the
+  // model's posts on all four faces, with the dense timber frame and two windows per face
+  // (timberStoreyFacade, as the W3 stone tower's framed top). P1 and the deck stay the model's.
+  const FRAME_P2_Z0=1.26,FRAME_P2_Z1=2.49,FRAME_P2_HALF=.78,FRAME_P2_JETTY=.1;
+  const PLASTER='#ddd0b4',BEAM='#4a3424',GLASS='#2a231d';
+  function addFramedP2(mesh,s,ground,raised=false){
+    if(typeof rectWorldPoints!=='function'||typeof timberStoreyFacade!=='function')return;
+    const H=FRAME_P2_HALF+FRAME_P2_JETTY,pts=rectWorldPoints(s.x,s.y,H*2,H*2,s.angle||0),z0=ground+FRAME_P2_Z0,z1=ground+FRAME_P2_Z1;
+    const tri=(a,b,c,hex)=>{mesh.pos.push(a.x,a.y,a.z,b.x,b.y,b.z,c.x,c.y,c.z);mesh.col.push(hex)};
+    const quad=(a,b,c,d,hex)=>{tri(a,b,c,hex);tri(a,c,d,hex)};
+    const cx=s.x,cy=s.y;
+    // outward-facing side walls (order the corners so the normal points away from the centre)
+    for(let i=0;i<4;i++){
+      let a=pts[i],b=pts[(i+1)%4];
+      const mx=(a.x+b.x)/2-cx,my=(a.y+b.y)/2-cy,nx=(b.y-a.y),ny=-(b.x-a.x);
+      if(nx*mx+ny*my<0)[a,b]=[b,a];
+      quad({x:a.x,y:a.y,z:z0},{x:b.x,y:b.y,z:z0},{x:b.x,y:b.y,z:z1},{x:a.x,y:a.y,z:z1},PLASTER);
+    }
+    // jetty underside and lid under the deck
+    quad(...[0,3,2,1].map(k=>({x:pts[k].x,y:pts[k].y,z:z0})),BEAM);
+    quad(...[0,1,2,3].map(k=>({x:pts[k].x,y:pts[k].y,z:z1})),BEAM);
+    // frame members and windows, a hair outside the plaster
+    for(const f of timberStoreyFacade(pts,FRAME_P2_Z0,FRAME_P2_Z1,()=>true,true)){
+      const e=f.edge,L=Math.hypot(e.b.x-e.a.x,e.b.y-e.a.y)||1,ux=(e.b.x-e.a.x)/L,uy=(e.b.y-e.a.y)/L;
+      const mx=(e.a.x+e.b.x)/2,my=(e.a.y+e.b.y)/2;let ox=uy,oy=-ux;if(ox*(mx-cx)+oy*(my-cy)<0){ox=-ox;oy=-oy}
+      const P=(off,z,push)=>({x:mx+ux*off+ox*push,y:my+uy*off+oy*push,z:ground+z});
+      const face=(A,B,C,D,hex)=>{const n=(B.x-A.x)*(D.y-A.y)-(B.y-A.y)*(D.x-A.x);void n;quad(A,B,C,D,hex)};
+      for(const [p0,p1] of f.beams){
+        const doff=p1.off-p0.off,dz=p1.z-p0.z,len=Math.hypot(doff,dz)||1,w=(typeof HOUSE_TIMBER_W==='number'?HOUSE_TIMBER_W:.05)/2,no=-dz/len*w,nz=doff/len*w,pu=.012;
+        face(P(p0.off+no,p0.z+nz,pu),P(p1.off+no,p1.z+nz,pu),P(p1.off-no,p1.z-nz,pu),P(p0.off-no,p0.z-nz,pu),BEAM);
+      }
+      const hw=typeof HOUSE_WINDOW_HALF_W==='number'?HOUSE_WINDOW_HALF_W:.08,hh=typeof HOUSE_WINDOW_HALF_H==='number'?HOUSE_WINDOW_HALF_H:.12;
+      // Raised (Mastio) entrance: the P1 doorway on the model's front (+x local) face.
+      const front=Math.cos(s.angle||0)*ox+Math.sin(s.angle||0)*oy>.7;
+      if(raised&&front){
+        const dw=.2,dz0=FRAME_P2_Z0+.02,dz1=FRAME_P2_Z0+1.02;
+        face(P(-dw-.04,dz0,.02),P(dw+.04,dz0,.02),P(dw+.04,dz1+.04,.02),P(-dw-.04,dz1+.04,.02),BEAM);
+        face(P(-dw,dz0,.024),P(dw,dz0,.024),P(dw,dz1,.024),P(-dw,dz1,.024),'#6b4a30');
+      }
+      for(const w of f.windows)if(!(raised&&front&&Math.abs(w.off)<.35))face(P(w.off-hw,w.z-hh,.016),P(w.off+hw,w.z-hh,.016),P(w.off+hw,w.z+hh,.016),P(w.off-hw,w.z+hh,.016),GLASS);
+    }
+  }
   function pointModel(s){
     const key=modelKey(s),ground=groundOf(s),mesh={pos:[],col:[]};
     if(key==='woodGate'){
@@ -215,6 +257,7 @@
       const only=names.filter(n=>(open?!open.has(n):!INTERIOR.includes(n))&&!(belfry.length&&n==='flag')&&!drop.has(n));
       addModel(mesh,key,{x:s.x,y:s.y,angle:s.angle||0},ground,only);
       for(const t of belfry){for(const q of t.pts)mesh.pos.push(q.p.x,q.p.y,ground+q.z);mesh.col.push(t.hex)}
+      if(key==='frameTower'&&!open)addFramedP2(mesh,s,ground,raised);
     }
     return mesh;
   }
