@@ -1,5 +1,9 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-24 — UI-BUILDERICON-02: icone Builder di nuovo beige su marrone (`fix/builder-icon-color`, NON MERGE)
+
+Solo CSS (`settlement.css`, cache `buildericon-2`); verificato in browser su barra e catalogo del Builder.
+
 ### 2026-11-24 — CLAY-WATER-ACCESS · Acqua dolce e cava in palude
 
 Branch `fix/territory-clay-stone-access`, base main `fe665fe`. Il generatore cerca una sponda interna utilizzabile nella whitezone e aggiunge un piccolo stagno quando serve, preservando spazio asciutto per una cava 4×4U. In foresta può aprire una radura locale se manca spazio. La cava argilla può sorgere su qualsiasi terrazza asciutta edificabile del territorio Palude, anche lontano dalle rive. Acquitrini, boschi, strade ed edifici mantengono le collisioni.

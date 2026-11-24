@@ -101,9 +101,10 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 .ux-builder .ux-rail-bottom{margin-top:auto;display:flex;flex-direction:column;gap:7px}
 .ux-builder .ux-separator{height:1px;background:var(--line-strong);margin:4px 2px}
 .ux-builder button.ux-icon-btn,.ux-builder button.ux-close{display:flex;align-items:center;justify-content:center;width:46px;height:46px;min-width:46px;padding:6px;border-radius:9px;position:relative;flex:0 0 auto}
-/* Black architectural SVGs keep their authored palette on a light button surface. */
-.ux-builder button.ux-icon-btn,.ux-builder button.ux-close{background:#e8ddc6;color:#000}
-.ux-builder button.ux-icon-btn:hover,.ux-builder button.ux-close:hover{background:#f4ead8}
+/* Legacy look: brown button surface, beige icon. The architectural SVGs are black <img>, so a filter
+   tints them to the text beige; on the orange selected tile they go back to dark ink. */
+.ux-builder .ux-svg{filter:invert(92%) sepia(12%) saturate(420%) hue-rotate(345deg) brightness(97%)}
+.ux-builder button.ux-icon-btn.active .ux-svg{filter:brightness(0) sepia(1) saturate(2) brightness(.16)}
 .ux-builder button.ux-icon-btn:focus-visible,.ux-builder button.ux-close:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .ux-builder .ux-svg{display:block;width:32px;height:32px;max-width:100%;object-fit:contain;pointer-events:none;flex:0 0 auto}
 .ux-builder button.ux-icon-btn.active{color:#23160d;background:var(--accent);border-color:var(--accent)}
@@ -120,7 +121,7 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 .ux-builder .ux-options{border-top:1px solid var(--line);margin-top:14px;padding-top:10px}
 .ux-builder .ux-options>strong{display:block;font-size:11px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
 .ux-builder .ux-option-line{display:flex;align-items:center;gap:8px;margin:7px 0}
-.ux-builder .ux-option-glyph{display:flex;align-items:center;justify-content:center;width:28px;height:28px;flex:0 0 28px;background:#e8ddc6;border-radius:4px}
+.ux-builder .ux-option-glyph{display:flex;align-items:center;justify-content:center;width:28px;height:28px;flex:0 0 28px;border-radius:4px}
 .ux-builder .ux-option-glyph .ux-svg{width:28px;height:28px}
 .ux-builder .ux-option-values{display:flex;min-width:0;flex:1;gap:5px}
 .ux-builder .ux-value-btn{flex:1;min-width:0;padding:7px 3px;font-size:11px;font-weight:700}
@@ -190,3 +191,5 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 .construction-inspector .site-material-grid{margin-top:8px}
 .construction-inspector .site-material-grid .kv{font-size:11px}
 .construction-priority select{margin-top:5px}
+/* Stone / clay selector: resource icon only, name in the tooltip. */
+.ux-builder button[data-build-masonry]{font-size:19px;line-height:1}

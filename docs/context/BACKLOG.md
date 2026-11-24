@@ -1,5 +1,9 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-24 — UI-BUILDERICON-02
+
+- [ ] Valutare SVG con `currentColor` al posto del filtro CSS, per tinte esatte in hover/selezione.
+
 ### 2026-11-24 — CLAY-WATER-ACCESS
 
 Implementato nel branch `fix/territory-clay-stone-access`. Nuove mappe con acqua dolce e sponda utilizzabile per l'argilla nella whitezone. Aggiunta deterministica di un piccolo stagno quando manca un sito accessibile. Cava argilla consentita sui terreni asciutti e pianeggianti del territorio Palude. QA dedicata con piazzamento condiviso, ripetibilità, acqua lontana e bosco fitto. Integrazione su main in attesa.
