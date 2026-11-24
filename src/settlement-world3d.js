@@ -1129,10 +1129,37 @@
           }
         }
       }else if(s.type==='built'&&!isLonghouse(s)){
-        for(const [side,z,density,key,aw,ah,,fixed] of builtWindowRows(s)){
+        const framedLean=isTimberLeanTo(s)&&typeof leanToTimberFrame==='function';
+        const door=(edge,off,ground,o,leaf)=>{
+          const ux=(edge.b.x-edge.a.x)/(edge.length||1),uy=(edge.b.y-edge.a.y)/(edge.length||1),m={x:(edge.a.x+edge.b.x)/2+ux*off,y:(edge.a.y+edge.b.y)/2+uy*off};
+          const hw=LEAN_DOOR_W/2,f=.03;
+          quad({x:m.x-ux*(hw+f),y:m.y-uy*(hw+f)},{x:m.x+ux*(hw+f),y:m.y+uy*(hw+f)},ground,ground+LEAN_DOOR_H+f,'__white',o,[36/255,30/255,26/255,1],.008);   // jambs and head
+          quad({x:m.x-ux*hw,y:m.y-uy*hw},{x:m.x+ux*hw,y:m.y+uy*hw},ground,ground+LEAN_DOOR_H,'__white',o,leaf,.011);                                        // plank leaf
+        };
+        // A stone lean-to has twin lights (gothicL2) instead of arrow slits, sized under its eaves.
+        const leanRows=isLeanTo(s)?builtWindowRows(s).map(r=>r[1]<1.2?[r[0],.80,0,'gothicL2',.5,.58,true,5]:r):builtWindowRows(s);
+        if(!framedLean)for(const [side,z,density,key,aw,ah,,fixed] of leanRows){
           const edge=linearFacadeEdge(s,side),count=builtWindowCount(edge,density,fixed,aw),cell=edge.length/count;
           const ground=terrainElevation({x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2}),o=outward(edge,center);
-          for(let i=0;i<count;i++){const off=(i+.5)*cell-edge.length/2;if(!window.ConquerRoomExterior?.takesWindow(s,side,z,off))onEdge(edge,z,Math.min(aw,cell*.82),ah,key,off,ground,o)}
+          // A stone lean-to opens its door in the middle cell of the low row, instead of that window.
+          const doorCell=isLeanTo(s)&&z<1.2?Math.floor(count/2):-1;
+          for(let i=0;i<count;i++){
+            const off=(i+.5)*cell-edge.length/2;
+            if(i===doorCell){door(edge,off,ground,o,[78/255,56/255,38/255,1]);continue}
+            if(!window.ConquerRoomExterior?.takesWindow(s,side,z,off))onEdge(edge,z,Math.min(aw,cell*.82),ah,key,off,ground,o);
+          }
+        }
+        // Framed timber lean-to (leanToTimberFrame, after PR #300): close posts and crosses over
+        // the plaster, small dark windows set in the frame, the plank door in the middle bay.
+        if(framedLean)for(const f of leanToTimberFrame(s)){
+          const e=f.edge,L=Math.hypot(e.b.x-e.a.x,e.b.y-e.a.y)||1,edge={...e,length:L},o=outward(e,center),ux=(e.b.x-e.a.x)/L,uy=(e.b.y-e.a.y)/L;
+          const m={x:(e.a.x+e.b.x)/2,y:(e.a.y+e.b.y)/2},at=off=>({x:m.x+ux*off,y:m.y+uy*off}),ground=terrainElevation(m);
+          for(const [p0,p1] of f.beams)strip(at,ground,p0,p1,HOUSE_TIMBER_W,o,[59/255,42/255,30/255,1],.009);
+          for(const win of f.windows){
+            const c=at(win.off),hw=LEAN_WIN/2;
+            quad({x:c.x-ux*hw,y:c.y-uy*hw},{x:c.x+ux*hw,y:c.y+uy*hw},ground+win.z-hw,ground+win.z+hw,'__white',o,[30/255,26/255,22/255,1],.010);
+          }
+          if(f.door)door(edge,f.door.off,ground,o,[96/255,66/255,40/255,1]);
         }
         // W1 portico: carved loggia in the castle body (builtLoggia). The W2 hall keeps the arcade decal.
         const arcade=!isBuiltPortico(s)&&builtArcadeLayout(s);

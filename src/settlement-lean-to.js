@@ -10,6 +10,7 @@
   const PICK=1.2;            // how far from a wall a click still picks it (U)
   const TOWER_PAD=.55;       // pulled back from a tower/gate socket at a snapped end
   const MIN_LENGTH=2;        // a W1 section has its room from 2U
+  const MAX_LENGTH=4;        // a lean-to is a shed against the wall, never the whole curtain
   function leanWallOf(s){return State.structures.find(o=>o.id===s?.leanWallId)||null}
   function nearestWall(p){
     let best=null,bd=PICK;
@@ -32,8 +33,10 @@
     if(w.wallStair)return{ok:false,reason:'The wall has a wall-walk stair on its inner face: remove the stair first'};
     const dx=w.b.x-w.a.x,dy=w.b.y-w.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,nx=-uy,ny=ux;
     const side=wallExteriorSide(w),off=(Number(w.width)||.5)/2+TYPES.built.width/2;
-    const pa=w.aSnap?TOWER_PAD:0,pb=w.bSnap?TOWER_PAD:0,length=L-pa-pb;
-    if(length<MIN_LENGTH-1e-6)return{ok:false,reason:`Wall too short: a lean-to needs ${MIN_LENGTH}U clear of the towers`};
+    const pa0=w.aSnap?TOWER_PAD:0,pb0=w.bSnap?TOWER_PAD:0,free=L-pa0-pb0;
+    if(free<MIN_LENGTH-1e-6)return{ok:false,reason:`Wall too short: a lean-to needs ${MIN_LENGTH}U clear of the towers`};
+    // At most MAX_LENGTH, centred on the free stretch of the wall.
+    const length=Math.min(free,MAX_LENGTH),extra=(free-length)/2,pa=pa0+extra,pb=pb0+extra;
     const ix=-nx*side*off,iy=-ny*side*off;
     const s={
       id:uid(),type:'built',leanTo:true,leanWallId:w.id,leanSide:side,
@@ -68,5 +71,5 @@
     const w=leanWallOf(s);
     return (w?structureHeight(w):2.35)-UNDER_WALK;
   }
-  window.ConquerLeanTo=Object.freeze({make,atPoint,nearestWall,leanWallOf,ofWall,setOnWall,roofTop,EAVES,MIN_LENGTH});
+  window.ConquerLeanTo=Object.freeze({make,atPoint,nearestWall,leanWallOf,ofWall,setOnWall,roofTop,EAVES,MIN_LENGTH,MAX_LENGTH});
 })();
