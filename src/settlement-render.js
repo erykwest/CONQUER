@@ -126,7 +126,7 @@ function drawPlacementVolume(ghost,fill,stroke){
 // hoarding, a small gate's timber upper storey, skins, bells...), rooms and their exterior damage.
 // A field missing here leaves a stale mesh or bitmap after the change (qa/render-cache-keys-regression.cjs).
 const STRUCTURE_VISUAL_FIELDS=Object.freeze(['id','type','shape','material','masonryMaterial','woodStyle','woodRoof','roofCover',
-  'roofStyle','machicolationStyle','bartizan','bell','innerRoof','signalFire','roofShape','baseStyle','skin','hoarding','upper','topWeapon',
+  'roofStyle','machicolationStyle','bartizan','bartizanCount','bell','innerRoof','signalFire','roofShape','baseStyle','skin','hoarding','upper','topWeapon',
   'r','size','w','h','width','length','angle','rotationStep','level','tier','cutawayFloor','aSnap','bSnap','parentTowerId',
   'orientationOffset','groundZ','foundationMinZ','isMastio']);
 function structureVisualKey(s){

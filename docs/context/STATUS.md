@@ -4,6 +4,25 @@
 
 Inspector legacy più corto (torre: da ~4000 a ~1200 caratteri), tasti piccoli, spiegazioni dietro ⓘ, controlli di test solo in DEV. UI v2 invariata. Verificato in browser su torre, casa e porta.
 
+### 2026-11-19 — HARDEN-261119 · Integrità salvataggi e DOM risorse
+
+- **Implementato su `fix/main-hardening-20261119`, non ancora su main**, base verificata `168b993b`.
+- Cloud: scrittura permessa solo dopo lettura riuscita (anche slot vuoto); attesa, errori SDK/rete e migrazioni fallite bloccano l'upsert. Retry riuscito riabilita la scrittura; Lab escluso anche con sessione presente.
+- Locale/CAMP: un errore di scrittura mantiene l'indicatore di errore e `dirty`; nessun falso «saved». Errori cloud restituiti o lanciati restano gestiti.
+- Barra risorse: chiavi e valori dei salvataggi costruiti come nodi di testo, senza interpretazione HTML.
+- QA locale: 16 test Node (11 nuovi + 5 runtime); 15 suite di regressione PASS. Rapporto e limiti in [HARDENING-2026-11-19](../HARDENING-2026-11-19.md). CI remota da verificare nella PR; browser e database live non verificati.
+### 2026-11-24 — CLAY-WATER-ACCESS · Acqua dolce e cava in palude
+
+Branch `fix/territory-clay-stone-access`, base main `fe665fe`. Il generatore cerca una sponda interna utilizzabile nella whitezone e aggiunge un piccolo stagno quando serve, preservando spazio asciutto per una cava 4×4U. In foresta può aprire una radura locale se manca spazio. La cava argilla può sorgere su qualsiasi terrazza asciutta edificabile del territorio Palude, anche lontano dalle rive. Acquitrini, boschi, strade ed edifici mantengono le collisioni.
+
+Prove locali PASS: economia/industrie, 42 mappe delle ricette, ordine del paesaggio, coste isola/penisola, demo regionali, bilanciamento Palude/Pianura, murature clay e Wiki. La nuova regressione delle sponde verifica il piazzamento reale in cinque biomi, acqua esterna, bosco fitto, ripetibilità e idempotenza, ed entra nella CI. Smoke Chromium headless PASS su pagina reale per Pianura 229, Mare 12345 e Palude 7, con generazione e validatore condiviso. La regola dell'acqua si applica alla generazione di nuove mappe. Merge in attesa.
+
+### 2026-11-24 — BARTIZAN-COUNT: numero di garitte selezionabile (branch `feature/bartizan-count`, NON MERGE)
+
+- **CODICE:** nuova variante torre `bartizanCount` ('1'–'4', default '4') in `settlement-core.js` (`towerBartizanCount`); `towerBartizans` riempie gli angoli opposti per primi (2 = diagonale, 3 = un angolo libero); comando `setTowerBartizanCount`, riga «Numero garitte» nel pannello e nell'ispettore; chiavi di cache/salvataggio aggiornate. I tiratori seguono (3 per garitta).
+- **PROVE LOCALI PASS:** `qa/bartizan-regression.cjs` (nuovo controllo 1–4 garitte e coppia sulla diagonale). Asset audit del Lab non eseguito, verifica a vista non fatta.
+
+
 ### 2026-11-24 — SPRING-FLORA: primavera e disgelo (`feature/spring-flora-thaw`)
 
 - **IMPLEMENTATO SUL BRANCH, NON MERGE.** Base `origin/main` `992d1c36`.

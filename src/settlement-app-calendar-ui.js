@@ -91,7 +91,18 @@ function solarClockLabel(day=State.clock.day){
   const fraction=((day%1)+1)%1,minutes=Math.floor(fraction*24*60+1e-8);
   return String(Math.floor(minutes/60)).padStart(2,'0')+':'+String(minutes%60).padStart(2,'0');
 }
-function renderUI(){syncSeasonToCalendar();const cal=calendarDateFromDay();document.getElementById('seedLabel').textContent=State.seed;document.getElementById('villageLabel').textContent=State.village.name||'—';document.getElementById('biomeLabel').textContent=BIOMES[State.biome]?.label||State.biome;document.getElementById('biomeSelect').value=State.biome;document.getElementById('dayLabel').textContent=`${['Lun','Mar','Mer','Gio','Ven','Sab · Mercato','Dom · Riposo'][window.ConquerEconomy?.weekday(State.clock.day)??0]} · ${cal.day} ${cal.name} · Y${cal.year} · ${solarClockLabel()} · Day ${State.clock.day.toFixed(1)}`;syncDevButtons();const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',clay:'🧱',metal:'⛓',equipment:'⚔'};window.ConquerEconomy?.syncBuilderResources?.();document.getElementById('resources').innerHTML=Object.entries(State.resources).map(([k,v])=>`<span class="res" title="${(typeof RES_NAMES_IT!=='undefined'&&RES_NAMES_IT[k])||k}" aria-label="${(typeof RES_NAMES_IT!=='undefined'&&RES_NAMES_IT[k])||k}">${icons[k]||k} <b>${v}</b></span>`).join('');window.ConquerEconomy?.render();const kr=window.ConquerCombat?.knightRecruitment?.();const ks=document.getElementById('knightRoster');if(ks&&kr){ks.textContent=`Cavalieri ${kr.current}/${kr.limit} · Noble room ${kr.rooms} · Stalla ${kr.horses} cavalli`;const btn=document.getElementById('recruitKnight');if(btn)btn.disabled=kr.current>=kr.limit}
+// Save resource names and values are data, including unknown keys from older saves.
+function renderResourceBar(resources,icons){
+  const host=document.getElementById('resources'),fragment=document.createDocumentFragment();
+  for(const [key,value] of Object.entries(resources)){
+    const item=document.createElement('span'),amount=document.createElement('b');
+    const name=(typeof RES_NAMES_IT!=='undefined'&&RES_NAMES_IT[key])||key;
+    item.className='res';item.title=name;item.setAttribute('aria-label',name);item.textContent=`${Object.hasOwn(icons,key)?icons[key]:key} `;
+    amount.textContent=String(value);item.append(amount);fragment.append(item);
+  }
+  host.replaceChildren(fragment);
+}
+function renderUI(){syncSeasonToCalendar();const cal=calendarDateFromDay();document.getElementById('seedLabel').textContent=State.seed;document.getElementById('villageLabel').textContent=State.village.name||'—';document.getElementById('biomeLabel').textContent=BIOMES[State.biome]?.label||State.biome;document.getElementById('biomeSelect').value=State.biome;document.getElementById('dayLabel').textContent=`${['Lun','Mar','Mer','Gio','Ven','Sab · Mercato','Dom · Riposo'][window.ConquerEconomy?.weekday(State.clock.day)??0]} · ${cal.day} ${cal.name} · Y${cal.year} · ${solarClockLabel()} · Day ${State.clock.day.toFixed(1)}`;syncDevButtons();const icons={gold:'🪙',population:'👥',food:'🌾',wood:'🪵',stone:'🪨',clay:'🧱',metal:'⛓',equipment:'⚔'};window.ConquerEconomy?.syncBuilderResources?.();renderResourceBar(State.resources,icons);window.ConquerEconomy?.render();const kr=window.ConquerCombat?.knightRecruitment?.();const ks=document.getElementById('knightRoster');if(ks&&kr){ks.textContent=`Cavalieri ${kr.current}/${kr.limit} · Noble room ${kr.rooms} · Stalla ${kr.horses} cavalli`;const btn=document.getElementById('recruitKnight');if(btn)btn.disabled=kr.current>=kr.limit}
   // Update selected construction site without rebuilding the whole room panel.
   const selected=typeof selectedStructure==='function'?selectedStructure():null;
   if(selected?.construction?.version===2){

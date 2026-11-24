@@ -786,7 +786,9 @@ function towerBartizans(s){
   const z=structureHeight(s),centers=s.shape==='round'
     ?[1,3,5,7].map(k=>{const a=(s.angle||0)+k*Math.PI/4,R=(Number(s.r)||1)-.02;return{x:s.x+Math.cos(a)*R,y:s.y+Math.sin(a)*R}})
     :footprintPoints(s).map(c=>{const dx=c.x-s.x,dy=c.y-s.y,L=Math.hypot(dx,dy)||1;return{x:c.x+dx/L*.09,y:c.y+dy/L*.09}});
-  return centers.map(c=>{
+  // Opposite corners first, so two turrets sit on a diagonal and three leave one corner bare.
+  const picked=[0,2,1,3].slice(0,towerBartizanCount(s)).sort((a,b)=>a-b).map(i=>centers[i]).filter(Boolean);
+  return picked.map(c=>{
     const ring=r=>circleWorldPoints(c.x,c.y,r,BARTIZAN_SIDES),z0=z-BARTIZAN_BELOW,L=Math.hypot(c.x-s.x,c.y-s.y)||1;
     const deckZ=style==='pitched'?z:z+BARTIZAN_RAISE;
     return{style,center:c,nx:(c.x-s.x)/L,ny:(c.y-s.y)/L,r:BARTIZAN_R,ring:ring(BARTIZAN_R),inner:ring(BARTIZAN_R-BARTIZAN_WALL),band:ring(BARTIZAN_R+.025),
