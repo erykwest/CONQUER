@@ -66,6 +66,7 @@ jobs:
           node qa/biome-selector-regression.cjs
           node qa/regional-boundary-drainage-regression.cjs
           node qa/landscape-order-regression.cjs
+          node qa/settlement-freshwater-regression.cjs
           node qa/sporadic-hills-regression.cjs
           node qa/valley-hills-regression.cjs
           node qa/hills-zone-regression.cjs

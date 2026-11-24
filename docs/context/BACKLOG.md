@@ -9,6 +9,15 @@
 - [x] Regressioni deterministiche per attesa, errori, recupero, CAMP, Lab e payload HTML; incluse nel workflow Runtime integrity.
 - [ ] Verifica separata delle policy RLS effettivamente applicate in produzione: in questa passata letto soltanto lo schema versionato.
 - [ ] CSP completa e rimozione dipendenze CDN: richiedono inventario e QA browser delle pagine/iframe; non applicate in questa passata.
+### 2026-11-24 — CLAY-WATER-ACCESS
+
+Implementato nel branch `fix/territory-clay-stone-access`. Nuove mappe con acqua dolce e sponda utilizzabile per l'argilla nella whitezone. Aggiunta deterministica di un piccolo stagno quando manca un sito accessibile. Cava argilla consentita sui terreni asciutti e pianeggianti del territorio Palude. QA dedicata con piazzamento condiviso, ripetibilità, acqua lontana e bosco fitto. Integrazione su main in attesa.
+
+### 2026-11-24 — BARTIZAN-COUNT · Numero di garitte
+
+**IMPLEMENTATO SU BRANCH `feature/bartizan-count`, NON MERGE.** Richiesta del product owner (24/11/2026).
+- [x] Da 1 a 4 garitte per torre, angoli opposti per primi.
+- [ ] Verifica a vista nel Lab e asset audit.
 
 
 ## 2026-11-24 — SPRING-FLORA · Primavera e disgelo
