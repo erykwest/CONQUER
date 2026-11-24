@@ -5,7 +5,23 @@
 - **CODICE:** variante torre `upper` 'stone'/'timber' (`settlement-core.js` `towerTimberUpperAllowed`/`towerTimberUpper`, `TOWER_TIMBER_COST` {wood:45}, `TOWER_JETTY` .1): solo torri quadrate in pietra W3, L2+, cima integra; tetto sempre a falde (niente merli, caditoie, ballatoio, garitte). Costo: torre un livello più bassa + solo legno. Fuoco (`settlement-fire.js`): parte 'upper' (flam .85, 50 s); bruciata, la torre perde il piano (brokenTop), muratura integra. Render: piano in intonaco a sbalzo, gronda allargata, intelaiatura fitta (`timberStoreyFacade` dense), niente aperture in pietra sopra il piano. Ispettore (UI classica e profilo) «Piano alto: Pietra / Graticcio». Nuova torre lignea a telaio H3 (`woodStyle:'frameTower3'`, {gold:80,wood:190}, 9 giorni): P1 e P2 del modello H2, P3 intonacato a sbalzo 0,1 U con intelaiatura fitta (`settlement-wood3d.js` `addFramedP3`), tetto a falde senza parapetto (deck, tetto e bandiera del modello tolti). La H2 resta invariata. Lab: due varianti «framed top».
 - **PROVE LOCALI PASS:** nuova `qa/tower-framed-top-regression.cjs`; caso nuovo in `qa/fire-regression.cjs`; tower-weapons, clay-material, tower-roof-shape, bartizan, biome-recipes. Falliscono anche su main: codex-obsidian, codex-vault-import, codex-wiki, hills-zone, stream-count. Verifica visiva nell'Asset Lab (intatta, cutaway).
 
+### 2026-11-24 — SPRING-FLORA: primavera e disgelo (`feature/spring-flora-thaw`)
 
+- **IMPLEMENTATO SUL BRANCH, NON MERGE.** Base `origin/main` `992d1c36`.
+- Alberi: un terzo con chioma fiorita (sprite primaverile con pallini, 12 varianti per tipo). Cespugli: tutti fioriti (12 varianti per tipo). Pini di montagna esclusi.
+- Sottobosco: marrone a marzo, verde da aprile (`forestGroundKey`). Fiori nei prati dal 1 marzo (`springFlowersOn`).
+- Inverno: `winterPhase` di `main` con febbraio riarticolato: neve fino al 21, disgelo (`thaw`, sottobosco marrone, alberi spogli) dal 22. Chiome spente dall'1 al 7 marzo (`treesBare`).
+- **PROVE LOCALI:** controlli di sintassi su tutti i file toccati; timeline verificata in locale (15 gen → 20 mar). Errori di console preesistenti in `settlement-codex.js`/`codex-catalog.js` (`CYCLE`), non legati a questa modifica.
+- **CI remota non ancora eseguita**; nessun merge o deploy.
+
+### 2026-11-19 — UI-BUILDERICON-01: icone medievali del Builder (`buildericon`)
+
+- **IMPLEMENTATO SUL BRANCH, NON MERGE.** Base `origin/main` aggiornata `67a1b1e8`.
+- 72 SVG neri su trasparenza: un file dedicato per ognuna delle 52 voci del catalogo, 7 categorie, 10 comandi/parametri e 3 ampliamenti da inspector. Il Builder carica SVG isolati tramite immagini decorative: le maschere non condividono ID nel DOM. Etichette accessibili, selettori e pulsanti con i gestori originali restano gli stessi.
+- Fondo chiaro sui pulsanti per il contrasto del nero; selezione arancione, focus da tastiera, icone a 32px e opzioni a 28px. Registro completo in `src/assets/builder-icons/catalog.json`.
+- Asset Lab: nuova categoria Interfaccia / famiglia Icone Builder, sfondo di consultazione chiaro, manifest rigenerato. Audit della categoria: **72 render, 0 errori, 0 avvisi**; foglio provini rivisto; aggiunte alla baseline solo le 72 voci nuove.
+- **PASS LOCALI:** builder-menu (52 associazioni e SVG nel Lab), builder-placement, events-builder, mills3d, lean-to, asset-catalog, context-guard. Chromium 1228: tutte le 7 categorie e i 52 file, identità dei pulsanti dopo cambi categoria, click mulino con gestore di gioco e selezione attiva, 12 opzioni, 72 voci nel Lab, flyout entro il viewport a 390px, nessun errore di pagina.
+- CI browser aggiunta al workflow Builder menu. **CI remota non ancora eseguita** al momento di questa nota; nessun merge o deploy. ROADMAP e DECISIONS invariati: sostituzione iconografica, nessuna regola di gameplay cambiata. Dettagli in [BUILDER-ICONS](../BUILDER-ICONS.md).
 ### 2026-11-20 — SHOP-L2-ROOMS: stanze del piano terra L2 (branch `feature/shops-l2-rooms`, NON MERGE)
 
 - **CODICE:** `settlement-shop-cutaway.js` `LAYOUTS_L2` (sette mestieri) e `domestic()`; `layout(R,out,kind,home)` sceglie le stanze L2 per le botteghe di casa e `LAYOUTS` per le avanzate L3; `grade` nella chiave della cache del cutaway.

@@ -1,7 +1,7 @@
 // Generated from content/codex/*.md. Do not edit; run node tools/export-codex-content.cjs.
 (function(root){root.ConquerWikiEditorial={
   "schemaVersion": 1,
-  "sourceDigest": "97584af0ba090c25483268daa1e40cd803573eed46d6ae68f5e8126812465189",
+  "sourceDigest": "d24b08cf2940aacf86c819a2173a77c8ccc2f1f0150c904d2607b652a258a05f",
   "pages": [
     {
       "id": "building:balivo",
@@ -8210,6 +8210,100 @@
       ],
       "text": [
         "Torre · Arma sommitale nessuno appartiene ai miglioramenti delle fortificazioni. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:tower"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:tower.upper.stone",
+      "kind": "entry",
+      "title": "Torre · Piano alto in pietra",
+      "aliases": [
+        "Torre · Piano alto in pietra"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Torre|Torre]] · Piano alto in pietra appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: l'ultimo piano della torre è in muratura come quelli sottostanti, e la sommità può avere merli, caditoie o tetto a falde.",
+          "tokens": [
+            {
+              "text": "Torre",
+              "id": "building:tower"
+            },
+            {
+              "text": " · Piano alto in pietra appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": l'ultimo piano della torre è in muratura come quelli sottostanti, e la sommità può avere merli, caditoie o tetto a falde."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Torre · Piano alto in pietra appartiene ai miglioramenti delle fortificazioni: l'ultimo piano della torre è in muratura come quelli sottostanti, e la sommità può avere merli, caditoie o tetto a falde."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:tower"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:tower.upper.timber",
+      "kind": "entry",
+      "title": "Torre · Piano alto a graticcio",
+      "aliases": [
+        "Torre · Piano alto a graticcio"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Torre|Torre]] · Piano alto a graticcio (framed top) appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: sulle torri quadrate in pietra W3 dal livello 2, l'ultimo piano è in legno e intonaco, leggermente a sbalzo, sempre con il tetto a falde. I piani sotto costano pietra o argilla, quello alto solo legno; resiste come la pietra ma il piano in legno brucia e, consumato, la torre perde quel piano.",
+          "tokens": [
+            {
+              "text": "Torre",
+              "id": "building:tower"
+            },
+            {
+              "text": " · Piano alto a graticcio (framed top) appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": sulle torri quadrate in pietra W3 dal livello 2, l'ultimo piano è in legno e intonaco, leggermente a sbalzo, sempre con il tetto a falde. I piani sotto costano pietra o argilla, quello alto solo legno; resiste come la pietra ma il piano in legno brucia e, consumato, la torre perde quel piano."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Torre · Piano alto a graticcio (framed top) appartiene ai miglioramenti delle fortificazioni: sulle torri quadrate in pietra W3 dal livello 2, l'ultimo piano è in legno e intonaco, leggermente a sbalzo, sempre con il tetto a falde. I piani sotto costano pietra o argilla, quello alto solo legno; resiste come la pietra ma il piano in legno brucia e, consumato, la torre perde quel piano."
       ],
       "related": [
         "category:upgrade",

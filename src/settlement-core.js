@@ -1430,6 +1430,8 @@ function winterPhase(){
   if(typeof calendarDateFromDay!=='function')return'snow';
   const d=calendarDateFromDay(),m=d.month;
   if(m!==11&&m>1)return'snow'; // DEV-forced winter outside Dec-Feb keeps the classic look.
+  // February: snow until the 21st, then the bare thaw for the last week of the month.
+  if(m===1)return d.day>=22?'thaw':'snow';
   const day=(m===11?0:m===0?31:62)+d.day-1;
   return WINTER_PHASES[Math.min(3,Math.floor(day/22.5))];
 }
@@ -1441,7 +1443,7 @@ function foliageLook(){
   const p=winterPhase();return p==='blizzard'?'blizzard':p==='snow'?'winter':'bare';
 }
 // Undergrowth of the woods: snowy, brown (early winter) or green.
-function undergrowthLook(){return isSnowGround()?'winter':winterPhase()==='bare'?'brown':'green'}
+function undergrowthLook(){return isSnowGround()?'winter':(winterPhase()==='bare'||winterPhase()==='thaw')?'brown':'green'}
 // Blizzard sprites: a hatched snow screen-tone (retino) laid only on the upward-facing (zenithal) band
 // of every branch/twig shape; the shapes keep their own colour elsewhere. Returns a canvas.
 function snowCapSprite(img,band=.12){

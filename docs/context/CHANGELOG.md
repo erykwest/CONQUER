@@ -4,7 +4,13 @@
 
 `feature/framed-top-towers`: le torri quadrate in pietra W3 (L2+) possono avere l'ultimo piano a graticcio, leggermente a sbalzo e sempre con tetto a falde; costa la torre un livello più bassa più 45 legno; resiste come la pietra ma il piano in legno brucia e, consumato, la torre perde quel piano. Nuova torre lignea a telaio H3: sopra la H2 un P3 a graticcio intonacato a sbalzo con tetto a falde senza parapetto. Nuova `qa/tower-framed-top-regression.cjs`.
 
+### 2026-11-24 — SPRING-FLORA · Primavera: fiori, sottobosco e disgelo (`feature/spring-flora-thaw`)
 
+Primavera più distinta dall'estate: un albero su tre ha la chioma fiorita (pallini di un colore per albero, dodici disposizioni per tipo, scelte per pianta); tutti i cespugli fioriscono con sprite dedicati. Sottobosco marrone a marzo, verde da aprile; fiori nei prati dal 1 marzo. Disgelo: da 22 febbraio sottobosco marrone e niente neve (fase `thaw` di `winterPhase`), neve fino al 21 febbraio; chiome spente dall'1 all'7 marzo. DEV: selettore del mese. ROADMAP e DECISIONS invariate: aggiustamento visivo e del calendario invernale, nessuna regola di gameplay nuova. QA: controlli sintattici e timeline verificata in locale; CI remota non ancora eseguita.
+
+### 2026-11-19 — UI-BUILDERICON-01 · Icone medievali geometriche nel Builder
+
+`buildericon` da `67a1b1e8`: sostituiti i glifi outline del Builder con 52 SVG specifici e icone complementari nere su trasparenza; superfici chiare e selezione arancione. Aggiunti al Lab 72 SVG in Interfaccia / Icone Builder; audit mirato 72/72 senza errori o avvisi e baseline aggiornata dopo revisione. Regressioni del Builder e QA Chromium desktop/mobile PASS in locale; CI remota da eseguire. Nessun merge/deploy; roadmap, contratti di gameplay e decisioni esistenti invariati.
 ### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2 come casa-bottega
 
 `feature/shops-l2-rooms` (base `feature/shops-l3-advanced`, #293): il cutaway delle botteghe L2 ha stanze proprie (`LAYOUTS_L2`): bancone su strada lontano dalla porta, angolo della famiglia (focolare con paiolo, tavolino, due sgabelli) sul fondo del lato bancone, postazione compatta del mestiere sul fondo del lato porta; passaggio dalla porta libero. Le case L3 tengono la bottega completa. Baseline del Lab aggiornata per i 21 render «Botteghe L2». ROADMAP invariata; DECISIONS: completa D-SHOP-L3-261119 (stanze L2).

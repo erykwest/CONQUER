@@ -9,7 +9,25 @@
 - [ ] Torre H3: posti arcieri e cutaway del P3 da definire.
 - [ ] Bilanciamento del costo in legno (45) e del tempo di costruzione; voce wiki/codex da aggiungere.
 
+## 2026-11-24 — SPRING-FLORA · Primavera e disgelo
 
+**FATTO sul branch `feature/spring-flora-thaw`, NON MERGE.**
+
+- [x] Alberi: un terzo fiorito; cespugli tutti fioriti; sprite con pallini, 12 varianti per tipo.
+- [x] Sottobosco marrone a marzo, verde da aprile; fiori nei prati dal 1 marzo.
+- [x] Febbraio: neve fino al 21, disgelo dal 22; chiome spente dall'1 al 7 marzo.
+- [ ] Verifica visiva a colori della transizione e della primavera (screenshot nel gioco).
+- [ ] CI remota e revisione della PR prima dell'integrazione in main.
+
+## 2026-11-19 — UI-BUILDERICON-01 · Iconografia architettonica del Builder
+
+**FATTO sul branch `buildericon`, NON MERGE.**
+
+- [x] 52 voci del Builder con SVG dedicati; categorie, opzioni e comandi nella stessa famiglia.
+- [x] Asset Lab, manifest e baseline delle 72 nuove voci; revisione del foglio e audit senza errori.
+- [x] QA del vero Builder in Chromium: categorie, caricamento SVG, gestori originali, selezione e viewport mobile.
+- [ ] CI remota e revisione della PR prima dell'integrazione in main.
+- Owner e dettaglio: [feature-backlog](../feature-backlog.md), [BUILDER-ICONS](../BUILDER-ICONS.md).
 ### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2
 
 **IMPLEMENTATO SU BRANCH `feature/shops-l2-rooms`, NON MERGE.**

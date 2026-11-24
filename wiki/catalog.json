@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceDigest": "c6924f24cda3ff76eb8962d0f99f94afd67fca595bf33f3359bfbdf34154dac7",
+  "sourceDigest": "b197a88e38b57dac420983b6a1d12d5c349cdec7d66b81802ca4919c5838c1a3",
   "catalog": {
     "schemaVersion": 1,
     "categories": [
@@ -1514,6 +1514,10 @@
               "pyramid",
               "gable",
               "hip"
+            ],
+            "upper": [
+              "stone",
+              "timber"
             ],
             "hoarding": [
               "off",
@@ -7942,6 +7946,100 @@
           "variant": "topWeapon",
           "value": "none",
           "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.upper.stone",
+        "key": "stone",
+        "label": "tower · upper · stone",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.upper"
+        },
+        "properties": {
+          "variant": "upper",
+          "value": "stone",
+          "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.upper.timber",
+        "key": "timber",
+        "label": "tower · upper · timber",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.upper"
+        },
+        "properties": {
+          "variant": "upper",
+          "value": "timber",
+          "default": false,
           "kind": "configuration"
         },
         "relations": [
