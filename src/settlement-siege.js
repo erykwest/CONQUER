@@ -876,10 +876,10 @@
   }
   const stumpCache=new Map();
   function stumpMesh(s){
-    const key=s.id+':'+s.ruinHeight+':'+(stumpClay(s)?'c':'s');let m=stumpCache.get(key);if(m)return m;
+    const key=s.id+':'+s.ruinHeight,ck=key+':'+(stumpClay(s)?'c':'s');let m=stumpCache.get(ck);if(m)return m;
     const pos=[],col=[];
     masonryPieces(s).forEach((base,i)=>stumpPiece(s,i?key+':'+i:key,base,pos,col));
-    m={pos,col,static:true};stumpCache.set(key,m);return m;
+    m={pos,col,static:true};stumpCache.set(ck,m);return m;
   }
   // Brick masonry (and the DEV clay palette) leaves a brick stump, as its falling blocks.
   function stumpClay(s){return State.visualPalette==='clay'||typeof masonryMaterial==='function'&&masonryMaterial(s)==='brick'}
@@ -942,11 +942,11 @@
   // the rim, rubble filling the top (towerRoofStyle/gateRoofStyle report 'broken').
   const crownCache=new Map();
   function crownMesh(s){
-    const g=groundOf(s),H=structureHeight(s),key=s.id+':'+H.toFixed(3)+':'+g.toFixed(3)+':'+(stumpClay(s)?'c':'s');
-    let m=crownCache.get(key);if(m)return m;
+    const g=groundOf(s),H=structureHeight(s),key=s.id+':'+H.toFixed(3)+':'+g.toFixed(3),ck=key+':'+(stumpClay(s)?'c':'s');   // seed: key; cache: + material
+    let m=crownCache.get(ck);if(m)return m;
     const pos=[],col=[];
     masonryPieces(s).forEach((base,i)=>crownPiece(i?key+':'+i:key,base,g,H,pos,col,stumpClay(s)));
-    m={pos,col,static:true};crownCache.set(key,m);return m;
+    m={pos,col,static:true};crownCache.set(ck,m);return m;
   }
   function crownPiece(key,base,g,H,pos,col,clay=false){
     const sideA=clay?'#8a4e36':'#6f665d',sideB=clay?'#a25d40':'#7d736b',topC=clay?'#a25d40':'#8a7f74';

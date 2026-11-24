@@ -32,7 +32,8 @@
 - [x] Variante, regole di esclusione, mesh 3D, cantiere, danni, clay, cutaway, Lab, codex.
 - [x] Torretta come piano a sé con una stanza in più, aperta nel cutaway.
 - [ ] La scala dalla stanza sotto sbuca sulla piazza nell'angolo della torre, non dentro la torretta.
-- [ ] Aggiornare la baseline del Lab con l'audit completo; costo dell'upgrade (oggi gratuito come il tetto interno).
+- [x] Baseline del Lab aggiornata.
+- [ ] Costo dell'upgrade (oggi gratuito come il tetto interno).
 
 ### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2
 
