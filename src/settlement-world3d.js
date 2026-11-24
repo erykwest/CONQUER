@@ -1146,6 +1146,19 @@
           const ground=terrainElevation({x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2}),o=outward(edge,center);
           for(let i=0;i<count;i++){const off=(i+.5)*cell-edge.length/2;if(!window.ConquerRoomExterior?.takesWindow(s,side,z,off))onEdge(edge,z,Math.min(aw,cell*.82),ah,key,off,ground,o)}
         }
+        // P0 courtyard face: a door in the middle bay, paired windows in the others (builtGroundFront).
+        const gf=builtGroundFront(s);
+        if(gf){
+          const ground=terrainElevation({x:(gf.edge.a.x+gf.edge.b.x)/2,y:(gf.edge.a.y+gf.edge.b.y)/2}),o=outward(gf.edge,center);
+          for(const bay of gf.bays){
+            if(bay.door){onEdge(gf.edge,BUILT_DOOR_H/2+.02,BUILT_DOOR_W,BUILT_DOOR_H,'towerDoor',bay.off,ground,o);continue}
+            for(const sg of [-1,1]){
+              const off=bay.off+sg*BUILT_PAIR_GAP;
+              onEdge(gf.edge,BUILT_PAIR_Z,BUILT_PAIR_W,BUILT_PAIR_H,'gothicL1',off,ground,o);
+              lightWindow(gf.edge,BUILT_PAIR_Z,BUILT_PAIR_W,BUILT_PAIR_H,off,ground,o,'gothicL1');
+            }
+          }
+        }
         // W1 portico: carved loggia in the castle body (builtLoggia). The W2 hall keeps the arcade decal.
         const arcade=!isBuiltPortico(s)&&builtArcadeLayout(s);
         if(arcade){

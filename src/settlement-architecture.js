@@ -122,8 +122,16 @@ function builtTimberFacade(s){
       f.edge.index=i;out.push(f);
     }
   }
+  // Ends: the storey's frame, and the gable over it framed too (king post and two struts
+  // up to the rafters, which run from the eaves at the corners to the ridge in the middle).
+  const R=builtRoofGeometry(s)?.ridgeH??z1,t=HOUSE_TIMBER_W/2;
   for(const i of [1,3]){
-    const a=pts[i],b=pts[(i+1)%4],f=timberStoreyFacade([a,b,b,a],z0,z1,()=>false,false)[0];
+    const a=pts[i],b=pts[(i+1)%4],f=timberStoreyFacade([a,b,b,a],z0,z1,()=>false,false)[0],w=Math.hypot(b.x-a.x,b.y-a.y);
+    if(R>z1+.1){
+      const rafter=x=>z1+(R-z1)*(1-2*Math.abs(x)/w);
+      f.beams.push([{off:0,z:z1},{off:0,z:R-t*2}]);
+      for(const sg of [-1,1])f.beams.push([{off:0,z:z1+(R-z1)*.12},{off:sg*w*.25,z:rafter(w*.25)-t}],[{off:sg*(w/2-t*2),z:z1},{off:sg*(w/2-t*2),z:rafter(w/2-t*2)-t}]);
+    }
     f.edge.index=i;out.push(f);
   }
   return out;
@@ -548,6 +556,14 @@ function builtLoggiaStandPoint(s,t){
 }
 // A fixed count (wide-hall lancets) drops windows whose bay could not hold them undistorted
 // (drawn width = min(asset width, bay * .82)).
+// P0 of a standard W1 section (stone or with the timber P1): on the courtyard face, bays of about
+// 1.25 U, a door in the middle bay and a pair of windows side by side in each of the others.
+function builtGroundFront(s){
+  if(!s||s.type!=='built'||isLonghouse(s)||isWideBuilt(s)||isBuiltPortico(s)||(typeof isLeanTo==='function'&&isLeanTo(s)))return null;
+  const side=-wallExteriorSide(s),edge=linearFacadeEdge(s,side),n=Math.max(1,Math.round(edge.length/1.25)),cell=edge.length/n,door=Math.floor(n/2);
+  return{side,edge,bays:Array.from({length:n},(_,k)=>({off:(k+.5)*cell-edge.length/2,door:k===door}))};
+}
+const BUILT_PAIR_GAP=.13,BUILT_PAIR_W=.22,BUILT_PAIR_H=.46,BUILT_PAIR_Z=.95,BUILT_DOOR_W=.46,BUILT_DOOR_H=.84;
 function builtWindowCount(edge,density,fixed,assetWidth=.24){
   return fixed?clamp(Math.floor(edge.length*.82/assetWidth),1,fixed):Math.max(1,Math.round(edge.length*density));
 }
@@ -563,7 +579,8 @@ function builtWindowRows(s){
     if(l<2)return arcade?slits:[lancet(1.30),...slits];
     return[arcade?[inside,upperZ,.42,'gothicL3',.92,.78,true]:lancet(2.12),...slits,[outside,upperZ,.72,'arrowSlit',.23,.58,false]];
   }
-  const rows=[[outside,lowerZ,.72,'arrowSlit',.23,.58,false]];
+  // Standard W1 sections: no slits at P0, the ground floor opens on the courtyard (builtGroundFront).
+  const rows=builtGroundFront(s)?[]:[[outside,lowerZ,.72,'arrowSlit',.23,.58,false]];
   // Timber P1: its frame carries its own windows (builtTimberFacade).
   if(l>=2&&typeof builtTimberUpper==='function'&&builtTimberUpper(s))return rows;
   if(l>=2)rows.unshift([inside,upperZ,.42,'gothicL3',.92,.78,true]),rows.push([outside,upperZ,.72,'arrowSlit',.23,.58,false]);
