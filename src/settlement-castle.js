@@ -230,8 +230,8 @@ function structureHeight(s){
     if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?2.35:woodTowerStyle(s)==='frameTower'?3.78:(woodTowerRoof(s)==='pitched'?2.95:2.32);
     const l=structureLevel(s),t=towerTier(s);return [2.35,3.55,4.75,5.95][l-1]+(t-1)*.12
   }
-  // The small gate stands just above the curtain (H2 walls are 2.35): L1 passage only, L2 one room over it.
-  if(s.type==='gate')return isWoodGate(s)?1.94:gateTimberUpper(s)?GATE_TIMBER_EAVES:(isSmallGate(s)?[2.4,3.6]:[2.8,4.0,5.2])[structureLevel(s)-1];
+  // The small gate stands just above the curtain (H2 walls are 2.35, the small gate 0.30 over it): L1 passage only, L2 one room over P1 (2.35).
+  if(s.type==='gate')return isWoodGate(s)?1.94:gateTimberUpper(s)?GATE_TIMBER_EAVES:(isSmallGate(s)?[2.65,3.85]:[2.8,4.0,5.2])[structureLevel(s)-1];
   // Wall-walks sit on the stone tower storeys (towerUpperFloorZ): H1 = P1, H2 = P2.
   if(s.type==='wall')return [TOWER_P1_Z,TOWER_P1_Z+TOWER_STOREY_H][structureLevel(s)-1];
   if(s.type==='palisade')return 1.15;
@@ -711,11 +711,13 @@ function cutawayFloorLevels(s){
   }
   if(level<=1)return floors;
   if(gateTimberUpper(s))return[...floors,{z:GATE_TIMBER_FLOOR,material:'wood'}];   // the frame's own floor
-  // A gate's storeys line up with those of the stone tower flanking it (one floor level across),
-  // above the passage: the gate takes the tower floors over the H2 walk.
-  const flank=s.type==='gate'?State.structures.find(o=>o.parentTowerId===s.id&&o.type==='tower'&&!isWoodTower(o)&&!cutawaySpiralStair(o)):null;
-  const fz=flank?cutawayFloorLevels(flank).filter(f=>f.z>=CURTAIN_WALK_Z-.01):[];
-  for(let i=1;i<level;i++)floors.push({z:fz[i-1]&&fz[i-1].z<h-.6?fz[i-1].z:h*i/level,material:'wood'});
+  // A stone gate's storeys sit on the tower grid above the passage: P1 at the H2 walk (2.35),
+  // then 1.20 a storey, so the wall-walks and a flanking stone tower share its floors.
+  if(s.type==='gate'){
+    for(let i=1;i<level;i++){const z=CURTAIN_WALK_Z+TOWER_STOREY_H*(i-1);floors.push({z:z<h-.6?z:h*i/level,material:'wood'})}
+    return floors;
+  }
+  for(let i=1;i<level;i++)floors.push({z:h*i/level,material:'wood'});
   return floors;
 }
 // Floor-by-floor cutaway, shared by the castle and the civic buildings (settlement-civic3d.js):

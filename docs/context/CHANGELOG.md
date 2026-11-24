@@ -1,8 +1,12 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-24 — WALL-STAIRS-261124 · Scale del camminamento a gradini, addossati
+
+`fix/wall-heights-follow-towers`: le scale del camminamento non sono più un modello scalato con l'altezza del muro: gradini pieni di alzata fissa (~0,18 U, pedata 0,28), pianerottolo d'arrivo a filo della sommità del muro. H1: una rampa lungo il muro. H2: rampa sul lato interno, pianerottolo intermedio a metà altezza esteso fino al muro, rampa di ritorno contro il muro che parte dal bordo del pianerottolo. Colori dal muro (PAL.stone mappato dal renderer: famiglie di pietra, clay, mattoni). Niente più corrimano sopra il cammino. L'addossato è rifiutato su un muro che ha la scala (stessa faccia interna).
+
 ### 2026-11-24 — WALL-GRID-261124 · I livelli torre comandano le altezze dei muri
 
-`fix/wall-heights-follow-towers`: le torri in pietra hanno una griglia unica di piani: piano terra basso, P1 a 1,15 e poi piani da 1,20 (1,15 / 2,35 / 3,55 / 4,75), terrazza all'altezza della torre (invariata). Una torre di livello L ha L+1 piani nel cutaway. I muri prendono il camminamento dalla griglia: H1 = P1 (1,15, invariato), H2 = P2 = terrazza della torre L1 (2,35, prima 2,10). Rimosso il ballatoio interno delle porte H1 (landingSpecs/landingsWorld); ogni piano senza stanza ha comunque la sua scala a pioli. Torre d'assedio L2 alzata a 2,35 (fitAssaultTowers in settlement-siege-engines3d.js; build_siege_engines.py aggiornato). Porte: i piani sopra il passaggio seguono quelli della torre sopra il camminamento H2.
+`fix/wall-heights-follow-towers`: le torri in pietra hanno una griglia unica di piani: piano terra basso, P1 a 1,15 e poi piani da 1,20 (1,15 / 2,35 / 3,55 / 4,75), terrazza all'altezza della torre (invariata). Una torre di livello L ha L+1 piani nel cutaway. I muri prendono il camminamento dalla griglia: H1 = P1 (1,15, invariato), H2 = P2 = terrazza della torre L1 (2,35, prima 2,10). Rimosso il ballatoio interno delle porte H1 (landingSpecs/landingsWorld); ogni piano senza stanza ha comunque la sua scala a pioli. Torre d'assedio L2 alzata a 2,35 (fitAssaultTowers in settlement-siege-engines3d.js; build_siege_engines.py aggiornato). Porte: i piani sopra il passaggio seguono quelli della torre sopra il camminamento H2. Verifica visiva di tutte le forme: anche le semitorri seguono la griglia (prima H·k/L), le porte in pietra hanno P1 a 2,35 e piani da 1,20 anche senza torre accanto, la porta piccola sale a 2,65 (L1) / 3,85 (L2) per restare 0,30 sopra il muro H2.
 
 ### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2 come casa-bottega
 

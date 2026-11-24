@@ -28,6 +28,8 @@
     if(underConstruction(w))return{ok:false,reason:'The wall is still under construction'};
     if(structureLevel(w)<2)return{ok:false,reason:'Lean-to needs an H2 wall: an H1 wall is lower than its eaves'};
     if(State.structures.some(o=>isLeanTo(o)&&o.leanWallId===w.id))return{ok:false,reason:'This wall already has a lean-to'};
+    // The lean-to and the wall-walk stair both stand on the inner face: one of the two per wall.
+    if(w.wallStair)return{ok:false,reason:'The wall has a wall-walk stair on its inner face: remove the stair first'};
     const dx=w.b.x-w.a.x,dy=w.b.y-w.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L,nx=-uy,ny=ux;
     const side=wallExteriorSide(w),off=(Number(w.width)||.5)/2+TYPES.built.width/2;
     const pa=w.aSnap?TOWER_PAD:0,pb=w.bSnap?TOWER_PAD:0,length=L-pa-pb;
