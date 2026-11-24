@@ -440,14 +440,14 @@ function towerRoofStyle(s){
 // Upgrade: a mangonel or a ballista on the deck of a medium (T2) stone tower without a roof,
 // at any height (drawn by settlement-tower-weapons.js). Not on a broken crown.
 // The inner roof takes the deck, so a tower carries one or the other.
-function towerTopWeaponAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===2&&!['pitched','broken'].includes(towerRoofStyle(s))&&!towerHoardingMounted(s)&&structureVariant(s,'innerRoof')!=='on'&&structureVariant(s,'upInnerTower')==='off'}
+function towerTopWeaponAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===2&&!['pitched','broken'].includes(towerRoofStyle(s))&&!towerHoardingMounted(s)&&structureVariant(s,'innerRoof')!=='on'&&!['round','square'].includes(structureVariant(s,'upInnerTower'))}
 // Inner roof (BC-251105-05): on a medium or large (T2+) stone tower with a crenellated or
 // machicolated top, a roof set back inside the merlons on a low kerb, the wall-walk left free
 // between them. Geometry: towerInnerRoofGeometry (settlement-population.js). It is not a pitched
 // roof: no room under it, so the Dovecote, the mews and the alarm bell keep asking for 'pitched'.
 function towerInnerRoofAllowed(s){
   return !!s&&s.type==='tower'&&!isWoodTower(s)&&s.shape!=='half'&&towerTier(s)>=2&&['battlement','machicolation'].includes(towerRoofStyle(s))
-    &&structureVariant(s,'topWeapon')==='none'&&structureVariant(s,'signalFire')!=='pyre'&&structureVariant(s,'upInnerTower')==='off'&&(typeof towerInnerRoofGeometry!=='function'||!!towerInnerRoofGeometry(s,true));
+    &&structureVariant(s,'topWeapon')==='none'&&structureVariant(s,'signalFire')!=='pyre'&&!['round','square'].includes(structureVariant(s,'upInnerTower'))&&(typeof towerInnerRoofGeometry!=='function'||!!towerInnerRoofGeometry(s,true));
 }
 function towerInnerRoofMounted(s){return towerInnerRoofAllowed(s)&&structureVariant(s,'innerRoof')==='on'}
 // Up inner tower (torretta centrale): W2/W3 stone towers with a crenellated or machicolated deck,
