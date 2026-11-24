@@ -1,6 +1,6 @@
 # Livello 2 — Stato tecnico e prove
 
-### 2026-11-24 — TOWER-HILL-BASES: torri sul bordo collina e basamenti ()
+### 2026-11-24 — TOWER-HILL-BASES: torri sul bordo collina e basamenti (`fix/tower-hill-bases`)
 
 - Porta delle torri su pendio rivolta verso la cima e sul pianoro (regola di piazzamento, D-TOWER-SUMMIT-261124); pavimento letto sotto il corpo.
 - Contrafforti e scarpa 10° che scendono fino al terreno; scarpa aperta davanti alla porta; contrafforti delle torri −30%.
