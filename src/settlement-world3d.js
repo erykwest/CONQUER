@@ -858,7 +858,7 @@
   const ATLAS_TILE=128,ATLAS_COLS=8;
   function buildTreeAtlas(){
     if(!forestTreeSpritesReady)return null;
-    const season=(typeof foliageLook==='function'?foliageLook():State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer');
+    const season=treesBare()?'bare':(typeof foliageLook==='function'?foliageLook():State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer');
     const tiles=[];
     // Autumn reuses the summer greens for stage zero; later stages use six warm tones.
     // Atlas pixels remain static throughout the season: only per-tree UVs advance.
@@ -868,9 +868,14 @@
       add(forestTreeSprites.summer);
       add(forestTreeSprites.autumn,FOREST_CANOPY_PALETTES.summer.length);
     }else add(forestTreeSprites[season==='bare'?'winter':season]);
-    // Hedge bushes (drawUrbanHedge): 920x580 sprites.
-    (window.boundaryBushSprites?.[season]||(typeof boundaryBushSprites!=='undefined'?boundaryBushSprites[season]:[])||[])
+    // Spring: summer canopies for most trees, plus one flowering canopy per shape for the ~1/3 in bloom.
+    if(State.season==='spring'&&!treesBare())add(forestTreeSprites.spring,FOREST_CANOPY_PALETTES.summer.length);
+    // Hedge bushes (drawUrbanHedge): 920x580 sprites; the bush set follows the bush season.
+    const bushKey=typeof bushSeasonKey==='function'?bushSeasonKey():season;
+    (window.boundaryBushSprites?.[bushKey]||(typeof boundaryBushSprites!=='undefined'?boundaryBushSprites[bushKey]:[])||[])
       .forEach((img,shape)=>img&&tiles.push({key:'bush:'+shape,img,aspect:580/920}));
+    // Spring: every bush shape also has SPRING_VARIANTS flowering layouts; bushes pick one per instance.
+    if(bushSeasonKey()==='spring')for(const shape of BOUNDARY_BUSH_ASSETS.keys())(boundaryBushSpringVariants[shape]||[]).forEach((img,v)=>tiles.push({key:'bushv:'+shape+':'+v,img,aspect:580/920}));
     // Mountain pines (96x128 canvases), two tones.
     if(typeof mountainPineSprite==='function')for(const v of [0,1])tiles.push({key:'pine:'+v,img:mountainPineSprite(v,season==='winter'||season==='blizzard'),aspect:1,pine:true});
     const rows=Math.ceil(tiles.length/ATLAS_COLS)||1,c=document.createElement('canvas');
@@ -879,16 +884,22 @@
       // Pines keep their 3:4 shape centred in the square tile.
       if(t.pine)g.drawImage(t.img,x+ATLAS_TILE*.125,y,ATLAS_TILE*.75,h);else g.drawImage(t.img,x,y,ATLAS_TILE,h);
       map.set(t.key,[x/c.width,y/c.height,(x+ATLAS_TILE)/c.width,(y+h)/c.height])});
-    return{canvas:c,map,season};
+    return{canvas:c,map,season,spring:State.season==='spring'&&!treesBare()};
+  }
+  // Atlas key of the bush sprite an instance uses: a flowering variant in spring, else the shape's sprite.
+  function bushTileKey(shape,p){
+    if(bushSeasonKey()==='spring'&&boundaryBushSpringVariants[shape])return 'bushv:'+shape+':'+springBushVariantIndex(p);
+    return 'bush:'+shape;
   }
   function buildTrees(atlas){
     const v=[];if(!atlas)return new Float32Array(0);
-    const groves=(State.environment||[]).filter(f=>f.type==='forest').map(f=>forestTreeLayout(f));
+    const groves=(State.environment||[]).filter(f=>f.type==='forest').map(f=>typeof forestTreesForSeason==='function'?forestTreesForSeason(f):forestTreeLayout(f));
     groves.push(urbanLotCornerTrees());                  // single trees on plot corners
     for(const trees of groves){
       for(const t of trees){
         const stage=atlas.season==='autumn'?autumnFoliageStage(t):0;
-        const canopyIndex=['winter','bare','blizzard'].includes(atlas.season)?0:
+        const flower=atlas.spring&&springForestTreeKept(t);
+        const canopyIndex=flower?FOREST_CANOPY_PALETTES.summer.length+springTreeVariant(t):['winter','bare','blizzard'].includes(atlas.season)?0:
           atlas.season==='autumn'&&stage>0?FOREST_CANOPY_PALETTES.summer.length+stage-1:t.colorIndex;
         const uv=atlas.map.get(t.shapeIndex+':'+canopyIndex);if(!uv)continue;
         let [u0,v0,u1,v1]=uv;if(t.flip)[u0,u1]=[u1,u0];
@@ -902,7 +913,7 @@
     for(const f of State.environment||[]){
       if(f.type!=='forest'||typeof forestShrubLayout!=='function')continue;
       for(const b of forestShrubLayout(f)){
-        const uv=atlas.map.get('bush:'+b.shape);if(!uv)continue;
+        const uv=atlas.map.get(bushTileKey(b.shape,b.p));if(!uv)continue;
         let [u0,v0,u1,v1]=uv;if(b.flip)[u0,u1]=[u1,u0];
         const hr=580/920*b.scale,C=[[-.5,-.97*hr,u0,v0],[.5,-.97*hr,u1,v0],[.5,.03*hr,u1,v1],[-.5,.03*hr,u0,v1]];
         for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(b.p.x,b.p.y,b.z+.01,cx,cy,b.width*(b.visualScale??1),u,w)}
@@ -932,7 +943,7 @@
     for(const e of urbanFenceSegments()){
       if(e.material!=='hedge')continue;
       for(const b of urbanHedgeBushes(e)){
-        const uv=atlas.map.get('bush:'+b.shape);if(!uv)continue;
+        const uv=atlas.map.get(bushTileKey(b.shape,b.p));if(!uv)continue;
         const [u0,v0,u1,v1]=uv,hr=580/920*(b.scale||1),z=terrainElevation(b.p)+.01;
         const C=[[-.5,-.97*hr,u0,v0],[.5,-.97*hr,u1,v0],[.5,.03*hr,u1,v1],[-.5,.03*hr,u0,v1]];
         for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(b.p.x,b.p.y,z,cx,cy,b.width,u,w)}
@@ -1619,7 +1630,7 @@
     // whole ground. Season and wetness re-bake the whole ground too. Structure and urban-lot edits only
     // re-bake the tiles they touch, one per frame (pumpGroundTiles).
     const meshSig=[season,State.stonePaletteId,State.biome,State.relief?.seed,terraformSig,(State.environment||[]).length,envRev].join('|');
-    const gSig=[meshSig,wet()].join('|');
+    const gSig=[meshSig,wet(),typeof forestGroundKey==='function'?forestGroundKey():'',typeof springFlowersOn==='function'?springFlowersOn():''].join('|');
     const tSig=[gSig,groundLotsSignature(),structuresSig('ground')].join('|');
     if(S.sig.terrain!==tSig){
       const a=performance.now(),items=groundItems();
@@ -1687,8 +1698,8 @@
       }
       S.buf.scatter=v.b;S.buf['scatter#n']=v.n;
     }
-    const atlasSig=[season,forestTreeSpritesReady,
-      Object.keys((typeof boundaryBushSprites!=='undefined'&&boundaryBushSprites[(typeof foliageLook==='function'?foliageLook():State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer')])||{}).length].join('|');
+    const atlasSig=[season,treesBare(),forestTreeSpritesReady,
+      Object.keys((typeof boundaryBushSprites!=='undefined'&&boundaryBushSprites[bushSeasonKey()])||{}).length].join('|');
     if(S.sig.treeAtlas!==atlasSig){
       S.treeAtlas=buildTreeAtlas();
       if(S.treeAtlas)uploadTexture(gl,'atlas',S.treeAtlas.canvas);

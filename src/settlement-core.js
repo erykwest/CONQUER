@@ -1412,6 +1412,8 @@ function winterPhase(){
   if(typeof calendarDateFromDay!=='function')return'snow';
   const d=calendarDateFromDay(),m=d.month;
   if(m!==11&&m>1)return'snow'; // DEV-forced winter outside Dec-Feb keeps the classic look.
+  // February: snow until the 21st, then the bare thaw for the last week of the month.
+  if(m===1)return d.day>=22?'thaw':'snow';
   const day=(m===11?0:m===0?31:62)+d.day-1;
   return WINTER_PHASES[Math.min(3,Math.floor(day/22.5))];
 }

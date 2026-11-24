@@ -238,7 +238,7 @@ function woodedSurfaceFace(vertices,forests){
   const dx=((b.z-a.z)*vy-(c.z-a.z)*uy)/det,dy=(ux*(c.z-a.z)-vx*(b.z-a.z))/det;
   const z=p=>a.z+dx*(p.x-a.x)+dy*(p.y-a.y),poly=projectClippedTerrain(vertices);
   if(poly.length<3||!screenPolygonVisible(poly,8))return;
-  const bounds=environmentPolygonBounds(vertices),winter=(typeof isSnowGround==='function'?isSnowGround():State.season==='winter');
+  const bounds=environmentPolygonBounds(vertices),winter=(typeof isSnowGround==='function'?isSnowGround():State.season==='winter'),groundKey=forestGroundKey();
   const light=clamp((1-dx*.48-dy*.72)/Math.sqrt(1+dx*dx+dy*dy),.42,1.28);
   for(const f of forests){
     const box=environmentPolygonBounds(f.points);
@@ -249,7 +249,7 @@ function woodedSurfaceFace(vertices,forests){
     for(const hole of f.holes||[]){const h=environmentPolygonBounds(hole);if(h.maxX<bounds.minX||h.minX>bounds.maxX||h.maxY<bounds.minY||h.minY>bounds.maxY)continue;ctx.beginPath();ctx.rect(-1e5,-1e5,2e5,2e5);hole.forEach((p,i)=>{const q=w2sRaw(p,z(p));i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)});ctx.closePath();ctx.clip('evenodd')}
     // Keep all the original undergrowth detail; shade over it per terrain face.
     ctx.fillStyle=getForestGroundPattern();ctx.fillRect(-1e4,-1e4,2e4,2e4);
-    ctx.fillStyle=winter?'rgba(238,247,234,.10)':'rgba(104,147,66,.16)';ctx.fillRect(-1e4,-1e4,2e4,2e4);
+    ctx.fillStyle=groundKey==='winter'?'rgba(238,247,234,.10)':groundKey==='brown'?'rgba(120,92,52,.13)':'rgba(104,147,66,.16)';ctx.fillRect(-1e4,-1e4,2e4,2e4);
     ctx.globalAlpha=Math.abs(1-light)*.8;ctx.fillStyle=light<1?'#000':'#fff';ctx.fillRect(-1e4,-1e4,2e4,2e4);ctx.restore();
   }
 }
@@ -398,7 +398,7 @@ function drawTerrain(){
       :(mark.light?'rgba(84,105,55,.12)':'rgba(137,120,70,.08)');
     ctx.beginPath();ctx.ellipse(p.x,p.y,r*1.7,r,0,0,Math.PI*2);ctx.fill();
   }
-  if(State.season==='spring')drawSpringFlowerClusters();
+  if(springFlowersOn())drawSpringFlowerClusters();
   ctx.restore();
 }
 // Mountain facet tone by its outward direction against a north-west light (world space, so the
@@ -559,7 +559,7 @@ const FOREST_CANOPY_PALETTES={
   // Six successive autumn tones; summer's five greens remain unchanged at day 1.
   autumn:['#98ac43','#d3c84a','#edbc3d','#df8a32','#bb4834','#76513a']
 };
-const forestTreeSprites={summer:[],autumn:[],winter:[],blizzard:[]};
+const forestTreeSprites={summer:[],autumn:[],winter:[],blizzard:[],spring:[]};
 let forestTreeSpritesReady=false;
 // Calendar-driven, deterministic foliage: September 1 = 0, November 30 = 90.
 // Outside that range, a forced DEV autumn shows a mid-season preview.
@@ -646,9 +646,15 @@ async function loadForestTreeSprites(){
       const bare=buildForestWinterSvg(sources[shape],shape);
       makeSprite('winter',shape,0,bare);
       makeSprite('blizzard',shape,0,bare);
+      // Flowering canopy (for about a third of the trees in spring): summer green, then blossoms.
+      makeSprite('spring',shape,0,buildForestSvg(sources[shape],FOREST_CANOPY_PALETTES.summer[2],true));
     }
     await Promise.all(jobs);
     forestTreeSprites.blizzard.forEach(set=>{if(set?.[0])set[0]=snowCapSprite(set[0])});
+    if(typeof paintSpringBlossoms==='function')for(let shape=0;shape<sources.length;shape++){
+      const img=forestTreeSprites.spring[shape]?.[0];
+      if(img&&img.naturalWidth)forestTreeSprites.spring[shape]=Array.from({length:SPRING_VARIANTS},(_,v)=>paintSpringBlossoms(img,shape,0.6,v));
+    }
     forestTreeSpritesReady=true;
     invalidateSceneCache('landscape');
     if(typeof draw==='function')draw();
@@ -662,7 +668,9 @@ function drawTree(tree){
   if(!forestTreeSpritesReady||!screenPointVisibleRaw(tree.p,tree.z||0,44))return false;
   const look=(typeof foliageLook==='function'?foliageLook():State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer'),season=look==='bare'?'winter':look;
   const stage=season==='autumn'?autumnFoliageStage(tree):0;
-  const img=season==='autumn'&&stage>0
+  const bare=treesBare();
+  const flower=!bare&&State.season==='spring'&&springForestTreeKept(tree);
+  const img=bare?forestTreeSprites.winter?.[tree.shapeIndex]?.[0]:flower?forestTreeSprites.spring?.[tree.shapeIndex]?.[springTreeVariant(tree)]:season==='autumn'&&stage>0
     ? forestTreeSprites.autumn?.[tree.shapeIndex]?.[stage-1]
     : forestTreeSprites[season==='autumn'?'summer':season]?.[tree.shapeIndex]?.[season==='winter'||season==='blizzard'?0:tree.colorIndex];
   if(!img)return false;
@@ -680,8 +688,18 @@ function drawTree(tree){
 }
 const forestGroundPatternCanvases={};
 const forestGroundPatternsByContext=new WeakMap();
+// Meadow flowers start in March, not on the bare late-February thaw.
+function springFlowersOn(){return State.season==='spring'&&calendarDateFromDay().month>=2}
+// Undergrowth key: winter is snow; the FIRST spring month (March) keeps a bare brown floor
+// that greens from the SECOND month on; every other green season uses the summer undergrowth.
+// Winter: snow only while main's winterPhase says so; the bare winter floor and the thaw are brown.
+function forestGroundKey(){
+  if(State.season==='winter')return(typeof isSnowGround==='function'&&isSnowGround())?'winter':'brown';
+  if(State.season==='spring'&&calendarDateFromDay().month===2)return'brown';
+  return'green';
+}
 function getForestGroundPattern(){
-  const key=(typeof undergrowthLook==='function'?undergrowthLook():State.season==='winter'?'winter':'green');
+  const key=forestGroundKey();
   if(!forestGroundPatternCanvases[key]){
     const off=document.createElement('canvas');
     off.width=72;off.height=72;
@@ -749,7 +767,7 @@ function drawForestGround(f,hulls=null){
   ctx.closePath();
   ctx.fillStyle=getForestGroundPattern()||((typeof isSnowGround==='function'?isSnowGround():State.season==='winter')?'#dfe5e0':'#1d3218');
   ctx.fill();
-  ctx.strokeStyle=(typeof isSnowGround==='function'?isSnowGround():State.season==='winter')?'rgba(126,139,130,.45)':'rgba(82,116,59,.58)';
+  ctx.strokeStyle=(k=>k==='winter'?'rgba(126,139,130,.45)':k==='brown'?'rgba(120,95,58,.52)':'rgba(82,116,59,.58)')(forestGroundKey());
   ctx.lineWidth=1.15;
   ctx.stroke();
   // Clearing outlines (not grooves or banks) read as the woodland edge.
@@ -793,6 +811,17 @@ function forestTreeLayout(f,bounds=null){
   const trees=continuousForestTrees(f);
   forestTreeLayoutCache.set(cacheKey,trees);return trees;
 }
+// Spring reads as a sparser, just-leafing wood: only about a third of the forest trees are
+// drawn. Mountain pines live on their own layout (mountainPineLayout) and are never thinned.
+// Deterministic per seed, so the same third stands in every spring and across 2D/3D paths.
+function springForestTreeKept(tree){
+  return (biomeHash('spring-thin|'+State.seed+'|'+Math.round(tree.p.x*16)+'|'+Math.round(tree.p.y*16))>>>0)%3===0;
+}
+function forestTreesForSeason(f,bounds=null){return forestTreeLayout(f,bounds)}
+// Which of the SPRING_VARIANTS flowering layouts a tree uses (stable per tree, so it never shimmers).
+function springTreeVariant(tree){
+  return biomeHash('tv|'+State.seed+'|'+Math.round(tree.p.x*16)+'|'+Math.round(tree.p.y*16))%SPRING_VARIANTS;
+}
 // Real bush sprites, independently seeded and counted from the tree grid.
 const FOREST_SHRUB_SPACING=7.5/Math.SQRT2; // twice the undergrowth bushes
 function forestShrubLayout(f){
@@ -812,8 +841,8 @@ function forestShrubLayout(f){
 }
 function drawForestShrub(shrub){
   if(!forestTreeSpritesReady)return false; // 3D ground bake uses upright billboards instead.
-  const season=(typeof foliageLook==='function'?foliageLook():State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer');
-  const img=typeof boundaryBushSprites!=='undefined'?boundaryBushSprites[season]?.[shrub.shape]:null;
+  const season=typeof bushSeasonKey==='function'?bushSeasonKey():(State.season==='autumn'?'autumn':State.season==='winter'?'winter':'summer');
+  const img=typeof boundaryBushSprites!=='undefined'?((season==='spring'?springBushImg(shrub.shape,shrub.p):boundaryBushSprites[season]?.[shrub.shape])||boundaryBushSprites.summer?.[shrub.shape]):null;
   if(!img)return false;
   const base=w2sRaw(shrub.p,shrub.z),width=shrub.width*(shrub.visualScale??1)*U*State.view.scale,height=width*580/920*shrub.scale;
   ctx.save();ctx.translate(base.x,base.y);if(shrub.flip)ctx.scale(-1,1);ctx.drawImage(img,-width/2,-height*.97,width,height);ctx.restore();return true;
@@ -828,7 +857,7 @@ function drawForestMask(f,occluders=null){
   // Without sprites (the WebGL ground bake) neither trees nor shrubs paint anything.
   if(!forestTreeSpritesReady||!forestLikelyVisible(f))return;
   const tier=landscapeDetailTier();
-  const trees=[...forestTreeLayout(f)
+  const trees=[...forestTreesForSeason(f)
     .filter((_,i)=>tier===0?i%2===0:tier===1?i%4!==3:true)
     .filter(tree=>screenPointVisibleRaw(tree.p,tree.z,50)),...forestShrubLayout(f).filter(b=>screenPointVisibleRaw(b.p,b.z,30))]
     .slice()

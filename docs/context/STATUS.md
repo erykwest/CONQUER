@@ -1,5 +1,14 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-24 — SPRING-FLORA: primavera e disgelo (`feature/spring-flora-thaw`)
+
+- **IMPLEMENTATO SUL BRANCH, NON MERGE.** Base `origin/main` `992d1c36`.
+- Alberi: un terzo con chioma fiorita (sprite primaverile con pallini, 12 varianti per tipo). Cespugli: tutti fioriti (12 varianti per tipo). Pini di montagna esclusi.
+- Sottobosco: marrone a marzo, verde da aprile (`forestGroundKey`). Fiori nei prati dal 1 marzo (`springFlowersOn`).
+- Inverno: `winterPhase` di `main` con febbraio riarticolato: neve fino al 21, disgelo (`thaw`, sottobosco marrone, alberi spogli) dal 22. Chiome spente dall'1 al 7 marzo (`treesBare`).
+- **PROVE LOCALI:** controlli di sintassi su tutti i file toccati; timeline verificata in locale (15 gen → 20 mar). Errori di console preesistenti in `settlement-codex.js`/`codex-catalog.js` (`CYCLE`), non legati a questa modifica.
+- **CI remota non ancora eseguita**; nessun merge o deploy.
+
 ### 2026-11-19 — UI-BUILDERICON-01: icone medievali del Builder (`buildericon`)
 
 - **IMPLEMENTATO SUL BRANCH, NON MERGE.** Base `origin/main` aggiornata `67a1b1e8`.
