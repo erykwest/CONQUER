@@ -307,8 +307,9 @@ function stoneTowerSplayRing(s,off){
 // Stepped Gothic buttress against a wall point p (u along the wall, o outward), h tall:
 // deep plinth, sloped weathering, shallower upper stage, final slope back into the wall.
 // Frustum pieces {bottom,top,z0,z1}; shared by wide halls and buttressed stone towers.
-function steppedButtressPieces(p,u,o,h,w=.22){
-  const rect=d=>[[-w/2,-.02],[w/2,-.02],[w/2,d],[-w/2,d]].map(([a,b])=>({x:p.x+u.x*a+o.x*b,y:p.y+u.y*a+o.y*b}));
+function steppedButtressPieces(p,u,o,h,w=.22,k=1){
+  w*=k;
+  const rect=d=>[[-w/2,-.02],[w/2,-.02],[w/2,d*k],[-w/2,d*k]].map(([a,b])=>({x:p.x+u.x*a+o.x*b,y:p.y+u.y*a+o.y*b}));
   const z=[0,h*.48,h*.53,h*.86,h*.94],deep=rect(.30),shallow=rect(.18);
   const pieces=[
     {bottom:deep,top:deep,z0:z[0],z1:z[1]},
@@ -319,17 +320,18 @@ function steppedButtressPieces(p,u,o,h,w=.22){
   pieces.anchor=p;pieces.outward=o;
   return pieces;
 }
-// Buttresses rise through half of the first storey (user, 24/11/2026: lower than the full
-// L1 height they had), whatever the tower level.
+// Buttresses rise through the first storey (the L1 tower height), whatever the tower level;
+// on towers they are 30% smaller in plan than on wide halls (user, 24/11/2026).
+const TOWER_BUTTRESS_SCALE=.7;
 function stoneTowerButtresses(s){
   if(!isStoneTowerStructure(s))return[];
-  const h=Math.min(structureHeight(s),1.2+(towerTier(s)-1)*.1),out=[];
+  const h=Math.min(structureHeight(s),2.35+(towerTier(s)-1)*.12),out=[];
   if(s.shape==='round'){
     const r=Number(s.r)||.5;
     for(let i=0;i<8;i++){
       // Half a step off the tower angle: the door (at `angle`) opens between two buttresses.
       const a=(s.angle||0)+(i+.5)*Math.PI/4,o={x:Math.cos(a),y:Math.sin(a)};
-      out.push(steppedButtressPieces({x:s.x+o.x*r,y:s.y+o.y*r},{x:-o.y,y:o.x},o,h));
+      out.push(steppedButtressPieces({x:s.x+o.x*r,y:s.y+o.y*r},{x:-o.y,y:o.x},o,h,.22,TOWER_BUTTRESS_SCALE));
     }
     return out;
   }
@@ -339,7 +341,7 @@ function stoneTowerButtresses(s){
     const a=fp[i],b=fp[(i+1)%fp.length],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
     const u={x:dx/L,y:dy/L},mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
     let nx=mid.x-center.x,ny=mid.y-center.y,NL=Math.hypot(nx,ny)||1;
-    for(const t of [1/3,2/3])out.push(steppedButtressPieces({x:a.x+dx*t,y:a.y+dy*t},u,{x:nx/NL,y:ny/NL},h));
+    for(const t of [1/3,2/3])out.push(steppedButtressPieces({x:a.x+dx*t,y:a.y+dy*t},u,{x:nx/NL,y:ny/NL},h,.22,TOWER_BUTTRESS_SCALE));
   }
   return out;
 }
