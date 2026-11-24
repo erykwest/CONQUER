@@ -1,5 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-19 — UI-BUILDERICON-01 · Icone medievali geometriche nel Builder
+
+`buildericon` da `67a1b1e8`: sostituiti i glifi outline del Builder con 52 SVG specifici e icone complementari nere su trasparenza; superfici chiare e selezione arancione. Aggiunti al Lab 72 SVG in Interfaccia / Icone Builder; audit mirato 72/72 senza errori o avvisi e baseline aggiornata dopo revisione. Regressioni del Builder e QA Chromium desktop/mobile PASS in locale; CI remota da eseguire. Nessun merge/deploy; roadmap, contratti di gameplay e decisioni esistenti invariati.
 ### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2 come casa-bottega
 
 `feature/shops-l2-rooms` (base `feature/shops-l3-advanced`, #293): il cutaway delle botteghe L2 ha stanze proprie (`LAYOUTS_L2`): bancone su strada lontano dalla porta, angolo della famiglia (focolare con paiolo, tavolino, due sgabelli) sul fondo del lato bancone, postazione compatta del mestiere sul fondo del lato porta; passaggio dalla porta libero. Le case L3 tengono la bottega completa. Baseline del Lab aggiornata per i 21 render «Botteghe L2». ROADMAP invariata; DECISIONS: completa D-SHOP-L3-261119 (stanze L2).

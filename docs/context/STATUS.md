@@ -1,5 +1,13 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-19 — UI-BUILDERICON-01: icone medievali del Builder (`buildericon`)
+
+- **IMPLEMENTATO SUL BRANCH, NON MERGE.** Base `origin/main` aggiornata `67a1b1e8`.
+- 72 SVG neri su trasparenza: un file dedicato per ognuna delle 52 voci del catalogo, 7 categorie, 10 comandi/parametri e 3 ampliamenti da inspector. Il Builder carica SVG isolati tramite immagini decorative: le maschere non condividono ID nel DOM. Etichette accessibili, selettori e pulsanti con i gestori originali restano gli stessi.
+- Fondo chiaro sui pulsanti per il contrasto del nero; selezione arancione, focus da tastiera, icone a 32px e opzioni a 28px. Registro completo in `src/assets/builder-icons/catalog.json`.
+- Asset Lab: nuova categoria Interfaccia / famiglia Icone Builder, sfondo di consultazione chiaro, manifest rigenerato. Audit della categoria: **72 render, 0 errori, 0 avvisi**; foglio provini rivisto; aggiunte alla baseline solo le 72 voci nuove.
+- **PASS LOCALI:** builder-menu (52 associazioni e SVG nel Lab), builder-placement, events-builder, mills3d, lean-to, asset-catalog, context-guard. Chromium 1228: tutte le 7 categorie e i 52 file, identità dei pulsanti dopo cambi categoria, click mulino con gestore di gioco e selezione attiva, 12 opzioni, 72 voci nel Lab, flyout entro il viewport a 390px, nessun errore di pagina.
+- CI browser aggiunta al workflow Builder menu. **CI remota non ancora eseguita** al momento di questa nota; nessun merge o deploy. ROADMAP e DECISIONS invariati: sostituzione iconografica, nessuna regola di gameplay cambiata. Dettagli in [BUILDER-ICONS](../BUILDER-ICONS.md).
 ### 2026-11-20 — SHOP-L2-ROOMS: stanze del piano terra L2 (branch `feature/shops-l2-rooms`, NON MERGE)
 
 - **CODICE:** `settlement-shop-cutaway.js` `LAYOUTS_L2` (sette mestieri) e `domestic()`; `layout(R,out,kind,home)` sceglie le stanze L2 per le botteghe di casa e `LAYOUTS` per le avanzate L3; `grade` nella chiave della cache del cutaway.
