@@ -219,6 +219,42 @@
       }
     }
   }
+  // Outer-face base of a wall or built section (linearBaseStyle): the face looking out of the
+  // enclosure (wallExteriorSide) gets the towers' 10° talus or their stepped buttresses; the inner
+  // face stays plumb. A stepped wall on a slope carries it section by section down to its foot.
+  function linearBaseRuns(s){
+    const side=wallExteriorSide(s),dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1;
+    const u={x:dx/L,y:dy/L},out={x:-u.y*side,y:u.x*side},half=(Number(s.width)||.5)/2;
+    const at=t=>({x:s.a.x+dx*t+out.x*half,y:s.a.y+dy*t+out.y*half});
+    const steps=s.type==='wall'?wallSlopeSections(s):null;
+    const runs=steps?steps.map(q=>({t0:Math.max(0,q.t0),t1:Math.min(1,q.t1),ground:q.ground,low:q.low})).filter(r=>r.t1>r.t0)
+      :[{t0:0,t1:1,ground:null,low:0}];
+    return{u,out,L,at,runs};
+  }
+  function addLinearBase(m,s){
+    const style=linearBaseStyle(s);if(!style||style==='standard')return;
+    const g=linearBaseRuns(s),H=STONE_TOWER_BASE_HEIGHT,T=Math.tan(STONE_TOWER_SPLAY_ANGLE);
+    const plane=(r,fn)=>r.ground==null?fn():withProjectionGroundZ(r.ground,fn);
+    const push=(p,d)=>({x:p.x+g.out.x*d,y:p.y+g.out.y*d});
+    if(style==='splayed'){
+      for(const r of g.runs)plane(r,()=>{
+        const a=g.at(r.t0),b=g.at(r.t1),d=STONE_TOWER_SPLAY_OFFSET+Math.max(0,-r.low)*T,a2=push(a,d),b2=push(b,d);
+        m.face([{p:a2,z:r.low},{p:b2,z:r.low},{p:b,z:H},{p:a,z:H}],castleSideShade(a2,b2));
+        m.face([{p:a,z:r.low},{p:a2,z:r.low},{p:a,z:H}],castleSideShade(a,a2));
+        m.face([{p:b2,z:r.low},{p:b,z:r.low},{p:b,z:H}],castleSideShade(b2,b));
+      });
+      return;
+    }
+    // Buttresses about every 1 U (user, 24/11/2026: twice as many), clear of the ends (towers and gates).
+    const pad=Math.min(.45,g.L*.2),span=g.L-2*pad;if(span<=.1)return;
+    const n=Math.max(1,Math.round(span)),h=structureHeight(s)*.85;
+    for(let k=0;k<n;k++){
+      const t=(pad+span*(k+.5)/n)/g.L,r=g.runs.find(q=>t>=q.t0&&t<=q.t1)||g.runs[0];
+      const pieces=steppedButtressPieces(g.at(t),g.u,g.out,h,.22,TOWER_BUTTRESS_SCALE);
+      if(r.low<-.01)pieces[0]={...pieces[0],z0:r.low};
+      plane(r,()=>addButtress(m,pieces));
+    }
+  }
   // Corbelled cone, moulding band and drum; the pitched kind adds a conical roof (merlons: addPieces).
   function addBartizan(m,b){
     const tag=m.tag;m.tag='body';
@@ -375,6 +411,7 @@
         // Wall-walk stair (settlement-wall-stairs.js, Blender models), as the room exteriors.
         if(s.wallStair)for(const t of window.ConquerWallStairs?.triangles(s)||[])m.face(t.pts,[t.hex,t.hex,shadeHex(t.hex,.82)]);
         for(const b of wideHallButtresses(s))addButtress(m,b);
+        if(s.type==='wall'||s.type==='built')addLinearBase(m,s);
         if(s.type==='wall'&&wallSkin(s)==='hoarding')addHoarding(m,s);
         const mf=machicolationFloorPolygon(s);
         if(mf)m.prism(mf.pts,mf.z-.055,mf.z+.035,PAL.machFloor());
