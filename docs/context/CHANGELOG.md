@@ -2,7 +2,7 @@
 
 ### 2026-11-24 — TOWER-FRAMED-TOP · Framed top per le torri quadrate W3
 
-`feature/framed-top-towers`: le torri quadrate in pietra W3 (L2+) possono avere l'ultimo piano a graticcio, leggermente a sbalzo e sempre con tetto a falde; costa la torre un livello più bassa più 45 legno; resiste come la pietra ma il piano in legno brucia e, consumato, la torre perde quel piano. Anche la torre a telaio in legno H2 ha il P2 a graticcio intonacato e a sbalzo. Nuova `qa/tower-framed-top-regression.cjs`.
+`feature/framed-top-towers`: le torri quadrate in pietra W3 (L2+) possono avere l'ultimo piano a graticcio, leggermente a sbalzo e sempre con tetto a falde; costa la torre un livello più bassa più 45 legno; resiste come la pietra ma il piano in legno brucia e, consumato, la torre perde quel piano. Nuova torre lignea a telaio H3: sopra la H2 un P3 a graticcio intonacato a sbalzo con tetto a falde senza parapetto. Nuova `qa/tower-framed-top-regression.cjs`.
 
 
 ### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2 come casa-bottega

@@ -5,7 +5,8 @@
 **IMPLEMENTATO SU BRANCH `feature/framed-top-towers`, NON MERGE.**
 - [x] Variante piano alto pietra/graticcio su torri quadrate W3 L2+, solo tetto a falde, a sbalzo.
 - [x] Costo: piani bassi in pietra/argilla, piano alto solo legno; resistenza della pietra, vulnerabile al fuoco.
-- [x] Torre a telaio in legno H2: P2 intonacato a sbalzo con intelaiatura fitta (solo aspetto).
+- [x] Torre lignea a telaio H3: P3 a graticcio a sbalzo, tetto a falde senza parapetto.
+- [ ] Torre H3: posti arcieri e cutaway del P3 da definire.
 - [ ] Bilanciamento del costo in legno (45) e del tempo di costruzione; voce wiki/codex da aggiungere.
 
 

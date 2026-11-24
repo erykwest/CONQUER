@@ -227,7 +227,7 @@ function circleWorldPoints(cx,cy,r,n=20){const pts=[];for(let i=0;i<n;i++){const
 function structureHeight(s){
   if(!s)return 0;
   if(s.type==='tower'){
-    if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?2.35:woodTowerStyle(s)==='frameTower'?3.78:(woodTowerRoof(s)==='pitched'?2.95:2.32);
+    if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?2.35:woodTowerStyle(s)==='frameTower'?3.78:woodTowerStyle(s)==='frameTower3'?4.45:(woodTowerRoof(s)==='pitched'?2.95:2.32);
     const l=structureLevel(s),t=towerTier(s);return [2.35,3.55,4.75,5.95][l-1]+(t-1)*.12
   }
   // The small gate stands just above the curtain (H2 walls are 2.10): L1 passage only, L2 one room over it.

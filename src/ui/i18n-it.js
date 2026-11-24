@@ -87,7 +87,7 @@ export const T = {
     radius: 'Raggio'
   },
   values: {
-    square: 'Quadrata', round: 'Rotonda', half: 'Semitorre', dee: 'A D', watchtower: 'Guardia', woodTower: 'Lignea', frameTower: 'Telaio H2',
+    square: 'Quadrata', round: 'Rotonda', half: 'Semitorre', dee: 'A D', watchtower: 'Guardia', woodTower: 'Lignea', frameTower: 'Telaio H2', frameTower3: 'Telaio H3',
     small: 'Piccola', medium: 'Media', large: 'Grande',
     wall: 'Mura', palisade: 'Palizzata', built: 'Sezione', builtWide: 'Sala larga', longhouse: 'Long house', longhouseWide: 'Long house larga', leanTo: 'Addossato alle mura', leanWood: 'Legno · paglia', leanStone: 'Pietra', leanBrick: 'Mattoni',
     stone: 'Pietra', wood: 'Legno',
@@ -107,7 +107,7 @@ export const T = {
     delete: 'Clic su un edificio per demolirlo'
   },
   structures: {
-    towerSquare: 'Torre quadrata', towerRound: 'Torre rotonda', watchtower: 'Torre di guardia', palisadeTower: 'Torre lignea', frameTower: 'Torre lignea a telaio',
+    towerSquare: 'Torre quadrata', towerRound: 'Torre rotonda', watchtower: 'Torre di guardia', palisadeTower: 'Torre lignea', frameTower: 'Torre lignea a telaio', frameTower3: 'Torre lignea a telaio H3',
     gate: 'Porta in pietra', woodGate: 'Porta lignea', wall: 'Mura', palisade: 'Palizzata', built: 'Sezione costruita',
     house: 'Casa', civicAnnex: 'Annesso', market: 'Mercato', tavern: 'Taverna', church: 'Chiesa', training: 'Campo di addestramento', plaza: 'Piazza', townhall: 'Municipio', guild: 'Gilda', bargello: 'Bargello', balivo: 'Palazzo del Balivo', windmill: 'Mulino a vento', watermill: 'Mulino ad acqua',
     loggingCamp: 'Campo taglialegna', quarry: 'Cava', mine: 'Miniera', moat: 'Fossato', bridge: 'Ponte', well: 'Pozzo'

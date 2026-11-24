@@ -30,7 +30,7 @@
 
   function eligible(t){
     // Masonry towers, and the two-storey timber frame tower (its P1 doorway is a model part).
-    return !!t&&t.type==='tower'&&!underConstruction(t)&&(!isWoodTower(t)||t.woodStyle==='frameTower')&&!t.parentTowerId&&
+    return !!t&&t.type==='tower'&&!underConstruction(t)&&(!isWoodTower(t)||['frameTower','frameTower3'].includes(t.woodStyle))&&!t.parentTowerId&&
       !(typeof isOrientedTower==='function'&&isOrientedTower(t))&&structureLevel(t)>=2;
   }
   function entrance(t){return eligible(t)&&[...STAIRS,'burnt'].includes(t.keepEntrance?.stair)?t.keepEntrance:null}
