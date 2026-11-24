@@ -1819,6 +1819,71 @@ function addBiomePond(env,rnd){
   }
   return null;
 }
+// Survey the finished landscape. A stream in a neighbouring sector or a lake
+// behind trees may have no usable bank in the settlement's 100U square.
+function ensureSettlementFreshwater(env){
+  const obstacles=[...env,...(State.relief?.hills||[]).map(h=>({
+    points:reliefEdgeBands(h.levels[0]).map(b=>b.oa)
+  }))].filter(f=>f.points?.length);
+  function clear(p,r,features=obstacles){
+    if(p.x-r<BUILD_MIN||p.y-r<BUILD_MIN||p.x+r>BUILD_MAX||p.y+r>BUILD_MAX)return false;
+    for(const f of features){
+      const line=f.type==='river'||f.type==='stream';
+      const gap=r+(line?(f.width||1.25)/2+.20:f.type==='sea'?3:0);
+      const b=environmentPolygonBounds(f.points);
+      if(p.x+gap<b.minX||p.x-gap>b.maxX||p.y+gap<b.minY||p.y-gap>b.maxY)continue;
+      if(!line&&pointInPolygon(p,f.points)&&!forestHoleAt(f,p))return false;
+      for(const ring of [f.points,...(f.holes||[])]){
+        for(let i=line?1:0;i<ring.length;i++)
+          if(pointSegmentDistance(p,ring[(i+ring.length-1)%ring.length],ring[i])<=gap)return false;
+      }
+    }
+    return true;
+  }
+  const pitRadius=Math.SQRT2*2; // contains the entire 4x4U footprint
+  for(const water of env){
+    const line=water.type==='river'||water.type==='stream';
+    if(!line&&(water.type!=='pond'||water.waterBodyKind==='marsh'))continue;
+    const offset=4+(line?(water.width||1.25)/2:0);
+    for(const ring of [water.points,...(water.holes||[])]){
+      for(let i=line?1:0;i<ring.length;i++){
+        const a=ring[(i+ring.length-1)%ring.length],b=ring[i],length=dist(a,b);
+        if(!length)continue;
+        const n=Math.ceil(length/4),dx=(b.x-a.x)/length,dy=(b.y-a.y)/length;
+        for(let j=0;j<n;j++)for(const side of [-offset,offset]){
+          const t=(j+.5)/n,p={x:a.x+(b.x-a.x)*t-dy*side,y:a.y+(b.y-a.y)*t+dx*side};
+          if(clear(p,pitRadius))return;
+        }
+      }
+    }
+  }
+  // The legacy Lake preview can consist entirely of open water.
+  if(State.biome==='lake'&&env.some(f=>f.type==='pond'))return;
+  // Try every grid cell in seed order, independently of forest and river RNG.
+  // The disk contains both the pond to the west and a dry 4x4U plot to the east.
+  const rnd=biomeStream(0x636c6179),step=2,cols=Math.floor((BUILD_MAX-BUILD_MIN)/step);
+  const count=cols*cols,start=Math.floor(rnd()*count);
+  const woods=env.filter(f=>f.type==='forest');
+  // On a densely wooded map, open a small glade only if no existing clearing fits.
+  for(const openGlade of [false,true]){
+    const features=openGlade?obstacles.filter(f=>f.type!=='forest'):obstacles;
+    for(let k=0;k<count;k++){
+      const i=(start+k*(cols+1))%count;
+      const p={x:BUILD_MIN+(i%cols+.5)*step,y:BUILD_MIN+(Math.floor(i/cols)+.5)*step};
+      if(dist(p,BIOME_TOWN)<BIOME_TOWN_CLEARANCE+7||!clear(p,7,features))continue;
+      if(openGlade){
+        const glade=circleWorldPoints(p.x,p.y,7.5,24);
+        for(const f of woods)if(!clear(p,7,[f]))(f.holes??=[]).push(glade);
+        if(typeof clearForestLayoutCache==='function')clearForestLayoutCache();
+      }
+      const pond=makeEnvBlob(rnd,'pond',p.x-3,p.y,3,2.2,'#3f7f8a','#8ab9bd',20,.12);
+      pond.waterBodyKind='pond';
+      env.push(pond);
+      return;
+    }
+  }
+  throw Error('No dry space for a settlement pond and clay pit');
+}
 // Foresta: the whole map is woodland; organic clearings cover about `ratio` of it, the first
 // one holding the settlement hub. Watercourse banks and ponds are holes too; main roads add
 // their grooves later (carveForestGroove).
@@ -1873,6 +1938,7 @@ function generateEnvironment(){
   }
   environmentRevision++;
   State.environment=window.ConquerRegionalLandscape?.finalizeWoodlands(filled)||filled;
+  ensureSettlementFreshwater(State.environment);
 }
 // ---------- woodland holes ----------
 // The Foresta biome is one woodland over the whole map (f.continuous) with holes: clearings,

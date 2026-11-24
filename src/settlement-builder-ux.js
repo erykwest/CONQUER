@@ -84,7 +84,7 @@
       ['[data-storage-yard]','Piazzale / magazzino · 2×2U espandibile','magazzino'],
       ['[data-industry="loggingCamp"]','Campo taglialegna','campo-taglialegna'],
       ['[data-industry="quarry"]:not([data-extraction-mode])','Cava pietra','cava-pietra'],
-      ['[data-industry="quarry"][data-extraction-mode="clay"]','Cava argilla · H0 · entro 6U da acqua interna','cava-argilla'],
+      ['[data-industry="quarry"][data-extraction-mode="clay"]','Cava argilla · terreno piano in palude o H0 entro 6U da una riva interna','cava-argilla'],
       ['[data-industry="mine"]','Miniera','miniera'],
       ['[data-industry="windmill"]','Mulino a vento · 2×2U · H+1','mulino-vento'],
       ['[data-industry="watermill"]','Mulino ad acqua · 2×2U · riva del fiume','mulino-acqua']]},
