@@ -339,11 +339,12 @@
   const stairCache=new Map();
   function stairMesh(t){
     const L=layout(t);if(!L)return null;
-    const key=[t.x,t.y,t.angle,t.r,t.size,t.level,L.zTop.toFixed(3),L.zFoot.toFixed(3),L.gap,L.stone,L.side,window.ConquerStoneColor?.current?.()].join('|');
+    const key=[t.x,t.y,t.angle,t.r,t.size,t.level,L.zTop.toFixed(3),L.zFoot.toFixed(3),L.gap,L.stone,L.side,window.ConquerStoneColor?.current?.(),t.masonryMaterial,State.visualPalette].join('|');
     const hit=stairCache.get(t.id);if(hit&&hit.key===key)return hit.mesh;
     const B=builder(L),{box}=B,stone=L.stone;
-    // Masonry in the tower's own stone (castle3d PAL.stone, recoloured by the map's stone family).
-    const M=c=>window.ConquerStoneColor?.masonry?.(c)??c,masonry=[M('#9a8e82'),M('#635951'),M('#514a44')];
+    // Masonry in the tower's own material: castle3d PAL.stone read through the tower's masonry
+    // (stone family of the map, or clay/brick), as visualPaletteColor paints the tower body.
+    const M=c=>typeof visualPaletteColor==='function'?withStructureVisualMaterial(t,()=>visualPaletteColor(c)):c,masonry=[M('#9a8e82'),M('#635951'),M('#514a44')];
     const deck=stone?masonry:'#9a6e43',dark=stone?M('#514a44'):'#6b4729',base=Math.min(L.g0,L.zFoot)-.06;
     const ld=L.landing;
     // Landing: a masonry block, or a plank deck on four posts.
