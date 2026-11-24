@@ -174,7 +174,7 @@
         if(blockedNature(p,foundation))return invalid('Placement intersects forest, water, obstacle or slope');
       if(blockedByTrees(polys))return invalid('Placement intersects forest trees');
       // On a hillside the tower door faces the summit and opens on it (settlement-castle.js).
-      if(s.type==='tower'){
+      if(s.type==='tower'&&typeof towerEntranceSummitVerdict==='function'){
         const summit=towerEntranceSummitVerdict(s,{wallSnapped:!!s.wallSnapId});
         if(!summit.ok)return invalid(summit.reason);
       }

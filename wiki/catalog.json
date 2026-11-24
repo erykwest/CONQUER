@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceDigest": "3cda5ea389f47eae49f0836ac19c6db2fcbbd058c5fed9cc46eb97b9079bf913",
+  "sourceDigest": "0161bbe691ffc6896cf722551f84469d2d386c55455e33757a93abbdf48a3473",
   "catalog": {
     "schemaVersion": 1,
     "categories": [
@@ -173,6 +173,11 @@
             "skin": [
               "standard",
               "arcade"
+            ],
+            "baseStyle": [
+              "standard",
+              "buttress",
+              "splayed"
             ]
           },
           "geometry": {
@@ -2347,6 +2352,11 @@
               "standard",
               "machicolation",
               "hoarding"
+            ],
+            "baseStyle": [
+              "standard",
+              "buttress",
+              "splayed"
             ]
           },
           "geometry": {
@@ -6153,6 +6163,147 @@
         }
       },
       {
+        "id": "upgrade:built.baseStyle.buttress",
+        "key": "buttress",
+        "label": "built · baseStyle · buttress",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.built.baseStyle"
+        },
+        "properties": {
+          "variant": "baseStyle",
+          "value": "buttress",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:built",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:built.baseStyle.splayed",
+        "key": "splayed",
+        "label": "built · baseStyle · splayed",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.built.baseStyle"
+        },
+        "properties": {
+          "variant": "baseStyle",
+          "value": "splayed",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:built",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:built.baseStyle.standard",
+        "key": "standard",
+        "label": "built · baseStyle · standard",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.built.baseStyle"
+        },
+        "properties": {
+          "variant": "baseStyle",
+          "value": "standard",
+          "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:built",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
         "id": "upgrade:built.skin.arcade",
         "key": "arcade",
         "label": "built · skin · arcade",
@@ -8287,6 +8438,147 @@
         "relations": [
           {
             "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:wall.baseStyle.buttress",
+        "key": "buttress",
+        "label": "wall · baseStyle · buttress",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.wall.baseStyle"
+        },
+        "properties": {
+          "variant": "baseStyle",
+          "value": "buttress",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:wall",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:wall.baseStyle.splayed",
+        "key": "splayed",
+        "label": "wall · baseStyle · splayed",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.wall.baseStyle"
+        },
+        "properties": {
+          "variant": "baseStyle",
+          "value": "splayed",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:wall",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:wall.baseStyle.standard",
+        "key": "standard",
+        "label": "wall · baseStyle · standard",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.wall.baseStyle"
+        },
+        "properties": {
+          "variant": "baseStyle",
+          "value": "standard",
+          "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:wall",
             "kind": "applies-to"
           }
         ],
