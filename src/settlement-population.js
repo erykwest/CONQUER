@@ -52,6 +52,10 @@ function sunShadowState(){
 }
 function towerRoofRise(s){
   // A hoarding on the crenellated top rises above it to its lean-to ridge (build_hoarding.py).
+  if(s?.type==='tower'&&towerUpInnerTower(s)){
+    const g=upInnerTowerGeometry(s);
+    return Math.max(g?g.apexZ-g.h:0,towerHoardingMounted(s)?.69:0);
+  }
   if(s?.type==='tower'&&towerInnerRoofMounted(s)){
     const g=towerInnerRoofGeometry(s);
     return Math.max(g?g.apexZ-g.h:0,towerHoardingMounted(s)?.69:0);
@@ -105,6 +109,19 @@ function towerInnerRoofGeometry(s,check=false){
     tail=orientedTowerWorld(s,[[Math.min(front,-d.w/2+k+half),0]])[0];
   }
   return{ring,h,eaveZ,apex,tail,apexZ:eaveZ+Math.max(roofPitchTan(),TOWER_INNER_ROOF_MIN_TAN)*half,half};
+}
+// Up inner tower (torretta centrale): a one-storey turret in the middle of the deck, footprint of
+// the next tier down (W3 -> W2, W2 -> W1), round or square by choice, under a cap with a small eave.
+// Returns {shape,ring,h,topZ,eave,eaveZ,apex,apexZ,half} or null.
+const UP_INNER_TOWER_STOREY=1.2,UP_INNER_TOWER_EAVE=.07,UP_INNER_TOWER_MIN_TAN=1.6;
+function upInnerTowerGeometry(s){
+  const shape=towerUpInnerTower(s);if(!shape)return null;
+  const t=towerTier(s)-1,c=towerRoofApex(s),ang=s.angle||0,round=shape==='round';
+  const half=round?towerSizeForTier('round',t):towerSizeForTier('square',t)/2;
+  const ring=round?circleWorldPoints(c.x,c.y,half,24):rectWorldPoints(c.x,c.y,half*2,half*2,ang);
+  const eave=round?circleWorldPoints(c.x,c.y,half+UP_INNER_TOWER_EAVE,24):rectWorldPoints(c.x,c.y,(half+UP_INNER_TOWER_EAVE)*2,(half+UP_INNER_TOWER_EAVE)*2,ang);
+  const h=structureHeight(s),topZ=h+UP_INNER_TOWER_STOREY;
+  return{shape,ring,eave,h,topZ,eaveZ:topZ,apex:c,apexZ:topZ+Math.max(roofPitchTan(),UP_INNER_TOWER_MIN_TAN)*(half+UP_INNER_TOWER_EAVE),half};
 }
 // Roof faces, one per ring edge: each eave point climbs to its nearest point on the ridge
 // tail→apex (a triangle where both ends reach the same ridge point, a quad along the ridge).
@@ -176,7 +193,7 @@ function structureVisualTopHeight(s){
 function shadowStructureHeight(s){
   if(s?.type==='house')return houseStructureHeight(s);
   if(s?.type==='built'){const g=builtRoofGeometry(s);return g?.ridgeH||structureHeight(s)}
-  if(s?.type==='tower'&&(towerRoofStyle(s)==='pitched'||towerInnerRoofMounted(s)))return towerVisualTopHeight(s);
+  if(s?.type==='tower'&&(towerRoofStyle(s)==='pitched'||towerInnerRoofMounted(s)||towerUpInnerTower(s)))return towerVisualTopHeight(s);
   if(s?.type==='gate'&&gateRoofStyle(s)==='pitched')return gateVisualTopHeight(s);
   return structureHeight(s);
 }
@@ -194,7 +211,7 @@ const shadowCasterGeometryCache=new Map();
 function shadowCasterSignature(s){
   return[
     s.id,s.type,s.x,s.y,s.angle,s.w,s.h,s.r,s.size,s.level,s.tier,s.houseLevel,s.width,
-    s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.roofStyle,s.machicolationStyle,s.bartizan,s.bell,s.innerRoof,s.signalFire,s.signalFireSpent,s.lookout,s.outpost?.readyDay,s.roofShape,s.baseStyle,s.material,s.woodStyle,s.woodRoof,
+    s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.roofStyle,s.machicolationStyle,s.bartizan,s.bell,s.innerRoof,s.upInnerTower,s.signalFire,s.signalFireSpent,s.lookout,s.outpost?.readyDay,s.roofShape,s.baseStyle,s.material,s.woodStyle,s.woodRoof,
     s.type==='house'&&(s.auto||s.urbanRedeveloped)&&houseLevel(s)>=3?urbanRevision:0
   ].join('|');
 }

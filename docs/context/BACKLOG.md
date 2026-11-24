@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-24 — UP-INNER-TOWER · Torretta centrale
+
+**IMPLEMENTATO SU BRANCH `feature/upinnertower`, NON MERGE.** Richiesta del product owner (24/11/2026): torretta di un piano al centro delle torri W2/W3, larga W-1, rotonda o quadrata a scelta, solo come upgrade.
+- [x] Variante, regole di esclusione, mesh 3D, cantiere, danni, clay, cutaway, Lab, codex.
+- [ ] Aggiornare la baseline del Lab con l'audit completo; costo dell'upgrade (oggi gratuito come il tetto interno).
+
 ### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2
 
 **IMPLEMENTATO SU BRANCH `feature/shops-l2-rooms`, NON MERGE.**

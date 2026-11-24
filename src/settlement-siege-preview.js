@@ -205,6 +205,13 @@
       ['Grande rotonda L3 merli + tetto interno + garitte',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'battlement',innerRoof:'on',bartizan:'battlement'}],
       ['Torre a D grande L3 merli + tetto interno',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'battlement',innerRoof:'on'}],
       ['Grande quadrata L3 merli + tetto interno + ballatoio',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'battlement',innerRoof:'on',hoarding:'on'}],
+      // Up inner tower (torretta centrale): W-1 turret, round or square on any tower shape.
+      ['Pietra quadrata L2 merli + torretta quadrata',{type:'tower',shape:'square',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'battlement',upInnerTower:'square'}],
+      ['Pietra rotonda L2 merli + torretta rotonda',{type:'tower',shape:'round',material:'stone',level:2,tier:2,r:rd(2),roofStyle:'battlement',upInnerTower:'round'}],
+      ['Grande quadrata L3 merli + torretta rotonda',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'battlement',upInnerTower:'round'}],
+      ['Grande rotonda L3 caditoie + torretta quadrata',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'machicolation',upInnerTower:'square'}],
+      ['Torre a D grande L3 merli + torretta rotonda',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'battlement',upInnerTower:'round'}],
+      ['Mattoni (argilla) quadrata L3 merli + torretta quadrata',{type:'tower',shape:'square',material:'stone',masonryMaterial:'brick',level:3,tier:3,size:sq(3),roofStyle:'battlement',upInnerTower:'square'}],
       ['Legno vedetta',{type:'tower',shape:'square',material:'wood',woodStyle:'watchtower',woodRoof:'pitched',level:1,tier:1,size:1}],
       ['Legno media aperta',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'open',level:1,tier:2,size:1.5}],
       ['Legno media tetto',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'pitched',level:1,tier:2,size:1.5}],

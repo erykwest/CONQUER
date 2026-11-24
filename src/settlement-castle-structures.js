@@ -176,6 +176,8 @@ function structureScreenSilhouette(s){
       const g=towerRoofShape(s)!=='pyramid'&&squareTowerRoofGeometry(s);
       if(g)cloud.push(w2s(g.ridgeA,g.ridgeH),w2s(g.ridgeB,g.ridgeH));
     }
+    const up=s.type==='tower'&&upInnerTowerGeometry(s);
+    if(up)cloud.push(w2s(up.apex,up.apexZ));
     const inner=s.type==='tower'&&towerInnerRoofGeometry(s);
     if(inner)cloud.push(w2s(inner.apex,inner.apexZ),w2s(inner.tail,inner.apexZ));
     if(hasPointHoarding(s)){
@@ -896,7 +898,7 @@ function towerTorchSources(){
 // The brazier stands on the open deck of a crenellated / machicolated stone tower. The inner roof
 // takes the deck: no brazier under it (and so no fire for the archers' fire arrows).
 function towerHasBrazier(s){
-  return !!s&&s.type==='tower'&&!underConstruction(s)&&!isWoodTower(s)&&['battlement','machicolation'].includes(towerRoofStyle(s))&&!towerInnerRoofMounted(s);
+  return !!s&&s.type==='tower'&&!underConstruction(s)&&!isWoodTower(s)&&['battlement','machicolation'].includes(towerRoofStyle(s))&&!towerInnerRoofMounted(s)&&!towerUpInnerTower(s);
 }
 function battlementBrazierSources(){
   const out=[];

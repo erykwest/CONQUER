@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-24 — UP-INNER-TOWER: torretta centrale sulle torri W2/W3 (branch `feature/upinnertower`, NON MERGE)
+
+- **CODICE:** variante torre `upInnerTower` ('off' | 'round' | 'square') in `settlement-core.js` con `towerUpInnerTowerAllowed` / `towerUpInnerTower` (pietra, W2/W3, non semitorre, merli o caditoie; esclusiva con tetto interno, arma sulla piazza e pira; toglie il bracere). `upInnerTowerGeometry` in `settlement-population.js`: impronta della torre di un taglio più piccola (W3→W2, W2→W1), un piano (1,2 U), tetto a cono/piramide con piccola gronda; forma indipendente da quella della torre. Mesh in `ConquerCastle3D.addTower` (quindi cantiere, danno, crolli e clay per costruzione), shell del cutaway in `settlement-world3d.js` quando è in vista l'ultimo piano. Upgrade dall'ispettore e dal pannello torre, non dal menu di costruzione. Chiavi di cache (render, assembly, ombre) aggiornate.
+- **PROVE LOCALI PASS:** nuova `qa/tower-up-inner-tower-regression.cjs` (4 controlli), tower-inner-roof, tutte le `qa/tower-*`, render-cache-keys, codex wiki/obsidian/vault (+3 note). Audit Lab su 6 voci nuove (58 render): 0 falliti, 0 avvisi; fogli rivisti. Baseline del Lab NON aggiornata (serve l'audit completo).
+- Il cutaway delle torri in mattoni resta grigio (preesistente, vale per tutta la torre).
+
 ### 2026-11-20 — SHOP-L2-ROOMS: stanze del piano terra L2 (branch `feature/shops-l2-rooms`, NON MERGE)
 
 - **CODICE:** `settlement-shop-cutaway.js` `LAYOUTS_L2` (sette mestieri) e `domestic()`; `layout(R,out,kind,home)` sceglie le stanze L2 per le botteghe di casa e `LAYOUTS` per le avanzate L3; `grade` nella chiave della cache del cutaway.

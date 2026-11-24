@@ -1437,6 +1437,14 @@
       // Room exterior elements stand outside the cut: whole, lit with the shell.
       for(const t of window.ConquerRoomExterior?.triangles(s)||[])sh.face(t.pts.map(q=>Z(q.p,q.z)),t.hex);
       if(H>=HF-1e-6&&s.type==='tower'&&towerRoofStyle(s)==='battlement')facesOut(g.inner,winter?WINTER_SNOW_TOP:stoneTone('#8f857a'),sh,H-.01);
+      // Up inner tower: with the top floor in view the turret still stands on the deck, whole.
+      const up=H>=HF-1e-6&&s.type==='tower'&&typeof upInnerTowerGeometry==='function'?upInnerTowerGeometry(s):null;
+      if(up){
+        const r=up.ring,e=up.eave,n2=r.length,round=up.shape==='round',cols=winter?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP]:['#303236','#3a3d42','#44474c'];
+        for(let i=0;i<n2;i++){const a=r[i],b=r[(i+1)%n2];sh.face([Z(a,up.h),Z(b,up.h),Z(b,up.topZ),Z(a,up.topZ)],stoneTone(i%2?'#61574f':'#82776c'))}
+        sh.face(r.map(p=>Z(p,up.topZ)),stoneTone('#8f857a'));
+        for(let i=0;i<e.length;i++)sh.face([Z(e[i],up.eaveZ),Z(e[(i+1)%e.length],up.eaveZ),Z(up.apex,up.apexZ)],round?cols[i%3]:winter?(i%2?WINTER_SNOW_A:WINTER_SNOW_B):(i%2?'#34363a':'#42454a'));
+      }
       // Floors: slab, then tiles (stone ground floor) or planks (wooden upper floors) clipped to the room.
       const basis=cutawayFloorBasis(s,g),ca=Math.cos(basis.angle),sa=Math.sin(basis.angle);
       const L=(u,v)=>({x:basis.center.x+u*ca-v*sa,y:basis.center.y+u*sa+v*ca});

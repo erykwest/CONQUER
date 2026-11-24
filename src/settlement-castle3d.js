@@ -163,6 +163,17 @@
       for(const f of towerInnerRoofFaces(inner))m.face(f.pts,round?cols[f.i%3]:winter()?(f.i%2?WINTER_SNOW_A:WINTER_SNOW_B):(f.i%2?'#34363a':'#42454a'));
       m.tag=tag;
     }
+    // Up inner tower: one-storey turret in the middle of the deck, then its cone / pyramid cap.
+    const up=upInnerTowerGeometry(s);
+    if(up){
+      const tag=m.tag;m.tag='body';
+      m.prism(up.ring,up.h,up.topZ,PAL.stone());
+      m.face(up.ring.map(p=>({p,z:up.topZ})),PAL.stone());
+      m.tag='roof';
+      const round=up.shape==='round',cols=winter()?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP]:['#303236','#3a3d42','#44474c'];
+      m.pyramid(up.eave,up.eaveZ,up.apex,up.apexZ,i=>round?cols[i%3]:winter()?(i%2?WINTER_SNOW_A:WINTER_SNOW_B):(i%2?'#34363a':'#42454a'));
+      m.tag=tag;
+    }
     for(const b of towerBartizans(s))addBartizan(m,b);
   }
   // Corbelled cone, moulding band and drum; the pitched kind adds a conical roof (merlons: addPieces).

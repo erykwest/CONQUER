@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-24 — UP-INNER-TOWER · Torretta centrale sulle torri W2/W3
+
+`feature/upinnertower`: nuovo upgrade delle torri in pietra W2/W3 con merli o caditoie, «Torretta centrale» rotonda o quadrata (indipendente dalla forma della torre), un piano, larga quanto la torre del taglio inferiore, con tetto a punta. Esclude tetto interno, arma e pira; toglie il bracere. Non è nel menu di costruzione. 6 voci nel Lab, test in `qa/tower-up-inner-tower-regression.cjs`. ROADMAP e DECISIONS invariate.
+
 ### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2 come casa-bottega
 
 `feature/shops-l2-rooms` (base `feature/shops-l3-advanced`, #293): il cutaway delle botteghe L2 ha stanze proprie (`LAYOUTS_L2`): bancone su strada lontano dalla porta, angolo della famiglia (focolare con paiolo, tavolino, due sgabelli) sul fondo del lato bancone, postazione compatta del mestiere sul fondo del lato porta; passaggio dalla porta libero. Le case L3 tengono la bottega completa. Baseline del Lab aggiornata per i 21 render «Botteghe L2». ROADMAP invariata; DECISIONS: completa D-SHOP-L3-261119 (stanze L2).
