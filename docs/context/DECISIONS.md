@@ -1,5 +1,12 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-SHELTER-261124 — Rifugio in ogni Sala comune, capienza 3× il banchetto (24/11/2026)
+
+- **DECISO dal product owner:** all'allarme rosso donne, bambini e uomini L3/L4 si rifugiano in **ogni** Sala comune (mastio, torri, sezioni costruite, long house), non solo in quella del mastio; averne più d'una è voluto.
+- **CONTRATTO:** la capienza di una Sala comune è **3× i posti del suo banchetto** (un commensale per panca da 1,6 m, due per panca lunga da 3,2 m). Ognuno va alla sala più vicina con posto, il mastio per primo; se tutte sono piene, alla più vicina. La campana rossa richiede almeno una Sala comune.
+- **PARAMETRO:** posti totali e persone da proteggere sono un parametro del castello (pannello Castello, voce Rifugio); se mancano posti l'utente è avvisato che serve nuovo spazio.
+- **Di notte** il personale e gli abitanti delle stanze non si animano (anche col tramonto invernale). **Tavoli lunghi (4,4 m) solo nelle sale W2.** Long house e sezioni costruite restano a 4U (W2 6U), come nel Builder.
+
 ## D-SHOP-L3-261119 — Botteghe avanzate L3 con artigiani L2 (19/11/2026)
 
 - **DECISO dal product owner:** le botteghe restano degli artigiani L2 (SOC-CLASS-02), ma anche il piano terra delle case L3 può ospitare una bottega: una **bottega avanzata** con **due artigiani L2** e produzione **×2,5**. Gli artigiani continuano ad abitare nelle case L2.

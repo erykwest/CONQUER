@@ -246,6 +246,45 @@
     if(alongV){r.near(fu-o,fv,'bench',turn);r.near(fu+o,fv,'bench',turn)}else{r.near(fu,fv-o,'bench',turn);r.near(fu,fv+o,'bench',turn)}
     return true;
   }
+  // Banquet tables of the common hall: as many as the floor holds, one per ~9 m² (1 to 8), in
+  // rows of long tables with a bench on each side, an aisle between the rows, centre first.
+  // Placed only where the table and both benches fit; returns how many stand.
+  const HALL_M2_PER_TABLE=9,HALL_MAX_TABLES=8;
+  // long: the 4.4 m banquet table of W2 halls takes twice the floor of a 2.2 m one.
+  function hallTableCount(F,long=false){
+    const m=FM()?.metersPerU||3.5,m2=(2*F.hu*m)*(2*F.hv*m);
+    return Math.max(1,Math.min(HALL_MAX_TABLES,Math.round(m2/(HALL_M2_PER_TABLE*(long?2:1)))));
+  }
+  function banquetTables(r){
+    // W2 halls lay the long banquet table (4.4 m, bench 3.2 m); the others the 2.2 m one.
+    const TN=r.longTables?'tableFeast':'tableLong',BN=r.longTables?'benchLong':'bench';
+    const alongV=r.A[0]==='u',turn=alongV?0:1,T=size(TN),B=size(BN),want=hallTableCount(r.F,!!r.longTables);
+    const o=T.d/2+B.d/2+.02,across=alongV?r.F.hu:r.F.hv,along=alongV?r.F.hv:r.F.hu;
+    // Row pitch (benches + aisle); along a row the tables spread over the whole length of the hall.
+    // In long halls (built sections, longhouses: > 3 U) the rows spread over the whole width (wide
+    // W2 halls: a broad aisle between them); towers keep the rows compact round the centre.
+    const fl=x=>Math.floor(x+1e-6);   // exact fits (1.53/.765) must not round down
+    const long=2*along>3,pa0=2*o+B.d+.12,na=Math.max(1,fl((2*across-.1)/pa0)),pa=long?(2*across-.1)/na:pa0;
+    // Long halls (built sections, longhouses: > 3 U) keep ~1 m between tables; towers stay compact.
+    const gap=long?.28:.1,pl=Math.max(T.w+gap,(2*along-.1)/Math.ceil(want/na)),nl=Math.max(1,fl((2*along-.1)/pl));
+    const spots=[];
+    for(let i=0;i<na;i++)for(let j=0;j<nl;j++)spots.push([(i-(na-1)/2)*pa,(j-(nl-1)/2)*pl]);
+    spots.sort((p,q)=>Math.hypot(...p)-Math.hypot(...q));
+    // Then, round the wall pieces (barrels, fireplace) that take an ideal spot: every 5 cm along each
+    // row, nearest the centre first, still a table pitch away from the tables of the same row.
+    const rows=[...new Set(spots.map(p=>p[0]))],lim=along-T.w/2-.02;
+    for(const a of rows)for(let l=0;l<=lim+1e-6;l+=.05)for(const sg of l?[1,-1]:[1])spots.push([a,sg*l]);
+    let placed=0;const done=[];
+    for(const [a,l] of spots){
+      if(placed>=want)break;
+      if(done.some(([da,dl])=>Math.abs(da-a)<1e-6&&Math.abs(dl-l)<T.w+gap-1e-6))continue;
+      const at=d=>alongV?[a+d,l]:[l,a+d],[u,v]=at(0),[u1,v1]=at(-o),[u2,v2]=at(o);
+      if(!r.fits(T,u,v,turn)||!r.fits(B,u1,v1,turn)||!r.fits(B,u2,v2,turn))continue;
+      r.place(TN,u,v,turn);r.place(BN,u1,v1,turn);r.place(BN,u2,v2,turn);placed++;done.push([a,l]);
+    }
+    if(!placed)tableWithBenches(r,0,0);
+    return placed;
+  }
   // Up to n ward cots against one wall, spread along it with an aisle between beds (at least a
   // hand apart when the wall is short, at most two bed widths of aisle); returns how many stand.
   function wardRow(r,side,n){
@@ -291,11 +330,15 @@
     chapel(r){r.wall(r.A,0,'altar');const rows=r.large?4:2,turn=r.toward(r.A);
       for(let i=0;i<rows;i++){const [fu,fv]=r.front(r.A,i%2?.45:-.45,.55+Math.floor(i/2)*.42);r.near(fu,fv,'pew',turn)}
       r.wall(r.B,-.6,'candleStand');r.wall(r.B,.6,'candleStand');if(r.large){r.near(.5,.5,'lectern',turn);r.wall(r.A,.85,'banner')}else{const [fu,fv]=r.front(r.A,0,.3);r.near(fu,fv,'kneeler',turn)}},
-    commonHall(r){tableWithBenches(r,0,0);r.wall(r.A,.7,'s:barrelGroup');r.wall(r.B,0,'banner');
+    commonHall(r){r.wall(r.A,.7,'s:barrelGroup');r.wall(r.B,0,'banner');
       // Heraldic drapes hang along the standing walls (deco: above the benches and barrels).
       for(const t of r.large?[-.6,0,.6]:[-.5,.5])r.wall(r.A,t,'heraldDrape',{deco:true,exact:true});
       r.wall(r.B,r.large?-.6:-.55,'heraldDrape',{deco:true,exact:true});
-      if(r.large){r.wall(r.A,-.4,'fireplace');tableWithBenches(r,.45,.5)}else r.wall(r.A,-.5,'brazier',{off:.1})},
+      if(r.large)r.wall(r.A,-.4,'fireplace');else r.wall(r.A,-.5,'brazier',{off:.1});
+      // The tables fill the floor left free by the wall pieces, by the size of the hall.
+      banquetTables(r);
+      // The banquet laid on every long table: cloth, roast, bread, trenchers, tankards, a candle.
+      for(const it of r.items.filter(x=>x.name==='tableLong'||x.name==='tableFeast'))r.place(it.name==='tableFeast'?'feastSpreadLong':'feastSpread',it.u,it.v,it.turn,{deco:true})},
     throneHall(r){r.wall(r.A,0,'throne');const [fu,fv]=r.front(r.A,0,1.05);r.at(fu*.55,fv*.55,'runner',r.toward(r.A),{deco:true});
       r.wall(r.A,-.85,'banner');r.wall(r.A,.85,'banner');r.wall(r.B,.0,'shieldWall',{deco:true});
       r.near(.55,-.5,'brazier');r.near(-.55,.5,'brazier');if(r.large){r.near(.4,.45,'tableLong');r.wall(r.B,-.7,'candleStand')}},
@@ -364,6 +407,8 @@
       const ext=slot.role&&window.ConquerRoomExterior?.elements(s,{broken:true}).find(e=>e.index===slot.index);
       if(ext){const ca=Math.cos(r.F.b.angle),sa=Math.sin(r.F.b.angle),u=ext.normal.x*ca+ext.normal.y*sa,v=-ext.normal.x*sa+ext.normal.y*ca;
         r.exteriorSide=Math.abs(u)>=Math.abs(v)?(u>0?'u+':'u-'):(v>0?'v+':'v-')}
+      // Long banquet tables in the common halls of W2 (wide) halls: built sections and longhouses.
+      r.longTables=typeof isWideBuilt==='function'&&isWideBuilt(s);
       if(slot.role&&ROOMS[slot.role])ROOMS[slot.role](r);
       // Torches on the standing walls light every furnished room at night.
       if(slot.role){r.wall(r.A,r.large?-.5:.0,'torchWall',{deco:true});if(r.large)r.wall(r.B,.5,'torchWall',{deco:true})}
@@ -642,5 +687,5 @@
     pieceWorld({name:'a:'+name,u:0,v:0,turn:0,lift:0,paint},F,slot.z,out,[],heraldry(),slot.floor);
     return out;
   }
-  window.ConquerCutawayFurniture={ROOMS,artSlots,artFits,artWorkFaces,lights,worldFaces,loggiaFaces,standSpots,roomPieces,roomContains,layoutStructure,spiralStair,landingSpecs,pieceFaces,clear:()=>cache.clear()};
+  window.ConquerCutawayFurniture={ROOMS,hallTableCount,artSlots,artFits,artWorkFaces,lights,worldFaces,loggiaFaces,standSpots,roomPieces,roomContains,layoutStructure,spiralStair,landingSpecs,pieceFaces,clear:()=>cache.clear()};
 })();

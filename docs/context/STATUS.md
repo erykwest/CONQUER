@@ -1,5 +1,15 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-24 — ROOM-ANIM-NIGHT/BANQUET/SHELTER: notte, banchetto e rifugio nelle sale comuni (branch `feature/cutaway-night-banquet`, NON MERGE)
+
+- **IMPLEMENTATO SUL BRANCH, NON MERGE.** Base `origin/main` `992d1c36`.
+- Notte: il personale delle stanze del castello lavora solo di giorno e col sole sopra l'orizzonte (`ConquerStaffPeople.isNight`); soldati, nobili e prigionieri delle stanze stanno fermi di notte.
+- Banchetto nella Sala comune: commensali seduti (posa seduta in `drawWorkerUnmasked`, `dot.seated`) con gesti `eat`/`toast`/`mug`, dame (L4), soldati a riposo, servitore col vassoio (`platter`), giullare (`juggle`) e musico (`lute`) che passeggiano; camino acceso. Modelli Blender nuovi: `feastSpread`, `tableFeast` (4,4 m), `benchLong` (3,2 m), `feastSpreadLong`; fuoco del camino ingrandito.
+- Tavoli: uno ogni ~9 m² (1–8) in file, attorno agli arredi a parete; nelle sale W2 tavoli lunghi da 4,4 m (due commensali per panca lunga).
+- Allarme rosso: donne, bambini e uomini L3/L4 vanno alla Sala comune più vicina con posto (mastio per primo, poi torri, sezioni, long house) e vi compaiono all'arrivo; bambini che corrono, parte degli adulti che cammina. Capienza = 3× posti del banchetto (`ConquerSiege.shelterCapacity`), totale e fabbisogno in `shelterStatus`: pannello Castello (Rifugio posti/persone) e avviso «Serve nuovo spazio nelle sale comuni». La campana rossa richiede una Sala comune qualsiasi.
+- Lab: sezioni costruite e long house alla lunghezza massima del Builder (4U / W2 6U), non più 7,5U.
+- **PASS LOCALI:** staff-people, work-anim, wardrobe, cutaway-furniture, builder-placement, asset-catalog, built-portico, wood3d, alarm-bell, combat-engage, siege-assault, ui-alerts. Verifica visiva nel Lab (World3D). **Audit del Lab e baseline non ancora aggiornati; pannello Castello non visto in una partita.** CI remota da eseguire.
+
 ### 2026-11-19 — UI-BUILDERICON-01: icone medievali del Builder (`buildericon`)
 
 - **IMPLEMENTATO SUL BRANCH, NON MERGE.** Base `origin/main` aggiornata `67a1b1e8`.

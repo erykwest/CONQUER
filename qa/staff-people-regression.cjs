@@ -67,12 +67,12 @@ const C3=window.ConquerCivic3D,CP=window.ConquerCourtPeople,W=window.ConquerWard
 
 // ---------- common hall: the garrison and the household at table (ROOM-ANIM-COMMON)
 {
-  const small=SP.commonHallScene(2,1,true,false,'h1'),large=SP.commonHallScene(4,2,true,false,'h2');
+  const seated=l=>l.filter(a=>a.bench!=null),small=SP.commonHallScene(2,1,true,false,'h1'),large=SP.commonHallScene(4,2,true,false,'h2');
   const kinds=l=>l.reduce((m,a)=>(m[a.kind]=(m[a.kind]||0)+1,m),{});
-  assert.equal(small.filter(a=>a.kind!=='servant').length,2,'one diner on each of the two benches');
+  assert.equal(seated(small).length,2,'one diner on each of the two benches');
   assert.notEqual(small[0].side,small[1].side,'the two benches of a table staggered');
   assert.equal(kinds(small).servant,1,'a servant at the table');
-  assert.equal(large.filter(a=>a.kind!=='servant').length,4,'a large hall: two tables, four diners');
+  assert.equal(seated(large).length,4,'a large hall: two tables, four diners');
   assert.equal(kinds(large).servant,2,'a servant per table');
   assert.equal(SP.commonHallScene(4,2,false,false).length,0,'empty at night');
   assert.equal(SP.commonHallScene(4,2,true,true).length,0,'an alarm empties the hall');
@@ -80,11 +80,71 @@ const C3=window.ConquerCivic3D,CP=window.ConquerCourtPeople,W=window.ConquerWard
   assert.ok(many.some(a=>a.kind==='soldier')&&many.some(a=>a.kind==='diner'),'soldiers and household at the tables');
   assert.equal(JSON.stringify(SP.commonHallScene(2,1,true,false,'h1')),JSON.stringify(small),'a fixed draw per hall');
   for(const a of large)assert.ok(WA.TOOLS[a.tool],a.kind+': '+a.tool+' is a work gesture');
+  // Banquet: the diners eat and toast, the servants bring the roast.
+  const diners=seated(many);
+  for(const k of ['lady','jester','minstrel'])assert.ok(many.some(a=>a.kind===k),k+' in the hall');
+  for(const g of ['eat','toast'])assert.ok(diners.some(a=>a.tool===g),'banquet gesture '+g+' at the tables');
+  assert.ok(many.filter(a=>a.kind==='servant').every(a=>a.tool==='platter'),'servants bring the roast on a platter');
+  assert.ok(diners.every(a=>SP.FEAST.includes(a.tool)),'diners use banquet gestures');
+  assert.ok(src('settlement-staff-people.js').includes("a.tool,facing,true)"),'diners sit at the table');
+  assert.ok(src('settlement-work-anim.js').includes('const seat=dot.seated?'),'a seated worker pose');
+  assert.ok(src('settlement-cutaway-furniture.js').includes("r.place(it.name==='tableFeast'?'feastSpreadLong':'feastSpread',it.u,it.v,it.turn,{deco:true})"),'the feast laid on every table, long or short');
+  // Long banquet tables (4.4 m, benches 3.2 m) in W2 halls only; two diners per long bench.
+  const cfs=src('settlement-cutaway-furniture.js');
+  assert.ok(cfs.includes("r.longTables=typeof isWideBuilt==='function'&&isWideBuilt(s);"),'long tables only in W2 halls');
+  assert.ok(cfs.includes("const TN=r.longTables?'tableFeast':'tableLong',BN=r.longTables?'benchLong':'bench';"),'the long table and bench are used there');
+  const fm=src('assets/furniture-model.js');
+  for(const k of ['tableFeast','benchLong','feastSpreadLong'])assert.ok(fm.includes('"'+k+'"'),k+' exported from Blender');
+  assert.ok(src('settlement-staff-people.js').includes('long.flatMap(b=>[{b,off:-LONG_SEAT},{b,off:LONG_SEAT}])'),'two diners on a long bench');
+  assert.ok(src('settlement-siege.js').includes("2*(CF.roomPieces(s,x,'benchLong')||[]).length"),'a long bench counts two banquet seats');
+  assert.ok(src('assets/furniture-model.js').includes('"feastSpread"'),'feast spread model exported from Blender');
+  assert.ok(W.ROLES.soldier,'off-duty soldiers have their clothes');
   assert.ok(W.ROLES.servant,'the servant has his clothes');
   assert.ok(SP.BENCH_SEATS.every(x=>Math.abs(x)<1.6/3.5/2),'places within the 1.6 m bench');
   assert.ok(SP.TABLE_END>2.2/3.5/2,'the servant stands beyond the end of the 2.2 m table');
-  assert.match(src('settlement-staff-people.js'),/if\(slot\.role==='commonHall'\)return drawCommonHall\(s,slot\)/,'the common hall is drawn by its diners');
-  assert.match(src('settlement-cutaway-furniture.js'),/commonHall\(r\)\{tableWithBenches\(r,0,0\)/,'a table with benches in every common hall');
+  assert.ok(src('settlement-staff-people.js').includes("return people?drawShelter(s,slot,people):drawCommonHall(s,slot)"),'the common hall: shelter in the red alarm, else its diners');
+  // ---------- red alarm: women and children shelter in the Mastio's Common Hall (ROOM-ANIM-SHELTER)
+  const ppl=[{id:'w1',sex:'female',age:'adult',level:1},{id:'w2',sex:'female',age:'adult',level:4},{id:'w3',sex:'female',age:'adult',level:2},
+    {id:'c1',sex:'male',age:'child',level:1},{id:'c2',sex:'female',age:'child',level:2},{id:'m1',sex:'male',age:'adult',level:3}];
+  const sh=SP.shelterScene(ppl,2,10);
+  assert.equal(sh.length,6,'everyone who arrived is in the hall');
+  assert.equal(sh.filter(x=>x.seated).map(x=>x.who.id).join(),'w1,w2','the women take the benches first');
+  assert.ok(sh.filter(x=>x.who.age!=='adult').every(x=>x.child&&!x.seated&&x.spot!=null),'children stand on the floor');
+  assert.ok(sh.filter(x=>x.who.age==='adult').every(x=>x.tool==='comfort'),'adults comfort');
+  assert.equal(SP.shelterScene(ppl,0,3).length,3,'no more people than the free floor holds');
+  assert.equal(SP.shelterScene([],4,10).length,0,'empty until the first arrive');
+  assert.ok(WA.TOOLS.comfort,'the comfort gesture');
+  const cb=src('settlement-combat.js');
+  assert.ok(cb.includes('function sheltered(structureId)')&&cb.includes("m.mode==='hall'&&m.who&&m.structureId===structureId"),'combat exposes who sheltered in the hall');
+  assert.ok(cb.includes('who:{id,sex:resident.sex,age:resident.age,'),'a recall remembers who walks');
+  // Not rigid: every child roams, part of the standing adults walk about, the seated stay.
+  const many2=Array.from({length:40},(_,i)=>({id:'p'+i,sex:i%2?'female':'male',age:i%3?'adult':'child',level:1+i%4}));
+  const sh2=SP.shelterScene(many2,4,60);
+  assert.ok(sh2.filter(x=>x.child).every(x=>x.roam),'children run about the hall');
+  const adultsUp=sh2.filter(x=>!x.child&&!x.seated);
+  assert.ok(adultsUp.some(x=>x.roam)&&adultsUp.some(x=>!x.roam),'some adults walk, others wait');
+  assert.ok(sh2.filter(x=>x.seated).every(x=>!x.roam),'the seated stay on the benches');
+  // A walker moves between two different spots and pauses at the end of each leg.
+  const legs=Array.from({length:200},(_,i)=>SP.roamAt('kid',12,i*.1,true));
+  assert.ok(legs.every(r=>r.a!==r.b&&r.a>=0&&r.a<12&&r.b<12&&r.e>=0&&r.e<=1),'legs between distinct spots');
+  assert.ok(legs.some(r=>r.moving)&&legs.some(r=>!r.moving),'walks, then pauses');
+  assert.ok(new Set(legs.map(r=>r.a)).size>3,'wanders over many spots');
+  // Every finished Common Hall shelters (Mastio first), each up to its capacity.
+  const sg=src('settlement-siege.js');
+  assert.ok(sg.includes('function shelters()')&&sg.includes("fn==='commonHall'&&allowed(s,i,fn)")&&sg.includes('return keep?[keep,...list.filter(s=>s!==keep)]:list'),'shelters: every Common Hall, the Mastio first');
+  assert.ok(sg.includes('function shelterCapacity(s){return SHELTER_PER_SEAT*banquetSeats(s)}')&&sg.includes('SHELTER_PER_SEAT=3'),'a hall shelters 3x its banquet');
+  assert.ok(sg.includes('function shelterStatus()')&&sg.includes('missing:Math.max(0,need-capacity)'),'the shelter is a castle parameter: places, need, missing');
+  assert.ok(sg.includes("if(r.age!=='adult'||r.sex!=='male'||level>=3)n++"),'need: women, children and L3/L4 men');
+  assert.ok(src('ui/game-api.js').includes('shelter: siege.shelterStatus ? siege.shelterStatus() : null'),'logistics read carries the shelter');
+  assert.ok(src('ui/shell.js').includes('M.shelterShort(l.shelter.missing, l.shelter.halls)'),'the castle panel warns when the shelter is short');
+  assert.ok(src('ui/alert-watchers.js').includes("key: 'castle-shelter'"),'an alert asks for a new Common Hall');
+  assert.ok(cb.includes('const room=halls.filter(h=>(load.get(h.id)||0)<(S?.shelterCapacity?.(h)??Infinity))'),'the recall picks the nearest hall with room');
+  assert.ok(cb.includes("!(window.ConquerSiege?.shelters?.()||[]).length"),'the red bell needs any Common Hall, not only a Mastio');
+  assert.ok(src('settlement-staff-people.js').includes('if(!halls.some(h=>h.id===s.id))return null;'),'any sheltering hall is drawn full');
+  { const sp=src('settlement-staff-people.js'),body=sp.slice(sp.indexOf('function drawShelter('),sp.indexOf('function drawRoom('));
+    assert.ok(body.includes('for(const {a,p,look,moving} of items)'),'the shelter loop knows who is walking'); }
+  console.log('PASS red alarm: women and children shelter in every Common Hall, children run about');
+  assert.ok(src('settlement-cutaway-furniture.js').includes('banquetTables(r);'),'tables with benches in every common hall, by its size');
   console.log('PASS common hall: soldiers and household at the benches, a servant per table, by day');
 }
 
@@ -94,6 +154,15 @@ const C3=window.ConquerCivic3D,CP=window.ConquerCourtPeople,W=window.ConquerWard
   const at=day=>{State.clock.day=day;return SP.onDuty()};
   assert.equal(at(10.5),true,'noon');assert.equal(at(10.2),false,'before 6');assert.equal(at(10.9),false,'after 20');
   alarm='green';assert.equal(at(10.5),false,'the alarm sends the staff away');alarm='off';
+  // Seasonal night: in winter the sun sets before 20:00 and the castle rests then.
+  ctx.solarIsNight=()=>true;
+  assert.equal(at(10.75),false,'sun down at 18:00: nobody at work');assert.equal(SP.isNight(),true,'night by the sun');
+  delete ctx.solarIsNight;
+  State.clock.day=10.95;assert.equal(SP.isNight(),true,'night by the clock');
+  // The soldiers, nobles and prisoners of the rooms stand still at night.
+  const gar=src('settlement-population-garrisons.js');
+  assert.ok(gar.includes('const still=!!window.ConquerStaffPeople?.isNight?.()'),'cutaway occupants read the night');
+  assert.ok(gar.includes('phase=still?0:'),'no animation phase at night');assert.ok(gar.includes('sway=still?0:'),'no sway at night');
   console.log('PASS staff in by day, away during an alarm');
 }
 
@@ -166,6 +235,6 @@ const C3=window.ConquerCivic3D,CP=window.ConquerCourtPeople,W=window.ConquerWard
 {
   assert.match(read('index.html'),/settlement-staff-people\.js/,'loaded');
   const cat=src('asset-catalog.js');
-  for(const tool of ['ladle','brush','book','quill','mortar','falcon','mug','speak','bowl'])assert.match(cat,new RegExp("'"+tool+"'"),tool+' gesture in the Lab');
+  for(const tool of ['ladle','brush','book','quill','mortar','falcon','mug','speak','bowl','eat','toast','platter'])assert.match(cat,new RegExp("'"+tool+"'"),tool+' gesture in the Lab');
   console.log('PASS wiring: index, Lab gestures');
 }

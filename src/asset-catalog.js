@@ -60,7 +60,7 @@
     ['build','hammer','Muratore (martello)'],['plough','hoe','Aratura (zappa)'],['sow','seeds','Semina'],['harvest','sickle','Mietitura (falce)'],
     ['throw','clay','Vasaio (tornio)'],['weave','shuttle','Tessitore (spola)'],['sew','needle','Sarto (ago)'],
     ['stir','ladle','Cuoco (mestolo)'],['groom','brush','Stalliere (striglia)'],['pray','book','Prete (libro)'],['write','quill','Tesoriere ed esattore (penna)'],
-    ['pound','mortar','Cerusico (mortaio)'],['hawk','falcon','Falconiere (falco)'],['serve','mug','Oste (boccale)'],['speak','speak','Consigliere (parola)'],['tend','bowl','Inserviente (ciotola)']];
+    ['pound','mortar','Cerusico (mortaio)'],['hawk','falcon','Falconiere (falco)'],['serve','mug','Oste (boccale)'],['speak','speak','Consigliere (parola)'],['tend','bowl','Inserviente (ciotola)'],['feast','eat','Banchetto (cosciotto)'],['toast','toast','Banchetto (brindisi)'],['platter','platter','Servitore (vassoio)'],['juggle','juggle','Giullare (giocoleria)'],['lute','lute','Musico (liuto)'],['comfort','comfort','Rifugiati (conforto)']];
   const SCHEMATICS=[
     ['well','Pozzo','Edifici','Servizi'],
     ['house1','Abitazione L1','Edifici','Abitazioni'],

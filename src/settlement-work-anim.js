@@ -33,7 +33,14 @@
     falcon:{period:3.2,len:2,hit:.3,fx:'feather',calm:true},                        // falconer: the bird on the raised fist
     mug:{period:3,len:1.6,hit:.5,fx:null},                                // innkeeper: wipes a tankard, sets it down
     speak:{period:4,len:1,hit:.5,fx:null},                                // councillor: speaks with a raised hand
-    bowl:{period:2.4,len:1.6,hit:.5,fx:null,calm:true}                              // orderly: carries a bowl with care
+    bowl:{period:2.4,len:1.6,hit:.5,fx:null,calm:true},                             // orderly: carries a bowl with care
+    // Banquet in the common hall (settlement-staff-people.js commonHallScene).
+    eat:{period:2.6,len:1.6,hit:.5,fx:null},                              // diner: a leg of fowl from the board to the mouth
+    toast:{period:5.5,len:1.6,hit:.4,fx:null},                            // diner: raises the tankard high, drinks
+    platter:{period:2.2,len:1.6,hit:.5,fx:'steam',calm:true},             // servant: brings the roast on a platter
+    juggle:{period:1.2,len:1.6,hit:.5,fx:null},                           // jester: three balls in the air
+    comfort:{period:2.8,len:1.6,hit:.5,fx:null,calm:true},                // sheltering: a slow pat, the hand on a child or the chest
+    lute:{period:.9,len:1.6,hit:.5,fx:null,calm:true,sweep:[1.6,2.05],y:.02}  // minstrel: strums the lute at the chest
   };
   const ease=window.ConquerUtil.smoothstep,lerp=(a,b,t)=>a+(b-a)*t;
   // Piecewise keyframes [[u,th,lean,bob],...] -> pose at phase u.
@@ -79,7 +86,19 @@
     // Hand rises to make a point, then rests.
     speak:[[0,2.6,0,0],[.3,2.6,0,0],[.45,.6,-.02,0],[.65,.8,-.02,0],[.8,2.6,0,0],[1,2.6,0,0]],
     // Bowl held in front, gently rocking.
-    bowl:[[0,1.8,.05,0],[.5,1.95,.07,.01],[1,1.8,.05,0]]
+    bowl:[[0,1.8,.05,0],[.5,1.95,.07,.01],[1,1.8,.05,0]],
+    // Hand down to the board, up to the mouth for a bite, chew, back down.
+    eat:[[0,2.2,.12,.01],[.3,2.2,.12,.01],[.45,.75,.02,0],[.55,.85,.02,0],[.62,.75,.02,0],[.78,2.2,.12,.01],[1,2.2,.12,.01]],
+    // Tankard raised high to the table, held, a long drink, set down.
+    toast:[[0,2.0,.04,0],[.18,.12,-.05,0],[.38,.12,-.05,0],[.5,.8,-.02,0],[.65,.8,-.02,0],[.8,2.0,.04,0],[1,2.0,.04,0]],
+    // Platter held out in front at chest height, a careful step.
+    platter:[[0,1.55,.04,0],[.5,1.75,.06,.01],[1,1.55,.04,0]],
+    // Hand tosses up and catches low, a little hop on the throw.
+    juggle:[[0,2.0,0,0],[.25,1.0,-.03,.02],[.5,2.0,0,0],[.75,1.0,-.03,.02],[1,2.0,0,0]],
+    // A slow pat at chest height, rocking a little.
+    comfort:[[0,1.95,.06,0],[.5,1.45,.1,.01],[1,1.95,.06,0]],
+    // Strumming hand across the strings.
+    lute:[[0,1.6,.03,0],[.5,2.05,.05,0],[1,1.6,.03,0]]
   };
   const hash=window.ConquerUtil.hash;
   const rnd=window.ConquerUtil.rng;
@@ -174,6 +193,37 @@
       ctx.beginPath();ctx.ellipse(bx,by-.4*s,1*s,1.5*s,0,0,Math.PI*2);ctx.fill();ctx.stroke();
       ctx.fillStyle='#ddd1b4';ctx.beginPath();ctx.ellipse(bx+f*.35*s,by-.3*s,.5*s,1.05*s,0,0,Math.PI*2);ctx.fill();
       ctx.fillStyle='#8e2a26';ctx.strokeStyle='#3a1412';ctx.beginPath();ctx.arc(bx+f*.15*s,by-2.1*s,.62*s,0,Math.PI*2);ctx.fill();ctx.stroke();
+    }else if(tool==='eat'){
+      // A roast leg of fowl: brown meat and the pale bone end.
+      ctx.fillStyle='#9a5a2a';ctx.strokeStyle='#4a2a14';ctx.lineWidth=lw;
+      ctx.beginPath();ctx.ellipse(g.x+f*.5*s,g.y-.7*s,.75*s,1.05*s,f*.5,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.strokeStyle='#efe6cf';ctx.lineWidth=Math.max(.5,.4*s);ctx.beginPath();ctx.moveTo(g.x,g.y);ctx.lineTo(g.x-f*.5*s,g.y+.6*s);ctx.stroke();
+    }else if(tool==='platter'){
+      // Wide pewter platter with the roast on it.
+      const w=2.1*s,h=.55*s;
+      ctx.fillStyle='#b8b3a6';ctx.strokeStyle='#5c6266';ctx.lineWidth=lw;
+      ctx.beginPath();ctx.ellipse(g.x+f*.6*s,g.y,w,h,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.fillStyle='#8a4a22';ctx.strokeStyle='#4a2a14';
+      ctx.beginPath();ctx.ellipse(g.x+f*.6*s,g.y-.55*s,w*.55,h*1.3,0,Math.PI,0);ctx.closePath();ctx.fill();ctx.stroke();
+    }else if(tool==='toast'){
+      // Tankard with its froth.
+      const w=.75*s,h=1.3*s;
+      ctx.fillStyle='#8a6a46';ctx.strokeStyle='#3e2c1d';ctx.lineWidth=lw;
+      ctx.beginPath();ctx.rect(g.x-w,g.y-h,2*w,h*1.6);ctx.fill();ctx.stroke();
+      ctx.beginPath();ctx.arc(g.x+f*w*1.2,g.y-h*.2,w*.5,0,Math.PI*2);ctx.stroke();
+      ctx.fillStyle='#f2ead2';ctx.beginPath();ctx.ellipse(g.x,g.y-h,w*1.05,.45*s,0,0,Math.PI*2);ctx.fill();
+    }else if(tool==='juggle'){
+      // Three coloured balls on an arc over the hands, each a third of a cycle apart.
+      const cols=['#d23a2a','#e8c23a','#3a6fd2'],cx=B.base.x+f*B.bodyW*.15,h=B.bodyH*.9,w=B.bodyW*.55;
+      for(let k=0;k<3;k++){const q=(B.u*1.5+k/3)%1,x=cx+w*Math.cos(q*Math.PI),y=B.bodyY-B.bodyH*.15-h*Math.sin(q*Math.PI);
+        ctx.fillStyle=cols[k];ctx.strokeStyle='#2a1a12';ctx.lineWidth=lw;ctx.beginPath();ctx.arc(x,y,.6*s,0,Math.PI*2);ctx.fill();ctx.stroke()}
+    }else if(tool==='lute'){
+      // Pear-shaped lute across the chest, the neck up behind the far shoulder.
+      const lx=B.base.x+f*B.bodyW*.28,ly=B.bodyY+B.bodyH*.02;
+      ctx.strokeStyle='#5a3a1e';ctx.lineWidth=Math.max(.6,.55*s);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(lx-f*B.bodyW*.75,ly-B.bodyH*.5);ctx.stroke();
+      ctx.fillStyle='#c08a4a';ctx.strokeStyle='#5a3a1e';ctx.lineWidth=lw;
+      ctx.beginPath();ctx.ellipse(lx,ly,B.bodyW*.32,B.bodyW*.24,-f*.6,0,Math.PI*2);ctx.fill();ctx.stroke();
+      ctx.fillStyle='#3a2414';ctx.beginPath();ctx.arc(lx-f*B.bodyW*.05,ly-B.bodyW*.03,B.bodyW*.07,0,Math.PI*2);ctx.fill();
     }else if(tool==='mug'||tool==='bowl'){
       const w=(tool==='mug'?.75:1.25)*s,h=(tool==='mug'?1.3:.6)*s;
       ctx.fillStyle=tool==='mug'?'#8a6a46':'#c9c2b0';ctx.strokeStyle='#3e2c1d';ctx.lineWidth=lw;
@@ -183,7 +233,7 @@
     }
   }
   // Tools held at the bench or in the hand (no haft): drawn by drawBench.
-  const BENCH=new Set(['clay','shuttle','needle','ladle','brush','book','quill','mortar','falcon','mug','speak','bowl']);
+  const BENCH=new Set(['clay','shuttle','needle','ladle','brush','book','quill','mortar','falcon','mug','speak','bowl','eat','toast','platter','juggle','lute','comfort']);
   function drawTool(tool,g,f,th,s){
     const d=dirOf(th,f),L=TOOLS[tool].len*s,lw=Math.max(.9,.95*s);
     const a={x:g.x-d.x*L*.22,y:g.y-d.y*L*.22},b={x:g.x+d.x*L*.78,y:g.y+d.y*L*.78};
@@ -271,6 +321,11 @@
     // Too small to read a tool: the plain figure.
     if(scale<.16)return drawVillagerFigureUnmasked(dot);
     ctx.save();
+    // Seated (dot.seated: diners on the common hall benches): the body drops by the thigh length,
+    // the robe is cut at the hip, the lap runs forward under the table and the shins go down to
+    // the floor. Feet stay where they were, on the floor.
+    const seat=dot.seated?bodyH*.34:0;
+    if(seat)ctx.translate(0,seat);
     // Lean and bob pivot on the feet.
     ctx.translate(base.x,base.y+P.bob*bodyH);ctx.rotate(f*P.lean);ctx.translate(-base.x,-base.y);
     const sack=tool==='seeds';
@@ -280,7 +335,17 @@
       ctx.beginPath();ctx.moveTo(base.x-f*bodyW*.4,top+bodyH*.05);ctx.lineTo(base.x+f*bodyW*.25,bodyY-bodyH*.1);ctx.stroke();
     }
     // The far hand rests at the side (the seed bag hangs there); the near one is at the tool.
-    drawVillagerFigureUnmasked(dot,sack?'none':'far',f);
+    if(seat){
+      const hipY=bodyY+bodyH*.06;
+      ctx.save();ctx.beginPath();ctx.rect(base.x-bodyW*3,top-bodyH*3,bodyW*6,hipY-(top-bodyH*3));ctx.clip();
+      drawVillagerFigureUnmasked(dot,'far',f);ctx.restore();
+      const robe=darken(dot.colors?.[1]||'#5d4a32',.9),knee={x:base.x+f*bodyW*.58,y:hipY+bodyH*.02};
+      ctx.fillStyle=robe;ctx.strokeStyle=darken(robe.length===7?robe:'#5d4a32',.6);ctx.lineWidth=Math.max(.5,.35*scale);
+      ctx.beginPath();ctx.moveTo(base.x-f*bodyW*.42,hipY-bodyH*.05);ctx.lineTo(knee.x,knee.y-bodyH*.08);ctx.lineTo(knee.x,knee.y+bodyH*.1);ctx.lineTo(base.x-f*bodyW*.42,hipY+bodyH*.1);ctx.closePath();ctx.fill();ctx.stroke();
+      // Shins and shoes from the knee to the floor (base.y-seat in this frame).
+      ctx.fillStyle='#4a3a2a';ctx.fillRect(knee.x-f*bodyW*.16-(f<0?bodyW*.16:0),knee.y,bodyW*.16,Math.max(0,base.y-seat-knee.y));
+      ctx.fillStyle='#2e241b';ctx.beginPath();ctx.ellipse(knee.x-f*bodyW*.02,base.y-seat,bodyW*.16,bodyW*.07,0,0,Math.PI*2);ctx.fill();
+    }else drawVillagerFigureUnmasked(dot,sack?'none':'far',f);
     // Hands rise with the tool: high when it points up, at the waist when down.
     const shoulder={x:base.x+f*bodyW*.18,y:top+bodyH*.2};
     // The sower's hand swings on the arm; tool hands rise with the tool.
@@ -316,7 +381,7 @@
     if(TOOLS[tool]&&window.ConquerWorld3D?.figure){
       const q=phaseTime(tool,dot.id,t),f=facing<0?-1:1;
       // Painted facing right; a worker facing left is the same card flipped.
-      if(window.ConquerWorld3D.figure(dot.p,.10,'w|'+tool+'|'+q.b+'|'+look(dot),()=>drawWorkerUnmasked({...dot,p:{x:0,y:0}},tool,q.t,1),dot.id,f<0))return true;
+      if(window.ConquerWorld3D.figure(dot.p,.10,'w|'+tool+'|'+q.b+(dot.seated?'|s':'')+'|'+look(dot),()=>drawWorkerUnmasked({...dot,p:{x:0,y:0}},tool,q.t,1),dot.id,f<0))return true;
     }
     return withUrbanFigureOcclusion(dot.p,.10,()=>drawWorkerUnmasked(dot,tool,t,facing));
   }

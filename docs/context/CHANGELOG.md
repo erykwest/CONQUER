@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-24 — ROOM-ANIM-NIGHT/BANQUET/SHELTER · Notte, banchetto e rifugio nelle sale comuni
+
+`feature/cutaway-night-banquet`: di notte (anche col tramonto invernale) personale e abitanti delle stanze del castello non si animano; banchetto nella Sala comune con commensali seduti, cibo in tavola (modelli Blender), dame, giullare e musico, camino acceso; numero di tavoli in funzione della superficie, tavoli da 4,4 m nelle sale W2. Allarme rosso: rifugio in ogni Sala comune (mastio per primo) con capienza 3× il banchetto, parametro Rifugio nel pannello Castello e avviso quando serve nuovo spazio. Lab: sezioni costruite e long house a 4U/6U. DECISIONS: nuova D-SHELTER-261124 (rifugio in ogni Sala comune, capienza 3× il banchetto, notte, tavoli lunghi W2); ROADMAP invariata.
+
 ### 2026-11-19 — UI-BUILDERICON-01 · Icone medievali geometriche nel Builder
 
 `buildericon` da `67a1b1e8`: sostituiti i glifi outline del Builder con 52 SVG specifici e icone complementari nere su trasparenza; superfici chiare e selezione arancione. Aggiunti al Lab 72 SVG in Interfaccia / Icone Builder; audit mirato 72/72 senza errori o avvisi e baseline aggiornata dopo revisione. Regressioni del Builder e QA Chromium desktop/mobile PASS in locale; CI remota da eseguire. Nessun merge/deploy; roadmap, contratti di gameplay e decisioni esistenti invariati.
