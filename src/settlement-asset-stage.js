@@ -19,12 +19,16 @@
     }
     return{x:100,y:100};
   }
-  // L3 workshops (settlement-shop-cutaway.js): one L3 house per trade, closed and opened.
+  // Workshops (settlement-shop-cutaway.js): one L2 artisan house per trade, closed and opened.
   function shopVariants(){
     const T=window.ConquerShopCutaway?.TRADES,K=window.ConquerCommerce?.WORKSHOP_KINDS;
-    return T?Object.keys(T).map(kind=>({id:'bottega-l3-'+kind,label:'Bottega L3 · '+(K?.[kind]?.label||kind),family:'Botteghe L3',category:'Edifici',
+    if(!T)return[];
+    // Home shops on L2 houses and advanced workshops on merchant L3 houses (D-SHOP-L3-261119).
+    const grades=[['l2','Bottega L2','Botteghe L2',2],['l3','Bottega avanzata L3','Botteghe avanzate L3',3]];
+    return grades.flatMap(([slug,label,family,tier])=>Object.keys(T).map(kind=>({id:'bottega-'+slug+'-'+kind,
+      label:label+' · '+(K?.[kind]?.label||kind),family,category:'Edifici',
       // Door side towards the default camera: the thumbnail shows the street front and its sign.
-      spec:{type:'house',auto:true,houseLevel:3,w:1.5,h:1,doorSide:1,groundZ:0,shopKind:kind}})):[];
+      spec:{type:'house',auto:true,houseLevel:tier,socialTier:tier,w:1.5,h:1,doorSide:1,groundZ:0,shopKind:kind}})));
   }
   // Every variant of the gallery (wood ones too) plus a built section.
   function variants(){

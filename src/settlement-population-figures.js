@@ -221,7 +221,7 @@ function drawPeasants(){
       // The shepherd with his flock (residentClassPosition returned his pasture spot).
       const shepherd=!building&&!carter&&p&&resident.sex==='male'&&resident.age==='adult'&&resident.index===0&&
         houseLevel(house)<=2&&samePoint(p,window.ConquerLivestock?.shepherdPosition?.(house));
-      // The artisan of an open L3 workshop works at his bench, not at the door.
+      // The artisan of an open (L2) workshop works at his bench, not at the door.
       const shop=!building&&!carter?window.ConquerShopCutaway?.artisanAt(house,resident,p):null;
       if(shop)p=shop.p;
       else if(p&&!building&&!carter&&!(assignment&&resident.sex==='male'&&resident.age==='adult'&&fieldSocialTier(house)===1))

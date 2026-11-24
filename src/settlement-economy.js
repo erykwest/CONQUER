@@ -948,7 +948,7 @@
       daily(day);
       window.ConquerEducated?.daily?.(day); // SCOL-01: educated cap, overflow, hire arrivals
       if(weekday(day)===5)market(day); // Saturday market; no civilian production
-      window.ConquerCommerce?.daily?.(day); // L3 workshops and their goods market
+      window.ConquerCommerce?.daily?.(day); // L2 workshops and their L3 goods market
       window.ConquerTreasury?.daily?.(day); // FISCO-01: Saturday tax collection, decrees
       window.ConquerChurch?.daily?.(day); // CHIESA-01: Sunday offerings into the Church treasury
       const today=dateAt(day),tomorrow=dateAt(day+1);

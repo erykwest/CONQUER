@@ -22,6 +22,10 @@ const opts={category:arg('category')||undefined,family:arg('family')||undefined,
 const changedSources=arg('sources')?.split(',').filter(Boolean)||[];
 if(changedSources.length&&(flag('update-baseline')||opts.ids||opts.category||opts.family))
   throw Error('Incremental audit cannot overwrite the baseline or combine with manual filters');
+// --shard=1/4: one quarter of the whole catalogue (whole families), for parallel CI jobs.
+const shardArg=arg('shard'),shard=shardArg?shardArg.split('/').map(Number):null;
+if(shard&&(changedSources.length||flag('update-baseline')||opts.ids||opts.category||opts.family))
+  throw Error('A shard is a slice of the full audit: no baseline update, sources or manual filters');
 fs.mkdirSync(path.join(out,'sheets'),{recursive:true});
 
 const browser=await chromium.launch({headless:true,executablePath:process.env.QA_CHROME||undefined,
@@ -48,6 +52,18 @@ try{
       if(choice.mode==='incremental')opts.ids=choice.ids;
     }
   }
+  let baselineForShard=null;
+  if(shard){
+    const catalogue=await page.evaluate(()=>window.ConquerAssetAudit.catalog());
+    opts.ids=scope.shardIds(catalogue,shard[0]-1,shard[1]);
+    auditMode='full-shard';auditReason='shard '+shard.join('/')+' of the full audit';
+    baselineForShard=JSON.parse(fs.readFileSync(path.join(root,'qa/asset-audit-baseline.json'),'utf8')).entries||{};
+    // Baseline entries whose asset left the catalogue belong to no shard: the first one reports them.
+    if(shard[0]===1){
+      const live=new Set(catalogue.map(x=>x.id));
+      baselineForShard.__gone=Object.keys(baselineForShard).filter(k=>!live.has(k.split('|')[0]));
+    }
+  }
   console.log('Asset audit mode: '+auditMode+' | '+auditReason+
     (opts.ids?' | '+opts.ids.length+' catalogue entries':' | whole catalogue'));
   const t0=Date.now();
@@ -58,6 +74,14 @@ try{
   },opts);
   report.durationMs=Date.now()-t0;report.url=url;report.pageErrors=errors;
   report.scope={mode:auditMode,reason:auditReason,sources:changedSources,selectedIds:opts.ids||null};
+  if(baselineForShard){
+    // The page skips the "disappeared" check on filtered runs; a shard does it for its own entries.
+    const k=r=>r.id+'|'+(r.state??'')+(r.rotation?'|r'+r.rotation:'');
+    const seen=new Set(report.results.map(k)),mine=new Set(opts.ids),gone=baselineForShard.__gone||[];
+    delete baselineForShard.__gone;
+    report.missing=[...Object.keys(baselineForShard).filter(b=>mine.has(b.split('|')[0])&&!seen.has(b)),...gone];
+    report.summary.missing=report.missing.length;
+  }
   fs.writeFileSync(path.join(out,'report.json'),JSON.stringify(report,null,1));
 
   // Contact sheets: one per engine-staged family (all states: fortifications, L3 workshops), one per other category.

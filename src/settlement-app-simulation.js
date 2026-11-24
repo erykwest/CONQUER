@@ -30,7 +30,7 @@ function scheduleCompletionRoadMaintenance(completed){
     if(completedIds.has(s.id)&&s.type==='gate')add('gate',s);
     if((completedIds.has(s.id)||types.has('gate')||types.has('well'))&&s.type==='tower'&&!s.parentTowerId)add('tower',s);
   }
-  for(const s of completed)if(s.type==='house'||s.type==='field'||isCivic(s))add('access',s);
+  for(const s of completed)if(structureNeedsAccessRoad(s))add('access',s);
   function tick(){
     if(completionRoadJob!==job)return;
     if(State.village!==village){completionRoadJob=null;return}

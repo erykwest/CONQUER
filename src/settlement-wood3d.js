@@ -42,7 +42,7 @@
     return{heraldA:h.c1||(typeof REIGN_COLOR_1==='string'?REIGN_COLOR_1:'#b53636'),heraldB:h.c2||(typeof REIGN_COLOR_2==='string'?REIGN_COLOR_2:'#355fb8')}};
   let palCache=null;
   function palette(){
-    const data=DATA(),winter=State.season==='winter',her=heraldry(),herKey=her.heraldA+her.heraldB;
+    const data=DATA(),winter=(typeof isSnowGround==='function'?isSnowGround():State.season==='winter'),her=heraldry(),herKey=her.heraldA+her.heraldB;
     if(palCache&&palCache.data===data&&palCache.winter===winter&&palCache.herKey===herKey)return palCache.pal;
     const pal=data.palette.map((hex,i)=>{const k=data.paletteKeys[i];
       return her[k]||(winter&&k.startsWith('roof')?WINTER[/Dark$|Ridge$/.test(k)?1:0]:hex)});
@@ -68,8 +68,12 @@
   }
   const hash=window.ConquerUtil.hash;
   // One stake: unit body scaled to r x (bodyZ - z0), then a tip to tipZ (or a flat cap).
+  // On a hill flank the foot goes down to the lowest ground under the stake, so its downhill
+  // side never floats; the body height is still measured from the ground at its centre.
   function addStake(mesh,center,r,z0,bodyZ,tipZ,angle,seed){
-    const ground=terrainElevation(center),base=ground+z0-(z0<=0?.06:0);
+    const ground=terrainElevation(center);
+    const low=Math.min(ground,...[[r,0],[-r,0],[0,r],[0,-r]].map(([dx,dy])=>terrainElevation({x:center.x+dx,y:center.y+dy})));
+    const base=z0>0?ground+z0:low+z0-.06;
     addModel(mesh,'stake',{x:center.x,y:center.y,angle,sx:r,sy:r,sz:ground+bodyZ-base},base,['body']);
     if(tipZ>bodyZ)addModel(mesh,'stake',{x:center.x,y:center.y,angle:angle+(seed&3)*Math.PI/2,sx:r,sy:r,sz:tipZ-bodyZ},ground+bodyZ,[seed&4?'tipB':'tipA']);
     else addModel(mesh,'stake',{x:center.x,y:center.y,angle,sx:r,sy:r,sz:ground+bodyZ-base},base,['cap']);
@@ -79,7 +83,7 @@
   const at=(p,z)=>({x:p.x,y:p.y,z:terrainElevation(p)+z});
   function palisade(s){
     const g=palisadeLayout(s),mesh={pos:[],col:[]},faces=[];
-    const angle=Math.atan2(g.dy,g.dx),winter=State.season==='winter';
+    const angle=Math.atan2(g.dy,g.dx),winter=(typeof isSnowGround==='function'?isSnowGround():State.season==='winter');
     if(g.tier===2){
       // drawPalisadeWalkway: plank deck at .66-.74 on the inner side, posts under its inner edge.
       const outer=g.postOffset-.05,inner=-g.width/2+.035,z0=.66,z1=.74,bays=Math.max(1,Math.floor(g.L/.72));

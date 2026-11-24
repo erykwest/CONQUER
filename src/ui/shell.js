@@ -1,9 +1,9 @@
 // CONQUER interface v2 ("Isole"): floating wood-and-gold tablets over a full-bleed map.
 // Opt-in with ?ui=2 (persisted; ?ui=1 goes back). Reads the game only through window.ConquerGame.
 import { html, render, useState, useEffect, useRef } from '../vendor/htm-preact-3.1.1.js';
-import { T } from './i18n-it.js?v=ui2-insp-2-wallpatrol2-alerts3-upg2';
-import { createAlertCenter } from './alerts.js?v=alerts3';
-import { createWatchers } from './alert-watchers.js?v=alerts3';
+import { T } from './i18n-it.js?v=ui2-insp-2-wallpatrol2-alerts3-upg2-fieldworks1-wallmoat1-l2shop1-shopl3a';
+import { createAlertCenter } from './alerts.js?v=alerts4';
+import { createWatchers } from './alert-watchers.js?v=alerts4';
 
 const STORE_KEY = 'conquer.ui.v2', MODE_KEY = 'conquer.ui.mode', DEV_KEY = 'conquer.dev';
 const params = new URLSearchParams(location.search);
@@ -26,6 +26,7 @@ const ICON = {
   production: 'M12 21V9M12 9c-3 0-5-2-5-5 3 0 5 2 5 5zM12 14c3 0 5-2 5-5-3 0-5 2-5 5z',
   well: 'M5 10h14M7 10v10h10V10M8 10V5h8v5',
   justice: 'M12 3v18M7 21h10M5 7h14M5 7l-2 6h4zM19 7l-2 6h4z',
+  fieldworks: 'M3 20h18M5 20l3-12M10 20l3-14M15 20l3-12M6.5 13l-2 1M11.5 12l-2 1M16.5 13l-2 1',
   terrain: 'M2 19l6-8 4 5 3-4 7 7zM14 6h6M17 3v6',
   delete: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13',
   undo: 'M9 14L4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3',
@@ -162,6 +163,9 @@ const CATALOG = [
   { id: 'well', hint: T.hints.point, press: '[data-well]', is: s => s.tool.kind === 'well', rows: s => [masonryRow(s)] },
   { id: 'justice', hint: T.hints.point, press: '[data-event-venue="pillory"]', is: s => s.tool.kind === 'event' && ['pillory', 'gallows', 'scaffold'].includes(s.tool.venue),
     rows: s => [{ label: O.building, options: ['pillory', 'gallows', 'scaffold'].map(k => opt(V[k], `[data-event-venue="${k}"]`, s.tool.venue === k)) }] },
+  // Field works against a charge (settlement-events3d.js): stake rows, chevaux de frise, the army camp.
+  { id: 'fieldworks', hint: T.hints.point, press: '[data-event-venue="stakeRow"]', is: s => s.tool.kind === 'event' && ['stakeRow', 'chevalFrise', 'armyCamp'].includes(s.tool.venue),
+    rows: s => [{ label: O.building, options: ['stakeRow', 'chevalFrise', 'armyCamp'].map(k => opt(V[k], `[data-event-venue="${k}"]`, s.tool.venue === k)) }] },
   { id: 'delete', hint: T.hints.delete, press: '[data-tool="delete"]', is: s => s.tool.kind === 'delete' }
 ];
 const activeEntry = snap => CATALOG.find(e => e.is(snap)) || CATALOG[0];
@@ -625,6 +629,8 @@ const ALERT_ACTIONS = {
   readLetter: () => window.ConquerDiplomacy?.openLetter?.(),
   caravans: arg => window.ConquerDiplomacy?.openCaravans?.(arg || undefined)
 };
+// An entry can be shown on the map when its structure still exists or it carries a map point.
+const canFocus = e => (e.focusId != null && State.structures?.some(s => s.id === e.focusId)) || !!e.at;
 const runAlertAction = a => { const fn = a && ALERT_ACTIONS[a.id]; if (fn) { fn(a.arg); window.ConquerGame?.emit?.(); } };
 function Journal({ game }) {
   const [, force] = useState(0);
@@ -644,8 +650,8 @@ function Journal({ game }) {
         ${e.detail && html`<p>${e.detail}</p>`}
         <div class="u2-j-meta"><span>${A.categories[e.category] || e.category}</span><span>${A.phase[e.phase] || e.phase}</span>
           ${e.action?.id === 'caravans' && html`<button type="button" class="u2-mini" onClick=${() => runAlertAction(e.action)}>${e.action.label}</button>`}
-          ${e.focusId != null && State.structures?.some(s => s.id === e.focusId) && html`<button type="button" class="u2-mini" data-tip=${A.focus}
-            onClick=${() => game.commands.select(e.focusId)}><${Icon} name="target" size=${12} /></button>`}</div>
+          ${canFocus(e) && html`<button type="button" class="u2-mini" data-tip=${A.focus} aria-label=${A.focus}
+            onClick=${() => game.commands.focus(e.focusId, e.at)}><${Icon} name="target" size=${12} /></button>`}</div>
       </li>`)}</ol>`}`;
 }
 function JournalFooter() {
@@ -680,7 +686,7 @@ function Alerts({ openJournal, cmd }) {
         ${expanded && html`<div class="u2-alert-body">
           ${a.detail && html`<p>${a.detail}</p>`}
           <div class="u2-alert-actions">
-            ${a.focusId != null && State.structures?.some(s => s.id === a.focusId) && html`<button type="button" class="u2-mini" onClick=${() => cmd.select(a.focusId)}>${A.focus}</button>`}
+            ${canFocus(a) && html`<button type="button" class="u2-mini" onClick=${() => cmd.focus(a.focusId, a.at)}>${A.focus}</button>`}
             <button type="button" class="u2-mini" onClick=${openJournal}>${A.openJournal}</button>
           </div></div>`}
         ${a.remaining != null && html`<div class="u2-alert-timer"><i style=${'width:' + Math.round(a.remaining * 100) + '%'}></i></div>`}
@@ -812,8 +818,8 @@ alertCenter.subscribe(() => {
 });
 addEventListener('pagehide', () => { clearTimeout(journalTimer); saveJournal(); });
 
-function App() {
-  const game = window.ConquerGame;
+// The watchers read the game once a second and feed the alert center (both interfaces).
+function useAlertWatchers(game) {
   useEffect(() => {
     const watchers = createWatchers(game, alertCenter, { structureNames: T.structures });
     const poll = () => { syncJournalStore(); watchers.poll(); };
@@ -822,6 +828,23 @@ function App() {
     window.ConquerAlerts = alertCenter;
     return () => clearInterval(timer);
   }, []);
+}
+
+// Classic interface (the default): the same notice stack over the map, and the event journal
+// as a floating card, so messages and alerts are not reserved to the opt-in UI v2.
+function LegacyAlerts() {
+  const game = window.ConquerGame;
+  useAlertWatchers(game);
+  const [journal, setJournal] = useState(false);
+  return html`
+    <${Alerts} cmd=${game.commands} openJournal=${() => setJournal(true)} />
+    ${journal && html`<${Card} title=${M.sections.journal} wide=${true} onClose=${() => setJournal(false)}
+      footer=${html`<${JournalFooter} />`}><${Journal} game=${game} /></${Card}>`}`;
+}
+
+function App() {
+  const game = window.ConquerGame;
+  useAlertWatchers(game);
   const [snap, setSnap] = useState(game.snapshot());
   const [mode, setModeState] = useState(['build', 'manage', 'defend'].includes(recall(MODE_KEY)) ? recall(MODE_KEY) : 'build');
   const setMode = m => { setModeState(m); remember(MODE_KEY, m); if (m !== 'build') game.commands.press('[data-tool="select"]'); };
@@ -867,4 +890,11 @@ if (enabled) {
   // The map now fills the window: let the game re-measure its canvases.
   if (typeof resize === 'function') resize();
   render(html`<${App} />`, root);
+} else if (window.ConquerGame && !window.__CONQUER_ASSET_LAB__ && document.getElementById('wrap')) {
+  // Legacy UI: only the alert overlay (#ui2 is pointer-transparent; body keeps no .ui2 class).
+  const root = document.createElement('div');
+  root.id = 'ui2';
+  root.className = 'u2-legacy';
+  document.getElementById('wrap').appendChild(root);
+  render(html`<${LegacyAlerts} />`, root);
 }

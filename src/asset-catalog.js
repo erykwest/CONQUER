@@ -9,7 +9,7 @@
   const gallery=byId('assetGallery'),filters=byId('assetCategoryFilters'),details=byId('assetDetail');
   if(!gallery||!filters||!details)return;
   const STATIC_FILES=window.CONQUER_ASSET_FILES||[],ROTATION_SETS=window.CONQUER_ASSET_ROTATIONS||{};
-  const CATEGORY_ORDER=['Tutti','Edifici','Fortificazioni','Produzione','Popolazione','Truppe','Fauna','Veicoli','Assedio','Eventi','Natura','Scatter','Interni','Componenti','Araldica','Territorio'];
+  const CATEGORY_ORDER=['Tutti','Edifici','Fortificazioni','Produzione','Popolazione','Truppe','Fauna','Veicoli','Assedio','Eventi','Natura','Scatter','Interni','Componenti','Araldica','Territorio','Interfaccia'];
   const MODEL_SOURCES=[
     {global:'ConquerCivicModels',collection:'models',category:'Edifici',family:'Edifici civili'},
     {global:'ConquerIndustryModels',collection:'models',category:'Produzione',family:'Industrie'},
@@ -73,10 +73,10 @@
     ['forest','Foresta procedurale','Territorio','Biomi'],
     ['terrain','Rilievo e scarpata','Territorio','Orografia']
   ];
-  const fileCategory=path=>path.includes('/animals/')?'Fauna':path.includes('/architecture/')?'Componenti'
+  const fileCategory=path=>path.includes('/builder-icons/')?'Interfaccia':path.includes('/animals/')?'Fauna':path.includes('/architecture/')?'Componenti'
     :path.includes('/economy/')?'Produzione':path.includes('/forest/')||path.includes('/bushes/')||path.endsWith('/tree-svgrepo-com.svg')?'Natura'
     :path.includes('/interior/')?'Interni':path.includes('/heraldry/')?'Araldica':'Territorio';
-  const fileFamily=path=>path.includes('/architecture/')?'Elementi architettonici':path.split('/').slice(-2,-1)[0]||'SVG';
+  const fileFamily=path=>path.includes('/builder-icons/')?'Icone Builder':path.includes('/architecture/')?'Elementi architettonici':path.split('/').slice(-2,-1)[0]||'SVG';
   const prettify=key=>key.replace(/([a-z])([A-Z])/g,'$1 $2').replace(/[_-]+/g,' ').replace(/(\d+)/g,' $1').trim().replace(/^./,m=>m.toUpperCase());
   const nameOverrides={church:'Chiesa',tavern:'Taverna',market:'Mercato',townhall:'Municipio',guild:'Gilda',bargello:'Bargello',balivo:'Palazzo del Balivo',quarry:'Cava',mine:'Miniera',clayPit:'Cava d’argilla',
     loggingCamp:'Campo taglialegna',stockyard2:'Piazzale · magazzino 2×2U',stockyard4:'Piazzale · magazzino 4×4U',stockyard6:'Piazzale · magazzino 6×6U',watermill:'Mulino ad acqua',windmill:'Mulino a vento',crate:'Cassa',barrel:'Botte',
@@ -562,6 +562,7 @@
   // stateId: for fortifications, '3d' (the mesh) or an engine state (a World 3D capture; rotation in 90° views).
   function makePreview(item,container,large,rotationDegrees=0,stateId=defaultState(item)){
     container.replaceChildren();
+    container.classList.toggle('builder-icon-preview-host',!!item.source?.startsWith('src/assets/builder-icons/'));
     if(item.kind==='castle'&&stateId&&stateId!=='3d'){
       const c=engineCapture(item,stateId,Math.round(rotationDegrees/90)%4);
       if(!c?.dataUrl){container.textContent='Cattura non disponibile';return}

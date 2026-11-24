@@ -1,0 +1,699 @@
+{
+  "name": "CONQUER Medieval Building Icons",
+  "version": "1.0.0",
+  "sourceCommit": "18e09f9141a94b760127dba2f635bf813b541473",
+  "viewBox": "0 0 64 64",
+  "palette": [
+    "#000000",
+    "transparent"
+  ],
+  "builderCount": 54,
+  "totalCount": 74,
+  "entries": [
+    {
+      "id": "pozzo",
+      "label": "Pozzo · Fondazione villaggio",
+      "category": "civic",
+      "selector": "[data-well]",
+      "previousGlyph": "well",
+      "file": "pozzo.svg",
+      "role": "builder"
+    },
+    {
+      "id": "mercato",
+      "label": "Mercato",
+      "category": "civic",
+      "selector": "[data-civic=\"market\"]",
+      "previousGlyph": "market",
+      "file": "mercato.svg",
+      "role": "builder"
+    },
+    {
+      "id": "taverna",
+      "label": "Taverna",
+      "category": "civic",
+      "selector": "[data-civic=\"tavern\"]",
+      "previousGlyph": "tavern",
+      "file": "taverna.svg",
+      "role": "builder"
+    },
+    {
+      "id": "chiesa",
+      "label": "Chiesa",
+      "category": "civic",
+      "selector": "[data-civic=\"church\"]",
+      "previousGlyph": "church",
+      "file": "chiesa.svg",
+      "role": "builder"
+    },
+    {
+      "id": "palazzo-balivo",
+      "label": "Palazzo del Balivo · nel contado",
+      "category": "civic",
+      "selector": "[data-civic=\"balivo\"]",
+      "previousGlyph": "balivo",
+      "file": "palazzo-balivo.svg",
+      "role": "builder"
+    },
+    {
+      "id": "campo-addestramento",
+      "label": "Campo di addestramento",
+      "category": "civic",
+      "selector": "[data-civic=\"training\"]",
+      "previousGlyph": "training",
+      "file": "campo-addestramento.svg",
+      "role": "builder"
+    },
+    {
+      "id": "gogna",
+      "label": "Gogna · 1×1U · piazza",
+      "category": "civic",
+      "selector": "[data-event-venue=\"pillory\"]",
+      "previousGlyph": "civic",
+      "file": "gogna.svg",
+      "role": "builder"
+    },
+    {
+      "id": "forca",
+      "label": "Forca · 2×1.5U · piazza o margine",
+      "category": "civic",
+      "selector": "[data-event-venue=\"gallows\"]",
+      "previousGlyph": "civic",
+      "file": "forca.svg",
+      "role": "builder"
+    },
+    {
+      "id": "patibolo",
+      "label": "Patibolo · 2.5×2U · piazza maggiore",
+      "category": "civic",
+      "selector": "[data-event-venue=\"scaffold\"]",
+      "previousGlyph": "civic",
+      "file": "patibolo.svg",
+      "role": "builder"
+    },
+    {
+      "id": "torre-quadrata",
+      "label": "Torre quadrata T2",
+      "category": "defense",
+      "selector": "[data-tower=\"square\"][data-size=\"1.5\"]",
+      "previousGlyph": "square",
+      "file": "torre-quadrata.svg",
+      "role": "builder"
+    },
+    {
+      "id": "torre-rotonda",
+      "label": "Torre rotonda T2",
+      "category": "defense",
+      "selector": "[data-tower=\"round\"][data-size=\"0.75\"]",
+      "previousGlyph": "round",
+      "file": "torre-rotonda.svg",
+      "role": "builder"
+    },
+    {
+      "id": "semitorre",
+      "label": "Semitorre aperta alla gola",
+      "category": "defense",
+      "selector": "[data-tower=\"half\"][data-size=\"1\"]",
+      "previousGlyph": "square",
+      "file": "semitorre.svg",
+      "role": "builder"
+    },
+    {
+      "id": "torre-d",
+      "label": "Torre a D · fronte tonda",
+      "category": "defense",
+      "selector": "[data-tower=\"dee\"][data-size=\"1.5\"]",
+      "previousGlyph": "round",
+      "file": "torre-d.svg",
+      "role": "builder"
+    },
+    {
+      "id": "torre-guardia-lignea",
+      "label": "Torre di guardia lignea",
+      "category": "defense",
+      "selector": "[data-wood-tower=\"watchtower\"]",
+      "previousGlyph": "timber",
+      "file": "torre-guardia-lignea.svg",
+      "role": "builder"
+    },
+    {
+      "id": "torre-lignea",
+      "label": "Torre lignea",
+      "category": "defense",
+      "selector": "[data-wood-tower=\"palisadeTower\"]",
+      "previousGlyph": "timber",
+      "file": "torre-lignea.svg",
+      "role": "builder"
+    },
+    {
+      "id": "mura",
+      "label": "Mura",
+      "category": "defense",
+      "selector": "[data-linear=\"wall\"]",
+      "previousGlyph": "wall",
+      "file": "mura.svg",
+      "role": "builder"
+    },
+    {
+      "id": "palizzata",
+      "label": "Palizzata",
+      "category": "defense",
+      "selector": "[data-linear=\"palisade\"]",
+      "previousGlyph": "fence",
+      "file": "palizzata.svg",
+      "role": "builder"
+    },
+    {
+      "id": "sezione-costruita",
+      "label": "Sezione costruita",
+      "category": "defense",
+      "selector": "[data-linear=\"built\"]",
+      "previousGlyph": "built",
+      "file": "sezione-costruita.svg",
+      "role": "builder"
+    },
+    {
+      "id": "sala-larga",
+      "label": "Sala larga 2U · doppia altezza",
+      "category": "defense",
+      "selector": "[data-linear=\"builtWide\"]",
+      "previousGlyph": "built",
+      "file": "sala-larga.svg",
+      "role": "builder"
+    },
+    {
+      "id": "longhouse-w1",
+      "label": "Long house lignea W1 · solo P0",
+      "category": "defense",
+      "selector": "[data-linear=\"longhouse\"]",
+      "previousGlyph": "timber",
+      "file": "longhouse-w1.svg",
+      "role": "builder"
+    },
+    {
+      "id": "longhouse-w2",
+      "label": "Long house lignea W2 · solo P0",
+      "category": "defense",
+      "selector": "[data-linear=\"longhouseWide\"]",
+      "previousGlyph": "timber",
+      "file": "longhouse-w2.svg",
+      "role": "builder"
+    },
+    {
+      "id": "porta-muraria",
+      "label": "Porta muraria · 1,5×1,5U",
+      "category": "defense",
+      "selector": "[data-gate][data-gate-size=\"1.5\"]",
+      "previousGlyph": "gate",
+      "file": "porta-muraria.svg",
+      "role": "builder"
+    },
+    {
+      "id": "porta-piccola",
+      "label": "Porta piccola · 1×1U · L1–L2",
+      "category": "defense",
+      "selector": "[data-gate][data-gate-size=\"1\"]",
+      "previousGlyph": "gate",
+      "file": "porta-piccola.svg",
+      "role": "builder"
+    },
+    {
+      "id": "porta-lignea",
+      "label": "Porta lignea",
+      "category": "defense",
+      "selector": "[data-wood-gate]",
+      "previousGlyph": "gate",
+      "file": "porta-lignea.svg",
+      "role": "builder"
+    },
+    {
+      "id": "magazzino",
+      "label": "Piazzale / magazzino · 2×2U espandibile",
+      "category": "economy",
+      "selector": "[data-storage-yard]",
+      "previousGlyph": "work",
+      "file": "magazzino.svg",
+      "role": "builder"
+    },
+    {
+      "id": "campo-taglialegna",
+      "label": "Campo taglialegna",
+      "category": "economy",
+      "selector": "[data-industry=\"loggingCamp\"]",
+      "previousGlyph": "timber",
+      "file": "campo-taglialegna.svg",
+      "role": "builder"
+    },
+    {
+      "id": "cava-pietra",
+      "label": "Cava pietra",
+      "category": "economy",
+      "selector": "[data-industry=\"quarry\"]:not([data-extraction-mode])",
+      "previousGlyph": "work",
+      "file": "cava-pietra.svg",
+      "role": "builder"
+    },
+    {
+      "id": "cava-argilla",
+      "label": "Cava argilla · H0 · entro 6U da acqua interna",
+      "category": "economy",
+      "selector": "[data-industry=\"quarry\"][data-extraction-mode=\"clay\"]",
+      "previousGlyph": "work",
+      "file": "cava-argilla.svg",
+      "role": "builder"
+    },
+    {
+      "id": "miniera",
+      "label": "Miniera",
+      "category": "economy",
+      "selector": "[data-industry=\"mine\"]",
+      "previousGlyph": "work",
+      "file": "miniera.svg",
+      "role": "builder"
+    },
+    {
+      "id": "mulino-vento",
+      "label": "Mulino a vento · 2×2U · H+1",
+      "category": "economy",
+      "selector": "[data-industry=\"windmill\"]",
+      "previousGlyph": "windmill",
+      "file": "mulino-vento.svg",
+      "role": "builder"
+    },
+    {
+      "id": "mulino-acqua",
+      "label": "Mulino ad acqua · 2×2U · riva del fiume",
+      "category": "economy",
+      "selector": "[data-industry=\"watermill\"]",
+      "previousGlyph": "watermill",
+      "file": "mulino-acqua.svg",
+      "role": "builder"
+    },
+    {
+      "id": "pulpito",
+      "label": "Pulpito · 1.6×1.6U · artisti di strada",
+      "category": "events",
+      "selector": "[data-event-venue=\"streetSpot\"]",
+      "previousGlyph": "podium",
+      "file": "pulpito.svg",
+      "role": "builder"
+    },
+    {
+      "id": "palco",
+      "label": "Palco · 2.4×1.2U · artisti / annunci",
+      "category": "events",
+      "selector": "[data-event-venue=\"stage\"]",
+      "previousGlyph": "stage",
+      "file": "palco.svg",
+      "role": "builder"
+    },
+    {
+      "id": "spiazzo-eventi",
+      "label": "Spiazzo eventi · 14×10U · giostra, torneo, circo, sagra",
+      "category": "events",
+      "selector": "[data-event-venue=\"festivalGround\"]",
+      "previousGlyph": "festival",
+      "file": "spiazzo-eventi.svg",
+      "role": "builder"
+    },
+    {
+      "id": "arena",
+      "label": "Arena · 18×14U · lotto dedicato",
+      "category": "events",
+      "selector": "[data-event-venue=\"arenaLot\"]",
+      "previousGlyph": "arena",
+      "file": "arena.svg",
+      "role": "builder"
+    },
+    {
+      "id": "accampamento-militare",
+      "label": "Accampamento militare · capi, compagnie, logistica · steccato → palizzata",
+      "category": "combat",
+      "selector": "[data-event-venue=\"armyCamp\"]",
+      "previousGlyph": "castle",
+      "file": "accampamento-militare.svg",
+      "role": "builder"
+    },
+    {
+      "id": "terreno",
+      "label": "Terreno",
+      "category": "terrain",
+      "selector": "[data-terraform=\"terrain\"]",
+      "previousGlyph": "terrain",
+      "file": "terreno.svg",
+      "role": "builder"
+    },
+    {
+      "id": "terrazzamento-murato",
+      "label": "Terrazzamento murato",
+      "category": "terrain",
+      "selector": "[data-terraform=\"walled\"]",
+      "previousGlyph": "terrace",
+      "file": "terrazzamento-murato.svg",
+      "role": "builder"
+    },
+    {
+      "id": "spianamento",
+      "label": "Flat · sottrai e riporta a H0",
+      "category": "terrain",
+      "selector": "[data-terraform=\"flat\"]",
+      "previousGlyph": "level",
+      "file": "spianamento.svg",
+      "role": "builder"
+    },
+    {
+      "id": "rimuovi-foresta",
+      "label": "Rimuovi foresta · job L1 · legname",
+      "category": "terrain",
+      "selector": "[data-terraform=\"forest\"]",
+      "previousGlyph": "work",
+      "file": "rimuovi-foresta.svg",
+      "role": "builder"
+    },
+    {
+      "id": "strada",
+      "label": "Strada principale",
+      "category": "infrastructure",
+      "selector": "[data-main-road]",
+      "previousGlyph": "route",
+      "file": "strada.svg",
+      "role": "builder"
+    },
+    {
+      "id": "fossato-asciutto",
+      "label": "Fossato asciutto",
+      "category": "infrastructure",
+      "selector": "[data-crossing=\"dry\"]",
+      "previousGlyph": "moat",
+      "file": "fossato-asciutto.svg",
+      "role": "builder"
+    },
+    {
+      "id": "fossato-allagato",
+      "label": "Fossato allagato · quota 0",
+      "category": "infrastructure",
+      "selector": "[data-crossing=\"water\"]",
+      "previousGlyph": "moat",
+      "file": "fossato-allagato.svg",
+      "role": "builder"
+    },
+    {
+      "id": "ponte-legno",
+      "label": "Ponte di legno",
+      "category": "infrastructure",
+      "selector": "[data-crossing=\"wood\"]",
+      "previousGlyph": "bridge",
+      "file": "ponte-legno.svg",
+      "role": "builder"
+    },
+    {
+      "id": "ponte-pietra",
+      "label": "Ponte di pietra",
+      "category": "infrastructure",
+      "selector": "[data-crossing=\"stone\"]",
+      "previousGlyph": "bridge",
+      "file": "ponte-pietra.svg",
+      "role": "builder"
+    },
+    {
+      "id": "molo-piccolo",
+      "label": "Molo piccolo L4 · 4U sul mare · 2 attracchi",
+      "category": "infrastructure",
+      "selector": "[data-pier=\"4\"]",
+      "previousGlyph": "bridge",
+      "file": "molo-piccolo.svg",
+      "role": "builder"
+    },
+    {
+      "id": "molo-grande",
+      "label": "Molo grande L12 · 12U sul mare · 2 attracchi",
+      "category": "infrastructure",
+      "selector": "[data-pier=\"12\"]",
+      "previousGlyph": "bridge",
+      "file": "molo-grande.svg",
+      "role": "builder"
+    },
+    {
+      "id": "rampa",
+      "label": "Rampa · 2U · collega due quote · pedoni e carri · pendenza max 1:4",
+      "category": "infrastructure",
+      "selector": "[data-slopeway=\"ramp\"]",
+      "previousGlyph": "route",
+      "file": "rampa.svg",
+      "role": "builder"
+    },
+    {
+      "id": "scalinata",
+      "label": "Scalinata · 1U · gradini sul pendio · solo pedoni",
+      "category": "infrastructure",
+      "selector": "[data-slopeway=\"stairway\"]",
+      "previousGlyph": "terrace",
+      "file": "scalinata.svg",
+      "role": "builder"
+    },
+    {
+      "id": "banchina",
+      "label": "Banchina in pietra · 2U · due clic lungo la riva o in acqua",
+      "category": "infrastructure",
+      "selector": "[data-quay]",
+      "previousGlyph": "wall",
+      "file": "banchina.svg",
+      "role": "builder"
+    },
+    {
+      "id": "cantiere-navale-l1",
+      "label": "Cantiere navale L1 · scalo 7U · barche e caravelle",
+      "category": "infrastructure",
+      "selector": "[data-yard=\"1\"]",
+      "previousGlyph": "bridge",
+      "file": "cantiere-navale-l1.svg",
+      "role": "builder"
+    },
+    {
+      "id": "cantiere-navale-l2",
+      "label": "Cantiere navale L2 · scalo 10U · piazzale 12U · tutte le navi",
+      "category": "infrastructure",
+      "selector": "[data-yard=\"2\"]",
+      "previousGlyph": "bridge",
+      "file": "cantiere-navale-l2.svg",
+      "role": "builder"
+    },
+    {
+      "id": "municipio",
+      "label": "Municipio",
+      "category": "inspector",
+      "file": "municipio.svg",
+      "role": "supplement"
+    },
+    {
+      "id": "gilda",
+      "label": "Gilda",
+      "category": "inspector",
+      "file": "gilda.svg",
+      "role": "supplement"
+    },
+    {
+      "id": "bargello",
+      "label": "Bargello",
+      "category": "inspector",
+      "file": "bargello.svg",
+      "role": "supplement"
+    },
+    {
+      "id": "category-civic",
+      "label": "Categoria · Edifici civili",
+      "category": "categories",
+      "file": "category-civic.svg",
+      "role": "supplement"
+    },
+    {
+      "id": "category-defense",
+      "label": "Categoria · Fortificazioni",
+      "category": "categories",
+      "file": "category-defense.svg",
+      "role": "supplement"
+    },
+    {
+      "id": "category-economy",
+      "label": "Categoria · Produzione",
+      "category": "categories",
+      "file": "category-economy.svg",
+      "role": "supplement"
+    },
+    {
+      "id": "category-events",
+      "label": "Categoria · Eventi e svago",
+      "category": "categories",
+      "file": "category-events.svg",
+      "role": "supplement"
+    },
+    {
+      "id": "category-combat",
+      "label": "Categoria · Combattimento",
+      "category": "categories",
+      "file": "category-combat.svg",
+      "role": "supplement"
+    },
+    {
+      "id": "category-terrain",
+      "label": "Categoria · Terraforming",
+      "category": "categories",
+      "file": "category-terrain.svg",
+      "role": "supplement"
+    },
+    {
+      "id": "category-infrastructure",
+      "label": "Categoria · Infrastrutture",
+      "category": "categories",
+      "file": "category-infrastructure.svg",
+      "role": "supplement"
+    },
+    {
+      "id": "ui-select",
+      "label": "Seleziona",
+      "category": "controls",
+      "file": "ui-select.svg",
+      "role": "supplement"
+    },
+    {
+      "id": "ui-demolish",
+      "label": "Demolisci",
+      "category": "controls",
+      "file": "ui-demolish.svg",
+      "role": "supplement"
+    },
+    {
+      "id": "ui-undo",
+      "label": "Annulla",
+      "category": "controls",
+      "file": "ui-undo.svg",
+      "role": "supplement"
+    },
+    {
+      "id": "ui-rotate",
+      "label": "Ruota",
+      "category": "controls",
+      "file": "ui-rotate.svg",
+      "role": "supplement"
+    },
+    {
+      "id": "ui-save",
+      "label": "Salva",
+      "category": "controls",
+      "file": "ui-save.svg",
+      "role": "supplement"
+    },
+    {
+      "id": "ui-height",
+      "label": "Altezza",
+      "category": "controls",
+      "file": "ui-height.svg",
+      "role": "supplement"
+    },
+    {
+      "id": "ui-depth",
+      "label": "Spessore / larghezza",
+      "category": "controls",
+      "file": "ui-depth.svg",
+      "role": "supplement"
+    },
+    {
+      "id": "ui-radius",
+      "label": "Raggio",
+      "category": "controls",
+      "file": "ui-radius.svg",
+      "role": "supplement"
+    },
+    {
+      "id": "ui-shape",
+      "label": "Forma",
+      "category": "controls",
+      "file": "ui-shape.svg",
+      "role": "supplement"
+    },
+    {
+      "id": "ui-material",
+      "label": "Materiale di muratura",
+      "category": "controls",
+      "file": "ui-material.svg",
+      "role": "supplement"
+    },
+    {
+      "id": "fila-pali",
+      "label": "Pali anti-carica · tratti da 1.4U · punte verso il fronte",
+      "category": "combat",
+      "selector": "[data-event-venue=\"stakeRow\"]",
+      "previousGlyph": "castle",
+      "file": "fila-pali.svg",
+      "role": "builder"
+    },
+    {
+      "id": "cavallo-frisia",
+      "label": "Cavallo di Frisia · 1.4U · sbarra un varco",
+      "category": "combat",
+      "selector": "[data-event-venue=\"chevalFrise\"]",
+      "previousGlyph": "castle",
+      "file": "cavallo-frisia.svg",
+      "role": "builder"
+    }
+  ],
+  "options": [
+    {
+      "label": "Materiale di muratura",
+      "id": "ui-material"
+    },
+    {
+      "label": "Pianta torre quadrata",
+      "id": "torre-quadrata"
+    },
+    {
+      "label": "Pianta torre rotonda",
+      "id": "torre-rotonda"
+    },
+    {
+      "label": "Semitorri e torri a D",
+      "id": "semitorre"
+    },
+    {
+      "label": "Altezza torre",
+      "id": "ui-height"
+    },
+    {
+      "label": "Spessore muro / palizzata",
+      "id": "ui-depth"
+    },
+    {
+      "label": "Altezza muro",
+      "id": "ui-height"
+    },
+    {
+      "label": "Altezza porta",
+      "id": "ui-height"
+    },
+    {
+      "label": "Larghezza fossati e ponti",
+      "id": "ui-depth"
+    },
+    {
+      "label": "Forma terreni / terrazzamenti",
+      "id": "ui-shape"
+    },
+    {
+      "label": "Scava / innalza",
+      "id": "ui-height"
+    },
+    {
+      "label": "Raggio intervento",
+      "id": "ui-radius"
+    }
+  ],
+  "commands": {
+    "select": "ui-select",
+    "close": "ui-select",
+    "demolish": "ui-demolish",
+    "clear": "ui-demolish",
+    "undo": "ui-undo",
+    "rotate": "ui-rotate",
+    "save": "ui-save"
+  }
+}

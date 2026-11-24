@@ -32,11 +32,31 @@ function syncAutumnFoliage(){
   if(step>=0)invalidateSceneCache(['landscape','base']);
   return true;
 }
+// The winter look (bare / snow / thaw, blizzard on snow days) moves with the day and the weather.
+let lastWinterLook=null;
+function syncWinterLook(){
+  const look=(typeof winterPhase==='function'?winterPhase():null);
+  if(look===lastWinterLook)return false;
+  lastWinterLook=look;invalidateSceneCache();return true;
+}
+// Spring undergrowth and meadow flowers change by date while the season stays the same, so track
+// the ground key (2D cache + 3D ground bake) and repaint when it flips.
+let lastForestGroundKey=null;
+function syncSpringUndergrowth(){
+  if(typeof forestGroundKey!=='function')return false;
+  const key=forestGroundKey()+'|'+treesBare()+'|'+springFlowersOn();
+  if(key===lastForestGroundKey)return false;
+  lastForestGroundKey=key;
+  invalidateSceneCache(['landscape','base']);
+  return true;
+}
 function syncSeasonToCalendar(){
   const next=State.seasonOverride||seasonForMonth(calendarDateFromDay().month);
-  if(State.season===next){syncAutumnFoliage();return false}
+  if(State.season===next){syncAutumnFoliage();syncWinterLook();syncSpringUndergrowth();return false}
   State.season=next;
   syncAutumnFoliage();
+  syncWinterLook();
+  syncSpringUndergrowth();
   document.querySelectorAll('[data-season]').forEach(b=>b.classList.toggle('active',b.dataset.season===State.seasonOverride));
   invalidateSceneCache();
   return true;
@@ -232,6 +252,20 @@ function ensureDevControls(){
   document.querySelectorAll('[data-private-masonry]').forEach(b=>b.onclick=()=>setPrivateMasonryMaterial(b.dataset.privateMasonry));
   document.querySelectorAll('[data-visual-palette]').forEach(b=>b.onclick=()=>setDevVisualPalette(b.dataset.visualPalette));
   document.querySelectorAll('[data-season]').forEach(b=>b.onclick=()=>setSeason(b.dataset.season));
+  const monthSelect=document.getElementById('devMonth');
+  if(monthSelect){
+    // Jump to the 1st of the chosen month (next occurrence from today) and follow the calendar again.
+    monthSelect.value=String(calendarDateFromDay().month);
+    monthSelect.onchange=()=>{
+      const m=Number(monthSelect.value),now=Math.floor(State.clock.day);
+      let target=-1;
+      for(let d=now;d<now+400;d++){const c=calendarDateFromDay(d);if(c.month===m&&c.day===1){target=d;break}}
+      if(target<0)return;
+      State.clock.day=target+(State.clock.day%1);
+      State.seasonOverride=null;
+      syncSeasonToCalendar();syncDevButtons();invalidateSceneCache();renderUI();draw();
+    };
+  }
   document.querySelectorAll('[data-light-override]').forEach(b=>b.onclick=()=>setLightOverride(b.dataset.lightOverride));
   document.querySelectorAll('[data-weather-override]').forEach(b=>b.onclick=()=>setWeatherOverride(b.dataset.weatherOverride));
   const cutawayAll=document.getElementById('devCutawayAll');

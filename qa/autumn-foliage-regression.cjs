@@ -50,8 +50,10 @@ assert.equal(State.season,'summer','DEV override returns to the civil season');
 assert.equal(evalJs('autumnFoliageStep()'),-1,'non-autumn foliage progression is inactive');
 assert.match(landscape,/forestTreeSprites\[season==='autumn'\?'summer':season\]/,
   'autumn stage zero reuses exact summer greens');
-assert.match(landscape,/makeSprite\('winter',shape,0,buildForestSvg\(sources\[shape\],null,false\)\)/,
+// Leafless winter: no crown, only the trunk plus the secondary branches (buildForestWinterSvg).
+assert.match(landscape,/buildForestSvg\(source,null,false\)\.replace\('<\/svg>',forestWinterBranchesSvg/,
   'winter remains leafless');
+assert.match(landscape,/makeSprite\('winter',shape,0,bare\)/,'winter sprite is the leafless one');
 assert.match(world3d,/const atlasSig=\[season,forestTreeSpritesReady/,
   'atlas signature does not depend on each autumn day');
 assert.match(world3d,/const treeSig=\[atlasSig,season==='autumn'\?autumnFoliageStep\(\):-1/,
