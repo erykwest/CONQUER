@@ -51,7 +51,8 @@ for(const [biome,e] of Object.entries(EXPECT))for(const seed of SEEDS){
   }else assert.equal(r.subs,0,tag+'no secondary summits without a chain');
   assert.ok(e.water.includes(r.water),tag+'water '+r.water);
   if(r.water)assert.ok(r.sinuosity>=1.12,tag+'watercourse too straight: '+r.sinuosity.toFixed(3));
-  assert.ok(r.ponds<=(e.ponds||0),tag+'ponds '+r.ponds);
+  assert.ok(r.ponds<=(e.ponds||0)+1,tag+'at most one extra pond for an accessible bank');
+  assert.ok(r.water||r.ponds>0,tag+'fresh water is guaranteed');
   assert.equal(r.sea,!!e.sea,tag+'sea');
   assert.ok(r.seaShare<=.30+1e-9,tag+'sea covers '+(100*r.seaShare).toFixed(1)+'%');
   if(e.continuous)assert.equal(r.continuous,true,tag+'continuous woodland');

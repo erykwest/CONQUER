@@ -91,7 +91,7 @@ function renderFunctionPanel(){
         'Produzione sospesa: verifica completamento, lavoratori L1 disponibili e priorità dei cantieri.')+'</div>';
     }
     info.innerHTML+=siteLaborLine(s);
-    slots.innerHTML='<div class="slot"><div class="slot-label">Rotate after construction</div><div class="grid3"><button data-point-rotate="-1">↺ 15°</button><button data-point-rotate="12">⇄ 180°</button><button data-point-rotate="1">↻ 15°</button></div></div><div class="legend">Placement: '+(s.type==='loggingCamp'?'2×2U, forest within 10U':s.type==='quarry'?(s.extractionMode==='clay'?'4×4U, centre H0 and at most 6U from river/stream/lake bank':'3×3U, any part overlaps steep rock'):'1×1U, centre directly on steep rock')+'. No tree depletion yet.</div>';
+    slots.innerHTML='<div class="slot"><div class="slot-label">Rotate after construction</div><div class="grid3"><button data-point-rotate="-1">↺ 15°</button><button data-point-rotate="12">⇄ 180°</button><button data-point-rotate="1">↻ 15°</button></div></div><div class="legend">Placement: '+(s.type==='loggingCamp'?'2×2U, forest within 10U':s.type==='quarry'?(s.extractionMode==='clay'?'4×4U, dry level swamp ground or centre at H0 within 6U of an inland bank':'3×3U, any part overlaps steep rock'):'1×1U, centre directly on steep rock')+'. No tree depletion yet.</div>';
     slots.querySelectorAll('[data-point-rotate]').forEach(btn=>btn.onclick=()=>rotatePointStructure(selectedStructure(),Number(btn.dataset.pointRotate)||1));
     return;
   }
@@ -298,6 +298,8 @@ function renderFunctionPanel(){
       if(variantSchema(s)?.bartizan){
         const bz=structureVariant(s,'bartizan'),ok=towerBartizanAllowed(s),bb=(k,l)=>`<button data-tower-bartizan="${k}" ${ok||k==='none'?'':'disabled'} class="${bz===k?'active':''}">${l}</button>`;
         html+=`<div class="slot"><div class="slot-label">Garitte</div><div class="grid3">${bb('none','Nessuna')}${bb('battlement','Merlate')}${bb('pitched','Guglia')}</div><div class="legend">${ok?'Quattro garitte d\'angolo su mensole: 3 tiratori ciascuna, colpiscono anche il piede della torre (0-1U).':'Solo torri grandi (T3) quadrate o rotonde.'}</div></div>`;
+        const n=structureVariant(s,'bartizanCount'),has=towerBartizan(s)!=='none',nb=k=>`<button data-tower-bartizan-count="${k}" ${has?'':'disabled'} class="${n===k?'active':''}">${k}</button>`;
+        html+=`<div class="slot"><div class="slot-label">Numero garitte</div><div class="grid4">${nb('1')}${nb('2')}${nb('3')}${nb('4')}</div><div class="legend">${has?'2 = angoli opposti; 3 lascia libero un angolo.':'Scegli prima lo stile delle garitte.'}</div></div>`;
       }
       html+=`<div class="slot"><div class="slot-label">Arma in cima</div><div class="grid3">${wb('none','Nessuna')}${wb('mangonel','Mangano')}${wb('ballista','Balista')}</div><div class="legend">${armed?'Upgrade: mangano o balista sulla piazza della torre, rivolti verso l\'esterno (vista 3D).':'Solo torri medie (T2) senza tetto a falde, di qualsiasi altezza.'}</div></div>`;
     }
@@ -428,5 +430,6 @@ function renderFunctionPanel(){
   on('[data-tower-roof-shape]',(id,el)=>StructureCommands.setTowerRoofShape(id,el.dataset.towerRoofShape));
   on('[data-tower-inner-roof]',(id,el)=>StructureCommands.setTowerInnerRoof(id,el.dataset.towerInnerRoof));
   on('[data-tower-bartizan]',(id,el)=>StructureCommands.setTowerBartizan(id,el.dataset.towerBartizan));
+  on('[data-tower-bartizan-count]',(id,el)=>StructureCommands.setTowerBartizanCount(id,el.dataset.towerBartizanCount));
 }
 let pan=null;

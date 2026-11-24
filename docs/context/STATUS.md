@@ -16,6 +16,42 @@
 - Ballatoio interno rimosso. Torre d'assedio di livello 2 rialzata in runtime di 0,25 sopra 1,0 U (no-op quando il modello Blender viene rigenerato con le nuove WALLS).
 - PASS cutaway-floors, cutaway-furniture, siege-assault, codex-wiki (catalog rigenerato) e il resto della suite qa/*.cjs (founding fallisce solo per tempo, flaky). Verificato a vista su torre W2 L3 con muro H2 a sinistra e H1 a destra: porte a 2,35 e 1,15 sui solai. Audit del Lab (qa/asset-audit.mjs) non eseguito in locale: da CI, poi aggiornare la baseline.
 
+### 2026-11-19 — HARDEN-261119 · Integrità salvataggi e DOM risorse
+
+- **Implementato su `fix/main-hardening-20261119`, non ancora su main**, base verificata `168b993b`.
+- Cloud: scrittura permessa solo dopo lettura riuscita (anche slot vuoto); attesa, errori SDK/rete e migrazioni fallite bloccano l'upsert. Retry riuscito riabilita la scrittura; Lab escluso anche con sessione presente.
+- Locale/CAMP: un errore di scrittura mantiene l'indicatore di errore e `dirty`; nessun falso «saved». Errori cloud restituiti o lanciati restano gestiti.
+- Barra risorse: chiavi e valori dei salvataggi costruiti come nodi di testo, senza interpretazione HTML.
+- QA locale: 16 test Node (11 nuovi + 5 runtime); 15 suite di regressione PASS. Rapporto e limiti in [HARDENING-2026-11-19](../HARDENING-2026-11-19.md). CI remota da verificare nella PR; browser e database live non verificati.
+### 2026-11-24 — CLAY-WATER-ACCESS · Acqua dolce e cava in palude
+
+Branch `fix/territory-clay-stone-access`, base main `fe665fe`. Il generatore cerca una sponda interna utilizzabile nella whitezone e aggiunge un piccolo stagno quando serve, preservando spazio asciutto per una cava 4×4U. In foresta può aprire una radura locale se manca spazio. La cava argilla può sorgere su qualsiasi terrazza asciutta edificabile del territorio Palude, anche lontano dalle rive. Acquitrini, boschi, strade ed edifici mantengono le collisioni.
+
+Prove locali PASS: economia/industrie, 42 mappe delle ricette, ordine del paesaggio, coste isola/penisola, demo regionali, bilanciamento Palude/Pianura, murature clay e Wiki. La nuova regressione delle sponde verifica il piazzamento reale in cinque biomi, acqua esterna, bosco fitto, ripetibilità e idempotenza, ed entra nella CI. Smoke Chromium headless PASS su pagina reale per Pianura 229, Mare 12345 e Palude 7, con generazione e validatore condiviso. La regola dell'acqua si applica alla generazione di nuove mappe. Merge in attesa.
+
+### 2026-11-24 — BARTIZAN-COUNT: numero di garitte selezionabile (branch `feature/bartizan-count`, NON MERGE)
+
+- **CODICE:** nuova variante torre `bartizanCount` ('1'–'4', default '4') in `settlement-core.js` (`towerBartizanCount`); `towerBartizans` riempie gli angoli opposti per primi (2 = diagonale, 3 = un angolo libero); comando `setTowerBartizanCount`, riga «Numero garitte» nel pannello e nell'ispettore; chiavi di cache/salvataggio aggiornate. I tiratori seguono (3 per garitta).
+- **PROVE LOCALI PASS:** `qa/bartizan-regression.cjs` (nuovo controllo 1–4 garitte e coppia sulla diagonale). Asset audit del Lab non eseguito, verifica a vista non fatta.
+
+
+### 2026-11-24 — SPRING-FLORA: primavera e disgelo (`feature/spring-flora-thaw`)
+
+- **IMPLEMENTATO SUL BRANCH, NON MERGE.** Base `origin/main` `992d1c36`.
+- Alberi: un terzo con chioma fiorita (sprite primaverile con pallini, 12 varianti per tipo). Cespugli: tutti fioriti (12 varianti per tipo). Pini di montagna esclusi.
+- Sottobosco: marrone a marzo, verde da aprile (`forestGroundKey`). Fiori nei prati dal 1 marzo (`springFlowersOn`).
+- Inverno: `winterPhase` di `main` con febbraio riarticolato: neve fino al 21, disgelo (`thaw`, sottobosco marrone, alberi spogli) dal 22. Chiome spente dall'1 al 7 marzo (`treesBare`).
+- **PROVE LOCALI:** controlli di sintassi su tutti i file toccati; timeline verificata in locale (15 gen → 20 mar). Errori di console preesistenti in `settlement-codex.js`/`codex-catalog.js` (`CYCLE`), non legati a questa modifica.
+- **CI remota non ancora eseguita**; nessun merge o deploy.
+
+### 2026-11-19 — UI-BUILDERICON-01: icone medievali del Builder (`buildericon`)
+
+- **IMPLEMENTATO SUL BRANCH, NON MERGE.** Base `origin/main` aggiornata `67a1b1e8`.
+- 72 SVG neri su trasparenza: un file dedicato per ognuna delle 52 voci del catalogo, 7 categorie, 10 comandi/parametri e 3 ampliamenti da inspector. Il Builder carica SVG isolati tramite immagini decorative: le maschere non condividono ID nel DOM. Etichette accessibili, selettori e pulsanti con i gestori originali restano gli stessi.
+- Fondo chiaro sui pulsanti per il contrasto del nero; selezione arancione, focus da tastiera, icone a 32px e opzioni a 28px. Registro completo in `src/assets/builder-icons/catalog.json`.
+- Asset Lab: nuova categoria Interfaccia / famiglia Icone Builder, sfondo di consultazione chiaro, manifest rigenerato. Audit della categoria: **72 render, 0 errori, 0 avvisi**; foglio provini rivisto; aggiunte alla baseline solo le 72 voci nuove.
+- **PASS LOCALI:** builder-menu (52 associazioni e SVG nel Lab), builder-placement, events-builder, mills3d, lean-to, asset-catalog, context-guard. Chromium 1228: tutte le 7 categorie e i 52 file, identità dei pulsanti dopo cambi categoria, click mulino con gestore di gioco e selezione attiva, 12 opzioni, 72 voci nel Lab, flyout entro il viewport a 390px, nessun errore di pagina.
+- CI browser aggiunta al workflow Builder menu. **CI remota non ancora eseguita** al momento di questa nota; nessun merge o deploy. ROADMAP e DECISIONS invariati: sostituzione iconografica, nessuna regola di gameplay cambiata. Dettagli in [BUILDER-ICONS](../BUILDER-ICONS.md).
 ### 2026-11-20 — SHOP-L2-ROOMS: stanze del piano terra L2 (branch `feature/shops-l2-rooms`, NON MERGE)
 
 - **CODICE:** `settlement-shop-cutaway.js` `LAYOUTS_L2` (sette mestieri) e `domestic()`; `layout(R,out,kind,home)` sceglie le stanze L2 per le botteghe di casa e `LAYOUTS` per le avanzate L3; `grade` nella chiave della cache del cutaway.
