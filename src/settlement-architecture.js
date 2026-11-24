@@ -112,11 +112,13 @@ function towerTimberFacade(s){return timberStoreyFacade(towerTimberStoreyPoints(
 // densely with its two windows; the short ends get the frame too (post and two braces, no window).
 function builtTimberFacade(s){
   const pts=builtTimberStoreyPoints(s),z0=builtTimberFloorZ(s),z1=structureHeight(s),out=[];
+  // Courtyard face (linearFacadeEdge: side +1 is edge 0): paired windows in each bay.
+  const inner=-wallExteriorSide(s)>0?0:2;
   for(const i of [0,2]){
     const a=pts[i],b=pts[(i+1)%4],L=Math.hypot(b.x-a.x,b.y-a.y),n=Math.max(1,Math.round(L/1.25));
     for(let k=0;k<n;k++){
       const p=t=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t}),qa=p(k/n),qb=p((k+1)/n);
-      const f=timberStoreyFacade([qa,qb,qb,qa],z0,z1,j=>j===0,true)[0];
+      const f=i===inner?pairedTimberBay(qa,qb,z0,z1):timberStoreyFacade([qa,qb,qb,qa],z0,z1,j=>j===0,true)[0];
       f.edge.index=i;out.push(f);
     }
   }
@@ -125,6 +127,17 @@ function builtTimberFacade(s){
     f.edge.index=i;out.push(f);
   }
   return out;
+}
+// One bay with a pair of windows side by side in the middle (a mullion between them), sill and
+// head rails, studs either side and a brace in each outer panel.
+function pairedTimberBay(a,b,z0,z1){
+  const t=HOUSE_TIMBER_W/2,L=Math.hypot(b.x-a.x,b.y-a.y),h=L/2-t,hw=HOUSE_WINDOW_HALF_W,hh=HOUSE_WINDOW_HALF_H;
+  const c=hw+t,o=2*hw+2*t+HOUSE_TIMBER_W*.4,mid=(z0+z1)/2,wl=mid-hh-t,wh=mid+hh+t,beams=[];
+  beams.push([{off:-L/2,z:z0+t},{off:L/2,z:z0+t}],[{off:-L/2,z:z1-t},{off:L/2,z:z1-t}]);
+  for(const e of [-h,h,0,-o,o])beams.push([{off:e,z:z0+t},{off:e,z:z1-t}]);
+  beams.push([{off:-o,z:wl},{off:o,z:wl}],[{off:-o,z:wh},{off:o,z:wh}]);
+  for(const sg of [-1,1])beams.push([{off:sg*h,z:z0+t},{off:sg*o,z:mid}],[{off:sg*h,z:z1-t},{off:sg*o,z:mid}]);
+  return{edge:{a,b,index:0},beams,windows:[{off:-c,z:mid},{off:c,z:mid}]};
 }
 function timberStoreyFacade(pts,z0,z1,windowed,dense=false){
   const t=HOUSE_TIMBER_W/2,out=[];
