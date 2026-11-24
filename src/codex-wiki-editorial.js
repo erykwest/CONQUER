@@ -1,7 +1,7 @@
 // Generated from content/codex/*.md. Do not edit; run node tools/export-codex-content.cjs.
 (function(root){root.ConquerWikiEditorial={
   "schemaVersion": 1,
-  "sourceDigest": "97584af0ba090c25483268daa1e40cd803573eed46d6ae68f5e8126812465189",
+  "sourceDigest": "c9d90e76545218c75a72fdc7f211e614d18124d86791e28726eed9cbf5f271be",
   "pages": [
     {
       "id": "building:balivo",
@@ -220,7 +220,7 @@
       "blocks": [
         {
           "type": "paragraph",
-          "text": "La cava argilla è una variante della [[Cava Di Pietra|cava di pietra]]. L’argilla viene usata nelle [[Costruzioni|costruzioni]] in mattoni; il piazzamento richiede terreno basso e vicinanza ad acqua interna.",
+          "text": "La cava argilla è una variante della [[Cava Di Pietra|cava di pietra]]. Produce argilla per le [[Costruzioni|costruzioni]] in mattoni. In palude puoi costruirla su qualsiasi terreno asciutto e pianeggiante con spazio per tutta la cava (4×4 U). Negli altri biomi il centro deve trovarsi a quota zero, entro 6 U dalla riva di un fiume, torrente, stagno o lago.",
           "tokens": [
             {
               "text": "La cava argilla è una variante della "
@@ -230,20 +230,20 @@
               "id": "building:quarry"
             },
             {
-              "text": ". L’argilla viene usata nelle "
+              "text": ". Produce argilla per le "
             },
             {
               "text": "costruzioni",
               "id": "topic:construction"
             },
             {
-              "text": " in mattoni; il piazzamento richiede terreno basso e vicinanza ad acqua interna."
+              "text": " in mattoni. In palude puoi costruirla su qualsiasi terreno asciutto e pianeggiante con spazio per tutta la cava (4×4 U). Negli altri biomi il centro deve trovarsi a quota zero, entro 6 U dalla riva di un fiume, torrente, stagno o lago."
             }
           ]
         }
       ],
       "text": [
-        "La cava argilla è una variante della cava di pietra. L’argilla viene usata nelle costruzioni in mattoni; il piazzamento richiede terreno basso e vicinanza ad acqua interna."
+        "La cava argilla è una variante della cava di pietra. Produce argilla per le costruzioni in mattoni. In palude puoi costruirla su qualsiasi terreno asciutto e pianeggiante con spazio per tutta la cava (4×4 U). Negli altri biomi il centro deve trovarsi a quota zero, entro 6 U dalla riva di un fiume, torrente, stagno o lago."
       ],
       "related": [
         "category:building",

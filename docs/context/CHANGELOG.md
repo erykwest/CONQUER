@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-24 — Acqua dolce garantita e argilla in Palude
+
+Branch `fix/territory-clay-stone-access`, base main `fe665fe`. Le nuove mappe ricevono un piccolo stagno quando manca una sponda interna utilizzabile per una cava nella whitezone. La Palude consente cave argilla su qualsiasi terrazza asciutta edificabile. Aggiornati aiuti Builder, scheda cava e catalogo Wiki. Aggiunta regressione su generazione e piazzamento reale alla CI. Decisione D-CLAY-WATER-261124. Roadmap invariata.
+
 ### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2 come casa-bottega
 
 `feature/shops-l2-rooms` (base `feature/shops-l3-advanced`, #293): il cutaway delle botteghe L2 ha stanze proprie (`LAYOUTS_L2`): bancone su strada lontano dalla porta, angolo della famiglia (focolare con paiolo, tavolino, due sgabelli) sul fondo del lato bancone, postazione compatta del mestiere sul fondo del lato porta; passaggio dalla porta libero. Le case L3 tengono la bottega completa. Baseline del Lab aggiornata per i 21 render «Botteghe L2». ROADMAP invariata; DECISIONS: completa D-SHOP-L3-261119 (stanze L2).

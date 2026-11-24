@@ -37,7 +37,7 @@
     return out;
   }
   function groundLevel(s){
-    if(isClayQuarry(s))return 0;
+    if(isClayQuarry(s))return terrainElevation(s);
     if(s.type==='quarry')return Math.max(...footprintSamples(s,.35).map(p=>terrainElevation(p)));
     return terrainElevation({x:s.x,y:s.y});
   }
@@ -183,14 +183,7 @@
     }else if(s.type==='loggingCamp'){
       if(buildableTerrainElevationForStructure(s)==null)
         return{ok:false,reason:'Logging camp needs a flat terrace'};
-    }else if(isClayQuarry(s)){
-      // The centre must be on elevation zero even when the corners touch other terraces.
-      if(Math.abs(terrainElevation(p))>1e-5||terrainSlopeKind(p))
-        return{ok:false,reason:'Clay pit centre must be at H0 (ground level)'};
-      const water=nearestClayWater(p);
-      if(!water.water||water.distance>6+1e-6)
-        return{ok:false,reason:'Clay pit centre must be within 6U of a river, stream or lake shoreline'};
-    }else if(s.type==='quarry'){
+    }else if(s.type==='quarry'&&!isClayQuarry(s)){
       // Existing 3x3 stone quarry: overlap with steep rock is unchanged.
       if(!intersectsRockySlope(fp))
         return{ok:false,reason:'Quarry must overlap a rocky slope somewhere within its 3×3U footprint'};
@@ -218,7 +211,17 @@
       return{ok:true,ground,resourceTarget:found.forest.id,distance:found.distance};
     }
     if(isClayQuarry(s)){
+      if(State.biome==='swamp'){
+        // A dry, buildable terrace anywhere in this territory can supply clay.
+        const terrace=buildableTerrainElevationForStructure(placement);
+        if(terrace!=null)return{ok:true,ground:terrace,resourceTarget:'swamp',distance:0};
+      }
+      // On river and lake banks only the centre has to be on level ground.
+      if(Math.abs(ground)>1e-5||terrainSlopeKind(p))
+        return{ok:false,reason:'Clay pit needs a level swamp site or a bank at H0'};
       const nearest=nearestClayWater(p);
+      if(!nearest.water||nearest.distance>6+1e-6)
+        return{ok:false,reason:'Clay pit needs swamp ground or a site within 6U of an inland bank'};
       return{ok:true,ground:0,resourceTarget:nearest.water.id,distance:nearest.distance};
     }
     return{ok:true,ground,resourceTarget:'steep',distance:0};

@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-24 — CLAY-WATER-ACCESS · Acqua dolce e cava in palude
+
+Branch `fix/territory-clay-stone-access`, base main `fe665fe`. Il generatore cerca una sponda interna utilizzabile nella whitezone e aggiunge un piccolo stagno quando serve, preservando spazio asciutto per una cava 4×4U. In foresta può aprire una radura locale se manca spazio. La cava argilla può sorgere su qualsiasi terrazza asciutta edificabile del territorio Palude, anche lontano dalle rive. Acquitrini, boschi, strade ed edifici mantengono le collisioni.
+
+Prove locali PASS: economia/industrie, 42 mappe delle ricette, ordine del paesaggio, coste isola/penisola, demo regionali, bilanciamento Palude/Pianura, murature clay e Wiki. La nuova regressione delle sponde verifica il piazzamento reale in cinque biomi, acqua esterna, bosco fitto, ripetibilità e idempotenza, ed entra nella CI. Smoke Chromium headless PASS su pagina reale per Pianura 229, Mare 12345 e Palude 7, con generazione e validatore condiviso. La regola dell'acqua si applica alla generazione di nuove mappe. Merge in attesa.
+
 ### 2026-11-20 — SHOP-L2-ROOMS: stanze del piano terra L2 (branch `feature/shops-l2-rooms`, NON MERGE)
 
 - **CODICE:** `settlement-shop-cutaway.js` `LAYOUTS_L2` (sette mestieri) e `domestic()`; `layout(R,out,kind,home)` sceglie le stanze L2 per le botteghe di casa e `LAYOUTS` per le avanzate L3; `grade` nella chiave della cache del cutaway.

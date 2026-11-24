@@ -78,7 +78,7 @@
       ['[data-storage-yard]','Piazzale / magazzino · 2×2U espandibile','work'],
       ['[data-industry="loggingCamp"]','Campo taglialegna','timber'],
       ['[data-industry="quarry"]:not([data-extraction-mode])','Cava pietra','work'],
-      ['[data-industry="quarry"][data-extraction-mode="clay"]','Cava argilla · H0 · entro 6U da acqua interna','work'],
+      ['[data-industry="quarry"][data-extraction-mode="clay"]','Cava argilla · terreno piano in palude o H0 entro 6U da una riva interna','work'],
       ['[data-industry="mine"]','Miniera','work'],
       ['[data-industry="windmill"]','Mulino a vento · 2×2U · collina H+1 o più','windmill'],
       ['[data-industry="watermill"]','Mulino ad acqua · 2×2U · riva del fiume','watermill']]},
