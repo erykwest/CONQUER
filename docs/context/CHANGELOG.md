@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-24 — WALL-SHEDS-261124 · Lean-to come upgrade, tettoie e scatter addossati
+
+`fix/wall-heights-follow-towers`: il lean-to non si costruisce più da solo (tolto il pulsante della barra): è un upgrade del muro dal pannello (Nessuno/Legno/Pietra/Mattoni), se ne va col muro (rimborso) ed esclude la scala del camminamento e viceversa. Tettoie aperte su pali automatiche lungo la faccia interna dei muri finiti senza scala (settlement-wall-sheds.js, modello delle tettoie dei cortili L3+): da 0 a 4 per muro, misure variabili, 30% in paglia, evitano il tratto del lean-to. Scatter nuovo contesto «wall»: oggetti appoggiati (profondità reale del modello + 1,5 cm) alla faccia interna dei muri e delle sezioni costruite, al fronte dei lean-to e sotto le tettoie.
+
 ### 2026-11-24 — WALL-STAIRS-261124 · Scale del camminamento a gradini, addossati
 
 `fix/wall-heights-follow-towers`: le scale del camminamento non sono più un modello scalato con l'altezza del muro: gradini pieni di alzata fissa (~0,18 U, pedata 0,28), pianerottolo d'arrivo a filo della sommità del muro. H1: una rampa lungo il muro. H2: rampa sul lato interno, pianerottolo intermedio a metà altezza esteso fino al muro, rampa di ritorno contro il muro che parte dal bordo del pianerottolo. Colori dal muro (PAL.stone mappato dal renderer: famiglie di pietra, clay, mattoni). Niente più corrimano sopra il cammino. L'addossato è rifiutato su un muro che ha la scala (stessa faccia interna).

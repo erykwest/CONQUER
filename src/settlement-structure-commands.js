@@ -138,6 +138,8 @@ const StructureCommands=(()=>{
   // Wall-walk stair (BC-251105-01/02, settlement-wall-stairs.js): none / timber / masonry, and where.
   function setWallStair(id,kind){const target=find(id),S=window.ConquerWallStairs;return !!target&&!!S&&S.setKind(target,kind)}
   function setWallStairPos(id,pos){const target=find(id),S=window.ConquerWallStairs;return !!target&&!!S&&S.setPos(target,pos)}
+  // Lean-to (settlement-lean-to.js): an upgrade of the wall, in timber, stone or brick.
+  function setWallLeanTo(id,material){const target=find(id),L=window.ConquerLeanTo;return !!target&&target.type==='wall'&&!!L&&L.setOnWall(target,material)}
   function toggleCutaway(id){
     const target=find(id);if(!cutawayEligible(target))return false;
     target.cutaway=!structureCutaway(target);
@@ -511,9 +513,16 @@ const StructureCommands=(()=>{
       d.controls.push(choice('skin','setSkin',[{value:'standard',word:'standard'},{value:'machicolation',word:'machicolation',disabled:narrow},{value:'hoarding',word:'hoarding'}],wallSkin(s)));
       const WS=window.ConquerWallStairs;
       if(WS&&!building){
-        const ok=WS.eligible(s),cur=WS.stair(s)?.kind||'none';
+        const ok=WS.eligible(s)&&!window.ConquerLeanTo?.ofWall(s),cur=WS.stair(s)?.kind||'none';
         d.controls.push(choice('wallStair','setWallStair',[{value:'none',word:'none'},{value:'wood',word:'stairWood',disabled:!ok||cur==='stone'},{value:'stone',word:'stairStone',disabled:!ok}],cur));
         if(cur!=='none')d.controls.push(choice('wallStairPos','setWallStairPos',Object.keys(WS.POSITIONS).map(v=>({value:v,word:'stairPos_'+v})),s.wallStair.pos||'middle'));
+      }
+      // Lean-to: an upgrade of an H2 wall, offered here only (no free-standing build tool).
+      const LT=window.ConquerLeanTo;
+      if(LT&&!building){
+        const lt=LT.ofWall(s),cur=lt?(lt.leanMaterial||'wood'):'none',can=!lt&&LT.make(s,'wood').ok;
+        d.controls.push(choice('leanTo','setWallLeanTo',[{value:'none',word:'none'},
+          ...['wood','stone','brick'].map(v=>({value:v,word:'lean_'+v,disabled:lt?cur!==v:!can}))],cur));
       }
     }
     // Patrols of the ring of walls this wall belongs to (settlement-wall-patrols.js, MIL-WALL-01).
@@ -564,7 +573,7 @@ const StructureCommands=(()=>{
     return d;
   }
 
-  const commands={setConstructionPriority,setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setLonghouseCover,setGateRoof,setGateUpper,setSkin,setWallStair,setWallStairPos,toggleCutaway,stepCutawayFloor,flipSide,digMoat,
+  const commands={setConstructionPriority,setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setLonghouseCover,setGateRoof,setGateUpper,setSkin,setWallStair,setWallStairPos,setWallLeanTo,toggleCutaway,stepCutawayFloor,flipSide,digMoat,
     setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBell,setTowerInnerRoof,setTowerLookout,setTowerOutpost,setTowerSignalFire,setWallPatrols,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,startUpgrade,
     describeStructure};
   for(const name of ['setTier','setHeight','setKeepFloorPlan','setTowerBase','setTowerRoof','setHoarding','setWoodRoof','setGateRoof','setGateUpper','setSkin','setTowerWeapon','setTowerRoofShape','setTowerBartizan','setTowerBell','setTowerInnerRoof','setCivicLevel','setPlazaVariant']){

@@ -46,11 +46,27 @@
     return{ok:true,structure:s};
   }
   function atPoint(p,material){return make(nearestWall(p),material)}
+  // The lean-to is an upgrade of its wall (wall inspector, StructureCommands.setWallLeanTo):
+  // it is never placed on its own, and it goes when its wall goes.
+  function ofWall(w){return w?State.structures.find(o=>isLeanTo(o)&&o.leanWallId===w.id)||null:null}
+  function setOnWall(w,material){
+    const cur=ofWall(w);
+    if(material==='none'){
+      if(!cur)return false;
+      if(typeof deleteStructure==='function')deleteStructure(cur.id);
+      status('Addossato rimosso');return true;
+    }
+    if(cur){status('Il muro ha già un addossato: rimuovilo per cambiarne il materiale');return false}
+    const r=make(w,material);
+    if(!r.ok){status('Addossato: '+r.reason);return false}
+    if(typeof addStructure==='function'&&addStructure(r.structure)===false)return false;
+    status('Addossato in costruzione contro il muro · scegli la stanza nel pannello');return true;
+  }
   // Roof heights: eaves on the open side, the top edge on the wall a hand under the walk.
   const EAVES=1.40,UNDER_WALK=.12;
   function roofTop(s){
     const w=leanWallOf(s);
     return (w?structureHeight(w):2.35)-UNDER_WALK;
   }
-  window.ConquerLeanTo=Object.freeze({make,atPoint,nearestWall,leanWallOf,roofTop,EAVES,MIN_LENGTH});
+  window.ConquerLeanTo=Object.freeze({make,atPoint,nearestWall,leanWallOf,ofWall,setOnWall,roofTop,EAVES,MIN_LENGTH});
 })();

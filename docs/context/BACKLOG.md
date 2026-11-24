@@ -1,5 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-24 — WALL-SHEDS-261124 · Lean-to, tettoie e scatter dei muri
+- [x] Lean-to come upgrade del muro, niente costruzione libera, demolito col muro.
+- [x] Tettoie automatiche lungo la faccia interna dei muri; scatter addossato a muri, sezioni costruite, lean-to e sotto le tettoie.
+- [ ] Regressione dedicata alle tettoie e inserimento nel Lab.
+- [ ] Lean-to e tettoie quando il muro crolla in assedio.
+
 ### 2026-11-24 — WALL-STAIRS-261124 · Scale del camminamento
 - [x] Gradini a passo fisso, pianerottolo d'arrivo; H2 a due rampe con pianerottolo intermedio.
 - [x] Colori della scala dal materiale del muro.

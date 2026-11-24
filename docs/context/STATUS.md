@@ -1,5 +1,10 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-24 — WALL-SHEDS-261124: lean-to upgrade, tettoie, scatter addossati (branch `fix/wall-heights-follow-towers`, NON MERGE)
+- settlement-lean-to.js ofWall/setOnWall; StructureCommands.setWallLeanTo e controllo «Addossato» nel pannello del muro; deleteStructure toglie il lean-to col muro. settlement-wall-sheds.js (tettoie, signature per la cache World3D); settlement-scatter.js wallProps/hug/footRow.
+- PASS lean-to, wall-stairs, scatter, panels, render-cache-keys, refactor-module-boundaries (sulla sola versione committata). Verificato in gioco: matrice W1/W2/W3 × H1/H2 (lean-to solo H2), tettoie e scatter dal lato interno. Non nel Lab e senza regressione dedicata alle tettoie.
+- Nello stesso worktree un'altra sessione ha modifiche non committate (lean-to 4U max, finestre/porta del lean-to, architecture/core/castle3d): escluse da questo commit.
+
 ### 2026-11-24 — WALL-STAIRS-261124: scale del camminamento e addossati (branch `fix/wall-heights-follow-towers`, NON MERGE)
 - settlement-wall-stairs.js: stairPlan/stairBoxes/stairTriangles (gradini pieni, pianerottoli); geometria alla sommità del muro (structureHeight), accesso alla rete a walkZ. settlement-lean-to.js: make() rifiuta un muro con wallStair.
 - PASS wall-stairs (sommità 1,15) e lean-to. Verificato a vista in gioco: H2 con quattro soldati disegnati sui gradini e pianerottoli (quote, non percorso di pattuglia), colori su 5 famiglie di pietra, clay e mattoni. La vista da fuori del muro mostra solo la sommità della scala. Audit Lab da CI.

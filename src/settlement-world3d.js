@@ -626,6 +626,9 @@
       const house=entry.house;if(underConstruction(house))continue;
       withStructureVisualMaterial(house,()=>addHouse(m,entry,winter));
     }
+    // Open sheds along the inner face of the curtain walls (settlement-wall-sheds.js): the
+    // town-yard lean-to on posts, its high side on the wall.
+    for(const w of State.structures)if(w.type==='wall')for(const part of window.ConquerWallSheds?.parts(w)||[])addOutbuilding(m,w,part,winter);
     // Urban boundaries (urbanFenceSegments): fences and low walls as solids, hedges are billboards.
     for(const e of urbanFenceSegments()){
       const dx=e.b.x-e.a.x,dy=e.b.y-e.a.y,L=Math.hypot(dx,dy);if(L<1e-4)continue;
@@ -750,7 +753,8 @@
   // L3/L4 yard outbuildings (urbanLotOutbuildings), same palette as drawUrbanOutbuilding.
   function addOutbuilding(m,house,part,winter){
     const faces=urbanHouseFaces(house,part),n=part.points.length,P=f=>f.map(({p,z})=>({x:p.x,y:p.y,z}));
-    const roofA=winter?WINTER_ROOF[0]:'#5b3d30',roofB=winter?WINTER_ROOF[1]:'#6b4938';
+    // A wall shed may be thatched (settlement-wall-sheds.js part.thatch): the cottage straw.
+    const roofA=winter?WINTER_ROOF[0]:part.thatch?HOUSE_THATCH.a:'#5b3d30',roofB=winter?WINTER_ROOF[1]:part.thatch?HOUSE_THATCH.b:'#6b4938';
     if(part.type==='store'){
       m.tag?.('body');for(let i=0;i<n;i++)m.face(P(faces[i]),i%2?'#5d4431':'#71543c');
       m.tag?.('roof');m.face(P(faces[n]),roofA);m.face(P(faces[n+1]),roofB);
@@ -1637,7 +1641,7 @@
     }
     pumpGroundTiles(gl);
     // Heraldry: flags and drapes of the timber fortifications take the realm's colours.
-    const bSig=[season,State.visualPalette,State.stonePaletteId,window.ConquerCoast?.shore()?.stretches?.length||0,State.seed,urbanRev(),structuresSig('buildings'),window.ConquerStorageYard?.visualSignature?.()||'',civicCut,shopCut,shopFront,JSON.stringify(State.heraldry||null)].join('|');
+    const bSig=[season,State.visualPalette,State.stonePaletteId,window.ConquerCoast?.shore()?.stretches?.length||0,State.seed,urbanRev(),structuresSig('buildings'),window.ConquerWallSheds?.signature?.()||0,window.ConquerStorageYard?.visualSignature?.()||'',civicCut,shopCut,shopFront,JSON.stringify(State.heraldry||null)].join('|');
     if(S.sig.buildings!==bSig){const a=performance.now();upload(gl,'buildings',buildBuildings());S.sig.buildings=bSig;st.buildingsMs=performance.now()-a}
     // The selected church / inn in cutaway: its section plane follows the camera quarter-turn.
     const cutSig=[bSig,rot,plan].join('|');

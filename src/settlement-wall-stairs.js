@@ -131,6 +131,8 @@
     }
     if(!allowedKind(s,kind))return false;
     if(!eligible(s)){status('Scala: serve un muro finito T2 o T3 con camminamento');return false}
+    // The lean-to and the stair share the inner face: one of the two per wall.
+    if(State.structures.some(o=>o.leanTo&&o.leanWallId===s.id)){status('Sul muro c’è un addossato: rimuovilo prima di fare la scala');return false}
     const cur=stair(s)?.kind;
     if(cur===kind)return false;
     if(cur==='stone'&&kind==='wood'){status('La scala lapidea non torna lignea: rimuovila prima');return false}
