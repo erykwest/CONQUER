@@ -211,6 +211,8 @@
       ['Grande quadrata L3 merli + torretta rotonda',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'battlement',upInnerTower:'round'}],
       ['Grande rotonda L3 caditoie + torretta quadrata',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'machicolation',upInnerTower:'square'}],
       ['Torre a D grande L3 merli + torretta rotonda',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'battlement',upInnerTower:'round'}],
+      ['Grande quadrata L2 + torretta rotonda con guardia',{type:'tower',shape:'square',material:'stone',level:2,tier:3,size:sq(3),roofStyle:'battlement',upInnerTower:'round',functions:['storage','barracks','guard']}],
+      ['Pietra rotonda L2 + torretta quadrata con armeria',{type:'tower',shape:'round',material:'stone',level:2,tier:2,r:rd(2),roofStyle:'battlement',upInnerTower:'square',functions:[null,'quarters','armory']}],
       ['Mattoni (argilla) quadrata L3 merli + torretta quadrata',{type:'tower',shape:'square',material:'stone',masonryMaterial:'brick',level:3,tier:3,size:sq(3),roofStyle:'battlement',upInnerTower:'square'}],
       ['Legno vedetta',{type:'tower',shape:'square',material:'wood',woodStyle:'watchtower',woodRoof:'pitched',level:1,tier:1,size:1}],
       ['Legno media aperta',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'open',level:1,tier:2,size:1.5}],

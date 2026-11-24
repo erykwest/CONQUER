@@ -45,6 +45,28 @@ check('W-1 footprint, one storey, shape free of the tower shape',()=>{
     assert.ok(Math.abs(run('towerVisualTopHeight')(t)-g.apexZ)<1e-9,'visual top = apex');
   }
 });
+check('the turret is a floor of its own with one more room',()=>{
+  const t=tower('a',{size:2,tier:3,level:2,upInnerTower:'round'}),plain=tower('b',{size:2,tier:3,level:2});setup([t,plain]);
+  assert.equal(run('functionCapacity')(t),run('functionCapacity')(plain)+1);
+  const fl=run('cutawayFloorLevels')(t),h=run('structureHeight')(t);
+  assert.equal(fl.length,run('cutawayFloorLevels')(plain).length+1);
+  assert.ok(fl[fl.length-1].turret&&Math.abs(fl[fl.length-1].z-h-.055)<1e-9,'turret floor on the deck');
+  const slots=run('cutawayRoomSlots')(t),last=slots[slots.length-1];
+  assert.ok(last.turret&&last.round&&last.size==='normal','turret room slot');
+  assert.ok(last.basis.w<1.5,'the turret room is inside the turret');
+  const w1=tower('c',{level:1,upInnerTower:'square'});setup([w1]);
+  assert.equal(run('functionCapacity')(w1),2,'a one-storey tower gets a second room');
+});
+check('floor-by-floor cutaway: the turret is the top floor, the one below shows the crenellated deck',()=>{
+  const t=tower('a',{size:2,tier:3,level:2,upInnerTower:'round',cutaway:true});setup([t]);
+  assert.equal(run('cutawayFloorCount')(t),3);
+  assert.equal(run('cutawayVisibleFloor')(t),2,'opens on the turret');
+  t.cutawayFloor=1;
+  assert.ok(!run('cutawayFloorShown')(t,2),'turret room hidden below it');
+  assert.ok(!run('cutawayCrestHidden')(t),'the merlons stay with the top storey in view');
+  t.cutawayFloor=0;
+  assert.ok(run('cutawayCrestHidden')(t),'crest goes with the floors above');
+});
 check('cache keys see the variant',()=>{
   for(const f of ['settlement-render.js','settlement-construction-assembly.js','settlement-population.js'])
     assert.ok(fs.readFileSync(__dirname+'/../src/'+f,'utf8').includes('upInnerTower'),f);

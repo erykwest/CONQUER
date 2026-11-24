@@ -357,9 +357,9 @@
     for(const pc of slots.flatMap(raw=>porticoSlots(s,raw))){
       const slot=pc.slot;
       // A W4 floor has one ladder, in its first room.
-      const key=s.id+':'+slot.index,ladder=['tower','gate'].includes(s.type)&&levels>1&&!slot.room;
+      const key=s.id+':'+slot.index,ladder=['tower','gate'].includes(s.type)&&floors.length>1&&!slot.room&&!slot.turret;
       const posts=s.type==='tower'?(window.ConquerSiege?.archerSlots(s)||[]).filter(a=>a.kind==='slit'&&a.floor===slot.floor+1).map(a=>a.p):[];
-      const r=builder({...slot,key,round:s.type==='tower'&&s.shape==='round',dee:s.type==='tower'&&s.shape==='dee'},{ladderCorner:ladder,passage:pc.passage||passageFor(s,slot),posts,blocks:typeof cutawayBlockers==='function'?cutawayBlockers(s).filter(k=>slot.z<k.h).map(k=>k.pts):[]});
+      const r=builder({...slot,key,round:slot.turret?slot.round:s.type==='tower'&&s.shape==='round',dee:!slot.turret&&s.type==='tower'&&s.shape==='dee'},{ladderCorner:ladder,passage:pc.passage||passageFor(s,slot),posts,blocks:typeof cutawayBlockers==='function'?cutawayBlockers(s).filter(k=>slot.z<k.h).map(k=>k.pts):[]});
       // A room with an exterior element (the garderobe) knows the side of the room it hangs from.
       const ext=slot.role&&window.ConquerRoomExterior?.elements(s,{broken:true}).find(e=>e.index===slot.index);
       if(ext){const ca=Math.cos(r.F.b.angle),sa=Math.sin(r.F.b.angle),u=ext.normal.x*ca+ext.normal.y*sa,v=-ext.normal.x*sa+ext.normal.y*ca;
@@ -369,7 +369,7 @@
       if(slot.role){r.wall(r.A,r.large?-.5:.0,'torchWall',{deco:true});if(r.large)r.wall(r.B,.5,'torchWall',{deco:true})}
       // ARTE anchors, after every piece of the room (the gate passage floor has none).
       const art=slot.index===-1?[]:roomArtSlots(r,{key});
-      out.push({slot,F:r.F,items:r.items,art,ladder:ladder&&slot.floor<levels-1?r.F.ladder:null,
+      out.push({slot,F:r.F,items:r.items,art,ladder:ladder&&slot.floor<floors.length-1?r.F.ladder:null,
         nextZ:floors[slot.floor+1]?.z});
     }
     return out;

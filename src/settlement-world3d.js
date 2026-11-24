@@ -1442,13 +1442,24 @@
       // Room exterior elements stand outside the cut: whole, lit with the shell.
       for(const t of window.ConquerRoomExterior?.triangles(s)||[])sh.face(t.pts.map(q=>Z(q.p,q.z)),t.hex);
       if(H>=HF-1e-6&&s.type==='tower'&&towerRoofStyle(s)==='battlement')facesOut(g.inner,winter?WINTER_SNOW_TOP:stoneTone('#8f857a'),sh,H-.01);
-      // Up inner tower: with the top floor in view the turret still stands on the deck, whole.
-      const up=H>=HF-1e-6&&s.type==='tower'&&typeof upInnerTowerGeometry==='function'?upInnerTowerGeometry(s):null;
-      if(up){
-        const r=up.ring,e=up.eave,n2=r.length,round=up.shape==='round',cols=winter?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP]:['#303236','#3a3d42','#44474c'];
-        for(let i=0;i<n2;i++){const a=r[i],b=r[(i+1)%n2];sh.face([Z(a,up.h),Z(b,up.h),Z(b,up.topZ),Z(a,up.topZ)],stoneTone(i%2?'#61574f':'#82776c'))}
-        sh.face(r.map(p=>Z(p,up.topZ)),stoneTone('#8f857a'));
-        for(let i=0;i<e.length;i++)sh.face([Z(e[i],up.eaveZ),Z(e[(i+1)%e.length],up.eaveZ),Z(up.apex,up.apexZ)],(c=>clayCut&&!winter?clayTone(c):c)(round?cols[i%3]:winter?(i%2?WINTER_SNOW_A:WINTER_SNOW_B):(i%2?'#34363a':'#42454a')));
+      // Up inner tower: a floor of its own. In view, it opens like the tower (far walls, cut crest,
+      // stone floor, its room's furniture); with a floor below in view it is taken off with the roof.
+      const tfl=s.type==='tower'?cutawayFloorLevels(s):[],tIdx=tfl.findIndex(f=>f.turret);
+      const tg=tIdx>=0&&cutawayVisibleFloor(s)===tIdx&&typeof upInnerTowerCutawayGeometry==='function'?upInnerTowerCutawayGeometry(s):null;
+      if(tg){
+        const up=tg.up,to=tg.outer,ti=tg.inner,tn=Math.min(to.length,ti.length),z0=up.h,z1=up.topZ,fz=tfl[tIdx].z;
+        const tin=to.slice(0,tn).map(o=>ti.reduce((b,p)=>Math.hypot(p.x-o.x,p.y-o.y)<Math.hypot(b.x-o.x,b.y-o.y)?p:b,ti[0]));
+        const topen=cutawayTransparentFaceIndexes({type:'tower',shape:tg.round?'round':'square',x:up.apex.x,y:up.apex.y},{outer:to.slice(0,tn),inner:tin});   // by the turret's own shape
+        for(let i=0;i<tn;i++){
+          if(topen.has(i))continue;
+          const j=(i+1)%tn;
+          sh.face([Z(to[i],z0),Z(to[j],z0),Z(to[j],z1),Z(to[i],z1)],stoneTone(castleSideShade(to[i],to[j])));
+          m.face([Z(tin[i],fz),Z(tin[j],fz),Z(tin[j],z1),Z(tin[i],z1)],stoneTone('#61574f'));
+          sh.face([Z(to[i],z1),Z(to[j],z1),Z(tin[j],z1),Z(tin[i],z1)],winter?WINTER_SNOW_TOP:stoneTone('#8f857a'));
+        }
+        for(const v of cutawayBoundaryVertices(topen,tn))m.face([Z(to[v],z0),Z(tin[v],z0),Z(tin[v],z1),Z(to[v],z1)],stoneTone('#82776c'));
+        m.face(tin.map(p=>Z(p,fz)),floorTone('#7f796f'));
+        for(let i=0;i<tn;i++){const j=(i+1)%tn;m.face([Z(tin[i],z0),Z(tin[j],z0),Z(tin[j],fz),Z(tin[i],fz)],floorTone('#5a554d'))}
       }
       // Floors: slab, then tiles (stone ground floor) or planks (wooden upper floors) clipped to the room.
       const basis=cutawayFloorBasis(s,g),ca=Math.cos(basis.angle),sa=Math.sin(basis.angle);

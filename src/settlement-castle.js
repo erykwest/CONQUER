@@ -694,7 +694,23 @@ function towerUpperFloorZ(s,i){
   if(s?.type!=='tower'||isWoodTower(s)||level<2||h-CURTAIN_WALK_Z<(level-1)*1.1)return h*i/level;
   return i===1?CURTAIN_WALK_Z:CURTAIN_WALK_Z+(h-CURTAIN_WALK_Z)*(i-1)/(level-1);
 }
+// Up inner tower: its room is one more floor, on the deck (upInnerTowerGeometry), with its own
+// walls (upInnerTowerCutawayGeometry) instead of the tower's.
+function upInnerTowerFloor(s){
+  const up=s?.type==='tower'&&typeof upInnerTowerGeometry==='function'?upInnerTowerGeometry(s):null;
+  return up?{z:up.h+.055,material:'stone',turret:true}:null;
+}
+function upInnerTowerCutawayGeometry(s){
+  const up=typeof upInnerTowerGeometry==='function'&&upInnerTowerGeometry(s);if(!up)return null;
+  const t=.1,c=up.apex,round=up.shape==='round',r=Math.max(.12,up.half-t);
+  const inner=round?circleWorldPoints(c.x,c.y,r,24):rectWorldPoints(c.x,c.y,r*2,r*2,s.angle||0);
+  return{outer:up.ring,inner,thickness:t,turret:true,round,basis:{center:{x:c.x,y:c.y},angle:s.angle||0,w:r*2,h:r*2},up};
+}
 function cutawayFloorLevels(s){
+  const floors=cutawayFloorLevelsBase(s),turret=upInnerTowerFloor(s);
+  return turret&&!cutawaySpiralStair(s)?[...floors,turret]:floors;
+}
+function cutawayFloorLevelsBase(s){
   // Wide halls keep the full height free: a single ground floor at L2.
   const level=s.type==='built'?builtInteriorFloors(s):structureLevel(s),h=structureHeight(s),floors=[{z:.055,material:'stone'}];
   if(level<=1||cutawaySpiralStair(s))return floors;
@@ -749,10 +765,12 @@ function cutawayRoomSlots(s,g=cutawayWallGeometry(s)){
     });
     return out;
   }
-  for(let i=0;i<cap;i++)out.push({
-    index:i,floor:i+off,role:roles[i]||null,size:functionSlotSize(s,i),
-    z:floors[i+off].z,basis,g
-  });
+  const tg=floors.some(f=>f.turret)?upInnerTowerCutawayGeometry(s):null;
+  for(let i=0;i<cap;i++){
+    const f=floors[i+off];
+    out.push(f.turret&&tg?{index:i,floor:i+off,role:roles[i]||null,size:'normal',z:f.z,basis:tg.basis,g:tg,turret:true,round:tg.round}
+      :{index:i,floor:i+off,role:roles[i]||null,size:functionSlotSize(s,i),z:f.z,basis,g});
+  }
   return out;
 }
 const KEEP_PARTITION=.10,KEEP_PARTITION_H=.62,KEEP_DOORWAY=.34;

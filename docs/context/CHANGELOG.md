@@ -2,7 +2,7 @@
 
 ### 2026-11-24 — UP-INNER-TOWER · Torretta centrale sulle torri W2/W3
 
-`feature/upinnertower`: nuovo upgrade delle torri in pietra W2/W3 con merli o caditoie, «Torretta centrale» rotonda o quadrata (indipendente dalla forma della torre), un piano, larga quanto la torre del taglio inferiore, con tetto a punta. Esclude tetto interno, arma e pira; toglie il bracere. Non è nel menu di costruzione. 6 voci nel Lab, test in `qa/tower-up-inner-tower-regression.cjs`. ROADMAP e DECISIONS invariate.
+`feature/upinnertower`: nuovo upgrade delle torri in pietra W2/W3 con merli o caditoie, «Torretta centrale» rotonda o quadrata (indipendente dalla forma della torre), un piano, larga quanto la torre del taglio inferiore, con tetto a punta. Esclude tetto interno, arma e pira; toglie il bracere. Non è nel menu di costruzione. La torretta è un piano in più con una stanza assegnabile, che si apre nel cutaway piano per piano. 6 voci nel Lab, test in `qa/tower-up-inner-tower-regression.cjs`. ROADMAP e DECISIONS invariate.
 
 ### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2 come casa-bottega
 
