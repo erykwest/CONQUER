@@ -1,5 +1,10 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-24 — BARTIZAN-COUNT · Numero di garitte selezionabile
+
+`feature/bartizan-count`: le torri T3 con garitte scelgono quante metterne (1–4, default 4 come prima); con 2 stanno sulla diagonale, con 3 resta libero un angolo. Tiratori di conseguenza.
+
+
 ### 2026-11-24 — SPRING-FLORA · Primavera: fiori, sottobosco e disgelo (`feature/spring-flora-thaw`)
 
 Primavera più distinta dall'estate: un albero su tre ha la chioma fiorita (pallini di un colore per albero, dodici disposizioni per tipo, scelte per pianta); tutti i cespugli fioriscono con sprite dedicati. Sottobosco marrone a marzo, verde da aprile; fiori nei prati dal 1 marzo. Disgelo: da 22 febbraio sottobosco marrone e niente neve (fase `thaw` di `winterPhase`), neve fino al 21 febbraio; chiome spente dall'1 all'7 marzo. DEV: selettore del mese. ROADMAP e DECISIONS invariate: aggiustamento visivo e del calendario invernale, nessuna regola di gameplay nuova. QA: controlli sintattici e timeline verificata in locale; CI remota non ancora eseguita.
