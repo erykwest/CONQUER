@@ -294,17 +294,15 @@ function isStoneTowerStructure(s){
 }
 function stoneTowerSplayedFootprint(s){
   if(!isStoneTowerStructure(s))return footprintPoints(s);
-  if(s.shape==='round'){
-    return circleWorldPoints(s.x,s.y,(Number(s.r)||.5)+STONE_TOWER_SPLAY_OFFSET,24);
-  }
-  if(isOrientedTower(s))return orientedTowerOutline(s,-STONE_TOWER_SPLAY_OFFSET);
+  return stoneTowerSplayRing(s,STONE_TOWER_SPLAY_OFFSET);
+}
+// The tower outline pushed out by `off`: the same vertices at every offset, so two rings of the
+// splayed talus (at the floor and down the slope) pair up vertex by vertex.
+function stoneTowerSplayRing(s,off){
+  if(s.shape==='round')return circleWorldPoints(s.x,s.y,(Number(s.r)||.5)+off,24);
+  if(isOrientedTower(s))return orientedTowerOutline(s,-off);
   const d=rectDims(s);
-  return rectWorldPoints(
-    s.x,s.y,
-    d.w+STONE_TOWER_SPLAY_OFFSET*2,
-    d.h+STONE_TOWER_SPLAY_OFFSET*2,
-    s.angle||0
-  );
+  return rectWorldPoints(s.x,s.y,d.w+off*2,d.h+off*2,s.angle||0);
 }
 // Stepped Gothic buttress against a wall point p (u along the wall, o outward), h tall:
 // deep plinth, sloped weathering, shallower upper stage, final slope back into the wall.
@@ -389,7 +387,15 @@ function placementFoundationProfile(s){
     minZ=Math.min(minZ,z);maxZ=Math.max(maxZ,z);
   }
   if(!Number.isFinite(minZ)||!Number.isFinite(maxZ))return null;
-  return{baseZ:maxZ,minZ,maxZ,depth:Math.max(0,maxZ-minZ)};
+  // The floor is the highest ground under the tower body, not under its buttresses or talus:
+  // those reach further uphill and would lift the floor (and the door) above the summit.
+  let floorZ=maxZ;
+  if(isStoneTowerStructure(s)&&towerBaseStyle(s)!=='standard'){
+    floorZ=-Infinity;
+    for(const p of structureTerrainSamples(s,[footprintPoints(s)]))floorZ=Math.max(floorZ,terrainElevation(p));
+    if(!Number.isFinite(floorZ))floorZ=maxZ;
+  }
+  return{baseZ:floorZ,minZ,maxZ,depth:Math.max(0,floorZ-minZ)};
 }
 // Memo per structure: the foundation profile samples the whole footprint on the terrain and
 // was recomputed for every ground-plane draw call (hundreds of terrain samples per frame).
@@ -425,6 +431,70 @@ function placementFoundationDepth(s){
   for(const p of samples)minZ=Math.min(minZ,terrainElevation(p));
   return Math.max(0,baseZ-minZ);
 }
+// Rule (user, 24/11/2026): on a hillside the tower's ground-floor entrance faces the summit and
+// opens on it — the threshold stands on the hilltop at the tower's floor level. Placement turns
+// the tower so its door looks uphill (orientTowerToSummit) and refuses a site where the threshold
+// would be on the slope (towerEntranceSummitVerdict).
+const TOWER_SUMMIT_MIN_RISE=.015,TOWER_SUMMIT_THRESHOLD=.25,TOWER_SUMMIT_TOLERANCE=.03;
+// Uphill direction around the tower (unit vector), or null on level ground.
+function towerUphillVector(s){
+  const fp=towerFacadePoints(s)||footprintPoints(s)||[];
+  let R=s.shape==='round'?Number(s.r)||.5:0;
+  for(const p of fp)R=Math.max(R,Math.hypot(p.x-s.x,p.y-s.y));
+  R+=.6;
+  const N=24,dirs=[],zs=[];
+  for(let i=0;i<N;i++){const a=i*Math.PI*2/N,d={x:Math.cos(a),y:Math.sin(a)};dirs.push(d);zs.push(terrainElevation({x:s.x+d.x*R,y:s.y+d.y*R}))}
+  const mean=zs.reduce((a,b)=>a+b,0)/N;
+  if(Math.max(...zs)-Math.min(...zs)<TOWER_SUMMIT_MIN_RISE)return null;
+  let vx=0,vy=0;
+  zs.forEach((z,i)=>{vx+=(z-mean)*dirs[i].x;vy+=(z-mean)*dirs[i].y});
+  const L=Math.hypot(vx,vy);
+  return L>1e-6?{x:vx/L,y:vy/L}:null;
+}
+// The rule covers the ground door of a free-standing tower: subtowers have none, a gate tower's
+// faces the gate, a quay tower's faces the quay, and a D tower on a wall is turned by the wall.
+function towerSummitRuleApplies(s,{wallSnapped=false}={}){
+  if(!s||s.type!=='tower'||s.parentTowerId||s.quaySnap)return false;
+  if(isOrientedTower(s))return s.shape==='dee'&&!wallSnapped&&!Number.isFinite(s.wallSeat);
+  return true;
+}
+// Turns a tower on a slope so its entrance looks uphill: a square one by quarter turns (same
+// footprint, so a wall seat stays put), a round one freely, a free-standing D with its round
+// front downhill (its door is on the flat rear). Returns true when the angle changed.
+function orientTowerToSummit(s,opts={}){
+  if(!towerSummitRuleApplies(s,opts))return false;
+  const up=towerUphillVector(s);if(!up)return false;
+  const ua=Math.atan2(up.y,up.x),a0=Number(s.angle)||0;
+  let target;
+  if(isOrientedTower(s))target=ua+Math.PI;
+  else if(s.shape==='round')target=ua;
+  else{
+    let best=-Infinity;
+    for(let k=0;k<4;k++){const a=a0+k*Math.PI/2,c=Math.cos(a-ua);if(c>best){best=c;target=a}}
+  }
+  const before=normalizeStructureAngle(a0);
+  applyStructureRotation(s,target);
+  return Math.abs(normalizeStructureAngle(s.angle)-before)>1e-6;
+}
+function towerSummitEntrance(s){
+  if(typeof towerDoorSpecs!=='function')return null;
+  return towerDoorSpecs(s).find(d=>d.kind==='front'&&!d.raised)||null;
+}
+// {ok, reason}: on level ground anything goes; on a slope the ground door faces uphill and its
+// threshold is on the hilltop at the floor level.
+function towerEntranceSummitVerdict(s,opts={}){
+  if(!towerSummitRuleApplies(s,opts)||!isPlacementFoundationBuilding(s))return{ok:true};
+  const up=towerUphillVector(s);
+  if(!up||placementFoundationDepth(s)<=TOWER_SUMMIT_MIN_RISE)return{ok:true};
+  const door=towerSummitEntrance(s);if(!door)return{ok:true};
+  if(door.outward.x*up.x+door.outward.y*up.y<Math.SQRT1_2)
+    return{ok:false,reason:'La porta della torre deve essere rivolta verso la cima'};
+  const t={x:door.contact.x+door.outward.x*TOWER_SUMMIT_THRESHOLD,y:door.contact.y+door.outward.y*TOWER_SUMMIT_THRESHOLD};
+  const top=terrainPlateauElevation(t),floor=placementGroundZ(s);
+  if(top==null||!Number.isFinite(floor)||Math.abs(top-floor)>TOWER_SUMMIT_TOLERANCE)
+    return{ok:false,reason:'La porta della torre deve aprirsi sulla cima: sposta la torre verso il pianoro'};
+  return{ok:true};
+}
 function usesRaisedPlacementFoundation(s){
   return isPlacementFoundationBuilding(s)&&placementFoundationDepth(s)>.015;
 }
@@ -435,8 +505,8 @@ function isRaisedPlacementCastlePoint(s){
 function withStructureGroundPlane(s,drawFn){
   return withProjectionGroundZ(placementGroundZ(s),drawFn);
 }
-function structureTerrainSamples(s){
-  const polys=structureGroundContactPolygons(s);if(!polys.length)return[];
+function structureTerrainSamples(s,polys=structureGroundContactPolygons(s)){
+  if(!polys?.length)return[];
   const out=[];
   for(const fp of polys){
     for(let i=0;i<fp.length;i++){

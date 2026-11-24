@@ -129,7 +129,16 @@
     if(isStoneTowerStructure(s)){
       const base=towerBaseStyle(s);
       if(base==='buttress'){
-        for(const b of stoneTowerButtresses(s))addButtress(m,b);
+        // On a slope each buttress plants its deep stage on the ground under it (z is relative
+        // to the tower floor here), instead of standing on the foundation wall.
+        const floor=placementGroundZ(s);
+        for(const b of stoneTowerButtresses(s)){
+          if(Number.isFinite(floor)){
+            const low=Math.min(...b[0].bottom.map(p=>terrainElevation(p)))-floor;
+            if(low<-.01)b[0]={...b[0],z0:low};
+          }
+          addButtress(m,b);
+        }
       }else if(base==='splayed'){
         m.frustum(stoneTowerSplayedFootprint(s),footprintPoints(s),0,STONE_TOWER_BASE_HEIGHT);
       }
@@ -259,8 +268,13 @@
     // drawPlacementFoundation: ground-contact ring walls from the terrain up to the placement plane.
     const baseZ=placementGroundZ(s);
     if(!Number.isFinite(baseZ)||placementFoundationDepth(s)<=.015)return;
+    const style=isStoneTowerStructure(s)?towerBaseStyle(s):null;
     withProjectionGroundZ(0,()=>{
-      for(const fp of unionGroundContactRings(structureGroundContactPolygons(s))){
+      // Splayed: the 10° talus runs on down the slope. Buttressed: the buttresses reach the ground
+      // themselves (addTower), so the foundation wall follows the tower body only.
+      if(style==='splayed'){addSplayTalus(m,s,baseZ);return}
+      const polys=style==='buttress'?[footprintPoints(s)]:structureGroundContactPolygons(s);
+      for(const fp of unionGroundContactRings(polys)){
         for(let i=0;i<fp.length;i++){
           const a=fp[i],b=fp[(i+1)%fp.length],steps=Math.max(1,Math.ceil(dist(a,b)/.24));
           for(let j=0;j<steps;j++){
@@ -272,6 +286,32 @@
         }
       }
     });
+  }
+  // Splayed base on a slope: the batter goes on below the floor at the same 10°, so its foot moves
+  // out as the ground falls away. The top ring is the splayed footprint at the floor; each point of
+  // the foot is pushed out by (depth below the floor)·tan10°, found by iterating on the terrain.
+  function addSplayTalus(m,s,baseZ){
+    const T=Math.tan(STONE_TOWER_SPLAY_ANGLE),depth=placementFoundationDepth(s)+.05;
+    const top=stoneTowerSplayedFootprint(s),far=stoneTowerSplayRing(s,STONE_TOWER_SPLAY_OFFSET+depth*T);
+    if(top.length!==far.length)return;
+    const lerp=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
+    const foot=p=>{
+      const q=far[p.i],r=top[p.i],q2=far[(p.i+1)%far.length],r2=top[(p.i+1)%top.length];
+      const a=lerp(r,r2,p.t),b=lerp(q,q2,p.t);
+      let g=terrainElevation(a),pt=a;
+      for(let k=0;k<4;k++){pt=lerp(a,b,clamp((baseZ-g)/depth,0,1));g=Math.min(baseZ,terrainElevation(pt))}
+      return{top:a,p:pt,z:g};
+    };
+    for(let i=0;i<top.length;i++){
+      const steps=Math.max(1,Math.ceil(dist(top[i],top[(i+1)%top.length])/.24));
+      let prev=foot({i,t:0});
+      for(let j=1;j<=steps;j++){
+        const cur=foot({i,t:j/steps});
+        if(baseZ-Math.min(prev.z,cur.z)>.01)
+          m.face([{p:prev.p,z:prev.z},{p:cur.p,z:cur.z},{p:cur.top,z:baseZ},{p:prev.top,z:baseZ}],castleSideShade(prev.top,cur.top));
+        prev=cur;
+      }
+    }
   }
   function bodyMesh(parts,withBackPieces=false){
     const m=makeMesh();

@@ -173,6 +173,11 @@
       for(const p of samples(polys))
         if(blockedNature(p,foundation))return invalid('Placement intersects forest, water, obstacle or slope');
       if(blockedByTrees(polys))return invalid('Placement intersects forest trees');
+      // On a hillside the tower door faces the summit and opens on it (settlement-castle.js).
+      if(s.type==='tower'){
+        const summit=towerEntranceSummitVerdict(s,{wallSnapped:!!s.wallSnapId});
+        if(!summit.ok)return invalid(summit.reason);
+      }
     }
     // New manual buildings may replace auto-created houses, fields and roads.
     // Rotation of an existing auto house must still respect other auto buildings.
