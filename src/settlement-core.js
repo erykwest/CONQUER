@@ -342,14 +342,15 @@ const STRUCTURE_VARIANTS=Object.freeze({
     skin:Object.freeze(['standard','machicolation','hoarding'])
   }),
   built:Object.freeze({
-    skin:Object.freeze(['standard','arcade'])
+    skin:Object.freeze(['standard','arcade']),
+    upper:Object.freeze(['stone','timber'])
   })
 });
 const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
   tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',roofShape:'pyramid',hoarding:'off',bell:'none',signalFire:'none',innerRoof:'off',machicolationStyle:'standard',upper:'stone'}),
   gate:Object.freeze({roofStyle:'battlement',upper:'stone',hoarding:'off'}),
   wall:Object.freeze({skin:'standard'}),
-  built:Object.freeze({skin:'standard'})
+  built:Object.freeze({skin:'standard',upper:'stone'})
 });
 // Clothing by house level: L1 grey/beige, L2 green/brown, L3 muted primaries,
 // L4 bright primaries. Shared by tunics and the dyed pieces of the seasonal wardrobe.
@@ -608,6 +609,13 @@ function gateTimberUpper(s){return isSmallGate(s)&&!s.brokenTop&&structureLevel(
 const TOWER_TIMBER_COST=Object.freeze({wood:45}),TOWER_JETTY=.1;
 function towerTimberUpperAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&(s.shape||'square')==='square'&&towerTier(s)===3&&structureLevel(s)>=2&&!s.brokenTop}
 function towerTimberUpper(s){return towerTimberUpperAllowed(s)&&s.upper==='timber'}
+// Built section with a timber P1 (BC-261124): a W1 stone section at L2 whose upper storey is a
+// jettied timber frame with plaster (BUILT_JETTY over both long faces, flush at the ends where
+// towers and gates stand). The ground floor keeps the stone strength; the frame burns
+// (settlement-fire.js 'upper'). Cost: the L1 section plus BUILT_TIMBER_WOOD_PER_U wood per U.
+const BUILT_TIMBER_WOOD_PER_U=14,BUILT_JETTY=.1;
+function builtTimberUpperAllowed(s){return !!s&&s.type==='built'&&!isLonghouse(s)&&!isWideBuilt(s)&&!(typeof isLeanTo==='function'&&isLeanTo(s))&&structureLevel(s)===2&&!s.brokenTop}
+function builtTimberUpper(s){return builtTimberUpperAllowed(s)&&s.upper==='timber'}
 // BC-251105-07: only the free-standing square stone W2 tower may rise to a fourth storey (H4),
 // a slender watch tower; wider towers stop at H3 and the W4 keep stays the only great tower.
 const TOWER_H4_LEVEL=4;
@@ -891,6 +899,10 @@ function baseConstructionCost(s){
   if(s.type==='palisade')return roundCost(Object.fromEntries(Object.entries(COSTS.palisadePerU).map(([k,v])=>[k,v*s.length])));
   if((typeof isTimberLeanTo==='function'&&isTimberLeanTo(s)))return roundCost(Object.fromEntries(Object.entries(COSTS.longhousePerU).map(([k,v])=>[k,v*.7*s.length])));
   if(isLonghouse(s))return roundCost(Object.fromEntries(Object.entries(COSTS.longhousePerU).map(([k,v])=>[k,v*s.length*builtWidth(s)])));
+  if(s.type==='built'&&(typeof builtTimberUpper==='function'&&builtTimberUpper(s))){
+    const c=scaleCost(Object.fromEntries(Object.entries(COSTS.builtPerU).map(([k,v])=>[k,v*s.length*builtWidth(s)])),1);
+    c.wood=(c.wood||0)+Math.ceil(BUILT_TIMBER_WOOD_PER_U*s.length);return c;
+  }
   if(s.type==='built')return scaleCost(Object.fromEntries(Object.entries(COSTS.builtPerU).map(([k,v])=>[k,v*s.length*builtWidth(s)])),levelCostFactor(s));
   return{};
 }

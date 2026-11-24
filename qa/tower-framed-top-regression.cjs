@@ -38,5 +38,14 @@ check('jettied storey and wider roof eaves',()=>{
   assert.ok(run('towerTimberFloorZ')(tower())<run('structureHeight')(tower()));
   assert.ok(run('towerRoofRise')(tower())>run('towerRoofRise')(tower({upper:'stone',roofStyle:'pitched'})));
 });
+const built=(extra={})=>run('normalizeStructureVariants')({id:'b',type:'built',tier:2,level:2,width:1,length:3,a:{x:0,y:0},b:{x:3,y:0},upper:'timber',functions:[],...extra});
+check('built section: timber P1 only on W1 stone sections at L2, wood-only extra cost',()=>{
+  const ok=run('builtTimberUpperAllowed'),cost=run('constructionCost');
+  assert.ok(ok(built()));assert.ok(!ok(built({level:1})));assert.ok(!ok(built({span:'wide'})));assert.ok(!ok(built({material:'wood'})));
+  const L1=cost(built({level:1,upper:'stone'})),T=cost(built());
+  assert.equal(T.stone,L1.stone);assert.equal(T.gold,L1.gold);assert.equal(T.wood,L1.wood+Math.ceil(run('BUILT_TIMBER_WOOD_PER_U')*3));
+  const pts=run('builtTimberStoreyPoints')(built());
+  assert.ok(Math.abs(Math.hypot(pts[3].x-pts[0].x,pts[3].y-pts[0].y)-(1+2*run('BUILT_JETTY')))<1e-9,'jettied on both long faces');
+});
 console.log('tower framed top regression: '+passed+' checks');
 `);

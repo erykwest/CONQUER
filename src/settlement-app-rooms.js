@@ -323,6 +323,7 @@ function renderFunctionPanel(){
   }
   if(s.type==='built'&&!isLonghouse(s)){
     const skin=builtSkin(s);
+    if(builtTimberUpperAllowed(s)){const tb=builtTimberUpper(s);html+=`<div class="slot"><div class="slot-label">Piano P1</div><div class="grid"><button data-built-upper="stone" class="${tb?'':'active'}">Pietra</button><button data-built-upper="timber" class="${tb?'active':''}">Graticcio</button></div><div class="legend">Graticcio: P1 in legno e intonaco a sbalzo sui due lati lunghi. Costa la sezione L1 più ${BUILT_TIMBER_WOOD_PER_U} legno per U. Resiste come la pietra ma il P1 brucia.</div></div>`}
     html+=`<div class="slot"><div class="slot-label">Built wall skin</div><div class="grid"><button data-built-skin="standard" class="${skin==='standard'?'active':''}">Standard</button><button data-built-skin="arcade" class="${skin==='arcade'?'active':''}">Porticato</button></div><div class="legend">${isWideBuilt(s)?'Porticato affects only the interior ground floor.':'Porticato: the ground floor opens under the arches and the upper floor is raised over it. Under the portico: '+PORTICO_FUNCTIONS.map(k=>FUNCTION_LABELS[k]).join(', ')+'.'}</div></div>`;
   }
   if(s.type==='wall'){
@@ -414,6 +415,7 @@ function renderFunctionPanel(){
   on('[data-gate-roof]',(id,el)=>StructureCommands.setGateRoof(id,el.dataset.gateRoof));
   on('[data-gate-upper]',(id,el)=>StructureCommands.setGateUpper(id,el.dataset.gateUpper));
   on('[data-tower-upper]',(id,el)=>StructureCommands.setTowerUpper(id,el.dataset.towerUpper));
+  on('[data-built-upper]',(id,el)=>StructureCommands.setBuiltUpper(id,el.dataset.builtUpper));
   on('[data-built-skin]',(id,el)=>StructureCommands.setSkin(id,el.dataset.builtSkin));
   on('[data-wall-skin]',(id,el)=>StructureCommands.setSkin(id,el.dataset.wallSkin));
   on('[data-cutaway-toggle]',id=>StructureCommands.toggleCutaway(id));

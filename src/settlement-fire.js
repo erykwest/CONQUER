@@ -44,7 +44,7 @@
     const out=s.type==='tower'?[...(window.ConquerKeepEntrance?.fireParts?.(s)||[])]:[];
     // Framed top of a W3 stone tower: the whole timber storey and its roof burn as one.
     const framed=s.type==='tower'&&typeof towerTimberUpper==='function'&&towerTimberUpper(s);
-    if(framed)out.push({part:'upper',flam:.85});
+    if(framed||(s.type==='built'&&typeof builtTimberUpper==='function'&&builtTimberUpper(s)))out.push({part:'upper',flam:.85});
     else if(s.type==='tower'&&typeof towerRoofStyle==='function'&&towerRoofStyle(s)==='pitched'&&!s.roofBurnt)out.push({part:'roof',flam:.6});
     if(s.type==='gate'&&typeof gateRoofStyle==='function'&&gateRoofStyle(s)==='pitched'&&!s.roofBurnt)out.push({part:'roof',flam:.6});
     if(s.type==='church'&&!s.roofBurnt)out.push({part:'roof',flam:.4});
@@ -106,7 +106,8 @@
   function burnout(s,f){
     if(f.part==='upper'){
       // The frame is gone: the stone storeys below stand with a broken, charred crown.
-      s.level=Math.max(1,structureLevel(s)-1);s.brokenTop=true;s.upper='stone';s.roofBurnt=true;
+      s.level=Math.max(1,structureLevel(s)-1);s.upper='stone';
+      if(s.type==='tower')s.brokenTop=true,s.roofBurnt=true;
       if(typeof normalizeFunctions==='function')normalizeFunctions(s);
     }else if(f.part==='roof'){
       s.roofBurnt=true;

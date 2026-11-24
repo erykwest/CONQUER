@@ -108,6 +108,20 @@ function gateWindowRows(s){
 function gateTimberFacade(s){return timberStoreyFacade(gateTimberStoreyPoints(s),gateTimberFloorZ(s),structureHeight(s),i=>i===GATE_FACADE_FRONT||i===GATE_FACADE_REAR)}
 // Framed top of a W3 tower: the same frame, two windows on every face (it is the watch room).
 function towerTimberFacade(s){return timberStoreyFacade(towerTimberStoreyPoints(s),towerTimberFloorZ(s),structureHeight(s),()=>true,true)}
+// Timber P1 of a built section: the two long faces in bays of about 1.25 U, each bay framed
+// densely with its two windows; the ends meet towers and gates and stay plain.
+function builtTimberFacade(s){
+  const pts=builtTimberStoreyPoints(s),z0=builtTimberFloorZ(s),z1=structureHeight(s),out=[];
+  for(const i of [0,2]){
+    const a=pts[i],b=pts[(i+1)%4],L=Math.hypot(b.x-a.x,b.y-a.y),n=Math.max(1,Math.round(L/1.25));
+    for(let k=0;k<n;k++){
+      const p=t=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t}),qa=p(k/n),qb=p((k+1)/n);
+      const f=timberStoreyFacade([qa,qb,qb,qa],z0,z1,j=>j===0,true)[0];
+      f.edge.index=i;out.push(f);
+    }
+  }
+  return out;
+}
 function timberStoreyFacade(pts,z0,z1,windowed,dense=false){
   const t=HOUSE_TIMBER_W/2,out=[];
   for(let i=0;i<4;i++){
@@ -533,6 +547,8 @@ function builtWindowRows(s){
     return[arcade?[inside,upperZ,.42,'gothicL3',.92,.78,true]:lancet(2.12),...slits,[outside,upperZ,.72,'arrowSlit',.23,.58,false]];
   }
   const rows=[[outside,lowerZ,.72,'arrowSlit',.23,.58,false]];
+  // Timber P1: its frame carries its own windows (builtTimberFacade).
+  if(l>=2&&typeof builtTimberUpper==='function'&&builtTimberUpper(s))return rows;
   if(l>=2)rows.unshift([inside,upperZ,.42,'gothicL3',.92,.78,true]),rows.push([outside,upperZ,.72,'arrowSlit',.23,.58,false]);
   return rows;
 }

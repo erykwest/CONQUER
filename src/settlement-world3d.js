@@ -1140,6 +1140,7 @@
           }
         }
       }else if(s.type==='built'&&!isLonghouse(s)){
+        if(builtTimberUpper(s))timberFacadeDecals(builtTimberFacade(s),terrainElevation(center),center);
         for(const [side,z,density,key,aw,ah,,fixed] of builtWindowRows(s)){
           const edge=linearFacadeEdge(s,side),count=builtWindowCount(edge,density,fixed,aw),cell=edge.length/count;
           const ground=terrainElevation({x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2}),o=outward(edge,center);

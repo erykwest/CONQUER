@@ -85,7 +85,7 @@ function woodTowerLocal(s,x,y){
   const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0);
   return{x:s.x+x*ca-y*sa,y:s.y+x*sa+y*ca};
 }
-function builtRoofFootprintPoints(s){
+function builtRoofFootprintPoints(s,extra=typeof builtTimberUpper==='function'&&builtTimberUpper(s)?BUILT_JETTY+.06:0){
   let a={...s.a},b={...s.b};
   let dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
   const inset=clamp((Number(s.width)||1)*.11,.08,.16);
@@ -96,7 +96,7 @@ function builtRoofFootprintPoints(s){
   if(hasCastleSnap(s.bSnap))b={x:b.x-ux*inset,y:b.y-uy*inset};
 
   dx=b.x-a.x;dy=b.y-a.y;L=Math.hypot(dx,dy)||1;
-  const nx=-dy/L*(Number(s.width)||1)/2,ny=dx/L*(Number(s.width)||1)/2;
+  const hw=(Number(s.width)||1)/2+extra,nx=-dy/L*hw,ny=dx/L*hw;
   return[
     {x:a.x+nx,y:a.y+ny},
     {x:b.x+nx,y:b.y+ny},

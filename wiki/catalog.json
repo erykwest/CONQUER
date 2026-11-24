@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceDigest": "b197a88e38b57dac420983b6a1d12d5c349cdec7d66b81802ca4919c5838c1a3",
+  "sourceDigest": "beddb2b057fe69cf6bbe24db3a21727f7e62cee38617cd1110fecce148c09cd7",
   "catalog": {
     "schemaVersion": 1,
     "categories": [
@@ -173,6 +173,10 @@
             "skin": [
               "standard",
               "arcade"
+            ],
+            "upper": [
+              "stone",
+              "timber"
             ]
           },
           "geometry": {
@@ -6206,6 +6210,100 @@
           "variant": "skin",
           "value": "standard",
           "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:built",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:built.upper.stone",
+        "key": "stone",
+        "label": "built · upper · stone",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.built.upper"
+        },
+        "properties": {
+          "variant": "upper",
+          "value": "stone",
+          "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:built",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:built.upper.timber",
+        "key": "timber",
+        "label": "built · upper · timber",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.built.upper"
+        },
+        "properties": {
+          "variant": "upper",
+          "value": "timber",
+          "default": false,
           "kind": "configuration"
         },
         "relations": [

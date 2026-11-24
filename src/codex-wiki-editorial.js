@@ -1,7 +1,7 @@
 // Generated from content/codex/*.md. Do not edit; run node tools/export-codex-content.cjs.
 (function(root){root.ConquerWikiEditorial={
   "schemaVersion": 1,
-  "sourceDigest": "d24b08cf2940aacf86c819a2173a77c8ccc2f1f0150c904d2607b652a258a05f",
+  "sourceDigest": "08e7daaae7836806e36a3a381afb9cc64ade84a80cbd3f682d51fe65a972724c",
   "pages": [
     {
       "id": "building:balivo",
@@ -6451,6 +6451,100 @@
       ],
       "text": [
         "Sezione costruita · Rivestimento standard appartiene ai miglioramenti delle fortificazioni. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:built"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:built.upper.stone",
+      "kind": "entry",
+      "title": "Sezione costruita · P1 in pietra",
+      "aliases": [
+        "Sezione costruita · P1 in pietra"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Sezione Costruita|Sezione costruita]] · P1 in pietra appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: il piano superiore della sezione L2 è in muratura come il piano terra.",
+          "tokens": [
+            {
+              "text": "Sezione costruita",
+              "id": "building:built"
+            },
+            {
+              "text": " · P1 in pietra appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": il piano superiore della sezione L2 è in muratura come il piano terra."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Sezione costruita · P1 in pietra appartiene ai miglioramenti delle fortificazioni: il piano superiore della sezione L2 è in muratura come il piano terra."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:built"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:built.upper.timber",
+      "kind": "entry",
+      "title": "Sezione costruita · P1 a graticcio",
+      "aliases": [
+        "Sezione costruita · P1 a graticcio"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Sezione Costruita|Sezione costruita]] · P1 a graticcio appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: sulle sezioni costruite W1 in pietra a L2 il piano superiore è in legno e intonaco, a sbalzo sui due lati lunghi. Costa la sezione L1 più solo legno; il piano terra resiste come la pietra, il P1 brucia e, consumato, la sezione torna a L1.",
+          "tokens": [
+            {
+              "text": "Sezione costruita",
+              "id": "building:built"
+            },
+            {
+              "text": " · P1 a graticcio appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": sulle sezioni costruite W1 in pietra a L2 il piano superiore è in legno e intonaco, a sbalzo sui due lati lunghi. Costa la sezione L1 più solo legno; il piano terra resiste come la pietra, il P1 brucia e, consumato, la sezione torna a L1."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Sezione costruita · P1 a graticcio appartiene ai miglioramenti delle fortificazioni: sulle sezioni costruite W1 in pietra a L2 il piano superiore è in legno e intonaco, a sbalzo sui due lati lunghi. Costa la sezione L1 più solo legno; il piano terra resiste come la pietra, il P1 brucia e, consumato, la sezione torna a L1."
       ],
       "related": [
         "category:upgrade",

@@ -741,8 +741,13 @@ function towerTimberStoreyPoints(s){const d=rectDims(s);return rectWorldPoints(s
 function timberStorey(s){
   if(s?.type==='gate'&&gateTimberUpper(s))return{z:gateTimberFloorZ(s),pts:gateTimberStoreyPoints(s)};
   if(s?.type==='tower'&&towerTimberUpper(s))return{z:towerTimberFloorZ(s),pts:towerTimberStoreyPoints(s)};
+  if(s?.type==='built'&&builtTimberUpper(s))return{z:builtTimberFloorZ(s),pts:builtTimberStoreyPoints(s)};
   return null;
 }
+// Timber P1 of a built section: from its upper floor to the eaves; the outline is the roof's
+// (pulled back from snapped towers) widened BUILT_JETTY on both long faces.
+function builtTimberFloorZ(s){return cutawayFloorLevels(s)[1]?.z??structureHeight(s)/2}
+function builtTimberStoreyPoints(s){return builtRoofFootprintPoints({...s,upper:'stone'},BUILT_JETTY)}
 function gateTimberStoreyPoints(s){const d=rectDims(s);return rectWorldPoints(s.x,s.y,d.w+GATE_JETTY*2,d.h,s.angle||0)}
 function cutawayRoomSlots(s,g=cutawayWallGeometry(s)){
   // slot i is the room on floor i+offset (gates: the ground floor is the passage, no room).
