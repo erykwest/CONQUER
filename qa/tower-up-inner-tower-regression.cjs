@@ -19,7 +19,9 @@ check('off by default; W2/W3 stone towers with a flat deck only',()=>{
   assert.equal(up(tower('e',{size:3,tier:4,upInnerTower:'round'})),null,'not W4');
   assert.equal(up(tower('f',{material:'wood',upInnerTower:'round'})),null,'not wood');
   assert.equal(up(tower('g',{shape:'half',upInnerTower:'round'})),null,'not a semitower');
-  assert.equal(up(tower('h',{roofStyle:'pitched',upInnerTower:'round'})),null,'not under a pitched roof');
+  assert.equal(up(tower('h',{roofStyle:'pitched',upInnerTower:'round'})),'round','through a pitched pyramid / cone');
+  assert.equal(up(tower('h2',{roofStyle:'pitched',roofShape:'gable',upInnerTower:'round'})),null,'not through a gable roof');
+  assert.equal(up(tower('h3',{roofStyle:'pitched',bell:'bell',upInnerTower:'round'})),null,'not with a bell on the apex');
   assert.equal(up(tower('i',{brokenTop:true,upInnerTower:'round'})),null,'gone with a broken crown');
   assert.ok(!run('setStructureVariant')(tower('j'),'upInnerTower','dome'),'only off / round / square');
 });
@@ -66,6 +68,15 @@ check('floor-by-floor cutaway: the turret is the top floor, the one below shows 
   assert.ok(!run('cutawayCrestHidden')(t),'the merlons stay with the top storey in view');
   t.cutawayFloor=0;
   assert.ok(run('cutawayCrestHidden')(t),'crest goes with the floors above');
+});
+check('pitched tower: the roof is cut round the turret, the turret stands above the cut',()=>{
+  for(const t of [tower('a',{shape:'round',r:1,size:undefined,tier:3,level:3,roofStyle:'pitched',upInnerTower:'round'}),tower('b',{size:2,tier:3,level:3,roofStyle:'pitched',upInnerTower:'square'}),tower('c',{size:2,tier:3,roofStyle:'pitched',upInnerTower:'round'})]){
+    setup([t]);const g=geo(t),h=run('structureHeight')(t);
+    assert.ok(g.cut&&g.cut.z>h,'cut above the eave');
+    assert.ok(Math.abs(g.topZ-g.cut.z-1.2)<1e-9,'one storey above the roof');
+    const c=g.apex,inside=p=>g.shape==='round'?Math.hypot(p.x-c.x,p.y-c.y)<=g.half:Math.max(Math.abs(p.x-c.x),Math.abs(p.y-c.y))<=g.half+1e-9;
+    assert.ok(g.cut.ring.every(inside),'cut ring hidden inside the turret walls');
+  }
 });
 check('cache keys see the variant',()=>{
   for(const f of ['settlement-render.js','settlement-construction-assembly.js','settlement-population.js'])

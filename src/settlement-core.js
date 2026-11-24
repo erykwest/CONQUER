@@ -453,7 +453,12 @@ function towerInnerRoofMounted(s){return towerInnerRoofAllowed(s)&&structureVari
 // excludes the inner roof, the deck weapon and the signal pyre. Geometry: upInnerTowerGeometry.
 function towerUpInnerTowerAllowed(s){
   const t=s?.type==='tower'&&!isWoodTower(s)?towerTier(s):0;
-  return (t===2||t===3)&&s.shape!=='half'&&['battlement','machicolation'].includes(towerRoofStyle(s))
+  const roof=towerRoofStyle(s);
+  // Under a pitched roof (pyramid or cone; not on a D tower) the turret rises through a truncated
+  // roof, as on the Sinwell tower; the roof's apex fittings (bell, dovecote lantern) give way to it.
+  const pitched=roof==='pitched'&&s.shape!=='dee'&&structureVariant(s,'roofShape')!=='gable'&&structureVariant(s,'roofShape')!=='hip'
+    &&structureVariant(s,'bell')!=='bell'&&!(s.functions||[]).some(f=>f==='dovecote'||f==='mews');
+  return (t===2||t===3)&&s.shape!=='half'&&(['battlement','machicolation'].includes(roof)||pitched)
     &&structureVariant(s,'topWeapon')==='none'&&structureVariant(s,'signalFire')!=='pyre'&&structureVariant(s,'innerRoof')!=='on';
 }
 function towerUpInnerTower(s){const v=structureVariant(s,'upInnerTower');return v&&v!=='off'&&towerUpInnerTowerAllowed(s)?v:null}

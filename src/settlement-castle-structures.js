@@ -826,7 +826,8 @@ function midpoint2(a,b){return{x:(a.x+b.x)/2,y:(a.y+b.y)/2}}
 function towerFlagAnchors(tower){
   if(!tower||tower.type!=='tower'||isWoodTower(tower)||underConstruction(tower))return[];
   const out=[];
-  if(towerRoofStyle(tower)==='pitched'){
+  // The apex flag goes with the roof in cutaway (the roof is taken off; it would float).
+  if(towerRoofStyle(tower)==='pitched'&&!(typeof structureCutaway==='function'&&structureCutaway(tower))){
     const g=towerRoofShape(tower)!=='pyramid'&&squareTowerRoofGeometry(tower);
     if(g){out.push({at:g.ridgeA,z:g.ridgeH,key:tower.id+'-flag',size:1},{at:g.ridgeB,z:g.ridgeH,key:tower.id+'-flag-2',size:1})}
     else out.push({at:{x:tower.x,y:tower.y},z:towerApexFlagZ(tower),key:tower.id+'-flag',size:1});

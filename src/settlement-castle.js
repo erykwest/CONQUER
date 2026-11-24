@@ -698,7 +698,7 @@ function towerUpperFloorZ(s,i){
 // walls (upInnerTowerCutawayGeometry) instead of the tower's.
 function upInnerTowerFloor(s){
   const up=s?.type==='tower'&&typeof upInnerTowerGeometry==='function'?upInnerTowerGeometry(s):null;
-  return up?{z:up.h+.055,material:'stone',turret:true}:null;
+  return up?{z:(up.cut?up.cut.z:up.h)+.055,material:'stone',turret:true}:null;   // above the cut roof under a pitched top
 }
 function upInnerTowerCutawayGeometry(s){
   const up=typeof upInnerTowerGeometry==='function'&&upInnerTowerGeometry(s);if(!up)return null;

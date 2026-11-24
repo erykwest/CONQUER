@@ -68,6 +68,12 @@ function towerRoofRise(s){
   const half=s.shape==='round'?Number(s.r||.5)+overhang:Math.min(d.w,d.h)/2+overhang;
   return roofPitchTan()*half;
 }
+// The full pitched apex of a tower, whatever stands on it (the turret cuts the roof below it).
+function towerVisualTopHeightPitched(s){
+  const overhang=.07,d=s.shape==='round'?null:rectDims(s);
+  const half=s.shape==='round'?Number(s.r||.5)+overhang:Math.min(d.w,d.h)/2+overhang;
+  return structureHeight(s)+roofPitchTan()*half;
+}
 function towerVisualTopHeight(s){
   if(!s||s.type!=='tower')return structureHeight(s);
   return structureHeight(s)+towerRoofRise(s);
@@ -120,8 +126,18 @@ function upInnerTowerGeometry(s){
   const half=round?towerSizeForTier('round',t):towerSizeForTier('square',t)/2;
   const ring=round?circleWorldPoints(c.x,c.y,half,24):rectWorldPoints(c.x,c.y,half*2,half*2,ang);
   const eave=round?circleWorldPoints(c.x,c.y,half+UP_INNER_TOWER_EAVE,24):rectWorldPoints(c.x,c.y,(half+UP_INNER_TOWER_EAVE)*2,(half+UP_INNER_TOWER_EAVE)*2,ang);
-  const h=structureHeight(s),topZ=h+UP_INNER_TOWER_STOREY;
-  return{shape,ring,eave,h,topZ,eaveZ:topZ,apex:c,apexZ:topZ+Math.max(roofPitchTan(),UP_INNER_TOWER_MIN_TAN)*(half+UP_INNER_TOWER_EAVE),half};
+  const h=structureHeight(s);
+  // Pitched tower: its roof is cut where it meets the turret (k of the way in from the eave, so the
+  // cut ring stays inside the turret walls), and the turret's storey stands above that cut.
+  let cut=null,base=h;
+  if(towerRoofStyle(s)==='pitched'){
+    const er=towerRoofFootprintPoints(s),R=Math.max(...er.map(p=>Math.hypot(p.x-c.x,p.y-c.y)));
+    const reach=!round&&er.length<=8?half*Math.SQRT2:half,k=Math.min(.95,(reach-.03)/R),rz=towerVisualTopHeightPitched(s);
+    const z=h+(rz-h)*(1-k);
+    cut={eave:er,ring:er.map(p=>({x:c.x+(p.x-c.x)*k,y:c.y+(p.y-c.y)*k})),z,eaveZ:h};base=z;
+  }
+  const topZ=base+UP_INNER_TOWER_STOREY;
+  return{shape,ring,eave,h,topZ,cut,eaveZ:topZ,apex:c,apexZ:topZ+Math.max(roofPitchTan(),UP_INNER_TOWER_MIN_TAN)*(half+UP_INNER_TOWER_EAVE),half};
 }
 // Roof faces, one per ring edge: each eave point climbs to its nearest point on the ridge
 // tail→apex (a triangle where both ends reach the same ridge point, a quad along the ridge).

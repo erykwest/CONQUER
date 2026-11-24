@@ -1447,7 +1447,13 @@
       const tfl=s.type==='tower'?cutawayFloorLevels(s):[],tIdx=tfl.findIndex(f=>f.turret);
       const tg=tIdx>=0&&cutawayVisibleFloor(s)===tIdx&&typeof upInnerTowerCutawayGeometry==='function'?upInnerTowerCutawayGeometry(s):null;
       if(tg){
-        const up=tg.up,to=tg.outer,ti=tg.inner,tn=Math.min(to.length,ti.length),z0=up.h,z1=up.topZ,fz=tfl[tIdx].z;
+        const up=tg.up,to=tg.outer,ti=tg.inner,tn=Math.min(to.length,ti.length),z0=up.cut?up.cut.z:up.h,z1=up.topZ,fz=tfl[tIdx].z;
+        // Pitched tower: the truncated roof stays round the turret's foot, so the turret does not float.
+        if(up.cut){
+          const e=up.cut.eave,r=up.cut.ring,ne=e.length,rr=ne>8,cols=winter?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP]:['#303236','#3a3d42','#44474c'];
+          const tone=c=>clayCut&&!winter?clayTone(c):c;
+          for(let i=0;i<ne;i++){const j=(i+1)%ne;sh.face([Z(r[i],up.cut.z),Z(r[j],up.cut.z),Z(e[j],up.h),Z(e[i],up.h)],tone(rr?cols[i%3]:winter?(i%2?WINTER_SNOW_A:WINTER_SNOW_B):(i%2?'#34363a':'#42454a')))}
+        }
         const tin=to.slice(0,tn).map(o=>ti.reduce((b,p)=>Math.hypot(p.x-o.x,p.y-o.y)<Math.hypot(b.x-o.x,b.y-o.y)?p:b,ti[0]));
         const topen=cutawayTransparentFaceIndexes({type:'tower',shape:tg.round?'round':'square',x:up.apex.x,y:up.apex.y},{outer:to.slice(0,tn),inner:tin});   // by the turret's own shape
         for(let i=0;i<tn;i++){

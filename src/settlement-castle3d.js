@@ -136,7 +136,13 @@
     }
     for(const d of halfTowerFloorDecks(s))m.prism(d.pts,d.z0,d.z1,PAL.hoardDeck());
     for(const l of halfTowerLadders(s))m.prism(l.pts,l.z0,l.z1,l.part==='rung'?PAL.ladderRung():PAL.ladderRail());
-    if(towerRoofStyle(s)==='pitched'){
+    const upCut=towerRoofStyle(s)==='pitched'&&upInnerTowerGeometry(s)?.cut;
+    if(upCut){
+      // Truncated roof round the turret: eave ring up to the cut ring.
+      m.tag='roof';
+      const e=upCut.eave,r=upCut.ring,n=e.length,round=n>8,cols=winter()?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP]:['#303236','#3a3d42','#44474c'];
+      for(let i=0;i<n;i++){const j=(i+1)%n;m.face([{p:e[i],z:h},{p:e[j],z:h},{p:r[j],z:upCut.z},{p:r[i],z:upCut.z}],round?cols[i%3]:winter()?(i%2?WINTER_SNOW_A:WINTER_SNOW_B):(i%2?'#34363a':'#42454a'))}
+    }else if(towerRoofStyle(s)==='pitched'){
       m.tag='roof';
       const ring=towerRoofFootprintPoints(s),apex=towerRoofApex(s),apexZ=towerVisualTopHeight(s);
       if(s.shape==='round'||s.shape==='dee'){
