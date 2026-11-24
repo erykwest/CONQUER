@@ -689,13 +689,21 @@ function drawTree(tree){
 const forestGroundPatternCanvases={};
 const forestGroundPatternsByContext=new WeakMap();
 // Meadow flowers start in March, not on the bare late-February thaw.
-function springFlowersOn(){return State.season==='spring'&&calendarDateFromDay().month>=2}
+// Calendar date for the spring look; without the game calendar (lab pages) it reads as June.
+function springCalendar(){return typeof calendarDateFromDay==='function'?calendarDateFromDay():{month:5,day:1}}
+// Early March: the tree canopies stay off (bare trunks) until 8 March, then grow back.
+function treesBare(){
+  if(typeof State==='undefined'||State.seasonOverride)return false;
+  const c=springCalendar();
+  return c.month===2&&c.day<=7;
+}
+function springFlowersOn(){return State.season==='spring'&&springCalendar().month>=2}
 // Undergrowth key: winter is snow; the FIRST spring month (March) keeps a bare brown floor
 // that greens from the SECOND month on; every other green season uses the summer undergrowth.
 // Winter: snow only while main's winterPhase says so; the bare winter floor and the thaw are brown.
 function forestGroundKey(){
   if(State.season==='winter')return(typeof isSnowGround==='function'&&isSnowGround())?'winter':'brown';
-  if(State.season==='spring'&&calendarDateFromDay().month===2)return'brown';
+  if(State.season==='spring'&&springCalendar().month===2)return'brown';
   return'green';
 }
 function getForestGroundPattern(){

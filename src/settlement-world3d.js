@@ -1698,8 +1698,8 @@
       }
       S.buf.scatter=v.b;S.buf['scatter#n']=v.n;
     }
-    const atlasSig=[season,treesBare(),forestTreeSpritesReady,
-      Object.keys((typeof boundaryBushSprites!=='undefined'&&boundaryBushSprites[bushSeasonKey()])||{}).length].join('|');
+    const atlasSig=[season,forestTreeSpritesReady,
+      Object.keys((typeof boundaryBushSprites!=='undefined'&&boundaryBushSprites[bushSeasonKey()])||{}).length,treesBare()].join('|');
     if(S.sig.treeAtlas!==atlasSig){
       S.treeAtlas=buildTreeAtlas();
       if(S.treeAtlas)uploadTexture(gl,'atlas',S.treeAtlas.canvas);

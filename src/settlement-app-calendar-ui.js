@@ -50,12 +50,6 @@ function syncSpringUndergrowth(){
   invalidateSceneCache(['landscape','base']);
   return true;
 }
-// Early March: the tree canopies stay off (bare trunks) until 8 March, then grow back.
-function treesBare(){
-  if(State.seasonOverride)return false;
-  const c=calendarDateFromDay();
-  return c.month===2&&c.day<=7;
-}
 function syncSeasonToCalendar(){
   const next=State.seasonOverride||seasonForMonth(calendarDateFromDay().month);
   if(State.season===next){syncAutumnFoliage();syncWinterLook();syncSpringUndergrowth();return false}
