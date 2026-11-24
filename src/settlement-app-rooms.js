@@ -298,6 +298,8 @@ function renderFunctionPanel(){
       if(variantSchema(s)?.bartizan){
         const bz=structureVariant(s,'bartizan'),ok=towerBartizanAllowed(s),bb=(k,l)=>`<button data-tower-bartizan="${k}" ${ok||k==='none'?'':'disabled'} class="${bz===k?'active':''}">${l}</button>`;
         html+=`<div class="slot"><div class="slot-label">Garitte</div><div class="grid3">${bb('none','Nessuna')}${bb('battlement','Merlate')}${bb('pitched','Guglia')}</div><div class="legend">${ok?'Quattro garitte d\'angolo su mensole: 3 tiratori ciascuna, colpiscono anche il piede della torre (0-1U).':'Solo torri grandi (T3) quadrate o rotonde.'}</div></div>`;
+        const n=structureVariant(s,'bartizanCount'),has=towerBartizan(s)!=='none',nb=k=>`<button data-tower-bartizan-count="${k}" ${has?'':'disabled'} class="${n===k?'active':''}">${k}</button>`;
+        html+=`<div class="slot"><div class="slot-label">Numero garitte</div><div class="grid4">${nb('1')}${nb('2')}${nb('3')}${nb('4')}</div><div class="legend">${has?'2 = angoli opposti; 3 lascia libero un angolo.':'Scegli prima lo stile delle garitte.'}</div></div>`;
       }
       html+=`<div class="slot"><div class="slot-label">Arma in cima</div><div class="grid3">${wb('none','Nessuna')}${wb('mangonel','Mangano')}${wb('ballista','Balista')}</div><div class="legend">${armed?'Upgrade: mangano o balista sulla piazza della torre, rivolti verso l\'esterno (vista 3D).':'Solo torri medie (T2) senza tetto a falde, di qualsiasi altezza.'}</div></div>`;
     }
@@ -428,5 +430,6 @@ function renderFunctionPanel(){
   on('[data-tower-roof-shape]',(id,el)=>StructureCommands.setTowerRoofShape(id,el.dataset.towerRoofShape));
   on('[data-tower-inner-roof]',(id,el)=>StructureCommands.setTowerInnerRoof(id,el.dataset.towerInnerRoof));
   on('[data-tower-bartizan]',(id,el)=>StructureCommands.setTowerBartizan(id,el.dataset.towerBartizan));
+  on('[data-tower-bartizan-count]',(id,el)=>StructureCommands.setTowerBartizanCount(id,el.dataset.towerBartizanCount));
 }
 let pan=null;

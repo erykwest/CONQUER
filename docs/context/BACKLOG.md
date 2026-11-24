@@ -4,6 +4,32 @@
 
 Implementato nel branch `fix/territory-clay-stone-access`. Nuove mappe con acqua dolce e sponda utilizzabile per l'argilla nella whitezone. Aggiunta deterministica di un piccolo stagno quando manca un sito accessibile. Cava argilla consentita sui terreni asciutti e pianeggianti del territorio Palude. QA dedicata con piazzamento condiviso, ripetibilità, acqua lontana e bosco fitto. Integrazione su main in attesa.
 
+### 2026-11-24 — BARTIZAN-COUNT · Numero di garitte
+
+**IMPLEMENTATO SU BRANCH `feature/bartizan-count`, NON MERGE.** Richiesta del product owner (24/11/2026).
+- [x] Da 1 a 4 garitte per torre, angoli opposti per primi.
+- [ ] Verifica a vista nel Lab e asset audit.
+
+
+## 2026-11-24 — SPRING-FLORA · Primavera e disgelo
+
+**FATTO sul branch `feature/spring-flora-thaw`, NON MERGE.**
+
+- [x] Alberi: un terzo fiorito; cespugli tutti fioriti; sprite con pallini, 12 varianti per tipo.
+- [x] Sottobosco marrone a marzo, verde da aprile; fiori nei prati dal 1 marzo.
+- [x] Febbraio: neve fino al 21, disgelo dal 22; chiome spente dall'1 al 7 marzo.
+- [ ] Verifica visiva a colori della transizione e della primavera (screenshot nel gioco).
+- [ ] CI remota e revisione della PR prima dell'integrazione in main.
+
+## 2026-11-19 — UI-BUILDERICON-01 · Iconografia architettonica del Builder
+
+**FATTO sul branch `buildericon`, NON MERGE.**
+
+- [x] 52 voci del Builder con SVG dedicati; categorie, opzioni e comandi nella stessa famiglia.
+- [x] Asset Lab, manifest e baseline delle 72 nuove voci; revisione del foglio e audit senza errori.
+- [x] QA del vero Builder in Chromium: categorie, caricamento SVG, gestori originali, selezione e viewport mobile.
+- [ ] CI remota e revisione della PR prima dell'integrazione in main.
+- Owner e dettaglio: [feature-backlog](../feature-backlog.md), [BUILDER-ICONS](../BUILDER-ICONS.md).
 ### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2
 
 **IMPLEMENTATO SU BRANCH `feature/shops-l2-rooms`, NON MERGE.**
