@@ -1,5 +1,11 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-24 — Acqua dolce garantita e argilla in Palude
+
+Allineamento a main `aca8c3bd` con icone Builder e aggiornamento della relativa etichetta accessibile nel catalogo. Ripetuti freshwater, industrie, menu Builder e Wiki dopo la risoluzione dei conflitti.
+
+Branch `fix/territory-clay-stone-access`, base main `fe665fe`. Le nuove mappe ricevono un piccolo stagno quando manca una sponda interna utilizzabile per una cava nella whitezone. La Palude consente cave argilla su qualsiasi terrazza asciutta edificabile. Aggiornati aiuti Builder, scheda cava e catalogo Wiki. Aggiunta regressione su generazione e piazzamento reale alla CI. Decisione D-CLAY-WATER-261124. Roadmap invariata.
+
 ### 2026-11-24 — BARTIZAN-COUNT · Numero di garitte selezionabile
 
 `feature/bartizan-count`: le torri T3 con garitte scelgono quante metterne (1–4, default 4 come prima); con 2 stanno sulla diagonale, con 3 resta libero un angolo. Tiratori di conseguenza.
