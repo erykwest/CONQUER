@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-24 — WALL-GRID-261124 · I livelli torre comandano le altezze dei muri
+
+`fix/wall-heights-follow-towers`: le torri in pietra hanno una griglia unica di piani: piano terra basso, P1 a 1,15 e poi piani da 1,20 (1,15 / 2,35 / 3,55 / 4,75), terrazza all'altezza della torre (invariata). Una torre di livello L ha L+1 piani nel cutaway. I muri prendono il camminamento dalla griglia: H1 = P1 (1,15, invariato), H2 = P2 = terrazza della torre L1 (2,35, prima 2,10). Rimosso il ballatoio interno delle porte H1 (landingSpecs/landingsWorld); ogni piano senza stanza ha comunque la sua scala a pioli. Torre d'assedio L2 alzata a 2,35 (fitAssaultTowers in settlement-siege-engines3d.js; build_siege_engines.py aggiornato). Porte: i piani sopra il passaggio seguono quelli della torre sopra il camminamento H2.
+
 ### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2 come casa-bottega
 
 `feature/shops-l2-rooms` (base `feature/shops-l3-advanced`, #293): il cutaway delle botteghe L2 ha stanze proprie (`LAYOUTS_L2`): bancone su strada lontano dalla porta, angolo della famiglia (focolare con paiolo, tavolino, due sgabelli) sul fondo del lato bancone, postazione compatta del mestiere sul fondo del lato porta; passaggio dalla porta libero. Le case L3 tengono la bottega completa. Baseline del Lab aggiornata per i 21 render «Botteghe L2». ROADMAP invariata; DECISIONS: completa D-SHOP-L3-261119 (stanze L2).

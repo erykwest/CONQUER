@@ -14,7 +14,7 @@ const ctx=vm.createContext({window,Math,Object,Number,Array,Map,Float32Array,Str
 for(const f of ['settlement-util.js','assets/siege-engines-model.js','settlement-siege-engines3d.js','settlement-siege-assault.js'])
   vm.runInContext(fs.readFileSync(path.join(__dirname,'..','src',f),'utf8'),ctx);
 const SA=window.ConquerSiegeAssault,SE=window.ConquerSiegeEngines3D,G=SA.DEFAULT;
-const H1=1.15,H2=2.10,near=(a,b,eps,msg)=>assert.ok(Math.abs(a-b)<eps,msg+' ('+a.toFixed(3)+' vs '+b.toFixed(3)+')');
+const H1=1.15,H2=2.35,near=(a,b,eps,msg)=>assert.ok(Math.abs(a-b)<eps,msg+' ('+a.toFixed(3)+' vs '+b.toFixed(3)+')');
 const partRange=(e,part)=>{let s=0;for(const [n,p] of Object.entries(window.ConquerSiegeModel.engines[e].parts)){if(n===part)return[s,s+p.c.length*9];if(n!=='wheel'&&n!=='hides')s+=p.c.length*9}};
 const along=(m,r,k)=>{let best=-1e9,at=null;for(let i=r[0];i<r[1];i+=3)if(m.pos[i+k]>best){best=m.pos[i+k];at=[m.pos[i],m.pos[i+1],m.pos[i+2]]}return at};
 

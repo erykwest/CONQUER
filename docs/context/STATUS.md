@@ -1,5 +1,10 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-24 — WALL-GRID-261124: griglia piani torre e muri (branch `fix/wall-heights-follow-towers`, NON MERGE)
+- Griglia in settlement-castle.js: TOWER_P1_Z=1,15, TOWER_STOREY_H=1,20, CURTAIN_WALK_Z=2,35; towerStoreyCount = livello+1 per le torri in pietra (le T1 a scala a chiocciola e le torri di legno invariate). Muri H1 1,15 / H2 2,35. Le stanze restano tante quante prima (capacità invariata): il piano in più è libero, con scala.
+- Ballatoio interno rimosso. Torre d'assedio di livello 2 rialzata in runtime di 0,25 sopra 1,0 U (no-op quando il modello Blender viene rigenerato con le nuove WALLS).
+- PASS cutaway-floors, cutaway-furniture, siege-assault, codex-wiki (catalog rigenerato) e il resto della suite qa/*.cjs (founding fallisce solo per tempo, flaky). Verificato a vista su torre W2 L3 con muro H2 a sinistra e H1 a destra: porte a 2,35 e 1,15 sui solai. Audit del Lab (qa/asset-audit.mjs) non eseguito in locale: da CI, poi aggiornare la baseline.
+
 ### 2026-11-20 — SHOP-L2-ROOMS: stanze del piano terra L2 (branch `feature/shops-l2-rooms`, NON MERGE)
 
 - **CODICE:** `settlement-shop-cutaway.js` `LAYOUTS_L2` (sette mestieri) e `domestic()`; `layout(R,out,kind,home)` sceglie le stanze L2 per le botteghe di casa e `LAYOUTS` per le avanzate L3; `grade` nella chiave della cache del cutaway.

@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-24 — WALL-GRID-261124 · Livelli torre e muri
+- [x] Griglia unica dei piani delle torri in pietra (1,15 + 1,20), muri H1/H2 sui piani P1/P2.
+- [x] Rimosso il ballatoio interno delle porte H1 (sostituito dalla griglia).
+- [x] Torre d'assedio L2 sul muro H2 a 2,35.
+- [ ] Rigenerare siege-engines-model.js da Blender con le nuove WALLS (oggi adattato in runtime).
+- [ ] Audit del Lab in CI e baseline aggiornata.
+
 ### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2
 
 **IMPLEMENTATO SU BRANCH `feature/shops-l2-rooms`, NON MERGE.**

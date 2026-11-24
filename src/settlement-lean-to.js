@@ -48,7 +48,7 @@
   const EAVES=1.40,UNDER_WALK=.12;
   function roofTop(s){
     const w=leanWallOf(s);
-    return (w?structureHeight(w):2.10)-UNDER_WALK;
+    return (w?structureHeight(w):2.35)-UNDER_WALK;
   }
   window.ConquerLeanTo=Object.freeze({make,atPoint,nearestWall,leanWallOf,roofTop,EAVES,MIN_LENGTH});
 })();
