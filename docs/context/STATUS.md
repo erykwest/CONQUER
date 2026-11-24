@@ -1,5 +1,11 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-24 — BARTIZAN-COUNT: numero di garitte selezionabile (branch `feature/bartizan-count`, NON MERGE)
+
+- **CODICE:** nuova variante torre `bartizanCount` ('1'–'4', default '4') in `settlement-core.js` (`towerBartizanCount`); `towerBartizans` riempie gli angoli opposti per primi (2 = diagonale, 3 = un angolo libero); comando `setTowerBartizanCount`, riga «Numero garitte» nel pannello e nell'ispettore; chiavi di cache/salvataggio aggiornate. I tiratori seguono (3 per garitta).
+- **PROVE LOCALI PASS:** `qa/bartizan-regression.cjs` (nuovo controllo 1–4 garitte e coppia sulla diagonale). Asset audit del Lab non eseguito, verifica a vista non fatta.
+
+
 ### 2026-11-24 — SPRING-FLORA: primavera e disgelo (`feature/spring-flora-thaw`)
 
 - **IMPLEMENTATO SUL BRANCH, NON MERGE.** Base `origin/main` `992d1c36`.

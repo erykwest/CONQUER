@@ -1,5 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-24 — BARTIZAN-COUNT · Numero di garitte
+
+**IMPLEMENTATO SU BRANCH `feature/bartizan-count`, NON MERGE.** Richiesta del product owner (24/11/2026).
+- [x] Da 1 a 4 garitte per torre, angoli opposti per primi.
+- [ ] Verifica a vista nel Lab e asset audit.
+
+
 ## 2026-11-24 — SPRING-FLORA · Primavera e disgelo
 
 **FATTO sul branch `feature/spring-flora-thaw`, NON MERGE.**
