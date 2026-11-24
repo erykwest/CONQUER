@@ -319,14 +319,16 @@ function steppedButtressPieces(p,u,o,h,w=.22){
   pieces.anchor=p;pieces.outward=o;
   return pieces;
 }
-// Buttresses rise through the first storey (the L1 tower height), whatever the tower level.
+// Buttresses rise through half of the first storey (user, 24/11/2026: lower than the full
+// L1 height they had), whatever the tower level.
 function stoneTowerButtresses(s){
   if(!isStoneTowerStructure(s))return[];
-  const h=Math.min(structureHeight(s),2.35+(towerTier(s)-1)*.12),out=[];
+  const h=Math.min(structureHeight(s),1.2+(towerTier(s)-1)*.1),out=[];
   if(s.shape==='round'){
     const r=Number(s.r)||.5;
     for(let i=0;i<8;i++){
-      const a=i*Math.PI/4,o={x:Math.cos(a),y:Math.sin(a)};
+      // Half a step off the tower angle: the door (at `angle`) opens between two buttresses.
+      const a=(s.angle||0)+(i+.5)*Math.PI/4,o={x:Math.cos(a),y:Math.sin(a)};
       out.push(steppedButtressPieces({x:s.x+o.x*r,y:s.y+o.y*r},{x:-o.y,y:o.x},o,h));
     }
     return out;
