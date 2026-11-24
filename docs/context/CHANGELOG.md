@@ -1,5 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-19 — HARDEN-261119 (branch `fix/main-hardening-20261119`, non merge)
+
+Hardening su base main `168b993b`: blocco scritture cloud senza lettura riuscita, errori di salvataggio locali/CAMP non mascherati, gestione rejection cloud, esclusione Asset Lab, barra risorse con nodi di testo. 11 nuovi test comportamentali nel workflow Runtime integrity; 5 test runtime e 15 suite locali PASS. [Rapporto e limiti](../HARDENING-2026-11-19.md). ROADMAP e DECISIONS invariate: nessun nuovo contratto di gameplay o priorità.
 ### 2026-11-24 — Acqua dolce garantita e argilla in Palude
 
 Allineamento a main `aca8c3bd` con icone Builder e aggiornamento della relativa etichetta accessibile nel catalogo. Ripetuti freshwater, industrie, menu Builder e Wiki dopo la risoluzione dei conflitti.
