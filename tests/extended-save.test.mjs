@@ -94,6 +94,9 @@ for(const transport of ['local','cloud'])test(transport+' restore retains saved 
     village:{founded:true,growthVersion:3,socialSchemaVersion:2,privateMasonryMaterial:'brick'},clock:{day:12},
     season:'spring',seasonOverride:null,landscape:{version:1,relief:{hills:[]},environment:[]},view:{rotation:3}};
   const f=fixture();const api=f.ctx.window.ConquerSaveSnapshot;
+  let deferredRoads=0;
+  f.ctx.connectBorderMainRoadsInFrames=()=>{deferredRoads++};
+  f.ctx.connectSelectedBorderMainRoads=()=>{throw Error('load must defer road planning')};
   f.ctx.window.ConquerSocialClasses={migrateSave:s=>{events.push('migrate');return{structures:s}}};
   f.ctx.window.ConquerSiege={restore:()=>events.push('siege')};
   if(transport==='local'){
@@ -107,6 +110,7 @@ for(const transport of ['local','cloud'])test(transport+' restore retains saved 
   assert.equal(f.State.resources.gold,0);assert.equal(f.State.resources.wood,7);
   assert.equal(f.State.view.rotation,3);assert.equal(f.State.clock.day,12);
   assert.equal(f.State.village.privateMasonryMaterial,'brick');assert.equal(f.State.season,'spring');
+  assert.equal(deferredRoads,1,'both transports use the shared deferred road reconciliation');
 });
 
 test('a cloud record that fails migration is backed up and cannot be overwritten',async()=>{

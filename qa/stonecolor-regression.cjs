@@ -44,7 +44,13 @@ assert.match(profile,/ConquerStoneColor\?\.changed/);
 const calendar=read('src/settlement-app-calendar-ui.js');
 assert.match(calendar,/State\.stonePaletteId=window\.ConquerStoneColor\?\.randomForSeed\(State\.seed\)/);
 const persist=read('src/settlement-app-persistence.js');
-assert.match(persist,/stonePaletteId:State\.stonePaletteId/);
+vm.runInContext(read('src/settlement-save-snapshot.js'),ctx);
+for(const id of ids){
+  const snapshot=window.ConquerSaveSnapshot.capture({...State,stonePaletteId:id,clock:{day:0}},{schema:2,landscapeVersion:1});
+  const row=window.ConquerSaveSnapshot.cloud(snapshot,{userId:'owner'});
+  assert.equal(JSON.parse(snapshot).stonePaletteId,id,'local snapshot preserves palette');
+  assert.equal(window.ConquerSaveSnapshot.fromCloud(row).stonePaletteId,id,'cloud round trip preserves palette');
+}
 assert.match(persist,/normalized\(x\.stonePaletteId\)/);
 assert.match(persist,/normalized\(data\.policies\?\.stonePaletteId\)/);
 for(const name of ['src/settlement-landscape.js','src/settlement-coast.js','src/settlement-industries3d.js','src/settlement-scatter.js','src/settlement-quay.js'])assert.match(read(name),/ConquerStoneColor\?\.shade/,name);

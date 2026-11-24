@@ -15,7 +15,8 @@
 - [x] Un owner per snapshot/restore condiviso, comandi e preset Builder, geometria percorsi, espansione mesh e stato salvataggio UI.
 - [x] Caricamento verificabile nei due entry point, dipendenze e accettazione nel [ledger](../REGRESSION.md), runner unico senza perdita dei fallimenti.
 - [x] Casi di rete, concorrenza, quota e compatibilità del salvataggio verificati localmente.
-- [ ] Completare suite generale, browser, audit Lab e CI della PR prima dell'integrazione.
+- [x] Browser legacy/UI2/CAMP, sintassi e confronto controllato di 22 render con main. Suite completa eseguita in CI e corretti i due controlli sulla vecchia posizione del codice.
+- [ ] Integrare soltanto dopo la CI verde sullo SHA finale della [PR #304](https://github.com/erykwest/CONQUER/pull/304).
 - Owner Builder: [feature-backlog](../feature-backlog.md). Non cambia priorità di gameplay o roadmap.
 
 ### 2026-11-24 — CLAY-WATER-ACCESS

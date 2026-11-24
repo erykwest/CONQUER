@@ -78,6 +78,6 @@ Sono stati controllati i nomi delle branch di destinazione prima della rimozione
 
 ## Refactor ECC — runner portabile (24/11/2026)
 
-La suite completa usa `node tools/run-regressions.cjs --report output/qa/regressions.json`, sia su Windows sia in CI. Discovery ordinata di tutti i `qa/*-regression.cjs`, tutti eseguiti anche dopo failure, segnale o errore di avvio. Il JSON con exit code e durata viene pubblicato come artifact `deterministic-regressions`; nessun test ritirato. Controllo del runner con `qa/regression-runner-regression.cjs`.
+La suite completa usa `node tools/run-regressions.cjs --report output/qa/regressions.json`, sia su Windows sia in CI. Discovery ordinata di tutti i `qa/*-regression.cjs`, tutti eseguiti anche dopo failure, segnale o errore di avvio. Il JSON con exit code e durata viene pubblicato come artifact `deterministic-regressions`; nessun test ritirato. Il budget temporale resta quello del job CI: nessun limite aggiuntivo per singola suite sulle macchine locali. Controllo del runner con `qa/regression-runner-regression.cjs`.
 
 Runtime integrity esegue anche `tools/runtime-contract.cjs` e i test Node di salvataggi/risorse; Panels browser verifica Builder legacy, UI2 e CAMP. I quattro shard dell'audit Asset Lab rimangono invariati. [Ledger di propagazione](REGRESSION.md).

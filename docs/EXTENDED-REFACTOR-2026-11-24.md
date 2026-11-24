@@ -1,6 +1,6 @@
 # Refactor trasversale ECC — 24 novembre 2026
 
-Implementato su `refactor/extended-ecc-20261124`; integrazione in main subordinata alla PR e alla CI. Base iniziale `6af5ee65`, aggiornata prima della pubblicazione. Skill applicate: ECC change-impact, module-regression, security-review e verification-loop. Due revisioni indipendenti hanno controllato sicurezza dei salvataggi e contratti tra moduli.
+Implementato su `refactor/extended-ecc-20261124`; integrazione in main subordinata alla PR e alla CI. Base iniziale `6af5ee65`, aggiornata a main `d886d3bc`. PR [#304](https://github.com/erykwest/CONQUER/pull/304). Skill applicate: ECC change-impact, module-regression, security-review e verification-loop. Due revisioni indipendenti hanno controllato sicurezza dei salvataggi e contratti tra moduli.
 
 ## Cambiamenti
 
@@ -15,10 +15,14 @@ Implementato su `refactor/extended-ecc-20261124`; integrazione in main subordina
 
 I comandi e i consumer sono in [REGRESSION.md](REGRESSION.md). I risultati conclusivi vengono registrati prima della consegna; un controllo in corso non equivale a PASS.
 
-- Test salvataggi e risorse: 25 casi PASS, inclusi upload concorrenti, aggiornamenti durante l'attesa, errori restituiti/sollevati, cambi di partita/account, letture obsolete, formato persistito, migrazioni e quota locale. Nessun account o database reale usato.
+- Test Node: 41 casi PASS, inclusi upload concorrenti, aggiornamenti durante l'attesa, errori restituiti/sollevati, cambi di partita/account, letture obsolete, formato persistito, migrazioni e quota locale. Nessun account o database reale usato.
 - Geometria: riconciliazione byte per byte su 77 modelli, 265 parti e 227.073 vertici PASS; caratterizzazione dei percorsi rispetto agli algoritmi precedenti PASS.
-- Browser Builder: in verifica su legacy, UI2 e CAMP con click sulla rail UI2 e assenza dei selettori legacy durante il comando.
-- Suite deterministica completa, sintassi, audit Lab e CI remota: in verifica; consultare la PR e il rapporto finale.
+- Browser Builder PASS su legacy, UI2 e CAMP: preset, limiti delle porte, cava argilla, opere campali, materiale tettoia, click sulla rail UI2, indicatore salvataggi e comandi senza selettori legacy. Nessun errore di pagina; provini controllati.
+- Sintassi PASS su tutti i 197 file runtime JS/MJS in src e api. Build, TypeScript e lint non configurati: progetto statico, verifica tramite parser, VM e browser.
+- La prima CI completa ha eseguito tutte le 237 suite: 235 PASS, due controlli sulla posizione precedente del codice falliti. Aggiornati Stonecolor con il round trip effettivo delle cinque palette e routing con il restore reale di entrambi i trasporti: entrambi PASS. Il risultato integrale sullo SHA finale è nella PR e nell'artifact `deterministic-regressions`.
+- Primo giro locale: 231/237, prima di completare quattro adattamenti delle vecchie asserzioni. Un test di reattività ha superato il suo limite sotto carico locale (stesso test PASS in CI, soglia invariata); un test generativo ha superato il limite per caso inizialmente aggiunto dal runner. Il runner conserva ora il solo limite del job CI precedente, senza nuova scadenza locale. I log originali e dei rerun rimangono separati in `output/qa/`.
+- Confronto visivo controllato contro main `d886d3bc` sulla stessa macchina: 22 render delle due varianti di porta segnalate dalla baseline, zero differenze di firma, copertura, proporzioni o dimensioni. Fogli provini rivisti. Le 77 espansioni mesh restano identiche byte per byte.
+- Audit completo del Lab PASS nei quattro shard CI sul runtime `c9cdc31d`: 1.768 render di 687 asset, zero errori e nessuna voce mancante; 32 avvisi non bloccanti. Rispetto alla baseline storica: 116 nuovi render e 6 cambiati. La baseline storica di main non contiene ancora alcune aggiunte già presenti, incluse le icone Builder: nuovi/cambiati rispetto a quella baseline non equivalgono a differenze introdotte qui. Questo refactor non aggiunge asset e conserva la baseline; esito e provini dello SHA finale sono negli artifact della PR.
 
 ## Confini
 

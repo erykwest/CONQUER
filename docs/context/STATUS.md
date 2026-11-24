@@ -11,7 +11,7 @@
 
 Implementato su `refactor/extended-ecc-20261124`, non ancora integrato. Snapshot di salvataggio condiviso e upload ordinati, restore comune, comandi Builder separati dai controlli e dal catalogo UI2, geometria percorsi comune, espansione mesh unica e rimozione del painter facciate senza chiamanti. Contratto di caricamento e runner QA portabile con report JSON. Conservate le feature correnti di main.
 
-25 test su salvataggi e risorse PASS; caratterizzazione percorsi e confronto byte di 77 modelli PASS. Suite completa, browser e Lab in verifica; CI da consultare nella PR. Dettagli, evidenze e limiti in [rapporto](../EXTENDED-REFACTOR-2026-11-24.md) e [ledger](../REGRESSION.md). Nessun merge o deploy implicito.
+41 test Node, sintassi di 197 file, browser legacy/UI2/CAMP, caratterizzazione percorsi e confronto byte di 77 modelli PASS. Confronto visivo main/refactor: 22 render identici. Prima CI 235/237; i due controlli sulla vecchia posizione del codice sono corretti e PASS nei rerun. CI integrale dello SHA finale e audit Lab consultabili nella [PR #304](https://github.com/erykwest/CONQUER/pull/304). Dettagli, evidenze e limiti in [rapporto](../EXTENDED-REFACTOR-2026-11-24.md) e [ledger](../REGRESSION.md). Nessun merge o deploy implicito.
 
 ### 2026-11-24 — CLAY-WATER-ACCESS · Acqua dolce e cava in palude
 

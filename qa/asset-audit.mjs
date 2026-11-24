@@ -34,6 +34,7 @@ const errors=[];
 try{
   const page=await browser.newPage({viewport:{width:1460,height:900},deviceScaleFactor:1});
   page.on('pageerror',e=>errors.push(String(e.stack||e)));
+  page.on('console',message=>{if(message.text().startsWith('Asset audit progress:'))console.log(message.text())});
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
   await page.waitForFunction(()=>window.ConquerAssetAudit&&window.ConquerAssetCatalog?.engineReady,null,{timeout:120000});
   // Catalogue metadata is authoritative: source -> every affected entry (also across families).
@@ -69,7 +70,9 @@ try{
   const t0=Date.now();
   // Images stay in the page (the sheets reuse them); report.json gets everything else.
   const report=await page.evaluate(async o=>{
-    const r=await window.ConquerAssetAudit.run({...o,images:true});
+    const r=await window.ConquerAssetAudit.run({...o,images:true,onProgress:(done,total,row)=>{
+      if(done%50===0||done===total)console.log(`Asset audit progress: ${done}/${total} · ${row.id} · ${row.state||'default'}`);
+    }});
     return{...r,results:r.results.map(({image,...rest})=>rest)};
   },opts);
   report.durationMs=Date.now()-t0;report.url=url;report.pageErrors=errors;

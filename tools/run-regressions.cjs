@@ -4,7 +4,9 @@ const fs=require('node:fs'),path=require('node:path'),{spawnSync}=require('node:
 function discover(root){
   return fs.readdirSync(path.join(root,'qa')).filter(f=>f.endsWith('-regression.cjs')).sort().map(f=>'qa/'+f);
 }
-function runSuite(root,files,{run,log=console.log,timeout=300000}={}){
+function runSuite(root,files,{run,log=console.log,timeout=0}={}){
+  // Preserve the previous shell runner's job-level time budget. Callers may opt
+  // into a per-suite timeout; slower local machines get no additional deadline.
   const invoke=run||((file)=>spawnSync(process.execPath,[file],{cwd:root,stdio:'inherit',timeout}));
   const results=[];
   for(const file of files){
