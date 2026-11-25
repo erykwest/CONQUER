@@ -1,5 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-25 — PLACEMENT-GHOST · Torna il ghost dell'edificio nel piazzamento
+
+`fix/placement-ghost-3d`: dopo il ritiro del 2.5D (#204) l'anteprima di piazzamento era solo un prisma tratteggiato. Ora mostra l'edificio finito World 3D traslucido sopra l'impronta, evidenziata solo a terra; le parti in muratura del castello (torri, porte, mura, sezioni) prendono la mesh dalla sorgente dell'assemblaggio di cantiere. ROADMAP e DECISIONS invariati: ripristino di un comportamento visivo.
 ### 2026-11-24 — TOWER-HILL-BASES · Torri sul bordo collina, basamenti esterni di mura e sezioni (`fix/tower-hill-bases`)
 
 Nuova regola (D-TOWER-SUMMIT-261124): su un pendio la porta a terra di una torre indipendente è rivolta verso la cima e si apre sul pianoro alla quota del pavimento; il piazzamento ruota la torre (quadrata a quarti di giro, rotonda libera, D isolata con la porta posteriore a monte) e rifiuta i siti con la soglia sul pendio. Il pavimento si legge sotto il corpo della torre (contrafforti e scarpa non lo alzano). Basamenti su pendio: contrafforti fino al terreno (sezione −30%, sfalsati sulla porta delle rotonde), scarpa 10° che continua giù dal pendio e si apre davanti alla porta. Mura e sezioni costruite: variante `baseStyle` (standard / contrafforti ogni ~1U / scarpa 10°) solo sul lato esterno, anche sui muri a gradoni. Scala in muratura del mastio nel materiale della torre (stonecolor/laterizio); ponte levatoio senza `progress` disegnato a riposo. Lab: famiglia «Torri su bordo collina» (27 varianti). Test: `qa/tower-summit-entrance-regression.cjs`. ROADMAP invariata; DECISIONS: nuova D-TOWER-SUMMIT-261124.
