@@ -391,7 +391,9 @@ def build_tower(root, off, level=1):
     back0 = -(1.2 + .3 * PAR)                       # the back slopes in: x at the ground ...
     back1 = -1.0                                    # ... and at the parapet
     back = lambda z: back0 + (back1 - back0) * min(1, max(0, z / PAR))
-    floors = [.75] + [.75 + (DECK - .75) * k / (2 if level == 1 else 3) for k in range(1, (2 if level == 1 else 3))] + [DECK]
+    # Landings: the base floor over the wheels, the bridge deck and (level 2) the fighting top;
+    # no intermediate landings between them (one long ladder per storey).
+    floors = [.75, DECK]
     if level > 1:
         floors.append(TOP)
 
