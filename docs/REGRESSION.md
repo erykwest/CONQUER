@@ -14,9 +14,9 @@ Ledger introdotto dal refactor `refactor/extended-ecc-20261124`. Eseguire dalla 
 
 - Consumer: `settlement-builder-controls`, `settlement-app-input`, `ui/game-api`, `ui/builder-catalog`, `ui/shell`; gioco legacy/UI2 e CAMP.
 - Evidenza: `rg -n 'ConquerBuilderCommands|ConquerBuilderControls|builder-catalog|cmd.builder' src`; `node tools/runtime-contract.cjs`.
-- Accettazione: `node qa/builder-commands-regression.cjs`; `node qa/runtime-contract-regression.cjs`; `node qa/builder-menu-regression.cjs`; `node qa/builder-placement-regression.cjs`; `node qa/builder-commands-browser.mjs`.
+- Accettazione: `node qa/builder-commands-regression.cjs`; `node qa/runtime-contract-regression.cjs`; `node qa/builder-menu-regression.cjs`; `node qa/builder-placement-regression.cjs`; `node qa/builder-commands-browser.mjs`; `node qa/lean-to-regression.cjs`; `node qa/tower-framed-top-regression.cjs`.
 - Propagazione: modifiche ai preset devono eseguire anche le regressioni di terraformazione, attraversamenti, industria, eventi e murature, incluse nella suite completa.
-- Difetti coperti: BUILDER-001 comando indipendente dai selettori DOM; BUILDER-002 materiale tettoia applicato e ricordato; BUILDER-003 avvio reale della shell dopo estrazione del catalogo. Copertura VM e browser, non solo ricerca testuale.
+- Difetti coperti: BUILDER-001 comando indipendente dai selettori DOM; BUILDER-002 materiale tettoia applicato e ricordato; BUILDER-003 avvio reale della shell dopo estrazione del catalogo; BUILDER-004 frameTower3 H3 e addossato applicato tramite l’ispettore muro (browser). Copertura VM e browser, non solo ricerca testuale.
 
 ## Geometria dei percorsi
 

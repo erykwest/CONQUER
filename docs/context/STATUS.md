@@ -8,7 +8,7 @@
 
 ### 2026-11-25 — Armonizzazione PR #287 e #304
 
-La #304 è il punto unico di integrazione del refactor: copre i comandi Builder, cache mesh e facciate della #287, più persistenza, percorsi e verifiche estese. Recuperati gate CI Builder e rapporto storico, con alias D-ARCH-261119. Riallineamento a main `794c6e28` con torre lignea H3 nel catalogo a comandi, nuovi rifugi/ispettore, pareti/scale, basi sui pendii e ghost 3D. Nessun merge su main. Le 19 CI verdi su `be9c8cb2` sono prova della revisione precedente; il consolidamento richiede nuova QA e CI sul proprio SHA, riportate nella PR #304.
+La #304 è il punto unico di integrazione del refactor: copre i comandi Builder, cache mesh e facciate della #287, più persistenza, percorsi e verifiche estese. Recuperati gate CI Builder e rapporto storico, con alias D-ARCH-261119. Riallineamento a main `794c6e28` con torre lignea H3 nel catalogo a comandi, nuovi rifugi/ispettore, pareti/scale, basi sui pendii e ghost 3D. Prove locali: 41 test Node, 29 regressioni mirate, sintassi di 199 file e browser classico/UI2/CAMP PASS, incluso l’addossato dall’ispettore. Palette GRAFICA di main preservata. Nessun merge su main. Le 19 CI verdi su `be9c8cb2` sono prova della revisione precedente; il consolidamento richiede nuova QA e CI sul proprio SHA, riportate nella PR #304.
 
 ### 2026-11-24 — TOWER-FRAMED-TOP: piano alto a graticcio delle torri W3 (branch `feature/framed-top-towers`, NON MERGE)
 
