@@ -6,9 +6,12 @@
 - [x] Kit Blender low-poly: villaggio L1–L4, castello, molo, nave (33–188 triangoli), nell'Asset Lab.
 - [x] Truppe: sprite delle figure del gioco (lanciere, arciere, cavaliere, cavaliere a cavallo) cotte dal Lab, con formazione.
 - [x] Allineati ai marker di `regional-map3d-placeholders.js`: un token per tipo (`markers`), colori del proprietario da `heraldry.c1/c2`.
-- [ ] Sostituire i cinque segnaposto con i token in `lab/3dregionmap.js` (mesh con `team` = c1 del proprietario; truppe come billboard ricolorati c1/c2, ordinati con alberi e canneti; nave orientata su `heading`).
+- [x] I cinque segnaposto disegnano i token in `lab/3dregionmap.js` (25/11, base PR #281): mesh con `team` = c1 del proprietario e ombreggiatura dalla rotazione; truppe = sprite del gioco in formazione; cubi/cilindri come ripiego.
 - [ ] Regole di posizionamento: villaggio (livello dalla popolazione) e castello per insediamento, molo e nave sulle coste, truppe per armata.
-- [ ] Ricolorazione runtime delle sprite delle truppe (c1/c2 di default → `colors` del marker); per i nemici valutare l'elmo a cuffia del gioco.
+- [x] Ricolorazione runtime delle sprite delle truppe (c1/c2 di default → `colors` del marker), senza toccare legno di lance e archi.
+- [ ] Per i nemici valutare l'elmo a cuffia del gioco (oggi tutte le truppe hanno l'elmo del regno).
+- [ ] Livello reale dei villaggi: il World Lab non lo espone ancora, i villaggi reali sono L1 (L1–L4 solo negli esempi).
+- [ ] Truppe ordinate in profondità con alberi e canneti (oggi stanno sulla tela dei marker, sopra la vegetazione).
 
 ### 2026-11-17 — LOCAL-HEX-01 · Mappa locale ereditata dal territorio esagonale
 

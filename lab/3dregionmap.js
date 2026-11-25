@@ -242,10 +242,36 @@
     const real=placeholder.counts(liveMarkers),demo=placeholder.counts(showExamples.checked?exampleMarkers:[]);
     const actual=Object.values(real).reduce((a,b)=>a+b,0);
     const sample=Object.values(demo).reduce((a,b)=>a+b,0);
-    markerLegend.textContent =
-      'Cubo arancione: villaggio · Cubo grigio: castello · Striscia marrone: porto · '+
-      'Rettangolo marrone: nave · 2 cilindri: truppe · '+
+    const tokens=!!window.ConquerRegionTokenModels;
+    markerLegend.textContent = (tokens
+      ? 'Casette: villaggio (L1 per i villaggi reali, che non hanno ancora un livello; L1–L4 negli esempi) · '+
+        'Torri: castello · Pontile: molo · Cocca: nave · Soldati del gioco: truppe · '
+      : 'Cubo arancione: villaggio · Cubo grigio: castello · Striscia marrone: porto · '+
+        'Rettangolo marrone: nave · 2 cilindri: truppe · ')+
       actual+' simboli reali'+(sample?' · '+sample+' esempi dimostrativi':'');
+  }
+  // Token size: about a third of an average territory, never below a readable size on screen.
+  function tokenRadius(){
+    const n=snapshot?.cells?.length||1;
+    return .3*Math.sqrt((snapshot.width*snapshot.height)/n);
+  }
+  // Ground height under a marker without a source height: the same elevation() the terrain mesh
+  // uses, on the canonical territory that contains the point (cached per point).
+  const groundCache=new Map();
+  function groundZ(x,y){
+    const key=Math.round(x*10)+','+Math.round(y*10);
+    if(groundCache.has(key))return groundCache.get(key);
+    let z=null;
+    for(const cell of snapshot?.cells||[]){
+      const poly=cell.polygon||[];let inside=false;
+      for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+        const a=poly[i],b=poly[j];
+        if((a.y>y)!==(b.y>y)&&x<(b.x-a.x)*(y-a.y)/(b.y-a.y)+a.x)inside=!inside;
+      }
+      if(inside){z=geometry.elevation({x,y},poly,snapshot.terrain?.[cell.macroId],snapshot.seed);break}
+    }
+    groundCache.set(key,z);
+    return z;
   }
   function drawMarkers(now=performance.now()) {
     if(!markerCanvas)return;
@@ -256,7 +282,10 @@
     const markers=showExamples.checked?liveMarkers.concat(exampleMarkers):liveMarkers;
     if(!markers.length)return;
     const c=camera();
-    placeholder.paint(ctx,markers,point=>project(point,c),c,now);
+    placeholder.paint(ctx,markers,point=>project(point,c),c,now,{
+      tokenRadius:tokenRadius(),minPx:9*(window.devicePixelRatio>1?Math.min(window.devicePixelRatio,2):1),
+      groundZ,onAssetsReady:()=>drawMarkers()
+    });
   }
   function syncLiveMarkers(){
     if(!placeholder || !frame.contentWindow)return;
@@ -405,6 +434,7 @@
       const source = w.ConquerRegion3DSnapshot?.();
       if (!source) return;
       snapshot = source;
+      groundCache.clear();
       seenRevision = revision;
       lastSyncMs = performance.now();
       updateSelection(source.selectedMacros || [], true);

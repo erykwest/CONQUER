@@ -2,6 +2,7 @@
 
 ### 2026-11-17 — REGION3D-TOKENS · Token low-poly della mappa regionale 3D
 
+- 25/11: le icone della mappa regionale 3D sono ora i token (villaggio L1–L4, castello, molo, nave, truppe del gioco) con i colori del proprietario; cubi e cilindri restano come ripiego. Roadmap e decisioni invariate.
 - Riallineati su `3dregionmap` con i segnaposto dei marker: un token per tipo (`pier` rinominato `port`), colori del proprietario dall'araldica c1/c2, sprite delle truppe ricotte in rosso/oro di default.
 - Nuovo kit Blender `build_region_tokens.py` → `region-token-models.js`: villaggio in quattro stati L1–L4 come le case del gioco, castello, molo e nave stilizzati (33–188 triangoli), nel catalogo dell'Asset Lab; le truppe riusano le figure del gioco cotte in sprite (`tools/bake-region-troops.mjs`). Test `qa/region-tokens-regression.cjs`, baseline audit estesa alle 11 voci. Non ancora collegati al renderer region3d. Roadmap e decisioni invariate.
 
