@@ -197,6 +197,7 @@ const COSTS={
   tower:[{gold:45,stone:55,wood:12},{gold:75,stone:95,wood:20},{gold:120,stone:155,wood:32},{gold:240,stone:330,wood:75}],
   woodTower:[{gold:18,wood:42},{gold:32,wood:78}],
   frameTower:{gold:55,wood:130},
+  frameTower3:{gold:80,wood:190},
   wallPerU:{gold:6,stone:18,wood:2},
   palisadePerU:{gold:3,wood:12},
   builtPerU:{gold:12,stone:16,wood:18},
@@ -216,7 +217,7 @@ const COSTS={
 // Stone towers of the same tier, against the square one: curved masonry costs more, the open-
 // backed semitower half.
 const TOWER_SHAPE_COST=Object.freeze({square:1,round:1.5,dee:1.25,half:.5});
-const BUILD_DAYS={tower:[4,7,11,18],woodTower:[2.5,4],frameTower:6.5,gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,townhall:8,guild:6,bargello:5,balivo:6,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,longhouseBase:1.2,longhousePerU:.8,road:1,house:2.2,field:1.5};
+const BUILD_DAYS={tower:[4,7,11,18],woodTower:[2.5,4],frameTower:6.5,frameTower3:9,gate:9,woodGate:4,well:0,market:4,tavern:6,church:10,plaza:3,townhall:8,guild:6,bargello:5,balivo:6,training:3.5,wallBase:.7,wallPerU:.45,palisadeBase:.45,palisadePerU:.30,builtBase:2,builtPerU:1.5,longhouseBase:1.2,longhousePerU:.8,road:1,house:2.2,field:1.5};
 const GROWTH_INTERVAL_DAYS=2.5;
 // One simulated 24-hour day lasts 48 real seconds at 1×.
 // All time controls multiply this common rate (3× = 16 s/day; 10× = 4.8 s/day; 100× = 0.48 s/day).
@@ -324,6 +325,7 @@ const STRUCTURE_VARIANTS=Object.freeze({
     // How many corner turrets the bartizan crown carries (corners filled opposite-first).
     bartizanCount:Object.freeze(['1','2','3','4']),
     roofShape:Object.freeze(['pyramid','gable','hip']),
+    upper:Object.freeze(['stone','timber']),
     // Timber gallery mounted round the top in wartime and taken down after: the roof stays as built.
     hoarding:Object.freeze(['off','on']),
     // Alarm bell under a small belfry on the roof apex (rules: settlement-alarm-bells.js).
@@ -352,14 +354,15 @@ const STRUCTURE_VARIANTS=Object.freeze({
   }),
   built:Object.freeze({
     skin:Object.freeze(['standard','arcade']),
-    baseStyle:Object.freeze(['standard','buttress','splayed'])
+    baseStyle:Object.freeze(['standard','buttress','splayed']),
+    upper:Object.freeze(['stone','timber'])
   })
 });
 const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
-  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',bartizanCount:'4',roofShape:'pyramid',hoarding:'off',bell:'none',signalFire:'none',innerRoof:'off',upInnerTower:'off',machicolationStyle:'standard'}),
+  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',bartizanCount:'4',roofShape:'pyramid',hoarding:'off',bell:'none',signalFire:'none',innerRoof:'off',upInnerTower:'off',machicolationStyle:'standard',upper:'stone'}),
   gate:Object.freeze({roofStyle:'battlement',upper:'stone',hoarding:'off'}),
   wall:Object.freeze({skin:'standard',baseStyle:'standard'}),
-  built:Object.freeze({skin:'standard',baseStyle:'standard'})
+  built:Object.freeze({skin:'standard',baseStyle:'standard',upper:'stone'})
 });
 // Clothing by house level: L1 grey/beige, L2 green/brown, L3 muted primaries,
 // L4 bright primaries. Shared by tunics and the dyed pieces of the seasonal wardrobe.
@@ -442,6 +445,7 @@ function setStructureVariant(s,key,value){
 // A storey brought down from the top leaves a broken crown: no roof, merlons or deck.
 function towerRoofStyle(s){
   if(s?.type==='tower'&&s.brokenTop&&!isWoodTower(s))return'broken';
+  if((typeof towerTimberUpper==='function'&&towerTimberUpper(s)))return'pitched';         // the framed top always carries the pitched roof
   return s?.type==='tower'?structureVariant(s,'roofStyle'):undefined;
 }
 // Upgrade: a mangonel or a ballista on the deck of a medium (T2) stone tower without a roof,
@@ -473,7 +477,7 @@ function towerUpInnerTowerAllowed(s){
 function towerUpInnerTower(s){const v=structureVariant(s,'upInnerTower');return v&&v!=='off'&&towerUpInnerTowerAllowed(s)?v:null}
 // Hoarding (ballatoio): not with machicolations (they do its job in stone) nor on a broken crown.
 // Nor with bartizans: their corbelled corners take the perimeter the gallery runs round.
-function towerHoardingAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&s.shape!=='half'&&['battlement','pitched'].includes(towerRoofStyle(s))&&towerBartizan(s)==='none'}
+function towerHoardingAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&s.shape!=='half'&&!(typeof towerTimberUpper==='function'&&towerTimberUpper(s))&&['battlement','pitched'].includes(towerRoofStyle(s))&&towerBartizan(s)==='none'}
 function towerHoardingMounted(s){return towerHoardingAllowed(s)&&structureVariant(s,'hoarding')==='on'}
 // Stone gates (large and small) take it too, not over a timber-framed storey.
 function gateHoardingAllowed(s){return !!s&&s.type==='gate'&&!isWoodGate(s)&&!gateTimberUpper(s)&&['battlement','pitched'].includes(gateRoofStyle(s))}
@@ -483,7 +487,7 @@ function hoardingMounted(s){return s?.type==='gate'?gateHoardingMounted(s):tower
 function towerTopWeapon(s){const w=s?.type==='tower'?structureVariant(s,'topWeapon'):'none';return towerTopWeaponAllowed(s)&&w?w:'none'}
 // Bartizans: four corbelled corner turrets on a large (T3) square or round stone tower, crowned
 // with merlons or with a pitched (conical) roof (geometry: towerBartizans in settlement-castle-structures.js).
-function towerBartizanAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)>=3&&['square','round'].includes(s.shape||'square')&&towerRoofStyle(s)!=='broken'}
+function towerBartizanAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&!(typeof towerTimberUpper==='function'&&towerTimberUpper(s))&&towerTier(s)>=3&&['square','round'].includes(s.shape||'square')&&towerRoofStyle(s)!=='broken'}
 function towerBartizanCount(s){return Number(structureVariant(s,'bartizanCount'))||4}
 function towerBartizan(s){const b=s?.type==='tower'?structureVariant(s,'bartizan'):'none';return towerBartizanAllowed(s)&&b?b:'none'}
 // Dovecote (Colombaia): the room under the pitched roof of a medium or large (T2/T3) stone tower,
@@ -501,10 +505,13 @@ function towerBaseStyle(s){
 function isWoodTower(s){return !!s&&s.type==='tower'&&s.material==='wood'}
 // Timber tower styles: watchtower (1 U, H1), palisade tower (1.5 U, H1) and the two-storey
 // frame tower (1.5 U, H2, BC-251105-06: braced post-and-beam frame, always roofed).
-const WOOD_TOWER_STYLES=Object.freeze(['watchtower','palisadeTower','frameTower']);
+// frameTower3 (BC-261124): the frame tower with a third, framed-top storey (plastered and
+// jettied, pitched roof, no parapet gallery).
+const WOOD_TOWER_STYLES=Object.freeze(['watchtower','palisadeTower','frameTower','frameTower3']);
+function isFrameTower(s){return isWoodTower(s)&&['frameTower','frameTower3'].includes(s.woodStyle)}
 function woodTowerStyle(s){return isWoodTower(s)?(WOOD_TOWER_STYLES.includes(s.woodStyle)?s.woodStyle:'palisadeTower'):undefined}
 function woodTowerSize(style){return style==='watchtower'?1:1.5}
-function woodTowerLevel(style){return style==='frameTower'?2:1}
+function woodTowerLevel(style){return style==='frameTower3'?3:style==='frameTower'?2:1}
 function woodTowerRoof(s){
   if(!isWoodTower(s))return undefined;
   if(woodTowerStyle(s)!=='palisadeTower')return'pitched';
@@ -633,6 +640,20 @@ const GATE_TIMBER_COST=Object.freeze({gold:8,wood:18}),GATE_JETTY=.07;
 // slopes over the front and the rear (gables on the flanks), so the whole gate stays low.
 const GATE_TIMBER_FLOOR=1.4,GATE_TIMBER_EAVES=2.6,GATE_TIMBER_RIDGE=GATE_TIMBER_EAVES+.84;
 function gateTimberUpper(s){return isSmallGate(s)&&!s.brokenTop&&structureLevel(s)===2&&structureVariant(s,'upper')==='timber'}
+// Framed top (BC-261124): the top storey of a large (W3) square stone tower, L2+, built as a
+// timber frame with plaster, slightly jettied on all four faces and always under a pitched roof.
+// The masonry storeys below keep the stone strength; the frame burns (settlement-fire.js 'upper').
+// It costs the stone tower one level lower plus TOWER_TIMBER_COST in wood for the top storey.
+const TOWER_TIMBER_COST=Object.freeze({wood:45}),TOWER_JETTY=.1;
+function towerTimberUpperAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&(s.shape||'square')==='square'&&towerTier(s)===3&&structureLevel(s)>=2&&!s.brokenTop}
+function towerTimberUpper(s){return towerTimberUpperAllowed(s)&&s.upper==='timber'}
+// Built section with a timber P1 (BC-261124): a W1 stone section at L2 whose upper storey is a
+// jettied timber frame with plaster (BUILT_JETTY over both long faces, flush at the ends where
+// towers and gates stand). The ground floor keeps the stone strength; the frame burns
+// (settlement-fire.js 'upper'). Cost: the L1 section plus BUILT_TIMBER_WOOD_PER_U wood per U.
+const BUILT_TIMBER_WOOD_PER_U=14,BUILT_JETTY=.1;
+function builtTimberUpperAllowed(s){return !!s&&s.type==='built'&&!isLonghouse(s)&&!isWideBuilt(s)&&!(typeof isLeanTo==='function'&&isLeanTo(s))&&structureLevel(s)===2&&!s.brokenTop}
+function builtTimberUpper(s){return builtTimberUpperAllowed(s)&&s.upper==='timber'}
 // BC-251105-07: only the free-standing square stone W2 tower may rise to a fourth storey (H4),
 // a slender watch tower; wider towers stop at H3 and the W4 keep stays the only great tower.
 const TOWER_H4_LEVEL=4;
@@ -878,8 +899,13 @@ function scaleCost(cost,factor){return roundCost(Object.fromEntries(Object.entri
 function baseConstructionCost(s){
   if(!s||s.auto)return{};
   if(s.type==='tower'){
-    if(isWoodTower(s)&&s.woodStyle==='frameTower')return {...COSTS.frameTower};
+    if(isWoodTower(s)&&['frameTower','frameTower3'].includes(s.woodStyle))return {...COSTS[s.woodStyle]};
     if(isWoodTower(s))return {...COSTS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))]};
+    if((typeof towerTimberUpper==='function'&&towerTimberUpper(s))){
+      const c=scaleCost(COSTS.tower[towerTier(s)-1],levelCostFactor({...s,level:structureLevel(s)-1})*(TOWER_SHAPE_COST[s.shape]??1));
+      for(const [k,v] of Object.entries(TOWER_TIMBER_COST))c[k]=(c[k]||0)+v;
+      return c;
+    }
     return scaleCost(COSTS.tower[towerTier(s)-1],levelCostFactor(s)*(TOWER_SHAPE_COST[s.shape]??1));
   }
   if(s.type==='gate'){
@@ -911,6 +937,10 @@ function baseConstructionCost(s){
   if(s.type==='palisade')return roundCost(Object.fromEntries(Object.entries(COSTS.palisadePerU).map(([k,v])=>[k,v*s.length])));
   if((typeof isTimberLeanTo==='function'&&isTimberLeanTo(s)))return roundCost(Object.fromEntries(Object.entries(COSTS.longhousePerU).map(([k,v])=>[k,v*.7*s.length])));
   if(isLonghouse(s))return roundCost(Object.fromEntries(Object.entries(COSTS.longhousePerU).map(([k,v])=>[k,v*s.length*builtWidth(s)])));
+  if(s.type==='built'&&(typeof builtTimberUpper==='function'&&builtTimberUpper(s))){
+    const c=scaleCost(Object.fromEntries(Object.entries(COSTS.builtPerU).map(([k,v])=>[k,v*s.length*builtWidth(s)])),1);
+    c.wood=(c.wood||0)+Math.ceil(BUILT_TIMBER_WOOD_PER_U*s.length);return c;
+  }
   if(s.type==='built')return scaleCost(Object.fromEntries(Object.entries(COSTS.builtPerU).map(([k,v])=>[k,v*s.length*builtWidth(s)])),levelCostFactor(s));
   return{};
 }
@@ -949,7 +979,7 @@ function refundCost(cost){
 }
 function buildDuration(s){
   if(s.type==='tower'){
-    if(isWoodTower(s)&&s.woodStyle==='frameTower')return BUILD_DAYS.frameTower;
+    if(isWoodTower(s)&&['frameTower','frameTower3'].includes(s.woodStyle))return BUILD_DAYS[s.woodStyle];
     if(isWoodTower(s))return BUILD_DAYS.woodTower[Math.min(1,Math.max(0,towerTier(s)-1))];
     return BUILD_DAYS.tower[towerTier(s)-1]*(.7+.3*structureLevel(s));
   }

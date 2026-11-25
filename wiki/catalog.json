@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceDigest": "0161bbe691ffc6896cf722551f84469d2d386c55455e33757a93abbdf48a3473",
+  "sourceDigest": "9d6a3b71802c725650df11e9145020d1944b18c4a7459913a3353b7f40f93f6f",
   "catalog": {
     "schemaVersion": 1,
     "categories": [
@@ -178,6 +178,10 @@
               "standard",
               "buttress",
               "splayed"
+            ],
+            "upper": [
+              "stone",
+              "timber"
             ]
           },
           "geometry": {
@@ -1525,6 +1529,10 @@
               "pyramid",
               "gable",
               "hip"
+            ],
+            "upper": [
+              "stone",
+              "timber"
             ],
             "hoarding": [
               "off",
@@ -6398,6 +6406,100 @@
         }
       },
       {
+        "id": "upgrade:built.upper.stone",
+        "key": "stone",
+        "label": "built · upper · stone",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.built.upper"
+        },
+        "properties": {
+          "variant": "upper",
+          "value": "stone",
+          "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:built",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:built.upper.timber",
+        "key": "timber",
+        "label": "built · upper · timber",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.built.upper"
+        },
+        "properties": {
+          "variant": "upper",
+          "value": "timber",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:built",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
         "id": "upgrade:gate.drawbridge",
         "key": "gate.drawbridge",
         "label": "Ponte levatoio della porta",
@@ -8432,6 +8534,100 @@
         "properties": {
           "variant": "upInnerTower",
           "value": "square",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.upper.stone",
+        "key": "stone",
+        "label": "tower · upper · stone",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.upper"
+        },
+        "properties": {
+          "variant": "upper",
+          "value": "stone",
+          "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.upper.timber",
+        "key": "timber",
+        "label": "tower · upper · timber",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.upper"
+        },
+        "properties": {
+          "variant": "upper",
+          "value": "timber",
           "default": false,
           "kind": "configuration"
         },

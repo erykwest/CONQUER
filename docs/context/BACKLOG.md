@@ -8,6 +8,24 @@
 - [ ] Gradienti anche sulle coperture a falda (`gabled`) in `settlement-world3d.js`.
 - [ ] Inserire le opzioni nel Lab (AGENTS.md) in una PR successiva.
 
+### 2026-11-24 — TOWER-FRAMED-TOP · Piano alto a graticcio delle torri W3
+
+**IMPLEMENTATO SU BRANCH `feature/framed-top-towers`, NON MERGE.**
+- [x] Variante piano alto pietra/graticcio su torri quadrate W3 L2+, solo tetto a falde, a sbalzo.
+- [x] Costo: piani bassi in pietra/argilla, piano alto solo legno; resistenza della pietra, vulnerabile al fuoco.
+- [x] Sezione costruita W1 L2 con P1 a graticcio a sbalzo (costo L1 + legno, brucia).
+- [x] Torre lignea a telaio H3: P3 a graticcio a sbalzo, tetto a falde senza parapetto.
+- [ ] Torre H3: posti arcieri e cutaway del P3 da definire.
+- [ ] Bilanciamento del costo in legno (45) e del tempo di costruzione; voce wiki/codex da aggiungere.
+## 2026-11-25 — PLACEMENT-GHOST · Ghost 3D nell'anteprima di piazzamento
+
+**FATTO sul branch `fix/placement-ghost-3d`, NON MERGE.**
+
+- [x] Anteprima: edificio finito World 3D traslucido sopra l'impronta, solo a terra.
+- [x] Torri in muratura, porte in pietra, mura e sezioni: ghost dalla sorgente dell'assemblaggio.
+- [x] Verifica con screenshot di ogni voce del Builder.
+- [ ] Verifica manuale di rampa e scalinata.
+- [ ] CI remota e revisione della PR prima dell'integrazione in main.
 ## 2026-11-24 — TOWER-HILL-BASES · Torri sul bordo collina
 
 - [x] Porta verso la cima e sulla cima per le torri su pendio (piazzamento + rifiuto).

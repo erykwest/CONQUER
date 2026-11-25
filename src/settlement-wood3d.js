@@ -16,7 +16,7 @@
     if(isLonghouse(s))return isWideBuilt(s)?'longhouse_w2':'longhouse_w1';
     if(!isWoodTower(s))return null;
     if(woodTowerStyle(s)==='watchtower')return'watchtower';
-    if(woodTowerStyle(s)==='frameTower')return DATA()?.models?.frameTower?'frameTower':null;
+    if(['frameTower','frameTower3'].includes(woodTowerStyle(s)))return DATA()?.models?.frameTower?'frameTower':null;
     return woodTowerRoof(s)==='open'?'palisadeTower_open':'palisadeTower_roofed';
   }
   // Structures this module draws in the world renderer (sites keep their ghost / assembly).
@@ -197,6 +197,54 @@
     }
     return mesh;
   }
+  // Frame tower H3 (framed top): over the model's P1 and P2 a third storey, plastered and jettied
+  // FRAME_P3_JETTY past the posts on all four faces, with the dense timber frame and two windows
+  // per face (timberStoreyFacade, as the W3 stone tower's framed top), under a pitched roof with
+  // no parapet gallery: the model's deck, roof and flag are left out.
+  const FRAME_P3_Z0=2.49,FRAME_P3_Z1=3.69,FRAME_P3_HALF=.78,FRAME_P3_JETTY=.1,FRAME_P3_APEX=4.45,FRAME_P3_EAVE=.08;
+  const FRAME_P3_DROP=['deck','top','flag'];
+  const PLASTER='#ddd0b4',BEAM='#4a3424',GLASS='#2a231d';
+  function addFramedP3(mesh,s,ground){
+    if(typeof rectWorldPoints!=='function'||typeof timberStoreyFacade!=='function')return;
+    const H=FRAME_P3_HALF+FRAME_P3_JETTY,pts=rectWorldPoints(s.x,s.y,H*2,H*2,s.angle||0),z0=ground+FRAME_P3_Z0,z1=ground+FRAME_P3_Z1;
+    const tri=(a,b,c,hex)=>{mesh.pos.push(a.x,a.y,a.z,b.x,b.y,b.z,c.x,c.y,c.z);mesh.col.push(hex)};
+    const quad=(a,b,c,d,hex)=>{tri(a,b,c,hex);tri(a,c,d,hex)};
+    const cx=s.x,cy=s.y;
+    // outward-facing side walls (order the corners so the normal points away from the centre)
+    for(let i=0;i<4;i++){
+      let a=pts[i],b=pts[(i+1)%4];
+      const mx=(a.x+b.x)/2-cx,my=(a.y+b.y)/2-cy,nx=(b.y-a.y),ny=-(b.x-a.x);
+      if(nx*mx+ny*my<0)[a,b]=[b,a];
+      quad({x:a.x,y:a.y,z:z0},{x:b.x,y:b.y,z:z0},{x:b.x,y:b.y,z:z1},{x:a.x,y:a.y,z:z1},PLASTER);
+    }
+    // jetty underside and lid under the deck
+    quad(...[0,3,2,1].map(k=>({x:pts[k].x,y:pts[k].y,z:z0})),BEAM);
+    quad(...[0,1,2,3].map(k=>({x:pts[k].x,y:pts[k].y,z:z1})),BEAM);
+    // frame members and windows, a hair outside the plaster
+    for(const f of timberStoreyFacade(pts,FRAME_P3_Z0,FRAME_P3_Z1,()=>true,true)){
+      const e=f.edge,L=Math.hypot(e.b.x-e.a.x,e.b.y-e.a.y)||1,ux=(e.b.x-e.a.x)/L,uy=(e.b.y-e.a.y)/L;
+      const mx=(e.a.x+e.b.x)/2,my=(e.a.y+e.b.y)/2;let ox=uy,oy=-ux;if(ox*(mx-cx)+oy*(my-cy)<0){ox=-ox;oy=-oy}
+      const P=(off,z,push)=>({x:mx+ux*off+ox*push,y:my+uy*off+oy*push,z:ground+z});
+      const face=(A,B,C,D,hex)=>{const n=(B.x-A.x)*(D.y-A.y)-(B.y-A.y)*(D.x-A.x);void n;quad(A,B,C,D,hex)};
+      for(const [p0,p1] of f.beams){
+        const doff=p1.off-p0.off,dz=p1.z-p0.z,len=Math.hypot(doff,dz)||1,w=(typeof HOUSE_TIMBER_W==='number'?HOUSE_TIMBER_W:.05)/2,no=-dz/len*w,nz=doff/len*w,pu=.012;
+        face(P(p0.off+no,p0.z+nz,pu),P(p1.off+no,p1.z+nz,pu),P(p1.off-no,p1.z-nz,pu),P(p0.off-no,p0.z-nz,pu),BEAM);
+      }
+      const hw=typeof HOUSE_WINDOW_HALF_W==='number'?HOUSE_WINDOW_HALF_W:.08,hh=typeof HOUSE_WINDOW_HALF_H==='number'?HOUSE_WINDOW_HALF_H:.12;
+      for(const w of f.windows)face(P(w.off-hw,w.z-hh,.016),P(w.off+hw,w.z-hh,.016),P(w.off+hw,w.z+hh,.016),P(w.off-hw,w.z+hh,.016),GLASS);
+    }
+    // Pitched (pyramid) roof over the eaves, no parapet: four slopes to the apex.
+    const winter=(typeof isSnowGround==='function'?isSnowGround():State.season==='winter');
+    const E=H+FRAME_P3_EAVE,eave=rectWorldPoints(s.x,s.y,E*2,E*2,s.angle||0),apex={x:cx,y:cy,z:ground+FRAME_P3_APEX};
+    const cols=winter?WINTER:['#6e4a30','#5c3d27'];
+    for(let i=0;i<4;i++){
+      let a=eave[i],b=eave[(i+1)%4];
+      const mx=(a.x+b.x)/2-cx,my=(a.y+b.y)/2-cy,nx=(b.y-a.y),ny=-(b.x-a.x);
+      if(nx*mx+ny*my<0)[a,b]=[b,a];
+      tri({x:a.x,y:a.y,z:z1},{x:b.x,y:b.y,z:z1},apex,cols[i%2]);
+    }
+    quad(...[0,3,2,1].map(k=>({x:eave[k].x,y:eave[k].y,z:z1})),BEAM);
+  }
   function pointModel(s){
     const key=modelKey(s),ground=groundOf(s),mesh={pos:[],col:[]};
     if(key==='woodGate'){
@@ -212,9 +260,11 @@
       // the front's middle post and with no door below.
       const raised=window.ConquerKeepEntrance?.sill?.(s)!=null;
       const drop=new Set(raised?['door','frontMid']:['doorRaised']);
+      if(woodTowerStyle(s)==='frameTower3')for(const n of FRAME_P3_DROP)drop.add(n);
       const only=names.filter(n=>(open?!open.has(n):!INTERIOR.includes(n))&&!(belfry.length&&n==='flag')&&!drop.has(n));
       addModel(mesh,key,{x:s.x,y:s.y,angle:s.angle||0},ground,only);
       for(const t of belfry){for(const q of t.pts)mesh.pos.push(q.p.x,q.p.y,ground+q.z);mesh.col.push(t.hex)}
+      if(woodTowerStyle(s)==='frameTower3'&&!open)addFramedP3(mesh,s,ground);
     }
     return mesh;
   }

@@ -322,7 +322,9 @@ function renderFunctionPanel(){
         const parent=State.structures.find(x=>x.id===s.parentTowerId);
         html+=`<div class="slot"><div class="legend">Subtower attached to ${parent?roomEsc(structureLabel(parent)):'parent structure'}.</div></div>`;
       }
-      html+=`<div class="slot"><div class="slot-label">Coronamento</div><div class="grid3"><button data-tower-roof="battlement" class="${roof==='battlement'?'active':''}">Merlato</button><button data-tower-roof="machicolation" class="${roof==='machicolation'&&!towerItalianMachicolation(s)?'active':''}">Caditoie</button><button data-tower-roof="machicolationItalian"${inspectorWhy(s.shape!=='half','Non sulle mezze torri')} class="${towerItalianMachicolation(s)?'active':''}">All'italiana</button></div><div class="legend">Machicolation: merlatura in aggetto con mensole. All'italiana: mensole alte quattro corsi raccordate da archetti (solo estetica, stesse regole). Predispone il futuro attacco verticale a raggio 1U.</div></div>`;
+      const framed=towerTimberUpper(s),fd=framed?'disabled':'';
+      if(towerTimberUpperAllowed(s))html+=`<div class="slot"><div class="slot-label">Piano alto</div><div class="grid"><button data-tower-upper="stone" class="${framed?'':'active'}">Pietra</button><button data-tower-upper="timber" class="${framed?'active':''}">Graticcio</button></div><div class="legend">Framed top: ultimo piano in legno e intonaco, leggermente a sbalzo, sempre con il tetto a falde. Resiste come la pietra ma brucia. Costa la torre un livello più bassa più ${costText(TOWER_TIMBER_COST)}.</div></div>`;
+      html+=`<div class="slot"><div class="slot-label">Coronamento</div><div class="grid3"><button data-tower-roof="battlement"${framed?' disabled':''} class="${roof==='battlement'?'active':''}">Merlato</button><button data-tower-roof="machicolation"${framed?' disabled':''} class="${roof==='machicolation'&&!towerItalianMachicolation(s)?'active':''}">Caditoie</button><button data-tower-roof="machicolationItalian"${inspectorWhy(s.shape!=='half'&&!framed,framed?'Non con il framed top':'Non sulle mezze torri')} class="${towerItalianMachicolation(s)?'active':''}">All'italiana</button></div><div class="legend">Machicolation: merlatura in aggetto con mensole. All'italiana: mensole alte quattro corsi raccordate da archetti (solo estetica, stesse regole). Predispone il futuro attacco verticale a raggio 1U.</div></div>`;
       if(s.shape!=='half')html+=hoardingSlot(s);
       {
         const half=s.shape==='half',pitched=roof==='pitched',ir=!half&&!pitched&&towerInnerRoofMounted(s),irOk=!half&&(pitched||towerInnerRoofAllowed(s));
@@ -366,6 +368,7 @@ function renderFunctionPanel(){
   }
   if(s.type==='built'&&!isLonghouse(s)){
     const skin=builtSkin(s);
+    if(builtTimberUpperAllowed(s)){const tb=builtTimberUpper(s);html+=`<div class="slot"><div class="slot-label">Piano P1</div><div class="grid"><button data-built-upper="stone" class="${tb?'':'active'}">Pietra</button><button data-built-upper="timber" class="${tb?'active':''}">Graticcio</button></div><div class="legend">Graticcio: P1 in legno e intonaco a sbalzo sui due lati lunghi. Costa la sezione L1 più ${BUILT_TIMBER_WOOD_PER_U} legno per U. Resiste come la pietra ma il P1 brucia.</div></div>`}
     html+=`<div class="slot"><div class="slot-label">Facciata</div><div class="grid"><button data-built-skin="standard" class="${skin==='standard'?'active':''}">Standard</button><button data-built-skin="arcade" class="${skin==='arcade'?'active':''}">Porticato</button></div><div class="legend">${isWideBuilt(s)?'Porticato affects only the interior ground floor.':'Porticato: the ground floor opens under the arches and the upper floor is raised over it. Under the portico: '+PORTICO_FUNCTIONS.map(k=>FUNCTION_LABELS[k]).join(', ')+'.'}</div></div>`;
   }
   if(s.type==='wall'){
@@ -449,6 +452,8 @@ function renderFunctionPanel(){
   on('[data-wood-roof]',(id,el)=>StructureCommands.setWoodRoof(id,el.dataset.woodRoof));
   on('[data-gate-roof]',(id,el)=>StructureCommands.setGateRoof(id,el.dataset.gateRoof));
   on('[data-gate-upper]',(id,el)=>StructureCommands.setGateUpper(id,el.dataset.gateUpper));
+  on('[data-tower-upper]',(id,el)=>StructureCommands.setTowerUpper(id,el.dataset.towerUpper));
+  on('[data-built-upper]',(id,el)=>StructureCommands.setBuiltUpper(id,el.dataset.builtUpper));
   on('[data-built-skin]',(id,el)=>StructureCommands.setSkin(id,el.dataset.builtSkin));
   on('[data-wall-skin]',(id,el)=>StructureCommands.setSkin(id,el.dataset.wallSkin));
   on('[data-cutaway-toggle]',id=>StructureCommands.toggleCutaway(id));

@@ -35,6 +35,7 @@
     const G=SP().GALLERY;
     return[...G.towers.map(r=>['Torri',r]),...G.walls.map(r=>['Mura',r]),
       ['Mura',['Sezione costruita T2',{type:'built',tier:2,level:1}]],
+      ['Mura',['Sezione costruita L2 · P1 a graticcio',{type:'built',tier:2,level:2,upper:'timber',functions:['storage','nobleRoom']}]],
       ['Mura',['Sezione porticata L2',{type:'built',tier:2,level:2,skin:'arcade',functions:['stables',null]}]],
       ['Mura',['Sala larga 2U',{type:'built',span:'wide',tier:2,level:2,flip:true,functions:['throneHall']}]],
       // Infirmary wards (W1 section on both floors, W2 hall): the cutaway shows the furnished rooms.
@@ -43,6 +44,9 @@
       // A W3 tower with an attached W1 subtower whose upper room is a latrine (garderobe on its free face).
       ['Torri',['Grande quadrata L3 + sottotorre W1 latrina',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:2,roofStyle:'battlement',
         attach:[{dx:1.45,dy:0,spec:{type:'tower',shape:'square',material:'stone',level:2,tier:1,size:1,roofStyle:'battlement',functions:[null,'latrine']}}]}]],
+      // Framed top (BC-261124): timber-framed jettied top storey on a W3 square stone tower.
+      ['Torri',['Grande quadrata L2 · framed top',{type:'tower',shape:'square',material:'stone',level:2,tier:3,size:2,upper:'timber'}]],
+      ['Torri',['Grande quadrata L3 · framed top',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:2,upper:'timber'}]],
       // Military stables (settlement-siege.js stableUnits): stall rows down the long room.
       ['Mura',['Scuderia militare · sezione L1',{type:'built',tier:2,level:1,functions:['stables']}]],
       // Timber longhouse (settlement-wood3d.js): W1 / W2 span, ground floor only, the stone section's rooms.

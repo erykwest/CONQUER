@@ -85,7 +85,7 @@ function woodTowerLocal(s,x,y){
   const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0);
   return{x:s.x+x*ca-y*sa,y:s.y+x*sa+y*ca};
 }
-function builtRoofFootprintPoints(s){
+function builtRoofFootprintPoints(s,extra=typeof builtTimberUpper==='function'&&builtTimberUpper(s)?BUILT_JETTY+.06:0){
   let a={...s.a},b={...s.b};
   let dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
   const inset=clamp((Number(s.width)||1)*.11,.08,.16);
@@ -96,7 +96,7 @@ function builtRoofFootprintPoints(s){
   if(hasCastleSnap(s.bSnap))b={x:b.x-ux*inset,y:b.y-uy*inset};
 
   dx=b.x-a.x;dy=b.y-a.y;L=Math.hypot(dx,dy)||1;
-  const nx=-dy/L*(Number(s.width)||1)/2,ny=dx/L*(Number(s.width)||1)/2;
+  const hw=(Number(s.width)||1)/2+extra,nx=-dy/L*hw,ny=dx/L*hw;
   return[
     {x:a.x+nx,y:a.y+ny},
     {x:b.x+nx,y:b.y+ny},
@@ -1039,8 +1039,9 @@ function chimneySpecs(s){
     const dx=g.ridgeB.x-g.ridgeA.x,dy=g.ridgeB.y-g.ridgeA.y;
     const ridgeLength=Math.hypot(dx,dy);
     // A hall has one hearth per end: two stacks, whatever its length.
-    // A lean-to is one room: a single stack, in the middle.
-    const count=g.leanTo?1:isWideBuilt(s)?2:Math.max(1,Math.ceil(ridgeLength/CHIMNEY_SPACING));
+    // A lean-to is one room: a single stack, in the middle. W1 sections: one stack every two
+    // chimney spacings (half the former count).
+    const count=g.leanTo?1:isWideBuilt(s)?2:Math.max(1,Math.ceil(ridgeLength/(CHIMNEY_SPACING*2)));
     for(let i=0;i<count;i++){
       const t=(i+1)/(count+1);
       // Lean-to: the stack rises off the wall face, inside the roof.
