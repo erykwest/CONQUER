@@ -4,6 +4,24 @@
 - Modello rigenerato in Blender 4.4 (cq_blender.py non è nel repo: usata la copia locale di autobuild/tools/blender). Solo tower2 diverso dal modello precedente; ram, catapult, trebuchet, mantlet, ladder, ballista, tower identici.
 - Piani: L1 base + ponte, senza parapetto posteriore; L2 base + un pianerottolo intermedio + ponte + cima. Cambia solo la geometria del telaio di tower e tower2, rig invariato.
 - PASS siege-engines, siege-assault (ponte su H2 entro 0,06), combat-sectors, codex-wiki (catalog rigenerato), stonecolor, trebuchet, tower-weapons, siege-damage-converge, gate-breach. Verificato a vista con l'anteprima d'assedio: torre L1 su H1, torre L2 su H2, scala su H1. Audit Lab non eseguibile in locale (manca Playwright): da CI.
+### 2026-11-24 — TOWER-FRAMED-TOP: piano alto a graticcio delle torri W3 (branch `feature/framed-top-towers`, NON MERGE)
+
+- **CODICE:** variante torre `upper` 'stone'/'timber' (`settlement-core.js` `towerTimberUpperAllowed`/`towerTimberUpper`, `TOWER_TIMBER_COST` {wood:45}, `TOWER_JETTY` .1): solo torri quadrate in pietra W3, L2+, cima integra; tetto sempre a falde (niente merli, caditoie, ballatoio, garitte). Costo: torre un livello più bassa + solo legno. Fuoco (`settlement-fire.js`): parte 'upper' (flam .85, 50 s); bruciata, la torre perde il piano (brokenTop), muratura integra. Render: piano in intonaco a sbalzo, gronda allargata, intelaiatura fitta (`timberStoreyFacade` dense), niente aperture in pietra sopra il piano. Ispettore (UI classica e profilo) «Piano alto: Pietra / Graticcio». Nuova torre lignea a telaio H3 (`woodStyle:'frameTower3'`, {gold:80,wood:190}, 9 giorni): P1 e P2 del modello H2, P3 intonacato a sbalzo 0,1 U con intelaiatura fitta (`settlement-wood3d.js` `addFramedP3`), tetto a falde senza parapetto (deck, tetto e bandiera del modello tolti). La H2 resta invariata. Sezione costruita W1 L2 con P1 a graticcio (variante `built.upper`, `builtTimberUpper`, +14 legno per U, sbalzo 0,1 U sui lati lunghi, intelaiatura fitta a campate, fuoco 'upper' che la riporta a L1; graticcio anche sui lati corti, frontoni intonacati, bifore sul lato interno: `pairedTimberBay`, graticcio anche sul frontone); P0 delle sezioni W1 standard (pietra e graticcio, `builtGroundFront`): niente feritoie, porta nella campata centrale e una bifora gotica (`gothicL2`) nelle altre sul lato cortile; camini delle sezioni W1 dimezzati (uno ogni 3 U di colmo); l'Asset Lab rispetta i limiti di lunghezza di `TYPES` (W1 max 4 U) invece dei 7,5 U fissi; schede codex `upgrade:tower.upper.*` e `upgrade:built.upper.*`. Lab: due varianti «framed top».
+- **PROVE LOCALI PASS:** nuova `qa/tower-framed-top-regression.cjs`; caso nuovo in `qa/fire-regression.cjs`; tower-weapons, clay-material, tower-roof-shape, bartizan, biome-recipes. Falliscono anche su main: codex-obsidian, codex-vault-import, codex-wiki, hills-zone, stream-count. Verifica visiva nell'Asset Lab (intatta, cutaway).
+### 2026-11-25 — PLACEMENT-GHOST: ghost 3D nell'anteprima di piazzamento (`fix/placement-ghost-3d`)
+
+- **IMPLEMENTATO SUL BRANCH, NON MERGE.** Base `origin/main` `82cd9e8a`.
+- Regressione da D-RENDER-3D-261111 (#204): l'anteprima mostrava solo il prisma tratteggiato dell'impronta. Ora `drawStructure(preview)` disegna l'impronta **solo a terra** (niente faccia superiore) e sopra l'edificio finito World 3D traslucido (`PREVIEW_GHOST_ALPHA` .58), riusando il ghost dei cantieri (#276).
+- Cache del ghost per chiave `preview:<tipo>[:segmento]`, con la posizione nella chiave (la mesh è in coordinate mondo). Torri in muratura, porte in pietra, mura e sezioni (buffer castello) usano `ConquerAssembly.source` come ripiego.
+- **PROVE LOCALI PASS:** `construction-ghost` (aggiornato: anteprima con ghost, ripiego torri, impronta solo a terra), `builder-placement`, `render-cache-keys`. Audit Chromium 1228 di tutte le voci del Builder con screenshot (`output/ghost-audit`, non versionato): ghost presente su tutte le voci con modello; strade, fossati e ponti mantengono la loro anteprima; rampa e scalinata non verificate.
+- **CI remota non ancora eseguita**; nessun merge o deploy.
+### 2026-11-24 — TOWER-HILL-BASES: torri sul bordo collina e basamenti (`fix/tower-hill-bases`)
+
+- Porta delle torri su pendio rivolta verso la cima e sul pianoro (regola di piazzamento, D-TOWER-SUMMIT-261124); pavimento letto sotto il corpo.
+- Contrafforti e scarpa 10° che scendono fino al terreno; scarpa aperta davanti alla porta; contrafforti delle torri −30%.
+- Mura e sezioni costruite: basamento esterno (standard / contrafforti / scarpa), selezionabile dal pannello; solo estetico, ingombro invariato.
+- Scala del mastio nel materiale della torre; ponte levatoio sempre disegnato.
+- Limite: torri già piazzate nei salvataggi esistenti tengono orientamento e pavimento salvati (nessuna migrazione).
 
 ### 2026-11-24 — UI-INSPECTOR-SLIM: inspector compatto (`feature/inspector-slim`, NON MERGE)
 

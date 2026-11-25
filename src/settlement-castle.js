@@ -227,7 +227,7 @@ function circleWorldPoints(cx,cy,r,n=20){const pts=[];for(let i=0;i<n;i++){const
 function structureHeight(s){
   if(!s)return 0;
   if(s.type==='tower'){
-    if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?2.35:woodTowerStyle(s)==='frameTower'?3.78:(woodTowerRoof(s)==='pitched'?2.95:2.32);
+    if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?2.35:woodTowerStyle(s)==='frameTower'?3.78:woodTowerStyle(s)==='frameTower3'?4.45:(woodTowerRoof(s)==='pitched'?2.95:2.32);
     const l=structureLevel(s),t=towerTier(s);return [2.35,3.55,4.75,5.95][l-1]+(t-1)*.12
   }
   // The small gate stands just above the curtain (H2 walls are 2.35, the small gate 0.30 over it): L1 passage only, L2 one room over P1 (2.35).
@@ -294,23 +294,22 @@ function isStoneTowerStructure(s){
 }
 function stoneTowerSplayedFootprint(s){
   if(!isStoneTowerStructure(s))return footprintPoints(s);
-  if(s.shape==='round'){
-    return circleWorldPoints(s.x,s.y,(Number(s.r)||.5)+STONE_TOWER_SPLAY_OFFSET,24);
-  }
-  if(isOrientedTower(s))return orientedTowerOutline(s,-STONE_TOWER_SPLAY_OFFSET);
+  return stoneTowerSplayRing(s,STONE_TOWER_SPLAY_OFFSET);
+}
+// The tower outline pushed out by `off`: the same vertices at every offset, so two rings of the
+// splayed talus (at the floor and down the slope) pair up vertex by vertex.
+function stoneTowerSplayRing(s,off){
+  if(s.shape==='round')return circleWorldPoints(s.x,s.y,(Number(s.r)||.5)+off,24);
+  if(isOrientedTower(s))return orientedTowerOutline(s,-off);
   const d=rectDims(s);
-  return rectWorldPoints(
-    s.x,s.y,
-    d.w+STONE_TOWER_SPLAY_OFFSET*2,
-    d.h+STONE_TOWER_SPLAY_OFFSET*2,
-    s.angle||0
-  );
+  return rectWorldPoints(s.x,s.y,d.w+off*2,d.h+off*2,s.angle||0);
 }
 // Stepped Gothic buttress against a wall point p (u along the wall, o outward), h tall:
 // deep plinth, sloped weathering, shallower upper stage, final slope back into the wall.
 // Frustum pieces {bottom,top,z0,z1}; shared by wide halls and buttressed stone towers.
-function steppedButtressPieces(p,u,o,h,w=.22){
-  const rect=d=>[[-w/2,-.02],[w/2,-.02],[w/2,d],[-w/2,d]].map(([a,b])=>({x:p.x+u.x*a+o.x*b,y:p.y+u.y*a+o.y*b}));
+function steppedButtressPieces(p,u,o,h,w=.22,k=1){
+  w*=k;
+  const rect=d=>[[-w/2,-.02],[w/2,-.02],[w/2,d*k],[-w/2,d*k]].map(([a,b])=>({x:p.x+u.x*a+o.x*b,y:p.y+u.y*a+o.y*b}));
   const z=[0,h*.48,h*.53,h*.86,h*.94],deep=rect(.30),shallow=rect(.18);
   const pieces=[
     {bottom:deep,top:deep,z0:z[0],z1:z[1]},
@@ -321,15 +320,18 @@ function steppedButtressPieces(p,u,o,h,w=.22){
   pieces.anchor=p;pieces.outward=o;
   return pieces;
 }
-// Buttresses rise through the first storey (the L1 tower height), whatever the tower level.
+// Buttresses rise through the first storey (the L1 tower height), whatever the tower level;
+// on towers they are 30% smaller in plan than on wide halls (user, 24/11/2026).
+const TOWER_BUTTRESS_SCALE=.7;
 function stoneTowerButtresses(s){
   if(!isStoneTowerStructure(s))return[];
   const h=Math.min(structureHeight(s),2.35+(towerTier(s)-1)*.12),out=[];
   if(s.shape==='round'){
     const r=Number(s.r)||.5;
     for(let i=0;i<8;i++){
-      const a=i*Math.PI/4,o={x:Math.cos(a),y:Math.sin(a)};
-      out.push(steppedButtressPieces({x:s.x+o.x*r,y:s.y+o.y*r},{x:-o.y,y:o.x},o,h));
+      // Half a step off the tower angle: the door (at `angle`) opens between two buttresses.
+      const a=(s.angle||0)+(i+.5)*Math.PI/4,o={x:Math.cos(a),y:Math.sin(a)};
+      out.push(steppedButtressPieces({x:s.x+o.x*r,y:s.y+o.y*r},{x:-o.y,y:o.x},o,h,.22,TOWER_BUTTRESS_SCALE));
     }
     return out;
   }
@@ -339,7 +341,7 @@ function stoneTowerButtresses(s){
     const a=fp[i],b=fp[(i+1)%fp.length],dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1;
     const u={x:dx/L,y:dy/L},mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
     let nx=mid.x-center.x,ny=mid.y-center.y,NL=Math.hypot(nx,ny)||1;
-    for(const t of [1/3,2/3])out.push(steppedButtressPieces({x:a.x+dx*t,y:a.y+dy*t},u,{x:nx/NL,y:ny/NL},h));
+    for(const t of [1/3,2/3])out.push(steppedButtressPieces({x:a.x+dx*t,y:a.y+dy*t},u,{x:nx/NL,y:ny/NL},h,.22,TOWER_BUTTRESS_SCALE));
   }
   return out;
 }
@@ -389,7 +391,15 @@ function placementFoundationProfile(s){
     minZ=Math.min(minZ,z);maxZ=Math.max(maxZ,z);
   }
   if(!Number.isFinite(minZ)||!Number.isFinite(maxZ))return null;
-  return{baseZ:maxZ,minZ,maxZ,depth:Math.max(0,maxZ-minZ)};
+  // The floor is the highest ground under the tower body, not under its buttresses or talus:
+  // those reach further uphill and would lift the floor (and the door) above the summit.
+  let floorZ=maxZ;
+  if(isStoneTowerStructure(s)&&towerBaseStyle(s)!=='standard'){
+    floorZ=-Infinity;
+    for(const p of structureTerrainSamples(s,[footprintPoints(s)]))floorZ=Math.max(floorZ,terrainElevation(p));
+    if(!Number.isFinite(floorZ))floorZ=maxZ;
+  }
+  return{baseZ:floorZ,minZ,maxZ,depth:Math.max(0,floorZ-minZ)};
 }
 // Memo per structure: the foundation profile samples the whole footprint on the terrain and
 // was recomputed for every ground-plane draw call (hundreds of terrain samples per frame).
@@ -425,6 +435,70 @@ function placementFoundationDepth(s){
   for(const p of samples)minZ=Math.min(minZ,terrainElevation(p));
   return Math.max(0,baseZ-minZ);
 }
+// Rule (user, 24/11/2026): on a hillside the tower's ground-floor entrance faces the summit and
+// opens on it — the threshold stands on the hilltop at the tower's floor level. Placement turns
+// the tower so its door looks uphill (orientTowerToSummit) and refuses a site where the threshold
+// would be on the slope (towerEntranceSummitVerdict).
+const TOWER_SUMMIT_MIN_RISE=.015,TOWER_SUMMIT_THRESHOLD=.25,TOWER_SUMMIT_TOLERANCE=.03;
+// Uphill direction around the tower (unit vector), or null on level ground.
+function towerUphillVector(s){
+  const fp=towerFacadePoints(s)||footprintPoints(s)||[];
+  let R=s.shape==='round'?Number(s.r)||.5:0;
+  for(const p of fp)R=Math.max(R,Math.hypot(p.x-s.x,p.y-s.y));
+  R+=.6;
+  const N=24,dirs=[],zs=[];
+  for(let i=0;i<N;i++){const a=i*Math.PI*2/N,d={x:Math.cos(a),y:Math.sin(a)};dirs.push(d);zs.push(terrainElevation({x:s.x+d.x*R,y:s.y+d.y*R}))}
+  const mean=zs.reduce((a,b)=>a+b,0)/N;
+  if(Math.max(...zs)-Math.min(...zs)<TOWER_SUMMIT_MIN_RISE)return null;
+  let vx=0,vy=0;
+  zs.forEach((z,i)=>{vx+=(z-mean)*dirs[i].x;vy+=(z-mean)*dirs[i].y});
+  const L=Math.hypot(vx,vy);
+  return L>1e-6?{x:vx/L,y:vy/L}:null;
+}
+// The rule covers the ground door of a free-standing tower: subtowers have none, a gate tower's
+// faces the gate, a quay tower's faces the quay, and a D tower on a wall is turned by the wall.
+function towerSummitRuleApplies(s,{wallSnapped=false}={}){
+  if(!s||s.type!=='tower'||s.parentTowerId||s.quaySnap)return false;
+  if(isOrientedTower(s))return s.shape==='dee'&&!wallSnapped&&!Number.isFinite(s.wallSeat);
+  return true;
+}
+// Turns a tower on a slope so its entrance looks uphill: a square one by quarter turns (same
+// footprint, so a wall seat stays put), a round one freely, a free-standing D with its round
+// front downhill (its door is on the flat rear). Returns true when the angle changed.
+function orientTowerToSummit(s,opts={}){
+  if(!towerSummitRuleApplies(s,opts))return false;
+  const up=towerUphillVector(s);if(!up)return false;
+  const ua=Math.atan2(up.y,up.x),a0=Number(s.angle)||0;
+  let target;
+  if(isOrientedTower(s))target=ua+Math.PI;
+  else if(s.shape==='round')target=ua;
+  else{
+    let best=-Infinity;
+    for(let k=0;k<4;k++){const a=a0+k*Math.PI/2,c=Math.cos(a-ua);if(c>best){best=c;target=a}}
+  }
+  const before=normalizeStructureAngle(a0);
+  applyStructureRotation(s,target);
+  return Math.abs(normalizeStructureAngle(s.angle)-before)>1e-6;
+}
+function towerSummitEntrance(s){
+  if(typeof towerDoorSpecs!=='function')return null;
+  return towerDoorSpecs(s).find(d=>d.kind==='front'&&!d.raised)||null;
+}
+// {ok, reason}: on level ground anything goes; on a slope the ground door faces uphill and its
+// threshold is on the hilltop at the floor level.
+function towerEntranceSummitVerdict(s,opts={}){
+  if(!towerSummitRuleApplies(s,opts)||!isPlacementFoundationBuilding(s))return{ok:true};
+  const up=towerUphillVector(s);
+  if(!up||placementFoundationDepth(s)<=TOWER_SUMMIT_MIN_RISE)return{ok:true};
+  const door=towerSummitEntrance(s);if(!door)return{ok:true};
+  if(door.outward.x*up.x+door.outward.y*up.y<Math.SQRT1_2)
+    return{ok:false,reason:'La porta della torre deve essere rivolta verso la cima'};
+  const t={x:door.contact.x+door.outward.x*TOWER_SUMMIT_THRESHOLD,y:door.contact.y+door.outward.y*TOWER_SUMMIT_THRESHOLD};
+  const top=terrainPlateauElevation(t),floor=placementGroundZ(s);
+  if(top==null||!Number.isFinite(floor)||Math.abs(top-floor)>TOWER_SUMMIT_TOLERANCE)
+    return{ok:false,reason:'La porta della torre deve aprirsi sulla cima: sposta la torre verso il pianoro'};
+  return{ok:true};
+}
 function usesRaisedPlacementFoundation(s){
   return isPlacementFoundationBuilding(s)&&placementFoundationDepth(s)>.015;
 }
@@ -435,8 +509,8 @@ function isRaisedPlacementCastlePoint(s){
 function withStructureGroundPlane(s,drawFn){
   return withProjectionGroundZ(placementGroundZ(s),drawFn);
 }
-function structureTerrainSamples(s){
-  const polys=structureGroundContactPolygons(s);if(!polys.length)return[];
+function structureTerrainSamples(s,polys=structureGroundContactPolygons(s)){
+  if(!polys?.length)return[];
   const out=[];
   for(const fp of polys){
     for(let i=0;i<fp.length;i++){
@@ -765,6 +839,20 @@ function cutawayFloorShown(s,i){const z=cutawayFloorLevels(s)[i]?.z;return !Numb
 // Timber upper storey of a small gate: from the room floor to the eaves, jettied over the front
 // and the rear (local x), flush with the flanks the walls meet.
 function gateTimberFloorZ(s){return GATE_TIMBER_FLOOR}
+// Framed top of a W3 tower: from its top floor to the eaves, jettied TOWER_JETTY on all faces.
+function towerTimberFloorZ(s){return towerUpperFloorZ(s,structureLevel(s)-1)}
+function towerTimberStoreyPoints(s){const d=rectDims(s);return rectWorldPoints(s.x,s.y,d.w+TOWER_JETTY*2,d.h+TOWER_JETTY*2,s.angle||0)}
+// Either timber storey (gate or tower): floor height and jettied outline, or null.
+function timberStorey(s){
+  if(s?.type==='gate'&&gateTimberUpper(s))return{z:gateTimberFloorZ(s),pts:gateTimberStoreyPoints(s)};
+  if(s?.type==='tower'&&towerTimberUpper(s))return{z:towerTimberFloorZ(s),pts:towerTimberStoreyPoints(s)};
+  if(s?.type==='built'&&builtTimberUpper(s))return{z:builtTimberFloorZ(s),pts:builtTimberStoreyPoints(s)};
+  return null;
+}
+// Timber P1 of a built section: from its upper floor to the eaves; the outline is the roof's
+// (pulled back from snapped towers) widened BUILT_JETTY on both long faces.
+function builtTimberFloorZ(s){return cutawayFloorLevels(s)[1]?.z??structureHeight(s)/2}
+function builtTimberStoreyPoints(s){return builtRoofFootprintPoints({...s,upper:'stone'},BUILT_JETTY)}
 function gateTimberStoreyPoints(s){const d=rectDims(s);return rectWorldPoints(s.x,s.y,d.w+GATE_JETTY*2,d.h,s.angle||0)}
 function cutawayRoomSlots(s,g=cutawayWallGeometry(s)){
   // slot i is the room on floor i+offset (gates: the ground floor is the passage, no room).

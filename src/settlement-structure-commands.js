@@ -89,6 +89,15 @@ const StructureCommands=(()=>{
     status('Tower base: '+(target.baseStyle==='buttress'?'buttressed':target.baseStyle==='splayed'?'splayed 10°':'standard'));
     return true;
   }
+  // Walls and built sections: talus or buttresses on the outer face (aesthetic, no footprint change).
+  function setWallBase(id,style){
+    const target=find(id);
+    if(!target||linearBaseStyle(target)===undefined)return false;
+    if(!setStructureVariant(target,'baseStyle',style))return false;
+    refresh(target);
+    status('Base: '+(target.baseStyle==='buttress'?'buttressed':target.baseStyle==='splayed'?'splayed 10°':'standard'));
+    return true;
+  }
   function setTowerRoof(id,style){
     const target=find(id);if(!target||target.type!=='tower')return false;
     // 'machicolationItalian' is the machicolated top with the Italian look (machicolationStyle).
@@ -126,6 +135,21 @@ const StructureCommands=(()=>{
     if(!setStructureVariant(target,'upper',upper))return false;
     target.buildCost=constructionCost(target);
     refresh(target);status('Gate upper storey: '+(target.upper==='timber'?'timber frame':'masonry'));return true;
+  }
+  // Framed top (W3 square stone tower, L2+): masonry or timber-framed top storey.
+  function setTowerUpper(id,upper){
+    const target=find(id);if(!towerTimberUpperAllowed(target))return false;
+    if(!setStructureVariant(target,'upper',upper))return false;
+    if(upper==='timber'){setStructureVariant(target,'roofStyle','pitched');setStructureVariant(target,'hoarding','off');setStructureVariant(target,'bartizan','none')}
+    target.buildCost=constructionCost(target);
+    refresh(target);status('Tower top storey: '+(target.upper==='timber'?'timber frame':'masonry'));return true;
+  }
+  // Built W1 section at L2: masonry or timber-framed P1.
+  function setBuiltUpper(id,upper){
+    const target=find(id);if(!builtTimberUpperAllowed(target))return false;
+    if(!setStructureVariant(target,'upper',upper))return false;
+    target.buildCost=constructionCost(target);
+    refresh(target);status('Built section P1: '+(target.upper==='timber'?'timber frame':'masonry'));return true;
   }
   function setSkin(id,skin){
     const target=find(id);if(!target||!['wall','built'].includes(target.type))return false;
@@ -491,7 +515,9 @@ const StructureCommands=(()=>{
       if(woodTower){
         if(woodTowerStyle(s)==='palisadeTower')d.controls.push(choice('woodRoof','setWoodRoof',[{value:'open',word:'open'},{value:'pitched',word:'pitched4'}],woodTowerRoof(s)));
       }else{
-        d.controls.push(choice('roof','setTowerRoof',[{value:'battlement',word:'battlement'},{value:'machicolation',word:'machicolation'},{value:'machicolationItalian',word:'machicolationItalian',disabled:s.shape==='half'},{value:'pitched',word:'pitched'}],towerRoofMenuValue(s)));
+        const framed=towerTimberUpper(s);
+        if(towerTimberUpperAllowed(s))d.controls.push(choice('upper','setTowerUpper',[{value:'stone',word:'masonry'},{value:'timber',word:'timber'}],framed?'timber':'stone'));
+        d.controls.push(choice('roof','setTowerRoof',[{value:'battlement',word:'battlement',disabled:framed},{value:'machicolation',word:'machicolation',disabled:framed},{value:'machicolationItalian',word:'machicolationItalian',disabled:framed||s.shape==='half'},{value:'pitched',word:'pitched'}],towerRoofMenuValue(s)));
         if(s.shape!=='half')d.controls.push(hoardingChoice(s));
         if(s.shape!=='half')d.controls.push(choice('innerRoof','setTowerInnerRoof',[{value:'off',word:'innerRoofOff'},{value:'on',word:'innerRoofOn',disabled:!towerInnerRoofAllowed(s)}],towerInnerRoofMounted(s)?'on':'off'));
         if(s.shape!=='half'&&[2,3].includes(towerTier(s))){const ok=!towerUpInnerTowerAllowed(s);d.controls.push(choice('upInnerTower','setTowerUpInnerTower',[{value:'off',word:'upInnerTowerOff'},{value:'round',word:'upInnerTowerRound',disabled:ok},{value:'square',word:'upInnerTowerSquare',disabled:ok}],towerUpInnerTower(s)||'off'))}
@@ -529,6 +555,8 @@ const StructureCommands=(()=>{
     }
     if(isLonghouse(s))d.controls.push(choice('roofCover','setLonghouseCover',LONGHOUSE_COVERS.map(v=>({value:v,word:'cover_'+v})),longhouseCover(s)));
     if(s.type==='built'&&!isLonghouse(s))d.controls.push(choice('skin','setSkin',[{value:'standard',word:'standard'},{value:'arcade',word:'arcade'}],builtSkin(s)));
+    if(builtTimberUpperAllowed(s))d.controls.push(choice('upper','setBuiltUpper',[{value:'stone',word:'masonry'},{value:'timber',word:'timber'}],builtTimberUpper(s)?'timber':'stone'));
+    if(linearBaseStyle(s)!==undefined)d.controls.push(choice('base','setWallBase',[{value:'standard',word:'standard'},{value:'buttress',word:'buttress'},{value:'splayed',word:'splayed'}],linearBaseStyle(s)));
     if(s.type==='wall'){
       const narrow=wallTier(s)===1;
       d.controls.push(choice('skin','setSkin',[{value:'standard',word:'standard'},{value:'machicolation',word:'machicolation',disabled:narrow},{value:'hoarding',word:'hoarding'}],wallSkin(s)));
@@ -594,10 +622,10 @@ const StructureCommands=(()=>{
     return d;
   }
 
-  const commands={setConstructionPriority,setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setLonghouseCover,setGateRoof,setGateUpper,setSkin,setWallStair,setWallStairPos,setWallLeanTo,toggleCutaway,stepCutawayFloor,flipSide,digMoat,
+  const commands={setConstructionPriority,setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setWallBase,setTowerRoof,setHoarding,setWoodRoof,setLonghouseCover,setGateRoof,setGateUpper,setTowerUpper,setBuiltUpper,setSkin,setWallStair,setWallStairPos,setWallLeanTo,toggleCutaway,stepCutawayFloor,flipSide,digMoat,
     setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBartizanCount,setTowerBell,setTowerInnerRoof,setTowerUpInnerTower,setTowerLookout,setTowerOutpost,setTowerSignalFire,setWallPatrols,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,startUpgrade,
     describeStructure};
-  for(const name of ['setTier','setHeight','setKeepFloorPlan','setTowerBase','setTowerRoof','setHoarding','setWoodRoof','setGateRoof','setGateUpper','setSkin','setTowerWeapon','setTowerRoofShape','setTowerBartizan','setTowerBartizanCount','setTowerBell','setTowerInnerRoof','setTowerUpInnerTower','setCivicLevel','setPlazaVariant']){
+  for(const name of ['setTier','setHeight','setKeepFloorPlan','setTowerBase','setWallBase','setTowerRoof','setHoarding','setWoodRoof','setGateRoof','setGateUpper','setTowerUpper','setBuiltUpper','setSkin','setTowerWeapon','setTowerRoofShape','setTowerBartizan','setTowerBartizanCount','setTowerBell','setTowerInnerRoof','setTowerUpInnerTower','setCivicLevel','setPlazaVariant']){
     const execute=commands[name];
     commands[name]=(id,...args)=>{
       const target=find(id);if(!target||underConstruction(target))return false;

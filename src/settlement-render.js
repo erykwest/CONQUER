@@ -32,17 +32,22 @@ function updateRendererReadout(ok){
 function drawConstructionProgress(s){
   const p=w2s(structureCenter(s),structureHeight(s)+.65),pr=constructionProgress(s),w=34,h=5;ctx.save();ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(p.x-w/2,p.y-18,w,h);ctx.fillStyle='#e08a3c';ctx.fillRect(p.x-w/2,p.y-18,w*pr,h);ctx.strokeStyle='rgba(255,255,255,.3)';ctx.strokeRect(p.x-w/2,p.y-18,w,h);if(s.construction?.version===2){ctx.font='9px sans-serif';ctx.textAlign='center';ctx.fillStyle='rgba(255,255,255,.95)';ctx.fillText((s.construction.workers||0)+' L1',p.x,p.y-23)}ctx.restore();
 }
-function drawStructure(s,preview=false){
+function drawStructure(s,preview=false,previewIndex=null){
   if(s?.type==='road'){drawAutoStructure(s,preview);return}
   if(s?.type==='ruin')return;          // ruined stumps are drawn with their rubble (ConquerSiege)
   // No building has a 2.5D Canvas body (D-RENDER-3D-261111): finished ones are World 3D meshes.
   // Here only the overlays: a site is assembled from the same meshes (ConquerAssembly) or shown as
   // the translucent ghost of its finished World 3D building (footprint volume when it has no mesh),
-  // with its progress bar; a placement ghost is its footprint volume.
+  // with its progress bar; a placement preview is that same translucent ghost over its footprint volume.
   if(!preview&&!underConstruction(s))return;
   const assembled=!preview&&window.ConquerAssembly?.has(s)&&window.ConquerAssembly.draw(s);
-  if(!assembled&&(preview||!drawSiteGhost(s)))drawPlacementVolume(s,'rgba(244,214,160,.22)','rgba(244,214,160,.92)');
-  if(preview)return;
+  if(preview){
+    // Placement preview: its footprint volume, then the finished World 3D building at PREVIEW_GHOST_ALPHA on top.
+    drawPlacementVolume(s,'rgba(244,214,160,.22)','rgba(244,214,160,.92)');
+    drawSiteGhost(s,PREVIEW_GHOST_ALPHA,'preview:'+(s.id??s.type)+(previewIndex==null?'':':'+previewIndex));
+    return;
+  }
+  if(!assembled&&!drawSiteGhost(s))drawPlacementVolume(s,'rgba(244,214,160,.22)','rgba(244,214,160,.92)');
   if(isPlacementFoundationBuilding(s))withStructureGroundPlane(s,()=>drawConstructionProgress(s));
   else if(window.ConquerIndustries?.is(s))withProjectionGroundZ(s.groundZ,()=>drawConstructionProgress(s));
   else drawConstructionProgress(s);
@@ -50,26 +55,31 @@ function drawStructure(s,preview=false){
 // Ghost of a site without an assembly (industries, storage yards, wells, piers, quays, ramps,
 // civic annexes, event venues...): its finished World 3D building at SITE_GHOST_ALPHA, cached as a
 // bitmap like the assembled sites. false: no finished mesh (the caller draws the footprint volume).
-const SITE_GHOST_ALPHA=.42,siteGhostCache=new Map();
-function siteGhostMesh(s){
+const SITE_GHOST_ALPHA=.42,PREVIEW_GHOST_ALPHA=.58,siteGhostCache=new Map();
+// Preview ghosts have no id: one cache slot per preview type (wall segments add their index).
+function siteGhostMesh(s,cacheId=s.id){
   const W=window.ConquerWorld3D;if(!W?.finishedMesh)return null;
-  const key=structureVisualKey(s)+'#'+[State.season,State.visualPalette,State.stonePaletteId].join('|');
-  let e=siteGhostCache.get(s.id);
+  // finishedMesh is in world coordinates: the position is part of the key (a preview follows the pointer).
+  const key=structureVisualKey(s)+'#'+[s.x,s.y,s.a?.x,s.a?.y,s.b?.x,s.b?.y,State.season,State.visualPalette,State.stonePaletteId].join('|');
+  let e=siteGhostCache.get(cacheId);
   if(!e||e.key!==key){
     if(siteGhostCache.size>64){const live=new Set((State.structures||[]).map(o=>o.id));for(const id of siteGhostCache.keys())if(!live.has(id))siteGhostCache.delete(id)}
-    let mesh=null;try{mesh=W.finishedMesh(s)}catch(err){console.warn('site ghost',s.id,err)}
-    e={key,mesh,uid:(e?.uid||0)+1};siteGhostCache.set(s.id,e);
+    let mesh=null;try{mesh=W.finishedMesh(s)}catch(err){console.warn('site ghost',cacheId,err)}
+    // Stone castle parts (towers, gates, walls, sections) live in the castle buffer, not in the
+    // buildings one: their finished triangles come from the construction assembly source.
+    if(!mesh?.col?.length&&window.ConquerAssembly?.source){try{const src=window.ConquerAssembly.source(s);if(src?.col?.length)mesh={pos:src.pos,col:src.col,flat:true}}catch(err){console.warn('site ghost',cacheId,err)}}
+    e={key,mesh,uid:(e?.uid||0)+1};siteGhostCache.set(cacheId,e);
   }
   return e;
 }
-function drawSiteGhost(s){
+function drawSiteGhost(s,alpha=SITE_GHOST_ALPHA,cacheId=s.id){
   if(!window.ConquerMesh3D)return false;
-  const e=siteGhostMesh(s);if(!e?.mesh)return false;
+  const e=siteGhostMesh(s,cacheId);if(!e?.mesh)return false;
   const c=structureCenter(s)||{x:s.x,y:s.y};
   if(typeof worldPointVisible==='function'&&!worldPointVisible(c,0,320))return true;
   const z=Number.isFinite(s.groundZ)?s.groundZ:terrainElevation(c);
-  ctx.save();ctx.globalAlpha=SITE_GHOST_ALPHA;
-  window.ConquerMesh3D.drawCached(ctx,'ghost:'+s.id,String(e.uid),()=>[e.mesh],{x:c.x,y:c.y,z});
+  ctx.save();ctx.globalAlpha=alpha;
+  window.ConquerMesh3D.drawCached(ctx,'ghost:'+cacheId,String(e.uid),()=>[e.mesh],{x:c.x,y:c.y,z});
   ctx.restore();
   return true;
 }
@@ -112,10 +122,8 @@ function drawPlacementVolume(ghost,fill,stroke){
     withProjectionGroundZ(ground,()=>{
       for(const poly of rings){
         if(poly?.length<3)continue;
+        // Only the ground footprint is highlighted: no upper face (the 3D ghost shows the volume).
         pathPolygon(projectPath(poly,.03),fill,stroke,2.5);
-        // A red upper face remains aligned to the slope-based industry platform.
-        const height=Math.max(0,structureHeight(ghost));
-        if(height>.05)pathPolygon(projectPath(poly,height+.04),fill,stroke,2);
       }
     });
   }
@@ -240,11 +248,11 @@ function draw(){
   }else if(['moat','bridge'].includes(State.draft?.preview?.type))window.ConquerCrossings?.drawPreview(State.draft.preview);
   if(State.draft?.mode!=='terraform'&&State.draft?.previewSegments?.length){
     const segments=State.draft.previewSegments;
-    for(const segment of segments){
-      drawStructure(segment,true);
+    segments.forEach((segment,i)=>{
+      drawStructure(segment,true,i);
       const verdict=builderGhostVerdict(segment);
       if(!verdict.ok)drawInvalidPlacementGhost(segment);
-    }
+    });
   }else if(State.draft?.mode!=='terraform'&&State.draft?.preview){
     const ghost=State.draft.preview;
     if(['moat','bridge'].includes(ghost.type)){
