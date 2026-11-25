@@ -193,3 +193,61 @@ hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 .construction-priority select{margin-top:5px}
 /* Stone / clay selector: resource icon only, name in the tooltip. */
 .ux-builder button[data-build-masonry]{font-size:19px;line-height:1}
+
+/* Compact inspector (legacy UI): small buttons, tight slots, title in the header. Explanatory legends
+   show only with the header (i) button; `.legend.live` carries current state and always shows. */
+#functionPanel{width:256px;padding:8px 9px}
+#functionPanel .panel-head{margin-bottom:4px;gap:4px}
+#functionPanel .panel-head h2{font-size:15px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#functionPanel .icon-btn{width:24px;height:24px;font-size:13px;border-radius:6px}
+#functionPanel [data-inspector-help]{font-style:italic;font-family:Georgia,serif;font-weight:700}
+#functionPanel.show-help [data-inspector-help]{background:var(--accent);color:#1b130f;border-color:var(--accent)}
+#functionPanel:not(.show-help) .legend:not(.live){display:none}
+#functionPanel .legend{font-size:10.5px;line-height:1.35}
+#functionPanel .slot{padding:5px 6px;margin-top:4px;border-radius:7px}
+#functionPanel .slot-label{font-size:9.5px;margin-bottom:3px;letter-spacing:.06em}
+#functionPanel .kv{margin:2px 0;font-size:11.5px}
+#functionPanel button{padding:2px 6px;min-height:24px;font-size:12px;line-height:1.15;border-radius:5px}
+#functionPanel .slot>button{width:100%;margin-top:2px}
+#functionPanel .slot>button:first-of-type{margin-top:0}
+#functionPanel .grid,#functionPanel .grid3{gap:3px}
+#functionPanel .gridn{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:3px}
+#functionPanel .grid+.grid,#functionPanel .grid+.slot-label{margin-top:4px}
+#functionPanel select,#functionPanel input[type=text]{width:100%;padding:2px 5px;font-size:12px;min-height:24px;border-radius:5px}
+#functionPanel .room-slot{display:grid;grid-template-columns:72px minmax(0,1fr);align-items:center;gap:4px}
+#functionPanel .room-slot .slot-label{margin:0}
+#functionPanel .room-slot>.legend{grid-column:1/-1}
+#functionPanel .progress{margin:3px 0}
+/* Resource glyphs (resIcon) in the inspector in place of resource names. */
+#functionPanel .res-ic{display:inline-block;min-width:1.2em;text-align:center;cursor:help;font-style:normal}
+#functionPanel .slot>button[data-siege-transfer]{width:auto;min-width:30px;display:inline-block;margin:2px 2px 0 0}
+#profileControl .cp-transfer{display:flex;flex-wrap:wrap;gap:4px}#profileControl .cp-transfer button{padding:3px 8px;min-height:26px}
+/* Profilo › Diplomazia: Mastio tributes / gifts form (ConquerConvoys.panelHtml) in a two-column grid. */
+#profileControl [data-cp-convoys] .slot{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;align-items:end;margin:0;padding:0;background:none;border:0}
+#profileControl [data-cp-convoys] .slot-label{display:none}
+#profileControl [data-cp-convoys] .legend{grid-column:1/-1}
+#profileControl [data-cp-convoys] label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+#profileControl [data-cp-convoys] input,#profileControl [data-cp-convoys] select{width:100%;min-height:28px;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--sunken);color:var(--text);font-size:13px}
+#profileControl [data-cp-convoys] button{grid-column:1/-1;justify-self:start;padding:5px 14px}
+/* Inspector rows: label on the left, its buttons on the same row. A label beside two rows of
+   buttons stays vertically centred. Hover shows names in a small overlay (.insp-tip). */
+#functionPanel .slot{display:grid;grid-template-columns:70px minmax(0,1fr);column-gap:6px;row-gap:3px;align-items:center}
+#functionPanel .slot>*{grid-column:2}
+#functionPanel .slot>.slot-label{grid-column:1;margin:0;text-align:center;font-size:10px;line-height:1.15;white-space:normal;overflow-wrap:anywhere;cursor:default}
+#functionPanel .slot>.legend,#functionPanel .slot>.legend.live{grid-column:1/-1}
+#functionPanel .slot>.legend.live{grid-column:2}
+#functionPanel .slot>button{margin-top:0}
+#functionPanel .slot>.slot-label:only-child{grid-column:1/-1}
+#functionPanel .room-slot{grid-template-columns:70px minmax(0,1fr)}
+.insp-tip{position:fixed;z-index:60;max-width:220px;padding:4px 7px;border:1px solid var(--line-strong);border-radius:6px;background:rgba(20,14,10,.96);color:var(--text);font-size:11px;line-height:1.3;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.35)}
+.insp-tip[hidden]{display:none}
+#functionPanel{width:300px;overflow-x:hidden}
+#functionPanel .slot{grid-template-columns:78px minmax(0,1fr)}
+#functionPanel .slot>.slot-label{font-size:9px;letter-spacing:.02em;overflow-wrap:normal;word-break:normal;hyphens:auto}
+#functionPanel .grid>*,#functionPanel .grid3>*,#functionPanel .gridn>*{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Builder palette and inspector: thin scrollbar in the game's colours, not the browser's white one. */
+.ux-flyout,#functionPanel{scrollbar-width:thin;scrollbar-color:rgba(214,186,140,.35) transparent;scrollbar-gutter:stable}
+.ux-flyout::-webkit-scrollbar,#functionPanel::-webkit-scrollbar{width:6px}
+.ux-flyout::-webkit-scrollbar-track,#functionPanel::-webkit-scrollbar-track{background:transparent}
+.ux-flyout::-webkit-scrollbar-thumb,#functionPanel::-webkit-scrollbar-thumb{background:rgba(214,186,140,.35);border-radius:3px}
+.ux-flyout::-webkit-scrollbar-button,#functionPanel::-webkit-scrollbar-button{display:none}

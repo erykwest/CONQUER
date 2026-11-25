@@ -85,7 +85,7 @@ function woodTowerLocal(s,x,y){
   const ca=Math.cos(s.angle||0),sa=Math.sin(s.angle||0);
   return{x:s.x+x*ca-y*sa,y:s.y+x*sa+y*ca};
 }
-function builtRoofFootprintPoints(s){
+function builtRoofFootprintPoints(s,extra=typeof builtTimberUpper==='function'&&builtTimberUpper(s)?BUILT_JETTY+.06:0){
   let a={...s.a},b={...s.b};
   let dx=b.x-a.x,dy=b.y-a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
   const inset=clamp((Number(s.width)||1)*.11,.08,.16);
@@ -96,7 +96,7 @@ function builtRoofFootprintPoints(s){
   if(hasCastleSnap(s.bSnap))b={x:b.x-ux*inset,y:b.y-uy*inset};
 
   dx=b.x-a.x;dy=b.y-a.y;L=Math.hypot(dx,dy)||1;
-  const nx=-dy/L*(Number(s.width)||1)/2,ny=dx/L*(Number(s.width)||1)/2;
+  const hw=(Number(s.width)||1)/2+extra,nx=-dy/L*hw,ny=dx/L*hw;
   return[
     {x:a.x+nx,y:a.y+ny},
     {x:b.x+nx,y:b.y+ny},
@@ -176,6 +176,8 @@ function structureScreenSilhouette(s){
       const g=towerRoofShape(s)!=='pyramid'&&squareTowerRoofGeometry(s);
       if(g)cloud.push(w2s(g.ridgeA,g.ridgeH),w2s(g.ridgeB,g.ridgeH));
     }
+    const up=s.type==='tower'&&upInnerTowerGeometry(s);
+    if(up)cloud.push(w2s(up.apex,up.apexZ));
     const inner=s.type==='tower'&&towerInnerRoofGeometry(s);
     if(inner)cloud.push(w2s(inner.apex,inner.apexZ),w2s(inner.tail,inner.apexZ));
     if(hasPointHoarding(s)){
@@ -826,7 +828,8 @@ function midpoint2(a,b){return{x:(a.x+b.x)/2,y:(a.y+b.y)/2}}
 function towerFlagAnchors(tower){
   if(!tower||tower.type!=='tower'||isWoodTower(tower)||underConstruction(tower))return[];
   const out=[];
-  if(towerRoofStyle(tower)==='pitched'){
+  // The apex flag goes with the roof in cutaway (the roof is taken off; it would float).
+  if(towerRoofStyle(tower)==='pitched'&&!(typeof structureCutaway==='function'&&structureCutaway(tower))){
     const g=towerRoofShape(tower)!=='pyramid'&&squareTowerRoofGeometry(tower);
     if(g){out.push({at:g.ridgeA,z:g.ridgeH,key:tower.id+'-flag',size:1},{at:g.ridgeB,z:g.ridgeH,key:tower.id+'-flag-2',size:1})}
     else out.push({at:{x:tower.x,y:tower.y},z:towerApexFlagZ(tower),key:tower.id+'-flag',size:1});
@@ -898,7 +901,7 @@ function towerTorchSources(){
 // The brazier stands on the open deck of a crenellated / machicolated stone tower. The inner roof
 // takes the deck: no brazier under it (and so no fire for the archers' fire arrows).
 function towerHasBrazier(s){
-  return !!s&&s.type==='tower'&&!underConstruction(s)&&!isWoodTower(s)&&['battlement','machicolation'].includes(towerRoofStyle(s))&&!towerInnerRoofMounted(s);
+  return !!s&&s.type==='tower'&&!underConstruction(s)&&!isWoodTower(s)&&['battlement','machicolation'].includes(towerRoofStyle(s))&&!towerInnerRoofMounted(s)&&!towerUpInnerTower(s);
 }
 function battlementBrazierSources(){
   const out=[];
@@ -1036,7 +1039,9 @@ function chimneySpecs(s){
     const dx=g.ridgeB.x-g.ridgeA.x,dy=g.ridgeB.y-g.ridgeA.y;
     const ridgeLength=Math.hypot(dx,dy);
     // A hall has one hearth per end: two stacks, whatever its length.
-    const count=isWideBuilt(s)?2:Math.max(1,Math.ceil(ridgeLength/CHIMNEY_SPACING));
+    // A lean-to is one room: a single stack, in the middle. W1 sections: one stack every two
+    // chimney spacings (half the former count).
+    const count=g.leanTo?1:isWideBuilt(s)?2:Math.max(1,Math.ceil(ridgeLength/(CHIMNEY_SPACING*2)));
     for(let i=0;i<count;i++){
       const t=(i+1)/(count+1);
       // Lean-to: the stack rises off the wall face, inside the roof.

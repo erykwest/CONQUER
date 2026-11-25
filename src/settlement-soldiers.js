@@ -174,7 +174,7 @@
 
   // ---------- signal fires
   const flatDeck=s=>s?.type==='tower'&&!isWoodTower(s)&&s.shape!=='half'&&['battlement','machicolation'].includes(towerRoofStyle(s))
-    &&(typeof structureVariant!=='function'||structureVariant(s,'topWeapon')==='none'&&structureVariant(s,'innerRoof')!=='on');   // the inner roof takes the deck
+    &&(typeof structureVariant!=='function'||structureVariant(s,'topWeapon')==='none'&&structureVariant(s,'innerRoof')!=='on'&&!['round','square'].includes(structureVariant(s,'upInnerTower')));   // the inner roof takes the deck
   function signalFireAllowed(s){return flatDeck(s)}
   function signalFire(s){return signalFireAllowed(s)&&typeof structureVariant==='function'&&structureVariant(s,'signalFire')==='pyre'}
   function pyreReady(s){return signalFire(s)&&standing(s)&&!s.signalFireSpent}
@@ -414,16 +414,16 @@
   function towerPanelHtml(s){
     if(!s||s.type!=='tower')return'';
     const r=roster(),building=underConstruction(s),why=outpostBlocker(s);
-    let h='<div class="slot" data-soldiers-tower><div class="slot-label">Vedetta · '+(s.outpost?'avamposto':s.lookout?(r.lookouts.has(s.id)?'in servizio':'senza soldato libero'):'nessuna (la torre non osserva)')+'</div>';
-    if(!s.outpost)h+='<button type="button" data-soldiers-lookout="'+(s.lookout?'0':'1')+'"'+(building?' disabled':'')+(s.lookout?' class="active"':'')+'>'+(s.lookout?'Ritira la vedetta':'Metti una vedetta · 1 soldato')+'</button>';
+    let h='<div class="slot" data-soldiers-tower><div class="slot-label">Vedetta · '+(s.outpost?'avamposto':s.lookout?(r.lookouts.has(s.id)?'in servizio':'senza soldato libero'):'nessuna')+'</div>';
+    if(!s.outpost)h+='<button type="button" data-soldiers-lookout="'+(s.lookout?'0':'1')+'"'+(building?' disabled':'')+(s.lookout?' class="active"':'')+' title="'+(s.lookout?'Ritira la vedetta':'Metti una vedetta · 1 soldato')+'">'+(s.lookout?'Vedetta ✓':'Metti vedetta')+'</button>';
     h+='<div class="slot-label">Avamposto'+(s.outpost?' · '+esc(towerFacts(s)[0]?.value||''):'')+'</div>';
-    h+=s.outpost?'<button type="button" data-soldiers-outpost="0">Smobilita l\'avamposto</button>'
-      :'<button type="button" data-soldiers-outpost="1"'+(why?' disabled title="'+esc(why)+'"':'')+'>Fai avamposto · 60 oro, 40 pietra, 20 legno, '+OUTPOST_DAYS+' giorni</button>';
+    h+=s.outpost?'<button type="button" data-soldiers-outpost="0" title="Smobilita l\'avamposto">Smobilita</button>'
+      :'<button type="button" data-soldiers-outpost="1"'+(why?' disabled title="'+esc(why)+'"':' title="60 oro, 40 pietra, 20 legno, '+OUTPOST_DAYS+' giorni"')+'>Fai avamposto</button>';
     if(signalFireAllowed(s)||signalFire(s)){
       const on=signalFire(s);
       h+='<div class="slot-label">Fuoco di segnalazione'+(on?' · '+(s.signalFireSpent?'bruciato':'pronto, '+fireReach(s)+'U'):'')+'</div>'+
         '<div class="grid"><button type="button" data-soldiers-fire="none"'+(on?'':' class="active"')+'>Nessuno</button>'+
-        '<button type="button" data-soldiers-fire="pyre"'+(on&&!s.signalFireSpent?' class="active" disabled':'')+'>'+(on&&s.signalFireSpent?'Ricostruisci pira · 30 legno':'Pira · 30 legno')+'</button></div>';
+        '<button type="button" data-soldiers-fire="pyre" title="30 legno"'+(on&&!s.signalFireSpent?' class="active" disabled':'')+'>'+(on&&s.signalFireSpent?'Ricostruisci':'Pira')+'</button></div>';
     }
     return h+'<div class="legend">Senza vedetta la torre non vede. L\'avamposto avvisa il castello con campane, fuochi e una staffetta a cavallo.</div></div>';
   }

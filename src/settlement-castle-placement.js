@@ -26,6 +26,8 @@ function makePlacementPreview(q,angle=0){
     const candidate={...spec,x:q.x,y:q.y,angle:snapped,rotationStep,previewOnly:true};
     if(candidate.type==='watermill')window.ConquerIndustries?.orientToWater(candidate);
     if(candidate.type==='pier')window.ConquerPier?.snapToCoast(candidate);
+    // On a hillside the tower turns its door to the summit (towerEntranceSummitVerdict).
+    if(candidate.type==='tower'&&typeof orientTowerToSummit==='function')orientTowerToSummit(candidate,{wallSnapped:!!State.draft?.wallSnapId});
     return candidate;
   }
   return null;
@@ -258,6 +260,7 @@ function commitOrientedPlacement(center,angle){
   if(quaySnap)s.quaySnap=quaySnap;
   if(s.type==='watermill')window.ConquerIndustries?.orientToWater(s);
   if(s.type==='pier')window.ConquerPier?.snapToCoast(s);
+  if(s.type==='tower'&&!snap.parentTowerId&&typeof orientTowerToSummit==='function')orientTowerToSummit(s,{wallSnapped:!!snap.wallId});
   const ok=s.type==='tower'?addTowerWithPlacement(s,snap):addStructure(s);
   if(ok){
     State.draft=null;
@@ -843,7 +846,7 @@ function functionSlotFloor(s,index){return isKeepW4(s)?functionSlotLayout(s)[ind
 function functionSlotSize(s,index=0){
   if(!s)return'normal';
   if(isKeepW4(s)){const r=functionSlotLayout(s)[index]?.rect;return r&&(r[2]-r[0])*(r[3]-r[1])<.4?'normal':'large'}
-  if(s.type==='tower')return towerTier(s)>=3?'large':'normal';
+  if(s.type==='tower')return index>=structureLevel(s)?'normal':towerTier(s)>=3?'large':'normal';   // the turret room is small
   if(s.type==='built')return isWideBuilt(s)||Number(s.length)>=3?'large':'normal';
   return'normal';
 }
@@ -859,7 +862,8 @@ function functionCapacity(s){
   if(typeof isKeepW4==='function'&&isKeepW4(s)){let n=0;for(let f=0;f<structureLevel(s);f++)n+=keepFloorRooms(s,f).length;return n}
   // One room per floor. W1 towers keep their spiral stair and take only dovecote, latrine, prison,
   // treasury and armory (settlement-siege.js allowed), except the first T1 keep (its Common Hall).
-  if(s.type==='tower')return structureLevel(s);
+  // The up inner tower (torretta centrale) adds its own room on the deck.
+  if(s.type==='tower')return structureLevel(s)+(typeof towerUpInnerTower==='function'&&towerUpInnerTower(s)?1:0);
   if(s.type==='built')return Number(s.length)>=2?builtInteriorFloors(s):0;
   if(s.type==='townhall')return civicLevel(s);
   return 0;

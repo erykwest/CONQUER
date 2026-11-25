@@ -208,10 +208,24 @@
       ['Grande rotonda L3 merli + tetto interno + garitte',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'battlement',innerRoof:'on',bartizan:'battlement'}],
       ['Torre a D grande L3 merli + tetto interno',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'battlement',innerRoof:'on'}],
       ['Grande quadrata L3 merli + tetto interno + ballatoio',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'battlement',innerRoof:'on',hoarding:'on'}],
+      // Up inner tower (torretta centrale): W-1 turret, round or square on any tower shape.
+      ['Pietra quadrata L2 merli + torretta quadrata',{type:'tower',shape:'square',material:'stone',level:2,tier:2,size:sq(2),roofStyle:'battlement',upInnerTower:'square'}],
+      ['Pietra rotonda L2 merli + torretta rotonda',{type:'tower',shape:'round',material:'stone',level:2,tier:2,r:rd(2),roofStyle:'battlement',upInnerTower:'round'}],
+      ['Grande quadrata L3 merli + torretta rotonda',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'battlement',upInnerTower:'round'}],
+      ['Grande rotonda L3 caditoie + torretta quadrata',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'machicolation',upInnerTower:'square'}],
+      ['Torre a D grande L3 merli + torretta rotonda',{type:'tower',shape:'dee',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'battlement',upInnerTower:'round'}],
+      ['Grande quadrata L2 + torretta rotonda con guardia',{type:'tower',shape:'square',material:'stone',level:2,tier:3,size:sq(3),roofStyle:'battlement',upInnerTower:'round',functions:['storage','barracks','guard']}],
+      ['Pietra rotonda L2 + torretta quadrata con armeria',{type:'tower',shape:'round',material:'stone',level:2,tier:2,r:rd(2),roofStyle:'battlement',upInnerTower:'square',functions:[null,'quarters','armory']}],
+      ['Pietra rotonda L3 falde + torretta rotonda',{type:'tower',shape:'round',material:'stone',level:3,tier:2,r:rd(2),roofStyle:'pitched',upInnerTower:'round'}],
+      ['Grande rotonda L3 falde + torretta rotonda',{type:'tower',shape:'round',material:'stone',level:3,tier:3,r:rd(3),roofStyle:'pitched',upInnerTower:'round'}],
+      ['Grande quadrata L3 falde + torretta quadrata',{type:'tower',shape:'square',material:'stone',level:3,tier:3,size:sq(3),roofStyle:'pitched',upInnerTower:'square'}],
+      ['Grande quadrata L2 falde + torretta rotonda',{type:'tower',shape:'square',material:'stone',level:2,tier:3,size:sq(3),roofStyle:'pitched',upInnerTower:'round'}],
+      ['Mattoni (argilla) quadrata L3 merli + torretta quadrata',{type:'tower',shape:'square',material:'stone',masonryMaterial:'brick',level:3,tier:3,size:sq(3),roofStyle:'battlement',upInnerTower:'square'}],
       ['Legno vedetta',{type:'tower',shape:'square',material:'wood',woodStyle:'watchtower',woodRoof:'pitched',level:1,tier:1,size:1}],
       ['Legno media aperta',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'open',level:1,tier:2,size:1.5}],
       ['Legno media tetto',{type:'tower',shape:'square',material:'wood',woodStyle:'palisadeTower',woodRoof:'pitched',level:1,tier:2,size:1.5}],
       ['Legno telaio H2',{type:'tower',shape:'square',material:'wood',woodStyle:'frameTower',woodRoof:'pitched',level:2,tier:2,size:1.5}],
+      ['Legno telaio H3 framed top',{type:'tower',shape:'square',material:'wood',woodStyle:'frameTower3',woodRoof:'pitched',level:3,tier:2,size:1.5}],
       ['Legno telaio H2 mastio rialzato',{type:'tower',shape:'square',material:'wood',woodStyle:'frameTower',woodRoof:'pitched',level:2,tier:2,size:1.5,isMastio:true,keepEntrance:{stair:'wood',side:1,drawbridge:null}}],
       // Alarm bell: the belfry on the roof of T1-T2 towers, stone and timber (settlement-alarm-bells.js).
       ['Pietra quadrata piccola L1 tetto + campana',{type:'tower',shape:'square',material:'stone',level:1,tier:1,size:sq(1),roofStyle:'pitched',bell:'bell'}],
@@ -307,9 +321,17 @@
   }
   // A complete structure for a gallery spec, centred on (x, y); walls run along +x.
   // The Asset Lab builds its fortification entries with this too.
+  // Built sections and longhouses take the longest run the Builder allows (TYPES.built 4U, wide
+  // 6U), so the Lab shows halls as they can really be built; walls, palisades and lean-tos keep 7.5U.
+  function galleryLength(spec){
+    if(spec.type!=='built'||spec.leanTo)return WALL_L;
+    const T=typeof TYPES!=='undefined'?(spec.span==='wide'?TYPES.builtWide:TYPES.built):null;
+    return Math.min(WALL_L,Number(T?.max)||WALL_L);
+  }
   function galleryStructure(spec,x,y){
+    const L=galleryLength(spec);
     return['wall','palisade','built'].includes(spec.type)
-      ?{id:uid(),functions:[],flip:false,...spec,width:spec.type==='built'?builtWidth(spec):wallWidthForTier(spec.tier),a:{x:x-WALL_L/2,y},b:{x:x+WALL_L/2,y},length:WALL_L,rotationStep:0}
+      ?{id:uid(),functions:[],flip:false,...spec,width:spec.type==='built'?builtWidth(spec):wallWidthForTier(spec.tier),a:{x:x-L/2,y},b:{x:x+L/2,y},length:L,rotationStep:0}
       :{id:uid(),functions:[],angle:0,rotationStep:0,...spec,x,y};
   }
   // Asset Lab (index.html?assetlab=1 in a hidden frame): world-space castle meshes of one gallery spec,

@@ -105,23 +105,131 @@ function gateWindowRows(s){
 // Timber frame of a small gate's upper storey, per face of the jettied storey: sill and head
 // plates, corner posts; two windows between posts on the front and the rear, a post and two
 // braces on the flanks. Offsets along the edge from its middle, z above the gate's ground.
-function gateTimberFacade(s){
-  const pts=gateTimberStoreyPoints(s),z0=gateTimberFloorZ(s),z1=structureHeight(s),t=HOUSE_TIMBER_W/2,out=[];
+function gateTimberFacade(s){return timberStoreyFacade(gateTimberStoreyPoints(s),gateTimberFloorZ(s),structureHeight(s),i=>i===GATE_FACADE_FRONT||i===GATE_FACADE_REAR)}
+// Framed top of a W3 tower: the same frame, two windows on every face (it is the watch room).
+function towerTimberFacade(s){return timberStoreyFacade(towerTimberStoreyPoints(s),towerTimberFloorZ(s),structureHeight(s),()=>true,true)}
+// Timber P1 of a built section: the two long faces in bays of about 1.25 U, each bay framed
+// densely with its two windows; the short ends get the frame too (post and two braces, no window).
+function builtTimberFacade(s){
+  const pts=builtTimberStoreyPoints(s),z0=builtTimberFloorZ(s),z1=structureHeight(s),out=[];
+  // Courtyard face (linearFacadeEdge: side +1 is edge 0): paired windows in each bay.
+  const inner=-wallExteriorSide(s)>0?0:2;
+  for(const i of [0,2]){
+    const a=pts[i],b=pts[(i+1)%4],L=Math.hypot(b.x-a.x,b.y-a.y),n=Math.max(1,Math.round(L/1.25));
+    for(let k=0;k<n;k++){
+      const p=t=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t}),qa=p(k/n),qb=p((k+1)/n);
+      const f=i===inner?pairedTimberBay(qa,qb,z0,z1):timberStoreyFacade([qa,qb,qb,qa],z0,z1,j=>j===0,true)[0];
+      f.edge.index=i;out.push(f);
+    }
+  }
+  // Ends: the storey's frame, and the gable over it framed too (king post and two struts
+  // up to the rafters, which run from the eaves at the corners to the ridge in the middle).
+  const R=builtRoofGeometry(s)?.ridgeH??z1,t=HOUSE_TIMBER_W/2;
+  for(const i of [1,3]){
+    const a=pts[i],b=pts[(i+1)%4],f=timberStoreyFacade([a,b,b,a],z0,z1,()=>false,false)[0],w=Math.hypot(b.x-a.x,b.y-a.y);
+    if(R>z1+.1){
+      const rafter=x=>z1+(R-z1)*(1-2*Math.abs(x)/w);
+      f.beams.push([{off:0,z:z1},{off:0,z:R-t*2}]);
+      for(const sg of [-1,1])f.beams.push([{off:0,z:z1+(R-z1)*.12},{off:sg*w*.25,z:rafter(w*.25)-t}],[{off:sg*(w/2-t*2),z:z1},{off:sg*(w/2-t*2),z:rafter(w/2-t*2)-t}]);
+    }
+    f.edge.index=i;out.push(f);
+  }
+  return out;
+}
+// One bay with a pair of windows side by side in the middle (a mullion between them), sill and
+// head rails, studs either side and a brace in each outer panel.
+function pairedTimberBay(a,b,z0,z1){
+  const t=HOUSE_TIMBER_W/2,L=Math.hypot(b.x-a.x,b.y-a.y),h=L/2-t,hw=HOUSE_WINDOW_HALF_W,hh=HOUSE_WINDOW_HALF_H;
+  const c=hw+t,o=2*hw+2*t+HOUSE_TIMBER_W*.4,mid=(z0+z1)/2,wl=mid-hh-t,wh=mid+hh+t,beams=[];
+  beams.push([{off:-L/2,z:z0+t},{off:L/2,z:z0+t}],[{off:-L/2,z:z1-t},{off:L/2,z:z1-t}]);
+  for(const e of [-h,h,0,-o,o])beams.push([{off:e,z:z0+t},{off:e,z:z1-t}]);
+  beams.push([{off:-o,z:wl},{off:o,z:wl}],[{off:-o,z:wh},{off:o,z:wh}]);
+  for(const sg of [-1,1])beams.push([{off:sg*h,z:z0+t},{off:sg*o,z:mid}],[{off:sg*h,z:z1-t},{off:sg*o,z:mid}]);
+  return{edge:{a,b,index:0},beams,windows:[{off:-c,z:mid},{off:c,z:mid}]};
+}
+function timberStoreyFacade(pts,z0,z1,windowed,dense=false){
+  const t=HOUSE_TIMBER_W/2,out=[];
   for(let i=0;i<4;i++){
     const a=pts[i],b=pts[(i+1)%4],L=Math.hypot(b.x-a.x,b.y-a.y),h=L/2-t,beams=[],windows=[];
     beams.push([{off:-L/2,z:z0+t},{off:L/2,z:z0+t}],[{off:-L/2,z:z1-t},{off:L/2,z:z1-t}]);
     for(const e of [-h,h])beams.push([{off:e,z:z0+t},{off:e,z:z1-t}]);
-    if(i===GATE_FACADE_FRONT||i===GATE_FACADE_REAR){
+    if(windowed(i)){
       const wz=(z0+z1)/2,f=HOUSE_WINDOW_HALF_W+HOUSE_TIMBER_W*.9;
       for(const c of [-L*.24,L*.24]){windows.push({off:c,z:wz});beams.push([{off:c-f,z:z0+t},{off:c-f,z:z1-t}],[{off:c+f,z:z0+t},{off:c+f,z:z1-t}])}
     }else{
       beams.push([{off:0,z:z0+t},{off:0,z:z1-t}],[{off:-h,z:z0+t},{off:0,z:z1-t}],[{off:h,z:z0+t},{off:0,z:z1-t}]);
+    }
+    // Dense frame (tower framed top): a mid rail beside the windows, close studs between them,
+    // and a K brace in each corner bay.
+    if(dense){
+      const f=HOUSE_WINDOW_HALF_W+HOUSE_TIMBER_W*.9,wl=(z0+z1)/2-HOUSE_WINDOW_HALF_H-t,wh=(z0+z1)/2+HOUSE_WINDOW_HALF_H+t,mid=(z0+z1)/2;
+      const c=L*.24,inner=c-f,outer=c+f;
+      // sill and head rails under/over the windows, mid rail in the corner bays and the centre
+      for(const sg of [-1,1]){
+        beams.push([{off:sg*inner,z:wl},{off:sg*outer,z:wl}],[{off:sg*inner,z:wh},{off:sg*outer,z:wh}]);
+        beams.push([{off:sg*outer,z:mid},{off:sg*h,z:mid}]);
+        // K braces in the corner bay
+        beams.push([{off:sg*h,z:z0+t},{off:sg*outer,z:mid}],[{off:sg*h,z:z1-t},{off:sg*outer,z:mid}]);
+      }
+      // close studs and a St Andrew's cross in the centre bay
+      beams.push([{off:0,z:z0+t},{off:0,z:z1-t}],[{off:-inner,z:z0+t},{off:inner,z:z1-t}],[{off:inner,z:z0+t},{off:-inner,z:z1-t}]);
     }
     out.push({edge:{a,b,index:i},beams,windows});
   }
   return out;
 }
 const GATE_FACADE_FRONT=1,GATE_FACADE_REAR=3;
+// Timber frame of a framed (timber) lean-to, after the framed tops and halls of PR #300: close
+// posts (bays of about LEAN_BAY), a St Andrew's cross in every plain bay, a small dark window
+// every third bay on the long face with rails over and under it, and the door in the middle bay
+// with a lintel. Every open face (not the one on the wall) has sill and head plates.
+// Returns [{edge,beams,windows:[{off,z}],door:{off}|null}], offsets from the edge's middle.
+const LEAN_DOOR_W=.30,LEAN_DOOR_H=.62,LEAN_BAY=.36,LEAN_WIN=.15,LEAN_WIN_Z=.86;
+// Masonry plinth under the frame, up to half the door (visual only: no cost, no material).
+const LEAN_PLINTH_H=LEAN_DOOR_H/2;
+function leanToTimberFrame(s){
+  const fp=footprintPoints(s),w=window.ConquerLeanTo?.leanWallOf?.(s),t=HOUSE_TIMBER_W/2,z0=LEAN_PLINTH_H,z1=structureHeight(s),out=[];
+  if(fp.length<4)return out;
+  const open=[];
+  for(let i=0;i<4;i++){
+    const a=fp[i],b=fp[(i+1)%4],m={x:(a.x+b.x)/2,y:(a.y+b.y)/2},L=Math.hypot(b.x-a.x,b.y-a.y);
+    if(w&&pointSegmentDistance(m,w.a,w.b)<(Number(w.width)||.5)/2+.2)continue;   // against the wall
+    open.push({a,b,index:i,L});
+  }
+  const front=open.reduce((best,e)=>!best||e.L>best.L?e:best,null);
+  // Gable of a short end: the single-pitch roof rises from the eaves (z1) on the front to the
+  // ridge (R) on the wall; the frame climbs into it (raking plate, posts and crosses up to the roof).
+  const g=typeof builtRoofGeometry==='function'?builtRoofGeometry(s):null,R=g?.ridgeH??z1;
+  for(const e of open){
+    const L=e.L,h=L/2-t,windows=[];
+    let top=()=>z1;
+    if(e!==front&&w&&R>z1+.02){
+      const da=pointSegmentDistance(e.a,w.a,w.b),db=pointSegmentDistance(e.b,w.a,w.b);
+      const wallAtB=db<da;   // which end of this edge stands on the wall (the ridge)
+      top=off=>{const u=(off+L/2)/L;return z1+(R-z1)*(wallAtB?u:1-u)-t*1.6};
+    }
+    const beams=[[{off:-L/2,z:z0+t},{off:L/2,z:z0+t}],[{off:-L/2,z:z1-t},{off:L/2,z:z1-t}]];
+    if(e!==front&&R>z1+.02)beams.push([{off:-L/2,z:top(-L/2)},{off:L/2,z:top(L/2)}]);   // raking plate under the roof
+    const n=Math.max(2,Math.round(L/LEAN_BAY)),bw=L/n,x=k=>-L/2+k*bw;
+    for(let k=0;k<=n;k++){const p=Math.max(-h,Math.min(h,x(k)));beams.push([{off:p,z:z0+t},{off:p,z:Math.max(z1-t,top(p))}])}
+    const isFront=e===front,door=isFront?Math.floor(n/2):-1;
+    const lo=LEAN_WIN_Z-LEAN_WIN/2-t,hi=LEAN_WIN_Z+LEAN_WIN/2+t;
+    for(let k=0;k<n;k++){
+      const c0=Math.max(-h,x(k)),c1=Math.min(h,x(k+1)),c=(c0+c1)/2;
+      if(k===door){beams.push([{off:c0,z:LEAN_DOOR_H+t},{off:c1,z:LEAN_DOOR_H+t}]);continue}
+      if(isFront&&k%3===1&&Math.abs(k-door)>1){
+        windows.push({off:c,z:LEAN_WIN_Z});
+        beams.push([{off:c0,z:lo},{off:c1,z:lo}],[{off:c0,z:hi},{off:c1,z:hi}]);
+        continue;
+      }
+      beams.push([{off:c0,z:z0+t},{off:c1,z:z1-t}],[{off:c1,z:z0+t},{off:c0,z:z1-t}]);   // St Andrew's cross
+      // In the gable above the eaves: a second cross up to the raking plate.
+      if(top(c0)>z1+.12||top(c1)>z1+.12)beams.push([{off:c0,z:z1-t},{off:c1,z:Math.max(z1,top(c1))}],[{off:c1,z:z1-t},{off:c0,z:Math.max(z1,top(c0))}]);
+    }
+    out.push({edge:{a:e.a,b:e.b,index:e.index},beams,windows,door:door>=0?{off:(x(door)+x(door+1))/2}:null});
+  }
+  return out;
+}
 // Slits along a gate face: two side by side on the field front, one on the flanks.
 function gateSlitOffsets(edge){return edge.index===GATE_FACADE_FRONT?[-.26,.26]:[0]}
 function cutawayOpenEdgeIndexes(s){
@@ -296,8 +404,10 @@ const TOWER_OPENING_EYE_Z=.44;
 function towerFloorZ(s,floor){
   const level=structureLevel(s);
   if(floor<=1)return .055;
-  // The same storeys as the cutaway (settlement-castle.js towerUpperFloorZ: P1 at the wall-walk).
-  return typeof towerUpperFloorZ==='function'?towerUpperFloorZ(s,Math.min(floor,level)-1):structureHeight(s)*(Math.min(floor,level)-1)/level;
+  // The same storeys as the cutaway (settlement-castle.js towerUpperFloorZ: the stone grid).
+  if(typeof towerUpperFloorZ!=='function')return structureHeight(s)*(Math.min(floor,level)-1)/level;
+  const n=typeof towerStoreyCount==='function'?towerStoreyCount(s):level;
+  return towerUpperFloorZ(s,Math.min(floor,n)-1);
 }
 function towerOpeningZ(s,floor){return towerFloorZ(s,floor)+TOWER_OPENING_EYE_Z}
 // Unit outward direction of each tower face: footprint edges for square towers, the
@@ -499,6 +609,14 @@ function builtLoggiaStandPoint(s,t){
 }
 // A fixed count (wide-hall lancets) drops windows whose bay could not hold them undistorted
 // (drawn width = min(asset width, bay * .82)).
+// P0 of a standard W1 section (stone or with the timber P1): on the courtyard face, bays of about
+// 1.25 U, a door in the middle bay and a gothic double window (gothicL2) in each of the others.
+function builtGroundFront(s){
+  if(!s||s.type!=='built'||isLonghouse(s)||isWideBuilt(s)||isBuiltPortico(s)||(typeof isLeanTo==='function'&&isLeanTo(s)))return null;
+  const side=-wallExteriorSide(s),edge=linearFacadeEdge(s,side),n=Math.max(1,Math.round(edge.length/1.25)),cell=edge.length/n,door=Math.floor(n/2);
+  return{side,edge,bays:Array.from({length:n},(_,k)=>({off:(k+.5)*cell-edge.length/2,door:k===door}))};
+}
+const BUILT_PAIR_W=.52,BUILT_PAIR_H=.6,BUILT_PAIR_Z=.98,BUILT_DOOR_W=.46,BUILT_DOOR_H=.84;
 function builtWindowCount(edge,density,fixed,assetWidth=.24){
   return fixed?clamp(Math.floor(edge.length*.82/assetWidth),1,fixed):Math.max(1,Math.round(edge.length*density));
 }
@@ -514,7 +632,10 @@ function builtWindowRows(s){
     if(l<2)return arcade?slits:[lancet(1.30),...slits];
     return[arcade?[inside,upperZ,.42,'gothicL3',.92,.78,true]:lancet(2.12),...slits,[outside,upperZ,.72,'arrowSlit',.23,.58,false]];
   }
-  const rows=[[outside,lowerZ,.72,'arrowSlit',.23,.58,false]];
+  // Standard W1 sections: no slits at P0, the ground floor opens on the courtyard (builtGroundFront).
+  const rows=builtGroundFront(s)?[]:[[outside,lowerZ,.72,'arrowSlit',.23,.58,false]];
+  // Timber P1: its frame carries its own windows (builtTimberFacade).
+  if(l>=2&&typeof builtTimberUpper==='function'&&builtTimberUpper(s))return rows;
   if(l>=2)rows.unshift([inside,upperZ,.42,'gothicL3',.92,.78,true]),rows.push([outside,upperZ,.72,'arrowSlit',.23,.58,false]);
   return rows;
 }

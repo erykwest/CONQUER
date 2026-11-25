@@ -30,7 +30,7 @@
 
   function eligible(t){
     // Masonry towers, and the two-storey timber frame tower (its P1 doorway is a model part).
-    return !!t&&t.type==='tower'&&!underConstruction(t)&&(!isWoodTower(t)||t.woodStyle==='frameTower')&&!t.parentTowerId&&
+    return !!t&&t.type==='tower'&&!underConstruction(t)&&(!isWoodTower(t)||['frameTower','frameTower3'].includes(t.woodStyle))&&!t.parentTowerId&&
       !(typeof isOrientedTower==='function'&&isOrientedTower(t))&&structureLevel(t)>=2;
   }
   function entrance(t){return eligible(t)&&[...STAIRS,'burnt'].includes(t.keepEntrance?.stair)?t.keepEntrance:null}
@@ -328,18 +328,24 @@
       for(const [ui,u] of [u0,u1].entries())for(const [vi,w] of [v0,v1].entries())for(const zi of [0,1]){
         const k=byV?vi:ui;v.push(at(u,w,zi?(k?z1b:z1a):(k?z0b:z0a)));
       }
-      for(const [i,j,k,l] of [[0,2,6,4],[1,5,7,3],[0,4,5,1],[2,3,7,6],[0,1,3,2],[4,6,7,5]])
-        for(const tri of [[i,j,k],[i,k,l]]){for(const q of tri)pos.push(...v[q]);col.push(colr)}
+      // colr: one colour, or [top, faces across u, faces across v] like the tower body.
+      const faceCol=Array.isArray(colr)?[colr[2],colr[0],colr[2],colr[2],colr[1],colr[1]]:null;
+      [[0,2,6,4],[1,5,7,3],[0,4,5,1],[2,3,7,6],[0,1,3,2],[4,6,7,5]].forEach(([i,j,k,l],f)=>{
+        for(const tri of [[i,j,k],[i,k,l]]){for(const q of tri)pos.push(...v[q]);col.push(faceCol?faceCol[f]:colr)}
+      });
     };
     return{pos,col,box};
   }
   const stairCache=new Map();
   function stairMesh(t){
     const L=layout(t);if(!L)return null;
-    const key=[t.x,t.y,t.angle,t.r,t.size,t.level,L.zTop.toFixed(3),L.zFoot.toFixed(3),L.gap,L.stone,L.side].join('|');
+    const key=[t.x,t.y,t.angle,t.r,t.size,t.level,L.zTop.toFixed(3),L.zFoot.toFixed(3),L.gap,L.stone,L.side,window.ConquerStoneColor?.current?.(),t.masonryMaterial,State.visualPalette].join('|');
     const hit=stairCache.get(t.id);if(hit&&hit.key===key)return hit.mesh;
     const B=builder(L),{box}=B,stone=L.stone;
-    const deck=stone?'#a19d92':'#9a6e43',dark=stone?'#7d786e':'#6b4729',base=Math.min(L.g0,L.zFoot)-.06;
+    // Masonry in the tower's own material: castle3d PAL.stone read through the tower's masonry
+    // (stone family of the map, or clay/brick), as visualPaletteColor paints the tower body.
+    const M=c=>typeof visualPaletteColor==='function'?withStructureVisualMaterial(t,()=>visualPaletteColor(c)):c,masonry=[M('#9a8e82'),M('#635951'),M('#514a44')];
+    const deck=stone?masonry:'#9a6e43',dark=stone?M('#514a44'):'#6b4729',base=Math.min(L.g0,L.zFoot)-.06;
     const ld=L.landing;
     // Landing: a masonry block, or a plank deck on four posts.
     if(stone)box(ld.u0,ld.u1,ld.v0,ld.v1,base,L.zTop,deck);
@@ -355,11 +361,11 @@
       const top=L.zTop-(i+1)*dz;
       if(fl.along==='u'){
         const u0=fl.u0+L.run*i/n,u1=fl.u0+L.run*(i+1)/n;
-        if(stone)box(u0,u1,fl.v0,fl.v1,base,top,i%2?deck:'#9a968b');
+        if(stone)box(u0,u1,fl.v0,fl.v1,base,top,deck);
         else box(u0,u1,fl.v0,fl.v1,top-.05,top,deck);
       }else{
         const a=fl.v0+(fl.v1-fl.v0)*i/n,b=fl.v0+(fl.v1-fl.v0)*(i+1)/n;
-        if(stone)box(fl.u0,fl.u1,Math.min(a,b),Math.max(a,b),base,top,i%2?deck:'#9a968b');
+        if(stone)box(fl.u0,fl.u1,Math.min(a,b),Math.max(a,b),base,top,deck);
         else box(fl.u0,fl.u1,Math.min(a,b),Math.max(a,b),top-.05,top,deck);
       }
     }
@@ -391,7 +397,9 @@
   // when raised; two chains from above the door to its tip.
   function leafMesh(t){
     const d=drawbridge(t),L=d&&layout(t);if(!L)return null;
-    const th=Math.max(0,Math.min(1,d.progress))*Math.PI/2,c=Math.cos(th),s=Math.sin(th);
+    // A leaf with no progress yet (just installed) lies at rest: down, or up when raised.
+    const prog=Number.isFinite(d.progress)?d.progress:d.raised?1:0;
+    const th=Math.max(0,Math.min(1,prog))*Math.PI/2,c=Math.cos(th),s=Math.sin(th);
     const len=L.gap+.12,w=.36,T=.06,f=L.frame,z0=L.zTop;
     const P=(along,across,up)=>{const u=along*c-up*s;return[f.contact.x+f.outward.x*(u+.01)+f.tangent.x*across,f.contact.y+f.outward.y*(u+.01)+f.tangent.y*across,z0+along*s+up*c]};
     const pos=[],col=[];

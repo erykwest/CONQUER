@@ -246,6 +246,56 @@
     if(alongV){r.near(fu-o,fv,'bench',turn);r.near(fu+o,fv,'bench',turn)}else{r.near(fu,fv-o,'bench',turn);r.near(fu,fv+o,'bench',turn)}
     return true;
   }
+  // Banquet tables of the common hall: as many as the floor holds, one per ~9 m² (1 to 8), in
+  // rows of long tables with a bench on each side, an aisle between the rows, centre first.
+  // Placed only where the table and both benches fit; returns how many stand.
+  const HALL_M2_PER_TABLE=9,HALL_MAX_TABLES=8;
+  // long: the 4.4 m banquet table of W2 halls takes twice the floor of a 2.2 m one.
+  function hallTableCount(F,long=false){
+    const m=FM()?.metersPerU||3.5,m2=(2*F.hu*m)*(2*F.hv*m);
+    return Math.max(1,Math.min(HALL_MAX_TABLES,Math.round(m2/(HALL_M2_PER_TABLE*(long?2:1)))));
+  }
+  function banquetTables(r){
+    // W2 halls lay the long banquet table (4.4 m, bench 3.2 m); the others the 2.2 m one.
+    const TN=r.longTables?'tableFeast':'tableLong',BN=r.longTables?'benchLong':'bench';
+    const alongV=r.A[0]==='u',turn=alongV?0:1,T=size(TN),B=size(BN),want=hallTableCount(r.F,!!r.longTables);
+    const o=T.d/2+B.d/2+.02,across=alongV?r.F.hu:r.F.hv,along=alongV?r.F.hv:r.F.hu;
+    // Row pitch (benches + aisle); along a row the tables spread over the whole length of the hall.
+    // In long halls (built sections, longhouses: > 3 U) the rows spread over the whole width (wide
+    // W2 halls: a broad aisle between them); towers keep the rows compact round the centre.
+    const fl=x=>Math.floor(x+1e-6);   // exact fits (1.53/.765) must not round down
+    const long=2*along>3,pa0=2*o+B.d+.12,na=Math.max(1,fl((2*across-.1)/pa0)),pa=long?(2*across-.1)/na:pa0;
+    // Long halls (built sections, longhouses: > 3 U) keep ~1 m between tables; towers stay compact.
+    const gap=long?.28:.1,pl=Math.max(T.w+gap,(2*along-.1)/Math.ceil(want/na)),nl=Math.max(1,fl((2*along-.1)/pl));
+    const spots=[];
+    for(let i=0;i<na;i++)for(let j=0;j<nl;j++)spots.push([(i-(na-1)/2)*pa,(j-(nl-1)/2)*pl]);
+    spots.sort((p,q)=>Math.hypot(...p)-Math.hypot(...q));
+    // Then, round the wall pieces (barrels, fireplace) that take an ideal spot: every 5 cm along each
+    // row, nearest the centre first, still a table pitch away from the tables of the same row.
+    const rows=[...new Set(spots.map(p=>p[0]))],lim=along-T.w/2-.02;
+    for(const a of rows)for(let l=0;l<=lim+1e-6;l+=.05)for(const sg of l?[1,-1]:[1])spots.push([a,sg*l]);
+    let placed=0;const done=[];
+    for(const [a,l] of spots){
+      if(placed>=want)break;
+      if(done.some(([da,dl])=>Math.abs(da-a)<1e-6&&Math.abs(dl-l)<T.w+gap-1e-6))continue;
+      const at=d=>alongV?[a+d,l]:[l,a+d],[u,v]=at(0),[u1,v1]=at(-o),[u2,v2]=at(o);
+      if(!r.fits(T,u,v,turn)||!r.fits(B,u1,v1,turn)||!r.fits(B,u2,v2,turn))continue;
+      r.place(TN,u,v,turn);r.place(BN,u1,v1,turn);r.place(BN,u2,v2,turn);placed++;done.push([a,l]);
+    }
+    if(!placed)tableWithBenches(r,0,0);
+    return placed;
+  }
+  // The red runner from the foot of the throne to the far end of the hall, piece after piece (deco).
+  function throneRunner(r,T){
+    const th=r.items.find(i=>i.name==='throne');if(!th)return 0;
+    const [du,dv]=SIDES[T],R=size('runner'),S=size('throne'),depth=2*(du?r.F.hu:r.F.hv),turn=r.toward(T);
+    let n=0;
+    for(let d=S.d/2+R.d/2+.05;d+R.d/2<=depth-.08;d+=R.d){
+      // The runner is the audience's way: kept clear of the pieces placed after it.
+      if(r.place('runner',th.u-du*d,th.v-dv*d,turn,{deco:true})){n++;r.reserve.push(r.rectFor(R,th.u-du*d,th.v-dv*d,((turn%4)+4)%4))}
+    }
+    return n;
+  }
   // Up to n ward cots against one wall, spread along it with an aisle between beds (at least a
   // hand apart when the wall is short, at most two bed widths of aisle); returns how many stand.
   function wardRow(r,side,n){
@@ -291,14 +341,23 @@
     chapel(r){r.wall(r.A,0,'altar');const rows=r.large?4:2,turn=r.toward(r.A);
       for(let i=0;i<rows;i++){const [fu,fv]=r.front(r.A,i%2?.45:-.45,.55+Math.floor(i/2)*.42);r.near(fu,fv,'pew',turn)}
       r.wall(r.B,-.6,'candleStand');r.wall(r.B,.6,'candleStand');if(r.large){r.near(.5,.5,'lectern',turn);r.wall(r.A,.85,'banner')}else{const [fu,fv]=r.front(r.A,0,.3);r.near(fu,fv,'kneeler',turn)}},
-    commonHall(r){tableWithBenches(r,0,0);r.wall(r.A,.7,'s:barrelGroup');r.wall(r.B,0,'banner');
+    commonHall(r){r.wall(r.A,.7,'s:barrelGroup');r.wall(r.B,0,'banner');
       // Heraldic drapes hang along the standing walls (deco: above the benches and barrels).
       for(const t of r.large?[-.6,0,.6]:[-.5,.5])r.wall(r.A,t,'heraldDrape',{deco:true,exact:true});
       r.wall(r.B,r.large?-.6:-.55,'heraldDrape',{deco:true,exact:true});
-      if(r.large){r.wall(r.A,-.4,'fireplace');tableWithBenches(r,.45,.5)}else r.wall(r.A,-.5,'brazier',{off:.1})},
-    throneHall(r){r.wall(r.A,0,'throne');const [fu,fv]=r.front(r.A,0,1.05);r.at(fu*.55,fv*.55,'runner',r.toward(r.A),{deco:true});
-      r.wall(r.A,-.85,'banner');r.wall(r.A,.85,'banner');r.wall(r.B,.0,'shieldWall',{deco:true});
-      r.near(.55,-.5,'brazier');r.near(-.55,.5,'brazier');if(r.large){r.near(.4,.45,'tableLong');r.wall(r.B,-.7,'candleStand')}},
+      if(r.large)r.wall(r.A,-.4,'fireplace');else r.wall(r.A,-.5,'brazier',{off:.1});
+      // The tables fill the floor left free by the wall pieces, by the size of the hall.
+      banquetTables(r);
+      // The banquet laid on every long table: cloth, roast, bread, trenchers, tankards, a candle.
+      for(const it of r.items.filter(x=>x.name==='tableLong'||x.name==='tableFeast'))r.place(it.name==='tableFeast'?'feastSpreadLong':'feastSpread',it.u,it.v,it.turn,{deco:true})},
+    // The throne stands at the far end of the hall: on the short standing wall when the hall is
+    // long (the long side at least 1.3x the short one), so the runner crosses the whole hall from
+    // the throne to the opposite end (the audience walks it); square halls keep the long wall.
+    throneHall(r){
+      const len=k=>k[0]==='u'?2*r.F.hv:2*r.F.hu,T=len(r.A)>=1.3*len(r.B)?r.B:r.A,O=T===r.A?r.B:r.A;
+      r.wall(T,0,'throne');throneRunner(r,T);
+      r.wall(T,-.85,'banner');r.wall(T,.85,'banner');r.wall(O,.0,'shieldWall',{deco:true});
+      r.near(.55,-.5,'brazier');r.near(-.55,.5,'brazier');if(r.large)r.wall(O,-.7,'candleStand')},   // no tables: the floor is the audience's
     treasury(r){r.row(r.A,'strongChest',r.large?3:2);r.wall(r.B,-.5,'goldChest');r.near(.2,.2,'coinSacks');
       if(r.large){r.wall(r.B,.4,'ingotRack');r.near(-.4,.4,'writingDesk');r.near(.5,-.3,'coinSacks')}},
     // Ward: one cot per bed of the simulation (6 normal, 12 large), heads to the wall. A room deep
@@ -348,8 +407,13 @@
       passage:[-room.w/2,L.walk.v0,room.w/2,L.walk.v1]}));
   }
   function layoutStructure(s,g){
-    const levels=structureLevel(s),floors=cutawayFloorLevels(s),out=[];
+    const floors=cutawayFloorLevels(s),levels=floors.length,out=[];
     const slots=cutawayRoomSlots(s,g).map(x=>({...x,floor:x.floor??x.index}));
+    // Stone towers have one storey more than rooms (the tower grid): the floors without a room
+    // still get their ladder up, so every floor of the shaft is reached.
+    if(s.type==='tower'&&!(typeof isKeepW4==='function'&&isKeepW4(s)))for(let f=0;f<levels;f++)if(!slots.some(x=>x.floor===f))
+      slots.push({index:'free'+f,floor:f,role:null,size:'normal',z:floors[f].z,basis:cutawayFloorBasis(s,g),g});
+    slots.sort((a,b)=>a.floor-b.floor);
     // Gates: the ground floor is the entrance passage, no room; it only holds the ladder up.
     if(functionFloorOffset(s)&&levels>1)slots.unshift({index:-1,floor:0,role:null,size:'normal',z:floors[0].z,basis:cutawayFloorBasis(s,g),g});
     // Small towers: a spiral stair fills the shaft, no room furniture nor ladder.
@@ -357,19 +421,21 @@
     for(const pc of slots.flatMap(raw=>porticoSlots(s,raw))){
       const slot=pc.slot;
       // A W4 floor has one ladder, in its first room.
-      const key=s.id+':'+slot.index,ladder=['tower','gate'].includes(s.type)&&levels>1&&!slot.room;
+      const key=s.id+':'+slot.index,ladder=['tower','gate'].includes(s.type)&&floors.length>1&&!slot.room&&!slot.turret;
       const posts=s.type==='tower'?(window.ConquerSiege?.archerSlots(s)||[]).filter(a=>a.kind==='slit'&&a.floor===slot.floor+1).map(a=>a.p):[];
-      const r=builder({...slot,key,round:s.type==='tower'&&s.shape==='round',dee:s.type==='tower'&&s.shape==='dee'},{ladderCorner:ladder,passage:pc.passage||passageFor(s,slot),posts,blocks:typeof cutawayBlockers==='function'?cutawayBlockers(s).filter(k=>slot.z<k.h).map(k=>k.pts):[]});
+      const r=builder({...slot,key,round:slot.turret?slot.round:s.type==='tower'&&s.shape==='round',dee:!slot.turret&&s.type==='tower'&&s.shape==='dee'},{ladderCorner:ladder,passage:pc.passage||passageFor(s,slot),posts,blocks:typeof cutawayBlockers==='function'?cutawayBlockers(s).filter(k=>slot.z<k.h).map(k=>k.pts):[]});
       // A room with an exterior element (the garderobe) knows the side of the room it hangs from.
       const ext=slot.role&&window.ConquerRoomExterior?.elements(s,{broken:true}).find(e=>e.index===slot.index);
       if(ext){const ca=Math.cos(r.F.b.angle),sa=Math.sin(r.F.b.angle),u=ext.normal.x*ca+ext.normal.y*sa,v=-ext.normal.x*sa+ext.normal.y*ca;
         r.exteriorSide=Math.abs(u)>=Math.abs(v)?(u>0?'u+':'u-'):(v>0?'v+':'v-')}
+      // Long banquet tables in the common halls of W2 (wide) halls: built sections and longhouses.
+      r.longTables=typeof isWideBuilt==='function'&&isWideBuilt(s);
       if(slot.role&&ROOMS[slot.role])ROOMS[slot.role](r);
       // Torches on the standing walls light every furnished room at night.
       if(slot.role){r.wall(r.A,r.large?-.5:.0,'torchWall',{deco:true});if(r.large)r.wall(r.B,.5,'torchWall',{deco:true})}
       // ARTE anchors, after every piece of the room (the gate passage floor has none).
-      const art=slot.index===-1?[]:roomArtSlots(r,{key});
-      out.push({slot,F:r.F,items:r.items,art,ladder:ladder&&slot.floor<levels-1?r.F.ladder:null,
+      const art=slot.index===-1||String(slot.index).startsWith('free')?[]:roomArtSlots(r,{key});
+      out.push({slot,F:r.F,items:r.items,art,ladder:ladder&&slot.floor<floors.length-1?r.F.ladder:null,
         nextZ:floors[slot.floor+1]?.z});
     }
     return out;
@@ -407,58 +473,6 @@
     for(let k=1;k*.09<h;k++){
       const z=z0+k*.09;
       boxWorld(F,L.u,L.v,z-.008,sideU?LADDER_W:.02,sideU?.02:LADDER_W,.016,'#b98652',out,floor);
-    }
-  }
-  // ---------- wall-walk landings: a door that opens between two floors (the walk of an H1 wall,
-  // 1.15, inside a tower whose P1 is at the H2 walk) gets a timber landing along the inner wall
-  // at its sill, on posts, running to the corner of the room's ladder (one turn round the corner
-  // when the ladder stands on the next wall); without a room ladder, a short ladder of its own.
-  const LANDING_W=.72,LANDING_D=.36,LANDING_T=.05,LANDING_FLOOR_TOL=.12;
-  function landingSpecs(s){
-    if(s?.type!=='tower'||typeof towerDoorSpecs!=='function')return[];
-    const floors=cutawayFloorLevels(s),out=[];
-    for(const d of towerDoorSpecs(s)){
-      if(d.kind!=='wall'&&d.kind!=='roof')continue;
-      if(d.baseZ<.3||floors.some(f=>Math.abs(f.z-d.baseZ)<LANDING_FLOOR_TOL))continue;
-      let fi=-1;floors.forEach((f,i)=>{if(f.z<d.baseZ)fi=i});
-      if(fi<0)continue;
-      out.push({door:d,floor:fi,z0:floors[fi].z});
-    }
-    return out;
-  }
-  function landingsWorld(s,g,out,ladders=new Map()){
-    for(const L of landingSpecs(s)){
-      const d=L.door,t=d.tangent,o=d.outward,th=(g?.thickness||.2)+.012;
-      const origin={x:d.contact.x-o.x*th,y:d.contact.y-o.y*th};
-      // u along the wall, v into the room.
-      const F={toWorld:(u,v)=>({x:origin.x+u*t.x-v*o.x,y:origin.y+u*t.y-v*o.y})};
-      const local=p=>({u:(p.x-origin.x)*t.x+(p.y-origin.y)*t.y,v:-((p.x-origin.x)*o.x+(p.y-origin.y)*o.y)});
-      const wood='#8b6845',dark='#5b402b',top=d.baseZ,h=top-L.z0,D=LANDING_D;
-      const deck=(u0,u1,v0,v1)=>{
-        boxWorld(F,(u0+u1)/2,(v0+v1)/2,top-LANDING_T,u1-u0,v1-v0,LANDING_T,wood,out,L.floor);
-        // Posts at the free corners (the ones away from the walls).
-        for(const [u,v] of [[u0,v1],[u1,v1],[u0,v0],[u1,v0]])if(v>.06)boxWorld(F,u+(u<0?.03:-.03),v-.03,L.z0,.05,.05,h-LANDING_T,dark,out,L.floor);
-      };
-      const ladder=s.shape!=='round'?ladders.get(L.floor):null;
-      if(!ladder){
-        deck(-LANDING_W/2,LANDING_W/2,0,D);
-        ladderWorld({u:LANDING_W/2-.14,v:D+.03,side:'v'},F,L.z0+.01,top,out,L.floor);
-        continue;
-      }
-      // The inner face of the door wall: how far it runs each way along u.
-      const edge=(g?.inner||[]).map((a,i,arr)=>[local(a),local(arr[(i+1)%arr.length])]).filter(([a,b])=>Math.abs(a.v)<.08&&Math.abs(b.v)<.08)[0];
-      const uMin=edge?Math.min(edge[0].u,edge[1].u):-LANDING_W/2,uMax=edge?Math.max(edge[0].u,edge[1].u):LANDING_W/2;
-      const lp=local(ladder),reach=LADDER_W/2+.02;
-      if(lp.v<D+.12){
-        // Ladder against the door wall: the deck runs along it to the ladder's side.
-        const u0=Math.max(uMin,Math.min(-LANDING_W/2,lp.u+reach)),u1=Math.min(uMax,Math.max(LANDING_W/2,lp.u-reach));
-        deck(u0,u1,0,D);
-      }else{
-        // Ladder on the next wall: along the door wall to that corner, then along the next wall to it.
-        const side=lp.u<0?-1:1,uc=side<0?uMin:uMax;
-        deck(side<0?uc:-LANDING_W/2,side<0?LANDING_W/2:uc,0,D);
-        deck(side<0?uc:uc-D,side<0?uc+D:uc,D,Math.max(D,lp.v-reach));
-      }
     }
   }
   // ---------- partition walls (W4 keep): low stone walls between the rooms of a floor, open
@@ -558,9 +572,8 @@
     const snaps=State.structures.filter(w=>w.aSnap===s.id||w.bSnap===s.id).map(w=>w.id+':'+structureLevel(w)).join(',');
     const key=[s.id,State.view.rotation||0,State.stonePaletteId,snaps,typeof cutawayBlockers==='function'?JSON.stringify(cutawayBlockers(s)):'',s.shape,s.isMastio?1:0,(typeof isPlanView==='function'&&isPlanView())?1:0,JSON.stringify(s.functions||[]),(s.keepPlans||[]).join(','),structureLevel(s),s.skin,s.wallSide,s.flip,s.x,s.y,s.angle,s.size,s.r,State.heraldry?.c1,State.heraldry?.c2,!!FM(),!!SM()].join('|');
     const hit=cache.get(s.id);if(hit&&hit.key===key)return hit;
-    const faces=[],lights=[],her=heraldry(),spots=new Map(),art=[],ladders=new Map(),rooms=new Map();
+    const faces=[],lights=[],her=heraldry(),spots=new Map(),art=[],rooms=new Map();
     for(const room of layoutStructure(s,g)){
-      if(room.ladder&&!ladders.has(room.slot.floor))ladders.set(room.slot.floor,room.F.toWorld(room.ladder.u,room.ladder.v));
       for(const it of room.items)pieceWorld(it,room.F,room.slot.z+.012,faces,lights,her,room.slot.floor);
       if(room.ladder&&Number.isFinite(room.nextZ))ladderWorld(room.ladder,room.F,room.slot.z+.01,room.nextZ,faces,room.slot.floor);
       spots.set(room.slot.index,freeSpots(room));
@@ -570,7 +583,7 @@
           side:a.side||null,u:a.u,v:a.v,turn:a.turn,x:p.x,y:p.y,z:room.slot.z+.012,angle:room.F.b.angle+a.turn*Math.PI/2})}
     }
     partitionsWorld(s,g,faces);
-    landingsWorld(s,g,faces,ladders);
+    
     if(spiralTower(s)){const st=spiralStair(s,g);if(st)spiralStairWorld(st,faces)}
     const res={key,faces,lights,spots,art,rooms};cache.set(s.id,res);return res;
   }
@@ -642,5 +655,5 @@
     pieceWorld({name:'a:'+name,u:0,v:0,turn:0,lift:0,paint},F,slot.z,out,[],heraldry(),slot.floor);
     return out;
   }
-  window.ConquerCutawayFurniture={ROOMS,artSlots,artFits,artWorkFaces,lights,worldFaces,loggiaFaces,standSpots,roomPieces,roomContains,layoutStructure,spiralStair,landingSpecs,pieceFaces,clear:()=>cache.clear()};
+  window.ConquerCutawayFurniture={ROOMS,hallTableCount,artSlots,artFits,artWorkFaces,lights,worldFaces,loggiaFaces,standSpots,roomPieces,roomContains,layoutStructure,spiralStair,pieceFaces,clear:()=>cache.clear()};
 })();

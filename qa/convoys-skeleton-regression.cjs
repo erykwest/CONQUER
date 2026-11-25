@@ -237,7 +237,9 @@ test('lifecycle snapshot and script order',()=>{
   const html=src('index.html'),rooms=src('src/settlement-app-rooms.js');
   assert.ok(html.indexOf('settlement-commerce.js')<html.indexOf('settlement-convoys.js'));
   assert.ok(html.indexOf('settlement-convoys.js')<html.indexOf('settlement-app.js'));
-  assert.ok(rooms.includes('window.ConquerConvoys?.panelHtml?.(s)'));
-  assert.ok(rooms.includes('window.ConquerConvoys?.bindPanel?.(slots)'));
+  // The Mastio convoy form lives in Profilo › Diplomazia, not in the building inspector.
+  const panels=src('src/settlement-panels.js');
+  assert.ok(!rooms.includes('ConquerConvoys?.panelHtml'),'no convoy form in the inspector');
+  assert.ok(panels.includes('window.ConquerConvoys?.panelHtml?.(k)')&&panels.includes('window.ConquerConvoys.bindPanel(convoys)'),'convoy form in the menu');
 });
 console.log('Convoys contracts regression: all checks passed.');

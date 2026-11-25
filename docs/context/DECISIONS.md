@@ -1,5 +1,11 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-SHELTER-261124 — Rifugio in ogni Sala comune, capienza 3× il banchetto (24/11/2026)
+
+- **DECISO dal product owner:** all'allarme rosso donne, bambini e uomini L3/L4 si rifugiano in **ogni** Sala comune (mastio, torri, sezioni costruite, long house), non solo in quella del mastio; averne più d'una è voluto.
+- **CONTRATTO:** la capienza di una Sala comune è **3× i posti del suo banchetto** (un commensale per panca da 1,6 m, due per panca lunga da 3,2 m). Ognuno va alla sala più vicina con posto, il mastio per primo; se tutte sono piene, alla più vicina. La campana rossa richiede almeno una Sala comune.
+- **PARAMETRO:** posti totali e persone da proteggere sono un parametro del castello (pannello Castello, voce Rifugio); se mancano posti l'utente è avvisato che serve nuovo spazio.
+- **Di notte** il personale e gli abitanti delle stanze non si animano (anche col tramonto invernale). **Tavoli lunghi (4,4 m) solo nelle sale W2.** Long house e sezioni costruite restano a 4U (W2 6U), come nel Builder.
 ## D-CLAY-WATER-261124 — Accesso all'argilla (24/11/2026)
 
 Richiesta del product owner: garantire un torrente o un laghetto e consentire la cava argilla in tutto il territorio paludoso. Il generatore riutilizza una sponda interna accessibile, oppure aggiunge un piccolo stagno con spazio per la cava 4×4U nella whitezone. L'implementazione usa lo stagno come ripiego deterministico. Se serve, apre una piccola radura nel bosco. La cava argilla in Palude richiede una terrazza asciutta edificabile e può trovarsi anche oltre 6U dall'acqua, comprese terrazze rialzate. Negli altri biomi resta il centro H0 entro 6U dalla riva interna. Questa estensione completa D-CLAY-02. La garanzia idrica riguarda le nuove generazioni. I paesaggi salvati conservano la propria geometria.
@@ -994,3 +1000,10 @@ Aggiungere un ID, classe, data di registrazione, **motivazione**, alternative sc
 - Il settore conquistato rimane `captured` finché non è ricontrollato dai difensori per almeno 0,5 giorni di gioco senza ostili. La riconquista riattiva la capacità fisica del deposito ma NON rigenera le merci sottratte.
 - Il record di cattura sopravvive a save/load, incluse brecce che eliminano la chiusura topologica; una successiva compartimentazione non può propagare una sola cattura a più settori. Il bottino lato attaccante e la simulazione di trasporti di risorse sono rinviati.
 
+
+
+### D-TOWER-SUMMIT-261124 — Porta delle torri su pendio — 2026-11-24
+- Su un pendio la porta a terra di una torre indipendente è **rivolta verso la cima ed è sulla cima**: la soglia sta sul pianoro alla quota del pavimento della torre. Il piazzamento ruota la torre (quadrata per quarti di giro, rotonda liberamente, torre a D isolata con il fronte curvo a valle) e rifiuta il sito se la soglia cade sul pendio.
+- Esclusi: sottotorri (nessuna porta a terra), torri di porta (porta verso il retro della porta), torri su banchina, torri a D sedute su un muro, ingressi sopraelevati del mastio. In piano nessun vincolo.
+- Il pavimento di una torre su pendio è la quota più alta sotto il **corpo** della torre; contrafforti e scarpa scendono fino al terreno e non lo alzano.
+- Mura e sezioni costruite possono avere un basamento (scarpa 10° o contrafforti) **solo sul lato esterno**; per ora è estetico e non cambia l'ingombro.

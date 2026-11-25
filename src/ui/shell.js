@@ -82,7 +82,8 @@ const CATALOG = [
         opt(V.dee, '[data-tower="dee"][data-size="1.5"]', stone && t.shape === 'dee'),
         opt(V.watchtower, '[data-wood-tower="watchtower"]', t.woodStyle === 'watchtower'),
         opt(V.woodTower, '[data-wood-tower="palisadeTower"]', t.woodStyle === 'palisadeTower'),
-        opt(V.frameTower || 'Telaio H2', '[data-wood-tower="frameTower"]', t.woodStyle === 'frameTower')] }];
+        opt(V.frameTower || 'Telaio H2', '[data-wood-tower="frameTower"]', t.woodStyle === 'frameTower'),
+        opt(V.frameTower3 || 'Telaio H3', '[data-wood-tower="frameTower3"]', t.woodStyle === 'frameTower3')] }];
       if (stone && t.shape === 'square') rows.push({ label: O.size, options: ['1', '1.5', '2', '3'].map(n =>
         opt(n.replace('.', ',') + 'U', `[data-tower="square"][data-size="${n}"]`, Number(t.size) === Number(n))) });
       if (stone && t.shape === 'round') rows.push({ label: O.size, options: ['0.5', '0.75', '1'].map(n =>
@@ -593,9 +594,11 @@ function CastleStores({ game }) {
       <${Stat} label=${M.autonomy} value=${M.days(l.autonomy)} tip=${TIP.autonomy + ' ' + M.dailyNeed + ': ' + num(l.daily) + '.'} />
       <${Stat} label=${M.capacity} value=${l.meals + ' · ' + l.soldiers + ' · ' + l.knights} tip=${TIP.capacity} />
       <${Stat} label=${M.water} value=${M.waterSource[l.water.source] + ' · ' + l.water.cisterns} tip=${TIP.water} />
+      ${l.shelter && html`<${Stat} label=${M.shelter} value=${l.shelter.capacity + ' / ' + l.shelter.need} tip=${TIP.shelter} />`}
     </div>
     ${l.shortfall > 0 && html`<p class="u2-warn">${M.shortfall(l.shortfall)}</p>`}
     ${l.thirst > 0 && html`<p class="u2-warn">${M.thirst(l.thirst)}</p>`}
+    ${l.shelter && l.shelter.missing > 0 && html`<p class="u2-warn">${M.shelterShort(l.shelter.missing, l.shelter.halls)}</p>`}
     ${l.stores.map(s => html`<div class="u2-store">
       <span class="u2-label">${M.stores[s.id]}</span>
       <div class="u2-meter" data-tip=${M.stores[s.id]} data-tip-body=${num(s.stock, 0) + ' / ' + num(s.cap, 0)}><${Bar} value=${s.stock} max=${s.cap} /></div>
