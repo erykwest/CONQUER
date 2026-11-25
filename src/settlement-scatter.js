@@ -29,7 +29,9 @@
     training:[['sawhorse',1],['ladder',1],['crateStack',1]],
     // Nobles arrive at the castle by carriage; supplies by wagon and cart.
     gate:[['carriageParked',2],['wagonLoaded',2],['cartParked',2],['crateStack',2],['goodsMixed',2]],
-    roadside:[['brokenCart',1],['wheelLying',2],['logPile',1]]
+    roadside:[['brokenCart',1],['wheelLying',2],['logPile',1]],
+    // Against the inner face of the curtain walls, under and beside the wall sheds.
+    wall:[['crateStack',3],['barrelGroup',3],['firewood',3],['plankStack',2],['ladder',2],['sackPile',2],['logPile',1],['buckets',1]]
   };
   const COUNTS={house1:[0,1],house2:[1,2],house3:[1,2],field:[0,1],loggingCamp:[2,4],quarry:[2,3],mine:[1,2],market:[3,5],tavern:[1,2],church:[0,1],training:[0,1],gate:[1,2]};
 
@@ -50,7 +52,7 @@
     for(const s of State.structures){
       if(s.type==='road'){if(s.a&&s.b)roads.push({a:s.a,b:s.b,half:(Number(s.width)||.5)*.36+.12});continue}
       if(s.type==='field'){polys.push(fieldPoints(s));continue}
-      if(['wall','palisade','built','moat','bridge','quay'].includes(s.type)&&s.a&&s.b){roads.push({a:s.a,b:s.b,half:(Number(s.width)||.6)/2+.15});continue}
+      if(['wall','palisade','built','moat','bridge','quay'].includes(s.type)&&s.a&&s.b){roads.push({a:s.a,b:s.b,half:(Number(s.width)||.6)/2+.15,id:s.id});continue}
       let list=[];
       try{list=urbanBuildingPolygons(s)}catch{}
       if(!list.length&&window.ConquerPier?.is(s))list=[window.ConquerPier.footprint(s)];
@@ -153,6 +155,74 @@
     for(let i=0;i<n;i++){
       const a=pick(rnd,ctx,{});if(!a)continue;
       tryPlace(out,obs,a,cands,c=>Math.atan2(c.y-s.y,c.x-s.x)+Math.PI/2+(rnd()-.5)*.4,ctx,s.id);
+    }
+  }
+  // Props leaning on masonry: the inner face of every finished curtain wall and of the
+  // built sections and the open front of the lean-tos, plus the bay of the wall sheds. Each prop
+  // stands along the face (its model x along it) at its real depth (model y) off the masonry, a
+  // hand from it: not at its bounding radius, which for a ladder is six times its depth.
+  const halfCache=new Map();
+  function halfOf(a){
+    let h=halfCache.get(a);if(h)return h;
+    const v=M().assets[a]?.v||[],s=scaleOf(a);let hx=0,hy=0;
+    for(let i=0;i<v.length;i+=3){hx=Math.max(hx,Math.abs(v[i]));hy=Math.max(hy,Math.abs(v[i+1]))}
+    h={hx:hx*s,hy:hy*s};halfCache.set(a,h);return h;
+  }
+  // Place a prop flush on the face of `host`: d0 = face distance from the host's centre line.
+  function hug(out,o,host,rnd,ctx,line,d0,t0,spread,depthRange=0){
+    const a=pick(rnd,'wall',{});if(!a)return false;
+    const A=M().assets[a],r=A.r*scaleOf(a),{hx,hy}=halfOf(a);
+    const oo={polys:o.polys,roads:o.roads.filter(rd=>rd.id!==host.id)};
+    for(let c=0;c<20;c++){
+      const dev=(rnd()-.5)*.08,t=t0+(rnd()-.5)*spread,d=d0+.015+hy+Math.abs(Math.sin(dev))*hx+rnd()*depthRange;
+      const p={x:line.a.x+line.ux*t+line.n.x*d,y:line.a.y+line.uy*t+line.n.y*d};
+      if(t-hx<0||t+hx>line.L)continue;
+      // Spacing between props by their footprint along the face, not their bounding circle.
+      if(!free(p,Math.max(hy,.06),oo,[]))continue;
+      if(out.some(q=>Math.hypot(q.x-p.x,q.y-p.y)<Math.max(q.hx??q.r,q.r*.6)+hx*.9))continue;
+      out.push({asset:a,x:p.x,y:p.y,r,hx,s:scaleOf(a),heading:line.heading+(rnd()<.5?0:Math.PI)+dev,ctx,owner:host.id});
+      return true;
+    }
+    return false;
+  }
+  function lineOf(s,sign=1){
+    const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
+    return{a:s.a,L,ux,uy,n:{x:-uy*sign,y:ux*sign},heading:Math.atan2(uy,ux)};
+  }
+  function footRow(out,o,host,line,face,key){
+    const rnd=rngFor(key),groups=1+Math.floor(line.L/3+rnd()*line.L/3);
+    for(let g=0;g<groups;g++){
+      const t0=line.L*(.06+rnd()*.88),size=1+Math.floor(rnd()*rnd()*4);
+      for(let i=0;i<size;i++)hug(out,o,host,rnd,'wall',line,face,t0,.5+i*.35);
+    }
+  }
+  function wallProps(out,obs){
+    const WS=window.ConquerWallSheds;if(!WS)return;
+    const sheds=WS.all();
+    const o={polys:obs.polys,roads:obs.roads};
+    const done=s=>s.a&&s.b&&!underConstruction(s);
+    // Under each open shed: one to three props against the wall, in the bay.
+    for(const sh of sheds){
+      const w=State.structures.find(s=>s.id===sh.wallId);if(!w)continue;
+      const f=WS.frame(w),line={a:w.a,L:f.L,ux:f.ux,uy:f.uy,n:f.inward,heading:Math.atan2(f.uy,f.ux)};
+      const rnd=rngFor('shed:'+sh.buildingKey),along=(sh.center.x-w.a.x)*f.ux+(sh.center.y-w.a.y)*f.uy;
+      const n=1+Math.floor(rnd()*Math.min(3,sh.w/.6));
+      for(let i=0;i<n;i++)hug(out,o,w,rnd,'wall',line,f.face,along,Math.max(0,sh.w-.3),Math.max(0,sh.h-.45));
+    }
+    // Curtain walls: the inner face.
+    for(const w of State.structures.filter(s=>s.type==='wall'&&done(s))){
+      const f=WS.frame(w);
+      footRow(out,o,w,{a:w.a,L:f.L,ux:f.ux,uy:f.uy,n:f.inward,heading:Math.atan2(f.uy,f.ux)},f.face,'wall:'+w.id);
+    }
+    // Built sections: the inner side (wallExteriorSide). Lean-tos: the open front, away from their wall.
+    for(const s of State.structures.filter(s=>s.type==='built'&&done(s))){
+      const face=(Number(s.width)||1)/2;
+      if(s.leanTo){
+        const w=State.structures.find(x=>x.id===s.leanWallId);if(!w)continue;
+        const base=lineOf(s),mid={x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2},wm={x:(w.a.x+w.b.x)/2,y:(w.a.y+w.b.y)/2};
+        const away=(mid.x-wm.x)*base.n.x+(mid.y-wm.y)*base.n.y>=0?1:-1;
+        footRow(out,o,s,lineOf(s,away),face,'lean:'+s.id);
+      }else footRow(out,o,s,lineOf(s,-(typeof wallExteriorSide==='function'?wallExteriorSide(s):1)),face,'built:'+s.id);   // the inner side only, as the walls
     }
   }
   function gateProps(out,obs){
@@ -306,6 +376,7 @@
       tryPlace(out,obs,'buckets',ring(w.x,w.y,edge+.25,edge+1.4,rnd,24),rnd()*6.3,'well',w.id);
     }
     roadProps(out,obs);
+    wallProps(out,obs);
     houseProps(out,obs,fields);
     fieldProps(out,obs,fields);
     const props=out.slice(pre.length,pre.length+MAX_PROPS),bank=[];
@@ -316,7 +387,7 @@
   // Everything layout() reads, as a cheap string (callers cache layouts by it).
   function signature(){
     let h=0;const add=v=>{h=(Math.imul(h,31)+hash(String(v)))|0};
-    for(const s of State.structures||[])add(s.id+s.type+(s.x??s.a?.x)+(s.y??s.a?.y)+(s.b?.x??'')+(s.b?.y??'')+(s.houseLevel||'')+(underConstruction(s)?'u':'c')+(s.angle||0)+(s.w||'')+(s.h||''));
+    for(const s of State.structures||[])add(s.id+s.type+(s.x??s.a?.x)+(s.y??s.a?.y)+(s.b?.x??'')+(s.b?.y??'')+(s.houseLevel||'')+(underConstruction(s)?'u':'c')+(s.angle||0)+(s.w||'')+(s.h||'')+(s.level||'')+(s.width||'')+(s.wallStair?.kind||'')+(s.flip?1:0));
     return[h,State.seed,State.season,State.relief?.seed,(State.environment||[]).length,typeof urbanRevision!=='undefined'?urbanRevision:0].join('|');
   }
 

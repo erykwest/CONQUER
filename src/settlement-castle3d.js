@@ -136,7 +136,13 @@
     }
     for(const d of halfTowerFloorDecks(s))m.prism(d.pts,d.z0,d.z1,PAL.hoardDeck());
     for(const l of halfTowerLadders(s))m.prism(l.pts,l.z0,l.z1,l.part==='rung'?PAL.ladderRung():PAL.ladderRail());
-    if(towerRoofStyle(s)==='pitched'){
+    const upCut=towerRoofStyle(s)==='pitched'&&upInnerTowerGeometry(s)?.cut;
+    if(upCut){
+      // Truncated roof round the turret: eave ring up to the cut ring.
+      m.tag='roof';
+      const e=upCut.eave,r=upCut.ring,n=e.length,round=n>8,cols=winter()?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP]:['#303236','#3a3d42','#44474c'];
+      for(let i=0;i<n;i++){const j=(i+1)%n;m.face([{p:e[i],z:h},{p:e[j],z:h},{p:r[j],z:upCut.z},{p:r[i],z:upCut.z}],round?cols[i%3]:winter()?(i%2?WINTER_SNOW_A:WINTER_SNOW_B):(i%2?'#34363a':'#42454a'))}
+    }else if(towerRoofStyle(s)==='pitched'){
       m.tag='roof';
       const ring=towerRoofFootprintPoints(s),apex=towerRoofApex(s),apexZ=towerVisualTopHeight(s);
       if(s.shape==='round'||s.shape==='dee'){
@@ -161,6 +167,17 @@
       m.tag='roof';
       const round=inner.ring.length>8,cols=round?(winter()?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP]:['#303236','#3a3d42','#44474c']):null;
       for(const f of towerInnerRoofFaces(inner))m.face(f.pts,round?cols[f.i%3]:winter()?(f.i%2?WINTER_SNOW_A:WINTER_SNOW_B):(f.i%2?'#34363a':'#42454a'));
+      m.tag=tag;
+    }
+    // Up inner tower: one-storey turret in the middle of the deck, then its cone / pyramid cap.
+    const up=upInnerTowerGeometry(s);
+    if(up){
+      const tag=m.tag;m.tag='body';
+      m.prism(up.ring,up.h,up.topZ,PAL.stone());
+      m.face(up.ring.map(p=>({p,z:up.topZ})),PAL.stone());
+      m.tag='roof';
+      const round=up.shape==='round',cols=winter()?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP]:['#303236','#3a3d42','#44474c'];
+      m.pyramid(up.eave,up.eaveZ,up.apex,up.apexZ,i=>round?cols[i%3]:winter()?(i%2?WINTER_SNOW_A:WINTER_SNOW_B):(i%2?'#34363a':'#42454a'));
       m.tag=tag;
     }
     for(const b of towerBartizans(s))addBartizan(m,b);
@@ -193,8 +210,16 @@
     const g=builtRoofGeometry(s);if(!g)return;
     const [p0,p1,p2,p3]=g.p,ra=g.ridgeA,rb=g.ridgeB,H=g.h,R=g.ridgeH;
     const thatch=isTimberLeanTo(s);   // timber lean-to: thatch instead of slate
-    m.face([{p:p0,z:H},{p:p1,z:H},{p:rb,z:R},{p:ra,z:R}],winter()?WINTER_SNOW_A:thatch?'#b8995a':'#34363a');
-    m.face([{p:p3,z:H},{p:p2,z:H},{p:rb,z:R},{p:ra,z:R}],winter()?WINTER_SNOW_B:thatch?'#a4864a':'#42454a');
+    // Framed lean-to: a masonry plinth up to half the door, in the wall's masonry (stone family
+    // or clay), drawn a hair outside the plastered body. Visual only.
+    if(thatch&&typeof LEAN_PLINTH_H==='number'){
+      const dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1,e=.006;
+      const ring=rectWorldPoints((s.a.x+s.b.x)/2,(s.a.y+s.b.y)/2,L+e*2,(Number(s.width)||1)+e*2,Math.atan2(dy,dx));
+      withStructureVisualMaterial({...s,leanMaterial:'stone',leanTo:false},()=>m.prism(ring,0,LEAN_PLINTH_H,PAL.stone()));
+    }
+    const shingle=thatch&&timberLeanToShingled(s);   // 30% of timber lean-tos: wooden shingles
+    m.face([{p:p0,z:H},{p:p1,z:H},{p:rb,z:R},{p:ra,z:R}],winter()?WINTER_SNOW_A:shingle?'#6e4f35':thatch?'#b8995a':'#34363a');
+    m.face([{p:p3,z:H},{p:p2,z:H},{p:rb,z:R},{p:ra,z:R}],winter()?WINTER_SNOW_B:shingle?'#5e432d':thatch?'#a4864a':'#42454a');
     // Gable ends are left open in 2.5D; a closed volume needs them.
     const roofTag=m.tag;m.tag='gable';
     m.face([{p:p0,z:H},{p:ra,z:R},{p:p3,z:H}],PAL.stone());

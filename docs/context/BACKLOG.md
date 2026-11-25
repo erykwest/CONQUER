@@ -1,5 +1,27 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-24 — WALL-SHEDS-261124 · Lean-to, tettoie e scatter dei muri
+- [x] Lean-to come upgrade del muro, niente costruzione libera, demolito col muro.
+- [x] Tettoie automatiche lungo la faccia interna dei muri; scatter addossato a muri, sezioni costruite, lean-to e sotto le tettoie.
+- [ ] Regressione dedicata alle tettoie e inserimento nel Lab.
+- [ ] Lean-to e tettoie quando il muro crolla in assedio.
+
+### 2026-11-24 — WALL-STAIRS-261124 · Scale del camminamento
+- [x] Gradini a passo fisso, pianerottolo d'arrivo; H2 a due rampe con pianerottolo intermedio.
+- [x] Colori della scala dal materiale del muro.
+- [x] Addossato non costruibile su un muro con scala.
+- [ ] Verificare che le pattuglie percorrano davvero la nuova scala (oggi validate solo le quote).
+- [ ] Addossato come upgrade del muro (oggi struttura separata agganciata).
+
+### 2026-11-24 — WALL-GRID-261124 · Livelli torre e muri
+- [x] Griglia unica dei piani delle torri in pietra (1,15 + 1,20), muri H1/H2 sui piani P1/P2.
+- [x] Rimosso il ballatoio interno delle porte H1 (sostituito dalla griglia).
+- [x] Torre d'assedio L2 sul muro H2 a 2,35.
+- [x] Semitorri e porte in pietra sulla griglia; porta piccola rialzata.
+- [ ] Porta piccola con piano superiore in legno: solaio a 1,40 da allineare al camminamento H2 (2,35).
+- [ ] Rigenerare siege-engines-model.js da Blender con le nuove WALLS (oggi adattato in runtime).
+- [ ] Audit del Lab in CI e baseline aggiornata.
+
 ### 2026-11-19 — HARDEN-261119 · Hardening della base main
 
 **IMPLEMENTATO SU `fix/main-hardening-20261119`, NON MERGE.** [Rapporto](../HARDENING-2026-11-19.md).
@@ -39,6 +61,15 @@ Implementato nel branch `fix/territory-clay-stone-access`. Nuove mappe con acqua
 - [x] QA del vero Builder in Chromium: categorie, caricamento SVG, gestori originali, selezione e viewport mobile.
 - [ ] CI remota e revisione della PR prima dell'integrazione in main.
 - Owner e dettaglio: [feature-backlog](../feature-backlog.md), [BUILDER-ICONS](../BUILDER-ICONS.md).
+### 2026-11-24 — UP-INNER-TOWER · Torretta centrale
+
+**IMPLEMENTATO SU BRANCH `feature/upinnertower`, NON MERGE.** Richiesta del product owner (24/11/2026): torretta di un piano al centro delle torri W2/W3, larga W-1, rotonda o quadrata a scelta, solo come upgrade.
+- [x] Variante, regole di esclusione, mesh 3D, cantiere, danni, clay, cutaway, Lab, codex.
+- [x] Torretta come piano a sé con una stanza in più, aperta nel cutaway.
+- [ ] La scala dalla stanza sotto sbuca sulla piazza nell'angolo della torre, non dentro la torretta.
+- [x] Baseline del Lab aggiornata.
+- [ ] Costo dell'upgrade (oggi gratuito come il tetto interno).
+
 ### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2
 
 **IMPLEMENTATO SU BRANCH `feature/shops-l2-rooms`, NON MERGE.**

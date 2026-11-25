@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "sourceDigest": "0ad3f1e0de9b51db57206d948daf8498ae1e4bd2441982614226a987028374ab",
+  "sourceDigest": "fc1b2cbc72116d7843d09f266db99f7b0f04702018c73adf0e6c83e1ab4ba6a5",
   "catalog": {
     "schemaVersion": 1,
     "categories": [
@@ -1536,6 +1536,11 @@
             "innerRoof": [
               "off",
               "on"
+            ],
+            "upInnerTower": [
+              "off",
+              "round",
+              "square"
             ],
             "machicolationStyle": [
               "standard",
@@ -8136,6 +8141,147 @@
           "variant": "topWeapon",
           "value": "none",
           "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.upInnerTower.off",
+        "key": "off",
+        "label": "tower · upInnerTower · off",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.upInnerTower"
+        },
+        "properties": {
+          "variant": "upInnerTower",
+          "value": "off",
+          "default": true,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.upInnerTower.round",
+        "key": "round",
+        "label": "tower · upInnerTower · round",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.upInnerTower"
+        },
+        "properties": {
+          "variant": "upInnerTower",
+          "value": "round",
+          "default": false,
+          "kind": "configuration"
+        },
+        "relations": [
+          {
+            "id": "building:tower",
+            "kind": "applies-to"
+          }
+        ],
+        "assets": [],
+        "requirements": {
+          "physical": [],
+          "functional": [],
+          "knowledge": {
+            "status": "unmapped",
+            "ids": []
+          }
+        },
+        "providers": {
+          "cost": null,
+          "time": null,
+          "compatibility": "variantSchema (schema exclusion only)"
+        },
+        "quotes": {
+          "cost": {
+            "status": "unmapped",
+            "value": null
+          },
+          "time": {
+            "status": "unmapped",
+            "value": null
+          }
+        }
+      },
+      {
+        "id": "upgrade:tower.upInnerTower.square",
+        "key": "square",
+        "label": "tower · upInnerTower · square",
+        "category": "upgrade",
+        "status": "present",
+        "source": {
+          "file": "src/settlement-core.js",
+          "symbol": "STRUCTURE_VARIANTS.tower.upInnerTower"
+        },
+        "properties": {
+          "variant": "upInnerTower",
+          "value": "square",
+          "default": false,
           "kind": "configuration"
         },
         "relations": [

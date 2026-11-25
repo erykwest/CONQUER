@@ -902,7 +902,7 @@
     const keep=H*(.34+.16*((seed%1000)/1000));             // a third to a half stays standing
     startCollapse(s,g+keep,g+H+.35,{cause:'ruin',lean:from?{x:s.x-from.x,y:s.y-from.y}:null});
     const stump={id:s.id,type:'ruin',ruinOf:s.type,shape:s.shape,size:s.size,r:s.r,w:s.w,h:s.h,x:s.x,y:s.y,
-      angle:s.angle||0,rotationStep:s.rotationStep,material:s.material,ruinHeight:+keep.toFixed(3),
+      angle:s.angle||0,rotationStep:s.rotationStep,material:s.material,masonryMaterial:s.masonryMaterial,ruinHeight:+keep.toFixed(3),
       wallConnections:s.wallConnections,ruinDay:State.clock.day};
     for(const k of Object.keys(s))delete s[k];
     for(const [k,v] of Object.entries(stump))if(v!==undefined)s[k]=v;   // same object: selection and links hold
@@ -916,12 +916,15 @@
   }
   const stumpCache=new Map();
   function stumpMesh(s){
-    const key=s.id+':'+s.ruinHeight;let m=stumpCache.get(key);if(m)return m;
+    const key=s.id+':'+s.ruinHeight,ck=key+':'+(stumpClay(s)?'c':'s');let m=stumpCache.get(ck);if(m)return m;
     const pos=[],col=[];
     masonryPieces(s).forEach((base,i)=>stumpPiece(s,i?key+':'+i:key,base,pos,col));
-    m={pos,col,static:true};stumpCache.set(key,m);return m;
+    m={pos,col,static:true};stumpCache.set(ck,m);return m;
   }
+  // Brick masonry (and the DEV clay palette) leaves a brick stump, as its falling blocks.
+  function stumpClay(s){return State.visualPalette==='clay'||typeof masonryMaterial==='function'&&masonryMaterial(s)==='brick'}
   function stumpPiece(s,key,base,pos,col){
+    const clay=stumpClay(s),sideA=clay?'#8a4e36':'#6f665d',sideB=clay?'#a25d40':'#7d736b',topC=clay?'#a25d40':'#8a7f74';
     const g=groundOf(s),H=Number(s.ruinHeight)||.8;
     let seed=0;for(const ch of key)seed=(Math.imul(seed,31)+ch.charCodeAt(0))>>>0;
     const rnd=()=>(seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296;
@@ -936,12 +939,12 @@
     const tri=(a,b,c,colr)=>{pos.push(...a,...b,...c);col.push(colr)};
     for(let i=0;i<ring.length;i++){
       const j=(i+1)%ring.length,a=ring[i],b=ring[j],ha=g+tops[i],hb=g+tops[j];
-      const sideCol=i%3===0?'#6f665d':'#7d736b';
+      const sideCol=i%3===0?sideA:sideB;
       tri([a.x,a.y,g],[b.x,b.y,g],[b.x,b.y,hb],sideCol);tri([a.x,a.y,g],[b.x,b.y,hb],[a.x,a.y,ha],sideCol);
       // Broken top: rubble-filled, sloping in from the ragged rim (faces up).
       const c=[cx,cy,g+H*.72],p=[a.x,a.y,ha],q=[b.x,b.y,hb];
       const up=(q[0]-c[0])*(p[1]-c[1])-(q[1]-c[1])*(p[0]-c[0]);
-      if(up>0)tri(c,q,p,'#8a7f74');else tri(c,p,q,'#8a7f74');
+      if(up>0)tri(c,q,p,topC);else tri(c,p,q,topC);
     }
   }
   // ---------- rubble on the ground ----------
@@ -979,13 +982,14 @@
   // the rim, rubble filling the top (towerRoofStyle/gateRoofStyle report 'broken').
   const crownCache=new Map();
   function crownMesh(s){
-    const g=groundOf(s),H=structureHeight(s),key=s.id+':'+H.toFixed(3)+':'+g.toFixed(3);
-    let m=crownCache.get(key);if(m)return m;
+    const g=groundOf(s),H=structureHeight(s),key=s.id+':'+H.toFixed(3)+':'+g.toFixed(3),ck=key+':'+(stumpClay(s)?'c':'s');   // seed: key; cache: + material
+    let m=crownCache.get(ck);if(m)return m;
     const pos=[],col=[];
-    masonryPieces(s).forEach((base,i)=>crownPiece(i?key+':'+i:key,base,g,H,pos,col));
-    m={pos,col,static:true};crownCache.set(key,m);return m;
+    masonryPieces(s).forEach((base,i)=>crownPiece(i?key+':'+i:key,base,g,H,pos,col,stumpClay(s)));
+    m={pos,col,static:true};crownCache.set(ck,m);return m;
   }
-  function crownPiece(key,base,g,H,pos,col){
+  function crownPiece(key,base,g,H,pos,col,clay=false){
+    const sideA=clay?'#8a4e36':'#6f665d',sideB=clay?'#a25d40':'#7d736b',topC=clay?'#a25d40':'#8a7f74';
     let seed=0;for(const ch of key)seed=(Math.imul(seed,31)+ch.charCodeAt(0))>>>0;
     const rnd=()=>(seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296;
     const ring=[];
@@ -999,11 +1003,11 @@
     const tri=(a,b,c,colr)=>{pos.push(...a,...b,...c);col.push(colr)};
     for(let i=0;i<ring.length;i++){
       const j=(i+1)%ring.length,a=ring[i],b=ring[j],z0=g+H-.02,ha=g+H+tops[i],hb=g+H+tops[j];
-      const sideCol=i%3===0?'#6f665d':'#7d736b';
+      const sideCol=i%3===0?sideA:sideB;
       tri([a.x,a.y,z0],[b.x,b.y,z0],[b.x,b.y,hb],sideCol);tri([a.x,a.y,z0],[b.x,b.y,hb],[a.x,a.y,ha],sideCol);
       const c=[cx,cy,g+H+.1],p=[a.x,a.y,ha],q=[b.x,b.y,hb];
       const up=(q[0]-c[0])*(p[1]-c[1])-(q[1]-c[1])*(p[0]-c[0]);
-      if(up>0)tri(c,q,p,'#8a7f74');else tri(c,p,q,'#8a7f74');
+      if(up>0)tri(c,q,p,topC);else tri(c,p,q,topC);
     }
   }
   function dynamicMeshes(){
