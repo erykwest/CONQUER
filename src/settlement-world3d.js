@@ -626,6 +626,9 @@
       const house=entry.house;if(underConstruction(house))continue;
       withStructureVisualMaterial(house,()=>addHouse(m,entry,winter));
     }
+    // Open sheds along the inner face of the curtain walls (settlement-wall-sheds.js): the
+    // town-yard lean-to on posts, its high side on the wall.
+    for(const w of State.structures)if(w.type==='wall')for(const part of window.ConquerWallSheds?.parts(w)||[])addOutbuilding(m,w,part,winter);
     // Urban boundaries (urbanFenceSegments): fences and low walls as solids, hedges are billboards.
     for(const e of urbanFenceSegments()){
       const dx=e.b.x-e.a.x,dy=e.b.y-e.a.y,L=Math.hypot(dx,dy);if(L<1e-4)continue;
@@ -750,7 +753,8 @@
   // L3/L4 yard outbuildings (urbanLotOutbuildings), same palette as drawUrbanOutbuilding.
   function addOutbuilding(m,house,part,winter){
     const faces=urbanHouseFaces(house,part),n=part.points.length,P=f=>f.map(({p,z})=>({x:p.x,y:p.y,z}));
-    const roofA=winter?WINTER_ROOF[0]:'#5b3d30',roofB=winter?WINTER_ROOF[1]:'#6b4938';
+    // A wall shed may be thatched (settlement-wall-sheds.js part.thatch): the cottage straw.
+    const roofA=winter?WINTER_ROOF[0]:part.thatch?HOUSE_THATCH.a:'#5b3d30',roofB=winter?WINTER_ROOF[1]:part.thatch?HOUSE_THATCH.b:'#6b4938';
     if(part.type==='store'){
       m.tag?.('body');for(let i=0;i<n;i++)m.face(P(faces[i]),i%2?'#5d4431':'#71543c');
       m.tag?.('roof');m.face(P(faces[n]),roofA);m.face(P(faces[n+1]),roofB);
@@ -1141,10 +1145,37 @@
         }
       }else if(s.type==='built'&&!isLonghouse(s)){
         if(builtTimberUpper(s))timberFacadeDecals(builtTimberFacade(s),terrainElevation(center),center);
-        for(const [side,z,density,key,aw,ah,,fixed] of builtWindowRows(s)){
+        const framedLean=isTimberLeanTo(s)&&typeof leanToTimberFrame==='function';
+        const door=(edge,off,ground,o,leaf)=>{
+          const ux=(edge.b.x-edge.a.x)/(edge.length||1),uy=(edge.b.y-edge.a.y)/(edge.length||1),m={x:(edge.a.x+edge.b.x)/2+ux*off,y:(edge.a.y+edge.b.y)/2+uy*off};
+          const hw=LEAN_DOOR_W/2,f=.03;
+          quad({x:m.x-ux*(hw+f),y:m.y-uy*(hw+f)},{x:m.x+ux*(hw+f),y:m.y+uy*(hw+f)},ground,ground+LEAN_DOOR_H+f,'__white',o,[36/255,30/255,26/255,1],.008);   // jambs and head
+          quad({x:m.x-ux*hw,y:m.y-uy*hw},{x:m.x+ux*hw,y:m.y+uy*hw},ground,ground+LEAN_DOOR_H,'__white',o,leaf,.011);                                        // plank leaf
+        };
+        // A stone lean-to has twin lights (gothicL2) instead of arrow slits, sized under its eaves.
+        const leanRows=isLeanTo(s)?builtWindowRows(s).map(r=>r[1]<1.2?[r[0],.80,0,'gothicL2',.5,.58,true,5]:r):builtWindowRows(s);
+        if(!framedLean)for(const [side,z,density,key,aw,ah,,fixed] of leanRows){
           const edge=linearFacadeEdge(s,side),count=builtWindowCount(edge,density,fixed,aw),cell=edge.length/count;
           const ground=terrainElevation({x:(edge.a.x+edge.b.x)/2,y:(edge.a.y+edge.b.y)/2}),o=outward(edge,center);
-          for(let i=0;i<count;i++){const off=(i+.5)*cell-edge.length/2;if(!window.ConquerRoomExterior?.takesWindow(s,side,z,off))onEdge(edge,z,Math.min(aw,cell*.82),ah,key,off,ground,o)}
+          // A stone lean-to opens its door in the middle cell of the low row, instead of that window.
+          const doorCell=isLeanTo(s)&&z<1.2?Math.floor(count/2):-1;
+          for(let i=0;i<count;i++){
+            const off=(i+.5)*cell-edge.length/2;
+            if(i===doorCell){door(edge,off,ground,o,[78/255,56/255,38/255,1]);continue}
+            if(!window.ConquerRoomExterior?.takesWindow(s,side,z,off))onEdge(edge,z,Math.min(aw,cell*.82),ah,key,off,ground,o);
+          }
+        }
+        // Framed timber lean-to (leanToTimberFrame, after PR #300): close posts and crosses over
+        // the plaster, small dark windows set in the frame, the plank door in the middle bay.
+        if(framedLean)for(const f of leanToTimberFrame(s)){
+          const e=f.edge,L=Math.hypot(e.b.x-e.a.x,e.b.y-e.a.y)||1,edge={...e,length:L},o=outward(e,center),ux=(e.b.x-e.a.x)/L,uy=(e.b.y-e.a.y)/L;
+          const m={x:(e.a.x+e.b.x)/2,y:(e.a.y+e.b.y)/2},at=off=>({x:m.x+ux*off,y:m.y+uy*off}),ground=terrainElevation(m);
+          for(const [p0,p1] of f.beams)strip(at,ground,p0,p1,HOUSE_TIMBER_W,o,[59/255,42/255,30/255,1],.009);
+          for(const win of f.windows){
+            const c=at(win.off),hw=LEAN_WIN/2;
+            quad({x:c.x-ux*hw,y:c.y-uy*hw},{x:c.x+ux*hw,y:c.y+uy*hw},ground+win.z-hw,ground+win.z+hw,'__white',o,[30/255,26/255,22/255,1],.010);
+          }
+          if(f.door)door(edge,f.door.off,ground,o,[96/255,66/255,40/255,1]);
         }
         // P0 courtyard face: a door in the middle bay, paired windows in the others (builtGroundFront).
         const gf=builtGroundFront(s);
@@ -1402,7 +1433,12 @@
         if(blk.length&&top<H)mesh.face([Z(p,top),Z(q,top),Z(q,H),Z(p,H)],hex);
       };
       const plane=s.type==='tower'||s.type==='gate',G0=plane?(Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s)):null;
-      const stoneTone=hex=>State.visualPalette==='clay'||(typeof masonryMaterial==='function'&&masonryMaterial(s)==='brick')?hex:(window.ConquerStoneColor?.shade(hex)||hex);
+      // Brick / clay: the cut shell takes the clay swatches (CLAY_VISUAL_SWATCHES), a terracotta tint of
+      // the same lightness for any tone missing from the table; stone takes the realm's stone shade.
+      const clayCut=State.visualPalette==='clay'||(typeof masonryMaterial==='function'&&masonryMaterial(s)==='brick');
+      const clayTone=hex=>{const k=String(hex).toLowerCase(),t=typeof CLAY_VISUAL_SWATCHES!=='undefined'&&CLAY_VISUAL_SWATCHES[k];if(t)return t;
+        const c=rgb(hex),l=(c[0]+c[1]+c[2])/3;return'#'+[1.3,.74,.56].map(f=>Math.round(clamp(l*f,0,1)*255).toString(16).padStart(2,'0')).join('')};
+      const stoneTone=hex=>clayCut?clayTone(hex):(window.ConquerStoneColor?.shade(hex)||hex);
       const floorTone=hex=>State.visualPalette==='clay'?hex:(window.ConquerStoneColor?.shade(hex)||hex);
       const Z=(p,z)=>({x:p.x,y:p.y,z:(plane?G0:terrainElevation(p))+z});
       let keep,jambs;
@@ -1463,6 +1499,31 @@
       // Room exterior elements stand outside the cut: whole, lit with the shell.
       for(const t of window.ConquerRoomExterior?.triangles(s)||[])sh.face(t.pts.map(q=>Z(q.p,q.z)),t.hex);
       if(H>=HF-1e-6&&s.type==='tower'&&towerRoofStyle(s)==='battlement')facesOut(g.inner,winter?WINTER_SNOW_TOP:stoneTone('#8f857a'),sh,H-.01);
+      // Up inner tower: a floor of its own. In view, it opens like the tower (far walls, cut crest,
+      // stone floor, its room's furniture); with a floor below in view it is taken off with the roof.
+      const tfl=s.type==='tower'?cutawayFloorLevels(s):[],tIdx=tfl.findIndex(f=>f.turret);
+      const tg=tIdx>=0&&cutawayVisibleFloor(s)===tIdx&&typeof upInnerTowerCutawayGeometry==='function'?upInnerTowerCutawayGeometry(s):null;
+      if(tg){
+        const up=tg.up,to=tg.outer,ti=tg.inner,tn=Math.min(to.length,ti.length),z0=up.cut?up.cut.z:up.h,z1=up.topZ,fz=tfl[tIdx].z;
+        // Pitched tower: the truncated roof stays round the turret's foot, so the turret does not float.
+        if(up.cut){
+          const e=up.cut.eave,r=up.cut.ring,ne=e.length,rr=ne>8,cols=winter?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP]:['#303236','#3a3d42','#44474c'];
+          const tone=c=>clayCut&&!winter?clayTone(c):c;
+          for(let i=0;i<ne;i++){const j=(i+1)%ne;sh.face([Z(r[i],up.cut.z),Z(r[j],up.cut.z),Z(e[j],up.h),Z(e[i],up.h)],tone(rr?cols[i%3]:winter?(i%2?WINTER_SNOW_A:WINTER_SNOW_B):(i%2?'#34363a':'#42454a')))}
+        }
+        const tin=to.slice(0,tn).map(o=>ti.reduce((b,p)=>Math.hypot(p.x-o.x,p.y-o.y)<Math.hypot(b.x-o.x,b.y-o.y)?p:b,ti[0]));
+        const topen=cutawayTransparentFaceIndexes({type:'tower',shape:tg.round?'round':'square',x:up.apex.x,y:up.apex.y},{outer:to.slice(0,tn),inner:tin});   // by the turret's own shape
+        for(let i=0;i<tn;i++){
+          if(topen.has(i))continue;
+          const j=(i+1)%tn;
+          sh.face([Z(to[i],z0),Z(to[j],z0),Z(to[j],z1),Z(to[i],z1)],stoneTone(castleSideShade(to[i],to[j])));
+          m.face([Z(tin[i],fz),Z(tin[j],fz),Z(tin[j],z1),Z(tin[i],z1)],stoneTone('#61574f'));
+          sh.face([Z(to[i],z1),Z(to[j],z1),Z(tin[j],z1),Z(tin[i],z1)],winter?WINTER_SNOW_TOP:stoneTone('#8f857a'));
+        }
+        for(const v of cutawayBoundaryVertices(topen,tn))m.face([Z(to[v],z0),Z(tin[v],z0),Z(tin[v],z1),Z(to[v],z1)],stoneTone('#82776c'));
+        m.face(tin.map(p=>Z(p,fz)),floorTone('#7f796f'));
+        for(let i=0;i<tn;i++){const j=(i+1)%tn;m.face([Z(tin[i],z0),Z(tin[j],z0),Z(tin[j],fz),Z(tin[i],fz)],floorTone('#5a554d'))}
+      }
       // Floors: slab, then tiles (stone ground floor) or planks (wooden upper floors) clipped to the room.
       const basis=cutawayFloorBasis(s,g),ca=Math.cos(basis.angle),sa=Math.sin(basis.angle);
       const L=(u,v)=>({x:basis.center.x+u*ca-v*sa,y:basis.center.y+u*sa+v*ca});
@@ -1663,7 +1724,7 @@
     }
     pumpGroundTiles(gl);
     // Heraldry: flags and drapes of the timber fortifications take the realm's colours.
-    const bSig=[season,State.visualPalette,State.stonePaletteId,window.ConquerCoast?.shore()?.stretches?.length||0,State.seed,urbanRev(),structuresSig('buildings'),window.ConquerStorageYard?.visualSignature?.()||'',civicCut,shopCut,shopFront,JSON.stringify(State.heraldry||null)].join('|');
+    const bSig=[season,State.visualPalette,State.stonePaletteId,window.ConquerCoast?.shore()?.stretches?.length||0,State.seed,urbanRev(),structuresSig('buildings'),window.ConquerWallSheds?.signature?.()||0,window.ConquerStorageYard?.visualSignature?.()||'',civicCut,shopCut,shopFront,JSON.stringify(State.heraldry||null)].join('|');
     if(S.sig.buildings!==bSig){const a=performance.now();upload(gl,'buildings',buildBuildings());S.sig.buildings=bSig;st.buildingsMs=performance.now()-a}
     // The selected church / inn in cutaway: its section plane follows the camera quarter-turn.
     const cutSig=[bSig,rot,plan].join('|');

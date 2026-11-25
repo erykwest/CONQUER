@@ -120,20 +120,20 @@ export const T = {
     controls: {
       tier: 'Impronta', height: 'Livelli', rotation: 'Angolo', roof: 'Tetto', woodRoof: 'Tetto', roofCover: 'Copertura',
       base: 'Base', skin: 'Rivestimento', side: 'Lato esterno', cutaway: 'Spaccato',
-      weapon: 'Arma', bartizan: 'Garitte', bartizanCount: 'N. garitte', roofShape: 'Falde', civicLevel: 'Sviluppo', plaza: 'Variante', upper: 'Piano alto', hoarding: 'Ballatoio', bell: 'Campana', lookout: 'Vedetta', outpost: 'Avamposto', signalFire: 'Fuoco di segnalazione', innerRoof: 'Tetto interno',
-      wallStair: 'Scala al camminamento', wallStairPos: 'Posizione scala', wallPatrols: 'Pattuglie del giro', moat: 'Fossato'
+      weapon: 'Arma', bartizan: 'Garitte', bartizanCount: 'N. garitte', roofShape: 'Falde', civicLevel: 'Sviluppo', plaza: 'Variante', upper: 'Piano alto', hoarding: 'Ballatoio', bell: 'Campana', lookout: 'Vedetta', outpost: 'Avamposto', signalFire: 'Fuoco di segnalazione', innerRoof: 'Tetto interno', upInnerTower: 'Torretta centrale',
+      wallStair: 'Scala al camminamento', leanTo: 'Addossato', wallStairPos: 'Posizione scala', wallPatrols: 'Pattuglie del giro', moat: 'Fossato'
     },
     words: {
       battlement: 'Merlato', machicolation: 'Caditoie', machicolationItalian: 'Caditoie all\'italiana', pitched: 'Falde', open: 'Piattaforma', pitched4: 'Falde · 4 pali', cover_shingle: 'Scandole', cover_thatch: 'Paglia', cover_turf: 'Zolle erbose',
       masonry: 'Pietra', timber: 'Graticcio',
-      standard: 'Standard', buttress: 'Contrafforti', splayed: 'A scarpa', arcade: 'Porticato', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', innerRoofOff: 'Nessuno', innerRoofOn: 'Dentro i merli',
+      standard: 'Standard', buttress: 'Contrafforti', splayed: 'A scarpa', arcade: 'Porticato', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', innerRoofOff: 'Nessuno', innerRoofOn: 'Dentro i merli', upInnerTowerOff: 'Nessuna', upInnerTowerRound: 'Rotonda', upInnerTowerSquare: 'Quadrata',
       none: 'Nessuna', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide · 4 falde', gable: '2 falde', hip: '4 falde con colmo', paved: 'Lastricata', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana d\'allarme',
       lookoutOff: 'Nessuna vedetta', lookoutOn: 'Vedetta · 1 soldato', outpost: 'Avamposto · 60 oro, 40 pietra, 20 legno · 4 giorni', pyre: 'Pira · 30 legno', pyreRebuild: 'Ricostruisci la pira · 30 legno',
-      stairWood: 'Scala lignea · 4 oro, 14 legno', stairStone: 'Scala lapidea · 8 oro, 22 pietra', stairPos_start: 'Inizio muro', stairPos_middle: 'Centro', stairPos_end: 'Fine muro',
+      stairWood: 'Scala lignea · 4 oro, 14 legno', stairStone: 'Scala lapidea · 8 oro, 22 pietra', stairPos_start: 'Inizio muro', stairPos_middle: 'Centro', stairPos_end: 'Fine muro', lean_wood: 'Addossato in legno e paglia', lean_stone: 'Addossato in pietra', lean_brick: 'Addossato in mattoni',
       moatDry: 'Fossato secco sul lato esterno', moatWater: 'Fossato d\'acqua sul lato esterno · solo a quota 0'
     },
     // Short labels shown on option buttons; the full word goes to the tooltip.
-    short: { masonry: 'Pietra', timber: 'Graticcio', battlement: 'Merli', machicolation: 'Caditoie', machicolationItalian: 'Italiane', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', innerRoofOff: '—', innerRoofOn: 'Interno', none: '—', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide', gable: '2 falde', hip: 'Colmo', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana', lookoutOff: '—', lookoutOn: 'Vedetta', outpost: 'Avamposto', pyre: 'Pira', pyreRebuild: 'Ricostruisci', stairWood: 'Lignea', stairStone: 'Lapidea', stairPos_start: 'Inizio', stairPos_middle: 'Centro', stairPos_end: 'Fine', moatDry: 'Secco', moatWater: 'Acqua' },
+    short: { masonry: 'Pietra', timber: 'Graticcio', battlement: 'Merli', machicolation: 'Caditoie', machicolationItalian: 'Italiane', pitched: 'Falde', open: 'Aperta', pitched4: 'Falde', standard: 'Dritta', buttress: 'Rinforzi', splayed: 'Scarpa', arcade: 'Portico', hoarding: 'Ballatoio', hoardingOff: 'Smontato', hoardingOn: 'Montato', innerRoofOff: '—', innerRoofOn: 'Interno', upInnerTowerOff: '—', upInnerTowerRound: 'Rotonda', upInnerTowerSquare: 'Quadrata', none: '—', mangonel: 'Mangano', ballista: 'Balista', spire: 'Guglia', pyramid: 'Piramide', gable: '2 falde', hip: 'Colmo', paved: 'Lastre', fountain: 'Fontana', garden: 'Giardino', bell: 'Campana', lookoutOff: '—', lookoutOn: 'Vedetta', outpost: 'Avamposto', pyre: 'Pira', pyreRebuild: 'Ricostruisci', stairWood: 'Lignea', stairStone: 'Lapidea', stairPos_start: 'Inizio', stairPos_middle: 'Centro', stairPos_end: 'Fine', lean_wood: 'Legno', lean_stone: 'Pietra', lean_brick: 'Mattoni', moatDry: 'Secco', moatWater: 'Acqua' },
     flip: 'Inverti', on: 'Attivo', off: 'Spento', toggles: 'Opzioni',
     rotateLeft: 'Ruota −15°', rotateRight: 'Ruota +15°', rotateFlip: 'Gira di 180°',
     facts: {
@@ -265,6 +265,7 @@ export const T = {
     cutaway: 'Apre la facciata verso la camera e mostra le stanze.',
     weapon: 'Solo su torri T2 senza tetto a falde né ballatoio.',
     roofShape: 'Solo estetica, stesso costo; con il tetto a falde. 2 falde: timpani in pietra. Colmo: 4 falde su un colmo lungo metà del tetto. Con il colmo, due bandiere.',
+    upInnerTower: 'Torretta di un piano al centro della piazza merlata, larga quanto una torre di un taglio più piccola (W3 → W2, W2 → W1), rotonda o quadrata qualunque sia la forma della torre, con tetto a punta. Solo torri in pietra W2/W3 con merli o caditoie; esclude tetto interno, arma e fuoco di segnalazione, e toglie il bracere.',
     innerRoof: 'Tetto a piramide o cono arretrato dentro i merli su un cordolo: il cammino di ronda resta libero tra tetto e merli. Torri in pietra T2+ con merli o caditoie, senza arma né fuoco di segnalazione in cima. Toglie il bracere della piazza. Nessuna stanza sotto (Colombaia, Falconiera e Campana restano sul tetto a falde).',
     bartizan: 'Quattro garitte d\'angolo su mensole, solo torri grandi (T3) quadrate o rotonde. 3 tiratori per garitta, che colpiscono anche il piede della torre fino a 1U.',
     hoarding: 'Galleria di legno montata in guerra attorno alla cima, sotto la gronda se c\'è il tetto; il tetto resta. Non con le caditoie né con le garitte.',

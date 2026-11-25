@@ -153,6 +153,8 @@ const StructureCommands=(()=>{
   // Wall-walk stair (BC-251105-01/02, settlement-wall-stairs.js): none / timber / masonry, and where.
   function setWallStair(id,kind){const target=find(id),S=window.ConquerWallStairs;return !!target&&!!S&&S.setKind(target,kind)}
   function setWallStairPos(id,pos){const target=find(id),S=window.ConquerWallStairs;return !!target&&!!S&&S.setPos(target,pos)}
+  // Lean-to (settlement-lean-to.js): an upgrade of the wall, in timber, stone or brick.
+  function setWallLeanTo(id,material){const target=find(id),L=window.ConquerLeanTo;return !!target&&target.type==='wall'&&!!L&&L.setOnWall(target,material)}
   function toggleCutaway(id){
     const target=find(id);if(!cutawayEligible(target))return false;
     target.cutaway=!structureCutaway(target);
@@ -235,6 +237,16 @@ const StructureCommands=(()=>{
     if(!setStructureVariant(target,'innerRoof',value==='on'?'on':'off'))return false;
     refresh(target,false);
     status(target.innerRoof==='on'?'Inner roof built inside the merlons':'Inner roof removed');
+    return true;
+  }
+  // Up inner tower (torretta centrale): one-storey turret on the deck of a W2/W3 stone tower.
+  function setTowerUpInnerTower(id,value){
+    const target=find(id);if(!target||target.type!=='tower')return false;
+    value=['round','square'].includes(value)?value:'off';
+    if(value!=='off'&&!towerUpInnerTowerAllowed(target)){status('Torretta centrale: solo torri in pietra W2/W3 con merli o caditoie, senza tetto interno, arma o fuoco di segnalazione');return false}
+    if(!setStructureVariant(target,'upInnerTower',value))return false;
+    refresh(target,false);
+    status(value==='off'?'Torretta centrale rimossa':'Torretta centrale '+(value==='round'?'rotonda':'quadrata')+' costruita');
     return true;
   }
   // Alarm bell on the roof apex of a T1-T2 tower with a pitched roof (settlement-alarm-bells.js).
@@ -499,6 +511,7 @@ const StructureCommands=(()=>{
         d.controls.push(choice('roof','setTowerRoof',[{value:'battlement',word:'battlement',disabled:framed},{value:'machicolation',word:'machicolation',disabled:framed},{value:'machicolationItalian',word:'machicolationItalian',disabled:framed||s.shape==='half'},{value:'pitched',word:'pitched'}],towerRoofMenuValue(s)));
         if(s.shape!=='half')d.controls.push(hoardingChoice(s));
         if(s.shape!=='half')d.controls.push(choice('innerRoof','setTowerInnerRoof',[{value:'off',word:'innerRoofOff'},{value:'on',word:'innerRoofOn',disabled:!towerInnerRoofAllowed(s)}],towerInnerRoofMounted(s)?'on':'off'));
+        if(s.shape!=='half'&&[2,3].includes(towerTier(s))){const ok=!towerUpInnerTowerAllowed(s);d.controls.push(choice('upInnerTower','setTowerUpInnerTower',[{value:'off',word:'upInnerTowerOff'},{value:'round',word:'upInnerTowerRound',disabled:ok},{value:'square',word:'upInnerTowerSquare',disabled:ok}],towerUpInnerTower(s)||'off'))}
         d.controls.push(choice('weapon','setTowerWeapon',[{value:'none',word:'none'},{value:'mangonel',word:'mangonel',disabled:!towerTopWeaponAllowed(s)},{value:'ballista',word:'ballista',disabled:!towerTopWeaponAllowed(s)}],structureVariant(s,'topWeapon')));
         if((s.shape||'square')==='square'&&variantSchema(s)?.roofShape){
           const flat=towerRoofStyle(s)!=='pitched';
@@ -539,9 +552,16 @@ const StructureCommands=(()=>{
       d.controls.push(choice('skin','setSkin',[{value:'standard',word:'standard'},{value:'machicolation',word:'machicolation',disabled:narrow},{value:'hoarding',word:'hoarding'}],wallSkin(s)));
       const WS=window.ConquerWallStairs;
       if(WS&&!building){
-        const ok=WS.eligible(s),cur=WS.stair(s)?.kind||'none';
+        const ok=WS.eligible(s)&&!window.ConquerLeanTo?.ofWall(s),cur=WS.stair(s)?.kind||'none';
         d.controls.push(choice('wallStair','setWallStair',[{value:'none',word:'none'},{value:'wood',word:'stairWood',disabled:!ok||cur==='stone'},{value:'stone',word:'stairStone',disabled:!ok}],cur));
         if(cur!=='none')d.controls.push(choice('wallStairPos','setWallStairPos',Object.keys(WS.POSITIONS).map(v=>({value:v,word:'stairPos_'+v})),s.wallStair.pos||'middle'));
+      }
+      // Lean-to: an upgrade of an H2 wall, offered here only (no free-standing build tool).
+      const LT=window.ConquerLeanTo;
+      if(LT&&!building){
+        const lt=LT.ofWall(s),cur=lt?(lt.leanMaterial||'wood'):'none',can=!lt&&LT.make(s,'wood').ok;
+        d.controls.push(choice('leanTo','setWallLeanTo',[{value:'none',word:'none'},
+          ...['wood','stone','brick'].map(v=>({value:v,word:'lean_'+v,disabled:lt?cur!==v:!can}))],cur));
       }
     }
     // Patrols of the ring of walls this wall belongs to (settlement-wall-patrols.js, MIL-WALL-01).
@@ -592,10 +612,10 @@ const StructureCommands=(()=>{
     return d;
   }
 
-  const commands={setConstructionPriority,setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setLonghouseCover,setGateRoof,setGateUpper,setTowerUpper,setBuiltUpper,setSkin,setWallStair,setWallStairPos,toggleCutaway,stepCutawayFloor,flipSide,digMoat,
-    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBartizanCount,setTowerBell,setTowerInnerRoof,setTowerLookout,setTowerOutpost,setTowerSignalFire,setWallPatrols,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,startUpgrade,
+  const commands={setConstructionPriority,setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setLonghouseCover,setGateRoof,setGateUpper,setTowerUpper,setBuiltUpper,setSkin,setWallStair,setWallStairPos,setWallLeanTo,toggleCutaway,stepCutawayFloor,flipSide,digMoat,
+    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBartizanCount,setTowerBell,setTowerInnerRoof,setTowerUpInnerTower,setTowerLookout,setTowerOutpost,setTowerSignalFire,setWallPatrols,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,startUpgrade,
     describeStructure};
-  for(const name of ['setTier','setHeight','setKeepFloorPlan','setTowerBase','setTowerRoof','setHoarding','setWoodRoof','setGateRoof','setGateUpper','setTowerUpper','setBuiltUpper','setSkin','setTowerWeapon','setTowerRoofShape','setTowerBartizan','setTowerBartizanCount','setTowerBell','setTowerInnerRoof','setCivicLevel','setPlazaVariant']){
+  for(const name of ['setTier','setHeight','setKeepFloorPlan','setTowerBase','setTowerRoof','setHoarding','setWoodRoof','setGateRoof','setGateUpper','setTowerUpper','setBuiltUpper','setSkin','setTowerWeapon','setTowerRoofShape','setTowerBartizan','setTowerBartizanCount','setTowerBell','setTowerInnerRoof','setTowerUpInnerTower','setCivicLevel','setPlazaVariant']){
     const execute=commands[name];
     commands[name]=(id,...args)=>{
       const target=find(id);if(!target||underConstruction(target))return false;

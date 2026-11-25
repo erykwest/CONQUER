@@ -10,7 +10,7 @@ const root=__dirname+'/../src/';
 function fixture(structures,stock={gold:100,wood:100,stone:100}){
   const State={structures,resources:stock},log=[];
   const ctx=vm.createContext({State,window:{},Math,Number,Object,Array,Map,Set,String,JSON,
-    underConstruction:s=>!!s.building,structureHeight:s=>[1.15,2.10][(s.level||1)-1],wallTier:s=>s.tier||2,
+    underConstruction:s=>!!s.building,structureHeight:s=>[1.15,2.35][(s.level||1)-1],wallTier:s=>s.tier||2,
     wallExteriorSide:s=>s.flip?-1:1,pointRadius:()=>.75,structureInteriorVector:()=>({x:1,y:0}),
     w2s:(p,z)=>({x:p.x*10,y:p.y*10-z*10}),status:m=>log.push(m),
     canAfford:c=>Object.entries(c).every(([k,v])=>(stock[k]||0)>=v),
@@ -52,7 +52,7 @@ const wall=(id,a,b,o={})=>({id,type:'wall',a,b,width:.5,level:1,tier:2,...o});
   assert.ok(Math.abs(top.z-1.25)<1e-9,'it comes out at the walk height');
   const tris=WS.triangles(W),zs=tris.flatMap(t=>t.pts.map(q=>q.z)),xs=tris.flatMap(t=>t.pts.map(q=>q.p.x));
   assert.ok(tris.length>50,'timber mesh emitted');
-  assert.ok(Math.min(...zs)>=-1e-6&&Math.abs(Math.max(...zs)-1.25*1.24)<.02,'from the ground up to the walk (handrail above)');
+  assert.ok(Math.min(...zs)>=-1e-6&&Math.abs(Math.max(...zs)-1.15)<.02,'from the ground up to the wall top, flush with the walk floor');
   assert.ok(Math.min(...xs)>=.25-1e-6,'the flight stands against the interior face, not in the masonry');
   const yTop=top.y,yFoot=WS.layout(W).foot.y;
   assert.ok(yTop>yFoot,'the walk is entered at the top of the flight');
