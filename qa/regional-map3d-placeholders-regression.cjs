@@ -78,7 +78,14 @@ assert.equal(paintOne({kind:'port',x:10,y:10}).length,tokens.models.port.tris,'p
 assert.equal(paintOne({kind:'ship',x:10,y:10}).length,tokens.models.ship.tris,'ship token');
 const blue=paintOne({kind:'ship',x:10,y:10,colors:['#2255cc','#ddaa33']});
 assert.ok(blue.some(f=>{const [r,g,b]=[1,3,5].map(i=>parseInt(f.slice(i,i+2),16));return b>r*1.6&&b>g}),'sail takes the owner c1');
-assert.ok(!paintOne({kind:'ship',x:10,y:10}).some(f=>{const [r,g,b]=[1,3,5].map(i=>parseInt(f.slice(i,i+2),16));return b>r*1.6&&b>g}),'no owner colour without heraldry');
+const rgbOf=f=>[1,3,5].map(i=>parseInt(f.slice(i,i+2),16));
+for(const kind of ['ship','castle']){
+  const plain=paintOne({kind,x:10,y:10});
+  assert.ok(!plain.some(f=>{const [r,g,b]=rgbOf(f);return b>r*1.6&&b>g}),kind+': no owner colour without heraldry');
+  assert.ok(!plain.some(f=>{const [r,g,b]=rgbOf(f);return r>g*2.2&&r>b*2.2}),kind+': not the default heraldry red (the player\'s) without heraldry');
+}
+assert.ok(paintOne({kind:'ship',x:10,y:10,colors:[...marker.HERALDRY_DEFAULT]}).some(f=>{const [r,g,b]=rgbOf(f);return r>g*2.2&&r>b*2.2}),'the default red only when that heraldry is supplied');
+assert.ok(demo.filter(m=>m.kind==='castle'||m.kind==='ship').every(m=>m.colors&&m.ownerId),'example castle and ship carry their example owner colours');
 // Without the sprite assets (Node: no Image) troops keep the heraldic cylinders.
 assert.ok(paintOne({kind:'troops',x:10,y:10,colors:['#224466','#ddaa33']}).length>=24,'troops fall back to the two cylinders');
 // groundZ lifts land markers onto the terrain; ships stay on the water.

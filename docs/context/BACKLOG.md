@@ -11,6 +11,7 @@
 - [x] Ricolorazione runtime delle sprite delle truppe (c1/c2 di default → `colors` del marker), senza toccare legno di lance e archi.
 - [ ] Per i nemici valutare l'elmo a cuffia del gioco (oggi tutte le truppe hanno l'elmo del regno).
 - [ ] Livello reale dei villaggi: il World Lab non lo espone ancora, i villaggi reali sono L1 (L1–L4 solo negli esempi).
+- [ ] Costo di ridisegno con molti villaggi reali (~56 triangoli ciascuno, tutti L1): oggi 0 simboli reali, da misurare quando il World Lab li espone.
 - [ ] Truppe ordinate in profondità con alberi e canneti (oggi stanno sulla tela dei marker, sopra la vegetazione).
 
 ### 2026-11-17 — LOCAL-HEX-01 · Mappa locale ereditata dal territorio esagonale

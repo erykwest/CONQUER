@@ -1,0 +1,49 @@
+name: Region 3D regression
+
+# Abort superseded PR runs of this workflow (never cancel scheduled/main runs).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+on:
+  pull_request:
+    branches: [main, 3dregionmap]
+    paths:
+      - 'lab/3dregionmap.html'
+      - 'lab/3dregionmap.js'
+      - 'src/regional-map3d-geometry.js'
+      - 'src/regional-map3d-placeholders.js'
+      - 'src/assets/region-token-models.js'
+      - 'src/assets/region-troop-sprites.js'
+      - 'src/assets/regional/**'
+      - 'tools/blender/build_region_tokens.py'
+      - 'tools/bake-region-troops.mjs'
+      - 'qa/regional-map3d-regression.cjs'
+      - 'qa/regional-map3d-placeholders-regression.cjs'
+      - 'qa/region-tokens-regression.cjs'
+      - '.github/workflows/region3d-regression.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  region3d:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Check affected scripts
+        run: |
+          node --check lab/3dregionmap.js
+          node --check src/regional-map3d-geometry.js
+          node --check src/regional-map3d-placeholders.js
+      - name: Regional 3D mesh, selection and rivers
+        run: node qa/regional-map3d-regression.cjs
+      - name: Regional markers drawn as tokens (fallback primitives, owner colours, levels)
+        run: node qa/regional-map3d-placeholders-regression.cjs
+      - name: Regional token kit (budgets, marker map, troop sprites, Asset Lab)
+        run: node qa/region-tokens-regression.cjs

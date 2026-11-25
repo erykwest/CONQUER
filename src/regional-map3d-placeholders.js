@@ -89,7 +89,7 @@
         markers.push({kind:'village',id:'example-village-'+(k+1),...p,level:k+1,demo:true});
     });
     const l1=at(4),l2=at(9);
-    if(l1)markers.push({kind:'castle',id:'example-castle',...l1,demo:true});
+    if(l1)markers.push({kind:'castle',id:'example-castle',...l1,colors:[...HERALDRY_DEFAULT],demo:true,ownerId:'PLAYER_001'});
     if(l2)markers.push({kind:'troops',id:'example-troops',...l2,colors:[...HERALDRY_DEFAULT],demo:true,ownerId:'PLAYER_001'});
     const shoreline=(scene?.coastlines||[]).find(e=>e.macroIds?.length===2&&e.macroIds.some(id=>!['sea','lake'].includes(terrain[id])));
     if(shoreline){
@@ -117,7 +117,7 @@
         .sort((p,q)=>Math.hypot(q.x-a.x,q.y-a.y)-Math.hypot(p.x-a.x,p.y-a.y))
         .find(p=>Math.hypot(p.x-a.x,p.y-a.y)<snapshot.width*.15)
         ||{x:a.x+Math.min(35,snapshot.width*.03),y:a.y};
-      markers.push({kind:'ship',id:'example-ship',...a,route:[a,b],periodMs:14000,demo:true});
+      markers.push({kind:'ship',id:'example-ship',...a,route:[a,b],periodMs:14000,colors:[...HERALDRY_DEFAULT],demo:true,ownerId:'PLAYER_001'});
     }
     return normalize(markers);
   }
@@ -202,9 +202,12 @@
     let h=2166136261;for(const ch of String(m.id||m.x+','+m.y)){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}
     return ((h>>>0)%360)*Math.PI/180;
   };
+  // Without the owner's heraldry the flag and sail stay unbleached canvas (build_ships.py 'sail'):
+  // never the default heraldry red, which is the player's own colour.
+  const NEUTRAL_TEAM='#ece2c8';
   function tokenPaint(models,key,colors){
     const base=key.replace(/Dark$/,'');
-    if(base==='team'&&colors)return colors[0];
+    if(base==='team')return colors?colors[0]:NEUTRAL_TEAM;
     const i=models.paletteKeys.indexOf(base);
     return models.palette[i>=0?i:models.paletteKeys.indexOf(key)];
   }
