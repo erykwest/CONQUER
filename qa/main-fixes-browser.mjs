@@ -29,7 +29,7 @@ try{
    State.structures.push(gate);ConquerGates.installPortcullis(gate);ConquerGates.togglePortcullis(gate);
    invalidateSceneCache();selectStructure(gate);
  });
- for(let i=0;i<5;i++)await page.locator('[data-siege-test="ram"]').click();
+ for(let i=0;i<5;i++)await page.evaluate(()=>document.querySelector('#devPanel [data-siege-test="ram"]').click());
  await page.evaluate(async()=>{
    for(let i=0;i<6;i++){
      State.view.rotation=i%4;State.daylightOverride=i%2?'night':'day';

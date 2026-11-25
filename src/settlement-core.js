@@ -941,6 +941,10 @@ function constructionCost(s){
   if(s?.masonryMaterial==='brick'&&cost.stone>0){cost.clay=(cost.clay||0)+cost.stone;delete cost.stone}
   return cost;
 }
+// Resource glyph with its Italian name as tooltip: the inspector shows icons, not resource words.
+const RES_ICONS={gold:'🪙',food:'🌾',wood:'🪵',stone:'🪨',clay:'🧱',metal:'⛓',equipment:'⚔',horses:'🐎',population:'👥',materials:'📦'};
+const RES_NAMES_IT={gold:'Oro',food:'Cibo',wood:'Legno',stone:'Pietra',clay:'Argilla',metal:'Metallo',equipment:'Equipaggiamento',horses:'Cavalli',population:'Popolazione',materials:'Materiali'};
+function resIcon(k){return RES_ICONS[k]?'<span class="res-ic" title="'+RES_NAMES_IT[k]+'" aria-label="'+RES_NAMES_IT[k]+'">'+RES_ICONS[k]+'</span>':String(k)}
 function costText(cost){const icons={gold:'🪙',stone:'🪨',clay:'🧱',wood:'🪵',metal:'⛓'};const parts=RES_ORDER.filter(k=>(cost?.[k]||0)>0).map(k=>`${icons[k]} ${cost[k]}`);return parts.length?parts.join(' · '):'free'}
 // Before founding, the sandbox only permits placement of the founding well.
 // Once founded, the economic treasury and castle store own all construction assets.
