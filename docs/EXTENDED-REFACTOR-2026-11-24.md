@@ -32,7 +32,7 @@ ROADMAP invariata: obiettivi di prodotto invariati. DECISIONS aggiornata per i n
 
 ## Armonizzazione delle PR 287 e 304 (25 novembre)
 
-La PR #304 è la proposta canonica; la #287 conserva la provenienza storica ed è superata dopo la verifica del consolidamento. Nessuna delle due è descritta come già merge. Base aggiornata a main `fc2c3984`; history pubblicata conservata con merge del main, senza riscrivere gli SHA revisionati.
+La PR #304 è la proposta canonica; la #287 conserva la provenienza storica ed è superata dopo la verifica del consolidamento. Nessuna delle due è descritta come già merge. Base aggiornata a main `794c6e28`; history pubblicata conservata con merge del main, senza riscrivere gli SHA revisionati.
 
 | Modifica della #287 | Owner nella #304 | Esito del confronto |
 |---|---|---|

@@ -2,7 +2,11 @@
 
 ### 2026-11-25 — PR #287 armonizzata nella #304
 
-Riconciliati refactor architetturale ed esteso, mantenendo le integrazioni di main fino a `fc2c3984`. Recuperati controllo CI specialistico Builder, rapporto originale e alias decisionale. Catalogo UI2 con nuova torre lignea H3; protetta la lettura delle etichette risorsa da proprietà ereditate conservando l'ispettore compatto. Stato di integrazione/QA dello SHA consolidato nella PR #304; nessun deploy.
+Riconciliati refactor architetturale ed esteso, mantenendo le integrazioni di main fino a `794c6e28`. Recuperati controllo CI specialistico Builder, rapporto originale e alias decisionale. Catalogo UI2 con nuova torre lignea H3; protetta la lettura delle etichette risorsa da proprietà ereditate conservando l'ispettore compatto. Stato di integrazione/QA dello SHA consolidato nella PR #304; nessun deploy.
+### 2026-11-25 — GRAPHSCHIC · Palette GRAFICA: bordi e gradienti (`GRAPHSCHIC`)
+
+Nuova palette GRAFICA nel Profilo (tab Generale, pulsante «Apri palette GRAFICA»), con due interruttori: Bordi (contorni scuri per faccia) e Gradienti (pareti più scure alla base). Preferenze locali in `localStorage` (`settlement-graphics.js`), non fanno parte della partita; con le opzioni spente l'output è identico. Applicate alle torri (`settlement-castle3d.js`) e alle prisms (`settlement-world3d.js`). Il cambio si applica subito, senza reload (verificato: 672 linee spente, 5472 accese). Nessuna regola di gioco cambiata. Verifica visiva fatta in gioco, non nell'Asset Lab, su richiesta esplicita.
+
 
 ### 2026-11-24 — TOWER-FRAMED-TOP · Framed top per le torri quadrate W3
 

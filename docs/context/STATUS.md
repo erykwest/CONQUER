@@ -1,8 +1,14 @@
 # Livello 2 — Stato tecnico e prove
+### 2026-11-25 — GRAPHSCHIC: palette GRAFICA (`GRAPHSCHIC`)
+
+- Opzioni grafiche Bordi e Gradienti attive in gioco per torri e prisms; cambio immediato.
+- Gradiente non ancora verificato visivamente con lo stesso conteggio usato per i bordi.
+- Lab non aggiornato per questa modifica (richiesta esplicita di saltarlo).
+
 
 ### 2026-11-25 — Armonizzazione PR #287 e #304
 
-La #304 è il punto unico di integrazione del refactor: copre i comandi Builder, cache mesh e facciate della #287, più persistenza, percorsi e verifiche estese. Recuperati gate CI Builder e rapporto storico, con alias D-ARCH-261119. Riallineamento a main `fc2c3984` con torre lignea H3 nel catalogo a comandi, nuovi rifugi/ispettore, pareti/scale, basi sui pendii e ghost 3D. Nessun merge su main. Le 19 CI verdi su `be9c8cb2` sono prova della revisione precedente; il consolidamento richiede nuova QA e CI sul proprio SHA, riportate nella PR #304.
+La #304 è il punto unico di integrazione del refactor: copre i comandi Builder, cache mesh e facciate della #287, più persistenza, percorsi e verifiche estese. Recuperati gate CI Builder e rapporto storico, con alias D-ARCH-261119. Riallineamento a main `794c6e28` con torre lignea H3 nel catalogo a comandi, nuovi rifugi/ispettore, pareti/scale, basi sui pendii e ghost 3D. Nessun merge su main. Le 19 CI verdi su `be9c8cb2` sono prova della revisione precedente; il consolidamento richiede nuova QA e CI sul proprio SHA, riportate nella PR #304.
 
 ### 2026-11-24 — TOWER-FRAMED-TOP: piano alto a graticcio delle torri W3 (branch `feature/framed-top-towers`, NON MERGE)
 

@@ -3,6 +3,14 @@
 ### 2026-11-25 — ECC-REFACTOR-02 / ARCH-261119 · Unica integrazione
 
 PR #287 assorbita nella #304 senza integrazione autonoma su main. Copertura verificata per comandi/preset, catalogo, tre consumer mesh, facciate e regressioni; recuperati gate Builder e rapporto storico. Nuova opzione `frameTower3` da main preservata nella UI2 a comandi. La chiusura della #287 come superata segue la verifica della #304 armonizzata. Roadmap di prodotto invariata.
+## 2026-11-25 — GRAPHSCHIC · Palette GRAFICA
+
+- [x] Pulsante nel Profilo › Generale e palette GRAFICA con Bordi e Gradienti.
+- [x] Cambio immediato senza reload per bordi (torri).
+- [ ] Verifica visiva del gradiente con lo stesso metodo.
+- [ ] Gradienti anche sulle coperture a falda (`gabled`) in `settlement-world3d.js`.
+- [ ] Inserire le opzioni nel Lab (AGENTS.md) in una PR successiva.
+
 
 ### 2026-11-24 — TOWER-FRAMED-TOP · Piano alto a graticcio delle torri W3
 
