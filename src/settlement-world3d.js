@@ -1768,9 +1768,10 @@
       for(const v of S.castleVariants?.values()||[])for(const p of Object.values(v))gl.deleteBuffer(p.b);
       S.castleContent=castleContent;S.castleVariants=new Map();
     }
-    const cSig=castleContent+'|'+rot+'|'+plan;
+    const gfxRev=window.ConquerGraphics?.rev?.()??0;   // GRAFICA options change the castle mesh
+    const cSig=castleContent+'|'+rot+'|'+plan+'|g'+gfxRev;
     if(S.sig.castle!==cSig&&window.ConquerCastle3D?.worldMeshes){
-      const a=performance.now(),key=rot+'|'+plan;
+      const a=performance.now(),key=rot+'|'+plan+'|g'+gfxRev;
       let v=S.castleVariants.get(key);
       if(!v){
         const cm=ConquerCastle3D.worldMeshes(),mk=d=>{const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,d,gl.STATIC_DRAW);return{b,n:d.length}};
@@ -2330,7 +2331,8 @@
     drawNightLights3D,drawEmissive,finishFrame,
     pickSoldier,colliders:()=>colliders.slice(),setColliderDebug,addMesh,addHouse,addOutbuilding,finishedMesh,figure,screenAxis,prewarmFigures,_setFiguresForTest:on=>{figuresOn=!!on},FIGURE_CARD_U:SOLDIER_SIZE_U,FIGURE_FEET:SOLDIER_FEET,
     atlasCanvas:()=>soldierAtlas.canvas,frameFigures:()=>(S.frameFigures||[]).map(f=>({key:f.key||f.type,p:f.p,z:f.z,mirror:f.mirror,span:f.span||1,ox:f.ox||0,id:f.id,capsule:f.capsule||null})),atlasStats:()=>({tiles:soldierAtlas.next,capacity:FIG_COLS*FIG_COLS,resets:soldierAtlas.resets,painted:soldierAtlas.painted}),
-    invalidate:()=>{S.sig={};S.contentDirty=true},
+    // Also drops the castle variant cache: it is keyed by rotation and plan only, not by GRAFICA options.
+    invalidate:()=>{S.sig={};S.contentDirty=true;S.castleVariants?.clear?.()},
     decalFloats:()=>S.buf['decals#n']|0,   // QA: size of the baked facade decal buffer
     _debugBake:bakeGround,
     status:()=>({enabled,supported:supported(),failed:S.failed,stats:{...S.stats},sig:{...S.sig},buffers:Object.fromEntries(Object.entries(S.buf).filter(([k])=>k.endsWith('#n')))})};
