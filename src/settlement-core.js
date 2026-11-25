@@ -106,8 +106,8 @@ function blitSceneCache(layer){
     dx,dy,(r.width+m*2)*ratio,(r.height+m*2)*ratio
   );
 }
-// WORLD is the square canvas of the local map: 200U, or 240U for a hex territory opened
-// from the World Lab (its 10000 U² buildable cell plus the 50U border must fit).
+// WORLD is the square canvas of the local map: 200U, or at least 360U for a hex territory
+// opened from the World Lab (its 40000 U² buildable cell plus the 50U border must fit).
 // BUILD_MIN/BUILD_MAX are the centred square that contains the buildable zone: the legacy
 // 100U box, or the bounding square of the hex cell (fine terrain mesh, grids, clamps).
 const U=12,WORLD=window.ConquerLocalShape?.worldSize?.()||200,GRID=.5;
@@ -119,7 +119,7 @@ const BUILD_HALF=(()=>{
 const BUILD=BUILD_HALF*2,BUILD_MIN=WORLD/2-BUILD_HALF,BUILD_MAX=WORLD/2+BUILD_HALF;
 // Buildable zone and world border. A regional territory opened from the World Lab
 // carries its hex Voronoi outline (src/regional-local-shape.js): the buildable zone is
-// that polygon inside the 100U box and the world ends 50U beyond it. Without it the
+// that polygon (40000 U², ConquerLocalShape.TARGET_AREA) and the world ends 50U beyond it. Without it the
 // legacy 100U square / 200U canvas apply.
 function localShape(){return window.ConquerLocalShape?.current?.()||null}
 function inBuildZone(p,eps=0){

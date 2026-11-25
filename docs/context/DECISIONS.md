@@ -1,10 +1,18 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-LOCAL-AREA-261125 — Mappe locali esagonali raddoppiate: 40000 U² (25/11/2026)
+
+- **DECISO dal product owner (25/11/2026):** «se raddoppiamo le dimensioni delle mappe locali (area 4x)? mi sembrano piccole» · «il problema dunque è la generazione delle strade maestre … ma il raddoppio è possibile». L'area edificabile delle mappe locali **esagonali** (aperte dalla mappa regionale) passa da 10000 a **40000 U²** (lato 200 invece di 100). Restano invariati l'omogeneizzazione (stessa area per ogni territorio, verificata alla generazione), il bordo esterno a offset 50U e il divieto di bordo quadrato. Il canvas minimo `HEX_WORLD` passa da 240 a 360U.
+- **SUPERA** il punto «area interna sempre 10000 U²» di D-LOCAL-HEX-261117 (che resta valido per tutto il resto).
+- **NON cambia:** le mappe quadrate classiche (partita normale, demo per bioma): tela 200U e zona 100×100, perché raddoppiarle sposterebbe il centro di ogni salvataggio. Da decidere a parte se estenderle.
+- **Prerequisito tecnico risolto nello stesso branch:** la ricerca delle strade maestre (A*) ricostruiva la chiave della costa a ogni punto testato; ora le stesse strade si calcolano in una frazione del tempo (vedi STATUS).
+- **STATO:** implementato su `3dworldvoronoi` (base PR #281 + token regionali), non in main. ROADMAP invariata.
+
 ## D-LOCAL-HEX-261117 — Mappa locale ereditata dal territorio esagonale (17/11/2026)
 
 - **DECISO dal product owner:** la mappa locale eredita il contorno del territorio regionale; la zona edificabile ha la forma della cella e il bordo esterno è un offset di 50U. La griglia regionale è esagonale: i biomi dell'anello vengono dai vicini **fisici** (di norma 6), e strade e rotte marine vanno ripensate su questa base.
 - **CONTRATTO TECNICO:** `ConquerLocalShape.create(shape)` → `build`, `outer`, `sectors`, `runs`, `weights(p,centro)`, `inBuild`, `inWorld`, `runSample(id,t)`. I bordi stradali esagonali si chiamano `hex:<macroId>`; `edgeSample` li risolve. Senza `shape` vale il modello quadrato.
-- **DECISO dal product owner (17/11/2026):** l'area interna è **sempre 10000 U²** indipendentemente dalla forma regionale: alla generazione si verifica e, se serve, si scala il perimetro; il fattore di omogeneizzazione viene salvato. Il bordo esterno resta l'offset di 50U, **non** un bordo quadrato. Il canvas quadrato interno al codice (`WORLD`) parte da 240U e si allarga se il bordo non ci sta; le mappe quadrate classiche restano a 200U.
+- **DECISO dal product owner (17/11/2026), area superata il 25/11 da D-LOCAL-AREA-261125 (40000 U²):** l'area interna è **sempre 10000 U²** indipendentemente dalla forma regionale: alla generazione si verifica e, se serve, si scala il perimetro; il fattore di omogeneizzazione viene salvato. Il bordo esterno resta l'offset di 50U, **non** un bordo quadrato. Il canvas quadrato interno al codice (`WORLD`) parte da 240U e si allarga se il bordo non ci sta; le mappe quadrate classiche restano a 200U.
 - **STATO:** implementato su `feature/local-hex-shape`, non in main.
 
 ## D-THREATS-261116 — Generatore di minacce (16/11/2026)

@@ -43,7 +43,7 @@
     try{built=ring(demo.shape.polygon)?window.ConquerLocalShape?.create({polygon:demo.shape.polygon,neighbors}):null}
     catch(error){console.warn('CONQUER_LOCAL_SHAPE_REJECTED',error)}
     // Homogenization is checked here, once, at generation (create() throws if the
-    // buildable area is not 10000 U²) and saved with the territory's local map.
+    // buildable area is not ConquerLocalShape.TARGET_AREA, 40000 U²) and saved with the territory's local map.
     // Neighbours across a regional river edge: the local river runs on that shared border.
     const riverNeighbors=(Array.isArray(demo.shape.riverNeighbors)?demo.shape.riverNeighbors:[]).map(String)
       .filter(id=>neighbors.some(n=>n.id===id)).slice(0,6);

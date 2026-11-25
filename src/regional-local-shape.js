@@ -2,13 +2,14 @@
 // Local map outline inherited from the regional HEX Voronoi territory.
 //
 // The territory outline (regional coordinates; the union of its cells) is
-// uniformly scaled, north up, so that its area is ALWAYS the legacy buildable
-// area (100x100 = 10000 U²), whatever its regional shape: the scale factor is
+// uniformly scaled, north up, so that its area is ALWAYS the local buildable
+// area (200x200 = 40000 U² since 25/11/2026, D-LOCAL-AREA-261125; it was
+// 100x100), whatever its regional shape: the scale factor is
 // the "homogenization", checked once at generation and saved with the map.
 // That polygon IS the buildable zone. The world border is the same polygon
 // offset outwards by OFFSET (50U, rounded corners; a true offset, concave
 // territories included) - never a square. The square canvas (WORLD) is sized
-// to contain that border: at least 240U (HEX_WORLD), more for an elongated
+// to contain that border: at least 360U (HEX_WORLD), more for an elongated
 // territory. Legacy square maps keep 200U. The 50U ring is split
 // among the territory's PHYSICAL regional neighbours by intersecting it with
 // their own Voronoi cells, carried into the same local frame: a vertex of the
@@ -16,7 +17,7 @@
 // the two neighbours. Neighbour counts follow the regional geometry (often 6,
 // 5 or 7 after jitter), never a fixed 8-slot compass.
 (function(root){
-  const OFFSET=50,BOX=100,TARGET_AREA=BOX*BOX,MARGIN=1,LEGACY_WORLD=200,HEX_WORLD=240;
+  const OFFSET=50,BOX=200,TARGET_AREA=BOX*BOX,MARGIN=1,LEGACY_WORLD=200,HEX_WORLD=360;
   const FEATHER=25,SECTOR_FEATHER=10,ARC_STEP=Math.PI/18,PERIMETER_SAMPLES=720;
 
   const finitePoint=p=>p&&Number.isFinite(+p.x)&&Number.isFinite(+p.y);
@@ -242,9 +243,15 @@
         if(!best||run.length>best.length)best=run;
       }
       if(!best||best.length<4)return null;
+      // Samples taken only through the tolerance (just past a vertex, on the next edge) bend the
+      // end tangent along the outline, and the extension then runs inside the ring instead of
+      // leaving it: trim them so each end continues the shared edge itself.
+      const onShared=p=>want.some(s=>ringDistance(p,s.polygon)<=.5);
+      while(best.length>4&&!onShared(best[0]))best.shift();
+      while(best.length>4&&!onShared(best[best.length-1]))best.pop();
       const extend=(end,prev)=>{
         const dx=end.x-prev.x,dy=end.y-prev.y,l=Math.hypot(dx,dy)||1,out=[];
-        for(let s=2;s<=OFFSET*2;s+=2){const p={x:end.x+dx/l*s,y:end.y+dy/l*s};out.push(p);if(signedDistance(p,outer)>2)break}
+        for(let s=2;s<=OFFSET*3;s+=2){const p={x:end.x+dx/l*s,y:end.y+dy/l*s};out.push(p);if(signedDistance(p,outer)>2)break}
         return out;
       };
       const head=extend(best[0],best[Math.min(3,best.length-1)]).reverse();

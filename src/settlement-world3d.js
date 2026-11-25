@@ -30,8 +30,9 @@
   const CAMERA=`
     uniform vec2 uRot;uniform float uS;uniform vec2 uV;uniform float uPlan;uniform vec2 uVp;uniform vec2 uDepth;
     // uRot = (cos, sin) of the camera yaw: same map as rotateViewPoint, any angle.
-    vec2 rotq(vec2 p){vec2 d=p-vec2(100.0);
-      return vec2(100.0+d.x*uRot.x-d.y*uRot.y,100.0+d.x*uRot.y+d.y*uRot.x);}
+    // Pivot = WORLD/2, the centre rotateViewPoint uses (100 on the legacy 200U map).
+    vec2 rotq(vec2 p){vec2 d=p-vec2(${(WORLD/2).toFixed(1)});
+      return vec2(${(WORLD/2).toFixed(1)}+d.x*uRot.x-d.y*uRot.y,${(WORLD/2).toFixed(1)}+d.x*uRot.y+d.y*uRot.x);}
     // Same affine map as w2sRaw (isometric or plan) plus a monotonic view depth (larger = nearer).
     vec4 cam(vec3 w,vec2 px){
       vec2 q=rotq(w.xy);vec2 s;float d;
@@ -1693,7 +1694,9 @@
     const L=prog.loc,plan=isPlanView();
     {const q=((State.view.rotation||0)%4+4)%4,r=Number.isInteger(q)?[[1,0],[0,1],[-1,0],[0,-1]][q]:[Math.cos(q*Math.PI/2),Math.sin(q*Math.PI/2)];gl.uniform2f(L.uRot,r[0],r[1]);}gl.uniform1f(L.uS,U*State.view.scale);
     gl.uniform2f(L.uV,State.view.x,State.view.y);gl.uniform1f(L.uPlan,plan?1:0);gl.uniform2f(L.uVp,r.width,r.height);
-    gl.uniform2f(L.uDepth,plan?-5:-80,plan?30:480);
+    // Iso depth d=qx+qy+0.9z spans 0..2*WORLD at any yaw: -80..480 on the legacy 200U map; a
+    // fixed 480 clipped the far side of the larger hex canvases (262U and up).
+    gl.uniform2f(L.uDepth,plan?-5:-80,plan?30:2*WORLD+80);
   }
   function bindAttrib(gl,prog,name,buf,size,stride,offset){
     const loc=prog.loc[name];if(loc==null||loc<0)return;

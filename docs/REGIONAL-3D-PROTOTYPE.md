@@ -83,4 +83,4 @@ Serve the repository root over HTTP and open \`/lab/3dregionmap.html\` (do not u
 
 ## Mappa locale ereditata (branch `feature/local-hex-shape`)
 
-Il pulsante «Apri demo locale» passa anche `shape`: contorno del territorio e contorni dei vicini fisici. La mappa locale usa quel poligono come zona edificabile (sempre 10000 U², omogeneizzazione salvata) e il suo offset di 50U come bordo del mondo; l'anello è diviso fra i vicini con le loro celle Voronoi reali. Codice in `src/regional-local-shape.js`, test in `qa/local-hex-shape-regression.cjs`.
+Il pulsante «Apri demo locale» passa anche `shape`: contorno del territorio e contorni dei vicini fisici. La mappa locale usa quel poligono come zona edificabile (sempre 40000 U² dal 25/11/2026, prima 10000 U², omogeneizzazione salvata) e il suo offset di 50U come bordo del mondo; l'anello è diviso fra i vicini con le loro celle Voronoi reali. Codice in `src/regional-local-shape.js`, test in `qa/local-hex-shape-regression.cjs`.

@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-25 — LOCAL-AREA-4X · Mappe locali esagonali 40000 U²
+
+- Le mappe locali aperte dalla mappa regionale passano da 10000 a 40000 U² (lato ×2, bordo 50U invariato); A* delle strade maestre molto più veloce con le stesse strade; camera WebGL, pivot e zoom adattati alle tele grandi. Nuova decisione D-LOCAL-AREA-261125 (supera l'area fissa del 17/11); ROADMAP invariata.
+
 ### 2026-11-17 — REGION3D-TOKENS · Token low-poly della mappa regionale 3D
 
 - 25/11: le icone della mappa regionale 3D sono ora i token (villaggio L1–L4, castello, molo, nave, truppe del gioco) con i colori del proprietario; cubi e cilindri restano come ripiego. Roadmap e decisioni invariate.

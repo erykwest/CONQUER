@@ -199,15 +199,17 @@ function s2w(x,y){
 }
 function fit(){
   const r=wrap.getBoundingClientRect(),availW=Math.max(260,r.width-610),availH=Math.max(220,r.height-90);
+  // Floor .18 on the legacy 200U map, scaled with the canvas for the larger hex maps.
+  const minScale=.18*200/Math.max(200,WORLD);
   if(isPlanView()){
     const side=WORLD*U;
-    State.view.scale=clamp(Math.min(availW/side,availH/side),.18,3);
+    State.view.scale=clamp(Math.min(availW/side,availH/side),minScale,3);
     State.view.x=(r.width-side*State.view.scale)/2;
     State.view.y=Math.max(38,(r.height-side*State.view.scale)/2+20);
     invalidateSceneCache();draw();return;
   }
   const worldW=2*WORLD*U*ISO_X,worldH=2*WORLD*U*ISO_Y;
-  State.view.scale=clamp(Math.min(availW/worldW,availH/worldH),.18,3);
+  State.view.scale=clamp(Math.min(availW/worldW,availH/worldH),minScale,3);
   const h=worldH*State.view.scale;
   State.view.x=r.width/2-12;
   State.view.y=Math.max(38,(r.height-h)/2+20);

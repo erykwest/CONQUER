@@ -4,7 +4,7 @@
   const rules=window.ConquerRegionalBiomeRules;
   // Hex territory outline (src/regional-local-shape.js): sectors of the real physical neighbours.
   const hex=()=>window.ConquerLocalShape?.current?.()||null;
-  // Canvas size (200U legacy, 240U hex) and the 2U sampling grid that covers it.
+  // Canvas size (200U legacy, 360U+ hex) and the 2U sampling grid that covers it.
   const W=()=>typeof WORLD==='number'?WORLD:200,C=()=>W()/2,N=()=>Math.round(W()/2);
   // The central recipe is generated over the whole canvas and shrunk into the middle half.
   const toC=v=>W()/4+v/2;
