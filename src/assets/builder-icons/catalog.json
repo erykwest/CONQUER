@@ -255,7 +255,7 @@
     },
     {
       "id": "cava-argilla",
-      "label": "Cava argilla · H0 · entro 6U da acqua interna",
+      "label": "Cava argilla · terreno piano in palude o H0 entro 6U da una riva interna",
       "category": "economy",
       "selector": "[data-industry=\"quarry\"][data-extraction-mode=\"clay\"]",
       "previousGlyph": "work",

@@ -7,6 +7,40 @@
 - Cache del ghost per chiave `preview:<tipo>[:segmento]`, con la posizione nella chiave (la mesh è in coordinate mondo). Torri in muratura, porte in pietra, mura e sezioni (buffer castello) usano `ConquerAssembly.source` come ripiego.
 - **PROVE LOCALI PASS:** `construction-ghost` (aggiornato: anteprima con ghost, ripiego torri, impronta solo a terra), `builder-placement`, `render-cache-keys`. Audit Chromium 1228 di tutte le voci del Builder con screenshot (`output/ghost-audit`, non versionato): ghost presente su tutte le voci con modello; strade, fossati e ponti mantengono la loro anteprima; rampa e scalinata non verificate.
 - **CI remota non ancora eseguita**; nessun merge o deploy.
+### 2026-11-24 — WALL-SHEDS-261124: lean-to upgrade, tettoie, scatter addossati (branch `fix/wall-heights-follow-towers`, NON MERGE)
+- settlement-lean-to.js ofWall/setOnWall; StructureCommands.setWallLeanTo e controllo «Addossato» nel pannello del muro; deleteStructure toglie il lean-to col muro. settlement-wall-sheds.js (tettoie, signature per la cache World3D); settlement-scatter.js wallProps/hug/footRow.
+- PASS lean-to, wall-stairs, scatter, panels, render-cache-keys, refactor-module-boundaries (sulla sola versione committata). Verificato in gioco: matrice W1/W2/W3 × H1/H2 (lean-to solo H2), tettoie e scatter dal lato interno. Non nel Lab e senza regressione dedicata alle tettoie.
+- Nello stesso worktree un'altra sessione ha modifiche non committate (lean-to 4U max, finestre/porta del lean-to, architecture/core/castle3d): escluse da questo commit.
+
+### 2026-11-24 — WALL-STAIRS-261124: scale del camminamento e addossati (branch `fix/wall-heights-follow-towers`, NON MERGE)
+- settlement-wall-stairs.js: stairPlan/stairBoxes/stairTriangles (gradini pieni, pianerottoli); geometria alla sommità del muro (structureHeight), accesso alla rete a walkZ. settlement-lean-to.js: make() rifiuta un muro con wallStair.
+- PASS wall-stairs (sommità 1,15) e lean-to. Verificato a vista in gioco: H2 con quattro soldati disegnati sui gradini e pianerottoli (quote, non percorso di pattuglia), colori su 5 famiglie di pietra, clay e mattoni. La vista da fuori del muro mostra solo la sommità della scala. Audit Lab da CI.
+
+### 2026-11-24 — WALL-GRID-261124: griglia piani torre e muri (branch `fix/wall-heights-follow-towers`, NON MERGE)
+- Griglia in settlement-castle.js: TOWER_P1_Z=1,15, TOWER_STOREY_H=1,20, CURTAIN_WALK_Z=2,35; towerStoreyCount = livello+1 per le torri in pietra (le T1 a scala a chiocciola e le torri di legno invariate). Muri H1 1,15 / H2 2,35. Le stanze restano tante quante prima (capacità invariata): il piano in più è libero, con scala.
+- Semitorri (halfTowerStoreys in settlement-tower-shapes.js) sulla stessa griglia; porte in pietra con P1 a 2,35 e passo 1,20; porta piccola 2,65 / 3,85. Torri tonde, a D e quadre W1–W4 verificate a vista su scena pulita con muri H1/H2 (cutaway).
+- Aperto: la porta piccola con piano superiore in legno ha ancora il solaio a 1,40 (GATE_TIMBER_FLOOR), sotto il camminamento H2.
+- Ballatoio interno rimosso. Torre d'assedio di livello 2 rialzata in runtime di 0,25 sopra 1,0 U (no-op quando il modello Blender viene rigenerato con le nuove WALLS).
+- PASS cutaway-floors, cutaway-furniture, siege-assault, codex-wiki (catalog rigenerato) e il resto della suite qa/*.cjs (founding fallisce solo per tempo, flaky). Verificato a vista su torre W2 L3 con muro H2 a sinistra e H1 a destra: porte a 2,35 e 1,15 sui solai. Audit del Lab (qa/asset-audit.mjs) non eseguito in locale: da CI, poi aggiornare la baseline.
+
+### 2026-11-19 — HARDEN-261119 · Integrità salvataggi e DOM risorse
+
+- **Implementato su `fix/main-hardening-20261119`, non ancora su main**, base verificata `168b993b`.
+- Cloud: scrittura permessa solo dopo lettura riuscita (anche slot vuoto); attesa, errori SDK/rete e migrazioni fallite bloccano l'upsert. Retry riuscito riabilita la scrittura; Lab escluso anche con sessione presente.
+- Locale/CAMP: un errore di scrittura mantiene l'indicatore di errore e `dirty`; nessun falso «saved». Errori cloud restituiti o lanciati restano gestiti.
+- Barra risorse: chiavi e valori dei salvataggi costruiti come nodi di testo, senza interpretazione HTML.
+- QA locale: 16 test Node (11 nuovi + 5 runtime); 15 suite di regressione PASS. Rapporto e limiti in [HARDENING-2026-11-19](../HARDENING-2026-11-19.md). CI remota da verificare nella PR; browser e database live non verificati.
+### 2026-11-24 — CLAY-WATER-ACCESS · Acqua dolce e cava in palude
+
+Branch `fix/territory-clay-stone-access`, base main `fe665fe`. Il generatore cerca una sponda interna utilizzabile nella whitezone e aggiunge un piccolo stagno quando serve, preservando spazio asciutto per una cava 4×4U. In foresta può aprire una radura locale se manca spazio. La cava argilla può sorgere su qualsiasi terrazza asciutta edificabile del territorio Palude, anche lontano dalle rive. Acquitrini, boschi, strade ed edifici mantengono le collisioni.
+
+Prove locali PASS: economia/industrie, 42 mappe delle ricette, ordine del paesaggio, coste isola/penisola, demo regionali, bilanciamento Palude/Pianura, murature clay e Wiki. La nuova regressione delle sponde verifica il piazzamento reale in cinque biomi, acqua esterna, bosco fitto, ripetibilità e idempotenza, ed entra nella CI. Smoke Chromium headless PASS su pagina reale per Pianura 229, Mare 12345 e Palude 7, con generazione e validatore condiviso. La regola dell'acqua si applica alla generazione di nuove mappe. Merge in attesa.
+
+### 2026-11-24 — BARTIZAN-COUNT: numero di garitte selezionabile (branch `feature/bartizan-count`, NON MERGE)
+
+- **CODICE:** nuova variante torre `bartizanCount` ('1'–'4', default '4') in `settlement-core.js` (`towerBartizanCount`); `towerBartizans` riempie gli angoli opposti per primi (2 = diagonale, 3 = un angolo libero); comando `setTowerBartizanCount`, riga «Numero garitte» nel pannello e nell'ispettore; chiavi di cache/salvataggio aggiornate. I tiratori seguono (3 per garitta).
+- **PROVE LOCALI PASS:** `qa/bartizan-regression.cjs` (nuovo controllo 1–4 garitte e coppia sulla diagonale). Asset audit del Lab non eseguito, verifica a vista non fatta.
+
 
 ### 2026-11-24 — SPRING-FLORA: primavera e disgelo (`feature/spring-flora-thaw`)
 
@@ -25,6 +59,14 @@
 - Asset Lab: nuova categoria Interfaccia / famiglia Icone Builder, sfondo di consultazione chiaro, manifest rigenerato. Audit della categoria: **72 render, 0 errori, 0 avvisi**; foglio provini rivisto; aggiunte alla baseline solo le 72 voci nuove.
 - **PASS LOCALI:** builder-menu (52 associazioni e SVG nel Lab), builder-placement, events-builder, mills3d, lean-to, asset-catalog, context-guard. Chromium 1228: tutte le 7 categorie e i 52 file, identità dei pulsanti dopo cambi categoria, click mulino con gestore di gioco e selezione attiva, 12 opzioni, 72 voci nel Lab, flyout entro il viewport a 390px, nessun errore di pagina.
 - CI browser aggiunta al workflow Builder menu. **CI remota non ancora eseguita** al momento di questa nota; nessun merge o deploy. ROADMAP e DECISIONS invariati: sostituzione iconografica, nessuna regola di gameplay cambiata. Dettagli in [BUILDER-ICONS](../BUILDER-ICONS.md).
+### 2026-11-24 — UP-INNER-TOWER: torretta centrale sulle torri W2/W3 (branch `feature/upinnertower`, NON MERGE)
+
+- **CODICE:** variante torre `upInnerTower` ('off' | 'round' | 'square') in `settlement-core.js` con `towerUpInnerTowerAllowed` / `towerUpInnerTower` (pietra, W2/W3, non semitorre, merli o caditoie; esclusiva con tetto interno, arma sulla piazza e pira; toglie il bracere). `upInnerTowerGeometry` in `settlement-population.js`: impronta della torre di un taglio più piccola (W3→W2, W2→W1), un piano (1,2 U), tetto a cono/piramide con piccola gronda; forma indipendente da quella della torre. Mesh in `ConquerCastle3D.addTower` (quindi cantiere, danno, crolli e clay per costruzione), shell del cutaway in `settlement-world3d.js` quando è in vista l'ultimo piano. Upgrade dall'ispettore e dal pannello torre, non dal menu di costruzione. Chiavi di cache (render, assembly, ombre) aggiornate.
+- **Su tetto a falde (prova, stile torre Sinwell):** la torretta è ammessa anche sotto falde a piramide/cono (non a D, non 2 falde/padiglione, senza campana, colombaia o falconiera): il tetto della torre è tagliato dove incontra la torretta (`upInnerTowerGeometry().cut`, anello di taglio dentro le pareti della torretta) e la torretta sta un piano sopra il taglio; nel cutaway la falda tronca resta intorno al piede della torretta e il pavimento della stanza è sopra il taglio. La bandiera in cima alle falde non si disegna più in cutaway (prima restava sospesa).
+- **Stanza nella torretta:** la torretta è un piano a sé (`cutawayFloorLevels` aggiunge un piano 'turret' sulla piazza) con uno slot stanza in più (`functionCapacity` +1, taglia normale, base e pareti della torretta via `upInnerTowerCutawayGeometry`). Nel cutaway si apre come la torre (pareti verso la camera tolte secondo la forma della torretta, cresta tagliata, pavimento in pietra, arredi della stanza); con un piano sotto in vista la torretta sparisce e resta la piazza merlata. La scala dell'ultimo piano sale alla torretta.
+- **PROVE LOCALI PASS:** nuova `qa/tower-up-inner-tower-regression.cjs` (6 controlli), tower-inner-roof, tutte le `qa/tower-*`, render-cache-keys, codex wiki/obsidian/vault (+3 note). Audit Lab su 6 voci nuove (58 render): 0 falliti, 0 avvisi; fogli rivisti. Baseline del Lab aggiornata con l'audit completo (1895 render, 0 falliti; cambiati solo i cutaway delle torri a falde, senza bandiera sospesa).
+- Clay: il cutaway delle torri in mattoni / palette clay usa le tinte argilla (`CLAY_VISUAL_SWATCHES`, tinta cotto per i toni mancanti) invece del grigio; il moncone della torre distrutta e il coronamento spezzato dei piani crollati conservano il mattone (prima grigi). Difetti preesistenti, corretti qui.
+
 ### 2026-11-20 — SHOP-L2-ROOMS: stanze del piano terra L2 (branch `feature/shops-l2-rooms`, NON MERGE)
 
 - **CODICE:** `settlement-shop-cutaway.js` `LAYOUTS_L2` (sette mestieri) e `domestic()`; `layout(R,out,kind,home)` sceglie le stanze L2 per le botteghe di casa e `LAYOUTS` per le avanzate L3; `grade` nella chiave della cache del cutaway.

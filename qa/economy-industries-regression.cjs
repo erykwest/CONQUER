@@ -199,6 +199,41 @@ test('lake shoreline counts as water; sea never counts',()=>{
   h.State.environment=[{...lake,id:'sea',type:'sea'}];
   assert.match(h.industry.validate(pit).reason,/6U/);
 });
+test('dry swamp terraces supply clay throughout the buildable territory',()=>{
+  const h=harness();
+  h.State.biome='swamp';
+  const pit=h.industry.make('quarry',{x:53,y:53},'clay');
+  for(const x of [53,100,147])for(const y of [53,100,147]){
+    const site={...pit,x,y};
+    assert.equal(h.industry.validate(site).resourceTarget,'swamp');
+    assert.equal(h.placement.check(site).ok,true);
+  }
+  h.ctx.terrainElevation=()=>2;
+  h.ctx.buildableTerrainElevationForStructure=()=>2;
+  assert.equal(h.industry.validate(pit).ground,2);
+  h.industry.normalizeFootprint(pit);
+  assert.equal(pit.groundZ,2,'a reloaded pit stays on its terrace');
+  h.ctx.buildableTerrainElevationForStructure=()=>null;
+  assert.equal(h.placement.check(pit).ok,false,'uneven ground is not a terrace');
+});
+test('swamp clay keeps the usual footprint and obstacle exclusions',()=>{
+  const h=harness();
+  h.State.biome='swamp';
+  const pit={...h.industry.make('quarry',{x:100,y:100},'clay'),id:'pit',angle:Math.PI/4};
+  assert.equal(h.placement.check({...pit,x:52}).ok,false,'rotated corner crosses the whitezone');
+  for(const type of ['pond','sea','forest']){
+    h.State.environment=[{id:'obstacle',type,points:rect(102,100,1,1),waterBodyKind:'marsh'}];
+    assert.equal(h.placement.check(pit).ok,false,type+' under the edge of the footprint');
+  }
+  h.State.environment=[];
+  h.State.structures=[{id:'tower',type:'tower',x:102,y:100,w:1,h:1}];
+  assert.equal(h.placement.check(pit).ok,false);
+  h.State.structures=[{id:'road',type:'road'}];
+  h.ctx.roadTouchesPolygon=()=>true;
+  assert.match(h.industry.validate(pit).reason,/road/);
+  h.State.structures=[];
+  assert.equal(h.placement.check(h.industry.make('quarry',pit,'stone')).ok,false);
+});
 test('clay requires centre H0, respects whitezone, forests, roads and buildings',()=>{
   const h=harness(),river={id:'river',type:'river',width:2,points:[{x:117,y:100},{x:117,y:140}]};
   const pit=h.industry.make('quarry',{x:122,y:125},'clay');

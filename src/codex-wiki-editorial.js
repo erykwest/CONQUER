@@ -1,7 +1,7 @@
 // Generated from content/codex/*.md. Do not edit; run node tools/export-codex-content.cjs.
 (function(root){root.ConquerWikiEditorial={
   "schemaVersion": 1,
-  "sourceDigest": "97584af0ba090c25483268daa1e40cd803573eed46d6ae68f5e8126812465189",
+  "sourceDigest": "224ce486253ec8c62197ffc7e0330937550b526e2c2002532d10794246adb2d3",
   "pages": [
     {
       "id": "building:balivo",
@@ -220,7 +220,7 @@
       "blocks": [
         {
           "type": "paragraph",
-          "text": "La cava argilla è una variante della [[Cava Di Pietra|cava di pietra]]. L’argilla viene usata nelle [[Costruzioni|costruzioni]] in mattoni; il piazzamento richiede terreno basso e vicinanza ad acqua interna.",
+          "text": "La cava argilla è una variante della [[Cava Di Pietra|cava di pietra]]. Produce argilla per le [[Costruzioni|costruzioni]] in mattoni. In palude puoi costruirla su qualsiasi terreno asciutto e pianeggiante con spazio per tutta la cava (4×4 U). Negli altri biomi il centro deve trovarsi a quota zero, entro 6 U dalla riva di un fiume, torrente, stagno o lago.",
           "tokens": [
             {
               "text": "La cava argilla è una variante della "
@@ -230,20 +230,20 @@
               "id": "building:quarry"
             },
             {
-              "text": ". L’argilla viene usata nelle "
+              "text": ". Produce argilla per le "
             },
             {
               "text": "costruzioni",
               "id": "topic:construction"
             },
             {
-              "text": " in mattoni; il piazzamento richiede terreno basso e vicinanza ad acqua interna."
+              "text": " in mattoni. In palude puoi costruirla su qualsiasi terreno asciutto e pianeggiante con spazio per tutta la cava (4×4 U). Negli altri biomi il centro deve trovarsi a quota zero, entro 6 U dalla riva di un fiume, torrente, stagno o lago."
             }
           ]
         }
       ],
       "text": [
-        "La cava argilla è una variante della cava di pietra. L’argilla viene usata nelle costruzioni in mattoni; il piazzamento richiede terreno basso e vicinanza ad acqua interna."
+        "La cava argilla è una variante della cava di pietra. Produce argilla per le costruzioni in mattoni. In palude puoi costruirla su qualsiasi terreno asciutto e pianeggiante con spazio per tutta la cava (4×4 U). Negli altri biomi il centro deve trovarsi a quota zero, entro 6 U dalla riva di un fiume, torrente, stagno o lago."
       ],
       "related": [
         "category:building",
@@ -7169,6 +7169,194 @@
       "members": []
     },
     {
+      "id": "upgrade:tower.bartizanCount.1",
+      "kind": "entry",
+      "title": "Torre · Garitte: 1",
+      "aliases": [
+        "Torre · Garitte: 1"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Torre|Torre]] · Garitte: 1 appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: una sola garitta, su un angolo della torre: 3 tiratori in più sulla cima. Si sceglie nel pannello della torre, sotto lo stile delle garitte, e vale solo per le torri grandi (T3) quadrate o rotonde in pietra che hanno le garitte. Ogni garitta ospita 3 tiratori che colpiscono anche il piede della torre.",
+          "tokens": [
+            {
+              "text": "Torre",
+              "id": "building:tower"
+            },
+            {
+              "text": " · Garitte: 1 appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": una sola garitta, su un angolo della torre: 3 tiratori in più sulla cima. Si sceglie nel pannello della torre, sotto lo stile delle garitte, e vale solo per le torri grandi (T3) quadrate o rotonde in pietra che hanno le garitte. Ogni garitta ospita 3 tiratori che colpiscono anche il piede della torre."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Torre · Garitte: 1 appartiene ai miglioramenti delle fortificazioni: una sola garitta, su un angolo della torre: 3 tiratori in più sulla cima. Si sceglie nel pannello della torre, sotto lo stile delle garitte, e vale solo per le torri grandi (T3) quadrate o rotonde in pietra che hanno le garitte. Ogni garitta ospita 3 tiratori che colpiscono anche il piede della torre."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:tower"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:tower.bartizanCount.2",
+      "kind": "entry",
+      "title": "Torre · Garitte: 2",
+      "aliases": [
+        "Torre · Garitte: 2"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Torre|Torre]] · Garitte: 2 appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: due garitte su angoli opposti, sulla diagonale della torre: 6 tiratori in più. Si sceglie nel pannello della torre, sotto lo stile delle garitte, e vale solo per le torri grandi (T3) quadrate o rotonde in pietra che hanno le garitte. Ogni garitta ospita 3 tiratori che colpiscono anche il piede della torre.",
+          "tokens": [
+            {
+              "text": "Torre",
+              "id": "building:tower"
+            },
+            {
+              "text": " · Garitte: 2 appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": due garitte su angoli opposti, sulla diagonale della torre: 6 tiratori in più. Si sceglie nel pannello della torre, sotto lo stile delle garitte, e vale solo per le torri grandi (T3) quadrate o rotonde in pietra che hanno le garitte. Ogni garitta ospita 3 tiratori che colpiscono anche il piede della torre."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Torre · Garitte: 2 appartiene ai miglioramenti delle fortificazioni: due garitte su angoli opposti, sulla diagonale della torre: 6 tiratori in più. Si sceglie nel pannello della torre, sotto lo stile delle garitte, e vale solo per le torri grandi (T3) quadrate o rotonde in pietra che hanno le garitte. Ogni garitta ospita 3 tiratori che colpiscono anche il piede della torre."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:tower"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:tower.bartizanCount.3",
+      "kind": "entry",
+      "title": "Torre · Garitte: 3",
+      "aliases": [
+        "Torre · Garitte: 3"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Torre|Torre]] · Garitte: 3 appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: tre garitte, con un angolo lasciato libero: 9 tiratori in più. Si sceglie nel pannello della torre, sotto lo stile delle garitte, e vale solo per le torri grandi (T3) quadrate o rotonde in pietra che hanno le garitte. Ogni garitta ospita 3 tiratori che colpiscono anche il piede della torre.",
+          "tokens": [
+            {
+              "text": "Torre",
+              "id": "building:tower"
+            },
+            {
+              "text": " · Garitte: 3 appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": tre garitte, con un angolo lasciato libero: 9 tiratori in più. Si sceglie nel pannello della torre, sotto lo stile delle garitte, e vale solo per le torri grandi (T3) quadrate o rotonde in pietra che hanno le garitte. Ogni garitta ospita 3 tiratori che colpiscono anche il piede della torre."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Torre · Garitte: 3 appartiene ai miglioramenti delle fortificazioni: tre garitte, con un angolo lasciato libero: 9 tiratori in più. Si sceglie nel pannello della torre, sotto lo stile delle garitte, e vale solo per le torri grandi (T3) quadrate o rotonde in pietra che hanno le garitte. Ogni garitta ospita 3 tiratori che colpiscono anche il piede della torre."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:tower"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:tower.bartizanCount.4",
+      "kind": "entry",
+      "title": "Torre · Garitte: 4",
+      "aliases": [
+        "Torre · Garitte: 4"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Torre|Torre]] · Garitte: 4 appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: una garitta per ogni angolo, come nelle torri costruite prima di questa scelta: 12 tiratori in più. È il valore predefinito. Si sceglie nel pannello della torre, sotto lo stile delle garitte, e vale solo per le torri grandi (T3) quadrate o rotonde in pietra che hanno le garitte. Ogni garitta ospita 3 tiratori che colpiscono anche il piede della torre.",
+          "tokens": [
+            {
+              "text": "Torre",
+              "id": "building:tower"
+            },
+            {
+              "text": " · Garitte: 4 appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": una garitta per ogni angolo, come nelle torri costruite prima di questa scelta: 12 tiratori in più. È il valore predefinito. Si sceglie nel pannello della torre, sotto lo stile delle garitte, e vale solo per le torri grandi (T3) quadrate o rotonde in pietra che hanno le garitte. Ogni garitta ospita 3 tiratori che colpiscono anche il piede della torre."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Torre · Garitte: 4 appartiene ai miglioramenti delle fortificazioni: una garitta per ogni angolo, come nelle torri costruite prima di questa scelta: 12 tiratori in più. È il valore predefinito. Si sceglie nel pannello della torre, sotto lo stile delle garitte, e vale solo per le torri grandi (T3) quadrate o rotonde in pietra che hanno le garitte. Ogni garitta ospita 3 tiratori che colpiscono anche il piede della torre."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:tower"
+      ],
+      "members": []
+    },
+    {
       "id": "upgrade:tower.baseStyle.buttress",
       "kind": "entry",
       "title": "Torre · Base con contrafforti",
@@ -8210,6 +8398,147 @@
       ],
       "text": [
         "Torre · Arma sommitale nessuno appartiene ai miglioramenti delle fortificazioni. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:tower"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:tower.upInnerTower.off",
+      "kind": "entry",
+      "title": "Torre · Torretta centrale nessuna",
+      "aliases": [
+        "Torre · Torretta centrale nessuna"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Torre|Torre]] · Torretta centrale nessuna appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: la piazza merlata resta libera, senza torretta al centro.",
+          "tokens": [
+            {
+              "text": "Torre",
+              "id": "building:tower"
+            },
+            {
+              "text": " · Torretta centrale nessuna appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": la piazza merlata resta libera, senza torretta al centro."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Torre · Torretta centrale nessuna appartiene ai miglioramenti delle fortificazioni: la piazza merlata resta libera, senza torretta al centro."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:tower"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:tower.upInnerTower.round",
+      "kind": "entry",
+      "title": "Torre · Torretta centrale rotonda",
+      "aliases": [
+        "Torre · Torretta centrale rotonda"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Torre|Torre]] · Torretta centrale rotonda appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: una torretta cilindrica di un piano al centro della piazza, larga quanto una torre di un taglio più piccola, con tetto a cono. Si monta su torri in pietra W2 e W3 con merli o caditoie, di qualunque forma; esclude tetto interno, arma e fuoco di segnalazione.",
+          "tokens": [
+            {
+              "text": "Torre",
+              "id": "building:tower"
+            },
+            {
+              "text": " · Torretta centrale rotonda appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": una torretta cilindrica di un piano al centro della piazza, larga quanto una torre di un taglio più piccola, con tetto a cono. Si monta su torri in pietra W2 e W3 con merli o caditoie, di qualunque forma; esclude tetto interno, arma e fuoco di segnalazione."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Torre · Torretta centrale rotonda appartiene ai miglioramenti delle fortificazioni: una torretta cilindrica di un piano al centro della piazza, larga quanto una torre di un taglio più piccola, con tetto a cono. Si monta su torri in pietra W2 e W3 con merli o caditoie, di qualunque forma; esclude tetto interno, arma e fuoco di segnalazione."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:tower"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:tower.upInnerTower.square",
+      "kind": "entry",
+      "title": "Torre · Torretta centrale quadrata",
+      "aliases": [
+        "Torre · Torretta centrale quadrata"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Torre|Torre]] · Torretta centrale quadrata appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: una torretta quadrata di un piano al centro della piazza, larga quanto una torre di un taglio più piccola, con tetto a piramide. Si monta su torri in pietra W2 e W3 con merli o caditoie, di qualunque forma; esclude tetto interno, arma e fuoco di segnalazione.",
+          "tokens": [
+            {
+              "text": "Torre",
+              "id": "building:tower"
+            },
+            {
+              "text": " · Torretta centrale quadrata appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": una torretta quadrata di un piano al centro della piazza, larga quanto una torre di un taglio più piccola, con tetto a piramide. Si monta su torri in pietra W2 e W3 con merli o caditoie, di qualunque forma; esclude tetto interno, arma e fuoco di segnalazione."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Torre · Torretta centrale quadrata appartiene ai miglioramenti delle fortificazioni: una torretta quadrata di un piano al centro della piazza, larga quanto una torre di un taglio più piccola, con tetto a piramide. Si monta su torri in pietra W2 e W3 con merli o caditoie, di qualunque forma; esclude tetto interno, arma e fuoco di segnalazione."
       ],
       "related": [
         "category:upgrade",
