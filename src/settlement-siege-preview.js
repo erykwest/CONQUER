@@ -320,9 +320,17 @@
   }
   // A complete structure for a gallery spec, centred on (x, y); walls run along +x.
   // The Asset Lab builds its fortification entries with this too.
+  // Built sections and longhouses take the longest run the Builder allows (TYPES.built 4U, wide
+  // 6U), so the Lab shows halls as they can really be built; walls, palisades and lean-tos keep 7.5U.
+  function galleryLength(spec){
+    if(spec.type!=='built'||spec.leanTo)return WALL_L;
+    const T=typeof TYPES!=='undefined'?(spec.span==='wide'?TYPES.builtWide:TYPES.built):null;
+    return Math.min(WALL_L,Number(T?.max)||WALL_L);
+  }
   function galleryStructure(spec,x,y){
+    const L=galleryLength(spec);
     return['wall','palisade','built'].includes(spec.type)
-      ?{id:uid(),functions:[],flip:false,...spec,width:spec.type==='built'?builtWidth(spec):wallWidthForTier(spec.tier),a:{x:x-WALL_L/2,y},b:{x:x+WALL_L/2,y},length:WALL_L,rotationStep:0}
+      ?{id:uid(),functions:[],flip:false,...spec,width:spec.type==='built'?builtWidth(spec):wallWidthForTier(spec.tier),a:{x:x-L/2,y},b:{x:x+L/2,y},length:L,rotationStep:0}
       :{id:uid(),functions:[],angle:0,rotationStep:0,...spec,x,y};
   }
   // Asset Lab (index.html?assetlab=1 in a hidden frame): world-space castle meshes of one gallery spec,
