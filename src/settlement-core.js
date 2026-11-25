@@ -332,6 +332,9 @@ const STRUCTURE_VARIANTS=Object.freeze({
     signalFire:Object.freeze(['none','pyre']),
     // Inner roof: a pyramid/cone set back inside the merlons of a crenellated top (BC-251105-05).
     innerRoof:Object.freeze(['off','on']),
+    // Up inner tower: a one-storey turret (W-1 footprint, round or square) raised in the middle of
+    // the deck of a W2/W3 stone tower, under a pointed cap. Upgrade only, not in the build menu.
+    upInnerTower:Object.freeze(['off','round','square']),
     // Look of a machicolated top: 'standard' single corbels, or 'italian' — tall corbels of four
     // stepped courses (4x the standard height) joined by small arches, as on Italian communal towers.
     // Aesthetic only: hasMachicolation() and every rule read roofStyle alone.
@@ -350,7 +353,7 @@ const STRUCTURE_VARIANTS=Object.freeze({
   })
 });
 const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
-  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',bartizanCount:'4',roofShape:'pyramid',hoarding:'off',bell:'none',signalFire:'none',innerRoof:'off',machicolationStyle:'standard'}),
+  tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',bartizanCount:'4',roofShape:'pyramid',hoarding:'off',bell:'none',signalFire:'none',innerRoof:'off',upInnerTower:'off',machicolationStyle:'standard'}),
   gate:Object.freeze({roofStyle:'battlement',upper:'stone',hoarding:'off'}),
   wall:Object.freeze({skin:'standard'}),
   built:Object.freeze({skin:'standard'})
@@ -441,16 +444,30 @@ function towerRoofStyle(s){
 // Upgrade: a mangonel or a ballista on the deck of a medium (T2) stone tower without a roof,
 // at any height (drawn by settlement-tower-weapons.js). Not on a broken crown.
 // The inner roof takes the deck, so a tower carries one or the other.
-function towerTopWeaponAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===2&&!['pitched','broken'].includes(towerRoofStyle(s))&&!towerHoardingMounted(s)&&structureVariant(s,'innerRoof')!=='on'}
+function towerTopWeaponAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&towerTier(s)===2&&!['pitched','broken'].includes(towerRoofStyle(s))&&!towerHoardingMounted(s)&&structureVariant(s,'innerRoof')!=='on'&&!['round','square'].includes(structureVariant(s,'upInnerTower'))}
 // Inner roof (BC-251105-05): on a medium or large (T2+) stone tower with a crenellated or
 // machicolated top, a roof set back inside the merlons on a low kerb, the wall-walk left free
 // between them. Geometry: towerInnerRoofGeometry (settlement-population.js). It is not a pitched
 // roof: no room under it, so the Dovecote, the mews and the alarm bell keep asking for 'pitched'.
 function towerInnerRoofAllowed(s){
   return !!s&&s.type==='tower'&&!isWoodTower(s)&&s.shape!=='half'&&towerTier(s)>=2&&['battlement','machicolation'].includes(towerRoofStyle(s))
-    &&structureVariant(s,'topWeapon')==='none'&&structureVariant(s,'signalFire')!=='pyre'&&(typeof towerInnerRoofGeometry!=='function'||!!towerInnerRoofGeometry(s,true));
+    &&structureVariant(s,'topWeapon')==='none'&&structureVariant(s,'signalFire')!=='pyre'&&!['round','square'].includes(structureVariant(s,'upInnerTower'))&&(typeof towerInnerRoofGeometry!=='function'||!!towerInnerRoofGeometry(s,true));
 }
 function towerInnerRoofMounted(s){return towerInnerRoofAllowed(s)&&structureVariant(s,'innerRoof')==='on'}
+// Up inner tower (torretta centrale): W2/W3 stone towers with a crenellated or machicolated deck,
+// round or square whatever the tower's own shape. It takes the deck like the inner roof, so it
+// excludes the inner roof, the deck weapon and the signal pyre. Geometry: upInnerTowerGeometry.
+function towerUpInnerTowerAllowed(s){
+  const t=s?.type==='tower'&&!isWoodTower(s)?towerTier(s):0;
+  const roof=towerRoofStyle(s);
+  // Under a pitched roof (pyramid or cone; not on a D tower) the turret rises through a truncated
+  // roof, as on the Sinwell tower; the roof's apex fittings (bell, dovecote lantern) give way to it.
+  const pitched=roof==='pitched'&&s.shape!=='dee'&&structureVariant(s,'roofShape')!=='gable'&&structureVariant(s,'roofShape')!=='hip'
+    &&structureVariant(s,'bell')!=='bell'&&!(s.functions||[]).some(f=>f==='dovecote'||f==='mews');
+  return (t===2||t===3)&&s.shape!=='half'&&(['battlement','machicolation'].includes(roof)||pitched)
+    &&structureVariant(s,'topWeapon')==='none'&&structureVariant(s,'signalFire')!=='pyre'&&structureVariant(s,'innerRoof')!=='on';
+}
+function towerUpInnerTower(s){const v=structureVariant(s,'upInnerTower');return v&&v!=='off'&&towerUpInnerTowerAllowed(s)?v:null}
 // Hoarding (ballatoio): not with machicolations (they do its job in stone) nor on a broken crown.
 // Nor with bartizans: their corbelled corners take the perimeter the gallery runs round.
 function towerHoardingAllowed(s){return !!s&&s.type==='tower'&&!isWoodTower(s)&&s.shape!=='half'&&['battlement','pitched'].includes(towerRoofStyle(s))&&towerBartizan(s)==='none'}

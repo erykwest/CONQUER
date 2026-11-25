@@ -224,6 +224,16 @@ const StructureCommands=(()=>{
     status(target.innerRoof==='on'?'Inner roof built inside the merlons':'Inner roof removed');
     return true;
   }
+  // Up inner tower (torretta centrale): one-storey turret on the deck of a W2/W3 stone tower.
+  function setTowerUpInnerTower(id,value){
+    const target=find(id);if(!target||target.type!=='tower')return false;
+    value=['round','square'].includes(value)?value:'off';
+    if(value!=='off'&&!towerUpInnerTowerAllowed(target)){status('Torretta centrale: solo torri in pietra W2/W3 con merli o caditoie, senza tetto interno, arma o fuoco di segnalazione');return false}
+    if(!setStructureVariant(target,'upInnerTower',value))return false;
+    refresh(target,false);
+    status(value==='off'?'Torretta centrale rimossa':'Torretta centrale '+(value==='round'?'rotonda':'quadrata')+' costruita');
+    return true;
+  }
   // Alarm bell on the roof apex of a T1-T2 tower with a pitched roof (settlement-alarm-bells.js).
   function setTowerBell(id,value){
     const target=find(id),bells=window.ConquerAlarmBells;if(!target||target.type!=='tower'||!bells)return false;
@@ -484,6 +494,7 @@ const StructureCommands=(()=>{
         d.controls.push(choice('roof','setTowerRoof',[{value:'battlement',word:'battlement'},{value:'machicolation',word:'machicolation'},{value:'machicolationItalian',word:'machicolationItalian',disabled:s.shape==='half'},{value:'pitched',word:'pitched'}],towerRoofMenuValue(s)));
         if(s.shape!=='half')d.controls.push(hoardingChoice(s));
         if(s.shape!=='half')d.controls.push(choice('innerRoof','setTowerInnerRoof',[{value:'off',word:'innerRoofOff'},{value:'on',word:'innerRoofOn',disabled:!towerInnerRoofAllowed(s)}],towerInnerRoofMounted(s)?'on':'off'));
+        if(s.shape!=='half'&&[2,3].includes(towerTier(s))){const ok=!towerUpInnerTowerAllowed(s);d.controls.push(choice('upInnerTower','setTowerUpInnerTower',[{value:'off',word:'upInnerTowerOff'},{value:'round',word:'upInnerTowerRound',disabled:ok},{value:'square',word:'upInnerTowerSquare',disabled:ok}],towerUpInnerTower(s)||'off'))}
         d.controls.push(choice('weapon','setTowerWeapon',[{value:'none',word:'none'},{value:'mangonel',word:'mangonel',disabled:!towerTopWeaponAllowed(s)},{value:'ballista',word:'ballista',disabled:!towerTopWeaponAllowed(s)}],structureVariant(s,'topWeapon')));
         if((s.shape||'square')==='square'&&variantSchema(s)?.roofShape){
           const flat=towerRoofStyle(s)!=='pitched';
@@ -584,9 +595,9 @@ const StructureCommands=(()=>{
   }
 
   const commands={setConstructionPriority,setTier,setHeight,setKeepFloorPlan,rotate,setTowerBase,setTowerRoof,setHoarding,setWoodRoof,setLonghouseCover,setGateRoof,setGateUpper,setSkin,setWallStair,setWallStairPos,setWallLeanTo,toggleCutaway,stepCutawayFloor,flipSide,digMoat,
-    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBartizanCount,setTowerBell,setTowerInnerRoof,setTowerLookout,setTowerOutpost,setTowerSignalFire,setWallPatrols,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,startUpgrade,
+    setRoom,changeHouseLevel,toggleMastio,toggleVillageCenter,setWellName,setKeepStair,keepDrawbridge,changeArchers,setTowerWeapon,setTowerBartizan,setTowerBartizanCount,setTowerBell,setTowerInnerRoof,setTowerUpInnerTower,setTowerLookout,setTowerOutpost,setTowerSignalFire,setWallPatrols,setTowerRoofShape,setCivicLevel,setPlazaVariant,setGateClosed,setGateNightClose,setYardSize,startUpgrade,
     describeStructure};
-  for(const name of ['setTier','setHeight','setKeepFloorPlan','setTowerBase','setTowerRoof','setHoarding','setWoodRoof','setGateRoof','setGateUpper','setSkin','setTowerWeapon','setTowerRoofShape','setTowerBartizan','setTowerBartizanCount','setTowerBell','setTowerInnerRoof','setCivicLevel','setPlazaVariant']){
+  for(const name of ['setTier','setHeight','setKeepFloorPlan','setTowerBase','setTowerRoof','setHoarding','setWoodRoof','setGateRoof','setGateUpper','setSkin','setTowerWeapon','setTowerRoofShape','setTowerBartizan','setTowerBartizanCount','setTowerBell','setTowerInnerRoof','setTowerUpInnerTower','setCivicLevel','setPlazaVariant']){
     const execute=commands[name];
     commands[name]=(id,...args)=>{
       const target=find(id);if(!target||underConstruction(target))return false;

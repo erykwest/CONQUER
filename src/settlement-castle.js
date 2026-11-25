@@ -701,7 +701,23 @@ function towerUpperFloorZ(s,i){
   if(stoneTowerGrid(s))return TOWER_P1_Z+TOWER_STOREY_H*(i-1);
   const level=structureLevel(s);return structureHeight(s)*i/level;
 }
+// Up inner tower: its room is one more floor, on the deck (upInnerTowerGeometry), with its own
+// walls (upInnerTowerCutawayGeometry) instead of the tower's.
+function upInnerTowerFloor(s){
+  const up=s?.type==='tower'&&typeof upInnerTowerGeometry==='function'?upInnerTowerGeometry(s):null;
+  return up?{z:(up.cut?up.cut.z:up.h)+.055,material:'stone',turret:true}:null;   // above the cut roof under a pitched top
+}
+function upInnerTowerCutawayGeometry(s){
+  const up=typeof upInnerTowerGeometry==='function'&&upInnerTowerGeometry(s);if(!up)return null;
+  const t=.1,c=up.apex,round=up.shape==='round',r=Math.max(.12,up.half-t);
+  const inner=round?circleWorldPoints(c.x,c.y,r,24):rectWorldPoints(c.x,c.y,r*2,r*2,s.angle||0);
+  return{outer:up.ring,inner,thickness:t,turret:true,round,basis:{center:{x:c.x,y:c.y},angle:s.angle||0,w:r*2,h:r*2},up};
+}
 function cutawayFloorLevels(s){
+  const floors=cutawayFloorLevelsBase(s),turret=upInnerTowerFloor(s);
+  return turret&&!cutawaySpiralStair(s)?[...floors,turret]:floors;
+}
+function cutawayFloorLevelsBase(s){
   // Wide halls keep the full height free: a single ground floor at L2.
   const level=s.type==='built'?builtInteriorFloors(s):structureLevel(s),h=structureHeight(s),floors=[{z:.055,material:'stone'}];
   if(cutawaySpiralStair(s))return floors;
@@ -764,10 +780,15 @@ function cutawayRoomSlots(s,g=cutawayWallGeometry(s)){
     });
     return out;
   }
-  for(let i=0;i<cap;i++)out.push({
-    index:i,floor:i+off,role:roles[i]||null,size:functionSlotSize(s,i),
-    z:floors[i+off].z,basis,g
-  });
+  const tg=floors.some(f=>f.turret)?upInnerTowerCutawayGeometry(s):null;
+  // Stone towers have one storey more than rooms (the tower grid): the turret's room (the last
+  // one) goes to the turret floor, the others fill the storeys from the ground up.
+  const turretAt=tg?floors.findIndex(f=>f.turret):-1;
+  for(let i=0;i<cap;i++){
+    const fi=tg&&i===cap-1&&turretAt>=0?turretAt:i+off,f=floors[fi];
+    out.push(f.turret&&tg?{index:i,floor:fi,role:roles[i]||null,size:'normal',z:f.z,basis:tg.basis,g:tg,turret:true,round:tg.round}
+      :{index:i,floor:fi,role:roles[i]||null,size:functionSlotSize(s,i),z:f.z,basis,g});
+  }
   return out;
 }
 const KEEP_PARTITION=.10,KEEP_PARTITION_H=.62,KEEP_DOORWAY=.34;

@@ -61,6 +61,15 @@ Implementato nel branch `fix/territory-clay-stone-access`. Nuove mappe con acqua
 - [x] QA del vero Builder in Chromium: categorie, caricamento SVG, gestori originali, selezione e viewport mobile.
 - [ ] CI remota e revisione della PR prima dell'integrazione in main.
 - Owner e dettaglio: [feature-backlog](../feature-backlog.md), [BUILDER-ICONS](../BUILDER-ICONS.md).
+### 2026-11-24 — UP-INNER-TOWER · Torretta centrale
+
+**IMPLEMENTATO SU BRANCH `feature/upinnertower`, NON MERGE.** Richiesta del product owner (24/11/2026): torretta di un piano al centro delle torri W2/W3, larga W-1, rotonda o quadrata a scelta, solo come upgrade.
+- [x] Variante, regole di esclusione, mesh 3D, cantiere, danni, clay, cutaway, Lab, codex.
+- [x] Torretta come piano a sé con una stanza in più, aperta nel cutaway.
+- [ ] La scala dalla stanza sotto sbuca sulla piazza nell'angolo della torre, non dentro la torretta.
+- [x] Baseline del Lab aggiornata.
+- [ ] Costo dell'upgrade (oggi gratuito come il tetto interno).
+
 ### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2
 
 **IMPLEMENTATO SU BRANCH `feature/shops-l2-rooms`, NON MERGE.**

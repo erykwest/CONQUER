@@ -33,6 +33,10 @@ Primavera più distinta dall'estate: un albero su tre ha la chioma fiorita (pall
 ### 2026-11-19 — UI-BUILDERICON-01 · Icone medievali geometriche nel Builder
 
 `buildericon` da `67a1b1e8`: sostituiti i glifi outline del Builder con 52 SVG specifici e icone complementari nere su trasparenza; superfici chiare e selezione arancione. Aggiunti al Lab 72 SVG in Interfaccia / Icone Builder; audit mirato 72/72 senza errori o avvisi e baseline aggiornata dopo revisione. Regressioni del Builder e QA Chromium desktop/mobile PASS in locale; CI remota da eseguire. Nessun merge/deploy; roadmap, contratti di gameplay e decisioni esistenti invariati.
+### 2026-11-24 — UP-INNER-TOWER · Torretta centrale sulle torri W2/W3
+
+`feature/upinnertower`: nuovo upgrade delle torri in pietra W2/W3 con merli o caditoie, «Torretta centrale» rotonda o quadrata (indipendente dalla forma della torre), un piano, larga quanto la torre del taglio inferiore, con tetto a punta. Esclude tetto interno, arma e pira; toglie il bracere. Non è nel menu di costruzione. La torretta è un piano in più con una stanza assegnabile, che si apre nel cutaway piano per piano. Ammessa anche sulle torri a falde (piramide/cono): il tetto si tronca intorno alla torretta. 6 voci nel Lab, test in `qa/tower-up-inner-tower-regression.cjs`. ROADMAP e DECISIONS invariate.
+
 ### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2 come casa-bottega
 
 `feature/shops-l2-rooms` (base `feature/shops-l3-advanced`, #293): il cutaway delle botteghe L2 ha stanze proprie (`LAYOUTS_L2`): bancone su strada lontano dalla porta, angolo della famiglia (focolare con paiolo, tavolino, due sgabelli) sul fondo del lato bancone, postazione compatta del mestiere sul fondo del lato porta; passaggio dalla porta libero. Le case L3 tengono la bottega completa. Baseline del Lab aggiornata per i 21 render «Botteghe L2». ROADMAP invariata; DECISIONS: completa D-SHOP-L3-261119 (stanze L2).
