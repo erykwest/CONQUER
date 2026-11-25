@@ -125,15 +125,19 @@ function withStructureVisualMaterial(s,paint){
   structureVisualMaterial=(typeof isTimberLeanTo==='function'&&isTimberLeanTo(s))?'timber':masonryMaterial(s);
   try{return paint()}finally{structureVisualMaterial=previous}
 }
-// Timber lean-to: the masonry greys become weathered planks (same light ramp, warm brown).
+// Timber lean-to: framed (graticcio). The masonry greys become lime plaster between the timber
+// frame (settlement-architecture.js leanToTimberFrame); same light ramp, warm off-white.
 const timberTintCache=new Map();
+const TIMBER_TINT_KEEP=new Set(['#3b302c','#493732','#332824','#6a5148']);   // castle3d PAL.chimney
 function timberTint(color){
   if(!/^#[0-9a-f]{6}$/i.test(color))return color;
   let out=timberTintCache.get(color);if(out)return out;
   const n=parseInt(color.slice(1),16),r=n>>16,g=n>>8&255,b=n&255,l=(r+g+b)/3;
   if(Math.max(r,g,b)-Math.min(r,g,b)>40)return color;   // already coloured (doors, banners)
+  if(TIMBER_TINT_KEEP.has(color.toLowerCase()))return color; // chimneys stay masonry
   const h=v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0');
-  out='#'+h(l*1.08+14)+h(l*.80+6)+h(l*.52);timberTintCache.set(color,out);return out;
+  const k=Math.max(.72,Math.min(1.06,l/150));
+  out='#'+h(232*k)+h(220*k)+h(194*k);timberTintCache.set(color,out);return out;
 }
 function visualPaletteColor(color){
   if(typeof color!=='string')return color;
@@ -533,6 +537,12 @@ function isLeanTo(s){return s?.type==='built'&&s.leanTo===true&&!isLonghouse(s)&
 // Lean-to material: timber frame + thatch (default), or stone / brick masonry with the slate/tile roof.
 function leanToMaterial(s){return !isLeanTo(s)?null:s.leanMaterial==='stone'||s.leanMaterial==='brick'?s.leanMaterial:'wood'}
 function isTimberLeanTo(s){return leanToMaterial(s)==='wood'}
+// A timber lean-to is thatched, or one in three (30%, fixed by its id) carries a shingle roof.
+function timberLeanToShingled(s){
+  if(!isTimberLeanTo(s))return false;
+  let h=2166136261;for(const c of String(s.id||''))h=Math.imul(h^c.charCodeAt(0),16777619);
+  return ((h>>>0)%100)<30;
+}
 // W1 section with the portico skin: its ground floor is the open arcade (the W2 hall keeps its hall).
 function isBuiltPortico(s){return s?.type==='built'&&!isWideBuilt(s)&&builtSkin(s)==='arcade'}
 // Semantic gameplay hook: combat can query this later without depending on renderer details.

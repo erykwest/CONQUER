@@ -61,12 +61,13 @@ check('the turret is a floor of its own with one more room',()=>{
 });
 check('floor-by-floor cutaway: the turret is the top floor, the one below shows the crenellated deck',()=>{
   const t=tower('a',{size:2,tier:3,level:2,upInnerTower:'round',cutaway:true});setup([t]);
-  assert.equal(run('cutawayFloorCount')(t),3);
-  assert.equal(run('cutawayVisibleFloor')(t),2,'opens on the turret');
-  t.cutawayFloor=1;
-  assert.ok(!run('cutawayFloorShown')(t,2),'turret room hidden below it');
+  // Tower grid (WALL-GRID-261124): an L2 stone tower has three storeys, the turret is the fourth.
+  assert.equal(run('cutawayFloorCount')(t),4);
+  assert.equal(run('cutawayVisibleFloor')(t),3,'opens on the turret');
+  t.cutawayFloor=2;
+  assert.ok(!run('cutawayFloorShown')(t,3),'turret room hidden below it');
   assert.ok(!run('cutawayCrestHidden')(t),'the merlons stay with the top storey in view');
-  t.cutawayFloor=0;
+  t.cutawayFloor=1;
   assert.ok(run('cutawayCrestHidden')(t),'crest goes with the floors above');
 });
 check('pitched tower: the roof is cut round the turret, the turret stands above the cut',()=>{

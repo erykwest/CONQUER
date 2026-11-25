@@ -1039,7 +1039,8 @@ function chimneySpecs(s){
     const dx=g.ridgeB.x-g.ridgeA.x,dy=g.ridgeB.y-g.ridgeA.y;
     const ridgeLength=Math.hypot(dx,dy);
     // A hall has one hearth per end: two stacks, whatever its length.
-    const count=isWideBuilt(s)?2:Math.max(1,Math.ceil(ridgeLength/CHIMNEY_SPACING));
+    // A lean-to is one room: a single stack, in the middle.
+    const count=g.leanTo?1:isWideBuilt(s)?2:Math.max(1,Math.ceil(ridgeLength/CHIMNEY_SPACING));
     for(let i=0;i<count;i++){
       const t=(i+1)/(count+1);
       // Lean-to: the stack rises off the wall face, inside the roof.

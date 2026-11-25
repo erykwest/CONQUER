@@ -30,17 +30,24 @@ function halfTowerBodyPieces(s){
   return[rect(w/2-t,w/2,-h/2,h/2),rect(-w/2,w/2-t,-h/2,-h/2+t),rect(-w/2,w/2-t,h/2-t,h/2)];
 }
 function towerBodyPrisms(s){return s?.type==='tower'&&s.shape==='half'?halfTowerBodyPieces(s):[unionFootprintPoints(s)]}
-// Timber floors seen through the open gorge, one per storey; the top one is the fighting deck.
+// Timber floors seen through the open gorge, one per storey on the stone tower grid
+// (settlement-castle.js towerUpperFloorZ: 1.15 / 2.35 / 3.55 ..., the wall-walks land on them);
+// the top one, at the tower height, is the fighting deck.
 // Storey k is climbed by a ladder against a side wall at the gorge (alternating sides), through
 // a hatch left open in floor k: the floor is two convex boards around it.
 const HALF_LADDER_W=.16,HALF_HATCH_X=.26,HALF_HATCH_Y=.2,HALF_RUNG_STEP=.09;
 function halfTowerStoreys(s){
   if(s?.type!=='tower'||s.shape!=='half')return[];
   const {w,h}=orientedTowerDims(s),t=HALF_TOWER_WALL,H=structureHeight(s),L=structureLevel(s),out=[];
-  for(let k=1;k<=L;k++){
-    const side=k%2?-1:1,face=side*(h/2-t);
-    out.push({k,side,face,z:k===L?H:H*k/L,zBase:k===1?0:H*(k-1)/L,x0:-w/2,x1:-w/2+HALF_HATCH_X,xIn:w/2-t,yIn:h/2-t});
-  }
+  const zs=[];
+  if(typeof towerUpperFloorZ==='function'&&typeof towerStoreyCount==='function')
+    for(let i=1,n=towerStoreyCount(s);i<n;i++){const z=towerUpperFloorZ(s,i);if(z<H-.6)zs.push(z)}
+  else for(let k=1;k<L;k++)zs.push(H*k/L);
+  zs.push(H);
+  zs.forEach((z,i)=>{
+    const k=i+1,side=k%2?-1:1,face=side*(h/2-t);
+    out.push({k,side,face,z,zBase:i?zs[i-1]:0,x0:-w/2,x1:-w/2+HALF_HATCH_X,xIn:w/2-t,yIn:h/2-t});
+  });
   return out;
 }
 function halfTowerFloorDecks(s){

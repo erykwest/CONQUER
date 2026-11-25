@@ -1,5 +1,21 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-24 — WALL-SHEDS-261124: lean-to upgrade, tettoie, scatter addossati (branch `fix/wall-heights-follow-towers`, NON MERGE)
+- settlement-lean-to.js ofWall/setOnWall; StructureCommands.setWallLeanTo e controllo «Addossato» nel pannello del muro; deleteStructure toglie il lean-to col muro. settlement-wall-sheds.js (tettoie, signature per la cache World3D); settlement-scatter.js wallProps/hug/footRow.
+- PASS lean-to, wall-stairs, scatter, panels, render-cache-keys, refactor-module-boundaries (sulla sola versione committata). Verificato in gioco: matrice W1/W2/W3 × H1/H2 (lean-to solo H2), tettoie e scatter dal lato interno. Non nel Lab e senza regressione dedicata alle tettoie.
+- Nello stesso worktree un'altra sessione ha modifiche non committate (lean-to 4U max, finestre/porta del lean-to, architecture/core/castle3d): escluse da questo commit.
+
+### 2026-11-24 — WALL-STAIRS-261124: scale del camminamento e addossati (branch `fix/wall-heights-follow-towers`, NON MERGE)
+- settlement-wall-stairs.js: stairPlan/stairBoxes/stairTriangles (gradini pieni, pianerottoli); geometria alla sommità del muro (structureHeight), accesso alla rete a walkZ. settlement-lean-to.js: make() rifiuta un muro con wallStair.
+- PASS wall-stairs (sommità 1,15) e lean-to. Verificato a vista in gioco: H2 con quattro soldati disegnati sui gradini e pianerottoli (quote, non percorso di pattuglia), colori su 5 famiglie di pietra, clay e mattoni. La vista da fuori del muro mostra solo la sommità della scala. Audit Lab da CI.
+
+### 2026-11-24 — WALL-GRID-261124: griglia piani torre e muri (branch `fix/wall-heights-follow-towers`, NON MERGE)
+- Griglia in settlement-castle.js: TOWER_P1_Z=1,15, TOWER_STOREY_H=1,20, CURTAIN_WALK_Z=2,35; towerStoreyCount = livello+1 per le torri in pietra (le T1 a scala a chiocciola e le torri di legno invariate). Muri H1 1,15 / H2 2,35. Le stanze restano tante quante prima (capacità invariata): il piano in più è libero, con scala.
+- Semitorri (halfTowerStoreys in settlement-tower-shapes.js) sulla stessa griglia; porte in pietra con P1 a 2,35 e passo 1,20; porta piccola 2,65 / 3,85. Torri tonde, a D e quadre W1–W4 verificate a vista su scena pulita con muri H1/H2 (cutaway).
+- Aperto: la porta piccola con piano superiore in legno ha ancora il solaio a 1,40 (GATE_TIMBER_FLOOR), sotto il camminamento H2.
+- Ballatoio interno rimosso. Torre d'assedio di livello 2 rialzata in runtime di 0,25 sopra 1,0 U (no-op quando il modello Blender viene rigenerato con le nuove WALLS).
+- PASS cutaway-floors, cutaway-furniture, siege-assault, codex-wiki (catalog rigenerato) e il resto della suite qa/*.cjs (founding fallisce solo per tempo, flaky). Verificato a vista su torre W2 L3 con muro H2 a sinistra e H1 a destra: porte a 2,35 e 1,15 sui solai. Audit del Lab (qa/asset-audit.mjs) non eseguito in locale: da CI, poi aggiornare la baseline.
+
 ### 2026-11-19 — HARDEN-261119 · Integrità salvataggi e DOM risorse
 
 - **Implementato su `fix/main-hardening-20261119`, non ancora su main**, base verificata `168b993b`.
