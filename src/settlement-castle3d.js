@@ -84,7 +84,17 @@
       face(points,color){
         const vs=points.map(({p,z})=>vert(p,z));if(vs.length<3)return;
         const sh=Array.isArray(color)?shadeFor(vs,color):{col:color,top:false},c=rgb(sh.col);
-        for(let i=1;i<vs.length-1;i++){for(const v of [vs[0],vs[i],vs[i+1]])tris.push(v.x,v.y,v.d,c[0],c[1],c[2]);tags.push(this.tag)}
+        // GRAFICA (settlement-graphics.js): vertical gradient on walls, dark outline on every face.
+        const G=window.ConquerGraphics,gOn=!!G?.get('gradient')&&!sh.top,k=gOn?G.get('gradientStrength'):0;
+        let zlo=Infinity,zhi=-Infinity;
+        if(gOn)for(const v of vs){zlo=Math.min(zlo,v.wz);zhi=Math.max(zhi,v.wz)}
+        const span=zhi-zlo;
+        const fAt=v=>gOn&&span>1e-6?1-k*(1-(v.wz-zlo)/span):1;
+        for(let i=1;i<vs.length-1;i++){for(const v of [vs[0],vs[i],vs[i+1]]){const f=fAt(v);tris.push(v.x,v.y,v.d,c[0]*f,c[1]*f,c[2]*f)}tags.push(this.tag)}
+        if(G?.get('edges')){
+          const o=rgb('#2a2119');
+          for(let i=0;i<vs.length;i++)for(const v of [vs[i],vs[(i+1)%vs.length]])lines.push(v.x,v.y,v.d,o[0],o[1],o[2]);
+        }
         if(sh.top&&Array.isArray(color)&&color[3]){
           const o=rgb(color[3]);
           for(let i=0;i<vs.length;i++)for(const v of [vs[i],vs[(i+1)%vs.length]])lines.push(v.x,v.y,v.d,o[0],o[1],o[2]);
