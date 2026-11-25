@@ -21,6 +21,8 @@
       window.ConquerWorld3D?.invalidate?.();
       // Ask the game loop for a new frame: the 3D world only rebuilds while drawing.
       if(typeof markDirty==='function')markDirty(false,true,false);
+      // The game draws on demand: redraw now so the 3D world rebuilds without a page reload.
+      if(typeof draw==='function')draw();
     },
     reset(){for(const k of Object.keys(DEFAULTS))api.set(k,DEFAULTS[k])}
   };
