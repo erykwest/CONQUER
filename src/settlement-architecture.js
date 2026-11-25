@@ -122,6 +122,57 @@ function gateTimberFacade(s){
   return out;
 }
 const GATE_FACADE_FRONT=1,GATE_FACADE_REAR=3;
+// Timber frame of a framed (timber) lean-to, after the framed tops and halls of PR #300: close
+// posts (bays of about LEAN_BAY), a St Andrew's cross in every plain bay, a small dark window
+// every third bay on the long face with rails over and under it, and the door in the middle bay
+// with a lintel. Every open face (not the one on the wall) has sill and head plates.
+// Returns [{edge,beams,windows:[{off,z}],door:{off}|null}], offsets from the edge's middle.
+const LEAN_DOOR_W=.30,LEAN_DOOR_H=.62,LEAN_BAY=.36,LEAN_WIN=.15,LEAN_WIN_Z=.86;
+// Masonry plinth under the frame, up to half the door (visual only: no cost, no material).
+const LEAN_PLINTH_H=LEAN_DOOR_H/2;
+function leanToTimberFrame(s){
+  const fp=footprintPoints(s),w=window.ConquerLeanTo?.leanWallOf?.(s),t=HOUSE_TIMBER_W/2,z0=LEAN_PLINTH_H,z1=structureHeight(s),out=[];
+  if(fp.length<4)return out;
+  const open=[];
+  for(let i=0;i<4;i++){
+    const a=fp[i],b=fp[(i+1)%4],m={x:(a.x+b.x)/2,y:(a.y+b.y)/2},L=Math.hypot(b.x-a.x,b.y-a.y);
+    if(w&&pointSegmentDistance(m,w.a,w.b)<(Number(w.width)||.5)/2+.2)continue;   // against the wall
+    open.push({a,b,index:i,L});
+  }
+  const front=open.reduce((best,e)=>!best||e.L>best.L?e:best,null);
+  // Gable of a short end: the single-pitch roof rises from the eaves (z1) on the front to the
+  // ridge (R) on the wall; the frame climbs into it (raking plate, posts and crosses up to the roof).
+  const g=typeof builtRoofGeometry==='function'?builtRoofGeometry(s):null,R=g?.ridgeH??z1;
+  for(const e of open){
+    const L=e.L,h=L/2-t,windows=[];
+    let top=()=>z1;
+    if(e!==front&&w&&R>z1+.02){
+      const da=pointSegmentDistance(e.a,w.a,w.b),db=pointSegmentDistance(e.b,w.a,w.b);
+      const wallAtB=db<da;   // which end of this edge stands on the wall (the ridge)
+      top=off=>{const u=(off+L/2)/L;return z1+(R-z1)*(wallAtB?u:1-u)-t*1.6};
+    }
+    const beams=[[{off:-L/2,z:z0+t},{off:L/2,z:z0+t}],[{off:-L/2,z:z1-t},{off:L/2,z:z1-t}]];
+    if(e!==front&&R>z1+.02)beams.push([{off:-L/2,z:top(-L/2)},{off:L/2,z:top(L/2)}]);   // raking plate under the roof
+    const n=Math.max(2,Math.round(L/LEAN_BAY)),bw=L/n,x=k=>-L/2+k*bw;
+    for(let k=0;k<=n;k++){const p=Math.max(-h,Math.min(h,x(k)));beams.push([{off:p,z:z0+t},{off:p,z:Math.max(z1-t,top(p))}])}
+    const isFront=e===front,door=isFront?Math.floor(n/2):-1;
+    const lo=LEAN_WIN_Z-LEAN_WIN/2-t,hi=LEAN_WIN_Z+LEAN_WIN/2+t;
+    for(let k=0;k<n;k++){
+      const c0=Math.max(-h,x(k)),c1=Math.min(h,x(k+1)),c=(c0+c1)/2;
+      if(k===door){beams.push([{off:c0,z:LEAN_DOOR_H+t},{off:c1,z:LEAN_DOOR_H+t}]);continue}
+      if(isFront&&k%3===1&&Math.abs(k-door)>1){
+        windows.push({off:c,z:LEAN_WIN_Z});
+        beams.push([{off:c0,z:lo},{off:c1,z:lo}],[{off:c0,z:hi},{off:c1,z:hi}]);
+        continue;
+      }
+      beams.push([{off:c0,z:z0+t},{off:c1,z:z1-t}],[{off:c1,z:z0+t},{off:c0,z:z1-t}]);   // St Andrew's cross
+      // In the gable above the eaves: a second cross up to the raking plate.
+      if(top(c0)>z1+.12||top(c1)>z1+.12)beams.push([{off:c0,z:z1-t},{off:c1,z:Math.max(z1,top(c1))}],[{off:c1,z:z1-t},{off:c0,z:Math.max(z1,top(c0))}]);
+    }
+    out.push({edge:{a:e.a,b:e.b,index:e.index},beams,windows,door:door>=0?{off:(x(door)+x(door+1))/2}:null});
+  }
+  return out;
+}
 // Slits along a gate face: two side by side on the field front, one on the flanks.
 function gateSlitOffsets(edge){return edge.index===GATE_FACADE_FRONT?[-.26,.26]:[0]}
 function cutawayOpenEdgeIndexes(s){
@@ -296,8 +347,10 @@ const TOWER_OPENING_EYE_Z=.44;
 function towerFloorZ(s,floor){
   const level=structureLevel(s);
   if(floor<=1)return .055;
-  // The same storeys as the cutaway (settlement-castle.js towerUpperFloorZ: P1 at the wall-walk).
-  return typeof towerUpperFloorZ==='function'?towerUpperFloorZ(s,Math.min(floor,level)-1):structureHeight(s)*(Math.min(floor,level)-1)/level;
+  // The same storeys as the cutaway (settlement-castle.js towerUpperFloorZ: the stone grid).
+  if(typeof towerUpperFloorZ!=='function')return structureHeight(s)*(Math.min(floor,level)-1)/level;
+  const n=typeof towerStoreyCount==='function'?towerStoreyCount(s):level;
+  return towerUpperFloorZ(s,Math.min(floor,n)-1);
 }
 function towerOpeningZ(s,floor){return towerFloorZ(s,floor)+TOWER_OPENING_EYE_Z}
 // Unit outward direction of each tower face: footprint edges for square towers, the
