@@ -129,9 +129,18 @@
     if(isStoneTowerStructure(s)){
       const base=towerBaseStyle(s);
       if(base==='buttress'){
-        for(const b of stoneTowerButtresses(s))addButtress(m,b);
+        // On a slope each buttress plants its deep stage on the ground under it (z is relative
+        // to the tower floor here), instead of standing on the foundation wall.
+        const floor=placementGroundZ(s);
+        for(const b of stoneTowerButtresses(s)){
+          if(Number.isFinite(floor)){
+            const low=Math.min(...b[0].bottom.map(p=>terrainElevation(p)))-floor;
+            if(low<-.01)b[0]={...b[0],z0:low};
+          }
+          addButtress(m,b);
+        }
       }else if(base==='splayed'){
-        m.frustum(stoneTowerSplayedFootprint(s),footprintPoints(s),0,STONE_TOWER_BASE_HEIGHT);
+        addSplayedBase(m,s);
       }
     }
     for(const d of halfTowerFloorDecks(s))m.prism(d.pts,d.z0,d.z1,PAL.hoardDeck());
@@ -181,6 +190,70 @@
       m.tag=tag;
     }
     for(const b of towerBartizans(s))addBartizan(m,b);
+  }
+  // The 10° talus of a splayed tower, cut open in front of each ground-level door: the doorway is
+  // in the wall face behind the talus, so the batter stops at its jambs with two triangular cheeks
+  // (a whole frustum buried the door up to its arch).
+  function addSplayedBase(m,s){
+    const bottom=stoneTowerSplayedFootprint(s),top=stoneTowerSplayRing(s,0),H=STONE_TOWER_BASE_HEIGHT;
+    if(bottom.length!==top.length){m.frustum(bottom,footprintPoints(s),0,H);return}
+    const half=clamp(.38+towerTier(s)*.045,.42,.54)*.75+.04;
+    const doors=towerDoorSpecs(s).filter(d=>d.baseZ<H);
+    const inDoor=p=>doors.some(d=>{
+      const rx=p.x-d.contact.x,ry=p.y-d.contact.y;
+      return Math.abs(rx*d.tangent.x+ry*d.tangent.y)<half&&Math.abs(rx*d.outward.x+ry*d.outward.y)<.2;
+    });
+    const lerp=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
+    const cheek=(b,t)=>m.face([{p:b,z:0},{p:t,z:0},{p:t,z:H}],castleSideShade(b,t));
+    let open=false;   // carried across vertices: a round tower's door spans several edges
+    for(let i=0;i<bottom.length;i++){
+      const j=(i+1)%bottom.length,shade=castleSideShade(bottom[i],bottom[j]);
+      const steps=doors.length?Math.max(1,Math.ceil(dist(top[i],top[j])/.08)):1;
+      for(let k=0;k<steps;k++){
+        const t0=k/steps,t1=(k+1)/steps,b0=lerp(bottom[i],bottom[j],t0),b1=lerp(bottom[i],bottom[j],t1),q0=lerp(top[i],top[j],t0),q1=lerp(top[i],top[j],t1);
+        const gap=doors.length&&inDoor(lerp(q0,q1,.5));
+        if(gap&&!open)cheek(b0,q0);
+        if(!gap&&open)cheek(q0,b0);
+        open=gap;
+        if(!gap)m.face([{p:b0,z:0},{p:b1,z:0},{p:q1,z:H},{p:q0,z:H}],shade);
+      }
+    }
+  }
+  // Outer-face base of a wall or built section (linearBaseStyle): the face looking out of the
+  // enclosure (wallExteriorSide) gets the towers' 10° talus or their stepped buttresses; the inner
+  // face stays plumb. A stepped wall on a slope carries it section by section down to its foot.
+  function linearBaseRuns(s){
+    const side=wallExteriorSide(s),dx=s.b.x-s.a.x,dy=s.b.y-s.a.y,L=Math.hypot(dx,dy)||1;
+    const u={x:dx/L,y:dy/L},out={x:-u.y*side,y:u.x*side},half=(Number(s.width)||.5)/2;
+    const at=t=>({x:s.a.x+dx*t+out.x*half,y:s.a.y+dy*t+out.y*half});
+    const steps=s.type==='wall'?wallSlopeSections(s):null;
+    const runs=steps?steps.map(q=>({t0:Math.max(0,q.t0),t1:Math.min(1,q.t1),ground:q.ground,low:q.low})).filter(r=>r.t1>r.t0)
+      :[{t0:0,t1:1,ground:null,low:0}];
+    return{u,out,L,at,runs};
+  }
+  function addLinearBase(m,s){
+    const style=linearBaseStyle(s);if(!style||style==='standard')return;
+    const g=linearBaseRuns(s),H=STONE_TOWER_BASE_HEIGHT,T=Math.tan(STONE_TOWER_SPLAY_ANGLE);
+    const plane=(r,fn)=>r.ground==null?fn():withProjectionGroundZ(r.ground,fn);
+    const push=(p,d)=>({x:p.x+g.out.x*d,y:p.y+g.out.y*d});
+    if(style==='splayed'){
+      for(const r of g.runs)plane(r,()=>{
+        const a=g.at(r.t0),b=g.at(r.t1),d=STONE_TOWER_SPLAY_OFFSET+Math.max(0,-r.low)*T,a2=push(a,d),b2=push(b,d);
+        m.face([{p:a2,z:r.low},{p:b2,z:r.low},{p:b,z:H},{p:a,z:H}],castleSideShade(a2,b2));
+        m.face([{p:a,z:r.low},{p:a2,z:r.low},{p:a,z:H}],castleSideShade(a,a2));
+        m.face([{p:b2,z:r.low},{p:b,z:r.low},{p:b,z:H}],castleSideShade(b2,b));
+      });
+      return;
+    }
+    // Buttresses about every 1 U (user, 24/11/2026: twice as many), clear of the ends (towers and gates).
+    const pad=Math.min(.45,g.L*.2),span=g.L-2*pad;if(span<=.1)return;
+    const n=Math.max(1,Math.round(span)),h=structureHeight(s)*.85;
+    for(let k=0;k<n;k++){
+      const t=(pad+span*(k+.5)/n)/g.L,r=g.runs.find(q=>t>=q.t0&&t<=q.t1)||g.runs[0];
+      const pieces=steppedButtressPieces(g.at(t),g.u,g.out,h,.22,TOWER_BUTTRESS_SCALE);
+      if(r.low<-.01)pieces[0]={...pieces[0],z0:r.low};
+      plane(r,()=>addButtress(m,pieces));
+    }
   }
   // Corbelled cone, moulding band and drum; the pitched kind adds a conical roof (merlons: addPieces).
   function addBartizan(m,b){
@@ -261,8 +334,13 @@
     // drawPlacementFoundation: ground-contact ring walls from the terrain up to the placement plane.
     const baseZ=placementGroundZ(s);
     if(!Number.isFinite(baseZ)||placementFoundationDepth(s)<=.015)return;
+    const style=isStoneTowerStructure(s)?towerBaseStyle(s):null;
     withProjectionGroundZ(0,()=>{
-      for(const fp of unionGroundContactRings(structureGroundContactPolygons(s))){
+      // Splayed: the 10° talus runs on down the slope. Buttressed: the buttresses reach the ground
+      // themselves (addTower), so the foundation wall follows the tower body only.
+      if(style==='splayed'){addSplayTalus(m,s,baseZ);return}
+      const polys=style==='buttress'?[footprintPoints(s)]:structureGroundContactPolygons(s);
+      for(const fp of unionGroundContactRings(polys)){
         for(let i=0;i<fp.length;i++){
           const a=fp[i],b=fp[(i+1)%fp.length],steps=Math.max(1,Math.ceil(dist(a,b)/.24));
           for(let j=0;j<steps;j++){
@@ -274,6 +352,32 @@
         }
       }
     });
+  }
+  // Splayed base on a slope: the batter goes on below the floor at the same 10°, so its foot moves
+  // out as the ground falls away. The top ring is the splayed footprint at the floor; each point of
+  // the foot is pushed out by (depth below the floor)·tan10°, found by iterating on the terrain.
+  function addSplayTalus(m,s,baseZ){
+    const T=Math.tan(STONE_TOWER_SPLAY_ANGLE),depth=placementFoundationDepth(s)+.05;
+    const top=stoneTowerSplayedFootprint(s),far=stoneTowerSplayRing(s,STONE_TOWER_SPLAY_OFFSET+depth*T);
+    if(top.length!==far.length)return;
+    const lerp=(a,b,t)=>({x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t});
+    const foot=p=>{
+      const q=far[p.i],r=top[p.i],q2=far[(p.i+1)%far.length],r2=top[(p.i+1)%top.length];
+      const a=lerp(r,r2,p.t),b=lerp(q,q2,p.t);
+      let g=terrainElevation(a),pt=a;
+      for(let k=0;k<4;k++){pt=lerp(a,b,clamp((baseZ-g)/depth,0,1));g=Math.min(baseZ,terrainElevation(pt))}
+      return{top:a,p:pt,z:g};
+    };
+    for(let i=0;i<top.length;i++){
+      const steps=Math.max(1,Math.ceil(dist(top[i],top[(i+1)%top.length])/.24));
+      let prev=foot({i,t:0});
+      for(let j=1;j<=steps;j++){
+        const cur=foot({i,t:j/steps});
+        if(baseZ-Math.min(prev.z,cur.z)>.01)
+          m.face([{p:prev.p,z:prev.z},{p:cur.p,z:cur.z},{p:cur.top,z:baseZ},{p:prev.top,z:baseZ}],castleSideShade(prev.top,cur.top));
+        prev=cur;
+      }
+    }
   }
   function bodyMesh(parts,withBackPieces=false){
     const m=makeMesh();
@@ -309,6 +413,7 @@
         // Wall-walk stair (settlement-wall-stairs.js, Blender models), as the room exteriors.
         if(s.wallStair)for(const t of window.ConquerWallStairs?.triangles(s)||[])m.face(t.pts,[t.hex,t.hex,shadeHex(t.hex,.82)]);
         for(const b of wideHallButtresses(s))addButtress(m,b);
+        if(s.type==='wall'||s.type==='built')addLinearBase(m,s);
         if(s.type==='wall'&&wallSkin(s)==='hoarding')addHoarding(m,s);
         const mf=machicolationFloorPolygon(s);
         if(mf)m.prism(mf.pts,mf.z-.055,mf.z+.035,PAL.machFloor());

@@ -65,11 +65,32 @@
       ['Mura',['Addossato alle mura W1 · pietra',{type:'built',leanTo:true,leanMaterial:'stone',leanSide:1,flip:true,level:1,functions:[]}]],
       ['Mura',['Addossato alle mura W1 · mattoni',{type:'built',leanTo:true,leanMaterial:'brick',masonryMaterial:'brick',leanSide:1,flip:true,level:1,functions:[]}]],
       ['Mura',['Long house W2 · sala comune',{type:'built',material:'wood',span:'wide',level:1,flip:true,functions:['commonHall']}]],...G.gates.map(r=>['Porte',r])]
-      .map(([family,[label,spec]])=>({id:slug(label),label,family,spec})).concat(shopVariants());
+      .map(([family,[label,spec]])=>({id:slug(label),label,family,spec})).concat(shopVariants(),hillTowerVariants());
+  }
+  // Stone towers on a hill crest (user, 24/11/2026): every shape and W with each base, the body
+  // half on the hilltop and half on the slope, turned with its door to the summit as placement does.
+  const HILL_TOWERS=[['square',1,'quadrata W1'],['square',2,'quadrata W2'],['square',3,'quadrata W3'],['square',4,'Mastio W4'],
+    ['round',1,'rotonda W1'],['round',2,'rotonda W2'],['round',3,'rotonda W3'],['dee',2,'a D W2'],['dee',3,'a D W3']];
+  const HILL_BASES=[['standard','base standard'],['buttress','contrafforti'],['splayed','scarpa 10°']];
+  function hillTowerVariants(){
+    if(typeof towerSizeForTier!=='function')return[];
+    return HILL_TOWERS.flatMap(([shape,tier,name])=>HILL_BASES.map(([baseStyle,bname])=>{
+      const label='Torre '+name+' su bordo collina · '+bname;
+      const spec={type:'tower',shape,material:'stone',level:2,tier,roofStyle:'battlement',baseStyle,hill:true,
+        ...(shape==='round'?{r:towerSizeForTier('round',tier)}:{size:shape==='dee'?(tier===3?2:1.5):towerSizeForTier('square',tier)})};
+      return{id:slug(label),label,family:'Torri su bordo collina',spec};
+    }));
+  }
+  // A gentle crest through the stage spot: hilltop to the north (-y), slope down to the south.
+  function hillRelief(){
+    const x=spot.x,y=spot.y;
+    return{seed:24112026,hills:[{id:'assetlab-hill',levels:[{id:'assetlab-hill-1',z0:0,z1:1,gentleBase:2.5,steepBase:.6,
+      top:[{x:x-25,y:y-30},{x:x+25,y:y-30},{x:x+25,y},{x:x-25,y}],center:{x,y:y-15},edgeKinds:['gentle','gentle','gentle','gentle']}]}]};
   }
   function find(id){const v=variants().find(x=>x.id===id);if(!v)throw new Error('asset stage: unknown variant '+id);return v}
   function states(id){
     const {spec}=find(id);
+    if(spec.hill)return[{id:'intact',label:'Bordo collina',group:'intatto'}];
     // Open front by day (intact), shutters closed (night, Sunday), cutaway when selected.
     if(spec.type==='house')return[{id:'intact',label:'Nel gioco',group:'intatto'},{id:'closed',label:'Bottega chiusa',group:'chiusa'},{id:'cutaway',label:'Cutaway',group:'cutaway'}];
     const s=SP().galleryStructure(spec,0,0);
@@ -103,6 +124,7 @@
   function apply(spec,state,id){
     // A fixed id: collapse seeds (and so the rubble heaps) derive from it.
     const s={...SP().galleryStructure(spec,spot.x,spot.y),id:'assetlab-'+id};State.structures.push(s);
+    if(spec.hill)orientTowerToSummit(s);
     // Attached subtowers (spec.attach: [{dx,dy,spec}]): staged with their parent, which they follow
     // in cutaway (structureCutaway).
     (spec.attach||[]).forEach((a,i)=>State.structures.push({...SP().galleryStructure(a.spec,spot.x+a.dx,spot.y+a.dy),id:'assetlab-'+id+'-sub'+i,parentTowerId:s.id}));
@@ -164,6 +186,8 @@
     // Pitch states set the feudal roof pitch for this capture only (roofPitch() reads State.policies).
     const policies=State.policies||(State.policies={}),keepPitch=policies.roofPitch;
     policies.roofPitch=state.pitch??45;
+    const keepRelief=State.relief;
+    if(v.spec.hill){State.relief=hillRelief();clearReliefBandCache()}
     try{
       const t=[realNow()],lap=()=>t.push(realNow());
       clear();steady(rotation,scale);lap();
@@ -210,6 +234,7 @@
     }finally{
       delete performance.now;delete crypto.randomUUID;
       if(keepPitch===undefined)delete policies.roofPitch;else policies.roofPitch=keepPitch;
+      if(v.spec.hill){State.relief=keepRelief;clearReliefBandCache()}
       State.structures=keep;window.ConquerSiege?.restore({...(State.siege||{}),ruins:[]});invalidateSceneCache();
       if(v.spec.type==='house')invalidateUrbanGeometry();
     }

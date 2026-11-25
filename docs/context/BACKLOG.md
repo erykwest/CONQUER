@@ -9,6 +9,15 @@
 - [x] Torre lignea a telaio H3: P3 a graticcio a sbalzo, tetto a falde senza parapetto.
 - [ ] Torre H3: posti arcieri e cutaway del P3 da definire.
 - [ ] Bilanciamento del costo in legno (45) e del tempo di costruzione; voce wiki/codex da aggiungere.
+## 2026-11-24 — TOWER-HILL-BASES · Torri sul bordo collina
+
+- [x] Porta verso la cima e sulla cima per le torri su pendio (piazzamento + rifiuto).
+- [x] Contrafforti e scarpa delle torri fino al terreno; scarpa aperta davanti alla porta.
+- [x] Basamento esterno di mura e sezioni costruite (contrafforti / scarpa).
+- [x] Scala del mastio nel materiale della torre; ponte levatoio sempre visibile.
+- [ ] Migrazione dei salvataggi: riorientare le torri già piazzate su pendio.
+- [ ] Decidere se il basamento esterno delle mura incide su collisioni (fossato, scale d'assedio).
+
 ## 2026-11-24 — UI-INSPECTOR-SLIM · Icone dell'inspector
 
 - [ ] Disegnare le icone elencate in [docs/inspector-icons.md](../inspector-icons.md) (~13 comuni + ~95 per edificio) e sostituire i testi dei tasti; priorità: comuni → torri → porte/mura → stanze → resto.

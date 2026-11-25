@@ -26,6 +26,8 @@ function makePlacementPreview(q,angle=0){
     const candidate={...spec,x:q.x,y:q.y,angle:snapped,rotationStep,previewOnly:true};
     if(candidate.type==='watermill')window.ConquerIndustries?.orientToWater(candidate);
     if(candidate.type==='pier')window.ConquerPier?.snapToCoast(candidate);
+    // On a hillside the tower turns its door to the summit (towerEntranceSummitVerdict).
+    if(candidate.type==='tower'&&typeof orientTowerToSummit==='function')orientTowerToSummit(candidate,{wallSnapped:!!State.draft?.wallSnapId});
     return candidate;
   }
   return null;
@@ -258,6 +260,7 @@ function commitOrientedPlacement(center,angle){
   if(quaySnap)s.quaySnap=quaySnap;
   if(s.type==='watermill')window.ConquerIndustries?.orientToWater(s);
   if(s.type==='pier')window.ConquerPier?.snapToCoast(s);
+  if(s.type==='tower'&&!snap.parentTowerId&&typeof orientTowerToSummit==='function')orientTowerToSummit(s,{wallSnapped:!!snap.wallId});
   const ok=s.type==='tower'?addTowerWithPlacement(s,snap):addStructure(s);
   if(ok){
     State.draft=null;
