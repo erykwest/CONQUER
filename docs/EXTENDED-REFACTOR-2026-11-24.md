@@ -32,7 +32,7 @@ ROADMAP invariata: obiettivi di prodotto invariati. DECISIONS aggiornata per i n
 
 ## Armonizzazione delle PR 287 e 304 (25 novembre)
 
-La PR #304 è la proposta canonica; la #287 conserva la provenienza storica ed è superata dopo la verifica del consolidamento. Nessuna delle due è descritta come già merge. Base aggiornata a main `794c6e28`; history pubblicata conservata con merge del main, senza riscrivere gli SHA revisionati.
+La PR #304 è la proposta canonica; la #287 conserva la provenienza storica ed è superata dopo la verifica del consolidamento. Nessuna delle due è descritta come già merge. Base aggiornata a main `f5ec5c41`; history pubblicata conservata con merge del main, senza riscrivere gli SHA revisionati.
 
 | Modifica della #287 | Owner nella #304 | Esito del confronto |
 |---|---|---|
@@ -48,3 +48,7 @@ Le CI verdi del 24 novembre non certificano questa nuova base: test mirati e CI 
 Allineamento alla regola di main per gli addossati: la scelta autonoma è rimossa dal catalogo UI2; il comando dell'ispettore del muro `setWallLeanTo` costruisce l'annesso con il materiale scelto. Le chiamate dati legacy e i loro preset restano compatibili. La regressione browser verifica anche il click «Mattoni» nell'ispettore del muro. Il catalogo consolidato esercita 82 scelte distinte, oltre alle chiamate legacy: il confronto numerico con 94/85 senza considerare conteggio e ritiro dell'opzione non è una perdita di copertura.
 
 Prove locali del consolidamento: 41 test Node PASS, 29 regressioni mirate PASS, sintassi di 199 file runtime PASS; browser classico/UI2/CAMP PASS anche su frameTower3 H3 e aggiunta in mattoni dall'ispettore del muro. Le stringhe delle note locale/cloud sono ricondotte alla codifica UTF-8 corretta. Main include anche la palette GRAFICA (#309), conservata senza alterare il suo owner. La verifica completa CI e i provini del Lab sullo SHA pubblicato si leggono nella PR #304.
+
+Aggiornamento successivo di main (#310): conservati icone beige e selettore muratura a icone. I riferimenti HTML di cache dei file non modificati dal refactor seguono esattamente main, evitando conflitti su aggiornamenti indipendenti; i moduli del refactor mantengono la propria invalidazione. Renderer e registri modelli invariati rispetto al consolidamento `3ab0ff71`.
+
+La verifica browser delle icone è aggiornata alla palette di #310: fondo marrone, filtro beige e tinta scura sull'elemento attivo; selettore pietra/argilla con sole icone, nomi accessibili e cambio materiale effettivo. PASS anche identità dei pulsanti, caricamento SVG, catalogo Lab e viewport mobile. I tre modi Builder sono rieseguiti dopo la riconciliazione dei riferimenti HTML, senza errori di pagina.
