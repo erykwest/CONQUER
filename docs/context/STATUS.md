@@ -1,5 +1,9 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-24 — UI-INSPECTOR-SLIM: inspector compatto (`feature/inspector-slim`, NON MERGE)
+
+Inspector legacy più corto (torre: da ~4000 a ~1200 caratteri), tasti piccoli, spiegazioni dietro ⓘ, controlli di test solo in DEV. UI v2 invariata. Verificato in browser su torre, casa e porta.
+
 ### 2026-11-24 — ROOM-ANIM-AUDIENCE: udienza nella Sala del trono (branch `feature/cutaway-night-banquet`, NON MERGE)
 
 - Trono sulla parete corta in fondo delle sale lunghe (lato lungo ≥ 1,3× il corto; sale quadrate invariate), passatoia dal trono al fondo della sala riservata al passaggio (`throneRunner`), niente tavoli nella sala del trono.

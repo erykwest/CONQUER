@@ -1,5 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-24 — UI-INSPECTOR-SLIM · Icone dell'inspector
+
+- [ ] Disegnare le icone elencate in [docs/inspector-icons.md](../inspector-icons.md) (~13 comuni + ~95 per edificio) e sostituire i testi dei tasti; priorità: comuni → torri → porte/mura → stanze → resto.
+- [ ] Compattare allo stesso modo i blocchi dei moduli esterni (logistica castello, convogli, chiesa, gilda, porto).
+
 ### 2026-11-24 — WALL-SHEDS-261124 · Lean-to, tettoie e scatter dei muri
 - [x] Lean-to come upgrade del muro, niente costruzione libera, demolito col muro.
 - [x] Tettoie automatiche lungo la faccia interna dei muri; scatter addossato a muri, sezioni costruite, lean-to e sotto le tettoie.

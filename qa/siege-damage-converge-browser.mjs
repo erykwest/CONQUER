@@ -41,7 +41,7 @@ try{
     assert.equal(initial.worldActive,mode==='webgl','the requested renderer must be exercised');
     assert.equal(initial.timberHp,initial.hp);
     assert.ok(initial.forbidden.every(x=>x===0),'ordinary weapons cannot damage timber towers');
-    const ram=page.locator('[data-siege-test="ram"]');
+    const ram={click:()=>page.evaluate(()=>document.querySelector('#devPanel [data-siege-test="ram"]').click())};
     // Actual panel events: three 40-HP hits wreck only the 120-HP grate.
     for(let i=0;i<3;i++)await ram.click();
     const grate=await page.evaluate(()=>{

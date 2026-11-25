@@ -24,7 +24,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
     .catch(err => console.warn('polygon-clipping unavailable; viewer fallback remains active.', err));
 })();
 </script>
-<link rel="stylesheet" href="./src/settlement.css?v=buildericon-1">
+<link rel="stylesheet" href="./src/settlement.css?v=buildericon-1-slim1-cv1-row1-row2-sb1">
 <link rel="stylesheet" href="./src/settlement-minimap.css?v=minimap-1">
 <link rel="stylesheet" href="./src/settlement-diplomacy.css?v=knights2d-1-floors1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -207,6 +207,11 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
         <button type="button" data-dev-build="freeBuild" aria-pressed="false">Free build</button>
         <button type="button" data-dev-build="fastBuild" aria-pressed="false">Fast build</button>
       </div><span class="dev-hint">Free: nessun consumo di risorse o salario. Fast: istantaneo quando i materiali sono disponibili. Entrambi: gratis e istantaneo. Solo sessione corrente.</span></div>
+      <div class="dev-section"><span class="dev-label">ASSEDIO · TEST sulla struttura selezionata</span><div class="dev-row">
+        <button type="button" data-siege-test="axe">Ascia</button>
+        <button type="button" data-siege-test="ram">Ariete</button>
+        <button type="button" data-siege-test="trebuchet">Trabucco</button>
+      </div></div>
       <div class="dev-section"><span class="dev-label">MAPPA</span><button class="full" id="newMapBtn" title="Generate a new seeded landscape">🗺️ Genera nuova mappa</button></div>
       <div class="dev-section">
         <span class="dev-label">ANTEPRIMA GRAFICA · solo estetica</span>
@@ -359,7 +364,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 </div>
 <!-- Ordered classic modules: shared global lexical runtime, no build step. -->
 <script src="./src/settlement-util.js?v=util-1-a261113"></script>
-<script src="./src/settlement-core.js?v=hill-quantities-2-valley-hills-alias-1-slopes-merge-1-wc1-hoard1-hardening2-dove1-bell1-portico6-longhouse1-mare-stonecolor1-sites2-upgrades1-milres1-regional-water-1-main-95e8dd2-merge-ecdd630-a261113-moatroad1-framed2-shingle1"></script>
+<script src="./src/settlement-core.js?v=hill-quantities-2-valley-hills-alias-1-slopes-merge-1-wc1-hoard1-hardening2-dove1-bell1-portico6-longhouse1-mare-stonecolor1-sites2-upgrades1-milres1-regional-water-1-main-95e8dd2-merge-ecdd630-a261113-moatroad1-framed2-shingle1-slim1"></script>
 <script src="./src/settlement-stonecolor.js?v=stonecolor1-stonecolor2"></script>
 <script src="./src/settlement-tower-shapes.js?v=dee-slits-1-grid1"></script>
 <script src="./src/settlement-civic-annexes.js?v=civil-annex-1-wc1-barg1-gilda1"></script>
@@ -412,9 +417,9 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/settlement-construction-assembly.js?v=wood3d-3-longhouse1-mare-stonecolor2-milres1"></script>
 <script src="./src/settlement-placement.js?v=canopy-query-1-wall-slopes-1-wc1-mare-sites2-merge-ecdd630-moatroad1"></script>
 <script src="./src/settlement-collapse.js?v=collapse-1"></script>
-<script src="./src/settlement-siege.js?v=keep-entrance-2-circle3-hoard1-p0-infirmary1-dove1-portico6-prepared1-milres1-barg1-wallpatrol1-slots1-a261113-q261116-combatai1"></script>
+<script src="./src/settlement-siege.js?v=keep-entrance-2-circle3-hoard1-p0-infirmary1-dove1-portico6-prepared1-milres1-barg1-wallpatrol1-slots1-a261113-q261116-combatai1-slim1-m2"></script>
 <script src="./src/settlement-infirmary.js?v=infirmary-1-a261113"></script>
-<script src="./src/settlement-soldiers.js?v=milres1-wallpatrol1-a261113-upg2"></script>
+<script src="./src/settlement-soldiers.js?v=milres1-wallpatrol1-a261113-upg2-slim1"></script>
 <script src="./src/settlement-earthworks.js?v=knights2d-1"></script>
 <script src="./src/settlement-fire.js?v=keep-entrance-2-hoard1-barg1-sling1"></script>
 <script src="./src/settlement-crossings.js?v=drawbridge-window-mask-v5-stonecolor2-stonecolor2-sites2-upgrades1-wallmoat1-moatroad1-moatwiden1"></script>
@@ -484,13 +489,13 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/settlement-haulage.js?v=haulage-l1-market-1-a261113"></script>
 <script src="./src/settlement-road-sign-tests.js?v=economy-vehicles-1"></script>
 <script src="./src/settlement-app.js?v=wall-slopes-1-wc1-longhouse1-mare-sites2-upgrades1-barg1-wall-road-gate-1-lean1"></script>
-<script src="./src/settlement-app-rooms.js?v=keep-entrance-1-wc1-hoard1-floors1-portico6-longhouse1-mare-sites2-upgrades1-milres1-barg1-chiesa1-gilda1-wallpatrol1-a261113-upg2-wallmoat1-l2shop1-shopl3a-freshwater-261124"></script>
+<script src="./src/settlement-app-rooms.js?v=keep-entrance-1-wc1-hoard1-floors1-portico6-longhouse1-mare-sites2-upgrades1-milres1-barg1-chiesa1-gilda1-wallpatrol1-a261113-upg2-wallmoat1-l2shop1-shopl3a-freshwater-261124-slim1-m2-roof1-cv1-row1"></script>
 <script src="./src/settlement-alarm-bells.js?v=bell1-a261113"></script>
 <script src="./src/settlement-structure-commands.js?v=keep-entrance-3-wc1-hoard1-floors1-bell1-longhouse1-mare-sites2-upgrades1-milres1-lhroof1-barg1-wallpatrol2-insp1-upg2-lean1"></script>
 <script src="./src/settlement-cutaway-floors.js?v=floors1"></script>
 <script src="./src/settlement-app-input.js?v=small-gate-1-wc1-longhouse1-mare-sites2-fisco1-wall-road-gate-1-mfix1-roadgate1-moatroad1"></script>
 <script src="./src/settlement-app-persistence.js?v=keep-entrance-1-wc1-longhouse1-mare-stonecolor1-sites2-fig3d-26111-fig3d-2611111-lhroof1-fisco1-a261113-combatai1-hardening261119"></script>
-<script src="./src/settlement-app-calendar-ui.js?v=economy-labour-1-autumn1-stonecolor1-upgrades1-a261113-mfix1-gore1-devmonth1-hardening261119"></script>
+<script src="./src/settlement-app-calendar-ui.js?v=economy-labour-1-autumn1-stonecolor1-upgrades1-a261113-mfix1-gore1-devmonth1-hardening261119-slim1"></script>
 <script src="./src/settlement-app-simulation.js?v=economy-convoys-1-wc1-circle3-sites2-milres1-fig3d-261111"></script>
 <script src="./src/settlement-circle.js?v=circle-2"></script>
 <script src="./src/settlement-lod.js?v=lod-1"></script>
@@ -524,7 +529,7 @@ window.__CONQUER_ASSET_LAB__ = new URLSearchParams(location.search).get('assetla
 <script src="./src/settlement-asset-stage.js?v=assetlab-audit-2-infirmary1-dove1-portico6-longhouse1-lhroof1-l2shop1-shopl3a"></script>
 <script src="./src/settlement-tower-weapons.js?v=siege-1"></script>
 <script src="./src/settlement-diplomacy.js?v=economy-convoys-1-wc1-dove1-a261113-doorstep1"></script>
-<script src="./src/settlement-panels.js?v=circle-zones-macrotowers-261109-fisco1-chiesa1-scol1-gilda1-wallpatrol2-a261113"></script>
+<script src="./src/settlement-panels.js?v=circle-zones-macrotowers-261109-fisco1-chiesa1-scol1-gilda1-wallpatrol2-a261113-m2-cv1"></script>
 <script src="./src/codex-catalog.js?v=codex-1"></script>
 <script src="./src/settlement-codex.js?v=codex-1-barg1"></script>
 <script src="./src/codex-host.js?v=wiki-1-profile-codex-1"></script>

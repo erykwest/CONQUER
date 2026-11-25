@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-24 — UI-INSPECTOR-SLIM · Inspector compatto (`feature/inspector-slim`)
+
+Inspector legacy degli edifici (`renderFunctionPanel`) snellito: nome dell'edificio nel titolo (niente riga «Selected»), via costo di costruzione degli edifici finiti, riga «Rooms», note «skeleton/prototype» e step 0/23; spiegazioni nascoste dietro il tasto ⓘ (`.legend.live` resta per lo stato corrente); motivi dei tasti disabilitati nel tooltip; tasti alti 24px, etichette brevi in italiano; test d'assedio solo con DEV attivo. Lista icone in `docs/inspector-icons.md` e prompt di generazione in `docs/inspector-icons-prompt.md`. Nomi delle risorse sostituiti da icone (`resIcon`, nome nel tooltip) nell'inspector e nella barra in alto. Logistica del castello spostata in Profilo › Scorte (card «Rifornisci il castello»); test ascia/ariete/trabucco spostati nel pannello DEV (Assedio · test sulla struttura selezionata); le stanze restano nell'inspector. ROADMAP e DECISIONS invariate: solo presentazione, nessuna regola nuova. QA locali PASS (panels, builder-placement, cutaway-floors, snow-scale-rooms, shops-l3, caserma-avamposto, wall-patrol, falconry, refactor-app-population); CI remota non eseguita.
+
 ### 2026-11-24 — ROOM-ANIM-AUDIENCE · Udienza nella Sala del trono
 
 `feature/cutaway-night-banquet`: nelle sale lunghe il trono sta sulla parete corta in fondo, con la passatoia per tutta la sala e senza tavoli; di giorno i postulanti fanno la fila, uno alla volta si inginocchiano davanti al signore che risponde, poi escono lungo il lato. ROADMAP e DECISIONS invariate.
