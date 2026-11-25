@@ -4,6 +4,24 @@
 
 - **CODICE:** variante torre `upper` 'stone'/'timber' (`settlement-core.js` `towerTimberUpperAllowed`/`towerTimberUpper`, `TOWER_TIMBER_COST` {wood:45}, `TOWER_JETTY` .1): solo torri quadrate in pietra W3, L2+, cima integra; tetto sempre a falde (niente merli, caditoie, ballatoio, garitte). Costo: torre un livello più bassa + solo legno. Fuoco (`settlement-fire.js`): parte 'upper' (flam .85, 50 s); bruciata, la torre perde il piano (brokenTop), muratura integra. Render: piano in intonaco a sbalzo, gronda allargata, intelaiatura fitta (`timberStoreyFacade` dense), niente aperture in pietra sopra il piano. Ispettore (UI classica e profilo) «Piano alto: Pietra / Graticcio». Nuova torre lignea a telaio H3 (`woodStyle:'frameTower3'`, {gold:80,wood:190}, 9 giorni): P1 e P2 del modello H2, P3 intonacato a sbalzo 0,1 U con intelaiatura fitta (`settlement-wood3d.js` `addFramedP3`), tetto a falde senza parapetto (deck, tetto e bandiera del modello tolti). La H2 resta invariata. Sezione costruita W1 L2 con P1 a graticcio (variante `built.upper`, `builtTimberUpper`, +14 legno per U, sbalzo 0,1 U sui lati lunghi, intelaiatura fitta a campate, fuoco 'upper' che la riporta a L1; graticcio anche sui lati corti, frontoni intonacati, bifore sul lato interno: `pairedTimberBay`, graticcio anche sul frontone); P0 delle sezioni W1 standard (pietra e graticcio, `builtGroundFront`): niente feritoie, porta nella campata centrale e una bifora gotica (`gothicL2`) nelle altre sul lato cortile; camini delle sezioni W1 dimezzati (uno ogni 3 U di colmo); l'Asset Lab rispetta i limiti di lunghezza di `TYPES` (W1 max 4 U) invece dei 7,5 U fissi; schede codex `upgrade:tower.upper.*` e `upgrade:built.upper.*`. Lab: due varianti «framed top».
 - **PROVE LOCALI PASS:** nuova `qa/tower-framed-top-regression.cjs`; caso nuovo in `qa/fire-regression.cjs`; tower-weapons, clay-material, tower-roof-shape, bartizan, biome-recipes. Falliscono anche su main: codex-obsidian, codex-vault-import, codex-wiki, hills-zone, stream-count. Verifica visiva nell'Asset Lab (intatta, cutaway).
+### 2026-11-19 — HARDEN-261119 · Integrità salvataggi e DOM risorse
+
+- **Implementato su `fix/main-hardening-20261119`, non ancora su main**, base verificata `168b993b`.
+- Cloud: scrittura permessa solo dopo lettura riuscita (anche slot vuoto); attesa, errori SDK/rete e migrazioni fallite bloccano l'upsert. Retry riuscito riabilita la scrittura; Lab escluso anche con sessione presente.
+- Locale/CAMP: un errore di scrittura mantiene l'indicatore di errore e `dirty`; nessun falso «saved». Errori cloud restituiti o lanciati restano gestiti.
+- Barra risorse: chiavi e valori dei salvataggi costruiti come nodi di testo, senza interpretazione HTML.
+- QA locale: 16 test Node (11 nuovi + 5 runtime); 15 suite di regressione PASS. Rapporto e limiti in [HARDENING-2026-11-19](../HARDENING-2026-11-19.md). CI remota da verificare nella PR; browser e database live non verificati.
+### 2026-11-24 — CLAY-WATER-ACCESS · Acqua dolce e cava in palude
+
+Branch `fix/territory-clay-stone-access`, base main `fe665fe`. Il generatore cerca una sponda interna utilizzabile nella whitezone e aggiunge un piccolo stagno quando serve, preservando spazio asciutto per una cava 4×4U. In foresta può aprire una radura locale se manca spazio. La cava argilla può sorgere su qualsiasi terrazza asciutta edificabile del territorio Palude, anche lontano dalle rive. Acquitrini, boschi, strade ed edifici mantengono le collisioni.
+
+Prove locali PASS: economia/industrie, 42 mappe delle ricette, ordine del paesaggio, coste isola/penisola, demo regionali, bilanciamento Palude/Pianura, murature clay e Wiki. La nuova regressione delle sponde verifica il piazzamento reale in cinque biomi, acqua esterna, bosco fitto, ripetibilità e idempotenza, ed entra nella CI. Smoke Chromium headless PASS su pagina reale per Pianura 229, Mare 12345 e Palude 7, con generazione e validatore condiviso. La regola dell'acqua si applica alla generazione di nuove mappe. Merge in attesa.
+
+### 2026-11-24 — BARTIZAN-COUNT: numero di garitte selezionabile (branch `feature/bartizan-count`, NON MERGE)
+
+- **CODICE:** nuova variante torre `bartizanCount` ('1'–'4', default '4') in `settlement-core.js` (`towerBartizanCount`); `towerBartizans` riempie gli angoli opposti per primi (2 = diagonale, 3 = un angolo libero); comando `setTowerBartizanCount`, riga «Numero garitte» nel pannello e nell'ispettore; chiavi di cache/salvataggio aggiornate. I tiratori seguono (3 per garitta).
+- **PROVE LOCALI PASS:** `qa/bartizan-regression.cjs` (nuovo controllo 1–4 garitte e coppia sulla diagonale). Asset audit del Lab non eseguito, verifica a vista non fatta.
+
 
 ### 2026-11-24 — SPRING-FLORA: primavera e disgelo (`feature/spring-flora-thaw`)
 

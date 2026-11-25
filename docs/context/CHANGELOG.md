@@ -3,6 +3,19 @@
 ### 2026-11-24 — TOWER-FRAMED-TOP · Framed top per le torri quadrate W3
 
 `feature/framed-top-towers`: le torri quadrate in pietra W3 (L2+) possono avere l'ultimo piano a graticcio, leggermente a sbalzo e sempre con tetto a falde; costa la torre un livello più bassa più 45 legno; resiste come la pietra ma il piano in legno brucia e, consumato, la torre perde quel piano. Anche le sezioni costruite W1 L2 possono avere il P1 a graticcio a sbalzo (anche sui lati corti). Al P0 delle sezioni W1 standard porta e finestre doppie sul lato cortile al posto delle feritoie. Camini delle sezioni W1 dimezzati; nel Lab mura e sezioni rispettano le lunghezze massime del gioco. Nuova torre lignea a telaio H3: sopra la H2 un P3 a graticcio intonacato a sbalzo con tetto a falde senza parapetto. Nuova `qa/tower-framed-top-regression.cjs`.
+### 2026-11-19 — HARDEN-261119 (branch `fix/main-hardening-20261119`, non merge)
+
+Hardening su base main `168b993b`: blocco scritture cloud senza lettura riuscita, errori di salvataggio locali/CAMP non mascherati, gestione rejection cloud, esclusione Asset Lab, barra risorse con nodi di testo. 11 nuovi test comportamentali nel workflow Runtime integrity; 5 test runtime e 15 suite locali PASS. [Rapporto e limiti](../HARDENING-2026-11-19.md). ROADMAP e DECISIONS invariate: nessun nuovo contratto di gameplay o priorità.
+### 2026-11-24 — Acqua dolce garantita e argilla in Palude
+
+Allineamento a main `aca8c3bd` con icone Builder e aggiornamento della relativa etichetta accessibile nel catalogo. Ripetuti freshwater, industrie, menu Builder e Wiki dopo la risoluzione dei conflitti.
+
+Branch `fix/territory-clay-stone-access`, base main `fe665fe`. Le nuove mappe ricevono un piccolo stagno quando manca una sponda interna utilizzabile per una cava nella whitezone. La Palude consente cave argilla su qualsiasi terrazza asciutta edificabile. Aggiornati aiuti Builder, scheda cava e catalogo Wiki. Aggiunta regressione su generazione e piazzamento reale alla CI. Decisione D-CLAY-WATER-261124. Roadmap invariata.
+
+### 2026-11-24 — BARTIZAN-COUNT · Numero di garitte selezionabile
+
+`feature/bartizan-count`: le torri T3 con garitte scelgono quante metterne (1–4, default 4 come prima); con 2 stanno sulla diagonale, con 3 resta libero un angolo. Tiratori di conseguenza.
+
 
 ### 2026-11-24 — SPRING-FLORA · Primavera: fiori, sottobosco e disgelo (`feature/spring-flora-thaw`)
 

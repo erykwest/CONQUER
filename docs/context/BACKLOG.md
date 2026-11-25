@@ -9,6 +9,25 @@
 - [x] Torre lignea a telaio H3: P3 a graticcio a sbalzo, tetto a falde senza parapetto.
 - [ ] Torre H3: posti arcieri e cutaway del P3 da definire.
 - [ ] Bilanciamento del costo in legno (45) e del tempo di costruzione; voce wiki/codex da aggiungere.
+### 2026-11-19 — HARDEN-261119 · Hardening della base main
+
+**IMPLEMENTATO SU `fix/main-hardening-20261119`, NON MERGE.** [Rapporto](../HARDENING-2026-11-19.md).
+- [x] Impedire l'upsert cloud prima della lettura iniziale e dopo errori di lettura/migrazione.
+- [x] Conservare errore e stato dirty quando il salvataggio locale fallisce; gestire le rejection cloud.
+- [x] Trattare nomi/valori delle risorse come testo nella UI legacy; nessuna esecuzione di HTML dal save.
+- [x] Regressioni deterministiche per attesa, errori, recupero, CAMP, Lab e payload HTML; incluse nel workflow Runtime integrity.
+- [ ] Verifica separata delle policy RLS effettivamente applicate in produzione: in questa passata letto soltanto lo schema versionato.
+- [ ] CSP completa e rimozione dipendenze CDN: richiedono inventario e QA browser delle pagine/iframe; non applicate in questa passata.
+### 2026-11-24 — CLAY-WATER-ACCESS
+
+Implementato nel branch `fix/territory-clay-stone-access`. Nuove mappe con acqua dolce e sponda utilizzabile per l'argilla nella whitezone. Aggiunta deterministica di un piccolo stagno quando manca un sito accessibile. Cava argilla consentita sui terreni asciutti e pianeggianti del territorio Palude. QA dedicata con piazzamento condiviso, ripetibilità, acqua lontana e bosco fitto. Integrazione su main in attesa.
+
+### 2026-11-24 — BARTIZAN-COUNT · Numero di garitte
+
+**IMPLEMENTATO SU BRANCH `feature/bartizan-count`, NON MERGE.** Richiesta del product owner (24/11/2026).
+- [x] Da 1 a 4 garitte per torre, angoli opposti per primi.
+- [ ] Verifica a vista nel Lab e asset audit.
+
 
 ## 2026-11-24 — SPRING-FLORA · Primavera e disgelo
 
