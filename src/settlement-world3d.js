@@ -199,17 +199,57 @@
     const tris=[];
     const api={
       tris,
-      face(vs,hex){                       // vs: [{x,y,z}] convex
+      face(vs,hex,grad=false){            // vs: [{x,y,z}] convex; grad: vertical gradient (GRAFICA)
         const c=rgb(hex,usePalette);
-        for(let i=1;i<vs.length-1;i++)for(const v of [vs[0],vs[i],vs[i+1]])tris.push(v.x,v.y,v.z,c[0],c[1],c[2]);
+        const gOn=grad&&window.ConquerGraphics?.get('gradient');
+        const k=gOn?window.ConquerGraphics.get('gradientStrength'):0;
+        let zlo=Infinity,zhi=-Infinity;
+        if(gOn)for(const v of vs){zlo=Math.min(zlo,v.z);zhi=Math.max(zhi,v.z)}
+        const span=zhi-zlo;
+        const shadeAt=z=>{
+          if(!gOn)return 1;
+          // Top of the face keeps the colour, the base goes darker by k.
+          const t=span>1e-6?(z-zlo)/span:1;
+          return 1-k*(1-t);
+        };
+        for(let i=1;i<vs.length-1;i++)for(const v of [vs[0],vs[i],vs[i+1]]){
+          const f=shadeAt(v.z);
+          tris.push(v.x,v.y,v.z,c[0]*f,c[1]*f,c[2]*f);
+        }
+      },
+      // Thin dark strips along the outline of a convex planar polygon (GRAFICA: bordi).
+      outline(vs,hex,w){
+        const n=vs.length;if(n<3||!(w>0))return;
+        const c=rgb(hex,false);
+        let nx=0,ny=0,nz=0;
+        for(let i=0;i<n;i++){const a=vs[i],b=vs[(i+1)%n];nx+=(a.y-b.y)*(a.z+b.z);ny+=(a.z-b.z)*(a.x+b.x);nz+=(a.x-b.x)*(a.y+b.y)}
+        const NL=Math.hypot(nx,ny,nz)||1;nx/=NL;ny/=NL;nz/=NL;
+        const cen={x:0,y:0,z:0};for(const v of vs){cen.x+=v.x/n;cen.y+=v.y/n;cen.z+=v.z/n}
+        const push=v=>tris.push(v.x,v.y,v.z,c[0],c[1],c[2]);
+        for(let i=0;i<n;i++){
+          const a=vs[i],b=vs[(i+1)%n];
+          const ex=b.x-a.x,ey=b.y-a.y,ez=b.z-a.z;
+          // In-plane normal of the edge, pointing toward the polygon interior.
+          let ix=ny*ez-nz*ey,iy=nz*ex-nx*ez,iz=nx*ey-ny*ex;
+          const IL=Math.hypot(ix,iy,iz)||1;ix/=IL;iy/=IL;iz/=IL;
+          const mx=(a.x+b.x)/2-cen.x,my=(a.y+b.y)/2-cen.y,mz=(a.z+b.z)/2-cen.z;
+          if(ix*mx+iy*my+iz*mz<0){ix=-ix;iy=-iy;iz=-iz}
+          const a2={x:a.x+ix*w,y:a.y+iy*w,z:a.z+iz*w},b2={x:b.x+ix*w,y:b.y+iy*w,z:b.z+iz*w};
+          push(a);push(b);push(b2);push(a);push(b2);push(a2);
+        }
       },
       // Prism over a footprint with absolute base z; sides alternate like extrudePolygon (i%2 ? A : B).
       prism(pts,z0,z1,top,sideA,sideB){
         if(!pts?.length||!(z1>z0))return;
-        api.face(pts.map(p=>({x:p.x,y:p.y,z:z1})),top);
+        const edges=window.ConquerGraphics?.get('edges'),ew=window.ConquerGraphics?.get('edgeWidth')||0;
+        const topVs=pts.map(p=>({x:p.x,y:p.y,z:z1}));
+        api.face(topVs,top);
+        if(edges)api.outline(topVs,'#2a2119',ew);
         for(let i=0;i<pts.length;i++){
           const a=pts[i],b=pts[(i+1)%pts.length];
-          api.face([{x:a.x,y:a.y,z:z0},{x:b.x,y:b.y,z:z0},{x:b.x,y:b.y,z:z1},{x:a.x,y:a.y,z:z1}],i%2?sideA:sideB);
+          const wall=[{x:a.x,y:a.y,z:z0},{x:b.x,y:b.y,z:z0},{x:b.x,y:b.y,z:z1},{x:a.x,y:a.y,z:z1}];
+          api.face(wall,i%2?sideA:sideB,true);
+          if(edges)api.outline(wall,'#2a2119',ew);
         }
       },
       // Gabled block (drawCivicGabledPart / urbanHouseFaces): ridge along local x of (angle), walls by parity.
