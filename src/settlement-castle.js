@@ -227,7 +227,7 @@ function circleWorldPoints(cx,cy,r,n=20){const pts=[];for(let i=0;i<n;i++){const
 function structureHeight(s){
   if(!s)return 0;
   if(s.type==='tower'){
-    if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?2.35:woodTowerStyle(s)==='frameTower'?3.78:(woodTowerRoof(s)==='pitched'?2.95:2.32);
+    if(isWoodTower(s))return woodTowerStyle(s)==='watchtower'?2.35:woodTowerStyle(s)==='frameTower'?3.78:woodTowerStyle(s)==='frameTower3'?4.45:(woodTowerRoof(s)==='pitched'?2.95:2.32);
     const l=structureLevel(s),t=towerTier(s);return [2.35,3.55,4.75,5.95][l-1]+(t-1)*.12
   }
   // The small gate stands just above the curtain (H2 walls are 2.35, the small gate 0.30 over it): L1 passage only, L2 one room over P1 (2.35).
@@ -839,6 +839,20 @@ function cutawayFloorShown(s,i){const z=cutawayFloorLevels(s)[i]?.z;return !Numb
 // Timber upper storey of a small gate: from the room floor to the eaves, jettied over the front
 // and the rear (local x), flush with the flanks the walls meet.
 function gateTimberFloorZ(s){return GATE_TIMBER_FLOOR}
+// Framed top of a W3 tower: from its top floor to the eaves, jettied TOWER_JETTY on all faces.
+function towerTimberFloorZ(s){return towerUpperFloorZ(s,structureLevel(s)-1)}
+function towerTimberStoreyPoints(s){const d=rectDims(s);return rectWorldPoints(s.x,s.y,d.w+TOWER_JETTY*2,d.h+TOWER_JETTY*2,s.angle||0)}
+// Either timber storey (gate or tower): floor height and jettied outline, or null.
+function timberStorey(s){
+  if(s?.type==='gate'&&gateTimberUpper(s))return{z:gateTimberFloorZ(s),pts:gateTimberStoreyPoints(s)};
+  if(s?.type==='tower'&&towerTimberUpper(s))return{z:towerTimberFloorZ(s),pts:towerTimberStoreyPoints(s)};
+  if(s?.type==='built'&&builtTimberUpper(s))return{z:builtTimberFloorZ(s),pts:builtTimberStoreyPoints(s)};
+  return null;
+}
+// Timber P1 of a built section: from its upper floor to the eaves; the outline is the roof's
+// (pulled back from snapped towers) widened BUILT_JETTY on both long faces.
+function builtTimberFloorZ(s){return cutawayFloorLevels(s)[1]?.z??structureHeight(s)/2}
+function builtTimberStoreyPoints(s){return builtRoofFootprintPoints({...s,upper:'stone'},BUILT_JETTY)}
 function gateTimberStoreyPoints(s){const d=rectDims(s);return rectWorldPoints(s.x,s.y,d.w+GATE_JETTY*2,d.h,s.angle||0)}
 function cutawayRoomSlots(s,g=cutawayWallGeometry(s)){
   // slot i is the room on floor i+offset (gates: the ground floor is the passage, no room).

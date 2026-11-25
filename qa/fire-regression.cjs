@@ -23,6 +23,8 @@ function fixture({rain=false,seed=7}={}){
     wallTier:s=>s.tier||2,wallSkin:s=>s.skin||'standard',towerTier:()=>2,isCivic:()=>false,rectDims:()=>({w:1.5,h:1.5}),
     isWoodTower:s=>s.type==='tower'&&s.material==='wood',isWoodGate:s=>s.type==='gate'&&s.material==='wood',
     towerRoofStyle:s=>s.type==='tower'?(s.roofStyle||'battlement'):undefined,gateRoofStyle:s=>s.roofStyle||'battlement',
+    towerTimberUpper:s=>s.type==='tower'&&s.upper==='timber'&&!s.brokenTop&&(s.level||1)>=2,
+    builtTimberUpper:s=>s.type==='built'&&s.upper==='timber'&&(s.level||1)===2,
     weatherGroundWet:()=>rain,normalizeFunctions:()=>{},invalidateUrbanGeometry:()=>{},
     underConstruction:()=>false,invalidateStructureScene:()=>{},invalidateSceneCache:()=>{},invalidateNavigation:()=>{},
     markDirty:()=>{},renderFunctionPanel:()=>{},draw:()=>{},status:()=>{},terrainElevation:()=>0
@@ -98,6 +100,28 @@ const house=(id,x,y)=>({id,type:'house',x,y,functions:[]});
   assert.equal(w.skin,'standard','the hoarding burnt away');
   assert.equal(F.parts(st).length,0,'nothing left to burn');
   console.log('PASS stone keeps standing, its roof and hoardings burn away');
+}
+{
+  // Framed top (W3 tower): the timber storey burns as one; burnt out, the tower loses that storey.
+  const {State,F,S}=fixture();
+  const ft={id:'ft',type:'tower',material:'stone',roofStyle:'pitched',upper:'timber',level:3,x:0,y:0,functions:[]};
+  State.structures.push(ft);
+  assert.equal(F.parts(ft).map(p=>p.part).join('+'),'upper');
+  const hp0=S.integrity(ft).core.hp;
+  F.ignite('ft');run(F,F.BURN.upper*2.5);
+  assert.equal(ft.level,2,'the framed storey is gone');
+  assert.ok(ft.brokenTop&&ft.charred&&ft.upper==='stone');
+  const c=S.integrity(ft).core;assert.ok(hp0>0&&c.hp>=c.max-1e-6,'the stone storeys left are sound: '+c.hp+'/'+c.max);
+  console.log('PASS a framed top burns away, the stone storeys stand');
+}
+{
+  const {State,F}=fixture();
+  const b={id:'bt',type:'built',upper:'timber',level:2,a:{x:0,y:0},b:{x:3,y:0},width:1,functions:[]};
+  State.structures.push(b);
+  assert.equal(F.parts(b).map(p=>p.part).join('+'),'upper');
+  F.ignite('bt');run(F,F.BURN.upper*2.5);
+  assert.equal(b.level,1);assert.equal(b.upper,'stone');assert.ok(b.charred);
+  console.log('PASS a timber P1 on a built section burns away, the ground floor stands');
 }
 {
   // The gate door burns (its own integrity), not the gatehouse.

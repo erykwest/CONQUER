@@ -1,5 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-24 — TOWER-FRAMED-TOP · Framed top per le torri quadrate W3
+
+`feature/framed-top-towers`: le torri quadrate in pietra W3 (L2+) possono avere l'ultimo piano a graticcio, leggermente a sbalzo e sempre con tetto a falde; costa la torre un livello più bassa più 45 legno; resiste come la pietra ma il piano in legno brucia e, consumato, la torre perde quel piano. Anche le sezioni costruite W1 L2 possono avere il P1 a graticcio a sbalzo (anche sui lati corti). Al P0 delle sezioni W1 standard porta e finestre doppie sul lato cortile al posto delle feritoie. Camini delle sezioni W1 dimezzati; nel Lab mura e sezioni rispettano le lunghezze massime del gioco. Nuova torre lignea a telaio H3: sopra la H2 un P3 a graticcio intonacato a sbalzo con tetto a falde senza parapetto. Nuova `qa/tower-framed-top-regression.cjs`.
 ### 2026-11-25 — PLACEMENT-GHOST · Torna il ghost dell'edificio nel piazzamento
 
 `fix/placement-ghost-3d`: dopo il ritiro del 2.5D (#204) l'anteprima di piazzamento era solo un prisma tratteggiato. Ora mostra l'edificio finito World 3D traslucido sopra l'impronta, evidenziata solo a terra; le parti in muratura del castello (torri, porte, mura, sezioni) prendono la mesh dalla sorgente dell'assemblaggio di cantiere. ROADMAP e DECISIONS invariati: ripristino di un comportamento visivo.

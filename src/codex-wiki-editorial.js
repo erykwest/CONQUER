@@ -1,7 +1,7 @@
 // Generated from content/codex/*.md. Do not edit; run node tools/export-codex-content.cjs.
 (function(root){root.ConquerWikiEditorial={
   "schemaVersion": 1,
-  "sourceDigest": "1d75c14fc74e4def3d7296e45544836d2cd7888a466c5a73c59198f728486e5a",
+  "sourceDigest": "c93b30d9663708b354accda84a41afce48f9148048359a514633e367dc817acb",
   "pages": [
     {
       "id": "building:balivo",
@@ -6602,6 +6602,100 @@
       "members": []
     },
     {
+      "id": "upgrade:built.upper.stone",
+      "kind": "entry",
+      "title": "Sezione costruita · P1 in pietra",
+      "aliases": [
+        "Sezione costruita · P1 in pietra"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Sezione Costruita|Sezione costruita]] · P1 in pietra appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: il piano superiore della sezione L2 è in muratura come il piano terra.",
+          "tokens": [
+            {
+              "text": "Sezione costruita",
+              "id": "building:built"
+            },
+            {
+              "text": " · P1 in pietra appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": il piano superiore della sezione L2 è in muratura come il piano terra."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Sezione costruita · P1 in pietra appartiene ai miglioramenti delle fortificazioni: il piano superiore della sezione L2 è in muratura come il piano terra."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:built"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:built.upper.timber",
+      "kind": "entry",
+      "title": "Sezione costruita · P1 a graticcio",
+      "aliases": [
+        "Sezione costruita · P1 a graticcio"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Sezione Costruita|Sezione costruita]] · P1 a graticcio appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: sulle sezioni costruite W1 in pietra a L2 il piano superiore è in legno e intonaco, a sbalzo sui due lati lunghi. Costa la sezione L1 più solo legno; il piano terra resiste come la pietra, il P1 brucia e, consumato, la sezione torna a L1.",
+          "tokens": [
+            {
+              "text": "Sezione costruita",
+              "id": "building:built"
+            },
+            {
+              "text": " · P1 a graticcio appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": sulle sezioni costruite W1 in pietra a L2 il piano superiore è in legno e intonaco, a sbalzo sui due lati lunghi. Costa la sezione L1 più solo legno; il piano terra resiste come la pietra, il P1 brucia e, consumato, la sezione torna a L1."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Sezione costruita · P1 a graticcio appartiene ai miglioramenti delle fortificazioni: sulle sezioni costruite W1 in pietra a L2 il piano superiore è in legno e intonaco, a sbalzo sui due lati lunghi. Costa la sezione L1 più solo legno; il piano terra resiste come la pietra, il P1 brucia e, consumato, la sezione torna a L1."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:built"
+      ],
+      "members": []
+    },
+    {
       "id": "upgrade:gate.drawbridge",
       "kind": "entry",
       "title": "Ponte levatoio della porta",
@@ -8680,6 +8774,100 @@
       ],
       "text": [
         "Torre · Torretta centrale quadrata appartiene ai miglioramenti delle fortificazioni: una torretta quadrata di un piano al centro della piazza, larga quanto una torre di un taglio più piccola, con tetto a piramide. Si monta su torri in pietra W2 e W3 con merli o caditoie, di qualunque forma; esclude tetto interno, arma e fuoco di segnalazione."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:tower"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:tower.upper.stone",
+      "kind": "entry",
+      "title": "Torre · Piano alto in pietra",
+      "aliases": [
+        "Torre · Piano alto in pietra"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Torre|Torre]] · Piano alto in pietra appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: l'ultimo piano della torre è in muratura come quelli sottostanti, e la sommità può avere merli, caditoie o tetto a falde.",
+          "tokens": [
+            {
+              "text": "Torre",
+              "id": "building:tower"
+            },
+            {
+              "text": " · Piano alto in pietra appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": l'ultimo piano della torre è in muratura come quelli sottostanti, e la sommità può avere merli, caditoie o tetto a falde."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Torre · Piano alto in pietra appartiene ai miglioramenti delle fortificazioni: l'ultimo piano della torre è in muratura come quelli sottostanti, e la sommità può avere merli, caditoie o tetto a falde."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:tower"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:tower.upper.timber",
+      "kind": "entry",
+      "title": "Torre · Piano alto a graticcio",
+      "aliases": [
+        "Torre · Piano alto a graticcio"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Torre|Torre]] · Piano alto a graticcio (framed top) appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: sulle torri quadrate in pietra W3 dal livello 2, l'ultimo piano è in legno e intonaco, leggermente a sbalzo, sempre con il tetto a falde. I piani sotto costano pietra o argilla, quello alto solo legno; resiste come la pietra ma il piano in legno brucia e, consumato, la torre perde quel piano.",
+          "tokens": [
+            {
+              "text": "Torre",
+              "id": "building:tower"
+            },
+            {
+              "text": " · Piano alto a graticcio (framed top) appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": sulle torri quadrate in pietra W3 dal livello 2, l'ultimo piano è in legno e intonaco, leggermente a sbalzo, sempre con il tetto a falde. I piani sotto costano pietra o argilla, quello alto solo legno; resiste come la pietra ma il piano in legno brucia e, consumato, la torre perde quel piano."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Torre · Piano alto a graticcio (framed top) appartiene ai miglioramenti delle fortificazioni: sulle torri quadrate in pietra W3 dal livello 2, l'ultimo piano è in legno e intonaco, leggermente a sbalzo, sempre con il tetto a falde. I piani sotto costano pietra o argilla, quello alto solo legno; resiste come la pietra ma il piano in legno brucia e, consumato, la torre perde quel piano."
       ],
       "related": [
         "category:upgrade",

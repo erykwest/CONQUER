@@ -64,7 +64,7 @@ function towerRoofRise(s){
   if(!s||s.type!=='tower'||towerRoofStyle(s)!=='pitched')return 0;
   // Feudal roof pitch (roofPitch()): the slope rises from the eave over the roof's half span, the
   // radius on round towers, the shorter half side on square ones.
-  const overhang=.07,d=s.shape==='round'?null:rectDims(s);
+  const overhang=.07+(typeof towerTimberUpper==='function'&&towerTimberUpper(s)?TOWER_JETTY:0),d=s.shape==='round'?null:rectDims(s);
   const half=s.shape==='round'?Number(s.r||.5)+overhang:Math.min(d.w,d.h)/2+overhang;
   return roofPitchTan()*half;
 }
@@ -81,7 +81,7 @@ function towerVisualTopHeight(s){
 function towerRoofApex(s){return s?.shape==='dee'?deeTowerRoofApex(s):{x:s.x,y:s.y}}
 function towerRoofFootprintPoints(s){
   if(!s||s.type!=='tower')return[];
-  const overhang=.07;
+  const overhang=.07+(typeof towerTimberUpper==='function'&&towerTimberUpper(s)?TOWER_JETTY:0);
   if(s.shape==='round')return circleWorldPoints(s.x,s.y,Number(s.r||.5)+overhang,24);
   if(isOrientedTower(s))return orientedTowerOutline(s,-overhang);
   const d=rectDims(s);
