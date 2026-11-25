@@ -2,7 +2,7 @@
 
 ### 2026-11-25 — SIEGE-HEIGHTS-261125: macchine d'assedio rigenerate (branch `fix/siege-heights`, NON MERGE)
 - Modello rigenerato in Blender 4.4 (cq_blender.py non è nel repo: usata la copia locale di autobuild/tools/blender). Solo tower2 diverso dal modello precedente; ram, catapult, trebuchet, mantlet, ladder, ballista, tower identici.
-- Seconda passata: tolti i pianerottoli intermedi (L1: base + ponte; L2: base + ponte + cima); cambia solo la geometria del telaio di tower e tower2, rig invariato.
+- Piani: L1 base + ponte, senza parapetto posteriore; L2 base + un pianerottolo intermedio + ponte + cima. Cambia solo la geometria del telaio di tower e tower2, rig invariato.
 - PASS siege-engines, siege-assault (ponte su H2 entro 0,06), combat-sectors, codex-wiki (catalog rigenerato), stonecolor, trebuchet, tower-weapons, siege-damage-converge, gate-breach. Verificato a vista con l'anteprima d'assedio: torre L1 su H1, torre L2 su H2, scala su H1. Audit Lab non eseguibile in locale (manca Playwright): da CI.
 
 ### 2026-11-24 — UI-INSPECTOR-SLIM: inspector compatto (`feature/inspector-slim`, NON MERGE)

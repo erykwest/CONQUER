@@ -2,7 +2,7 @@
 
 ### 2026-11-25 — SIEGE-HEIGHTS-261125 · Macchine d'assedio alle nuove altezze dei muri
 
-`fix/siege-heights`: src/assets/siege-engines-model.js rigenerato in Blender 4.4 da tools/blender/build_siege_engines.py con le WALLS della griglia (H1 1,15, H2 2,35): cambia solo la torre d'assedio di livello 2 (camminamento 2,35, ponte 2,50, cima di combattimento 3,28, base 0,25 più lunga con ruote e serventi spostati). Tolto l'adattamento a runtime (fitAssaultTowers). Torri d'assedio senza pianerottoli intermedi: L1 piano di base e ponte, L2 piano di base, ponte e cima di combattimento (build_siege_engines.py floors). Scala d'assalto invariata, solo per H1: test aggiornato al limite H2 2,35.
+`fix/siege-heights`: src/assets/siege-engines-model.js rigenerato in Blender 4.4 da tools/blender/build_siege_engines.py con le WALLS della griglia (H1 1,15, H2 2,35): cambia solo la torre d'assedio di livello 2 (camminamento 2,35, ponte 2,50, cima di combattimento 3,28, base 0,25 più lunga con ruote e serventi spostati). Tolto l'adattamento a runtime (fitAssaultTowers). Torri d'assedio: L1 con piano di base e ponte, senza parapetto posteriore in cima; L2 con piano di base, un pianerottolo intermedio, ponte e cima di combattimento (build_siege_engines.py). Scala d'assalto invariata, solo per H1: test aggiornato al limite H2 2,35.
 
 ### 2026-11-24 — UI-INSPECTOR-SLIM · Inspector compatto (`feature/inspector-slim`)
 

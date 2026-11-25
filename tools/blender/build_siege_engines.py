@@ -391,9 +391,10 @@ def build_tower(root, off, level=1):
     back0 = -(1.2 + .3 * PAR)                       # the back slopes in: x at the ground ...
     back1 = -1.0                                    # ... and at the parapet
     back = lambda z: back0 + (back1 - back0) * min(1, max(0, z / PAR))
-    # Landings: the base floor over the wheels, the bridge deck and (level 2) the fighting top;
-    # no intermediate landings between them (one long ladder per storey).
-    floors = [.75, DECK]
+    # Landings: the base floor over the wheels, the bridge deck and (level 2) the fighting top.
+    # Level 1 has nothing in between (one long ladder); level 2 one intermediate landing
+    # halfway up to the bridge.
+    floors = [.75, DECK] if level == 1 else [.75, (.75 + DECK) / 2, DECK]
     if level > 1:
         floors.append(TOP)
 
@@ -442,14 +443,14 @@ def build_tower(root, off, level=1):
     for s in (-1, 1):
         p.box(((FRONT + back1) / 2, s * W, TOP + .45), (FRONT - back1 + .2, .12, .7), 'wood')
     for x, sx in ((FRONT, 1), (back1, -1)):
-        if level == 1 and sx == 1:
-            continue                                                                    # the bridge closes the front
+        if level == 1:
+            continue                    # level 1: the bridge closes the front, the back stays open
         p.box((x, 0, TOP + .45), (.12, 2 * W + .2, .7), 'wood')
     for s in (-1, 1):
         for x in [FRONT - .2 - .6 * i for i in range(int((FRONT - back1) / .6) + 1)]:
             p.box((x, s * W, TOP + .95), (.3, .14, .4), 'woodLight')
     for x, sx in ((FRONT, 1), (back1, -1)):
-        if level == 1 and sx == 1:
+        if level == 1:
             continue
         for yy in (-1.2, -.4, .4, 1.2):
             p.box((x, yy, TOP + .95), (.14, .3, .4), 'woodLight')
