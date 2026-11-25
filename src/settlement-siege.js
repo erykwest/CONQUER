@@ -162,6 +162,46 @@
     return State.structures.find(s=>s.type==='tower'&&s.isMastio&&!s.destroyed&&!underConstruction(s)
       &&s.functions?.includes('commonHall'))||null;
   }
+  // Red alarm shelters: every standing, finished structure with a Common Hall (Mastio, towers, built
+  // sections, longhouses), the Mastio first. A hall shelters 3x its banquet: the banquet seats one
+  // diner per bench (settlement-staff-people.js commonHallScene), the shelter three people per bench
+  // place. Without the furniture layout the banquet is estimated from the floor: one table with two
+  // benches per ~9 m² (settlement-cutaway-furniture.js hallTableCount).
+  const SHELTER_PER_SEAT=3,BANQUET_M2_PER_TABLE=9;
+  function shelters(){
+    const keep=mastio();
+    const list=State.structures.filter(s=>eligibleRoom(s)&&!s.destroyed&&!underConstruction(s)
+      &&s.functions?.some((fn,i)=>fn==='commonHall'&&allowed(s,i,fn)));
+    return keep?[keep,...list.filter(s=>s!==keep)]:list;
+  }
+  function banquetSeats(s){
+    const slots=typeof cutawayRoomSlots==='function'?cutawayRoomSlots(s).filter(x=>x.role==='commonHall'):[];
+    if(!slots.length)return 0;
+    const CF=window.ConquerCutawayFurniture;
+    // A 1.6 m bench seats one diner, the 3.2 m bench of a long banquet table two.
+    const benches=CF?.roomPieces?slots.reduce((n,x)=>n+(CF.roomPieces(s,x,'bench')||[]).length+2*(CF.roomPieces(s,x,'benchLong')||[]).length,0):0;
+    if(benches>0)return benches;
+    const m2=slots.reduce((n,x)=>n+(x.basis?.w||0)*(x.basis?.h||0)*12.25,0);
+    return 2*Math.max(1,Math.round(m2/BANQUET_M2_PER_TABLE));
+  }
+  function shelterCapacity(s){return SHELTER_PER_SEAT*banquetSeats(s)}
+  // Who must shelter at the red alarm: women, children and L3/L4 men (L1/L2 men are the levy,
+  // settlement-combat.js combatRole), from the households of the finished houses.
+  function shelterNeed(){
+    if(typeof completedSettlement!=='function'||typeof houseResidents!=='function')return 0;
+    let n=0;
+    for(const house of completedSettlement('house')){
+      const level=Math.round(Number(house?.houseLevel)||1);
+      for(const r of houseResidents(house))if(r.age!=='adult'||r.sex!=='male'||level>=3)n++;
+    }
+    return n;
+  }
+  // The shelter as a castle parameter: places in all the Common Halls against the people to shelter;
+  // missing > 0 tells the player a new Common Hall is needed.
+  function shelterStatus(){
+    const halls=shelters(),capacity=halls.reduce((n,s)=>n+shelterCapacity(s),0),need=shelterNeed();
+    return{halls:halls.length,capacity,need,missing:Math.max(0,need-capacity)};
+  }
   function armories(){
     return State.structures.filter(s=>eligibleRoom(s)&&!s.destroyed
       &&s.functions?.some((fn,i)=>fn==='armory'&&allowed(s,i,fn)));
@@ -1259,15 +1299,16 @@
     const c=capacity(),x=state(),f=x.stock.food,d=dailyFoodDemand();
     const days=d>0?Math.floor(f/d):null,material=used('materials');
     const fmtDays=days===null?'∞':days+' d';
+    const R=k=>typeof resIcon==='function'?resIcon(k):k;
     const buttons=['food','wood','stone','metal','equipment','gold','horses'].map(key=>{
       const group=MATERIAL_KEYS.includes(key)?'materials':key;
       const disabled=(c[group]||0)<=used(group)||(State.resources[key]||0)<=0;
-      return '<button data-siege-transfer="'+key+'" '+(disabled?'disabled':'')+'>+'+key+'</button>';
+      return '<button data-siege-transfer="'+key+'" '+(disabled?'disabled':'')+' title="Trasferisci al castello">+'+R(key)+'</button>';
     }).join('');
     return '<div class="slot"><div class="slot-label">Castle logistics · allocated stores</div>'+
-      '<div class="legend">Food '+fmt(f)+'/'+fmt(c.food)+' · '+fmtDays+' autonomy · Daily '+d.toFixed(1)+
-      '<br>Materials '+fmt(material)+'/'+fmt(c.materials)+' · Arms '+fmt(x.stock.equipment)+'/'+fmt(c.equipment)+
-      '<br>Horses '+fmt(x.stock.horses)+'/'+fmt(c.horses)+' · Gold '+fmt(x.stock.gold)+'/'+fmt(c.gold)+
+      '<div class="legend live">'+R('food')+' '+fmt(f)+'/'+fmt(c.food)+' · '+fmtDays+' autonomy · Daily '+d.toFixed(1)+
+      '<br>'+R('materials')+' '+fmt(material)+'/'+fmt(c.materials)+' · '+R('equipment')+' '+fmt(x.stock.equipment)+'/'+fmt(c.equipment)+
+      '<br>'+R('horses')+' '+fmt(x.stock.horses)+'/'+fmt(c.horses)+' · '+R('gold')+' '+fmt(x.stock.gold)+'/'+fmt(c.gold)+
       '<br>Kitchen '+fmt(c.meals)+' meals/d · Barracks '+fmt(c.soldiers)+' · Knights '+fmt(c.knights)+
       '<br>Cisterns '+fmt(c.water)+' people'+
       (()=>{const p=prestige(),m=mewsCount();return'<br>Prestige '+fmt(p.total)+(m?' · Falconry hunts '+fmt(m*MEWS_FOOD)+' food/d':'')})()+
@@ -1322,7 +1363,17 @@
       renderFunctionPanel();
     });
   }
-  window.ConquerSiege={restore,state,initial,assignMastio,normalizeMastio,syncAutoMastio,ensureMastioHall,mastio,armories,allowed,sanitizeRooms,
+  // DEV › Assedio: damage tests on the selected structure (moved out of the inspector).
+  function siegeTest(tool){
+    const s=selectedStructure();if(!s){status('Seleziona una struttura');return}
+    const out=attackStructure(s.id,tool,10,s.type==='gate'&&tool!=='trebuchet'?'door':'core');
+    status(out.ok?(out.destroyed?'Difesa sfondata · ':'Danno · ')+(out.damage||0).toFixed(1):out.reason);
+    renderFunctionPanel();
+  }
+  if(typeof document!=='undefined'&&document.addEventListener)document.addEventListener('click',ev=>{
+    const b=ev.target?.closest?.('#devPanel [data-siege-test]');if(b)siegeTest(b.dataset.siegeTest);
+  });
+  window.ConquerSiege={siegeTest,restore,state,initial,assignMastio,normalizeMastio,syncAutoMastio,ensureMastioHall,mastio,shelters,shelterCapacity,banquetSeats,shelterNeed,shelterStatus,armories,allowed,sanitizeRooms,
     capacity,used,transfer,civilians,dailyFoodDemand,water,wellReachable,cisternTaps,tick,stableUnits,spareHorses,slaughterHorses,HORSE_FOOD,mewsCount,prestige,PRESTIGE,MEWS_FOOD,integrity,effectiveness,attackStructure,
     drawOverlay,summaryHtml,bindPanel,WEAPONS,healthMaximum,
     circleCaptureRecords,circleDepots,circleStoreInventory,captureCircleSector,activeRooms,

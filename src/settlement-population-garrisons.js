@@ -9,6 +9,8 @@ function cutawayOccupantLayout(count){
 function drawCutawayOccupants(){
   const structures=State.structures.filter(s=>structureCutaway(s)&&!underConstruction(s)).slice().sort((a,b)=>worldDepth(a)-worldDepth(b));
   const t=performance.now()/1000;
+  // At night the soldiers, nobles and prisoners of the rooms rest: no sway, no gesture.
+  const still=!!window.ConquerStaffPeople?.isNight?.();
   for(const s of structures){
     const render=()=>{
       for(const slot of cutawayRoomSlots(s)){
@@ -37,8 +39,8 @@ function drawCutawayOccupants(){
         const spots=window.ConquerCutawayFurniture?.standSpots(s,slot,count);
         const positions=cutawayOccupantLayout(count),items=[];
         for(let i=0;i<count;i++){
-          const [nx,ny]=positions[i%positions.length],phase=(t*.42+i*.21+(peasantHash(s.id+'-'+slot.index+'-'+i)%100)/100)%1;
-          const sway=Math.sin(phase*Math.PI*2)*.035;
+          const [nx,ny]=positions[i%positions.length],phase=still?0:(t*.42+i*.21+(peasantHash(s.id+'-'+slot.index+'-'+i)%100)/100)%1;
+          const sway=still?0:Math.sin(phase*Math.PI*2)*.035;
           const p=spots?.[i]?{x:spots[i].x+sway*.4,y:spots[i].y}:cutawayRoomPoint(slot,nx+sway,ny);
           items.push({p,phase,i,depth:viewDepthPoint(p)});
         }

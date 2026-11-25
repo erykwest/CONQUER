@@ -74,6 +74,11 @@ export function createWatchers(game, center, { econEveryMs = 10000, now = () => 
       detail: 'Autonomia di ' + fmt(l.autonomy) + ' giorni per la guarnigione.', resolvedTitle: 'Scorte del castello ristabilite' });
     if (l.thirst > 0) out.push({ key: 'castle-water', severity: 'danger', category: 'castle', title: 'Sete nel castello',
       detail: 'Senza acqua da ' + fmt(l.thirst) + ' giorni: servono pozzi o cisterne.', resolvedTitle: 'Acqua del castello ristabilita' });
+    // Shelter: the Common Halls hold 3x their banquet; fewer places than people to protect.
+    if (l.shelter && l.shelter.need > 0 && l.shelter.missing > 0) out.push({ key: 'castle-shelter', severity: 'warn', category: 'castle',
+      title: l.shelter.halls ? 'Serve nuovo spazio nelle sale comuni' : 'Nessuna sala comune per il rifugio',
+      detail: l.shelter.missing + ' persone senza posto all\'allarme rosso (' + l.shelter.capacity + ' posti per ' + l.shelter.need + '). Costruisci un\'altra sala comune.',
+      resolvedTitle: 'Rifugio sufficiente nelle sale comuni' });
     return out;
   }
 

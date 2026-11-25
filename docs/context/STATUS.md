@@ -7,6 +7,25 @@
 - Cache del ghost per chiave `preview:<tipo>[:segmento]`, con la posizione nella chiave (la mesh è in coordinate mondo). Torri in muratura, porte in pietra, mura e sezioni (buffer castello) usano `ConquerAssembly.source` come ripiego.
 - **PROVE LOCALI PASS:** `construction-ghost` (aggiornato: anteprima con ghost, ripiego torri, impronta solo a terra), `builder-placement`, `render-cache-keys`. Audit Chromium 1228 di tutte le voci del Builder con screenshot (`output/ghost-audit`, non versionato): ghost presente su tutte le voci con modello; strade, fossati e ponti mantengono la loro anteprima; rampa e scalinata non verificate.
 - **CI remota non ancora eseguita**; nessun merge o deploy.
+### 2026-11-24 — UI-INSPECTOR-SLIM: inspector compatto (`feature/inspector-slim`, NON MERGE)
+
+Inspector legacy più corto (torre: da ~4000 a ~1200 caratteri), tasti piccoli, spiegazioni dietro ⓘ, controlli di test solo in DEV. UI v2 invariata. Verificato in browser su torre, casa e porta.
+
+### 2026-11-24 — ROOM-ANIM-AUDIENCE: udienza nella Sala del trono (branch `feature/cutaway-night-banquet`, NON MERGE)
+
+- Trono sulla parete corta in fondo delle sale lunghe (lato lungo ≥ 1,3× il corto; sale quadrate invariate), passatoia dal trono al fondo della sala riservata al passaggio (`throneRunner`), niente tavoli nella sala del trono.
+- Di giorno l'udienza (`ConquerStaffPeople.audienceScene`, turno 14 s): fila di 3 postulanti (4 nella sala grande) sul tappeto; uno alla volta avanza, si inginocchia e supplica, il signore risponde alzando la mano, poi se ne va lungo il lato; la fila avanza e un nuovo postulante entra in coda.
+- **PASS LOCALI:** staff-people, cutaway-furniture. Verifica nel Lab (mastio W4, sala W2). Audit del Lab non ancora aggiornato.
+
+### 2026-11-24 — ROOM-ANIM-NIGHT/BANQUET/SHELTER: notte, banchetto e rifugio nelle sale comuni (branch `feature/cutaway-night-banquet`, NON MERGE)
+
+- **IMPLEMENTATO SUL BRANCH, NON MERGE.** Base `origin/main` `992d1c36`.
+- Notte: il personale delle stanze del castello lavora solo di giorno e col sole sopra l'orizzonte (`ConquerStaffPeople.isNight`); soldati, nobili e prigionieri delle stanze stanno fermi di notte.
+- Banchetto nella Sala comune: commensali seduti (posa seduta in `drawWorkerUnmasked`, `dot.seated`) con gesti `eat`/`toast`/`mug`, dame (L4), soldati a riposo, servitore col vassoio (`platter`), giullare (`juggle`) e musico (`lute`) che passeggiano; camino acceso. Modelli Blender nuovi: `feastSpread`, `tableFeast` (4,4 m), `benchLong` (3,2 m), `feastSpreadLong`; fuoco del camino ingrandito.
+- Tavoli: uno ogni ~9 m² (1–8) in file, attorno agli arredi a parete; nelle sale W2 tavoli lunghi da 4,4 m (due commensali per panca lunga).
+- Allarme rosso: donne, bambini e uomini L3/L4 vanno alla Sala comune più vicina con posto (mastio per primo, poi torri, sezioni, long house) e vi compaiono all'arrivo; bambini che corrono, parte degli adulti che cammina. Capienza = 3× posti del banchetto (`ConquerSiege.shelterCapacity`), totale e fabbisogno in `shelterStatus`: pannello Castello (Rifugio posti/persone) e avviso «Serve nuovo spazio nelle sale comuni». La campana rossa richiede una Sala comune qualsiasi.
+- Lab: sezioni costruite e long house alla lunghezza massima del Builder (4U / W2 6U), non più 7,5U.
+- **PASS LOCALI:** staff-people, work-anim, wardrobe, cutaway-furniture, builder-placement, asset-catalog, built-portico, wood3d, alarm-bell, combat-engage, siege-assault, ui-alerts. Verifica visiva nel Lab (World3D). **Audit del Lab e baseline non ancora aggiornati; pannello Castello non visto in una partita.** CI remota da eseguire.
 ### 2026-11-24 — WALL-SHEDS-261124: lean-to upgrade, tettoie, scatter addossati (branch `fix/wall-heights-follow-towers`, NON MERGE)
 - settlement-lean-to.js ofWall/setOnWall; StructureCommands.setWallLeanTo e controllo «Addossato» nel pannello del muro; deleteStructure toglie il lean-to col muro. settlement-wall-sheds.js (tettoie, signature per la cache World3D); settlement-scatter.js wallProps/hug/footRow.
 - PASS lean-to, wall-stairs, scatter, panels, render-cache-keys, refactor-module-boundaries (sulla sola versione committata). Verificato in gioco: matrice W1/W2/W3 × H1/H2 (lean-to solo H2), tettoie e scatter dal lato interno. Non nel Lab e senza regressione dedicata alle tettoie.
