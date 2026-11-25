@@ -1,5 +1,9 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-24 — UI-BUILDERICON-02
+
+- [ ] Valutare SVG con `currentColor` al posto del filtro CSS, per tinte esatte in hover/selezione.
+
 ## 2026-11-25 — GRAPHSCHIC · Palette GRAFICA
 
 - [x] Pulsante nel Profilo › Generale e palette GRAFICA con Bordi e Gradienti.

@@ -1,6 +1,10 @@
 # Livello 2 — Stato tecnico e prove
 ### 2026-11-25 — GRAPHSCHIC: palette GRAFICA (`GRAPHSCHIC`)
 
+### 2026-11-24 — UI-BUILDERICON-02: icone Builder di nuovo beige su marrone (`fix/builder-icon-color`, NON MERGE)
+
+Solo CSS (`settlement.css`, cache `buildericon-2`); verificato in browser su barra e catalogo del Builder.
+
 - Opzioni grafiche Bordi e Gradienti attive in gioco per torri e prisms; cambio immediato.
 - Gradiente non ancora verificato visivamente con lo stesso conteggio usato per i bordi.
 - Lab non aggiornato per questa modifica (richiesta esplicita di saltarlo).

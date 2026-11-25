@@ -32,7 +32,8 @@ for(const group of groups){
 }
 for(const match of ux.matchAll(/icon:'([^']+)'/g))assert(catalog.entries.some(e=>e.id===match[1]),'registered option/category '+match[1]);
 assert.match(ux,/<img class="ux-svg"[^>]*alt=""[^>]*aria-hidden="true"/,'decorative image keeps the button accessible name');
-assert.match(css,/\.ux-builder button\.ux-icon-btn[^}]*background:#e8ddc6/,'black icons have a light surface');
+assert.match(css,/.ux-builder .ux-svg{filter:invert/,'black SVG icons are tinted beige on the brown legacy buttons');
+assert.doesNotMatch(css,/.ux-builder button.ux-icon-btn[^}]*background:#e8ddc6/,'no light beige tile');
 
 for(const [type,label,icon] of [
   ['windmill','Mulino a vento','mulino-vento'],
@@ -51,8 +52,8 @@ assert.match(ux,/catalog\.append\(b\)/);
 assert.match(css,/#devTools\{[^}]*max-height:calc\(100% - 24px\)/);
 assert.match(css,/#devToggle\{[^}]*flex:0 0 34px/);
 assert.match(css,/#devPanel\{[^}]*min-height:0;[^}]*overflow-y:auto;[^}]*overscroll-behavior:contain/);
-assert.match(html,/settlement\.css\?v=buildericon-1/);
-assert.match(html,/settlement-builder-ux\.js\?v=buildericon-1/);
+assert.match(html,/settlement\.css\?v=buildericon-3/);
+assert.match(html,/settlement-builder-ux\.js\?v=buildericon-2/);
 // Both stone gate buttons (gatehouse and small gate) get a catalog entry of their own.
 for(const size of ['1.5','1']){
   assert.match(html,new RegExp('<button data-gate data-gate-size="'+size+'">'),'gate button '+size);
