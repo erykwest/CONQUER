@@ -8,28 +8,10 @@
 // (parts sort as units), plus crew anchors and the flying projectile for the
 // caller's sprites. Classic script; poses are pure functions of time.
 (function(){
-  // The walls take their walk from the stone tower grid (settlement-castle.js: H1 = 1.15,
-  // H2 = 2.35). An assault tower whose model was built for another walk is raised to it: every
-  // vertex above the lift line (the lower frame and the wheels stay) goes up by the difference,
-  // with the bridge pivot, the deck, the fighting top and the archers. No-op once the Blender
-  // model is regenerated on the same heights.
-  const WALL_WALKS={tower:1.15,tower2:2.35},LIFT_LINE=1.0;
-  function fitAssaultTowers(m){
-    m.__wallFit=true;
-    for(const [name,walk] of Object.entries(WALL_WALKS)){
-      const e=m.engines?.[name],r=e?.rig;if(!r||!Number.isFinite(r.walk))continue;
-      const d=walk-r.walk;if(Math.abs(d)<1e-4)continue;
-      for(const [part,P] of Object.entries(e.parts||{})){
-        if(part==='wheel'||!Array.isArray(P.v))continue;
-        for(let i=2;i<P.v.length;i+=3)if(P.v[i]>LIFT_LINE)P.v[i]+=d;
-      }
-      for(const pv of Object.values(e.pivots||{}))if(pv[2]>LIFT_LINE)pv[2]+=d;
-      r.walk=walk;r.deck+=d;r.top+=d;(r.archers||[]).forEach(a=>{a[2]+=d});
-    }
-    return m;
-  }
-  const M=()=>{const m=window.ConquerSiegeModel;return m&&!m.__wallFit?fitAssaultTowers(m):m};
-  if(window.ConquerSiegeModel&&!window.ConquerSiegeModel.__wallFit)fitAssaultTowers(window.ConquerSiegeModel);
+  // The assault towers are built in Blender on the wall walks of the stone tower grid
+  // (tools/blender/build_siege_engines.py WALLS; settlement-castle.js: H1 = 1.15, H2 = 2.35):
+  // rig.walk is the wall top each level's bridge lands on.
+  const M=()=>window.ConquerSiegeModel;
   const clamp01=v=>Math.max(0,Math.min(1,v)),ease=window.ConquerUtil.smoothstep,easeIn=k=>k*k*k;
   const ph=(u,a,b)=>ease(clamp01((u-a)/(b-a))),lerp=(a,b,s)=>a+(b-a)*s;
   // Action cycles (seconds) and the angles they sweep (radians; positive pitch =

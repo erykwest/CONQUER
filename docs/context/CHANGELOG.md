@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-25 — SIEGE-HEIGHTS-261125 · Macchine d'assedio alle nuove altezze dei muri
+
+`fix/siege-heights`: src/assets/siege-engines-model.js rigenerato in Blender 4.4 da tools/blender/build_siege_engines.py con le WALLS della griglia (H1 1,15, H2 2,35): cambia solo la torre d'assedio di livello 2 (camminamento 2,35, ponte 2,50, cima di combattimento 3,28, base 0,25 più lunga con ruote e serventi spostati). Tolto l'adattamento a runtime (fitAssaultTowers). Scala d'assalto invariata, solo per H1: test aggiornato al limite H2 2,35.
+
 ### 2026-11-24 — UI-INSPECTOR-SLIM · Inspector compatto (`feature/inspector-slim`)
 
 Inspector legacy degli edifici (`renderFunctionPanel`) snellito: nome dell'edificio nel titolo (niente riga «Selected»), via costo di costruzione degli edifici finiti, riga «Rooms», note «skeleton/prototype» e step 0/23; spiegazioni nascoste dietro il tasto ⓘ (`.legend.live` resta per lo stato corrente); motivi dei tasti disabilitati nel tooltip; tasti alti 24px, etichette brevi in italiano; test d'assedio solo con DEV attivo. Lista icone in `docs/inspector-icons.md` e prompt di generazione in `docs/inspector-icons-prompt.md`. Nomi delle risorse sostituiti da icone (`resIcon`, nome nel tooltip) nell'inspector e nella barra in alto. Logistica del castello spostata in Profilo › Scorte (card «Rifornisci il castello»); test ascia/ariete/trabucco spostati nel pannello DEV (Assedio · test sulla struttura selezionata); le stanze restano nell'inspector. ROADMAP e DECISIONS invariate: solo presentazione, nessuna regola nuova. QA locali PASS (panels, builder-placement, cutaway-floors, snow-scale-rooms, shops-l3, caserma-avamposto, wall-patrol, falconry, refactor-app-population); CI remota non eseguita.
