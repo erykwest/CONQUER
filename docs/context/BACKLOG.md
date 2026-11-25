@@ -1,5 +1,13 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-25 — GRAPHSCHIC · Palette GRAFICA
+
+- [x] Pulsante nel Profilo › Generale e palette GRAFICA con Bordi e Gradienti.
+- [x] Cambio immediato senza reload per bordi (torri).
+- [ ] Verifica visiva del gradiente con lo stesso metodo.
+- [ ] Gradienti anche sulle coperture a falda (`gabled`) in `settlement-world3d.js`.
+- [ ] Inserire le opzioni nel Lab (AGENTS.md) in una PR successiva.
+
 ### 2026-11-24 — TOWER-FRAMED-TOP · Piano alto a graticcio delle torri W3
 
 **IMPLEMENTATO SU BRANCH `feature/framed-top-towers`, NON MERGE.**
