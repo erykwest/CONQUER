@@ -3,6 +3,15 @@
 ### 2026-11-25 — SIEGE-HEIGHTS-261125 · Macchine d'assedio alle nuove altezze dei muri
 
 `fix/siege-heights`: src/assets/siege-engines-model.js rigenerato in Blender 4.4 da tools/blender/build_siege_engines.py con le WALLS della griglia (H1 1,15, H2 2,35): cambia solo la torre d'assedio di livello 2 (camminamento 2,35, ponte 2,50, cima di combattimento 3,28, base 0,25 più lunga con ruote e serventi spostati). Tolto l'adattamento a runtime (fitAssaultTowers). Torri d'assedio: L1 con piano di base e ponte, senza parapetto posteriore in cima; L2 con piano di base, un pianerottolo intermedio, ponte e cima di combattimento (build_siege_engines.py). Scala d'assalto invariata, solo per H1: test aggiornato al limite H2 2,35.
+
+### 2026-11-24 — UI-BUILDERICON-02 · Colori legacy delle icone del Builder (`fix/builder-icon-color`)
+
+Ripristinato l'aspetto precedente a #284: tasti marroni (`--btn`) con icona beige; gli SVG neri sono tinti via `filter` CSS, scuri sul tasto selezionato arancione. Selettore Pietra/Argilla della Configurazione: solo icona della risorsa, nome nel tooltip. Rimosso lo sfondo beige chiaro (`#e8ddc6`) da tasti e glifi delle opzioni. SVG invariati, quindi audit del Lab non necessario. ROADMAP e DECISIONS invariate. QA: builder-menu-regression PASS in locale; CI remota non eseguita.
+
+### 2026-11-25 — GRAPHSCHIC · Palette GRAFICA: bordi e gradienti (`GRAPHSCHIC`)
+
+Nuova palette GRAFICA nel Profilo (tab Generale, pulsante «Apri palette GRAFICA»), con due interruttori: Bordi (contorni scuri per faccia) e Gradienti (pareti più scure alla base). Preferenze locali in `localStorage` (`settlement-graphics.js`), non fanno parte della partita; con le opzioni spente l'output è identico. Applicate alle torri (`settlement-castle3d.js`) e alle prisms (`settlement-world3d.js`). Il cambio si applica subito, senza reload (verificato: 672 linee spente, 5472 accese). Nessuna regola di gioco cambiata. Verifica visiva fatta in gioco, non nell'Asset Lab, su richiesta esplicita.
+
 ### 2026-11-24 — TOWER-FRAMED-TOP · Framed top per le torri quadrate W3
 
 `feature/framed-top-towers`: le torri quadrate in pietra W3 (L2+) possono avere l'ultimo piano a graticcio, leggermente a sbalzo e sempre con tetto a falde; costa la torre un livello più bassa più 45 legno; resiste come la pietra ma il piano in legno brucia e, consumato, la torre perde quel piano. Anche le sezioni costruite W1 L2 possono avere il P1 a graticcio a sbalzo (anche sui lati corti). Al P0 delle sezioni W1 standard porta e finestre doppie sul lato cortile al posto delle feritoie. Camini delle sezioni W1 dimezzati; nel Lab mura e sezioni rispettano le lunghezze massime del gioco. Nuova torre lignea a telaio H3: sopra la H2 un P3 a graticcio intonacato a sbalzo con tetto a falde senza parapetto. Nuova `qa/tower-framed-top-regression.cjs`.
