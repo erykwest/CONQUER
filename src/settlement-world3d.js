@@ -1387,7 +1387,12 @@
         if(blk.length&&top<H)mesh.face([Z(p,top),Z(q,top),Z(q,H),Z(p,H)],hex);
       };
       const plane=s.type==='tower'||s.type==='gate',G0=plane?(Number.isFinite(placementGroundZ(s))?placementGroundZ(s):terrainElevation(s)):null;
-      const stoneTone=hex=>State.visualPalette==='clay'||(typeof masonryMaterial==='function'&&masonryMaterial(s)==='brick')?hex:(window.ConquerStoneColor?.shade(hex)||hex);
+      // Brick / clay: the cut shell takes the clay swatches (CLAY_VISUAL_SWATCHES), a terracotta tint of
+      // the same lightness for any tone missing from the table; stone takes the realm's stone shade.
+      const clayCut=State.visualPalette==='clay'||(typeof masonryMaterial==='function'&&masonryMaterial(s)==='brick');
+      const clayTone=hex=>{const k=String(hex).toLowerCase(),t=typeof CLAY_VISUAL_SWATCHES!=='undefined'&&CLAY_VISUAL_SWATCHES[k];if(t)return t;
+        const c=rgb(hex),l=(c[0]+c[1]+c[2])/3;return'#'+[1.3,.74,.56].map(f=>Math.round(clamp(l*f,0,1)*255).toString(16).padStart(2,'0')).join('')};
+      const stoneTone=hex=>clayCut?clayTone(hex):(window.ConquerStoneColor?.shade(hex)||hex);
       const floorTone=hex=>State.visualPalette==='clay'?hex:(window.ConquerStoneColor?.shade(hex)||hex);
       const Z=(p,z)=>({x:p.x,y:p.y,z:(plane?G0:terrainElevation(p))+z});
       let keep,jambs;
@@ -1448,6 +1453,31 @@
       // Room exterior elements stand outside the cut: whole, lit with the shell.
       for(const t of window.ConquerRoomExterior?.triangles(s)||[])sh.face(t.pts.map(q=>Z(q.p,q.z)),t.hex);
       if(H>=HF-1e-6&&s.type==='tower'&&towerRoofStyle(s)==='battlement')facesOut(g.inner,winter?WINTER_SNOW_TOP:stoneTone('#8f857a'),sh,H-.01);
+      // Up inner tower: a floor of its own. In view, it opens like the tower (far walls, cut crest,
+      // stone floor, its room's furniture); with a floor below in view it is taken off with the roof.
+      const tfl=s.type==='tower'?cutawayFloorLevels(s):[],tIdx=tfl.findIndex(f=>f.turret);
+      const tg=tIdx>=0&&cutawayVisibleFloor(s)===tIdx&&typeof upInnerTowerCutawayGeometry==='function'?upInnerTowerCutawayGeometry(s):null;
+      if(tg){
+        const up=tg.up,to=tg.outer,ti=tg.inner,tn=Math.min(to.length,ti.length),z0=up.cut?up.cut.z:up.h,z1=up.topZ,fz=tfl[tIdx].z;
+        // Pitched tower: the truncated roof stays round the turret's foot, so the turret does not float.
+        if(up.cut){
+          const e=up.cut.eave,r=up.cut.ring,ne=e.length,rr=ne>8,cols=winter?[WINTER_SNOW_B,WINTER_SNOW_A,WINTER_SNOW_TOP]:['#303236','#3a3d42','#44474c'];
+          const tone=c=>clayCut&&!winter?clayTone(c):c;
+          for(let i=0;i<ne;i++){const j=(i+1)%ne;sh.face([Z(r[i],up.cut.z),Z(r[j],up.cut.z),Z(e[j],up.h),Z(e[i],up.h)],tone(rr?cols[i%3]:winter?(i%2?WINTER_SNOW_A:WINTER_SNOW_B):(i%2?'#34363a':'#42454a')))}
+        }
+        const tin=to.slice(0,tn).map(o=>ti.reduce((b,p)=>Math.hypot(p.x-o.x,p.y-o.y)<Math.hypot(b.x-o.x,b.y-o.y)?p:b,ti[0]));
+        const topen=cutawayTransparentFaceIndexes({type:'tower',shape:tg.round?'round':'square',x:up.apex.x,y:up.apex.y},{outer:to.slice(0,tn),inner:tin});   // by the turret's own shape
+        for(let i=0;i<tn;i++){
+          if(topen.has(i))continue;
+          const j=(i+1)%tn;
+          sh.face([Z(to[i],z0),Z(to[j],z0),Z(to[j],z1),Z(to[i],z1)],stoneTone(castleSideShade(to[i],to[j])));
+          m.face([Z(tin[i],fz),Z(tin[j],fz),Z(tin[j],z1),Z(tin[i],z1)],stoneTone('#61574f'));
+          sh.face([Z(to[i],z1),Z(to[j],z1),Z(tin[j],z1),Z(tin[i],z1)],winter?WINTER_SNOW_TOP:stoneTone('#8f857a'));
+        }
+        for(const v of cutawayBoundaryVertices(topen,tn))m.face([Z(to[v],z0),Z(tin[v],z0),Z(tin[v],z1),Z(to[v],z1)],stoneTone('#82776c'));
+        m.face(tin.map(p=>Z(p,fz)),floorTone('#7f796f'));
+        for(let i=0;i<tn;i++){const j=(i+1)%tn;m.face([Z(tin[i],z0),Z(tin[j],z0),Z(tin[j],fz),Z(tin[i],fz)],floorTone('#5a554d'))}
+      }
       // Floors: slab, then tiles (stone ground floor) or planks (wooden upper floors) clipped to the room.
       const basis=cutawayFloorBasis(s,g),ca=Math.cos(basis.angle),sa=Math.sin(basis.angle);
       const L=(u,v)=>({x:basis.center.x+u*ca-v*sa,y:basis.center.y+u*sa+v*ca});
