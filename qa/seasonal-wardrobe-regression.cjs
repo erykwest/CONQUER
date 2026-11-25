@@ -133,7 +133,7 @@ console.log('PASS festival crowds dress for the season, players keep their costu
 // Every 3D card that caches a commoner keys on the outfit (the figure atlas keeps tiles by key).
 const has=(f,re,msg)=>assert.match(src(f),re,msg);
 has('settlement-population-figures.js',/function villagerLookKey[\s\S]{0,200}outfitFor\(dot\)[\s\S]{0,200}JSON\.stringify\(outfit\)/,'residents: villagerLookKey carries the outfit');
-has('settlement-work-anim.js',/'w\|'\+tool\+'\|'\+q\.b\+'\|'\+look\(dot\)/,'workers: card key carries villagerLookKey');
+assert.ok(src('settlement-work-anim.js').includes("'w|'+tool+'|'+q.b+(dot.seated?'|s':'')+'|'+look(dot)"),'workers: card key carries villagerLookKey (and the seated pose)');
 has('settlement-ship-crew.js',/villagerLookKey\(d\)/,'sailors: card key carries villagerLookKey');
 has('settlement-vehicles.js',/villagerLookKey\(dot\)/,'carters: card key carries villagerLookKey');
 has('settlement-events-people.js',/'ev\|'[^\n]*outfitKey\(a\.id,kind,c\)/,'festival crowd: card key carries the outfit');
