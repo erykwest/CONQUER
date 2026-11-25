@@ -3,6 +3,23 @@
 // and animals): castle-style face shading and a depth-sorted Canvas 2D painter for
 // the 2.5D renderer. WebGL draws the same triangles with a depth buffer.
 (function(){
+  // Model records are immutable snapshots: a replacement record gets a fresh expansion.
+  // Weak keys keep identically named pieces from separate catalogues isolated without
+  // retaining obsolete model registers. Colour indices stay owned by the source part.
+  const expandedModels=new WeakMap();
+  function modelParts(model){
+    if(!model?.parts)return [];
+    let out=expandedModels.get(model);if(out)return out;
+    out=Object.entries(model.parts).map(([name,part])=>{
+      const v=new Float32Array(part.i.length*3);
+      for(let k=0;k<part.i.length;k++){
+        const j=part.i[k]*3;
+        v[k*3]=part.p[j];v[k*3+1]=part.p[j+1];v[k*3+2]=part.p[j+2];
+      }
+      return{name,v,c:part.c};
+    });
+    expandedModels.set(model,out);return out;
+  }
   const rgbCache=new Map();
   function rgb(hex){
     let v=rgbCache.get(hex);if(v)return v;
@@ -146,5 +163,5 @@
     shadedMemo.set(mesh,out);
     return out;
   }
-  window.ConquerMesh3D={rgb,toHex,rotDir,shadeFactor,shadedHex,shadedHexes,drawMeshes,drawCached,gameView};
+  window.ConquerMesh3D={modelParts,rgb,toHex,rotDir,shadeFactor,shadedHex,shadedHexes,drawMeshes,drawCached,gameView};
 })();

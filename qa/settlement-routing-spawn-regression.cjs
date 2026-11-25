@@ -53,10 +53,11 @@ test('both local and cloud loads defer main-road planning',()=>{
  const app=['app','app-rooms','app-input','app-persistence','app-calendar-ui','app-simulation','app-bootstrap'].map(part=>fs.readFileSync(__dirname+'/../src/settlement-'+part+'.js','utf8')).join('\\n');
  const local=app.slice(app.indexOf('function loadLocal(){'),app.indexOf('async function initSupabase()'));
  const cloud=app.slice(app.indexOf('async function loadCloud()'),app.indexOf('async function saveCloud()'));
- assert.ok(local.includes('connectBorderMainRoadsInFrames('));
- assert.ok(cloud.includes('connectBorderMainRoadsInFrames('));
- assert.ok(!local.includes('connectSelectedBorderMainRoads()'));
- assert.ok(!cloud.includes('connectSelectedBorderMainRoads()'));
+ const shared=app.slice(app.indexOf('function reconcileLoadedSettlement(){'),app.indexOf('function loadLocal(){'));
+ assert.ok(local.includes('reconcileLoadedSettlement()'));
+ assert.ok(cloud.includes('reconcileLoadedSettlement()'));
+ assert.ok(shared.includes('connectBorderMainRoadsInFrames('));
+ assert.ok(![local,cloud,shared].some(code=>code.includes('connectSelectedBorderMainRoads()')));
 });
 console.log(passed+' main road/house spawn regression checks passed.');
 `);

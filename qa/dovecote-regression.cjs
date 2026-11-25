@@ -77,6 +77,7 @@ function diplomacy(structures){
     ensureBorderEntrySelection:()=>State.village.borderEntries,terrainElevation:()=>0,placementGroundZ:()=>0,
     towerVisualTopHeight:()=>3,w2s:()=>({x:0,y:0}),towerDovecote};
   sandbox.window.window=sandbox.window;
+  vm.runInNewContext(src('settlement-path.js'),sandbox);
   vm.runInNewContext(src('settlement-diplomacy.js'),sandbox);
   return{D:window.ConquerDiplomacy,Dove:window.ConquerDovecote,State,planned};
 }

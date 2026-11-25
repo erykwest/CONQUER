@@ -1,12 +1,17 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-25 — PR #287 armonizzata nella #304
+
+Riconciliati refactor architetturale ed esteso, mantenendo le integrazioni di main fino a `f5ec5c41`. Recuperati controllo CI specialistico Builder, rapporto originale e alias decisionale. Catalogo UI2 con nuova torre lignea H3; protetta la lettura delle etichette risorsa da proprietà ereditate conservando l'ispettore compatto. Stato di integrazione/QA dello SHA consolidato nella PR #304; nessun deploy.
 ### 2026-11-24 — UI-BUILDERICON-02 · Colori legacy delle icone del Builder (`fix/builder-icon-color`)
 
 Ripristinato l'aspetto precedente a #284: tasti marroni (`--btn`) con icona beige; gli SVG neri sono tinti via `filter` CSS, scuri sul tasto selezionato arancione. Selettore Pietra/Argilla della Configurazione: solo icona della risorsa, nome nel tooltip. Rimosso lo sfondo beige chiaro (`#e8ddc6`) da tasti e glifi delle opzioni. SVG invariati, quindi audit del Lab non necessario. ROADMAP e DECISIONS invariate. QA: builder-menu-regression PASS in locale; CI remota non eseguita.
 
+
 ### 2026-11-25 — GRAPHSCHIC · Palette GRAFICA: bordi e gradienti (`GRAPHSCHIC`)
 
 Nuova palette GRAFICA nel Profilo (tab Generale, pulsante «Apri palette GRAFICA»), con due interruttori: Bordi (contorni scuri per faccia) e Gradienti (pareti più scure alla base). Preferenze locali in `localStorage` (`settlement-graphics.js`), non fanno parte della partita; con le opzioni spente l'output è identico. Applicate alle torri (`settlement-castle3d.js`) e alle prisms (`settlement-world3d.js`). Il cambio si applica subito, senza reload (verificato: 672 linee spente, 5472 accese). Nessuna regola di gioco cambiata. Verifica visiva fatta in gioco, non nell'Asset Lab, su richiesta esplicita.
+
 
 ### 2026-11-24 — TOWER-FRAMED-TOP · Framed top per le torri quadrate W3
 
@@ -44,6 +49,10 @@ Inspector legacy degli edifici (`renderFunctionPanel`) snellito: nome dell'edifi
 ### 2026-11-19 — HARDEN-261119 (branch `fix/main-hardening-20261119`, non merge)
 
 Hardening su base main `168b993b`: blocco scritture cloud senza lettura riuscita, errori di salvataggio locali/CAMP non mascherati, gestione rejection cloud, esclusione Asset Lab, barra risorse con nodi di testo. 11 nuovi test comportamentali nel workflow Runtime integrity; 5 test runtime e 15 suite locali PASS. [Rapporto e limiti](../HARDENING-2026-11-19.md). ROADMAP e DECISIONS invariate: nessun nuovo contratto di gameplay o priorità.
+### 2026-11-24 — ECC-REFACTOR-02 (PR #304, branch, non main)
+
+Refactor trasversale di persistenza, Builder, percorsi e renderer; rimossi algoritmi duplicati e painter facciate inattivo, mantenuti formati e regole di gioco. Aggiunti test delle race cloud, comandi senza DOM, riconciliazione delle geometrie, contratto di caricamento, ledger e report QA portabile. Revisione ECC sicurezza e dipendenze; risultati conclusivi nel [rapporto](../EXTENDED-REFACTOR-2026-11-24.md). ROADMAP invariata, DECISIONS aggiornata con i contratti interni; CI/merge distinti dall'implementazione locale.
+
 ### 2026-11-24 — Acqua dolce garantita e argilla in Palude
 
 Allineamento a main `aca8c3bd` con icone Builder e aggiornamento della relativa etichetta accessibile nel catalogo. Ripetuti freshwater, industrie, menu Builder e Wiki dopo la risoluzione dei conflitti.

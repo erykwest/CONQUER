@@ -28,7 +28,7 @@ try{
         const button=document.querySelector('.ux-catalog '+e.selector),image=button?.querySelector('img');
         await image?.decode();
         window.__builderIconButtons.set(e.selector,button);
-        return {id:button?.dataset.icon,name:button?.getAttribute('aria-label'),loaded:!!image?.naturalWidth,src:image?.getAttribute('src'),size:image?.getBoundingClientRect().width,background:button?getComputedStyle(button).backgroundColor:null};
+        return {id:button?.dataset.icon,name:button?.getAttribute('aria-label'),loaded:!!image?.naturalWidth,src:image?.getAttribute('src'),size:image?.getBoundingClientRect().width,background:button?getComputedStyle(button).backgroundColor:null,active:button?.classList.contains('active'),filter:image?getComputedStyle(image).filter:null};
       }));
     },expected);
     for(let i=0;i<expected.length;i++){
@@ -36,7 +36,10 @@ try{
       assert.equal(actual[i].name,expected[i].label);
       assert(actual[i].loaded&&actual[i].src.includes('/'+expected[i].id+'.svg?'),expected[i].id+' loaded');
       assert.equal(actual[i].size,32);
-      assert.equal(actual[i].background,'rgb(232, 221, 198)');
+      if(!actual[i].active){
+        assert.equal(actual[i].background,'rgb(51, 37, 29)','brown Builder surface');
+        assert.match(actual[i].filter,/invert\(0\.92\)/,'beige icon tint');
+      }else assert.match(actual[i].filter,/brightness\(0\)/,'dark icon on the selected tile');
     }
     if(category==='economy'){
       await page.locator('[data-industry="windmill"]').click();
@@ -50,6 +53,14 @@ try{
   for(const category of groups){
     await page.locator('.ux-rail [data-icon="category-'+category+'"]').click();
     assert(await page.evaluate(entries=>entries.every(e=>document.querySelector('.ux-catalog '+e.selector)===window.__builderIconButtons.get(e.selector)),catalog.entries.filter(e=>e.role==='builder'&&e.category===category)),category+' keeps original button objects after switching away and back');
+  }
+  await page.locator('.ux-rail [data-icon="category-defense"]').click();
+  for(const [material,glyph,name] of [['stone','🪨','Pietra'],['brick','🧱','Argilla']]){
+    const button=page.locator('.ux-options [data-build-masonry="'+material+'"]');
+    assert.equal((await button.textContent()).trim(),glyph,'resource glyph without visible word');
+    assert((await button.getAttribute('aria-label')).includes(name),'resource name remains accessible');
+    await button.click();
+    assert.equal(await page.evaluate(()=>State.buildMasonryMaterial),material,'real material command');
   }
   await page.locator('.ux-close').click();
   assert(await page.locator('.ux-flyout').isHidden());
@@ -70,5 +81,5 @@ try{
   const box=await page.locator('.ux-flyout').boundingBox();assert(box&&box.x>=0&&box.x+box.width<=390);
   await page.screenshot({path:path.join(out,'builder-mobile.png'),fullPage:false});
   assert.deepEqual(errors,[],'page errors');
-  console.log('PASS Builder icons: 52 tools / 7 categories, all SVGs loaded, button identity and windmill handler, 12 options, 72 Lab entries, mobile flyout, no page errors');
+  console.log('PASS Builder icons: all tools/categories, beige icons on brown, accessible masonry glyphs, real handlers, button identity, 12 options, 74 Lab entries and mobile flyout');
 }finally{await browser.close();}

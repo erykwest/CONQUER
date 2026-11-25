@@ -11,9 +11,14 @@ on:
       - 'api/telemetry.js'
       - 'src/settlement-core.js'
       - 'src/settlement-app-persistence.js'
-      - 'tests/runtime-integrity.test.mjs'
+      - 'src/settlement-save-snapshot.js'
+      - 'src/ui/save-status.js'
+      - 'tools/runtime-contract.cjs'
+      - 'tests/extended-save.test.mjs'
+      - 'tests/resource-ui.test.mjs'
       - 'tests/hardening.test.mjs'
-      - 'src/settlement-app-calendar-ui.js'
+      - 'tests/helpers/**'
+      - 'tests/runtime-integrity.test.mjs'
       - 'src/codex-catalog.js'
       - 'src/settlement-codex.js'
       - 'qa/codex-catalog-regression.cjs'
@@ -53,8 +58,10 @@ jobs:
           echo "Syntax-checked $count files"
           test "$count" -gt 0
           exit "$failed"
+      - name: Runtime module wiring
+        run: node tools/runtime-contract.cjs
       - name: Local diagnostics and disabled remote telemetry
-        run: node --test tests/runtime-integrity.test.mjs tests/hardening.test.mjs
+        run: node --test tests/runtime-integrity.test.mjs tests/hardening.test.mjs tests/extended-save.test.mjs tests/resource-ui.test.mjs
       - name: Autumn foliage calendar and renderer regression
         run: node qa/autumn-foliage-regression.cjs
       - name: Tree and bush bark colour regression

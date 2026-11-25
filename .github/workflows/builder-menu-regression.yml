@@ -11,6 +11,13 @@ on:
     paths:
       - 'src/settlement.css'
       - 'src/settlement-builder-ux.js'
+      - 'src/settlement-builder-commands.js'
+      - 'src/settlement-builder-controls.js'
+      - 'src/settlement-app-input.js'
+      - 'src/ui/game-api.js'
+      - 'src/ui/shell.js'
+      - 'src/ui/builder-catalog.js'
+      - 'qa/builder-commands-regression.cjs'
       - 'index.html'
       - 'qa/builder-menu-regression.cjs'
       - 'qa/builder-icons-browser.mjs'
@@ -35,7 +42,9 @@ jobs:
           node --check src/settlement-builder-ux.js
           node --check qa/builder-menu-regression.cjs
       - name: Verify DEV scrolling and mill tool registration
-        run: node qa/builder-menu-regression.cjs
+        run: |
+          node qa/builder-menu-regression.cjs
+          node qa/builder-commands-regression.cjs
       - name: Check existing mill models and placements
         run: |
           node qa/mills3d-regression.cjs

@@ -24,18 +24,8 @@
     if(!s||!DATA()||!window.ConquerMesh3D||underConstruction(s))return false;
     return s.type==='palisade'||!!modelKey(s);
   }
-  // Indexed parts expanded once into flat triangle lists.
-  const expanded=new Map();
-  function parts(key){
-    let out=expanded.get(key);if(out)return out;
-    out=[];
-    for(const [name,part] of Object.entries(DATA().models[key].parts)){
-      const v=new Float32Array(part.i.length*3);
-      for(let k=0;k<part.i.length;k++){const j=part.i[k]*3;v[k*3]=part.p[j];v[k*3+1]=part.p[j+1];v[k*3+2]=part.p[j+2]}
-      out.push({name,v,c:part.c});
-    }
-    expanded.set(key,out);return out;
-  }
+  // The shared mesh module owns indexed expansion and model-identity caching.
+  const parts=key=>window.ConquerMesh3D.modelParts(DATA()?.models?.[key]);
   // Palette with roofs, exposed decks and merlon tops whitened in winter, and the flags and
   // drapes in the realm's heraldry (as the cutaway furniture and the stone gate banners).
   const heraldry=()=>{const h=State.heraldry||{};

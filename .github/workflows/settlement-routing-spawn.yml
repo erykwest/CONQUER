@@ -75,23 +75,16 @@ jobs:
         if: steps.tier.outputs.full == 'true'
         shell: bash
         run: |
-          # Run every test and report all failures instead of stopping at the first.
-          failed=()
-          for test in qa/*-regression.cjs; do
-            echo "::group::$test"
-            if ! node "$test"; then
-              failed+=("$test")
-            fi
-            echo '::endgroup::'
-          done
-          if (( ${#failed[@]} )); then
-            for test in "${failed[@]}"; do
-              echo "::error file=$test::$test failed"
-            done
-            echo "${#failed[@]} deterministic regression(s) failed." >&2
-            exit 1
-          fi
-          echo 'All deterministic regressions passed.'
+          # Shared runner discovers every qa/*-regression.cjs and reports all failures.
+          node tools/run-regressions.cjs --report output/qa/regressions.json
+      - name: Save complete regression results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deterministic-regressions
+          path: output/qa/regressions.json
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Syntax-check all source modules (non-docs PR/manual/weekly)
         if: steps.tier.outputs.full == 'true'
         run: |

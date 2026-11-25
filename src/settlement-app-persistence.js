@@ -1,5 +1,5 @@
 'use strict';
-// Save migrations, persistence and cloud sync. Extracted verbatim from settlement-app.js.
+// Save migrations and local/cloud adapters. Snapshot format and shared restore stages have one owner.
 function migrateStructures(list){
   const migrated=(list||[]).map(s=>{
     if(['moat','bridge'].includes(s.type))window.ConquerCrossings?.normalise(s);
@@ -166,16 +166,18 @@ function saveBlocked(){
   return !!State.loadFailed;
 }
 let localSaveTimer=null;
-function saveLocal(){
+function reportLocalSaveFailure(error){
+  console.warn('CONQUER local save failed',error);
+  const indicator=document.getElementById('saveState');if(indicator)indicator.textContent='local save failed';
+  window.__conquerAnalytics?.event?.('LOCAL_SAVE_ERROR',{message:String(error)},'error',30000);
+}
+function saveLocal(snapshot=null){
   if(window.__CONQUER_ASSET_LAB__)return;
   if(window.__CONQUER_REGIONAL_DEMO__)return;
   if(saveBlocked()){const indicator=document.getElementById('saveState');if(indicator)indicator.textContent='salvataggio bloccato';return false}
-  window.ConquerEconomy?.syncBuilderResources?.();
   const t0=performance.now();
-  try{localStorage.setItem(localStorageKey(),JSON.stringify({schema:LOCAL_STORAGE_SCHEMA,ambientAutoV1:true,buildMasonryMaterial:State.buildMasonryMaterial,stonePaletteId:State.stonePaletteId,seed:State.seed,biome:State.biome,season:State.season,seasonOverride:State.seasonOverride||null,neighborBiomes:State.neighborBiomes,landscape:{version:LANDSCAPE_GENERATION_VERSION,relief:State.relief,environment:State.environment},structures:State.structures,resources:State.resources,economy:State.economy||null,diplomacy:State.diplomacy||null,siege:State.siege||null,policies:State.policies,heraldry:State.heraldry||null,village:State.village,clock:{day:State.clock.day,speed:0},view:State.view,combat:window.ConquerCombat?.serialize()||State.combat}));}catch(error){
-    console.warn('CONQUER local save failed',error);
-    const indicator=document.getElementById('saveState');if(indicator)indicator.textContent='local save failed';
-    window.__conquerAnalytics?.event?.('LOCAL_SAVE_ERROR',{message:String(error)},'error',30000);
+  try{localStorage.setItem(localStorageKey(),snapshot??captureSettlementSave());}catch(error){
+    reportLocalSaveFailure(error);
     return false;
   }
   if(window.__conquerPerf)window.__conquerPerf.lastSaveMs=performance.now()-t0;
@@ -186,30 +188,117 @@ function scheduleLocalSave(delay=700){
   if(localSaveTimer)return;
   localSaveTimer=setTimeout(()=>{localSaveTimer=null;saveLocal()},delay);
 }
-function loadLocal(){if(window.__CONQUER_REGIONAL_DEMO__)return;let raw=null;try{const key=localStorageKey();raw=localStorage.getItem(key);const x=JSON.parse(raw||'null');if(x){window.ConquerHaulage?.reset?.();State.seed=x.seed??State.seed;State.stonePaletteId=window.ConquerStoneColor?.normalized(x.stonePaletteId)||'gray';State.buildMasonryMaterial=x.buildMasonryMaterial==='brick'?'brick':'stone';State.economy=x.economy||null;State.diplomacy=x.diplomacy||null;State.biome=BIOMES[x.biome]?x.biome:State.biome;State.season=['summer','autumn','winter','spring'].includes(x.season)?x.season:'summer';State.seasonOverride=['summer','autumn','winter','spring'].includes(x.seasonOverride)&&(x.ambientAutoV1===true||x.seasonOverride!=='summer')?x.seasonOverride:null;State.neighborBiomes=x.neighborBiomes||{};State.combat=x.combat||null;const socialMigration=window.ConquerSocialClasses?.migrateSave?.(x.structures||[],State.economy,{alreadyV2:x.village?.socialSchemaVersion===2});if(socialMigration)State.economy=socialMigration.economy;State.structures=migrateStructures(socialMigration?.structures||x.structures);window.ConquerSiege?.restore(x.siege);State.resources={...State.resources,...x.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(loadResourceFloor(),Number(State.resources[k])||0);if(x.view&&Number.isFinite(x.view.rotation))State.view.rotation=((x.view.rotation%4)+4)%4;State.policies={...State.policies,...x.policies};State.heraldry=x.heraldry||null;const legacyGrowth=x.village?.growthVersion!==3;State.village={...State.village,...x.village,socialSchemaVersion:2};if(legacyGrowth)State.village.growthVersion=1;State.village.privateMasonryMaterial=State.village.privateMasonryMaterial==='brick'?'brick':'stone';State.clock.day=Math.max(0,Number(x.clock?.day)||0);State.clock.speed=0;State.clock.lastSpeed=1;State.daylightOverride=null;State.weatherOverride=null;resetLegacyVillageGrowth();if(State.village.founded){
+// Shared restore stages retain the historical local/cloud ordering of migrations.
+function restoreSavedSeason(saved){
+  State.season=['summer','autumn','winter','spring'].includes(saved.season)?saved.season:'summer';
+  State.seasonOverride=['summer','autumn','winter','spring'].includes(saved.seasonOverride)&&(saved.ambientAutoV1===true||saved.seasonOverride!=='summer')?saved.seasonOverride:null;
+}
+function restoreSavedResources(resources){
+  State.resources={...State.resources,...resources};
+  for(const k of Object.keys(State.resources))State.resources[k]=Math.max(loadResourceFloor(),Number(State.resources[k])||0);
+}
+function restoreSavedVillage(village){
+  const legacyGrowth=village?.growthVersion!==3;
+  State.village={...State.village,...village,socialSchemaVersion:2};
+  if(legacyGrowth)State.village.growthVersion=1;
+  State.village.privateMasonryMaterial=State.village.privateMasonryMaterial==='brick'?'brick':'stone';
+}
+function restoreSavedLandscape(landscape,{repair=false}={}){
+  if(landscape?.version===LANDSCAPE_GENERATION_VERSION&&Array.isArray(landscape.relief?.hills)&&Array.isArray(landscape.environment)){
+    State.relief=landscape.relief;State.environment=landscape.environment;widenWatercourses();clearReliefBandCache();
+    return{missing:false,repaired:repair?ensureStaticLandscape():false};
+  }
+  State.relief=null;State.environment=[];ensureStaticLandscape();return{missing:true,repaired:true};
+}
+function reconcileLoadedSettlement(){
+  window.ConquerStorageYard?.ensureForWell?.();ensureBorderEntrySelection();syncPrimaryRoadBridges();
+  for(const structure of State.structures)if(window.ConquerIndustries?.is(structure))window.ConquerIndustries.normalizeFootprint(structure);
+  if(State.village.founded)connectBorderMainRoadsInFrames(()=>{markDirty(true,['ground','base']);renderUI();draw()});
+  rebuildSecondaryRoadsOnLoad();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);reconcileGateMainConnections(true);
+  reconcileSettlementAccessRoads(Infinity,true);invalidateSceneCache();
+}
+function loadLocal(){if(window.__CONQUER_REGIONAL_DEMO__)return;let raw=null;try{const key=localStorageKey();raw=localStorage.getItem(key);const x=JSON.parse(raw||'null');if(x){window.ConquerHaulage?.reset?.();State.seed=x.seed??State.seed;State.stonePaletteId=window.ConquerStoneColor?.normalized(x.stonePaletteId)||'gray';State.buildMasonryMaterial=x.buildMasonryMaterial==='brick'?'brick':'stone';State.economy=x.economy||null;State.diplomacy=x.diplomacy||null;State.biome=BIOMES[x.biome]?x.biome:State.biome;restoreSavedSeason(x);State.neighborBiomes=x.neighborBiomes||{};State.combat=x.combat||null;const socialMigration=window.ConquerSocialClasses?.migrateSave?.(x.structures||[],State.economy,{alreadyV2:x.village?.socialSchemaVersion===2});if(socialMigration)State.economy=socialMigration.economy;State.structures=migrateStructures(socialMigration?.structures||x.structures);window.ConquerSiege?.restore(x.siege);restoreSavedResources(x.resources);if(x.view&&Number.isFinite(x.view.rotation))State.view.rotation=((x.view.rotation%4)+4)%4;State.policies={...State.policies,...x.policies};State.heraldry=x.heraldry||null;restoreSavedVillage(x.village);State.clock.day=Math.max(0,Number(x.clock?.day)||0);State.clock.speed=0;State.clock.lastSpeed=1;State.daylightOverride=null;State.weatherOverride=null;resetLegacyVillageGrowth();if(State.village.founded){
     window.ConquerEconomy?.foundingCharter?.(State.village.wellId||State.structures.find(s=>s.type==='well')?.id);
     window.ConquerEconomy?.applyDevFloor?.(loadResourceFloor());
     window.ConquerEconomy?.syncBuilderResources?.();
   }else State.resources={...PROVISIONAL_RESOURCES};
-  window.ConquerSiege?.syncAutoMastio?.();const savedLandscape=x.landscape;if(savedLandscape?.version===LANDSCAPE_GENERATION_VERSION&&Array.isArray(savedLandscape.relief?.hills)&&Array.isArray(savedLandscape.environment)){State.relief=savedLandscape.relief;State.environment=savedLandscape.environment;widenWatercourses();clearReliefBandCache()}else{State.relief=null;State.environment=[];ensureStaticLandscape();saveLocal()}window.ConquerStorageYard?.ensureForWell?.();ensureBorderEntrySelection();syncPrimaryRoadBridges();for(const structure of State.structures)if(window.ConquerIndustries?.is(structure))window.ConquerIndustries.normalizeFootprint(structure);if(State.village.founded)connectBorderMainRoadsInFrames(()=>{markDirty(true,['ground','base']);renderUI();draw()});rebuildSecondaryRoadsOnLoad();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);reconcileGateMainConnections(true);reconcileSettlementAccessRoads(Infinity,true);invalidateSceneCache();['tax','rations'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch(err){console.warn('Local state ignored',err);if(raw)markLoadFailed(raw,err)}}
+  window.ConquerSiege?.syncAutoMastio?.();const landscapeResult=restoreSavedLandscape(x.landscape);if(landscapeResult.missing)saveLocal();reconcileLoadedSettlement();['tax','rations'].forEach(k=>document.getElementById(k).value=State.policies[k])}}catch(err){console.warn('Local state ignored',err);if(raw)markLoadFailed(raw,err)}}
 async function initSupabase(){if(window.__CONQUER_ASSET_LAB__)return;if(window.__CONQUER_REGIONAL_DEMO__)return;if(window.__CONQUER_CAMP_MODE__){document.getElementById('dbNote').textContent='CAMP · Salvataggio locale separato';return;}for(let i=0;i<30&&!window.__createSupabaseClient;i++)await new Promise(r=>setTimeout(r,50));if(!window.__createSupabaseClient)return;State.supabase=window.__createSupabaseClient(SUPABASE_URL,SUPABASE_KEY);const {data}=await State.supabase.auth.getSession();State.user=data?.session?.user||null;if(State.user){document.getElementById('dbNote').textContent='Supabase authenticated — loading cloud save.';document.getElementById('saveState').textContent='cloud loading';if(await loadCloud())document.getElementById('dbNote').textContent='Supabase authenticated — cloud save enabled.'}else document.getElementById('dbNote').textContent='Local autosave active. Sign-in can be added next; RLS already protects cloud rows.'}
-// Cloud writes require a successful read, including a confirmed empty slot.
-let cloudLoadState='idle';
+// A write needs a successful read for this account and this read generation.
+let cloudRead={status:'idle',userId:null,generation:0};
 function cloudReadFailed(error){
-  cloudLoadState='error';
-  console.warn('CONQUER cloud load failed',error);
+  cloudRead.status='error';console.warn('CONQUER cloud load failed',error);
   document.getElementById('saveState').textContent='cloud load failed';
   status('Cloud non caricato: scrittura cloud bloccata. Ricarica per riprovare; la partita locale resta disponibile.');
 }
-async function loadCloud(){if(window.__CONQUER_REGIONAL_DEMO__)return;if(!State.user)return;cloudLoadState='loading';let result;try{result=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle()}catch(error){cloudReadFailed(error);return false}const {data,error}=result;if(error){cloudReadFailed(error);return false}if(data){let repairedLandscape=false;try{window.ConquerHaulage?.reset?.();State.seed=data.terrain_seed;State.stonePaletteId=window.ConquerStoneColor?.normalized(data.policies?.stonePaletteId)||'gray';State.buildMasonryMaterial=data.policies?.buildMasonryMaterial==='brick'?'brick':'stone';State.biome=BIOMES[data.biome]?data.biome:State.biome;State.neighborBiomes=data.neighbor_biomes||{};State.structures=data.structures||[];window.ConquerSiege?.restore(data.policies?.siege);State.resources={...State.resources,...data.resources};for(const k of Object.keys(State.resources))State.resources[k]=Math.max(loadResourceFloor(),Number(State.resources[k])||0);if(data.camera&&Number.isFinite(data.camera.rotation))State.view.rotation=((data.camera.rotation%4)+4)%4;const cloudPolicies=data.policies||{};State.economy=cloudPolicies.economy||null;const socialMigration=window.ConquerSocialClasses?.migrateSave?.(State.structures,State.economy,{alreadyV2:cloudPolicies.village?.socialSchemaVersion===2});if(socialMigration)State.economy=socialMigration.economy;State.structures=migrateStructures(socialMigration?.structures||State.structures);State.diplomacy=cloudPolicies.diplomacy||null;State.combat=cloudPolicies.combat||null;State.heraldry=cloudPolicies.heraldry||State.heraldry||null;window.ConquerCombat?.restore(State.combat);State.policies={...State.policies,tax:cloudPolicies.tax??State.policies.tax,rations:cloudPolicies.rations??State.policies.rations,levy:cloudPolicies.levy??State.policies.levy,crenelStyle:cloudPolicies.crenelStyle??State.policies.crenelStyle,roofPitch:cloudPolicies.roofPitch??State.policies.roofPitch,unitHelmet:cloudPolicies.unitHelmet??State.policies.unitHelmet,unitShield:cloudPolicies.unitShield??State.policies.unitShield};State.season=['summer','autumn','winter','spring'].includes(cloudPolicies.season)?cloudPolicies.season:'summer';State.seasonOverride=['summer','autumn','winter','spring'].includes(cloudPolicies.seasonOverride)&&(cloudPolicies.ambientAutoV1===true||cloudPolicies.seasonOverride!=='summer')?cloudPolicies.seasonOverride:null;const legacyGrowth=cloudPolicies.village?.growthVersion!==3;State.village={...State.village,...(cloudPolicies.village||{}),socialSchemaVersion:2};if(legacyGrowth)State.village.growthVersion=1;State.village.privateMasonryMaterial=State.village.privateMasonryMaterial==='brick'?'brick':'stone';State.clock.day=Math.max(0,Number(cloudPolicies.clock?.day)||State.clock.day);
+async function loadCloud(){if(window.__CONQUER_REGIONAL_DEMO__||window.__CONQUER_ASSET_LAB__||window.__CONQUER_CAMP_MODE__||!State.user)return false;
+  const owner=State.user.id,seed=State.seed,generation=cloudRead.generation+1;
+  cloudRead={status:'loading',userId:owner,generation};
+  let result;
+  try{result=await State.supabase.from('settlements').select('*').eq('world_cell_x',0).eq('world_cell_y',0).maybeSingle()}
+  catch(error){if(generation===cloudRead.generation)cloudReadFailed(error);return false}
+  if(generation!==cloudRead.generation||owner!==State.user?.id||seed!==State.seed){
+    if(generation===cloudRead.generation)cloudRead.status='error';
+    return false;
+  }
+  const {data,error}=result;
+  if(error){cloudReadFailed(error);return false}
+  if(data){const saved=window.ConquerSaveSnapshot.fromCloud(data);let repairedLandscape=false;try{window.ConquerHaulage?.reset?.();State.seed=saved.seed;State.stonePaletteId=window.ConquerStoneColor?.normalized(data.policies?.stonePaletteId)||'gray';State.buildMasonryMaterial=data.policies?.buildMasonryMaterial==='brick'?'brick':'stone';State.biome=BIOMES[saved.biome]?saved.biome:State.biome;State.neighborBiomes=saved.neighborBiomes||{};State.structures=saved.structures||[];window.ConquerSiege?.restore(data.policies?.siege);restoreSavedResources(saved.resources);if(saved.view&&Number.isFinite(saved.view.rotation))State.view.rotation=((saved.view.rotation%4)+4)%4;const cloudPolicies=data.policies||{};State.economy=cloudPolicies.economy||null;const socialMigration=window.ConquerSocialClasses?.migrateSave?.(State.structures,State.economy,{alreadyV2:cloudPolicies.village?.socialSchemaVersion===2});if(socialMigration)State.economy=socialMigration.economy;State.structures=migrateStructures(socialMigration?.structures||State.structures);State.diplomacy=cloudPolicies.diplomacy||null;State.combat=cloudPolicies.combat||null;State.heraldry=cloudPolicies.heraldry||State.heraldry||null;window.ConquerCombat?.restore(State.combat);State.policies={...State.policies,tax:cloudPolicies.tax??State.policies.tax,rations:cloudPolicies.rations??State.policies.rations,levy:cloudPolicies.levy??State.policies.levy,crenelStyle:cloudPolicies.crenelStyle??State.policies.crenelStyle,roofPitch:cloudPolicies.roofPitch??State.policies.roofPitch,unitHelmet:cloudPolicies.unitHelmet??State.policies.unitHelmet,unitShield:cloudPolicies.unitShield??State.policies.unitShield};restoreSavedSeason(cloudPolicies);restoreSavedVillage(cloudPolicies.village);State.clock.day=Math.max(0,Number(cloudPolicies.clock?.day)||State.clock.day);
   State.daylightOverride=null;State.weatherOverride=null;
   resetLegacyVillageGrowth();if(State.village.founded){
     window.ConquerEconomy?.foundingCharter?.(State.village.wellId||State.structures.find(s=>s.type==='well')?.id);
     window.ConquerEconomy?.applyDevFloor?.(loadResourceFloor());
     window.ConquerEconomy?.syncBuilderResources?.();
   }else State.resources={...PROVISIONAL_RESOURCES};
-  window.ConquerSiege?.syncAutoMastio?.();const cloudLandscape=cloudPolicies.landscape;if(cloudLandscape?.version===LANDSCAPE_GENERATION_VERSION&&Array.isArray(cloudLandscape.relief?.hills)&&Array.isArray(cloudLandscape.environment)){State.relief=cloudLandscape.relief;State.environment=cloudLandscape.environment;widenWatercourses();clearReliefBandCache();repairedLandscape=ensureStaticLandscape()}else{State.relief=null;State.environment=[];ensureStaticLandscape();repairedLandscape=true}window.ConquerStorageYard?.ensureForWell?.();ensureBorderEntrySelection();syncPrimaryRoadBridges();for(const structure of State.structures)if(window.ConquerIndustries?.is(structure))window.ConquerIndustries.normalizeFootprint(structure);if(State.village.founded)connectBorderMainRoadsInFrames(()=>{markDirty(true,['ground','base']);renderUI();draw()});rebuildSecondaryRoadsOnLoad();reconcileReactiveRoadNetwork();syncCompletedTowerWallColliders(true);reconcileGateMainConnections(true);reconcileSettlementAccessRoads(Infinity,true);invalidateSceneCache()}catch(err){cloudLoadState='error';markLoadFailed(JSON.stringify(data),err);return false}State.loadFailed=false;cloudLoadState='ready';if(repairedLandscape)await saveCloud();else saveLocal();renderUI();renderFunctionPanel();draw()}else cloudLoadState='ready';return true}
-async function saveCloud(){if(window.__CONQUER_ASSET_LAB__)return;if(window.__CONQUER_REGIONAL_DEMO__){State.dirty=false;return;}if(saveBlocked()){status('Salvataggio bloccato: la partita salvata non è stata caricata ed è conservata. Avvia una nuova mappa per salvare di nuovo.');return}const localSaved=saveLocal();if(window.__CONQUER_CAMP_MODE__||!State.user){if(localSaved){document.getElementById('saveState').textContent=window.__CONQUER_CAMP_MODE__?'saved camp local':'saved local';State.dirty=false}return localSaved}if(cloudLoadState!=='ready'){document.getElementById('saveState').textContent='cloud save blocked';status('Scrittura cloud bloccata: caricamento cloud non completato. Ricarica per riprovare.');return false}const payload={user_id:State.user.id,world_cell_x:0,world_cell_y:0,terrain_seed:State.seed,biome:State.biome,neighbor_biomes:State.neighborBiomes,resources:State.resources,policies:{...State.policies,ambientAutoV1:true,buildMasonryMaterial:State.buildMasonryMaterial,stonePaletteId:State.stonePaletteId,economy:State.economy||null,diplomacy:State.diplomacy||null,siege:State.siege||null,combat:window.ConquerCombat?.serialize()||State.combat,heraldry:State.heraldry||null,season:State.season,seasonOverride:State.seasonOverride||null,village:State.village,clock:{day:State.clock.day},landscape:{version:LANDSCAPE_GENERATION_VERSION,relief:State.relief,environment:State.environment}},structures:State.structures,camera:State.view,updated_at:new Date().toISOString()};try{const {error}=await State.supabase.from('settlements').upsert(payload,{onConflict:'user_id,world_cell_x,world_cell_y'});if(error)throw error;State.dirty=false;document.getElementById('saveState').textContent='saved cloud';return true}catch(error){document.getElementById('saveState').textContent='cloud error';console.error(error);return false}}
+  window.ConquerSiege?.syncAutoMastio?.();repairedLandscape=restoreSavedLandscape(cloudPolicies.landscape,{repair:true}).repaired;reconcileLoadedSettlement()}catch(err){cloudRead.status='error';markLoadFailed(JSON.stringify(data),err);return false}State.loadFailed=false;cloudRead.status='ready';if(repairedLandscape)await saveCloud();else if(saveLocal())document.getElementById('saveState').textContent='saved local';renderUI();renderFunctionPanel();draw()}else{cloudRead.status='ready';document.getElementById('saveState').textContent='unsaved'}return true}
+function captureSettlementSave(){
+  window.ConquerEconomy?.syncBuilderResources?.();
+  return window.ConquerSaveSnapshot.capture(State,{schema:LOCAL_STORAGE_SCHEMA,
+    landscapeVersion:LANDSCAPE_GENERATION_VERSION,combat:window.ConquerCombat?.serialize()||State.combat});
+}
+let cloudSaveTail=Promise.resolve(),latestCloudRequest=0;
+function sameSaveWorld(job){
+  return State.seed===job.seed&&State.village===job.village&&State.user?.id===job.userId&&State.supabase===job.client&&cloudRead.status==='ready'&&cloudRead.userId===job.userId&&cloudRead.generation===job.generation;
+}
+async function saveCloud(){
+  if(window.__CONQUER_ASSET_LAB__)return false;
+  if(window.__CONQUER_REGIONAL_DEMO__){State.dirty=false;return false}
+  if(saveBlocked()){status('Salvataggio bloccato: la partita salvata non è stata caricata ed è conservata. Avvia una nuova mappa per salvare di nuovo.');return false}
+  let snapshot;
+  try{snapshot=captureSettlementSave()}catch(error){reportLocalSaveFailure(error);return false}
+  const localSaved=saveLocal(snapshot);
+  if(window.__CONQUER_CAMP_MODE__||!State.user){
+    if(localSaved){
+      document.getElementById('saveState').textContent=window.__CONQUER_CAMP_MODE__?'saved camp local':'saved local';
+      State.dirty=false;
+    }
+    return localSaved;
+  }
+  if(cloudRead.status!=='ready'||cloudRead.userId!==State.user.id){
+    document.getElementById('saveState').textContent='cloud save blocked';
+    status('Scrittura cloud bloccata: caricamento cloud non completato. Ricarica per riprovare.');return false;
+  }
+  const job={snapshot,request:++latestCloudRequest,seed:State.seed,village:State.village,userId:State.user.id,client:State.supabase,generation:cloudRead.generation};
+  document.getElementById('saveState').textContent='saving cloud';
+  const task=cloudSaveTail.then(async()=>{
+    if(!sameSaveWorld(job))return false;
+    try{
+      const payload=window.ConquerSaveSnapshot.cloud(job.snapshot,{userId:job.userId});
+      const {error}=await job.client.from('settlements').upsert(payload,{onConflict:'user_id,world_cell_x,world_cell_y'});
+      if(error)throw error;
+      if(!sameSaveWorld(job)||job.request!==latestCloudRequest)return false;
+      const current=job.snapshot===captureSettlementSave();
+      State.dirty=!current;document.getElementById('saveState').textContent=current?'saved cloud':'unsaved';
+      return current;
+    }catch(error){
+      console.error(error);
+      if(sameSaveWorld(job)&&job.request===latestCloudRequest){State.dirty=true;document.getElementById('saveState').textContent='cloud error'}
+      return false;
+    }
+  });
+  cloudSaveTail=task.catch(()=>{});
+  return task;
+}
 document.getElementById('saveBtn').onclick=saveCloud;
 // DEV: saved test layouts (layouts/<name>.json, the same format as the local save) replace the
 // local game and reload it.

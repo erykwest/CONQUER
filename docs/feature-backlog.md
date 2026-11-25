@@ -1,5 +1,13 @@
 # CONQUER — Backlog prioritizzato Builder / Manager
 
+## ECC-REFACTOR-02 / ARCH-261119 — Armonizzazione (25/11/2026)
+
+La #304 consolida la #287 e recupera il gate CI Builder. Il catalogo UI2 a comandi comprende `frameTower3` di main; icone, opere campali, preset, limiti porte e nuove regole di piazzamento restano nei rispettivi owner. Nessun merge/deploy; esito della nuova QA nella PR #304. [Copertura delle due PR](EXTENDED-REFACTOR-2026-11-24.md#armonizzazione-delle-pr-287-e-304-25-novembre).
+
+## ECC-REFACTOR-02 — Comandi e catalogo Builder (24/11/2026)
+
+**IMPLEMENTATO SUL BRANCH `refactor/extended-ecc-20261124`, NON MERGE.** Comandi e preset indipendenti dal DOM, adapter per i controlli legacy, catalogo UI2 separato dalla shell; il materiale della tettoia viene applicato e ricordato. Conservati icone e opere campali di main. Regressione delle 85 scelte, browser legacy/UI2/CAMP e indicatore salvataggi nel [rapporto](EXTENDED-REFACTOR-2026-11-24.md). Non cambia la roadmap Builder/Manager.
+
 ## UI-BUILDERICON-01 — Icone medievali del Builder (19/11/2026)
 
 **FATTO sul branch `buildericon`, NON MERGE.** Sostituzione dei glifi con 52 SVG individuali, più 20 icone complementari. Monocromo nero, trasparenza, prospettiva 3/4 per le architetture; comandi conservati come pittogrammi. Lab con manifest e baseline; audit mirato 72 render senza errori; QA caricamento, categorie, identità dei pulsanti, gestore del mulino e viewport mobile PASS. CI remota e integrazione ancora da verificare. Vedi [BUILDER-ICONS](BUILDER-ICONS.md).

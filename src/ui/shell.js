@@ -1,7 +1,8 @@
 // CONQUER interface v2 ("Isole"): floating wood-and-gold tablets over a full-bleed map.
 // Opt-in with ?ui=2 (persisted; ?ui=1 goes back). Reads the game only through window.ConquerGame.
 import { html, render, useState, useEffect, useRef } from '../vendor/htm-preact-3.1.1.js';
-import { T } from './i18n-it.js?v=ui2-insp-2-wallpatrol2-alerts3-upg2-fieldworks1-wallmoat1-l2shop1-shopl3a';
+import { T } from './i18n-it.js?v=ui2-insp-2-wallpatrol2-alerts3-upg2-fieldworks1-wallmoat1-l2shop1-shopl3a-harmony261125';
+import { CATALOG, activeEntry } from './builder-catalog.js?v=extended261124-harmony261125';
 import { createAlertCenter } from './alerts.js?v=alerts4';
 import { createWatchers } from './alert-watchers.js?v=alerts4';
 
@@ -13,6 +14,7 @@ if (params.has('ui')) remember(STORE_KEY, params.get('ui') === '2' ? '1' : '0');
 if (params.has('dev')) remember(DEV_KEY, params.get('dev') === '1' ? '1' : '0');
 const enabled = recall(STORE_KEY) === '1' && window.ConquerGame;
 const devEnabled = recall(DEV_KEY) === '1';
+const O = T.options, V = T.values;
 
 // ---------- icons (stroke paths, 24×24) ----------
 const ICON = {
@@ -54,122 +56,6 @@ const Icon = ({ name, size = 20 }) => html`
   <svg class="u2-icon" width=${size} height=${size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
     stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d=${ICON[name]}></path></svg>`;
 
-// ---------- build catalog: each entry drives a legacy control in phase 1 ----------
-const V = T.values, O = T.options;
-const opt = (label, selector, active) => ({ label, selector, active });
-// Masonry of the next stone/brick sites (State.buildMasonryMaterial), shared by every masonry tool.
-const masonryRow = s => ({ label: O.masonry, options: [
-  opt(V.stone, '[data-build-masonry="stone"]', s.masonry === 'stone'),
-  opt(V.brick, '[data-build-masonry="brick"]', s.masonry === 'brick')] });
-const INDUSTRIES = [
-  ['loggingCamp', '[data-industry="loggingCamp"]', t => t.industry === 'loggingCamp'],
-  ['quarry', '[data-industry="quarry"]:not([data-extraction-mode])', t => t.industry === 'quarry' && t.extraction !== 'clay'],
-  ['clayPit', '[data-industry="quarry"][data-extraction-mode="clay"]', t => t.industry === 'quarry' && t.extraction === 'clay'],
-  ['mine', '[data-industry="mine"]', t => t.industry === 'mine'],
-  ['windmill', '[data-industry="windmill"]', t => t.industry === 'windmill'],
-  ['watermill', '[data-industry="watermill"]', t => t.industry === 'watermill']
-];
-const WELL_UPGRADES = ['townhall', 'guild', 'bargello'];
-const CATALOG = [
-  { id: 'select', hint: T.hints.select, press: '[data-tool="select"]', is: s => s.tool.kind === 'select' },
-  { id: 'towers', hint: T.hints.point, press: '[data-tower="square"][data-size="1.5"]', is: s => s.tool.kind === 'tower',
-    rows: s => {
-      const t = s.tool, stone = t.material !== 'wood';
-      const rows = [{ label: O.shape, options: [
-        opt(V.square, '[data-tower="square"][data-size="1.5"]', stone && t.shape === 'square'),
-        opt(V.round, '[data-tower="round"][data-size="0.75"]', stone && t.shape === 'round'),
-        opt(V.half, '[data-tower="half"][data-size="1"]', stone && t.shape === 'half'),
-        opt(V.dee, '[data-tower="dee"][data-size="1.5"]', stone && t.shape === 'dee'),
-        opt(V.watchtower, '[data-wood-tower="watchtower"]', t.woodStyle === 'watchtower'),
-        opt(V.woodTower, '[data-wood-tower="palisadeTower"]', t.woodStyle === 'palisadeTower'),
-        opt(V.frameTower || 'Telaio H2', '[data-wood-tower="frameTower"]', t.woodStyle === 'frameTower'),
-        opt(V.frameTower3 || 'Telaio H3', '[data-wood-tower="frameTower3"]', t.woodStyle === 'frameTower3')] }];
-      if (stone && t.shape === 'square') rows.push({ label: O.size, options: ['1', '1.5', '2', '3'].map(n =>
-        opt(n.replace('.', ',') + 'U', `[data-tower="square"][data-size="${n}"]`, Number(t.size) === Number(n))) });
-      if (stone && t.shape === 'round') rows.push({ label: O.size, options: ['0.5', '0.75', '1'].map(n =>
-        opt('R ' + n.replace('.', ','), `[data-tower="round"][data-size="${n}"]`, Number(t.size) === Number(n))) });
-      if (stone && t.shape === 'half') rows.push({ label: O.size, options: [['1', V.small], ['1.5', V.medium]].map(([n, l]) =>
-        opt(l, `[data-tower="half"][data-size="${n}"]`, Number(t.size) === Number(n))) });
-      if (stone && t.shape === 'dee') rows.push({ label: O.size, options: [['1.5', V.medium], ['2', V.large]].map(([n, l]) =>
-        opt(l, `[data-tower="dee"][data-size="${n}"]`, Number(t.size) === Number(n))) });
-      if (stone) rows.push({ label: O.level, options: [1, 2, 3].map(n => opt(String(n), `[data-tower-level="${n}"]`, s.levels.tower === n)) });
-      if (stone) rows.push(masonryRow(s));
-      return rows;
-    } },
-  { id: 'walls', hint: T.hints.linear, press: '[data-linear="wall"]', is: s => (s.tool.kind === 'linear' && s.tool.linear !== 'road') || s.tool.kind === 'leanTo',
-    rows: s => {
-      const kind = s.tool.linear, lean = s.tool.kind === 'leanTo', wide = kind === 'built' && s.tool.span === 'wide', wood = kind === 'built' && s.tool.material === 'wood', rows = [{ label: O.type, options: [
-        opt(V.wall, '[data-linear="wall"]', kind === 'wall'),
-        opt(V.palisade, '[data-linear="palisade"]', kind === 'palisade'),
-        opt(V.built, '[data-linear="built"]', kind === 'built' && !wide && !wood && !lean),
-        opt(V.builtWide, '[data-linear="builtWide"]', wide && !wood),
-        opt(V.longhouse, '[data-linear="longhouse"]', wood && !wide),
-        opt(V.longhouseWide, '[data-linear="longhouseWide"]', wood && wide),
-        opt(V.leanTo, '[data-linear="leanTo"]', lean)] }];
-      if (lean) return [...rows, { label: O.material, options: [['wood', V.leanWood], ['stone', V.leanStone], ['brick', V.leanBrick]].map(([m, l]) => opt(l, `[data-lean-material="${m}"]`, (s.tool.leanMaterial || 'wood') === m)) }];
-      if (kind !== 'built') rows.push({ label: O.tier, options: [1, 2, 3].map(n => opt('T' + n, `[data-wall-tier="${n}"]`, s.levels.wallTier === n)) });
-      if (kind !== 'palisade' && !wood) rows.push({ label: O.height, options: [1, 2].map(n => opt(String(n), `[data-wall-level="${n}"]`, (wide ? s.levels.builtWide : s.levels.wall) === n)) });
-      if (kind !== 'palisade' && !wood) rows.push(masonryRow(s));
-      return rows;
-    } },
-  { id: 'gates', hint: T.hints.point, press: '[data-gate]', is: s => s.tool.kind === 'gate',
-    rows: s => {
-      const stone = s.tool.material !== 'wood', rows = [{ label: O.material, options: [
-        opt(V.stone, '[data-gate]', stone), opt(V.wood, '[data-wood-gate]', !stone)] }];
-      const small = stone && Number(s.tool.size) < 1.25;
-      if (stone) rows.push({ label: O.size, options: [['1.5', V.large], ['1', V.small]].map(([n, l]) =>
-        opt(l, `[data-gate][data-gate-size="${n}"]`, (Number(s.tool.size) || 1.5) === Number(n))) });
-      if (stone) rows.push({ label: O.height, options: (small ? [1, 2] : [1, 2, 3]).map(n => opt('L' + n, `[data-gate-level="${n}"]`, s.levels.gate === n)) });
-      if (stone) rows.push(masonryRow(s));
-      return rows;
-    } },
-  { id: 'terrain', hint: T.hints.terrain, press: '[data-terraform="terrain"]', is: s => s.tool.kind === 'terraform',
-    rows: s => {
-      const t = s.tool, rows = [
-        { label: O.type, options: [
-          opt(V.sloped, '[data-terraform="terrain"]', t.mode === 'terrain'),
-          opt(V.walled, '[data-terraform="walled"]', t.mode === 'walled'),
-          opt(V.flat, '[data-terraform="flat"]', t.mode === 'flat')] },
-        { label: O.shape, options: [
-          opt(V.round, '[data-terraform-shape="round"]', (t.shape || s.terraform.shape) === 'round'),
-          opt(V.square, '[data-terraform-shape="square"]', (t.shape || s.terraform.shape) === 'square')] }];
-      if (t.mode !== 'flat') rows.push({ label: O.action, options: [
-        opt(V.dig, '[data-terraform-delta="-1"]', (t.delta ?? s.terraform.delta) < 0),
-        opt(V.raise, '[data-terraform-delta="1"]', (t.delta ?? s.terraform.delta) > 0)] });
-      rows.push({ label: O.radius, options: [2, 4, 6].map(n => opt('R' + n, `[data-terraform-radius="${n}"]`, (t.radius ?? s.terraform.radius) === n)) });
-      return rows;
-    } },
-  { id: 'roads', hint: T.hints.linear, press: '[data-main-road]', is: s => s.tool.kind === 'linear' && s.tool.linear === 'road' },
-  { id: 'crossings', hint: T.hints.crossing, press: '[data-crossing="dry"]', is: s => ['crossing', 'pier', 'quay', 'slopeway'].includes(s.tool.kind),
-    rows: s => {
-      const rows = [{ label: O.type, wrap: true, options: [
-        opt(V.dry, '[data-crossing="dry"]', s.tool.crossing === 'dry'),
-        opt(V.water, '[data-crossing="water"]', s.tool.crossing === 'water'),
-        opt(V.woodBridge, '[data-crossing="wood"]', s.tool.crossing === 'wood'),
-        opt(V.stoneBridge, '[data-crossing="stone"]', s.tool.crossing === 'stone'),
-        opt(V.pier + ' L4', '[data-pier="4"]', s.tool.kind === 'pier' && s.tool.reach === 4),
-        opt(V.pier + ' L12', '[data-pier="12"]', s.tool.kind === 'pier' && s.tool.reach === 12),
-        opt(V.quay, '[data-quay]', s.tool.kind === 'quay'),
-        opt(V.ramp, '[data-slopeway="ramp"]', s.tool.kind === 'slopeway' && s.tool.slopeway === 'ramp'),
-        opt(V.stairway, '[data-slopeway="stairway"]', s.tool.kind === 'slopeway' && s.tool.slopeway === 'stairway')] }];
-      if (s.tool.kind === 'crossing') rows.push({ label: O.width, options: [1, 2, 3].map(n => opt(n + 'U', `[data-crossing-width="${n}"]`, s.crossingWidth === n)) });
-      return rows;
-    } },
-  { id: 'civic', hint: T.hints.point, press: '[data-civic="market"]', is: s => s.tool.kind === 'civic',
-    // Town hall, guild hall and bargello are well upgrades: they start from the well's inspector.
-    rows: s => WELL_UPGRADES.includes(s.tool.civic) ? [masonryRow(s)] : [{ label: O.building, options: ['market', 'tavern', 'church', 'training', 'plaza', 'balivo'].map(k =>
-      opt(V[k], `[data-civic="${k}"]`, s.tool.civic === k)) }, masonryRow(s)] },
-  { id: 'production', hint: T.hints.point, press: '[data-industry="loggingCamp"]', is: s => s.tool.kind === 'industry',
-    rows: s => [{ label: O.building, wrap: true, options: INDUSTRIES.map(([k, selector, on]) => opt(V[k], selector, on(s.tool))) }, masonryRow(s)] },
-  { id: 'well', hint: T.hints.point, press: '[data-well]', is: s => s.tool.kind === 'well', rows: s => [masonryRow(s)] },
-  { id: 'justice', hint: T.hints.point, press: '[data-event-venue="pillory"]', is: s => s.tool.kind === 'event' && ['pillory', 'gallows', 'scaffold'].includes(s.tool.venue),
-    rows: s => [{ label: O.building, options: ['pillory', 'gallows', 'scaffold'].map(k => opt(V[k], `[data-event-venue="${k}"]`, s.tool.venue === k)) }] },
-  // Field works against a charge (settlement-events3d.js): stake rows, chevaux de frise, the army camp.
-  { id: 'fieldworks', hint: T.hints.point, press: '[data-event-venue="stakeRow"]', is: s => s.tool.kind === 'event' && ['stakeRow', 'chevalFrise', 'armyCamp'].includes(s.tool.venue),
-    rows: s => [{ label: O.building, options: ['stakeRow', 'chevalFrise', 'armyCamp'].map(k => opt(V[k], `[data-event-venue="${k}"]`, s.tool.venue === k)) }] },
-  { id: 'delete', hint: T.hints.delete, press: '[data-tool="delete"]', is: s => s.tool.kind === 'delete' }
-];
-const activeEntry = snap => CATALOG.find(e => e.is(snap)) || CATALOG[0];
 const fmt = n => Math.round(Number(n) || 0).toLocaleString('it-IT');
 
 
@@ -269,7 +155,7 @@ function ToolRail({ snap, cmd }) {
   return html`<nav class="u2-tablet u2-rail" aria-label=${T.aria.buildTools}>
     ${CATALOG.map(e => html`
       <button type="button" class=${'u2-tool' + (active === e.id ? ' on' : '')} aria-label=${T.tools[e.id]}
-        aria-pressed=${active === e.id} data-tip=${T.tools[e.id]} data-tip-body=${e.hint} onClick=${() => cmd.press(e.press)}>
+        aria-pressed=${active === e.id} data-tip=${T.tools[e.id]} data-tip-body=${e.hint} onClick=${() => cmd.builder(e.command)}>
         <${Icon} name=${e.id} size=${22} />
       </button>`)}
     <div class="u2-sep"></div>
@@ -288,11 +174,11 @@ function ToolCard({ snap, cmd }) {
   const entry = activeEntry(snap);
   if (entry.id === 'select' || snap.selection) return null;
   const rows = entry.rows ? entry.rows(snap) : [];
-  return html`<${Card} title=${T.tools[entry.id]} onClose=${() => cmd.press('[data-tool="select"]')}>
+  return html`<${Card} title=${T.tools[entry.id]} onClose=${() => cmd.builder({tool:'select'})}>
     ${rows.map(row => html`<${Row} label=${row.label} tip=${ROW_TIPS[row.label]}>
       <${Seg} options=${row.options.map(o => ({ ...o, label: VALUE_SHORT[o.label] || o.label,
         tip: VALUE_TIPS[o.label] || VALUE_SHORT[o.label] ? o.label : null, tipBody: VALUE_TIPS[o.label] }))}
-        wrap=${row.wrap} onPick=${o => cmd.press(o.selector)} /></${Row}>`)}
+        wrap=${row.wrap} onPick=${o => cmd.builder(o.command)} /></${Row}>`)}
     ${rows.length === 0 && html`<p class="u2-hint">${entry.hint}</p>`}
     <a class="u2-codex-link" href=${window.ConquerWikiHost?.href() || './wiki/'} onClick=${e => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) { e.preventDefault(); window.ConquerWikiHost?.openTool(); } }}>${T.codexEntry}</a>
   </${Card}>`;
@@ -560,7 +446,7 @@ function Policies({ game }) {
         onInput=${e => { game.commands.setPolicy(k, e.currentTarget.value); game.emit(); }} /><b>${p[k]}%</b></div></${Row}>`)}
     <${Row} label=${M.privateMasonry} tip=${M.privateMasonryHelp}>
       <${Seg} options=${['stone', 'brick'].map(m => ({ label: T.values[m], active: snap.privateMasonry === m, m }))}
-        onPick=${o => game.commands.press('[data-private-masonry="' + o.m + '"]')} /></${Row}>`;
+        onPick=${o => game.commands.builder({privateMasonry:o.m})} /></${Row}>`;
 }
 function Market({ game }) {
   const e = game.read.economy();
@@ -796,7 +682,7 @@ function Toast({ snap }) {
   const save = snap.saveStatus, message = statusText(snap.status);
   return html`<div class="u2-toast" aria-live="polite">
     ${message && html`<div class="u2-tablet u2-status">${message}</div>`}
-    <div class=${'u2-saved' + (save !== 'saved' ? ' bad' : '')}>● ${save === 'error' ? T.saveError : save === 'unsaved' ? T.unsaved : T.saved}</div>
+    <div class=${'u2-saved' + (save !== 'saved' ? ' bad' : '')}>● ${window.ConquerSaveStatus.label(save, {saved:T.saved,unsaved:T.unsaved,error:T.saveError})}</div>
   </div>`;
 }
 
@@ -850,7 +736,7 @@ function App() {
   useAlertWatchers(game);
   const [snap, setSnap] = useState(game.snapshot());
   const [mode, setModeState] = useState(['build', 'manage', 'defend'].includes(recall(MODE_KEY)) ? recall(MODE_KEY) : 'build');
-  const setMode = m => { setModeState(m); remember(MODE_KEY, m); if (m !== 'build') game.commands.press('[data-tool="select"]'); };
+  const setMode = m => { setModeState(m); remember(MODE_KEY, m); if (m !== 'build') game.commands.builder({tool:'select'}); };
   const [section, setSectionState] = useState(MANAGE_SECTIONS.includes(recall('conquer.ui.manage')) ? recall('conquer.ui.manage') : 'overview');
   const setSection = s => { setSectionState(s); remember('conquer.ui.manage', s); };
   const [defSection, setDefSectionState] = useState(DEFEND_SECTIONS.includes(recall('conquer.ui.defend')) ? recall('conquer.ui.defend') : 'command');

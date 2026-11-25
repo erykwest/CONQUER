@@ -15,6 +15,13 @@ on:
       - src/settlement-siege-preview.js
       - src/settlement-castle3d.js
       - src/settlement-world3d.js
+      - src/settlement-mesh3d.js
+      - src/settlement-civic3d.js
+      - src/settlement-house3d.js
+      - src/settlement-wood3d.js
+      - src/settlement-architecture.js
+      - qa/model-parts-regression.cjs
+      - qa/architecture-facade-regression.cjs
       - src/settlement-storage-yard.js
       - .github/actions/playwright-setup/action.yml
       - src/settlement-app-persistence.js
@@ -104,6 +111,8 @@ jobs:
       - run: node --check src/asset-audit.js
       - name: Asset manifest is up to date
         run: node tools/build-asset-manifest.cjs --check
+      - run: node qa/model-parts-regression.cjs
+      - run: node qa/architecture-facade-regression.cjs
       - run: node qa/asset-catalog-regression.cjs
       - run: node qa/asset-audit-scope-regression.cjs
   browser:

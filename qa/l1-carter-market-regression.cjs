@@ -32,7 +32,7 @@ function world({market=false,logging=false,quarry=false,workers=4}={}){
     document:{getElementById:()=>null},rectWorldPoints:()=>[]
   });
   for(const file of ['src/settlement-economy.js','src/settlement-storage-yard.js',
-    'src/settlement-vehicles.js','src/settlement-haulage.js'])
+    'src/settlement-path.js','src/settlement-vehicles.js','src/settlement-haulage.js'])
     vm.runInContext(read(file),env,{filename:file});
   return{State,window,drawn,drivers,road,yard,producer,marketPlace,q,
     E:window.ConquerEconomy,H:window.ConquerHaulage,V:window.ConquerVehicles};

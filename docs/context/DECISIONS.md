@@ -1,11 +1,22 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-ARCH-261119 — Alias storico, assorbito da D-ECC-REFACTOR-261124
+
+La decisione della PR #287 su comandi Builder, modelli indicizzati e facciate è consolidata nella PR #304 sotto D-ECC-REFACTOR-261124. Mantiene un solo owner per contratto; il [rapporto originale](../ARCHITECTURE-REVIEW-2026-11-19.md) resta uno snapshot storico. Nessuna nuova regola di prodotto.
+
+## D-ECC-REFACTOR-261124 — Owner dei contratti condivisi
+
+Su branch `refactor/extended-ecc-20261124`: i comandi Builder ricevono dati e non cercano pulsanti; i controlli DOM sono adapter e il catalogo UI2 è puro. Il formato locale resta schema 2, una fotografia JSON immutabile alimenta locale e cloud. Upload seriali con identità di account/mondo/generazione: un acknowledgement vecchio non certifica le modifiche successive. Il caricamento conserva l'ordine storico delle migrazioni dei due trasporti.
+
+`ConquerPath` condivide la geometria, mentre ciascun consumer sceglie orientamento e soglie compatibili con il comportamento precedente. `ConquerMesh3D.modelParts` usa identità del record: i registri modello sono immutabili e una modifica richiede un nuovo record. Ordine script in gioco/CAMP verificato da `tools/runtime-contract.cjs`; consumer e accettazione in [REGRESSION](../REGRESSION.md). Nessuna nuova regola economica o decisione di prodotto.
+
 ## D-SHELTER-261124 — Rifugio in ogni Sala comune, capienza 3× il banchetto (24/11/2026)
 
 - **DECISO dal product owner:** all'allarme rosso donne, bambini e uomini L3/L4 si rifugiano in **ogni** Sala comune (mastio, torri, sezioni costruite, long house), non solo in quella del mastio; averne più d'una è voluto.
 - **CONTRATTO:** la capienza di una Sala comune è **3× i posti del suo banchetto** (un commensale per panca da 1,6 m, due per panca lunga da 3,2 m). Ognuno va alla sala più vicina con posto, il mastio per primo; se tutte sono piene, alla più vicina. La campana rossa richiede almeno una Sala comune.
 - **PARAMETRO:** posti totali e persone da proteggere sono un parametro del castello (pannello Castello, voce Rifugio); se mancano posti l'utente è avvisato che serve nuovo spazio.
 - **Di notte** il personale e gli abitanti delle stanze non si animano (anche col tramonto invernale). **Tavoli lunghi (4,4 m) solo nelle sale W2.** Long house e sezioni costruite restano a 4U (W2 6U), come nel Builder.
+
 ## D-CLAY-WATER-261124 — Accesso all'argilla (24/11/2026)
 
 Richiesta del product owner: garantire un torrente o un laghetto e consentire la cava argilla in tutto il territorio paludoso. Il generatore riutilizza una sponda interna accessibile, oppure aggiunge un piccolo stagno con spazio per la cava 4×4U nella whitezone. L'implementazione usa lo stagno come ripiego deterministico. Se serve, apre una piccola radura nel bosco. La cava argilla in Palude richiede una terrazza asciutta edificabile e può trovarsi anche oltre 6U dall'acqua, comprese terrazze rialzate. Negli altri biomi resta il centro H0 entro 6U dalla riva interna. Questa estensione completa D-CLAY-02. La garanzia idrica riguarda le nuove generazioni. I paesaggi salvati conservano la propria geometria.

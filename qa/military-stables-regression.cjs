@@ -87,6 +87,7 @@ const tower=(id,o={})=>({id,type:'tower',shape:'square',size:1.5,level:2,x:0,y:0
       ensureBorderEntrySelection:()=>State.village.borderEntries,terrainElevation:()=>0,placementGroundZ:()=>0,
       towerVisualTopHeight:()=>3,w2s:()=>({x:0,y:0}),towerDovecote:()=>false};
     sandbox.window.window=sandbox.window;
+    vm.runInNewContext(fs.readFileSync(root+'settlement-path.js','utf8'),sandbox);
     vm.runInNewContext(fs.readFileSync(root+'settlement-diplomacy.js','utf8'),sandbox);
     const D=window.ConquerDiplomacy;assert.ok(D.spawn(10));
     const m=State.diplomacy.incoming;D.tick(10,m.arrivalDay);D.finishResponse(false);

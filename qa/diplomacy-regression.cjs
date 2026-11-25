@@ -49,7 +49,7 @@ function fixture(){
   vm.createContext(ctx);
   // Caravans are lord convoys: the economy owns castle gold and goods.
   for(const f of ['settlement-economy.js','settlement-urban-economy.js','settlement-market-economy.js',
-    'settlement-commerce.js','settlement-convoys.js','settlement-diplomacy.js'])
+    'settlement-commerce.js','settlement-convoys.js','settlement-path.js','settlement-diplomacy.js'])
     vm.runInContext(fs.readFileSync(path.join(base,f),'utf8'),ctx,{filename:f});
   const e=window.ConquerEconomy.state();
   e.castleGold=1000;Object.assign(e.castle,{food:1000,stone:100,wood:100,metal:100,equipment:100});

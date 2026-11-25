@@ -21,7 +21,7 @@ function fixture(){
     terrainElevation:p=>window.ConquerSlopeways.lift(p,ground(p)),environmentContains:()=>false,
     structureHeight:()=>.3,footprintPoints:()=>[],rectDims:()=>({w:1,h:1}),placementGroundZ:()=>0,
     markDirty:()=>{},draw:()=>{},status:()=>{},selectStructure:()=>{},invalidateNavigation:()=>{},uid:()=>'x'});
-  for(const f of ['settlement-slopeways.js','settlement-crossings.js','settlement-vehicles.js'])vm.runInContext(read('src/'+f),ctx);
+  for(const f of ['settlement-slopeways.js','settlement-crossings.js','settlement-path.js','settlement-vehicles.js'])vm.runInContext(read('src/'+f),ctx);
   return{State,window,W:window.ConquerSlopeways,C:window.ConquerCrossings,V:window.ConquerVehicles,ground,slope};
 }
 const P=(x,y=0)=>({x,y});

@@ -65,6 +65,7 @@
       size: t.size ?? null,
       woodStyle: t.woodStyle || null,
       linear: t.linear || null,
+      leanMaterial: t.leanMaterial || null,
       span: t.span || null,
       crossing: t.crossing || null,
       slopeway: t.slopeway || null,
@@ -92,20 +93,21 @@
     return { id: s.id, type: s.type, detail };
   }
   function snapshot() {
+    const build = window.ConquerBuilderCommands.options();
     return {
       resources: { ...State.resources },
       clock: clock(),
       view: { rotation: State.view.rotation || 0, plan: typeof isPlanView === 'function' && isPlanView() },
       tool: tool(),
       levels: { ...State.buildLevels },
-      crossingWidth: Number(findLegacy('[data-crossing-width].active')?.dataset.crossingWidth) || 2,
+      crossingWidth: build.crossingWidth,
       terraform: {
-        shape: findLegacy('[data-terraform-shape].active')?.dataset.terraformShape || 'round',
-        delta: Number(findLegacy('[data-terraform-delta].active')?.dataset.terraformDelta) || 1,
-        radius: Number(findLegacy('[data-terraform-radius].active')?.dataset.terraformRadius) || 4
+        shape: build.terraformShape,
+        delta: build.terraformDelta,
+        radius: build.terraformRadius
       },
       masonry: State.buildMasonryMaterial === 'brick' ? 'brick' : 'stone',
-      privateMasonry: findLegacy('[data-private-masonry].active')?.dataset.privateMasonry || 'stone',
+      privateMasonry: build.privateMasonry,
       selection: selection(),
       village: State.village?.name || null,
       status: document.getElementById('status')?.textContent || '',
@@ -113,18 +115,10 @@
       saveStatus: saveStatus()
     };
   }
-  // 'saved' | 'unsaved' | 'error' from the legacy indicator ('unsaved', 'saved local',
-  // 'saved cloud', 'cloud ready', 'local save failed', 'cloud error', …).
-  function saveStatus() {
-    const text = (document.getElementById('saveState')?.textContent || '').toLowerCase();
-    if (/fail|error/.test(text)) return 'error';
-    if (/unsaved/.test(text)) return 'unsaved';
-    return 'saved';
-  }
+  // The indicator is a transport message, never itself proof that a save succeeded.
+  function saveStatus(){return window.ConquerSaveStatus.classify(document.getElementById('saveState')?.textContent)}
 
-  // Legacy controls are still the source of truth for tool parameters in phase 1.
-  // This script loads before settlement-builder-ux.js, which detaches the buttons of
-  // closed palette groups: keep references so they stay reachable (handlers still fire).
+  // Remaining non-Builder controls keep their legacy DOM adapter.
   const legacyButtons = [...document.querySelectorAll('button')];
   const findLegacy = selector => document.querySelector(selector) || legacyButtons.find(b => b.matches(selector)) || null;
   function press(selector) {
@@ -138,6 +132,7 @@
   const saved = fn => (...args) => { const ok = fn(...args); if (ok) { scheduleLocalSave(200); emit(); } return !!ok; };
   const commands = {
     press,
+    builder: request => { const ok = window.ConquerBuilderCommands.execute(request); if (ok) emit(); return ok; },
     setSpeed: speed => setTimeSpeed(speed),
     togglePause: () => togglePause(),
     rotate: delta => rotateCamera(delta),

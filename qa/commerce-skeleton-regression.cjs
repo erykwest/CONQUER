@@ -312,8 +312,12 @@ test('script order, persistence and L3 art direction stay compatible',()=>{
   assert.ok(html.indexOf('settlement-market-economy.js')<html.indexOf('settlement-commerce.js'));
   assert.ok(html.indexOf('settlement-economy.js')<html.indexOf('settlement-commerce.js'));
   assert.ok(html.indexOf('settlement-commerce.js')<html.indexOf('settlement-app.js'));
-  assert.ok(local.includes('economy:State.economy||null'),'local saves carry nested commerce');
-  assert.ok(local.includes('economy:State.economy||null'),'cloud saves carry nested commerce');
+  const h=harness();h.c.state();
+  vm.runInContext(fs.readFileSync(path.join(ROOT,'src/settlement-save-snapshot.js'),'utf8'),h.ctx);
+  const snapshot=h.window.ConquerSaveSnapshot.capture(h.State,{schema:2,landscapeVersion:1});
+  const cloud=h.window.ConquerSaveSnapshot.cloud(snapshot,{userId:'owner'});
+  assert.deepEqual(JSON.parse(snapshot).economy.commerce,asObject(h.State.economy.commerce),'local saves carry nested commerce');
+  assert.deepEqual(asObject(cloud.policies.economy.commerce),asObject(h.State.economy.commerce),'cloud saves carry nested commerce');
   assert.ok(/const CIVIC_TYPES=Object\.freeze\(\['market','tavern','church'/.test(core));
   assert.ok(residentsCode.includes("if(level===3)return educatedPosition(house,shiftedDay)"));
   assert.ok(residentsCode.includes("if(level===3)return'merchant'"));

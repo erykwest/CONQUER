@@ -21,20 +21,9 @@
     return !!s&&s.type==='house'&&LEVELS.has(houseLevel(s))&&!!DATA()&&!!window.ConquerMesh3D&&
       !(typeof underConstruction==='function'&&underConstruction(s));
   }
-  // Indexed kit parts expanded once into flat triangle lists.
-  const expanded=new Map();
-  function parts(key){
-    let out=expanded.get(key);if(out)return out;
-    out=[];
-    // A stale cached kit can lack a newer piece: skip it rather than throw and disable World 3D.
-    const model=DATA()?.models?.[key];if(!model?.parts)return out;
-    for(const [name,part] of Object.entries(model.parts)){
-      const v=new Float32Array(part.i.length*3);
-      for(let k=0;k<part.i.length;k++){const j=part.i[k]*3;v[k*3]=part.p[j];v[k*3+1]=part.p[j+1];v[k*3+2]=part.p[j+2]}
-      out.push({name,v,c:part.c});
-    }
-    expanded.set(key,out);return out;
-  }
+  // The shared mesh module owns indexed expansion and model-identity caching.
+  // A stale kit can lack a newer piece: keep the empty-piece fallback.
+  const parts=key=>window.ConquerMesh3D.modelParts(DATA()?.models?.[key]);
   // Kit palette (winter roofs white) through the brick masonry swatches, like the procedural houses.
   const tint=hex=>typeof visualPaletteColor==='function'?visualPaletteColor(hex):hex;
   // In clay (brick masonry or the clay palette) the kit's own stone and slate details borrow the

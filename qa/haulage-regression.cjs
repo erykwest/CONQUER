@@ -24,6 +24,7 @@ function world(){
   });
   vm.runInContext(read('src/settlement-economy.js'),ctx);
   vm.runInContext(read('src/settlement-storage-yard.js'),ctx);
+  vm.runInContext(read('src/settlement-path.js'),ctx);
   vm.runInContext(read('src/settlement-vehicles.js'),ctx);
   vm.runInContext(read('src/settlement-haulage.js'),ctx);
   return{State,window,ctx,artwork,yard,camp,first,second,

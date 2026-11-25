@@ -2,6 +2,7 @@
 __pycache__/
 .playwright-cli/
 output/playwright/
+output/qa/
 
 # Local Obsidian workspace/cache; editorial Markdown is versioned.
 content/codex/.obsidian/

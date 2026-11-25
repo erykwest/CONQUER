@@ -1,8 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-25 — ECC-REFACTOR-02 / ARCH-261119 · Unica integrazione
+
+PR #287 assorbita nella #304 senza integrazione autonoma su main. Copertura verificata per comandi/preset, catalogo, tre consumer mesh, facciate e regressioni; recuperati gate Builder e rapporto storico. Nuova opzione `frameTower3` da main preservata nella UI2 a comandi. La chiusura della #287 come superata segue la verifica della #304 armonizzata. Roadmap di prodotto invariata.
 ## 2026-11-24 — UI-BUILDERICON-02
 
 - [ ] Valutare SVG con `currentColor` al posto del filtro CSS, per tinte esatte in hover/selezione.
+
 
 ## 2026-11-25 — GRAPHSCHIC · Palette GRAFICA
 
@@ -11,6 +15,7 @@
 - [ ] Verifica visiva del gradiente con lo stesso metodo.
 - [ ] Gradienti anche sulle coperture a falda (`gabled`) in `settlement-world3d.js`.
 - [ ] Inserire le opzioni nel Lab (AGENTS.md) in una PR successiva.
+
 
 ### 2026-11-24 — TOWER-FRAMED-TOP · Piano alto a graticcio delle torri W3
 
@@ -75,6 +80,16 @@
 - [x] Regressioni deterministiche per attesa, errori, recupero, CAMP, Lab e payload HTML; incluse nel workflow Runtime integrity.
 - [ ] Verifica separata delle policy RLS effettivamente applicate in produzione: in questa passata letto soltanto lo schema versionato.
 - [ ] CSP completa e rimozione dipendenze CDN: richiedono inventario e QA browser delle pagine/iframe; non applicate in questa passata.
+### 2026-11-24 — ECC-REFACTOR-02 · Semplificazione architetturale
+
+**IMPLEMENTATO SU BRANCH `refactor/extended-ecc-20261124`, NON MERGE.**
+- [x] Un owner per snapshot/restore condiviso, comandi e preset Builder, geometria percorsi, espansione mesh e stato salvataggio UI.
+- [x] Caricamento verificabile nei due entry point, dipendenze e accettazione nel [ledger](../REGRESSION.md), runner unico senza perdita dei fallimenti.
+- [x] Casi di rete, concorrenza, quota e compatibilità del salvataggio verificati localmente.
+- [x] Browser legacy/UI2/CAMP, sintassi e confronto controllato di 22 render con main. Suite completa eseguita in CI e corretti i due controlli sulla vecchia posizione del codice.
+- [ ] Integrare soltanto dopo la CI verde sullo SHA finale della [PR #304](https://github.com/erykwest/CONQUER/pull/304).
+- Owner Builder: [feature-backlog](../feature-backlog.md). Non cambia priorità di gameplay o roadmap.
+
 ### 2026-11-24 — CLAY-WATER-ACCESS
 
 Implementato nel branch `fix/territory-clay-stone-access`. Nuove mappe con acqua dolce e sponda utilizzabile per l'argilla nella whitezone. Aggiunta deterministica di un piccolo stagno quando manca un sito accessibile. Cava argilla consentita sui terreni asciutti e pianeggianti del territorio Palude. QA dedicata con piazzamento condiviso, ripetibilità, acqua lontana e bosco fitto. Integrazione su main in attesa.
