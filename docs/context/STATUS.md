@@ -1,5 +1,13 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-25 — PLACEMENT-GHOST: ghost 3D nell'anteprima di piazzamento (`fix/placement-ghost-3d`)
+
+- **IMPLEMENTATO SUL BRANCH, NON MERGE.** Base `origin/main` `82cd9e8a`.
+- Regressione da D-RENDER-3D-261111 (#204): l'anteprima mostrava solo il prisma tratteggiato dell'impronta. Ora `drawStructure(preview)` disegna l'impronta **solo a terra** (niente faccia superiore) e sopra l'edificio finito World 3D traslucido (`PREVIEW_GHOST_ALPHA` .58), riusando il ghost dei cantieri (#276).
+- Cache del ghost per chiave `preview:<tipo>[:segmento]`, con la posizione nella chiave (la mesh è in coordinate mondo). Torri in muratura, porte in pietra, mura e sezioni (buffer castello) usano `ConquerAssembly.source` come ripiego.
+- **PROVE LOCALI PASS:** `construction-ghost` (aggiornato: anteprima con ghost, ripiego torri, impronta solo a terra), `builder-placement`, `render-cache-keys`. Audit Chromium 1228 di tutte le voci del Builder con screenshot (`output/ghost-audit`, non versionato): ghost presente su tutte le voci con modello; strade, fossati e ponti mantengono la loro anteprima; rampa e scalinata non verificate.
+- **CI remota non ancora eseguita**; nessun merge o deploy.
+
 ### 2026-11-24 — SPRING-FLORA: primavera e disgelo (`feature/spring-flora-thaw`)
 
 - **IMPLEMENTATO SUL BRANCH, NON MERGE.** Base `origin/main` `992d1c36`.

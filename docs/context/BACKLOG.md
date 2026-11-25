@@ -1,5 +1,15 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+## 2026-11-25 — PLACEMENT-GHOST · Ghost 3D nell'anteprima di piazzamento
+
+**FATTO sul branch `fix/placement-ghost-3d`, NON MERGE.**
+
+- [x] Anteprima: edificio finito World 3D traslucido sopra l'impronta, solo a terra.
+- [x] Torri in muratura, porte in pietra, mura e sezioni: ghost dalla sorgente dell'assemblaggio.
+- [x] Verifica con screenshot di ogni voce del Builder.
+- [ ] Verifica manuale di rampa e scalinata.
+- [ ] CI remota e revisione della PR prima dell'integrazione in main.
+
 ## 2026-11-24 — SPRING-FLORA · Primavera e disgelo
 
 **FATTO sul branch `feature/spring-flora-thaw`, NON MERGE.**

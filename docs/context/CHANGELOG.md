@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-25 — PLACEMENT-GHOST · Torna il ghost dell'edificio nel piazzamento
+
+`fix/placement-ghost-3d`: dopo il ritiro del 2.5D (#204) l'anteprima di piazzamento era solo un prisma tratteggiato. Ora mostra l'edificio finito World 3D traslucido sopra l'impronta, evidenziata solo a terra; le parti in muratura del castello (torri, porte, mura, sezioni) prendono la mesh dalla sorgente dell'assemblaggio di cantiere. ROADMAP e DECISIONS invariati: ripristino di un comportamento visivo.
+
 ### 2026-11-24 — SPRING-FLORA · Primavera: fiori, sottobosco e disgelo (`feature/spring-flora-thaw`)
 
 Primavera più distinta dall'estate: un albero su tre ha la chioma fiorita (pallini di un colore per albero, dodici disposizioni per tipo, scelte per pianta); tutti i cespugli fioriscono con sprite dedicati. Sottobosco marrone a marzo, verde da aprile; fiori nei prati dal 1 marzo. Disgelo: da 22 febbraio sottobosco marrone e niente neve (fase `thaw` di `winterPhase`), neve fino al 21 febbraio; chiome spente dall'1 all'7 marzo. DEV: selettore del mese. ROADMAP e DECISIONS invariate: aggiustamento visivo e del calendario invernale, nessuna regola di gameplay nuova. QA: controlli sintattici e timeline verificata in locale; CI remota non ancora eseguita.
