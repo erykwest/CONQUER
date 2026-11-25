@@ -235,6 +235,16 @@ Implementato nel branch `fix/territory-clay-stone-access`. Nuove mappe con acqua
 
 ### 2026-11-17 — ROOM-ANIM · Animazioni per stanze
 
+**2026-11-24, branch `feature/cutaway-night-banquet`, NON MERGE:**
+- [x] Di notte personale e abitanti delle stanze fermi (anche col tramonto invernale).
+- [x] Sala comune: banchetto (seduti, cibo in tavola, dame, giullare, musico, camino acceso); tavoli in funzione della superficie; tavoli lunghi nelle W2.
+- [x] Allarme rosso: rifugio in ogni Sala comune, capienza 3× banchetto, parametro e avviso «serve nuovo spazio».
+- [ ] Audit del Lab e baseline per le sezioni a 4U/6U e i nuovi arredi.
+- [ ] Verifica del pannello Castello (Rifugio) in partita.
+- [ ] Passo di camminata vero per chi gira nella sala (oggi scivola).
+- [x] Sala del trono: trono in fondo alle sale lunghe, passatoia, niente tavoli, udienza animata.
+- [ ] Opere d'arte negli ancoraggi ARTE: i modelli ci sono ma il gioco non le disegna ancora (test nel Lab fatto).
+
 **Sala del trono e Sala comune IMPLEMENTATE SU BRANCH `feat/throne-hall-court`, NON MERGE.**
 - [x] Sala del trono: signore sul trono, guardie, araldo, postulante (+ cortigiano nella sala grande); di notte solo le guardie.
 - [x] Sala comune: un commensale per panca (soldati e civili che bevono), un servo col cibo in capo a ogni tavolo; vuota di notte.

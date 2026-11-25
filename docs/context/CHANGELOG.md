@@ -3,6 +3,13 @@
 ### 2026-11-24 — TOWER-FRAMED-TOP · Framed top per le torri quadrate W3
 
 `feature/framed-top-towers`: le torri quadrate in pietra W3 (L2+) possono avere l'ultimo piano a graticcio, leggermente a sbalzo e sempre con tetto a falde; costa la torre un livello più bassa più 45 legno; resiste come la pietra ma il piano in legno brucia e, consumato, la torre perde quel piano. Anche le sezioni costruite W1 L2 possono avere il P1 a graticcio a sbalzo (anche sui lati corti). Al P0 delle sezioni W1 standard porta e finestre doppie sul lato cortile al posto delle feritoie. Camini delle sezioni W1 dimezzati; nel Lab mura e sezioni rispettano le lunghezze massime del gioco. Nuova torre lignea a telaio H3: sopra la H2 un P3 a graticcio intonacato a sbalzo con tetto a falde senza parapetto. Nuova `qa/tower-framed-top-regression.cjs`.
+### 2026-11-24 — ROOM-ANIM-AUDIENCE · Udienza nella Sala del trono
+
+`feature/cutaway-night-banquet`: nelle sale lunghe il trono sta sulla parete corta in fondo, con la passatoia per tutta la sala e senza tavoli; di giorno i postulanti fanno la fila, uno alla volta si inginocchiano davanti al signore che risponde, poi escono lungo il lato. ROADMAP e DECISIONS invariate.
+
+### 2026-11-24 — ROOM-ANIM-NIGHT/BANQUET/SHELTER · Notte, banchetto e rifugio nelle sale comuni
+
+`feature/cutaway-night-banquet`: di notte (anche col tramonto invernale) personale e abitanti delle stanze del castello non si animano; banchetto nella Sala comune con commensali seduti, cibo in tavola (modelli Blender), dame, giullare e musico, camino acceso; numero di tavoli in funzione della superficie, tavoli da 4,4 m nelle sale W2. Allarme rosso: rifugio in ogni Sala comune (mastio per primo) con capienza 3× il banchetto, parametro Rifugio nel pannello Castello e avviso quando serve nuovo spazio. Lab: sezioni costruite e long house a 4U/6U. DECISIONS: nuova D-SHELTER-261124 (rifugio in ogni Sala comune, capienza 3× il banchetto, notte, tavoli lunghi W2); ROADMAP invariata.
 ### 2026-11-24 — WALL-SHEDS-261124 · Lean-to come upgrade, tettoie e scatter addossati
 
 `fix/wall-heights-follow-towers`: il lean-to non si costruisce più da solo (tolto il pulsante della barra): è un upgrade del muro dal pannello (Nessuno/Legno/Pietra/Mattoni), se ne va col muro (rimborso) ed esclude la scala del camminamento e viceversa. Tettoie aperte su pali automatiche lungo la faccia interna dei muri finiti senza scala (settlement-wall-sheds.js, modello delle tettoie dei cortili L3+): da 0 a 4 per muro, misure variabili, 30% in paglia, evitano il tratto del lean-to. Scatter nuovo contesto «wall»: oggetti appoggiati (profondità reale del modello + 1,5 cm) alla faccia interna dei muri e delle sezioni costruite, al fronte dei lean-to e sotto le tettoie.

@@ -87,7 +87,10 @@
     exactor:{label:'Esattore',pieces:['tabard','flatCap']},
     bailiff:{label:'Giudice del Balivo',pieces:['bailiffRobe','clerkCap']},
     herald:{label:'Araldo della Sala del trono',pieces:['tabard','feltHat']},
-    servant:{label:'Servo della Sala comune',pieces:['clothApron','stockingCap']}
+    servant:{label:'Servo della Sala comune',pieces:['clothApron','stockingCap']},
+    soldier:{label:'Soldato a riposo (Sala comune)',pieces:['jerkin','leatherCap','shawl']},
+    jester:{label:'Giullare della Sala comune',pieces:['woolHood']},
+    minstrel:{label:'Musico della Sala comune',pieces:['feltHat']}
   };
   // L4 ladies (women and girls of the elite, FIG-HANDS-261117): medieval headdresses over
   // braided hair instead of the town's hats and hoods; furs instead of cloaks in winter.
