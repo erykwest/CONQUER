@@ -85,7 +85,7 @@ assert.ok(xMax(down,br)>xMax(tw,br)+.5,'the bridge drops forward');
 assert.ok(SE.pose('ladder',{mode:'idle'}).up===0&&SE.pose('ladder',{mode:'fire',t:.6*7}).up===1,'the ladder goes up');
 const lr=partRange('ladder','ladder');
 const ladTop=zMax(SE.triangles('ladder',{x:0,y:0},{mode:'fire',t:.6*7}),lr);
-assert.ok(ladTop>SE.WALL_WALK+.15&&ladTop<2.1,'raised, it reaches over the low (H1) wall, never the high (H2) one');
+assert.ok(ladTop>SE.WALL_WALK+.15&&ladTop<2.35,'raised, it reaches over the low (H1) wall, never the high (H2) one');
 console.log('PASS siege tower bridge and scaling ladder');
 
 // Trebuchet like the wooden model: two A-frames whose parts lie along the sills

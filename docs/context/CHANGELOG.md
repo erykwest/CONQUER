@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-25 — SIEGE-HEIGHTS-261125 · Macchine d'assedio alle nuove altezze dei muri
+
+`fix/siege-heights`: src/assets/siege-engines-model.js rigenerato in Blender 4.4 da tools/blender/build_siege_engines.py con le WALLS della griglia (H1 1,15, H2 2,35): cambia solo la torre d'assedio di livello 2 (camminamento 2,35, ponte 2,50, cima di combattimento 3,28, base 0,25 più lunga con ruote e serventi spostati). Tolto l'adattamento a runtime (fitAssaultTowers). Torri d'assedio: L1 con piano di base e ponte, senza parapetto posteriore in cima; L2 con piano di base, un pianerottolo intermedio, ponte e cima di combattimento (build_siege_engines.py). Scala d'assalto invariata, solo per H1: test aggiornato al limite H2 2,35.
+
 ### 2026-11-24 — UI-BUILDERICON-02 · Colori legacy delle icone del Builder (`fix/builder-icon-color`)
 
 Ripristinato l'aspetto precedente a #284: tasti marroni (`--btn`) con icona beige; gli SVG neri sono tinti via `filter` CSS, scuri sul tasto selezionato arancione. Selettore Pietra/Argilla della Configurazione: solo icona della risorsa, nome nel tooltip. Rimosso lo sfondo beige chiaro (`#e8ddc6`) da tasti e glifi delle opzioni. SVG invariati, quindi audit del Lab non necessario. ROADMAP e DECISIONS invariate. QA: builder-menu-regression PASS in locale; CI remota non eseguita.

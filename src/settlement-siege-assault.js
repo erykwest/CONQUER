@@ -8,7 +8,7 @@
 //   ladder   carried to the wall, raised, climbed; the men step onto the wall top
 //   tower    pushed to the wall, bridge lowered onto it, the party crosses
 //   moat     men carry fascines and throw them in until the crossing is filled
-// High (H2) walls cannot be scaled (no ladder or tower reaches them), only battered.
+// High (H2, 2.35) walls cannot be scaled with ladders: only the level 2 assault tower reaches them.
 // The wall geometry G comes from the real structures (ConquerSiegePreview) or the
 // defaults below, which copy the game's H1 wall, stone gate and water moat.
 // scene(kind,t,G) -> {engine:{name,place,state}|null, soldiers, arrows, carried,

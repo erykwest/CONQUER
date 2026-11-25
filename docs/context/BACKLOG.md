@@ -63,7 +63,7 @@
 - [x] Torre d'assedio L2 sul muro H2 a 2,35.
 - [x] Semitorri e porte in pietra sulla griglia; porta piccola rialzata.
 - [ ] Porta piccola con piano superiore in legno: solaio a 1,40 da allineare al camminamento H2 (2,35).
-- [ ] Rigenerare siege-engines-model.js da Blender con le nuove WALLS (oggi adattato in runtime).
+- [x] Rigenerare siege-engines-model.js da Blender con le nuove WALLS (SIEGE-HEIGHTS-261125, `fix/siege-heights`).
 - [ ] Audit del Lab in CI e baseline aggiornata.
 
 ### 2026-11-19 — HARDEN-261119 · Hardening della base main
