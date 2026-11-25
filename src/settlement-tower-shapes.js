@@ -86,7 +86,7 @@ function towerSlitEdge(s,edge){return deeSideSlit(s,edge.index)?.edge??edge}
 function deeTowerRoofApex(s){const {w,h}=orientedTowerDims(s);return orientedTowerWorld(s,[[w/2-h/2,0]])[0]}
 function deeTowerButtresses(s,h){
   const {w,h:width}=orientedTowerDims(s),cx=w/2-width/2,r=width/2,out=[];
-  const add=(x,y,ox,oy)=>{const p=orientedTowerWorld(s,[[x,y]])[0],o=orientedTowerDir(s,ox,oy);out.push(steppedButtressPieces(p,{x:-o.y,y:o.x},o,h))};
+  const add=(x,y,ox,oy)=>{const p=orientedTowerWorld(s,[[x,y]])[0],o=orientedTowerDir(s,ox,oy);out.push(steppedButtressPieces(p,{x:-o.y,y:o.x},o,h,.22,TOWER_BUTTRESS_SCALE))};
   for(const a of [-Math.PI/3,0,Math.PI/3])add(cx+Math.cos(a)*r,Math.sin(a)*r,Math.cos(a),Math.sin(a));
   for(const side of [-1,1]){add((-w/2+cx)/2,side*r,0,side);add(-w/2,side*width/4,-1,0)}
   return out;

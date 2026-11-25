@@ -1,5 +1,13 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-24 — TOWER-HILL-BASES: torri sul bordo collina e basamenti (`fix/tower-hill-bases`)
+
+- Porta delle torri su pendio rivolta verso la cima e sul pianoro (regola di piazzamento, D-TOWER-SUMMIT-261124); pavimento letto sotto il corpo.
+- Contrafforti e scarpa 10° che scendono fino al terreno; scarpa aperta davanti alla porta; contrafforti delle torri −30%.
+- Mura e sezioni costruite: basamento esterno (standard / contrafforti / scarpa), selezionabile dal pannello; solo estetico, ingombro invariato.
+- Scala del mastio nel materiale della torre; ponte levatoio sempre disegnato.
+- Limite: torri già piazzate nei salvataggi esistenti tengono orientamento e pavimento salvati (nessuna migrazione).
+
 ### 2026-11-24 — UI-INSPECTOR-SLIM: inspector compatto (`feature/inspector-slim`, NON MERGE)
 
 Inspector legacy più corto (torre: da ~4000 a ~1200 caratteri), tasti piccoli, spiegazioni dietro ⓘ, controlli di test solo in DEV. UI v2 invariata. Verificato in browser su torre, casa e porta.
