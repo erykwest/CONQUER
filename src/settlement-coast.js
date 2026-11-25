@@ -34,10 +34,31 @@
   }
   const band=(pts,D,toSea,toLand)=>[...pts.map(p=>({x:p.x+(p.nx??D.x)*toSea,y:p.y+(p.ny??D.y)*toSea})),...pts.slice().reverse().map(p=>({x:p.x-(p.nx??D.x)*toLand,y:p.y-(p.ny??D.y)*toLand}))];
   const bounds=poly=>{let a=Infinity,b=Infinity,c=-Infinity,d=-Infinity;for(const p of poly){a=Math.min(a,p.x);b=Math.min(b,p.y);c=Math.max(c,p.x);d=Math.max(d,p.y)}return{minX:a,minY:b,maxX:c,maxY:d}};
+  // Cheap per-call signature (side, point counts, first/middle/last vertex): the full JSON key of
+  // every coastline was rebuilt on each rockAt() the road planner asks (~3/4 of main-road time).
+  const quickSig=seas=>{
+    let s='';
+    for(const sea of seas){
+      s+=sea.side+':';
+      for(const c of sea.coastlines||[sea.coastline]){
+        if(!c?.length){s+='0;';continue}
+        const m=c[c.length>>1],l=c[c.length-1];
+        s+=c.length+','+c[0].x+','+c[0].y+','+m.x+','+m.y+','+l.x+','+l.y+';';
+      }
+    }
+    return s;
+  };
   function shore(){
+    // Within one burst of queries (a road search slice, a frame) the shore is checked once.
+    const now=typeof performance!=='undefined'?performance.now():Date.now();
+    const env=typeof State!=='undefined'&&State.environment||[],rev=typeof environmentRevision!=='undefined'?environmentRevision:0;
+    if(cache.data&&cache.seas&&now-cache.checkedAt<30&&cache.seas===seasMemo.seas&&
+      seasMemo.list===env&&seasMemo.length===env.length&&seasMemo.rev===rev)return cache.data;
     const seas=seasOf();if(!seas.length)return null;
+    const quick=quickSig(seas);
+    if(cache.seas===seas&&cache.quick===quick){cache.checkedAt=now;return cache.data}
     const key=JSON.stringify(seas.map(sea=>[sea.side,sea.coastlines||[sea.coastline]]));
-    if(cache.key===key)return cache.data;
+    if(cache.key===key){cache.seas=seas;cache.quick=quick;cache.checkedAt=now;return cache.data}
     const all=[];
     for(const sea of seas)for(const c of sea.coastlines||[sea.coastline]){
     if(c.length<2)continue;
@@ -65,7 +86,7 @@
     }
     all.push(...stretches);
     }
-    cache={key,data:{side:seas[0].side,D:SEA_DIR[seas[0].side]||{x:0,y:1},stretches:all}};
+    cache={key,seas,quick,checkedAt:now,data:{side:seas[0].side,D:SEA_DIR[seas[0].side]||{x:0,y:1},stretches:all}};
     return cache.data;
   }
   const pip=(p,poly)=>{let k=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.y>p.y)!==(b.y>p.y)&&p.x<(b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x)k=!k}return k};
