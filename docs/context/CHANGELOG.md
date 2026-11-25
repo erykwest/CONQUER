@@ -1,5 +1,12 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-24 — ROOM-ANIM-AUDIENCE · Udienza nella Sala del trono
+
+`feature/cutaway-night-banquet`: nelle sale lunghe il trono sta sulla parete corta in fondo, con la passatoia per tutta la sala e senza tavoli; di giorno i postulanti fanno la fila, uno alla volta si inginocchiano davanti al signore che risponde, poi escono lungo il lato. ROADMAP e DECISIONS invariate.
+
+### 2026-11-24 — ROOM-ANIM-NIGHT/BANQUET/SHELTER · Notte, banchetto e rifugio nelle sale comuni
+
+`feature/cutaway-night-banquet`: di notte (anche col tramonto invernale) personale e abitanti delle stanze del castello non si animano; banchetto nella Sala comune con commensali seduti, cibo in tavola (modelli Blender), dame, giullare e musico, camino acceso; numero di tavoli in funzione della superficie, tavoli da 4,4 m nelle sale W2. Allarme rosso: rifugio in ogni Sala comune (mastio per primo) con capienza 3× il banchetto, parametro Rifugio nel pannello Castello e avviso quando serve nuovo spazio. Lab: sezioni costruite e long house a 4U/6U. DECISIONS: nuova D-SHELTER-261124 (rifugio in ogni Sala comune, capienza 3× il banchetto, notte, tavoli lunghi W2); ROADMAP invariata.
 ### 2026-11-24 — WALL-SHEDS-261124 · Lean-to come upgrade, tettoie e scatter addossati
 
 `fix/wall-heights-follow-towers`: il lean-to non si costruisce più da solo (tolto il pulsante della barra): è un upgrade del muro dal pannello (Nessuno/Legno/Pietra/Mattoni), se ne va col muro (rimborso) ed esclude la scala del camminamento e viceversa. Tettoie aperte su pali automatiche lungo la faccia interna dei muri finiti senza scala (settlement-wall-sheds.js, modello delle tettoie dei cortili L3+): da 0 a 4 per muro, misure variabili, 30% in paglia, evitano il tratto del lean-to. Scatter nuovo contesto «wall»: oggetti appoggiati (profondità reale del modello + 1,5 cm) alla faccia interna dei muri e delle sezioni costruite, al fronte dei lean-to e sotto le tettoie.
