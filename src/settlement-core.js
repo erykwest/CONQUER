@@ -345,18 +345,21 @@ const STRUCTURE_VARIANTS=Object.freeze({
     upper:Object.freeze(['stone','timber']),
     hoarding:Object.freeze(['off','on'])
   }),
+  // baseStyle on walls and built sections: a 10° talus or buttresses on the OUTER face only.
   wall:Object.freeze({
-    skin:Object.freeze(['standard','machicolation','hoarding'])
+    skin:Object.freeze(['standard','machicolation','hoarding']),
+    baseStyle:Object.freeze(['standard','buttress','splayed'])
   }),
   built:Object.freeze({
-    skin:Object.freeze(['standard','arcade'])
+    skin:Object.freeze(['standard','arcade']),
+    baseStyle:Object.freeze(['standard','buttress','splayed'])
   })
 });
 const STRUCTURE_VARIANT_DEFAULTS=Object.freeze({
   tower:Object.freeze({roofStyle:'battlement',baseStyle:'standard',topWeapon:'none',bartizan:'none',bartizanCount:'4',roofShape:'pyramid',hoarding:'off',bell:'none',signalFire:'none',innerRoof:'off',upInnerTower:'off',machicolationStyle:'standard'}),
   gate:Object.freeze({roofStyle:'battlement',upper:'stone',hoarding:'off'}),
-  wall:Object.freeze({skin:'standard'}),
-  built:Object.freeze({skin:'standard'})
+  wall:Object.freeze({skin:'standard',baseStyle:'standard'}),
+  built:Object.freeze({skin:'standard',baseStyle:'standard'})
 });
 // Clothing by house level: L1 grey/beige, L2 green/brown, L3 muted primaries,
 // L4 bright primaries. Shared by tunics and the dyed pieces of the seasonal wardrobe.
@@ -518,6 +521,11 @@ function gateRoofStyle(s){
 function wallSkin(s){
   if(s?.type!=='wall')return undefined;
   return typeof wallSlopeSections==='function'&&wallSlopeSections(s)?'standard':structureVariant(s,'skin');
+}
+// Outer-face base of a masonry wall or built section (timber longhouses and lean-tos have none).
+function linearBaseStyle(s){
+  if(!s||!((s.type==='wall'&&masonryMaterial(s))||(s.type==='built'&&!isLonghouse(s)&&!(typeof isLeanTo==='function'&&isLeanTo(s)))))return undefined;
+  return structureVariant(s,'baseStyle')||'standard';
 }
 function builtSkin(s){return s?.type==='built'?(isLonghouse(s)?'standard':structureVariant(s,'skin')):undefined}
 // Wide built section (hall): same 'built' type, double width, one free-height

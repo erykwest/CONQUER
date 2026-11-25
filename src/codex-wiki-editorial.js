@@ -1,7 +1,7 @@
 // Generated from content/codex/*.md. Do not edit; run node tools/export-codex-content.cjs.
 (function(root){root.ConquerWikiEditorial={
   "schemaVersion": 1,
-  "sourceDigest": "224ce486253ec8c62197ffc7e0330937550b526e2c2002532d10794246adb2d3",
+  "sourceDigest": "1d75c14fc74e4def3d7296e45544836d2cd7888a466c5a73c59198f728486e5a",
   "pages": [
     {
       "id": "building:balivo",
@@ -6367,6 +6367,147 @@
       "members": []
     },
     {
+      "id": "upgrade:built.baseStyle.buttress",
+      "kind": "entry",
+      "title": "Sezione costruita · Base con contrafforti",
+      "aliases": [
+        "Sezione costruita · Base con contrafforti"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Sezione Costruita|Sezione costruita]] · Base con contrafforti appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: contrafforti a gradoni sul lato esterno, circa uno ogni unità. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata.",
+          "tokens": [
+            {
+              "text": "Sezione costruita",
+              "id": "building:built"
+            },
+            {
+              "text": " · Base con contrafforti appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": contrafforti a gradoni sul lato esterno, circa uno ogni unità. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Sezione costruita · Base con contrafforti appartiene ai miglioramenti delle fortificazioni: contrafforti a gradoni sul lato esterno, circa uno ogni unità. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:built"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:built.baseStyle.splayed",
+      "kind": "entry",
+      "title": "Sezione costruita · Base a scarpa",
+      "aliases": [
+        "Sezione costruita · Base a scarpa"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Sezione Costruita|Sezione costruita]] · Base a scarpa appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: una scarpa di 10° sul lato esterno, che sul pendio scende fino al terreno. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata.",
+          "tokens": [
+            {
+              "text": "Sezione costruita",
+              "id": "building:built"
+            },
+            {
+              "text": " · Base a scarpa appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": una scarpa di 10° sul lato esterno, che sul pendio scende fino al terreno. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Sezione costruita · Base a scarpa appartiene ai miglioramenti delle fortificazioni: una scarpa di 10° sul lato esterno, che sul pendio scende fino al terreno. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:built"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:built.baseStyle.standard",
+      "kind": "entry",
+      "title": "Sezione costruita · Base standard",
+      "aliases": [
+        "Sezione costruita · Base standard"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Sezione Costruita|Sezione costruita]] · Base standard appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: il muro scende a piombo fino a terra. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata.",
+          "tokens": [
+            {
+              "text": "Sezione costruita",
+              "id": "building:built"
+            },
+            {
+              "text": " · Base standard appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": il muro scende a piombo fino a terra. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Sezione costruita · Base standard appartiene ai miglioramenti delle fortificazioni: il muro scende a piombo fino a terra. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:built"
+      ],
+      "members": []
+    },
+    {
       "id": "upgrade:built.skin.arcade",
       "kind": "entry",
       "title": "Sezione costruita · Rivestimento porticato",
@@ -8545,6 +8686,147 @@
         "topic:fortifications",
         "topic:construction",
         "building:tower"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:wall.baseStyle.buttress",
+      "kind": "entry",
+      "title": "Mura · Base con contrafforti",
+      "aliases": [
+        "Mura · Base con contrafforti"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Mura|Mura]] · Base con contrafforti appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: contrafforti a gradoni sul lato esterno, circa uno ogni unità. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata.",
+          "tokens": [
+            {
+              "text": "Mura",
+              "id": "building:wall"
+            },
+            {
+              "text": " · Base con contrafforti appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": contrafforti a gradoni sul lato esterno, circa uno ogni unità. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Mura · Base con contrafforti appartiene ai miglioramenti delle fortificazioni: contrafforti a gradoni sul lato esterno, circa uno ogni unità. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:wall"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:wall.baseStyle.splayed",
+      "kind": "entry",
+      "title": "Mura · Base a scarpa",
+      "aliases": [
+        "Mura · Base a scarpa"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Mura|Mura]] · Base a scarpa appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: una scarpa di 10° sul lato esterno, che sul pendio scende fino al terreno. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata.",
+          "tokens": [
+            {
+              "text": "Mura",
+              "id": "building:wall"
+            },
+            {
+              "text": " · Base a scarpa appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": una scarpa di 10° sul lato esterno, che sul pendio scende fino al terreno. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Mura · Base a scarpa appartiene ai miglioramenti delle fortificazioni: una scarpa di 10° sul lato esterno, che sul pendio scende fino al terreno. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:wall"
+      ],
+      "members": []
+    },
+    {
+      "id": "upgrade:wall.baseStyle.standard",
+      "kind": "entry",
+      "title": "Mura · Base standard",
+      "aliases": [
+        "Mura · Base standard"
+      ],
+      "blocks": [
+        {
+          "type": "paragraph",
+          "text": "[[Mura|Mura]] · Base standard appartiene ai [[Miglioramenti|miglioramenti]] delle [[Fortificazioni|fortificazioni]]: il muro scende a piombo fino a terra. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata.",
+          "tokens": [
+            {
+              "text": "Mura",
+              "id": "building:wall"
+            },
+            {
+              "text": " · Base standard appartiene ai "
+            },
+            {
+              "text": "miglioramenti",
+              "id": "category:upgrade"
+            },
+            {
+              "text": " delle "
+            },
+            {
+              "text": "fortificazioni",
+              "id": "topic:fortifications"
+            },
+            {
+              "text": ": il muro scende a piombo fino a terra. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata."
+            }
+          ]
+        }
+      ],
+      "text": [
+        "Mura · Base standard appartiene ai miglioramenti delle fortificazioni: il muro scende a piombo fino a terra. Le condizioni della struttura determinano le opzioni utilizzabili: la presenza nel catalogo non garantisce che ogni configurazione possa essere installata."
+      ],
+      "related": [
+        "category:upgrade",
+        "topic:fortifications",
+        "topic:construction",
+        "building:wall"
       ],
       "members": []
     },
