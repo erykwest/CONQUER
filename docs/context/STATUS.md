@@ -1,4 +1,10 @@
 # Livello 2 — Stato tecnico e prove
+### 2026-11-25 — GRAPHSCHIC: palette GRAFICA (`GRAPHSCHIC`)
+
+- Opzioni grafiche Bordi e Gradienti attive in gioco per torri e prisms; cambio immediato.
+- Gradiente non ancora verificato visivamente con lo stesso conteggio usato per i bordi.
+- Lab non aggiornato per questa modifica (richiesta esplicita di saltarlo).
+
 
 ### 2026-11-24 — TOWER-HILL-BASES: torri sul bordo collina e basamenti (`fix/tower-hill-bases`)
 
