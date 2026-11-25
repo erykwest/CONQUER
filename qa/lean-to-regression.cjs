@@ -48,7 +48,7 @@ const wall=(o={})=>({id:'wall',type:'wall',a:{x:0,y:0},b:{x:8,y:0},length:8,widt
   assert.ok(f.isLeanTo(s)&&s.type==='built'&&s.leanWallId==='wall','a built section tied to its wall');
   // Not flipped: exterior on +n (y>0), so the lean-to stands at y<0, touching the inner face.
   assert.ok(Math.abs(s.a.y+(.25+.5))<1e-9&&Math.abs(s.b.y-s.a.y)<1e-9,'along the inner face, flush with it');
-  assert.ok(Math.abs(s.a.x-.55)<1e-9&&Math.abs(s.b.x-7.45)<1e-9&&Math.abs(s.length-6.9)<1e-9,'clear of the tower sockets');
+  assert.ok(Math.abs(s.a.x-2)<1e-9&&Math.abs(s.b.x-6)<1e-9&&Math.abs(s.length-4)<1e-9,'at most 4U, centred on the stretch clear of the tower sockets');
   assert.equal(f.structureLevel({...s,level:2}),1,'one storey only');
   assert.equal(f.functionCapacity(s),1,'one room, like a W1 section on the ground floor');
   console.log('PASS a lean-to is placed against the inner face of an H2 wall');

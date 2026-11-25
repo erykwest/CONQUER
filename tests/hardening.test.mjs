@@ -73,7 +73,7 @@ test('a cloud migration failure keeps the unreadable row blocked',async()=>{
 test('resource names and values are inserted as text, including HTML payloads',()=>{
   const src=read('src/settlement-app-calendar-ui.js');
   const fn=src.slice(src.indexOf('function renderResourceBar('),src.indexOf('function renderUI('));
-  function element(){return {children:[],textContent:'',append(child){this.children.push(child)},
+  function element(){return {children:[],textContent:'',attrs:{},setAttribute(k,v){this.attrs[k]=String(v)},append(child){this.children.push(child)},
     replaceChildren(fragment){this.children=fragment.children},
     set innerHTML(_){throw Error('untrusted HTML insertion')}}}
   const host=element(),document={getElementById:()=>host,createElement:element,createDocumentFragment:element};
@@ -81,10 +81,13 @@ test('resource names and values are inserted as text, including HTML payloads',(
   runInContext(fn+';renderResourceBar(resources,icons)',createContext({document,
     resources:{gold:12,[payload]:payload,constructor:3},icons:{gold:'coin'}}));
   assert.equal(host.children.length,3);
-  assert.equal(host.children[0].textContent,'coin gold ');
+  // Icon only (key when no icon); the name goes to the tooltip, as text.
+  assert.equal(host.children[0].textContent,'coin ');
+  assert.equal(host.children[0].title,'gold');
   assert.equal(host.children[0].children[0].textContent,'12');
-  assert.equal(host.children[1].textContent,` ${payload} `);
+  assert.equal(host.children[1].textContent,`${payload} `);
+  assert.equal(host.children[1].title,payload);
   assert.equal(host.children[1].children[0].textContent,payload);
-  assert.equal(host.children[2].textContent,' constructor ');
+  assert.equal(host.children[2].textContent,'constructor ');
   assert.match(src,/renderResourceBar\(State\.resources,icons\)/);
 });

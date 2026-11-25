@@ -379,7 +379,8 @@
     ])+grid([
       card('Riserve del signore',bars(economic.map(g=>[good(g.id),g.castle]),econMax),'Scorte del ledger economico rispetto ai target impostati.'),
       card('Scorte per la difesa',bars(siege.map(g=>[good(g.id),g.stock]),max1(siege.map(g=>g.cap))),'Depositi fisici del castello: non sommare queste scorte a quelle economiche.'),
-      card('Capienza dei magazzini',siege.map(g=>line(good(g.id),fmt(g.stock)+' / '+fmt(g.cap))).join('')||empty('Nessun deposito assegnato.'),'',true)
+      card('Capienza dei magazzini',siege.map(g=>line(good(g.id),fmt(g.stock)+' / '+fmt(g.cap))).join('')||empty('Nessun deposito assegnato.'),'',true),
+      card('Rifornisci il castello','<div class="cp-transfer">'+['food','wood','stone','metal','equipment','gold','horses'].map(k=>'<button type="button" data-cp-store="'+k+'" title="Trasferisci fino a 50">+ '+(typeof resIcon==='function'?resIcon(k):esc(k))+'</button>').join('')+'</div>','Sposta fino a 50 unità per clic dalle risorse dell\'insediamento ai depositi del castello.')
     ]);
   }
 
@@ -610,6 +611,7 @@
       kpi('Eventi registrati',fmt(s.history?.length||0))
     ])+grid([
       card('Messaggeri e carovane',line('Convogli in corso',fmt(active.length))+'<button type="button" class="cp-action" data-cp-action="caravans">Apri gestione carovane</button>'),
+      card('Tributi e doni dal mastio',(()=>{const k=window.ConquerSiege?.mastio?.();const h=k&&window.ConquerConvoys?.panelHtml?.(k);return h?'<div data-cp-convoys>'+h+'</div>':empty('Serve un mastio per spedire tributi e doni.')})(),'',true),
       card('Relazioni tra feudi',empty('TBD: alleanze, trattati, reputazione e vassallaggio non hanno ancora un modello completo. Non mostriamo valori fittizi.'))
     ]);
   }
@@ -678,6 +680,7 @@
   function render() {
     const root = $('profileControl'), body = $('controlBody');
     if(!root || root.hidden || !body)return;
+    if(typeof document!=='undefined'&&document.activeElement?.closest?.('[data-cp-convoys]'))return;
     const d = get();
     // Keep horizontal table scroll across live refreshes.
     const scrolls = [...(body.querySelectorAll?.('.cp-scroll')||[])].map(el=>el.scrollLeft);
@@ -689,6 +692,11 @@
       ? card('Insediamento non fondato',empty('Fonda il villaggio: le risorse di test del Builder non sono statistiche economiche.'))
       : '<div class="cp-head"><h2>'+esc(title)+'</h2><p>'+esc(subtitle)+'</p></div>'+(palette ? (ui.mode==='jobs'?jobs(d):ui.mode==='erario'?erario(d):trade(d)) : (views[ui.tab]||general)(d));
     [...(body.querySelectorAll?.('.cp-scroll')||[])].forEach((el,i)=>{ if(scrolls[i])el.scrollLeft = scrolls[i]; });
+    const convoys=body.querySelector?.('[data-cp-convoys]');
+    if(convoys&&window.ConquerConvoys?.bindPanel){
+      window.ConquerConvoys.bindPanel(convoys);
+      convoys.querySelectorAll('button').forEach(b=>{const f=b.onclick;if(f)b.onclick=e=>{f.call(b,e);render()}});
+    }
   }
   function open(mode='control') { ui.mode=Object.hasOwn(PALETTES,mode)?mode:'control'; render(); }
 
@@ -705,6 +713,8 @@
     root.addEventListener('click',ev=>{
       const tier = ev.target.closest('[data-cp-jobs-tier]');
       if(tier){ui.jobTier=['L2','L3'].includes(tier.dataset.cpJobsTier)?tier.dataset.cpJobsTier:'L1';render();return;}
+      const tr = ev.target.closest('[data-cp-store]');
+      if(tr){const out=window.ConquerSiege?.transfer?.(tr.dataset.cpStore);if(out&&!out.accepted&&typeof status==='function')status(out.reason);render();return;}
       if(ev.target.closest('[data-cp-educated-hire]')){window.ConquerGame?.commands?.hireEducated?.();render();return;}
       const msub = ev.target.closest('[data-cp-military-sub]');
       if(msub){ui.militaryTab=['garrisons','equipment'].includes(msub.dataset.cpMilitarySub)?msub.dataset.cpMilitarySub:'overview';render();return;}

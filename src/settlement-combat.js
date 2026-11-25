@@ -268,15 +268,28 @@
     }
     return best;
   }
+  // Red alarm: the nearest Common Hall that still has room (the Mastio's or any other: towers, built
+  // sections, longhouses); when every hall is full, the nearest one anyway.
   function recallMastio(house,resident,origin){
-    const keep=window.ConquerSiege?.mastio?.();
-    return keep?buildingDestination(house,resident,origin,[keep]):null;
+    const S=window.ConquerSiege,halls=S?.shelters?.()||(S?.mastio?.()?[S.mastio()]:[]);
+    if(!halls.length)return null;
+    const load=new Map();
+    for(const m of residentMotion.values())if(m.mode==='hall'&&m.structureId)load.set(m.structureId,(load.get(m.structureId)||0)+1);
+    const room=halls.filter(h=>(load.get(h.id)||0)<(S?.shelterCapacity?.(h)??Infinity));
+    return buildingDestination(house,resident,origin,room.length?room:halls);
   }
   function recruitArmory(house,resident,origin){
     const armories=window.ConquerSiege?.armories?.()||[];
     return armories.length?buildingDestination(house,resident,origin,armories):null;
   }
   function alarmMode(){return combat?.recallMode||'off'}
+  // Red alarm: the residents who have reached a Common Hall (structureId) and are sheltering in it.
+  function sheltered(structureId){
+    const now=performance.now(),out=[];
+    for(const m of residentMotion.values())
+      if(m.mode==='hall'&&m.who&&m.structureId===structureId&&now>=m.startedAt+m.duration)out.push(m.who);
+    return out;
+  }
   // The alarm as this household has heard it so far.
   function heardAlarm(house,now){
     const mode=alarmMode(),bells=window.ConquerAlarmBells;
@@ -298,8 +311,8 @@
   }
   function setAlarmMode(mode){
     if(!combat||!['off','green','hall'].includes(mode))return false;
-    if(mode==='hall'&&!window.ConquerSiege?.mastio?.()){
-      status('A completed Mastio with a Common Hall is required for the red bell.');
+    if(mode==='hall'&&!(window.ConquerSiege?.shelters?.()||[]).length&&!window.ConquerSiege?.mastio?.()){
+      status('A completed Common Hall (Mastio, tower, built section or longhouse) is required for the red bell.');
       return false;
     }
     const prior=combat.recallMode||'off';
@@ -315,7 +328,7 @@
     const pealing=(alarmRing?.plan?.nodes||[]).filter(n=>n.r>0).length;
     const heardBy=mode==='off'?'':pealing?' · '+pealing+' bell(s) ringing':' · no bell: the alarm spreads by word of mouth';
     status((mode==='green'?'🔔 Green alarm: women, children and L3/L4 men → safe zones; L1/L2 levy → closest armory':
-      mode==='hall'?'🔔 Red alarm: women, children and L3/L4 men → Mastio Common Hall; L1/L2 levy → closest armory':
+      mode==='hall'?'🔔 Red alarm: women, children and L3/L4 men → nearest Common Hall (Mastio first); L1/L2 levy → closest armory':
       '🔕 Release: civilians and recalled recruits return to normal routines')+heardBy);
     return true;
   }
@@ -461,6 +474,8 @@
       motion={
         mode,homeId:house.id,start:origin,target:result.target,path:result.path,
         structureId:result.structureId||null,startedAt:now,walkMs,climbMs,
+        // Who is walking (red alarm: drawn inside the Common Hall once arrived, settlement-staff-people.js).
+        who:{id,sex:resident.sex,age:resident.age,level:Math.min(4,Math.max(1,Math.round(Number(house?.houseLevel)||1)))},
         duration:walkMs+climbMs
       };
       residentMotion.set(id,motion);
@@ -2351,7 +2366,7 @@
   const ui=document.createElement('div');
   ui.id='combatControls';
   ui.innerHTML='<h3>COMBAT · Fog / Command</h3>'+
-    '<div class="combat-row"><button id="combatFog">Fog ON</button><button id="combatZones">Zones OFF</button><button id="combatRecall" title="Bell: green safe zones, then red Mastio Common Hall" aria-label="Raise alarm">🔔</button><button id="combatMute" title="Release all recalled civilians and recruits" aria-label="Release">🔕</button></div>'+
+    '<div class="combat-row"><button id="combatFog">Fog ON</button><button id="combatZones">Zones OFF</button><button id="combatRecall" title="Bell: green safe zones, then red: nearest Common Hall" aria-label="Raise alarm">🔔</button><button id="combatMute" title="Release all recalled civilians and recruits" aria-label="Release">🔕</button></div>'+
     '<div class="combat-row"><button data-combat-brush="allow">White +</button><button data-combat-brush="deny">White −</button><button data-combat-brush="yellow">Yellow</button><button data-combat-brush="green">Green</button></div>'+
     '<div class="combat-row"><button data-combat-brush="eraseYellow">− Yellow</button><button data-combat-brush="eraseGreen">− Green</button><button id="combatOrders">Orders</button><button id="combatDeselect" title="Clear selection (Esc)">Deselect</button><button id="combatMoor" title="Selected warships tie up at the nearest free military pier">Attracca</button></div>'+
     '<div class="combat-row"><button id="combatRecruit" title="Enlist an L1 man in the Barracks (15 gold, then an L2 wage a day)">Arruola +1</button><button id="combatDismiss" title="Send a free soldier back to L1 work">Congeda −1</button></div>'+
@@ -2375,7 +2390,7 @@
     if($('combatBuckets'))$('combatBuckets').textContent='Buckets '+(window.ConquerFire?.brigade.on()===false?'OFF':'ON');
     $('combatRecall').textContent='🔔';
     $('combatRecall').dataset.mode=combat.recallMode;
-    $('combatRecall').title=combat.recallMode==='green'?'Green alarm · click to retreat into the Mastio':combat.recallMode==='hall'?'Red alarm · women and children in Common Hall':'Raise green alarm';
+    $('combatRecall').title=combat.recallMode==='green'?'Green alarm · click to retreat into the Mastio':combat.recallMode==='hall'?'Red alarm · women and children in the Common Halls':'Raise green alarm';
     $('combatMute').disabled=combat.recallMode==='off';
     $('combatBrushSize').value=combat.brushRadius;
     $('combatBrushReadout').textContent=combat.brushRadius+'U';
@@ -2446,7 +2461,7 @@
   const priorDraw=draw;
   draw=function(){priorDraw();renderOverlay()};
   const initial=State.combat;restore(initial);
-  window.ConquerCombat={tick,serialize,restore,mapContacts,civilPosition,areaState,sourceSees,observers,spawnOccupants,civilSpawnPosition,
+  window.ConquerCombat={sheltered,tick,serialize,restore,mapContacts,civilPosition,areaState,sourceSees,observers,spawnOccupants,civilSpawnPosition,
     dynamicMeshes,addStorm,addRamStorm,addKeepStorm,issueWallOrder,planLegs,areaOf,inKeep:()=>combat?.inKeep||[],
     units:()=>combat?.units||[],enemy:()=>combat?.enemy||[],
     recruitKnight,assignCirclePatrol,addPatrol,removePatrol,withdrawPatrols,townRoundPoints,knightRecruitment:()=>{

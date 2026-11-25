@@ -96,7 +96,8 @@ function renderResourceBar(resources,icons){
   const host=document.getElementById('resources'),fragment=document.createDocumentFragment();
   for(const [key,value] of Object.entries(resources)){
     const item=document.createElement('span'),amount=document.createElement('b');
-    item.className='res';item.textContent=`${Object.hasOwn(icons,key)?icons[key]:''} ${key} `;
+    const name=(typeof RES_NAMES_IT!=='undefined'&&Object.hasOwn(RES_NAMES_IT,key)&&RES_NAMES_IT[key])||key;
+    item.className='res';item.title=name;item.setAttribute('aria-label',name);item.textContent=`${Object.hasOwn(icons,key)?icons[key]:key} `;
     amount.textContent=String(value);item.append(amount);fragment.append(item);
   }
   host.replaceChildren(fragment);

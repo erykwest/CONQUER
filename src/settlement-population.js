@@ -52,6 +52,10 @@ function sunShadowState(){
 }
 function towerRoofRise(s){
   // A hoarding on the crenellated top rises above it to its lean-to ridge (build_hoarding.py).
+  if(s?.type==='tower'&&towerUpInnerTower(s)){
+    const g=upInnerTowerGeometry(s);
+    return Math.max(g?g.apexZ-g.h:0,towerHoardingMounted(s)?.69:0);
+  }
   if(s?.type==='tower'&&towerInnerRoofMounted(s)){
     const g=towerInnerRoofGeometry(s);
     return Math.max(g?g.apexZ-g.h:0,towerHoardingMounted(s)?.69:0);
@@ -60,9 +64,15 @@ function towerRoofRise(s){
   if(!s||s.type!=='tower'||towerRoofStyle(s)!=='pitched')return 0;
   // Feudal roof pitch (roofPitch()): the slope rises from the eave over the roof's half span, the
   // radius on round towers, the shorter half side on square ones.
-  const overhang=.07,d=s.shape==='round'?null:rectDims(s);
+  const overhang=.07+(typeof towerTimberUpper==='function'&&towerTimberUpper(s)?TOWER_JETTY:0),d=s.shape==='round'?null:rectDims(s);
   const half=s.shape==='round'?Number(s.r||.5)+overhang:Math.min(d.w,d.h)/2+overhang;
   return roofPitchTan()*half;
+}
+// The full pitched apex of a tower, whatever stands on it (the turret cuts the roof below it).
+function towerVisualTopHeightPitched(s){
+  const overhang=.07,d=s.shape==='round'?null:rectDims(s);
+  const half=s.shape==='round'?Number(s.r||.5)+overhang:Math.min(d.w,d.h)/2+overhang;
+  return structureHeight(s)+roofPitchTan()*half;
 }
 function towerVisualTopHeight(s){
   if(!s||s.type!=='tower')return structureHeight(s);
@@ -71,7 +81,7 @@ function towerVisualTopHeight(s){
 function towerRoofApex(s){return s?.shape==='dee'?deeTowerRoofApex(s):{x:s.x,y:s.y}}
 function towerRoofFootprintPoints(s){
   if(!s||s.type!=='tower')return[];
-  const overhang=.07;
+  const overhang=.07+(typeof towerTimberUpper==='function'&&towerTimberUpper(s)?TOWER_JETTY:0);
   if(s.shape==='round')return circleWorldPoints(s.x,s.y,Number(s.r||.5)+overhang,24);
   if(isOrientedTower(s))return orientedTowerOutline(s,-overhang);
   const d=rectDims(s);
@@ -105,6 +115,29 @@ function towerInnerRoofGeometry(s,check=false){
     tail=orientedTowerWorld(s,[[Math.min(front,-d.w/2+k+half),0]])[0];
   }
   return{ring,h,eaveZ,apex,tail,apexZ:eaveZ+Math.max(roofPitchTan(),TOWER_INNER_ROOF_MIN_TAN)*half,half};
+}
+// Up inner tower (torretta centrale): a one-storey turret in the middle of the deck, footprint of
+// the next tier down (W3 -> W2, W2 -> W1), round or square by choice, under a cap with a small eave.
+// Returns {shape,ring,h,topZ,eave,eaveZ,apex,apexZ,half} or null.
+const UP_INNER_TOWER_STOREY=1.2,UP_INNER_TOWER_EAVE=.07,UP_INNER_TOWER_MIN_TAN=1.6;
+function upInnerTowerGeometry(s){
+  const shape=towerUpInnerTower(s);if(!shape)return null;
+  const t=towerTier(s)-1,c=towerRoofApex(s),ang=s.angle||0,round=shape==='round';
+  const half=round?towerSizeForTier('round',t):towerSizeForTier('square',t)/2;
+  const ring=round?circleWorldPoints(c.x,c.y,half,24):rectWorldPoints(c.x,c.y,half*2,half*2,ang);
+  const eave=round?circleWorldPoints(c.x,c.y,half+UP_INNER_TOWER_EAVE,24):rectWorldPoints(c.x,c.y,(half+UP_INNER_TOWER_EAVE)*2,(half+UP_INNER_TOWER_EAVE)*2,ang);
+  const h=structureHeight(s);
+  // Pitched tower: its roof is cut where it meets the turret (k of the way in from the eave, so the
+  // cut ring stays inside the turret walls), and the turret's storey stands above that cut.
+  let cut=null,base=h;
+  if(towerRoofStyle(s)==='pitched'){
+    const er=towerRoofFootprintPoints(s),R=Math.max(...er.map(p=>Math.hypot(p.x-c.x,p.y-c.y)));
+    const reach=!round&&er.length<=8?half*Math.SQRT2:half,k=Math.min(.95,(reach-.03)/R),rz=towerVisualTopHeightPitched(s);
+    const z=h+(rz-h)*(1-k);
+    cut={eave:er,ring:er.map(p=>({x:c.x+(p.x-c.x)*k,y:c.y+(p.y-c.y)*k})),z,eaveZ:h};base=z;
+  }
+  const topZ=base+UP_INNER_TOWER_STOREY;
+  return{shape,ring,eave,h,topZ,cut,eaveZ:topZ,apex:c,apexZ:topZ+Math.max(roofPitchTan(),UP_INNER_TOWER_MIN_TAN)*(half+UP_INNER_TOWER_EAVE),half};
 }
 // Roof faces, one per ring edge: each eave point climbs to its nearest point on the ridge
 // tail→apex (a triangle where both ends reach the same ridge point, a quad along the ridge).
@@ -176,7 +209,7 @@ function structureVisualTopHeight(s){
 function shadowStructureHeight(s){
   if(s?.type==='house')return houseStructureHeight(s);
   if(s?.type==='built'){const g=builtRoofGeometry(s);return g?.ridgeH||structureHeight(s)}
-  if(s?.type==='tower'&&(towerRoofStyle(s)==='pitched'||towerInnerRoofMounted(s)))return towerVisualTopHeight(s);
+  if(s?.type==='tower'&&(towerRoofStyle(s)==='pitched'||towerInnerRoofMounted(s)||towerUpInnerTower(s)))return towerVisualTopHeight(s);
   if(s?.type==='gate'&&gateRoofStyle(s)==='pitched')return gateVisualTopHeight(s);
   return structureHeight(s);
 }
@@ -194,7 +227,7 @@ const shadowCasterGeometryCache=new Map();
 function shadowCasterSignature(s){
   return[
     s.id,s.type,s.x,s.y,s.angle,s.w,s.h,s.r,s.size,s.level,s.tier,s.houseLevel,s.width,
-    s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.roofStyle,s.machicolationStyle,s.bartizan,s.bartizanCount,s.bell,s.innerRoof,s.signalFire,s.signalFireSpent,s.lookout,s.outpost?.readyDay,s.roofShape,s.baseStyle,s.material,s.woodStyle,s.woodRoof,
+    s.a?.x,s.a?.y,s.b?.x,s.b?.y,s.roofStyle,s.machicolationStyle,s.bartizan,s.bartizanCount,s.bell,s.innerRoof,s.upInnerTower,s.signalFire,s.signalFireSpent,s.lookout,s.outpost?.readyDay,s.roofShape,s.baseStyle,s.material,s.woodStyle,s.woodRoof,
     s.type==='house'&&(s.auto||s.urbanRedeveloped)&&houseLevel(s)>=3?urbanRevision:0
   ].join('|');
 }

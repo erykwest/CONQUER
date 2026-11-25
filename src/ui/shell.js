@@ -1,8 +1,8 @@
 // CONQUER interface v2 ("Isole"): floating wood-and-gold tablets over a full-bleed map.
 // Opt-in with ?ui=2 (persisted; ?ui=1 goes back). Reads the game only through window.ConquerGame.
 import { html, render, useState, useEffect, useRef } from '../vendor/htm-preact-3.1.1.js';
-import { T } from './i18n-it.js?v=ui2-insp-2-wallpatrol2-alerts3-upg2-fieldworks1-wallmoat1-l2shop1-shopl3a';
-import { CATALOG, activeEntry } from './builder-catalog.js?v=extended261124';
+import { T } from './i18n-it.js?v=ui2-insp-2-wallpatrol2-alerts3-upg2-fieldworks1-wallmoat1-l2shop1-shopl3a-harmony261125';
+import { CATALOG, activeEntry } from './builder-catalog.js?v=extended261124-harmony261125';
 import { createAlertCenter } from './alerts.js?v=alerts4';
 import { createWatchers } from './alert-watchers.js?v=alerts4';
 
@@ -480,9 +480,11 @@ function CastleStores({ game }) {
       <${Stat} label=${M.autonomy} value=${M.days(l.autonomy)} tip=${TIP.autonomy + ' ' + M.dailyNeed + ': ' + num(l.daily) + '.'} />
       <${Stat} label=${M.capacity} value=${l.meals + ' · ' + l.soldiers + ' · ' + l.knights} tip=${TIP.capacity} />
       <${Stat} label=${M.water} value=${M.waterSource[l.water.source] + ' · ' + l.water.cisterns} tip=${TIP.water} />
+      ${l.shelter && html`<${Stat} label=${M.shelter} value=${l.shelter.capacity + ' / ' + l.shelter.need} tip=${TIP.shelter} />`}
     </div>
     ${l.shortfall > 0 && html`<p class="u2-warn">${M.shortfall(l.shortfall)}</p>`}
     ${l.thirst > 0 && html`<p class="u2-warn">${M.thirst(l.thirst)}</p>`}
+    ${l.shelter && l.shelter.missing > 0 && html`<p class="u2-warn">${M.shelterShort(l.shelter.missing, l.shelter.halls)}</p>`}
     ${l.stores.map(s => html`<div class="u2-store">
       <span class="u2-label">${M.stores[s.id]}</span>
       <div class="u2-meter" data-tip=${M.stores[s.id]} data-tip-body=${num(s.stock, 0) + ' / ' + num(s.cap, 0)}><${Bar} value=${s.stock} max=${s.cap} /></div>

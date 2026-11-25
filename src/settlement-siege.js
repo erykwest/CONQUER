@@ -162,6 +162,46 @@
     return State.structures.find(s=>s.type==='tower'&&s.isMastio&&!s.destroyed&&!underConstruction(s)
       &&s.functions?.includes('commonHall'))||null;
   }
+  // Red alarm shelters: every standing, finished structure with a Common Hall (Mastio, towers, built
+  // sections, longhouses), the Mastio first. A hall shelters 3x its banquet: the banquet seats one
+  // diner per bench (settlement-staff-people.js commonHallScene), the shelter three people per bench
+  // place. Without the furniture layout the banquet is estimated from the floor: one table with two
+  // benches per ~9 m² (settlement-cutaway-furniture.js hallTableCount).
+  const SHELTER_PER_SEAT=3,BANQUET_M2_PER_TABLE=9;
+  function shelters(){
+    const keep=mastio();
+    const list=State.structures.filter(s=>eligibleRoom(s)&&!s.destroyed&&!underConstruction(s)
+      &&s.functions?.some((fn,i)=>fn==='commonHall'&&allowed(s,i,fn)));
+    return keep?[keep,...list.filter(s=>s!==keep)]:list;
+  }
+  function banquetSeats(s){
+    const slots=typeof cutawayRoomSlots==='function'?cutawayRoomSlots(s).filter(x=>x.role==='commonHall'):[];
+    if(!slots.length)return 0;
+    const CF=window.ConquerCutawayFurniture;
+    // A 1.6 m bench seats one diner, the 3.2 m bench of a long banquet table two.
+    const benches=CF?.roomPieces?slots.reduce((n,x)=>n+(CF.roomPieces(s,x,'bench')||[]).length+2*(CF.roomPieces(s,x,'benchLong')||[]).length,0):0;
+    if(benches>0)return benches;
+    const m2=slots.reduce((n,x)=>n+(x.basis?.w||0)*(x.basis?.h||0)*12.25,0);
+    return 2*Math.max(1,Math.round(m2/BANQUET_M2_PER_TABLE));
+  }
+  function shelterCapacity(s){return SHELTER_PER_SEAT*banquetSeats(s)}
+  // Who must shelter at the red alarm: women, children and L3/L4 men (L1/L2 men are the levy,
+  // settlement-combat.js combatRole), from the households of the finished houses.
+  function shelterNeed(){
+    if(typeof completedSettlement!=='function'||typeof houseResidents!=='function')return 0;
+    let n=0;
+    for(const house of completedSettlement('house')){
+      const level=Math.round(Number(house?.houseLevel)||1);
+      for(const r of houseResidents(house))if(r.age!=='adult'||r.sex!=='male'||level>=3)n++;
+    }
+    return n;
+  }
+  // The shelter as a castle parameter: places in all the Common Halls against the people to shelter;
+  // missing > 0 tells the player a new Common Hall is needed.
+  function shelterStatus(){
+    const halls=shelters(),capacity=halls.reduce((n,s)=>n+shelterCapacity(s),0),need=shelterNeed();
+    return{halls:halls.length,capacity,need,missing:Math.max(0,need-capacity)};
+  }
   function armories(){
     return State.structures.filter(s=>eligibleRoom(s)&&!s.destroyed
       &&s.functions?.some((fn,i)=>fn==='armory'&&allowed(s,i,fn)));
@@ -862,7 +902,7 @@
     const keep=H*(.34+.16*((seed%1000)/1000));             // a third to a half stays standing
     startCollapse(s,g+keep,g+H+.35,{cause:'ruin',lean:from?{x:s.x-from.x,y:s.y-from.y}:null});
     const stump={id:s.id,type:'ruin',ruinOf:s.type,shape:s.shape,size:s.size,r:s.r,w:s.w,h:s.h,x:s.x,y:s.y,
-      angle:s.angle||0,rotationStep:s.rotationStep,material:s.material,ruinHeight:+keep.toFixed(3),
+      angle:s.angle||0,rotationStep:s.rotationStep,material:s.material,masonryMaterial:s.masonryMaterial,ruinHeight:+keep.toFixed(3),
       wallConnections:s.wallConnections,ruinDay:State.clock.day};
     for(const k of Object.keys(s))delete s[k];
     for(const [k,v] of Object.entries(stump))if(v!==undefined)s[k]=v;   // same object: selection and links hold
@@ -876,12 +916,15 @@
   }
   const stumpCache=new Map();
   function stumpMesh(s){
-    const key=s.id+':'+s.ruinHeight;let m=stumpCache.get(key);if(m)return m;
+    const key=s.id+':'+s.ruinHeight,ck=key+':'+(stumpClay(s)?'c':'s');let m=stumpCache.get(ck);if(m)return m;
     const pos=[],col=[];
     masonryPieces(s).forEach((base,i)=>stumpPiece(s,i?key+':'+i:key,base,pos,col));
-    m={pos,col,static:true};stumpCache.set(key,m);return m;
+    m={pos,col,static:true};stumpCache.set(ck,m);return m;
   }
+  // Brick masonry (and the DEV clay palette) leaves a brick stump, as its falling blocks.
+  function stumpClay(s){return State.visualPalette==='clay'||typeof masonryMaterial==='function'&&masonryMaterial(s)==='brick'}
   function stumpPiece(s,key,base,pos,col){
+    const clay=stumpClay(s),sideA=clay?'#8a4e36':'#6f665d',sideB=clay?'#a25d40':'#7d736b',topC=clay?'#a25d40':'#8a7f74';
     const g=groundOf(s),H=Number(s.ruinHeight)||.8;
     let seed=0;for(const ch of key)seed=(Math.imul(seed,31)+ch.charCodeAt(0))>>>0;
     const rnd=()=>(seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296;
@@ -896,12 +939,12 @@
     const tri=(a,b,c,colr)=>{pos.push(...a,...b,...c);col.push(colr)};
     for(let i=0;i<ring.length;i++){
       const j=(i+1)%ring.length,a=ring[i],b=ring[j],ha=g+tops[i],hb=g+tops[j];
-      const sideCol=i%3===0?'#6f665d':'#7d736b';
+      const sideCol=i%3===0?sideA:sideB;
       tri([a.x,a.y,g],[b.x,b.y,g],[b.x,b.y,hb],sideCol);tri([a.x,a.y,g],[b.x,b.y,hb],[a.x,a.y,ha],sideCol);
       // Broken top: rubble-filled, sloping in from the ragged rim (faces up).
       const c=[cx,cy,g+H*.72],p=[a.x,a.y,ha],q=[b.x,b.y,hb];
       const up=(q[0]-c[0])*(p[1]-c[1])-(q[1]-c[1])*(p[0]-c[0]);
-      if(up>0)tri(c,q,p,'#8a7f74');else tri(c,p,q,'#8a7f74');
+      if(up>0)tri(c,q,p,topC);else tri(c,p,q,topC);
     }
   }
   // ---------- rubble on the ground ----------
@@ -939,13 +982,14 @@
   // the rim, rubble filling the top (towerRoofStyle/gateRoofStyle report 'broken').
   const crownCache=new Map();
   function crownMesh(s){
-    const g=groundOf(s),H=structureHeight(s),key=s.id+':'+H.toFixed(3)+':'+g.toFixed(3);
-    let m=crownCache.get(key);if(m)return m;
+    const g=groundOf(s),H=structureHeight(s),key=s.id+':'+H.toFixed(3)+':'+g.toFixed(3),ck=key+':'+(stumpClay(s)?'c':'s');   // seed: key; cache: + material
+    let m=crownCache.get(ck);if(m)return m;
     const pos=[],col=[];
-    masonryPieces(s).forEach((base,i)=>crownPiece(i?key+':'+i:key,base,g,H,pos,col));
-    m={pos,col,static:true};crownCache.set(key,m);return m;
+    masonryPieces(s).forEach((base,i)=>crownPiece(i?key+':'+i:key,base,g,H,pos,col,stumpClay(s)));
+    m={pos,col,static:true};crownCache.set(ck,m);return m;
   }
-  function crownPiece(key,base,g,H,pos,col){
+  function crownPiece(key,base,g,H,pos,col,clay=false){
+    const sideA=clay?'#8a4e36':'#6f665d',sideB=clay?'#a25d40':'#7d736b',topC=clay?'#a25d40':'#8a7f74';
     let seed=0;for(const ch of key)seed=(Math.imul(seed,31)+ch.charCodeAt(0))>>>0;
     const rnd=()=>(seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296;
     const ring=[];
@@ -959,11 +1003,11 @@
     const tri=(a,b,c,colr)=>{pos.push(...a,...b,...c);col.push(colr)};
     for(let i=0;i<ring.length;i++){
       const j=(i+1)%ring.length,a=ring[i],b=ring[j],z0=g+H-.02,ha=g+H+tops[i],hb=g+H+tops[j];
-      const sideCol=i%3===0?'#6f665d':'#7d736b';
+      const sideCol=i%3===0?sideA:sideB;
       tri([a.x,a.y,z0],[b.x,b.y,z0],[b.x,b.y,hb],sideCol);tri([a.x,a.y,z0],[b.x,b.y,hb],[a.x,a.y,ha],sideCol);
       const c=[cx,cy,g+H+.1],p=[a.x,a.y,ha],q=[b.x,b.y,hb];
       const up=(q[0]-c[0])*(p[1]-c[1])-(q[1]-c[1])*(p[0]-c[0]);
-      if(up>0)tri(c,q,p,'#8a7f74');else tri(c,p,q,'#8a7f74');
+      if(up>0)tri(c,q,p,topC);else tri(c,p,q,topC);
     }
   }
   function dynamicMeshes(){
@@ -1255,15 +1299,16 @@
     const c=capacity(),x=state(),f=x.stock.food,d=dailyFoodDemand();
     const days=d>0?Math.floor(f/d):null,material=used('materials');
     const fmtDays=days===null?'∞':days+' d';
+    const R=k=>typeof resIcon==='function'?resIcon(k):k;
     const buttons=['food','wood','stone','metal','equipment','gold','horses'].map(key=>{
       const group=MATERIAL_KEYS.includes(key)?'materials':key;
       const disabled=(c[group]||0)<=used(group)||(State.resources[key]||0)<=0;
-      return '<button data-siege-transfer="'+key+'" '+(disabled?'disabled':'')+'>+'+key+'</button>';
+      return '<button data-siege-transfer="'+key+'" '+(disabled?'disabled':'')+' title="Trasferisci al castello">+'+R(key)+'</button>';
     }).join('');
     return '<div class="slot"><div class="slot-label">Castle logistics · allocated stores</div>'+
-      '<div class="legend">Food '+fmt(f)+'/'+fmt(c.food)+' · '+fmtDays+' autonomy · Daily '+d.toFixed(1)+
-      '<br>Materials '+fmt(material)+'/'+fmt(c.materials)+' · Arms '+fmt(x.stock.equipment)+'/'+fmt(c.equipment)+
-      '<br>Horses '+fmt(x.stock.horses)+'/'+fmt(c.horses)+' · Gold '+fmt(x.stock.gold)+'/'+fmt(c.gold)+
+      '<div class="legend live">'+R('food')+' '+fmt(f)+'/'+fmt(c.food)+' · '+fmtDays+' autonomy · Daily '+d.toFixed(1)+
+      '<br>'+R('materials')+' '+fmt(material)+'/'+fmt(c.materials)+' · '+R('equipment')+' '+fmt(x.stock.equipment)+'/'+fmt(c.equipment)+
+      '<br>'+R('horses')+' '+fmt(x.stock.horses)+'/'+fmt(c.horses)+' · '+R('gold')+' '+fmt(x.stock.gold)+'/'+fmt(c.gold)+
       '<br>Kitchen '+fmt(c.meals)+' meals/d · Barracks '+fmt(c.soldiers)+' · Knights '+fmt(c.knights)+
       '<br>Cisterns '+fmt(c.water)+' people'+
       (()=>{const p=prestige(),m=mewsCount();return'<br>Prestige '+fmt(p.total)+(m?' · Falconry hunts '+fmt(m*MEWS_FOOD)+' food/d':'')})()+
@@ -1318,7 +1363,17 @@
       renderFunctionPanel();
     });
   }
-  window.ConquerSiege={restore,state,initial,assignMastio,normalizeMastio,syncAutoMastio,ensureMastioHall,mastio,armories,allowed,sanitizeRooms,
+  // DEV › Assedio: damage tests on the selected structure (moved out of the inspector).
+  function siegeTest(tool){
+    const s=selectedStructure();if(!s){status('Seleziona una struttura');return}
+    const out=attackStructure(s.id,tool,10,s.type==='gate'&&tool!=='trebuchet'?'door':'core');
+    status(out.ok?(out.destroyed?'Difesa sfondata · ':'Danno · ')+(out.damage||0).toFixed(1):out.reason);
+    renderFunctionPanel();
+  }
+  if(typeof document!=='undefined'&&document.addEventListener)document.addEventListener('click',ev=>{
+    const b=ev.target?.closest?.('#devPanel [data-siege-test]');if(b)siegeTest(b.dataset.siegeTest);
+  });
+  window.ConquerSiege={siegeTest,restore,state,initial,assignMastio,normalizeMastio,syncAutoMastio,ensureMastioHall,mastio,shelters,shelterCapacity,banquetSeats,shelterNeed,shelterStatus,armories,allowed,sanitizeRooms,
     capacity,used,transfer,civilians,dailyFoodDemand,water,wellReachable,cisternTaps,tick,stableUnits,spareHorses,slaughterHorses,HORSE_FOOD,mewsCount,prestige,PRESTIGE,MEWS_FOOD,integrity,effectiveness,attackStructure,
     drawOverlay,summaryHtml,bindPanel,WEAPONS,healthMaximum,
     circleCaptureRecords,circleDepots,circleStoreInventory,captureCircleSector,activeRooms,

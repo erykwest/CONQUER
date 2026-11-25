@@ -1,5 +1,42 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-25 — PR #287 armonizzata nella #304
+
+Riconciliati refactor architetturale ed esteso, mantenendo le integrazioni di main fino a `fc2c3984`. Recuperati controllo CI specialistico Builder, rapporto originale e alias decisionale. Catalogo UI2 con nuova torre lignea H3; protetta la lettura delle etichette risorsa da proprietà ereditate conservando l'ispettore compatto. Stato di integrazione/QA dello SHA consolidato nella PR #304; nessun deploy.
+
+### 2026-11-24 — TOWER-FRAMED-TOP · Framed top per le torri quadrate W3
+
+`feature/framed-top-towers`: le torri quadrate in pietra W3 (L2+) possono avere l'ultimo piano a graticcio, leggermente a sbalzo e sempre con tetto a falde; costa la torre un livello più bassa più 45 legno; resiste come la pietra ma il piano in legno brucia e, consumato, la torre perde quel piano. Anche le sezioni costruite W1 L2 possono avere il P1 a graticcio a sbalzo (anche sui lati corti). Al P0 delle sezioni W1 standard porta e finestre doppie sul lato cortile al posto delle feritoie. Camini delle sezioni W1 dimezzati; nel Lab mura e sezioni rispettano le lunghezze massime del gioco. Nuova torre lignea a telaio H3: sopra la H2 un P3 a graticcio intonacato a sbalzo con tetto a falde senza parapetto. Nuova `qa/tower-framed-top-regression.cjs`.
+### 2026-11-25 — PLACEMENT-GHOST · Torna il ghost dell'edificio nel piazzamento
+
+`fix/placement-ghost-3d`: dopo il ritiro del 2.5D (#204) l'anteprima di piazzamento era solo un prisma tratteggiato. Ora mostra l'edificio finito World 3D traslucido sopra l'impronta, evidenziata solo a terra; le parti in muratura del castello (torri, porte, mura, sezioni) prendono la mesh dalla sorgente dell'assemblaggio di cantiere. ROADMAP e DECISIONS invariati: ripristino di un comportamento visivo.
+### 2026-11-24 — TOWER-HILL-BASES · Torri sul bordo collina, basamenti esterni di mura e sezioni (`fix/tower-hill-bases`)
+
+Nuova regola (D-TOWER-SUMMIT-261124): su un pendio la porta a terra di una torre indipendente è rivolta verso la cima e si apre sul pianoro alla quota del pavimento; il piazzamento ruota la torre (quadrata a quarti di giro, rotonda libera, D isolata con la porta posteriore a monte) e rifiuta i siti con la soglia sul pendio. Il pavimento si legge sotto il corpo della torre (contrafforti e scarpa non lo alzano). Basamenti su pendio: contrafforti fino al terreno (sezione −30%, sfalsati sulla porta delle rotonde), scarpa 10° che continua giù dal pendio e si apre davanti alla porta. Mura e sezioni costruite: variante `baseStyle` (standard / contrafforti ogni ~1U / scarpa 10°) solo sul lato esterno, anche sui muri a gradoni. Scala in muratura del mastio nel materiale della torre (stonecolor/laterizio); ponte levatoio senza `progress` disegnato a riposo. Lab: famiglia «Torri su bordo collina» (27 varianti). Test: `qa/tower-summit-entrance-regression.cjs`. ROADMAP invariata; DECISIONS: nuova D-TOWER-SUMMIT-261124.
+
+### 2026-11-24 — UI-INSPECTOR-SLIM · Inspector compatto (`feature/inspector-slim`)
+
+Inspector legacy degli edifici (`renderFunctionPanel`) snellito: nome dell'edificio nel titolo (niente riga «Selected»), via costo di costruzione degli edifici finiti, riga «Rooms», note «skeleton/prototype» e step 0/23; spiegazioni nascoste dietro il tasto ⓘ (`.legend.live` resta per lo stato corrente); motivi dei tasti disabilitati nel tooltip; tasti alti 24px, etichette brevi in italiano; test d'assedio solo con DEV attivo. Lista icone in `docs/inspector-icons.md` e prompt di generazione in `docs/inspector-icons-prompt.md`. Nomi delle risorse sostituiti da icone (`resIcon`, nome nel tooltip) nell'inspector e nella barra in alto. Logistica del castello spostata in Profilo › Scorte (card «Rifornisci il castello»); test ascia/ariete/trabucco spostati nel pannello DEV (Assedio · test sulla struttura selezionata); le stanze restano nell'inspector. ROADMAP e DECISIONS invariate: solo presentazione, nessuna regola nuova. QA locali PASS (panels, builder-placement, cutaway-floors, snow-scale-rooms, shops-l3, caserma-avamposto, wall-patrol, falconry, refactor-app-population); CI remota non eseguita.
+
+### 2026-11-24 — ROOM-ANIM-AUDIENCE · Udienza nella Sala del trono
+
+`feature/cutaway-night-banquet`: nelle sale lunghe il trono sta sulla parete corta in fondo, con la passatoia per tutta la sala e senza tavoli; di giorno i postulanti fanno la fila, uno alla volta si inginocchiano davanti al signore che risponde, poi escono lungo il lato. ROADMAP e DECISIONS invariate.
+
+### 2026-11-24 — ROOM-ANIM-NIGHT/BANQUET/SHELTER · Notte, banchetto e rifugio nelle sale comuni
+
+`feature/cutaway-night-banquet`: di notte (anche col tramonto invernale) personale e abitanti delle stanze del castello non si animano; banchetto nella Sala comune con commensali seduti, cibo in tavola (modelli Blender), dame, giullare e musico, camino acceso; numero di tavoli in funzione della superficie, tavoli da 4,4 m nelle sale W2. Allarme rosso: rifugio in ogni Sala comune (mastio per primo) con capienza 3× il banchetto, parametro Rifugio nel pannello Castello e avviso quando serve nuovo spazio. Lab: sezioni costruite e long house a 4U/6U. DECISIONS: nuova D-SHELTER-261124 (rifugio in ogni Sala comune, capienza 3× il banchetto, notte, tavoli lunghi W2); ROADMAP invariata.
+### 2026-11-24 — WALL-SHEDS-261124 · Lean-to come upgrade, tettoie e scatter addossati
+
+`fix/wall-heights-follow-towers`: il lean-to non si costruisce più da solo (tolto il pulsante della barra): è un upgrade del muro dal pannello (Nessuno/Legno/Pietra/Mattoni), se ne va col muro (rimborso) ed esclude la scala del camminamento e viceversa. Tettoie aperte su pali automatiche lungo la faccia interna dei muri finiti senza scala (settlement-wall-sheds.js, modello delle tettoie dei cortili L3+): da 0 a 4 per muro, misure variabili, 30% in paglia, evitano il tratto del lean-to. Scatter nuovo contesto «wall»: oggetti appoggiati (profondità reale del modello + 1,5 cm) alla faccia interna dei muri e delle sezioni costruite, al fronte dei lean-to e sotto le tettoie.
+
+### 2026-11-24 — WALL-STAIRS-261124 · Scale del camminamento a gradini, addossati
+
+`fix/wall-heights-follow-towers`: le scale del camminamento non sono più un modello scalato con l'altezza del muro: gradini pieni di alzata fissa (~0,18 U, pedata 0,28), pianerottolo d'arrivo a filo della sommità del muro. H1: una rampa lungo il muro. H2: rampa sul lato interno, pianerottolo intermedio a metà altezza esteso fino al muro, rampa di ritorno contro il muro che parte dal bordo del pianerottolo. Colori dal muro (PAL.stone mappato dal renderer: famiglie di pietra, clay, mattoni). Niente più corrimano sopra il cammino. L'addossato è rifiutato su un muro che ha la scala (stessa faccia interna).
+
+### 2026-11-24 — WALL-GRID-261124 · I livelli torre comandano le altezze dei muri
+
+`fix/wall-heights-follow-towers`: le torri in pietra hanno una griglia unica di piani: piano terra basso, P1 a 1,15 e poi piani da 1,20 (1,15 / 2,35 / 3,55 / 4,75), terrazza all'altezza della torre (invariata). Una torre di livello L ha L+1 piani nel cutaway. I muri prendono il camminamento dalla griglia: H1 = P1 (1,15, invariato), H2 = P2 = terrazza della torre L1 (2,35, prima 2,10). Rimosso il ballatoio interno delle porte H1 (landingSpecs/landingsWorld); ogni piano senza stanza ha comunque la sua scala a pioli. Torre d'assedio L2 alzata a 2,35 (fitAssaultTowers in settlement-siege-engines3d.js; build_siege_engines.py aggiornato). Porte: i piani sopra il passaggio seguono quelli della torre sopra il camminamento H2. Verifica visiva di tutte le forme: anche le semitorri seguono la griglia (prima H·k/L), le porte in pietra hanno P1 a 2,35 e piani da 1,20 anche senza torre accanto, la porta piccola sale a 2,65 (L1) / 3,85 (L2) per restare 0,30 sopra il muro H2.
+
 ### 2026-11-19 — HARDEN-261119 (branch `fix/main-hardening-20261119`, non merge)
 
 Hardening su base main `168b993b`: blocco scritture cloud senza lettura riuscita, errori di salvataggio locali/CAMP non mascherati, gestione rejection cloud, esclusione Asset Lab, barra risorse con nodi di testo. 11 nuovi test comportamentali nel workflow Runtime integrity; 5 test runtime e 15 suite locali PASS. [Rapporto e limiti](../HARDENING-2026-11-19.md). ROADMAP e DECISIONS invariate: nessun nuovo contratto di gameplay o priorità.
@@ -25,6 +62,10 @@ Primavera più distinta dall'estate: un albero su tre ha la chioma fiorita (pall
 ### 2026-11-19 — UI-BUILDERICON-01 · Icone medievali geometriche nel Builder
 
 `buildericon` da `67a1b1e8`: sostituiti i glifi outline del Builder con 52 SVG specifici e icone complementari nere su trasparenza; superfici chiare e selezione arancione. Aggiunti al Lab 72 SVG in Interfaccia / Icone Builder; audit mirato 72/72 senza errori o avvisi e baseline aggiornata dopo revisione. Regressioni del Builder e QA Chromium desktop/mobile PASS in locale; CI remota da eseguire. Nessun merge/deploy; roadmap, contratti di gameplay e decisioni esistenti invariati.
+### 2026-11-24 — UP-INNER-TOWER · Torretta centrale sulle torri W2/W3
+
+`feature/upinnertower`: nuovo upgrade delle torri in pietra W2/W3 con merli o caditoie, «Torretta centrale» rotonda o quadrata (indipendente dalla forma della torre), un piano, larga quanto la torre del taglio inferiore, con tetto a punta. Esclude tetto interno, arma e pira; toglie il bracere. Non è nel menu di costruzione. La torretta è un piano in più con una stanza assegnabile, che si apre nel cutaway piano per piano. Ammessa anche sulle torri a falde (piramide/cono): il tetto si tronca intorno alla torretta. 6 voci nel Lab, test in `qa/tower-up-inner-tower-regression.cjs`. ROADMAP e DECISIONS invariate.
+
 ### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2 come casa-bottega
 
 `feature/shops-l2-rooms` (base `feature/shops-l3-advanced`, #293): il cutaway delle botteghe L2 ha stanze proprie (`LAYOUTS_L2`): bancone su strada lontano dalla porta, angolo della famiglia (focolare con paiolo, tavolino, due sgabelli) sul fondo del lato bancone, postazione compatta del mestiere sul fondo del lato porta; passaggio dalla porta libero. Le case L3 tengono la bottega completa. Baseline del Lab aggiornata per i 21 render «Botteghe L2». ROADMAP invariata; DECISIONS: completa D-SHOP-L3-261119 (stanze L2).

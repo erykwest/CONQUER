@@ -1,5 +1,5 @@
 // Pure construction read model: only snapshots and localized labels, no DOM or simulation.
-import { T } from './i18n-it.js?v=ui2-insp-2-wallpatrol2-alerts3-upg2-fieldworks1-wallmoat1-l2shop1-shopl3a';
+import { T } from './i18n-it.js?v=ui2-insp-2-wallpatrol2-alerts3-upg2-fieldworks1-wallmoat1-l2shop1-shopl3a-harmony261125';
 
 /**
  * Plain command union shared by both Builder adapters; never a selector or DOM node.
@@ -43,7 +43,8 @@ export const CATALOG = [
         opt(V.dee, {tower:"dee",size:"1.5"}, stone && t.shape === 'dee'),
         opt(V.watchtower, {woodTower:"watchtower"}, t.woodStyle === 'watchtower'),
         opt(V.woodTower, {woodTower:"palisadeTower"}, t.woodStyle === 'palisadeTower'),
-        opt(V.frameTower || 'Telaio H2', {woodTower:"frameTower"}, t.woodStyle === 'frameTower')] }];
+        opt(V.frameTower || 'Telaio H2', {woodTower:"frameTower"}, t.woodStyle === 'frameTower'),
+        opt(V.frameTower3 || 'Telaio H3', {woodTower:'frameTower3'}, t.woodStyle === 'frameTower3')] }];
       if (stone && t.shape === 'square') rows.push({ label: O.size, options: ['1', '1.5', '2', '3'].map(n =>
         opt(n.replace('.', ',') + 'U', {tower:"square",size:n}, Number(t.size) === Number(n))) });
       if (stone && t.shape === 'round') rows.push({ label: O.size, options: ['0.5', '0.75', '1'].map(n =>
@@ -64,8 +65,9 @@ export const CATALOG = [
         opt(V.built, {linear:"built"}, kind === 'built' && !wide && !wood && !lean),
         opt(V.builtWide, {linear:"builtWide"}, wide && !wood),
         opt(V.longhouse, {linear:"longhouse"}, wood && !wide),
-        opt(V.longhouseWide, {linear:"longhouseWide"}, wood && wide),
-        opt(V.leanTo, {linear:"leanTo"}, lean)] }];
+        opt(V.longhouseWide, {linear:"longhouseWide"}, wood && wide)] }];
+      // Main makes lean-tos wall upgrades. Keep rendering legacy command state,
+      // while new UI choices go through the selected wall's inspector.
       if (lean) return [...rows, { label: O.material, options: [['wood', V.leanWood], ['stone', V.leanStone], ['brick', V.leanBrick]].map(([m, l]) => opt(l, {leanMaterial:m}, (s.tool.leanMaterial || 'wood') === m)) }];
       if (kind !== 'built') rows.push({ label: O.tier, options: [1, 2, 3].map(n => opt('T' + n, {wallTier:n}, s.levels.wallTier === n)) });
       if (kind !== 'palisade' && !wood) rows.push({ label: O.height, options: [1, 2].map(n => opt(String(n), {wallLevel:n}, (wide ? s.levels.builtWide : s.levels.wall) === n)) });

@@ -20,7 +20,7 @@
     woodTower:style=>{
       const size=woodTowerSize(style),level=woodTowerLevel(style),woodRoof=style==='palisadeTower'?'open':'pitched';
       const dummy={type:'tower',material:'wood',woodStyle:style,woodRoof,shape:'square',size,level};
-      choose({kind:'tower',material:'wood',woodStyle:style,woodRoof,shape:'square',size,level,label:`${style==='watchtower'?'Wood watchtower':style==='frameTower'?'Timber frame tower':'Wood tower'} · H${level} · ${buildDuration(dummy).toFixed(1)}d · ${costText(constructionCost(dummy))}`});
+      choose({kind:'tower',material:'wood',woodStyle:style,woodRoof,shape:'square',size,level,label:`${style==='watchtower'?'Wood watchtower':style==='frameTower3'?'Framed top timber tower':style==='frameTower'?'Timber frame tower':'Wood tower'} · H${level} · ${buildDuration(dummy).toFixed(1)}d · ${costText(constructionCost(dummy))}`});
     },
     mainRoad:()=>choose({kind:'linear',linear:'road',label:'Main road — choose point A'}),
     terraform:value=>{
@@ -46,6 +46,7 @@
       if(State.tool.kind==='crossing'){State.tool.width=width;changed('Crossing width: '+width+'U')}
     },
     linear:kind=>{
+      // Legacy data API; the current UI offers this on the wall inspector.
       if(kind==='leanTo'){choose({kind:'leanTo',linear:'built',leanTo:true,leanMaterial:presets.leanMaterial,level:1,label:'Lean-to W1 — click the inner side of an H2 wall'});return}
       const tier=State.buildLevels.wallTier,wood=kind==='longhouse'||kind==='longhouseWide',wide=kind==='builtWide'||kind==='longhouseWide';
       const linear=wide||wood?'built':kind,isPalisade=linear==='palisade',level=isPalisade||wood?1:wide?State.buildLevels.builtWide:State.buildLevels.wall;

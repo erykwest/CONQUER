@@ -1,10 +1,21 @@
 # Livello 3 — Decisioni, ipotesi e conflitti
 
+## D-ARCH-261119 — Alias storico, assorbito da D-ECC-REFACTOR-261124
+
+La decisione della PR #287 su comandi Builder, modelli indicizzati e facciate è consolidata nella PR #304 sotto D-ECC-REFACTOR-261124. Mantiene un solo owner per contratto; il [rapporto originale](../ARCHITECTURE-REVIEW-2026-11-19.md) resta uno snapshot storico. Nessuna nuova regola di prodotto.
+
 ## D-ECC-REFACTOR-261124 — Owner dei contratti condivisi
 
 Su branch `refactor/extended-ecc-20261124`: i comandi Builder ricevono dati e non cercano pulsanti; i controlli DOM sono adapter e il catalogo UI2 è puro. Il formato locale resta schema 2, una fotografia JSON immutabile alimenta locale e cloud. Upload seriali con identità di account/mondo/generazione: un acknowledgement vecchio non certifica le modifiche successive. Il caricamento conserva l'ordine storico delle migrazioni dei due trasporti.
 
 `ConquerPath` condivide la geometria, mentre ciascun consumer sceglie orientamento e soglie compatibili con il comportamento precedente. `ConquerMesh3D.modelParts` usa identità del record: i registri modello sono immutabili e una modifica richiede un nuovo record. Ordine script in gioco/CAMP verificato da `tools/runtime-contract.cjs`; consumer e accettazione in [REGRESSION](../REGRESSION.md). Nessuna nuova regola economica o decisione di prodotto.
+
+## D-SHELTER-261124 — Rifugio in ogni Sala comune, capienza 3× il banchetto (24/11/2026)
+
+- **DECISO dal product owner:** all'allarme rosso donne, bambini e uomini L3/L4 si rifugiano in **ogni** Sala comune (mastio, torri, sezioni costruite, long house), non solo in quella del mastio; averne più d'una è voluto.
+- **CONTRATTO:** la capienza di una Sala comune è **3× i posti del suo banchetto** (un commensale per panca da 1,6 m, due per panca lunga da 3,2 m). Ognuno va alla sala più vicina con posto, il mastio per primo; se tutte sono piene, alla più vicina. La campana rossa richiede almeno una Sala comune.
+- **PARAMETRO:** posti totali e persone da proteggere sono un parametro del castello (pannello Castello, voce Rifugio); se mancano posti l'utente è avvisato che serve nuovo spazio.
+- **Di notte** il personale e gli abitanti delle stanze non si animano (anche col tramonto invernale). **Tavoli lunghi (4,4 m) solo nelle sale W2.** Long house e sezioni costruite restano a 4U (W2 6U), come nel Builder.
 
 ## D-CLAY-WATER-261124 — Accesso all'argilla (24/11/2026)
 
@@ -1000,3 +1011,10 @@ Aggiungere un ID, classe, data di registrazione, **motivazione**, alternative sc
 - Il settore conquistato rimane `captured` finché non è ricontrollato dai difensori per almeno 0,5 giorni di gioco senza ostili. La riconquista riattiva la capacità fisica del deposito ma NON rigenera le merci sottratte.
 - Il record di cattura sopravvive a save/load, incluse brecce che eliminano la chiusura topologica; una successiva compartimentazione non può propagare una sola cattura a più settori. Il bottino lato attaccante e la simulazione di trasporti di risorse sono rinviati.
 
+
+
+### D-TOWER-SUMMIT-261124 — Porta delle torri su pendio — 2026-11-24
+- Su un pendio la porta a terra di una torre indipendente è **rivolta verso la cima ed è sulla cima**: la soglia sta sul pianoro alla quota del pavimento della torre. Il piazzamento ruota la torre (quadrata per quarti di giro, rotonda liberamente, torre a D isolata con il fronte curvo a valle) e rifiuta il sito se la soglia cade sul pendio.
+- Esclusi: sottotorri (nessuna porta a terra), torri di porta (porta verso il retro della porta), torri su banchina, torri a D sedute su un muro, ingressi sopraelevati del mastio. In piano nessun vincolo.
+- Il pavimento di una torre su pendio è la quota più alta sotto il **corpo** della torre; contrafforti e scarpa scendono fino al terreno e non lo alzano.
+- Mura e sezioni costruite possono avere un basamento (scarpa 10° o contrafforti) **solo sul lato esterno**; per ora è estetico e non cambia l'ingombro.

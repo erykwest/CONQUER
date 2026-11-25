@@ -71,7 +71,7 @@ const deps={
  'src/settlement-cutaway-furniture.js':['State.stonePaletteId',"f.key?.startsWith('stone')"],
  'src/settlement-crossings.js':['State.stonePaletteId','ConquerStoneColor?.shade'],
  'src/settlement-slopeways.js':['State.stonePaletteId','STONE_TONES','stoneTone(c)'],
- 'src/settlement-wall-stairs.js':["l.spec.kind==='stone'",'ConquerStoneColor?.shade'],
+ 'src/settlement-wall-stairs.js':["'#9a8e82'","'#635951'"],
  'src/settlement-construction-props.js':['State.stonePaletteId',"'rock','block','blockDressed'"],
  'src/settlement-construction-assembly.js':['State.stonePaletteId'],
  'src/settlement-coast.js':['State.stonePaletteId',"role?.startsWith('rock')"],

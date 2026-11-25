@@ -216,7 +216,12 @@ def f_runner(p):
     p.box((0, 0, .008), (3.2, .9, .016), 'heraldA'); p.box((0, 0, .018), (3.0, .5, .006), 'gold')
 def f_fireplace(p):
     p.box((-.3, 0, 1.2), (.5, 1.8, 2.4), 'stoneLight'); p.box((.02, 0, 1.05), (.2, 1.9, .14), 'stone')
-    p.box((-.08, 0, .45), (.25, 1.1, .9), 'soot'); fire(p, -.05, 0, .02, .18)
+    p.box((-.08, 0, .45), (.25, 1.1, .9), 'soot')
+    # A lit fire filling the mouth: a log pile, the embers and three tongues of flame, out to the hearth stone.
+    fire(p, .1, 0, .02, .26)
+    for y, h in ((-.22, .3), (.2, .34)):
+        p.cylinder(.1, 0, 'flame', n=6, axis='z', center=(.1, y, .1), radii=[.09, 0], along=[0, h])
+    p.box((.2, 0, .015), (.2, .9, .03), 'ember')
     p.box((.05, 0, 1.2), (.08, .5, .3), 'heraldA')
 def f_tapestry(p):
     p.box((-.02, 0, 2.3), (.04, 1.6, .05), 'woodDark'); p.box((0, 0, 1.45), (.02, 1.5, 1.7), 'heraldA')
@@ -382,6 +387,40 @@ def f_perch(p):
     pigeon(p, 0, -.2, 1.37, .8); pigeon(p, 0, .25, 1.02, -.6)
     p.cylinder(.16, 0, 'wood', n=8, axis='z', center=(.1, .2, .08), radii=[.14, .16], along=[0, .1], cap_key='hay')   # grain bowl
 
+# Common hall banquet: what stands on a long table (f_table_long, top at .76 m, .8 x 2.2 m).
+# Origin on the floor at the table's centre, so it is placed on the same spot as the table.
+def feast(p, oy=0.0):
+    """The banquet on a 2.2 m table, its middle at y = oy (the long table lays it twice)."""
+    top = .76
+    p.box((0, oy, top + .004), (.42, 2.1, .008), 'linen')                                  # runner cloth
+    p.cylinder(.2, 0, 'ironLight', n=12, axis='z', center=(0, oy, top + .01), radii=[.17, .21], along=[0, .02], squash=.7)   # pewter platter
+    p.cylinder(.11, 0, 'log', n=10, axis='x', center=(0, oy, top + .08), radii=[.03, .1, .11, .09, .03], along=[-.17, -.1, 0, .1, .17], squash=.75)  # the roast
+    for y in (-.13, .13):
+        p.beam((0, oy + y, top + .1), (0, oy + y * 1.5, top + .17), .015, .015, 'linen')            # bone ends
+    for y in (-.62, .55):                                                                  # bread loaves
+        p.cylinder(.07, 0, 'logEnd', n=8, axis='x', center=(.04, oy + y, top + .04), radii=[.03, .07, .06, .02], along=[-.1, -.04, .05, .1], squash=.8)
+    p.cylinder(.06, 0, 'stoneWarm', n=8, axis='z', center=(-.05, oy + .38, top), radii=[.05, .07, .05, .03, .035], along=[0, .1, .18, .24, .26])   # jug
+    for x, y in ((.27, -.75), (-.27, -.35), (.27, .1), (-.27, .7), (.27, .8), (-.27, -.9)):
+        p.cylinder(.1, 0, 'board', n=8, axis='z', center=(x, oy + y, top + .005), radii=[.1, .1], along=[0, .015])       # wooden trencher
+        p.cylinder(.04, 0, 'wood', n=7, axis='z', center=(x - .02 * (1 if x > 0 else -1), oy + y + .14, top), radii=[.035, .04], along=[0, .12], cap_key='trim')   # tankard
+    p.cylinder(.06, 0, 'hay', n=8, axis='z', center=(-.06, oy - .55, top), radii=[.04, .09, .08], along=[0, .05, .07], cap_key='herb')                    # bowl of greens
+    p.box((0, oy - .2, top + .02), (.05, .05, .04), 'iron'); candle_flame(p, 0, oy - .2, top + .04, .12)                                                       # candle
+
+def f_feast_spread(p): feast(p)
+
+# Long banquet table (common halls of W2 halls): twice the 2.2 m table, middle legs,
+# a bench of twice the length, and the banquet laid twice along it.
+def f_table_feast(p):
+    table(p, .8, 4.4)
+    for sx in (-1, 1):
+        p.box((sx * (.8 / 2 - .05), 0, .35), (.06, .06, .7), 'woodDark')
+def f_bench_long(p):
+    bench(p, 3.2)
+    p.box((0, 0, .2), (.06, .06, .41), 'woodDark')
+def f_feast_spread_long(p):
+    p.box((0, 0, .764), (.42, 4.2, .008), 'linen')
+    feast(p, -1.1); feast(p, 1.1)
+
 PIECES = (
     ('bench', f_bench), ('tableLong', f_table_long), ('tableSmall', f_table_small), ('stool', f_stool), ('chair', f_chair),
     ('chest', f_chest), ('brazier', f_brazier), ('banner', f_banner),
@@ -398,11 +437,14 @@ PIECES = (
     ('cisternTank', f_cistern_tank), ('cisternHatch', f_cistern_hatch),
     ('nestWall', f_nest_wall), ('perch', f_perch),
     ('infirmaryBed', f_infirmary_bed), ('herbShelf', f_herb_shelf),
+    ('feastSpread', f_feast_spread),
+    ('tableFeast', f_table_feast), ('benchLong', f_bench_long), ('feastSpreadLong', f_feast_spread_long),
 )
 # Light sources (local metres): torch and candle flames glow in the night cutaway.
 LIGHTS = {'torchWall': [(.17, 0, 2.1, 'torch')], 'brazier': [(0, 0, 1.0, 'fire')], 'hearth': [(.05, 0, .45, 'fire')],
-          'fireplace': [(-.05, 0, .3, 'fire')], 'forge': [(0, 0, .95, 'fire')], 'candleStand': [(0, 0, 1.5, 'candle')],
-          'altar': [(0, -.7, 1.5, 'candle'), (0, .7, 1.5, 'candle')], 'writingDesk': [(-.15, -.4, .95, 'candle')]}
+          'fireplace': [(.1, 0, .35, 'fire')], 'forge': [(0, 0, .95, 'fire')], 'candleStand': [(0, 0, 1.5, 'candle')],
+          'altar': [(0, -.7, 1.5, 'candle'), (0, .7, 1.5, 'candle')], 'writingDesk': [(-.15, -.4, .95, 'candle')],
+          'feastSpread': [(0, -.2, .97, 'candle')], 'feastSpreadLong': [(0, -1.3, .97, 'candle'), (0, .9, .97, 'candle')]}
 
 def build(root):
     parts = {}

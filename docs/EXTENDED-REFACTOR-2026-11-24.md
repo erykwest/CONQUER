@@ -29,3 +29,20 @@ I comandi e i consumer sono in [REGRESSION.md](REGRESSION.md). I risultati concl
 Il lavoro riduce duplicazioni e accoppiamento nei sottosistemi condivisi; non riscrive ogni file del gioco. Simulazione, economia, combattimento, migrazioni delle singole strutture e gestione di input restano nei loro owner. Non introduce dipendenze npm, framework, nuove regole economiche o un nuovo schema cloud. Il contratto dei modelli richiede record immutabili: sostituire il record quando cambia la geometria.
 
 ROADMAP invariata: obiettivi di prodotto invariati. DECISIONS aggiornata per i nuovi contratti interni. La precedente PR #285 è stata incorporata in main durante il lavoro; la PR #287 resta una fonte storica di parte dell'estrazione architetturale, aggiornata qui alle feature correnti. Nessun merge o deploy implicito.
+
+## Armonizzazione delle PR 287 e 304 (25 novembre)
+
+La PR #304 è la proposta canonica; la #287 conserva la provenienza storica ed è superata dopo la verifica del consolidamento. Nessuna delle due è descritta come già merge. Base aggiornata a main `fc2c3984`; history pubblicata conservata con merge del main, senza riscrivere gli SHA revisionati.
+
+| Modifica della #287 | Owner nella #304 | Esito del confronto |
+|---|---|---|
+| Comandi e preset Builder | builder-commands / builder-controls | Stesse scelte; aggiunti leanMaterial e opere campali. 94/85 era selezioni ripetute contro comandi distinti. |
+| Catalogo UI2 | ui/builder-catalog | Estratto dalla shell, con frameTower3 di main; addossato nel solo ispettore muro, API legacy conservata. |
+| Espansione indicizzata | ConquerMesh3D.modelParts e tre consumer | Preservata; nuovi renderer di main mantenuti. |
+| Facciate | settlement-architecture | Regola unica; painter inattivo ancora rimosso. |
+| QA e pipeline | suite generale, Panels, Builder, Asset Lab | Recuperato il gate specialistico Builder, preservati icone/browser e quattro shard attuali. |
+| Rapporto e ADR | ARCHITECTURE-REVIEW-2026-11-19, D-ARCH-261119 | Snapshot marcato storico; alias verso D-ECC-REFACTOR-261124. |
+
+Le CI verdi del 24 novembre non certificano questa nuova base: test mirati e CI dello SHA consolidato sono riportati nella PR #304. Nessun cambiamento alla roadmap, nessuna migrazione o deploy introdotto dall'armonizzazione.
+
+Allineamento alla regola di main per gli addossati: la scelta autonoma è rimossa dal catalogo UI2; il comando dell'ispettore del muro `setWallLeanTo` costruisce l'annesso con il materiale scelto. Le chiamate dati legacy e i loro preset restano compatibili. La regressione browser verifica anche il click «Mattoni» nell'ispettore del muro. Il catalogo consolidato esercita 82 scelte distinte, oltre alle chiamate legacy: il confronto numerico con 94/85 senza considerare conteggio e ritiro dell'opzione non è una perdita di copertura.

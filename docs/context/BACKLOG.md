@@ -1,5 +1,63 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-25 — ECC-REFACTOR-02 / ARCH-261119 · Unica integrazione
+
+PR #287 assorbita nella #304 senza integrazione autonoma su main. Copertura verificata per comandi/preset, catalogo, tre consumer mesh, facciate e regressioni; recuperati gate Builder e rapporto storico. Nuova opzione `frameTower3` da main preservata nella UI2 a comandi. La chiusura della #287 come superata segue la verifica della #304 armonizzata. Roadmap di prodotto invariata.
+
+### 2026-11-24 — TOWER-FRAMED-TOP · Piano alto a graticcio delle torri W3
+
+**IMPLEMENTATO SU BRANCH `feature/framed-top-towers`, NON MERGE.**
+- [x] Variante piano alto pietra/graticcio su torri quadrate W3 L2+, solo tetto a falde, a sbalzo.
+- [x] Costo: piani bassi in pietra/argilla, piano alto solo legno; resistenza della pietra, vulnerabile al fuoco.
+- [x] Sezione costruita W1 L2 con P1 a graticcio a sbalzo (costo L1 + legno, brucia).
+- [x] Torre lignea a telaio H3: P3 a graticcio a sbalzo, tetto a falde senza parapetto.
+- [ ] Torre H3: posti arcieri e cutaway del P3 da definire.
+- [ ] Bilanciamento del costo in legno (45) e del tempo di costruzione; voce wiki/codex da aggiungere.
+## 2026-11-25 — PLACEMENT-GHOST · Ghost 3D nell'anteprima di piazzamento
+
+**FATTO sul branch `fix/placement-ghost-3d`, NON MERGE.**
+
+- [x] Anteprima: edificio finito World 3D traslucido sopra l'impronta, solo a terra.
+- [x] Torri in muratura, porte in pietra, mura e sezioni: ghost dalla sorgente dell'assemblaggio.
+- [x] Verifica con screenshot di ogni voce del Builder.
+- [ ] Verifica manuale di rampa e scalinata.
+- [ ] CI remota e revisione della PR prima dell'integrazione in main.
+## 2026-11-24 — TOWER-HILL-BASES · Torri sul bordo collina
+
+- [x] Porta verso la cima e sulla cima per le torri su pendio (piazzamento + rifiuto).
+- [x] Contrafforti e scarpa delle torri fino al terreno; scarpa aperta davanti alla porta.
+- [x] Basamento esterno di mura e sezioni costruite (contrafforti / scarpa).
+- [x] Scala del mastio nel materiale della torre; ponte levatoio sempre visibile.
+- [ ] Migrazione dei salvataggi: riorientare le torri già piazzate su pendio.
+- [ ] Decidere se il basamento esterno delle mura incide su collisioni (fossato, scale d'assedio).
+
+## 2026-11-24 — UI-INSPECTOR-SLIM · Icone dell'inspector
+
+- [ ] Disegnare le icone elencate in [docs/inspector-icons.md](../inspector-icons.md) (~13 comuni + ~95 per edificio) e sostituire i testi dei tasti; priorità: comuni → torri → porte/mura → stanze → resto.
+- [ ] Compattare allo stesso modo i blocchi dei moduli esterni (logistica castello, convogli, chiesa, gilda, porto).
+
+### 2026-11-24 — WALL-SHEDS-261124 · Lean-to, tettoie e scatter dei muri
+- [x] Lean-to come upgrade del muro, niente costruzione libera, demolito col muro.
+- [x] Tettoie automatiche lungo la faccia interna dei muri; scatter addossato a muri, sezioni costruite, lean-to e sotto le tettoie.
+- [ ] Regressione dedicata alle tettoie e inserimento nel Lab.
+- [ ] Lean-to e tettoie quando il muro crolla in assedio.
+
+### 2026-11-24 — WALL-STAIRS-261124 · Scale del camminamento
+- [x] Gradini a passo fisso, pianerottolo d'arrivo; H2 a due rampe con pianerottolo intermedio.
+- [x] Colori della scala dal materiale del muro.
+- [x] Addossato non costruibile su un muro con scala.
+- [ ] Verificare che le pattuglie percorrano davvero la nuova scala (oggi validate solo le quote).
+- [ ] Addossato come upgrade del muro (oggi struttura separata agganciata).
+
+### 2026-11-24 — WALL-GRID-261124 · Livelli torre e muri
+- [x] Griglia unica dei piani delle torri in pietra (1,15 + 1,20), muri H1/H2 sui piani P1/P2.
+- [x] Rimosso il ballatoio interno delle porte H1 (sostituito dalla griglia).
+- [x] Torre d'assedio L2 sul muro H2 a 2,35.
+- [x] Semitorri e porte in pietra sulla griglia; porta piccola rialzata.
+- [ ] Porta piccola con piano superiore in legno: solaio a 1,40 da allineare al camminamento H2 (2,35).
+- [ ] Rigenerare siege-engines-model.js da Blender con le nuove WALLS (oggi adattato in runtime).
+- [ ] Audit del Lab in CI e baseline aggiornata.
+
 ### 2026-11-19 — HARDEN-261119 · Hardening della base main
 
 **IMPLEMENTATO SU `fix/main-hardening-20261119`, NON MERGE.** [Rapporto](../HARDENING-2026-11-19.md).
@@ -49,6 +107,15 @@ Implementato nel branch `fix/territory-clay-stone-access`. Nuove mappe con acqua
 - [x] QA del vero Builder in Chromium: categorie, caricamento SVG, gestori originali, selezione e viewport mobile.
 - [ ] CI remota e revisione della PR prima dell'integrazione in main.
 - Owner e dettaglio: [feature-backlog](../feature-backlog.md), [BUILDER-ICONS](../BUILDER-ICONS.md).
+### 2026-11-24 — UP-INNER-TOWER · Torretta centrale
+
+**IMPLEMENTATO SU BRANCH `feature/upinnertower`, NON MERGE.** Richiesta del product owner (24/11/2026): torretta di un piano al centro delle torri W2/W3, larga W-1, rotonda o quadrata a scelta, solo come upgrade.
+- [x] Variante, regole di esclusione, mesh 3D, cantiere, danni, clay, cutaway, Lab, codex.
+- [x] Torretta come piano a sé con una stanza in più, aperta nel cutaway.
+- [ ] La scala dalla stanza sotto sbuca sulla piazza nell'angolo della torre, non dentro la torretta.
+- [x] Baseline del Lab aggiornata.
+- [ ] Costo dell'upgrade (oggi gratuito come il tetto interno).
+
 ### 2026-11-20 — SHOP-L2-ROOMS · Piano terra L2
 
 **IMPLEMENTATO SU BRANCH `feature/shops-l2-rooms`, NON MERGE.**
@@ -204,6 +271,16 @@ Implementato nel branch `fix/territory-clay-stone-access`. Nuove mappe con acqua
 - [ ] Statistiche dell'uomo d'arme fra fante e cavaliere (proposta: 14 PV, armatura 2, combattimento 3).
 
 ### 2026-11-17 — ROOM-ANIM · Animazioni per stanze
+
+**2026-11-24, branch `feature/cutaway-night-banquet`, NON MERGE:**
+- [x] Di notte personale e abitanti delle stanze fermi (anche col tramonto invernale).
+- [x] Sala comune: banchetto (seduti, cibo in tavola, dame, giullare, musico, camino acceso); tavoli in funzione della superficie; tavoli lunghi nelle W2.
+- [x] Allarme rosso: rifugio in ogni Sala comune, capienza 3× banchetto, parametro e avviso «serve nuovo spazio».
+- [ ] Audit del Lab e baseline per le sezioni a 4U/6U e i nuovi arredi.
+- [ ] Verifica del pannello Castello (Rifugio) in partita.
+- [ ] Passo di camminata vero per chi gira nella sala (oggi scivola).
+- [x] Sala del trono: trono in fondo alle sale lunghe, passatoia, niente tavoli, udienza animata.
+- [ ] Opere d'arte negli ancoraggi ARTE: i modelli ci sono ma il gioco non le disegna ancora (test nel Lab fatto).
 
 **Sala del trono e Sala comune IMPLEMENTATE SU BRANCH `feat/throne-hall-court`, NON MERGE.**
 - [x] Sala del trono: signore sul trono, guardie, araldo, postulante (+ cortigiano nella sala grande); di notte solo le guardie.

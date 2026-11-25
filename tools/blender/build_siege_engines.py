@@ -359,12 +359,12 @@ def build_trebuchet(root, off):
 # ------------------------------------------------------------------ siege tower
 # One assault tower with upgrades, sized on the game's walls (patrols walk on the
 # wall top, structureHeight): level 1 reaches the low H1 wall (1.15 U = 4.0 m),
-# level 2 the high H2 wall (2.10 U = 7.35 m) and carries a fighting top for
+# level 2 the high H2 wall (2.35 U = 8.2 m) and carries a fighting top for
 # archers above the bridge. Wet hides over the front and sides (against fire) are a
 # further upgrade: a separate part shown only when bought. Look after the classic
 # assault tower: vertical plank front, plank sides on a trapezoid (sloping back),
 # open back with the ladders inside, plank battlements on top.
-WALLS = {1: 1.15 * 3.5, 2: 2.10 * 3.5}
+WALLS = {1: 1.15 * 3.5, 2: 2.35 * 3.5}   # H1 = P1, H2 = P2 of the stone tower grid
 WALL_WALK = WALLS[1]
 HIDE_KEYS = ('hideA', 'hideB', 'hideC', 'hideD', 'hide', 'hideDark')
 

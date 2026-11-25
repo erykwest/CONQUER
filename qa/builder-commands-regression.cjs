@@ -12,7 +12,7 @@ function fixture(){
     setTool:tool=>{State.tool=tool;State.draft=null},status:s=>messages.push(s),draw(){},scheduleLocalSave(){},
     setPrivateMasonryMaterial:m=>{State.village.privateMasonryMaterial=m},
     isOrientedTowerShape:s=>['half','dee'].includes(s),orientedTowerLabel:s=>s.shape+' tower',
-    woodTowerSize:s=>s==='watchtower'?1:1.5,woodTowerLevel:s=>s==='frameTower'?2:1,
+    woodTowerSize:s=>s==='watchtower'?1:1.5,woodTowerLevel:s=>s==='frameTower3'?3:s==='frameTower'?2:1,
     wallWidthForTier:t=>t*.25,SMALL_GATE_MAX_LEVEL:2,GATE_SIZES:{large:1.5},BUILD_DAYS:{market:4},
     structureLabel:s=>s.type,buildDuration:()=>3,
     constructionCost:s=>{quotes.push(s);return{wood:5}},costText:()=> '5 wood',aggregateConstructionCost:()=>({wood:10})
@@ -109,7 +109,10 @@ while(queue.length){
 }
 assert.ok(selections>60,'complete catalogue paths, including alternate shapes');
 for(const venue of ['stakeRow','chevalFrise','armyCamp'])assert.ok(seen.has(JSON.stringify({eventVenue:venue})),venue+' preserved from main');
-assert.ok(seen.has(JSON.stringify({leanMaterial:'brick'})),'brick lean-to is reachable');
+assert.ok(seen.has(JSON.stringify({woodTower:'frameTower3'})),'H3 framed tower from main remains reachable');
+const framed=fixture();framed.commands.execute({woodTower:'frameTower3'});
+assert.equal(framed.State.tool.level,3);assert.match(framed.State.tool.label,/Framed top timber tower/);
+assert.equal(seen.has(JSON.stringify({linear:'leanTo'})),false,'standalone lean-to is retired in favour of wall upgrades');
 assert.ok(read('src/ui/shell.js').includes("'./builder-catalog.js?v="),'shell imports the pure catalogue');
 assert.doesNotMatch(read('src/ui/game-api.js'),/findLegacy\('\[data-(?:crossing-width|terraform-|private-masonry)/);
 const ux=read('src/settlement-builder-ux.js');
@@ -120,7 +123,7 @@ for(const page of ['index.html','camp/index.html']){
   assert.ok(commands>=0&&controls>commands,'Builder scripts exist and load in order in '+page);
   assert.ok(controls<html.indexOf('settlement-app-input.js'));
 }
-console.log('PASS UI catalogue: '+selections+' distinct typed choices, including fieldworks and lean-to materials');
+console.log('PASS UI catalogue: '+selections+' distinct typed choices, including fieldworks and the H3 framed tower');
 
 // Exercise the actual game interface too, so an omitted export or snapshot
 // dependency cannot pass merely because the standalone commands worked.

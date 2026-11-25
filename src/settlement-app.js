@@ -214,6 +214,9 @@ function deleteStructure(id){
   }
   if(target.type==='tower')restoreTowerWallConnections(target);
   const removedChildren=civicAnnexChildren(id);
+  // A lean-to is an upgrade of its wall: it goes with it (refunded like a child).
+  const leanTos=target.type==='wall'?State.structures.filter(s=>s.leanTo&&s.leanWallId===id):[];
+  for(const lt of leanTos)if(lt.buildCost)refundCost(refundableConstructionCost(lt));
   for(const child of removedChildren)if(child.buildCost)refundCost(refundableConstructionCost(child));
   if(['tower','gate'].includes(target.type))detachSubtowerChildren(target.id);
   if(!target.auto&&target.buildCost&&(target.construction?.materialsDelivered||!(target.type==='bridge'&&target.variant==='wood')))refundCost(refundableConstructionCost(target));
@@ -227,7 +230,7 @@ function deleteStructure(id){
     window.ConquerEconomy?.reset?.();State.resources={...PROVISIONAL_RESOURCES};
     State.village={name:null,wellId:null,founded:false,growthVersion:3,accessRoadVersion:0,growthStep:0,nextGrowthDay:null,roadPlan:null,roadPlanVersion:0,borderEntries,baseRoadAngle:null};
   }else{
-    State.structures=State.structures.filter(s=>s.id!==id&&s.accessFor!==id&&s.repairFor!==id&&s.gateFor!==id&&s.wellFor!==id&&s.branchTargetId!==id&&s.parentId!==id);
+    State.structures=State.structures.filter(s=>s.id!==id&&s.accessFor!==id&&s.repairFor!==id&&s.gateFor!==id&&s.wellFor!==id&&s.branchTargetId!==id&&s.parentId!==id&&s.leanWallId!==id);
     if(target.type==='well'){
       // A later well: its main road goes with it; the centre role falls back to the founding well.
       if(State.village.centerWellId===id)delete State.village.centerWellId;

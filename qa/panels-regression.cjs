@@ -207,14 +207,16 @@ const roomsSource=fs.readFileSync(path.join(__dirname,'../src/settlement-app-roo
 assert.equal((roomsSource.match(/structureLabel\(/g)||[]).length,(roomsSource.match(/roomEsc\(structureLabel\(/g)||[]).length,'every inspector structureLabel is escaped');
 function inspector(s,panels){
   const node=()=>({innerHTML:'',classList:{add(){},remove(){}},querySelector:()=>null,querySelectorAll:()=>[]});
-  const els={functionPanel:node(),functionInfo:node(),functionSlots:node()};
+  // The inspector title (selection label) lives in the panel header h2.
+  const title={innerHTML:''},head={querySelector:q=>q==='h2'?title:{}};
+  const els={functionPanel:{...node(),querySelector:q=>q==='.panel-head'?head:null},functionInfo:node(),functionSlots:node()};
   const ctx={window:{ConquerPanels:panels,ConquerIndustries:{is:t=>t.type==='quarry',definition:()=>({tier:1,workers:2,good:'stone'})}},
     document:{getElementById:id=>els[id]},selectedStructure:()=>s,underConstruction:()=>false,isCivicAnnex:()=>false,
     structureLabel:t=>'Cava · '+t.name,costText:()=>'',constructionCost:()=>({}),
     StructureCommands:{describeStructure:()=>({well:{founded:true,center:false,canCenter:true,name:s.name}})}};
   vm.runInNewContext(roomsSource,ctx,{filename:'settlement-app-rooms.js'});
   ctx.renderFunctionPanel();
-  return els.functionInfo.innerHTML+els.functionSlots.innerHTML;
+  return title.innerHTML+els.functionInfo.innerHTML+els.functionSlots.innerHTML;
 }
 for(const panels of [x.context.window.ConquerPanels,undefined]){
   for(const type of ['quarry','well']){

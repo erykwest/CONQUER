@@ -27,11 +27,15 @@ try{
       run('crossingWidth','3');run('crossing','water');const width=State.tool.width;
       run('gateLevel','3');run('gate','',{gateSize:'1'});const small=State.tool.level;
       run('woodGate','');run('gateLevel','3');const wood=State.tool.level;
+      run('woodTower','frameTower3');
+      const frame={style:State.tool.woodStyle,level:State.tool.level,label:State.tool.label};
       run('industry','quarry',{extractionMode:'clay'});const clay=State.tool.placementSpec.extractionMode;
       const fieldworks=[];
       for(const venue of ['stakeRow','chevalFrise','armyCamp']){run('eventVenue',venue);fieldworks.push(State.tool.venue)}
-      run('linear','leanTo');run('leanMaterial','brick');const lean=State.tool.leanMaterial;
-      run('tool','select');run('linear','leanTo');const rememberedLean=State.tool.leanMaterial;
+      // The main UI now offers lean-tos on the wall inspector. Preserve the
+      // direct legacy command contract without assuming a retired DOM button.
+      B.execute({linear:'leanTo'});B.execute({leanMaterial:'brick'});const lean=State.tool.leanMaterial;
+      run('tool','select');B.execute({linear:'leanTo'});const rememberedLean=State.tool.leanMaterial;
       const snapshot=window.ConquerGame?.snapshot?.();
       // Once the DOM adapter is mounted, commands remain usable with no matching
       // legacy query available: this was impossible when UI v2 pressed buttons.
@@ -42,10 +46,11 @@ try{
         try{independent=window.ConquerGame.commands.builder({tower:'round',size:.75})&&State.tool.shape==='round'}
         finally{document.querySelector=query}
       }
-      return{terra,persisted,width,small,wood,clay,lean,rememberedLean,fieldworks,independent,snapshot:!!snapshot,options:B.options()};
+      return{terra,persisted,width,small,wood,frame,clay,lean,rememberedLean,fieldworks,independent,snapshot:!!snapshot,options:B.options()};
     },mode);
     if(mode!=='camp')assert.deepEqual(result.terra,{shape:'square',radius:6});assert.equal(result.persisted,true);
     assert.equal(result.width,3);assert.equal(result.small,2);assert.equal(result.wood,1);assert.equal(result.clay,'clay');
+    assert.equal(result.frame.style,'frameTower3');assert.equal(result.frame.level,3);assert.match(result.frame.label,/Framed top timber tower/);
     assert.equal(result.lean,'brick');assert.equal(result.rememberedLean,'brick');
     assert.deepEqual(result.fieldworks,['stakeRow','chevalFrise','armyCamp']);
     if(mode==='ui2')assert.equal(result.independent,true);
@@ -62,6 +67,20 @@ try{
         await page.waitForFunction(state=>window.ConquerGame.snapshot().saveStatus===state,state);
         await page.waitForFunction(label=>document.querySelector('#ui2 .u2-saved')?.textContent.includes(label),label);
       }
+    }
+    if(mode!=='camp'){
+      await page.evaluate(()=>{
+        State.environment=[];State.relief={hills:[]};clearReliefBandCache();
+        State.devBuild={freeBuild:true,fastBuild:true};
+        State.structures=[{id:'harmony-wall',type:'wall',level:2,tier:1,width:.5,length:4,a:{x:92,y:100},b:{x:96,y:100}}];
+        invalidateNavigation();window.ConquerGame.commands.select('harmony-wall');
+      });
+      if(mode==='ui2'){
+        const row=page.locator('#ui2 .u2-row').filter({has:page.getByText('Addossato',{exact:true})});
+        await row.getByRole('button',{name:'Mattoni',exact:true}).click();
+      }else assert.equal(await page.evaluate(()=>window.ConquerGame.commands.structure('setWallLeanTo','harmony-wall','brick')),true);
+      assert.equal(await page.evaluate(()=>window.ConquerLeanTo.ofWall(State.structures.find(s=>s.id==='harmony-wall'))?.leanMaterial),'brick');
+      assert.equal(await page.locator('[data-linear="leanTo"]').count(),0,'wall upgrade replaces the standalone tool');
     }
     assert.equal(await page.locator('.ux-rail [data-icon="category-defense"]').count(),1,'main fortifications icon remains present');
     await page.screenshot({path:`${out}/builder-${mode}.png`});

@@ -47,35 +47,35 @@ const fnSrc=(text,name)=>{const m=text.match(new RegExp('function '+name+'\\([^)
   console.log('PASS castle: floor in view, cut at the next floor, subtowers follow the parent');
 }
 
-// ---------- stone towers: P1 at the curtain wall-walk
+// ---------- stone towers: one storey grid, the walls take their walk from it
 {
   const castle=src('settlement-castle.js'),arch=src('settlement-architecture.js');
   const H={1:2.35,2:3.55,3:4.75,4:5.95};
-  const ctx=vm.createContext({Math,structureLevel:s=>s.level,structureHeight:s=>s.wood?2.35:s.type==='wall'?2.1:H[s.level]+(s.tier-1)*.12,isWoodTower:s=>!!s.wood});
-  vm.runInContext(castle.match(/const CURTAIN_WALK_Z=[^\n]*/)[0]+'\n'+fnSrc(castle,'towerUpperFloorZ')+'\n'+fnSrc(arch,'towerFloorZ')+'\nthis.api={towerUpperFloorZ,towerFloorZ,CURTAIN_WALK_Z};',ctx);
-  const {towerUpperFloorZ,towerFloorZ,CURTAIN_WALK_Z}=ctx.api;
-  assert.equal(CURTAIN_WALK_Z,2.10,'the top of an H2 wall');
-  assert.match(castle,/if\(s\.type==='wall'\)return \[1\.15,2\.10\]/,'H2 walls stand 2.10 high');
-  for(const level of [2,3,4])for(const tier of [1,2,3]){
+  const ctx=vm.createContext({Math,structureLevel:s=>s.level,structureHeight:s=>s.wood?2.35:H[s.level]+(s.tier-1)*.12,isWoodTower:s=>!!s.wood});
+  vm.runInContext(castle.match(/const TOWER_P1_Z=[^\n]*/)[0]+'\n'+castle.match(/const CURTAIN_WALK_Z=[^\n]*/)[0]+'\n'+['stoneTowerGrid','towerStoreyCount','towerUpperFloorZ'].map(n=>fnSrc(castle,n)).join('\n')+'\n'+fnSrc(arch,'towerFloorZ')+'\nthis.api={towerUpperFloorZ,towerFloorZ,towerStoreyCount,CURTAIN_WALK_Z,TOWER_P1_Z};',ctx);
+  const {towerUpperFloorZ,towerFloorZ,towerStoreyCount,CURTAIN_WALK_Z,TOWER_P1_Z}=ctx.api;
+  const near=(a,b,m)=>assert.ok(Math.abs(a-b)<1e-9,m+' ('+a+' vs '+b+')');
+  near(TOWER_P1_Z,1.15,'P1 at the top of an H1 wall');
+  near(CURTAIN_WALK_Z,2.35,'P2 at the top of an H2 wall');
+  assert.match(castle,/if\(s\.type==='wall'\)return \[TOWER_P1_Z,TOWER_P1_Z\+TOWER_STOREY_H\]/,'walls stand on the tower grid');
+  for(const level of [1,2,3,4])for(const tier of [1,2,3]){
     const t={type:'tower',level,tier},h=ctx.structureHeight(t);
-    assert.equal(towerUpperFloorZ(t,1),2.10,'L'+level+' T'+tier+': P1 on the wall-walk');
-    assert.equal(towerFloorZ(t,2),2.10,'windows and slits use the same P1');
-    for(let i=2;i<level;i++){
-      const z=towerUpperFloorZ(t,i);
-      assert.ok(z-towerUpperFloorZ(t,i-1)>=1.1&&h-z>=1.1,'L'+level+' T'+tier+' P'+i+': room at least 1.1 high');
-    }
+    assert.equal(towerStoreyCount(t),level+1,'L'+level+': one storey more than the level');
+    near(towerUpperFloorZ(t,1),1.15,'L'+level+' T'+tier+': P1 on the H1 walk');
+    if(level>=1)near(towerUpperFloorZ(t,2),2.35,'L'+level+' T'+tier+': P2 on the H2 walk (terrace of an L1 tower)');
+    near(towerFloorZ(t,2),1.15,'windows and slits use the same P1');
+    near(h-towerUpperFloorZ(t,level),1.2+(tier-1)*.12,'L'+level+' T'+tier+': the top storey reaches the terrace');
   }
+  near(towerUpperFloorZ({type:'tower',level:2,tier:1},3)-towerUpperFloorZ({type:'tower',level:2,tier:1},2),1.2,'storeys of 1.20');
   assert.equal(towerUpperFloorZ({type:'tower',level:2,tier:1,wood:true},1),2.35/2,'timber towers keep their own frame');
-  assert.match(castle,/s\.type==='tower'\?towerUpperFloorZ\(s,i\):h\*i\/level/,'cutaway floors use the same storeys');
-  // The wall-walk door sits on the P1 planks (its opening seen from inside is not clipped by the slab).
+  assert.match(castle,/for\(let i=1,n=towerStoreyCount\(s\);i<n;i\+\+\)floors\.push\(\{z:towerUpperFloorZ\(s,i\)/,'cutaway floors use the same storeys');
+  // Both wall-walk doors sit on a floor's planks.
   const dctx=vm.createContext({Math,clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),structureHeight:s=>s.h,
-    closestFootprintEdge:()=>null,cutawayFloorLevels:()=>[{z:.055},{z:2.10}]});
+    closestFootprintEdge:()=>null,cutawayFloorLevels:()=>[{z:.055},{z:1.15},{z:2.35}]});
   vm.runInContext(fnSrc(arch,'towerDoorContactSpec')+'\nthis.f=towerDoorContactSpec;',dctx);
-  const door=dctx.f({x:0,y:0,shape:'round',h:3.79},{x:1,y:0},{h:2.10},'wall');
-  assert.equal(door.baseZ,2.10,'wall-walk door sill on the P1 floor');
-  const low=dctx.f({x:0,y:0,shape:'round',h:3.79},{x:1,y:0},{h:1.15},'wall');
-  assert.ok(Math.abs(low.baseZ-1.13)<1e-9,'no storey at an H1 wall-walk: the door keeps its height');
-  console.log('PASS stone towers: P1 at the curtain wall-walk (2.10), upper storeys share the rest');
+  near(dctx.f({x:0,y:0,shape:'round',h:3.79},{x:1,y:0},{h:2.35},'wall').baseZ,2.35,'H2 wall-walk door sill on the P2 floor');
+  near(dctx.f({x:0,y:0,shape:'round',h:3.79},{x:1,y:0},{h:1.15},'wall').baseZ,1.15,'H1 wall-walk door sill on the P1 floor');
+  console.log('PASS stone towers: storey grid 1.15 + 1.20, H1 walk = P1, H2 walk = P2');
 }
 
 // ---------- civic: town hall storeys

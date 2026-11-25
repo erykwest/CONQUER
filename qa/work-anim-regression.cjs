@@ -27,7 +27,7 @@ for(const f of ['settlement-util.js','settlement-work-anim.js'])vm.runInContext(
 const WA=window.ConquerWorkAnim;
 
 const tools=Object.keys(WA.TOOLS);
-assert.deepEqual(tools.sort(),['axe','book','bowl','brush','clay','falcon','hammer','hoe','ladle','mortar','mug','needle','pickaxe','quill','seeds','shovel','shuttle','sickle','speak']);
+assert.deepEqual(tools.sort(),['axe','book','bowl','brush','clay','comfort','eat','falcon','hammer','hoe','juggle','ladle','lute','mortar','mug','needle','pickaxe','platter','quill','seeds','shovel','shuttle','sickle','speak','toast']);
 for(const tool of tools){
   const T=WA.TOOLS[tool];
   for(const t of [0,.3,.77,1.9]){
