@@ -439,12 +439,17 @@
     const id=C.sectorAt({x:w.x,y:w.y});
     return !!id&&C.controlState?.(id)?.safe!==false;
   }
+  // Why the wells are cut off: 'open' when they lie outside every enclosed sector (the settlement
+  // is not closed or protected), 'breach' when their sector is no longer safe, 'nowell' with none.
   function water(){
     const cap=capacity(),people=civilians()+cap.soldiers+cap.knights;
     const wells=State.structures.filter(s=>s.type==='well'&&!underConstruction(s));
-    if(!hostilesInField()||wells.some(wellReachable))return{people,source:'wells',served:people,short:0};
+    if(!hostilesInField()||wells.some(wellReachable))return{people,source:'wells',served:people,short:0,cause:null};
     const served=Math.min(people,cap.water);
-    return{people,source:served>0?'cistern':'none',served,short:people>0?(people-served)/people:0};
+    const short=people>0?(people-served)/people:0;
+    const sectorless=wells.every(w=>!window.ConquerCircle?.sectorAt?.({x:w.x,y:w.y}));
+    const cause=!wells.length?'nowell':sectorless?'open':'breach';
+    return{people,source:served>0?'cistern':'none',served,short,cause:short>0?cause:null};
   }
   // Where the bucket brigade draws water from a cistern: just outside its tower's ground door.
   function cisternTaps(){

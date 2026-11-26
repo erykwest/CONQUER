@@ -1,4 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
+### 2026-11-26 — THREAT-ALERTS-261126 · Minacce nel centro avvisi, acqua e insediamento aperto (`fix/threat-alerts-261126`)
+
+Gli avvisi di minaccia (lupi, orso, briganti, banditi, predoni) non usano più il banner rosso separato: vanno nel centro avvisi con «Vai» (centra la mappa tramite `commands.focus`) e × standard. Il pannello log usa lo stesso comando. Con nemici in campo e pozzi fuori da ogni settore, la sete mostra «Insediamento non chiuso / protetto» (causa `open` in `water()`), invece di «Sete nel castello»; rottura di settore e assenza di pozzi restano sull'avviso precedente. Nessuna regola di gioco cambiata. QA: cistern-regression, threats-regression e ui-alerts-regression PASS in locale; CI remota da verificare.
+
 ### 2026-11-26 — DEV-FREE-RESTYLE · Restyle gratis in DEV (`feat/dev-free-restyle`)
 
 Con freeBuild o fastBuild DEV attivi, il cambio globale dello stile delle merlature e della pendenza dei tetti di torri e porte è gratuito (preventivo vuoto in `crenelRestyleQuote`/`roofPitchQuote`) oltre che immediato. Nessuna regola di gioco cambia fuori dalle modalità DEV. ROADMAP e DECISIONS invariate. QA: roof-pitch e battlement-parapet regression PASS in locale.

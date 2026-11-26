@@ -77,7 +77,7 @@ const enemy={id:'e',x:20,y:0,faction:'dev_hostile'};
   // Siege, well outside the walls, no cistern: everyone goes thirsty, day after day.
   const dry=fixture({enemies:[enemy],walled:{}});
   dry.State.structures.push({id:'w',type:'well',x:20,y:0},house('h',0,0,90));
-  assert.deepEqual({...dry.S.water()},{people:90,source:'none',served:0,short:1});
+  assert.deepEqual({...dry.S.water()},{people:90,source:'none',served:0,short:1,cause:'open'});
   dry.S.state().lastDay=5;dry.S.tick(5,8);
   assert.ok(Math.abs(dry.S.state().thirstDays-3)<1e-9,'three days without water: '+dry.S.state().thirstDays);
   // Same siege with a W2 cistern: 60 of 90 drink, a third goes thirsty.
@@ -97,6 +97,11 @@ const enemy={id:'e',x:20,y:0,faction:'dev_hostile'};
   const invaded=fixture({enemies:[enemy],walled:{safe:false}});
   invaded.State.structures.push({id:'w',type:'well',x:1,y:1},house('h',0,0,90));
   assert.equal(invaded.S.water().source,'none','a well in an invaded sector is cut off');
+  assert.equal(invaded.S.water().cause,'breach','an invaded sector is a breach, not an open settlement');
+  const nowell=fixture({enemies:[enemy],walled:{}});
+  nowell.State.structures.push(house('h',0,0,90));
+  assert.equal(nowell.S.water().cause,'nowell','no well at all');
+  assert.equal(peace.S.water().cause,null,'no cause while the wells serve');
   // Wolves are not a siege.
   const wolves=fixture({enemies:[{id:'wolf',kind:'wolf'}],walled:{}});
   wolves.State.structures.push({id:'w',type:'well',x:20,y:0},house('h',0,0,90));

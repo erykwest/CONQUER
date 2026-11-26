@@ -72,7 +72,11 @@ export function createWatchers(game, center, { econEveryMs = 10000, now = () => 
       detail: 'Il castello è senza cibo da ' + fmt(l.shortfall) + ' giorni. Immagazzina cibo (Gestisci › Castello).', resolvedTitle: 'Razioni militari ristabilite' });
     else if (l.daily > 0 && l.autonomy != null && l.autonomy < 5) out.push({ key: 'castle-food', severity: 'warn', category: 'castle', title: 'Scorte del castello in esaurimento',
       detail: 'Autonomia di ' + fmt(l.autonomy) + ' giorni per la guarnigione.', resolvedTitle: 'Scorte del castello ristabilite' });
-    if (l.thirst > 0) out.push({ key: 'castle-water', severity: 'danger', category: 'castle', title: 'Sete nel castello',
+    // Wells cut off because the settlement is not closed: the cause is the enclosure, not the water.
+    if (l.thirst > 0 && l.water?.cause === 'open') out.push({ key: 'castle-open', severity: 'danger', category: 'castle', title: 'Insediamento non chiuso / protetto',
+      detail: 'I pozzi stanno fuori da ogni cinta e i nemici in campo li tagliano fuori: senza acqua da ' + fmt(l.thirst) + ' giorni. Chiudi il villaggio con mura o palizzate, o costruisci una cisterna.',
+      resolvedTitle: 'Insediamento protetto: pozzi di nuovo raggiungibili' });
+    else if (l.thirst > 0) out.push({ key: 'castle-water', severity: 'danger', category: 'castle', title: 'Sete nel castello',
       detail: 'Senza acqua da ' + fmt(l.thirst) + ' giorni: servono pozzi o cisterne.', resolvedTitle: 'Acqua del castello ristabilita' });
     // Shelter: the Common Halls hold 3x their banquet; fewer places than people to protect.
     if (l.shelter && l.shelter.need > 0 && l.shelter.missing > 0) out.push({ key: 'castle-shelter', severity: 'warn', category: 'castle',

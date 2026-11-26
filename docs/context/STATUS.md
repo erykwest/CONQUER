@@ -1,4 +1,9 @@
 # Livello 2 — Stato tecnico e prove
+### 2026-11-26 — THREAT-ALERTS-261126: minacce nel centro avvisi e sete per insediamento aperto (`fix/threat-alerts-261126`, NON MERGE)
+
+- **CODICE:** `settlement-threats.js` `banner()` invia ad `alerts.push` (chiave `threat-…`, azione `focus` «Vai»); rimosso `#threatBanner`. `shell.js` `ALERT_ACTIONS.focus`. `settlement-siege.js` `water()` aggiunge `cause` (`open`/`breach`/`nowell`/`null`); `ui/alert-watchers.js` usa «Insediamento non chiuso / protetto» per `open`.
+- **PROVE:** `qa/cistern-regression.cjs`, `qa/threats-regression.cjs`, `qa/ui-alerts-regression.mjs` PASS in locale; in browser il «Vai» centra la mappa e la × chiude l'avviso. Avviso di sete in gioco non verificato (manca una cinta con nemici).
+
 ### 2026-11-26 — DEV-FREE-RESTYLE: cambi di stile gratis in DEV (`feat/dev-free-restyle`, NON MERGE)
 
 - **CODICE:** `settlement-castle-structures.js` `devFreeRestyle()`: con freeBuild o fastBuild DEV attivi, `crenelRestyleQuote` e `roofPitchQuote` restituiscono un costo vuoto; le schede «Stile delle merlature» e «Pendenza dei tetti» mostrano «Adotta · gratis». Il cambio era già immediato. Senza DEV il costo resta invariato.

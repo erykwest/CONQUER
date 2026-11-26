@@ -1,4 +1,12 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
+## 2026-11-26 — THREAT-ALERTS-261126 · Minacce nel centro avvisi
+
+**FATTO sul branch `fix/threat-alerts-261126`, NON MERGE.**
+
+- [x] Banner delle minacce sostituito dal centro avvisi, con «Vai» e ×.
+- [x] Causa `open` per la sete: avviso «Insediamento non chiuso / protetto».
+- [ ] Verifica in gioco dell'avviso con una cinta reale e un nemico nei paraggi.
+
 ## 2026-11-26 — DEV-FREE-RESTYLE · Restyle gratis in DEV
 
 **FATTO sul branch `feat/dev-free-restyle`, NON MERGE.**
