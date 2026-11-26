@@ -52,4 +52,22 @@ assert.ok(run("qaSearches")<=1,'no wider searches once the bridge is proven unav
 run(base+"State.environment=[{id:'water',type:'stream',width:1.8,points:[{x:100,y:-8},{x:100,y:120}]}];invalidateNavigation();");
 assert.equal(run("finishRoadWork(riverCrossingLowerBoundWork({x:40,y:100},{x:160,y:100}))"),0,'an inland stream end can be walked around: no bound');
 console.log('PASS a border-to-sea river is a proven crossing: the main road stops widening its search');
+
+// 4. Main-road terrain grid: blocks what the exact test blocks (sea, a forest, a hill ellipse with
+// its .45U pad), stays open around them, leaves a continuous woodland open, and is reused when
+// only a continuous forest changes (grooves carved by every main road).
+run(base+"State.environment=[{id:'sea',type:'sea',side:'south',points:[{x:0,y:160},{x:200,y:160},{x:200,y:200},{x:0,y:200}]},"+
+ "{id:'wood',type:'forest',points:[{x:40,y:40},{x:80,y:40},{x:80,y:80},{x:40,y:80}]},"+
+ "{id:'wild',type:'forest',continuous:true,points:[{x:120,y:40},{x:170,y:40},{x:170,y:90},{x:120,y:90}]},"+
+ "{id:'hill',type:'hill',x:100,y:120,rx:6,ry:4,angle:0}];invalidateNavigation();globalThis.qaGrid=finishRoadWork(roadTerrainRasterWork());");
+const blocked=(x,y)=>run("qaGrid.blocked({x:"+x+",y:"+y+"})");
+assert.ok(blocked(100,180)&&blocked(60,60)&&blocked(100,120)&&blocked(106.2,120),'sea, forest and padded hill are blocked on the grid');
+assert.ok(!blocked(100,140)&&!blocked(20,20)&&!blocked(60,90),'open ground stays open');
+assert.ok(!blocked(145,65),'continuous woodland is open to main roads');
+for(const [x,y] of [[100,180],[60,60],[100,120]])assert.ok(run("primaryRoadTerrainBlocked({x:"+x+",y:"+y+"})"),'the exact test agrees at '+x+','+y);
+run("const w=State.environment.find(f=>f.id==='wild');w.holes=[[{x:130,y:50},{x:140,y:50},{x:140,y:60},{x:130,y:60}]];environmentRevision++;");
+assert.equal(run("finishRoadWork(roadTerrainRasterWork())===qaGrid"),true,'a groove in continuous woodland keeps the grid');
+run("State.environment.find(f=>f.id==='wood').points=[{x:40,y:40},{x:90,y:40},{x:90,y:80},{x:40,y:80}];environmentRevision++;");
+assert.equal(run("finishRoadWork(roadTerrainRasterWork())===qaGrid"),false,'a changed blocking forest rebuilds the grid');
+console.log('PASS the main-road terrain grid matches the exact blockers and survives woodland grooves');
 `)(require,__dirname);

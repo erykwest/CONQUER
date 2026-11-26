@@ -1,5 +1,14 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-26 — ROADS-PATH-03 · Strade maestre sotto i 3 s sulla mappa 4× (branch `3dworldvoronoi`)
+
+- Obiettivo del product owner: «dobbiamo scendere molto sotto (massimo 3s)».
+- **Griglia del terreno per le strade maestre:** le stesse regole del test esatto (fasce di pendenza, scogli della costa, poligoni di mare/montagna/stagno/bosco non continuo con i buchi, ellissi di colline e terreno accidentato con margine 0,45U) riempite una volta per scanline in una griglia da 0,25U, dilatata di una cella (più severa del test esatto). A* vi legge il terreno a costo costante; le strutture restano col test esatto via indice spaziale. Ogni percorso trovato è ricontrollato col test esatto (campionamento 0,09U) e un errore ricade sulla ricerca esatta; una ricerca esatta finale parte solo se tutti i riquadri si esauriscono sulla griglia. Con modifiche di terraforming si usa solo il test esatto. Validità legata alla firma delle sole feature bloccanti: i tagli nei boschi continui (a ogni strada) non la invalidano.
+- **Disegno:** niente ridisegno del terreno dopo ogni strada (un solo ridisegno finale in `onDone`); il ciclo di simulazione non ridisegna la scena mentre `foundingRoadJob` è attivo (le onde del mare chiedevano un frame a ogni giro: 93–144 ridisegni da ~16 ms durante il calcolo); fette da 10 ms.
+- **Indice dei fiumi:** in cache (firma di fiumi e ruscelli), chiavi numeriche, niente `Set` per chiamata; indice spaziale delle strutture con chiavi numeriche.
+- **Esito (seme 1943, mappa 4×, Iris Xe, headless):** dal clic di fondazione alle strade disegnate T364 2,0–2,9 s (calcolo 1,4–2,2 s + ridisegno finale 0,45–0,55 s; prima 34–45 s, all'inizio della sessione oltre 7 minuti), T274 2,6–2,8 s; tutte le strade collegate, nessuna ricaduta esatta. Strade: 8 su 10 identiche al calcolo esatto, una entro 0,23U, una spostata fino a 2,4U (lunghezza −0,2%) per il margine prudente vicino a un ostacolo.
+- **QA:** `qa/road-river-crossings-regression.cjs` caso 4 (la griglia blocca mare, bosco e collina come il test esatto, lascia aperti terreno libero e bosco continuo, sopravvive ai tagli e si ricostruisce se cambia un bosco bloccante).
+
 ### 2026-11-26 — ROADS-PATH-02 · Strade maestre: meno ricerche, stesse strade (branch `3dworldvoronoi`)
 
 - Priorità del product owner: «è prioritario risolvere i problemi di pathfinding delle strade».
