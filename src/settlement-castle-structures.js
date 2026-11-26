@@ -714,6 +714,8 @@ function towerBattlementPieces(s){
   }
   return withoutBuriedBattlements(s,crown);
 }
+// DEV free/fast build: feudal restyles (crenels, roof pitch) are free and immediate.
+function devFreeRestyle(){return typeof devBuildMode==='function'&&(devBuildMode('freeBuild')||devBuildMode('fastBuild'))}
 // Restyling the feudal crenellation: every standing stone merlon is rebuilt at the target style's
 // rate (CRENEL_STYLE_COST). Brick structures pay clay instead of stone, as in constructionCost.
 function crenelRestyleQuote(style){
@@ -729,7 +731,7 @@ function crenelRestyleQuote(style){
       cost[key]=(cost[key]||0)+v*n;
     }
   }}finally{State.policies.crenelStyle=prev}
-  return{style,merlons,cost};
+  return{style,merlons,cost:devFreeRestyle()?{}:cost};
 }
 function applyCrenelStyle(style){
   if(!CRENEL_STYLES.includes(style)||style===crenelStyle())return{ok:false,reason:'unchanged'};
@@ -749,7 +751,7 @@ function pitchedRoofOwners(){
 }
 function roofPitchQuote(pitch){
   const roofs=pitchedRoofOwners().length,cost={};
-  for(const [k,v] of Object.entries(ROOF_PITCH_COST[pitch]||{}))cost[k]=v*roofs;
+  if(!devFreeRestyle())for(const [k,v] of Object.entries(ROOF_PITCH_COST[pitch]||{}))cost[k]=v*roofs;
   return{pitch,roofs,cost};
 }
 function applyRoofPitch(pitch){

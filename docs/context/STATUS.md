@@ -1,4 +1,9 @@
 # Livello 2 — Stato tecnico e prove
+### 2026-11-26 — DEV-FREE-RESTYLE: cambi di stile gratis in DEV (`feat/dev-free-restyle`, NON MERGE)
+
+- **CODICE:** `settlement-castle-structures.js` `devFreeRestyle()`: con freeBuild o fastBuild DEV attivi, `crenelRestyleQuote` e `roofPitchQuote` restituiscono un costo vuoto; le schede «Stile delle merlature» e «Pendenza dei tetti» mostrano «Adotta · gratis». Il cambio era già immediato. Senza DEV il costo resta invariato.
+- **PROVE:** `node qa/roof-pitch-regression.cjs` e `qa/battlement-parapet-regression.cjs` PASS in locale; in browser `roofPitchQuote(60)` con freeBuild = `{}`. Click in gioco non verificato.
+
 ### 2026-11-25 — GRAPHSCHIC: palette GRAFICA (`GRAPHSCHIC`)
 
 ### 2026-11-24 — UI-BUILDERICON-02: icone Builder di nuovo beige su marrone (`fix/builder-icon-color`, NON MERGE)
