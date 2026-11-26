@@ -379,6 +379,8 @@
       }
       g.restore();
     }
+    // In World 3D the relay riders are cards (drawCards, population pass); this overlay is 2D only.
+    if(window.ConquerWorld3D?.active?.()&&window.ConquerMounted2D?.card)return;
     const M2=window.ConquerMounted2D;
     for(const r of riders){
       const p=pointAt(r),q=pointAt({...r,s:r.s+.3});
@@ -386,11 +388,23 @@
       if(M2&&typeof w2sRaw==='function'){
         const s=w2s(p,.1),a=w2sRaw(p,0),b=w2sRaw(q,0);
         M2.draw(g,s.x,s.y,Math.max(1.5,(State.view?.scale||10)*5.75),{kind:'messenger',facing:b.x>=a.x?1:-1,
-          mode:'walk',from:'walk',blend:1,t:now/1000*3,seed:3,coat:'brown',
+          mode:'walk',from:'walk',blend:1,t:now/1000,seed:3,coat:'brown',
           livery:typeof soldierLivery==='function'?soldierLivery(r.id):undefined});
       }else if(typeof drawSoldierFigure==='function'&&typeof withRenderContext==='function'){
         withRenderContext(g,()=>drawSoldierFigure(p,.1,'unarmed',r.id,now/1000));
       }
+    }
+  }
+  // World 3D front pass (settlement-render.js): each relay rider is a depth-tested card with the
+  // horse's capsule as its collider; its heading is the route direction.
+  function drawCards(){
+    const M2=window.ConquerMounted2D;
+    if(!M2?.card||!window.ConquerWorld3D?.active?.())return;
+    for(const r of riders){
+      const p=pointAt(r),q=pointAt({...r,s:r.s+.3});
+      if(typeof worldPointVisible==='function'&&!worldPointVisible(p,.15,70))continue;
+      M2.card(p,.1,'relay:'+r.id,{kind:'messenger',heading:{x:q.x-p.x,y:q.y-p.y},mode:'walk',seed:3,coat:'brown',
+        livery:typeof soldierLivery==='function'?soldierLivery(r.id):undefined});
     }
   }
   const needsAnimation=()=>riders.length>0||burning.size>0||pending.length>0;
@@ -443,7 +457,7 @@
   }
 
   window.ConquerSoldiers=Object.freeze({RECRUIT_COST,PATROL_MEN,LOOKOUT_MEN,OUTPOST_MEN,OUTPOST_HORSES,OUTPOST_COST,OUTPOST_DAYS,
-    PYRE_COST,FIRE_REACH,FIRE_HOP,RIDER_SPEED,MONTH_SHIFTS,
+    PYRE_COST,FIRE_REACH,FIRE_HOP,RIDER_SPEED,MONTH_SHIFTS,drawCards,
     posts,enlisted,paid,onDuty,enlistable,wagePerDay,roster,free,invalidate,summary,
     isolated,outsideWhite,outpostBlocker,outpostReady,lookoutActive,outpostActive,towerWatches,horsesHeld,
     recruit,dismiss,setLookout,setOutpost,signalFireAllowed,signalFire,pyreReady,fireReach,setSignalFire,

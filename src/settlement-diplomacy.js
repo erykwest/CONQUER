@@ -245,18 +245,31 @@
     const p=courierPose(m),sc=w2s(p,m.by==='pigeon'?loftTopZ(m):terrainElevation(p)+1.35);
     letter.style.left=Math.round(sc.x)+'px';letter.style.top=Math.round(sc.y-15)+'px';
   }
+  // The messenger's rider options: the approved flat 2D horse (settlement-mounted2d.js), with the
+  // route's heading and the coat and livery of the courier.
+  function courierOpts(m,p){
+    const moving=m.phase!=='waiting';
+    return {kind:'messenger',heading:{x:Math.cos(p.heading),y:Math.sin(p.heading)},mode:moving?'walk':'idle',
+      seed:hash(m.id)%7,coat:['brown','black','grey','white'][hash(m.id)%4],livery:soldierLivery(m.id)};
+  }
+  // World 3D front pass (settlement-render.js, with the other population): the courier is a
+  // depth-tested card whose horse capsule is its collider. Without World 3D the 2D overlay below.
+  function drawCard(){
+    const m=state().incoming,p=courierPose(m);
+    if(!m||!p||m.by==='pigeon'||!window.ConquerMounted2D?.card||window.ConquerLOD?.militaryTier()==='dot')return;
+    if(!worldPointVisible(p,.15,70))return;
+    window.ConquerMounted2D.card(p,.1,'courier:'+m.id,courierOpts(m,p));
+  }
   function draw(g){
     const m=state().incoming,p=courierPose(m);if(!m||!p||!worldPointVisible(p,.15,70))return;
     if(m.by==='pigeon'){if(m.phase==='arriving')drawPigeon(g,m,p);return}
-    // The messenger rides the approved flat 2D horse (settlement-mounted2d.js), facing
-    // left or right by the screen direction of its route.
+    // In World 3D the courier is drawn as a card by drawCard(); this overlay is for 2D only.
+    if(window.ConquerWorld3D?.active?.()&&window.ConquerMounted2D?.card&&window.ConquerLOD?.militaryTier()!=='dot')return;
     const M2=window.ConquerMounted2D;
     if(M2&&window.ConquerAnimals&&window.ConquerLOD?.militaryTier()!=='dot'){
-      const moving=m.phase!=='waiting',s=w2s(p,.1);
-      const a=w2sRaw(p,0),b=w2sRaw({x:p.x+Math.cos(p.heading),y:p.y+Math.sin(p.heading)},0);
-      M2.draw(g,s.x,s.y,Math.max(1.5,State.view.scale*5.75),{kind:'messenger',facing:b.x>=a.x?1:-1,
-        mode:moving?'walk':'idle',from:moving?'walk':'idle',blend:1,t:day()*7,seed:hash(m.id)%7,
-        coat:['brown','black','grey','white'][hash(m.id)%4],livery:soldierLivery(m.id)});
+      const s=w2s(p,.1),o=courierOpts(m,p),a=w2sRaw(p,0),b=w2sRaw({x:p.x+o.heading.x,y:p.y+o.heading.y},0);
+      M2.draw(g,s.x,s.y,Math.max(1.5,State.view.scale*5.75),{...o,facing:b.x>=a.x?1:-1,from:o.mode,blend:1,
+        t:Date.now()/1000,seed:o.seed});
     }else{
       withRenderContext(g,()=>drawSoldierFigure(p,.10,'unarmed',m.id,day()));
     }
@@ -303,7 +316,7 @@
     });
     refreshUI();
   }
-  window.ConquerDiplomacy={tick,reset,state,caravans,draw,courierPose,routeFrom,positionLetter,refreshUI,travel,spawn,openLetter,openCaravans,finishResponse};
+  window.ConquerDiplomacy={tick,reset,state,caravans,draw,drawCard,courierPose,routeFrom,positionLetter,refreshUI,travel,spawn,openLetter,openCaravans,finishResponse};
   // Hook for the outpost / guard-room work: quick alerts between towers will use the same post.
   window.ConquerDovecote={towers:dovecotes,active:()=>dovecotes().length>0,PIGEON_SPEEDUP,MIN_PIGEON_DAYS};
   initUI();

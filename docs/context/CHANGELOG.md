@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-25 — MESSENGER-CARD · Il messaggero a cavallo è una card World 3D (`fix/messenger-card`)
+
+Il messaggero del corriere e dei relay delle torri-vedetta era fermo e di profilo, senza collider: regressione dell'overlay 2D, con il passo sul clock di gioco. Ora è una card World 3D (`ConquerMounted2D.card`) con collider a scatola orientata, passo in tempo reale e 8 viste: E/W sono il disegno 2D approvato, le altre 6 lo stesso disegno costruito in 3D parte per parte in Blender e ritracciato (`tools/blender/`, `src/assets/mounted-views.js`). Lo stesso per i cavalieri in battaglia, con gualdrappa, crinet, mantello, lancia (anche in resta in carica) e i layer di elmo, scudo e cimiero. Collo dei quadrupedi chiuso da un terminale arrotondato (niente taglio dietro la nuca). Nuova `qa/messenger-card-regression.cjs`, registrata in `combat-regression.yml`. ROADMAP e DECISIONS invariati: correzione di comportamento visivo.
+
 ### 2026-11-24 — TOWER-FRAMED-TOP · Framed top per le torri quadrate W3
 
 `feature/framed-top-towers`: le torri quadrate in pietra W3 (L2+) possono avere l'ultimo piano a graticcio, leggermente a sbalzo e sempre con tetto a falde; costa la torre un livello più bassa più 45 legno; resiste come la pietra ma il piano in legno brucia e, consumato, la torre perde quel piano. Anche le sezioni costruite W1 L2 possono avere il P1 a graticcio a sbalzo (anche sui lati corti). Al P0 delle sezioni W1 standard porta e finestre doppie sul lato cortile al posto delle feritoie. Camini delle sezioni W1 dimezzati; nel Lab mura e sezioni rispettano le lunghezze massime del gioco. Nuova torre lignea a telaio H3: sopra la H2 un P3 a graticcio intonacato a sbalzo con tetto a falde senza parapetto. Nuova `qa/tower-framed-top-regression.cjs`.

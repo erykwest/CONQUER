@@ -2088,7 +2088,8 @@
       if(!s.paint)out.push({id:s.id,type:s.type,x:s.p.x,y:s.p.y,z0:s.z-CAPSULE.below,z1:s.z+CAPSULE.above,r:CAPSULE.r});
       else if(s.capsule){
         // Animal collider: the same horizontal capsule (segment from x-ax to x+ax at height z).
-        out.push({id:s.id,type:s.capsule.kind||'animal',x:s.p.x,y:s.p.y,ax:cap.seg1[0],ay:cap.seg1[1],z0:s.z+cap.seg0[2],z1:s.z+cap.seg1[2],r:cap.r});
+        // capsule.box: the same body as an oriented box (half-length along the axis, half-width r).
+        out.push({id:s.id,type:s.capsule.kind||'animal',x:s.p.x,y:s.p.y,ax:cap.seg1[0],ay:cap.seg1[1],z0:s.z+cap.seg0[2],z1:s.z+cap.seg1[2],r:cap.r,box:!!s.capsule.box});
       }
     }
     colliders=out;
@@ -2124,10 +2125,28 @@
     const px=ray.o.x+u.x*sN-(o.x+v.x*tN),py=ray.o.y+u.y*sN-(o.y+v.y*tN),pz=ray.o.z+u.z*sN-(o.z+v.z*tN);
     return{dist:Math.hypot(px,py,pz),t:o.z+v.z*tN};
   }
+  // Oriented box collider (c.box): footprint rectangle along the axis (half-length |ax,ay|, half-width
+  // c.r), from z0 to z1. Slab test of the ray in the box's own frame; dist 0 on a hit, Infinity off it.
+  function rayBox(ray,c){
+    const L=Math.hypot(c.ax,c.ay)||1e-6,ux=c.ax/L,uy=c.ay/L,vx=-uy,vy=ux;
+    const ox=ray.o.x-c.x,oy=ray.o.y-c.y,dx=ray.d.x,dy=ray.d.y;
+    let t0=-Infinity,t1=Infinity;
+    const slab=(p,d,lo,hi)=>{
+      if(Math.abs(d)<1e-12){if(p<lo||p>hi)return false;return true}
+      let a=(lo-p)/d,b=(hi-p)/d;if(a>b)[a,b]=[b,a];
+      t0=Math.max(t0,a);t1=Math.min(t1,b);return t0<=t1;
+    };
+    const pu=ox*ux+oy*uy,du=dx*ux+dy*uy,pv=ox*vx+oy*vy,dv=dx*vx+dy*vy;
+    if(!slab(pu,du,-L,L)||!slab(pv,dv,-c.r,c.r))return{dist:Infinity,t:c.z1};
+    // z slab (the ray's z is its own parameter): hit only inside the box height.
+    const pz=ray.o.z,dz=ray.d.z;
+    if(!slab(pz,dz,c.z0,c.z1))return{dist:Infinity,t:c.z1};
+    return{dist:0,t:(c.z0+c.z1)/2};
+  }
   function pickSoldier(sx,sy){
     const ray=screenRay(sx,sy);let best=null;
     for(const c of colliders){
-      const h=rayCapsule(ray,c);if(h.dist>c.r)continue;
+      const h=c.box&&!isPlanView()?rayBox(ray,c):rayCapsule(ray,c);if(h.dist>c.r)continue;
       const q=rotateViewPoint(c),depth=isPlanView()?c.z1:q.x+q.y+ISO_Z*h.t;  // nearest = largest view depth
       if(!best||depth>best.depth)best={collider:c,depth,distance:h.dist};
     }
@@ -2137,6 +2156,14 @@
     ctx.save();ctx.lineWidth=1;
     for(const c of colliders){
       const hl=S.hover&&S.hover.id===c.id;ctx.strokeStyle=hl?'rgba(255,214,90,.95)':'rgba(120,220,255,.75)';
+      if(c.box){
+        // Oriented box: its footprint rectangle at z0 and z1, joined by the vertical edges.
+        const L=Math.hypot(c.ax,c.ay)||1e-6,ux=c.ax/L*L,uy=c.ay/L*L,vx=-c.ay/L*c.r,vy=c.ax/L*c.r;
+        const corners=[[-1,-1],[1,-1],[1,1],[-1,1]].map(([a,b])=>({x:c.x+a*ux+b*vx,y:c.y+a*uy+b*vy}));
+        for(const z of [c.z0,c.z1]){const pts=corners.map(p=>w2sRaw(p,z));ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.stroke()}
+        for(const p of corners){const a=w2sRaw(p,c.z0),b=w2sRaw(p,c.z1);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke()}
+        continue;
+      }
       if(c.ax||c.ay){
         // Horizontal (animal) capsule: a sphere outline at each end and the axis between them.
         const ends=[{x:c.x-c.ax,y:c.y-c.ay,z:c.z0},{x:c.x+c.ax,y:c.y+c.ay,z:c.z1}];

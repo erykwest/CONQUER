@@ -50,6 +50,8 @@
     // The in-game 2D horse (settlement-animals.js) and everything that rides or pulls with it.
     ['horse2d','Cavallo 2D (passo)','Fauna','Cavalli 2D'],['horse2dGraze','Cavallo 2D (pascola)','Fauna','Cavalli 2D'],
     ['knight2d','Cavaliere a cavallo 2D','Truppe','Cavalli 2D'],['messenger2d','Messaggero a cavallo 2D','Truppe','Cavalli 2D'],
+    // The 8 views (settlement-mounted2d.js drawView; off-profile views from tools/blender/mounted_views.py).
+    ['knight8views','Cavaliere a cavallo · 8 viste','Truppe','Cavalli 2D'],['messenger8views','Messaggero a cavallo · 8 viste','Truppe','Cavalli 2D'],
     ['wagonTeam','Carro con tiro 2D','Veicoli','Carri'],
     // The other in-game 2D animals (livestock and wildlife), same painter as the horse.
     ...[['sheep','Pecora'],['goat','Capra'],['cow','Mucca'],['deer','Cerva'],['stag','Cervo'],['wolf','Lupo'],['boar','Cinghiale'],['bear','Orso']]
@@ -496,6 +498,13 @@
     const sp2d=/^(\w+)2d$/.exec(subject)?.[1];
     if(sp2d&&sp2d!=='horse'&&A?.SPECIES?.[sp2d]){
       A.drawAnimal(sp2d,g,w*.5,h*.9,Math.min(w,h)*.5*1.9/(A.SPECIES[sp2d].scale||1),{t:.15,mode:'walk',facing:1});return;
+    }
+    if((subject==='knight8views'||subject==='messenger8views')&&M2?.drawView&&A){
+      // Two rows of four: E SE S SW / W NW N NE, at rest.
+      const s=Math.min(w/4,h/2)*(subject==='knight8views'?.3:.62);   // the raised lance is ~2x the rider's height
+      M2.VIEW_NAMES.forEach((view,i)=>M2.drawView(g,w*(.125+.25*(i%4)),h*(i<4?.47:.97),s,
+        {kind:subject==='knight8views'?'knight':'messenger',view,phase:null,coat:'grey',seed:0,livery:{main:'#b32628',alt:'#eac15b'},paint:null}));
+      return;
     }
     if((subject==='knight2d'||subject==='messenger2d')&&M2?.draw&&A){
       M2.draw(g,w*.48,h*.9,Math.min(w,h)*.36,{kind:subject==='knight2d'?'knight':'messenger',mode:'idle',t:0,facing:1,coat:'grey',

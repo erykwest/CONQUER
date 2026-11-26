@@ -207,14 +207,21 @@
     r.blend=Math.min(1,(r.blend??1)+dt/.45);r.t+=dt*(moving?Math.min(2,.6+State.clock.speed*.1):1);
     const paint=livery?null:window.__conquerHeraldryCanvas?.paint;
     const a=w2sRaw(p,0),b=w2sRaw({x:p.x+Math.cos(r.heading),y:p.y+Math.sin(r.heading)},0);
+    const opts={kind:'knight',facing:b.x>=a.x?1:-1,
+      mode:r.mode,from:r.from,blend:r.blend,t:r.t,seed:peasantHash(id)%7,coat:HORSE_COATS[peasantHash(id)%7%4],
+      pose,livery:livery||soldierLivery(id),paint,crest:typeof knightCrestKind==='function'?knightCrestKind(id):null,
+      // The realm's own knights wear the feudal equipment once one is chosen (until then, and for
+      // foes with a livery override, the original great helm and pointed shield).
+      helmet:livery?null:State.policies?.unitHelmet||null,shield:livery?null:State.policies?.unitShield||null};
+    // Eight views (settlement-mounted2d.js drawView): the profile is the 2D art itself; the other six
+    // come from the same art built in 3D. Short actions (guard, blow, flash, fall) keep the profile.
+    const view=M2.viewOf?M2.viewOf(b.x-a.x,b.y-a.y):'E';
+    const action=pose&&(pose.ready>.05||Math.abs(pose.attack||0)>.05||pose.flash>.05||pose.fall>0||(pose.alpha??1)<1);
     withUrbanFigureOcclusion(p,z,()=>{
-      const s=w2s(p,z);
-      M2.draw(ctx,s.x,s.y,Math.max(1.5,State.view.scale*5.75),{kind:'knight',facing:b.x>=a.x?1:-1,
-        mode:r.mode,from:r.from,blend:r.blend,t:r.t,seed:peasantHash(id)%7,coat:HORSE_COATS[peasantHash(id)%7%4],
-        pose,livery:livery||soldierLivery(id),paint,crest:typeof knightCrestKind==='function'?knightCrestKind(id):null,
-        // The realm's own knights wear the feudal equipment once one is chosen (until then, and for
-        // foes with a livery override, the original great helm and pointed shield).
-        helmet:livery?null:State.policies?.unitHelmet||null,shield:livery?null:State.policies?.unitShield||null});
+      const s=w2s(p,z),size=Math.max(1.5,State.view.scale*5.75);
+      if(!action&&view!=='E'&&view!=='W'&&M2.drawView)
+        M2.drawView(ctx,s.x,s.y,size,{...opts,view,phase:r.mode==='idle'?null:M2.phaseOf(r.t,r.mode)});
+      else M2.draw(ctx,s.x,s.y,size,opts);
     });
     return true;
   }
