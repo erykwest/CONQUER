@@ -80,7 +80,7 @@ function scheduleCompletionRoadMaintenance(completed){
       perf.completionRoadPending=job.tasks.size;
     }
     window.__conquerAnalytics?.measure('COMPLETION_ROADS',ms,{pending:job.tasks.size,changed});
-    if(job.tasks.size)setTimeout(tick,0);
+    if(job.tasks.size)(typeof scheduleRoadSlice==='function'?scheduleRoadSlice:fn=>setTimeout(fn,0))(tick);
     else{
       completionRoadJob=null;
       if(job.repaint&&State.clock.speed<=0)requestAnimationFrame(()=>{if(State.village===village&&State.clock.speed<=0)draw()});

@@ -1994,6 +1994,32 @@ function carveForestGroove(road){
 function pointInPolygon(point,pts){
   let inside=false;for(let i=0,j=pts.length-1;i<pts.length;j=i++){const a=pts[i],b=pts[j],hit=((a.y>point.y)!==(b.y>point.y))&&(point.x<(b.x-a.x)*(point.y-a.y)/((b.y-a.y)||1e-9)+a.x);if(hit)inside=!inside}return inside;
 }
+// Same answer as pointInPolygon for large rings: an edge can only flip the parity when the point's
+// y lies in its vertical span, so each ring keeps its edges bucketed in horizontal bands and only
+// the band of the point is scanned (forest/sea/pond outlines have hundreds of vertices and the road
+// planner asks millions of points). Rebuilt if the ring's length or end vertices change.
+const POLY_BANDS=new WeakMap(),POLY_BAND_H=2;
+function polygonBands(pts){
+  const n=pts.length,first=pts[0],last=pts[n-1];
+  let c=POLY_BANDS.get(pts);
+  if(c&&c.n===n&&c.fx===first.x&&c.fy===first.y&&c.lx===last.x&&c.ly===last.y)return c;
+  let minY=Infinity,maxY=-Infinity;for(const p of pts){if(p.y<minY)minY=p.y;if(p.y>maxY)maxY=p.y}
+  const rows=Array.from({length:Math.max(1,Math.floor((maxY-minY)/POLY_BAND_H)+1)},()=>[]);
+  for(let i=0,j=n-1;i<n;j=i++){
+    const lo=Math.min(pts[i].y,pts[j].y),hi=Math.max(pts[i].y,pts[j].y);
+    for(let r=Math.floor((lo-minY)/POLY_BAND_H);r<=Math.floor((hi-minY)/POLY_BAND_H)&&r<rows.length;r++)rows[r].push(i,j);
+  }
+  c={n,fx:first.x,fy:first.y,lx:last.x,ly:last.y,minY,rows};
+  POLY_BANDS.set(pts,c);return c;
+}
+function pointInPolygonFast(point,pts){
+  if(!pts||pts.length<24)return pointInPolygon(point,pts||[]);
+  const c=polygonBands(pts),r=Math.floor((point.y-c.minY)/POLY_BAND_H);
+  if(r<0||r>=c.rows.length)return false;
+  const row=c.rows[r];let inside=false;
+  for(let k=0;k<row.length;k+=2){const a=pts[row[k]],b=pts[row[k+1]],hit=((a.y>point.y)!==(b.y>point.y))&&(point.x<(b.x-a.x)*(point.y-a.y)/((b.y-a.y)||1e-9)+a.x);if(hit)inside=!inside}
+  return inside;
+}
 // `slope` may carry terrainSlopeKind(p) when the caller already knows it.
 function environmentContains(f,p,pad=0,slope){
   if(f.type==='forest'||f.type==='mountain'||f.type==='pond'||f.type==='sea'){
@@ -2001,7 +2027,7 @@ function environmentContains(f,p,pad=0,slope){
     // Cheap bounds/polygon tests first: the steep-slope query is the costly one.
     const bounds=environmentPolygonBounds(f.points);
     if(p.x<bounds.minX||p.x>bounds.maxX||p.y<bounds.minY||p.y>bounds.maxY)return false;
-    if(!pointInPolygon(p,f.points))return false;
+    if(!pointInPolygonFast(p,f.points))return false;
     if(f.type==='forest'&&(slope===undefined?terrainSlopeKind(p):slope)==='steep')return false;
     return !forestHoleAt(f,p);
   }
@@ -2321,10 +2347,23 @@ function connectBorderMainRoadsInFrames(onDone=()=>{}){
     let step;
     do{step=iterator.next()}while(!step.done&&performance.now()<deadline);
     if(step.done){foundingRoadJob=null;releaseRoadRepairPointMemo();onDone(step.value);return}
-    setTimeout(tick,0);
+    scheduleRoadSlice(tick);
   }
   // Keep all initial and reloaded main-road routing off the input/load handler.
   setTimeout(tick,0);
+}
+// Next slice of a cooperative road job. Nested setTimeout(0) is clamped to >= 4 ms by browsers,
+// so 6 ms slices ran at ~60% duty; a MessageChannel task (as React's scheduler does) follows
+// immediately and still lets the browser render frames between tasks. Where MessageChannel is
+// missing (the Node test sandboxes, which queue setTimeout) it falls back to setTimeout.
+const roadSliceQueue=[];let roadSliceChannel=null;
+function scheduleRoadSlice(fn){
+  if(typeof MessageChannel!=='function'){setTimeout(fn,0);return}
+  if(!roadSliceChannel){
+    roadSliceChannel=new MessageChannel();
+    roadSliceChannel.port1.onmessage=()=>{const next=roadSliceQueue.shift();if(next)next()};
+  }
+  roadSliceQueue.push(fn);roadSliceChannel.port2.postMessage(0);
 }
 // Road magnet on the two mouths of a gate: the road ends at the gate centre, after a straight
 // approach along the passage, so roads drawn to either mouth meet inside and join up.
@@ -2604,15 +2643,100 @@ function* minimalCrossingRoadLeg(a,b,width,ignore,searches,onRetry=null){
     if(!best||c<best.c||(c===best.c&&L<best.L-1e-6))best={leg,c,L};
   }
   const floor=minimumRiverCrossings(a,b);
+  // The parity floor only knows edge-to-edge rivers; a river from the border into the sea or a
+  // lake is just as unavoidable. The coarse bound below sees those too, so a wider search is
+  // only tried while fewer bridges are still possible (it used to re-find the same route twice).
+  let bound=null;
+  function* minimal(){
+    if(!best)return false;
+    if(best.c<=floor)return true;
+    if(bound===null)bound=yield* riverCrossingLowerBoundWork(a,b);
+    return best.c<=bound;
+  }
   if(yield* roadRepairSegmentWork(a,b,width,ignore,null,true))yield* consider([a,b]);
-  if(best&&best.c<=floor)return best.leg;
-  for(const [pad,guard] of searches){
+  if(yield* minimal())return best.leg;
+  // A route found with more bridges than proven necessary can only improve in a wider box, and
+  // the widest box contains every narrower one: go straight to it, keeping the skipped boxes as
+  // fallbacks for when it runs out of nodes. A missing route still widens one step at a time.
+  const queue=searches.slice();let jumped=false;
+  while(queue.length){
+    const [pad,guard]=queue.shift();
     const leg=yield* findRoadRepairWork(a,b,width,pad,ignore,guard,true);
     yield* consider(leg);
-    if(best&&best.c<=floor)break;
-    if(!leg||leg.length<2)onRetry?.(pad);
+    if(yield* minimal())break;
+    const found=!!leg&&leg.length>1;
+    if(!found)onRetry?.(pad);
+    if(found&&jumped)break;
+    if(found&&queue.length>1){queue.unshift(queue.pop());jumped=true}
   }
   return best?.leg||null;
+}
+// Lower bound on the river crossings of ANY main road from a to b, on a coarse 2U grid where
+// only sea, lakes and mountains block (forests, hills, slopes and structures count as passable,
+// so every real route is also a route here) and each step costs the rivers it crosses.
+// Dijkstra with integer buckets from a's cell; 0 when b's cell is not reached (no claim).
+// Grid, blocked cells, per-step crossings and distances per start are cached until the
+// environment list/length/revision or the canvas change.
+// The grid is shifted by an odd fraction so a river on a round coordinate never runs exactly
+// through cell centres (a step that only touches a centreline is not a crossing).
+const RIVER_BOUND_STEP=2,RIVER_BOUND_OFFSET=.731;
+let riverBoundState=null;
+function* riverCrossingLowerBoundWork(a,b){
+  const env=State.environment||[];
+  let st=riverBoundState;
+  if(!st||st.env!==env||st.length!==env.length||st.rev!==environmentRevision||st.world!==WORLD){
+    const index=riverCrossingIndex();
+    // Cell centres stay inside the canvas (0..WORLD), like every point a road search may visit.
+    const S=RIVER_BOUND_STEP,N=Math.floor((WORLD-RIVER_BOUND_OFFSET)/S)+1,blocked=new Uint8Array(N*N);
+    const barriers=env.filter(f=>f.type==='sea'||f.type==='pond'||f.type==='mountain');
+    const wet=p=>barriers.some(f=>environmentContains(f,p,0));
+    for(let gy=0;gy<N;gy++){
+      if(gy%2===0)yield;
+      for(let gx=0;gx<N;gx++){
+        const x=gx*S+RIVER_BOUND_OFFSET,y=gy*S+RIVER_BOUND_OFFSET,h=S*.45;
+        // Blocked only when the whole cell is water/mountain: narrow land gaps stay open.
+        if(wet({x,y})&&wet({x:x-h,y:y-h})&&wet({x:x+h,y:y-h})&&wet({x:x-h,y:y+h})&&wet({x:x+h,y:y+h}))blocked[gx+gy*N]=1;
+      }
+    }
+    st=riverBoundState={env,length:env.length,rev:environmentRevision,world:WORLD,index,N,S,blocked,steps:new Map(),dist:new Map()};
+  }
+  if(!st.index.count)return 0;
+  const {N,S,blocked}=st;
+  const cellOf=p=>{
+    const cx=Math.max(0,Math.min(N-1,Math.round((p.x-RIVER_BOUND_OFFSET)/S))),cy=Math.max(0,Math.min(N-1,Math.round((p.y-RIVER_BOUND_OFFSET)/S)));
+    if(!blocked[cx+cy*N])return cx+cy*N;
+    for(let r=1;r<=3;r++)for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){
+      const x=cx+dx,y=cy+dy;if(x>=0&&y>=0&&x<N&&y<N&&!blocked[x+y*N])return x+y*N;
+    }
+    return -1;
+  };
+  const from=cellOf(a),to=cellOf(b);
+  if(from<0||to<0)return 0;
+  let dist=st.dist.get(from);
+  if(!dist){
+    dist=new Int32Array(N*N).fill(-1);
+    const best=new Int32Array(N*N).fill(2147483647),buckets=[[from]];best[from]=0;
+    const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]],back=[1,0,3,2,7,6,5,4];
+    let expanded=0;
+    for(let d=0;d<buckets.length;d++){
+      const bucket=buckets[d];if(!bucket)continue;
+      for(let k=0;k<bucket.length;k++){
+        const c=bucket[k];if(dist[c]>=0||best[c]!==d)continue;
+        dist[c]=d;if(++expanded%150===0)yield;
+        const cx=c%N,cy=(c-cx)/N;
+        for(let i=0;i<8;i++){
+          const nx=cx+dirs[i][0],ny=cy+dirs[i][1];if(nx<0||ny<0||nx>=N||ny>=N)continue;
+          const n=nx+ny*N;if(blocked[n]||dist[n]>=0)continue;
+          const ek=c<n?c*8+i:n*8+back[i],cached=st.steps.get(ek);
+          const w=cached!==undefined?cached:riverCrossingStep({x:cx*S+RIVER_BOUND_OFFSET,y:cy*S+RIVER_BOUND_OFFSET},{x:nx*S+RIVER_BOUND_OFFSET,y:ny*S+RIVER_BOUND_OFFSET},st.index).n;
+          if(cached===undefined)st.steps.set(ek,w);
+          const nd=d+w;if(nd<best[n]){best[n]=nd;(buckets[nd]||(buckets[nd]=[])).push(n)}
+        }
+      }
+    }
+    st.dist.set(from,dist);
+  }
+  return Math.max(0,dist[to]);
 }
 function addManualMainRoad(a,b){
   if(!a||!b)return false;

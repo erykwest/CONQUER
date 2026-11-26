@@ -6,7 +6,8 @@
 - [x] Strade maestre: A* con le stesse strade ma molto più veloce (costa, memoria dei punti, indice ambientale).
 - [x] Area edificabile esagonale 40000 U², canvas minimo 360U, bordo a 50U.
 - [x] Camera WebGL senza taglio sulle tele grandi; pivot di rotazione su `WORLD/2`; zoom minimo scalato.
-- [ ] Strade maestre ancora 35–47 s su T364 a 4×: ridurre le tre ricerche ripetute (12/24/42 U) che danno lo stesso percorso, o spostare il calcolo in un worker.
+- [x] Ricerche ripetute 12/24/42 U ridotte (limite inferiore dei ponti su griglia grossolana, salto al riquadro più largo): T364 da 11 a 4 ricerche, stesse strade (ROADS-PATH-02).
+- [ ] Strade maestre: il tratto con un fiume aggirabile solo sulla griglia permissiva (es. attraverso il bosco) fa ancora 2 ricerche da 60–75k nodi; valutare un limite che conti anche i boschi o un worker.
 - [ ] Densità del paesaggio a 4×: rocce ~+25% contro boscaglia ×2,3; da rivedere a vista su più biomi.
 - [ ] Texture del terreno: 4096 px coprono ora 360–420U (risoluzione circa dimezzata); valutare tile o texture più grande.
 - [ ] Decidere se raddoppiare anche le mappe quadrate classiche (sposterebbe il centro dei salvataggi).

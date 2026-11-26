@@ -1,5 +1,13 @@
 # Livello 2 — Stato tecnico e prove
 
+### 2026-11-26 — ROADS-PATH-02 · Strade maestre: meno ricerche, stesse strade (branch `3dworldvoronoi`)
+
+- Priorità del product owner: «è prioritario risolvere i problemi di pathfinding delle strade».
+- **Causa misurata** (T364, seme 1943, mappa 4×, ricerche intercettate): per ogni tratto `minimalCrossingRoadLeg` allarga la ricerca A* (12 → 24 → 42 U) finché il percorso ha più ponti del minimo `minimumRiverCrossings`, che però conosce solo i fiumi da bordo a bordo. Un fiume che va dal bordo al mare/lago dà minimo 0, quindi 3 tratti su 4 rifacevano 3 ricerche (47k/59k/75k nodi) ritrovando lo stesso percorso con 1 ponte.
+- **Correzioni:** (1) `riverCrossingLowerBoundWork`: limite inferiore dei ponti su una griglia grossolana da 2U (sfalsata di 0,731U) dove bloccano solo mare, laghi e montagne e tutto il resto è percorribile (ogni strada reale è anche un cammino qui), Dijkstra a secchi con il costo dei fiumi attraversati, cache per partenza finché ambiente/tela non cambiano, cooperativo; la ricerca si ferma appena i ponti sono provatamente minimi. (2) Percorso trovato ma con ponti non minimi: si salta direttamente al riquadro più largo (contiene tutti gli altri), i margini intermedi restano di riserva se esaurisce i nodi. (3) `pointInPolygon` dei poligoni ambientali grandi (≥24 vertici) a fasce orizzontali, stesso risultato. (4) Controllo della costa: firma completa solo ogni 512 chiamate. (5) Fette dei lavori stradali rilanciate con `MessageChannel` (niente ritardo minimo di 4 ms dei `setTimeout` annidati), ricaduta su `setTimeout` dove manca (sandbox dei test).
+- **Esito:** strade **byte-identiche** a `HEAD` precedente su T364 e T274 a 4×. Ricerche A* T364: da 11 a 4 (2/3/3/3 → 2/0/0/2); T274: 5. A/B alternato nelle stesse condizioni (T364 4×, 2 giri): codice precedente 208–215 s, nuovo 34–45 s (~5×), strade identiche in entrambi i giri. T274 4× 27 s → 11–23 s (misure isolate, rumorose).
+- **QA:** suite completa 210/212 prima dell'ultimo test, poi `environment-contains-perf` aggiornato (estrae anche le funzioni a fasce e verifica l'equivalenza esatta con il ciclo completo su 5000 punti) e PASS; nuovo caso in `qa/road-river-crossings-regression.cjs` (fiume bordo→mare: minimo 1, una sola ricerca; ruscello che finisce nell'entroterra: minimo 0). `founding` resta il controllo di tempo instabile sotto carico: A/B con e senza la nuova ricerca grossolana, entrambi falliscono a volte (140–243 ms senza, 145 con).
+
 ### 2026-11-25 — LOCAL-AREA-4X · Mappe locali esagonali 40000 U² e strade maestre veloci (branch `3dworldvoronoi`)
 
 - Branch locale `3dworldvoronoi` da `feature/region3d-tokens` (testa PR #281 `1af6f13` + token regionali), non pubblicata. Decisione D-LOCAL-AREA-261125.

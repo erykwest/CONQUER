@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-26 — ROADS-PATH-02 · Strade maestre: meno ricerche, stesse strade
+
+- Le strade maestre non rifanno più ricerche più larghe quando il ponte è inevitabile (limite dei ponti su griglia grossolana) e saltano al riquadro più largo quando serve; stesse strade, ricerche A* su T364 da 11 a 4. Roadmap e decisioni invariate.
+
 ### 2026-11-25 — LOCAL-AREA-4X · Mappe locali esagonali 40000 U²
 
 - Le mappe locali aperte dalla mappa regionale passano da 10000 a 40000 U² (lato ×2, bordo 50U invariato); A* delle strade maestre molto più veloce con le stesse strade; camera WebGL, pivot e zoom adattati alle tele grandi. Nuova decisione D-LOCAL-AREA-261125 (supera l'area fissa del 17/11); ROADMAP invariata.

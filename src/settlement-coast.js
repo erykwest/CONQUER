@@ -49,11 +49,12 @@
     return s;
   };
   function shore(){
-    // Within one burst of queries (a road search slice, a frame) the shore is checked once.
-    const now=typeof performance!=='undefined'?performance.now():Date.now();
+    // Same environment list, length and revision: only every 512th query re-checks the coastline
+    // signature (a road search asks this for every sampled point).
     const env=typeof State!=='undefined'&&State.environment||[],rev=typeof environmentRevision!=='undefined'?environmentRevision:0;
-    if(cache.data&&cache.seas&&now-cache.checkedAt<30&&cache.seas===seasMemo.seas&&
+    if(cache.data&&cache.seas&&((cache.calls=(cache.calls||0)+1)&511)&&cache.seas===seasMemo.seas&&
       seasMemo.list===env&&seasMemo.length===env.length&&seasMemo.rev===rev)return cache.data;
+    const now=0;
     const seas=seasOf();if(!seas.length)return null;
     const quick=quickSig(seas);
     if(cache.seas===seas&&cache.quick===quick){cache.checkedAt=now;return cache.data}
