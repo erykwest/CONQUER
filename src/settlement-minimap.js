@@ -6,8 +6,11 @@ window.ConquerMinimap=(()=>{
   const mini=document.getElementById('conquerMinimapCanvas');
   const toggle=document.getElementById('conquerMinimapToggle');
   if(!root||!mini||!toggle)return{requestDraw(){}};
-  const g=mini.getContext('2d');
-  if(!g)return{requestDraw(){}};
+  const screenG=mini.getContext('2d');
+  if(!screenG)return{requestDraw(){}};
+  // Drawing context of the helpers below: the minimap itself, or the cached static layer while it
+  // is rebuilt (see paint()).
+  let g=screenG;
   const preferenceKey='conquer.minimap.collapsed.v1';
   let pending=false,lastPaint=0,dragging=false,dragPointer=null,dragFrame=0,drawSize=190;
   const limit=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -173,10 +176,22 @@ window.ConquerMinimap=(()=>{
     g.beginPath();g.moveTo(center.x-3,center.y);g.lineTo(center.x+3,center.y);
     g.moveTo(center.x,center.y-3);g.lineTo(center.x,center.y+3);g.stroke();
   }
-  function paint(){
-    if(root.classList.contains('collapsed'))return;
-    resizeMap();
-    g.clearRect(0,0,drawSize,drawSize);
+  // Static layer (background, relief, environment, dark ring beyond a hex border) cached in an
+  // offscreen canvas: once main roads carve hundreds of grooves into continuous woodland, repainting
+  // every forest with its holes on each minimap refresh cost >100 ms and stalled the interface while
+  // exploring a 40000 U² map. Rebuilt only when its signature changes.
+  let staticLayer=null,staticSig=null,staticRefs=null;
+  function staticSignature(){
+    const parts=[mini.width,drawSize,State.season,State.biome,State.view.rotation||0,WORLD,
+      typeof environmentRevision!=='undefined'?environmentRevision:0,
+      typeof reliefBandRevision!=='undefined'?reliefBandRevision:0];
+    for(const f of State.environment||[]){
+      if(!f)continue;
+      parts.push(f.type,f.points?.length||0,f.holes?.length||0,f.width||0,f.x||0,f.y||0,f.rx||0,f.ry||0);
+    }
+    return parts.join('|');
+  }
+  function paintStatic(){
     g.fillStyle=State.season==='winter'?'#dce2dc':
       ({forest:'#33482e',mountains:'#646550',sea:'#536f75',hills:'#6c7950',valley:'#6c7950',river:'#59744f'}[State.biome]||'#607448');
     g.fillRect(0,0,drawSize,drawSize);
@@ -189,6 +204,27 @@ window.ConquerMinimap=(()=>{
       g.save();g.rect(0,0,drawSize,drawSize);g.fillStyle='#14160f';g.fill('evenodd');g.restore();
       g.strokeStyle='rgba(222,206,170,.45)';g.lineWidth=.8;g.stroke();
     }
+    g.restore();
+  }
+  function paint(){
+    if(root.classList.contains('collapsed'))return;
+    resizeMap();
+    const sig=staticSignature(),shape=typeof localShape==='function'?localShape():null;
+    const refs=[State.environment,State.relief,shape];
+    if(!staticLayer||sig!==staticSig||!staticRefs||refs.some((r,i)=>r!==staticRefs[i])){
+      if(!staticLayer)staticLayer=document.createElement('canvas');
+      if(staticLayer.width!==mini.width||staticLayer.height!==mini.height){staticLayer.width=mini.width;staticLayer.height=mini.height}
+      const layerG=staticLayer.getContext('2d');
+      layerG.setTransform(mini.width/drawSize,0,0,mini.height/drawSize,0,0);
+      layerG.clearRect(0,0,drawSize,drawSize);
+      g=layerG;
+      try{paintStatic()}finally{g=screenG}
+      staticSig=sig;staticRefs=refs;
+    }
+    g.clearRect(0,0,drawSize,drawSize);
+    g.save();g.setTransform(1,0,0,1,0,0);g.drawImage(staticLayer,0,0);g.restore();
+    g.save();
+    g.beginPath();g.rect(0,0,drawSize,drawSize);g.clip();
     const b=typeof buildZoneOutline==='function'?buildZoneOutline():[{x:BUILD_MIN,y:BUILD_MIN},{x:BUILD_MAX,y:BUILD_MIN},
       {x:BUILD_MAX,y:BUILD_MAX},{x:BUILD_MIN,y:BUILD_MAX}];
     if(poly(b)){

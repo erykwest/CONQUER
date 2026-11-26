@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-26 — MINIMAP-CACHE · Esplorazione fluida dopo la fondazione
+
+- La minimappa tiene in cache lo sfondo (terreno, foreste, acque) e lo ridisegna solo se l'ambiente cambia: dopo la fondazione su mappa 4× il pan passa da ~2 a ~8–15 fps (headless). Roadmap e decisioni invariate.
+
 ### 2026-11-26 — ROADS-PATH-03 · Strade maestre sotto i 3 s
 
 - Le strade maestre di fondazione su mappa 4× si tracciano in 2–3 s (prima 34–45 s): griglia del terreno per A* con ricontrollo esatto del percorso, niente ridisegni durante il calcolo. Strade praticamente uguali (8/10 identiche). Roadmap e decisioni invariate.
