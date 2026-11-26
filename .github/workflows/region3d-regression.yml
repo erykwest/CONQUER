@@ -21,6 +21,8 @@ on:
       - 'qa/regional-map3d-regression.cjs'
       - 'qa/regional-map3d-placeholders-regression.cjs'
       - 'qa/region-tokens-regression.cjs'
+      - 'src/regional-local-shape.js'
+      - 'qa/local-hex-shape-regression.cjs'
       - '.github/workflows/region3d-regression.yml'
   workflow_dispatch:
 
@@ -47,3 +49,5 @@ jobs:
         run: node qa/regional-map3d-placeholders-regression.cjs
       - name: Regional token kit (budgets, marker map, troop sprites, Asset Lab)
         run: node qa/region-tokens-regression.cjs
+      - name: Local hex map from the regional territory (40000 U² area, 50U offset border, river paths)
+        run: node qa/local-hex-shape-regression.cjs
