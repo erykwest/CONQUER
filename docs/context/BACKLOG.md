@@ -1,4 +1,11 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
+## 2026-11-26 — DEV-FREE-RESTYLE · Restyle gratis in DEV
+
+**FATTO sul branch `feat/dev-free-restyle`, NON MERGE.**
+
+- [x] Stile merlature e pendenza tetti gratis e immediati con freeBuild/fastBuild.
+- [ ] Verifica a mano in gioco del click «Adotta · gratis».
+
 
 ## 2026-11-24 — UI-BUILDERICON-02
 

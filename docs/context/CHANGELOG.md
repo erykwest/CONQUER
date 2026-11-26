@@ -1,4 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
+### 2026-11-26 — DEV-FREE-RESTYLE · Restyle gratis in DEV (`feat/dev-free-restyle`)
+
+Con freeBuild o fastBuild DEV attivi, il cambio globale dello stile delle merlature e della pendenza dei tetti di torri e porte è gratuito (preventivo vuoto in `crenelRestyleQuote`/`roofPitchQuote`) oltre che immediato. Nessuna regola di gioco cambia fuori dalle modalità DEV. ROADMAP e DECISIONS invariate. QA: roof-pitch e battlement-parapet regression PASS in locale.
+
 
 ### 2026-11-24 — UI-BUILDERICON-02 · Colori legacy delle icone del Builder (`fix/builder-icon-color`)
 
