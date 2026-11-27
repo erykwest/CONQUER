@@ -1,4 +1,23 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
+## 2026-11-26 — DEV-FREE-RESTYLE · Restyle gratis in DEV
+
+**FATTO sul branch `feat/dev-free-restyle`, NON MERGE.**
+
+- [x] Stile merlature e pendenza tetti gratis e immediati con freeBuild/fastBuild.
+- [ ] Verifica a mano in gioco del click «Adotta · gratis».
+
+
+## 2026-11-24 — UI-BUILDERICON-02
+
+- [ ] Valutare SVG con `currentColor` al posto del filtro CSS, per tinte esatte in hover/selezione.
+
+## 2026-11-25 — GRAPHSCHIC · Palette GRAFICA
+
+- [x] Pulsante nel Profilo › Generale e palette GRAFICA con Bordi e Gradienti.
+- [x] Cambio immediato senza reload per bordi (torri).
+- [ ] Verifica visiva del gradiente con lo stesso metodo.
+- [ ] Gradienti anche sulle coperture a falda (`gabled`) in `settlement-world3d.js`.
+- [ ] Inserire le opzioni nel Lab (AGENTS.md) in una PR successiva.
 
 ### 2026-11-24 — TOWER-FRAMED-TOP · Piano alto a graticcio delle torri W3
 
@@ -51,7 +70,7 @@
 - [x] Torre d'assedio L2 sul muro H2 a 2,35.
 - [x] Semitorri e porte in pietra sulla griglia; porta piccola rialzata.
 - [ ] Porta piccola con piano superiore in legno: solaio a 1,40 da allineare al camminamento H2 (2,35).
-- [ ] Rigenerare siege-engines-model.js da Blender con le nuove WALLS (oggi adattato in runtime).
+- [x] Rigenerare siege-engines-model.js da Blender con le nuove WALLS (SIEGE-HEIGHTS-261125, `fix/siege-heights`).
 - [ ] Audit del Lab in CI e baseline aggiornata.
 
 ### 2026-11-19 — HARDEN-261119 · Hardening della base main

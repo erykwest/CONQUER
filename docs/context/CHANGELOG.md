@@ -1,4 +1,20 @@
 # Livello 5 — Diario delle variazioni del contesto
+### 2026-11-26 — DEV-FREE-RESTYLE · Restyle gratis in DEV (`feat/dev-free-restyle`)
+
+Con freeBuild o fastBuild DEV attivi, il cambio globale dello stile delle merlature e della pendenza dei tetti di torri e porte è gratuito (preventivo vuoto in `crenelRestyleQuote`/`roofPitchQuote`) oltre che immediato. Nessuna regola di gioco cambia fuori dalle modalità DEV. ROADMAP e DECISIONS invariate. QA: roof-pitch e battlement-parapet regression PASS in locale.
+
+
+### 2026-11-25 — SIEGE-HEIGHTS-261125 · Macchine d'assedio alle nuove altezze dei muri
+
+`fix/siege-heights`: src/assets/siege-engines-model.js rigenerato in Blender 4.4 da tools/blender/build_siege_engines.py con le WALLS della griglia (H1 1,15, H2 2,35): cambia solo la torre d'assedio di livello 2 (camminamento 2,35, ponte 2,50, cima di combattimento 3,28, base 0,25 più lunga con ruote e serventi spostati). Tolto l'adattamento a runtime (fitAssaultTowers). Torri d'assedio: L1 con piano di base e ponte, senza parapetto posteriore in cima; L2 con piano di base, un pianerottolo intermedio, ponte e cima di combattimento (build_siege_engines.py). Scala d'assalto invariata, solo per H1: test aggiornato al limite H2 2,35.
+
+### 2026-11-24 — UI-BUILDERICON-02 · Colori legacy delle icone del Builder (`fix/builder-icon-color`)
+
+Ripristinato l'aspetto precedente a #284: tasti marroni (`--btn`) con icona beige; gli SVG neri sono tinti via `filter` CSS, scuri sul tasto selezionato arancione. Selettore Pietra/Argilla della Configurazione: solo icona della risorsa, nome nel tooltip. Rimosso lo sfondo beige chiaro (`#e8ddc6`) da tasti e glifi delle opzioni. SVG invariati, quindi audit del Lab non necessario. ROADMAP e DECISIONS invariate. QA: builder-menu-regression PASS in locale; CI remota non eseguita.
+
+### 2026-11-25 — GRAPHSCHIC · Palette GRAFICA: bordi e gradienti (`GRAPHSCHIC`)
+
+Nuova palette GRAFICA nel Profilo (tab Generale, pulsante «Apri palette GRAFICA»), con due interruttori: Bordi (contorni scuri per faccia) e Gradienti (pareti più scure alla base). Preferenze locali in `localStorage` (`settlement-graphics.js`), non fanno parte della partita; con le opzioni spente l'output è identico. Applicate alle torri (`settlement-castle3d.js`) e alle prisms (`settlement-world3d.js`). Il cambio si applica subito, senza reload (verificato: 672 linee spente, 5472 accese). Nessuna regola di gioco cambiata. Verifica visiva fatta in gioco, non nell'Asset Lab, su richiesta esplicita.
 
 ### 2026-11-25 — MESSENGER-CARD · Il messaggero a cavallo è una card World 3D (`fix/messenger-card`)
 

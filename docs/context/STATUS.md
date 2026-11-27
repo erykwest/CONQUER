@@ -1,4 +1,5 @@
 # Livello 2 — Stato tecnico e prove
+### 2026-11-26 — DEV-FREE-RESTYLE: cambi di stile gratis in DEV (`feat/dev-free-restyle`, NON MERGE)
 
 ### 2026-11-25 — MESSENGER-CARD: messaggero a cavallo come card World 3D (`fix/messenger-card`)
 
@@ -10,6 +11,24 @@
 - **CAVALIERI:** stesso metodo, con le loro parti: gualdrappa inquartata (volume proprio, quarti, orlo e stemma dipinti sopra), crinet e testiera sul collo e sul muso, pennacchio, mantello foderato, lancia e braccio sul lato lontano, cotta e sopravveste, scudo sul lato vicino. Elmo (5 stili), scudo (default + 5) e cimiero (5) sono layer resi con la base presente e dipinti sopra; set di pose: fermo, passo (p0..p7) e carica con lancia in resta (r0..r7, `charge` in `ConquerMounted2D.draw`). In battaglia (`drawMountedKnight`) il cavaliere sceglie una delle 8 viste; guardia, colpo, lampo e caduta restano sul profilo 2D. Lo stemma del regno si dipinge nelle regioni araldiche (`paint`). Driver: `tools/blender/build_mounted_views.py`. Lab: «Cavaliere a cavallo · 8 viste», «Messaggero a cavallo · 8 viste».
 - **DA RIVEDERE:** `src/assets/mounted-views.js` pesa ~2,1 MB (cavaliere ~1,75 MB); audit del Lab (`qa/asset-audit.mjs`) non eseguito per le due voci nuove; cavalieri non verificati in una battaglia reale.
 
+- **CODICE:** `settlement-castle-structures.js` `devFreeRestyle()`: con freeBuild o fastBuild DEV attivi, `crenelRestyleQuote` e `roofPitchQuote` restituiscono un costo vuoto; le schede «Stile delle merlature» e «Pendenza dei tetti» mostrano «Adotta · gratis». Il cambio era già immediato. Senza DEV il costo resta invariato.
+- **PROVE:** `node qa/roof-pitch-regression.cjs` e `qa/battlement-parapet-regression.cjs` PASS in locale; in browser `roofPitchQuote(60)` con freeBuild = `{}`. Click in gioco non verificato.
+
+### 2026-11-25 — GRAPHSCHIC: palette GRAFICA (`GRAPHSCHIC`)
+
+### 2026-11-24 — UI-BUILDERICON-02: icone Builder di nuovo beige su marrone (`fix/builder-icon-color`, NON MERGE)
+
+Solo CSS (`settlement.css`, cache `buildericon-2`); verificato in browser su barra e catalogo del Builder.
+
+- Opzioni grafiche Bordi e Gradienti attive in gioco per torri e prisms; cambio immediato.
+- Gradiente non ancora verificato visivamente con lo stesso conteggio usato per i bordi.
+- Lab non aggiornato per questa modifica (richiesta esplicita di saltarlo).
+
+
+### 2026-11-25 — SIEGE-HEIGHTS-261125: macchine d'assedio rigenerate (branch `fix/siege-heights`, NON MERGE)
+- Modello rigenerato in Blender 4.4 (cq_blender.py non è nel repo: usata la copia locale di autobuild/tools/blender). Solo tower2 diverso dal modello precedente; ram, catapult, trebuchet, mantlet, ladder, ballista, tower identici.
+- Piani: L1 base + ponte, senza parapetto posteriore; L2 base + un pianerottolo intermedio + ponte + cima. Cambia solo la geometria del telaio di tower e tower2, rig invariato.
+- PASS siege-engines, siege-assault (ponte su H2 entro 0,06), combat-sectors, codex-wiki (catalog rigenerato), stonecolor, trebuchet, tower-weapons, siege-damage-converge, gate-breach. Verificato a vista con l'anteprima d'assedio: torre L1 su H1, torre L2 su H2, scala su H1. Audit Lab non eseguibile in locale (manca Playwright): da CI.
 ### 2026-11-24 — TOWER-FRAMED-TOP: piano alto a graticcio delle torri W3 (branch `feature/framed-top-towers`, NON MERGE)
 
 - **CODICE:** variante torre `upper` 'stone'/'timber' (`settlement-core.js` `towerTimberUpperAllowed`/`towerTimberUpper`, `TOWER_TIMBER_COST` {wood:45}, `TOWER_JETTY` .1): solo torri quadrate in pietra W3, L2+, cima integra; tetto sempre a falde (niente merli, caditoie, ballatoio, garitte). Costo: torre un livello più bassa + solo legno. Fuoco (`settlement-fire.js`): parte 'upper' (flam .85, 50 s); bruciata, la torre perde il piano (brokenTop), muratura integra. Render: piano in intonaco a sbalzo, gronda allargata, intelaiatura fitta (`timberStoreyFacade` dense), niente aperture in pietra sopra il piano. Ispettore (UI classica e profilo) «Piano alto: Pietra / Graticcio». Nuova torre lignea a telaio H3 (`woodStyle:'frameTower3'`, {gold:80,wood:190}, 9 giorni): P1 e P2 del modello H2, P3 intonacato a sbalzo 0,1 U con intelaiatura fitta (`settlement-wood3d.js` `addFramedP3`), tetto a falde senza parapetto (deck, tetto e bandiera del modello tolti). La H2 resta invariata. Sezione costruita W1 L2 con P1 a graticcio (variante `built.upper`, `builtTimberUpper`, +14 legno per U, sbalzo 0,1 U sui lati lunghi, intelaiatura fitta a campate, fuoco 'upper' che la riporta a L1; graticcio anche sui lati corti, frontoni intonacati, bifore sul lato interno: `pairedTimberBay`, graticcio anche sul frontone); P0 delle sezioni W1 standard (pietra e graticcio, `builtGroundFront`): niente feritoie, porta nella campata centrale e una bifora gotica (`gothicL2`) nelle altre sul lato cortile; camini delle sezioni W1 dimezzati (uno ogni 3 U di colmo); l'Asset Lab rispetta i limiti di lunghezza di `TYPES` (W1 max 4 U) invece dei 7,5 U fissi; schede codex `upgrade:tower.upper.*` e `upgrade:built.upper.*`. Lab: due varianti «framed top».
