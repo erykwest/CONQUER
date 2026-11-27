@@ -1,4 +1,15 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
+## 2026-11-27 — TERRAIN-EDGES-261127 · Bordi frastagliati di rupi, boschi e coste
+
+**FATTO sul branch `feat/ragged-terrain-edges`, NON MERGE.**
+
+- [x] Strati delle colline senza sbalzo sul livello sottostante.
+- [x] Rupi: bordi di roccia frastagliati, sassi, ciuffi e cespugli stagionali.
+- [x] Boschi: margine del sottobosco frastagliato con ciuffi, sassi e cespugli.
+- [x] Coste: spiagge e scogli frastagliati, giunzione scogli/spiaggia a denti con lastre.
+- [ ] Radure interne dei boschi e rive di laghi/paludi.
+- [ ] Ridisegno parziale della texture: saltare le rupi fuori dal riquadro.
+
 ## 2026-11-26 — DEV-FREE-RESTYLE · Restyle gratis in DEV
 
 **FATTO sul branch `feat/dev-free-restyle`, NON MERGE.**

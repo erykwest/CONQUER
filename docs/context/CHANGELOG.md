@@ -1,4 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
+### 2026-11-27 — TERRAIN-EDGES-261127 · Bordi frastagliati di rupi, boschi e coste (`feat/ragged-terrain-edges`)
+
+Strati delle colline senza sbalzo: il pendio di un livello non esce dal livello sottostante. Attorno alle rupi, ai margini dei boschi e lungo spiagge e scogli i passaggi di materiale sono frastagliati (profilo irregolare, nessuna sfumatura), con sassi, ciuffi d'erba e cespugli 3D che seguono la stagione; tra scogli e spiaggia la roccia si spezza a denti con lastre sulla sabbia. Solo resa grafica: alberi, percorribilita e zone costiere invariati. ROADMAP e DECISIONS invariate. QA: regressioni di rilievo, boschi e coste PASS in locale; CI remota da verificare.
+
 ### 2026-11-26 — DEV-FREE-RESTYLE · Restyle gratis in DEV (`feat/dev-free-restyle`)
 
 Con freeBuild o fastBuild DEV attivi, il cambio globale dello stile delle merlature e della pendenza dei tetti di torri e porte è gratuito (preventivo vuoto in `crenelRestyleQuote`/`roofPitchQuote`) oltre che immediato. Nessuna regola di gioco cambia fuori dalle modalità DEV. ROADMAP e DECISIONS invariate. QA: roof-pitch e battlement-parapet regression PASS in locale.

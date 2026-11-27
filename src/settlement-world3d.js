@@ -965,6 +965,15 @@
       }
     }
     S.stats.forestBushes=forestBushes;
+    // Bushes along cliff borders (summit lip, foot, slopes beside a cliff).
+    const borderBushes=[...(typeof cliffBorderBushLayout==='function'?cliffBorderBushLayout():[]),
+      ...(typeof forestEdgeBushLayout==='function'?forestEdgeBushLayout():[]),...(window.ConquerCoast?.edgeBushes?.()||[])];
+    for(const b of borderBushes){
+      const uv=atlas.map.get(bushTileKey(b.shape,b.p));if(!uv)continue;
+      let [u0,v0,u1,v1]=uv;if(b.flip)[u0,u1]=[u1,u0];
+      const hr=580/920*b.scale,C=[[-.5,-.97*hr,u0,v0],[.5,-.97*hr,u1,v0],[.5,.03*hr,u1,v1],[-.5,.03*hr,u0,v1]];
+      for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(b.p.x,b.p.y,b.z+.01,cx,cy,b.width,u,w)}
+    }
     // River, stream and marsh bank bushes: the legacy 2D bush sprites, not the 3D scatter models.
     for(const p of S.scatterProps||[]){
       if(!window.ConquerScatter?.isBankBush?.(p))continue;
@@ -1746,7 +1755,7 @@
     // whole ground. Season and wetness re-bake the whole ground too. Structure and urban-lot edits only
     // re-bake the tiles they touch, one per frame (pumpGroundTiles).
     const meshSig=[season,State.stonePaletteId,State.biome,State.relief?.seed,terraformSig,(State.environment||[]).length,envRev].join('|');
-    const gSig=[meshSig,wet(),typeof forestGroundKey==='function'?forestGroundKey():'',typeof springFlowersOn==='function'?springFlowersOn():''].join('|');
+    const gSig=[meshSig,wet(),typeof bushSeasonKey==='function'?bushSeasonKey():'',typeof forestGroundKey==='function'?forestGroundKey():'',typeof springFlowersOn==='function'?springFlowersOn():''].join('|');
     const tSig=[gSig,groundLotsSignature(),structuresSig('ground')].join('|');
     if(S.sig.terrain!==tSig){
       const a=performance.now(),items=groundItems();
