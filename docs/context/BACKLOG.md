@@ -245,6 +245,12 @@ Implementato nel branch `fix/territory-clay-stone-access`. Nuove mappe con acqua
 - [x] Convogli signorili di ritorno orientati verso casa, carro di testa davanti.
 - [x] Messaggero di ritorno orientato nel verso di marcia.
 - [x] Messaggero sulle strade anche quando il grafo pedonale rifiuta il percorso.
+- [x] Messaggero come card World 3D con collider a scatola, passo in tempo reale e 8 viste dal disegno approvato costruito in Blender (MESSENGER-CARD, `fix/messenger-card`).
+- [x] Cavalieri (`drawMountedKnight`) con lo stesso metodo, con le loro parti: gualdrappa, crinet, mantello, scudo, lancia, elmo e cimiero (layer per elmo/scudo/cimiero, carica con lancia in resta).
+- [ ] Ridurre il peso di `src/assets/mounted-views.js` (~2,1 MB): viste speculari, semplificazione per layer, caricamento differito.
+- [ ] Viste fuori profilo anche per guardia, colpo e caduta del cavaliere (oggi restano sul profilo).
+- [x] Carretto, carro e carrozza in 8 viste con collider a scatola (WAGON-VIEWS, `feature/wagon-views`).
+- [ ] Conducente dei carri col guardaroba stagionale anche nelle viste ruotate; sobbalzo del carico col passo.
 - [ ] Salvataggi con un messaggero già in viaggio su un percorso in linea retta: lo tiene fino all'arrivo (non ricalcolato).
 
 ## 2026-11-18 — UI-UPG-01 · Ampliamenti dall'ispettore
