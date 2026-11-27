@@ -255,6 +255,8 @@ Implementato nel branch `fix/territory-clay-stone-access`. Nuove mappe con acqua
 - [ ] 8 viste per le animazioni di lavoro (`settlement-work-anim.js`, oggi profilo sinistra/destra) e per personale, corte, equipaggi e carrettieri (passare `dot.view`/`dot.heading`).
 - [ ] 8 viste per gli animali 2D.
 - [ ] Verifica in partita di battaglie e pattuglie con le nuove viste.
+- [x] Carretto, carro e carrozza in 8 viste con collider a scatola (WAGON-VIEWS, `feature/wagon-views`).
+- [ ] Conducente dei carri col guardaroba stagionale anche nelle viste ruotate; sobbalzo del carico col passo.
 - [ ] Salvataggi con un messaggero già in viaggio su un percorso in linea retta: lo tiene fino all'arrivo (non ricalcolato).
 
 ## 2026-11-18 — UI-UPG-01 · Ampliamenti dall'ispettore
