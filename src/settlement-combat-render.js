@@ -215,7 +215,7 @@
       helmet:livery?null:State.policies?.unitHelmet||null,shield:livery?null:State.policies?.unitShield||null};
     // Eight views (settlement-mounted2d.js drawView): the profile is the 2D art itself; the other six
     // come from the same art built in 3D. Short actions (guard, blow, flash, fall) keep the profile.
-    const view=M2.viewOf?M2.viewOf(b.x-a.x,b.y-a.y):'E';
+    const view=M2.viewAt?M2.viewAt(p,{x:Math.cos(r.heading),y:Math.sin(r.heading)}):'E';
     const action=pose&&(pose.ready>.05||Math.abs(pose.attack||0)>.05||pose.flash>.05||pose.fall>0||(pose.alpha??1)<1);
     withUrbanFigureOcclusion(p,z,()=>{
       const s=w2s(p,z),size=Math.max(1.5,State.view.scale*5.75);
