@@ -1,4 +1,10 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
+## 2026-11-27 — MOUNTAIN-STAR-CRAGS · Montagne a stella e costoni
+
+- [x] Base a stella irregolare delle montagne (branch `feature/mountain-star-crags`).
+- [x] Costoni di roccia al piede (diradati) con ghiaione e placche rocciose in vetta, 3D e 2D.
+- [ ] Taratura densità costoni/placche dopo revisione visiva; i costoni non bloccano ancora il pathing né la costruzione.
+
 ## 2026-11-26 — DEV-FREE-RESTYLE · Restyle gratis in DEV
 
 **FATTO sul branch `feat/dev-free-restyle`, NON MERGE.**

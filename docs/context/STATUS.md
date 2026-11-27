@@ -1,4 +1,8 @@
 # Livello 2 — Stato tecnico e prove
+### 2026-11-27 — MOUNTAIN-STAR-CRAGS: montagne a stella con costoni di roccia (`feature/mountain-star-crags`, NON MERGE)
+
+Base delle montagne a stella irregolare (punte e rientranze alternate, `MOUNTAIN_STAR`), costoni con la grafica delle cliff al piede (~1/3 delle facce, `MOUNTAIN_FOOT_CRAG_CHANCE`) con ghiaione di massi low-poly e placche di roccia nuda in vetta sopra la neve. Renderer 3D (`buildMountains`) e 2D (`drawRaisedFan`) condividono `mountainCragLayout`. Regressioni montagne/terreno PASS in locale; CI remota da eseguire.
+
 ### 2026-11-26 — DEV-FREE-RESTYLE: cambi di stile gratis in DEV (`feat/dev-free-restyle`, NON MERGE)
 
 - **CODICE:** `settlement-castle-structures.js` `devFreeRestyle()`: con freeBuild o fastBuild DEV attivi, `crenelRestyleQuote` e `roofPitchQuote` restituiscono un costo vuoto; le schede «Stile delle merlature» e «Pendenza dei tetti» mostrano «Adotta · gratis». Il cambio era già immediato. Senza DEV il costo resta invariato.

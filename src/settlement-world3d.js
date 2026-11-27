@@ -486,6 +486,17 @@
         if(q.snow.length)m.face(q.snow,mountainSnowColor(f,a,b,i));
         for(const cut of q.cuts)m.face(cut,window.ConquerStoneColor?.shade('#514a40')||'#514a40');
       }
+      // Rock crags (cliff look) at the foot and high on the peak, lifted off the facet against z-fighting.
+      if(typeof mountainCragLayout==='function'&&f.height){
+        const shade=h=>window.ConquerStoneColor?.shade(h)||h,winter=typeof isSnowGround==='function'&&isSnowGround();
+        for(const crag of mountainCragLayout(f,f.height)){
+          crag.polys.forEach((poly,k)=>{
+            const clip=typeof clipTerrainPolygon==='function'?clipTerrainPolygon(poly):poly;
+            if(clip.length>=3)m.face(clip.map(p=>({...p,z:p.z+.08})),shade(['#6f7477','#676c6f','#787d80'][(crag.i+k)%3]));
+          });
+          for(const r of crag.rocks)for(const face of mountainRockFaces(r))m.face(face.poly,face.top&&winter?'#e6ecee':shade(face.color));
+        }
+      }
     }
     return new Float32Array(m.tris);
   }

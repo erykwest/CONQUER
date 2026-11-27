@@ -1,5 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
 ### 2026-11-26 — DEV-FREE-RESTYLE · Restyle gratis in DEV (`feat/dev-free-restyle`)
+### 2026-11-27 — MOUNTAIN-STAR-CRAGS · Montagne a stella con costoni di roccia
+
+`feature/mountain-star-crags`: la base delle montagne passa da poligono quasi circolare a stella irregolare (4–6 braccia, creste e valli alternate con variazione casuale). Costoni di roccia riusando la grafica delle cliff: fascia frastagliata al piede su circa un terzo delle facce, con ghiaione di massi, e placche di roccia nuda alte sulla punta. ROADMAP e DECISIONS invariate: modifica solo visiva del paesaggio. QA: `mountain-density`, `regional-surroundings`, `p1-terrain` PASS in locale.
+
 
 Con freeBuild o fastBuild DEV attivi, il cambio globale dello stile delle merlature e della pendenza dei tetti di torri e porte è gratuito (preventivo vuoto in `crenelRestyleQuote`/`roofPitchQuote`) oltre che immediato. Nessuna regola di gioco cambia fuori dalle modalità DEV. ROADMAP e DECISIONS invariate. QA: roof-pitch e battlement-parapet regression PASS in locale.
 
