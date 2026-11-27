@@ -460,8 +460,11 @@ function footViewOfScreen(dx,dy){
 function footViewOf(p,h){
   if(typeof h==='string')return FOOT_VIEW_YAW[h]!==undefined?h:'S';
   if(!h||!(Math.hypot(h.x,h.y)>1e-6)||typeof w2sRaw!=='function')return'S';
-  const a=w2sRaw(p,0),b=w2sRaw({x:p.x+h.x,y:p.y+h.y},0);
-  return footViewOfScreen(b.x-a.x,b.y-a.y);
+  // As ConquerMounted2D.viewAt: the screen axes normalised, so the flattened ground (iso) does not
+  // push every heading toward E/W; the eight ground directions get the eight views evenly.
+  const o=w2sRaw(p,0),X=w2sRaw({x:p.x+1,y:p.y},0),Y=w2sRaw({x:p.x,y:p.y+1},0);
+  const a=X.x-o.x,b=Y.x-o.x,c=X.y-o.y,d=Y.y-o.y,A=Math.hypot(a,b)||1,B=Math.hypot(c,d)||1;
+  return footViewOfScreen((a*h.x+b*h.y)/A,(c*h.x+d*h.y)/B);
 }
 // The turn of a view (null for S: the approved art, untouched).
 function footTurn(view){

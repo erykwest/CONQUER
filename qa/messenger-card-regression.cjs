@@ -18,7 +18,7 @@ assert.match(render,/ConquerSoldiers\?\.drawCards\?\.\(\)/,'the relay rider card
 assert.match(diplomacy,/window\.ConquerWorld3D\?\.active\?\.\(\)&&window\.ConquerMounted2D\?\.card&&/,'the courier overlay yields to the World 3D card');
 assert.match(soldiers,/window\.ConquerWorld3D\?\.active\?\.\(\)&&window\.ConquerMounted2D\?\.card\)return;/,'the relay overlay yields to the World 3D card');
 assert.doesNotMatch(diplomacy,/t:day\(\)\*7/,'the courier gait is no longer tied to the game clock');
-assert.match(mounted,/window\.ConquerMounted2D=\{draw,drawView,card,lanceGeometry,VIEW_NAMES,viewOf,phaseOf\}/);
+assert.match(mounted,/window\.ConquerMounted2D=\{draw,drawView,card,lanceGeometry,VIEW_NAMES,viewOf,viewAt,phaseOf\}/);
 
 // The off-profile views (tools/blender/mounted_views.py): the approved 2D art built part by part in
 // Blender, one frame per pose (idle + 8 stride phases), regions coloured by coat/livery tokens.

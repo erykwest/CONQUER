@@ -299,6 +299,15 @@
   // The 8 screen directions. Index 0 = E (the art's own facing), then clockwise on screen.
   const VIEW_NAMES=['E','SE','S','SW','W','NW','N','NE'];
   function viewOf(dx,dy){return VIEW_NAMES[((Math.round(Math.atan2(dy,dx)/(Math.PI/4))%8)+8)%8]}
+  // The view of a heading h (world vector) at ground point p, measured on the ground as the camera sees
+  // it: each screen axis is normalised by how long a unit ground step can get on it. The camera looks
+  // down, so the screen squashes depth (y) about in half: the raw screen angle would round a road along
+  // a world axis (~27 deg on screen) to E/W and the diagonal views would almost never show.
+  function viewAt(p,h){
+    const o=w2sRaw(p,0),X=w2sRaw({x:p.x+1,y:p.y},0),Y=w2sRaw({x:p.x,y:p.y+1},0);
+    const a=X.x-o.x,b=Y.x-o.x,c=X.y-o.y,d=Y.y-o.y,A=Math.hypot(a,b)||1,B=Math.hypot(c,d)||1;
+    return viewOf((a*h.x+b*h.y)/A,(c*h.x+d*h.y)/B);
+  }
   // Off-profile views of the same figure (src/assets/mounted-views.js): the approved 2D art built in
   // Blender part by part (tools/blender/mounted_views.py), rendered per view and per stride phase,
   // traced back into the art's own units. Each region is filled in its part's colour (coat, livery or
@@ -352,7 +361,7 @@
     const W=window.ConquerWorld3D,A=window.ConquerAnimals;
     if(!W?.figure||!A?.capsule||typeof w2s!=='function'||typeof w2sRaw!=='function')return false;
     const h=o.heading&&Math.hypot(o.heading.x,o.heading.y)>1e-6?o.heading:{x:1,y:0};
-    const a=w2sRaw(p,0),b=w2sRaw({x:p.x+h.x,y:p.y+h.y},0),view=viewOf(b.x-a.x,b.y-a.y);
+    const view=viewAt(p,h);
     const moving=o.mode==='walk',seed=o.seed||0;
     const c=moving?performance.now()/1000*WALK_HZ+seed/(Math.PI*2):0;
     const phase=moving?Math.floor((c-Math.floor(c))*CARD_PHASES):null;
@@ -382,5 +391,5 @@
   }
   // Stride phase (0..7) of a gait clock t, as drawAnimal cycles it (walk t*1.6, run t*2.2 per second).
   const phaseOf=(t,mode)=>{const c=t*(mode==='run'?RUN_HZ:WALK_HZ);return Math.floor((c-Math.floor(c))*CARD_PHASES)};
-  window.ConquerMounted2D={draw,drawView,card,lanceGeometry,VIEW_NAMES,viewOf,phaseOf};
+  window.ConquerMounted2D={draw,drawView,card,lanceGeometry,VIEW_NAMES,viewOf,viewAt,phaseOf};
 })();
