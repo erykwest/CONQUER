@@ -258,6 +258,8 @@ Implementato nel branch `fix/territory-clay-stone-access`. Nuove mappe con acqua
 - [ ] Viste fuori profilo anche per pascolo, corsa, allerta, ululato, orso in piedi/che dorme (oggi profilo).
 - [ ] Ridurre il peso di `src/assets/animal-views.js` (~1 MB): semplificazione, caricamento differito.
 - [ ] Verifica in partita di battaglie e pattuglie con le nuove viste.
+- [x] Carretto, carro e carrozza in 8 viste con collider a scatola (WAGON-VIEWS, `feature/wagon-views`).
+- [ ] Conducente dei carri col guardaroba stagionale anche nelle viste ruotate; sobbalzo del carico col passo.
 - [ ] Salvataggi con un messaggero già in viaggio su un percorso in linea retta: lo tiene fino all'arrivo (non ricalcolato).
 
 ## 2026-11-18 — UI-UPG-01 · Ampliamenti dall'ispettore

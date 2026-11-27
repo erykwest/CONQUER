@@ -40,13 +40,21 @@ def extract(work, name, kind, options, fresh):
 
 def main():
     work = os.path.abspath(sys.argv[1])
-    kinds = ["messenger", "knight"]
+    kinds = ["messenger", "knight", "cart", "wagon", "coach"]
     if "--kinds" in sys.argv:
         kinds = sys.argv[sys.argv.index("--kinds") + 1].split(",")
     fresh = "--fresh" in sys.argv
     blender = os.environ.get("BLENDER", r"C:\Program Files\Blender Foundation\Blender 4.4\blender.exe")
     traced = []
     for kind in kinds:
+        if kind in ("cart", "wagon", "coach"):
+            # Vehicles: wagon_views.py builds the vehicle from settlement-wagons.js's numbers, the team
+            # and driver from the art, cargo as layers; module key vehicle:<kind>.
+            d = extract(work, f"vehicle-{kind}", "wagon", {"vehicle": kind}, fresh)
+            renders = os.path.join(work, f"vehicle-{kind}-renders")
+            run([blender, "-b", "-P", os.path.join(HERE, "wagon_views.py"), "--", d, renders])
+            traced.append(f"vehicle:{kind}={renders}")
+            continue
         if kind == "messenger":
             config = {"base": extract(work, "messenger", "messenger", {}, fresh), "exclude": [], "views": VIEWS,
                       "sets": [{"name": "rest", "poses": REST}]}

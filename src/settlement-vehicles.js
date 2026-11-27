@@ -211,16 +211,35 @@
     const keep=w2s;w2s=()=>({x:sx,y:sy});
     try{drawVillagerFigureUnmasked({...dot,p:{x:0,y:0}})}finally{w2s=keep}
   }
-  function vehicleCardKey(c,v,k,cargo,bucket,dot){
+  function vehicleCardKey(c,v,k,cargo,bucket,dot,view){
     const look=typeof villagerLookKey==='function'?villagerLookKey(dot):dot.kind;
-    return['veh',k.chassis,v.spec.team.map(h=>h.coat||'').join(','),cargo.join(','),v.moving?bucket:'still',look].join('|');
+    return['veh',k.chassis,v.spec.team.map(h=>h.coat||'').join(','),cargo.join(','),v.moving?bucket:'still',look,view||''].join('|');
   }
-  function drawCard(c,v,k,cargo,facing){
+  // Screen-x share of the forward axis in each of the 8 views (the card centres the composition on it).
+  const VIEW_SX={E:1,SE:Math.SQRT1_2,S:0,SW:-Math.SQRT1_2,W:-1,NW:-Math.SQRT1_2,N:0,NE:Math.SQRT1_2};
+  function drawCard(c,v,k,cargo,facing,view){
     const W3=window.ConquerWorld3D;if(!W3?.figure||!W3.FIGURE_CARD_U)return false;
     const ext=cardExtent(k.chassis,v.spec.team.length),cardU=W3.FIGURE_CARD_U;
     const span=Math.max(1,(ext.widthU+.12)/cardU);
     const bucket=v.moving?Math.floor((((v.s*.5*WALK_HZ)%1)+1)%1*GAIT_PHASES):0;
     const dot=driverLook(c),cart=k.chassis==='cart';
+    // Off-profile views (settlement-mounted2d.js drawVehicleView, built in Blender from this very
+    // composition): the vehicle turns with the road. The profile keeps the 2D painter below.
+    const M2=window.ConquerMounted2D,vk=KINDS[c.vehicle]?c.vehicle:'wagon';
+    const turned=view&&view!=='E'&&view!=='W'&&M2?.drawVehicleView&&window.ConquerMountedViews?.['vehicle:'+vk]?.views?.[view];
+    const sx=turned?VIEW_SX[view]:facing;
+    // Box collider along the heading: the composition's length, the bed's width (U).
+    const half=ext.widthU/2,hx=Math.cos(v.heading)*half,hy=Math.sin(v.heading)*half;
+    const capsule={axis:{x:hx,y:hy},z:110*U_PER_ART,r:62*U_PER_ART,kind:'vehicle',box:true};
+    if(turned){
+      const paintTurned=g=>{
+        const f=w2s(),size=teamSize(),u=size*U_PER_ART*12/5.75;
+        M2.drawVehicleView(g,f.x-sx*ext.mid*u,f.y,size,{vehicle:vk,view,phase:v.moving?bucket:null,team:v.spec.team,cargo,
+          driver:(gg,px,py)=>paintVillagerAt(dot,px,py)});   // the same villager as the profile
+      };
+      return W3.figure({x:v.x,y:v.y},.1,vehicleCardKey(c,v,k,cargo,bucket,dot,view),paintTurned,
+        'vehicle-'+c.id+'-'+v.i,false,{span,ox:sx*ext.mid*U_PER_ART/(cardU*span),capsule});
+    }
     const paint=g=>{
       const W2=window.ConquerWagons,f=w2s(),size=teamSize(),u=size*U_PER_ART*12/5.75;   // px per art unit
       const pxU=(typeof U!=='undefined'?U:12)*(State.view.scale||1);
@@ -233,7 +252,7 @@
     };
     const ox=facing*ext.mid*U_PER_ART/(cardU*span);
     return W3.figure({x:v.x,y:v.y},.1,vehicleCardKey(c,v,k,cargo,bucket,dot),paint,
-      'vehicle-'+c.id+'-'+v.i,facing<0,{span,ox});
+      'vehicle-'+c.id+'-'+v.i,facing<0,{span,ox,capsule});
   }
   // Draw one convoy into the current 2D ctx, back to front.
   function draw(c,points){
@@ -245,9 +264,9 @@
     for(const it of items){
       if(it.e){drawEscort(c,it.e);continue}
       const v=it.v,a=w2sRaw(v,0),b=w2sRaw({x:v.x+Math.cos(v.heading),y:v.y+Math.sin(v.heading)},0);
-      const facing=b.x>=a.x?1:-1;
+      const facing=b.x>=a.x?1:-1,view=window.ConquerMounted2D?.viewAt?.(v,{x:Math.cos(v.heading),y:Math.sin(v.heading)});
       const cargo=v.spec.cargo.length?v.spec.cargo:(k.chassis==='carriage'||c.emptyReturn)?[]:['crate'];
-      if(drawCard(c,v,k,cargo,facing))continue;
+      if(drawCard(c,v,k,cargo,facing,view))continue;
       const scr=w2s(v,.15);
       W2.drawWagon(ctx,scr.x,scr.y,size,{chassis:k.chassis,team:v.spec.team,cargo,covered:false,
         facing,moving:v.moving,t:v.s*.5,distance:v.s*(typeof U!=='undefined'?U:12)*(State.view.scale||1)});
