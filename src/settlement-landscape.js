@@ -606,14 +606,19 @@ const mountainPineCache=new Map();
 function mountainPineLayout(f){
   const pineZ=mountainPineZ(),key=f.id+':'+State.seed+':'+(f.height||0)+':'+pineZ.toFixed(3);
   if(mountainPineCache.has(key))return mountainPineCache.get(key);
-  const rnd=seedRand((State.seed^biomeHash(f.id+':pines'))>>>0),b=environmentPolygonBounds(f.points),step=2.6/Math.sqrt(1.5),out=[]; // 1.5x the pines, at 75% size
+  const rnd=seedRand((State.seed^biomeHash(f.id+':pines'))>>>0),b=environmentPolygonBounds(f.points),step=2.6/Math.sqrt(3),out=[]; // 3x the pines, at 75% size
   const others=State.environment.filter(o=>o.type==='mountain'&&o!==f);
+  // No pines on the rock crags (foot bands and summit slabs).
+  const cragPolys=f.height&&typeof mountainCragLayout==='function'?mountainCragLayout(f,f.height).flatMap(c=>c.polys):[];
+  const cragBox=cragPolys.map(q=>environmentPolygonBounds(q));
+  const onCrag=p=>cragPolys.some((q,k)=>{const bb=cragBox[k];return p.x>=bb.minX-.6&&p.x<=bb.maxX+.6&&p.y>=bb.minY-.6&&p.y<=bb.maxY+.6&&(pointInPolygon(p,q)||q.some(v=>Math.hypot(v.x-p.x,v.y-p.y)<.6))});
   for(let y=b.minY;y<=b.maxY;y+=step)for(let x=b.minX;x<=b.maxX;x+=step){
     const p={x:x+(rnd()-.5)*step*.8,y:y+(rnd()-.5)*step*.8},shade=rnd(),scale=.9+rnd()*.45,flip=rnd()<.5;
     if(!pointInPolygon(p,f.points))continue;
     const z=mountainSurfaceZ(f,p),h=f.height||3.6;
     if(z>pineZ||z>h||z<.05)continue;
     if(others.some(o=>pointInPolygon(p,o.points)&&mountainSurfaceZ(o,p)>z))continue;
+    if(onCrag(p))continue;
     out.push({p,z,facet:mountainFacet(f,p),shade:shade<.5?0:1,scale,flip});
   }
   mountainPineCache.set(key,out);return out;
@@ -714,7 +719,7 @@ function mountainFacetPolygons(f,height=f.height||3.6){
 }
 // Rock crags reusing the cliff look: a jagged cliff band at the foot of every facet with scree
 // boulders on it and just outside the base, plus bare rock slabs high on the peak (over the snow).
-const mountainCragCache=new Map(),MOUNTAIN_FOOT_CRAG_CHANCE=.33;
+const mountainCragCache=new Map(),MOUNTAIN_FOOT_CRAG_CHANCE=1;
 function mountainCragLayout(f,height){
   const base=f.unclippedPoints||f.points,key=f.id+':'+State.seed+':'+height.toFixed(3)+':'+base.length;
   if(mountainCragCache.has(key))return mountainCragCache.get(key);

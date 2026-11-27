@@ -999,11 +999,14 @@
     // Pines on the lower half of the mountains, standing on the cone surface.
     for(const f of State.environment||[]){
       if(f.type!=='mountain'||!f.height||typeof mountainPineLayout!=='function')continue;
+      const slope=Math.min(2,f.height/Math.max(1,Math.sqrt((f.rx||8)*(f.ry||8))));
       for(const t of mountainPineLayout(f)){
         const uv=atlas.map.get('pine:'+t.shade);if(!uv)continue;
         let [u0,v0,u1,v1]=uv;if(t.flip)[u0,u1]=[u1,u0];
         const size=(typeof MOUNTAIN_PINE_SIZE!=='undefined'?MOUNTAIN_PINE_SIZE:1.8)*t.scale,C=[[-.5,-.97,u0,v0],[.5,-.97,u1,v0],[.5,.03,u1,v1],[-.5,.03,u0,v1]];
-        for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(t.p.x,t.p.y,t.z,cx,cy,size,u,w)}
+        // Lift by the slope under half the sprite width, so the uphill corner does not cut into the cone.
+        const z=t.z+size*.5*slope;
+        for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(t.p.x,t.p.y,z,cx,cy,size,u,w)}
       }
     }
     for(const e of urbanFenceSegments()){
