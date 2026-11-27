@@ -130,6 +130,7 @@ jobs:
           node qa/melee-outnumbered-regression.cjs
           node qa/diplomacy-regression.cjs
           node qa/messenger-card-regression.cjs
+          node qa/foot-views-regression.cjs
           node qa/siege-assault-regression.cjs
           node qa/keep-entrance-regression.cjs
           node qa/wall-stairs-regression.cjs

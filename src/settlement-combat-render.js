@@ -150,8 +150,20 @@
     g.restore();
   }
   // The regiment's standard (drawHeraldStandard, settlement-population-figures.js), waving with the day.
-  function drawSquadStandard(p,id,z=.08){
-    drawHeraldStandard(g,w2s(p,z),id,visualCycleDay()*18);
+  // view (FOOT-VIEWS): the herald's view; the standard is a card in his right hand.
+  function drawSquadStandard(p,id,z=.08,view='S'){
+    const base=w2s(p,z),t=typeof footTurn==='function'?footTurn(view):null;
+    const draw=()=>drawHeraldStandard(g,base,id,visualCycleDay()*18);
+    if(t)withFootCard(g,t,base.x,5.4*militaryScale()*.1,draw);else draw();
+  }
+  // Foot soldiers' view (FOOT-VIEWS, settlement-population-figures.js): along the path while moving,
+  // toward the foe while engaged, else facing the viewer (S, the approved art).
+  function footView(p,unit,foe){
+    if(typeof footViewOf!=='function'||!unit||unit.defeated)return'S';
+    const next=unit.path?.[unit.pathIndex],moving=!!next&&State.clock.speed>0;
+    const aim=moving?next:foe&&!foe.defeated&&unit.engaged?foe:null;
+    if(!aim||!Number.isFinite(unit.x)||Math.hypot(aim.x-unit.x,aim.y-unit.y)<=.05)return'S';
+    return footViewOf(p,{x:aim.x-unit.x,y:aim.y-unit.y});
   }
   // One torch-bearer per two-man patrol: the light is held above the leading
   // soldier's right hand, rather than being a stationary world fixture.
@@ -179,10 +191,12 @@
     // Facing only needs the flat projection; terrain-aware w2s is costly per figure.
     const foe=anim.foeOf(unit);
     const pose=anim.pose(unit,index||0,w2sRaw(p,0),foe?w2sRaw(foe,0):null);
-    if(type==='knight'&&drawMountedKnight(p,id,livery,unit,pose,foe,z))return;
+    if(type==='knight'&&drawMountedKnight(p,id,livery,unit,pose,foe,z))return'S';
+    const view=footView(p,unit,foe);
     // The captain commands on foot, drawn as the knight figure.
-    if(type==='captain')return anim.drawFigure(p,z,'knight',id,State.clock.day,livery,pose);
-    anim.drawFigure(p,z,type,id,State.clock.day,livery,pose);
+    if(type==='captain'){anim.drawFigure(p,z,'knight',id,State.clock.day,livery,pose,view);return view}
+    anim.drawFigure(p,z,type,id,State.clock.day,livery,pose,view);
+    return view;
   }
   // Knights ride (settlement-mounted2d.js): the flat 2D horse with caparison, lance
   // and shield in the realm's arms, in the foot soldiers' style. Heading follows the
@@ -290,7 +304,7 @@
     const sightSources=combat.enemy.length?observers():null;
     withRenderContext(g,()=>{
       for(const soldier of characters){
-        drawPosedFigure(soldier.p,soldier.type,soldier.id,null,soldier.unit,soldier.index,soldier.z);
+        const view=drawPosedFigure(soldier.p,soldier.type,soldier.id,null,soldier.unit,soldier.index,soldier.z);
         if(soldier.unit.defeated)continue;
         // Without the combat animations, a spear thrust line still shows engagement.
         if(!anim&&(soldier.type==='spearman'||soldier.type==='pikeman')&&soldier.unit.engaged){
@@ -305,7 +319,7 @@
           }
         }
         if(soldier.flag)withUrbanFigureOcclusion(soldier.p,soldier.z,()=>
-          drawSquadStandard(soldier.p,soldier.unit.id,soldier.z));
+          drawSquadStandard(soldier.p,soldier.unit.id,soldier.z,view||'S'));
         if(soldier.torch)withUrbanFigureOcclusion(soldier.p,soldier.z,()=>
           drawPatrolTorch(soldier.p,soldier.id,soldier.z));
       }

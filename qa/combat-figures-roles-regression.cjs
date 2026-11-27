@@ -27,8 +27,9 @@ assert.match(figures,/if\(type==='manAtArms'\)return drawManAtArmsUnmasked/,"L3 
 // Knights (L4): crest on the helmet and cloak, on foot and mounted; sword in the right hand (screen
 // left) and shield; dismounted in the tournament and on the training field.
 const mounted=read('src/settlement-mounted2d.js'),events=read('src/settlement-events-people.js'),garrisons=read('src/settlement-population-garrisons.js');
-assert.match(figures,/if\(knightly\)drawKnightCloak\(/,'knight on foot: cloak');
-assert.match(figures,/if\(knightly\)drawKnightCrest\(/,'knight on foot: crest');
+assert.match(figures,/const cloak=\(\)=>withFootVolume\(.*drawKnightCloak\(/,'knight on foot: cloak');
+assert.match(figures,/if\(knightly&&cloakBehind\)cloak\(\)/,'knight on foot: the cloak hangs behind (FOOT-VIEWS: in front from behind)');
+assert.match(figures,/if\(knightly\)withFootCard\(.*drawKnightCrest\(/,'knight on foot: crest');
 assert.match(anim,/type==='knight'\?'knightUnarmed':'unarmed'/,'posed knight keeps cloak and crest');
 assert.match(anim,/const hx=base\.x-bodyW\*\.42/,'posed sword in the right hand (screen left)');
 assert.match(mounted,/if\(o\.kind==='knight'\)cloak\(ctx,o\);/,'mounted knight: cloak');
@@ -36,7 +37,7 @@ assert.match(mounted,/if\(o\.kind==='knight'\)crest\(ctx,o,/,'mounted knight: cr
 // Heraldic crest: torse + figure (wings, antlers, horns, eagle, crown) + mantling behind the helmet,
 // one drawing shared by the knight on foot and on horseback, figure stable per knight.
 assert.match(figures,/const KNIGHT_CRESTS=Object\.freeze\(\['wings','antlers','horns','eagle','crown'\]\)/,'crest figures');
-assert.match(figures,/if\(knightly\)drawKnightMantling\([\s\S]{0,200}drawSoldierHelmet\([\s\S]{0,120}if\(knightly\)drawKnightCrest\(/,'mantling behind the helmet, crest above it');
+assert.match(figures,/if\(knightly&&cloakBehind\)mantling\(\)[\s\S]{0,300}drawSoldierHelmet\([\s\S]{0,200}drawKnightCrest\(/,'mantling behind the helmet, crest above it');
 assert.match(mounted,/drawHeraldicMantling\(ctx,/,'mounted knight: same mantling');
 assert.match(mounted,/drawHeraldicCrest\(ctx,/,'mounted knight: same crest');
 assert.match(render,/crest:typeof knightCrestKind==='function'\?knightCrestKind\(id\):null/,'mounted knight keeps his own crest figure');
@@ -65,8 +66,8 @@ assert.match(combat,/canFight\(house,resident\)\?'recruit':alarm/,'the alarm use
 // Squad: herald first (standard instead of the spear), then pikemen with shields; patrols keep 'spearman'.
 assert.match(render,/const squadType=i===0\?'herald':'pikeman'/,'squad = herald + pikemen');
 assert.match(render,/u\.kind==='squad'\?squadType:'spearman'/,'patrol guards stay spear only');
-assert.match(anim,/if\(type==='herald'\)\{[^}]*\}\s*else if\(type==='spearman'\|\|type==='pikeman'\)drawSpear/,'the herald carries no spear');
-assert.match(anim,/type==='pikeman'\|\|type==='herald'\)drawSpearShield/,'pikemen and herald carry the shield');
+assert.match(anim,/if\(type==='herald'\)\{[^}]*\}\s*else if\(type==='spearman'\|\|type==='pikeman'\)gear\.push\(\[[^\n]*drawSpear\(/,'the herald carries no spear');
+assert.match(anim,/type==='pikeman'\|\|type==='herald'\)gear\.push\(\[[^\n]*drawSpearShield\(/,'pikemen and herald carry the shield');
 assert.match(figures,/function soldierSpearHandX\(base,bodyW\)\{return base\.x-bodyW\*\.55\}/,'spear in the right hand: screen left');
 assert.match(figures,/const HERALD_STANDARD_SIZE=3;/,'standard three times the old squad flag');
 

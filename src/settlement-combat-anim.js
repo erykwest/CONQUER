@@ -69,8 +69,10 @@
 
   // Same silhouette as drawSoldierFigure; the body comes from the shared
   // 'unarmed' drawing so realm heraldry stays authoritative, weapons are posed here.
-  function drawFigure(p,z,type,id,phase,livery,pose){
-    if(!pose)return drawSoldierFigure(p,z,type,id,phase,livery);
+  // view (FOOT-VIEWS): one of the eight views (settlement-population-figures.js footViewOf); S, the
+  // approved art facing the viewer, by default. Weapons and shields are cards on their side of the body.
+  function drawFigure(p,z,type,id,phase,livery,pose,view='S'){
+    if(!pose)return drawSoldierFigure(p,z,type,id,phase,livery,view);
     if(pose.alpha<=0)return;
     // Sample terrain once: every w2s below (and in the shared body) reuses it.
     const ground=terrainElevation(p);
@@ -90,19 +92,31 @@
         ctx.translate(base.x,base.y);ctx.rotate((pose.dirX>0?-1:1)*pose.fall*1.45);ctx.translate(-base.x,-base.y);
       }
       // The man-at-arms draws whole (gambeson, armour, two-handed weapon): no separate posed weapon.
-      if(type==='manAtArms'){drawSoldierFigureUnmasked(p,z,type,id,phase,livery);ctx.restore();return}
+      if(type==='manAtArms'){drawSoldierFigureUnmasked(p,z,type,id,phase,livery,false,view);ctx.restore();return}
+      const t=typeof footTurn==='function'?footTurn(view):null;
+      // Gear by side: the shield arm (screen right in S) and the weapon hand (screen left).
+      const gear=[];
+      if(type==='spearman'||type==='herald'){
+        const lx=type==='spearman'?bodyW*.52:-bodyW*.55;
+        gear.push([lx,bodyW*.12,()=>drawSoldierFixedHands(type,base,bodyW,bodyH,bodyY,scale)]);
+      }
+      if(type==='pikeman'||type==='herald')gear.push([bodyW*.62,bodyW*.12,()=>drawSpearShield(base,scale,bodyW,bodyH,bodyY,id,livery,pose,t)]);
+      if(type==='herald'){/* standard instead of the spear: drawn by the combat overlay */}
+      else if(type==='spearman'||type==='pikeman')gear.push([-bodyW*.55,bodyW*.1,()=>drawSpear(base,scale,bodyW,bodyH,bodyY,headY,pose)]);
+      else if(type==='axeman'&&typeof drawAxeAndRoundShield==='function')gear.push([0,bodyW*.1,()=>drawAxeAndRoundShield(base,scale,bodyW,bodyH,bodyY,top,pose)]);
+      else if(armed){
+        gear.push([bodyW*.62,bodyW*.12,()=>drawSwordShield(base,scale,bodyW,bodyH,bodyY,id,livery,pose,t)]);
+        gear.push([-bodyW*.42,bodyW*.1,()=>drawSword(base,scale,bodyW,bodyH,bodyY,top,id,phase,livery,pose)]);
+      }
+      const drawGear=front=>{for(const [lx,lz,fn] of gear)if((footDepth(t,lx,lz)>=0)===front)withFootCard(ctx,t,base.x,lz,fn)};
+      drawGear(false);
       // Knights keep their cloak and crest on the posed body ('knightUnarmed'); posed=true: the
       // weapon hands are drawn here, with the weapons (FIG-HANDS-261117).
-      drawSoldierFigureUnmasked(p,z,armed?(type==='knight'?'knightUnarmed':'unarmed'):type,id,phase,livery,true);
-      if(type==='spearman'||type==='herald')drawSoldierFixedHands(type,base,bodyW,bodyH,bodyY,scale);
-      if(type==='pikeman'||type==='herald')drawSpearShield(base,scale,bodyW,bodyH,bodyY,id,livery,pose);
-      if(type==='herald'){/* standard instead of the spear: drawn by the combat overlay */}
-      else if(type==='spearman'||type==='pikeman')drawSpear(base,scale,bodyW,bodyH,bodyY,headY,pose);
-      else if(type==='axeman'&&typeof drawAxeAndRoundShield==='function')drawAxeAndRoundShield(base,scale,bodyW,bodyH,bodyY,top,pose);
-      else if(armed)drawSword(base,scale,bodyW,bodyH,bodyY,top,id,phase,livery,pose);
+      drawSoldierFigureUnmasked(p,z,armed?(type==='knight'?'knightUnarmed':'unarmed'):type,id,phase,livery,true,view);
+      drawGear(true);
       if(pose.flash>0){
         ctx.fillStyle='rgba(255,246,228,'+(.8*pose.flash).toFixed(3)+')';
-        soldierBodyPath(base,bodyW,bodyH,top,bodyY);ctx.fill();
+        withFootVolume(ctx,t,base.x,0,()=>soldierBodyPath(base,bodyW,bodyH,top,bodyY));ctx.fill();
         ctx.beginPath();ctx.arc(base.x,headY,headR,0,Math.PI*2);ctx.fill();
       }
       ctx.restore();
@@ -143,15 +157,20 @@
     ctx.restore();
   }
   // Pikeman's / herald's shield: on the left arm (screen right), pushed toward the foe on guard.
-  function drawSpearShield(base,scale,bodyW,bodyH,bodyY,id,livery,pose){
+  function drawSpearShield(base,scale,bodyW,bodyH,bodyY,id,livery,pose,t=null){
     const guard=pose.ready*1.2*scale;
+    if(t&&!t.front)return drawShieldBack(base.x+bodyW*.62+pose.dirX*guard,bodyY+bodyH*.10,2.7*scale,3.6*scale,'#b7aa8f',scale,livery?'oval':soldierShieldStyle());
+    drawQuarteredShield(base.x+bodyW*.62+pose.dirX*guard,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery||soldierLivery(id),'#b7aa8f',scale,!livery,livery?'oval':soldierShieldStyle());
+  }
+  function drawSwordShield(base,scale,bodyW,bodyH,bodyY,id,livery,pose,t=null){
+    const guard=pose.ready*1.2*scale;
+    if(t&&!t.front)return drawShieldBack(base.x+bodyW*.62+pose.dirX*guard,bodyY+bodyH*.10,2.7*scale,3.6*scale,'#b7aa8f',scale,livery?'oval':soldierShieldStyle());
     drawQuarteredShield(base.x+bodyW*.62+pose.dirX*guard,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery||soldierLivery(id),'#b7aa8f',scale,!livery,livery?'oval':soldierShieldStyle());
   }
   function drawSword(base,scale,bodyW,bodyH,bodyY,top,id,phase,livery,pose){
     const side=pose.dirX>=0?1:-1,swing=Math.sin(phase*Math.PI*2)*3.2*scale*(1-pose.ready);
-    const guard=pose.ready*1.2*scale;
-    // Shield on the left arm (screen right), sword in the right hand (screen left): the figure faces the viewer.
-    drawQuarteredShield(base.x+bodyW*.62+pose.dirX*guard,bodyY+bodyH*.10,2.7*scale,3.6*scale,livery||soldierLivery(id),'#b7aa8f',scale,!livery,livery?'oval':soldierShieldStyle());
+    // Sword in the right hand (screen left); the shield (drawSwordShield) on the left arm: the
+    // figure faces the viewer.
     const hx=base.x-bodyW*.42,hy=bodyY+bodyH*.16;
     // Wind-up raises the blade back, the cut sweeps it down toward the foe.
     const theta=side*(pose.attack<0?pose.attack*.9:pose.attack*1.6)+side*pose.ready*.15;
