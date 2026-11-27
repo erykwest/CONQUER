@@ -380,6 +380,37 @@
     return W.figure(p,z,key,paint,id,false,{span:1,capsule:{...A.capsule('horse',CARD_SIZE,h),box:true}});
   }
   // drawView: one of the 8 views (Asset Lab, comparisons); E/W are the 2D art, the rest artView.
+  // Vehicles (src/assets/mounted-views.js 'vehicle:cart|wagon|coach', tools/blender/wagon_views.py): one of
+  // the six off-profile views of the card settlement-vehicles.js paints (vehicle, team, driver), then the
+  // cargo items as layers in slot order. x,y = ground under the middle of the bed; size as drawWagon.
+  // o: {vehicle, view, phase (null idle, 0..7), team:[{coat}], cargo:[kinds]}. False without the view.
+  function drawVehicleView(g,x,y,size,o){
+    const set=window.ConquerMountedViews?.['vehicle:'+o.vehicle],V=set?.views?.[o.view];
+    const sp=window.ConquerAnimals?.SPECIES?.horse;if(!V||!sp)return false;
+    const fi=o.phase===null||o.phase===undefined?0:Math.max(0,set.poses.indexOf('p'+o.phase));
+    const color=t=>{
+      if(t.startsWith('coat@')){const i=+t.slice(5,t.indexOf(':')),c=sp.coatColors?.[o.team?.[i]?.coat]||sp.colors;return c[t.slice(t.indexOf(':')+1)]}
+      return t==='outline'?OUTLINE:t;
+    };
+    const S=size*(sp.scale||1),s=S/256,lw=Math.max(.55,S/90)/s;
+    // The driver is the game's own 2D villager (o.driver(ctx,x,y,size), as drawWagon's), at the view's
+    // seat anchor; the board top hides his legs. Behind the vehicle's middle he is drawn first, so the
+    // boards, the load and the team cover him; in front, last. The carter walks at the horse's head.
+    const A=V.anchor,person=A&&o.driver?()=>{
+      g.save();
+      if(A.kind==='seat'){g.beginPath();g.rect(x-1e5,y-1e5,2e5,1e5+A.clip*s);g.clip()}
+      o.driver(g,x+A.at[0]*s,y+A.at[1]*s,size);
+      g.restore();
+    }:null;
+    if(person&&A.behind)person();
+    g.save();g.translate(x,y);g.scale(s,s);g.lineJoin='round';g.lineCap='round';
+    paintFrame(g,set,V.frames[fi]||V.frames[0],color,lw,null);
+    const cargo=(o.cargo||[]).slice(0,6),n=cargo.length;
+    cargo.forEach((kind,i)=>{const f=set.layers?.[`cargo:${n}:${i}:${kind}`]?.[o.view]?.[0];if(f)paintFrame(g,set,f,color,lw,null)});
+    g.restore();
+    if(person&&!A.behind)person();
+    return true;
+  }
   // o.view, o.phase (null = idle, else 0..7), o.mode ('walk' default, 'run' = the knight's charge).
   const RUN_HZ=2.2;
   function drawView(g,x,y,size,o={}){
@@ -391,5 +422,5 @@
   }
   // Stride phase (0..7) of a gait clock t, as drawAnimal cycles it (walk t*1.6, run t*2.2 per second).
   const phaseOf=(t,mode)=>{const c=t*(mode==='run'?RUN_HZ:WALK_HZ);return Math.floor((c-Math.floor(c))*CARD_PHASES)};
-  window.ConquerMounted2D={draw,drawView,card,lanceGeometry,VIEW_NAMES,viewOf,viewAt,phaseOf};
+  window.ConquerMounted2D={draw,drawView,drawVehicleView,card,lanceGeometry,VIEW_NAMES,viewOf,viewAt,phaseOf};
 })();

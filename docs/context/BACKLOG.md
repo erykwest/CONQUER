@@ -256,6 +256,8 @@ Implementato nel branch `fix/territory-clay-stone-access`. Nuove mappe con acqua
 - [ ] Direzione nel mondo anche per botteghe (`shop.facing`), personale e rifugiati, corte, equipaggi e carrettieri; commensali seduti.
 - [ ] 8 viste per gli animali 2D.
 - [ ] Verifica in partita di battaglie e pattuglie con le nuove viste.
+- [x] Carretto, carro e carrozza in 8 viste con collider a scatola (WAGON-VIEWS, `feature/wagon-views`).
+- [ ] Conducente dei carri col guardaroba stagionale anche nelle viste ruotate; sobbalzo del carico col passo.
 - [ ] Salvataggi con un messaggero già in viaggio su un percorso in linea retta: lo tiene fino all'arrivo (non ricalcolato).
 
 ## 2026-11-18 — UI-UPG-01 · Ampliamenti dall'ispettore
