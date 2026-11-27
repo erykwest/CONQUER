@@ -1,4 +1,26 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
+## 2026-11-27 — MOUNTAIN-FACETS-261127 · Neve e costoni sfaccettati
+
+- [x] Linea della neve frastagliata con lingue nei canaloni.
+- [x] Costoni al piede e placche di vetta divisi in facce di toni diversi.
+
+## 2026-11-27 — MOUNTAIN-STAR-CRAGS · Montagne a stella e costoni
+
+- [x] Base a stella irregolare delle montagne (branch `feature/mountain-star-crags`).
+- [x] Costoni di roccia al piede (diradati) con ghiaione e placche rocciose in vetta, 3D e 2D.
+- [ ] Taratura densità costoni/placche dopo revisione visiva; i costoni non bloccano ancora il pathing né la costruzione.
+
+## 2026-11-27 — TERRAIN-EDGES-261127 · Bordi frastagliati di rupi, boschi e coste
+
+**FATTO sul branch `feat/ragged-terrain-edges`, NON MERGE.**
+
+- [x] Strati delle colline senza sbalzo sul livello sottostante.
+- [x] Rupi: bordi di roccia frastagliati, sassi, ciuffi e cespugli stagionali.
+- [x] Boschi: margine del sottobosco frastagliato con ciuffi, sassi e cespugli.
+- [x] Coste: spiagge e scogli frastagliati, giunzione scogli/spiaggia a denti con lastre.
+- [ ] Radure interne dei boschi e rive di laghi/paludi.
+- [ ] Ridisegno parziale della texture: saltare le rupi fuori dal riquadro.
+
 ## 2026-11-26 — DEV-FREE-RESTYLE · Restyle gratis in DEV
 
 **FATTO sul branch `feat/dev-free-restyle`, NON MERGE.**
@@ -249,14 +271,15 @@ Implementato nel branch `fix/territory-clay-stone-access`. Nuove mappe con acqua
 - [x] Cavalieri (`drawMountedKnight`) con lo stesso metodo, con le loro parti: gualdrappa, crinet, mantello, scudo, lancia, elmo e cimiero (layer per elmo/scudo/cimiero, carica con lancia in resta).
 - [ ] Ridurre il peso di `src/assets/mounted-views.js` (~2,1 MB): viste speculari, semplificazione per layer, caricamento differito.
 - [ ] Viste fuori profilo anche per guardia, colpo e caduta del cavaliere (oggi restano sul profilo).
+- [x] Carretto, carro e carrozza in 8 viste con collider a scatola (WAGON-VIEWS, `feature/wagon-views`).
+- [ ] Conducente dei carri col guardaroba stagionale anche nelle viste ruotate; sobbalzo del carico col passo.
 - [x] Fanti a piedi in 8 viste (FOOT-VIEWS-261127, `feature/foot-views`): rotazione in tempo reale della grafica frontale approvata; combattimento e pattuglie delle mura orientati.
 - [ ] Passare la direzione anche agli altri chiamanti di `drawSoldierFigure` (scorte dei convogli, guardie di porta, equipaggi del trabucco, anteprima d'assedio).
+- [ ] Estendere le 8 viste a popolani e civili (lavori, costumi di ruolo, abiti da mestiere, dame L4) e agli animali 2D.
+- [ ] Verifica in partita di battaglie e pattuglie con le nuove viste.
 - [x] Popolani, bambini, dame L4, guardaroba stagionale/di ruolo/di mestiere e leva in 8 viste (CIVIL-VIEWS-261127, `feature/civil-views`), orientati sul cammino.
 - [ ] 8 viste per le animazioni di lavoro (`settlement-work-anim.js`, oggi profilo sinistra/destra) e per personale, corte, equipaggi e carrettieri (passare `dot.view`/`dot.heading`).
 - [ ] 8 viste per gli animali 2D.
-- [ ] Verifica in partita di battaglie e pattuglie con le nuove viste.
-- [x] Carretto, carro e carrozza in 8 viste con collider a scatola (WAGON-VIEWS, `feature/wagon-views`).
-- [ ] Conducente dei carri col guardaroba stagionale anche nelle viste ruotate; sobbalzo del carico col passo.
 - [ ] Salvataggi con un messaggero già in viaggio su un percorso in linea retta: lo tiene fino all'arrivo (non ricalcolato).
 
 ## 2026-11-18 — UI-UPG-01 · Ampliamenti dall'ispettore
