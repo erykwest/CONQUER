@@ -187,6 +187,15 @@
     ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
     for(const s of d.stretches){
       if(s.kind==='beach'){
+        // Static per stretch: river-mouth gaps and the world bounding box (for off-screen culling).
+        if(s._mouthSrc!==mouths.length+':'+(State.environment||[]).length){
+          s._mouthSrc=mouths.length+':'+(State.environment||[]).length;
+          s._mouth=s.points.map(p=>mouths.some(f=>Math.hypot(p.x-f.mouth.point.x,p.y-f.mouth.point.y)<f.width*1.6));
+          let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;for(const p of s.points){x0=Math.min(x0,p.x);y0=Math.min(y0,p.y);x1=Math.max(x1,p.x);y1=Math.max(y1,p.y)}
+          s._box=[x0-3,y0-3,x1+3,y1+3];
+        }
+        if(view&&s._box){const B=s._box,cs=[w2sRaw({x:B[0],y:B[1]},0),w2sRaw({x:B[2],y:B[1]},0),w2sRaw({x:B[0],y:B[3]},0),w2sRaw({x:B[2],y:B[3]},0)];
+          if(cs.every(q=>q.x<-80)||cs.every(q=>q.y<-80)||cs.every(q=>q.x>view.w+80)||cs.every(q=>q.y>view.h+80))continue}
         // Each wave runs from 1.4U out at sea up onto the sand and back, thinning as it goes.
         for(let w=0;w<WAVES;w++){
           const ph=((now/WAVE_PERIOD*(.8+swell*.3))+w/WAVES)%1,reach=-.9*swell;
@@ -200,7 +209,7 @@
             if(onScreen(q))any=true;
             // Broken crests: the foam comes in patches that drift along the shore.
             const gap=Math.sin(p.x*.23+p.y*.17+w*2.1+now*.15)+Math.sin(p.x*.61-p.y*.43+w)*.5<-.35;
-            if(gap||mouths.some(f=>Math.hypot(p.x-f.mouth.point.x,p.y-f.mouth.point.y)<f.width*1.6)){started=false;continue}
+            if(gap||s._mouth[i]){started=false;continue}
             if(!started){ctx.moveTo(q.x,q.y);started=true}else ctx.lineTo(q.x,q.y);
           }
           if(any){ctx.stroke();drawn=true}
