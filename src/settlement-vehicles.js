@@ -263,7 +263,7 @@
     for(const it of items){
       if(it.e){drawEscort(c,it.e);continue}
       const v=it.v,a=w2sRaw(v,0),b=w2sRaw({x:v.x+Math.cos(v.heading),y:v.y+Math.sin(v.heading)},0);
-      const facing=b.x>=a.x?1:-1,view=window.ConquerMounted2D?.viewOf?.(b.x-a.x,b.y-a.y);
+      const facing=b.x>=a.x?1:-1,view=window.ConquerMounted2D?.viewAt?.(v,{x:Math.cos(v.heading),y:Math.sin(v.heading)});
       const cargo=v.spec.cargo.length?v.spec.cargo:(k.chassis==='carriage'||c.emptyReturn)?[]:['crate'];
       if(drawCard(c,v,k,cargo,facing,view))continue;
       const scr=w2s(v,.15);
