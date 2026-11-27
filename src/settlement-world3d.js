@@ -1784,7 +1784,7 @@
     // Relief, terraforming and forests shape the terrain meshes: those rebuild them and re-bake the
     // whole ground. Season and wetness re-bake the whole ground too. Structure and urban-lot edits only
     // re-bake the tiles they touch, one per frame (pumpGroundTiles).
-    const meshSig=['g'+(window.ConquerGraphics?.rev?.()??0),season,State.stonePaletteId,State.biome,State.relief?.seed,terraformSig,(State.environment||[]).length,envRev].join('|');
+    const meshSig=[season,State.stonePaletteId,State.biome,State.relief?.seed,terraformSig,(State.environment||[]).length,envRev,'g'+(window.ConquerGraphics?.rev?.()??0)].join('|');
     const gSig=[meshSig,wet(),typeof bushSeasonKey==='function'?bushSeasonKey():'',typeof forestGroundKey==='function'?forestGroundKey():'',typeof springFlowersOn==='function'?springFlowersOn():''].join('|');
     const tSig=[gSig,groundLotsSignature(),structuresSig('ground')].join('|');
     if(S.sig.terrain!==tSig){
