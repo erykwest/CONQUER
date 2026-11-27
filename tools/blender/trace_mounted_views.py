@@ -94,8 +94,11 @@ def trace_kind(src):
     keys = list(meta["ids"].keys())
     keys_rgb = np.array([[int(c) for c in k.split(",")] for k in keys])
     meta["_parts"] = [meta["ids"][k] for k in keys]
-    parts = [{"k": p["k"], "group": p["group"], "fill": token_of(p["style"], p["group"], coat, livery),
-              "outline": None if p["group"] in NO_OUTLINE else ("coat:line" if p["group"].startswith(HORSE_GROUPS) else "outline"),
+    # Vehicles (wagon_views.py) give each part its own fill and outline; the riders derive them.
+    parts = [{"k": p["k"], "group": p["group"],
+              "fill": p.get("fill") or token_of(p["style"], p["group"], coat, livery),
+              "outline": p["outline"] if "outline" in p else (None if p["group"] in NO_OUTLINE else
+                         ("coat:line" if p["group"].startswith(HORSE_GROUPS) else "outline")),
               **({"arms": True} if p["arms"] else {})} for p in meta["_parts"]]
     sets = meta["sets"] or [{"name": "rest", "poses": ["idle"] + [f"p{i}" for i in range(8)]}]
     poses = [p for s in sets for p in s["poses"]]
@@ -108,6 +111,8 @@ def trace_kind(src):
             for pose in s["poses"]:
                 frames.append(regions_of(os.path.join(src, f"{view}_{pose}__base.png"), meta, keys_rgb, ppm, base_srcs))
                 for L in layers:
+                    if meta.get("layerPoses") and pose not in meta["layerPoses"]:
+                        continue   # layers traced at rest only (vehicle cargo)
                     layer_frames[L].setdefault(view, []).append(
                         regions_of(os.path.join(src, f"{view}_{pose}__{L.replace(':', '-')}.png"), meta, keys_rgb, ppm, {L}))
         a = math.radians(ANGLES[view])

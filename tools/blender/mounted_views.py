@@ -60,6 +60,7 @@ def empty(name, x, z, parent=None):
     scene.collection.objects.link(e)
     e.location = (x, 0.0, z)
     if parent is not None:
+        bpy.context.view_layer.update()   # the parent's matrix_world must be current (a fresh one is identity)
         e.parent = parent
         e.matrix_parent_inverse = parent.matrix_world.inverted()
     return e
@@ -384,10 +385,10 @@ def build(src_name, ops, polys, marks, fallback):
                 marks[key] = (val[0], val[1], ob)
         counter[0] += 1
         n = counter[0]
-        rgb = ((n * 67) % 211 + 30, (n * 131) % 211 + 30, (n * 29) % 211 + 30)
+        rgb = (30 + n % 200, 30 + (n // 200) % 200, 30 + (n * 37) % 200)   # unique for n < 40000
         while "%d,%d,%d" % rgb in ids:
             n += 997
-            rgb = ((n * 67) % 211 + 30, (n * 131) % 211 + 30, (n * 29) % 211 + 30)
+            rgb = (30 + n % 200, 30 + (n // 200) % 200, 30 + (n * 37) % 200)   # unique for n < 40000
         ob.color = (*(srgb_to_lin(c / 255) for c in rgb), 1.0)
         ids["%d,%d,%d" % rgb] = {"k": op["k"], "src": src_name, "side": side, "group": group,
                                  "style": op["style"], "tag": op["tag"], "arms": "arms<" in op["tag"]}

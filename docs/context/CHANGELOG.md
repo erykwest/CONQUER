@@ -1,4 +1,9 @@
 # Livello 5 — Diario delle variazioni del contesto
+
+### 2026-11-27 — WAGON-VIEWS · Carri in 8 viste con collider (`feature/wagon-views`)
+
+Carretto, carro e carrozza seguono la strada in 8 viste: il profilo resta il disegno 2D, le altre 6 sono lo stesso veicolo costruito in Blender dai numeri del pittore (ruote che girano, tiro che cammina, conducente) con il carico come layer. Collider a scatola sulle card dei veicoli. ROADMAP e DECISIONS invariati.
+
 ### 2026-11-26 — DEV-FREE-RESTYLE · Restyle gratis in DEV (`feat/dev-free-restyle`)
 
 Con freeBuild o fastBuild DEV attivi, il cambio globale dello stile delle merlature e della pendenza dei tetti di torri e porte è gratuito (preventivo vuoto in `crenelRestyleQuote`/`roofPitchQuote`) oltre che immediato. Nessuna regola di gioco cambia fuori dalle modalità DEV. ROADMAP e DECISIONS invariate. QA: roof-pitch e battlement-parapet regression PASS in locale.
