@@ -1,4 +1,12 @@
 # Livello 2 — Stato tecnico e prove
+### 2026-11-27 — ANIMAL-VIEWS: animali 2D in 8 viste (`feature/animal-views`, base `feature/work-views`, NON MERGE)
+
+- **CODICE:** pecora, capra, mucca, cavallo (senza cavaliere), cerva, cervo, lupo, cinghiale e orso hanno 8 viste. E/W restano il disegno 2D approvato; SE S SW NW N NE vengono dallo stesso disegno costruito parte per parte in Blender e ritracciato, come cavalieri e messaggero (PR 314). Pipeline in `tools/blender/` (`build_animal_views.py`: `extract_animal_parts.mjs` → `mounted_parts_poly.py` → `animal_views.py` → `trace_animal_views.py`); output generato `src/assets/animal-views.js` (~1 MB, `window.ConquerAnimalViews`). Profondità del corpo e della testa per specie (`DEPTH`), palchi, corna e orecchie aperti verso l'esterno (`SPLAY`).
+- **Runtime:** `ConquerAnimals.drawView` e `card` in `settlement-animals.js`: con una direzione nel mondo (`o.heading`), al passo o fermi, la card usa la vista (`viewAt`, normalizzata come `ConquerMounted2D.viewAt`) con una tile per vista e fase, senza specchiatura; E/W, pascolo, corsa, allerta, ululato, orso in piedi/che dorme e cavalli con gualdrappa (overlay) restano sul profilo. Bestiame (`settlement-livestock.js`) passa già la direzione; i lupi ora passano quella di marcia (`wolf.wolfHeading`).
+- **Lab:** 9 voci «· 8 viste» (famiglia «Animali 2D · 8 viste»).
+- **Prove:** `qa/animal-views-regression.cjs` (nuova, in `combat-regression.yml`): 9 specie × 6 viste × 9 fotogrammi con colori della specie; ogni vista si disegna; scelta della tile dalla direzione, profilo per E/W, altri modi e gualdrappa; collegamenti. `animals`, `animals3d`, `wolves`, `messenger-card`: PASS.
+- **Non verificato:** in partita.
+
 ### 2026-11-27 — WORK-VIEWS: animazioni di lavoro in 8 viste (`feature/work-views`, base `feature/civil-views`, NON MERGE)
 
 - **CODICE:** `settlement-work-anim.js`: `drawWorkerUnmasked` e `drawCarrierUnmasked` accettano una vista. Il corpo prende la vista (popolani, CIVIL-VIEWS); attrezzo, braccio, pezzo al banco ed effetto oscillano nel piano della direzione, compressi orizzontalmente di |sin yaw| (minimo 0,35: un colpo verso l'osservatore resta leggibile); da dietro il corpo copre attrezzo e braccio. `facingOf` restituisce la direzione nel mondo e `drawWorker`/`drawCarrier` la convertono in vista, con una tile World 3D per vista, senza specchiature. Con una direzione a schermo (1/-1) resta il disegno di lato di prima.

@@ -1,4 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
+### 2026-11-27 — ANIMAL-VIEWS · Animali 2D in 8 viste (`feature/animal-views`)
+
+Gli animali 2D ottengono le 6 viste fuori profilo con la pipeline Blender della PR 314 (asset generato ~1 MB); al passo e fermi la card del mondo 3D sceglie la vista dalla direzione. ROADMAP e DECISIONS invariate.
+
 ### 2026-11-27 — WORK-VIEWS · Lavori in 8 viste (`feature/work-views`)
 
 Le animazioni di lavoro passano dal profilo sinistra/destra alle 8 viste per costruttori, boscaioli, cavatori, cantiere navale e campi; il disegno di lato resta per chi non passa una direzione. ROADMAP e DECISIONS invariate.

@@ -250,6 +250,8 @@
         wolf.wolfPath=null;wolf.wolfPathIndex=1;wolf.wolfDecisionIn=.7;break;
       }
       wolf.wolfFace=next.x>=wolf.x?1:-1;
+      // World heading of the walk (ANIMAL-VIEWS: the card picks one of the eight views from it).
+      wolf.wolfHeading={x:next.x-wolf.x,y:next.y-wolf.y};
       wolf.x=next.x;wolf.y=next.y;
       budget-=step;
       if(step>=len-.025)wolf.wolfPathIndex++;
@@ -382,7 +384,7 @@
     const mode=wolf.wolfMode||(species==='bear'?'walk':isNight()?'howl':'walk');
     const facing=wolf.wolfFace||1,seed=wolf.wolfSeed||0;
     const time=performance.now();
-    const opts={mode,facing,seed,t:time/1000};
+    const opts={mode,facing,seed,t:time/1000,heading:wolf.wolfHeading||null};
     const box=SPRITES[species];
     // World3D: depth-tested card with the animal's horizontal body capsule (same size as below).
     if(window.ConquerAnimals.card?.(species,wolf,.08,{...opts,id:species+':'+wolf.id,sizeFactor:size/Math.max(1e-6,State.view.scale)}))return;
