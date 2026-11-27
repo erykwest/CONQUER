@@ -280,6 +280,8 @@ Implementato nel branch `fix/territory-clay-stone-access`. Nuove mappe con acqua
 - [x] Popolani, bambini, dame L4, guardaroba stagionale/di ruolo/di mestiere e leva in 8 viste (CIVIL-VIEWS-261127, `feature/civil-views`), orientati sul cammino.
 - [ ] 8 viste per le animazioni di lavoro (`settlement-work-anim.js`, oggi profilo sinistra/destra) e per personale, corte, equipaggi e carrettieri (passare `dot.view`/`dot.heading`).
 - [ ] 8 viste per gli animali 2D.
+- [x] Animazioni di lavoro in 8 viste (WORK-VIEWS-261127, `feature/work-views`): costruttori, boscaioli, cavatori, cantiere navale, campi.
+- [ ] Direzione nel mondo anche per botteghe (`shop.facing`), personale e rifugiati, corte, equipaggi e carrettieri; commensali seduti.
 - [ ] Salvataggi con un messaggero già in viaggio su un percorso in linea retta: lo tiene fino all'arrivo (non ricalcolato).
 
 ## 2026-11-18 — UI-UPG-01 · Ampliamenti dall'ispettore

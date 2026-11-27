@@ -313,13 +313,26 @@
     ctx.fillStyle=VILLAGER_SKIN;ctx.beginPath();ctx.arc(x,y,Math.max(.5,.55*s),0,Math.PI*2);ctx.fill();
   }
   const darken=(hex,k)=>{const h=hex.replace('#','');return'#'+[0,2,4].map(i=>Math.round(parseInt(h.slice(i,i+2),16)*k).toString(16).padStart(2,'0')).join('')};
+  // Eight views (WORK-VIEWS): the body takes the view (settlement-population-figures.js footTurn);
+  // tool, arm, bench piece and effect swing in the plane of the facing direction, squeezed across
+  // the screen by |sin yaw| (never below WORK_SQUEEZE, so a stroke toward the viewer still reads),
+  // and go behind the body when the worker turns its back.
+  const WORK_SQUEEZE=.35;
+  function workTurn(view){
+    if(!view||typeof FOOT_VIEW_YAW==='undefined'||FOOT_VIEW_YAW[view]===undefined)return null;
+    const a=FOOT_VIEW_YAW[view]*Math.PI/180,sn=Math.sin(a),cs=Math.cos(a);
+    return{view,f:sn< -1e-9?-1:1,k:Math.max(WORK_SQUEEZE,Math.abs(sn)),back:cs<-.2};
+  }
   // A villager dot ({p,id,kind,sex,age,hair,colors}) at work. facing: 1 right, -1 left.
-  function drawWorkerUnmasked(dot,tool,t,facing=1){
-    const T=TOOLS[tool];if(!T)return drawVillagerFigureUnmasked(dot);
+  // view: one of the eight views (then facing comes from it); none: the side art as before.
+  function drawWorkerUnmasked(dot,tool,t,facing=1,view=null){
+    const T=TOOLS[tool];if(!T)return drawVillagerFigureUnmasked(dot,'both',1,view||'S');
+    const W8=dot.seated?null:workTurn(view);
     const P=pose(tool,dot.id,t),base=w2s(dot.p,.10),scale=State.view.scale*.5;
-    const bodyW=6*scale,bodyH=8*scale,bodyY=base.y-bodyH*.16,top=bodyY-bodyH/2,f=facing<0?-1:1;
+    const bodyW=6*scale,bodyH=8*scale,bodyY=base.y-bodyH*.16,top=bodyY-bodyH/2,f=W8?W8.f:facing<0?-1:1;
+    const K=W8?W8.k:1;
     // Too small to read a tool: the plain figure.
-    if(scale<.16)return drawVillagerFigureUnmasked(dot);
+    if(scale<.16)return drawVillagerFigureUnmasked(dot,'both',1,W8?view:'S');
     ctx.save();
     // Seated (dot.seated: diners on the common hall benches): the body drops by the thigh length,
     // the robe is cut at the hip, the lap runs forward under the table and the shins go down to
@@ -327,13 +340,15 @@
     const seat=dot.seated?bodyH*.34:0;
     if(seat)ctx.translate(0,seat);
     // Lean and bob pivot on the feet.
-    ctx.translate(base.x,base.y+P.bob*bodyH);ctx.rotate(f*P.lean);ctx.translate(-base.x,-base.y);
+    ctx.translate(base.x,base.y+P.bob*bodyH);ctx.rotate(f*P.lean*K);ctx.translate(-base.x,-base.y);
+    // The work plane: squeezed across the screen about the body's axis (identity without a view).
+    const plane=fn=>{if(K===1)return fn();ctx.save();ctx.translate(base.x,0);ctx.scale(K,1);ctx.translate(-base.x,0);try{return fn()}finally{ctx.restore()}};
     const sack=tool==='seeds';
-    if(sack){   // seed bag on the far hip, behind the body
+    if(sack)plane(()=>{   // seed bag on the far hip, behind the body
       ctx.fillStyle='#cdb88c';ctx.strokeStyle='#6d5a3b';ctx.lineWidth=Math.max(.5,.4*scale);
       ctx.beginPath();ctx.ellipse(base.x-f*bodyW*.42,bodyY+bodyH*.12,bodyW*.3,bodyH*.26,0,0,Math.PI*2);ctx.fill();ctx.stroke();
       ctx.beginPath();ctx.moveTo(base.x-f*bodyW*.4,top+bodyH*.05);ctx.lineTo(base.x+f*bodyW*.25,bodyY-bodyH*.1);ctx.stroke();
-    }
+    });
     // The far hand rests at the side (the seed bag hangs there); the near one is at the tool.
     if(seat){
       const hipY=bodyY+bodyH*.06;
@@ -345,7 +360,7 @@
       // Shins and shoes from the knee to the floor (base.y-seat in this frame).
       ctx.fillStyle='#4a3a2a';ctx.fillRect(knee.x-f*bodyW*.16-(f<0?bodyW*.16:0),knee.y,bodyW*.16,Math.max(0,base.y-seat-knee.y));
       ctx.fillStyle='#2e241b';ctx.beginPath();ctx.ellipse(knee.x-f*bodyW*.02,base.y-seat,bodyW*.16,bodyW*.07,0,0,Math.PI*2);ctx.fill();
-    }else drawVillagerFigureUnmasked(dot,sack?'none':'far',f);
+    }else if(!W8?.back)drawVillagerFigureUnmasked(dot,sack?'none':'far',f,W8?view:'S');
     // Hands rise with the tool: high when it points up, at the waist when down.
     const shoulder={x:base.x+f*bodyW*.18,y:top+bodyH*.2};
     // The sower's hand swings on the arm; tool hands rise with the tool.
@@ -355,17 +370,22 @@
       :tool==='shuttle'?{x:base.x+f*bodyW*(.3+.75*reach),y:bodyY+bodyH*(.02-.04*reach)}
       :T.sweep?{x:base.x+f*bodyW*(.3+.75*Math.max(0,Math.min(1,(P.th-T.sweep[0])/(T.sweep[1]-T.sweep[0])))),y:bodyY+bodyH*T.y}
       :{x:base.x+f*bodyW*.48,y:bodyY-bodyH*(.08+.28*Math.cos(P.th))};
+    plane(()=>{
     if(BENCH.has(tool))drawBench(tool,g,f,scale,{base,bodyW,bodyH,bodyY,u:P.u});
     else if(!sack)drawTool(tool,g,f,P.th,scale);
     // Arm: shoulder to hand, in the darker tunic tone (or the cloak's, when wearing one).
     ctx.strokeStyle=darken(window.ConquerWardrobe?.outfitFor(dot)?.sleeve||dot.colors?.[0]||'#8c6b3f',.78);ctx.lineWidth=Math.max(.8,1.1*scale);ctx.lineCap='round';
     ctx.beginPath();ctx.moveTo(shoulder.x,shoulder.y);ctx.lineTo(g.x,g.y);ctx.stroke();
     hand(g.x,g.y,scale);
+    });
+    // Seen from behind, the tool and the arm are in front of the body's back: the body goes over them.
+    if(W8?.back)drawVillagerFigureUnmasked(dot,sack?'none':'far',f,view);
     // Effect origin: where the tool tip strikes (or the casting hand).
     const hitTh=keys(KEYS[tool],T.hit).th,d=dirOf(hitTh,f),L=T.len*scale*.78;
     const gHit={x:base.x+f*bodyW*.48,y:bodyY-bodyH*(.08+.28*Math.cos(hitTh))};
-    const at=sack?{x:base.x+f*bodyW*.9,y:bodyY-bodyH*.1}:BENCH.has(tool)?{x:g.x+f*bodyW*.2,y:g.y}
+    const at0=sack?{x:base.x+f*bodyW*.9,y:bodyY-bodyH*.1}:BENCH.has(tool)?{x:g.x+f*bodyW*.2,y:g.y}
       :{x:gHit.x+d.x*L,y:Math.min(base.y,gHit.y+d.y*L)};
+    const at=K===1?at0:{x:base.x+(at0.x-base.x)*K,y:at0.y};
     ctx.restore();
     drawFx(tool,dot.id,P.cycle,P.u,{x:at.x,y:at.y+P.bob*bodyH},f,scale);
   }
@@ -377,7 +397,17 @@
     return{b,t:(b+.5)/PHASES*T.period-k};
   }
   const look=dot=>typeof villagerLookKey==='function'?villagerLookKey(dot):(dot.colors||[]).join(',');
+  // facing: 1 / -1 (screen right / left, the side art), or a world heading {x,y} (WORK-VIEWS: the
+  // worker turns to one of the eight views, the tile is painted per view, never mirrored).
+  const viewOfFacing=(dot,facing)=>facing&&typeof facing==='object'&&typeof footViewOf==='function'?footViewOf(dot.p,facing):null;
   function drawWorker(dot,tool,t,facing){
+    const view=viewOfFacing(dot,facing);
+    if(view&&TOOLS[tool]){
+      const q=phaseTime(tool,dot.id,t);
+      if(window.ConquerWorld3D?.figure?.(dot.p,.10,'w|'+tool+'|'+q.b+(dot.seated?'|s':'')+'|'+view+'|'+look(dot),()=>drawWorkerUnmasked({...dot,p:{x:0,y:0}},tool,q.t,1,view),dot.id,false))return true;
+      return withUrbanFigureOcclusion(dot.p,.10,()=>drawWorkerUnmasked(dot,tool,t,1,view));
+    }
+    if(typeof facing==='object')facing=1;
     if(TOOLS[tool]&&window.ConquerWorld3D?.figure){
       const q=phaseTime(tool,dot.id,t),f=facing<0?-1:1;
       // Painted facing right; a worker facing left is the same card flipped.
@@ -386,21 +416,37 @@
     return withUrbanFigureOcclusion(dot.p,.10,()=>drawWorkerUnmasked(dot,tool,t,facing));
   }
   // A walking worker carries the tool on the shoulder.
-  function drawCarrierUnmasked(dot,tool,facing=1){
-    const base=w2s(dot.p,.10),scale=State.view.scale*.5,bodyW=6*scale,bodyH=8*scale,bodyY=base.y-bodyH*.16,f=facing<0?-1:1;
+  function drawCarrierUnmasked(dot,tool,facing=1,view=null){
+    const W8=workTurn(view);
+    const base=w2s(dot.p,.10),scale=State.view.scale*.5,bodyW=6*scale,bodyH=8*scale,bodyY=base.y-bodyH*.16,f=W8?W8.f:facing<0?-1:1;
     const shouldered=scale>=.16&&tool!=='seeds';
-    drawVillagerFigureUnmasked(dot,shouldered?'far':'both',f);
-    if(!shouldered)return;
-    const g={x:base.x+f*bodyW*.3,y:bodyY-bodyH*.28};
-    ctx.save();drawTool(tool,g,f,tool==='hammer'||tool==='sickle'?.9:-.75,scale);ctx.restore();
-    hand(g.x,g.y,scale);   // the near hand steadies the tool on the shoulder
+    const body=()=>drawVillagerFigureUnmasked(dot,shouldered?'far':'both',f,W8?view:'S');
+    if(!W8?.back)body();
+    if(!shouldered){if(W8?.back)body();return}
+    const g={x:base.x+f*bodyW*.3,y:bodyY-bodyH*.28},K=W8?W8.k:1;
+    ctx.save();
+    if(K!==1){ctx.translate(base.x,0);ctx.scale(K,1);ctx.translate(-base.x,0)}
+    drawTool(tool,g,f,tool==='hammer'||tool==='sickle'?.9:-.75,scale);
+    ctx.restore();
+    hand(base.x+(g.x-base.x)*K,g.y,scale);   // the near hand steadies the tool on the shoulder
+    if(W8?.back)body();
   }
   function drawCarrier(dot,tool,facing){
+    const view=viewOfFacing(dot,facing);
+    if(view){
+      if(window.ConquerWorld3D?.figure?.(dot.p,.10,'c|'+tool+'|'+view+'|'+look(dot),()=>drawCarrierUnmasked({...dot,p:{x:0,y:0}},tool,1,view),dot.id,false))return true;
+      return withUrbanFigureOcclusion(dot.p,.10,()=>drawCarrierUnmasked(dot,tool,1,view));
+    }
+    if(typeof facing==='object')facing=1;
     const f=facing<0?-1:1;
     if(window.ConquerWorld3D?.figure?.(dot.p,.10,'c|'+tool+'|'+look(dot),()=>drawCarrierUnmasked({...dot,p:{x:0,y:0}},tool,1),dot.id,f<0))return true;
     return withUrbanFigureOcclusion(dot.p,.10,()=>drawCarrierUnmasked(dot,tool,facing))}
-  // Screen-space facing of a world direction (dx,dy).
-  function facingOf(p,dx,dy){const a=w2s(p,0),b=w2s({x:p.x+dx,y:p.y+dy},0);return b.x>=a.x?1:-1}
+  // Facing of a world direction (dx,dy): the world heading itself (WORK-VIEWS: drawWorker and
+  // drawCarrier turn it into one of the eight views); 1 / -1 when the views are not loaded.
+  function facingOf(p,dx,dy){
+    if(typeof footViewOf==='function'&&Math.hypot(dx,dy)>1e-9)return{x:dx,y:dy};
+    const a=w2s(p,0),b=w2s({x:p.x+dx,y:p.y+dy},0);return b.x>=a.x?1:-1;
+  }
   const now=()=>(typeof performance!=='undefined'?performance.now():Date.now())/1000;
   // Anonymous labourers are L1: grey and beige cloth.
   const WORKER_COLORS=[['#9c9078','#7d7a72'],['#b4a58a','#8f8b82'],['#a39e93','#7d7a72'],['#c8bda6','#9c9078'],['#8f8b82','#b9b2a3']];

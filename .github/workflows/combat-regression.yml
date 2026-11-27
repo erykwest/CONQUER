@@ -132,6 +132,7 @@ jobs:
           node qa/messenger-card-regression.cjs
           node qa/foot-views-regression.cjs
           node qa/civil-views-regression.cjs
+          node qa/work-views-regression.cjs
           node qa/siege-assault-regression.cjs
           node qa/keep-entrance-regression.cjs
           node qa/wall-stairs-regression.cjs
