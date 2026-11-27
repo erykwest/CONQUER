@@ -420,8 +420,11 @@ cam_data.type = 'ORTHO'
 cam_data.ortho_scale = ORTHO
 cam = bpy.data.objects.new("cam", cam_data)
 scene.collection.objects.link(cam)
-cam.location = (0.0, -10.0, CAM_Z)
-cam.rotation_euler = (math.radians(90), 0.0, 0.0)
+# The game camera looks down ~30 deg (w2sRaw: ground depth x0.5, height x0.9): render the views from
+# the same elevation, so a diagonal view reads as three-quarter (top of the bed, the horses' backs).
+ELEV = math.radians(30)
+cam.rotation_euler = (math.radians(90) - ELEV, 0.0, 0.0)
+cam.location = (0.0, -40.0 * math.cos(ELEV), CAM_Z + 40.0 * math.sin(ELEV))
 scene.camera = cam
 scene.render.engine = 'BLENDER_WORKBENCH'
 scene.render.resolution_x = scene.render.resolution_y = RES
@@ -490,6 +493,6 @@ for view in config.get("views", ["SE", "S", "SW", "NW", "N", "NE"]):
                 renders += 1
     print("rendered", view, renders)
 
-json.dump({"ids": ids, "res": RES, "ortho": ORTHO, "camZ": CAM_Z, "M": M, "layers": layers,
+json.dump({"ids": ids, "res": RES, "ortho": ORTHO, "camZ": CAM_Z, "elev": math.degrees(ELEV), "M": M, "layers": layers,
            "sets": config.get("sets", []), "views": config.get("views", []), "colors": base_data["colors"]}, open(os.path.join(outdir, "ids.json"), "w"))
 print("done:", outdir, renders, "renders")

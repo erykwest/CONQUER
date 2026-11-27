@@ -234,7 +234,8 @@
     if(turned){
       const paintTurned=g=>{
         const f=w2s(),size=teamSize(),u=size*U_PER_ART*12/5.75;
-        M2.drawVehicleView(g,f.x-sx*ext.mid*u,f.y,size,{vehicle:vk,view,phase:v.moving?bucket:null,team:v.spec.team,cargo});
+        M2.drawVehicleView(g,f.x-sx*ext.mid*u,f.y,size,{vehicle:vk,view,phase:v.moving?bucket:null,team:v.spec.team,cargo,
+          driver:(gg,px,py)=>paintVillagerAt(dot,px,py)});   // the same villager as the profile
       };
       return W3.figure({x:v.x,y:v.y},.1,vehicleCardKey(c,v,k,cargo,bucket,dot,view),paintTurned,
         'vehicle-'+c.id+'-'+v.i,false,{span,ox:sx*ext.mid*U_PER_ART/(cardU*span),capsule});

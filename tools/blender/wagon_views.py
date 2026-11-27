@@ -301,17 +301,12 @@ for h, run in zip(horses, animal_runs):
         elif style == C["shade"] and "body" in marks:
             register(overlay(f"h{idx}:{op['k']}", marks["body"], loops, 0.004, sx, sy), "base", f"body{g}", ctok + "shade", ctok + "line", bp, op["k"])
 
-# --- driver or carter: the villager figure of the card ---------------------------------------------
-vill = [op for op in ops if op["tag"].startswith(("population-figures:", "wardrobe:"))]
+# --- driver or carter --------------------------------------------------------------------------------
+# Not built in 3D: in every view the game draws its own 2D villager (as in the profile and as every
+# person in the game), placed at the seat's projected anchor. Here only the anchors are computed
+# (see ANCHORS below): the seat (feet point and the board top that hides the legs) or, for the cart,
+# the carter walking at the horse's head on the near side.
 carter = WG["chassis"] == "cart"
-vy = -0.62 if carter else 0.0          # the carter walks on the near side; the driver sits in the middle
-for n, op in enumerate(vill):
-    style = op["style"].lower()
-    loops = polys.get(str(op["k"])) or []
-    if not loops or style.startswith("rgba("):
-        continue
-    ob = solid(f"v:{op['k']}", loops, vy, 0.26 + 0.012 * n, True)
-    register(ob, "base", "v:figure", style, "rgba(33,24,16,.82)", root if carter else body, op["k"])
 
 # --- the vehicle, from the 2D painter's numbers -----------------------------------------------------
 HW = WIDTH / 2
@@ -453,8 +448,11 @@ cam_data.type = 'ORTHO'
 cam_data.ortho_scale = ORTHO
 cam = bpy.data.objects.new("cam", cam_data)
 scene.collection.objects.link(cam)
-cam.location = (0.0, -20.0, CAM_Z)
-cam.rotation_euler = (math.radians(90), 0.0, 0.0)
+# The game camera looks down ~30 deg (w2sRaw: ground depth x0.5, height x0.9): render the views from
+# the same elevation, so a diagonal view reads as three-quarter (top of the bed, the horses' backs).
+ELEV = math.radians(30)
+cam.rotation_euler = (math.radians(90) - ELEV, 0.0, 0.0)
+cam.location = (0.0, -40.0 * math.cos(ELEV), CAM_Z + 40.0 * math.sin(ELEV))
 scene.camera = cam
 scene.render.engine = 'BLENDER_WORKBENCH'
 scene.render.resolution_x = scene.render.resolution_y = RES
@@ -504,6 +502,34 @@ def show(srcs):
             o.hide_render = name not in srcs
 
 
+# Anchors of the 2D driver per view, in art units as the tracer writes regions (x right, y down from
+# the ground under the bed's middle, heights restored by /cos(elev)), and whether he stands behind the
+# vehicle's middle (then the renderer draws him before the vehicle, so boards, load and team hide him).
+def project(pt, yaw):
+    x, y, z = pt
+    xr, yr = x * math.cos(yaw) - y * math.sin(yaw), x * math.sin(yaw) + y * math.cos(yaw)
+    u = xr
+    v = yr * math.sin(ELEV) + (z - CAM_Z) * math.cos(ELEV)        # screen-up through the target
+    depth = yr * math.cos(ELEV) - (z - CAM_Z) * math.sin(ELEV)    # away from the camera
+    ce = math.cos(ELEV)
+    return [round(u / M, 1), round(-(v + CAM_Z * ce) / ce / M, 1)], depth
+
+
+def view_anchors(yaw):
+    if carter:
+        ahead = 0.75 * 12 / (5.75 * 1.9 / 256) * M          # .75 U ahead of the bed middle, metres
+        at, depth = project((ahead, -0.55, 0.0), yaw)
+        _, mid = project((ahead * .5, 0.0, 0.6), yaw)
+        return {"kind": "carter", "at": at, "behind": depth > mid}
+    if not seat:
+        return None
+    at, depth = project((wx(seat["x"]), 0.0, wz(seat["driverY"])), yaw)
+    clip, _ = project((wx(seat["x"]), 0.0, wz(CH["boardTop"] if not CH.get("cabin") else seat["y"])), yaw)
+    _, mid = project((0.0, 0.0, wz(CH["boardTop"])), yaw)
+    return {"kind": "seat", "at": at, "clip": clip[1], "behind": depth > mid}
+
+
+anchors = {}
 POSES = ["idle"] + [f"p{i}" for i in range(8)]
 renders = 0
 for view in VIEWS:
@@ -520,9 +546,10 @@ for view in VIEWS:
         scene.render.filepath = os.path.join(outdir, f"{view}_idle__{L.replace(':', '-')}.png")
         bpy.ops.render.render(write_still=True)
         renders += 1
+    anchors[view] = view_anchors(math.radians(ANGLES[view]))
     print("rendered", view, renders, flush=True)
 
-json.dump({"ids": ids, "res": RES, "ortho": ORTHO, "camZ": CAM_Z, "M": M, "layers": layers, "layerPoses": ["idle"],
+json.dump({"ids": ids, "res": RES, "ortho": ORTHO, "camZ": CAM_Z, "elev": math.degrees(ELEV), "M": M, "anchors": anchors, "layers": layers, "layerPoses": ["idle"],
            "sets": [{"name": "rest", "poses": POSES}], "views": VIEWS, "colors": data["colors"]},
           open(os.path.join(outdir, "ids.json"), "w"))
 print("done:", outdir, renders, "renders")

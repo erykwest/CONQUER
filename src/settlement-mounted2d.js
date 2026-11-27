@@ -393,11 +393,22 @@
       return t==='outline'?OUTLINE:t;
     };
     const S=size*(sp.scale||1),s=S/256,lw=Math.max(.55,S/90)/s;
+    // The driver is the game's own 2D villager (o.driver(ctx,x,y,size), as drawWagon's), at the view's
+    // seat anchor; the board top hides his legs. Behind the vehicle's middle he is drawn first, so the
+    // boards, the load and the team cover him; in front, last. The carter walks at the horse's head.
+    const A=V.anchor,person=A&&o.driver?()=>{
+      g.save();
+      if(A.kind==='seat'){g.beginPath();g.rect(x-1e5,y-1e5,2e5,1e5+A.clip*s);g.clip()}
+      o.driver(g,x+A.at[0]*s,y+A.at[1]*s,size);
+      g.restore();
+    }:null;
+    if(person&&A.behind)person();
     g.save();g.translate(x,y);g.scale(s,s);g.lineJoin='round';g.lineCap='round';
     paintFrame(g,set,V.frames[fi]||V.frames[0],color,lw,null);
     const cargo=(o.cargo||[]).slice(0,6),n=cargo.length;
     cargo.forEach((kind,i)=>{const f=set.layers?.[`cargo:${n}:${i}:${kind}`]?.[o.view]?.[0];if(f)paintFrame(g,set,f,color,lw,null)});
     g.restore();
+    if(person&&!A.behind)person();
     return true;
   }
   // o.view, o.phase (null = idle, else 0..7), o.mode ('walk' default, 'run' = the knight's charge).
