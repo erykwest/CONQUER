@@ -2130,7 +2130,10 @@
       else if(s.capsule){
         // Animal collider: the same horizontal capsule (segment from x-ax to x+ax at height z).
         // capsule.box: the same body as an oriented box (half-length along the axis, half-width r).
-        out.push({id:s.id,type:s.capsule.kind||'animal',x:s.p.x,y:s.p.y,ax:cap.seg1[0],ay:cap.seg1[1],z0:s.z+cap.seg0[2],z1:s.z+cap.seg1[2],r:cap.r,box:!!s.capsule.box});
+        // A box spans z-r..z+r (the capsule's axis is horizontal: seg0 and seg1 share one height).
+        const bx=!!s.capsule.box;
+        out.push({id:s.id,type:s.capsule.kind||'animal',x:s.p.x,y:s.p.y,ax:cap.seg1[0],ay:cap.seg1[1],
+          z0:s.z+cap.seg0[2]-(bx?cap.r:0),z1:s.z+cap.seg1[2]+(bx?cap.r:0),r:cap.r,box:bx});
       }
     }
     colliders=out;

@@ -249,6 +249,8 @@ Implementato nel branch `fix/territory-clay-stone-access`. Nuove mappe con acqua
 - [x] Cavalieri (`drawMountedKnight`) con lo stesso metodo, con le loro parti: gualdrappa, crinet, mantello, scudo, lancia, elmo e cimiero (layer per elmo/scudo/cimiero, carica con lancia in resta).
 - [ ] Ridurre il peso di `src/assets/mounted-views.js` (~2,1 MB): viste speculari, semplificazione per layer, caricamento differito.
 - [ ] Viste fuori profilo anche per guardia, colpo e caduta del cavaliere (oggi restano sul profilo).
+- [x] Carretto, carro e carrozza in 8 viste con collider a scatola (WAGON-VIEWS, `feature/wagon-views`).
+- [ ] Conducente dei carri col guardaroba stagionale anche nelle viste ruotate; sobbalzo del carico col passo.
 - [ ] Salvataggi con un messaggero già in viaggio su un percorso in linea retta: lo tiene fino all'arrivo (non ricalcolato).
 
 ## 2026-11-18 — UI-UPG-01 · Ampliamenti dall'ispettore
