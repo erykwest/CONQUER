@@ -59,7 +59,7 @@
     for(const [a,b] of runs){if(a>u)stretches.push({kind:'beach',u0:u,u1:a});stretches.push({kind:'rocks',u0:a,u1:b});u=b}
     if(u<c.length-1)stretches.push({kind:'beach',u0:u,u1:c.length-1});
     for(const s of stretches){
-      s.points=along(c,s.u0,s.u1,normals);
+      s.points=along(c,s.u0,s.u1,normals);s.coast=c;s.normals=normals;
       s.poly=s.kind==='rocks'?band(s.points,D,ROCK_SEA,ROCK_LAND):band(s.points,D,.25,BEACH_LAND);
       s.bounds=bounds(s.poly);
     }
@@ -76,16 +76,114 @@
 
   // Ground paint (2D scene and the baked WebGL ground): sand and wet sand on the beaches,
   // grey stone with a dark wet edge on the rocks.
+  // The painted edges are ragged (visual only: kindAt/rockAt keep the straight bands): the
+  // sand ends in an irregular line with tongues into the grass, the wet sand winds, and the
+  // rocky stretches spill past their ends onto the beach in tapering, broken tongues.
+  // Grass tufts, stones and (3D) bushes dot the landward edge.
+  const RAGGED_STEP=.35,ROCK_SPILL=2.8;
+  // Smooth world-anchored noise in about [-1,1]: continuous across stretches.
+  const wnoise=(p,k=0)=>.5*Math.sin(.37*p.x+.23*p.y+1.3+k)+.3*Math.sin(.91*p.y-.57*p.x+4.1+k*2)+.2*Math.sin(2.1*p.x+1.7*p.y+.7+k*3);
+  const jit=(p,k)=>h01((Math.round(p.x*97)*73856093)^(Math.round(p.y*97)*19349663)^k)*2-1;
+  function fineAlong(s,u0,u1){
+    const c=s.coast,N=s.normals;if(!c)return s.points;
+    const a=Math.max(0,u0),b=Math.min(c.length-1,u1);
+    const out=[],at=u=>{const i=Math.min(c.length-2,Math.floor(u));const p=lerp(c[i],c[i+1],u-i);if(N){const n=lerp(N[i],N[i+1],u-i),l=Math.hypot(n.x,n.y)||1;p.nx=n.x/l;p.ny=n.y/l}return p};
+    let len=0;for(let i=Math.floor(a);i<Math.ceil(b);i++)len+=Math.hypot(c[i+1].x-c[i].x,c[i+1].y-c[i].y);
+    const n=Math.max(2,Math.ceil(len*Math.max(.05,b-a)/Math.max(1e-6,Math.ceil(b)-Math.floor(a))/RAGGED_STEP));
+    for(let k=0;k<=n;k++){const u=a+(b-a)*k/n,p=at(u);p.u=u;out.push(p)}
+    return out;
+  }
+  // Coast parameter shift that walks about `dist` world units along the coast from u.
+  function uShift(c,u,dist){
+    const i=Math.max(0,Math.min(c.length-2,Math.floor(u))),L=Math.hypot(c[i+1].x-c[i].x,c[i+1].y-c[i].y)||1;
+    return dist/L;
+  }
+  const raggedBand=(pts,D,toSea,toLand)=>[
+    ...pts.map((p,i)=>({x:p.x+(p.nx??D.x)*toSea(p,i),y:p.y+(p.ny??D.y)*toSea(p,i)})),
+    ...pts.map((p,i)=>({p,i})).reverse().map(({p,i})=>({x:p.x-(p.nx??D.x)*toLand(p,i),y:p.y-(p.ny??D.y)*toLand(p,i)}))];
+  const inland=(p,D,d)=>({x:p.x-(p.nx??D.x)*d,y:p.y-(p.ny??D.y)*d});
+  function landRagged(p,base,amp,k){
+    let w=base*(1+amp*wnoise(p,k))+jit(p,k)*base*.05;
+    // Tongues reaching inland and notches of grass: smooth bumps of a slower noise, a few
+    // units wide (never single-point spikes).
+    const slow=.6*Math.sin(.19*p.x-.27*p.y+k*1.7)+.4*Math.sin(.43*p.y+.31*p.x+k*.9);
+    w+=base*.45*Math.max(0,slow-.45)/.55-base*.3*Math.max(0,-slow-.6)/.4;
+    return Math.max(base*.35,w);
+  }
   function drawGround(project,fill){
-    for(const s of stretches()){
-      if(s.kind==='beach'){
-        fill(project(s.poly),'#d6c494');
-        const wet=band(s.points,shore().D,.25,.7);fill(project(wet),'#b9a978');
-      }else{
-        fill(project(s.poly),window.ConquerStoneColor?.shade('#7d786e')||'#7d786e');
-        const wet=band(s.points,shore().D,ROCK_SEA,.4);fill(project(wet),window.ConquerStoneColor?.shade('#4d4f49')||'#4d4f49');
-      }
+    const d=shore();if(!d)return;const D=d.D,list=stretches();
+    const winter=typeof isSnowGround==='function'&&isSnowGround();
+    const tufts=[],stones=[];
+    for(const s of list){
+      if(s.kind!=='beach')continue;
+      const pts=fineAlong(s,s.u0,s.u1);
+      const land=(p)=>landRagged(p,BEACH_LAND,.22,11);
+      fill(project(raggedBand(pts,D,()=>.25,land)),'#d6c494');
+      fill(project(raggedBand(pts,D,()=>.25,p=>.62+.22*wnoise(p,5)+.06*jit(p,6))),'#b9a978');
+      pts.forEach((p,i)=>{if(i%3)return;const r=h01(i*131+Math.round(p.x*7));if(r<.55)tufts.push({p:inland(p,D,land(p)+.05+r*.5),s:.6+r*.8})});
     }
+    for(const s of list){
+      if(s.kind!=='rocks')continue;
+      const c=s.coast,a=c?s.u0-uShift(c,s.u0,ROCK_SPILL):s.u0,b=c?s.u1+uShift(c,s.u1,ROCK_SPILL):s.u1;
+      const pts=fineAlong(s,a,b);
+      // 0 in the spill beyond the stretch ends, 1 inside: tongues taper and break up.
+      const core=p=>{if(p.u==null)return 1;if(p.u>=s.u0&&p.u<=s.u1)return 1;const out=p.u<s.u0?(s.u0-p.u)/Math.max(1e-6,s.u0-a):(p.u-s.u1)/Math.max(1e-6,b-s.u1);return Math.max(0,1-out)};
+      // Rock/beach junction is faceted, not a smooth taper: in the spill zone every sample gets
+      // its own jagged cut (sharp teeth of rock into the sand), on both the land and sea side.
+      const teeth=(p,k)=>{const t=core(p);if(t>=1)return 1;const j=jit(p,k);return Math.max(0,Math.sqrt(t)*(.8+.45*wnoise(p,29))-.12+(j>.2?.38*j:j<-.45?-.4:.05*j))};
+      const land=p=>{const w=landRagged(p,ROCK_LAND,.3,23);return w*teeth(p,41)};
+      const sea=p=>ROCK_SEA*Math.max(.12,teeth(p,43));
+      fill(project(raggedBand(pts,D,sea,land)),window.ConquerStoneColor?.shade('#7d786e')||'#7d786e');
+      // Broken-off rock slabs lying on the sand just past each end: small angular polygons.
+      for(const [u,dir] of [[s.u0,-1],[s.u1,1]]){
+        if(!c)break;
+        const rnd=seedRand(((Number(State.seed)||1)^Math.round(u*1000)^0x51ab)>>>0),count=4+Math.floor(rnd()*4);
+        for(let k=0;k<count;k++){
+          const along=(ROCK_SPILL*(.4+rnd()*.9))*dir,uu=Math.max(0,Math.min(c.length-1,u+uShift(c,u,Math.abs(along))*Math.sign(along)));
+          const base=fineAlong(s,uu,uu+1e-4)[0];if(!base)continue;
+          const ctr=inland(base,D,-.2+rnd()*(ROCK_LAND*.9)),rad=.18+rnd()*.38,sides=4+Math.floor(rnd()*3),rot=rnd()*6.28;
+          const slab=[];for(let q=0;q<sides;q++){const ang=rot+q/sides*6.28+(rnd()-.5)*.6,rr=rad*(.6+rnd()*.6);slab.push({x:ctr.x+Math.cos(ang)*rr,y:ctr.y+Math.sin(ang)*rr})}
+          fill(project(slab),window.ConquerStoneColor?.shade(rnd()<.5?'#7d786e':'#6c675e')||'#7d786e');
+          if(rnd()<.5)stones.push({p:ctr,s:rnd()*.6});
+        }
+      }
+      fill(project(raggedBand(pts,D,sea,p=>Math.min(land(p),.4+.15*wnoise(p,31)))),window.ConquerStoneColor?.shade('#4d4f49')||'#4d4f49');
+      pts.forEach((p,i)=>{
+        const r=h01(i*197+Math.round(p.y*7)),w=land(p);if(w<.15)return;
+        if(i%4===0&&r<.45)stones.push({p:inland(p,D,w*(.7+r*.5)),s:r});
+        else if(i%3===0&&r>.6)tufts.push({p:inland(p,D,w+.1+r*.4),s:.6+r*.6});
+      });
+    }
+    // Stones and tufts only where painting projects to screen (2D scene / plan bake).
+    if(typeof drawLowPolyRock==='function')for(const st of stones){
+      const z=typeof terrainElevation==='function'?terrainElevation(st.p):0;
+      drawLowPolyRock(st.p,z,.1+st.s*.16,.06+st.s*.1,Math.floor(st.s*0xffffffff),winter);
+    }
+    if(typeof cliffTufts==='function')cliffTufts(tufts.map(t=>({p:t.p,z:typeof terrainElevation==='function'?terrainElevation(t.p):0,s:t.s})),winter);
+  }
+  // Upright bushes on the grass just behind the beaches and the rocky stretches
+  // (3D billboards, settlement-world3d.js). Deterministic; skips water, cliffs and structures.
+  let bushCache={key:null,list:[]};
+  function edgeBushes(){
+    const d=shore();if(!d)return[];
+    const key=cache.key+'|'+(State.seed||0)+'|'+(State.structures||[]).length;
+    if(bushCache.key===key)return bushCache.list;
+    const list=[],D=d.D,water=(State.environment||[]).filter(f=>['sea','pond','river','stream','marsh'].includes(f.type));
+    const blocked=p=>p.x<1||p.y<1||p.x>199||p.y>199||(typeof terrainSlopeKind==='function'&&terrainSlopeKind(p)==='steep')||kindAt(p)||
+      water.some(f=>{try{return environmentContains(f,p,.4)}catch{return false}})||
+      (State.structures||[]).some(s=>Number.isFinite(s.x)?Math.hypot(s.x-p.x,s.y-p.y)<2.2:(s.a&&s.b&&pointSegmentDistance(p,s.a,s.b)<1.4));
+    for(const s of d.stretches){
+      const pts=fineAlong(s,s.u0,s.u1),base=s.kind==='beach'?BEACH_LAND:ROCK_LAND;
+      let gap=0;
+      pts.forEach((p,i)=>{
+        gap+=RAGGED_STEP;const r=h01(i*389+Math.round(p.x*11)+(s.kind==='beach'?0:7777));
+        if(gap<(s.kind==='beach'?3.6:2.6)+r*2)return;gap=0;
+        const w=landRagged(p,base,s.kind==='beach'?.22:.3,s.kind==='beach'?11:23),q=inland(p,D,w+.5+r*1.1);
+        if(blocked(q))return;
+        list.push({p:q,z:typeof terrainElevation==='function'?terrainElevation(q):0,width:.8+r*.7,scale:.75+h01(i*17+3)*.35,shape:Math.floor(h01(i*29+5)*7),flip:h01(i*41)<.5});
+      });
+    }
+    bushCache={key,list};return list;
   }
   // Rocks along the rocky stretches and a few things on the beaches, seeded by the map.
   let rockCache={key:null,meshes:[]};
@@ -220,5 +318,5 @@
     if(drawn&&typeof requestSceneDraw==='function')requestSceneDraw();
     return drawn;
   }
-  window.ConquerCoast=Object.freeze({HEADLAND,ROCK_LAND,ROCK_SEA,shore,stretches,kindAt,rockAt,drawGround,meshes,addToBuilder,drawWaves});
+  window.ConquerCoast=Object.freeze({HEADLAND,ROCK_LAND,ROCK_SEA,shore,stretches,kindAt,rockAt,drawGround,edgeBushes,meshes,addToBuilder,drawWaves});
 })();

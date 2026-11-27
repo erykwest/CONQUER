@@ -24,14 +24,13 @@
 - **Prove:** `qa/foot-views-regression.cjs` (nuova, in `combat-regression.yml`): S identica chiamata per chiamata al codice prima della modifica per ogni tipo, elmo e posa; 8 viste per ogni tipo; retro di scudo ed elmo; ordine di profondità; collegamenti. `combat-figures-roles` aggiornata alla nuova struttura; `figure-hands-feet`, `combat-anim`, `combat-render`, `messenger-card` PASS. Audit Lab categoria Truppe: 24 render, 0 falliti, 0 cambiati, 8 nuovi (aggiunti alla baseline, comprese le due voci 8 viste dei cavalli della PR 314).
 - **Non verificato:** in partita (battaglia e pattuglie reali).
 
+
 ### 2026-11-27 — WAGON-VIEWS: carretto, carro e carrozza in 8 viste (`feature/wagon-views`, su `fix/messenger-card`)
 
 - **CODICE:** la card del veicolo (`settlement-vehicles.js`) sceglie una delle 8 viste dalla direzione sullo schermo; E/W restano il pittore 2D (`drawWagon`), le altre 6 vengono da `ConquerMounted2D.drawVehicleView` (`src/assets/mounted-views.js`, chiavi `vehicle:cart|wagon|coach`). Collider a scatola lungo la direzione (lunghezza della composizione, larghezza del pianale); le scatole hanno ora un'altezza reale (z−r..z+r in `settlement-world3d.js`).
 - **BUILD:** `tools/blender/wagon_views.py`: il veicolo è costruito dai numeri di `settlement-wagons.js` (sponde con assi e montanti, testate, pianale, sedile, timone, ruote con raggi che girano col passo, cabina della carrozza); tiro (un rig per cavallo, il cavallo lontano riportato alla sua profondità) e conducente/carrettiere dal disegno approvato; carico come layer per numero di colli, slot e merce (carretto 60, carro 126), resi da fermi. Correzioni comuni: colori ID unici oltre 211 parti; perni del ginocchio agganciati con la matrice aggiornata (il passo piegava le gambe attorno a un punto sbagliato, anche per messaggero e cavalieri: viste rigenerate).
 - **LIMITI:** il conducente usa il guardaroba della stagione d'estrazione; il carico non sobbalza col passo; scorte e passeggeri invariati.
 - **PROVE:** `qa/messenger-card-regression.cjs` esteso ai veicoli. Lab: «Carretto · 8 viste», «Carro · 8 viste», «Carrozza · 8 viste».
-
-### 2026-11-26 — DEV-FREE-RESTYLE: cambi di stile gratis in DEV (`feat/dev-free-restyle`, NON MERGE)
 
 ### 2026-11-25 — MESSENGER-CARD: messaggero a cavallo come card World 3D (`fix/messenger-card`)
 
@@ -42,6 +41,27 @@
 - **COLLO:** `drawNeck` (`settlement-animals.js`) chiude il collo con un terminale semicircolare e ritaglia la criniera sulla stessa forma: niente più taglio dietro la nuca (cavallo, cervo, lupo, cinghiale; capra e mucca invariate). Cache-buster aggiornati in `index.html` e `figures-lab.html`.
 - **CAVALIERI:** stesso metodo, con le loro parti: gualdrappa inquartata (volume proprio, quarti, orlo e stemma dipinti sopra), crinet e testiera sul collo e sul muso, pennacchio, mantello foderato, lancia e braccio sul lato lontano, cotta e sopravveste, scudo sul lato vicino. Elmo (5 stili), scudo (default + 5) e cimiero (5) sono layer resi con la base presente e dipinti sopra; set di pose: fermo, passo (p0..p7) e carica con lancia in resta (r0..r7, `charge` in `ConquerMounted2D.draw`). In battaglia (`drawMountedKnight`) il cavaliere sceglie una delle 8 viste; guardia, colpo, lampo e caduta restano sul profilo 2D. Lo stemma del regno si dipinge nelle regioni araldiche (`paint`). Driver: `tools/blender/build_mounted_views.py`. Lab: «Cavaliere a cavallo · 8 viste», «Messaggero a cavallo · 8 viste».
 - **DA RIVEDERE:** `src/assets/mounted-views.js` pesa ~2,1 MB (cavaliere ~1,75 MB); audit del Lab (`qa/asset-audit.mjs`) non eseguito per le due voci nuove; cavalieri non verificati in una battaglia reale.
+
+### 2026-11-27 — MOUNTAIN-FACETS-261127: neve e costoni sfaccettati (`feat/ragged-terrain-edges`, NON MERGE)
+
+- **CODICE:** assorbita la PR 318 (montagne a stella e costoni). `settlement-landscape.js` `mountainFacetPolygons`: linea della neve frastagliata (`mountainSnowLine`, `MOUNTAIN_SNOW_RAGGED`), con lingue di neve nei canaloni e neve piu alta sulle creste, continua tra facce vicine; la faccia restituisce anche `rockParts`/`snowParts` (triangoli convessi per il 3D). `mountainCragLayout`: fascia al piede con cresta irregolare e tacche, divisa in triangoli attorno a un punto interno; placche di vetta a 9-12 punti irregolari. `settlement-world3d.js`: roccia e neve disegnate per triangoli, costoni con 4 toni di pietra.
+- **OMBREGGIATURA MONTAGNE:** l'opzione Gradienti (Centro di controllo > Grafica) scurisce anche i fianchi delle montagne dal piede alla vetta, su tutta l'altezza del monte (`face(...,range)` in `meshBuilder`); cambiare l'opzione ricostruisce la mesh del terreno.
+- **CESPUGLI DI MONTAGNA:** `mountainBushLayout` (fitti sotto la linea dei pini, radi fino sotto la neve, ciuffi in cima ai costoni, mai sui costoni), billboard 3D stagionali come il sottobosco, alzati per la pendenza; ~2300 cespugli e ~50 ms di calcolo una tantum sulla demo montagne.
+- **RITOCCHI:** pini di montagna raddoppiati (passo 2.6/sqrt(3)) ed esclusi da costoni e placche; costoni al piede su tutte le facce (`MOUNTAIN_FOOT_CRAG_CHANCE=1`, circa 3x); nel 3D i pini sono alzati di mezza larghezza per la pendenza, cosi non affondano nel fianco.
+- **PROVE (locale):** mountain-density, regional-surroundings, p1-terrain, sporadic-hills, coast PASS; verifica visiva `?demo=mountains&seed=229`, nessun errore in console.
+
+### 2026-11-27 — MOUNTAIN-STAR-CRAGS: montagne a stella con costoni di roccia (`feature/mountain-star-crags`, NON MERGE)
+
+Base delle montagne a stella irregolare (punte e rientranze alternate, `MOUNTAIN_STAR`), costoni con la grafica delle cliff al piede (~1/3 delle facce, `MOUNTAIN_FOOT_CRAG_CHANCE`) con ghiaione di massi low-poly e placche di roccia nuda in vetta sopra la neve. Renderer 3D (`buildMountains`) e 2D (`drawRaisedFan`) condividono `mountainCragLayout`. Regressioni montagne/terreno PASS in locale; CI remota da eseguire.
+
+### 2026-11-27 — TERRAIN-EDGES-261127: bordi frastagliati di rupi, boschi e coste (`feat/ragged-terrain-edges`, NON MERGE)
+
+- **CODICE:** `settlement-castle.js` `reliefEdgeBands`: il piede del pendio di un livello resta dentro il livello sottostante (`reliefLevelBelow`, ricerca binaria della larghezza), niente piu strati a sbalzo. `settlement-landscape.js`: attorno alle rupi lingue di roccia frastagliate sui pendii vicini, sulla cima e al piede (`drawCliffRaggedSides`/`drawCliffRaggedCrest`, profilo irregolare `cliffRaggedProfile`), sassi e ciuffi d'erba stagionali (`cliffTufts`); margine del sottobosco frastagliato (`forestRaggedOutline`, solo pittura) con ciuffi e sassi. `settlement-coast.js`: sabbia e scogli con bordi irregolari verso terra, giunzione scogli/spiaggia a denti e lastre di roccia sulla sabbia (`drawGround`), cespugli `edgeBushes`. `settlement-world3d.js`: cespugli 3D billboard lungo rupi, boschi e coste (sprite stagionali del sottobosco); la texture del terreno si ricalcola anche al cambio di fogliame (`bushSeasonKey` nella firma).
+- **CONTRATTI INVARIATI:** alberi e regole di gioco usano ancora `f.points`; `ConquerCoast.kindAt/rockAt` usano le fasce originali; tutto il resto e solo pittura della texture del terreno + billboard.
+- **PROVE (locale):** sporadic-hills, slopeways, shore-relief-occlusion, wooded-relief, terraforming, earthworks, p1-terrain, forest-shrubs, organic-forest, tree-density-balance, forest-canopy-query, forestry, river-forest-detour, scatter, coast, island-coast, inherited-coast, pier, sea-convoys, sea-nav PASS. Verifica visiva in gioco (estate; autunno/inverno per i cespugli) su una mappa per tipo. Piede del pendio fuori dal livello sottostante: 456/1048 -> 0. Peso: pittura del terreno +~11 ms boschi, ~80 ms rupi (mappa con 391 tratti), ~6 ms costa; costo per frame trascurabile.
+- **LIMITI:** radure interne e rive di laghi/paludi ancora lisce; i cespugli vicino a nuove costruzioni si aggiornano solo al ricalcolo della vegetazione.
+
+### 2026-11-26 — DEV-FREE-RESTYLE: cambi di stile gratis in DEV (`feat/dev-free-restyle`, NON MERGE)
 
 - **CODICE:** `settlement-castle-structures.js` `devFreeRestyle()`: con freeBuild o fastBuild DEV attivi, `crenelRestyleQuote` e `roofPitchQuote` restituiscono un costo vuoto; le schede «Stile delle merlature» e «Pendenza dei tetti» mostrano «Adotta · gratis». Il cambio era già immediato. Senza DEV il costo resta invariato.
 - **PROVE:** `node qa/roof-pitch-regression.cjs` e `qa/battlement-parapet-regression.cjs` PASS in locale; in browser `roofPitchQuote(60)` con freeBuild = `{}`. Click in gioco non verificato.
