@@ -32,8 +32,11 @@ function drawSplitVillagerBody(kind,x,y,w,h,topColor,bottomColor){
   ctx.beginPath();ctx.moveTo(x-w/2,y);ctx.lineTo(x+w/2,y);ctx.stroke();
   ctx.restore();
 }
-function drawVillagerHead(id,x,y,r,sex='male',cachedHair=null){
+// t (footTurn, CIVIL-VIEWS): the hair covers the part of the head turned away; the side locks
+// follow the turn.
+function drawVillagerHead(id,x,y,r,sex='male',cachedHair=null,t=null){
   const hair=cachedHair||villagerHair(id);
+  if(t)return drawVillagerHeadTurned(x,y,r,sex,hair,t);
   ctx.save();
   ctx.fillStyle=VILLAGER_SKIN;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
 
@@ -50,6 +53,24 @@ function drawVillagerHead(id,x,y,r,sex='male',cachedHair=null){
     }
   }
 
+  ctx.strokeStyle='rgba(67,42,30,.80)';ctx.lineWidth=Math.max(.65,r*.20);
+  ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();
+  ctx.restore();
+}
+function drawVillagerHeadTurned(x,y,r,sex,hair,t){
+  ctx.save();
+  ctx.fillStyle=VILLAGER_SKIN;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+  if(hair!=='bald'){
+    const hc=HAIR_COLORS[hair];ctx.fillStyle=hc;
+    if(sex==='female')for(const side of[-1,1]){
+      if(footDepth(t,side,0)<-.5)continue;   // the lock behind the head is hidden by it
+      ctx.beginPath();ctx.ellipse(x+side*r*.72*t.c-r*.25*t.s,y+r*.48,r*.34*(.6+.4*Math.abs(t.c)),r*.80,0,0,Math.PI*2);ctx.fill();
+    }
+    ctx.save();ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.clip();
+    ctx.beginPath();ctx.arc(x,y,r,Math.PI,Math.PI*2);ctx.lineTo(x-r,y);ctx.closePath();ctx.fill();
+    if(t.c<.9){ctx.beginPath();ctx.arc(x-t.s*r*(1+t.c),y,r*1.05,0,Math.PI*2);ctx.fill()}
+    ctx.restore();
+  }
   ctx.strokeStyle='rgba(67,42,30,.80)';ctx.lineWidth=Math.max(.65,r*.20);
   ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();
   ctx.restore();
@@ -92,20 +113,41 @@ function villagerLookKey(dot){
   const outfit=window.ConquerWardrobe?.outfitFor(dot);
   return [dot.kind,dot.age,dot.sex,dot.hair||villagerHair(dot.id),(dot.colors||[]).join(','),outfit?JSON.stringify(outfit):''].join('|');
 }
+// Walking direction of a civilian (CIVIL-VIEWS): from where it was drawn last; kept for a moment
+// after it stops, then it faces the viewer again (S). dot.view or dot.heading, when given, win.
+const civilianWalk=new Map();
+const CIVILIAN_HOLD=1.2;   // seconds the last heading is kept after the figure stops
+function civilianView(dot){
+  if(dot.view)return dot.view;
+  if(dot.heading)return footViewOf(dot.p,dot.heading);
+  if(!dot.id||!dot.p)return'S';
+  const now=performance.now()/1000,w=civilianWalk.get(dot.id);
+  if(!w){civilianWalk.set(dot.id,{x:dot.p.x,y:dot.p.y,hx:0,hy:0,at:-1e9});return'S'}
+  const dx=dot.p.x-w.x,dy=dot.p.y-w.y,d=Math.hypot(dx,dy);
+  // A jump (teleport, new scatter) is not a walk.
+  if(d>1e-4&&d<1.5){w.hx=dx;w.hy=dy;w.at=now}
+  w.x=dot.p.x;w.y=dot.p.y;
+  if(civilianWalk.size>4000)civilianWalk.clear();
+  return now-w.at<CIVILIAN_HOLD?footViewOf(dot.p,{x:w.hx,y:w.hy}):'S';
+}
 function drawVillagerFigure(dot){
+  const view=civilianView(dot);
   // WebGL: a depth-tested card (settlement-world3d.js figure()), so ships and walls in front hide it.
-  if(window.ConquerWorld3D?.figure?.(dot.p,.10,'v|'+villagerLookKey(dot),()=>drawVillagerFigureUnmasked({...dot,p:{x:0,y:0}}),dot.id))return true;
-  return withUrbanFigureOcclusion(dot.p,.10,()=>drawVillagerFigureUnmasked(dot));
+  if(window.ConquerWorld3D?.figure?.(dot.p,.10,'v|'+villagerLookKey(dot)+(view==='S'?'':'|'+view),()=>drawVillagerFigureUnmasked({...dot,p:{x:0,y:0}},'both',1,view),dot.id))return true;
+  return withUrbanFigureOcclusion(dot.p,.10,()=>drawVillagerFigureUnmasked(dot,'both',1,view));
 }
 // hands: 'both' (idle, hands at the sides), 'far' (only the hand away from facing: the
 // near one is drawn by the work animation at the tool), or 'none'.
-function drawVillagerFigureUnmasked(dot,hands='both',facing=1){
+// view (CIVIL-VIEWS): one of FOOT_VIEW_NAMES; S, the approved art, by default.
+function drawVillagerFigureUnmasked(dot,hands='both',facing=1,view=dot.view||'S'){
   const base=w2s(dot.p,.10),scale=State.view.scale*.5;
   const kind=villagerShape(dot),sizeFactor=dot.age==='child'?.5:1;
   const bodyW=6.0*scale*sizeFactor,bodyH=8.0*scale*sizeFactor,s=scale*sizeFactor;
   const headR=2.35*scale*sizeFactor,bodyY=base.y-bodyH*.16,headY=bodyY-bodyH/2-headR*.68;
   // Seasonal wardrobe overlays (cloak, hood, hat) for cold months and bad weather.
   const outfit=window.ConquerWardrobe?.outfitFor(dot);
+  const t=footTurn(view);
+  if(t)return drawVillagerTurned(dot,hands,facing,t,{base,kind,bodyW,bodyH,s,headR,bodyY,headY,outfit});
   // Under the gown only the shoe tips show.
   drawFigureFeet(base.x,villagerBodyBottom(kind,bodyY,bodyW,bodyH),bodyW,s,kind==='lady'?.76:1);
   // Ladies wear a gown of one colour; the other classes keep the two-tone tunic.
@@ -122,6 +164,27 @@ function drawVillagerFigureUnmasked(dot,hands='both',facing=1){
   }else drawVillagerHead(dot.id,base.x,headY,headR,dot.sex,dot.hair);
   if(outfit)window.ConquerWardrobe.drawHead(outfit,base.x,headY,headR);
 }
+// The same figure turned (CIVIL-VIEWS): body and garments as volumes, hands by their side of the
+// body (the far one first), hair over the part of the head turned away.
+function drawVillagerTurned(dot,hands,facing,t,f){
+  const {base,kind,bodyW,bodyH,s,headR,bodyY,headY,outfit}=f,lady=kind==='lady',W=window.ConquerWardrobe;
+  const sides=hands==='both'?[-1,1]:hands==='far'?[facing<0?1:-1]:[];
+  const hand=side=>{const h=villagerSideHand(kind,base.x,bodyY,bodyW,bodyH,s,side);drawFigureHand(base.x+(h.x-base.x)*t.c,h.y,s)};
+  const near=side=>footDepth(t,side,0)>=0;
+  for(const side of sides)if(!near(side))hand(side);
+  drawFootViewFeet(t,base.x,villagerBodyBottom(kind,bodyY,bodyW,bodyH),bodyW,s);
+  withFootVolume(ctx,t,base.x,0,()=>drawSplitVillagerBody(kind,base.x,bodyY,bodyW,bodyH,dot.colors[0],lady?dot.colors[0]:dot.colors[1]));
+  if(outfit)W.drawBody(outfit,dot,base.x,bodyY,bodyW,bodyH,t);
+  for(const side of sides)if(near(side))hand(side);
+  if(lady&&W?.drawLadyHair){
+    // Under the veil the head stays bare; otherwise her hair covers the back of the head (her own
+    // locks and braids are the lady's hair, drawn next).
+    const bare=outfit?.head==='veil'?'bald':dot.hair||villagerHair(dot.id);
+    drawVillagerHead(dot.id,base.x,headY,headR,'male',bare,t);
+    withFootVolume(ctx,t,base.x,0,()=>W.drawLadyHair(outfit,dot,base.x,headY,headR),.85);
+  }else drawVillagerHead(dot.id,base.x,headY,headR,dot.sex,dot.hair,t);
+  if(outfit)W.drawHead(outfit,base.x,headY,headR,t);
+}
 // The levy (alarm recruits, extraordinary levy): no livery, the villager's own class clothes
 // (season included) under a hood in the realm's colours. By class (combatRole, settlement-combat.js):
 // L1 peasants are levy infantry with spear (right hand, screen left) and the realm shield,
@@ -133,19 +196,29 @@ function levyOutfit(dot){
     colors:{...(season?.colors||{}),head:null},sleeve:season?.sleeve||null};
 }
 function drawLevyFigure(dot){
+  if(!dot.view)dot={...dot,view:civilianView(dot)};
   const look={...dot,outfit:levyOutfit(dot)};
-  const key='levy|'+villagerLookKey(look)+'|'+(levyArcher(dot)?'bow':'spear:'+soldierShieldStyle());
+  const key='levy|'+villagerLookKey(look)+'|'+(levyArcher(dot)?'bow':'spear:'+soldierShieldStyle())+(dot.view==='S'?'':'|'+dot.view);
   if(window.ConquerWorld3D?.figure?.(dot.p,.10,key,()=>drawLevyFigureUnmasked({...look,p:{x:0,y:0}}),dot.id))return true;
   return withUrbanFigureOcclusion(dot.p,.10,()=>drawLevyFigureUnmasked(look));
 }
 function drawLevyFigureUnmasked(dot){
   if(dot.outfit===undefined)dot={...dot,outfit:levyOutfit(dot)};
-  // Hands only on the weapons (FIG-HANDS-261117): none hanging at the sides.
-  drawVillagerFigureUnmasked(dot,'none');
-  const base=w2s(dot.p,.10),scale=State.view.scale*.5;
+  const t=footTurn(dot.view),base=w2s(dot.p,.10),scale=State.view.scale*.5;
   const bodyW=6.0*scale,bodyH=8.0*scale,headR=2.35*scale,bodyY=base.y-bodyH*.16,headY=bodyY-bodyH/2-headR*.68;
+  // Weapons as the soldiers' (FOOT-VIEWS): cards on their side, behind the body when turned away.
+  const gear=levyArcher(dot)?[[bodyW*.62,bodyW*.15]]:[[bodyW*.62,bodyW*.12],[-bodyW*.55,bodyW*.1]];
+  const behind=gear.map(([lx,lz])=>footDepth(t,lx,lz)<0);
+  if(t){ctx.save();levyGear(dot,base,scale,bodyW,bodyH,bodyY,headY,t,behind,true);ctx.restore()}
+  // Hands only on the weapons (FIG-HANDS-261117): none hanging at the sides.
+  drawVillagerFigureUnmasked(dot,'none',1,dot.view||'S');
   ctx.save();
-  if(levyArcher(dot)){
+  levyGear(dot,base,scale,bodyW,bodyH,bodyY,headY,t,behind,false);
+  ctx.restore();
+}
+function levyGear(dot,base,scale,bodyW,bodyH,bodyY,headY,t,behind,back){
+  const card=(i,lz,fn)=>{if(behind[i]===back)withFootCard(ctx,t,base.x,lz,fn)};
+  if(levyArcher(dot))card(0,bodyW*.15,()=>{
     // Bow on the left arm (screen right), as the realm's archers, both hands on it.
     const bx=base.x+bodyW*.62,by=bodyY-bodyH*.04,r=5.3*scale;
     ctx.strokeStyle='#9b7243';ctx.lineWidth=Math.max(.8,.85*scale);
@@ -153,11 +226,14 @@ function drawLevyFigureUnmasked(dot){
     ctx.beginPath();ctx.moveTo(bx+Math.cos(-Math.PI*.55)*r,by+Math.sin(-Math.PI*.55)*r);
     ctx.lineTo(bx-r*.18,by);ctx.lineTo(bx+Math.cos(Math.PI*.55)*r,by+Math.sin(Math.PI*.55)*r);ctx.stroke();
     drawFigureHand(bx+r,by,scale);drawFigureHand(bx-r*.18,by,scale);
-  }else{
-    drawQuarteredShield(base.x+bodyW*.62,bodyY+bodyH*.10,2.7*scale,3.6*scale,soldierLivery(dot.id),'#b7aa8f',scale,true,soldierShieldStyle());
-    drawSoldierSpear(base,scale,bodyW,bodyH,bodyY,headY);
+  });
+  else{
+    card(0,bodyW*.12,()=>{
+      if(t&&!t.front)drawShieldBack(base.x+bodyW*.62,bodyY+bodyH*.10,2.7*scale,3.6*scale,'#b7aa8f',scale,soldierShieldStyle());
+      else drawQuarteredShield(base.x+bodyW*.62,bodyY+bodyH*.10,2.7*scale,3.6*scale,soldierLivery(dot.id),'#b7aa8f',scale,true,soldierShieldStyle());
+    });
+    card(1,bodyW*.1,()=>drawSoldierSpear(base,scale,bodyW,bodyH,bodyY,headY));
   }
-  ctx.restore();
 }
 let populationFrameBounds=null;
 function beginPopulationFrame(r){

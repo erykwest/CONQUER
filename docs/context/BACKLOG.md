@@ -251,7 +251,9 @@ Implementato nel branch `fix/territory-clay-stone-access`. Nuove mappe con acqua
 - [ ] Viste fuori profilo anche per guardia, colpo e caduta del cavaliere (oggi restano sul profilo).
 - [x] Fanti a piedi in 8 viste (FOOT-VIEWS-261127, `feature/foot-views`): rotazione in tempo reale della grafica frontale approvata; combattimento e pattuglie delle mura orientati.
 - [ ] Passare la direzione anche agli altri chiamanti di `drawSoldierFigure` (scorte dei convogli, guardie di porta, equipaggi del trabucco, anteprima d'assedio).
-- [ ] Estendere le 8 viste a popolani e civili (lavori, costumi di ruolo, abiti da mestiere, dame L4) e agli animali 2D.
+- [x] Popolani, bambini, dame L4, guardaroba stagionale/di ruolo/di mestiere e leva in 8 viste (CIVIL-VIEWS-261127, `feature/civil-views`), orientati sul cammino.
+- [ ] 8 viste per le animazioni di lavoro (`settlement-work-anim.js`, oggi profilo sinistra/destra) e per personale, corte, equipaggi e carrettieri (passare `dot.view`/`dot.heading`).
+- [ ] 8 viste per gli animali 2D.
 - [ ] Verifica in partita di battaglie e pattuglie con le nuove viste.
 - [ ] Salvataggi con un messaggero già in viaggio su un percorso in linea retta: lo tiene fino all'arrivo (non ricalcolato).
 
