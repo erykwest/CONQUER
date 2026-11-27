@@ -2,6 +2,7 @@
 ### 2026-11-27 — MOUNTAIN-FACETS-261127: neve e costoni sfaccettati (`feat/ragged-terrain-edges`, NON MERGE)
 
 - **CODICE:** assorbita la PR 318 (montagne a stella e costoni). `settlement-landscape.js` `mountainFacetPolygons`: linea della neve frastagliata (`mountainSnowLine`, `MOUNTAIN_SNOW_RAGGED`), con lingue di neve nei canaloni e neve piu alta sulle creste, continua tra facce vicine; la faccia restituisce anche `rockParts`/`snowParts` (triangoli convessi per il 3D). `mountainCragLayout`: fascia al piede con cresta irregolare e tacche, divisa in triangoli attorno a un punto interno; placche di vetta a 9-12 punti irregolari. `settlement-world3d.js`: roccia e neve disegnate per triangoli, costoni con 4 toni di pietra.
+- **CESPUGLI DI MONTAGNA:** `mountainBushLayout` (fitti sotto la linea dei pini, radi fino sotto la neve, ciuffi in cima ai costoni, mai sui costoni), billboard 3D stagionali come il sottobosco, alzati per la pendenza; ~2300 cespugli e ~50 ms di calcolo una tantum sulla demo montagne.
 - **RITOCCHI:** pini di montagna raddoppiati (passo 2.6/sqrt(3)) ed esclusi da costoni e placche; costoni al piede su tutte le facce (`MOUNTAIN_FOOT_CRAG_CHANCE=1`, circa 3x); nel 3D i pini sono alzati di mezza larghezza per la pendenza, cosi non affondano nel fianco.
 - **PROVE (locale):** mountain-density, regional-surroundings, p1-terrain, sporadic-hills, coast PASS; verifica visiva `?demo=mountains&seed=229`, nessun errore in console.
 

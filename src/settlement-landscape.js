@@ -623,6 +623,40 @@ function mountainPineLayout(f){
   }
   mountainPineCache.set(key,out);return out;
 }
+// Bushes on the mountain slopes: thicker around the foot crags and scattered up past the tree
+// line (below the snow), never on the crags themselves. z is the cone surface.
+const mountainBushCache=new Map();
+function mountainBushLayout(f){
+  const snowZ=mountainSnowZ(),pineZ=mountainPineZ(),key=f.id+':'+State.seed+':'+(f.height||0)+':'+snowZ.toFixed(3);
+  if(mountainBushCache.has(key))return mountainBushCache.get(key);
+  const rnd=seedRand((State.seed^biomeHash(f.id+':bushes'))>>>0),b=environmentPolygonBounds(f.points),step=2.4,out=[],h=f.height||3.6;
+  const others=State.environment.filter(o=>o.type==='mountain'&&o!==f);
+  const crags=f.height&&typeof mountainCragLayout==='function'?mountainCragLayout(f,f.height):[];
+  const cragPolys=crags.flatMap(c=>c.polys),box=cragPolys.map(q=>environmentPolygonBounds(q));
+  const near=(p,m)=>cragPolys.some((q,k)=>{const bb=box[k];return p.x>=bb.minX-m&&p.x<=bb.maxX+m&&p.y>=bb.minY-m&&p.y<=bb.maxY+m&&(pointInPolygon(p,q)||q.some(v=>Math.hypot(v.x-p.x,v.y-p.y)<m))});
+  const top=Math.min(snowZ*.9,pineZ*2.2,h*.9);
+  const add=(p,z)=>out.push({p,z,width:.8+rnd()*.7,scale:.75+rnd()*.35,shape:Math.floor(rnd()*7),flip:rnd()<.5});
+  for(let y=b.minY;y<=b.maxY;y+=step)for(let x=b.minX;x<=b.maxX;x+=step){
+    const p={x:x+(rnd()-.5)*step*.9,y:y+(rnd()-.5)*step*.9},r=rnd();
+    if(!pointInPolygon(p,f.points)||p.x<1||p.y<1||p.x>WORLD-1||p.y>WORLD-1)continue;
+    const z=mountainSurfaceZ(f,p);
+    if(z<.05||z>top)continue;
+    // Sparser higher up: dense below the tree line, thinning towards the snow.
+    const keep=z<=pineZ?.32:.32*(1-(z-pineZ)/Math.max(.01,top-pineZ))+.06;
+    if(r>keep)continue;
+    if(others.some(o=>pointInPolygon(p,o.points)&&mountainSurfaceZ(o,p)>z))continue;
+    if(near(p,.5))continue;
+    add(p,z);
+  }
+  // Clumps hugging the crest of each foot crag.
+  for(const c of crags)for(const q of c.polys){
+    if(rnd()>.35)continue;
+    const top2=q.reduce((m,v)=>v.z>m.z?v:m,q[0]),p={x:top2.x+(f.x-top2.x)*.03+(rnd()-.5)*.6,y:top2.y+(f.y-top2.y)*.03+(rnd()-.5)*.6};
+    if(!pointInPolygon(p,f.points)||near(p,.25))continue;
+    const z=mountainSurfaceZ(f,p);if(z>.05&&z<top)add(p,z);
+  }
+  mountainBushCache.set(key,out);return out;
+}
 // Two-tone pine like the reference: tiered drooping crown and a short trunk.
 const mountainPineSprites={};
 const MOUNTAIN_PINE_SIZE=2.4*.75;

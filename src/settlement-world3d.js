@@ -987,6 +987,17 @@
       const hr=580/920*b.scale,C=[[-.5,-.97*hr,u0,v0],[.5,-.97*hr,u1,v0],[.5,.03*hr,u1,v1],[-.5,.03*hr,u0,v1]];
       for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(b.p.x,b.p.y,b.z+.01,cx,cy,b.width,u,w)}
     }
+    // Mountain slope bushes (seasonal underbrush sprites), lifted by the slope like the pines.
+    for(const f of State.environment||[]){
+      if(f.type!=='mountain'||!f.height||typeof mountainBushLayout!=='function')continue;
+      const slope=Math.min(2,f.height/Math.max(1,Math.sqrt((f.rx||8)*(f.ry||8))));
+      for(const b of mountainBushLayout(f)){
+        const uv=atlas.map.get(bushTileKey(b.shape,b.p));if(!uv)continue;
+        let [u0,v0,u1,v1]=uv;if(b.flip)[u0,u1]=[u1,u0];
+        const hr=580/920*b.scale,C=[[-.5,-.97*hr,u0,v0],[.5,-.97*hr,u1,v0],[.5,.03*hr,u1,v1],[-.5,.03*hr,u0,v1]],z=b.z+b.width*.5*slope;
+        for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(b.p.x,b.p.y,z,cx,cy,b.width,u,w)}
+      }
+    }
     // River, stream and marsh bank bushes: the legacy 2D bush sprites, not the 3D scatter models.
     for(const p of S.scatterProps||[]){
       if(!window.ConquerScatter?.isBankBush?.(p))continue;
