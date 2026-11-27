@@ -675,7 +675,7 @@
     const row = (key,label,help) => '<div class="cp-row"><label><input type="checkbox" data-cp-gfx="'+key+'"'+(G.get(key)?' checked':'')+'> '+esc(label)+'</label><p class="cp-foot">'+esc(help)+'</p></div>';
     return card('Contorni e ombreggiatura',
       row('edges','Bordi','Linee scure sul contorno di edifici e torri. Rende le sagome più leggibili.')+
-      row('gradient','Gradienti','Le facciate passano dal colore pieno in alto a una tinta più scura alla base.'),
+      row('gradient','Gradienti','Facciate degli edifici e fianchi delle montagne passano dal colore pieno in alto a una tinta più scura alla base.'),
       'Preferenze locali: si applicano subito e non cambiano la partita salvata.',true);
   }
 

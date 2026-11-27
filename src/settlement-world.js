@@ -1066,7 +1066,20 @@ function autoBlocked(candidate,placed,manual,margin=.2){
   return false;
 }
 function biomeHash(name){let h=2166136261>>>0;for(const ch of name){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
+// Mountain base as an irregular star: convex spurs (ridges) alternate with concave notches
+// (valleys), so the facets fanned to the apex read as crests and gullies, not a smooth cone.
+const MOUNTAIN_STAR=true;
+function makeMountainStarPoints(rnd,x,y,rx,ry,count){
+  const arms=Math.max(4,Math.round(count/4)),n=arms*2,step=Math.PI*2/n,phase=rnd()*step*2,points=[];
+  for(let i=0;i<n;i++){
+    const spur=i%2===0,a=phase+i*step+(rnd()-.5)*step*.55;
+    const r=spur?.92+rnd()*.22:.48+rnd()*.24;
+    points.push({x:x+Math.cos(a)*rx*r,y:y+Math.sin(a)*ry*r});
+  }
+  return points;
+}
 function makeEnvBlob(rnd,type,x,y,rx,ry,fill,edge,count=22,jitter=.16){
+  if(type==='mountain'&&MOUNTAIN_STAR)return{id:'env-'+type+'-'+Math.round(x*10)+'-'+Math.round(y*10),type,points:makeMountainStarPoints(rnd,x,y,rx,ry,count),fill,edge,x,y,rx,ry};
   const points=[];for(let i=0;i<count;i++){const a=Math.PI*2*i/count,j=1+(rnd()-.5)*2*jitter;points.push({x:x+Math.cos(a)*rx*j,y:y+Math.sin(a)*ry*j})}
   return{id:'env-'+type+'-'+Math.round(x*10)+'-'+Math.round(y*10),type,points,fill,edge,x,y,rx,ry};
 }
