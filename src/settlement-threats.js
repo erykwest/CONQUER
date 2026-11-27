@@ -9,7 +9,8 @@
 //   predoni   ConquerOutlaws.spawn         outlying buildings; full stores, harvest time
 // Difficulty (Tranquilla / Normale / Dura) scales frequency, band size, the
 // grace period after founding and how many wolf packs may roam at once.
-// The player is warned by a banner with «Vai» (centres the view) and a log.
+// The player is warned through the alert center (window.ConquerAlerts): the same stack as every
+// other notice, with «Vai» (centres the view) and × (dismiss). The panel keeps the log.
 // Rolls are deterministic per seed and day: the same game gives the same events.
 (function(){
   const TYPES=Object.freeze({
@@ -33,7 +34,7 @@
     hard:{label:'Dura',freq:1.7,size:2,grace:.6,packs:3}
   });
   const ORDER=['wolves','bear','brigands','bandits','raiders'];
-  const MAX_CATCHUP=30,LOG_MAX=20,BANNER_MS=15000;
+  const MAX_CATCHUP=30,LOG_MAX=20;
   const C=()=>window.ConquerCombat,W=()=>window.ConquerWolves,O=()=>window.ConquerOutlaws;
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const finite=v=>Number.isFinite(Number(v))?Number(v):0;
@@ -187,31 +188,24 @@
     record(type,{text,at},today(),'end');
   }
 
-  // ---- UI: banner, log, difficulty ------------------------------------------
+  // ---- UI: alert center, log, difficulty ------------------------------------
+  // Centres the camera through the game's own command (same mapping as the alert «Vai»).
   function focus(entry){
-    if(!Number.isFinite(entry?.x)||typeof w2s!=='function')return;
-    const canvas=document.getElementById('c'),r=canvas?.getBoundingClientRect();if(!r)return;
-    const s=w2s({x:entry.x,y:entry.y},0);
-    State.view.x+=r.width/2-s.x;State.view.y+=r.height/2-s.y;
-    if(typeof draw==='function')draw();
+    if(!Number.isFinite(entry?.x))return;
+    window.ConquerGame?.commands?.focus?.(null,{x:entry.x,y:entry.y});
   }
-  let bannerTimer=null;
+  const ALERT_TITLE={wolves:'Lupi nel bosco',bear:'Orso nel bosco',brigands:'Briganti sulla strada',bandits:'Banditi nel bosco',raiders:'Predoni al confine'};
+  let threatSerial=0;
+  // A threat (or its end) goes to the alert center: stacked, dismissable, journalled.
   function banner(entry){
-    if(typeof document==='undefined')return;
-    let el=document.getElementById('threatBanner');
-    if(!el){
-      el=document.createElement('div');el.id='threatBanner';el.setAttribute('role','alert');
-      el.innerHTML='<span class="tb-icon"></span><span class="tb-text"></span><button type="button" class="tb-go">Vai</button><button type="button" class="tb-close" aria-label="Chiudi">×</button>';
-      document.body.appendChild(el);
-      el.querySelector('.tb-close').onclick=()=>{el.dataset.open='0'};
-    }
-    el.querySelector('.tb-icon').textContent=TYPES[entry.type]?.icon||'⚠';
-    el.querySelector('.tb-text').textContent=entry.text;
-    el.dataset.kind=entry.kind;
-    const go=el.querySelector('.tb-go');go.hidden=!Number.isFinite(entry.x);
-    go.onclick=()=>{focus(entry);el.dataset.open='0'};
-    el.dataset.open='1';
-    clearTimeout(bannerTimer);bannerTimer=setTimeout(()=>{el.dataset.open='0'},BANNER_MS);
+    const alerts=window.ConquerAlerts;
+    if(!alerts?.push)return;
+    const end=entry.kind==='end',at=Number.isFinite(entry.x)?{x:entry.x,y:entry.y}:null;
+    alerts.push({key:'threat-'+entry.type+'-'+entry.kind+'-'+entry.day+'-'+(++threatSerial),
+      severity:end?'good':'danger',category:'military',
+      title:end?'Minaccia risolta':(ALERT_TITLE[entry.type]||'Minaccia'),
+      detail:entry.text,at,
+      action:at?{id:'focus',label:'Vai',arg:at}:null},today());
   }
   let lastPanel='';
   function renderPanel(force=false){
@@ -236,12 +230,7 @@
   function mountUi(){
     if(typeof document==='undefined')return;
     const style=document.createElement('style');
-    style.textContent='#threatBanner{position:fixed;top:132px;left:50%;transform:translate(-50%,-140%);z-index:90;display:flex;align-items:center;gap:10px;max-width:min(640px,calc(100vw - 32px));'+
-      'padding:10px 12px;border-radius:10px;background:#2a1b14;color:#f6e7d0;border:1px solid #c0563e;box-shadow:0 8px 24px rgba(0,0,0,.45);font-size:13px;transition:transform .25s}'+
-      '#threatBanner[data-open="1"]{transform:translate(-50%,0)}#threatBanner[data-kind="end"]{border-color:#5c9a5a}'+
-      '#threatBanner .tb-icon{font-size:20px}#threatBanner .tb-text{flex:1}#threatBanner button{padding:5px 10px;border-radius:6px;border:0;cursor:pointer}'+
-      '#threatBanner .tb-go{background:#f2c772;color:#20180c;font-weight:700}#threatBanner .tb-close{background:transparent;color:#f6e7d0;font-size:16px}'+
-      '#combatThreats{border-top:1px solid #4a3c2c;margin-top:6px;padding-top:6px}#combatThreats .threat-odds{font-size:10.5px;opacity:.8;margin:4px 0}'+
+    style.textContent='#combatThreats{border-top:1px solid #4a3c2c;margin-top:6px;padding-top:6px}#combatThreats .threat-odds{font-size:10.5px;opacity:.8;margin:4px 0}'+
       '#combatThreats .threat-row{font-size:11px;display:flex;gap:6px;align-items:center;margin:2px 0}#combatThreats .threat-row button{flex:0 0 auto;padding:2px 6px;font-size:10px}';
     document.head.appendChild(style);
     const alarm=document.getElementById('combatAlarm');

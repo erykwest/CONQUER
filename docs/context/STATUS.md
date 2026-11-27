@@ -6,6 +6,10 @@
 - **BUILD:** `tools/blender/wagon_views.py`: il veicolo è costruito dai numeri di `settlement-wagons.js` (sponde con assi e montanti, testate, pianale, sedile, timone, ruote con raggi che girano col passo, cabina della carrozza); tiro (un rig per cavallo, il cavallo lontano riportato alla sua profondità) e conducente/carrettiere dal disegno approvato; carico come layer per numero di colli, slot e merce (carretto 60, carro 126), resi da fermi. Correzioni comuni: colori ID unici oltre 211 parti; perni del ginocchio agganciati con la matrice aggiornata (il passo piegava le gambe attorno a un punto sbagliato, anche per messaggero e cavalieri: viste rigenerate).
 - **LIMITI:** il conducente usa il guardaroba della stagione d'estrazione; il carico non sobbalza col passo; scorte e passeggeri invariati.
 - **PROVE:** `qa/messenger-card-regression.cjs` esteso ai veicoli. Lab: «Carretto · 8 viste», «Carro · 8 viste», «Carrozza · 8 viste».
+### 2026-11-26 — THREAT-ALERTS-261126: minacce nel centro avvisi e sete per insediamento aperto (`fix/threat-alerts-261126`, NON MERGE)
+
+- **CODICE:** `settlement-threats.js` `banner()` invia ad `alerts.push` (chiave `threat-…`, azione `focus` «Vai»); rimosso `#threatBanner`. `shell.js` `ALERT_ACTIONS.focus`. `settlement-siege.js` `water()` aggiunge `cause` (`open`/`breach`/`nowell`/`null`); `ui/alert-watchers.js` usa «Insediamento non chiuso / protetto» per `open`.
+- **PROVE:** `qa/cistern-regression.cjs`, `qa/threats-regression.cjs`, `qa/ui-alerts-regression.mjs` PASS in locale; in browser il «Vai» centra la mappa e la × chiude l'avviso. Avviso di sete in gioco non verificato (manca una cinta con nemici).
 
 ### 2026-11-26 — DEV-FREE-RESTYLE: cambi di stile gratis in DEV (`feat/dev-free-restyle`, NON MERGE)
 

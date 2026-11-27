@@ -3,6 +3,9 @@
 ### 2026-11-27 — WAGON-VIEWS · Carri in 8 viste con collider (`feature/wagon-views`)
 
 Carretto, carro e carrozza seguono la strada in 8 viste: il profilo resta il disegno 2D, le altre 6 sono lo stesso veicolo costruito in Blender dai numeri del pittore (ruote che girano, tiro che cammina, conducente) con il carico come layer. Collider a scatola sulle card dei veicoli. ROADMAP e DECISIONS invariati.
+### 2026-11-26 — THREAT-ALERTS-261126 · Minacce nel centro avvisi, acqua e insediamento aperto (`fix/threat-alerts-261126`)
+
+Gli avvisi di minaccia (lupi, orso, briganti, banditi, predoni) non usano più il banner rosso separato: vanno nel centro avvisi con «Vai» (centra la mappa tramite `commands.focus`) e × standard. Il pannello log usa lo stesso comando. Con nemici in campo e pozzi fuori da ogni settore, la sete mostra «Insediamento non chiuso / protetto» (causa `open` in `water()`), invece di «Sete nel castello»; rottura di settore e assenza di pozzi restano sull'avviso precedente. Nessuna regola di gioco cambiata. QA: cistern-regression, threats-regression e ui-alerts-regression PASS in locale; CI remota da verificare.
 
 ### 2026-11-26 — DEV-FREE-RESTYLE · Restyle gratis in DEV (`feat/dev-free-restyle`)
 

@@ -629,6 +629,8 @@ const journalDate = e => {
 };
 // Alert buttons: action ids from alert-watchers.js → game commands.
 const ALERT_ACTIONS = {
+  // «Vai» on a threat: centre the map on the map point {x, y} carried by the alert.
+  focus: arg => window.ConquerGame?.commands?.focus?.(null, arg),
   readLetter: () => window.ConquerDiplomacy?.openLetter?.(),
   caravans: arg => window.ConquerDiplomacy?.openCaravans?.(arg || undefined)
 };
