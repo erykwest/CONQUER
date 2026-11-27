@@ -663,18 +663,52 @@ function drawMountainPine(t){
   const h=Math.max(8,U*State.view.scale*MOUNTAIN_PINE_SIZE*t.scale),w=h*.75;
   ctx.drawImage(img,base.x-w/2,base.y-h*.97,w,h);
 }
+// Ragged snow line: tongues of snow run down the gullies (star notches) and stop higher on the
+// ridges, and every facet edge is broken into uneven teeth. Shared base vertices get the same
+// height on both facets, so the line stays continuous around the peak.
+const MOUNTAIN_SNOW_RAGGED={gully:.13,ridge:.06,teeth:.028,step:2.6};
+function mountainSnowVertexV(f,i,n,k){
+  const h=(biomeHash(f.id+':snowv:'+i)%1000)/1000,star=f.points&&n%2===0&&n>=8;
+  const d=star?(i%2?-(MOUNTAIN_SNOW_RAGGED.gully*(.6+h*.8)):MOUNTAIN_SNOW_RAGGED.ridge*(.4+h)):(h-.5)*.16;
+  return clamp(k+d,.12,.96);
+}
+function mountainSnowLine(f,i,n,k,len){
+  const R=MOUNTAIN_SNOW_RAGGED,steps=Math.max(4,Math.round(len/R.step)),rnd=seedRand((State.seed^biomeHash(f.id+':snowl:'+i))>>>0);
+  const v0=mountainSnowVertexV(f,i,n,k),v1=mountainSnowVertexV(f,(i+1)%n,n,k),ph=rnd()*6.28,line=[];
+  for(let s=0;s<=steps;s++){
+    const t=s/steps;let u=t,v=v0+(v1-v0)*t;
+    if(s>0&&s<steps){
+      // Uneven spacing and teeth, a slow swell and now and then a deeper tongue of snow.
+      u=t+(rnd()-.5)*.6/steps;
+      const r=rnd();
+      v+=Math.sin(t*Math.PI*2.3+ph)*.025+(r<.2?-(.035+rnd()*.04):(rnd()-.5)*2*R.teeth);
+      v=clamp(v,.1,.97);
+    }
+    line.push({u,v});
+  }
+  return line;
+}
 function mountainFacetPolygons(f,height=f.height||3.6){
-  const base=f.unclippedPoints||f.points,apex={x:f.x,y:f.y,z:height},faces=[];
-  const k=Math.min(1,mountainSnowZ()/height),at=p=>({x:f.x+(p.x-f.x)*(1-k),y:f.y+(p.y-f.y)*(1-k),z:height*k});
-  for(let i=0;i<base.length;i++){
-    const a={...base[i],z:0},b={...base[(i+1)%base.length],z:0},sa=at(a),sb=at(b);
+  const base=f.unclippedPoints||f.points,n=base.length,apex={x:f.x,y:f.y,z:height},faces=[];
+  const k=Math.min(1,mountainSnowZ()/height);
+  const at=(a,b,u,v)=>{const e=mixWorld(a,b,u);return{x:e.x+(f.x-e.x)*v,y:e.y+(f.y-e.y)*v,z:height*v}};
+  for(let i=0;i<n;i++){
+    const a={...base[i],z:0},b={...base[(i+1)%n],z:0};
     const full=clipTerrainPolygon([a,b,apex]),cuts=[];
     for(let j=0;j<full.length;j++){
       const u=full[j],v=full[(j+1)%full.length];
       const onBorder=(Math.abs(u.x-v.x)<1e-7&&(Math.abs(u.x)<1e-7||Math.abs(u.x-WORLD)<1e-7))||(Math.abs(u.y-v.y)<1e-7&&(Math.abs(u.y)<1e-7||Math.abs(u.y-WORLD)<1e-7));
       if(onBorder&&Math.max(u.z,v.z)>1e-6)cuts.push([u,v,{...v,z:0},{...u,z:0}]);
     }
-    faces.push({i,a,b,rock:clipTerrainPolygon(k<1?[a,b,sb,sa]:[a,b,apex]),snow:k<1?clipTerrainPolygon([sa,sb,apex]):[],cuts});
+    if(k>=1){const rock=clipTerrainPolygon([a,b,apex]);faces.push({i,a,b,rock,snow:[],rockParts:rock.length>=3?[rock]:[],snowParts:[],cuts});continue}
+    const line=mountainSnowLine(f,i,n,k,dist(a,b)),sl=line.map(q=>at(a,b,q.u,q.v)),rockParts=[],snowParts=[];
+    // Convex pieces (triangles) for the 3D builder; whole outlines for the 2D painter.
+    for(let s=0;s<sl.length-1;s++){
+      const A=at(a,b,line[s].u,0),B=at(a,b,line[s+1].u,0);
+      for(const tri of [[A,B,sl[s+1]],[A,sl[s+1],sl[s]]]){const c=clipTerrainPolygon(tri);if(c.length>=3)rockParts.push(c)}
+      const c=clipTerrainPolygon([sl[s],sl[s+1],apex]);if(c.length>=3)snowParts.push({poly:c,s});
+    }
+    faces.push({i,a,b,rock:clipTerrainPolygon([a,b,...sl.slice().reverse()]),snow:clipTerrainPolygon([...sl,apex]),rockParts,snowParts,cuts});
   }
   return faces;
 }
@@ -692,20 +726,35 @@ function mountainCragLayout(f,height){
     // Foot cliff: jagged top edge, 7-16% of the height.
     // Convex pieces only (the 3D builder fans each polygon).
     // Foot cliff only on about a third of the facets, and only along part of the edge.
-    const foot=rnd()<MOUNTAIN_FOOT_CRAG_CHANCE,vb=.05+rnd()*.06,steps=Math.max(3,Math.round(len/4)),tops=[];
-    const fu0=.1+rnd()*.25,fu1=.65+rnd()*.25;
-    for(let s=0;s<=steps;s++)tops.push((s===0||s===steps)?vb*.4:vb*(.7+rnd()*.6));
+    const foot=rnd()<MOUNTAIN_FOOT_CRAG_CHANCE,vb=.05+rnd()*.06,steps=Math.max(5,Math.round(len/2)),tops=[],mids=[];
+    const fu0=.1+rnd()*.25,fu1=.65+rnd()*.25,ph=rnd()*6.28;
+    // Irregular crest: slow swell + uneven teeth (some deep notches), like the cliff borders.
+    for(let s=0;s<=steps;s++){
+      const t=s/steps,edge=Math.min(1,Math.min(t,1-t)*steps/1.5);
+      const tooth=rnd()<.18?.35+rnd()*.25:(s%2?.75+rnd()*.5:1.05+rnd()*.55);
+      tops.push(vb*(.25+.75*edge)*tooth*(1+.25*Math.sin(t*7+ph)));
+      mids.push({u:(s+.5)/steps+(rnd()-.5)*.25/steps,v:.35+rnd()*.3});
+    }
+    // Faceted band: each step is split through a jittered inner point into triangles, so the
+    // shades alternate like broken rock faces instead of one flat strip.
     if(foot)for(let s=0;s<steps;s++){
-      const u0=fu0+(fu1-fu0)*s/steps,u1=fu0+(fu1-fu0)*(s+1)/steps;
-      polys.push([at(a,b,u0,0),at(a,b,u1,0),at(a,b,u1,tops[s+1]),at(a,b,u0,tops[s])]);
+      const u0=fu0+(fu1-fu0)*s/steps,u1=fu0+(fu1-fu0)*(s+1)/steps,um=fu0+(fu1-fu0)*mids[s].u;
+      const A=at(a,b,u0,0),B=at(a,b,u1,0),C=at(a,b,u1,tops[s+1]),D=at(a,b,u0,tops[s]);
+      const M=at(a,b,um,Math.min(tops[s],tops[s+1])*mids[s].v);
+      polys.push([A,B,M],[B,C,M],[C,D,M],[D,A,M]);
     }
     // Summit slab: a narrowed patch high on the facet, on most facets.
     let summit=false;
     if(rnd()<.7){
       summit=true;
       const v0=.55+rnd()*.15,v1=Math.min(.94,v0+.16+rnd()*.14),u0=.12+rnd()*.2,u1=.88-rnd()*.2;
-      const ring=[at(a,b,u0,v0),at(a,b,(u0+u1)/2,v0-.04-rnd()*.05),at(a,b,u1,v0),at(a,b,u1-.06,v1),at(a,b,(u0+u1)/2+(rnd()-.5)*.2,v1+.03),at(a,b,u0+.06,v1)];
-      const c=at(a,b,(u0+u1)/2,(v0+v1)/2);
+      // Irregular slab: 9-12 ring points on a noisy ellipse, fanned from an off-centre point.
+      const cu=(u0+u1)/2,cv=(v0+v1)/2,ru=(u1-u0)/2,rv=(v1-v0)/2,m=9+Math.floor(rnd()*4),ring=[],rot=rnd()*6.28;
+      for(let k=0;k<m;k++){
+        const ang=rot+k/m*Math.PI*2+(rnd()-.5)*.35,r=k%2?.55+rnd()*.3:.85+rnd()*.3;
+        ring.push(at(a,b,clamp(cu+Math.cos(ang)*ru*r,.03,.97),clamp(cv+Math.sin(ang)*rv*r,.02,.97)));
+      }
+      const c=at(a,b,cu+(rnd()-.5)*ru*.4,cv+(rnd()-.5)*rv*.4);
       for(let k=0;k<ring.length;k++)polys.push([c,ring[k],ring[(k+1)%ring.length]]);
     }
     const scale=clamp(Math.sqrt(f.rx*f.ry)/12,1,2.6);

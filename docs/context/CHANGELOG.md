@@ -1,4 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
+### 2026-11-27 — MOUNTAIN-FACETS-261127 · Neve e costoni sfaccettati (`feat/ragged-terrain-edges`)
+
+Integrata la PR 318. Il confine tra roccia e neve delle montagne non e piu una retta: si spezza in denti irregolari, scende nei canaloni e risale sulle creste. Costoni al piede e placche di roccia in vetta sono sfaccettati in triangoli di toni diversi. Solo resa grafica. ROADMAP e DECISIONS invariate.
+
 ### 2026-11-27 — MOUNTAIN-STAR-CRAGS · Montagne a stella con costoni di roccia
 
 `feature/mountain-star-crags`: la base delle montagne passa da poligono quasi circolare a stella irregolare (4–6 braccia, creste e valli alternate con variazione casuale). Costoni di roccia riusando la grafica delle cliff: fascia frastagliata al piede su circa un terzo delle facce, con ghiaione di massi, e placche di roccia nuda alte sulla punta. ROADMAP e DECISIONS invariate: modifica solo visiva del paesaggio. QA: `mountain-density`, `regional-surroundings`, `p1-terrain` PASS in locale.

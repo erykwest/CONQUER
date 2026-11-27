@@ -1,4 +1,9 @@
 # Livello 2 — Stato tecnico e prove
+### 2026-11-27 — MOUNTAIN-FACETS-261127: neve e costoni sfaccettati (`feat/ragged-terrain-edges`, NON MERGE)
+
+- **CODICE:** assorbita la PR 318 (montagne a stella e costoni). `settlement-landscape.js` `mountainFacetPolygons`: linea della neve frastagliata (`mountainSnowLine`, `MOUNTAIN_SNOW_RAGGED`), con lingue di neve nei canaloni e neve piu alta sulle creste, continua tra facce vicine; la faccia restituisce anche `rockParts`/`snowParts` (triangoli convessi per il 3D). `mountainCragLayout`: fascia al piede con cresta irregolare e tacche, divisa in triangoli attorno a un punto interno; placche di vetta a 9-12 punti irregolari. `settlement-world3d.js`: roccia e neve disegnate per triangoli, costoni con 4 toni di pietra.
+- **PROVE (locale):** mountain-density, regional-surroundings, p1-terrain, sporadic-hills, coast PASS; verifica visiva `?demo=mountains&seed=229`, nessun errore in console.
+
 ### 2026-11-27 — MOUNTAIN-STAR-CRAGS: montagne a stella con costoni di roccia (`feature/mountain-star-crags`, NON MERGE)
 
 Base delle montagne a stella irregolare (punte e rientranze alternate, `MOUNTAIN_STAR`), costoni con la grafica delle cliff al piede (~1/3 delle facce, `MOUNTAIN_FOOT_CRAG_CHANCE`) con ghiaione di massi low-poly e placche di roccia nuda in vetta sopra la neve. Renderer 3D (`buildMountains`) e 2D (`drawRaisedFan`) condividono `mountainCragLayout`. Regressioni montagne/terreno PASS in locale; CI remota da eseguire.

@@ -1,4 +1,9 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
+## 2026-11-27 — MOUNTAIN-FACETS-261127 · Neve e costoni sfaccettati
+
+- [x] Linea della neve frastagliata con lingue nei canaloni.
+- [x] Costoni al piede e placche di vetta divisi in facce di toni diversi.
+
 ## 2026-11-27 — MOUNTAIN-STAR-CRAGS · Montagne a stella e costoni
 
 - [x] Base a stella irregolare delle montagne (branch `feature/mountain-star-crags`).

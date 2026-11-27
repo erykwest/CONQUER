@@ -482,8 +482,10 @@
       for(const q of mountainFacetPolygons(f,f.height||MOUNTAIN_HEIGHT)){
         const {i,a,b}=q;
         const rock=typeof mountainFaceColor==='function'?mountainFaceColor(f,a,b,i):(window.ConquerStoneColor?.shade(MOUNTAIN_FACES[i%2])||MOUNTAIN_FACES[i%2]);
-        m.face(q.rock,rock);
-        if(q.snow.length)m.face(q.snow,mountainSnowColor(f,a,b,i));
+        // Ragged snow line: triangles below it are rock, above it snow.
+        for(const part of q.rockParts||[q.rock])if(part.length>=3)m.face(part,rock);
+        const snow=mountainSnowColor(f,a,b,i);
+        for(const part of q.snowParts||(q.snow.length?[{poly:q.snow}]:[]))m.face(part.poly,snow);
         for(const cut of q.cuts)m.face(cut,window.ConquerStoneColor?.shade('#514a40')||'#514a40');
       }
       // Rock crags (cliff look) at the foot and high on the peak, lifted off the facet against z-fighting.
@@ -492,7 +494,7 @@
         for(const crag of mountainCragLayout(f,f.height)){
           crag.polys.forEach((poly,k)=>{
             const clip=typeof clipTerrainPolygon==='function'?clipTerrainPolygon(poly):poly;
-            if(clip.length>=3)m.face(clip.map(p=>({...p,z:p.z+.08})),shade(['#6f7477','#676c6f','#787d80'][(crag.i+k)%3]));
+            if(clip.length>=3)m.face(clip.map(p=>({...p,z:p.z+.08})),shade(['#6f7477','#5f6467','#787d80','#686d70'][(crag.i*3+k*5+(k>>2))%4]));
           });
           for(const r of crag.rocks)for(const face of mountainRockFaces(r))m.face(face.poly,face.top&&winter?'#e6ecee':shade(face.color));
         }
