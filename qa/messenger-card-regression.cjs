@@ -18,7 +18,7 @@ assert.match(render,/ConquerSoldiers\?\.drawCards\?\.\(\)/,'the relay rider card
 assert.match(diplomacy,/window\.ConquerWorld3D\?\.active\?\.\(\)&&window\.ConquerMounted2D\?\.card&&/,'the courier overlay yields to the World 3D card');
 assert.match(soldiers,/window\.ConquerWorld3D\?\.active\?\.\(\)&&window\.ConquerMounted2D\?\.card\)return;/,'the relay overlay yields to the World 3D card');
 assert.doesNotMatch(diplomacy,/t:day\(\)\*7/,'the courier gait is no longer tied to the game clock');
-assert.match(mounted,/window\.ConquerMounted2D=\{draw,drawView,card,lanceGeometry,VIEW_NAMES,viewOf,viewAt,phaseOf\}/);
+assert.match(mounted,/window\.ConquerMounted2D=\{draw,drawView,drawVehicleView,card,lanceGeometry,VIEW_NAMES,viewOf,viewAt,phaseOf\}/);
 
 // The off-profile views (tools/blender/mounted_views.py): the approved 2D art built part by part in
 // Blender, one frame per pose (idle + 8 stride phases), regions coloured by coat/livery tokens.
@@ -96,5 +96,21 @@ win.ConquerWorld3D.figure=(p2,z,key,paint)=>{calls.push({key,paint});return true
 M2.card(p,.1,'courier:a',walk);
 const fakeCtx=new Proxy({},{get:()=>()=>{},set:()=>true});
 assert.doesNotThrow(()=>calls.at(-1).paint(fakeCtx));
+
+// Vehicles (tools/blender/wagon_views.py): cart, wagon and coach in the six off-profile views, idle + 8 walk
+// phases; cargo as layers per load size, slot and kind (cart up to 4 items, wagon up to 6, coach none).
+const kinds=['sack','crate','barrel','hay','logs','stone'];
+for(const [v,maxN] of [['cart',4],['wagon',6],['coach',0]]){
+  const VV=viewsBox.window.ConquerMountedViews?.['vehicle:'+v];
+  assert.ok(VV,'vehicle views: '+v);
+  for(const view of ['SE','S','SW','NW','N','NE'])assert.equal(VV.views[view]?.frames?.length,9,v+' '+view+': idle + 8 walk phases');
+  const n=Object.keys(VV.layers||{}).length,want=maxN*(maxN+1)/2*kinds.length;
+  assert.equal(n,want,v+': one cargo layer per load size, slot and kind');
+}
+const vehicles=read('settlement-vehicles.js'),world3d=read('settlement-world3d.js');
+assert.match(vehicles,/M2\.drawVehicleView\(g,/,'vehicle cards draw the 8 views');
+assert.match(vehicles,/kind:'vehicle',box:true/,'vehicle cards carry a box collider');
+assert.match(world3d,/z0:s\.z\+cap\.seg0\[2\]-\(bx\?cap\.r:0\)/,'box colliders span z-r..z+r');
+assert.match(mounted,/function drawVehicleView\(/);
 
 console.log('messenger-card-regression: ok');

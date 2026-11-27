@@ -52,7 +52,26 @@ const data=await page.evaluate(({kind,variant})=>{
     };
   }
   const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+  // kind 'wagon': the vehicle card as settlement-vehicles.js paints it (wagon, team, seated driver or
+  // the carter at the horse's head), at rest, without cargo; variant.vehicle: cart | wagon | coach.
+  const VEH={cart:{chassis:'cart',team:1},wagon:{chassis:'wagon',team:2},coach:{chassis:'carriage',team:2}};
+  const DRIVER={kind:'peasant',role:'carter',age:'adult',sex:'male',colors:['#8a6a48','#5d4632'],hair:'#4a3626',id:'x-driver'};
+  const COACHMAN={kind:'merchant',age:'adult',sex:'male',colors:['#3f4f6e','#c8a44a'],hair:'#2e2620',id:'x-coachman'};
+  const villagerAt=(dot,sx,sy,sz)=>{
+    // paintVillagerAt: the figure painter projects only its feet point through w2s.
+    const keep=w2s,ks=State.view.scale;State.view.scale=sz/5.75;window.ctx=g;try{ctx=g}catch{}
+    w2s=()=>({x:sx,y:sy});try{drawVillagerFigureUnmasked({...dot,p:{x:0,y:0}})}finally{w2s=keep;State.view.scale=ks}};
   const draw=()=>{count=0;g.clearRect(0,0,W,H);
+    if(kind==='wagon'){
+      const v=VEH[variant.vehicle]||VEH.wagon,dot=variant.vehicle==='coach'?COACHMAN:DRIVER,cart=v.chassis==='cart';
+      // The team at rest (drawWagon always walks its horses): the 3D rig poses them from rest.
+      const keep=A.drawAnimal;A.drawAnimal=(sp,c2,x,y,sz,o={})=>keep(sp,c2,x,y,sz,{...o,mode:'idle',from:'idle',t:0});
+      try{window.ConquerWagons.drawWagon(g,X,Y,size,{chassis:v.chassis,team:Array.from({length:v.team},()=>({coat:'brown'})),
+        cargo:variant.cargo||[],facing:1,moving:false,t:0,distance:0,driver:cart?null:(gg,sx,sy,sz)=>villagerAt(dot,sx,sy,sz)});}finally{A.drawAnimal=keep}
+      // The carter walks at the horse's head: .75 U ahead of the bed middle (U = 12 px at scale 1).
+      if(cart)villagerAt(dot,X+.75*12*size/5.75,Y+.12*12*size/5.75,size);
+      return;
+    }
     M2.draw(g,X,Y,size,{kind,facing:1,mode:'idle',from:'idle',blend:1,t:0,seed:0,coat:'brown',livery,...variant})};
   draw();
   // Outlines are redrawn by the view renderer; only coloured shapes become parts.
@@ -71,7 +90,15 @@ const data=await page.evaluate(({kind,variant})=>{
   for(let ph=0;ph<8;ph++)poses['r'+ph]=pick(A.transitionPose('horse','run','run',1,(ph+.5)/8/2.2,0));
   return{frame:{W,H,X,Y,PX,center:sp.center,pivot:sp.pivot,joint:sp.joint,tailPivot:sp.tailPivot,neck:sp.neck,
       legOrder:sp.legOrder||[0,1,2,3],legs:sp.legList.map(l=>({x:l.x,y:l.y,joint:l.joint,w:l.w}))},
-    colors:{coat:C,livery},variant,ops:kept,poses,masks};
+    colors:{coat:C,livery},variant,ops:kept,poses,masks,wagons:kind==='wagon'?wagonData():null};
+  // The vehicle's own numbers (settlement-wagons.js), so the 3D build uses the art's geometry:
+  // chassis, cargo sizes, colours, depth offset, scale, team layout and cargo slots for 1..6 items.
+  function wagonData(){
+    const W2=window.ConquerWagons,v=VEH[variant.vehicle]||VEH.wagon,team=Array.from({length:v.team},()=>({}));
+    const slots={};for(let n=1;n<=6;n++)slots[n]=W2.wagonLayout({chassis:v.chassis,team,cargo:Array(n).fill('crate')}).cargo;
+    return{vehicle:variant.vehicle||'wagon',chassis:v.chassis,CHASSIS:W2.CHASSIS,CARGO:W2.CARGO,COLORS:W2.COLORS,DEPTH:W2.DEPTH,
+      K:W2.WAGON_SCALE,layout:W2.wagonLayout({chassis:v.chassis,team}),slots};
+  }
 },{kind,variant});
 
 for(const [k,url] of Object.entries(data.masks))
