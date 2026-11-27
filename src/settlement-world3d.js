@@ -199,12 +199,13 @@
     const tris=[];
     const api={
       tris,
-      face(vs,hex,grad=false){            // vs: [{x,y,z}] convex; grad: vertical gradient (GRAFICA)
-        const c=rgb(hex,usePalette);
+      face(vs,hex,grad=false,range=null){ // vs: [{x,y,z}] convex; grad: vertical gradient (GRAFICA)
+        const c=rgb(hex,usePalette);        // range {lo,hi}: shared gradient span (a whole mountain), not this face's own
         const gOn=grad&&window.ConquerGraphics?.get('gradient');
         const k=gOn?window.ConquerGraphics.get('gradientStrength'):0;
         let zlo=Infinity,zhi=-Infinity;
-        if(gOn)for(const v of vs){zlo=Math.min(zlo,v.z);zhi=Math.max(zhi,v.z)}
+        if(gOn&&range){zlo=range.lo;zhi=range.hi}
+        else if(gOn)for(const v of vs){zlo=Math.min(zlo,v.z);zhi=Math.max(zhi,v.z)}
         const span=zhi-zlo;
         const shadeAt=z=>{
           if(!gOn)return 1;
@@ -479,14 +480,16 @@
       if(f.type!=='mountain'||!(f.points?.length>=3))continue;
       // Rock up to the snow line (75% of the height), snow cap above it.
       // Map-wide snow line (75% of the tallest summit): lower peaks may stay bare.
+      // GRAFICA gradient over the whole peak: darker at the foot, full colour at the summit.
+      const R={lo:0,hi:f.height||MOUNTAIN_HEIGHT},face=(vs,hex)=>m.face(vs,hex,true,R);
       for(const q of mountainFacetPolygons(f,f.height||MOUNTAIN_HEIGHT)){
         const {i,a,b}=q;
         const rock=typeof mountainFaceColor==='function'?mountainFaceColor(f,a,b,i):(window.ConquerStoneColor?.shade(MOUNTAIN_FACES[i%2])||MOUNTAIN_FACES[i%2]);
         // Ragged snow line: triangles below it are rock, above it snow.
-        for(const part of q.rockParts||[q.rock])if(part.length>=3)m.face(part,rock);
+        for(const part of q.rockParts||[q.rock])if(part.length>=3)face(part,rock);
         const snow=mountainSnowColor(f,a,b,i);
-        for(const part of q.snowParts||(q.snow.length?[{poly:q.snow}]:[]))m.face(part.poly,snow);
-        for(const cut of q.cuts)m.face(cut,window.ConquerStoneColor?.shade('#514a40')||'#514a40');
+        for(const part of q.snowParts||(q.snow.length?[{poly:q.snow}]:[]))face(part.poly,snow);
+        for(const cut of q.cuts)face(cut,window.ConquerStoneColor?.shade('#514a40')||'#514a40');
       }
       // Rock crags (cliff look) at the foot and high on the peak, lifted off the facet against z-fighting.
       if(typeof mountainCragLayout==='function'&&f.height){
@@ -494,9 +497,9 @@
         for(const crag of mountainCragLayout(f,f.height)){
           crag.polys.forEach((poly,k)=>{
             const clip=typeof clipTerrainPolygon==='function'?clipTerrainPolygon(poly):poly;
-            if(clip.length>=3)m.face(clip.map(p=>({...p,z:p.z+.08})),shade(['#6f7477','#5f6467','#787d80','#686d70'][(crag.i*3+k*5+(k>>2))%4]));
+            if(clip.length>=3)face(clip.map(p=>({...p,z:p.z+.08})),shade(['#6f7477','#5f6467','#787d80','#686d70'][(crag.i*3+k*5+(k>>2))%4]));
           });
-          for(const r of crag.rocks)for(const face of mountainRockFaces(r))m.face(face.poly,face.top&&winter?'#e6ecee':shade(face.color));
+          for(const r of crag.rocks)for(const rf of mountainRockFaces(r))face(rf.poly,rf.top&&winter?'#e6ecee':shade(rf.color));
         }
       }
     }
@@ -1781,7 +1784,7 @@
     // Relief, terraforming and forests shape the terrain meshes: those rebuild them and re-bake the
     // whole ground. Season and wetness re-bake the whole ground too. Structure and urban-lot edits only
     // re-bake the tiles they touch, one per frame (pumpGroundTiles).
-    const meshSig=[season,State.stonePaletteId,State.biome,State.relief?.seed,terraformSig,(State.environment||[]).length,envRev].join('|');
+    const meshSig=['g'+(window.ConquerGraphics?.rev?.()??0),season,State.stonePaletteId,State.biome,State.relief?.seed,terraformSig,(State.environment||[]).length,envRev].join('|');
     const gSig=[meshSig,wet(),typeof bushSeasonKey==='function'?bushSeasonKey():'',typeof forestGroundKey==='function'?forestGroundKey():'',typeof springFlowersOn==='function'?springFlowersOn():''].join('|');
     const tSig=[gSig,groundLotsSignature(),structuresSig('ground')].join('|');
     if(S.sig.terrain!==tSig){
