@@ -34,10 +34,32 @@
   }
   const band=(pts,D,toSea,toLand)=>[...pts.map(p=>({x:p.x+(p.nx??D.x)*toSea,y:p.y+(p.ny??D.y)*toSea})),...pts.slice().reverse().map(p=>({x:p.x-(p.nx??D.x)*toLand,y:p.y-(p.ny??D.y)*toLand}))];
   const bounds=poly=>{let a=Infinity,b=Infinity,c=-Infinity,d=-Infinity;for(const p of poly){a=Math.min(a,p.x);b=Math.min(b,p.y);c=Math.max(c,p.x);d=Math.max(d,p.y)}return{minX:a,minY:b,maxX:c,maxY:d}};
+  // Cheap per-call signature (side, point counts, first/middle/last vertex): the full JSON key of
+  // every coastline was rebuilt on each rockAt() the road planner asks (~3/4 of main-road time).
+  const quickSig=seas=>{
+    let s='';
+    for(const sea of seas){
+      s+=sea.side+':';
+      for(const c of sea.coastlines||[sea.coastline]){
+        if(!c?.length){s+='0;';continue}
+        const m=c[c.length>>1],l=c[c.length-1];
+        s+=c.length+','+c[0].x+','+c[0].y+','+m.x+','+m.y+','+l.x+','+l.y+';';
+      }
+    }
+    return s;
+  };
   function shore(){
+    // Same environment list, length and revision: only every 512th query re-checks the coastline
+    // signature (a road search asks this for every sampled point).
+    const env=typeof State!=='undefined'&&State.environment||[],rev=typeof environmentRevision!=='undefined'?environmentRevision:0;
+    if(cache.data&&cache.seas&&((cache.calls=(cache.calls||0)+1)&511)&&cache.seas===seasMemo.seas&&
+      seasMemo.list===env&&seasMemo.length===env.length&&seasMemo.rev===rev)return cache.data;
+    const now=0;
     const seas=seasOf();if(!seas.length)return null;
+    const quick=quickSig(seas);
+    if(cache.seas===seas&&cache.quick===quick){cache.checkedAt=now;return cache.data}
     const key=JSON.stringify(seas.map(sea=>[sea.side,sea.coastlines||[sea.coastline]]));
-    if(cache.key===key)return cache.data;
+    if(cache.key===key){cache.seas=seas;cache.quick=quick;cache.checkedAt=now;return cache.data}
     const all=[];
     for(const sea of seas)for(const c of sea.coastlines||[sea.coastline]){
     if(c.length<2)continue;
@@ -65,7 +87,7 @@
     }
     all.push(...stretches);
     }
-    cache={key,data:{side:seas[0].side,D:SEA_DIR[seas[0].side]||{x:0,y:1},stretches:all}};
+    cache={key,seas,quick,checkedAt:now,data:{side:seas[0].side,D:SEA_DIR[seas[0].side]||{x:0,y:1},stretches:all}};
     return cache.data;
   }
   const pip=(p,poly)=>{let k=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a.y>p.y)!==(b.y>p.y)&&p.x<(b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x)k=!k}return k};
@@ -165,6 +187,15 @@
     ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
     for(const s of d.stretches){
       if(s.kind==='beach'){
+        // Static per stretch: river-mouth gaps and the world bounding box (for off-screen culling).
+        if(s._mouthSrc!==mouths.length+':'+(State.environment||[]).length){
+          s._mouthSrc=mouths.length+':'+(State.environment||[]).length;
+          s._mouth=s.points.map(p=>mouths.some(f=>Math.hypot(p.x-f.mouth.point.x,p.y-f.mouth.point.y)<f.width*1.6));
+          let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;for(const p of s.points){x0=Math.min(x0,p.x);y0=Math.min(y0,p.y);x1=Math.max(x1,p.x);y1=Math.max(y1,p.y)}
+          s._box=[x0-3,y0-3,x1+3,y1+3];
+        }
+        if(view&&s._box){const B=s._box,cs=[w2sRaw({x:B[0],y:B[1]},0),w2sRaw({x:B[2],y:B[1]},0),w2sRaw({x:B[0],y:B[3]},0),w2sRaw({x:B[2],y:B[3]},0)];
+          if(cs.every(q=>q.x<-80)||cs.every(q=>q.y<-80)||cs.every(q=>q.x>view.w+80)||cs.every(q=>q.y>view.h+80))continue}
         // Each wave runs from 1.4U out at sea up onto the sand and back, thinning as it goes.
         for(let w=0;w<WAVES;w++){
           const ph=((now/WAVE_PERIOD*(.8+swell*.3))+w/WAVES)%1,reach=-.9*swell;
@@ -178,7 +209,7 @@
             if(onScreen(q))any=true;
             // Broken crests: the foam comes in patches that drift along the shore.
             const gap=Math.sin(p.x*.23+p.y*.17+w*2.1+now*.15)+Math.sin(p.x*.61-p.y*.43+w)*.5<-.35;
-            if(gap||mouths.some(f=>Math.hypot(p.x-f.mouth.point.x,p.y-f.mouth.point.y)<f.width*1.6)){started=false;continue}
+            if(gap||s._mouth[i]){started=false;continue}
             if(!started){ctx.moveTo(q.x,q.y);started=true}else ctx.lineTo(q.x,q.y);
           }
           if(any){ctx.stroke();drawn=true}

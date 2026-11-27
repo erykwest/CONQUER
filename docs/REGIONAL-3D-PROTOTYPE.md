@@ -41,17 +41,19 @@ With the updated weighting, the synthetic 20× map has microcell areas of about 
 - Script syntax and simulated renderer execution: model-based reed sprite construction, WebGL draw submission, border draw, regional forest/reed billboards, middle-mouse pan, Shift+middle yaw and wheel zoom.
 - **Not yet established:** real browser screenshots, verified WebGL FPS/GPU profiling, low-end mobile memory/thermal behaviour or full visual art-direction approval. Static server or a Vercel preview is needed for real visual review.
 
-## Regional marker placeholders (visual only)
+## Regional markers (visual only)
 
-Five camera-projected 3D primitives are implemented in `src/regional-map3d-placeholders.js`. They use a dedicated upper canvas so ship animation never rebuilds the terrain mesh:
+Five marker kinds are drawn by `src/regional-map3d-placeholders.js` on a dedicated upper canvas, so ship animation never rebuilds the terrain mesh. Each marker is drawn as its regional token (see *Map tokens* below) when `lab/3dregionmap.html` has loaded `region-token-models.js` and `region-troop-sprites.js`; without them the original primitives remain as a fallback (and are what the Node regression draws for troops):
 
-| Live condition | Symbol |
-|---|---|
-| Village present | Orange cuboid |
-| Non-palisade fortification present | Grey cuboid (palisades excluded) |
-| Port present | Narrow brown dock strip |
-| Ship present | Brown rectangular vessel, oriented along its route |
-| Troops with their owner's heraldry present | Two stacked polygonal cylinders, coloured `heraldry.c1` and `heraldry.c2` |
+| Live condition | Token | Fallback primitive |
+|---|---|---|
+| Village present | `village1`–`village4` by the source `level`; real villages carry no level yet, so they are L1 (the examples show L1–L4) | Orange cuboid |
+| Non-palisade fortification present | `castle` (palisades excluded); flag in the owner's `heraldry.c1` when supplied | Grey cuboid |
+| Port present | `port` jetty on the waterline, `heading` pointing out to sea | Narrow brown dock strip |
+| Ship present | `ship` cog on the waterline, bow along its route; sail in the owner's `heraldry.c1` when supplied | Brown rectangular vessel |
+| Troops with their owner's heraldry present | The game's soldier sprites in a 7-figure formation, livery recoloured from the default `#b32628`/`#eac15b` to `heraldry.c1`/`c2` | Two stacked cylinders in c1/c2 |
+
+Tokens are sized at about a third of an average territory (never below ~9 screen px of radius) and land markers without a source height sit on the same `elevation()` the terrain mesh uses; ships and ports sit on the sea surface (z = −1.8). Building tokens get a stable per-marker yaw; mesh faces are shaded at runtime from their rotated normals against a light fixed on screen, so the shading follows camera yaw and marker heading. The example ship route is now chosen so it stays on water cells.
 
 The read-only `ConquerRegion3DMarkerSnapshot()` bridge maps real World Lab `villages`, `fortifications`, `ports`, and optional `regionalShips` / `ships` and `regionalArmies` / `armies`. Troops with unavailable heraldic colours are omitted, not assigned invented player colours. Live ships may supply `{route:[{x,y},...],progress}` and the marker follows their simulation-supplied progress. The `window.ConquerRegion3DLiveMarkers` provider offers a compatible extension point for future integration.
 
@@ -67,6 +69,12 @@ Verification: `qa/regional-map3d-placeholders-regression.cjs` covers all five pr
 - The original map's outer rectangular domain remains the same; the **internal** region/biome boundaries are organic. Distinct sea/land borders are derived from aggregated microcells.
 - A production renderer should cache meshes by seed/palette/warp revision, progressively LOD distant geometry, and eventually use worker/OffscreenCanvas and GPU sprite instancing rather than sorting and painting thousands of 2D billboards for every camera update.
 
+## Map tokens
+
+`tools/blender/build_region_tokens.py` → `src/assets/region-token-models.js` (`window.ConquerRegionTokenModels`) provides flat-coloured, very low-poly tokens distilled from the Builder kits: `village1`–`village4` (56/102/130/188 tris, the four evolution states of the game's L1–L4 houses, in their colours), `castle` (91), `port` (56), `ship` (33). Troops are not meshes: `tools/bake-region-troops.mjs` bakes the game's own soldier painters from the Asset Lab into `src/assets/regional/troop-*.png`, with feet anchors, a 7-figure formation and `pxPerToken` in `src/assets/region-troop-sprites.js`, to be drawn as billboards like the forest sprites.
+
+They replace the five placeholder primitives one to one: `ConquerRegionTokenModels.markers` maps the marker kinds `village` (→ `village1`–`village4` by settlement level), `castle`, `port`, `ship`; `troops` → the sprite formation. Owner colours follow the marker contract: the meshes' `team`/`teamDark` keys default to the CONQUER heraldry c1 `#b32628` (castle flag, sail) and take the owner's `heraldry.c1`; the troop sprites are painted in the default field colours `heraldry: ['#b32628','#eac15b']` (realm helmet, no foe cap), so a troops marker recolours exactly those pixels with its own `colors`. Ships orient along the marker `heading` (+X is the bow). Token units: origin on the ground (waterline for pier and ship), +X forward, +Z up, footprint radius ~1, so the renderer scales each by one number. Indexed `p`/`i` plus one palette index per triangle (`c`), the same layout as the other Blender registries; `team`/`teamDark` are meant to take the owner's political colour, `*Dark` keys are pre-shaded faces because this renderer has no lighting. Flags and the sail are single planes and rely on the renderer's lack of back-face culling. They are listed in the Asset Lab under Territorio › Mappa regionale (token) and (truppe), and drawn by the regional markers above.
+
 ## Preview
 
 Serve the repository root over HTTP and open \`/lab/3dregionmap.html\` (do not use \`file://\`). In the left iframe, generate/edit the authoritative 2D map. The right pane detects the 2D revision, then builds its own global microcell mesh. Choose 8/20/40 detail, vary the deformation slider, and toggle tree/reed populations. The benchmark button reports CPU construction time (not GPU FPS).
@@ -75,4 +83,4 @@ Serve the repository root over HTTP and open \`/lab/3dregionmap.html\` (do not u
 
 ## Mappa locale ereditata (branch `feature/local-hex-shape`)
 
-Il pulsante «Apri demo locale» passa anche `shape`: contorno del territorio e contorni dei vicini fisici. La mappa locale usa quel poligono come zona edificabile (sempre 10000 U², omogeneizzazione salvata) e il suo offset di 50U come bordo del mondo; l'anello è diviso fra i vicini con le loro celle Voronoi reali. Codice in `src/regional-local-shape.js`, test in `qa/local-hex-shape-regression.cjs`.
+Il pulsante «Apri demo locale» passa anche `shape`: contorno del territorio e contorni dei vicini fisici. La mappa locale usa quel poligono come zona edificabile (sempre 40000 U² dal 25/11/2026, prima 10000 U², omogeneizzazione salvata) e il suo offset di 50U come bordo del mondo; l'anello è diviso fra i vicini con le loro celle Voronoi reali. Codice in `src/regional-local-shape.js`, test in `qa/local-hex-shape-regression.cjs`.

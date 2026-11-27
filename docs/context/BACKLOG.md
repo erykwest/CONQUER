@@ -1,5 +1,33 @@
 # Livello 4 — Indice dei requisiti e backlog inter-sistemi
 
+### 2026-11-25 — LOCAL-AREA-4X · Mappe locali esagonali 40000 U²
+
+**IMPLEMENTATO SU BRANCH LOCALE `3dworldvoronoi`, NON PUBBLICATO.** Dettagli in [STATUS](STATUS.md), decisione D-LOCAL-AREA-261125.
+- [x] Strade maestre: A* con le stesse strade ma molto più veloce (costa, memoria dei punti, indice ambientale).
+- [x] Area edificabile esagonale 40000 U², canvas minimo 360U, bordo a 50U.
+- [x] Camera WebGL senza taglio sulle tele grandi; pivot di rotazione su `WORLD/2`; zoom minimo scalato.
+- [x] Ricerche ripetute 12/24/42 U ridotte (limite inferiore dei ponti su griglia grossolana, salto al riquadro più largo): T364 da 11 a 4 ricerche, stesse strade (ROADS-PATH-02).
+- [x] Strade maestre sotto i 3 s sulla mappa 4× (griglia del terreno, niente ridisegni durante il calcolo): ROADS-PATH-03.
+- [ ] Le strade compaiono tutte alla fine (≈2–3 s): valutare un indicatore «tracciamento strade…» nella UI.
+- [ ] Mappe con terraforming: la griglia è disattivata (test esatto); estenderla alle modifiche se serve.
+- [ ] Densità del paesaggio a 4×: rocce ~+25% contro boscaglia ×2,3; da rivedere a vista su più biomi.
+- [ ] Texture del terreno: 4096 px coprono ora 360–420U (risoluzione circa dimezzata); valutare tile o texture più grande.
+- [ ] Decidere se raddoppiare anche le mappe quadrate classiche (sposterebbe il centro dei salvataggi).
+
+### 2026-11-17 — REGION3D-TOKENS · Token della mappa regionale 3D
+
+**IMPLEMENTATO SU BRANCH `feature/region3d-tokens`, NON MERGE.** Dettagli in [STATUS](STATUS.md).
+- [x] Kit Blender low-poly: villaggio L1–L4, castello, molo, nave (33–188 triangoli), nell'Asset Lab.
+- [x] Truppe: sprite delle figure del gioco (lanciere, arciere, cavaliere, cavaliere a cavallo) cotte dal Lab, con formazione.
+- [x] Allineati ai marker di `regional-map3d-placeholders.js`: un token per tipo (`markers`), colori del proprietario da `heraldry.c1/c2`.
+- [x] I cinque segnaposto disegnano i token in `lab/3dregionmap.js` (25/11, base PR #281): mesh con `team` = c1 del proprietario e ombreggiatura dalla rotazione; truppe = sprite del gioco in formazione; cubi/cilindri come ripiego.
+- [ ] Regole di posizionamento: villaggio (livello dalla popolazione) e castello per insediamento, molo e nave sulle coste, truppe per armata.
+- [x] Ricolorazione runtime delle sprite delle truppe (c1/c2 di default → `colors` del marker), senza toccare legno di lance e archi.
+- [ ] Per i nemici valutare l'elmo a cuffia del gioco (oggi tutte le truppe hanno l'elmo del regno).
+- [ ] Livello reale dei villaggi: il World Lab non lo espone ancora, i villaggi reali sono L1 (L1–L4 solo negli esempi).
+- [ ] Costo di ridisegno con molti villaggi reali (~56 triangoli ciascuno, tutti L1): oggi 0 simboli reali, da misurare quando il World Lab li espone.
+- [ ] Truppe ordinate in profondità con alberi e canneti (oggi stanno sulla tela dei marker, sopra la vegetazione).
+
 ### 2026-11-17 — LOCAL-HEX-01 · Mappa locale ereditata dal territorio esagonale
 
 **IMPLEMENTATO SU BRANCH `feature/local-hex-shape` (base `3dregionmap`), NON MERGE.** Dettagli in [STATUS](STATUS.md).
@@ -7,7 +35,7 @@
 - [x] Settori dell'anello dai vicini fisici reali (5–7), non dagli 8 slot logici.
 - [x] Ingressi stradali per vicino di terra e uscite marine per tratto di costa sul bordo poligonale.
 - [x] Area interna sempre 10000 U² (omogeneizzazione verificata alla generazione e salvata); canvas adattato al bordo offset (min 240U), mai bordo quadrato; terreno 3D ritagliato.
-- [ ] Prestazioni del tracciato delle strade principali sul canvas grande (68 s verso la palude di T364).
+- [x] Prestazioni del tracciato delle strade principali sul canvas grande (68 s verso la palude di T364): risolto su `3dworldvoronoi` (LOCAL-AREA-4X).
 - [x] Costa sul confine regionale: passaggio di bioma centrato sul bordo edificabile (50/50), baie che entrano nella zona edificabile (19/11).
 - [x] Fiumi sul confine: il fiume locale segue il tratto di bordo condiviso con i vicini oltre il lato-fiume regionale (`shape.riverNeighbors`, `borderPath`) (19/11).
 - [x] Strade maestre: un solo ponte perpendicolare per attraversamento; tracciato col minimo numero di attraversamenti (19/11).

@@ -461,7 +461,9 @@ function flushWheelZoom(){
   const steps=clamp(zoomWheelDelta/100,-3,3);
   const factor=Math.pow(1.12,-steps);
   zoomWheelDelta=0;
-  State.view.scale=clamp(State.view.scale*factor,.2,10);
+  // Zoom-out floor scales with the canvas (.2 on the legacy 200U map): a 40000 U² hex map
+  // (WORLD ~360-420U) can still be seen whole.
+  State.view.scale=clamp(State.view.scale*factor,.2*200/Math.max(200,WORLD),10);
   const after=w2s(before);
   State.view.x+=sx-after.x;State.view.y+=sy-after.y;
   sceneCacheZoomPreview=true;

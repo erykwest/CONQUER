@@ -1,5 +1,27 @@
 # Livello 5 — Diario delle variazioni del contesto
 
+### 2026-11-26 — MINIMAP-CACHE · Esplorazione fluida dopo la fondazione
+
+- La minimappa tiene in cache lo sfondo (terreno, foreste, acque) e lo ridisegna solo se l'ambiente cambia: dopo la fondazione su mappa 4× il pan passa da ~2 a ~8–15 fps (headless). Roadmap e decisioni invariate.
+
+### 2026-11-26 — ROADS-PATH-03 · Strade maestre sotto i 3 s
+
+- Le strade maestre di fondazione su mappa 4× si tracciano in 2–3 s (prima 34–45 s): griglia del terreno per A* con ricontrollo esatto del percorso, niente ridisegni durante il calcolo. Strade praticamente uguali (8/10 identiche). Roadmap e decisioni invariate.
+
+### 2026-11-26 — ROADS-PATH-02 · Strade maestre: meno ricerche, stesse strade
+
+- Le strade maestre non rifanno più ricerche più larghe quando il ponte è inevitabile (limite dei ponti su griglia grossolana) e saltano al riquadro più largo quando serve; stesse strade, ricerche A* su T364 da 11 a 4. Roadmap e decisioni invariate.
+
+### 2026-11-25 — LOCAL-AREA-4X · Mappe locali esagonali 40000 U²
+
+- Le mappe locali aperte dalla mappa regionale passano da 10000 a 40000 U² (lato ×2, bordo 50U invariato); A* delle strade maestre molto più veloce con le stesse strade; camera WebGL, pivot e zoom adattati alle tele grandi. Nuova decisione D-LOCAL-AREA-261125 (supera l'area fissa del 17/11); ROADMAP invariata.
+
+### 2026-11-17 — REGION3D-TOKENS · Token low-poly della mappa regionale 3D
+
+- 25/11: le icone della mappa regionale 3D sono ora i token (villaggio L1–L4, castello, molo, nave, truppe del gioco) con i colori del proprietario; cubi e cilindri restano come ripiego. Roadmap e decisioni invariate.
+- Riallineati su `3dregionmap` con i segnaposto dei marker: un token per tipo (`pier` rinominato `port`), colori del proprietario dall'araldica c1/c2, sprite delle truppe ricotte in rosso/oro di default.
+- Nuovo kit Blender `build_region_tokens.py` → `region-token-models.js`: villaggio in quattro stati L1–L4 come le case del gioco, castello, molo e nave stilizzati (33–188 triangoli), nel catalogo dell'Asset Lab; le truppe riusano le figure del gioco cotte in sprite (`tools/bake-region-troops.mjs`). Test `qa/region-tokens-regression.cjs`, baseline audit estesa alle 11 voci. Non ancora collegati al renderer region3d. Roadmap e decisioni invariate.
+
 ### 2026-11-17 — LOCAL-HEX-01: contorno esagonale ereditato dalla mappa regionale
 
 - `feature/local-hex-shape` (da `3dregionmap`): nuovo `src/regional-local-shape.js`, payload `shape` dal World Lab, zona edificabile poligonale, bordo offset 50U, biomi dai vicini fisici, ingressi stradali e uscite marine sul bordo poligonale. Test `qa/local-hex-shape-regression.cjs`; `wiki/catalog.json` rigenerato. Nuova decisione D-LOCAL-HEX-261117 in DECISIONS; ROADMAP invariata.

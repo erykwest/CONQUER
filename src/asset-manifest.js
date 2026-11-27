@@ -34,6 +34,10 @@ window.CONQUER_ASSET_FILES=[
  "src/assets/heraldry/her2.svg",
  "src/assets/interior/barrel.svg",
  "src/assets/interior/crate.svg",
+ "src/assets/regional/troop-archer.png",
+ "src/assets/regional/troop-knight.png",
+ "src/assets/regional/troop-mounted.png",
+ "src/assets/regional/troop-spearman.png",
  "src/assets/tree-svgrepo-com.svg"
 ];
 window.CONQUER_ASSET_ROTATIONS={};

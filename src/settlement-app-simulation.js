@@ -80,7 +80,7 @@ function scheduleCompletionRoadMaintenance(completed){
       perf.completionRoadPending=job.tasks.size;
     }
     window.__conquerAnalytics?.measure('COMPLETION_ROADS',ms,{pending:job.tasks.size,changed});
-    if(job.tasks.size)setTimeout(tick,0);
+    if(job.tasks.size)(typeof scheduleRoadSlice==='function'?scheduleRoadSlice:fn=>setTimeout(fn,0))(tick);
     else{
       completionRoadJob=null;
       if(job.repaint&&State.clock.speed<=0)requestAnimationFrame(()=>{if(State.village===village&&State.clock.speed<=0)draw()});
@@ -234,7 +234,12 @@ function simulationFrame(now){
       simUiAt=now;
     }
 
-    if(now-simDrawAt>=adaptiveVisualFrameMs){
+    // While the founding main roads are being planned (a few seconds) the periodic scene redraw
+    // pauses: every route that lands changes structures and woodland, and each redraw rebuilt the
+    // 3D content (~0.6 s on a 40000 U² map). Requests (waves, effects) wait, the flag stays set;
+    // the job's onDone draws the finished network once. Player input calls draw() directly.
+    const planningRoads=typeof foundingRoadJob!=='undefined'&&!!foundingRoadJob;
+    if(!planningRoads&&now-simDrawAt>=adaptiveVisualFrameMs){
       const t0=performance.now();
       sceneDrawRequested=false;
       draw();
@@ -272,7 +277,9 @@ function simulationFrame(now){
     // DEV weather/daylight overrides ease even with the simulation paused.
     const ambientTransition=window.ConquerAmbientLight?.isTransitioning?.()||false;
     const animatedEffects=window.ConquerFire?.needsAnimation?.()||window.ConquerSiege?.needsAnimation?.()||window.ConquerCombatAnim?.active?.()||window.ConquerSoldiers?.needsAnimation?.();
-    if(sceneDrawRequested||((animatedCutaway||ambientTransition||animatedEffects)&&now-simDrawAt>=(ambientTransition?WEATHER_FRAME_MS:animatedEffects?VISUAL_FRAME_FAST_MS:84))){
+    // Same pause as the running branch while the founding main roads are planned.
+    const planningRoads=typeof foundingRoadJob!=='undefined'&&!!foundingRoadJob;
+    if(!planningRoads&&(sceneDrawRequested||((animatedCutaway||ambientTransition||animatedEffects)&&now-simDrawAt>=(ambientTransition?WEATHER_FRAME_MS:animatedEffects?VISUAL_FRAME_FAST_MS:84)))){
       sceneDrawRequested=false;
       draw();
       simDrawAt=now;

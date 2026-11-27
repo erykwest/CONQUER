@@ -24,18 +24,29 @@ const s=S.create(lattice());
 assert(s,'shape created');
 const C=S.HEX_WORLD/2,WMAX=S.HEX_WORLD;
 const bb=G.bounds(s.build),ob=G.bounds(s.outer);
-assert.strictEqual(s.world,240,'hex maps use a 240U canvas');
-// Buildable polygon keeps the legacy 100x100 area, centred, north up.
-assert(Math.abs(s.buildArea-10000)<1,'build area 10000, got '+s.buildArea);
+// Product rule (25/11/2026, doubled side): buildable area 40000 U² (200x200), hex canvas 360U.
+assert.strictEqual(S.TARGET_AREA,40000,'local buildable area is 40000 U²');
+assert.strictEqual(S.BOX,200,'200U side');
+assert.strictEqual(S.HEX_WORLD,360,'hex canvas floor 360U');
+const AREA=S.TARGET_AREA;
+assert.strictEqual(s.world,S.HEX_WORLD,'hex maps use the HEX_WORLD canvas');
+// Buildable polygon keeps the target area, centred, north up.
+assert(Math.abs(s.buildArea-AREA)<1,'build area '+AREA+', got '+s.buildArea);
 assert(Math.abs((bb.minY+bb.maxY)/2-C)<1e-6&&Math.abs((bb.minX+bb.maxX)/2-C)<1e-6,'build centred');
 assert(bb.maxY-bb.minY>bb.maxX-bb.minX,'pointy-top hex stays north-up');
-// World border = 50U offset, inside the 200U canvas.
+// World border = 50U offset, inside the canvas.
 assert(ob.minX>=0&&ob.minY>=0&&ob.maxX<=WMAX&&ob.maxY<=WMAX,'outer fits canvas '+JSON.stringify(ob));
 for(let i=0;i<s.outer.length;i+=3){
   const d=G.ringDistance(s.outer[i],s.build);
   assert(Math.abs(d-50)<.05,'outer vertex at 50U from build, got '+d.toFixed(3));
 }
-assert(s.outerArea>s.buildArea*3,'ring larger than build');
+// The ring is a true 50U offset at any build size (Steiner: A + P*50 + pi*50² for a convex
+// cell; the rounded corners are polygonal, so a little less than the exact arcs).
+{
+  let P=0;for(let i=0;i<s.build.length;i++){const a=s.build[i],b=s.build[(i+1)%s.build.length];P+=Math.hypot(b.x-a.x,b.y-a.y)}
+  const steiner=s.buildArea+P*50+Math.PI*2500;
+  assert(Math.abs(s.outerArea-steiner)<steiner*.01,'outer area = 50U offset ring: '+s.outerArea.toFixed(0)+' vs '+steiner.toFixed(0));
+}
 
 // Six physical neighbours -> six sectors, each owning one contiguous border run.
 assert.strictEqual(s.sectors.length,6);
@@ -102,24 +113,24 @@ const e=S.create(edge);
 assert(e.weights({x:G.bounds(e.outer).maxX-3,y:C},'@c')['@c']>.99,'no neighbour beyond the regional edge -> own biome');
 
 // Homogenization, verified at generation: ANY regional size or shape gets exactly
-// 10000 U²; an elongated territory grows the canvas instead of shrinking.
+// TARGET_AREA; an elongated territory grows the canvas instead of shrinking.
 const close=(a,b,eps=1e-6)=>Math.abs(a-b)<=eps*Math.max(1,Math.abs(b));
 for(const k of [.01,1,37]){
   const t=S.create({polygon:hex(0,0,R*k),neighbors:[]});
-  assert(close(t.buildArea,10000),'area 10000 at regional scale '+k+': '+t.buildArea);
+  assert(close(t.buildArea,AREA),'target area at regional scale '+k+': '+t.buildArea);
   assert(close(t.homogenization.scale,s.homogenization.scale/k),'scale saved and inversely proportional');
-  assert.strictEqual(t.homogenization.targetArea,10000);
+  assert.strictEqual(t.homogenization.targetArea,AREA);
 }
-assert(close(s.homogenization.sourceArea*s.homogenization.scale**2,10000),'saved homogenization reproduces the area');
+assert(close(s.homogenization.sourceArea*s.homogenization.scale**2,AREA),'saved homogenization reproduces the area');
 const long=S.create({polygon:[{x:0,y:0},{x:300,y:0},{x:300,y:40},{x:0,y:40}],neighbors:[]});
 const lb=G.bounds(long.outer);
-assert(close(long.buildArea,10000),'elongated cell keeps 10000 U²');
-assert(long.world>240&&long.world%2===0&&lb.minX>=0&&lb.maxX<=long.world&&lb.minY>=0&&lb.maxY<=long.world,'canvas grows to the border: '+long.world);
+assert(close(long.buildArea,AREA),'elongated cell keeps the target area');
+assert(long.world>S.HEX_WORLD&&long.world%2===0&&lb.minX>=0&&lb.maxX<=long.world&&lb.minY>=0&&lb.maxY<=long.world,'canvas grows to the border: '+long.world);
 // Concave territory (two regional cells): true 50U offset, not a convex hull or a square.
 const twin={polygon:[...hex(500,300,R).slice(0,1),...hex(500+W,300,R).slice(0,4),...hex(500,300,R).slice(2)],neighbors:[]};
 const tw=S.create(twin);
 assert(!G.isConvex(tw.build),'two-cell territory is concave');
-assert(close(tw.buildArea,10000));
+assert(close(tw.buildArea,AREA));
 for(let i=0;i<tw.outer.length;i+=7){const d=G.ringDistance(tw.outer[i],tw.build);assert(Math.abs(d-50)<.05,'concave offset at 50U, got '+d.toFixed(3))}
 const corner={x:0,y:0},side=(tw.world);
 for(const q of [{x:1,y:1},{x:side-1,y:1},{x:1,y:side-1},{x:side-1,y:side-1}])assert(!tw.inWorld(q),'no square border: canvas corners are off-map');
