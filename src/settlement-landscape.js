@@ -678,9 +678,71 @@ function mountainFacetPolygons(f,height=f.height||3.6){
   }
   return faces;
 }
+// Rock crags reusing the cliff look: a jagged cliff band at the foot of every facet with scree
+// boulders on it and just outside the base, plus bare rock slabs high on the peak (over the snow).
+const mountainCragCache=new Map(),MOUNTAIN_FOOT_CRAG_CHANCE=.33;
+function mountainCragLayout(f,height){
+  const base=f.unclippedPoints||f.points,key=f.id+':'+State.seed+':'+height.toFixed(3)+':'+base.length;
+  if(mountainCragCache.has(key))return mountainCragCache.get(key);
+  const rnd=seedRand((State.seed^biomeHash(f.id+':crags'))>>>0),apex={x:f.x,y:f.y},out=[];
+  const at=(a,b,u,v)=>{const e=mixWorld(a,b,u);return{x:e.x+(apex.x-e.x)*v,y:e.y+(apex.y-e.y)*v,z:height*v}};
+  const inWorld=p=>p.x>=0&&p.x<=WORLD&&p.y>=0&&p.y<=WORLD;
+  for(let i=0;i<base.length;i++){
+    const a=base[i],b=base[(i+1)%base.length],len=dist(a,b),polys=[],rocks=[];
+    // Foot cliff: jagged top edge, 7-16% of the height.
+    // Convex pieces only (the 3D builder fans each polygon).
+    // Foot cliff only on about a third of the facets, and only along part of the edge.
+    const foot=rnd()<MOUNTAIN_FOOT_CRAG_CHANCE,vb=.05+rnd()*.06,steps=Math.max(3,Math.round(len/4)),tops=[];
+    const fu0=.1+rnd()*.25,fu1=.65+rnd()*.25;
+    for(let s=0;s<=steps;s++)tops.push((s===0||s===steps)?vb*.4:vb*(.7+rnd()*.6));
+    if(foot)for(let s=0;s<steps;s++){
+      const u0=fu0+(fu1-fu0)*s/steps,u1=fu0+(fu1-fu0)*(s+1)/steps;
+      polys.push([at(a,b,u0,0),at(a,b,u1,0),at(a,b,u1,tops[s+1]),at(a,b,u0,tops[s])]);
+    }
+    // Summit slab: a narrowed patch high on the facet, on most facets.
+    let summit=false;
+    if(rnd()<.7){
+      summit=true;
+      const v0=.55+rnd()*.15,v1=Math.min(.94,v0+.16+rnd()*.14),u0=.12+rnd()*.2,u1=.88-rnd()*.2;
+      const ring=[at(a,b,u0,v0),at(a,b,(u0+u1)/2,v0-.04-rnd()*.05),at(a,b,u1,v0),at(a,b,u1-.06,v1),at(a,b,(u0+u1)/2+(rnd()-.5)*.2,v1+.03),at(a,b,u0+.06,v1)];
+      const c=at(a,b,(u0+u1)/2,(v0+v1)/2);
+      for(let k=0;k<ring.length;k++)polys.push([c,ring[k],ring[(k+1)%ring.length]]);
+    }
+    const scale=clamp(Math.sqrt(f.rx*f.ry)/12,1,2.6);
+    // Scree on the foot band and spilling past the base edge.
+    const n=foot?Math.max(3,Math.round(len*.6)):(rnd()<.4?1+Math.floor(rnd()*2):0);
+    for(let k=0;k<n;k++){
+      const u=foot?fu0+(fu1-fu0)*(k+rnd())/n:.15+rnd()*.7,v=rnd()<.5?-rnd()*.04:rnd()*vb;
+      const p=at(a,b,u,v),z=Math.max(0,p.z);
+      if(inWorld(p))rocks.push({p:{x:p.x,y:p.y},z,size:(.22+rnd()*.4)*scale,height:(.16+rnd()*.42)*scale,seed:Math.floor(rnd()*0xffffffff)});
+    }
+    // A few boulders on the summit slab.
+    if(summit)for(let k=0;k<3;k++){
+      const p=at(a,b,.3+rnd()*.4,.6+rnd()*.25);
+      if(inWorld(p))rocks.push({p:{x:p.x,y:p.y},z:p.z,size:(.18+rnd()*.25)*scale,height:(.14+rnd()*.3)*scale,seed:Math.floor(rnd()*0xffffffff)});
+    }
+    out.push({i,polys,rocks});
+  }
+  mountainCragCache.set(key,out);return out;
+}
+// Same low-poly boulder as drawLowPolyRock, as 3D faces for the WebGL builder.
+function mountainRockFaces(r){
+  const rnd=seedRand(r.seed>>>0),n=5+Math.floor(rnd()*2),rot=rnd()*Math.PI*2,base=[],top=[];
+  const sx=r.size*(.72+rnd()*.42),sy=r.size*(.55+rnd()*.36);
+  for(let i=0;i<n;i++){
+    const a=rot+i/n*Math.PI*2+(rnd()-.5)*.16,rr=.74+rnd()*.28,q={x:r.p.x+Math.cos(a)*sx*rr,y:r.p.y+Math.sin(a)*sy*rr};
+    const shrink=.46+rnd()*.18;
+    base.push({...q,z:r.z-.05});top.push({x:r.p.x+(q.x-r.p.x)*shrink,y:r.p.y+(q.y-r.p.y)*shrink,z:r.z+r.height*(.76+rnd()*.22)});
+  }
+  const sides=['#5e6263','#727677','#505455','#838787'],faces=[];
+  for(let i=0;i<n;i++){const j=(i+1)%n;faces.push({poly:[base[i],base[j],top[j],top[i]],color:sides[(i+r.seed)%4]})}
+  faces.push({poly:top,color:'#8a8e8d',top:true});
+  return faces;
+}
 function drawRaisedFan(f,height){
   const faces=[];
   const plan=typeof isPlanView==='function'&&isPlanView(),pines=f.height?mountainPineLayout(f):[];
+  const crags=f.height?mountainCragLayout(f,height):[],winterGround=typeof isSnowGround==='function'?isSnowGround():State.season==='winter';
   // Fraction of this peak's height where the map-wide snow line falls (1 = no snow).
   const project=poly=>poly.map(p=>w2sRaw(p,p.z));
   for(const q of mountainFacetPolygons(f,height)){
@@ -695,6 +757,11 @@ function drawRaisedFan(f,height){
   for(const q of faces){
     pathPolygon(q.rock,q.color,'rgba(170,150,125,.35)',.8);
     if(q.snow)pathPolygon(q.snow,q.snowColor,'rgba(200,210,214,.45)',.8);
+    const crag=q.i>=0&&f.height?crags[q.i]:null;
+    if(crag){
+      for(const poly of crag.polys){const sp=projectClippedTerrain(poly);if(sp.length>=3)drawSteepSlopeSurface(sp,false)}
+      if(!plan)for(const r of crag.rocks.slice().sort((a,b)=>w2sRaw(a.p,a.z).y-w2sRaw(b.p,b.z).y))drawLowPolyRock(r.p,r.z,r.size,r.height,r.seed,winterGround);
+    }
     if(plan||!forestTreeSpritesReady)continue;
     for(const t of (byFacet.get(q.i)||[]).sort((a,b)=>w2sRaw(a.p,a.z).y-w2sRaw(b.p,b.z).y))drawMountainPine(t);
   }

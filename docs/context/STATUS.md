@@ -1,4 +1,8 @@
 # Livello 2 — Stato tecnico e prove
+### 2026-11-27 — MOUNTAIN-STAR-CRAGS: montagne a stella con costoni di roccia (`feature/mountain-star-crags`, NON MERGE)
+
+Base delle montagne a stella irregolare (punte e rientranze alternate, `MOUNTAIN_STAR`), costoni con la grafica delle cliff al piede (~1/3 delle facce, `MOUNTAIN_FOOT_CRAG_CHANCE`) con ghiaione di massi low-poly e placche di roccia nuda in vetta sopra la neve. Renderer 3D (`buildMountains`) e 2D (`drawRaisedFan`) condividono `mountainCragLayout`. Regressioni montagne/terreno PASS in locale; CI remota da eseguire.
+
 ### 2026-11-27 — TERRAIN-EDGES-261127: bordi frastagliati di rupi, boschi e coste (`feat/ragged-terrain-edges`, NON MERGE)
 
 - **CODICE:** `settlement-castle.js` `reliefEdgeBands`: il piede del pendio di un livello resta dentro il livello sottostante (`reliefLevelBelow`, ricerca binaria della larghezza), niente piu strati a sbalzo. `settlement-landscape.js`: attorno alle rupi lingue di roccia frastagliate sui pendii vicini, sulla cima e al piede (`drawCliffRaggedSides`/`drawCliffRaggedCrest`, profilo irregolare `cliffRaggedProfile`), sassi e ciuffi d'erba stagionali (`cliffTufts`); margine del sottobosco frastagliato (`forestRaggedOutline`, solo pittura) con ciuffi e sassi. `settlement-coast.js`: sabbia e scogli con bordi irregolari verso terra, giunzione scogli/spiaggia a denti e lastre di roccia sulla sabbia (`drawGround`), cespugli `edgeBushes`. `settlement-world3d.js`: cespugli 3D billboard lungo rupi, boschi e coste (sprite stagionali del sottobosco); la texture del terreno si ricalcola anche al cambio di fogliame (`bushSeasonKey` nella firma).

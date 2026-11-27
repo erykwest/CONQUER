@@ -1,4 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
+### 2026-11-27 — MOUNTAIN-STAR-CRAGS · Montagne a stella con costoni di roccia
+
+`feature/mountain-star-crags`: la base delle montagne passa da poligono quasi circolare a stella irregolare (4–6 braccia, creste e valli alternate con variazione casuale). Costoni di roccia riusando la grafica delle cliff: fascia frastagliata al piede su circa un terzo delle facce, con ghiaione di massi, e placche di roccia nuda alte sulla punta. ROADMAP e DECISIONS invariate: modifica solo visiva del paesaggio. QA: `mountain-density`, `regional-surroundings`, `p1-terrain` PASS in locale.
+
 ### 2026-11-27 — TERRAIN-EDGES-261127 · Bordi frastagliati di rupi, boschi e coste (`feat/ragged-terrain-edges`)
 
 Strati delle colline senza sbalzo: il pendio di un livello non esce dal livello sottostante. Attorno alle rupi, ai margini dei boschi e lungo spiagge e scogli i passaggi di materiale sono frastagliati (profilo irregolare, nessuna sfumatura), con sassi, ciuffi d'erba e cespugli 3D che seguono la stagione; tra scogli e spiaggia la roccia si spezza a denti con lastre sulla sabbia. Solo resa grafica: alberi, percorribilita e zone costiere invariati. ROADMAP e DECISIONS invariate. QA: regressioni di rilievo, boschi e coste PASS in locale; CI remota da verificare.
