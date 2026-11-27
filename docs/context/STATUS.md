@@ -1,4 +1,12 @@
 # Livello 2 — Stato tecnico e prove
+### 2026-11-27 — CIVIL-VIEWS: popolani in 8 viste (`feature/civil-views`, base `feature/foot-views`, NON MERGE)
+
+- **CODICE:** i civili (quattro classi, bambini, dame L4) e la leva usano le 8 viste dei fanti (`footTurn`). `drawVillagerFigureUnmasked` ha il parametro `view` (default `dot.view` o S); corpo e capi del guardaroba sono volumi, le mani si dispongono per lato, i capelli coprono la parte della testa girata. Guardaroba (`settlement-wardrobe.js`): `drawBody`/`drawHead` accettano la vista; da dietro spariscono grembiule, stola, catena, stemma del tabarro e apertura frontale; cappucci e velo si chiudono, niente fori degli occhi del boia. Leva: lancia, scudo (retro in legno) e arco come carte per lato.
+- **Direzione:** `civilianView` ricava il verso di marcia dalla posizione del fotogramma precedente (per id), lo tiene 1,2 s dopo l'arresto, poi torna in S. Tile World 3D per vista (popolani e leva). Lavori (`settlement-work-anim.js`), personale, corte, equipaggi e carrettieri restano in S finché non passano `dot.view`/`dot.heading`.
+- **Lab:** 8 voci «· 8 viste» (famiglia «Civili · 8 viste»).
+- **Prove:** `qa/civil-views-regression.cjs` (nuova, in `combat-regression.yml`): S identica chiamata per chiamata al codice prima della modifica per ogni classe, età, dama e capo del guardaroba, e per la leva; 8 viste per tutti; grembiule solo davanti; capelli sulla nuca; verso di marcia. `foot-views`, `figure-hands-feet`, `wardrobe`, `seasonal-wardrobe`, `court-people`, `staff-people`, `work-anim`, `vehicles`, `l1-carter-market`, combattimento: PASS. Audit Lab Popolazione: 90 render, 0 falliti, 0 cambiati; le 8 voci nuove in baseline.
+- **Non verificato:** in partita.
+
 ### 2026-11-27 — FOOT-VIEWS: fanti in 8 viste (`feature/foot-views`, base `fix/messenger-card`, NON MERGE)
 
 - **CODICE:** i fanti (fanteria/guardia, picchiere, araldo, uomo d'arme, arciere, cavaliere a piedi, ascia dei fuorilegge) erano sempre disegnati di fronte. Ora hanno 8 viste (E SE S SW W NW N NE). S è la grafica approvata, invariata; le altre sette ruotano le stesse forme attorno all'asse verticale in `settlement-population-figures.js` (`footTurn`, `withFootVolume` per busto/testa/piedi, `withFootCard` per armi, scudi, arco e stendardo), con ordine di profondità per lato. Da dietro: retro dello scudo in legno, capelli sotto l'elmo, niente visiera/nasale/apertura a T, livrea senza stemma con i colori invertiti; di lato la cucitura della livrea scivola sul petto.

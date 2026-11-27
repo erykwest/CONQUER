@@ -1,4 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
+### 2026-11-27 — CIVIL-VIEWS · Popolani in 8 viste (`feature/civil-views`)
+
+Popolani, bambini, dame e leva ruotano come i fanti (S invariata), con il guardaroba che nasconde da dietro i capi frontali. Il verso viene dal cammino reale della figura. ROADMAP e DECISIONS invariate.
+
 ### 2026-11-27 — FOOT-VIEWS · Fanti in 8 viste (`feature/foot-views`)
 
 I fanti a piedi passano dalla sola vista frontale a 8 viste, ruotando in tempo reale le forme della grafica approvata (S invariata). Direzione presa da percorso/nemico in battaglia e dal giro delle pattuglie sulle mura. Voci Lab e regressione nuove. ROADMAP e DECISIONS invariate.

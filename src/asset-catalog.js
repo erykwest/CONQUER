@@ -49,6 +49,9 @@
     // FOOT-VIEWS: the same foot soldiers in the eight views (E SE S SW / W NW N NE).
     ...[['spearman','Fanteria / guardia'],['pikeman','Picchiere'],['herald','Araldo'],['manAtArms',"Uomo d'arme"],['archer','Arciere'],['knight','Cavaliere a piedi']]
       .map(([k,name])=>['foot8:'+k,name+' · 8 viste','Truppe','Militari · 8 viste']),
+    // CIVIL-VIEWS: civilians of the four classes, a child, an L4 lady and the levy in the eight views.
+    ...[['peasant','Popolano L1'],['artisan','Artigiana L2'],['merchant','Mercante L3'],['elite','Nobile L4'],['lady','Dama L4'],['child','Bambino'],['levySpear','Leva (lancia)'],['levyBow','Leva (arco)']]
+      .map(([k,name])=>['civil8:'+k,name+' · 8 viste','Popolazione','Civili · 8 viste']),
     ['wagon3d','Carro animato 3D','Veicoli','Carri'],
     // The in-game 2D horse (settlement-animals.js) and everything that rides or pulls with it.
     ['horse2d','Cavallo 2D (passo)','Fauna','Cavalli 2D'],['horse2dGraze','Cavallo 2D (pascola)','Fauna','Cavalli 2D'],
@@ -530,6 +533,24 @@
         {chassis:'wagon',cargo:['sack','crate','barrel'],team:[{coat:'brown'},{coat:'black'}],facing:1,moving:true,t:.15,distance:20});return;
     }
     const previous=ctx,oldScale=State.view.scale;
+    if(subject.startsWith('civil8:')){
+      // Two rows of four, at rest (CIVIL-VIEWS): E SE S SW / W NW N NE.
+      const key=subject.slice(7),W=window.ConquerWardrobe;
+      const look={peasant:['peasant','male','adult'],artisan:['artisan','female','adult'],merchant:['merchant','male','adult'],elite:['elite','male','adult'],
+        lady:['elite','female','adult'],child:['peasant','male','child'],levySpear:['peasant','male','adult'],levyBow:['artisan','male','adult']}[key];
+      try{
+        ctx=g;State.view.scale=Math.min(w*.03,h*.065);
+        FOOT_VIEW_NAMES.forEach((view,i)=>{
+          const [kind,sex,age]=look,pal=W?.classPalette(kind)||['#8c6b3f','#7d7a72','#5d4a32'];
+          const d={id:'civil8-'+key,kind,sex,age,hair:'brown',colors:[pal[0],pal[2]||pal[1]],p:{x:w*(.125+.25*(i%4)),y:h*(i<4?.44:.92)},view};
+          if(key.startsWith('levy'))drawLevyFigureUnmasked(d);else drawVillagerFigureUnmasked(d,'both',1,view);
+        });
+      }catch(error){
+        console.warn('Asset Lab civil views could not render',subject,error);
+        placeholder(canvas,'ANTEPRIMA DAL LAB');
+      }finally{ctx=previous;State.view.scale=oldScale}
+      return;
+    }
     if(subject.startsWith('foot8:')){
       // Two rows of four, at rest (FOOT-VIEWS): E SE S SW / W NW N NE.
       const type=subject.slice(6),CA=window.ConquerCombatAnim;

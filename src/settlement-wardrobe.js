@@ -200,8 +200,14 @@
 
   const outline=(lw)=>{ctx.strokeStyle='rgba(33,24,16,.82)';ctx.lineWidth=lw;ctx.stroke()};
   // Over the tunic: x/bodyY are the figure's body centre, w/h its size (px).
-  function drawBody(o,dot,x,bodyY,w,h){
+  // t (footTurn, CIVIL-VIEWS): the garment turns with the body as a volume; from behind the pieces
+  // worn on the front (apron, stole, chain, emblem, open front) are hidden.
+  function drawBody(o,dot,x,bodyY,w,h,t=null){
     if(!o)return;
+    if(t&&typeof withFootVolume==='function')return withFootVolume(ctx,t,x,0,()=>drawBodyArt(o,dot,x,bodyY,w,h,t.c<-.15));
+    drawBodyArt(o,dot,x,bodyY,w,h,false);
+  }
+  function drawBodyArt(o,dot,x,bodyY,w,h,back){
     const top=bodyY-h/2,lw=Math.max(.6,w*.1),fine=w>=2.6;
     ctx.save();
     const R=o.body&&ROLE_PIECES[o.body];
@@ -223,6 +229,9 @@
       for(let k=1;k<=n;k++)ctx.lineTo(x-w*.54+w*1.08*k/n,hem+(k%2?h*.07:0));
       ctx.lineTo(x+w*.5,top+h*.2);ctx.lineTo(x+w*.26,top);ctx.closePath();
       ctx.fillStyle=o.colors.body;ctx.fill();outline(lw);
+    }else if(R?.apron&&back){
+      // Seen from behind: only the waist tie.
+      if(fine){ctx.strokeStyle=R.strap;ctx.lineWidth=Math.max(.5,w*.06);ctx.beginPath();ctx.moveTo(x-w*.42,bodyY+h*.02);ctx.lineTo(x+w*.42,bodyY+h*.02);ctx.stroke()}
     }else if(R?.apron){
       // Work apron: a bib from the chest to the knees, neck strap and waist tie; the tunic shows at the sides.
       const bib=top+h*.2,waist=bodyY+h*.02,hem=bodyY+h*.46;
@@ -255,7 +264,7 @@
       const hem=bodyY+h*.44;
       ctx.beginPath();ctx.moveTo(x-w*.3,top-h*.01);ctx.lineTo(x+w*.3,top-h*.01);ctx.lineTo(x+w*.34,hem);ctx.lineTo(x-w*.34,hem);ctx.closePath();
       ctx.fillStyle=o.colors.body;ctx.fill();outline(lw);
-      if(fine){
+      if(fine&&!back){
         ctx.fillStyle=R.emblem;ctx.beginPath();ctx.moveTo(x-w*.12,top+h*.14);ctx.lineTo(x+w*.12,top+h*.14);ctx.lineTo(x+w*.12,top+h*.3);
         ctx.quadraticCurveTo(x,top+h*.42,x-w*.12,top+h*.3);ctx.closePath();ctx.fill();
         ctx.fillStyle='#3e2c1d';ctx.fillRect(x-w*.5,bodyY+h*.02,w,Math.max(.6,h*.05));
@@ -286,7 +295,7 @@
       ctx.moveTo(x-w*.20,top-h*.02);ctx.lineTo(x-w*.50,top+h*.18);ctx.lineTo(x-w*.60,hem);
       ctx.quadraticCurveTo(x,hem+h*.10,x+w*.60,hem);ctx.lineTo(x+w*.50,top+h*.18);ctx.lineTo(x+w*.20,top-h*.02);ctx.closePath();
       ctx.fillStyle=o.colors.body;ctx.fill();outline(lw);
-      if(!cape&&fine){
+      if(!cape&&fine&&!back){
         // Open front: the class tunic colour stays readable down the middle.
         ctx.beginPath();ctx.moveTo(x-w*.05,top+h*.12);ctx.lineTo(x-w*.14,hem+h*.06);ctx.lineTo(x+w*.14,hem+h*.06);ctx.lineTo(x+w*.05,top+h*.12);ctx.closePath();
         ctx.fillStyle=dot.colors?.[0]||'#8c6b3f';ctx.fill();
@@ -301,7 +310,8 @@
         ctx.beginPath();ctx.moveTo(x-w*.30,top+h*.20);ctx.lineTo(x-w*.38,hem-h*.04);ctx.stroke();
       }
     }
-    if(o.neck==='shawl'){
+    if(back&&(o.neck==='stole'||o.neck==='chainOfOffice')){/* worn on the front */}
+    else if(o.neck==='shawl'){
       ctx.fillStyle=o.colors.neck;
       ctx.beginPath();ctx.rect(x+w*.12,top+h*.08,w*.16,h*.36);ctx.fill();outline(lw*.7);
       ctx.beginPath();ctx.ellipse(x,top+h*.10,w*.46,h*.12,0,0,Math.PI*2);ctx.fill();outline(lw*.7);
@@ -349,7 +359,7 @@
     ctx.restore();
   }
   // Medieval headdresses of the L4 ladies (reference sheet of the product owner, 17/11/2026).
-  function drawLadyHeaddress(o,x,headY,r,c,lw){
+  function drawLadyHeaddress(o,x,headY,r,c,lw,back=false){
     const P=LADY_PIECES[o.head],fine=r>=1.2;
     if(o.head==='hennin'){
       // Tall cone tilted back, a sheer veil streaming from the tip, gold band on the brow.
@@ -390,7 +400,7 @@
       ctx.fillStyle=c;ctx.beginPath();
       ctx.moveTo(x-r*1.35,headY+r*1.6);ctx.quadraticCurveTo(x-r*1.55,headY-r*1.25,x,headY-r*1.35);
       ctx.quadraticCurveTo(x+r*1.55,headY-r*1.25,x+r*1.35,headY+r*1.6);ctx.quadraticCurveTo(x,headY+r*2.0,x-r*1.35,headY+r*1.6);ctx.closePath();
-      ctx.moveTo(x+r*.7,headY+r*.05);ctx.ellipse(x,headY+r*.05,r*.7,r*.8,0,0,Math.PI*2);
+      if(!back){ctx.moveTo(x+r*.7,headY+r*.05);ctx.ellipse(x,headY+r*.05,r*.7,r*.8,0,0,Math.PI*2)}
       ctx.fill('evenodd');outline(lw*.7);
     }else if(o.head==='furToque'){
       // Tall round fur hat, its pile brushed in short strokes.
@@ -401,12 +411,17 @@
     }
   }
   // Over the head: x/headY its centre, r its radius; the hood also drapes the shoulders.
-  function drawHead(o,x,headY,r){
+  // t (CIVIL-VIEWS): the headgear turns with the head; from behind hoods and veils are closed.
+  function drawHead(o,x,headY,r,t=null){
     if(!o||!o.head)return;
+    if(t&&typeof withFootVolume==='function')return withFootVolume(ctx,t,x,0,()=>drawHeadArt(o,x,headY,r,t.c<-.15),.85);
+    drawHeadArt(o,x,headY,r,false);
+  }
+  function drawHeadArt(o,x,headY,r,back){
     const lw=Math.max(.6,r*.2),c=o.colors.head,P=pieceOf(o.head);
     ctx.save();
     if(LADY_PIECES[o.head]){
-      drawLadyHeaddress(o,x,headY,r,c,lw);
+      drawLadyHeaddress(o,x,headY,r,c,lw,back);
     }else if(o.head==='judgeCap'||o.head==='clerkCap'){
       // Round cap of office (the judge's taller, a biretta), sitting low on the brow.
       const tall=o.head==='judgeCap'?.95:.62;
@@ -420,7 +435,7 @@
       ctx.quadraticCurveTo(x,headY+r*2.05,x+r*1.55,headY+r*1.6);ctx.lineTo(x+r*1.05,headY+r*.5);ctx.closePath();ctx.fill();outline(lw*.8);
       ctx.beginPath();ctx.moveTo(x-r*1.15,headY+r*.6);ctx.quadraticCurveTo(x-r*1.3,headY-r*1.5,x,headY-r*1.75);
       ctx.quadraticCurveTo(x+r*1.3,headY-r*1.5,x+r*1.15,headY+r*.6);ctx.closePath();ctx.fill();outline(lw*.8);
-      if(r>=1.1){ctx.fillStyle='#d9c3a5';for(const s of [-1,1]){ctx.beginPath();ctx.ellipse(x+s*r*.38,headY-r*.08,r*.2,r*.12,0,0,Math.PI*2);ctx.fill()}}
+      if(r>=1.1&&!back){ctx.fillStyle='#d9c3a5';for(const s of [-1,1]){ctx.beginPath();ctx.ellipse(x+s*r*.38,headY-r*.08,r*.2,r*.12,0,0,Math.PI*2);ctx.fill()}}
     }else if(o.head==='strawHat'){
       ctx.fillStyle=c;
       ctx.beginPath();ctx.ellipse(x,headY-r*.42,r*1.85,r*.42,0,0,Math.PI*2);ctx.fill();outline(lw*.8);
@@ -463,7 +478,7 @@
       const shoulders=()=>{ctx.beginPath();ctx.moveTo(x-r*1.0,headY+r*.6);ctx.lineTo(x-r*1.5,headY+r*1.55);
         ctx.quadraticCurveTo(x,headY+r*2.0,x+r*1.5,headY+r*1.55);ctx.lineTo(x+r*1.0,headY+r*.6);ctx.closePath()};
       const ring=()=>{ctx.beginPath();ctx.ellipse(x,headY-r*.02,r*1.28,r*1.32,0,0,Math.PI*2);
-        ctx.moveTo(x+r*.9,headY+r*.18);ctx.ellipse(x,headY+r*.18,r*.9,r*.94,0,0,Math.PI*2)};
+        if(!back){ctx.moveTo(x+r*.9,headY+r*.18);ctx.ellipse(x,headY+r*.18,r*.9,r*.94,0,0,Math.PI*2)}};
       if(P?.heraldic){
         // Levy hood: party per pale in the realm's two colours, like the soldiers' livery.
         const H=typeof State!=='undefined'&&State.heraldry||{};
