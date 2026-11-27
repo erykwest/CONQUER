@@ -580,6 +580,50 @@
   // o: {id, mode, blend, t, seed, facing, coat, heading (world vector or null), sizeFactor (5.75),
   // span}. Returns false when World3D is not collecting figures (the caller draws in 2D).
   const PHASES=8,GAIT_FREQ={walk:1.6,run:2.2,browse:1};
+  // ---------- eight views (ANIMAL-VIEWS-261127) ----------
+  // E/W are the approved side art (drawAnimal). SE S SW NW N NE come from the same art built part by
+  // part in Blender (tools/blender/animal_views.py) and traced back to the art's own units
+  // (src/assets/animal-views.js, window.ConquerAnimalViews): frames idle and p0..p7 (walk phases).
+  // Each region is filled in its coat colour, each group outlined like the art (a thick stroke under
+  // the fills, so only the group's outer edge stays). Same scale and line weight as drawAnimal.
+  const VIEW_NAMES=['E','SE','S','SW','W','NW','N','NE'];
+  const viewOfScreen=(dx,dy)=>VIEW_NAMES[((Math.round(Math.atan2(dy,dx)/(Math.PI/4))%8)+8)%8];
+  // View of a world heading h at p: the screen axes normalised (as ConquerMounted2D.viewAt), so the
+  // flattened iso ground spreads the eight ground directions evenly over the eight views.
+  function viewAt(p,h){
+    if(typeof w2sRaw!=='function'||!h||!(Math.hypot(h.x,h.y)>1e-6))return null;
+    const o=w2sRaw(p,0),X=w2sRaw({x:p.x+1,y:p.y},0),Y=w2sRaw({x:p.x,y:p.y+1},0);
+    const a=X.x-o.x,b=Y.x-o.x,c=X.y-o.y,d=Y.y-o.y,A=Math.hypot(a,b)||1,B=Math.hypot(c,d)||1;
+    return viewOfScreen((a*h.x+b*h.y)/A,(c*h.x+d*h.y)/B);
+  }
+  const viewSet=species=>window.ConquerAnimalViews?.[species]||null;
+  // Whether a pose has traced views: walking (no blend into browse) or standing still.
+  function viewPose(species,mode,blend){
+    const sp=SPECIES[species];if(!sp||!viewSet(species))return null;
+    const gait=sp.pose[mode]?.gait||(GAIT_FREQ[mode]?mode:'still');
+    if(mode==='walk'&&!(blend>.01))return'walk';
+    if(gait==='still'&&!sp.pose[mode]?.art&&!sp.pose[mode]?.bodyRot&&(sp.pose[mode]?.rot??0)===(sp.pose.walk?.rot??0))return'idle';
+    return null;
+  }
+  function drawView(species,g,x,y,size,o={}){
+    const sp=SPECIES[species],set=viewSet(species),V=set?.views?.[o.view];
+    if(!sp||!V)return false;
+    const name=o.phase===null||o.phase===undefined?'idle':'p'+o.phase,fi=Math.max(0,set.poses.indexOf(name));
+    const frame=V.frames[fi]||V.frames[0],c=sp.coatColors?.[o.coat]||sp.colors;
+    const color=t=>t.startsWith('coat:')?c[t.slice(5)]||c.line:t;
+    const S=size*(sp.scale||1),s=S/256,lw=Math.max(.55,S/90)/s;
+    g.save();g.translate(x,y);g.scale(s,s);
+    g.fillStyle='rgba(30,40,20,.22)';g.beginPath();g.ellipse(0,-2,V.shadow,12,0,0,Math.PI*2);g.fill();
+    g.lineJoin='round';g.lineCap='round';
+    const groups=new Map();
+    for(const r of frame){const part=set.parts[r[0]];let gr=groups.get(part.group);if(!gr)groups.set(part.group,gr={part,regions:[]});gr.regions.push(r)}
+    for(const {part,regions} of groups.values()){
+      if(part.outline){g.strokeStyle=color(part.outline);g.lineWidth=lw*2;for(const r of regions)g.stroke(path(r[1]))}
+      for(const r of regions){g.fillStyle=color(set.parts[r[0]].fill);g.fill(path(r[1]),'evenodd')}
+    }
+    g.restore();
+    return true;
+  }
   function card(species,p,z,o={}){
     const W=window.ConquerWorld3D;if(!W?.figure||!SPECIES[species])return false;
     const sp=SPECIES[species],mode=o.mode||'walk',sizeFactor=Math.round((o.sizeFactor||5.75)*100)/100;
@@ -587,6 +631,14 @@
     let b=0,tp=0;
     if(f){const c=(o.t||0)*f+(o.seed||0)/(Math.PI*2);b=Math.floor((c-Math.floor(c))*PHASES);tp=(b+.5)/PHASES/f}
     const blend=o.blend??(mode==='browse'?1:0),coat=o.coat||'';
+    // Off-profile view (no overlay gear, which is side art only): its own tile, never mirrored.
+    const vp=!o.overlay&&o.heading?viewPose(species,mode,blend):null,view=vp?viewAt(p,o.heading):null;
+    if(view&&view!=='E'&&view!=='W'&&viewSet(species).views[view]){
+      const phase=vp==='walk'?b:null;
+      const key=['av',species,view,phase===null?'idle':phase,coat,sizeFactor].join('|');
+      const paint=g=>{const s=w2s({x:0,y:0},0),size=Math.max(1.5,State.view.scale*sizeFactor);drawView(species,g,s.x,s.y,size,{view,phase,coat:o.coat})};
+      return W.figure(p,z,key,paint,o.id??key,false,{span:o.span||1,capsule:capsule(species,sizeFactor,o.heading)});
+    }
     // o.overlay(g,{x,y,size,facing:1,t}) paints extra gear over the animal (the joust caparison);
     // o.overlayKey says what changes it.
     const key=['a',species,mode,blend,coat,b,sizeFactor,o.overlayKey||''].join('|');
@@ -602,6 +654,6 @@
   const drawHorse=(ctx,x,y,size,opts)=>drawAnimal('horse',ctx,x,y,size,opts);
   window.ConquerAnimals={SPECIES,SHEEP:SPECIES.sheep,HEAD:SPECIES.sheep.pose,COLORS:SPECIES.sheep.colors,
     gaitPose,sheepPose:gaitPose,blendedPose:(t,seed,blend)=>blendedPose('sheep',t,seed,blend),blendedPoseOf:blendedPose,
-    modePose,transitionPose,capsule,card,
+    modePose,transitionPose,capsule,card,VIEW_NAMES,viewAt,drawView,
     drawAnimal,drawSheep,drawGoat,drawCow,drawHorse};
 })();

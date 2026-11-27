@@ -254,7 +254,9 @@ Implementato nel branch `fix/territory-clay-stone-access`. Nuove mappe con acqua
 - [x] Popolani, bambini, dame L4, guardaroba stagionale/di ruolo/di mestiere e leva in 8 viste (CIVIL-VIEWS-261127, `feature/civil-views`), orientati sul cammino.
 - [x] Animazioni di lavoro in 8 viste (WORK-VIEWS-261127, `feature/work-views`): costruttori, boscaioli, cavatori, cantiere navale, campi.
 - [ ] Direzione nel mondo anche per botteghe (`shop.facing`), personale e rifugiati, corte, equipaggi e carrettieri; commensali seduti.
-- [ ] 8 viste per gli animali 2D.
+- [x] Animali 2D in 8 viste al passo e fermi (ANIMAL-VIEWS-261127, `feature/animal-views`, pipeline Blender come PR 314).
+- [ ] Viste fuori profilo anche per pascolo, corsa, allerta, ululato, orso in piedi/che dorme (oggi profilo).
+- [ ] Ridurre il peso di `src/assets/animal-views.js` (~1 MB): semplificazione, caricamento differito.
 - [ ] Verifica in partita di battaglie e pattuglie con le nuove viste.
 - [ ] Salvataggi con un messaggero già in viaggio su un percorso in linea retta: lo tiene fino all'arrivo (non ricalcolato).
 
