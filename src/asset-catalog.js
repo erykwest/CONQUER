@@ -169,6 +169,9 @@
   for(const [action,tool,title] of WORK){
     items.push({id:'figure:work:'+action,title,category:'Popolazione',family:'Lavori',kind:'figure',subject:'villager',
       action,tool,key:tool,format:'Animazione',source:'src/settlement-work-anim.js'});
+    // WORK-VIEWS: the same work in the eight views (E SE S SW / W NW N NE), at the stroke.
+    items.push({id:'figure:work8:'+action,title:title+' · 8 viste',category:'Popolazione',family:'Lavori · 8 viste',kind:'figure',subject:'work8',
+      action,tool,key:tool+':8',format:'Animazione',source:'src/settlement-work-anim.js'});
   }
   // GORE-01 battlefield aftermath (settlement-gore.js): corpses and mutilations as the game draws them.
   const GORE_TITLES={corpse:'Caduto',arrows:'Caduto trafitto da frecce',decap:'Decapitato',cleave:'Squartato',
@@ -521,6 +524,18 @@
         {chassis:'wagon',cargo:['sack','crate','barrel'],team:[{coat:'brown'},{coat:'black'}],facing:1,moving:true,t:.15,distance:20});return;
     }
     const previous=ctx,oldScale=State.view.scale;
+    if(subject==='work8'&&window.ConquerWorkAnim){
+      const WA=window.ConquerWorkAnim,T=WA.TOOLS[item.tool];
+      try{
+        ctx=g;State.view.scale=Math.min(w*.03,h*.065);
+        FOOT_VIEW_NAMES.forEach((view,i)=>WA.drawWorkerUnmasked({...LAB_VILLAGER,id:'asset-lab-worker-'+item.tool,p:{x:w*(.125+.25*(i%4)),y:h*(i<4?.44:.92)}},
+          item.tool,T?T.period*T.hit:0,1,view));
+      }catch(error){
+        console.warn('Asset Lab work views could not render',item.tool,error);
+        placeholder(canvas,'ANTEPRIMA DAL LAB');
+      }finally{ctx=previous;State.view.scale=oldScale}
+      return;
+    }
     if(subject.startsWith('civil8:')){
       // Two rows of four, at rest (CIVIL-VIEWS): E SE S SW / W NW N NE.
       const key=subject.slice(7),W=window.ConquerWardrobe;

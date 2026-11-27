@@ -377,7 +377,12 @@ function fieldWork(p,assignment,house,resident){
   const spot=fieldWorkerPosition(assignment.field,assignment.cell);
   if(!spot||Math.hypot(p.x-spot.x,p.y-spot.y)>.02)return null;
   const tool=window.ConquerWorkAnim.FIELD_TOOL[fieldCrop(assignment.field).phase];
-  return tool?{tool,facing:(peasantHash(resident.id)&1)?1:-1}:null;
+  // Each man works his strip in his own direction (WORK-VIEWS: one of eight, stable per resident);
+  // without the views, left or right as before.
+  if(!tool)return null;
+  if(typeof footViewOf!=='function')return{tool,facing:(peasantHash(resident.id)&1)?1:-1};
+  const a=(peasantHash(resident.id+':work')%8)*Math.PI/4;
+  return{tool,facing:{x:Math.cos(a),y:Math.sin(a)}};
 }
 function militaryScale(){
   // World-size figures track the camera across its full .18x–3x zoom range.

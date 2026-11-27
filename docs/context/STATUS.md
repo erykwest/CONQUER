@@ -1,4 +1,12 @@
 # Livello 2 — Stato tecnico e prove
+### 2026-11-27 — WORK-VIEWS: animazioni di lavoro in 8 viste (`feature/work-views`, base `feature/civil-views`, NON MERGE)
+
+- **CODICE:** `settlement-work-anim.js`: `drawWorkerUnmasked` e `drawCarrierUnmasked` accettano una vista. Il corpo prende la vista (popolani, CIVIL-VIEWS); attrezzo, braccio, pezzo al banco ed effetto oscillano nel piano della direzione, compressi orizzontalmente di |sin yaw| (minimo 0,35: un colpo verso l'osservatore resta leggibile); da dietro il corpo copre attrezzo e braccio. `facingOf` restituisce la direzione nel mondo e `drawWorker`/`drawCarrier` la convertono in vista, con una tile World 3D per vista, senza specchiature. Con una direzione a schermo (1/-1) resta il disegno di lato di prima.
+- **Chi si gira:** costruttori, taglialegna, cavatori e minatori, carpentieri del cantiere navale, boscaioli in cammino (tutti via `facingOf`); contadini nei campi (una delle 8 direzioni, stabile per residente). Restano di lato: botteghe (`shop.facing`), personale e rifugiati (`settlement-staff-people.js`), commensali seduti.
+- **Lab:** 25 voci «· 8 viste» (famiglia «Lavori · 8 viste»).
+- **Prove:** `qa/work-views-regression.cjs` (nuova, in `combat-regression.yml`): disegno di lato identico chiamata per chiamata al codice prima della modifica per ogni attrezzo, fase e verso, e per chi porta l'attrezzo; ogni attrezzo nelle 8 viste; ordine di profondità; direzioni → tile per vista non specchiate. `work-anim`, `forestry`, `economy-industries`, `construction-workers`, `fields`, `urban-workshops`, `staff-people`, figure e popolani: PASS. Audit Lab Popolazione: 115 render, 0 falliti, 0 cambiati; 25 voci nuove in baseline.
+- **Non verificato:** in partita.
+
 ### 2026-11-27 — CIVIL-VIEWS: popolani in 8 viste (`feature/civil-views`, base `feature/foot-views`, NON MERGE)
 
 - **CODICE:** i civili (quattro classi, bambini, dame L4) e la leva usano le 8 viste dei fanti (`footTurn`). `drawVillagerFigureUnmasked` ha il parametro `view` (default `dot.view` o S); corpo e capi del guardaroba sono volumi, le mani si dispongono per lato, i capelli coprono la parte della testa girata. Guardaroba (`settlement-wardrobe.js`): `drawBody`/`drawHead` accettano la vista; da dietro spariscono grembiule, stola, catena, stemma del tabarro e apertura frontale; cappucci e velo si chiudono, niente fori degli occhi del boia. Leva: lancia, scudo (retro in legno) e arco come carte per lato.

@@ -1,4 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
+### 2026-11-27 — WORK-VIEWS · Lavori in 8 viste (`feature/work-views`)
+
+Le animazioni di lavoro passano dal profilo sinistra/destra alle 8 viste per costruttori, boscaioli, cavatori, cantiere navale e campi; il disegno di lato resta per chi non passa una direzione. ROADMAP e DECISIONS invariate.
+
 ### 2026-11-27 — CIVIL-VIEWS · Popolani in 8 viste (`feature/civil-views`)
 
 Popolani, bambini, dame e leva ruotano come i fanti (S invariata), con il guardaroba che nasconde da dietro i capi frontali. Il verso viene dal cammino reale della figura. ROADMAP e DECISIONS invariate.
