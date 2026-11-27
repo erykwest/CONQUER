@@ -1,4 +1,13 @@
 # Livello 5 — Diario delle variazioni del contesto
+
+### 2026-11-27 — WAGON-VIEWS · Carri in 8 viste con collider (`feature/wagon-views`)
+
+Carretto, carro e carrozza seguono la strada in 8 viste: il profilo resta il disegno 2D, le altre 6 sono lo stesso veicolo costruito in Blender dai numeri del pittore (ruote che girano, tiro che cammina, conducente) con il carico come layer. Collider a scatola sulle card dei veicoli. ROADMAP e DECISIONS invariati.
+
+### 2026-11-25 — MESSENGER-CARD · Il messaggero a cavallo è una card World 3D (`fix/messenger-card`)
+
+Il messaggero del corriere e dei relay delle torri-vedetta era fermo e di profilo, senza collider: regressione dell'overlay 2D, con il passo sul clock di gioco. Ora è una card World 3D (`ConquerMounted2D.card`) con collider a scatola orientata, passo in tempo reale e 8 viste: E/W sono il disegno 2D approvato, le altre 6 lo stesso disegno costruito in 3D parte per parte in Blender e ritracciato (`tools/blender/`, `src/assets/mounted-views.js`). Lo stesso per i cavalieri in battaglia, con gualdrappa, crinet, mantello, lancia (anche in resta in carica) e i layer di elmo, scudo e cimiero. Collo dei quadrupedi chiuso da un terminale arrotondato (niente taglio dietro la nuca). Nuova `qa/messenger-card-regression.cjs`, registrata in `combat-regression.yml`. ROADMAP e DECISIONS invariati: correzione di comportamento visivo.
+
 ### 2026-11-27 — MOUNTAIN-FACETS-261127 · Neve e costoni sfaccettati (`feat/ragged-terrain-edges`)
 
 Integrata la PR 318. Il confine tra roccia e neve delle montagne non e piu una retta: si spezza in denti irregolari, scende nei canaloni e risale sulle creste. Costoni al piede e placche di roccia in vetta sono sfaccettati in triangoli di toni diversi. Solo resa grafica. ROADMAP e DECISIONS invariate.
