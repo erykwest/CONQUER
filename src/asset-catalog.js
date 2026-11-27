@@ -46,6 +46,9 @@
     ['villager','Popolano','Popolazione','Civili'],
     ['spearman','Fanteria / guardia','Truppe','Militari'],['pikeman','Picchiere (squadra)','Truppe','Militari'],['herald','Araldo del reggimento (stendardo)','Truppe','Militari'],['manAtArms',"Uomo d'arme (L3)",'Truppe','Militari'],['archer','Arciere','Truppe','Militari'],
     ['knight','Cavaliere','Truppe','Militari'],['wagon','Carro animato 2D','Veicoli','Carri'],
+    // FOOT-VIEWS: the same foot soldiers in the eight views (E SE S SW / W NW N NE).
+    ...[['spearman','Fanteria / guardia'],['pikeman','Picchiere'],['herald','Araldo'],['manAtArms',"Uomo d'arme"],['archer','Arciere'],['knight','Cavaliere a piedi']]
+      .map(([k,name])=>['foot8:'+k,name+' · 8 viste','Truppe','Militari · 8 viste']),
     ['wagon3d','Carro animato 3D','Veicoli','Carri'],
     // The in-game 2D horse (settlement-animals.js) and everything that rides or pulls with it.
     ['horse2d','Cavallo 2D (passo)','Fauna','Cavalli 2D'],['horse2dGraze','Cavallo 2D (pascola)','Fauna','Cavalli 2D'],
@@ -527,6 +530,25 @@
         {chassis:'wagon',cargo:['sack','crate','barrel'],team:[{coat:'brown'},{coat:'black'}],facing:1,moving:true,t:.15,distance:20});return;
     }
     const previous=ctx,oldScale=State.view.scale;
+    if(subject.startsWith('foot8:')){
+      // Two rows of four, at rest (FOOT-VIEWS): E SE S SW / W NW N NE.
+      const type=subject.slice(6),CA=window.ConquerCombatAnim;
+      try{
+        ctx=g;State.view.scale=Math.min(w*.03,h*.065);
+        FOOT_VIEW_NAMES.forEach((view,i)=>{
+          const p={x:w*(.125+.25*(i%4)),y:h*(i<4?.44:.92)},unit={id:'asset-lab-'+type,engaged:false};
+          CA.drawFigure(p,0,type,unit.id,0,null,CA.pose(unit,0),view);
+          if(type==='herald'){
+            const t=footTurn(view),base={x:p.x,y:p.y},draw=()=>drawHeraldStandard(g,base,'lab-herald',0);
+            if(t)withFootCard(g,t,base.x,5.4*militaryScale()*.1,draw);else draw();
+          }
+        });
+      }catch(error){
+        console.warn('Asset Lab foot views could not render',subject,error);
+        placeholder(canvas,'ANTEPRIMA DAL LAB');
+      }finally{ctx=previous;State.view.scale=oldScale}
+      return;
+    }
     try{
       ctx=g;State.view.scale=Math.min(w*.09,h*.14);
       const p={x:w*.5,y:h*.78};

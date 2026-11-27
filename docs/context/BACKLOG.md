@@ -273,6 +273,10 @@ Implementato nel branch `fix/territory-clay-stone-access`. Nuove mappe con acqua
 - [ ] Viste fuori profilo anche per guardia, colpo e caduta del cavaliere (oggi restano sul profilo).
 - [x] Carretto, carro e carrozza in 8 viste con collider a scatola (WAGON-VIEWS, `feature/wagon-views`).
 - [ ] Conducente dei carri col guardaroba stagionale anche nelle viste ruotate; sobbalzo del carico col passo.
+- [x] Fanti a piedi in 8 viste (FOOT-VIEWS-261127, `feature/foot-views`): rotazione in tempo reale della grafica frontale approvata; combattimento e pattuglie delle mura orientati.
+- [ ] Passare la direzione anche agli altri chiamanti di `drawSoldierFigure` (scorte dei convogli, guardie di porta, equipaggi del trabucco, anteprima d'assedio).
+- [ ] Estendere le 8 viste a popolani e civili (lavori, costumi di ruolo, abiti da mestiere, dame L4) e agli animali 2D.
+- [ ] Verifica in partita di battaglie e pattuglie con le nuove viste.
 - [ ] Salvataggi con un messaggero già in viaggio su un percorso in linea retta: lo tiene fino all'arrivo (non ricalcolato).
 
 ## 2026-11-18 — UI-UPG-01 · Ampliamenti dall'ispettore

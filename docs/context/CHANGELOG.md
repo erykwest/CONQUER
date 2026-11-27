@@ -1,4 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
+### 2026-11-27 — FOOT-VIEWS · Fanti in 8 viste (`feature/foot-views`)
+
+I fanti a piedi passano dalla sola vista frontale a 8 viste, ruotando in tempo reale le forme della grafica approvata (S invariata). Direzione presa da percorso/nemico in battaglia e dal giro delle pattuglie sulle mura. Voci Lab e regressione nuove. ROADMAP e DECISIONS invariate.
+
 
 ### 2026-11-27 — WAGON-VIEWS · Carri in 8 viste con collider (`feature/wagon-views`)
 

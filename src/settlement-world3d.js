@@ -2123,18 +2123,20 @@
   let collecting=null,colliders=[];
   if(typeof drawSoldierFigure==='function'){
     const original=drawSoldierFigure;
-    drawSoldierFigure=function(p,z,type,id,phase=0,livery=null){
+    drawSoldierFigure=function(p,z,type,id,phase=0,livery=null,facing=null){
       if(!collecting)return original.apply(this,arguments);
       const ground=Number.isFinite(structureProjectionGroundZ)?structureProjectionGroundZ:terrainElevation(p);
-      collecting.push({p:{x:p.x,y:p.y},z:z+ground,type,id,phase,livery});
+      // The view (FOOT-VIEWS) is the camera's: one tile per view, never mirrored.
+      const view=typeof footViewOf==='function'?footViewOf(p,facing):'S';
+      collecting.push({p:{x:p.x,y:p.y},z:z+ground,type,id,phase,livery,view});
       return true;
     };
   }
-  function soldierTile(type,phase,livery){
+  function soldierTile(type,phase,livery,view='S'){
     // Only the knight's sword swings with phase; everything else is a single pose.
     const isDot=window.ConquerLOD?.militaryTier()==='dot';
     const bucket=!isDot&&type==='knight'?Math.floor((((phase%1)+1)%1)*8):0;
-    const key=(isDot?'dot|':'figure|')+type+'|'+bucket+'|'+(livery?JSON.stringify(livery):'realm');
+    const key=(isDot?'dot|':'figure|')+type+'|'+bucket+'|'+(livery?JSON.stringify(livery):'realm')+(isDot||view==='S'?'':'|'+view);
     return atlasTile(key,isDot?(g,x,y)=>{
       // The same sprite/billboard and depth-tested capsule stay in place, but
       // the distant soldier is a single colored point instead of a figure.
@@ -2142,7 +2144,7 @@
       g.fillStyle=window.ConquerLOD.militaryColor(type,livery);
       g.strokeStyle='#28302a';g.lineWidth=4;
       g.beginPath();g.arc(x+SOLDIER_TILE/2,cy,r,0,Math.PI*2);g.fill();g.stroke();
-    }:()=>drawSoldierFigureUnmasked({x:0,y:0},0,type,'FIG_ATLAS',bucket/8,livery));
+    }:()=>drawSoldierFigureUnmasked({x:0,y:0},0,type,'FIG_ATLAS',bucket/8,livery,false,view||'S'));
   }
   // Capsules (world units, relative to the feet point): people stand in a vertical one; an animal
   // lies in a horizontal one along its heading (capsule.axis = half-length vector, z = axis height,
@@ -2161,7 +2163,7 @@
     soldierAtlas.frame++;
     for(const s of list){
       const span=s.span||1,ox=s.ox||0,cap=cardCapsule(s);
-      let [u0,v0,u1,v1]=s.paint?atlasTile(s.key,s.paint,span):soldierTile(s.type,s.phase,s.livery);
+      let [u0,v0,u1,v1]=s.paint?atlasTile(s.key,s.paint,span):soldierTile(s.type,s.phase,s.livery,s.view);
       if(s.mirror)[u0,u1]=[u1,u0];
       const C=[[ox-.5,-SOLDIER_FEET,u0,v0],[ox+.5,-SOLDIER_FEET,u1,v0],[ox+.5,1-SOLDIER_FEET,u1,v1],[ox-.5,1-SOLDIER_FEET,u0,v1]];
       for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(s.p.x,s.p.y,s.z,cx,cy,SOLDIER_SIZE_U*span,u,w,...cap.seg0,...cap.seg1,cap.r)}

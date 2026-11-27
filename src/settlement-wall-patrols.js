@@ -195,7 +195,9 @@
         const lead=day*SPEED+seed+i*c.total/k;
         for(let m=0;m<men();m++){
           const p=pointAt(c,lead-m*FILE_GAP);if(!p)continue;
-          out.push({x:p.x,y:p.y,z:p.z,id:r.id+':patrol:'+i+':'+m,phase:day*1.44+i*.5+m*.27,ringId:r.id});
+          // Heading along the walk (FOOT-VIEWS): toward a point a little further on.
+          const q=pointAt(c,lead-m*FILE_GAP+.2),heading=q?{x:q.x-p.x,y:q.y-p.y}:null;
+          out.push({x:p.x,y:p.y,z:p.z,id:r.id+':patrol:'+i+':'+m,phase:day*1.44+i*.5+m*.27,ringId:r.id,heading});
         }
       }
     }
@@ -205,7 +207,7 @@
     if(typeof drawSoldierFigure!=='function')return;
     for(const p of positions()){
       if(typeof worldPointVisible==='function'&&!worldPointVisible(p,p.z,48))continue;
-      drawSoldierFigure({x:p.x,y:p.y},p.z,'spearman',p.id,p.phase);
+      drawSoldierFigure({x:p.x,y:p.y},p.z,'spearman',p.id,p.phase,null,p.heading);
     }
   }
 

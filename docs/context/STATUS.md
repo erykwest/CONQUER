@@ -1,4 +1,13 @@
 # Livello 2 — Stato tecnico e prove
+### 2026-11-27 — FOOT-VIEWS: fanti in 8 viste (`feature/foot-views`, base `fix/messenger-card`, NON MERGE)
+
+- **CODICE:** i fanti (fanteria/guardia, picchiere, araldo, uomo d'arme, arciere, cavaliere a piedi, ascia dei fuorilegge) erano sempre disegnati di fronte. Ora hanno 8 viste (E SE S SW W NW N NE). S è la grafica approvata, invariata; le altre sette ruotano le stesse forme attorno all'asse verticale in `settlement-population-figures.js` (`footTurn`, `withFootVolume` per busto/testa/piedi, `withFootCard` per armi, scudi, arco e stendardo), con ordine di profondità per lato. Da dietro: retro dello scudo in legno, capelli sotto l'elmo, niente visiera/nasale/apertura a T, livrea senza stemma con i colori invertiti; di lato la cucitura della livrea scivola sul petto.
+- **Metodo:** nessuna pipeline Blender come per i cavalli (PR 314): le figure a piedi sono forme semplici, la rotazione in tempo reale copre tutte le varianti (elmi, scudi, livree, araldica) senza asset generati.
+- **Direzione:** unità in combattimento lungo il percorso o verso il nemico ingaggiato (`settlement-combat-render.js`, anche lo stendardo dell'araldo); pattuglie delle mura lungo il giro (`settlement-wall-patrols.js`); tile World 3D per vista (`settlement-world3d.js`). Gli altri chiamanti di `drawSoldierFigure` restano in S finché non passano una direzione.
+- **Lab:** 6 voci «· 8 viste» (famiglia «Militari · 8 viste»).
+- **Prove:** `qa/foot-views-regression.cjs` (nuova, in `combat-regression.yml`): S identica chiamata per chiamata al codice prima della modifica per ogni tipo, elmo e posa; 8 viste per ogni tipo; retro di scudo ed elmo; ordine di profondità; collegamenti. `combat-figures-roles` aggiornata alla nuova struttura; `figure-hands-feet`, `combat-anim`, `combat-render`, `messenger-card` PASS. Audit Lab categoria Truppe: 24 render, 0 falliti, 0 cambiati, 8 nuovi (aggiunti alla baseline, comprese le due voci 8 viste dei cavalli della PR 314).
+- **Non verificato:** in partita (battaglia e pattuglie reali).
+
 
 ### 2026-11-27 — WAGON-VIEWS: carretto, carro e carrozza in 8 viste (`feature/wagon-views`, su `fix/messenger-card`)
 
