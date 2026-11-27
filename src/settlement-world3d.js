@@ -199,12 +199,13 @@
     const tris=[];
     const api={
       tris,
-      face(vs,hex,grad=false){            // vs: [{x,y,z}] convex; grad: vertical gradient (GRAFICA)
-        const c=rgb(hex,usePalette);
+      face(vs,hex,grad=false,range=null){ // vs: [{x,y,z}] convex; grad: vertical gradient (GRAFICA)
+        const c=rgb(hex,usePalette);        // range {lo,hi}: shared gradient span (a whole mountain), not this face's own
         const gOn=grad&&window.ConquerGraphics?.get('gradient');
         const k=gOn?window.ConquerGraphics.get('gradientStrength'):0;
         let zlo=Infinity,zhi=-Infinity;
-        if(gOn)for(const v of vs){zlo=Math.min(zlo,v.z);zhi=Math.max(zhi,v.z)}
+        if(gOn&&range){zlo=range.lo;zhi=range.hi}
+        else if(gOn)for(const v of vs){zlo=Math.min(zlo,v.z);zhi=Math.max(zhi,v.z)}
         const span=zhi-zlo;
         const shadeAt=z=>{
           if(!gOn)return 1;
@@ -479,12 +480,27 @@
       if(f.type!=='mountain'||!(f.points?.length>=3))continue;
       // Rock up to the snow line (75% of the height), snow cap above it.
       // Map-wide snow line (75% of the tallest summit): lower peaks may stay bare.
+      // GRAFICA gradient over the whole peak: darker at the foot, full colour at the summit.
+      const R={lo:0,hi:f.height||MOUNTAIN_HEIGHT},face=(vs,hex)=>m.face(vs,hex,true,R);
       for(const q of mountainFacetPolygons(f,f.height||MOUNTAIN_HEIGHT)){
         const {i,a,b}=q;
         const rock=typeof mountainFaceColor==='function'?mountainFaceColor(f,a,b,i):(window.ConquerStoneColor?.shade(MOUNTAIN_FACES[i%2])||MOUNTAIN_FACES[i%2]);
-        m.face(q.rock,rock);
-        if(q.snow.length)m.face(q.snow,mountainSnowColor(f,a,b,i));
-        for(const cut of q.cuts)m.face(cut,window.ConquerStoneColor?.shade('#514a40')||'#514a40');
+        // Ragged snow line: triangles below it are rock, above it snow.
+        for(const part of q.rockParts||[q.rock])if(part.length>=3)face(part,rock);
+        const snow=mountainSnowColor(f,a,b,i);
+        for(const part of q.snowParts||(q.snow.length?[{poly:q.snow}]:[]))face(part.poly,snow);
+        for(const cut of q.cuts)face(cut,window.ConquerStoneColor?.shade('#514a40')||'#514a40');
+      }
+      // Rock crags (cliff look) at the foot and high on the peak, lifted off the facet against z-fighting.
+      if(typeof mountainCragLayout==='function'&&f.height){
+        const shade=h=>window.ConquerStoneColor?.shade(h)||h,winter=typeof isSnowGround==='function'&&isSnowGround();
+        for(const crag of mountainCragLayout(f,f.height)){
+          crag.polys.forEach((poly,k)=>{
+            const clip=typeof clipTerrainPolygon==='function'?clipTerrainPolygon(poly):poly;
+            if(clip.length>=3)face(clip.map(p=>({...p,z:p.z+.08})),shade(['#6f7477','#5f6467','#787d80','#686d70'][(crag.i*3+k*5+(k>>2))%4]));
+          });
+          for(const r of crag.rocks)for(const rf of mountainRockFaces(r))face(rf.poly,rf.top&&winter?'#e6ecee':shade(rf.color));
+        }
       }
     }
     return new Float32Array(m.tris);
@@ -965,6 +981,26 @@
       }
     }
     S.stats.forestBushes=forestBushes;
+    // Bushes along cliff borders (summit lip, foot, slopes beside a cliff).
+    const borderBushes=[...(typeof cliffBorderBushLayout==='function'?cliffBorderBushLayout():[]),
+      ...(typeof forestEdgeBushLayout==='function'?forestEdgeBushLayout():[]),...(window.ConquerCoast?.edgeBushes?.()||[])];
+    for(const b of borderBushes){
+      const uv=atlas.map.get(bushTileKey(b.shape,b.p));if(!uv)continue;
+      let [u0,v0,u1,v1]=uv;if(b.flip)[u0,u1]=[u1,u0];
+      const hr=580/920*b.scale,C=[[-.5,-.97*hr,u0,v0],[.5,-.97*hr,u1,v0],[.5,.03*hr,u1,v1],[-.5,.03*hr,u0,v1]];
+      for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(b.p.x,b.p.y,b.z+.01,cx,cy,b.width,u,w)}
+    }
+    // Mountain slope bushes (seasonal underbrush sprites), lifted by the slope like the pines.
+    for(const f of State.environment||[]){
+      if(f.type!=='mountain'||!f.height||typeof mountainBushLayout!=='function')continue;
+      const slope=Math.min(2,f.height/Math.max(1,Math.sqrt((f.rx||8)*(f.ry||8))));
+      for(const b of mountainBushLayout(f)){
+        const uv=atlas.map.get(bushTileKey(b.shape,b.p));if(!uv)continue;
+        let [u0,v0,u1,v1]=uv;if(b.flip)[u0,u1]=[u1,u0];
+        const hr=580/920*b.scale,C=[[-.5,-.97*hr,u0,v0],[.5,-.97*hr,u1,v0],[.5,.03*hr,u1,v1],[-.5,.03*hr,u0,v1]],z=b.z+b.width*.5*slope;
+        for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(b.p.x,b.p.y,z,cx,cy,b.width,u,w)}
+      }
+    }
     // River, stream and marsh bank bushes: the legacy 2D bush sprites, not the 3D scatter models.
     for(const p of S.scatterProps||[]){
       if(!window.ConquerScatter?.isBankBush?.(p))continue;
@@ -977,11 +1013,14 @@
     // Pines on the lower half of the mountains, standing on the cone surface.
     for(const f of State.environment||[]){
       if(f.type!=='mountain'||!f.height||typeof mountainPineLayout!=='function')continue;
+      const slope=Math.min(2,f.height/Math.max(1,Math.sqrt((f.rx||8)*(f.ry||8))));
       for(const t of mountainPineLayout(f)){
         const uv=atlas.map.get('pine:'+t.shade);if(!uv)continue;
         let [u0,v0,u1,v1]=uv;if(t.flip)[u0,u1]=[u1,u0];
         const size=(typeof MOUNTAIN_PINE_SIZE!=='undefined'?MOUNTAIN_PINE_SIZE:1.8)*t.scale,C=[[-.5,-.97,u0,v0],[.5,-.97,u1,v0],[.5,.03,u1,v1],[-.5,.03,u0,v1]];
-        for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(t.p.x,t.p.y,t.z,cx,cy,size,u,w)}
+        // Lift by the slope under half the sprite width, so the uphill corner does not cut into the cone.
+        const z=t.z+size*.5*slope;
+        for(const k of [0,1,2,0,2,3]){const [cx,cy,u,w]=C[k];v.push(t.p.x,t.p.y,z,cx,cy,size,u,w)}
       }
     }
     for(const e of urbanFenceSegments()){
@@ -1745,8 +1784,8 @@
     // Relief, terraforming and forests shape the terrain meshes: those rebuild them and re-bake the
     // whole ground. Season and wetness re-bake the whole ground too. Structure and urban-lot edits only
     // re-bake the tiles they touch, one per frame (pumpGroundTiles).
-    const meshSig=[season,State.stonePaletteId,State.biome,State.relief?.seed,terraformSig,(State.environment||[]).length,envRev].join('|');
-    const gSig=[meshSig,wet(),typeof forestGroundKey==='function'?forestGroundKey():'',typeof springFlowersOn==='function'?springFlowersOn():''].join('|');
+    const meshSig=[season,State.stonePaletteId,State.biome,State.relief?.seed,terraformSig,(State.environment||[]).length,envRev,'g'+(window.ConquerGraphics?.rev?.()??0)].join('|');
+    const gSig=[meshSig,wet(),typeof bushSeasonKey==='function'?bushSeasonKey():'',typeof forestGroundKey==='function'?forestGroundKey():'',typeof springFlowersOn==='function'?springFlowersOn():''].join('|');
     const tSig=[gSig,groundLotsSignature(),structuresSig('ground')].join('|');
     if(S.sig.terrain!==tSig){
       const a=performance.now(),items=groundItems();

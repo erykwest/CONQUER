@@ -277,6 +277,158 @@ function forestTreeOccluders(){
     {poly:l.top.map(p=>w2sRaw(p,l.z1)),depth:l.top.reduce((s,p)=>s+w2sRaw(p,0).y,0)/l.top.length}
   ]).map(f=>({...f,b:environmentPolygonBounds(f.poly)}));
 }
+// ---------- Ragged cliff borders (ground texture) and border scatter.
+// Rock does not stop at the straight edge of a cliff band: crisp, irregular tongues of
+// rock run onto the neighbouring slopes, over the summit lip and onto the ground at the
+// foot, dotted with stones and grass tufts. Slopes and geometry are unchanged.
+const CLIFF_RAGGED={side:2.2,crest:.75,foot:.9,teeth:7};
+function cliffRaggedRand(level,index,salt){return seedRand((State.seed^biomeHash(level.id+'|'+index+'|'+salt))>>>0)}
+function cliffOutDir(p,q){const x=q.x-p.x,y=q.y-p.y,L=Math.hypot(x,y)||1;return{x:x/L,y:y/L}}
+// Organic irregular profile in [0,1]: three noise octaves with random phases, per-point
+// grain and occasional deep bites, sampled at uneven spacing (no regular saw teeth).
+function cliffRaggedProfile(rnd,count){
+  const ph=[rnd()*6.28,rnd()*6.28,rnd()*6.28],fr=[1.3+rnd()*1.2,3.1+rnd()*2,7+rnd()*4];
+  const steps=[];let acc=0;
+  for(let k=0;k<count;k++){const w=.35+rnd()*1.3;steps.push(w);acc+=w}
+  const out=[];let t=0;
+  for(let k=0;k<=count;k++){
+    if(k>0)t+=steps[k-1]/acc;
+    const x=Math.min(1,t)*Math.PI*2;
+    let n=.5*Math.sin(x*fr[0]+ph[0])+.3*Math.sin(x*fr[1]+ph[1])+.2*Math.sin(x*fr[2]+ph[2]);
+    n=.5+.5*n+(rnd()-.5)*.35;
+    if(rnd()<.12)n+=.35+rnd()*.4;      // a deeper bite of rock
+    if(rnd()<.1)n*=.25;                // a grassy notch reaching back to the edge
+    out.push({t:Math.min(1,t),d:Math.max(0,Math.min(1.3,n))});
+  }
+  return out;
+}
+// Points along a-b pushed by dir*depth with an irregular profile, zero at the ends.
+function cliffRaggedLine(a,b,dirA,dirB,depth,rnd,teeth){
+  const along=cliffOutDir(a,b),len=dist(a,b);
+  return cliffRaggedProfile(rnd,teeth*3).map(({t,d},k,arr)=>{
+    const edge=k===0||k===arr.length-1,env=Math.pow(Math.sin(Math.PI*t),.45);
+    const dd=edge?0:depth*env*d,slide=edge?0:(rnd()-.5)*.25*len/arr.length;
+    const dx=dirA.x+(dirB.x-dirA.x)*t,dy=dirA.y+(dirB.y-dirA.y)*t,p=mixWorld(a,b,t);
+    return{x:p.x+dx*dd+along.x*slide,y:p.y+dy*dd+along.y*slide};
+  });
+}
+function cliffRockFill(poly3d,winter){
+  // Same look as drawSteepSlopeSurface (base rock + speckle pattern) but one path filled
+  // twice, no clip/fillRect: hundreds of these per ground bake made the clips expensive.
+  const poly=projectClippedTerrain(poly3d);
+  if(poly.length<3||!screenPolygonVisible(poly,48))return;
+  const base=winter?'#969ca0':'#6f7477';
+  ctx.beginPath();poly.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();
+  ctx.fillStyle=visualPaletteColor(window.ConquerStoneColor?.shade(base)||base);ctx.fill();
+  const pattern=getSteepSlopePattern(winter);
+  if(pattern){const a=ctx.globalAlpha;ctx.globalAlpha=a*(winter?.72:.82);ctx.fillStyle=pattern;ctx.fill();ctx.globalAlpha=a}
+}
+function cliffTufts(points,winter){
+  if(landscapeDetailTier()===0||winter||!points.length)return;
+  // Tuft colour follows the foliage season like the bushes (bushSeasonKey).
+  const look=typeof bushSeasonKey==='function'?bushSeasonKey():'summer';
+  const tuft={spring:'rgba(104,140,58,.85)',summer:'rgba(78,96,48,.85)',autumn:'rgba(150,122,62,.85)',bare:'rgba(122,104,74,.8)',blizzard:'rgba(122,104,74,.8)'}[look]||'rgba(78,96,48,.85)';
+  ctx.save();ctx.strokeStyle=tuft;ctx.lineWidth=Math.max(.6,State.view.scale*.9);ctx.lineCap='round';
+  for(const t of points){
+    const b=w2sRaw(t.p,t.z),h=Math.max(1.5,U*State.view.scale*.18*t.s);
+    ctx.beginPath();
+    for(const a of [-.55,-.2,.15,.5]){ctx.moveTo(b.x,b.y);ctx.lineTo(b.x+a*h*.7,b.y-h*(1-Math.abs(a)*.4))}
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+// Tongues on the gentle slopes either side of a cliff, and the scree apron at the foot.
+function drawCliffRaggedSides(level,winter){
+  const bands=reliefEdgeBands(level),n=bands.length;if(!n)return;
+  for(const band of bands){
+    if(band.kind!=='steep')continue;
+    const rnd=cliffRaggedRand(level,band.index,'foot');
+    // Foot apron: rock between the band foot and a ragged outer line.
+    const da=cliffOutDir(band.a,band.oa),db=cliffOutDir(band.b,band.ob);
+    const rag=cliffRaggedLine(band.oa,band.ob,da,db,CLIFF_RAGGED.foot,rnd,CLIFF_RAGGED.teeth);
+    const z=band.z0+.003;
+    cliffRockFill([{...band.oa,z},{...band.ob,z},...rag.slice(1,-1).reverse().map(p=>({...p,z}))],winter);
+    for(const p of rag.slice(1,-1))if(rnd()<.12)drawLowPolyRock(p,band.z0,.12+rnd()*.16,.06+rnd()*.12,Math.floor(rnd()*0xffffffff),winter);
+    cliffTufts(rag.slice(1,-1).filter(()=>rnd()<.5).map(p=>{const d=.15+rnd()*.3;return{p:{x:p.x+da.x*d,y:p.y+da.y*d},z:band.z0,s:.7+rnd()*.6}}),winter);
+    // Tongues on a gentle neighbour, starting from the shared side.
+    for(const side of [-1,1]){
+      const nb=bands[(band.index+side+n)%n];if(!nb||nb.kind==='steep')continue;
+      const r2=cliffRaggedRand(level,band.index,'side'+side),len=dist(nb.a,nb.b)||1;
+      const reach=Math.min(.9,CLIFF_RAGGED.side*(.6+r2()*.5)/len),u0=side<0?1:0,dir=side<0?-1:1;
+      const at=(u,v)=>{const p=slopePoint(nb,u,v);return{...p,z:nb.z0+(nb.z1-nb.z0)*v}};
+      // Irregular tongue: the rock/grass line winds from the foot to the top of the slope,
+      // reaching furthest somewhere along the slope (not always at the bottom).
+      const prof=cliffRaggedProfile(r2,14),peak=.15+r2()*.7,pts=[at(u0,0)];
+      for(const {t,d} of prof){
+        const v=t,bulge=Math.exp(-Math.pow((v-peak)/.38,2));
+        const reachAt=reach*Math.max(.05,Math.min(1,(.25+.75*bulge)*(.55+.6*d)));
+        pts.push(at(u0+dir*reachAt,Math.max(0,Math.min(1,v))));
+      }
+      pts.push(at(u0,1));
+      cliffRockFill(pts,winter);
+      for(let k=0;k<1;k++){
+        const p=at(u0+dir*reach*r2()*.8,r2()*.8);
+        drawLowPolyRock(p,p.z,.12+r2()*.18,.08+r2()*.16,Math.floor(r2()*0xffffffff),winter);
+      }
+      const edge=[];for(let k=0;k<5;k++){const p=at(u0+dir*reach*(.3+r2()*.7),r2()*.9);edge.push({p,z:p.z,s:.6+r2()*.6})}
+      cliffTufts(edge,winter);
+    }
+  }
+}
+// Bare rock biting into the summit along the top of a cliff, with a ragged inner edge.
+function drawCliffRaggedCrest(level,winter){
+  const top=level.top||[],n=top.length;if(n<3)return;
+  const kinds=level.edgeKinds||[];if(!kinds.includes('steep'))return;
+  const c=level.center||{x:top.reduce((s,p)=>s+p.x,0)/n,y:top.reduce((s,p)=>s+p.y,0)/n};
+  const clip=projectClippedTerrain(top.map(p=>({...p,z:level.z1})));if(clip.length<3)return;
+  ctx.save();ctx.beginPath();clip.forEach((v,i)=>i?ctx.lineTo(v.x,v.y):ctx.moveTo(v.x,v.y));ctx.closePath();ctx.clip();
+  for(let i=0;i<n;i++){
+    if(kinds[i]!=='steep')continue;
+    const a=top[i],b=top[(i+1)%n],rnd=cliffRaggedRand(level,i,'crest');
+    const ia=cliffOutDir(a,c),ib=cliffOutDir(b,c);
+    // Inside a run of cliffs the rock stays continuous across the shared vertex.
+    const prevSteep=kinds[(i-1+n)%n]==='steep',nextSteep=kinds[(i+1)%n]==='steep';
+    const rag=cliffRaggedLine(a,b,ia,ib,CLIFF_RAGGED.crest,rnd,CLIFF_RAGGED.teeth);
+    const d0=CLIFF_RAGGED.crest*.45;
+    if(prevSteep)rag[0]={x:a.x+ia.x*d0,y:a.y+ia.y*d0};
+    if(nextSteep)rag[rag.length-1]={x:b.x+ib.x*d0,y:b.y+ib.y*d0};
+    const z=level.z1;
+    cliffRockFill([{...a,z},{...b,z},...rag.slice().reverse().map(p=>({...p,z}))],winter);
+    for(const p of rag.slice(1,-1))if(rnd()<.1)drawLowPolyRock(p,z,.1+rnd()*.14,.05+rnd()*.1,Math.floor(rnd()*0xffffffff),winter);
+    cliffTufts(rag.slice(1,-1).filter(()=>rnd()<.55).map(p=>{const d=.1+rnd()*.25;return{p:{x:p.x+ia.x*d,y:p.y+ia.y*d},z,s:.7+rnd()*.6}}),winter);
+  }
+  ctx.restore();
+}
+// Upright bushes along cliff borders (3D billboards in settlement-world3d.js): on the summit
+// lip and at the foot. Deterministic; skips water, cliffs and structures.
+let cliffBushLayoutCache=null;
+function cliffBorderBushLayout(){
+  const key=[State.seed,reliefBandRevision,(State.structures||[]).length].join('|');
+  if(cliffBushLayoutCache?.key===key)return cliffBushLayoutCache.list;
+  const list=[],water=(State.environment||[]).filter(f=>['sea','pond','river','stream','marsh'].includes(f.type));
+  const blocked=p=>p.x<1||p.y<1||p.x>WORLD-1||p.y>WORLD-1||terrainSlopeKind(p)==='steep'||
+    water.some(f=>{try{return environmentContains(f,p,.4)}catch{return false}})||
+    (State.structures||[]).some(s=>Number.isFinite(s.x)?Math.hypot(s.x-p.x,s.y-p.y)<2.2:(s.a&&s.b&&pointSegmentDistance(p,s.a,s.b)<1.4));
+  for(const level of reliefLevels()){
+    const top=level.top||[],n=top.length;if(n<3)continue;
+    const c=level.center||{x:top.reduce((s,p)=>s+p.x,0)/n,y:top.reduce((s,p)=>s+p.y,0)/n};
+    for(const band of reliefEdgeBands(level)){
+      if(band.kind!=='steep')continue;
+      const rnd=cliffRaggedRand(level,band.index,'bush'),len=dist(band.a,band.b);
+      const cnt=Math.max(1,Math.round(len*.55));
+      for(let k=0;k<cnt;k++){
+        const t=(k+rnd())/cnt,crest=rnd()<.45;
+        let p,z=null;
+        if(crest){const q=mixWorld(band.a,band.b,t),d=cliffOutDir(q,c),r=CLIFF_RAGGED.crest*(.9+rnd()*.9);p={x:q.x+d.x*r,y:q.y+d.y*r};z=level.z1}
+        else{const q=mixWorld(band.oa,band.ob,t),d=cliffOutDir(mixWorld(band.a,band.b,t),q),r=CLIFF_RAGGED.foot*(.7+rnd()*1.1);p={x:q.x+d.x*r,y:q.y+d.y*r}}
+        const width=.9+rnd()*.7,scale=.8+rnd()*.35,shape=Math.floor(rnd()*7),flip=rnd()<.5;
+        if(blocked(p))continue;
+        list.push({p,z:z??terrainElevation(p),width,scale,shape,flip});
+      }
+    }
+  }
+  cliffBushLayoutCache={key,list};return list;
+}
 function drawRelief(){
   ensureLandscapeRenderCaches();
   const winter=(typeof isSnowGround==='function'?isSnowGround():State.season==='winter'),baseFill=winter?'#edf1ed':(BIOMES[State.biome]?.field||'#24291b');
@@ -303,9 +455,11 @@ function drawRelief(){
         drawSteepSlopeRocks(level,band,winter);
       }
     }
+    drawCliffRaggedSides(level,winter);
     const top=projectClippedTerrain(level.top.map(p=>({...p,z:level.z1})));
     if(top.length>=3&&screenPolygonVisible(top,96))pathPolygon(top,baseFill,winter?'rgba(118,128,121,.40)':'rgba(203,190,148,.22)',1.05);
     woodedSurfaceFace(level.top.map(p=>({...p,z:level.z1})),woods);
+    drawCliffRaggedCrest(level,winter);
   }
   window.ConquerTerraforming?.drawCommitted();
   if(window.__conquerPerf)window.__conquerPerf.reliefBandsDrawn=bandsDrawn;
@@ -452,17 +606,56 @@ const mountainPineCache=new Map();
 function mountainPineLayout(f){
   const pineZ=mountainPineZ(),key=f.id+':'+State.seed+':'+(f.height||0)+':'+pineZ.toFixed(3);
   if(mountainPineCache.has(key))return mountainPineCache.get(key);
-  const rnd=seedRand((State.seed^biomeHash(f.id+':pines'))>>>0),b=environmentPolygonBounds(f.points),step=2.6/Math.sqrt(1.5),out=[]; // 1.5x the pines, at 75% size
+  const rnd=seedRand((State.seed^biomeHash(f.id+':pines'))>>>0),b=environmentPolygonBounds(f.points),step=2.6/Math.sqrt(3),out=[]; // 3x the pines, at 75% size
   const others=State.environment.filter(o=>o.type==='mountain'&&o!==f);
+  // No pines on the rock crags (foot bands and summit slabs).
+  const cragPolys=f.height&&typeof mountainCragLayout==='function'?mountainCragLayout(f,f.height).flatMap(c=>c.polys):[];
+  const cragBox=cragPolys.map(q=>environmentPolygonBounds(q));
+  const onCrag=p=>cragPolys.some((q,k)=>{const bb=cragBox[k];return p.x>=bb.minX-.6&&p.x<=bb.maxX+.6&&p.y>=bb.minY-.6&&p.y<=bb.maxY+.6&&(pointInPolygon(p,q)||q.some(v=>Math.hypot(v.x-p.x,v.y-p.y)<.6))});
   for(let y=b.minY;y<=b.maxY;y+=step)for(let x=b.minX;x<=b.maxX;x+=step){
     const p={x:x+(rnd()-.5)*step*.8,y:y+(rnd()-.5)*step*.8},shade=rnd(),scale=.9+rnd()*.45,flip=rnd()<.5;
     if(!pointInPolygon(p,f.points))continue;
     const z=mountainSurfaceZ(f,p),h=f.height||3.6;
     if(z>pineZ||z>h||z<.05)continue;
     if(others.some(o=>pointInPolygon(p,o.points)&&mountainSurfaceZ(o,p)>z))continue;
+    if(onCrag(p))continue;
     out.push({p,z,facet:mountainFacet(f,p),shade:shade<.5?0:1,scale,flip});
   }
   mountainPineCache.set(key,out);return out;
+}
+// Bushes on the mountain slopes: thicker around the foot crags and scattered up past the tree
+// line (below the snow), never on the crags themselves. z is the cone surface.
+const mountainBushCache=new Map();
+function mountainBushLayout(f){
+  const snowZ=mountainSnowZ(),pineZ=mountainPineZ(),key=f.id+':'+State.seed+':'+(f.height||0)+':'+snowZ.toFixed(3);
+  if(mountainBushCache.has(key))return mountainBushCache.get(key);
+  const rnd=seedRand((State.seed^biomeHash(f.id+':bushes'))>>>0),b=environmentPolygonBounds(f.points),step=2.4,out=[],h=f.height||3.6;
+  const others=State.environment.filter(o=>o.type==='mountain'&&o!==f);
+  const crags=f.height&&typeof mountainCragLayout==='function'?mountainCragLayout(f,f.height):[];
+  const cragPolys=crags.flatMap(c=>c.polys),box=cragPolys.map(q=>environmentPolygonBounds(q));
+  const near=(p,m)=>cragPolys.some((q,k)=>{const bb=box[k];return p.x>=bb.minX-m&&p.x<=bb.maxX+m&&p.y>=bb.minY-m&&p.y<=bb.maxY+m&&(pointInPolygon(p,q)||q.some(v=>Math.hypot(v.x-p.x,v.y-p.y)<m))});
+  const top=Math.min(snowZ*.9,pineZ*2.2,h*.9);
+  const add=(p,z)=>out.push({p,z,width:.8+rnd()*.7,scale:.75+rnd()*.35,shape:Math.floor(rnd()*7),flip:rnd()<.5});
+  for(let y=b.minY;y<=b.maxY;y+=step)for(let x=b.minX;x<=b.maxX;x+=step){
+    const p={x:x+(rnd()-.5)*step*.9,y:y+(rnd()-.5)*step*.9},r=rnd();
+    if(!pointInPolygon(p,f.points)||p.x<1||p.y<1||p.x>WORLD-1||p.y>WORLD-1)continue;
+    const z=mountainSurfaceZ(f,p);
+    if(z<.05||z>top)continue;
+    // Sparser higher up: dense below the tree line, thinning towards the snow.
+    const keep=z<=pineZ?.32:.32*(1-(z-pineZ)/Math.max(.01,top-pineZ))+.06;
+    if(r>keep)continue;
+    if(others.some(o=>pointInPolygon(p,o.points)&&mountainSurfaceZ(o,p)>z))continue;
+    if(near(p,.5))continue;
+    add(p,z);
+  }
+  // Clumps hugging the crest of each foot crag.
+  for(const c of crags)for(const q of c.polys){
+    if(rnd()>.35)continue;
+    const top2=q.reduce((m,v)=>v.z>m.z?v:m,q[0]),p={x:top2.x+(f.x-top2.x)*.03+(rnd()-.5)*.6,y:top2.y+(f.y-top2.y)*.03+(rnd()-.5)*.6};
+    if(!pointInPolygon(p,f.points)||near(p,.25))continue;
+    const z=mountainSurfaceZ(f,p);if(z>.05&&z<top)add(p,z);
+  }
+  mountainBushCache.set(key,out);return out;
 }
 // Two-tone pine like the reference: tiered drooping crown and a short trunk.
 const mountainPineSprites={};
@@ -509,24 +702,135 @@ function drawMountainPine(t){
   const h=Math.max(8,U*State.view.scale*MOUNTAIN_PINE_SIZE*t.scale),w=h*.75;
   ctx.drawImage(img,base.x-w/2,base.y-h*.97,w,h);
 }
+// Ragged snow line: tongues of snow run down the gullies (star notches) and stop higher on the
+// ridges, and every facet edge is broken into uneven teeth. Shared base vertices get the same
+// height on both facets, so the line stays continuous around the peak.
+const MOUNTAIN_SNOW_RAGGED={gully:.13,ridge:.06,teeth:.028,step:2.6};
+function mountainSnowVertexV(f,i,n,k){
+  const h=(biomeHash(f.id+':snowv:'+i)%1000)/1000,star=f.points&&n%2===0&&n>=8;
+  const d=star?(i%2?-(MOUNTAIN_SNOW_RAGGED.gully*(.6+h*.8)):MOUNTAIN_SNOW_RAGGED.ridge*(.4+h)):(h-.5)*.16;
+  return clamp(k+d,.12,.96);
+}
+function mountainSnowLine(f,i,n,k,len){
+  const R=MOUNTAIN_SNOW_RAGGED,steps=Math.max(4,Math.round(len/R.step)),rnd=seedRand((State.seed^biomeHash(f.id+':snowl:'+i))>>>0);
+  const v0=mountainSnowVertexV(f,i,n,k),v1=mountainSnowVertexV(f,(i+1)%n,n,k),ph=rnd()*6.28,line=[];
+  for(let s=0;s<=steps;s++){
+    const t=s/steps;let u=t,v=v0+(v1-v0)*t;
+    if(s>0&&s<steps){
+      // Uneven spacing and teeth, a slow swell and now and then a deeper tongue of snow.
+      u=t+(rnd()-.5)*.6/steps;
+      const r=rnd();
+      v+=Math.sin(t*Math.PI*2.3+ph)*.025+(r<.2?-(.035+rnd()*.04):(rnd()-.5)*2*R.teeth);
+      v=clamp(v,.1,.97);
+    }
+    line.push({u,v});
+  }
+  return line;
+}
 function mountainFacetPolygons(f,height=f.height||3.6){
-  const base=f.unclippedPoints||f.points,apex={x:f.x,y:f.y,z:height},faces=[];
-  const k=Math.min(1,mountainSnowZ()/height),at=p=>({x:f.x+(p.x-f.x)*(1-k),y:f.y+(p.y-f.y)*(1-k),z:height*k});
-  for(let i=0;i<base.length;i++){
-    const a={...base[i],z:0},b={...base[(i+1)%base.length],z:0},sa=at(a),sb=at(b);
+  const base=f.unclippedPoints||f.points,n=base.length,apex={x:f.x,y:f.y,z:height},faces=[];
+  const k=Math.min(1,mountainSnowZ()/height);
+  const at=(a,b,u,v)=>{const e=mixWorld(a,b,u);return{x:e.x+(f.x-e.x)*v,y:e.y+(f.y-e.y)*v,z:height*v}};
+  for(let i=0;i<n;i++){
+    const a={...base[i],z:0},b={...base[(i+1)%n],z:0};
     const full=clipTerrainPolygon([a,b,apex]),cuts=[];
     for(let j=0;j<full.length;j++){
       const u=full[j],v=full[(j+1)%full.length];
       const onBorder=(Math.abs(u.x-v.x)<1e-7&&(Math.abs(u.x)<1e-7||Math.abs(u.x-WORLD)<1e-7))||(Math.abs(u.y-v.y)<1e-7&&(Math.abs(u.y)<1e-7||Math.abs(u.y-WORLD)<1e-7));
       if(onBorder&&Math.max(u.z,v.z)>1e-6)cuts.push([u,v,{...v,z:0},{...u,z:0}]);
     }
-    faces.push({i,a,b,rock:clipTerrainPolygon(k<1?[a,b,sb,sa]:[a,b,apex]),snow:k<1?clipTerrainPolygon([sa,sb,apex]):[],cuts});
+    if(k>=1){const rock=clipTerrainPolygon([a,b,apex]);faces.push({i,a,b,rock,snow:[],rockParts:rock.length>=3?[rock]:[],snowParts:[],cuts});continue}
+    const line=mountainSnowLine(f,i,n,k,dist(a,b)),sl=line.map(q=>at(a,b,q.u,q.v)),rockParts=[],snowParts=[];
+    // Convex pieces (triangles) for the 3D builder; whole outlines for the 2D painter.
+    for(let s=0;s<sl.length-1;s++){
+      const A=at(a,b,line[s].u,0),B=at(a,b,line[s+1].u,0);
+      for(const tri of [[A,B,sl[s+1]],[A,sl[s+1],sl[s]]]){const c=clipTerrainPolygon(tri);if(c.length>=3)rockParts.push(c)}
+      const c=clipTerrainPolygon([sl[s],sl[s+1],apex]);if(c.length>=3)snowParts.push({poly:c,s});
+    }
+    faces.push({i,a,b,rock:clipTerrainPolygon([a,b,...sl.slice().reverse()]),snow:clipTerrainPolygon([...sl,apex]),rockParts,snowParts,cuts});
   }
+  return faces;
+}
+// Rock crags reusing the cliff look: a jagged cliff band at the foot of every facet with scree
+// boulders on it and just outside the base, plus bare rock slabs high on the peak (over the snow).
+const mountainCragCache=new Map(),MOUNTAIN_FOOT_CRAG_CHANCE=1;
+function mountainCragLayout(f,height){
+  const base=f.unclippedPoints||f.points,key=f.id+':'+State.seed+':'+height.toFixed(3)+':'+base.length;
+  if(mountainCragCache.has(key))return mountainCragCache.get(key);
+  const rnd=seedRand((State.seed^biomeHash(f.id+':crags'))>>>0),apex={x:f.x,y:f.y},out=[];
+  const at=(a,b,u,v)=>{const e=mixWorld(a,b,u);return{x:e.x+(apex.x-e.x)*v,y:e.y+(apex.y-e.y)*v,z:height*v}};
+  const inWorld=p=>p.x>=0&&p.x<=WORLD&&p.y>=0&&p.y<=WORLD;
+  for(let i=0;i<base.length;i++){
+    const a=base[i],b=base[(i+1)%base.length],len=dist(a,b),polys=[],rocks=[];
+    // Foot cliff: jagged top edge, 7-16% of the height.
+    // Convex pieces only (the 3D builder fans each polygon).
+    // Foot cliff only on about a third of the facets, and only along part of the edge.
+    const foot=rnd()<MOUNTAIN_FOOT_CRAG_CHANCE,vb=.05+rnd()*.06,steps=Math.max(5,Math.round(len/2)),tops=[],mids=[];
+    const fu0=.1+rnd()*.25,fu1=.65+rnd()*.25,ph=rnd()*6.28;
+    // Irregular crest: slow swell + uneven teeth (some deep notches), like the cliff borders.
+    for(let s=0;s<=steps;s++){
+      const t=s/steps,edge=Math.min(1,Math.min(t,1-t)*steps/1.5);
+      const tooth=rnd()<.18?.35+rnd()*.25:(s%2?.75+rnd()*.5:1.05+rnd()*.55);
+      tops.push(vb*(.25+.75*edge)*tooth*(1+.25*Math.sin(t*7+ph)));
+      mids.push({u:(s+.5)/steps+(rnd()-.5)*.25/steps,v:.35+rnd()*.3});
+    }
+    // Faceted band: each step is split through a jittered inner point into triangles, so the
+    // shades alternate like broken rock faces instead of one flat strip.
+    if(foot)for(let s=0;s<steps;s++){
+      const u0=fu0+(fu1-fu0)*s/steps,u1=fu0+(fu1-fu0)*(s+1)/steps,um=fu0+(fu1-fu0)*mids[s].u;
+      const A=at(a,b,u0,0),B=at(a,b,u1,0),C=at(a,b,u1,tops[s+1]),D=at(a,b,u0,tops[s]);
+      const M=at(a,b,um,Math.min(tops[s],tops[s+1])*mids[s].v);
+      polys.push([A,B,M],[B,C,M],[C,D,M],[D,A,M]);
+    }
+    // Summit slab: a narrowed patch high on the facet, on most facets.
+    let summit=false;
+    if(rnd()<.7){
+      summit=true;
+      const v0=.55+rnd()*.15,v1=Math.min(.94,v0+.16+rnd()*.14),u0=.12+rnd()*.2,u1=.88-rnd()*.2;
+      // Irregular slab: 9-12 ring points on a noisy ellipse, fanned from an off-centre point.
+      const cu=(u0+u1)/2,cv=(v0+v1)/2,ru=(u1-u0)/2,rv=(v1-v0)/2,m=9+Math.floor(rnd()*4),ring=[],rot=rnd()*6.28;
+      for(let k=0;k<m;k++){
+        const ang=rot+k/m*Math.PI*2+(rnd()-.5)*.35,r=k%2?.55+rnd()*.3:.85+rnd()*.3;
+        ring.push(at(a,b,clamp(cu+Math.cos(ang)*ru*r,.03,.97),clamp(cv+Math.sin(ang)*rv*r,.02,.97)));
+      }
+      const c=at(a,b,cu+(rnd()-.5)*ru*.4,cv+(rnd()-.5)*rv*.4);
+      for(let k=0;k<ring.length;k++)polys.push([c,ring[k],ring[(k+1)%ring.length]]);
+    }
+    const scale=clamp(Math.sqrt(f.rx*f.ry)/12,1,2.6);
+    // Scree on the foot band and spilling past the base edge.
+    const n=foot?Math.max(3,Math.round(len*.6)):(rnd()<.4?1+Math.floor(rnd()*2):0);
+    for(let k=0;k<n;k++){
+      const u=foot?fu0+(fu1-fu0)*(k+rnd())/n:.15+rnd()*.7,v=rnd()<.5?-rnd()*.04:rnd()*vb;
+      const p=at(a,b,u,v),z=Math.max(0,p.z);
+      if(inWorld(p))rocks.push({p:{x:p.x,y:p.y},z,size:(.22+rnd()*.4)*scale,height:(.16+rnd()*.42)*scale,seed:Math.floor(rnd()*0xffffffff)});
+    }
+    // A few boulders on the summit slab.
+    if(summit)for(let k=0;k<3;k++){
+      const p=at(a,b,.3+rnd()*.4,.6+rnd()*.25);
+      if(inWorld(p))rocks.push({p:{x:p.x,y:p.y},z:p.z,size:(.18+rnd()*.25)*scale,height:(.14+rnd()*.3)*scale,seed:Math.floor(rnd()*0xffffffff)});
+    }
+    out.push({i,polys,rocks});
+  }
+  mountainCragCache.set(key,out);return out;
+}
+// Same low-poly boulder as drawLowPolyRock, as 3D faces for the WebGL builder.
+function mountainRockFaces(r){
+  const rnd=seedRand(r.seed>>>0),n=5+Math.floor(rnd()*2),rot=rnd()*Math.PI*2,base=[],top=[];
+  const sx=r.size*(.72+rnd()*.42),sy=r.size*(.55+rnd()*.36);
+  for(let i=0;i<n;i++){
+    const a=rot+i/n*Math.PI*2+(rnd()-.5)*.16,rr=.74+rnd()*.28,q={x:r.p.x+Math.cos(a)*sx*rr,y:r.p.y+Math.sin(a)*sy*rr};
+    const shrink=.46+rnd()*.18;
+    base.push({...q,z:r.z-.05});top.push({x:r.p.x+(q.x-r.p.x)*shrink,y:r.p.y+(q.y-r.p.y)*shrink,z:r.z+r.height*(.76+rnd()*.22)});
+  }
+  const sides=['#5e6263','#727677','#505455','#838787'],faces=[];
+  for(let i=0;i<n;i++){const j=(i+1)%n;faces.push({poly:[base[i],base[j],top[j],top[i]],color:sides[(i+r.seed)%4]})}
+  faces.push({poly:top,color:'#8a8e8d',top:true});
   return faces;
 }
 function drawRaisedFan(f,height){
   const faces=[];
   const plan=typeof isPlanView==='function'&&isPlanView(),pines=f.height?mountainPineLayout(f):[];
+  const crags=f.height?mountainCragLayout(f,height):[],winterGround=typeof isSnowGround==='function'?isSnowGround():State.season==='winter';
   // Fraction of this peak's height where the map-wide snow line falls (1 = no snow).
   const project=poly=>poly.map(p=>w2sRaw(p,p.z));
   for(const q of mountainFacetPolygons(f,height)){
@@ -541,6 +845,11 @@ function drawRaisedFan(f,height){
   for(const q of faces){
     pathPolygon(q.rock,q.color,'rgba(170,150,125,.35)',.8);
     if(q.snow)pathPolygon(q.snow,q.snowColor,'rgba(200,210,214,.45)',.8);
+    const crag=q.i>=0&&f.height?crags[q.i]:null;
+    if(crag){
+      for(const poly of crag.polys){const sp=projectClippedTerrain(poly);if(sp.length>=3)drawSteepSlopeSurface(sp,false)}
+      if(!plan)for(const r of crag.rocks.slice().sort((a,b)=>w2sRaw(a.p,a.z).y-w2sRaw(b.p,b.z).y))drawLowPolyRock(r.p,r.z,r.size,r.height,r.seed,winterGround);
+    }
     if(plan||!forestTreeSpritesReady)continue;
     for(const t of (byFacet.get(q.i)||[]).sort((a,b)=>w2sRaw(a.p,a.z).y-w2sRaw(b.p,b.z).y))drawMountainPine(t);
   }
@@ -742,8 +1051,86 @@ function getForestGroundPattern(){
 function forestGroundLayout(f){
   ensureLandscapeRenderCaches();
   if(forestGroundLayoutCache.has(f.id))return forestGroundLayoutCache.get(f.id);
-  const pts=(f.points||[]).map(p=>({x:p.x,y:p.y,z:0}));
+  const pts=forestRaggedOutline(f).map(p=>({x:p.x,y:p.y,z:0}));
   forestGroundLayoutCache.set(f.id,pts);return pts;
+}
+// ---------- Ragged woodland margin (ground texture only; trees and gameplay keep f.points).
+// The undergrowth does not end on the forest polygon: its edge winds in and out with an
+// irregular profile (noise along the perimeter, uneven spacing, occasional deep tongues
+// and notches), the same language as the cliff borders.
+const FOREST_RAGGED={out:.95,in:.45,step:.32};
+function forestRaggedOutline(f){
+  const src=f.points||[],n=src.length;if(n<3)return src.slice();
+  let area=0;for(let i=0;i<n;i++){const a=src[i],b=src[(i+1)%n];area+=a.x*b.y-b.x*a.y}
+  const sign=area>0?1:-1,rnd=seedRand((State.seed^biomeHash(f.id+'|ragged-edge'))>>>0);
+  const normal=i=>{const a=src[i],b=src[(i+1)%n],L=dist(a,b)||1;return{x:sign*(b.y-a.y)/L,y:-sign*(b.x-a.x)/L}};
+  let perim=0;for(let i=0;i<n;i++)perim+=dist(src[i],src[(i+1)%n]);
+  // Periodic noise along the perimeter: integer cycles so the outline closes seamlessly.
+  const oct=[[Math.max(2,Math.round(perim/9)),.5],[Math.max(3,Math.round(perim/3.8)),.3],[Math.max(5,Math.round(perim/1.6)),.2]].map(([c,w])=>({c,w,ph:rnd()*6.283}));
+  const out=[];let s=0;
+  for(let i=0;i<n;i++){
+    const a=src[i],b=src[(i+1)%n],L=dist(a,b),nm=normal(i),np=normal((i-1+n)%n);
+    const steps=Math.max(1,Math.round(L/(FOREST_RAGGED.step*(.6+rnd()*.8))));
+    for(let k=0;k<steps;k++){
+      const t=k/steps,p=mixWorld(a,b,t);
+      // At the shared vertex blend both edge normals so convex corners do not tear.
+      let nx=nm.x,ny=nm.y;if(k===0){nx=(nm.x+np.x)/2;ny=(nm.y+np.y)/2;const l=Math.hypot(nx,ny)||1;nx/=l;ny/=l}
+      const x=(s+L*t)/perim*Math.PI*2;
+      let v=0;for(const o of oct)v+=o.w*Math.sin(x*o.c+o.ph);
+      v+=(rnd()-.5)*.45;
+      if(rnd()<.06)v+=.8+rnd()*.6;        // a tongue of undergrowth reaching out
+      if(rnd()<.05)v-=.7+rnd()*.5;        // a grassy notch biting in
+      const d=v>=0?v*FOREST_RAGGED.out:v*FOREST_RAGGED.in*2;
+      out.push({x:p.x+nx*d,y:p.y+ny*d,o:d});
+    }
+    s+=L;
+  }
+  return out;
+}
+// Grass tufts and stones scattered just outside the ragged woodland margin (texture).
+function drawForestEdgeScatter(f){
+  if(landscapeDetailTier()===0)return;
+  const edge=forestGroundLayout(f);if(edge.length<3)return;
+  const winter=(typeof isSnowGround==='function'?isSnowGround():State.season==='winter');
+  const rnd=seedRand((State.seed^biomeHash(f.id+'|edge-scatter'))>>>0),c={x:0,y:0};
+  for(const p of edge){c.x+=p.x;c.y+=p.y}c.x/=edge.length;c.y/=edge.length;
+  const tufts=[];
+  for(let i=0;i<edge.length;i++){
+    const r=rnd(),p=edge[i];
+    if(r>.42)continue;
+    const d=cliffOutDir(c,p),o=.12+rnd()*.55,q={x:p.x+d.x*o,y:p.y+d.y*o};
+    if(q.x<0||q.y<0||q.x>WORLD||q.y>WORLD)continue;
+    if(rnd()<.18&&!winter)drawLowPolyRock(q,terrainElevation(q),.08+rnd()*.1,.05+rnd()*.08,Math.floor(rnd()*0xffffffff),winter);
+    else tufts.push({p:q,z:terrainElevation(q),s:.6+rnd()*.7});
+  }
+  cliffTufts(tufts,winter);
+}
+// Upright bushes along the woodland margin (3D billboards, settlement-world3d.js), mostly on
+// the outer tongues. Deterministic; skips water, cliffs, structures and other forests' trees.
+let forestEdgeBushCache=null;
+function forestEdgeBushLayout(){
+  const key=[State.seed,(State.environment||[]).length,(State.structures||[]).length,reliefBandRevision].join('|');
+  if(forestEdgeBushCache?.key===key)return forestEdgeBushCache.list;
+  const list=[],water=(State.environment||[]).filter(f=>['sea','pond','river','stream','marsh'].includes(f.type));
+  const blocked=p=>p.x<1||p.y<1||p.x>WORLD-1||p.y>WORLD-1||terrainSlopeKind(p)==='steep'||
+    water.some(f=>{try{return environmentContains(f,p,.4)}catch{return false}})||
+    (State.structures||[]).some(s=>Number.isFinite(s.x)?Math.hypot(s.x-p.x,s.y-p.y)<2.2:(s.a&&s.b&&pointSegmentDistance(p,s.a,s.b)<1.4));
+  for(const f of State.environment||[]){
+    if(f.type!=='forest')continue;
+    const edge=forestGroundLayout(f),rnd=seedRand((State.seed^biomeHash(f.id+'|edge-bush'))>>>0);
+    let gap=0;
+    for(let i=0;i<edge.length;i++){
+      const p=edge[i];gap+=FOREST_RAGGED.step;
+      // Bushes cluster on outward tongues, sparser elsewhere: about one every 2.5-4U.
+      if(gap<(p.o>.35?1.6:3.2)+rnd()*1.2)continue;
+      gap=0;
+      const q={x:p.x+(rnd()-.5)*.4,y:p.y+(rnd()-.5)*.4};
+      const width=.8+rnd()*.7,scale=.75+rnd()*.35,shape=Math.floor(rnd()*7),flip=rnd()<.5;
+      if(blocked(q))continue;
+      list.push({p:q,z:terrainElevation(q),width,scale,shape,flip});
+    }
+  }
+  forestEdgeBushCache={key,list};return list;
 }
 // `hulls`: forestReliefHulls() for this view, shared by every forest of one drawEnvironment().
 function drawForestGround(f,hulls=null){
@@ -776,13 +1163,14 @@ function drawForestGround(f,hulls=null){
   ctx.fillStyle=getForestGroundPattern()||((typeof isSnowGround==='function'?isSnowGround():State.season==='winter')?'#dfe5e0':'#1d3218');
   ctx.fill();
   ctx.strokeStyle=(k=>k==='winter'?'rgba(126,139,130,.45)':k==='brown'?'rgba(120,95,58,.52)':'rgba(82,116,59,.58)')(forestGroundKey());
-  ctx.lineWidth=1.15;
+  ctx.lineWidth=.8;
   ctx.stroke();
   // Clearing outlines (not grooves or banks) read as the woodland edge.
   for(const hole of holes.slice(0,f.clearings||0)){
     ctx.beginPath();hole.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();ctx.stroke();
   }
   ctx.restore();
+  drawForestEdgeScatter(f);
 }
 // Holes (clearings, grooves) change the layout: key it by their count, not just the id.
 function forestLayoutKey(f){return f.id+':'+(f.holes?.length||0)}

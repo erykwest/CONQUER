@@ -23,6 +23,14 @@ let reliefBandSpatialCache=null;
 function reliefLevels(){return State.relief?.hills?.flatMap(h=>h.levels||[])||[]}
 let reliefBandRevision=0; // bumped with every band cache reset; keys view-space relief memos
 function clearReliefBandCache(){reliefBandRevision++;reliefBandCache.clear();reliefBandSpatialCache=null;terrainElevationIndex=null;placementGroundZMemo=new WeakMap()}
+function reliefLevelBelow(level){
+  if(!(level?.z0>0))return null;
+  for(const hill of State.relief?.hills||[]){
+    if(!hill.levels?.includes(level))continue;
+    return hill.levels.find(l=>l!==level&&l.z1===level.z0)||null;
+  }
+  return null;
+}
 function reliefEdgeBands(level){
   if(reliefBandCache.has(level.id))return reliefBandCache.get(level.id);
   const pts=level.top||[];if(pts.length<3)return[];
@@ -40,11 +48,23 @@ function reliefEdgeBands(level){
   // Procedural hills are polar/star-shaped. Build the lower edge by moving
   // each shared vertex radially outward. This keeps every slope ring ordered
   // and prevents miter spikes/self-intersections on concave organic outlines.
+  // The foot of a slope must rest on the level below: where the upper level is inset
+  // by less than its slope width, the slope is shortened (steeper) instead of
+  // overhanging past the lower level's edge.
+  const below=reliefLevelBelow(level),belowTop=below?.top?.length>=3?below.top:null;
   const outer=pts.map((vertex,i)=>{
     const prev=edges[(i-1+edges.length)%edges.length],next=edges[i];
-    const width=(prev.width+next.width)*.5;
-    const vx=vertex.x-center.x,vy=vertex.y-center.y,L=Math.hypot(vx,vy)||1;
-    return{x:vertex.x+vx/L*width,y:vertex.y+vy/L*width};
+    let width=(prev.width+next.width)*.5;
+    const vx=vertex.x-center.x,vy=vertex.y-center.y,L=Math.hypot(vx,vy)||1,dx=vx/L,dy=vy/L;
+    if(belowTop){
+      const margin=.15,fits=t=>pointInPolygon({x:vertex.x+dx*(t+margin),y:vertex.y+dy*(t+margin)},belowTop);
+      if(!fits(width)){
+        let lo=0,hi=width;
+        for(let k=0;k<12;k++){const mid=(lo+hi)/2;if(fits(mid))lo=mid;else hi=mid}
+        width=Math.max(.12,lo);
+      }
+    }
+    return{x:vertex.x+dx*width,y:vertex.y+dy*width};
   });
   const bands=edges.map((edge,i)=>{
     const oa=outer[i],ob=outer[(i+1)%outer.length];
