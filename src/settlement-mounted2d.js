@@ -269,7 +269,7 @@
     const p=opts.pose||{},kind=opts.kind==='messenger'?'messenger':'knight';
     const alpha=p.alpha??1;if(alpha<=0)return;
     const state={kind,livery:opts.livery,paint:opts.paint,ready:p.ready||0,attack:p.attack||0,flash:p.flash||0,
-      fall:p.fall||0,charge:opts.mode==='run',helmet:opts.helmet||null,shield:opts.shield||null,crest:opts.crest||null,seed:opts.seed||0};
+      fall:p.fall||0,charge:opts.charge??opts.mode==='run',helmet:opts.helmet||null,shield:opts.shield||null,crest:opts.crest||null,seed:opts.seed||0};
     ctx.save();ctx.globalAlpha*=alpha;
     let unhorsed=null;
     window.ConquerAnimals.drawAnimal('horse',ctx,x,y,size,{t:opts.t||0,seed:opts.seed||0,coat:opts.coat,
@@ -289,5 +289,138 @@
     }
     ctx.restore();
   }
-  window.ConquerMounted2D={draw,lanceGeometry};
+  // World3D card of a mounted figure: the same flat horse and rider, depth-tested with the horse's
+  // body capsule (ConquerAnimals.capsule), which is also its collider. The walk is quantised like
+  // ConquerAnimals.card (8 phases per cycle, real time), so the tile changes with every stride.
+  // p: ground point, z: height above it, id: stable key, o: {kind, heading (world vector), mode
+  // 'walk'|'idle', seed, coat, livery}. Facing comes from the camera, not from the route's sign.
+  // Returns false when World3D is not collecting figures (the caller draws the 2D sprite instead).
+  const CARD_SIZE=5.75,CARD_PHASES=8,WALK_HZ=1.6;
+  // The 8 screen directions. Index 0 = E (the art's own facing), then clockwise on screen.
+  const VIEW_NAMES=['E','SE','S','SW','W','NW','N','NE'];
+  function viewOf(dx,dy){return VIEW_NAMES[((Math.round(Math.atan2(dy,dx)/(Math.PI/4))%8)+8)%8]}
+  // The view of a heading h (world vector) at ground point p, measured on the ground as the camera sees
+  // it: each screen axis is normalised by how long a unit ground step can get on it. The camera looks
+  // down, so the screen squashes depth (y) about in half: the raw screen angle would round a road along
+  // a world axis (~27 deg on screen) to E/W and the diagonal views would almost never show.
+  function viewAt(p,h){
+    const o=w2sRaw(p,0),X=w2sRaw({x:p.x+1,y:p.y},0),Y=w2sRaw({x:p.x,y:p.y+1},0);
+    const a=X.x-o.x,b=Y.x-o.x,c=X.y-o.y,d=Y.y-o.y,A=Math.hypot(a,b)||1,B=Math.hypot(c,d)||1;
+    return viewOf((a*h.x+b*h.y)/A,(c*h.x+d*h.y)/B);
+  }
+  // Off-profile views of the same figure (src/assets/mounted-views.js): the approved 2D art built in
+  // Blender part by part (tools/blender/mounted_views.py), rendered per view and per stride phase,
+  // traced back into the art's own units. Each region is filled in its part's colour (coat, livery or
+  // the gear's own); each group is outlined like the 2D art (thick stroke under the fills, so only
+  // the group's outer edge stays). Same scale and line weight as drawAnimal.
+  const pathCache=new Map();
+  const path2d=d=>{let p=pathCache.get(d);if(!p){p=new Path2D(d);pathCache.set(d,p)}return p};
+  // One frame: regions by group, in the art's drawing order; arms regions (realm heraldry) get the
+  // painted arms over their livery fill, like arms() in the 2D art.
+  function paintFrame(g,set,frame,color,lw,paint){
+    const groups=new Map();
+    for(const r of frame){const part=set.parts[r[0]];let gr=groups.get(part.group);if(!gr)groups.set(part.group,gr={part,regions:[]});gr.regions.push(r)}
+    for(const {part,regions} of groups.values()){
+      if(part.outline){g.strokeStyle=color(part.outline);g.lineWidth=lw*2;for(const r of regions)g.stroke(path2d(r[1]))}
+      for(const [i,d,box] of regions){
+        g.fillStyle=color(set.parts[i].fill);g.fill(path2d(d),'evenodd');
+        if(box&&paint){g.save();g.clip(path2d(d),'evenodd');paint(g,box[0],box[1],box[2],box[3]);g.restore()}
+      }
+    }
+  }
+  // Frame of a pose: idle, a walk phase (p0..p7) or, for the knight's charge, a run phase (r0..r7).
+  function frameIndex(set,o,phase){
+    const name=phase===null?'idle':(o.mode==='run'&&set.poses.includes('r0')?'r':'p')+phase;
+    const i=set.poses.indexOf(name);return i<0?0:i;
+  }
+  function artView(g,x,y,size,o,view,phase){
+    const set=window.ConquerMountedViews?.[o.kind==='knight'?'knight':'messenger'],V=set?.views?.[view];
+    const sp=window.ConquerAnimals?.SPECIES?.horse;if(!V||!sp)return false;
+    const fi=frameIndex(set,o,phase),frame=V.frames[fi]||V.frames[0];
+    const coat=sp.coatColors?.[o.coat]||sp.colors,L=o.livery||{main:'#b53636',alt:'#eac15b'};
+    const color=t=>t.startsWith('coat:')?coat[t.slice(5)]:t==='livery:main'?L.main:t==='livery:alt'?L.alt:t==='outline'?OUTLINE:t;
+    const S=size*(sp.scale||1),s=S/256,lw=Math.max(.55,S/90)/s;
+    g.save();g.translate(x,y);g.scale(s,s);
+    g.fillStyle='rgba(30,40,20,.22)';g.beginPath();g.ellipse(0,-2,V.shadow,12,0,0,Math.PI*2);g.fill();
+    g.lineJoin='round';g.lineCap='round';
+    paintFrame(g,set,frame,color,lw,o.paint);
+    // The knight's equipment: shield, helmet (with mantling) and crest, each traced with the base in
+    // place, so only its visible part is painted over it. The crest rides the helmet's top.
+    if(set.layers){
+      const helmet=o.helmet&&o.helmet!=='greathelm'&&set.layers['helmet:'+o.helmet]?o.helmet:'greathelm';
+      const layer=(name,dy=0)=>{const f=set.layers[name]?.[view]?.[fi];if(!f)return;
+        if(dy){g.save();g.translate(0,dy)}paintFrame(g,set,f,color,lw,o.paint);if(dy)g.restore()};
+      layer('shield:'+(o.shield&&set.layers['shield:'+o.shield]?o.shield:'default'));
+      layer('helmet:'+helmet);
+      layer('crest:'+crestKind(o),(HELMET_TOP[helmet]??4)-HELMET_TOP.greathelm);
+    }
+    g.restore();
+    return true;
+  }
+  function card(p,z,id,o={}){
+    const W=window.ConquerWorld3D,A=window.ConquerAnimals;
+    if(!W?.figure||!A?.capsule||typeof w2s!=='function'||typeof w2sRaw!=='function')return false;
+    const h=o.heading&&Math.hypot(o.heading.x,o.heading.y)>1e-6?o.heading:{x:1,y:0};
+    const view=viewAt(p,h);
+    const moving=o.mode==='walk',seed=o.seed||0;
+    const c=moving?performance.now()/1000*WALK_HZ+seed/(Math.PI*2):0;
+    const phase=moving?Math.floor((c-Math.floor(c))*CARD_PHASES):null;
+    const key=['mounted',o.kind||'knight',o.coat||'',o.livery?JSON.stringify(o.livery):'',view,phase===null?'idle':phase].join('|');
+    const paint=g=>{
+      const s=w2s({x:0,y:0},0),size=Math.max(1.5,State.view.scale*CARD_SIZE);
+      // Profile (E/W): the approved hand-drawn art itself, with its gait at this stride phase. The other
+      // six views come from the same art built in 3D (artView); without them, the nearest profile.
+      if(view!=='E'&&view!=='W'&&artView(g,s.x,s.y,size,o,view,phase))return;
+      const t=phase===null?0:(phase+.5)/CARD_PHASES/WALK_HZ;
+      draw(g,s.x,s.y,size,{kind:o.kind,coat:o.coat,livery:o.livery,mode:moving?'walk':'idle',from:moving?'walk':'idle',
+        blend:1,t,seed:0,facing:view==='E'||view==='NE'||view==='SE'?1:-1});
+    };
+    // The horse and rider are a box collider (oriented, half-width = the body's radius), not a capsule.
+    // Each view is traced in its own direction, so the tile is never mirrored.
+    return W.figure(p,z,key,paint,id,false,{span:1,capsule:{...A.capsule('horse',CARD_SIZE,h),box:true}});
+  }
+  // drawView: one of the 8 views (Asset Lab, comparisons); E/W are the 2D art, the rest artView.
+  // Vehicles (src/assets/mounted-views.js 'vehicle:cart|wagon|coach', tools/blender/wagon_views.py): one of
+  // the six off-profile views of the card settlement-vehicles.js paints (vehicle, team, driver), then the
+  // cargo items as layers in slot order. x,y = ground under the middle of the bed; size as drawWagon.
+  // o: {vehicle, view, phase (null idle, 0..7), team:[{coat}], cargo:[kinds]}. False without the view.
+  function drawVehicleView(g,x,y,size,o){
+    const set=window.ConquerMountedViews?.['vehicle:'+o.vehicle],V=set?.views?.[o.view];
+    const sp=window.ConquerAnimals?.SPECIES?.horse;if(!V||!sp)return false;
+    const fi=o.phase===null||o.phase===undefined?0:Math.max(0,set.poses.indexOf('p'+o.phase));
+    const color=t=>{
+      if(t.startsWith('coat@')){const i=+t.slice(5,t.indexOf(':')),c=sp.coatColors?.[o.team?.[i]?.coat]||sp.colors;return c[t.slice(t.indexOf(':')+1)]}
+      return t==='outline'?OUTLINE:t;
+    };
+    const S=size*(sp.scale||1),s=S/256,lw=Math.max(.55,S/90)/s;
+    // The driver is the game's own 2D villager (o.driver(ctx,x,y,size), as drawWagon's), at the view's
+    // seat anchor; the board top hides his legs. Behind the vehicle's middle he is drawn first, so the
+    // boards, the load and the team cover him; in front, last. The carter walks at the horse's head.
+    const A=V.anchor,person=A&&o.driver?()=>{
+      g.save();
+      if(A.kind==='seat'){g.beginPath();g.rect(x-1e5,y-1e5,2e5,1e5+A.clip*s);g.clip()}
+      o.driver(g,x+A.at[0]*s,y+A.at[1]*s,size);
+      g.restore();
+    }:null;
+    if(person&&A.behind)person();
+    g.save();g.translate(x,y);g.scale(s,s);g.lineJoin='round';g.lineCap='round';
+    paintFrame(g,set,V.frames[fi]||V.frames[0],color,lw,null);
+    const cargo=(o.cargo||[]).slice(0,6),n=cargo.length;
+    cargo.forEach((kind,i)=>{const f=set.layers?.[`cargo:${n}:${i}:${kind}`]?.[o.view]?.[0];if(f)paintFrame(g,set,f,color,lw,null)});
+    g.restore();
+    if(person&&!A.behind)person();
+    return true;
+  }
+  // o.view, o.phase (null = idle, else 0..7), o.mode ('walk' default, 'run' = the knight's charge).
+  const RUN_HZ=2.2;
+  function drawView(g,x,y,size,o={}){
+    const view=o.view||'E',phase=o.phase??null,mode=phase===null?'idle':o.mode==='run'?'run':'walk';
+    if(view!=='E'&&view!=='W'&&artView(g,x,y,size,{...o,mode},view,phase))return true;
+    draw(g,x,y,size,{...o,mode,from:mode,blend:1,t:phase===null?0:(phase+.5)/CARD_PHASES/(mode==='run'?RUN_HZ:WALK_HZ),
+      seed:o.seed||0,facing:view==='E'||view==='NE'||view==='SE'?1:-1});
+    return true;
+  }
+  // Stride phase (0..7) of a gait clock t, as drawAnimal cycles it (walk t*1.6, run t*2.2 per second).
+  const phaseOf=(t,mode)=>{const c=t*(mode==='run'?RUN_HZ:WALK_HZ);return Math.floor((c-Math.floor(c))*CARD_PHASES)};
+  window.ConquerMounted2D={draw,drawView,drawVehicleView,card,lanceGeometry,VIEW_NAMES,viewOf,viewAt,phaseOf};
 })();

@@ -490,19 +490,31 @@
       ctx.strokeStyle=c.headLine;ctx.lineWidth=lw;ctx.lineCap='round';ctx.stroke();
       return;
     }
-    const quad=(w0,w1,o0,o1)=>{ctx.beginPath();
-      ctx.moveTo(r.x+nx*(w0/2+o0),r.y+ny*(w0/2+o0));ctx.lineTo(tip.x+nx*(w1/2+o1),tip.y+ny*(w1/2+o1));
-      ctx.lineTo(tip.x-nx*w1/2,tip.y-ny*w1/2);ctx.lineTo(r.x-nx*w0/2,r.y-ny*w0/2);ctx.closePath()};
-    quad(n.rootWidth,n.tipWidth,0,0);ctx.fillStyle=c.head;ctx.fill();
-    ctx.strokeStyle=c.headLine;ctx.lineWidth=lw;ctx.lineJoin='round';ctx.stroke();
+    // Tapered neck with a rounded end at the tip: a half disc ahead of the throat point, so the neck
+    // never shows a cut corner behind the poll where the head (clipped at the throat line) does not
+    // reach. The head drawn next covers the inner half of the cap.
+    const fx=dx/len,fy=dy/len,a0=Math.atan2(ny,nx),a1=Math.atan2(-ny,-nx),ccw=(-ny*fx+nx*fy)<0;
+    const quad=(w0,w1)=>{ctx.beginPath();
+      ctx.moveTo(r.x+nx*w0/2,r.y+ny*w0/2);ctx.lineTo(tip.x+nx*w1/2,tip.y+ny*w1/2);
+      ctx.arc(tip.x,tip.y,w1/2,a0,a1,ccw);
+      ctx.lineTo(r.x-nx*w0/2,r.y-ny*w0/2);ctx.closePath()};
+    quad(n.rootWidth,n.tipWidth);ctx.fillStyle=c.head;ctx.fill();
+    ctx.strokeStyle=c.headLine;ctx.lineWidth=lw;ctx.lineJoin='round';
     if(n.mane){
-      // Mane strip along the crest edge.
+      // Mane strip along the crest edge, carried past the tip and clipped to the neck: it follows the
+      // rounded end and runs on under the head instead of stopping square behind the poll.
+      const e=n.tipWidth/2,m=n.mane;
+      ctx.save();quad(n.rootWidth,n.tipWidth);ctx.clip();
       ctx.beginPath();
-      ctx.moveTo(r.x+nx*n.rootWidth/2,r.y+ny*n.rootWidth/2);ctx.lineTo(tip.x+nx*n.tipWidth/2,tip.y+ny*n.tipWidth/2);
-      ctx.lineTo(tip.x+nx*(n.tipWidth/2-n.mane),tip.y+ny*(n.tipWidth/2-n.mane));
-      ctx.lineTo(r.x+nx*(n.rootWidth/2-n.mane),r.y+ny*(n.rootWidth/2-n.mane));ctx.closePath();
-      ctx.fillStyle=c.mane;ctx.fill();ctx.strokeStyle=c.headLine;ctx.stroke();
+      ctx.moveTo(r.x+nx*n.rootWidth/2,r.y+ny*n.rootWidth/2);ctx.lineTo(tip.x+nx*e+fx*e,tip.y+ny*e+fy*e);
+      ctx.lineTo(tip.x+nx*(e-m)+fx*e,tip.y+ny*(e-m)+fy*e);
+      ctx.lineTo(r.x+nx*(n.rootWidth/2-m),r.y+ny*(n.rootWidth/2-m));ctx.closePath();
+      ctx.fillStyle=c.mane;ctx.fill();
+      ctx.beginPath();ctx.moveTo(r.x+nx*(n.rootWidth/2-m),r.y+ny*(n.rootWidth/2-m));
+      ctx.lineTo(tip.x+nx*(e-m)+fx*e,tip.y+ny*(e-m)+fy*e);ctx.stroke();      // inner edge of the mane
+      ctx.restore();
     }
+    quad(n.rootWidth,n.tipWidth);ctx.stroke();
   }
   function drawHeadArt(ctx,sp,c,lw,size,strokes=true,horns=true){
     if(sp.horn&&horns){ctx.save();ctx.translate(sp.farHorn.x,sp.farHorn.y);fillStroke(ctx,sp.horn,c.hornFar,c.hornLine,lw);ctx.restore()}

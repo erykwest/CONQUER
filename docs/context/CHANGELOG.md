@@ -1,4 +1,8 @@
 # Livello 5 — Diario delle variazioni del contesto
+
+### 2026-11-27 — WAGON-VIEWS · Carri in 8 viste con collider (`feature/wagon-views`)
+
+Carretto, carro e carrozza seguono la strada in 8 viste: il profilo resta il disegno 2D, le altre 6 sono lo stesso veicolo costruito in Blender dai numeri del pittore (ruote che girano, tiro che cammina, conducente) con il carico come layer. Collider a scatola sulle card dei veicoli. ROADMAP e DECISIONS invariati.
 ### 2026-11-26 — THREAT-ALERTS-261126 · Minacce nel centro avvisi, acqua e insediamento aperto (`fix/threat-alerts-261126`)
 
 Gli avvisi di minaccia (lupi, orso, briganti, banditi, predoni) non usano più il banner rosso separato: vanno nel centro avvisi con «Vai» (centra la mappa tramite `commands.focus`) e × standard. Il pannello log usa lo stesso comando. Con nemici in campo e pozzi fuori da ogni settore, la sete mostra «Insediamento non chiuso / protetto» (causa `open` in `water()`), invece di «Sete nel castello»; rottura di settore e assenza di pozzi restano sull'avviso precedente. Nessuna regola di gioco cambiata. QA: cistern-regression, threats-regression e ui-alerts-regression PASS in locale; CI remota da verificare.
@@ -19,6 +23,10 @@ Ripristinato l'aspetto precedente a #284: tasti marroni (`--btn`) con icona beig
 ### 2026-11-25 — GRAPHSCHIC · Palette GRAFICA: bordi e gradienti (`GRAPHSCHIC`)
 
 Nuova palette GRAFICA nel Profilo (tab Generale, pulsante «Apri palette GRAFICA»), con due interruttori: Bordi (contorni scuri per faccia) e Gradienti (pareti più scure alla base). Preferenze locali in `localStorage` (`settlement-graphics.js`), non fanno parte della partita; con le opzioni spente l'output è identico. Applicate alle torri (`settlement-castle3d.js`) e alle prisms (`settlement-world3d.js`). Il cambio si applica subito, senza reload (verificato: 672 linee spente, 5472 accese). Nessuna regola di gioco cambiata. Verifica visiva fatta in gioco, non nell'Asset Lab, su richiesta esplicita.
+
+### 2026-11-25 — MESSENGER-CARD · Il messaggero a cavallo è una card World 3D (`fix/messenger-card`)
+
+Il messaggero del corriere e dei relay delle torri-vedetta era fermo e di profilo, senza collider: regressione dell'overlay 2D, con il passo sul clock di gioco. Ora è una card World 3D (`ConquerMounted2D.card`) con collider a scatola orientata, passo in tempo reale e 8 viste: E/W sono il disegno 2D approvato, le altre 6 lo stesso disegno costruito in 3D parte per parte in Blender e ritracciato (`tools/blender/`, `src/assets/mounted-views.js`). Lo stesso per i cavalieri in battaglia, con gualdrappa, crinet, mantello, lancia (anche in resta in carica) e i layer di elmo, scudo e cimiero. Collo dei quadrupedi chiuso da un terminale arrotondato (niente taglio dietro la nuca). Nuova `qa/messenger-card-regression.cjs`, registrata in `combat-regression.yml`. ROADMAP e DECISIONS invariati: correzione di comportamento visivo.
 
 ### 2026-11-24 — TOWER-FRAMED-TOP · Framed top per le torri quadrate W3
 
